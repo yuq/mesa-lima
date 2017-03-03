@@ -2651,6 +2651,60 @@ static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)
 	return bytes;
 }
 
+static bool si_update_scratch_relocs(struct si_context *sctx)
+{
+	int r;
+
+	/* Update the shaders, so that they are using the latest scratch.
+	 * The scratch buffer may have been changed since these shaders were
+	 * last used, so we still need to try to update them, even if they
+	 * require scratch buffers smaller than the current size.
+	 */
+	r = si_update_scratch_buffer(sctx, sctx->ps_shader.current);
+	if (r < 0)
+		return false;
+	if (r == 1)
+		si_pm4_bind_state(sctx, ps, sctx->ps_shader.current->pm4);
+
+	r = si_update_scratch_buffer(sctx, sctx->gs_shader.current);
+	if (r < 0)
+		return false;
+	if (r == 1)
+		si_pm4_bind_state(sctx, gs, sctx->gs_shader.current->pm4);
+
+	r = si_update_scratch_buffer(sctx, sctx->tcs_shader.current);
+	if (r < 0)
+		return false;
+	if (r == 1)
+		si_pm4_bind_state(sctx, hs, sctx->tcs_shader.current->pm4);
+
+	/* VS can be bound as LS, ES, or VS. */
+	r = si_update_scratch_buffer(sctx, sctx->vs_shader.current);
+	if (r < 0)
+		return false;
+	if (r == 1) {
+		if (sctx->tes_shader.current)
+			si_pm4_bind_state(sctx, ls, sctx->vs_shader.current->pm4);
+		else if (sctx->gs_shader.current)
+			si_pm4_bind_state(sctx, es, sctx->vs_shader.current->pm4);
+		else
+			si_pm4_bind_state(sctx, vs, sctx->vs_shader.current->pm4);
+	}
+
+	/* TES can be bound as ES or VS. */
+	r = si_update_scratch_buffer(sctx, sctx->tes_shader.current);
+	if (r < 0)
+		return false;
+	if (r == 1) {
+		if (sctx->gs_shader.current)
+			si_pm4_bind_state(sctx, es, sctx->tes_shader.current->pm4);
+		else
+			si_pm4_bind_state(sctx, vs, sctx->tes_shader.current->pm4);
+	}
+
+	return true;
+}
+
 static bool si_update_spi_tmpring_size(struct si_context *sctx)
 {
 	unsigned current_scratch_buffer_size =
@@ -2660,7 +2714,6 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 	unsigned scratch_needed_size = scratch_bytes_per_wave *
 		sctx->scratch_waves;
 	unsigned spi_tmpring_size;
-	int r;
 
 	if (scratch_needed_size > 0) {
 		if (scratch_needed_size > current_scratch_buffer_size) {
@@ -2680,52 +2733,8 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 						       &sctx->scratch_buffer->b.b);
 		}
 
-		/* Update the shaders, so they are using the latest scratch.  The
-		 * scratch buffer may have been changed since these shaders were
-		 * last used, so we still need to try to update them, even if
-		 * they require scratch buffers smaller than the current size.
-		 */
-		r = si_update_scratch_buffer(sctx, sctx->ps_shader.current);
-		if (r < 0)
+		if (!si_update_scratch_relocs(sctx))
 			return false;
-		if (r == 1)
-			si_pm4_bind_state(sctx, ps, sctx->ps_shader.current->pm4);
-
-		r = si_update_scratch_buffer(sctx, sctx->gs_shader.current);
-		if (r < 0)
-			return false;
-		if (r == 1)
-			si_pm4_bind_state(sctx, gs, sctx->gs_shader.current->pm4);
-
-		r = si_update_scratch_buffer(sctx, sctx->tcs_shader.current);
-		if (r < 0)
-			return false;
-		if (r == 1)
-			si_pm4_bind_state(sctx, hs, sctx->tcs_shader.current->pm4);
-
-		/* VS can be bound as LS, ES, or VS. */
-		r = si_update_scratch_buffer(sctx, sctx->vs_shader.current);
-		if (r < 0)
-			return false;
-		if (r == 1) {
-			if (sctx->tes_shader.current)
-				si_pm4_bind_state(sctx, ls, sctx->vs_shader.current->pm4);
-			else if (sctx->gs_shader.current)
-				si_pm4_bind_state(sctx, es, sctx->vs_shader.current->pm4);
-			else
-				si_pm4_bind_state(sctx, vs, sctx->vs_shader.current->pm4);
-		}
-
-		/* TES can be bound as ES or VS. */
-		r = si_update_scratch_buffer(sctx, sctx->tes_shader.current);
-		if (r < 0)
-			return false;
-		if (r == 1) {
-			if (sctx->gs_shader.current)
-				si_pm4_bind_state(sctx, es, sctx->tes_shader.current->pm4);
-			else
-				si_pm4_bind_state(sctx, vs, sctx->tes_shader.current->pm4);
-		}
 	}
 
 	/* The LLVM shader backend should be reporting aligned scratch_sizes. */
