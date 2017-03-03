@@ -72,6 +72,9 @@ upload_blorp_shader(struct blorp_context *blorp,
                                        key, key_size, kernel, kernel_size,
                                        prog_data, prog_data_size, &bind_map);
 
+   if (!bin)
+      return false;
+
    /* The cache already has a reference and it's not going anywhere so there
     * is no need to hold a second reference.
     */
