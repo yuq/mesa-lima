@@ -865,10 +865,11 @@ nir_visitor::visit(ir_call *ir)
 
          /* Set the intrinsic destination. */
          if (ir->return_deref) {
-            const nir_intrinsic_info *info =
-                    &nir_intrinsic_infos[instr->intrinsic];
+            unsigned num_components = ir->return_deref->type->vector_elements;
+            if (instr->intrinsic == nir_intrinsic_image_size)
+               instr->num_components = num_components;
             nir_ssa_dest_init(&instr->instr, &instr->dest,
-                              info->dest_components, 32, NULL);
+                              num_components, 32, NULL);
          }
 
          if (op == nir_intrinsic_image_size ||

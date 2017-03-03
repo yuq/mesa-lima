@@ -1998,17 +1998,21 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    if (opcode != SpvOpImageWrite) {
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-      nir_ssa_dest_init(&intrin->instr, &intrin->dest, 4, 32, NULL);
+
+      unsigned dest_components =
+         nir_intrinsic_infos[intrin->intrinsic].dest_components;
+      if (intrin->intrinsic == nir_intrinsic_image_size) {
+         dest_components = intrin->num_components =
+            glsl_get_vector_elements(type->type);
+      }
+
+      nir_ssa_dest_init(&intrin->instr, &intrin->dest,
+                        dest_components, 32, NULL);
 
       nir_builder_instr_insert(&b->nb, &intrin->instr);
 
-      /* The image intrinsics always return 4 channels but we may not want
-       * that many.  Emit a mov to trim it down.
-       */
-      unsigned swiz[4] = {0, 1, 2, 3};
       val->ssa = vtn_create_ssa_value(b, type->type);
-      val->ssa->def = nir_swizzle(&b->nb, &intrin->dest.ssa, swiz,
-                                  glsl_get_vector_elements(type->type), false);
+      val->ssa->def = &intrin->dest.ssa;
    } else {
       nir_builder_instr_insert(&b->nb, &intrin->instr);
    }
