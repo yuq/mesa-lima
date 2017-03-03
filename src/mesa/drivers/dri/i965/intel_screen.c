@@ -1361,12 +1361,18 @@ err:
 static bool
 intel_detect_pipelined_so(struct intel_screen *screen)
 {
+   const struct gen_device_info *devinfo = &screen->devinfo;
+
    /* Supposedly, Broadwell just works. */
-   if (screen->devinfo.gen >= 8)
+   if (devinfo->gen >= 8)
       return true;
 
-   if (screen->devinfo.gen <= 6)
+   if (devinfo->gen <= 6)
       return false;
+
+   /* See the big explanation about command parser versions below */
+   if (screen->cmd_parser_version >= (devinfo->is_haswell ? 7 : 2))
+      return true;
 
    /* We use SO_WRITE_OFFSET0 since you're supposed to write it (unlike the
     * statistics registers), and we already reset it to zero before using it.
