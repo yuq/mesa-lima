@@ -3759,8 +3759,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                   type->sampler_array;
 
       /* Copy all the components. */
-      const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
-      for (unsigned c = 0; c < info->dest_components; ++c) {
+      for (unsigned c = 0; c < instr->dest.ssa.num_components; ++c) {
          if ((int)c >= type->coordinate_components()) {
              bld.MOV(offset(retype(dest, BRW_REGISTER_TYPE_D), bld, c),
                      brw_imm_d(1));
