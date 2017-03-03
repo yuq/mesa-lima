@@ -1508,7 +1508,8 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    struct blorp_surf surf;
    get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
                                 att_state->aux_usage, &surf);
-   surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
+   if (att_state->fast_clear)
+      surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
 
    /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
     *
