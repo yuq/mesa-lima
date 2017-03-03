@@ -1845,8 +1845,18 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
     *   means that we can no longer use it as an indicator of the
     *   age of the kernel.
     */
-   if (intel_detect_pipelined_so(screen))
+   if (intel_get_param(screen, I915_PARAM_CMD_PARSER_VERSION,
+                       &screen->cmd_parser_version) < 0) {
+      /* Command parser does not exist - getparam is unrecognized */
+      screen->cmd_parser_version = 0;
+   }
+
+   if (!intel_detect_pipelined_so(screen)) {
+      /* We can't do anything, so the effective version is 0. */
+      screen->cmd_parser_version = 0;
+   } else {
       screen->kernel_features |= KERNEL_ALLOWS_SOL_OFFSET_WRITES;
+   }
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {
@@ -1877,11 +1887,6 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 
       screen->has_context_reset_notification =
          (ret != -1 || errno != EINVAL);
-   }
-
-   if (intel_get_param(screen, I915_PARAM_CMD_PARSER_VERSION,
-                       &screen->cmd_parser_version) < 0) {
-      screen->cmd_parser_version = 0;
    }
 
    if (devinfo->gen >= 8 || screen->cmd_parser_version >= 2)
