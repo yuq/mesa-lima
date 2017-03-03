@@ -160,13 +160,17 @@ anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
    if (*ptr == NULL) {
       *ptr = vk_alloc(&cmd_buffer->pool->alloc, size, 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-      if (*ptr == NULL)
+      if (*ptr == NULL) {
+         anv_batch_set_error(&cmd_buffer->batch, VK_ERROR_OUT_OF_HOST_MEMORY);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
    } else if ((*ptr)->size < size) {
       *ptr = vk_realloc(&cmd_buffer->pool->alloc, *ptr, size, 8,
                          VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-      if (*ptr == NULL)
+      if (*ptr == NULL) {
+         anv_batch_set_error(&cmd_buffer->batch, VK_ERROR_OUT_OF_HOST_MEMORY);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
    }
    (*ptr)->size = size;
 
@@ -718,7 +722,11 @@ void anv_CmdPushConstants(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    anv_foreach_stage(stage, stageFlags) {
-      anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, client_data);
+      VkResult result =
+         anv_cmd_buffer_ensure_push_constant_field(cmd_buffer,
+                                                   stage, client_data);
+      if (result != VK_SUCCESS)
+         return;
 
       memcpy(cmd_buffer->state.push_constants[stage]->client_data + offset,
              pValues, size);
