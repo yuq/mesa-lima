@@ -308,7 +308,8 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
       pthread_mutex_unlock(&cache->mutex);
 
       /* We increment refcount before handing it to the caller */
-      anv_shader_bin_ref(bin);
+      if (bin)
+         anv_shader_bin_ref(bin);
 
       return bin;
    } else {
@@ -546,6 +547,8 @@ VkResult anv_MergePipelineCaches(
       struct hash_entry *entry;
       hash_table_foreach(src->cache, entry) {
          struct anv_shader_bin *bin = entry->data;
+         assert(bin);
+
          if (_mesa_hash_table_search(dst->cache, bin->key))
             continue;
 

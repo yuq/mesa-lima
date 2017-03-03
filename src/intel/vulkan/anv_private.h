@@ -1556,14 +1556,14 @@ anv_shader_bin_destroy(struct anv_device *device, struct anv_shader_bin *shader)
 static inline void
 anv_shader_bin_ref(struct anv_shader_bin *shader)
 {
-   assert(shader->ref_cnt >= 1);
+   assert(shader && shader->ref_cnt >= 1);
    __sync_fetch_and_add(&shader->ref_cnt, 1);
 }
 
 static inline void
 anv_shader_bin_unref(struct anv_device *device, struct anv_shader_bin *shader)
 {
-   assert(shader->ref_cnt >= 1);
+   assert(shader && shader->ref_cnt >= 1);
    if (__sync_fetch_and_add(&shader->ref_cnt, -1) == 1)
       anv_shader_bin_destroy(device, shader);
 }
