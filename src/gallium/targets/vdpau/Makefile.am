@@ -108,6 +108,7 @@ endif
 install-data-hook:
 	$(AM_V_GEN)dest_dir=$(DESTDIR)/$(vdpaudir);			\
 	for i in $(TARGET_DRIVERS); do					\
+		has_drivers=1;						\
 		j=libvdpau_gallium.$(LIB_EXT);				\
 		k=libvdpau_$${i}.$(LIB_EXT);				\
 		l=$${k}.$(VDPAU_MAJOR).$(VDPAU_MINOR).0;		\
@@ -120,7 +121,8 @@ install-data-hook:
 		ln -sf $${l}						\
 		       $${dest_dir}/$${k};				\
 	done;								\
-	$(RM) $${dest_dir}/libvdpau_gallium.*
+	$(RM) $${dest_dir}/libvdpau_gallium.*;				\
+	test $${has_drivers} -eq 1 || $(RM) -d $${dest_dir}
 
 uninstall-hook:
 	for i in $(TARGET_DRIVERS); do					\
