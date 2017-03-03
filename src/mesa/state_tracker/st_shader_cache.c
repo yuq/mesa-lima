@@ -379,7 +379,8 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
          }
 
          st_set_prog_affected_state_flags(glprog);
-         _mesa_associate_uniform_storage(ctx, prog, glprog->Parameters);
+         _mesa_associate_uniform_storage(ctx, prog, glprog->Parameters,
+                                         false);
 
          free(buffer);
       } else {
