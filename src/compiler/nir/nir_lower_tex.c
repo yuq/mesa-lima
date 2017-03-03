@@ -172,7 +172,8 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
    txs->src[0].src = nir_src_for_ssa(nir_imm_int(b, 0));
    txs->src[0].src_type = nir_tex_src_lod;
 
-   nir_ssa_dest_init(&txs->instr, &txs->dest, tex->coord_components, 32, NULL);
+   nir_ssa_dest_init(&txs->instr, &txs->dest,
+                     nir_tex_instr_dest_size(txs), 32, NULL);
    nir_builder_instr_insert(b, &txs->instr);
 
    return nir_i2f(b, &txs->dest.ssa);
