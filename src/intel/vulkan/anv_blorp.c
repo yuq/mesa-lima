@@ -1457,7 +1457,9 @@ anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
 
    struct blorp_surf surf;
    get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                image->aux_usage, &surf);
+                                image->aux_usage == ISL_AUX_USAGE_NONE ?
+                                ISL_AUX_USAGE_CCS_D : image->aux_usage,
+                                &surf);
 
    /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
     *

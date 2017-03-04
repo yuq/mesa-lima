@@ -519,6 +519,17 @@ genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+/**
+ * @brief Transitions a color buffer from one layout to another.
+ *
+ * See section 6.1.1. Image Layout Transitions of the Vulkan 1.0.50 spec for
+ * more information.
+ *
+ * @param level_count VK_REMAINING_MIP_LEVELS isn't supported.
+ * @param layer_count VK_REMAINING_ARRAY_LAYERS isn't supported. For 3D images,
+ *                    this represents the maximum layers to transition at each
+ *                    specified miplevel.
+ */
 static void
 transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
@@ -527,14 +538,27 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                         VkImageLayout initial_layout,
                         VkImageLayout final_layout)
 {
-   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   /* Validate the inputs. */
+   assert(cmd_buffer);
+   assert(image && image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   /* These values aren't supported for simplicity's sake. */
+   assert(level_count != VK_REMAINING_MIP_LEVELS &&
+          layer_count != VK_REMAINING_ARRAY_LAYERS);
+   /* Ensure the subresource range is valid. */
+   uint64_t last_level_num = base_level + level_count;
+   const uint32_t max_depth = anv_minify(image->extent.depth, base_level);
+   const uint32_t image_layers = MAX2(image->array_size, max_depth);
+   assert((uint64_t)base_layer + layer_count  <= image_layers);
+   assert(last_level_num <= image->levels);
+   /* The spec disallows these final layouts. */
+   assert(final_layout != VK_IMAGE_LAYOUT_UNDEFINED &&
+          final_layout != VK_IMAGE_LAYOUT_PREINITIALIZED);
 
-   if (image->aux_surface.isl.size == 0 ||
-       base_level >= anv_image_aux_levels(image))
-      return;
-
-   if (initial_layout != VK_IMAGE_LAYOUT_UNDEFINED &&
-       initial_layout != VK_IMAGE_LAYOUT_PREINITIALIZED)
+   /* No work is necessary if the layout stays the same or if this subresource
+    * range lacks auxiliary data.
+    */
+   if (initial_layout == final_layout ||
+       base_layer >= anv_image_aux_layers(image, base_level))
       return;
 
    /* A transition of a 3D subresource works on all slices at a time. */
@@ -545,22 +569,38 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
    /* We're interested in the subresource range subset that has aux data. */
    level_count = MIN2(level_count, anv_image_aux_levels(image) - base_level);
+   layer_count = MIN2(layer_count,
+                      anv_image_aux_layers(image, base_level) - base_layer);
+   last_level_num = base_level + level_count;
 
-   /* We're transitioning from an undefined layout. We must ensure that the
-    * clear values buffer is filled with valid data.
+   /* Record whether or not the layout is undefined. Pre-initialized images
+    * with auxiliary buffers have a non-linear layout and are thus undefined.
     */
-   for (unsigned l = 0; l < level_count; l++)
-      init_fast_clear_state_entry(cmd_buffer, image, base_level + l);
+   assert(image->tiling == VK_IMAGE_TILING_OPTIMAL);
+   const bool undef_layout = initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
+                             initial_layout == VK_IMAGE_LAYOUT_PREINITIALIZED;
 
-   if (image->aux_usage == ISL_AUX_USAGE_CCS_E ||
-       image->aux_usage == ISL_AUX_USAGE_MCS) {
-      /* We're transitioning from an undefined layout so it doesn't really
-       * matter what data ends up in the color buffer. We do, however, need to
-       * ensure that the auxiliary surface is not in an undefined state. This
-       * state is possible for CCS buffers SKL+ and MCS buffers with certain
-       * sample counts that require certain bits to be reserved (2x and 8x).
-       * One easy way to get to a valid state is to fast-clear the specified
-       * range.
+   /* Do preparatory work before the resolve operation or return early if no
+    * resolve is actually needed.
+    */
+   if (undef_layout) {
+      /* A subresource in the undefined layout may have been aliased and
+       * populated with any arrangement of bits. Therefore, we must initialize
+       * the related aux buffer and clear buffer entry with desirable values.
+       *
+       * Initialize the relevant clear buffer entries.
+       */
+      for (unsigned level = base_level; level < last_level_num; level++)
+         init_fast_clear_state_entry(cmd_buffer, image, level);
+
+      /* Initialize the aux buffers to enable correct rendering. This operation
+       * requires up to two steps: one to rid the aux buffer of data that may
+       * cause GPU hangs, and another to ensure that writes done without aux
+       * will be visible to reads done with aux.
+       *
+       * Having an aux buffer with invalid data is possible for CCS buffers
+       * SKL+ and for MCS buffers with certain sample counts (2x and 8x). One
+       * easy way to get to a valid state is to fast-clear the specified range.
        *
        * Even for MCS buffers that have sample counts that don't require
        * certain bits to be reserved (4x and 8x), we're unsure if the hardware
@@ -568,14 +608,113 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
        * We don't have any data to show that this is a problem, but we want to
        * avoid causing difficult-to-debug problems.
        */
-      if (image->samples == 4 || image->samples == 16) {
-         anv_perf_warn("Doing a potentially unnecessary fast-clear to define "
-                       "an MCS buffer.");
+      if ((GEN_GEN >= 9 && image->samples == 1) || image->samples > 1) {
+         if (image->samples == 4 || image->samples == 16) {
+            anv_perf_warn("Doing a potentially unnecessary fast-clear to "
+                          "define an MCS buffer.");
+         }
+
+         anv_image_fast_clear(cmd_buffer, image, base_level, level_count,
+                              base_layer, layer_count);
+      }
+      /* At this point, some elements of the CCS buffer may have the fast-clear
+       * bit-arrangement. As the user writes to a subresource, we need to have
+       * the associated CCS elements enter the ambiguated state. This enables
+       * reads (implicit or explicit) to reflect the user-written data instead
+       * of the clear color. The only time such elements will not change their
+       * state as described above, is in a final layout that doesn't have CCS
+       * enabled. In this case, we must force the associated CCS buffers of the
+       * specified range to enter the ambiguated state in advance.
+       */
+      if (image->samples == 1 && image->aux_usage != ISL_AUX_USAGE_CCS_E &&
+          final_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+         /* The CCS_D buffer may not be enabled in the final layout. Continue
+          * executing this function to perform a resolve.
+          */
+          anv_perf_warn("Performing an additional resolve for CCS_D layout "
+                        "transition. Consider always leaving it on or "
+                        "performing an ambiguation pass.");
+      } else {
+         /* Writes in the final layout will be aware of the auxiliary buffer.
+          * In addition, the clear buffer entries and the auxiliary buffers
+          * have been populated with values that will result in correct
+          * rendering.
+          */
+         return;
+      }
+   } else if (initial_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+      /* Resolves are only necessary if the subresource may contain blocks
+       * fast-cleared to values unsupported in other layouts. This only occurs
+       * if the initial layout is COLOR_ATTACHMENT_OPTIMAL.
+       */
+      return;
+   } else if (image->samples > 1) {
+      /* MCS buffers don't need resolving. */
+      return;
+   }
+
+   /* Perform a resolve to synchronize data between the main and aux buffer.
+    * Before we begin, we must satisfy the cache flushing requirement specified
+    * in the Sky Lake PRM Vol. 7, "MCS Buffer for Render Target(s)":
+    *
+    *    Any transition from any value in {Clear, Render, Resolve} to a
+    *    different value in {Clear, Render, Resolve} requires end of pipe
+    *    synchronization.
+    *
+    * We perform a flush of the write cache before and after the clear and
+    * resolve operations to meet this requirement.
+    *
+    * Unlike other drawing, fast clear operations are not properly
+    * synchronized. The first PIPE_CONTROL here likely ensures that the
+    * contents of the previous render or clear hit the render target before we
+    * resolve and the second likely ensures that the resolve is complete before
+    * we do any more rendering or clearing.
+    */
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
+
+   for (uint32_t level = base_level; level < last_level_num; level++) {
+
+      /* The number of layers changes at each 3D miplevel. */
+      if (image->type == VK_IMAGE_TYPE_3D) {
+         layer_count = MIN2(layer_count, anv_image_aux_layers(image, level));
       }
 
-      anv_image_fast_clear(cmd_buffer, image, base_level, level_count,
-                           base_layer, layer_count);
+      /* Create a surface state with the right clear color and perform the
+       * resolve.
+       */
+      struct anv_state surface_state =
+         anv_cmd_buffer_alloc_surface_state(cmd_buffer);
+      isl_surf_fill_state(&cmd_buffer->device->isl_dev, surface_state.map,
+                          .surf = &image->color_surface.isl,
+                          .view = &(struct isl_view) {
+                              .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT,
+                              .format = image->color_surface.isl.format,
+                              .swizzle = ISL_SWIZZLE_IDENTITY,
+                              .base_level = level,
+                              .levels = 1,
+                              .base_array_layer = base_layer,
+                              .array_len = layer_count,
+                           },
+                          .aux_surf = &image->aux_surface.isl,
+                          .aux_usage = image->aux_usage == ISL_AUX_USAGE_NONE ?
+                                       ISL_AUX_USAGE_CCS_D : image->aux_usage,
+                          .mocs = cmd_buffer->device->default_mocs);
+      add_image_relocs(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                       image->aux_usage == ISL_AUX_USAGE_CCS_E ?
+                       ISL_AUX_USAGE_CCS_E : ISL_AUX_USAGE_CCS_D,
+                       surface_state);
+      anv_state_flush(cmd_buffer->device, surface_state);
+      genX(copy_fast_clear_dwords)(cmd_buffer, surface_state, image, level,
+                                   false /* copy to ss */);
+      anv_ccs_resolve(cmd_buffer, surface_state, image, level, layer_count,
+                      image->aux_usage == ISL_AUX_USAGE_CCS_E ?
+                      BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL :
+                      BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
    }
+
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 }
 
 /**
