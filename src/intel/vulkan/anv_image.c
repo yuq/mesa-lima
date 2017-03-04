@@ -837,8 +837,8 @@ anv_CreateBufferView(VkDevice _device,
    const uint32_t format_bs = isl_format_get_layout(view->format)->bpb / 8;
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
-   view->range = pCreateInfo->range == VK_WHOLE_SIZE ?
-                 buffer->size - pCreateInfo->offset : pCreateInfo->range;
+   view->range = anv_buffer_get_range(buffer, pCreateInfo->offset,
+                                              pCreateInfo->range);
    view->range = align_down_npot_u32(view->range, format_bs);
 
    if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {

@@ -672,10 +672,9 @@ anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
    /* For buffers with dynamic offsets, we use the full possible range in the
     * surface state and do the actual range-checking in the shader.
     */
-   if (bind_layout->dynamic_offset_index >= 0 || range == VK_WHOLE_SIZE)
-      bview->range = buffer->size - offset;
-   else
-      bview->range = range;
+   if (bind_layout->dynamic_offset_index >= 0)
+      range = VK_WHOLE_SIZE;
+   bview->range = anv_buffer_get_range(buffer, offset, range);
 
    /* If we're writing descriptors through a push command, we need to allocate
     * the surface state from the command buffer. Otherwise it will be

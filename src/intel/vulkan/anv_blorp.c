@@ -722,11 +722,17 @@ void anv_CmdFillBuffer(
    struct blorp_batch batch;
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
-   if (fillSize == VK_WHOLE_SIZE) {
-      fillSize = dst_buffer->size - dstOffset;
-      /* Make sure fillSize is a multiple of 4 */
-      fillSize &= ~3ull;
-   }
+   fillSize = anv_buffer_get_range(dst_buffer, dstOffset, fillSize);
+
+   /* From the Vulkan spec:
+    *
+    *    "size is the number of bytes to fill, and must be either a multiple
+    *    of 4, or VK_WHOLE_SIZE to fill the range from offset to the end of
+    *    the buffer. If VK_WHOLE_SIZE is used and the remaining size of the
+    *    buffer is not a multiple of 4, then the nearest smaller multiple is
+    *    used."
+    */
+   fillSize &= ~3ull;
 
    /* First, we compute the biggest format that can be used with the
     * given offsets and size.

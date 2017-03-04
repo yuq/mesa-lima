@@ -1082,6 +1082,18 @@ struct anv_buffer {
    VkDeviceSize                                 offset;
 };
 
+static inline uint64_t
+anv_buffer_get_range(struct anv_buffer *buffer, uint64_t offset, uint64_t range)
+{
+   assert(offset <= buffer->size);
+   if (range == VK_WHOLE_SIZE) {
+      return buffer->size - offset;
+   } else {
+      assert(range <= buffer->size);
+      return range;
+   }
+}
+
 enum anv_cmd_dirty_bits {
    ANV_CMD_DIRTY_DYNAMIC_VIEWPORT                  = 1 << 0, /* VK_DYNAMIC_STATE_VIEWPORT */
    ANV_CMD_DIRTY_DYNAMIC_SCISSOR                   = 1 << 1, /* VK_DYNAMIC_STATE_SCISSOR */
