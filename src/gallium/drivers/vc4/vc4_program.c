@@ -2643,6 +2643,13 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                 }
         }
 
+        if ((vc4_debug & VC4_DEBUG_SHADERDB) && stage == QSTAGE_FRAG) {
+                fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d FS threads\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id,
+                        1 + shader->fs_threaded);
+        }
+
         qir_compile_destroy(c);
 
         struct vc4_key *dup_key;
