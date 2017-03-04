@@ -246,7 +246,7 @@ pb_slab_buffer_unmap(struct pb_buffer *_buf)
 
    --buf->mapCount;
    if (buf->mapCount == 0) 
-       pipe_condvar_broadcast(buf->event);
+       cnd_broadcast(&buf->event);
 }
 
 

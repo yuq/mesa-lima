@@ -99,7 +99,7 @@ lp_fence_signal(struct lp_fence *fence)
 
    /* Wakeup all threads waiting on the mutex:
     */
-   pipe_condvar_broadcast(fence->signalled);
+   cnd_broadcast(&fence->signalled);
 
    pipe_mutex_unlock(fence->mutex);
 }

@@ -96,7 +96,7 @@ util_queue_fence_signal(struct util_queue_fence *fence)
 {
    pipe_mutex_lock(fence->mutex);
    fence->signalled = true;
-   pipe_condvar_broadcast(fence->cond);
+   cnd_broadcast(&fence->cond);
    pipe_mutex_unlock(fence->mutex);
 }
 
@@ -267,7 +267,7 @@ util_queue_killall_and_wait(struct util_queue *queue)
    /* Signal all threads to terminate. */
    pipe_mutex_lock(queue->lock);
    queue->kill_threads = 1;
-   pipe_condvar_broadcast(queue->has_queued_cond);
+   cnd_broadcast(&queue->has_queued_cond);
    pipe_mutex_unlock(queue->lock);
 
    for (i = 0; i < queue->num_threads; i++)

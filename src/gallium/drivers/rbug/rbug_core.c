@@ -409,7 +409,7 @@ rbug_context_draw_step(struct rbug_rbug *tr_rbug, struct rbug_header *header, ui
    }
    pipe_mutex_unlock(rb_context->draw_mutex);
 
-   pipe_condvar_broadcast(rb_context->draw_cond);
+   cnd_broadcast(&rb_context->draw_cond);
 
    pipe_mutex_unlock(rb_screen->list_mutex);
 
@@ -442,7 +442,7 @@ rbug_context_draw_unblock(struct rbug_rbug *tr_rbug, struct rbug_header *header,
    rb_context->draw_blocker &= ~unblock->unblock;
    pipe_mutex_unlock(rb_context->draw_mutex);
 
-   pipe_condvar_broadcast(rb_context->draw_cond);
+   cnd_broadcast(&rb_context->draw_cond);
 
    pipe_mutex_unlock(rb_screen->list_mutex);
 
@@ -474,7 +474,7 @@ rbug_context_draw_rule(struct rbug_rbug *tr_rbug, struct rbug_header *header, ui
    rb_context->draw_blocker |= RBUG_BLOCK_RULE;
    pipe_mutex_unlock(rb_context->draw_mutex);
 
-   pipe_condvar_broadcast(rb_context->draw_cond);
+   cnd_broadcast(&rb_context->draw_cond);
 
    pipe_mutex_unlock(rb_screen->list_mutex);
 

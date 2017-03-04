@@ -148,9 +148,6 @@ __pipe_mutex_assert_locked(pipe_mutex *mutex)
  */
 typedef cnd_t pipe_condvar;
 
-#define pipe_condvar_broadcast(cond) \
-   cnd_broadcast(&(cond))
-
 
 /*
  * pipe_barrier
@@ -218,7 +215,7 @@ static inline void pipe_barrier_wait(pipe_barrier *barrier)
    } else {
       barrier->waiters = 0;
       barrier->sequence++;
-      pipe_condvar_broadcast(barrier->condvar);
+      cnd_broadcast(&barrier->condvar);
    }
 
    pipe_mutex_unlock(barrier->mutex);
