@@ -384,6 +384,73 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
       anv_gen8_hiz_op_resolve(cmd_buffer, image, hiz_op);
 }
 
+static inline uint32_t
+get_fast_clear_state_entry_offset(const struct anv_device *device,
+                                  const struct anv_image *image,
+                                  unsigned level)
+{
+   assert(device && image);
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(level < anv_image_aux_levels(image));
+   const uint32_t offset = image->offset + image->aux_surface.offset +
+                           image->aux_surface.isl.size +
+                           anv_fast_clear_state_entry_size(device) * level;
+   assert(offset < image->offset + image->size);
+   return offset;
+}
+
+static void
+init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
+                            const struct anv_image *image,
+                            unsigned level)
+{
+   assert(cmd_buffer && image);
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(level < anv_image_aux_levels(image));
+
+   /* The fast clear value dword(s) will be copied into a surface state object.
+    * Ensure that the restrictions of the fields in the dword(s) are followed.
+    *
+    * CCS buffers on SKL+ can have any value set for the clear colors.
+    */
+   if (image->samples == 1 && GEN_GEN >= 9)
+      return;
+
+   /* Other combinations of auxiliary buffers and platforms require specific
+    * values in the clear value dword(s).
+    */
+   unsigned i = 0;
+   for (; i < cmd_buffer->device->isl_dev.ss.clear_value_size; i += 4) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+         const uint32_t entry_offset =
+            get_fast_clear_state_entry_offset(cmd_buffer->device, image, level);
+         sdi.Address = (struct anv_address) { image->bo, entry_offset + i };
+
+         if (GEN_GEN >= 9) {
+            /* MCS buffers on SKL+ can only have 1/0 clear colors. */
+            assert(image->aux_usage == ISL_AUX_USAGE_MCS);
+            sdi.ImmediateData = 0;
+         } else if (GEN_VERSIONx10 >= 75) {
+            /* Pre-SKL, the dword containing the clear values also contains
+             * other fields, so we need to initialize those fields to match the
+             * values that would be in a color attachment.
+             */
+            assert(i == 0);
+            sdi.ImmediateData = ISL_CHANNEL_SELECT_RED   << 25 |
+                                ISL_CHANNEL_SELECT_GREEN << 22 |
+                                ISL_CHANNEL_SELECT_BLUE  << 19 |
+                                ISL_CHANNEL_SELECT_ALPHA << 16;
+         }  else if (GEN_VERSIONx10 == 70) {
+            /* On IVB, the dword containing the clear values also contains
+             * other fields that must be zero or can be zero.
+             */
+            assert(i == 0);
+            sdi.ImmediateData = 0;
+         }
+      }
+   }
+}
+
 static void
 transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
@@ -394,7 +461,8 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 {
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
 
-   if (image->aux_usage == ISL_AUX_USAGE_NONE)
+   if (image->aux_surface.isl.size == 0 ||
+       base_level >= anv_image_aux_levels(image))
       return;
 
    if (initial_layout != VK_IMAGE_LAYOUT_UNDEFINED &&
@@ -406,6 +474,15 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       base_layer = 0;
       layer_count = anv_minify(image->extent.depth, base_level);
    }
+
+   /* We're interested in the subresource range subset that has aux data. */
+   level_count = MIN2(level_count, anv_image_aux_levels(image) - base_level);
+
+   /* We're transitioning from an undefined layout. We must ensure that the
+    * clear values buffer is filled with valid data.
+    */
+   for (unsigned l = 0; l < level_count; l++)
+      init_fast_clear_state_entry(cmd_buffer, image, base_level + l);
 
    if (image->aux_usage == ISL_AUX_USAGE_CCS_E ||
        image->aux_usage == ISL_AUX_USAGE_MCS) {
