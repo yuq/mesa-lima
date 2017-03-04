@@ -148,9 +148,6 @@ __pipe_mutex_assert_locked(pipe_mutex *mutex)
  */
 typedef cnd_t pipe_condvar;
 
-#define pipe_condvar_wait(cond, mutex) \
-   cnd_wait(&(cond), &(mutex))
-
 #define pipe_condvar_signal(cond) \
    cnd_signal(&(cond))
 
@@ -219,7 +216,7 @@ static inline void pipe_barrier_wait(pipe_barrier *barrier)
       uint64_t sequence = barrier->sequence;
 
       do {
-         pipe_condvar_wait(barrier->condvar, barrier->mutex);
+         cnd_wait(&barrier->condvar, &barrier->mutex);
       } while (sequence == barrier->sequence);
    } else {
       barrier->waiters = 0;
@@ -277,7 +274,7 @@ pipe_semaphore_wait(pipe_semaphore *sema)
 {
    pipe_mutex_lock(sema->mutex);
    while (sema->counter <= 0) {
-      pipe_condvar_wait(sema->cond, sema->mutex);
+      cnd_wait(&sema->cond, &sema->mutex);
    }
    sema->counter--;
    pipe_mutex_unlock(sema->mutex);

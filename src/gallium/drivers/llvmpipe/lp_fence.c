@@ -119,7 +119,7 @@ lp_fence_wait(struct lp_fence *f)
    pipe_mutex_lock(f->mutex);
    assert(f->issued);
    while (f->count < f->rank) {
-      pipe_condvar_wait(f->signalled, f->mutex);
+      cnd_wait(&f->signalled, &f->mutex);
    }
    pipe_mutex_unlock(f->mutex);
 }

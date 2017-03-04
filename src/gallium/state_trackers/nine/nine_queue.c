@@ -89,7 +89,7 @@ nine_queue_wait_flush(struct nine_queue_pool* ctx)
     while (!cmdbuf->full)
     {
         DBG("waiting for full cmdbuf\n");
-        pipe_condvar_wait(ctx->event_push, ctx->mutex_push);
+        cnd_wait(&ctx->event_push, &ctx->mutex_push);
     }
     DBG("got cmdbuf=%p\n", cmdbuf);
     pipe_mutex_unlock(ctx->mutex_push);
@@ -162,7 +162,7 @@ nine_queue_flush(struct nine_queue_pool* ctx)
     while (cmdbuf->full)
     {
         DBG("waiting for empty cmdbuf\n");
-        pipe_condvar_wait(ctx->event_pop, ctx->mutex_pop);
+        cnd_wait(&ctx->event_pop, &ctx->mutex_pop);
     }
     DBG("got empty cmdbuf=%p\n", cmdbuf);
     pipe_mutex_unlock(ctx->mutex_pop);

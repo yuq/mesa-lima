@@ -85,7 +85,7 @@ void util_ringbuffer_enqueue( struct util_ringbuffer *ring,
    /* Wait for free space:
     */
    while (util_ringbuffer_space(ring) < packet->dwords)
-      pipe_condvar_wait(ring->change, ring->mutex);
+      cnd_wait(&ring->change, &ring->mutex);
 
    /* Copy data to ring:
     */
@@ -123,7 +123,7 @@ enum pipe_error util_ringbuffer_dequeue( struct util_ringbuffer *ring,
     */
    if (wait) {
       while (util_ringbuffer_empty(ring))
-         pipe_condvar_wait(ring->change, ring->mutex);
+         cnd_wait(&ring->change, &ring->mutex);
    }
    else {
       if (util_ringbuffer_empty(ring)) {

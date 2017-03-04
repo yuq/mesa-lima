@@ -105,7 +105,7 @@ util_queue_fence_wait(struct util_queue_fence *fence)
 {
    pipe_mutex_lock(fence->mutex);
    while (!fence->signalled)
-      pipe_condvar_wait(fence->cond, fence->mutex);
+      cnd_wait(&fence->cond, &fence->mutex);
    pipe_mutex_unlock(fence->mutex);
 }
 
@@ -156,7 +156,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
 
       /* wait if the queue is empty */
       while (!queue->kill_threads && queue->num_queued == 0)
-         pipe_condvar_wait(queue->has_queued_cond, queue->lock);
+         cnd_wait(&queue->has_queued_cond, &queue->lock);
 
       if (queue->kill_threads) {
          pipe_mutex_unlock(queue->lock);
@@ -305,7 +305,7 @@ util_queue_add_job(struct util_queue *queue,
 
    /* if the queue is full, wait until there is space */
    while (queue->num_queued == queue->max_jobs)
-      pipe_condvar_wait(queue->has_space_cond, queue->lock);
+      cnd_wait(&queue->has_space_cond, &queue->lock);
 
    ptr = &queue->jobs[queue->write_idx];
    assert(ptr->job == NULL);

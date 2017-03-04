@@ -81,7 +81,7 @@ nine_csmt_wait_processed(struct csmt_context *ctx)
 {
     pipe_mutex_lock(ctx->mutex_processed);
     while (!p_atomic_read(&ctx->processed)) {
-        pipe_condvar_wait(ctx->event_processed, ctx->mutex_processed);
+        cnd_wait(&ctx->event_processed, &ctx->mutex_processed);
     }
     pipe_mutex_unlock(ctx->mutex_processed);
 }

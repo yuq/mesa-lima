@@ -108,7 +108,7 @@ rbug_draw_block_locked(struct rbug_context *rb_pipe, int flag)
    /* wait for rbug to clear the blocked flag */
    while (rb_pipe->draw_blocked & flag) {
       rb_pipe->draw_blocked |= flag;
-      pipe_condvar_wait(rb_pipe->draw_cond, rb_pipe->draw_mutex);
+      cnd_wait(&rb_pipe->draw_cond, &rb_pipe->draw_mutex);
    }
 
 }
