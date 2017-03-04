@@ -148,9 +148,6 @@ __pipe_mutex_assert_locked(pipe_mutex *mutex)
  */
 typedef cnd_t pipe_condvar;
 
-#define pipe_condvar_destroy(cond) \
-   cnd_destroy(&(cond))
-
 #define pipe_condvar_wait(cond, mutex) \
    cnd_wait(&(cond), &(mutex))
 
@@ -208,7 +205,7 @@ static inline void pipe_barrier_destroy(pipe_barrier *barrier)
 {
    assert(barrier->waiters == 0);
    pipe_mutex_destroy(barrier->mutex);
-   pipe_condvar_destroy(barrier->condvar);
+   cnd_destroy(&barrier->condvar);
 }
 
 static inline void pipe_barrier_wait(pipe_barrier *barrier)
@@ -261,7 +258,7 @@ static inline void
 pipe_semaphore_destroy(pipe_semaphore *sema)
 {
    pipe_mutex_destroy(sema->mutex);
-   pipe_condvar_destroy(sema->cond);
+   cnd_destroy(&sema->cond);
 }
 
 /** Signal/increment semaphore counter */

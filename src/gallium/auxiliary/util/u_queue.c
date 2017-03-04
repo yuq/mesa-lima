@@ -122,7 +122,7 @@ void
 util_queue_fence_destroy(struct util_queue_fence *fence)
 {
    assert(fence->signalled);
-   pipe_condvar_destroy(fence->cond);
+   cnd_destroy(&fence->cond);
    pipe_mutex_destroy(fence->mutex);
 }
 
@@ -249,8 +249,8 @@ fail:
    FREE(queue->threads);
 
    if (queue->jobs) {
-      pipe_condvar_destroy(queue->has_space_cond);
-      pipe_condvar_destroy(queue->has_queued_cond);
+      cnd_destroy(&queue->has_space_cond);
+      cnd_destroy(&queue->has_queued_cond);
       pipe_mutex_destroy(queue->lock);
       FREE(queue->jobs);
    }
@@ -281,8 +281,8 @@ util_queue_destroy(struct util_queue *queue)
    util_queue_killall_and_wait(queue);
    remove_from_atexit_list(queue);
 
-   pipe_condvar_destroy(queue->has_space_cond);
-   pipe_condvar_destroy(queue->has_queued_cond);
+   cnd_destroy(&queue->has_space_cond);
+   cnd_destroy(&queue->has_queued_cond);
    pipe_mutex_destroy(queue->lock);
    FREE(queue->jobs);
    FREE(queue->threads);

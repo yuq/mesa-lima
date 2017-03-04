@@ -73,7 +73,7 @@ lp_fence_destroy(struct lp_fence *fence)
       debug_printf("%s %d\n", __FUNCTION__, fence->id);
 
    pipe_mutex_destroy(fence->mutex);
-   pipe_condvar_destroy(fence->signalled);
+   cnd_destroy(&fence->signalled);
    FREE(fence);
 }
 

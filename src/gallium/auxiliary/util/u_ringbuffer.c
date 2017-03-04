@@ -47,7 +47,7 @@ fail:
 
 void util_ringbuffer_destroy( struct util_ringbuffer *ring )
 {
-   pipe_condvar_destroy(ring->change);
+   cnd_destroy(&ring->change);
    pipe_mutex_destroy(ring->mutex);
    FREE(ring->buf);
    FREE(ring);
