@@ -75,6 +75,11 @@ endif
 # include only conditionally ?
 SUBDIRS += compiler
 
+## Optionally required by GBM, EGL and Vulkan
+if HAVE_PLATFORM_WAYLAND
+SUBDIRS += egl/wayland/wayland-drm
+endif
+
 if HAVE_VULKAN_COMMON
 SUBDIRS += vulkan
 endif
@@ -96,11 +101,6 @@ SUBDIRS += loader
 
 if HAVE_DRI_GLX
 SUBDIRS += glx
-endif
-
-## Optionally required by GBM and EGL
-if HAVE_PLATFORM_WAYLAND
-SUBDIRS += egl/wayland/wayland-drm
 endif
 
 ## Optionally required by EGL (aka PLATFORM_GBM)
