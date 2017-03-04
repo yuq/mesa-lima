@@ -151,7 +151,7 @@ nine_csmt_create( struct NineDevice9 *This )
         FREE(ctx);
         return NULL;
     }
-    pipe_condvar_init(ctx->event_processed);
+    cnd_init(&ctx->event_processed);
     pipe_mutex_init(ctx->mutex_processed);
     pipe_mutex_init(ctx->thread_running);
     pipe_mutex_init(ctx->thread_resume);

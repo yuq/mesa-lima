@@ -350,7 +350,7 @@ pb_slab_create(struct pb_slab_manager *mgr)
       buf->slab = slab;
       buf->start = i* mgr->bufSize;
       buf->mapCount = 0;
-      pipe_condvar_init(buf->event);
+      cnd_init(&buf->event);
       LIST_ADDTAIL(&buf->head, &slab->freeBuffers);
       slab->numFree++;
       buf++;

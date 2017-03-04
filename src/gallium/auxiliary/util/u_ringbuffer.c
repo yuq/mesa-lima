@@ -35,7 +35,7 @@ struct util_ringbuffer *util_ringbuffer_create( unsigned dwords )
 
    ring->mask = dwords - 1;
 
-   pipe_condvar_init(ring->change);
+   cnd_init(&ring->change);
    pipe_mutex_init(ring->mutex);
    return ring;
 

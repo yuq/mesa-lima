@@ -114,7 +114,7 @@ util_queue_fence_init(struct util_queue_fence *fence)
 {
    memset(fence, 0, sizeof(*fence));
    pipe_mutex_init(fence->mutex);
-   pipe_condvar_init(fence->cond);
+   cnd_init(&fence->cond);
    fence->signalled = true;
 }
 
@@ -213,8 +213,8 @@ util_queue_init(struct util_queue *queue,
    pipe_mutex_init(queue->lock);
 
    queue->num_queued = 0;
-   pipe_condvar_init(queue->has_queued_cond);
-   pipe_condvar_init(queue->has_space_cond);
+   cnd_init(&queue->has_queued_cond);
+   cnd_init(&queue->has_space_cond);
 
    queue->threads = (pipe_thread*)CALLOC(num_threads, sizeof(pipe_thread));
    if (!queue->threads)

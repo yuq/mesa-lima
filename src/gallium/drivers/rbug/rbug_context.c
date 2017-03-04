@@ -1204,7 +1204,7 @@ rbug_context_create(struct pipe_screen *_screen, struct pipe_context *pipe)
       return NULL;
 
    pipe_mutex_init(rb_pipe->draw_mutex);
-   pipe_condvar_init(rb_pipe->draw_cond);
+   cnd_init(&rb_pipe->draw_cond);
    pipe_mutex_init(rb_pipe->call_mutex);
    pipe_mutex_init(rb_pipe->list_mutex);
    make_empty_list(&rb_pipe->shaders);

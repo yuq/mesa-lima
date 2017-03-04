@@ -148,9 +148,6 @@ __pipe_mutex_assert_locked(pipe_mutex *mutex)
  */
 typedef cnd_t pipe_condvar;
 
-#define pipe_condvar_init(cond)	\
-   cnd_init(&(cond))
-
 #define pipe_condvar_destroy(cond) \
    cnd_destroy(&(cond))
 
@@ -204,7 +201,7 @@ static inline void pipe_barrier_init(pipe_barrier *barrier, unsigned count)
    barrier->waiters = 0;
    barrier->sequence = 0;
    pipe_mutex_init(barrier->mutex);
-   pipe_condvar_init(barrier->condvar);
+   cnd_init(&barrier->condvar);
 }
 
 static inline void pipe_barrier_destroy(pipe_barrier *barrier)
@@ -256,7 +253,7 @@ static inline void
 pipe_semaphore_init(pipe_semaphore *sema, int init_val)
 {
    pipe_mutex_init(sema->mutex);
-   pipe_condvar_init(sema->cond);
+   cnd_init(&sema->cond);
    sema->counter = init_val;
 }
 

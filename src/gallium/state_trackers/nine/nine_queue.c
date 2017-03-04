@@ -240,10 +240,10 @@ nine_queue_create(void)
             goto failed;
     }
 
-    pipe_condvar_init(ctx->event_pop);
+    cnd_init(&ctx->event_pop);
     pipe_mutex_init(ctx->mutex_pop);
 
-    pipe_condvar_init(ctx->event_push);
+    cnd_init(&ctx->event_push);
     pipe_mutex_init(ctx->mutex_push);
 
     /* Block until first cmdbuf has been flushed. */
