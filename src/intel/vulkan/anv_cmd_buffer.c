@@ -507,42 +507,31 @@ void anv_CmdBindDescriptorSets(
 
    assert(firstSet + descriptorSetCount < MAX_SETS);
 
+   uint32_t dynamic_slot = 0;
    for (uint32_t i = 0; i < descriptorSetCount; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
       set_layout = layout->set[firstSet + i].layout;
 
-      if (cmd_buffer->state.descriptors[firstSet + i] != set) {
-         cmd_buffer->state.descriptors[firstSet + i] = set;
-         cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
-      }
+      cmd_buffer->state.descriptors[firstSet + i] = set;
 
       if (set_layout->dynamic_offset_count > 0) {
-         anv_foreach_stage(s, set_layout->shader_stages) {
-            anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, s, dynamic);
+         uint32_t dynamic_offset_start =
+            layout->set[firstSet + i].dynamic_offset_start;
 
-            struct anv_push_constants *push =
-               cmd_buffer->state.push_constants[s];
+         /* Assert that everything is in range */
+         assert(dynamic_offset_start + set_layout->dynamic_offset_count <=
+                ARRAY_SIZE(cmd_buffer->state.dynamic_offsets));
+         assert(dynamic_slot + set_layout->dynamic_offset_count <=
+                dynamicOffsetCount);
 
-            unsigned d = layout->set[firstSet + i].dynamic_offset_start;
-            const uint32_t *offsets = pDynamicOffsets;
-            struct anv_descriptor *desc = set->descriptors;
+         typed_memcpy(&cmd_buffer->state.dynamic_offsets[dynamic_offset_start],
+                      &pDynamicOffsets[dynamic_slot],
+                      set_layout->dynamic_offset_count);
 
-            for (unsigned b = 0; b < set_layout->binding_count; b++) {
-               if (set_layout->binding[b].dynamic_offset_index < 0)
-                  continue;
-
-               unsigned array_size = set_layout->binding[b].array_size;
-               for (unsigned j = 0; j < array_size; j++) {
-                  push->dynamic[d].offset = *(offsets++);
-                  push->dynamic[d].range = (desc->buffer_view) ?
-                                            desc->buffer_view->range : 0;
-                  desc++;
-                  d++;
-               }
-            }
-         }
-         cmd_buffer->state.push_constants_dirty |= set_layout->shader_stages;
+         dynamic_slot += set_layout->dynamic_offset_count;
       }
+
+      cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
    }
 }
 

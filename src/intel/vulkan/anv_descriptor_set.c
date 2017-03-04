@@ -662,35 +662,39 @@ anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
 
    assert(type == bind_layout->type);
 
-   struct anv_buffer_view *bview =
-      &set->buffer_views[bind_layout->buffer_index + element];
+   if (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+       type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+      *desc = (struct anv_descriptor) {
+         .type = type,
+         .buffer = buffer,
+         .offset = offset,
+         .range = range,
+      };
+   } else {
+      struct anv_buffer_view *bview =
+         &set->buffer_views[bind_layout->buffer_index + element];
 
-   bview->format = anv_isl_format_for_descriptor_type(type);
-   bview->bo = buffer->bo;
-   bview->offset = buffer->offset + offset;
+      bview->format = anv_isl_format_for_descriptor_type(type);
+      bview->bo = buffer->bo;
+      bview->offset = buffer->offset + offset;
+      bview->range = anv_buffer_get_range(buffer, offset, range);
 
-   /* For buffers with dynamic offsets, we use the full possible range in the
-    * surface state and do the actual range-checking in the shader.
-    */
-   if (bind_layout->dynamic_offset_index >= 0)
-      range = VK_WHOLE_SIZE;
-   bview->range = anv_buffer_get_range(buffer, offset, range);
+      /* If we're writing descriptors through a push command, we need to
+       * allocate the surface state from the command buffer. Otherwise it will
+       * be allocated by the descriptor pool when calling
+       * vkAllocateDescriptorSets. */
+      if (alloc_stream)
+         bview->surface_state = anv_state_stream_alloc(alloc_stream, 64, 64);
 
-   /* If we're writing descriptors through a push command, we need to allocate
-    * the surface state from the command buffer. Otherwise it will be
-    * allocated by the descriptor pool when calling
-    * vkAllocateDescriptorSets. */
-   if (alloc_stream)
-      bview->surface_state = anv_state_stream_alloc(alloc_stream, 64, 64);
+      anv_fill_buffer_surface_state(device, bview->surface_state,
+                                    bview->format,
+                                    bview->offset, bview->range, 1);
 
-   anv_fill_buffer_surface_state(device, bview->surface_state,
-                                 bview->format,
-                                 bview->offset, bview->range, 1);
-
-   *desc = (struct anv_descriptor) {
-      .type = type,
-      .buffer_view = bview,
-   };
+      *desc = (struct anv_descriptor) {
+         .type = type,
+         .buffer_view = bview,
+      };
+   }
 }
 
 void anv_UpdateDescriptorSets(

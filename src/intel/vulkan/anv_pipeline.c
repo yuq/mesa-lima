@@ -352,9 +352,6 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       prog_data->nr_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
    }
 
-   if (pipeline->layout && pipeline->layout->stage[stage].has_dynamic_offsets)
-      prog_data->nr_params += MAX_DYNAMIC_BUFFERS * 2;
-
    if (nir->info->num_images > 0) {
       prog_data->nr_params += nir->info->num_images * BRW_IMAGE_PARAM_SIZE;
       pipeline->needs_data_cache = true;
@@ -385,9 +382,6 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
                &null_data->client_data[i * sizeof(float)];
       }
    }
-
-   /* Set up dynamic offsets */
-   anv_nir_apply_dynamic_offsets(pipeline, nir, prog_data);
 
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (pipeline->layout)

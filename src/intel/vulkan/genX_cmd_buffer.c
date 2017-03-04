@@ -1215,8 +1215,6 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
          surface_state = desc->buffer_view->surface_state;
          assert(surface_state.alloc_size);
@@ -1224,6 +1222,34 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                  desc->buffer_view->bo,
                                  desc->buffer_view->offset);
          break;
+
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
+         uint32_t dynamic_offset_idx =
+            pipeline->layout->set[binding->set].dynamic_offset_start +
+            set->layout->binding[binding->binding].dynamic_offset_index +
+            binding->index;
+
+         /* Compute the offset within the buffer */
+         uint64_t offset = desc->offset +
+            cmd_buffer->state.dynamic_offsets[dynamic_offset_idx];
+         /* Clamp to the buffer size */
+         offset = MIN2(offset, desc->buffer->size);
+         /* Clamp the range to the buffer size */
+         uint32_t range = MIN2(desc->range, desc->buffer->size - offset);
+
+         surface_state =
+            anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+         enum isl_format format =
+            anv_isl_format_for_descriptor_type(desc->type);
+
+         anv_fill_buffer_surface_state(cmd_buffer->device, surface_state,
+                                       format, offset, range, 1);
+         add_surface_state_reloc(cmd_buffer, surface_state,
+                                 desc->buffer->bo,
+                                 desc->buffer->offset + offset);
+         break;
+      }
 
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
          surface_state = (binding->write_only)

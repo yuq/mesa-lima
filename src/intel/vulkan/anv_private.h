@@ -901,6 +901,12 @@ struct anv_descriptor {
          enum isl_aux_usage aux_usage;
       };
 
+      struct {
+         struct anv_buffer *buffer;
+         uint64_t offset;
+         uint64_t range;
+      };
+
       struct anv_buffer_view *buffer_view;
    };
 };
@@ -1172,12 +1178,6 @@ struct anv_push_constants {
    uint32_t base_vertex;
    uint32_t base_instance;
 
-   /* Offsets and ranges for dynamically bound buffers */
-   struct {
-      uint32_t offset;
-      uint32_t range;
-   } dynamic[MAX_DYNAMIC_BUFFERS];
-
    /* Image data for image_load_store on pre-SKL */
    struct brw_image_param images[MAX_IMAGES];
 };
@@ -1271,6 +1271,7 @@ struct anv_cmd_state {
    uint32_t                                     restart_index;
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set *                  descriptors[MAX_SETS];
+   uint32_t                                     dynamic_offsets[MAX_DYNAMIC_BUFFERS];
    VkShaderStageFlags                           push_constant_stages;
    struct anv_push_constants *                  push_constants[MESA_SHADER_STAGES];
    struct anv_state                             binding_tables[MESA_SHADER_STAGES];
