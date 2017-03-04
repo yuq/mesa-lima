@@ -230,14 +230,6 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
       goto fail;
    }
 
-   /* LLVM 3.6.1 is required for VI. */
-   if (ws->info.chip_class >= VI &&
-       HAVE_LLVM == 0x0306 && MESA_LLVM_VERSION_PATCH < 1) {
-      fprintf(stderr, "amdgpu: LLVM 3.6.1 is required, got LLVM %i.%i.%i\n",
-              HAVE_LLVM >> 8, HAVE_LLVM & 255, MESA_LLVM_VERSION_PATCH);
-      goto fail;
-   }
-
    /* family and rev_id are for addrlib */
    switch (ws->info.family) {
    case CHIP_TAHITI:

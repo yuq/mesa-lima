@@ -792,22 +792,16 @@ ac_get_thread_id(struct ac_llvm_context *ctx)
 {
 	LLVMValueRef tid;
 
-	if (HAVE_LLVM < 0x0308) {
-		tid = ac_build_intrinsic(ctx, "llvm.SI.tid",
-					 ctx->i32,
-					 NULL, 0, AC_FUNC_ATTR_READNONE);
-	} else {
-		LLVMValueRef tid_args[2];
-		tid_args[0] = LLVMConstInt(ctx->i32, 0xffffffff, false);
-		tid_args[1] = LLVMConstInt(ctx->i32, 0, false);
-		tid_args[1] = ac_build_intrinsic(ctx,
-						 "llvm.amdgcn.mbcnt.lo", ctx->i32,
-						 tid_args, 2, AC_FUNC_ATTR_READNONE);
+	LLVMValueRef tid_args[2];
+	tid_args[0] = LLVMConstInt(ctx->i32, 0xffffffff, false);
+	tid_args[1] = LLVMConstInt(ctx->i32, 0, false);
+	tid_args[1] = ac_build_intrinsic(ctx,
+					 "llvm.amdgcn.mbcnt.lo", ctx->i32,
+					 tid_args, 2, AC_FUNC_ATTR_READNONE);
 
-		tid = ac_build_intrinsic(ctx, "llvm.amdgcn.mbcnt.hi",
-					 ctx->i32, tid_args,
-					 2, AC_FUNC_ATTR_READNONE);
-	}
+	tid = ac_build_intrinsic(ctx, "llvm.amdgcn.mbcnt.hi",
+				 ctx->i32, tid_args,
+				 2, AC_FUNC_ATTR_READNONE);
 	set_range_metadata(ctx, tid, 0, 64);
 	return tid;
 }
@@ -972,15 +966,13 @@ LLVMValueRef ac_build_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 					  AC_FUNC_ATTR_READNONE);
 	}
 
-	const char *intr = HAVE_LLVM >= 0x0308 ? "llvm.AMDGPU.clamp." :
-						 "llvm.AMDIL.clamp.";
 	LLVMValueRef args[3] = {
 		value,
 		LLVMConstReal(ctx->f32, 0),
 		LLVMConstReal(ctx->f32, 1),
 	};
 
-	return ac_build_intrinsic(ctx, intr, ctx->f32, args, 3,
+	return ac_build_intrinsic(ctx, "llvm.AMDGPU.clamp.", ctx->f32, args, 3,
 				  AC_FUNC_ATTR_READNONE |
 				  AC_FUNC_ATTR_LEGACY);
 }

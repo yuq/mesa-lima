@@ -26,10 +26,8 @@
 /* based on Marek's patch to lp_bld_misc.cpp */
 
 // Workaround http://llvm.org/PR23628
-#if HAVE_LLVM >= 0x0307
-#  pragma push_macro("DEBUG")
-#  undef DEBUG
-#endif
+#pragma push_macro("DEBUG")
+#undef DEBUG
 
 #include "ac_llvm_util.h"
 #include <llvm-c/Core.h>

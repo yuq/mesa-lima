@@ -35,17 +35,10 @@
 
 static void ac_init_llvm_target()
 {
-#if HAVE_LLVM < 0x0307
-	LLVMInitializeR600TargetInfo();
-	LLVMInitializeR600Target();
-	LLVMInitializeR600TargetMC();
-	LLVMInitializeR600AsmPrinter();
-#else
 	LLVMInitializeAMDGPUTargetInfo();
 	LLVMInitializeAMDGPUTarget();
 	LLVMInitializeAMDGPUTargetMC();
 	LLVMInitializeAMDGPUAsmPrinter();
-#endif
 }
 
 static once_flag ac_init_llvm_target_once_flag = ONCE_FLAG_INIT;
@@ -97,18 +90,11 @@ static const char *ac_get_llvm_processor_name(enum radeon_family family)
 		return "iceland";
 	case CHIP_CARRIZO:
 		return "carrizo";
-#if HAVE_LLVM <= 0x0307
-	case CHIP_FIJI:
-		return "tonga";
-	case CHIP_STONEY:
-		return "carrizo";
-#else
 	case CHIP_FIJI:
 		return "fiji";
 	case CHIP_STONEY:
 		return "stoney";
-#endif
-#if HAVE_LLVM <= 0x0308
+#if HAVE_LLVM == 0x0308
 	case CHIP_POLARIS10:
 		return "tonga";
 	case CHIP_POLARIS11:

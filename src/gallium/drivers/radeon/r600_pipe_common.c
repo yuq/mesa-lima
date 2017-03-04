@@ -43,7 +43,7 @@
 #define HAVE_LLVM 0
 #endif
 
-#if HAVE_LLVM >= 0x0306
+#if HAVE_LLVM
 #include <llvm-c/TargetMachine.h>
 #endif
 
@@ -793,7 +793,7 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 		if (rscreen->chip_class < SI) {
 			res = asprintf(&timestamp_str, "%u",mesa_timestamp);
 		}
-#if HAVE_LLVM >= 0x0306
+#if HAVE_LLVM
 		else {
 			uint32_t llvm_timestamp;
 			if (disk_cache_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo,
@@ -938,9 +938,9 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_ICELAND: return "iceland";
 	case CHIP_CARRIZO: return "carrizo";
 	case CHIP_FIJI:
-		return HAVE_LLVM >= 0x0308 ? "fiji" : "carrizo";
+		return "fiji";
 	case CHIP_STONEY:
-		return HAVE_LLVM >= 0x0308 ? "stoney" : "carrizo";
+		return "stoney";
 	case CHIP_POLARIS10:
 		return HAVE_LLVM >= 0x0309 ? "polaris10" : "carrizo";
 	case CHIP_POLARIS11:

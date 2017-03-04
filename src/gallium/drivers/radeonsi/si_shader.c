@@ -600,7 +600,7 @@ static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
 	 * - SI & CIK hang
 	 * - VI crashes
 	 */
-	if (HAVE_LLVM <= 0x0308)
+	if (HAVE_LLVM == 0x0308)
 		return LLVMGetUndef(ctx->i32);
 
 	return si_llvm_bound_index(ctx, result, num);

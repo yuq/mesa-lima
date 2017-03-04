@@ -128,10 +128,8 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 
 	return LLVMCreateTargetMachine(si_llvm_get_amdgpu_target(triple), triple,
 				       r600_get_llvm_processor_name(sscreen->b.family),
-#if HAVE_LLVM >= 0x0308
 				       sscreen->b.debug_flags & DBG_SI_SCHED ?
 					       SI_LLVM_DEFAULT_FEATURES ",+si-scheduler" :
-#endif
 					       SI_LLVM_DEFAULT_FEATURES,
 				       LLVMCodeGenLevelDefault,
 				       LLVMRelocDefault,
@@ -417,10 +415,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
 	case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
 	case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
+	case PIPE_CAP_DOUBLES:
 		return 1;
 
-	case PIPE_CAP_DOUBLES:
-		return HAVE_LLVM >= 0x0307;
 	case PIPE_CAP_INT64:
 	case PIPE_CAP_INT64_DIVMOD:
 		return HAVE_LLVM >= 0x0309;
@@ -456,8 +453,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
 		if (si_have_tgsi_compute(sscreen))
 			return 450;
-		return HAVE_LLVM >= 0x0309 ? 420 :
-		       HAVE_LLVM >= 0x0307 ? 410 : 330;
+		return HAVE_LLVM >= 0x0309 ? 420 : 410;
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		return MIN2(sscreen->b.info.max_alloc_size, INT_MAX);
@@ -577,12 +573,8 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_FRAGMENT:
 	case PIPE_SHADER_VERTEX:
 	case PIPE_SHADER_GEOMETRY:
-		break;
 	case PIPE_SHADER_TESS_CTRL:
 	case PIPE_SHADER_TESS_EVAL:
-		/* LLVM 3.6.2 is required for tessellation because of bug fixes there */
-		if (HAVE_LLVM == 0x0306 && MESA_LLVM_VERSION_PATCH < 2)
-			return 0;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		switch (param) {
@@ -836,7 +828,6 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.has_streamout = true;
 	pipe_mutex_init(sscreen->shader_parts_mutex);
 	sscreen->use_monolithic_shaders =
-		HAVE_LLVM < 0x0308 ||
 		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
 
 	sscreen->b.barrier_flags.cp_to_L2 = SI_CONTEXT_INV_SMEM_L1 |
