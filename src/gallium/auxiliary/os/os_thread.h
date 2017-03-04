@@ -148,9 +148,6 @@ __pipe_mutex_assert_locked(pipe_mutex *mutex)
  */
 typedef cnd_t pipe_condvar;
 
-#define pipe_condvar_signal(cond) \
-   cnd_signal(&(cond))
-
 #define pipe_condvar_broadcast(cond) \
    cnd_broadcast(&(cond))
 
@@ -264,7 +261,7 @@ pipe_semaphore_signal(pipe_semaphore *sema)
 {
    pipe_mutex_lock(sema->mutex);
    sema->counter++;
-   pipe_condvar_signal(sema->cond);
+   cnd_signal(&sema->cond);
    pipe_mutex_unlock(sema->mutex);
 }
 

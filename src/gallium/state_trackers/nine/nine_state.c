@@ -108,7 +108,7 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
             if (instr->func(ctx->device, instr)) {
                 pipe_mutex_lock(ctx->mutex_processed);
                 p_atomic_set(&ctx->processed, TRUE);
-                pipe_condvar_signal(ctx->event_processed);
+                cnd_signal(&ctx->event_processed);
                 pipe_mutex_unlock(ctx->mutex_processed);
             }
             if (p_atomic_read(&ctx->toPause)) {
@@ -124,7 +124,7 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
         if (p_atomic_read(&ctx->terminate)) {
             pipe_mutex_lock(ctx->mutex_processed);
             p_atomic_set(&ctx->processed, TRUE);
-            pipe_condvar_signal(ctx->event_processed);
+            cnd_signal(&ctx->event_processed);
             pipe_mutex_unlock(ctx->mutex_processed);
             break;
         }

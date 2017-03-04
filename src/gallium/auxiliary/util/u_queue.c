@@ -168,7 +168,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
       queue->read_idx = (queue->read_idx + 1) % queue->max_jobs;
 
       queue->num_queued--;
-      pipe_condvar_signal(queue->has_space_cond);
+      cnd_signal(&queue->has_space_cond);
       pipe_mutex_unlock(queue->lock);
 
       if (job.job) {
@@ -316,7 +316,7 @@ util_queue_add_job(struct util_queue *queue,
    queue->write_idx = (queue->write_idx + 1) % queue->max_jobs;
 
    queue->num_queued++;
-   pipe_condvar_signal(queue->has_queued_cond);
+   cnd_signal(&queue->has_queued_cond);
    pipe_mutex_unlock(queue->lock);
 }
 

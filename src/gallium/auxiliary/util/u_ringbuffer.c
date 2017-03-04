@@ -102,7 +102,7 @@ void util_ringbuffer_enqueue( struct util_ringbuffer *ring,
 
    /* Signal change:
     */
-   pipe_condvar_signal(ring->change);
+   cnd_signal(&ring->change);
    pipe_mutex_unlock(ring->mutex);
 }
 
@@ -154,7 +154,7 @@ enum pipe_error util_ringbuffer_dequeue( struct util_ringbuffer *ring,
 out:
    /* Signal change:
     */
-   pipe_condvar_signal(ring->change);
+   cnd_signal(&ring->change);
    pipe_mutex_unlock(ring->mutex);
    return ret;
 }

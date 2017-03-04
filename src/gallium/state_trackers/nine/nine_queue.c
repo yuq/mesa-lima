@@ -114,7 +114,7 @@ nine_queue_get(struct nine_queue_pool* ctx)
         pipe_mutex_lock(ctx->mutex_pop);
         DBG("freeing cmdbuf=%p\n", cmdbuf);
         cmdbuf->full = 0;
-        pipe_condvar_signal(ctx->event_pop);
+        cnd_signal(&ctx->event_pop);
         pipe_mutex_unlock(ctx->mutex_pop);
 
         ctx->tail = (ctx->tail + 1) & NINE_CMD_BUFS_MASK;
@@ -150,7 +150,7 @@ nine_queue_flush(struct nine_queue_pool* ctx)
     /* signal waiting worker */
     pipe_mutex_lock(ctx->mutex_push);
     cmdbuf->full = 1;
-    pipe_condvar_signal(ctx->event_push);
+    cnd_signal(&ctx->event_push);
     pipe_mutex_unlock(ctx->mutex_push);
 
     ctx->head = (ctx->head + 1) & NINE_CMD_BUFS_MASK;
