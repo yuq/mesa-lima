@@ -368,7 +368,7 @@ radv_temp_descriptor_set_create(struct radv_device *device,
 				VkDescriptorSet *_set)
 {
 	RADV_FROM_HANDLE(radv_descriptor_set_layout, layout, _layout);
-	struct radv_descriptor_set *set;
+	struct radv_descriptor_set *set = NULL;
 	VkResult ret;
 
 	ret = radv_descriptor_set_create(device, NULL, cmd_buffer, layout, &set);
