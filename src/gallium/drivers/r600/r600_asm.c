@@ -1510,6 +1510,8 @@ int cm_bytecode_add_cf_end(struct r600_bytecode *bc)
 /* common to all 3 families */
 static int r600_bytecode_vtx_build(struct r600_bytecode *bc, struct r600_bytecode_vtx *vtx, unsigned id)
 {
+	if (r600_isa_fetch(vtx->op)->flags & FF_MEM)
+		return r700_bytecode_fetch_mem_build(bc, vtx, id);
 	bc->bytecode[id] = S_SQ_VTX_WORD0_VTX_INST(r600_isa_fetch_opcode(bc->isa->hw_class, vtx->op)) |
 			S_SQ_VTX_WORD0_BUFFER_ID(vtx->buffer_id) |
 			S_SQ_VTX_WORD0_FETCH_TYPE(vtx->fetch_type) |
@@ -2190,6 +2192,10 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 					fprintf(stderr, "NO_BARRIER ");
 				if (cf->end_of_program)
 					fprintf(stderr, "EOP ");
+
+				if (cf->output.mark)
+					fprintf(stderr, "MARK ");
+
 				fprintf(stderr, "\n");
 			} else {
 				fprintf(stderr, "%04d %08X %08X  %s ", id, bc->bytecode[id],
@@ -2323,6 +2329,8 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 
 			o += fprintf(stderr, ", R%d.", vtx->src_gpr);
 			o += print_swizzle(vtx->src_sel_x);
+			if (r600_isa_fetch(vtx->op)->flags & FF_MEM)
+				o += print_swizzle(vtx->src_sel_y);
 
 			if (vtx->offset)
 				fprintf(stderr, " +%db", vtx->offset);
@@ -2338,6 +2346,19 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 
 			if (bc->chip_class >= EVERGREEN && vtx->buffer_index_mode)
 				fprintf(stderr, "SQ_%s ", index_mode[vtx->buffer_index_mode]);
+
+			if (r600_isa_fetch(vtx->op)->flags & FF_MEM) {
+				if (vtx->uncached)
+					fprintf(stderr, "UNCACHED ");
+				if (vtx->indexed)
+					fprintf(stderr, "INDEXED:%d ", vtx->indexed);
+
+				fprintf(stderr, "ELEM_SIZE:%d ", vtx->elem_size);
+				if (vtx->burst_count)
+					fprintf(stderr, "BURST_COUNT:%d ", vtx->burst_count);
+				fprintf(stderr, "ARRAY_BASE:%d ", vtx->array_base);
+				fprintf(stderr, "ARRAY_SIZE:%d ", vtx->array_size);
+			}
 
 			fprintf(stderr, "UCF:%d ", vtx->use_const_fields);
 			fprintf(stderr, "FMT(DTA:%d ", vtx->data_format);

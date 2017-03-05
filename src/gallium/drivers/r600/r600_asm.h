@@ -116,6 +116,17 @@ struct r600_bytecode_vtx {
 	unsigned			offset;
 	unsigned			endian;
 	unsigned			buffer_index_mode;
+
+	// READ_SCRATCH fields
+	unsigned			uncached;
+	unsigned			indexed;
+	unsigned			src_sel_y;
+	unsigned			src_rel;
+	unsigned			elem_size;
+	unsigned			array_size;
+	unsigned			array_base;
+	unsigned			burst_count;
+	unsigned			dst_rel;
 };
 
 struct r600_bytecode_gds {
@@ -155,6 +166,7 @@ struct r600_bytecode_output {
 	unsigned			swizzle_w;
 	unsigned			burst_count;
 	unsigned			index_gpr;
+	unsigned			mark; /* used by MEM_SCRATCH */
 };
 
 struct r600_bytecode_rat {
@@ -313,6 +325,9 @@ int r700_bytecode_alu_build(struct r600_bytecode *bc,
 		struct r600_bytecode_alu *alu, unsigned id);
 void r700_bytecode_alu_read(struct r600_bytecode *bc,
 		struct r600_bytecode_alu *alu, uint32_t word0, uint32_t word1);
+int r700_bytecode_fetch_mem_build(struct r600_bytecode *bc,
+		struct r600_bytecode_vtx *mem, unsigned id);
+
 void r600_bytecode_export_read(struct r600_bytecode *bc,
 		struct r600_bytecode_output *output, uint32_t word0, uint32_t word1);
 void eg_bytecode_export_read(struct r600_bytecode *bc,
