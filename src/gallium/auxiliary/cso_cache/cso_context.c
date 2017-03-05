@@ -852,7 +852,8 @@ cso_restore_stencil_ref(struct cso_context *ctx)
 
 void cso_set_render_condition(struct cso_context *ctx,
                               struct pipe_query *query,
-                              boolean condition, uint mode)
+                              boolean condition,
+                              enum pipe_render_cond_flag mode)
 {
    struct pipe_context *pipe = ctx->pipe;
 

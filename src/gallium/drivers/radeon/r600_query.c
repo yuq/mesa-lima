@@ -1583,7 +1583,7 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
 static void r600_render_condition(struct pipe_context *ctx,
 				  struct pipe_query *query,
 				  boolean condition,
-				  uint mode)
+				  enum pipe_render_cond_flag mode)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query_hw *rquery = (struct r600_query_hw *)query;

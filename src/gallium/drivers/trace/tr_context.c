@@ -1580,7 +1580,7 @@ static void
 trace_context_render_condition(struct pipe_context *_context,
                                struct pipe_query *query,
                                boolean condition,
-                               uint mode)
+                               enum pipe_render_cond_flag mode)
 {
    struct trace_context *tr_context = trace_context(_context);
    struct pipe_context *context = tr_context->pipe;

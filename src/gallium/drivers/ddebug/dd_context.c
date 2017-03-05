@@ -161,7 +161,7 @@ dd_context_set_active_query_state(struct pipe_context *_pipe, boolean enable)
 static void
 dd_context_render_condition(struct pipe_context *_pipe,
                             struct pipe_query *query, boolean condition,
-                            uint mode)
+                            enum pipe_render_cond_flag mode)
 {
    struct dd_context *dctx = dd_context(_pipe);
    struct pipe_context *pipe = dctx->pipe;

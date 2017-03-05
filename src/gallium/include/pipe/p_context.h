@@ -119,7 +119,7 @@ struct pipe_context {
    void (*render_condition)( struct pipe_context *pipe,
                              struct pipe_query *query,
                              boolean condition,
-                             uint mode );
+                             enum pipe_render_cond_flag mode );
 
    /**
     * Query objects
