@@ -473,6 +473,8 @@ static OMX_ERRORTYPE vid_enc_GetParameter(OMX_HANDLETYPE handle, OMX_INDEXTYPE i
 
       if (format->nPortIndex > 1)
          return OMX_ErrorBadPortIndex;
+      if (format->nIndex >= 1)
+         return OMX_ErrorNoMore;
 
       port = (omx_base_video_PortType *)priv->ports[format->nPortIndex];
       memcpy(format, &port->sVideoParam, sizeof(OMX_VIDEO_PARAM_PORTFORMATTYPE));
