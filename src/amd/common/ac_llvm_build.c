@@ -736,7 +736,7 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					 LLVMValueRef voffset,
 					 bool readonly_memory)
 {
-	if (HAVE_LLVM >= 0x0309) {
+	if (HAVE_LLVM >= 0x0400) {
 		LLVMValueRef args [] = {
 			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
 			vindex,
