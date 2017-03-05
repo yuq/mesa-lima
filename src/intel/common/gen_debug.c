@@ -33,8 +33,8 @@
 
 #include "common/gen_debug.h"
 #include "util/macros.h"
-#include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 #include "util/debug.h"
+#include "c11/threads.h"
 
 uint64_t INTEL_DEBUG = 0;
 
@@ -101,9 +101,17 @@ intel_debug_flag_for_shader_stage(gl_shader_stage stage)
    return flags[stage];
 }
 
+static void
+brw_process_intel_debug_variable_once(void)
+{
+   INTEL_DEBUG = parse_debug_string(getenv("INTEL_DEBUG"), debug_control);
+}
+
 void
 brw_process_intel_debug_variable(void)
 {
-   uint64_t intel_debug = parse_debug_string(getenv("INTEL_DEBUG"), debug_control);
-   (void) p_atomic_cmpxchg(&INTEL_DEBUG, 0, intel_debug);
+   static once_flag process_intel_debug_variable_flag = ONCE_FLAG_INIT;
+
+   call_once(&process_intel_debug_variable_flag,
+             brw_process_intel_debug_variable_once);
 }
