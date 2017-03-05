@@ -66,7 +66,7 @@ static bool radeon_set_fd_access(struct radeon_drm_cs *applier,
 
     memset(&info, 0, sizeof(info));
 
-    pipe_mutex_lock(*mutex);
+    mtx_lock(&*mutex);
 
     /* Early exit if we are sure the request will fail. */
     if (enable) {
@@ -709,7 +709,7 @@ static bool radeon_winsys_unref(struct radeon_winsys *ws)
      * This must happen while the mutex is locked, so that
      * radeon_drm_winsys_create in another thread doesn't get the winsys
      * from the table when the counter drops to 0. */
-    pipe_mutex_lock(fd_tab_mutex);
+    mtx_lock(&fd_tab_mutex);
 
     destroy = pipe_reference(&rws->reference, NULL);
     if (destroy && fd_tab)
@@ -736,7 +736,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
 {
     struct radeon_drm_winsys *ws;
 
-    pipe_mutex_lock(fd_tab_mutex);
+    mtx_lock(&fd_tab_mutex);
     if (!fd_tab) {
         fd_tab = util_hash_table_create(hash_fd, compare_fd);
     }

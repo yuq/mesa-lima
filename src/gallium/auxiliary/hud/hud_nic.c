@@ -331,7 +331,7 @@ hud_get_num_nics(bool displayhelp)
    char name[64];
 
    /* Return the number if network interfaces. */
-   pipe_mutex_lock(gnic_mutex);
+   mtx_lock(&gnic_mutex);
    if (gnic_count) {
       pipe_mutex_unlock(gnic_mutex);
       return gnic_count;

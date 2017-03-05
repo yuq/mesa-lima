@@ -406,7 +406,7 @@ void
 GalliumContext::Lock()
 {
 	CALLED();
-	pipe_mutex_lock(fMutex);
+	mtx_lock(&fMutex);
 }
 
 

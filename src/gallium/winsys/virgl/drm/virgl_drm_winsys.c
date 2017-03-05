@@ -54,14 +54,14 @@ static void virgl_hw_res_destroy(struct virgl_drm_winsys *qdws,
       struct drm_gem_close args;
 
       if (res->flinked) {
-         pipe_mutex_lock(qdws->bo_handles_mutex);
+         mtx_lock(&qdws->bo_handles_mutex);
          util_hash_table_remove(qdws->bo_names,
                                 (void *)(uintptr_t)res->flink);
          pipe_mutex_unlock(qdws->bo_handles_mutex);
       }
 
       if (res->bo_handle) {
-         pipe_mutex_lock(qdws->bo_handles_mutex);
+         mtx_lock(&qdws->bo_handles_mutex);
          util_hash_table_remove(qdws->bo_handles,
                                 (void *)(uintptr_t)res->bo_handle);
          pipe_mutex_unlock(qdws->bo_handles_mutex);
@@ -98,7 +98,7 @@ virgl_cache_flush(struct virgl_drm_winsys *qdws)
    struct list_head *curr, *next;
    struct virgl_hw_res *res;
 
-   pipe_mutex_lock(qdws->mutex);
+   mtx_lock(&qdws->mutex);
    curr = qdws->delayed.next;
    next = curr->next;
 
@@ -158,7 +158,7 @@ static void virgl_drm_resource_reference(struct virgl_drm_winsys *qdws,
       if (!can_cache_resource(old)) {
          virgl_hw_res_destroy(qdws, old);
       } else {
-         pipe_mutex_lock(qdws->mutex);
+         mtx_lock(&qdws->mutex);
          virgl_cache_list_check_free(qdws);
 
          old->start = os_time_get();
@@ -310,7 +310,7 @@ virgl_drm_winsys_resource_cache_create(struct virgl_winsys *qws,
        bind != VIRGL_BIND_VERTEX_BUFFER && bind != VIRGL_BIND_CUSTOM)
       goto alloc;
 
-   pipe_mutex_lock(qdws->mutex);
+   mtx_lock(&qdws->mutex);
 
    res = NULL;
    curr = qdws->delayed.next;
@@ -386,7 +386,7 @@ virgl_drm_winsys_resource_create_handle(struct virgl_winsys *qws,
       return NULL;
    }
 
-   pipe_mutex_lock(qdws->bo_handles_mutex);
+   mtx_lock(&qdws->bo_handles_mutex);
 
    if (whandle->type == DRM_API_HANDLE_TYPE_SHARED) {
       res = util_hash_table_get(qdws->bo_names, (void*)(uintptr_t)handle);
@@ -479,7 +479,7 @@ static boolean virgl_drm_winsys_resource_get_handle(struct virgl_winsys *qws,
          res->flinked = TRUE;
          res->flink = flink.name;
 
-         pipe_mutex_lock(qdws->bo_handles_mutex);
+         mtx_lock(&qdws->bo_handles_mutex);
          util_hash_table_set(qdws->bo_names, (void *)(uintptr_t)res->flink, res);
          pipe_mutex_unlock(qdws->bo_handles_mutex);
       }
@@ -489,7 +489,7 @@ static boolean virgl_drm_winsys_resource_get_handle(struct virgl_winsys *qws,
    } else if (whandle->type == DRM_API_HANDLE_TYPE_FD) {
       if (drmPrimeHandleToFD(qdws->fd, res->bo_handle, DRM_CLOEXEC, (int*)&whandle->handle))
             return FALSE;
-      pipe_mutex_lock(qdws->bo_handles_mutex);
+      mtx_lock(&qdws->bo_handles_mutex);
       util_hash_table_set(qdws->bo_handles, (void *)(uintptr_t)res->bo_handle, res);
       pipe_mutex_unlock(qdws->bo_handles_mutex);
    }
@@ -814,7 +814,7 @@ virgl_drm_screen_destroy(struct pipe_screen *pscreen)
    struct virgl_screen *screen = virgl_screen(pscreen);
    boolean destroy;
 
-   pipe_mutex_lock(virgl_screen_mutex);
+   mtx_lock(&virgl_screen_mutex);
    destroy = --screen->refcnt == 0;
    if (destroy) {
       int fd = virgl_drm_winsys(screen->vws)->fd;
@@ -855,7 +855,7 @@ virgl_drm_screen_create(int fd)
 {
    struct pipe_screen *pscreen = NULL;
 
-   pipe_mutex_lock(virgl_screen_mutex);
+   mtx_lock(&virgl_screen_mutex);
    if (!fd_tab) {
       fd_tab = util_hash_table_create(hash_fd, compare_fd);
       if (!fd_tab)

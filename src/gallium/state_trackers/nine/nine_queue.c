@@ -85,7 +85,7 @@ nine_queue_wait_flush(struct nine_queue_pool* ctx)
     struct nine_cmdbuf *cmdbuf = &ctx->pool[ctx->tail];
 
     /* wait for cmdbuf full */
-    pipe_mutex_lock(ctx->mutex_push);
+    mtx_lock(&ctx->mutex_push);
     while (!cmdbuf->full)
     {
         DBG("waiting for full cmdbuf\n");
@@ -111,7 +111,7 @@ nine_queue_get(struct nine_queue_pool* ctx)
 
     if (ctx->cur_instr == cmdbuf->num_instr) {
         /* signal waiting producer */
-        pipe_mutex_lock(ctx->mutex_pop);
+        mtx_lock(&ctx->mutex_pop);
         DBG("freeing cmdbuf=%p\n", cmdbuf);
         cmdbuf->full = 0;
         cnd_signal(&ctx->event_pop);
@@ -148,7 +148,7 @@ nine_queue_flush(struct nine_queue_pool* ctx)
         return;
 
     /* signal waiting worker */
-    pipe_mutex_lock(ctx->mutex_push);
+    mtx_lock(&ctx->mutex_push);
     cmdbuf->full = 1;
     cnd_signal(&ctx->event_push);
     pipe_mutex_unlock(ctx->mutex_push);
@@ -158,7 +158,7 @@ nine_queue_flush(struct nine_queue_pool* ctx)
     cmdbuf = &ctx->pool[ctx->head];
 
     /* wait for queue empty */
-    pipe_mutex_lock(ctx->mutex_pop);
+    mtx_lock(&ctx->mutex_pop);
     while (cmdbuf->full)
     {
         DBG("waiting for empty cmdbuf\n");

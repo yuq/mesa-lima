@@ -76,7 +76,7 @@ void util_ringbuffer_enqueue( struct util_ringbuffer *ring,
 
    /* XXX: over-reliance on mutexes, etc:
     */
-   pipe_mutex_lock(ring->mutex);
+   mtx_lock(&ring->mutex);
 
    /* make sure we don't request an impossible amount of space
     */
@@ -117,7 +117,7 @@ enum pipe_error util_ringbuffer_dequeue( struct util_ringbuffer *ring,
 
    /* XXX: over-reliance on mutexes, etc:
     */
-   pipe_mutex_lock(ring->mutex);
+   mtx_lock(&ring->mutex);
 
    /* Get next ring entry:
     */

@@ -50,7 +50,7 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    context = handle_table_get(drv->htab, context_id);
    if (!context) {
       pipe_mutex_unlock(drv->mutex);
@@ -494,7 +494,7 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    context = handle_table_get(drv->htab, context_id);
    if (!context) {
       pipe_mutex_unlock(drv->mutex);
@@ -569,7 +569,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    context = handle_table_get(drv->htab, context_id);
    pipe_mutex_unlock(drv->mutex);
    if (!context)
@@ -583,7 +583,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       return VA_STATUS_SUCCESS;
    }
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    surf = handle_table_get(drv->htab, context->target_id);
    context->mpeg4.frame_num++;
 

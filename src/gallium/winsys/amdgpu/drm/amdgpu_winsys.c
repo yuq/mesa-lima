@@ -500,7 +500,7 @@ static bool amdgpu_winsys_unref(struct radeon_winsys *rws)
     * This must happen while the mutex is locked, so that
     * amdgpu_winsys_create in another thread doesn't get the winsys
     * from the table when the counter drops to 0. */
-   pipe_mutex_lock(dev_tab_mutex);
+   mtx_lock(&dev_tab_mutex);
 
    destroy = pipe_reference(&ws->reference, NULL);
    if (destroy && dev_tab)
@@ -526,7 +526,7 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    drmFreeVersion(version);
 
    /* Look up the winsys from the dev table. */
-   pipe_mutex_lock(dev_tab_mutex);
+   mtx_lock(&dev_tab_mutex);
    if (!dev_tab)
       dev_tab = util_hash_table_create(hash_dev, compare_dev);
 

@@ -88,7 +88,7 @@ lp_fence_signal(struct lp_fence *fence)
    if (LP_DEBUG & DEBUG_FENCE)
       debug_printf("%s %d\n", __FUNCTION__, fence->id);
 
-   pipe_mutex_lock(fence->mutex);
+   mtx_lock(&fence->mutex);
 
    fence->count++;
    assert(fence->count <= fence->rank);
@@ -116,7 +116,7 @@ lp_fence_wait(struct lp_fence *f)
    if (LP_DEBUG & DEBUG_FENCE)
       debug_printf("%s %d\n", __FUNCTION__, f->id);
 
-   pipe_mutex_lock(f->mutex);
+   mtx_lock(&f->mutex);
    assert(f->issued);
    while (f->count < f->rank) {
       cnd_wait(&f->signalled, &f->mutex);

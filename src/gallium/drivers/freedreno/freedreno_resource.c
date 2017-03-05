@@ -179,7 +179,7 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 	 */
 	fd_bc_invalidate_resource(rsc, false);
 
-	pipe_mutex_lock(ctx->screen->lock);
+	mtx_lock(&ctx->screen->lock);
 
 	/* Swap the backing bo's, so shadow becomes the old buffer,
 	 * blit from shadow to new buffer.  From here on out, we

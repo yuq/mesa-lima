@@ -1403,7 +1403,7 @@ void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_re
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)rscreen->aux_context;
 
-	pipe_mutex_lock(rscreen->aux_context_lock);
+	mtx_lock(&rscreen->aux_context_lock);
 	rctx->dma_clear_buffer(&rctx->b, dst, offset, size, value);
 	rscreen->aux_context->flush(rscreen->aux_context, NULL, 0);
 	pipe_mutex_unlock(rscreen->aux_context_lock);

@@ -109,7 +109,7 @@ pb_slab_alloc(struct pb_slabs *slabs, unsigned size, unsigned heap)
    group_index = heap * slabs->num_orders + (order - slabs->min_order);
    group = &slabs->groups[group_index];
 
-   pipe_mutex_lock(slabs->mutex);
+   mtx_lock(&slabs->mutex);
 
    /* If there is no candidate slab at all, or the first slab has no free
     * entries, try reclaiming entries.
@@ -139,7 +139,7 @@ pb_slab_alloc(struct pb_slabs *slabs, unsigned size, unsigned heap)
       slab = slabs->slab_alloc(slabs->priv, heap, 1 << order, group_index);
       if (!slab)
          return NULL;
-      pipe_mutex_lock(slabs->mutex);
+      mtx_lock(&slabs->mutex);
 
       LIST_ADD(&slab->head, &group->slabs);
    }
@@ -162,7 +162,7 @@ pb_slab_alloc(struct pb_slabs *slabs, unsigned size, unsigned heap)
 void
 pb_slab_free(struct pb_slabs* slabs, struct pb_slab_entry *entry)
 {
-   pipe_mutex_lock(slabs->mutex);
+   mtx_lock(&slabs->mutex);
    LIST_ADDTAIL(&entry->head, &slabs->reclaim);
    pipe_mutex_unlock(slabs->mutex);
 }
@@ -176,7 +176,7 @@ pb_slab_free(struct pb_slabs* slabs, struct pb_slab_entry *entry)
 void
 pb_slabs_reclaim(struct pb_slabs *slabs)
 {
-   pipe_mutex_lock(slabs->mutex);
+   mtx_lock(&slabs->mutex);
    pb_slabs_reclaim_locked(slabs);
    pipe_mutex_unlock(slabs->mutex);
 }

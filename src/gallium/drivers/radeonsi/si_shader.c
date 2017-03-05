@@ -7467,7 +7467,7 @@ si_get_shader_part(struct si_screen *sscreen,
 {
 	struct si_shader_part *result;
 
-	pipe_mutex_lock(sscreen->shader_parts_mutex);
+	mtx_lock(&sscreen->shader_parts_mutex);
 
 	/* Find existing. */
 	for (result = *list; result; result = result->next) {

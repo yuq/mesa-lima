@@ -594,7 +594,7 @@ dd_context_destroy(struct pipe_context *_pipe)
    struct pipe_context *pipe = dctx->pipe;
 
    if (dctx->thread) {
-      pipe_mutex_lock(dctx->mutex);
+      mtx_lock(&dctx->mutex);
       dctx->kill_thread = 1;
       pipe_mutex_unlock(dctx->mutex);
       pipe_thread_wait(dctx->thread);

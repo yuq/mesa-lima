@@ -110,7 +110,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	 * Figure out the buffers/features we need:
 	 */
 
-	pipe_mutex_lock(ctx->screen->lock);
+	mtx_lock(&ctx->screen->lock);
 
 	if (fd_depth_enabled(ctx)) {
 		buffers |= FD_BUFFER_DEPTH;
@@ -332,7 +332,7 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	batch->resolve |= buffers;
 	batch->needs_flush = true;
 
-	pipe_mutex_lock(ctx->screen->lock);
+	mtx_lock(&ctx->screen->lock);
 
 	if (buffers & PIPE_CLEAR_COLOR)
 		for (i = 0; i < pfb->nr_cbufs; i++)

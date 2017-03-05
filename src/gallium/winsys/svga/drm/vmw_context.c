@@ -528,7 +528,7 @@ vmw_swc_surface_relocation(struct svga_winsys_context *swc,
        * Make sure backup buffer ends up fenced.
        */
 
-      pipe_mutex_lock(vsurf->mutex);
+      mtx_lock(&vsurf->mutex);
       assert(vsurf->buf != NULL);
       
       vmw_swc_mob_relocation(swc, mobid, NULL, (struct svga_winsys_buffer *)

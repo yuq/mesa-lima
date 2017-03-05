@@ -324,7 +324,7 @@ int
 hud_get_num_sensors(bool displayhelp)
 {
    /* Return the number of sensors detected. */
-   pipe_mutex_lock(gsensor_temp_mutex);
+   mtx_lock(&gsensor_temp_mutex);
    if (gsensors_temp_count) {
       pipe_mutex_unlock(gsensor_temp_mutex);
       return gsensors_temp_count;

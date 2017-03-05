@@ -38,7 +38,7 @@ boolean vlCreateHTAB(void)
 
    /* Make sure handle table handles match VDPAU handles. */
    assert(sizeof(unsigned) <= sizeof(vlHandle));
-   pipe_mutex_lock(htab_lock);
+   mtx_lock(&htab_lock);
    if (!htab)
       htab = handle_table_create();
    ret = htab != NULL;
@@ -48,7 +48,7 @@ boolean vlCreateHTAB(void)
 
 void vlDestroyHTAB(void)
 {
-   pipe_mutex_lock(htab_lock);
+   mtx_lock(&htab_lock);
    if (htab && !handle_table_get_first_handle(htab)) {
       handle_table_destroy(htab);
       htab = NULL;
@@ -61,7 +61,7 @@ vlHandle vlAddDataHTAB(void *data)
    vlHandle handle = 0;
 
    assert(data);
-   pipe_mutex_lock(htab_lock);
+   mtx_lock(&htab_lock);
    if (htab)
       handle = handle_table_add(htab, data);
    pipe_mutex_unlock(htab_lock);
@@ -73,7 +73,7 @@ void* vlGetDataHTAB(vlHandle handle)
    void *data = NULL;
 
    assert(handle);
-   pipe_mutex_lock(htab_lock);
+   mtx_lock(&htab_lock);
    if (htab)
       data = handle_table_get(htab, handle);
    pipe_mutex_unlock(htab_lock);
@@ -82,7 +82,7 @@ void* vlGetDataHTAB(vlHandle handle)
 
 void vlRemoveDataHTAB(vlHandle handle)
 {
-   pipe_mutex_lock(htab_lock);
+   mtx_lock(&htab_lock);
    if (htab)
       handle_table_remove(htab, handle);
    pipe_mutex_unlock(htab_lock);

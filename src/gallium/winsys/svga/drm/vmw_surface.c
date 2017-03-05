@@ -48,7 +48,7 @@ vmw_svga_winsys_surface_map(struct svga_winsys_context *swc,
    
    *retry = FALSE;
    assert((flags & (PIPE_TRANSFER_READ | PIPE_TRANSFER_WRITE)) != 0);
-   pipe_mutex_lock(vsrf->mutex);
+   mtx_lock(&vsrf->mutex);
 
    if (vsrf->mapcount) {
       /*
@@ -165,7 +165,7 @@ vmw_svga_winsys_surface_unmap(struct svga_winsys_context *swc,
                               boolean *rebind)
 {
    struct vmw_svga_winsys_surface *vsrf = vmw_svga_winsys_surface(srf);
-   pipe_mutex_lock(vsrf->mutex);
+   mtx_lock(&vsrf->mutex);
    if (--vsrf->mapcount == 0) {
       *rebind = vsrf->rebind;
       vsrf->rebind = FALSE;

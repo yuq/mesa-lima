@@ -73,7 +73,7 @@ vlVaCreateSubpicture(VADriverContextP ctx, VAImageID image,
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    img = handle_table_get(drv->htab, image);
    if (!img) {
       pipe_mutex_unlock(drv->mutex);
@@ -103,7 +103,7 @@ vlVaDestroySubpicture(VADriverContextP ctx, VASubpictureID subpicture)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
 
    sub = handle_table_get(drv->htab, subpicture);
    if (!sub) {
@@ -129,7 +129,7 @@ vlVaSubpictureImage(VADriverContextP ctx, VASubpictureID subpicture, VAImageID i
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
 
    img = handle_table_get(drv->htab, image);
    if (!img) {
@@ -186,7 +186,7 @@ vlVaAssociateSubpicture(VADriverContextP ctx, VASubpictureID subpicture,
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
    drv = VL_VA_DRIVER(ctx);
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
 
    sub = handle_table_get(drv->htab, subpicture);
    if (!sub) {
@@ -256,7 +256,7 @@ vlVaDeassociateSubpicture(VADriverContextP ctx, VASubpictureID subpicture,
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
    drv = VL_VA_DRIVER(ctx);
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
 
    sub = handle_table_get(drv->htab, subpicture);
    if (!sub) {

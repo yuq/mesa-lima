@@ -1078,7 +1078,7 @@ nv50_blit_select_fp(struct nv50_blitctx *ctx, const struct pipe_blit_info *info)
    const unsigned mode = ctx->mode;
 
    if (!blitter->fp[targ][mode]) {
-      pipe_mutex_lock(blitter->mutex);
+      mtx_lock(&blitter->mutex);
       if (!blitter->fp[targ][mode])
          blitter->fp[targ][mode] =
             nv50_blitter_make_fp(&ctx->nv50->base.pipe, mode, ptarg);

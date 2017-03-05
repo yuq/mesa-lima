@@ -47,7 +47,7 @@ atexit_handler(void)
 {
    struct util_queue *iter;
 
-   pipe_mutex_lock(exit_mutex);
+   mtx_lock(&exit_mutex);
    /* Wait for all queues to assert idle. */
    LIST_FOR_EACH_ENTRY(iter, &queue_list, head) {
       util_queue_killall_and_wait(iter);
@@ -67,7 +67,7 @@ add_to_atexit_list(struct util_queue *queue)
 {
    call_once(&atexit_once_flag, global_init);
 
-   pipe_mutex_lock(exit_mutex);
+   mtx_lock(&exit_mutex);
    LIST_ADD(&queue->head, &queue_list);
    pipe_mutex_unlock(exit_mutex);
 }
@@ -77,7 +77,7 @@ remove_from_atexit_list(struct util_queue *queue)
 {
    struct util_queue *iter, *tmp;
 
-   pipe_mutex_lock(exit_mutex);
+   mtx_lock(&exit_mutex);
    LIST_FOR_EACH_ENTRY_SAFE(iter, tmp, &queue_list, head) {
       if (iter == queue) {
          LIST_DEL(&iter->head);
@@ -94,7 +94,7 @@ remove_from_atexit_list(struct util_queue *queue)
 static void
 util_queue_fence_signal(struct util_queue_fence *fence)
 {
-   pipe_mutex_lock(fence->mutex);
+   mtx_lock(&fence->mutex);
    fence->signalled = true;
    cnd_broadcast(&fence->cond);
    pipe_mutex_unlock(fence->mutex);
@@ -103,7 +103,7 @@ util_queue_fence_signal(struct util_queue_fence *fence)
 void
 util_queue_fence_wait(struct util_queue_fence *fence)
 {
-   pipe_mutex_lock(fence->mutex);
+   mtx_lock(&fence->mutex);
    while (!fence->signalled)
       cnd_wait(&fence->cond, &fence->mutex);
    pipe_mutex_unlock(fence->mutex);
@@ -151,7 +151,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
    while (1) {
       struct util_queue_job job;
 
-      pipe_mutex_lock(queue->lock);
+      mtx_lock(&queue->lock);
       assert(queue->num_queued >= 0 && queue->num_queued <= queue->max_jobs);
 
       /* wait if the queue is empty */
@@ -180,7 +180,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
    }
 
    /* signal remaining jobs before terminating */
-   pipe_mutex_lock(queue->lock);
+   mtx_lock(&queue->lock);
    while (queue->jobs[queue->read_idx].job) {
       util_queue_fence_signal(queue->jobs[queue->read_idx].fence);
 
@@ -265,7 +265,7 @@ util_queue_killall_and_wait(struct util_queue *queue)
    unsigned i;
 
    /* Signal all threads to terminate. */
-   pipe_mutex_lock(queue->lock);
+   mtx_lock(&queue->lock);
    queue->kill_threads = 1;
    cnd_broadcast(&queue->has_queued_cond);
    pipe_mutex_unlock(queue->lock);
@@ -300,7 +300,7 @@ util_queue_add_job(struct util_queue *queue,
    assert(fence->signalled);
    fence->signalled = false;
 
-   pipe_mutex_lock(queue->lock);
+   mtx_lock(&queue->lock);
    assert(queue->num_queued >= 0 && queue->num_queued <= queue->max_jobs);
 
    /* if the queue is full, wait until there is space */

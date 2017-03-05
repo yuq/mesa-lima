@@ -189,7 +189,7 @@ hud_get_num_cpufreq(bool displayhelp)
    int cpu_index;
 
    /* Return the number of CPU metrics we support. */
-   pipe_mutex_lock(gcpufreq_mutex);
+   mtx_lock(&gcpufreq_mutex);
    if (gcpufreq_count) {
       pipe_mutex_unlock(gcpufreq_mutex);
       return gcpufreq_count;

@@ -165,7 +165,7 @@ debug_flush_ctx_create(boolean catch_reference_of_mapped, unsigned bt_depth)
       goto out_no_ref_hash;
 
    fctx->bt_depth = bt_depth;
-   pipe_mutex_lock(list_mutex);
+   mtx_lock(&list_mutex);
    list_addtail(&fctx->head, &ctx_list);
    pipe_mutex_unlock(list_mutex);
 
@@ -215,7 +215,7 @@ debug_flush_map(struct debug_flush_buf *fbuf, unsigned flags)
    if (!fbuf)
       return;
 
-   pipe_mutex_lock(fbuf->mutex);
+   mtx_lock(&fbuf->mutex);
    if (fbuf->mapped) {
       debug_flush_alert("Recursive map detected.", "Map",
                         2, fbuf->bt_depth, TRUE, TRUE, NULL);
@@ -232,7 +232,7 @@ debug_flush_map(struct debug_flush_buf *fbuf, unsigned flags)
    if (mapped_sync) {
       struct debug_flush_ctx *fctx;
 
-      pipe_mutex_lock(list_mutex);
+      mtx_lock(&list_mutex);
       LIST_FOR_EACH_ENTRY(fctx, &ctx_list, head) {
          struct debug_flush_item *item =
             util_hash_table_get(fctx->ref_hash, fbuf);
@@ -254,7 +254,7 @@ debug_flush_unmap(struct debug_flush_buf *fbuf)
    if (!fbuf)
       return;
 
-   pipe_mutex_lock(fbuf->mutex);
+   mtx_lock(&fbuf->mutex);
    if (!fbuf->mapped)
       debug_flush_alert("Unmap not previously mapped detected.", "Map",
                         2, fbuf->bt_depth, FALSE, TRUE, NULL);
@@ -277,7 +277,7 @@ debug_flush_cb_reference(struct debug_flush_ctx *fctx,
 
    item = util_hash_table_get(fctx->ref_hash, fbuf);
 
-   pipe_mutex_lock(fbuf->mutex);
+   mtx_lock(&fbuf->mutex);
    if (fbuf->mapped_sync) {
       debug_flush_alert("Reference of mapped buffer detected.", "Reference",
                         2, fctx->bt_depth, TRUE, TRUE, NULL);
@@ -320,7 +320,7 @@ debug_flush_might_flush_cb(void *key, void *value, void *data)
    util_snprintf(message, sizeof(message),
                  "%s referenced mapped buffer detected.", reason);
 
-   pipe_mutex_lock(fbuf->mutex);
+   mtx_lock(&fbuf->mutex);
    if (fbuf->mapped_sync) {
       debug_flush_alert(message, reason, 3, item->bt_depth, TRUE, TRUE, NULL);
       debug_flush_alert(NULL, "Map", 0, fbuf->bt_depth, TRUE, FALSE,

@@ -214,7 +214,7 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    config = handle_table_get(drv->htab, config_id);
    pipe_mutex_unlock(drv->mutex);
 
@@ -287,7 +287,7 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
    if (config->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE)
       context->desc.h264enc.rate_ctrl.rate_ctrl_method = config->rc;
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    *context_id = handle_table_add(drv->htab, context);
    pipe_mutex_unlock(drv->mutex);
 
@@ -304,7 +304,7 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    context = handle_table_get(drv->htab, context_id);
    if (!context) {
       pipe_mutex_unlock(drv->mutex);

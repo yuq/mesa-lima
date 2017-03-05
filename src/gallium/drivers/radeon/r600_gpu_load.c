@@ -178,7 +178,7 @@ static uint64_t r600_read_mmio_counter(struct r600_common_screen *rscreen,
 {
 	/* Start the thread if needed. */
 	if (!rscreen->gpu_load_thread) {
-		pipe_mutex_lock(rscreen->gpu_load_mutex);
+		mtx_lock(&rscreen->gpu_load_mutex);
 		/* Check again inside the mutex. */
 		if (!rscreen->gpu_load_thread)
 			rscreen->gpu_load_thread =

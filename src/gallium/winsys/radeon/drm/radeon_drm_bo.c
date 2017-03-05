@@ -77,7 +77,7 @@ static bool radeon_bo_is_busy(struct radeon_bo *bo)
     if (bo->handle)
         return radeon_real_bo_is_busy(bo);
 
-    pipe_mutex_lock(bo->rws->bo_fence_lock);
+    mtx_lock(&bo->rws->bo_fence_lock);
     for (num_idle = 0; num_idle < bo->u.slab.num_fences; ++num_idle) {
         if (radeon_real_bo_is_busy(bo->u.slab.fences[num_idle])) {
             busy = true;
@@ -107,7 +107,7 @@ static void radeon_bo_wait_idle(struct radeon_bo *bo)
     if (bo->handle) {
         radeon_real_bo_wait_idle(bo);
     } else {
-        pipe_mutex_lock(bo->rws->bo_fence_lock);
+        mtx_lock(&bo->rws->bo_fence_lock);
         while (bo->u.slab.num_fences) {
             struct radeon_bo *fence = NULL;
             radeon_bo_reference(&fence, bo->u.slab.fences[0]);
@@ -116,7 +116,7 @@ static void radeon_bo_wait_idle(struct radeon_bo *bo)
             /* Wait without holding the fence lock. */
             radeon_real_bo_wait_idle(fence);
 
-            pipe_mutex_lock(bo->rws->bo_fence_lock);
+            mtx_lock(&bo->rws->bo_fence_lock);
             if (bo->u.slab.num_fences && fence == bo->u.slab.fences[0]) {
                 radeon_bo_reference(&bo->u.slab.fences[0], NULL);
                 memmove(&bo->u.slab.fences[0], &bo->u.slab.fences[1],
@@ -204,7 +204,7 @@ static uint64_t radeon_bomgr_find_va(struct radeon_drm_winsys *rws,
      */
     size = align(size, rws->info.gart_page_size);
 
-    pipe_mutex_lock(rws->bo_va_mutex);
+    mtx_lock(&rws->bo_va_mutex);
     /* first look for a hole */
     LIST_FOR_EACH_ENTRY_SAFE(hole, n, &rws->va_holes, list) {
         offset = hole->offset;
@@ -262,7 +262,7 @@ static void radeon_bomgr_free_va(struct radeon_drm_winsys *rws,
 
     size = align(size, rws->info.gart_page_size);
 
-    pipe_mutex_lock(rws->bo_va_mutex);
+    mtx_lock(&rws->bo_va_mutex);
     if ((va + size) == rws->va_offset) {
         rws->va_offset = va;
         /* Delete uppermost hole if it reaches the new top */
@@ -331,7 +331,7 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
 
     memset(&args, 0, sizeof(args));
 
-    pipe_mutex_lock(rws->bo_handles_mutex);
+    mtx_lock(&rws->bo_handles_mutex);
     util_hash_table_remove(rws->bo_handles, (void*)(uintptr_t)bo->handle);
     if (bo->flink_name) {
         util_hash_table_remove(rws->bo_names,
@@ -418,7 +418,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
     }
 
     /* Map the buffer. */
-    pipe_mutex_lock(bo->u.real.map_mutex);
+    mtx_lock(&bo->u.real.map_mutex);
     /* Return the pointer if it's already mapped. */
     if (bo->u.real.ptr) {
         bo->u.real.map_count++;
@@ -553,7 +553,7 @@ static void radeon_bo_unmap(struct pb_buffer *_buf)
     if (!bo->handle)
         bo = bo->u.slab.real;
 
-    pipe_mutex_lock(bo->u.real.map_mutex);
+    mtx_lock(&bo->u.real.map_mutex);
     if (!bo->u.real.ptr) {
         pipe_mutex_unlock(bo->u.real.map_mutex);
         return; /* it's not been mapped */
@@ -665,7 +665,7 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
             radeon_bo_destroy(&bo->base);
             return NULL;
         }
-        pipe_mutex_lock(rws->bo_handles_mutex);
+        mtx_lock(&rws->bo_handles_mutex);
         if (va.operation == RADEON_VA_RESULT_VA_EXIST) {
             struct pb_buffer *b = &bo->base;
             struct radeon_bo *old_bo =
@@ -1030,7 +1030,7 @@ no_slab:
 
     bo->u.real.use_reusable_pool = true;
 
-    pipe_mutex_lock(ws->bo_handles_mutex);
+    mtx_lock(&ws->bo_handles_mutex);
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);
     pipe_mutex_unlock(ws->bo_handles_mutex);
 
@@ -1063,7 +1063,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
 
     assert(args.handle != 0);
 
-    pipe_mutex_lock(ws->bo_handles_mutex);
+    mtx_lock(&ws->bo_handles_mutex);
 
     /* Initialize it. */
     pipe_reference_init(&bo->base.reference, 1);
@@ -1101,7 +1101,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
             radeon_bo_destroy(&bo->base);
             return NULL;
         }
-        pipe_mutex_lock(ws->bo_handles_mutex);
+        mtx_lock(&ws->bo_handles_mutex);
         if (va.operation == RADEON_VA_RESULT_VA_EXIST) {
             struct pb_buffer *b = &bo->base;
             struct radeon_bo *old_bo =
@@ -1144,7 +1144,7 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
      * we would hit a deadlock in the kernel.
      *
      * The list of pairs is guarded by a mutex, of course. */
-    pipe_mutex_lock(ws->bo_handles_mutex);
+    mtx_lock(&ws->bo_handles_mutex);
 
     if (whandle->type == DRM_API_HANDLE_TYPE_SHARED) {
         /* First check if there already is an existing bo for the handle. */
@@ -1244,7 +1244,7 @@ done:
             radeon_bo_destroy(&bo->base);
             return NULL;
         }
-        pipe_mutex_lock(ws->bo_handles_mutex);
+        mtx_lock(&ws->bo_handles_mutex);
         if (va.operation == RADEON_VA_RESULT_VA_EXIST) {
             struct pb_buffer *b = &bo->base;
             struct radeon_bo *old_bo =
@@ -1301,7 +1301,7 @@ static bool radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
 
             bo->flink_name = flink.name;
 
-            pipe_mutex_lock(ws->bo_handles_mutex);
+            mtx_lock(&ws->bo_handles_mutex);
             util_hash_table_set(ws->bo_names, (void*)(uintptr_t)bo->flink_name, bo);
             pipe_mutex_unlock(ws->bo_handles_mutex);
         }

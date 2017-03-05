@@ -305,7 +305,7 @@ static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
 	struct pipe_context *ctx = &rctx->b;
 
 	if (ctx == rscreen->aux_context)
-		pipe_mutex_lock(rscreen->aux_context_lock);
+		mtx_lock(&rscreen->aux_context_lock);
 
 	ctx->flush_resource(ctx, &rtex->resource.b.b);
 	ctx->flush(ctx, NULL, 0);
@@ -394,7 +394,7 @@ bool r600_texture_disable_dcc(struct r600_common_context *rctx,
 		return false;
 
 	if (&rctx->b == rscreen->aux_context)
-		pipe_mutex_lock(rscreen->aux_context_lock);
+		mtx_lock(&rscreen->aux_context_lock);
 
 	/* Decompress DCC. */
 	rctx->decompress_dcc(&rctx->b, rtex);

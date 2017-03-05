@@ -153,7 +153,7 @@ debug_malloc(const char *file, unsigned line, const char *function,
    ftr = footer_from_header(hdr);
    ftr->magic = DEBUG_MEMORY_MAGIC;
    
-   pipe_mutex_lock(list_mutex);
+   mtx_lock(&list_mutex);
    LIST_ADDTAIL(&hdr->head, &list);
    pipe_mutex_unlock(list_mutex);
    
@@ -198,7 +198,7 @@ debug_free(const char *file, unsigned line, const char *function,
    /* set freed memory to special value */
    memset(ptr, DEBUG_FREED_BYTE, hdr->size);
 #else
-   pipe_mutex_lock(list_mutex);
+   mtx_lock(&list_mutex);
    LIST_DEL(&hdr->head);
    pipe_mutex_unlock(list_mutex);
    hdr->magic = 0;
@@ -273,7 +273,7 @@ debug_realloc(const char *file, unsigned line, const char *function,
    new_ftr = footer_from_header(new_hdr);
    new_ftr->magic = DEBUG_MEMORY_MAGIC;
    
-   pipe_mutex_lock(list_mutex);
+   mtx_lock(&list_mutex);
    LIST_REPLACE(&old_hdr->head, &new_hdr->head);
    pipe_mutex_unlock(list_mutex);
 

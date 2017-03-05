@@ -65,7 +65,7 @@ vlVdpPresentationQueueCreate(VdpDevice device,
    DeviceReference(&pq->device, dev);
    pq->drawable = pqt->drawable;
 
-   pipe_mutex_lock(dev->mutex);
+   mtx_lock(&dev->mutex);
    if (!vl_compositor_init_state(&pq->cstate, dev->context)) {
       pipe_mutex_unlock(dev->mutex);
       ret = VDP_STATUS_ERROR;
@@ -100,7 +100,7 @@ vlVdpPresentationQueueDestroy(VdpPresentationQueue presentation_queue)
    if (!pq)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(pq->device->mutex);
+   mtx_lock(&pq->device->mutex);
    vl_compositor_cleanup_state(&pq->cstate);
    pipe_mutex_unlock(pq->device->mutex);
 
@@ -133,7 +133,7 @@ vlVdpPresentationQueueSetBackgroundColor(VdpPresentationQueue presentation_queue
    color.f[2] = background_color->blue;
    color.f[3] = background_color->alpha;
 
-   pipe_mutex_lock(pq->device->mutex);
+   mtx_lock(&pq->device->mutex);
    vl_compositor_set_clear_color(&pq->cstate, &color);
    pipe_mutex_unlock(pq->device->mutex);
 
@@ -157,7 +157,7 @@ vlVdpPresentationQueueGetBackgroundColor(VdpPresentationQueue presentation_queue
    if (!pq)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(pq->device->mutex);
+   mtx_lock(&pq->device->mutex);
    vl_compositor_get_clear_color(&pq->cstate, &color);
    pipe_mutex_unlock(pq->device->mutex);
 
@@ -185,7 +185,7 @@ vlVdpPresentationQueueGetTime(VdpPresentationQueue presentation_queue,
    if (!pq)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(pq->device->mutex);
+   mtx_lock(&pq->device->mutex);
    *current_time = pq->device->vscreen->get_timestamp(pq->device->vscreen,
                                                       (void *)pq->drawable);
    pipe_mutex_unlock(pq->device->mutex);
@@ -230,7 +230,7 @@ vlVdpPresentationQueueDisplay(VdpPresentationQueue presentation_queue,
    cstate = &pq->cstate;
    vscreen = pq->device->vscreen;
 
-   pipe_mutex_lock(pq->device->mutex);
+   mtx_lock(&pq->device->mutex);
    if (vscreen->set_back_texture_from_output && surf->send_to_X)
       vscreen->set_back_texture_from_output(vscreen, surf->surface->texture, clip_width, clip_height);
    tex = vscreen->texture_from_drawable(vscreen, (void *)pq->drawable);
@@ -321,7 +321,7 @@ vlVdpPresentationQueueBlockUntilSurfaceIdle(VdpPresentationQueue presentation_qu
    if (!surf)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(pq->device->mutex);
+   mtx_lock(&pq->device->mutex);
    if (surf->fence) {
       screen = pq->device->vscreen->pscreen;
       screen->fence_finish(screen, NULL, surf->fence, PIPE_TIMEOUT_INFINITE);
@@ -364,7 +364,7 @@ vlVdpPresentationQueueQuerySurfaceStatus(VdpPresentationQueue presentation_queue
       else
          *status = VDP_PRESENTATION_QUEUE_STATUS_IDLE;
    } else {
-      pipe_mutex_lock(pq->device->mutex);
+      mtx_lock(&pq->device->mutex);
       screen = pq->device->vscreen->pscreen;
       if (screen->fence_finish(screen, NULL, surf->fence, 0)) {
          screen->fence_reference(screen, &surf->fence, NULL);

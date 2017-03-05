@@ -59,7 +59,7 @@ static inline void
 util_range_add(struct util_range *range, unsigned start, unsigned end)
 {
    if (start < range->start || end > range->end) {
-      pipe_mutex_lock(range->write_mutex);
+      mtx_lock(&range->write_mutex);
       range->start = MIN2(start, range->start);
       range->end = MAX2(end, range->end);
       pipe_mutex_unlock(range->write_mutex);

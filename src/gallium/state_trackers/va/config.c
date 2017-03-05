@@ -200,7 +200,7 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
       if (!config->rt_format)
          config->rt_format = VA_RT_FORMAT_YUV420 | VA_RT_FORMAT_RGB32;
 
-      pipe_mutex_lock(drv->mutex);
+      mtx_lock(&drv->mutex);
       *config_id = handle_table_add(drv->htab, config);
       pipe_mutex_unlock(drv->mutex);
       return VA_STATUS_SUCCESS;
@@ -265,7 +265,7 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
    if (!config->rt_format)
       config->rt_format = VA_RT_FORMAT_YUV420;
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    *config_id = handle_table_add(drv->htab, config);
    pipe_mutex_unlock(drv->mutex);
 
@@ -286,7 +286,7 @@ vlVaDestroyConfig(VADriverContextP ctx, VAConfigID config_id)
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    config = handle_table_get(drv->htab, config_id);
 
    if (!config)
@@ -314,7 +314,7 @@ vlVaQueryConfigAttributes(VADriverContextP ctx, VAConfigID config_id, VAProfile 
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   pipe_mutex_lock(drv->mutex);
+   mtx_lock(&drv->mutex);
    config = handle_table_get(drv->htab, config_id);
    pipe_mutex_unlock(drv->mutex);
 

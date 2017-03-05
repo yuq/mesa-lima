@@ -94,7 +94,7 @@ debug_serial(void *p, unsigned *pserial)
    }
 #endif
 
-   pipe_mutex_lock(serials_mutex);
+   mtx_lock(&serials_mutex);
    if (!serials_hash)
       serials_hash = util_hash_table_create(hash_ptr, compare_ptr);
 
@@ -126,7 +126,7 @@ debug_serial(void *p, unsigned *pserial)
 static void
 debug_serial_delete(void *p)
 {
-   pipe_mutex_lock(serials_mutex);
+   mtx_lock(&serials_mutex);
    util_hash_table_remove(serials_hash, p);
    pipe_mutex_unlock(serials_mutex);
 }

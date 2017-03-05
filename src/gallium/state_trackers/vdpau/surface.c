@@ -80,7 +80,7 @@ vlVdpVideoSurfaceCreate(VdpDevice device, VdpChromaType chroma_type,
    DeviceReference(&p_surf->device, dev);
    pipe = dev->context;
 
-   pipe_mutex_lock(dev->mutex);
+   mtx_lock(&dev->mutex);
    memset(&p_surf->templat, 0, sizeof(p_surf->templat));
    p_surf->templat.buffer_format = pipe->screen->get_video_param
    (
@@ -138,7 +138,7 @@ vlVdpVideoSurfaceDestroy(VdpVideoSurface surface)
    if (!p_surf)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(p_surf->device->mutex);
+   mtx_lock(&p_surf->device->mutex);
    if (p_surf->video_buffer)
       p_surf->video_buffer->destroy(p_surf->video_buffer);
    pipe_mutex_unlock(p_surf->device->mutex);
@@ -238,7 +238,7 @@ vlVdpVideoSurfaceGetBitsYCbCr(VdpVideoSurface surface,
          return VDP_STATUS_NO_IMPLEMENTATION;
    }
 
-   pipe_mutex_lock(vlsurface->device->mutex);
+   mtx_lock(&vlsurface->device->mutex);
    sampler_views = vlsurface->video_buffer->get_sampler_view_planes(vlsurface->video_buffer);
    if (!sampler_views) {
       pipe_mutex_unlock(vlsurface->device->mutex);
@@ -321,7 +321,7 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
    if (!source_data || !source_pitches)
        return VDP_STATUS_INVALID_POINTER;
 
-   pipe_mutex_lock(p_surf->device->mutex);
+   mtx_lock(&p_surf->device->mutex);
 
    if (p_surf->video_buffer == NULL ||
        ((pformat != p_surf->video_buffer->buffer_format))) {
@@ -465,7 +465,7 @@ struct pipe_video_buffer *vlVdpVideoSurfaceGallium(VdpVideoSurface surface)
    if (!p_surf)
       return NULL;
 
-   pipe_mutex_lock(p_surf->device->mutex);
+   mtx_lock(&p_surf->device->mutex);
    if (p_surf->video_buffer == NULL) {
       struct pipe_context *pipe = p_surf->device->context;
 
@@ -500,7 +500,7 @@ VdpStatus vlVdpVideoSurfaceDMABuf(VdpVideoSurface surface,
    memset(result, 0, sizeof(*result));
    result->handle = -1;
 
-   pipe_mutex_lock(p_surf->device->mutex);
+   mtx_lock(&p_surf->device->mutex);
    if (p_surf->video_buffer == NULL) {
       struct pipe_context *pipe = p_surf->device->context;
 

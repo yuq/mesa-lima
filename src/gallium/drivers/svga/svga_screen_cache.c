@@ -104,7 +104,7 @@ svga_screen_cache_lookup(struct svga_screen *svgascreen,
 
    bucket = svga_screen_cache_bucket(key);
 
-   pipe_mutex_lock(cache->mutex);
+   mtx_lock(&cache->mutex);
 
    curr = cache->bucket[bucket].next;
    next = curr->next;
@@ -226,7 +226,7 @@ svga_screen_cache_add(struct svga_screen *svgascreen,
    surf_size = surface_size(key);
 
    *p_handle = NULL;
-   pipe_mutex_lock(cache->mutex);
+   mtx_lock(&cache->mutex);
 
    if (surf_size >= SVGA_HOST_SURFACE_CACHE_BYTES) {
       /* this surface is too large to cache, just free it */
@@ -318,7 +318,7 @@ svga_screen_cache_flush(struct svga_screen *svgascreen,
    struct list_head *curr, *next;
    unsigned bucket;
 
-   pipe_mutex_lock(cache->mutex);
+   mtx_lock(&cache->mutex);
 
    /* Loop over entries in the invalidated list */
    curr = cache->invalidated.next;

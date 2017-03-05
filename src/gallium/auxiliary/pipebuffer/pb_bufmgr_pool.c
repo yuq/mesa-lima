@@ -110,7 +110,7 @@ pool_buffer_destroy(struct pb_buffer *buf)
    
    assert(!pipe_is_referenced(&pool_buf->base.reference));
 
-   pipe_mutex_lock(pool->mutex);
+   mtx_lock(&pool->mutex);
    LIST_ADD(&pool_buf->head, &pool->free);
    pool->numFree++;
    pipe_mutex_unlock(pool->mutex);
@@ -126,7 +126,7 @@ pool_buffer_map(struct pb_buffer *buf, unsigned flags, void *flush_ctx)
 
    /* XXX: it will be necessary to remap here to propagate flush_ctx */
 
-   pipe_mutex_lock(pool->mutex);
+   mtx_lock(&pool->mutex);
    map = (unsigned char *) pool->map + pool_buf->start;
    pipe_mutex_unlock(pool->mutex);
    return map;
@@ -196,7 +196,7 @@ pool_bufmgr_create_buffer(struct pb_manager *mgr,
    assert(size == pool->bufSize);
    assert(pool->bufAlign % desc->alignment == 0);
    
-   pipe_mutex_lock(pool->mutex);
+   mtx_lock(&pool->mutex);
 
    if (pool->numFree == 0) {
       pipe_mutex_unlock(pool->mutex);
@@ -238,7 +238,7 @@ static void
 pool_bufmgr_destroy(struct pb_manager *mgr)
 {
    struct pool_pb_manager *pool = pool_pb_manager(mgr);
-   pipe_mutex_lock(pool->mutex);
+   mtx_lock(&pool->mutex);
 
    FREE(pool->bufs);
    

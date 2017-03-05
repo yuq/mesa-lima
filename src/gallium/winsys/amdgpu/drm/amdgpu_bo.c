@@ -83,7 +83,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
       unsigned idle_fences;
       bool buffer_idle;
 
-      pipe_mutex_lock(ws->bo_fence_lock);
+      mtx_lock(&ws->bo_fence_lock);
 
       for (idle_fences = 0; idle_fences < bo->num_fences; ++idle_fences) {
          if (!amdgpu_fence_wait(bo->fences[idle_fences], 0, false))
@@ -105,7 +105,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
    } else {
       bool buffer_idle = true;
 
-      pipe_mutex_lock(ws->bo_fence_lock);
+      mtx_lock(&ws->bo_fence_lock);
       while (bo->num_fences && buffer_idle) {
          struct pipe_fence_handle *fence = NULL;
          bool fence_idle = false;
@@ -118,7 +118,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
             fence_idle = true;
          else
             buffer_idle = false;
-         pipe_mutex_lock(ws->bo_fence_lock);
+         mtx_lock(&ws->bo_fence_lock);
 
          /* Release an idle fence to avoid checking it again later, keeping in
           * mind that the fence array may have been modified by other threads.
@@ -160,7 +160,7 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
 
    assert(bo->bo && "must not be called for slab entries");
 
-   pipe_mutex_lock(bo->ws->global_bo_list_lock);
+   mtx_lock(&bo->ws->global_bo_list_lock);
    LIST_DEL(&bo->u.real.global_list_item);
    bo->ws->num_buffers--;
    pipe_mutex_unlock(bo->ws->global_bo_list_lock);
@@ -349,7 +349,7 @@ static void amdgpu_add_buffer_to_global_list(struct amdgpu_winsys_bo *bo)
 
    assert(bo->bo);
 
-   pipe_mutex_lock(ws->global_bo_list_lock);
+   mtx_lock(&ws->global_bo_list_lock);
    LIST_ADDTAIL(&bo->u.real.global_list_item, &ws->global_bo_list);
    ws->num_buffers++;
    pipe_mutex_unlock(ws->global_bo_list_lock);

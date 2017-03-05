@@ -144,7 +144,7 @@ virgl_cache_flush(struct virgl_vtest_winsys *vtws)
    struct list_head *curr, *next;
    struct virgl_hw_res *res;
 
-   pipe_mutex_lock(vtws->mutex);
+   mtx_lock(&vtws->mutex);
    curr = vtws->delayed.next;
    next = curr->next;
 
@@ -189,7 +189,7 @@ static void virgl_vtest_resource_reference(struct virgl_vtest_winsys *vtws,
       if (!can_cache_resource(old)) {
          virgl_hw_res_destroy(vtws, old);
       } else {
-         pipe_mutex_lock(vtws->mutex);
+         mtx_lock(&vtws->mutex);
          virgl_cache_list_check_free(vtws);
 
          old->start = os_time_get();
@@ -333,7 +333,7 @@ virgl_vtest_winsys_resource_cache_create(struct virgl_winsys *vws,
        bind != VIRGL_BIND_VERTEX_BUFFER && bind != VIRGL_BIND_CUSTOM)
       goto alloc;
 
-   pipe_mutex_lock(vtws->mutex);
+   mtx_lock(&vtws->mutex);
 
    res = NULL;
    curr = vtws->delayed.next;

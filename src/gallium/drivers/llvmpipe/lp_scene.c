@@ -484,7 +484,7 @@ lp_scene_bin_iter_next( struct lp_scene *scene , int *x, int *y)
 {
    struct cmd_bin *bin = NULL;
 
-   pipe_mutex_lock(scene->mutex);
+   mtx_lock(&scene->mutex);
 
    if (scene->curr_x < 0) {
       /* first bin */

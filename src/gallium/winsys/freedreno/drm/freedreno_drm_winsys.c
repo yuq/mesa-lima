@@ -50,7 +50,7 @@ fd_drm_screen_destroy(struct pipe_screen *pscreen)
 	struct fd_screen *screen = fd_screen(pscreen);
 	boolean destroy;
 
-	pipe_mutex_lock(fd_screen_mutex);
+	mtx_lock(&fd_screen_mutex);
 	destroy = --screen->refcnt == 0;
 	if (destroy) {
 		int fd = fd_device_fd(screen->dev);
@@ -91,7 +91,7 @@ fd_drm_screen_create(int fd)
 {
 	struct pipe_screen *pscreen = NULL;
 
-	pipe_mutex_lock(fd_screen_mutex);
+	mtx_lock(&fd_screen_mutex);
 	if (!fd_tab) {
 		fd_tab = util_hash_table_create(hash_fd, compare_fd);
 		if (!fd_tab)

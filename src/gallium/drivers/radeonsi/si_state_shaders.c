@@ -1256,7 +1256,7 @@ again:
 	if (thread_index < 0)
 		util_queue_fence_wait(&sel->ready);
 
-	pipe_mutex_lock(sel->mutex);
+	mtx_lock(&sel->mutex);
 
 	/* Find the shader variant. */
 	for (iter = sel->first_variant; iter; iter = iter->next_variant) {
@@ -1457,7 +1457,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		tgsi_binary = si_get_tgsi_binary(sel);
 
 		/* Try to load the shader from the shader cache. */
-		pipe_mutex_lock(sscreen->shader_cache_mutex);
+		mtx_lock(&sscreen->shader_cache_mutex);
 
 		if (tgsi_binary &&
 		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
@@ -1475,7 +1475,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 			}
 
 			if (tgsi_binary) {
-				pipe_mutex_lock(sscreen->shader_cache_mutex);
+				mtx_lock(&sscreen->shader_cache_mutex);
 				if (!si_shader_cache_insert_shader(sscreen, tgsi_binary, shader, true))
 					FREE(tgsi_binary);
 				pipe_mutex_unlock(sscreen->shader_cache_mutex);

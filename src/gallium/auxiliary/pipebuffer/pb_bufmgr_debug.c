@@ -236,7 +236,7 @@ pb_debug_buffer_destroy(struct pb_buffer *_buf)
    
    pb_debug_buffer_check(buf);
 
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
    LIST_DEL(&buf->head);
    pipe_mutex_unlock(mgr->mutex);
 
@@ -260,7 +260,7 @@ pb_debug_buffer_map(struct pb_buffer *_buf,
    if (!map)
       return NULL;
    
-   pipe_mutex_lock(buf->mutex);
+   mtx_lock(&buf->mutex);
    ++buf->map_count;
    debug_backtrace_capture(buf->map_backtrace, 1, PB_DEBUG_MAP_BACKTRACE);
    pipe_mutex_unlock(buf->mutex);
@@ -274,7 +274,7 @@ pb_debug_buffer_unmap(struct pb_buffer *_buf)
 {
    struct pb_debug_buffer *buf = pb_debug_buffer(_buf);   
    
-   pipe_mutex_lock(buf->mutex);
+   mtx_lock(&buf->mutex);
    assert(buf->map_count);
    if(buf->map_count)
       --buf->map_count;
@@ -304,7 +304,7 @@ pb_debug_buffer_validate(struct pb_buffer *_buf,
 {
    struct pb_debug_buffer *buf = pb_debug_buffer(_buf);
    
-   pipe_mutex_lock(buf->mutex);
+   mtx_lock(&buf->mutex);
    if(buf->map_count) {
       debug_printf("%s: attempting to validate a mapped buffer\n", __FUNCTION__);
       debug_printf("last map backtrace is\n");
@@ -388,7 +388,7 @@ pb_debug_manager_create_buffer(struct pb_manager *_mgr,
    if(!buf->buffer) {
       FREE(buf);
 #if 0
-      pipe_mutex_lock(mgr->mutex);
+      mtx_lock(&mgr->mutex);
       debug_printf("%s: failed to create buffer\n", __FUNCTION__);
       if(!LIST_IS_EMPTY(&mgr->list))
          pb_debug_manager_dump_locked(mgr);
@@ -419,7 +419,7 @@ pb_debug_manager_create_buffer(struct pb_manager *_mgr,
    
    (void) mtx_init(&buf->mutex, mtx_plain);
    
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
    LIST_ADDTAIL(&buf->head, &mgr->list);
    pipe_mutex_unlock(mgr->mutex);
 
@@ -442,7 +442,7 @@ pb_debug_manager_destroy(struct pb_manager *_mgr)
 {
    struct pb_debug_manager *mgr = pb_debug_manager(_mgr);
    
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
    if(!LIST_IS_EMPTY(&mgr->list)) {
       debug_printf("%s: unfreed buffers\n", __FUNCTION__);
       pb_debug_manager_dump_locked(mgr);

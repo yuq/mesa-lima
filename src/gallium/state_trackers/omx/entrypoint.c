@@ -75,7 +75,7 @@ int omx_component_library_Setup(stLoaderComponentType **stComponents)
 struct vl_screen *omx_get_screen(void)
 {
    static bool first_time = true;
-   pipe_mutex_lock(omx_lock);
+   mtx_lock(&omx_lock);
 
    if (!omx_screen) {
       if (first_time) {
@@ -117,7 +117,7 @@ error:
 
 void omx_put_screen(void)
 {
-   pipe_mutex_lock(omx_lock);
+   mtx_lock(&omx_lock);
    if ((--omx_usecount) == 0) {
       omx_screen->destroy(omx_screen);
       omx_screen = NULL;

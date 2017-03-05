@@ -71,7 +71,7 @@ vlVdpDecoderCreate(VdpDevice device,
    pipe = dev->context;
    screen = dev->vscreen->pscreen;
 
-   pipe_mutex_lock(dev->mutex);
+   mtx_lock(&dev->mutex);
 
    supported = screen->get_video_param
    (
@@ -163,7 +163,7 @@ vlVdpDecoderDestroy(VdpDecoder decoder)
    if (!vldecoder)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(vldecoder->mutex);
+   mtx_lock(&vldecoder->mutex);
    vldecoder->decoder->destroy(vldecoder->decoder);
    pipe_mutex_unlock(vldecoder->mutex);
    mtx_destroy(&vldecoder->mutex);
@@ -614,7 +614,7 @@ vlVdpDecoderRender(VdpDecoder decoder,
                                           dec->profile, PIPE_VIDEO_ENTRYPOINT_BITSTREAM) ||
        !buffer_support[vlsurf->video_buffer->interlaced]) {
 
-      pipe_mutex_lock(vlsurf->device->mutex);
+      mtx_lock(&vlsurf->device->mutex);
 
       /* destroy the old one */
       if (vlsurf->video_buffer)
@@ -674,7 +674,7 @@ vlVdpDecoderRender(VdpDecoder decoder,
    if (ret != VDP_STATUS_OK)
       return ret;
 
-   pipe_mutex_lock(vldecoder->mutex);
+   mtx_lock(&vldecoder->mutex);
    dec->begin_frame(dec, vlsurf->video_buffer, &desc.base);
    dec->decode_bitstream(dec, vlsurf->video_buffer, &desc.base, bitstream_buffer_count, buffers, sizes);
    dec->end_frame(dec, vlsurf->video_buffer, &desc.base);

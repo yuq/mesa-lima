@@ -91,7 +91,7 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
 
    /* First try the cache */
    if (view) {
-      pipe_mutex_lock(ss->tex_mutex);
+      mtx_lock(&ss->tex_mutex);
       if (tex->cached_view &&
           tex->cached_view->min_lod == min_lod &&
           tex->cached_view->max_lod == max_lod) {
@@ -163,7 +163,7 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
       return sv;
    }
 
-   pipe_mutex_lock(ss->tex_mutex);
+   mtx_lock(&ss->tex_mutex);
    svga_sampler_view_reference(&tex->cached_view, sv);
    pipe_mutex_unlock(ss->tex_mutex);
 

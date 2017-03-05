@@ -90,7 +90,7 @@ rtasm_exec_malloc(size_t size)
    struct mem_block *block = NULL;
    void *addr = NULL;
 
-   pipe_mutex_lock(exec_mutex);
+   mtx_lock(&exec_mutex);
 
    if (!init_heap())
       goto bail;
@@ -115,7 +115,7 @@ bail:
 void 
 rtasm_exec_free(void *addr)
 {
-   pipe_mutex_lock(exec_mutex);
+   mtx_lock(&exec_mutex);
 
    if (exec_heap) {
       struct mem_block *block = u_mmFindBlock(exec_heap, (unsigned char *)addr - exec_mem);

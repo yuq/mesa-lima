@@ -79,7 +79,7 @@ struct csmt_context {
 static void
 nine_csmt_wait_processed(struct csmt_context *ctx)
 {
-    pipe_mutex_lock(ctx->mutex_processed);
+    mtx_lock(&ctx->mutex_processed);
     while (!p_atomic_read(&ctx->processed)) {
         cnd_wait(&ctx->event_processed, &ctx->mutex_processed);
     }
@@ -98,7 +98,7 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
 
     while (1) {
         nine_queue_wait_flush(ctx->pool);
-        pipe_mutex_lock(ctx->thread_running);
+        mtx_lock(&ctx->thread_running);
 
         /* Get instruction. NULL on empty cmdbuf. */
         while (!p_atomic_read(&ctx->terminate) &&
@@ -106,7 +106,7 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
 
             /* decode */
             if (instr->func(ctx->device, instr)) {
-                pipe_mutex_lock(ctx->mutex_processed);
+                mtx_lock(&ctx->mutex_processed);
                 p_atomic_set(&ctx->processed, TRUE);
                 cnd_signal(&ctx->event_processed);
                 pipe_mutex_unlock(ctx->mutex_processed);
@@ -114,15 +114,15 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
             if (p_atomic_read(&ctx->toPause)) {
                 pipe_mutex_unlock(ctx->thread_running);
                 /* will wait here the thread can be resumed */
-                pipe_mutex_lock(ctx->thread_resume);
-                pipe_mutex_lock(ctx->thread_running);
+                mtx_lock(&ctx->thread_resume);
+                mtx_lock(&ctx->thread_running);
                 pipe_mutex_unlock(ctx->thread_resume);
             }
         }
 
         pipe_mutex_unlock(ctx->thread_running);
         if (p_atomic_read(&ctx->terminate)) {
-            pipe_mutex_lock(ctx->mutex_processed);
+            mtx_lock(&ctx->mutex_processed);
             p_atomic_set(&ctx->processed, TRUE);
             cnd_signal(&ctx->event_processed);
             pipe_mutex_unlock(ctx->mutex_processed);
@@ -252,11 +252,11 @@ nine_csmt_pause( struct NineDevice9 *device )
     if (nine_queue_no_flushed_work(ctx->pool))
         return;
 
-    pipe_mutex_lock(ctx->thread_resume);
+    mtx_lock(&ctx->thread_resume);
     p_atomic_set(&ctx->toPause, TRUE);
 
     /* Wait the thread is paused */
-    pipe_mutex_lock(ctx->thread_running);
+    mtx_lock(&ctx->thread_running);
     ctx->hasPaused = TRUE;
     p_atomic_set(&ctx->toPause, FALSE);
 }

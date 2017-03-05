@@ -904,7 +904,7 @@ PIPE_THREAD_ROUTINE(dd_thread_pipelined_hang_detect, input)
    struct dd_context *dctx = (struct dd_context *)input;
    struct dd_screen *dscreen = dd_screen(dctx->base.screen);
 
-   pipe_mutex_lock(dctx->mutex);
+   mtx_lock(&dctx->mutex);
 
    while (!dctx->kill_thread) {
       struct dd_draw_record **record = &dctx->records;
@@ -944,7 +944,7 @@ PIPE_THREAD_ROUTINE(dd_thread_pipelined_hang_detect, input)
       /* Unlock and sleep before starting all over again. */
       pipe_mutex_unlock(dctx->mutex);
       os_time_sleep(10000); /* 10 ms */
-      pipe_mutex_lock(dctx->mutex);
+      mtx_lock(&dctx->mutex);
    }
 
    /* Thread termination. */
@@ -1041,7 +1041,7 @@ dd_pipelined_process_draw(struct dd_context *dctx, struct dd_call *call)
    dd_copy_draw_state(&record->draw_state.base, &dctx->draw_state);
 
    /* Add the record to the list. */
-   pipe_mutex_lock(dctx->mutex);
+   mtx_lock(&dctx->mutex);
    record->next = dctx->records;
    dctx->records = record;
    pipe_mutex_unlock(dctx->mutex);

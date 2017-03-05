@@ -99,7 +99,7 @@ mm_buffer_destroy(struct pb_buffer *buf)
    
    assert(!pipe_is_referenced(&mm_buf->base.reference));
    
-   pipe_mutex_lock(mm->mutex);
+   mtx_lock(&mm->mutex);
    u_mmFreeMem(mm_buf->block);
    FREE(mm_buf);
    pipe_mutex_unlock(mm->mutex);
@@ -184,7 +184,7 @@ mm_bufmgr_create_buffer(struct pb_manager *mgr,
    if(!pb_check_alignment(desc->alignment, (pb_size)1 << mm->align2))
       return NULL;
    
-   pipe_mutex_lock(mm->mutex);
+   mtx_lock(&mm->mutex);
 
    mm_buf = CALLOC_STRUCT(mm_buffer);
    if (!mm_buf) {
@@ -233,7 +233,7 @@ mm_bufmgr_destroy(struct pb_manager *mgr)
 {
    struct mm_pb_manager *mm = mm_pb_manager(mgr);
    
-   pipe_mutex_lock(mm->mutex);
+   mtx_lock(&mm->mutex);
 
    u_mmDestroy(mm->heap);
    

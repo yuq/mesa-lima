@@ -199,7 +199,7 @@ pb_slab_buffer_destroy(struct pb_buffer *_buf)
    struct pb_slab_manager *mgr = slab->mgr;
    struct list_head *list = &buf->head;
 
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
    
    assert(!pipe_is_referenced(&buf->base.reference));
    
@@ -396,7 +396,7 @@ pb_slab_manager_create_buffer(struct pb_manager *_mgr,
    if(!pb_check_usage(desc->usage, mgr->desc.usage))
       return NULL;
 
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
    
    /* Create a new slab, if we run out of partial slabs */
    if (mgr->slabs.next == &mgr->slabs) {

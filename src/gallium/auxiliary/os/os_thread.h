@@ -108,9 +108,6 @@ static inline int pipe_thread_is_self( pipe_thread thread )
    return 0;
 }
 
-#define pipe_mutex_lock(mutex) \
-   (void) mtx_lock(&(mutex))
-
 #define pipe_mutex_unlock(mutex) \
    (void) mtx_unlock(&(mutex))
 
@@ -188,7 +185,7 @@ static inline void pipe_barrier_destroy(pipe_barrier *barrier)
 
 static inline void pipe_barrier_wait(pipe_barrier *barrier)
 {
-   pipe_mutex_lock(barrier->mutex);
+   mtx_lock(&barrier->mutex);
 
    assert(barrier->waiters < barrier->count);
    barrier->waiters++;
@@ -243,7 +240,7 @@ pipe_semaphore_destroy(pipe_semaphore *sema)
 static inline void
 pipe_semaphore_signal(pipe_semaphore *sema)
 {
-   pipe_mutex_lock(sema->mutex);
+   mtx_lock(&sema->mutex);
    sema->counter++;
    cnd_signal(&sema->cond);
    pipe_mutex_unlock(sema->mutex);
@@ -253,7 +250,7 @@ pipe_semaphore_signal(pipe_semaphore *sema)
 static inline void
 pipe_semaphore_wait(pipe_semaphore *sema)
 {
-   pipe_mutex_lock(sema->mutex);
+   mtx_lock(&sema->mutex);
    while (sema->counter <= 0) {
       cnd_wait(&sema->cond, &sema->mutex);
    }

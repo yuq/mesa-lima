@@ -1431,7 +1431,7 @@ dri2_load_opencl_interop(struct dri_screen *screen)
 #if defined(RTLD_DEFAULT)
    bool success;
 
-   pipe_mutex_lock(screen->opencl_func_mutex);
+   mtx_lock(&screen->opencl_func_mutex);
 
    if (dri2_is_opencl_interop_loaded_locked(screen)) {
       pipe_mutex_unlock(screen->opencl_func_mutex);

@@ -77,7 +77,7 @@ etna_drm_screen_destroy(struct pipe_screen *pscreen)
    struct etna_screen *screen = etna_screen(pscreen);
    boolean destroy;
 
-   pipe_mutex_lock(etna_screen_mutex);
+   mtx_lock(&etna_screen_mutex);
    destroy = --screen->refcnt == 0;
    if (destroy) {
       int fd = etna_device_fd(screen->dev);
@@ -120,7 +120,7 @@ etna_drm_screen_create_renderonly(struct renderonly *ro)
 {
    struct pipe_screen *pscreen = NULL;
 
-   pipe_mutex_lock(etna_screen_mutex);
+   mtx_lock(&etna_screen_mutex);
    if (!etna_tab) {
       etna_tab = util_hash_table_create(hash_fd, compare_fd);
       if (!etna_tab)

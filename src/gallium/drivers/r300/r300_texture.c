@@ -1030,7 +1030,7 @@ static void r300_texture_destroy(struct pipe_screen *screen,
     struct r300_resource* tex = (struct r300_resource*)texture;
 
     if (tex->tex.cmask_dwords) {
-        pipe_mutex_lock(rscreen->cmask_mutex);
+        mtx_lock(&rscreen->cmask_mutex);
         if (texture == rscreen->cmask_resource) {
             rscreen->cmask_resource = NULL;
         }

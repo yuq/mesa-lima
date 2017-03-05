@@ -328,7 +328,7 @@ static void r300_clear(struct pipe_context* pipe,
             /* Pair the resource with the CMASK to avoid other resources
              * accessing it. */
             if (!r300->screen->cmask_resource) {
-                pipe_mutex_lock(r300->screen->cmask_mutex);
+                mtx_lock(&r300->screen->cmask_mutex);
                 /* Double checking (first unlocked, then locked). */
                 if (!r300->screen->cmask_resource) {
                     /* Don't reference this, so that the texture can be

@@ -63,7 +63,7 @@ vlVdpVideoMixerCreate(VdpDevice device,
 
    DeviceReference(&vmixer->device, dev);
 
-   pipe_mutex_lock(dev->mutex);
+   mtx_lock(&dev->mutex);
 
    if (!vl_compositor_init_state(&vmixer->cstate, dev->context)) {
       ret = VDP_STATUS_ERROR;
@@ -191,7 +191,7 @@ vlVdpVideoMixerDestroy(VdpVideoMixer mixer)
    if (!vmixer)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(vmixer->device->mutex);
+   mtx_lock(&vmixer->device->mutex);
 
    vlRemoveDataHTAB(mixer);
 
@@ -290,7 +290,7 @@ VdpStatus vlVdpVideoMixerRender(VdpVideoMixer mixer,
          return VDP_STATUS_INVALID_HANDLE;
    }
 
-   pipe_mutex_lock(vmixer->device->mutex);
+   mtx_lock(&vmixer->device->mutex);
 
    vl_compositor_clear_layers(&vmixer->cstate);
 
@@ -658,7 +658,7 @@ vlVdpVideoMixerSetFeatureEnables(VdpVideoMixer mixer,
    if (!vmixer)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(vmixer->device->mutex);
+   mtx_lock(&vmixer->device->mutex);
    for (i = 0; i < feature_count; ++i) {
       switch (features[i]) {
       /* they are valid, but we doesn't support them */
@@ -796,7 +796,7 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
    if (!vmixer)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(vmixer->device->mutex);
+   mtx_lock(&vmixer->device->mutex);
    for (i = 0; i < attribute_count; ++i) {
       switch (attributes[i]) {
       case VDP_VIDEO_MIXER_ATTRIBUTE_BACKGROUND_COLOR:
@@ -955,7 +955,7 @@ vlVdpVideoMixerGetAttributeValues(VdpVideoMixer mixer,
    if (!vmixer)
       return VDP_STATUS_INVALID_HANDLE;
 
-   pipe_mutex_lock(vmixer->device->mutex);
+   mtx_lock(&vmixer->device->mutex);
    for (i = 0; i < attribute_count; ++i) {
       switch (attributes[i]) {
       case VDP_VIDEO_MIXER_ATTRIBUTE_BACKGROUND_COLOR:

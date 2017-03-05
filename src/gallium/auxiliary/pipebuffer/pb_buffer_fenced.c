@@ -352,7 +352,7 @@ fenced_buffer_finish_locked(struct fenced_manager *fenced_mgr,
 
       finished = ops->fence_finish(ops, fenced_buf->fence, 0);
 
-      pipe_mutex_lock(fenced_mgr->mutex);
+      mtx_lock(&fenced_mgr->mutex);
 
       assert(pipe_is_referenced(&fenced_buf->base.reference));
 
@@ -652,7 +652,7 @@ fenced_buffer_destroy(struct pb_buffer *buf)
 
    assert(!pipe_is_referenced(&fenced_buf->base.reference));
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    fenced_buffer_destroy_locked(fenced_mgr, fenced_buf);
 
@@ -669,7 +669,7 @@ fenced_buffer_map(struct pb_buffer *buf,
    struct pb_fence_ops *ops = fenced_mgr->ops;
    void *map = NULL;
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    assert(!(flags & PB_USAGE_GPU_READ_WRITE));
 
@@ -721,7 +721,7 @@ fenced_buffer_unmap(struct pb_buffer *buf)
    struct fenced_buffer *fenced_buf = fenced_buffer(buf);
    struct fenced_manager *fenced_mgr = fenced_buf->mgr;
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    assert(fenced_buf->mapcount);
    if (fenced_buf->mapcount) {
@@ -745,7 +745,7 @@ fenced_buffer_validate(struct pb_buffer *buf,
    struct fenced_manager *fenced_mgr = fenced_buf->mgr;
    enum pipe_error ret;
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    if (!vl) {
       /* Invalidate. */
@@ -816,7 +816,7 @@ fenced_buffer_fence(struct pb_buffer *buf,
    struct fenced_manager *fenced_mgr = fenced_buf->mgr;
    struct pb_fence_ops *ops = fenced_mgr->ops;
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    assert(pipe_is_referenced(&fenced_buf->base.reference));
    assert(fenced_buf->buffer);
@@ -853,7 +853,7 @@ fenced_buffer_get_base_buffer(struct pb_buffer *buf,
    struct fenced_buffer *fenced_buf = fenced_buffer(buf);
    struct fenced_manager *fenced_mgr = fenced_buf->mgr;
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    /* This should only be called when the buffer is validated. Typically
     * when processing relocations.
@@ -917,7 +917,7 @@ fenced_bufmgr_create_buffer(struct pb_manager *mgr,
    fenced_buf->base.vtbl = &fenced_buffer_vtbl;
    fenced_buf->mgr = fenced_mgr;
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    /* Try to create GPU storage without stalling. */
    ret = fenced_buffer_create_gpu_storage_locked(fenced_mgr, fenced_buf, FALSE);
@@ -958,7 +958,7 @@ fenced_bufmgr_flush(struct pb_manager *mgr)
 {
    struct fenced_manager *fenced_mgr = fenced_manager(mgr);
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
    while (fenced_manager_check_signalled_locked(fenced_mgr, TRUE))
       ;
    pipe_mutex_unlock(fenced_mgr->mutex);
@@ -974,7 +974,7 @@ fenced_bufmgr_destroy(struct pb_manager *mgr)
 {
    struct fenced_manager *fenced_mgr = fenced_manager(mgr);
 
-   pipe_mutex_lock(fenced_mgr->mutex);
+   mtx_lock(&fenced_mgr->mutex);
 
    /* Wait on outstanding fences. */
    while (fenced_mgr->num_fenced) {
@@ -982,7 +982,7 @@ fenced_bufmgr_destroy(struct pb_manager *mgr)
 #if defined(PIPE_OS_LINUX) || defined(PIPE_OS_BSD) || defined(PIPE_OS_SOLARIS)
       sched_yield();
 #endif
-      pipe_mutex_lock(fenced_mgr->mutex);
+      mtx_lock(&fenced_mgr->mutex);
       while (fenced_manager_check_signalled_locked(fenced_mgr, TRUE))
          ;
    }

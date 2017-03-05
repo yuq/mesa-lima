@@ -89,7 +89,7 @@ pb_cache_add_buffer(struct pb_cache_entry *entry)
    struct pb_buffer *buf = entry->buffer;
    unsigned i;
 
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
    assert(!pipe_is_referenced(&buf->reference));
 
    for (i = 0; i < ARRAY_SIZE(mgr->buckets); i++)
@@ -155,7 +155,7 @@ pb_cache_reclaim_buffer(struct pb_cache *mgr, pb_size size,
    int ret = 0;
    struct list_head *cache = &mgr->buckets[bucket_index];
 
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
 
    entry = NULL;
    cur = cache->next;
@@ -228,7 +228,7 @@ pb_cache_release_all_buffers(struct pb_cache *mgr)
    struct pb_cache_entry *buf;
    unsigned i;
 
-   pipe_mutex_lock(mgr->mutex);
+   mtx_lock(&mgr->mutex);
    for (i = 0; i < ARRAY_SIZE(mgr->buckets); i++) {
       struct list_head *cache = &mgr->buckets[i];
 

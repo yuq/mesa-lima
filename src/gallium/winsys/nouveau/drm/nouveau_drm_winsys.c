@@ -27,7 +27,7 @@ bool nouveau_drm_screen_unref(struct nouveau_screen *screen)
 	if (screen->refcount == -1)
 		return true;
 
-	pipe_mutex_lock(nouveau_screen_mutex);
+	mtx_lock(&nouveau_screen_mutex);
 	ret = --screen->refcount;
 	assert(ret >= 0);
 	if (ret == 0)
@@ -67,7 +67,7 @@ nouveau_drm_screen_create(int fd)
 	struct nouveau_screen *screen = NULL;
 	int ret, dupfd;
 
-	pipe_mutex_lock(nouveau_screen_mutex);
+	mtx_lock(&nouveau_screen_mutex);
 	if (!fd_tab) {
 		fd_tab = util_hash_table_create(hash_fd, compare_fd);
 		if (!fd_tab) {

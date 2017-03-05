@@ -246,7 +246,7 @@ hud_get_num_disks(bool displayhelp)
    char name[64];
 
    /* Return the number of block devices and partitions. */
-   pipe_mutex_lock(gdiskstat_mutex);
+   mtx_lock(&gdiskstat_mutex);
    if (gdiskstat_count) {
       pipe_mutex_unlock(gdiskstat_mutex);
       return gdiskstat_count;

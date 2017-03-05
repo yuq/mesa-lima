@@ -301,7 +301,7 @@ debug_symbol_name_cached(const void *addr)
    }
 #endif
 
-   pipe_mutex_lock(symbols_mutex);
+   mtx_lock(&symbols_mutex);
    if(!symbols_hash)
       symbols_hash = util_hash_table_create(hash_ptr, compare_ptr);
    name = util_hash_table_get(symbols_hash, (void*)addr);

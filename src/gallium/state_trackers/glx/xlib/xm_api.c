@@ -197,7 +197,7 @@ xmesa_init_display( Display *display )
       return NULL;
    }
 
-   pipe_mutex_lock(init_mutex);
+   mtx_lock(&init_mutex);
 
    /* Look for XMesaDisplay which corresponds to this display */
    info = MesaExtInfo.head;
@@ -372,7 +372,7 @@ xmesa_get_window_size(Display *dpy, XMesaBuffer b,
    XMesaDisplay xmdpy = xmesa_init_display(dpy);
    Status stat;
 
-   pipe_mutex_lock(xmdpy->mutex);
+   mtx_lock(&xmdpy->mutex);
    stat = get_drawable_size(dpy, b->ws.drawable, width, height);
    pipe_mutex_unlock(xmdpy->mutex);
 

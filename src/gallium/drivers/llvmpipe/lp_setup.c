@@ -165,7 +165,7 @@ lp_setup_rasterize_scene( struct lp_setup_context *setup )
    if (setup->last_fence)
       setup->last_fence->issued = TRUE;
 
-   pipe_mutex_lock(screen->rast_mutex);
+   mtx_lock(&screen->rast_mutex);
 
    /* FIXME: We enqueue the scene then wait on the rasterizer to finish.
     * This means we never actually run any vertex stuff in parallel to

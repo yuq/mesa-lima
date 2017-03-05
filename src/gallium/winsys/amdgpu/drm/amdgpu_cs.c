@@ -1037,7 +1037,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       amdgpu_bo_handle *handles;
       unsigned num = 0;
 
-      pipe_mutex_lock(ws->global_bo_list_lock);
+      mtx_lock(&ws->global_bo_list_lock);
 
       handles = malloc(sizeof(handles[0]) * ws->num_buffers);
       if (!handles) {
@@ -1211,7 +1211,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
        * that the order of fence dependency updates matches the order of
        * submissions.
        */
-      pipe_mutex_lock(ws->bo_fence_lock);
+      mtx_lock(&ws->bo_fence_lock);
       amdgpu_add_fence_dependencies(cs);
 
       /* Swap command streams. "cst" is going to be submitted. */
