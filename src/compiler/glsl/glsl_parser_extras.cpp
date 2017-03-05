@@ -1979,6 +1979,7 @@ do_late_parsing_checks(struct _mesa_glsl_parse_state *state)
 
 static void
 opt_shader_and_create_symbol_table(struct gl_context *ctx,
+                                   struct glsl_symbol_table *source_symbols,
                                    struct gl_shader *shader)
 {
    assert(shader->CompileStatus != compile_failure &&
@@ -2036,22 +2037,8 @@ opt_shader_and_create_symbol_table(struct gl_context *ctx,
     * We don't have to worry about types or interface-types here because those
     * are fly-weights that are looked up by glsl_type.
     */
-   foreach_in_list (ir_instruction, ir, shader->ir) {
-      switch (ir->ir_type) {
-      case ir_type_function:
-         shader->symbols->add_function((ir_function *) ir);
-         break;
-      case ir_type_variable: {
-         ir_variable *const var = (ir_variable *) ir;
-
-         if (var->data.mode != ir_var_temporary)
-            shader->symbols->add_variable(var);
-         break;
-      }
-      default:
-         break;
-      }
-   }
+   _mesa_glsl_copy_symbols_from_table(shader->ir, source_symbols,
+                                      shader->symbols);
 }
 
 void
@@ -2088,7 +2075,9 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
          return;
 
       if (shader->CompileStatus == compiled_no_opts) {
-         opt_shader_and_create_symbol_table(ctx, shader);
+         opt_shader_and_create_symbol_table(ctx,
+                                            NULL, /* source_symbols */
+                                            shader);
          shader->CompileStatus = compile_success;
          return;
       }
@@ -2149,7 +2138,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       lower_subroutine(shader->ir, state);
 
       if (!ctx->Cache || force_recompile)
-         opt_shader_and_create_symbol_table(ctx, shader);
+         opt_shader_and_create_symbol_table(ctx, state->symbols, shader);
       else {
          reparent_ir(shader->ir, shader->ir);
          shader->CompileStatus = compiled_no_opts;
