@@ -99,7 +99,7 @@ static void virgl_attach_res_framebuffer(struct virgl_context *vctx)
 }
 
 static void virgl_attach_res_sampler_views(struct virgl_context *vctx,
-                                           unsigned shader_type)
+                                           enum pipe_shader_type shader_type)
 {
    struct virgl_winsys *vws = virgl_screen(vctx->base.screen)->vws;
    struct virgl_textures_info *tinfo = &vctx->samplers[shader_type];
@@ -153,7 +153,7 @@ static void virgl_attach_res_so_targets(struct virgl_context *vctx)
 }
 
 static void virgl_attach_res_uniform_buffers(struct virgl_context *vctx,
-                                             unsigned shader_type)
+                                             enum pipe_shader_type shader_type)
 {
    struct virgl_winsys *vws = virgl_screen(vctx->base.screen)->vws;
    struct virgl_resource *res;
@@ -172,7 +172,7 @@ static void virgl_attach_res_uniform_buffers(struct virgl_context *vctx,
  */
 static void virgl_reemit_res(struct virgl_context *vctx)
 {
-   unsigned shader_type;
+   enum pipe_shader_type shader_type;
 
    /* reattach any flushed resources */
    /* framebuffer, sampler views, vertex/index/uniform/stream buffers */
