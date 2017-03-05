@@ -465,7 +465,6 @@ void radv_GetPhysicalDeviceFeatures(
 		.shaderFloat64                            = true,
 		.shaderInt64                              = false,
 		.shaderInt16                              = false,
-		.alphaToOne                               = true,
 		.variableMultisampleRate                  = false,
 		.inheritedQueries                         = false,
 	};
