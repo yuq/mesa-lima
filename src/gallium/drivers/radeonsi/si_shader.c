@@ -3442,13 +3442,15 @@ static unsigned get_load_intr_attribs(bool readonly_memory)
 {
 	/* READNONE means writes can't affect it, while READONLY means that
 	 * writes can affect it. */
-	return readonly_memory ? LP_FUNC_ATTR_READNONE :
+	return readonly_memory && HAVE_LLVM >= 0x0400 ?
+				 LP_FUNC_ATTR_READNONE :
 				 LP_FUNC_ATTR_READONLY;
 }
 
 static unsigned get_store_intr_attribs(bool writeonly_memory)
 {
-	return writeonly_memory ? LP_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
+	return writeonly_memory && HAVE_LLVM >= 0x0400 ?
+				  LP_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
 				  LP_FUNC_ATTR_WRITEONLY;
 }
 

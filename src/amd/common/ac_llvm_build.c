@@ -693,7 +693,7 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 					  /* READNONE means writes can't
 					   * affect it, while READONLY means
 					   * that writes can affect it. */
-					  readonly_memory ?
+					  readonly_memory && HAVE_LLVM >= 0x0400 ?
 						  AC_FUNC_ATTR_READNONE :
 						  AC_FUNC_ATTR_READONLY);
 	} else {
@@ -736,7 +736,7 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					 LLVMValueRef voffset,
 					 bool readonly_memory)
 {
-	if (HAVE_LLVM >= 0x0400) {
+	if (HAVE_LLVM >= 0x0309) {
 		LLVMValueRef args [] = {
 			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
 			vindex,
@@ -751,7 +751,7 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					  /* READNONE means writes can't
 					   * affect it, while READONLY means
 					   * that writes can affect it. */
-					  readonly_memory ?
+					  readonly_memory && HAVE_LLVM >= 0x0400 ?
 						  AC_FUNC_ATTR_READNONE :
 						  AC_FUNC_ATTR_READONLY);
 	}
