@@ -2068,7 +2068,7 @@ draw_llvm_dump_variant_key(struct draw_llvm_variant_key *key)
 
 void
 draw_llvm_set_mapped_texture(struct draw_context *draw,
-                             unsigned shader_stage,
+                             enum pipe_shader_type shader_stage,
                              unsigned sview_idx,
                              uint32_t width, uint32_t height, uint32_t depth,
                              uint32_t first_level, uint32_t last_level,
@@ -2113,7 +2113,7 @@ draw_llvm_set_mapped_texture(struct draw_context *draw,
 
 void
 draw_llvm_set_sampler_state(struct draw_context *draw, 
-                            unsigned shader_type)
+                            enum pipe_shader_type shader_type)
 {
    unsigned i;
 
