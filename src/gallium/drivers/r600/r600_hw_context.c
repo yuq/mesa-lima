@@ -415,6 +415,10 @@ void r600_begin_new_cs(struct r600_context *ctx)
 		r600_sampler_states_dirty(ctx, &samplers->states);
 	}
 
+	for (shader = 0; shader < ARRAY_SIZE(ctx->scratch_buffers); shader++) {
+		ctx->scratch_buffers[shader].dirty = true;
+	}
+
 	r600_postflush_resume_features(&ctx->b);
 
 	/* Re-emit the draw state. */

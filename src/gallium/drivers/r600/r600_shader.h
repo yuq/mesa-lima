@@ -180,6 +180,7 @@ struct r600_pipe_shader {
 	unsigned		db_shader_control;
 	unsigned		ps_depth_export;
 	unsigned		enabled_stream_buffers_mask;
+	unsigned		scratch_space_needed; /* size of scratch space (if > 0) counted in vec4 */
 };
 
 /* return the table index 0-5 for TGSI_INTERPOLATE_LINEAR/PERSPECTIVE and

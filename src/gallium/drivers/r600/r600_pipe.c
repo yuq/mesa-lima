@@ -71,6 +71,9 @@ static void r600_destroy_context(struct pipe_context *context)
 
 	r600_sb_context_destroy(rctx->sb_context);
 
+	for (sh = 0; sh < (rctx->b.chip_class < EVERGREEN ? R600_NUM_HW_STAGES : EG_NUM_HW_STAGES); sh++) {
+		r600_resource_reference(&rctx->scratch_buffers[sh].buffer, NULL);
+	}
 	r600_resource_reference(&rctx->dummy_cmask, NULL);
 	r600_resource_reference(&rctx->dummy_fmask, NULL);
 

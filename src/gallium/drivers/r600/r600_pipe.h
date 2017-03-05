@@ -478,6 +478,14 @@ struct r600_image_state {
 	struct r600_image_view views[R600_MAX_IMAGES];
 };
 
+/* Used to spill shader temps */
+struct r600_scratch_buffer {
+	struct r600_resource		*buffer;
+	boolean					dirty;
+	unsigned				size;
+	unsigned				item_size;
+};
+
 struct r600_context {
 	struct r600_common_context	b;
 	struct r600_screen		*screen;
@@ -594,6 +602,8 @@ struct r600_context {
 	unsigned last_num_tcs_input_cp;
 	unsigned lds_alloc;
 
+	struct r600_scratch_buffer scratch_buffers[MAX2(R600_NUM_HW_STAGES, EG_NUM_HW_STAGES)];
+
 	/* Debug state. */
 	bool			is_debug;
 	struct radeon_saved_cs	last_gfx;
@@ -703,7 +713,7 @@ void evergreen_init_color_surface_rat(struct r600_context *rctx,
 					struct r600_surface *surf);
 void evergreen_update_db_shader_control(struct r600_context * rctx);
 bool evergreen_adjust_gprs(struct r600_context *rctx);
-
+void evergreen_setup_scratch_buffers(struct r600_context *rctx);
 uint32_t evergreen_construct_rat_mask(struct r600_context *rctx, struct r600_cb_misc_state *a,
 				      unsigned nr_cbufs);
 /* r600_blit.c */
@@ -754,6 +764,7 @@ boolean r600_is_format_supported(struct pipe_screen *screen,
 				 unsigned sample_count,
 				 unsigned usage);
 void r600_update_db_shader_control(struct r600_context * rctx);
+void r600_setup_scratch_buffers(struct r600_context *rctx);
 
 /* r600_hw_context.c */
 void r600_context_gfx_flush(void *context, unsigned flags,
@@ -819,6 +830,9 @@ void r600_sampler_states_dirty(struct r600_context *rctx,
 			       struct r600_sampler_states *state);
 void r600_constant_buffers_dirty(struct r600_context *rctx, struct r600_constbuf_state *state);
 void r600_set_sample_locations_constant_buffer(struct r600_context *rctx);
+void r600_setup_scratch_area_for_shader(struct r600_context *rctx,
+	struct r600_pipe_shader *shader, struct r600_scratch_buffer *scratch,
+	unsigned ring_base_reg, unsigned item_size_reg, unsigned ring_size_reg);
 uint32_t r600_translate_stencil_op(int s_op);
 uint32_t r600_translate_fill(uint32_t func);
 unsigned r600_tex_wrap(unsigned wrap);
