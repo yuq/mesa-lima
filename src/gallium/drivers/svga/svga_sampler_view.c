@@ -96,13 +96,13 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
           tex->cached_view->min_lod == min_lod &&
           tex->cached_view->max_lod == max_lod) {
          svga_sampler_view_reference(&sv, tex->cached_view);
-         pipe_mutex_unlock(ss->tex_mutex);
+         mtx_unlock(&ss->tex_mutex);
          SVGA_DBG(DEBUG_VIEWS, "svga: Sampler view: reuse %p, %u %u, last %u\n",
                               pt, min_lod, max_lod, pt->last_level);
          svga_validate_sampler_view(svga_context(pipe), sv);
          return sv;
       }
-      pipe_mutex_unlock(ss->tex_mutex);
+      mtx_unlock(&ss->tex_mutex);
    }
 
    sv = CALLOC_STRUCT(svga_sampler_view);
@@ -165,7 +165,7 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
 
    mtx_lock(&ss->tex_mutex);
    svga_sampler_view_reference(&tex->cached_view, sv);
-   pipe_mutex_unlock(ss->tex_mutex);
+   mtx_unlock(&ss->tex_mutex);
 
    debug_reference(&sv->reference,
                    (debug_reference_descriptor)

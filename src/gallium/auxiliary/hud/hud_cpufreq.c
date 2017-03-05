@@ -191,7 +191,7 @@ hud_get_num_cpufreq(bool displayhelp)
    /* Return the number of CPU metrics we support. */
    mtx_lock(&gcpufreq_mutex);
    if (gcpufreq_count) {
-      pipe_mutex_unlock(gcpufreq_mutex);
+      mtx_unlock(&gcpufreq_mutex);
       return gcpufreq_count;
    }
 
@@ -201,7 +201,7 @@ hud_get_num_cpufreq(bool displayhelp)
    list_inithead(&gcpufreq_list);
    DIR *dir = opendir("/sys/devices/system/cpu");
    if (!dir) {
-      pipe_mutex_unlock(gcpufreq_mutex);
+      mtx_unlock(&gcpufreq_mutex);
       return 0;
    }
 
@@ -247,7 +247,7 @@ hud_get_num_cpufreq(bool displayhelp)
       }
    }
 
-   pipe_mutex_unlock(gcpufreq_mutex);
+   mtx_unlock(&gcpufreq_mutex);
    return gcpufreq_count;
 }
 

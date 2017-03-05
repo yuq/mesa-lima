@@ -1434,7 +1434,7 @@ dri2_load_opencl_interop(struct dri_screen *screen)
    mtx_lock(&screen->opencl_func_mutex);
 
    if (dri2_is_opencl_interop_loaded_locked(screen)) {
-      pipe_mutex_unlock(screen->opencl_func_mutex);
+      mtx_unlock(&screen->opencl_func_mutex);
       return true;
    }
 
@@ -1448,7 +1448,7 @@ dri2_load_opencl_interop(struct dri_screen *screen)
       dlsym(RTLD_DEFAULT, "opencl_dri_event_get_fence");
 
    success = dri2_is_opencl_interop_loaded_locked(screen);
-   pipe_mutex_unlock(screen->opencl_func_mutex);
+   mtx_unlock(&screen->opencl_func_mutex);
    return success;
 #else
    return false;

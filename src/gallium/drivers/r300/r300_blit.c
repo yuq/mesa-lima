@@ -336,7 +336,7 @@ static void r300_clear(struct pipe_context* pipe,
                      * Then in texture_destroy, we set cmask_resource to NULL. */
                     r300->screen->cmask_resource = fb->cbufs[0]->texture;
                 }
-                pipe_mutex_unlock(r300->screen->cmask_mutex);
+                mtx_unlock(&r300->screen->cmask_mutex);
             }
 
             if (r300->screen->cmask_resource == fb->cbufs[0]->texture) {

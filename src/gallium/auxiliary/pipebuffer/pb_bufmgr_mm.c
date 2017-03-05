@@ -102,7 +102,7 @@ mm_buffer_destroy(struct pb_buffer *buf)
    mtx_lock(&mm->mutex);
    u_mmFreeMem(mm_buf->block);
    FREE(mm_buf);
-   pipe_mutex_unlock(mm->mutex);
+   mtx_unlock(&mm->mutex);
 }
 
 
@@ -188,7 +188,7 @@ mm_bufmgr_create_buffer(struct pb_manager *mgr,
 
    mm_buf = CALLOC_STRUCT(mm_buffer);
    if (!mm_buf) {
-      pipe_mutex_unlock(mm->mutex);
+      mtx_unlock(&mm->mutex);
       return NULL;
    }
 
@@ -208,7 +208,7 @@ mm_bufmgr_create_buffer(struct pb_manager *mgr,
       mmDumpMemInfo(mm->heap);
 #endif
       FREE(mm_buf);
-      pipe_mutex_unlock(mm->mutex);
+      mtx_unlock(&mm->mutex);
       return NULL;
    }
    
@@ -216,7 +216,7 @@ mm_bufmgr_create_buffer(struct pb_manager *mgr,
    assert(0 <= (pb_size)mm_buf->block->ofs && (pb_size)mm_buf->block->ofs < mm->size);
    assert(size <= (pb_size)mm_buf->block->size && (pb_size)mm_buf->block->ofs + (pb_size)mm_buf->block->size <= mm->size);
    
-   pipe_mutex_unlock(mm->mutex);
+   mtx_unlock(&mm->mutex);
    return SUPER(mm_buf);
 }
 
@@ -240,7 +240,7 @@ mm_bufmgr_destroy(struct pb_manager *mgr)
    pb_unmap(mm->buffer);
    pb_reference(&mm->buffer, NULL);
    
-   pipe_mutex_unlock(mm->mutex);
+   mtx_unlock(&mm->mutex);
    
    FREE(mgr);
 }

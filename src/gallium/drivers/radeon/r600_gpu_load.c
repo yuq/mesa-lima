@@ -183,7 +183,7 @@ static uint64_t r600_read_mmio_counter(struct r600_common_screen *rscreen,
 		if (!rscreen->gpu_load_thread)
 			rscreen->gpu_load_thread =
 				pipe_thread_create(r600_gpu_load_thread, rscreen);
-		pipe_mutex_unlock(rscreen->gpu_load_mutex);
+		mtx_unlock(&rscreen->gpu_load_mutex);
 	}
 
 	unsigned busy = p_atomic_read(&rscreen->mmio_counters.array[busy_index]);

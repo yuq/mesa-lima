@@ -155,7 +155,7 @@ virgl_cache_flush(struct virgl_vtest_winsys *vtws)
       curr = next;
       next = curr->next;
    }
-   pipe_mutex_unlock(vtws->mutex);
+   mtx_unlock(&vtws->mutex);
 }
 
 static void
@@ -196,7 +196,7 @@ static void virgl_vtest_resource_reference(struct virgl_vtest_winsys *vtws,
          old->end = old->start + vtws->usecs;
          LIST_ADDTAIL(&old->head, &vtws->delayed);
          vtws->num_delayed++;
-         pipe_mutex_unlock(vtws->mutex);
+         mtx_unlock(&vtws->mutex);
       }
    }
    *dres = sres;
@@ -376,12 +376,12 @@ virgl_vtest_winsys_resource_cache_create(struct virgl_winsys *vws,
    if (res) {
       LIST_DEL(&res->head);
       --vtws->num_delayed;
-      pipe_mutex_unlock(vtws->mutex);
+      mtx_unlock(&vtws->mutex);
       pipe_reference_init(&res->reference, 1);
       return res;
    }
 
-   pipe_mutex_unlock(vtws->mutex);
+   mtx_unlock(&vtws->mutex);
 
 alloc:
    res = virgl_vtest_winsys_resource_create(vws, target, format, bind,

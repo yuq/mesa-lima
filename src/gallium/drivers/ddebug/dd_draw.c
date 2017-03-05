@@ -942,7 +942,7 @@ PIPE_THREAD_ROUTINE(dd_thread_pipelined_hang_detect, input)
       }
 
       /* Unlock and sleep before starting all over again. */
-      pipe_mutex_unlock(dctx->mutex);
+      mtx_unlock(&dctx->mutex);
       os_time_sleep(10000); /* 10 ms */
       mtx_lock(&dctx->mutex);
    }
@@ -951,7 +951,7 @@ PIPE_THREAD_ROUTINE(dd_thread_pipelined_hang_detect, input)
    while (dctx->records)
       dd_free_record(&dctx->records);
 
-   pipe_mutex_unlock(dctx->mutex);
+   mtx_unlock(&dctx->mutex);
    return 0;
 }
 
@@ -1044,7 +1044,7 @@ dd_pipelined_process_draw(struct dd_context *dctx, struct dd_call *call)
    mtx_lock(&dctx->mutex);
    record->next = dctx->records;
    dctx->records = record;
-   pipe_mutex_unlock(dctx->mutex);
+   mtx_unlock(&dctx->mutex);
 }
 
 static void

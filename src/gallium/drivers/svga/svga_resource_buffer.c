@@ -298,7 +298,7 @@ svga_buffer_transfer_flush_region( struct pipe_context *pipe,
 
    mtx_lock(&ss->swc_mutex);
    svga_buffer_add_range(sbuf, offset, offset + length);
-   pipe_mutex_unlock(ss->swc_mutex);
+   mtx_unlock(&ss->swc_mutex);
 }
 
 
@@ -339,7 +339,7 @@ svga_buffer_transfer_unmap( struct pipe_context *pipe,
       }
    }
 
-   pipe_mutex_unlock(ss->swc_mutex);
+   mtx_unlock(&ss->swc_mutex);
    FREE(transfer);
    SVGA_STATS_TIME_POP(svga_sws(svga));
 }

@@ -83,7 +83,7 @@ etna_drm_screen_destroy(struct pipe_screen *pscreen)
       int fd = etna_device_fd(screen->dev);
       util_hash_table_remove(etna_tab, intptr_to_pointer(fd));
    }
-   pipe_mutex_unlock(etna_screen_mutex);
+   mtx_unlock(&etna_screen_mutex);
 
    if (destroy) {
       pscreen->destroy = screen->winsys_priv;
@@ -145,7 +145,7 @@ etna_drm_screen_create_renderonly(struct renderonly *ro)
    }
 
 unlock:
-   pipe_mutex_unlock(etna_screen_mutex);
+   mtx_unlock(&etna_screen_mutex);
    return pscreen;
 }
 

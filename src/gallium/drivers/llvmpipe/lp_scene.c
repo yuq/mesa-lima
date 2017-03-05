@@ -502,7 +502,7 @@ lp_scene_bin_iter_next( struct lp_scene *scene , int *x, int *y)
 
 end:
    /*printf("return bin %p at %d, %d\n", (void *) bin, *bin_x, *bin_y);*/
-   pipe_mutex_unlock(scene->mutex);
+   mtx_unlock(&scene->mutex);
    return bin;
 }
 

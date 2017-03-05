@@ -102,7 +102,7 @@ vlVdpBitmapSurfaceCreate(VdpDevice device,
       goto err_unlock;
    }
 
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    *surface = vlAddDataHTAB(vlsurface);
    if (*surface == 0) {
@@ -116,7 +116,7 @@ vlVdpBitmapSurfaceCreate(VdpDevice device,
 err_sampler:
    pipe_sampler_view_reference(&vlsurface->sampler_view, NULL);
 err_unlock:
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
    DeviceReference(&vlsurface->device, NULL);
    FREE(vlsurface);
    return ret;
@@ -136,7 +136,7 @@ vlVdpBitmapSurfaceDestroy(VdpBitmapSurface surface)
 
    mtx_lock(&vlsurface->device->mutex);
    pipe_sampler_view_reference(&vlsurface->sampler_view, NULL);
-   pipe_mutex_unlock(vlsurface->device->mutex);
+   mtx_unlock(&vlsurface->device->mutex);
 
    vlRemoveDataHTAB(surface);
    DeviceReference(&vlsurface->device, NULL);
@@ -203,7 +203,7 @@ vlVdpBitmapSurfacePutBitsNative(VdpBitmapSurface surface,
                          PIPE_TRANSFER_WRITE, &dst_box, *source_data,
                          *source_pitches, 0);
 
-   pipe_mutex_unlock(vlsurface->device->mutex);
+   mtx_unlock(&vlsurface->device->mutex);
 
    return VDP_STATUS_OK;
 }

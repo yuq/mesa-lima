@@ -81,7 +81,7 @@ vlVdpDecoderCreate(VdpDevice device,
       PIPE_VIDEO_CAP_SUPPORTED
    );
    if (!supported) {
-      pipe_mutex_unlock(dev->mutex);
+      mtx_unlock(&dev->mutex);
       return VDP_STATUS_INVALID_DECODER_PROFILE;
    }
 
@@ -100,13 +100,13 @@ vlVdpDecoderCreate(VdpDevice device,
       PIPE_VIDEO_CAP_MAX_HEIGHT
    );
    if (width > maxwidth || height > maxheight) {
-      pipe_mutex_unlock(dev->mutex);
+      mtx_unlock(&dev->mutex);
       return VDP_STATUS_INVALID_SIZE;
    }
 
    vldecoder = CALLOC(1,sizeof(vlVdpDecoder));
    if (!vldecoder) {
-      pipe_mutex_unlock(dev->mutex);
+      mtx_unlock(&dev->mutex);
       return VDP_STATUS_RESOURCES;
    }
 
@@ -137,7 +137,7 @@ vlVdpDecoderCreate(VdpDevice device,
    }
 
    (void) mtx_init(&vldecoder->mutex, mtx_plain);
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 
@@ -145,7 +145,7 @@ error_handle:
    vldecoder->decoder->destroy(vldecoder->decoder);
 
 error_decoder:
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
    DeviceReference(&vldecoder->device, NULL);
    FREE(vldecoder);
    return ret;
@@ -165,7 +165,7 @@ vlVdpDecoderDestroy(VdpDecoder decoder)
 
    mtx_lock(&vldecoder->mutex);
    vldecoder->decoder->destroy(vldecoder->decoder);
-   pipe_mutex_unlock(vldecoder->mutex);
+   mtx_unlock(&vldecoder->mutex);
    mtx_destroy(&vldecoder->mutex);
 
    vlRemoveDataHTAB(decoder);
@@ -633,11 +633,11 @@ vlVdpDecoderRender(VdpDecoder decoder,
 
       /* still no luck? get me out of here... */
       if (!vlsurf->video_buffer) {
-         pipe_mutex_unlock(vlsurf->device->mutex);
+         mtx_unlock(&vlsurf->device->mutex);
          return VDP_STATUS_NO_IMPLEMENTATION;
       }
       vlVdpVideoSurfaceClear(vlsurf);
-      pipe_mutex_unlock(vlsurf->device->mutex);
+      mtx_unlock(&vlsurf->device->mutex);
    }
 
    for (i = 0; i < bitstream_buffer_count; ++i) {
@@ -678,6 +678,6 @@ vlVdpDecoderRender(VdpDecoder decoder,
    dec->begin_frame(dec, vlsurf->video_buffer, &desc.base);
    dec->decode_bitstream(dec, vlsurf->video_buffer, &desc.base, bitstream_buffer_count, buffers, sizes);
    dec->end_frame(dec, vlsurf->video_buffer, &desc.base);
-   pipe_mutex_unlock(vldecoder->mutex);
+   mtx_unlock(&vldecoder->mutex);
    return ret;
 }

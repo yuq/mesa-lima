@@ -107,11 +107,11 @@ struct vl_screen *omx_get_screen(void)
 
    ++omx_usecount;
 
-   pipe_mutex_unlock(omx_lock);
+   mtx_unlock(&omx_lock);
    return omx_screen;
 
 error:
-   pipe_mutex_unlock(omx_lock);
+   mtx_unlock(&omx_lock);
    return NULL;
 }
 
@@ -127,7 +127,7 @@ void omx_put_screen(void)
       else
          XCloseDisplay(omx_display);
    }
-   pipe_mutex_unlock(omx_lock);
+   mtx_unlock(&omx_lock);
 }
 
 OMX_ERRORTYPE omx_workaround_Destructor(OMX_COMPONENTTYPE *comp)

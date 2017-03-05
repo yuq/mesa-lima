@@ -52,7 +52,7 @@ atexit_handler(void)
    LIST_FOR_EACH_ENTRY(iter, &queue_list, head) {
       util_queue_killall_and_wait(iter);
    }
-   pipe_mutex_unlock(exit_mutex);
+   mtx_unlock(&exit_mutex);
 }
 
 static void
@@ -69,7 +69,7 @@ add_to_atexit_list(struct util_queue *queue)
 
    mtx_lock(&exit_mutex);
    LIST_ADD(&queue->head, &queue_list);
-   pipe_mutex_unlock(exit_mutex);
+   mtx_unlock(&exit_mutex);
 }
 
 static void
@@ -84,7 +84,7 @@ remove_from_atexit_list(struct util_queue *queue)
          break;
       }
    }
-   pipe_mutex_unlock(exit_mutex);
+   mtx_unlock(&exit_mutex);
 }
 
 /****************************************************************************
@@ -97,7 +97,7 @@ util_queue_fence_signal(struct util_queue_fence *fence)
    mtx_lock(&fence->mutex);
    fence->signalled = true;
    cnd_broadcast(&fence->cond);
-   pipe_mutex_unlock(fence->mutex);
+   mtx_unlock(&fence->mutex);
 }
 
 void
@@ -106,7 +106,7 @@ util_queue_fence_wait(struct util_queue_fence *fence)
    mtx_lock(&fence->mutex);
    while (!fence->signalled)
       cnd_wait(&fence->cond, &fence->mutex);
-   pipe_mutex_unlock(fence->mutex);
+   mtx_unlock(&fence->mutex);
 }
 
 void
@@ -159,7 +159,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
          cnd_wait(&queue->has_queued_cond, &queue->lock);
 
       if (queue->kill_threads) {
-         pipe_mutex_unlock(queue->lock);
+         mtx_unlock(&queue->lock);
          break;
       }
 
@@ -169,7 +169,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
 
       queue->num_queued--;
       cnd_signal(&queue->has_space_cond);
-      pipe_mutex_unlock(queue->lock);
+      mtx_unlock(&queue->lock);
 
       if (job.job) {
          job.execute(job.job, thread_index);
@@ -188,7 +188,7 @@ static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
       queue->read_idx = (queue->read_idx + 1) % queue->max_jobs;
    }
    queue->num_queued = 0; /* reset this when exiting the thread */
-   pipe_mutex_unlock(queue->lock);
+   mtx_unlock(&queue->lock);
    return 0;
 }
 
@@ -268,7 +268,7 @@ util_queue_killall_and_wait(struct util_queue *queue)
    mtx_lock(&queue->lock);
    queue->kill_threads = 1;
    cnd_broadcast(&queue->has_queued_cond);
-   pipe_mutex_unlock(queue->lock);
+   mtx_unlock(&queue->lock);
 
    for (i = 0; i < queue->num_threads; i++)
       pipe_thread_wait(queue->threads[i]);
@@ -317,7 +317,7 @@ util_queue_add_job(struct util_queue *queue,
 
    queue->num_queued++;
    cnd_signal(&queue->has_queued_cond);
-   pipe_mutex_unlock(queue->lock);
+   mtx_unlock(&queue->lock);
 }
 
 int64_t

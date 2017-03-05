@@ -248,7 +248,7 @@ hud_get_num_disks(bool displayhelp)
    /* Return the number of block devices and partitions. */
    mtx_lock(&gdiskstat_mutex);
    if (gdiskstat_count) {
-      pipe_mutex_unlock(gdiskstat_mutex);
+      mtx_unlock(&gdiskstat_mutex);
       return gdiskstat_count;
    }
 
@@ -258,7 +258,7 @@ hud_get_num_disks(bool displayhelp)
    list_inithead(&gdiskstat_list);
    DIR *dir = opendir("/sys/block/");
    if (!dir) {
-      pipe_mutex_unlock(gdiskstat_mutex);
+      mtx_unlock(&gdiskstat_mutex);
       return 0;
    }
 
@@ -285,7 +285,7 @@ hud_get_num_disks(bool displayhelp)
       struct dirent *dpart;
       DIR *pdir = opendir(basename);
       if (!pdir) {
-         pipe_mutex_unlock(gdiskstat_mutex);
+         mtx_unlock(&gdiskstat_mutex);
          closedir(dir);
          return 0;
       }
@@ -320,7 +320,7 @@ hud_get_num_disks(bool displayhelp)
          puts(line);
       }
    }
-   pipe_mutex_unlock(gdiskstat_mutex);
+   mtx_unlock(&gdiskstat_mutex);
 
    return gdiskstat_count;
 }

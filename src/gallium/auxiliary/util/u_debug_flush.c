@@ -167,7 +167,7 @@ debug_flush_ctx_create(boolean catch_reference_of_mapped, unsigned bt_depth)
    fctx->bt_depth = bt_depth;
    mtx_lock(&list_mutex);
    list_addtail(&fctx->head, &ctx_list);
-   pipe_mutex_unlock(list_mutex);
+   mtx_unlock(&list_mutex);
 
    return fctx;
 
@@ -227,7 +227,7 @@ debug_flush_map(struct debug_flush_buf *fbuf, unsigned flags)
    }
    fbuf->map_frame = debug_flush_capture_frame(1, fbuf->bt_depth);
    fbuf->mapped = TRUE;
-   pipe_mutex_unlock(fbuf->mutex);
+   mtx_unlock(&fbuf->mutex);
 
    if (mapped_sync) {
       struct debug_flush_ctx *fctx;
@@ -244,7 +244,7 @@ debug_flush_map(struct debug_flush_buf *fbuf, unsigned flags)
                               FALSE, FALSE, item->ref_frame);
          }
       }
-      pipe_mutex_unlock(list_mutex);
+      mtx_unlock(&list_mutex);
    }
 }
 
@@ -263,7 +263,7 @@ debug_flush_unmap(struct debug_flush_buf *fbuf)
    fbuf->mapped = FALSE;
    FREE(fbuf->map_frame);
    fbuf->map_frame = NULL;
-   pipe_mutex_unlock(fbuf->mutex);
+   mtx_unlock(&fbuf->mutex);
 }
 
 void
@@ -284,7 +284,7 @@ debug_flush_cb_reference(struct debug_flush_ctx *fctx,
       debug_flush_alert(NULL, "Map", 0, fbuf->bt_depth, FALSE,
                         FALSE, fbuf->map_frame);
    }
-   pipe_mutex_unlock(fbuf->mutex);
+   mtx_unlock(&fbuf->mutex);
 
    if (!item) {
       item = CALLOC_STRUCT(debug_flush_item);
@@ -328,7 +328,7 @@ debug_flush_might_flush_cb(void *key, void *value, void *data)
       debug_flush_alert(NULL, "First reference", 0, item->bt_depth, FALSE,
                         FALSE, item->ref_frame);
    }
-   pipe_mutex_unlock(fbuf->mutex);
+   mtx_unlock(&fbuf->mutex);
 
    return PIPE_OK;
 }

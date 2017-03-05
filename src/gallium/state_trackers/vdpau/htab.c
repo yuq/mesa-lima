@@ -42,7 +42,7 @@ boolean vlCreateHTAB(void)
    if (!htab)
       htab = handle_table_create();
    ret = htab != NULL;
-   pipe_mutex_unlock(htab_lock);
+   mtx_unlock(&htab_lock);
    return ret;
 }
 
@@ -53,7 +53,7 @@ void vlDestroyHTAB(void)
       handle_table_destroy(htab);
       htab = NULL;
    }
-   pipe_mutex_unlock(htab_lock);
+   mtx_unlock(&htab_lock);
 }
 
 vlHandle vlAddDataHTAB(void *data)
@@ -64,7 +64,7 @@ vlHandle vlAddDataHTAB(void *data)
    mtx_lock(&htab_lock);
    if (htab)
       handle = handle_table_add(htab, data);
-   pipe_mutex_unlock(htab_lock);
+   mtx_unlock(&htab_lock);
    return handle;
 }
 
@@ -76,7 +76,7 @@ void* vlGetDataHTAB(vlHandle handle)
    mtx_lock(&htab_lock);
    if (htab)
       data = handle_table_get(htab, handle);
-   pipe_mutex_unlock(htab_lock);
+   mtx_unlock(&htab_lock);
    return data;
 }
 
@@ -85,5 +85,5 @@ void vlRemoveDataHTAB(vlHandle handle)
    mtx_lock(&htab_lock);
    if (htab)
       handle_table_remove(htab, handle);
-   pipe_mutex_unlock(htab_lock);
+   mtx_unlock(&htab_lock);
 }

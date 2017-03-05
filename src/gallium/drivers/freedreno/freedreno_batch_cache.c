@@ -136,7 +136,7 @@ fd_bc_flush(struct fd_batch_cache *cache, struct fd_context *ctx)
 		struct fd_batch *batch = NULL;
 		fd_batch_reference_locked(&batch, (struct fd_batch *)entry->data);
 		if (batch->ctx == ctx) {
-			pipe_mutex_unlock(ctx->screen->lock);
+			mtx_unlock(&ctx->screen->lock);
 			fd_batch_reference(&last_batch, batch);
 			fd_batch_flush(batch, false);
 			mtx_lock(&ctx->screen->lock);
@@ -144,7 +144,7 @@ fd_bc_flush(struct fd_batch_cache *cache, struct fd_context *ctx)
 		fd_batch_reference_locked(&batch, NULL);
 	}
 
-	pipe_mutex_unlock(ctx->screen->lock);
+	mtx_unlock(&ctx->screen->lock);
 
 	if (last_batch) {
 		fd_batch_sync(last_batch);
@@ -165,7 +165,7 @@ fd_bc_invalidate_context(struct fd_context *ctx)
 			fd_batch_reference_locked(&batch, NULL);
 	}
 
-	pipe_mutex_unlock(ctx->screen->lock);
+	mtx_unlock(&ctx->screen->lock);
 }
 
 void
@@ -224,7 +224,7 @@ fd_bc_invalidate_resource(struct fd_resource *rsc, bool destroy)
 
 	rsc->bc_batch_mask = 0;
 
-	pipe_mutex_unlock(screen->lock);
+	mtx_unlock(&screen->lock);
 }
 
 struct fd_batch *
@@ -263,7 +263,7 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 		/* we can drop lock temporarily here, since we hold a ref,
 		 * flush_batch won't disappear under us.
 		 */
-		pipe_mutex_unlock(ctx->screen->lock);
+		mtx_unlock(&ctx->screen->lock);
 		DBG("%p: too many batches!  flush forced!", flush_batch);
 		fd_batch_flush(flush_batch, true);
 		mtx_lock(&ctx->screen->lock);
@@ -303,7 +303,7 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 	cache->batches[idx] = batch;
 
 out:
-	pipe_mutex_unlock(ctx->screen->lock);
+	mtx_unlock(&ctx->screen->lock);
 
 	return batch;
 }
@@ -349,7 +349,7 @@ batch_from_key(struct fd_batch_cache *cache, struct key *key,
 		rsc->bc_batch_mask = (1 << batch->idx);
 	}
 
-	pipe_mutex_unlock(ctx->screen->lock);
+	mtx_unlock(&ctx->screen->lock);
 
 	return batch;
 }

@@ -172,7 +172,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	resource_written(batch, batch->query_buf);
 
-	pipe_mutex_unlock(ctx->screen->lock);
+	mtx_unlock(&ctx->screen->lock);
 
 	batch->num_draws++;
 
@@ -346,7 +346,7 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 
 	resource_written(batch, batch->query_buf);
 
-	pipe_mutex_unlock(ctx->screen->lock);
+	mtx_unlock(&ctx->screen->lock);
 
 	DBG("%p: %x %ux%u depth=%f, stencil=%u (%s/%s)", batch, buffers,
 		pfb->width, pfb->height, depth, stencil,

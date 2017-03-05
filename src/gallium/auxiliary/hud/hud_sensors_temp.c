@@ -326,13 +326,13 @@ hud_get_num_sensors(bool displayhelp)
    /* Return the number of sensors detected. */
    mtx_lock(&gsensor_temp_mutex);
    if (gsensors_temp_count) {
-      pipe_mutex_unlock(gsensor_temp_mutex);
+      mtx_unlock(&gsensor_temp_mutex);
       return gsensors_temp_count;
    }
 
    int ret = sensors_init(NULL);
    if (ret) {
-      pipe_mutex_unlock(gsensor_temp_mutex);
+      mtx_unlock(&gsensor_temp_mutex);
       return 0;
    }
 
@@ -368,7 +368,7 @@ hud_get_num_sensors(bool displayhelp)
       }
    }
 
-   pipe_mutex_unlock(gsensor_temp_mutex);
+   mtx_unlock(&gsensor_temp_mutex);
    return gsensors_temp_count;
 }
 

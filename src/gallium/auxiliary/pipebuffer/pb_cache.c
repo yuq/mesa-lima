@@ -98,7 +98,7 @@ pb_cache_add_buffer(struct pb_cache_entry *entry)
    /* Directly release any buffer that exceeds the limit. */
    if (mgr->cache_size + buf->size > mgr->max_cache_size) {
       mgr->destroy_buffer(buf);
-      pipe_mutex_unlock(mgr->mutex);
+      mtx_unlock(&mgr->mutex);
       return;
    }
 
@@ -107,7 +107,7 @@ pb_cache_add_buffer(struct pb_cache_entry *entry)
    LIST_ADDTAIL(&entry->head, cache);
    ++mgr->num_buffers;
    mgr->cache_size += buf->size;
-   pipe_mutex_unlock(mgr->mutex);
+   mtx_unlock(&mgr->mutex);
 }
 
 /**
@@ -208,13 +208,13 @@ pb_cache_reclaim_buffer(struct pb_cache *mgr, pb_size size,
       mgr->cache_size -= buf->size;
       LIST_DEL(&entry->head);
       --mgr->num_buffers;
-      pipe_mutex_unlock(mgr->mutex);
+      mtx_unlock(&mgr->mutex);
       /* Increase refcount */
       pipe_reference_init(&buf->reference, 1);
       return buf;
    }
 
-   pipe_mutex_unlock(mgr->mutex);
+   mtx_unlock(&mgr->mutex);
    return NULL;
 }
 
@@ -241,7 +241,7 @@ pb_cache_release_all_buffers(struct pb_cache *mgr)
          next = curr->next;
       }
    }
-   pipe_mutex_unlock(mgr->mutex);
+   mtx_unlock(&mgr->mutex);
 }
 
 void

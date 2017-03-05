@@ -311,7 +311,7 @@ static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
 	ctx->flush(ctx, NULL, 0);
 
 	if (ctx == rscreen->aux_context)
-		pipe_mutex_unlock(rscreen->aux_context_lock);
+		mtx_unlock(&rscreen->aux_context_lock);
 }
 
 static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
@@ -401,7 +401,7 @@ bool r600_texture_disable_dcc(struct r600_common_context *rctx,
 	rctx->b.flush(&rctx->b, NULL, 0);
 
 	if (&rctx->b == rscreen->aux_context)
-		pipe_mutex_unlock(rscreen->aux_context_lock);
+		mtx_unlock(&rscreen->aux_context_lock);
 
 	return r600_texture_discard_dcc(rscreen, rtex);
 }

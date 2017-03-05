@@ -333,7 +333,7 @@ hud_get_num_nics(bool displayhelp)
    /* Return the number if network interfaces. */
    mtx_lock(&gnic_mutex);
    if (gnic_count) {
-      pipe_mutex_unlock(gnic_mutex);
+      mtx_unlock(&gnic_mutex);
       return gnic_count;
    }
 
@@ -343,7 +343,7 @@ hud_get_num_nics(bool displayhelp)
    list_inithead(&gnic_list);
    DIR *dir = opendir("/sys/class/net/");
    if (!dir) {
-      pipe_mutex_unlock(gnic_mutex);
+      mtx_unlock(&gnic_mutex);
       return 0;
    }
 
@@ -419,7 +419,7 @@ hud_get_num_nics(bool displayhelp)
 
    }
 
-   pipe_mutex_unlock(gnic_mutex);
+   mtx_unlock(&gnic_mutex);
    return gnic_count;
 }
 

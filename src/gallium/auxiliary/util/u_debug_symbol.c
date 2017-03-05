@@ -313,6 +313,6 @@ debug_symbol_name_cached(const void *addr)
 
       util_hash_table_set(symbols_hash, (void*)addr, (void*)name);
    }
-   pipe_mutex_unlock(symbols_mutex);
+   mtx_unlock(&symbols_mutex);
    return name;
 }

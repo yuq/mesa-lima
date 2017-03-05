@@ -106,7 +106,7 @@ rtasm_exec_malloc(size_t size)
       debug_printf("rtasm_exec_malloc failed\n");
 
 bail:
-   pipe_mutex_unlock(exec_mutex);
+   mtx_unlock(&exec_mutex);
    
    return addr;
 }
@@ -124,7 +124,7 @@ rtasm_exec_free(void *addr)
 	 u_mmFreeMem(block);
    }
 
-   pipe_mutex_unlock(exec_mutex);
+   mtx_unlock(&exec_mutex);
 }
 
 

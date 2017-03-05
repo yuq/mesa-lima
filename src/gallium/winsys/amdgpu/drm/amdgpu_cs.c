@@ -1041,7 +1041,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
 
       handles = malloc(sizeof(handles[0]) * ws->num_buffers);
       if (!handles) {
-         pipe_mutex_unlock(ws->global_bo_list_lock);
+         mtx_unlock(&ws->global_bo_list_lock);
          amdgpu_cs_context_cleanup(cs);
          cs->error_code = -ENOMEM;
          return;
@@ -1056,7 +1056,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
                                 handles, NULL,
                                 &cs->request.resources);
       free(handles);
-      pipe_mutex_unlock(ws->global_bo_list_lock);
+      mtx_unlock(&ws->global_bo_list_lock);
    } else {
       r = amdgpu_bo_list_create(ws->dev, cs->num_real_buffers,
                                 cs->handles, cs->flags,
@@ -1222,7 +1222,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       util_queue_add_job(&ws->cs_queue, cs, &cs->flush_completed,
                          amdgpu_cs_submit_ib, NULL);
       /* The submission has been queued, unlock the fence now. */
-      pipe_mutex_unlock(ws->bo_fence_lock);
+      mtx_unlock(&ws->bo_fence_lock);
 
       if (!(flags & RADEON_FLUSH_ASYNC)) {
          amdgpu_cs_sync_flush(rcs);

@@ -154,7 +154,7 @@ out_mapped:
    vsrf->data = data;
    vsrf->map_mode = flags & (PIPE_TRANSFER_READ | PIPE_TRANSFER_WRITE);
 out_unlock:
-   pipe_mutex_unlock(vsrf->mutex);
+   mtx_unlock(&vsrf->mutex);
    return data;
 }
 
@@ -173,7 +173,7 @@ vmw_svga_winsys_surface_unmap(struct svga_winsys_context *swc,
    } else {
       *rebind = FALSE;
    }
-   pipe_mutex_unlock(vsrf->mutex);
+   mtx_unlock(&vsrf->mutex);
 }
 
 void

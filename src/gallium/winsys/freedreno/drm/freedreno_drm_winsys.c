@@ -56,7 +56,7 @@ fd_drm_screen_destroy(struct pipe_screen *pscreen)
 		int fd = fd_device_fd(screen->dev);
 		util_hash_table_remove(fd_tab, intptr_to_pointer(fd));
 	}
-	pipe_mutex_unlock(fd_screen_mutex);
+	mtx_unlock(&fd_screen_mutex);
 
 	if (destroy) {
 		pscreen->destroy = screen->winsys_priv;
@@ -122,6 +122,6 @@ fd_drm_screen_create(int fd)
 	}
 
 unlock:
-	pipe_mutex_unlock(fd_screen_mutex);
+	mtx_unlock(&fd_screen_mutex);
 	return pscreen;
 }

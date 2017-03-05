@@ -1034,7 +1034,7 @@ static void r300_texture_destroy(struct pipe_screen *screen,
         if (texture == rscreen->cmask_resource) {
             rscreen->cmask_resource = NULL;
         }
-        pipe_mutex_unlock(rscreen->cmask_mutex);
+        mtx_unlock(&rscreen->cmask_mutex);
     }
     pb_reference(&tex->buf, NULL);
     FREE(tex);

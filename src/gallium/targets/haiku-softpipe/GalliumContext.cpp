@@ -414,6 +414,6 @@ void
 GalliumContext::Unlock()
 {
 	CALLED();
-	pipe_mutex_unlock(fMutex);
+	mtx_unlock(&fMutex);
 }
 /* vim: set tabstop=4: */

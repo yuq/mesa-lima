@@ -104,7 +104,7 @@ vmw_fences_release(struct vmw_fence_ops *ops)
    mtx_lock(&ops->mutex);
    LIST_FOR_EACH_ENTRY_SAFE(fence, n, &ops->not_signaled, ops_list)
       LIST_DELINIT(&fence->ops_list);
-   pipe_mutex_unlock(ops->mutex);
+   mtx_unlock(&ops->mutex);
 }
 
 /**
@@ -152,7 +152,7 @@ vmw_fences_signal(struct pb_fence_ops *fence_ops,
    ops->last_emitted = emitted;
 
 out_unlock:
-   pipe_mutex_unlock(ops->mutex);
+   mtx_unlock(&ops->mutex);
 }
 
 
@@ -203,7 +203,7 @@ vmw_fence_create(struct pb_fence_ops *fence_ops, uint32_t handle,
       LIST_ADDTAIL(&fence->ops_list, &ops->not_signaled);
    }
 
-   pipe_mutex_unlock(ops->mutex);
+   mtx_unlock(&ops->mutex);
 
    return (struct pipe_fence_handle *) fence;
 }
@@ -231,7 +231,7 @@ vmw_fence_reference(struct vmw_winsys_screen *vws,
 
          mtx_lock(&ops->mutex);
          LIST_DELINIT(&vfence->ops_list);
-         pipe_mutex_unlock(ops->mutex);
+         mtx_unlock(&ops->mutex);
 
 	 FREE(vfence);
       }

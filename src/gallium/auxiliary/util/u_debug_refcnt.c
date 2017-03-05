@@ -112,7 +112,7 @@ debug_serial(void *p, unsigned *pserial)
       util_hash_table_set(serials_hash, p, (void *) (uintptr_t) serial);
       found = FALSE;
    }
-   pipe_mutex_unlock(serials_mutex);
+   mtx_unlock(&serials_mutex);
 
    *pserial = serial;
 
@@ -128,7 +128,7 @@ debug_serial_delete(void *p)
 {
    mtx_lock(&serials_mutex);
    util_hash_table_remove(serials_hash, p);
-   pipe_mutex_unlock(serials_mutex);
+   mtx_unlock(&serials_mutex);
 }
 
 

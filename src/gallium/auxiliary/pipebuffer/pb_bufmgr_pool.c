@@ -113,7 +113,7 @@ pool_buffer_destroy(struct pb_buffer *buf)
    mtx_lock(&pool->mutex);
    LIST_ADD(&pool_buf->head, &pool->free);
    pool->numFree++;
-   pipe_mutex_unlock(pool->mutex);
+   mtx_unlock(&pool->mutex);
 }
 
 
@@ -128,7 +128,7 @@ pool_buffer_map(struct pb_buffer *buf, unsigned flags, void *flush_ctx)
 
    mtx_lock(&pool->mutex);
    map = (unsigned char *) pool->map + pool_buf->start;
-   pipe_mutex_unlock(pool->mutex);
+   mtx_unlock(&pool->mutex);
    return map;
 }
 
@@ -199,7 +199,7 @@ pool_bufmgr_create_buffer(struct pb_manager *mgr,
    mtx_lock(&pool->mutex);
 
    if (pool->numFree == 0) {
-      pipe_mutex_unlock(pool->mutex);
+      mtx_unlock(&pool->mutex);
       debug_printf("warning: out of fixed size buffer objects\n");
       return NULL;
    }
@@ -207,7 +207,7 @@ pool_bufmgr_create_buffer(struct pb_manager *mgr,
    item = pool->free.next;
 
    if (item == &pool->free) {
-      pipe_mutex_unlock(pool->mutex);
+      mtx_unlock(&pool->mutex);
       debug_printf("error: fixed size buffer pool corruption\n");
       return NULL;
    }
@@ -215,7 +215,7 @@ pool_bufmgr_create_buffer(struct pb_manager *mgr,
    LIST_DEL(item);
    --pool->numFree;
 
-   pipe_mutex_unlock(pool->mutex);
+   mtx_unlock(&pool->mutex);
    
    pool_buf = LIST_ENTRY(struct pool_buffer, item, head);
    assert(!pipe_is_referenced(&pool_buf->base.reference));
@@ -245,7 +245,7 @@ pool_bufmgr_destroy(struct pb_manager *mgr)
    pb_unmap(pool->buffer);
    pb_reference(&pool->buffer, NULL);
    
-   pipe_mutex_unlock(pool->mutex);
+   mtx_unlock(&pool->mutex);
    
    FREE(mgr);
 }

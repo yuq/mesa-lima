@@ -216,7 +216,7 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
    drv = VL_VA_DRIVER(ctx);
    mtx_lock(&drv->mutex);
    config = handle_table_get(drv->htab, config_id);
-   pipe_mutex_unlock(drv->mutex);
+   mtx_unlock(&drv->mutex);
 
    is_vpp = config->profile == PIPE_VIDEO_PROFILE_UNKNOWN && !picture_width &&
             !picture_height && !flag && !render_targets && !num_render_targets;
@@ -289,7 +289,7 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
 
    mtx_lock(&drv->mutex);
    *context_id = handle_table_add(drv->htab, context);
-   pipe_mutex_unlock(drv->mutex);
+   mtx_unlock(&drv->mutex);
 
    return VA_STATUS_SUCCESS;
 }
@@ -307,7 +307,7 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
    mtx_lock(&drv->mutex);
    context = handle_table_get(drv->htab, context_id);
    if (!context) {
-      pipe_mutex_unlock(drv->mutex);
+      mtx_unlock(&drv->mutex);
       return VA_STATUS_ERROR_INVALID_CONTEXT;
    }
 
@@ -332,7 +332,7 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
    }
    FREE(context);
    handle_table_remove(drv->htab, context_id);
-   pipe_mutex_unlock(drv->mutex);
+   mtx_unlock(&drv->mutex);
 
    return VA_STATUS_SUCCESS;
 }

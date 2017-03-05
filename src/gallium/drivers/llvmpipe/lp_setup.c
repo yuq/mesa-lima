@@ -179,7 +179,7 @@ lp_setup_rasterize_scene( struct lp_setup_context *setup )
     */
    lp_rast_queue_scene(screen->rast, scene);
    lp_rast_finish(screen->rast);
-   pipe_mutex_unlock(screen->rast_mutex);
+   mtx_unlock(&screen->rast_mutex);
 
    lp_scene_end_rasterization(setup->scene);
    lp_setup_reset( setup );

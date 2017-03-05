@@ -104,7 +104,7 @@ vlVdpVideoSurfaceCreate(VdpDevice device, VdpChromaType chroma_type,
 
    /* do not mandate early allocation of a video buffer */
    vlVdpVideoSurfaceClear(p_surf);
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    *surface = vlAddDataHTAB(p_surf);
    if (*surface == 0) {
@@ -141,7 +141,7 @@ vlVdpVideoSurfaceDestroy(VdpVideoSurface surface)
    mtx_lock(&p_surf->device->mutex);
    if (p_surf->video_buffer)
       p_surf->video_buffer->destroy(p_surf->video_buffer);
-   pipe_mutex_unlock(p_surf->device->mutex);
+   mtx_unlock(&p_surf->device->mutex);
 
    vlRemoveDataHTAB(surface);
    DeviceReference(&p_surf->device, NULL);
@@ -241,7 +241,7 @@ vlVdpVideoSurfaceGetBitsYCbCr(VdpVideoSurface surface,
    mtx_lock(&vlsurface->device->mutex);
    sampler_views = vlsurface->video_buffer->get_sampler_view_planes(vlsurface->video_buffer);
    if (!sampler_views) {
-      pipe_mutex_unlock(vlsurface->device->mutex);
+      mtx_unlock(&vlsurface->device->mutex);
       return VDP_STATUS_RESOURCES;
    }
 
@@ -263,7 +263,7 @@ vlVdpVideoSurfaceGetBitsYCbCr(VdpVideoSurface surface,
          map = pipe->transfer_map(pipe, sv->texture, 0,
                                        PIPE_TRANSFER_READ, &box, &transfer);
          if (!map) {
-            pipe_mutex_unlock(vlsurface->device->mutex);
+            mtx_unlock(&vlsurface->device->mutex);
             return VDP_STATUS_RESOURCES;
          }
 
@@ -288,7 +288,7 @@ vlVdpVideoSurfaceGetBitsYCbCr(VdpVideoSurface surface,
          pipe_transfer_unmap(pipe, transfer);
       }
    }
-   pipe_mutex_unlock(vlsurface->device->mutex);
+   mtx_unlock(&vlsurface->device->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -337,7 +337,7 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
                                            PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
                                            PIPE_VIDEO_CAP_PREFERED_FORMAT);
          if (nformat == PIPE_FORMAT_NONE) {
-            pipe_mutex_unlock(p_surf->device->mutex);
+            mtx_unlock(&p_surf->device->mutex);
             return VDP_STATUS_NO_IMPLEMENTATION;
          }
       }
@@ -356,7 +356,7 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
 
          /* stil no luck? ok forget it we don't support it */
          if (!p_surf->video_buffer) {
-            pipe_mutex_unlock(p_surf->device->mutex);
+            mtx_unlock(&p_surf->device->mutex);
             return VDP_STATUS_NO_IMPLEMENTATION;
          }
          vlVdpVideoSurfaceClear(p_surf);
@@ -373,7 +373,7 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
 
    sampler_views = p_surf->video_buffer->get_sampler_view_planes(p_surf->video_buffer);
    if (!sampler_views) {
-      pipe_mutex_unlock(p_surf->device->mutex);
+      mtx_unlock(&p_surf->device->mutex);
       return VDP_STATUS_RESOURCES;
    }
 
@@ -399,7 +399,7 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
             map = pipe->transfer_map(pipe, tex, 0, usage,
                                      &dst_box, &transfer);
             if (!map) {
-               pipe_mutex_unlock(p_surf->device->mutex);
+               mtx_unlock(&p_surf->device->mutex);
                return VDP_STATUS_RESOURCES;
             }
 
@@ -422,7 +422,7 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
          usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
       }
    }
-   pipe_mutex_unlock(p_surf->device->mutex);
+   mtx_unlock(&p_surf->device->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -472,7 +472,7 @@ struct pipe_video_buffer *vlVdpVideoSurfaceGallium(VdpVideoSurface surface)
       /* try to create a video buffer if we don't already have one */
       p_surf->video_buffer = pipe->create_video_buffer(pipe, &p_surf->templat);
    }
-   pipe_mutex_unlock(p_surf->device->mutex);
+   mtx_unlock(&p_surf->device->mutex);
 
    return p_surf->video_buffer;
 }
@@ -511,13 +511,13 @@ VdpStatus vlVdpVideoSurfaceDMABuf(VdpVideoSurface surface,
    /* Check if surface match interop requirements */
    if (p_surf->video_buffer == NULL || !p_surf->video_buffer->interlaced ||
        p_surf->video_buffer->buffer_format != PIPE_FORMAT_NV12) {
-      pipe_mutex_unlock(p_surf->device->mutex);
+      mtx_unlock(&p_surf->device->mutex);
       return VDP_STATUS_NO_IMPLEMENTATION;
    }
 
    surf = p_surf->video_buffer->get_surfaces(p_surf->video_buffer)[plane];
    if (!surf) {
-      pipe_mutex_unlock(p_surf->device->mutex);
+      mtx_unlock(&p_surf->device->mutex);
       return VDP_STATUS_RESOURCES;
    }
 
@@ -529,11 +529,11 @@ VdpStatus vlVdpVideoSurfaceDMABuf(VdpVideoSurface surface,
    if (!pscreen->resource_get_handle(pscreen, p_surf->device->context,
                                      surf->texture, &whandle,
                                      PIPE_HANDLE_USAGE_READ_WRITE)) {
-      pipe_mutex_unlock(p_surf->device->mutex);
+      mtx_unlock(&p_surf->device->mutex);
       return VDP_STATUS_NO_IMPLEMENTATION;
    }
 
-   pipe_mutex_unlock(p_surf->device->mutex);
+   mtx_unlock(&p_surf->device->mutex);
 
    result->handle = whandle.handle;
    result->width = surf->width;

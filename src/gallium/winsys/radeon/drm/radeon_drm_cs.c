@@ -602,7 +602,7 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
             p_atomic_inc(&bo->num_active_ioctls);
             radeon_bo_slab_fence(bo, (struct radeon_bo *)fence);
         }
-        pipe_mutex_unlock(cs->ws->bo_fence_lock);
+        mtx_unlock(&cs->ws->bo_fence_lock);
 
         radeon_fence_reference(&fence, NULL);
     } else {

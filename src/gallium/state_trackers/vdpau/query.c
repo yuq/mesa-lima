@@ -87,7 +87,7 @@ vlVdpVideoSurfaceQueryCapabilities(VdpDevice device, VdpChromaType surface_chrom
    /* XXX: Current limits */
    *is_supported = true;
    max_2d_texture_level = pscreen->get_param(pscreen, PIPE_CAP_MAX_TEXTURE_2D_LEVELS);
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
    if (!max_2d_texture_level)
       return VDP_STATUS_RESOURCES;
 
@@ -135,7 +135,7 @@ vlVdpVideoSurfaceQueryGetPutBitsYCbCrCapabilities(VdpDevice device, VdpChromaTyp
                                              PIPE_FORMAT_NV12,
                                              PIPE_VIDEO_PROFILE_UNKNOWN,
                                              PIPE_VIDEO_ENTRYPOINT_BITSTREAM)) {
-         pipe_mutex_unlock(dev->mutex);
+         mtx_unlock(&dev->mutex);
          return VDP_STATUS_OK;
       }
       break;
@@ -162,7 +162,7 @@ vlVdpVideoSurfaceQueryGetPutBitsYCbCrCapabilities(VdpDevice device, VdpChromaTyp
       PIPE_VIDEO_PROFILE_UNKNOWN,
       PIPE_VIDEO_ENTRYPOINT_BITSTREAM
    );
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -213,7 +213,7 @@ vlVdpDecoderQueryCapabilities(VdpDevice device, VdpDecoderProfile profile,
       *max_level = 0;
       *max_macroblocks = 0;
    }
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -255,7 +255,7 @@ vlVdpOutputSurfaceQueryCapabilities(VdpDevice device, VdpRGBAFormat surface_rgba
          pscreen, PIPE_CAP_MAX_TEXTURE_2D_LEVELS);
 
       if (!max_2d_texture_level) {
-         pipe_mutex_unlock(dev->mutex);
+         mtx_unlock(&dev->mutex);
          return VDP_STATUS_ERROR;
       }
 
@@ -264,7 +264,7 @@ vlVdpOutputSurfaceQueryCapabilities(VdpDevice device, VdpRGBAFormat surface_rgba
       *max_width = 0;
       *max_height = 0;
    }
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -302,7 +302,7 @@ vlVdpOutputSurfaceQueryGetPutBitsNativeCapabilities(VdpDevice device, VdpRGBAFor
       pscreen, format, PIPE_TEXTURE_2D, 1,
       PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET
    );
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -363,7 +363,7 @@ vlVdpOutputSurfaceQueryPutBitsIndexedCapabilities(VdpDevice device,
       pscreen, colortbl_format, PIPE_TEXTURE_1D, 1,
       PIPE_BIND_SAMPLER_VIEW
    );
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -413,7 +413,7 @@ vlVdpOutputSurfaceQueryPutBitsYCbCrCapabilities(VdpDevice device, VdpRGBAFormat 
       PIPE_VIDEO_PROFILE_UNKNOWN,
       PIPE_VIDEO_ENTRYPOINT_BITSTREAM
    );
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -455,7 +455,7 @@ vlVdpBitmapSurfaceQueryCapabilities(VdpDevice device, VdpRGBAFormat surface_rgba
          pscreen, PIPE_CAP_MAX_TEXTURE_2D_LEVELS);
 
       if (!max_2d_texture_level) {
-         pipe_mutex_unlock(dev->mutex);
+         mtx_unlock(&dev->mutex);
          return VDP_STATUS_ERROR;
       }
 
@@ -464,7 +464,7 @@ vlVdpBitmapSurfaceQueryCapabilities(VdpDevice device, VdpRGBAFormat surface_rgba
       *max_width = 0;
       *max_height = 0;
    }
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
 
    return VDP_STATUS_OK;
 }
@@ -556,10 +556,10 @@ vlVdpVideoMixerQueryParameterValueRange(VdpDevice device, VdpVideoMixerParameter
 
    case VDP_VIDEO_MIXER_PARAMETER_CHROMA_TYPE:
    default:
-      pipe_mutex_unlock(dev->mutex);
+      mtx_unlock(&dev->mutex);
       return VDP_STATUS_INVALID_VIDEO_MIXER_PARAMETER;
    }
-   pipe_mutex_unlock(dev->mutex);
+   mtx_unlock(&dev->mutex);
    return VDP_STATUS_OK;
 }
 

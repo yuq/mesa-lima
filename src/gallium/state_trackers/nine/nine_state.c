@@ -83,7 +83,7 @@ nine_csmt_wait_processed(struct csmt_context *ctx)
     while (!p_atomic_read(&ctx->processed)) {
         cnd_wait(&ctx->event_processed, &ctx->mutex_processed);
     }
-    pipe_mutex_unlock(ctx->mutex_processed);
+    mtx_unlock(&ctx->mutex_processed);
 }
 
 /* CSMT worker thread */
@@ -109,23 +109,23 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
                 mtx_lock(&ctx->mutex_processed);
                 p_atomic_set(&ctx->processed, TRUE);
                 cnd_signal(&ctx->event_processed);
-                pipe_mutex_unlock(ctx->mutex_processed);
+                mtx_unlock(&ctx->mutex_processed);
             }
             if (p_atomic_read(&ctx->toPause)) {
-                pipe_mutex_unlock(ctx->thread_running);
+                mtx_unlock(&ctx->thread_running);
                 /* will wait here the thread can be resumed */
                 mtx_lock(&ctx->thread_resume);
                 mtx_lock(&ctx->thread_running);
-                pipe_mutex_unlock(ctx->thread_resume);
+                mtx_unlock(&ctx->thread_resume);
             }
         }
 
-        pipe_mutex_unlock(ctx->thread_running);
+        mtx_unlock(&ctx->thread_running);
         if (p_atomic_read(&ctx->terminate)) {
             mtx_lock(&ctx->mutex_processed);
             p_atomic_set(&ctx->processed, TRUE);
             cnd_signal(&ctx->event_processed);
-            pipe_mutex_unlock(ctx->mutex_processed);
+            mtx_unlock(&ctx->mutex_processed);
             break;
         }
     }
@@ -273,8 +273,8 @@ nine_csmt_resume( struct NineDevice9 *device )
         return;
 
     ctx->hasPaused = FALSE;
-    pipe_mutex_unlock(ctx->thread_running);
-    pipe_mutex_unlock(ctx->thread_resume);
+    mtx_unlock(&ctx->thread_running);
+    mtx_unlock(&ctx->thread_resume);
 }
 
 struct pipe_context *

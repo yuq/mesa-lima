@@ -101,7 +101,7 @@ lp_fence_signal(struct lp_fence *fence)
     */
    cnd_broadcast(&fence->signalled);
 
-   pipe_mutex_unlock(fence->mutex);
+   mtx_unlock(&fence->mutex);
 }
 
 boolean
@@ -121,7 +121,7 @@ lp_fence_wait(struct lp_fence *f)
    while (f->count < f->rank) {
       cnd_wait(&f->signalled, &f->mutex);
    }
-   pipe_mutex_unlock(f->mutex);
+   mtx_unlock(&f->mutex);
 }
 
 

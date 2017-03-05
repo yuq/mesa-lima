@@ -307,7 +307,7 @@ void trace_dump_call_lock(void)
 
 void trace_dump_call_unlock(void)
 {
-   pipe_mutex_unlock(call_mutex);
+   mtx_unlock(&call_mutex);
 }
 
 /*
@@ -333,14 +333,14 @@ void trace_dumping_start(void)
 {
    mtx_lock(&call_mutex);
    trace_dumping_start_locked();
-   pipe_mutex_unlock(call_mutex);
+   mtx_unlock(&call_mutex);
 }
 
 void trace_dumping_stop(void)
 {
    mtx_lock(&call_mutex);
    trace_dumping_stop_locked();
-   pipe_mutex_unlock(call_mutex);
+   mtx_unlock(&call_mutex);
 }
 
 boolean trace_dumping_enabled(void)
@@ -348,7 +348,7 @@ boolean trace_dumping_enabled(void)
    boolean ret;
    mtx_lock(&call_mutex);
    ret = trace_dumping_enabled_locked();
-   pipe_mutex_unlock(call_mutex);
+   mtx_unlock(&call_mutex);
    return ret;
 }
 
@@ -402,7 +402,7 @@ void trace_dump_call_begin(const char *klass, const char *method)
 void trace_dump_call_end(void)
 {
    trace_dump_call_end_locked();
-   pipe_mutex_unlock(call_mutex);
+   mtx_unlock(&call_mutex);
 }
 
 void trace_dump_arg_begin(const char *name)

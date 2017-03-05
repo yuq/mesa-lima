@@ -172,7 +172,7 @@ batch_reset_resources(struct fd_batch *batch)
 {
 	mtx_lock(&batch->ctx->screen->lock);
 	batch_reset_resources_locked(batch);
-	pipe_mutex_unlock(batch->ctx->screen->lock);
+	mtx_unlock(&batch->ctx->screen->lock);
 }
 
 static void
@@ -205,7 +205,7 @@ __fd_batch_destroy(struct fd_batch *batch)
 
 	mtx_lock(&batch->ctx->screen->lock);
 	fd_bc_invalidate_batch(batch, true);
-	pipe_mutex_unlock(batch->ctx->screen->lock);
+	mtx_unlock(&batch->ctx->screen->lock);
 
 	batch_fini(batch);
 
@@ -289,7 +289,7 @@ batch_flush(struct fd_batch *batch)
 	} else {
 		mtx_lock(&batch->ctx->screen->lock);
 		fd_bc_invalidate_batch(batch, false);
-		pipe_mutex_unlock(batch->ctx->screen->lock);
+		mtx_unlock(&batch->ctx->screen->lock);
 	}
 }
 
@@ -337,7 +337,7 @@ batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
 	 */
 	if (batch_depends_on(dep, batch)) {
 		DBG("%p: flush forced on %p!", batch, dep);
-		pipe_mutex_unlock(batch->ctx->screen->lock);
+		mtx_unlock(&batch->ctx->screen->lock);
 		fd_batch_flush(dep, false);
 		mtx_lock(&batch->ctx->screen->lock);
 	} else {

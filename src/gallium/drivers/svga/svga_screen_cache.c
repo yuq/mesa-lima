@@ -154,7 +154,7 @@ svga_screen_cache_lookup(struct svga_screen *svgascreen,
       next = curr->next;
    }
 
-   pipe_mutex_unlock(cache->mutex);
+   mtx_unlock(&cache->mutex);
 
    if (SVGA_DEBUG & DEBUG_DMA)
       debug_printf("%s: cache %s after %u tries (bucket %d)\n", __FUNCTION__,
@@ -231,7 +231,7 @@ svga_screen_cache_add(struct svga_screen *svgascreen,
    if (surf_size >= SVGA_HOST_SURFACE_CACHE_BYTES) {
       /* this surface is too large to cache, just free it */
       sws->surface_reference(sws, &handle, NULL);
-      pipe_mutex_unlock(cache->mutex);
+      mtx_unlock(&cache->mutex);
       return;
    }
 
@@ -249,7 +249,7 @@ svga_screen_cache_add(struct svga_screen *svgascreen,
           * just discard this surface.
           */
          sws->surface_reference(sws, &handle, NULL);
-         pipe_mutex_unlock(cache->mutex);
+         mtx_unlock(&cache->mutex);
          return;
       }
    }
@@ -300,7 +300,7 @@ svga_screen_cache_add(struct svga_screen *svgascreen,
       sws->surface_reference(sws, &handle, NULL);
    }
 
-   pipe_mutex_unlock(cache->mutex);
+   mtx_unlock(&cache->mutex);
 }
 
 
@@ -368,7 +368,7 @@ svga_screen_cache_flush(struct svga_screen *svgascreen,
       next = curr->next;
    }
 
-   pipe_mutex_unlock(cache->mutex);
+   mtx_unlock(&cache->mutex);
 }
 
 

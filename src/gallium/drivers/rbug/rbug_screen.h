@@ -71,7 +71,7 @@ rbug_screen(struct pipe_screen *screen)
       mtx_lock(&scr->list_mutex);          \
       insert_at_head(&scr->name, &obj->list);    \
       scr->num_##name++;                         \
-      pipe_mutex_unlock(scr->list_mutex);        \
+      mtx_unlock(&scr->list_mutex);        \
    } while (0)
 
 #define rbug_screen_remove_from_list(scr, name, obj) \
@@ -79,7 +79,7 @@ rbug_screen(struct pipe_screen *screen)
       mtx_lock(&scr->list_mutex);               \
       remove_from_list(&obj->list);                   \
       scr->num_##name--;                              \
-      pipe_mutex_unlock(scr->list_mutex);             \
+      mtx_unlock(&scr->list_mutex);             \
    } while (0)
 
 

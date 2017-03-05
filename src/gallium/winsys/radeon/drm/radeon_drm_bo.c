@@ -88,7 +88,7 @@ static bool radeon_bo_is_busy(struct radeon_bo *bo)
     memmove(&bo->u.slab.fences[0], &bo->u.slab.fences[num_idle],
             (bo->u.slab.num_fences - num_idle) * sizeof(bo->u.slab.fences[0]));
     bo->u.slab.num_fences -= num_idle;
-    pipe_mutex_unlock(bo->rws->bo_fence_lock);
+    mtx_unlock(&bo->rws->bo_fence_lock);
 
     return busy;
 }
@@ -111,7 +111,7 @@ static void radeon_bo_wait_idle(struct radeon_bo *bo)
         while (bo->u.slab.num_fences) {
             struct radeon_bo *fence = NULL;
             radeon_bo_reference(&fence, bo->u.slab.fences[0]);
-            pipe_mutex_unlock(bo->rws->bo_fence_lock);
+            mtx_unlock(&bo->rws->bo_fence_lock);
 
             /* Wait without holding the fence lock. */
             radeon_real_bo_wait_idle(fence);
@@ -125,7 +125,7 @@ static void radeon_bo_wait_idle(struct radeon_bo *bo)
             }
             radeon_bo_reference(&fence, NULL);
         }
-        pipe_mutex_unlock(bo->rws->bo_fence_lock);
+        mtx_unlock(&bo->rws->bo_fence_lock);
     }
 }
 
@@ -218,7 +218,7 @@ static uint64_t radeon_bomgr_find_va(struct radeon_drm_winsys *rws,
             offset = hole->offset;
             list_del(&hole->list);
             FREE(hole);
-            pipe_mutex_unlock(rws->bo_va_mutex);
+            mtx_unlock(&rws->bo_va_mutex);
             return offset;
         }
         if ((hole->size - waste) > size) {
@@ -230,12 +230,12 @@ static uint64_t radeon_bomgr_find_va(struct radeon_drm_winsys *rws,
             }
             hole->size -= (size + waste);
             hole->offset += size + waste;
-            pipe_mutex_unlock(rws->bo_va_mutex);
+            mtx_unlock(&rws->bo_va_mutex);
             return offset;
         }
         if ((hole->size - waste) == size) {
             hole->size = waste;
-            pipe_mutex_unlock(rws->bo_va_mutex);
+            mtx_unlock(&rws->bo_va_mutex);
             return offset;
         }
     }
@@ -251,7 +251,7 @@ static uint64_t radeon_bomgr_find_va(struct radeon_drm_winsys *rws,
     }
     offset += waste;
     rws->va_offset += size + waste;
-    pipe_mutex_unlock(rws->bo_va_mutex);
+    mtx_unlock(&rws->bo_va_mutex);
     return offset;
 }
 
@@ -318,7 +318,7 @@ static void radeon_bomgr_free_va(struct radeon_drm_winsys *rws,
         }
     }
 out:
-    pipe_mutex_unlock(rws->bo_va_mutex);
+    mtx_unlock(&rws->bo_va_mutex);
 }
 
 void radeon_bo_destroy(struct pb_buffer *_buf)
@@ -337,7 +337,7 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
         util_hash_table_remove(rws->bo_names,
                                (void*)(uintptr_t)bo->flink_name);
     }
-    pipe_mutex_unlock(rws->bo_handles_mutex);
+    mtx_unlock(&rws->bo_handles_mutex);
 
     if (bo->u.real.ptr)
         os_munmap(bo->u.real.ptr, bo->base.size);
@@ -422,7 +422,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
     /* Return the pointer if it's already mapped. */
     if (bo->u.real.ptr) {
         bo->u.real.map_count++;
-        pipe_mutex_unlock(bo->u.real.map_mutex);
+        mtx_unlock(&bo->u.real.map_mutex);
         return (uint8_t*)bo->u.real.ptr + offset;
     }
     args.handle = bo->handle;
@@ -432,7 +432,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
                             DRM_RADEON_GEM_MMAP,
                             &args,
                             sizeof(args))) {
-        pipe_mutex_unlock(bo->u.real.map_mutex);
+        mtx_unlock(&bo->u.real.map_mutex);
         fprintf(stderr, "radeon: gem_mmap failed: %p 0x%08X\n",
                 bo, bo->handle);
         return NULL;
@@ -447,7 +447,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
         ptr = os_mmap(0, args.size, PROT_READ|PROT_WRITE, MAP_SHARED,
                       bo->rws->fd, args.addr_ptr);
         if (ptr == MAP_FAILED) {
-            pipe_mutex_unlock(bo->u.real.map_mutex);
+            mtx_unlock(&bo->u.real.map_mutex);
             fprintf(stderr, "radeon: mmap failed, errno: %i\n", errno);
             return NULL;
         }
@@ -461,7 +461,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
        bo->rws->mapped_gtt += bo->base.size;
     bo->rws->num_mapped_buffers++;
 
-    pipe_mutex_unlock(bo->u.real.map_mutex);
+    mtx_unlock(&bo->u.real.map_mutex);
     return (uint8_t*)bo->u.real.ptr + offset;
 }
 
@@ -555,13 +555,13 @@ static void radeon_bo_unmap(struct pb_buffer *_buf)
 
     mtx_lock(&bo->u.real.map_mutex);
     if (!bo->u.real.ptr) {
-        pipe_mutex_unlock(bo->u.real.map_mutex);
+        mtx_unlock(&bo->u.real.map_mutex);
         return; /* it's not been mapped */
     }
 
     assert(bo->u.real.map_count);
     if (--bo->u.real.map_count) {
-        pipe_mutex_unlock(bo->u.real.map_mutex);
+        mtx_unlock(&bo->u.real.map_mutex);
         return; /* it's been mapped multiple times */
     }
 
@@ -574,7 +574,7 @@ static void radeon_bo_unmap(struct pb_buffer *_buf)
        bo->rws->mapped_gtt -= bo->base.size;
     bo->rws->num_mapped_buffers--;
 
-    pipe_mutex_unlock(bo->u.real.map_mutex);
+    mtx_unlock(&bo->u.real.map_mutex);
 }
 
 static const struct pb_vtbl radeon_bo_vtbl = {
@@ -671,13 +671,13 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
             struct radeon_bo *old_bo =
                 util_hash_table_get(rws->bo_vas, (void*)(uintptr_t)va.offset);
 
-            pipe_mutex_unlock(rws->bo_handles_mutex);
+            mtx_unlock(&rws->bo_handles_mutex);
             pb_reference(&b, &old_bo->base);
             return radeon_bo(b);
         }
 
         util_hash_table_set(rws->bo_vas, (void*)(uintptr_t)bo->va, bo);
-        pipe_mutex_unlock(rws->bo_handles_mutex);
+        mtx_unlock(&rws->bo_handles_mutex);
     }
 
     if (initial_domains & RADEON_DOMAIN_VRAM)
@@ -1032,7 +1032,7 @@ no_slab:
 
     mtx_lock(&ws->bo_handles_mutex);
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);
-    pipe_mutex_unlock(ws->bo_handles_mutex);
+    mtx_unlock(&ws->bo_handles_mutex);
 
     return &bo->base;
 }
@@ -1080,7 +1080,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
 
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);
 
-    pipe_mutex_unlock(ws->bo_handles_mutex);
+    mtx_unlock(&ws->bo_handles_mutex);
 
     if (ws->info.has_virtual_memory) {
         struct drm_radeon_gem_va va;
@@ -1107,13 +1107,13 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
             struct radeon_bo *old_bo =
                 util_hash_table_get(ws->bo_vas, (void*)(uintptr_t)va.offset);
 
-            pipe_mutex_unlock(ws->bo_handles_mutex);
+            mtx_unlock(&ws->bo_handles_mutex);
             pb_reference(&b, &old_bo->base);
             return b;
         }
 
         util_hash_table_set(ws->bo_vas, (void*)(uintptr_t)bo->va, bo);
-        pipe_mutex_unlock(ws->bo_handles_mutex);
+        mtx_unlock(&ws->bo_handles_mutex);
     }
 
     ws->allocated_gtt += align(bo->base.size, ws->info.gart_page_size);
@@ -1218,7 +1218,7 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);
 
 done:
-    pipe_mutex_unlock(ws->bo_handles_mutex);
+    mtx_unlock(&ws->bo_handles_mutex);
 
     if (stride)
         *stride = whandle->stride;
@@ -1250,13 +1250,13 @@ done:
             struct radeon_bo *old_bo =
                 util_hash_table_get(ws->bo_vas, (void*)(uintptr_t)va.offset);
 
-            pipe_mutex_unlock(ws->bo_handles_mutex);
+            mtx_unlock(&ws->bo_handles_mutex);
             pb_reference(&b, &old_bo->base);
             return b;
         }
 
         util_hash_table_set(ws->bo_vas, (void*)(uintptr_t)bo->va, bo);
-        pipe_mutex_unlock(ws->bo_handles_mutex);
+        mtx_unlock(&ws->bo_handles_mutex);
     }
 
     bo->initial_domain = radeon_bo_get_initial_domain((void*)bo);
@@ -1269,7 +1269,7 @@ done:
     return (struct pb_buffer*)bo;
 
 fail:
-    pipe_mutex_unlock(ws->bo_handles_mutex);
+    mtx_unlock(&ws->bo_handles_mutex);
     return NULL;
 }
 
@@ -1303,7 +1303,7 @@ static bool radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
 
             mtx_lock(&ws->bo_handles_mutex);
             util_hash_table_set(ws->bo_names, (void*)(uintptr_t)bo->flink_name, bo);
-            pipe_mutex_unlock(ws->bo_handles_mutex);
+            mtx_unlock(&ws->bo_handles_mutex);
         }
         whandle->handle = bo->flink_name;
     } else if (whandle->type == DRM_API_HANDLE_TYPE_KMS) {

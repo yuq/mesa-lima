@@ -101,7 +101,7 @@ vc4_bo_unreference(struct vc4_bo **bo)
                         vc4_bo_last_unreference(*bo);
                 }
 
-                pipe_mutex_unlock(screen->bo_handles_mutex);
+                mtx_unlock(&screen->bo_handles_mutex);
         }
 
         *bo = NULL;

@@ -107,7 +107,7 @@ vc4_bo_from_cache(struct vc4_screen *screen, uint32_t size, const char *name)
                  * user will proceed to CPU map it and fill it with stuff.
                  */
                 if (!vc4_bo_wait(bo, 0, NULL)) {
-                        pipe_mutex_unlock(cache->lock);
+                        mtx_unlock(&cache->lock);
                         return NULL;
                 }
 
@@ -116,7 +116,7 @@ vc4_bo_from_cache(struct vc4_screen *screen, uint32_t size, const char *name)
 
                 bo->name = name;
         }
-        pipe_mutex_unlock(cache->lock);
+        mtx_unlock(&cache->lock);
         return bo;
 }
 
@@ -190,7 +190,7 @@ vc4_bo_last_unreference(struct vc4_bo *bo)
         clock_gettime(CLOCK_MONOTONIC, &time);
         mtx_lock(&screen->bo_cache.lock);
         vc4_bo_last_unreference_locked_timed(bo, time.tv_sec);
-        pipe_mutex_unlock(screen->bo_cache.lock);
+        mtx_unlock(&screen->bo_cache.lock);
 }
 
 static void
@@ -267,7 +267,7 @@ vc4_bo_cache_free_all(struct vc4_bo_cache *cache)
                 vc4_bo_remove_from_cache(cache, bo);
                 vc4_bo_free(bo);
         }
-        pipe_mutex_unlock(cache->lock);
+        mtx_unlock(&cache->lock);
 }
 
 void
@@ -347,7 +347,7 @@ vc4_bo_open_handle(struct vc4_screen *screen,
         util_hash_table_set(screen->bo_handles, (void *)(uintptr_t)handle, bo);
 
 done:
-        pipe_mutex_unlock(screen->bo_handles_mutex);
+        mtx_unlock(&screen->bo_handles_mutex);
         return bo;
 }
 
@@ -404,7 +404,7 @@ vc4_bo_get_dmabuf(struct vc4_bo *bo)
         mtx_lock(&bo->screen->bo_handles_mutex);
         bo->private = false;
         util_hash_table_set(bo->screen->bo_handles, (void *)(uintptr_t)bo->handle, bo);
-        pipe_mutex_unlock(bo->screen->bo_handles_mutex);
+        mtx_unlock(&bo->screen->bo_handles_mutex);
 
         return fd;
 }

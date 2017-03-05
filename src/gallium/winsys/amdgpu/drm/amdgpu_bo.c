@@ -99,7 +99,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
       bo->num_fences -= idle_fences;
 
       buffer_idle = !bo->num_fences;
-      pipe_mutex_unlock(ws->bo_fence_lock);
+      mtx_unlock(&ws->bo_fence_lock);
 
       return buffer_idle;
    } else {
@@ -113,7 +113,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
          amdgpu_fence_reference(&fence, bo->fences[0]);
 
          /* Wait for the fence. */
-         pipe_mutex_unlock(ws->bo_fence_lock);
+         mtx_unlock(&ws->bo_fence_lock);
          if (amdgpu_fence_wait(fence, abs_timeout, true))
             fence_idle = true;
          else
@@ -132,7 +132,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
 
          amdgpu_fence_reference(&fence, NULL);
       }
-      pipe_mutex_unlock(ws->bo_fence_lock);
+      mtx_unlock(&ws->bo_fence_lock);
 
       return buffer_idle;
    }
@@ -163,7 +163,7 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
    mtx_lock(&bo->ws->global_bo_list_lock);
    LIST_DEL(&bo->u.real.global_list_item);
    bo->ws->num_buffers--;
-   pipe_mutex_unlock(bo->ws->global_bo_list_lock);
+   mtx_unlock(&bo->ws->global_bo_list_lock);
 
    amdgpu_bo_va_op(bo->bo, 0, bo->base.size, bo->va, 0, AMDGPU_VA_OP_UNMAP);
    amdgpu_va_range_free(bo->u.real.va_handle);
@@ -352,7 +352,7 @@ static void amdgpu_add_buffer_to_global_list(struct amdgpu_winsys_bo *bo)
    mtx_lock(&ws->global_bo_list_lock);
    LIST_ADDTAIL(&bo->u.real.global_list_item, &ws->global_bo_list);
    ws->num_buffers++;
-   pipe_mutex_unlock(ws->global_bo_list_lock);
+   mtx_unlock(&ws->global_bo_list_lock);
 }
 
 static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,

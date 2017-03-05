@@ -221,7 +221,7 @@ pb_slab_buffer_destroy(struct pb_buffer *_buf)
       FREE(slab);
    }
 
-   pipe_mutex_unlock(mgr->mutex);
+   mtx_unlock(&mgr->mutex);
 }
 
 
@@ -402,7 +402,7 @@ pb_slab_manager_create_buffer(struct pb_manager *_mgr,
    if (mgr->slabs.next == &mgr->slabs) {
       (void) pb_slab_create(mgr);
       if (mgr->slabs.next == &mgr->slabs) {
-	 pipe_mutex_unlock(mgr->mutex);
+	 mtx_unlock(&mgr->mutex);
 	 return NULL;
       }
    }
@@ -418,7 +418,7 @@ pb_slab_manager_create_buffer(struct pb_manager *_mgr,
    list = slab->freeBuffers.next;
    LIST_DELINIT(list);
 
-   pipe_mutex_unlock(mgr->mutex);
+   mtx_unlock(&mgr->mutex);
    buf = LIST_ENTRY(struct pb_slab_buffer, list, head);
    
    pipe_reference_init(&buf->base.reference, 1);

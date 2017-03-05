@@ -188,7 +188,7 @@ rbug_texture_list(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
       tr_tex = container_of(ptr, struct rbug_resource, list);
       texs[i++] = VOID2U64(tr_tex);
    }
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    rbug_send_texture_list_reply(tr_rbug->con, serial, texs, i, NULL);
    FREE(texs);
@@ -215,7 +215,7 @@ rbug_texture_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
    }
 
    if (!tr_tex) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -235,7 +235,7 @@ rbug_texture_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
                                t->bind,
                                NULL);
 
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -264,7 +264,7 @@ rbug_texture_read(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
    }
 
    if (!tr_tex) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -287,7 +287,7 @@ rbug_texture_read(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
 
    context->transfer_unmap(context, t);
 
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -307,7 +307,7 @@ rbug_context_list(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
       rb_context = container_of(ptr, struct rbug_context, list);
       ctxs[i++] = VOID2U64(rb_context);
    }
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    rbug_send_context_list_reply(tr_rbug->con, serial, ctxs, i, NULL);
    FREE(ctxs);
@@ -330,7 +330,7 @@ rbug_context_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
    rb_context = rbug_get_context_locked(rb_screen, info->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -352,9 +352,9 @@ rbug_context_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
                                 VOID2U64(rb_context->curr.zsbuf),
                                 rb_context->draw_blocker, rb_context->draw_blocked, NULL);
 
-   pipe_mutex_unlock(rb_context->call_mutex);
-   pipe_mutex_unlock(rb_context->draw_mutex);
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_context->call_mutex);
+   mtx_unlock(&rb_context->draw_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -371,15 +371,15 @@ rbug_context_draw_block(struct rbug_rbug *tr_rbug, struct rbug_header *header, u
    rb_context = rbug_get_context_locked(rb_screen, block->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
    mtx_lock(&rb_context->draw_mutex);
    rb_context->draw_blocker |= block->block;
-   pipe_mutex_unlock(rb_context->draw_mutex);
+   mtx_unlock(&rb_context->draw_mutex);
 
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -396,7 +396,7 @@ rbug_context_draw_step(struct rbug_rbug *tr_rbug, struct rbug_header *header, ui
    rb_context = rbug_get_context_locked(rb_screen, step->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -407,11 +407,11 @@ rbug_context_draw_step(struct rbug_rbug *tr_rbug, struct rbug_header *header, ui
    } else {
       rb_context->draw_blocked &= ~step->step;
    }
-   pipe_mutex_unlock(rb_context->draw_mutex);
+   mtx_unlock(&rb_context->draw_mutex);
 
    cnd_broadcast(&rb_context->draw_cond);
 
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -428,7 +428,7 @@ rbug_context_draw_unblock(struct rbug_rbug *tr_rbug, struct rbug_header *header,
    rb_context = rbug_get_context_locked(rb_screen, unblock->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -440,11 +440,11 @@ rbug_context_draw_unblock(struct rbug_rbug *tr_rbug, struct rbug_header *header,
       rb_context->draw_blocked &= ~unblock->unblock;
    }
    rb_context->draw_blocker &= ~unblock->unblock;
-   pipe_mutex_unlock(rb_context->draw_mutex);
+   mtx_unlock(&rb_context->draw_mutex);
 
    cnd_broadcast(&rb_context->draw_cond);
 
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -461,7 +461,7 @@ rbug_context_draw_rule(struct rbug_rbug *tr_rbug, struct rbug_header *header, ui
    rb_context = rbug_get_context_locked(rb_screen, rule->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -472,11 +472,11 @@ rbug_context_draw_rule(struct rbug_rbug *tr_rbug, struct rbug_header *header, ui
    rb_context->draw_rule.surf = U642VOID(rule->surface);
    rb_context->draw_rule.blocker = rule->block;
    rb_context->draw_blocker |= RBUG_BLOCK_RULE;
-   pipe_mutex_unlock(rb_context->draw_mutex);
+   mtx_unlock(&rb_context->draw_mutex);
 
    cnd_broadcast(&rb_context->draw_cond);
 
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -493,7 +493,7 @@ rbug_context_flush(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32
    rb_context = rbug_get_context_locked(rb_screen, flush->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -502,8 +502,8 @@ rbug_context_flush(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32
 
    rb_context->pipe->flush(rb_context->pipe, NULL, 0);
 
-   pipe_mutex_unlock(rb_context->call_mutex);
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_context->call_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -524,7 +524,7 @@ rbug_shader_list(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_t
    rb_context = rbug_get_context_locked(rb_screen, list->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -535,8 +535,8 @@ rbug_shader_list(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_t
       shdrs[i++] = VOID2U64(tr_shdr);
    }
 
-   pipe_mutex_unlock(rb_context->list_mutex);
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_context->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    rbug_send_shader_list_reply(tr_rbug->con, serial, shdrs, i, NULL);
    FREE(shdrs);
@@ -559,7 +559,7 @@ rbug_shader_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_t
    rb_context = rbug_get_context_locked(rb_screen, info->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -568,8 +568,8 @@ rbug_shader_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_t
    tr_shdr = rbug_get_shader_locked(rb_context, info->shader);
 
    if (!tr_shdr) {
-      pipe_mutex_unlock(rb_context->list_mutex);
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_context->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -588,8 +588,8 @@ rbug_shader_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_t
                                tr_shdr->disabled,
                                NULL);
 
-   pipe_mutex_unlock(rb_context->list_mutex);
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_context->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -607,7 +607,7 @@ rbug_shader_disable(struct rbug_rbug *tr_rbug, struct rbug_header *header)
    rb_context = rbug_get_context_locked(rb_screen, dis->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -616,15 +616,15 @@ rbug_shader_disable(struct rbug_rbug *tr_rbug, struct rbug_header *header)
    tr_shdr = rbug_get_shader_locked(rb_context, dis->shader);
 
    if (!tr_shdr) {
-      pipe_mutex_unlock(rb_context->list_mutex);
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_context->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
    tr_shdr->disabled = dis->disable;
 
-   pipe_mutex_unlock(rb_context->list_mutex);
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_context->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 }
@@ -644,7 +644,7 @@ rbug_shader_replace(struct rbug_rbug *tr_rbug, struct rbug_header *header)
    rb_context = rbug_get_context_locked(rb_screen, rep->context);
 
    if (!rb_context) {
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -653,8 +653,8 @@ rbug_shader_replace(struct rbug_rbug *tr_rbug, struct rbug_header *header)
    tr_shdr = rbug_get_shader_locked(rb_context, rep->shader);
 
    if (!tr_shdr) {
-      pipe_mutex_unlock(rb_context->list_mutex);
-      pipe_mutex_unlock(rb_screen->list_mutex);
+      mtx_unlock(&rb_context->list_mutex);
+      mtx_unlock(&rb_screen->list_mutex);
       return -ESRCH;
    }
 
@@ -695,9 +695,9 @@ rbug_shader_replace(struct rbug_rbug *tr_rbug, struct rbug_header *header)
    tr_shdr->replaced_shader = state;
 
 out:
-   pipe_mutex_unlock(rb_context->call_mutex);
-   pipe_mutex_unlock(rb_context->list_mutex);
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_context->call_mutex);
+   mtx_unlock(&rb_context->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
 
    return 0;
 
@@ -706,9 +706,9 @@ err:
    tr_shdr->replaced_shader = NULL;
    tr_shdr->replaced_tokens = NULL;
 
-   pipe_mutex_unlock(rb_context->call_mutex);
-   pipe_mutex_unlock(rb_context->list_mutex);
-   pipe_mutex_unlock(rb_screen->list_mutex);
+   mtx_unlock(&rb_context->call_mutex);
+   mtx_unlock(&rb_context->list_mutex);
+   mtx_unlock(&rb_screen->list_mutex);
    return -EINVAL;
 }
 

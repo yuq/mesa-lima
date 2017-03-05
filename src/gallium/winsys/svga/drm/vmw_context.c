@@ -533,7 +533,7 @@ vmw_swc_surface_relocation(struct svga_winsys_context *swc,
       
       vmw_swc_mob_relocation(swc, mobid, NULL, (struct svga_winsys_buffer *)
                              vsurf->buf, 0, flags);
-      pipe_mutex_unlock(vsurf->mutex);
+      mtx_unlock(&vsurf->mutex);
    }
 }
 

@@ -1082,7 +1082,7 @@ nv50_blit_select_fp(struct nv50_blitctx *ctx, const struct pipe_blit_info *info)
       if (!blitter->fp[targ][mode])
          blitter->fp[targ][mode] =
             nv50_blitter_make_fp(&ctx->nv50->base.pipe, mode, ptarg);
-      pipe_mutex_unlock(blitter->mutex);
+      mtx_unlock(&blitter->mutex);
    }
    ctx->fp = blitter->fp[targ][mode];
 }

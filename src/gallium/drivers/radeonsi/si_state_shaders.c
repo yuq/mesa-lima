@@ -1270,17 +1270,17 @@ again:
 			if (iter->is_optimized &&
 			    !util_queue_fence_is_signalled(&iter->optimized_ready)) {
 				memset(&key->opt, 0, sizeof(key->opt));
-				pipe_mutex_unlock(sel->mutex);
+				mtx_unlock(&sel->mutex);
 				goto again;
 			}
 
 			if (iter->compilation_failed) {
-				pipe_mutex_unlock(sel->mutex);
+				mtx_unlock(&sel->mutex);
 				return -1; /* skip the draw call */
 			}
 
 			state->current = iter;
-			pipe_mutex_unlock(sel->mutex);
+			mtx_unlock(&sel->mutex);
 			return 0;
 		}
 	}
@@ -1288,7 +1288,7 @@ again:
 	/* Build a new shader. */
 	shader = CALLOC_STRUCT(si_shader);
 	if (!shader) {
-		pipe_mutex_unlock(sel->mutex);
+		mtx_unlock(&sel->mutex);
 		return -ENOMEM;
 	}
 	shader->selector = sel;
@@ -1307,7 +1307,7 @@ again:
 
 		if (!main_part) {
 			FREE(shader);
-			pipe_mutex_unlock(sel->mutex);
+			mtx_unlock(&sel->mutex);
 			return -ENOMEM; /* skip the draw call */
 		}
 
@@ -1320,7 +1320,7 @@ again:
 					   &compiler_state->debug) != 0) {
 			FREE(main_part);
 			FREE(shader);
-			pipe_mutex_unlock(sel->mutex);
+			mtx_unlock(&sel->mutex);
 			return -ENOMEM; /* skip the draw call */
 		}
 		*mainp = main_part;
@@ -1357,7 +1357,7 @@ again:
 
 		/* Use the default (unoptimized) shader for now. */
 		memset(&key->opt, 0, sizeof(key->opt));
-		pipe_mutex_unlock(sel->mutex);
+		mtx_unlock(&sel->mutex);
 		goto again;
 	}
 
@@ -1367,7 +1367,7 @@ again:
 	if (!shader->compilation_failed)
 		state->current = shader;
 
-	pipe_mutex_unlock(sel->mutex);
+	mtx_unlock(&sel->mutex);
 	return shader->compilation_failed ? -1 : 0;
 }
 
@@ -1461,9 +1461,9 @@ void si_init_shader_selector_async(void *job, int thread_index)
 
 		if (tgsi_binary &&
 		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
-			pipe_mutex_unlock(sscreen->shader_cache_mutex);
+			mtx_unlock(&sscreen->shader_cache_mutex);
 		} else {
-			pipe_mutex_unlock(sscreen->shader_cache_mutex);
+			mtx_unlock(&sscreen->shader_cache_mutex);
 
 			/* Compile the shader if it hasn't been loaded from the cache. */
 			if (si_compile_tgsi_shader(sscreen, tm, shader, false,
@@ -1478,7 +1478,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 				mtx_lock(&sscreen->shader_cache_mutex);
 				if (!si_shader_cache_insert_shader(sscreen, tgsi_binary, shader, true))
 					FREE(tgsi_binary);
-				pipe_mutex_unlock(sscreen->shader_cache_mutex);
+				mtx_unlock(&sscreen->shader_cache_mutex);
 			}
 		}
 
