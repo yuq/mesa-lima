@@ -311,7 +311,7 @@ void bc_finalizer::finalize_alu_group(alu_group_node* g, node *prev_node) {
 		value *d = n->dst.empty() ? NULL : n->dst[0];
 
 		if (d && d->is_special_reg()) {
-			assert((n->bc.op_ptr->flags & AF_MOVA) || d->is_geometry_emit() || d->is_lds_oq() || d->is_lds_access());
+			assert((n->bc.op_ptr->flags & AF_MOVA) || d->is_geometry_emit() || d->is_lds_oq() || d->is_lds_access() || d->is_scratch());
 			d = NULL;
 		}
 

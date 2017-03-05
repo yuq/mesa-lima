@@ -725,6 +725,11 @@ int bc_parser::prepare_fetch_clause(cf_node *cf) {
 				n->src.push_back(get_cf_index_value(n->bc.resource_index_mode == V_SQ_CF_INDEX_1));
 			}
 		}
+
+		if (n->bc.op == FETCH_OP_READ_SCRATCH) {
+			n->src.push_back(sh->get_special_value(SV_SCRATCH));
+			n->dst.push_back(sh->get_special_value(SV_SCRATCH));
+		}
 	}
 
 	return 0;
@@ -855,6 +860,10 @@ int bc_parser::prepare_ir() {
 						c->flags |= NF_DONT_KILL;
 					}
 				}
+				else if (c->bc.op == CF_OP_MEM_SCRATCH) {
+					c->src.push_back(sh->get_special_value(SV_SCRATCH));
+					c->dst.push_back(sh->get_special_value(SV_SCRATCH));
+				}
 
 				if (!burst_count--)
 					break;
@@ -889,6 +898,9 @@ int bc_parser::prepare_ir() {
 				c->src.push_back(sh->get_special_value(SV_GEOMETRY_EMIT));
 				c->dst.push_back(sh->get_special_value(SV_GEOMETRY_EMIT));
 			}
+		} else if (c->bc.op == CF_OP_WAIT_ACK) {
+			c->src.push_back(sh->get_special_value(SV_SCRATCH));
+			c->dst.push_back(sh->get_special_value(SV_SCRATCH));
 		}
 	}
 

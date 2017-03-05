@@ -59,6 +59,7 @@ sb_ostream& operator << (sb_ostream &o, value &v) {
 			case SV_LDS_RW: o << "LDS_RW"; break;
 			case SV_LDS_OQA: o << "LDS_OQA"; break;
 			case SV_LDS_OQB: o << "LDS_OQB"; break;
+			case SV_SCRATCH: o << "SCRATCH"; break;
 			default: o << "???specialreg"; break;
 		}
 		break;

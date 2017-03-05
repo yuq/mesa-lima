@@ -46,6 +46,7 @@ enum special_regs {
 	SV_LDS_RW,
 	SV_LDS_OQA,
 	SV_LDS_OQB,
+	SV_SCRATCH
 };
 
 class node;
@@ -516,6 +517,9 @@ public:
 			// FIXME we really shouldn't have such chains
 			v = v->gvn_source;
 		return v;
+	}
+	bool is_scratch() {
+		return is_special_reg() && select == sel_chan(SV_SCRATCH, 0);
 	}
 
 	bool is_float_0_or_1() {

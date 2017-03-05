@@ -78,6 +78,7 @@ struct r600_shader {
 	boolean			uses_kill;
 	boolean			fs_write_all;
 	boolean			two_side;
+	boolean			needs_scratch_space;
 	/* Number of color outputs in the TGSI shader,
 	 * sometimes it could be higher than nr_cbufs (bug?).
 	 * Also with writes_all property on eg+ it will be set to max CB number */
