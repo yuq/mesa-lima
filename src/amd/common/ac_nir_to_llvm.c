@@ -1052,14 +1052,13 @@ static LLVMValueRef emit_imul_high(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef emit_bitfield_extract(struct nir_to_llvm_context *ctx,
-					  const char *intrin, unsigned attr_mask,
+					  bool is_signed,
 					  LLVMValueRef srcs[3])
 {
 	LLVMValueRef result;
 	LLVMValueRef icond = LLVMBuildICmp(ctx->builder, LLVMIntEQ, srcs[2], LLVMConstInt(ctx->i32, 32, false), "");
-	result = ac_build_intrinsic(&ctx->ac, intrin, ctx->i32, srcs, 3,
-				    AC_FUNC_ATTR_READNONE | attr_mask);
 
+	result = ac_build_bfe(&ctx->ac, srcs[0], srcs[1], srcs[2], is_signed);
 	result = LLVMBuildSelect(ctx->builder, icond, srcs[0], result, "");
 	return result;
 }
@@ -1432,12 +1431,10 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 		                              to_float_type(ctx, def_type), src[0], src[1], src[2]);
 		break;
 	case nir_op_ibitfield_extract:
-		result = emit_bitfield_extract(ctx, "llvm.AMDGPU.bfe.i32",
-					       AC_FUNC_ATTR_LEGACY, src);
+		result = emit_bitfield_extract(ctx, true, src);
 		break;
 	case nir_op_ubitfield_extract:
-		result = emit_bitfield_extract(ctx, "llvm.AMDGPU.bfe.u32",
-					       AC_FUNC_ATTR_LEGACY, src);
+		result = emit_bitfield_extract(ctx, false, src);
 		break;
 	case nir_op_bitfield_insert:
 		result = emit_bitfield_insert(ctx, src[0], src[1], src[2], src[3]);
