@@ -2029,7 +2029,7 @@ VkResult radv_CreateSemaphore(
 	if (!sem)
 		return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-	*pSemaphore = (VkSemaphore)sem;
+	*pSemaphore = radeon_winsys_sem_to_handle(sem);
 	return VK_SUCCESS;
 }
 
@@ -2039,11 +2039,10 @@ void radv_DestroySemaphore(
 	const VkAllocationCallbacks*                pAllocator)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
-	struct radeon_winsys_sem *sem;
+	RADV_FROM_HANDLE(radeon_winsys_sem, sem, _semaphore);
 	if (!_semaphore)
 		return;
 
-	sem = (struct radeon_winsys_sem *)_semaphore;
 	device->ws->destroy_sem(sem);
 }
 
