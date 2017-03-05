@@ -2393,31 +2393,6 @@ static int image_type_to_components_count(enum glsl_sampler_dim dim, bool array)
 }
 
 
-static void get_image_intr_name(const char *base_name,
-                                LLVMTypeRef data_type,
-                                LLVMTypeRef coords_type,
-                                LLVMTypeRef rsrc_type,
-                                char *out_name, unsigned out_len)
-{
-        char coords_type_name[8];
-
-        ac_build_type_name_for_intr(coords_type, coords_type_name,
-                            sizeof(coords_type_name));
-
-        if (HAVE_LLVM <= 0x0309) {
-                snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
-        } else {
-                char data_type_name[8];
-                char rsrc_type_name[8];
-
-                ac_build_type_name_for_intr(data_type, data_type_name,
-                                        sizeof(data_type_name));
-                ac_build_type_name_for_intr(rsrc_type, rsrc_type_name,
-                                        sizeof(rsrc_type_name));
-                snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
-                         data_type_name, coords_type_name, rsrc_type_name);
-        }
-}
 
 /* Adjust the sample index according to FMASK.
  *
@@ -2462,11 +2437,11 @@ static LLVMValueRef adjust_sample_index_using_fmask(struct nir_to_llvm_context *
 	params[5] = lwe;
 	params[6] = da;
 
-	get_image_intr_name("llvm.amdgcn.image.load",
-			    ctx->v4f32, /* vdata */
-			    LLVMTypeOf(params[0]), /* coords */
-			    LLVMTypeOf(params[1]), /* rsrc */
-			    intrinsic_name, sizeof(intrinsic_name));
+	ac_get_image_intr_name("llvm.amdgcn.image.load",
+			       ctx->v4f32, /* vdata */
+			       LLVMTypeOf(params[0]), /* coords */
+			       LLVMTypeOf(params[1]), /* rsrc */
+			       intrinsic_name, sizeof(intrinsic_name));
 
 	res = ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->v4f32,
 				 params, 7, AC_FUNC_ATTR_READONLY);
@@ -2633,11 +2608,11 @@ static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
 			params[6] = da;
 		}
 
-		get_image_intr_name("llvm.amdgcn.image.load",
-				    ctx->v4f32, /* vdata */
-				    LLVMTypeOf(params[0]), /* coords */
-				    LLVMTypeOf(params[1]), /* rsrc */
-				    intrinsic_name, sizeof(intrinsic_name));
+		ac_get_image_intr_name("llvm.amdgcn.image.load",
+				       ctx->v4f32, /* vdata */
+				       LLVMTypeOf(params[0]), /* coords */
+				       LLVMTypeOf(params[1]), /* rsrc */
+				       intrinsic_name, sizeof(intrinsic_name));
 
 		res = ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->v4f32,
 					 params, 7, AC_FUNC_ATTR_READONLY);
@@ -2692,11 +2667,11 @@ static void visit_image_store(struct nir_to_llvm_context *ctx,
 			params[7] = da;
 		}
 
-		get_image_intr_name("llvm.amdgcn.image.store",
-				    LLVMTypeOf(params[0]), /* vdata */
-				    LLVMTypeOf(params[1]), /* coords */
-				    LLVMTypeOf(params[2]), /* rsrc */
-				    intrinsic_name, sizeof(intrinsic_name));
+		ac_get_image_intr_name("llvm.amdgcn.image.store",
+				       LLVMTypeOf(params[0]), /* vdata */
+				       LLVMTypeOf(params[1]), /* coords */
+				       LLVMTypeOf(params[2]), /* rsrc */
+				       intrinsic_name, sizeof(intrinsic_name));
 
 		ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->voidt,
 				   params, 8, 0);
