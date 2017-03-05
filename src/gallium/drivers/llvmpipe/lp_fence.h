@@ -44,7 +44,7 @@ struct lp_fence
    unsigned id;
 
    mtx_t mutex;
-   pipe_condvar signalled;
+   cnd_t signalled;
 
    boolean issued;
    unsigned rank;

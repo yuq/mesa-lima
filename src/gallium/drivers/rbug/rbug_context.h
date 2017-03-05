@@ -59,7 +59,7 @@ struct rbug_context {
 
    /* draw locking */
    mtx_t draw_mutex;
-   pipe_condvar draw_cond;
+   cnd_t draw_cond;
    unsigned draw_num_rules;
    int draw_blocker;
    int draw_blocked;

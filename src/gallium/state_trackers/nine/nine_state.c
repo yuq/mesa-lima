@@ -63,7 +63,7 @@ struct csmt_context {
     thrd_t worker;
     struct nine_queue_pool* pool;
     BOOL terminate;
-    pipe_condvar event_processed;
+    cnd_t event_processed;
     mtx_t mutex_processed;
     struct NineDevice9 *device;
     BOOL processed;

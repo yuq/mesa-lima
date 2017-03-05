@@ -121,10 +121,6 @@ __pipe_mutex_assert_locked(mtx_t *mutex)
 #endif
 }
 
-/* pipe_condvar
- */
-typedef cnd_t pipe_condvar;
-
 
 /*
  * pipe_barrier
@@ -157,7 +153,7 @@ typedef struct {
    unsigned waiters;
    uint64_t sequence;
    mtx_t mutex;
-   pipe_condvar condvar;
+   cnd_t condvar;
 } pipe_barrier;
 
 static inline void pipe_barrier_init(pipe_barrier *barrier, unsigned count)
@@ -209,7 +205,7 @@ static inline void pipe_barrier_wait(pipe_barrier *barrier)
 typedef struct
 {
    mtx_t mutex;
-   pipe_condvar cond;
+   cnd_t cond;
    int counter;
 } pipe_semaphore;
 

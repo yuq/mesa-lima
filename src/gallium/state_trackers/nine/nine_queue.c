@@ -72,8 +72,8 @@ struct nine_queue_pool {
     unsigned tail;
     unsigned cur_instr;
     BOOL worker_wait;
-    pipe_condvar event_pop;
-    pipe_condvar event_push;
+    cnd_t event_pop;
+    cnd_t event_push;
     mtx_t mutex_pop;
     mtx_t mutex_push;
 };

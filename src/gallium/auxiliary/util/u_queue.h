@@ -41,7 +41,7 @@
  */
 struct util_queue_fence {
    mtx_t mutex;
-   pipe_condvar cond;
+   cnd_t cond;
    int signalled;
 };
 
@@ -58,8 +58,8 @@ struct util_queue_job {
 struct util_queue {
    const char *name;
    mtx_t lock;
-   pipe_condvar has_queued_cond;
-   pipe_condvar has_space_cond;
+   cnd_t has_queued_cond;
+   cnd_t has_space_cond;
    thrd_t *threads;
    int num_queued;
    unsigned num_threads;

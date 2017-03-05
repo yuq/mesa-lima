@@ -71,7 +71,7 @@ struct pb_slab_buffer
    
    /** Use when validating, to signal that all mappings are finished */
    /* TODO: Actually validation does not reach this stage yet */
-   pipe_condvar event;
+   cnd_t event;
 };
 
 
