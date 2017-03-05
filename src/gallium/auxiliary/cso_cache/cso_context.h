@@ -70,7 +70,7 @@ cso_set_samplers(struct cso_context *cso,
  * samplers one at a time:
  */
 enum pipe_error
-cso_single_sampler(struct cso_context *cso, unsigned shader_stage,
+cso_single_sampler(struct cso_context *cso, enum pipe_shader_type shader_stage,
                    unsigned idx, const struct pipe_sampler_state *states);
 
 void
@@ -205,16 +205,17 @@ cso_set_shader_images(struct cso_context *cso,
 
 /* constant buffers */
 
-void cso_set_constant_buffer(struct cso_context *cso, unsigned shader_stage,
+void cso_set_constant_buffer(struct cso_context *cso,
+                             enum pipe_shader_type shader_stage,
                              unsigned index, struct pipe_constant_buffer *cb);
 void cso_set_constant_buffer_resource(struct cso_context *cso,
-                                      unsigned shader_stage,
+                                      enum pipe_shader_type shader_stage,
                                       unsigned index,
                                       struct pipe_resource *buffer);
 void cso_save_constant_buffer_slot0(struct cso_context *cso,
-                                    unsigned shader_stage);
+                                    enum pipe_shader_type shader_stage);
 void cso_restore_constant_buffer_slot0(struct cso_context *cso,
-                                       unsigned shader_stage);
+                                       enum pipe_shader_type shader_stage);
 
 
 /* drawing */
