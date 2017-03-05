@@ -216,7 +216,7 @@ util_queue_init(struct util_queue *queue,
    cnd_init(&queue->has_queued_cond);
    cnd_init(&queue->has_space_cond);
 
-   queue->threads = (pipe_thread*)CALLOC(num_threads, sizeof(pipe_thread));
+   queue->threads = (thrd_t*)CALLOC(num_threads, sizeof(thrd_t));
    if (!queue->threads)
       goto fail;
 

@@ -234,7 +234,7 @@ struct dd_context
     * their fences. Records with signalled fences are freed. On fence timeout,
     * the thread dumps the record of the oldest unsignalled fence.
     */
-   pipe_thread thread;
+   thrd_t thread;
    mtx_t mutex;
    int kill_thread;
    struct pipe_resource *fence;

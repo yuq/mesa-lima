@@ -54,7 +54,7 @@ struct rbug_rbug
 {
    struct rbug_screen *rb_screen;
    struct rbug_connection *con;
-   pipe_thread thread;
+   thrd_t thread;
    boolean running;
 };
 

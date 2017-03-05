@@ -60,7 +60,7 @@ struct util_queue {
    mtx_t lock;
    pipe_condvar has_queued_cond;
    pipe_condvar has_space_cond;
-   pipe_thread *threads;
+   thrd_t *threads;
    int num_queued;
    unsigned num_threads;
    int kill_threads;

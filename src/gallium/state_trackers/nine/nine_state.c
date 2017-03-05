@@ -60,7 +60,7 @@ struct csmt_instruction {
 };
 
 struct csmt_context {
-    pipe_thread worker;
+    thrd_t worker;
     struct nine_queue_pool* pool;
     BOOL terminate;
     pipe_condvar event_processed;
@@ -217,7 +217,7 @@ void
 nine_csmt_destroy( struct NineDevice9 *device, struct csmt_context *ctx )
 {
     struct csmt_instruction* instr;
-    pipe_thread render_thread = ctx->worker;
+    thrd_t render_thread = ctx->worker;
 
     DBG("device=%p ctx=%p\n", device, ctx);
 

@@ -395,7 +395,7 @@ struct r600_common_screen {
 
 	/* GPU load thread. */
 	mtx_t				gpu_load_mutex;
-	pipe_thread			gpu_load_thread;
+	thrd_t				gpu_load_thread;
 	union r600_mmio_counters	mmio_counters;
 	volatile unsigned		gpu_load_stop_thread; /* bool */
 

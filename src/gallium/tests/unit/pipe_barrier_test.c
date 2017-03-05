@@ -46,7 +46,7 @@
 
 static int verbosity = 0;
 
-static pipe_thread threads[NUM_THREADS];
+static thrd_t threads[NUM_THREADS];
 static pipe_barrier barrier;
 static int thread_ids[NUM_THREADS];
 

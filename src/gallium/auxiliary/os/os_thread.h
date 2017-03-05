@@ -47,16 +47,12 @@
 #endif
 
 
-/* pipe_thread
- */
-typedef thrd_t pipe_thread;
-
 #define PIPE_THREAD_ROUTINE( name, param ) \
    int name( void *param )
 
-static inline pipe_thread pipe_thread_create( PIPE_THREAD_ROUTINE((*routine), ), void *param )
+static inline thrd_t pipe_thread_create( PIPE_THREAD_ROUTINE((*routine), ), void *param )
 {
-   pipe_thread thread;
+   thrd_t thread;
 #ifdef HAVE_PTHREAD
    sigset_t saved_set, new_set;
    int ret;
@@ -75,12 +71,12 @@ static inline pipe_thread pipe_thread_create( PIPE_THREAD_ROUTINE((*routine), ),
    return thread;
 }
 
-static inline int pipe_thread_wait( pipe_thread thread )
+static inline int pipe_thread_wait( thrd_t thread )
 {
    return thrd_join( thread, NULL );
 }
 
-static inline int pipe_thread_destroy( pipe_thread thread )
+static inline int pipe_thread_destroy( thrd_t thread )
 {
    return thrd_detach( thread );
 }
@@ -97,7 +93,7 @@ static inline void pipe_thread_setname( const char *name )
 }
 
 
-static inline int pipe_thread_is_self( pipe_thread thread )
+static inline int pipe_thread_is_self( thrd_t thread )
 {
 #if defined(HAVE_PTHREAD)
 #  if defined(__GNU_LIBRARY__) && defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
@@ -307,7 +303,7 @@ pipe_tsd_set(pipe_tsd *tsd, void *value)
 
 /* Return the time of a thread's CPU time clock. */
 static inline int64_t
-pipe_thread_get_time_nano(pipe_thread thread)
+pipe_thread_get_time_nano(thrd_t thread)
 {
 #if defined(PIPE_OS_LINUX) && defined(HAVE_PTHREAD)
    struct timespec ts;
