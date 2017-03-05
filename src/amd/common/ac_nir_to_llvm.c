@@ -2852,9 +2852,7 @@ static void emit_discard_if(struct nir_to_llvm_context *ctx,
 	cond = LLVMBuildSelect(ctx->builder, cond,
 			       LLVMConstReal(ctx->f32, -1.0f),
 			       ctx->f32zero, "");
-	ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
-			   ctx->voidt,
-			   &cond, 1, AC_FUNC_ATTR_LEGACY);
+	ac_build_kill(&ctx->ac, cond);
 }
 
 static LLVMValueRef
@@ -3110,8 +3108,7 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	kill = LLVMBuildSelect(ctx->builder, can_emit,
 			       LLVMConstReal(ctx->f32, 1.0f),
 			       LLVMConstReal(ctx->f32, -1.0f), "");
-	ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
-			   ctx->voidt, &kill, 1, AC_FUNC_ATTR_LEGACY);
+	ac_build_kill(&ctx->ac, kill);
 
 	/* loop num outputs */
 	idx = 0;
