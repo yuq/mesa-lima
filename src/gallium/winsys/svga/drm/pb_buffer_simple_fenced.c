@@ -809,7 +809,7 @@ fenced_bufmgr_destroy(struct pb_manager *mgr)
 #endif
 
    pipe_mutex_unlock(fenced_mgr->mutex);
-   pipe_mutex_destroy(fenced_mgr->mutex);
+   mtx_destroy(&fenced_mgr->mutex);
 
    FREE(fenced_mgr);
 }

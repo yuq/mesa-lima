@@ -123,7 +123,7 @@ util_queue_fence_destroy(struct util_queue_fence *fence)
 {
    assert(fence->signalled);
    cnd_destroy(&fence->cond);
-   pipe_mutex_destroy(fence->mutex);
+   mtx_destroy(&fence->mutex);
 }
 
 /****************************************************************************
@@ -251,7 +251,7 @@ fail:
    if (queue->jobs) {
       cnd_destroy(&queue->has_space_cond);
       cnd_destroy(&queue->has_queued_cond);
-      pipe_mutex_destroy(queue->lock);
+      mtx_destroy(&queue->lock);
       FREE(queue->jobs);
    }
    /* also util_queue_is_initialized can be used to check for success */
@@ -283,7 +283,7 @@ util_queue_destroy(struct util_queue *queue)
 
    cnd_destroy(&queue->has_space_cond);
    cnd_destroy(&queue->has_queued_cond);
-   pipe_mutex_destroy(queue->lock);
+   mtx_destroy(&queue->lock);
    FREE(queue->jobs);
    FREE(queue->threads);
 }

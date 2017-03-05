@@ -85,7 +85,7 @@ util_range_init(struct util_range *range)
 static inline void
 util_range_destroy(struct util_range *range)
 {
-   pipe_mutex_destroy(range->write_mutex);
+   mtx_destroy(&range->write_mutex);
 }
 
 #endif

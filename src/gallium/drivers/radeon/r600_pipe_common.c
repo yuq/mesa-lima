@@ -1360,8 +1360,8 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 	r600_perfcounters_destroy(rscreen);
 	r600_gpu_load_kill_thread(rscreen);
 
-	pipe_mutex_destroy(rscreen->gpu_load_mutex);
-	pipe_mutex_destroy(rscreen->aux_context_lock);
+	mtx_destroy(&rscreen->gpu_load_mutex);
+	mtx_destroy(&rscreen->aux_context_lock);
 	rscreen->aux_context->destroy(rscreen->aux_context);
 
 	slab_destroy_parent(&rscreen->pool_transfers);

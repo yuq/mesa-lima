@@ -389,10 +389,10 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
    if (util_queue_is_initialized(&ws->cs_queue))
       util_queue_destroy(&ws->cs_queue);
 
-   pipe_mutex_destroy(ws->bo_fence_lock);
+   mtx_destroy(&ws->bo_fence_lock);
    pb_slabs_deinit(&ws->bo_slabs);
    pb_cache_deinit(&ws->bo_cache);
-   pipe_mutex_destroy(ws->global_bo_list_lock);
+   mtx_destroy(&ws->global_bo_list_lock);
    do_winsys_deinit(ws);
    FREE(rws);
 }

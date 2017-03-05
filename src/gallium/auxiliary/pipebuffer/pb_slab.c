@@ -248,5 +248,5 @@ pb_slabs_deinit(struct pb_slabs *slabs)
    }
 
    FREE(slabs->groups);
-   pipe_mutex_destroy(slabs->mutex);
+   mtx_destroy(&slabs->mutex);
 }

@@ -704,7 +704,7 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 			FREE(part);
 		}
 	}
-	pipe_mutex_destroy(sscreen->shader_parts_mutex);
+	mtx_destroy(&sscreen->shader_parts_mutex);
 	si_destroy_shader_cache(sscreen);
 	r600_destroy_common_screen(&sscreen->b);
 }

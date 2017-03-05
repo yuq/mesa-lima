@@ -313,7 +313,7 @@ void si_destroy_shader_cache(struct si_screen *sscreen)
 	if (sscreen->shader_cache)
 		_mesa_hash_table_destroy(sscreen->shader_cache,
 					 si_destroy_shader_cache_entry);
-	pipe_mutex_destroy(sscreen->shader_cache_mutex);
+	mtx_destroy(&sscreen->shader_cache_mutex);
 }
 
 /* SHADER STATES */
@@ -1960,7 +1960,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 		si_delete_shader(sctx, sel->gs_copy_shader);
 
 	util_queue_fence_destroy(&sel->ready);
-	pipe_mutex_destroy(sel->mutex);
+	mtx_destroy(&sel->mutex);
 	free(sel->tokens);
 	free(sel);
 }

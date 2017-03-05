@@ -69,7 +69,7 @@ GalliumContext::~GalliumContext()
 		DestroyContext(i);
 	Unlock();
 
-	pipe_mutex_destroy(fMutex);
+	mtx_destroy(&fMutex);
 
 	// TODO: Destroy fScreen
 }

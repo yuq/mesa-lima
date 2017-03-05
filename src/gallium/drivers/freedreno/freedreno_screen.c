@@ -142,7 +142,7 @@ fd_screen_destroy(struct pipe_screen *pscreen)
 
 	slab_destroy_parent(&screen->transfer_pool);
 
-	pipe_mutex_destroy(screen->lock);
+	mtx_destroy(&screen->lock);
 
 	free(screen);
 }

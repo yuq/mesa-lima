@@ -120,8 +120,8 @@ virgl_drm_winsys_destroy(struct virgl_winsys *qws)
 
    util_hash_table_destroy(qdws->bo_handles);
    util_hash_table_destroy(qdws->bo_names);
-   pipe_mutex_destroy(qdws->bo_handles_mutex);
-   pipe_mutex_destroy(qdws->mutex);
+   mtx_destroy(&qdws->bo_handles_mutex);
+   mtx_destroy(&qdws->mutex);
 
    FREE(qdws);
 }

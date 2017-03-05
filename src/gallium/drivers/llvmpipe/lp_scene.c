@@ -90,7 +90,7 @@ void
 lp_scene_destroy(struct lp_scene *scene)
 {
    lp_fence_reference(&scene->fence, NULL);
-   pipe_mutex_destroy(scene->mutex);
+   mtx_destroy(&scene->mutex);
    assert(scene->data.head->next == NULL);
    FREE(scene->data.head);
    FREE(scene);

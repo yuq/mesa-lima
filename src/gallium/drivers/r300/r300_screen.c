@@ -684,7 +684,7 @@ static void r300_destroy_screen(struct pipe_screen* pscreen)
     if (rws && !rws->unref(rws))
       return;
 
-    pipe_mutex_destroy(r300screen->cmask_mutex);
+    mtx_destroy(&r300screen->cmask_mutex);
     slab_destroy_parent(&r300screen->pool_transfers);
 
     if (rws)

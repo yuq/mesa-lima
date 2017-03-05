@@ -240,7 +240,7 @@ pb_debug_buffer_destroy(struct pb_buffer *_buf)
    LIST_DEL(&buf->head);
    pipe_mutex_unlock(mgr->mutex);
 
-   pipe_mutex_destroy(buf->mutex);
+   mtx_destroy(&buf->mutex);
    
    pb_reference(&buf->buffer, NULL);
    FREE(buf);
@@ -449,7 +449,7 @@ pb_debug_manager_destroy(struct pb_manager *_mgr)
    }
    pipe_mutex_unlock(mgr->mutex);
    
-   pipe_mutex_destroy(mgr->mutex);
+   mtx_destroy(&mgr->mutex);
    mgr->provider->destroy(mgr->provider);
    FREE(mgr);
 }

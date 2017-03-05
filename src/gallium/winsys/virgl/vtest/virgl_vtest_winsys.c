@@ -619,7 +619,7 @@ virgl_vtest_winsys_destroy(struct virgl_winsys *vws)
 
    virgl_cache_flush(vtws);
 
-   pipe_mutex_destroy(vtws->mutex);
+   mtx_destroy(&vtws->mutex);
    FREE(vtws);
 }
 

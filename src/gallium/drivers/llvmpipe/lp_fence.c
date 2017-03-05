@@ -72,7 +72,7 @@ lp_fence_destroy(struct lp_fence *fence)
    if (LP_DEBUG & DEBUG_FENCE)
       debug_printf("%s %d\n", __FUNCTION__, fence->id);
 
-   pipe_mutex_destroy(fence->mutex);
+   mtx_destroy(&fence->mutex);
    cnd_destroy(&fence->signalled);
    FREE(fence);
 }

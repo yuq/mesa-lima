@@ -992,7 +992,7 @@ fenced_bufmgr_destroy(struct pb_manager *mgr)
 #endif
 
    pipe_mutex_unlock(fenced_mgr->mutex);
-   pipe_mutex_destroy(fenced_mgr->mutex);
+   mtx_destroy(&fenced_mgr->mutex);
 
    if (fenced_mgr->provider)
       fenced_mgr->provider->destroy(fenced_mgr->provider);

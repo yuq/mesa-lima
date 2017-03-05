@@ -351,7 +351,7 @@ vlVaTerminate(VADriverContextP ctx)
    drv->pipe->destroy(drv->pipe);
    drv->vscreen->destroy(drv->vscreen);
    handle_table_destroy(drv->htab);
-   pipe_mutex_destroy(drv->mutex);
+   mtx_destroy(&drv->mutex);
    FREE(drv);
 
    return VA_STATUS_SUCCESS;

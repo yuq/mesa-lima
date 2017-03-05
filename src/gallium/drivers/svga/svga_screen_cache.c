@@ -396,7 +396,7 @@ svga_screen_cache_cleanup(struct svga_screen *svgascreen)
          sws->fence_reference(sws, &cache->entries[i].fence, NULL);
    }
 
-   pipe_mutex_destroy(cache->mutex);
+   mtx_destroy(&cache->mutex);
 }
 
 

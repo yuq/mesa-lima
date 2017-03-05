@@ -201,7 +201,7 @@ vmw_svga_winsys_surface_reference(struct vmw_svga_winsys_surface **pdst,
       assert(p_atomic_read(&dst->validated) == 0);
       dst->sid = SVGA3D_INVALID_ID;
 #endif
-      pipe_mutex_destroy(dst->mutex);
+      mtx_destroy(&dst->mutex);
       FREE(dst);
    }
 

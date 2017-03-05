@@ -598,7 +598,7 @@ dd_context_destroy(struct pipe_context *_pipe)
       dctx->kill_thread = 1;
       pipe_mutex_unlock(dctx->mutex);
       pipe_thread_wait(dctx->thread);
-      pipe_mutex_destroy(dctx->mutex);
+      mtx_destroy(&dctx->mutex);
       assert(!dctx->records);
    }
 
@@ -873,7 +873,7 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
       (void) mtx_init(&dctx->mutex, mtx_plain);
       dctx->thread = pipe_thread_create(dd_thread_pipelined_hang_detect, dctx);
       if (!dctx->thread) {
-         pipe_mutex_destroy(dctx->mutex);
+         mtx_destroy(&dctx->mutex);
          goto fail;
       }
    }

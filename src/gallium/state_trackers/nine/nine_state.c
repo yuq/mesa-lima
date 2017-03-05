@@ -233,7 +233,7 @@ nine_csmt_destroy( struct NineDevice9 *device, struct csmt_context *ctx )
 
     nine_csmt_wait_processed(ctx);
     nine_queue_delete(ctx->pool);
-    pipe_mutex_destroy(ctx->mutex_processed);
+    mtx_destroy(&ctx->mutex_processed);
 
     FREE(ctx);
 

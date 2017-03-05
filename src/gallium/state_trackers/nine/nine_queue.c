@@ -265,8 +265,8 @@ void
 nine_queue_delete(struct nine_queue_pool *ctx)
 {
     unsigned i;
-    pipe_mutex_destroy(ctx->mutex_pop);
-    pipe_mutex_destroy(ctx->mutex_push);
+    mtx_destroy(&ctx->mutex_pop);
+    mtx_destroy(&ctx->mutex_push);
 
     for (i = 0; i < NINE_CMD_BUFS; i++)
         FREE(ctx->pool[i].mem_pool);

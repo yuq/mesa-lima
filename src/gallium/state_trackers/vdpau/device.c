@@ -233,7 +233,7 @@ vlVdpDeviceDestroy(VdpDevice device)
 void
 vlVdpDeviceFree(vlVdpDevice *dev)
 {
-   pipe_mutex_destroy(dev->mutex);
+   mtx_destroy(&dev->mutex);
    vl_compositor_cleanup(&dev->compositor);
    pipe_sampler_view_reference(&dev->dummy_sv, NULL);
    dev->context->destroy(dev->context);

@@ -561,7 +561,7 @@ llvmpipe_destroy_screen( struct pipe_screen *_screen )
    if(winsys->destroy)
       winsys->destroy(winsys);
 
-   pipe_mutex_destroy(screen->rast_mutex);
+   mtx_destroy(&screen->rast_mutex);
 
    FREE(screen);
 }

@@ -919,8 +919,8 @@ svga_destroy_screen( struct pipe_screen *screen )
    
    svga_screen_cache_cleanup(svgascreen);
 
-   pipe_mutex_destroy(svgascreen->swc_mutex);
-   pipe_mutex_destroy(svgascreen->tex_mutex);
+   mtx_destroy(&svgascreen->swc_mutex);
+   mtx_destroy(&svgascreen->tex_mutex);
 
    svgascreen->sws->destroy(svgascreen->sws);
    

@@ -166,7 +166,7 @@ vlVdpDecoderDestroy(VdpDecoder decoder)
    pipe_mutex_lock(vldecoder->mutex);
    vldecoder->decoder->destroy(vldecoder->decoder);
    pipe_mutex_unlock(vldecoder->mutex);
-   pipe_mutex_destroy(vldecoder->mutex);
+   mtx_destroy(&vldecoder->mutex);
 
    vlRemoveDataHTAB(decoder);
    DeviceReference(&vldecoder->device, NULL);

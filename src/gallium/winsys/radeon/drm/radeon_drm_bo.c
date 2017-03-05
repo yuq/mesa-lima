@@ -370,7 +370,7 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
     args.handle = bo->handle;
     drmIoctl(rws->fd, DRM_IOCTL_GEM_CLOSE, &args);
 
-    pipe_mutex_destroy(bo->u.real.map_mutex);
+    mtx_destroy(&bo->u.real.map_mutex);
 
     if (bo->initial_domain & RADEON_DOMAIN_VRAM)
         rws->allocated_vram -= align(bo->base.size, rws->info.gart_page_size);

@@ -298,5 +298,5 @@ void
 pb_cache_deinit(struct pb_cache *mgr)
 {
    pb_cache_release_all_buffers(mgr);
-   pipe_mutex_destroy(mgr->mutex);
+   mtx_destroy(&mgr->mutex);
 }

@@ -538,8 +538,8 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     if (util_queue_is_initialized(&ws->cs_queue))
         util_queue_destroy(&ws->cs_queue);
 
-    pipe_mutex_destroy(ws->hyperz_owner_mutex);
-    pipe_mutex_destroy(ws->cmask_owner_mutex);
+    mtx_destroy(&ws->hyperz_owner_mutex);
+    mtx_destroy(&ws->cmask_owner_mutex);
 
     if (ws->info.has_virtual_memory)
         pb_slabs_deinit(&ws->bo_slabs);
@@ -552,9 +552,9 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     util_hash_table_destroy(ws->bo_names);
     util_hash_table_destroy(ws->bo_handles);
     util_hash_table_destroy(ws->bo_vas);
-    pipe_mutex_destroy(ws->bo_handles_mutex);
-    pipe_mutex_destroy(ws->bo_va_mutex);
-    pipe_mutex_destroy(ws->bo_fence_lock);
+    mtx_destroy(&ws->bo_handles_mutex);
+    mtx_destroy(&ws->bo_va_mutex);
+    mtx_destroy(&ws->bo_fence_lock);
 
     if (ws->fd >= 0)
         close(ws->fd);
