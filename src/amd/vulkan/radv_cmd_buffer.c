@@ -2265,8 +2265,6 @@ void radv_CmdBeginRenderPass(
 	cmd_buffer->state.render_area = pRenderPassBegin->renderArea;
 	radv_cmd_state_setup_attachments(cmd_buffer, pass, pRenderPassBegin);
 
-	si_emit_cache_flush(cmd_buffer);
-
 	radv_cmd_buffer_set_subpass(cmd_buffer, pass->subpasses, true);
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 
@@ -2279,7 +2277,6 @@ void radv_CmdNextSubpass(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 
-	si_emit_cache_flush(cmd_buffer);
 	radv_cmd_buffer_resolve_subpass(cmd_buffer);
 
 	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs,
@@ -2704,7 +2701,6 @@ void radv_CmdEndRenderPass(
 
 	radv_subpass_barrier(cmd_buffer, &cmd_buffer->state.pass->end_barrier);
 
-	si_emit_cache_flush(cmd_buffer);
 	radv_cmd_buffer_resolve_subpass(cmd_buffer);
 
 	for (unsigned i = 0; i < cmd_buffer->state.framebuffer->attachment_count; ++i) {

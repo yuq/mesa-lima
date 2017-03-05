@@ -364,7 +364,6 @@ emit_resolve(struct radv_cmd_buffer *cmd_buffer,
 
 	radv_CmdDraw(cmd_buffer_h, 3, 1, 0, 0);
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
-	si_emit_cache_flush(cmd_buffer);
 }
 
 void radv_CmdResolveImage(
