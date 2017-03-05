@@ -372,8 +372,6 @@ emit_fast_clear_flush(struct radv_cmd_buffer *cmd_buffer,
 		},
 	};
 
-	cmd_buffer->state.flush_bits |= (RADV_CMD_FLAG_FLUSH_AND_INV_CB |
-					 RADV_CMD_FLAG_FLUSH_AND_INV_CB_META);
 	radv_cmd_buffer_upload_data(cmd_buffer, sizeof(vertex_data), 16, vertex_data, &offset);
 	struct radv_buffer vertex_buffer = {
 		.device = device,
