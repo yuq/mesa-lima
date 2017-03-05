@@ -391,6 +391,8 @@ BuilderSWR::swr_gs_llvm_emit_vertex(const struct lp_build_tgsi_gs_iface *gs_base
           attribSlot = VERTEX_POINT_SIZE_SLOT;
        else if (iface->info->output_semantic_name[attrib] == TGSI_SEMANTIC_PRIMID)
           attribSlot = VERTEX_PRIMID_SLOT;
+       else if (iface->info->output_semantic_name[attrib] == TGSI_SEMANTIC_LAYER)
+          attribSlot = VERTEX_RTAI_SLOT;
 
        Value *vOffsetsAttrib =
           ADD(vOffsets, MUL(vVertexSlot, VIMMED1((uint32_t)sizeof(simdvertex))));
