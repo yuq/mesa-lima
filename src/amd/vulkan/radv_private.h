@@ -53,6 +53,7 @@
 #include "radv_radeon_winsys.h"
 #include "ac_binary.h"
 #include "ac_nir_to_llvm.h"
+#include "radv_debug.h"
 #include "radv_descriptor_set.h"
 
 #include <llvm-c/TargetMachine.h>
@@ -98,18 +99,6 @@ enum radv_mem_type {
 	RADV_MEM_TYPE_VRAM_CPU_ACCESS,
 	RADV_MEM_TYPE_GTT_CACHED,
 	RADV_MEM_TYPE_COUNT
-};
-
-
-enum {
-	RADV_DEBUG_NO_FAST_CLEARS    =   0x1,
-	RADV_DEBUG_NO_DCC            =   0x2,
-	RADV_DEBUG_DUMP_SHADERS      =   0x4,
-	RADV_DEBUG_NO_CACHE          =   0x8,
-	RADV_DEBUG_DUMP_SHADER_STATS =  0x10,
-	RADV_DEBUG_NO_HIZ            =  0x20,
-	RADV_DEBUG_NO_COMPUTE_QUEUE  =  0x40,
-	RADV_DEBUG_UNSAFE_MATH       =  0x80,
 };
 
 #define radv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))

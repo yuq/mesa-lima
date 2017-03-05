@@ -1,10 +1,5 @@
 /*
- * Copyright © 2016 Red Hat.
- * Copyright © 2016 Bas Nieuwenhuizen
- *
- * based on amdgpu winsys.
- * Copyright © 2011 Marek Olšák <maraeo@gmail.com>
- * Copyright © 2015 Advanced Micro Devices, Inc.
+ * Copyright © 2017 Google.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,9 +21,20 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef RADV_AMDGPU_WINSYS_PUBLIC_H
-#define RADV_AMDGPU_WINSYS_PUBLIC_H
+#ifndef RADV_DEBUG_H
+#define RADV_DEBUG_H
 
-struct radeon_winsys *radv_amdgpu_winsys_create(int fd, uint32_t debug_flags);
+enum {
+	RADV_DEBUG_NO_FAST_CLEARS    =   0x1,
+	RADV_DEBUG_NO_DCC            =   0x2,
+	RADV_DEBUG_DUMP_SHADERS      =   0x4,
+	RADV_DEBUG_NO_CACHE          =   0x8,
+	RADV_DEBUG_DUMP_SHADER_STATS =  0x10,
+	RADV_DEBUG_NO_HIZ            =  0x20,
+	RADV_DEBUG_NO_COMPUTE_QUEUE  =  0x40,
+	RADV_DEBUG_UNSAFE_MATH       =  0x80,
+	RADV_DEBUG_ALL_BOS           = 0x100,
+	RADV_DEBUG_NO_IBS            = 0x200,
+};
 
-#endif /* RADV_AMDGPU_WINSYS_PUBLIC_H */
+#endif

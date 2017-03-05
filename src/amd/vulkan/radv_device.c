@@ -207,7 +207,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 	assert(strlen(path) < ARRAY_SIZE(device->path));
 	strncpy(device->path, path, ARRAY_SIZE(device->path));
 
-	device->ws = radv_amdgpu_winsys_create(fd);
+	device->ws = radv_amdgpu_winsys_create(fd, instance->debug_flags);
 	if (!device->ws) {
 		result = VK_ERROR_INCOMPATIBLE_DRIVER;
 		goto fail;
@@ -292,6 +292,8 @@ static const struct debug_control radv_debug_options[] = {
 	{"nohiz", RADV_DEBUG_NO_HIZ},
 	{"nocompute", RADV_DEBUG_NO_COMPUTE_QUEUE},
 	{"unsafemath", RADV_DEBUG_UNSAFE_MATH},
+	{"allbos", RADV_DEBUG_ALL_BOS},
+	{"noibs", RADV_DEBUG_NO_IBS},
 	{NULL, 0}
 };
 
