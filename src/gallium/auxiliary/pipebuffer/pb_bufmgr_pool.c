@@ -56,7 +56,7 @@ struct pool_pb_manager
 {
    struct pb_manager base;
    
-   pipe_mutex mutex;
+   mtx_t mutex;
    
    pb_size bufSize;
    pb_size bufAlign;

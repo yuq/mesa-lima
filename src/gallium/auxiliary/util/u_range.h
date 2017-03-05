@@ -43,7 +43,7 @@ struct util_range {
    unsigned end; /* exclusive */
 
    /* for the range to be consistent with multiple contexts: */
-   pipe_mutex write_mutex;
+   mtx_t write_mutex;
 };
 
 

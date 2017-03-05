@@ -278,7 +278,7 @@ struct si_shader_selector {
 	struct util_queue_fence ready;
 	struct si_compiler_ctx_state compiler_ctx_state;
 
-	pipe_mutex		mutex;
+	mtx_t		mutex;
 	struct si_shader	*first_variant; /* immutable after the first variant */
 	struct si_shader	*last_variant; /* mutable */
 

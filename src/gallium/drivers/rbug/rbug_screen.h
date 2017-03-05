@@ -49,7 +49,7 @@ struct rbug_screen
    /* remote debugger */
    struct rbug_rbug *rbug;
 
-   pipe_mutex list_mutex;
+   mtx_t list_mutex;
    int num_contexts;
    int num_resources;
    int num_surfaces;

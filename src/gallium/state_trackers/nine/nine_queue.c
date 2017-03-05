@@ -74,8 +74,8 @@ struct nine_queue_pool {
     BOOL worker_wait;
     pipe_condvar event_pop;
     pipe_condvar event_push;
-    pipe_mutex mutex_pop;
-    pipe_mutex mutex_push;
+    mtx_t mutex_pop;
+    mtx_t mutex_push;
 };
 
 /* Consumer functions: */

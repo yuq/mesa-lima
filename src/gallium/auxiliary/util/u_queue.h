@@ -40,7 +40,7 @@
  * Put this into your job structure.
  */
 struct util_queue_fence {
-   pipe_mutex mutex;
+   mtx_t mutex;
    pipe_condvar cond;
    int signalled;
 };
@@ -57,7 +57,7 @@ struct util_queue_job {
 /* Put this into your context. */
 struct util_queue {
    const char *name;
-   pipe_mutex lock;
+   mtx_t lock;
    pipe_condvar has_queued_cond;
    pipe_condvar has_space_cond;
    pipe_thread *threads;

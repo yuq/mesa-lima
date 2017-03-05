@@ -17,7 +17,7 @@ struct util_ringbuffer
    unsigned head;
    unsigned tail;
    pipe_condvar change;
-   pipe_mutex mutex;
+   mtx_t mutex;
 };
 
 

@@ -70,7 +70,7 @@ struct fenced_manager
    /**
     * Following members are mutable and protected by this mutex.
     */
-   pipe_mutex mutex;
+   mtx_t mutex;
 
    /**
     * Fenced buffer list.

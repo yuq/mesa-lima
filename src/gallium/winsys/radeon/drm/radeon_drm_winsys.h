@@ -78,9 +78,9 @@ struct radeon_drm_winsys {
     struct util_hash_table *bo_handles;
     /* List of buffer virtual memory ranges. Protectded by bo_handles_mutex. */
     struct util_hash_table *bo_vas;
-    pipe_mutex bo_handles_mutex;
-    pipe_mutex bo_va_mutex;
-    pipe_mutex bo_fence_lock;
+    mtx_t bo_handles_mutex;
+    mtx_t bo_va_mutex;
+    mtx_t bo_fence_lock;
 
     uint64_t va_offset;
     struct list_head va_holes;
@@ -91,9 +91,9 @@ struct radeon_drm_winsys {
     uint32_t num_cpus;      /* Number of CPUs. */
 
     struct radeon_drm_cs *hyperz_owner;
-    pipe_mutex hyperz_owner_mutex;
+    mtx_t hyperz_owner_mutex;
     struct radeon_drm_cs *cmask_owner;
-    pipe_mutex cmask_owner_mutex;
+    mtx_t cmask_owner_mutex;
 
     /* multithreaded command submission */
     struct util_queue cs_queue;

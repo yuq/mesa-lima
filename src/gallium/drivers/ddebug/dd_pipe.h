@@ -235,7 +235,7 @@ struct dd_context
     * the thread dumps the record of the oldest unsignalled fence.
     */
    pipe_thread thread;
-   pipe_mutex mutex;
+   mtx_t mutex;
    int kill_thread;
    struct pipe_resource *fence;
    struct pipe_transfer *fence_transfer;

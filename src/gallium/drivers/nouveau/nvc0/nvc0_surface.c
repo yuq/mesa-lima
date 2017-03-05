@@ -772,7 +772,7 @@ struct nvc0_blitter
 
    struct nv50_tsc_entry sampler[2]; /* nearest, bilinear */
 
-   pipe_mutex mutex;
+   mtx_t mutex;
 
    struct nvc0_screen *screen;
 };

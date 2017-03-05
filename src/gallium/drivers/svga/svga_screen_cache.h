@@ -105,7 +105,7 @@ struct svga_host_surface_cache_entry
  */
 struct svga_host_surface_cache 
 {
-   pipe_mutex mutex;
+   mtx_t mutex;
    
    /* Unused buffers are put in buckets to speed up lookups */
    struct list_head bucket[SVGA_HOST_SURFACE_CACHE_BUCKETS];

@@ -381,7 +381,7 @@ struct r600_common_screen {
 	/* Auxiliary context. Mainly used to initialize resources.
 	 * It must be locked prior to using and flushed before unlocking. */
 	struct pipe_context		*aux_context;
-	pipe_mutex			aux_context_lock;
+	mtx_t				aux_context_lock;
 
 	/* This must be in the screen, because UE4 uses one context for
 	 * compilation and another one for rendering.
@@ -394,7 +394,7 @@ struct r600_common_screen {
 	unsigned			num_shader_cache_hits;
 
 	/* GPU load thread. */
-	pipe_mutex			gpu_load_mutex;
+	mtx_t				gpu_load_mutex;
 	pipe_thread			gpu_load_thread;
 	union r600_mmio_counters	mmio_counters;
 	volatile unsigned		gpu_load_stop_thread; /* bool */

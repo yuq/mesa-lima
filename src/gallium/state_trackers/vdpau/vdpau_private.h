@@ -354,7 +354,7 @@ typedef struct
    struct pipe_context *context;
    struct vl_compositor compositor;
    struct pipe_sampler_view *dummy_sv;
-   pipe_mutex mutex;
+   mtx_t mutex;
 } vlVdpDevice;
 
 typedef struct
@@ -439,7 +439,7 @@ typedef struct
 typedef struct
 {
    vlVdpDevice *device;
-   pipe_mutex mutex;
+   mtx_t mutex;
    struct pipe_video_codec *decoder;
 } vlVdpDecoder;
 

@@ -40,7 +40,7 @@ struct vmw_fence_ops
    struct pb_fence_ops base;
    struct vmw_winsys_screen *vws;
 
-   pipe_mutex mutex;
+   mtx_t mutex;
 
    /*
     * Protected by mutex;

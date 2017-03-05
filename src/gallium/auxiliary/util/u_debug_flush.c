@@ -53,7 +53,7 @@
 struct debug_flush_buf {
    /* Atomic */
    struct pipe_reference reference; /* Must be the first member. */
-   pipe_mutex mutex;
+   mtx_t mutex;
    /* Immutable */
    boolean supports_unsync;
    unsigned bt_depth;

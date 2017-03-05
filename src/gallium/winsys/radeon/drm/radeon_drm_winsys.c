@@ -57,7 +57,7 @@ pipe_static_mutex(fd_tab_mutex);
  * with multiple contexts (here command streams) backed by one winsys. */
 static bool radeon_set_fd_access(struct radeon_drm_cs *applier,
                                  struct radeon_drm_cs **owner,
-                                 pipe_mutex *mutex,
+                                 mtx_t *mutex,
                                  unsigned request, const char *request_name,
                                  bool enable)
 {

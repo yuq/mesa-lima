@@ -108,12 +108,8 @@ static inline int pipe_thread_is_self( pipe_thread thread )
    return 0;
 }
 
-/* pipe_mutex
- */
-typedef mtx_t pipe_mutex;
-
 #define pipe_static_mutex(mutex) \
-   static pipe_mutex mutex = _MTX_INITIALIZER_NP
+   static mtx_t mutex = _MTX_INITIALIZER_NP
 
 #define pipe_mutex_init(mutex) \
    (void) mtx_init(&(mutex), mtx_plain)
@@ -131,11 +127,11 @@ typedef mtx_t pipe_mutex;
    __pipe_mutex_assert_locked(&(mutex))
 
 static inline void
-__pipe_mutex_assert_locked(pipe_mutex *mutex)
+__pipe_mutex_assert_locked(mtx_t *mutex)
 {
 #ifdef DEBUG
    /* NOTE: this would not work for recursive mutexes, but
-    * pipe_mutex doesn't support those
+    * mtx_t doesn't support those
     */
    int ret = mtx_trylock(mutex);
    assert(ret == thrd_busy);
@@ -179,7 +175,7 @@ typedef struct {
    unsigned count;
    unsigned waiters;
    uint64_t sequence;
-   pipe_mutex mutex;
+   mtx_t mutex;
    pipe_condvar condvar;
 } pipe_barrier;
 
@@ -231,7 +227,7 @@ static inline void pipe_barrier_wait(pipe_barrier *barrier)
 
 typedef struct
 {
-   pipe_mutex mutex;
+   mtx_t mutex;
    pipe_condvar cond;
    int counter;
 } pipe_semaphore;

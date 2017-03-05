@@ -78,7 +78,7 @@ struct pb_debug_buffer
 
    struct debug_stack_frame create_backtrace[PB_DEBUG_CREATE_BACKTRACE];
 
-   pipe_mutex mutex;
+   mtx_t mutex;
    unsigned map_count;
    struct debug_stack_frame map_backtrace[PB_DEBUG_MAP_BACKTRACE];
    
@@ -95,7 +95,7 @@ struct pb_debug_manager
    pb_size underflow_size;
    pb_size overflow_size;
    
-   pipe_mutex mutex;
+   mtx_t mutex;
    struct list_head list;
 };
 

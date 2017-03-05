@@ -84,7 +84,7 @@ struct si_screen {
 	bool				use_monolithic_shaders;
 	bool				record_llvm_ir;
 
-	pipe_mutex			shader_parts_mutex;
+	mtx_t			shader_parts_mutex;
 	struct si_shader_part		*vs_prologs;
 	struct si_shader_part		*vs_epilogs;
 	struct si_shader_part		*tcs_epilogs;
@@ -104,7 +104,7 @@ struct si_screen {
 	 * - GS and CS aren't cached, but it's certainly possible to cache
 	 *   those as well.
 	 */
-	pipe_mutex			shader_cache_mutex;
+	mtx_t			shader_cache_mutex;
 	struct hash_table		*shader_cache;
 
 	/* Shader compiler queue for multithreaded compilation. */

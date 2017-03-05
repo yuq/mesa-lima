@@ -53,7 +53,7 @@ struct mm_pb_manager
 {
    struct pb_manager base;
    
-   pipe_mutex mutex;
+   mtx_t mutex;
    
    pb_size size;
    struct mem_block *heap;

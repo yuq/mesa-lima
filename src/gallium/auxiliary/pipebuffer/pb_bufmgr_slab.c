@@ -128,7 +128,7 @@ struct pb_slab_manager
     */
    struct list_head slabs;
    
-   pipe_mutex mutex;
+   mtx_t mutex;
 };
 
 

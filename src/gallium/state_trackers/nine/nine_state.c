@@ -64,13 +64,13 @@ struct csmt_context {
     struct nine_queue_pool* pool;
     BOOL terminate;
     pipe_condvar event_processed;
-    pipe_mutex mutex_processed;
+    mtx_t mutex_processed;
     struct NineDevice9 *device;
     BOOL processed;
     BOOL toPause;
     BOOL hasPaused;
-    pipe_mutex thread_running;
-    pipe_mutex thread_resume;
+    mtx_t thread_running;
+    mtx_t thread_resume;
 };
 
 /* Wait for instruction to be processed.

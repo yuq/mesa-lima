@@ -209,7 +209,7 @@ typedef struct {
    struct vl_compositor compositor;
    struct vl_compositor_state cstate;
    vl_csc_matrix csc;
-   pipe_mutex mutex;
+   mtx_t mutex;
 } vlVaDriver;
 
 typedef struct {

@@ -77,14 +77,14 @@ struct vc4_screen {
                 struct list_head *size_list;
                 uint32_t size_list_size;
 
-                pipe_mutex lock;
+                mtx_t lock;
 
                 uint32_t bo_size;
                 uint32_t bo_count;
         } bo_cache;
 
         struct util_hash_table *bo_handles;
-        pipe_mutex bo_handles_mutex;
+        mtx_t bo_handles_mutex;
 
         uint32_t bo_size;
         uint32_t bo_count;
