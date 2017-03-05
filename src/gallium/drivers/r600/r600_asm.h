@@ -274,6 +274,8 @@ struct r600_bytecode {
 	unsigned        index_reg[2]; /* indexing register CF_INDEX_[01] */
 	unsigned        debug_id;
 	struct r600_isa* isa;
+	struct r600_bytecode_output pending_outputs[5];
+	int n_pending_outputs;
 };
 
 /* eg_asm.c */
@@ -299,6 +301,8 @@ int r600_bytecode_add_tex(struct r600_bytecode *bc,
 int r600_bytecode_add_gds(struct r600_bytecode *bc,
 		const struct r600_bytecode_gds *gds);
 int r600_bytecode_add_output(struct r600_bytecode *bc,
+		const struct r600_bytecode_output *output);
+int r600_bytecode_add_pending_output(struct r600_bytecode *bc,
 		const struct r600_bytecode_output *output);
 int r600_bytecode_build(struct r600_bytecode *bc);
 int r600_bytecode_add_cf(struct r600_bytecode *bc);

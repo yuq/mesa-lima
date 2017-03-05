@@ -231,6 +231,15 @@ int r600_bytecode_add_output(struct r600_bytecode *bc,
 	return 0;
 }
 
+int r600_bytecode_add_pending_output(struct r600_bytecode *bc,
+		const struct r600_bytecode_output *output)
+{
+	assert(bc->n_pending_outputs + 1 < ARRAY_SIZE(bc->pending_outputs));
+	bc->pending_outputs[bc->n_pending_outputs++] = *output;
+
+	return 0;
+}
+
 /* alu instructions that can ony exits once per group */
 static int is_alu_once_inst(struct r600_bytecode_alu *alu)
 {
@@ -1300,6 +1309,15 @@ int r600_bytecode_add_alu_type(struct r600_bytecode *bc,
 
 	if (nalu->dst.rel && bc->r6xx_nop_after_rel_dst)
 		insert_nop_r6xx(bc);
+
+	/* Might need to insert spill write ops after current clause */
+	if (nalu->last && bc->n_pending_outputs) {
+		while (bc->n_pending_outputs) {
+			r = r600_bytecode_add_output(bc, &bc->pending_outputs[--bc->n_pending_outputs]);
+			if (r)
+				return r;
+		}
+	}
 
 	return 0;
 }
