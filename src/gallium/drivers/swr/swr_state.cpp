@@ -457,7 +457,7 @@ swr_delete_gs_state(struct pipe_context *pipe, void *gs)
 
 static void
 swr_set_constant_buffer(struct pipe_context *pipe,
-                        uint shader,
+                        enum pipe_shader_type shader,
                         uint index,
                         const struct pipe_constant_buffer *cb)
 {

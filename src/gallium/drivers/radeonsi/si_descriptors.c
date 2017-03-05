@@ -1135,7 +1135,7 @@ void si_set_rw_buffer(struct si_context *sctx,
 }
 
 static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
-					uint shader, uint slot,
+					enum pipe_shader_type shader, uint slot,
 					const struct pipe_constant_buffer *input)
 {
 	struct si_context *sctx = (struct si_context *)ctx;

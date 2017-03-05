@@ -273,7 +273,7 @@ struct pipe_context {
                             const struct pipe_clip_state * );
 
    void (*set_constant_buffer)( struct pipe_context *,
-                                uint shader, uint index,
+                                enum pipe_shader_type shader, uint index,
                                 const struct pipe_constant_buffer *buf );
 
    void (*set_framebuffer_state)( struct pipe_context *,

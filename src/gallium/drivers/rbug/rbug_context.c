@@ -623,7 +623,7 @@ rbug_set_clip_state(struct pipe_context *_pipe,
 
 static void
 rbug_set_constant_buffer(struct pipe_context *_pipe,
-                         uint shader,
+                         enum pipe_shader_type shader,
                          uint index,
                          const struct pipe_constant_buffer *_cb)
 {
