@@ -4390,17 +4390,14 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 				};
 				LLVMValueRef packed;
 
-				packed = ac_build_intrinsic(&ctx->ac, "llvm.SI.packf16",
-							    ctx->i32, pack_args, 2,
-							    AC_FUNC_ATTR_READNONE |
-							    AC_FUNC_ATTR_LEGACY);
+				packed = ac_build_cvt_pkrtz_f16(&ctx->ac, pack_args);
 				args[chan + 5] = packed;
 			}
 			break;
 
 		case V_028714_SPI_SHADER_UNORM16_ABGR:
 			for (unsigned chan = 0; chan < 4; chan++) {
-				val[chan] = emit_float_saturate(ctx, values[chan], 0, 1);
+				val[chan] = ac_build_clamp(&ctx->ac, values[chan]);
 				val[chan] = LLVMBuildFMul(ctx->builder, val[chan],
 							LLVMConstReal(ctx->f32, 65535), "");
 				val[chan] = LLVMBuildFAdd(ctx->builder, val[chan],
