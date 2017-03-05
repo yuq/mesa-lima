@@ -4330,23 +4330,25 @@ static void
 si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 			 LLVMValueRef *values,
 			 unsigned target,
-			 LLVMValueRef *args)
+			 struct ac_export_args *args)
 {
 	/* Default is 0xf. Adjusted below depending on the format. */
-	args[0] = LLVMConstInt(ctx->i32, target != V_008DFC_SQ_EXP_NULL ? 0xf : 0, false);
+	args->enabled_channels = 0xf;
+
 	/* Specify whether the EXEC mask represents the valid mask */
-	args[1] = LLVMConstInt(ctx->i32, 0, false);
+	args->valid_mask = 0;
 
 	/* Specify whether this is the last export */
-	args[2] = LLVMConstInt(ctx->i32, 0, false);
-	/* Specify the target we are exporting */
-	args[3] = LLVMConstInt(ctx->i32, target, false);
+	args->done = 0;
 
-	args[4] = LLVMConstInt(ctx->i32, 0, false); /* COMPR flag */
-	args[5] = LLVMGetUndef(ctx->f32);
-	args[6] = LLVMGetUndef(ctx->f32);
-	args[7] = LLVMGetUndef(ctx->f32);
-	args[8] = LLVMGetUndef(ctx->f32);
+	/* Specify the target we are exporting */
+	args->target = target;
+
+	args->compr = false;
+	args->out[0] = LLVMGetUndef(ctx->f32);
+	args->out[1] = LLVMGetUndef(ctx->f32);
+	args->out[2] = LLVMGetUndef(ctx->f32);
+	args->out[3] = LLVMGetUndef(ctx->f32);
 
 	if (!values)
 		return;
@@ -4359,29 +4361,29 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 
 		switch(col_format) {
 		case V_028714_SPI_SHADER_ZERO:
-			args[0] = LLVMConstInt(ctx->i32, 0x0, 0);
-			args[3] = LLVMConstInt(ctx->i32, V_008DFC_SQ_EXP_NULL, 0);
+			args->enabled_channels = 0; /* writemask */
+			args->target = V_008DFC_SQ_EXP_NULL;
 			break;
 
 		case V_028714_SPI_SHADER_32_R:
-			args[0] = LLVMConstInt(ctx->i32, 0x1, 0);
-			args[5] = values[0];
+			args->enabled_channels = 1;
+			args->out[0] = values[0];
 			break;
 
 		case V_028714_SPI_SHADER_32_GR:
-			args[0] = LLVMConstInt(ctx->i32, 0x3, 0);
-			args[5] = values[0];
-			args[6] = values[1];
+			args->enabled_channels = 0x3;
+			args->out[0] = values[0];
+			args->out[1] = values[1];
 			break;
 
 		case V_028714_SPI_SHADER_32_AR:
-			args[0] = LLVMConstInt(ctx->i32, 0x9, 0);
-			args[5] = values[0];
-			args[8] = values[3];
+			args->enabled_channels = 0x9;
+			args->out[0] = values[0];
+			args->out[3] = values[3];
 			break;
 
 		case V_028714_SPI_SHADER_FP16_ABGR:
-			args[4] = ctx->i32one;
+			args->compr = 1;
 
 			for (unsigned chan = 0; chan < 2; chan++) {
 				LLVMValueRef pack_args[2] = {
@@ -4391,7 +4393,7 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 				LLVMValueRef packed;
 
 				packed = ac_build_cvt_pkrtz_f16(&ctx->ac, pack_args);
-				args[chan + 5] = packed;
+				args->out[chan] = packed;
 			}
 			break;
 
@@ -4406,9 +4408,9 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 							ctx->i32, "");
 			}
 
-			args[4] = ctx->i32one;
-			args[5] = emit_pack_int16(ctx, val[0], val[1]);
-			args[6] = emit_pack_int16(ctx, val[2], val[3]);
+			args->compr = 1;
+			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
+			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
 			break;
 
 		case V_028714_SPI_SHADER_SNORM16_ABGR:
@@ -4427,9 +4429,9 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 				val[chan] = LLVMBuildFPToSI(ctx->builder, val[chan], ctx->i32, "");
 			}
 
-			args[4] = ctx->i32one;
-			args[5] = emit_pack_int16(ctx, val[0], val[1]);
-			args[6] = emit_pack_int16(ctx, val[2], val[3]);
+			args->compr = 1;
+			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
+			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
 			break;
 
 		case V_028714_SPI_SHADER_UINT16_ABGR: {
@@ -4440,9 +4442,9 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 				val[chan] = emit_minmax_int(ctx, LLVMIntULT, val[chan], max);
 			}
 
-			args[4] = ctx->i32one;
-			args[5] = emit_pack_int16(ctx, val[0], val[1]);
-			args[6] = emit_pack_int16(ctx, val[2], val[3]);
+			args->compr = 1;
+			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
+			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
 			break;
 		}
 
@@ -4457,22 +4459,22 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 				val[chan] = emit_minmax_int(ctx, LLVMIntSGT, val[chan], min);
 			}
 
-			args[4] = ctx->i32one;
-			args[5] = emit_pack_int16(ctx, val[0], val[1]);
-			args[6] = emit_pack_int16(ctx, val[2], val[3]);
+			args->compr = 1;
+			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
+			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
 			break;
 		}
 
 		default:
 		case V_028714_SPI_SHADER_32_ABGR:
-			memcpy(&args[5], values, sizeof(values[0]) * 4);
+			memcpy(&args->out[0], values, sizeof(values[0]) * 4);
 			break;
 		}
 	} else
-		memcpy(&args[5], values, sizeof(values[0]) * 4);
+		memcpy(&args->out[0], values, sizeof(values[0]) * 4);
 
-	for (unsigned i = 5; i < 9; ++i)
-		args[i] = to_float(ctx, args[i]);
+	for (unsigned i = 0; i < 4; ++i)
+		args->out[i] = to_float(ctx, args->out[i]);
 }
 
 static void
@@ -4481,8 +4483,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 	uint32_t param_count = 0;
 	unsigned target;
 	unsigned pos_idx, num_pos_exports = 0;
-	LLVMValueRef args[9];
-	LLVMValueRef pos_args[4][9] = { { 0 } };
+	struct ac_export_args args, pos_args[4] = {};
 	LLVMValueRef psize_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	int i;
 	const uint64_t clip_mask = ctx->output_mask & ((1ull << VARYING_SLOT_CLIP_DIST0) |
@@ -4513,15 +4514,15 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 
 		if (ctx->num_output_clips + ctx->num_output_culls > 4) {
 			target = V_008DFC_SQ_EXP_POS + 3;
-			si_llvm_init_export_args(ctx, &slots[4], target, args);
-			memcpy(pos_args[target - V_008DFC_SQ_EXP_POS],
-			       args, sizeof(args));
+			si_llvm_init_export_args(ctx, &slots[4], target, &args);
+			memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
+			       &args, sizeof(args));
 		}
 
 		target = V_008DFC_SQ_EXP_POS + 2;
-		si_llvm_init_export_args(ctx, &slots[0], target, args);
-		memcpy(pos_args[target - V_008DFC_SQ_EXP_POS],
-		       args, sizeof(args));
+		si_llvm_init_export_args(ctx, &slots[0], target, &args);
+		memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
+		       &args, sizeof(args));
 
 	}
 
@@ -4565,74 +4566,66 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 			param_count++;
 		}
 
-		si_llvm_init_export_args(ctx, values, target, args);
+		si_llvm_init_export_args(ctx, values, target, &args);
 
 		if (target >= V_008DFC_SQ_EXP_POS &&
 		    target <= (V_008DFC_SQ_EXP_POS + 3)) {
-			memcpy(pos_args[target - V_008DFC_SQ_EXP_POS],
-			       args, sizeof(args));
+			memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
+			       &args, sizeof(args));
 		} else {
-			ac_build_intrinsic(&ctx->ac,
-					   "llvm.SI.export",
-					   ctx->voidt,
-					   args, 9,
-					   AC_FUNC_ATTR_LEGACY);
+			ac_build_export(&ctx->ac, &args);
 		}
 	}
 
 	/* We need to add the position output manually if it's missing. */
-	if (!pos_args[0][0]) {
-		pos_args[0][0] = LLVMConstInt(ctx->i32, 0xf, false);
-		pos_args[0][1] = ctx->i32zero; /* EXEC mask */
-		pos_args[0][2] = ctx->i32zero; /* last export? */
-		pos_args[0][3] = LLVMConstInt(ctx->i32, V_008DFC_SQ_EXP_POS, false);
-		pos_args[0][4] = ctx->i32zero; /* COMPR flag */
-		pos_args[0][5] = ctx->f32zero; /* X */
-		pos_args[0][6] = ctx->f32zero; /* Y */
-		pos_args[0][7] = ctx->f32zero; /* Z */
-		pos_args[0][8] = ctx->f32one;  /* W */
+	if (!pos_args[0].out[0]) {
+		pos_args[0].enabled_channels = 0xf;
+		pos_args[0].valid_mask = 0;
+		pos_args[0].done = 0;
+		pos_args[0].target = V_008DFC_SQ_EXP_POS;
+		pos_args[0].compr = 0;
+		pos_args[0].out[0] = ctx->f32zero; /* X */
+		pos_args[0].out[1] = ctx->f32zero; /* Y */
+		pos_args[0].out[2] = ctx->f32zero; /* Z */
+		pos_args[0].out[3] = ctx->f32one;  /* W */
 	}
 
 	uint32_t mask = ((ctx->shader_info->vs.writes_pointsize == true ? 1 : 0) |
 			 (ctx->shader_info->vs.writes_layer == true ? 4 : 0) |
 			 (ctx->shader_info->vs.writes_viewport_index == true ? 8 : 0));
 	if (mask) {
-		pos_args[1][0] = LLVMConstInt(ctx->i32, mask, false); /* writemask */
-		pos_args[1][1] = ctx->i32zero;  /* EXEC mask */
-		pos_args[1][2] = ctx->i32zero;  /* last export? */
-		pos_args[1][3] = LLVMConstInt(ctx->i32, V_008DFC_SQ_EXP_POS + 1, false);
-		pos_args[1][4] = ctx->i32zero;  /* COMPR flag */
-		pos_args[1][5] = ctx->f32zero; /* X */
-		pos_args[1][6] = ctx->f32zero; /* Y */
-		pos_args[1][7] = ctx->f32zero; /* Z */
-		pos_args[1][8] = ctx->f32zero;  /* W */
+		pos_args[1].enabled_channels = mask;
+		pos_args[1].valid_mask = 0;
+		pos_args[1].done = 0;
+		pos_args[1].target = V_008DFC_SQ_EXP_POS + 1;
+		pos_args[1].compr = 0;
+		pos_args[1].out[0] = ctx->f32zero; /* X */
+		pos_args[1].out[1] = ctx->f32zero; /* Y */
+		pos_args[1].out[2] = ctx->f32zero; /* Z */
+		pos_args[1].out[3] = ctx->f32zero;  /* W */
 
 		if (ctx->shader_info->vs.writes_pointsize == true)
-			pos_args[1][5] = psize_value;
+			pos_args[1].out[0] = psize_value;
 		if (ctx->shader_info->vs.writes_layer == true)
-			pos_args[1][7] = layer_value;
+			pos_args[1].out[2] = layer_value;
 		if (ctx->shader_info->vs.writes_viewport_index == true)
-			pos_args[1][8] = viewport_index_value;
+			pos_args[1].out[3] = viewport_index_value;
 	}
 	for (i = 0; i < 4; i++) {
-		if (pos_args[i][0])
+		if (pos_args[i].out[0])
 			num_pos_exports++;
 	}
 
 	pos_idx = 0;
 	for (i = 0; i < 4; i++) {
-		if (!pos_args[i][0])
+		if (!pos_args[i].out[0])
 			continue;
 
 		/* Specify the target we are exporting */
-		pos_args[i][3] = LLVMConstInt(ctx->i32, V_008DFC_SQ_EXP_POS + pos_idx++, false);
+		pos_args[i].target = V_008DFC_SQ_EXP_POS + pos_idx++;
 		if (pos_idx == num_pos_exports)
-			pos_args[i][2] = ctx->i32one;
-		ac_build_intrinsic(&ctx->ac,
-				   "llvm.SI.export",
-				   ctx->voidt,
-				   pos_args[i], 9,
-				   AC_FUNC_ATTR_LEGACY);
+			pos_args[i].done = 1;
+		ac_build_export(&ctx->ac, &pos_args[i]);
 	}
 
 	ctx->shader_info->vs.pos_exports = num_pos_exports;
@@ -4682,20 +4675,20 @@ static void
 si_export_mrt_color(struct nir_to_llvm_context *ctx,
 		    LLVMValueRef *color, unsigned param, bool is_last)
 {
-	LLVMValueRef args[9];
+
+	struct ac_export_args args;
+
 	/* Export */
 	si_llvm_init_export_args(ctx, color, param,
-				 args);
+				 &args);
 
 	if (is_last) {
-		args[1] = ctx->i32one; /* whether the EXEC mask is valid */
-		args[2] = ctx->i32one; /* DONE bit */
-	} else if (args[0] == ctx->i32zero)
+		args.valid_mask = 1; /* whether the EXEC mask is valid */
+		args.done = 1; /* DONE bit */
+	} else if (!args.enabled_channels)
 		return; /* unnecessary NULL export */
 
-	ac_build_intrinsic(&ctx->ac, "llvm.SI.export",
-			   ctx->voidt, args, 9,
-			   AC_FUNC_ATTR_LEGACY);
+	ac_build_export(&ctx->ac, &args);
 }
 
 static void
