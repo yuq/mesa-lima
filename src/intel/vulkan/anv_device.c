@@ -660,43 +660,27 @@ void anv_GetPhysicalDeviceProperties2KHR(
    }
 }
 
-static void
-anv_get_queue_family_properties(struct anv_physical_device *phys_dev,
-                                VkQueueFamilyProperties *props)
-{
-   *props = (VkQueueFamilyProperties) {
-      .queueFlags = VK_QUEUE_GRAPHICS_BIT |
-                    VK_QUEUE_COMPUTE_BIT |
-                    VK_QUEUE_TRANSFER_BIT,
-      .queueCount = 1,
-      .timestampValidBits = 36, /* XXX: Real value here */
-      .minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
-   };
-}
+/* We support exactly one queue family. */
+static const VkQueueFamilyProperties
+anv_queue_family_properties = {
+   .queueFlags = VK_QUEUE_GRAPHICS_BIT |
+                 VK_QUEUE_COMPUTE_BIT |
+                 VK_QUEUE_TRANSFER_BIT,
+   .queueCount = 1,
+   .timestampValidBits = 36, /* XXX: Real value here */
+   .minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
+};
 
 void anv_GetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pCount,
     VkQueueFamilyProperties*                    pQueueFamilyProperties)
 {
-   ANV_FROM_HANDLE(anv_physical_device, phys_dev, physicalDevice);
+   VK_OUTARRAY_MAKE(out, pQueueFamilyProperties, pCount);
 
-   if (pQueueFamilyProperties == NULL) {
-      *pCount = 1;
-      return;
+   vk_outarray_append(&out, p) {
+      *p = anv_queue_family_properties;
    }
-
-   /* The spec implicitly allows the incoming count to be 0. From the Vulkan
-    * 1.0.38 spec, Section 4.1 Physical Devices:
-    *
-    *     If the value referenced by pQueueFamilyPropertyCount is not 0 [then
-    *     do stuff].
-    */
-   if (*pCount == 0)
-      return;
-
-   *pCount = 1;
-   anv_get_queue_family_properties(phys_dev, pQueueFamilyProperties);
 }
 
 void anv_GetPhysicalDeviceQueueFamilyProperties2KHR(
@@ -705,34 +689,13 @@ void anv_GetPhysicalDeviceQueueFamilyProperties2KHR(
     VkQueueFamilyProperties2KHR*                pQueueFamilyProperties)
 {
 
-   ANV_FROM_HANDLE(anv_physical_device, phys_dev, physicalDevice);
+   VK_OUTARRAY_MAKE(out, pQueueFamilyProperties, pQueueFamilyPropertyCount);
 
-   if (pQueueFamilyProperties == NULL) {
-      *pQueueFamilyPropertyCount = 1;
-      return;
-   }
+   vk_outarray_append(&out, p) {
+      p->queueFamilyProperties = anv_queue_family_properties;
 
-   /* The spec implicitly allows the incoming count to be 0. From the Vulkan
-    * 1.0.38 spec, Section 4.1 Physical Devices:
-    *
-    *     If the value referenced by pQueueFamilyPropertyCount is not 0 [then
-    *     do stuff].
-    */
-   if (*pQueueFamilyPropertyCount == 0)
-      return;
-
-   /* We support exactly one queue family. So need to traverse only the first
-    * array element's pNext chain.
-    */
-   *pQueueFamilyPropertyCount = 1;
-   anv_get_queue_family_properties(phys_dev,
-         &pQueueFamilyProperties->queueFamilyProperties);
-
-   vk_foreach_struct(ext, pQueueFamilyProperties->pNext) {
-      switch (ext->sType) {
-      default:
-         anv_debug_ignored_stype(ext->sType);
-         break;
+      vk_foreach_struct(s, p->pNext) {
+         anv_debug_ignored_stype(s->sType);
       }
    }
 }
