@@ -34,6 +34,11 @@
 #define MAX_GLOBAL_BUFFERS 22
 
 struct si_compute {
+	struct si_screen *screen;
+	struct tgsi_token *tokens;
+	struct util_queue_fence ready;
+	struct si_compiler_ctx_state compiler_ctx_state;
+
 	unsigned ir_type;
 	unsigned local_size;
 	unsigned private_size;
@@ -88,6 +93,60 @@ static void code_object_to_config(const amd_kernel_code_t *code_object,
 		align(code_object->workitem_private_segment_byte_size * 64, 1024);
 }
 
+/* Asynchronous compute shader compilation. */
+static void si_create_compute_state_async(void *job, int thread_index)
+{
+	struct si_compute *program = (struct si_compute *)job;
+	struct si_shader *shader = &program->shader;
+	struct si_shader_selector sel;
+	LLVMTargetMachineRef tm;
+	struct pipe_debug_callback *debug = &program->compiler_ctx_state.debug;
+
+	if (thread_index >= 0) {
+		assert(thread_index < ARRAY_SIZE(program->screen->tm));
+		tm = program->screen->tm[thread_index];
+		if (!debug->async)
+			debug = NULL;
+	} else {
+		tm = program->compiler_ctx_state.tm;
+	}
+
+	memset(&sel, 0, sizeof(sel));
+
+	tgsi_scan_shader(program->tokens, &sel.info);
+	sel.tokens = program->tokens;
+	sel.type = PIPE_SHADER_COMPUTE;
+	sel.local_size = program->local_size;
+
+	program->shader.selector = &sel;
+	program->shader.is_monolithic = true;
+
+	if (si_shader_create(program->screen, tm, &program->shader, debug)) {
+		program->shader.compilation_failed = true;
+	} else {
+		bool scratch_enabled = shader->config.scratch_bytes_per_wave > 0;
+
+		shader->config.rsrc1 =
+			S_00B848_VGPRS((shader->config.num_vgprs - 1) / 4) |
+			S_00B848_SGPRS((shader->config.num_sgprs - 1) / 8) |
+			S_00B848_DX10_CLAMP(1) |
+			S_00B848_FLOAT_MODE(shader->config.float_mode);
+
+		shader->config.rsrc2 =
+			S_00B84C_USER_SGPR(SI_CS_NUM_USER_SGPR) |
+			S_00B84C_SCRATCH_EN(scratch_enabled) |
+			S_00B84C_TGID_X_EN(1) | S_00B84C_TGID_Y_EN(1) |
+			S_00B84C_TGID_Z_EN(1) | S_00B84C_TIDIG_COMP_CNT(2) |
+			S_00B84C_LDS_SIZE(shader->config.lds_size);
+
+		program->variable_group_size =
+			sel.info.properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0;
+	}
+
+	FREE(program->tokens);
+	program->shader.selector = NULL;
+}
+
 static void *si_create_compute_state(
 	struct pipe_context *ctx,
 	const struct pipe_compute_state *cso)
@@ -95,9 +154,8 @@ static void *si_create_compute_state(
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_screen *sscreen = (struct si_screen *)ctx->screen;
 	struct si_compute *program = CALLOC_STRUCT(si_compute);
-	struct si_shader *shader = &program->shader;
 
-
+	program->screen = (struct si_screen *)ctx->screen;
 	program->ir_type = cso->ir_type;
 	program->local_size = cso->req_local_mem;
 	program->private_size = cso->req_private_mem;
@@ -105,54 +163,27 @@ static void *si_create_compute_state(
 	program->use_code_object_v2 = HAVE_LLVM >= 0x0400 &&
 					cso->ir_type == PIPE_SHADER_IR_NATIVE;
 
-
 	if (cso->ir_type == PIPE_SHADER_IR_TGSI) {
-		struct si_shader_selector sel;
-		bool scratch_enabled;
-
-		memset(&sel, 0, sizeof(sel));
-
-		sel.tokens = tgsi_dup_tokens(cso->prog);
-		if (!sel.tokens) {
+		program->tokens = tgsi_dup_tokens(cso->prog);
+		if (!program->tokens) {
 			FREE(program);
 			return NULL;
 		}
 
-		tgsi_scan_shader(cso->prog, &sel.info);
-		sel.type = PIPE_SHADER_COMPUTE;
-		sel.local_size = cso->req_local_mem;
-
+		program->compiler_ctx_state.tm = sctx->tm;
+		program->compiler_ctx_state.debug = sctx->b.debug;
+		program->compiler_ctx_state.is_debug_context = sctx->is_debug;
 		p_atomic_inc(&sscreen->b.num_shaders_created);
+		util_queue_fence_init(&program->ready);
 
-		program->shader.selector = &sel;
-		program->shader.is_monolithic = true;
-
-		if (si_shader_create(sscreen, sctx->tm, &program->shader,
-		                     &sctx->b.debug)) {
-			FREE(sel.tokens);
-			FREE(program);
-			return NULL;
-		}
-
-		scratch_enabled = shader->config.scratch_bytes_per_wave > 0;
-
-		shader->config.rsrc1 =
-			   S_00B848_VGPRS((shader->config.num_vgprs - 1) / 4) |
-			   S_00B848_SGPRS((shader->config.num_sgprs - 1) / 8) |
-			   S_00B848_DX10_CLAMP(1) |
-			   S_00B848_FLOAT_MODE(shader->config.float_mode);
-
-		shader->config.rsrc2 = S_00B84C_USER_SGPR(SI_CS_NUM_USER_SGPR) |
-			   S_00B84C_SCRATCH_EN(scratch_enabled) |
-			   S_00B84C_TGID_X_EN(1) | S_00B84C_TGID_Y_EN(1) |
-			   S_00B84C_TGID_Z_EN(1) | S_00B84C_TIDIG_COMP_CNT(2) |
-			   S_00B84C_LDS_SIZE(shader->config.lds_size);
-
-		program->variable_group_size =
-			sel.info.properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0;
-
-		FREE(sel.tokens);
-		program->shader.selector = NULL;
+		if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
+		    sctx->is_debug ||
+		    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_COMPUTE))
+			si_create_compute_state_async(program, -1);
+		else
+			util_queue_add_job(&sscreen->shader_compiler_queue,
+					   program, &program->ready,
+					   si_create_compute_state_async, NULL);
 	} else {
 		const struct pipe_llvm_program_header *header;
 		const char *code;
@@ -715,6 +746,7 @@ static void si_launch_grid(
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 				 SI_CONTEXT_CS_PARTIAL_FLUSH;
 
+	util_queue_fence_wait(&program->ready);
 	si_decompress_compute_textures(sctx);
 
 	/* Add buffer sizes for memory checking in need_cs_space. */
@@ -792,6 +824,11 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 
 	if (!state) {
 		return;
+	}
+
+	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
+		util_queue_fence_wait(&program->ready);
+		util_queue_fence_destroy(&program->ready);
 	}
 
 	if (program == sctx->cs_shader_state.program)
