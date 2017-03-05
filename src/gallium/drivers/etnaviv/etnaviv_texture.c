@@ -71,7 +71,7 @@ etna_create_sampler_state(struct pipe_context *pipe,
 }
 
 static void
-etna_bind_sampler_states(struct pipe_context *pctx, unsigned shader,
+etna_bind_sampler_states(struct pipe_context *pctx, enum pipe_shader_type shader,
                          unsigned start_slot, unsigned num_samplers,
                          void **samplers)
 {
@@ -292,7 +292,7 @@ etna_vertex_set_sampler_views(struct etna_context *ctx, unsigned nr,
 }
 
 static void
-etna_set_sampler_views(struct pipe_context *pctx, unsigned shader,
+etna_set_sampler_views(struct pipe_context *pctx, enum pipe_shader_type shader,
                        unsigned start_slot, unsigned num_views,
                        struct pipe_sampler_view **views)
 {
