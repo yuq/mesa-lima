@@ -1271,4 +1271,7 @@ static void vid_enc_BufferEncoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE*
 
    output->nOffset = 0;
    output->nFilledLen = size; /* mark buffer as full */
+
+   /* all output buffers contain exactly one frame */
+   output->nFlags = OMX_BUFFERFLAG_ENDOFFRAME;
 }
