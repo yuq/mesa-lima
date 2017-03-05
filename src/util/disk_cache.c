@@ -80,7 +80,7 @@ struct disk_cache {
  *         -1 in all other cases.
  */
 static int
-mkdir_if_needed(char *path)
+mkdir_if_needed(const char *path)
 {
    struct stat sb;
 
@@ -118,7 +118,7 @@ mkdir_if_needed(char *path)
  *      <path>/<name> cannot be created as a directory
  */
 static char *
-concatenate_and_mkdir(void *ctx, char *path, const char *name)
+concatenate_and_mkdir(void *ctx, const char *path, const char *name)
 {
    char *new_path;
    struct stat sb;
@@ -147,7 +147,8 @@ remove_dir(const char *fpath, const struct stat *sb,
 }
 
 static void
-remove_old_cache_directories(void *mem_ctx, char *path, const char *timestamp)
+remove_old_cache_directories(void *mem_ctx, const char *path,
+                             const char *timestamp)
 {
    DIR *dir = opendir(path);
 
@@ -170,7 +171,7 @@ remove_old_cache_directories(void *mem_ctx, char *path, const char *timestamp)
 }
 
 static char *
-create_mesa_cache_dir(void *mem_ctx, char *path, const char *timestamp,
+create_mesa_cache_dir(void *mem_ctx, const char *path, const char *timestamp,
                       const char *gpu_name)
 {
    char *new_path = concatenate_and_mkdir(mem_ctx, path, "mesa");
@@ -403,7 +404,7 @@ disk_cache_destroy(struct disk_cache *cache)
  * Returns NULL if out of memory.
  */
 static char *
-get_cache_file(struct disk_cache *cache, cache_key key)
+get_cache_file(struct disk_cache *cache, const cache_key key)
 {
    char buf[41];
    char *filename;
@@ -422,7 +423,7 @@ get_cache_file(struct disk_cache *cache, cache_key key)
  * _get_cache_file above.
 */
 static void
-make_cache_file_directory(struct disk_cache *cache, cache_key key)
+make_cache_file_directory(struct disk_cache *cache, const cache_key key)
 {
    char *dir;
    char buf[41];
@@ -445,7 +446,7 @@ make_cache_file_directory(struct disk_cache *cache, cache_key key)
  */
 static char *
 choose_random_file_matching(const char *dir_path,
-                            bool (*predicate)(struct dirent *,
+                            bool (*predicate)(const struct dirent *,
                                               const char *dir_path))
 {
    DIR *dir;
@@ -508,7 +509,7 @@ choose_random_file_matching(const char *dir_path,
  * ".tmp"
  */
 static bool
-is_regular_non_tmp_file(struct dirent *entry, const char *path)
+is_regular_non_tmp_file(const struct dirent *entry, const char *path)
 {
    char *filename;
    if (asprintf(&filename, "%s/%s", path, entry->d_name) == -1)
@@ -555,7 +556,7 @@ unlink_random_file_from_directory(const char *path)
  * special name of "..")
  */
 static bool
-is_two_character_sub_directory(struct dirent *entry, const char *path)
+is_two_character_sub_directory(const struct dirent *entry, const char *path)
 {
    char *subdir;
    if (asprintf(&subdir, "%s/%s", path, entry->d_name) == -1)
@@ -625,7 +626,7 @@ evict_random_item(struct disk_cache *cache)
 }
 
 void
-disk_cache_remove(struct disk_cache *cache, cache_key key)
+disk_cache_remove(struct disk_cache *cache, const cache_key key)
 {
    struct stat sb;
 
@@ -658,7 +659,7 @@ disk_cache_remove(struct disk_cache *cache, cache_key key)
  */
 static size_t
 deflate_and_write_to_disk(const void *in_data, size_t in_data_size, int dest,
-                          char *filename)
+                          const char *filename)
 {
    unsigned char out[BUFSIZE];
 
@@ -725,7 +726,7 @@ struct cache_entry_file_data {
 
 void
 disk_cache_put(struct disk_cache *cache,
-          cache_key key,
+          const cache_key key,
           const void *data,
           size_t size)
 {
@@ -871,7 +872,7 @@ inflate_cache_data(uint8_t *in_data, size_t in_data_size,
 }
 
 void *
-disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
+disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
 {
    int fd = -1, ret, len;
    struct stat sb;
@@ -949,9 +950,9 @@ disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
 }
 
 void
-disk_cache_put_key(struct disk_cache *cache, cache_key key)
+disk_cache_put_key(struct disk_cache *cache, const cache_key key)
 {
-   uint32_t *key_chunk = (uint32_t *) key;
+   const uint32_t *key_chunk = (const uint32_t *) key;
    int i = *key_chunk & CACHE_INDEX_KEY_MASK;
    unsigned char *entry;
 
@@ -968,9 +969,9 @@ disk_cache_put_key(struct disk_cache *cache, cache_key key)
  * extra recompile.
  */
 bool
-disk_cache_has_key(struct disk_cache *cache, cache_key key)
+disk_cache_has_key(struct disk_cache *cache, const cache_key key)
 {
-   uint32_t *key_chunk = (uint32_t *) key;
+   const uint32_t *key_chunk = (const uint32_t *) key;
    int i = *key_chunk & CACHE_INDEX_KEY_MASK;
    unsigned char *entry;
 
