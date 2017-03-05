@@ -2197,7 +2197,8 @@ static const nir_shader_compiler_options nir_options = {
 
 const void *
 vc4_screen_get_compiler_options(struct pipe_screen *pscreen,
-                                enum pipe_shader_ir ir, unsigned shader)
+                                enum pipe_shader_ir ir,
+                                enum pipe_shader_type shader)
 {
         return &nir_options;
 }
