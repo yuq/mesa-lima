@@ -710,6 +710,7 @@ struct radv_cmd_state {
 struct radv_cmd_pool {
 	VkAllocationCallbacks                        alloc;
 	struct list_head                             cmd_buffers;
+	struct list_head                             free_cmd_buffers;
 	uint32_t queue_family_index;
 };
 

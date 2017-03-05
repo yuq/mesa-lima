@@ -187,6 +187,51 @@ fail:
 	return result;
 }
 
+static void
+radv_cmd_buffer_destroy(struct radv_cmd_buffer *cmd_buffer)
+{
+	list_del(&cmd_buffer->pool_link);
+
+	list_for_each_entry_safe(struct radv_cmd_buffer_upload, up,
+				 &cmd_buffer->upload.list, list) {
+		cmd_buffer->device->ws->buffer_destroy(up->upload_bo);
+		list_del(&up->list);
+		free(up);
+	}
+
+	if (cmd_buffer->upload.upload_bo)
+		cmd_buffer->device->ws->buffer_destroy(cmd_buffer->upload.upload_bo);
+	cmd_buffer->device->ws->cs_destroy(cmd_buffer->cs);
+	vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
+}
+
+static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
+{
+
+	cmd_buffer->device->ws->cs_reset(cmd_buffer->cs);
+
+	list_for_each_entry_safe(struct radv_cmd_buffer_upload, up,
+				 &cmd_buffer->upload.list, list) {
+		cmd_buffer->device->ws->buffer_destroy(up->upload_bo);
+		list_del(&up->list);
+		free(up);
+	}
+
+	cmd_buffer->scratch_size_needed = 0;
+	cmd_buffer->compute_scratch_size_needed = 0;
+	cmd_buffer->esgs_ring_size_needed = 0;
+	cmd_buffer->gsvs_ring_size_needed = 0;
+
+	if (cmd_buffer->upload.upload_bo)
+		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs,
+						      cmd_buffer->upload.upload_bo, 8);
+	cmd_buffer->upload.offset = 0;
+
+	cmd_buffer->record_fail = false;
+
+	cmd_buffer->ring_offsets_idx = -1;
+}
+
 static bool
 radv_cmd_buffer_resize_upload_buf(struct radv_cmd_buffer *cmd_buffer,
 				  uint64_t min_needed)
@@ -1589,8 +1634,22 @@ VkResult radv_AllocateCommandBuffers(
 			sizeof(*pCommandBuffers)*pAllocateInfo->commandBufferCount);
 
 	for (i = 0; i < pAllocateInfo->commandBufferCount; i++) {
-		result = radv_create_cmd_buffer(device, pool, pAllocateInfo->level,
-						&pCommandBuffers[i]);
+
+		if (!list_empty(&pool->free_cmd_buffers)) {
+			struct radv_cmd_buffer *cmd_buffer = list_first_entry(&pool->free_cmd_buffers, struct radv_cmd_buffer, pool_link);
+
+			list_del(&cmd_buffer->pool_link);
+			list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
+
+			radv_reset_cmd_buffer(cmd_buffer);
+			cmd_buffer->level = pAllocateInfo->level;
+
+			pCommandBuffers[i] = radv_cmd_buffer_to_handle(cmd_buffer);
+			result = VK_SUCCESS;
+		} else {
+			result = radv_create_cmd_buffer(device, pool, pAllocateInfo->level,
+			                                &pCommandBuffers[i]);
+		}
 		if (result != VK_SUCCESS)
 			break;
 	}
@@ -1602,24 +1661,6 @@ VkResult radv_AllocateCommandBuffers(
 	return result;
 }
 
-static void
-radv_cmd_buffer_destroy(struct radv_cmd_buffer *cmd_buffer)
-{
-	list_del(&cmd_buffer->pool_link);
-
-	list_for_each_entry_safe(struct radv_cmd_buffer_upload, up,
-				 &cmd_buffer->upload.list, list) {
-		cmd_buffer->device->ws->buffer_destroy(up->upload_bo);
-		list_del(&up->list);
-		free(up);
-	}
-
-	if (cmd_buffer->upload.upload_bo)
-		cmd_buffer->device->ws->buffer_destroy(cmd_buffer->upload.upload_bo);
-	cmd_buffer->device->ws->cs_destroy(cmd_buffer->cs);
-	vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
-}
-
 void radv_FreeCommandBuffers(
 	VkDevice device,
 	VkCommandPool commandPool,
@@ -1629,36 +1670,15 @@ void radv_FreeCommandBuffers(
 	for (uint32_t i = 0; i < commandBufferCount; i++) {
 		RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, pCommandBuffers[i]);
 
-		if (cmd_buffer)
-			radv_cmd_buffer_destroy(cmd_buffer);
+		if (cmd_buffer) {
+			if (cmd_buffer->pool) {
+				list_del(&cmd_buffer->pool_link);
+				list_addtail(&cmd_buffer->pool_link, &cmd_buffer->pool->free_cmd_buffers);
+			} else
+				radv_cmd_buffer_destroy(cmd_buffer);
+
+		}
 	}
-}
-
-static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
-{
-
-	cmd_buffer->device->ws->cs_reset(cmd_buffer->cs);
-
-	list_for_each_entry_safe(struct radv_cmd_buffer_upload, up,
-				 &cmd_buffer->upload.list, list) {
-		cmd_buffer->device->ws->buffer_destroy(up->upload_bo);
-		list_del(&up->list);
-		free(up);
-	}
-
-	cmd_buffer->scratch_size_needed = 0;
-	cmd_buffer->compute_scratch_size_needed = 0;
-	cmd_buffer->esgs_ring_size_needed = 0;
-	cmd_buffer->gsvs_ring_size_needed = 0;
-
-	if (cmd_buffer->upload.upload_bo)
-		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs,
-						      cmd_buffer->upload.upload_bo, 8);
-	cmd_buffer->upload.offset = 0;
-
-	cmd_buffer->record_fail = false;
-
-	cmd_buffer->ring_offsets_idx = -1;
 }
 
 VkResult radv_ResetCommandBuffer(
@@ -2140,6 +2160,7 @@ VkResult radv_CreateCommandPool(
 		pool->alloc = device->alloc;
 
 	list_inithead(&pool->cmd_buffers);
+	list_inithead(&pool->free_cmd_buffers);
 
 	pool->queue_family_index = pCreateInfo->queueFamilyIndex;
 
@@ -2162,6 +2183,11 @@ void radv_DestroyCommandPool(
 
 	list_for_each_entry_safe(struct radv_cmd_buffer, cmd_buffer,
 				 &pool->cmd_buffers, pool_link) {
+		radv_cmd_buffer_destroy(cmd_buffer);
+	}
+
+	list_for_each_entry_safe(struct radv_cmd_buffer, cmd_buffer,
+				 &pool->free_cmd_buffers, pool_link) {
 		radv_cmd_buffer_destroy(cmd_buffer);
 	}
 
@@ -2188,6 +2214,15 @@ void radv_TrimCommandPoolKHR(
     VkCommandPool                               commandPool,
     VkCommandPoolTrimFlagsKHR                   flags)
 {
+	RADV_FROM_HANDLE(radv_cmd_pool, pool, commandPool);
+
+	if (!pool)
+		return;
+
+	list_for_each_entry_safe(struct radv_cmd_buffer, cmd_buffer,
+				 &pool->free_cmd_buffers, pool_link) {
+		radv_cmd_buffer_destroy(cmd_buffer);
+	}
 }
 
 void radv_CmdBeginRenderPass(
