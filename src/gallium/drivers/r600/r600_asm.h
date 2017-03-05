@@ -276,6 +276,7 @@ struct r600_bytecode {
 	struct r600_isa* isa;
 	struct r600_bytecode_output pending_outputs[5];
 	int n_pending_outputs;
+	boolean			need_wait_ack; /* emit a pending WAIT_ACK prior to control flow */
 };
 
 /* eg_asm.c */
@@ -304,6 +305,8 @@ int r600_bytecode_add_output(struct r600_bytecode *bc,
 		const struct r600_bytecode_output *output);
 int r600_bytecode_add_pending_output(struct r600_bytecode *bc,
 		const struct r600_bytecode_output *output);
+void r600_bytecode_need_wait_ack(struct r600_bytecode *bc, boolean needed);
+boolean r600_bytecode_get_need_wait_ack(struct r600_bytecode *bc);
 int r600_bytecode_build(struct r600_bytecode *bc);
 int r600_bytecode_add_cf(struct r600_bytecode *bc);
 int r600_bytecode_add_cfinst(struct r600_bytecode *bc,

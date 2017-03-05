@@ -165,7 +165,7 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 	bool dump = r600_can_dump_shader(&rctx->screen->b,
 					 tgsi_get_processor_type(sel->tokens));
 	unsigned use_sb = !(rctx->screen->b.debug_flags & DBG_NO_SB);
-	unsigned sb_disasm = use_sb || (rctx->screen->b.debug_flags & DBG_SB_DISASM);
+	unsigned sb_disasm;
 	unsigned export_shader;
 
 	shader->shader.bc.isa = rctx->isa;
@@ -208,6 +208,7 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 		}
 	}
 
+	sb_disasm = use_sb || (rctx->screen->b.debug_flags & DBG_SB_DISASM);
 	if (dump && !sb_disasm) {
 		fprintf(stderr, "--------------------------------------------------------------\n");
 		r600_bytecode_disasm(&shader->shader.bc);
@@ -325,6 +326,9 @@ struct eg_interp {
 
 struct r600_shader_ctx {
 	struct tgsi_shader_info			info;
+	struct tgsi_array_info			*array_infos;
+	/* flag for each tgsi temp array if its been spilled or not */
+	bool					*spilled_arrays;
 	struct tgsi_parse_context		parse;
 	const struct tgsi_token			*tokens;
 	unsigned				type;
@@ -861,6 +865,95 @@ static int tgsi_barrier(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+static void choose_spill_arrays(struct r600_shader_ctx *ctx, int *regno, unsigned *scratch_space_needed)
+{
+	// pick largest array and spill it, repeat until the number of temps is under limit or we run out of arrays
+	unsigned n = ctx->info.array_max[TGSI_FILE_TEMPORARY];
+	unsigned narrays_left = n;
+	bool *spilled = ctx->spilled_arrays; // assumed calloc:ed
+
+	*scratch_space_needed = 0;
+	while (*regno > 124 && narrays_left) {
+		unsigned i;
+		unsigned largest = 0;
+		unsigned largest_index = 0;
+
+		for (i = 0; i < n; i++) {
+			unsigned size = ctx->array_infos[i].range.Last - ctx->array_infos[i].range.First + 1;
+			if (!spilled[i] && size > largest) {
+				largest = size;
+				largest_index = i;
+			}
+		}
+
+		spilled[largest_index] = true;
+		*regno -= largest;
+		*scratch_space_needed += largest;
+
+		narrays_left --;
+	}
+
+	if (narrays_left == 0) {
+		ctx->info.indirect_files &= ~(1 << TGSI_FILE_TEMPORARY);
+	}
+}
+
+/* Take spilled temp arrays into account when translating tgsi register
+ * indexes into r600 gprs if spilled is false, or scratch array offset if
+ * spilled is true */
+static int map_tgsi_reg_index_to_r600_gpr(struct r600_shader_ctx *ctx, unsigned tgsi_reg_index, bool *spilled)
+{
+	unsigned i;
+	unsigned spilled_size = 0;
+
+	for (i = 0; i < ctx->info.array_max[TGSI_FILE_TEMPORARY]; i++) {
+		if (tgsi_reg_index >= ctx->array_infos[i].range.First && tgsi_reg_index <= ctx->array_infos[i].range.Last) {
+			if (ctx->spilled_arrays[i]) {
+				/* vec4 index into spilled scratch memory */
+				*spilled = true;
+				return tgsi_reg_index - ctx->array_infos[i].range.First + spilled_size;
+			}
+			else {
+				/* regular GPR array */
+				*spilled = false;
+				return tgsi_reg_index - spilled_size + ctx->file_offset[TGSI_FILE_TEMPORARY];
+			}
+		}
+
+		if (ctx->spilled_arrays[i]) {
+			spilled_size += ctx->array_infos[i].range.Last - ctx->array_infos[i].range.First + 1;
+		}
+	}
+
+	/* regular GPR index, minus the holes from spilled arrays */
+	*spilled = false;
+
+	return tgsi_reg_index - spilled_size + ctx->file_offset[TGSI_FILE_TEMPORARY];
+}
+
+/* look up spill area base offset and array size for a spilled temp array */
+static void get_spilled_array_base_and_size(struct r600_shader_ctx *ctx, unsigned tgsi_reg_index,
+	unsigned *array_base, unsigned *array_size)
+{
+	unsigned i;
+	unsigned offset = 0;
+
+	for (i = 0; i < ctx->info.array_max[TGSI_FILE_TEMPORARY]; i++) {
+		if (ctx->spilled_arrays[i]) {
+			unsigned size = ctx->array_infos[i].range.Last - ctx->array_infos[i].range.First + 1;
+
+			if (tgsi_reg_index >= ctx->array_infos[i].range.First && tgsi_reg_index <= ctx->array_infos[i].range.Last) {
+				*array_base = offset;
+				*array_size = size - 1; /* hw counts from 1 */
+
+				return;
+			}
+
+			offset += size;
+		}
+	}
+}
+
 static int tgsi_declaration(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_declaration *d = &ctx->parse.FullToken.FullDeclaration;
@@ -965,10 +1058,15 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 	case TGSI_FILE_TEMPORARY:
 		if (ctx->info.indirect_files & (1 << TGSI_FILE_TEMPORARY)) {
 			if (d->Array.ArrayID) {
-				r600_add_gpr_array(ctx->shader,
-				               ctx->file_offset[TGSI_FILE_TEMPORARY] +
-								   d->Range.First,
-				               d->Range.Last - d->Range.First + 1, 0x0F);
+				bool spilled;
+				unsigned idx = map_tgsi_reg_index_to_r600_gpr(ctx,
+					d->Range.First,
+					&spilled);
+
+				if (!spilled) {
+					r600_add_gpr_array(ctx->shader, idx,
+						d->Range.Last - d->Range.First + 1, 0x0F);
+				}
 			}
 		}
 		break;
@@ -1407,6 +1505,95 @@ static void tgsi_src(struct r600_shader_ctx *ctx,
 	r600_src->swizzle[3] = tgsi_src->Register.SwizzleW;
 	r600_src->neg = tgsi_src->Register.Negate;
 	r600_src->abs = tgsi_src->Register.Absolute;
+
+	if (tgsi_src->Register.File == TGSI_FILE_TEMPORARY) {
+		bool spilled;
+		unsigned idx;
+
+		idx = map_tgsi_reg_index_to_r600_gpr(ctx, tgsi_src->Register.Index, &spilled);
+
+		if (spilled) {
+			int reg = r600_get_temp(ctx);
+			int r;
+
+			r600_src->sel = reg;
+
+			if (ctx->bc->chip_class < R700) {
+				struct r600_bytecode_output cf;
+
+				memset(&cf, 0, sizeof(struct r600_bytecode_output));
+				cf.op = CF_OP_MEM_SCRATCH;
+				cf.elem_size = 3;
+				cf.gpr = reg;
+				cf.comp_mask = 0xF;
+				cf.swizzle_x = 0;
+				cf.swizzle_y = 1;
+				cf.swizzle_z = 2;
+				cf.swizzle_w = 3;
+				cf.burst_count = 1;
+
+				get_spilled_array_base_and_size(ctx, tgsi_src->Register.Index,
+					&cf.array_base, &cf.array_size);
+
+				if (tgsi_src->Register.Indirect) {
+					cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_READ_IND;
+					cf.index_gpr = ctx->bc->ar_reg;
+				}
+				else {
+					cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_READ;
+					cf.array_base += idx;
+					cf.array_size = 0;
+				}
+
+				r = r600_bytecode_add_output(ctx->bc, &cf);
+			}
+			else {
+				struct r600_bytecode_vtx vtx;
+
+				if (r600_bytecode_get_need_wait_ack(ctx->bc)) {
+					r600_bytecode_need_wait_ack(ctx->bc, false);
+					r = r600_bytecode_add_cfinst(ctx->bc, CF_OP_WAIT_ACK);
+				}
+
+				memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
+				vtx.op = FETCH_OP_READ_SCRATCH;
+				vtx.dst_gpr = reg;
+				vtx.uncached = 1; // Must bypass cache since prior spill written in same invocation
+				vtx.elem_size = 3;
+				vtx.data_format = FMT_32_32_32_32;
+				vtx.num_format_all = V_038010_SQ_NUM_FORMAT_INT;
+				vtx.dst_sel_x = tgsi_src->Register.SwizzleX;
+				vtx.dst_sel_y = tgsi_src->Register.SwizzleY;
+				vtx.dst_sel_z = tgsi_src->Register.SwizzleZ;
+				vtx.dst_sel_w = tgsi_src->Register.SwizzleW;
+
+				get_spilled_array_base_and_size(ctx, tgsi_src->Register.Index,
+					&vtx.array_base, &vtx.array_size);
+
+				if (tgsi_src->Register.Indirect) {
+					vtx.indexed = 1;
+					vtx.src_gpr = ctx->bc->ar_reg;
+				}
+				else {
+					vtx.array_base += idx;
+					vtx.array_size = 0;
+				}
+
+				r = r600_bytecode_add_vtx(ctx->bc, &vtx);
+			}
+
+			if (r)
+				return;
+		}
+		else {
+			if (tgsi_src->Register.Indirect)
+				r600_src->rel = V_SQ_REL_RELATIVE;
+
+			r600_src->sel = idx;
+		}
+
+		return;
+	}
 
 	if (tgsi_src->Register.File == TGSI_FILE_IMMEDIATE) {
 		int index;
@@ -3173,6 +3360,11 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	tgsi_scan_shader(tokens, &ctx.info);
 	shader->indirect_files = ctx.info.indirect_files;
 
+	int narrays = ctx.info.array_max[TGSI_FILE_TEMPORARY];
+	ctx.array_infos = calloc(narrays, sizeof(*ctx.array_infos));
+	ctx.spilled_arrays = calloc(narrays, sizeof(bool));
+	tgsi_scan_arrays(tokens, TGSI_FILE_TEMPORARY, narrays, ctx.array_infos);
+
 	shader->uses_helper_invocation = false;
 	shader->uses_doubles = ctx.info.uses_doubles;
 	shader->uses_atomics = ctx.info.file_mask[TGSI_FILE_HW_ATOMIC];
@@ -3342,11 +3534,17 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	/* Outside the GPR range. This will be translated to one of the
 	 * kcache banks later. */
 	ctx.file_offset[TGSI_FILE_CONSTANT] = 512;
-
 	ctx.file_offset[TGSI_FILE_IMMEDIATE] = V_SQ_ALU_SRC_LITERAL;
 
+	pipeshader->scratch_space_needed = 0;
 	int regno = ctx.file_offset[TGSI_FILE_TEMPORARY] +
 			ctx.info.file_max[TGSI_FILE_TEMPORARY];
+	if (regno > 124) {
+		choose_spill_arrays(&ctx, &regno, &pipeshader->scratch_space_needed);
+		shader->indirect_files = ctx.info.indirect_files;
+	}
+	shader->needs_scratch_space = pipeshader->scratch_space_needed != 0;
+
 	ctx.bc->ar_reg = ++regno;
 	ctx.bc->index_reg[0] = ++regno;
 	ctx.bc->index_reg[1] = ++regno;
@@ -4061,10 +4259,14 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			return r;
 	}
 
+	free(ctx.spilled_arrays);
+	free(ctx.array_infos);
 	free(ctx.literals);
 	tgsi_parse_free(&ctx.parse);
 	return 0;
 out_err:
+	free(ctx.spilled_arrays);
+	free(ctx.array_infos);
 	free(ctx.literals);
 	tgsi_parse_free(&ctx.parse);
 	return r;
@@ -4116,8 +4318,70 @@ static void tgsi_dst(struct r600_shader_ctx *ctx,
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 
-	r600_dst->sel = tgsi_dst->Register.Index;
-	r600_dst->sel += ctx->file_offset[tgsi_dst->Register.File];
+	if (tgsi_dst->Register.File == TGSI_FILE_TEMPORARY) {
+		bool spilled;
+		unsigned idx;
+
+		idx = map_tgsi_reg_index_to_r600_gpr(ctx, tgsi_dst->Register.Index, &spilled);
+
+		if (spilled) {
+			struct r600_bytecode_output cf;
+			int reg = r600_get_temp(ctx);
+			int r;
+
+			r600_dst->sel = reg;
+			r600_dst->chan = swizzle;
+			r600_dst->write = 1;
+			if (inst->Instruction.Saturate) {
+				r600_dst->clamp = 1;
+			}
+
+			// needs to be added after op using tgsi_dst
+			memset(&cf, 0, sizeof(struct r600_bytecode_output));
+			cf.op = CF_OP_MEM_SCRATCH;
+			cf.elem_size = 3;
+			cf.gpr = reg;
+			cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE;
+			cf.mark = 1;
+			cf.comp_mask = inst->Dst[0].Register.WriteMask;
+			cf.swizzle_x = 0;
+			cf.swizzle_y = 1;
+			cf.swizzle_z = 2;
+			cf.swizzle_w = 3;
+			cf.burst_count = 1;
+
+			get_spilled_array_base_and_size(ctx, tgsi_dst->Register.Index,
+				&cf.array_base, &cf.array_size);
+
+			if (tgsi_dst->Register.Indirect) {
+				if (ctx->bc->chip_class < R700)
+					cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND;
+				else
+					cf.type = 3; // V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND_ACK;
+				cf.index_gpr = ctx->bc->ar_reg;
+			}
+			else {
+				cf.array_base += idx;
+				cf.array_size = 0;
+			}
+
+			r = r600_bytecode_add_pending_output(ctx->bc, &cf);
+			if (r)
+				return;
+
+			if (ctx->bc->chip_class >= R700)
+				r600_bytecode_need_wait_ack(ctx->bc, true);
+
+			return;
+		}
+		else {
+			r600_dst->sel = idx;
+		}
+	}
+	else {
+		r600_dst->sel = tgsi_dst->Register.Index;
+		r600_dst->sel += ctx->file_offset[tgsi_dst->Register.File];
+	}
 	r600_dst->chan = swizzle;
 	r600_dst->write = 1;
 	if (inst->Instruction.Saturate) {

@@ -240,6 +240,16 @@ int r600_bytecode_add_pending_output(struct r600_bytecode *bc,
 	return 0;
 }
 
+void r600_bytecode_need_wait_ack(struct r600_bytecode *bc, boolean need_wait_ack)
+{
+	bc->need_wait_ack = need_wait_ack;
+}
+
+boolean r600_bytecode_get_need_wait_ack(struct r600_bytecode *bc)
+{
+	return bc->need_wait_ack;
+}
+
 /* alu instructions that can ony exits once per group */
 static int is_alu_once_inst(struct r600_bytecode_alu *alu)
 {
@@ -1511,6 +1521,13 @@ int r600_bytecode_add_gds(struct r600_bytecode *bc, const struct r600_bytecode_g
 int r600_bytecode_add_cfinst(struct r600_bytecode *bc, unsigned op)
 {
 	int r;
+
+	/* Emit WAIT_ACK before control flow to ensure pending writes are always acked. */
+	if (op != CF_OP_MEM_SCRATCH && bc->need_wait_ack) {
+		bc->need_wait_ack = false;
+		r = r600_bytecode_add_cfinst(bc, CF_OP_WAIT_ACK);
+	}
+
 	r = r600_bytecode_add_cf(bc);
 	if (r)
 		return r;
