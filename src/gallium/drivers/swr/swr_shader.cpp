@@ -76,7 +76,7 @@ bool operator==(const swr_jit_gs_key &lhs, const swr_jit_gs_key &rhs)
 static void
 swr_generate_sampler_key(const struct lp_tgsi_info &info,
                          struct swr_context *ctx,
-                         unsigned shader_type,
+                         enum pipe_shader_type shader_type,
                          struct swr_jit_sampler_key &key)
 {
    key.nr_samplers = info.base.file_max[TGSI_FILE_SAMPLER] + 1;

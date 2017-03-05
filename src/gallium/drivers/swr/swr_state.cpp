@@ -748,7 +748,7 @@ swr_update_resource_status(struct pipe_context *pipe,
 
 static void
 swr_update_texture_state(struct swr_context *ctx,
-                         unsigned shader_type,
+                         enum pipe_shader_type shader_type,
                          unsigned num_sampler_views,
                          swr_jit_texture *textures)
 {
@@ -802,7 +802,7 @@ swr_update_texture_state(struct swr_context *ctx,
 
 static void
 swr_update_sampler_state(struct swr_context *ctx,
-                         unsigned shader_type,
+                         enum pipe_shader_type shader_type,
                          unsigned num_samplers,
                          swr_jit_sampler *samplers)
 {

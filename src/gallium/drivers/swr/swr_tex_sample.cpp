@@ -74,7 +74,7 @@ struct swr_sampler_dynamic_state {
 
    const struct swr_sampler_static_state *static_state;
 
-   unsigned shader_type;
+   enum pipe_shader_type shader_type;
 };
 
 
@@ -325,7 +325,7 @@ swr_sampler_soa_emit_size_query(const struct lp_build_sampler_soa *base,
 
 struct lp_build_sampler_soa *
 swr_sampler_soa_create(const struct swr_sampler_static_state *static_state,
-                       unsigned shader_type)
+                       enum pipe_shader_type shader_type)
 {
    struct swr_sampler_soa *sampler;
 
