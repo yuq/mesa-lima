@@ -116,7 +116,7 @@ debug_flush_buf_create(boolean supports_unsync, unsigned bt_depth)
    fbuf->supports_unsync = supports_unsync;
    fbuf->bt_depth = bt_depth;
    pipe_reference_init(&fbuf->reference, 1);
-   pipe_mutex_init(fbuf->mutex);
+   (void) mtx_init(&fbuf->mutex, mtx_plain);
 
    return fbuf;
 out_no_buf:

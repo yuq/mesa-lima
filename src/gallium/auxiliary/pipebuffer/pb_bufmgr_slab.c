@@ -473,7 +473,7 @@ pb_slab_manager_create(struct pb_manager *provider,
 
    LIST_INITHEAD(&mgr->slabs);
    
-   pipe_mutex_init(mgr->mutex);
+   (void) mtx_init(&mgr->mutex, mtx_plain);
 
    return &mgr->base;
 }

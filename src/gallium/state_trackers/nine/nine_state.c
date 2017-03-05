@@ -152,9 +152,9 @@ nine_csmt_create( struct NineDevice9 *This )
         return NULL;
     }
     cnd_init(&ctx->event_processed);
-    pipe_mutex_init(ctx->mutex_processed);
-    pipe_mutex_init(ctx->thread_running);
-    pipe_mutex_init(ctx->thread_resume);
+    (void) mtx_init(&ctx->mutex_processed, mtx_plain);
+    (void) mtx_init(&ctx->thread_running, mtx_plain);
+    (void) mtx_init(&ctx->thread_resume, mtx_plain);
 
 #if DEBUG
     pipe_thread_setname("Main thread");

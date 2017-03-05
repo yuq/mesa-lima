@@ -280,7 +280,7 @@ pb_cache_init(struct pb_cache *mgr, uint usecs, float size_factor,
    for (i = 0; i < ARRAY_SIZE(mgr->buckets); i++)
       LIST_INITHEAD(&mgr->buckets[i]);
 
-   pipe_mutex_init(mgr->mutex);
+   (void) mtx_init(&mgr->mutex, mtx_plain);
    mgr->cache_size = 0;
    mgr->max_cache_size = maximum_cache_size;
    mgr->usecs = usecs;

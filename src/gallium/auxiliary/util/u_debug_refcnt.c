@@ -89,7 +89,7 @@ debug_serial(void *p, unsigned *pserial)
    static boolean first = TRUE;
 
    if (first) {
-      pipe_mutex_init(serials_mutex);
+      (void) mtx_init(&serials_mutex, mtx_plain);
       first = FALSE;
    }
 #endif

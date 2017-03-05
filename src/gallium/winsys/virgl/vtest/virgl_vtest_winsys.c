@@ -637,7 +637,7 @@ virgl_vtest_winsys_wrap(struct sw_winsys *sws)
 
    vtws->usecs = 1000000;
    LIST_INITHEAD(&vtws->delayed);
-   pipe_mutex_init(vtws->mutex);
+   (void) mtx_init(&vtws->mutex, mtx_plain);
 
    vtws->base.destroy = virgl_vtest_winsys_destroy;
 

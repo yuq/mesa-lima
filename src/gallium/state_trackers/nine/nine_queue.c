@@ -241,10 +241,10 @@ nine_queue_create(void)
     }
 
     cnd_init(&ctx->event_pop);
-    pipe_mutex_init(ctx->mutex_pop);
+    (void) mtx_init(&ctx->mutex_pop, mtx_plain);
 
     cnd_init(&ctx->event_push);
-    pipe_mutex_init(ctx->mutex_push);
+    (void) mtx_init(&ctx->mutex_push, mtx_plain);
 
     /* Block until first cmdbuf has been flushed. */
     ctx->worker_wait = TRUE;

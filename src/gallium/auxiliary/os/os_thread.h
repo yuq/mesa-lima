@@ -108,9 +108,6 @@ static inline int pipe_thread_is_self( pipe_thread thread )
    return 0;
 }
 
-#define pipe_mutex_init(mutex) \
-   (void) mtx_init(&(mutex), mtx_plain)
-
 #define pipe_mutex_destroy(mutex) \
    mtx_destroy(&(mutex))
 
@@ -181,7 +178,7 @@ static inline void pipe_barrier_init(pipe_barrier *barrier, unsigned count)
    barrier->count = count;
    barrier->waiters = 0;
    barrier->sequence = 0;
-   pipe_mutex_init(barrier->mutex);
+   (void) mtx_init(&barrier->mutex, mtx_plain);
    cnd_init(&barrier->condvar);
 }
 
@@ -233,7 +230,7 @@ typedef struct
 static inline void
 pipe_semaphore_init(pipe_semaphore *sema, int init_val)
 {
-   pipe_mutex_init(sema->mutex);
+   (void) mtx_init(&sema->mutex, mtx_plain);
    cnd_init(&sema->cond);
    sema->counter = init_val;
 }

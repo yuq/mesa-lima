@@ -52,7 +52,7 @@ lp_fence_create(unsigned rank)
 
    pipe_reference_init(&fence->reference, 1);
 
-   pipe_mutex_init(fence->mutex);
+   (void) mtx_init(&fence->mutex, mtx_plain);
    cnd_init(&fence->signalled);
 
    fence->id = fence_id++;

@@ -591,8 +591,8 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    amdgpu_surface_init_functions(ws);
 
    LIST_INITHEAD(&ws->global_bo_list);
-   pipe_mutex_init(ws->global_bo_list_lock);
-   pipe_mutex_init(ws->bo_fence_lock);
+   (void) mtx_init(&ws->global_bo_list_lock, mtx_plain);
+   (void) mtx_init(&ws->bo_fence_lock, mtx_plain);
 
    if (!util_queue_init(&ws->cs_queue, "amdgpu_cs", 8, 1)) {
       amdgpu_winsys_destroy(&ws->base);

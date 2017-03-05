@@ -1311,8 +1311,8 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	}
 
 	util_format_s3tc_init();
-	pipe_mutex_init(rscreen->aux_context_lock);
-	pipe_mutex_init(rscreen->gpu_load_mutex);
+	(void) mtx_init(&rscreen->aux_context_lock, mtx_plain);
+	(void) mtx_init(&rscreen->gpu_load_mutex, mtx_plain);
 
 	if (rscreen->debug_flags & DBG_INFO) {
 		printf("pci_id = 0x%x\n", rscreen->info.pci_id);

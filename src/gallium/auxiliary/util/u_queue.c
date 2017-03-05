@@ -113,7 +113,7 @@ void
 util_queue_fence_init(struct util_queue_fence *fence)
 {
    memset(fence, 0, sizeof(*fence));
-   pipe_mutex_init(fence->mutex);
+   (void) mtx_init(&fence->mutex, mtx_plain);
    cnd_init(&fence->cond);
    fence->signalled = true;
 }
@@ -210,7 +210,7 @@ util_queue_init(struct util_queue *queue,
    if (!queue->jobs)
       goto fail;
 
-   pipe_mutex_init(queue->lock);
+   (void) mtx_init(&queue->lock, mtx_plain);
 
    queue->num_queued = 0;
    cnd_init(&queue->has_queued_cond);

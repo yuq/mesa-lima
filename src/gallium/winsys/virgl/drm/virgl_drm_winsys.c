@@ -776,8 +776,8 @@ virgl_drm_winsys_create(int drmFD)
    qdws->num_delayed = 0;
    qdws->usecs = 1000000;
    LIST_INITHEAD(&qdws->delayed);
-   pipe_mutex_init(qdws->mutex);
-   pipe_mutex_init(qdws->bo_handles_mutex);
+   (void) mtx_init(&qdws->mutex, mtx_plain);
+   (void) mtx_init(&qdws->bo_handles_mutex, mtx_plain);
    qdws->bo_handles = util_hash_table_create(handle_hash, handle_compare);
    qdws->bo_names = util_hash_table_create(handle_hash, handle_compare);
    qdws->base.destroy = virgl_drm_winsys_destroy;

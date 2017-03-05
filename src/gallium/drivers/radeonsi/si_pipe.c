@@ -826,7 +826,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
-	pipe_mutex_init(sscreen->shader_parts_mutex);
+	(void) mtx_init(&sscreen->shader_parts_mutex, mtx_plain);
 	sscreen->use_monolithic_shaders =
 		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
 

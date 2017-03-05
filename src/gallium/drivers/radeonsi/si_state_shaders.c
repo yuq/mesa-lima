@@ -299,7 +299,7 @@ static void si_destroy_shader_cache_entry(struct hash_entry *entry)
 
 bool si_init_shader_cache(struct si_screen *sscreen)
 {
-	pipe_mutex_init(sscreen->shader_cache_mutex);
+	(void) mtx_init(&sscreen->shader_cache_mutex, mtx_plain);
 	sscreen->shader_cache =
 		_mesa_hash_table_create(NULL,
 					si_shader_cache_key_hash,
@@ -1764,7 +1764,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		sel->db_shader_control |= S_02880C_Z_ORDER(V_02880C_EARLY_Z_THEN_LATE_Z);
 	}
 
-	pipe_mutex_init(sel->mutex);
+	(void) mtx_init(&sel->mutex, mtx_plain);
 	util_queue_fence_init(&sel->ready);
 
 	if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||

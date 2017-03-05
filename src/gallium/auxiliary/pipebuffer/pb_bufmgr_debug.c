@@ -417,7 +417,7 @@ pb_debug_manager_create_buffer(struct pb_manager *_mgr,
 
    pb_debug_buffer_fill(buf);
    
-   pipe_mutex_init(buf->mutex);
+   (void) mtx_init(&buf->mutex, mtx_plain);
    
    pipe_mutex_lock(mgr->mutex);
    LIST_ADDTAIL(&buf->head, &mgr->list);
@@ -475,7 +475,7 @@ pb_debug_manager_create(struct pb_manager *provider,
    mgr->underflow_size = underflow_size;
    mgr->overflow_size = overflow_size;
     
-   pipe_mutex_init(mgr->mutex);
+   (void) mtx_init(&mgr->mutex, mtx_plain);
    LIST_INITHEAD(&mgr->list);
 
    return &mgr->base;

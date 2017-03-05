@@ -266,7 +266,7 @@ mm_bufmgr_create_from_buffer(struct pb_buffer *buffer,
    mm->size = size;
    mm->align2 = align2; /* 64-byte alignment */
 
-   pipe_mutex_init(mm->mutex);
+   (void) mtx_init(&mm->mutex, mtx_plain);
 
    mm->buffer = buffer; 
 

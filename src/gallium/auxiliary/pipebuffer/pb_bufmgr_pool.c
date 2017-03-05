@@ -279,7 +279,7 @@ pool_bufmgr_create(struct pb_manager *provider,
    pool->bufSize = bufSize;
    pool->bufAlign = desc->alignment; 
    
-   pipe_mutex_init(pool->mutex);
+   (void) mtx_init(&pool->mutex, mtx_plain);
 
    pool->buffer = provider->create_buffer(provider, numBufs*bufSize, desc); 
    if (!pool->buffer)

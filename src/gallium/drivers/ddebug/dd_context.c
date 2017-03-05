@@ -870,7 +870,7 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
 
       *dctx->mapped_fence = 0;
 
-      pipe_mutex_init(dctx->mutex);
+      (void) mtx_init(&dctx->mutex, mtx_plain);
       dctx->thread = pipe_thread_create(dd_thread_pipelined_hang_detect, dctx);
       if (!dctx->thread) {
          pipe_mutex_destroy(dctx->mutex);

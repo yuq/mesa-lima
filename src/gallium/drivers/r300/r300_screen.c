@@ -751,7 +751,7 @@ struct pipe_screen* r300_screen_create(struct radeon_winsys *rws)
     slab_create_parent(&r300screen->pool_transfers, sizeof(struct pipe_transfer), 64);
 
     util_format_s3tc_init();
-    pipe_mutex_init(r300screen->cmask_mutex);
+    (void) mtx_init(&r300screen->cmask_mutex, mtx_plain);
 
     return &r300screen->screen;
 }

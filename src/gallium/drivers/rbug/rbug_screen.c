@@ -279,7 +279,7 @@ rbug_screen_create(struct pipe_screen *screen)
    if (!rb_screen)
       return screen;
 
-   pipe_mutex_init(rb_screen->list_mutex);
+   (void) mtx_init(&rb_screen->list_mutex, mtx_plain);
    make_empty_list(&rb_screen->contexts);
    make_empty_list(&rb_screen->resources);
    make_empty_list(&rb_screen->surfaces);

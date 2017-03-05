@@ -804,15 +804,15 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     radeon_drm_cs_init_functions(ws);
     radeon_surface_init_functions(ws);
 
-    pipe_mutex_init(ws->hyperz_owner_mutex);
-    pipe_mutex_init(ws->cmask_owner_mutex);
+    (void) mtx_init(&ws->hyperz_owner_mutex, mtx_plain);
+    (void) mtx_init(&ws->cmask_owner_mutex, mtx_plain);
 
     ws->bo_names = util_hash_table_create(handle_hash, handle_compare);
     ws->bo_handles = util_hash_table_create(handle_hash, handle_compare);
     ws->bo_vas = util_hash_table_create(handle_hash, handle_compare);
-    pipe_mutex_init(ws->bo_handles_mutex);
-    pipe_mutex_init(ws->bo_va_mutex);
-    pipe_mutex_init(ws->bo_fence_lock);
+    (void) mtx_init(&ws->bo_handles_mutex, mtx_plain);
+    (void) mtx_init(&ws->bo_va_mutex, mtx_plain);
+    (void) mtx_init(&ws->bo_fence_lock, mtx_plain);
     ws->va_offset = ws->va_start;
     list_inithead(&ws->va_holes);
 

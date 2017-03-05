@@ -296,7 +296,7 @@ debug_symbol_name_cached(const void *addr)
    static boolean first = TRUE;
 
    if (first) {
-      pipe_mutex_init(symbols_mutex);
+      (void) mtx_init(&symbols_mutex, mtx_plain);
       first = FALSE;
    }
 #endif

@@ -224,7 +224,7 @@ pb_slabs_init(struct pb_slabs *slabs,
       LIST_INITHEAD(&group->slabs);
    }
 
-   pipe_mutex_init(slabs->mutex);
+   (void) mtx_init(&slabs->mutex, mtx_plain);
 
    return true;
 }

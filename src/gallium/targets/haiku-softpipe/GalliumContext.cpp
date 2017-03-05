@@ -55,7 +55,7 @@ GalliumContext::GalliumContext(ulong options)
 
 	CreateScreen();
 
-	pipe_mutex_init(fMutex);
+	(void) mtx_init(&fMutex, mtx_plain);
 }
 
 

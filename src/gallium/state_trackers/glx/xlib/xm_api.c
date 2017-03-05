@@ -242,7 +242,7 @@ xmesa_init_display( Display *display )
    }
 
    if (xmdpy->screen && xmdpy->smapi) {
-      pipe_mutex_init(xmdpy->mutex);
+      (void) mtx_init(&xmdpy->mutex, mtx_plain);
    }
    else {
       if (xmdpy->screen) {

@@ -705,7 +705,7 @@ fd_screen_create(struct fd_device *dev)
 
 	fd_bc_init(&screen->batch_cache);
 
-	pipe_mutex_init(screen->lock);
+	(void) mtx_init(&screen->lock, mtx_plain);
 
 	pscreen->destroy = fd_screen_destroy;
 	pscreen->get_param = fd_screen_get_param;

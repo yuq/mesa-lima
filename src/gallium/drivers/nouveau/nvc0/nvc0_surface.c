@@ -1664,7 +1664,7 @@ nvc0_blitter_create(struct nvc0_screen *screen)
    }
    screen->blitter->screen = screen;
 
-   pipe_mutex_init(screen->blitter->mutex);
+   (void) mtx_init(&screen->blitter->mutex, mtx_plain);
 
    nvc0_blitter_make_vp(screen->blitter);
    nvc0_blitter_make_sampler(screen->blitter);

@@ -1755,7 +1755,7 @@ nv50_blitter_create(struct nv50_screen *screen)
       return false;
    }
 
-   pipe_mutex_init(screen->blitter->mutex);
+   (void) mtx_init(&screen->blitter->mutex, mtx_plain);
 
    nv50_blitter_make_vp(screen->blitter);
    nv50_blitter_make_sampler(screen->blitter);

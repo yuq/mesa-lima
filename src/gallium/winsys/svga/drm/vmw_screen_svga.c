@@ -156,7 +156,7 @@ vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
    pipe_reference_init(&surface->refcnt, 1);
    p_atomic_set(&surface->validated, 0);
    surface->screen = vws;
-   pipe_mutex_init(surface->mutex);
+   (void) mtx_init(&surface->mutex, mtx_plain);
    surface->shared = !!(usage & SVGA_SURFACE_USAGE_SHARED);
    provider = (surface->shared) ? vws->pools.gmr : vws->pools.mob_fenced;
 

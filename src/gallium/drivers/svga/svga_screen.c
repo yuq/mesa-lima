@@ -1104,8 +1104,8 @@ svga_screen_create(struct svga_winsys_screen *sws)
       debug_printf("svga: msaa samples mask: 0x%x\n", svgascreen->ms_samples);
    }
 
-   pipe_mutex_init(svgascreen->tex_mutex);
-   pipe_mutex_init(svgascreen->swc_mutex);
+   (void) mtx_init(&svgascreen->tex_mutex, mtx_plain);
+   (void) mtx_init(&svgascreen->swc_mutex, mtx_plain);
 
    svga_screen_cache_init(svgascreen);
 

@@ -421,7 +421,7 @@ vmw_fence_ops_create(struct vmw_winsys_screen *vws)
    if(!ops)
       return NULL;
 
-   pipe_mutex_init(ops->mutex);
+   (void) mtx_init(&ops->mutex, mtx_plain);
    LIST_INITHEAD(&ops->not_signaled);
    ops->base.destroy = &vmw_fence_ops_destroy;
    ops->base.fence_reference = &vmw_fence_ops_fence_reference;

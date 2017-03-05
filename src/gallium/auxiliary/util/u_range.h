@@ -78,7 +78,7 @@ util_ranges_intersect(struct util_range *range, unsigned start, unsigned end)
 static inline void
 util_range_init(struct util_range *range)
 {
-   pipe_mutex_init(range->write_mutex);
+   (void) mtx_init(&range->write_mutex, mtx_plain);
    util_range_set_empty(range);
 }
 

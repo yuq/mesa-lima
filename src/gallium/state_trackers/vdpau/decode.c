@@ -136,7 +136,7 @@ vlVdpDecoderCreate(VdpDevice device,
       goto error_handle;
    }
 
-   pipe_mutex_init(vldecoder->mutex);
+   (void) mtx_init(&vldecoder->mutex, mtx_plain);
    pipe_mutex_unlock(dev->mutex);
 
    return VDP_STATUS_OK;

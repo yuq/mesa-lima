@@ -408,7 +408,7 @@ svga_screen_cache_init(struct svga_screen *svgascreen)
 
    assert(cache->total_size == 0);
 
-   pipe_mutex_init(cache->mutex);
+   (void) mtx_init(&cache->mutex, mtx_plain);
 
    for (i = 0; i < SVGA_HOST_SURFACE_CACHE_BUCKETS; ++i)
       LIST_INITHEAD(&cache->bucket[i]);

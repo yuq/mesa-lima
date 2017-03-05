@@ -841,7 +841,7 @@ simple_fenced_bufmgr_create(struct pb_manager *provider,
    LIST_INITHEAD(&fenced_mgr->unfenced);
    fenced_mgr->num_unfenced = 0;
 
-   pipe_mutex_init(fenced_mgr->mutex);
+   (void) mtx_init(&fenced_mgr->mutex, mtx_plain);
 
    return &fenced_mgr->base;
 }

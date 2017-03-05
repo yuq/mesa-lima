@@ -668,7 +668,7 @@ llvmpipe_create_screen(struct sw_winsys *winsys)
       FREE(screen);
       return NULL;
    }
-   pipe_mutex_init(screen->rast_mutex);
+   (void) mtx_init(&screen->rast_mutex, mtx_plain);
 
    util_format_s3tc_init();
 

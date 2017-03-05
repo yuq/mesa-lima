@@ -610,7 +610,7 @@ vc4_screen_create(int fd)
 
         screen->fd = fd;
         list_inithead(&screen->bo_cache.time_list);
-        pipe_mutex_init(screen->bo_handles_mutex);
+        (void) mtx_init(&screen->bo_handles_mutex, mtx_plain);
         screen->bo_handles = util_hash_table_create(handle_hash, handle_compare);
 
         screen->has_control_flow =

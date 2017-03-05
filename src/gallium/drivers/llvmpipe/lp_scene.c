@@ -62,7 +62,7 @@ lp_scene_create( struct pipe_context *pipe )
    scene->data.head =
       CALLOC_STRUCT(data_block);
 
-   pipe_mutex_init(scene->mutex);
+   (void) mtx_init(&scene->mutex, mtx_plain);
 
 #ifdef DEBUG
    /* Do some scene limit sanity checks here */
