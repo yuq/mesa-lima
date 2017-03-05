@@ -430,7 +430,8 @@ fd_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 }
 
 static int
-fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
+fd_screen_get_shader_param(struct pipe_screen *pscreen,
+						   enum pipe_shader_type shader,
 		enum pipe_shader_cap param)
 {
 	struct fd_screen *screen = fd_screen(pscreen);

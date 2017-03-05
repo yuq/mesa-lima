@@ -299,10 +299,11 @@ boolean draw_need_pipeline(const struct draw_context *draw,
                            unsigned prim );
 
 int
-draw_get_shader_param(unsigned shader, enum pipe_shader_cap param);
+draw_get_shader_param(enum pipe_shader_type shader, enum pipe_shader_cap param);
 
 int
-draw_get_shader_param_no_llvm(unsigned shader, enum pipe_shader_cap param);
+draw_get_shader_param_no_llvm(enum pipe_shader_type shader,
+                              enum pipe_shader_cap param);
 
 boolean
 draw_get_option_use_llvm(void);

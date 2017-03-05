@@ -147,8 +147,9 @@ trace_screen_get_param(struct pipe_screen *_screen,
 
 
 static int
-trace_screen_get_shader_param(struct pipe_screen *_screen, unsigned shader,
-                       enum pipe_shader_cap param)
+trace_screen_get_shader_param(struct pipe_screen *_screen,
+                              enum pipe_shader_type shader,
+                              enum pipe_shader_cap param)
 {
    struct trace_screen *tr_scr = trace_screen(_screen);
    struct pipe_screen *screen = tr_scr->screen;

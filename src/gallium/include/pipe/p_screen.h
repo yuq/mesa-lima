@@ -97,7 +97,8 @@ struct pipe_screen {
     * Query a per-shader-stage integer-valued capability/parameter/limit
     * \param param  one of PIPE_CAP_x
     */
-   int (*get_shader_param)( struct pipe_screen *, unsigned shader, enum pipe_shader_cap param );
+   int (*get_shader_param)( struct pipe_screen *, enum pipe_shader_type shader,
+                            enum pipe_shader_cap param );
 
    /**
     * Query an integer-valued capability/parameter/limit for a codec/profile

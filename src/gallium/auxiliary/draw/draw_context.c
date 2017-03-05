@@ -1036,7 +1036,8 @@ draw_set_mapped_texture(struct draw_context *draw,
  * different ways of setting textures, and drivers typically only support one.
  */
 int
-draw_get_shader_param_no_llvm(unsigned shader, enum pipe_shader_cap param)
+draw_get_shader_param_no_llvm(enum pipe_shader_type shader,
+                              enum pipe_shader_cap param)
 {
    switch(shader) {
    case PIPE_SHADER_VERTEX:
@@ -1054,7 +1055,7 @@ draw_get_shader_param_no_llvm(unsigned shader, enum pipe_shader_cap param)
  * draw_get_shader_param_no_llvm instead.
  */
 int
-draw_get_shader_param(unsigned shader, enum pipe_shader_cap param)
+draw_get_shader_param(enum pipe_shader_type shader, enum pipe_shader_cap param)
 {
 
 #ifdef HAVE_LLVM

@@ -344,8 +344,9 @@ vc4_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 }
 
 static int
-vc4_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
-                           enum pipe_shader_cap param)
+vc4_screen_get_shader_param(struct pipe_screen *pscreen,
+                            enum pipe_shader_type shader,
+                            enum pipe_shader_cap param)
 {
         if (shader != PIPE_SHADER_VERTEX &&
             shader != PIPE_SHADER_FRAGMENT) {

@@ -391,7 +391,9 @@ static float noop_get_paramf(struct pipe_screen* pscreen,
    return screen->get_paramf(screen, param);
 }
 
-static int noop_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enum pipe_shader_cap param)
+static int noop_get_shader_param(struct pipe_screen* pscreen,
+                                 enum pipe_shader_type shader,
+                                 enum pipe_shader_cap param)
 {
    struct pipe_screen *screen = ((struct noop_pipe_screen*)pscreen)->oscreen;
 

@@ -306,7 +306,9 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
 }
 
 static int
-softpipe_get_shader_param(struct pipe_screen *screen, unsigned shader, enum pipe_shader_cap param)
+softpipe_get_shader_param(struct pipe_screen *screen,
+                          enum pipe_shader_type shader,
+                          enum pipe_shader_cap param)
 {
    struct softpipe_screen *sp_screen = softpipe_screen(screen);
    switch(shader)

@@ -258,7 +258,8 @@ nv30_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 }
 
 static int
-nv30_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
+nv30_screen_get_shader_param(struct pipe_screen *pscreen,
+                             enum pipe_shader_type shader,
                              enum pipe_shader_cap param)
 {
    struct nv30_screen *screen = nv30_screen(pscreen);

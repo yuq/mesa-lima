@@ -93,7 +93,8 @@ dd_screen_get_compute_param(struct pipe_screen *_screen,
 }
 
 static int
-dd_screen_get_shader_param(struct pipe_screen *_screen, unsigned shader,
+dd_screen_get_shader_param(struct pipe_screen *_screen,
+                           enum pipe_shader_type shader,
                            enum pipe_shader_cap param)
 {
    struct pipe_screen *screen = dd_screen(_screen)->screen;

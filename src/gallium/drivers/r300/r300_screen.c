@@ -289,7 +289,9 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
     return 0;
 }
 
-static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, enum pipe_shader_cap param)
+static int r300_get_shader_param(struct pipe_screen *pscreen,
+                                 enum pipe_shader_type shader,
+                                 enum pipe_shader_cap param)
 {
    struct r300_screen* r300screen = r300_screen(pscreen);
    boolean is_r400 = r300screen->caps.is_r400;
@@ -417,6 +419,8 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
             return 0;
         }
         break;
+    default:
+        ; /* nothing */
     }
     return 0;
 }

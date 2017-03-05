@@ -107,7 +107,9 @@ i915_get_name(struct pipe_screen *screen)
 }
 
 static int
-i915_get_shader_param(struct pipe_screen *screen, unsigned shader, enum pipe_shader_cap cap)
+i915_get_shader_param(struct pipe_screen *screen,
+                      enum pipe_shader_type shader,
+                      enum pipe_shader_cap cap)
 {
    switch(shader) {
    case PIPE_SHADER_VERTEX:

@@ -564,7 +564,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	return 0;
 }
 
-static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enum pipe_shader_cap param)
+static int si_get_shader_param(struct pipe_screen* pscreen,
+			       enum pipe_shader_type shader,
+			       enum pipe_shader_cap param)
 {
 	struct si_screen *sscreen = (struct si_screen *)pscreen;
 

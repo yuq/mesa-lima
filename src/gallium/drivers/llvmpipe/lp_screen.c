@@ -354,7 +354,9 @@ llvmpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
 }
 
 static int
-llvmpipe_get_shader_param(struct pipe_screen *screen, unsigned shader, enum pipe_shader_cap param)
+llvmpipe_get_shader_param(struct pipe_screen *screen,
+                          enum pipe_shader_type shader,
+                          enum pipe_shader_cap param)
 {
    switch(shader)
    {

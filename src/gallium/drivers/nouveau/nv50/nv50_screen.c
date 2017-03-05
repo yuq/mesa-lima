@@ -287,7 +287,8 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 }
 
 static int
-nv50_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
+nv50_screen_get_shader_param(struct pipe_screen *pscreen,
+                             enum pipe_shader_type shader,
                              enum pipe_shader_cap param)
 {
    switch (shader) {

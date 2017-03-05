@@ -353,7 +353,8 @@ etna_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 }
 
 static int
-etna_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
+etna_screen_get_shader_param(struct pipe_screen *pscreen,
+                             enum pipe_shader_type shader,
                              enum pipe_shader_cap param)
 {
    struct etna_screen *screen = etna_screen(pscreen);
