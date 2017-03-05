@@ -69,7 +69,7 @@ screen_create(struct renderonly *ro)
 
 static struct util_hash_table *etna_tab = NULL;
 
-pipe_static_mutex(etna_screen_mutex);
+static mtx_t etna_screen_mutex = _MTX_INITIALIZER_NP;
 
 static void
 etna_drm_screen_destroy(struct pipe_screen *pscreen)

@@ -271,7 +271,7 @@ debug_symbol_print(const void *addr)
 }
 
 struct util_hash_table* symbols_hash;
-pipe_static_mutex(symbols_mutex);
+static mtx_t symbols_mutex = _MTX_INITIALIZER_NP;
 
 static unsigned hash_ptr(void* p)
 {

@@ -30,7 +30,7 @@
 #include "vdpau_private.h"
 
 static struct handle_table *htab = NULL;
-pipe_static_mutex(htab_lock);
+static mtx_t htab_lock = _MTX_INITIALIZER_NP;
 
 boolean vlCreateHTAB(void)
 {

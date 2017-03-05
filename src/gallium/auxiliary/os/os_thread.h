@@ -108,9 +108,6 @@ static inline int pipe_thread_is_self( pipe_thread thread )
    return 0;
 }
 
-#define pipe_static_mutex(mutex) \
-   static mtx_t mutex = _MTX_INITIALIZER_NP
-
 #define pipe_mutex_init(mutex) \
    (void) mtx_init(&(mutex), mtx_plain)
 

@@ -59,7 +59,7 @@
 
 static boolean close_stream = FALSE;
 static FILE *stream = NULL;
-pipe_static_mutex(call_mutex);
+static mtx_t call_mutex = _MTX_INITIALIZER_NP;
 static long unsigned call_no = 0;
 static boolean dumping = FALSE;
 

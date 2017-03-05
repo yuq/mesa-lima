@@ -62,7 +62,7 @@ struct cpufreq_info
 
 static int gcpufreq_count = 0;
 static struct list_head gcpufreq_list;
-pipe_static_mutex(gcpufreq_mutex);
+static mtx_t gcpufreq_mutex = _MTX_INITIALIZER_NP;
 
 static struct cpufreq_info *
 find_cfi_by_index(int cpu_index, int mode)

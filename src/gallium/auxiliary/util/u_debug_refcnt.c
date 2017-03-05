@@ -52,7 +52,7 @@ static FILE *stream;
 /* TODO: maybe move this serial machinery to a stand-alone module and
  * expose it?
  */
-pipe_static_mutex(serials_mutex);
+static mtx_t serials_mutex = _MTX_INITIALIZER_NP;
 
 static struct util_hash_table *serials_hash;
 static unsigned serials_last;

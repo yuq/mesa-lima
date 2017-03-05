@@ -47,7 +47,7 @@
 #include <radeon_surface.h>
 
 static struct util_hash_table *fd_tab = NULL;
-pipe_static_mutex(fd_tab_mutex);
+static mtx_t fd_tab_mutex = _MTX_INITIALIZER_NP;
 
 /* Enable/disable feature access for one command stream.
  * If enable == true, return true on success.

@@ -45,7 +45,7 @@
 #include "vid_dec.h"
 #include "vid_enc.h"
 
-pipe_static_mutex(omx_lock);
+static mtx_t omx_lock = _MTX_INITIALIZER_NP;
 static Display *omx_display = NULL;
 static struct vl_screen *omx_screen = NULL;
 static unsigned omx_usecount = 0;

@@ -189,7 +189,7 @@ xmesa_close_display(Display *display)
 static XMesaDisplay
 xmesa_init_display( Display *display )
 {
-   pipe_static_mutex(init_mutex);
+   static mtx_t init_mutex = _MTX_INITIALIZER_NP;
    XMesaDisplay xmdpy;
    XMesaExtDisplayInfo *info;
 

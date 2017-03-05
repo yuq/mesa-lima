@@ -806,7 +806,7 @@ virgl_drm_winsys_create(int drmFD)
 }
 
 static struct util_hash_table *fd_tab = NULL;
-pipe_static_mutex(virgl_screen_mutex);
+static mtx_t virgl_screen_mutex = _MTX_INITIALIZER_NP;
 
 static void
 virgl_drm_screen_destroy(struct pipe_screen *pscreen)

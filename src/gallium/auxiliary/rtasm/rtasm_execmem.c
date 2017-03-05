@@ -63,7 +63,7 @@
 
 #define EXEC_HEAP_SIZE (10*1024*1024)
 
-pipe_static_mutex(exec_mutex);
+static mtx_t exec_mutex = _MTX_INITIALIZER_NP;
 
 static struct mem_block *exec_heap = NULL;
 static unsigned char *exec_mem = NULL;

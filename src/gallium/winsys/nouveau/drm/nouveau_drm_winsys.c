@@ -19,7 +19,7 @@
 
 static struct util_hash_table *fd_tab = NULL;
 
-pipe_static_mutex(nouveau_screen_mutex);
+static mtx_t nouveau_screen_mutex = _MTX_INITIALIZER_NP;
 
 bool nouveau_drm_screen_unref(struct nouveau_screen *screen)
 {

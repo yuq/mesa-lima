@@ -87,7 +87,7 @@ struct debug_memory_footer
 
 static struct list_head list = { &list, &list };
 
-pipe_static_mutex(list_mutex);
+static mtx_t list_mutex = _MTX_INITIALIZER_NP;
 
 static unsigned long last_no = 0;
 

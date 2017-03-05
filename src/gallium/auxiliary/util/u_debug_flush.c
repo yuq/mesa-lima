@@ -77,7 +77,7 @@ struct debug_flush_ctx {
    struct list_head head;
 };
 
-pipe_static_mutex(list_mutex);
+static mtx_t list_mutex = _MTX_INITIALIZER_NP;
 static struct list_head ctx_list = {&ctx_list, &ctx_list};
 
 static struct debug_stack_frame *

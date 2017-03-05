@@ -40,7 +40,7 @@ static void util_queue_killall_and_wait(struct util_queue *queue);
 
 static once_flag atexit_once_flag = ONCE_FLAG_INIT;
 static struct list_head queue_list;
-pipe_static_mutex(exit_mutex);
+static mtx_t exit_mutex = _MTX_INITIALIZER_NP;
 
 static void
 atexit_handler(void)

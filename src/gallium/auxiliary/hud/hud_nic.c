@@ -67,7 +67,7 @@ struct nic_info
  */
 static int gnic_count = 0;
 static struct list_head gnic_list;
-pipe_static_mutex(gnic_mutex);
+static mtx_t gnic_mutex = _MTX_INITIALIZER_NP;
 
 static struct nic_info *
 find_nic_by_name(const char *n, int mode)

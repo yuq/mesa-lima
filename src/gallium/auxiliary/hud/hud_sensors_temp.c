@@ -50,7 +50,7 @@
  */
 static int gsensors_temp_count = 0;
 static struct list_head gsensors_temp_list;
-pipe_static_mutex(gsensor_temp_mutex);
+static mtx_t gsensor_temp_mutex = _MTX_INITIALIZER_NP;
 
 struct sensors_temp_info
 {

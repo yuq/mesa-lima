@@ -64,7 +64,7 @@
 #endif
 
 static struct util_hash_table *dev_tab = NULL;
-pipe_static_mutex(dev_tab_mutex);
+static mtx_t dev_tab_mutex = _MTX_INITIALIZER_NP;
 
 static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
 {

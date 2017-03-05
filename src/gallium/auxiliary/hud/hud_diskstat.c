@@ -82,7 +82,7 @@ struct diskstat_info
  */
 static int gdiskstat_count = 0;
 static struct list_head gdiskstat_list;
-pipe_static_mutex(gdiskstat_mutex);
+static mtx_t gdiskstat_mutex = _MTX_INITIALIZER_NP;
 
 static struct diskstat_info *
 find_dsi_by_name(const char *n, int mode)

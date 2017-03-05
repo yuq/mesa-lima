@@ -48,7 +48,7 @@
 #include "os/os_thread.h"
 
 /* Global mutex as described by MSDN */
-pipe_static_mutex(d3dlock_global);
+static mtx_t d3dlock_global = _MTX_INITIALIZER_NP;
 
 void
 NineLockGlobalMutex()
