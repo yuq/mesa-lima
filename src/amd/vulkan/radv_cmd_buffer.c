@@ -1285,9 +1285,10 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 	if (!stages || !layout || (!layout->push_constant_size && !layout->dynamic_offset_count))
 		return;
 
-	radv_cmd_buffer_upload_alloc(cmd_buffer, layout->push_constant_size +
-				     16 * layout->dynamic_offset_count,
-				     256, &offset, &ptr);
+	if (!radv_cmd_buffer_upload_alloc(cmd_buffer, layout->push_constant_size +
+					  16 * layout->dynamic_offset_count,
+					  256, &offset, &ptr))
+		return;
 
 	memcpy(ptr, cmd_buffer->push_constants, layout->push_constant_size);
 	memcpy((char*)ptr + layout->push_constant_size, cmd_buffer->dynamic_buffers,
