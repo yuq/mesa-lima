@@ -139,12 +139,11 @@ endif
 # gallium_dri.so in the set of final installed files.
 install-data-hook:
 	for i in $(TARGET_DRIVERS); do                                  \
-		has_drivers=1;                                          \
 		ln -f $(DESTDIR)$(dridir)/gallium_dri.so                \
 		      $(DESTDIR)$(dridir)/$${i}_dri.so;                 \
 	done;                                                           \
 	$(RM) $(DESTDIR)$(dridir)/gallium_dri.*;                        \
-	test $${has_drivers} -eq 1 || $(RM) -d $(DESTDIR)$(dridir)
+	$(RM) -d $(DESTDIR)$(dridir) &>/dev/null || true
 
 uninstall-hook:
 	for i in $(TARGET_DRIVERS); do                                  \
