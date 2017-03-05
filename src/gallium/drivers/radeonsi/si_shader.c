@@ -3534,32 +3534,6 @@ static void load_emit_memory(
 	emit_data->output[emit_data->chan] = lp_build_gather_values(gallivm, channels, 4);
 }
 
-static void get_image_intr_name(const char *base_name,
-				LLVMTypeRef data_type,
-				LLVMTypeRef coords_type,
-				LLVMTypeRef rsrc_type,
-				char *out_name, unsigned out_len)
-{
-	char coords_type_name[8];
-
-	ac_build_type_name_for_intr(coords_type, coords_type_name,
-			    sizeof(coords_type_name));
-
-	if (HAVE_LLVM <= 0x0309) {
-		snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
-	} else {
-		char data_type_name[8];
-		char rsrc_type_name[8];
-
-		ac_build_type_name_for_intr(data_type, data_type_name,
-					sizeof(data_type_name));
-		ac_build_type_name_for_intr(rsrc_type, rsrc_type_name,
-					sizeof(rsrc_type_name));
-		snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
-			 data_type_name, coords_type_name, rsrc_type_name);
-	}
-}
-
 /**
  * Return true if the memory accessed by a LOAD or STORE instruction is
  * read-only or write-only, respectively.
@@ -3662,11 +3636,11 @@ static void load_emit(
 				emit_data->args, emit_data->arg_count,
 				get_load_intr_attribs(readonly_memory));
 	} else {
-		get_image_intr_name("llvm.amdgcn.image.load",
-				emit_data->dst_type,		/* vdata */
-				LLVMTypeOf(emit_data->args[0]), /* coords */
-				LLVMTypeOf(emit_data->args[1]), /* rsrc */
-				intrinsic_name, sizeof(intrinsic_name));
+		ac_get_image_intr_name("llvm.amdgcn.image.load",
+				       emit_data->dst_type,		/* vdata */
+				       LLVMTypeOf(emit_data->args[0]), /* coords */
+				       LLVMTypeOf(emit_data->args[1]), /* rsrc */
+				       intrinsic_name, sizeof(intrinsic_name));
 
 		emit_data->output[emit_data->chan] =
 			lp_build_intrinsic(
@@ -3881,11 +3855,11 @@ static void store_emit(
 			emit_data->arg_count,
 			get_store_intr_attribs(writeonly_memory));
 	} else {
-		get_image_intr_name("llvm.amdgcn.image.store",
-				LLVMTypeOf(emit_data->args[0]), /* vdata */
-				LLVMTypeOf(emit_data->args[1]), /* coords */
-				LLVMTypeOf(emit_data->args[2]), /* rsrc */
-				intrinsic_name, sizeof(intrinsic_name));
+		ac_get_image_intr_name("llvm.amdgcn.image.store",
+				       LLVMTypeOf(emit_data->args[0]), /* vdata */
+				       LLVMTypeOf(emit_data->args[1]), /* coords */
+				       LLVMTypeOf(emit_data->args[2]), /* rsrc */
+				       intrinsic_name, sizeof(intrinsic_name));
 
 		emit_data->output[emit_data->chan] =
 			lp_build_intrinsic(

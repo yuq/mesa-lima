@@ -1216,3 +1216,29 @@ LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
 				  AC_FUNC_ATTR_READNONE |
 				  AC_FUNC_ATTR_LEGACY);
 }
+
+void ac_get_image_intr_name(const char *base_name,
+			    LLVMTypeRef data_type,
+			    LLVMTypeRef coords_type,
+			    LLVMTypeRef rsrc_type,
+			    char *out_name, unsigned out_len)
+{
+        char coords_type_name[8];
+
+        ac_build_type_name_for_intr(coords_type, coords_type_name,
+                            sizeof(coords_type_name));
+
+        if (HAVE_LLVM <= 0x0309) {
+                snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
+        } else {
+                char data_type_name[8];
+                char rsrc_type_name[8];
+
+                ac_build_type_name_for_intr(data_type, data_type_name,
+                                        sizeof(data_type_name));
+                ac_build_type_name_for_intr(rsrc_type, rsrc_type_name,
+                                        sizeof(rsrc_type_name));
+                snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
+                         data_type_name, coords_type_name, rsrc_type_name);
+        }
+}
