@@ -381,7 +381,7 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
 /**
  * Setup anv_cmd_state::attachments for vkCmdBeginRenderPass.
  */
-static void
+static VkResult
 genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_render_pass *pass,
                                    const VkRenderPassBeginInfo *begin)
@@ -393,7 +393,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
 
    if (pass->attachment_count == 0) {
       state->attachments = NULL;
-      return;
+      return VK_SUCCESS;
    }
 
    state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
@@ -402,7 +402,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                  8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (state->attachments == NULL) {
       /* FIXME: Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
-      abort();
+      return VK_ERROR_OUT_OF_HOST_MEMORY;
    }
 
    bool need_null_state = false;
@@ -557,6 +557,8 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
 
       anv_state_flush(cmd_buffer->device, state->render_pass_states);
    }
+
+   return VK_SUCCESS;
 }
 
 VkResult
@@ -589,6 +591,7 @@ genX(BeginCommandBuffer)(
 
    genX(cmd_buffer_emit_state_base_address)(cmd_buffer);
 
+   VkResult result = VK_SUCCESS;
    if (cmd_buffer->usage_flags &
        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
       cmd_buffer->state.pass =
@@ -597,13 +600,13 @@ genX(BeginCommandBuffer)(
          &cmd_buffer->state.pass->subpasses[pBeginInfo->pInheritanceInfo->subpass];
       cmd_buffer->state.framebuffer = NULL;
 
-      genX(cmd_buffer_setup_attachments)(cmd_buffer, cmd_buffer->state.pass,
-                                         NULL);
+      result = genX(cmd_buffer_setup_attachments)(cmd_buffer,
+                                                  cmd_buffer->state.pass, NULL);
 
       cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
    }
 
-   return VK_SUCCESS;
+   return result;
 }
 
 VkResult
