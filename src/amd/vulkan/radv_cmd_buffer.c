@@ -2110,6 +2110,9 @@ void radv_CmdExecuteCommands(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, primary, commandBuffer);
 
+	/* Emit pending flushes on primary prior to executing secondary */
+	si_emit_cache_flush(primary);
+
 	for (uint32_t i = 0; i < commandBufferCount; i++) {
 		RADV_FROM_HANDLE(radv_cmd_buffer, secondary, pCmdBuffers[i]);
 
