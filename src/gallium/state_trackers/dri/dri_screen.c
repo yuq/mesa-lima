@@ -83,9 +83,11 @@ const __DRIconfigOptionsExtension gallium_config_options = {
 #define false 0
 
 static void
-dri_fill_st_options(struct st_config_options *options,
-                    const struct driOptionCache * optionCache)
+dri_fill_st_options(struct dri_screen *screen)
 {
+   struct st_config_options *options = &screen->options;
+   const struct driOptionCache *optionCache = &screen->optionCache;
+
    options->disable_blend_func_extended =
       driQueryOptionb(optionCache, "disable_blend_func_extended");
    options->disable_glsl_line_continuations =
@@ -455,7 +457,7 @@ dri_init_screen_helper(struct dri_screen *screen,
                        screen->sPriv->myNum,
                        driver_name);
 
-   dri_fill_st_options(&screen->options, &screen->optionCache);
+   dri_fill_st_options(screen);
 
    /* Handle force_s3tc_enable. */
    if (!util_format_s3tc_enabled && screen->options.force_s3tc_enable) {
