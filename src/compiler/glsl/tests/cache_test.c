@@ -350,9 +350,10 @@ test_put_and_get(void)
 
    free(result);
 
-   /* Ensure eviction happened by checking that only one of the two
-    * previously-added items can still be fetched.
+   /* Ensure eviction happened by checking that both of the previous
+    * cache itesm were evicted.
     */
+   bool contains_1KB_file = false;
    count = 0;
    if (does_cache_contain(cache, blob_key))
        count++;
@@ -360,6 +361,13 @@ test_put_and_get(void)
    if (does_cache_contain(cache, string_key))
        count++;
 
+   if (does_cache_contain(cache, one_KB_key)) {
+      count++;
+      contains_1KB_file = true;
+   }
+
+   expect_true(contains_1KB_file,
+               "disk_cache_put eviction last file == MAX_SIZE (1KB)");
    expect_equal(count, 1, "disk_cache_put eviction with MAX_SIZE=1K");
 
    /* Now increase the size to 1M, add back both items, and ensure all
@@ -406,6 +414,7 @@ test_put_and_get(void)
     */
    wait_until_file_written(cache, one_MB_key);
 
+   bool contains_1MB_file = false;
    count = 0;
    if (does_cache_contain(cache, blob_key))
        count++;
@@ -416,7 +425,14 @@ test_put_and_get(void)
    if (does_cache_contain(cache, one_KB_key))
        count++;
 
-   expect_equal(count, 2, "eviction after overflow with MAX_SIZE=1M");
+   if (does_cache_contain(cache, one_MB_key)) {
+      count++;
+      contains_1MB_file = true;
+   }
+
+   expect_true(contains_1MB_file,
+               "disk_cache_put eviction last file == MAX_SIZE (1MB)");
+   expect_equal(count, 1, "eviction after overflow with MAX_SIZE=1M");
 
    disk_cache_destroy(cache);
 }
