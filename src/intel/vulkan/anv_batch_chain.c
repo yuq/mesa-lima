@@ -1259,8 +1259,11 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
 
    adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs,
                                       cmd_buffer->last_ss_pool_center);
-   anv_execbuf_add_bo(&execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs,
-                      &cmd_buffer->pool->alloc);
+   VkResult result =
+      anv_execbuf_add_bo(&execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs,
+                         &cmd_buffer->pool->alloc);
+   if (result != VK_SUCCESS)
+      return result;
 
    /* First, we walk over all of the bos we've seen and add them and their
     * relocations to the validate list.
@@ -1376,7 +1379,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
          cmd_buffer->surface_relocs.relocs[i].presumed_offset = -1;
    }
 
-   VkResult result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
+   result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
 
    anv_execbuf_finish(&execbuf, &cmd_buffer->pool->alloc);
 
