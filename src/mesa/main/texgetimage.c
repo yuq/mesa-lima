@@ -1461,7 +1461,7 @@ _mesa_GetTextureSubImage(GLuint texture, GLint level,
    struct gl_texture_object *texObj = NULL;
 
    if (texture > 0)
-      _mesa_lookup_texture(ctx, texture);
+      texObj = _mesa_lookup_texture(ctx, texture);
 
    if (!texObj) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(texture)", caller);
