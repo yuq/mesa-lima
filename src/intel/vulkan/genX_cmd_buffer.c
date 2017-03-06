@@ -646,6 +646,9 @@ genX(CmdExecuteCommands)(
 
    assert(primary->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
+   if (anv_batch_has_error(&primary->batch))
+      return;
+
    /* The secondary command buffers will assume that the PMA fix is disabled
     * when they begin executing.  Make sure this is true.
     */
@@ -655,6 +658,7 @@ genX(CmdExecuteCommands)(
       ANV_FROM_HANDLE(anv_cmd_buffer, secondary, pCmdBuffers[i]);
 
       assert(secondary->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+      assert(!anv_batch_has_error(&secondary->batch));
 
       if (secondary->usage_flags &
           VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
