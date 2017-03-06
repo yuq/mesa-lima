@@ -1696,6 +1696,9 @@ void genX(CmdDraw)(
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
 
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
+
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
@@ -1725,6 +1728,9 @@ void genX(CmdDrawIndexed)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
+
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
@@ -1766,6 +1772,9 @@ void genX(CmdDrawIndirect)(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
+
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
@@ -1799,6 +1808,9 @@ void genX(CmdDrawIndexedIndirect)(
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
+
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
