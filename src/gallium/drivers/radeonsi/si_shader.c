@@ -6484,6 +6484,9 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_BARRIER].emit = si_llvm_emit_barrier;
 }
 
+#define EXP_TARGET (HAVE_LLVM >= 0x0500 ? 0 : 3)
+#define EXP_OUT0 (HAVE_LLVM >= 0x0500 ? 2 : 5)
+
 /* Return true if the PARAM export has been eliminated. */
 static bool si_eliminate_const_output(struct si_shader_context *ctx,
 				      LLVMValueRef inst, unsigned offset)
@@ -6495,7 +6498,7 @@ static bool si_eliminate_const_output(struct si_shader_context *ctx,
 
 	for (i = 0; i < 4; i++) {
 		LLVMBool loses_info;
-		LLVMValueRef p = LLVMGetOperand(inst, (HAVE_LLVM >= 0x0500 ? 2 : 5) + i);
+		LLVMValueRef p = LLVMGetOperand(inst, EXP_OUT0 + i);
 
 		/* It's a constant expression. Undef outputs are eliminated too. */
 		if (LLVMIsUndef(p)) {
@@ -6581,10 +6584,10 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 			/* Check if this is an export instruction. */
 			if ((num_args != 9 && num_args != 8) ||
 			    (strcmp(name, "llvm.SI.export") &&
-			     strcmp(name, "llvm.amdgcn.exp.")))
+			     strcmp(name, "llvm.amdgcn.exp.f32")))
 				continue;
 
-			LLVMValueRef arg = LLVMGetOperand(cur, HAVE_LLVM >= 0x0500 ? 0 : 3);
+			LLVMValueRef arg = LLVMGetOperand(cur, EXP_TARGET);
 			unsigned target = LLVMConstIntGetZExtValue(arg);
 
 			if (target < V_008DFC_SQ_EXP_PARAM)
@@ -6626,7 +6629,7 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 				if (current_offset[out] != offset)
 					continue;
 
-				LLVMSetOperand(exports.inst[i], 3,
+				LLVMSetOperand(exports.inst[i], EXP_TARGET,
 					       LLVMConstInt(ctx->i32,
 							    V_008DFC_SQ_EXP_PARAM + new_count, 0));
 				shader->info.vs_output_param_offset[out] = new_count;
