@@ -260,6 +260,30 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 		}
 	}
 
+	if (!is_stencil && AddrSurfInfoIn->flags.depth &&
+	    surf_level->mode == RADEON_SURF_MODE_2D && level == 0) {
+		ADDR_COMPUTE_HTILE_INFO_INPUT AddrHtileIn = {0};
+		ADDR_COMPUTE_HTILE_INFO_OUTPUT AddrHtileOut = {0};
+		AddrHtileIn.flags.tcCompatible = AddrSurfInfoIn->flags.tcCompatible;
+		AddrHtileIn.pitch = AddrSurfInfoOut->pitch;
+		AddrHtileIn.height = AddrSurfInfoOut->height;
+		AddrHtileIn.numSlices = AddrSurfInfoOut->depth;
+		AddrHtileIn.blockWidth = ADDR_HTILE_BLOCKSIZE_8;
+		AddrHtileIn.blockHeight = ADDR_HTILE_BLOCKSIZE_8;
+		AddrHtileIn.pTileInfo = AddrSurfInfoOut->pTileInfo;
+		AddrHtileIn.tileIndex = AddrSurfInfoOut->tileIndex;
+		AddrHtileIn.macroModeIndex = AddrSurfInfoOut->macroModeIndex;
+
+		ret = AddrComputeHtileInfo(addrlib,
+		                           &AddrHtileIn,
+		                           &AddrHtileOut);
+
+		if (ret == ADDR_OK) {
+			surf->htile_size = AddrHtileOut.htileBytes;
+			surf->htile_slice_size = AddrHtileOut.sliceSize;
+			surf->htile_alignment = AddrHtileOut.baseAlign;
+		}
+	}
 	return 0;
 }
 
@@ -455,6 +479,8 @@ static int radv_amdgpu_winsys_surface_init(struct radeon_winsys *_ws,
 	surf->bo_size = 0;
 	surf->dcc_size = 0;
 	surf->dcc_alignment = 1;
+	surf->htile_size = surf->htile_slice_size = 0;
+	surf->htile_alignment = 1;
 
 	/* Calculate texture layout information. */
 	for (level = 0; level <= surf->last_level; level++) {
