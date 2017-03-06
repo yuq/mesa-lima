@@ -31,6 +31,7 @@
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -45,6 +46,7 @@
 #include "util/mesa-sha1.h"
 #include "util/ralloc.h"
 #include "main/errors.h"
+#include "util/macros.h"
 
 #include "disk_cache.h"
 
@@ -228,6 +230,7 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
    uint64_t max_size;
    int fd = -1;
    struct stat sb;
+   struct statvfs vfs = { 0 };
    size_t size;
 
    /* If running as a users other than the real user disable cache */
@@ -389,9 +392,11 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
       }
    }
 
-   /* Default to 1GB for maximum cache size. */
-   if (max_size == 0)
-      max_size = 1024*1024*1024;
+   /* Default to 1GB or 10% of filesystem for maximum cache size. */
+   if (max_size == 0) {
+      statvfs(path, &vfs);
+      max_size = MAX2(1024*1024*1024, vfs.f_blocks * vfs.f_bsize / 10);
+   }
 
    cache->max_size = max_size;
 
