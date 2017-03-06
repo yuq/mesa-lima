@@ -365,6 +365,9 @@ void radv_DestroyInstance(
 {
 	RADV_FROM_HANDLE(radv_instance, instance, _instance);
 
+	if (!instance)
+		return;
+
 	for (int i = 0; i < instance->physicalDeviceCount; ++i) {
 		radv_physical_device_finish(instance->physicalDevices + i);
 	}
@@ -987,6 +990,9 @@ void radv_DestroyDevice(
 	const VkAllocationCallbacks*                pAllocator)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
+
+	if (!device)
+		return;
 
 	if (device->trace_bo)
 		device->ws->buffer_destroy(device->trace_bo);
