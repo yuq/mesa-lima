@@ -68,11 +68,6 @@ static inline thrd_t pipe_thread_create(int (*routine)(void *), void *param)
    return thread;
 }
 
-static inline int pipe_thread_destroy( thrd_t thread )
-{
-   return thrd_detach( thread );
-}
-
 static inline void pipe_thread_setname( const char *name )
 {
 #if defined(HAVE_PTHREAD)
