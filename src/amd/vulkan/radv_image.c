@@ -586,89 +586,22 @@ radv_image_alloc_dcc(struct radv_device *device,
 	image->alignment = MAX2(image->alignment, image->surface.dcc_alignment);
 }
 
-static unsigned
-radv_image_get_htile_size(struct radv_device *device,
-			  struct radv_image *image)
-{
-	unsigned cl_width, cl_height, width, height;
-	unsigned slice_elements, slice_bytes, base_align;
-	unsigned num_pipes = device->physical_device->rad_info.num_tile_pipes;
-	unsigned pipe_interleave_bytes = device->physical_device->rad_info.pipe_interleave_bytes;
-
-	/* Overalign HTILE on P2 configs to work around GPU hangs in
-	 * piglit/depthstencil-render-miplevels 585.
-	 *
-	 * This has been confirmed to help Kabini & Stoney, where the hangs
-	 * are always reproducible. I think I have seen the test hang
-	 * on Carrizo too, though it was very rare there.
-	 */
-	if (device->physical_device->rad_info.chip_class >= CIK && num_pipes < 4)
-		num_pipes = 4;
-
-	switch (num_pipes) {
-	case 1:
-		cl_width = 32;
-		cl_height = 16;
-		break;
-	case 2:
-		cl_width = 32;
-		cl_height = 32;
-		break;
-	case 4:
-		cl_width = 64;
-		cl_height = 32;
-		break;
-	case 8:
-		cl_width = 64;
-		cl_height = 64;
-		break;
-	case 16:
-		cl_width = 128;
-		cl_height = 64;
-		break;
-	default:
-		assert(0);
-		return 0;
-	}
-
-	width = align(image->surface.npix_x, cl_width * 8);
-	height = align(image->surface.npix_y, cl_height * 8);
-
-	slice_elements = (width * height) / (8 * 8);
-	slice_bytes = slice_elements * 4;
-
-	base_align = num_pipes * pipe_interleave_bytes;
-
-	image->htile.pitch = width;
-	image->htile.height = height;
-	image->htile.xalign = cl_width * 8;
-	image->htile.yalign = cl_height * 8;
-
-	return image->array_size *
-		align(slice_bytes, base_align);
-}
-
 static void
 radv_image_alloc_htile(struct radv_device *device,
 		       struct radv_image *image)
 {
-	if (device->debug_flags & RADV_DEBUG_NO_HIZ)
+	if ((device->debug_flags & RADV_DEBUG_NO_HIZ) || image->layers > 1 ||
+	    image->levels > 1) {
+		image->surface.htile_size = 0;
 		return;
+	}
 
-	if (image->array_size > 1 || image->levels > 1)
-		return;
-
-	image->htile.size = radv_image_get_htile_size(device, image);
-
-	if (!image->htile.size)
-		return;
-
-	image->htile.offset = align64(image->size, 32768);
+	image->htile_offset = align64(image->size, image->surface.htile_alignment);
 
 	/* + 8 for storing the clear values */
-	image->clear_value_offset = image->htile.offset + image->htile.size;
-	image->size = image->htile.offset + image->htile.size + 8;
-	image->alignment = align64(image->alignment, 32768);
+	image->clear_value_offset = image->htile_offset + image->surface.htile_size;
+	image->size = image->clear_value_offset + 8;
+	image->alignment = align64(image->alignment, image->surface.htile_alignment);
 }
 
 VkResult

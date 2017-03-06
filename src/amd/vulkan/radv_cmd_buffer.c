@@ -951,7 +951,7 @@ radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	va += image->offset + image->clear_value_offset;
 	unsigned reg_offset = 0, reg_count = 0;
 
-	if (!image->htile.size || !aspects)
+	if (!image->surface.htile_size || !aspects)
 		return;
 
 	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
@@ -990,7 +990,7 @@ radv_load_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(image->bo);
 	va += image->offset + image->clear_value_offset;
 
-	if (!image->htile.size)
+	if (!image->surface.htile_size)
 		return;
 
 	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, image->bo, 8);
@@ -2710,8 +2710,8 @@ static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
 	                                RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 
-	radv_fill_buffer(cmd_buffer, image->bo, image->offset + image->htile.offset,
-			 image->htile.size, 0xffffffff);
+	radv_fill_buffer(cmd_buffer, image->bo, image->offset + image->htile_offset,
+			 image->surface.htile_size, 0xffffffff);
 
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
@@ -2851,7 +2851,7 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 	unsigned src_queue_mask = radv_image_queue_family_mask(image, src_family, cmd_buffer->queue_family_index);
 	unsigned dst_queue_mask = radv_image_queue_family_mask(image, dst_family, cmd_buffer->queue_family_index);
 
-	if (image->htile.size)
+	if (image->surface.htile_size)
 		radv_handle_depth_image_transition(cmd_buffer, image, src_layout,
 						   dst_layout, range, pending_clears);
 

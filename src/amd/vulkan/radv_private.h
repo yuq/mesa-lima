@@ -1071,14 +1071,12 @@ struct radv_image {
 	struct radeon_winsys_bo *bo;
 	VkDeviceSize offset;
 	uint32_t dcc_offset;
+	uint32_t htile_offset;
 	struct radeon_surf surface;
 
 	struct radv_fmask_info fmask;
 	struct radv_cmask_info cmask;
 	uint32_t clear_value_offset;
-
-	/* Depth buffer compression and fast clear. */
-	struct r600_htile_info htile;
 };
 
 bool radv_layout_has_htile(const struct radv_image *image,

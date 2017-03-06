@@ -376,7 +376,7 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t height = radv_minify(image->extent.height,
 				     subresourceRange->baseMipLevel);
 
-	if (!image->htile.size)
+	if (!image->surface.htile_size)
 		return;
 	radv_meta_save_pass(&saved_pass_state, cmd_buffer);
 

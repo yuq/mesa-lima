@@ -618,7 +618,7 @@ static bool depth_view_can_fast_clear(const struct radv_image_view *iview,
 	    clear_rect->rect.extent.width != iview->extent.width ||
 	    clear_rect->rect.extent.height != iview->extent.height)
 		return false;
-	if (iview->image->htile.size &&
+	if (iview->image->surface.htile_size &&
 	    iview->base_mip == 0 &&
 	    iview->base_layer == 0 &&
 	    radv_layout_can_expclear(iview->image, layout) &&

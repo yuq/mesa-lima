@@ -2404,7 +2404,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		ds->db_stencil_info |= S_028044_TILE_MODE_INDEX(tile_mode_index);
 	}
 
-	if (iview->image->htile.size && !level) {
+	if (iview->image->surface.htile_size && !level) {
 		ds->db_z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 			S_028040_ALLOW_EXPCLEAR(1);
 
@@ -2427,7 +2427,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 			ds->db_stencil_info |= S_028044_TILE_STENCIL_DISABLE(1);
 
 		va = device->ws->buffer_get_va(iview->bo) + iview->image->offset +
-		     iview->image->htile.offset;
+		     iview->image->htile_offset;
 		ds->db_htile_data_base = va >> 8;
 		ds->db_htile_surface = S_028ABC_FULL_CACHE(1);
 	} else {
