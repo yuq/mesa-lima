@@ -57,6 +57,7 @@ ChromaToPipe(int format)
 {
    switch (format) {
    case VA_RT_FORMAT_YUV420:
+   case VA_RT_FORMAT_YUV420_10BPP:
       return PIPE_VIDEO_CHROMA_FORMAT_420;
    case VA_RT_FORMAT_YUV422:
       return PIPE_VIDEO_CHROMA_FORMAT_422;
