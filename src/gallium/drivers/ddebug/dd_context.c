@@ -597,7 +597,7 @@ dd_context_destroy(struct pipe_context *_pipe)
       mtx_lock(&dctx->mutex);
       dctx->kill_thread = 1;
       mtx_unlock(&dctx->mutex);
-      pipe_thread_wait(dctx->thread);
+      thrd_join(dctx->thread, NULL);
       mtx_destroy(&dctx->mutex);
       assert(!dctx->records);
    }

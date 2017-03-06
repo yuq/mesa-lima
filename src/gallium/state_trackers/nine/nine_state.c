@@ -238,7 +238,7 @@ nine_csmt_destroy( struct NineDevice9 *device, struct csmt_context *ctx )
 
     FREE(ctx);
 
-    pipe_thread_wait(render_thread);
+    thrd_join(render_thread, NULL);
 }
 
 static void

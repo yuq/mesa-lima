@@ -869,7 +869,7 @@ rbug_stop(struct rbug_rbug *tr_rbug)
       return;
 
    tr_rbug->running = false;
-   pipe_thread_wait(tr_rbug->thread);
+   thrd_join(tr_rbug->thread, NULL);
 
    FREE(tr_rbug);
 

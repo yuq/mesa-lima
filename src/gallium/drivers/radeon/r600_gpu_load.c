@@ -170,7 +170,7 @@ void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen)
 		return;
 
 	p_atomic_inc(&rscreen->gpu_load_stop_thread);
-	pipe_thread_wait(rscreen->gpu_load_thread);
+	thrd_join(rscreen->gpu_load_thread, NULL);
 	rscreen->gpu_load_thread = 0;
 }
 

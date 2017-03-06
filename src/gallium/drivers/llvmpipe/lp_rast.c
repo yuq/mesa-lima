@@ -956,7 +956,7 @@ void lp_rast_destroy( struct lp_rasterizer *rast )
 #ifdef _WIN32
       pipe_semaphore_wait(&rast->tasks[i].work_done);
 #else
-      pipe_thread_wait(rast->threads[i]);
+      thrd_join(rast->threads[i], NULL);
 #endif
    }
 

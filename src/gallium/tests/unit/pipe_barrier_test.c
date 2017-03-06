@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
    }
 
    for (i = 0; i < NUM_THREADS; i++ ) {
-      pipe_thread_wait(threads[i]);
+      thrd_join(threads[i], NULL);
    }
 
    CHECK(p_atomic_read(&proceeded) == NUM_THREADS);
