@@ -443,6 +443,7 @@ dri_flush(__DRIcontext *cPriv,
 {
    struct dri_context *ctx = dri_context(cPriv);
    struct dri_drawable *drawable = dri_drawable(dPriv);
+   struct st_context_iface *st;
    unsigned flush_flags;
    boolean swap_msaa_buffers = FALSE;
 
@@ -450,6 +451,8 @@ dri_flush(__DRIcontext *cPriv,
       assert(0);
       return;
    }
+
+   st = ctx->st;
 
    if (drawable) {
       /* prevent recursion */
@@ -465,12 +468,12 @@ dri_flush(__DRIcontext *cPriv,
    /* Flush the drawable. */
    if ((flags & __DRI2_FLUSH_DRAWABLE) &&
        drawable->textures[ST_ATTACHMENT_BACK_LEFT]) {
-      struct pipe_context *pipe = ctx->st->pipe;
+      struct pipe_context *pipe = st->pipe;
 
       if (drawable->stvis.samples > 1 &&
           reason == __DRI2_THROTTLE_SWAPBUFFER) {
          /* Resolve the MSAA back buffer. */
-         dri_pipe_blit(ctx->st->pipe,
+         dri_pipe_blit(st->pipe,
                        drawable->textures[ST_ATTACHMENT_BACK_LEFT],
                        drawable->msaa_textures[ST_ATTACHMENT_BACK_LEFT]);
 
@@ -529,7 +532,7 @@ dri_flush(__DRIcontext *cPriv,
          screen->fence_reference(screen, &fence, NULL);
       }
 
-      ctx->st->flush(ctx->st, flush_flags, &fence);
+      st->flush(st, flush_flags, &fence);
 
       if (fence) {
          swap_fences_push_back(drawable, fence);
@@ -537,7 +540,7 @@ dri_flush(__DRIcontext *cPriv,
       }
    }
    else if (flags & (__DRI2_FLUSH_DRAWABLE | __DRI2_FLUSH_CONTEXT)) {
-      ctx->st->flush(ctx->st, flush_flags, NULL);
+      st->flush(st, flush_flags, NULL);
    }
 
    if (drawable) {
