@@ -135,7 +135,8 @@ struct thread_input {
    int thread_index;
 };
 
-static PIPE_THREAD_ROUTINE(util_queue_thread_func, input)
+static int
+util_queue_thread_func(void *input)
 {
    struct util_queue *queue = ((struct thread_input*)input)->queue;
    int thread_index = ((struct thread_input*)input)->thread_index;

@@ -88,7 +88,8 @@ nine_csmt_wait_processed(struct csmt_context *ctx)
 
 /* CSMT worker thread */
 static
-PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
+int
+nine_csmt_worker(void *arg)
 {
     struct csmt_context *ctx = arg;
     struct csmt_instruction *instr;

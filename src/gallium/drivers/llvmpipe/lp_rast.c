@@ -781,7 +781,8 @@ lp_rast_finish( struct lp_rasterizer *rast )
  *   2. do work
  *   3. signal that we're done
  */
-static PIPE_THREAD_ROUTINE( thread_function, init_data )
+static int
+thread_function(void *init_data)
 {
    struct lp_rasterizer_task *task = (struct lp_rasterizer_task *) init_data;
    struct lp_rasterizer *rast = task->rast;

@@ -58,7 +58,8 @@ struct rbug_rbug
    boolean running;
 };
 
-PIPE_THREAD_ROUTINE(rbug_thread, void_rbug);
+int
+rbug_thread(void *void_rbug);
 
 
 /**********************************************************
@@ -799,7 +800,8 @@ rbug_con(struct rbug_rbug *tr_rbug)
    tr_rbug->con = NULL;
 }
 
-PIPE_THREAD_ROUTINE(rbug_thread, void_tr_rbug)
+int
+rbug_thread(void *void_tr_rbug)
 {
    struct rbug_rbug *tr_rbug = void_tr_rbug;
    uint16_t port = 13370;

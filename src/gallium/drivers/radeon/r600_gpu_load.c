@@ -132,7 +132,8 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 
 #undef UPDATE_COUNTER
 
-static PIPE_THREAD_ROUTINE(r600_gpu_load_thread, param)
+static int
+r600_gpu_load_thread(void *param)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)param;
 	const int period_us = 1000000 / SAMPLES_PER_SEC;

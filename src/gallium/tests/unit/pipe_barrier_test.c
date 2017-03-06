@@ -66,7 +66,8 @@ static volatile int proceeded = 0;
    }
 
 
-static PIPE_THREAD_ROUTINE(thread_function, thread_data)
+static int
+thread_function(void *thread_data)
 {
    int thread_id = *((int *) thread_data);
 

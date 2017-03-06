@@ -47,10 +47,7 @@
 #endif
 
 
-#define PIPE_THREAD_ROUTINE( name, param ) \
-   int name( void *param )
-
-static inline thrd_t pipe_thread_create( PIPE_THREAD_ROUTINE((*routine), ), void *param )
+static inline thrd_t pipe_thread_create(int (*routine)(void *), void *param)
 {
    thrd_t thread;
 #ifdef HAVE_PTHREAD

@@ -251,7 +251,8 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe);
 
 void
 dd_init_draw_functions(struct dd_context *dctx);
-PIPE_THREAD_ROUTINE(dd_thread_pipelined_hang_detect, input);
+int
+dd_thread_pipelined_hang_detect(void *input);
 
 
 static inline struct dd_context *

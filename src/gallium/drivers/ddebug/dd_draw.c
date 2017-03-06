@@ -899,7 +899,8 @@ dd_dump_record(struct dd_context *dctx, struct dd_draw_record *record,
    fclose(f);
 }
 
-PIPE_THREAD_ROUTINE(dd_thread_pipelined_hang_detect, input)
+int
+dd_thread_pipelined_hang_detect(void *input)
 {
    struct dd_context *dctx = (struct dd_context *)input;
    struct dd_screen *dscreen = dd_screen(dctx->base.screen);
