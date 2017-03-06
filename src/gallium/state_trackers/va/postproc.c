@@ -292,7 +292,8 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    src_region = vlVaRegionDefault(param->surface_region, src_surface->buffer, &def_src_region);
    dst_region = vlVaRegionDefault(param->output_region, context->target, &def_dst_region);
 
-   if (context->target->buffer_format != PIPE_FORMAT_NV12)
+   if (context->target->buffer_format != PIPE_FORMAT_NV12 &&
+       context->target->buffer_format != PIPE_FORMAT_P016)
       return vlVaPostProcCompositor(drv, context, src_region, dst_region,
                                     src, context->target, deinterlace);
    else
