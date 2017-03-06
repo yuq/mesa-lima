@@ -4665,44 +4665,41 @@ si_export_mrt_z(struct nir_to_llvm_context *ctx,
 		LLVMValueRef depth, LLVMValueRef stencil,
 		LLVMValueRef samplemask)
 {
-	LLVMValueRef args[9];
-	unsigned mask = 0;
-	args[1] = ctx->i32one; /* whether the EXEC mask is valid */
-	args[2] = ctx->i32one; /* DONE bit */
-	/* Specify the target we are exporting */
-	args[3] = LLVMConstInt(ctx->i32, V_008DFC_SQ_EXP_MRTZ, false);
+	struct ac_export_args args;
 
-	args[4] = ctx->i32zero; /* COMP flag */
-	args[5] = LLVMGetUndef(ctx->f32); /* R, depth */
-	args[6] = LLVMGetUndef(ctx->f32); /* G, stencil test val[0:7], stencil op val[8:15] */
-	args[7] = LLVMGetUndef(ctx->f32); /* B, sample mask */
-	args[8] = LLVMGetUndef(ctx->f32); /* A, alpha to mask */
+	args.enabled_channels = 0;
+	args.valid_mask = 1;
+	args.done = 1;
+	args.target = V_008DFC_SQ_EXP_MRTZ;
+	args.compr = false;
+
+	args.out[0] = LLVMGetUndef(ctx->f32); /* R, depth */
+	args.out[1] = LLVMGetUndef(ctx->f32); /* G, stencil test val[0:7], stencil op val[8:15] */
+	args.out[2] = LLVMGetUndef(ctx->f32); /* B, sample mask */
+	args.out[3] = LLVMGetUndef(ctx->f32); /* A, alpha to mask */
 
 	if (depth) {
-		args[5] = depth;
-		mask |= 0x1;
+		args.out[0] = depth;
+		args.enabled_channels |= 0x1;
 	}
 
 	if (stencil) {
-		args[6] = stencil;
-		mask |= 0x2;
+		args.out[1] = stencil;
+		args.enabled_channels |= 0x2;
 	}
 
 	if (samplemask) {
-		args[7] = samplemask;
-		mask |= 0x04;
+		args.out[2] = samplemask;
+		args.enabled_channels |= 0x4;
 	}
 
 	/* SI (except OLAND) has a bug that it only looks
 	 * at the X writemask component. */
 	if (ctx->options->chip_class == SI &&
 	    ctx->options->family != CHIP_OLAND)
-		mask |= 0x01;
+		args.enabled_channels |= 0x1;
 
-	args[0] = LLVMConstInt(ctx->i32, mask, false);
-	ac_build_intrinsic(&ctx->ac, "llvm.SI.export",
-			   ctx->voidt, args, 9,
-			   AC_FUNC_ATTR_LEGACY);
+	ac_build_export(&ctx->ac, &args);
 }
 
 static void
