@@ -326,6 +326,21 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 	struct radv_meta_saved_compute_state saved_state;
 	const uint32_t samples = src_image->samples;
 	const uint32_t samples_log2 = ffs(samples) - 1;
+
+	for (uint32_t r = 0; r < region_count; ++r) {
+		const VkImageResolve *region = &regions[r];
+		const uint32_t src_base_layer =
+			radv_meta_get_iview_layer(src_image, &region->srcSubresource,
+						  &region->srcOffset);
+		VkImageSubresourceRange range;
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = region->srcSubresource.mipLevel;
+		range.levelCount = 1;
+		range.baseArrayLayer = src_base_layer;
+		range.layerCount = region->srcSubresource.layerCount;
+		radv_fast_clear_flush_image_inplace(cmd_buffer, src_image, &range);
+	}
+
 	radv_meta_save_compute(&saved_state, cmd_buffer, 16);
 
 	for (uint32_t r = 0; r < region_count; ++r) {
@@ -349,14 +364,6 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 			radv_sanitize_image_offset(src_image->type, region->srcOffset);
 		const struct VkOffset3D dstOffset =
 			radv_sanitize_image_offset(dest_image->type, region->dstOffset);
-
-		VkImageSubresourceRange range;
-		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		range.baseMipLevel = region->srcSubresource.mipLevel;
-		range.levelCount = 1;
-		range.baseArrayLayer = src_base_layer;
-		range.layerCount = region->srcSubresource.layerCount;
-		radv_fast_clear_flush_image_inplace(cmd_buffer, src_image, &range);
 
 		for (uint32_t layer = 0; layer < region->srcSubresource.layerCount;
 		     ++layer) {
