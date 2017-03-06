@@ -1461,7 +1461,7 @@ static void radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 	for_each_bit(b, src_flags) {
 		switch ((VkAccessFlagBits)(1 << b)) {
 		case VK_ACCESS_SHADER_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_INV_GLOBAL_L2;
+			flush_bits |= RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 			break;
 		case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
 			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
@@ -2713,7 +2713,7 @@ static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
 	                                RADV_CMD_FLAG_INV_VMEM_L1 |
-	                                RADV_CMD_FLAG_INV_GLOBAL_L2;
+	                                RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 }
 
 static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffer,
@@ -2762,7 +2762,7 @@ void radv_initialise_cmask(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
 	                                RADV_CMD_FLAG_INV_VMEM_L1 |
-	                                RADV_CMD_FLAG_INV_GLOBAL_L2;
+	                                RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 }
 
 static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffer,
@@ -2799,7 +2799,7 @@ void radv_initialize_dcc(struct radv_cmd_buffer *cmd_buffer,
 	                                RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
 	                                RADV_CMD_FLAG_INV_VMEM_L1 |
-	                                RADV_CMD_FLAG_INV_GLOBAL_L2;
+	                                RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 }
 
 static void radv_handle_dcc_image_transition(struct radv_cmd_buffer *cmd_buffer,

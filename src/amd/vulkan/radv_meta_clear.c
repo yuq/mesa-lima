@@ -907,11 +907,11 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	if (post_flush)
 		*post_flush |= RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
 	                       RADV_CMD_FLAG_INV_VMEM_L1 |
-	                       RADV_CMD_FLAG_INV_GLOBAL_L2;
+	                       RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 	else
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
 	                                        RADV_CMD_FLAG_INV_VMEM_L1 |
-	                                        RADV_CMD_FLAG_INV_GLOBAL_L2;
+	                                        RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 
 	radv_set_color_clear_regs(cmd_buffer, iview->image, subpass_att, clear_color);
 
