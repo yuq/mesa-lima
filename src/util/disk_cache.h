@@ -27,6 +27,7 @@
 #ifdef ENABLE_SHADER_CACHE
 #include <dlfcn.h>
 #endif
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/stat.h>
@@ -41,6 +42,23 @@ extern "C" {
 typedef uint8_t cache_key[CACHE_KEY_SIZE];
 
 struct disk_cache;
+
+static inline const char *
+get_arch_bitness_str(void)
+{
+    if (sizeof(void *) == 4)
+#ifdef __ILP32__
+        return "ilp-32";
+#else
+        return "32";
+#endif
+    if (sizeof(void *) == 8)
+        return "64";
+
+    /* paranoia check which will be dropped by the optimiser */
+    assert(!"unknown_arch");
+    return "unknown_arch";
+}
 
 static inline bool
 disk_cache_get_function_timestamp(void *ptr, uint32_t* timestamp)

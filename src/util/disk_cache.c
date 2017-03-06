@@ -74,23 +74,6 @@ struct disk_cache {
    uint64_t max_size;
 };
 
-static const char *
-get_arch_bitness_str(void)
-{
-    if (sizeof(void *) == 4)
-#ifdef __ILP32__
-        return "ilp-32";
-#else
-        return "32";
-#endif
-    if (sizeof(void *) == 8)
-        return "64";
-
-    /* paranoia check which will be dropped by the optimiser */
-    assert(!"unknown_arch");
-    return "unknown_arch";
-}
-
 /* Create a directory named 'path' if it does not already exist.
  *
  * Returns: 0 if path already exists as a directory or if created.
