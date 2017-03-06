@@ -689,6 +689,30 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 
 }
 
+static void
+si_emit_acquire_mem(struct radeon_winsys_cs *cs,
+                    bool is_mec,
+                    unsigned cp_coher_cntl)
+{
+	if (is_mec) {
+		radeon_emit(cs, PKT3(PKT3_ACQUIRE_MEM, 5, 0) |
+		                            PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+		radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
+		radeon_emit(cs, 0xff);            /* CP_COHER_SIZE_HI */
+		radeon_emit(cs, 0);               /* CP_COHER_BASE */
+		radeon_emit(cs, 0);               /* CP_COHER_BASE_HI */
+		radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
+	} else {
+		/* ACQUIRE_MEM is only required on a compute ring. */
+		radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
+		radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+		radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
+		radeon_emit(cs, 0);               /* CP_COHER_BASE */
+		radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
+	}
+}
+
 void
 si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
                        enum chip_class chip_class,
@@ -701,13 +725,6 @@ si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
 		cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1);
 	if (flush_bits & RADV_CMD_FLAG_INV_SMEM_L1)
 		cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
-	if (flush_bits & RADV_CMD_FLAG_INV_VMEM_L1)
-		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
-	if (flush_bits & RADV_CMD_FLAG_INV_GLOBAL_L2) {
-		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
-		if (chip_class >= VI)
-			cp_coher_cntl |= S_0301F0_TC_WB_ACTION_ENA(1);
-	}
 
 	if (flush_bits & RADV_CMD_FLAG_FLUSH_AND_INV_CB) {
 		cp_coher_cntl |= S_0085F0_CB_ACTION_ENA(1) |
@@ -778,28 +795,29 @@ si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
 		radeon_emit(cs, 0);
 	}
 
+	if ((flush_bits & RADV_CMD_FLAG_INV_GLOBAL_L2) ||
+	    (chip_class <= CIK && (flush_bits & RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2))) {
+		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
+		if (chip_class >= VI)
+			cp_coher_cntl |= S_0301F0_TC_WB_ACTION_ENA(1);
+	} else	if(flush_bits & RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2) {
+		cp_coher_cntl |= S_0301F0_TC_WB_ACTION_ENA(1) |
+		                 S_0301F0_TC_NC_ACTION_ENA(1);
+
+		/* L2 writeback doesn't combine with L1 invalidate */
+		si_emit_acquire_mem(cs, is_mec, cp_coher_cntl);
+
+		cp_coher_cntl = 0;
+	}
+
+	if (flush_bits & RADV_CMD_FLAG_INV_VMEM_L1)
+		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
+
 	/* When one of the DEST_BASE flags is set, SURFACE_SYNC waits for idle.
 	 * Therefore, it should be last. Done in PFP.
 	 */
-	if (cp_coher_cntl) {
-		if (is_mec) {
-			radeon_emit(cs, PKT3(PKT3_ACQUIRE_MEM, 5, 0) |
-			                            PKT3_SHADER_TYPE_S(1));
-			radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
-			radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
-			radeon_emit(cs, 0xff);            /* CP_COHER_SIZE_HI */
-			radeon_emit(cs, 0);               /* CP_COHER_BASE */
-			radeon_emit(cs, 0);               /* CP_COHER_BASE_HI */
-			radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
-		} else {
-			/* ACQUIRE_MEM is only required on a compute ring. */
-			radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
-			radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
-			radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
-			radeon_emit(cs, 0);               /* CP_COHER_BASE */
-			radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
-		}
-	}
+	if (cp_coher_cntl)
+		si_emit_acquire_mem(cs, is_mec, cp_coher_cntl);
 }
 
 void
