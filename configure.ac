@@ -1013,7 +1013,7 @@ radeon_llvm_check() {
     llvm_add_component "ipo" $2
 
     if test "x$have_libelf" != xyes; then
-       AC_MSG_ERROR([$1 requires libelf when using llvm])
+       AC_MSG_ERROR([$2 requires libelf when using llvm])
     fi
 }
 
