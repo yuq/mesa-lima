@@ -1961,6 +1961,9 @@ void genX(CmdDispatch)(
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    const struct brw_cs_prog_data *prog_data = get_cs_prog_data(pipeline);
 
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
+
    if (prog_data->uses_num_work_groups) {
       struct anv_state state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, 12, 4);
