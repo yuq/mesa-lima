@@ -665,8 +665,10 @@ anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
        &cmd_buffer->device->surface_state_block_pool;
 
    int32_t *offset = u_vector_add(&cmd_buffer->bt_blocks);
-   if (offset == NULL)
+   if (offset == NULL) {
+      anv_batch_set_error(&cmd_buffer->batch, VK_ERROR_OUT_OF_HOST_MEMORY);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   }
 
    *offset = anv_block_pool_alloc_back(block_pool);
    cmd_buffer->bt_next = 0;
@@ -719,7 +721,9 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
       goto fail_bt_blocks;
    cmd_buffer->last_ss_pool_center = 0;
 
-   anv_cmd_buffer_new_binding_table_block(cmd_buffer);
+   result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
+   if (result != VK_SUCCESS)
+      goto fail_bt_blocks;
 
    return VK_SUCCESS;
 

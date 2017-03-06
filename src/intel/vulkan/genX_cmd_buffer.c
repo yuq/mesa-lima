@@ -1376,7 +1376,8 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       assert(result == VK_ERROR_OUT_OF_DEVICE_MEMORY);
 
       result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
-      assert(result == VK_SUCCESS);
+      if (result != VK_SUCCESS)
+         return 0;
 
       /* Re-emit state base addresses so we get the new surface state base
        * address before we start emitting binding tables etc.
@@ -1388,11 +1389,11 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       anv_foreach_stage(s, dirty) {
          result = emit_samplers(cmd_buffer, s, &cmd_buffer->state.samplers[s]);
          if (result != VK_SUCCESS)
-            return result;
+            return 0;
          result = emit_binding_table(cmd_buffer, s,
                                      &cmd_buffer->state.binding_tables[s]);
          if (result != VK_SUCCESS)
-            return result;
+            return 0;
       }
    }
 
@@ -1847,8 +1848,10 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    result = emit_binding_table(cmd_buffer, MESA_SHADER_COMPUTE, &surfaces);
    if (result != VK_SUCCESS) {
       assert(result == VK_ERROR_OUT_OF_DEVICE_MEMORY);
+
       result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
-      assert(result == VK_SUCCESS);
+      if (result != VK_SUCCESS)
+         return result;
 
       /* Re-emit state base addresses so we get the new surface state base
        * address before we start emitting binding tables etc.
