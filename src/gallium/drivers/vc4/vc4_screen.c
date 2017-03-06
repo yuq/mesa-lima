@@ -587,7 +587,7 @@ vc4_get_chip_info(struct vc4_screen *screen)
         uint32_t minor = (ident1.value >> 0) & 0xf;
         screen->v3d_ver = major * 10 + minor;
 
-        if (screen->v3d_ver != 21) {
+        if (screen->v3d_ver != 21 && screen->v3d_ver != 26) {
                 fprintf(stderr,
                         "V3D %d.%d not supported by this version of Mesa.\n",
                         screen->v3d_ver / 10,
