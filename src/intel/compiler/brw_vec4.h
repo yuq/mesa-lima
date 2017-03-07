@@ -28,6 +28,7 @@
 
 #ifdef __cplusplus
 #include "brw_ir_vec4.h"
+#include "brw_vec4_builder.h"
 #endif
 
 #include "compiler/glsl/ir.h"
@@ -323,8 +324,6 @@ public:
 
    void emit_conversion_from_double(dst_reg dst, src_reg src, bool saturate);
    void emit_conversion_to_double(dst_reg dst, src_reg src, bool saturate);
-
-   src_reg setup_imm_df(double v);
 
    vec4_instruction *shuffle_64bit_data(dst_reg dst, src_reg src,
                                         bool for_write,
