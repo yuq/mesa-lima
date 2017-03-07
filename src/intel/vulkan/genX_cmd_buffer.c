@@ -504,7 +504,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
             state->attachments[i].clear_value = begin->pClearValues[i];
 
          struct anv_image_view *iview = framebuffer->attachments[i];
-         assert(iview->vk_format == att->format);
+         anv_assert(iview->vk_format == att->format);
 
          union isl_color_value clear_color = { .u32 = { 0, } };
          if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
