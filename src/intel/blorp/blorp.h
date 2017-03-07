@@ -191,6 +191,17 @@ blorp_ccs_resolve(struct blorp_batch *batch,
                   enum isl_format format,
                   enum blorp_fast_clear_op resolve_op);
 
+/* Resolves subresources of the image subresource range specified in the
+ * binding table.
+ */
+void
+blorp_ccs_resolve_attachment(struct blorp_batch *batch,
+                             const uint32_t binding_table_offset,
+                             struct blorp_surf * const surf,
+                             const uint32_t level, const uint32_t num_layers,
+                             const enum isl_format format,
+                             const enum blorp_fast_clear_op resolve_op);
+
 /**
  * For an overview of the HiZ operations, see the following sections of the
  * Sandy Bridge PRM, Volume 1, Part2:
