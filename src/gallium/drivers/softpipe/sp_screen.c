@@ -156,6 +156,7 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       return 330;
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
+   case PIPE_CAP_TGSI_TEX_TXF_LZ:
       return 0;
    case PIPE_CAP_COMPUTE:
       return 1;
