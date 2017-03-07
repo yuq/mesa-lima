@@ -2704,14 +2704,20 @@ void radv_CmdEndRenderPass(
 
 
 static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
-				  struct radv_image *image)
+                                  struct radv_image *image,
+                                  const VkImageSubresourceRange *range)
 {
+	assert(range->baseMipLevel == 0);
+	assert(range->levelCount == 1 || range->levelCount == VK_REMAINING_ARRAY_LAYERS);
+	unsigned layer_count = radv_get_layerCount(image, range);
+	uint64_t size = image->surface.htile_slice_size * layer_count;
+	uint64_t offset = image->offset + image->htile_offset +
+	                  image->surface.htile_slice_size * range->baseArrayLayer;
 
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
 	                                RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 
-	radv_fill_buffer(cmd_buffer, image->bo, image->offset + image->htile_offset,
-			 image->surface.htile_size, 0xffffffff);
+	radv_fill_buffer(cmd_buffer, image->bo, offset, size, 0xffffffff);
 
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
@@ -2736,10 +2742,10 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 	} else if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
 	           radv_layout_has_htile(image, dst_layout)) {
 		/* TODO: merge with the clear if applicable */
-		radv_initialize_htile(cmd_buffer, image);
+		radv_initialize_htile(cmd_buffer, image, range);
 	} else if (!radv_layout_has_htile(image, src_layout) &&
 	           radv_layout_has_htile(image, dst_layout)) {
-		radv_initialize_htile(cmd_buffer, image);
+		radv_initialize_htile(cmd_buffer, image, range);
 	} else if ((radv_layout_has_htile(image, src_layout) &&
 	            !radv_layout_has_htile(image, dst_layout)) ||
 	           (radv_layout_is_htile_compressed(image, src_layout) &&

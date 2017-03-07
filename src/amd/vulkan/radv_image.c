@@ -590,8 +590,7 @@ static void
 radv_image_alloc_htile(struct radv_device *device,
 		       struct radv_image *image)
 {
-	if ((device->debug_flags & RADV_DEBUG_NO_HIZ) || image->layers > 1 ||
-	    image->levels > 1) {
+	if ((device->debug_flags & RADV_DEBUG_NO_HIZ) || image->levels > 1) {
 		image->surface.htile_size = 0;
 		return;
 	}
