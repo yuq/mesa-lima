@@ -1603,7 +1603,7 @@ void anv_GetImageSparseMemoryRequirements(
     uint32_t*                                   pSparseMemoryRequirementCount,
     VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
 {
-   stub();
+   *pSparseMemoryRequirementCount = 0;
 }
 
 void anv_GetDeviceMemoryCommitment(
@@ -1640,7 +1640,7 @@ VkResult anv_QueueBindSparse(
     const VkBindSparseInfo*                     pBindInfo,
     VkFence                                     fence)
 {
-   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
+   return vk_error(VK_ERROR_FEATURE_NOT_PRESENT);
 }
 
 VkResult anv_CreateFence(

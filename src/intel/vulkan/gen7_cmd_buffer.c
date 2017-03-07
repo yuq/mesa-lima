@@ -270,7 +270,7 @@ void genX(CmdSetEvent)(
     VkEvent                                     event,
     VkPipelineStageFlags                        stageMask)
 {
-   stub();
+   anv_finishme("Implement events on gen7");
 }
 
 void genX(CmdResetEvent)(
@@ -278,7 +278,7 @@ void genX(CmdResetEvent)(
     VkEvent                                     event,
     VkPipelineStageFlags                        stageMask)
 {
-   stub();
+   anv_finishme("Implement events on gen7");
 }
 
 void genX(CmdWaitEvents)(
@@ -294,7 +294,7 @@ void genX(CmdWaitEvents)(
     uint32_t                                    imageMemoryBarrierCount,
     const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
-   stub();
+   anv_finishme("Implement events on gen7");
 
    genX(CmdPipelineBarrier)(commandBuffer, srcStageMask, destStageMask,
                             false, /* byRegion */

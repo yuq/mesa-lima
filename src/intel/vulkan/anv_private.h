@@ -279,18 +279,6 @@ void anv_loge_v(const char *format, va_list va);
 #define anv_validate if (0)
 #endif
 
-#define stub_return(v) \
-   do { \
-      anv_finishme("stub %s", __func__); \
-      return (v); \
-   } while (0)
-
-#define stub() \
-   do { \
-      anv_finishme("stub %s", __func__); \
-      return; \
-   } while (0)
-
 /**
  * A dynamically growable, circular buffer.  Elements are added at head and
  * removed from tail. head and tail are free-running uint32_t indices and we
