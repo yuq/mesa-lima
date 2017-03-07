@@ -728,7 +728,7 @@ struct radv_cmd_buffer {
 	uint32_t queue_family_index;
 
 	uint8_t push_constants[MAX_PUSH_CONSTANTS_SIZE];
-	uint32_t dynamic_buffers[16 * MAX_DYNAMIC_BUFFERS];
+	uint32_t dynamic_buffers[4 * MAX_DYNAMIC_BUFFERS];
 	VkShaderStageFlags push_constant_stages;
 
 	struct radv_cmd_buffer_upload upload;
