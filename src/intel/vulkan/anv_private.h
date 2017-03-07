@@ -270,16 +270,6 @@ void anv_loge_v(const char *format, va_list va);
 #endif
 
 /**
- * If a block of code is annotated with anv_validate, then the block runs only
- * in debug builds.
- */
-#ifdef DEBUG
-#define anv_validate if (1)
-#else
-#define anv_validate if (0)
-#endif
-
-/**
  * A dynamically growable, circular buffer.  Elements are added at head and
  * removed from tail. head and tail are free-running uint32_t indices and we
  * only compute the modulo with size when accessing the array.  This way,

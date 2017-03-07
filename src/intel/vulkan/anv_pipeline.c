@@ -1119,6 +1119,7 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
 static void
 anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
 {
+#ifdef DEBUG
    struct anv_render_pass *renderpass = NULL;
    struct anv_subpass *subpass = NULL;
 
@@ -1158,6 +1159,7 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
          break;
       }
    }
+#endif
 }
 
 /**
@@ -1189,9 +1191,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
 {
    VkResult result;
 
-   anv_validate {
-      anv_pipeline_validate_create_info(pCreateInfo);
-   }
+   anv_pipeline_validate_create_info(pCreateInfo);
 
    if (alloc == NULL)
       alloc = &device->alloc;
