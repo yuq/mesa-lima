@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
@@ -795,6 +796,31 @@ gbm_dri_bo_import(struct gbm_device *gbm,
    return &bo->base.base;
 }
 
+static bool
+is_planar_format(uint32_t format)
+{
+   switch (format) {
+   case GBM_FORMAT_NV12:
+   case GBM_FORMAT_NV21:
+   case GBM_FORMAT_NV16:
+   case GBM_FORMAT_NV61:
+   case GBM_FORMAT_YUV410:
+   case GBM_FORMAT_YVU410:
+   case GBM_FORMAT_YUV411:
+   case GBM_FORMAT_YVU411:
+   case GBM_FORMAT_YUV420:
+   case GBM_FORMAT_YVU420:
+   case GBM_FORMAT_YUV422:
+   case GBM_FORMAT_YVU422:
+   case GBM_FORMAT_YUV444:
+   case GBM_FORMAT_YVU444:
+      return true;
+   default:
+      return false;
+   }
+
+}
+
 static struct gbm_bo *
 create_dumb(struct gbm_device *gbm,
                   uint32_t width, uint32_t height,
@@ -812,6 +838,11 @@ create_dumb(struct gbm_device *gbm,
    is_scanout = (usage & GBM_BO_USE_SCANOUT) != 0 &&
       format == GBM_FORMAT_XRGB8888;
    if (!is_cursor && !is_scanout) {
+      errno = EINVAL;
+      return NULL;
+   }
+
+   if (is_planar_format(format)) {
       errno = EINVAL;
       return NULL;
    }
