@@ -25,7 +25,6 @@
 #define BRW_VEC4_H
 
 #include "brw_shader.h"
-#include "brw_program.h"
 
 #ifdef __cplusplus
 #include "brw_ir_vec4.h"

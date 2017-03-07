@@ -30,7 +30,6 @@
 #include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
-#include "brw_program.h"
 
 static enum brw_reg_file
 brw_file_from_reg(fs_reg *reg)

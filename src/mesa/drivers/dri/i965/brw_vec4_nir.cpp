@@ -25,7 +25,6 @@
 #include "brw_vec4.h"
 #include "brw_vec4_builder.h"
 #include "brw_vec4_surface_builder.h"
-#include "brw_program.h"
 
 using namespace brw;
 using namespace brw::surface_access;

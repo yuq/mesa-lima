@@ -25,7 +25,6 @@
 #include "brw_fs.h"
 #include "brw_fs_surface_builder.h"
 #include "brw_nir.h"
-#include "brw_program.h"
 
 using namespace brw;
 using namespace brw::surface_access;
