@@ -432,6 +432,7 @@ public:
    bool have_sqrt;
    bool have_fma;
    bool use_shared_memory;
+   bool has_tex_txf_lz;
 
    variable_storage *find_variable_storage(ir_variable *var);
 
@@ -4190,9 +4191,13 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       }
       break;
    case ir_txl:
-      opcode = is_cube_array ? TGSI_OPCODE_TXL2 : TGSI_OPCODE_TXL;
-      ir->lod_info.lod->accept(this);
-      lod_info = this->result;
+      if (this->has_tex_txf_lz && ir->lod_info.lod->is_zero()) {
+         opcode = TGSI_OPCODE_TEX_LZ;
+      } else {
+         opcode = is_cube_array ? TGSI_OPCODE_TXL2 : TGSI_OPCODE_TXL;
+         ir->lod_info.lod->accept(this);
+         lod_info = this->result;
+      }
       if (ir->offset) {
          ir->offset->accept(this);
          offset[0] = this->result;
@@ -4220,9 +4225,13 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       levels_src = get_temp(ir->type);
       break;
    case ir_txf:
-      opcode = TGSI_OPCODE_TXF;
-      ir->lod_info.lod->accept(this);
-      lod_info = this->result;
+      if (this->has_tex_txf_lz && ir->lod_info.lod->is_zero()) {
+         opcode = TGSI_OPCODE_TXF_LZ;
+      } else {
+         opcode = TGSI_OPCODE_TXF;
+         ir->lod_info.lod->accept(this);
+         lod_info = this->result;
+      }
       if (ir->offset) {
          ir->offset->accept(this);
          offset[0] = this->result;
@@ -4559,6 +4568,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    have_sqrt = false;
    have_fma = false;
    use_shared_memory = false;
+   has_tex_txf_lz = false;
 }
 
 glsl_to_tgsi_visitor::~glsl_to_tgsi_visitor()
@@ -5804,6 +5814,7 @@ compile_tgsi_instruction(struct st_translate *t,
       return;
 
    case TGSI_OPCODE_TEX:
+   case TGSI_OPCODE_TEX_LZ:
    case TGSI_OPCODE_TXB:
    case TGSI_OPCODE_TXD:
    case TGSI_OPCODE_TXL:
@@ -5811,6 +5822,7 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_TXQ:
    case TGSI_OPCODE_TXQS:
    case TGSI_OPCODE_TXF:
+   case TGSI_OPCODE_TXF_LZ:
    case TGSI_OPCODE_TEX2:
    case TGSI_OPCODE_TXB2:
    case TGSI_OPCODE_TXL2:
@@ -6664,6 +6676,8 @@ get_mesa_program_tgsi(struct gl_context *ctx,
                                             PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED);
    v->have_fma = pscreen->get_shader_param(pscreen, ptarget,
                                            PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED);
+   v->has_tex_txf_lz = pscreen->get_param(pscreen,
+                                          PIPE_CAP_TGSI_TEX_TXF_LZ);
 
    _mesa_generate_parameters_list_for_uniforms(shader_program, shader,
                                                prog->Parameters);
