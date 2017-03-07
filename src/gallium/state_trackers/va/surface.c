@@ -553,6 +553,39 @@ suface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
    return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+surface_allocate(VADriverContextP ctx, vlVaSurface *surface,
+		 struct pipe_video_buffer *templat)
+{
+   vlVaDriver *drv;
+   struct pipe_surface **surfaces;
+   unsigned i;
+
+   drv = VL_VA_DRIVER(ctx);
+
+   surface->buffer = drv->pipe->create_video_buffer(drv->pipe, templat);
+   if (!surface->buffer)
+      return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+   surfaces = surface->buffer->get_surfaces(surface->buffer);
+   for (i = 0; i < VL_MAX_SURFACES; ++i) {
+      union pipe_color_union c = {};
+
+      if (!surfaces[i])
+         continue;
+
+      if (i > !!surface->buffer->interlaced)
+         c.f[0] = c.f[1] = c.f[2] = c.f[3] = 0.5f;
+
+      drv->pipe->clear_render_target(drv->pipe, surfaces[i], &c, 0, 0,
+				     surfaces[i]->width, surfaces[i]->height,
+				     false);
+   }
+   drv->pipe->flush(drv->pipe, NULL, 0);
+
+   return VA_STATUS_SUCCESS;
+}
+
 VAStatus
 vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
                     unsigned int width, unsigned int height,
@@ -695,11 +728,9 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
              !(memory_attibute->flags & VA_SURFACE_EXTBUF_DESC_ENABLE_TILING))
             templat.bind = PIPE_BIND_LINEAR | PIPE_BIND_SHARED;
 
-         surf->buffer = drv->pipe->create_video_buffer(drv->pipe, &templat);
-         if (!surf->buffer) {
-            vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
+	 vaStatus = surface_allocate(ctx, surf, &templat);
+         if (vaStatus != VA_STATUS_SUCCESS)
             goto free_surf;
-         }
          break;
 
       case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME:
