@@ -170,14 +170,14 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
         /* VC4_DIRTY_COMPILED_VS */
         cl_u16(&shader_rec, 0); /* vs num uniforms */
         cl_u8(&shader_rec, vc4->prog.vs->vattrs_live);
-        cl_u8(&shader_rec, vc4->prog.vs->vattr_total_size);
+        cl_u8(&shader_rec, vc4->prog.vs->vattr_offsets[8]);
         cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.vs->bo, 0);
         cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
 
         /* VC4_DIRTY_COMPILED_CS */
         cl_u16(&shader_rec, 0); /* cs num uniforms */
         cl_u8(&shader_rec, vc4->prog.cs->vattrs_live);
-        cl_u8(&shader_rec, vc4->prog.cs->vattr_total_size);
+        cl_u8(&shader_rec, vc4->prog.cs->vattr_offsets[8]);
         cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.cs->bo, 0);
         cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
 

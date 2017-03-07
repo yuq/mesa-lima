@@ -733,14 +733,11 @@ emit_vertex_input(struct vc4_compile *c, int attr)
 {
         enum pipe_format format = c->vs_key->attr_formats[attr];
         uint32_t attr_size = util_format_get_blocksize(format);
-        uint32_t vpm_attr = c->next_vpm_input++;
 
-        c->vpm_input_order[vpm_attr] = attr;
-
-        c->vattr_sizes[vpm_attr] = align(attr_size, 4);
+        c->vattr_sizes[attr] = align(attr_size, 4);
         for (int i = 0; i < align(attr_size, 4) / 4; i++) {
                 c->inputs[attr * 4 + i] =
-                        qir_MOV(c, qir_reg(QFILE_VPM, vpm_attr * 4 + i));
+                        qir_MOV(c, qir_reg(QFILE_VPM, attr * 4 + i));
                 c->num_inputs++;
         }
 }
@@ -1469,7 +1466,6 @@ emit_stub_vpm_read(struct vc4_compile *c)
         if (c->num_inputs)
                 return;
 
-        c->next_vpm_input++;
         c->vattr_sizes[0] = 4;
         (void)qir_MOV(c, qir_reg(QFILE_VPM, 0));
         c->num_inputs++;
@@ -1554,6 +1550,64 @@ vc4_optimize_nir(struct nir_shader *s)
                          nir_var_shader_out |
                          nir_var_local);
         } while (progress);
+}
+
+static int
+driver_location_compare(const void *in_a, const void *in_b)
+{
+        const nir_variable *const *a = in_a;
+        const nir_variable *const *b = in_b;
+
+        return (*a)->data.driver_location - (*b)->data.driver_location;
+}
+
+static void
+ntq_setup_inputs(struct vc4_compile *c)
+{
+        unsigned num_entries = 0;
+        nir_foreach_variable(var, &c->s->inputs)
+                num_entries++;
+
+        nir_variable *vars[num_entries];
+
+        unsigned i = 0;
+        nir_foreach_variable(var, &c->s->inputs)
+                vars[i++] = var;
+
+        /* Sort the variables so that we emit the input setup in
+         * driver_location order.  This is required for VPM reads, whose data
+         * is fetched into the VPM in driver_location (TGSI register index)
+         * order.
+         */
+        qsort(&vars, num_entries, sizeof(*vars), driver_location_compare);
+
+        for (unsigned i = 0; i < num_entries; i++) {
+                nir_variable *var = vars[i];
+                unsigned array_len = MAX2(glsl_get_length(var->type), 1);
+                unsigned loc = var->data.driver_location;
+
+                assert(array_len == 1);
+                (void)array_len;
+                resize_qreg_array(c, &c->inputs, &c->inputs_array_size,
+                                  (loc + 1) * 4);
+
+                if (c->stage == QSTAGE_FRAG) {
+                        if (var->data.location == VARYING_SLOT_POS) {
+                                emit_fragcoord_input(c, loc);
+                        } else if (var->data.location == VARYING_SLOT_PNTC ||
+                                   (var->data.location >= VARYING_SLOT_VAR0 &&
+                                    (c->fs_key->point_sprite_mask &
+                                     (1 << (var->data.location -
+                                            VARYING_SLOT_VAR0))))) {
+                                c->inputs[loc * 4 + 0] = c->point_x;
+                                c->inputs[loc * 4 + 1] = c->point_y;
+                        } else {
+                                emit_fragment_input(c, loc, var->data.location);
+                        }
+                } else {
+                        emit_vertex_input(c, loc);
+                }
+        }
 }
 
 static void
@@ -1686,73 +1740,10 @@ ntq_emit_load_input(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 return;
         }
 
-        /* Size our inputs array as far as this input.  Input arrays are
-         * small, and we don't have a shader_info field that tells us up front
-         * what the maximum driver_location is.
-         */
-        uint32_t loc = nir_intrinsic_base(instr) + const_offset->u32[0];
-        if ((loc + 1) * 4 > c->inputs_array_size) {
-                resize_qreg_array(c, &c->inputs, &c->inputs_array_size,
-                                  (loc + 1) * 4);
-        }
-
-        /* If we've already loaded this input, just return it.  This would
-         * happen for VPM loads, where we load an entire vertex attribute at
-         * once, or possibly also in the FS if we haven't CSEed away repeated
-         * loads.
-         */
+        uint32_t offset = nir_intrinsic_base(instr) + const_offset->u32[0];
         int comp = nir_intrinsic_component(instr);
-        if (c->inputs[loc * 4 + comp].file != QFILE_NULL) {
-                ntq_store_dest(c, &instr->dest, 0,
-                               qir_MOV(c, c->inputs[loc * 4 + comp]));
-                return;
-        }
-
-        /* In the FS, we always have to fully drain our FS FIFO before
-         * terminating the shader.  For the VS we only have to drain whatever
-         * VPM setup we configure, but vc4_qpu_emit.c configures it for the
-         * entire vertex attribute space.  Because of this, we emit our lazy
-         * varying/VPM loads at the last top level basic block.
-         */
-        struct qblock *saved_cur_block = c->cur_block;
-        c->cur_block = c->last_top_block;
-
-        /* Look up the NIR variable for this input, so we can see how big the
-         * input is, or what sort of interpolation is necessary.
-         */
-        nir_variable *var = NULL;
-        nir_foreach_variable(search_var, &c->s->inputs) {
-                unsigned search_len = MAX2(glsl_get_length(search_var->type), 1);
-                unsigned search_loc = search_var->data.driver_location;
-
-                if (loc >= search_loc && loc < search_loc + search_len) {
-                        var = search_var;
-                        break;
-                }
-        }
-        assert(var);
-
-        if (c->stage == QSTAGE_FRAG) {
-                if (var->data.location == VARYING_SLOT_POS) {
-                        emit_fragcoord_input(c, loc);
-                } else if (var->data.location == VARYING_SLOT_PNTC ||
-                           (var->data.location >= VARYING_SLOT_VAR0 &&
-                            (c->fs_key->point_sprite_mask &
-                             (1 << (var->data.location -
-                                    VARYING_SLOT_VAR0))))) {
-                        c->inputs[loc * 4 + 0] = c->point_x;
-                        c->inputs[loc * 4 + 1] = c->point_y;
-                } else {
-                        emit_fragment_input(c, loc, var->data.location);
-                }
-        } else {
-                emit_vertex_input(c, loc);
-        }
-
-        c->cur_block = saved_cur_block;
-
         ntq_store_dest(c, &instr->dest, 0,
-                       qir_MOV(c, c->inputs[loc * 4 + comp]));
+                       qir_MOV(c, c->inputs[offset * 4 + comp]));
 }
 
 static void
@@ -2170,6 +2161,7 @@ nir_to_qir(struct vc4_compile *c)
         if (c->stage == QSTAGE_FRAG && c->s->info->fs.uses_discard)
                 c->discard = qir_MOV(c, qir_uniform_ui(c, 0));
 
+        ntq_setup_inputs(c);
         ntq_setup_outputs(c);
         ntq_setup_uniforms(c);
         ntq_setup_registers(c, &c->s->registers);
@@ -2596,17 +2588,14 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         } else {
                 shader->num_inputs = c->num_inputs;
 
-                uint8_t next_vattr_offset = 0;
-                for (int i = 0; i < c->next_vpm_input; i++) {
-                        if (!c->vattr_sizes[i])
-                                continue;
+                shader->vattr_offsets[0] = 0;
+                for (int i = 0; i < 8; i++) {
+                        shader->vattr_offsets[i + 1] =
+                                shader->vattr_offsets[i] + c->vattr_sizes[i];
 
-                        uint32_t nir_attr = c->vpm_input_order[i];
-                        shader->vattr_offsets[nir_attr] = next_vattr_offset;
-                        next_vattr_offset += c->vattr_sizes[i];
-                        shader->vattrs_live |= (1 << nir_attr);
+                        if (c->vattr_sizes[i])
+                                shader->vattrs_live |= (1 << i);
                 }
-                shader->vattr_total_size = next_vattr_offset;
         }
 
         shader->failed = c->failed;

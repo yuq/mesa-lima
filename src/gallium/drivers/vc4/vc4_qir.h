@@ -462,13 +462,6 @@ struct vc4_compile {
         uint8_t vattr_sizes[8];
 
         /**
-         * Order in which the vattrs were loaded by the program, to arrange
-         * vattr_offsets[] in the program data appropriately.
-         */
-        uint8_t vpm_input_order[8];
-        uint8_t next_vpm_input;
-
-        /**
          * Array of the VARYING_SLOT_* of all FS QFILE_VARY reads.
          *
          * This includes those that aren't part of the VPM varyings, like
