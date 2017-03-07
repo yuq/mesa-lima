@@ -59,10 +59,6 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
                                         uint32_t next_binding_table_offset);
 
 void
-brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
-                      unsigned surf_index);
-
-void
 brw_stage_prog_data_free(const void *prog_data);
 
 void
