@@ -117,7 +117,3 @@ void brw_copy_from_indirect(struct brw_codegen *p,
       brw_MOV(p, byte_offset(dst, delta+16), deref_4f(ptr, delta+16));
    }
 }
-
-
-
-

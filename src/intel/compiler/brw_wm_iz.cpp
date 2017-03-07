@@ -166,4 +166,3 @@ void fs_visitor::setup_fs_payload_gen4()
 
    payload.num_regs = reg;
 }
-
