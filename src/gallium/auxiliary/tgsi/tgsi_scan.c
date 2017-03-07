@@ -87,6 +87,8 @@ computes_derivative(unsigned opcode)
       return opcode != TGSI_OPCODE_TG4 &&
              opcode != TGSI_OPCODE_TXD &&
              opcode != TGSI_OPCODE_TXF &&
+             opcode != TGSI_OPCODE_TXF_LZ &&
+             opcode != TGSI_OPCODE_TEX_LZ &&
              opcode != TGSI_OPCODE_TXL &&
              opcode != TGSI_OPCODE_TXL2 &&
              opcode != TGSI_OPCODE_TXQ &&

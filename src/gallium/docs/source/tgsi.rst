@@ -755,6 +755,29 @@ This instruction replicates its result.
   dst = src0.x \times src1.x + src0.y \times src1.y
 
 
+.. opcode:: TEX_LZ - Texture Lookup With LOD = 0
+
+  This is the same as TXL with LOD = 0. Like every texture opcode, it obeys
+  pipe_sampler_view::u.tex.first_level and pipe_sampler_state::min_lod.
+  There is no way to override those two in shaders.
+
+.. math::
+
+  coord.x = src0.x
+
+  coord.y = src0.y
+
+  coord.z = src0.z
+
+  coord.w = none
+
+  lod = 0
+
+  unit = src1
+
+  dst = texture\_sample(unit, coord, lod)
+
+
 .. opcode:: TXL - Texture Lookup With explicit LOD
 
   for cube map array textures, the explicit lod value
@@ -918,8 +941,16 @@ XXX doesn't look like most of the opcodes really belong here.
   four-component signed integer vector used to identify the single texel
   accessed. 3 components + level.  Just like texture instructions, an optional
   offset vector is provided, which is subject to various driver restrictions
-  (regarding range, source of offsets).
+  (regarding range, source of offsets). This instruction ignores the sampler
+  state.
+
   TXF(uint_vec coord, int_vec offset).
+
+
+.. opcode:: TXF_LZ - Texel Fetch
+
+  This is the same as TXF with level = 0. Like TXF, it obeys
+  pipe_sampler_view::u.tex.first_level.
 
 
 .. opcode:: TXQ - Texture Size Query
