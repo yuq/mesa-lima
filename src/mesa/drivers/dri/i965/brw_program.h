@@ -80,8 +80,6 @@ bool brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog);
 bool brw_cs_precompile(struct gl_context *ctx, struct gl_program *prog);
 
 GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
-struct gl_linked_shader *brw_new_shader(gl_shader_stage stage);
-
 
 void brw_upload_tcs_prog(struct brw_context *brw);
 void brw_tcs_populate_key(struct brw_context *brw,
