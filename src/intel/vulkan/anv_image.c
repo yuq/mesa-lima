@@ -191,13 +191,13 @@ make_surface(const struct anv_device *dev,
       if (!(image->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
          /* It will never be used as an attachment, HiZ is pointless. */
       } else if (!env_var_as_boolean("INTEL_VK_HIZ", dev->info.gen >= 8)) {
-         anv_finishme("Implement gen7 HiZ");
+         anv_perf_warn("Implement gen7 HiZ");
       } else if (vk_info->mipLevels > 1) {
-         anv_finishme("Test multi-LOD HiZ");
+         anv_perf_warn("Enable multi-LOD HiZ");
       } else if (vk_info->arrayLayers > 1) {
-         anv_finishme("Implement multi-arrayLayer HiZ clears and resolves");
+         anv_perf_warn("Implement multi-arrayLayer HiZ clears and resolves");
       } else if (dev->info.gen == 8 && vk_info->samples > 1) {
-         anv_finishme("Test gen8 multisampled HiZ");
+         anv_perf_warn("Enable gen8 multisampled HiZ");
       } else {
          assert(image->aux_surface.isl.size == 0);
          ok = isl_surf_get_hiz_surf(&dev->isl_dev, &image->depth_surface.isl,
