@@ -93,10 +93,6 @@ anv_shader_compile_to_nir(struct anv_device *device,
                           gl_shader_stage stage,
                           const VkSpecializationInfo *spec_info)
 {
-   if (strcmp(entrypoint_name, "main") != 0) {
-      anv_finishme("Multiple shaders per module not really supported");
-   }
-
    const struct brw_compiler *compiler =
       device->instance->physicalDevice.compiler;
    const nir_shader_compiler_options *nir_options =
