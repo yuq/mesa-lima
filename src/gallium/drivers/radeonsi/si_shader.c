@@ -4383,7 +4383,9 @@ static void tex_fetch_args(
 		coords[3] = bld_base->base.one;
 
 	/* Pack offsets. */
-	if (has_offset && opcode != TGSI_OPCODE_TXF) {
+	if (has_offset &&
+	    opcode != TGSI_OPCODE_TXF &&
+	    opcode != TGSI_OPCODE_TXF_LZ) {
 		/* The offsets are six-bit signed integers packed like this:
 		 *   X=[5:0], Y=[13:8], and Z=[21:16].
 		 */
@@ -4541,8 +4543,8 @@ static void tex_fetch_args(
 
 		memcpy(txf_address, address, sizeof(txf_address));
 
-		/* Read FMASK using TXF. */
-		inst.Instruction.Opcode = TGSI_OPCODE_TXF;
+		/* Read FMASK using TXF_LZ. */
+		inst.Instruction.Opcode = TGSI_OPCODE_TXF_LZ;
 		inst.Texture.Texture = target;
 		txf_emit_data.inst = &inst;
 		txf_emit_data.chan = 0;
@@ -4593,7 +4595,8 @@ static void tex_fetch_args(
 					final_sample, address[sample_chan], "");
 	}
 
-	if (opcode == TGSI_OPCODE_TXF) {
+	if (opcode == TGSI_OPCODE_TXF ||
+	    opcode == TGSI_OPCODE_TXF_LZ) {
 		/* add tex offsets */
 		if (inst->Texture.NumOffsets) {
 			struct lp_build_context *uint_bld = &bld_base->uint_bld;
@@ -4755,7 +4758,9 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 
 	switch (opcode) {
 	case TGSI_OPCODE_TXF:
-		args.opcode = target == TGSI_TEXTURE_2D_MSAA ||
+	case TGSI_OPCODE_TXF_LZ:
+		args.opcode = opcode == TGSI_OPCODE_TXF_LZ ||
+			      target == TGSI_TEXTURE_2D_MSAA ||
 			      target == TGSI_TEXTURE_2D_ARRAY_MSAA ?
 				      ac_image_load : ac_image_load_mip;
 		args.compare = false;
@@ -4771,6 +4776,9 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	case TGSI_OPCODE_TXP:
 		if (ctx->type != PIPE_SHADER_FRAGMENT)
 			args.level_zero = true;
+		break;
+	case TGSI_OPCODE_TEX_LZ:
+		args.level_zero = true;
 		break;
 	case TGSI_OPCODE_TXB:
 	case TGSI_OPCODE_TXB2:
@@ -6426,11 +6434,13 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_INTERP_OFFSET] = interp_action;
 
 	bld_base->op_actions[TGSI_OPCODE_TEX] = tex_action;
+	bld_base->op_actions[TGSI_OPCODE_TEX_LZ] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TEX2] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXB] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXB2] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXD] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXF] = tex_action;
+	bld_base->op_actions[TGSI_OPCODE_TXF_LZ] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXL] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXL2] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXP] = tex_action;

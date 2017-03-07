@@ -416,6 +416,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
 	case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
 	case PIPE_CAP_DOUBLES:
+	case PIPE_CAP_TGSI_TEX_TXF_LZ:
 		return 1;
 
 	case PIPE_CAP_INT64:
@@ -482,7 +483,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_FBFETCH:
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
 	case PIPE_CAP_UMA:
-	case PIPE_CAP_TGSI_TEX_TXF_LZ:
 		return 0;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
