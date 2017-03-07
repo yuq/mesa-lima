@@ -378,7 +378,7 @@ struct anv_block_pool {
 };
 
 /* Block pools are backed by a fixed-size 2GB memfd */
-#define BLOCK_POOL_MEMFD_SIZE (1ull << 32)
+#define BLOCK_POOL_MEMFD_SIZE (1ul << 31)
 
 /* The center of the block pool is also the middle of the memfd.  This may
  * change in the future if we decide differently for some reason.
