@@ -1230,7 +1230,8 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 	}
 }
 
-void si_get_shader_buffers(struct si_context *sctx, uint shader,
+void si_get_shader_buffers(struct si_context *sctx,
+			   enum pipe_shader_type shader,
 			   uint start_slot, uint count,
 			   struct pipe_shader_buffer *sbuf)
 {
