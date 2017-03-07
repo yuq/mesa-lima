@@ -4372,8 +4372,6 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
          inst = emit_asm(ir, opcode, result_dst, lod_info);
    } else if (opcode == TGSI_OPCODE_TXQS) {
       inst = emit_asm(ir, opcode, result_dst);
-   } else if (opcode == TGSI_OPCODE_TXF) {
-      inst = emit_asm(ir, opcode, result_dst, coord);
    } else if (opcode == TGSI_OPCODE_TXL2 || opcode == TGSI_OPCODE_TXB2) {
       inst = emit_asm(ir, opcode, result_dst, coord, lod_info);
    } else if (opcode == TGSI_OPCODE_TEX2) {
