@@ -45,6 +45,7 @@ EXTRA_DIST += \
 # ----------------------------------------------------------------------------
 
 TEST_LIBS = \
+	$(top_builddir)/src/gtest/libgtest.la \
 	compiler/libintel_compiler.la \
 	common/libintel_common.la \
 	$(top_builddir)/src/compiler/nir/libnir.la \
@@ -69,53 +70,38 @@ check_PROGRAMS += $(COMPILER_TESTS)
 
 compiler_test_fs_cmod_propagation_SOURCES = \
 	compiler/test_fs_cmod_propagation.cpp
-compiler_test_fs_cmod_propagation_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_fs_cmod_propagation_LDADD = $(TEST_LIBS)
 
 compiler_test_fs_copy_propagation_SOURCES = \
 	compiler/test_fs_copy_propagation.cpp
-compiler_test_fs_copy_propagation_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_fs_copy_propagation_LDADD = $(TEST_LIBS)
 
 compiler_test_fs_saturate_propagation_SOURCES = \
 	compiler/test_fs_saturate_propagation.cpp
-compiler_test_fs_saturate_propagation_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_fs_saturate_propagation_LDADD = $(TEST_LIBS)
 
 compiler_test_vf_float_conversions_SOURCES = \
 	compiler/test_vf_float_conversions.cpp
-compiler_test_vf_float_conversions_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_vf_float_conversions_LDADD = $(TEST_LIBS)
 
 compiler_test_vec4_register_coalesce_SOURCES = \
 	compiler/test_vec4_register_coalesce.cpp
-compiler_test_vec4_register_coalesce_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_vec4_register_coalesce_LDADD = $(TEST_LIBS)
 
 compiler_test_vec4_copy_propagation_SOURCES = \
 	compiler/test_vec4_copy_propagation.cpp
-compiler_test_vec4_copy_propagation_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_vec4_copy_propagation_LDADD = $(TEST_LIBS)
 
 compiler_test_vec4_cmod_propagation_SOURCES = \
 	compiler/test_vec4_cmod_propagation.cpp
-compiler_test_vec4_cmod_propagation_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_vec4_cmod_propagation_LDADD = $(TEST_LIBS)
 
+# Strictly speaking this is neither a C++ test nor using gtest - we can address
+# address that at a later point. Until then, this allows us a to simplify things.
 compiler_test_eu_compact_SOURCES = \
-	compiler/test_eu_compact.c
-nodist_EXTRA_compiler_test_eu_compact_SOURCES = dummy.cpp
+	compiler/test_eu_compact.cpp
 compiler_test_eu_compact_LDADD = $(TEST_LIBS)
 
 compiler_test_eu_validate_SOURCES = \
 	compiler/test_eu_validate.cpp
-compiler_test_eu_validate_LDADD = \
-	$(top_builddir)/src/gtest/libgtest.la \
-	$(TEST_LIBS)
+compiler_test_eu_validate_LDADD = $(TEST_LIBS)
