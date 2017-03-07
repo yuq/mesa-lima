@@ -230,6 +230,8 @@ VkResult __vk_errorf(VkResult error, const char *file, int line, const char *for
 
 void __anv_finishme(const char *file, int line, const char *format, ...)
    anv_printflike(3, 4);
+void __anv_perf_warn(const char *file, int line, const char *format, ...)
+   anv_printflike(3, 4);
 void anv_loge(const char *format, ...) anv_printflike(1, 2);
 void anv_loge_v(const char *format, va_list va);
 
@@ -241,6 +243,18 @@ void anv_loge_v(const char *format, va_list va);
       static bool reported = false; \
       if (!reported) { \
          __anv_finishme(__FILE__, __LINE__, format, ##__VA_ARGS__); \
+         reported = true; \
+      } \
+   } while (0)
+
+/**
+ * Print a perf warning message.  Set INTEL_DEBUG=perf to see these.
+ */
+#define anv_perf_warn(format, ...) \
+   do { \
+      static bool reported = false; \
+      if (!reported && unlikely(INTEL_DEBUG & DEBUG_PERF)) { \
+         __anv_perf_warn(__FILE__, __LINE__, format, ##__VA_ARGS__); \
          reported = true; \
       } \
    } while (0)

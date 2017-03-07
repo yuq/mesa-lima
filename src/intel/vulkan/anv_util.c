@@ -64,6 +64,19 @@ __anv_finishme(const char *file, int line, const char *format, ...)
    fprintf(stderr, "%s:%d: FINISHME: %s\n", file, line, buffer);
 }
 
+void anv_printflike(3, 4)
+__anv_perf_warn(const char *file, int line, const char *format, ...)
+{
+   va_list ap;
+   char buffer[256];
+
+   va_start(ap, format);
+   vsnprintf(buffer, sizeof(buffer), format, ap);
+   va_end(ap);
+
+   fprintf(stderr, "%s:%d: PERF: %s\n", file, line, buffer);
+}
+
 VkResult
 __vk_errorf(VkResult error, const char *file, int line, const char *format, ...)
 {
