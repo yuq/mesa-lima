@@ -1823,7 +1823,7 @@ void radv_CmdBindDescriptorSets(
 		radv_bind_descriptor_set(cmd_buffer, set, idx);
 
 		for(unsigned j = 0; j < set->layout->dynamic_offset_count; ++j, ++dyn_idx) {
-			unsigned idx = j + layout->set[i].dynamic_offset_start;
+			unsigned idx = j + layout->set[i + firstSet].dynamic_offset_start;
 			uint32_t *dst = cmd_buffer->dynamic_buffers + idx * 4;
 			assert(dyn_idx < dynamicOffsetCount);
 
