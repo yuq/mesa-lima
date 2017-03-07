@@ -31,7 +31,6 @@
 #include "main/macros.h"
 #include "brw_eu.h"
 #include "brw_fs.h"
-#include "brw_cs.h"
 #include "brw_nir.h"
 #include "brw_vec4_gs_visitor.h"
 #include "brw_cfg.h"
