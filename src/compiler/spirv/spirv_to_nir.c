@@ -1149,6 +1149,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                               glsl_get_bit_size(v1->type->type);
 
          assert(bit_size == bit_size0 && bit_size == bit_size1);
+         (void)bit_size0; (void)bit_size1;
 
          if (bit_size == 64) {
             uint64_t u64[8];
