@@ -34,7 +34,7 @@
 
 #include "pipe/p_compiler.h"
 #include "os/os_thread.h"
-#include "u_string.h"
+#include "util/u_string.h"
 
 #include "u_debug.h"
 #include "u_debug_symbol.h"

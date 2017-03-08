@@ -26,7 +26,7 @@
 
 #include "u_queue.h"
 #include "u_memory.h"
-#include "u_string.h"
+#include "util/u_string.h"
 
 static void util_queue_killall_and_wait(struct util_queue *queue);
 

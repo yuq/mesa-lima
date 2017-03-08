@@ -290,7 +290,6 @@ C_SOURCES := \
 	util/u_simple_shaders.h \
 	util/u_split_prim.h \
 	util/u_sse.h \
-	util/u_string.h \
 	util/u_suballoc.c \
 	util/u_suballoc.h \
 	util/u_surface.c \
