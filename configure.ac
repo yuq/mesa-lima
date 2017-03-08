@@ -1786,9 +1786,8 @@ if test -n "$with_vulkan_drivers"; then
     for driver in $VULKAN_DRIVERS; do
         case "x$driver" in
         xintel)
-            if test "x$HAVE_I965_DRI" != xyes; then
-                AC_MSG_ERROR([Intel Vulkan driver requires the i965 dri driver])
-            fi
+            require_libdrm "i965"
+            PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             HAVE_INTEL_VULKAN=yes
 
             ;;
