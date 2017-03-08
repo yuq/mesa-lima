@@ -82,7 +82,7 @@ build_resolve_compute_shader(struct radv_device *dev, bool is_integer, int sampl
 	nir_ssa_dest_init(&dst_offset->instr, &dst_offset->dest, 2, 32, "dst_offset");
 	nir_builder_instr_insert(&b, &dst_offset->instr);
 
-	nir_ssa_def *img_coord = nir_iadd(&b, global_id, &src_offset->dest.ssa);
+	nir_ssa_def *img_coord = nir_channels(&b, nir_iadd(&b, global_id, &src_offset->dest.ssa), 0x3);
 	/* do a txf_ms on each sample */
 	nir_ssa_def *tmp;
 
