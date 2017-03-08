@@ -133,6 +133,7 @@ enum {
    PIPE_POLYGON_MODE_FILL,
    PIPE_POLYGON_MODE_LINE,
    PIPE_POLYGON_MODE_POINT,
+   PIPE_POLYGON_MODE_FILL_RECTANGLE,
 };
 
 /** Polygon face specification, eg for culling */
