@@ -2517,6 +2517,9 @@ void genX(CmdNextSubpass)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
+
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
