@@ -1465,13 +1465,19 @@ radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			flush_bits |= RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 			break;
 		case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+			              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 			break;
 		case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB;
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+			              RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 			break;
 		case VK_ACCESS_TRANSFER_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+			              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
+			              RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+			              RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
+			              RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 			break;
 		default:
 			break;
