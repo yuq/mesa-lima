@@ -1170,14 +1170,13 @@ emit_find_msb_using_lzd(const vec4_builder &bld,
 
 void
 vec4_visitor::emit_conversion_from_double(dst_reg dst, src_reg src,
-                                          bool saturate,
-                                          brw_reg_type single_type)
+                                          bool saturate)
 {
    /* BDW PRM vol 15 - workarounds:
     * DF->f format conversion for Align16 has wrong emask calculation when
     * source is immediate.
     */
-   if (devinfo->gen == 8 && single_type == BRW_REGISTER_TYPE_F &&
+   if (devinfo->gen == 8 && dst.type == BRW_REGISTER_TYPE_F &&
        src.file == BRW_IMMEDIATE_VALUE) {
       vec4_instruction *inst = emit(MOV(dst, brw_imm_f(src.df)));
       inst->saturate = saturate;
@@ -1188,7 +1187,7 @@ vec4_visitor::emit_conversion_from_double(dst_reg dst, src_reg src,
    emit(MOV(temp, src));
 
    dst_reg temp2 = dst_reg(this, glsl_type::dvec4_type);
-   temp2 = retype(temp2, single_type);
+   temp2 = retype(temp2, dst.type);
    emit(VEC4_OPCODE_FROM_DOUBLE, temp2, src_reg(temp))
       ->size_written = 2 * REG_SIZE;
 
@@ -1198,12 +1197,11 @@ vec4_visitor::emit_conversion_from_double(dst_reg dst, src_reg src,
 
 void
 vec4_visitor::emit_conversion_to_double(dst_reg dst, src_reg src,
-                                        bool saturate,
-                                        brw_reg_type single_type)
+                                        bool saturate)
 {
    dst_reg tmp_dst = dst_reg(src_reg(this, glsl_type::dvec4_type));
-   src_reg tmp_src = retype(src_reg(this, glsl_type::vec4_type), single_type);
-   emit(MOV(dst_reg(tmp_src), retype(src, single_type)));
+   src_reg tmp_src = retype(src_reg(this, glsl_type::vec4_type), src.type);
+   emit(MOV(dst_reg(tmp_src), src));
    emit(VEC4_OPCODE_TO_DOUBLE, tmp_dst, tmp_src);
    vec4_instruction *inst = emit(MOV(dst, src_reg(tmp_dst)));
    inst->saturate = saturate;
@@ -1301,27 +1299,21 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_d2f:
-      emit_conversion_from_double(dst, op[0], instr->dest.saturate,
-                                  BRW_REGISTER_TYPE_F);
+      emit_conversion_from_double(dst, op[0], instr->dest.saturate);
       break;
 
    case nir_op_f2d:
-      emit_conversion_to_double(dst, op[0], instr->dest.saturate,
-                                BRW_REGISTER_TYPE_F);
+      emit_conversion_to_double(dst, op[0], instr->dest.saturate);
       break;
 
    case nir_op_d2i:
    case nir_op_d2u:
-      emit_conversion_from_double(dst, op[0], instr->dest.saturate,
-                                  instr->op == nir_op_d2i ? BRW_REGISTER_TYPE_D :
-                                                            BRW_REGISTER_TYPE_UD);
+      emit_conversion_from_double(dst, op[0], instr->dest.saturate);
       break;
 
    case nir_op_i2d:
    case nir_op_u2d:
-      emit_conversion_to_double(dst, op[0], instr->dest.saturate,
-                                instr->op == nir_op_i2d ? BRW_REGISTER_TYPE_D :
-                                                          BRW_REGISTER_TYPE_UD);
+      emit_conversion_to_double(dst, op[0], instr->dest.saturate);
       break;
 
    case nir_op_iadd:
@@ -1968,8 +1960,9 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
          inst->predicate = BRW_PREDICATE_NORMAL;
 
          /* Now convert the result from float to double */
-         emit_conversion_to_double(dst, src_reg(tmp), instr->dest.saturate,
-                                   BRW_REGISTER_TYPE_F);
+         emit_conversion_to_double(dst, retype(src_reg(tmp),
+                                               BRW_REGISTER_TYPE_F),
+                                   instr->dest.saturate);
       }
       break;
 
