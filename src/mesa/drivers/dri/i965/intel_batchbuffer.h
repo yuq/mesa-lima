@@ -38,7 +38,6 @@ extern "C" {
 
 struct intel_batchbuffer;
 
-void intel_batchbuffer_emit_render_ring_prelude(struct brw_context *brw);
 void intel_batchbuffer_init(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
                             bool has_llc);
 void intel_batchbuffer_free(struct intel_batchbuffer *batch);

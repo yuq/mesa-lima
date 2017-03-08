@@ -134,9 +134,6 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
     * brw->batch.ring to UNKNOWN_RING, so we need to set it here at the end.
     */
    brw->batch.ring = ring;
-
-   if (unlikely(prev_ring == UNKNOWN_RING && ring == RENDER_RING))
-      intel_batchbuffer_emit_render_ring_prelude(brw);
 }
 
 static void
@@ -177,12 +174,6 @@ do_batch_dump(struct brw_context *brw)
 
       brw_debug_batch(brw);
    }
-}
-
-void
-intel_batchbuffer_emit_render_ring_prelude(struct brw_context *brw)
-{
-   /* Un-used currently */
 }
 
 /**
