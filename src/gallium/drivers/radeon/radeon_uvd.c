@@ -1354,7 +1354,7 @@ static unsigned bank_wh(unsigned bankwh)
 void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
 			  struct radeon_surf *chroma)
 {
-	msg->body.decode.dt_pitch = luma->level[0].nblk_x * luma->bpe;
+	msg->body.decode.dt_pitch = luma->level[0].nblk_x;
 	switch (luma->level[0].mode) {
 	case RADEON_SURF_MODE_LINEAR_ALIGNED:
 		msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
