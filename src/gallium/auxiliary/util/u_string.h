@@ -179,25 +179,6 @@ util_strstr(const char *haystack, const char *needle)
    return NULL;
 }
 
-static inline void *
-util_memmove(void *dest, const void *src, size_t n)
-{
-   char *p = (char *)dest;
-   const char *q = (const char *)src;
-   if (dest < src) {
-      while (n--)
-	 *p++ = *q++;
-   }
-   else
-   {
-      p += n;
-      q += n;
-      while (n--)
-	 *--p = *--q;
-   }
-   return dest;
-}
-
 
 #define util_strcasecmp stricmp
 
@@ -212,7 +193,6 @@ util_memmove(void *dest, const void *src, size_t n)
 #define util_strncmp strncmp
 #define util_strncat strncat
 #define util_strstr strstr
-#define util_memmove memmove
 #define util_strcasecmp strcasecmp
 
 #endif
