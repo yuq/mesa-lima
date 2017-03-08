@@ -46,11 +46,23 @@ AM_CFLAGS = \
 AM_CXXFLAGS = $(AM_CFLAGS)
 
 I965_PERGEN_LIBS = \
+	libi965_gen4.la \
+	libi965_gen45.la \
+	libi965_gen5.la \
 	libi965_gen6.la \
 	libi965_gen7.la \
 	libi965_gen75.la \
 	libi965_gen8.la \
 	libi965_gen9.la
+
+libi965_gen4_la_SOURCES = $(i965_gen4_FILES)
+libi965_gen4_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=40
+
+libi965_gen45_la_SOURCES = $(i965_gen45_FILES)
+libi965_gen45_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=45
+
+libi965_gen5_la_SOURCES = $(i965_gen5_FILES)
+libi965_gen5_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=50
 
 libi965_gen6_la_SOURCES = $(i965_gen6_FILES)
 libi965_gen6_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=60
