@@ -2018,8 +2018,10 @@ if test "x$enable_opencl" = xyes; then
                     PKG_CONFIG_PATH environment variable.
                     By default libclc.pc is installed to /usr/local/share/pkgconfig/])
     else
-        PKG_CHECK_VAR([LIBCLC_INCLUDEDIR], [libclc], [includedir])
-        PKG_CHECK_VAR([LIBCLC_LIBEXECDIR], [libclc], [libexecdir])
+        LIBCLC_INCLUDEDIR=`$PKG_CONFIG --variable=includedir libclc`
+        LIBCLC_LIBEXECDIR=`$PKG_CONFIG --variable=libexecdir libclc`
+        AC_SUBST([LIBCLC_INCLUDEDIR])
+        AC_SUBST([LIBCLC_LIBEXECDIR])
     fi
 
     gallium_st="$gallium_st clover"
