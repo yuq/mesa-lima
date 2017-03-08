@@ -1488,7 +1488,8 @@ radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 
 static enum radv_cmd_flush_bits
 radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
-                      VkAccessFlags dst_flags)
+                      VkAccessFlags dst_flags,
+                      struct radv_image *image)
 {
 	enum radv_cmd_flush_bits flush_bits = 0;
 	uint32_t b;
@@ -1508,12 +1509,16 @@ radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			              RADV_CMD_FLAG_INV_GLOBAL_L2;
 			break;
 		case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
-			              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+			/* TODO: change to image && when the image gets passed
+			 * through from the subpass. */
+			if (!image || (image->usage & VK_IMAGE_USAGE_STORAGE_BIT))
+				flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+				              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 			break;
 		case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
-			              RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
+			if (!image || (image->usage & VK_IMAGE_USAGE_STORAGE_BIT))
+				flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+				              RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 			break;
 		default:
 			break;
@@ -1526,7 +1531,8 @@ static void radv_subpass_barrier(struct radv_cmd_buffer *cmd_buffer, const struc
 {
 	cmd_buffer->state.flush_bits |= radv_src_access_flush(cmd_buffer, barrier->src_access_mask);
 	radv_stage_flush(cmd_buffer, barrier->src_stage_mask);
-	cmd_buffer->state.flush_bits |= radv_dst_access_flush(cmd_buffer, barrier->dst_access_mask);
+	cmd_buffer->state.flush_bits |= radv_dst_access_flush(cmd_buffer, barrier->dst_access_mask,
+	                                                      NULL);
 }
 
 static void radv_handle_subpass_image_transition(struct radv_cmd_buffer *cmd_buffer,
@@ -2905,17 +2911,21 @@ void radv_CmdPipelineBarrier(
 
 	for (uint32_t i = 0; i < memoryBarrierCount; i++) {
 		src_flush_bits |= radv_src_access_flush(cmd_buffer, pMemoryBarriers[i].srcAccessMask);
-		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pMemoryBarriers[i].dstAccessMask);
+		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pMemoryBarriers[i].dstAccessMask,
+		                                        NULL);
 	}
 
 	for (uint32_t i = 0; i < bufferMemoryBarrierCount; i++) {
 		src_flush_bits |= radv_src_access_flush(cmd_buffer, pBufferMemoryBarriers[i].srcAccessMask);
-		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pBufferMemoryBarriers[i].dstAccessMask);
+		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pBufferMemoryBarriers[i].dstAccessMask,
+		                                        NULL);
 	}
 
 	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
+		RADV_FROM_HANDLE(radv_image, image, pImageMemoryBarriers[i].image);
 		src_flush_bits |= radv_src_access_flush(cmd_buffer, pImageMemoryBarriers[i].srcAccessMask);
-		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pImageMemoryBarriers[i].dstAccessMask);
+		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pImageMemoryBarriers[i].dstAccessMask,
+		                                        image);
 	}
 
 	cmd_buffer->state.flush_bits |= src_flush_bits;
