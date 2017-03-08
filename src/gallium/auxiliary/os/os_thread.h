@@ -258,28 +258,12 @@ pipe_tsd_set(pipe_tsd *tsd, void *value)
  * Thread statistics.
  */
 
-/* Return the time of a thread's CPU time clock. */
-static inline int64_t
-pipe_thread_get_time_nano(thrd_t thread)
-{
-#if defined(PIPE_OS_LINUX) && defined(HAVE_PTHREAD)
-   struct timespec ts;
-   clockid_t cid;
-
-   pthread_getcpuclockid(thread, &cid);
-   clock_gettime(cid, &ts);
-   return (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
-#else
-   return 0;
-#endif
-}
-
 /* Return the time of the current thread's CPU time clock. */
 static inline int64_t
 pipe_current_thread_get_time_nano(void)
 {
 #if defined(HAVE_PTHREAD)
-   return pipe_thread_get_time_nano(pthread_self());
+   return u_thread_get_time_nano(pthread_self());
 #else
    return 0;
 #endif
