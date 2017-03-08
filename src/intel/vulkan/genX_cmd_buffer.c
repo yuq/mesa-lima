@@ -620,6 +620,9 @@ genX(EndCommandBuffer)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return cmd_buffer->batch.status;
+
    /* We want every command buffer to start with the PMA fix in a known state,
     * so we disable it at the end of the command buffer.
     */
