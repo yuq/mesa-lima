@@ -33,8 +33,10 @@
 #ifndef U_QUEUE_H
 #define U_QUEUE_H
 
-#include "os/os_thread.h"
+#include <string.h>
+
 #include "util/list.h"
+#include "util/u_thread.h"
 
 /* Job completion fence.
  * Put this into your job structure.

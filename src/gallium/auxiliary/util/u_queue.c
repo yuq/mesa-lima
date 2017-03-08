@@ -144,7 +144,7 @@ util_queue_thread_func(void *input)
    if (queue->name) {
       char name[16];
       util_snprintf(name, sizeof(name), "%s:%i", queue->name, thread_index);
-      pipe_thread_setname(name);
+      u_thread_setname(name);
    }
 
    while (1) {
@@ -226,7 +226,7 @@ util_queue_init(struct util_queue *queue,
       input->queue = queue;
       input->thread_index = i;
 
-      queue->threads[i] = pipe_thread_create(util_queue_thread_func, input);
+      queue->threads[i] = u_thread_create(util_queue_thread_func, input);
 
       if (!queue->threads[i]) {
          free(input);
@@ -327,5 +327,5 @@ util_queue_get_thread_time_nano(struct util_queue *queue, unsigned thread_index)
    if (thread_index >= queue->num_threads)
       return 0;
 
-   return pipe_thread_get_time_nano(queue->threads[thread_index]);
+   return u_thread_get_time_nano(queue->threads[thread_index]);
 }
