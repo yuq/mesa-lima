@@ -45,6 +45,7 @@ MESA_UTIL_FILES :=	\
 	u_atomic.h \
 	u_endian.h \
 	u_string.h \
+	u_thread.h \
 	u_vector.c \
 	u_vector.h \
 	vk_alloc.h \
