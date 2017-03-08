@@ -41,6 +41,7 @@
 
 #include "util/crc32.h"
 #include "util/u_atomic.h"
+#include "util/u_queue.h"
 #include "util/mesa-sha1.h"
 #include "util/ralloc.h"
 #include "main/errors.h"
@@ -59,6 +60,9 @@
 struct disk_cache {
    /* The path to the cache directory. */
    char *path;
+
+   /* Thread queue for compressing and writing cache entries to disk */
+   struct util_queue cache_queue;
 
    /* A pointer to the mmapped index file within the cache directory. */
    uint8_t *index_mmap;
@@ -377,6 +381,14 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
 
    cache->max_size = max_size;
 
+   /* A limit of 32 jobs was choosen as observations of Deus Ex start-up times
+    * showed that we reached at most 11 jobs on an Intel i5-6400 CPU@2.70GHz
+    * (a fairly modest desktop CPU). 1 thread was chosen because we don't
+    * really care about getting things to disk quickly just that it's not
+    * blocking other tasks.
+    */
+   util_queue_init(&cache->cache_queue, "disk_cache", 32, 1);
+
    ralloc_free(local);
 
    return cache;
@@ -394,8 +406,10 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
 void
 disk_cache_destroy(struct disk_cache *cache)
 {
-   if (cache)
+   if (cache) {
+      util_queue_destroy(&cache->cache_queue);
       munmap(cache->index_mmap, cache->index_mmap_size);
+   }
 
    ralloc_free(cache);
 }
