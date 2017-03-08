@@ -643,8 +643,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    switch (instr->op) {
    case nir_op_i2f:
    case nir_op_u2f:
-   case nir_op_i642d:
-   case nir_op_u642d:
       if (optimize_extract_to_float(instr, result))
          return;
       inst = bld.MOV(result, op[0]);
@@ -678,13 +676,14 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
          break;
       }
       /* fallthrough */
+   case nir_op_i642d:
+   case nir_op_u642d:
    case nir_op_f2i64:
    case nir_op_f2u64:
    case nir_op_i2i64:
    case nir_op_i2u64:
    case nir_op_u2i64:
    case nir_op_u2u64:
-   case nir_op_b2i64:
    case nir_op_d2f:
    case nir_op_d2i:
    case nir_op_d2u:
@@ -694,17 +693,10 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_i2i32:
    case nir_op_u2u32:
    case nir_op_i2u32:
-      if (instr->op == nir_op_b2i64) {
-         bld.MOV(result, negate(op[0]));
-      } else {
-         inst = bld.MOV(result, op[0]);
-         inst->saturate = instr->dest.saturate;
-      }
-      break;
-
    case nir_op_f2i:
    case nir_op_f2u:
-      bld.MOV(result, op[0]);
+      inst = bld.MOV(result, op[0]);
+      inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fsign: {
@@ -1085,40 +1077,43 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_b2i64:
    case nir_op_b2i:
    case nir_op_b2f:
       bld.MOV(result, negate(op[0]));
       break;
 
-   case nir_op_f2b:
-      bld.CMP(result, op[0], brw_imm_f(0.0f), BRW_CONDITIONAL_NZ);
-      break;
-
-   case nir_op_i642b:
-   case nir_op_d2b: {
-      /* two-argument instructions can't take 64-bit immediates */
-      fs_reg zero;
-      fs_reg tmp;
-
-      if (instr->op == nir_op_d2b) {
-         zero = vgrf(glsl_type::double_type);
-         tmp = vgrf(glsl_type::double_type);
-      } else {
-         zero = vgrf(glsl_type::int64_t_type);
-         tmp = vgrf(glsl_type::int64_t_type);
-      }
-
-      bld.MOV(zero, setup_imm_df(bld, 0.0));
-      /* A SIMD16 execution needs to be split in two instructions, so use
-       * a vgrf instead of the flag register as dst so instruction splitting
-       * works
-       */
-      bld.CMP(tmp, op[0], zero, BRW_CONDITIONAL_NZ);
-      bld.MOV(result, subscript(tmp, BRW_REGISTER_TYPE_UD, 0));
-      break;
-   }
    case nir_op_i2b:
-      bld.CMP(result, op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ);
+   case nir_op_f2b:
+   case nir_op_i642b:
+   case nir_op_d2b:
+      if (nir_src_bit_size(instr->src[0].src) == 64) {
+         /* two-argument instructions can't take 64-bit immediates */
+         fs_reg zero;
+         fs_reg tmp;
+
+         if (instr->op == nir_op_d2b) {
+            zero = vgrf(glsl_type::double_type);
+            tmp = vgrf(glsl_type::double_type);
+         } else {
+            zero = vgrf(glsl_type::int64_t_type);
+            tmp = vgrf(glsl_type::int64_t_type);
+         }
+
+         bld.MOV(zero, setup_imm_df(bld, 0.0));
+         /* A SIMD16 execution needs to be split in two instructions, so use
+          * a vgrf instead of the flag register as dst so instruction splitting
+          * works
+          */
+         bld.CMP(tmp, op[0], zero, BRW_CONDITIONAL_NZ);
+         bld.MOV(result, subscript(tmp, BRW_REGISTER_TYPE_UD, 0));
+      } else {
+         if (instr->op == nir_op_f2b) {
+            bld.CMP(result, op[0], brw_imm_f(0.0f), BRW_CONDITIONAL_NZ);
+         } else {
+            bld.CMP(result, op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ);
+         }
+      }
       break;
 
    case nir_op_ftrunc:
