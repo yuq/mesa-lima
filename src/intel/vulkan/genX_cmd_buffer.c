@@ -406,8 +406,9 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                       sizeof(state->attachments[0]),
                                  8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (state->attachments == NULL) {
-      /* FIXME: Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
-      return VK_ERROR_OUT_OF_HOST_MEMORY;
+      /* Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
+      return anv_batch_set_error(&cmd_buffer->batch,
+                                 VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
    bool need_null_state = false;
@@ -2504,7 +2505,14 @@ void genX(CmdBeginRenderPass)(
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
    cmd_buffer->state.render_area = pRenderPassBegin->renderArea;
-   genX(cmd_buffer_setup_attachments)(cmd_buffer, pass, pRenderPassBegin);
+   VkResult result =
+      genX(cmd_buffer_setup_attachments)(cmd_buffer, pass, pRenderPassBegin);
+
+   /* If we failed to setup the attachments we should not try to go further */
+   if (result != VK_SUCCESS) {
+      assert(anv_batch_has_error(&cmd_buffer->batch));
+      return;
+   }
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
