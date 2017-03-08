@@ -154,23 +154,6 @@ set_tex_image(struct gl_texture_object *tObj,
 
 
 /**
- * Allocate a texture image structure.
- *
- * Called via ctx->Driver.NewTextureImage() unless overriden by a device
- * driver.
- *
- * \return a pointer to gl_texture_image struct with all fields initialized to
- * zero.
- */
-struct gl_texture_image *
-_mesa_new_texture_image( struct gl_context *ctx )
-{
-   (void) ctx;
-   return CALLOC_STRUCT(gl_texture_image);
-}
-
-
-/**
  * Free a gl_texture_image and associated data.
  * This function is a fallback called via ctx->Driver.DeleteTextureImage().
  *
