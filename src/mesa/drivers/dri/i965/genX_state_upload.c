@@ -30,6 +30,9 @@
 #include "brw_state.h"
 
 #include "intel_batchbuffer.h"
+#include "intel_fbo.h"
+
+#include "main/stencil.h"
 
 UNUSED static void *
 emit_dwords(struct brw_context *brw, unsigned n)
@@ -108,8 +111,104 @@ __gen_combine_address(struct brw_context *brw, void *location,
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 
 /* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_depth_stencil_state)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_BUFFERS */
+   struct intel_renderbuffer *depth_irb =
+      intel_get_renderbuffer(ctx->DrawBuffer, BUFFER_DEPTH);
+
+   /* _NEW_DEPTH */
+   struct gl_depthbuffer_attrib *depth = &ctx->Depth;
+
+   /* _NEW_STENCIL */
+   struct gl_stencil_attrib *stencil = &ctx->Stencil;
+   const int b = stencil->_BackFace;
+
+#if GEN_GEN >= 8
+   brw_batch_emit(brw, GENX(3DSTATE_WM_DEPTH_STENCIL), wmds) {
+#else
+   uint32_t ds_offset;
+   brw_state_emit(brw, GENX(DEPTH_STENCIL_STATE), 64, &ds_offset, wmds) {
+#endif
+      if (depth->Test && depth_irb) {
+         wmds.DepthTestEnable = true;
+         wmds.DepthBufferWriteEnable = brw_depth_writes_enabled(brw);
+         wmds.DepthTestFunction = intel_translate_compare_func(depth->Func);
+      }
+
+      if (stencil->_Enabled) {
+         wmds.StencilTestEnable = true;
+         wmds.StencilWriteMask = stencil->WriteMask[0] & 0xff;
+         wmds.StencilTestMask = stencil->ValueMask[0] & 0xff;
+
+         wmds.StencilTestFunction =
+            intel_translate_compare_func(stencil->Function[0]);
+         wmds.StencilFailOp =
+            intel_translate_stencil_op(stencil->FailFunc[0]);
+         wmds.StencilPassDepthPassOp =
+            intel_translate_stencil_op(stencil->ZPassFunc[0]);
+         wmds.StencilPassDepthFailOp =
+            intel_translate_stencil_op(stencil->ZFailFunc[0]);
+
+         wmds.StencilBufferWriteEnable = stencil->_WriteEnabled;
+
+         if (stencil->_TestTwoSide) {
+            wmds.DoubleSidedStencilEnable = true;
+            wmds.BackfaceStencilWriteMask = stencil->WriteMask[b] & 0xff;
+            wmds.BackfaceStencilTestMask = stencil->ValueMask[b] & 0xff;
+
+            wmds.BackfaceStencilTestFunction =
+               intel_translate_compare_func(stencil->Function[b]);
+            wmds.BackfaceStencilFailOp =
+               intel_translate_stencil_op(stencil->FailFunc[b]);
+            wmds.BackfaceStencilPassDepthPassOp =
+               intel_translate_stencil_op(stencil->ZPassFunc[b]);
+            wmds.BackfaceStencilPassDepthFailOp =
+               intel_translate_stencil_op(stencil->ZFailFunc[b]);
+         }
+
+#if GEN_GEN >= 9
+         wmds.StencilReferenceValue = _mesa_get_stencil_ref(ctx, 0);
+         wmds.BackfaceStencilReferenceValue = _mesa_get_stencil_ref(ctx, b);
+#endif
+      }
+   }
+
+#if GEN_GEN == 6
+   brw_batch_emit(brw, GENX(3DSTATE_CC_STATE_POINTERS), ptr) {
+      ptr.PointertoDEPTH_STENCIL_STATE = ds_offset;
+      ptr.DEPTH_STENCIL_STATEChange = true;
+   }
+#elif GEN_GEN == 7
+   brw_batch_emit(brw, GENX(3DSTATE_DEPTH_STENCIL_STATE_POINTERS), ptr) {
+      ptr.PointertoDEPTH_STENCIL_STATE = ds_offset;
+   }
+#endif
+}
+
+static const struct brw_tracked_state genX(depth_stencil_state) = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS |
+              _NEW_DEPTH |
+              _NEW_STENCIL,
+      .brw  = BRW_NEW_BLORP |
+              (GEN_GEN >= 8 ? BRW_NEW_CONTEXT
+                            : BRW_NEW_BATCH |
+                              BRW_NEW_STATE_BASE_ADDRESS),
+   },
+   .emit = genX(upload_depth_stencil_state),
+};
+
+/* ---------------------------------------------------------------------- */
+
+#endif
 
 void
 genX(init_atoms)(struct brw_context *brw)
@@ -250,7 +349,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_urb,
       &gen6_blend_state,		/* must do before cc unit */
       &gen6_color_calc_state,	/* must do before cc unit */
-      &gen6_depth_stencil_state,	/* must do before cc unit */
+      &genX(depth_stencil_state),	/* must do before cc unit */
 
       &brw_vs_image_surfaces, /* Before vs push/pull constants and binding table */
       &brw_tcs_image_surfaces, /* Before tcs push/pull constants and binding table */
@@ -398,7 +497,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen8_ps_blend,
       &gen8_ps_extra,
       &gen8_ps_state,
-      &gen8_wm_depth_stencil,
+      &genX(depth_stencil_state),
       &gen8_wm_state,
 
       &gen6_scissor_state,

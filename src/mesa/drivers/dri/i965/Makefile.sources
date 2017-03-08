@@ -80,7 +80,6 @@ i965_FILES = \
 	gen6_clip_state.c \
 	gen6_constant_state.c \
 	gen6_depth_state.c \
-	gen6_depthstencil.c \
 	gen6_gs_state.c \
 	gen6_multisample_state.c \
 	gen6_queryobj.c \
@@ -119,7 +118,6 @@ i965_FILES = \
 	gen8_surface_state.c \
 	gen8_viewport_state.c \
 	gen8_vs_state.c \
-	gen8_wm_depth_stencil.c \
 	hsw_queryobj.c \
 	hsw_sol.c \
 	intel_batchbuffer.c \
