@@ -680,9 +680,9 @@ nir_alu_type_get_base_type(nir_alu_type type)
 }
 
 static inline nir_alu_type
-nir_get_nir_type_for_glsl_type(const struct glsl_type *type)
+nir_get_nir_type_for_glsl_base_type(enum glsl_base_type base_type)
 {
-   switch (glsl_get_base_type(type)) {
+   switch (base_type) {
    case GLSL_TYPE_BOOL:
       return nir_type_bool32;
       break;
@@ -707,6 +707,12 @@ nir_get_nir_type_for_glsl_type(const struct glsl_type *type)
    default:
       unreachable("unknown type");
    }
+}
+
+static inline nir_alu_type
+nir_get_nir_type_for_glsl_type(const struct glsl_type *type)
+{
+   return nir_get_nir_type_for_glsl_base_type(glsl_get_base_type(type));
 }
 
 nir_op nir_type_conversion_op(nir_alu_type src, nir_alu_type dst);
