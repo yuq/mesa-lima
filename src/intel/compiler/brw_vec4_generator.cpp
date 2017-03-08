@@ -1961,14 +1961,6 @@ generate_code(struct brw_codegen *p,
          src[0].width = BRW_WIDTH_4;
          brw_MOV(p, spread_dst, src[0]);
 
-         /* As we have set horizontal stride 1 instead of 2 in IVB/BYT, we
-          * need to fix it here to have the expected value.
-          */
-         if (devinfo->gen == 7 && !devinfo->is_haswell)
-            spread_dst = stride(dst, 8, 4, 2);
-
-         brw_MOV(p, dst, spread_dst);
-
          brw_set_default_access_mode(p, BRW_ALIGN_16);
          break;
       }

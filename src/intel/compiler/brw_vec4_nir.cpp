@@ -1191,6 +1191,7 @@ vec4_visitor::emit_conversion_from_double(dst_reg dst, src_reg src,
    emit(VEC4_OPCODE_FROM_DOUBLE, temp2, src_reg(temp))
       ->size_written = 2 * REG_SIZE;
 
+   emit(VEC4_OPCODE_PICK_LOW_32BIT, temp2, src_reg(retype(temp2, BRW_REGISTER_TYPE_DF)));
    vec4_instruction *inst = emit(MOV(dst, src_reg(temp2)));
    inst->saturate = saturate;
 }
