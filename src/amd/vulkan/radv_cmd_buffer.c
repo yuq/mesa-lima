@@ -1497,13 +1497,19 @@ radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			flush_bits |= RADV_CMD_FLAG_INV_VMEM_L1 | RADV_CMD_FLAG_INV_SMEM_L1;
 			break;
 		case VK_ACCESS_SHADER_READ_BIT:
-			flush_bits |= RADV_CMD_FLAG_INV_GLOBAL_L2;
+		case VK_ACCESS_TRANSFER_READ_BIT:
+		case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
+			flush_bits |= RADV_CMD_FLAG_INV_VMEM_L1 |
+			              RADV_CMD_FLAG_INV_GLOBAL_L2;
 			break;
 		case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
-		case VK_ACCESS_TRANSFER_READ_BIT:
-		case VK_ACCESS_TRANSFER_WRITE_BIT:
-		case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
-			flush_bits |= RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER | RADV_CMD_FLAG_INV_GLOBAL_L2;
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+			              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+			break;
+		case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+			              RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
+			break;
 		default:
 			break;
 		}
