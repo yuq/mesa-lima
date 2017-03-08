@@ -2928,6 +2928,7 @@ void radv_CmdPipelineBarrier(
 		                                        image);
 	}
 
+	radv_stage_flush(cmd_buffer, srcStageMask);
 	cmd_buffer->state.flush_bits |= src_flush_bits;
 
 	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
@@ -2942,12 +2943,6 @@ void radv_CmdPipelineBarrier(
 	}
 
 	cmd_buffer->state.flush_bits |= dst_flush_bits;
-
-	/* TODO reduce this */
-	enum radv_cmd_flush_bits flush_bits = RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
-		RADV_CMD_FLAG_PS_PARTIAL_FLUSH;
-
-	cmd_buffer->state.flush_bits |= flush_bits;
 }
 
 
