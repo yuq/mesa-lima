@@ -2536,6 +2536,9 @@ void genX(CmdEndRenderPass)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
+
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
 
    /* Perform transitions to the final layout after all writes have occurred.
