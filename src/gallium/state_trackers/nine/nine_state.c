@@ -163,7 +163,7 @@ nine_csmt_create( struct NineDevice9 *This )
 
     ctx->device = This;
 
-    ctx->worker = pipe_thread_create(nine_csmt_worker, ctx);
+    ctx->worker = u_thread_create(nine_csmt_worker, ctx);
     if (!ctx->worker) {
         nine_queue_delete(ctx->pool);
         FREE(ctx);

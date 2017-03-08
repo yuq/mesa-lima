@@ -857,7 +857,7 @@ rbug_start(struct rbug_screen *rb_screen)
 
    tr_rbug->rb_screen = rb_screen;
    tr_rbug->running = TRUE;
-   tr_rbug->thread = pipe_thread_create(rbug_thread, tr_rbug);
+   tr_rbug->thread = u_thread_create(rbug_thread, tr_rbug);
 
    return tr_rbug;
 }

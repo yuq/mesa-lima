@@ -183,7 +183,7 @@ static uint64_t r600_read_mmio_counter(struct r600_common_screen *rscreen,
 		/* Check again inside the mutex. */
 		if (!rscreen->gpu_load_thread)
 			rscreen->gpu_load_thread =
-				pipe_thread_create(r600_gpu_load_thread, rscreen);
+				u_thread_create(r600_gpu_load_thread, rscreen);
 		mtx_unlock(&rscreen->gpu_load_mutex);
 	}
 

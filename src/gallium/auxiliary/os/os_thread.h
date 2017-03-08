@@ -39,34 +39,8 @@
 
 #include "pipe/p_compiler.h"
 #include "util/u_debug.h" /* for assert */
+#include "util/u_thread.h"
 
-#include "c11/threads.h"
-
-#ifdef HAVE_PTHREAD
-#include <signal.h>
-#endif
-
-
-static inline thrd_t pipe_thread_create(int (*routine)(void *), void *param)
-{
-   thrd_t thread;
-#ifdef HAVE_PTHREAD
-   sigset_t saved_set, new_set;
-   int ret;
-
-   sigfillset(&new_set);
-   pthread_sigmask(SIG_SETMASK, &new_set, &saved_set);
-   ret = thrd_create( &thread, routine, param );
-   pthread_sigmask(SIG_SETMASK, &saved_set, NULL);
-#else
-   int ret;
-   ret = thrd_create( &thread, routine, param );
-#endif
-   if (ret)
-      return 0;
-
-   return thread;
-}
 
 static inline void pipe_thread_setname( const char *name )
 {
