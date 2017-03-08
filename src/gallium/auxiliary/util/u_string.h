@@ -41,7 +41,6 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-#include "pipe/p_compiler.h"
 #include "util/macros.h" // PRINTFLIKE
 
 
