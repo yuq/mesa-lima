@@ -1453,7 +1453,8 @@ static void radv_stage_flush(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
-static void radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
+static enum radv_cmd_flush_bits
+radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 				  VkAccessFlags src_flags)
 {
 	enum radv_cmd_flush_bits flush_bits = 0;
@@ -1476,11 +1477,12 @@ static void radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			break;
 		}
 	}
-	cmd_buffer->state.flush_bits |= flush_bits;
+	return flush_bits;
 }
 
-static void radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
-				  VkAccessFlags dst_flags)
+static enum radv_cmd_flush_bits
+radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
+                      VkAccessFlags dst_flags)
 {
 	enum radv_cmd_flush_bits flush_bits = 0;
 	uint32_t b;
@@ -1506,14 +1508,14 @@ static void radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			break;
 		}
 	}
-	cmd_buffer->state.flush_bits |= flush_bits;
+	return flush_bits;
 }
 
 static void radv_subpass_barrier(struct radv_cmd_buffer *cmd_buffer, const struct radv_subpass_barrier *barrier)
 {
-	radv_src_access_flush(cmd_buffer, barrier->src_access_mask);
+	cmd_buffer->state.flush_bits |= radv_src_access_flush(cmd_buffer, barrier->src_access_mask);
 	radv_stage_flush(cmd_buffer, barrier->src_stage_mask);
-	radv_dst_access_flush(cmd_buffer, barrier->dst_access_mask);
+	cmd_buffer->state.flush_bits |= radv_dst_access_flush(cmd_buffer, barrier->dst_access_mask);
 }
 
 static void radv_handle_subpass_image_transition(struct radv_cmd_buffer *cmd_buffer,
@@ -2887,25 +2889,25 @@ void radv_CmdPipelineBarrier(
 	const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	VkAccessFlags src_flags = 0;
-	VkAccessFlags dst_flags = 0;
+	enum radv_cmd_flush_bits src_flush_bits = 0;
+	enum radv_cmd_flush_bits dst_flush_bits = 0;
 
 	for (uint32_t i = 0; i < memoryBarrierCount; i++) {
-		src_flags |= pMemoryBarriers[i].srcAccessMask;
-		dst_flags |= pMemoryBarriers[i].dstAccessMask;
+		src_flush_bits |= radv_src_access_flush(cmd_buffer, pMemoryBarriers[i].srcAccessMask);
+		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pMemoryBarriers[i].dstAccessMask);
 	}
 
 	for (uint32_t i = 0; i < bufferMemoryBarrierCount; i++) {
-		src_flags |= pBufferMemoryBarriers[i].srcAccessMask;
-		dst_flags |= pBufferMemoryBarriers[i].dstAccessMask;
+		src_flush_bits |= radv_src_access_flush(cmd_buffer, pBufferMemoryBarriers[i].srcAccessMask);
+		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pBufferMemoryBarriers[i].dstAccessMask);
 	}
 
 	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
-		src_flags |= pImageMemoryBarriers[i].srcAccessMask;
-		dst_flags |= pImageMemoryBarriers[i].dstAccessMask;
+		src_flush_bits |= radv_src_access_flush(cmd_buffer, pImageMemoryBarriers[i].srcAccessMask);
+		dst_flush_bits |= radv_dst_access_flush(cmd_buffer, pImageMemoryBarriers[i].dstAccessMask);
 	}
 
-	radv_src_access_flush(cmd_buffer, src_flags);
+	cmd_buffer->state.flush_bits |= src_flush_bits;
 
 	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
 		RADV_FROM_HANDLE(radv_image, image, pImageMemoryBarriers[i].image);
@@ -2918,7 +2920,7 @@ void radv_CmdPipelineBarrier(
 					     0);
 	}
 
-	radv_dst_access_flush(cmd_buffer, dst_flags);
+	cmd_buffer->state.flush_bits |= dst_flush_bits;
 
 	/* TODO reduce this */
 	enum radv_cmd_flush_bits flush_bits = RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
