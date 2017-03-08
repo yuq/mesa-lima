@@ -25,7 +25,6 @@
  */
 
 #include "u_queue.h"
-#include "u_memory.h"
 #include "util/u_string.h"
 
 static void util_queue_killall_and_wait(struct util_queue *queue);
@@ -140,7 +139,7 @@ util_queue_thread_func(void *input)
    struct util_queue *queue = ((struct thread_input*)input)->queue;
    int thread_index = ((struct thread_input*)input)->thread_index;
 
-   FREE(input);
+   free(input);
 
    if (queue->name) {
       char name[16];
@@ -206,7 +205,7 @@ util_queue_init(struct util_queue *queue,
    queue->max_jobs = max_jobs;
 
    queue->jobs = (struct util_queue_job*)
-                 CALLOC(max_jobs, sizeof(struct util_queue_job));
+                 calloc(max_jobs, sizeof(struct util_queue_job));
    if (!queue->jobs)
       goto fail;
 
@@ -216,20 +215,21 @@ util_queue_init(struct util_queue *queue,
    cnd_init(&queue->has_queued_cond);
    cnd_init(&queue->has_space_cond);
 
-   queue->threads = (thrd_t*)CALLOC(num_threads, sizeof(thrd_t));
+   queue->threads = (thrd_t*) calloc(num_threads, sizeof(thrd_t));
    if (!queue->threads)
       goto fail;
 
    /* start threads */
    for (i = 0; i < num_threads; i++) {
-      struct thread_input *input = MALLOC_STRUCT(thread_input);
+      struct thread_input *input =
+         (struct thread_input *) malloc(sizeof(struct thread_input));
       input->queue = queue;
       input->thread_index = i;
 
       queue->threads[i] = pipe_thread_create(util_queue_thread_func, input);
 
       if (!queue->threads[i]) {
-         FREE(input);
+         free(input);
 
          if (i == 0) {
             /* no threads created, fail */
@@ -246,13 +246,13 @@ util_queue_init(struct util_queue *queue,
    return true;
 
 fail:
-   FREE(queue->threads);
+   free(queue->threads);
 
    if (queue->jobs) {
       cnd_destroy(&queue->has_space_cond);
       cnd_destroy(&queue->has_queued_cond);
       mtx_destroy(&queue->lock);
-      FREE(queue->jobs);
+      free(queue->jobs);
    }
    /* also util_queue_is_initialized can be used to check for success */
    memset(queue, 0, sizeof(*queue));
@@ -284,8 +284,8 @@ util_queue_destroy(struct util_queue *queue)
    cnd_destroy(&queue->has_space_cond);
    cnd_destroy(&queue->has_queued_cond);
    mtx_destroy(&queue->lock);
-   FREE(queue->jobs);
-   FREE(queue->threads);
+   free(queue->jobs);
+   free(queue->threads);
 }
 
 void
