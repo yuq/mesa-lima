@@ -97,7 +97,7 @@ blorp_blit_get_frag_coords(nir_builder *b,
                            const struct brw_blorp_blit_prog_key *key,
                            struct brw_blorp_blit_vars *v)
 {
-   nir_ssa_def *coord = nir_f2i(b, nir_load_var(b, v->frag_coord));
+   nir_ssa_def *coord = nir_f2i32(b, nir_load_var(b, v->frag_coord));
 
    /* Account for destination surface intratile offset
     *
@@ -764,7 +764,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
       nir_ssa_def *sample_off = nir_imm_vec2(b, sample_off_x, sample_off_y);
 
       nir_ssa_def *sample_coords = nir_fadd(b, pos_xy, sample_off);
-      nir_ssa_def *sample_coords_int = nir_f2i(b, sample_coords);
+      nir_ssa_def *sample_coords_int = nir_f2i32(b, sample_coords);
 
       /* The MCS value we fetch has to match up with the pixel that we're
        * sampling from. Since we sample from different pixels in each
@@ -821,7 +821,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
       nir_ssa_def *sample =
          nir_fdot2(b, frac, nir_imm_vec2(b, key->x_scale,
                                             key->x_scale * key->y_scale));
-      sample = nir_f2i(b, sample);
+      sample = nir_f2i32(b, sample);
 
       if (tex_samples == 8) {
          sample = nir_iand(b, nir_ishr(b, nir_imm_int(b, 0x64210573),
@@ -1150,7 +1150,7 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
       blorp_nir_discard_if_outside_rect(&b, dst_pos, &v);
    }
 
-   src_pos = blorp_blit_apply_transform(&b, nir_i2f(&b, dst_pos), &v);
+   src_pos = blorp_blit_apply_transform(&b, nir_i2f32(&b, dst_pos), &v);
    if (dst_pos->num_components == 3) {
       /* The sample coordinate is an integer that we want left alone but
        * blorp_blit_apply_transform() blindly applies the transform to all
@@ -1175,7 +1175,7 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
       /* Resolves (effecively) use texelFetch, so we need integers and we
        * don't care about the sample index if we got one.
        */
-      src_pos = nir_f2i(&b, nir_channels(&b, src_pos, 0x3));
+      src_pos = nir_f2i32(&b, nir_channels(&b, src_pos, 0x3));
 
       if (devinfo->gen == 6) {
          /* Because gen6 only supports 4x interleved MSAA, we can do all the
@@ -1187,7 +1187,7 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
           */
          src_pos = nir_ishl(&b, src_pos, nir_imm_int(&b, 1));
          src_pos = nir_iadd(&b, src_pos, nir_imm_int(&b, 1));
-         src_pos = nir_i2f(&b, src_pos);
+         src_pos = nir_i2f32(&b, src_pos);
          color = blorp_nir_tex(&b, &v, src_pos, key->texture_data_type);
       } else {
          /* Gen7+ hardware doesn't automaticaly blend. */
@@ -1204,11 +1204,11 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
       } else {
          /* We're going to use texelFetch, so we need integers */
          if (src_pos->num_components == 2) {
-            src_pos = nir_f2i(&b, src_pos);
+            src_pos = nir_f2i32(&b, src_pos);
          } else {
             assert(src_pos->num_components == 3);
-            src_pos = nir_vec3(&b, nir_channel(&b, nir_f2i(&b, src_pos), 0),
-                                   nir_channel(&b, nir_f2i(&b, src_pos), 1),
+            src_pos = nir_vec3(&b, nir_channel(&b, nir_f2i32(&b, src_pos), 0),
+                                   nir_channel(&b, nir_f2i32(&b, src_pos), 1),
                                    nir_channel(&b, src_pos, 2));
          }
 

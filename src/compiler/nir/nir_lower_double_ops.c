@@ -116,7 +116,7 @@ lower_rcp(nir_builder *b, nir_ssa_def *src)
    /* cast to float, do an rcp, and then cast back to get an approximate
     * result
     */
-   nir_ssa_def *ra = nir_f2d(b, nir_frcp(b, nir_d2f(b, src_norm)));
+   nir_ssa_def *ra = nir_f2f64(b, nir_frcp(b, nir_f2f32(b, src_norm)));
 
    /* Fixup the exponent of the result - note that we check if this is too
     * small below.
@@ -180,7 +180,7 @@ lower_sqrt_rsq(nir_builder *b, nir_ssa_def *src, bool sqrt)
                                         nir_iadd(b, nir_imm_int(b, 1023),
                                                  even));
 
-   nir_ssa_def *ra = nir_f2d(b, nir_frsq(b, nir_d2f(b, src_norm)));
+   nir_ssa_def *ra = nir_f2f64(b, nir_frsq(b, nir_f2f32(b, src_norm)));
    nir_ssa_def *new_exp = nir_isub(b, get_exponent(b, ra), half);
    ra = set_exponent(b, ra, new_exp);
 

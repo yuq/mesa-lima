@@ -637,7 +637,7 @@ vc4_nir_lower_blend_instr(struct vc4_compile *c, nir_builder *b,
                  * coordinate, instead.
                  */
                 nir_ssa_def *num_samples = nir_imm_float(b, VC4_MAX_SAMPLES);
-                nir_ssa_def *num_bits = nir_f2i(b, nir_fmul(b, a, num_samples));
+                nir_ssa_def *num_bits = nir_f2i32(b, nir_fmul(b, a, num_samples));
                 nir_ssa_def *bitmask = nir_isub(b,
                                                 nir_ishl(b,
                                                          nir_imm_int(b, 1),

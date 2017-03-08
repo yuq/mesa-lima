@@ -1287,32 +1287,24 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_vec4:
       unreachable("not reached: should be handled by lower_vec_to_movs()");
 
-   case nir_op_i2f:
-   case nir_op_u2f:
+   case nir_op_i2f32:
+   case nir_op_u2f32:
       inst = emit(MOV(dst, op[0]));
       inst->saturate = instr->dest.saturate;
       break;
 
-   case nir_op_f2i:
-   case nir_op_f2u:
-      inst = emit(MOV(dst, op[0]));
+   case nir_op_f2f32:
+   case nir_op_f2i32:
+   case nir_op_f2u32:
+      if (nir_src_bit_size(instr->src[0].src) == 64)
+         emit_conversion_from_double(dst, op[0], instr->dest.saturate);
+      else
+         inst = emit(MOV(dst, op[0]));
       break;
 
-   case nir_op_d2f:
-      emit_conversion_from_double(dst, op[0], instr->dest.saturate);
-      break;
-
-   case nir_op_f2d:
-      emit_conversion_to_double(dst, op[0], instr->dest.saturate);
-      break;
-
-   case nir_op_d2i:
-   case nir_op_d2u:
-      emit_conversion_from_double(dst, op[0], instr->dest.saturate);
-      break;
-
-   case nir_op_i2d:
-   case nir_op_u2d:
+   case nir_op_f2f64:
+   case nir_op_i2f64:
+   case nir_op_u2f64:
       emit_conversion_to_double(dst, op[0], instr->dest.saturate);
       break;
 
@@ -1681,26 +1673,25 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_f2b:
-      emit(CMP(dst, op[0], brw_imm_f(0.0f), BRW_CONDITIONAL_NZ));
-      break;
+      if (nir_src_bit_size(instr->src[0].src) == 64) {
+         /* We use a MOV with conditional_mod to check if the provided value is
+          * 0.0. We want this to flush denormalized numbers to zero, so we set a
+          * source modifier on the source operand to trigger this, as source
+          * modifiers don't affect the result of the testing against 0.0.
+          */
+         src_reg value = op[0];
+         value.abs = true;
+         vec4_instruction *inst = emit(MOV(dst_null_df(), value));
+         inst->conditional_mod = BRW_CONDITIONAL_NZ;
 
-   case nir_op_d2b: {
-      /* We use a MOV with conditional_mod to check if the provided value is
-       * 0.0. We want this to flush denormalized numbers to zero, so we set a
-       * source modifier on the source operand to trigger this, as source
-       * modifiers don't affect the result of the testing against 0.0.
-       */
-      src_reg value = op[0];
-      value.abs = true;
-      vec4_instruction *inst = emit(MOV(dst_null_df(), value));
-      inst->conditional_mod = BRW_CONDITIONAL_NZ;
-
-      src_reg one = src_reg(this, glsl_type::ivec4_type);
-      emit(MOV(dst_reg(one), brw_imm_d(~0)));
-      inst = emit(BRW_OPCODE_SEL, dst, one, brw_imm_d(0));
-      inst->predicate = BRW_PREDICATE_NORMAL;
+         src_reg one = src_reg(this, glsl_type::ivec4_type);
+         emit(MOV(dst_reg(one), brw_imm_d(~0)));
+         inst = emit(BRW_OPCODE_SEL, dst, one, brw_imm_d(0));
+         inst->predicate = BRW_PREDICATE_NORMAL;
+      } else {
+         emit(CMP(dst, op[0], brw_imm_f(0.0f), BRW_CONDITIONAL_NZ));
+      }
       break;
-   }
 
    case nir_op_i2b:
       emit(CMP(dst, op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ));

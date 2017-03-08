@@ -99,7 +99,7 @@ apply_attr_wa_block(nir_block *block, struct attr_wa_state *state)
                nir_imm_vec4(b, 1.0f / ((1 << 9) - 1), 1.0f / ((1 << 9) - 1),
                                1.0f / ((1 << 9) - 1), 1.0f / ((1 << 1) - 1));
             val = nir_fmax(b,
-                           nir_fmul(b, nir_i2f(b, val), es3_normalize_factor),
+                           nir_fmul(b, nir_i2f32(b, val), es3_normalize_factor),
                            nir_imm_float(b, -1.0f));
          } else {
             /* The following equations are from the OpenGL 3.2 specification:
@@ -121,18 +121,18 @@ apply_attr_wa_block(nir_block *block, struct attr_wa_state *state)
                /* For signed normalization, the numerator is 2c+1. */
                nir_ssa_def *two = nir_imm_float(b, 2.0f);
                nir_ssa_def *one = nir_imm_float(b, 1.0f);
-               val = nir_fadd(b, nir_fmul(b, nir_i2f(b, val), two), one);
+               val = nir_fadd(b, nir_fmul(b, nir_i2f32(b, val), two), one);
             } else {
                /* For unsigned normalization, the numerator is just c. */
-               val = nir_u2f(b, val);
+               val = nir_u2f32(b, val);
             }
             val = nir_fmul(b, val, normalize_factor);
          }
       }
 
       if (wa_flags & BRW_ATTRIB_WA_SCALE) {
-         val = (wa_flags & BRW_ATTRIB_WA_SIGN) ? nir_i2f(b, val)
-                                               : nir_u2f(b, val);
+         val = (wa_flags & BRW_ATTRIB_WA_SIGN) ? nir_i2f32(b, val)
+                                               : nir_u2f32(b, val);
       }
 
       nir_ssa_def_rewrite_uses_after(&intrin->dest.ssa, nir_src_for_ssa(val),

@@ -1456,10 +1456,10 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_exp2: result = nir_fexp2(&b, srcs[0]); break;
    case ir_unop_log2: result = nir_flog2(&b, srcs[0]); break;
    case ir_unop_i2f:
-      result = supports_ints ? nir_i2f(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
+      result = supports_ints ? nir_i2f32(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
       break;
    case ir_unop_u2f:
-      result = supports_ints ? nir_u2f(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
+      result = supports_ints ? nir_u2f32(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
       break;
    case ir_unop_b2f:
       result = supports_ints ? nir_b2f(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
@@ -1502,6 +1502,10 @@ nir_visitor::visit(ir_expression *ir)
       nir_alu_type dst_type = nir_get_nir_type_for_glsl_base_type(out_type);
       result = nir_build_alu(&b, nir_type_conversion_op(src_type, dst_type),
                                  srcs[0], NULL, NULL, NULL);
+      /* b2i and b2f don't have fixed bit-size versions so the builder will
+       * just assume 32 and we have to fix it up here.
+       */
+      result->bit_size = nir_alu_type_get_type_size(dst_type);
       break;
    }
 

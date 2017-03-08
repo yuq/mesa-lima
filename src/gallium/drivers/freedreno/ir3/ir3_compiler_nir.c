@@ -722,16 +722,16 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 	}
 
 	switch (alu->op) {
-	case nir_op_f2i:
+	case nir_op_f2i32:
 		dst[0] = ir3_COV(b, src[0], TYPE_F32, TYPE_S32);
 		break;
-	case nir_op_f2u:
+	case nir_op_f2u32:
 		dst[0] = ir3_COV(b, src[0], TYPE_F32, TYPE_U32);
 		break;
-	case nir_op_i2f:
+	case nir_op_i2f32:
 		dst[0] = ir3_COV(b, src[0], TYPE_S32, TYPE_F32);
 		break;
-	case nir_op_u2f:
+	case nir_op_u2f32:
 		dst[0] = ir3_COV(b, src[0], TYPE_U32, TYPE_F32);
 		break;
 	case nir_op_imov:

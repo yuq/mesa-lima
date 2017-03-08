@@ -121,7 +121,7 @@ lower_offset(nir_builder *b, nir_tex_instr *tex)
    nir_ssa_def *offset_coord;
    if (nir_tex_instr_src_type(tex, coord_index) == nir_type_float) {
       assert(tex->sampler_dim == GLSL_SAMPLER_DIM_RECT);
-      offset_coord = nir_fadd(b, coord, nir_i2f(b, offset));
+      offset_coord = nir_fadd(b, coord, nir_i2f32(b, offset));
    } else {
       offset_coord = nir_iadd(b, coord, offset);
    }
@@ -176,7 +176,7 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
                      nir_tex_instr_dest_size(txs), 32, NULL);
    nir_builder_instr_insert(b, &txs->instr);
 
-   return nir_i2f(b, &txs->dest.ssa);
+   return nir_i2f32(b, &txs->dest.ssa);
 }
 
 static void

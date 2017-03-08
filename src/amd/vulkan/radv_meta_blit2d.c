@@ -586,7 +586,7 @@ build_nir_copy_fragment_shader(struct radv_device *device,
 						      vec4, "f_color");
 	color_out->data.location = FRAG_RESULT_DATA0;
 
-	nir_ssa_def *pos_int = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
+	nir_ssa_def *pos_int = nir_f2i32(&b, nir_load_var(&b, tex_pos_in));
 	unsigned swiz[4] = { 0, 1 };
 	nir_ssa_def *tex_pos = nir_swizzle(&b, pos_int, swiz, 2, false);
 
@@ -615,7 +615,7 @@ build_nir_copy_fragment_shader_depth(struct radv_device *device,
 						      vec4, "f_color");
 	color_out->data.location = FRAG_RESULT_DEPTH;
 
-	nir_ssa_def *pos_int = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
+	nir_ssa_def *pos_int = nir_f2i32(&b, nir_load_var(&b, tex_pos_in));
 	unsigned swiz[4] = { 0, 1 };
 	nir_ssa_def *tex_pos = nir_swizzle(&b, pos_int, swiz, 2, false);
 
@@ -644,7 +644,7 @@ build_nir_copy_fragment_shader_stencil(struct radv_device *device,
 						      vec4, "f_color");
 	color_out->data.location = FRAG_RESULT_STENCIL;
 
-	nir_ssa_def *pos_int = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
+	nir_ssa_def *pos_int = nir_f2i32(&b, nir_load_var(&b, tex_pos_in));
 	unsigned swiz[4] = { 0, 1 };
 	nir_ssa_def *tex_pos = nir_swizzle(&b, pos_int, swiz, 2, false);
 

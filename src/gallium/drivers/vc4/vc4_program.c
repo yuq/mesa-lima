@@ -1150,12 +1150,12 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
                 result = qir_FMAX(c, src[0], src[1]);
                 break;
 
-        case nir_op_f2i:
-        case nir_op_f2u:
+        case nir_op_f2i32:
+        case nir_op_f2u32:
                 result = qir_FTOI(c, src[0]);
                 break;
-        case nir_op_i2f:
-        case nir_op_u2f:
+        case nir_op_i2f32:
+        case nir_op_u2f32:
                 result = qir_ITOF(c, src[0]);
                 break;
         case nir_op_b2f:
