@@ -117,6 +117,8 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_cmd_state *state = &cmd_buffer->state;
 
+   cmd_buffer->batch.status = VK_SUCCESS;
+
    memset(&state->descriptors, 0, sizeof(state->descriptors));
    memset(&state->push_constants, 0, sizeof(state->push_constants));
    memset(state->binding_tables, 0, sizeof(state->binding_tables));
@@ -184,6 +186,8 @@ static VkResult anv_create_cmd_buffer(
                           VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (cmd_buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   cmd_buffer->batch.status = VK_SUCCESS;
 
    cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    cmd_buffer->device = device;

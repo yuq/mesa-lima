@@ -704,6 +704,15 @@ struct anv_batch {
     */
    VkResult (*extend_cb)(struct anv_batch *, void *);
    void *                                       user_data;
+
+   /**
+    * Current error status of the command buffer. Used to track inconsistent
+    * or incomplete command buffer states that are the consequence of run-time
+    * errors such as out of memory scenarios. We want to track this in the
+    * batch because the command buffer object is not visible to some parts
+    * of the driver.
+    */
+   VkResult                                     status;
 };
 
 void *anv_batch_emit_dwords(struct anv_batch *batch, int num_dwords);
