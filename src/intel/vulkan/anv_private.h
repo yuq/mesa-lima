@@ -722,6 +722,21 @@ uint64_t anv_batch_emit_reloc(struct anv_batch *batch,
 VkResult anv_device_submit_simple_batch(struct anv_device *device,
                                         struct anv_batch *batch);
 
+static inline VkResult
+anv_batch_set_error(struct anv_batch *batch, VkResult error)
+{
+   assert(error != VK_SUCCESS);
+   if (batch->status == VK_SUCCESS)
+      batch->status = error;
+   return batch->status;
+}
+
+static inline bool
+anv_batch_has_error(struct anv_batch *batch)
+{
+   return batch->status != VK_SUCCESS;
+}
+
 struct anv_address {
    struct anv_bo *bo;
    uint32_t offset;
