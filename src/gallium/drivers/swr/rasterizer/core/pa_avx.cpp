@@ -469,6 +469,7 @@ static bool PaPatchList_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector ver
     SetNextPaState_simd16(
         pa,
         PaPatchList_simd16<TotalControlPoints, CurrentControlPoints + 1>,
+        PaPatchList<TotalControlPoints, CurrentControlPoints + 1>,
         PaPatchListSingle<TotalControlPoints>);
 
     return false;
@@ -505,6 +506,7 @@ static bool PaPatchListTerm_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector
     SetNextPaState_simd16(
         pa,
         PaPatchList_simd16<TotalControlPoints>,
+        PaPatchList<TotalControlPoints>,
         PaPatchListSingle<TotalControlPoints>,
         0,
         KNOB_SIMD16_WIDTH,
@@ -741,13 +743,13 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if ENABLE_AVX512_SIMD16
 bool PaTriList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaTriList1_simd16, PaTriListSingle0);
+    SetNextPaState_simd16(pa, PaTriList1_simd16, PaTriList1, PaTriListSingle0);
     return false;    // Not enough vertices to assemble 16 triangles
 }
 
 bool PaTriList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaTriList2_simd16, PaTriListSingle0);
+    SetNextPaState_simd16(pa, PaTriList2_simd16, PaTriList2, PaTriListSingle0);
     return false;    // Not enough vertices to assemble 16 triangles
 }
 
@@ -781,7 +783,7 @@ bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v2[i] = _simd16_permute_ps(temp2, perm2);
     }
 
-    SetNextPaState_simd16(pa, PaTriList0_simd16, PaTriListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaTriList0_simd16, PaTriList0, PaTriListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
 
@@ -1019,7 +1021,7 @@ bool PaTriStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if  ENABLE_AVX512_SIMD16
 bool PaTriStrip0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStripSingle0);
+    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStrip1, PaTriStripSingle0);
     return false;    // Not enough vertices to assemble 16 triangles.
 }
 
@@ -1050,7 +1052,7 @@ bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v2[i] = _simd16_shuffle_ps(a[i], shuff, _MM_SHUFFLE(2, 2, 2, 2));                           // a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
     }
 
-    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStripSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStrip1, PaTriStripSingle0, 0, KNOB_SIMD16_WIDTH);
     return true;
 }
 
@@ -1285,7 +1287,7 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if ENABLE_AVX512_SIMD16
 bool PaTriFan0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFanSingle0);
+    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFan1, PaTriFanSingle0);
     return false;    // Not enough vertices to assemble 16 triangles.
 }
 
@@ -1319,7 +1321,7 @@ bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v1[i] = _simd16_shuffle_ps(b[i], v2[i], _MM_SHUFFLE(2, 1, 2, 1));                           // b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
     }
 
-    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFanSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFan1, PaTriFanSingle0, 0, KNOB_SIMD16_WIDTH);
     return true;
 }
 
@@ -1457,7 +1459,7 @@ bool PaQuadList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if ENABLE_AVX512_SIMD16
 bool PaQuadList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaQuadList1_simd16, PaQuadListSingle0);
+    SetNextPaState_simd16(pa, PaQuadList1_simd16, PaQuadList1, PaQuadListSingle0);
     return false;    // Not enough vertices to assemble 16 triangles.
 }
 
@@ -1485,7 +1487,7 @@ bool PaQuadList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v2[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(3, 2, 3, 2));                          // a2 a3 a6 a7 aA aB aE aF b2 b3 b6 b7 bA bB bE bF
     }
 
-    SetNextPaState_simd16(pa, PaQuadList0_simd16, PaQuadListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaQuadList0_simd16, PaQuadList0, PaQuadListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
 
@@ -1712,7 +1714,7 @@ bool PaLineLoop1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if ENABLE_AVX512_SIMD16
 bool PaLineLoop0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoopSingle0);
+    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoop1, PaLineLoopSingle0);
     return false;
 }
 
@@ -1735,7 +1737,7 @@ bool PaLineLoop1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         }
     }
 
-    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoopSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoop1, PaLineLoopSingle0, 0, KNOB_SIMD16_WIDTH);
     return true;
 }
 
@@ -1824,7 +1826,7 @@ bool PaLineList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if ENABLE_AVX512_SIMD16
 bool PaLineList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaLineList1_simd16, PaLineListSingle0);
+    SetNextPaState_simd16(pa, PaLineList1_simd16, PaLineList1, PaLineListSingle0);
     return false;    // Not enough vertices to assemble 16 lines
 }
 
@@ -1849,7 +1851,7 @@ bool PaLineList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v1[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(3, 1, 3, 1));                          // a1 a3 a5 a7 a9 aB aD aF b1 b3 b5 b7 b9 bB bD bF
     }
 
-    SetNextPaState_simd16(pa, PaLineList0_simd16, PaLineListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaLineList0_simd16, PaLineList0, PaLineListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
 
@@ -2042,7 +2044,7 @@ bool PaLineStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if ENABLE_AVX512_SIMD16
 bool PaLineStrip0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStripSingle0);
+    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStrip1, PaLineStripSingle0);
     return false;    // Not enough vertices to assemble 16 lines
 }
 
@@ -2069,7 +2071,7 @@ bool PaLineStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v1[i] = _simd16_permute_ps(temp, perm);                                                     // a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0
     }
 
-    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStripSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStrip1, PaLineStripSingle0, 0, KNOB_SIMD16_WIDTH);
     return true;
 }
 
@@ -2234,7 +2236,7 @@ bool PaPoints0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 
     verts[0] = a;  // points only have 1 vertex.
 
-    SetNextPaState_simd16(pa, PaPoints0_simd16, PaPointsSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaPoints0_simd16, PaPoints0, PaPointsSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
 
@@ -2390,7 +2392,7 @@ bool PaRectList2(
 ///        There is not enough to assemble 8 triangles.
 bool PaRectList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectListSingle0);
+    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectList1, PaRectListSingle0);
     return false;
 }
 
@@ -2494,7 +2496,7 @@ bool PaRectList1_simd16(
         v2[i] = _simd16_insert_ps(_simd16_setzero_ps(), v2_lo, 0);
     }
 
-    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectList1, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
 
@@ -2510,7 +2512,7 @@ bool PaRectList2_simd16(
     simd16vector verts[])
 {
     SWR_INVALID("Is rect list used for anything other then clears?");
-    SetNextPaState_simd16(pa, PaRectList0_simd16, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaRectList0_simd16, PaRectList0, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
 

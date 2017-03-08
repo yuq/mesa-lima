@@ -233,8 +233,6 @@ struct PA_STATE_OPT : public PA_STATE
             this->reset = false;
         }
 
-        this->pfnPaFunc = this->pfnPaNextFunc;
-
         if (!HasWork())
         {
             morePrims = false;    // no more to do
@@ -290,12 +288,14 @@ struct PA_STATE_OPT : public PA_STATE
 
 #if ENABLE_AVX512_SIMD16
     void SetNextState_simd16(PA_STATE_OPT::PFN_PA_FUNC_SIMD16 pfnPaNextFunc_simd16,
+        PA_STATE_OPT::PFN_PA_FUNC pfnPaNextFunc,
         PA_STATE_OPT::PFN_PA_SINGLE_FUNC pfnPaNextSingleFunc,
         uint32_t numSimdPrims = 0,
         uint32_t numPrimsIncrement = 0,
         bool reset = false)
     {
         this->pfnPaNextFunc_simd16 = pfnPaNextFunc_simd16;
+        this->pfnPaNextFunc = pfnPaNextFunc;
         this->nextNumSimdPrims = numSimdPrims;
         this->nextNumPrimsIncrement = numPrimsIncrement;
         this->nextReset = reset;
@@ -344,12 +344,13 @@ INLINE void SetNextPaState(PA_STATE_OPT& pa, PA_STATE_OPT::PFN_PA_FUNC pfnPaNext
 
 #if ENABLE_AVX512_SIMD16
 INLINE void SetNextPaState_simd16(PA_STATE_OPT& pa, PA_STATE_OPT::PFN_PA_FUNC_SIMD16 pfnPaNextFunc_simd16,
+    PA_STATE_OPT::PFN_PA_FUNC pfnPaNextFunc,
     PA_STATE_OPT::PFN_PA_SINGLE_FUNC pfnPaNextSingleFunc,
     uint32_t numSimdPrims = 0,
     uint32_t numPrimsIncrement = 0,
     bool reset = false)
 {
-    return pa.SetNextState_simd16(pfnPaNextFunc_simd16, pfnPaNextSingleFunc, numSimdPrims, numPrimsIncrement, reset);
+    return pa.SetNextState_simd16(pfnPaNextFunc_simd16, pfnPaNextFunc, pfnPaNextSingleFunc, numSimdPrims, numPrimsIncrement, reset);
 }
 
 #endif

@@ -610,6 +610,8 @@ INLINE static T RoundDownEven(T value)
 ///
 /// attribCount will limit the vector copies to those attribs specified
 ///
+/// note: the stride between vertexes is determinded by KNOB_NUM_ATTRIBUTES
+///
 void PackPairsOfSimdVertexIntoSimd16VertexInPlace(simdvertex *vertex, uint32_t vertexCount, uint32_t attribCount)
 {
     SWR_ASSERT(vertex);
@@ -1244,7 +1246,7 @@ static void TessellationStages(
         uint32_t requiredDSVectorInvocations = AlignUp(tsData.NumDomainPoints, KNOB_SIMD_WIDTH) / KNOB_SIMD_WIDTH;
         size_t requiredDSOutputVectors = requiredDSVectorInvocations * tsState.numDsOutputAttribs;
 #if USE_SIMD16_FRONTEND
-        size_t requiredAllocSize = sizeof(simdvector) * RoundUpEven(requiredDSOutputVectors);       // simd8 -> simd16, padding
+        size_t requiredAllocSize = sizeof(simdvector) * RoundUpEven(requiredDSVectorInvocations) * tsState.numDsOutputAttribs;      // simd8 -> simd16, padding
 #else
         size_t requiredAllocSize = sizeof(simdvector) * requiredDSOutputVectors;
 #endif
@@ -1253,7 +1255,7 @@ static void TessellationStages(
             AlignedFree(gt_pTessellationThreadData->pDSOutput);
             gt_pTessellationThreadData->pDSOutput = (simdscalar*)AlignedMalloc(requiredAllocSize, 64);
 #if USE_SIMD16_FRONTEND
-            gt_pTessellationThreadData->numDSOutputVectors = RoundUpEven(requiredDSOutputVectors);  // simd8 -> simd16, padding
+            gt_pTessellationThreadData->numDSOutputVectors = RoundUpEven(requiredDSVectorInvocations) * tsState.numDsOutputAttribs; // simd8 -> simd16, padding
 #else
             gt_pTessellationThreadData->numDSOutputVectors = requiredDSOutputVectors;
 #endif
@@ -1272,7 +1274,11 @@ static void TessellationStages(
         dsContext.pDomainU = (simdscalar*)tsData.pDomainPointsU;
         dsContext.pDomainV = (simdscalar*)tsData.pDomainPointsV;
         dsContext.pOutputData = gt_pTessellationThreadData->pDSOutput;
+#if USE_SIMD16_FRONTEND
+        dsContext.vectorStride = RoundUpEven(requiredDSVectorInvocations);      // simd8 -> simd16
+#else
         dsContext.vectorStride = requiredDSVectorInvocations;
+#endif
 
         uint32_t dsInvocations = 0;
 
@@ -1289,19 +1295,14 @@ static void TessellationStages(
         UPDATE_STAT_FE(DsInvocations, tsData.NumDomainPoints);
 
 #if USE_SIMD16_FRONTEND
-        // TEMPORARY: DS outputs simdvertex, PA inputs simd16vertex, so convert simdvertex to simd16vertex, in-place
-
-        PackPairsOfSimdVertexIntoSimd16VertexInPlace(
-            reinterpret_cast<simdvertex *>(dsContext.pOutputData),
-            RoundUpEven(dsContext.vectorStride),                                // simd8 -> simd16
-            tsState.numDsOutputAttribs);
+        SWR_ASSERT(IsEven(dsContext.vectorStride));                             // simd8 -> simd16
 
 #endif
         PA_TESS tessPa(
             pDC,
 #if USE_SIMD16_FRONTEND
             reinterpret_cast<const simd16scalar *>(dsContext.pOutputData),      // simd8 -> simd16
-            RoundUpEven(dsContext.vectorStride) / 2,                            // simd8 -> simd16
+            dsContext.vectorStride / 2,                                         // simd8 -> simd16
 #else
             dsContext.pOutputData,
             dsContext.vectorStride,
