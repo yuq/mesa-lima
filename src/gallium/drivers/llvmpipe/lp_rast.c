@@ -791,7 +791,7 @@ thread_function(void *init_data)
    unsigned fpstate;
 
    util_snprintf(thread_name, sizeof thread_name, "llvmpipe-%u", task->thread_index);
-   pipe_thread_setname(thread_name);
+   u_thread_setname(thread_name);
 
    /* Make sure that denorms are treated like zeros. This is 
     * the behavior required by D3D10. OpenGL doesn't care.

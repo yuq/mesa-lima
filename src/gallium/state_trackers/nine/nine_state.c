@@ -95,7 +95,7 @@ nine_csmt_worker(void *arg)
     struct csmt_instruction *instr;
     DBG("CSMT worker spawned\n");
 
-    pipe_thread_setname("CSMT-Worker");
+    u_thread_setname("CSMT-Worker");
 
     while (1) {
         nine_queue_wait_flush(ctx->pool);
@@ -158,7 +158,7 @@ nine_csmt_create( struct NineDevice9 *This )
     (void) mtx_init(&ctx->thread_resume, mtx_plain);
 
 #if DEBUG
-    pipe_thread_setname("Main thread");
+    u_thread_setname("Main thread");
 #endif
 
     ctx->device = This;
