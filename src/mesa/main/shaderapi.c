@@ -903,7 +903,7 @@ get_shaderiv(struct gl_context *ctx, GLuint name, GLenum pname, GLint *params)
       *params = shader->DeletePending;
       break;
    case GL_COMPILE_STATUS:
-      *params = shader->CompileStatus;
+      *params = shader->CompileStatus ? GL_TRUE : GL_FALSE;
       break;
    case GL_INFO_LOG_LENGTH:
       *params = (shader->InfoLog && shader->InfoLog[0] != '\0') ?
@@ -1003,7 +1003,7 @@ shader_source(struct gl_shader *sh, const GLchar *source)
 {
    assert(sh);
 
-   if (sh->CompileStatus == GL_TRUE && !sh->FallbackSource) {
+   if (sh->CompileStatus == compile_skipped && !sh->FallbackSource) {
       /* If shader was previously compiled back-up the source in case of cache
        * fallback.
        */
@@ -1034,7 +1034,7 @@ _mesa_compile_shader(struct gl_context *ctx, struct gl_shader *sh)
       /* If the user called glCompileShader without first calling
        * glShaderSource, we should fail to compile, but not raise a GL_ERROR.
        */
-      sh->CompileStatus = GL_FALSE;
+      sh->CompileStatus = compile_failure;
    } else {
       if (ctx->_Shader->Flags & GLSL_DUMP) {
          _mesa_log("GLSL source for %s shader %d:\n",

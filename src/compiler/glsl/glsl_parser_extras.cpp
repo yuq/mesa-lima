@@ -1946,7 +1946,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
             fprintf(stderr, "deferring compile of shader: %s\n",
                     _mesa_sha1_format(buf, shader->sha1));
          }
-         shader->CompileStatus = true;
+         shader->CompileStatus = compile_skipped;
 
          free((void *)shader->FallbackSource);
          shader->FallbackSource = NULL;
@@ -2034,7 +2034,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       set_shader_inout_layout(shader, state);
 
    shader->symbols = new(shader->ir) glsl_symbol_table;
-   shader->CompileStatus = !state->error;
+   shader->CompileStatus = state->error ? compile_failure : compile_success;
    shader->InfoLog = state->info_log;
    shader->Version = state->language_version;
    shader->IsES = state->es_shader;

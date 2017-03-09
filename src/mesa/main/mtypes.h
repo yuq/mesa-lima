@@ -2400,6 +2400,18 @@ static inline GLbitfield gl_external_samplers(struct gl_program *prog)
 }
 
 /**
+ * Compile status enum. compile_skipped is used to indicate the compile
+ * was skipped due to the shader matching one that's been seen before by
+ * the on-disk cache.
+ */
+enum gl_compile_status
+{
+   compile_failure = 0,
+   compile_success,
+   compile_skipped
+};
+
+/**
  * A GLSL shader object.
  */
 struct gl_shader
@@ -2415,7 +2427,7 @@ struct gl_shader
    GLchar *Label;   /**< GL_KHR_debug */
    unsigned char sha1[20]; /**< SHA1 hash of pre-processed source */
    GLboolean DeletePending;
-   GLboolean CompileStatus;
+   enum gl_compile_status CompileStatus;
    bool IsES;              /**< True if this shader uses GLSL ES */
 
 #ifdef DEBUG
