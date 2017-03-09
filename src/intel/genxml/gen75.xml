@@ -2954,6 +2954,77 @@
     <field name="CS Invocation Count Report" start="0" end="63" type="uint"/>
   </register>
 
+  <register name="BCS_INSTDONE" length="1" num="0x2206c">
+    <field name="Ring Enable" start="0" end="0" type="bool"/>
+    <field name="Blitter IDLE" start="1" end="1" type="bool" default="1"/>
+    <field name="GAB IDLE" start="2" end="2" type="bool" default="1"/>
+    <field name="BCS Done" start="3" end="3" type="bool" default="1"/>
+  </register>
+
+  <register name="INSTDONE_1" length="1" num="0x206c">
+    <field name="PRB0 Ring Enable" start="0" end="0" type="bool"/>
+    <field name="VFG Done" start="1" end="1" type="bool"/>
+    <field name="VS Done" start="2" end="2" type="bool"/>
+    <field name="HS Done" start="3" end="3" type="bool"/>
+    <field name="TE Done" start="4" end="4" type="bool"/>
+    <field name="DS Done" start="5" end="5" type="bool"/>
+    <field name="GS Done" start="6" end="6" type="bool"/>
+    <field name="SOL Done" start="7" end="7" type="bool"/>
+    <field name="CL Done" start="8" end="8" type="bool"/>
+    <field name="SF Done" start="9" end="9" type="bool"/>
+    <field name="TDG Done" start="12" end="12" type="bool"/>
+    <field name="URBM Done" start="13" end="13" type="bool"/>
+    <field name="SVG Done" start="14" end="14" type="bool"/>
+    <field name="GAFS Done" start="15" end="15" type="bool"/>
+    <field name="VFE Done" start="16" end="16" type="bool"/>
+    <field name="TSG Done" start="17" end="17" type="bool"/>
+    <field name="GAFM Done" start="18" end="18" type="bool"/>
+    <field name="GAM Done" start="19" end="19" type="bool"/>
+    <field name="SDE Done" start="22" end="22" type="bool"/>
+    <field name="RCCFBC CS Done" start="23" end="23" type="bool"/>
+  </register>
+
+  <register name="VCS_INSTDONE" length="1" num="0x1206c">
+    <field name="Ring Enable" start="0" end="0" type="bool"/>
+    <field name="USB Done" start="1" end="1" type="uint" default="1"/>
+    <field name="QRC Done" start="2" end="2" type="uint" default="1"/>
+    <field name="SEC Done" start="3" end="3" type="uint" default="1"/>
+    <field name="MPC Done" start="4" end="4" type="uint" default="1"/>
+    <field name="VFT Done" start="5" end="5" type="uint" default="1"/>
+    <field name="BSP Done" start="6" end="6" type="uint" default="1"/>
+    <field name="VLF Done" start="7" end="7" type="uint" default="1"/>
+    <field name="VOP Done" start="8" end="8" type="uint" default="1"/>
+    <field name="VMC Done" start="9" end="9" type="uint" default="1"/>
+    <field name="VIP Done" start="10" end="10" type="uint" default="1"/>
+    <field name="VIT Done" start="11" end="11" type="uint" default="1"/>
+    <field name="VDS Done" start="12" end="12" type="uint" default="1"/>
+    <field name="VMX Done" start="13" end="13" type="uint" default="1"/>
+    <field name="VCP Done" start="14" end="14" type="uint" default="1"/>
+    <field name="VCD Done" start="15" end="15" type="uint" default="1"/>
+    <field name="VAD Done" start="16" end="16" type="uint" default="1"/>
+    <field name="VMD Done" start="17" end="17" type="uint" default="1"/>
+    <field name="VIS Done" start="18" end="18" type="uint" default="1"/>
+    <field name="VAC Done" start="19" end="19" type="uint" default="1"/>
+    <field name="VAM Done" start="20" end="20" type="uint" default="1"/>
+    <field name="JPG Done" start="21" end="21" type="uint" default="1"/>
+    <field name="VBP Done" start="22" end="22" type="uint" default="1"/>
+    <field name="VHR Done" start="23" end="23" type="uint" default="1"/>
+    <field name="VCI Done" start="24" end="24" type="uint" default="1"/>
+    <field name="VCR Done" start="25" end="25" type="uint" default="1"/>
+    <field name="VIN Done" start="26" end="26" type="uint" default="1"/>
+    <field name="VPR Done" start="27" end="27" type="uint" default="1"/>
+    <field name="VTQ Done" start="28" end="28" type="uint" default="1"/>
+    <field name="Reserved" start="29" end="29" type="uint" default="1"/>
+    <field name="VCS Done" start="30" end="30" type="uint" default="1"/>
+    <field name="GAC Done" start="31" end="31" type="uint" default="1"/>
+  </register>
+
+  <register name="VECS_INSTDONE" length="1" num="0x1a06c">
+    <field name="Ring Enable" start="0" end="0" type="bool"/>
+    <field name="VECS Done" start="30" end="30" type="uint" default="1"/>
+    <field name="GAM Done" start="31" end="31" type="uint" default="1"/>
+  </register>
+
   <register name="L3SQCREG1" length="1" num="0xb010">
     <field name="Convert DC_UC" start="24" end="24" type="uint"/>
     <field name="Convert IS_UC" start="25" end="25" type="uint"/>
