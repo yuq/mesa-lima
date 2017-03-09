@@ -6293,9 +6293,11 @@ computed_depth_mode(const nir_shader *shader)
  *
  * This should be replaced by global value numbering someday.
  */
-void
+static bool
 move_interpolation_to_top(nir_shader *nir)
 {
+   bool progress = false;
+
    nir_foreach_function(f, nir) {
       if (!f->impl)
          continue;
@@ -6339,6 +6341,7 @@ move_interpolation_to_top(nir_shader *nir)
                      exec_list_push_head(&top->instr_list, &move[i]->node);
                   }
                   cursor_node = &move[i]->node;
+                  progress = true;
                }
             }
          }
@@ -6347,6 +6350,8 @@ move_interpolation_to_top(nir_shader *nir)
                             ((unsigned) nir_metadata_block_index |
                              (unsigned) nir_metadata_dominance));
    }
+
+   return progress;
 }
 
 /**
