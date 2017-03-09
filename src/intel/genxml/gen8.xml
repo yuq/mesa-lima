@@ -3348,4 +3348,20 @@
     <field name="Context Was Not Marked As Present When Doing DMA" start="15" end="15" type="bool"/>
   </register>
 
+  <register name="ACTHD_UDW" length="1" num="0x205c">
+    <field name="Head Pointer Upper DWORD" start="0" end="15" type="uint" default="0"/>
+  </register>
+
+  <register name="BCS_ACTHD_UDW" length="1" num="0x2205c">
+    <field name="Head Pointer Upper DWORD" start="0" end="15" type="uint" default="0"/>
+  </register>
+
+  <register name="VCS_ACTHD_UDW" length="1" num="0x1205c">
+    <field name="Head Pointer Upper DWORD" start="0" end="15" type="uint" default="0"/>
+  </register>
+
+  <register name="VECS_ACTHD_UDW" length="1" num="0x1a05c">
+    <field name="Head Pointer Upper DWORD" start="0" end="15" type="uint" default="0"/>
+  </register>
+
 </genxml>
