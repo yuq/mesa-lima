@@ -89,9 +89,13 @@ blorp_alloc_binding_table(struct blorp_batch *batch, unsigned num_entries,
    struct anv_cmd_buffer *cmd_buffer = batch->driver_batch;
 
    uint32_t state_offset;
-   struct anv_state bt_state =
+   struct anv_state bt_state;
+
+   VkResult result =
       anv_cmd_buffer_alloc_blorp_binding_table(cmd_buffer, num_entries,
-                                               &state_offset);
+                                               &state_offset, &bt_state);
+   if (result != VK_SUCCESS)
+      return;
 
    uint32_t *bt_map = bt_state.map;
    *bt_offset = bt_state.offset;

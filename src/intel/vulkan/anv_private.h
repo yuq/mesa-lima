@@ -1476,10 +1476,11 @@ void anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer);
 const struct anv_image_view *
 anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer);
 
-struct anv_state
+VkResult
 anv_cmd_buffer_alloc_blorp_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                          uint32_t num_entries,
-                                         uint32_t *state_offset);
+                                         uint32_t *state_offset,
+                                         struct anv_state *bt_state);
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
 

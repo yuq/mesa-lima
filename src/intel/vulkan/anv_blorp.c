@@ -912,45 +912,52 @@ void anv_CmdClearDepthStencilImage(
    blorp_batch_finish(&batch);
 }
 
-struct anv_state
+VkResult
 anv_cmd_buffer_alloc_blorp_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                          uint32_t num_entries,
-                                         uint32_t *state_offset)
+                                         uint32_t *state_offset,
+                                         struct anv_state *bt_state)
 {
-   struct anv_state bt_state =
-      anv_cmd_buffer_alloc_binding_table(cmd_buffer, num_entries,
-                                         state_offset);
-   if (bt_state.map == NULL) {
+   *bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer, num_entries,
+                                                  state_offset);
+   if (bt_state->map == NULL) {
       /* We ran out of space.  Grab a new binding table block. */
-      MAYBE_UNUSED VkResult result =
-         anv_cmd_buffer_new_binding_table_block(cmd_buffer);
-      assert(result == VK_SUCCESS);
+      VkResult result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
+      if (result != VK_SUCCESS)
+         return result;
 
       /* Re-emit state base addresses so we get the new surface state base
        * address before we start emitting binding tables etc.
        */
       anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
-      bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer, num_entries,
-                                                    state_offset);
-      assert(bt_state.map != NULL);
+      *bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer, num_entries,
+                                                     state_offset);
+      assert(bt_state->map != NULL);
    }
 
-   return bt_state;
+   return VK_SUCCESS;
 }
 
-static uint32_t
+static VkResult
 binding_table_for_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                                struct anv_state surface_state)
+                                struct anv_state surface_state,
+                                uint32_t *bt_offset)
 {
    uint32_t state_offset;
-   struct anv_state bt_state =
-      anv_cmd_buffer_alloc_blorp_binding_table(cmd_buffer, 1, &state_offset);
+   struct anv_state bt_state;
+
+   VkResult result =
+      anv_cmd_buffer_alloc_blorp_binding_table(cmd_buffer, 1, &state_offset,
+                                               &bt_state);
+   if (result != VK_SUCCESS)
+      return result;
 
    uint32_t *bt_map = bt_state.map;
    bt_map[0] = surface_state.offset + state_offset;
 
-   return bt_state.offset;
+   *bt_offset = bt_state.offset;
+   return VK_SUCCESS;
 }
 
 static void
@@ -971,8 +978,12 @@ clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
    struct anv_attachment_state *att_state =
       &cmd_buffer->state.attachments[att_idx];
 
-   uint32_t binding_table =
-      binding_table_for_surface_state(cmd_buffer, att_state->color_rt_state);
+   uint32_t binding_table;
+   VkResult result =
+      binding_table_for_surface_state(cmd_buffer, att_state->color_rt_state,
+                                      &binding_table);
+   if (result != VK_SUCCESS)
+      return;
 
    union isl_color_value clear_color =
       vk_to_isl_color(attachment->clearValue.color);
@@ -1017,9 +1028,13 @@ clear_depth_stencil_attachment(struct anv_cmd_buffer *cmd_buffer,
                                         VK_IMAGE_TILING_OPTIMAL);
    }
 
-   uint32_t binding_table =
+   uint32_t binding_table;
+   VkResult result =
       binding_table_for_surface_state(cmd_buffer,
-                                      cmd_buffer->state.null_surface_state);
+                                      cmd_buffer->state.null_surface_state,
+                                      &binding_table);
+   if (result != VK_SUCCESS)
+      return;
 
    for (uint32_t r = 0; r < rectCount; ++r) {
       const VkOffset2D offset = pRects[r].rect.offset;
