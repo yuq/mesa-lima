@@ -1952,6 +1952,13 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
          shader->FallbackSource = NULL;
          return;
       }
+   } else {
+      /* We should only ever end up here if a re-compile has been forced by a
+       * shader cache miss. In which case we can skip the compile if its
+       * already be done by a previous fallback or the initial compile call.
+       */
+      if (shader->CompileStatus == compile_success)
+         return;
    }
 
    if (!state->error) {
