@@ -1677,7 +1677,7 @@ genX(graphics_pipeline_create)(
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
-   return VK_SUCCESS;
+   return pipeline->batch.status;
 }
 
 static VkResult
@@ -1716,6 +1716,7 @@ compute_pipeline_create(
    pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
    pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
    pipeline->batch.relocs = &pipeline->batch_relocs;
+   pipeline->batch.status = VK_SUCCESS;
 
    /* When we free the pipeline, we detect stages based on the NULL status
     * of various prog_data pointers.  Make them NULL by default.
@@ -1805,7 +1806,7 @@ compute_pipeline_create(
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
-   return VK_SUCCESS;
+   return pipeline->batch.status;
 }
 
 VkResult genX(CreateGraphicsPipelines)(
