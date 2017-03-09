@@ -779,15 +779,17 @@ _anv_combine_address(struct anv_batch *batch, void *location,
       VG(VALGRIND_CHECK_MEM_IS_DEFINED(dst, __anv_cmd_length(struc) * 4)); \
    } while (0)
 
-#define anv_batch_emitn(batch, n, cmd, ...) ({          \
-      void *__dst = anv_batch_emit_dwords(batch, n);    \
-      struct cmd __template = {                         \
-         __anv_cmd_header(cmd),                         \
-        .DWordLength = n - __anv_cmd_length_bias(cmd),  \
-         __VA_ARGS__                                    \
-      };                                                \
-      __anv_cmd_pack(cmd)(batch, __dst, &__template);   \
-      __dst;                                            \
+#define anv_batch_emitn(batch, n, cmd, ...) ({             \
+      void *__dst = anv_batch_emit_dwords(batch, n);       \
+      if (__dst) {                                         \
+         struct cmd __template = {                         \
+            __anv_cmd_header(cmd),                         \
+           .DWordLength = n - __anv_cmd_length_bias(cmd),  \
+            __VA_ARGS__                                    \
+         };                                                \
+         __anv_cmd_pack(cmd)(batch, __dst, &__template);   \
+      }                                                    \
+      __dst;                                               \
    })
 
 #define anv_batch_emit_merge(batch, dwords0, dwords1)                   \
@@ -796,6 +798,8 @@ _anv_combine_address(struct anv_batch *batch, void *location,
                                                                         \
       STATIC_ASSERT(ARRAY_SIZE(dwords0) == ARRAY_SIZE(dwords1));        \
       dw = anv_batch_emit_dwords((batch), ARRAY_SIZE(dwords0));         \
+      if (!dw)                                                          \
+         break;                                                         \
       for (uint32_t i = 0; i < ARRAY_SIZE(dwords0); i++)                \
          dw[i] = (dwords0)[i] | (dwords1)[i];                           \
       VG(VALGRIND_CHECK_MEM_IS_DEFINED(dw, ARRAY_SIZE(dwords0) * 4));\

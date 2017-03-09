@@ -112,6 +112,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    const uint32_t num_dwords = 1 + total_elems * 2;
    p = anv_batch_emitn(&pipeline->batch, num_dwords,
                        GENX(3DSTATE_VERTEX_ELEMENTS));
+   if (!p)
+      return;
    memset(p + 1, 0, (num_dwords - 1) * 4);
 
    for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
@@ -389,10 +391,14 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
 
    uint32_t *dw = anv_batch_emit_dwords(&pipeline->batch,
                                         GENX(3DSTATE_SBE_length));
+   if (!dw)
+      return;
    GENX(3DSTATE_SBE_pack)(&pipeline->batch, dw, &sbe);
 
 #if GEN_GEN >= 8
    dw = anv_batch_emit_dwords(&pipeline->batch, GENX(3DSTATE_SBE_SWIZ_length));
+   if (!dw)
+      return;
    GENX(3DSTATE_SBE_SWIZ_pack)(&pipeline->batch, dw, &swiz);
 #endif
 }

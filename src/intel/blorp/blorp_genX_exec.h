@@ -110,14 +110,16 @@ _blorp_combine_address(struct blorp_batch *batch, void *location,
         _blorp_cmd_pack(cmd)(batch, (void *)_dst, &name),         \
         _dst = NULL)
 
-#define blorp_emitn(batch, cmd, n) ({                    \
-      uint32_t *_dw = blorp_emit_dwords(batch, n);       \
-      struct cmd template = {                            \
-         _blorp_cmd_header(cmd),                         \
-         .DWordLength = n - _blorp_cmd_length_bias(cmd), \
-      };                                                 \
-      _blorp_cmd_pack(cmd)(batch, _dw, &template);       \
-      _dw + 1; /* Array starts at dw[1] */               \
+#define blorp_emitn(batch, cmd, n) ({                       \
+      uint32_t *_dw = blorp_emit_dwords(batch, n);          \
+      if (_dw) {                                            \
+         struct cmd template = {                            \
+            _blorp_cmd_header(cmd),                         \
+            .DWordLength = n - _blorp_cmd_length_bias(cmd), \
+         };                                                 \
+         _blorp_cmd_pack(cmd)(batch, _dw, &template);       \
+      }                                                     \
+      _dw ? _dw + 1 : NULL; /* Array starts at dw[1] */     \
    })
 
 /* 3DSTATE_URB
@@ -274,6 +276,8 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
 
    const unsigned num_dwords = 1 + GENX(VERTEX_BUFFER_STATE_length) * 2;
    uint32_t *dw = blorp_emitn(batch, GENX(3DSTATE_VERTEX_BUFFERS), num_dwords);
+   if (!dw)
+      return;
 
    for (unsigned i = 0; i < 2; i++) {
       GENX(VERTEX_BUFFER_STATE_pack)(batch, dw, &vb[i]);
@@ -379,6 +383,8 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
    const unsigned num_dwords =
       1 + GENX(VERTEX_ELEMENT_STATE_length) * num_elements;
    uint32_t *dw = blorp_emitn(batch, GENX(3DSTATE_VERTEX_ELEMENTS), num_dwords);
+   if (!dw)
+      return;
 
    for (unsigned i = 0; i < num_elements; i++) {
       GENX(VERTEX_ELEMENT_STATE_pack)(batch, dw, &ve[i]);
@@ -1019,6 +1025,9 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
    uint32_t offset = 0;
    uint32_t *dw = blorp_emit_dwords(batch,
                                     GENX(3DSTATE_WM_DEPTH_STENCIL_length));
+   if (!dw)
+      return 0;
+
    GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, dw, &ds);
 #else
    uint32_t offset;
