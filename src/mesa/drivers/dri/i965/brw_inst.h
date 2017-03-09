@@ -31,6 +31,7 @@
 #ifndef BRW_INST_H
 #define BRW_INST_H
 
+#include <assert.h>
 #include <stdint.h>
 
 #include "brw_defines.h"
