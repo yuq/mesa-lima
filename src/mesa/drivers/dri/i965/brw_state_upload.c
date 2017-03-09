@@ -32,6 +32,7 @@
 
 
 #include "brw_context.h"
+#include "brw_defines.h"
 #include "brw_state.h"
 #include "brw_program.h"
 #include "drivers/common/meta.h"
