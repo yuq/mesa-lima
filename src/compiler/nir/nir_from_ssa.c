@@ -41,6 +41,7 @@ struct from_ssa_state {
    bool phi_webs_only;
    struct hash_table *merge_node_table;
    nir_instr *instr;
+   bool progress;
 };
 
 /* Returns true if a dominates b */
@@ -503,6 +504,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
       nir_instr *parent_instr = def->parent_instr;
       nir_instr_remove(parent_instr);
       ralloc_steal(state->dead_ctx, parent_instr);
+      state->progress = true;
       return true;
    }
 
@@ -514,14 +516,14 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
    nir_dest *dest = exec_node_data(nir_dest, def, ssa);
 
    nir_instr_rewrite_dest(state->instr, dest, nir_dest_for_reg(reg));
-
+   state->progress = true;
    return true;
 }
 
 /* Resolves ssa definitions to registers.  While we're at it, we also
  * remove phi nodes.
  */
-static bool
+static void
 resolve_registers_block(nir_block *block, struct from_ssa_state *state)
 {
    nir_foreach_instr_safe(instr, block) {
@@ -531,11 +533,10 @@ resolve_registers_block(nir_block *block, struct from_ssa_state *state)
       if (instr->type == nir_instr_type_phi) {
          nir_instr_remove(instr);
          ralloc_steal(state->dead_ctx, instr);
+         state->progress = true;
       }
    }
    state->instr = NULL;
-
-   return true;
 }
 
 static void
@@ -756,7 +757,7 @@ resolve_parallel_copies_block(nir_block *block, struct from_ssa_state *state)
    return true;
 }
 
-static void
+static bool
 nir_convert_from_ssa_impl(nir_function_impl *impl, bool phi_webs_only)
 {
    struct from_ssa_state state;
@@ -766,6 +767,7 @@ nir_convert_from_ssa_impl(nir_function_impl *impl, bool phi_webs_only)
    state.phi_webs_only = phi_webs_only;
    state.merge_node_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                                     _mesa_key_pointer_equal);
+   state.progress = false;
 
    nir_foreach_block(block, impl) {
       add_parallel_copy_to_end_of_block(block, state.dead_ctx);
@@ -804,15 +806,20 @@ nir_convert_from_ssa_impl(nir_function_impl *impl, bool phi_webs_only)
    /* Clean up dead instructions and the hash tables */
    _mesa_hash_table_destroy(state.merge_node_table, NULL);
    ralloc_free(state.dead_ctx);
+   return state.progress;
 }
 
-void
+bool
 nir_convert_from_ssa(nir_shader *shader, bool phi_webs_only)
 {
+   bool progress = false;
+
    nir_foreach_function(function, shader) {
       if (function->impl)
-         nir_convert_from_ssa_impl(function->impl, phi_webs_only);
+         progress |= nir_convert_from_ssa_impl(function->impl, phi_webs_only);
    }
+
+   return progress;
 }
 
 

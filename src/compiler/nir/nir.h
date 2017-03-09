@@ -2588,7 +2588,7 @@ void nir_convert_loop_to_lcssa(nir_loop *loop);
  * registers.  If false, convert all values (even those not involved in a phi
  * node) to registers.
  */
-void nir_convert_from_ssa(nir_shader *shader, bool phi_webs_only);
+bool nir_convert_from_ssa(nir_shader *shader, bool phi_webs_only);
 
 bool nir_lower_phis_to_regs_block(nir_block *block);
 bool nir_lower_ssa_defs_to_regs_block(nir_block *block);
