@@ -60,20 +60,6 @@ _mesa_lookup_samplerobj_locked(struct gl_context *ctx, GLuint name)
          _mesa_HashLookupLocked(ctx->Shared->SamplerObjects, name);
 }
 
-static inline void
-begin_samplerobj_lookups(struct gl_context *ctx)
-{
-   _mesa_HashLockMutex(ctx->Shared->SamplerObjects);
-}
-
-
-static inline void
-end_samplerobj_lookups(struct gl_context *ctx)
-{
-   _mesa_HashUnlockMutex(ctx->Shared->SamplerObjects);
-}
-
-
 static inline struct gl_sampler_object *
 lookup_samplerobj_locked(struct gl_context *ctx, GLuint name)
 {
@@ -362,7 +348,7 @@ _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
        *       their parameters are valid and no other error occurs."
        */
 
-      begin_samplerobj_lookups(ctx);
+      _mesa_HashLockMutex(ctx->Shared->SamplerObjects);
 
       for (i = 0; i < count; i++) {
          const GLuint unit = first + i;
@@ -402,7 +388,7 @@ _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
          }
       }
 
-      end_samplerobj_lookups(ctx);
+      _mesa_HashUnlockMutex(ctx->Shared->SamplerObjects);
    } else {
       /* Unbind all samplers in the range <first> through <first>+<count>-1 */
       for (i = 0; i < count; i++) {
