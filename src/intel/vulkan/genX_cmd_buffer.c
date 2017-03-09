@@ -1388,12 +1388,16 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       dirty |= cmd_buffer->state.pipeline->active_stages;
       anv_foreach_stage(s, dirty) {
          result = emit_samplers(cmd_buffer, s, &cmd_buffer->state.samplers[s]);
-         if (result != VK_SUCCESS)
+         if (result != VK_SUCCESS) {
+            anv_batch_set_error(&cmd_buffer->batch, result);
             return 0;
+         }
          result = emit_binding_table(cmd_buffer, s,
                                      &cmd_buffer->state.binding_tables[s]);
-         if (result != VK_SUCCESS)
+         if (result != VK_SUCCESS) {
+            anv_batch_set_error(&cmd_buffer->batch, result);
             return 0;
+         }
       }
    }
 
@@ -1859,11 +1863,17 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
       genX(cmd_buffer_emit_state_base_address)(cmd_buffer);
 
       result = emit_binding_table(cmd_buffer, MESA_SHADER_COMPUTE, &surfaces);
-      assert(result == VK_SUCCESS);
+      if (result != VK_SUCCESS) {
+         anv_batch_set_error(&cmd_buffer->batch, result);
+         return result;
+      }
    }
 
    result = emit_samplers(cmd_buffer, MESA_SHADER_COMPUTE, &samplers);
-   assert(result == VK_SUCCESS);
+   if (result != VK_SUCCESS) {
+      anv_batch_set_error(&cmd_buffer->batch, result);
+      return result;
+   }
 
    uint32_t iface_desc_data_dw[GENX(INTERFACE_DESCRIPTOR_DATA_length)];
    struct GENX(INTERFACE_DESCRIPTOR_DATA) desc = {
@@ -1919,7 +1929,9 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
        (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
       /* FIXME: figure out descriptors for gen7 */
       result = flush_compute_descriptor_set(cmd_buffer);
-      assert(result == VK_SUCCESS);
+      if (result != VK_SUCCESS)
+         return;
+
       cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE_BIT;
    }
 
