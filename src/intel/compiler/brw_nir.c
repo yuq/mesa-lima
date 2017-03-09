@@ -452,8 +452,6 @@ brw_nir_lower_cs_shared(nir_shader *nir)
    this_progress;                                          \
 })
 
-#define OPT_V(pass, ...) NIR_PASS_V(nir, pass, ##__VA_ARGS__)
-
 static nir_shader *
 nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
              bool is_scalar)
@@ -469,7 +467,7 @@ nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
    bool progress;
    do {
       progress = false;
-      OPT_V(nir_lower_vars_to_ssa);
+      OPT(nir_lower_vars_to_ssa);
       OPT(nir_opt_copy_prop_vars);
 
       if (is_scalar) {
@@ -503,16 +501,16 @@ nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
       }
       OPT(nir_opt_remove_phis);
       OPT(nir_opt_undef);
-      OPT_V(nir_lower_doubles, nir_lower_drcp |
-                               nir_lower_dsqrt |
-                               nir_lower_drsq |
-                               nir_lower_dtrunc |
-                               nir_lower_dfloor |
-                               nir_lower_dceil |
-                               nir_lower_dfract |
-                               nir_lower_dround_even |
-                               nir_lower_dmod);
-      OPT_V(nir_lower_64bit_pack);
+      OPT(nir_lower_doubles, nir_lower_drcp |
+                             nir_lower_dsqrt |
+                             nir_lower_drsq |
+                             nir_lower_dtrunc |
+                             nir_lower_dfloor |
+                             nir_lower_dceil |
+                             nir_lower_dfract |
+                             nir_lower_dround_even |
+                             nir_lower_dmod);
+      OPT(nir_lower_64bit_pack);
    } while (progress);
 
    return nir;
@@ -531,8 +529,7 @@ nir_shader *
 brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 {
    const struct gen_device_info *devinfo = compiler->devinfo;
-   bool progress; /* Written by OPT and OPT_V */
-   (void)progress;
+   UNUSED bool progress; /* Written by OPT */
 
    const bool is_scalar = compiler->scalar_stage[nir->stage];
 
@@ -561,13 +558,13 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    nir = nir_optimize(nir, compiler, is_scalar);
 
    if (is_scalar) {
-      OPT_V(nir_lower_load_const_to_scalar);
+      OPT(nir_lower_load_const_to_scalar);
    }
 
    /* Lower a bunch of stuff */
-   OPT_V(nir_lower_var_copies);
+   OPT(nir_lower_var_copies);
 
-   OPT_V(nir_lower_clip_cull_distance_arrays);
+   OPT(nir_lower_clip_cull_distance_arrays);
 
    nir_variable_mode indirect_mask = 0;
    if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectInput)
@@ -606,8 +603,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
    bool debug_enabled =
       (INTEL_DEBUG & intel_debug_flag_for_shader_stage(nir->stage));
 
-   bool progress; /* Written by OPT and OPT_V */
-   (void)progress;
+   UNUSED bool progress; /* Written by OPT */
 
    nir = nir_optimize(nir, compiler, is_scalar);
 
@@ -618,7 +614,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
 
    OPT(nir_opt_algebraic_late);
 
-   OPT_V(nir_lower_to_source_mods);
+   OPT(nir_lower_to_source_mods);
    OPT(nir_copy_prop);
    OPT(nir_opt_dce);
    OPT(nir_opt_move_comparisons);
@@ -637,10 +633,10 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
       nir_print_shader(nir, stderr);
    }
 
-   OPT_V(nir_convert_from_ssa, true);
+   OPT(nir_convert_from_ssa, true);
 
    if (!is_scalar) {
-      OPT_V(nir_move_vec_src_uses_to_dest);
+      OPT(nir_move_vec_src_uses_to_dest);
       OPT(nir_lower_vec_to_movs);
    }
 
