@@ -143,9 +143,6 @@ blorp_emit_urb_config(struct blorp_batch *batch, unsigned vs_entry_size)
                         entry_size);
 }
 
-void genX(blorp_exec)(struct blorp_batch *batch,
-                      const struct blorp_params *params);
-
 void
 genX(blorp_exec)(struct blorp_batch *batch,
                  const struct blorp_params *params)
