@@ -696,7 +696,7 @@ deflate_and_write_to_disk(const void *in_data, size_t in_data_size, int dest,
          assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
 
          size_t have = BUFSIZE - strm.avail_out;
-         compressed_size += compressed_size + have;
+         compressed_size += have;
 
          size_t written = 0;
          for (size_t len = 0; len < have; len += written) {
