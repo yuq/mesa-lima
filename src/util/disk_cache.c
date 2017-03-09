@@ -603,7 +603,7 @@ evict_random_item(struct disk_cache *cache)
    free(dir_path);
 
    if (size) {
-      p_atomic_add(cache->size, - size);
+      p_atomic_add(cache->size, - (uint64_t)size);
       return;
    }
 
@@ -624,7 +624,7 @@ evict_random_item(struct disk_cache *cache)
    free(dir_path);
 
    if (size)
-      p_atomic_add(cache->size, - size);
+      p_atomic_add(cache->size, - (uint64_t)size);
 }
 
 void
@@ -646,7 +646,7 @@ disk_cache_remove(struct disk_cache *cache, const cache_key key)
    free(filename);
 
    if (sb.st_size)
-      p_atomic_add(cache->size, - sb.st_size);
+      p_atomic_add(cache->size, - (uint64_t)sb.st_size);
 }
 
 /* From the zlib docs:
