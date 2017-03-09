@@ -3614,4 +3614,22 @@
     <field name="Sampler L2 Disable Mask" start="31" end="31" type="bool"/>
   </register>
 
+  <register name="GFX_ARB_ERROR_RPT" length="1" num="0x40a0">
+    <field name="TLB Page Fault Error" start="0" end="0" type="bool"/>
+    <field name="RSTRM PAVP Read Invalid" start="1" end="1" type="bool"/>
+    <field name="Invalid Page Directory Entry Error" start="2" end="2" type="bool"/>
+    <field name="ROSTRM PAVP Invalid Physical Address" start="3" end="3" type="bool"/>
+    <field name="TLB Page VTD Translation Error" start="4" end="4" type="bool"/>
+    <field name="WRDP PAVP Invalid" start="5" end="5" type="bool"/>
+    <field name="Page Directory Entry VTD Translation Error" start="6" end="6" type="bool"/>
+    <field name="Unloaded PD Error" start="8" end="8" type="bool"/>
+    <field name="GuC VTd translation Page Fault 2nd level (Undefined doorbell)" start="9" end="9" type="bool"/>
+    <field name="Non WB memory type for Advanced Context" start="10" end="10" type="bool"/>
+    <field name="PASID Not Enabled" start="11" end="11" type="bool"/>
+    <field name="PASID Boundary Violation" start="12" end="12" type="bool"/>
+    <field name="PASID Not Valid" start="13" end="13" type="bool"/>
+    <field name="PASID Was Zero For Untranslated Request" start="14" end="14" type="bool"/>
+    <field name="Context Was Not Marked As Present When Doing DMA" start="15" end="15" type="bool"/>
+  </register>
+
 </genxml>

@@ -2653,4 +2653,16 @@
     <field name="Write Offset" start="2" end="31" type="offset"/>
   </register>
 
+  <register name="GFX_ARB_ERROR_RPT" length="1" num="0x40a0">
+    <field name="TLB Page Fault Error" start="0" end="0" type="bool"/>
+    <field name="Context Page Fault Error" start="1" end="1" type="bool"/>
+    <field name="Invalid Page Directory entry error" start="2" end="2" type="bool"/>
+    <field name="Hardware Status Page Fault Error" start="3" end="3" type="bool"/>
+    <field name="TLB Page VTD Translation Error" start="4" end="4" type="bool"/>
+    <field name="Context Page VTD Translation Error" start="5" end="5" type="bool"/>
+    <field name="Page Directory Entry VTD Translation Error" start="6" end="6" type="bool"/>
+    <field name="Hardware Status Page VTD Translation Error" start="7" end="7" type="bool"/>
+    <field name="Unloaded PD Error" start="8" end="8" type="bool"/>
+  </register>
+
 </genxml>
