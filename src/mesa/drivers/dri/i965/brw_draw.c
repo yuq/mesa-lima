@@ -43,6 +43,7 @@
 #include "brw_blorp.h"
 #include "brw_draw.h"
 #include "brw_defines.h"
+#include "brw_eu_defines.h"
 #include "brw_context.h"
 #include "brw_state.h"
 

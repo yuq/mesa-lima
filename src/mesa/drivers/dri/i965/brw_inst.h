@@ -34,7 +34,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include "brw_defines.h"
+#include "brw_eu_defines.h"
 #include "common/gen_device_info.h"
 
 #ifdef __cplusplus

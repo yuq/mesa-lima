@@ -30,7 +30,7 @@
   */
 
 
-#include "brw_defines.h"
+#include "brw_eu_defines.h"
 #include "brw_eu.h"
 
 

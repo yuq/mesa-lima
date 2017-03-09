@@ -27,7 +27,7 @@
 #include "util/format_rgb9e5.h"
 
 #include "blorp_priv.h"
-#include "brw_defines.h"
+#include "brw_eu_defines.h"
 
 #include "compiler/nir/nir_builder.h"
 

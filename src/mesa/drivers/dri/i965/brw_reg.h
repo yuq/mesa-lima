@@ -46,7 +46,7 @@
 #include "main/compiler.h"
 #include "main/macros.h"
 #include "program/prog_instruction.h"
-#include "brw_defines.h"
+#include "brw_eu_defines.h"
 
 #ifdef __cplusplus
 extern "C" {

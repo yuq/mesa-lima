@@ -5,10 +5,10 @@ i965_compiler_FILES = \
 	brw_compiler.h \
 	brw_dead_control_flow.cpp \
 	brw_dead_control_flow.h \
-	brw_defines.h \
 	brw_disasm.c \
 	brw_eu.c \
 	brw_eu_compact.c \
+	brw_eu_defines.h \
 	brw_eu_emit.c \
 	brw_eu.h \
 	brw_eu_util.c \
@@ -110,6 +110,7 @@ i965_FILES = \
 	brw_cs.c \
 	brw_cs.h \
 	brw_curbe.c \
+	brw_defines.h \
 	brw_draw.c \
 	brw_draw.h \
 	brw_draw_upload.c \
