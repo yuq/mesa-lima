@@ -2379,7 +2379,7 @@ typedef enum {
     */
    nir_lower_io_force_sample_interpolation = (1 << 1),
 } nir_lower_io_options;
-void nir_lower_io(nir_shader *shader,
+bool nir_lower_io(nir_shader *shader,
                   nir_variable_mode modes,
                   int (*type_size)(const struct glsl_type *),
                   nir_lower_io_options);
