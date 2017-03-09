@@ -50,16 +50,6 @@ _mesa_lookup_samplerobj(struct gl_context *ctx, GLuint name)
          _mesa_HashLookup(ctx->Shared->SamplerObjects, name);
 }
 
-static struct gl_sampler_object *
-_mesa_lookup_samplerobj_locked(struct gl_context *ctx, GLuint name)
-{
-   if (name == 0)
-      return NULL;
-   else
-      return (struct gl_sampler_object *)
-         _mesa_HashLookupLocked(ctx->Shared->SamplerObjects, name);
-}
-
 static inline struct gl_sampler_object *
 lookup_samplerobj_locked(struct gl_context *ctx, GLuint name)
 {
@@ -230,7 +220,7 @@ _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
       if (samplers[i]) {
          GLuint j;
          struct gl_sampler_object *sampObj =
-            _mesa_lookup_samplerobj_locked(ctx, samplers[i]);
+            lookup_samplerobj_locked(ctx, samplers[i]);
    
          if (sampObj) {
             /* If the sampler is currently bound, unbind it. */
