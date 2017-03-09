@@ -6359,9 +6359,11 @@ move_interpolation_to_top(nir_shader *nir)
  *
  * Useful when rendering to a non-multisampled buffer.
  */
-static void
+static bool
 demote_sample_qualifiers(nir_shader *nir)
 {
+   bool progress = true;
+
    nir_foreach_function(f, nir) {
       if (!f->impl)
          continue;
@@ -6386,6 +6388,7 @@ demote_sample_qualifiers(nir_shader *nir)
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(centroid));
             nir_instr_remove(instr);
+            progress = true;
          }
       }
 
@@ -6393,6 +6396,8 @@ demote_sample_qualifiers(nir_shader *nir)
                             ((unsigned) nir_metadata_block_index |
                              (unsigned) nir_metadata_dominance));
    }
+
+   return progress;
 }
 
 /**
