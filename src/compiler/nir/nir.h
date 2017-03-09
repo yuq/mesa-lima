@@ -106,6 +106,10 @@ typedef enum {
 typedef union {
    float f32[4];
    double f64[4];
+   int8_t i8[4];
+   uint8_t u8[4];
+   int16_t i16[4];
+   uint16_t u16[4];
    int32_t i32[4];
    uint32_t u32[4];
    int64_t i64[4];

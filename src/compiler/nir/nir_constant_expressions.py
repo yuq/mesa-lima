@@ -13,8 +13,10 @@ def type_size(type_):
 def type_sizes(type_):
     if type_has_size(type_):
         return [type_size(type_)]
+    elif type_ == 'float':
+        return [16, 32, 64]
     else:
-        return [32, 64]
+        return [8, 16, 32, 64]
 
 def type_add_size(type_, size):
     if type_has_size(type_):
@@ -38,6 +40,8 @@ def op_bit_sizes(op):
 def get_const_field(type_):
     if type_ == "bool32":
         return "u32"
+    elif type_ == "float16":
+        return "u16"
     else:
         m = type_split_re.match(type_)
         if not m:
@@ -250,6 +254,7 @@ unpack_half_1x16(uint16_t u)
 }
 
 /* Some typed vector structures to make things like src0.y work */
+typedef float float16_t;
 typedef float float32_t;
 typedef double float64_t;
 typedef bool bool32_t;
@@ -292,6 +297,8 @@ struct bool32_vec {
       % for k in range(op.input_sizes[j]):
          % if input_types[j] == "bool32":
             _src[${j}].u32[${k}] != 0,
+         % elif input_types[j] == "float16":
+            _mesa_half_to_float(_src[${j}].u16[${k}]),
          % else:
             _src[${j}].${get_const_field(input_types[j])}[${k}],
          % endif
@@ -317,6 +324,9 @@ struct bool32_vec {
                <% continue %>
             % elif input_types[j] == "bool32":
                const bool src${j} = _src[${j}].u32[_i] != 0;
+            % elif input_types[j] == "float16":
+               const float src${j} =
+                  _mesa_half_to_float(_src[${j}].u16[_i]);
             % else:
                const ${input_types[j]}_t src${j} =
                   _src[${j}].${get_const_field(input_types[j])}[_i];
@@ -339,6 +349,8 @@ struct bool32_vec {
          % if output_type == "bool32":
             ## Sanitize the C value to a proper NIR bool
             _dst_val.u32[_i] = dst ? NIR_TRUE : NIR_FALSE;
+         % elif output_type == "float16":
+            _dst_val.u16[_i] = _mesa_float_to_half(dst);
          % else:
             _dst_val.${get_const_field(output_type)}[_i] = dst;
          % endif
@@ -366,6 +378,8 @@ struct bool32_vec {
          % if output_type == "bool32":
             ## Sanitize the C value to a proper NIR bool
             _dst_val.u32[${k}] = dst.${"xyzw"[k]} ? NIR_TRUE : NIR_FALSE;
+         % elif output_type == "float16":
+            _dst_val.u16[${k}] = _mesa_float_to_half(dst.${"xyzw"[k]});
          % else:
             _dst_val.${get_const_field(output_type)}[${k}] = dst.${"xyzw"[k]};
          % endif

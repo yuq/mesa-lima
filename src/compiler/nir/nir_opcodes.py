@@ -174,7 +174,11 @@ for src_t in [tint, tuint, tfloat]:
       dst_types = [tint, tuint, tfloat]
 
    for dst_t in dst_types:
-      for bit_size in [32, 64]:
+      if dst_t == tfloat:
+         bit_sizes = [16, 32, 64]
+      else:
+         bit_sizes = [8, 16, 32, 64]
+      for bit_size in bit_sizes:
          unop_convert("{0}2{1}{2}".format(src_t[0], dst_t[0], bit_size),
                       dst_t + str(bit_size), src_t, "src0")
 
