@@ -1,4 +1,6 @@
-# Copyright © 2016 Intel Corporation
+#encoding=utf-8
+#
+# Copyright © 2017 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -18,47 +20,28 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+#
 
-BUILT_SOURCES += \
-	$(GENXML_GENERATED_FILES) \
-	$(AUBINATOR_GENERATED_FILES)
+from __future__ import print_function
+import os
+import sys
+import zlib
 
-EXTRA_DIST += \
-	$(GENXML_GENERATED_FILES) \
-	$(AUBINATOR_GENERATED_FILES)
+def main():
+    if len(sys.argv) < 2:
+        print("No input xml file specified")
+        sys.exit(1)
 
-SUFFIXES = _pack.h _xml.h .xml
+    with open(sys.argv[1]) as f:
+        compressed_data = zlib.compress(f.read())
 
-$(GENXML_GENERATED_FILES): genxml/gen_pack_header.py
+    gen_name = os.path.splitext(os.path.basename(sys.argv[1]))[0]
+    print("static const uint8_t %s_xml[] = {" % gen_name)
+    print("   ", end='')
 
-.xml_pack.h:
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/genxml/gen_pack_header.py $< > $@ || ($(RM) $@; false)
+    for i, c in enumerate(compressed_data, start=1):
+        print("0x%.2x, " % ord(c), end='\n   ' if not i % 12 else '')
+    print('\n};')
 
-# xxd generates variable names based on the path of the input file. We
-# prefer to generate our own name here, so it doesn't vary from
-# in/out-of-tree builds.
-
-$(GENXML_GENERATED_FILES): Makefile.am
-
-.xml_xml.h:
-	$(MKDIR_GEN)
-	$(AM_V_GEN) echo -n "static const uint8_t " > $@; \
-	echo "$(@F)_xml[] = {" | sed -e 's,_xml.h,,' >> $@; \
-	cat $< | $(XXD) -i >> $@; \
-	echo "};" >> $@
-
-EXTRA_DIST += \
-	genxml/gen4.xml \
-	genxml/gen45.xml \
-	genxml/gen5.xml \
-	genxml/gen6.xml \
-	genxml/gen7.xml \
-	genxml/gen75.xml \
-	genxml/gen8.xml \
-	genxml/gen9.xml \
-	genxml/genX_pack.h \
-	genxml/gen_macros.h \
-	genxml/gen_pack_header.py \
-	genxml/gen_zipped_file.py \
-	genxml/README
+if __name__ == '__main__':
+    main()
