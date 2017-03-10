@@ -3089,4 +3089,15 @@
     <field name="Pending Page Faults" start="9" end="15" type="uint"/>
   </register>
 
+  <register name="ERR_INT" length="1" num="0x44040">
+    <field name="Primary A GTT Fault Status" start="0" end="0" type="bool"/>
+    <field name="Primary B GTT Fault Status" start="1" end="1" type="bool"/>
+    <field name="Sprite A GTT Fault Status" start="2" end="2" type="bool"/>
+    <field name="Sprite B GTT Fault Status" start="3" end="3" type="bool"/>
+    <field name="Cursor A GTT Fault Status" start="4" end="4" type="bool"/>
+    <field name="Cursor B GTT Fault Status" start="5" end="5" type="bool"/>
+    <field name="Invalid page table entry data" start="6" end="6" type="bool"/>
+    <field name="Invalid GTT page table entry" start="7" end="7" type="bool"/>
+  </register>
+
 </genxml>
