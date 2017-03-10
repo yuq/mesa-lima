@@ -27,7 +27,6 @@
 #include "r600_cs.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
-#include "util/u_threaded_context.h"
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -239,6 +238,7 @@ static void r600_buffer_destroy(struct pipe_screen *screen,
 {
 	struct r600_resource *rbuffer = r600_resource(buf);
 
+	threaded_resource_deinit(buf);
 	util_range_destroy(&rbuffer->valid_buffer_range);
 	pb_reference(&rbuffer->buf, NULL);
 	FREE(rbuffer);
@@ -249,7 +249,7 @@ r600_invalidate_buffer(struct r600_common_context *rctx,
 		       struct r600_resource *rbuffer)
 {
 	/* Shared buffers can't be reallocated. */
-	if (rbuffer->is_shared)
+	if (rbuffer->b.is_shared)
 		return false;
 
 	/* Sparse buffers can't be reallocated. */
@@ -259,7 +259,7 @@ r600_invalidate_buffer(struct r600_common_context *rctx,
 	/* In AMD_pinned_memory, the user pointer association only gets
 	 * broken when the buffer is explicitly re-allocated.
 	 */
-	if (rctx->ws->buffer_is_user_ptr(rbuffer->buf))
+	if (rbuffer->b.is_user_ptr)
 		return false;
 
 	/* Check if mapping this buffer would cause waiting for the GPU. */
@@ -349,7 +349,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	 *
 	 * So don't ever use staging buffers.
 	 */
-	if (rscreen->ws->buffer_is_user_ptr(rbuffer->buf))
+	if (rbuffer->b.is_user_ptr)
 		usage |= PIPE_TRANSFER_PERSISTENT;
 
 	/* See if the buffer range being mapped has never been initialized,
@@ -357,7 +357,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	if (!(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
 		       TC_TRANSFER_MAP_IGNORE_VALID_RANGE)) &&
 	    usage & PIPE_TRANSFER_WRITE &&
-	    !rbuffer->is_shared &&
+	    !rbuffer->b.is_shared &&
 	    !util_ranges_intersect(&rbuffer->valid_buffer_range, box->x, box->x + box->width)) {
 		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
 	}
@@ -565,11 +565,13 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 	rbuffer->b.b.next = NULL;
 	pipe_reference_init(&rbuffer->b.b.reference, 1);
 	rbuffer->b.b.screen = screen;
+
 	rbuffer->b.vtbl = &r600_buffer_vtbl;
+	threaded_resource_init(&rbuffer->b.b);
+
 	rbuffer->buf = NULL;
 	rbuffer->bind_history = 0;
 	rbuffer->TC_L2_dirty = false;
-	rbuffer->is_shared = false;
 	util_range_init(&rbuffer->valid_buffer_range);
 	return rbuffer;
 }
@@ -627,7 +629,9 @@ r600_buffer_from_user_memory(struct pipe_screen *screen,
 
 	rbuffer->domains = RADEON_DOMAIN_GTT;
 	rbuffer->flags = 0;
+	rbuffer->b.is_user_ptr = true;
 	util_range_add(&rbuffer->valid_buffer_range, 0, templ->width0);
+	util_range_add(&rbuffer->b.valid_buffer_range, 0, templ->width0);
 
 	/* Convert a user pointer to a buffer. */
 	rbuffer->buf = ws->buffer_from_ptr(ws, user_memory, templ->width0);

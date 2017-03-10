@@ -45,6 +45,7 @@
 #include "util/slab.h"
 #include "util/u_suballoc.h"
 #include "util/u_transfer.h"
+#include "util/u_threaded_context.h"
 
 #define ATI_VENDOR_ID 0x1002
 
@@ -140,7 +141,7 @@ void radeon_shader_binary_clean(struct ac_shader_binary *b);
  * at the moment.
  */
 struct r600_resource {
-	struct u_resource		b;
+	struct threaded_resource	b;
 
 	/* Winsys objects. */
 	struct pb_buffer		*buf;
@@ -179,7 +180,6 @@ struct r600_resource {
 	bool				TC_L2_dirty;
 
 	/* Whether the resource has been exported via resource_get_handle. */
-	bool				is_shared;
 	unsigned			external_usage; /* PIPE_HANDLE_USAGE_* */
 };
 

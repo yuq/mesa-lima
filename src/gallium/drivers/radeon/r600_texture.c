@@ -389,7 +389,7 @@ static bool r600_can_disable_dcc(struct r600_texture *rtex)
 {
 	/* We can't disable DCC if it can be written by another process. */
 	return rtex->dcc_offset &&
-	       (!rtex->resource.is_shared ||
+	       (!rtex->resource.b.is_shared ||
 		!(rtex->resource.external_usage & PIPE_HANDLE_USAGE_WRITE));
 }
 
@@ -466,7 +466,7 @@ static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
 	if (rctx->chip_class < SI)
 		return;
 
-	if (rtex->resource.is_shared ||
+	if (rtex->resource.b.is_shared ||
 	    rtex->surface.is_linear)
 		return;
 
@@ -570,7 +570,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		}
 
 		/* Set metadata. */
-		if (!res->is_shared || update_metadata) {
+		if (!res->b.is_shared || update_metadata) {
 			r600_texture_init_metadata(rscreen, rtex, &metadata);
 			if (rscreen->query_opaque_metadata)
 				rscreen->query_opaque_metadata(rscreen, rtex,
@@ -580,7 +580,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		}
 	}
 
-	if (res->is_shared) {
+	if (res->b.is_shared) {
 		/* USAGE_EXPLICIT_FLUSH must be cleared if at least one user
 		 * doesn't set it.
 		 */
@@ -588,7 +588,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
 			res->external_usage &= ~PIPE_HANDLE_USAGE_EXPLICIT_FLUSH;
 	} else {
-		res->is_shared = true;
+		res->b.is_shared = true;
 		res->external_usage = usage;
 	}
 
@@ -1432,7 +1432,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	if (!rtex)
 		return NULL;
 
-	rtex->resource.is_shared = true;
+	rtex->resource.b.is_shared = true;
 	rtex->resource.external_usage = usage;
 
 	if (rscreen->apply_opaque_metadata)
@@ -1550,7 +1550,7 @@ static bool r600_can_invalidate_texture(struct r600_common_screen *rscreen,
 {
 	/* r600g doesn't react to dirty_tex_descriptor_counter */
 	return rscreen->chip_class >= SI &&
-		!rtex->resource.is_shared &&
+		!rtex->resource.b.is_shared &&
 		!(transfer_usage & PIPE_TRANSFER_READ) &&
 		rtex->resource.b.b.last_level == 0 &&
 		util_texrange_covers_whole_level(&rtex->resource.b.b, 0,
@@ -2257,7 +2257,7 @@ static void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
 	/* The intent is to use this with shared displayable back buffers,
 	 * but it's not strictly limited only to them.
 	 */
-	if (!tex->resource.is_shared ||
+	if (!tex->resource.b.is_shared ||
 	    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) ||
 	    tex->resource.b.b.target != PIPE_TEXTURE_2D ||
 	    tex->resource.b.b.last_level > 0 ||
@@ -2524,7 +2524,7 @@ void vi_dcc_clear_level(struct r600_common_context *rctx,
 static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
 					   struct r600_texture *rtex)
 {
-	if (rtex->resource.is_shared ||
+	if (rtex->resource.b.is_shared ||
 	    rtex->resource.b.b.nr_samples <= 1 ||
 	    rtex->surface.micro_tile_mode == rtex->last_msaa_resolve_target_micro_mode)
 		return;
@@ -2674,7 +2674,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		 * because there is no way to communicate the clear color among
 		 * all clients
 		 */
-		if (tex->resource.is_shared &&
+		if (tex->resource.b.is_shared &&
 		    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
 			continue;
 
