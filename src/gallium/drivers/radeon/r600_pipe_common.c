@@ -785,6 +785,11 @@ static const char* r600_get_chip_name(struct r600_common_screen *rscreen)
 
 static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 {
+	/* Don't use the cache if shader dumping is enabled. */
+	if (rscreen->debug_flags &
+	    (DBG_FS | DBG_VS | DBG_TCS | DBG_TES | DBG_GS | DBG_PS | DBG_CS))
+		return;
+
 	uint32_t mesa_timestamp;
 	if (disk_cache_get_function_timestamp(r600_disk_cache_create,
 					      &mesa_timestamp)) {
