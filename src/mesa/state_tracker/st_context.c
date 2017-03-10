@@ -330,9 +330,6 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    st->ctx = ctx;
    st->pipe = pipe;
 
-   /* XXX: this is one-off, per-screen init: */
-   st_debug_init();
-   
    /* state tracker needs the VBO module */
    _vbo_CreateContext(ctx);
 
@@ -536,7 +533,10 @@ struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
       return NULL;
    }
 
-   if (pipe->screen->get_disk_shader_cache)
+   st_debug_init();
+
+   if (pipe->screen->get_disk_shader_cache &&
+       !(ST_DEBUG & DEBUG_TGSI))
       ctx->Cache = pipe->screen->get_disk_shader_cache(pipe->screen);
 
    st_init_driver_flags(&ctx->DriverFlags);
