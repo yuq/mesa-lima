@@ -466,30 +466,29 @@ make_cache_file_directory(struct disk_cache *cache, const cache_key key)
    free(dir);
 }
 
-/* Given a directory path and predicate function, count all entries in
- * that directory for which the predicate returns true. Then choose a
- * random entry from among those counted.
+/* Given a directory path and predicate function, find the entry with
+ * the oldest access time in that directory for which the predicate
+ * returns true.
  *
  * Returns: A malloc'ed string for the path to the chosen file, (or
  * NULL on any error). The caller should free the string when
  * finished.
  */
 static char *
-choose_random_file_matching(const char *dir_path,
-                            bool (*predicate)(const struct dirent *,
-                                              const char *dir_path))
+choose_lru_file_matching(const char *dir_path,
+                         bool (*predicate)(const struct dirent *,
+                                           const char *dir_path))
 {
    DIR *dir;
    struct dirent *entry;
-   unsigned int count, victim;
    char *filename;
+   char *lru_name = NULL;
+   time_t lru_atime = 0;
 
    dir = opendir(dir_path);
    if (dir == NULL)
       return NULL;
 
-   count = 0;
-
    while (1) {
       entry = readdir(dir);
       if (entry == NULL)
@@ -497,39 +496,29 @@ choose_random_file_matching(const char *dir_path,
       if (!predicate(entry, dir_path))
          continue;
 
-      count++;
+      struct stat sb;
+      if (fstatat(dirfd(dir), entry->d_name, &sb, 0) == 0) {
+         if (!lru_atime || (sb.st_atime < lru_atime)) {
+            size_t len = strlen(entry->d_name) + 1;
+            char *tmp = realloc(lru_name, len);
+            if (tmp) {
+               lru_name = tmp;
+               memcpy(lru_name, entry->d_name, len);
+               lru_atime = sb.st_atime;
+            }
+         }
+      }
    }
 
-   if (count == 0) {
+   if (lru_name == NULL) {
       closedir(dir);
       return NULL;
    }
 
-   victim = rand() % count;
-
-   rewinddir(dir);
-   count = 0;
-
-   while (1) {
-      entry = readdir(dir);
-      if (entry == NULL)
-         break;
-      if (!predicate(entry, dir_path))
-         continue;
-      if (count == victim)
-         break;
-
-      count++;
-   }
-
-   if (entry == NULL) {
-      closedir(dir);
-      return NULL;
-   }
-
-   if (asprintf(&filename, "%s/%s", dir_path, entry->d_name) < 0)
+   if (asprintf(&filename, "%s/%s", dir_path, lru_name) < 0)
       filename = NULL;
 
+   free(lru_name);
    closedir(dir);
 
    return filename;
@@ -561,12 +550,12 @@ is_regular_non_tmp_file(const struct dirent *entry, const char *path)
 
 /* Returns the size of the deleted file, (or 0 on any error). */
 static size_t
-unlink_random_file_from_directory(const char *path)
+unlink_lru_file_from_directory(const char *path)
 {
    struct stat sb;
    char *filename;
 
-   filename = choose_random_file_matching(path, is_regular_non_tmp_file);
+   filename = choose_lru_file_matching(path, is_regular_non_tmp_file);
    if (filename == NULL)
       return 0;
 
@@ -630,7 +619,7 @@ is_two_character_sub_directory(const struct dirent *entry, const char *path)
 }
 
 static void
-evict_random_item(struct disk_cache *cache)
+evict_lru_item(struct disk_cache *cache)
 {
    const char hex[] = "0123456789abcde";
    char *dir_path;
@@ -640,6 +629,7 @@ evict_random_item(struct disk_cache *cache)
    /* With a reasonably-sized, full cache, (and with keys generated
     * from a cryptographic hash), we can choose two random hex digits
     * and reasonably expect the directory to exist with a file in it.
+    * Provides pseudo-LRU eviction to reduce checking all cache files.
     */
    a = rand() % 16;
    b = rand() % 16;
@@ -647,7 +637,7 @@ evict_random_item(struct disk_cache *cache)
    if (asprintf(&dir_path, "%s/%c%c", cache->path, hex[a], hex[b]) < 0)
       return;
 
-   size = unlink_random_file_from_directory(dir_path);
+   size = unlink_lru_file_from_directory(dir_path);
 
    free(dir_path);
 
@@ -657,18 +647,19 @@ evict_random_item(struct disk_cache *cache)
    }
 
    /* In the case where the random choice of directory didn't find
-    * something, we choose randomly from the existing directories.
+    * something, we choose the least recently accessed from the
+    * existing directories.
     *
     * Really, the only reason this code exists is to allow the unit
     * tests to work, (which use an artificially-small cache to be able
     * to force a single cached item to be evicted).
     */
-   dir_path = choose_random_file_matching(cache->path,
-                                          is_two_character_sub_directory);
+   dir_path = choose_lru_file_matching(cache->path,
+                                       is_two_character_sub_directory);
    if (dir_path == NULL)
       return;
 
-   size = unlink_random_file_from_directory(dir_path);
+   size = unlink_lru_file_from_directory(dir_path);
 
    free(dir_path);
 
@@ -863,7 +854,7 @@ cache_put(void *job, int thread_index)
     * else first.
     */
    if (*dc_job->cache->size + dc_job->size > dc_job->cache->max_size)
-      evict_random_item(dc_job->cache);
+      evict_lru_item(dc_job->cache);
 
    /* Create CRC of the data and store at the start of the file. We will
     * read this when restoring the cache and use it to check for corruption.
