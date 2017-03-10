@@ -3648,4 +3648,27 @@
     <field name="Head Pointer Upper DWORD" start="0" end="15" type="uint" default="0"/>
   </register>
 
+  <register name="FAULT_REG" length="1" num="0x4094">
+    <field name="Valid Bit" start="0" end="0" type="bool"/>
+    <field name="Fault Type" start="1" end="2" type="uint">
+      <value name="Invalid PTE Fault" value="0"/>
+      <value name="Invalid PDE Fault" value="1"/>
+      <value name="Invalid PDPE Fault" value="2"/>
+      <value name="Invalid PML4E Fault" value="3"/>
+    </field>
+    <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
+    <field name="GTTSEL" start="11" end="11" type="uint">
+      <value name="PPGTT" value="0"/>
+      <value name="GGTT" value="1"/>
+    </field>
+    <field name="Engine ID" start="12" end="14" type="uint">
+      <value name="GFX" value="0"/>
+      <value name="MFX0" value="1"/>
+      <value name="MFX1" value="2"/>
+      <value name="VEBX" value="3"/>
+      <value name="BLT" value="4"/>
+      <value name="GUC" value="5"/>
+    </field>
+  </register>
+
 </genxml>

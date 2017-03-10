@@ -2087,4 +2087,52 @@
     <field name="Unloaded PD Error" start="8" end="8" type="bool"/>
   </register>
 
+  <register name="BCS_FAULT_REG" length="1" num="0x4294">
+    <field name="Valid Bit" start="0" end="0" type="bool"/>
+    <field name="Fault Type" start="1" end="2" type="uint">
+      <value name="Page Fault" value="0"/>
+      <value name="Invalid PD Fault" value="1"/>
+      <value name="Unloaded PD Fault" value="2"/>
+      <value name="Invalid and Unloaded PD fault" value="3"/>
+    </field>
+    <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
+    <field name="GTTSEL" start="11" end="1" type="uint">
+      <value name="PPGTT" value="0"/>
+      <value name="GGTT" value="1"/>
+    </field>
+    <field name="Virtual Address of Fault" start="12" end="31" type="address"/>
+  </register>
+
+  <register name="RCS_FAULT_REG" length="1" num="0x4094">
+    <field name="Valid Bit" start="0" end="0" type="bool"/>
+    <field name="Fault Type" start="1" end="2" type="uint">
+      <value name="Page Fault" value="0"/>
+      <value name="Invalid PD Fault" value="1"/>
+      <value name="Unloaded PD Fault" value="2"/>
+      <value name="Invalid and Unloaded PD fault" value="3"/>
+    </field>
+    <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
+    <field name="GTTSEL" start="11" end="1" type="uint">
+      <value name="PPGTT" value="0"/>
+      <value name="GGTT" value="1"/>
+    </field>
+    <field name="Virtual Address of Fault" start="12" end="31" type="address"/>
+  </register>
+
+  <register name="VCS_FAULT_REG" length="1" num="0x4194">
+    <field name="Valid Bit" start="0" end="0" type="bool"/>
+    <field name="Fault Type" start="1" end="2" type="uint">
+      <value name="Page Fault" value="0"/>
+      <value name="Invalid PD Fault" value="1"/>
+      <value name="Unloaded PD Fault" value="2"/>
+      <value name="Invalid and Unloaded PD fault" value="3"/>
+    </field>
+    <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
+    <field name="GTTSEL" start="11" end="1" type="uint">
+      <value name="PPGTT" value="0"/>
+      <value name="GGTT" value="1"/>
+    </field>
+    <field name="Virtual Address of Fault" start="12" end="31" type="address"/>
+  </register>
+
 </genxml>
