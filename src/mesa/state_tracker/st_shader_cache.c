@@ -68,7 +68,7 @@ st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
       return;
 
    unsigned char *sha1;
-   struct blob *blob = blob_create(NULL);
+   struct blob *blob = blob_create();
 
    switch (prog->info.stage) {
    case MESA_SHADER_VERTEX: {
@@ -134,7 +134,7 @@ st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
               _mesa_shader_stage_to_string(prog->info.stage), sha1_buf);
    }
 
-   ralloc_free(blob);
+   free(blob);
 }
 
 static void

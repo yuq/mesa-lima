@@ -1224,7 +1224,7 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
    if (*prog->data->sha1 == 0)
       return;
 
-   struct blob *metadata = blob_create(NULL);
+   struct blob *metadata = blob_create();
 
    write_uniforms(metadata, prog);
 
@@ -1272,7 +1272,7 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    disk_cache_put(cache, prog->data->sha1, metadata->data, metadata->size);
 
-   ralloc_free(metadata);
+   free(metadata);
 
    if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
       fprintf(stderr, "putting program metadata in cache: %s\n",
