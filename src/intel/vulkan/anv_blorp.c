@@ -1537,6 +1537,8 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
 
    /* Once we've done any sort of resolve, we're no longer fast-cleared */
    att_state->fast_clear = false;
+   if (att_state->aux_usage == ISL_AUX_USAGE_CCS_D)
+      att_state->aux_usage = ISL_AUX_USAGE_NONE;
 }
 
 void
