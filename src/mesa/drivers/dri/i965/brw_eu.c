@@ -354,8 +354,6 @@ brw_init_codegen(const struct gen_device_info *devinfo,
    p->loop_stack_array_size = 16;
    p->loop_stack = rzalloc_array(mem_ctx, int, p->loop_stack_array_size);
    p->if_depth_in_loop = rzalloc_array(mem_ctx, int, p->loop_stack_array_size);
-
-   brw_init_compaction_tables(devinfo);
 }
 
 

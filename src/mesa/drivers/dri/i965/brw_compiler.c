@@ -23,6 +23,7 @@
 
 #include "brw_compiler.h"
 #include "brw_shader.h"
+#include "brw_eu.h"
 #include "common/gen_debug.h"
 #include "compiler/nir/nir.h"
 #include "main/errors.h"
@@ -107,6 +108,7 @@ brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
 
    brw_fs_alloc_reg_sets(compiler);
    brw_vec4_alloc_reg_set(compiler);
+   brw_init_compaction_tables(devinfo);
 
    compiler->precise_trig = env_var_as_boolean("INTEL_PRECISE_TRIG", false);
 
