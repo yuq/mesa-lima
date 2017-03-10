@@ -3671,4 +3671,73 @@
     </field>
   </register>
 
+  <register name="BCS_RING_BUFFER_CTL" length="1" num="0x2203c">
+    <field name="Ring Buffer Enable" start="0" end="0" type="bool"/>
+    <field name="Automatic Report Head Pointer" start="1" end="2" type="uint">
+      <value name="MI_AUTOREPORT_OFF" value="0"/>
+      <value name="MI_AUTOREPORT_64KB" value="1"/>
+      <value name="MI_AUTOREPORT_4KB" value="2"/>
+      <value name="MI_AUTOREPORT_128KB" value="3"/>
+    </field>
+    <field name="Disable Register Accesses" start="8" end="8" type="bool"/>
+    <field name="Semaphore Wait" start="10" end="10" type="bool"/>
+    <field name="RBWait" start="11" end="11" type="bool"/>
+    <field name="Buffer Length (in pages - 1)" start="12" end="20" type="uint"/>
+  </register>
+
+  <register name="RCS_RING_BUFFER_CTL" length="1" num="0x203c">
+    <field name="Ring Buffer Enable" start="0" end="0" type="bool"/>
+    <field name="Automatic Report Head Pointer" start="1" end="2" type="uint">
+      <value name="MI_AUTOREPORT_OFF" value="0"/>
+      <value name="MI_AUTOREPORT_64KB" value="1"/>
+      <value name="MI_AUTOREPORT_4KB" value="2"/>
+      <value name="MI_AUTOREPORT_128KB" value="3"/>
+    </field>
+    <field name="Semaphore Wait" start="10" end="10" type="bool"/>
+    <field name="RBWait" start="11" end="11" type="bool"/>
+    <field name="Buffer Length (in pages - 1)" start="12" end="20" type="uint"/>
+  </register>
+
+  <register name="VECS_RING_BUFFER_CTL" length="1" num="0x1A03c">
+    <field name="Ring Buffer Enable" start="0" end="0" type="bool"/>
+    <field name="Automatic Report Head Pointer" start="1" end="2" type="uint">
+      <value name="MI_AUTOREPORT_OFF" value="0"/>
+      <value name="MI_AUTOREPORT_64KB" value="1"/>
+      <value name="MI_AUTOREPORT_4KB" value="2"/>
+      <value name="MI_AUTOREPORT_128KB" value="3"/>
+    </field>
+    <field name="Disable Register Accesses" start="8" end="8" type="bool"/>
+    <field name="Semaphore Wait" start="10" end="10" type="bool"/>
+    <field name="RBWait" start="11" end="11" type="bool"/>
+    <field name="Buffer Length (in pages - 1)" start="12" end="20" type="uint"/>
+  </register>
+
+  <register name="VCS_RING_BUFFER_CTL" length="1" num="0x1203c">
+    <field name="Ring Buffer Enable" start="0" end="0" type="bool"/>
+    <field name="Automatic Report Head Pointer" start="1" end="2" type="uint">
+      <value name="MI_AUTOREPORT_OFF" value="0"/>
+      <value name="MI_AUTOREPORT_64KB" value="1"/>
+      <value name="MI_AUTOREPORT_4KB" value="2"/>
+      <value name="MI_AUTOREPORT_128KB" value="3"/>
+    </field>
+    <field name="Disable Register Accesses" start="8" end="8" type="bool"/>
+    <field name="Semaphore Wait" start="10" end="10" type="bool"/>
+    <field name="RBWait" start="11" end="11" type="bool"/>
+    <field name="Buffer Length (in pages - 1)" start="12" end="20" type="uint"/>
+  </register>
+
+  <register name="VCS2_RING_BUFFER_CTL" length="1" num="0x1203c">
+    <field name="Ring Buffer Enable" start="0" end="0" type="bool"/>
+    <field name="Automatic Report Head Pointer" start="1" end="2" type="uint">
+      <value name="MI_AUTOREPORT_OFF" value="0"/>
+      <value name="MI_AUTOREPORT_64KB" value="1"/>
+      <value name="MI_AUTOREPORT_4KB" value="2"/>
+      <value name="MI_AUTOREPORT_128KB" value="3"/>
+    </field>
+    <field name="Disable Register Accesses" start="8" end="8" type="bool"/>
+    <field name="Semaphore Wait" start="10" end="10" type="bool"/>
+    <field name="RBWait" start="11" end="11" type="bool"/>
+    <field name="Buffer Length (in pages - 1)" start="12" end="20" type="uint"/>
+  </register>
+
 </genxml>
