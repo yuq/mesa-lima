@@ -593,18 +593,20 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
             fence = radeon_cs_create_fence(rcs);
         }
 
-        if (pfence)
-            radeon_fence_reference(pfence, fence);
+        if (fence) {
+            if (pfence)
+                radeon_fence_reference(pfence, fence);
 
-        mtx_lock(&cs->ws->bo_fence_lock);
-        for (unsigned i = 0; i < cs->csc->num_slab_buffers; ++i) {
-            struct radeon_bo *bo = cs->csc->slab_buffers[i].bo;
-            p_atomic_inc(&bo->num_active_ioctls);
-            radeon_bo_slab_fence(bo, (struct radeon_bo *)fence);
+            mtx_lock(&cs->ws->bo_fence_lock);
+            for (unsigned i = 0; i < cs->csc->num_slab_buffers; ++i) {
+                struct radeon_bo *bo = cs->csc->slab_buffers[i].bo;
+                p_atomic_inc(&bo->num_active_ioctls);
+                radeon_bo_slab_fence(bo, (struct radeon_bo *)fence);
+            }
+            mtx_unlock(&cs->ws->bo_fence_lock);
+
+            radeon_fence_reference(&fence, NULL);
         }
-        mtx_unlock(&cs->ws->bo_fence_lock);
-
-        radeon_fence_reference(&fence, NULL);
     } else {
         radeon_fence_reference(&cs->next_fence, NULL);
     }
