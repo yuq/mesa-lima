@@ -231,12 +231,14 @@ color_is_zero_one(VkClearColorValue value, enum isl_format format)
 }
 
 static void
-color_attachment_compute_aux_usage(struct anv_device *device,
-                                   struct anv_attachment_state *att_state,
-                                   struct anv_image_view *iview,
-                                   VkRect2D render_area,
+color_attachment_compute_aux_usage(struct anv_device * device,
+                                   struct anv_cmd_state * cmd_state,
+                                   uint32_t att, VkRect2D render_area,
                                    union isl_color_value *fast_clear_color)
 {
+   struct anv_attachment_state *att_state = &cmd_state->attachments[att];
+   struct anv_image_view *iview = cmd_state->framebuffer->attachments[att];
+
    if (iview->image->aux_surface.isl.size == 0) {
       att_state->aux_usage = ISL_AUX_USAGE_NONE;
       att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
@@ -274,14 +276,28 @@ color_attachment_compute_aux_usage(struct anv_device *device,
           * don't want to deal with now.
           */
          if (iview->isl.base_level > 0 ||
-             iview->isl.base_array_layer > 0 ||
-             iview->isl.array_len > 1)
+             iview->isl.base_array_layer > 0)
             att_state->fast_clear = false;
       }
 
       /* On Broadwell and earlier, we can only handle 0/1 clear colors */
       if (GEN_GEN <= 8 && !att_state->clear_color_is_zero_one)
          att_state->fast_clear = false;
+
+      /* We allow fast clears when all aux layers of the miplevel are targeted.
+       * See add_fast_clear_state_buffer() for more information. Also, because
+       * we only either do a fast clear or a normal clear and not both, this
+       * complies with the gen7 restriction of not fast-clearing multiple
+       * layers.
+       */
+      if (cmd_state->framebuffer->layers !=
+          anv_image_aux_layers(iview->image, iview->isl.base_level)) {
+         att_state->fast_clear = false;
+         if (GEN_GEN == 7) {
+            anv_perf_warn("Not fast-clearing the first layer in "
+                          "a multi-layer fast clear.");
+         }
+      }
 
       if (att_state->fast_clear) {
          memcpy(fast_clear_color->u32, att_state->clear_value.color.uint32,
@@ -629,8 +645,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          union isl_color_value clear_color = { .u32 = { 0, } };
          if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
             color_attachment_compute_aux_usage(cmd_buffer->device,
-                                               &state->attachments[i],
-                                               iview, begin->renderArea,
+                                               state, i, begin->renderArea,
                                                &clear_color);
 
             struct isl_view view = iview->isl;
