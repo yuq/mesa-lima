@@ -1043,11 +1043,7 @@ isl_calc_linear_min_row_pitch(const struct isl_device *dev,
 
    assert(phys_slice0_sa->w % fmtl->bw == 0);
 
-   uint32_t min_row_pitch = bs * (phys_slice0_sa->w / fmtl->bw);
-   min_row_pitch = MAX2(min_row_pitch, info->min_pitch);
-   min_row_pitch = isl_align_npot(min_row_pitch, alignment);
-
-   return min_row_pitch;
+   return isl_align_npot(bs * (phys_slice0_sa->w / fmtl->bw), alignment);
 }
 
 static uint32_t
@@ -1068,11 +1064,8 @@ isl_calc_tiled_min_row_pitch(const struct isl_device *dev,
       isl_align_div(total_w_el * tile_el_scale,
                     tile_info->logical_extent_el.width);
 
-   uint32_t min_row_pitch = total_w_tl * tile_info->phys_extent_B.width;
-   min_row_pitch = MAX2(min_row_pitch, surf_info->min_pitch);
-   min_row_pitch = isl_align_npot(min_row_pitch, alignment);
-
-   return min_row_pitch;
+   assert(alignment == tile_info->phys_extent_B.width);
+   return total_w_tl * tile_info->phys_extent_B.width;
 }
 
 static uint32_t
