@@ -35,18 +35,11 @@ $(GENXML_GENERATED_FILES): genxml/gen_pack_header.py
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) $(srcdir)/genxml/gen_pack_header.py $< > $@ || ($(RM) $@; false)
 
-# xxd generates variable names based on the path of the input file. We
-# prefer to generate our own name here, so it doesn't vary from
-# in/out-of-tree builds.
-
-$(GENXML_GENERATED_FILES): Makefile.am
+$(GENXML_GENERATED_FILES): genxml/gen_zipped_file.py
 
 .xml_xml.h:
 	$(MKDIR_GEN)
-	$(AM_V_GEN) echo -n "static const uint8_t " > $@; \
-	echo "$(@F)_xml[] = {" | sed -e 's,_xml.h,,' >> $@; \
-	cat $< | $(XXD) -i >> $@; \
-	echo "};" >> $@
+	$(AM_V_GEN) $(PYTHON2) $(srcdir)/genxml/gen_zipped_file.py $< > $@ || ($(RM) $@; false)
 
 EXTRA_DIST += \
 	genxml/gen4.xml \

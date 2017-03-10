@@ -126,7 +126,6 @@ LT_PREREQ([2.2])
 LT_INIT([disable-static])
 
 AC_CHECK_PROG(RM, rm, [rm -f])
-AC_CHECK_PROG(XXD, xxd, [xxd])
 
 AX_PROG_BISON([],
               AS_IF([test ! -f "$srcdir/src/compiler/glsl/glcpp/glcpp-parse.c"],

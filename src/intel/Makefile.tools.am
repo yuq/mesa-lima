@@ -30,7 +30,8 @@ tools_aubinator_SOURCES = \
 
 tools_aubinator_CFLAGS = \
 	$(AM_CFLAGS) \
-	$(EXPAT_CFLAGS)
+	$(EXPAT_CFLAGS) \
+	$(ZLIB_CFLAGS)
 
 tools_aubinator_LDADD = \
 	common/libintel_common.la \
@@ -40,4 +41,5 @@ tools_aubinator_LDADD = \
 	$(PTHREAD_LIBS) \
 	$(DLOPEN_LIBS) \
 	$(EXPAT_LIBS) \
+	$(ZLIB_LIBS) \
 	-lm

@@ -28,6 +28,7 @@
 #include <string.h>
 #include <expat.h>
 #include <inttypes.h>
+#include <zlib.h>
 
 #include <util/macros.h>
 
@@ -508,13 +509,62 @@ devinfo_to_xml_data(const struct gen_device_info *devinfo,
    return NULL;
 }
 
+static uint32_t zlib_inflate(const void *compressed_data,
+                             uint32_t compressed_len,
+                             void **out_ptr)
+{
+   struct z_stream_s zstream;
+   void *out;
+
+   memset(&zstream, 0, sizeof(zstream));
+
+   zstream.next_in = (unsigned char *)compressed_data;
+   zstream.avail_in = compressed_len;
+
+   if (inflateInit(&zstream) != Z_OK)
+      return 0;
+
+   out = malloc(4096);
+   zstream.next_out = out;
+   zstream.avail_out = 4096;
+
+   do {
+      switch (inflate(&zstream, Z_SYNC_FLUSH)) {
+      case Z_STREAM_END:
+         goto end;
+      case Z_OK:
+         break;
+      default:
+         inflateEnd(&zstream);
+         return 0;
+      }
+
+      if (zstream.avail_out)
+         break;
+
+      out = realloc(out, 2*zstream.total_out);
+      if (out == NULL) {
+         inflateEnd(&zstream);
+         return 0;
+      }
+
+      zstream.next_out = (unsigned char *)out + zstream.total_out;
+      zstream.avail_out = zstream.total_out;
+   } while (1);
+ end:
+   inflateEnd(&zstream);
+   *out_ptr = out;
+   return zstream.total_out;
+}
+
 struct gen_spec *
 gen_spec_load(const struct gen_device_info *devinfo)
 {
    struct parser_context ctx;
    void *buf;
-   const void *data;
-   uint32_t data_length = 0;
+   const void *zlib_data;
+   void *text_data;
+   uint32_t zlib_length = 0, text_length;
 
    memset(&ctx, 0, sizeof ctx);
    ctx.parser = XML_ParserCreate(NULL);
@@ -529,22 +579,26 @@ gen_spec_load(const struct gen_device_info *devinfo)
 
    ctx.spec = xzalloc(sizeof(*ctx.spec));
 
-   data = devinfo_to_xml_data(devinfo, &data_length);
-   buf = XML_GetBuffer(ctx.parser, data_length);
+   zlib_data = devinfo_to_xml_data(devinfo, &zlib_length);
+   text_length = zlib_inflate(zlib_data, zlib_length, &text_data);
 
-   memcpy(buf, data, data_length);
+   buf = XML_GetBuffer(ctx.parser, text_length);
+   memcpy(buf, text_data, text_length);
 
-   if (XML_ParseBuffer(ctx.parser, data_length, true) == 0) {
+   if (XML_ParseBuffer(ctx.parser, text_length, true) == 0) {
       fprintf(stderr,
-              "Error parsing XML at line %ld col %ld: %s\n",
+              "Error parsing XML at line %ld col %ld byte %ld/%u: %s\n",
               XML_GetCurrentLineNumber(ctx.parser),
               XML_GetCurrentColumnNumber(ctx.parser),
+              XML_GetCurrentByteIndex(ctx.parser), text_length,
               XML_ErrorString(XML_GetErrorCode(ctx.parser)));
       XML_ParserFree(ctx.parser);
+      free(text_data);
       return NULL;
    }
 
    XML_ParserFree(ctx.parser);
+   free(text_data);
 
    return ctx.spec;
 }
