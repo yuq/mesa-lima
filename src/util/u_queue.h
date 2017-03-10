@@ -38,6 +38,10 @@
 #include "util/list.h"
 #include "util/u_thread.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Job completion fence.
  * Put this into your job structure.
  */
@@ -105,5 +109,9 @@ util_queue_fence_is_signalled(struct util_queue_fence *fence)
 {
    return fence->signalled != 0;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
