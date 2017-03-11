@@ -2128,6 +2128,12 @@ void
 anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
                         enum blorp_hiz_op op);
+void
+anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
+                const struct anv_state surface_state,
+                const struct anv_image * const image,
+                const uint8_t level, const uint32_t layer_count,
+                const enum blorp_fast_clear_op op);
 
 void
 anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,

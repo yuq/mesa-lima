@@ -1739,3 +1739,41 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
    blorp_hiz_op(&batch, &surf, 0, 0, 1, op);
    blorp_batch_finish(&batch);
 }
+
+void
+anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
+                const struct anv_state surface_state,
+                const struct anv_image * const image,
+                const uint8_t level, const uint32_t layer_count,
+                const enum blorp_fast_clear_op op)
+{
+   assert(cmd_buffer && image);
+
+   /* The resolved subresource range must have a CCS buffer. */
+   assert(level < anv_image_aux_levels(image));
+   assert(layer_count <= anv_image_aux_layers(image, level));
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT && image->samples == 1);
+
+   /* Create a binding table for this surface state. */
+   uint32_t binding_table;
+   VkResult result =
+      binding_table_for_surface_state(cmd_buffer, surface_state,
+                                      &binding_table);
+   if (result != VK_SUCCESS)
+      return;
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
+   struct blorp_surf surf;
+   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                image->aux_usage == ISL_AUX_USAGE_CCS_E ?
+                                ISL_AUX_USAGE_CCS_E : ISL_AUX_USAGE_CCS_D,
+                                &surf);
+
+   blorp_ccs_resolve_attachment(&batch, binding_table, &surf, level,
+                                layer_count, image->color_surface.isl.format,
+                                op);
+
+   blorp_batch_finish(&batch);
+}
