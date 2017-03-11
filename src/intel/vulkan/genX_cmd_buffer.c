@@ -2504,6 +2504,9 @@ void genX(CmdBeginRenderPass)(
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
    genX(cmd_buffer_set_subpass)(cmd_buffer, pass->subpasses);
+
+   cmd_buffer->state.pending_pipe_bits |=
+      cmd_buffer->state.pass->subpass_flushes[0];
 }
 
 void genX(CmdNextSubpass)(
@@ -2524,6 +2527,10 @@ void genX(CmdNextSubpass)(
    cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
 
    genX(cmd_buffer_set_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
+
+   uint32_t subpass_id = anv_get_subpass_id(&cmd_buffer->state);
+   cmd_buffer->state.pending_pipe_bits |=
+      cmd_buffer->state.pass->subpass_flushes[subpass_id];
 }
 
 void genX(CmdEndRenderPass)(
@@ -2539,6 +2546,9 @@ void genX(CmdEndRenderPass)(
    /* Perform transitions to the final layout after all writes have occurred.
     */
    cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
+
+   cmd_buffer->state.pending_pipe_bits |=
+      cmd_buffer->state.pass->subpass_flushes[cmd_buffer->state.pass->subpass_count];
 
    cmd_buffer->state.hiz_enabled = false;
 
