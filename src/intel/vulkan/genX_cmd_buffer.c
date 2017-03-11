@@ -179,17 +179,20 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 }
 
 static void
-add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
-                      const struct anv_image_view *iview,
-                      enum isl_aux_usage aux_usage,
-                      struct anv_state state)
+add_image_relocs(struct anv_cmd_buffer * const cmd_buffer,
+                 const struct anv_image * const image,
+                 const VkImageAspectFlags aspect_mask,
+                 const enum isl_aux_usage aux_usage,
+                 const struct anv_state state)
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
+   const uint32_t surf_offset = image->offset +
+      anv_image_get_surface_for_aspect_mask(image, aspect_mask)->offset;
 
-   add_surface_state_reloc(cmd_buffer, state, iview->bo, iview->offset);
+   add_surface_state_reloc(cmd_buffer, state, image->bo, surf_offset);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
-      uint32_t aux_offset = iview->offset + iview->image->aux_surface.offset;
+      uint32_t aux_offset = image->offset + image->aux_surface.offset;
 
       /* On gen7 and prior, the bottom 12 bits of the MCS base address are
        * used to store other information.  This should be ok, however, because
@@ -203,7 +206,7 @@ add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
          anv_reloc_list_add(&cmd_buffer->surface_relocs,
                             &cmd_buffer->pool->alloc,
                             state.offset + isl_dev->ss.aux_addr_offset,
-                            iview->bo, aux_offset);
+                            image->bo, aux_offset);
       if (result != VK_SUCCESS)
          anv_batch_set_error(&cmd_buffer->batch, result);
    }
@@ -542,9 +545,9 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                 .clear_color = clear_color,
                                 .mocs = cmd_buffer->device->default_mocs);
 
-            add_image_view_relocs(cmd_buffer, iview,
-                                  state->attachments[i].aux_usage,
-                                  state->attachments[i].color_rt_state);
+            add_image_relocs(cmd_buffer, iview->image, iview->aspect_mask,
+                             state->attachments[i].aux_usage,
+                             state->attachments[i].color_rt_state);
          } else {
             /* This field will be initialized after the first subpass
              * transition.
@@ -566,9 +569,9 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                 .clear_color = clear_color,
                                 .mocs = cmd_buffer->device->default_mocs);
 
-            add_image_view_relocs(cmd_buffer, iview,
-                                  state->attachments[i].input_aux_usage,
-                                  state->attachments[i].input_att_state);
+            add_image_relocs(cmd_buffer, iview->image, iview->aspect_mask,
+                             state->attachments[i].input_aux_usage,
+                             state->attachments[i].input_att_state);
          }
       }
 
@@ -1191,8 +1194,9 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             desc->image_view->no_aux_sampler_surface_state :
             desc->image_view->sampler_surface_state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, desc->image_view,
-                               desc->aux_usage, surface_state);
+         add_image_relocs(cmd_buffer, desc->image_view->image,
+                          desc->image_view->aspect_mask,
+                          desc->aux_usage, surface_state);
          break;
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          assert(stage == MESA_SHADER_FRAGMENT);
@@ -1204,8 +1208,9 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                desc->image_view->no_aux_sampler_surface_state :
                desc->image_view->sampler_surface_state;
             assert(surface_state.alloc_size);
-            add_image_view_relocs(cmd_buffer, desc->image_view,
-                                  desc->aux_usage, surface_state);
+            add_image_relocs(cmd_buffer, desc->image_view->image,
+                             desc->image_view->aspect_mask,
+                             desc->aux_usage, surface_state);
          } else {
             /* For color input attachments, we create the surface state at
              * vkBeginRenderPass time so that we can include aux and clear
@@ -1223,9 +1228,9 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             ? desc->image_view->writeonly_storage_surface_state
             : desc->image_view->storage_surface_state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, desc->image_view,
-                               desc->image_view->image->aux_usage,
-                               surface_state);
+         add_image_relocs(cmd_buffer, desc->image_view->image,
+                          desc->image_view->aspect_mask,
+                          desc->image_view->image->aux_usage, surface_state);
 
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
