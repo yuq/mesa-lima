@@ -251,6 +251,7 @@ struct {
 static bool
 run_tests(const struct gen_device_info *devinfo)
 {
+   brw_init_compaction_tables(devinfo);
    bool fail = false;
 
    for (int i = 0; i < ARRAY_SIZE(tests); i++) {
