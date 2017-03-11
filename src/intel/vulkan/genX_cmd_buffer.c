@@ -941,7 +941,6 @@ void genX(CmdPipelineBarrier)(
     const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   uint32_t b;
 
    /* XXX: Right now, we're really dumb and just flush whatever categories
     * the app asks for.  One of these days we may make this a bit better
@@ -972,50 +971,9 @@ void genX(CmdPipelineBarrier)(
       }
    }
 
-   enum anv_pipe_bits pipe_bits = 0;
-
-   for_each_bit(b, src_flags) {
-      switch ((VkAccessFlagBits)(1 << b)) {
-      case VK_ACCESS_SHADER_WRITE_BIT:
-         pipe_bits |= ANV_PIPE_DATA_CACHE_FLUSH_BIT;
-         break;
-      case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
-         pipe_bits |= ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT;
-         break;
-      case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
-         pipe_bits |= ANV_PIPE_DEPTH_CACHE_FLUSH_BIT;
-         break;
-      case VK_ACCESS_TRANSFER_WRITE_BIT:
-         pipe_bits |= ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT;
-         pipe_bits |= ANV_PIPE_DEPTH_CACHE_FLUSH_BIT;
-         break;
-      default:
-         break; /* Nothing to do */
-      }
-   }
-
-   for_each_bit(b, dst_flags) {
-      switch ((VkAccessFlagBits)(1 << b)) {
-      case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
-      case VK_ACCESS_INDEX_READ_BIT:
-      case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
-         pipe_bits |= ANV_PIPE_VF_CACHE_INVALIDATE_BIT;
-         break;
-      case VK_ACCESS_UNIFORM_READ_BIT:
-         pipe_bits |= ANV_PIPE_CONSTANT_CACHE_INVALIDATE_BIT;
-         pipe_bits |= ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT;
-         break;
-      case VK_ACCESS_SHADER_READ_BIT:
-      case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
-      case VK_ACCESS_TRANSFER_READ_BIT:
-         pipe_bits |= ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT;
-         break;
-      default:
-         break; /* Nothing to do */
-      }
-   }
-
-   cmd_buffer->state.pending_pipe_bits |= pipe_bits;
+   cmd_buffer->state.pending_pipe_bits |=
+      anv_pipe_flush_bits_for_access_flags(src_flags) |
+      anv_pipe_invalidate_bits_for_access_flags(dst_flags);
 }
 
 static void

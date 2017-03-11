@@ -1201,6 +1201,65 @@ enum anv_pipe_bits {
    ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT | \
    ANV_PIPE_INSTRUCTION_CACHE_INVALIDATE_BIT)
 
+static inline enum anv_pipe_bits
+anv_pipe_flush_bits_for_access_flags(VkAccessFlags flags)
+{
+   enum anv_pipe_bits pipe_bits = 0;
+
+   unsigned b;
+   for_each_bit(b, flags) {
+      switch ((VkAccessFlagBits)(1 << b)) {
+      case VK_ACCESS_SHADER_WRITE_BIT:
+         pipe_bits |= ANV_PIPE_DATA_CACHE_FLUSH_BIT;
+         break;
+      case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
+         pipe_bits |= ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT;
+         break;
+      case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
+         pipe_bits |= ANV_PIPE_DEPTH_CACHE_FLUSH_BIT;
+         break;
+      case VK_ACCESS_TRANSFER_WRITE_BIT:
+         pipe_bits |= ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT;
+         pipe_bits |= ANV_PIPE_DEPTH_CACHE_FLUSH_BIT;
+         break;
+      default:
+         break; /* Nothing to do */
+      }
+   }
+
+   return pipe_bits;
+}
+
+static inline enum anv_pipe_bits
+anv_pipe_invalidate_bits_for_access_flags(VkAccessFlags flags)
+{
+   enum anv_pipe_bits pipe_bits = 0;
+
+   unsigned b;
+   for_each_bit(b, flags) {
+      switch ((VkAccessFlagBits)(1 << b)) {
+      case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
+      case VK_ACCESS_INDEX_READ_BIT:
+      case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
+         pipe_bits |= ANV_PIPE_VF_CACHE_INVALIDATE_BIT;
+         break;
+      case VK_ACCESS_UNIFORM_READ_BIT:
+         pipe_bits |= ANV_PIPE_CONSTANT_CACHE_INVALIDATE_BIT;
+         pipe_bits |= ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT;
+         break;
+      case VK_ACCESS_SHADER_READ_BIT:
+      case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
+      case VK_ACCESS_TRANSFER_READ_BIT:
+         pipe_bits |= ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT;
+         break;
+      default:
+         break; /* Nothing to do */
+      }
+   }
+
+   return pipe_bits;
+}
+
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
    VkDeviceSize                                 offset;
