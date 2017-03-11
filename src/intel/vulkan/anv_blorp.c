@@ -1206,6 +1206,25 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
       if (att_state->fast_clear) {
          surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
 
+         /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
+          *
+          *    "After Render target fast clear, pipe-control with color cache
+          *    write-flush must be issued before sending any DRAW commands on
+          *    that render target."
+          *
+          * This comment is a bit cryptic and doesn't really tell you what's
+          * going or what's really needed.  It appears that fast clear ops are
+          * not properly synchronized with other drawing.  This means that we
+          * cannot have a fast clear operation in the pipe at the same time as
+          * other regular drawing operations.  We need to use a PIPE_CONTROL
+          * to ensure that the contents of the previous draw hit the render
+          * target before we resolve and then use a second PIPE_CONTROL after
+          * the resolve to ensure that it is completed before any additional
+          * drawing occurs.
+          */
+         cmd_buffer->state.pending_pipe_bits |=
+            ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
+
          blorp_fast_clear(&batch, &surf, iview->isl.format,
                           iview->isl.base_level,
                           iview->isl.base_array_layer, fb->layers,
@@ -1213,12 +1232,6 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
                           render_area.offset.x + render_area.extent.width,
                           render_area.offset.y + render_area.extent.height);
 
-         /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
-          *
-          *    "After Render target fast clear, pipe-control with color cache
-          *    write-flush must be issued before sending any DRAW commands on
-          *    that render target."
-          */
          cmd_buffer->state.pending_pipe_bits |=
             ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
       } else {
