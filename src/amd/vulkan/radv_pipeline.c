@@ -381,7 +381,10 @@ void radv_shader_variant_destroy(struct radv_device *device,
 	if (!p_atomic_dec_zero(&variant->ref_count))
 		return;
 
-	device->ws->buffer_destroy(variant->bo);
+	mtx_lock(&device->shader_slab_mutex);
+	list_del(&variant->slab_list);
+	mtx_unlock(&device->shader_slab_mutex);
+
 	free(variant);
 }
 
@@ -431,14 +434,8 @@ static void radv_fill_shader_variant(struct radv_device *device,
 		S_00B848_DX10_CLAMP(1) |
 		S_00B848_FLOAT_MODE(variant->config.float_mode);
 
-	variant->bo = device->ws->buffer_create(device->ws, binary->code_size, 256,
-						RADEON_DOMAIN_VRAM, RADEON_FLAG_CPU_ACCESS);
-
-	void *ptr = device->ws->buffer_map(variant->bo);
+	void *ptr = radv_alloc_shader_memory(device, variant);
 	memcpy(ptr, binary->code, binary->code_size);
-	device->ws->buffer_unmap(variant->bo);
-
-
 }
 
 static struct radv_shader_variant *radv_shader_variant_create(struct radv_device *device,
@@ -2425,4 +2422,57 @@ VkResult radv_CreateComputePipelines(
 	}
 
 	return result;
+}
+
+void *radv_alloc_shader_memory(struct radv_device *device,
+                               struct radv_shader_variant *shader)
+{
+	mtx_lock(&device->shader_slab_mutex);
+	list_for_each_entry(struct radv_shader_slab, slab, &device->shader_slabs, slabs) {
+		uint64_t offset = 0;
+		list_for_each_entry(struct radv_shader_variant, s, &slab->shaders, slab_list) {
+			if (s->bo_offset - offset >= shader->code_size) {
+				shader->bo = slab->bo;
+				shader->bo_offset = offset;
+				list_addtail(&shader->slab_list, &s->slab_list);
+				mtx_unlock(&device->shader_slab_mutex);
+				return slab->ptr + offset;
+			}
+			offset = align_u64(s->bo_offset + s->code_size, 256);
+		}
+		if (slab->size - offset >= shader->code_size) {
+			shader->bo = slab->bo;
+			shader->bo_offset = offset;
+			list_addtail(&shader->slab_list, &slab->shaders);
+			mtx_unlock(&device->shader_slab_mutex);
+			return slab->ptr + offset;
+		}
+	}
+
+	mtx_unlock(&device->shader_slab_mutex);
+	struct radv_shader_slab *slab = calloc(1, sizeof(struct radv_shader_slab));
+
+	slab->size = 256 * 1024;
+	slab->bo = device->ws->buffer_create(device->ws, slab->size, 256,
+	                                     RADEON_DOMAIN_VRAM, 0);
+	slab->ptr = (char*)device->ws->buffer_map(slab->bo);
+	list_inithead(&slab->shaders);
+
+	mtx_lock(&device->shader_slab_mutex);
+	list_add(&slab->slabs, &device->shader_slabs);
+
+	shader->bo = slab->bo;
+	shader->bo_offset = 0;
+	list_add(&shader->slab_list, &slab->shaders);
+	mtx_unlock(&device->shader_slab_mutex);
+	return slab->ptr;
+}
+
+void radv_destroy_shader_slabs(struct radv_device *device)
+{
+	list_for_each_entry_safe(struct radv_shader_slab, slab, &device->shader_slabs, slabs) {
+		device->ws->buffer_destroy(slab->bo);
+		free(slab);
+	}
+	mtx_destroy(&device->shader_slab_mutex);
 }

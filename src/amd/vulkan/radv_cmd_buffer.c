@@ -546,7 +546,7 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 		struct ac_vs_output_info *outinfo)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
-	uint64_t va = ws->buffer_get_va(shader->bo);
+	uint64_t va = ws->buffer_get_va(shader->bo) + shader->bo_offset;
 	unsigned export_count;
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
@@ -596,7 +596,7 @@ radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
 		struct ac_es_output_info *outinfo)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
-	uint64_t va = ws->buffer_get_va(shader->bo);
+	uint64_t va = ws->buffer_get_va(shader->bo) + shader->bo_offset;
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
 	radv_emit_prefetch(cmd_buffer, va, shader->code_size);
@@ -615,7 +615,7 @@ radv_emit_hw_ls(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_shader_variant *shader)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
-	uint64_t va = ws->buffer_get_va(shader->bo);
+	uint64_t va = ws->buffer_get_va(shader->bo) + shader->bo_offset;
 	uint32_t rsrc2 = shader->rsrc2;
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
@@ -640,7 +640,7 @@ radv_emit_hw_hs(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_shader_variant *shader)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
-	uint64_t va = ws->buffer_get_va(shader->bo);
+	uint64_t va = ws->buffer_get_va(shader->bo) + shader->bo_offset;
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
 	radv_emit_prefetch(cmd_buffer, va, shader->code_size);
@@ -775,7 +775,7 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 			       S_028B90_CNT(MIN2(gs_num_invocations, 127)) |
 			       S_028B90_ENABLE(gs_num_invocations > 0));
 
-	va = ws->buffer_get_va(gs->bo);
+	va = ws->buffer_get_va(gs->bo) + gs->bo_offset;
 	ws->cs_add_buffer(cmd_buffer->cs, gs->bo, 8);
 	radv_emit_prefetch(cmd_buffer, va, gs->code_size);
 
@@ -816,8 +816,7 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 	assert (pipeline->shaders[MESA_SHADER_FRAGMENT]);
 
 	ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
-
-	va = ws->buffer_get_va(ps->bo);
+	va = ws->buffer_get_va(ps->bo) + ps->bo_offset;
 	ws->cs_add_buffer(cmd_buffer->cs, ps->bo, 8);
 	radv_emit_prefetch(cmd_buffer, va, ps->code_size);
 
@@ -2256,7 +2255,7 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	cmd_buffer->state.emitted_compute_pipeline = pipeline;
 
 	compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
-	va = ws->buffer_get_va(compute_shader->bo);
+	va = ws->buffer_get_va(compute_shader->bo) + compute_shader->bo_offset;
 
 	ws->cs_add_buffer(cmd_buffer->cs, compute_shader->bo, 8);
 	radv_emit_prefetch(cmd_buffer, va, compute_shader->code_size);

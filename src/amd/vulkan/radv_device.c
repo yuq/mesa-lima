@@ -1080,6 +1080,9 @@ VkResult radv_CreateDevice(
 	else
 		device->alloc = physical_device->instance->alloc;
 
+	mtx_init(&device->shader_slab_mutex, mtx_plain);
+	list_inithead(&device->shader_slabs);
+
 	for (unsigned i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
 		const VkDeviceQueueCreateInfo *queue_create = &pCreateInfo->pQueueCreateInfos[i];
 		uint32_t qfi = queue_create->queueFamilyIndex;
@@ -1269,6 +1272,8 @@ void radv_DestroyDevice(
 
 	VkPipelineCache pc = radv_pipeline_cache_to_handle(device->mem_cache);
 	radv_DestroyPipelineCache(radv_device_to_handle(device), pc, NULL);
+
+	radv_destroy_shader_slabs(device);
 
 	vk_free(&device->alloc, device);
 }

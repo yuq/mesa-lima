@@ -549,6 +549,9 @@ struct radv_device {
 	struct radv_pipeline_cache *                mem_cache;
 
 	uint32_t image_mrt_offset_counter;
+
+	struct list_head shader_slabs;
+	mtx_t shader_slab_mutex;
 };
 
 struct radv_device_memory {
@@ -981,16 +984,34 @@ mesa_to_vk_shader_stage(gl_shader_stage mesa_stage)
 	     stage = __builtin_ffs(__tmp) - 1, __tmp;			\
 	     __tmp &= ~(1 << (stage)))
 
+
+struct radv_shader_slab {
+	struct list_head slabs;
+	struct list_head shaders;
+	struct radeon_winsys_bo *bo;
+	uint64_t size;
+	char *ptr;
+};
+
 struct radv_shader_variant {
 	uint32_t ref_count;
 
 	struct radeon_winsys_bo *bo;
+	uint64_t bo_offset;
 	struct ac_shader_config config;
 	struct ac_shader_variant_info info;
 	unsigned rsrc1;
 	unsigned rsrc2;
 	uint32_t code_size;
+
+	struct list_head slab_list;
 };
+
+
+void *radv_alloc_shader_memory(struct radv_device *device,
+                              struct radv_shader_variant *shader);
+
+void radv_destroy_shader_slabs(struct radv_device *device);
 
 struct radv_depth_stencil_state {
 	uint32_t db_depth_control;
