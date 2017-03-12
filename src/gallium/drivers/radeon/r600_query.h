@@ -28,9 +28,7 @@
 #ifndef R600_QUERY_H
 #define R600_QUERY_H
 
-#include "pipe/p_defines.h"
-#include "pipe/p_state.h"
-#include "util/list.h"
+#include "util/u_threaded_context.h"
 
 struct pipe_context;
 struct pipe_query;
@@ -129,6 +127,7 @@ struct r600_query_ops {
 };
 
 struct r600_query {
+	struct threaded_query b;
 	struct r600_query_ops *ops;
 
 	/* The type of query */

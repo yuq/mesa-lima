@@ -354,7 +354,9 @@ static bool r600_query_sw_get_result(struct r600_common_context *rctx,
 		return true;
 	case PIPE_QUERY_GPU_FINISHED: {
 		struct pipe_screen *screen = rctx->b.screen;
-		result->b = screen->fence_finish(screen, &rctx->b, query->fence,
+		struct pipe_context *ctx = rquery->b.flushed ? NULL : &rctx->b;
+
+		result->b = screen->fence_finish(screen, ctx, query->fence,
 						 wait ? PIPE_TIMEOUT_INFINITE : 0);
 		return result->b;
 	}
@@ -1212,12 +1214,16 @@ bool r600_query_hw_get_result(struct r600_common_context *rctx,
 	query->ops->clear_result(query, result);
 
 	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
+		unsigned usage = PIPE_TRANSFER_READ |
+				 (wait ? 0 : PIPE_TRANSFER_DONTBLOCK);
 		unsigned results_base = 0;
 		void *map;
 
-		map = r600_buffer_map_sync_with_rings(rctx, qbuf->buf,
-						      PIPE_TRANSFER_READ |
-						      (wait ? 0 : PIPE_TRANSFER_DONTBLOCK));
+		if (rquery->b.flushed)
+			map = rctx->ws->buffer_map(qbuf->buf->buf, NULL, usage);
+		else
+			map = r600_buffer_map_sync_with_rings(rctx, qbuf->buf, usage);
+
 		if (!map)
 			return false;
 
