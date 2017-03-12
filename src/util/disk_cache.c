@@ -78,6 +78,20 @@ struct disk_cache {
    uint64_t max_size;
 };
 
+struct disk_cache_put_job {
+   struct util_queue_fence fence;
+
+   struct disk_cache *cache;
+
+   cache_key key;
+
+   /* Copy of cache data to be compressed and written. */
+   void *data;
+
+   /* Size of data to be compressed and written. */
+   size_t size;
+};
+
 /* Create a directory named 'path' if it does not already exist.
  *
  * Returns: 0 if path already exists as a directory or if created.
@@ -733,6 +747,32 @@ deflate_and_write_to_disk(const void *in_data, size_t in_data_size, int dest,
    /* clean up and return */
    (void)deflateEnd(&strm);
    return compressed_size;
+}
+
+static struct disk_cache_put_job *
+create_put_job(struct disk_cache *cache, const cache_key key,
+               const void *data, size_t size)
+{
+   struct disk_cache_put_job *dc_job = (struct disk_cache_put_job *)
+      malloc(sizeof(struct disk_cache_put_job) + size);
+
+   if (dc_job) {
+      dc_job->cache = cache;
+      memcpy(dc_job->key, key, sizeof(cache_key));
+      dc_job->data = dc_job + 1;
+      memcpy(dc_job->data, data, size);
+      dc_job->size = size;
+   }
+
+   return dc_job;
+}
+
+static void
+destroy_put_job(void *job, int thread_index)
+{
+   if (job) {
+      free(job);
+   }
 }
 
 struct cache_entry_file_data {
