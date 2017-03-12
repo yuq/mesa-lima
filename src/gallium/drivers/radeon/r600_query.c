@@ -515,7 +515,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 				       struct r600_query_hw *query,
 				       struct r600_resource *buffer,
 				       uint64_t va);
-static void r600_query_hw_add_result(struct r600_common_context *ctx,
+static void r600_query_hw_add_result(struct r600_common_screen *rscreen,
 				     struct r600_query_hw *, void *buffer,
 				     union pipe_query_result *result);
 static void r600_query_hw_clear_result(struct r600_query_hw *,
@@ -1046,12 +1046,12 @@ static unsigned r600_query_read_result(void *map, unsigned start_index, unsigned
 	return 0;
 }
 
-static void r600_query_hw_add_result(struct r600_common_context *ctx,
+static void r600_query_hw_add_result(struct r600_common_screen *rscreen,
 				     struct r600_query_hw *query,
 				     void *buffer,
 				     union pipe_query_result *result)
 {
-	unsigned max_rbs = ctx->screen->info.num_render_backends;
+	unsigned max_rbs = rscreen->info.num_render_backends;
 
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER: {
@@ -1101,7 +1101,7 @@ static void r600_query_hw_add_result(struct r600_common_context *ctx,
 			r600_query_read_result(buffer, 0, 4, true);
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
-		if (ctx->chip_class >= EVERGREEN) {
+		if (rscreen->chip_class >= EVERGREEN) {
 			result->pipeline_statistics.ps_invocations +=
 				r600_query_read_result(buffer, 0, 22, false);
 			result->pipeline_statistics.c_primitives +=
@@ -1199,6 +1199,7 @@ bool r600_query_hw_get_result(struct r600_common_context *rctx,
 			      struct r600_query *rquery,
 			      bool wait, union pipe_query_result *result)
 {
+	struct r600_common_screen *rscreen = rctx->screen;
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *qbuf;
 
@@ -1215,7 +1216,7 @@ bool r600_query_hw_get_result(struct r600_common_context *rctx,
 			return false;
 
 		while (results_base != qbuf->results_end) {
-			query->ops->add_result(rctx, query, map + results_base,
+			query->ops->add_result(rscreen, query, map + results_base,
 					       result);
 			results_base += query->result_size;
 		}
@@ -1224,7 +1225,7 @@ bool r600_query_hw_get_result(struct r600_common_context *rctx,
 	/* Convert the time to expected units. */
 	if (rquery->type == PIPE_QUERY_TIME_ELAPSED ||
 	    rquery->type == PIPE_QUERY_TIMESTAMP) {
-		result->u64 = (1000000 * result->u64) / rctx->screen->info.clock_crystal_freq;
+		result->u64 = (1000000 * result->u64) / rscreen->info.clock_crystal_freq;
 	}
 	return true;
 }

@@ -196,7 +196,7 @@ static void r600_pc_query_clear_result(struct r600_query_hw *hwquery,
 	memset(result, 0, sizeof(result->batch[0]) * query->num_counters);
 }
 
-static void r600_pc_query_add_result(struct r600_common_context *ctx,
+static void r600_pc_query_add_result(struct r600_common_screen *rscreen,
 				     struct r600_query_hw *hwquery,
 				     void *buffer,
 				     union pipe_query_result *result)

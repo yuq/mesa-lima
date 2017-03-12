@@ -152,7 +152,7 @@ struct r600_query_hw_ops {
 			  struct r600_query_hw *,
 			  struct r600_resource *buffer, uint64_t va);
 	void (*clear_result)(struct r600_query_hw *, union pipe_query_result *);
-	void (*add_result)(struct r600_common_context *ctx,
+	void (*add_result)(struct r600_common_screen *screen,
 			   struct r600_query_hw *, void *buffer,
 			   union pipe_query_result *result);
 };
