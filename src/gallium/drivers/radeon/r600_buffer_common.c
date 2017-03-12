@@ -354,7 +354,8 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 
 	/* See if the buffer range being mapped has never been initialized,
 	 * in which case it can be mapped unsynchronized. */
-	if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED) &&
+	if (!(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
+		       TC_TRANSFER_MAP_IGNORE_VALID_RANGE)) &&
 	    usage & PIPE_TRANSFER_WRITE &&
 	    !rbuffer->is_shared &&
 	    !util_ranges_intersect(&rbuffer->valid_buffer_range, box->x, box->x + box->width)) {
@@ -368,7 +369,8 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	}
 
 	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE &&
-	    !(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+	    !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
+		       TC_TRANSFER_MAP_NO_INVALIDATE))) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
 		if (r600_invalidate_buffer(rctx, rbuffer)) {
