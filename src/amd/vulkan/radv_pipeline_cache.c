@@ -171,7 +171,7 @@ radv_create_shader_variant_from_pipeline_cache(struct radv_device *device,
 		variant->ref_count = 1;
 
 		variant->bo = device->ws->buffer_create(device->ws, entry->code_size, 256,
-						RADEON_DOMAIN_GTT, RADEON_FLAG_CPU_ACCESS);
+						RADEON_DOMAIN_VRAM, RADEON_FLAG_CPU_ACCESS);
 
 		void *ptr = device->ws->buffer_map(variant->bo);
 		memcpy(ptr, entry->code, entry->code_size);

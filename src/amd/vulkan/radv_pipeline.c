@@ -410,7 +410,7 @@ static void radv_fill_shader_variant(struct radv_device *device,
 		S_00B848_FLOAT_MODE(variant->config.float_mode);
 
 	variant->bo = device->ws->buffer_create(device->ws, binary->code_size, 256,
-						RADEON_DOMAIN_GTT, RADEON_FLAG_CPU_ACCESS);
+						RADEON_DOMAIN_VRAM, RADEON_FLAG_CPU_ACCESS);
 
 	void *ptr = device->ws->buffer_map(variant->bo);
 	memcpy(ptr, binary->code, binary->code_size);
