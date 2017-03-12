@@ -1626,24 +1626,14 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 	}
 }
 
-/* Reallocate a buffer a update all resource bindings where the buffer is
- * bound.
- *
- * This is used to avoid CPU-GPU synchronizations, because it makes the buffer
- * idle by discarding its contents. Apps usually tell us when to do this using
- * map_buffer flags, for example.
- */
-static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource *buf)
+static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf,
+			     uint64_t old_va)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_resource *rbuffer = r600_resource(buf);
 	unsigned i, shader;
-	uint64_t old_va = rbuffer->gpu_address;
 	unsigned num_elems = sctx->vertex_elements ?
 				       sctx->vertex_elements->count : 0;
-
-	/* Reallocate the buffer in the same pipe_resource. */
-	r600_alloc_resource(&sctx->screen->b, rbuffer);
 
 	/* We changed the buffer, now we need to bind it where the old one
 	 * was bound. This consists of 2 things:
@@ -1770,6 +1760,25 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 			}
 		}
 	}
+}
+
+/* Reallocate a buffer a update all resource bindings where the buffer is
+ * bound.
+ *
+ * This is used to avoid CPU-GPU synchronizations, because it makes the buffer
+ * idle by discarding its contents. Apps usually tell us when to do this using
+ * map_buffer flags, for example.
+ */
+static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource *buf)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+	struct r600_resource *rbuffer = r600_resource(buf);
+	uint64_t old_va = rbuffer->gpu_address;
+
+	/* Reallocate the buffer in the same pipe_resource. */
+	r600_alloc_resource(&sctx->screen->b, rbuffer);
+
+	si_rebind_buffer(ctx, buf, old_va);
 }
 
 /* Update mutable image descriptor fields of all bound textures. */
@@ -2067,6 +2076,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.b.set_sampler_views = si_set_sampler_views;
 	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;
 	sctx->b.invalidate_buffer = si_invalidate_buffer;
+	sctx->b.rebind_buffer = si_rebind_buffer;
 
 	/* Shader user data. */
 	si_init_atom(sctx, &sctx->shader_userdata.atom, &sctx->atoms.s.shader_userdata,

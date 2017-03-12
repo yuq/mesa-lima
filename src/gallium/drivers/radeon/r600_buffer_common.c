@@ -273,6 +273,29 @@ r600_invalidate_buffer(struct r600_common_context *rctx,
 	return true;
 }
 
+/* Replace the storage of dst with src. */
+void r600_replace_buffer_storage(struct pipe_context *ctx,
+				 struct pipe_resource *dst,
+				 struct pipe_resource *src)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct r600_resource *rdst = r600_resource(dst);
+	struct r600_resource *rsrc = r600_resource(src);
+	uint64_t old_gpu_address = rdst->gpu_address;
+
+	pb_reference(&rdst->buf, rsrc->buf);
+	rdst->gpu_address = rsrc->gpu_address;
+
+	assert(rdst->vram_usage == rsrc->vram_usage);
+	assert(rdst->gart_usage == rsrc->gart_usage);
+	assert(rdst->bo_size == rsrc->bo_size);
+	assert(rdst->bo_alignment == rsrc->bo_alignment);
+	assert(rdst->domains == rsrc->domains);
+	assert(rdst->flags == rsrc->flags);
+
+	rctx->rebind_buffer(ctx, dst, old_gpu_address);
+}
+
 void r600_invalidate_resource(struct pipe_context *ctx,
 			      struct pipe_resource *resource)
 {

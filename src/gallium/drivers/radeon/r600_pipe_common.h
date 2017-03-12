@@ -666,6 +666,12 @@ struct r600_common_context {
 	 * the buffer is bound, including all resource descriptors. */
 	void (*invalidate_buffer)(struct pipe_context *ctx, struct pipe_resource *buf);
 
+	/* Update all resource bindings where the buffer is bound, including
+	 * all resource descriptors. This is invalidate_buffer without
+	 * the invalidation. */
+	void (*rebind_buffer)(struct pipe_context *ctx, struct pipe_resource *buf,
+			      uint64_t old_gpu_address);
+
 	/* Enable or disable occlusion queries. */
 	void (*set_occlusion_query_state)(struct pipe_context *ctx, bool enable);
 
@@ -683,7 +689,7 @@ struct r600_common_context {
 				enum ring_type ring);
 };
 
-/* r600_buffer.c */
+/* r600_buffer_common.c */
 bool r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
 				     struct pb_buffer *buf,
 				     enum radeon_bo_usage usage);
@@ -714,6 +720,9 @@ r600_buffer_from_user_memory(struct pipe_screen *screen,
 void
 r600_invalidate_resource(struct pipe_context *ctx,
 			 struct pipe_resource *resource);
+void r600_replace_buffer_storage(struct pipe_context *ctx,
+				 struct pipe_resource *dst,
+				 struct pipe_resource *src);
 
 /* r600_common_pipe.c */
 void r600_gfx_write_event_eop(struct r600_common_context *ctx,
