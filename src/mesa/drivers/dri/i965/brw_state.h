@@ -441,6 +441,19 @@ void brw_calculate_guardband_size(const struct gen_device_info *devinfo,
                                   float *xmin, float *xmax,
                                   float *ymin, float *ymax);
 
+void brw_copy_pipeline_atoms(struct brw_context *brw,
+                             enum brw_pipeline pipeline,
+                             const struct brw_tracked_state **atoms,
+                             int num_atoms);
+void gen4_init_atoms(struct brw_context *brw);
+void gen45_init_atoms(struct brw_context *brw);
+void gen5_init_atoms(struct brw_context *brw);
+void gen6_init_atoms(struct brw_context *brw);
+void gen7_init_atoms(struct brw_context *brw);
+void gen75_init_atoms(struct brw_context *brw);
+void gen8_init_atoms(struct brw_context *brw);
+void gen9_init_atoms(struct brw_context *brw);
+
 #ifdef __cplusplus
 }
 #endif
