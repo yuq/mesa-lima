@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "util/mesa-sha1.h"
@@ -231,6 +232,26 @@ does_cache_contain(struct disk_cache *cache, cache_key key)
 }
 
 static void
+wait_until_file_written(struct disk_cache *cache, cache_key key)
+{
+   struct timespec req;
+   struct timespec rem;
+
+   /* Set 100ms delay */
+   req.tv_sec = 0;
+   req.tv_nsec = 100000000;
+
+   unsigned retries = 0;
+   while (retries++ < 20) {
+      if (does_cache_contain(cache, key)) {
+         break;
+      }
+
+      nanosleep(&req, &rem);
+   }
+}
+
+static void
 test_put_and_get(void)
 {
    struct disk_cache *cache;
@@ -260,6 +281,11 @@ test_put_and_get(void)
    /* Simple test of put and get. */
    disk_cache_put(cache, blob_key, blob, sizeof(blob));
 
+   /* disk_cache_put() hands things off to a thread give it some time to
+    * finish.
+    */
+   wait_until_file_written(cache, blob_key);
+
    result = disk_cache_get(cache, blob_key, &size);
    expect_equal_str(blob, result, "disk_cache_get of existing item (pointer)");
    expect_equal(size, sizeof(blob), "disk_cache_get of existing item (size)");
@@ -269,6 +295,11 @@ test_put_and_get(void)
    /* Test put and get of a second item. */
    _mesa_sha1_compute(string, sizeof(string), string_key);
    disk_cache_put(cache, string_key, string, sizeof(string));
+
+   /* disk_cache_put() hands things off to a thread give it some time to
+    * finish.
+    */
+   wait_until_file_written(cache, string_key);
 
    result = disk_cache_get(cache, string_key, &size);
    expect_equal_str(result, string, "2nd disk_cache_get of existing item (pointer)");
@@ -308,6 +339,11 @@ test_put_and_get(void)
 
    free(one_KB);
 
+   /* disk_cache_put() hands things off to a thread give it some time to
+    * finish.
+    */
+   wait_until_file_written(cache, one_KB_key);
+
    result = disk_cache_get(cache, one_KB_key, &size);
    expect_non_null(result, "3rd disk_cache_get of existing item (pointer)");
    expect_equal(size, 1024, "3rd disk_cache_get of existing item (size)");
@@ -337,6 +373,12 @@ test_put_and_get(void)
    disk_cache_put(cache, blob_key, blob, sizeof(blob));
    disk_cache_put(cache, string_key, string, sizeof(string));
 
+   /* disk_cache_put() hands things off to a thread give it some time to
+    * finish.
+    */
+   wait_until_file_written(cache, blob_key);
+   wait_until_file_written(cache, string_key);
+
    count = 0;
    if (does_cache_contain(cache, blob_key))
        count++;
@@ -358,6 +400,11 @@ test_put_and_get(void)
    disk_cache_put(cache, one_MB_key, one_MB, 1024 * 1024);
 
    free(one_MB);
+
+   /* disk_cache_put() hands things off to a thread give it some time to
+    * finish.
+    */
+   wait_until_file_written(cache, one_MB_key);
 
    count = 0;
    if (does_cache_contain(cache, blob_key))

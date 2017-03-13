@@ -780,17 +780,17 @@ struct cache_entry_file_data {
    uint32_t uncompressed_size;
 };
 
-void
-disk_cache_put(struct disk_cache *cache,
-          const cache_key key,
-          const void *data,
-          size_t size)
+static void
+cache_put(void *job, int thread_index)
 {
+   assert(job);
+
    int fd = -1, fd_final = -1, err, ret;
    size_t len;
    char *filename = NULL, *filename_tmp = NULL;
+   struct disk_cache_put_job *dc_job = (struct disk_cache_put_job *) job;
 
-   filename = get_cache_file(cache, key);
+   filename = get_cache_file(dc_job->cache, dc_job->key);
    if (filename == NULL)
       goto done;
 
@@ -808,7 +808,7 @@ disk_cache_put(struct disk_cache *cache,
       if (errno != ENOENT)
          goto done;
 
-      make_cache_file_directory(cache, key);
+      make_cache_file_directory(dc_job->cache, dc_job->key);
 
       fd = open(filename_tmp, O_WRONLY | O_CLOEXEC | O_CREAT, 0644);
       if (fd == -1)
@@ -841,15 +841,15 @@ disk_cache_put(struct disk_cache *cache,
     * Before we do that, if the cache is too large, evict something
     * else first.
     */
-   if (*cache->size + size > cache->max_size)
-      evict_random_item(cache);
+   if (*dc_job->cache->size + dc_job->size > dc_job->cache->max_size)
+      evict_random_item(dc_job->cache);
 
    /* Create CRC of the data and store at the start of the file. We will
     * read this when restoring the cache and use it to check for corruption.
     */
    struct cache_entry_file_data cf_data;
-   cf_data.crc32 = util_hash_crc32(data, size);
-   cf_data.uncompressed_size = size;
+   cf_data.crc32 = util_hash_crc32(dc_job->data, dc_job->size);
+   cf_data.uncompressed_size = dc_job->size;
 
    size_t cf_data_size = sizeof(cf_data);
    for (len = 0; len < cf_data_size; len += ret) {
@@ -864,7 +864,8 @@ disk_cache_put(struct disk_cache *cache,
     * rename them atomically to the destination filename, and also
     * perform an atomic increment of the total cache size.
     */
-   size_t file_size = deflate_and_write_to_disk(data, size, fd, filename_tmp);
+   size_t file_size = deflate_and_write_to_disk(dc_job->data, dc_job->size,
+                                                fd, filename_tmp);
    if (file_size == 0) {
       unlink(filename_tmp);
       goto done;
@@ -872,7 +873,7 @@ disk_cache_put(struct disk_cache *cache,
    rename(filename_tmp, filename);
 
    file_size += cf_data_size;
-   p_atomic_add(cache->size, file_size);
+   p_atomic_add(dc_job->cache->size, file_size);
 
  done:
    if (fd_final != -1)
@@ -886,6 +887,20 @@ disk_cache_put(struct disk_cache *cache,
       free(filename_tmp);
    if (filename)
       free(filename);
+}
+
+void
+disk_cache_put(struct disk_cache *cache, const cache_key key,
+               const void *data, size_t size)
+{
+   struct disk_cache_put_job *dc_job =
+      create_put_job(cache, key, data, size);
+
+   if (dc_job) {
+      util_queue_fence_init(&dc_job->fence);
+      util_queue_add_job(&cache->cache_queue, dc_job, &dc_job->fence,
+                         cache_put, destroy_put_job);
+   }
 }
 
 /**
