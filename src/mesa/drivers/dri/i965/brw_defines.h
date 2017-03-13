@@ -678,14 +678,6 @@ enum brw_wrap_mode {
 # define BRW_GS_EDGE_INDICATOR_0			(1 << 8)
 # define BRW_GS_EDGE_INDICATOR_1			(1 << 9)
 
-/* GS Thread Payload
- */
-
-/* 3DSTATE_GS "Output Vertex Size" has an effective maximum of 62.  It's
- * counted in multiples of 16 bytes.
- */
-#define GEN7_MAX_GS_OUTPUT_VERTEX_SIZE_BYTES		(62*16)
-
 #define _3DSTATE_HS                             0x781B /* GEN7+ */
 /* DW1 */
 # define GEN7_HS_SAMPLER_COUNT_MASK                     INTEL_MASK(29, 27)

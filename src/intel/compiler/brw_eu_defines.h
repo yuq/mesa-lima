@@ -1240,6 +1240,13 @@ enum brw_message_target {
 
 /* GS Thread Payload
  */
+
+/* 3DSTATE_GS "Output Vertex Size" has an effective maximum of 62. It's
+ * counted in multiples of 16 bytes.
+ */
+#define GEN7_MAX_GS_OUTPUT_VERTEX_SIZE_BYTES            (62*16)
+
+
 /* R0 */
 # define GEN7_GS_PAYLOAD_INSTANCE_ID_SHIFT		27
 
