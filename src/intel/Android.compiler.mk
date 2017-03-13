@@ -43,6 +43,7 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/gallium/include \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_glsl,,)/glsl \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
+	$(MESA_TOP)/src/intel/compiler \
 	$(MESA_TOP)/src/compiler/nir
 
 LOCAL_SHARED_LIBRARIES := \
