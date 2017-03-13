@@ -129,7 +129,6 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
    if (intel_batchbuffer_space(&brw->batch) < sz)
       intel_batchbuffer_flush(brw);
 
-   enum brw_gpu_ring prev_ring = brw->batch.ring;
    /* The intel_batchbuffer_flush() calls above might have changed
     * brw->batch.ring to UNKNOWN_RING, so we need to set it here at the end.
     */
