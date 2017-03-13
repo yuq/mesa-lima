@@ -604,6 +604,27 @@ struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
                                       gl_shader_stage stage,
                                       unsigned per_thread_scratch);
 
+/** Implements a BO cache that ensures a 1-1 mapping of GEM BOs to anv_bos */
+struct anv_bo_cache {
+   struct hash_table *bo_map;
+   pthread_mutex_t mutex;
+};
+
+VkResult anv_bo_cache_init(struct anv_bo_cache *cache);
+void anv_bo_cache_finish(struct anv_bo_cache *cache);
+VkResult anv_bo_cache_alloc(struct anv_device *device,
+                            struct anv_bo_cache *cache,
+                            uint64_t size, struct anv_bo **bo);
+VkResult anv_bo_cache_import(struct anv_device *device,
+                             struct anv_bo_cache *cache,
+                             int fd, uint64_t size, struct anv_bo **bo);
+VkResult anv_bo_cache_export(struct anv_device *device,
+                             struct anv_bo_cache *cache,
+                             struct anv_bo *bo_in, int *fd_out);
+void anv_bo_cache_release(struct anv_device *device,
+                          struct anv_bo_cache *cache,
+                          struct anv_bo *bo);
+
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
 
