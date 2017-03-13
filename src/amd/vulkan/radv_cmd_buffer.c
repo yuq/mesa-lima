@@ -1662,6 +1662,7 @@ VkResult radv_AllocateCommandBuffers(
 			list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
 
 			radv_reset_cmd_buffer(cmd_buffer);
+			cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 			cmd_buffer->level = pAllocateInfo->level;
 
 			pCommandBuffers[i] = radv_cmd_buffer_to_handle(cmd_buffer);
