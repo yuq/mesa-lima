@@ -198,7 +198,7 @@ make_surface(const struct anv_device *dev,
          anv_perf_warn("Implement multi-arrayLayer HiZ clears and resolves");
       } else if (dev->info.gen == 8 && vk_info->samples > 1) {
          anv_perf_warn("Enable gen8 multisampled HiZ");
-      } else if (env_var_as_boolean("INTEL_VK_HIZ", true)) {
+      } else if (!unlikely(INTEL_DEBUG & DEBUG_NO_HIZ)) {
          assert(image->aux_surface.isl.size == 0);
          ok = isl_surf_get_hiz_surf(&dev->isl_dev, &image->depth_surface.isl,
                                     &image->aux_surface.isl);

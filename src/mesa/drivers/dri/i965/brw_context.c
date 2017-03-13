@@ -880,7 +880,7 @@ brw_process_driconf_options(struct brw_context *brw)
       break;
    }
 
-   if (!driQueryOptionb(options, "hiz")) {
+   if (INTEL_DEBUG & DEBUG_NO_HIZ) {
        brw->has_hiz = false;
        /* On gen6, you can only do separate stencil with HIZ. */
        if (brw->gen == 6)

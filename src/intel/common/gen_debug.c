@@ -82,6 +82,7 @@ static const struct debug_control debug_control[] = {
    { "l3",          DEBUG_L3 },
    { "do32",        DEBUG_DO32 },
    { "norbc",       DEBUG_NO_RBC },
+   { "nohiz",       DEBUG_NO_HIZ },
    { NULL,    0 }
 };
 

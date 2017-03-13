@@ -56,10 +56,6 @@ DRI_CONF_BEGIN
 	    DRI_CONF_ENUM(1, "Enable reuse of all sizes of buffer objects")
 	 DRI_CONF_DESC_END
       DRI_CONF_OPT_END
-
-      DRI_CONF_OPT_BEGIN_B(hiz, "true")
-	 DRI_CONF_DESC(en, "Enable Hierarchical Z on gen6+")
-      DRI_CONF_OPT_END
    DRI_CONF_SECTION_END
 
    DRI_CONF_SECTION_QUALITY
