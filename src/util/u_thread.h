@@ -27,6 +27,8 @@
 #ifndef U_THREAD_H_
 #define U_THREAD_H_
 
+#include <stdint.h>
+
 #include "c11/threads.h"
 
 #ifdef HAVE_PTHREAD
