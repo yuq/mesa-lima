@@ -63,6 +63,7 @@ wsi/wayland-drm-client-protocol.h : $(WL_DRM_XML)
 
 if HAVE_PLATFORM_WAYLAND
 AM_CPPFLAGS += \
+	-I$(top_builddir)/src/vulkan/wsi \
 	$(WAYLAND_CFLAGS) \
 	-DVK_USE_PLATFORM_WAYLAND_KHR
 
