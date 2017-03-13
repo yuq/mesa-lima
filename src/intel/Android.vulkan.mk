@@ -73,7 +73,7 @@ include $(BUILD_STATIC_LIBRARY)
 
 ANV_INCLUDES := \
 	$(VULKAN_COMMON_INCLUDES) \
-	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_anv_entrypoints,,) \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_anv_entrypoints,,)/vulkan \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_vulkan_util,,)/util
 
@@ -204,7 +204,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_C_INCLUDES := \
 	$(VULKAN_COMMON_INCLUDES) \
-	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_anv_entrypoints,,)
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_anv_entrypoints,,)/vulkan
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(MESA_TOP)/src/intel/vulkan
 
