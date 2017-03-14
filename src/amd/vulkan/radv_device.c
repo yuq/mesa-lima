@@ -597,7 +597,7 @@ void radv_GetPhysicalDeviceProperties(
 	};
 
 	*pProperties = (VkPhysicalDeviceProperties) {
-		.apiVersion = VK_MAKE_VERSION(1, 0, 5),
+		.apiVersion = VK_MAKE_VERSION(1, 0, 42),
 		.driverVersion = 1,
 		.vendorID = 0x1002,
 		.deviceID = pdevice->rad_info.pci_id,
