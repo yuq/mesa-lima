@@ -1124,10 +1124,14 @@ VkResult anv_CreateDevice(
 
    anv_bo_pool_init(&device->batch_bo_pool, device);
 
+   result = anv_bo_cache_init(&device->bo_cache);
+   if (result != VK_SUCCESS)
+      goto fail_batch_bo_pool;
+
    result = anv_block_pool_init(&device->dynamic_state_block_pool, device,
                                 16384);
    if (result != VK_SUCCESS)
-      goto fail_batch_bo_pool;
+      goto fail_bo_cache;
 
    anv_state_pool_init(&device->dynamic_state_pool,
                        &device->dynamic_state_block_pool);
@@ -1199,6 +1203,8 @@ VkResult anv_CreateDevice(
  fail_dynamic_state_pool:
    anv_state_pool_finish(&device->dynamic_state_pool);
    anv_block_pool_finish(&device->dynamic_state_block_pool);
+ fail_bo_cache:
+   anv_bo_cache_finish(&device->bo_cache);
  fail_batch_bo_pool:
    anv_bo_pool_finish(&device->batch_bo_pool);
    pthread_cond_destroy(&device->queue_submit);
@@ -1245,6 +1251,8 @@ void anv_DestroyDevice(
    anv_block_pool_finish(&device->instruction_block_pool);
    anv_state_pool_finish(&device->dynamic_state_pool);
    anv_block_pool_finish(&device->dynamic_state_block_pool);
+
+   anv_bo_cache_finish(&device->bo_cache);
 
    anv_bo_pool_finish(&device->batch_bo_pool);
 
@@ -1633,7 +1641,8 @@ VkResult anv_AllocateMemory(
    /* The kernel is going to give us whole pages anyway */
    uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
 
-   result = anv_bo_init_new(&mem->bo, device, alloc_size);
+   result = anv_bo_cache_alloc(device, &device->bo_cache,
+                               alloc_size, &mem->bo);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -1666,11 +1675,7 @@ void anv_FreeMemory(
    if (mem->map)
       anv_UnmapMemory(_device, _mem);
 
-   if (mem->bo.map)
-      anv_gem_munmap(mem->bo.map, mem->bo.size);
-
-   if (mem->bo.gem_handle != 0)
-      anv_gem_close(device, mem->bo.gem_handle);
+   anv_bo_cache_release(device, &device->bo_cache, mem->bo);
 
    vk_free2(&device->alloc, pAllocator, mem);
 }
@@ -1692,7 +1697,7 @@ VkResult anv_MapMemory(
    }
 
    if (size == VK_WHOLE_SIZE)
-      size = mem->bo.size - offset;
+      size = mem->bo->size - offset;
 
    /* From the Vulkan spec version 1.0.32 docs for MapMemory:
     *
@@ -1702,7 +1707,7 @@ VkResult anv_MapMemory(
     *    equal to the size of the memory minus offset
     */
    assert(size > 0);
-   assert(offset + size <= mem->bo.size);
+   assert(offset + size <= mem->bo->size);
 
    /* FIXME: Is this supposed to be thread safe? Since vkUnmapMemory() only
     * takes a VkDeviceMemory pointer, it seems like only one map of the memory
@@ -1722,7 +1727,7 @@ VkResult anv_MapMemory(
    /* Let's map whole pages */
    map_size = align_u64(map_size, 4096);
 
-   void *map = anv_gem_mmap(device, mem->bo.gem_handle,
+   void *map = anv_gem_mmap(device, mem->bo->gem_handle,
                             map_offset, map_size, gem_flags);
    if (map == MAP_FAILED)
       return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
@@ -1874,7 +1879,7 @@ VkResult anv_BindBufferMemory(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    if (mem) {
-      buffer->bo = &mem->bo;
+      buffer->bo = mem->bo;
       buffer->offset = memoryOffset;
    } else {
       buffer->bo = NULL;

@@ -721,6 +721,8 @@ struct anv_device {
 
     struct anv_bo_pool                          batch_bo_pool;
 
+    struct anv_bo_cache                         bo_cache;
+
     struct anv_block_pool                       dynamic_state_block_pool;
     struct anv_state_pool                       dynamic_state_pool;
 
@@ -983,7 +985,7 @@ _anv_combine_address(struct anv_batch *batch, void *location,
    }
 
 struct anv_device_memory {
-   struct anv_bo                                bo;
+   struct anv_bo *                              bo;
    uint32_t                                     type_index;
    VkDeviceSize                                 map_size;
    void *                                       map;

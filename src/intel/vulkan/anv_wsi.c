@@ -208,8 +208,8 @@ x11_anv_wsi_image_create(VkDevice device_h,
     * know we're writing to them and synchronize uses on other rings (eg if
     * the display server uses the blitter ring).
     */
-   memory->bo.flags &= ~EXEC_OBJECT_ASYNC;
-   memory->bo.flags |= EXEC_OBJECT_WRITE;
+   memory->bo->flags &= ~EXEC_OBJECT_ASYNC;
+   memory->bo->flags |= EXEC_OBJECT_WRITE;
 
    anv_BindImageMemory(device_h, image_h, memory_h, 0);
 
@@ -217,7 +217,7 @@ x11_anv_wsi_image_create(VkDevice device_h,
    assert(surface->isl.tiling == ISL_TILING_X);
 
    *row_pitch = surface->isl.row_pitch;
-   int ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
+   int ret = anv_gem_set_tiling(device, memory->bo->gem_handle,
                                 surface->isl.row_pitch, I915_TILING_X);
    if (ret) {
       /* FINISHME: Choose a better error. */
@@ -226,7 +226,7 @@ x11_anv_wsi_image_create(VkDevice device_h,
       goto fail_alloc_memory;
    }
 
-   int fd = anv_gem_handle_to_fd(device, memory->bo.gem_handle);
+   int fd = anv_gem_handle_to_fd(device, memory->bo->gem_handle);
    if (fd == -1) {
       /* FINISHME: Choose a better error. */
       result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,

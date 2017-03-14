@@ -341,7 +341,7 @@ VkResult anv_BindImageMemory(
       return VK_SUCCESS;
    }
 
-   image->bo = &mem->bo;
+   image->bo = mem->bo;
    image->offset = memoryOffset;
 
    if (image->aux_surface.isl.size > 0) {
