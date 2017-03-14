@@ -1806,8 +1806,7 @@
     <field name="DWord Length" start="0" end="5" type="uint" default="2"/>
     <field name="Address" start="66" end="95" type="address"/>
     <field name="Core Mode Enable" start="64" end="64" type="uint"/>
-    <field name="Data DWord 0" start="96" end="127" type="uint"/>
-    <field name="Data DWord 1" start="128" end="159" type="uint"/>
+    <field name="Immediate Data" start="96" end="159" type="uint"/>
   </instruction>
 
   <instruction name="MI_STORE_DATA_INDEX" bias="2" length="3">

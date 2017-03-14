@@ -283,8 +283,7 @@ void genX(CmdResetQueryPool)(
             .bo = &pool->bo,
             .offset = (firstQuery + i) * pool->stride,
          };
-         sdm.DataDWord0 = 0;
-         sdm.DataDWord1 = 0;
+         sdm.ImmediateData = 0;
       }
    }
 }
