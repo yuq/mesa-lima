@@ -180,4 +180,21 @@ __vk_outarray_next(struct __vk_outarray *a, size_t elem_size)
    for (vk_outarray_typeof_elem(a) *elem = vk_outarray_next(a); \
         elem != NULL; elem = NULL)
 
+static inline void *
+__vk_find_struct(void *start, VkStructureType sType)
+{
+   vk_foreach_struct(s, start) {
+      if (s->sType == sType)
+         return s;
+   }
+
+   return NULL;
+}
+
+#define vk_find_struct(__start, __sType) \
+   __vk_find_struct((__start), VK_STRUCTURE_TYPE_##__sType)
+
+#define vk_find_struct_const(__start, __sType) \
+   (const void *)__vk_find_struct((void *)(__start), VK_STRUCTURE_TYPE_##__sType)
+
 #endif /* VK_UTIL_H */
