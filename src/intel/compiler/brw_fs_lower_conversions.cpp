@@ -44,7 +44,7 @@ supports_type_conversion(const fs_inst *inst) {
 }
 
 bool
-fs_visitor::lower_d2x()
+fs_visitor::lower_conversions()
 {
    bool progress = false;
 

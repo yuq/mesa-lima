@@ -5740,7 +5740,7 @@ fs_visitor::optimize()
       OPT(dead_code_eliminate);
    }
 
-   if (OPT(lower_d2x)) {
+   if (OPT(lower_conversions)) {
       OPT(opt_copy_propagation);
       OPT(dead_code_eliminate);
       OPT(lower_simd_width);

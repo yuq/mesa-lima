@@ -46,7 +46,7 @@ COMPILER_FILES = \
 	compiler/brw_fs.h \
 	compiler/brw_fs_live_variables.cpp \
 	compiler/brw_fs_live_variables.h \
-	compiler/brw_fs_lower_d2x.cpp \
+	compiler/brw_fs_lower_conversions.cpp \
 	compiler/brw_fs_lower_pack.cpp \
 	compiler/brw_fs_nir.cpp \
 	compiler/brw_fs_reg_allocate.cpp \
