@@ -834,7 +834,9 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 *
 			 * LLVM 3.8 crashes with this.
 			 */
-			if (HAVE_LLVM >= 0x0309 && array_size > 16) {
+			if ((HAVE_LLVM >= 0x0309 && array_size > 16) ||
+			    /* TODO: VGPR indexing is buggy on GFX9. */
+			    ctx->screen->b.chip_class == GFX9) {
 				array_alloca = LLVMBuildAlloca(builder,
 					LLVMArrayType(bld_base->base.vec_type,
 						      array_size), "array");

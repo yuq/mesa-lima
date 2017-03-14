@@ -1625,7 +1625,9 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		 * Use the staging texture for uploads if the underlying BO
 		 * is busy.
 		 */
-		if (!rtex->surface.is_linear)
+		/* TODO: Linear CPU mipmap addressing is broken on GFX9: */
+		if (!rtex->surface.is_linear ||
+		    (rctx->chip_class == GFX9 && level))
 			use_staging_texture = true;
 		else if (usage & PIPE_TRANSFER_READ)
 			use_staging_texture =
@@ -2630,6 +2632,10 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 #endif
 
 	if (rctx->render_cond)
+		return;
+
+	/* TODO: fix CMASK and DCC fast clear */
+	if (rctx->chip_class >= GFX9)
 		return;
 
 	for (i = 0; i < fb->nr_cbufs; i++) {
