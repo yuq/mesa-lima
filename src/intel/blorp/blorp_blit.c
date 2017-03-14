@@ -1285,14 +1285,14 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
    return b.shader;
 }
 
-static void
+static bool
 brw_blorp_get_blit_kernel(struct blorp_context *blorp,
                           struct blorp_params *params,
                           const struct brw_blorp_blit_prog_key *prog_key)
 {
    if (blorp->lookup_shader(blorp, prog_key, sizeof(*prog_key),
                             &params->wm_prog_kernel, &params->wm_prog_data))
-      return;
+      return true;
 
    void *mem_ctx = ralloc_context(NULL);
 
@@ -1313,12 +1313,14 @@ brw_blorp_get_blit_kernel(struct blorp_context *blorp,
    program = blorp_compile_fs(blorp, mem_ctx, nir, &wm_key, false,
                               &prog_data, &program_size);
 
-   blorp->upload_shader(blorp, prog_key, sizeof(*prog_key),
-                        program, program_size,
-                        &prog_data.base, sizeof(prog_data),
-                        &params->wm_prog_kernel, &params->wm_prog_data);
+   bool result =
+      blorp->upload_shader(blorp, prog_key, sizeof(*prog_key),
+                           program, program_size,
+                           &prog_data.base, sizeof(prog_data),
+                           &params->wm_prog_kernel, &params->wm_prog_data);
 
    ralloc_free(mem_ctx);
+   return result;
 }
 
 static void
@@ -1821,7 +1823,8 @@ try_blorp_blit(struct blorp_batch *batch,
    /* For some texture types, we need to pass the layer through the sampler. */
    params->wm_inputs.src_z = params->src.z_offset;
 
-   brw_blorp_get_blit_kernel(batch->blorp, params, wm_prog_key);
+   if (!brw_blorp_get_blit_kernel(batch->blorp, params, wm_prog_key))
+      return 0;
 
    unsigned result = 0;
    unsigned max_surface_size = get_max_surface_size(devinfo, params);

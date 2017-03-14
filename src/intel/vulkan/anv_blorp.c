@@ -49,7 +49,7 @@ lookup_blorp_shader(struct blorp_context *blorp,
    return true;
 }
 
-static void
+static bool
 upload_blorp_shader(struct blorp_context *blorp,
                     const void *key, uint32_t key_size,
                     const void *kernel, uint32_t kernel_size,
@@ -79,6 +79,8 @@ upload_blorp_shader(struct blorp_context *blorp,
 
    *kernel_out = bin->kernel.offset;
    *(const struct brw_stage_prog_data **)prog_data_out = bin->prog_data;
+
+   return true;
 }
 
 void

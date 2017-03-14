@@ -48,7 +48,7 @@ brw_blorp_lookup_shader(struct blorp_context *blorp,
                            key, key_size, kernel_out, prog_data_out);
 }
 
-static void
+static bool
 brw_blorp_upload_shader(struct blorp_context *blorp,
                         const void *key, uint32_t key_size,
                         const void *kernel, uint32_t kernel_size,
@@ -60,6 +60,7 @@ brw_blorp_upload_shader(struct blorp_context *blorp,
    brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG, key, key_size,
                     kernel, kernel_size, prog_data, prog_data_size,
                     kernel_out, prog_data_out);
+   return true;
 }
 
 void
