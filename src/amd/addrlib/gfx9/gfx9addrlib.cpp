@@ -1467,7 +1467,7 @@ VOID Gfx9Lib::GetMetaEquation(
 {
     UINT_32 numPipeTotalLog2 = GetPipeLog2ForMetaAddressing(metaFlag.pipeAligned, swizzleMode);
     UINT_32 pipeInterleaveLog2 = m_pipeInterleaveLog2;
-    UINT_32 blockSizeLog2 = GetBlockSizeLog2(swizzleMode);
+    //UINT_32 blockSizeLog2 = GetBlockSizeLog2(swizzleMode);
 
     // Get the correct data address and rb equation
     CoordEq dataEq;
@@ -1921,8 +1921,8 @@ UINT_32 Gfx9Lib::HwlGetEquationIndex(
             pMipInfo->mipOffsetZPixel = 0;
             pMipInfo->postSwizzleOffset = 0;
 
-            static const UINT_32 Prt_Xor_Gap =
-                static_cast<UINT_32>(ADDR_SW_64KB_Z_T) - static_cast<UINT_32>(ADDR_SW_64KB_Z);
+            /*static const UINT_32 Prt_Xor_Gap =
+                static_cast<UINT_32>(ADDR_SW_64KB_Z_T) - static_cast<UINT_32>(ADDR_SW_64KB_Z);*/
 
             for (UINT_32 i = 1; i < numMipLevels; i++)
             {
@@ -2159,7 +2159,7 @@ ADDR_E_RETURNCODE Gfx9Lib::HwlComputeBlock256Equation(
     // Post validation
     if (ret == ADDR_OK)
     {
-        Dim2d microBlockDim = Block256b[elementBytesLog2];
+        //Dim2d microBlockDim = Block256b[elementBytesLog2];
         ADDR_ASSERT((2u << GetMaxValidChannelIndex(pEquation->addr, 8, 0)) ==
                     (microBlockDim.w * (1 << elementBytesLog2)));
         ADDR_ASSERT((2u << GetMaxValidChannelIndex(pEquation->addr, 8, 1)) == microBlockDim.h);
@@ -2605,7 +2605,7 @@ BOOL_32 Gfx9Lib::HwlIsValidDisplaySwizzleMode(const ADDR2_COMPUTE_SURFACE_INFO_I
 {
     BOOL_32 support = FALSE;
 
-    const AddrResourceType resourceType = pIn->resourceType;
+    //const AddrResourceType resourceType = pIn->resourceType;
     const AddrSwizzleMode swizzleMode = pIn->swizzleMode;
 
     if (m_settings.isDce12)

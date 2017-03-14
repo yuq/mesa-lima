@@ -832,7 +832,7 @@ BOOL_32 ADDR_API ElemGetExportNorm(
     Addr::Lib* pLib = Lib::GetLib(hLib);
     BOOL_32 enabled = FALSE;
 
-    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+    //ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
     if (pLib != NULL)
     {
@@ -840,7 +840,7 @@ BOOL_32 ADDR_API ElemGetExportNorm(
     }
     else
     {
-        returnCode = ADDR_ERROR;
+        //returnCode = ADDR_ERROR;
     }
 
     ADDR_ASSERT(returnCode == ADDR_OK);

@@ -47,7 +47,7 @@ VOID RB_MAP::Get_Comp_Block_Screen_Space( CoordEq& addr, int bytes_log2, int* w,
     if( h ) *h = 0;
     if( d ) *d = 0;
     for( n=0; n<bytes_log2; n++ ) { // go up to the bytes_log2 bit
-        for( i=0; i<addr[n].getsize(); i++ ) {
+        for( i=0; (unsigned)i<addr[n].getsize(); i++ ) {
             char dim = addr[n][i].getdim();
             int ord = addr[n][i].getord();
             if( w && dim == 'x' && ord >= *w ) *w = ord+1;
@@ -685,7 +685,7 @@ RB_MAP::get_meta_eq( CoordEq& metaaddr,
 
     bool data_linear = ( data_type == DATA_COLOR1D || data_type == DATA_COLOR2D_LINEAR );
     bool is_color = ( data_linear || data_type == DATA_COLOR2D || data_type == DATA_COLOR3D_S || data_type == DATA_COLOR3D_Z || data_type == DATA_COLOR3D_D_NOT_USED );
-    bool is3d = ( data_type == DATA_COLOR3D_S || data_type == DATA_COLOR3D_Z || data_type == DATA_COLOR3D_D_NOT_USED );
+    //bool is3d = ( data_type == DATA_COLOR3D_S || data_type == DATA_COLOR3D_Z || data_type == DATA_COLOR3D_D_NOT_USED );
     bool is_thick = ( data_type == DATA_COLOR3D_S || data_type == DATA_COLOR3D_Z );
 
     bool is_fmask = (data_type == DATA_FMASK);
@@ -933,7 +933,7 @@ RB_MAP::get_meta_eq( CoordEq& metaaddr,
             if( cur_rbeq[j].remove( co ) ) {
                 // if we actually removed something from this bit, then add the remaining
                 // channel bits, as these can be removed for this bit
-                for( k=0; k<pipe_equation[i].getsize(); k++ ) {
+                for( k=0; (unsigned)k<pipe_equation[i].getsize(); k++ ) {
                     if( pipe_equation[i][k] != co ) {
                         cur_rbeq[j].add( pipe_equation[i][k] );
                     }
@@ -962,7 +962,7 @@ RB_MAP::get_meta_eq( CoordEq& metaaddr,
                 if( cur_rbeq[j].remove( co ) ) {
                     // if we actually removed something from this bit, then add the remaining
                     // rb bits, as these can be removed for this bit
-                    for( k=0; k<cur_rbeq[i].getsize(); k++ ) {
+                    for( k=0; (unsigned)k<cur_rbeq[i].getsize(); k++ ) {
                         if( cur_rbeq[i][k] != co ) {
                             cur_rbeq[j].add( cur_rbeq[i][k] );
                         }
@@ -1072,7 +1072,7 @@ RB_MAP::get_meta_addr_calc( int x, int y, int z, int s,
 
     CoordEq metaaddr;
 
-    bool se_affinity_enable = false;
+    //bool se_affinity_enable = false;
     //int max_pipe_bytes = std::max(1<<num_pipes_log2 * 1<<pipe_interleave_log2, 1024 * 1<<log2_element_bytes);
     //int max_banks_samples = std::max(1<<num_banks_log2, 1<<num_samples_log2);
     //int block_size_log2 = max(4096, max_pipe_bytes * max_bank_samples * 1<<num_ses_log2);
