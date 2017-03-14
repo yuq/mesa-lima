@@ -2461,7 +2461,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	unsigned tess_inner_index, tess_outer_index;
 	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, rw_buffers, tf_base, inner[4], outer[4];
-	unsigned stride, outer_comps, inner_comps, i;
+	unsigned stride, outer_comps, inner_comps, i, offset;
 	struct lp_build_if_state if_ctx, inner_if_ctx;
 
 	si_llvm_emit_barrier(NULL, bld_base, NULL);
@@ -2558,21 +2558,26 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				  rel_patch_id, ctx->i32_0, ""));
 
 	/* Store the dynamic HS control word. */
-	ac_build_buffer_store_dword(&ctx->ac, buffer,
-				    LLVMConstInt(ctx->i32, 0x80000000, 0),
-				    1, ctx->i32_0, tf_base,
-				    0, 1, 0, true, false);
+	offset = 0;
+	if (ctx->screen->b.chip_class <= VI) {
+		ac_build_buffer_store_dword(&ctx->ac, buffer,
+					    LLVMConstInt(ctx->i32, 0x80000000, 0),
+					    1, ctx->i32_0, tf_base,
+					    offset, 1, 0, true, false);
+		offset += 4;
+	}
 
 	lp_build_endif(&inner_if_ctx);
 
 	/* Store the tessellation factors. */
 	ac_build_buffer_store_dword(&ctx->ac, buffer, vec0,
 				    MIN2(stride, 4), byteoffset, tf_base,
-				    4, 1, 0, true, false);
+				    offset, 1, 0, true, false);
+	offset += 16;
 	if (vec1)
 		ac_build_buffer_store_dword(&ctx->ac, buffer, vec1,
 					    stride - 4, byteoffset, tf_base,
-					    20, 1, 0, true, false);
+					    offset, 1, 0, true, false);
 
 	/* Store the tess factors into the offchip buffer if TES reads them. */
 	if (shader->key.part.tcs.epilog.tes_reads_tess_factors) {
