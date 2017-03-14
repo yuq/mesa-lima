@@ -173,11 +173,11 @@ etna_link_shaders(struct etna_context *ctx, struct compiled_shader_state *cs,
 bool
 etna_shader_link(struct etna_context *ctx)
 {
-   if (!ctx->vs || !ctx->fs)
+   if (!ctx->shader.vs || !ctx->shader.fs)
       return false;
 
    /* re-link vs and fs if needed */
-   return etna_link_shaders(ctx, &ctx->shader_state, ctx->vs, ctx->fs);
+   return etna_link_shaders(ctx, &ctx->shader_state, ctx->shader.vs, ctx->shader.fs);
 }
 
 static bool
@@ -197,7 +197,7 @@ etna_shader_update_vs_inputs(struct etna_context *ctx,
    num_vs_inputs = MAX2(ves->num_elements, vs->infile.num_reg);
    if (num_vs_inputs != ves->num_elements) {
       BUG("Number of elements %u does not match the number of VS inputs %zu",
-          ctx->vertex_elements->num_elements, ctx->vs->infile.num_reg);
+          ctx->vertex_elements->num_elements, ctx->shader.vs->infile.num_reg);
       return false;
    }
 
@@ -263,7 +263,7 @@ dump_shader_info(struct etna_shader_variant *shader, struct pipe_debug_callback 
 bool
 etna_shader_update_vertex(struct etna_context *ctx)
 {
-   return etna_shader_update_vs_inputs(ctx, &ctx->shader_state, ctx->vs,
+   return etna_shader_update_vs_inputs(ctx, &ctx->shader_state, ctx->shader.vs,
                                        ctx->vertex_elements);
 }
 
@@ -334,11 +334,11 @@ etna_bind_fs_state(struct pipe_context *pctx, void *fss_)
    struct etna_context *ctx = etna_context(pctx);
    struct etna_shader_variant *fss = fss_;
 
-   if (ctx->fs == fss) /* skip if already bound */
+   if (ctx->shader.fs == fss) /* skip if already bound */
       return;
 
    assert(fss == NULL || fss->processor == PIPE_SHADER_FRAGMENT);
-   ctx->fs = fss;
+   ctx->shader.fs = fss;
    ctx->dirty |= ETNA_DIRTY_SHADER;
 }
 
@@ -348,11 +348,11 @@ etna_bind_vs_state(struct pipe_context *pctx, void *vss_)
    struct etna_context *ctx = etna_context(pctx);
    struct etna_shader_variant *vss = vss_;
 
-   if (ctx->vs == vss) /* skip if already bound */
+   if (ctx->shader.vs == vss) /* skip if already bound */
       return;
 
    assert(vss == NULL || vss->processor == PIPE_SHADER_VERTEX);
-   ctx->vs = vss;
+   ctx->shader.vs = vss;
    ctx->dirty |= ETNA_DIRTY_SHADER;
 }
 

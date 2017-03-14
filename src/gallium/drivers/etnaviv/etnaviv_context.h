@@ -79,6 +79,10 @@ struct etna_vertexbuf_state {
    uint32_t enabled_mask;
 };
 
+struct etna_shader_state {
+   struct etna_shader_variant *vs, *fs;
+};
+
 enum etna_immediate_contents {
    ETNA_IMMEDIATE_UNUSED = 0,
    ETNA_IMMEDIATE_CONSTANT,
@@ -155,10 +159,7 @@ struct etna_context {
    struct pipe_constant_buffer constant_buffer[PIPE_SHADER_TYPES];
    struct etna_vertexbuf_state vertex_buffer;
    struct etna_index_buffer index_buffer;
-
-   /* pointers to the bound state. these are mainly kept around for the blitter */
-   struct etna_shader_variant *vs;
-   struct etna_shader_variant *fs;
+   struct etna_shader_state shader;
 
    /* saved parameter-like state. these are mainly kept around for the blitter */
    struct pipe_framebuffer_state framebuffer_s;

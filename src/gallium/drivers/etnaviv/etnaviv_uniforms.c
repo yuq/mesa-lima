@@ -72,7 +72,7 @@ etna_uniforms_write(const struct etna_context *ctx,
       memcpy(uniforms, cb->user_buffer, size);
    }
 
-   if (sobj == ctx->fs)
+   if (sobj == ctx->shader.fs)
       frag = true;
 
    for (uint32_t i = 0; i < uinfo->imm_count; i++) {
