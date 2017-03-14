@@ -26,7 +26,7 @@
 #include "ac_llvm_util.h"
 #include "util/bitscan.h"
 #include <llvm-c/Core.h>
-
+#include <llvm-c/Support.h>
 #include "c11/threads.h"
 
 #include <assert.h>
@@ -39,6 +39,17 @@ static void ac_init_llvm_target()
 	LLVMInitializeAMDGPUTarget();
 	LLVMInitializeAMDGPUTargetMC();
 	LLVMInitializeAMDGPUAsmPrinter();
+
+	/*
+	 * Workaround for bug in llvm 4.0 that causes image intrinsics
+	 * to disappear.
+	 * https://reviews.llvm.org/D26348
+	 */
+#if HAVE_LLVM >= 0x0400
+	const char *argv[2] = {"mesa", "-simplifycfg-sink-common=false"};
+	LLVMParseCommandLineOptions(2, argv, NULL);
+#endif
+
 }
 
 static once_flag ac_init_llvm_target_once_flag = ONCE_FLAG_INIT;
