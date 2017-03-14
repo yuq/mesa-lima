@@ -2172,12 +2172,22 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 struct anv_format_plane {
    enum isl_format isl_format:16;
    struct isl_swizzle swizzle;
+
+   /* Whether this plane contains chroma channels */
+   bool has_chroma;
+
+   /* For downscaling of YUV planes */
+   uint8_t denominator_scales[2];
+
+   /* How to map sampled ycbcr planes to a single 4 component element. */
+   struct isl_swizzle ycbcr_swizzle;
 };
 
 
 struct anv_format {
    struct anv_format_plane planes[3];
    uint8_t n_planes;
+   bool can_ycbcr;
 };
 
 static inline uint32_t

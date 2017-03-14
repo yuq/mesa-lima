@@ -22,6 +22,7 @@
  */
 
 #include "anv_private.h"
+#include "vk_enum_to_str.h"
 #include "vk_format_info.h"
 #include "vk_util.h"
 
@@ -44,14 +45,12 @@
 #define BGRA _ISL_SWIZZLE(BLUE, GREEN, RED, ALPHA)
 #define RGB1 _ISL_SWIZZLE(RED, GREEN, BLUE, ONE)
 
-#define _fmt(__hw_fmt, __swizzle) \
-   { .isl_format = __hw_fmt, \
-     .swizzle = __swizzle }
-
 #define swiz_fmt1(__vk_fmt, __hw_fmt, __swizzle) \
    [VK_ENUM_OFFSET(__vk_fmt)] = { \
       .planes = { \
-          { .isl_format = __hw_fmt, .swizzle = __swizzle },     \
+         { .isl_format = __hw_fmt, .swizzle = __swizzle, \
+           .denominator_scales = { 1, 1, }, \
+         }, \
       }, \
       .n_planes = 1, \
    }
@@ -64,9 +63,11 @@
       .planes = { \
          { .isl_format = __fmt1, \
            .swizzle = RGBA,       \
+           .denominator_scales = { 1, 1, }, \
          }, \
          { .isl_format = __fmt2, \
            .swizzle = RGBA,       \
+           .denominator_scales = { 1, 1, }, \
          }, \
       }, \
       .n_planes = 2, \
@@ -77,6 +78,31 @@
       .planes = { \
          { .isl_format = ISL_FORMAT_UNSUPPORTED, }, \
       }, \
+   }
+
+#define y_plane(__hw_fmt, __swizzle, __ycbcr_swizzle, dhs, dvs) \
+   { .isl_format = __hw_fmt, \
+     .swizzle = __swizzle, \
+     .ycbcr_swizzle = __ycbcr_swizzle, \
+     .denominator_scales = { dhs, dvs, }, \
+     .has_chroma = false, \
+   }
+
+#define chroma_plane(__hw_fmt, __swizzle, __ycbcr_swizzle, dhs, dvs) \
+   { .isl_format = __hw_fmt, \
+     .swizzle = __swizzle, \
+     .ycbcr_swizzle = __ycbcr_swizzle, \
+     .denominator_scales = { dhs, dvs, }, \
+     .has_chroma = true, \
+   }
+
+#define ycbcr_fmt(__vk_fmt, __n_planes, ...) \
+   [VK_ENUM_OFFSET(__vk_fmt)] = { \
+      .planes = { \
+         __VA_ARGS__, \
+      }, \
+      .n_planes = __n_planes, \
+      .can_ycbcr = true, \
    }
 
 /* HINT: For array formats, the ISL name should match the VK name.  For
@@ -275,6 +301,76 @@ static const struct anv_format main_formats[] = {
    fmt1(VK_FORMAT_B8G8R8A8_SRGB,                     ISL_FORMAT_B8G8R8A8_UNORM_SRGB),
 };
 
+static const struct anv_format ycbcr_formats[] = {
+   ycbcr_fmt(VK_FORMAT_G8B8G8R8_422_UNORM_KHR, 1,
+             y_plane(ISL_FORMAT_YCRCB_SWAPUV, RGBA, _ISL_SWIZZLE(BLUE, GREEN, RED, ZERO), 1, 1)),
+   ycbcr_fmt(VK_FORMAT_B8G8R8G8_422_UNORM_KHR, 1,
+             y_plane(ISL_FORMAT_YCRCB_SWAPUVY, RGBA, _ISL_SWIZZLE(BLUE, GREEN, RED, ZERO), 1, 1)),
+   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR, 3,
+             y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 2),
+             chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 2)),
+   ycbcr_fmt(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR, 2,
+             y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R8G8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 2)),
+   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM_KHR, 3,
+             y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 1),
+             chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 1)),
+   ycbcr_fmt(VK_FORMAT_G8_B8R8_2PLANE_422_UNORM_KHR, 2,
+             y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R8G8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 1)),
+   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM_KHR, 3,
+             y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 1, 1)),
+
+   fmt_unsupported(VK_FORMAT_R10X6_UNORM_PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_R10X6G10X6_UNORM_2PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_R12X4_UNORM_PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_R12X4G12X4_UNORM_2PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16_KHR),
+   /* TODO: it is possible to enable the following 2 formats, but that
+    * requires further refactoring of how we handle multiplanar formats.
+    */
+   fmt_unsupported(VK_FORMAT_G16B16G16R16_422_UNORM_KHR),
+   fmt_unsupported(VK_FORMAT_B16G16R16G16_422_UNORM_KHR),
+
+   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM_KHR, 3,
+             y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 2),
+             chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 2)),
+   ycbcr_fmt(VK_FORMAT_G16_B16R16_2PLANE_420_UNORM_KHR, 2,
+             y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R16G16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 2)),
+   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM_KHR, 3,
+             y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 1),
+             chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 1)),
+   ycbcr_fmt(VK_FORMAT_G16_B16R16_2PLANE_422_UNORM_KHR, 2,
+             y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R16G16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 1)),
+   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM_KHR, 3,
+             y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 1, 1),
+             chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 1, 1)),
+};
+
 #undef _fmt
 #undef swiz_fmt1
 #undef fmt1
@@ -284,7 +380,10 @@ static const struct {
    const struct anv_format *formats;
    uint32_t n_formats;
 } anv_formats[] = {
-   [0] = { .formats = main_formats, .n_formats = ARRAY_SIZE(main_formats), },
+   [0]                                       = { .formats = main_formats,
+                                                 .n_formats = ARRAY_SIZE(main_formats), },
+   [_VK_KHR_sampler_ycbcr_conversion_number] = { .formats = ycbcr_formats,
+                                                 .n_formats = ARRAY_SIZE(ycbcr_formats), },
 };
 
 const struct anv_format *
@@ -494,6 +593,53 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
       /* ASTC textures must be in Y-tiled memory */
       if (isl_format_get_layout(linear_fmt.isl_format)->txc == ISL_TXC_ASTC)
          linear = 0;
+   }
+
+   if (format && format->can_ycbcr) {
+      VkFormatFeatureFlags ycbcr_features = 0;
+
+      /* The sampler doesn't have support for mid point when it handles YUV on
+       * its own.
+       */
+      if (isl_format_is_yuv(format->planes[0].isl_format)) {
+         /* TODO: We've disabled linear implicit reconstruction with the
+          * sampler. The failures show a slightly out of range values on the
+          * bottom left of the sampled image.
+          */
+         ycbcr_features |= VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR;
+      } else {
+         ycbcr_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT_KHR |
+            VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR |
+            VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT_KHR;
+      }
+
+      /* We can support cosited chroma locations when handle planes with our
+       * own shader snippets.
+       */
+      for (unsigned p = 0; p < format->n_planes; p++) {
+         if (format->planes[p].denominator_scales[0] > 1 ||
+             format->planes[p].denominator_scales[1] > 1) {
+            ycbcr_features |= VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT_KHR;
+            break;
+         }
+      }
+
+      if (format->n_planes > 1)
+         ycbcr_features |= VK_FORMAT_FEATURE_DISJOINT_BIT_KHR;
+
+      linear |= ycbcr_features;
+      tiled |= ycbcr_features;
+
+      const VkFormatFeatureFlags disallowed_ycbcr_image_features =
+         VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+         VK_FORMAT_FEATURE_BLIT_DST_BIT |
+         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT |
+         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+
+      linear &= ~disallowed_ycbcr_image_features;
+      tiled &= ~disallowed_ycbcr_image_features;
+      buffer = 0;
    }
 
    out_properties->linearTilingFeatures = linear;
