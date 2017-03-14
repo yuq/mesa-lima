@@ -31,6 +31,7 @@
 #include "etnaviv_debug.h"
 #include "etnaviv_util.h"
 
+#include "tgsi/tgsi_parse.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
 
@@ -266,25 +267,65 @@ etna_shader_update_vertex(struct etna_context *ctx)
                                        ctx->vertex_elements);
 }
 
+static struct etna_shader_variant *
+create_variant(struct etna_shader *shader)
+{
+   struct etna_shader_variant *v;
+
+   v = etna_compile_shader(shader->specs, shader->tokens);
+   if (!v) {
+      debug_error("compile failed!");
+      return NULL;
+   }
+
+   v->id = ++shader->variant_count;
+
+   return v;
+}
+
 static void *
 etna_create_shader_state(struct pipe_context *pctx,
                          const struct pipe_shader_state *pss)
 {
    struct etna_context *ctx = etna_context(pctx);
-   struct etna_shader_variant *shader = etna_compile_shader(&ctx->specs, pss->tokens);
+   struct etna_shader *shader = CALLOC_STRUCT(etna_shader);
+
+   if (!shader)
+      return NULL;
 
    static uint32_t id;
    shader->id = id++;
+   shader->specs = &ctx->specs;
+   shader->tokens = tgsi_dup_tokens(pss->tokens);
 
-   dump_shader_info(shader, &ctx->debug);
+   /* compile new variant */
+   struct etna_shader_variant *v;
 
-   return shader;
+   v = create_variant(shader);
+   if (v) {
+      v->next = shader->variants;
+      shader->variants = v;
+      dump_shader_info(v, &ctx->debug);
+   }
+
+   return v;
 }
 
 static void
 etna_delete_shader_state(struct pipe_context *pctx, void *ss)
 {
-   etna_destroy_shader(ss);
+   struct etna_shader *shader = ss;
+   struct etna_shader_variant *v, *t;
+
+   v = shader->variants;
+   while (v) {
+      t = v;
+      v = v->next;
+      etna_destroy_shader(t);
+   }
+
+   FREE(shader->tokens);
+   FREE(shader);
 }
 
 static void

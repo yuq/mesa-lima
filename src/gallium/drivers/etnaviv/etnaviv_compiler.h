@@ -92,6 +92,9 @@ struct etna_shader_variant {
 
    /* unknown input property (XX_INPUT_COUNT, field UNK8) */
    uint32_t input_count_unk8;
+
+   /* shader variants form a linked list */
+   struct etna_shader_variant *next;
 };
 
 struct etna_varying {

@@ -30,6 +30,18 @@
 #include "pipe/p_state.h"
 
 struct etna_context;
+struct etna_shader_variant;
+
+struct etna_shader {
+    /* shader id (for debug): */
+    uint32_t id;
+    uint32_t variant_count;
+
+    struct tgsi_token *tokens;
+    struct etna_specs *specs;
+
+    struct etna_shader_variant *variants;
+};
 
 bool
 etna_shader_link(struct etna_context *ctx);
