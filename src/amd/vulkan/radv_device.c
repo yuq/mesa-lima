@@ -477,6 +477,28 @@ void radv_GetPhysicalDeviceFeatures2KHR(
 	return radv_GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
 }
 
+static uint32_t radv_get_driver_version()
+{
+	const char *minor_string = strchr(VERSION, '.');
+	const char *patch_string = minor_string ? strchr(minor_string + 1, ','): NULL;
+	int major = atoi(VERSION);
+	int minor = minor_string ? atoi(minor_string + 1) : 0;
+	int patch = patch_string ? atoi(patch_string + 1) : 0;
+	if (strstr(VERSION, "devel")) {
+		if (patch == 0) {
+			patch = 99;
+			if (minor == 0) {
+				minor = 99;
+				--major;
+			} else
+				--minor;
+		} else
+			--patch;
+	}
+	uint32_t version = VK_MAKE_VERSION(major, minor, patch);
+	return version;
+}
+
 void radv_GetPhysicalDeviceProperties(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceProperties*                 pProperties)
@@ -598,7 +620,7 @@ void radv_GetPhysicalDeviceProperties(
 
 	*pProperties = (VkPhysicalDeviceProperties) {
 		.apiVersion = VK_MAKE_VERSION(1, 0, 42),
-		.driverVersion = 1,
+		.driverVersion = radv_get_driver_version(),
 		.vendorID = 0x1002,
 		.deviceID = pdevice->rad_info.pci_id,
 		.deviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
