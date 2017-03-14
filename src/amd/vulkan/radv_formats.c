@@ -1006,16 +1006,11 @@ void radv_GetPhysicalDeviceFormatProperties2KHR(
 						   &pFormatProperties->formatProperties);
 }
 
-VkResult radv_GetPhysicalDeviceImageFormatProperties(
-	VkPhysicalDevice                            physicalDevice,
-	VkFormat                                    format,
-	VkImageType                                 type,
-	VkImageTiling                               tiling,
-	VkImageUsageFlags                           usage,
-	VkImageCreateFlags                          createFlags,
-	VkImageFormatProperties*                    pImageFormatProperties)
+static VkResult radv_get_image_format_properties(struct radv_physical_device *physical_device,
+						 const VkPhysicalDeviceImageFormatInfo2KHR *info,
+						 VkImageFormatProperties *pImageFormatProperties)
+
 {
-	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
 	VkFormatProperties format_props;
 	VkFormatFeatureFlags format_feature_flags;
 	VkExtent3D maxExtent;
@@ -1023,11 +1018,11 @@ VkResult radv_GetPhysicalDeviceImageFormatProperties(
 	uint32_t maxArraySize;
 	VkSampleCountFlags sampleCounts = VK_SAMPLE_COUNT_1_BIT;
 
-	radv_physical_device_get_format_properties(physical_device, format,
+	radv_physical_device_get_format_properties(physical_device, info->format,
 						   &format_props);
-	if (tiling == VK_IMAGE_TILING_LINEAR) {
+	if (info->tiling == VK_IMAGE_TILING_LINEAR) {
 		format_feature_flags = format_props.linearTilingFeatures;
-	} else if (tiling == VK_IMAGE_TILING_OPTIMAL) {
+	} else if (info->tiling == VK_IMAGE_TILING_OPTIMAL) {
 		format_feature_flags = format_props.optimalTilingFeatures;
 	} else {
 		unreachable("bad VkImageTiling");
@@ -1036,7 +1031,7 @@ VkResult radv_GetPhysicalDeviceImageFormatProperties(
 	if (format_feature_flags == 0)
 		goto unsupported;
 
-	switch (type) {
+	switch (info->type) {
 	default:
 		unreachable("bad vkimage type\n");
 	case VK_IMAGE_TYPE_1D:
@@ -1062,34 +1057,34 @@ VkResult radv_GetPhysicalDeviceImageFormatProperties(
 		break;
 	}
 
-	if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-	    type == VK_IMAGE_TYPE_2D &&
+	if (info->tiling == VK_IMAGE_TILING_OPTIMAL &&
+	    info->type == VK_IMAGE_TYPE_2D &&
 	    (format_feature_flags & (VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
 				     VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) &&
-	    !(createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
-	    !(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+	    !(info->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
+	    !(info->usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
 		sampleCounts |= VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT | VK_SAMPLE_COUNT_8_BIT;
 	}
 
-	if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+	if (info->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
 		if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
 			goto unsupported;
 		}
 	}
 
-	if (usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+	if (info->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
 		if (!(format_feature_flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
 			goto unsupported;
 		}
 	}
 
-	if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+	if (info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
 		if (!(format_feature_flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
 			goto unsupported;
 		}
 	}
 
-	if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+	if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
 		if (!(format_feature_flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
 			goto unsupported;
 		}
@@ -1120,18 +1115,39 @@ unsupported:
 	return VK_ERROR_FORMAT_NOT_SUPPORTED;
 }
 
+VkResult radv_GetPhysicalDeviceImageFormatProperties(
+	VkPhysicalDevice                            physicalDevice,
+	VkFormat                                    format,
+	VkImageType                                 type,
+	VkImageTiling                               tiling,
+	VkImageUsageFlags                           usage,
+	VkImageCreateFlags                          createFlags,
+	VkImageFormatProperties*                    pImageFormatProperties)
+{
+	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
+
+	const VkPhysicalDeviceImageFormatInfo2KHR info = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2_KHR,
+		.pNext = NULL,
+		.format = format,
+		.type = type,
+		.tiling = tiling,
+		.usage = usage,
+		.flags = createFlags,
+	};
+
+	return radv_get_image_format_properties(physical_device, &info,
+						pImageFormatProperties);
+}
+
 VkResult radv_GetPhysicalDeviceImageFormatProperties2KHR(
 	VkPhysicalDevice                            physicalDevice,
-	const VkPhysicalDeviceImageFormatInfo2KHR*  pImageFormatInfo,
-	VkImageFormatProperties2KHR                *pImageFormatProperties)
+	const VkPhysicalDeviceImageFormatInfo2KHR  *base_info,
+	VkImageFormatProperties2KHR                *base_props)
 {
-	return radv_GetPhysicalDeviceImageFormatProperties(physicalDevice,
-							   pImageFormatInfo->format,
-							   pImageFormatInfo->type,
-							   pImageFormatInfo->tiling,
-							   pImageFormatInfo->usage,
-							   pImageFormatInfo->flags,
-							   &pImageFormatProperties->imageFormatProperties);
+	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
+	return radv_get_image_format_properties(physical_device, base_info,
+						&base_props->imageFormatProperties);
 }
 
 void radv_GetPhysicalDeviceSparseImageFormatProperties(
