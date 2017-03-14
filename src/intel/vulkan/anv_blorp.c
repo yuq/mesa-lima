@@ -459,12 +459,12 @@ void anv_CmdBlitImage(
       get_blorp_surf_for_anv_image(dst_image, dst_res->aspectMask,
                                    dst_image->aux_usage, &dst);
 
-      struct anv_format src_format =
-         anv_get_format(&cmd_buffer->device->info, src_image->vk_format,
-                        src_res->aspectMask, src_image->tiling);
-      struct anv_format dst_format =
-         anv_get_format(&cmd_buffer->device->info, dst_image->vk_format,
-                        dst_res->aspectMask, dst_image->tiling);
+      struct anv_format_plane src_format =
+         anv_get_format_plane(&cmd_buffer->device->info, src_image->vk_format,
+                              src_res->aspectMask, src_image->tiling);
+      struct anv_format_plane dst_format =
+         anv_get_format_plane(&cmd_buffer->device->info, dst_image->vk_format,
+                              dst_res->aspectMask, dst_image->tiling);
 
       unsigned dst_start, dst_end;
       if (dst_image->type == VK_IMAGE_TYPE_3D) {
@@ -758,9 +758,9 @@ void anv_CmdClearColorImage(
 
       assert(pRanges[r].aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
 
-      struct anv_format src_format =
-         anv_get_format(&cmd_buffer->device->info, image->vk_format,
-                        VK_IMAGE_ASPECT_COLOR_BIT, image->tiling);
+      struct anv_format_plane src_format =
+         anv_get_format_plane(&cmd_buffer->device->info, image->vk_format,
+                              VK_IMAGE_ASPECT_COLOR_BIT, image->tiling);
 
       unsigned base_layer = pRanges[r].baseArrayLayer;
       unsigned layer_count = anv_get_layerCount(image, &pRanges[r]);

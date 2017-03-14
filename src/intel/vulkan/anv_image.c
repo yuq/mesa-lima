@@ -972,8 +972,12 @@ anv_CreateImageView(VkDevice _device,
    iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
    iview->vk_format = pCreateInfo->format;
 
-   struct anv_format format = anv_get_format(&device->info, pCreateInfo->format,
-                                             range->aspectMask, image->tiling);
+   struct anv_format_plane format =
+      anv_get_format_plane(&device->info, pCreateInfo->format,
+                           range->aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT |
+                                                 VK_IMAGE_ASPECT_STENCIL_BIT) ?
+                           VK_IMAGE_ASPECT_DEPTH_BIT : range->aspectMask,
+                           image->tiling);
 
    iview->isl = (struct isl_view) {
       .format = format.isl_format,

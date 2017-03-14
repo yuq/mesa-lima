@@ -2169,20 +2169,59 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                         const char *entrypoint,
                         const VkSpecializationInfo *spec_info);
 
-struct anv_format {
+struct anv_format_plane {
    enum isl_format isl_format:16;
    struct isl_swizzle swizzle;
 };
 
-struct anv_format
-anv_get_format(const struct gen_device_info *devinfo, VkFormat format,
-               VkImageAspectFlags aspect, VkImageTiling tiling);
+
+struct anv_format {
+   struct anv_format_plane planes[3];
+   uint8_t n_planes;
+};
+
+static inline uint32_t
+anv_image_aspect_to_plane(VkImageAspectFlags image_aspects,
+                          VkImageAspectFlags aspect_mask)
+{
+   switch (aspect_mask) {
+   case VK_IMAGE_ASPECT_COLOR_BIT:
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
+   case VK_IMAGE_ASPECT_PLANE_0_BIT_KHR:
+      return 0;
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
+      if ((image_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) == 0)
+         return 0;
+      /* Fall-through */
+   case VK_IMAGE_ASPECT_PLANE_1_BIT_KHR:
+      return 1;
+   case VK_IMAGE_ASPECT_PLANE_2_BIT_KHR:
+      return 2;
+   default:
+      unreachable("invalid image aspect");
+   }
+}
+
+const struct anv_format *
+anv_get_format(VkFormat format);
+
+static inline uint32_t
+anv_get_format_planes(VkFormat vk_format)
+{
+   const struct anv_format *format = anv_get_format(vk_format);
+
+   return format != NULL ? format->n_planes : 0;
+}
+
+struct anv_format_plane
+anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
+                     VkImageAspectFlags aspect, VkImageTiling tiling);
 
 static inline enum isl_format
 anv_get_isl_format(const struct gen_device_info *devinfo, VkFormat vk_format,
                    VkImageAspectFlags aspect, VkImageTiling tiling)
 {
-   return anv_get_format(devinfo, vk_format, aspect, tiling).isl_format;
+   return anv_get_format_plane(devinfo, vk_format, aspect, tiling).isl_format;
 }
 
 static inline struct isl_swizzle
