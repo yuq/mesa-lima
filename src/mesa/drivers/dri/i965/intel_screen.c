@@ -41,6 +41,10 @@
 #include "utils.h"
 #include "xmlpool.h"
 
+#ifndef DRM_FORMAT_MOD_INVALID
+#define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
+#endif
+
 static const __DRIconfigOptionsExtension brw_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },
    .xml =
@@ -505,6 +509,15 @@ intel_destroy_image(__DRIimage *image)
    free(image);
 }
 
+static uint64_t
+select_best_modifier(struct gen_device_info *devinfo,
+                     const uint64_t *modifiers,
+                     const unsigned count)
+{
+   /* Modifiers are not supported by this DRI driver */
+   return DRM_FORMAT_MOD_INVALID;
+}
+
 static __DRIimage *
 intel_create_image_common(__DRIscreen *dri_screen,
                           int width, int height, int format,
@@ -525,6 +538,12 @@ intel_create_image_common(__DRIscreen *dri_screen,
     */
    assert(!(use && count));
 
+   uint64_t modifier = select_best_modifier(&screen->devinfo, modifiers, count);
+   assert(modifier == DRM_FORMAT_MOD_INVALID);
+
+   /* Historically, X-tiled was the default, and so lack of modifier means
+    * X-tiled.
+    */
    tiling = I915_TILING_X;
    if (use & __DRI_IMAGE_USE_CURSOR) {
       if (width != 64 || height != 64)
