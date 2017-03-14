@@ -266,6 +266,108 @@ struct bool32_vec {
     bool w;
 };
 
+<%def name="evaluate_op(op, bit_size)">
+   <%
+   output_type = type_add_size(op.output_type, bit_size)
+   input_types = [type_add_size(type_, bit_size) for type_ in op.input_types]
+   %>
+
+   ## For each non-per-component input, create a variable srcN that
+   ## contains x, y, z, and w elements which are filled in with the
+   ## appropriately-typed values.
+   % for j in range(op.num_inputs):
+      % if op.input_sizes[j] == 0:
+         <% continue %>
+      % elif "src" + str(j) not in op.const_expr:
+         ## Avoid unused variable warnings
+         <% continue %>
+      %endif
+
+      const struct ${input_types[j]}_vec src${j} = {
+      % for k in range(op.input_sizes[j]):
+         % if input_types[j] == "bool32":
+            _src[${j}].u32[${k}] != 0,
+         % else:
+            _src[${j}].${get_const_field(input_types[j])}[${k}],
+         % endif
+      % endfor
+      % for k in range(op.input_sizes[j], 4):
+         0,
+      % endfor
+      };
+   % endfor
+
+   % if op.output_size == 0:
+      ## For per-component instructions, we need to iterate over the
+      ## components and apply the constant expression one component
+      ## at a time.
+      for (unsigned _i = 0; _i < num_components; _i++) {
+         ## For each per-component input, create a variable srcN that
+         ## contains the value of the current (_i'th) component.
+         % for j in range(op.num_inputs):
+            % if op.input_sizes[j] != 0:
+               <% continue %>
+            % elif "src" + str(j) not in op.const_expr:
+               ## Avoid unused variable warnings
+               <% continue %>
+            % elif input_types[j] == "bool32":
+               const bool src${j} = _src[${j}].u32[_i] != 0;
+            % else:
+               const ${input_types[j]}_t src${j} =
+                  _src[${j}].${get_const_field(input_types[j])}[_i];
+            % endif
+         % endfor
+
+         ## Create an appropriately-typed variable dst and assign the
+         ## result of the const_expr to it.  If const_expr already contains
+         ## writes to dst, just include const_expr directly.
+         % if "dst" in op.const_expr:
+            ${output_type}_t dst;
+
+            ${op.const_expr}
+         % else:
+            ${output_type}_t dst = ${op.const_expr};
+         % endif
+
+         ## Store the current component of the actual destination to the
+         ## value of dst.
+         % if output_type == "bool32":
+            ## Sanitize the C value to a proper NIR bool
+            _dst_val.u32[_i] = dst ? NIR_TRUE : NIR_FALSE;
+         % else:
+            _dst_val.${get_const_field(output_type)}[_i] = dst;
+         % endif
+      }
+   % else:
+      ## In the non-per-component case, create a struct dst with
+      ## appropriately-typed elements x, y, z, and w and assign the result
+      ## of the const_expr to all components of dst, or include the
+      ## const_expr directly if it writes to dst already.
+      struct ${output_type}_vec dst;
+
+      % if "dst" in op.const_expr:
+         ${op.const_expr}
+      % else:
+         ## Splat the value to all components.  This way expressions which
+         ## write the same value to all components don't need to explicitly
+         ## write to dest.  One such example is fnoise which has a
+         ## const_expr of 0.0f.
+         dst.x = dst.y = dst.z = dst.w = ${op.const_expr};
+      % endif
+
+      ## For each component in the destination, copy the value of dst to
+      ## the actual destination.
+      % for k in range(op.output_size):
+         % if output_type == "bool32":
+            ## Sanitize the C value to a proper NIR bool
+            _dst_val.u32[${k}] = dst.${"xyzw"[k]} ? NIR_TRUE : NIR_FALSE;
+         % else:
+            _dst_val.${get_const_field(output_type)}[${k}] = dst.${"xyzw"[k]};
+         % endif
+      % endfor
+   % endif
+</%def>
+
 % for name, op in sorted(opcodes.iteritems()):
 static nir_const_value
 evaluate_${name}(MAYBE_UNUSED unsigned num_components, unsigned bit_size,
@@ -276,106 +378,7 @@ evaluate_${name}(MAYBE_UNUSED unsigned num_components, unsigned bit_size,
    switch (bit_size) {
    % for bit_size in op_bit_sizes(op):
    case ${bit_size}: {
-      <%
-      output_type = type_add_size(op.output_type, bit_size)
-      input_types = [type_add_size(type_, bit_size) for type_ in op.input_types]
-      %>
-
-      ## For each non-per-component input, create a variable srcN that
-      ## contains x, y, z, and w elements which are filled in with the
-      ## appropriately-typed values.
-      % for j in range(op.num_inputs):
-         % if op.input_sizes[j] == 0:
-            <% continue %>
-         % elif "src" + str(j) not in op.const_expr:
-            ## Avoid unused variable warnings
-            <% continue %>
-         %endif
-
-         const struct ${input_types[j]}_vec src${j} = {
-         % for k in range(op.input_sizes[j]):
-            % if input_types[j] == "bool32":
-               _src[${j}].u32[${k}] != 0,
-            % else:
-               _src[${j}].${get_const_field(input_types[j])}[${k}],
-            % endif
-         % endfor
-         % for k in range(op.input_sizes[j], 4):
-            0,
-         % endfor
-         };
-      % endfor
-
-      % if op.output_size == 0:
-         ## For per-component instructions, we need to iterate over the
-         ## components and apply the constant expression one component
-         ## at a time.
-         for (unsigned _i = 0; _i < num_components; _i++) {
-            ## For each per-component input, create a variable srcN that
-            ## contains the value of the current (_i'th) component.
-            % for j in range(op.num_inputs):
-               % if op.input_sizes[j] != 0:
-                  <% continue %>
-               % elif "src" + str(j) not in op.const_expr:
-                  ## Avoid unused variable warnings
-                  <% continue %>
-               % elif input_types[j] == "bool32":
-                  const bool src${j} = _src[${j}].u32[_i] != 0;
-               % else:
-                  const ${input_types[j]}_t src${j} =
-                     _src[${j}].${get_const_field(input_types[j])}[_i];
-               % endif
-            % endfor
-
-            ## Create an appropriately-typed variable dst and assign the
-            ## result of the const_expr to it.  If const_expr already contains
-            ## writes to dst, just include const_expr directly.
-            % if "dst" in op.const_expr:
-               ${output_type}_t dst;
-
-               ${op.const_expr}
-            % else:
-               ${output_type}_t dst = ${op.const_expr};
-            % endif
-
-            ## Store the current component of the actual destination to the
-            ## value of dst.
-            % if output_type == "bool32":
-               ## Sanitize the C value to a proper NIR bool
-               _dst_val.u32[_i] = dst ? NIR_TRUE : NIR_FALSE;
-            % else:
-               _dst_val.${get_const_field(output_type)}[_i] = dst;
-            % endif
-         }
-      % else:
-         ## In the non-per-component case, create a struct dst with
-         ## appropriately-typed elements x, y, z, and w and assign the result
-         ## of the const_expr to all components of dst, or include the
-         ## const_expr directly if it writes to dst already.
-         struct ${output_type}_vec dst;
-
-         % if "dst" in op.const_expr:
-            ${op.const_expr}
-         % else:
-            ## Splat the value to all components.  This way expressions which
-            ## write the same value to all components don't need to explicitly
-            ## write to dest.  One such example is fnoise which has a
-            ## const_expr of 0.0f.
-            dst.x = dst.y = dst.z = dst.w = ${op.const_expr};
-         % endif
-
-         ## For each component in the destination, copy the value of dst to
-         ## the actual destination.
-         % for k in range(op.output_size):
-            % if output_type == "bool32":
-               ## Sanitize the C value to a proper NIR bool
-               _dst_val.u32[${k}] = dst.${"xyzw"[k]} ? NIR_TRUE : NIR_FALSE;
-            % else:
-               _dst_val.${get_const_field(output_type)}[${k}] = dst.${"xyzw"[k]};
-            % endif
-         % endfor
-      % endif
-
+      ${evaluate_op(op, bit_size)}
       break;
    }
    % endfor
