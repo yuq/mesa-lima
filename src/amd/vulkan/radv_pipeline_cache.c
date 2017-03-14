@@ -305,6 +305,7 @@ struct cache_header {
 	uint32_t device_id;
 	uint8_t  uuid[VK_UUID_SIZE];
 };
+
 void
 radv_pipeline_cache_load(struct radv_pipeline_cache *cache,
 			 const void *data, size_t size)

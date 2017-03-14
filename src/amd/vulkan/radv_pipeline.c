@@ -41,6 +41,7 @@
 #include "ac_nir_to_llvm.h"
 #include "vk_format.h"
 #include "util/debug.h"
+
 void radv_shader_variant_destroy(struct radv_device *device,
                                  struct radv_shader_variant *variant);
 
@@ -250,14 +251,10 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	/* Vulkan uses the separate-shader linking model */
 	nir->info->separate_shader = true;
 
-	//   nir = brw_preprocess_nir(compiler, nir);
-
 	nir_shader_gather_info(nir, entry_point->impl);
 
 	nir_variable_mode indirect_mask = 0;
-	//   if (compiler->glsl_compiler_options[stage].EmitNoIndirectInput)
 	indirect_mask |= nir_var_shader_in;
-	//   if (compiler->glsl_compiler_options[stage].EmitNoIndirectTemp)
 	indirect_mask |= nir_var_local;
 
 	nir_lower_indirect_derefs(nir, indirect_mask);
@@ -1531,7 +1528,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 	radv_pipeline_init_blend_state(pipeline, pCreateInfo, extra);
 
-	/* */
 	if (modules[MESA_SHADER_VERTEX]) {
 		bool as_es = modules[MESA_SHADER_GEOMETRY] != NULL;
 		union ac_shader_variant_key key = radv_compute_vs_key(pCreateInfo, as_es);
