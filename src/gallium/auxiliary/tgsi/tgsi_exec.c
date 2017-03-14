@@ -3359,6 +3359,46 @@ exec_up2h(struct tgsi_exec_machine *mach,
 }
 
 static void
+micro_ucmp(union tgsi_exec_channel *dst,
+           const union tgsi_exec_channel *src0,
+           const union tgsi_exec_channel *src1,
+           const union tgsi_exec_channel *src2)
+{
+   dst->f[0] = src0->u[0] ? src1->f[0] : src2->f[0];
+   dst->f[1] = src0->u[1] ? src1->f[1] : src2->f[1];
+   dst->f[2] = src0->u[2] ? src1->f[2] : src2->f[2];
+   dst->f[3] = src0->u[3] ? src1->f[3] : src2->f[3];
+}
+
+static void
+exec_ucmp(struct tgsi_exec_machine *mach,
+          const struct tgsi_full_instruction *inst)
+{
+   unsigned int chan;
+   struct tgsi_exec_vector dst;
+
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         union tgsi_exec_channel src[3];
+
+         fetch_source(mach, &src[0], &inst->Src[0], chan,
+                      TGSI_EXEC_DATA_UINT);
+         fetch_source(mach, &src[1], &inst->Src[1], chan,
+                      TGSI_EXEC_DATA_FLOAT);
+         fetch_source(mach, &src[2], &inst->Src[2], chan,
+                      TGSI_EXEC_DATA_FLOAT);
+         micro_ucmp(&dst.xyzw[chan], &src[0], &src[1], &src[2]);
+      }
+   }
+   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
+         store_dest(mach, &dst.xyzw[chan], &inst->Dst[0], inst, chan,
+                    TGSI_EXEC_DATA_FLOAT);
+      }
+   }
+}
+
+static void
 exec_scs(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
@@ -4997,18 +5037,6 @@ micro_uarl(union tgsi_exec_channel *dst,
    dst->i[3] = src->u[3];
 }
 
-static void
-micro_ucmp(union tgsi_exec_channel *dst,
-           const union tgsi_exec_channel *src0,
-           const union tgsi_exec_channel *src1,
-           const union tgsi_exec_channel *src2)
-{
-   dst->u[0] = src0->u[0] ? src1->u[0] : src2->u[0];
-   dst->u[1] = src0->u[1] ? src1->u[1] : src2->u[1];
-   dst->u[2] = src0->u[2] ? src1->u[2] : src2->u[2];
-   dst->u[3] = src0->u[3] ? src1->u[3] : src2->u[3];
-}
-
 /**
  * Signed bitfield extract (i.e. sign-extend the extracted bits)
  */
@@ -5911,7 +5939,7 @@ exec_instruction(
       break;
 
    case TGSI_OPCODE_UCMP:
-      exec_vector_trinary(mach, inst, micro_ucmp, TGSI_EXEC_DATA_UINT, TGSI_EXEC_DATA_UINT);
+      exec_ucmp(mach, inst);
       break;
 
    case TGSI_OPCODE_IABS:

@@ -28,9 +28,11 @@ Modifiers
 
 TGSI supports modifiers on inputs (as well as saturate modifier on instructions).
 
-For inputs which have a floating point type, both absolute value and negation
-modifiers are supported (with absolute value being applied first).
-TGSI_OPCODE_MOV is considered to have float input type for applying modifiers.
+For inputs which have a floating point type, both absolute value and
+negation modifiers are supported (with absolute value being applied
+first).  The only source of TGSI_OPCODE_MOV and the second and third
+sources of TGSI_OPCODE_UCMP are considered to have float type for
+applying modifiers.
 
 For inputs which have signed or unsigned type only the negate modifier is
 supported.
