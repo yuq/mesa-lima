@@ -576,14 +576,13 @@ unlink_random_file_from_directory(const char *path)
    }
 
    unlink(filename);
-
    free (filename);
 
    return sb.st_size;
 }
 
 /* Is entry a directory with a two-character name, (and not the
- * special name of "..")
+ * special name of ".."). We also return false if the dir is empty.
  */
 static bool
 is_two_character_sub_directory(const struct dirent *entry, const char *path)
@@ -594,15 +593,37 @@ is_two_character_sub_directory(const struct dirent *entry, const char *path)
 
    struct stat sb;
    int res = stat(subdir, &sb);
+   if (res == -1 || !S_ISDIR(sb.st_mode)) {
+      free(subdir);
+      return false;
+   }
+
+   if (strlen(entry->d_name) != 2) {
+      free(subdir);
+      return false;
+   }
+
+   if (strcmp(entry->d_name, "..") == 0) {
+      free(subdir);
+      return false;
+   }
+
+   DIR *dir = opendir(subdir);
    free(subdir);
 
-   if (res == -1 || !S_ISDIR(sb.st_mode))
-      return false;
+   if (dir == NULL)
+     return false;
 
-   if (strlen(entry->d_name) != 2)
-      return false;
+   unsigned subdir_entries = 0;
+   struct dirent *d;
+   while ((d = readdir(dir)) != NULL) {
+      if(++subdir_entries > 2)
+         break;
+   }
+   closedir(dir);
 
-   if (strcmp(entry->d_name, "..") == 0)
+   /* If dir only contains '.' and '..' it must be empty */
+   if (subdir_entries <= 2)
       return false;
 
    return true;
