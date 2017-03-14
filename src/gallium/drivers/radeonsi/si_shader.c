@@ -7079,9 +7079,22 @@ static void si_count_scratch_private_memory(struct si_shader_context *ctx)
 	}
 }
 
-static bool si_compile_tgsi_main(struct si_shader_context *ctx,
-				 struct si_shader *shader)
+static void si_init_exec_from_input(struct si_shader_context *ctx,
+				    unsigned param, unsigned bitoffset)
 {
+	LLVMValueRef args[] = {
+		LLVMGetParam(ctx->main_fn, param),
+		LLVMConstInt(ctx->i32, bitoffset, 0),
+	};
+	lp_build_intrinsic(ctx->gallivm.builder,
+			   "llvm.amdgcn.init.exec.from.input",
+			   ctx->voidt, args, 2, LP_FUNC_ATTR_CONVERGENT);
+}
+
+static bool si_compile_tgsi_main(struct si_shader_context *ctx,
+				 bool is_monolithic)
+{
+	struct si_shader *shader = ctx->shader;
 	struct si_shader_selector *sel = shader->selector;
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 
@@ -7126,6 +7139,29 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 
 	create_function(ctx);
 	preload_ring_buffers(ctx);
+
+	/* For GFX9 merged shaders:
+	 * - Set EXEC. If the prolog is present, set EXEC there instead.
+	 * - Add a barrier before the second shader.
+	 *
+	 * The same thing for monolithic shaders is done in
+	 * si_build_wrapper_function.
+	 */
+	if (ctx->screen->b.chip_class >= GFX9 && !is_monolithic) {
+		if (sel->info.num_instructions > 1 && /* not empty shader */
+		    (shader->key.as_es || shader->key.as_ls) &&
+		    (ctx->type == PIPE_SHADER_TESS_EVAL ||
+		     (ctx->type == PIPE_SHADER_VERTEX &&
+		      !sel->vs_needs_prolog))) {
+			si_init_exec_from_input(ctx,
+						ctx->param_merged_wave_info, 0);
+		} else if (ctx->type == PIPE_SHADER_TESS_CTRL ||
+			   ctx->type == PIPE_SHADER_GEOMETRY) {
+			si_init_exec_from_input(ctx,
+						ctx->param_merged_wave_info, 8);
+			si_llvm_emit_barrier(NULL, bld_base, NULL);
+		}
+	}
 
 	if (ctx->type == PIPE_SHADER_GEOMETRY) {
 		int i;
@@ -7642,7 +7678,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	ctx.load_system_value = declare_system_value;
 
-	if (!si_compile_tgsi_main(&ctx, shader)) {
+	if (!si_compile_tgsi_main(&ctx, is_monolithic)) {
 		si_llvm_dispose(&ctx);
 		return -1;
 	}
@@ -7991,6 +8027,9 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	si_create_function(ctx, "vs_prolog", returns, num_returns, params,
 			   num_params, last_sgpr);
 	func = ctx->main_fn;
+
+	if (key->vs_prolog.num_merged_next_stage_vgprs)
+		si_init_exec_from_input(ctx, 3, 0);
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
 	 * but it will prevent the compiler from overwriting them unintentionally.
