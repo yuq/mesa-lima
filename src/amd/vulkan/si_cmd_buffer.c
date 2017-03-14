@@ -998,6 +998,7 @@ void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t main_src_va, main_dest_va;
 	uint64_t skipped_size = 0, realign_size = 0;
 
+	si_emit_cache_flush(cmd_buffer);
 
 	if (cmd_buffer->device->physical_device->rad_info.family <= CHIP_CARRIZO ||
 	    cmd_buffer->device->physical_device->rad_info.family == CHIP_STONEY) {
@@ -1060,6 +1061,8 @@ void si_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
 		return;
 
 	assert(va % 4 == 0 && size % 4 == 0);
+
+	si_emit_cache_flush(cmd_buffer);
 
 	while (size) {
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
