@@ -412,8 +412,11 @@ VkResult anv_EnumeratePhysicalDevices(
       }
    }
 
-   vk_outarray_append(&out, i) {
-      *i = anv_physical_device_to_handle(&instance->physicalDevice);
+   if (instance->physicalDeviceCount > 0) {
+      assert(instance->physicalDeviceCount == 1);
+      vk_outarray_append(&out, i) {
+         *i = anv_physical_device_to_handle(&instance->physicalDevice);
+      }
    }
 
    return vk_outarray_status(&out);
