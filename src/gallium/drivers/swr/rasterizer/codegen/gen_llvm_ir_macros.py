@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+# Copyright (C) 2014-2017 Intel Corporation.   All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -19,51 +19,32 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-#!deps/python32/python.exe
-
+from __future__ import print_function
 import os, sys, re
 import argparse
 import json as JSON
 import operator
+from mako.template import Template
+from mako.exceptions import RichTraceback
 
-header = r"""/****************************************************************************
-* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the "Software"),
-* to deal in the Software without restriction, including without limitation
-* the rights to use, copy, modify, merge, publish, distribute, sublicense,
-* and/or sell copies of the Software, and to permit persons to whom the
-* Software is furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice (including the next
-* paragraph) shall be included in all copies or substantial portions of the
-* Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-* IN THE SOFTWARE.
-* 
-* @file %s
-* 
-* @brief auto-generated file
-* 
-* DO NOT EDIT
-* 
-******************************************************************************/
+def write_template_to_string(template_filename, **kwargs):
+    try:
+        template = Template(filename=os.path.abspath(template_filename))
+        # Split + Join fixes line-endings for whatever platform you are using
+        return '\n'.join(template.render(**kwargs).splitlines())
+    except:
+        traceback = RichTraceback()
+        for (filename, lineno, function, line) in traceback.traceback:
+            print('File %s, line %s, in %s' % (filename, lineno, function))
+            print(line, '\n')
+        print('%s: %s' % (str(traceback.error.__class__.__name__), traceback.error))
 
-"""
-
-"""
-"""
-def gen_file_header(filename):
-    global header
-    headerStr = header % filename
-    return headerStr.splitlines()
+def write_template_to_file(template_filename, output_filename, **kwargs):
+    output_dirname = os.path.dirname(output_filename)
+    if not os.path.exists(output_dirname):
+        os.makedirs(output_dirname)
+    with open(output_filename, 'w') as outfile:
+        print(write_template_to_string(template_filename, **kwargs), file=outfile)
 
 
 inst_aliases = {
@@ -84,42 +65,45 @@ inst_aliases = {
 }
 
 intrinsics = [
-        ["VGATHERPD", "x86_avx2_gather_d_pd_256", ["src", "pBase", "indices", "mask", "scale"]],
-        ["VGATHERPS", "x86_avx2_gather_d_ps_256", ["src", "pBase", "indices", "mask", "scale"]],
-        ["VGATHERDD", "x86_avx2_gather_d_d_256", ["src", "pBase", "indices", "mask", "scale"]],
-        ["VSQRTPS", "x86_avx_sqrt_ps_256", ["a"]],
-        ["VRSQRTPS", "x86_avx_rsqrt_ps_256", ["a"]],
-        ["VRCPPS", "x86_avx_rcp_ps_256", ["a"]],
-        ["VMINPS", "x86_avx_min_ps_256", ["a", "b"]],
-        ["VMAXPS", "x86_avx_max_ps_256", ["a", "b"]],
-        ["VROUND", "x86_avx_round_ps_256", ["a", "rounding"]],
-        ["VCMPPS", "x86_avx_cmp_ps_256", ["a", "b", "cmpop"]],
-        ["VBLENDVPS", "x86_avx_blendv_ps_256", ["a", "b", "mask"]],
-        ["BEXTR_32", "x86_bmi_bextr_32", ["src", "control"]],
-        ["VMASKLOADD", "x86_avx2_maskload_d_256", ["src", "mask"]],
-        ["VMASKMOVPS", "x86_avx_maskload_ps_256", ["src", "mask"]],
-        ["VMASKSTOREPS", "x86_avx_maskstore_ps_256", ["src", "mask", "val"]],
-        ["VPSHUFB", "x86_avx2_pshuf_b", ["a", "b"]],
-        ["VPERMD", "x86_avx2_permd", ["a", "idx"]],
-        ["VPERMPS", "x86_avx2_permps", ["idx", "a"]],
-        ["VCVTPD2PS", "x86_avx_cvt_pd2_ps_256", ["a"]],
-        ["VCVTPH2PS", "x86_vcvtph2ps_256", ["a"]],
-        ["VCVTPS2PH", "x86_vcvtps2ph_256", ["a", "round"]],
-        ["VHSUBPS", "x86_avx_hsub_ps_256", ["a", "b"]],
-        ["VPTESTC", "x86_avx_ptestc_256", ["a", "b"]],
-        ["VPTESTZ", "x86_avx_ptestz_256", ["a", "b"]],
-        ["VFMADDPS", "x86_fma_vfmadd_ps_256", ["a", "b", "c"]],
-        ["VMOVMSKPS", "x86_avx_movmsk_ps_256", ["a"]],
-        ["INTERRUPT", "x86_int", ["a"]],
+        ['VGATHERPD', 'x86_avx2_gather_d_pd_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
+        ['VGATHERPS', 'x86_avx2_gather_d_ps_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
+        ['VGATHERDD', 'x86_avx2_gather_d_d_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
+        ['VSQRTPS', 'x86_avx_sqrt_ps_256', ['a']],
+        ['VRSQRTPS', 'x86_avx_rsqrt_ps_256', ['a']],
+        ['VRCPPS', 'x86_avx_rcp_ps_256', ['a']],
+        ['VMINPS', 'x86_avx_min_ps_256', ['a', 'b']],
+        ['VMAXPS', 'x86_avx_max_ps_256', ['a', 'b']],
+        ['VROUND', 'x86_avx_round_ps_256', ['a', 'rounding']],
+        ['VCMPPS', 'x86_avx_cmp_ps_256', ['a', 'b', 'cmpop']],
+        ['VBLENDVPS', 'x86_avx_blendv_ps_256', ['a', 'b', 'mask']],
+        ['BEXTR_32', 'x86_bmi_bextr_32', ['src', 'control']],
+        ['VMASKLOADD', 'x86_avx2_maskload_d_256', ['src', 'mask']],
+        ['VMASKMOVPS', 'x86_avx_maskload_ps_256', ['src', 'mask']],
+        ['VMASKSTOREPS', 'x86_avx_maskstore_ps_256', ['src', 'mask', 'val']],
+        ['VPSHUFB', 'x86_avx2_pshuf_b', ['a', 'b']],
+        ['VPERMD', 'x86_avx2_permd', ['a', 'idx']],
+        ['VPERMPS', 'x86_avx2_permps', ['idx', 'a']],
+        ['VCVTPD2PS', 'x86_avx_cvt_pd2_ps_256', ['a']],
+        ['VCVTPH2PS', 'x86_vcvtph2ps_256', ['a']],
+        ['VCVTPS2PH', 'x86_vcvtps2ph_256', ['a', 'round']],
+        ['VHSUBPS', 'x86_avx_hsub_ps_256', ['a', 'b']],
+        ['VPTESTC', 'x86_avx_ptestc_256', ['a', 'b']],
+        ['VPTESTZ', 'x86_avx_ptestz_256', ['a', 'b']],
+        ['VFMADDPS', 'x86_fma_vfmadd_ps_256', ['a', 'b', 'c']],
+        ['VMOVMSKPS', 'x86_avx_movmsk_ps_256', ['a']],
+        ['INTERRUPT', 'x86_int', ['a']],
     ]
+
+this_dir = os.path.dirname(os.path.abspath(__file__))
+template = os.path.join(this_dir, 'templates', 'gen_builder_template.hpp')
 
 def convert_uppercamel(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).upper()
 
-"""
+'''
     Given an input file (e.g. IRBuilder.h) generates function dictionary.
-"""
+'''
 def parse_ir_builder(input_file):
 
     functions = []
@@ -131,19 +115,19 @@ def parse_ir_builder(input_file):
         line = lines[idx].rstrip()
         idx += 1
 
-        #match = re.search(r"\*Create", line)
-        match = re.search(r"[\*\s]Create(\w*)\(", line)
+        #match = re.search(r'\*Create', line)
+        match = re.search(r'[\*\s]Create(\w*)\(', line)
         if match is not None:
-            #print("Line: %s" % match.group(1))
+            #print('Line: %s' % match.group(1))
 
-            if re.search(r"^\s*Create", line) is not None:
+            if re.search(r'^\s*Create', line) is not None:
                 func_sig = lines[idx-2].rstrip() + line
             else:
                 func_sig = line
 
             end_of_args = False
             while not end_of_args:
-                end_paren = re.search(r"\)", line)
+                end_paren = re.search(r'\)', line)
                 if end_paren is not None:
                     end_of_args = True
                 else:
@@ -151,44 +135,30 @@ def parse_ir_builder(input_file):
                     func_sig += line
                     idx += 1
 
-            delfunc = re.search(r"LLVM_DELETED_FUNCTION|= delete;", func_sig)
+            delfunc = re.search(r'LLVM_DELETED_FUNCTION|= delete;', func_sig)
 
             if not delfunc:
-                func = re.search(r"(.*?)\*[\n\s]*(Create\w*)\((.*?)\)", func_sig)
+                func = re.search(r'(.*?)\*[\n\s]*(Create\w*)\((.*?)\)', func_sig)
                 if func is not None:
 
-                    return_type = func.group(1).lstrip() + '*'
+                    return_type = func.group(1).strip() + '*'
                     func_name = func.group(2)
                     arguments = func.group(3)
 
-                    func_args = ''
-                    func_args_nodefs = ''
-
-                    num_args = arguments.count(',')
-
+                    func_args = []
                     arg_names = []
-                    num_args = 0
                     args = arguments.split(',')
                     for arg in args:
-                        arg = arg.lstrip()
+                        arg = arg.strip()
                         if arg:
-                            if num_args > 0:
-                                func_args += ', '
-                                func_args_nodefs += ', '
-                            func_args += arg
-                            func_args_nodefs += arg.split(' =')[0]
+                            func_args.append(arg)
 
                             split_args = arg.split('=')
                             arg_name = split_args[0].rsplit(None, 1)[-1]
 
-                            #print("Before ArgName = %s" % arg_name)
-
-                            reg_arg = re.search(r"[\&\*]*(\w*)", arg_name)
+                            reg_arg = re.search(r'[\&\*]*(\w*)', arg_name)
                             if reg_arg:
-                                #print("Arg Name = %s" % reg_arg.group(1))
                                 arg_names += [reg_arg.group(1)]
-
-                            num_args += 1
 
                     ignore = False
 
@@ -200,7 +170,7 @@ def parse_ir_builder(input_file):
                         ignore = True
 
                     # Convert CamelCase to CAMEL_CASE
-                    func_mod = re.search(r"Create(\w*)", func_name)
+                    func_mod = re.search(r'Create(\w*)', func_name)
                     if func_mod:
                         func_mod = func_mod.group(1)
                         func_mod = convert_uppercamel(func_mod)
@@ -213,197 +183,89 @@ def parse_ir_builder(input_file):
                         func_alias = func_mod
 
                         if func_name == 'CreateCall' or func_name == 'CreateGEP':
-                            arglist = re.search(r'ArrayRef', func_args)
+                            arglist = re.search(r'ArrayRef', ', '.join(func_args))
                             if arglist:
                                 func_alias = func_alias + 'A'
 
                     if not ignore:
                         functions.append({
-                                "name": func_name,
-                                "alias": func_alias,
-                                "return": return_type,
-                                "args": func_args,
-                                "args_nodefs": func_args_nodefs,
-                                "arg_names": arg_names
+                                'name'      : func_name,
+                                'alias'     : func_alias,
+                                'return'    : return_type,
+                                'args'      : ', '.join(func_args),
+                                'arg_names' : arg_names,
                             })
 
     return functions
 
-"""
+'''
     Auto-generates macros for LLVM IR
-"""
-def generate_gen_h(functions, output_file):
-    output_lines = gen_file_header(os.path.basename(output_file.name))
+'''
+def generate_gen_h(functions, output_dir):
+    filename = 'gen_builder.hpp'
+    output_filename = os.path.join(output_dir, filename)
 
-    output_lines += [
-        '#pragma once',
-        '',
-        '//////////////////////////////////////////////////////////////////////////',
-        '/// Auto-generated Builder IR declarations',
-        '//////////////////////////////////////////////////////////////////////////',
-    ]
-
+    templfuncs = []
     for func in functions:
-        name = func['name']
-        if func['alias']:
-            name = func['alias']
-        output_lines += [
-            '%s%s(%s);' % (func['return'], name, func['args'])
-        ]
+        decl = '%s %s(%s)' % (func['return'], func['alias'], func['args'])
 
-    output_file.write('\n'.join(output_lines) + '\n')
+        templfuncs.append({
+            'decl'      : decl,
+            'intrin'    : func['name'],
+            'args'      : ', '.join(func['arg_names']),
+        })
 
-"""
+    write_template_to_file(
+        template,
+        output_filename,
+        comment='Builder IR Wrappers',
+        filename=filename,
+        functions=templfuncs,
+        isX86=False)
+
+'''
     Auto-generates macros for LLVM IR
-"""
-def generate_gen_cpp(functions, output_file):
-    output_lines = gen_file_header(os.path.basename(output_file.name))
+'''
+def generate_x86_h(output_dir):
+    filename = 'gen_builder_x86.hpp'
+    output_filename = os.path.join(output_dir, filename)
 
-    output_lines += [
-        '#include \"builder.h\"',
-        '',
-        'namespace SwrJit',
-        '{',
-        '    using namespace llvm;',
-        '',
-    ]
-
-    for func in functions:
-        name = func['name']
-        if func['alias']:
-            name = func['alias']
-
-        args = func['arg_names']
-        func_args = ''
-        first_arg = True
-        for arg in args:
-            if not first_arg:
-                func_args += ', '
-            func_args += arg
-            first_arg = False
-
-        output_lines += [
-            '    //////////////////////////////////////////////////////////////////////////',
-            '    %sBuilder::%s(%s)' % (func['return'], name, func['args_nodefs']),
-            '    {',
-            '       return IRB()->%s(%s);' % (func['name'], func_args),
-            '    }',
-            '',
-        ]
-    output_lines.append('}')
-    output_file.write('\n'.join(output_lines) + '\n')
-
-"""
-    Auto-generates macros for LLVM IR
-"""
-def generate_x86_h(output_file):
-    output_lines = gen_file_header(os.path.basename(output_file.name))
-
-    output_lines += [
-        '#pragma once',
-        '',
-        '//////////////////////////////////////////////////////////////////////////',
-        '/// Auto-generated x86 intrinsics',
-        '//////////////////////////////////////////////////////////////////////////',
-    ]
-
+    functions = []
     for inst in intrinsics:
-        #print("Inst: %s, x86: %s numArgs: %d" % (inst[0], inst[1], len(inst[2])))
+        #print('Inst: %s, x86: %s numArgs: %d' % (inst[0], inst[1], len(inst[2])))
+        declargs = 'Value* ' + ', Value* '.join(inst[2])
 
-        args = ''
-        first = True
-        for arg in inst[2]:
-            if not first:
-                args += ', '
-            args += ("Value* %s" % arg)
-            first = False
+        functions.append({
+            'decl'      : 'Value* %s(%s)' % (inst[0], declargs),
+            'args'      : ', '.join(inst[2]),
+            'intrin'    : inst[1],
+        })
 
-        output_lines += [
-            'Value *%s(%s);' % (inst[0], args)
-        ]
+    write_template_to_file(
+        template,
+        output_filename,
+        comment='x86 intrinsics',
+        filename=filename,
+        functions=functions,
+        isX86=True)
 
-    output_file.write('\n'.join(output_lines) + '\n')
-
-"""
-    Auto-generates macros for LLVM IR
-"""
-def generate_x86_cpp(output_file):
-    output_lines = gen_file_header(os.path.basename(output_file.name))
-
-    output_lines += [
-        '#include \"builder.h\"',
-        '',
-        'namespace SwrJit',
-        '{',
-        '    using namespace llvm;',
-        '',
-    ]
-
-    for inst in intrinsics:
-        #print("Inst: %s, x86: %s numArgs: %d" % (inst[0], inst[1], len(inst[2])))
-
-        args = ''
-        pass_args = ''
-        first = True
-        for arg in inst[2]:
-            if not first:
-                args += ', '
-                pass_args += ', '
-            args += ("Value* %s" % arg)
-            pass_args += arg
-            first = False
-
-        output_lines += [
-            '    //////////////////////////////////////////////////////////////////////////',
-            '    Value *Builder::%s(%s)' % (inst[0], args),
-            '    {',
-            '        Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::%s);' % inst[1],
-        ]
-        if inst[0] == "VPERMD":
-            rev_args = ''
-            first = True
-            for arg in reversed(inst[2]):
-                if not first:
-                    rev_args += ', '
-                rev_args += arg
-                first = False
-
-            output_lines += [
-                '#if (HAVE_LLVM == 0x306) && (LLVM_VERSION_PATCH == 0)',
-                '        return CALL(func, std::initializer_list<Value*>{%s});' % rev_args,
-                '#else',
-            ]
-        output_lines += [
-            '        return CALL(func, std::initializer_list<Value*>{%s});' % pass_args,
-        ]
-        if inst[0] == "VPERMD":
-            output_lines += [
-                '#endif',
-            ]
-        output_lines += [
-            '    }',
-            '',
-        ]
-
-    output_lines.append('}')
-    output_file.write('\n'.join(output_lines) + '\n')
-
-"""
+'''
     Function which is invoked when this script is started from a command line.
     Will present and consume a set of arguments which will tell this script how
     to behave
-"""
+'''
 def main():
 
     # Parse args...
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", "-i", type=argparse.FileType('r'), help="Path to IRBuilder.h", required=False)
-    parser.add_argument("--output", "-o", type=argparse.FileType('w'), help="Path to output file", required=True)
-    parser.add_argument("--gen_h", "-gen_h", help="Generate builder_gen.h", action="store_true", default=False)
-    parser.add_argument("--gen_cpp", "-gen_cpp", help="Generate builder_gen.cpp", action="store_true", default=False)
-    parser.add_argument("--gen_x86_h", "-gen_x86_h", help="Generate x86 intrinsics. No input is needed.", action="store_true", default=False)
-    parser.add_argument("--gen_x86_cpp", "-gen_x86_cpp", help="Generate x86 intrinsics. No input is needed.", action="store_true", default=False)
+    parser.add_argument('--input', '-i', type=argparse.FileType('r'), help='Path to IRBuilder.h', required=False)
+    parser.add_argument('--output-dir', '-o', action='store', dest='output', help='Path to output directory', required=True)
+    parser.add_argument('--gen_h', help='Generate builder_gen.h', action='store_true', default=False)
+    parser.add_argument('--gen_x86_h', help='Generate x86 intrinsics. No input is needed.', action='store_true', default=False)
     args = parser.parse_args()
+
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
 
     if args.input:
         functions = parse_ir_builder(args.input)
@@ -411,20 +273,11 @@ def main():
         if args.gen_h:
             generate_gen_h(functions, args.output)
 
-        if args.gen_cpp:
-            generate_gen_cpp(functions, args.output)
-    else:
-        if args.gen_x86_h:
-            generate_x86_h(args.output)
+    elif args.gen_h:
+        print('Need to specify --input for --gen_h!')
 
-        if args.gen_x86_cpp:
-            generate_x86_cpp(args.output)
-
-        if args.gen_h:
-            print("Need to specify --input for --gen_h!")
-
-        if args.gen_cpp:
-            print("Need to specify --input for --gen_cpp!")
+    if args.gen_x86_h:
+        generate_x86_h(args.output)
 
 if __name__ == '__main__':
     main()

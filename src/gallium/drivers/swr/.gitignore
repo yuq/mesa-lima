@@ -3,10 +3,8 @@ rasterizer/archrast/gen_ar_event.cpp
 rasterizer/archrast/gen_ar_event.h
 rasterizer/archrast/gen_ar_eventhandler.h
 rasterizer/archrast/gen_ar_eventhandlerfile.h
-rasterizer/jitter/builder_gen.cpp
-rasterizer/jitter/builder_gen.h
-rasterizer/jitter/builder_x86.cpp
-rasterizer/jitter/builder_x86.h
+rasterizer/jitter/gen_builder.hpp
+rasterizer/jitter/gen_builder_x86.hpp
 rasterizer/jitter/state_llvm.h
 rasterizer/codegen/gen_knobs.cpp
 rasterizer/codegen/gen_knobs.h

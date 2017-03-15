@@ -56,8 +56,7 @@ BUILT_SOURCES = \
 	rasterizer/codegen/gen_knobs.cpp \
 	rasterizer/codegen/gen_knobs.h \
 	rasterizer/jitter/state_llvm.h \
-	rasterizer/jitter/builder_x86.h \
-	rasterizer/jitter/builder_x86.cpp \
+	rasterizer/jitter/gen_builder_x86.hpp \
 	rasterizer/archrast/gen_ar_event.h \
 	rasterizer/archrast/gen_ar_event.cpp \
 	rasterizer/archrast/gen_ar_eventhandler.h \
@@ -95,35 +94,20 @@ rasterizer/jitter/state_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/
 		--input $(srcdir)/rasterizer/core/state.h \
 		--output rasterizer/jitter/state_llvm.h
 
-rasterizer/jitter/builder_gen.h: rasterizer/codegen/gen_llvm_ir_macros.py
+rasterizer/jitter/gen_builder.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder_template.hpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_ir_macros.py \
 		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
-		--output rasterizer/jitter/builder_gen.h \
+		--output rasterizer/jitter \
 		--gen_h
 
-rasterizer/jitter/builder_gen.cpp: rasterizer/codegen/gen_llvm_ir_macros.py
+rasterizer/jitter/gen_builder_x86.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder_template.hpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_ir_macros.py \
-		--input $(LLVM_INCLUDEDIR)/llvm/IR/IRBuilder.h \
-		--output rasterizer/jitter/builder_gen.cpp \
-		--gen_cpp
-
-rasterizer/jitter/builder_x86.h: rasterizer/codegen/gen_llvm_ir_macros.py
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) \
-		$(srcdir)/rasterizer/codegen/gen_llvm_ir_macros.py \
-		--output rasterizer/jitter/builder_x86.h \
+		--output rasterizer/jitter \
 		--gen_x86_h
-
-rasterizer/jitter/builder_x86.cpp: rasterizer/codegen/gen_llvm_ir_macros.py
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) \
-		$(srcdir)/rasterizer/codegen/gen_llvm_ir_macros.py \
-		--output rasterizer/jitter/builder_x86.cpp \
-		--gen_x86_cpp
 
 rasterizer/archrast/gen_ar_event.h: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/ar_event_h.template rasterizer/archrast/events.proto
 	$(MKDIR_GEN)
@@ -188,27 +172,17 @@ COMMON_LDFLAGS = \
 
 # XXX: As we cannot use BUILT_SOURCES (the files will end up in the dist
 # tarball) just annotate the dependency directly.
-# As the single direct user of builder_gen.h is a header (builder.h) trace all
+# As the single direct user of gen_builder.hpp is a header (builder.h) trace all
 # the translusive users (one that use the latter header).
-rasterizer/jitter/blend_jit.cpp: rasterizer/jitter/builder_gen.h
-rasterizer/jitter/builder.cpp: rasterizer/jitter/builder_gen.h
-rasterizer/jitter/builder_gen.cpp: rasterizer/jitter/builder_gen.h
-rasterizer/jitter/builder_x86.cpp: rasterizer/jitter/builder_gen.h
-rasterizer/jitter/builder_misc.cpp: rasterizer/jitter/builder_gen.h
-rasterizer/jitter/fetch_jit.cpp: rasterizer/jitter/builder_gen.h
-rasterizer/jitter/streamout_jit.cpp: rasterizer/jitter/builder_gen.h
-swr_shader.cpp: rasterizer/jitter/builder_gen.h
+rasterizer/jitter/blend_jit.cpp: rasterizer/jitter/gen_builder.hpp
+rasterizer/jitter/builder.cpp: rasterizer/jitter/gen_builder.hpp
+rasterizer/jitter/builder_misc.cpp: rasterizer/jitter/gen_builder.hpp
+rasterizer/jitter/fetch_jit.cpp: rasterizer/jitter/gen_builder.hpp
+rasterizer/jitter/streamout_jit.cpp: rasterizer/jitter/gen_builder.hpp
+swr_shader.cpp: rasterizer/jitter/gen_builder.hpp
 
 CLEANFILES = \
-	rasterizer/jitter/builder_gen.h \
-	rasterizer/jitter/builder_gen.cpp
-
-# XXX: Due to the funky dependencies above, the builder_x86.cpp file gets
-# generated (copied) into builddir when building from release tarball.
-# Add a temporary workaround to remove it, until the above issue is resolved.
-distclean-local:
-	( test $(top_srcdir) != $(top_builddir) && \
-		rm $(builddir)/rasterizer/jitter/builder_x86.cpp ) || true
+	rasterizer/jitter/gen_builder.hpp
 
 lib_LTLIBRARIES = libswrAVX.la libswrAVX2.la
 
@@ -226,8 +200,7 @@ libswrAVX_la_SOURCES = \
 # on systems with other versions of LLVM eg. 3.7 or 3.6.
 # Move these back to BUILT_SOURCES once that is resolved.
 nodist_libswrAVX_la_SOURCES = \
-	rasterizer/jitter/builder_gen.h \
-	rasterizer/jitter/builder_gen.cpp
+	rasterizer/jitter/gen_builder.hpp
 
 libswrAVX_la_LIBADD = \
 	$(COMMON_LIBADD)
@@ -249,8 +222,7 @@ libswrAVX2_la_SOURCES = \
 # on systems with other versions of LLVM eg. 3.7 or 3.6.
 # Move these back to BUILT_SOURCES once that is resolved.
 nodist_libswrAVX2_la_SOURCES = \
-	rasterizer/jitter/builder_gen.h \
-	rasterizer/jitter/builder_gen.cpp
+	rasterizer/jitter/gen_builder.hpp
 
 libswrAVX2_la_LIBADD = \
 	$(COMMON_LIBADD)
@@ -291,4 +263,5 @@ EXTRA_DIST = \
 	rasterizer/codegen/templates/ar_event_cpp.template \
 	rasterizer/codegen/templates/ar_eventhandler_h.template \
 	rasterizer/codegen/templates/ar_eventhandlerfile_h.template \
-	rasterizer/codegen/templates/backend_template.cpp
+	rasterizer/codegen/templates/backend_template.cpp \
+	rasterizer/codegen/templates/gen_builder_template.hpp

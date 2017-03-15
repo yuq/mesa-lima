@@ -70,8 +70,8 @@ namespace SwrJit
         Type*                mSimdVectorTy;
         Type*                mSimdVectorTRTy;
 
-#include "builder_gen.h"
-#include "builder_x86.h"
+#include "gen_builder.hpp"
+#include "gen_builder_x86.hpp"
 #include "builder_misc.h"
 #include "builder_math.h"
     };

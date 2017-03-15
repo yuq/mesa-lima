@@ -70,31 +70,17 @@ env.CodeGenerate(
 )
 
 env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_gen.h',
+    target = 'rasterizer/jitter/gen_builder.hpp',
     script = swrroot + 'rasterizer/codegen/gen_llvm_ir_macros.py',
     source = os.path.join(llvm_includedir, 'llvm/IR/IRBuilder.h'),
-    command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_h'
+    command = python_cmd + ' $SCRIPT --input $SOURCE --output rasterizer/jitter --gen_h'
 )
 
 env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_gen.cpp',
-    script = swrroot + 'rasterizer/codegen/gen_llvm_ir_macros.py',
-    source = os.path.join(llvm_includedir, 'llvm/IR/IRBuilder.h'),
-    command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_cpp'
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_x86.h',
+    target = 'rasterizer/jitter/gen_builder_x86.hpp',
     script = swrroot + 'rasterizer/codegen/gen_llvm_ir_macros.py',
     source = '',
-    command = python_cmd + ' $SCRIPT --output $TARGET --gen_x86_h'
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_x86.cpp',
-    script = swrroot + 'rasterizer/codegen/gen_llvm_ir_macros.py',
-    source = '',
-    command = python_cmd + ' $SCRIPT --output $TARGET --gen_x86_cpp'
+    command = python_cmd + ' $SCRIPT --output rasterizer/jitter --gen_x86_h'
 )
 
 env.CodeGenerate(
@@ -147,8 +133,6 @@ env.CodeGenerate(
 # Auto-generated .cpp files (that need to generate object files)
 built_sources = [
     'rasterizer/codegen/gen_knobs.cpp',
-    'rasterizer/jitter/builder_gen.cpp',
-    'rasterizer/jitter/builder_x86.cpp',
     'rasterizer/archrast/gen_ar_event.cpp',
     'rasterizer/core/BackendPixelRate0.cpp',
     ]
