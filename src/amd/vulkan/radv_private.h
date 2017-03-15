@@ -530,7 +530,6 @@ struct radv_descriptor_set {
 	const struct radv_descriptor_set_layout *layout;
 	uint32_t size;
 
-	struct radv_buffer_view *buffer_views;
 	struct radeon_winsys_bo *bo;
 	uint64_t va;
 	uint32_t *mapped_ptr;
