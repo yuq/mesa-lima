@@ -417,6 +417,22 @@ store_query_result(struct anv_batch *batch, uint32_t reg,
    }
 }
 
+static void
+compute_query_result(struct anv_batch *batch, uint32_t dst_reg,
+                     struct anv_bo *bo, uint32_t offset)
+{
+   emit_load_alu_reg_u64(batch, CS_GPR(0), bo, offset);
+   emit_load_alu_reg_u64(batch, CS_GPR(1), bo, offset + 8);
+
+   /* FIXME: We need to clamp the result for 32 bit. */
+
+   uint32_t *dw = anv_batch_emitn(batch, 5, GENX(MI_MATH));
+   dw[1] = alu(OPCODE_LOAD, OPERAND_SRCA, OPERAND_R1);
+   dw[2] = alu(OPCODE_LOAD, OPERAND_SRCB, OPERAND_R0);
+   dw[3] = alu(OPCODE_SUB, 0, 0);
+   dw[4] = alu(OPCODE_STORE, dst_reg, OPERAND_ACCU);
+}
+
 void genX(CmdCopyQueryPoolResults)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
@@ -445,18 +461,8 @@ void genX(CmdCopyQueryPoolResults)(
       slot_offset = (firstQuery + i) * pool->stride;
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION:
-         emit_load_alu_reg_u64(&cmd_buffer->batch,
-                               CS_GPR(0), &pool->bo, slot_offset + 8);
-         emit_load_alu_reg_u64(&cmd_buffer->batch,
-                               CS_GPR(1), &pool->bo, slot_offset + 16);
-
-         /* FIXME: We need to clamp the result for 32 bit. */
-
-         uint32_t *dw = anv_batch_emitn(&cmd_buffer->batch, 5, GENX(MI_MATH));
-         dw[1] = alu(OPCODE_LOAD, OPERAND_SRCA, OPERAND_R1);
-         dw[2] = alu(OPCODE_LOAD, OPERAND_SRCB, OPERAND_R0);
-         dw[3] = alu(OPCODE_SUB, 0, 0);
-         dw[4] = alu(OPCODE_STORE, OPERAND_R2, OPERAND_ACCU);
+         compute_query_result(&cmd_buffer->batch, OPERAND_R2,
+                              &pool->bo, slot_offset + 8);
          break;
 
       case VK_QUERY_TYPE_TIMESTAMP:
