@@ -99,7 +99,7 @@ def main(args=sys.argv[1:]):
 
         for fileNum in range(numFiles):
             filename = baseCppName % str(fileNum)
-            print('Generating', filename)
+            #print('Generating', filename)
             write_template_to_file(
                 templateCpp,
                 baseCppName % str(fileNum),
@@ -110,14 +110,14 @@ def main(args=sys.argv[1:]):
     if args.cmake:
         templateCmake = os.path.join(thisDir, 'templates', 'backend_template.cmake')
         cmakeFile = os.path.join(args.outdir, 'gen_backends.cmake')
-        print('Generating', cmakeFile)
+        #print('Generating', cmakeFile)
         write_template_to_file(
             templateCmake,
             cmakeFile,
             numFiles=numFiles,
             baseCppName=baseCppName.replace('\\','/'))
 
-    print("Generated %d template instantiations in %d files" % (len(output_list), numFiles))
+    #print("Generated %d template instantiations in %d files" % (len(output_list), numFiles))
 
     return 0
 
