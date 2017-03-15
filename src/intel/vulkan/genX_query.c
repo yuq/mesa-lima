@@ -181,8 +181,6 @@ VkResult genX(GetQueryPoolResults)(
             dst[1] = slot[firstQuery + i].available;
       } else {
          uint32_t *dst = pData;
-         if (result > UINT32_MAX)
-            result = UINT32_MAX;
          if (write_results)
             dst[0] = result;
          if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
