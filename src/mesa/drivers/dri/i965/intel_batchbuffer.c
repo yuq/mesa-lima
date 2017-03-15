@@ -31,6 +31,7 @@
 #include "brw_context.h"
 #include "brw_defines.h"
 #include "brw_state.h"
+#include "common/gen_decoder.h"
 
 #include <xf86drm.h>
 #include <i915_drm.h>
@@ -135,45 +136,62 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
    brw->batch.ring = ring;
 }
 
+#ifdef DEBUG
+#define CSI "\e["
+#define BLUE_HEADER  CSI "0;44m"
+#define NORMAL       CSI "0m"
+
 static void
 do_batch_dump(struct brw_context *brw)
 {
-   struct drm_intel_decode *decode;
    struct intel_batchbuffer *batch = &brw->batch;
-   int ret;
+   struct gen_spec *spec = gen_spec_load(&brw->screen->devinfo);
 
-   decode = drm_intel_decode_context_alloc(brw->screen->deviceID);
-   if (!decode)
+   if (batch->ring != RENDER_RING)
       return;
 
-   ret = drm_intel_bo_map(batch->bo, false);
-   if (ret == 0) {
-      drm_intel_decode_set_batch_pointer(decode,
-					 batch->bo->virtual,
-					 batch->bo->offset64,
-                                         USED_BATCH(*batch));
-   } else {
+   int ret = drm_intel_bo_map(batch->bo, false);
+   if (ret != 0) {
       fprintf(stderr,
 	      "WARNING: failed to map batchbuffer (%s), "
 	      "dumping uploaded data instead.\n", strerror(ret));
-
-      drm_intel_decode_set_batch_pointer(decode,
-					 batch->map,
-					 batch->bo->offset64,
-                                         USED_BATCH(*batch));
    }
 
-   drm_intel_decode_set_output_file(decode, stderr);
-   drm_intel_decode(decode);
+   uint32_t *data = batch->bo->virtual ? batch->bo->virtual : batch->map;
+   uint32_t *end = data + USED_BATCH(*batch);
+   uint32_t gtt_offset = batch->bo->virtual ? batch->bo->offset64 : 0;
+   unsigned int length;
 
-   drm_intel_decode_context_free(decode);
+   bool color = INTEL_DEBUG & DEBUG_COLOR;
+   const char *header_color = color ? BLUE_HEADER : "";
+   const char *reset_color  = color ? NORMAL : "";
+
+   for (uint32_t *p = data; p < end; p += length) {
+      struct gen_group *inst = gen_spec_find_instruction(spec, p);
+      if (inst == NULL) {
+         fprintf(stderr, "unknown instruction %08x\n", p[0]);
+         length = (p[0] & 0xff) + 2;
+         continue;
+      }
+
+      uint64_t offset = gtt_offset + 4 * (p - data);
+
+      fprintf(stderr, "%s0x%08"PRIx64":  0x%08x:  %-80s%s\n", header_color,
+              offset, p[0], gen_group_get_name(inst), reset_color);
+
+      gen_print_group(stderr, inst, offset, p, 1, color);
+      length = gen_group_get_length(inst, p);
+   }
 
    if (ret == 0) {
       drm_intel_bo_unmap(batch->bo);
-
-      brw_debug_batch(brw);
    }
+
+   brw_debug_batch(brw);
 }
+#else
+static void do_batch_dump(struct brw_context *brw) { }
+#endif
 
 /**
  * Called when starting a new batch buffer.
