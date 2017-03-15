@@ -119,6 +119,8 @@ struct PA_STATE
 // cuts
 struct PA_STATE_OPT : public PA_STATE
 {
+    SIMDVERTEX leadingVertex;            // For tri-fan
+
     uint32_t numPrims{ 0 };              // Total number of primitives for draw.
     uint32_t numPrimsComplete{ 0 };      // Total number of complete primitives.
 
