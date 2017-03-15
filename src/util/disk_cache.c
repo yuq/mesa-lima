@@ -812,6 +812,13 @@ cache_put(void *job, int thread_index)
    if (filename == NULL)
       goto done;
 
+   /* If the cache is too large, evict something else first. */
+   while (*dc_job->cache->size + dc_job->size > dc_job->cache->max_size &&
+          i < 8) {
+      evict_lru_item(dc_job->cache);
+      i++;
+   }
+
    /* Write to a temporary file to allow for an atomic rename to the
     * final destination filename, (to prevent any readers from seeing
     * a partially written file).
@@ -856,16 +863,7 @@ cache_put(void *job, int thread_index)
     * not in the cache, and is also not being written out to the cache
     * by some other process.
     *
-    * Before we do that, if the cache is too large, evict something
-    * else first.
-    */
-   while ((*dc_job->cache->size + dc_job->size > dc_job->cache->max_size) &&
-          i < 8) {
-      evict_lru_item(dc_job->cache);
-      i++;
-   }
-
-   /* Create CRC of the data and store at the start of the file. We will
+    * Create CRC of the data and store at the start of the file. We will
     * read this when restoring the cache and use it to check for corruption.
     */
    struct cache_entry_file_data cf_data;
