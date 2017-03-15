@@ -162,29 +162,6 @@ concatenate_and_mkdir(void *ctx, const char *path, const char *name)
       return NULL;
 }
 
-static char *
-create_mesa_cache_dir(void *mem_ctx, const char *path, const char *gpu_name)
-{
-   char *new_path = concatenate_and_mkdir(mem_ctx, path, "mesa");
-   if (new_path == NULL)
-      return NULL;
-
-   /* Create a parent architecture directory so that we don't remove cache
-    * files for other architectures. In theory we could share the cache
-    * between architectures but we have no way of knowing if they were created
-    * by a compatible Mesa version.
-    */
-   new_path = concatenate_and_mkdir(mem_ctx, new_path, get_arch_bitness_str());
-   if (new_path == NULL)
-      return NULL;
-
-   new_path = concatenate_and_mkdir(mem_ctx, new_path, gpu_name);
-   if (new_path == NULL)
-      return NULL;
-
-   return new_path;
-}
-
 struct disk_cache *
 disk_cache_create(const char *gpu_name, const char *timestamp)
 {
@@ -221,7 +198,7 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
       if (mkdir_if_needed(path) == -1)
          goto fail;
 
-      path = create_mesa_cache_dir(local, path, gpu_name);
+      path = concatenate_and_mkdir(local, path, "mesa");
       if (path == NULL)
          goto fail;
    }
@@ -233,7 +210,7 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
          if (mkdir_if_needed(xdg_cache_home) == -1)
             goto fail;
 
-         path = create_mesa_cache_dir(local, xdg_cache_home, gpu_name);
+         path = concatenate_and_mkdir(local, xdg_cache_home, "mesa");
          if (path == NULL)
             goto fail;
       }
@@ -269,7 +246,7 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
       if (path == NULL)
          goto fail;
 
-      path = create_mesa_cache_dir(local, path, gpu_name);
+      path = concatenate_and_mkdir(local, path, "mesa");
       if (path == NULL)
          goto fail;
    }
@@ -372,7 +349,16 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
 
    /* Create driver id keys */
    size_t ts_size = strlen(timestamp) + 1;
+   size_t gpu_name_size = strlen(gpu_name) + 1;
    cache->driver_keys_blob_size = ts_size;
+   cache->driver_keys_blob_size += gpu_name_size;
+
+   /* We sometimes store entire structs that contains a pointers in the cache,
+    * use pointer size as a key to avoid hard to debug issues.
+    */
+   uint8_t ptr_size = sizeof(void *);
+   size_t ptr_size_size = sizeof(ptr_size);
+   cache->driver_keys_blob_size += ptr_size_size;
 
    cache->driver_keys_blob =
       ralloc_size(cache, cache->driver_keys_blob_size);
@@ -380,6 +366,9 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
       goto fail;
 
    memcpy(cache->driver_keys_blob, timestamp, ts_size);
+   memcpy(cache->driver_keys_blob + ts_size, gpu_name, gpu_name_size);
+   memcpy(cache->driver_keys_blob + ts_size + gpu_name_size, &ptr_size,
+          ptr_size_size);
 
    /* Seed our rand function */
    s_rand_xorshift128plus(cache->seed_xorshift128plus, true);

@@ -181,16 +181,11 @@ test_disk_cache_create(void)
    expect_null(cache, "disk_cache_create with XDG_CACHE_HOME set with"
                "a non-existing parent directory");
 
-   /* Create string with expected directory hierarchy */
-   char expected_dir_h[255];
-   sprintf(expected_dir_h, "%s%s%s", CACHE_TEST_TMP "/xdg-cache-home/mesa/",
-           get_arch_bitness_str(), "/test");
-
    mkdir(CACHE_TEST_TMP, 0755);
    cache = disk_cache_create("test", "make_check");
    expect_non_null(cache, "disk_cache_create with XDG_CACHE_HOME set");
 
-   check_directories_created(expected_dir_h);
+   check_directories_created(CACHE_TEST_TMP "/xdg-cache-home/mesa");
 
    disk_cache_destroy(cache);
 
@@ -203,15 +198,11 @@ test_disk_cache_create(void)
    expect_null(cache, "disk_cache_create with MESA_GLSL_CACHE_DIR set with"
                "a non-existing parent directory");
 
-   sprintf(expected_dir_h, "%s%s%s", CACHE_TEST_TMP
-           "/mesa-glsl-cache-dir/mesa/", get_arch_bitness_str(),
-           "/test");
-
    mkdir(CACHE_TEST_TMP, 0755);
    cache = disk_cache_create("test", "make_check");
    expect_non_null(cache, "disk_cache_create with MESA_GLSL_CACHE_DIR set");
 
-   check_directories_created(expected_dir_h);
+   check_directories_created(CACHE_TEST_TMP "/mesa-glsl-cache-dir/mesa");
 
    disk_cache_destroy(cache);
 }
