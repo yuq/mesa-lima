@@ -4234,23 +4234,21 @@ static void tex_fetch_ptrs(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	const struct tgsi_full_instruction *inst = emit_data->inst;
+	const struct tgsi_full_src_register *reg;
 	unsigned target = inst->Texture.Texture;
 	unsigned sampler_src;
-	unsigned sampler_index;
 	LLVMValueRef index;
 
 	sampler_src = emit_data->inst->Instruction.NumSrcRegs - 1;
-	sampler_index = emit_data->inst->Src[sampler_src].Register.Index;
+	reg = &emit_data->inst->Src[sampler_src];
 
-	if (emit_data->inst->Src[sampler_src].Register.Indirect) {
-		const struct tgsi_full_src_register *reg = &emit_data->inst->Src[sampler_src];
-
+	if (reg->Register.Indirect) {
 		index = get_bounded_indirect_index(ctx,
 						   &reg->Indirect,
 						   reg->Register.Index,
 						   SI_NUM_SAMPLERS);
 	} else {
-		index = LLVMConstInt(ctx->i32, sampler_index, 0);
+		index = LLVMConstInt(ctx->i32, reg->Register.Index, 0);
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER)
