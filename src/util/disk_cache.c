@@ -82,6 +82,10 @@ struct disk_cache {
 
    /* Maximum size of all cached objects (in bytes). */
    uint64_t max_size;
+
+   /* Driver cache keys. */
+   uint8_t *driver_keys_blob;
+   size_t driver_keys_blob_size;
 };
 
 struct disk_cache_put_job {
@@ -158,45 +162,8 @@ concatenate_and_mkdir(void *ctx, const char *path, const char *name)
       return NULL;
 }
 
-static int
-remove_dir(const char *fpath, const struct stat *sb,
-           int typeflag, struct FTW *ftwbuf)
-{
-   if (S_ISREG(sb->st_mode))
-      unlink(fpath);
-   else if (S_ISDIR(sb->st_mode))
-      rmdir(fpath);
-
-   return 0;
-}
-
-static void
-remove_old_cache_directories(void *mem_ctx, const char *path,
-                             const char *timestamp)
-{
-   DIR *dir = opendir(path);
-
-   struct dirent* d_entry;
-   while((d_entry = readdir(dir)) != NULL)
-   {
-      char *full_path =
-         ralloc_asprintf(mem_ctx, "%s/%s", path, d_entry->d_name);
-
-      struct stat sb;
-      if (stat(full_path, &sb) == 0 && S_ISDIR(sb.st_mode) &&
-          strcmp(d_entry->d_name, timestamp) != 0 &&
-          strcmp(d_entry->d_name, "..") != 0 &&
-          strcmp(d_entry->d_name, ".") != 0) {
-         nftw(full_path, remove_dir, 20, FTW_DEPTH);
-      }
-   }
-
-   closedir(dir);
-}
-
 static char *
-create_mesa_cache_dir(void *mem_ctx, const char *path, const char *timestamp,
-                      const char *gpu_name)
+create_mesa_cache_dir(void *mem_ctx, const char *path, const char *gpu_name)
 {
    char *new_path = concatenate_and_mkdir(mem_ctx, path, "mesa");
    if (new_path == NULL)
@@ -208,13 +175,6 @@ create_mesa_cache_dir(void *mem_ctx, const char *path, const char *timestamp,
     * by a compatible Mesa version.
     */
    new_path = concatenate_and_mkdir(mem_ctx, new_path, get_arch_bitness_str());
-   if (new_path == NULL)
-      return NULL;
-
-   /* Remove cache directories for old Mesa versions */
-   remove_old_cache_directories(mem_ctx, new_path, timestamp);
-
-   new_path = concatenate_and_mkdir(mem_ctx, new_path, timestamp);
    if (new_path == NULL)
       return NULL;
 
@@ -261,8 +221,7 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
       if (mkdir_if_needed(path) == -1)
          goto fail;
 
-      path = create_mesa_cache_dir(local, path, timestamp,
-                                   gpu_name);
+      path = create_mesa_cache_dir(local, path, gpu_name);
       if (path == NULL)
          goto fail;
    }
@@ -274,8 +233,7 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
          if (mkdir_if_needed(xdg_cache_home) == -1)
             goto fail;
 
-         path = create_mesa_cache_dir(local, xdg_cache_home, timestamp,
-                                      gpu_name);
+         path = create_mesa_cache_dir(local, xdg_cache_home, gpu_name);
          if (path == NULL)
             goto fail;
       }
@@ -311,7 +269,7 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
       if (path == NULL)
          goto fail;
 
-      path = create_mesa_cache_dir(local, path, timestamp, gpu_name);
+      path = create_mesa_cache_dir(local, path, gpu_name);
       if (path == NULL)
          goto fail;
    }
@@ -411,6 +369,17 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
     * blocking other tasks.
     */
    util_queue_init(&cache->cache_queue, "disk_cache", 32, 1);
+
+   /* Create driver id keys */
+   size_t ts_size = strlen(timestamp) + 1;
+   cache->driver_keys_blob_size = ts_size;
+
+   cache->driver_keys_blob =
+      ralloc_size(cache, cache->driver_keys_blob_size);
+   if (!cache->driver_keys_blob)
+      goto fail;
+
+   memcpy(cache->driver_keys_blob, timestamp, ts_size);
 
    /* Seed our rand function */
    s_rand_xorshift128plus(cache->seed_xorshift128plus, true);
@@ -1078,7 +1047,13 @@ void
 disk_cache_compute_key(struct disk_cache *cache, const void *data, size_t size,
                        cache_key key)
 {
-   _mesa_sha1_compute(data, size, key);
+   struct mesa_sha1 ctx;
+
+   _mesa_sha1_init(&ctx);
+   _mesa_sha1_update(&ctx, cache->driver_keys_blob,
+                     cache->driver_keys_blob_size);
+   _mesa_sha1_update(&ctx, data, size);
+   _mesa_sha1_final(&ctx, key);
 }
 
 #endif /* ENABLE_SHADER_CACHE */

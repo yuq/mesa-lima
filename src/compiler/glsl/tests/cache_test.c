@@ -128,7 +128,7 @@ rmrf_local(const char *path)
 }
 
 static void
-check_timestamp_and_gpu_id_directories_created(char *cache_dir)
+check_directories_created(char *cache_dir)
 {
    bool sub_dirs_created = false;
 
@@ -184,13 +184,13 @@ test_disk_cache_create(void)
    /* Create string with expected directory hierarchy */
    char expected_dir_h[255];
    sprintf(expected_dir_h, "%s%s%s", CACHE_TEST_TMP "/xdg-cache-home/mesa/",
-           get_arch_bitness_str(), "/make_check/test");
+           get_arch_bitness_str(), "/test");
 
    mkdir(CACHE_TEST_TMP, 0755);
    cache = disk_cache_create("test", "make_check");
    expect_non_null(cache, "disk_cache_create with XDG_CACHE_HOME set");
 
-   check_timestamp_and_gpu_id_directories_created(expected_dir_h);
+   check_directories_created(expected_dir_h);
 
    disk_cache_destroy(cache);
 
@@ -205,13 +205,13 @@ test_disk_cache_create(void)
 
    sprintf(expected_dir_h, "%s%s%s", CACHE_TEST_TMP
            "/mesa-glsl-cache-dir/mesa/", get_arch_bitness_str(),
-           "/make_check/test");
+           "/test");
 
    mkdir(CACHE_TEST_TMP, 0755);
    cache = disk_cache_create("test", "make_check");
    expect_non_null(cache, "disk_cache_create with MESA_GLSL_CACHE_DIR set");
 
-   check_timestamp_and_gpu_id_directories_created(expected_dir_h);
+   check_directories_created(expected_dir_h);
 
    disk_cache_destroy(cache);
 }
