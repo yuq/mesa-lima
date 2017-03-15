@@ -207,7 +207,8 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 	}
 
 	if (sscreen->b.disk_shader_cache && insert_into_disk_cache) {
-		_mesa_sha1_compute(tgsi_binary, *((uint32_t *)tgsi_binary), key);
+		disk_cache_compute_key(sscreen->b.disk_shader_cache, tgsi_binary,
+				       *((uint32_t *)tgsi_binary), key);
 		disk_cache_put(sscreen->b.disk_shader_cache, key, hw_binary,
 			       *((uint32_t *) hw_binary));
 	}
@@ -226,7 +227,8 @@ static bool si_shader_cache_load_shader(struct si_screen *sscreen,
 			unsigned char sha1[CACHE_KEY_SIZE];
 			size_t tg_size = *((uint32_t *) tgsi_binary);
 
-			_mesa_sha1_compute(tgsi_binary, tg_size, sha1);
+			disk_cache_compute_key(sscreen->b.disk_shader_cache,
+					       tgsi_binary, tg_size, sha1);
 
 			size_t binary_size;
 			uint8_t *buffer =

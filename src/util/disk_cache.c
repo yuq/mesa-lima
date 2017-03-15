@@ -1063,4 +1063,11 @@ disk_cache_has_key(struct disk_cache *cache, const cache_key key)
    return memcmp(entry, key, CACHE_KEY_SIZE) == 0;
 }
 
+void
+disk_cache_compute_key(struct disk_cache *cache, const void *data, size_t size,
+                       cache_key key)
+{
+   _mesa_sha1_compute(data, size, key);
+}
+
 #endif /* ENABLE_SHADER_CACHE */

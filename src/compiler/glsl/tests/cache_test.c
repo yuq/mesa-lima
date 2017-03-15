@@ -271,7 +271,7 @@ test_put_and_get(void)
 
    cache = disk_cache_create("test", "make_check");
 
-   _mesa_sha1_compute(blob, sizeof(blob), blob_key);
+   disk_cache_compute_key(cache, blob, sizeof(blob), blob_key);
 
    /* Ensure that disk_cache_get returns nothing before anything is added. */
    result = disk_cache_get(cache, blob_key, &size);
@@ -293,7 +293,7 @@ test_put_and_get(void)
    free(result);
 
    /* Test put and get of a second item. */
-   _mesa_sha1_compute(string, sizeof(string), string_key);
+   disk_cache_compute_key(cache, string, sizeof(string), string_key);
    disk_cache_put(cache, string_key, string, sizeof(string));
 
    /* disk_cache_put() hands things off to a thread give it some time to
@@ -332,7 +332,7 @@ test_put_and_get(void)
     * For this test, we force this signature to land in the same
     * directory as the original blob first written to the cache.
     */
-   _mesa_sha1_compute(one_KB, 1024, one_KB_key);
+   disk_cache_compute_key(cache, one_KB, 1024, one_KB_key);
    one_KB_key[0] = blob_key_byte_zero;
 
    disk_cache_put(cache, one_KB_key, one_KB, 1024);
@@ -402,7 +402,7 @@ test_put_and_get(void)
    /* Finally, check eviction again after adding an object of size 1M. */
    one_MB = calloc(1024, 1024);
 
-   _mesa_sha1_compute(one_MB, 1024 * 1024, one_MB_key);
+   disk_cache_compute_key(cache, one_MB, 1024 * 1024, one_MB_key);
    one_MB_key[0] = blob_key_byte_zero;;
 
    disk_cache_put(cache, one_MB_key, one_MB, 1024 * 1024);

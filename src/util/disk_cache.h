@@ -178,6 +178,13 @@ disk_cache_put_key(struct disk_cache *cache, const cache_key key);
 bool
 disk_cache_has_key(struct disk_cache *cache, const cache_key key);
 
+/**
+ * Compute the name \key from \data of given \size.
+ */
+void
+disk_cache_compute_key(struct disk_cache *cache, const void *data, size_t size,
+                       cache_key key);
+
 #else
 
 static inline struct disk_cache *
@@ -220,6 +227,13 @@ static inline bool
 disk_cache_has_key(struct disk_cache *cache, const cache_key key)
 {
    return false;
+}
+
+void
+disk_cache_compute_key(struct disk_cache *cache, const void *data, size_t size,
+                       const cache_key key)
+{
+   return;
 }
 
 #endif /* ENABLE_SHADER_CACHE */

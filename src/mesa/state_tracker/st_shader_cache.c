@@ -183,7 +183,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
          struct st_vertex_program *stvp = (struct st_vertex_program *) glprog;
          stage_sha1[i] = stvp->sha1;
          ralloc_strcat(&buf, " vs");
-         _mesa_sha1_compute(buf, strlen(buf), stage_sha1[i]);
+         disk_cache_compute_key(ctx->Cache, buf, strlen(buf), stage_sha1[i]);
          break;
       }
       case MESA_SHADER_TESS_CTRL: {
@@ -191,7 +191,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
             (struct st_tessctrl_program *) glprog;
          stage_sha1[i] = stcp->sha1;
          ralloc_strcat(&buf, " tcs");
-         _mesa_sha1_compute(buf, strlen(buf), stage_sha1[i]);
+         disk_cache_compute_key(ctx->Cache, buf, strlen(buf), stage_sha1[i]);
          break;
       }
       case MESA_SHADER_TESS_EVAL: {
@@ -199,7 +199,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
             (struct st_tesseval_program *) glprog;
          stage_sha1[i] = step->sha1;
          ralloc_strcat(&buf, " tes");
-         _mesa_sha1_compute(buf, strlen(buf), stage_sha1[i]);
+         disk_cache_compute_key(ctx->Cache, buf, strlen(buf), stage_sha1[i]);
          break;
       }
       case MESA_SHADER_GEOMETRY: {
@@ -207,7 +207,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
             (struct st_geometry_program *) glprog;
          stage_sha1[i] = stgp->sha1;
          ralloc_strcat(&buf, " gs");
-         _mesa_sha1_compute(buf, strlen(buf), stage_sha1[i]);
+         disk_cache_compute_key(ctx->Cache, buf, strlen(buf), stage_sha1[i]);
          break;
       }
       case MESA_SHADER_FRAGMENT: {
@@ -215,7 +215,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
             (struct st_fragment_program *) glprog;
          stage_sha1[i] = stfp->sha1;
          ralloc_strcat(&buf, " fs");
-         _mesa_sha1_compute(buf, strlen(buf), stage_sha1[i]);
+         disk_cache_compute_key(ctx->Cache, buf, strlen(buf), stage_sha1[i]);
          break;
       }
       case MESA_SHADER_COMPUTE: {
@@ -223,7 +223,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
             (struct st_compute_program *) glprog;
          stage_sha1[i] = stcp->sha1;
          ralloc_strcat(&buf, " cs");
-         _mesa_sha1_compute(buf, strlen(buf), stage_sha1[i]);
+         disk_cache_compute_key(ctx->Cache, buf, strlen(buf), stage_sha1[i]);
          break;
       }
       default:

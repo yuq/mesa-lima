@@ -1331,7 +1331,7 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
       ralloc_asprintf_append(&buf, "%s: %s\n",
                              _mesa_shader_stage_to_abbrev(sh->Stage), sha1buf);
    }
-   _mesa_sha1_compute(buf, strlen(buf), prog->data->sha1);
+   disk_cache_compute_key(cache, buf, strlen(buf), prog->data->sha1);
    ralloc_free(buf);
 
    size_t size;
