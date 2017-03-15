@@ -681,6 +681,21 @@ disk_cache_remove(struct disk_cache *cache, const cache_key key)
       p_atomic_add(cache->size, - (uint64_t)sb.st_size);
 }
 
+static ssize_t
+write_all(int fd, const void *buf, size_t count)
+{
+   const char *out = buf;
+   ssize_t written;
+   size_t done;
+
+   for (done = 0; done < count; done += written) {
+      written = write(fd, out + done, count - done);
+      if (written == -1)
+         return -1;
+   }
+   return done;
+}
+
 /* From the zlib docs:
  *    "If the memory is available, buffers sizes on the order of 128K or 256K
  *    bytes should be used."
@@ -730,13 +745,10 @@ deflate_and_write_to_disk(const void *in_data, size_t in_data_size, int dest,
          size_t have = BUFSIZE - strm.avail_out;
          compressed_size += have;
 
-         size_t written = 0;
-         for (size_t len = 0; len < have; len += written) {
-            written = write(dest, out + len, have - len);
-            if (written == -1) {
-               (void)deflateEnd(&strm);
-               return 0;
-            }
+         ssize_t written = write_all(dest, out, have);
+         if (written == -1) {
+            (void)deflateEnd(&strm);
+            return 0;
          }
       } while (strm.avail_out == 0);
 
@@ -791,7 +803,6 @@ cache_put(void *job, int thread_index)
 
    int fd = -1, fd_final = -1, err, ret;
    unsigned i = 0;
-   size_t len;
    char *filename = NULL, *filename_tmp = NULL;
    struct disk_cache_put_job *dc_job = (struct disk_cache_put_job *) job;
 
@@ -860,12 +871,10 @@ cache_put(void *job, int thread_index)
    cf_data.uncompressed_size = dc_job->size;
 
    size_t cf_data_size = sizeof(cf_data);
-   for (len = 0; len < cf_data_size; len += ret) {
-      ret = write(fd, ((uint8_t *) &cf_data) + len, cf_data_size - len);
-      if (ret == -1) {
-         unlink(filename_tmp);
-         goto done;
-      }
+   ret = write_all(fd, &cf_data, cf_data_size);
+   if (ret == -1) {
+      unlink(filename_tmp);
+      goto done;
    }
 
    /* Now, finally, write out the contents to the temporary file, then
