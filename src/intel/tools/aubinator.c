@@ -134,8 +134,9 @@ print_iterator_values(struct gen_field_iterator *iter, int *idx)
 }
 
 static void
-decode_structure(struct gen_spec *spec, struct gen_group *strct,
-                 const uint32_t *p)
+decode_group(struct gen_spec *spec, struct gen_group *strct,
+             const uint32_t *p, int starting_dword,
+             bool print_dword_headers)
 {
    struct gen_field_iterator iter;
    char *token = NULL;
@@ -152,13 +153,23 @@ decode_structure(struct gen_spec *spec, struct gen_group *strct,
    while (gen_field_iterator_next(&iter)) {
       idx = 0;
       print_dword_val(&iter, offset, &dword_num);
-      token = print_iterator_values(&iter, &idx);
+      if (dword_num >= starting_dword)
+         token = print_iterator_values(&iter, &idx);
       if (token != NULL) {
+         printf("0x%08"PRIx64":  0x%08x : Dword %d\n",
+                offset + 4 * idx, p[idx], idx);
          struct gen_group *struct_val = gen_spec_find_struct(spec, token);
-         decode_structure(spec, struct_val, &p[idx]);
+         decode_group(spec, struct_val, &p[idx], 0, false);
          token = NULL;
       }
    }
+}
+
+static void
+decode_structure(struct gen_spec *spec, struct gen_group *strct,
+                 const uint32_t *p)
+{
+   decode_group(spec, strct, p, 0, false);
 }
 
 static void
@@ -780,25 +791,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
              gen_group_get_name(inst), reset_color);
 
       if (option_full_decode) {
-         struct gen_field_iterator iter;
-         char *token = NULL;
-         int idx = 0, dword_num = 0;
-         gen_field_iterator_init(&iter, inst, p,
-                                 option_color == COLOR_ALWAYS);
-         while (gen_field_iterator_next(&iter)) {
-            idx = 0;
-            print_dword_val(&iter, offset, &dword_num);
-            if (dword_num > 0)
-               token = print_iterator_values(&iter, &idx);
-            if (token != NULL) {
-               printf("0x%08"PRIx64":  0x%08x : Dword %d\n",
-                      offset + 4 * idx, p[idx], idx);
-               struct gen_group *struct_val =
-                  gen_spec_find_struct(spec, token);
-               decode_structure(spec, struct_val, &p[idx]);
-               token = NULL;
-            }
-         }
+         decode_group(spec, inst, p, 1, true);
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
             if (gen_group_get_opcode(inst) == custom_handlers[i].opcode)
