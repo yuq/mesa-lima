@@ -2133,32 +2133,33 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
     */
    if (pipeline == GPGPU)
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), t);
-#elif GEN_GEN <= 7
-      /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
-       * PIPELINE_SELECT [DevBWR+]":
-       *
-       *   Project: DEVSNB+
-       *
-       *   Software must ensure all the write caches are flushed through a
-       *   stalling PIPE_CONTROL command followed by another PIPE_CONTROL
-       *   command to invalidate read only caches prior to programming
-       *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
-       */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
-         pc.RenderTargetCacheFlushEnable  = true;
-         pc.DepthCacheFlushEnable         = true;
-         pc.DCFlushEnable                 = true;
-         pc.PostSyncOperation             = NoWrite;
-         pc.CommandStreamerStallEnable    = true;
-      }
 
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
-         pc.TextureCacheInvalidationEnable   = true;
-         pc.ConstantCacheInvalidationEnable  = true;
-         pc.StateCacheInvalidationEnable     = true;
-         pc.InstructionCacheInvalidateEnable = true;
-         pc.PostSyncOperation                = NoWrite;
-      }
+#elif GEN_GEN <= 7
+   /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
+    * PIPELINE_SELECT [DevBWR+]":
+    *
+    *   Project: DEVSNB+
+    *
+    *   Software must ensure all the write caches are flushed through a
+    *   stalling PIPE_CONTROL command followed by another PIPE_CONTROL
+    *   command to invalidate read only caches prior to programming
+    *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
+    */
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      pc.RenderTargetCacheFlushEnable  = true;
+      pc.DepthCacheFlushEnable         = true;
+      pc.DCFlushEnable                 = true;
+      pc.PostSyncOperation             = NoWrite;
+      pc.CommandStreamerStallEnable    = true;
+   }
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      pc.TextureCacheInvalidationEnable   = true;
+      pc.ConstantCacheInvalidationEnable  = true;
+      pc.StateCacheInvalidationEnable     = true;
+      pc.InstructionCacheInvalidateEnable = true;
+      pc.PostSyncOperation                = NoWrite;
+   }
 #endif
 }
 
