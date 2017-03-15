@@ -1256,10 +1256,7 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 
 void si_llvm_context_init(struct si_shader_context *ctx,
 			  struct si_screen *sscreen,
-			  struct si_shader *shader,
-			  LLVMTargetMachineRef tm,
-			  const struct tgsi_shader_info *info,
-			  const struct tgsi_token *tokens)
+			  LLVMTargetMachineRef tm)
 {
 	struct lp_type type;
 
@@ -1269,10 +1266,8 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	 * helper functions in the gallivm module.
 	 */
 	memset(ctx, 0, sizeof(*ctx));
-	ctx->shader = shader;
 	ctx->screen = sscreen;
 	ctx->tm = tm;
-	ctx->type = info ? info->processor : -1;
 
 	ctx->gallivm.context = LLVMContextCreate();
 	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
@@ -1301,24 +1296,6 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 
-	bld_base->info = info;
-
-	if (info && info->array_max[TGSI_FILE_TEMPORARY] > 0) {
-		int size = info->array_max[TGSI_FILE_TEMPORARY];
-
-		ctx->temp_arrays = CALLOC(size, sizeof(ctx->temp_arrays[0]));
-		ctx->temp_array_allocas = CALLOC(size, sizeof(ctx->temp_array_allocas[0]));
-
-		if (tokens)
-			tgsi_scan_arrays(tokens, TGSI_FILE_TEMPORARY, size,
-					 ctx->temp_arrays);
-	}
-
-	if (info && info->file_max[TGSI_FILE_IMMEDIATE] >= 0) {
-		int size = info->file_max[TGSI_FILE_IMMEDIATE] + 1;
-		ctx->imms = MALLOC(size * TGSI_NUM_CHANNELS * sizeof(LLVMValueRef));
-	}
-
 	type.floating = true;
 	type.fixed = false;
 	type.sign = true;
@@ -1335,16 +1312,9 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	lp_build_context_init(&ctx->bld_base.int64_bld, &ctx->gallivm, lp_int_type(type));
 
 	bld_base->soa = 1;
-	bld_base->emit_store = si_llvm_emit_store;
 	bld_base->emit_swizzle = emit_swizzle;
 	bld_base->emit_declaration = emit_declaration;
 	bld_base->emit_immediate = emit_immediate;
-
-	bld_base->emit_fetch_funcs[TGSI_FILE_IMMEDIATE] = si_llvm_emit_fetch;
-	bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = si_llvm_emit_fetch;
-	bld_base->emit_fetch_funcs[TGSI_FILE_TEMPORARY] = si_llvm_emit_fetch;
-	bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = si_llvm_emit_fetch;
-	bld_base->emit_fetch_funcs[TGSI_FILE_SYSTEM_VALUE] = fetch_system_value;
 
 	/* metadata allowing 2.5 ULP */
 	ctx->fpmath_md_kind = LLVMGetMDKindIDInContext(ctx->gallivm.context,
@@ -1379,6 +1349,67 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 
 	ctx->i32_0 = LLVMConstInt(ctx->i32, 0, 0);
 	ctx->i32_1 = LLVMConstInt(ctx->i32, 1, 0);
+}
+
+/* Set the context to a certain TGSI shader. Can be called repeatedly
+ * to change the shader. */
+void si_llvm_context_set_tgsi(struct si_shader_context *ctx,
+			      struct si_shader *shader)
+{
+	const struct tgsi_shader_info *info = NULL;
+	const struct tgsi_token *tokens = NULL;
+
+	if (shader && shader->selector) {
+		info = &shader->selector->info;
+		tokens = shader->selector->tokens;
+	}
+
+	ctx->shader = shader;
+	ctx->type = info ? info->processor : -1;
+	ctx->bld_base.info = info;
+
+	/* Clean up the old contents. */
+	FREE(ctx->temp_arrays);
+	ctx->temp_arrays = NULL;
+	FREE(ctx->temp_array_allocas);
+	ctx->temp_array_allocas = NULL;
+
+	FREE(ctx->imms);
+	ctx->imms = NULL;
+	ctx->imms_num = 0;
+
+	FREE(ctx->temps);
+	ctx->temps = NULL;
+	ctx->temps_count = 0;
+
+	if (!info || !tokens)
+		return;
+
+	if (info->array_max[TGSI_FILE_TEMPORARY] > 0) {
+		int size = info->array_max[TGSI_FILE_TEMPORARY];
+
+		ctx->temp_arrays = CALLOC(size, sizeof(ctx->temp_arrays[0]));
+		ctx->temp_array_allocas = CALLOC(size, sizeof(ctx->temp_array_allocas[0]));
+
+		tgsi_scan_arrays(tokens, TGSI_FILE_TEMPORARY, size,
+				 ctx->temp_arrays);
+	}
+	if (info->file_max[TGSI_FILE_IMMEDIATE] >= 0) {
+		int size = info->file_max[TGSI_FILE_IMMEDIATE] + 1;
+		ctx->imms = MALLOC(size * TGSI_NUM_CHANNELS * sizeof(LLVMValueRef));
+	}
+
+	/* Re-set these to start with a clean slate. */
+	ctx->bld_base.num_instructions = 0;
+	ctx->bld_base.pc = 0;
+	memset(ctx->outputs, 0, sizeof(ctx->outputs));
+
+	ctx->bld_base.emit_store = si_llvm_emit_store;
+	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_IMMEDIATE] = si_llvm_emit_fetch;
+	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_INPUT] = si_llvm_emit_fetch;
+	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_TEMPORARY] = si_llvm_emit_fetch;
+	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_OUTPUT] = si_llvm_emit_fetch;
+	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_SYSTEM_VALUE] = fetch_system_value;
 }
 
 void si_llvm_create_func(struct si_shader_context *ctx,

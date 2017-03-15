@@ -63,7 +63,6 @@ struct si_shader_output_values
 
 static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       struct si_screen *sscreen,
-			       struct si_shader *shader,
 			       LLVMTargetMachineRef tm);
 
 static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
@@ -6523,7 +6522,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	shader->selector = gs_selector;
 	shader->is_gs_copy_shader = true;
 
-	si_init_shader_ctx(&ctx, sscreen, shader, tm);
+	si_init_shader_ctx(&ctx, sscreen, tm);
+	ctx.shader = shader;
 	ctx.type = PIPE_SHADER_VERTEX;
 
 	builder = gallivm->builder;
@@ -6722,15 +6722,12 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 
 static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       struct si_screen *sscreen,
-			       struct si_shader *shader,
 			       LLVMTargetMachineRef tm)
 {
 	struct lp_build_tgsi_context *bld_base;
 	struct lp_build_tgsi_action tmpl = {};
 
-	si_llvm_context_init(ctx, sscreen, shader, tm,
-		(shader && shader->selector) ? &shader->selector->info : NULL,
-		(shader && shader->selector) ? shader->selector->tokens : NULL);
+	si_llvm_context_init(ctx, sscreen, tm);
 
 	bld_base = &ctx->bld_base;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
@@ -7396,7 +7393,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		si_dump_streamout(&sel->so);
 	}
 
-	si_init_shader_ctx(&ctx, sscreen, shader, tm);
+	si_init_shader_ctx(&ctx, sscreen, tm);
+	si_llvm_context_set_tgsi(&ctx, shader);
 	ctx.separate_prolog = !is_monolithic;
 
 	memset(shader->info.vs_output_param_offset, AC_EXP_PARAM_UNDEFINED,
@@ -7644,7 +7642,8 @@ si_get_shader_part(struct si_screen *sscreen,
 	struct si_shader_context ctx;
 	struct gallivm_state *gallivm = &ctx.gallivm;
 
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
+	si_init_shader_ctx(&ctx, sscreen, tm);
+	ctx.shader = &shader;
 	ctx.type = type;
 
 	switch (type) {

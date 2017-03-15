@@ -182,10 +182,9 @@ LLVMValueRef si_llvm_bound_index(struct si_shader_context *ctx,
 
 void si_llvm_context_init(struct si_shader_context *ctx,
 			  struct si_screen *sscreen,
-			  struct si_shader *shader,
-			  LLVMTargetMachineRef tm,
-			  const struct tgsi_shader_info *info,
-			  const struct tgsi_token *tokens);
+			  LLVMTargetMachineRef tm);
+void si_llvm_context_set_tgsi(struct si_shader_context *ctx,
+			      struct si_shader *shader);
 
 void si_llvm_create_func(struct si_shader_context *ctx,
 			 const char *name,
