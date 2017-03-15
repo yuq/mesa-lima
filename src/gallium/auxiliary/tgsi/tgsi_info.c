@@ -332,6 +332,8 @@ tgsi_get_processor_name( uint processor )
       return "tessellation control shader";
    case PIPE_SHADER_TESS_EVAL:
       return "tessellation evaluation shader";
+   case PIPE_SHADER_COMPUTE:
+      return "compute shader";
    default:
       return "unknown shader type!";
    }
