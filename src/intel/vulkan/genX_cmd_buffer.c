@@ -2133,8 +2133,8 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
     */
    if (pipeline == GPGPU)
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), t);
+#endif
 
-#elif GEN_GEN <= 7
    /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
     * PIPELINE_SELECT [DevBWR+]":
     *
@@ -2160,7 +2160,6 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
       pc.InstructionCacheInvalidateEnable = true;
       pc.PostSyncOperation                = NoWrite;
    }
-#endif
 }
 
 void
