@@ -115,6 +115,38 @@ performed where possible.
 Achieved by combination of local ad-hoc scripts and AppVeyor plus Travis-CI,
 the latter as part of their Github integration.
 </p>
+<p>
+<strong>Note:</strong> If a patch in the current queue needs any additional
+fix(es), then they should be squashed together.
+<br>
+The commit messages and the <code>cherry picked from</code> tags must be preserved.
+</p>
+<p>
+This should be noted in the <a href="#prerelease">pre-announce</a> email.
+<pre>
+    git show b10859ec41d09c57663a258f43fe57c12332698e
+
+    commit b10859ec41d09c57663a258f43fe57c12332698e
+    Author: Jonas Pfeil &ltpfeiljonas@gmx.de&gt
+    Date:   Wed Mar 1 18:11:10 2017 +0100
+
+        ralloc: Make sure ralloc() allocations match malloc()'s alignment.
+
+        The header of ralloc needs to be aligned, because the compiler assumes
+        ...
+
+        (cherry picked from commit cd2b55e536dc806f9358f71db438dd9c246cdb14)
+
+        Squashed with commit:
+
+        ralloc: don't leave out the alignment factor
+
+        Experimentation shows that without alignment factor gcc and clang choose
+        ...
+
+        (cherry picked from commit ff494fe999510ea40e3ed5827e7818550b6de126)
+</pre>
+</p>
 
 <h2>Regression/functionality testing</h2>
 
@@ -290,6 +322,12 @@ Queued (NUMBER)
 AUTHOR (NUMBER):
       COMMIT SUMMARY
 
+For example:
+
+Jonas Pfeil (1):
+      ralloc: Make sure ralloc() allocations match malloc()'s alignment.
+Squashed with
+      ralloc: don't leave out the alignment factor
 
 Rejected (NUMBER)
 =================
