@@ -255,12 +255,8 @@ static void
 test_put_and_get(void)
 {
    struct disk_cache *cache;
-   /* If the text of this blob is changed, then blob_key_byte_zero
-    * also needs to be updated.
-    */
    char blob[] = "This is a blob of thirty-seven bytes";
    uint8_t blob_key[20];
-   uint8_t blob_key_byte_zero = 0xca;
    char string[] = "While this string has thirty-four";
    uint8_t string_key[20];
    char *result;
@@ -333,7 +329,7 @@ test_put_and_get(void)
     * directory as the original blob first written to the cache.
     */
    disk_cache_compute_key(cache, one_KB, 1024, one_KB_key);
-   one_KB_key[0] = blob_key_byte_zero;
+   one_KB_key[0] = blob_key[0];
 
    disk_cache_put(cache, one_KB_key, one_KB, 1024);
 
@@ -403,7 +399,7 @@ test_put_and_get(void)
    one_MB = calloc(1024, 1024);
 
    disk_cache_compute_key(cache, one_MB, 1024 * 1024, one_MB_key);
-   one_MB_key[0] = blob_key_byte_zero;;
+   one_MB_key[0] = blob_key[0];
 
    disk_cache_put(cache, one_MB_key, one_MB, 1024 * 1024);
 
