@@ -65,11 +65,11 @@ BUILT_SOURCES = \
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
-swr_context_llvm.h: rasterizer/codegen/gen_llvm_types.py swr_context.h
+swr_context_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/codegen/templates/gen_llvm.hpp swr_context.h
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_types.py \
 		--input $(srcdir)/swr_context.h \
-		--output swr_context_llvm.h
+		--output ./swr_context_llvm.h
 
 rasterizer/codegen/gen_knobs.cpp: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/knobs_template.cpp
 	$(MKDIR_GEN)
@@ -87,7 +87,7 @@ rasterizer/codegen/gen_knobs.h: rasterizer/codegen/gen_knobs.py rasterizer/codeg
 		--output rasterizer/codegen/gen_knobs.h \
 		--gen_h
 
-rasterizer/jitter/state_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/core/state.h
+rasterizer/jitter/state_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/codegen/templates/gen_llvm.hpp rasterizer/core/state.h
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_types.py \
@@ -264,4 +264,5 @@ EXTRA_DIST = \
 	rasterizer/codegen/templates/ar_eventhandler_h.template \
 	rasterizer/codegen/templates/ar_eventhandlerfile_h.template \
 	rasterizer/codegen/templates/backend_template.cpp \
-	rasterizer/codegen/templates/gen_builder_template.hpp
+	rasterizer/codegen/templates/gen_builder_template.hpp \
+	rasterizer/codegen/templates/gen_llvm.hpp

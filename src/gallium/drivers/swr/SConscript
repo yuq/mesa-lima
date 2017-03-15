@@ -84,7 +84,7 @@ env.CodeGenerate(
 )
 
 env.CodeGenerate(
-    target = 'swr_context_llvm.h',
+    target = './swr_context_llvm.h',
     script = swrroot + 'rasterizer/codegen/gen_llvm_types.py',
     source = 'swr_context.h',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET'
