@@ -2013,14 +2013,11 @@ struct anv_render_pass {
    struct anv_subpass                           subpasses[0];
 };
 
-struct anv_query_pool_slot {
-   uint64_t available;
-   uint64_t begin;
-   uint64_t end;
-};
-
 struct anv_query_pool {
    VkQueryType                                  type;
+   /** Stride between slots, in bytes */
+   uint32_t                                     stride;
+   /** Number of slots in this query pool */
    uint32_t                                     slots;
    struct anv_bo                                bo;
 };

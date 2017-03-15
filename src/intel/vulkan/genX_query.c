@@ -41,14 +41,24 @@ VkResult genX(CreateQueryPool)(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_query_pool *pool;
    VkResult result;
-   uint32_t slot_size;
-   uint64_t size;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
 
+   /* Query pool slots are made up of some number of 64-bit values packed
+    * tightly together.  The first 64-bit value is always the "available" bit
+    * which is 0 when the query is unavailable and 1 when it is available.
+    * The 64-bit values that follow are determined by the type of query.
+    */
+   uint32_t uint64s_per_slot = 1;
+
    switch (pCreateInfo->queryType) {
    case VK_QUERY_TYPE_OCCLUSION:
+      /* Occlusion queries have two values: begin and end. */
+      uint64s_per_slot += 2;
+      break;
    case VK_QUERY_TYPE_TIMESTAMP:
+      /* Timestamps just have the one timestamp value */
+      uint64s_per_slot += 1;
       break;
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
       return VK_ERROR_INCOMPATIBLE_DRIVER;
@@ -56,16 +66,16 @@ VkResult genX(CreateQueryPool)(
       assert(!"Invalid query type");
    }
 
-   slot_size = sizeof(struct anv_query_pool_slot);
    pool = vk_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pool == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    pool->type = pCreateInfo->queryType;
+   pool->stride = uint64s_per_slot * sizeof(uint64_t);
    pool->slots = pCreateInfo->queryCount;
 
-   size = pCreateInfo->queryCount * slot_size;
+   uint64_t size = pool->slots * pool->stride;
    result = anv_bo_init_new(&pool->bo, device, size);
    if (result != VK_SUCCESS)
       goto fail;
@@ -130,18 +140,20 @@ VkResult genX(GetQueryPoolResults)(
    }
 
    void *data_end = pData + dataSize;
-   struct anv_query_pool_slot *slot = pool->bo.map;
 
    if (!device->info.has_llc) {
-      uint64_t offset = firstQuery * sizeof(*slot);
-      uint64_t size = queryCount * sizeof(*slot);
+      uint64_t offset = firstQuery * pool->stride;
+      uint64_t size = queryCount * pool->stride;
       anv_invalidate_range(pool->bo.map + offset,
                            MIN2(size, pool->bo.size - offset));
    }
 
    VkResult status = VK_SUCCESS;
    for (uint32_t i = 0; i < queryCount; i++) {
-      bool available = slot[firstQuery + i].available;
+      uint64_t *slot = pool->bo.map + (firstQuery + i) * pool->stride;
+
+      /* Availability is always at the start of the slot */
+      bool available = slot[0];
 
       /* From the Vulkan 1.0.42 spec:
        *
@@ -157,13 +169,13 @@ VkResult genX(GetQueryPoolResults)(
       if (write_results) {
          switch (pool->type) {
          case VK_QUERY_TYPE_OCCLUSION: {
-            result = slot[firstQuery + i].end - slot[firstQuery + i].begin;
+            result = slot[2] - slot[1];
             break;
          }
          case VK_QUERY_TYPE_PIPELINE_STATISTICS:
             unreachable("pipeline stats not supported");
          case VK_QUERY_TYPE_TIMESTAMP: {
-            result = slot[firstQuery + i].begin;
+            result = slot[1];
             break;
          }
          default:
@@ -178,13 +190,13 @@ VkResult genX(GetQueryPoolResults)(
          if (write_results)
             dst[0] = result;
          if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
-            dst[1] = slot[firstQuery + i].available;
+            dst[1] = available;
       } else {
          uint32_t *dst = pData;
          if (write_results)
             dst[0] = result;
          if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
-            dst[1] = slot[firstQuery + i].available;
+            dst[1] = available;
       }
 
       pData += stride;
@@ -235,7 +247,7 @@ void genX(CmdResetQueryPool)(
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdm) {
          sdm.Address = (struct anv_address) {
             .bo = &pool->bo,
-            .offset = (firstQuery + i) * sizeof(struct anv_query_pool_slot),
+            .offset = (firstQuery + i) * pool->stride,
          };
          sdm.DataDWord0 = 0;
          sdm.DataDWord1 = 0;
@@ -268,8 +280,7 @@ void genX(CmdBeginQuery)(
 
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
-      emit_ps_depth_count(cmd_buffer, &pool->bo,
-                          query * sizeof(struct anv_query_pool_slot) + 8);
+      emit_ps_depth_count(cmd_buffer, &pool->bo, query * pool->stride + 8);
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -288,11 +299,8 @@ void genX(CmdEndQuery)(
 
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
-      emit_ps_depth_count(cmd_buffer, &pool->bo,
-                          query * sizeof(struct anv_query_pool_slot) + 16);
-
-      emit_query_availability(cmd_buffer, &pool->bo,
-                              query * sizeof(struct anv_query_pool_slot));
+      emit_ps_depth_count(cmd_buffer, &pool->bo, query * pool->stride + 16);
+      emit_query_availability(cmd_buffer, &pool->bo, query * pool->stride);
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -311,7 +319,7 @@ void genX(CmdWriteTimestamp)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
-   uint32_t offset = query * sizeof(struct anv_query_pool_slot);
+   uint32_t offset = query * pool->stride;
 
    assert(pool->type == VK_QUERY_TYPE_TIMESTAMP);
 
@@ -433,7 +441,7 @@ void genX(CmdCopyQueryPoolResults)(
    dst_offset = buffer->offset + destOffset;
    for (uint32_t i = 0; i < queryCount; i++) {
 
-      slot_offset = (firstQuery + i) * sizeof(struct anv_query_pool_slot);
+      slot_offset = (firstQuery + i) * pool->stride;
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION:
          emit_load_alu_reg_u64(&cmd_buffer->batch,
