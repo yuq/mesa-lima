@@ -108,6 +108,19 @@ void genX(DestroyQueryPool)(
    vk_free2(&device->alloc, pAllocator, pool);
 }
 
+static void
+cpu_write_query_result(void *dst_slot, VkQueryResultFlags flags,
+                       uint32_t value_index, uint64_t result)
+{
+   if (flags & VK_QUERY_RESULT_64_BIT) {
+      uint64_t *dst64 = dst_slot;
+      dst64[value_index] = result;
+   } else {
+      uint32_t *dst32 = dst_slot;
+      dst32[value_index] = result;
+   }
+}
+
 VkResult genX(GetQueryPoolResults)(
     VkDevice                                    _device,
     VkQueryPool                                 queryPool,
@@ -121,7 +134,6 @@ VkResult genX(GetQueryPoolResults)(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
    int64_t timeout = INT64_MAX;
-   uint64_t result;
    int ret;
 
    assert(pool->type == VK_QUERY_TYPE_OCCLUSION ||
@@ -169,13 +181,13 @@ VkResult genX(GetQueryPoolResults)(
       if (write_results) {
          switch (pool->type) {
          case VK_QUERY_TYPE_OCCLUSION: {
-            result = slot[2] - slot[1];
+            cpu_write_query_result(pData, flags, 0, slot[2] - slot[1]);
             break;
          }
          case VK_QUERY_TYPE_PIPELINE_STATISTICS:
             unreachable("pipeline stats not supported");
          case VK_QUERY_TYPE_TIMESTAMP: {
-            result = slot[1];
+            cpu_write_query_result(pData, flags, 0, slot[1]);
             break;
          }
          default:
@@ -185,19 +197,8 @@ VkResult genX(GetQueryPoolResults)(
          status = VK_NOT_READY;
       }
 
-      if (flags & VK_QUERY_RESULT_64_BIT) {
-         uint64_t *dst = pData;
-         if (write_results)
-            dst[0] = result;
-         if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
-            dst[1] = available;
-      } else {
-         uint32_t *dst = pData;
-         if (write_results)
-            dst[0] = result;
-         if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
-            dst[1] = available;
-      }
+      if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
+         cpu_write_query_result(pData, flags, 1, available);
 
       pData += stride;
       if (pData >= data_end)
