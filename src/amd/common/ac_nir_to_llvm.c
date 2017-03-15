@@ -4236,6 +4236,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	}
 
 	if (instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE && coord) {
+		if (instr->is_array && instr->op != nir_texop_lod)
+			coords[3] = apply_round_slice(ctx, coords[3]);
 		for (chan = 0; chan < instr->coord_components; chan++)
 			coords[chan] = to_float(ctx, coords[chan]);
 		if (instr->coord_components == 3)
@@ -4263,7 +4265,9 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		}
 		if (instr->coord_components > 2) {
 			/* This seems like a bit of a hack - but it passes Vulkan CTS with it */
-			if (instr->sampler_dim != GLSL_SAMPLER_DIM_3D && instr->op != nir_texop_txf) {
+			if (instr->sampler_dim != GLSL_SAMPLER_DIM_3D &&
+			    instr->sampler_dim != GLSL_SAMPLER_DIM_CUBE &&
+			    instr->op != nir_texop_txf) {
 				coords[2] = apply_round_slice(ctx, coords[2]);
 			}
 			address[count++] = coords[2];
