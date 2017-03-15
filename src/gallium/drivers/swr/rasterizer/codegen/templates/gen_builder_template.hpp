@@ -26,6 +26,9 @@
 //
 // DO NOT EDIT
 //
+// Generation Command Line:
+//  ${'\n//    '.join(cmdline)}
+//
 //============================================================================
 #pragma once
 

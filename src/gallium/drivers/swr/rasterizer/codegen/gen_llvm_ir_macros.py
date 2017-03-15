@@ -218,6 +218,7 @@ def generate_gen_h(functions, output_dir):
     write_template_to_file(
         template,
         output_filename,
+        cmdline=sys.argv,
         comment='Builder IR Wrappers',
         filename=filename,
         functions=templfuncs,
@@ -244,6 +245,7 @@ def generate_x86_h(output_dir):
     write_template_to_file(
         template,
         output_filename,
+        cmdline=sys.argv,
         comment='x86 intrinsics',
         filename=filename,
         functions=functions,

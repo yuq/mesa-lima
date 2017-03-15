@@ -26,6 +26,9 @@
 // 
 // DO NOT EDIT
 //
+// Generation Command Line:
+//  ${'\n//    '.join(cmdline)}
+//
 //============================================================================
 
 #include "core/backend.h"

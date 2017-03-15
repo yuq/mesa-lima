@@ -51,14 +51,14 @@ swrroot = '#src/gallium/drivers/swr/'
 env.CodeGenerate(
     target = 'rasterizer/codegen/gen_knobs.cpp',
     script = swrroot + 'rasterizer/codegen/gen_knobs.py',
-    source = 'rasterizer/codegen/templates/knobs.template',
+    source = 'rasterizer/codegen/templates/knobs_template.cpp',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_cpp'
 )
 
 env.CodeGenerate(
     target = 'rasterizer/codegen/gen_knobs.h',
     script = swrroot + 'rasterizer/codegen/gen_knobs.py',
-    source = 'rasterizer/codegen/templates/knobs.template',
+    source = 'rasterizer/codegen/templates/knobs_template.cpp',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_h'
 )
 

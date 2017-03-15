@@ -71,19 +71,19 @@ swr_context_llvm.h: rasterizer/codegen/gen_llvm_types.py swr_context.h
 		--input $(srcdir)/swr_context.h \
 		--output swr_context_llvm.h
 
-rasterizer/codegen/gen_knobs.cpp: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/knobs.template
+rasterizer/codegen/gen_knobs.cpp: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/knobs_template.cpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_knobs.py \
-		--input $(srcdir)/rasterizer/codegen/templates/knobs.template \
+		--input $(srcdir)/rasterizer/codegen/templates/knobs_template.cpp \
 		--output rasterizer/codegen/gen_knobs.cpp \
 		--gen_cpp
 
-rasterizer/codegen/gen_knobs.h: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/knobs.template
+rasterizer/codegen/gen_knobs.h: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/knobs_template.cpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_knobs.py \
-		--input $(srcdir)/rasterizer/codegen/templates/knobs.template \
+		--input $(srcdir)/rasterizer/codegen/templates/knobs_template.cpp \
 		--output rasterizer/codegen/gen_knobs.h \
 		--gen_h
 
@@ -258,7 +258,7 @@ EXTRA_DIST = \
 	rasterizer/codegen/mako/runtime.py \
 	rasterizer/codegen/mako/template.py \
 	rasterizer/codegen/mako/util.py \
-	rasterizer/codegen/templates/knobs.template \
+	rasterizer/codegen/templates/knobs_template.cpp \
 	rasterizer/codegen/templates/ar_event_h.template \
 	rasterizer/codegen/templates/ar_event_cpp.template \
 	rasterizer/codegen/templates/ar_eventhandler_h.template \

@@ -24,7 +24,7 @@
 
 %>/******************************************************************************
 *
-* Copyright 2015-2016
+* Copyright 2015-2017
 * Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +48,9 @@
 * @brief Dynamic Knobs for Core.
 *
 * ======================= AUTO GENERATED: DO NOT EDIT !!! ====================
+*
+* Generation Command Line:
+*  ${'\n*    '.join(cmdline)}
 *
 ******************************************************************************/
 %if gen_header:

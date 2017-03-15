@@ -62,6 +62,7 @@ def main(args=sys.argv[1:]):
         if args.gen_h:
             write_template_to_file(args.input,
                                    args.output,
+                                   cmdline=sys.argv,
                                    filename='gen_knobs',
                                    knobs=knob_defs.KNOBS,
                                    includes=['core/knobs_init.h', 'common/os.h', 'sstream', 'iomanip'],
@@ -70,6 +71,7 @@ def main(args=sys.argv[1:]):
         if args.gen_cpp:
             write_template_to_file(args.input,
                                    args.output,
+                                   cmdline=sys.argv,
                                    filename='gen_knobs',
                                    knobs=knob_defs.KNOBS,
                                    includes=['core/knobs_init.h', 'common/os.h', 'sstream', 'iomanip'],

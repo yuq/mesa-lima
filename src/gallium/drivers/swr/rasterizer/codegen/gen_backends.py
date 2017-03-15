@@ -103,6 +103,7 @@ def main(args=sys.argv[1:]):
             write_template_to_file(
                 templateCpp,
                 baseCppName % str(fileNum),
+                cmdline=sys.argv,
                 fileNum=fileNum,
                 funcList=chunkedList[fileNum])
 
@@ -114,6 +115,7 @@ def main(args=sys.argv[1:]):
         write_template_to_file(
             templateCmake,
             cmakeFile,
+            cmdline=sys.argv,
             numFiles=numFiles,
             baseCppName=baseCppName.replace('\\','/'))
 
