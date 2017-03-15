@@ -684,9 +684,6 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	};
 	unsigned i;
 
-	if (!sscreen)
-		return;
-
 	if (!sscreen->b.ws->unref(sscreen->b.ws))
 		return;
 
