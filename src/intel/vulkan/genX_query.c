@@ -327,7 +327,7 @@ void genX(CmdWriteTimestamp)(
       break;
    }
 
-   emit_query_availability(cmd_buffer, &pool->bo, query + 16);
+   emit_query_availability(cmd_buffer, &pool->bo, offset + 16);
 }
 
 #if GEN_GEN > 7 || GEN_IS_HASWELL
