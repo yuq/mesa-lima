@@ -2118,9 +2118,12 @@ void genX(CmdDispatchIndirect)(
 }
 
 static void
-flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
-                                      uint32_t pipeline)
+genX(flush_pipeline_select)(struct anv_cmd_buffer *cmd_buffer,
+                            uint32_t pipeline)
 {
+   if (cmd_buffer->state.current_pipeline == pipeline)
+      return;
+
 #if GEN_GEN >= 8 && GEN_GEN < 10
    /* From the Broadwell PRM, Volume 2a: Instructions, PIPELINE_SELECT:
     *
@@ -2160,40 +2163,27 @@ flush_pipeline_before_pipeline_select(struct anv_cmd_buffer *cmd_buffer,
       pc.InstructionCacheInvalidateEnable = true;
       pc.PostSyncOperation                = NoWrite;
    }
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
+#if GEN_GEN >= 9
+      ps.MaskBits = 3;
+#endif
+      ps.PipelineSelection = pipeline;
+   }
+
+   cmd_buffer->state.current_pipeline = pipeline;
 }
 
 void
 genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer)
 {
-   if (cmd_buffer->state.current_pipeline != _3D) {
-      flush_pipeline_before_pipeline_select(cmd_buffer, _3D);
-
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
-#if GEN_GEN >= 9
-         ps.MaskBits = 3;
-#endif
-         ps.PipelineSelection = _3D;
-      }
-
-      cmd_buffer->state.current_pipeline = _3D;
-   }
+   genX(flush_pipeline_select)(cmd_buffer, _3D);
 }
 
 void
 genX(flush_pipeline_select_gpgpu)(struct anv_cmd_buffer *cmd_buffer)
 {
-   if (cmd_buffer->state.current_pipeline != GPGPU) {
-      flush_pipeline_before_pipeline_select(cmd_buffer, GPGPU);
-
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT), ps) {
-#if GEN_GEN >= 9
-         ps.MaskBits = 3;
-#endif
-         ps.PipelineSelection = GPGPU;
-      }
-
-      cmd_buffer->state.current_pipeline = GPGPU;
-   }
+   genX(flush_pipeline_select)(cmd_buffer, GPGPU);
 }
 
 void
