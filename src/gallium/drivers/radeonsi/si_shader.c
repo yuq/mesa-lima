@@ -7508,7 +7508,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 {
 	struct si_shader_selector *sel = shader->selector;
 	struct si_shader_context ctx;
-	LLVMModuleRef mod;
 	int r = -1;
 
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
@@ -7619,12 +7618,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		si_build_wrapper_function(&ctx, parts, need_prolog ? 3 : 2, need_prolog ? 1 : 0);
 	}
 
-	mod = ctx.gallivm.module;
-
 	/* Dump LLVM IR before any optimization passes */
 	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
 	    r600_can_dump_shader(&sscreen->b, ctx.type))
-		ac_dump_module(mod);
+		LLVMDumpModule(ctx.gallivm.module);
 
 	si_llvm_finalize_module(&ctx,
 				    r600_extra_shader_checks(&sscreen->b, ctx.type));
@@ -7638,7 +7635,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	/* Compile to bytecode. */
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
-			    mod, debug, ctx.type, "TGSI shader");
+			    ctx.gallivm.module, debug, ctx.type, "TGSI shader");
 	si_llvm_dispose(&ctx);
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
