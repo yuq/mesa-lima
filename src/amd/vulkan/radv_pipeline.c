@@ -528,21 +528,19 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 		radv_hash_shader(gs_copy_sha1, module, entrypoint, spec_info,
 				 layout, key, 1);
 
-	if (cache) {
-		variant = radv_create_shader_variant_from_pipeline_cache(pipeline->device,
-									 cache,
-									 sha1);
+	variant = radv_create_shader_variant_from_pipeline_cache(pipeline->device,
+								 cache,
+								 sha1);
 
-		if (stage == MESA_SHADER_GEOMETRY) {
-			pipeline->gs_copy_shader =
-				radv_create_shader_variant_from_pipeline_cache(
-					pipeline->device,
-					cache,
-					gs_copy_sha1);
-		}
-		if (variant)
-			return variant;
+	if (stage == MESA_SHADER_GEOMETRY) {
+		pipeline->gs_copy_shader =
+			radv_create_shader_variant_from_pipeline_cache(
+				pipeline->device,
+				cache,
+				gs_copy_sha1);
 	}
+	if (variant)
+		return variant;
 
 	nir = radv_shader_compile_to_nir(pipeline->device,
 				         module, entrypoint, stage,
@@ -559,7 +557,7 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 		pipeline->gs_copy_shader = radv_pipeline_create_gs_copy_shader(
 			pipeline, nir, &gs_copy_code, &gs_copy_code_size, dump);
 
-		if (pipeline->gs_copy_shader && cache) {
+		if (pipeline->gs_copy_shader) {
 			pipeline->gs_copy_shader =
 				radv_pipeline_cache_insert_shader(cache,
 								  gs_copy_sha1,
@@ -571,7 +569,7 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	if (!module->nir)
 		ralloc_free(nir);
 
-	if (variant && cache)
+	if (variant)
 		variant = radv_pipeline_cache_insert_shader(cache, sha1, variant,
 							    code, code_size);
 
