@@ -132,8 +132,12 @@ VkResult genX(GetQueryPoolResults)(
    void *data_end = pData + dataSize;
    struct anv_query_pool_slot *slot = pool->bo.map;
 
-   if (!device->info.has_llc)
-      anv_invalidate_range(slot, MIN2(queryCount * sizeof(*slot), pool->bo.size));
+   if (!device->info.has_llc) {
+      uint64_t offset = firstQuery * sizeof(*slot);
+      uint64_t size = queryCount * sizeof(*slot);
+      anv_invalidate_range(pool->bo.map + offset,
+                           MIN2(size, pool->bo.size - offset));
+   }
 
    for (uint32_t i = 0; i < queryCount; i++) {
       switch (pool->type) {
