@@ -798,18 +798,17 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
             idx = 0;
             print_dword_val(&iter, offset, &dword_num);
             if (dword_num > 0)
-                token = print_iterator_values(&iter, &idx);
+               token = print_iterator_values(&iter, &idx);
             if (token != NULL) {
-                printf("0x%08"PRIx64":  0x%08x : Dword %d\n",
-                       offset + 4 * idx, p[idx], idx);
-                handle_struct_decode(spec,token, &p[idx]);
-                token = NULL;
+               printf("0x%08"PRIx64":  0x%08x : Dword %d\n",
+                      offset + 4 * idx, p[idx], idx);
+               handle_struct_decode(spec,token, &p[idx]);
+               token = NULL;
             }
          }
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
-            if (gen_group_get_opcode(inst) ==
-                custom_handlers[i].opcode)
+            if (gen_group_get_opcode(inst) == custom_handlers[i].opcode)
                custom_handlers[i].handle(spec, p);
          }
       }
