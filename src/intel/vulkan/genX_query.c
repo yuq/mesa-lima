@@ -232,22 +232,13 @@ void genX(CmdResetQueryPool)(
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
 
    for (uint32_t i = 0; i < queryCount; i++) {
-      switch (pool->type) {
-      case VK_QUERY_TYPE_OCCLUSION:
-      case VK_QUERY_TYPE_TIMESTAMP: {
-         anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdm) {
-            sdm.Address = (struct anv_address) {
-               .bo = &pool->bo,
-               .offset = (firstQuery + i) * sizeof(struct anv_query_pool_slot) +
-                         offsetof(struct anv_query_pool_slot, available),
-            };
-            sdm.DataDWord0 = 0;
-            sdm.DataDWord1 = 0;
-         }
-         break;
-      }
-      default:
-         assert(!"Invalid query type");
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdm) {
+         sdm.Address = (struct anv_address) {
+            .bo = &pool->bo,
+            .offset = (firstQuery + i) * sizeof(struct anv_query_pool_slot),
+         };
+         sdm.DataDWord0 = 0;
+         sdm.DataDWord1 = 0;
       }
    }
 }
@@ -278,7 +269,7 @@ void genX(CmdBeginQuery)(
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
       emit_ps_depth_count(cmd_buffer, &pool->bo,
-                          query * sizeof(struct anv_query_pool_slot));
+                          query * sizeof(struct anv_query_pool_slot) + 8);
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -298,10 +289,10 @@ void genX(CmdEndQuery)(
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
       emit_ps_depth_count(cmd_buffer, &pool->bo,
-                          query * sizeof(struct anv_query_pool_slot) + 8);
+                          query * sizeof(struct anv_query_pool_slot) + 16);
 
       emit_query_availability(cmd_buffer, &pool->bo,
-                              query * sizeof(struct anv_query_pool_slot) + 16);
+                              query * sizeof(struct anv_query_pool_slot));
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -328,11 +319,11 @@ void genX(CmdWriteTimestamp)(
    case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
          srm.RegisterAddress  = TIMESTAMP;
-         srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset };
+         srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset + 8 };
       }
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
          srm.RegisterAddress  = TIMESTAMP + 4;
-         srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset + 4 };
+         srm.MemoryAddress    = (struct anv_address) { &pool->bo, offset + 12 };
       }
       break;
 
@@ -341,7 +332,7 @@ void genX(CmdWriteTimestamp)(
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.DestinationAddressType  = DAT_PPGTT;
          pc.PostSyncOperation       = WriteTimestamp;
-         pc.Address = (struct anv_address) { &pool->bo, offset };
+         pc.Address = (struct anv_address) { &pool->bo, offset + 8 };
 
          if (GEN_GEN == 9 && cmd_buffer->device->info.gt == 4)
             pc.CommandStreamerStallEnable = true;
@@ -349,7 +340,7 @@ void genX(CmdWriteTimestamp)(
       break;
    }
 
-   emit_query_availability(cmd_buffer, &pool->bo, offset + 16);
+   emit_query_availability(cmd_buffer, &pool->bo, offset);
 }
 
 #if GEN_GEN > 7 || GEN_IS_HASWELL
@@ -446,9 +437,9 @@ void genX(CmdCopyQueryPoolResults)(
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION:
          emit_load_alu_reg_u64(&cmd_buffer->batch,
-                               CS_GPR(0), &pool->bo, slot_offset);
+                               CS_GPR(0), &pool->bo, slot_offset + 8);
          emit_load_alu_reg_u64(&cmd_buffer->batch,
-                               CS_GPR(1), &pool->bo, slot_offset + 8);
+                               CS_GPR(1), &pool->bo, slot_offset + 16);
 
          /* FIXME: We need to clamp the result for 32 bit. */
 
@@ -461,7 +452,7 @@ void genX(CmdCopyQueryPoolResults)(
 
       case VK_QUERY_TYPE_TIMESTAMP:
          emit_load_alu_reg_u64(&cmd_buffer->batch,
-                               CS_GPR(2), &pool->bo, slot_offset);
+                               CS_GPR(2), &pool->bo, slot_offset + 8);
          break;
 
       default:
@@ -473,7 +464,7 @@ void genX(CmdCopyQueryPoolResults)(
 
       if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
          emit_load_alu_reg_u64(&cmd_buffer->batch, CS_GPR(0),
-                               &pool->bo, slot_offset + 16);
+                               &pool->bo, slot_offset);
          if (flags & VK_QUERY_RESULT_64_BIT)
             store_query_result(&cmd_buffer->batch,
                                CS_GPR(0), buffer->bo, dst_offset + 8, flags);

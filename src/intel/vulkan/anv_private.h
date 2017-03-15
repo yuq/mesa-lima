@@ -2014,9 +2014,9 @@ struct anv_render_pass {
 };
 
 struct anv_query_pool_slot {
+   uint64_t available;
    uint64_t begin;
    uint64_t end;
-   uint64_t available;
 };
 
 struct anv_query_pool {
