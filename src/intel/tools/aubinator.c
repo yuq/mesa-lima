@@ -162,15 +162,6 @@ decode_structure(struct gen_spec *spec, struct gen_group *strct,
 }
 
 static void
-handle_struct_decode(struct gen_spec *spec, char *struct_name, uint32_t *p)
-{
-   if (struct_name == NULL)
-      return;
-   struct gen_group *struct_val = gen_spec_find_struct(spec, struct_name);
-   decode_structure(spec, struct_val, p);
-}
-
-static void
 dump_binding_table(struct gen_spec *spec, uint32_t offset)
 {
    uint32_t *pointers, i;
@@ -802,7 +793,9 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
             if (token != NULL) {
                printf("0x%08"PRIx64":  0x%08x : Dword %d\n",
                       offset + 4 * idx, p[idx], idx);
-               handle_struct_decode(spec,token, &p[idx]);
+               struct gen_group *struct_val =
+                  gen_spec_find_struct(spec, token);
+               decode_structure(spec, struct_val, &p[idx]);
                token = NULL;
             }
          }
