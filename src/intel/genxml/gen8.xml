@@ -3177,6 +3177,50 @@
     <field name="SW Tessellation Memory Object Control State" start="40" end="43" type="MEMORY_OBJECT_CONTROL_STATE"/>
   </instruction>
 
+  <register name="IA_VERTICES_COUNT" length="2" num="0x2310">
+    <field name="IA Vertices Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="IA_PRIMITIVES_COUNT" length="2" num="0x2318">
+    <field name="IA Primitives Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="VS_INVOCATION_COUNT" length="2" num="0x2320">
+    <field name="VS Invocation Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="HS_INVOCATION_COUNT" length="2" num="0x2300">
+    <field name="HS Invocation Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="DS_INVOCATION_COUNT" length="2" num="0x2308">
+    <field name="DS Invocation Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="GS_INVOCATION_COUNT" length="2" num="0x2328">
+    <field name="GS Invocation Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="GS_PRIMITIVES_COUNT" length="2" num="0x2330">
+    <field name="GS Primitives Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="CL_INVOCATION_COUNT" length="2" num="0x2338">
+    <field name="CL Invocation Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="CL_PRIMITIVES_COUNT" length="2" num="0x2340">
+    <field name="CL Primitives Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="PS_INVOCATION_COUNT" length="2" num="0x2348">
+    <field name="PS Invocation Count Report" start="0" end="63" type="uint"/>
+  </register>
+
+  <register name="CS_INVOCATION_COUNT" length="2" num="0x2290">
+    <field name="CS Invocation Count Report" start="0" end="63" type="uint"/>
+  </register>
+
   <register name="L3CNTLREG" length="1" num="0x7034">
     <field name="SLM Enable" start="0" end="0" type="uint"/>
     <field name="URB Allocation" start="1" end="7" type="uint"/>
