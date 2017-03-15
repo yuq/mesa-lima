@@ -1651,6 +1651,8 @@ swr_update_derived(struct pipe_context *pipe,
    backendState.numAttributes =
       ((ctx->gs ? ctx->gs->info.base.num_outputs : ctx->vs->info.base.num_outputs) - 1) +
       (ctx->rasterizer->sprite_coord_enable ? 1 : 0);
+   backendState.numAttributes = std::min((size_t)backendState.numAttributes,
+                                         sizeof(backendState.numComponents));
    for (unsigned i = 0; i < backendState.numAttributes; i++)
       backendState.numComponents[i] = 4;
    backendState.constantInterpolationMask = ctx->fs->constantMask |
