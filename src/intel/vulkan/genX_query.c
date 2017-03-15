@@ -401,18 +401,31 @@ emit_load_alu_reg_u64(struct anv_batch *batch, uint32_t reg,
 }
 
 static void
-store_query_result(struct anv_batch *batch, uint32_t reg,
-                   struct anv_bo *bo, uint32_t offset, VkQueryResultFlags flags)
+gpu_write_query_result(struct anv_batch *batch,
+                       struct anv_buffer *dst_buffer, uint32_t dst_offset,
+                       VkQueryResultFlags flags,
+                       uint32_t value_index, uint32_t reg)
 {
+   if (flags & VK_QUERY_RESULT_64_BIT)
+      dst_offset += value_index * 8;
+   else
+      dst_offset += value_index * 4;
+
    anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
       srm.RegisterAddress  = reg;
-      srm.MemoryAddress    = (struct anv_address) { bo, offset };
+      srm.MemoryAddress    = (struct anv_address) {
+         .bo = dst_buffer->bo,
+         .offset = dst_buffer->offset + dst_offset,
+      };
    }
 
    if (flags & VK_QUERY_RESULT_64_BIT) {
       anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
          srm.RegisterAddress  = reg + 4;
-         srm.MemoryAddress    = (struct anv_address) { bo, offset + 4 };
+         srm.MemoryAddress    = (struct anv_address) {
+            .bo = dst_buffer->bo,
+            .offset = dst_buffer->offset + dst_offset + 4,
+         };
       }
    }
 }
@@ -455,7 +468,6 @@ void genX(CmdCopyQueryPoolResults)(
       }
    }
 
-   dst_offset = buffer->offset + destOffset;
    for (uint32_t i = 0; i < queryCount; i++) {
 
       slot_offset = (firstQuery + i) * pool->stride;
@@ -463,32 +475,29 @@ void genX(CmdCopyQueryPoolResults)(
       case VK_QUERY_TYPE_OCCLUSION:
          compute_query_result(&cmd_buffer->batch, OPERAND_R2,
                               &pool->bo, slot_offset + 8);
+         gpu_write_query_result(&cmd_buffer->batch, buffer, destOffset,
+                                flags, 0, CS_GPR(2));
          break;
 
       case VK_QUERY_TYPE_TIMESTAMP:
          emit_load_alu_reg_u64(&cmd_buffer->batch,
                                CS_GPR(2), &pool->bo, slot_offset + 8);
+         gpu_write_query_result(&cmd_buffer->batch, buffer, destOffset,
+                                flags, 0, CS_GPR(2));
          break;
 
       default:
          unreachable("unhandled query type");
       }
 
-      store_query_result(&cmd_buffer->batch,
-                         CS_GPR(2), buffer->bo, dst_offset, flags);
-
       if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
          emit_load_alu_reg_u64(&cmd_buffer->batch, CS_GPR(0),
                                &pool->bo, slot_offset);
-         if (flags & VK_QUERY_RESULT_64_BIT)
-            store_query_result(&cmd_buffer->batch,
-                               CS_GPR(0), buffer->bo, dst_offset + 8, flags);
-         else
-            store_query_result(&cmd_buffer->batch,
-                               CS_GPR(0), buffer->bo, dst_offset + 4, flags);
+         gpu_write_query_result(&cmd_buffer->batch, buffer, destOffset,
+                                flags, 1, CS_GPR(0));
       }
 
-      dst_offset += destStride;
+      destOffset += destStride;
    }
 }
 
