@@ -211,6 +211,7 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
                              const struct pipe_rasterizer_state *cso)
 {
     struct nvc0_rasterizer_stateobj *so;
+    uint16_t class_3d = nouveau_screen(pipe->screen)->class_3d;
     uint32_t reg;
 
     so = CALLOC_STRUCT(nvc0_rasterizer_stateobj);
@@ -260,6 +261,12 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
     SB_DATA    (so, ((cso->sprite_coord_enable & 0xff) << 3) | reg);
     SB_IMMED_3D(so, POINT_SPRITE_ENABLE, cso->point_quad_rasterization);
     SB_IMMED_3D(so, POINT_SMOOTH_ENABLE, cso->point_smooth);
+
+    if (class_3d >= GM200_3D_CLASS) {
+       SB_IMMED_3D(so, FILL_RECTANGLE,
+                   cso->fill_front == PIPE_POLYGON_MODE_FILL_RECTANGLE ?
+                   NVC0_3D_FILL_RECTANGLE_ENABLE : 0);
+    }
 
     SB_BEGIN_3D(so, MACRO_POLYGON_MODE_FRONT, 1);
     SB_DATA    (so, nvgl_polygon_mode(cso->fill_front));
