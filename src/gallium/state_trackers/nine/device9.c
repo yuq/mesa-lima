@@ -476,6 +476,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->driver_caps.user_cbufs = GET_PCAP(USER_CONSTANT_BUFFERS);
     This->driver_caps.user_sw_vbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_VERTEX_BUFFERS);
     This->driver_caps.user_sw_cbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_CONSTANT_BUFFERS);
+    This->vertex_uploader = This->csmt_active ? This->pipe_secondary->stream_uploader : This->context.pipe->stream_uploader;
     if (!This->driver_caps.user_cbufs)
         This->constbuf_alignment = GET_PCAP(CONSTANT_BUFFER_OFFSET_ALIGNMENT);
     This->driver_caps.window_space_position_support = GET_PCAP(TGSI_VS_WINDOW_SPACE_POSITION);
@@ -2817,17 +2818,15 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
     vtxbuf.buffer = NULL;
     vtxbuf.user_buffer = pVertexStreamZeroData;
 
-    /* csmt is unactive when user vertex or index buffers are used, thus no
-     * need to call NineDevice9_GetPipe. */
     if (!This->driver_caps.user_vbufs) {
-        u_upload_data(This->context.pipe->stream_uploader,
+        u_upload_data(This->vertex_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * VertexStreamZeroStride, /* XXX */
                       4,
                       vtxbuf.user_buffer,
                       &vtxbuf.buffer_offset,
                       &vtxbuf.buffer);
-        u_upload_unmap(This->context.pipe->stream_uploader);
+        u_upload_unmap(This->vertex_uploader);
         vtxbuf.user_buffer = NULL;
     }
 
@@ -2883,27 +2882,27 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
 
     if (!This->driver_caps.user_vbufs) {
         const unsigned base = MinVertexIndex * VertexStreamZeroStride;
-        u_upload_data(This->context.pipe->stream_uploader,
+        u_upload_data(This->vertex_uploader,
                       base,
                       NumVertices * VertexStreamZeroStride, /* XXX */
                       4,
                       (const uint8_t *)vbuf.user_buffer + base,
                       &vbuf.buffer_offset,
                       &vbuf.buffer);
-        u_upload_unmap(This->context.pipe->stream_uploader);
+        u_upload_unmap(This->vertex_uploader);
         /* Won't be used: */
         vbuf.buffer_offset -= base;
         vbuf.user_buffer = NULL;
     }
     if (This->csmt_active) {
-        u_upload_data(This->context.pipe->stream_uploader,
+        u_upload_data(This->pipe_secondary->stream_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * ibuf.index_size,
                       4,
                       ibuf.user_buffer,
                       &ibuf.offset,
                       &ibuf.buffer);
-        u_upload_unmap(This->context.pipe->stream_uploader);
+        u_upload_unmap(This->pipe_secondary->stream_uploader);
         ibuf.user_buffer = NULL;
     }
 
