@@ -508,6 +508,9 @@ struct radv_device {
 	uint32_t                                     *trace_id_ptr;
 
 	struct radv_physical_device                  *physical_device;
+
+	/* Backup in-memory cache to be used if the app doesn't provide one */
+	struct radv_pipeline_cache *                mem_cache;
 };
 
 struct radv_device_memory {

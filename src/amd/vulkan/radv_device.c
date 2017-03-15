@@ -1009,6 +1009,20 @@ VkResult radv_CreateDevice(
 	if (device->physical_device->rad_info.chip_class >= CIK)
 		cik_create_gfx_config(device);
 
+	VkPipelineCacheCreateInfo ci;
+	ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+	ci.pNext = NULL;
+	ci.flags = 0;
+	ci.pInitialData = NULL;
+	ci.initialDataSize = 0;
+	VkPipelineCache pc;
+	result = radv_CreatePipelineCache(radv_device_to_handle(device),
+					  &ci, NULL, &pc);
+	if (result != VK_SUCCESS)
+		goto fail;
+
+	device->mem_cache = radv_pipeline_cache_from_handle(pc);
+
 	*pDevice = radv_device_to_handle(device);
 	return VK_SUCCESS;
 
@@ -1056,6 +1070,9 @@ void radv_DestroyDevice(
 			device->ws->cs_destroy(device->flush_cs[i]);
 	}
 	radv_device_finish_meta(device);
+
+	VkPipelineCache pc = radv_pipeline_cache_to_handle(device->mem_cache);
+	radv_DestroyPipelineCache(radv_device_to_handle(device), pc, NULL);
 
 	vk_free(&device->alloc, device);
 }
