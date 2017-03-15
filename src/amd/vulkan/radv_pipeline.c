@@ -539,7 +539,9 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 				cache,
 				gs_copy_sha1);
 	}
-	if (variant)
+
+	if (variant &&
+	    (stage != MESA_SHADER_GEOMETRY || pipeline->gs_copy_shader))
 		return variant;
 
 	nir = radv_shader_compile_to_nir(pipeline->device,
@@ -548,10 +550,13 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	if (nir == NULL)
 		return NULL;
 
-	variant = radv_shader_variant_create(pipeline->device, nir, layout, key,
-					     &code, &code_size, dump);
+	if (!variant) {
+		variant = radv_shader_variant_create(pipeline->device, nir,
+						     layout, key, &code,
+						     &code_size, dump);
+	}
 
-	if (stage == MESA_SHADER_GEOMETRY) {
+	if (stage == MESA_SHADER_GEOMETRY && !pipeline->gs_copy_shader) {
 		void *gs_copy_code = NULL;
 		unsigned gs_copy_code_size = 0;
 		pipeline->gs_copy_shader = radv_pipeline_create_gs_copy_shader(
