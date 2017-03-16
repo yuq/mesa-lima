@@ -496,7 +496,7 @@ void anv_GetPhysicalDeviceFeatures(
       .shaderInt16                              = false,
       .shaderResourceMinLod                     = false,
       .variableMultisampleRate                  = false,
-      .inheritedQueries                         = false,
+      .inheritedQueries                         = true,
    };
 
    /* We can't do image stores in vec4 shaders */
