@@ -1508,9 +1508,13 @@ enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
    char buf[256];
    DIR *metricsdir = NULL;
    struct dirent *metric_entry;
+   int len;
 
-   strncpy(buf, sysfs_dev_dir, sizeof(buf));
-   strncat(buf, "/metrics", sizeof(buf));
+   len = snprintf(buf, sizeof(buf), "%s/metrics", sysfs_dev_dir);
+   if (len < 0 || len >= sizeof(buf)) {
+      DBG("Failed to concatenate path to sysfs metrics/ directory\n");
+      return;
+   }
 
    metricsdir = opendir(buf);
    if (!metricsdir) {
@@ -1533,8 +1537,12 @@ enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
          struct brw_perf_query_info *query;
          uint64_t id;
 
-         snprintf(buf, sizeof(buf), "%s/metrics/%s/id",
-                  sysfs_dev_dir, metric_entry->d_name);
+         len = snprintf(buf, sizeof(buf), "%s/metrics/%s/id",
+                        sysfs_dev_dir, metric_entry->d_name);
+         if (len < 0 || len >= sizeof(buf)) {
+            DBG("Failed to concatenate path to sysfs metric id file\n");
+            continue;
+         }
 
          if (!read_file_uint64(buf, &id)) {
             DBG("Failed to read metric set id from %s: %m", buf);
@@ -1561,8 +1569,13 @@ read_sysfs_drm_device_file_uint64(struct brw_context *brw,
                                   uint64_t *value)
 {
    char buf[512];
+   int len;
 
-   snprintf(buf, sizeof(buf), "%s/%s", sysfs_dev_dir, file);
+   len = snprintf(buf, sizeof(buf), "%s/%s", sysfs_dev_dir, file);
+   if (len < 0 || len >= sizeof(buf)) {
+      DBG("Failed to concatenate sys filename to read u64 from\n");
+      return false;
+   }
 
    return read_file_uint64(buf, value);
 }
@@ -1620,6 +1633,7 @@ get_sysfs_dev_dir(struct brw_context *brw,
    int min, maj;
    DIR *drmdir;
    struct dirent *drm_entry;
+   int len;
 
    assert(path_buf);
    assert(path_buf_len);
@@ -1638,8 +1652,12 @@ get_sysfs_dev_dir(struct brw_context *brw,
       return false;
    }
 
-   snprintf(path_buf, path_buf_len,
-            "/sys/dev/char/%d:%d/device/drm", maj, min);
+   len = snprintf(path_buf, path_buf_len,
+                  "/sys/dev/char/%d:%d/device/drm", maj, min);
+   if (len < 0 || len >= path_buf_len) {
+      DBG("Failed to concatenate sysfs path to drm device\n");
+      return false;
+   }
 
    drmdir = opendir(path_buf);
    if (!drmdir) {
@@ -1652,11 +1670,14 @@ get_sysfs_dev_dir(struct brw_context *brw,
            drm_entry->d_type == DT_LNK) &&
           strncmp(drm_entry->d_name, "card", 4) == 0)
       {
-         snprintf(path_buf, path_buf_len,
-                  "/sys/dev/char/%d:%d/device/drm/%s",
-                  maj, min, drm_entry->d_name);
+         len = snprintf(path_buf, path_buf_len,
+                        "/sys/dev/char/%d:%d/device/drm/%s",
+                        maj, min, drm_entry->d_name);
          closedir(drmdir);
-         return true;
+         if (len < 0 || len >= path_buf_len)
+            return false;
+         else
+            return true;
       }
    }
 
