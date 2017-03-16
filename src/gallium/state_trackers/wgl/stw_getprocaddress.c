@@ -79,6 +79,9 @@ static const struct stw_extension_entry stw_extension_entries[] = {
    STW_EXTENSION_ENTRY( wglReleaseTexImageARB ),
    STW_EXTENSION_ENTRY( wglSetPbufferAttribARB ),
 
+   /*  WGL_ARB_make_current_read */
+   STW_EXTENSION_ENTRY( wglMakeContextCurrentARB ),
+   STW_EXTENSION_ENTRY( wglGetCurrentReadDCARB ),
    { NULL, NULL }
 };
 
