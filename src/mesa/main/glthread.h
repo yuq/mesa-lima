@@ -24,17 +24,18 @@
 #ifndef _GLTHREAD_H
 #define _GLTHREAD_H
 
+#include "main/mtypes.h"
+
+/* Command size is a number of bytes stored in a short. */
+#define MARSHAL_MAX_CMD_SIZE 65535
+
 #ifdef HAVE_PTHREAD
 
 #include <inttypes.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include "main/mtypes.h"
 
 enum marshal_dispatch_cmd_id;
-
-/* Command size is a number of bytes stored in a short. */
-#define MARSHAL_MAX_CMD_SIZE 65535
 
 struct glthread_state
 {
@@ -142,6 +143,11 @@ _mesa_glthread_finish(struct gl_context *ctx)
 
 static inline void
 _mesa_glthread_restore_dispatch(struct gl_context *ctx)
+{
+}
+
+static inline void
+_mesa_glthread_flush_batch(struct gl_context *ctx)
 {
 }
 

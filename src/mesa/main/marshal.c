@@ -31,6 +31,8 @@
 #include "dispatch.h"
 #include "marshal_generated.h"
 
+#ifdef HAVE_PTHREAD
+
 struct marshal_cmd_Flush
 {
    struct marshal_cmd_base cmd_base;
@@ -257,3 +259,4 @@ _mesa_marshal_BindBuffer(GLenum target, GLuint buffer)
    }
 }
 
+#endif

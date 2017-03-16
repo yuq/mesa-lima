@@ -68,6 +68,8 @@ class PrintCode(gl_XML.gl_print_base):
         print header
         print '#include <X11/Xlib-xcb.h>'
         print
+        print '#ifdef HAVE_PTHREAD'
+        print
         print 'static _X_INLINE int safe_mul(int a, int b)'
         print '{'
         print '    if (a < 0 || b < 0) return -1;'
@@ -78,7 +80,8 @@ class PrintCode(gl_XML.gl_print_base):
         print
 
     def printRealFooter(self):
-        pass
+        print
+        print '#endif'
 
     def print_sync_call(self, func):
         call = 'CALL_{0}(ctx->CurrentServerDispatch, ({1}))'.format(
