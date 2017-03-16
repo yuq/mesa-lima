@@ -377,6 +377,10 @@ The integer capabilities:
 * ``PIPE_CAP_TGSI_TEX_TXF_LZ``: Whether TEX_LZ and TXF_LZ opcodes are
   supported.
 * ``PIPE_CAP_TGSI_CLOCK``: Whether the CLOCK opcode is supported.
+* ``PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE``: Whether the
+  PIPE_POLYGON_MODE_FILL_RECTANGLE mode is supported for
+  ``pipe_rasterizer_state::fill_front`` and
+  ``pipe_rasterizer_state::fill_back``.
 
 
 .. _pipe_capf:
