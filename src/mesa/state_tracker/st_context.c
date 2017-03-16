@@ -575,6 +575,9 @@ void st_destroy_context( struct st_context *st )
    struct gl_context *ctx = st->ctx;
    GLuint i;
 
+   /* This must be called first so that glthread has a chance to finish */
+   _mesa_glthread_destroy(ctx);
+
    _mesa_HashWalk(ctx->Shared->TexObjects, destroy_tex_sampler_cb, st);
 
    st_reference_fragprog(st, &st->fp, NULL);

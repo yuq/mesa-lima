@@ -1294,8 +1294,6 @@ _mesa_free_context_data( struct gl_context *ctx )
       _mesa_make_current(ctx, NULL, NULL);
    }
 
-   _mesa_glthread_destroy(ctx);
-
    /* unreference WinSysDraw/Read buffers */
    _mesa_reference_framebuffer(&ctx->WinSysDrawBuffer, NULL);
    _mesa_reference_framebuffer(&ctx->WinSysReadBuffer, NULL);
