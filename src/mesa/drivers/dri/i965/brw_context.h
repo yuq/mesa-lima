@@ -482,6 +482,9 @@ struct intel_batchbuffer {
       uint32_t *map_next;
       int reloc_count;
    } saved;
+
+   /** Map from batch offset to brw_state_batch data (with DEBUG_BATCH) */
+   struct hash_table *state_batch_sizes;
 };
 
 #define BRW_MAX_XFB_STREAMS 4
@@ -1173,15 +1176,6 @@ struct brw_context
    const struct brw_tracked_state render_atoms[76];
    const struct brw_tracked_state compute_atoms[11];
 
-   /* If (INTEL_DEBUG & DEBUG_BATCH) */
-   struct {
-      uint32_t offset;
-      uint32_t size;
-      enum aub_state_struct_type type;
-      int index;
-   } *state_batch_list;
-   int state_batch_count;
-
    uint32_t render_target_format[MESA_FORMAT_COUNT];
    bool format_supported_as_render_target[MESA_FORMAT_COUNT];
 
@@ -1344,11 +1338,6 @@ void brw_store_data_imm32(struct brw_context *brw, drm_intel_bo *bo,
                           uint32_t offset, uint32_t imm);
 void brw_store_data_imm64(struct brw_context *brw, drm_intel_bo *bo,
                           uint32_t offset, uint64_t imm);
-
-/*======================================================================
- * brw_state_dump.c
- */
-void brw_debug_batch(struct brw_context *brw);
 
 /*======================================================================
  * intel_tex_validate.c

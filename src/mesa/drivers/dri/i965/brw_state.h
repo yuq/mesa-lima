@@ -261,6 +261,8 @@ void *__brw_state_batch(struct brw_context *brw,
 #define brw_state_batch(brw, type, size, alignment, out_offset) \
    __brw_state_batch(brw, type, size, alignment, 0, out_offset)
 
+uint32_t brw_state_batch_size(struct brw_context *brw, uint32_t offset);
+
 /* brw_wm_surface_state.c */
 void gen4_init_vtable_surface_functions(struct brw_context *brw);
 uint32_t brw_get_surface_tiling_bits(uint32_t tiling);

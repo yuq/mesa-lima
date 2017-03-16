@@ -33,12 +33,26 @@
 #include "brw_state.h"
 #include "common/gen_decoder.h"
 
+#include "util/hash_table.h"
+
 #include <xf86drm.h>
 #include <i915_drm.h>
 
 static void
 intel_batchbuffer_reset(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
                         bool has_llc);
+
+static bool
+uint_key_compare(const void *a, const void *b)
+{
+   return a == b;
+}
+
+static uint32_t
+uint_key_hash(const void *key)
+{
+   return (uintptr_t) key;
+}
 
 void
 intel_batchbuffer_init(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
@@ -50,6 +64,11 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
       batch->cpu_map = malloc(BATCH_SZ);
       batch->map = batch->cpu_map;
       batch->map_next = batch->cpu_map;
+   }
+
+   if (INTEL_DEBUG & DEBUG_BATCH) {
+      batch->state_batch_sizes =
+         _mesa_hash_table_create(NULL, uint_key_hash, uint_key_compare);
    }
 }
 
@@ -79,6 +98,9 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
     * first BEGIN_BATCH or BEGIN_BATCH_BLT.  Mark it as unknown.
     */
    batch->ring = UNKNOWN_RING;
+
+   if (batch->state_batch_sizes)
+      _mesa_hash_table_clear(batch->state_batch_sizes, NULL);
 }
 
 static void
@@ -112,6 +134,8 @@ intel_batchbuffer_free(struct intel_batchbuffer *batch)
    free(batch->cpu_map);
    drm_intel_bo_unreference(batch->last_bo);
    drm_intel_bo_unreference(batch->bo);
+   if (batch->state_batch_sizes)
+      _mesa_hash_table_destroy(batch->state_batch_sizes, NULL);
 }
 
 void
@@ -140,6 +164,39 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
 #define CSI "\e["
 #define BLUE_HEADER  CSI "0;44m"
 #define NORMAL       CSI "0m"
+
+
+static void
+decode_struct(struct brw_context *brw, struct gen_spec *spec,
+              const char *struct_name, uint32_t *data,
+              uint32_t gtt_offset, uint32_t offset, bool color)
+{
+   struct gen_group *group = gen_spec_find_struct(spec, struct_name);
+   if (!group)
+      return;
+
+   fprintf(stderr, "%s\n", struct_name);
+   gen_print_group(stderr, group, gtt_offset + offset,
+                   &data[offset / 4], 0, color);
+}
+
+static void
+decode_structs(struct brw_context *brw, struct gen_spec *spec,
+               const char *struct_name,
+               uint32_t *data, uint32_t gtt_offset, uint32_t offset,
+               int struct_size, bool color)
+{
+   struct gen_group *group = gen_spec_find_struct(spec, struct_name);
+   if (!group)
+      return;
+
+   int entries = brw_state_batch_size(brw, offset) / struct_size;
+   for (int i = 0; i < entries; i++) {
+      fprintf(stderr, "%s %d\n", struct_name, i);
+      gen_print_group(stderr, group, gtt_offset + offset,
+                      &data[(offset + i * struct_size) / 4], 0, color);
+   }
+}
 
 static void
 do_batch_dump(struct brw_context *brw)
@@ -180,14 +237,89 @@ do_batch_dump(struct brw_context *brw)
               offset, p[0], gen_group_get_name(inst), reset_color);
 
       gen_print_group(stderr, inst, offset, p, 1, color);
+
+      switch (gen_group_get_opcode(inst) >> 16) {
+      case _3DSTATE_PIPELINED_POINTERS:
+         /* TODO: Decode Gen4-5 pipelined pointers */
+         break;
+      case _3DSTATE_BINDING_TABLE_POINTERS_VS:
+      case _3DSTATE_BINDING_TABLE_POINTERS_HS:
+      case _3DSTATE_BINDING_TABLE_POINTERS_DS:
+      case _3DSTATE_BINDING_TABLE_POINTERS_GS:
+      case _3DSTATE_BINDING_TABLE_POINTERS_PS: {
+         struct gen_group *group =
+            gen_spec_find_struct(spec, "RENDER_SURFACE_STATE");
+         if (!group)
+            break;
+
+         uint32_t bt_offset = p[1] & ~0x1fu;
+         int bt_entries = brw_state_batch_size(brw, bt_offset) / 4;
+         uint32_t *bt_pointers = &data[bt_offset / 4];
+         for (int i = 0; i < bt_entries; i++) {
+            fprintf(stderr, "SURFACE_STATE - BTI = %d\n", i);
+            gen_print_group(stderr, group, gtt_offset + bt_pointers[i],
+                            &data[bt_pointers[i] / 4], 0, color);
+         }
+         break;
+      }
+      case _3DSTATE_SAMPLER_STATE_POINTERS_VS:
+      case _3DSTATE_SAMPLER_STATE_POINTERS_HS:
+      case _3DSTATE_SAMPLER_STATE_POINTERS_DS:
+      case _3DSTATE_SAMPLER_STATE_POINTERS_GS:
+      case _3DSTATE_SAMPLER_STATE_POINTERS_PS:
+         decode_structs(brw, spec, "SAMPLER_STATE", data,
+                        gtt_offset, p[1] & ~0x1fu, 4 * 4, color);
+         break;
+      case _3DSTATE_VIEWPORT_STATE_POINTERS:
+         decode_structs(brw, spec, "CLIP_VIEWPORT", data,
+                        gtt_offset, p[1] & ~0x3fu, 4 * 4, color);
+         decode_structs(brw, spec, "SF_VIEWPORT", data,
+                        gtt_offset, p[1] & ~0x3fu, 8 * 4, color);
+         decode_structs(brw, spec, "CC_VIEWPORT", data,
+                        gtt_offset, p[3] & ~0x3fu, 2 * 4, color);
+         break;
+      case _3DSTATE_VIEWPORT_STATE_POINTERS_CC:
+         decode_structs(brw, spec, "CC_VIEWPORT", data,
+                        gtt_offset, p[1] & ~0x3fu, 2 * 4, color);
+         break;
+      case _3DSTATE_VIEWPORT_STATE_POINTERS_SF_CL:
+         decode_structs(brw, spec, "SF_CLIP_VIEWPORT", data,
+                        gtt_offset, p[1] & ~0x3fu, 16 * 4, color);
+         break;
+      case _3DSTATE_SCISSOR_STATE_POINTERS:
+         decode_structs(brw, spec, "SCISSOR_RECT", data,
+                        gtt_offset, p[1] & ~0x1fu, 2 * 4, color);
+         break;
+      case _3DSTATE_BLEND_STATE_POINTERS:
+         /* TODO: handle Gen8+ extra dword at the beginning */
+         decode_structs(brw, spec, "BLEND_STATE", data,
+                        gtt_offset, p[1] & ~0x3fu, 8 * 4, color);
+         break;
+      case _3DSTATE_CC_STATE_POINTERS:
+         if (brw->gen >= 7) {
+            decode_struct(brw, spec, "COLOR_CALC_STATE", data,
+                          gtt_offset, p[1] & ~0x3fu, color);
+         } else if (brw->gen == 6) {
+            decode_structs(brw, spec, "BLEND_STATE", data,
+                           gtt_offset, p[1] & ~0x3fu, 2 * 4, color);
+            decode_struct(brw, spec, "DEPTH_STENCIL_STATE", data,
+                          gtt_offset, p[2] & ~0x3fu, color);
+            decode_struct(brw, spec, "COLOR_CALC_STATE", data,
+                          gtt_offset, p[3] & ~0x3fu, color);
+         }
+         break;
+      case _3DSTATE_DEPTH_STENCIL_STATE_POINTERS:
+         decode_struct(brw, spec, "DEPTH_STENCIL_STATE", data,
+                       gtt_offset, p[1] & ~0x3fu, color);
+         break;
+      }
+
       length = gen_group_get_length(inst, p);
    }
 
    if (ret == 0) {
       drm_intel_bo_unmap(batch->bo);
    }
-
-   brw_debug_batch(brw);
 }
 #else
 static void do_batch_dump(struct brw_context *brw) { }
@@ -213,8 +345,6 @@ brw_new_batch(struct brw_context *brw)
       brw->ctx.NewDriverState |= BRW_NEW_CONTEXT;
 
    brw->ctx.NewDriverState |= BRW_NEW_BATCH;
-
-   brw->state_batch_count = 0;
 
    brw->ib.type = -1;
 

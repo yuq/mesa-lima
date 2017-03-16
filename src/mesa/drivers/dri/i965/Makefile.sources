@@ -55,7 +55,6 @@ i965_FILES = \
 	brw_sf.h \
 	brw_sf_state.c \
 	brw_state_batch.c \
-	brw_state_dump.c \
 	brw_state.h \
 	brw_state_upload.c \
 	brw_structs.h \

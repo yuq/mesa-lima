@@ -32,31 +32,16 @@
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
 #include "main/imports.h"
+#include "util/hash_table.h"
 #include "util/ralloc.h"
 
-static void
-brw_track_state_batch(struct brw_context *brw,
-		      enum aub_state_struct_type type,
-		      uint32_t offset,
-                      int size,
-                      int index)
+uint32_t
+brw_state_batch_size(struct brw_context *brw, uint32_t offset)
 {
-   struct intel_batchbuffer *batch = &brw->batch;
-
-   if (!brw->state_batch_list) {
-      /* Our structs are always aligned to at least 32 bytes, so
-       * our array doesn't need to be any larger
-       * TODO: don't use rzalloc
-       */
-      brw->state_batch_list = rzalloc_size(brw, sizeof(*brw->state_batch_list) *
-                                           batch->bo->size / 32);
-   }
-
-   brw->state_batch_list[brw->state_batch_count].offset = offset;
-   brw->state_batch_list[brw->state_batch_count].size = size;
-   brw->state_batch_list[brw->state_batch_count].type = type;
-   brw->state_batch_list[brw->state_batch_count].index = index;
-   brw->state_batch_count++;
+   struct hash_entry *entry =
+      _mesa_hash_table_search(brw->batch.state_batch_sizes,
+                              (void *) (uintptr_t) offset);
+   return entry ? (uintptr_t) entry->data : 0;
 }
 
 /**
@@ -100,8 +85,11 @@ __brw_state_batch(struct brw_context *brw,
 
    batch->state_batch_offset = offset;
 
-   if (unlikely(INTEL_DEBUG & DEBUG_BATCH))
-      brw_track_state_batch(brw, type, offset, size, index);
+   if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
+      _mesa_hash_table_insert(batch->state_batch_sizes,
+                              (void *) (uintptr_t) offset,
+                              (void *) (uintptr_t) size);
+   }
 
    *out_offset = offset;
    return batch->map + (offset>>2);
