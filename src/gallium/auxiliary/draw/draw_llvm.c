@@ -1670,8 +1670,6 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
       ind_vec = LLVMBuildInsertElement(builder, ind_vec, index, index, "");
    }
 
-   fetch_max = lp_build_alloca(gallivm, int32_type, "fetch_max");
-
    have_elts = LLVMBuildICmp(builder, LLVMIntNE,
                              LLVMConstPointerNull(arg_types[10]), fetch_elts, "");
 
