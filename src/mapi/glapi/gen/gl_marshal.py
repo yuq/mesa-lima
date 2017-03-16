@@ -66,9 +66,9 @@ class PrintCode(gl_XML.gl_print_base):
 
     def printRealHeader(self):
         print header
-        print '#include <X11/Xlib-xcb.h>'
-        print
         print '#ifdef HAVE_PTHREAD'
+        print
+        print '#include <X11/Xlib-xcb.h>'
         print
         print 'static _X_INLINE int safe_mul(int a, int b)'
         print '{'
