@@ -68,9 +68,7 @@ class PrintCode(gl_XML.gl_print_base):
         print header
         print '#ifdef HAVE_PTHREAD'
         print
-        print '#include <X11/Xlib-xcb.h>'
-        print
-        print 'static _X_INLINE int safe_mul(int a, int b)'
+        print 'static inline int safe_mul(int a, int b)'
         print '{'
         print '    if (a < 0 || b < 0) return -1;'
         print '    if (a == 0 || b == 0) return 0;'
