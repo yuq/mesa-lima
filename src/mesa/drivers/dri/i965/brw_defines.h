@@ -354,12 +354,6 @@
 #define GEN7_SURFACE_MOCS_SHIFT                 16
 #define GEN7_SURFACE_MOCS_MASK                  INTEL_MASK(19, 16)
 
-#define GEN9_SURFACE_TRMODE_SHIFT          18
-#define GEN9_SURFACE_TRMODE_MASK           INTEL_MASK(19, 18)
-#define GEN9_SURFACE_TRMODE_NONE           0
-#define GEN9_SURFACE_TRMODE_TILEYF         1
-#define GEN9_SURFACE_TRMODE_TILEYS         2
-
 #define GEN9_SURFACE_MIP_TAIL_START_LOD_SHIFT      8
 #define GEN9_SURFACE_MIP_TAIL_START_LOD_MASK       INTEL_MASK(11, 8)
 
@@ -1619,9 +1613,6 @@ enum brw_pixel_shader_coverage_mask_mode {
 #define BR13_8888		(0x3 << 24)
 #define BR13_16161616		(0x4 << 24)
 #define BR13_32323232		(0x5 << 24)
-
-#define XY_FAST_SRC_TRMODE_YF        (1 << 31)
-#define XY_FAST_DST_TRMODE_YF        (1 << 30)
 
 /* Pipeline Statistics Counter Registers */
 #define IA_VERTICES_COUNT               0x2310

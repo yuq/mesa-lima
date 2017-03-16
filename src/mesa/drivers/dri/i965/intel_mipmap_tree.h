@@ -333,13 +333,6 @@ struct intel_miptree_hiz_buffer
    struct intel_mipmap_tree *mt;
 };
 
-/* Tile resource modes */
-enum intel_miptree_tr_mode {
-   INTEL_MIPTREE_TRMODE_NONE,
-   INTEL_MIPTREE_TRMODE_YF,
-   INTEL_MIPTREE_TRMODE_YS
-};
-
 struct intel_mipmap_tree
 {
    /**
@@ -372,12 +365,6 @@ struct intel_mipmap_tree
     * @see 3DSTATE_DEPTH_BUFFER.TileMode
     */
    uint32_t tiling;
-
-   /**
-    * @see RENDER_SURFACE_STATE.TiledResourceMode
-    * @see 3DSTATE_DEPTH_BUFFER.TiledResourceMode
-    */
-   enum intel_miptree_tr_mode tr_mode;
 
    /**
     * @brief One of GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY, etc.
@@ -806,11 +793,11 @@ intel_get_image_dims(struct gl_texture_image *image,
                      int *width, int *height, int *depth);
 
 void
-intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+intel_get_tile_masks(uint32_t tiling, uint32_t cpp,
                      uint32_t *mask_x, uint32_t *mask_y);
 
 void
-intel_get_tile_dims(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+intel_get_tile_dims(uint32_t tiling, uint32_t cpp,
                     uint32_t *tile_w, uint32_t *tile_h);
 
 uint32_t

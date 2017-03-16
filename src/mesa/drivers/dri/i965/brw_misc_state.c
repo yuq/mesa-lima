@@ -177,7 +177,7 @@ brw_get_depthstencil_tile_masks(struct intel_mipmap_tree *depth_mt,
    uint32_t tile_mask_x = 0, tile_mask_y = 0;
 
    if (depth_mt) {
-      intel_get_tile_masks(depth_mt->tiling, depth_mt->tr_mode,
+      intel_get_tile_masks(depth_mt->tiling,
                            depth_mt->cpp,
                            &tile_mask_x, &tile_mask_y);
       assert(!intel_miptree_level_has_hiz(depth_mt, depth_level));
@@ -194,7 +194,6 @@ brw_get_depthstencil_tile_masks(struct intel_mipmap_tree *depth_mt,
       } else {
          uint32_t stencil_tile_mask_x, stencil_tile_mask_y;
          intel_get_tile_masks(stencil_mt->tiling,
-                              stencil_mt->tr_mode,
                               stencil_mt->cpp,
                               &stencil_tile_mask_x,
                               &stencil_tile_mask_y);

@@ -576,34 +576,6 @@ intel_lower_compressed_format(struct brw_context *brw, mesa_format format)
    }
 }
 
-/* This function computes Yf/Ys tiled bo size, alignment and pitch. */
-static unsigned long
-intel_get_yf_ys_bo_size(struct intel_mipmap_tree *mt, unsigned *alignment,
-                        unsigned long *pitch)
-{
-   uint32_t tile_width, tile_height;
-   unsigned long stride, size, aligned_y;
-
-   assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
-   intel_get_tile_dims(mt->tiling, mt->tr_mode, mt->cpp,
-                       &tile_width, &tile_height);
-
-   aligned_y = ALIGN(mt->total_height, tile_height);
-   stride = mt->total_width * mt->cpp;
-   stride = ALIGN(stride, tile_width);
-   size = stride * aligned_y;
-
-   if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YF) {
-      assert(size % 4096 == 0);
-      *alignment = 4096;
-   } else {
-      assert(size % (64 * 1024) == 0);
-      *alignment = 64 * 1024;
-   }
-   *pitch = stride;
-   return size;
-}
-
 static struct intel_mipmap_tree *
 miptree_create(struct brw_context *brw,
                GLenum target,
@@ -642,27 +614,18 @@ miptree_create(struct brw_context *brw,
    unsigned long pitch;
    mt->etc_format = etc_format;
 
-   if (mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
-      unsigned alignment = 0;
-      unsigned long size;
-      size = intel_get_yf_ys_bo_size(mt, &alignment, &pitch);
-      assert(size);
-      mt->bo = drm_intel_bo_alloc_for_render(brw->bufmgr, "miptree",
-                                             size, alignment);
+   if (format == MESA_FORMAT_S_UINT8) {
+      /* Align to size of W tile, 64x64. */
+      mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                        ALIGN(mt->total_width, 64),
+                                        ALIGN(mt->total_height, 64),
+                                        mt->cpp, &mt->tiling, &pitch,
+                                        alloc_flags);
    } else {
-      if (format == MESA_FORMAT_S_UINT8) {
-         /* Align to size of W tile, 64x64. */
-         mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                           ALIGN(mt->total_width, 64),
-                                           ALIGN(mt->total_height, 64),
-                                           mt->cpp, &mt->tiling, &pitch,
-                                           alloc_flags);
-      } else {
-         mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                           mt->total_width, mt->total_height,
-                                           mt->cpp, &mt->tiling, &pitch,
-                                           alloc_flags);
-      }
+      mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                        mt->total_width, mt->total_height,
+                                        mt->cpp, &mt->tiling, &pitch,
+                                        alloc_flags);
    }
 
    mt->pitch = pitch;
@@ -1148,53 +1111,24 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
  * and tile_h is set to 1.
  */
 void
-intel_get_tile_dims(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+intel_get_tile_dims(uint32_t tiling, uint32_t cpp,
                     uint32_t *tile_w, uint32_t *tile_h)
 {
-   if (tr_mode == INTEL_MIPTREE_TRMODE_NONE) {
-      switch (tiling) {
-      case I915_TILING_X:
-         *tile_w = 512;
-         *tile_h = 8;
-         break;
-      case I915_TILING_Y:
-         *tile_w = 128;
-         *tile_h = 32;
-         break;
-      case I915_TILING_NONE:
-         *tile_w = cpp;
-         *tile_h = 1;
-         break;
-      default:
-         unreachable("not reached");
-      }
-   } else {
-      uint32_t aspect_ratio = 1;
-      assert(_mesa_is_pow_two(cpp));
-
-      switch (cpp) {
-      case 1:
-         *tile_h = 64;
-         break;
-      case 2:
-      case 4:
-         *tile_h = 32;
-         break;
-      case 8:
-      case 16:
-         *tile_h = 16;
-         break;
-      default:
-         unreachable("not reached");
-      }
-
-      if (cpp == 2 || cpp == 8)
-         aspect_ratio = 2;
-
-      if (tr_mode == INTEL_MIPTREE_TRMODE_YS)
-         *tile_h *= 4;
-
-      *tile_w = *tile_h * aspect_ratio * cpp;
+   switch (tiling) {
+   case I915_TILING_X:
+      *tile_w = 512;
+      *tile_h = 8;
+      break;
+   case I915_TILING_Y:
+      *tile_w = 128;
+      *tile_h = 32;
+      break;
+   case I915_TILING_NONE:
+      *tile_w = cpp;
+      *tile_h = 1;
+      break;
+   default:
+      unreachable("not reached");
    }
 }
 
@@ -1205,12 +1139,12 @@ intel_get_tile_dims(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
  * untiled, the masks are set to 0.
  */
 void
-intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+intel_get_tile_masks(uint32_t tiling, uint32_t cpp,
                      uint32_t *mask_x, uint32_t *mask_y)
 {
    uint32_t tile_w_bytes, tile_h;
 
-   intel_get_tile_dims(tiling, tr_mode, cpp, &tile_w_bytes, &tile_h);
+   intel_get_tile_dims(tiling, cpp, &tile_w_bytes, &tile_h);
 
    *mask_x = tile_w_bytes / cpp - 1;
    *mask_y = tile_h - 1;
@@ -1264,7 +1198,7 @@ intel_miptree_get_tile_offsets(const struct intel_mipmap_tree *mt,
    uint32_t x, y;
    uint32_t mask_x, mask_y;
 
-   intel_get_tile_masks(mt->tiling, mt->tr_mode, mt->cpp, &mask_x, &mask_y);
+   intel_get_tile_masks(mt->tiling, mt->cpp, &mask_x, &mask_y);
    intel_miptree_get_image_offset(mt, level, slice, &x, &y);
 
    *tile_x = x & mask_x;
@@ -3072,11 +3006,9 @@ use_intel_mipree_map_blit(struct brw_context *brw,
 {
    if (brw->has_llc &&
       /* It's probably not worth swapping to the blit ring because of
-       * all the overhead involved. But, we must use blitter for the
-       * surfaces with INTEL_MIPTREE_TRMODE_{YF,YS}.
+       * all the overhead involved.
        */
-       (!(mode & GL_MAP_WRITE_BIT) ||
-        mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) &&
+       !(mode & GL_MAP_WRITE_BIT) &&
        !mt->compressed &&
        (mt->tiling == I915_TILING_X ||
         /* Prior to Sandybridge, the blitter can't handle Y tiling */
@@ -3151,8 +3083,6 @@ intel_miptree_map(struct brw_context *brw,
       intel_miptree_map_movntdqa(brw, mt, map, level, slice);
 #endif
    } else {
-      /* intel_miptree_map_gtt() doesn't support surfaces with Yf/Ys tiling. */
-      assert(mt->tr_mode == INTEL_MIPTREE_TRMODE_NONE);
       intel_miptree_map_gtt(brw, mt, map, level, slice);
    }
 
@@ -3267,16 +3197,7 @@ intel_miptree_get_isl_tiling(const struct intel_mipmap_tree *mt)
       case I915_TILING_X:
          return ISL_TILING_X;
       case I915_TILING_Y:
-         switch (mt->tr_mode) {
-         case INTEL_MIPTREE_TRMODE_NONE:
             return ISL_TILING_Y0;
-         case INTEL_MIPTREE_TRMODE_YF:
-            return ISL_TILING_Yf;
-         case INTEL_MIPTREE_TRMODE_YS:
-            return ISL_TILING_Ys;
-         default:
-            unreachable("Invalid tiled resource mode");
-         }
       default:
          unreachable("Invalid tiling mode");
       }
