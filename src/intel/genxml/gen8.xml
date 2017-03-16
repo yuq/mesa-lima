@@ -1124,7 +1124,7 @@
     <field name="Early Cull Enable" start="50" end="50" type="bool"/>
     <field name="Force User Clip Distance Clip Test Enable Bitmask" start="49" end="49" type="bool"/>
     <field name="Force Clip Mode" start="48" end="48" type="bool"/>
-    <field name="Clipper Statistics Enable" start="42" end="42" type="bool"/>
+    <field name="Statistics Enable" start="42" end="42" type="bool"/>
     <field name="User Clip Distance Cull Test Enable Bitmask" start="32" end="39" type="uint"/>
     <field name="Clip Enable" start="95" end="95" type="bool"/>
     <field name="API Mode" start="94" end="94" type="uint">

@@ -1044,7 +1044,7 @@
       <value name="FRONT" value="2"/>
       <value name="BACK" value="3"/>
     </field>
-    <field name="Clipper Statistics Enable" start="42" end="42" type="bool"/>
+    <field name="Statistics Enable" start="42" end="42" type="bool"/>
     <field name="User Clip Distance Cull Test Enable Bitmask" start="32" end="39" type="uint"/>
     <field name="Clip Enable" start="95" end="95" type="bool"/>
     <field name="API Mode" start="94" end="94" type="uint">

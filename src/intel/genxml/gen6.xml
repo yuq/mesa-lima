@@ -804,7 +804,7 @@
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="18"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="2"/>
-    <field name="Clipper Statistics Enable" start="42" end="42" type="bool"/>
+    <field name="Statistics Enable" start="42" end="42" type="bool"/>
     <field name="User Clip Distance Cull Test Enable Bitmask" start="32" end="39" type="uint"/>
     <field name="CLIP Enable" start="95" end="95" type="bool"/>
     <field name="API Mode" start="94" end="94" type="uint">
