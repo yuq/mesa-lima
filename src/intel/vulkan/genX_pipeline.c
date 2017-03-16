@@ -1570,6 +1570,14 @@ emit_3dstate_vf_topology(struct anv_pipeline *pipeline)
 #endif
 
 static void
+emit_3dstate_vf_statistics(struct anv_pipeline *pipeline)
+{
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_STATISTICS), vfs) {
+      vfs.StatisticsEnable = true;
+   }
+}
+
+static void
 compute_kill_pixel(struct anv_pipeline *pipeline,
                    const VkPipelineMultisampleStateCreateInfo *ms_info,
                    const struct anv_subpass *subpass)
@@ -1675,6 +1683,7 @@ genX(graphics_pipeline_create)(
    emit_3dstate_ps_extra(pipeline, subpass);
    emit_3dstate_vf_topology(pipeline);
 #endif
+   emit_3dstate_vf_statistics(pipeline);
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
