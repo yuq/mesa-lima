@@ -1113,7 +1113,8 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 
 				interpolate = ctx->info.input_interpolate[inst->Src[0].Register.Index];
 				k = eg_get_interpolator_index(interpolate, location);
-				ctx->eg_interpolators[k].enabled = true;
+                                if (k >= 0)
+                                        ctx->eg_interpolators[k].enabled = true;
 			}
 		} else if (parse.FullToken.Token.Type == TGSI_TOKEN_TYPE_DECLARATION) {
 			struct tgsi_full_declaration *d = &parse.FullToken.FullDeclaration;
@@ -1209,7 +1210,8 @@ static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
 
 				interpolate = ctx->info.input_interpolate[inst->Src[0].Register.Index];
 				k = eg_get_interpolator_index(interpolate, location);
-				ctx->eg_interpolators[k].enabled = true;
+                                if (k >= 0)
+                                        ctx->eg_interpolators[k].enabled = true;
 			}
 		}
 	}
