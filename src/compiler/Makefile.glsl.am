@@ -251,6 +251,12 @@ CLEANFILES +=						\
 	glsl/glcpp/glcpp-lex.c
 
 clean-local:
+	$(RM) glsl/tests/lower_jumps/*.opt_test
+	$(RM) glsl/tests/lower_jumps/*.expected
+	$(RM) glsl/tests/lower_jumps/*.out
+	$(RM) glsl/tests/warnings/*.out
+	$(RM) glsl/glcpp/tests/*.out
+	$(RM) -r glsl/glcpp/tests/subtest*/
 	$(RM) -r subtest-cr subtest-cr-lf subtest-lf subtest-lf-cr
 
 dist-hook:
