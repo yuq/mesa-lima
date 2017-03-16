@@ -330,6 +330,14 @@ static unsigned calc_ctx_size_h265_main10(struct ruvd_decoder *dec, struct pipe_
 	return cm_buffer_size + db_left_tile_ctx_size + db_left_tile_pxl_size;
 }
 
+static unsigned get_db_pitch_alignment(struct ruvd_decoder *dec)
+{
+	if (((struct r600_common_screen*)dec->screen)->family < CHIP_VEGA10)
+		return 16;
+	else
+		return 32;
+}
+
 /* calculate size of reference picture buffer */
 static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 {
@@ -343,7 +351,7 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 	unsigned max_references = dec->base.max_references + 1;
 
 	// aligned size of a single frame
-	image_size = width * height;
+	image_size = align(width, get_db_pitch_alignment(dec)) * height;
 	image_size += image_size / 2;
 	image_size = align(image_size, 1024);
 
@@ -418,9 +426,9 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 		width = align (width, 16);
 		height = align (height, 16);
 		if (dec->base.profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
-			dpb_size = align((width * height * 9) / 4, 256) * max_references;
+			dpb_size = align((align(width, get_db_pitch_alignment(dec)) * height * 9) / 4, 256) * max_references;
 		else
-			dpb_size = align((width * height * 3) / 2, 256) * max_references;
+			dpb_size = align((align(width, get_db_pitch_alignment(dec)) * height * 3) / 2, 256) * max_references;
 		break;
 
 	case PIPE_VIDEO_FORMAT_VC1:
@@ -1085,7 +1093,7 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 
 	dec->msg->body.decode.dpb_size = dec->dpb.res->buf->size;
 	dec->msg->body.decode.bsd_size = bs_size;
-	dec->msg->body.decode.db_pitch = align(dec->base.width, 16);
+	dec->msg->body.decode.db_pitch = align(dec->base.width, get_db_pitch_alignment(dec));
 
 	if (dec->stream_type == RUVD_CODEC_H264_PERF &&
 	    ((struct r600_common_screen*)dec->screen)->family >= CHIP_POLARIS10)
