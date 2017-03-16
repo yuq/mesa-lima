@@ -297,7 +297,7 @@ static LLVMValueRef get_shared_memory_ptr(struct nir_to_llvm_context *ctx,
 	LLVMValueRef ptr;
 	int addr_space;
 
-	offset = LLVMConstInt(ctx->i32, idx, false);
+	offset = LLVMConstInt(ctx->i32, idx * 16, false);
 
 	ptr = ctx->shared_memory;
 	ptr = LLVMBuildGEP(ctx->builder, ptr, &offset, 1, "");
