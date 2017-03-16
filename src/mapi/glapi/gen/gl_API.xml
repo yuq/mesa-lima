@@ -1109,7 +1109,7 @@
     <type name="DEBUGPROCARB" size="4" pointer="true"/>
     <type name="DEBUGPROC" size="4" pointer="true"/>
 
-    <function name="NewList" deprecated="3.1">
+    <function name="NewList" deprecated="3.1" marshal_fail="true">
         <param name="list" type="GLuint"/>
         <param name="mode" type="GLenum"/>
         <glx sop="101"/>
