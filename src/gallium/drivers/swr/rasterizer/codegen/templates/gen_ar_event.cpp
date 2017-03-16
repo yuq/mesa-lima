@@ -28,8 +28,8 @@
 *
 ******************************************************************************/
 #include "common/os.h"
-#include "gen_ar_event.h"
-#include "gen_ar_eventhandler.h"
+#include "gen_ar_event.hpp"
+#include "gen_ar_eventhandler.hpp"
 
 using namespace ArchRast;
 % for name in protos['event_names']:

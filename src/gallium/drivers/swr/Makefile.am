@@ -52,49 +52,49 @@ COMMON_SOURCES = \
 	$(BUILT_SOURCES)
 
 BUILT_SOURCES = \
-	swr_context_llvm.h \
+	gen_swr_context_llvm.h \
 	rasterizer/codegen/gen_knobs.cpp \
 	rasterizer/codegen/gen_knobs.h \
-	rasterizer/jitter/state_llvm.h \
+	rasterizer/jitter/gen_state_llvm.h \
 	rasterizer/jitter/gen_builder_x86.hpp \
-	rasterizer/archrast/gen_ar_event.h \
+	rasterizer/archrast/gen_ar_event.hpp \
 	rasterizer/archrast/gen_ar_event.cpp \
-	rasterizer/archrast/gen_ar_eventhandler.h \
-	rasterizer/archrast/gen_ar_eventhandlerfile.h \
-	rasterizer/core/BackendPixelRate0.cpp
+	rasterizer/archrast/gen_ar_eventhandler.hpp \
+	rasterizer/archrast/gen_ar_eventhandlerfile.hpp \
+	rasterizer/core/gen_BackendPixelRate0.cpp
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
-swr_context_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/codegen/templates/gen_llvm.hpp swr_context.h
+gen_swr_context_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/codegen/templates/gen_llvm.hpp swr_context.h
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_types.py \
 		--input $(srcdir)/swr_context.h \
-		--output ./swr_context_llvm.h
+		--output ./gen_swr_context_llvm.h
 
-rasterizer/codegen/gen_knobs.cpp: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/knobs_template.cpp
+rasterizer/codegen/gen_knobs.cpp: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/gen_knobs.cpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_knobs.py \
-		--input $(srcdir)/rasterizer/codegen/templates/knobs_template.cpp \
+		--input $(srcdir)/rasterizer/codegen/templates/gen_knobs.cpp \
 		--output rasterizer/codegen/gen_knobs.cpp \
 		--gen_cpp
 
-rasterizer/codegen/gen_knobs.h: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/knobs_template.cpp
+rasterizer/codegen/gen_knobs.h: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/gen_knobs.cpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_knobs.py \
-		--input $(srcdir)/rasterizer/codegen/templates/knobs_template.cpp \
+		--input $(srcdir)/rasterizer/codegen/templates/gen_knobs.cpp \
 		--output rasterizer/codegen/gen_knobs.h \
 		--gen_h
 
-rasterizer/jitter/state_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/codegen/templates/gen_llvm.hpp rasterizer/core/state.h
+rasterizer/jitter/gen_state_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/codegen/templates/gen_llvm.hpp rasterizer/core/state.h
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_types.py \
 		--input $(srcdir)/rasterizer/core/state.h \
-		--output rasterizer/jitter/state_llvm.h
+		--output rasterizer/jitter/gen_state_llvm.h
 
-rasterizer/jitter/gen_builder.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder_template.hpp
+rasterizer/jitter/gen_builder.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder.hpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_ir_macros.py \
@@ -102,22 +102,22 @@ rasterizer/jitter/gen_builder.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rast
 		--output rasterizer/jitter \
 		--gen_h
 
-rasterizer/jitter/gen_builder_x86.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder_template.hpp
+rasterizer/jitter/gen_builder_x86.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder.hpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_ir_macros.py \
 		--output rasterizer/jitter \
 		--gen_x86_h
 
-rasterizer/archrast/gen_ar_event.h: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/ar_event_h.template rasterizer/archrast/events.proto
+rasterizer/archrast/gen_ar_event.hpp: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/gen_ar_event.hpp rasterizer/archrast/events.proto
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_archrast.py \
 		--proto $(srcdir)/rasterizer/archrast/events.proto \
-		--output rasterizer/archrast/gen_ar_event.h \
+		--output rasterizer/archrast/gen_ar_event.hpp \
 		--gen_event_h
 
-rasterizer/archrast/gen_ar_event.cpp: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/ar_event_cpp.template rasterizer/archrast/events.proto
+rasterizer/archrast/gen_ar_event.cpp: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/gen_ar_event.cpp rasterizer/archrast/events.proto
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_archrast.py \
@@ -125,20 +125,20 @@ rasterizer/archrast/gen_ar_event.cpp: rasterizer/codegen/gen_archrast.py rasteri
 		--output rasterizer/archrast/gen_ar_event.cpp \
 		--gen_event_cpp
 
-rasterizer/archrast/gen_ar_eventhandler.h: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/ar_eventhandler_h.template rasterizer/archrast/events.proto
+rasterizer/archrast/gen_ar_eventhandler.hpp: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/gen_ar_eventhandler.hpp rasterizer/archrast/events.proto
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_archrast.py \
 		--proto $(srcdir)/rasterizer/archrast/events.proto \
-		--output rasterizer/archrast/gen_ar_eventhandler.h \
+		--output rasterizer/archrast/gen_ar_eventhandler.hpp \
 		--gen_eventhandler_h
 
-rasterizer/archrast/gen_ar_eventhandlerfile.h: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/ar_eventhandlerfile_h.template rasterizer/archrast/events.proto
+rasterizer/archrast/gen_ar_eventhandlerfile.hpp: rasterizer/codegen/gen_archrast.py rasterizer/codegen/templates/gen_ar_eventhandlerfile.hpp rasterizer/archrast/events.proto
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_archrast.py \
 		--proto $(srcdir)/rasterizer/archrast/events.proto \
-		--output rasterizer/archrast/gen_ar_eventhandlerfile.h \
+		--output rasterizer/archrast/gen_ar_eventhandlerfile.hpp \
 		--gen_eventhandlerfile_h
 
 # 5 SWR_MULTISAMPLE_TYPE_COUNT
@@ -147,7 +147,7 @@ rasterizer/archrast/gen_ar_eventhandlerfile.h: rasterizer/codegen/gen_archrast.p
 # 2 centroid
 # 2 forcedSampleCount
 # 2 canEarlyZ
-rasterizer/core/BackendPixelRate0.cpp: rasterizer/codegen/gen_backends.py rasterizer/codegen/templates/backend_template.cpp
+rasterizer/core/gen_BackendPixelRate0.cpp: rasterizer/codegen/gen_backends.py rasterizer/codegen/templates/gen_backend.cpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_backends.py \
@@ -258,11 +258,11 @@ EXTRA_DIST = \
 	rasterizer/codegen/mako/runtime.py \
 	rasterizer/codegen/mako/template.py \
 	rasterizer/codegen/mako/util.py \
-	rasterizer/codegen/templates/knobs_template.cpp \
-	rasterizer/codegen/templates/ar_event_h.template \
-	rasterizer/codegen/templates/ar_event_cpp.template \
-	rasterizer/codegen/templates/ar_eventhandler_h.template \
-	rasterizer/codegen/templates/ar_eventhandlerfile_h.template \
-	rasterizer/codegen/templates/backend_template.cpp \
-	rasterizer/codegen/templates/gen_builder_template.hpp \
+	rasterizer/codegen/templates/gen_ar_event.cpp \
+	rasterizer/codegen/templates/gen_ar_event.hpp \
+	rasterizer/codegen/templates/gen_ar_eventhandler.hpp \
+	rasterizer/codegen/templates/gen_ar_eventhandlerfile.hpp \
+	rasterizer/codegen/templates/gen_backend.cpp \
+	rasterizer/codegen/templates/gen_builder.hpp \
+	rasterizer/codegen/templates/gen_knobs.cpp \
 	rasterizer/codegen/templates/gen_llvm.hpp

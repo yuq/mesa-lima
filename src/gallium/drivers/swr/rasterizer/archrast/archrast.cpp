@@ -30,7 +30,7 @@
 #include "common/os.h"
 #include "archrast/archrast.h"
 #include "archrast/eventmanager.h"
-#include "gen_ar_eventhandlerfile.h"
+#include "gen_ar_eventhandlerfile.hpp"
 
 namespace ArchRast
 {

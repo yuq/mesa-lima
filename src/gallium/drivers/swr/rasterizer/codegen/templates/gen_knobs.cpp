@@ -1,28 +1,4 @@
-<%
-    max_len = 0
-    for knob in knobs:
-        if len(knob[0]) > max_len: max_len = len(knob[0])
-    max_len += len('KNOB_ ')
-    if max_len % 4: max_len += 4 - (max_len % 4)
-
-    def space_knob(knob):
-        knob_len = len('KNOB_' + knob)
-        return ' '*(max_len - knob_len)
-
-    def calc_max_name_len(choices_array):
-        _max_len = 0
-        for choice in choices_array:
-            if len(choice['name']) > _max_len: _max_len = len(choice['name'])
-
-        if _max_len % 4: _max_len += 4 - (_max_len % 4)
-        return _max_len
-
-    def space_name(name, max_len):
-        name_len = len(name)
-        return ' '*(max_len - name_len)
-
-
-%>/******************************************************************************
+/******************************************************************************
 *
 * Copyright 2015-2017
 * Intel Corporation
@@ -53,6 +29,7 @@
 *  ${'\n*    '.join(cmdline)}
 *
 ******************************************************************************/
+<% calc_max_knob_len(knobs) %>
 %if gen_header:
 #pragma once
 #include <string>
@@ -168,3 +145,33 @@ std::string GlobalKnobs::ToString(const char* optPerLinePrefix)
 }
 
 % endif
+
+<%!
+    # Globally available python 
+    max_len = 0
+    def calc_max_knob_len(knobs):
+        global max_len
+        max_len = 0
+        for knob in knobs:
+            if len(knob[0]) > max_len: max_len = len(knob[0])
+        max_len += len('KNOB_ ')
+        if max_len % 4: max_len += 4 - (max_len % 4)
+
+    def space_knob(knob):
+        knob_len = len('KNOB_' + knob)
+        return ' '*(max_len - knob_len)
+
+    def calc_max_name_len(choices_array):
+        _max_len = 0
+        for choice in choices_array:
+            if len(choice['name']) > _max_len: _max_len = len(choice['name'])
+
+        if _max_len % 4: _max_len += 4 - (_max_len % 4)
+        return _max_len
+
+    def space_name(name, max_len):
+        name_len = len(name)
+        return ' '*(max_len - name_len)
+
+
+%>

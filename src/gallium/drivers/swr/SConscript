@@ -51,19 +51,19 @@ swrroot = '#src/gallium/drivers/swr/'
 env.CodeGenerate(
     target = 'rasterizer/codegen/gen_knobs.cpp',
     script = swrroot + 'rasterizer/codegen/gen_knobs.py',
-    source = 'rasterizer/codegen/templates/knobs_template.cpp',
+    source = 'rasterizer/codegen/templates/gen_knobs.cpp',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_cpp'
 )
 
 env.CodeGenerate(
     target = 'rasterizer/codegen/gen_knobs.h',
     script = swrroot + 'rasterizer/codegen/gen_knobs.py',
-    source = 'rasterizer/codegen/templates/knobs_template.cpp',
+    source = 'rasterizer/codegen/templates/gen_knobs.cpp',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_h'
 )
 
 env.CodeGenerate(
-    target = 'rasterizer/jitter/state_llvm.h',
+    target = 'rasterizer/jitter/gen_state_llvm.h',
     script = swrroot + 'rasterizer/codegen/gen_llvm_types.py',
     source = 'rasterizer/core/state.h',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET'
@@ -84,14 +84,14 @@ env.CodeGenerate(
 )
 
 env.CodeGenerate(
-    target = './swr_context_llvm.h',
+    target = './gen_swr_context_llvm.h',
     script = swrroot + 'rasterizer/codegen/gen_llvm_types.py',
     source = 'swr_context.h',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET'
 )
 
 env.CodeGenerate(
-    target = 'rasterizer/archrast/gen_ar_event.h',
+    target = 'rasterizer/archrast/gen_ar_event.hpp',
     script = swrroot + 'rasterizer/codegen/gen_archrast.py',
     source = 'rasterizer/archrast/events.proto',
     command = python_cmd + ' $SCRIPT --proto $SOURCE --output $TARGET --gen_event_h'
@@ -105,14 +105,14 @@ env.CodeGenerate(
 )
 
 env.CodeGenerate(
-    target = 'rasterizer/archrast/gen_ar_eventhandler.h',
+    target = 'rasterizer/archrast/gen_ar_eventhandler.hpp',
     script = swrroot + 'rasterizer/codegen/gen_archrast.py',
     source = 'rasterizer/archrast/events.proto',
     command = python_cmd + ' $SCRIPT --proto $SOURCE --output $TARGET --gen_eventhandler_h'
 )
 
 env.CodeGenerate(
-    target = 'rasterizer/archrast/gen_ar_eventhandlerfile.h',
+    target = 'rasterizer/archrast/gen_ar_eventhandlerfile.hpp',
     script = swrroot + 'rasterizer/codegen/gen_archrast.py',
     source = 'rasterizer/archrast/events.proto',
     command = python_cmd + ' $SCRIPT --proto $SOURCE --output $TARGET --gen_eventhandlerfile_h'
@@ -125,7 +125,7 @@ env.CodeGenerate(
 # 2 forcedSampleCount
 # 2 canEarlyZ
 env.CodeGenerate(
-    target = 'rasterizer/core/BackendPixelRate0.cpp',
+    target = 'rasterizer/core/gen_BackendPixelRate0.cpp',
     script = swrroot + 'rasterizer/codegen/gen_backends.py',
     command = python_cmd + ' $SCRIPT --output rasterizer/core --dim 5 2 3 2 2 2 --split 0 --cpp'
 )
@@ -134,7 +134,7 @@ env.CodeGenerate(
 built_sources = [
     'rasterizer/codegen/gen_knobs.cpp',
     'rasterizer/archrast/gen_ar_event.cpp',
-    'rasterizer/core/BackendPixelRate0.cpp',
+    'rasterizer/core/gen_BackendPixelRate0.cpp',
     ]
 
 source = built_sources

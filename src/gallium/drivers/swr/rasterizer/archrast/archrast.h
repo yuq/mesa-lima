@@ -28,7 +28,7 @@
 #pragma once
 
 #include "common/os.h"
-#include "gen_ar_event.h"
+#include "gen_ar_event.hpp"
 
 namespace ArchRast
 {

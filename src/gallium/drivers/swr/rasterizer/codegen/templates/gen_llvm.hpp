@@ -30,19 +30,6 @@
 *   ${'\n*     '.join(cmdline)}
 *
 ******************************************************************************/
-<%!
-    def calc_max_len(fields):
-        max_type_len = 0
-        max_name_len = 0
-        for f in fields:
-            if len(f['type']) > max_type_len: max_type_len = len(f['type'])
-            if len(f['name']) > max_name_len: max_name_len = len(f['name'])
-        return (max_type_len, max_name_len)
-
-    def pad(cur_len, max_len):
-        pad_amt = max_len - cur_len
-        return ' '*pad_amt
-%>
 #pragma once
 
 namespace SwrJit
@@ -58,7 +45,7 @@ namespace SwrJit
             (max_type_len, max_name_len) = calc_max_len(type['members'])
         %>
         %for member in type['members']:
-        /* ${member['name']} ${pad(len(member['name']), max_name_len)} */ members.push_back( ${member['type']} );
+        /* ${member['name']} ${pad(len(member['name']), max_name_len)}*/ members.push_back( ${member['type']} );
         %endfor
 
         return StructType::get(ctx, members, false);
@@ -70,3 +57,17 @@ namespace SwrJit
 
 %endfor
 } // ns SwrJit
+
+<%! # Global function definitions
+    def calc_max_len(fields):
+        max_type_len = 0
+        max_name_len = 0
+        for f in fields:
+            if len(f['type']) > max_type_len: max_type_len = len(f['type'])
+            if len(f['name']) > max_name_len: max_name_len = len(f['name'])
+        return (max_type_len, max_name_len)
+
+    def pad(cur_len, max_len):
+        pad_amt = max_len - cur_len
+        return ' '*pad_amt
+%>

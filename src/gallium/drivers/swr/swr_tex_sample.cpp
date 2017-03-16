@@ -46,7 +46,7 @@
 
 #include "state.h"
 #include "JitManager.h"
-#include "state_llvm.h"
+#include "gen_state_llvm.h"
 
 #include "pipe/p_defines.h"
 #include "pipe/p_shader_tokens.h"
@@ -58,7 +58,7 @@
 #include "util/u_memory.h"
 
 #include "swr_tex_sample.h"
-#include "swr_context_llvm.h"
+#include "gen_swr_context_llvm.h"
 
 using namespace SwrJit;
 

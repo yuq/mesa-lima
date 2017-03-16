@@ -30,7 +30,7 @@
 #pragma pop_macro("DEBUG")
 
 #include "state.h"
-#include "state_llvm.h"
+#include "gen_state_llvm.h"
 #include "builder.h"
 
 #include "tgsi/tgsi_strings.h"
@@ -42,7 +42,7 @@
 #include "gallivm/lp_bld_tgsi.h"
 
 #include "swr_context.h"
-#include "swr_context_llvm.h"
+#include "gen_swr_context_llvm.h"
 #include "swr_resource.h"
 #include "swr_state.h"
 #include "swr_screen.h"

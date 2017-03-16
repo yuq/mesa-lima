@@ -36,12 +36,12 @@ def write_template_to_string(template_filename, **kwargs):
     except:
         traceback = RichTraceback()
         for (filename, lineno, function, line) in traceback.traceback:
-            print("File %s, line %s, in %s" % (filename, lineno, function))
-            print(line, "\n")
-        print("%s: %s" % (str(traceback.error.__class__.__name__), traceback.error))
+            print('File %s, line %s, in %s' % (filename, lineno, function))
+            print(line, '\n')
+        print('%s: %s' % (str(traceback.error.__class__.__name__), traceback.error))
 
 def write_template_to_file(template_filename, output_filename, **kwargs):
-    with open(output_filename, "w") as outfile:
+    with open(output_filename, 'w') as outfile:
         print(write_template_to_string(template_filename, **kwargs), file=outfile)
 
 def parse_event_fields(lines, idx, event_dict):
@@ -57,14 +57,14 @@ def parse_event_fields(lines, idx, event_dict):
         line = lines[idx].rstrip()
         idx += 1
 
-        field = re.match(r"(\s*)(\w+)(\s*)(\w+)", line)
+        field = re.match(r'(\s*)(\w+)(\s*)(\w+)', line)
 
         if field:
             field_types.append(field.group(2))
             field_names.append(field.group(4))
             num_fields += 1
 
-        end_of_event = re.match(r"(\s*)};", line)
+        end_of_event = re.match(r'(\s*)};', line)
 
     event_dict['field_types'] = field_types
     event_dict['field_names'] = field_names
@@ -82,15 +82,15 @@ def parse_enums(lines, idx, event_dict):
         line = lines[idx].rstrip()
         idx += 1
 
-        preprocessor = re.search(r"#if|#endif", line)
+        preprocessor = re.search(r'#if|#endif', line)
 
         if not preprocessor:
-            enum = re.match(r"(\s*)(\w+)(\s*)", line)
+            enum = re.match(r'(\s*)(\w+)(\s*)', line)
 
             if enum:
                 enum_names.append(line)
 
-            end_of_enum = re.match(r"(\s*)};", line)
+            end_of_enum = re.match(r'(\s*)};', line)
 
     event_dict['names'] = enum_names
     return idx
@@ -115,7 +115,7 @@ def parse_protos(filename):
             idx += 1
 
             # search for event definitions.
-            match = re.match(r"(\s*)event(\s*)(\w+)", line)
+            match = re.match(r'(\s*)event(\s*)(\w+)', line)
 
             if match:
                 eventId += 1
@@ -127,7 +127,7 @@ def parse_protos(filename):
                 idx = parse_event_fields(lines, idx, protos['events'][event_name])
 
             # search for enums.
-            match = re.match(r"(\s*)enum(\s*)(\w+)", line)
+            match = re.match(r'(\s*)enum(\s*)(\w+)', line)
 
             if match:
                 enum_name = match.group(3)
@@ -142,12 +142,12 @@ def main():
 
     # Parse args...
     parser = argparse.ArgumentParser()
-    parser.add_argument("--proto", "-p", help="Path to proto file", required=True)
-    parser.add_argument("--output", "-o", help="Output filename (i.e. event.h)", required=True)
-    parser.add_argument("--gen_event_h", "-geh", help="Generate event header", action="store_true", default=False)
-    parser.add_argument("--gen_event_cpp", "-gec", help="Generate event cpp", action="store_true", default=False)
-    parser.add_argument("--gen_eventhandler_h", "-gehh", help="Generate eventhandler header", action="store_true", default=False)
-    parser.add_argument("--gen_eventhandlerfile_h", "-gehf", help="Generate eventhandler header for writing to files", action="store_true", default=False)
+    parser.add_argument('--proto', '-p', help='Path to proto file', required=True)
+    parser.add_argument('--output', '-o', help='Output filename (i.e. event.hpp)', required=True)
+    parser.add_argument('--gen_event_hpp', help='Generate event header', action='store_true', default=False)
+    parser.add_argument('--gen_event_cpp', help='Generate event cpp', action='store_true', default=False)
+    parser.add_argument('--gen_eventhandler_hpp', help='Generate eventhandler header', action='store_true', default=False)
+    parser.add_argument('--gen_eventhandlerfile_hpp', help='Generate eventhandler header for writing to files', action='store_true', default=False)
     args = parser.parse_args()
 
     proto_filename = args.proto
@@ -155,21 +155,21 @@ def main():
     (output_dir, output_filename) = os.path.split(args.output)
 
     if not output_dir:
-        output_dir = "."
+        output_dir = '.'
 
-    #print("output_dir = %s" % output_dir, file=sys.stderr)
-    #print("output_filename = %s" % output_filename, file=sys.stderr)
+    #print('output_dir = %s' % output_dir, file=sys.stderr)
+    #print('output_filename = %s' % output_filename, file=sys.stderr)
 
     if not os.path.exists(proto_filename):
-        print("Error: Could not find proto file %s" % proto_filename, file=sys.stderr)
+        print('Error: Could not find proto file %s' % proto_filename, file=sys.stderr)
         return 1
 
     protos = parse_protos(proto_filename)
 
     # Generate event header
-    if args.gen_event_h:
+    if args.gen_event_hpp:
         curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'ar_event_h.template'])
+        template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.hpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         write_template_to_file(template_file, output_fullpath,
@@ -179,7 +179,7 @@ def main():
     # Generate event implementation
     if args.gen_event_cpp:
         curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'ar_event_cpp.template'])
+        template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.cpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         write_template_to_file(template_file, output_fullpath,
@@ -187,25 +187,25 @@ def main():
                 protos=protos)
 
     # Generate event handler header
-    if args.gen_eventhandler_h:
+    if args.gen_eventhandler_hpp:
         curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'ar_eventhandler_h.template'])
+        template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandler.hpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         write_template_to_file(template_file, output_fullpath,
                 filename=output_filename,
-                event_header="gen_ar_event.h",   # todo: fix this!
+                event_header='gen_ar_event.hpp',
                 protos=protos)
 
     # Generate event handler header
-    if args.gen_eventhandlerfile_h:
+    if args.gen_eventhandlerfile_hpp:
         curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'ar_eventhandlerfile_h.template'])
+        template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandlerfile.hpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         write_template_to_file(template_file, output_fullpath,
                 filename=output_filename,
-                event_header="gen_ar_eventhandler.h",   # todo: fix this!
+                event_header='gen_ar_eventhandler.hpp',
                 protos=protos)
 
     return 0

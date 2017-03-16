@@ -59,7 +59,7 @@
 
 #include "core/state.h"
 
-#include "state_llvm.h"
+#include "gen_state_llvm.h"
 
 #include <sstream>
 #if defined(_WIN32)

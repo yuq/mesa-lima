@@ -51,7 +51,7 @@ def main(args=sys.argv[1:]):
 
     # parse args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", "-i", help="Path to knobs.template", required=True)
+    parser.add_argument("--input", "-i", help="Path to gen_knobs.cpp template", required=True)
     parser.add_argument("--output", "-o", help="Path to output file", required=True)
     parser.add_argument("--gen_h", "-gen_h", help="Generate gen_knobs.h", action="store_true", default=False)
     parser.add_argument("--gen_cpp", "-gen_cpp", help="Generate gen_knobs.cpp", action="store_true", required=False)

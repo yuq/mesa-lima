@@ -94,8 +94,8 @@ def main(args=sys.argv[1:]):
 
     # generate .cpp files
     if args.cpp:
-        baseCppName = os.path.join(args.outdir, 'BackendPixelRate%s.cpp')
-        templateCpp = os.path.join(thisDir, 'templates', 'backend_template.cpp')
+        baseCppName = os.path.join(args.outdir, 'gen_BackendPixelRate%s.cpp')
+        templateCpp = os.path.join(thisDir, 'templates', 'gen_backend.cpp')
 
         for fileNum in range(numFiles):
             filename = baseCppName % str(fileNum)
@@ -109,7 +109,7 @@ def main(args=sys.argv[1:]):
 
     # generate gen_backend.cmake file
     if args.cmake:
-        templateCmake = os.path.join(thisDir, 'templates', 'backend_template.cmake')
+        templateCmake = os.path.join(thisDir, 'templates', 'gen_backend.cmake')
         cmakeFile = os.path.join(args.outdir, 'gen_backends.cmake')
         #print('Generating', cmakeFile)
         write_template_to_file(
@@ -117,7 +117,7 @@ def main(args=sys.argv[1:]):
             cmakeFile,
             cmdline=sys.argv,
             numFiles=numFiles,
-            baseCppName=baseCppName.replace('\\','/'))
+            baseCppName='${RASTY_GEN_SRC_DIR}/backends/' + os.path.basename(baseCppName))
 
     #print("Generated %d template instantiations in %d files" % (len(output_list), numFiles))
 

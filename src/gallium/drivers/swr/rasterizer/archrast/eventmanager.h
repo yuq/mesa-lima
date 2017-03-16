@@ -29,8 +29,8 @@
 
 #include "common/os.h"
 
-#include "gen_ar_event.h"
-#include "gen_ar_eventhandler.h"
+#include "gen_ar_event.hpp"
+#include "gen_ar_eventhandler.hpp"
 
 #include <vector>
 

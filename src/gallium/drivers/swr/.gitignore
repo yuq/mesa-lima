@@ -1,11 +1,11 @@
-swr_context_llvm.h
+gen_swr_context_llvm.h
 rasterizer/archrast/gen_ar_event.cpp
-rasterizer/archrast/gen_ar_event.h
-rasterizer/archrast/gen_ar_eventhandler.h
-rasterizer/archrast/gen_ar_eventhandlerfile.h
+rasterizer/archrast/gen_ar_event.hpp
+rasterizer/archrast/gen_ar_eventhandler.hpp
+rasterizer/archrast/gen_ar_eventhandlerfile.hpp
 rasterizer/jitter/gen_builder.hpp
 rasterizer/jitter/gen_builder_x86.hpp
-rasterizer/jitter/state_llvm.h
+rasterizer/jitter/gen_state_llvm.h
 rasterizer/codegen/gen_knobs.cpp
 rasterizer/codegen/gen_knobs.h
-rasterizer/core/BackendPixelRate0.cpp
+rasterizer/core/gen_BackendPixelRate0.cpp

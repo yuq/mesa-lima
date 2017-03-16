@@ -30,7 +30,7 @@
 #include "builder.h"
 #include "jit_api.h"
 #include "blend_jit.h"
-#include "state_llvm.h"
+#include "gen_state_llvm.h"
 
 #include <sstream>
 

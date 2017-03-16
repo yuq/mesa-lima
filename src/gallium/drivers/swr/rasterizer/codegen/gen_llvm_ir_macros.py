@@ -95,7 +95,7 @@ intrinsics = [
     ]
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-template = os.path.join(this_dir, 'templates', 'gen_builder_template.hpp')
+template = os.path.join(this_dir, 'templates', 'gen_builder.hpp')
 
 def convert_uppercamel(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)

@@ -43,7 +43,6 @@
 #include "core/clip.h"
 #include "core/utils.h"
 
-#include "common/simdintrin.h"
 #include "common/os.h"
 
 static const SWR_RECT g_MaxScissorRect = { 0, 0, KNOB_MAX_SCISSOR_X, KNOB_MAX_SCISSOR_Y };
