@@ -46,6 +46,14 @@ void InitBackendFuncTables();
 void InitCPSFuncTables();
 void CalcSampleBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTEXT &psContext);
 
+extern PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_COUNT]
+                                              [SWR_MSAA_SAMPLE_PATTERN_COUNT]
+                                              [SWR_INPUT_COVERAGE_COUNT]
+                                              [2]  // centroid
+                                              [2]  // forcedSampleCount
+                                              [2]  // canEarlyZ
+                                              ;
+
 enum SWR_BACKEND_FUNCS
 {
     SWR_BACKEND_SINGLE_SAMPLE,
