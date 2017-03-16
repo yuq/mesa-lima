@@ -141,7 +141,7 @@ _mesa_glthread_finish(struct gl_context *ctx)
 }
 
 static inline void
-_mesa_glthread_restore_dispatch(struct gl_context *ctx);
+_mesa_glthread_restore_dispatch(struct gl_context *ctx)
 {
 }
 
