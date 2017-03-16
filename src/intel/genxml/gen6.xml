@@ -806,7 +806,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="2"/>
     <field name="Statistics Enable" start="42" end="42" type="bool"/>
     <field name="User Clip Distance Cull Test Enable Bitmask" start="32" end="39" type="uint"/>
-    <field name="CLIP Enable" start="95" end="95" type="bool"/>
+    <field name="Clip Enable" start="95" end="95" type="bool"/>
     <field name="API Mode" start="94" end="94" type="uint">
       <value name="APIMODE_OGL" value="0"/>
       <value name="APIMODE_D3D" value="1"/>

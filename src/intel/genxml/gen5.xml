@@ -1091,7 +1091,7 @@
     <field name="Pointer to GS State" start="69" end="95" type="address"/>
     <field name="GS Enable" start="64" end="64" type="bool"/>
     <field name="Pointer to CLIP State" start="101" end="127" type="address"/>
-    <field name="CLIP Enable" start="96" end="96" type="bool"/>
+    <field name="Clip Enable" start="96" end="96" type="bool"/>
     <field name="Pointer to SF State" start="133" end="159" type="address"/>
     <field name="Pointer to WM State" start="165" end="191" type="address"/>
     <field name="Pointer to Color Calc State" start="197" end="223" type="address"/>
