@@ -75,6 +75,8 @@ EXTRA_DIST= \
 	gl_enums.py \
 	gl_genexec.py \
 	gl_gentable.py \
+	gl_marshal.py \
+	gl_marshal_h.py \
 	gl_procs.py \
 	gl_SPARC_asm.py \
 	gl_table.py \
@@ -84,6 +86,7 @@ EXTRA_DIST= \
 	glX_proto_send.py \
 	glX_proto_size.py \
 	glX_server_table.py \
+	marshal_XML.py \
 	remap_helper.py \
 	static_data.py \
 	SConscript \
