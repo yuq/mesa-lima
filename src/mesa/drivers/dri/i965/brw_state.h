@@ -156,7 +156,6 @@ extern const struct brw_tracked_state gen8_ps_blend;
 extern const struct brw_tracked_state gen8_ps_extra;
 extern const struct brw_tracked_state gen8_ps_state;
 extern const struct brw_tracked_state gen8_wm_state;
-extern const struct brw_tracked_state gen8_raster_state;
 extern const struct brw_tracked_state gen8_sbe_state;
 extern const struct brw_tracked_state gen8_sf_state;
 extern const struct brw_tracked_state gen8_sf_clip_viewport;

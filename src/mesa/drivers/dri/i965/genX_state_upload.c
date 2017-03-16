@@ -338,9 +338,131 @@ static const struct brw_tracked_state genX(clip_state) = {
    .emit = genX(upload_clip_state),
 };
 
+#endif
+
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 8
+static void
+genX(upload_raster)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_BUFFERS */
+   bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+
+   /* _NEW_POLYGON */
+   struct gl_polygon_attrib *polygon = &ctx->Polygon;
+
+   /* _NEW_POINT */
+   struct gl_point_attrib *point = &ctx->Point;
+
+   brw_batch_emit(brw, GENX(3DSTATE_RASTER), raster) {
+      if (polygon->_FrontBit == render_to_fbo)
+         raster.FrontWinding = CounterClockwise;
+
+      if (polygon->CullFlag) {
+         switch (polygon->CullFaceMode) {
+         case GL_FRONT:
+            raster.CullMode = CULLMODE_FRONT;
+            break;
+         case GL_BACK:
+            raster.CullMode = CULLMODE_BACK;
+            break;
+         case GL_FRONT_AND_BACK:
+            raster.CullMode = CULLMODE_BOTH;
+            break;
+         default:
+            unreachable("not reached");
+         }
+      } else {
+         raster.CullMode = CULLMODE_NONE;
+      }
+
+      point->SmoothFlag = raster.SmoothPointEnable;
+
+      raster.DXMultisampleRasterizationEnable =
+         _mesa_is_multisample_enabled(ctx);
+
+      raster.GlobalDepthOffsetEnableSolid = polygon->OffsetFill;
+      raster.GlobalDepthOffsetEnableWireframe = polygon->OffsetLine;
+      raster.GlobalDepthOffsetEnablePoint = polygon->OffsetPoint;
+
+      switch (polygon->FrontMode) {
+      case GL_FILL:
+         raster.FrontFaceFillMode = FILL_MODE_SOLID;
+         break;
+      case GL_LINE:
+         raster.FrontFaceFillMode = FILL_MODE_WIREFRAME;
+         break;
+      case GL_POINT:
+         raster.FrontFaceFillMode = FILL_MODE_POINT;
+         break;
+      default:
+         unreachable("not reached");
+      }
+
+      switch (polygon->BackMode) {
+      case GL_FILL:
+         raster.BackFaceFillMode = FILL_MODE_SOLID;
+         break;
+      case GL_LINE:
+         raster.BackFaceFillMode = FILL_MODE_WIREFRAME;
+         break;
+      case GL_POINT:
+         raster.BackFaceFillMode = FILL_MODE_POINT;
+         break;
+      default:
+         unreachable("not reached");
+      }
+
+      /* _NEW_LINE */
+      raster.AntialiasingEnable = ctx->Line.SmoothFlag;
+
+      /* _NEW_SCISSOR */
+      raster.ScissorRectangleEnable = ctx->Scissor.EnableFlags;
+
+      /* _NEW_TRANSFORM */
+      if (!ctx->Transform.DepthClamp) {
+#if GEN_GEN >= 9
+         raster.ViewportZFarClipTestEnable = true;
+         raster.ViewportZNearClipTestEnable = true;
+#else
+         raster.ViewportZClipTestEnable = true;
 #endif
+      }
+
+      /* BRW_NEW_CONSERVATIVE_RASTERIZATION */
+#if GEN_GEN >= 9
+      raster.ConservativeRasterizationEnable =
+         ctx->IntelConservativeRasterization;
+#endif
+
+      raster.GlobalDepthOffsetClamp = polygon->OffsetClamp;
+      raster.GlobalDepthOffsetScale = polygon->OffsetFactor;
+
+      raster.GlobalDepthOffsetConstant = polygon->OffsetUnits * 2;
+   }
+}
+
+static const struct brw_tracked_state genX(raster_state) = {
+   .dirty = {
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LINE |
+               _NEW_MULTISAMPLE |
+               _NEW_POINT |
+               _NEW_POLYGON |
+               _NEW_SCISSOR |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
+               BRW_NEW_CONSERVATIVE_RASTERIZATION,
+   },
+   .emit = genX(upload_raster),
+};
+#endif
+
+/* ---------------------------------------------------------------------- */
 
 void
 genX(init_atoms)(struct brw_context *brw)
@@ -623,7 +745,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen8_gs_state,
       &gen7_sol_state,
       &genX(clip_state),
-      &gen8_raster_state,
+      &genX(raster_state),
       &gen8_sbe_state,
       &gen8_sf_state,
       &gen8_ps_blend,
