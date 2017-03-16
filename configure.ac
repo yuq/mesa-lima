@@ -907,19 +907,19 @@ llvm_add_target() {
 # Call this inside ` ` to get the return value.
 # $1 is the llvm-config command with arguments.
 strip_unwanted_llvm_flags() {
-    # Use \> (marks the end of the word)
-    echo " `$1`" | sed -E \
+    echo " `$1` " | sed -E \
         -e 's/[[[:space:]]]+-m[[^[:space:]]]*//g' \
-        -e 's/[[[:space:]]]+-DNDEBUG\>//g' \
-        -e 's/[[[:space:]]]+-D_GNU_SOURCE\>//g' \
-        -e 's/[[[:space:]]]+-pedantic\>//g' \
+        -e 's/[[[:space:]]]+-DNDEBUG[[[:space:]]]//g' \
+        -e 's/[[[:space:]]]+-D_GNU_SOURCE[[[:space:]]]//g' \
+        -e 's/[[[:space:]]]+-pedantic[[[:space:]]]//g' \
         -e 's/[[[:space:]]]+-W[[^[:space:]]]*//g' \
         -e 's/[[[:space:]]]+-O[[^[:space:]]]*//g' \
         -e 's/[[[:space:]]]+-g[[^[:space:]]]*//g' \
-        -e 's/-fno-rtti\>/-Fno-rtti/g' \
+        -e 's/-fno-rtti[[[:space:]]]/-Fno-rtti /g' \
         -e 's/[[[:space:]]]+-f[[^[:space:]]]*//g' \
-        -e 's/-Fno-rtti\>/-fno-rtti/g' \
-        -e 's/^[[[:space:]]]//'
+        -e 's/-Fno-rtti[[[:space:]]]/-fno-rtti /g' \
+        -e 's/^[[[:space:]]]//' \
+        -e 's/[[[:space:]]]$//'
 }
 
 llvm_set_environment_variables() {
