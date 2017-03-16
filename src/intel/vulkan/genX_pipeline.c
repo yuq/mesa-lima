@@ -1001,6 +1001,7 @@ emit_3dstate_clip(struct anv_pipeline *pipeline,
    (void) wm_prog_data;
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
       clip.ClipEnable               = true;
+      clip.StatisticsEnable         = true;
       clip.EarlyCullEnable          = true;
       clip.APIMode                  = APIMODE_D3D,
       clip.ViewportXYClipTestEnable = true;
