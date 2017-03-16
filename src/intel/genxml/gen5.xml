@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <genxml name="ILK" gen="5">
   <struct name="RENDER_SURFACE_STATE" length="6">
     <field name="Surface Type" start="29" end="31" type="uint">

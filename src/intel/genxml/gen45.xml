@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <genxml name="CTG" gen="4.5">
   <enum name="3D_Vertex_Component_Control" prefix="VFCOMP">
     <value name="NOSTORE" value="0"/>

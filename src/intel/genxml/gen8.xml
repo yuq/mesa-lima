@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <genxml name="BDW" gen="8">
   <enum name="3D_Prim_Topo_Type" prefix="3DPRIM">
     <value name="POINTLIST" value="1"/>
