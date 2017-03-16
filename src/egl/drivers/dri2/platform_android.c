@@ -634,6 +634,14 @@ droid_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
       if (dri2_surf->color_buffers[i].age > 0)
          dri2_surf->color_buffers[i].age++;
    }
+
+   /* Make sure we have a back buffer in case we're swapping without
+    * ever rendering. */
+   if (get_back_bo(dri2_surf, 0) < 0) {
+      _eglError(EGL_BAD_ALLOC, "dri2_swap_buffers");
+      return EGL_FALSE;
+   }
+
    dri2_surf->back->age = 1;
 
    dri2_flush_drawable_for_swapbuffers(disp, draw);
