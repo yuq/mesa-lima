@@ -305,6 +305,8 @@ unsigned int Instruction::srcMask(unsigned int s) const
    case TGSI_OPCODE_TXD:
    case TGSI_OPCODE_TXL:
    case TGSI_OPCODE_TXP:
+   case TGSI_OPCODE_TEX_LZ:
+   case TGSI_OPCODE_TXF_LZ:
    case TGSI_OPCODE_LODQ:
    {
       const struct tgsi_instruction_texture *tex = &insn->Texture;
@@ -313,6 +315,8 @@ unsigned int Instruction::srcMask(unsigned int s) const
 
       mask = 0x7;
       if (insn->Instruction.Opcode != TGSI_OPCODE_TEX &&
+          insn->Instruction.Opcode != TGSI_OPCODE_TEX_LZ &&
+          insn->Instruction.Opcode != TGSI_OPCODE_TXF_LZ &&
           insn->Instruction.Opcode != TGSI_OPCODE_TXD)
          mask |= 0x8; /* bias, lod or proj */
 
@@ -820,6 +824,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(DIV, DIV);
 
    NV50_IR_OPCODE_CASE(TXL, TXL);
+   NV50_IR_OPCODE_CASE(TEX_LZ, TXL);
 
    NV50_IR_OPCODE_CASE(CEIL, CEIL);
    NV50_IR_OPCODE_CASE(I2F, CVT);
@@ -833,6 +838,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(XOR, XOR);
    NV50_IR_OPCODE_CASE(SAD, SAD);
    NV50_IR_OPCODE_CASE(TXF, TXF);
+   NV50_IR_OPCODE_CASE(TXF_LZ, TXF);
    NV50_IR_OPCODE_CASE(TXQ, TXQ);
    NV50_IR_OPCODE_CASE(TXQS, TXQ);
    NV50_IR_OPCODE_CASE(TG4, TXG);
@@ -2283,7 +2289,9 @@ Converter::handleTEX(Value *dst[4], int R, int S, int L, int C, int Dx, int Dy)
    for (s = 0; s < tgt.getArgCount(); ++s)
       arg[s] = src[s] = fetchSrc(0, s);
 
-   if (texi->op == OP_TXL || texi->op == OP_TXB)
+   if (tgsi.getOpcode() == TGSI_OPCODE_TEX_LZ)
+      lod = loadImm(NULL, 0);
+   else if (texi->op == OP_TXL || texi->op == OP_TXB)
       lod = fetchSrc(L >> 4, L & 3);
 
    if (C == 0x0f)
@@ -2375,7 +2383,10 @@ Converter::handleTXF(Value *dst[4], int R, int L_M)
    }
    for (c = 0; c < (texi->tex.target.getArgCount() - ms); ++c)
       texi->setSrc(c, fetchSrc(0, c));
-   texi->setSrc(c++, fetchSrc(L_M >> 4, L_M & 3)); // lod or ms
+   if (!ms && tgsi.getOpcode() == TGSI_OPCODE_TXF_LZ)
+      texi->setSrc(c++, loadImm(NULL, 0));
+   else
+      texi->setSrc(c++, fetchSrc(L_M >> 4, L_M & 3)); // lod or ms
 
    setTexRS(texi, c, R, -1);
 
@@ -3415,6 +3426,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       mkOp(OP_DISCARD, TYPE_NONE, NULL);
       break;
    case TGSI_OPCODE_TEX:
+   case TGSI_OPCODE_TEX_LZ:
    case TGSI_OPCODE_TXB:
    case TGSI_OPCODE_TXL:
    case TGSI_OPCODE_TXP:
@@ -3443,6 +3455,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_SAMPLE_C_LZ:
       handleTEX(dst0, 1, 2, 0x30, 0x30, 0x30, 0x40);
       break;
+   case TGSI_OPCODE_TXF_LZ:
    case TGSI_OPCODE_TXF:
       handleTXF(dst0, 1, 0x03);
       break;
