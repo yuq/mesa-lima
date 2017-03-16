@@ -32,6 +32,8 @@
 #include "intel_batchbuffer.h"
 #include "intel_fbo.h"
 
+#include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "main/stencil.h"
 
 UNUSED static void *
@@ -208,6 +210,136 @@ static const struct brw_tracked_state genX(depth_stencil_state) = {
 
 /* ---------------------------------------------------------------------- */
 
+static void
+genX(upload_clip_state)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_BUFFERS */
+   struct gl_framebuffer *fb = ctx->DrawBuffer;
+
+   /* BRW_NEW_FS_PROG_DATA */
+   struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+
+   brw_batch_emit(brw, GENX(3DSTATE_CLIP), clip) {
+      clip.StatisticsEnable = !brw->meta_in_progress;
+
+      if (wm_prog_data->barycentric_interp_modes &
+          BRW_BARYCENTRIC_NONPERSPECTIVE_BITS)
+         clip.NonPerspectiveBarycentricEnable = true;
+
+#if GEN_GEN >= 7
+      clip.EarlyCullEnable = true;
+#endif
+
+#if GEN_GEN == 7
+      clip.FrontWinding = ctx->Polygon._FrontBit == _mesa_is_user_fbo(fb);
+
+      if (ctx->Polygon.CullFlag) {
+         switch (ctx->Polygon.CullFaceMode) {
+         case GL_FRONT:
+            clip.CullMode = CULLMODE_FRONT;
+            break;
+         case GL_BACK:
+            clip.CullMode = CULLMODE_BACK;
+            break;
+         case GL_FRONT_AND_BACK:
+            clip.CullMode = CULLMODE_BOTH;
+            break;
+         default:
+            unreachable("Should not get here: invalid CullFlag");
+         }
+      } else {
+         clip.CullMode = CULLMODE_NONE;
+      }
+#endif
+
+#if GEN_GEN < 8
+      clip.UserClipDistanceCullTestEnableBitmask =
+         brw_vue_prog_data(brw->vs.base.prog_data)->cull_distance_mask;
+
+      clip.ViewportZClipTestEnable = !ctx->Transform.DepthClamp;
+#endif
+
+      /* _NEW_LIGHT */
+      if (ctx->Light.ProvokingVertex == GL_FIRST_VERTEX_CONVENTION) {
+         clip.TriangleStripListProvokingVertexSelect = 0;
+         clip.TriangleFanProvokingVertexSelect = 1;
+         clip.LineStripListProvokingVertexSelect = 0;
+      } else {
+         clip.TriangleStripListProvokingVertexSelect = 2;
+         clip.TriangleFanProvokingVertexSelect = 2;
+         clip.LineStripListProvokingVertexSelect = 1;
+      }
+
+      /* _NEW_TRANSFORM */
+      clip.UserClipDistanceClipTestEnableBitmask =
+         ctx->Transform.ClipPlanesEnabled;
+
+#if GEN_GEN >= 8
+      clip.ForceUserClipDistanceClipTestEnableBitmask = true;
+#endif
+
+      if (ctx->Transform.ClipDepthMode == GL_ZERO_TO_ONE)
+         clip.APIMode = APIMODE_D3D;
+      else
+         clip.APIMode = APIMODE_OGL;
+
+      clip.GuardbandClipTestEnable = true;
+
+      /* BRW_NEW_VIEWPORT_COUNT */
+      const unsigned viewport_count = brw->clip.viewport_count;
+
+      if (ctx->RasterDiscard) {
+         clip.ClipMode = CLIPMODE_REJECT_ALL;
+#if GEN_GEN == 6
+         perf_debug("Rasterizer discard is currently implemented via the "
+                    "clipper; having the GS not write primitives would "
+                    "likely be faster.\n");
+#endif
+      } else {
+         clip.ClipMode = CLIPMODE_NORMAL;
+      }
+
+      clip.ClipEnable = brw->primitive != _3DPRIM_RECTLIST;
+
+      /* _NEW_POLYGON,
+       * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_TES_PROG_DATA | BRW_NEW_PRIMITIVE
+       */
+      if (!brw_is_drawing_points(brw) && !brw_is_drawing_lines(brw))
+         clip.ViewportXYClipTestEnable = true;
+
+      clip.MinimumPointWidth = 0.125;
+      clip.MaximumPointWidth = 255.875;
+      clip.MaximumVPIndex = viewport_count - 1;
+      if (_mesa_geometric_layers(fb) == 0)
+         clip.ForceZeroRTAIndexEnable = true;
+   }
+}
+
+static const struct brw_tracked_state genX(clip_state) = {
+   .dirty = {
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_POLYGON |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
+               BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_GS_PROG_DATA |
+               BRW_NEW_VS_PROG_DATA |
+               BRW_NEW_META_IN_PROGRESS |
+               BRW_NEW_PRIMITIVE |
+               BRW_NEW_RASTERIZER_DISCARD |
+               BRW_NEW_TES_PROG_DATA |
+               BRW_NEW_VIEWPORT_COUNT,
+   },
+   .emit = genX(upload_clip_state),
+};
+
+/* ---------------------------------------------------------------------- */
+
 #endif
 
 void
@@ -315,7 +447,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       &gen6_vs_state,
       &gen6_gs_state,
-      &gen6_clip_state,
+      &genX(clip_state),
       &gen6_sf_state,
       &gen6_wm_state,
 
@@ -403,7 +535,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_ds_state,
       &gen7_gs_state,
       &gen7_sol_state,
-      &gen6_clip_state,
+      &genX(clip_state),
       &gen7_sbe_state,
       &gen7_sf_state,
       &gen7_wm_state,
@@ -490,7 +622,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen8_ds_state,
       &gen8_gs_state,
       &gen7_sol_state,
-      &gen6_clip_state,
+      &genX(clip_state),
       &gen8_raster_state,
       &gen8_sbe_state,
       &gen8_sf_state,
