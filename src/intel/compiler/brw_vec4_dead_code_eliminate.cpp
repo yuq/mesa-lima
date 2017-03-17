@@ -121,7 +121,7 @@ vec4_visitor::dead_code_eliminate()
             }
          }
 
-         if (inst->writes_flag() && !inst->predicate) {
+         if (inst->writes_flag() && !inst->predicate && inst->exec_size == 8) {
             for (unsigned c = 0; c < 4; c++)
                BITSET_CLEAR(flag_live, c);
          }
