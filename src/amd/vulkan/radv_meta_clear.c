@@ -1175,6 +1175,14 @@ radv_cmd_clear_image(struct radv_cmd_buffer *cmd_buffer,
 		internal_clear_value.color.uint32[0] = value;
 	}
 
+	if (format == VK_FORMAT_R4G4_UNORM_PACK8) {
+		uint8_t r, g;
+		format = VK_FORMAT_R8_UINT;
+		r = float_to_ubyte(clear_value->color.float32[0]) >> 4;
+		g = float_to_ubyte(clear_value->color.float32[1]) >> 4;
+		internal_clear_value.color.uint32[0] = (r << 4) | (g & 0xf);
+	}
+
 	for (uint32_t r = 0; r < range_count; r++) {
 		const VkImageSubresourceRange *range = &ranges[r];
 		for (uint32_t l = 0; l < radv_get_levelCount(image, range); ++l) {
