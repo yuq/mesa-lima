@@ -28,6 +28,7 @@
 
 #include "brw_context.h"
 #include "brw_state.h"
+#include "brw_util.h"
 
 #include "intel_batchbuffer.h"
 #include "intel_fbo.h"
@@ -110,6 +111,235 @@ __gen_combine_address(struct brw_context *brw, void *location,
         __builtin_expect(_dst != NULL, 1);                         \
         _brw_cmd_pack(cmd)(brw, (void *)_dst, &name),              \
         _dst = NULL)
+
+#if GEN_GEN == 6
+/**
+ * Determine the appropriate attribute override value to store into the
+ * 3DSTATE_SF structure for a given fragment shader attribute.  The attribute
+ * override value contains two pieces of information: the location of the
+ * attribute in the VUE (relative to urb_entry_read_offset, see below), and a
+ * flag indicating whether to "swizzle" the attribute based on the direction
+ * the triangle is facing.
+ *
+ * If an attribute is "swizzled", then the given VUE location is used for
+ * front-facing triangles, and the VUE location that immediately follows is
+ * used for back-facing triangles.  We use this to implement the mapping from
+ * gl_FrontColor/gl_BackColor to gl_Color.
+ *
+ * urb_entry_read_offset is the offset into the VUE at which the SF unit is
+ * being instructed to begin reading attribute data.  It can be set to a
+ * nonzero value to prevent the SF unit from wasting time reading elements of
+ * the VUE that are not needed by the fragment shader.  It is measured in
+ * 256-bit increments.
+ */
+static void
+genX(get_attr_override)(struct GENX(SF_OUTPUT_ATTRIBUTE_DETAIL) *attr,
+                        const struct brw_vue_map *vue_map,
+                        int urb_entry_read_offset, int fs_attr,
+                        bool two_side_color, uint32_t *max_source_attr)
+{
+   /* Find the VUE slot for this attribute. */
+   int slot = vue_map->varying_to_slot[fs_attr];
+
+   /* Viewport and Layer are stored in the VUE header.  We need to override
+    * them to zero if earlier stages didn't write them, as GL requires that
+    * they read back as zero when not explicitly set.
+    */
+   if (fs_attr == VARYING_SLOT_VIEWPORT || fs_attr == VARYING_SLOT_LAYER) {
+      attr->ComponentOverrideX = true;
+      attr->ComponentOverrideW = true;
+      attr->ConstantSource = CONST_0000;
+
+      if (!(vue_map->slots_valid & VARYING_BIT_LAYER))
+         attr->ComponentOverrideY = true;
+      if (!(vue_map->slots_valid & VARYING_BIT_VIEWPORT))
+         attr->ComponentOverrideZ = true;
+
+      return;
+   }
+
+   /* If there was only a back color written but not front, use back
+    * as the color instead of undefined
+    */
+   if (slot == -1 && fs_attr == VARYING_SLOT_COL0)
+      slot = vue_map->varying_to_slot[VARYING_SLOT_BFC0];
+   if (slot == -1 && fs_attr == VARYING_SLOT_COL1)
+      slot = vue_map->varying_to_slot[VARYING_SLOT_BFC1];
+
+   if (slot == -1) {
+      /* This attribute does not exist in the VUE--that means that the vertex
+       * shader did not write to it.  This means that either:
+       *
+       * (a) This attribute is a texture coordinate, and it is going to be
+       * replaced with point coordinates (as a consequence of a call to
+       * glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE)), so the
+       * hardware will ignore whatever attribute override we supply.
+       *
+       * (b) This attribute is read by the fragment shader but not written by
+       * the vertex shader, so its value is undefined.  Therefore the
+       * attribute override we supply doesn't matter.
+       *
+       * (c) This attribute is gl_PrimitiveID, and it wasn't written by the
+       * previous shader stage.
+       *
+       * Note that we don't have to worry about the cases where the attribute
+       * is gl_PointCoord or is undergoing point sprite coordinate
+       * replacement, because in those cases, this function isn't called.
+       *
+       * In case (c), we need to program the attribute overrides so that the
+       * primitive ID will be stored in this slot.  In every other case, the
+       * attribute override we supply doesn't matter.  So just go ahead and
+       * program primitive ID in every case.
+       */
+      attr->ComponentOverrideW = true;
+      attr->ComponentOverrideX = true;
+      attr->ComponentOverrideY = true;
+      attr->ComponentOverrideZ = true;
+      attr->ConstantSource = PRIM_ID;
+      return;
+   }
+
+   /* Compute the location of the attribute relative to urb_entry_read_offset.
+    * Each increment of urb_entry_read_offset represents a 256-bit value, so
+    * it counts for two 128-bit VUE slots.
+    */
+   int source_attr = slot - 2 * urb_entry_read_offset;
+   assert(source_attr >= 0 && source_attr < 32);
+
+   /* If we are doing two-sided color, and the VUE slot following this one
+    * represents a back-facing color, then we need to instruct the SF unit to
+    * do back-facing swizzling.
+    */
+   bool swizzling = two_side_color &&
+      ((vue_map->slot_to_varying[slot] == VARYING_SLOT_COL0 &&
+        vue_map->slot_to_varying[slot+1] == VARYING_SLOT_BFC0) ||
+       (vue_map->slot_to_varying[slot] == VARYING_SLOT_COL1 &&
+        vue_map->slot_to_varying[slot+1] == VARYING_SLOT_BFC1));
+
+   /* Update max_source_attr.  If swizzling, the SF will read this slot + 1. */
+   if (*max_source_attr < source_attr + swizzling)
+      *max_source_attr = source_attr + swizzling;
+
+   attr->SourceAttribute = source_attr;
+   if (swizzling)
+      attr->SwizzleSelect = INPUTATTR_FACING;
+}
+
+
+static void
+genX(calculate_attr_overrides)(const struct brw_context *brw,
+                               struct GENX(SF_OUTPUT_ATTRIBUTE_DETAIL) *attr_overrides,
+                               uint32_t *point_sprite_enables,
+                               uint32_t *urb_entry_read_length,
+                               uint32_t *urb_entry_read_offset)
+{
+   const struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_POINT */
+   const struct gl_point_attrib *point = &ctx->Point;
+
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+   uint32_t max_source_attr = 0;
+
+   *point_sprite_enables = 0;
+
+   /* BRW_NEW_FRAGMENT_PROGRAM
+    *
+    * If the fragment shader reads VARYING_SLOT_LAYER, then we need to pass in
+    * the full vertex header.  Otherwise, we can program the SF to start
+    * reading at an offset of 1 (2 varying slots) to skip unnecessary data:
+    * - VARYING_SLOT_PSIZ and BRW_VARYING_SLOT_NDC on gen4-5
+    * - VARYING_SLOT_{PSIZ,LAYER} and VARYING_SLOT_POS on gen6+
+    */
+
+   bool fs_needs_vue_header = brw->fragment_program->info.inputs_read &
+      (VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT);
+
+   *urb_entry_read_offset = fs_needs_vue_header ? 0 : 1;
+
+   /* From the Ivybridge PRM, Vol 2 Part 1, 3DSTATE_SBE,
+    * description of dw10 Point Sprite Texture Coordinate Enable:
+    *
+    * "This field must be programmed to zero when non-point primitives
+    * are rendered."
+    *
+    * The SandyBridge PRM doesn't explicitly say that point sprite enables
+    * must be programmed to zero when rendering non-point primitives, but
+    * the IvyBridge PRM does, and if we don't, we get garbage.
+    *
+    * This is not required on Haswell, as the hardware ignores this state
+    * when drawing non-points -- although we do still need to be careful to
+    * correctly set the attr overrides.
+    *
+    * _NEW_POLYGON
+    * BRW_NEW_PRIMITIVE | BRW_NEW_GS_PROG_DATA | BRW_NEW_TES_PROG_DATA
+    */
+   bool drawing_points = brw_is_drawing_points(brw);
+
+   for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
+      int input_index = wm_prog_data->urb_setup[attr];
+
+      if (input_index < 0)
+         continue;
+
+      /* _NEW_POINT */
+      bool point_sprite = false;
+      if (drawing_points) {
+         if (point->PointSprite &&
+             (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7) &&
+             (point->CoordReplace & (1u << (attr - VARYING_SLOT_TEX0)))) {
+            point_sprite = true;
+         }
+
+         if (attr == VARYING_SLOT_PNTC)
+            point_sprite = true;
+
+         if (point_sprite)
+            *point_sprite_enables |= (1 << input_index);
+      }
+
+      /* BRW_NEW_VUE_MAP_GEOM_OUT | _NEW_LIGHT | _NEW_PROGRAM */
+      struct GENX(SF_OUTPUT_ATTRIBUTE_DETAIL) attribute = { 0 };
+
+      if (!point_sprite) {
+         genX(get_attr_override)(&attribute,
+                                 &brw->vue_map_geom_out,
+                                 *urb_entry_read_offset, attr,
+                                 brw->ctx.VertexProgram._TwoSideEnabled,
+                                 &max_source_attr);
+      }
+
+      /* The hardware can only do the overrides on 16 overrides at a
+       * time, and the other up to 16 have to be lined up so that the
+       * input index = the output index.  We'll need to do some
+       * tweaking to make sure that's the case.
+       */
+      if (input_index < 16)
+         attr_overrides[input_index] = attribute;
+      else
+         assert(attribute.SourceAttribute == input_index);
+   }
+
+   /* From the Sandy Bridge PRM, Volume 2, Part 1, documentation for
+    * 3DSTATE_SF DWord 1 bits 15:11, "Vertex URB Entry Read Length":
+    *
+    * "This field should be set to the minimum length required to read the
+    *  maximum source attribute.  The maximum source attribute is indicated
+    *  by the maximum value of the enabled Attribute # Source Attribute if
+    *  Attribute Swizzle Enable is set, Number of Output Attributes-1 if
+    *  enable is not set.
+    *  read_length = ceiling((max_source_attr + 1) / 2)
+    *
+    *  [errata] Corruption/Hang possible if length programmed larger than
+    *  recommended"
+    *
+    * Similar text exists for Ivy Bridge.
+    */
+   *urb_entry_read_length = DIV_ROUND_UP(max_source_attr + 1, 2);
+}
+#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -336,6 +566,190 @@ static const struct brw_tracked_state genX(clip_state) = {
                BRW_NEW_VIEWPORT_COUNT,
    },
    .emit = genX(upload_clip_state),
+};
+
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_sf)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   float point_size;
+
+#if GEN_GEN <= 7
+   /* _NEW_BUFFERS */
+   bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+   const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
+#endif
+
+   brw_batch_emit(brw, GENX(3DSTATE_SF), sf) {
+      sf.StatisticsEnable = true;
+      sf.ViewportTransformEnable = brw->sf.viewport_transform_enable;
+
+#if GEN_GEN == 7
+      /* _NEW_BUFFERS */
+      sf.DepthBufferSurfaceFormat = brw_depthbuffer_format(brw);
+#endif
+
+#if GEN_GEN <= 7
+      /* _NEW_POLYGON */
+      sf.FrontWinding = ctx->Polygon._FrontBit == render_to_fbo;
+      sf.GlobalDepthOffsetEnableSolid = ctx->Polygon.OffsetFill;
+      sf.GlobalDepthOffsetEnableWireframe = ctx->Polygon.OffsetLine;
+      sf.GlobalDepthOffsetEnablePoint = ctx->Polygon.OffsetPoint;
+
+      switch (ctx->Polygon.FrontMode) {
+         case GL_FILL:
+            sf.FrontFaceFillMode = FILL_MODE_SOLID;
+            break;
+         case GL_LINE:
+            sf.FrontFaceFillMode = FILL_MODE_WIREFRAME;
+            break;
+         case GL_POINT:
+            sf.FrontFaceFillMode = FILL_MODE_POINT;
+            break;
+         default:
+            unreachable("not reached");
+      }
+
+      switch (ctx->Polygon.BackMode) {
+         case GL_FILL:
+            sf.BackFaceFillMode = FILL_MODE_SOLID;
+            break;
+         case GL_LINE:
+            sf.BackFaceFillMode = FILL_MODE_WIREFRAME;
+            break;
+         case GL_POINT:
+            sf.BackFaceFillMode = FILL_MODE_POINT;
+            break;
+         default:
+            unreachable("not reached");
+      }
+
+      sf.ScissorRectangleEnable = true;
+
+      if (ctx->Polygon.CullFlag) {
+         switch (ctx->Polygon.CullFaceMode) {
+            case GL_FRONT:
+               sf.CullMode = CULLMODE_FRONT;
+               break;
+            case GL_BACK:
+               sf.CullMode = CULLMODE_BACK;
+               break;
+            case GL_FRONT_AND_BACK:
+               sf.CullMode = CULLMODE_BOTH;
+               break;
+            default:
+               unreachable("not reached");
+         }
+      } else {
+         sf.CullMode = CULLMODE_NONE;
+      }
+
+#if GEN_IS_HASWELL
+      sf.LineStippleEnable = ctx->Line.StippleFlag;
+#endif
+
+      if (multisampled_fbo && ctx->Multisample.Enabled)
+         sf.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
+
+      sf.GlobalDepthOffsetConstant = ctx->Polygon.OffsetUnits * 2;
+      sf.GlobalDepthOffsetScale = ctx->Polygon.OffsetFactor;
+      sf.GlobalDepthOffsetClamp = ctx->Polygon.OffsetClamp;
+#endif
+
+      /* _NEW_LINE */
+      sf.LineWidth = brw_get_line_width_float(brw);
+
+      if (ctx->Line.SmoothFlag) {
+         sf.LineEndCapAntialiasingRegionWidth = _10pixels;
+#if GEN_GEN <= 7
+         sf.AntiAliasingEnable = true;
+#endif
+      }
+
+      /* _NEW_POINT - Clamp to ARB_point_parameters user limits */
+      point_size = CLAMP(ctx->Point.Size, ctx->Point.MinSize, ctx->Point.MaxSize);
+      /* Clamp to the hardware limits */
+      sf.PointWidth = CLAMP(point_size, 0.125f, 255.875f);
+
+      /* _NEW_PROGRAM | _NEW_POINT, BRW_NEW_VUE_MAP_GEOM_OUT */
+      if (use_state_point_size(brw))
+         sf.PointWidthSource = State;
+
+#if GEN_GEN >= 8
+      /* _NEW_POINT | _NEW_MULTISAMPLE */
+      if ((ctx->Point.SmoothFlag || _mesa_is_multisample_enabled(ctx)) &&
+          !ctx->Point.PointSprite)
+         sf.SmoothPointEnable = true;
+#endif
+
+      sf.AALineDistanceMode = AALINEDISTANCE_TRUE;
+
+      /* _NEW_LIGHT */
+      if (ctx->Light.ProvokingVertex != GL_FIRST_VERTEX_CONVENTION) {
+         sf.TriangleStripListProvokingVertexSelect = 2;
+         sf.TriangleFanProvokingVertexSelect = 2;
+         sf.LineStripListProvokingVertexSelect = 1;
+      } else {
+         sf.TriangleFanProvokingVertexSelect = 1;
+      }
+
+#if GEN_GEN == 6
+      /* BRW_NEW_FS_PROG_DATA */
+      const struct brw_wm_prog_data *wm_prog_data =
+         brw_wm_prog_data(brw->wm.base.prog_data);
+
+      sf.AttributeSwizzleEnable = true;
+      sf.NumberofSFOutputAttributes = wm_prog_data->num_varying_inputs;
+
+      /*
+       * Window coordinates in an FBO are inverted, which means point
+       * sprite origin must be inverted, too.
+       */
+      if ((ctx->Point.SpriteOrigin == GL_LOWER_LEFT) != render_to_fbo) {
+         sf.PointSpriteTextureCoordinateOrigin = LOWERLEFT;
+      } else {
+         sf.PointSpriteTextureCoordinateOrigin = UPPERLEFT;
+      }
+
+      /* BRW_NEW_VUE_MAP_GEOM_OUT | BRW_NEW_FRAGMENT_PROGRAM |
+       * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | BRW_NEW_FS_PROG_DATA
+       */
+      uint32_t urb_entry_read_length;
+      uint32_t urb_entry_read_offset;
+      uint32_t point_sprite_enables;
+      genX(calculate_attr_overrides)(brw, sf.Attribute, &point_sprite_enables,
+                                     &urb_entry_read_length,
+                                     &urb_entry_read_offset);
+      sf.VertexURBEntryReadLength = urb_entry_read_length;
+      sf.VertexURBEntryReadOffset = urb_entry_read_offset;
+      sf.PointSpriteTextureCoordinateEnable = point_sprite_enables;
+      sf.ConstantInterpolationEnable = wm_prog_data->flat_inputs;
+#endif
+   }
+}
+
+static const struct brw_tracked_state genX(sf_state) = {
+   .dirty = {
+      .mesa  = _NEW_LIGHT |
+               _NEW_LINE |
+               _NEW_MULTISAMPLE |
+               _NEW_POINT |
+               _NEW_PROGRAM |
+               (GEN_GEN <= 7 ? _NEW_BUFFERS | _NEW_POLYGON : 0),
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
+               BRW_NEW_VUE_MAP_GEOM_OUT |
+               (GEN_GEN <= 7 ? BRW_NEW_GS_PROG_DATA |
+                               BRW_NEW_PRIMITIVE |
+                               BRW_NEW_TES_PROG_DATA
+                             : 0) |
+               (GEN_GEN == 6 ? BRW_NEW_FS_PROG_DATA |
+                               BRW_NEW_FRAGMENT_PROGRAM
+                             : 0),
+   },
+   .emit = genX(upload_sf),
 };
 
 #endif
@@ -570,7 +984,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen6_vs_state,
       &gen6_gs_state,
       &genX(clip_state),
-      &gen6_sf_state,
+      &genX(sf_state),
       &gen6_wm_state,
 
       &gen6_scissor_state,
@@ -659,7 +1073,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_sol_state,
       &genX(clip_state),
       &gen7_sbe_state,
-      &gen7_sf_state,
+      &genX(sf_state),
       &gen7_wm_state,
       &gen7_ps_state,
 
@@ -747,7 +1161,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(clip_state),
       &genX(raster_state),
       &gen8_sbe_state,
-      &gen8_sf_state,
+      &genX(sf_state),
       &gen8_ps_blend,
       &gen8_ps_extra,
       &gen8_ps_state,
