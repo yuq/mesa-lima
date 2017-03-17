@@ -306,6 +306,10 @@ static const VkExtensionProperties global_extensions[] = {
       .specVersion = 1,
    },
    {
+      .extensionName = VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+      .specVersion = 1,
+   },
+   {
       .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
       .specVersion = 25,
    },
