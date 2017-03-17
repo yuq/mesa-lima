@@ -516,7 +516,15 @@ struct anv_physical_device {
     char                                        path[20];
     const char *                                name;
     struct gen_device_info                      info;
-    uint64_t                                    aperture_size;
+    /** Amount of "GPU memory" we want to advertise
+     *
+     * Clearly, this value is bogus since Intel is a UMA architecture.  On
+     * gen7 platforms, we are limited by GTT size unless we want to implement
+     * fine-grained tracking and GTT splitting.  On Broadwell and above we are
+     * practically unlimited.  However, we will never report more than 3/4 of
+     * the total system ram to try and avoid running out of RAM.
+     */
+    uint64_t                                    heap_size;
     bool                                        supports_48bit_addresses;
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;
@@ -652,6 +660,8 @@ int anv_gem_set_tiling(struct anv_device *device, uint32_t gem_handle,
                        uint32_t stride, uint32_t tiling);
 int anv_gem_create_context(struct anv_device *device);
 int anv_gem_destroy_context(struct anv_device *device, int context);
+int anv_gem_get_context_param(int fd, int context, uint32_t param,
+                              uint64_t *value);
 int anv_gem_get_param(int fd, uint32_t param);
 bool anv_gem_get_bit6_swizzle(int fd, uint32_t tiling);
 int anv_gem_get_aperture(int fd, uint64_t *size);

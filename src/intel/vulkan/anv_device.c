@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/sysinfo.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <xf86drm.h>
@@ -51,6 +52,48 @@ compiler_perf_log(void *data, const char *fmt, ...)
       vfprintf(stderr, fmt, args);
 
    va_end(args);
+}
+
+static VkResult
+anv_compute_heap_size(int fd, uint64_t *heap_size)
+{
+   uint64_t gtt_size;
+   if (anv_gem_get_context_param(fd, 0, I915_CONTEXT_PARAM_GTT_SIZE,
+                                 &gtt_size) == -1) {
+      /* If, for whatever reason, we can't actually get the GTT size from the
+       * kernel (too old?) fall back to the aperture size.
+       */
+      anv_perf_warn("Failed to get I915_CONTEXT_PARAM_GTT_SIZE: %m");
+
+      if (anv_gem_get_aperture(fd, &gtt_size) == -1) {
+         return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                          "failed to get aperture size: %m");
+      }
+   }
+
+   /* Query the total ram from the system */
+   struct sysinfo info;
+   sysinfo(&info);
+
+   uint64_t total_ram = (uint64_t)info.totalram * (uint64_t)info.mem_unit;
+
+   /* We don't want to burn too much ram with the GPU.  If the user has 4GiB
+    * or less, we use at most half.  If they have more than 4GiB, we use 3/4.
+    */
+   uint64_t available_ram;
+   if (total_ram <= 4ull * 1024ull * 1024ull * 1024ull)
+      available_ram = total_ram / 2;
+   else
+      available_ram = total_ram * 3 / 4;
+
+   /* We also want to leave some padding for things we allocate in the driver,
+    * so don't go over 3/4 of the GTT either.
+    */
+   uint64_t available_gtt = gtt_size * 3 / 4;
+
+   *heap_size = MIN2(available_ram, available_gtt);
+
+   return VK_SUCCESS;
 }
 
 static bool
@@ -124,12 +167,6 @@ anv_physical_device_init(struct anv_physical_device *device,
       }
    }
 
-   if (anv_gem_get_aperture(fd, &device->aperture_size) == -1) {
-      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
-                         "failed to get aperture size: %m");
-      goto fail;
-   }
-
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT)) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "kernel missing gem wait");
@@ -150,6 +187,10 @@ anv_physical_device_init(struct anv_physical_device *device,
    }
 
    device->supports_48bit_addresses = anv_gem_supports_48b_addresses(fd);
+
+   result = anv_compute_heap_size(fd, &device->heap_size);
+   if (result != VK_SUCCESS)
+      goto fail;
 
    if (!anv_device_get_cache_uuid(device->uuid)) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
@@ -735,12 +776,6 @@ void anv_GetPhysicalDeviceMemoryProperties(
     VkPhysicalDeviceMemoryProperties*           pMemoryProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-   VkDeviceSize heap_size;
-
-   /* Reserve some wiggle room for the driver by exposing only 75% of the
-    * aperture to the heap.
-    */
-   heap_size = 3 * physical_device->aperture_size / 4;
 
    if (physical_device->info.has_llc) {
       /* Big core GPUs share LLC with the CPU and thus one memory type can be
@@ -777,7 +812,7 @@ void anv_GetPhysicalDeviceMemoryProperties(
 
    pMemoryProperties->memoryHeapCount = 1;
    pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
-      .size = heap_size,
+      .size = physical_device->heap_size,
       .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
    };
 }
