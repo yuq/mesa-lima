@@ -284,9 +284,10 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    const struct gl_context *ctx = &brw->ctx;
    const int streams = ctx->Const.MaxVertexStreams;
 
+   assert(obj->prim_count_bo != NULL);
+
    /* Check if there's enough space for a new pair of four values. */
-   if (obj->prim_count_bo != NULL &&
-       obj->prim_count_buffer_index + 2 * streams >= 4096 / sizeof(uint64_t)) {
+   if (obj->prim_count_buffer_index + 2 * streams >= 4096 / sizeof(uint64_t)) {
       /* Gather up the results so far and release the BO. */
       tally_prims_generated(brw, obj);
    }
