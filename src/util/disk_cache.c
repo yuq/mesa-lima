@@ -481,8 +481,9 @@ make_cache_file_directory(struct disk_cache *cache, const cache_key key)
  */
 static char *
 choose_lru_file_matching(const char *dir_path,
-                         bool (*predicate)(const struct dirent *,
-                                           const char *dir_path))
+                         bool (*predicate)(const char *dir_path,
+                                           const struct stat *,
+                                           const char *, const size_t))
 {
    DIR *dir;
    struct dirent *entry;
@@ -498,17 +499,19 @@ choose_lru_file_matching(const char *dir_path,
       entry = readdir(dir);
       if (entry == NULL)
          break;
-      if (!predicate(entry, dir_path))
-         continue;
 
       struct stat sb;
       if (fstatat(dirfd(dir), entry->d_name, &sb, 0) == 0) {
          if (!lru_atime || (sb.st_atime < lru_atime)) {
-            size_t len = strlen(entry->d_name) + 1;
-            char *tmp = realloc(lru_name, len);
+            size_t len = strlen(entry->d_name);
+
+            if (!predicate(dir_path, &sb, entry->d_name, len))
+               continue;
+
+            char *tmp = realloc(lru_name, len + 1);
             if (tmp) {
                lru_name = tmp;
-               memcpy(lru_name, entry->d_name, len);
+               memcpy(lru_name, entry->d_name, len + 1);
                lru_atime = sb.st_atime;
             }
          }
@@ -533,21 +536,13 @@ choose_lru_file_matching(const char *dir_path,
  * ".tmp"
  */
 static bool
-is_regular_non_tmp_file(const struct dirent *entry, const char *path)
+is_regular_non_tmp_file(const char *path, const struct stat *sb,
+                        const char *d_name, const size_t len)
 {
-   char *filename;
-   if (asprintf(&filename, "%s/%s", path, entry->d_name) == -1)
+   if (!S_ISREG(sb->st_mode))
       return false;
 
-   struct stat sb;
-   int res = stat(filename, &sb);
-   free(filename);
-
-   if (res == -1 || !S_ISREG(sb.st_mode))
-      return false;
-
-   size_t len = strlen (entry->d_name);
-   if (len >= 4 && strcmp(&entry->d_name[len-4], ".tmp") == 0)
+   if (len >= 4 && strcmp(&d_name[len-4], ".tmp") == 0)
       return false;
 
    return true;
@@ -579,29 +574,21 @@ unlink_lru_file_from_directory(const char *path)
  * special name of ".."). We also return false if the dir is empty.
  */
 static bool
-is_two_character_sub_directory(const struct dirent *entry, const char *path)
+is_two_character_sub_directory(const char *path, const struct stat *sb,
+                               const char *d_name, const size_t len)
 {
+   if (!S_ISDIR(sb->st_mode))
+      return false;
+
+   if (len != 2)
+      return false;
+
+   if (strcmp(d_name, "..") == 0)
+      return false;
+
    char *subdir;
-   if (asprintf(&subdir, "%s/%s", path, entry->d_name) == -1)
+   if (asprintf(&subdir, "%s/%s", path, d_name) == -1)
       return false;
-
-   struct stat sb;
-   int res = stat(subdir, &sb);
-   if (res == -1 || !S_ISDIR(sb.st_mode)) {
-      free(subdir);
-      return false;
-   }
-
-   if (strlen(entry->d_name) != 2) {
-      free(subdir);
-      return false;
-   }
-
-   if (strcmp(entry->d_name, "..") == 0) {
-      free(subdir);
-      return false;
-   }
-
    DIR *dir = opendir(subdir);
    free(subdir);
 
