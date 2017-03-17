@@ -24,25 +24,7 @@ from __future__ import print_function
 import os
 import sys
 import re
-import argparse
-from mako.template import Template
-from mako.exceptions import RichTraceback
-
-def write_template_to_string(template_filename, **kwargs):
-    try:
-        template = Template(filename=template_filename)
-        # Split + Join fixes line-endings for whatever platform you are using
-        return '\n'.join(template.render(**kwargs).splitlines())
-    except:
-        traceback = RichTraceback()
-        for (filename, lineno, function, line) in traceback.traceback:
-            print('File %s, line %s, in %s' % (filename, lineno, function))
-            print(line, '\n')
-        print('%s: %s' % (str(traceback.error.__class__.__name__), traceback.error))
-
-def write_template_to_file(template_filename, output_filename, **kwargs):
-    with open(output_filename, 'w') as outfile:
-        print(write_template_to_string(template_filename, **kwargs), file=outfile)
+from gen_common import ArgumentParser, MakoTemplateWriter
 
 def parse_event_fields(lines, idx, event_dict):
     field_names = []
@@ -141,7 +123,7 @@ def parse_protos(filename):
 def main():
 
     # Parse args...
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument('--proto', '-p', help='Path to proto file', required=True)
     parser.add_argument('--output', '-o', help='Output filename (i.e. event.hpp)', required=True)
     parser.add_argument('--gen_event_hpp', help='Generate event header', action='store_true', default=False)
@@ -172,7 +154,7 @@ def main():
         template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.hpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
-        write_template_to_file(template_file, output_fullpath,
+        MakoTemplateWriter.to_file(template_file, output_fullpath,
                 filename=output_filename,
                 protos=protos)
 
@@ -182,7 +164,7 @@ def main():
         template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.cpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
-        write_template_to_file(template_file, output_fullpath,
+        MakoTemplateWriter.to_file(template_file, output_fullpath,
                 filename=output_filename,
                 protos=protos)
 
@@ -192,7 +174,7 @@ def main():
         template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandler.hpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
-        write_template_to_file(template_file, output_fullpath,
+        MakoTemplateWriter.to_file(template_file, output_fullpath,
                 filename=output_filename,
                 event_header='gen_ar_event.hpp',
                 protos=protos)
@@ -203,7 +185,7 @@ def main():
         template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandlerfile.hpp'])
         output_fullpath = os.sep.join([output_dir, output_filename])
 
-        write_template_to_file(template_file, output_fullpath,
+        MakoTemplateWriter.to_file(template_file, output_fullpath,
                 filename=output_filename,
                 event_header='gen_ar_eventhandler.hpp',
                 protos=protos)

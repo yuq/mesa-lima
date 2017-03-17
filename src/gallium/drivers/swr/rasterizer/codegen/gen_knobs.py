@@ -23,59 +23,41 @@
 from __future__ import print_function
 import os
 import sys
-import argparse
 import knob_defs
-from mako.template import Template
-from mako.exceptions import RichTraceback
-
-def write_template_to_string(template_filename, **kwargs):
-    try:
-        template = Template(filename=os.path.abspath(template_filename))
-        # Split + Join fixes line-endings for whatever platform you are using
-        return '\n'.join(template.render(**kwargs).splitlines())
-    except:
-        traceback = RichTraceback()
-        for (filename, lineno, function, line) in traceback.traceback:
-            print("File %s, line %s, in %s" % (filename, lineno, function))
-            print(line, "\n")
-        print("%s: %s" % (str(traceback.error.__class__.__name__), traceback.error))
-
-def write_template_to_file(template_filename, output_filename, **kwargs):
-    output_dirname = os.path.dirname(output_filename)
-    if not os.path.exists(output_dirname):
-        os.makedirs(output_dirname)
-    with open(output_filename, "w") as outfile:
-        print(write_template_to_string(template_filename, **kwargs), file=outfile)
+from gen_common import MakoTemplateWriter, ArgumentParser
 
 def main(args=sys.argv[1:]):
 
     # parse args
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", "-i", help="Path to gen_knobs.cpp template", required=True)
+    parser = ArgumentParser()
     parser.add_argument("--output", "-o", help="Path to output file", required=True)
     parser.add_argument("--gen_h", "-gen_h", help="Generate gen_knobs.h", action="store_true", default=False)
     parser.add_argument("--gen_cpp", "-gen_cpp", help="Generate gen_knobs.cpp", action="store_true", required=False)
 
     args = parser.parse_args()
 
-    if args.input:
-        if args.gen_h:
-            write_template_to_file(args.input,
-                                   args.output,
-                                   cmdline=sys.argv,
-                                   filename='gen_knobs',
-                                   knobs=knob_defs.KNOBS,
-                                   includes=['core/knobs_init.h', 'common/os.h', 'sstream', 'iomanip'],
-                                   gen_header=True)
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    template_file = os.path.join(cur_dir, 'templates', 'gen_knobs.cpp')
 
-        if args.gen_cpp:
-            write_template_to_file(args.input,
-                                   args.output,
-                                   cmdline=sys.argv,
-                                   filename='gen_knobs',
-                                   knobs=knob_defs.KNOBS,
-                                   includes=['core/knobs_init.h', 'common/os.h', 'sstream', 'iomanip'],
-                                   gen_header=False)
+    if args.gen_h:
+        MakoTemplateWriter.to_file(
+            template_file,
+            args.output,
+            cmdline=sys.argv,
+            filename='gen_knobs',
+            knobs=knob_defs.KNOBS,
+            includes=['core/knobs_init.h', 'common/os.h', 'sstream', 'iomanip'],
+            gen_header=True)
+
+    if args.gen_cpp:
+        MakoTemplateWriter.to_file(
+            template_file,
+            args.output,
+            cmdline=sys.argv,
+            filename='gen_knobs',
+            knobs=knob_defs.KNOBS,
+            includes=['core/knobs_init.h', 'common/os.h', 'sstream', 'iomanip'],
+            gen_header=False)
 
     return 0
 

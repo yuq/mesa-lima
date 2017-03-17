@@ -21,31 +21,8 @@
 
 from __future__ import print_function
 import os, sys, re
-import argparse
-import json as JSON
-import operator
-from mako.template import Template
-from mako.exceptions import RichTraceback
-
-def write_template_to_string(template_filename, **kwargs):
-    try:
-        template = Template(filename=os.path.abspath(template_filename))
-        # Split + Join fixes line-endings for whatever platform you are using
-        return '\n'.join(template.render(**kwargs).splitlines())
-    except:
-        traceback = RichTraceback()
-        for (filename, lineno, function, line) in traceback.traceback:
-            print('File %s, line %s, in %s' % (filename, lineno, function))
-            print(line, '\n')
-        print('%s: %s' % (str(traceback.error.__class__.__name__), traceback.error))
-
-def write_template_to_file(template_filename, output_filename, **kwargs):
-    output_dirname = os.path.dirname(output_filename)
-    if not os.path.exists(output_dirname):
-        os.makedirs(output_dirname)
-    with open(output_filename, 'w') as outfile:
-        print(write_template_to_string(template_filename, **kwargs), file=outfile)
-
+from gen_common import MakoTemplateWriter, ArgumentParser
+from argparse import FileType
 
 inst_aliases = {
     'SHUFFLE_VECTOR': 'VSHUFFLE',
@@ -215,7 +192,7 @@ def generate_gen_h(functions, output_dir):
             'args'      : ', '.join(func['arg_names']),
         })
 
-    write_template_to_file(
+    MakoTemplateWriter.to_file(
         template,
         output_filename,
         cmdline=sys.argv,
@@ -242,7 +219,7 @@ def generate_x86_h(output_dir):
             'intrin'    : inst[1],
         })
 
-    write_template_to_file(
+    MakoTemplateWriter.to_file(
         template,
         output_filename,
         cmdline=sys.argv,
@@ -259,8 +236,8 @@ def generate_x86_h(output_dir):
 def main():
 
     # Parse args...
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input', '-i', type=argparse.FileType('r'), help='Path to IRBuilder.h', required=False)
+    parser = ArgumentParser()
+    parser.add_argument('--input', '-i', type=FileType('r'), help='Path to IRBuilder.h', required=False)
     parser.add_argument('--output-dir', '-o', action='store', dest='output', help='Path to output directory', required=True)
     parser.add_argument('--gen_h', help='Generate builder_gen.h', action='store_true', default=False)
     parser.add_argument('--gen_x86_h', help='Generate x86 intrinsics. No input is needed.', action='store_true', default=False)

@@ -24,36 +24,14 @@
 
 from __future__ import print_function
 import itertools
-import math
-import argparse
 import os
 import sys
-from mako.template import Template
-from mako.exceptions import RichTraceback
-
-def write_template_to_string(template_filename, **kwargs):
-    try:
-        template = Template(filename=os.path.abspath(template_filename))
-        # Split + Join fixes line-endings for whatever platform you are using
-        return '\n'.join(template.render(**kwargs).splitlines())
-    except:
-        traceback = RichTraceback()
-        for (filename, lineno, function, line) in traceback.traceback:
-            print("File %s, line %s, in %s" % (filename, lineno, function))
-            print(line, "\n")
-        print("%s: %s" % (str(traceback.error.__class__.__name__), traceback.error))
-
-def write_template_to_file(template_filename, output_filename, **kwargs):
-    output_dirname = os.path.dirname(output_filename)
-    if not os.path.exists(output_dirname):
-        os.makedirs(output_dirname)
-    with open(output_filename, "w") as outfile:
-        print(write_template_to_string(template_filename, **kwargs), file=outfile)
+from gen_common import ArgumentParser, MakoTemplateWriter
 
 
 def main(args=sys.argv[1:]):
     thisDir = os.path.dirname(os.path.realpath(__file__))
-    parser = argparse.ArgumentParser("Generate files and initialization functions for all permutuations of BackendPixelRate.")
+    parser = ArgumentParser("Generate files and initialization functions for all permutuations of BackendPixelRate.")
     parser.add_argument('--dim', help="gBackendPixelRateTable array dimensions", nargs='+', type=int, required=True)
     parser.add_argument('--outdir', help="output directory", nargs='?', type=str, default=thisDir)
     parser.add_argument('--split', help="how many lines of initialization per file [0=no split]", nargs='?', type=int, default='512')
@@ -100,7 +78,7 @@ def main(args=sys.argv[1:]):
         for fileNum in range(numFiles):
             filename = baseCppName % str(fileNum)
             #print('Generating', filename)
-            write_template_to_file(
+            MakoTemplateWriter.to_file(
                 templateCpp,
                 baseCppName % str(fileNum),
                 cmdline=sys.argv,
@@ -112,7 +90,7 @@ def main(args=sys.argv[1:]):
         templateCmake = os.path.join(thisDir, 'templates', 'gen_backend.cmake')
         cmakeFile = os.path.join(args.outdir, 'gen_backends.cmake')
         #print('Generating', cmakeFile)
-        write_template_to_file(
+        MakoTemplateWriter.to_file(
             templateCmake,
             cmakeFile,
             cmdline=sys.argv,

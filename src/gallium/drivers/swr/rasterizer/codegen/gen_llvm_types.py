@@ -21,30 +21,8 @@
 
 from __future__ import print_function
 import os, sys, re
-import argparse
-import json as JSON
-import operator
-from mako.template import Template
-from mako.exceptions import RichTraceback
-
-def write_template_to_string(template_filename, **kwargs):
-    try:
-        template = Template(filename=os.path.abspath(template_filename))
-        # Split + Join fixes line-endings for whatever platform you are using
-        return '\n'.join(template.render(**kwargs).splitlines())
-    except:
-        traceback = RichTraceback()
-        for (filename, lineno, function, line) in traceback.traceback:
-            print('File %s, line %s, in %s' % (filename, lineno, function))
-            print(line, '\n')
-        print('%s: %s' % (str(traceback.error.__class__.__name__), traceback.error))
-
-def write_template_to_file(template_filename, output_filename, **kwargs):
-    output_dirname = os.path.dirname(output_filename)
-    if not os.path.exists(output_dirname):
-        os.makedirs(output_dirname)
-    with open(output_filename, 'w') as outfile:
-        print(write_template_to_string(template_filename, **kwargs), file=outfile)
+from gen_common import MakoTemplateWriter, ArgumentParser
+from argparse import FileType
 
 '''
 '''
@@ -300,7 +278,7 @@ def gen_llvm_types(input_file, output_file):
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     template = os.path.join(cur_dir, 'templates', 'gen_llvm.hpp')
 
-    write_template_to_file(
+    MakoTemplateWriter.to_file(
         template,
         output_file,
         cmdline=sys.argv,
@@ -315,8 +293,8 @@ def gen_llvm_types(input_file, output_file):
 def main():
 
     # Parse args...
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input', '-i', type=argparse.FileType('r'),
+    parser = ArgumentParser()
+    parser.add_argument('--input', '-i', type=FileType('r'),
             help='Path to input file containing structs', required=True)
     parser.add_argument('--output', '-o', action='store',
             help='Path to output file', required=True)
