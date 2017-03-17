@@ -175,7 +175,7 @@ for src_t in [tint, tuint, tfloat]:
 
    for dst_t in dst_types:
       for bit_size in [32, 64]:
-         unop_convert("{}2{}{}".format(src_t[0], dst_t[0], bit_size),
+         unop_convert("{0}2{1}{2}".format(src_t[0], dst_t[0], bit_size),
                       dst_t + str(bit_size), src_t, "src0")
 
 # We'll hand-code the to/from bool conversion opcodes.  Because bool doesn't

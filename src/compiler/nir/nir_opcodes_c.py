@@ -64,7 +64,7 @@ nir_type_conversion_op(nir_alu_type src, nir_alu_type dst)
                switch (dst_bit_size) {
 %                 for dst_bits in [32, 64]:
                   case ${dst_bits}:
-                     return ${'nir_op_{}2{}{}'.format(src_t[0], dst_t[0], dst_bits)};
+                     return ${'nir_op_{0}2{1}{2}'.format(src_t[0], dst_t[0], dst_bits)};
 %                 endfor
                   default:
                      unreachable("Invalid nir alu bit size");
