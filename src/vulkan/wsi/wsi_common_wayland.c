@@ -31,6 +31,7 @@
 #include <string.h>
 #include <pthread.h>
 
+#include "util/vk_util.h"
 #include "wsi_common_wayland.h"
 #include "wayland-drm-client-protocol.h"
 
@@ -412,28 +413,17 @@ wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
    if (!display)
       return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-   if (pSurfaceFormats == NULL) {
-      *pSurfaceFormatCount = u_vector_length(&display->formats);
-      return VK_SUCCESS;
+   VK_OUTARRAY_MAKE(out, pSurfaceFormats, pSurfaceFormatCount);
+
+   VkFormat *disp_fmt;
+   u_vector_foreach(disp_fmt, &display->formats) {
+      vk_outarray_append(&out, out_fmt) {
+         out_fmt->format = *disp_fmt;
+         out_fmt->colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+      }
    }
 
-   uint32_t count = 0;
-   VkFormat *f;
-   u_vector_foreach(f, &display->formats) {
-      if (count == *pSurfaceFormatCount)
-         return VK_INCOMPLETE;
-
-      pSurfaceFormats[count++] = (VkSurfaceFormatKHR) {
-         .format = *f,
-         /* TODO: We should get this from the compositor somehow */
-         .colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
-      };
-   }
-
-   assert(*pSurfaceFormatCount <= count);
-   *pSurfaceFormatCount = count;
-
-   return VK_SUCCESS;
+   return vk_outarray_status(&out);
 }
 
 static VkResult
