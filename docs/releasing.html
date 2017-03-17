@@ -379,7 +379,7 @@ Here is one solution that I've been using.
 	chmod 755 -fR $__build_root; rm -rf $__build_root
 	mkdir -p $__build_root &amp;&amp; cd $__build_root
 
-	$__mesa_root/autogen.sh --enable-llvm-shared-libs &amp;&amp; make -j2 distcheck
+	$__mesa_root/autogen.sh &amp;&amp; make -j2 distcheck
 
 	# Build check the tarballs (scons, linux)
 	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
