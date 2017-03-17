@@ -192,9 +192,12 @@ offset(dst_reg reg, unsigned width, unsigned delta)
 }
 
 static inline dst_reg
-horiz_offset(dst_reg reg, unsigned delta)
+horiz_offset(const dst_reg &reg, unsigned delta)
 {
-   return byte_offset(reg, delta * type_sz(reg.type));
+   if (is_uniform(src_reg(reg)))
+      return reg;
+   else
+      return byte_offset(reg, delta * type_sz(reg.type));
 }
 
 static inline dst_reg
