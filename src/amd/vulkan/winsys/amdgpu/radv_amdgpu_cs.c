@@ -998,8 +998,8 @@ static void radv_amdgpu_winsys_cs_dump(struct radeon_winsys_cs *_cs,
 		num_dw = cs->ib.size;
 	}
 	assert(ib);
-	ac_parse_ib(file, ib, num_dw, trace_id, "main IB", cs->ws->info.chip_class,
-		    radv_amdgpu_winsys_get_cpu_addr, cs);
+	ac_parse_ib(file, ib, num_dw, (const int*)&trace_id, 1,  "main IB",
+		    cs->ws->info.chip_class, radv_amdgpu_winsys_get_cpu_addr, cs);
 }
 
 static struct radeon_winsys_ctx *radv_amdgpu_ctx_create(struct radeon_winsys *_ws)

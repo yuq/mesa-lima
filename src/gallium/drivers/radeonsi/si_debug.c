@@ -285,8 +285,8 @@ static void si_log_chunk_type_cs_destroy(void *data)
 
 static void si_parse_current_ib(FILE *f, struct radeon_winsys_cs *cs,
 				unsigned begin, unsigned end,
-				unsigned last_trace_id, const char *name,
-				enum chip_class chip_class)
+				int *last_trace_id, unsigned trace_id_count,
+				const char *name, enum chip_class chip_class)
 {
 	unsigned orig_end = end;
 
@@ -301,7 +301,8 @@ static void si_parse_current_ib(FILE *f, struct radeon_winsys_cs *cs,
 		if (begin < chunk->cdw) {
 			ac_parse_ib_chunk(f, chunk->buf + begin,
 					  MIN2(end, chunk->cdw) - begin,
-					  last_trace_id, chip_class, NULL, NULL);
+					  last_trace_id, trace_id_count,
+				          chip_class, NULL, NULL);
 		}
 
 		if (end <= chunk->cdw)
@@ -318,7 +319,7 @@ static void si_parse_current_ib(FILE *f, struct radeon_winsys_cs *cs,
 	assert(end <= cs->current.cdw);
 
 	ac_parse_ib_chunk(f, cs->current.buf + begin, end - begin, last_trace_id,
-			  chip_class, NULL, NULL);
+			  trace_id_count, chip_class, NULL, NULL);
 
 	fprintf(f, "------------------- %s end (dw = %u) -------------------\n\n",
 		name, orig_end);
@@ -346,25 +347,25 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 		if (chunk->gfx_begin == 0) {
 			if (ctx->init_config)
 				ac_parse_ib(f, ctx->init_config->pm4, ctx->init_config->ndw,
-					    -1, "IB2: Init config", ctx->b.chip_class,
+					    NULL, 0, "IB2: Init config", ctx->b.chip_class,
 					    NULL, NULL);
 
 			if (ctx->init_config_gs_rings)
 				ac_parse_ib(f, ctx->init_config_gs_rings->pm4,
 					    ctx->init_config_gs_rings->ndw,
-					    -1, "IB2: Init GS rings", ctx->b.chip_class,
+					    NULL, 0, "IB2: Init GS rings", ctx->b.chip_class,
 					    NULL, NULL);
 		}
 
 		if (scs->flushed) {
 			ac_parse_ib(f, scs->gfx.ib + chunk->gfx_begin,
 				    chunk->gfx_end - chunk->gfx_begin,
-				    last_trace_id, "IB", ctx->b.chip_class,
+				    &last_trace_id, map ? 1 : 0, "IB", ctx->b.chip_class,
 				    NULL, NULL);
 		} else {
 			si_parse_current_ib(f, ctx->b.gfx.cs, chunk->gfx_begin,
-					    chunk->gfx_end, last_trace_id, "IB",
-					    ctx->b.chip_class);
+					    chunk->gfx_end, &last_trace_id, map ? 1 : 0,
+					    "IB", ctx->b.chip_class);
 		}
 	}
 
