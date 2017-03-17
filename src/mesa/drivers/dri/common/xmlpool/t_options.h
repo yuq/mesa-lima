@@ -120,6 +120,11 @@ DRI_CONF_OPT_BEGIN_B(allow_higher_compat_version, def) \
         DRI_CONF_DESC(en,gettext("Allow a higher compat profile (version 3.1+) for apps that request it")) \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_FORCE_GLSL_ABS_SQRT(def) \
+DRI_CONF_OPT_BEGIN_B(force_glsl_abs_sqrt, def) \
+        DRI_CONF_DESC(en,gettext("Force computing the absolute value for sqrt() and inversesqrt()")) \
+DRI_CONF_OPT_END
+
 
 
 /**

@@ -881,6 +881,8 @@ void st_init_extensions(struct pipe_screen *screen,
 
    consts->AllowHigherCompatVersion = options->allow_higher_compat_version;
 
+   consts->ForceGLSLAbsSqrt = options->force_glsl_abs_sqrt;
+
    consts->dri_config_options_sha1 = options->config_options_sha1;
 
    if (consts->GLSLVersion >= 400)

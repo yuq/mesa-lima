@@ -3556,6 +3556,12 @@ struct gl_constants
    GLboolean AllowHigherCompatVersion;
 
    /**
+    * Force computing the absolute value for sqrt() and inversesqrt() to follow
+    * D3D9 when apps rely on this behaviour.
+    */
+   GLboolean ForceGLSLAbsSqrt;
+
+   /**
     * Force uninitialized variables to default to zero.
     */
    GLboolean GLSLZeroInit;
