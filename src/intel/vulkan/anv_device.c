@@ -535,8 +535,6 @@ void anv_GetPhysicalDeviceProperties(
    ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
    const struct gen_device_info *devinfo = &pdevice->info;
 
-   const float time_stamp_base = devinfo->gen >= 9 ? 83.333 : 80.0;
-
    /* See assertions made when programming the buffer surface state. */
    const uint32_t max_raw_buffer_sz = devinfo->gen >= 7 ?
                                       (1ul << 30) : (1ul << 27);
@@ -641,7 +639,7 @@ void anv_GetPhysicalDeviceProperties(
       .storageImageSampleCounts                 = VK_SAMPLE_COUNT_1_BIT,
       .maxSampleMaskWords                       = 1,
       .timestampComputeAndGraphics              = false,
-      .timestampPeriod                          = time_stamp_base,
+      .timestampPeriod                          = devinfo->timebase_scale,
       .maxClipDistances                         = 8,
       .maxCullDistances                         = 8,
       .maxCombinedClipAndCullDistances          = 8,
