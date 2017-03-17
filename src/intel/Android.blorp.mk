@@ -41,7 +41,5 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_STATIC_LIBRARIES := libmesa_nir
 
-LOCAL_SHARED_LIBRARIES := libdrm_intel
-
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)

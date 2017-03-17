@@ -66,7 +66,7 @@ $(intermediates)/vulkan/anv_entrypoints.h: $(intermediates)/vulkan/dummy.c
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
         $(intermediates)
 
-LOCAL_SHARED_LIBRARIES := libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -112,7 +112,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -132,7 +132,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -152,7 +152,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -191,7 +191,7 @@ $(intermediates)/vulkan/anv_entrypoints.c:
 		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
 		--outdir $(dir $@)
 
-LOCAL_SHARED_LIBRARIES := libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -231,8 +231,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_intel_compiler \
 	libmesa_anv_entrypoints
 
-LOCAL_SHARED_LIBRARIES := \
-	libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm
 
 include $(MESA_COMMON_MK)
 include $(BUILD_SHARED_LIBRARY)

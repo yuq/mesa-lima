@@ -46,9 +46,6 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/intel/compiler \
 	$(MESA_TOP)/src/compiler/nir
 
-LOCAL_SHARED_LIBRARIES := \
-	libdrm_intel
-
 brw_nir_trig_workarounds_deps := \
 	$(LOCAL_PATH)/compiler/brw_nir_trig_workarounds.py \
 	$(MESA_TOP)/src/compiler/nir/nir_algebraic.py
