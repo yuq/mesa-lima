@@ -206,6 +206,9 @@ dri_unbind_context(__DRIcontext * cPriv)
 
    if (--ctx->bind_count == 0) {
       if (ctx->st == ctx->stapi->get_current(ctx->stapi)) {
+         if (ctx->st->thread_finish)
+            ctx->st->thread_finish(ctx->st);
+
          /* For conformance, unbind is supposed to flush the context.
           * However, if we do it here we might end up flushing a partially
           * destroyed context. Instead, we flush in dri_make_current and
