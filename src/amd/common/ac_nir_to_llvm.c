@@ -1230,6 +1230,33 @@ static LLVMValueRef emit_b2f(struct nir_to_llvm_context *ctx,
 	return LLVMBuildAnd(ctx->builder, src0, LLVMBuildBitCast(ctx->builder, LLVMConstReal(ctx->f32, 1.0), ctx->i32, ""), "");
 }
 
+static LLVMValueRef emit_f2f16(struct nir_to_llvm_context *ctx,
+			       LLVMValueRef src0)
+{
+	LLVMValueRef result;
+	LLVMValueRef cond;
+
+	src0 = to_float(ctx, src0);
+	result = LLVMBuildFPTrunc(ctx->builder, src0, ctx->f16, "");
+
+	/* TODO SI/CIK options here */
+	if (ctx->options->chip_class >= VI) {
+		LLVMValueRef args[2];
+		/* Check if the result is a denormal - and flush to 0 if so. */
+		args[0] = result;
+		args[1] = LLVMConstInt(ctx->i32, N_SUBNORMAL | P_SUBNORMAL, false);
+		cond = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.class.f16", ctx->i1, args, 2, AC_FUNC_ATTR_READNONE);
+	}
+
+	/* need to convert back up to f32 */
+	result = LLVMBuildFPExt(ctx->builder, result, ctx->f32, "");
+
+	if (ctx->options->chip_class >= VI)
+		result = LLVMBuildSelect(ctx->builder, cond, ctx->f32zero, result, "");
+
+	return result;
+}
+
 static LLVMValueRef emit_umul_high(struct nir_to_llvm_context *ctx,
 				   LLVMValueRef src0, LLVMValueRef src1)
 {
@@ -1717,10 +1744,7 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 		result = emit_b2f(ctx, src[0]);
 		break;
 	case nir_op_fquantize2f16:
-		src[0] = to_float(ctx, src[0]);
-		result = LLVMBuildFPTrunc(ctx->builder, src[0], ctx->f16, "");
-		/* need to convert back up to f32 */
-		result = LLVMBuildFPExt(ctx->builder, result, ctx->f32, "");
+		result = emit_f2f16(ctx, src[0]);
 		break;
 	case nir_op_umul_high:
 		result = emit_umul_high(ctx, src[0], src[1]);
