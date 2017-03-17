@@ -1653,10 +1653,18 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_fmax:
 		result = emit_intrin_2f_param(ctx, "llvm.maxnum",
 		                              to_float_type(ctx, def_type), src[0], src[1]);
+		if (instr->dest.dest.ssa.bit_size == 32)
+			result = emit_intrin_1f_param(ctx, "llvm.canonicalize",
+						      to_float_type(ctx, def_type),
+						      result);
 		break;
 	case nir_op_fmin:
 		result = emit_intrin_2f_param(ctx, "llvm.minnum",
 		                              to_float_type(ctx, def_type), src[0], src[1]);
+		if (instr->dest.dest.ssa.bit_size == 32)
+			result = emit_intrin_1f_param(ctx, "llvm.canonicalize",
+						      to_float_type(ctx, def_type),
+						      result);
 		break;
 	case nir_op_ffma:
 		result = emit_intrin_3f_param(ctx, "llvm.fma",
