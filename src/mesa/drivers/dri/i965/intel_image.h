@@ -71,6 +71,7 @@ struct __DRIimageRec {
    GLenum internal_format;
    uint32_t dri_format;
    GLuint format;
+   uint64_t modifier; /**< fb modifier (fourcc) */
    uint32_t offset;
 
    /*

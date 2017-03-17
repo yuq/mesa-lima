@@ -635,6 +635,12 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
    case __DRI_IMAGE_ATTRIB_OFFSET:
       *value = image->offset;
       return true;
+   case __DRI_IMAGE_ATTRIB_MODIFIER_LOWER:
+      *value = (image->modifier & 0xffffffff);
+      return true;
+   case __DRI_IMAGE_ATTRIB_MODIFIER_UPPER:
+      *value = ((image->modifier >> 32) & 0xffffffff);
+      return true;
 
   default:
       return false;
