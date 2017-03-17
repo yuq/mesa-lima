@@ -969,6 +969,19 @@ static void *radv_amdgpu_winsys_get_cpu_addr(void *_cs, uint64_t addr)
 				return (char *)ret + (addr - bo->va);
 		}
 	}
+	if(cs->ws->debug_all_bos) {
+		pthread_mutex_lock(&cs->ws->global_bo_list_lock);
+		list_for_each_entry(struct radv_amdgpu_winsys_bo, bo,
+		                    &cs->ws->global_bo_list, global_list_item) {
+			if (addr >= bo->va && addr - bo->va < bo->size) {
+				if (amdgpu_bo_cpu_map(bo->bo, &ret) == 0) {
+					pthread_mutex_unlock(&cs->ws->global_bo_list_lock);
+					return (char *)ret + (addr - bo->va);
+				}
+			}
+		}
+		pthread_mutex_unlock(&cs->ws->global_bo_list_lock);
+	}
 	return ret;
 }
 
