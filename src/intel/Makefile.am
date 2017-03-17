@@ -37,7 +37,6 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
-	$(INTEL_CFLAGS) \
 	$(VALGRIND_CFLAGS) \
 	$(DEFINES)
 
