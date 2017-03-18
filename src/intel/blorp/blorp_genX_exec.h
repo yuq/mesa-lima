@@ -256,13 +256,15 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
    blorp_emit_vertex_data(batch, params, &vb[0].BufferStartingAddress, &size);
    vb[0].VertexBufferIndex = 0;
    vb[0].BufferPitch = 3 * sizeof(float);
+#if GEN_GEN >= 6
    vb[0].VertexBufferMOCS = batch->blorp->mocs.vb;
+#endif
 #if GEN_GEN >= 7
    vb[0].AddressModifyEnable = true;
 #endif
 #if GEN_GEN >= 8
    vb[0].BufferSize = size;
-#else
+#elif GEN_GEN >= 5
    vb[0].BufferAccessType = VERTEXDATA;
    vb[0].EndAddress = vb[0].BufferStartingAddress;
    vb[0].EndAddress.offset += size - 1;
@@ -272,13 +274,15 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
                                  &vb[1].BufferStartingAddress, &size);
    vb[1].VertexBufferIndex = 1;
    vb[1].BufferPitch = 0;
+#if GEN_GEN >= 6
    vb[1].VertexBufferMOCS = batch->blorp->mocs.vb;
+#endif
 #if GEN_GEN >= 7
    vb[1].AddressModifyEnable = true;
 #endif
 #if GEN_GEN >= 8
    vb[1].BufferSize = size;
-#else
+#elif GEN_GEN >= 5
    vb[1].BufferAccessType = INSTANCEDATA;
    vb[1].EndAddress = vb[1].BufferStartingAddress;
    vb[1].EndAddress.offset += size - 1;
@@ -364,8 +368,10 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
     */
 #if GEN_GEN >= 8
    ve[0].Component1Control = VFCOMP_STORE_0;
-#else
+#elif GEN_GEN >= 5
    ve[0].Component1Control = VFCOMP_STORE_IID;
+#else
+   ve[0].Component1Control = VFCOMP_STORE_0;
 #endif
    ve[0].Component2Control = VFCOMP_STORE_SRC;
    ve[0].Component3Control = VFCOMP_STORE_SRC;
@@ -425,7 +431,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 }
 
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
-static void
+static uint32_t
 blorp_emit_viewport_state(struct blorp_batch *batch,
                           const struct blorp_params *params)
 {
@@ -439,15 +445,17 @@ blorp_emit_viewport_state(struct blorp_batch *batch,
    blorp_emit(batch, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), vsp) {
       vsp.CCViewportPointer = cc_vp_offset;
    }
-#else
+#elif GEN_GEN == 6
    blorp_emit(batch, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vsp) {
       vsp.CCViewportStateChange = true;
       vsp.PointertoCC_VIEWPORT = cc_vp_offset;
    }
 #endif
+
+   return cc_vp_offset;
 }
 
-static void
+static uint32_t
 blorp_emit_sampler_state(struct blorp_batch *batch,
                          const struct blorp_params *params)
 {
@@ -468,14 +476,16 @@ blorp_emit_sampler_state(struct blorp_batch *batch,
       sampler.VAddressMagFilterRoundingEnable = true;
       sampler.UAddressMinFilterRoundingEnable = true;
       sampler.UAddressMagFilterRoundingEnable = true;
+#if GEN_GEN >= 6
       sampler.NonnormalizedCoordinateEnable = true;
+#endif
    }
 
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_SAMPLER_STATE_POINTERS_PS), ssp) {
       ssp.PointertoPSSamplerState = offset;
    }
-#else
+#elif GEN_GEN == 6
    blorp_emit(batch, GENX(3DSTATE_SAMPLER_STATE_POINTERS), ssp) {
       ssp.VSSamplerStateChange = true;
       ssp.GSSamplerStateChange = true;
@@ -483,7 +493,15 @@ blorp_emit_sampler_state(struct blorp_batch *batch,
       ssp.PointertoPSSamplerState = offset;
    }
 #endif
+
+   return offset;
 }
+
+/* What follows is the code for setting up a "pipeline" on Sandy Bridge and
+ * later hardware.  This file will be included by i965 for gen4-5 as well, so
+ * this code is guarded by GEN_GEN >= 6.
+ */
+#if GEN_GEN >= 6
 
 static void
 blorp_emit_vs_config(struct blorp_batch *batch,
@@ -1121,6 +1139,10 @@ blorp_emit_pipeline(struct blorp_batch *batch,
    blorp_emit_viewport_state(batch, params);
 }
 
+/******** This is the end of the pipeline setup code ********/
+
+#endif /* GEN_GEN >= 6 */
+
 static void
 blorp_emit_surface_state(struct blorp_batch *batch,
                          const struct brw_blorp_surface_info *surface,
@@ -1180,7 +1202,9 @@ blorp_emit_null_surface_state(struct blorp_batch *batch,
       .MinimumArrayElement = surface->view.base_array_layer,
       .Depth = surface->view.array_len - 1,
       .RenderTargetViewExtent = surface->view.array_len - 1,
+#if GEN_GEN >= 6
       .NumberofMultisamples = ffs(surface->surf.samples) - 1,
+#endif
 
 #if GEN_GEN >= 7
       .SurfaceArray = surface->surf.dim != ISL_SURF_DIM_3D,
@@ -1243,9 +1267,13 @@ blorp_emit_surface_states(struct blorp_batch *batch,
    blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS_PS), bt) {
       bt.PointertoPSBindingTable = bind_offset;
    }
-#else
+#elif GEN_GEN >= 6
    blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS), bt) {
       bt.PSBindingTableChange = true;
+      bt.PointertoPSBindingTable = bind_offset;
+   }
+#else
+   blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS), bt) {
       bt.PointertoPSBindingTable = bind_offset;
    }
 #endif
