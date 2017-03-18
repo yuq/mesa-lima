@@ -2290,13 +2290,6 @@ anv_subpass_view_count(const struct anv_subpass *subpass)
    return MAX2(1, _mesa_bitcount(subpass->view_mask));
 }
 
-enum anv_subpass_usage {
-   ANV_SUBPASS_USAGE_DRAW =         (1 << 0),
-   ANV_SUBPASS_USAGE_INPUT =        (1 << 1),
-   ANV_SUBPASS_USAGE_RESOLVE_SRC =  (1 << 2),
-   ANV_SUBPASS_USAGE_RESOLVE_DST =  (1 << 3),
-};
-
 struct anv_render_pass_attachment {
    /* TODO: Consider using VkAttachmentDescription instead of storing each of
     * its members individually.
@@ -2310,9 +2303,6 @@ struct anv_render_pass_attachment {
    VkImageLayout                                initial_layout;
    VkImageLayout                                final_layout;
    VkImageLayout                                first_subpass_layout;
-
-   /* An array, indexed by subpass id, of how the attachment will be used. */
-   enum anv_subpass_usage *                     subpass_usage;
 
    /* The subpass id in which the attachment will be used last. */
    uint32_t                                     last_subpass_idx;

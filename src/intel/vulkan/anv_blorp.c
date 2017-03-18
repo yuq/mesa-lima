@@ -1502,150 +1502,16 @@ anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 }
 
-static void
-ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
-                       uint32_t att)
-{
-   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   struct anv_attachment_state *att_state =
-      &cmd_buffer->state.attachments[att];
-
-   if (att_state->aux_usage == ISL_AUX_USAGE_NONE ||
-       att_state->aux_usage == ISL_AUX_USAGE_MCS)
-      return; /* Nothing to resolve */
-
-   assert(att_state->aux_usage == ISL_AUX_USAGE_CCS_E ||
-          att_state->aux_usage == ISL_AUX_USAGE_CCS_D);
-
-   struct anv_render_pass *pass = cmd_buffer->state.pass;
-   const uint32_t subpass_idx = anv_get_subpass_id(&cmd_buffer->state);
-
-   /* Scan forward to see what all ways this attachment will be used.
-    * Ideally, we would like to resolve in the same subpass as the last write
-    * of a particular attachment.  That way we only resolve once but it's
-    * still hot in the cache.
-    */
-   bool found_draw = false;
-   enum anv_subpass_usage usage = 0;
-   for (uint32_t s = subpass_idx + 1; s < pass->subpass_count; s++) {
-      usage |= pass->attachments[att].subpass_usage[s];
-
-      if (usage & (ANV_SUBPASS_USAGE_DRAW | ANV_SUBPASS_USAGE_RESOLVE_DST)) {
-         /* We found another subpass that draws to this attachment.  We'll
-          * wait to resolve until then.
-          */
-         found_draw = true;
-         break;
-      }
-   }
-
-   struct anv_image_view *iview = fb->attachments[att];
-   const struct anv_image *image = iview->image;
-   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
-
-   enum blorp_fast_clear_op resolve_op = BLORP_FAST_CLEAR_OP_NONE;
-   if (!found_draw) {
-      /* This is the last subpass that writes to this attachment so we need to
-       * resolve here.  Ideally, we would like to only resolve if the storeOp
-       * is set to VK_ATTACHMENT_STORE_OP_STORE.  However, we need to ensure
-       * that the CCS bits are set to "resolved" because there may be copy or
-       * blit operations (which may ignore CCS) between now and the next time
-       * we render and we need to ensure that anything they write will be
-       * respected in the next render.  Unfortunately, the hardware does not
-       * provide us with any sort of "invalidate" pass that sets the CCS to
-       * "resolved" without writing to the render target.
-       */
-      if (iview->image->aux_usage != ISL_AUX_USAGE_CCS_E) {
-         /* The image destination surface doesn't support compression outside
-          * the render pass.  We need a full resolve.
-          */
-         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
-      } else if (att_state->fast_clear) {
-         /* We don't know what to do with clear colors outside the render
-          * pass.  We need a partial resolve. Only transparent black is
-          * built into the surface state object and thus no resolve is
-          * required for this case.
-          */
-         if (att_state->clear_value.color.uint32[0] ||
-             att_state->clear_value.color.uint32[1] ||
-             att_state->clear_value.color.uint32[2] ||
-             att_state->clear_value.color.uint32[3])
-            resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
-      } else {
-         /* The image "natively" supports all the compression we care about
-          * and we don't need to resolve at all.  If this is the case, we also
-          * don't need to resolve for any of the input attachment cases below.
-          */
-      }
-   } else if (usage & ANV_SUBPASS_USAGE_INPUT) {
-      /* Input attachments are clear-color aware so, at least on Sky Lake, we
-       * can frequently sample from them with no resolves at all.
-       */
-      if (att_state->aux_usage != att_state->input_aux_usage) {
-         assert(att_state->input_aux_usage == ISL_AUX_USAGE_NONE);
-         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
-      } else if (!att_state->clear_color_is_zero_one) {
-         /* Sky Lake PRM, Vol. 2d, RENDER_SURFACE_STATE::Red Clear Color:
-          *
-          *    "If Number of Multisamples is MULTISAMPLECOUNT_1 AND if this RT
-          *    is fast cleared with non-0/1 clear value, this RT must be
-          *    partially resolved (refer to Partial Resolve operation) before
-          *    binding this surface to Sampler."
-          */
-         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
-      }
-   }
-
-   if (resolve_op == BLORP_FAST_CLEAR_OP_NONE)
-      return;
-
-   /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
-    *
-    *    "When performing a render target resolve, PIPE_CONTROL with end of
-    *    pipe sync must be delivered."
-    *
-    * This comment is a bit cryptic and doesn't really tell you what's going
-    * or what's really needed.  It appears that fast clear ops are not
-    * properly synchronized with other drawing.  We need to use a PIPE_CONTROL
-    * to ensure that the contents of the previous draw hit the render target
-    * before we resolve and then use a second PIPE_CONTROL after the resolve
-    * to ensure that it is completed before any additional drawing occurs.
-    */
-   cmd_buffer->state.pending_pipe_bits |=
-      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-
-   const uint32_t aux_layers =
-      anv_image_aux_layers(image, iview->isl.base_level);
-   anv_ccs_resolve(cmd_buffer, att_state->color_rt_state, image,
-                   iview->isl.base_level, MIN2(fb->layers, aux_layers),
-                   resolve_op);
-
-   cmd_buffer->state.pending_pipe_bits |=
-      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-
-   /* Once we've done any sort of resolve, we're no longer fast-cleared */
-   att_state->fast_clear = false;
-   if (att_state->aux_usage == ISL_AUX_USAGE_CCS_D)
-      att_state->aux_usage = ISL_AUX_USAGE_NONE;
-}
-
 void
 anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
 
-
-   for (uint32_t i = 0; i < subpass->color_count; ++i) {
-      const uint32_t att = subpass->color_attachments[i].attachment;
-      if (att == VK_ATTACHMENT_UNUSED)
-         continue;
-
-      assert(att < cmd_buffer->state.pass->attachment_count);
-      ccs_resolve_attachment(cmd_buffer, att);
-   }
-
    if (subpass->has_resolve) {
+      struct blorp_batch batch;
+      blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
       /* We are about to do some MSAA resolves.  We need to flush so that the
        * result of writes to the MSAA color attachments show up in the sampler
        * when we blit to the single-sampled resolve target.
@@ -1687,9 +1553,6 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 
          assert(src_iview->aspect_mask == dst_iview->aspect_mask);
 
-         struct blorp_batch batch;
-         blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
-
          resolve_image(&batch, src_iview->image, src_aux_usage,
                        src_iview->isl.base_level,
                        src_iview->isl.base_array_layer,
@@ -1700,13 +1563,10 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
                        render_area.offset.x, render_area.offset.y,
                        render_area.offset.x, render_area.offset.y,
                        render_area.extent.width, render_area.extent.height);
-
-         blorp_batch_finish(&batch);
-
-         ccs_resolve_attachment(cmd_buffer, dst_att);
       }
-   }
 
+      blorp_batch_finish(&batch);
+   }
 }
 
 void
