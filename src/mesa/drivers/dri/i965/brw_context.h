@@ -325,13 +325,6 @@ struct brw_program {
 };
 
 
-struct brw_clip_prog_data {
-   GLuint curb_read_length;	/* user planes? */
-   GLuint clip_mode;
-   GLuint urb_read_length;
-   GLuint total_grf;
-};
-
 struct brw_ff_gs_prog_data {
    GLuint urb_read_length;
    GLuint total_grf;

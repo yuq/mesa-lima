@@ -32,47 +32,14 @@
 #ifndef BRW_CLIP_H
 #define BRW_CLIP_H
 
-
-#include "brw_context.h"
-#include "compiler/brw_eu.h"
+#include "brw_compiler.h"
+#include "brw_eu.h"
 
 /* Initial 3 verts, plus at most 6 additional verts from intersections
  * with fixed planes, plus at most 8 additional verts from intersections
  * with user clip planes
  */
 #define MAX_VERTS (3+6+8)
-
-/* Note that if unfilled primitives are being emitted, we have to fix
- * up polygon offset and flatshading at this point:
- */
-struct brw_clip_prog_key {
-   GLbitfield64 attrs;
-   bool contains_flat_varying;
-   bool contains_noperspective_varying;
-   unsigned char interp_mode[65]; /* BRW_VARYING_SLOT_COUNT */
-   GLuint primitive:4;
-   GLuint nr_userclip:4;
-   GLuint pv_first:1;
-   GLuint do_unfilled:1;
-   GLuint fill_cw:2;		/* includes cull information */
-   GLuint fill_ccw:2;		/* includes cull information */
-   GLuint offset_cw:1;
-   GLuint offset_ccw:1;
-   GLuint copy_bfc_cw:1;
-   GLuint copy_bfc_ccw:1;
-   GLuint clip_mode:3;
-
-   GLfloat offset_factor;
-   GLfloat offset_units;
-   GLfloat offset_clamp;
-};
-
-
-#define CLIP_LINE   0
-#define CLIP_POINT  1
-#define CLIP_FILL   2
-#define CLIP_CULL   3
-
 
 #define PRIM_MASK  (0x1f)
 
@@ -192,4 +159,5 @@ void brw_clip_project_position(struct brw_clip_compile *c,
              struct brw_reg pos );
 void brw_clip_ff_sync(struct brw_clip_compile *c);
 void brw_clip_init_ff_sync(struct brw_clip_compile *c);
+
 #endif

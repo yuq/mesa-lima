@@ -7,13 +7,7 @@ i965_FILES = \
 	brw_cc.c \
 	brw_clear.c \
 	brw_clip.c \
-	brw_clip.h \
-	brw_clip_line.c \
-	brw_clip_point.c \
 	brw_clip_state.c \
-	brw_clip_tri.c \
-	brw_clip_unfilled.c \
-	brw_clip_util.c \
 	brw_compute.c \
 	brw_conditional_render.c \
 	brw_context.c \

@@ -33,12 +33,7 @@
 #include "main/enums.h"
 #include "program/program.h"
 
-#include "intel_batchbuffer.h"
-
-#include "brw_defines.h"
-#include "brw_context.h"
 #include "brw_clip.h"
-
 
 
 /* This is performed against the original triangles, so no indirection
@@ -99,10 +94,10 @@ static void cull_direction( struct brw_clip_compile *c )
    struct brw_codegen *p = &c->func;
    GLuint conditional;
 
-   assert (!(c->key.fill_ccw == CLIP_CULL &&
-	     c->key.fill_cw == CLIP_CULL));
+   assert (!(c->key.fill_ccw == BRW_CLIP_FILL_MODE_CULL &&
+	     c->key.fill_cw == BRW_CLIP_FILL_MODE_CULL));
 
-   if (c->key.fill_ccw == CLIP_CULL)
+   if (c->key.fill_ccw == BRW_CLIP_FILL_MODE_CULL)
       conditional = BRW_CONDITIONAL_GE;
    else
       conditional = BRW_CONDITIONAL_L;
@@ -405,19 +400,19 @@ static void emit_primitives( struct brw_clip_compile *c,
 			     bool do_offset )
 {
    switch (mode) {
-   case CLIP_FILL:
+   case BRW_CLIP_FILL_MODE_FILL:
       brw_clip_tri_emit_polygon(c);
       break;
 
-   case CLIP_LINE:
+   case BRW_CLIP_FILL_MODE_LINE:
       emit_lines(c, do_offset);
       break;
 
-   case CLIP_POINT:
+   case BRW_CLIP_FILL_MODE_POINT:
       emit_points(c, do_offset);
       break;
 
-   case CLIP_CULL:
+   case BRW_CLIP_FILL_MODE_CULL:
       unreachable("not reached");
    }
 }
@@ -431,8 +426,8 @@ static void emit_unfilled_primitives( struct brw_clip_compile *c )
    /* Direction culling has already been done.
     */
    if (c->key.fill_ccw != c->key.fill_cw &&
-       c->key.fill_ccw != CLIP_CULL &&
-       c->key.fill_cw != CLIP_CULL)
+       c->key.fill_ccw != BRW_CLIP_FILL_MODE_CULL &&
+       c->key.fill_cw != BRW_CLIP_FILL_MODE_CULL)
    {
       brw_CMP(p,
 	      vec1(brw_null_reg()),
@@ -450,10 +445,10 @@ static void emit_unfilled_primitives( struct brw_clip_compile *c )
       }
       brw_ENDIF(p);
    }
-   else if (c->key.fill_cw != CLIP_CULL) {
+   else if (c->key.fill_cw != BRW_CLIP_FILL_MODE_CULL) {
       emit_primitives(c, c->key.fill_cw, c->key.offset_cw);
    }
-   else if (c->key.fill_ccw != CLIP_CULL) {
+   else if (c->key.fill_ccw != BRW_CLIP_FILL_MODE_CULL) {
       emit_primitives(c, c->key.fill_ccw, c->key.offset_ccw);
    }
 }
@@ -480,8 +475,8 @@ void brw_emit_unfilled_clip( struct brw_clip_compile *c )
 
    c->need_direction = ((c->key.offset_ccw || c->key.offset_cw) ||
 			(c->key.fill_ccw != c->key.fill_cw) ||
-			c->key.fill_ccw == CLIP_CULL ||
-			c->key.fill_cw == CLIP_CULL ||
+			c->key.fill_ccw == BRW_CLIP_FILL_MODE_CULL ||
+			c->key.fill_cw == BRW_CLIP_FILL_MODE_CULL ||
 			c->key.copy_bfc_cw ||
 			c->key.copy_bfc_ccw);
 
@@ -491,8 +486,8 @@ void brw_emit_unfilled_clip( struct brw_clip_compile *c )
 
    assert(brw_clip_have_varying(c, VARYING_SLOT_EDGE));
 
-   if (c->key.fill_ccw == CLIP_CULL &&
-       c->key.fill_cw == CLIP_CULL) {
+   if (c->key.fill_ccw == BRW_CLIP_FILL_MODE_CULL &&
+       c->key.fill_cw == BRW_CLIP_FILL_MODE_CULL) {
       brw_clip_kill_thread(c);
       return;
    }
@@ -504,8 +499,8 @@ void brw_emit_unfilled_clip( struct brw_clip_compile *c )
    if (c->need_direction)
       compute_tri_direction(c);
 
-   if (c->key.fill_ccw == CLIP_CULL ||
-       c->key.fill_cw == CLIP_CULL)
+   if (c->key.fill_ccw == BRW_CLIP_FILL_MODE_CULL ||
+       c->key.fill_cw == BRW_CLIP_FILL_MODE_CULL)
       cull_direction(c);
 
    if (c->key.offset_ccw ||

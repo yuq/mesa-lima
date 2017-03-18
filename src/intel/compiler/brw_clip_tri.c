@@ -33,10 +33,6 @@
 #include "main/enums.h"
 #include "program/program.h"
 
-#include "intel_batchbuffer.h"
-
-#include "brw_defines.h"
-#include "brw_context.h"
 #include "brw_clip.h"
 
 static void release_tmps( struct brw_clip_compile *c )
@@ -652,8 +648,8 @@ void brw_emit_tri_clip( struct brw_clip_compile *c )
    if (c->key.contains_flat_varying)
       brw_clip_tri_flat_shade(c);
 
-   if ((c->key.clip_mode == BRW_CLIPMODE_NORMAL) ||
-       (c->key.clip_mode == BRW_CLIPMODE_KERNEL_CLIP))
+   if ((c->key.clip_mode == BRW_CLIP_MODE_NORMAL) ||
+       (c->key.clip_mode == BRW_CLIP_MODE_KERNEL_CLIP))
       do_clip_tri(c);
    else
       maybe_do_clip_tri(c);

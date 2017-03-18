@@ -23,6 +23,13 @@ DECODER_FILES = \
 COMPILER_FILES = \
 	compiler/brw_cfg.cpp \
 	compiler/brw_cfg.h \
+	compiler/brw_clip.h \
+	compiler/brw_clip_line.c \
+	compiler/brw_clip_point.c \
+	compiler/brw_clip_tri.c \
+	compiler/brw_clip_unfilled.c \
+	compiler/brw_clip_util.c \
+	compiler/brw_compile_clip.c \
 	compiler/brw_compile_sf.c \
 	compiler/brw_compiler.c \
 	compiler/brw_compiler.h \

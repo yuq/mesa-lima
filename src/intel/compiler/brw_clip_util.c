@@ -34,13 +34,7 @@
 #include "main/enums.h"
 #include "program/program.h"
 
-#include "intel_batchbuffer.h"
-
-#include "brw_defines.h"
-#include "brw_context.h"
 #include "brw_clip.h"
-
-
 
 
 struct brw_reg get_tmp( struct brw_clip_compile *c )
