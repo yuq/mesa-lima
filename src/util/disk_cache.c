@@ -1033,7 +1033,7 @@ disk_cache_put_key(struct disk_cache *cache, const cache_key key)
    int i = *key_chunk & CACHE_INDEX_KEY_MASK;
    unsigned char *entry;
 
-   entry = &cache->stored_keys[i + CACHE_KEY_SIZE];
+   entry = &cache->stored_keys[i * CACHE_KEY_SIZE];
 
    memcpy(entry, key, CACHE_KEY_SIZE);
 }
@@ -1052,7 +1052,7 @@ disk_cache_has_key(struct disk_cache *cache, const cache_key key)
    int i = *key_chunk & CACHE_INDEX_KEY_MASK;
    unsigned char *entry;
 
-   entry = &cache->stored_keys[i + CACHE_KEY_SIZE];
+   entry = &cache->stored_keys[i * CACHE_KEY_SIZE];
 
    return memcmp(entry, key, CACHE_KEY_SIZE) == 0;
 }
