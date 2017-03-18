@@ -517,6 +517,7 @@ struct anv_physical_device {
     const char *                                name;
     struct gen_device_info                      info;
     uint64_t                                    aperture_size;
+    bool                                        supports_48bit_addresses;
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;
     int                                         cmd_parser_version;
@@ -654,6 +655,7 @@ int anv_gem_destroy_context(struct anv_device *device, int context);
 int anv_gem_get_param(int fd, uint32_t param);
 bool anv_gem_get_bit6_swizzle(int fd, uint32_t tiling);
 int anv_gem_get_aperture(int fd, uint64_t *size);
+bool anv_gem_supports_48b_addresses(int fd);
 int anv_gem_gpu_get_reset_stats(struct anv_device *device,
                                 uint32_t *active, uint32_t *pending);
 int anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle);

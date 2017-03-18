@@ -149,6 +149,8 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
+   device->supports_48bit_addresses = anv_gem_supports_48b_addresses(fd);
+
    if (!anv_device_get_cache_uuid(device->uuid)) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "cannot generate UUID");
@@ -1451,6 +1453,9 @@ anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
       return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
 
    anv_bo_init(bo, gem_handle, size);
+
+   if (device->instance->physicalDevice.supports_48bit_addresses)
+      bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
 
    return VK_SUCCESS;
 }
