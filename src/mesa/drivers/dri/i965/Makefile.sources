@@ -51,8 +51,6 @@ i965_FILES = \
 	brw_reset.c \
 	brw_sampler_state.c \
 	brw_sf.c \
-	brw_sf_emit.c \
-	brw_sf.h \
 	brw_sf_state.c \
 	brw_state_batch.c \
 	brw_state.h \

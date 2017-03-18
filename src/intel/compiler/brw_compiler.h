@@ -260,6 +260,27 @@ struct brw_gs_prog_key
    struct brw_sampler_prog_key_data tex;
 };
 
+enum brw_sf_primitive {
+   BRW_SF_PRIM_POINTS = 0,
+   BRW_SF_PRIM_LINES = 1,
+   BRW_SF_PRIM_TRIANGLES = 2,
+   BRW_SF_PRIM_UNFILLED_TRIS = 3,
+};
+
+struct brw_sf_prog_key {
+   uint64_t attrs;
+   bool contains_flat_varying;
+   unsigned char interp_mode[65]; /* BRW_VARYING_SLOT_COUNT */
+   uint8_t point_sprite_coord_replace;
+   enum brw_sf_primitive primitive:2;
+   bool do_twoside_color:1;
+   bool frontface_ccw:1;
+   bool do_point_sprite:1;
+   bool do_point_coord:1;
+   bool sprite_origin_lower_left:1;
+   bool userclip_active:1;
+};
+
 /* A big lookup table is used to figure out which and how many
  * additional regs will inserted before the main payload in the WM
  * program execution.  These mainly relate to depth and stencil
@@ -871,6 +892,19 @@ struct brw_gs_prog_data
    unsigned char transform_feedback_swizzles[64 /* BRW_MAX_SOL_BINDINGS */];
 };
 
+struct brw_sf_prog_data {
+   uint32_t urb_read_length;
+   uint32_t total_grf;
+
+   /* Each vertex may have upto 12 attributes, 4 components each,
+    * except WPOS which requires only 2.  (11*4 + 2) == 44 ==> 11
+    * rows.
+    *
+    * Actually we use 4 for each, so call it 12 rows.
+    */
+   unsigned urb_entry_size;
+};
+
 #define DEFINE_PROG_DATA_DOWNCAST(stage)                       \
 static inline struct brw_##stage##_prog_data *                 \
 brw_##stage##_prog_data(struct brw_stage_prog_data *prog_data) \
@@ -959,6 +993,22 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str);
+
+/**
+ * Compile a strips and fans shader.
+ *
+ * This is a fixed-function shader determined entirely by the shader key and
+ * a VUE map.
+ *
+ * Returns the final assembly and the program's size.
+ */
+const unsigned *
+brw_compile_sf(const struct brw_compiler *compiler,
+               void *mem_ctx,
+               const struct brw_sf_prog_key *key,
+               struct brw_sf_prog_data *prog_data,
+               struct brw_vue_map *vue_map,
+               unsigned *final_assembly_size);
 
 /**
  * Compile a fragment shader.

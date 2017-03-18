@@ -23,6 +23,7 @@ DECODER_FILES = \
 COMPILER_FILES = \
 	compiler/brw_cfg.cpp \
 	compiler/brw_cfg.h \
+	compiler/brw_compile_sf.c \
 	compiler/brw_compiler.c \
 	compiler/brw_compiler.h \
 	compiler/brw_dead_control_flow.cpp \

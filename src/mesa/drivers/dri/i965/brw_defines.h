@@ -153,8 +153,6 @@
 #define BRW_FRONTWINDING_CW      0
 #define BRW_FRONTWINDING_CCW     1
 
-#define BRW_SPRITE_POINT_ENABLE  16
-
 #define BRW_CUT_INDEX_ENABLE     (1 << 10)
 
 #define BRW_INDEX_BYTE     0
