@@ -843,8 +843,10 @@ cache_put(void *job, int thread_index)
     * (to ensure the size accounting of the cache doesn't get off).
     */
    fd_final = open(filename, O_RDONLY | O_CLOEXEC);
-   if (fd_final != -1)
+   if (fd_final != -1) {
+      unlink(filename_tmp);
       goto done;
+   }
 
    /* OK, we're now on the hook to write out a file that we know is
     * not in the cache, and is also not being written out to the cache
