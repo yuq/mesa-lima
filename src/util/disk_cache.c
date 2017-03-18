@@ -878,7 +878,11 @@ cache_put(void *job, int thread_index)
       unlink(filename_tmp);
       goto done;
    }
-   rename(filename_tmp, filename);
+   ret = rename(filename_tmp, filename);
+   if (ret == -1) {
+      unlink(filename_tmp);
+      goto done;
+   }
 
    file_size += cf_data_size;
    p_atomic_add(dc_job->cache->size, file_size);
@@ -886,7 +890,7 @@ cache_put(void *job, int thread_index)
  done:
    if (fd_final != -1)
       close(fd_final);
-   /* This close finally releases the flock, (now that the final dile
+   /* This close finally releases the flock, (now that the final file
     * has been renamed into place and the size has been added).
     */
    if (fd != -1)
