@@ -36,6 +36,7 @@
 #include "main/glthread.h"
 #include "main/marshal.h"
 #include "main/marshal_generated.h"
+#include "util/u_thread.h"
 
 #ifdef HAVE_PTHREAD
 
@@ -74,6 +75,8 @@ glthread_worker(void *data)
 
    ctx->Driver.SetBackgroundContext(ctx);
    _glapi_set_context(ctx);
+
+   u_thread_setname("mesa_glthread");
 
    pthread_mutex_lock(&glthread->mutex);
 
