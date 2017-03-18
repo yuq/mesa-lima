@@ -366,12 +366,12 @@ const unsigned *brw_get_program( struct brw_codegen *p,
 
 void
 brw_disassemble(const struct gen_device_info *devinfo,
-                void *assembly, int start, int end, FILE *out)
+                const void *assembly, int start, int end, FILE *out)
 {
    bool dump_hex = (INTEL_DEBUG & DEBUG_HEX) != 0;
 
    for (int offset = start; offset < end;) {
-      brw_inst *insn = assembly + offset;
+      const brw_inst *insn = assembly + offset;
       brw_inst uncompacted;
       bool compacted = brw_inst_cmpt_control(devinfo, insn);
       if (0)
