@@ -84,6 +84,10 @@ static const VkExtensionProperties instance_extensions[] = {
 		.specVersion = 5,
 	},
 #endif
+	{
+		.extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static const VkExtensionProperties common_device_extensions[] = {
@@ -101,10 +105,6 @@ static const VkExtensionProperties common_device_extensions[] = {
 	},
 	{
 		.extensionName = VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-	{
-		.extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		.specVersion = 1,
 	},
 	{
