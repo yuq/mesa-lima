@@ -32,6 +32,23 @@
 struct etna_context;
 struct etna_shader_variant;
 
+struct etna_shader_key
+{
+   union {
+      struct {
+      };
+      uint32_t global;
+   };
+};
+
+static inline bool
+etna_shader_key_equal(struct etna_shader_key *a, struct etna_shader_key *b)
+{
+   STATIC_ASSERT(sizeof(struct etna_shader_key) <= sizeof(a->global));
+
+   return a->global == b->global;
+}
+
 struct etna_shader {
     /* shader id (for debug): */
     uint32_t id;
@@ -48,6 +65,10 @@ etna_shader_link(struct etna_context *ctx);
 
 bool
 etna_shader_update_vertex(struct etna_context *ctx);
+
+struct etna_shader_variant *
+etna_shader_variant(struct etna_shader *shader, struct etna_shader_key key,
+                   struct pipe_debug_callback *debug);
 
 void
 etna_shader_init(struct pipe_context *pctx);

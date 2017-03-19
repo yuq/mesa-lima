@@ -106,6 +106,37 @@ etna_update_state_for_draw(struct etna_context *ctx, const struct pipe_draw_info
    }
 }
 
+static bool
+etna_get_vs(struct etna_context *ctx, struct etna_shader_key key)
+{
+   const struct etna_shader_variant *old = ctx->shader.vs;
+
+   ctx->shader.vs = etna_shader_variant(ctx->shader.bind_vs, key, &ctx->debug);
+
+   if (!ctx->shader.vs)
+      return false;
+
+   if (old != ctx->shader.vs)
+      ctx->dirty |= ETNA_DIRTY_SHADER;
+
+   return true;
+}
+
+static bool
+etna_get_fs(struct etna_context *ctx, struct etna_shader_key key)
+{
+   const struct etna_shader_variant *old = ctx->shader.fs;
+
+   ctx->shader.fs = etna_shader_variant(ctx->shader.bind_fs, key, &ctx->debug);
+
+   if (!ctx->shader.fs)
+      return false;
+
+   if (old != ctx->shader.fs)
+      ctx->dirty |= ETNA_DIRTY_SHADER;
+
+   return true;
+}
 
 static void
 etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
@@ -149,6 +180,13 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (info->indexed && !ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo) {
       BUG("Unsupported or no index buffer");
+      return;
+   }
+
+   struct etna_shader_key key = {};
+
+   if (!etna_get_vs(ctx, key) || !etna_get_fs(ctx, key)) {
+      BUG("compiled shaders are not okay");
       return;
    }
 

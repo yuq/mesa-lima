@@ -102,6 +102,7 @@ main(int argc, char **argv)
    struct tgsi_token toks[65536];
    struct tgsi_parse_context parse;
    struct etna_shader s = {};
+   struct etna_shader_key key = {};
    void *ptr;
    size_t size;
 
@@ -147,6 +148,7 @@ main(int argc, char **argv)
    s.tokens = toks;
 
    v->shader = &s;
+   v->key = key;
 
    if (!etna_compile_shader(v)) {
       fprintf(stderr, "compiler failed!\n");

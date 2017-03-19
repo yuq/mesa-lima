@@ -29,6 +29,7 @@
 
 #include "etnaviv_context.h"
 #include "etnaviv_internal.h"
+#include "etnaviv_shader.h"
 #include "pipe/p_compiler.h"
 #include "pipe/p_shader_tokens.h"
 
@@ -98,6 +99,7 @@ struct etna_shader_variant {
 
    /* replicated here to avoid passing extra ptrs everywhere */
    struct etna_shader *shader;
+   struct etna_shader_key key;
 };
 
 struct etna_varying {

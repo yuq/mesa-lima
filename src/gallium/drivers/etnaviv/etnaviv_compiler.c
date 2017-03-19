@@ -54,7 +54,6 @@
 #include "etnaviv_context.h"
 #include "etnaviv_debug.h"
 #include "etnaviv_disasm.h"
-#include "etnaviv_shader.h"
 #include "etnaviv_uniforms.h"
 #include "etnaviv_util.h"
 
@@ -197,6 +196,8 @@ struct etna_compile {
 
    /* GPU hardware specs */
    const struct etna_specs *specs;
+
+   const struct etna_shader_key *key;
 };
 
 static struct etna_reg_desc *
@@ -2287,6 +2288,7 @@ etna_compile_shader(struct etna_shader_variant *v)
    const struct tgsi_token *tokens = v->shader->tokens;
 
    c->specs = specs;
+   c->key = &v->key;
    c->tokens = tgsi_transform_lowering(&lconfig, tokens, &c->info);
    c->free_tokens = !!c->tokens;
    if (!c->tokens) {
