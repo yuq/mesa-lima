@@ -4230,8 +4230,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		}
 
 		for (unsigned i = 0; i < num_deriv_comp; i++) {
-			derivs[i * 2] = to_float(ctx, llvm_extract_elem(ctx, ddx, i));
-			derivs[i * 2 + 1] = to_float(ctx, llvm_extract_elem(ctx, ddy, i));
+			derivs[i] = to_float(ctx, llvm_extract_elem(ctx, ddx, i));
+			derivs[num_deriv_comp + i] = to_float(ctx, llvm_extract_elem(ctx, ddy, i));
 		}
 	}
 
