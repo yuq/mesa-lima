@@ -2324,7 +2324,7 @@ void radv_CmdDraw(
 
 static void radv_emit_primitive_reset_index(struct radv_cmd_buffer *cmd_buffer)
 {
-	uint32_t primitive_reset_index = cmd_buffer->state.last_primitive_reset_index ? 0xffffffffu : 0xffffu;
+	uint32_t primitive_reset_index = cmd_buffer->state.index_type ? 0xffffffffu : 0xffffu;
 
 	if (cmd_buffer->state.pipeline->graphics.prim_restart_enable &&
 	    primitive_reset_index != cmd_buffer->state.last_primitive_reset_index) {
