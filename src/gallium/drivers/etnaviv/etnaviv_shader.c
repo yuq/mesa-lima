@@ -330,6 +330,15 @@ etna_create_shader_state(struct pipe_context *pctx,
    shader->specs = &ctx->specs;
    shader->tokens = tgsi_dup_tokens(pss->tokens);
 
+   if (etna_mesa_debug & ETNA_DBG_SHADERDB) {
+      /* if shader-db run, create a standard variant immediately
+       * (as otherwise nothing will trigger the shader to be
+       * actually compiled).
+       */
+      struct etna_shader_key key = {};
+      etna_shader_variant(shader, key, &ctx->debug);
+   }
+
    return shader;
 }
 
