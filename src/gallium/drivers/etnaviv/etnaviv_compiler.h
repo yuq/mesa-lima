@@ -95,6 +95,9 @@ struct etna_shader_variant {
 
    /* shader variants form a linked list */
    struct etna_shader_variant *next;
+
+   /* replicated here to avoid passing extra ptrs everywhere */
+   struct etna_shader *shader;
 };
 
 struct etna_varying {
@@ -110,8 +113,8 @@ struct etna_shader_link_info {
    struct etna_varying varyings[ETNA_NUM_INPUTS];
 };
 
-struct etna_shader_variant *
-etna_compile_shader(const struct etna_specs *specs, const struct tgsi_token *tokens);
+bool
+etna_compile_shader(struct etna_shader_variant *shader);
 
 void
 etna_dump_shader(const struct etna_shader_variant *shader);

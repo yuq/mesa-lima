@@ -54,6 +54,7 @@
 #include "etnaviv_context.h"
 #include "etnaviv_debug.h"
 #include "etnaviv_disasm.h"
+#include "etnaviv_shader.h"
 #include "etnaviv_uniforms.h"
 #include "etnaviv_util.h"
 
@@ -2253,15 +2254,18 @@ copy_uniform_state_to_shader(struct etna_compile *c, struct etna_shader_variant 
    etna_set_shader_uniforms_dirty_flags(sobj);
 }
 
-struct etna_shader_variant *
-etna_compile_shader(const struct etna_specs *specs,
-                    const struct tgsi_token *tokens)
+bool
+etna_compile_shader(struct etna_shader_variant *v)
 {
    /* Create scratch space that may be too large to fit on stack
     */
    bool ret;
    struct etna_compile *c;
-   struct etna_shader_variant *shader;
+
+   if (unlikely(!v))
+      return false;
+
+   const struct etna_specs *specs = v->shader->specs;
 
    struct tgsi_lowering_config lconfig = {
       .lower_SCS = specs->has_sin_cos_sqrt,
@@ -2278,11 +2282,9 @@ etna_compile_shader(const struct etna_specs *specs,
 
    c = CALLOC_STRUCT(etna_compile);
    if (!c)
-      return NULL;
+      return false;
 
-   shader = CALLOC_STRUCT(etna_shader_variant);
-   if (!shader)
-      goto out;
+   const struct tgsi_token *tokens = v->shader->tokens;
 
    c->specs = specs;
    c->tokens = tgsi_transform_lowering(&lconfig, tokens, &c->info);
@@ -2412,30 +2414,27 @@ etna_compile_shader(const struct etna_specs *specs,
    etna_compile_fill_in_labels(c);
 
    ret = etna_compile_check_limits(c);
-   if (!ret) {
-      FREE(shader);
-      shader = NULL;
+   if (!ret)
       goto out;
-   }
 
    /* fill in output structure */
-   shader->processor = c->info.processor;
-   shader->code_size = c->inst_ptr * 4;
-   shader->code = mem_dup(c->code, c->inst_ptr * 16);
-   shader->num_loops = c->num_loops;
-   shader->num_temps = c->next_free_native;
-   shader->vs_pos_out_reg = -1;
-   shader->vs_pointsize_out_reg = -1;
-   shader->ps_color_out_reg = -1;
-   shader->ps_depth_out_reg = -1;
-   copy_uniform_state_to_shader(c, shader);
+   v->processor = c->info.processor;
+   v->code_size = c->inst_ptr * 4;
+   v->code = mem_dup(c->code, c->inst_ptr * 16);
+   v->num_loops = c->num_loops;
+   v->num_temps = c->next_free_native;
+   v->vs_pos_out_reg = -1;
+   v->vs_pointsize_out_reg = -1;
+   v->ps_color_out_reg = -1;
+   v->ps_depth_out_reg = -1;
+   copy_uniform_state_to_shader(c, v);
 
    if (c->info.processor == PIPE_SHADER_VERTEX) {
-      fill_in_vs_inputs(shader, c);
-      fill_in_vs_outputs(shader, c);
+      fill_in_vs_inputs(v, c);
+      fill_in_vs_outputs(v, c);
    } else if (c->info.processor == PIPE_SHADER_FRAGMENT) {
-      fill_in_ps_inputs(shader, c);
-      fill_in_ps_outputs(shader, c);
+      fill_in_ps_inputs(v, c);
+      fill_in_ps_outputs(v, c);
    }
 
 out:
@@ -2445,7 +2444,7 @@ out:
    FREE(c->labels);
    FREE(c);
 
-   return shader;
+   return ret;
 }
 
 extern const char *tgsi_swizzle_names[];

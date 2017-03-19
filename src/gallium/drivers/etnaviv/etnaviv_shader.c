@@ -270,17 +270,27 @@ etna_shader_update_vertex(struct etna_context *ctx)
 static struct etna_shader_variant *
 create_variant(struct etna_shader *shader)
 {
-   struct etna_shader_variant *v;
+   struct etna_shader_variant *v = CALLOC_STRUCT(etna_shader_variant);
+   int ret;
 
-   v = etna_compile_shader(shader->specs, shader->tokens);
-   if (!v) {
-      debug_error("compile failed!");
+   if (!v)
       return NULL;
+
+   v->shader = shader;
+
+   ret = etna_compile_shader(v);
+   if (!ret) {
+      debug_error("compile failed!");
+      goto fail;
    }
 
    v->id = ++shader->variant_count;
 
    return v;
+
+fail:
+   FREE(v);
+   return NULL;
 }
 
 static void *

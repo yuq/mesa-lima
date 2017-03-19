@@ -38,6 +38,9 @@
 #include "etnaviv_compiler.h"
 #include "etnaviv_debug.h"
 #include "etnaviv_internal.h"
+#include "etnaviv_shader.h"
+
+#include "util/u_memory.h"
 
 static const struct etna_specs specs_gc2000 = {
    .vs_need_z_div = 0,
@@ -98,9 +101,15 @@ main(int argc, char **argv)
    const char *filename;
    struct tgsi_token toks[65536];
    struct tgsi_parse_context parse;
-   struct etna_shader_variant *shader_obj;
+   struct etna_shader s = {};
    void *ptr;
    size_t size;
+
+   struct etna_shader_variant *v = CALLOC_STRUCT(etna_shader_variant);
+   if (!v) {
+      fprintf(stderr, "malloc failed!\n");
+      return 1;
+   }
 
    etna_mesa_debug = ETNA_DBG_MSGS;
 
@@ -134,13 +143,16 @@ main(int argc, char **argv)
 
    tgsi_parse_init(&parse, toks);
 
-   shader_obj = etna_compile_shader(&specs_gc2000, toks);
+   s.specs = &specs_gc2000;
+   s.tokens = toks;
 
-   if (shader_obj == NULL) {
+   v->shader = &s;
+
+   if (!etna_compile_shader(v)) {
       fprintf(stderr, "compiler failed!\n");
       return 1;
    }
 
-   etna_dump_shader(shader_obj);
-   etna_destroy_shader(shader_obj);
+   etna_dump_shader(v);
+   etna_destroy_shader(v);
 }
