@@ -238,26 +238,26 @@ etna_shader_stage(struct etna_shader_variant *shader)
 }
 
 static void
-dump_shader_info(struct etna_shader_variant *shader, struct pipe_debug_callback *debug)
+dump_shader_info(struct etna_shader_variant *v, struct pipe_debug_callback *debug)
 {
    if (!unlikely(etna_mesa_debug & ETNA_DBG_SHADERDB))
       return;
 
    pipe_debug_message(debug, SHADER_INFO, "\n"
-         "SHADER-DB: %s prog %d: %u instructions %u temps\n"
-         "SHADER-DB: %s prog %d: %u immediates %u consts\n"
-         "SHADER-DB: %s prog %d: %u loops\n",
-         etna_shader_stage(shader),
-         shader->id,
-         shader->code_size,
-         shader->num_temps,
-         etna_shader_stage(shader),
-         shader->id,
-         shader->uniforms.imm_count,
-         shader->uniforms.const_count,
-         etna_shader_stage(shader),
-         shader->id,
-         shader->num_loops);
+         "SHADER-DB: %s prog %d/%d: %u instructions %u temps\n"
+         "SHADER-DB: %s prog %d/%d: %u immediates %u consts\n"
+         "SHADER-DB: %s prog %d/%d: %u loops\n",
+         etna_shader_stage(v),
+         v->shader->id, v->id,
+         v->code_size,
+         v->num_temps,
+         etna_shader_stage(v),
+         v->shader->id, v->id,
+         v->uniforms.imm_count,
+         v->uniforms.const_count,
+         etna_shader_stage(v),
+         v->shader->id, v->id,
+         v->num_loops);
 }
 
 bool
