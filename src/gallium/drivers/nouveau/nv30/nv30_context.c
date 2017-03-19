@@ -209,18 +209,18 @@ nv30_context_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    nv30->base.screen = &screen->base;
    nv30->base.copy_data = nv30_transfer_copy_data;
 
+   pipe = &nv30->base.pipe;
+   pipe->screen = pscreen;
+   pipe->priv = priv;
+   pipe->destroy = nv30_context_destroy;
+   pipe->flush = nv30_context_flush;
+
    nv30->base.pipe.stream_uploader = u_upload_create_default(&nv30->base.pipe);
    if (!nv30->base.pipe.stream_uploader) {
       nv30_context_destroy(pipe);
       return NULL;
    }
    nv30->base.pipe.const_uploader = nv30->base.pipe.stream_uploader;
-
-   pipe = &nv30->base.pipe;
-   pipe->screen = pscreen;
-   pipe->priv = priv;
-   pipe->destroy = nv30_context_destroy;
-   pipe->flush = nv30_context_flush;
 
    /*XXX: *cough* per-context client */
    nv30->base.client = screen->base.client;
