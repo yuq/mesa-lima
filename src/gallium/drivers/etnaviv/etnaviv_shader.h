@@ -38,7 +38,7 @@ struct etna_shader {
     uint32_t variant_count;
 
     struct tgsi_token *tokens;
-    struct etna_specs *specs;
+    const struct etna_specs *specs;
 
     struct etna_shader_variant *variants;
 };
