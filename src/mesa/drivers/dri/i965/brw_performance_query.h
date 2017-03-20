@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef BRW_PERFORMANCE_QUERY_H
+#define BRW_PERFORMANCE_QUERY_H
 
 #include <stdint.h>
 
@@ -55,3 +56,4 @@ struct brw_perf_query_counter
    };
 };
 
+#endif /* BRW_PERFORMANCE_QUERY_H */
