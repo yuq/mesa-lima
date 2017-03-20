@@ -376,7 +376,16 @@ public:
         const simdscalar vMask = _mm256_set_ps(0, -1, -1, -1, -1, -1, -1, -1);
 
         uint32_t numClippedPrims = 0;
+#if USE_SIMD16_FRONTEND
+        const uint32_t numPrims = pa.NumPrims();
+        const uint32_t numPrims_lo = std::min<uint32_t>(numPrims, KNOB_SIMD_WIDTH);
+
+        SWR_ASSERT(numPrims <= numPrims_lo);
+
+        for (uint32_t inputPrim = 0; inputPrim < numPrims_lo; ++inputPrim)
+#else
         for (uint32_t inputPrim = 0; inputPrim < pa.NumPrims(); ++inputPrim)
+#endif
         {
             uint32_t numEmittedVerts = pVertexCount[inputPrim];
             if (numEmittedVerts < NumVertsPerPrim)
@@ -391,13 +400,28 @@ public:
             // tranpose clipper output so that each lane's vertices are in SIMD order
             // set aside space for 2 vertices, as the PA will try to read up to 16 verts
             // for triangle fan
+#if USE_SIMD16_FRONTEND
+            simd16vertex transposedPrims[2];
+#else
             simdvertex transposedPrims[2];
+#endif
 
             // transpose pos
             uint8_t* pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_POSITION_SLOT]) + sizeof(float) * inputPrim;
+
+#if USE_SIMD16_FRONTEND
+            // TEMPORARY WORKAROUND for bizarre VS2015 code-gen bug - use dx11_clipping_03-09 failures to check for existence of bug
+            static const float *dummy = reinterpret_cast<const float *>(pBase);
+#endif
+
             for (uint32_t c = 0; c < 4; ++c)
             {
+#if USE_SIMD16_FRONTEND
+                simdscalar temp = _simd_mask_i32gather_ps(_simd_setzero_ps(), (const float *)pBase, vOffsets, vMask, 1);
+                transposedPrims[0].attrib[VERTEX_POSITION_SLOT][c] = _simd16_insert_ps(_simd16_setzero_ps(), temp, 0);
+#else
                 transposedPrims[0].attrib[VERTEX_POSITION_SLOT][c] = _simd_mask_i32gather_ps(_mm256_undefined_ps(), (const float*)pBase, vOffsets, vMask, 1);
+#endif
                 pBase += sizeof(simdscalar);
             }
 
@@ -408,7 +432,12 @@ public:
                 uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + attrib;
                 for (uint32_t c = 0; c < 4; ++c)
                 {
+#if USE_SIMD16_FRONTEND
+                    simdscalar temp = _simd_mask_i32gather_ps(_simd_setzero_ps(), (const float *)pBase, vOffsets, vMask, 1);
+                    transposedPrims[0].attrib[attribSlot][c] = _simd16_insert_ps(_simd16_setzero_ps(), temp, 0);
+#else
                     transposedPrims[0].attrib[attribSlot][c] = _simd_mask_i32gather_ps(_mm256_undefined_ps(), (const float*)pBase, vOffsets, vMask, 1);
+#endif
                     pBase += sizeof(simdscalar);
                 }
             }
@@ -419,7 +448,12 @@ public:
                 pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT]) + sizeof(float) * inputPrim;
                 for (uint32_t c = 0; c < 4; ++c)
                 {
+#if USE_SIMD16_FRONTEND
+                    simdscalar temp = _simd_mask_i32gather_ps(_simd_setzero_ps(), (const float *)pBase, vOffsets, vMask, 1);
+                    transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT][c] = _simd16_insert_ps(_simd16_setzero_ps(), temp, 0);
+#else
                     transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT][c] = _simd_mask_i32gather_ps(_mm256_undefined_ps(), (const float*)pBase, vOffsets, vMask, 1);
+#endif
                     pBase += sizeof(simdscalar);
                 }
             }
@@ -429,7 +463,12 @@ public:
                 pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT]) + sizeof(float) * inputPrim;
                 for (uint32_t c = 0; c < 4; ++c)
                 {
+#if USE_SIMD16_FRONTEND
+                    simdscalar temp = _simd_mask_i32gather_ps(_simd_setzero_ps(), (const float *)pBase, vOffsets, vMask, 1);
+                    transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT][c] = _simd16_insert_ps(_simd16_setzero_ps(), temp, 0);
+#else
                     transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT][c] = _simd_mask_i32gather_ps(_mm256_undefined_ps(), (const float*)pBase, vOffsets, vMask, 1);
+#endif
                     pBase += sizeof(simdscalar);
                 }
             }
@@ -440,6 +479,27 @@ public:
             {
                 do
                 {
+#if USE_SIMD16_FRONTEND
+                    simd16vector attrib_simd16[NumVertsPerPrim];
+                    bool assemble = clipPa.Assemble_simd16(VERTEX_POSITION_SLOT, attrib_simd16);
+
+                    if (assemble)
+                    {
+                        static const uint32_t primMaskMap[] = { 0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f, 0xff };
+
+                        simdvector attrib[NumVertsPerPrim];
+                        for (uint32_t i = 0; i < NumVertsPerPrim; i += 1)
+                        {
+                            for (uint32_t j = 0; j < 4; j += 1)
+                            {
+                                attrib[i][j] = _simd16_extract_ps(attrib_simd16[i][j], 0);
+                            }
+                        }
+
+                        clipPa.useAlternateOffset = false;
+                        pfnBinFunc(this->pDC, clipPa, this->workerId, attrib, primMaskMap[numEmittedPrims], _simd_set1_epi32(pPrimitiveId[inputPrim]), _simd_set1_epi32(pViewportIdx[inputPrim]));
+                    }
+#else
                     simdvector attrib[NumVertsPerPrim];
                     bool assemble = clipPa.Assemble(VERTEX_POSITION_SLOT, attrib);
                     if (assemble)
@@ -447,6 +507,7 @@ public:
                         static const uint32_t primMaskMap[] = { 0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f, 0xff };
                         pfnBinFunc(this->pDC, clipPa, this->workerId, attrib, primMaskMap[numEmittedPrims], _simd_set1_epi32(pPrimitiveId[inputPrim]), _simd_set1_epi32(pViewportIdx[inputPrim]));
                     }
+#endif
                 } while (clipPa.NextPrim());
             }
         }
