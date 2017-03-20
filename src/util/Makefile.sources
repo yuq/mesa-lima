@@ -37,7 +37,6 @@ MESA_UTIL_FILES :=	\
 	slab.h \
 	string_to_uint_map.h \
 	string_to_uint_map.cpp \
-	strndup.c \
 	strndup.h \
 	strtod.c \
 	strtod.h \
