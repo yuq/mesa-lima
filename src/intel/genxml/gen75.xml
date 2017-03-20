@@ -1957,6 +1957,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="2"/>
     <field name="SO Buffer Index" start="61" end="62" type="uint"/>
     <field name="SO Buffer Object Control State" start="57" end="60" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="SO Buffer MOCS" start="57" end="60" type="uint"/>
     <field name="Surface Pitch" start="32" end="43" type="uint"/>
     <field name="Surface Base Address" start="66" end="95" type="address"/>
     <field name="Surface End Address" start="98" end="127" type="address"/>

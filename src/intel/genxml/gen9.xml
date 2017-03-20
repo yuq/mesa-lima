@@ -2246,6 +2246,7 @@
     <field name="SO Buffer Enable" start="63" end="63" type="bool"/>
     <field name="SO Buffer Index" start="61" end="62" type="uint"/>
     <field name="SO Buffer Object Control State" start="54" end="60" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="SO Buffer MOCS" start="54" end="60" type="uint"/>
     <field name="Stream Offset Write Enable" start="53" end="53" type="bool"/>
     <field name="Stream Output Buffer Offset Address Enable" start="52" end="52" type="bool"/>
     <field name="Surface Base Address" start="66" end="111" type="address"/>
