@@ -746,7 +746,9 @@ static void si_launch_grid(
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 				 SI_CONTEXT_CS_PARTIAL_FLUSH;
 
-	util_queue_fence_wait(&program->ready);
+	if (program->ir_type == PIPE_SHADER_IR_TGSI)
+		util_queue_fence_wait(&program->ready);
+
 	si_decompress_compute_textures(sctx);
 
 	/* Add buffer sizes for memory checking in need_cs_space. */
