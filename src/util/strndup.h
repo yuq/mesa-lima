@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef STRNDUP_H
+#define STRNDUP_H
 
 #include <stdlib.h> // size_t
 
@@ -38,3 +39,5 @@ char *strndup(const char *str, size_t max);
 #endif
 
 #endif
+
+#endif /* STRNDUP_H */
