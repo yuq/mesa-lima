@@ -132,8 +132,7 @@ print_iterator_values(struct gen_field_iterator *iter, int *idx)
 
 static void
 decode_group(struct gen_spec *spec, struct gen_group *strct,
-             const uint32_t *p, int starting_dword,
-             bool print_dword_headers)
+             const uint32_t *p, int starting_dword)
 {
    struct gen_field_iterator iter;
    char *token = NULL;
@@ -156,7 +155,7 @@ decode_group(struct gen_spec *spec, struct gen_group *strct,
          fprintf(outfile, "0x%08"PRIx64":  0x%08x : Dword %d\n",
                  offset + 4 * idx, p[idx], idx);
          struct gen_group *struct_val = gen_spec_find_struct(spec, token);
-         decode_group(spec, struct_val, &p[idx], 0, false);
+         decode_group(spec, struct_val, &p[idx], 0);
          token = NULL;
       }
    }
@@ -166,7 +165,7 @@ static void
 decode_structure(struct gen_spec *spec, struct gen_group *strct,
                  const uint32_t *p)
 {
-   decode_group(spec, strct, p, 0, false);
+   decode_group(spec, strct, p, 0);
 }
 
 static void
@@ -788,7 +787,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
               gen_group_get_name(inst), reset_color);
 
       if (option_full_decode) {
-         decode_group(spec, inst, p, 1, true);
+         decode_group(spec, inst, p, 1);
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
             if (gen_group_get_opcode(inst) == custom_handlers[i].opcode)
