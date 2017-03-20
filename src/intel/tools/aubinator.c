@@ -96,39 +96,11 @@ valid_offset(uint32_t offset)
 }
 
 static void
-print_dword_header(struct gen_field_iterator *iter, uint64_t offset)
-{
-   fprintf(outfile, "0x%08"PRIx64":  0x%08x : Dword %d\n",
-           offset + 4 * iter->dword, iter->p[iter->dword], iter->dword);
-}
-
-static void
 decode_group(struct gen_group *strct, const uint32_t *p, int starting_dword)
 {
-   struct gen_field_iterator iter;
-   int last_dword = 0;
-   uint64_t offset = 0;
-
-   if (option_print_offsets)
-      offset = (void *) p - gtt;
-   else
-      offset = 0;
-
-   gen_field_iterator_init(&iter, strct, p,
-                           option_color == COLOR_ALWAYS);
-   while (gen_field_iterator_next(&iter)) {
-      if (last_dword != iter.dword) {
-         print_dword_header(&iter, offset);
-         last_dword = iter.dword;
-      }
-      if (iter.dword >= starting_dword) {
-         fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
-         if (iter.struct_desc) {
-            print_dword_header(&iter, offset + 4 * iter.dword);
-            decode_group(iter.struct_desc, &p[iter.dword], 0);
-         }
-      }
-   }
+   uint64_t offset = option_print_offsets ? (void *) p - gtt : 0;
+   gen_print_group(outfile, strct, offset, p, starting_dword,
+                   option_color == COLOR_ALWAYS);
 }
 
 static void
