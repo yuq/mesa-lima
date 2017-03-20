@@ -726,16 +726,15 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    iter->print_colors = print_colors;
 }
 
-static void
-gen_enum_write_value(char *str, size_t max_length,
-                      struct gen_enum *e, uint64_t value)
+static const char *
+gen_get_enum_name(struct gen_enum *e, uint64_t value)
 {
    for (int i = 0; i < e->nvalues; i++) {
       if (e->values[i]->value == value) {
-         strncpy(str, e->values[i]->name, max_length);
-         return;
+         return e->values[i]->name;
       }
    }
+   return NULL;
 }
 
 bool
@@ -759,7 +758,7 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    else
       v.qw = iter->p[index];
 
-   iter->description[0] = '\0';
+   const char *enum_name = NULL;
 
    switch (f->type.kind) {
    case GEN_TYPE_UNKNOWN:
@@ -767,16 +766,14 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
       uint64_t value = field(v.qw, f->start, f->end);
       snprintf(iter->value, sizeof(iter->value),
                "%"PRId64, value);
-      gen_enum_write_value(iter->description, sizeof(iter->description),
-                           &f->inline_enum, value);
+      enum_name = gen_get_enum_name(&f->inline_enum, value);
       break;
    }
    case GEN_TYPE_UINT: {
       uint64_t value = field(v.qw, f->start, f->end);
       snprintf(iter->value, sizeof(iter->value),
                "%"PRIu64, value);
-      gen_enum_write_value(iter->description, sizeof(iter->description),
-                            &f->inline_enum, value);
+      enum_name = gen_get_enum_name(&f->inline_enum, value);
       break;
    }
    case GEN_TYPE_BOOL: {
@@ -812,10 +809,15 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
       uint64_t value = field(v.qw, f->start, f->end);
       snprintf(iter->value, sizeof(iter->value),
                "%"PRId64, value);
-      gen_enum_write_value(iter->description, sizeof(iter->description),
-                           f->type.gen_enum, value);
+      enum_name = gen_get_enum_name(f->type.gen_enum, value);
       break;
    }
+   }
+
+   if (enum_name) {
+      int length = strlen(iter->value);
+      snprintf(iter->value + length, sizeof(iter->value) - length,
+               " (%s)", enum_name);
    }
 
    return true;
