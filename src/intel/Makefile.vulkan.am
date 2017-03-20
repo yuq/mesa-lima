@@ -92,8 +92,8 @@ VULKAN_CPPFLAGS = \
 	-I$(top_srcdir)/src/vulkan/wsi \
 	-I$(top_builddir)/src/vulkan/util \
 	-I$(top_srcdir)/src/vulkan/util \
-	$(LIBDRM_CFLAGS) \
-	$(AM_CPPFLAGS)
+	$(AM_CPPFLAGS) \
+	$(LIBDRM_CFLAGS)
 
 vulkan_libanv_gen7_la_CFLAGS = $(VULKAN_CFLAGS)
 vulkan_libanv_gen7_la_CPPFLAGS = $(VULKAN_CPPFLAGS) -DGEN_VERSIONx10=70
