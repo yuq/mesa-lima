@@ -189,7 +189,10 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	    sscreen->b.chip_class != SI &&
 	    /* These can't use CE due to a power gating bug in the kernel. */
 	    sscreen->b.family != CHIP_CARRIZO &&
-	    sscreen->b.family != CHIP_STONEY) {
+	    sscreen->b.family != CHIP_STONEY &&
+	    /* Some CE bug is causing green screen corruption w/ MPV video
+	     * playback and occasional corruption w/ 3D. */
+	    sscreen->b.chip_class != GFX9) {
 		sctx->ce_ib = ws->cs_add_const_ib(sctx->b.gfx.cs);
 		if (!sctx->ce_ib)
 			goto fail;
