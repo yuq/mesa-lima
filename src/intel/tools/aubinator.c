@@ -102,30 +102,11 @@ print_dword_header(struct gen_field_iterator *iter, uint64_t offset)
            offset + 4 * iter->dword, iter->p[iter->dword], iter->dword);
 }
 
-static char *
-print_iterator_values(struct gen_field_iterator *iter)
-{
-    char *token = NULL;
-    if (strstr(iter->value, "struct") == NULL) {
-       fprintf(outfile, "    %s: %s\n", iter->name, iter->value);
-    } else {
-        token = strtok(iter->value, " ");
-        if (token != NULL) {
-            token = strtok(NULL, " ");
-        } else {
-            token = NULL;
-        }
-        fprintf(outfile, "    %s:<struct %s>\n", iter->name, token);
-    }
-    return token;
-}
-
 static void
 decode_group(struct gen_spec *spec, struct gen_group *strct,
              const uint32_t *p, int starting_dword)
 {
    struct gen_field_iterator iter;
-   char *token = NULL;
    int last_dword = 0;
    uint64_t offset = 0;
 
@@ -141,13 +122,12 @@ decode_group(struct gen_spec *spec, struct gen_group *strct,
          print_dword_header(&iter, offset);
          last_dword = iter.dword;
       }
-      if (iter.dword >= starting_dword)
-         token = print_iterator_values(&iter);
-      if (token != NULL) {
-         print_dword_header(&iter, offset);
-         struct gen_group *struct_val = gen_spec_find_struct(spec, token);
-         decode_group(spec, struct_val, &p[iter.dword], 0);
-         token = NULL;
+      if (iter.dword >= starting_dword) {
+         fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
+         if (iter.struct_desc) {
+            print_dword_header(&iter, offset + 4 * iter.dword);
+            decode_group(spec, iter.struct_desc, &p[iter.dword], 0);
+         }
       }
    }
 }

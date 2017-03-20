@@ -54,6 +54,7 @@ struct gen_field_iterator {
    struct gen_group *group;
    const char *name;
    char value[128];
+   struct gen_group *struct_desc;
    const uint32_t *p;
    int dword; /**< current field starts at &p[dword] */
    int i;

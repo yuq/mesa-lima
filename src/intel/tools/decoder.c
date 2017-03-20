@@ -753,6 +753,7 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    f = iter->group->fields[iter->i++];
    iter->name = f->name;
    iter->dword = f->start / 32;
+   iter->struct_desc = NULL;
 
    if ((f->end - f->start) > 32)
       v.qw = ((uint64_t) iter->p[iter->dword+1] << 32) | iter->p[iter->dword];
@@ -794,7 +795,9 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
       break;
    case GEN_TYPE_STRUCT:
       snprintf(iter->value, sizeof(iter->value),
-               "<struct %s %d>", f->type.gen_struct->name, iter->dword);
+               "<struct %s>", f->type.gen_struct->name);
+      iter->struct_desc =
+         gen_spec_find_struct(iter->group->spec, f->type.gen_struct->name);
       break;
    case GEN_TYPE_UFIXED:
       snprintf(iter->value, sizeof(iter->value),
