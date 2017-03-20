@@ -155,8 +155,7 @@ gen7_emit_null_surface_state(struct brw_context *brw,
     *     depth buffer’s corresponding state for all render target surfaces,
     *     including null.
     */
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 8 * 4, 32,
-                                    out_offset);
+   uint32_t *surf = brw_state_batch(brw, 8 * 4, 32, out_offset);
    memset(surf, 0, 8 * 4);
 
    /* From the Ivybridge PRM, Volume 4, Part 1, page 65,

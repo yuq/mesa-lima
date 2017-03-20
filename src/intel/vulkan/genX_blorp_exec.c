@@ -66,7 +66,6 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
 
 static void *
 blorp_alloc_dynamic_state(struct blorp_batch *batch,
-                          enum aub_state_struct_type type,
                           uint32_t size,
                           uint32_t alignment,
                           uint32_t *offset)

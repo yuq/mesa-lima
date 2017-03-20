@@ -85,8 +85,7 @@ brw_upload_wm_unit(struct brw_context *brw)
       brw_wm_prog_data(brw->wm.base.prog_data);
    struct brw_wm_unit_state *wm;
 
-   wm = brw_state_batch(brw, AUB_TRACE_WM_STATE,
-			sizeof(*wm), 32, &brw->wm.base.state_offset);
+   wm = brw_state_batch(brw, sizeof(*wm), 32, &brw->wm.base.state_offset);
    memset(wm, 0, sizeof(*wm));
 
    if (prog_data->dispatch_8 && prog_data->dispatch_16) {

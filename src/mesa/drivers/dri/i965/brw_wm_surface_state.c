@@ -156,10 +156,10 @@ brw_emit_surface_state(struct brw_context *brw,
       clear_color = intel_miptree_get_isl_clear_color(brw, mt);
    }
 
-   void *state = __brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-                                   brw->isl_dev.ss.size,
-                                   brw->isl_dev.ss.align,
-                                   surf_index, surf_offset);
+   void *state = brw_state_batch(brw,
+                                 brw->isl_dev.ss.size,
+                                 brw->isl_dev.ss.align,
+                                 surf_offset);
 
    isl_surf_fill_state(&brw->isl_dev, state, .surf = &surf, .view = &view,
                        .address = mt->bo->offset64 + offset,
@@ -654,7 +654,7 @@ brw_emit_buffer_surface_state(struct brw_context *brw,
                               unsigned pitch,
                               bool rw)
 {
-   uint32_t *dw = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+   uint32_t *dw = brw_state_batch(brw,
                                   brw->isl_dev.ss.size,
                                   brw->isl_dev.ss.align,
                                   out_offset);
@@ -781,8 +781,7 @@ brw_update_sol_surface(struct brw_context *brw,
    drm_intel_bo *bo = intel_bufferobj_buffer(brw, intel_bo,
                                              offset_bytes,
                                              buffer_obj->Size - offset_bytes);
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 6 * 4, 32,
-                                    out_offset);
+   uint32_t *surf = brw_state_batch(brw, 6 * 4, 32, out_offset);
    uint32_t pitch_minus_1 = 4*stride_dwords - 1;
    size_t size_dwords = buffer_obj->Size / 4;
    uint32_t buffer_size_minus_1, width, height, depth, surface_format;
@@ -918,8 +917,7 @@ brw_emit_null_surface_state(struct brw_context *brw,
    drm_intel_bo *bo = NULL;
    unsigned pitch_minus_1 = 0;
    uint32_t multisampling_state = 0;
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 6 * 4, 32,
-                                    out_offset);
+   uint32_t *surf = brw_state_batch(brw, 6 * 4, 32, out_offset);
 
    if (samples > 1) {
       /* On Gen6, null render targets seem to cause GPU hangs when
@@ -1017,7 +1015,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
       }
    }
 
-   surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 6 * 4, 32, &offset);
+   surf = brw_state_batch(brw, 6 * 4, 32, &offset);
 
    format = brw->render_target_format[rb_format];
    if (unlikely(!brw->format_supported_as_render_target[rb_format])) {

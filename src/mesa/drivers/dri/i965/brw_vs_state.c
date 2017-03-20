@@ -47,8 +47,7 @@ brw_upload_vs_unit(struct brw_context *brw)
 
    struct brw_vs_unit_state *vs;
 
-   vs = brw_state_batch(brw, AUB_TRACE_VS_STATE,
-			sizeof(*vs), 32, &stage_state->state_offset);
+   vs = brw_state_batch(brw, sizeof(*vs), 32, &stage_state->state_offset);
    memset(vs, 0, sizeof(*vs));
 
    /* BRW_NEW_PROGRAM_CACHE | BRW_NEW_VS_PROG_DATA */

@@ -252,15 +252,8 @@ void brw_print_program_cache(struct brw_context *brw);
 #define BRW_BATCH_STRUCT(brw, s) \
    intel_batchbuffer_data(brw, (s), sizeof(*(s)), RENDER_RING)
 
-void *__brw_state_batch(struct brw_context *brw,
-                        enum aub_state_struct_type type,
-                        int size,
-                        int alignment,
-                        int index,
-                        uint32_t *out_offset);
-#define brw_state_batch(brw, type, size, alignment, out_offset) \
-   __brw_state_batch(brw, type, size, alignment, 0, out_offset)
-
+void *brw_state_batch(struct brw_context *brw,
+                      int size, int alignment, uint32_t *out_offset);
 uint32_t brw_state_batch_size(struct brw_context *brw, uint32_t offset);
 
 /* brw_wm_surface_state.c */

@@ -38,7 +38,6 @@
 #include "main/mtypes.h"
 #include "brw_structs.h"
 #include "compiler/brw_compiler.h"
-#include "intel_aub.h"
 
 #include "isl/isl.h"
 #include "blorp/blorp.h"
@@ -1699,8 +1698,7 @@ void
 gen6_upload_push_constants(struct brw_context *brw,
                            const struct gl_program *prog,
                            const struct brw_stage_prog_data *prog_data,
-                           struct brw_stage_state *stage_state,
-                           enum aub_state_struct_type type);
+                           struct brw_stage_state *stage_state);
 
 bool
 gen9_use_linear_1d_layout(const struct brw_context *brw,

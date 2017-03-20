@@ -40,8 +40,7 @@ brw_upload_gs_unit(struct brw_context *brw)
 {
    struct brw_gs_unit_state *gs;
 
-   gs = brw_state_batch(brw, AUB_TRACE_GS_STATE,
-			sizeof(*gs), 32, &brw->ff_gs.state_offset);
+   gs = brw_state_batch(brw, sizeof(*gs), 32, &brw->ff_gs.state_offset);
 
    memset(gs, 0, sizeof(*gs));
 

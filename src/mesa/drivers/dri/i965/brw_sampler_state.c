@@ -290,8 +290,7 @@ upload_default_color(struct brw_context *brw,
        * format.  This matches the sampler->BorderColor union exactly; just
        * memcpy the values.
        */
-      uint32_t *sdc = brw_state_batch(brw, AUB_TRACE_SAMPLER_DEFAULT_COLOR,
-                                      4 * 4, 64, sdc_offset);
+      uint32_t *sdc = brw_state_batch(brw, 4 * 4, 64, sdc_offset);
       memcpy(sdc, color.ui, 4 * 4);
    } else if (brw->is_haswell && (is_integer_format || is_stencil_sampling)) {
       /* Haswell's integer border color support is completely insane:
@@ -302,8 +301,7 @@ upload_default_color(struct brw_context *brw,
        * has the "Integer Surface Format" bit set.  Even then, the
        * arrangement of the RGBA data devolves into madness.
        */
-      uint32_t *sdc = brw_state_batch(brw, AUB_TRACE_SAMPLER_DEFAULT_COLOR,
-                                      20 * 4, 512, sdc_offset);
+      uint32_t *sdc = brw_state_batch(brw, 20 * 4, 512, sdc_offset);
       memset(sdc, 0, 20 * 4);
       sdc = &sdc[16];
 
@@ -359,8 +357,7 @@ upload_default_color(struct brw_context *brw,
    } else if (brw->gen == 5 || brw->gen == 6) {
       struct gen5_sampler_default_color *sdc;
 
-      sdc = brw_state_batch(brw, AUB_TRACE_SAMPLER_DEFAULT_COLOR,
-			    sizeof(*sdc), 32, sdc_offset);
+      sdc = brw_state_batch(brw, sizeof(*sdc), 32, sdc_offset);
 
       memset(sdc, 0, sizeof(*sdc));
 
@@ -394,8 +391,7 @@ upload_default_color(struct brw_context *brw,
       sdc->f[2] = color.f[2];
       sdc->f[3] = color.f[3];
    } else {
-      float *sdc = brw_state_batch(brw, AUB_TRACE_SAMPLER_DEFAULT_COLOR,
-			           4 * 4, 32, sdc_offset);
+      float *sdc = brw_state_batch(brw, 4 * 4, 32, sdc_offset);
       memcpy(sdc, color.f, 4 * 4);
    }
 }
@@ -596,7 +592,7 @@ brw_upload_sampler_state_table(struct brw_context *brw,
    const int dwords = 4;
    const int size_in_bytes = dwords * sizeof(uint32_t);
 
-   uint32_t *sampler_state = brw_state_batch(brw, AUB_TRACE_SAMPLER_STATE,
+   uint32_t *sampler_state = brw_state_batch(brw,
                                              sampler_count * size_in_bytes,
                                              32, &stage_state->sampler_offset);
    memset(sampler_state, 0, sampler_count * size_in_bytes);

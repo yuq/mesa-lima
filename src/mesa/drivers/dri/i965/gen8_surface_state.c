@@ -43,11 +43,9 @@
 #include "isl/isl.h"
 
 static uint32_t *
-gen8_allocate_surface_state(struct brw_context *brw,
-                            uint32_t *out_offset, int index)
+gen8_allocate_surface_state(struct brw_context *brw, uint32_t *out_offset)
 {
-   uint32_t *surf = __brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-                                      64, 64, index, out_offset);
+   uint32_t *surf = brw_state_batch(brw, 64, 64, out_offset);
    memset(surf, 0, 64);
    return surf;
 }
@@ -67,7 +65,7 @@ gen8_emit_null_surface_state(struct brw_context *brw,
                              unsigned samples,
                              uint32_t *out_offset)
 {
-   uint32_t *surf = gen8_allocate_surface_state(brw, out_offset, -1);
+   uint32_t *surf = gen8_allocate_surface_state(brw, out_offset);
 
    surf[0] = BRW_SURFACE_NULL << BRW_SURFACE_TYPE_SHIFT |
              ISL_FORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT |

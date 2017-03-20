@@ -71,10 +71,9 @@ brw_upload_binding_table(struct brw_context *brw,
             brw->shader_time.bo, 0, ISL_FORMAT_RAW,
             brw->shader_time.bo->size, 1, true);
       }
-      uint32_t *bind = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
-                                       prog_data->binding_table.size_bytes,
-                                       32,
-                                       &stage_state->bind_bo_offset);
+      uint32_t *bind =
+         brw_state_batch(brw, prog_data->binding_table.size_bytes,
+                         32, &stage_state->bind_bo_offset);
 
       /* BRW_NEW_SURFACES and BRW_NEW_*_CONSTBUF */
       memcpy(bind, stage_state->surf_offset,

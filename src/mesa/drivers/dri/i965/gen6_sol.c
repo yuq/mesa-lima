@@ -131,8 +131,7 @@ brw_gs_upload_binding_table(struct brw_context *brw)
        * space for the binding table. Anyway, in this case we know that we only
        * use BRW_MAX_SOL_BINDINGS surfaces at most.
        */
-      bind = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
-                             sizeof(uint32_t) * BRW_MAX_SOL_BINDINGS,
+      bind = brw_state_batch(brw, sizeof(uint32_t) * BRW_MAX_SOL_BINDINGS,
                              32, &brw->ff_gs.bind_bo_offset);
 
       /* BRW_NEW_SURFACES */
@@ -160,8 +159,7 @@ brw_gs_upload_binding_table(struct brw_context *brw)
       /* Might want to calculate nr_surfaces first, to avoid taking up so much
        * space for the binding table.
        */
-      bind = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
-                             sizeof(uint32_t) * BRW_MAX_SURFACES,
+      bind = brw_state_batch(brw, sizeof(uint32_t) * BRW_MAX_SURFACES,
                              32, &brw->gs.base.bind_bo_offset);
 
       /* BRW_NEW_SURFACES */

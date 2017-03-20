@@ -40,8 +40,7 @@ upload_clip_vp(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    struct brw_clipper_viewport *vp;
 
-   vp = brw_state_batch(brw, AUB_TRACE_CLIP_VP_STATE,
-                        sizeof(*vp), 32, &brw->clip.vp_offset);
+   vp = brw_state_batch(brw, sizeof(*vp), 32, &brw->clip.vp_offset);
 
    const float maximum_post_clamp_delta = 4096;
    float gbx = maximum_post_clamp_delta / ctx->ViewportArray[0].Width;
@@ -66,8 +65,7 @@ brw_upload_clip_unit(struct brw_context *brw)
 
    upload_clip_vp(brw);
 
-   clip = brw_state_batch(brw, AUB_TRACE_CLIP_STATE,
-			  sizeof(*clip), 32, &brw->clip.state_offset);
+   clip = brw_state_batch(brw, sizeof(*clip), 32, &brw->clip.state_offset);
    memset(clip, 0, sizeof(*clip));
 
    /* BRW_NEW_PROGRAM_CACHE | BRW_NEW_CLIP_PROG_DATA */

@@ -91,7 +91,6 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
 
 static void *
 blorp_alloc_dynamic_state(struct blorp_batch *batch,
-                          enum aub_state_struct_type type,
                           uint32_t size,
                           uint32_t alignment,
                           uint32_t *offset)
@@ -99,7 +98,7 @@ blorp_alloc_dynamic_state(struct blorp_batch *batch,
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;
 
-   return brw_state_batch(brw, type, size, alignment, offset);
+   return brw_state_batch(brw, size, alignment, offset);
 }
 
 static void
@@ -111,12 +110,12 @@ blorp_alloc_binding_table(struct blorp_batch *batch, unsigned num_entries,
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;
 
-   uint32_t *bt_map = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
+   uint32_t *bt_map = brw_state_batch(brw,
                                       num_entries * sizeof(uint32_t), 32,
                                       bt_offset);
 
    for (unsigned i = 0; i < num_entries; i++) {
-      surface_maps[i] = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+      surface_maps[i] = brw_state_batch(brw,
                                         state_size, state_alignment,
                                         &(surface_offsets)[i]);
       bt_map[i] = surface_offsets[i];
@@ -131,8 +130,7 @@ blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
    struct brw_context *brw = batch->driver_batch;
 
    uint32_t offset;
-   void *data = brw_state_batch(brw, AUB_TRACE_VERTEX_BUFFER,
-                                size, 32, &offset);
+   void *data = brw_state_batch(brw, size, 32, &offset);
 
    *addr = (struct blorp_address) {
       .buffer = brw->batch.bo,

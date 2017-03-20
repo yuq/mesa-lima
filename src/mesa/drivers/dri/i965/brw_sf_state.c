@@ -48,8 +48,7 @@ static void upload_sf_vp(struct brw_context *brw)
    float scale[3], translate[3];
    const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
 
-   sfv = brw_state_batch(brw, AUB_TRACE_SF_VP_STATE,
-			 sizeof(*sfv), 32, &brw->sf.vp_offset);
+   sfv = brw_state_batch(brw, sizeof(*sfv), 32, &brw->sf.vp_offset);
    memset(sfv, 0, sizeof(*sfv));
 
    /* Accessing the fields Width and Height of gl_framebuffer to produce the
@@ -138,8 +137,7 @@ static void upload_sf_unit( struct brw_context *brw )
    int chipset_max_threads;
    bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
 
-   sf = brw_state_batch(brw, AUB_TRACE_SF_STATE,
-			sizeof(*sf), 64, &brw->sf.state_offset);
+   sf = brw_state_batch(brw, sizeof(*sf), 64, &brw->sf.state_offset);
 
    memset(sf, 0, sizeof(*sf));
 

@@ -59,13 +59,10 @@ brw_state_batch_size(struct brw_context *brw, uint32_t offset)
  * buffers in at the top of the batchbuffer.
  */
 void *
-__brw_state_batch(struct brw_context *brw,
-                  enum aub_state_struct_type type,
-                  int size,
-                  int alignment,
-                  int index,
-                  uint32_t *out_offset)
-
+brw_state_batch(struct brw_context *brw,
+                int size,
+                int alignment,
+                uint32_t *out_offset)
 {
    struct intel_batchbuffer *batch = &brw->batch;
    uint32_t offset;

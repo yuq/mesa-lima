@@ -47,8 +47,7 @@ brw_upload_cc_vp(struct brw_context *brw)
    /* BRW_NEW_VIEWPORT_COUNT */
    const unsigned viewport_count = brw->clip.viewport_count;
 
-   ccv = brw_state_batch(brw, AUB_TRACE_CC_VP_STATE,
-			 sizeof(*ccv) * viewport_count, 32,
+   ccv = brw_state_batch(brw, sizeof(*ccv) * viewport_count, 32,
                          &brw->cc.vp_offset);
 
    /* _NEW_TRANSFORM */
@@ -116,8 +115,7 @@ static void upload_cc_unit(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    struct brw_cc_unit_state *cc;
 
-   cc = brw_state_batch(brw, AUB_TRACE_CC_STATE,
-			sizeof(*cc), 64, &brw->cc.state_offset);
+   cc = brw_state_batch(brw, sizeof(*cc), 64, &brw->cc.state_offset);
    memset(cc, 0, sizeof(*cc));
 
    /* _NEW_STENCIL | _NEW_BUFFERS */
