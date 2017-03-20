@@ -103,8 +103,7 @@ print_dword_header(struct gen_field_iterator *iter, uint64_t offset)
 }
 
 static void
-decode_group(struct gen_spec *spec, struct gen_group *strct,
-             const uint32_t *p, int starting_dword)
+decode_group(struct gen_group *strct, const uint32_t *p, int starting_dword)
 {
    struct gen_field_iterator iter;
    int last_dword = 0;
@@ -126,7 +125,7 @@ decode_group(struct gen_spec *spec, struct gen_group *strct,
          fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
          if (iter.struct_desc) {
             print_dword_header(&iter, offset + 4 * iter.dword);
-            decode_group(spec, iter.struct_desc, &p[iter.dword], 0);
+            decode_group(iter.struct_desc, &p[iter.dword], 0);
          }
       }
    }
@@ -159,7 +158,7 @@ dump_binding_table(struct gen_spec *spec, uint32_t offset)
          fprintf(outfile, "pointer %u: %08x\n", i, pointers[i]);
       }
 
-      decode_group(spec, surface_state, gtt + start, 0);
+      decode_group(surface_state, gtt + start, 0);
    }
 }
 
@@ -271,7 +270,7 @@ dump_samplers(struct gen_spec *spec, uint32_t offset)
    start = dynamic_state_base + offset;
    for (i = 0; i < 4; i++) {
       fprintf(outfile, "sampler state %d\n", i);
-      decode_group(spec, sampler_state, gtt + start + i * 16, 0);
+      decode_group(sampler_state, gtt + start + i * 16, 0);
    }
 }
 
@@ -295,7 +294,7 @@ handle_media_interface_descriptor_load(struct gen_spec *spec, uint32_t *p)
    descriptors = gtt + start;
    for (i = 0; i < length; i++, descriptors += 8) {
       fprintf(outfile, "descriptor %u: %08x\n", i, *descriptors);
-      decode_group(spec, descriptor_structure, descriptors, 0);
+      decode_group(descriptor_structure, descriptors, 0);
 
       start = instruction_base + descriptors[0];
       if (!valid_offset(start)) {
@@ -563,7 +562,7 @@ handle_3dstate_viewport_state_pointers_cc(struct gen_spec *spec, uint32_t *p)
    start = dynamic_state_base + (p[1] & ~0x1fu);
    for (uint32_t i = 0; i < 4; i++) {
       fprintf(outfile, "viewport %d\n", i);
-      decode_group(spec, cc_viewport, gtt + start + i * 8, 0);
+      decode_group(cc_viewport, gtt + start + i * 8, 0);
    }
 }
 
@@ -579,7 +578,7 @@ handle_3dstate_viewport_state_pointers_sf_clip(struct gen_spec *spec,
    start = dynamic_state_base + (p[1] & ~0x3fu);
    for (uint32_t i = 0; i < 4; i++) {
       fprintf(outfile, "viewport %d\n", i);
-      decode_group(spec, sf_clip_viewport, gtt + start + i * 64, 0);
+      decode_group(sf_clip_viewport, gtt + start + i * 64, 0);
    }
 }
 
@@ -592,7 +591,7 @@ handle_3dstate_blend_state_pointers(struct gen_spec *spec, uint32_t *p)
    blend_state = gen_spec_find_struct(spec, "BLEND_STATE");
 
    start = dynamic_state_base + (p[1] & ~0x3fu);
-   decode_group(spec, blend_state, gtt + start, 0);
+   decode_group(blend_state, gtt + start, 0);
 }
 
 static void
@@ -604,7 +603,7 @@ handle_3dstate_cc_state_pointers(struct gen_spec *spec, uint32_t *p)
    cc_state = gen_spec_find_struct(spec, "COLOR_CALC_STATE");
 
    start = dynamic_state_base + (p[1] & ~0x3fu);
-   decode_group(spec, cc_state, gtt + start, 0);
+   decode_group(cc_state, gtt + start, 0);
 }
 
 static void
@@ -616,7 +615,7 @@ handle_3dstate_scissor_state_pointers(struct gen_spec *spec, uint32_t *p)
    scissor_rect = gen_spec_find_struct(spec, "SCISSOR_RECT");
 
    start = dynamic_state_base + (p[1] & ~0x1fu);
-   decode_group(spec, scissor_rect, gtt + start, 0);
+   decode_group(scissor_rect, gtt + start, 0);
 }
 
 static void
@@ -627,7 +626,7 @@ handle_load_register_imm(struct gen_spec *spec, uint32_t *p)
    if (reg != NULL) {
       fprintf(outfile, "register %s (0x%x): 0x%x\n",
               reg->name, reg->register_offset, p[2]);
-      decode_group(spec, reg, &p[2], 0);
+      decode_group(reg, &p[2], 0);
    }
 }
 
@@ -751,7 +750,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
               gen_group_get_name(inst), reset_color);
 
       if (option_full_decode) {
-         decode_group(spec, inst, p, 1);
+         decode_group(inst, p, 1);
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
             if (gen_group_get_opcode(inst) == custom_handlers[i].opcode)
