@@ -564,8 +564,7 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 
 		if (pipeline->gs_copy_shader) {
 			pipeline->gs_copy_shader =
-				radv_pipeline_cache_insert_shader(pipeline->device,
-								  cache,
+				radv_pipeline_cache_insert_shader(cache,
 								  gs_copy_sha1,
 								  pipeline->gs_copy_shader,
 								  gs_copy_code,
@@ -576,10 +575,8 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 		ralloc_free(nir);
 
 	if (variant)
-		variant = radv_pipeline_cache_insert_shader(pipeline->device,
-							    cache, sha1,
-							    variant, code,
-							    code_size);
+		variant = radv_pipeline_cache_insert_shader(cache, sha1, variant,
+							    code, code_size);
 
 	if (code)
 		free(code);
