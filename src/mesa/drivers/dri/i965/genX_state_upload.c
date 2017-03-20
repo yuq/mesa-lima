@@ -112,7 +112,7 @@ __gen_combine_address(struct brw_context *brw, void *location,
         _brw_cmd_pack(cmd)(brw, (void *)_dst, &name),              \
         _dst = NULL)
 
-#if GEN_GEN == 6
+#if GEN_GEN >= 6
 /**
  * Determine the appropriate attribute override value to store into the
  * 3DSTATE_SF structure for a given fragment shader attribute.  The attribute
@@ -339,11 +339,6 @@ genX(calculate_attr_overrides)(const struct brw_context *brw,
     */
    *urb_entry_read_length = DIV_ROUND_UP(max_source_attr + 1, 2);
 }
-#endif
-
-/* ---------------------------------------------------------------------- */
-
-#if GEN_GEN >= 6
 
 /* ---------------------------------------------------------------------- */
 
@@ -756,6 +751,119 @@ static const struct brw_tracked_state genX(sf_state) = {
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 7
+static void
+genX(upload_sbe)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+#if GEN_GEN >= 8
+   struct GENX(SF_OUTPUT_ATTRIBUTE_DETAIL) attr_overrides[16] = { { 0 } };
+#else
+#define attr_overrides sbe.Attribute
+#endif
+   uint32_t urb_entry_read_length;
+   uint32_t urb_entry_read_offset;
+   uint32_t point_sprite_enables;
+
+   brw_batch_emit(brw, GENX(3DSTATE_SBE), sbe) {
+      sbe.AttributeSwizzleEnable = true;
+      sbe.NumberofSFOutputAttributes = wm_prog_data->num_varying_inputs;
+
+      /* _NEW_BUFFERS */
+      bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+
+      /* _NEW_POINT
+       *
+       * Window coordinates in an FBO are inverted, which means point
+       * sprite origin must be inverted.
+       */
+      if ((ctx->Point.SpriteOrigin == GL_LOWER_LEFT) != render_to_fbo)
+         sbe.PointSpriteTextureCoordinateOrigin = LOWERLEFT;
+      else
+         sbe.PointSpriteTextureCoordinateOrigin = UPPERLEFT;
+
+      /* _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM,
+       * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM |
+       * BRW_NEW_GS_PROG_DATA | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA |
+       * BRW_NEW_VUE_MAP_GEOM_OUT
+       */
+      genX(calculate_attr_overrides)(brw,
+                                     attr_overrides,
+                                     &point_sprite_enables,
+                                     &urb_entry_read_length,
+                                     &urb_entry_read_offset);
+
+      /* Typically, the URB entry read length and offset should be programmed
+       * in 3DSTATE_VS and 3DSTATE_GS; SBE inherits it from the last active
+       * stage which produces geometry.  However, we don't know the proper
+       * value until we call calculate_attr_overrides().
+       *
+       * To fit with our existing code, we override the inherited values and
+       * specify it here directly, as we did on previous generations.
+       */
+      sbe.VertexURBEntryReadLength = urb_entry_read_length;
+      sbe.VertexURBEntryReadOffset = urb_entry_read_offset;
+      sbe.PointSpriteTextureCoordinateEnable = point_sprite_enables;
+      sbe.ConstantInterpolationEnable = wm_prog_data->flat_inputs;
+
+#if GEN_GEN >= 8
+      sbe.ForceVertexURBEntryReadLength = true;
+      sbe.ForceVertexURBEntryReadOffset = true;
+#endif
+
+#if GEN_GEN >= 9
+      /* prepare the active component dwords */
+      int input_index = 0;
+      for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
+         if (!(brw->fragment_program->info.inputs_read &
+               BITFIELD64_BIT(attr))) {
+            continue;
+         }
+
+         assert(input_index < 32);
+
+         sbe.AttributeActiveComponentFormat[input_index] = ACTIVE_COMPONENT_XYZW;
+         ++input_index;
+      }
+#endif
+   }
+
+#if GEN_GEN >= 8
+   brw_batch_emit(brw, GENX(3DSTATE_SBE_SWIZ), sbes) {
+      for (int i = 0; i < 16; i++)
+         sbes.Attribute[i] = attr_overrides[i];
+   }
+#endif
+
+#undef attr_overrides
+}
+
+static const struct brw_tracked_state genX(sbe_state) = {
+   .dirty = {
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_POINT |
+               _NEW_POLYGON |
+               _NEW_PROGRAM,
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_GS_PROG_DATA |
+               BRW_NEW_TES_PROG_DATA |
+               BRW_NEW_VUE_MAP_GEOM_OUT |
+               (GEN_GEN == 7 ? BRW_NEW_PRIMITIVE
+                             : 0),
+   },
+   .emit = genX(upload_sbe),
+};
+#endif
+
+/* ---------------------------------------------------------------------- */
+
 #if GEN_GEN >= 8
 static void
 genX(upload_raster)(struct brw_context *brw)
@@ -1072,7 +1180,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_gs_state,
       &gen7_sol_state,
       &genX(clip_state),
-      &gen7_sbe_state,
+      &genX(sbe_state),
       &genX(sf_state),
       &gen7_wm_state,
       &gen7_ps_state,
@@ -1160,7 +1268,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_sol_state,
       &genX(clip_state),
       &genX(raster_state),
-      &gen8_sbe_state,
+      &genX(sbe_state),
       &genX(sf_state),
       &gen8_ps_blend,
       &gen8_ps_extra,

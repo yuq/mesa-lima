@@ -97,7 +97,6 @@ i965_FILES = \
 	gen7_hs_state.c \
 	gen7_l3_state.c \
 	gen7_misc_state.c \
-	gen7_sf_state.c \
 	gen7_sol_state.c \
 	gen7_te_state.c \
 	gen7_urb.c \
@@ -113,7 +112,6 @@ i965_FILES = \
 	gen8_hs_state.c \
 	gen8_multisample_state.c \
 	gen8_ps_state.c \
-	gen8_sf_state.c \
 	gen8_sol_state.c \
 	gen8_surface_state.c \
 	gen8_viewport_state.c \
