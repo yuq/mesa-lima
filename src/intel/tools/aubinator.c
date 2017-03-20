@@ -96,23 +96,14 @@ valid_offset(uint32_t offset)
 }
 
 static void
-print_dword_val(struct gen_field_iterator *iter, uint64_t offset,
-                int *dword_num)
+print_dword_header(struct gen_field_iterator *iter, uint64_t offset)
 {
-   struct gen_field *f;
-
-   f = iter->group->fields[iter->i - 1];
-   const int dword = f->start / 32;
-
-   if (*dword_num != dword) {
-      fprintf(outfile, "0x%08"PRIx64":  0x%08x : Dword %d\n",
-              offset + 4 * dword,  iter->p[dword], dword);
-      *dword_num = dword;
-   }
+   fprintf(outfile, "0x%08"PRIx64":  0x%08x : Dword %d\n",
+           offset + 4 * iter->dword, iter->p[iter->dword], iter->dword);
 }
 
 static char *
-print_iterator_values(struct gen_field_iterator *iter, int *idx)
+print_iterator_values(struct gen_field_iterator *iter)
 {
     char *token = NULL;
     if (strstr(iter->value, "struct") == NULL) {
@@ -121,7 +112,6 @@ print_iterator_values(struct gen_field_iterator *iter, int *idx)
         token = strtok(iter->value, " ");
         if (token != NULL) {
             token = strtok(NULL, " ");
-            *idx = atoi(strtok(NULL, ">"));
         } else {
             token = NULL;
         }
@@ -136,7 +126,7 @@ decode_group(struct gen_spec *spec, struct gen_group *strct,
 {
    struct gen_field_iterator iter;
    char *token = NULL;
-   int idx = 0, dword_num = 0;
+   int last_dword = 0;
    uint64_t offset = 0;
 
    if (option_print_offsets)
@@ -147,15 +137,16 @@ decode_group(struct gen_spec *spec, struct gen_group *strct,
    gen_field_iterator_init(&iter, strct, p,
                            option_color == COLOR_ALWAYS);
    while (gen_field_iterator_next(&iter)) {
-      idx = 0;
-      print_dword_val(&iter, offset, &dword_num);
-      if (dword_num >= starting_dword)
-         token = print_iterator_values(&iter, &idx);
+      if (last_dword != iter.dword) {
+         print_dword_header(&iter, offset);
+         last_dword = iter.dword;
+      }
+      if (iter.dword >= starting_dword)
+         token = print_iterator_values(&iter);
       if (token != NULL) {
-         fprintf(outfile, "0x%08"PRIx64":  0x%08x : Dword %d\n",
-                 offset + 4 * idx, p[idx], idx);
+         print_dword_header(&iter, offset);
          struct gen_group *struct_val = gen_spec_find_struct(spec, token);
-         decode_group(spec, struct_val, &p[idx], 0);
+         decode_group(spec, struct_val, &p[iter.dword], 0);
          token = NULL;
       }
    }

@@ -752,12 +752,12 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
 
    f = iter->group->fields[iter->i++];
    iter->name = f->name;
-   int index = f->start / 32;
+   iter->dword = f->start / 32;
 
    if ((f->end - f->start) > 32)
-      v.qw = ((uint64_t) iter->p[index+1] << 32) | iter->p[index];
+      v.qw = ((uint64_t) iter->p[iter->dword+1] << 32) | iter->p[iter->dword];
    else
-      v.qw = iter->p[index];
+      v.qw = iter->p[iter->dword];
 
    const char *enum_name = NULL;
 
@@ -794,7 +794,7 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
       break;
    case GEN_TYPE_STRUCT:
       snprintf(iter->value, sizeof(iter->value),
-               "<struct %s %d>", f->type.gen_struct->name, (f->start / 32));
+               "<struct %s %d>", f->type.gen_struct->name, iter->dword);
       break;
    case GEN_TYPE_UFIXED:
       snprintf(iter->value, sizeof(iter->value),
