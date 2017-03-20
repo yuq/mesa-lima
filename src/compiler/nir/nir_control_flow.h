@@ -25,9 +25,10 @@
  *
  */
 
-#include "nir.h"
+#ifndef NIR_CONTROL_FLOW_H
+#define NIR_CONTROL_FLOW_H
 
-#pragma once
+#include "nir.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -163,3 +164,5 @@ nir_cf_node_remove(nir_cf_node *node)
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* NIR_CONTROL_FLOW_H */

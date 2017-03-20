@@ -25,7 +25,8 @@
  *
  */
 
-#pragma once
+#ifndef NIR_H
+#define NIR_H
 
 #include "util/hash_table.h"
 #include "compiler/glsl/list.h"
@@ -2634,3 +2635,5 @@ gl_system_value nir_system_value_from_intrinsic(nir_intrinsic_op intrin);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+#endif /* NIR_H */
