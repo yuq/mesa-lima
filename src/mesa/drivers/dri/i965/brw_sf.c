@@ -207,7 +207,11 @@ brw_upload_sf_prog(struct brw_context *brw)
       brw_wm_prog_data(brw->wm.base.prog_data);
    if (wm_prog_data) {
       key.contains_flat_varying = wm_prog_data->contains_flat_varying;
-      key.interp_mode = wm_prog_data->interp_mode;
+
+      STATIC_ASSERT(sizeof(key.interp_mode) ==
+                    sizeof(wm_prog_data->interp_mode));
+      memcpy(key.interp_mode, wm_prog_data->interp_mode,
+             sizeof(key.interp_mode));
    }
 
    /* _NEW_LIGHT | _NEW_PROGRAM */
