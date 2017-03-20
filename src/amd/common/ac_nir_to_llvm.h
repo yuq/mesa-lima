@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef AC_NIR_TO_LLVM_H
+#define AC_NIR_TO_LLVM_H
 
 #include <stdbool.h>
 #include "llvm-c/Core.h"
@@ -157,3 +158,4 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 			      const struct ac_nir_compiler_options *options,
 			      bool dump_shader);
 
+#endif /* AC_NIR_TO_LLVM_H */

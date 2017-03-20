@@ -22,7 +22,9 @@
  * of the Software.
  *
  */
-#pragma once
+
+#ifndef AC_LLVM_UTIL_H
+#define AC_LLVM_UTIL_H
 
 #include <stdbool.h>
 #include <llvm-c/TargetMachine.h>
@@ -65,3 +67,5 @@ void ac_dump_module(LLVMModuleRef module);
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* AC_LLVM_UTIL_H */
