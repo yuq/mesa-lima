@@ -40,7 +40,7 @@
 #include <xf86drm.h>
 
 #include "main/mtypes.h"
-#include "intel_bufmgr.h"
+#include "brw_bufmgr.h"
 #include <GL/internal/dri_interface.h>
 
 #ifdef __cplusplus
@@ -66,7 +66,7 @@ struct intel_image_format {
 
 struct __DRIimageRec {
    struct intel_screen *screen;
-   drm_intel_bo *bo;
+   drm_bacon_bo *bo;
    uint32_t pitch; /**< in bytes */
    GLenum internal_format;
    uint32_t dri_format;

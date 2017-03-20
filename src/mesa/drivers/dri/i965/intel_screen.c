@@ -105,7 +105,7 @@ DRI_CONF_END
 
 #include "intel_batchbuffer.h"
 #include "intel_buffers.h"
-#include "intel_bufmgr.h"
+#include "brw_bufmgr.h"
 #include "intel_fbo.h"
 #include "intel_mipmap_tree.h"
 #include "intel_screen.h"
@@ -294,7 +294,7 @@ static void
 intel_image_warn_if_unaligned(__DRIimage *image, const char *func)
 {
    uint32_t tiling, swizzle;
-   drm_intel_bo_get_tiling(image->bo, &tiling, &swizzle);
+   drm_bacon_bo_get_tiling(image->bo, &tiling, &swizzle);
 
    if (tiling != I915_TILING_NONE && (image->offset & 0xfff)) {
       _mesa_warning(NULL, "%s: offset 0x%08x not on tile boundary",
@@ -375,9 +375,9 @@ intel_setup_image_from_mipmap_tree(struct brw_context *brw, __DRIimage *image,
                                                   &image->tile_x,
                                                   &image->tile_y);
 
-   drm_intel_bo_unreference(image->bo);
+   drm_bacon_bo_unreference(image->bo);
    image->bo = mt->bo;
-   drm_intel_bo_reference(mt->bo);
+   drm_bacon_bo_reference(mt->bo);
 }
 
 static __DRIimage *
@@ -401,7 +401,7 @@ intel_create_image_from_name(__DRIscreen *dri_screen,
     image->width = width;
     image->height = height;
     image->pitch = pitch * cpp;
-    image->bo = drm_intel_bo_gem_create_from_name(screen->bufmgr, "image",
+    image->bo = drm_bacon_bo_gem_create_from_name(screen->bufmgr, "image",
                                                   name);
     if (!image->bo) {
        free(image);
@@ -437,9 +437,9 @@ intel_create_image_from_renderbuffer(__DRIcontext *context,
    image->format = rb->Format;
    image->offset = 0;
    image->data = loaderPrivate;
-   drm_intel_bo_unreference(image->bo);
+   drm_bacon_bo_unreference(image->bo);
    image->bo = irb->mt->bo;
-   drm_intel_bo_reference(irb->mt->bo);
+   drm_bacon_bo_reference(irb->mt->bo);
    image->width = rb->Width;
    image->height = rb->Height;
    image->pitch = irb->mt->pitch;
@@ -513,7 +513,7 @@ intel_create_image_from_texture(__DRIcontext *context, int target,
 static void
 intel_destroy_image(__DRIimage *image)
 {
-   drm_intel_bo_unreference(image->bo);
+   drm_bacon_bo_unreference(image->bo);
    free(image);
 }
 
@@ -613,7 +613,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
       return NULL;
 
    cpp = _mesa_get_format_bytes(image->format);
-   image->bo = drm_intel_bo_alloc_tiled(screen->bufmgr, "image",
+   image->bo = drm_bacon_bo_alloc_tiled(screen->bufmgr, "image",
                                         width, height, cpp, &tiling,
                                         &pitch, 0);
    if (image->bo == NULL) {
@@ -660,7 +660,7 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
       *value = image->bo->handle;
       return true;
    case __DRI_IMAGE_ATTRIB_NAME:
-      return !drm_intel_bo_flink(image->bo, (uint32_t *) value);
+      return !drm_bacon_bo_flink(image->bo, (uint32_t *) value);
    case __DRI_IMAGE_ATTRIB_FORMAT:
       *value = image->dri_format;
       return true;
@@ -676,7 +676,7 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
       *value = image->planar_format->components;
       return true;
    case __DRI_IMAGE_ATTRIB_FD:
-      return !drm_intel_bo_gem_export_to_prime(image->bo, value);
+      return !drm_bacon_bo_gem_export_to_prime(image->bo, value);
    case __DRI_IMAGE_ATTRIB_FOURCC:
       return intel_lookup_fourcc(image->dri_format, value);
    case __DRI_IMAGE_ATTRIB_NUM_PLANES:
@@ -706,7 +706,7 @@ intel_dup_image(__DRIimage *orig_image, void *loaderPrivate)
    if (image == NULL)
       return NULL;
 
-   drm_intel_bo_reference(orig_image->bo);
+   drm_bacon_bo_reference(orig_image->bo);
    image->bo              = orig_image->bo;
    image->internal_format = orig_image->internal_format;
    image->planar_format   = orig_image->planar_format;
@@ -824,7 +824,7 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
          size = end;
    }
 
-   image->bo = drm_intel_bo_gem_create_from_prime(screen->bufmgr,
+   image->bo = drm_bacon_bo_gem_create_from_prime(screen->bufmgr,
                                                   fds[0], size);
    if (image->bo == NULL) {
       free(image);
@@ -916,7 +916,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
     }
 
     image->bo = parent->bo;
-    drm_intel_bo_reference(parent->bo);
+    drm_bacon_bo_reference(parent->bo);
 
     image->width = width;
     image->height = height;
@@ -1111,7 +1111,7 @@ intelDestroyScreen(__DRIscreen * sPriv)
 {
    struct intel_screen *screen = sPriv->driverPrivate;
 
-   drm_intel_bufmgr_destroy(screen->bufmgr);
+   drm_bacon_bufmgr_destroy(screen->bufmgr);
    driDestroyOptionInfo(&screen->optionCache);
 
    ralloc_free(screen);
@@ -1274,7 +1274,7 @@ intel_init_bufmgr(struct intel_screen *screen)
 
    screen->no_hw = getenv("INTEL_NO_HW") != NULL;
 
-   screen->bufmgr = drm_intel_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
+   screen->bufmgr = drm_bacon_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
    if (screen->bufmgr == NULL) {
       fprintf(stderr, "[%s:%u] Error initializing buffer manager.\n",
 	      __func__, __LINE__);
@@ -1292,20 +1292,20 @@ intel_init_bufmgr(struct intel_screen *screen)
 static bool
 intel_detect_swizzling(struct intel_screen *screen)
 {
-   drm_intel_bo *buffer;
+   drm_bacon_bo *buffer;
    unsigned long flags = 0;
    unsigned long aligned_pitch;
    uint32_t tiling = I915_TILING_X;
    uint32_t swizzle_mode = 0;
 
-   buffer = drm_intel_bo_alloc_tiled(screen->bufmgr, "swizzle test",
+   buffer = drm_bacon_bo_alloc_tiled(screen->bufmgr, "swizzle test",
 				     64, 64, 4,
 				     &tiling, &aligned_pitch, flags);
    if (buffer == NULL)
       return false;
 
-   drm_intel_bo_get_tiling(buffer, &tiling, &swizzle_mode);
-   drm_intel_bo_unreference(buffer);
+   drm_bacon_bo_get_tiling(buffer, &tiling, &swizzle_mode);
+   drm_bacon_bo_unreference(buffer);
 
    if (swizzle_mode == I915_BIT_6_SWIZZLE_NONE)
       return false;
@@ -1325,13 +1325,13 @@ intel_detect_timestamp(struct intel_screen *screen)
     * More recent kernels offer an interface to read the full 36bits
     * everywhere.
     */
-   if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP | 1, &dummy) == 0)
+   if (drm_bacon_reg_read(screen->bufmgr, TIMESTAMP | 1, &dummy) == 0)
       return 3;
 
    /* Determine if we have a 32bit or 64bit kernel by inspecting the
     * upper 32bits for a rapidly changing timestamp.
     */
-   if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP, &last))
+   if (drm_bacon_reg_read(screen->bufmgr, TIMESTAMP, &last))
       return 0;
 
    upper = lower = 0;
@@ -1339,7 +1339,7 @@ intel_detect_timestamp(struct intel_screen *screen)
       /* The TIMESTAMP should change every 80ns, so several round trips
        * through the kernel should be enough to advance it.
        */
-      if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP, &dummy))
+      if (drm_bacon_reg_read(screen->bufmgr, TIMESTAMP, &dummy))
          return 0;
 
       upper += (dummy >> 32) != (last >> 32);
@@ -1368,21 +1368,21 @@ static bool
 intel_detect_pipelined_register(struct intel_screen *screen,
                                 int reg, uint32_t expected_value, bool reset)
 {
-   drm_intel_bo *results, *bo;
+   drm_bacon_bo *results, *bo;
    uint32_t *batch;
    uint32_t offset = 0;
    bool success = false;
 
    /* Create a zero'ed temporary buffer for reading our results */
-   results = drm_intel_bo_alloc(screen->bufmgr, "registers", 4096, 0);
+   results = drm_bacon_bo_alloc(screen->bufmgr, "registers", 4096, 0);
    if (results == NULL)
       goto err;
 
-   bo = drm_intel_bo_alloc(screen->bufmgr, "batchbuffer", 4096, 0);
+   bo = drm_bacon_bo_alloc(screen->bufmgr, "batchbuffer", 4096, 0);
    if (bo == NULL)
       goto err_results;
 
-   if (drm_intel_bo_map(bo, 1))
+   if (drm_bacon_bo_map(bo, 1))
       goto err_batch;
 
    batch = bo->virtual;
@@ -1395,7 +1395,7 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    /* Save the register's value back to the buffer. */
    *batch++ = MI_STORE_REGISTER_MEM | (3 - 2);
    *batch++ = reg;
-   drm_intel_bo_emit_reloc(bo, (char *)batch -(char *)bo->virtual,
+   drm_bacon_bo_emit_reloc(bo, (char *)batch -(char *)bo->virtual,
                            results, offset*sizeof(uint32_t),
                            I915_GEM_DOMAIN_INSTRUCTION,
                            I915_GEM_DOMAIN_INSTRUCTION);
@@ -1410,20 +1410,20 @@ intel_detect_pipelined_register(struct intel_screen *screen,
 
    *batch++ = MI_BATCH_BUFFER_END;
 
-   drm_intel_bo_mrb_exec(bo, ALIGN((char *)batch - (char *)bo->virtual, 8),
+   drm_bacon_bo_mrb_exec(bo, ALIGN((char *)batch - (char *)bo->virtual, 8),
                          NULL, 0, 0,
                          I915_EXEC_RENDER);
 
    /* Check whether the value got written. */
-   if (drm_intel_bo_map(results, false) == 0) {
+   if (drm_bacon_bo_map(results, false) == 0) {
       success = *((uint32_t *)results->virtual + offset) == expected_value;
-      drm_intel_bo_unmap(results);
+      drm_bacon_bo_unmap(results);
    }
 
 err_batch:
-   drm_intel_bo_unreference(bo);
+   drm_bacon_bo_unreference(bo);
 err_results:
-   drm_intel_bo_unreference(results);
+   drm_bacon_bo_unreference(results);
 err:
    return success;
 }
@@ -1763,7 +1763,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    if (!intel_init_bufmgr(screen))
        return NULL;
 
-   screen->deviceID = drm_intel_bufmgr_gem_get_devid(screen->bufmgr);
+   screen->deviceID = drm_bacon_bufmgr_gem_get_devid(screen->bufmgr);
    if (!gen_get_device_info(screen->deviceID, &screen->devinfo))
       return NULL;
 
@@ -1772,7 +1772,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    brw_process_intel_debug_variable();
 
    if (INTEL_DEBUG & DEBUG_BUFMGR)
-      drm_intel_bufmgr_set_debug(screen->bufmgr, true);
+      drm_bacon_bufmgr_set_debug(screen->bufmgr, true);
 
    if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && devinfo->gen < 7) {
       fprintf(stderr,
@@ -1786,7 +1786,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
        * Currently the entire (global) address space for all GTT maps is
        * limited to 64bits. That is all objects on the system that are
        * setup for GTT mmapping must fit within 64bits. An attempt to use
-       * one that exceeds the limit with fail in drm_intel_bo_map_gtt().
+       * one that exceeds the limit with fail in drm_bacon_bo_map_gtt().
        *
        * Long before we hit that limit, we will be practically limited by
        * that any single object must fit in physical memory (RAM). The upper
@@ -2005,7 +2005,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 
 struct intel_buffer {
    __DRIbuffer base;
-   drm_intel_bo *bo;
+   drm_bacon_bo *bo;
 };
 
 static __DRIbuffer *
@@ -2029,7 +2029,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
    uint32_t tiling = I915_TILING_X;
    unsigned long pitch;
    int cpp = format / 8;
-   intelBuffer->bo = drm_intel_bo_alloc_tiled(screen->bufmgr,
+   intelBuffer->bo = drm_bacon_bo_alloc_tiled(screen->bufmgr,
                                               "intelAllocateBuffer",
                                               width,
                                               height,
@@ -2042,7 +2042,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
 	   return NULL;
    }
 
-   drm_intel_bo_flink(intelBuffer->bo, &intelBuffer->base.name);
+   drm_bacon_bo_flink(intelBuffer->bo, &intelBuffer->base.name);
 
    intelBuffer->base.attachment = attachment;
    intelBuffer->base.cpp = cpp;
@@ -2056,7 +2056,7 @@ intelReleaseBuffer(__DRIscreen *dri_screen, __DRIbuffer *buffer)
 {
    struct intel_buffer *intelBuffer = (struct intel_buffer *) buffer;
 
-   drm_intel_bo_unreference(intelBuffer->bo);
+   drm_bacon_bo_unreference(intelBuffer->bo);
    free(intelBuffer);
 }
 

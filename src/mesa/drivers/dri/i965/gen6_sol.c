@@ -194,9 +194,9 @@ brw_new_transform_feedback(struct gl_context *ctx, GLuint name)
    _mesa_init_transform_feedback_object(&brw_obj->base, name);
 
    brw_obj->offset_bo =
-      drm_intel_bo_alloc(brw->bufmgr, "transform feedback offsets", 16, 64);
+      drm_bacon_bo_alloc(brw->bufmgr, "transform feedback offsets", 16, 64);
    brw_obj->prim_count_bo =
-      drm_intel_bo_alloc(brw->bufmgr, "xfb primitive counts", 4096, 64);
+      drm_bacon_bo_alloc(brw->bufmgr, "xfb primitive counts", 4096, 64);
 
    return &brw_obj->base;
 }
@@ -212,8 +212,8 @@ brw_delete_transform_feedback(struct gl_context *ctx,
       _mesa_reference_buffer_object(ctx, &obj->Buffers[i], NULL);
    }
 
-   drm_intel_bo_unreference(brw_obj->offset_bo);
-   drm_intel_bo_unreference(brw_obj->prim_count_bo);
+   drm_bacon_bo_unreference(brw_obj->offset_bo);
+   drm_bacon_bo_unreference(brw_obj->prim_count_bo);
 
    free(brw_obj);
 }
@@ -241,13 +241,13 @@ tally_prims_generated(struct brw_context *brw,
    /* If the current batch is still contributing to the number of primitives
     * generated, flush it now so the results will be present when mapped.
     */
-   if (drm_intel_bo_references(brw->batch.bo, obj->prim_count_bo))
+   if (drm_bacon_bo_references(brw->batch.bo, obj->prim_count_bo))
       intel_batchbuffer_flush(brw);
 
-   if (unlikely(brw->perf_debug && drm_intel_bo_busy(obj->prim_count_bo)))
+   if (unlikely(brw->perf_debug && drm_bacon_bo_busy(obj->prim_count_bo)))
       perf_debug("Stalling for # of transform feedback primitives written.\n");
 
-   drm_intel_bo_map(obj->prim_count_bo, false);
+   drm_bacon_bo_map(obj->prim_count_bo, false);
    uint64_t *prim_counts = obj->prim_count_bo->virtual;
 
    assert(obj->prim_count_buffer_index % (2 * streams) == 0);
@@ -260,7 +260,7 @@ tally_prims_generated(struct brw_context *brw,
       prim_counts += 2 * streams; /* move to the next pair */
    }
 
-   drm_intel_bo_unmap(obj->prim_count_bo);
+   drm_bacon_bo_unmap(obj->prim_count_bo);
 
    /* We've already gathered up the old data; we can safely overwrite it now. */
    obj->prim_count_buffer_index = 0;

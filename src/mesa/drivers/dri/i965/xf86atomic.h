@@ -38,8 +38,6 @@
 #include "config.h"
 #endif
 
-#if HAVE_LIBDRM_ATOMIC_PRIMITIVES
-
 #define HAS_ATOMIC_OPS 1
 
 typedef struct {
@@ -113,5 +111,3 @@ static inline int atomic_add_unless(atomic_t *v, int add, int unless)
 		c = old;
 	return c == unless;
 }
-
-#endif

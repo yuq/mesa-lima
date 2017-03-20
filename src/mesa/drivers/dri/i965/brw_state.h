@@ -274,7 +274,7 @@ int brw_get_texture_swizzle(const struct gl_context *ctx,
 
 void brw_emit_buffer_surface_state(struct brw_context *brw,
                                    uint32_t *out_offset,
-                                   drm_intel_bo *bo,
+                                   drm_bacon_bo *bo,
                                    unsigned buffer_offset,
                                    unsigned surface_format,
                                    unsigned buffer_size,

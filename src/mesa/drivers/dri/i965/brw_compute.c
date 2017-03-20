@@ -38,7 +38,7 @@ static void
 prepare_indirect_gpgpu_walker(struct brw_context *brw)
 {
    GLintptr indirect_offset = brw->compute.num_work_groups_offset;
-   drm_intel_bo *bo = brw->compute.num_work_groups_bo;
+   drm_bacon_bo *bo = brw->compute.num_work_groups_bo;
 
    brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMX, bo,
                          I915_GEM_DOMAIN_VERTEX, 0,
@@ -212,7 +212,7 @@ brw_dispatch_compute_common(struct gl_context *ctx)
 
    brw->no_batch_wrap = false;
 
-   if (drm_intel_bufmgr_check_aperture_space(&brw->batch.bo, 1)) {
+   if (drm_bacon_bufmgr_check_aperture_space(&brw->batch.bo, 1)) {
       if (!fail_next) {
          intel_batchbuffer_reset_to_saved(brw);
          intel_batchbuffer_flush(brw);
@@ -258,7 +258,7 @@ brw_dispatch_compute_indirect(struct gl_context *ctx, GLintptr indirect)
    struct brw_context *brw = brw_context(ctx);
    static const GLuint indirect_group_counts[3] = { 0, 0, 0 };
    struct gl_buffer_object *indirect_buffer = ctx->DispatchIndirectBuffer;
-   drm_intel_bo *bo =
+   drm_bacon_bo *bo =
       intel_bufferobj_buffer(brw,
                              intel_buffer_object(indirect_buffer),
                              indirect, 3 * sizeof(GLuint));

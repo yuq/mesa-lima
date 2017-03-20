@@ -74,7 +74,7 @@ brw_upload_pull_constants(struct brw_context *brw,
 
    /* BRW_NEW_*_PROG_DATA | _NEW_PROGRAM_CONSTANTS */
    uint32_t size = prog_data->nr_pull_params * 4;
-   drm_intel_bo *const_bo = NULL;
+   drm_bacon_bo *const_bo = NULL;
    uint32_t const_offset;
    gl_constant_value *constants = intel_upload_space(brw, size, 64,
                                                      &const_bo, &const_offset);
@@ -95,7 +95,7 @@ brw_upload_pull_constants(struct brw_context *brw,
 
    brw_create_constant_surface(brw, const_bo, const_offset, size,
                                &stage_state->surf_offset[surf_index]);
-   drm_intel_bo_unreference(const_bo);
+   drm_bacon_bo_unreference(const_bo);
 
    brw->ctx.NewDriverState |= brw_new_constbuf;
 }

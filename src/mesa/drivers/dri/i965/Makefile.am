@@ -40,7 +40,8 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/src/intel \
 	$(DEFINES) \
 	$(VISIBILITY_CFLAGS) \
-	$(INTEL_CFLAGS)
+	$(LIBDRM_CFLAGS) \
+	$(VALGRIND_CFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
 
@@ -79,7 +80,7 @@ libi965_dri_la_LIBADD = \
 	$(top_builddir)/src/intel/compiler/libintel_compiler.la \
 	$(top_builddir)/src/intel/blorp/libblorp.la \
 	$(I965_PERGEN_LIBS) \
-	$(INTEL_LIBS)
+	$(LIBDRM_LIBS)
 
 BUILT_SOURCES = $(i965_oa_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)

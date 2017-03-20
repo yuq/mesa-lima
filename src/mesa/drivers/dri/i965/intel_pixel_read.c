@@ -82,7 +82,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
    int dst_pitch;
 
    /* The miptree's buffer. */
-   drm_intel_bo *bo;
+   drm_bacon_bo *bo;
 
    int error = 0;
 
@@ -142,7 +142,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
 
    bo = irb->mt->bo;
 
-   if (drm_intel_bo_references(brw->batch.bo, bo)) {
+   if (drm_bacon_bo_references(brw->batch.bo, bo)) {
       perf_debug("Flushing before mapping a referenced bo.\n");
       intel_batchbuffer_flush(brw);
    }
@@ -195,7 +195,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       mem_copy
    );
 
-   drm_intel_bo_unmap(bo);
+   drm_bacon_bo_unmap(bo);
    return true;
 }
 

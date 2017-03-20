@@ -486,11 +486,11 @@ bool
 intelEmitCopyBlit(struct brw_context *brw,
 		  GLuint cpp,
 		  int32_t src_pitch,
-		  drm_intel_bo *src_buffer,
+		  drm_bacon_bo *src_buffer,
 		  GLuint src_offset,
 		  uint32_t src_tiling,
 		  int32_t dst_pitch,
-		  drm_intel_bo *dst_buffer,
+		  drm_bacon_bo *dst_buffer,
 		  GLuint dst_offset,
 		  uint32_t dst_tiling,
 		  GLshort src_x, GLshort src_y,
@@ -501,7 +501,7 @@ intelEmitCopyBlit(struct brw_context *brw,
    GLuint CMD, BR13, pass = 0;
    int dst_y2 = dst_y + h;
    int dst_x2 = dst_x + w;
-   drm_intel_bo *aper_array[3];
+   drm_bacon_bo *aper_array[3];
    bool dst_y_tiled = dst_tiling == I915_TILING_Y;
    bool src_y_tiled = src_tiling == I915_TILING_Y;
    uint32_t src_tile_w, src_tile_h;
@@ -516,7 +516,7 @@ intelEmitCopyBlit(struct brw_context *brw,
        aper_array[1] = dst_buffer;
        aper_array[2] = src_buffer;
 
-       if (drm_intel_bufmgr_check_aperture_space(aper_array, 3) != 0) {
+       if (drm_bacon_bufmgr_check_aperture_space(aper_array, 3) != 0) {
            intel_batchbuffer_flush(brw);
            pass++;
        } else
@@ -633,7 +633,7 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
 				  GLubyte *src_bits, GLuint src_size,
 				  GLuint fg_color,
 				  GLshort dst_pitch,
-				  drm_intel_bo *dst_buffer,
+				  drm_bacon_bo *dst_buffer,
 				  GLuint dst_offset,
 				  uint32_t dst_tiling,
 				  GLshort x, GLshort y,
@@ -717,9 +717,9 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
  */
 void
 intel_emit_linear_blit(struct brw_context *brw,
-		       drm_intel_bo *dst_bo,
+		       drm_bacon_bo *dst_bo,
 		       unsigned int dst_offset,
-		       drm_intel_bo *src_bo,
+		       drm_bacon_bo *src_bo,
 		       unsigned int src_offset,
 		       unsigned int size)
 {
@@ -780,7 +780,7 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
 {
    uint32_t BR13, CMD;
    int pitch, cpp;
-   drm_intel_bo *aper_array[2];
+   drm_bacon_bo *aper_array[2];
 
    pitch = mt->pitch;
    cpp = mt->cpp;
@@ -802,7 +802,7 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
    aper_array[0] = brw->batch.bo;
    aper_array[1] = mt->bo;
 
-   if (drm_intel_bufmgr_check_aperture_space(aper_array,
+   if (drm_bacon_bufmgr_check_aperture_space(aper_array,
 					     ARRAY_SIZE(aper_array)) != 0) {
       intel_batchbuffer_flush(brw);
    }

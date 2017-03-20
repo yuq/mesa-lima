@@ -26,7 +26,7 @@
  */
 
 /**
- * @file intel_bufmgr.h
+ * @file brw_bufmgr.h
  *
  * Public definitions of Intel-specific bufmgr functions.
  */

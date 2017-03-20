@@ -4,7 +4,7 @@
 #include "main/mtypes.h"
 
 #include "brw_context.h"
-#include "intel_bufmgr.h"
+#include "brw_bufmgr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,7 +39,7 @@ extern "C" {
 struct intel_batchbuffer;
 
 void intel_batchbuffer_init(struct intel_batchbuffer *batch,
-                            drm_intel_bufmgr *bufmgr,
+                            drm_bacon_bufmgr *bufmgr,
                             bool has_llc);
 void intel_batchbuffer_free(struct intel_batchbuffer *batch);
 void intel_batchbuffer_save_state(struct brw_context *brw);
@@ -66,7 +66,7 @@ void intel_batchbuffer_data(struct brw_context *brw,
                             enum brw_gpu_ring ring);
 
 uint64_t intel_batchbuffer_reloc(struct intel_batchbuffer *batch,
-                                 drm_intel_bo *buffer,
+                                 drm_bacon_bo *buffer,
                                  uint32_t offset,
                                  uint32_t read_domains,
                                  uint32_t write_domain,

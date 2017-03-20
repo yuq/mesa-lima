@@ -393,7 +393,7 @@ hsw_result_to_gpr0(struct gl_context *ctx, struct brw_query_object *query,
  * Store immediate data into the user buffer using the requested size.
  */
 static void
-store_query_result_imm(struct brw_context *brw, drm_intel_bo *bo,
+store_query_result_imm(struct brw_context *brw, drm_bacon_bo *bo,
                        uint32_t offset, GLenum ptype, uint64_t imm)
 {
    switch (ptype) {
@@ -411,7 +411,7 @@ store_query_result_imm(struct brw_context *brw, drm_intel_bo *bo,
 }
 
 static void
-set_predicate(struct brw_context *brw, drm_intel_bo *query_bo)
+set_predicate(struct brw_context *brw, drm_bacon_bo *query_bo)
 {
    brw_load_register_imm64(brw, MI_PREDICATE_SRC1, 0ull);
 
@@ -435,7 +435,7 @@ set_predicate(struct brw_context *brw, drm_intel_bo *query_bo)
  * query has not finished yet.
  */
 static void
-store_query_result_reg(struct brw_context *brw, drm_intel_bo *bo,
+store_query_result_reg(struct brw_context *brw, drm_bacon_bo *bo,
                        uint32_t offset, GLenum ptype, uint32_t reg,
                        const bool pipelined)
 {

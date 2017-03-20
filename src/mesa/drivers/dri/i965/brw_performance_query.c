@@ -224,7 +224,7 @@ struct brw_perf_query_object
          /**
           * BO containing OA counter snapshots at query Begin/End time.
           */
-         drm_intel_bo *bo;
+         drm_bacon_bo *bo;
 
          /**
           * The MI_REPORT_PERF_COUNT command lets us specify a unique
@@ -264,7 +264,7 @@ struct brw_perf_query_object
           * BO containing starting and ending snapshots for the
           * statistics counters.
           */
-         drm_intel_bo *bo;
+         drm_bacon_bo *bo;
       } pipeline_stats;
    };
 };
@@ -476,7 +476,7 @@ snapshot_statistics_registers(struct brw_context *brw,
  */
 static void
 emit_mi_report_perf_count(struct brw_context *brw,
-                          drm_intel_bo *bo,
+                          drm_bacon_bo *bo,
                           uint32_t offset_in_bytes,
                           uint32_t report_id)
 {
@@ -713,7 +713,7 @@ accumulate_oa_reports(struct brw_context *brw,
    if (!read_oa_samples(brw))
       goto error;
 
-   drm_intel_bo_map(obj->oa.bo, false);
+   drm_bacon_bo_map(obj->oa.bo, false);
    query_buffer = obj->oa.bo->virtual;
 
    start = last = query_buffer;
@@ -793,7 +793,7 @@ end:
 
    DBG("Marking %d accumulated - results gathered\n", o->Id);
 
-   drm_intel_bo_unmap(obj->oa.bo);
+   drm_bacon_bo_unmap(obj->oa.bo);
    obj->oa.results_accumulated = true;
    drop_from_unaccumulated_query_list(brw, obj);
    dec_n_oa_users(brw);
@@ -802,7 +802,7 @@ end:
 
 error:
 
-   drm_intel_bo_unmap(obj->oa.bo);
+   drm_bacon_bo_unmap(obj->oa.bo);
    discard_all_queries(brw);
 }
 
@@ -951,7 +951,7 @@ brw_begin_perf_query(struct gl_context *ctx,
          uint32_t ctx_id;
          int period_exponent;
 
-         if (drm_intel_gem_context_get_id(brw->hw_ctx, &ctx_id) != 0)
+         if (drm_bacon_gem_context_get_id(brw->hw_ctx, &ctx_id) != 0)
             return false;
 
          /* The timestamp for HSW+ increments every 80ns
@@ -988,18 +988,18 @@ brw_begin_perf_query(struct gl_context *ctx,
       }
 
       if (obj->oa.bo) {
-         drm_intel_bo_unreference(obj->oa.bo);
+         drm_bacon_bo_unreference(obj->oa.bo);
          obj->oa.bo = NULL;
       }
 
       obj->oa.bo =
-         drm_intel_bo_alloc(brw->bufmgr, "perf. query OA MI_RPC bo",
+         drm_bacon_bo_alloc(brw->bufmgr, "perf. query OA MI_RPC bo",
                             MI_RPC_BO_SIZE, 64);
 #ifdef DEBUG
       /* Pre-filling the BO helps debug whether writes landed. */
-      drm_intel_bo_map(obj->oa.bo, true);
+      drm_bacon_bo_map(obj->oa.bo, true);
       memset((char *) obj->oa.bo->virtual, 0x80, MI_RPC_BO_SIZE);
-      drm_intel_bo_unmap(obj->oa.bo);
+      drm_bacon_bo_unmap(obj->oa.bo);
 #endif
 
       obj->oa.begin_report_id = brw->perfquery.next_query_start_report_id;
@@ -1035,12 +1035,12 @@ brw_begin_perf_query(struct gl_context *ctx,
 
    case PIPELINE_STATS:
       if (obj->pipeline_stats.bo) {
-         drm_intel_bo_unreference(obj->pipeline_stats.bo);
+         drm_bacon_bo_unreference(obj->pipeline_stats.bo);
          obj->pipeline_stats.bo = NULL;
       }
 
       obj->pipeline_stats.bo =
-         drm_intel_bo_alloc(brw->bufmgr, "perf. query pipeline stats bo",
+         drm_bacon_bo_alloc(brw->bufmgr, "perf. query pipeline stats bo",
                             STATS_BO_SIZE, 64);
 
       /* Take starting snapshots. */
@@ -1112,7 +1112,7 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_perf_query_object *obj = brw_perf_query(o);
-   drm_intel_bo *bo = NULL;
+   drm_bacon_bo *bo = NULL;
 
    assert(!o->Ready);
 
@@ -1132,15 +1132,15 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
    /* If the current batch references our results bo then we need to
     * flush first...
     */
-   if (drm_intel_bo_references(brw->batch.bo, bo))
+   if (drm_bacon_bo_references(brw->batch.bo, bo))
       intel_batchbuffer_flush(brw);
 
    if (unlikely(brw->perf_debug)) {
-      if (drm_intel_bo_busy(bo))
+      if (drm_bacon_bo_busy(bo))
          perf_debug("Stalling GPU waiting for a performance query object.\n");
    }
 
-   drm_intel_bo_wait_rendering(bo);
+   drm_bacon_bo_wait_rendering(bo);
 }
 
 static bool
@@ -1157,13 +1157,13 @@ brw_is_perf_query_ready(struct gl_context *ctx,
    case OA_COUNTERS:
       return (obj->oa.results_accumulated ||
               (obj->oa.bo &&
-               !drm_intel_bo_references(brw->batch.bo, obj->oa.bo) &&
-               !drm_intel_bo_busy(obj->oa.bo)));
+               !drm_bacon_bo_references(brw->batch.bo, obj->oa.bo) &&
+               !drm_bacon_bo_busy(obj->oa.bo)));
 
    case PIPELINE_STATS:
       return (obj->pipeline_stats.bo &&
-              !drm_intel_bo_references(brw->batch.bo, obj->pipeline_stats.bo) &&
-              !drm_intel_bo_busy(obj->pipeline_stats.bo));
+              !drm_bacon_bo_references(brw->batch.bo, obj->pipeline_stats.bo) &&
+              !drm_bacon_bo_busy(obj->pipeline_stats.bo));
    }
 
    unreachable("missing ready check for unknown query kind");
@@ -1224,7 +1224,7 @@ get_pipeline_stats_data(struct brw_context *brw,
    int n_counters = obj->query->n_counters;
    uint8_t *p = data;
 
-   drm_intel_bo_map(obj->pipeline_stats.bo, false);
+   drm_bacon_bo_map(obj->pipeline_stats.bo, false);
    uint64_t *start = obj->pipeline_stats.bo->virtual;
    uint64_t *end = start + (STATS_BO_END_OFFSET_BYTES / sizeof(uint64_t));
 
@@ -1242,7 +1242,7 @@ get_pipeline_stats_data(struct brw_context *brw,
       p += 8;
    }
 
-   drm_intel_bo_unmap(obj->pipeline_stats.bo);
+   drm_bacon_bo_unmap(obj->pipeline_stats.bo);
 
    return p - data;
 }
@@ -1333,7 +1333,7 @@ brw_delete_perf_query(struct gl_context *ctx,
             dec_n_oa_users(brw);
          }
 
-         drm_intel_bo_unreference(obj->oa.bo);
+         drm_bacon_bo_unreference(obj->oa.bo);
          obj->oa.bo = NULL;
       }
 
@@ -1342,7 +1342,7 @@ brw_delete_perf_query(struct gl_context *ctx,
 
    case PIPELINE_STATS:
       if (obj->pipeline_stats.bo) {
-         drm_intel_bo_unreference(obj->pipeline_stats.bo);
+         drm_bacon_bo_unreference(obj->pipeline_stats.bo);
          obj->pipeline_stats.bo = NULL;
       }
       break;

@@ -133,7 +133,7 @@ static void upload_sf_unit( struct brw_context *brw )
 {
    struct gl_context *ctx = &brw->ctx;
    struct brw_sf_unit_state *sf;
-   drm_intel_bo *bo = brw->batch.bo;
+   drm_bacon_bo *bo = brw->batch.bo;
    int chipset_max_threads;
    bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
 
@@ -291,7 +291,7 @@ static void upload_sf_unit( struct brw_context *brw )
     */
 
    /* Emit SF viewport relocation */
-   drm_intel_bo_emit_reloc(bo, (brw->sf.state_offset +
+   drm_bacon_bo_emit_reloc(bo, (brw->sf.state_offset +
 				offsetof(struct brw_sf_unit_state, sf5)),
 			   brw->batch.bo, (brw->sf.vp_offset |
 					     sf->sf5.front_winding |

@@ -159,7 +159,7 @@ brw_upload_vs_unit(struct brw_context *brw)
       /* BRW_NEW_SAMPLER_STATE_TABLE - reloc */
       vs->vs5.sampler_state_pointer =
          (brw->batch.bo->offset64 + stage_state->sampler_offset) >> 5;
-      drm_intel_bo_emit_reloc(brw->batch.bo,
+      drm_bacon_bo_emit_reloc(brw->batch.bo,
                               stage_state->state_offset +
                               offsetof(struct brw_vs_unit_state, vs5),
                               brw->batch.bo,
@@ -170,7 +170,7 @@ brw_upload_vs_unit(struct brw_context *brw)
 
    /* Emit scratch space relocation */
    if (prog_data->total_scratch != 0) {
-      drm_intel_bo_emit_reloc(brw->batch.bo,
+      drm_bacon_bo_emit_reloc(brw->batch.bo,
 			      stage_state->state_offset +
 			      offsetof(struct brw_vs_unit_state, thread2),
 			      stage_state->scratch_bo,

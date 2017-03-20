@@ -32,7 +32,7 @@
 #include <GL/internal/dri_interface.h>
 
 #include "dri_util.h"
-#include "intel_bufmgr.h"
+#include "brw_bufmgr.h"
 #include "common/gen_device_info.h"
 #include "i915_drm.h"
 #include "xmlconfig.h"
@@ -72,7 +72,7 @@ struct intel_screen
 #define KERNEL_ALLOWS_HSW_SCRATCH1_AND_ROW_CHICKEN3 (1<<3)
 #define KERNEL_ALLOWS_COMPUTE_DISPATCH              (1<<4)
 
-   drm_intel_bufmgr *bufmgr;
+   drm_bacon_bufmgr *bufmgr;
 
    /**
     * A unique ID for shader programs.

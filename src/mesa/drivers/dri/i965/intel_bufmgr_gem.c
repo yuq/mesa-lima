@@ -58,7 +58,7 @@
 #endif
 #include "libdrm_macros.h"
 #include "libdrm_lists.h"
-#include "intel_bufmgr.h"
+#include "brw_bufmgr.h"
 #include "intel_bufmgr_priv.h"
 #include "intel_chipset.h"
 #include "string.h"

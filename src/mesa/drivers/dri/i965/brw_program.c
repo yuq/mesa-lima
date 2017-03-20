@@ -343,17 +343,17 @@ brw_blend_barrier(struct gl_context *ctx)
 
 void
 brw_get_scratch_bo(struct brw_context *brw,
-		   drm_intel_bo **scratch_bo, int size)
+		   drm_bacon_bo **scratch_bo, int size)
 {
-   drm_intel_bo *old_bo = *scratch_bo;
+   drm_bacon_bo *old_bo = *scratch_bo;
 
    if (old_bo && old_bo->size < size) {
-      drm_intel_bo_unreference(old_bo);
+      drm_bacon_bo_unreference(old_bo);
       old_bo = NULL;
    }
 
    if (!old_bo) {
-      *scratch_bo = drm_intel_bo_alloc(brw->bufmgr, "scratch bo", size, 4096);
+      *scratch_bo = drm_bacon_bo_alloc(brw->bufmgr, "scratch bo", size, 4096);
    }
 }
 
@@ -371,10 +371,10 @@ brw_alloc_stage_scratch(struct brw_context *brw,
       stage_state->per_thread_scratch = per_thread_size;
 
       if (stage_state->scratch_bo)
-         drm_intel_bo_unreference(stage_state->scratch_bo);
+         drm_bacon_bo_unreference(stage_state->scratch_bo);
 
       stage_state->scratch_bo =
-         drm_intel_bo_alloc(brw->bufmgr, "shader scratch space",
+         drm_bacon_bo_alloc(brw->bufmgr, "shader scratch space",
                             per_thread_size * thread_count, 4096);
    }
 }
@@ -404,7 +404,7 @@ brw_init_shader_time(struct brw_context *brw)
 {
    const int max_entries = 2048;
    brw->shader_time.bo =
-      drm_intel_bo_alloc(brw->bufmgr, "shader time",
+      drm_bacon_bo_alloc(brw->bufmgr, "shader time",
                          max_entries * BRW_SHADER_TIME_STRIDE * 3, 4096);
    brw->shader_time.names = rzalloc_array(brw, const char *, max_entries);
    brw->shader_time.ids = rzalloc_array(brw, int, max_entries);
@@ -580,7 +580,7 @@ brw_collect_shader_time(struct brw_context *brw)
     * delaying reading the reports, but it doesn't look like it's a big
     * overhead compared to the cost of tracking the time in the first place.
     */
-   drm_intel_bo_map(brw->shader_time.bo, true);
+   drm_bacon_bo_map(brw->shader_time.bo, true);
    void *bo_map = brw->shader_time.bo->virtual;
 
    for (int i = 0; i < brw->shader_time.num_entries; i++) {
@@ -594,7 +594,7 @@ brw_collect_shader_time(struct brw_context *brw)
    /* Zero the BO out to clear it out for our next collection.
     */
    memset(bo_map, 0, brw->shader_time.bo->size);
-   drm_intel_bo_unmap(brw->shader_time.bo);
+   drm_bacon_bo_unmap(brw->shader_time.bo);
 }
 
 void
@@ -643,7 +643,7 @@ brw_get_shader_time_index(struct brw_context *brw, struct gl_program *prog,
 void
 brw_destroy_shader_time(struct brw_context *brw)
 {
-   drm_intel_bo_unreference(brw->shader_time.bo);
+   drm_bacon_bo_unreference(brw->shader_time.bo);
    brw->shader_time.bo = NULL;
 }
 

@@ -136,7 +136,7 @@ brw_upload_clip_unit(struct brw_context *brw)
          (brw->batch.bo->offset64 + brw->clip.vp_offset) >> 5;
 
       /* emit clip viewport relocation */
-      drm_intel_bo_emit_reloc(brw->batch.bo,
+      drm_bacon_bo_emit_reloc(brw->batch.bo,
                               (brw->clip.state_offset +
                                offsetof(struct brw_clip_unit_state, clip6)),
                               brw->batch.bo, brw->clip.vp_offset,

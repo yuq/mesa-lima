@@ -2,6 +2,7 @@ i965_FILES = \
 	brw_binding_tables.c \
 	brw_blorp.c \
 	brw_blorp.h \
+	brw_bufmgr.h \
 	brw_cc.c \
 	brw_clear.c \
 	brw_clip.c \
@@ -130,6 +131,10 @@ i965_FILES = \
 	intel_buffer_objects.h \
 	intel_buffers.c \
 	intel_buffers.h \
+	intel_bufmgr.c \
+	intel_bufmgr_gem.c \
+	intel_bufmgr_priv.h \
+	intel_chipset.h \
 	intel_copy_image.c \
 	intel_extensions.c \
 	intel_fbo.c \
@@ -157,7 +162,11 @@ i965_FILES = \
 	intel_tex_validate.c \
 	intel_tiled_memcpy.c \
 	intel_tiled_memcpy.h \
-	intel_upload.c
+	intel_upload.c \
+	libdrm_lists.h \
+	libdrm_macros.h \
+	uthash.h \
+	xf86atomic.h
 
 i965_gen6_FILES = \
 	genX_blorp_exec.c
