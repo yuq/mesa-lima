@@ -21,7 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef IR_TO_MESA_H
+#define IR_TO_MESA_H
 
 #include "main/glheader.h"
 
@@ -51,3 +52,5 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* IR_TO_MESA_H */
