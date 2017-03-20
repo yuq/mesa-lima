@@ -21,6 +21,11 @@
  * IN THE SOFTWARE.
  */
 
+#ifndef BRW_DEAD_CONTROL_FLOW_H
+#define BRW_DEAD_CONTROL_FLOW_H
+
 #include "brw_shader.h"
 
 bool dead_control_flow_eliminate(backend_shader *s);
+
+#endif /* BRW_DEAD_CONTROL_FLOW_H */

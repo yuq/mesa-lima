@@ -25,7 +25,6 @@
  *
  */
 
-#pragma once
 #ifndef BRW_CFG_H
 #define BRW_CFG_H
 

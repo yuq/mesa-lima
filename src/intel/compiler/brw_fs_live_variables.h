@@ -25,6 +25,9 @@
  *
  */
 
+#ifndef BRW_FS_LIVE_VARIABLES_H
+#define BRW_FS_LIVE_VARIABLES_H
+
 #include "brw_fs.h"
 #include "util/bitset.h"
 
@@ -113,3 +116,5 @@ protected:
 };
 
 } /* namespace brw */
+
+#endif /* BRW_FS_LIVE_VARIABLES_H */

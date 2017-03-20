@@ -25,6 +25,9 @@
  *
  */
 
+#ifndef BRW_VEC4_LIVE_VARIABLES_H
+#define BRW_VEC4_LIVE_VARIABLES_H
+
 #include "util/bitset.h"
 #include "brw_vec4.h"
 
@@ -110,3 +113,5 @@ var_from_reg(const simple_allocator &alloc, const dst_reg &reg,
 }
 
 } /* namespace brw */
+
+#endif /* BRW_VEC4_LIVE_VARIABLES_H */

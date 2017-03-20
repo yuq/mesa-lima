@@ -25,7 +25,8 @@
  *
  */
 
-#pragma once
+#ifndef BRW_FS_H
+#define BRW_FS_H
 
 #include "brw_shader.h"
 #include "brw_ir_fs.h"
@@ -498,3 +499,5 @@ fs_reg setup_imm_df(const brw::fs_builder &bld,
 
 enum brw_barycentric_mode brw_barycentric_mode(enum glsl_interp_mode mode,
                                                nir_intrinsic_op op);
+
+#endif /* BRW_FS_H */

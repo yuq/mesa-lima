@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef BRW_SHADER_H
+#define BRW_SHADER_H
 
 #include <stdint.h>
 #include "brw_reg.h"
@@ -288,3 +289,5 @@ unsigned get_atomic_counter_op(nir_intrinsic_op op);
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* BRW_SHADER_H */

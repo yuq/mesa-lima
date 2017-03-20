@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef BRW_COMPILER_H
+#define BRW_COMPILER_H
 
 #include <stdio.h>
 #include "common/gen_device_info.h"
@@ -1055,3 +1056,5 @@ brw_stage_has_packed_dispatch(const struct gen_device_info *devinfo,
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+#endif /* BRW_COMPILER_H */

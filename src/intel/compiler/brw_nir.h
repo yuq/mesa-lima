@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef BRW_NIR_H
+#define BRW_NIR_H
 
 #include "brw_reg.h"
 #include "compiler/nir/nir.h"
@@ -152,3 +153,5 @@ bool brw_nir_opt_peephole_ffma(nir_shader *shader);
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* BRW_NIR_H */
