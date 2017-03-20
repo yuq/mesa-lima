@@ -155,7 +155,11 @@ brw_upload_clip_prog(struct brw_context *brw)
       key.contains_flat_varying = wm_prog_data->contains_flat_varying;
       key.contains_noperspective_varying =
          wm_prog_data->contains_noperspective_varying;
-      key.interp_mode = wm_prog_data->interp_mode;
+
+      STATIC_ASSERT(sizeof(key.interp_mode) ==
+                    sizeof(wm_prog_data->interp_mode));
+      memcpy(key.interp_mode, wm_prog_data->interp_mode,
+             sizeof(key.interp_mode));
    }
 
    /* BRW_NEW_REDUCED_PRIMITIVE */
