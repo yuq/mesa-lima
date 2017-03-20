@@ -40,7 +40,6 @@
  * exec_list or any structure in which an \c exec_list is embedded.
  */
 
-#pragma once
 #ifndef LIST_CONTAINER_H
 #define LIST_CONTAINER_H
 

@@ -21,7 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
 #ifndef BLOB_H
 #define BLOB_H
 
