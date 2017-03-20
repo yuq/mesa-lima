@@ -339,14 +339,6 @@ gen6_upload_wm_state(struct brw_context *brw,
                      bool line_stipple_enable, bool polygon_stipple_enable,
                      bool statistic_enable);
 
-/* gen6_sf_state.c */
-void
-calculate_attr_overrides(const struct brw_context *brw,
-                         uint16_t *attr_overrides,
-                         uint32_t *point_sprite_enables,
-                         uint32_t *urb_entry_read_length,
-                         uint32_t *urb_entry_read_offset);
-
 /* gen6_surface_state.c */
 void gen6_init_vtable_surface_functions(struct brw_context *brw);
 
