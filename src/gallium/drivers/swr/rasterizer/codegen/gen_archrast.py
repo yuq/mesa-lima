@@ -155,6 +155,7 @@ def main():
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         MakoTemplateWriter.to_file(template_file, output_fullpath,
+                cmdline=sys.argv,
                 filename=output_filename,
                 protos=protos)
 
@@ -165,6 +166,7 @@ def main():
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         MakoTemplateWriter.to_file(template_file, output_fullpath,
+                cmdline=sys.argv,
                 filename=output_filename,
                 protos=protos)
 
@@ -175,6 +177,7 @@ def main():
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         MakoTemplateWriter.to_file(template_file, output_fullpath,
+                cmdline=sys.argv,
                 filename=output_filename,
                 event_header='gen_ar_event.hpp',
                 protos=protos)
@@ -186,6 +189,7 @@ def main():
         output_fullpath = os.sep.join([output_dir, output_filename])
 
         MakoTemplateWriter.to_file(template_file, output_fullpath,
+                cmdline=sys.argv,
                 filename=output_filename,
                 event_header='gen_ar_eventhandler.hpp',
                 protos=protos)

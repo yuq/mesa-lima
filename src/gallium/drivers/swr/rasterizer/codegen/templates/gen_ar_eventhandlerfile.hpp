@@ -25,7 +25,10 @@
 * @brief Event handler interface.  auto-generated file
 * 
 * DO NOT EDIT
-* 
+*
+* Generation Command Line:
+*  ${'\n*    '.join(cmdline)}
+*
 ******************************************************************************/
 #pragma once
 

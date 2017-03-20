@@ -26,6 +26,9 @@
 * 
 * DO NOT EDIT
 *
+* Generation Command Line:
+*  ${'\n*    '.join(cmdline)}
+*
 ******************************************************************************/
 #include "common/os.h"
 #include "gen_ar_event.hpp"
