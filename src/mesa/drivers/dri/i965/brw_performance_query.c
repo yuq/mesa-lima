@@ -42,6 +42,13 @@
 #include <limits.h>
 #include <dirent.h>
 
+/* put before sys/types.h to silence glibc warnings */
+#ifdef MAJOR_IN_MKDEV
+#include <sys/mkdev.h>
+#endif
+#ifdef MAJOR_IN_SYSMACROS
+#include <sys/sysmacros.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
