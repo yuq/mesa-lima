@@ -60,6 +60,7 @@ struct gen_field_iterator {
 };
 
 struct gen_group {
+   struct gen_spec *spec;
    char *name;
    int nfields;
    struct gen_field **fields;

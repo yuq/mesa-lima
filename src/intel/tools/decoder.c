@@ -180,6 +180,7 @@ create_group(struct parser_context *ctx, const char *name, const char **atts)
    if (name)
       group->name = xstrdup(name);
 
+   group->spec = ctx->spec;
    group->group_offset = 0;
    group->group_count = 0;
 
