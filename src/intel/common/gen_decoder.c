@@ -32,7 +32,7 @@
 
 #include <util/macros.h>
 
-#include "decoder.h"
+#include "gen_decoder.h"
 
 #include "genxml/gen6_xml.h"
 #include "genxml/gen7_xml.h"

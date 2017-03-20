@@ -21,8 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef DECODER_H
-#define DECODER_H
+#ifndef GEN_DECODER_H
+#define GEN_DECODER_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -135,4 +135,4 @@ void gen_print_group(FILE *out,
                      uint64_t offset, const uint32_t *p,
                      int starting_dword, bool color);
 
-#endif /* DECODER_H */
+#endif /* GEN_DECODER_H */

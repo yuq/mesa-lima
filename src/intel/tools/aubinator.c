@@ -39,7 +39,7 @@
 
 #include "util/macros.h"
 
-#include "decoder.h"
+#include "common/gen_decoder.h"
 #include "intel_aub.h"
 #include "gen_disasm.h"
 

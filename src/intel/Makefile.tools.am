@@ -23,8 +23,6 @@ noinst_PROGRAMS += tools/aubinator
 
 tools_aubinator_SOURCES = \
 	tools/aubinator.c \
-	tools/decoder.c \
-	tools/decoder.h \
 	tools/disasm.c \
 	tools/gen_disasm.h
 
