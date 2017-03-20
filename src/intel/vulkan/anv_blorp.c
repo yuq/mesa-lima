@@ -830,7 +830,7 @@ void anv_CmdClearColorImage(
                         VK_IMAGE_ASPECT_COLOR_BIT, image->tiling);
 
       unsigned base_layer = pRanges[r].baseArrayLayer;
-      unsigned layer_count = pRanges[r].layerCount;
+      unsigned layer_count = anv_get_layerCount(image, &pRanges[r]);
 
       for (unsigned i = 0; i < anv_get_levelCount(image, &pRanges[r]); i++) {
          const unsigned level = pRanges[r].baseMipLevel + i;
@@ -890,7 +890,7 @@ void anv_CmdClearDepthStencilImage(
       bool clear_stencil = pRanges[r].aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT;
 
       unsigned base_layer = pRanges[r].baseArrayLayer;
-      unsigned layer_count = pRanges[r].layerCount;
+      unsigned layer_count = anv_get_layerCount(image, &pRanges[r]);
 
       for (unsigned i = 0; i < anv_get_levelCount(image, &pRanges[r]); i++) {
          const unsigned level = pRanges[r].baseMipLevel + i;
