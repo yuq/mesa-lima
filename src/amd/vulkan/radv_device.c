@@ -2418,9 +2418,6 @@ radv_initialise_ds_surface(struct radv_device *device,
 	}
 
 	format = radv_translate_dbformat(iview->vk_format);
-	if (format == V_028040_Z_INVALID) {
-		fprintf(stderr, "Invalid DB format: %d, disabling DB.\n", iview->vk_format);
-	}
 
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	s_offs = z_offs = va;
