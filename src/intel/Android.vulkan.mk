@@ -26,7 +26,6 @@ include $(LOCAL_PATH)/Makefile.sources
 VK_ENTRYPOINTS_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/vulkan/anv_entrypoints_gen.py
 
 VULKAN_COMMON_INCLUDES := \
-	$(MESA_TOP)/include/vulkan \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(MESA_TOP)/src/gallium/include \
