@@ -5097,6 +5097,14 @@ ast_declarator_list::hir(exec_list *instructions,
              *    vectors, matrices, signed and unsigned integers and integer
              *    vectors. Vertex shader inputs cannot be arrays or
              *    structures."
+             *
+             * From section 4.3.4 of the ARB_bindless_texture spec:
+             *
+             *    "(modify third paragraph of the section to allow sampler and
+             *    image types) ...  Vertex shader inputs can only be float,
+             *    single-precision floating-point scalars, single-precision
+             *    floating-point vectors, matrices, signed and unsigned
+             *    integers and integer vectors, sampler and image types."
              */
             const glsl_type *check_type = var->type->without_array();
 
@@ -5112,6 +5120,12 @@ ast_declarator_list::hir(exec_list *instructions,
                   break;
             case GLSL_TYPE_DOUBLE:
                if (check_type->is_double() && (state->is_version(410, 0) || state->ARB_vertex_attrib_64bit_enable))
+                  break;
+            case GLSL_TYPE_SAMPLER:
+               if (check_type->is_sampler() && state->has_bindless())
+                  break;
+            case GLSL_TYPE_IMAGE:
+               if (check_type->is_image() && state->has_bindless())
                   break;
             /* FALLTHROUGH */
             default:
