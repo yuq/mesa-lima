@@ -79,7 +79,7 @@ setup_vec4_uniform_value(const gl_constant_value **params,
       params[i] = &zero;
 }
 
-void
+static void
 brw_setup_image_uniform_values(gl_shader_stage stage,
                                struct brw_stage_prog_data *stage_prog_data,
                                unsigned param_start_index,

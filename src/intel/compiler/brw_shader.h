@@ -235,11 +235,6 @@ bool brw_texture_offset(int *offsets,
                         unsigned num_components,
                         uint32_t *offset_bits);
 
-void brw_setup_image_uniform_values(gl_shader_stage stage,
-                                    struct brw_stage_prog_data *stage_prog_data,
-                                    unsigned param_start_index,
-                                    const gl_uniform_storage *storage);
-
 #else
 struct backend_shader;
 #endif /* __cplusplus */
