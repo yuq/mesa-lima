@@ -24,10 +24,9 @@
 #ifndef STRNDUP_H
 #define STRNDUP_H
 
-#include <stdlib.h> // size_t
-
 #if defined(_WIN32)
 
+#include <stdlib.h> // size_t
 #include <string.h>
 
 #ifdef __cplusplus
