@@ -57,7 +57,7 @@
 #define ETIME ETIMEDOUT
 #endif
 #include "libdrm_macros.h"
-#include "libdrm_lists.h"
+#include "util/list.h"
 #include "brw_bufmgr.h"
 #include "intel_bufmgr_priv.h"
 #include "intel_chipset.h"
@@ -113,7 +113,7 @@ atomic_add_unless(int *v, int add, int unless)
 typedef struct _drm_bacon_bo_gem drm_bacon_bo_gem;
 
 struct drm_bacon_gem_bo_bucket {
-	drmMMListHead head;
+	struct list_head head;
 	unsigned long size;
 };
 
@@ -139,12 +139,12 @@ typedef struct _drm_bacon_bufmgr_gem {
 	int num_buckets;
 	time_t time;
 
-	drmMMListHead managers;
+	struct list_head managers;
 
 	drm_bacon_bo_gem *name_table;
 	drm_bacon_bo_gem *handle_table;
 
-	drmMMListHead vma_cache;
+	struct list_head vma_cache;
 	int vma_count, vma_open, vma_max;
 
 	uint64_t gtt_size;
@@ -237,10 +237,10 @@ struct _drm_bacon_bo_gem {
 	 */
 	void *user_virtual;
 	int map_count;
-	drmMMListHead vma_list;
+	struct list_head vma_list;
 
 	/** BO cache list */
-	drmMMListHead head;
+	struct list_head head;
 
 	/**
 	 * Boolean of whether this BO and its children have been included in
@@ -701,16 +701,16 @@ static void
 drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr_gem *bufmgr_gem,
 				    struct drm_bacon_gem_bo_bucket *bucket)
 {
-	while (!DRMLISTEMPTY(&bucket->head)) {
+	while (!list_empty(&bucket->head)) {
 		drm_bacon_bo_gem *bo_gem;
 
-		bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
-				      bucket->head.next, head);
+		bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
+				    bucket->head.next, head);
 		if (drm_bacon_gem_bo_madvise_internal
 		    (bufmgr_gem, bo_gem, I915_MADV_DONTNEED))
 			break;
 
-		DRMLISTDEL(&bo_gem->head);
+		list_del(&bo_gem->head);
 		drm_bacon_gem_bo_free(&bo_gem->bo);
 	}
 }
@@ -754,15 +754,15 @@ drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 	/* Get a buffer out of the cache if available */
 retry:
 	alloc_from_cache = false;
-	if (bucket != NULL && !DRMLISTEMPTY(&bucket->head)) {
+	if (bucket != NULL && !list_empty(&bucket->head)) {
 		if (for_render) {
 			/* Allocate new render-target BOs from the tail (MRU)
 			 * of the list, as it will likely be hot in the GPU
 			 * cache and in the aperture for us.
 			 */
-			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
-					      bucket->head.prev, head);
-			DRMLISTDEL(&bo_gem->head);
+			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
+					    bucket->head.prev, head);
+			list_del(&bo_gem->head);
 			alloc_from_cache = true;
 			bo_gem->bo.align = alignment;
 		} else {
@@ -774,11 +774,11 @@ retry:
 			 * allocating a new buffer is probably faster than
 			 * waiting for the GPU to finish.
 			 */
-			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
-					      bucket->head.next, head);
+			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
+					    bucket->head.next, head);
 			if (!drm_bacon_gem_bo_busy(&bo_gem->bo)) {
 				alloc_from_cache = true;
-				DRMLISTDEL(&bo_gem->head);
+				list_del(&bo_gem->head);
 			}
 		}
 
@@ -807,9 +807,9 @@ retry:
 		if (!bo_gem)
 			goto err;
 
-		/* drm_bacon_gem_bo_free calls DRMLISTDEL() for an uninitialized
+		/* drm_bacon_gem_bo_free calls list_del() for an uninitialized
 		   list (vma_list), so better set the list head here */
-		DRMINITLISTHEAD(&bo_gem->vma_list);
+		list_inithead(&bo_gem->vma_list);
 
 		bo_gem->bo.size = bo_size;
 
@@ -965,7 +965,7 @@ drm_bacon_gem_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 		return NULL;
 
 	p_atomic_set(&bo_gem->refcount, 1);
-	DRMINITLISTHEAD(&bo_gem->vma_list);
+	list_inithead(&bo_gem->vma_list);
 
 	bo_gem->bo.size = size;
 
@@ -1142,7 +1142,7 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 		goto out;
 
 	p_atomic_set(&bo_gem->refcount, 1);
-	DRMINITLISTHEAD(&bo_gem->vma_list);
+	list_inithead(&bo_gem->vma_list);
 
 	bo_gem->bo.size = open_arg.size;
 	bo_gem->bo.offset = 0;
@@ -1193,7 +1193,7 @@ drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 	struct drm_gem_close close;
 	int ret;
 
-	DRMLISTDEL(&bo_gem->vma_list);
+	list_del(&bo_gem->vma_list);
 	if (bo_gem->mem_virtual) {
 		VG(VALGRIND_FREELIKE_BLOCK(bo_gem->mem_virtual, 0));
 		drm_munmap(bo_gem->mem_virtual, bo_gem->bo.size);
@@ -1254,15 +1254,15 @@ drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr_gem *bufmgr_gem, time_t time)
 		struct drm_bacon_gem_bo_bucket *bucket =
 		    &bufmgr_gem->cache_bucket[i];
 
-		while (!DRMLISTEMPTY(&bucket->head)) {
+		while (!list_empty(&bucket->head)) {
 			drm_bacon_bo_gem *bo_gem;
 
-			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
-					      bucket->head.next, head);
+			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
+					    bucket->head.next, head);
 			if (time - bo_gem->free_time <= 1)
 				break;
 
-			DRMLISTDEL(&bo_gem->head);
+			list_del(&bo_gem->head);
 
 			drm_bacon_gem_bo_free(&bo_gem->bo);
 		}
@@ -1289,11 +1289,11 @@ static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr_gem *bufmgr_gem)
 	while (bufmgr_gem->vma_count > limit) {
 		drm_bacon_bo_gem *bo_gem;
 
-		bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
-				      bufmgr_gem->vma_cache.next,
-				      vma_list);
+		bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
+				    bufmgr_gem->vma_cache.next,
+				    vma_list);
 		assert(bo_gem->map_count == 0);
-		DRMLISTDELINIT(&bo_gem->vma_list);
+		list_delinit(&bo_gem->vma_list);
 
 		if (bo_gem->mem_virtual) {
 			drm_munmap(bo_gem->mem_virtual, bo_gem->bo.size);
@@ -1317,7 +1317,7 @@ static void drm_bacon_gem_bo_close_vma(drm_bacon_bufmgr_gem *bufmgr_gem,
 				       drm_bacon_bo_gem *bo_gem)
 {
 	bufmgr_gem->vma_open--;
-	DRMLISTADDTAIL(&bo_gem->vma_list, &bufmgr_gem->vma_cache);
+	list_addtail(&bo_gem->vma_list, &bufmgr_gem->vma_cache);
 	if (bo_gem->mem_virtual)
 		bufmgr_gem->vma_count++;
 	if (bo_gem->wc_virtual)
@@ -1331,7 +1331,7 @@ static void drm_bacon_gem_bo_open_vma(drm_bacon_bufmgr_gem *bufmgr_gem,
 				      drm_bacon_bo_gem *bo_gem)
 {
 	bufmgr_gem->vma_open++;
-	DRMLISTDEL(&bo_gem->vma_list);
+	list_del(&bo_gem->vma_list);
 	if (bo_gem->mem_virtual)
 		bufmgr_gem->vma_count--;
 	if (bo_gem->wc_virtual)
@@ -1401,7 +1401,7 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 		bo_gem->name = NULL;
 		bo_gem->validate_index = -1;
 
-		DRMLISTADDTAIL(&bo_gem->head, &bucket->head);
+		list_addtail(&bo_gem->head, &bucket->head);
 	} else {
 		drm_bacon_gem_bo_free(bo);
 	}
@@ -1928,10 +1928,10 @@ drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 		    &bufmgr_gem->cache_bucket[i];
 		drm_bacon_bo_gem *bo_gem;
 
-		while (!DRMLISTEMPTY(&bucket->head)) {
-			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
-					      bucket->head.next, head);
-			DRMLISTDEL(&bo_gem->head);
+		while (!list_empty(&bucket->head)) {
+			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
+					    bucket->head.next, head);
+			list_del(&bo_gem->head);
 
 			drm_bacon_gem_bo_free(&bo_gem->bo);
 		}
@@ -2668,7 +2668,7 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 		goto out;
 
 	p_atomic_set(&bo_gem->refcount, 1);
-	DRMINITLISTHEAD(&bo_gem->vma_list);
+	list_inithead(&bo_gem->vma_list);
 
 	/* Determine size of bo.  The fd-to-handle ioctl really should
 	 * return the size, but it doesn't.  If we have kernel 3.12 or
@@ -3084,7 +3084,7 @@ add_bucket(drm_bacon_bufmgr_gem *bufmgr_gem, int size)
 
 	assert(i < ARRAY_SIZE(bufmgr_gem->cache_bucket));
 
-	DRMINITLISTHEAD(&bufmgr_gem->cache_bucket[i].head);
+	list_inithead(&bufmgr_gem->cache_bucket[i].head);
 	bufmgr_gem->cache_bucket[i].size = size;
 	bufmgr_gem->num_buckets++;
 }
@@ -3369,14 +3369,13 @@ drm_bacon_get_min_eu_in_pool(int fd)
 }
 
 static pthread_mutex_t bufmgr_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-static drmMMListHead bufmgr_list = { &bufmgr_list, &bufmgr_list };
+static struct list_head bufmgr_list = { &bufmgr_list, &bufmgr_list };
 
 static drm_bacon_bufmgr_gem *
 drm_bacon_bufmgr_gem_find(int fd)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem;
-
-	DRMLISTFOREACHENTRY(bufmgr_gem, &bufmgr_list, managers) {
+	list_for_each_entry(drm_bacon_bufmgr_gem,
+                            bufmgr_gem, &bufmgr_list, managers) {
 		if (bufmgr_gem->fd == fd) {
 			p_atomic_inc(&bufmgr_gem->refcount);
 			return bufmgr_gem;
@@ -3395,7 +3394,7 @@ drm_bacon_bufmgr_gem_unref(drm_bacon_bufmgr *bufmgr)
 		pthread_mutex_lock(&bufmgr_list_mutex);
 
 		if (p_atomic_dec_zero(&bufmgr_gem->refcount)) {
-			DRMLISTDEL(&bufmgr_gem->managers);
+			list_del(&bufmgr_gem->managers);
 			drm_bacon_bufmgr_gem_destroy(bufmgr);
 		}
 
@@ -3751,10 +3750,10 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 
 	init_cache_buckets(bufmgr_gem);
 
-	DRMINITLISTHEAD(&bufmgr_gem->vma_cache);
+	list_inithead(&bufmgr_gem->vma_cache);
 	bufmgr_gem->vma_max = -1; /* unlimited by default */
 
-	DRMLISTADD(&bufmgr_gem->managers, &bufmgr_list);
+	list_add(&bufmgr_gem->managers, &bufmgr_list);
 
 exit:
 	pthread_mutex_unlock(&bufmgr_list_mutex);
