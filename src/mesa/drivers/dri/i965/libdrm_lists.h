@@ -31,6 +31,10 @@
 
 #include <stddef.h>
 
+#ifndef typeof
+#define typeof __typeof__
+#endif
+
 typedef struct _drmMMListHead
 {
     struct _drmMMListHead *prev;
