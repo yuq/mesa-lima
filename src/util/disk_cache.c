@@ -41,6 +41,7 @@
 #include "zlib.h"
 
 #include "util/crc32.h"
+#include "util/rand_xor.h"
 #include "util/u_atomic.h"
 #include "util/u_queue.h"
 #include "util/mesa-sha1.h"
@@ -65,6 +66,9 @@ struct disk_cache {
 
    /* Thread queue for compressing and writing cache entries to disk */
    struct util_queue cache_queue;
+
+   /* Seed for rand, which is used to pick a random directory */
+   uint64_t seed_xorshift128plus[2];
 
    /* A pointer to the mmapped index file within the cache directory. */
    uint8_t *index_mmap;
@@ -408,6 +412,9 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
     */
    util_queue_init(&cache->cache_queue, "disk_cache", 32, 1);
 
+   /* Seed our rand function */
+   s_rand_xorshift128plus(cache->seed_xorshift128plus, true);
+
    ralloc_free(local);
 
    return cache;
@@ -613,23 +620,18 @@ is_two_character_sub_directory(const char *path, const struct stat *sb,
 static void
 evict_lru_item(struct disk_cache *cache)
 {
-   const char hex[] = "0123456789abcde";
    char *dir_path;
-   int a, b;
-   size_t size;
 
    /* With a reasonably-sized, full cache, (and with keys generated
     * from a cryptographic hash), we can choose two random hex digits
     * and reasonably expect the directory to exist with a file in it.
     * Provides pseudo-LRU eviction to reduce checking all cache files.
     */
-   a = rand() % 16;
-   b = rand() % 16;
-
-   if (asprintf(&dir_path, "%s/%c%c", cache->path, hex[a], hex[b]) < 0)
+   uint64_t rand64 = rand_xorshift128plus(cache->seed_xorshift128plus);
+   if (asprintf(&dir_path, "%s/%02" PRIx64 , cache->path, rand64 & 0xff) < 0)
       return;
 
-   size = unlink_lru_file_from_directory(dir_path);
+   size_t size = unlink_lru_file_from_directory(dir_path);
 
    free(dir_path);
 
