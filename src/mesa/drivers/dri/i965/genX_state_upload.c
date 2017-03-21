@@ -31,11 +31,13 @@
 #include "brw_util.h"
 
 #include "intel_batchbuffer.h"
+#include "intel_buffer_objects.h"
 #include "intel_fbo.h"
 
 #include "main/fbobject.h"
 #include "main/framebuffer.h"
 #include "main/stencil.h"
+#include "main/transformfeedback.h"
 
 UNUSED static void *
 emit_dwords(struct brw_context *brw, unsigned n)
@@ -80,6 +82,28 @@ __gen_combine_address(struct brw_context *brw, void *location,
    }
 }
 
+static inline struct brw_address
+render_bo(struct brw_bo *bo, uint32_t offset)
+{
+   return (struct brw_address) {
+            .bo = bo,
+            .offset = offset,
+            .read_domains = I915_GEM_DOMAIN_RENDER,
+            .write_domain = I915_GEM_DOMAIN_RENDER,
+   };
+}
+
+static inline struct brw_address
+instruction_bo(struct brw_bo *bo, uint32_t offset)
+{
+   return (struct brw_address) {
+            .bo = bo,
+            .offset = offset,
+            .read_domains = I915_GEM_DOMAIN_INSTRUCTION,
+            .write_domain = I915_GEM_DOMAIN_INSTRUCTION,
+   };
+}
+
 #include "genxml/genX_pack.h"
 
 #define _brw_cmd_length(cmd) cmd ## _length
@@ -94,11 +118,12 @@ __gen_combine_address(struct brw_context *brw, void *location,
         _brw_cmd_pack(cmd)(brw, (void *)_dst, &name),   \
         _dst = NULL)
 
-#define brw_batch_emitn(brw, cmd, n) ({                \
+#define brw_batch_emitn(brw, cmd, n, ...) ({           \
       uint32_t *_dw = emit_dwords(brw, n);             \
       struct cmd template = {                          \
          _brw_cmd_header(cmd),                         \
          .DWordLength = n - _brw_cmd_length_bias(cmd), \
+         __VA_ARGS__                                   \
       };                                               \
       _brw_cmd_pack(cmd)(brw, _dw, &template);         \
       _dw + 1; /* Array starts at dw[1] */             \
@@ -860,6 +885,316 @@ static const struct brw_tracked_state genX(sbe_state) = {
    },
    .emit = genX(upload_sbe),
 };
+
+/* ---------------------------------------------------------------------- */
+
+/**
+ * Outputs the 3DSTATE_SO_DECL_LIST command.
+ *
+ * The data output is a series of 64-bit entries containing a SO_DECL per
+ * stream.  We only have one stream of rendering coming out of the GS unit, so
+ * we only emit stream 0 (low 16 bits) SO_DECLs.
+ */
+static void
+genX(upload_3dstate_so_decl_list)(struct brw_context *brw,
+                                  const struct brw_vue_map *vue_map)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_TRANSFORM_FEEDBACK */
+   struct gl_transform_feedback_object *xfb_obj =
+      ctx->TransformFeedback.CurrentObject;
+   const struct gl_transform_feedback_info *linked_xfb_info =
+      xfb_obj->program->sh.LinkedTransformFeedback;
+   struct GENX(SO_DECL) so_decl[MAX_VERTEX_STREAMS][128];
+   int buffer_mask[MAX_VERTEX_STREAMS] = {0, 0, 0, 0};
+   int next_offset[MAX_VERTEX_STREAMS] = {0, 0, 0, 0};
+   int decls[MAX_VERTEX_STREAMS] = {0, 0, 0, 0};
+   int max_decls = 0;
+   STATIC_ASSERT(ARRAY_SIZE(so_decl[0]) >= MAX_PROGRAM_OUTPUTS);
+
+   memset(so_decl, 0, sizeof(so_decl));
+
+   /* Construct the list of SO_DECLs to be emitted.  The formatting of the
+    * command feels strange -- each dword pair contains a SO_DECL per stream.
+    */
+   for (unsigned i = 0; i < linked_xfb_info->NumOutputs; i++) {
+      int buffer = linked_xfb_info->Outputs[i].OutputBuffer;
+      struct GENX(SO_DECL) decl = {0};
+      int varying = linked_xfb_info->Outputs[i].OutputRegister;
+      const unsigned components = linked_xfb_info->Outputs[i].NumComponents;
+      unsigned component_mask = (1 << components) - 1;
+      unsigned stream_id = linked_xfb_info->Outputs[i].StreamId;
+      unsigned decl_buffer_slot = buffer;
+      assert(stream_id < MAX_VERTEX_STREAMS);
+
+      /* gl_PointSize is stored in VARYING_SLOT_PSIZ.w
+       * gl_Layer is stored in VARYING_SLOT_PSIZ.y
+       * gl_ViewportIndex is stored in VARYING_SLOT_PSIZ.z
+       */
+      if (varying == VARYING_SLOT_PSIZ) {
+         assert(components == 1);
+         component_mask <<= 3;
+      } else if (varying == VARYING_SLOT_LAYER) {
+         assert(components == 1);
+         component_mask <<= 1;
+      } else if (varying == VARYING_SLOT_VIEWPORT) {
+         assert(components == 1);
+         component_mask <<= 2;
+      } else {
+         component_mask <<= linked_xfb_info->Outputs[i].ComponentOffset;
+      }
+
+      buffer_mask[stream_id] |= 1 << buffer;
+
+      decl.OutputBufferSlot = decl_buffer_slot;
+      if (varying == VARYING_SLOT_LAYER || varying == VARYING_SLOT_VIEWPORT) {
+         decl.RegisterIndex = vue_map->varying_to_slot[VARYING_SLOT_PSIZ];
+      } else {
+         assert(vue_map->varying_to_slot[varying] >= 0);
+         decl.RegisterIndex = vue_map->varying_to_slot[varying];
+      }
+      decl.ComponentMask = component_mask;
+
+      /* Mesa doesn't store entries for gl_SkipComponents in the Outputs[]
+       * array.  Instead, it simply increments DstOffset for the following
+       * input by the number of components that should be skipped.
+       *
+       * Our hardware is unusual in that it requires us to program SO_DECLs
+       * for fake "hole" components, rather than simply taking the offset
+       * for each real varying.  Each hole can have size 1, 2, 3, or 4; we
+       * program as many size = 4 holes as we can, then a final hole to
+       * accommodate the final 1, 2, or 3 remaining.
+       */
+      int skip_components =
+         linked_xfb_info->Outputs[i].DstOffset - next_offset[buffer];
+
+      next_offset[buffer] += skip_components;
+
+      while (skip_components >= 4) {
+         struct GENX(SO_DECL) *d = &so_decl[stream_id][decls[stream_id]++];
+         d->HoleFlag = 1;
+         d->OutputBufferSlot = decl_buffer_slot;
+         d->ComponentMask = 0xf;
+         skip_components -= 4;
+      }
+
+      if (skip_components > 0) {
+         struct GENX(SO_DECL) *d = &so_decl[stream_id][decls[stream_id]++];
+         d->HoleFlag = 1;
+         d->OutputBufferSlot = decl_buffer_slot;
+         d->ComponentMask = (1 << skip_components) - 1;
+      }
+
+      assert(linked_xfb_info->Outputs[i].DstOffset == next_offset[buffer]);
+
+      next_offset[buffer] += components;
+
+      so_decl[stream_id][decls[stream_id]++] = decl;
+
+      if (decls[stream_id] > max_decls)
+         max_decls = decls[stream_id];
+   }
+
+   uint32_t *dw;
+   dw = brw_batch_emitn(brw, GENX(3DSTATE_SO_DECL_LIST), 3 + 2 * max_decls,
+                        .StreamtoBufferSelects0 = buffer_mask[0],
+                        .StreamtoBufferSelects1 = buffer_mask[1],
+                        .StreamtoBufferSelects2 = buffer_mask[2],
+                        .StreamtoBufferSelects3 = buffer_mask[3],
+                        .NumEntries0 = decls[0],
+                        .NumEntries1 = decls[1],
+                        .NumEntries2 = decls[2],
+                        .NumEntries3 = decls[3]);
+
+   for (int i = 0; i < max_decls; i++) {
+      GENX(SO_DECL_ENTRY_pack)(
+         brw, dw + 2 + i * 2,
+         &(struct GENX(SO_DECL_ENTRY)) {
+            .Stream0Decl = so_decl[0][i],
+            .Stream1Decl = so_decl[1][i],
+            .Stream2Decl = so_decl[2][i],
+            .Stream3Decl = so_decl[3][i],
+         });
+   }
+}
+
+static void
+genX(upload_3dstate_so_buffers)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_TRANSFORM_FEEDBACK */
+   struct gl_transform_feedback_object *xfb_obj =
+      ctx->TransformFeedback.CurrentObject;
+#if GEN_GEN < 8
+   const struct gl_transform_feedback_info *linked_xfb_info =
+      xfb_obj->program->sh.LinkedTransformFeedback;
+#else
+   struct brw_transform_feedback_object *brw_obj =
+      (struct brw_transform_feedback_object *) xfb_obj;
+   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+#endif
+
+   /* Set up the up to 4 output buffers.  These are the ranges defined in the
+    * gl_transform_feedback_object.
+    */
+   for (int i = 0; i < 4; i++) {
+      struct intel_buffer_object *bufferobj =
+         intel_buffer_object(xfb_obj->Buffers[i]);
+
+      if (!bufferobj) {
+         brw_batch_emit(brw, GENX(3DSTATE_SO_BUFFER), sob) {
+            sob.SOBufferIndex = i;
+         }
+         continue;
+      }
+
+      uint32_t start = xfb_obj->Offset[i];
+      assert(start % 4 == 0);
+      uint32_t end = ALIGN(start + xfb_obj->Size[i], 4);
+      struct brw_bo *bo =
+         intel_bufferobj_buffer(brw, bufferobj, start, end - start);
+      assert(end <= bo->size);
+
+      brw_batch_emit(brw, GENX(3DSTATE_SO_BUFFER), sob) {
+         sob.SOBufferIndex = i;
+
+         sob.SurfaceBaseAddress = render_bo(bo, start);
+#if GEN_GEN < 8
+         sob.SurfacePitch = linked_xfb_info->Buffers[i].Stride * 4;
+         sob.SurfaceEndAddress = render_bo(bo, end);
+#else
+         sob.SOBufferEnable = true;
+         sob.StreamOffsetWriteEnable = true;
+         sob.StreamOutputBufferOffsetAddressEnable = true;
+         sob.SOBufferMOCS = mocs_wb;
+
+         sob.SurfaceSize = MAX2(xfb_obj->Size[i] / 4, 1) - 1;
+         sob.StreamOutputBufferOffsetAddress =
+            instruction_bo(brw_obj->offset_bo, i * sizeof(uint32_t));
+
+         if (brw_obj->zero_offsets) {
+            /* Zero out the offset and write that to offset_bo */
+            sob.StreamOffset = 0;
+         } else {
+            /* Use offset_bo as the "Stream Offset." */
+            sob.StreamOffset = 0xFFFFFFFF;
+         }
+#endif
+      }
+   }
+
+#if GEN_GEN >= 8
+   brw_obj->zero_offsets = false;
+#endif
+}
+
+static inline bool
+query_active(struct gl_query_object *q)
+{
+   return q && q->Active;
+}
+
+static void
+genX(upload_3dstate_streamout)(struct brw_context *brw, bool active,
+                               const struct brw_vue_map *vue_map)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_TRANSFORM_FEEDBACK */
+   struct gl_transform_feedback_object *xfb_obj =
+      ctx->TransformFeedback.CurrentObject;
+
+   brw_batch_emit(brw, GENX(3DSTATE_STREAMOUT), sos) {
+      if (active) {
+         int urb_entry_read_offset = 0;
+         int urb_entry_read_length = (vue_map->num_slots + 1) / 2 -
+            urb_entry_read_offset;
+
+         sos.SOFunctionEnable = true;
+         sos.SOStatisticsEnable = true;
+
+         /* BRW_NEW_RASTERIZER_DISCARD */
+         if (ctx->RasterDiscard) {
+            if (!query_active(ctx->Query.PrimitivesGenerated[0])) {
+               sos.RenderingDisable = true;
+            } else {
+               perf_debug("Rasterizer discard with a GL_PRIMITIVES_GENERATED "
+                          "query active relies on the clipper.");
+            }
+         }
+
+         /* _NEW_LIGHT */
+         if (ctx->Light.ProvokingVertex != GL_FIRST_VERTEX_CONVENTION)
+            sos.ReorderMode = TRAILING;
+
+#if GEN_GEN < 8
+         sos.SOBufferEnable0 = xfb_obj->Buffers[0] != NULL;
+         sos.SOBufferEnable1 = xfb_obj->Buffers[1] != NULL;
+         sos.SOBufferEnable2 = xfb_obj->Buffers[2] != NULL;
+         sos.SOBufferEnable3 = xfb_obj->Buffers[3] != NULL;
+#else
+         const struct gl_transform_feedback_info *linked_xfb_info =
+            xfb_obj->program->sh.LinkedTransformFeedback;
+         /* Set buffer pitches; 0 means unbound. */
+         if (xfb_obj->Buffers[0])
+            sos.Buffer0SurfacePitch = linked_xfb_info->Buffers[0].Stride * 4;
+         if (xfb_obj->Buffers[1])
+            sos.Buffer1SurfacePitch = linked_xfb_info->Buffers[1].Stride * 4;
+         if (xfb_obj->Buffers[2])
+            sos.Buffer2SurfacePitch = linked_xfb_info->Buffers[2].Stride * 4;
+         if (xfb_obj->Buffers[3])
+            sos.Buffer3SurfacePitch = linked_xfb_info->Buffers[3].Stride * 4;
+#endif
+
+         /* We always read the whole vertex.  This could be reduced at some
+          * point by reading less and offsetting the register index in the
+          * SO_DECLs.
+          */
+         sos.Stream0VertexReadOffset = urb_entry_read_offset;
+         sos.Stream0VertexReadLength = urb_entry_read_length - 1;
+         sos.Stream1VertexReadOffset = urb_entry_read_offset;
+         sos.Stream1VertexReadLength = urb_entry_read_length - 1;
+         sos.Stream2VertexReadOffset = urb_entry_read_offset;
+         sos.Stream2VertexReadLength = urb_entry_read_length - 1;
+         sos.Stream3VertexReadOffset = urb_entry_read_offset;
+         sos.Stream3VertexReadLength = urb_entry_read_length - 1;
+      }
+   }
+}
+
+static void
+genX(upload_sol)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_TRANSFORM_FEEDBACK */
+   bool active = _mesa_is_xfb_active_and_unpaused(ctx);
+
+   if (active) {
+      genX(upload_3dstate_so_buffers)(brw);
+
+      /* BRW_NEW_VUE_MAP_GEOM_OUT */
+      genX(upload_3dstate_so_decl_list)(brw, &brw->vue_map_geom_out);
+   }
+
+   /* Finally, set up the SOL stage.  This command must always follow updates to
+    * the nonpipelined SOL state (3DSTATE_SO_BUFFER, 3DSTATE_SO_DECL_LIST) or
+    * MMIO register updates (current performed by the kernel at each batch
+    * emit).
+    */
+   genX(upload_3dstate_streamout)(brw, active, &brw->vue_map_geom_out);
+}
+
+static const struct brw_tracked_state genX(sol_state) = {
+   .dirty = {
+      .mesa  = _NEW_LIGHT,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_RASTERIZER_DISCARD |
+               BRW_NEW_VUE_MAP_GEOM_OUT |
+               BRW_NEW_TRANSFORM_FEEDBACK,
+   },
+   .emit = genX(upload_sol),
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -1178,7 +1513,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_te_state,
       &gen7_ds_state,
       &gen7_gs_state,
-      &gen7_sol_state,
+      &genX(sol_state),
       &genX(clip_state),
       &genX(sbe_state),
       &genX(sf_state),
@@ -1265,7 +1600,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_te_state,
       &gen8_ds_state,
       &gen8_gs_state,
-      &gen7_sol_state,
+      &genX(sol_state),
       &genX(clip_state),
       &genX(raster_state),
       &genX(sbe_state),

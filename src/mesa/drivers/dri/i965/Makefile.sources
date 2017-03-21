@@ -111,7 +111,6 @@ i965_FILES = \
 	gen8_hs_state.c \
 	gen8_multisample_state.c \
 	gen8_ps_state.c \
-	gen8_sol_state.c \
 	gen8_surface_state.c \
 	gen8_viewport_state.c \
 	gen8_vs_state.c \
