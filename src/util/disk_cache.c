@@ -822,9 +822,21 @@ cache_put(void *job, int thread_index)
    /* OK, we're now on the hook to write out a file that we know is
     * not in the cache, and is also not being written out to the cache
     * by some other process.
-    *
-    * Create CRC of the data and store at the start of the file. We will
-    * read this when restoring the cache and use it to check for corruption.
+    */
+
+   /* Write the driver_keys_blob, this can be used find information about the
+    * mesa version that produced the entry or deal with hash collisions,
+    * should that ever become a real problem.
+    */
+   ret = write_all(fd, dc_job->cache->driver_keys_blob,
+                   dc_job->cache->driver_keys_blob_size);
+   if (ret == -1) {
+      unlink(filename_tmp);
+      goto done;
+   }
+
+   /* Create CRC of the data. We will read this when restoring the cache and
+    * use it to check for corruption.
     */
    struct cache_entry_file_data cf_data;
    cf_data.crc32 = util_hash_crc32(dc_job->data, dc_job->size);
@@ -853,7 +865,7 @@ cache_put(void *job, int thread_index)
       goto done;
    }
 
-   file_size += cf_data_size;
+   file_size += cf_data_size + dc_job->cache->driver_keys_blob_size;
    p_atomic_add(dc_job->cache->size, file_size);
 
  done:
@@ -950,10 +962,36 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
    if (data == NULL)
       goto fail;
 
+   size_t ck_size = cache->driver_keys_blob_size;
+#ifndef NDEBUG
+   uint8_t *file_header = malloc(ck_size);
+   if (!file_header)
+      goto fail;
+
+   assert(sb.st_size > ck_size);
+   for (len = 0; len < ck_size; len += ret) {
+      ret = read(fd, ((uint8_t *) file_header) + len, ck_size - len);
+      if (ret == -1) {
+         free(file_header);
+         goto fail;
+      }
+   }
+
+   assert(memcmp(cache->driver_keys_blob, file_header, ck_size) == 0);
+
+   free(file_header);
+#else
+   /* The cache keys are currently just used for distributing precompiled
+    * shaders, they are not used by Mesa so just skip them for now.
+    */
+   ret = lseek(fd, ck_size, SEEK_CUR);
+   if (ret == -1)
+      goto fail;
+#endif
+
    /* Load the CRC that was created when the file was written. */
    struct cache_entry_file_data cf_data;
    size_t cf_data_size = sizeof(cf_data);
-   assert(sb.st_size > cf_data_size);
    for (len = 0; len < cf_data_size; len += ret) {
       ret = read(fd, ((uint8_t *) &cf_data) + len, cf_data_size - len);
       if (ret == -1)
@@ -961,7 +999,7 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
    }
 
    /* Load the actual cache data. */
-   size_t cache_data_size = sb.st_size - cf_data_size;
+   size_t cache_data_size = sb.st_size - cf_data_size - ck_size;
    for (len = 0; len < cache_data_size; len += ret) {
       ret = read(fd, data + len, cache_data_size - len);
       if (ret == -1)
