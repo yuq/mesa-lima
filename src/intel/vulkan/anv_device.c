@@ -612,6 +612,15 @@ void anv_GetPhysicalDeviceFeatures2KHR(
 
    vk_foreach_struct(ext, pFeatures->pNext) {
       switch (ext->sType) {
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX: {
+         VkPhysicalDeviceMultiviewFeaturesKHX *features =
+            (VkPhysicalDeviceMultiviewFeaturesKHX *)ext;
+         features->multiview = true;
+         features->multiviewGeometryShader = true;
+         features->multiviewTessellationShader = true;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
@@ -786,6 +795,14 @@ void anv_GetPhysicalDeviceProperties2KHR(
          memcpy(id_props->driverUUID, pdevice->driver_uuid, VK_UUID_SIZE);
          /* The LUID is for Windows. */
          id_props->deviceLUIDValid = false;
+         break;
+      }
+
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX: {
+         VkPhysicalDeviceMultiviewPropertiesKHX *properties =
+            (VkPhysicalDeviceMultiviewPropertiesKHX *)ext;
+         properties->maxMultiviewViewCount = 16;
+         properties->maxMultiviewInstanceIndex = UINT32_MAX / 16;
          break;
       }
 
