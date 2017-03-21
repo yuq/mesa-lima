@@ -1195,6 +1195,138 @@ static const struct brw_tracked_state genX(sol_state) = {
    .emit = genX(upload_sol),
 };
 
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_ps)(struct brw_context *brw)
+{
+   UNUSED const struct gl_context *ctx = &brw->ctx;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+   const struct brw_stage_state *stage_state = &brw->wm.base;
+
+#if GEN_GEN < 8
+#endif
+
+   brw_batch_emit(brw, GENX(3DSTATE_PS), ps) {
+      /* Initialize the execution mask with VMask.  Otherwise, derivatives are
+       * incorrect for subspans where some of the pixels are unlit.  We believe
+       * the bit just didn't take effect in previous generations.
+       */
+      ps.VectorMaskEnable = GEN_GEN >= 8;
+
+      ps.SamplerCount =
+         DIV_ROUND_UP(CLAMP(stage_state->sampler_count, 0, 16), 4);
+
+      /* BRW_NEW_FS_PROG_DATA */
+      ps.BindingTableEntryCount = prog_data->base.binding_table.size_bytes / 4;
+
+      if (prog_data->base.use_alt_mode)
+         ps.FloatingPointMode = Alternate;
+
+      /* Haswell requires the sample mask to be set in this packet as well as
+       * in 3DSTATE_SAMPLE_MASK; the values should match.
+       */
+
+      /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
+#if GEN_IS_HASWELL
+      ps.SampleMask = gen6_determine_sample_mask(brw);
+#endif
+
+      /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
+       * it implicitly scales for different GT levels (which have some # of
+       * PSDs).
+       *
+       * In Gen8 the format is U8-2 whereas in Gen9 it is U8-1.
+       */
+#if GEN_GEN >= 9
+      ps.MaximumNumberofThreadsPerPSD = 64 - 1;
+#elif GEN_GEN >= 8
+      ps.MaximumNumberofThreadsPerPSD = 64 - 2;
+#else
+      ps.MaximumNumberofThreads = devinfo->max_wm_threads - 1;
+#endif
+
+      if (prog_data->base.nr_params > 0)
+         ps.PushConstantEnable = true;
+
+#if GEN_GEN < 8
+      /* From the IVB PRM, volume 2 part 1, page 287:
+       * "This bit is inserted in the PS payload header and made available to
+       * the DataPort (either via the message header or via header bypass) to
+       * indicate that oMask data (one or two phases) is included in Render
+       * Target Write messages. If present, the oMask data is used to mask off
+       * samples."
+       */
+      ps.oMaskPresenttoRenderTarget = prog_data->uses_omask;
+
+      /* The hardware wedges if you have this bit set but don't turn on any
+       * dual source blend factors.
+       *
+       * BRW_NEW_FS_PROG_DATA | _NEW_COLOR
+       */
+      ps.DualSourceBlendEnable = prog_data->dual_src_blend &&
+                                 (ctx->Color.BlendEnabled & 1) &&
+                                 ctx->Color.Blend[0]._UsesDualSrc;
+
+      /* BRW_NEW_FS_PROG_DATA */
+      ps.AttributeEnable = (prog_data->num_varying_inputs != 0);
+#endif
+
+      /* From the documentation for this packet:
+       * "If the PS kernel does not need the Position XY Offsets to
+       *  compute a Position Value, then this field should be programmed
+       *  to POSOFFSET_NONE."
+       *
+       * "SW Recommendation: If the PS kernel needs the Position Offsets
+       *  to compute a Position XY value, this field should match Position
+       *  ZW Interpolation Mode to ensure a consistent position.xyzw
+       *  computation."
+       *
+       * We only require XY sample offsets. So, this recommendation doesn't
+       * look useful at the moment. We might need this in future.
+       */
+      if (prog_data->uses_pos_offset)
+         ps.PositionXYOffsetSelect = POSOFFSET_SAMPLE;
+      else
+         ps.PositionXYOffsetSelect = POSOFFSET_NONE;
+
+      ps.RenderTargetFastClearEnable = brw->wm.fast_clear_op;
+      ps._8PixelDispatchEnable = prog_data->dispatch_8;
+      ps._16PixelDispatchEnable = prog_data->dispatch_16;
+      ps.DispatchGRFStartRegisterForConstantSetupData0 =
+         prog_data->base.dispatch_grf_start_reg;
+      ps.DispatchGRFStartRegisterForConstantSetupData2 =
+         prog_data->dispatch_grf_start_reg_2;
+
+      ps.KernelStartPointer0 = stage_state->prog_offset;
+      ps.KernelStartPointer2 = stage_state->prog_offset +
+         prog_data->prog_offset_2;
+
+      if (prog_data->base.total_scratch) {
+         ps.ScratchSpaceBasePointer =
+            render_bo(stage_state->scratch_bo,
+                      ffs(stage_state->per_thread_scratch) - 11);
+      }
+   }
+}
+
+static const struct brw_tracked_state genX(ps_state) = {
+   .dirty = {
+      .mesa  = _NEW_MULTISAMPLE |
+               (GEN_GEN < 8 ? _NEW_BUFFERS |
+                              _NEW_COLOR
+                            : 0),
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_FS_PROG_DATA,
+   },
+   .emit = genX(upload_ps),
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -1518,7 +1650,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(sbe_state),
       &genX(sf_state),
       &gen7_wm_state,
-      &gen7_ps_state,
+      &genX(ps_state),
 
       &gen6_scissor_state,
 
@@ -1607,7 +1739,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(sf_state),
       &gen8_ps_blend,
       &gen8_ps_extra,
-      &gen8_ps_state,
+      &genX(ps_state),
       &genX(depth_stencil_state),
       &gen8_wm_state,
 
