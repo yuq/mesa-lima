@@ -126,4 +126,6 @@ endif
 # Quiet down the build system and remove any .h files from the sources
 LOCAL_SRC_FILES := $(patsubst %.h, , $(LOCAL_SRC_FILES))
 
+ifneq ($(LOCAL_IS_HOST_MODULE),true)
 LOCAL_SHARED_LIBRARIES += libz
+endif
