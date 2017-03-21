@@ -146,7 +146,6 @@ extern const struct brw_tracked_state gen8_index_buffer;
 extern const struct brw_tracked_state gen8_multisample_state;
 extern const struct brw_tracked_state gen8_pma_fix;
 extern const struct brw_tracked_state gen8_ps_blend;
-extern const struct brw_tracked_state gen8_ps_extra;
 extern const struct brw_tracked_state gen8_sf_clip_viewport;
 extern const struct brw_tracked_state gen8_vertices;
 extern const struct brw_tracked_state gen8_vf_topology;
@@ -283,15 +282,6 @@ void brw_update_renderbuffer_surfaces(struct brw_context *brw,
 /* gen7_wm_surface_state.c */
 void gen7_check_surface_setup(uint32_t *surf, bool is_render_target);
 void gen7_init_vtable_surface_functions(struct brw_context *brw);
-
-/* gen8_ps_state.c */
-void gen8_upload_ps_state(struct brw_context *brw,
-                          const struct brw_stage_state *stage_state,
-                          const struct brw_wm_prog_data *prog_data,
-                          uint32_t fast_clear_op);
-
-void gen8_upload_ps_extra(struct brw_context *brw,
-                          const struct brw_wm_prog_data *prog_data);
 
 /* gen8_surface_state.c */
 

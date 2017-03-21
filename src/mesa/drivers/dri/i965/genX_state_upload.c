@@ -1631,6 +1631,93 @@ static const struct brw_tracked_state genX(raster_state) = {
    },
    .emit = genX(upload_raster),
 };
+
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_ps_extra)(struct brw_context *brw)
+{
+   UNUSED struct gl_context *ctx = &brw->ctx;
+
+   const struct brw_wm_prog_data *prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+
+   brw_batch_emit(brw, GENX(3DSTATE_PS_EXTRA), psx) {
+      psx.PixelShaderValid = true;
+      psx.PixelShaderComputedDepthMode = prog_data->computed_depth_mode;
+      psx.PixelShaderKillsPixel = prog_data->uses_kill;
+      psx.AttributeEnable = prog_data->num_varying_inputs != 0;
+      psx.PixelShaderUsesSourceDepth = prog_data->uses_src_depth;
+      psx.PixelShaderUsesSourceW = prog_data->uses_src_w;
+      psx.PixelShaderIsPerSample = prog_data->persample_dispatch;
+
+      /* _NEW_MULTISAMPLE | BRW_NEW_CONSERVATIVE_RASTERIZATION */
+      if (prog_data->uses_sample_mask) {
+#if GEN_GEN >= 9
+         if (prog_data->post_depth_coverage)
+            psx.InputCoverageMaskState = ICMS_DEPTH_COVERAGE;
+         else if (prog_data->inner_coverage && ctx->IntelConservativeRasterization)
+            psx.InputCoverageMaskState = ICMS_INNER_CONSERVATIVE;
+         else
+            psx.InputCoverageMaskState = ICMS_NORMAL;
+#else
+         psx.PixelShaderUsesInputCoverageMask = true;
+#endif
+      }
+
+      psx.oMaskPresenttoRenderTarget = prog_data->uses_omask;
+#if GEN_GEN >= 9
+      psx.PixelShaderPullsBary = prog_data->pulls_bary;
+      psx.PixelShaderComputesStencil = prog_data->computed_stencil;
+#endif
+
+      /* The stricter cross-primitive coherency guarantees that the hardware
+       * gives us with the "Accesses UAV" bit set for at least one shader stage
+       * and the "UAV coherency required" bit set on the 3DPRIMITIVE command
+       * are redundant within the current image, atomic counter and SSBO GL
+       * APIs, which all have very loose ordering and coherency requirements
+       * and generally rely on the application to insert explicit barriers when
+       * a shader invocation is expected to see the memory writes performed by
+       * the invocations of some previous primitive.  Regardless of the value
+       * of "UAV coherency required", the "Accesses UAV" bits will implicitly
+       * cause an in most cases useless DC flush when the lowermost stage with
+       * the bit set finishes execution.
+       *
+       * It would be nice to disable it, but in some cases we can't because on
+       * Gen8+ it also has an influence on rasterization via the PS UAV-only
+       * signal (which could be set independently from the coherency mechanism
+       * in the 3DSTATE_WM command on Gen7), and because in some cases it will
+       * determine whether the hardware skips execution of the fragment shader
+       * or not via the ThreadDispatchEnable signal.  However if we know that
+       * GEN8_PS_BLEND_HAS_WRITEABLE_RT is going to be set and
+       * GEN8_PSX_PIXEL_SHADER_NO_RT_WRITE is not set it shouldn't make any
+       * difference so we may just disable it here.
+       *
+       * Gen8 hardware tries to compute ThreadDispatchEnable for us but doesn't
+       * take into account KillPixels when no depth or stencil writes are
+       * enabled.  In order for occlusion queries to work correctly with no
+       * attachments, we need to force-enable here.
+       *
+       * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM | _NEW_BUFFERS |
+       * _NEW_COLOR
+       */
+      if ((prog_data->has_side_effects || prog_data->uses_kill) &&
+          !brw_color_buffer_write_enabled(brw))
+         psx.PixelShaderHasUAV = true;
+   }
+}
+
+const struct brw_tracked_state genX(ps_extra) = {
+   .dirty = {
+      .mesa  = _NEW_BUFFERS | _NEW_COLOR,
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_CONSERVATIVE_RASTERIZATION,
+   },
+   .emit = genX(upload_ps_extra),
+};
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -1920,7 +2007,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(sbe_state),
       &genX(sf_state),
       &gen8_ps_blend,
-      &gen8_ps_extra,
+      &genX(ps_extra),
       &genX(ps_state),
       &genX(depth_stencil_state),
       &genX(wm_state),
