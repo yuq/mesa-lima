@@ -1036,6 +1036,10 @@ vtn_get_builtin_location(struct vtn_builder *b,
       *location = SYSTEM_VALUE_DRAW_ID;
       set_mode_system_value(mode);
       break;
+   case SpvBuiltInViewIndex:
+      *location = SYSTEM_VALUE_VIEW_INDEX;
+      set_mode_system_value(mode);
+      break;
    case SpvBuiltInHelperInvocation:
    default:
       unreachable("unsupported builtin");
