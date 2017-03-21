@@ -183,8 +183,7 @@ void r600_test_dma(struct r600_common_screen *rscreen)
 	/* the seed for random test parameters */
 	srand(0x9b47d95b);
 	/* the seed for random pixel data */
-	seed_xorshift128plus[0] = 0x3bffb83978e24f88;
-	seed_xorshift128plus[1] = 0x9238d5d56c71cd35;
+	s_rand_xorshift128plus(seed_xorshift128plus, false);
 
 	iterations = 1000000000; /* just kill it when you are bored */
 	num_partial_copies = 30;
