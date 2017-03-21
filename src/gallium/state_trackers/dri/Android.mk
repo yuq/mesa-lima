@@ -31,14 +31,14 @@ LOCAL_SRC_FILES := $(common_SOURCES)
 
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/mapi \
-	$(MESA_TOP)/src/mesa \
+	$(MESA_TOP)/src/mesa
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
 	$(LOCAL_PATH) \
-	$(LOCAL_C_INCLUDES) \
+	$(LOCAL_C_INCLUDES)
 
 LOCAL_STATIC_LIBRARIES := \
-	libmesa_dri_common \
+	libmesa_dri_common
 
 ifneq ($(filter swrast,$(MESA_GPU_DRIVERS)),)
 LOCAL_SRC_FILES += $(drisw_SOURCES)

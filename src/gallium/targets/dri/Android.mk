@@ -41,7 +41,7 @@ LOCAL_CFLAGS :=
 LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libglapi \
-	libexpat \
+	libexpat
 
 ifneq ($(filter freedreno,$(MESA_GPU_DRIVERS)),)
 LOCAL_CFLAGS += -DGALLIUM_FREEDRENO
@@ -107,7 +107,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_gallium \
 	libmesa_pipe_loader \
 	libmesa_util \
-	libmesa_loader \
+	libmesa_loader
 
 LOCAL_STATIC_LIBRARIES :=
 
