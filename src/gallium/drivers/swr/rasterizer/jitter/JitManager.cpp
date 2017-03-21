@@ -106,15 +106,9 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     std::unique_ptr<Module> newModule(new Module(fnName.str(), mContext));
     mpCurrentModule = newModule.get();
 
-    auto &&EB = EngineBuilder(std::move(newModule));
-    EB.setTargetOptions(tOpts);
-    EB.setOptLevel(CodeGenOpt::Aggressive);
-
     StringRef hostCPUName;
 
     hostCPUName = sys::getHostCPUName();
-
-    EB.setMCPU(hostCPUName);
 
 #if defined(_WIN32)
     // Needed for MCJIT on windows
@@ -123,7 +117,11 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     mpCurrentModule->setTargetTriple(hostTriple.getTriple());
 #endif // _WIN32
 
-    mpExec = EB.create();
+    mpExec = EngineBuilder(std::move(newModule))
+        .setTargetOptions(tOpts)
+        .setOptLevel(CodeGenOpt::Aggressive)
+        .setMCPU(hostCPUName)
+        .create();
 
 #if LLVM_USE_INTEL_JITEVENTS
     JITEventListener *vTune = JITEventListener::createIntelJITEventListener();
