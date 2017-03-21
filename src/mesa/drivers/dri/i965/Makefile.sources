@@ -165,8 +165,7 @@ i965_FILES = \
 	intel_upload.c \
 	libdrm_lists.h \
 	libdrm_macros.h \
-	uthash.h \
-	xf86atomic.h
+	uthash.h
 
 i965_gen6_FILES = \
 	genX_blorp_exec.c

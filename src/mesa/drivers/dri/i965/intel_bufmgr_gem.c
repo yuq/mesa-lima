@@ -39,7 +39,7 @@
 #endif
 
 #include <xf86drm.h>
-#include <xf86atomic.h>
+#include <util/u_atomic.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,6 +84,16 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define MAX2(A, B) ((A) > (B) ? (A) : (B))
 
+static inline int
+atomic_add_unless(int *v, int add, int unless)
+{
+   int c, old;
+   c = p_atomic_read(v);
+   while (c != unless && (old = p_atomic_cmpxchg(v, c, c + add)) != c)
+      c = old;
+   return c == unless;
+}
+
 /**
  * upper_32_bits - return bits 32-63 of a number
  * @n: the number we're accessing
@@ -110,7 +120,7 @@ struct drm_bacon_gem_bo_bucket {
 typedef struct _drm_bacon_bufmgr_gem {
 	drm_bacon_bufmgr bufmgr;
 
-	atomic_t refcount;
+	int refcount;
 
 	int fd;
 
@@ -169,7 +179,7 @@ typedef struct _drm_bacon_reloc_target_info {
 struct _drm_bacon_bo_gem {
 	drm_bacon_bo bo;
 
-	atomic_t refcount;
+	int refcount;
 	uint32_t gem_handle;
 	const char *name;
 
@@ -472,7 +482,7 @@ drm_bacon_gem_bo_reference(drm_bacon_bo *bo)
 {
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	atomic_inc(&bo_gem->refcount);
+	p_atomic_inc(&bo_gem->refcount);
 }
 
 /**
@@ -834,7 +844,7 @@ retry:
 	}
 
 	bo_gem->name = name;
-	atomic_set(&bo_gem->refcount, 1);
+	p_atomic_set(&bo_gem->refcount, 1);
 	bo_gem->validate_index = -1;
 	bo_gem->reloc_tree_fences = 0;
 	bo_gem->used_as_reloc_target = false;
@@ -954,7 +964,7 @@ drm_bacon_gem_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 	if (!bo_gem)
 		return NULL;
 
-	atomic_set(&bo_gem->refcount, 1);
+	p_atomic_set(&bo_gem->refcount, 1);
 	DRMINITLISTHEAD(&bo_gem->vma_list);
 
 	bo_gem->bo.size = size;
@@ -1131,7 +1141,7 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	if (!bo_gem)
 		goto out;
 
-	atomic_set(&bo_gem->refcount, 1);
+	p_atomic_set(&bo_gem->refcount, 1);
 	DRMINITLISTHEAD(&bo_gem->vma_list);
 
 	bo_gem->bo.size = open_arg.size;
@@ -1402,8 +1412,8 @@ static void drm_bacon_gem_bo_unreference_locked_timed(drm_bacon_bo *bo,
 {
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	assert(atomic_read(&bo_gem->refcount) > 0);
-	if (atomic_dec_and_test(&bo_gem->refcount))
+	assert(p_atomic_read(&bo_gem->refcount) > 0);
+	if (p_atomic_dec_zero(&bo_gem->refcount))
 		drm_bacon_gem_bo_unreference_final(bo, time);
 }
 
@@ -1411,7 +1421,7 @@ static void drm_bacon_gem_bo_unreference(drm_bacon_bo *bo)
 {
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	assert(atomic_read(&bo_gem->refcount) > 0);
+	assert(p_atomic_read(&bo_gem->refcount) > 0);
 
 	if (atomic_add_unless(&bo_gem->refcount, -1, 1)) {
 		drm_bacon_bufmgr_gem *bufmgr_gem =
@@ -1422,7 +1432,7 @@ static void drm_bacon_gem_bo_unreference(drm_bacon_bo *bo)
 
 		pthread_mutex_lock(&bufmgr_gem->lock);
 
-		if (atomic_dec_and_test(&bo_gem->refcount)) {
+		if (p_atomic_dec_zero(&bo_gem->refcount)) {
 			drm_bacon_gem_bo_unreference_final(bo, time.tv_sec);
 			drm_bacon_gem_cleanup_bo_cache(bufmgr_gem, time.tv_sec);
 		}
@@ -2657,7 +2667,7 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	if (!bo_gem)
 		goto out;
 
-	atomic_set(&bo_gem->refcount, 1);
+	p_atomic_set(&bo_gem->refcount, 1);
 	DRMINITLISTHEAD(&bo_gem->vma_list);
 
 	/* Determine size of bo.  The fd-to-handle ioctl really should
@@ -3368,7 +3378,7 @@ drm_bacon_bufmgr_gem_find(int fd)
 
 	DRMLISTFOREACHENTRY(bufmgr_gem, &bufmgr_list, managers) {
 		if (bufmgr_gem->fd == fd) {
-			atomic_inc(&bufmgr_gem->refcount);
+			p_atomic_inc(&bufmgr_gem->refcount);
 			return bufmgr_gem;
 		}
 	}
@@ -3384,7 +3394,7 @@ drm_bacon_bufmgr_gem_unref(drm_bacon_bufmgr *bufmgr)
 	if (atomic_add_unless(&bufmgr_gem->refcount, -1, 1)) {
 		pthread_mutex_lock(&bufmgr_list_mutex);
 
-		if (atomic_dec_and_test(&bufmgr_gem->refcount)) {
+		if (p_atomic_dec_zero(&bufmgr_gem->refcount)) {
 			DRMLISTDEL(&bufmgr_gem->managers);
 			drm_bacon_bufmgr_gem_destroy(bufmgr);
 		}
@@ -3554,7 +3564,7 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 		goto exit;
 
 	bufmgr_gem->fd = fd;
-	atomic_set(&bufmgr_gem->refcount, 1);
+	p_atomic_set(&bufmgr_gem->refcount, 1);
 
 	if (pthread_mutex_init(&bufmgr_gem->lock, NULL) != 0) {
 		free(bufmgr_gem);
