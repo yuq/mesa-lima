@@ -147,7 +147,8 @@ glsl_compiler_SOURCES = \
 	glsl/main.cpp
 
 glsl_compiler_LDADD = \
-	glsl/libstandalone.la
+	glsl/libstandalone.la \
+	$(CLOCK_LIB)
 
 glsl_glsl_test_SOURCES = \
 	glsl/test.cpp \
