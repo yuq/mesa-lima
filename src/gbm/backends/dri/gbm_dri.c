@@ -1143,12 +1143,29 @@ gbm_dri_bo_create(struct gbm_device *gbm,
          goto failed;
       }
 
+      /* It's acceptable to create an image with INVALID modifier in the list,
+       * but it cannot be on the only modifier (since it will certainly fail
+       * later). While we could easily catch this after modifier creation, doing
+       * the check here is a convenient debug check likely pointing at whatever
+       * interface the client is using to build its modifier list.
+       */
+      if (count == 1 && modifiers[0] == DRM_FORMAT_MOD_INVALID) {
+         fprintf(stderr, "Only invalid modifier specified\n");
+         errno = EINVAL;
+         goto failed;
+      }
+
       bo->image =
          dri->image->createImageWithModifiers(dri->screen,
                                               width, height,
                                               dri_format,
                                               modifiers, count,
                                               bo);
+
+      if (bo->image) {
+         /* The client passed in a list of invalid modifiers */
+         assert(gbm_dri_bo_get_modifier(&bo->base.base) != DRM_FORMAT_MOD_INVALID);
+      }
    } else {
       bo->image = dri->image->createImage(dri->screen, width, height,
                                           dri_format, dri_use, bo);
@@ -1240,6 +1257,17 @@ gbm_dri_surface_create(struct gbm_device *gbm,
       return NULL;
    }
 
+   /* It's acceptable to create an image with INVALID modifier in the list,
+    * but it cannot be on the only modifier (since it will certainly fail
+    * later). While we could easily catch this after modifier creation, doing
+    * the check here is a convenient debug check likely pointing at whatever
+    * interface the client is using to build its modifier list.
+    */
+   if (count == 1 && modifiers[0] == DRM_FORMAT_MOD_INVALID) {
+      fprintf(stderr, "Only invalid modifier specified\n");
+      errno = EINVAL;
+   }
+
    surf = calloc(1, sizeof *surf);
    if (surf == NULL) {
       errno = ENOMEM;
@@ -1263,6 +1291,10 @@ gbm_dri_surface_create(struct gbm_device *gbm,
       return NULL;
    }
 
+   /* TODO: We are deferring validation of modifiers until the image is actually
+    * created. This deferred creation can fail due to a modifier-format
+    * mismatch. The result is the client has a surface but no object to back it.
+    */
    surf->base.count = count;
    memcpy(surf->base.modifiers, modifiers, count * sizeof(*modifiers));
 
