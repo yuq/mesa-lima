@@ -3457,6 +3457,69 @@ validate_array_dimensions(const glsl_type *t,
 }
 
 static void
+apply_bindless_qualifier_to_variable(const struct ast_type_qualifier *qual,
+                                     ir_variable *var,
+                                     struct _mesa_glsl_parse_state *state,
+                                     YYLTYPE *loc)
+{
+   bool has_local_qualifiers = qual->flags.q.bindless_sampler ||
+                               qual->flags.q.bindless_image ||
+                               qual->flags.q.bound_sampler ||
+                               qual->flags.q.bound_image;
+
+   /* The ARB_bindless_texture spec says:
+    *
+    * "Modify Section 4.4.6 Opaque-Uniform Layout Qualifiers of the GLSL 4.30
+    *  spec"
+    *
+    * "If these layout qualifiers are applied to other types of default block
+    *  uniforms, or variables with non-uniform storage, a compile-time error
+    *  will be generated."
+    */
+   if (has_local_qualifiers && !qual->flags.q.uniform) {
+      _mesa_glsl_error(loc, state, "ARB_bindless_texture layout qualifiers "
+                       "can only be applied to default block uniforms or "
+                       "variables with uniform storage");
+      return;
+   }
+
+   /* The ARB_bindless_texture spec doesn't state anything in this situation,
+    * but it makes sense to only allow bindless_sampler/bound_sampler for
+    * sampler types, and respectively bindless_image/bound_image for image
+    * types.
+    */
+   if ((qual->flags.q.bindless_sampler || qual->flags.q.bound_sampler) &&
+       !var->type->contains_sampler()) {
+      _mesa_glsl_error(loc, state, "bindless_sampler or bound_sampler can only "
+                       "be applied to sampler types");
+      return;
+   }
+
+   if ((qual->flags.q.bindless_image || qual->flags.q.bound_image) &&
+       !var->type->contains_image()) {
+      _mesa_glsl_error(loc, state, "bindless_image or bound_image can only be "
+                       "applied to image types");
+      return;
+   }
+
+   /* The bindless_sampler/bindless_image (and respectively
+    * bound_sampler/bound_image) layout qualifiers can be set at global and at
+    * local scope.
+    */
+   if (var->type->contains_sampler() || var->type->contains_image()) {
+      var->data.bindless = qual->flags.q.bindless_sampler ||
+                           qual->flags.q.bindless_image ||
+                           state->bindless_sampler_specified ||
+                           state->bindless_image_specified;
+
+      var->data.bound = qual->flags.q.bound_sampler ||
+                        qual->flags.q.bound_image ||
+                        state->bound_sampler_specified ||
+                        state->bound_image_specified;
+   }
+}
+
+static void
 apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
                                    ir_variable *var,
                                    struct _mesa_glsl_parse_state *state,
@@ -3753,6 +3816,9 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
       _mesa_glsl_error(loc, state, "post_depth_coverage layout qualifier only "
                        "valid in fragment shader input layout declaration.");
    }
+
+   if (state->has_bindless())
+      apply_bindless_qualifier_to_variable(qual, var, state, loc);
 }
 
 static void

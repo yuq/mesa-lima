@@ -1729,6 +1729,8 @@ ir_variable::ir_variable(const struct glsl_type *type, const char *name,
    this->data.memory_restrict = false;
    this->data.from_ssbo_unsized_array = false;
    this->data.fb_fetch_output = false;
+   this->data.bindless = false;
+   this->data.bound = false;
 
    if (type != NULL) {
       if (type->is_interface())

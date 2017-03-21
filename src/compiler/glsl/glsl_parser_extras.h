@@ -428,6 +428,16 @@ struct _mesa_glsl_parse_state {
    bool cs_input_local_size_variable_specified;
 
    /**
+    * True if a shader declare bindless_sampler/bindless_image, and
+    * respectively bound_sampler/bound_image at global scope as specified by
+    * ARB_bindless_texture.
+    */
+   bool bindless_sampler_specified;
+   bool bindless_image_specified;
+   bool bound_sampler_specified;
+   bool bound_image_specified;
+
+   /**
     * Output layout qualifiers from GLSL 1.50 (geometry shader controls),
     * and GLSL 4.00 (tessellation control shader).
     */

@@ -69,6 +69,10 @@ ast_type_qualifier::has_layout() const
           || this->flags.q.column_major
           || this->flags.q.row_major
           || this->flags.q.packed
+          || this->flags.q.bindless_sampler
+          || this->flags.q.bindless_image
+          || this->flags.q.bound_sampler
+          || this->flags.q.bound_image
           || this->flags.q.explicit_align
           || this->flags.q.explicit_component
           || this->flags.q.explicit_location
@@ -179,6 +183,33 @@ validate_point_mode(MAYBE_UNUSED const ast_type_qualifier &qualifier,
            || (qualifier.point_mode && new_qualifier.point_mode));
 
    return true;
+}
+
+static void
+merge_bindless_qualifier(YYLTYPE *loc,
+                         _mesa_glsl_parse_state *state,
+                         const ast_type_qualifier &qualifier,
+                         const ast_type_qualifier &new_qualifier)
+{
+   if (state->default_uniform_qualifier->flags.q.bindless_sampler) {
+      state->bindless_sampler_specified = true;
+      state->default_uniform_qualifier->flags.q.bindless_sampler = false;
+   }
+
+   if (state->default_uniform_qualifier->flags.q.bindless_image) {
+      state->bindless_image_specified = true;
+      state->default_uniform_qualifier->flags.q.bindless_image = false;
+   }
+
+   if (state->default_uniform_qualifier->flags.q.bound_sampler) {
+      state->bound_sampler_specified = true;
+      state->default_uniform_qualifier->flags.q.bound_sampler = false;
+   }
+
+   if (state->default_uniform_qualifier->flags.q.bound_image) {
+      state->bound_image_specified = true;
+      state->default_uniform_qualifier->flags.q.bound_image = false;
+   }
 }
 
 /**
@@ -393,6 +424,18 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    if (q.flags.q.local_size_variable)
       this->flags.q.local_size_variable = true;
 
+   if (q.flags.q.bindless_sampler)
+      this->flags.q.bindless_sampler = true;
+
+   if (q.flags.q.bindless_image)
+      this->flags.q.bindless_image = true;
+
+   if (q.flags.q.bound_sampler)
+      this->flags.q.bound_sampler = true;
+
+   if (q.flags.q.bound_image)
+      this->flags.q.bound_image = true;
+
    this->flags.i |= q.flags.i;
 
    if (this->flags.q.in &&
@@ -426,6 +469,12 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       this->image_format = q.image_format;
       this->image_base_type = q.image_base_type;
    }
+
+   if (q.flags.q.bindless_sampler ||
+       q.flags.q.bindless_image ||
+       q.flags.q.bound_sampler ||
+       q.flags.q.bound_image)
+      merge_bindless_qualifier(loc, state, *this, q);
 
    return r;
 }
@@ -778,6 +827,10 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     bad.flags.q.subroutine ? " subroutine" : "",
                     bad.flags.q.blend_support ? " blend_support" : "",
                     bad.flags.q.inner_coverage ? " inner_coverage" : "",
+                    bad.flags.q.bindless_sampler ? " bindless_sampler" : "",
+                    bad.flags.q.bindless_image ? " bindless_image" : "",
+                    bad.flags.q.bound_sampler ? " bound_sampler" : "",
+                    bad.flags.q.bound_image ? " bound_image" : "",
                     bad.flags.q.post_depth_coverage ? " post_depth_coverage" : "");
    return false;
 }

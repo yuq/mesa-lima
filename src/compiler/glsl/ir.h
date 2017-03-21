@@ -850,6 +850,18 @@ public:
       unsigned fb_fetch_output:1;
 
       /**
+       * Non-zero if this variable is considered bindless as defined by
+       * ARB_bindless_texture.
+       */
+      unsigned bindless:1;
+
+      /**
+       * Non-zero if this variable is considered bound as defined by
+       * ARB_bindless_texture.
+       */
+      unsigned bound:1;
+
+      /**
        * Emit a warning if this variable is accessed.
        */
    private:
