@@ -334,6 +334,11 @@ struct _mesa_glsl_parse_state {
       return ARB_shader_image_load_store_enable || is_version(420, 310);
    }
 
+   bool has_bindless() const
+   {
+      return ARB_bindless_texture_enable;
+   }
+
    void process_version_directive(YYLTYPE *locp, int version,
                                   const char *ident);
 
@@ -592,6 +597,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_ES3_2_compatibility_warn;
    bool ARB_arrays_of_arrays_enable;
    bool ARB_arrays_of_arrays_warn;
+   bool ARB_bindless_texture_enable;
+   bool ARB_bindless_texture_warn;
    bool ARB_compute_shader_enable;
    bool ARB_compute_shader_warn;
    bool ARB_compute_variable_group_size_enable;
