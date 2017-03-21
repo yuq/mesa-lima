@@ -891,7 +891,7 @@ brw_process_driconf_options(struct brw_context *brw)
    case DRI_CONF_BO_REUSE_DISABLED:
       break;
    case DRI_CONF_BO_REUSE_ALL:
-      intel_bufmgr_gem_enable_reuse(brw->bufmgr);
+      drm_intel_bufmgr_gem_enable_reuse(brw->bufmgr);
       break;
    }
 

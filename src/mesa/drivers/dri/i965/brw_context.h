@@ -656,7 +656,7 @@ struct brw_context
 
    } vtbl;
 
-   dri_bufmgr *bufmgr;
+   drm_intel_bufmgr *bufmgr;
 
    drm_intel_context *hw_ctx;
 

@@ -232,7 +232,7 @@ retry:
     * map all the BOs into the GPU at batch exec time later.  If so, flush the
     * batch and try again with nothing else in the batch.
     */
-   if (dri_bufmgr_check_aperture_space(&brw->batch.bo, 1)) {
+   if (drm_intel_bufmgr_check_aperture_space(&brw->batch.bo, 1)) {
       if (!check_aperture_failed_once) {
          check_aperture_failed_once = true;
          intel_batchbuffer_reset_to_saved(brw);

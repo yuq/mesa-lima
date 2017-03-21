@@ -516,7 +516,7 @@ intelEmitCopyBlit(struct brw_context *brw,
        aper_array[1] = dst_buffer;
        aper_array[2] = src_buffer;
 
-       if (dri_bufmgr_check_aperture_space(aper_array, 3) != 0) {
+       if (drm_intel_bufmgr_check_aperture_space(aper_array, 3) != 0) {
            intel_batchbuffer_flush(brw);
            pass++;
        } else

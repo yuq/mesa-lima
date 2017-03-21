@@ -72,7 +72,7 @@ struct intel_screen
 #define KERNEL_ALLOWS_HSW_SCRATCH1_AND_ROW_CHICKEN3 (1<<3)
 #define KERNEL_ALLOWS_COMPUTE_DISPATCH              (1<<4)
 
-   dri_bufmgr *bufmgr;
+   drm_intel_bufmgr *bufmgr;
 
    /**
     * A unique ID for shader programs.

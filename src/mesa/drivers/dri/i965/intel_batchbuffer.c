@@ -39,7 +39,8 @@
 #include <i915_drm.h>
 
 static void
-intel_batchbuffer_reset(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
+intel_batchbuffer_reset(struct intel_batchbuffer *batch,
+                        drm_intel_bufmgr *bufmgr,
                         bool has_llc);
 
 static bool
@@ -55,7 +56,8 @@ uint_key_hash(const void *key)
 }
 
 void
-intel_batchbuffer_init(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
+intel_batchbuffer_init(struct intel_batchbuffer *batch,
+                       drm_intel_bufmgr *bufmgr,
                        bool has_llc)
 {
    intel_batchbuffer_reset(batch, bufmgr, has_llc);
@@ -73,7 +75,8 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
 }
 
 static void
-intel_batchbuffer_reset(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
+intel_batchbuffer_reset(struct intel_batchbuffer *batch,
+                        drm_intel_bufmgr *bufmgr,
                         bool has_llc)
 {
    if (batch->last_bo != NULL) {

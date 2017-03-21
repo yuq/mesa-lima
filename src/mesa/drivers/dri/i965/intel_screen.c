@@ -1103,7 +1103,7 @@ intelDestroyScreen(__DRIscreen * sPriv)
 {
    struct intel_screen *screen = sPriv->driverPrivate;
 
-   dri_bufmgr_destroy(screen->bufmgr);
+   drm_intel_bufmgr_destroy(screen->bufmgr);
    driDestroyOptionInfo(&screen->optionCache);
 
    ralloc_free(screen);
@@ -1265,7 +1265,7 @@ intel_init_bufmgr(struct intel_screen *screen)
 
    screen->no_hw = getenv("INTEL_NO_HW") != NULL;
 
-   screen->bufmgr = intel_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
+   screen->bufmgr = drm_intel_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
    if (screen->bufmgr == NULL) {
       fprintf(stderr, "[%s:%u] Error initializing buffer manager.\n",
 	      __func__, __LINE__);
@@ -1765,7 +1765,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    brw_process_intel_debug_variable();
 
    if (INTEL_DEBUG & DEBUG_BUFMGR)
-      dri_bufmgr_set_debug(screen->bufmgr, true);
+      drm_intel_bufmgr_set_debug(screen->bufmgr, true);
 
    if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && devinfo->gen < 7) {
       fprintf(stderr,
