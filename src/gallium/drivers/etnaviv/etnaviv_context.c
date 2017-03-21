@@ -184,6 +184,13 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    }
 
    struct etna_shader_key key = {};
+   struct etna_surface *cbuf = etna_surface(pfb->cbufs[0]);
+
+   if (cbuf) {
+      struct etna_resource *res = etna_resource(cbuf->base.texture);
+
+      key.frag_rb_swap = !!translate_rs_format_rb_swap(res->base.format);
+   }
 
    if (!etna_get_vs(ctx, key) || !etna_get_fs(ctx, key)) {
       BUG("compiled shaders are not okay");

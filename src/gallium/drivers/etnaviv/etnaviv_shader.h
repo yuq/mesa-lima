@@ -36,6 +36,12 @@ struct etna_shader_key
 {
    union {
       struct {
+         /*
+          * Combined Vertex/Fragment shader parameters:
+          */
+
+         /* do we need to swap rb in frag color? */
+         unsigned frag_rb_swap : 1;
       };
       uint32_t global;
    };

@@ -1910,6 +1910,22 @@ etna_compile_add_z_div_if_needed(struct etna_compile *c)
    }
 }
 
+static void
+etna_compile_frag_rb_swap(struct etna_compile *c)
+{
+   if (c->info.processor == PIPE_SHADER_FRAGMENT && c->key->frag_rb_swap) {
+      /* find color out */
+      struct etna_reg_desc *color_reg =
+         find_decl_by_semantic(c, TGSI_FILE_OUTPUT, TGSI_SEMANTIC_COLOR, 0);
+
+      emit_inst(c, &(struct etna_inst) {
+         .opcode = INST_OPCODE_MOV,
+         .dst = etna_native_to_dst(color_reg->native, INST_COMPS_X | INST_COMPS_Y | INST_COMPS_Z | INST_COMPS_W),
+         .src[2] = etna_native_to_src(color_reg->native, SWIZZLE(Z, Y, X, W)),
+      });
+   }
+}
+
 /** add a NOP to the shader if
  * a) the shader is empty
  * or
@@ -2412,6 +2428,7 @@ etna_compile_shader(struct etna_shader_variant *v)
    /* pass 3: generate instructions */
    etna_compile_pass_generate_code(c);
    etna_compile_add_z_div_if_needed(c);
+   etna_compile_frag_rb_swap(c);
    etna_compile_add_nop_if_needed(c);
    etna_compile_fill_in_labels(c);
 

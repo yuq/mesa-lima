@@ -91,6 +91,7 @@ print_usage(void)
 {
    printf("Usage: etnaviv_compiler [OPTIONS]... FILE\n");
    printf("    --verbose         - verbose compiler/debug messages\n");
+   printf("    --frag-rb-swap    - swap rb in color output (FRAG)\n");
    printf("    --help            - show this message\n");
 }
 
@@ -117,6 +118,13 @@ main(int argc, char **argv)
    while (n < argc) {
       if (!strcmp(argv[n], "--verbose")) {
          etna_mesa_debug |= ETNA_DBG_COMPILER_MSGS;
+         n++;
+         continue;
+      }
+
+      if (!strcmp(argv[n], "--frag-rb-swap")) {
+         debug_printf(" %s", argv[n]);
+         key.frag_rb_swap = true;
          n++;
          continue;
       }
