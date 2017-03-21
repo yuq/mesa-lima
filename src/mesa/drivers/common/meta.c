@@ -3510,15 +3510,20 @@ cleartexsubimage_depth_stencil(struct gl_context *ctx,
       /* Convert the clearValue from whatever format it's in to a floating
        * point value for the depth and an integer value for the stencil index
        */
-      _mesa_unpack_float_32_uint_24_8_depth_stencil_row(texImage->TexFormat,
-                                                        1, /* n */
-                                                        clearValue,
-                                                        depthStencilValue);
-      /* We need a memcpy here instead of a cast because we need to
-       * reinterpret the bytes as a float rather than converting it
-       */
-      memcpy(&depthValue, depthStencilValue, sizeof depthValue);
-      stencilValue = depthStencilValue[1] & 0xff;
+      if (texImage->_BaseFormat == GL_DEPTH_STENCIL) {
+         _mesa_unpack_float_32_uint_24_8_depth_stencil_row(texImage->TexFormat,
+                                                           1, /* n */
+                                                           clearValue,
+                                                           depthStencilValue);
+         /* We need a memcpy here instead of a cast because we need to
+          * reinterpret the bytes as a float rather than converting it
+          */
+         memcpy(&depthValue, depthStencilValue, sizeof depthValue);
+         stencilValue = depthStencilValue[1] & 0xff;
+      } else {
+         _mesa_unpack_float_z_row(texImage->TexFormat, 1 /* n */,
+                                  clearValue, &depthValue);
+      }
    }
 
    if (texImage->_BaseFormat == GL_DEPTH_STENCIL)
