@@ -125,7 +125,6 @@ extern const struct brw_tracked_state gen6_viewport_state;
 extern const struct brw_tracked_state gen6_vs_push_constants;
 extern const struct brw_tracked_state gen6_vs_state;
 extern const struct brw_tracked_state gen6_wm_push_constants;
-extern const struct brw_tracked_state gen6_wm_state;
 extern const struct brw_tracked_state gen7_depthbuffer;
 extern const struct brw_tracked_state gen7_ds_state;
 extern const struct brw_tracked_state gen7_gs_state;
@@ -138,7 +137,6 @@ extern const struct brw_tracked_state gen7_te_state;
 extern const struct brw_tracked_state gen7_tes_push_constants;
 extern const struct brw_tracked_state gen7_urb;
 extern const struct brw_tracked_state gen7_vs_state;
-extern const struct brw_tracked_state gen7_wm_state;
 extern const struct brw_tracked_state haswell_cut_index;
 extern const struct brw_tracked_state gen8_blend_state;
 extern const struct brw_tracked_state gen8_ds_state;
@@ -149,7 +147,6 @@ extern const struct brw_tracked_state gen8_multisample_state;
 extern const struct brw_tracked_state gen8_pma_fix;
 extern const struct brw_tracked_state gen8_ps_blend;
 extern const struct brw_tracked_state gen8_ps_extra;
-extern const struct brw_tracked_state gen8_wm_state;
 extern const struct brw_tracked_state gen8_sf_clip_viewport;
 extern const struct brw_tracked_state gen8_vertices;
 extern const struct brw_tracked_state gen8_vf_topology;
@@ -319,17 +316,6 @@ void brw_emit_sampler_state(struct brw_context *brw,
                             unsigned shadow_function,
                             bool non_normalized_coordinates,
                             uint32_t border_color_offset);
-
-/* gen6_wm_state.c */
-void
-gen6_upload_wm_state(struct brw_context *brw,
-                     const struct brw_wm_prog_data *prog_data,
-                     const struct brw_stage_state *stage_state,
-                     bool multisampled_fbo,
-                     bool dual_source_blend_enable, bool kill_enable,
-                     bool color_buffer_write_enable, bool msaa_enabled,
-                     bool line_stipple_enable, bool polygon_stipple_enable,
-                     bool statistic_enable);
 
 /* gen6_surface_state.c */
 void gen6_init_vtable_surface_functions(struct brw_context *brw);

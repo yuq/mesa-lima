@@ -28,6 +28,7 @@
 
 #include "brw_context.h"
 #include "brw_state.h"
+#include "brw_wm.h"
 #include "brw_util.h"
 
 #include "intel_batchbuffer.h"
@@ -770,6 +771,187 @@ static const struct brw_tracked_state genX(sf_state) = {
                              : 0),
    },
    .emit = genX(upload_sf),
+};
+
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_wm)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+
+   UNUSED bool writes_depth =
+      wm_prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
+
+#if GEN_GEN < 7
+   const struct brw_stage_state *stage_state = &brw->wm.base;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   /* We can't fold this into gen6_upload_wm_push_constants(), because
+    * according to the SNB PRM, vol 2 part 1 section 7.2.2
+    * (3DSTATE_CONSTANT_PS [DevSNB]):
+    *
+    *     "[DevSNB]: This packet must be followed by WM_STATE."
+    */
+   brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_PS), wmcp) {
+      if (wm_prog_data->base.nr_params != 0) {
+         wmcp.Buffer0Valid = true;
+         /* Pointer to the WM constant buffer.  Covered by the set of
+          * state flags from gen6_upload_wm_push_constants.
+          */
+         wmcp.PointertoPSConstantBuffer0 = stage_state->push_const_offset;
+         wmcp.PSConstantBuffer0ReadLength = stage_state->push_const_size - 1;
+      }
+   }
+#endif
+
+   brw_batch_emit(brw, GENX(3DSTATE_WM), wm) {
+      wm.StatisticsEnable = true;
+      wm.LineAntialiasingRegionWidth = _10pixels;
+      wm.LineEndCapAntialiasingRegionWidth = _05pixels;
+
+#if GEN_GEN < 7
+      if (wm_prog_data->base.use_alt_mode)
+         wm.FloatingPointMode = Alternate;
+
+      wm.SamplerCount = DIV_ROUND_UP(stage_state->sampler_count, 4);
+      wm.BindingTableEntryCount = wm_prog_data->base.binding_table.size_bytes / 4;
+      wm.MaximumNumberofThreads = devinfo->max_wm_threads - 1;
+      wm._8PixelDispatchEnable = wm_prog_data->dispatch_8;
+      wm._16PixelDispatchEnable = wm_prog_data->dispatch_16;
+      wm.DispatchGRFStartRegisterForConstantSetupData0 =
+         wm_prog_data->base.dispatch_grf_start_reg;
+      wm.DispatchGRFStartRegisterForConstantSetupData2 =
+         wm_prog_data->dispatch_grf_start_reg_2;
+      wm.KernelStartPointer0 = stage_state->prog_offset;
+      wm.KernelStartPointer2 = stage_state->prog_offset +
+         wm_prog_data->prog_offset_2;
+      wm.DualSourceBlendEnable =
+         wm_prog_data->dual_src_blend && (ctx->Color.BlendEnabled & 1) &&
+         ctx->Color.Blend[0]._UsesDualSrc;
+      wm.oMaskPresenttoRenderTarget = wm_prog_data->uses_omask;
+      wm.NumberofSFOutputAttributes = wm_prog_data->num_varying_inputs;
+
+      /* From the SNB PRM, volume 2 part 1, page 281:
+       * "If the PS kernel does not need the Position XY Offsets
+       * to compute a Position XY value, then this field should be
+       * programmed to POSOFFSET_NONE."
+       *
+       * "SW Recommendation: If the PS kernel needs the Position Offsets
+       * to compute a Position XY value, this field should match Position
+       * ZW Interpolation Mode to ensure a consistent position.xyzw
+       * computation."
+       * We only require XY sample offsets. So, this recommendation doesn't
+       * look useful at the moment. We might need this in future.
+       */
+      if (wm_prog_data->uses_pos_offset)
+         wm.PositionXYOffsetSelect = POSOFFSET_SAMPLE;
+      else
+         wm.PositionXYOffsetSelect = POSOFFSET_NONE;
+
+      if (wm_prog_data->base.total_scratch) {
+         wm.ScratchSpaceBasePointer =
+            render_bo(stage_state->scratch_bo,
+                      ffs(stage_state->per_thread_scratch) - 11);
+      }
+
+      wm.PixelShaderComputedDepth = writes_depth;
+#endif
+
+      wm.PointRasterizationRule = RASTRULE_UPPER_RIGHT;
+
+      /* _NEW_LINE */
+      wm.LineStippleEnable = ctx->Line.StippleFlag;
+
+      /* _NEW_POLYGON */
+      wm.PolygonStippleEnable = ctx->Polygon.StippleFlag;
+      wm.BarycentricInterpolationMode = wm_prog_data->barycentric_interp_modes;
+
+#if GEN_GEN < 8
+      /* _NEW_BUFFERS */
+      const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
+
+      wm.PixelShaderUsesSourceDepth = wm_prog_data->uses_src_depth;
+      wm.PixelShaderUsesSourceW = wm_prog_data->uses_src_w;
+      if (wm_prog_data->uses_kill ||
+          _mesa_is_alpha_test_enabled(ctx) ||
+          _mesa_is_alpha_to_coverage_enabled(ctx) ||
+          wm_prog_data->uses_omask) {
+         wm.PixelShaderKillsPixel = true;
+      }
+
+      /* _NEW_BUFFERS | _NEW_COLOR */
+      if (brw_color_buffer_write_enabled(brw) || writes_depth ||
+          wm_prog_data->has_side_effects || wm.PixelShaderKillsPixel) {
+         wm.ThreadDispatchEnable = true;
+      }
+      if (multisampled_fbo) {
+         /* _NEW_MULTISAMPLE */
+         if (ctx->Multisample.Enabled)
+            wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
+         else
+            wm.MultisampleRasterizationMode = MSRASTMODE_OFF_PIXEL;
+
+         if (wm_prog_data->persample_dispatch)
+            wm.MultisampleDispatchMode = MSDISPMODE_PERSAMPLE;
+         else
+            wm.MultisampleDispatchMode = MSDISPMODE_PERPIXEL;
+      } else {
+         wm.MultisampleRasterizationMode = MSRASTMODE_OFF_PIXEL;
+         wm.MultisampleDispatchMode = MSDISPMODE_PERSAMPLE;
+      }
+
+#if GEN_GEN >= 7
+      wm.PixelShaderComputedDepthMode = wm_prog_data->computed_depth_mode;
+      wm.PixelShaderUsesInputCoverageMask = wm_prog_data->uses_sample_mask;
+#endif
+
+      /* The "UAV access enable" bits are unnecessary on HSW because they only
+       * seem to have an effect on the HW-assisted coherency mechanism which we
+       * don't need, and the rasterization-related UAV_ONLY flag and the
+       * DISPATCH_ENABLE bit can be set independently from it.
+       * C.f. gen8_upload_ps_extra().
+       *
+       * BRW_NEW_FRAGMENT_PROGRAM | BRW_NEW_FS_PROG_DATA | _NEW_BUFFERS |
+       * _NEW_COLOR
+       */
+#if GEN_IS_HASWELL
+      if (!(brw_color_buffer_write_enabled(brw) || writes_depth) &&
+          wm_prog_data->has_side_effects)
+         wm.PSUAVonly = ON;
+#endif
+#endif
+
+#if GEN_GEN >= 7
+      /* BRW_NEW_FS_PROG_DATA */
+      if (wm_prog_data->early_fragment_tests)
+         wm.EarlyDepthStencilControl = EDSC_PREPS;
+      else if (wm_prog_data->has_side_effects)
+         wm.EarlyDepthStencilControl = EDSC_PSEXEC;
+#endif
+   }
+}
+
+static const struct brw_tracked_state genX(wm_state) = {
+   .dirty = {
+      .mesa  = _NEW_LINE |
+               _NEW_POLYGON |
+               (GEN_GEN < 8 ? _NEW_BUFFERS |
+                              _NEW_COLOR |
+                              _NEW_MULTISAMPLE :
+                              0) |
+               (GEN_GEN < 7 ? _NEW_PROGRAM_CONSTANTS : 0),
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_FS_PROG_DATA |
+               (GEN_GEN < 7 ? BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+                              BRW_NEW_BATCH
+                            : BRW_NEW_CONTEXT),
+   },
+   .emit = genX(upload_wm),
 };
 
 #endif
@@ -1560,7 +1742,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen6_gs_state,
       &genX(clip_state),
       &genX(sf_state),
-      &gen6_wm_state,
+      &genX(wm_state),
 
       &gen6_scissor_state,
 
@@ -1649,7 +1831,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(clip_state),
       &genX(sbe_state),
       &genX(sf_state),
-      &gen7_wm_state,
+      &genX(wm_state),
       &genX(ps_state),
 
       &gen6_scissor_state,
@@ -1741,7 +1923,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen8_ps_extra,
       &genX(ps_state),
       &genX(depth_stencil_state),
-      &gen8_wm_state,
+      &genX(wm_state),
 
       &gen6_scissor_state,
 
