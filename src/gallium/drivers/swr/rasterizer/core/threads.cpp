@@ -274,7 +274,7 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
 void bindThread(SWR_CONTEXT* pContext, uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=false)
 {
     // Only bind threads when MAX_WORKER_THREADS isn't set.
-    if (pContext->threadInfo.MAX_WORKER_THREADS && bindProcGroup == false)
+    if (pContext->threadInfo.SINGLE_THREADED || (pContext->threadInfo.MAX_WORKER_THREADS && bindProcGroup == false))
     {
         return;
     }
