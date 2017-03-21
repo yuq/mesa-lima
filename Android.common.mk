@@ -65,7 +65,9 @@ LOCAL_CFLAGS += \
 LOCAL_CPPFLAGS += \
 	-D__STDC_CONSTANT_MACROS \
 	-D__STDC_FORMAT_MACROS \
-	-D__STDC_LIMIT_MACROS
+	-D__STDC_LIMIT_MACROS \
+	-Wno-error=non-virtual-dtor \
+	-Wno-non-virtual-dtor
 
 # mesa requires at least c99 compiler
 LOCAL_CONLYFLAGS += \
@@ -102,17 +104,8 @@ LOCAL_SHARED_LIBRARIES += libdrm
 endif
 endif
 
-LOCAL_CPPFLAGS += \
-	$(if $(filter true,$(MESA_LOLLIPOP_BUILD)),-D_USING_LIBCXX) \
-	-Wno-error=non-virtual-dtor \
-	-Wno-non-virtual-dtor
-
-ifeq ($(MESA_LOLLIPOP_BUILD),true)
-  LOCAL_CFLAGS_32 += -DDEFAULT_DRIVER_DIR=\"/system/lib/$(MESA_DRI_MODULE_REL_PATH)\"
-  LOCAL_CFLAGS_64 += -DDEFAULT_DRIVER_DIR=\"/system/lib64/$(MESA_DRI_MODULE_REL_PATH)\"
-else
-  LOCAL_CFLAGS += -DDEFAULT_DRIVER_DIR=\"/system/lib/$(MESA_DRI_MODULE_REL_PATH)\"
-endif
+LOCAL_CFLAGS_32 += -DDEFAULT_DRIVER_DIR=\"/system/lib/$(MESA_DRI_MODULE_REL_PATH)\"
+LOCAL_CFLAGS_64 += -DDEFAULT_DRIVER_DIR=\"/system/lib64/$(MESA_DRI_MODULE_REL_PATH)\"
 
 # uncomment to keep the debug symbols
 #LOCAL_STRIP_MODULE := false

@@ -39,10 +39,6 @@ LOCAL_SRC_FILES := \
 LOCAL_SHARED_LIBRARIES := libdrm_nouveau
 LOCAL_MODULE := libmesa_pipe_nouveau
 
-ifeq ($(MESA_LOLLIPOP_BUILD),true)
 LOCAL_C_INCLUDES := external/libcxx/include
-else
-include external/stlport/libstlport.mk
-endif
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)

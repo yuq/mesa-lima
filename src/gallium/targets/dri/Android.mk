@@ -27,13 +27,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := gallium_dri
 
-ifeq ($(MESA_LOLLIPOP_BUILD),true)
 LOCAL_MODULE_RELATIVE_PATH := $(MESA_DRI_MODULE_REL_PATH)
-else
-LOCAL_MODULE_PATH := $(MESA_DRI_MODULE_PATH)
-LOCAL_UNSTRIPPED_PATH := $(MESA_DRI_MODULE_UNSTRIPPED_PATH)
-endif
-
 LOCAL_SRC_FILES := target.c
 
 LOCAL_CFLAGS :=
@@ -92,7 +86,7 @@ gallium_DRIVERS += libmesa_winsys_svga libmesa_pipe_svga
 LOCAL_CFLAGS += -DGALLIUM_VMWGFX
 endif
 ifneq ($(filter nouveau r600g,$(MESA_GPU_DRIVERS)),)
-LOCAL_SHARED_LIBRARIES += $(if $(filter true,$(MESA_LOLLIPOP_BUILD)),libc++,libstlport)
+LOCAL_SHARED_LIBRARIES += libc++
 endif
 
 LOCAL_WHOLE_STATIC_LIBRARIES := \
@@ -118,7 +112,7 @@ LOCAL_STATIC_LIBRARIES += \
 	libLLVMR600Info \
 	libLLVMR600AsmPrinter \
 	libelf
-LOCAL_LDLIBS += $(if $(filter true,$(MESA_LOLLIPOP_BUILD)),-lgcc)
+LOCAL_LDLIBS += -lgcc
 endif
 
 include $(GALLIUM_COMMON_MK)
