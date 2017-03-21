@@ -144,6 +144,8 @@ fd_screen_destroy(struct pipe_screen *pscreen)
 
 	mtx_destroy(&screen->lock);
 
+	ralloc_free(screen->compiler);
+
 	free(screen);
 }
 
