@@ -25,6 +25,8 @@ MESA_UTIL_FILES := \
 	sha1/sha1.h \
 	ralloc.c \
 	ralloc.h \
+	rand_xor.c \
+	rand_xor.h \
 	register_allocate.c \
 	register_allocate.h \
 	rgtc.c \
