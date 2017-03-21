@@ -853,10 +853,10 @@ INLINE simd16scalari _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, i
 #define _simd16_broadcast_ps(m) _mm512_extload_ps(m, _MM_UPCONV_PS_NONE, _MM_BROADCAST_4X16, 0)
 #define _simd16_store_ps        _mm512_store_ps
 #define _simd16_store_si        _mm512_store_si512
-#define _simd16_extract_ps      _mm512_extractf32x8_ps
-#define _simd16_extract_si      _mm512_extracti32x8_epi32
-#define _simd16_insert_ps       _mm512_insertf32x8
-#define _simd16_insert_si       _mm512_inserti32x8
+#define _simd16_extract_ps(a, imm8) _mm256_castsi256_ps(_mm512_extracti64x4_epi64(_mm512_castps_si512(a), imm8))
+#define _simd16_extract_si      _mm512_extracti64x4_epi64
+#define _simd16_insert_ps(a, b, imm8)  _mm512_castsi512_ps(_mm512_inserti64x4(_mm512_castps_si512(a), _mm256_castps_si256(b), imm8))
+#define _simd16_insert_si       _mm512_inserti64x4
 
 INLINE void _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
 {
@@ -871,21 +871,21 @@ INLINE simd16scalar _simd16_blendv_ps(simd16scalar a, simd16scalar b, const simd
 {
     simd16mask k = _simd16_scalari2mask(_mm512_castps_si512(mask));
 
-    _mm512_mask_blend_ps(k, a, b);
+    return _mm512_mask_blend_ps(k, a, b);
 }
 
 INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalar mask)
 {
     simd16mask k = _simd16_scalari2mask(_mm512_castps_si512(mask));
 
-    _mm512_mask_blend_epi32(k, a, b);
+    return _mm512_mask_blend_epi32(k, a, b);
 }
 
 INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalari mask)
 {
     simd16mask k = _simd16_scalari2mask(mask);
 
-    _mm512_mask_blend_epi32(k, a, b);
+    return _mm512_mask_blend_epi32(k, a, b);
 }
 
 #define _simd16_mul_ps          _mm512_mul_ps

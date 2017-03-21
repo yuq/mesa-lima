@@ -1297,7 +1297,19 @@ bool PaTriFan0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 
 bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
+#if USE_SIMD16_FRONTEND
     const simd16vector &a = pa.leadingVertex.attrib[slot];
+#else
+    simd16vector a;
+
+    {
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_insert_ps(_simd16_setzero_ps(), pa.leadingVertex.attrib[slot][i], 0);
+        }
+    }
+
+#endif
     const simd16vector &b = PaGetSimdVector_simd16(pa, pa.prev, slot);
     const simd16vector &c = PaGetSimdVector_simd16(pa, pa.cur, slot);
 

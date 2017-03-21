@@ -38,7 +38,7 @@
 // AVX512 Support
 ///////////////////////////////////////////////////////////////////////////////
 
-#define ENABLE_AVX512_SIMD16    0
+#define ENABLE_AVX512_SIMD16    1
 #define USE_8x2_TILE_BACKEND    0
 #define USE_SIMD16_FRONTEND     0
 
