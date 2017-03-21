@@ -1026,6 +1026,7 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          i->postFactor = 0;
       }
       break;
+   case OP_FMA:
    case OP_MAD:
       if (imm0.isInteger(0)) {
          i->setSrc(0, i->getSrc(2));
