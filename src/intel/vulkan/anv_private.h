@@ -2169,6 +2169,8 @@ struct anv_subpass {
 
    VkAttachmentReference                        depth_stencil_attachment;
 
+   uint32_t                                     view_mask;
+
    /** Subpass has a depth/stencil self-dependency */
    bool                                         has_ds_self_dep;
 

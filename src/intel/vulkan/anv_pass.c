@@ -23,6 +23,8 @@
 
 #include "anv_private.h"
 
+#include "util/vk_util.h"
+
 static unsigned
 num_subpass_attachments(const VkSubpassDescription *desc)
 {
@@ -102,6 +104,7 @@ VkResult anv_CreateRenderPass(
       subpass->color_count = desc->colorAttachmentCount;
       subpass->attachment_count = num_subpass_attachments(desc);
       subpass->attachments = subpass_attachments;
+      subpass->view_mask = 0;
 
       if (desc->inputAttachmentCount > 0) {
          subpass->input_attachments = subpass_attachments;
@@ -259,6 +262,22 @@ VkResult anv_CreateRenderPass(
    if (has_depth) {
       pass->subpass_flushes[pass->subpass_count] |=
          ANV_PIPE_DEPTH_CACHE_FLUSH_BIT;
+   }
+
+   vk_foreach_struct(ext, pCreateInfo->pNext) {
+      switch (ext->sType) {
+      case VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHX: {
+         VkRenderPassMultiviewCreateInfoKHX *mv = (void *)ext;
+
+         for (uint32_t i = 0; i < mv->subpassCount; i++) {
+            pass->subpasses[i].view_mask = mv->pViewMasks[i];
+         }
+         break;
+      }
+
+      default:
+         anv_debug_ignored_stype(ext->sType);
+      }
    }
 
    *pRenderPass = anv_render_pass_to_handle(pass);
