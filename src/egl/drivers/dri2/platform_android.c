@@ -32,10 +32,7 @@
 #include <fcntl.h>
 #include <xf86drm.h>
 #include <stdbool.h>
-
-#if ANDROID_VERSION >= 0x402
 #include <sync/sync.h>
-#endif
 
 #include "loader.h"
 #include "egl_dri2.h"
@@ -160,7 +157,6 @@ get_native_buffer_name(struct ANativeWindowBuffer *buf)
 static EGLBoolean
 droid_window_dequeue_buffer(struct dri2_egl_surface *dri2_surf)
 {
-#if ANDROID_VERSION >= 0x0402
    int fence_fd;
 
    if (dri2_surf->window->dequeueBuffer(dri2_surf->window, &dri2_surf->buffer,
@@ -195,13 +191,6 @@ droid_window_dequeue_buffer(struct dri2_egl_surface *dri2_surf)
    }
 
    dri2_surf->buffer->common.incRef(&dri2_surf->buffer->common);
-#else
-   if (dri2_surf->window->dequeueBuffer(dri2_surf->window, &dri2_surf->buffer))
-      return EGL_FALSE;
-
-   dri2_surf->buffer->common.incRef(&dri2_surf->buffer->common);
-   dri2_surf->window->lockBuffer(dri2_surf->window, dri2_surf->buffer);
-#endif
 
    /* Record all the buffers created by ANativeWindow and update back buffer
     * for updating buffer's age in swap_buffers.
@@ -244,7 +233,6 @@ droid_window_enqueue_buffer(_EGLDisplay *disp, struct dri2_egl_surface *dri2_sur
     */
    mtx_unlock(&disp->Mutex);
 
-#if ANDROID_VERSION >= 0x0402
    /* Queue the buffer without a sync fence. This informs the ANativeWindow
     * that it may access the buffer immediately.
     *
@@ -260,9 +248,6 @@ droid_window_enqueue_buffer(_EGLDisplay *disp, struct dri2_egl_surface *dri2_sur
    int fence_fd = -1;
    dri2_surf->window->queueBuffer(dri2_surf->window, dri2_surf->buffer,
                                   fence_fd);
-#else
-   dri2_surf->window->queueBuffer(dri2_surf->window, dri2_surf->buffer);
-#endif
 
    dri2_surf->buffer->common.decRef(&dri2_surf->buffer->common);
    dri2_surf->buffer = NULL;
