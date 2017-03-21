@@ -229,7 +229,7 @@ disk_cache_has_key(struct disk_cache *cache, const cache_key key)
    return false;
 }
 
-void
+static inline void
 disk_cache_compute_key(struct disk_cache *cache, const void *data, size_t size,
                        const cache_key key)
 {
