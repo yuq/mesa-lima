@@ -192,12 +192,12 @@ include $(BUILD_STATIC_LIBRARY)
 
 
 #
-# vulkan.mesa_intel
+# libvulkan_intel
 #
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := vulkan.mesa_intel
+LOCAL_MODULE := libvulkan_intel
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 
 LOCAL_SRC_FILES := \
