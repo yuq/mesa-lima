@@ -28,12 +28,6 @@
 #include "mesa-sha1.h"
 
 void
-_mesa_sha1_update(struct mesa_sha1 *ctx, const void *data, int size)
-{
-   SHA1Update(ctx, data, size);
-}
-
-void
 _mesa_sha1_compute(const void *data, size_t size, unsigned char result[20])
 {
    struct mesa_sha1 ctx;
