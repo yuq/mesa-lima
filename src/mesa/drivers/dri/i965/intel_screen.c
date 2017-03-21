@@ -541,6 +541,9 @@ intel_create_image_common(__DRIscreen *dri_screen,
    uint64_t modifier = select_best_modifier(&screen->devinfo, modifiers, count);
    assert(modifier == DRM_FORMAT_MOD_INVALID);
 
+   if (modifier == DRM_FORMAT_MOD_INVALID && modifiers)
+      return NULL;
+
    /* Historically, X-tiled was the default, and so lack of modifier means
     * X-tiled.
     */
