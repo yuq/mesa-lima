@@ -25,6 +25,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "genxml/genX_bits.h"
+
 #include "isl.h"
 #include "isl_gen4.h"
 #include "isl_gen6.h"
@@ -1089,18 +1091,72 @@ isl_calc_min_row_pitch(const struct isl_device *dev,
    }
 }
 
-static uint32_t
+/**
+ * Is `pitch` in the valid range for a hardware bitfield, if the bitfield's
+ * size is `bits` bits?
+ *
+ * Hardware pitch fields are offset by 1. For example, if the size of
+ * RENDER_SURFACE_STATE::SurfacePitch is B bits, then the range of valid
+ * pitches is [1, 2^b] inclusive.  If the surface pitch is N, then
+ * RENDER_SURFACE_STATE::SurfacePitch must be set to N-1.
+ */
+static bool
+pitch_in_range(uint32_t n, uint32_t bits)
+{
+   assert(n != 0);
+   return likely(bits != 0 && 1 <= n && n <= (1 << bits));
+}
+
+static bool
 isl_calc_row_pitch(const struct isl_device *dev,
                    const struct isl_surf_init_info *surf_info,
                    const struct isl_tile_info *tile_info,
                    enum isl_dim_layout dim_layout,
-                   const struct isl_extent2d *phys_slice0_sa)
+                   const struct isl_extent2d *phys_slice0_sa,
+                   uint32_t *out_row_pitch)
 {
    const uint32_t alignment =
       isl_calc_row_pitch_alignment(surf_info, tile_info);
 
-   return isl_calc_min_row_pitch(dev, surf_info, tile_info, phys_slice0_sa,
-                                 alignment);
+   const uint32_t row_pitch =
+      isl_calc_min_row_pitch(dev, surf_info, tile_info, phys_slice0_sa,
+                             alignment);
+
+   const uint32_t row_pitch_tiles = row_pitch / tile_info->phys_extent_B.width;
+
+   if (row_pitch == 0)
+      return false;
+
+   if (dim_layout == ISL_DIM_LAYOUT_GEN9_1D) {
+      /* SurfacePitch is ignored for this layout. */
+      goto done;
+   }
+
+   if ((surf_info->usage & (ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                            ISL_SURF_USAGE_TEXTURE_BIT |
+                            ISL_SURF_USAGE_STORAGE_BIT)) &&
+       !pitch_in_range(row_pitch, RENDER_SURFACE_STATE_SurfacePitch_bits(dev->info)))
+      return false;
+
+   if ((surf_info->usage & (ISL_SURF_USAGE_CCS_BIT |
+                            ISL_SURF_USAGE_MCS_BIT)) &&
+       !pitch_in_range(row_pitch_tiles, RENDER_SURFACE_STATE_AuxiliarySurfacePitch_bits(dev->info)))
+      return false;
+
+   if ((surf_info->usage & ISL_SURF_USAGE_DEPTH_BIT) &&
+       !pitch_in_range(row_pitch, _3DSTATE_DEPTH_BUFFER_SurfacePitch_bits(dev->info)))
+      return false;
+
+   if ((surf_info->usage & ISL_SURF_USAGE_HIZ_BIT) &&
+       !pitch_in_range(row_pitch, _3DSTATE_HIER_DEPTH_BUFFER_SurfacePitch_bits(dev->info)))
+      return false;
+
+   if (surf_info->usage & ISL_SURF_USAGE_STENCIL_BIT)
+      isl_finishme("validate row pitch of stencil surfaces");
+
+ done:
+   *out_row_pitch = row_pitch;
+   return true;
 }
 
 /**
@@ -1275,8 +1331,10 @@ isl_surf_init_s(const struct isl_device *dev,
    uint32_t pad_bytes;
    isl_apply_surface_padding(dev, info, &tile_info, &total_h_el, &pad_bytes);
 
-   const uint32_t row_pitch = isl_calc_row_pitch(dev, info, &tile_info,
-                                                 dim_layout, &phys_slice0_sa);
+   uint32_t row_pitch;
+   if (!isl_calc_row_pitch(dev, info, &tile_info, dim_layout,
+                           &phys_slice0_sa, &row_pitch))
+      return false;
 
    uint32_t size, base_alignment;
    if (tiling == ISL_TILING_LINEAR) {
