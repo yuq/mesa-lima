@@ -1477,7 +1477,7 @@ radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
 			              RADV_CMD_FLAG_FLUSH_AND_INV_DB |
 			              RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
-			              RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
+			              RADV_CMD_FLAG_INV_GLOBAL_L2;
 			break;
 		default:
 			break;
