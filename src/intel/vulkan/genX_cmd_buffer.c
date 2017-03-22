@@ -1736,6 +1736,28 @@ void genX(CmdDrawIndexed)(
 #define GEN7_3DPRIM_START_INSTANCE      0x243C
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
 
+static void
+load_indirect_parameters(struct anv_cmd_buffer *cmd_buffer,
+                         struct anv_buffer *buffer, uint64_t offset,
+                         bool indexed)
+{
+   struct anv_batch *batch = &cmd_buffer->batch;
+   struct anv_bo *bo = buffer->bo;
+   uint32_t bo_offset = buffer->offset + offset;
+
+   emit_lrm(batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
+   emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+   emit_lrm(batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
+
+   if (indexed) {
+      emit_lrm(batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
+      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
+   } else {
+      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
+      emit_lri(batch, GEN7_3DPRIM_BASE_VERTEX, 0);
+   }
+}
+
 void genX(CmdDrawIndirect)(
     VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
@@ -1760,11 +1782,7 @@ void genX(CmdDrawIndirect)(
    if (vs_prog_data->uses_drawid)
       emit_draw_index(cmd_buffer, 0);
 
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
-   emit_lri(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, 0);
+   load_indirect_parameters(cmd_buffer, buffer, offset, false);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.IndirectParameterEnable  = true;
@@ -1798,11 +1816,7 @@ void genX(CmdDrawIndexedIndirect)(
    if (vs_prog_data->uses_drawid)
       emit_draw_index(cmd_buffer, 0);
 
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
-   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
+   load_indirect_parameters(cmd_buffer, buffer, offset, true);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.IndirectParameterEnable  = true;
