@@ -24,6 +24,7 @@ BUILT_SOURCES += \
 	$(AUBINATOR_GENERATED_FILES)
 
 EXTRA_DIST += \
+	$(GENXML_XML_FILES) \
 	$(GENXML_GENERATED_FILES) \
 	$(AUBINATOR_GENERATED_FILES)
 
@@ -42,14 +43,6 @@ $(GENXML_GENERATED_FILES): genxml/gen_zipped_file.py
 	$(AM_V_GEN) $(PYTHON2) $(srcdir)/genxml/gen_zipped_file.py $< > $@ || ($(RM) $@; false)
 
 EXTRA_DIST += \
-	genxml/gen4.xml \
-	genxml/gen45.xml \
-	genxml/gen5.xml \
-	genxml/gen6.xml \
-	genxml/gen7.xml \
-	genxml/gen75.xml \
-	genxml/gen8.xml \
-	genxml/gen9.xml \
 	genxml/genX_pack.h \
 	genxml/gen_macros.h \
 	genxml/gen_pack_header.py \

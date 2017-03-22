@@ -109,6 +109,16 @@ COMPILER_FILES = \
 COMPILER_GENERATED_FILES = \
 	compiler/brw_nir_trig_workarounds.c
 
+GENXML_XML_FILES = \
+	genxml/gen4.xml \
+	genxml/gen45.xml \
+	genxml/gen5.xml \
+	genxml/gen6.xml \
+	genxml/gen7.xml \
+	genxml/gen75.xml \
+	genxml/gen8.xml \
+	genxml/gen9.xml
+
 GENXML_GENERATED_FILES = \
 	genxml/gen4_pack.h \
 	genxml/gen45_pack.h \
