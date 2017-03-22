@@ -319,7 +319,7 @@ drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr_gem *bufmgr_gem, unsigned long size,
 		return size;
 
 	/* 965+ just need multiples of page size for tiling */
-	return ROUND_UP_TO(size, 4096);
+	return ALIGN(size, 4096);
 }
 
 /*
@@ -345,7 +345,7 @@ drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr_gem *bufmgr_gem,
 		tile_width = 128;
 
 	/* 965 is flexible */
-	return ROUND_UP_TO(pitch, tile_width);
+	return ALIGN(pitch, tile_width);
 }
 
 static struct drm_bacon_gem_bo_bucket *
