@@ -128,7 +128,6 @@ typedef struct _drm_bacon_bufmgr_gem {
 
 	pthread_mutex_t lock;
 
-	struct drm_i915_gem_exec_object *exec_objects;
 	struct drm_i915_gem_exec_object2 *exec2_objects;
 	drm_bacon_bo **exec_bos;
 	int exec_size;
@@ -426,52 +425,6 @@ drm_bacon_gem_bo_reference(drm_bacon_bo *bo)
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	p_atomic_inc(&bo_gem->refcount);
-}
-
-/**
- * Adds the given buffer to the list of buffers to be validated (moved into the
- * appropriate memory type) with the next batch submission.
- *
- * If a buffer is validated multiple times in a batch submission, it ends up
- * with the intersection of the memory type flags and the union of the
- * access flags.
- */
-static void
-drm_bacon_add_validate_buffer(drm_bacon_bo *bo)
-{
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	int index;
-
-	if (bo_gem->validate_index != -1)
-		return;
-
-	/* Extend the array of validation entries as necessary. */
-	if (bufmgr_gem->exec_count == bufmgr_gem->exec_size) {
-		int new_size = bufmgr_gem->exec_size * 2;
-
-		if (new_size == 0)
-			new_size = 5;
-
-		bufmgr_gem->exec_objects =
-		    realloc(bufmgr_gem->exec_objects,
-			    sizeof(*bufmgr_gem->exec_objects) * new_size);
-		bufmgr_gem->exec_bos =
-		    realloc(bufmgr_gem->exec_bos,
-			    sizeof(*bufmgr_gem->exec_bos) * new_size);
-		bufmgr_gem->exec_size = new_size;
-	}
-
-	index = bufmgr_gem->exec_count;
-	bo_gem->validate_index = index;
-	/* Fill in array entry */
-	bufmgr_gem->exec_objects[index].handle = bo_gem->gem_handle;
-	bufmgr_gem->exec_objects[index].relocation_count = bo_gem->reloc_count;
-	bufmgr_gem->exec_objects[index].relocs_ptr = (uintptr_t) bo_gem->relocs;
-	bufmgr_gem->exec_objects[index].alignment = bo->align;
-	bufmgr_gem->exec_objects[index].offset = 0;
-	bufmgr_gem->exec_bos[index] = bo;
-	bufmgr_gem->exec_count++;
 }
 
 static void
@@ -1796,7 +1749,6 @@ drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 	int i, ret;
 
 	free(bufmgr_gem->exec2_objects);
-	free(bufmgr_gem->exec_objects);
 	free(bufmgr_gem->exec_bos);
 
 	pthread_mutex_destroy(&bufmgr_gem->lock);
@@ -2002,36 +1954,6 @@ drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 
 }
 
-/**
- * Walk the tree of relocations rooted at BO and accumulate the list of
- * validations to be performed and update the relocation buffers with
- * index values into the validation list.
- */
-static void
-drm_bacon_gem_bo_process_reloc(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	int i;
-
-	if (bo_gem->relocs == NULL)
-		return;
-
-	for (i = 0; i < bo_gem->reloc_count; i++) {
-		drm_bacon_bo *target_bo = bo_gem->reloc_target_info[i].bo;
-
-		if (target_bo == bo)
-			continue;
-
-		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
-
-		/* Continue walking the tree depth-first. */
-		drm_bacon_gem_bo_process_reloc(target_bo);
-
-		/* Add the target to the validate list */
-		drm_bacon_add_validate_buffer(target_bo);
-	}
-}
-
 static void
 drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 {
@@ -2068,30 +1990,6 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 	}
 }
 
-
-static void
-drm_bacon_update_buffer_offsets(drm_bacon_bufmgr_gem *bufmgr_gem)
-{
-	int i;
-
-	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_bacon_bo *bo = bufmgr_gem->exec_bos[i];
-		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-		/* Update the buffer offset */
-		if (bufmgr_gem->exec_objects[i].offset != bo->offset64) {
-			DBG("BO %d (%s) migrated: 0x%08x %08x -> 0x%08x %08x\n",
-			    bo_gem->gem_handle, bo_gem->name,
-			    upper_32_bits(bo->offset64),
-			    lower_32_bits(bo->offset64),
-			    upper_32_bits(bufmgr_gem->exec_objects[i].offset),
-			    lower_32_bits(bufmgr_gem->exec_objects[i].offset));
-			bo->offset64 = bufmgr_gem->exec_objects[i].offset;
-			bo->offset = bufmgr_gem->exec_objects[i].offset;
-		}
-	}
-}
-
 static void
 drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr_gem *bufmgr_gem)
 {
@@ -2117,73 +2015,6 @@ drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr_gem *bufmgr_gem)
 			bo->offset = bufmgr_gem->exec2_objects[i].offset;
 		}
 	}
-}
-
-static int
-drm_bacon_gem_bo_exec(drm_bacon_bo *bo, int used,
-		      drm_clip_rect_t * cliprects, int num_cliprects, int DR4)
-{
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
-	struct drm_i915_gem_execbuffer execbuf;
-	int ret, i;
-
-	if (to_bo_gem(bo)->has_error)
-		return -ENOMEM;
-
-	pthread_mutex_lock(&bufmgr_gem->lock);
-	/* Update indices and set up the validate list. */
-	drm_bacon_gem_bo_process_reloc(bo);
-
-	/* Add the batch buffer to the validation list.  There are no
-	 * relocations pointing to it.
-	 */
-	drm_bacon_add_validate_buffer(bo);
-
-	memclear(execbuf);
-	execbuf.buffers_ptr = (uintptr_t) bufmgr_gem->exec_objects;
-	execbuf.buffer_count = bufmgr_gem->exec_count;
-	execbuf.batch_start_offset = 0;
-	execbuf.batch_len = used;
-	execbuf.cliprects_ptr = (uintptr_t) cliprects;
-	execbuf.num_cliprects = num_cliprects;
-	execbuf.DR1 = 0;
-	execbuf.DR4 = DR4;
-
-	ret = drmIoctl(bufmgr_gem->fd,
-		       DRM_IOCTL_I915_GEM_EXECBUFFER,
-		       &execbuf);
-	if (ret != 0) {
-		ret = -errno;
-		if (errno == ENOSPC) {
-			DBG("Execbuffer fails to pin. "
-			    "Estimate: %u. Actual: %u. Available: %u\n",
-			    drm_bacon_gem_estimate_batch_space(bufmgr_gem->exec_bos,
-							       bufmgr_gem->
-							       exec_count),
-			    drm_bacon_gem_compute_batch_space(bufmgr_gem->exec_bos,
-							      bufmgr_gem->
-							      exec_count),
-			    (unsigned int)bufmgr_gem->gtt_size);
-		}
-	}
-	drm_bacon_update_buffer_offsets(bufmgr_gem);
-
-	if (bufmgr_gem->bufmgr.debug)
-		drm_bacon_gem_dump_validation_list(bufmgr_gem);
-
-	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_bacon_bo_gem *bo_gem = to_bo_gem(bufmgr_gem->exec_bos[i]);
-
-		bo_gem->idle = false;
-
-		/* Disconnect the buffer from the validate list */
-		bo_gem->validate_index = -1;
-		bufmgr_gem->exec_bos[i] = NULL;
-	}
-	bufmgr_gem->exec_count = 0;
-	pthread_mutex_unlock(&bufmgr_gem->lock);
-
-	return ret;
 }
 
 static int
@@ -3224,7 +3055,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	struct drm_i915_gem_get_aperture aperture;
 	drm_i915_getparam_t gp;
 	int ret, tmp;
-	bool exec2 = false;
 
 	pthread_mutex_lock(&bufmgr_list_mutex);
 
@@ -3284,11 +3114,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 
 	memclear(gp);
 	gp.value = &tmp;
-
-	gp.param = I915_PARAM_HAS_EXECBUF2;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	if (!ret)
-		exec2 = true;
 
 	gp.param = I915_PARAM_HAS_BSD;
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
@@ -3351,12 +3176,8 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	bufmgr_gem->bufmgr.bo_get_tiling = drm_bacon_gem_bo_get_tiling;
 	bufmgr_gem->bufmgr.bo_set_tiling = drm_bacon_gem_bo_set_tiling;
 	bufmgr_gem->bufmgr.bo_flink = drm_bacon_gem_bo_flink;
-	/* Use the new one if available */
-	if (exec2) {
-		bufmgr_gem->bufmgr.bo_exec = drm_bacon_gem_bo_exec2;
-		bufmgr_gem->bufmgr.bo_mrb_exec = drm_bacon_gem_bo_mrb_exec2;
-	} else
-		bufmgr_gem->bufmgr.bo_exec = drm_bacon_gem_bo_exec;
+	bufmgr_gem->bufmgr.bo_exec = drm_bacon_gem_bo_exec2;
+	bufmgr_gem->bufmgr.bo_mrb_exec = drm_bacon_gem_bo_mrb_exec2;
 	bufmgr_gem->bufmgr.bo_busy = drm_bacon_gem_bo_busy;
 	bufmgr_gem->bufmgr.bo_madvise = drm_bacon_gem_bo_madvise;
 	bufmgr_gem->bufmgr.destroy = drm_bacon_bufmgr_gem_unref;
