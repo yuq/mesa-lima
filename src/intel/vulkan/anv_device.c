@@ -929,6 +929,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    ret = anv_gem_wait(device, bo.gem_handle, &timeout);
    if (ret != 0) {
       /* We don't know the real error. */
+      device->lost = true;
       result = vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
       goto fail;
    }
@@ -973,6 +974,7 @@ VkResult anv_CreateDevice(
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = physical_device->instance;
    device->chipset_id = physical_device->chipset_id;
+   device->lost = false;
 
    if (pAllocator)
       device->alloc = *pAllocator;
@@ -1250,6 +1252,7 @@ anv_device_execbuf(struct anv_device *device,
    int ret = anv_gem_execbuffer(device, execbuf);
    if (ret != 0) {
       /* We don't know the real error. */
+      device->lost = true;
       return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
    }
 
@@ -1339,6 +1342,7 @@ out:
        * submit the same job again to this device.
        */
       result = VK_ERROR_DEVICE_LOST;
+      device->lost = true;
 
       /* If we return VK_ERROR_DEVICE LOST here, we need to ensure that
        * vkWaitForFences() and vkGetFenceStatus() return a valid result
@@ -1865,6 +1869,7 @@ VkResult anv_WaitForFences(
                return VK_TIMEOUT;
             } else if (ret == -1) {
                /* We don't know the real error. */
+                device->lost = true;
                return vk_errorf(VK_ERROR_DEVICE_LOST, "gem wait failed: %m");
             } else {
                fence->state = ANV_FENCE_STATE_SIGNALED;

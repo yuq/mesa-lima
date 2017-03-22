@@ -619,6 +619,7 @@ struct anv_device {
 
     pthread_mutex_t                             mutex;
     pthread_cond_t                              queue_submit;
+    bool                                        lost;
 };
 
 static void inline
