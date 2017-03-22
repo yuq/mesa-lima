@@ -36,7 +36,7 @@ $(GENXML_GENERATED_FILES): genxml/gen_pack_header.py
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) $(srcdir)/genxml/gen_pack_header.py $< > $@ || ($(RM) $@; false)
 
-$(GENXML_GENERATED_FILES): genxml/gen_zipped_file.py
+$(AUBINATOR_GENERATED_FILES): genxml/gen_zipped_file.py
 
 .xml_xml.h:
 	$(MKDIR_GEN)
