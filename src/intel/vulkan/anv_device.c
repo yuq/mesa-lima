@@ -1325,6 +1325,31 @@ VkResult anv_QueueSubmit(
    }
 
 out:
+   if (result != VK_SUCCESS) {
+      /* In the case that something has gone wrong we may end up with an
+       * inconsistent state from which it may not be trivial to recover.
+       * For example, we might have computed address relocations and
+       * any future attempt to re-submit this job will need to know about
+       * this and avoid computing relocation addresses again.
+       *
+       * To avoid this sort of issues, we assume that if something was
+       * wrong during submission we must already be in a really bad situation
+       * anyway (such us being out of memory) and return
+       * VK_ERROR_DEVICE_LOST to ensure that clients do not attempt to
+       * submit the same job again to this device.
+       */
+      result = VK_ERROR_DEVICE_LOST;
+
+      /* If we return VK_ERROR_DEVICE LOST here, we need to ensure that
+       * vkWaitForFences() and vkGetFenceStatus() return a valid result
+       * (VK_SUCCESS or VK_ERROR_DEVICE_LOST) in a finite amount of time.
+       * Setting the fence status to SIGNALED ensures this will happen in
+       * any case.
+       */
+      if (fence)
+         fence->state = ANV_FENCE_STATE_SIGNALED;
+   }
+
    pthread_mutex_unlock(&device->mutex);
 
    return result;
