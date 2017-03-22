@@ -248,7 +248,7 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
       static const gl_state_index wposTransformState[STATE_LENGTH] = {
          STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM
       };
-      nir_lower_wpos_ytransform_options wpos_options = {0};
+      nir_lower_wpos_ytransform_options wpos_options = { { 0 } };
       struct pipe_screen *pscreen = st->pipe->screen;
 
       memcpy(wpos_options.state_tokens, wposTransformState,
