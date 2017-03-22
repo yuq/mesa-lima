@@ -275,9 +275,6 @@ struct _drm_bacon_bufmgr {
 
 	/** Returns true if target_bo is in the relocation tree rooted at bo. */
 	int (*bo_references) (drm_bacon_bo *bo, drm_bacon_bo *target_bo);
-
-	/**< Enables verbose debugging printouts */
-	int debug;
 };
 
 struct _drm_bacon_context {

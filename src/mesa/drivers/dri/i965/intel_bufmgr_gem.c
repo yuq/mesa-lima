@@ -56,6 +56,7 @@
 #ifndef ETIME
 #define ETIME ETIMEDOUT
 #endif
+#include "common/gen_debug.h"
 #include "libdrm_macros.h"
 #include "main/macros.h"
 #include "util/macros.h"
@@ -78,10 +79,7 @@
 
 #define memclear(s) memset(&s, 0, sizeof(s))
 
-#define DBG(...) do {					\
-	if (bufmgr_gem->bufmgr.debug)			\
-		fprintf(stderr, __VA_ARGS__);		\
-} while (0)
+#define FILE_DEBUG_FLAG DEBUG_BUFMGR
 
 static inline int
 atomic_add_unless(int *v, int add, int unless)
@@ -2107,7 +2105,7 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 		*out_fence = execbuf.rsvd2 >> 32;
 
 skip_execution:
-	if (bufmgr_gem->bufmgr.debug)
+	if (INTEL_DEBUG & DEBUG_BUFMGR)
 		drm_bacon_gem_dump_validation_list(bufmgr_gem);
 
 	for (i = 0; i < bufmgr_gem->exec_count; i++) {
@@ -3180,7 +3178,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	bufmgr_gem->bufmgr.bo_busy = drm_bacon_gem_bo_busy;
 	bufmgr_gem->bufmgr.bo_madvise = drm_bacon_gem_bo_madvise;
 	bufmgr_gem->bufmgr.destroy = drm_bacon_bufmgr_gem_unref;
-	bufmgr_gem->bufmgr.debug = 0;
 	bufmgr_gem->bufmgr.check_aperture_space =
 	    drm_bacon_gem_check_aperture_space;
 	bufmgr_gem->bufmgr.bo_disable_reuse = drm_bacon_gem_bo_disable_reuse;

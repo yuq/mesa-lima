@@ -126,7 +126,6 @@ int drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 			     unsigned long size, void *data);
 void drm_bacon_bo_wait_rendering(drm_bacon_bo *bo);
 
-void drm_bacon_bufmgr_set_debug(drm_bacon_bufmgr *bufmgr, int enable_debug);
 void drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr);
 int drm_bacon_bo_exec(drm_bacon_bo *bo, int used,
 		      struct drm_clip_rect *cliprects, int num_cliprects, int DR4);

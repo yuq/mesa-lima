@@ -1771,9 +1771,6 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 
    brw_process_intel_debug_variable();
 
-   if (INTEL_DEBUG & DEBUG_BUFMGR)
-      drm_bacon_bufmgr_set_debug(screen->bufmgr, true);
-
    if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && devinfo->gen < 7) {
       fprintf(stderr,
               "shader_time debugging requires gen7 (Ivybridge) or better.\n");

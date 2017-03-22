@@ -175,12 +175,6 @@ drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used,
 	}
 }
 
-void
-drm_bacon_bufmgr_set_debug(drm_bacon_bufmgr *bufmgr, int enable_debug)
-{
-	bufmgr->debug = enable_debug;
-}
-
 int
 drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo ** bo_array, int count)
 {
