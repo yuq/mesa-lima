@@ -1097,7 +1097,7 @@ brwCreateContext(gl_api api,
       brw->hw_ctx = drm_intel_gem_context_create(brw->bufmgr);
 
       if (!brw->hw_ctx) {
-         fprintf(stderr, "Gen6+ requires Kernel 3.6 or later.\n");
+         fprintf(stderr, "Failed to create hardware context.\n");
          intelDestroyContext(driContextPriv);
          return false;
       }
