@@ -198,13 +198,6 @@ struct _drm_bacon_bo_gem {
 	drm_bacon_reloc_target *reloc_target_info;
 	/** Number of entries in relocs */
 	int reloc_count;
-	/** Array of BOs that are referenced by this buffer and will be softpinned */
-	drm_bacon_bo **softpin_target;
-	/** Number softpinned BOs that are referenced by this buffer */
-	int softpin_target_count;
-	/** Maximum amount of softpinned BOs that are referenced by this buffer */
-	int softpin_target_size;
-
 	/** Mapped address for the buffer, saved across map/unmap cycles */
 	void *mem_virtual;
 	/** GTT virtual address for the buffer, saved across map/unmap cycles */
@@ -345,9 +338,8 @@ drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr *bufmgr)
 		drm_bacon_bo *bo = bufmgr->exec_bos[i];
 		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-		if (bo_gem->relocs == NULL && bo_gem->softpin_target == NULL) {
-			DBG("%2d: %d %s(%s)\n", i, bo_gem->gem_handle,
-			    bo_gem->kflags & EXEC_OBJECT_PINNED ? "*" : "",
+		if (bo_gem->relocs == NULL) {
+			DBG("%2d: %d (%s)\n", i, bo_gem->gem_handle,
 			    bo_gem->name);
 			continue;
 		}
@@ -357,11 +349,10 @@ drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr *bufmgr)
 			drm_bacon_bo_gem *target_gem =
 			    (drm_bacon_bo_gem *) target_bo;
 
-			DBG("%2d: %d %s(%s)@0x%08x %08x -> "
+			DBG("%2d: %d (%s)@0x%08x %08x -> "
 			    "%d (%s)@0x%08x %08x + 0x%08x\n",
 			    i,
 			    bo_gem->gem_handle,
-			    bo_gem->kflags & EXEC_OBJECT_PINNED ? "*" : "",
 			    bo_gem->name,
 			    upper_32_bits(bo_gem->relocs[j].offset),
 			    lower_32_bits(bo_gem->relocs[j].offset),
@@ -370,22 +361,6 @@ drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr *bufmgr)
 			    upper_32_bits(target_bo->offset64),
 			    lower_32_bits(target_bo->offset64),
 			    bo_gem->relocs[j].delta);
-		}
-
-		for (j = 0; j < bo_gem->softpin_target_count; j++) {
-			drm_bacon_bo *target_bo = bo_gem->softpin_target[j];
-			drm_bacon_bo_gem *target_gem =
-			    (drm_bacon_bo_gem *) target_bo;
-			DBG("%2d: %d %s(%s) -> "
-			    "%d *(%s)@0x%08x %08x\n",
-			    i,
-			    bo_gem->gem_handle,
-			    bo_gem->kflags & EXEC_OBJECT_PINNED ? "*" : "",
-			    bo_gem->name,
-			    target_gem->gem_handle,
-			    target_gem->name,
-			    upper_32_bits(target_bo->offset64),
-			    lower_32_bits(target_bo->offset64));
 		}
 	}
 }
@@ -1043,13 +1018,9 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 								  time);
 		}
 	}
-	for (i = 0; i < bo_gem->softpin_target_count; i++)
-		drm_bacon_gem_bo_unreference_locked_timed(bo_gem->softpin_target[i],
-								  time);
 	bo_gem->kflags = 0;
 	bo_gem->reloc_count = 0;
 	bo_gem->used_as_reloc_target = false;
-	bo_gem->softpin_target_count = 0;
 
 	DBG("bo_unreference final: %d (%s)\n",
 	    bo_gem->gem_handle, bo_gem->name);
@@ -1062,11 +1033,6 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	if (bo_gem->relocs) {
 		free(bo_gem->relocs);
 		bo_gem->relocs = NULL;
-	}
-	if (bo_gem->softpin_target) {
-		free(bo_gem->softpin_target);
-		bo_gem->softpin_target = NULL;
-		bo_gem->softpin_target_size = 0;
 	}
 
 	/* Clear any left-over mappings */
@@ -1573,10 +1539,10 @@ drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
  * the relocation entry write when the buffer hasn't moved from the
  * last known offset in target_bo.
  */
-static int
-do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
-		 drm_bacon_bo *target_bo, uint32_t target_offset,
-		 uint32_t read_domains, uint32_t write_domain)
+int
+drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
+			drm_bacon_bo *target_bo, uint32_t target_offset,
+			uint32_t read_domains, uint32_t write_domain)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
@@ -1626,59 +1592,6 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 	return 0;
 }
 
-static int
-drm_bacon_gem_bo_add_softpin_target(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
-{
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
-
-	if (bo_gem->has_error)
-		return -ENOMEM;
-
-	if (target_bo_gem->has_error) {
-		bo_gem->has_error = true;
-		return -ENOMEM;
-	}
-
-	if (!(target_bo_gem->kflags & EXEC_OBJECT_PINNED))
-		return -EINVAL;
-	if (target_bo_gem == bo_gem)
-		return -EINVAL;
-
-	if (bo_gem->softpin_target_count == bo_gem->softpin_target_size) {
-		int new_size = bo_gem->softpin_target_size * 2;
-		if (new_size == 0)
-			new_size = bufmgr->max_relocs;
-
-		bo_gem->softpin_target = realloc(bo_gem->softpin_target, new_size *
-				sizeof(drm_bacon_bo *));
-		if (!bo_gem->softpin_target)
-			return -ENOMEM;
-
-		bo_gem->softpin_target_size = new_size;
-	}
-	bo_gem->softpin_target[bo_gem->softpin_target_count] = target_bo;
-	drm_bacon_bo_reference(target_bo);
-	bo_gem->softpin_target_count++;
-
-	return 0;
-}
-
-int
-drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
-			drm_bacon_bo *target_bo, uint32_t target_offset,
-			uint32_t read_domains, uint32_t write_domain)
-{
-	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *)target_bo;
-
-	if (target_bo_gem->kflags & EXEC_OBJECT_PINNED)
-		return drm_bacon_gem_bo_add_softpin_target(bo, target_bo);
-	else
-		return do_bo_emit_reloc(bo, offset, target_bo, target_offset,
-					read_domains, write_domain);
-}
-
 int
 drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo)
 {
@@ -1699,8 +1612,6 @@ drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo)
  *
  * Any further drm_bacon_bufmgr_check_aperture_space() queries
  * involving this buffer in the tree are undefined after this call.
- *
- * This also removes all softpinned targets being referenced by the BO.
  */
 void
 drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
@@ -1726,12 +1637,6 @@ drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 	}
 	bo_gem->reloc_count = start;
 
-	for (i = 0; i < bo_gem->softpin_target_count; i++) {
-		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->softpin_target[i];
-		drm_bacon_gem_bo_unreference_locked_timed(&target_bo_gem->bo, time.tv_sec);
-	}
-	bo_gem->softpin_target_count = 0;
-
 	pthread_mutex_unlock(&bufmgr->lock);
 
 }
@@ -1742,7 +1647,7 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
 	int i;
 
-	if (bo_gem->relocs == NULL && bo_gem->softpin_target == NULL)
+	if (bo_gem->relocs == NULL)
 		return;
 
 	for (i = 0; i < bo_gem->reloc_count; i++) {
@@ -1759,17 +1664,6 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 		/* Add the target to the validate list */
 		drm_bacon_add_validate_buffer2(target_bo);
 	}
-
-	for (i = 0; i < bo_gem->softpin_target_count; i++) {
-		drm_bacon_bo *target_bo = bo_gem->softpin_target[i];
-
-		if (target_bo == bo)
-			continue;
-
-		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
-		drm_bacon_gem_bo_process_reloc2(target_bo);
-		drm_bacon_add_validate_buffer2(target_bo);
-	}
 }
 
 static void
@@ -1783,10 +1677,6 @@ drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr *bufmgr)
 
 		/* Update the buffer offset */
 		if (bufmgr->exec2_objects[i].offset != bo->offset64) {
-			/* If we're seeing softpinned object here it means that the kernel
-			 * has relocated our object... Indicating a programming error
-			 */
-			assert(!(bo_gem->kflags & EXEC_OBJECT_PINNED));
 			DBG("BO %d (%s) migrated: 0x%08x %08x -> 0x%08x %08x\n",
 			    bo_gem->gem_handle, bo_gem->name,
 			    upper_32_bits(bo->offset64),
@@ -1984,17 +1874,6 @@ drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 
 	*tiling_mode = bo_gem->tiling_mode;
 	*swizzle_mode = bo_gem->swizzle_mode;
-	return 0;
-}
-
-int
-drm_bacon_bo_set_softpin_offset(drm_bacon_bo *bo, uint64_t offset)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	bo->offset64 = offset;
-	bo_gem->kflags |= EXEC_OBJECT_PINNED;
-
 	return 0;
 }
 
@@ -2359,13 +2238,6 @@ _drm_bacon_gem_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 			continue;
 		if (_drm_bacon_gem_bo_references(bo_gem->reloc_target_info[i].bo,
 						target_bo))
-			return 1;
-	}
-
-	for (i = 0; i< bo_gem->softpin_target_count; i++) {
-		if (bo_gem->softpin_target[i] == target_bo)
-			return 1;
-		if (_drm_bacon_gem_bo_references(bo_gem->softpin_target[i], target_bo))
 			return 1;
 	}
 

@@ -256,13 +256,6 @@ int drm_bacon_bo_busy(drm_bacon_bo *bo);
 int drm_bacon_bo_madvise(drm_bacon_bo *bo, int madv);
 
 /**
- * Set the offset at which this buffer will be softpinned
- * \param bo Buffer to set the softpin offset for
- * \param offset Softpin offset
- */
-int drm_bacon_bo_set_softpin_offset(drm_bacon_bo *bo, uint64_t offset);
-
-/**
  * Disable buffer reuse for buffers which will be shared in some way,
  * as with scanout buffers. When the buffer reference count goes to
  * zero, it will be freed and not placed in the reuse list.
