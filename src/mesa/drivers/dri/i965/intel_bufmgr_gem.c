@@ -151,7 +151,6 @@ typedef struct _drm_bacon_bufmgr {
 	unsigned int has_bsd : 1;
 	unsigned int has_blt : 1;
 	unsigned int has_llc : 1;
-	unsigned int has_wait_timeout : 1;
 	unsigned int bo_reuse : 1;
 	unsigned int no_exec : 1;
 	unsigned int has_vebox : 1;
@@ -1663,17 +1662,6 @@ drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 	struct drm_i915_gem_wait wait;
 	int ret;
 
-	if (!bufmgr->has_wait_timeout) {
-		DBG("%s:%d: Timed wait is not supported. Falling back to "
-		    "infinite wait\n", __FILE__, __LINE__);
-		if (timeout_ns) {
-			drm_bacon_bo_wait_rendering(bo);
-			return 0;
-		} else {
-			return drm_bacon_bo_busy(bo) ? -ETIME : 0;
-		}
-	}
-
 	memclear(wait);
 	wait.bo_handle = bo_gem->gem_handle;
 	wait.timeout_ns = timeout_ns;
@@ -3061,10 +3049,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	gp.param = I915_PARAM_HAS_EXEC_ASYNC;
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	bufmgr->has_exec_async = ret == 0;
-
-	gp.param = I915_PARAM_HAS_WAIT_TIMEOUT;
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr->has_wait_timeout = ret == 0;
 
 	gp.param = I915_PARAM_HAS_LLC;
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
