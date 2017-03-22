@@ -401,6 +401,7 @@ struct svga_hw_draw_state
    unsigned default_constbuf_size[PIPE_SHADER_TYPES];
 
    boolean rasterizer_discard; /* set if rasterization is disabled */
+   boolean has_backed_views;   /* set if any of the rtv/dsv is a backed surface view */
 };
 
 

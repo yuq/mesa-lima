@@ -174,6 +174,12 @@ emit_fb_vgpu10(struct svga_context *svga)
 
    assert(svga_have_vgpu10(svga));
 
+   /* Reset the has_backed_views flag.
+    * The flag is set in svga_validate_surface_view() if
+    * a backed surface view is used.
+    */
+   svga->state.hw_draw.has_backed_views = FALSE;
+
    /* Setup render targets array.  Note that we loop over the max of the
     * number of previously bound buffers and the new buffers to unbind
     * any previously bound buffers when the new number of buffers is less

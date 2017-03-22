@@ -428,6 +428,10 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
                   "same resource used in shaderResource and renderTarget 0x%x\n",
                   s->handle);
          s = create_backed_surface_view(svga, s);
+
+         if (s)
+            svga->state.hw_draw.has_backed_views = TRUE;
+
          /* s may be null here if the function failed */
          break;
       }
@@ -677,6 +681,10 @@ void
 svga_propagate_rendertargets(struct svga_context *svga)
 {
    unsigned i;
+
+   /* Early exit if there is no backing texture views in use */
+   if (!svga->state.hw_draw.has_backed_views)
+      return;
 
    /* Note that we examine the svga->state.hw_draw.framebuffer surfaces,
     * not the svga->curr.framebuffer surfaces, because it's the former
