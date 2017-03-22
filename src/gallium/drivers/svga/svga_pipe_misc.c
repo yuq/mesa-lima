@@ -128,7 +128,7 @@ svga_set_framebuffer_state(struct pipe_context *pipe,
       struct pipe_surface *s = i < fb->nr_cbufs ? fb->cbufs[i] : NULL;
       if (dst->cbufs[i] && dst->cbufs[i] != s) {
          if (svga_surface_needs_propagation(dst->cbufs[i])) {
-            svga_propagate_surface(svga, dst->cbufs[i]);
+            svga_propagate_surface(svga, dst->cbufs[i], FALSE);
          }
       }
    }

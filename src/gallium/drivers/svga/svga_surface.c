@@ -618,7 +618,8 @@ svga_mark_surfaces_dirty(struct svga_context *svga)
  * pipe is optional context to inline the blit command in.
  */
 void
-svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
+svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf,
+                       boolean reset)
 {
    struct svga_surface *s = svga_surface(surf);
    struct svga_texture *tex = svga_texture(surf->texture);
@@ -629,7 +630,14 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
 
    SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_PROPAGATESURFACE);
 
-   s->dirty = FALSE;
+   /* Reset the dirty flag if specified. This is to ensure that
+    * the dirty flag will not be reset and stay unset when the backing
+    * surface is still being bound and rendered to.
+    * The reset flag will be set to TRUE when the surface is propagated
+    * and will be unbound.
+    */
+   s->dirty = !reset;
+
    ss->texture_timestamp++;
    svga_age_texture_view(tex, surf->u.tex.level);
 
@@ -693,12 +701,12 @@ svga_propagate_rendertargets(struct svga_context *svga)
    for (i = 0; i < svga->state.hw_draw.num_rendertargets; i++) {
       struct pipe_surface *s = svga->state.hw_draw.rtv[i];
       if (s) {
-         svga_propagate_surface(svga, s);
+         svga_propagate_surface(svga, s, FALSE);
       }
    }
 
    if (svga->state.hw_draw.dsv) {
-      svga_propagate_surface(svga, svga->state.hw_draw.dsv);
+      svga_propagate_surface(svga, svga->state.hw_draw.dsv, FALSE);
    }
 }
 

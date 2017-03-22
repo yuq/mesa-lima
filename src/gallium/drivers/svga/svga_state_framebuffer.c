@@ -233,7 +233,8 @@ emit_fb_vgpu10(struct svga_context *svga)
             /* propagate the backed view surface before unbinding it */
             if (hw->cbufs[i] && svga_surface(hw->cbufs[i])->backed) {
                svga_propagate_surface(svga,
-                                      &svga_surface(hw->cbufs[i])->backed->base);
+                                      &svga_surface(hw->cbufs[i])->backed->base,
+                                      TRUE);
             }
             pipe_surface_reference(&hw->cbufs[i], curr->cbufs[i]);
          }
@@ -243,7 +244,8 @@ emit_fb_vgpu10(struct svga_context *svga)
       if (hw->zsbuf != curr->zsbuf) {
          /* propagate the backed view surface before unbinding it */
          if (hw->zsbuf && svga_surface(hw->zsbuf)->backed) {
-            svga_propagate_surface(svga, &svga_surface(hw->zsbuf)->backed->base);
+            svga_propagate_surface(svga, &svga_surface(hw->zsbuf)->backed->base,
+                                   TRUE);
          }
          pipe_surface_reference(&hw->zsbuf, curr->zsbuf);
       }
