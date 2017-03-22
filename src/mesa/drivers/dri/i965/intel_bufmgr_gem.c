@@ -57,6 +57,8 @@
 #define ETIME ETIMEDOUT
 #endif
 #include "libdrm_macros.h"
+#include "main/macros.h"
+#include "util/macros.h"
 #include "util/list.h"
 #include "brw_bufmgr.h"
 #include "intel_bufmgr_priv.h"
@@ -80,9 +82,6 @@
 	if (bufmgr_gem->bufmgr.debug)			\
 		fprintf(stderr, __VA_ARGS__);		\
 } while (0)
-
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#define MAX2(A, B) ((A) > (B) ? (A) : (B))
 
 static inline int
 atomic_add_unless(int *v, int add, int unless)

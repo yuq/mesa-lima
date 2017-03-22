@@ -285,8 +285,4 @@ struct _drm_bacon_context {
 	struct _drm_bacon_bufmgr *bufmgr;
 };
 
-#define ALIGN(value, alignment)	((value + alignment - 1) & ~(alignment - 1))
-#define ROUND_UP_TO(x, y)	(((x) + (y) - 1) / (y) * (y))
-#define ROUND_UP_TO_MB(x)	ROUND_UP_TO((x), 1024*1024)
-
 #endif /* INTEL_BUFMGR_PRIV_H */

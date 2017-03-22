@@ -23,15 +23,7 @@
 #ifndef LIBDRM_LIBDRM_H
 #define LIBDRM_LIBDRM_H
 
-/**
- * Static (compile-time) assertion.
- * Basically, use COND to dimension an array.  If COND is false/zero the
- * array size will be -1 and we'll get a compilation error.
- */
-#define STATIC_ASSERT(COND) \
-   do { \
-      (void) sizeof(char [1 - 2*!(COND)]); \
-   } while (0)
+#include "util/macros.h"
 
 
 #include <sys/mman.h>
