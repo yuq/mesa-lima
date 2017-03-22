@@ -47,7 +47,6 @@
 #endif
 
 #define OSALIGN(RWORD, WIDTH) __declspec(align(WIDTH)) RWORD
-#define THREAD __declspec(thread)
 #define INLINE __forceinline
 #define DEBUGBREAK __debugbreak()
 
@@ -108,7 +107,6 @@ typedef unsigned int    DWORD;
 #define MAX_PATH PATH_MAX
 
 #define OSALIGN(RWORD, WIDTH) RWORD __attribute__((aligned(WIDTH)))
-#define THREAD __thread
 #ifndef INLINE
 #define INLINE __inline
 #endif
@@ -241,6 +239,8 @@ pid_t gettid(void);
 #error Unsupported OS/system.
 
 #endif
+
+#define THREAD thread_local
 
 // Universal types
 typedef uint8_t     KILOBYTE[1024];
