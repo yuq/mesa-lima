@@ -131,7 +131,6 @@ i965_FILES = \
 	intel_buffer_objects.h \
 	intel_buffers.c \
 	intel_buffers.h \
-	intel_bufmgr.c \
 	intel_bufmgr_gem.c \
 	intel_bufmgr_priv.h \
 	intel_chipset.h \
