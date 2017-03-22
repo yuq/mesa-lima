@@ -2585,7 +2585,7 @@
     <field name="Statistics Enable" start="234" end="234" type="bool"/>
     <field name="SIMD8 Dispatch Enable" start="226" end="226" type="bool"/>
     <field name="Vertex Cache Disable" start="225" end="225" type="bool"/>
-    <field name="Function Enable" start="224" end="224" type="bool"/>
+    <field name="Enable" start="224" end="224" type="bool"/>
     <field name="Vertex URB Entry Output Read Offset" start="277" end="282" type="uint"/>
     <field name="Vertex URB Entry Output Length" start="272" end="276" type="uint"/>
     <field name="User Clip Distance Clip Test Enable Bitmask" start="264" end="271" type="uint"/>

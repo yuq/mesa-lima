@@ -1135,7 +1135,7 @@ emit_3dstate_vs(struct anv_pipeline *pipeline)
    assert(anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX));
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
-      vs.FunctionEnable       = true;
+      vs.Enable               = true;
       vs.StatisticsEnable     = true;
       vs.KernelStartPointer   = vs_bin->kernel.offset;
 #if GEN_GEN >= 8

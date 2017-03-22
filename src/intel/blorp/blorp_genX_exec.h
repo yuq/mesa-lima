@@ -432,7 +432,7 @@ blorp_emit_vs_config(struct blorp_batch *batch,
 
    blorp_emit(batch, GENX(3DSTATE_VS), vs) {
       if (vs_prog_data) {
-         vs.FunctionEnable = true;
+         vs.Enable = true;
 
          vs.KernelStartPointer = params->vs_prog_kernel;
 

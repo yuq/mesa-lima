@@ -1391,7 +1391,7 @@
     <field name="Maximum Number of Threads" start="185" end="191" type="uint"/>
     <field name="Statistics Enable" start="170" end="170" type="bool"/>
     <field name="Vertex Cache Disable" start="161" end="161" type="bool"/>
-    <field name="Function Enable" start="160" end="160" type="bool"/>
+    <field name="Enable" start="160" end="160" type="bool"/>
   </instruction>
 
   <instruction name="3DSTATE_WM" bias="2" length="9">
