@@ -1399,7 +1399,7 @@ intel_detect_pipelined_register(struct intel_screen *screen,
                            results, offset*sizeof(uint32_t),
                            I915_GEM_DOMAIN_INSTRUCTION,
                            I915_GEM_DOMAIN_INSTRUCTION);
-   *batch++ = results->offset + offset*sizeof(uint32_t);
+   *batch++ = ((uint32_t) results->offset64) + offset*sizeof(uint32_t);
 
    /* And afterwards clear the register */
    if (reset) {

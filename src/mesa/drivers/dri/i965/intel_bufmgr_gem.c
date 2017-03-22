@@ -977,7 +977,6 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	list_inithead(&bo_gem->vma_list);
 
 	bo_gem->bo.size = open_arg.size;
-	bo_gem->bo.offset = 0;
 	bo_gem->bo.offset64 = 0;
 	bo_gem->bo.virtual = NULL;
 	bo_gem->bo.bufmgr = bufmgr;
@@ -1973,7 +1972,6 @@ drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr *bufmgr)
 			    upper_32_bits(bufmgr->exec2_objects[i].offset),
 			    lower_32_bits(bufmgr->exec2_objects[i].offset));
 			bo->offset64 = bufmgr->exec2_objects[i].offset;
-			bo->offset = bufmgr->exec2_objects[i].offset;
 		}
 	}
 }
@@ -2199,7 +2197,6 @@ drm_bacon_bo_set_softpin_offset(drm_bacon_bo *bo, uint64_t offset)
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	bo->offset64 = offset;
-	bo->offset = offset;
 	bo_gem->kflags |= EXEC_OBJECT_PINNED;
 
 	return 0;

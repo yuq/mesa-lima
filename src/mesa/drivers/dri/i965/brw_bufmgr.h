@@ -63,12 +63,6 @@ struct _drm_bacon_bo {
 	unsigned long align;
 
 	/**
-	 * Deprecated field containing (possibly the low 32-bits of) the last
-	 * seen virtual card address.  Use offset64 instead.
-	 */
-	unsigned long offset;
-
-	/**
 	 * Virtual address for accessing the buffer data.  Only valid while
 	 * mapped.
 	 */
