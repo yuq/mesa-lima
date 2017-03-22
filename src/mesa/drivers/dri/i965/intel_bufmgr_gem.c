@@ -150,12 +150,6 @@ typedef struct _drm_bacon_bufmgr {
 	unsigned int bo_reuse : 1;
 	unsigned int no_exec : 1;
 	unsigned int has_exec_async : 1;
-
-	struct {
-		void *ptr;
-		uint32_t handle;
-	} userptr_active;
-
 } drm_bacon_bufmgr;
 
 typedef struct _drm_bacon_reloc_target_info {
@@ -217,11 +211,6 @@ struct _drm_bacon_bo_gem {
 	void *gtt_virtual;
 	/** WC CPU address for the buffer, saved across map/unmap cycles */
 	void *wc_virtual;
-	/**
-	 * Virtual address of the buffer allocated by user, used for userptr
-	 * objects only.
-	 */
-	void *user_virtual;
 	int map_count;
 	struct list_head vma_list;
 
@@ -259,11 +248,6 @@ struct _drm_bacon_bo_gem {
 	 * processes, so we don't know their state.
 	 */
 	bool idle;
-
-	/**
-	 * Boolean of whether this buffer was allocated with userptr
-	 */
-	bool is_userptr;
 
 	/**
 	 * Size in bytes of this buffer and its relocation descendents.
@@ -788,130 +772,6 @@ drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
 					       tiling, stride, 0);
 }
 
-drm_bacon_bo *
-drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
-			   const char *name,
-			   void *addr,
-			   uint32_t tiling_mode,
-			   uint32_t stride,
-			   unsigned long size,
-			   unsigned long flags)
-{
-	drm_bacon_bo_gem *bo_gem;
-	int ret;
-	struct drm_i915_gem_userptr userptr;
-
-	/* Tiling with userptr surfaces is not supported
-	 * on all hardware so refuse it for time being.
-	 */
-	if (tiling_mode != I915_TILING_NONE)
-		return NULL;
-
-	bo_gem = calloc(1, sizeof(*bo_gem));
-	if (!bo_gem)
-		return NULL;
-
-	p_atomic_set(&bo_gem->refcount, 1);
-	list_inithead(&bo_gem->vma_list);
-
-	bo_gem->bo.size = size;
-
-	memclear(userptr);
-	userptr.user_ptr = (__u64)((unsigned long)addr);
-	userptr.user_size = size;
-	userptr.flags = flags;
-
-	ret = drmIoctl(bufmgr->fd,
-			DRM_IOCTL_I915_GEM_USERPTR,
-			&userptr);
-	if (ret != 0) {
-		DBG("bo_create_userptr: "
-		    "ioctl failed with user ptr %p size 0x%lx, "
-		    "user flags 0x%lx\n", addr, size, flags);
-		free(bo_gem);
-		return NULL;
-	}
-
-	pthread_mutex_lock(&bufmgr->lock);
-
-	bo_gem->gem_handle = userptr.handle;
-	bo_gem->bo.handle = bo_gem->gem_handle;
-	bo_gem->bo.bufmgr    = bufmgr;
-	bo_gem->is_userptr   = true;
-	bo_gem->bo.virtual   = addr;
-	/* Save the address provided by user */
-	bo_gem->user_virtual = addr;
-	bo_gem->tiling_mode  = I915_TILING_NONE;
-	bo_gem->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
-	bo_gem->stride       = 0;
-
-	HASH_ADD(handle_hh, bufmgr->handle_table,
-		 gem_handle, sizeof(bo_gem->gem_handle),
-		 bo_gem);
-
-	bo_gem->name = name;
-	bo_gem->validate_index = -1;
-	bo_gem->used_as_reloc_target = false;
-	bo_gem->has_error = false;
-	bo_gem->reusable = false;
-
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
-	pthread_mutex_unlock(&bufmgr->lock);
-
-	DBG("bo_create_userptr: "
-	    "ptr %p buf %d (%s) size %ldb, stride 0x%x, tile mode %d\n",
-		addr, bo_gem->gem_handle, bo_gem->name,
-		size, stride, tiling_mode);
-
-	return &bo_gem->bo;
-}
-
-bool
-drm_bacon_has_userptr(drm_bacon_bufmgr *bufmgr)
-{
-	int ret;
-	void *ptr;
-	long pgsz;
-	struct drm_i915_gem_userptr userptr;
-
-	pgsz = sysconf(_SC_PAGESIZE);
-	assert(pgsz > 0);
-
-	ret = posix_memalign(&ptr, pgsz, pgsz);
-	if (ret) {
-		DBG("Failed to get a page (%ld) for userptr detection!\n",
-			pgsz);
-		return false;
-	}
-
-	memclear(userptr);
-	userptr.user_ptr = (__u64)(unsigned long)ptr;
-	userptr.user_size = pgsz;
-
-retry:
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_USERPTR, &userptr);
-	if (ret) {
-		if (errno == ENODEV && userptr.flags == 0) {
-			userptr.flags = I915_USERPTR_UNSYNCHRONIZED;
-			goto retry;
-		}
-		free(ptr);
-		return false;
-	}
-
-	/* We don't release the userptr bo here as we want to keep the
-	 * kernel mm tracking alive for our lifetime. The first time we
-	 * create a userptr object the kernel has to install a mmu_notifer
-	 * which is a heavyweight operation (e.g. it requires taking all
-	 * mm_locks and stop_machine()).
-	 */
-
-	bufmgr->userptr_active.ptr = ptr;
-	bufmgr->userptr_active.handle = userptr.handle;
-
-	return true;
-}
-
 /**
  * Returns a drm_bacon_bo wrapping the given buffer object handle.
  *
@@ -1278,12 +1138,6 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
-	if (bo_gem->is_userptr) {
-		/* Return the same user ptr */
-		bo->virtual = bo_gem->user_virtual;
-		return 0;
-	}
-
 	pthread_mutex_lock(&bufmgr->lock);
 
 	if (bo_gem->map_count++ == 0)
@@ -1350,9 +1204,6 @@ map_gtt(drm_bacon_bo *bo)
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
-
-	if (bo_gem->is_userptr)
-		return -EINVAL;
 
 	if (bo_gem->map_count++ == 0)
 		drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
@@ -1508,9 +1359,6 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 	if (bo == NULL)
 		return 0;
 
-	if (bo_gem->is_userptr)
-		return 0;
-
 	pthread_mutex_lock(&bufmgr->lock);
 
 	if (bo_gem->map_count <= 0) {
@@ -1563,9 +1411,6 @@ drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 	struct drm_i915_gem_pwrite pwrite;
 	int ret;
 
-	if (bo_gem->is_userptr)
-		return -EINVAL;
-
 	memclear(pwrite);
 	pwrite.handle = bo_gem->gem_handle;
 	pwrite.offset = offset;
@@ -1592,9 +1437,6 @@ drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pread pread;
 	int ret;
-
-	if (bo_gem->is_userptr)
-		return -EINVAL;
 
 	memclear(pread);
 	pread.handle = bo_gem->gem_handle;
@@ -1699,16 +1541,13 @@ drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 static void
 drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 {
-	struct drm_gem_close close_bo;
-	int i, ret;
-
 	free(bufmgr->exec2_objects);
 	free(bufmgr->exec_bos);
 
 	pthread_mutex_destroy(&bufmgr->lock);
 
 	/* Free any cached buffer objects we were going to reuse */
-	for (i = 0; i < bufmgr->num_buckets; i++) {
+	for (int i = 0; i < bufmgr->num_buckets; i++) {
 		struct drm_bacon_gem_bo_bucket *bucket =
 		    &bufmgr->cache_bucket[i];
 		drm_bacon_bo_gem *bo_gem;
@@ -1720,18 +1559,6 @@ drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 
 			drm_bacon_gem_bo_free(&bo_gem->bo);
 		}
-	}
-
-	/* Release userptr bo kept hanging around for optimisation. */
-	if (bufmgr->userptr_active.ptr) {
-		memclear(close_bo);
-		close_bo.handle = bufmgr->userptr_active.handle;
-		ret = drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_CLOSE, &close_bo);
-		free(bufmgr->userptr_active.ptr);
-		if (ret)
-			fprintf(stderr,
-				"Failed to release test userptr object! (%d) "
-				"i915 kernel driver may not be sane!\n", errno);
 	}
 
 	free(bufmgr);
@@ -2134,12 +1961,6 @@ drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
-
-	/* Tiling with userptr surfaces is not supported
-	 * on all hardware so refuse it for time being.
-	 */
-	if (bo_gem->is_userptr)
-		return -EINVAL;
 
 	/* Linear buffers have no stride. By ensuring that we only ever use
 	 * stride 0 with linear buffers, we simplify our code.
@@ -2758,9 +2579,6 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 	if (bo_gem->gtt_virtual)
 		return bo_gem->gtt_virtual;
 
-	if (bo_gem->is_userptr)
-		return NULL;
-
 	pthread_mutex_lock(&bufmgr->lock);
 	if (bo_gem->gtt_virtual == NULL) {
 		struct drm_i915_gem_mmap_gtt mmap_arg;
@@ -2806,11 +2624,6 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 	if (bo_gem->mem_virtual)
 		return bo_gem->mem_virtual;
 
-	if (bo_gem->is_userptr) {
-		/* Return the same user ptr */
-		return bo_gem->user_virtual;
-	}
-
 	pthread_mutex_lock(&bufmgr->lock);
 	if (!bo_gem->mem_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
@@ -2849,9 +2662,6 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 
 	if (bo_gem->wc_virtual)
 		return bo_gem->wc_virtual;
-
-	if (bo_gem->is_userptr)
-		return NULL;
 
 	pthread_mutex_lock(&bufmgr->lock);
 	if (!bo_gem->wc_virtual) {

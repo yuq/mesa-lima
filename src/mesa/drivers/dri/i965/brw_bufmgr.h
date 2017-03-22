@@ -112,19 +112,6 @@ drm_bacon_bo *drm_bacon_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr,
 					    unsigned long size,
 					    unsigned int alignment);
 
-bool drm_bacon_has_userptr(drm_bacon_bufmgr *bufmgr);
-
-/**
- * Allocate a buffer object from an existing user accessible
- * address malloc'd with the provided size.
- * Alignment is used when mapping to the gtt.
- * Flags may be I915_VMAP_READ_ONLY or I915_USERPTR_UNSYNCHRONIZED
- */
-drm_bacon_bo *drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
-					const char *name,
-					void *addr, uint32_t tiling_mode,
-					uint32_t stride, unsigned long size,
-					unsigned long flags);
 /**
  * Allocate a tiled buffer object.
  *
