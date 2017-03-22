@@ -2996,6 +2996,26 @@ validate_fragment_flat_interpolation_input(struct _mesa_glsl_parse_state *state,
       _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
                        "a double, then it must be qualified with 'flat'");
    }
+
+   /* Bindless sampler/image fragment inputs must be qualified with 'flat'.
+    *
+    * From section 4.3.4 of the ARB_bindless_texture spec:
+    *
+    *    "(modify last paragraph, p. 35, allowing samplers and images as
+    *     fragment shader inputs) ... Fragment inputs can only be signed and
+    *     unsigned integers and integer vectors, floating point scalars,
+    *     floating-point vectors, matrices, sampler and image types, or arrays
+    *     or structures of these.  Fragment shader inputs that are signed or
+    *     unsigned integers, integer vectors, or any double-precision floating-
+    *     point type, or any sampler or image type must be qualified with the
+    *     interpolation qualifier "flat"."
+    */
+   if (state->has_bindless()
+       && (var_type->contains_sampler() || var_type->contains_image())) {
+      _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
+                       "a bindless sampler (or image), then it must be "
+                       "qualified with 'flat'");
+   }
 }
 
 static void
