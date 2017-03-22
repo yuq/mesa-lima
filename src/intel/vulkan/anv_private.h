@@ -1797,6 +1797,7 @@ struct anv_pipeline {
    uint32_t                                     dynamic_state_mask;
    struct anv_dynamic_state                     dynamic_state;
 
+   struct anv_subpass *                         subpass;
    struct anv_pipeline_layout *                 layout;
 
    bool                                         needs_data_cache;

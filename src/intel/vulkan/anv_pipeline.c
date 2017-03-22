@@ -279,7 +279,6 @@ populate_wm_prog_key(const struct anv_pipeline *pipeline,
                      struct brw_wm_prog_key *key)
 {
    const struct gen_device_info *devinfo = &pipeline->device->info;
-   ANV_FROM_HANDLE(anv_render_pass, render_pass, info->renderPass);
 
    memset(key, 0, sizeof(*key));
 
@@ -297,8 +296,7 @@ populate_wm_prog_key(const struct anv_pipeline *pipeline,
    /* XXX Vulkan doesn't appear to specify */
    key->clamp_fragment_color = false;
 
-   key->nr_color_regions =
-      render_pass->subpasses[info->subpass].color_count;
+   key->nr_color_regions = pipeline->subpass->color_count;
 
    key->replicate_alpha = key->nr_color_regions > 1 &&
                           info->pMultisampleState &&
@@ -1028,8 +1026,7 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
                        const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
    anv_cmd_dirty_mask_t states = ANV_CMD_DIRTY_DYNAMIC_ALL;
-   ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
-   struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
+   struct anv_subpass *subpass = pipeline->subpass;
 
    pipeline->dynamic_state = default_dynamic_state;
 
@@ -1232,6 +1229,11 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       alloc = &device->alloc;
 
    pipeline->device = device;
+
+   ANV_FROM_HANDLE(anv_render_pass, render_pass, pCreateInfo->renderPass);
+   assert(pCreateInfo->subpass < render_pass->subpass_count);
+   pipeline->subpass = &render_pass->subpasses[pCreateInfo->subpass];
+
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
 
    result = anv_reloc_list_init(&pipeline->batch_relocs, alloc);
