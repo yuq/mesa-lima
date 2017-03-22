@@ -150,6 +150,9 @@ VkResult genX(GetQueryPoolResults)(
           pool->type == VK_QUERY_TYPE_PIPELINE_STATISTICS ||
           pool->type == VK_QUERY_TYPE_TIMESTAMP);
 
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
    if (pData == NULL)
       return VK_SUCCESS;
 

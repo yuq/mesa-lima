@@ -1273,6 +1273,9 @@ VkResult anv_QueueSubmit(
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
    struct anv_device *device = queue->device;
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
    VkResult result = VK_SUCCESS;
 
    /* We lock around QueueSubmit for three main reasons:
@@ -1371,6 +1374,9 @@ VkResult anv_DeviceWaitIdle(
     VkDevice                                    _device)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
    struct anv_batch batch;
 
    uint32_t cmds[8];
@@ -1676,11 +1682,15 @@ VkResult anv_BindBufferMemory(
 }
 
 VkResult anv_QueueBindSparse(
-    VkQueue                                     queue,
+    VkQueue                                     _queue,
     uint32_t                                    bindInfoCount,
     const VkBindSparseInfo*                     pBindInfo,
     VkFence                                     fence)
 {
+   ANV_FROM_HANDLE(anv_queue, queue, _queue);
+   if (unlikely(queue->device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
    return vk_error(VK_ERROR_FEATURE_NOT_PRESENT);
 }
 
@@ -1788,6 +1798,10 @@ VkResult anv_GetFenceStatus(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
+
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
    int64_t t = 0;
    int ret;
 
@@ -1826,6 +1840,9 @@ VkResult anv_WaitForFences(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    int ret;
+
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
 
    /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and is supposed
     * to block indefinitely timeouts <= 0.  Unfortunately, this was broken
@@ -2017,6 +2034,9 @@ VkResult anv_GetEventStatus(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_event, event, _event);
+
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
 
    if (!device->info.has_llc) {
       /* Invalidate read cache before reading event written by GPU. */
