@@ -85,6 +85,7 @@ F: src/gallium/targets/
 
 AUTOCONF BUILD
 R: Emil Velikov <emil.l.velikov@gmail.com>
+F: autogen.sh
 F: configure.ac
 F: */Automake.inc
 F: */Makefile.*am
