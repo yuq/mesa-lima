@@ -62,7 +62,6 @@
 #include "util/macros.h"
 #include "util/list.h"
 #include "brw_bufmgr.h"
-#include "intel_bufmgr_priv.h"
 #include "intel_chipset.h"
 #include "string.h"
 
@@ -119,9 +118,7 @@ struct drm_bacon_gem_bo_bucket {
 	unsigned long size;
 };
 
-typedef struct _drm_bacon_bufmgr_gem {
-	drm_bacon_bufmgr bufmgr;
-
+typedef struct _drm_bacon_bufmgr {
 	int refcount;
 
 	int fd;
@@ -165,7 +162,7 @@ typedef struct _drm_bacon_bufmgr_gem {
 		uint32_t handle;
 	} userptr_active;
 
-} drm_bacon_bufmgr_gem;
+} drm_bacon_bufmgr;
 
 typedef struct _drm_bacon_reloc_target_info {
 	drm_bacon_bo *bo;
@@ -308,7 +305,7 @@ static inline drm_bacon_bo_gem *to_bo_gem(drm_bacon_bo *bo)
 }
 
 static unsigned long
-drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr_gem *bufmgr_gem, unsigned long size,
+drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr *bufmgr, unsigned long size,
 			   uint32_t *tiling_mode)
 {
 	if (*tiling_mode == I915_TILING_NONE)
@@ -324,7 +321,7 @@ drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr_gem *bufmgr_gem, unsigned long size,
  * change.
  */
 static unsigned long
-drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr_gem *bufmgr_gem,
+drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr *bufmgr,
 			    unsigned long pitch, uint32_t *tiling_mode)
 {
 	unsigned long tile_width;
@@ -345,14 +342,14 @@ drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr_gem *bufmgr_gem,
 }
 
 static struct drm_bacon_gem_bo_bucket *
-drm_bacon_gem_bo_bucket_for_size(drm_bacon_bufmgr_gem *bufmgr_gem,
+drm_bacon_gem_bo_bucket_for_size(drm_bacon_bufmgr *bufmgr,
 				 unsigned long size)
 {
 	int i;
 
-	for (i = 0; i < bufmgr_gem->num_buckets; i++) {
+	for (i = 0; i < bufmgr->num_buckets; i++) {
 		struct drm_bacon_gem_bo_bucket *bucket =
-		    &bufmgr_gem->cache_bucket[i];
+		    &bufmgr->cache_bucket[i];
 		if (bucket->size >= size) {
 			return bucket;
 		}
@@ -362,12 +359,12 @@ drm_bacon_gem_bo_bucket_for_size(drm_bacon_bufmgr_gem *bufmgr_gem,
 }
 
 static void
-drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr_gem *bufmgr_gem)
+drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr *bufmgr)
 {
 	int i, j;
 
-	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_bacon_bo *bo = bufmgr_gem->exec_bos[i];
+	for (i = 0; i < bufmgr->exec_count; i++) {
+		drm_bacon_bo *bo = bufmgr->exec_bos[i];
 		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 		if (bo_gem->relocs == NULL && bo_gem->softpin_target == NULL) {
@@ -426,7 +423,7 @@ drm_bacon_bo_reference(drm_bacon_bo *bo)
 static void
 drm_bacon_add_validate_buffer2(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
 	int index;
 
@@ -434,38 +431,38 @@ drm_bacon_add_validate_buffer2(drm_bacon_bo *bo)
 		return;
 
 	/* Extend the array of validation entries as necessary. */
-	if (bufmgr_gem->exec_count == bufmgr_gem->exec_size) {
-		int new_size = bufmgr_gem->exec_size * 2;
+	if (bufmgr->exec_count == bufmgr->exec_size) {
+		int new_size = bufmgr->exec_size * 2;
 
 		if (new_size == 0)
 			new_size = 5;
 
-		bufmgr_gem->exec2_objects =
-			realloc(bufmgr_gem->exec2_objects,
-				sizeof(*bufmgr_gem->exec2_objects) * new_size);
-		bufmgr_gem->exec_bos =
-			realloc(bufmgr_gem->exec_bos,
-				sizeof(*bufmgr_gem->exec_bos) * new_size);
-		bufmgr_gem->exec_size = new_size;
+		bufmgr->exec2_objects =
+			realloc(bufmgr->exec2_objects,
+				sizeof(*bufmgr->exec2_objects) * new_size);
+		bufmgr->exec_bos =
+			realloc(bufmgr->exec_bos,
+				sizeof(*bufmgr->exec_bos) * new_size);
+		bufmgr->exec_size = new_size;
 	}
 
-	index = bufmgr_gem->exec_count;
+	index = bufmgr->exec_count;
 	bo_gem->validate_index = index;
 	/* Fill in array entry */
-	bufmgr_gem->exec2_objects[index].handle = bo_gem->gem_handle;
-	bufmgr_gem->exec2_objects[index].relocation_count = bo_gem->reloc_count;
-	bufmgr_gem->exec2_objects[index].relocs_ptr = (uintptr_t)bo_gem->relocs;
-	bufmgr_gem->exec2_objects[index].alignment = bo->align;
-	bufmgr_gem->exec2_objects[index].offset = bo->offset64;
-	bufmgr_gem->exec2_objects[index].flags = bo_gem->kflags;
-	bufmgr_gem->exec2_objects[index].rsvd1 = 0;
-	bufmgr_gem->exec2_objects[index].rsvd2 = 0;
-	bufmgr_gem->exec_bos[index] = bo;
-	bufmgr_gem->exec_count++;
+	bufmgr->exec2_objects[index].handle = bo_gem->gem_handle;
+	bufmgr->exec2_objects[index].relocation_count = bo_gem->reloc_count;
+	bufmgr->exec2_objects[index].relocs_ptr = (uintptr_t)bo_gem->relocs;
+	bufmgr->exec2_objects[index].alignment = bo->align;
+	bufmgr->exec2_objects[index].offset = bo->offset64;
+	bufmgr->exec2_objects[index].flags = bo_gem->kflags;
+	bufmgr->exec2_objects[index].rsvd1 = 0;
+	bufmgr->exec2_objects[index].rsvd2 = 0;
+	bufmgr->exec_bos[index] = bo;
+	bufmgr->exec_count++;
 }
 
 static void
-drm_bacon_bo_gem_set_in_aperture_size(drm_bacon_bufmgr_gem *bufmgr_gem,
+drm_bacon_bo_gem_set_in_aperture_size(drm_bacon_bufmgr *bufmgr,
 				      drm_bacon_bo_gem *bo_gem,
 				      unsigned int alignment)
 {
@@ -488,8 +485,8 @@ static int
 drm_bacon_setup_reloc_list(drm_bacon_bo *bo)
 {
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
-	unsigned int max_relocs = bufmgr_gem->max_relocs;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	unsigned int max_relocs = bufmgr->max_relocs;
 
 	if (bo->size / 4 < max_relocs)
 		max_relocs = bo->size / 4;
@@ -516,7 +513,7 @@ drm_bacon_setup_reloc_list(drm_bacon_bo *bo)
 int
 drm_bacon_bo_busy(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_busy busy;
 	int ret;
@@ -527,7 +524,7 @@ drm_bacon_bo_busy(drm_bacon_bo *bo)
 	memclear(busy);
 	busy.handle = bo_gem->gem_handle;
 
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_BUSY, &busy);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_BUSY, &busy);
 	if (ret == 0) {
 		bo_gem->idle = !busy.busy;
 		return busy.busy;
@@ -538,7 +535,7 @@ drm_bacon_bo_busy(drm_bacon_bo *bo)
 }
 
 static int
-drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr_gem *bufmgr_gem,
+drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr *bufmgr,
 				  drm_bacon_bo_gem *bo_gem, int state)
 {
 	struct drm_i915_gem_madvise madv;
@@ -547,7 +544,7 @@ drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr_gem *bufmgr_gem,
 	madv.handle = bo_gem->gem_handle;
 	madv.madv = state;
 	madv.retained = 1;
-	drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_MADVISE, &madv);
+	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MADVISE, &madv);
 
 	return madv.retained;
 }
@@ -555,15 +552,14 @@ drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr_gem *bufmgr_gem,
 int
 drm_bacon_bo_madvise(drm_bacon_bo *bo, int madv)
 {
-	return drm_bacon_gem_bo_madvise_internal
-		((drm_bacon_bufmgr_gem *) bo->bufmgr,
-		 (drm_bacon_bo_gem *) bo,
-		 madv);
+	return drm_bacon_gem_bo_madvise_internal(bo->bufmgr,
+						 (drm_bacon_bo_gem *) bo,
+						 madv);
 }
 
 /* drop the oldest entries that have been purged by the kernel */
 static void
-drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr_gem *bufmgr_gem,
+drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr *bufmgr,
 				    struct drm_bacon_gem_bo_bucket *bucket)
 {
 	while (!list_empty(&bucket->head)) {
@@ -572,7 +568,7 @@ drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr_gem *bufmgr_gem,
 		bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
 				    bucket->head.next, head);
 		if (drm_bacon_gem_bo_madvise_internal
-		    (bufmgr_gem, bo_gem, I915_MADV_DONTNEED))
+		    (bufmgr, bo_gem, I915_MADV_DONTNEED))
 			break;
 
 		list_del(&bo_gem->head);
@@ -589,7 +585,6 @@ drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 				unsigned long stride,
 				unsigned int alignment)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	drm_bacon_bo_gem *bo_gem;
 	unsigned int page_size = getpagesize();
 	int ret;
@@ -602,7 +597,7 @@ drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 		for_render = true;
 
 	/* Round the allocated size up to a power of two number of pages. */
-	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr_gem, size);
+	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr, size);
 
 	/* If we don't have caching at this size, don't actually round the
 	 * allocation up.
@@ -615,7 +610,7 @@ drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 		bo_size = bucket->size;
 	}
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 	/* Get a buffer out of the cache if available */
 retry:
 	alloc_from_cache = false;
@@ -649,9 +644,9 @@ retry:
 
 		if (alloc_from_cache) {
 			if (!drm_bacon_gem_bo_madvise_internal
-			    (bufmgr_gem, bo_gem, I915_MADV_WILLNEED)) {
+			    (bufmgr, bo_gem, I915_MADV_WILLNEED)) {
 				drm_bacon_gem_bo_free(&bo_gem->bo);
-				drm_bacon_gem_bo_cache_purge_bucket(bufmgr_gem,
+				drm_bacon_gem_bo_cache_purge_bucket(bufmgr,
 								    bucket);
 				goto retry;
 			}
@@ -681,7 +676,7 @@ retry:
 		memclear(create);
 		create.size = bo_size;
 
-		ret = drmIoctl(bufmgr_gem->fd,
+		ret = drmIoctl(bufmgr->fd,
 			       DRM_IOCTL_I915_GEM_CREATE,
 			       &create);
 		if (ret != 0) {
@@ -690,7 +685,7 @@ retry:
 		}
 
 		bo_gem->gem_handle = create.handle;
-		HASH_ADD(handle_hh, bufmgr_gem->handle_table,
+		HASH_ADD(handle_hh, bufmgr->handle_table,
 			 gem_handle, sizeof(bo_gem->gem_handle),
 			 bo_gem);
 
@@ -715,8 +710,8 @@ retry:
 	bo_gem->has_error = false;
 	bo_gem->reusable = true;
 
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, alignment);
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, alignment);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	DBG("bo_create: buf %d (%s) %ldb\n",
 	    bo_gem->gem_handle, bo_gem->name, size);
@@ -726,7 +721,7 @@ retry:
 err_free:
 	drm_bacon_gem_bo_free(&bo_gem->bo);
 err:
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
 }
 
@@ -757,7 +752,6 @@ drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
 			 int x, int y, int cpp, uint32_t *tiling_mode,
 			 unsigned long *pitch, unsigned long flags)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 	unsigned long size, stride;
 	uint32_t tiling;
 
@@ -787,9 +781,9 @@ drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
 		aligned_y = ALIGN(y, height_alignment);
 
 		stride = x * cpp;
-		stride = drm_bacon_gem_bo_tile_pitch(bufmgr_gem, stride, tiling_mode);
+		stride = drm_bacon_gem_bo_tile_pitch(bufmgr, stride, tiling_mode);
 		size = stride * aligned_y;
-		size = drm_bacon_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
+		size = drm_bacon_gem_bo_tile_size(bufmgr, size, tiling_mode);
 	} while (*tiling_mode != tiling);
 	*pitch = stride;
 
@@ -809,7 +803,6 @@ drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 			   unsigned long size,
 			   unsigned long flags)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	drm_bacon_bo_gem *bo_gem;
 	int ret;
 	struct drm_i915_gem_userptr userptr;
@@ -834,7 +827,7 @@ drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 	userptr.user_size = size;
 	userptr.flags = flags;
 
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 			DRM_IOCTL_I915_GEM_USERPTR,
 			&userptr);
 	if (ret != 0) {
@@ -845,7 +838,7 @@ drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 		return NULL;
 	}
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 
 	bo_gem->gem_handle = userptr.handle;
 	bo_gem->bo.handle = bo_gem->gem_handle;
@@ -858,7 +851,7 @@ drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 	bo_gem->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
 	bo_gem->stride       = 0;
 
-	HASH_ADD(handle_hh, bufmgr_gem->handle_table,
+	HASH_ADD(handle_hh, bufmgr->handle_table,
 		 gem_handle, sizeof(bo_gem->gem_handle),
 		 bo_gem);
 
@@ -868,8 +861,8 @@ drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 	bo_gem->has_error = false;
 	bo_gem->reusable = false;
 
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	DBG("bo_create_userptr: "
 	    "ptr %p buf %d (%s) size %ldb, stride 0x%x, tile mode %d\n",
@@ -882,7 +875,6 @@ drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 bool
 drm_bacon_has_userptr(drm_bacon_bufmgr *bufmgr)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	int ret;
 	void *ptr;
 	long pgsz;
@@ -903,7 +895,7 @@ drm_bacon_has_userptr(drm_bacon_bufmgr *bufmgr)
 	userptr.user_size = pgsz;
 
 retry:
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_USERPTR, &userptr);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_USERPTR, &userptr);
 	if (ret) {
 		if (errno == ENODEV && userptr.flags == 0) {
 			userptr.flags = I915_USERPTR_UNSYNCHRONIZED;
@@ -920,8 +912,8 @@ retry:
 	 * mm_locks and stop_machine()).
 	 */
 
-	bufmgr_gem->userptr_active.ptr = ptr;
-	bufmgr_gem->userptr_active.handle = userptr.handle;
+	bufmgr->userptr_active.ptr = ptr;
+	bufmgr->userptr_active.handle = userptr.handle;
 
 	return true;
 }
@@ -937,7 +929,6 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 				  const char *name,
 				  unsigned int handle)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	drm_bacon_bo_gem *bo_gem;
 	int ret;
 	struct drm_gem_open open_arg;
@@ -949,8 +940,8 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	 * alternating names for the front/back buffer a linear search
 	 * provides a sufficiently fast match.
 	 */
-	pthread_mutex_lock(&bufmgr_gem->lock);
-	HASH_FIND(name_hh, bufmgr_gem->name_table,
+	pthread_mutex_lock(&bufmgr->lock);
+	HASH_FIND(name_hh, bufmgr->name_table,
 		  &handle, sizeof(handle), bo_gem);
 	if (bo_gem) {
 		drm_bacon_bo_reference(&bo_gem->bo);
@@ -959,7 +950,7 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 
 	memclear(open_arg);
 	open_arg.name = handle;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_GEM_OPEN,
 		       &open_arg);
 	if (ret != 0) {
@@ -972,7 +963,7 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
          * object from the kernel before by looking through the list
          * again for a matching gem_handle
          */
-	HASH_FIND(handle_hh, bufmgr_gem->handle_table,
+	HASH_FIND(handle_hh, bufmgr->handle_table,
 		  &open_arg.handle, sizeof(open_arg.handle), bo_gem);
 	if (bo_gem) {
 		drm_bacon_bo_reference(&bo_gem->bo);
@@ -998,14 +989,14 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	bo_gem->global_name = handle;
 	bo_gem->reusable = false;
 
-	HASH_ADD(handle_hh, bufmgr_gem->handle_table,
+	HASH_ADD(handle_hh, bufmgr->handle_table,
 		 gem_handle, sizeof(bo_gem->gem_handle), bo_gem);
-	HASH_ADD(name_hh, bufmgr_gem->name_table,
+	HASH_ADD(name_hh, bufmgr->name_table,
 		 global_name, sizeof(bo_gem->global_name), bo_gem);
 
 	memclear(get_tiling);
 	get_tiling.handle = bo_gem->gem_handle;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_GET_TILING,
 		       &get_tiling);
 	if (ret != 0)
@@ -1014,23 +1005,23 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	bo_gem->tiling_mode = get_tiling.tiling_mode;
 	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
 	DBG("bo_create_from_handle: %d (%s)\n", handle, bo_gem->name);
 
 out:
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 	return &bo_gem->bo;
 
 err_unref:
 	drm_bacon_gem_bo_free(&bo_gem->bo);
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
 }
 
 static void
 drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_gem_close close;
 	int ret;
@@ -1039,26 +1030,26 @@ drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 	if (bo_gem->mem_virtual) {
 		VG(VALGRIND_FREELIKE_BLOCK(bo_gem->mem_virtual, 0));
 		drm_munmap(bo_gem->mem_virtual, bo_gem->bo.size);
-		bufmgr_gem->vma_count--;
+		bufmgr->vma_count--;
 	}
 	if (bo_gem->wc_virtual) {
 		VG(VALGRIND_FREELIKE_BLOCK(bo_gem->wc_virtual, 0));
 		drm_munmap(bo_gem->wc_virtual, bo_gem->bo.size);
-		bufmgr_gem->vma_count--;
+		bufmgr->vma_count--;
 	}
 	if (bo_gem->gtt_virtual) {
 		drm_munmap(bo_gem->gtt_virtual, bo_gem->bo.size);
-		bufmgr_gem->vma_count--;
+		bufmgr->vma_count--;
 	}
 
 	if (bo_gem->global_name)
-		HASH_DELETE(name_hh, bufmgr_gem->name_table, bo_gem);
-	HASH_DELETE(handle_hh, bufmgr_gem->handle_table, bo_gem);
+		HASH_DELETE(name_hh, bufmgr->name_table, bo_gem);
+	HASH_DELETE(handle_hh, bufmgr->handle_table, bo_gem);
 
 	/* Close this object */
 	memclear(close);
 	close.handle = bo_gem->gem_handle;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_GEM_CLOSE, &close);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_CLOSE, &close);
 	if (ret != 0) {
 		DBG("DRM_IOCTL_GEM_CLOSE %d failed (%s): %s\n",
 		    bo_gem->gem_handle, bo_gem->name, strerror(errno));
@@ -1085,16 +1076,16 @@ drm_bacon_gem_bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
 
 /** Frees all cached buffers significantly older than @time. */
 static void
-drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr_gem *bufmgr_gem, time_t time)
+drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
 {
 	int i;
 
-	if (bufmgr_gem->time == time)
+	if (bufmgr->time == time)
 		return;
 
-	for (i = 0; i < bufmgr_gem->num_buckets; i++) {
+	for (i = 0; i < bufmgr->num_buckets; i++) {
 		struct drm_bacon_gem_bo_bucket *bucket =
-		    &bufmgr_gem->cache_bucket[i];
+		    &bufmgr->cache_bucket[i];
 
 		while (!list_empty(&bucket->head)) {
 			drm_bacon_bo_gem *bo_gem;
@@ -1110,29 +1101,29 @@ drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr_gem *bufmgr_gem, time_t time)
 		}
 	}
 
-	bufmgr_gem->time = time;
+	bufmgr->time = time;
 }
 
-static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr_gem *bufmgr_gem)
+static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr *bufmgr)
 {
 	int limit;
 
 	DBG("%s: cached=%d, open=%d, limit=%d\n", __FUNCTION__,
-	    bufmgr_gem->vma_count, bufmgr_gem->vma_open, bufmgr_gem->vma_max);
+	    bufmgr->vma_count, bufmgr->vma_open, bufmgr->vma_max);
 
-	if (bufmgr_gem->vma_max < 0)
+	if (bufmgr->vma_max < 0)
 		return;
 
 	/* We may need to evict a few entries in order to create new mmaps */
-	limit = bufmgr_gem->vma_max - 2*bufmgr_gem->vma_open;
+	limit = bufmgr->vma_max - 2*bufmgr->vma_open;
 	if (limit < 0)
 		limit = 0;
 
-	while (bufmgr_gem->vma_count > limit) {
+	while (bufmgr->vma_count > limit) {
 		drm_bacon_bo_gem *bo_gem;
 
 		bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
-				    bufmgr_gem->vma_cache.next,
+				    bufmgr->vma_cache.next,
 				    vma_list);
 		assert(bo_gem->map_count == 0);
 		list_delinit(&bo_gem->vma_list);
@@ -1140,53 +1131,53 @@ static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr_gem *bufmgr_gem)
 		if (bo_gem->mem_virtual) {
 			drm_munmap(bo_gem->mem_virtual, bo_gem->bo.size);
 			bo_gem->mem_virtual = NULL;
-			bufmgr_gem->vma_count--;
+			bufmgr->vma_count--;
 		}
 		if (bo_gem->wc_virtual) {
 			drm_munmap(bo_gem->wc_virtual, bo_gem->bo.size);
 			bo_gem->wc_virtual = NULL;
-			bufmgr_gem->vma_count--;
+			bufmgr->vma_count--;
 		}
 		if (bo_gem->gtt_virtual) {
 			drm_munmap(bo_gem->gtt_virtual, bo_gem->bo.size);
 			bo_gem->gtt_virtual = NULL;
-			bufmgr_gem->vma_count--;
+			bufmgr->vma_count--;
 		}
 	}
 }
 
-static void drm_bacon_gem_bo_close_vma(drm_bacon_bufmgr_gem *bufmgr_gem,
+static void drm_bacon_gem_bo_close_vma(drm_bacon_bufmgr *bufmgr,
 				       drm_bacon_bo_gem *bo_gem)
 {
-	bufmgr_gem->vma_open--;
-	list_addtail(&bo_gem->vma_list, &bufmgr_gem->vma_cache);
+	bufmgr->vma_open--;
+	list_addtail(&bo_gem->vma_list, &bufmgr->vma_cache);
 	if (bo_gem->mem_virtual)
-		bufmgr_gem->vma_count++;
+		bufmgr->vma_count++;
 	if (bo_gem->wc_virtual)
-		bufmgr_gem->vma_count++;
+		bufmgr->vma_count++;
 	if (bo_gem->gtt_virtual)
-		bufmgr_gem->vma_count++;
-	drm_bacon_gem_bo_purge_vma_cache(bufmgr_gem);
+		bufmgr->vma_count++;
+	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
 }
 
-static void drm_bacon_gem_bo_open_vma(drm_bacon_bufmgr_gem *bufmgr_gem,
+static void drm_bacon_gem_bo_open_vma(drm_bacon_bufmgr *bufmgr,
 				      drm_bacon_bo_gem *bo_gem)
 {
-	bufmgr_gem->vma_open++;
+	bufmgr->vma_open++;
 	list_del(&bo_gem->vma_list);
 	if (bo_gem->mem_virtual)
-		bufmgr_gem->vma_count--;
+		bufmgr->vma_count--;
 	if (bo_gem->wc_virtual)
-		bufmgr_gem->vma_count--;
+		bufmgr->vma_count--;
 	if (bo_gem->gtt_virtual)
-		bufmgr_gem->vma_count--;
-	drm_bacon_gem_bo_purge_vma_cache(bufmgr_gem);
+		bufmgr->vma_count--;
+	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
 }
 
 static void
 drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_bacon_gem_bo_bucket *bucket;
 	int i;
@@ -1229,14 +1220,14 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	if (bo_gem->map_count) {
 		DBG("bo freed with non-zero map-count %d\n", bo_gem->map_count);
 		bo_gem->map_count = 0;
-		drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
 		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	}
 
-	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr_gem, bo->size);
+	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr, bo->size);
 	/* Put the buffer into our internal cache for reuse if we can. */
-	if (bufmgr_gem->bo_reuse && bo_gem->reusable && bucket != NULL &&
-	    drm_bacon_gem_bo_madvise_internal(bufmgr_gem, bo_gem,
+	if (bufmgr->bo_reuse && bo_gem->reusable && bucket != NULL &&
+	    drm_bacon_gem_bo_madvise_internal(bufmgr, bo_gem,
 					      I915_MADV_DONTNEED)) {
 		bo_gem->free_time = time;
 
@@ -1270,27 +1261,26 @@ drm_bacon_bo_unreference(drm_bacon_bo *bo)
 	assert(p_atomic_read(&bo_gem->refcount) > 0);
 
 	if (atomic_add_unless(&bo_gem->refcount, -1, 1)) {
-		drm_bacon_bufmgr_gem *bufmgr_gem =
-		    (drm_bacon_bufmgr_gem *) bo->bufmgr;
+		drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 		struct timespec time;
 
 		clock_gettime(CLOCK_MONOTONIC, &time);
 
-		pthread_mutex_lock(&bufmgr_gem->lock);
+		pthread_mutex_lock(&bufmgr->lock);
 
 		if (p_atomic_dec_zero(&bo_gem->refcount)) {
 			drm_bacon_gem_bo_unreference_final(bo, time.tv_sec);
-			drm_bacon_gem_cleanup_bo_cache(bufmgr_gem, time.tv_sec);
+			drm_bacon_gem_cleanup_bo_cache(bufmgr, time.tv_sec);
 		}
 
-		pthread_mutex_unlock(&bufmgr_gem->lock);
+		pthread_mutex_unlock(&bufmgr->lock);
 	}
 }
 
 int
 drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
@@ -1301,10 +1291,10 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		return 0;
 	}
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 
 	if (bo_gem->map_count++ == 0)
-		drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 	if (!bo_gem->mem_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
@@ -1315,7 +1305,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		memclear(mmap_arg);
 		mmap_arg.handle = bo_gem->gem_handle;
 		mmap_arg.size = bo->size;
-		ret = drmIoctl(bufmgr_gem->fd,
+		ret = drmIoctl(bufmgr->fd,
 			       DRM_IOCTL_I915_GEM_MMAP,
 			       &mmap_arg);
 		if (ret != 0) {
@@ -1324,8 +1314,8 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 			    __FILE__, __LINE__, bo_gem->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
-			pthread_mutex_unlock(&bufmgr_gem->lock);
+				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+			pthread_mutex_unlock(&bufmgr->lock);
 			return ret;
 		}
 		VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
@@ -1342,7 +1332,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		set_domain.write_domain = I915_GEM_DOMAIN_CPU;
 	else
 		set_domain.write_domain = 0;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_SET_DOMAIN,
 		       &set_domain);
 	if (ret != 0) {
@@ -1356,7 +1346,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 
 	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return 0;
 }
@@ -1364,7 +1354,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 static int
 map_gtt(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
 
@@ -1372,7 +1362,7 @@ map_gtt(drm_bacon_bo *bo)
 		return -EINVAL;
 
 	if (bo_gem->map_count++ == 0)
-		drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 	/* Get a mapping of the buffer if we haven't before. */
 	if (bo_gem->gtt_virtual == NULL) {
@@ -1385,7 +1375,7 @@ map_gtt(drm_bacon_bo *bo)
 		mmap_arg.handle = bo_gem->gem_handle;
 
 		/* Get the fake offset back... */
-		ret = drmIoctl(bufmgr_gem->fd,
+		ret = drmIoctl(bufmgr->fd,
 			       DRM_IOCTL_I915_GEM_MMAP_GTT,
 			       &mmap_arg);
 		if (ret != 0) {
@@ -1395,13 +1385,13 @@ map_gtt(drm_bacon_bo *bo)
 			    bo_gem->gem_handle, bo_gem->name,
 			    strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
 			return ret;
 		}
 
 		/* and mmap it */
 		bo_gem->gtt_virtual = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
-					       MAP_SHARED, bufmgr_gem->fd,
+					       MAP_SHARED, bufmgr->fd,
 					       mmap_arg.offset);
 		if (bo_gem->gtt_virtual == MAP_FAILED) {
 			bo_gem->gtt_virtual = NULL;
@@ -1411,7 +1401,7 @@ map_gtt(drm_bacon_bo *bo)
 			    bo_gem->gem_handle, bo_gem->name,
 			    strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
 			return ret;
 		}
 	}
@@ -1427,16 +1417,16 @@ map_gtt(drm_bacon_bo *bo)
 int
 drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 
 	ret = map_gtt(bo);
 	if (ret) {
-		pthread_mutex_unlock(&bufmgr_gem->lock);
+		pthread_mutex_unlock(&bufmgr->lock);
 		return ret;
 	}
 
@@ -1453,7 +1443,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 	set_domain.handle = bo_gem->gem_handle;
 	set_domain.read_domains = I915_GEM_DOMAIN_GTT;
 	set_domain.write_domain = I915_GEM_DOMAIN_GTT;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_SET_DOMAIN,
 		       &set_domain);
 	if (ret != 0) {
@@ -1464,7 +1454,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 
 	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->gtt_virtual, bo->size));
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return 0;
 }
@@ -1486,7 +1476,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 int
 drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 #ifdef HAVE_VALGRIND
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 #endif
@@ -1499,10 +1489,10 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 	 * we would potentially corrupt the buffer even when the user
 	 * does reasonable things.
 	 */
-	if (!bufmgr_gem->has_llc)
+	if (!bufmgr->has_llc)
 		return drm_bacon_gem_bo_map_gtt(bo);
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 
 	ret = map_gtt(bo);
 	if (ret == 0) {
@@ -1510,7 +1500,7 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 		VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->gtt_virtual, bo->size));
 	}
 
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return ret;
 }
@@ -1518,7 +1508,7 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 int
 drm_bacon_bo_unmap(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret = 0;
 
@@ -1528,13 +1518,11 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 	if (bo_gem->is_userptr)
 		return 0;
 
-	bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
-
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 
 	if (bo_gem->map_count <= 0) {
 		DBG("attempted to unmap an unmapped bo\n");
-		pthread_mutex_unlock(&bufmgr_gem->lock);
+		pthread_mutex_unlock(&bufmgr->lock);
 		/* Preserve the old behaviour of just treating this as a
 		 * no-op rather than reporting the error.
 		 */
@@ -1551,7 +1539,7 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 		 */
 		memclear(sw_finish);
 		sw_finish.handle = bo_gem->gem_handle;
-		ret = drmIoctl(bufmgr_gem->fd,
+		ret = drmIoctl(bufmgr->fd,
 			       DRM_IOCTL_I915_GEM_SW_FINISH,
 			       &sw_finish);
 		ret = ret == -1 ? -errno : 0;
@@ -1564,11 +1552,11 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 	 * limits and cause later failures.
 	 */
 	if (--bo_gem->map_count == 0) {
-		drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
 		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 		bo->virtual = NULL;
 	}
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return ret;
 }
@@ -1577,7 +1565,7 @@ int
 drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 		     unsigned long size, const void *data)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pwrite pwrite;
 	int ret;
@@ -1590,7 +1578,7 @@ drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 	pwrite.offset = offset;
 	pwrite.size = size;
 	pwrite.data_ptr = (uint64_t) (uintptr_t) data;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_PWRITE,
 		       &pwrite);
 	if (ret != 0) {
@@ -1607,7 +1595,7 @@ int
 drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 			 unsigned long size, void *data)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pread pread;
 	int ret;
@@ -1620,7 +1608,7 @@ drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 	pread.offset = offset;
 	pread.size = size;
 	pread.data_ptr = (uint64_t) (uintptr_t) data;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_PREAD,
 		       &pread);
 	if (ret != 0) {
@@ -1670,12 +1658,12 @@ drm_bacon_bo_wait_rendering(drm_bacon_bo *bo)
 int
 drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_wait wait;
 	int ret;
 
-	if (!bufmgr_gem->has_wait_timeout) {
+	if (!bufmgr->has_wait_timeout) {
 		DBG("%s:%d: Timed wait is not supported. Falling back to "
 		    "infinite wait\n", __FILE__, __LINE__);
 		if (timeout_ns) {
@@ -1689,7 +1677,7 @@ drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 	memclear(wait);
 	wait.bo_handle = bo_gem->gem_handle;
 	wait.timeout_ns = timeout_ns;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_WAIT, &wait);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_WAIT, &wait);
 	if (ret == -1)
 		return -errno;
 
@@ -1706,7 +1694,7 @@ drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 void
 drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
@@ -1715,7 +1703,7 @@ drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 	set_domain.handle = bo_gem->gem_handle;
 	set_domain.read_domains = I915_GEM_DOMAIN_GTT;
 	set_domain.write_domain = write_enable ? I915_GEM_DOMAIN_GTT : 0;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_SET_DOMAIN,
 		       &set_domain);
 	if (ret != 0) {
@@ -1729,19 +1717,18 @@ drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 static void
 drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	struct drm_gem_close close_bo;
 	int i, ret;
 
-	free(bufmgr_gem->exec2_objects);
-	free(bufmgr_gem->exec_bos);
+	free(bufmgr->exec2_objects);
+	free(bufmgr->exec_bos);
 
-	pthread_mutex_destroy(&bufmgr_gem->lock);
+	pthread_mutex_destroy(&bufmgr->lock);
 
 	/* Free any cached buffer objects we were going to reuse */
-	for (i = 0; i < bufmgr_gem->num_buckets; i++) {
+	for (i = 0; i < bufmgr->num_buckets; i++) {
 		struct drm_bacon_gem_bo_bucket *bucket =
-		    &bufmgr_gem->cache_bucket[i];
+		    &bufmgr->cache_bucket[i];
 		drm_bacon_bo_gem *bo_gem;
 
 		while (!list_empty(&bucket->head)) {
@@ -1754,11 +1741,11 @@ drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 	}
 
 	/* Release userptr bo kept hanging around for optimisation. */
-	if (bufmgr_gem->userptr_active.ptr) {
+	if (bufmgr->userptr_active.ptr) {
 		memclear(close_bo);
-		close_bo.handle = bufmgr_gem->userptr_active.handle;
-		ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_GEM_CLOSE, &close_bo);
-		free(bufmgr_gem->userptr_active.ptr);
+		close_bo.handle = bufmgr->userptr_active.handle;
+		ret = drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_CLOSE, &close_bo);
+		free(bufmgr->userptr_active.ptr);
 		if (ret)
 			fprintf(stderr,
 				"Failed to release test userptr object! (%d) "
@@ -1782,7 +1769,7 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 		 drm_bacon_bo *target_bo, uint32_t target_offset,
 		 uint32_t read_domains, uint32_t write_domain)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
 
@@ -1799,7 +1786,7 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 		return -ENOMEM;
 
 	/* Check overflow */
-	assert(bo_gem->reloc_count < bufmgr_gem->max_relocs);
+	assert(bo_gem->reloc_count < bufmgr->max_relocs);
 
 	/* Check args */
 	assert(offset <= bo->size - 4);
@@ -1833,7 +1820,7 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 static int
 drm_bacon_gem_bo_add_softpin_target(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
 
@@ -1853,7 +1840,7 @@ drm_bacon_gem_bo_add_softpin_target(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 	if (bo_gem->softpin_target_count == bo_gem->softpin_target_size) {
 		int new_size = bo_gem->softpin_target_size * 2;
 		if (new_size == 0)
-			new_size = bufmgr_gem->max_relocs;
+			new_size = bufmgr->max_relocs;
 
 		bo_gem->softpin_target = realloc(bo_gem->softpin_target, new_size *
 				sizeof(drm_bacon_bo *));
@@ -1909,7 +1896,7 @@ drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo)
 void
 drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int i;
 	struct timespec time;
@@ -1919,7 +1906,7 @@ drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 	assert(bo_gem->reloc_count >= start);
 
 	/* Unreference the cleared target buffers */
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 
 	for (i = start; i < bo_gem->reloc_count; i++) {
 		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->reloc_target_info[i].bo;
@@ -1936,7 +1923,7 @@ drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 	}
 	bo_gem->softpin_target_count = 0;
 
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 }
 
@@ -1977,16 +1964,16 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 }
 
 static void
-drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr_gem *bufmgr_gem)
+drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr *bufmgr)
 {
 	int i;
 
-	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_bacon_bo *bo = bufmgr_gem->exec_bos[i];
+	for (i = 0; i < bufmgr->exec_count; i++) {
+		drm_bacon_bo *bo = bufmgr->exec_bos[i];
 		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
 
 		/* Update the buffer offset */
-		if (bufmgr_gem->exec2_objects[i].offset != bo->offset64) {
+		if (bufmgr->exec2_objects[i].offset != bo->offset64) {
 			/* If we're seeing softpinned object here it means that the kernel
 			 * has relocated our object... Indicating a programming error
 			 */
@@ -1995,10 +1982,10 @@ drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr_gem *bufmgr_gem)
 			    bo_gem->gem_handle, bo_gem->name,
 			    upper_32_bits(bo->offset64),
 			    lower_32_bits(bo->offset64),
-			    upper_32_bits(bufmgr_gem->exec2_objects[i].offset),
-			    lower_32_bits(bufmgr_gem->exec2_objects[i].offset));
-			bo->offset64 = bufmgr_gem->exec2_objects[i].offset;
-			bo->offset = bufmgr_gem->exec2_objects[i].offset;
+			    upper_32_bits(bufmgr->exec2_objects[i].offset),
+			    lower_32_bits(bufmgr->exec2_objects[i].offset));
+			bo->offset64 = bufmgr->exec2_objects[i].offset;
+			bo->offset = bufmgr->exec2_objects[i].offset;
 		}
 	}
 }
@@ -2008,7 +1995,7 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 	 int in_fence, int *out_fence,
 	 unsigned int flags)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_execbuffer2 execbuf;
 	int ret = 0;
 	int i;
@@ -2020,15 +2007,15 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 	default:
 		return -EINVAL;
 	case I915_EXEC_BLT:
-		if (!bufmgr_gem->has_blt)
+		if (!bufmgr->has_blt)
 			return -EINVAL;
 		break;
 	case I915_EXEC_BSD:
-		if (!bufmgr_gem->has_bsd)
+		if (!bufmgr->has_bsd)
 			return -EINVAL;
 		break;
 	case I915_EXEC_VEBOX:
-		if (!bufmgr_gem->has_vebox)
+		if (!bufmgr->has_vebox)
 			return -EINVAL;
 		break;
 	case I915_EXEC_RENDER:
@@ -2036,7 +2023,7 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 		break;
 	}
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 	/* Update indices and set up the validate list. */
 	drm_bacon_gem_bo_process_reloc2(bo);
 
@@ -2046,8 +2033,8 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 	drm_bacon_add_validate_buffer2(bo);
 
 	memclear(execbuf);
-	execbuf.buffers_ptr = (uintptr_t)bufmgr_gem->exec2_objects;
-	execbuf.buffer_count = bufmgr_gem->exec_count;
+	execbuf.buffers_ptr = (uintptr_t)bufmgr->exec2_objects;
+	execbuf.buffer_count = bufmgr->exec_count;
 	execbuf.batch_start_offset = 0;
 	execbuf.batch_len = used;
 	execbuf.cliprects_ptr = 0;
@@ -2069,10 +2056,10 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 		execbuf.flags |= I915_EXEC_FENCE_OUT;
 	}
 
-	if (bufmgr_gem->no_exec)
+	if (bufmgr->no_exec)
 		goto skip_execution;
 
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_EXECBUFFER2_WR,
 		       &execbuf);
 	if (ret != 0) {
@@ -2080,33 +2067,33 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 		if (ret == -ENOSPC) {
 			DBG("Execbuffer fails to pin. "
 			    "Estimate: %u. Actual: %u. Available: %u\n",
-			    drm_bacon_gem_estimate_batch_space(bufmgr_gem->exec_bos,
-							       bufmgr_gem->exec_count),
-			    drm_bacon_gem_compute_batch_space(bufmgr_gem->exec_bos,
-							      bufmgr_gem->exec_count),
-			    (unsigned int) bufmgr_gem->gtt_size);
+			    drm_bacon_gem_estimate_batch_space(bufmgr->exec_bos,
+							       bufmgr->exec_count),
+			    drm_bacon_gem_compute_batch_space(bufmgr->exec_bos,
+							      bufmgr->exec_count),
+			    (unsigned int) bufmgr->gtt_size);
 		}
 	}
-	drm_bacon_update_buffer_offsets2(bufmgr_gem);
+	drm_bacon_update_buffer_offsets2(bufmgr);
 
 	if (ret == 0 && out_fence != NULL)
 		*out_fence = execbuf.rsvd2 >> 32;
 
 skip_execution:
 	if (INTEL_DEBUG & DEBUG_BUFMGR)
-		drm_bacon_gem_dump_validation_list(bufmgr_gem);
+		drm_bacon_gem_dump_validation_list(bufmgr);
 
-	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_bacon_bo_gem *bo_gem = to_bo_gem(bufmgr_gem->exec_bos[i]);
+	for (i = 0; i < bufmgr->exec_count; i++) {
+		drm_bacon_bo_gem *bo_gem = to_bo_gem(bufmgr->exec_bos[i]);
 
 		bo_gem->idle = false;
 
 		/* Disconnect the buffer from the validate list */
 		bo_gem->validate_index = -1;
-		bufmgr_gem->exec_bos[i] = NULL;
+		bufmgr->exec_bos[i] = NULL;
 	}
-	bufmgr_gem->exec_count = 0;
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	bufmgr->exec_count = 0;
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return ret;
 }
@@ -2146,7 +2133,7 @@ drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 				     uint32_t tiling_mode,
 				     uint32_t stride)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_tiling set_tiling;
 	int ret;
@@ -2166,7 +2153,7 @@ drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 		set_tiling.tiling_mode = tiling_mode;
 		set_tiling.stride = stride;
 
-		ret = ioctl(bufmgr_gem->fd,
+		ret = ioctl(bufmgr->fd,
 			    DRM_IOCTL_I915_GEM_SET_TILING,
 			    &set_tiling);
 	} while (ret == -1 && (errno == EINTR || errno == EAGAIN));
@@ -2183,7 +2170,7 @@ int
 drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			uint32_t stride)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
 
@@ -2201,7 +2188,7 @@ drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 
 	ret = drm_bacon_gem_bo_set_tiling_internal(bo, *tiling_mode, stride);
 	if (ret == 0)
-		drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
+		drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
 
 	*tiling_mode = bo_gem->tiling_mode;
 	return ret;
@@ -2233,17 +2220,16 @@ drm_bacon_bo_set_softpin_offset(drm_bacon_bo *bo, uint64_t offset)
 drm_bacon_bo *
 drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int size)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	int ret;
 	uint32_t handle;
 	drm_bacon_bo_gem *bo_gem;
 	struct drm_i915_gem_get_tiling get_tiling;
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
-	ret = drmPrimeFDToHandle(bufmgr_gem->fd, prime_fd, &handle);
+	pthread_mutex_lock(&bufmgr->lock);
+	ret = drmPrimeFDToHandle(bufmgr->fd, prime_fd, &handle);
 	if (ret) {
 		DBG("create_from_prime: failed to obtain handle from fd: %s\n", strerror(errno));
-		pthread_mutex_unlock(&bufmgr_gem->lock);
+		pthread_mutex_unlock(&bufmgr->lock);
 		return NULL;
 	}
 
@@ -2252,7 +2238,7 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	 * for named buffers, we must not create two bo's pointing at the same
 	 * kernel object
 	 */
-	HASH_FIND(handle_hh, bufmgr_gem->handle_table,
+	HASH_FIND(handle_hh, bufmgr->handle_table,
 		  &handle, sizeof(handle), bo_gem);
 	if (bo_gem) {
 		drm_bacon_bo_reference(&bo_gem->bo);
@@ -2281,7 +2267,7 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	bo_gem->bo.bufmgr = bufmgr;
 
 	bo_gem->gem_handle = handle;
-	HASH_ADD(handle_hh, bufmgr_gem->handle_table,
+	HASH_ADD(handle_hh, bufmgr->handle_table,
 		 gem_handle, sizeof(bo_gem->gem_handle), bo_gem);
 
 	bo_gem->name = "prime";
@@ -2292,7 +2278,7 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 
 	memclear(get_tiling);
 	get_tiling.handle = bo_gem->gem_handle;
-	if (drmIoctl(bufmgr_gem->fd,
+	if (drmIoctl(bufmgr->fd,
 		     DRM_IOCTL_I915_GEM_GET_TILING,
 		     &get_tiling))
 		goto err;
@@ -2300,25 +2286,25 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	bo_gem->tiling_mode = get_tiling.tiling_mode;
 	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
 
 out:
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 	return &bo_gem->bo;
 
 err:
 	drm_bacon_gem_bo_free(&bo_gem->bo);
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
 }
 
 int
 drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	if (drmPrimeHandleToFD(bufmgr_gem->fd, bo_gem->gem_handle,
+	if (drmPrimeHandleToFD(bufmgr->fd, bo_gem->gem_handle,
 			       DRM_CLOEXEC, prime_fd) != 0)
 		return -errno;
 
@@ -2330,7 +2316,7 @@ drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 int
 drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (!bo_gem->global_name) {
@@ -2338,19 +2324,19 @@ drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 
 		memclear(flink);
 		flink.handle = bo_gem->gem_handle;
-		if (drmIoctl(bufmgr_gem->fd, DRM_IOCTL_GEM_FLINK, &flink))
+		if (drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_FLINK, &flink))
 			return -errno;
 
-		pthread_mutex_lock(&bufmgr_gem->lock);
+		pthread_mutex_lock(&bufmgr->lock);
 		if (!bo_gem->global_name) {
 			bo_gem->global_name = flink.name;
 			bo_gem->reusable = false;
 
-			HASH_ADD(name_hh, bufmgr_gem->name_table,
+			HASH_ADD(name_hh, bufmgr->name_table,
 				 global_name, sizeof(bo_gem->global_name),
 				 bo_gem);
 		}
-		pthread_mutex_unlock(&bufmgr_gem->lock);
+		pthread_mutex_unlock(&bufmgr->lock);
 	}
 
 	*name = bo_gem->global_name;
@@ -2367,9 +2353,7 @@ drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 void
 drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
-
-	bufmgr_gem->bo_reuse = true;
+	bufmgr->bo_reuse = true;
 }
 
 /**
@@ -2420,9 +2404,7 @@ drm_bacon_gem_bo_enable_implicit_sync(drm_bacon_bo *bo)
 int
 drm_bacon_bufmgr_gem_can_disable_implicit_sync(drm_bacon_bufmgr *bufmgr)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
-
-	return bufmgr_gem->has_exec_async;
+	return bufmgr->has_exec_async;
 }
 
 /**
@@ -2541,10 +2523,9 @@ drm_bacon_gem_compute_batch_space(drm_bacon_bo **bo_array, int count)
 int
 drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo **bo_array, int count)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem =
-	    (drm_bacon_bufmgr_gem *) bo_array[0]->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo_array[0]->bufmgr;
 	unsigned int total = 0;
-	unsigned int threshold = bufmgr_gem->gtt_size * 3 / 4;
+	unsigned int threshold = bufmgr->gtt_size * 3 / 4;
 
 	total = drm_bacon_gem_estimate_batch_space(bo_array, count);
 
@@ -2554,11 +2535,11 @@ drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo **bo_array, int count)
 	if (total > threshold) {
 		DBG("check_space: overflowed available aperture, "
 		    "%dkb vs %dkb\n",
-		    total / 1024, (int)bufmgr_gem->gtt_size / 1024);
+		    total / 1024, (int)bufmgr->gtt_size / 1024);
 		return -ENOSPC;
 	} else {
 		DBG("drm_check_space: total %dkb vs bufgr %dkb\n", total / 1024,
-		    (int)bufmgr_gem->gtt_size / 1024);
+		    (int)bufmgr->gtt_size / 1024);
 		return 0;
 	}
 }
@@ -2624,19 +2605,19 @@ drm_bacon_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 }
 
 static void
-add_bucket(drm_bacon_bufmgr_gem *bufmgr_gem, int size)
+add_bucket(drm_bacon_bufmgr *bufmgr, int size)
 {
-	unsigned int i = bufmgr_gem->num_buckets;
+	unsigned int i = bufmgr->num_buckets;
 
-	assert(i < ARRAY_SIZE(bufmgr_gem->cache_bucket));
+	assert(i < ARRAY_SIZE(bufmgr->cache_bucket));
 
-	list_inithead(&bufmgr_gem->cache_bucket[i].head);
-	bufmgr_gem->cache_bucket[i].size = size;
-	bufmgr_gem->num_buckets++;
+	list_inithead(&bufmgr->cache_bucket[i].head);
+	bufmgr->cache_bucket[i].size = size;
+	bufmgr->num_buckets++;
 }
 
 static void
-init_cache_buckets(drm_bacon_bufmgr_gem *bufmgr_gem)
+init_cache_buckets(drm_bacon_bufmgr *bufmgr)
 {
 	unsigned long size, cache_max_size = 64 * 1024 * 1024;
 
@@ -2648,28 +2629,26 @@ init_cache_buckets(drm_bacon_bufmgr_gem *bufmgr_gem)
 	 * width/height alignment and rounding of sizes to pages will
 	 * get us useful cache hit rates anyway)
 	 */
-	add_bucket(bufmgr_gem, 4096);
-	add_bucket(bufmgr_gem, 4096 * 2);
-	add_bucket(bufmgr_gem, 4096 * 3);
+	add_bucket(bufmgr, 4096);
+	add_bucket(bufmgr, 4096 * 2);
+	add_bucket(bufmgr, 4096 * 3);
 
 	/* Initialize the linked lists for BO reuse cache. */
 	for (size = 4 * 4096; size <= cache_max_size; size *= 2) {
-		add_bucket(bufmgr_gem, size);
+		add_bucket(bufmgr, size);
 
-		add_bucket(bufmgr_gem, size + size * 1 / 4);
-		add_bucket(bufmgr_gem, size + size * 2 / 4);
-		add_bucket(bufmgr_gem, size + size * 3 / 4);
+		add_bucket(bufmgr, size + size * 1 / 4);
+		add_bucket(bufmgr, size + size * 2 / 4);
+		add_bucket(bufmgr, size + size * 3 / 4);
 	}
 }
 
 void
 drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr, int limit)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
+	bufmgr->vma_max = limit;
 
-	bufmgr_gem->vma_max = limit;
-
-	drm_bacon_gem_bo_purge_vma_cache(bufmgr_gem);
+	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
 }
 
 static int
@@ -2705,7 +2684,7 @@ parse_devid_override(const char *devid_override)
  * INTEL_DEVID_OVERRIDE environment variable to the desired ID.
  */
 static int
-get_pci_device_id(drm_bacon_bufmgr_gem *bufmgr_gem)
+get_pci_device_id(drm_bacon_bufmgr *bufmgr)
 {
 	char *devid_override;
 	int devid = 0;
@@ -2715,7 +2694,7 @@ get_pci_device_id(drm_bacon_bufmgr_gem *bufmgr_gem)
 	if (geteuid() == getuid()) {
 		devid_override = getenv("INTEL_DEVID_OVERRIDE");
 		if (devid_override) {
-			bufmgr_gem->no_exec = true;
+			bufmgr->no_exec = true;
 			return parse_devid_override(devid_override);
 		}
 	}
@@ -2723,7 +2702,7 @@ get_pci_device_id(drm_bacon_bufmgr_gem *bufmgr_gem)
 	memclear(gp);
 	gp.param = I915_PARAM_CHIPSET_ID;
 	gp.value = &devid;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	if (ret) {
 		fprintf(stderr, "get chip id failed: %d [%d]\n", ret, errno);
 		fprintf(stderr, "param: %d, val: %d\n", gp.param, *gp.value);
@@ -2734,15 +2713,12 @@ get_pci_device_id(drm_bacon_bufmgr_gem *bufmgr_gem)
 int
 drm_bacon_bufmgr_gem_get_devid(drm_bacon_bufmgr *bufmgr)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
-
-	return bufmgr_gem->pci_device;
+	return bufmgr->pci_device;
 }
 
 drm_bacon_context *
 drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 	struct drm_i915_gem_context_create create;
 	drm_bacon_context *context = NULL;
 	int ret;
@@ -2752,7 +2728,7 @@ drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr)
 		return NULL;
 
 	memclear(create);
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_CONTEXT_CREATE, &create);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_CONTEXT_CREATE, &create);
 	if (ret != 0) {
 		DBG("DRM_IOCTL_I915_GEM_CONTEXT_CREATE failed: %s\n",
 		    strerror(errno));
@@ -2780,7 +2756,6 @@ drm_bacon_gem_context_get_id(drm_bacon_context *ctx, uint32_t *ctx_id)
 void
 drm_bacon_gem_context_destroy(drm_bacon_context *ctx)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem;
 	struct drm_i915_gem_context_destroy destroy;
 	int ret;
 
@@ -2789,9 +2764,8 @@ drm_bacon_gem_context_destroy(drm_bacon_context *ctx)
 
 	memclear(destroy);
 
-	bufmgr_gem = (drm_bacon_bufmgr_gem *)ctx->bufmgr;
 	destroy.ctx_id = ctx->ctx_id;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_CONTEXT_DESTROY,
+	ret = drmIoctl(ctx->bufmgr->fd, DRM_IOCTL_I915_GEM_CONTEXT_DESTROY,
 		       &destroy);
 	if (ret != 0)
 		fprintf(stderr, "DRM_IOCTL_I915_GEM_CONTEXT_DESTROY failed: %s\n",
@@ -2806,7 +2780,6 @@ drm_bacon_get_reset_stats(drm_bacon_context *ctx,
 			  uint32_t *active,
 			  uint32_t *pending)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem;
 	struct drm_i915_reset_stats stats;
 	int ret;
 
@@ -2815,9 +2788,8 @@ drm_bacon_get_reset_stats(drm_bacon_context *ctx,
 
 	memclear(stats);
 
-	bufmgr_gem = (drm_bacon_bufmgr_gem *)ctx->bufmgr;
 	stats.ctx_id = ctx->ctx_id;
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(ctx->bufmgr->fd,
 		       DRM_IOCTL_I915_GET_RESET_STATS,
 		       &stats);
 	if (ret == 0) {
@@ -2839,14 +2811,13 @@ drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 		   uint32_t offset,
 		   uint64_t *result)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 	struct drm_i915_reg_read reg_read;
 	int ret;
 
 	memclear(reg_read);
 	reg_read.offset = offset;
 
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_REG_READ, &reg_read);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_REG_READ, &reg_read);
 
 	*result = reg_read.val;
 	return ret;
@@ -2855,14 +2826,14 @@ drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 static pthread_mutex_t bufmgr_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct list_head bufmgr_list = { &bufmgr_list, &bufmgr_list };
 
-static drm_bacon_bufmgr_gem *
+static drm_bacon_bufmgr *
 drm_bacon_bufmgr_gem_find(int fd)
 {
-	list_for_each_entry(drm_bacon_bufmgr_gem,
-                            bufmgr_gem, &bufmgr_list, managers) {
-		if (bufmgr_gem->fd == fd) {
-			p_atomic_inc(&bufmgr_gem->refcount);
-			return bufmgr_gem;
+	list_for_each_entry(drm_bacon_bufmgr,
+                            bufmgr, &bufmgr_list, managers) {
+		if (bufmgr->fd == fd) {
+			p_atomic_inc(&bufmgr->refcount);
+			return bufmgr;
 		}
 	}
 
@@ -2872,13 +2843,11 @@ drm_bacon_bufmgr_gem_find(int fd)
 void
 drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
-
-	if (atomic_add_unless(&bufmgr_gem->refcount, -1, 1)) {
+	if (atomic_add_unless(&bufmgr->refcount, -1, 1)) {
 		pthread_mutex_lock(&bufmgr_list_mutex);
 
-		if (p_atomic_dec_zero(&bufmgr_gem->refcount)) {
-			list_del(&bufmgr_gem->managers);
+		if (p_atomic_dec_zero(&bufmgr->refcount)) {
+			list_del(&bufmgr->managers);
 			drm_bacon_bufmgr_gem_destroy(bufmgr);
 		}
 
@@ -2888,7 +2857,7 @@ drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 
 void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (bo_gem->gtt_virtual)
@@ -2897,7 +2866,7 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 	if (bo_gem->is_userptr)
 		return NULL;
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 	if (bo_gem->gtt_virtual == NULL) {
 		struct drm_i915_gem_mmap_gtt mmap_arg;
 		void *ptr;
@@ -2906,37 +2875,37 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
 
 		if (bo_gem->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
+			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo_gem->gem_handle;
 
 		/* Get the fake offset back... */
 		ptr = MAP_FAILED;
-		if (drmIoctl(bufmgr_gem->fd,
+		if (drmIoctl(bufmgr->fd,
 			     DRM_IOCTL_I915_GEM_MMAP_GTT,
 			     &mmap_arg) == 0) {
 			/* and mmap it */
 			ptr = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
-				       MAP_SHARED, bufmgr_gem->fd,
+				       MAP_SHARED, bufmgr->fd,
 				       mmap_arg.offset);
 		}
 		if (ptr == MAP_FAILED) {
 			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
 			ptr = NULL;
 		}
 
 		bo_gem->gtt_virtual = ptr;
 	}
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return bo_gem->gtt_virtual;
 }
 
 void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (bo_gem->mem_virtual)
@@ -2947,12 +2916,12 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 		return bo_gem->user_virtual;
 	}
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 	if (!bo_gem->mem_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
 
 		if (bo_gem->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
+			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
 		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
@@ -2960,27 +2929,27 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 		memclear(mmap_arg);
 		mmap_arg.handle = bo_gem->gem_handle;
 		mmap_arg.size = bo->size;
-		if (drmIoctl(bufmgr_gem->fd,
+		if (drmIoctl(bufmgr->fd,
 			     DRM_IOCTL_I915_GEM_MMAP,
 			     &mmap_arg)) {
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
 			    __FILE__, __LINE__, bo_gem->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
 			bo_gem->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
 		}
 	}
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return bo_gem->mem_virtual;
 }
 
 void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (bo_gem->wc_virtual)
@@ -2989,12 +2958,12 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 	if (bo_gem->is_userptr)
 		return NULL;
 
-	pthread_mutex_lock(&bufmgr_gem->lock);
+	pthread_mutex_lock(&bufmgr->lock);
 	if (!bo_gem->wc_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
 
 		if (bo_gem->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
+			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
 		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
@@ -3003,20 +2972,20 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 		mmap_arg.handle = bo_gem->gem_handle;
 		mmap_arg.size = bo->size;
 		mmap_arg.flags = I915_MMAP_WC;
-		if (drmIoctl(bufmgr_gem->fd,
+		if (drmIoctl(bufmgr->fd,
 			     DRM_IOCTL_I915_GEM_MMAP,
 			     &mmap_arg)) {
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
 			    __FILE__, __LINE__, bo_gem->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
 			bo_gem->wc_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
 		}
 	}
-	pthread_mutex_unlock(&bufmgr_gem->lock);
+	pthread_mutex_unlock(&bufmgr->lock);
 
 	return bo_gem->wc_virtual;
 }
@@ -3030,64 +2999,64 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 drm_bacon_bufmgr *
 drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem;
+	drm_bacon_bufmgr *bufmgr;
 	struct drm_i915_gem_get_aperture aperture;
 	drm_i915_getparam_t gp;
 	int ret, tmp;
 
 	pthread_mutex_lock(&bufmgr_list_mutex);
 
-	bufmgr_gem = drm_bacon_bufmgr_gem_find(fd);
-	if (bufmgr_gem)
+	bufmgr = drm_bacon_bufmgr_gem_find(fd);
+	if (bufmgr)
 		goto exit;
 
-	bufmgr_gem = calloc(1, sizeof(*bufmgr_gem));
-	if (bufmgr_gem == NULL)
+	bufmgr = calloc(1, sizeof(*bufmgr));
+	if (bufmgr == NULL)
 		goto exit;
 
-	bufmgr_gem->fd = fd;
-	p_atomic_set(&bufmgr_gem->refcount, 1);
+	bufmgr->fd = fd;
+	p_atomic_set(&bufmgr->refcount, 1);
 
-	if (pthread_mutex_init(&bufmgr_gem->lock, NULL) != 0) {
-		free(bufmgr_gem);
-		bufmgr_gem = NULL;
+	if (pthread_mutex_init(&bufmgr->lock, NULL) != 0) {
+		free(bufmgr);
+		bufmgr = NULL;
 		goto exit;
 	}
 
 	memclear(aperture);
-	ret = drmIoctl(bufmgr_gem->fd,
+	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_GET_APERTURE,
 		       &aperture);
 
 	if (ret == 0)
-		bufmgr_gem->gtt_size = aperture.aper_available_size;
+		bufmgr->gtt_size = aperture.aper_available_size;
 	else {
 		fprintf(stderr, "DRM_IOCTL_I915_GEM_APERTURE failed: %s\n",
 			strerror(errno));
-		bufmgr_gem->gtt_size = 128 * 1024 * 1024;
+		bufmgr->gtt_size = 128 * 1024 * 1024;
 		fprintf(stderr, "Assuming %dkB available aperture size.\n"
 			"May lead to reduced performance or incorrect "
 			"rendering.\n",
-			(int)bufmgr_gem->gtt_size / 1024);
+			(int)bufmgr->gtt_size / 1024);
 	}
 
-	bufmgr_gem->pci_device = get_pci_device_id(bufmgr_gem);
+	bufmgr->pci_device = get_pci_device_id(bufmgr);
 
-	if (IS_GEN4(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 4;
-	else if (IS_GEN5(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 5;
-	else if (IS_GEN6(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 6;
-	else if (IS_GEN7(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 7;
-	else if (IS_GEN8(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 8;
-	else if (IS_GEN9(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 9;
+	if (IS_GEN4(bufmgr->pci_device))
+		bufmgr->gen = 4;
+	else if (IS_GEN5(bufmgr->pci_device))
+		bufmgr->gen = 5;
+	else if (IS_GEN6(bufmgr->pci_device))
+		bufmgr->gen = 6;
+	else if (IS_GEN7(bufmgr->pci_device))
+		bufmgr->gen = 7;
+	else if (IS_GEN8(bufmgr->pci_device))
+		bufmgr->gen = 8;
+	else if (IS_GEN9(bufmgr->pci_device))
+		bufmgr->gen = 9;
 	else {
-		free(bufmgr_gem);
-		bufmgr_gem = NULL;
+		free(bufmgr);
+		bufmgr = NULL;
 		goto exit;
 	}
 
@@ -3095,35 +3064,35 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	gp.value = &tmp;
 
 	gp.param = I915_PARAM_HAS_BSD;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr_gem->has_bsd = ret == 0;
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+	bufmgr->has_bsd = ret == 0;
 
 	gp.param = I915_PARAM_HAS_BLT;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr_gem->has_blt = ret == 0;
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+	bufmgr->has_blt = ret == 0;
 
 	gp.param = I915_PARAM_HAS_EXEC_ASYNC;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr_gem->has_exec_async = ret == 0;
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+	bufmgr->has_exec_async = ret == 0;
 
 	gp.param = I915_PARAM_HAS_WAIT_TIMEOUT;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr_gem->has_wait_timeout = ret == 0;
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+	bufmgr->has_wait_timeout = ret == 0;
 
 	gp.param = I915_PARAM_HAS_LLC;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	if (ret != 0) {
 		/* Kernel does not supports HAS_LLC query, fallback to GPU
 		 * generation detection and assume that we have LLC on GEN6/7
 		 */
-		bufmgr_gem->has_llc = (IS_GEN6(bufmgr_gem->pci_device) |
-				IS_GEN7(bufmgr_gem->pci_device));
+		bufmgr->has_llc = (IS_GEN6(bufmgr->pci_device) |
+				IS_GEN7(bufmgr->pci_device));
 	} else
-		bufmgr_gem->has_llc = *gp.value;
+		bufmgr->has_llc = *gp.value;
 
 	gp.param = I915_PARAM_HAS_VEBOX;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr_gem->has_vebox = (ret == 0) & (*gp.value > 0);
+	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+	bufmgr->has_vebox = (ret == 0) & (*gp.value > 0);
 
 	/* Let's go with one relocation per every 2 dwords (but round down a bit
 	 * since a power of two will mean an extra page allocation for the reloc
@@ -3131,17 +3100,17 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	 *
 	 * Every 4 was too few for the blender benchmark.
 	 */
-	bufmgr_gem->max_relocs = batch_size / sizeof(uint32_t) / 2 - 2;
+	bufmgr->max_relocs = batch_size / sizeof(uint32_t) / 2 - 2;
 
-	init_cache_buckets(bufmgr_gem);
+	init_cache_buckets(bufmgr);
 
-	list_inithead(&bufmgr_gem->vma_cache);
-	bufmgr_gem->vma_max = -1; /* unlimited by default */
+	list_inithead(&bufmgr->vma_cache);
+	bufmgr->vma_max = -1; /* unlimited by default */
 
-	list_add(&bufmgr_gem->managers, &bufmgr_list);
+	list_add(&bufmgr->managers, &bufmgr_list);
 
 exit:
 	pthread_mutex_unlock(&bufmgr_list_mutex);
 
-	return bufmgr_gem != NULL ? &bufmgr_gem->bufmgr : NULL;
+	return bufmgr;
 }
