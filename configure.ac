@@ -909,9 +909,9 @@ llvm_add_target() {
 strip_unwanted_llvm_flags() {
     echo " `$1` " | sed -E \
         -e 's/[[[:space:]]]+-m[[^[:space:]]]*//g' \
-        -e 's/[[[:space:]]]+-DNDEBUG[[[:space:]]]//g' \
-        -e 's/[[[:space:]]]+-D_GNU_SOURCE[[[:space:]]]//g' \
-        -e 's/[[[:space:]]]+-pedantic[[[:space:]]]//g' \
+        -e 's/[[[:space:]]]+-DNDEBUG[[[:space:]]]/ /g' \
+        -e 's/[[[:space:]]]+-D_GNU_SOURCE[[[:space:]]]/ /g' \
+        -e 's/[[[:space:]]]+-pedantic[[[:space:]]]/ /g' \
         -e 's/[[[:space:]]]+-W[[^[:space:]]]*//g' \
         -e 's/[[[:space:]]]+-O[[^[:space:]]]*//g' \
         -e 's/[[[:space:]]]+-g[[^[:space:]]]*//g' \
