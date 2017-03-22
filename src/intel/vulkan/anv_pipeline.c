@@ -181,8 +181,6 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    if (stage == MESA_SHADER_FRAGMENT)
       NIR_PASS_V(nir, anv_nir_lower_input_attachments);
 
-   nir_shader_gather_info(nir, entry_point->impl);
-
    return nir;
 }
 
@@ -375,6 +373,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       return NULL;
 
    NIR_PASS_V(nir, anv_nir_lower_push_constants);
+
+   nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 
    /* Figure out the number of parameters */
    prog_data->nr_params = 0;
