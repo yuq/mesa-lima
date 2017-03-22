@@ -123,7 +123,6 @@ extern const struct brw_tracked_state gen6_sf_vp;
 extern const struct brw_tracked_state gen6_urb;
 extern const struct brw_tracked_state gen6_viewport_state;
 extern const struct brw_tracked_state gen6_vs_push_constants;
-extern const struct brw_tracked_state gen6_vs_state;
 extern const struct brw_tracked_state gen6_wm_push_constants;
 extern const struct brw_tracked_state gen7_depthbuffer;
 extern const struct brw_tracked_state gen7_ds_state;
@@ -136,7 +135,6 @@ extern const struct brw_tracked_state gen7_sf_clip_viewport;
 extern const struct brw_tracked_state gen7_te_state;
 extern const struct brw_tracked_state gen7_tes_push_constants;
 extern const struct brw_tracked_state gen7_urb;
-extern const struct brw_tracked_state gen7_vs_state;
 extern const struct brw_tracked_state haswell_cut_index;
 extern const struct brw_tracked_state gen8_blend_state;
 extern const struct brw_tracked_state gen8_ds_state;
@@ -149,7 +147,6 @@ extern const struct brw_tracked_state gen8_ps_blend;
 extern const struct brw_tracked_state gen8_sf_clip_viewport;
 extern const struct brw_tracked_state gen8_vertices;
 extern const struct brw_tracked_state gen8_vf_topology;
-extern const struct brw_tracked_state gen8_vs_state;
 extern const struct brw_tracked_state brw_cs_work_groups_surface;
 
 static inline bool
