@@ -146,12 +146,9 @@ typedef struct _drm_bacon_bufmgr {
 	int vma_count, vma_open, vma_max;
 
 	uint64_t gtt_size;
-	unsigned int has_bsd : 1;
-	unsigned int has_blt : 1;
 	unsigned int has_llc : 1;
 	unsigned int bo_reuse : 1;
 	unsigned int no_exec : 1;
-	unsigned int has_vebox : 1;
 	unsigned int has_exec_async : 1;
 
 	struct {
@@ -1987,26 +1984,6 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 	if (to_bo_gem(bo)->has_error)
 		return -ENOMEM;
 
-	switch (flags & 0x7) {
-	default:
-		return -EINVAL;
-	case I915_EXEC_BLT:
-		if (!bufmgr->has_blt)
-			return -EINVAL;
-		break;
-	case I915_EXEC_BSD:
-		if (!bufmgr->has_bsd)
-			return -EINVAL;
-		break;
-	case I915_EXEC_VEBOX:
-		if (!bufmgr->has_vebox)
-			return -EINVAL;
-		break;
-	case I915_EXEC_RENDER:
-	case I915_EXEC_DEFAULT:
-		break;
-	}
-
 	pthread_mutex_lock(&bufmgr->lock);
 	/* Update indices and set up the validate list. */
 	drm_bacon_gem_bo_process_reloc2(bo);
@@ -2949,23 +2926,11 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 	memclear(gp);
 	gp.value = &tmp;
 
-	gp.param = I915_PARAM_HAS_BSD;
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr->has_bsd = ret == 0;
-
-	gp.param = I915_PARAM_HAS_BLT;
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr->has_blt = ret == 0;
-
 	gp.param = I915_PARAM_HAS_EXEC_ASYNC;
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	bufmgr->has_exec_async = ret == 0;
 
 	bufmgr->has_llc = devinfo->has_llc;
-
-	gp.param = I915_PARAM_HAS_VEBOX;
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr->has_vebox = (ret == 0) & (*gp.value > 0);
 
 	/* Let's go with one relocation per every 2 dwords (but round down a bit
 	 * since a power of two will mean an extra page allocation for the reloc
