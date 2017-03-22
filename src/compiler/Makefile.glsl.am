@@ -66,7 +66,8 @@ glsl_tests_cache_test_CFLAGS =				\
 	$(PTHREAD_CFLAGS)
 glsl_tests_cache_test_LDADD =				\
 	glsl/libglsl.la					\
-	$(PTHREAD_LIBS)
+	$(PTHREAD_LIBS)					\
+	$(CLOCK_LIB)
 
 glsl_tests_general_ir_test_SOURCES =			\
 	glsl/tests/array_refcount_test.cpp 		\
@@ -83,7 +84,8 @@ glsl_tests_general_ir_test_LDADD =			\
 	glsl/libglsl.la		\
 	glsl/libstandalone.la				\
 	$(top_builddir)/src/libglsl_util.la		\
-	$(PTHREAD_LIBS)
+	$(PTHREAD_LIBS)					\
+	$(CLOCK_LIB)
 
 glsl_tests_uniform_initializer_test_SOURCES =		\
 	glsl/tests/copy_constant_to_storage_tests.cpp	\
@@ -159,7 +161,8 @@ glsl_glsl_test_LDADD =					\
 	glsl/libglsl.la					\
 	glsl/libstandalone.la				\
 	$(top_builddir)/src/libglsl_util.la		\
-	$(PTHREAD_LIBS)
+	$(PTHREAD_LIBS)					\
+	$(CLOCK_LIB)
 
 # We write our own rules for yacc and lex below. We'd rather use automake,
 # but automake makes it especially difficult for a number of reasons:
