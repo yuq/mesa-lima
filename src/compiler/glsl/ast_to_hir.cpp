@@ -4000,6 +4000,21 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
        * Similar text exists in the GLSL ES 3.00 spec, except that the GLSL ES
        * 3.00 spec allows structs as well.  Varying structs are also allowed
        * in GLSL 1.50.
+       *
+       * From section 4.3.4 of the ARB_bindless_texture spec:
+       *
+       *     "(modify third paragraph of the section to allow sampler and image
+       *     types) ...  Vertex shader inputs can only be float,
+       *     single-precision floating-point scalars, single-precision
+       *     floating-point vectors, matrices, signed and unsigned integers
+       *     and integer vectors, sampler and image types."
+       *
+       * From section 4.3.6 of the ARB_bindless_texture spec:
+       *
+       *     "Output variables can only be floating-point scalars,
+       *     floating-point vectors, matrices, signed or unsigned integers or
+       *     integer vectors, sampler or image types, or arrays or structures
+       *     of any these."
        */
       switch (var->type->without_array()->base_type) {
       case GLSL_TYPE_FLOAT:
@@ -4023,6 +4038,11 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
       case GLSL_TYPE_UINT64:
       case GLSL_TYPE_INT64:
          break;
+      case GLSL_TYPE_SAMPLER:
+      case GLSL_TYPE_IMAGE:
+         if (state->has_bindless())
+            break;
+         /* fallthrough */
       default:
          _mesa_glsl_error(loc, state, "illegal type for a varying variable");
          break;
