@@ -839,11 +839,18 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     }
     
     PFN_PROCESS_PRIMS pfnBinner;
+#if USE_SIMD16_FRONTEND
+    PFN_PROCESS_PRIMS_SIMD16 pfnBinner_simd16;
+#endif
     switch (pState->state.topology)
     {
     case TOP_POINT_LIST:
         pState->pfnProcessPrims = ClipPoints;
         pfnBinner = BinPoints;
+#if USE_SIMD16_FRONTEND
+        pState->pfnProcessPrims_simd16 = ClipPoints_simd16;
+        pfnBinner_simd16 = BinPoints_simd16;
+#endif
         break;
     case TOP_LINE_LIST:
     case TOP_LINE_STRIP:
@@ -852,10 +859,18 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     case TOP_LISTSTRIP_ADJ:
         pState->pfnProcessPrims = ClipLines;
         pfnBinner = BinLines;
+#if USE_SIMD16_FRONTEND
+        pState->pfnProcessPrims_simd16 = ClipLines_simd16;
+        pfnBinner_simd16 = BinLines_simd16;
+#endif
         break;
     default:
         pState->pfnProcessPrims = ClipTriangles;
         pfnBinner = GetBinTrianglesFunc((rastState.conservativeRast > 0));
+#if USE_SIMD16_FRONTEND
+        pState->pfnProcessPrims_simd16 = ClipTriangles_simd16;
+        pfnBinner_simd16 = GetBinTrianglesFunc_simd16((rastState.conservativeRast > 0));
+#endif
         break;
     };
 
@@ -864,6 +879,9 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     if (pState->state.frontendState.vpTransformDisable)
     {
         pState->pfnProcessPrims = pfnBinner;
+#if USE_SIMD16_FRONTEND
+        pState->pfnProcessPrims_simd16 = pfnBinner_simd16;
+#endif
     }
 
     if ((pState->state.psState.pfnPixelShader == nullptr) &&
@@ -874,11 +892,17 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         (pState->state.backendState.numAttributes == 0))
     {
         pState->pfnProcessPrims = nullptr;
+#if USE_SIMD16_FRONTEND
+        pState->pfnProcessPrims_simd16 = nullptr;
+#endif
     }
 
     if (pState->state.soState.rasterizerDisable == true)
     {
         pState->pfnProcessPrims = nullptr;
+#if USE_SIMD16_FRONTEND
+        pState->pfnProcessPrims_simd16 = nullptr;
+#endif
     }
 
 

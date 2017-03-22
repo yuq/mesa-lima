@@ -174,6 +174,7 @@ void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector pr
     clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
     AR_END(FEClipLines, 1);
 }
+
 void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
@@ -182,4 +183,134 @@ void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector p
     clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
     AR_END(FEClipPoints, 1);
 }
+
+#if USE_SIMD16_FRONTEND
+inline uint32_t GetPrimMaskLo(uint32_t primMask)
+{
+    return primMask & 255;
+}
+
+inline uint32_t GetPrimMaskHi(uint32_t primMask)
+{
+    return (primMask >> 8) & 255;
+}
+
+void ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx)
+{
+    SWR_CONTEXT *pContext = pDC->pContext;
+    AR_BEGIN(FEClipTriangles, pDC->drawId);
+
+    enum { VERTS_PER_PRIM = 3 };
+
+    Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
+
+    simdvector verts[VERTS_PER_PRIM];
+
+    for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+    {
+        for (uint32_t j = 0; j < 4; j += 1)
+        {
+            verts[i][j] = _simd16_extract_ps(prims[i][j], 0);
+        }
+    }
+
+    pa.useAlternateOffset = false;
+    clipper.ExecuteStage(pa, verts, GetPrimMaskLo(primMask), _simd16_extract_si(primId, 0), _simd16_extract_si(viewportIdx, 0));
+
+    if (GetPrimMaskHi(primMask))
+    {
+        for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+        {
+            for (uint32_t j = 0; j < 4; j += 1)
+            {
+                verts[i][j] = _simd16_extract_ps(prims[i][j], 1);
+            }
+        }
+
+        pa.useAlternateOffset = true;
+        clipper.ExecuteStage(pa, verts, GetPrimMaskHi(primMask), _simd16_extract_si(primId, 1), _simd16_extract_si(viewportIdx, 1));
+    }
+
+    AR_END(FEClipTriangles, 1);
+}
+
+void ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx)
+{
+    SWR_CONTEXT *pContext = pDC->pContext;
+    AR_BEGIN(FEClipLines, pDC->drawId);
+
+    enum { VERTS_PER_PRIM = 2 };
+
+    Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
+
+    simdvector verts[VERTS_PER_PRIM];
+
+    for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+    {
+        for (uint32_t j = 0; j < 4; j += 1)
+        {
+            verts[i][j] = _simd16_extract_ps(prims[i][j], 0);
+        }
+    }
+
+    pa.useAlternateOffset = false;
+    clipper.ExecuteStage(pa, verts, GetPrimMaskLo(primMask), _simd16_extract_si(primId, 0), _simd16_extract_si(viewportIdx, 0));
+
+    if (GetPrimMaskHi(primMask))
+    {
+        for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+        {
+            for (uint32_t j = 0; j < 4; j += 1)
+            {
+                verts[i][j] = _simd16_extract_ps(prims[i][j], 1);
+            }
+        }
+
+        pa.useAlternateOffset = true;
+        clipper.ExecuteStage(pa, verts, GetPrimMaskHi(primMask), _simd16_extract_si(primId, 1), _simd16_extract_si(viewportIdx, 1));
+    }
+
+    AR_END(FEClipLines, 1);
+}
+
+void ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx)
+{
+    SWR_CONTEXT *pContext = pDC->pContext;
+    AR_BEGIN(FEClipPoints, pDC->drawId);
+
+    enum { VERTS_PER_PRIM = 1 };
+
+    Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
+
+    simdvector verts[VERTS_PER_PRIM];
+
+    for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+    {
+        for (uint32_t j = 0; j < 4; j += 1)
+        {
+            verts[i][j] = _simd16_extract_ps(prims[i][j], 0);
+        }
+    }
+
+    pa.useAlternateOffset = false;
+    clipper.ExecuteStage(pa, verts, GetPrimMaskLo(primMask), _simd16_extract_si(primId, 0), _simd16_extract_si(viewportIdx, 0));
+
+    if (GetPrimMaskHi(primMask))
+    {
+        for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+        {
+            for (uint32_t j = 0; j < 4; j += 1)
+            {
+                verts[i][j] = _simd16_extract_ps(prims[i][j], 1);
+            }
+        }
+
+        pa.useAlternateOffset = true;
+        clipper.ExecuteStage(pa, verts, GetPrimMaskHi(primMask), _simd16_extract_si(primId, 1), _simd16_extract_si(viewportIdx, 1));
+    }
+
+    AR_END(FEClipPoints, 1);
+}
+
+#endif
 

@@ -856,6 +856,58 @@ endBinTriangles:
     AR_END(FEBinTriangles, 1);
 }
 
+#if USE_SIMD16_FRONTEND
+inline uint32_t GetPrimMaskLo(uint32_t primMask)
+{
+    return primMask & 255;
+}
+
+inline uint32_t GetPrimMaskHi(uint32_t primMask)
+{
+    return (primMask >> 8) & 255;
+}
+
+template <typename CT>
+void BinTriangles_simd16(
+    DRAW_CONTEXT *pDC,
+    PA_STATE& pa,
+    uint32_t workerId,
+    simd16vector tri[3],
+    uint32_t triMask,
+    simd16scalari primID,
+    simd16scalari viewportIdx)
+{
+    enum { VERTS_PER_PRIM = 3 };
+
+    simdvector verts[VERTS_PER_PRIM];
+
+    for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+    {
+        for (uint32_t j = 0; j < 4; j += 1)
+        {
+            verts[i][j] = _simd16_extract_ps(tri[i][j], 0);
+        }
+    }
+
+    pa.useAlternateOffset = false;
+    BinTriangles<CT>(pDC, pa, workerId, verts, GetPrimMaskLo(triMask), _simd16_extract_si(primID, 0), _simd16_extract_si(viewportIdx, 0));
+
+    if (GetPrimMaskHi(triMask))
+    {
+        for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+        {
+            for (uint32_t j = 0; j < 4; j += 1)
+            {
+                verts[i][j] = _simd16_extract_ps(tri[i][j], 1);
+            }
+        }
+
+        pa.useAlternateOffset = true;
+        BinTriangles<CT>(pDC, pa, workerId, verts, GetPrimMaskHi(triMask), _simd16_extract_si(primID, 1), _simd16_extract_si(viewportIdx, 1));
+    }
+}
+
+#endif
 struct FEBinTrianglesChooser
 {
     typedef PFN_PROCESS_PRIMS FuncType;
@@ -873,6 +925,25 @@ PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative)
     return TemplateArgUnroller<FEBinTrianglesChooser>::GetFunc(IsConservative);
 }
 
+#if USE_SIMD16_FRONTEND
+struct FEBinTrianglesChooser_simd16
+{
+    typedef PFN_PROCESS_PRIMS_SIMD16 FuncType;
+
+    template <typename... ArgsB>
+    static FuncType GetFunc()
+    {
+        return BinTriangles_simd16<ConservativeRastFETraits<ArgsB...>>;
+    }
+};
+
+// Selector for correct templated BinTrinagles function
+PFN_PROCESS_PRIMS_SIMD16 GetBinTrianglesFunc_simd16(bool IsConservative)
+{
+    return TemplateArgUnroller<FEBinTrianglesChooser_simd16>::GetFunc(IsConservative);
+}
+
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Bin SIMD points to the backend.  Only supports point size of 1
@@ -1217,6 +1288,47 @@ void BinPoints(
     AR_END(FEBinPoints, 1);
 }
 
+#if USE_SIMD16_FRONTEND
+void BinPoints_simd16(
+    DRAW_CONTEXT *pDC,
+    PA_STATE& pa,
+    uint32_t workerId,
+    simd16vector prim[3],
+    uint32_t primMask,
+    simd16scalari primID,
+    simd16scalari viewportIdx)
+{
+    enum { VERTS_PER_PRIM = 1 };
+
+    simdvector verts[VERTS_PER_PRIM];
+
+    for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+    {
+        for (uint32_t j = 0; j < 4; j += 1)
+        {
+            verts[i][j] = _simd16_extract_ps(prim[i][j], 0);
+        }
+    }
+
+    pa.useAlternateOffset = false;
+    BinPoints(pDC, pa, workerId, verts, GetPrimMaskLo(primMask), _simd16_extract_si(primID, 0), _simd16_extract_si(viewportIdx, 0));
+
+    if (GetPrimMaskHi(primMask))
+    {
+        for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+        {
+            for (uint32_t j = 0; j < 4; j += 1)
+            {
+                verts[i][j] = _simd16_extract_ps(prim[i][j], 1);
+            }
+        }
+
+        pa.useAlternateOffset = true;
+        BinPoints(pDC, pa, workerId, verts, GetPrimMaskHi(primMask), _simd16_extract_si(primID, 1), _simd16_extract_si(viewportIdx, 1));
+    }
+}
+
+#endif
 //////////////////////////////////////////////////////////////////////////
 /// @brief Bin SIMD lines to the backend.
 /// @param pDC - pointer to draw context.
@@ -1503,3 +1615,45 @@ void BinLines(
         primID,
         viewportIdx);
 }
+
+#if USE_SIMD16_FRONTEND
+void BinLines_simd16(
+    DRAW_CONTEXT *pDC,
+    PA_STATE& pa,
+    uint32_t workerId,
+    simd16vector prim[3],
+    uint32_t primMask,
+    simd16scalari primID,
+    simd16scalari viewportIdx)
+{
+    enum { VERTS_PER_PRIM = 2 };
+
+    simdvector verts[VERTS_PER_PRIM];
+
+    for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+    {
+        for (uint32_t j = 0; j < 4; j += 1)
+        {
+            verts[i][j] = _simd16_extract_ps(prim[i][j], 0);
+        }
+    }
+
+    pa.useAlternateOffset = false;
+    BinLines(pDC, pa, workerId, verts, GetPrimMaskLo(primMask), _simd16_extract_si(primID, 0), _simd16_extract_si(viewportIdx, 0));
+
+    if (GetPrimMaskHi(primMask))
+    {
+        for (uint32_t i = 0; i < VERTS_PER_PRIM; i += 1)
+        {
+            for (uint32_t j = 0; j < 4; j += 1)
+            {
+                verts[i][j] = _simd16_extract_ps(prim[i][j], 1);
+            }
+        }
+
+        pa.useAlternateOffset = true;
+        BinLines(pDC, pa, workerId, verts, GetPrimMaskHi(primMask), _simd16_extract_si(primID, 1), _simd16_extract_si(viewportIdx, 1));
+    }
+}
+
+#endif

@@ -969,3 +969,9 @@ private:
 void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx);
 void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx);
 void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx);
+#if USE_SIMD16_FRONTEND
+void ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx);
+void ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx);
+void ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx);
+#endif
+

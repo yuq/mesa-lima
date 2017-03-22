@@ -1228,7 +1228,11 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     simdvector a;
     simdvector b;
 
+#if 1
+    const simd16vector &leadvert_16 = PaGetSimdVector_simd16(pa, pa.first, slot);
+#else
     const simd16vector &leadvert_16 = pa.leadingVertex.attrib[slot];
+#endif
 
     if (!pa.useAlternateOffset)
     {
@@ -1298,7 +1302,11 @@ bool PaTriFan0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
 #if USE_SIMD16_FRONTEND
+#if 1
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.first, slot);
+#else
     const simd16vector &a = pa.leadingVertex.attrib[slot];
+#endif
 #else
     simd16vector a;
 
@@ -1345,7 +1353,11 @@ bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 void PaTriFanSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
 #if USE_SIMD16_FRONTEND
+#if 1
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.first, slot);
+#else
     const simd16vector &a = pa.leadingVertex.attrib[slot];
+#endif
     const simd16vector &b = PaGetSimdVector_simd16(pa, pa.prev, slot);
     const simd16vector &c = PaGetSimdVector_simd16(pa, pa.cur, slot);
 

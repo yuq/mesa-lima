@@ -363,6 +363,9 @@ struct DRAW_STATE
     // pipeline function pointers, filled in by API thread when setting up the draw
     BACKEND_FUNCS backendFuncs;
     PFN_PROCESS_PRIMS pfnProcessPrims;
+#if USE_SIMD16_FRONTEND
+    PFN_PROCESS_PRIMS_SIMD16 pfnProcessPrims_simd16;
+#endif
 
     CachingArena* pArena;     // This should only be used by API thread.
 };

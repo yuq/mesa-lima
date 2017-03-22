@@ -315,8 +315,15 @@ void ProcessSync(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, vo
 void ProcessShutdown(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 
 PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative);
+#if USE_SIMD16_FRONTEND
+PFN_PROCESS_PRIMS_SIMD16 GetBinTrianglesFunc_simd16(bool IsConservative);
+#endif
 
 struct PA_STATE_BASE;  // forward decl
 void BinPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
 void BinLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
+#if USE_SIMD16_FRONTEND
+void BinPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
+void BinLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
+#endif
 

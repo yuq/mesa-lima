@@ -841,6 +841,20 @@ static void GeometryShaderStage(
     }
 
     // set up new binner and state for the GS output topology
+#if USE_SIMD16_FRONTEND
+    PFN_PROCESS_PRIMS_SIMD16 pfnClipFunc = nullptr;
+    if (HasRastT::value)
+    {
+        switch (pState->outputTopology)
+        {
+        case TOP_TRIANGLE_STRIP:    pfnClipFunc = ClipTriangles_simd16; break;
+        case TOP_LINE_STRIP:        pfnClipFunc = ClipLines_simd16; break;
+        case TOP_POINT_LIST:        pfnClipFunc = ClipPoints_simd16; break;
+        default: SWR_INVALID("Unexpected GS output topology: %d", pState->outputTopology);
+        }
+    }
+
+#else
     PFN_PROCESS_PRIMS pfnClipFunc = nullptr;
     if (HasRastT::value)
     {
@@ -853,6 +867,7 @@ static void GeometryShaderStage(
         }
     }
 
+#endif
     // foreach input prim:
     // - setup a new PA based on the emitted verts for that prim
     // - loop over the new verts, calling PA to assemble each prim
@@ -997,39 +1012,8 @@ static void GeometryShaderStage(
                                     vViewPortIdx = _simd16_set1_epi32(0);
                                 }
 
-                                const uint32_t primMask = GenMask(gsPa.NumPrims());
-                                const uint32_t primMask_lo = primMask & 255;
-                                const uint32_t primMask_hi = (primMask >> 8) & 255;
-
-                                const simd16scalari primID = vPrimId;
-                                const simdscalari primID_lo = _simd16_extract_si(primID, 0);
-                                const simdscalari primID_hi = _simd16_extract_si(primID, 1);
-
-                                for (uint32_t i = 0; i < 3; i += 1)
-                                {
-                                    for (uint32_t j = 0; j < 4; j += 1)
-                                    {
-                                        attrib[i][j] = _simd16_extract_ps(attrib_simd16[i][j], 0);
-                                    }
-                                }
-
                                 gsPa.useAlternateOffset = false;
-                                pfnClipFunc(pDC, gsPa, workerId, attrib, primMask_lo, primID_lo, _simd16_extract_si(vViewPortIdx, 0));
-
-                                if (primMask_hi)
-                                {
-                                    for (uint32_t i = 0; i < 3; i += 1)
-                                    {
-                                        for (uint32_t j = 0; j < 4; j += 1)
-                                        {
-                                            attrib[i][j] = _simd16_extract_ps(attrib_simd16[i][j], 1);
-                                        }
-                                    }
-
-                                    gsPa.useAlternateOffset = true;
-                                    pfnClipFunc(pDC, gsPa, workerId, attrib, primMask_hi, primID_hi, _simd16_extract_si(vViewPortIdx, 1));
-                                }
-
+                                pfnClipFunc(pDC, gsPa, workerId, attrib_simd16, GenMask(gsPa.NumPrims()), vPrimId, vViewPortIdx);
 #else
                                 simdscalari vPrimId;
                                 // pull primitiveID from the GS output if available
@@ -1202,6 +1186,20 @@ static void TessellationStages(
     }
     SWR_ASSERT(tsCtx);
 
+#if USE_SIMD16_FRONTEND
+    PFN_PROCESS_PRIMS_SIMD16 pfnClipFunc = nullptr;
+    if (HasRastT::value)
+    {
+        switch (tsState.postDSTopology)
+        {
+        case TOP_TRIANGLE_LIST: pfnClipFunc = ClipTriangles_simd16; break;
+        case TOP_LINE_LIST:     pfnClipFunc = ClipLines_simd16; break;
+        case TOP_POINT_LIST:    pfnClipFunc = ClipPoints_simd16; break;
+        default: SWR_INVALID("Unexpected DS output topology: %d", tsState.postDSTopology);
+        }
+    }
+
+#else
     PFN_PROCESS_PRIMS pfnClipFunc = nullptr;
     if (HasRastT::value)
     {
@@ -1214,6 +1212,7 @@ static void TessellationStages(
         }
     }
 
+#endif
     SWR_HS_CONTEXT& hsContext = gt_pTessellationThreadData->hsContext;
     hsContext.pCPout = gt_pTessellationThreadData->patchData;
     hsContext.PrimitiveID = primID;
@@ -1408,30 +1407,8 @@ static void TessellationStages(
 
                     SWR_ASSERT(pfnClipFunc);
 #if USE_SIMD16_FRONTEND
-                    for (uint32_t i = 0; i < 3; i += 1)
-                    {
-                        for (uint32_t j = 0; j < 4; j += 1)
-                        {
-                            prim[i][j] = _simd16_extract_ps(prim_simd16[i][j], 0);
-                        }
-                    }
-
                     tessPa.useAlternateOffset = false;
-                    pfnClipFunc(pDC, tessPa, workerId, prim, primMask_lo, primID_lo, _simd_set1_epi32(0));
-
-                    if (primMask_hi)
-                    {
-                        for (uint32_t i = 0; i < 3; i += 1)
-                        {
-                            for (uint32_t j = 0; j < 4; j += 1)
-                            {
-                                prim[i][j] = _simd16_extract_ps(prim_simd16[i][j], 1);
-                            }
-                        }
-
-                        tessPa.useAlternateOffset = true;
-                        pfnClipFunc(pDC, tessPa, workerId, prim, primMask_hi, primID_hi, _simd_set1_epi32(0));
-                    }
+                    pfnClipFunc(pDC, tessPa, workerId, prim_simd16, primMask, primID, _simd16_set1_epi32(0));
 #else
                     pfnClipFunc(pDC, tessPa, workerId, prim,
                         GenMask(tessPa.NumPrims()), _simd_set1_epi32(dsContext.PrimitiveID), _simd_set1_epi32(0));
@@ -1791,34 +1768,10 @@ void ProcessDraw(
 
                                 if (HasRastT::value)
                                 {
-                                    SWR_ASSERT(pDC->pState->pfnProcessPrims);
-
-                                    simdvector prim[MAX_NUM_VERTS_PER_PRIM];
-
-                                    for (uint32_t i = 0; i < 3; i += 1)
-                                    {
-                                        for (uint32_t j = 0; j < 4; j += 1)
-                                        {
-                                            prim[i][j] = _simd16_extract_ps(prim_simd16[i][j], 0);
-                                        }
-                                    }
+                                    SWR_ASSERT(pDC->pState->pfnProcessPrims_simd16);
 
                                     pa.useAlternateOffset = false;
-                                    pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim, primMask_lo, primID_lo, _simd_setzero_si());
-
-                                    if (primMask_hi)
-                                    {
-                                        for (uint32_t i = 0; i < 3; i += 1)
-                                        {
-                                            for (uint32_t j = 0; j < 4; j += 1)
-                                            {
-                                                prim[i][j] = _simd16_extract_ps(prim_simd16[i][j], 1);
-                                            }
-                                        }
-
-                                        pa.useAlternateOffset = true;
-                                        pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim, primMask_hi, primID_hi, _simd_setzero_si());
-                                    }
+                                    pDC->pState->pfnProcessPrims_simd16(pDC, pa, workerId, prim_simd16, primMask, primID, _simd16_setzero_si());
                                 }
                             }
                         }
