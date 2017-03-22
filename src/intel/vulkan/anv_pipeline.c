@@ -339,6 +339,10 @@ anv_pipeline_hash_shader(struct anv_pipeline *pipeline,
    struct mesa_sha1 ctx;
 
    _mesa_sha1_init(&ctx);
+   if (stage != MESA_SHADER_COMPUTE) {
+      _mesa_sha1_update(&ctx, &pipeline->subpass->view_mask,
+                        sizeof(pipeline->subpass->view_mask));
+   }
    if (pipeline->layout) {
       _mesa_sha1_update(&ctx, pipeline->layout->sha1,
                         sizeof(pipeline->layout->sha1));
@@ -371,6 +375,9 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       return NULL;
 
    NIR_PASS_V(nir, anv_nir_lower_push_constants);
+
+   if (stage != MESA_SHADER_COMPUTE)
+      NIR_PASS_V(nir, anv_nir_lower_multiview, pipeline->subpass->view_mask);
 
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 

@@ -197,6 +197,7 @@ VULKAN_FILES := \
 	vulkan/anv_nir.h \
 	vulkan/anv_nir_apply_pipeline_layout.c \
 	vulkan/anv_nir_lower_input_attachments.c \
+	vulkan/anv_nir_lower_multiview.c \
 	vulkan/anv_nir_lower_push_constants.c \
 	vulkan/anv_pass.c \
 	vulkan/anv_pipeline.c \
