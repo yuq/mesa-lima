@@ -627,6 +627,11 @@ compute_query_result(struct anv_batch *batch, uint32_t dst_reg,
    /* FIXME: We need to clamp the result for 32 bit. */
 
    uint32_t *dw = anv_batch_emitn(batch, 5, GENX(MI_MATH));
+   if (!dw) {
+      anv_batch_set_error(batch, VK_ERROR_OUT_OF_HOST_MEMORY);
+      return;
+   }
+
    dw[1] = alu(OPCODE_LOAD, OPERAND_SRCA, OPERAND_R1);
    dw[2] = alu(OPCODE_LOAD, OPERAND_SRCB, OPERAND_R0);
    dw[3] = alu(OPCODE_SUB, 0, 0);
