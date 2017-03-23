@@ -47,7 +47,19 @@
 #endif
 
 #define OSALIGN(RWORD, WIDTH) __declspec(align(WIDTH)) RWORD
+
+#if defined(_DEBUG)
+// We compile Debug builds with inline function expansion enabled.  This allows
+// functions compiled with __forceinline to be inlined even in Debug builds.
+// The inline_depth(0) pragma below will disable inline function expansion for
+// normal INLINE / inline functions, but not for __forceinline functions.
+// Our SIMD function wrappers (see simdlib.hpp) use __forceinline even in
+// Debug builds.
+#define INLINE inline
+#pragma inline_depth(0)
+#else
 #define INLINE __forceinline
+#endif
 #define DEBUGBREAK __debugbreak()
 
 #define PRAGMA_WARNING_PUSH_DISABLE(...) \
