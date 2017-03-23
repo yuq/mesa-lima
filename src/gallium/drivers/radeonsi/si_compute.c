@@ -579,7 +579,7 @@ static void si_setup_user_sgprs_co_v2(struct si_context *sctx,
 	}
 }
 
-static void si_upload_compute_input(struct si_context *sctx,
+static bool si_upload_compute_input(struct si_context *sctx,
 				    const amd_kernel_code_t *code_object,
 				    const struct pipe_grid_info *info)
 {
@@ -601,6 +601,9 @@ static void si_upload_compute_input(struct si_context *sctx,
 		       sctx->screen->b.info.tcc_cache_line_size,
 		       &kernel_args_offset,
 		       (struct pipe_resource**)&input_buffer, &kernel_args_ptr);
+
+	if (unlikely(!kernel_args_ptr))
+		return false;
 
 	kernel_args = (uint32_t*)kernel_args_ptr;
 	kernel_args_va = input_buffer->gpu_address + kernel_args_offset;
@@ -636,6 +639,8 @@ static void si_upload_compute_input(struct si_context *sctx,
 	}
 
 	r600_resource_reference(&input_buffer, NULL);
+
+	return true;
 }
 
 static void si_setup_tgsi_grid(struct si_context *sctx,
@@ -790,8 +795,11 @@ static void si_launch_grid(
 		si_set_atom_dirty(sctx, sctx->atoms.s.render_cond, false);
 	}
 
-	if (program->input_size || program->ir_type == PIPE_SHADER_IR_NATIVE)
-		si_upload_compute_input(sctx, code_object, info);
+	if ((program->input_size ||
+            program->ir_type == PIPE_SHADER_IR_NATIVE) &&
+           unlikely(!si_upload_compute_input(sctx, code_object, info))) {
+		return;
+	}
 
 	/* Global buffers */
 	for (i = 0; i < MAX_GLOBAL_BUFFERS; i++) {
