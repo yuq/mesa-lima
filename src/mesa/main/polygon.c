@@ -143,14 +143,13 @@ _mesa_PolygonMode( GLenum face, GLenum mode )
          return;
       }
       if (ctx->Polygon.FrontMode == mode)
-	 return;
+         return;
       FLUSH_VERTICES(ctx, _NEW_POLYGON);
       ctx->Polygon.FrontMode = mode;
       break;
    case GL_FRONT_AND_BACK:
-      if (ctx->Polygon.FrontMode == mode &&
-	  ctx->Polygon.BackMode == mode)
-	 return;
+      if (ctx->Polygon.FrontMode == mode && ctx->Polygon.BackMode == mode)
+         return;
       FLUSH_VERTICES(ctx, _NEW_POLYGON);
       ctx->Polygon.FrontMode = mode;
       ctx->Polygon.BackMode = mode;
@@ -161,7 +160,7 @@ _mesa_PolygonMode( GLenum face, GLenum mode )
          return;
       }
       if (ctx->Polygon.BackMode == mode)
-	 return;
+         return;
       FLUSH_VERTICES(ctx, _NEW_POLYGON);
       ctx->Polygon.BackMode = mode;
       break;
