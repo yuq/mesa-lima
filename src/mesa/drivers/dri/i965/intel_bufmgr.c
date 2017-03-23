@@ -46,22 +46,22 @@
  * Convenience functions for buffer management methods.
  */
 
-drm_intel_bo *
-drm_intel_bo_alloc(drm_intel_bufmgr *bufmgr, const char *name,
+drm_bacon_bo *
+drm_bacon_bo_alloc(drm_bacon_bufmgr *bufmgr, const char *name,
 		   unsigned long size, unsigned int alignment)
 {
 	return bufmgr->bo_alloc(bufmgr, name, size, alignment);
 }
 
-drm_intel_bo *
-drm_intel_bo_alloc_for_render(drm_intel_bufmgr *bufmgr, const char *name,
+drm_bacon_bo *
+drm_bacon_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr, const char *name,
 			      unsigned long size, unsigned int alignment)
 {
 	return bufmgr->bo_alloc_for_render(bufmgr, name, size, alignment);
 }
 
-drm_intel_bo *
-drm_intel_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
+drm_bacon_bo *
+drm_bacon_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 			   const char *name, void *addr,
 			   uint32_t tiling_mode,
 			   uint32_t stride,
@@ -74,8 +74,8 @@ drm_intel_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
 	return NULL;
 }
 
-drm_intel_bo *
-drm_intel_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
+drm_bacon_bo *
+drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
                         int x, int y, int cpp, uint32_t *tiling_mode,
                         unsigned long *pitch, unsigned long flags)
 {
@@ -84,13 +84,13 @@ drm_intel_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 }
 
 void
-drm_intel_bo_reference(drm_intel_bo *bo)
+drm_bacon_bo_reference(drm_bacon_bo *bo)
 {
 	bo->bufmgr->bo_reference(bo);
 }
 
 void
-drm_intel_bo_unreference(drm_intel_bo *bo)
+drm_bacon_bo_unreference(drm_bacon_bo *bo)
 {
 	if (bo == NULL)
 		return;
@@ -99,26 +99,26 @@ drm_intel_bo_unreference(drm_intel_bo *bo)
 }
 
 int
-drm_intel_bo_map(drm_intel_bo *buf, int write_enable)
+drm_bacon_bo_map(drm_bacon_bo *buf, int write_enable)
 {
 	return buf->bufmgr->bo_map(buf, write_enable);
 }
 
 int
-drm_intel_bo_unmap(drm_intel_bo *buf)
+drm_bacon_bo_unmap(drm_bacon_bo *buf)
 {
 	return buf->bufmgr->bo_unmap(buf);
 }
 
 int
-drm_intel_bo_subdata(drm_intel_bo *bo, unsigned long offset,
+drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 		     unsigned long size, const void *data)
 {
 	return bo->bufmgr->bo_subdata(bo, offset, size, data);
 }
 
 int
-drm_intel_bo_get_subdata(drm_intel_bo *bo, unsigned long offset,
+drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 			 unsigned long size, void *data)
 {
 	int ret;
@@ -128,35 +128,35 @@ drm_intel_bo_get_subdata(drm_intel_bo *bo, unsigned long offset,
 	if (size == 0 || data == NULL)
 		return 0;
 
-	ret = drm_intel_bo_map(bo, 0);
+	ret = drm_bacon_bo_map(bo, 0);
 	if (ret)
 		return ret;
 	memcpy(data, (unsigned char *)bo->virtual + offset, size);
-	drm_intel_bo_unmap(bo);
+	drm_bacon_bo_unmap(bo);
 	return 0;
 }
 
 void
-drm_intel_bo_wait_rendering(drm_intel_bo *bo)
+drm_bacon_bo_wait_rendering(drm_bacon_bo *bo)
 {
 	bo->bufmgr->bo_wait_rendering(bo);
 }
 
 void
-drm_intel_bufmgr_destroy(drm_intel_bufmgr *bufmgr)
+drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 {
 	bufmgr->destroy(bufmgr);
 }
 
 int
-drm_intel_bo_exec(drm_intel_bo *bo, int used,
+drm_bacon_bo_exec(drm_bacon_bo *bo, int used,
 		  drm_clip_rect_t * cliprects, int num_cliprects, int DR4)
 {
 	return bo->bufmgr->bo_exec(bo, used, cliprects, num_cliprects, DR4);
 }
 
 int
-drm_intel_bo_mrb_exec(drm_intel_bo *bo, int used,
+drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used,
 		drm_clip_rect_t *cliprects, int num_cliprects, int DR4,
 		unsigned int rings)
 {
@@ -176,19 +176,19 @@ drm_intel_bo_mrb_exec(drm_intel_bo *bo, int used,
 }
 
 void
-drm_intel_bufmgr_set_debug(drm_intel_bufmgr *bufmgr, int enable_debug)
+drm_bacon_bufmgr_set_debug(drm_bacon_bufmgr *bufmgr, int enable_debug)
 {
 	bufmgr->debug = enable_debug;
 }
 
 int
-drm_intel_bufmgr_check_aperture_space(drm_intel_bo ** bo_array, int count)
+drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo ** bo_array, int count)
 {
 	return bo_array[0]->bufmgr->check_aperture_space(bo_array, count);
 }
 
 int
-drm_intel_bo_flink(drm_intel_bo *bo, uint32_t * name)
+drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t * name)
 {
 	if (bo->bufmgr->bo_flink)
 		return bo->bufmgr->bo_flink(bo, name);
@@ -197,8 +197,8 @@ drm_intel_bo_flink(drm_intel_bo *bo, uint32_t * name)
 }
 
 int
-drm_intel_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
-			drm_intel_bo *target_bo, uint32_t target_offset,
+drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
+			drm_bacon_bo *target_bo, uint32_t target_offset,
 			uint32_t read_domains, uint32_t write_domain)
 {
 	return bo->bufmgr->bo_emit_reloc(bo, offset,
@@ -208,8 +208,8 @@ drm_intel_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
 
 /* For fence registers, not GL fences */
 int
-drm_intel_bo_emit_reloc_fence(drm_intel_bo *bo, uint32_t offset,
-			      drm_intel_bo *target_bo, uint32_t target_offset,
+drm_bacon_bo_emit_reloc_fence(drm_bacon_bo *bo, uint32_t offset,
+			      drm_bacon_bo *target_bo, uint32_t target_offset,
 			      uint32_t read_domains, uint32_t write_domain)
 {
 	return bo->bufmgr->bo_emit_reloc_fence(bo, offset,
@@ -219,7 +219,7 @@ drm_intel_bo_emit_reloc_fence(drm_intel_bo *bo, uint32_t offset,
 
 
 int
-drm_intel_bo_pin(drm_intel_bo *bo, uint32_t alignment)
+drm_bacon_bo_pin(drm_bacon_bo *bo, uint32_t alignment)
 {
 	if (bo->bufmgr->bo_pin)
 		return bo->bufmgr->bo_pin(bo, alignment);
@@ -228,7 +228,7 @@ drm_intel_bo_pin(drm_intel_bo *bo, uint32_t alignment)
 }
 
 int
-drm_intel_bo_unpin(drm_intel_bo *bo)
+drm_bacon_bo_unpin(drm_bacon_bo *bo)
 {
 	if (bo->bufmgr->bo_unpin)
 		return bo->bufmgr->bo_unpin(bo);
@@ -237,7 +237,7 @@ drm_intel_bo_unpin(drm_intel_bo *bo)
 }
 
 int
-drm_intel_bo_set_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			uint32_t stride)
 {
 	if (bo->bufmgr->bo_set_tiling)
@@ -248,7 +248,7 @@ drm_intel_bo_set_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
 }
 
 int
-drm_intel_bo_get_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			uint32_t * swizzle_mode)
 {
 	if (bo->bufmgr->bo_get_tiling)
@@ -260,7 +260,7 @@ drm_intel_bo_get_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
 }
 
 int
-drm_intel_bo_set_softpin_offset(drm_intel_bo *bo, uint64_t offset)
+drm_bacon_bo_set_softpin_offset(drm_bacon_bo *bo, uint64_t offset)
 {
 	if (bo->bufmgr->bo_set_softpin_offset)
 		return bo->bufmgr->bo_set_softpin_offset(bo, offset);
@@ -269,7 +269,7 @@ drm_intel_bo_set_softpin_offset(drm_intel_bo *bo, uint64_t offset)
 }
 
 int
-drm_intel_bo_disable_reuse(drm_intel_bo *bo)
+drm_bacon_bo_disable_reuse(drm_bacon_bo *bo)
 {
 	if (bo->bufmgr->bo_disable_reuse)
 		return bo->bufmgr->bo_disable_reuse(bo);
@@ -277,7 +277,7 @@ drm_intel_bo_disable_reuse(drm_intel_bo *bo)
 }
 
 int
-drm_intel_bo_is_reusable(drm_intel_bo *bo)
+drm_bacon_bo_is_reusable(drm_bacon_bo *bo)
 {
 	if (bo->bufmgr->bo_is_reusable)
 		return bo->bufmgr->bo_is_reusable(bo);
@@ -285,7 +285,7 @@ drm_intel_bo_is_reusable(drm_intel_bo *bo)
 }
 
 int
-drm_intel_bo_busy(drm_intel_bo *bo)
+drm_bacon_bo_busy(drm_bacon_bo *bo)
 {
 	if (bo->bufmgr->bo_busy)
 		return bo->bufmgr->bo_busy(bo);
@@ -293,7 +293,7 @@ drm_intel_bo_busy(drm_intel_bo *bo)
 }
 
 int
-drm_intel_bo_madvise(drm_intel_bo *bo, int madv)
+drm_bacon_bo_madvise(drm_bacon_bo *bo, int madv)
 {
 	if (bo->bufmgr->bo_madvise)
 		return bo->bufmgr->bo_madvise(bo, madv);
@@ -301,7 +301,7 @@ drm_intel_bo_madvise(drm_intel_bo *bo, int madv)
 }
 
 int
-drm_intel_bo_use_48b_address_range(drm_intel_bo *bo, uint32_t enable)
+drm_bacon_bo_use_48b_address_range(drm_bacon_bo *bo, uint32_t enable)
 {
 	if (bo->bufmgr->bo_use_48b_address_range) {
 		bo->bufmgr->bo_use_48b_address_range(bo, enable);
@@ -312,13 +312,13 @@ drm_intel_bo_use_48b_address_range(drm_intel_bo *bo, uint32_t enable)
 }
 
 int
-drm_intel_bo_references(drm_intel_bo *bo, drm_intel_bo *target_bo)
+drm_bacon_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 {
 	return bo->bufmgr->bo_references(bo, target_bo);
 }
 
 int
-drm_intel_get_pipe_from_crtc_id(drm_intel_bufmgr *bufmgr, int crtc_id)
+drm_bacon_get_pipe_from_crtc_id(drm_bacon_bufmgr *bufmgr, int crtc_id)
 {
 	if (bufmgr->get_pipe_from_crtc_id)
 		return bufmgr->get_pipe_from_crtc_id(bufmgr, crtc_id);

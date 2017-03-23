@@ -39,15 +39,15 @@
  *
  * Contains public methods followed by private storage for the buffer manager.
  */
-struct _drm_intel_bufmgr {
+struct _drm_bacon_bufmgr {
 	/**
 	 * Allocate a buffer object.
 	 *
 	 * Buffer objects are not necessarily initially mapped into CPU virtual
 	 * address space or graphics device aperture.  They must be mapped
-	 * using bo_map() or drm_intel_gem_bo_map_gtt() to be used by the CPU.
+	 * using bo_map() or drm_bacon_gem_bo_map_gtt() to be used by the CPU.
 	 */
-	drm_intel_bo *(*bo_alloc) (drm_intel_bufmgr *bufmgr, const char *name,
+	drm_bacon_bo *(*bo_alloc) (drm_bacon_bufmgr *bufmgr, const char *name,
 				   unsigned long size, unsigned int alignment);
 
 	/**
@@ -56,7 +56,7 @@ struct _drm_intel_bufmgr {
 	 *
 	 * This is otherwise the same as bo_alloc.
 	 */
-	drm_intel_bo *(*bo_alloc_for_render) (drm_intel_bufmgr *bufmgr,
+	drm_bacon_bo *(*bo_alloc_for_render) (drm_bacon_bufmgr *bufmgr,
 					      const char *name,
 					      unsigned long size,
 					      unsigned int alignment);
@@ -67,7 +67,7 @@ struct _drm_intel_bufmgr {
 	 * Alignment is used when mapping to the gtt.
 	 * Flags may be I915_VMAP_READ_ONLY or I915_USERPTR_UNSYNCHRONIZED
 	 */
-	drm_intel_bo *(*bo_alloc_userptr)(drm_intel_bufmgr *bufmgr,
+	drm_bacon_bo *(*bo_alloc_userptr)(drm_bacon_bufmgr *bufmgr,
 					  const char *name, void *addr,
 					  uint32_t tiling_mode, uint32_t stride,
 					  unsigned long size,
@@ -88,7 +88,7 @@ struct _drm_intel_bufmgr {
 	 * 'tiling_mode' field on return, as well as the pitch value, which
 	 * may have been rounded up to accommodate for tiling restrictions.
 	 */
-	drm_intel_bo *(*bo_alloc_tiled) (drm_intel_bufmgr *bufmgr,
+	drm_bacon_bo *(*bo_alloc_tiled) (drm_bacon_bufmgr *bufmgr,
 					 const char *name,
 					 int x, int y, int cpp,
 					 uint32_t *tiling_mode,
@@ -96,13 +96,13 @@ struct _drm_intel_bufmgr {
 					 unsigned long flags);
 
 	/** Takes a reference on a buffer object */
-	void (*bo_reference) (drm_intel_bo *bo);
+	void (*bo_reference) (drm_bacon_bo *bo);
 
 	/**
 	 * Releases a reference on a buffer object, freeing the data if
 	 * no references remain.
 	 */
-	void (*bo_unreference) (drm_intel_bo *bo);
+	void (*bo_unreference) (drm_bacon_bo *bo);
 
 	/**
 	 * Maps the buffer into userspace.
@@ -111,30 +111,30 @@ struct _drm_intel_bufmgr {
 	 * buffer to complete, first.  The resulting mapping is available at
 	 * buf->virtual.
 	 */
-	int (*bo_map) (drm_intel_bo *bo, int write_enable);
+	int (*bo_map) (drm_bacon_bo *bo, int write_enable);
 
 	/**
 	 * Reduces the refcount on the userspace mapping of the buffer
 	 * object.
 	 */
-	int (*bo_unmap) (drm_intel_bo *bo);
+	int (*bo_unmap) (drm_bacon_bo *bo);
 
 	/**
 	 * Write data into an object.
 	 *
 	 * This is an optional function, if missing,
-	 * drm_intel_bo will map/memcpy/unmap.
+	 * drm_bacon_bo will map/memcpy/unmap.
 	 */
-	int (*bo_subdata) (drm_intel_bo *bo, unsigned long offset,
+	int (*bo_subdata) (drm_bacon_bo *bo, unsigned long offset,
 			   unsigned long size, const void *data);
 
 	/**
 	 * Read data from an object
 	 *
 	 * This is an optional function, if missing,
-	 * drm_intel_bo will map/memcpy/unmap.
+	 * drm_bacon_bo will map/memcpy/unmap.
 	 */
-	int (*bo_get_subdata) (drm_intel_bo *bo, unsigned long offset,
+	int (*bo_get_subdata) (drm_bacon_bo *bo, unsigned long offset,
 			       unsigned long size, void *data);
 
 	/**
@@ -144,12 +144,12 @@ struct _drm_intel_bufmgr {
 	 * bo_subdata, etc.  It is merely a way for the driver to implement
 	 * glFinish.
 	 */
-	void (*bo_wait_rendering) (drm_intel_bo *bo);
+	void (*bo_wait_rendering) (drm_bacon_bo *bo);
 
 	/**
 	 * Tears down the buffer manager instance.
 	 */
-	void (*destroy) (drm_intel_bufmgr *bufmgr);
+	void (*destroy) (drm_bacon_bufmgr *bufmgr);
 
 	/**
 	 * Indicate if the buffer can be placed anywhere in the full ppgtt
@@ -163,7 +163,7 @@ struct _drm_intel_bufmgr {
 	 * \param bo Buffer to set the use_48b_address_range flag.
 	 * \param enable The flag value.
 	 */
-	void (*bo_use_48b_address_range) (drm_intel_bo *bo, uint32_t enable);
+	void (*bo_use_48b_address_range) (drm_bacon_bo *bo, uint32_t enable);
 
 	/**
 	 * Add relocation entry in reloc_buf, which will be updated with the
@@ -185,24 +185,24 @@ struct _drm_intel_bufmgr {
 	 *			dirtied in by the command that this
 	 *			relocation is part of.
 	 */
-	int (*bo_emit_reloc) (drm_intel_bo *bo, uint32_t offset,
-			      drm_intel_bo *target_bo, uint32_t target_offset,
+	int (*bo_emit_reloc) (drm_bacon_bo *bo, uint32_t offset,
+			      drm_bacon_bo *target_bo, uint32_t target_offset,
 			      uint32_t read_domains, uint32_t write_domain);
-	int (*bo_emit_reloc_fence)(drm_intel_bo *bo, uint32_t offset,
-				   drm_intel_bo *target_bo,
+	int (*bo_emit_reloc_fence)(drm_bacon_bo *bo, uint32_t offset,
+				   drm_bacon_bo *target_bo,
 				   uint32_t target_offset,
 				   uint32_t read_domains,
 				   uint32_t write_domain);
 
 	/** Executes the command buffer pointed to by bo. */
-	int (*bo_exec) (drm_intel_bo *bo, int used,
+	int (*bo_exec) (drm_bacon_bo *bo, int used,
 			drm_clip_rect_t *cliprects, int num_cliprects,
 			int DR4);
 
 	/** Executes the command buffer pointed to by bo on the selected
 	 * ring buffer
 	 */
-	int (*bo_mrb_exec) (drm_intel_bo *bo, int used,
+	int (*bo_mrb_exec) (drm_bacon_bo *bo, int used,
 			    drm_clip_rect_t *cliprects, int num_cliprects,
 			    int DR4, unsigned flags);
 
@@ -212,14 +212,14 @@ struct _drm_intel_bufmgr {
 	 * \param buf Buffer to pin
 	 * \param alignment Required alignment for aperture, in bytes
 	 */
-	int (*bo_pin) (drm_intel_bo *bo, uint32_t alignment);
+	int (*bo_pin) (drm_bacon_bo *bo, uint32_t alignment);
 
 	/**
 	 * Unpin a buffer from the aperture, allowing it to be removed
 	 *
 	 * \param buf Buffer to unpin
 	 */
-	int (*bo_unpin) (drm_intel_bo *bo);
+	int (*bo_unpin) (drm_bacon_bo *bo);
 
 	/**
 	 * Ask that the buffer be placed in tiling mode
@@ -227,7 +227,7 @@ struct _drm_intel_bufmgr {
 	 * \param buf Buffer to set tiling mode for
 	 * \param tiling_mode desired, and returned tiling mode
 	 */
-	int (*bo_set_tiling) (drm_intel_bo *bo, uint32_t * tiling_mode,
+	int (*bo_set_tiling) (drm_bacon_bo *bo, uint32_t * tiling_mode,
 			      uint32_t stride);
 
 	/**
@@ -237,7 +237,7 @@ struct _drm_intel_bufmgr {
 	 * \param tiling_mode returned tiling mode
 	 * \param swizzle_mode returned swizzling mode
 	 */
-	int (*bo_get_tiling) (drm_intel_bo *bo, uint32_t * tiling_mode,
+	int (*bo_get_tiling) (drm_bacon_bo *bo, uint32_t * tiling_mode,
 			      uint32_t * swizzle_mode);
 
 	/**
@@ -245,7 +245,7 @@ struct _drm_intel_bufmgr {
 	 * \param bo Buffer to set the softpin offset for
 	 * \param offset Softpin offset
 	 */
-	int (*bo_set_softpin_offset) (drm_intel_bo *bo, uint64_t offset);
+	int (*bo_set_softpin_offset) (drm_bacon_bo *bo, uint64_t offset);
 
 	/**
 	 * Create a visible name for a buffer which can be used by other apps
@@ -253,13 +253,13 @@ struct _drm_intel_bufmgr {
 	 * \param buf Buffer to create a name for
 	 * \param name Returned name
 	 */
-	int (*bo_flink) (drm_intel_bo *bo, uint32_t * name);
+	int (*bo_flink) (drm_bacon_bo *bo, uint32_t * name);
 
 	/**
 	 * Returns 1 if mapping the buffer for write could cause the process
 	 * to block, due to the object being active in the GPU.
 	 */
-	int (*bo_busy) (drm_intel_bo *bo);
+	int (*bo_busy) (drm_bacon_bo *bo);
 
 	/**
 	 * Specify the volatility of the buffer.
@@ -273,9 +273,9 @@ struct _drm_intel_bufmgr {
 	 * Returns 1 if the buffer was retained, or 0 if it was discarded whilst
 	 * marked as I915_MADV_DONTNEED.
 	 */
-	int (*bo_madvise) (drm_intel_bo *bo, int madv);
+	int (*bo_madvise) (drm_bacon_bo *bo, int madv);
 
-	int (*check_aperture_space) (drm_intel_bo ** bo_array, int count);
+	int (*check_aperture_space) (drm_bacon_bo ** bo_array, int count);
 
 	/**
 	 * Disable buffer reuse for buffers which will be shared in some way,
@@ -284,14 +284,14 @@ struct _drm_intel_bufmgr {
 	 *
 	 * \param bo Buffer to disable reuse for
 	 */
-	int (*bo_disable_reuse) (drm_intel_bo *bo);
+	int (*bo_disable_reuse) (drm_bacon_bo *bo);
 
 	/**
 	 * Query whether a buffer is reusable.
 	 *
 	 * \param bo Buffer to query
 	 */
-	int (*bo_is_reusable) (drm_intel_bo *bo);
+	int (*bo_is_reusable) (drm_bacon_bo *bo);
 
 	/**
 	 *
@@ -304,18 +304,18 @@ struct _drm_intel_bufmgr {
 	 * \param bufmgr the associated buffer manager
 	 * \param crtc_id the crtc identifier
 	 */
-	int (*get_pipe_from_crtc_id) (drm_intel_bufmgr *bufmgr, int crtc_id);
+	int (*get_pipe_from_crtc_id) (drm_bacon_bufmgr *bufmgr, int crtc_id);
 
 	/** Returns true if target_bo is in the relocation tree rooted at bo. */
-	int (*bo_references) (drm_intel_bo *bo, drm_intel_bo *target_bo);
+	int (*bo_references) (drm_bacon_bo *bo, drm_bacon_bo *target_bo);
 
 	/**< Enables verbose debugging printouts */
 	int debug;
 };
 
-struct _drm_intel_context {
+struct _drm_bacon_context {
 	unsigned int ctx_id;
-	struct _drm_intel_bufmgr *bufmgr;
+	struct _drm_bacon_bufmgr *bufmgr;
 };
 
 #define ALIGN(value, alignment)	((value + alignment - 1) & ~(alignment - 1))

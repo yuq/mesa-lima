@@ -100,15 +100,15 @@
  */
 #define lower_32_bits(n) ((__u32)(n))
 
-typedef struct _drm_intel_bo_gem drm_intel_bo_gem;
+typedef struct _drm_bacon_bo_gem drm_bacon_bo_gem;
 
-struct drm_intel_gem_bo_bucket {
+struct drm_bacon_gem_bo_bucket {
 	drmMMListHead head;
 	unsigned long size;
 };
 
-typedef struct _drm_intel_bufmgr_gem {
-	drm_intel_bufmgr bufmgr;
+typedef struct _drm_bacon_bufmgr_gem {
+	drm_bacon_bufmgr bufmgr;
 
 	atomic_t refcount;
 
@@ -120,19 +120,19 @@ typedef struct _drm_intel_bufmgr_gem {
 
 	struct drm_i915_gem_exec_object *exec_objects;
 	struct drm_i915_gem_exec_object2 *exec2_objects;
-	drm_intel_bo **exec_bos;
+	drm_bacon_bo **exec_bos;
 	int exec_size;
 	int exec_count;
 
 	/** Array of lists of cached gem objects of power-of-two sizes */
-	struct drm_intel_gem_bo_bucket cache_bucket[14 * 4];
+	struct drm_bacon_gem_bo_bucket cache_bucket[14 * 4];
 	int num_buckets;
 	time_t time;
 
 	drmMMListHead managers;
 
-	drm_intel_bo_gem *name_table;
-	drm_intel_bo_gem *handle_table;
+	drm_bacon_bo_gem *name_table;
+	drm_bacon_bo_gem *handle_table;
 
 	drmMMListHead vma_cache;
 	int vma_count, vma_open, vma_max;
@@ -157,17 +157,17 @@ typedef struct _drm_intel_bufmgr_gem {
 		uint32_t handle;
 	} userptr_active;
 
-} drm_intel_bufmgr_gem;
+} drm_bacon_bufmgr_gem;
 
 #define DRM_INTEL_RELOC_FENCE (1<<0)
 
-typedef struct _drm_intel_reloc_target_info {
-	drm_intel_bo *bo;
+typedef struct _drm_bacon_reloc_target_info {
+	drm_bacon_bo *bo;
 	int flags;
-} drm_intel_reloc_target;
+} drm_bacon_reloc_target;
 
-struct _drm_intel_bo_gem {
-	drm_intel_bo bo;
+struct _drm_bacon_bo_gem {
+	drm_bacon_bo bo;
 
 	atomic_t refcount;
 	uint32_t gem_handle;
@@ -205,11 +205,11 @@ struct _drm_intel_bo_gem {
 	/**
 	 * Array of info structs corresponding to relocs[i].target_handle etc
 	 */
-	drm_intel_reloc_target *reloc_target_info;
+	drm_bacon_reloc_target *reloc_target_info;
 	/** Number of entries in relocs */
 	int reloc_count;
 	/** Array of BOs that are referenced by this buffer and will be softpinned */
-	drm_intel_bo **softpin_target;
+	drm_bacon_bo **softpin_target;
 	/** Number softpinned BOs that are referenced by this buffer */
 	int softpin_target_count;
 	/** Maximum amount of softpinned BOs that are referenced by this buffer */
@@ -234,7 +234,7 @@ struct _drm_intel_bo_gem {
 
 	/**
 	 * Boolean of whether this BO and its children have been included in
-	 * the current drm_intel_bufmgr_check_aperture_space() total.
+	 * the current drm_bacon_bufmgr_check_aperture_space() total.
 	 */
 	bool included_in_check_aperture;
 
@@ -273,7 +273,7 @@ struct _drm_intel_bo_gem {
 	 * Size in bytes of this buffer and its relocation descendents.
 	 *
 	 * Used to avoid costly tree walking in
-	 * drm_intel_bufmgr_check_aperture in the common case.
+	 * drm_bacon_bufmgr_check_aperture in the common case.
 	 */
 	int reloc_tree_size;
 
@@ -288,34 +288,34 @@ struct _drm_intel_bo_gem {
 };
 
 static unsigned int
-drm_intel_gem_estimate_batch_space(drm_intel_bo ** bo_array, int count);
+drm_bacon_gem_estimate_batch_space(drm_bacon_bo ** bo_array, int count);
 
 static unsigned int
-drm_intel_gem_compute_batch_space(drm_intel_bo ** bo_array, int count);
+drm_bacon_gem_compute_batch_space(drm_bacon_bo ** bo_array, int count);
 
 static int
-drm_intel_gem_bo_get_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+drm_bacon_gem_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			    uint32_t * swizzle_mode);
 
 static int
-drm_intel_gem_bo_set_tiling_internal(drm_intel_bo *bo,
+drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 				     uint32_t tiling_mode,
 				     uint32_t stride);
 
-static void drm_intel_gem_bo_unreference_locked_timed(drm_intel_bo *bo,
+static void drm_bacon_gem_bo_unreference_locked_timed(drm_bacon_bo *bo,
 						      time_t time);
 
-static void drm_intel_gem_bo_unreference(drm_intel_bo *bo);
+static void drm_bacon_gem_bo_unreference(drm_bacon_bo *bo);
 
-static void drm_intel_gem_bo_free(drm_intel_bo *bo);
+static void drm_bacon_gem_bo_free(drm_bacon_bo *bo);
 
-static inline drm_intel_bo_gem *to_bo_gem(drm_intel_bo *bo)
+static inline drm_bacon_bo_gem *to_bo_gem(drm_bacon_bo *bo)
 {
-        return (drm_intel_bo_gem *)bo;
+        return (drm_bacon_bo_gem *)bo;
 }
 
 static unsigned long
-drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
+drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr_gem *bufmgr_gem, unsigned long size,
 			   uint32_t *tiling_mode)
 {
 	unsigned long min_size, max_size;
@@ -358,7 +358,7 @@ drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
  * change.
  */
 static unsigned long
-drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
+drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr_gem *bufmgr_gem,
 			    unsigned long pitch, uint32_t *tiling_mode)
 {
 	unsigned long tile_width;
@@ -396,14 +396,14 @@ drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
 	return i;
 }
 
-static struct drm_intel_gem_bo_bucket *
-drm_intel_gem_bo_bucket_for_size(drm_intel_bufmgr_gem *bufmgr_gem,
+static struct drm_bacon_gem_bo_bucket *
+drm_bacon_gem_bo_bucket_for_size(drm_bacon_bufmgr_gem *bufmgr_gem,
 				 unsigned long size)
 {
 	int i;
 
 	for (i = 0; i < bufmgr_gem->num_buckets; i++) {
-		struct drm_intel_gem_bo_bucket *bucket =
+		struct drm_bacon_gem_bo_bucket *bucket =
 		    &bufmgr_gem->cache_bucket[i];
 		if (bucket->size >= size) {
 			return bucket;
@@ -414,13 +414,13 @@ drm_intel_gem_bo_bucket_for_size(drm_intel_bufmgr_gem *bufmgr_gem,
 }
 
 static void
-drm_intel_gem_dump_validation_list(drm_intel_bufmgr_gem *bufmgr_gem)
+drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr_gem *bufmgr_gem)
 {
 	int i, j;
 
 	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_intel_bo *bo = bufmgr_gem->exec_bos[i];
-		drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+		drm_bacon_bo *bo = bufmgr_gem->exec_bos[i];
+		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 		if (bo_gem->relocs == NULL && bo_gem->softpin_target == NULL) {
 			DBG("%2d: %d %s(%s)\n", i, bo_gem->gem_handle,
@@ -430,9 +430,9 @@ drm_intel_gem_dump_validation_list(drm_intel_bufmgr_gem *bufmgr_gem)
 		}
 
 		for (j = 0; j < bo_gem->reloc_count; j++) {
-			drm_intel_bo *target_bo = bo_gem->reloc_target_info[j].bo;
-			drm_intel_bo_gem *target_gem =
-			    (drm_intel_bo_gem *) target_bo;
+			drm_bacon_bo *target_bo = bo_gem->reloc_target_info[j].bo;
+			drm_bacon_bo_gem *target_gem =
+			    (drm_bacon_bo_gem *) target_bo;
 
 			DBG("%2d: %d %s(%s)@0x%08x %08x -> "
 			    "%d (%s)@0x%08x %08x + 0x%08x\n",
@@ -450,9 +450,9 @@ drm_intel_gem_dump_validation_list(drm_intel_bufmgr_gem *bufmgr_gem)
 		}
 
 		for (j = 0; j < bo_gem->softpin_target_count; j++) {
-			drm_intel_bo *target_bo = bo_gem->softpin_target[j];
-			drm_intel_bo_gem *target_gem =
-			    (drm_intel_bo_gem *) target_bo;
+			drm_bacon_bo *target_bo = bo_gem->softpin_target[j];
+			drm_bacon_bo_gem *target_gem =
+			    (drm_bacon_bo_gem *) target_bo;
 			DBG("%2d: %d %s(%s) -> "
 			    "%d *(%s)@0x%08x %08x\n",
 			    i,
@@ -468,9 +468,9 @@ drm_intel_gem_dump_validation_list(drm_intel_bufmgr_gem *bufmgr_gem)
 }
 
 static inline void
-drm_intel_gem_bo_reference(drm_intel_bo *bo)
+drm_bacon_gem_bo_reference(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	atomic_inc(&bo_gem->refcount);
 }
@@ -484,10 +484,10 @@ drm_intel_gem_bo_reference(drm_intel_bo *bo)
  * access flags.
  */
 static void
-drm_intel_add_validate_buffer(drm_intel_bo *bo)
+drm_bacon_add_validate_buffer(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int index;
 
 	if (bo_gem->validate_index != -1)
@@ -522,10 +522,10 @@ drm_intel_add_validate_buffer(drm_intel_bo *bo)
 }
 
 static void
-drm_intel_add_validate_buffer2(drm_intel_bo *bo, int need_fence)
+drm_bacon_add_validate_buffer2(drm_bacon_bo *bo, int need_fence)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *)bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
 	int index;
 	unsigned long flags;
 
@@ -573,8 +573,8 @@ drm_intel_add_validate_buffer2(drm_intel_bo *bo, int need_fence)
 	sizeof(uint32_t))
 
 static void
-drm_intel_bo_gem_set_in_aperture_size(drm_intel_bufmgr_gem *bufmgr_gem,
-				      drm_intel_bo_gem *bo_gem,
+drm_bacon_bo_gem_set_in_aperture_size(drm_bacon_bufmgr_gem *bufmgr_gem,
+				      drm_bacon_bo_gem *bo_gem,
 				      unsigned int alignment)
 {
 	unsigned int size;
@@ -610,10 +610,10 @@ drm_intel_bo_gem_set_in_aperture_size(drm_intel_bufmgr_gem *bufmgr_gem,
 }
 
 static int
-drm_intel_setup_reloc_list(drm_intel_bo *bo)
+drm_bacon_setup_reloc_list(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
 	unsigned int max_relocs = bufmgr_gem->max_relocs;
 
 	if (bo->size / 4 < max_relocs)
@@ -622,7 +622,7 @@ drm_intel_setup_reloc_list(drm_intel_bo *bo)
 	bo_gem->relocs = malloc(max_relocs *
 				sizeof(struct drm_i915_gem_relocation_entry));
 	bo_gem->reloc_target_info = malloc(max_relocs *
-					   sizeof(drm_intel_reloc_target));
+					   sizeof(drm_bacon_reloc_target));
 	if (bo_gem->relocs == NULL || bo_gem->reloc_target_info == NULL) {
 		bo_gem->has_error = true;
 
@@ -639,10 +639,10 @@ drm_intel_setup_reloc_list(drm_intel_bo *bo)
 }
 
 static int
-drm_intel_gem_bo_busy(drm_intel_bo *bo)
+drm_bacon_gem_bo_busy(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_busy busy;
 	int ret;
 
@@ -663,8 +663,8 @@ drm_intel_gem_bo_busy(drm_intel_bo *bo)
 }
 
 static int
-drm_intel_gem_bo_madvise_internal(drm_intel_bufmgr_gem *bufmgr_gem,
-				  drm_intel_bo_gem *bo_gem, int state)
+drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr_gem *bufmgr_gem,
+				  drm_bacon_bo_gem *bo_gem, int state)
 {
 	struct drm_i915_gem_madvise madv;
 
@@ -678,35 +678,35 @@ drm_intel_gem_bo_madvise_internal(drm_intel_bufmgr_gem *bufmgr_gem,
 }
 
 static int
-drm_intel_gem_bo_madvise(drm_intel_bo *bo, int madv)
+drm_bacon_gem_bo_madvise(drm_bacon_bo *bo, int madv)
 {
-	return drm_intel_gem_bo_madvise_internal
-		((drm_intel_bufmgr_gem *) bo->bufmgr,
-		 (drm_intel_bo_gem *) bo,
+	return drm_bacon_gem_bo_madvise_internal
+		((drm_bacon_bufmgr_gem *) bo->bufmgr,
+		 (drm_bacon_bo_gem *) bo,
 		 madv);
 }
 
 /* drop the oldest entries that have been purged by the kernel */
 static void
-drm_intel_gem_bo_cache_purge_bucket(drm_intel_bufmgr_gem *bufmgr_gem,
-				    struct drm_intel_gem_bo_bucket *bucket)
+drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr_gem *bufmgr_gem,
+				    struct drm_bacon_gem_bo_bucket *bucket)
 {
 	while (!DRMLISTEMPTY(&bucket->head)) {
-		drm_intel_bo_gem *bo_gem;
+		drm_bacon_bo_gem *bo_gem;
 
-		bo_gem = DRMLISTENTRY(drm_intel_bo_gem,
+		bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
 				      bucket->head.next, head);
-		if (drm_intel_gem_bo_madvise_internal
+		if (drm_bacon_gem_bo_madvise_internal
 		    (bufmgr_gem, bo_gem, I915_MADV_DONTNEED))
 			break;
 
 		DRMLISTDEL(&bo_gem->head);
-		drm_intel_gem_bo_free(&bo_gem->bo);
+		drm_bacon_gem_bo_free(&bo_gem->bo);
 	}
 }
 
-static drm_intel_bo *
-drm_intel_gem_bo_alloc_internal(drm_intel_bufmgr *bufmgr,
+static drm_bacon_bo *
+drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 				const char *name,
 				unsigned long size,
 				unsigned long flags,
@@ -714,11 +714,11 @@ drm_intel_gem_bo_alloc_internal(drm_intel_bufmgr *bufmgr,
 				unsigned long stride,
 				unsigned int alignment)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
-	drm_intel_bo_gem *bo_gem;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
+	drm_bacon_bo_gem *bo_gem;
 	unsigned int page_size = getpagesize();
 	int ret;
-	struct drm_intel_gem_bo_bucket *bucket;
+	struct drm_bacon_gem_bo_bucket *bucket;
 	bool alloc_from_cache;
 	unsigned long bo_size;
 	bool for_render = false;
@@ -727,7 +727,7 @@ drm_intel_gem_bo_alloc_internal(drm_intel_bufmgr *bufmgr,
 		for_render = true;
 
 	/* Round the allocated size up to a power of two number of pages. */
-	bucket = drm_intel_gem_bo_bucket_for_size(bufmgr_gem, size);
+	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr_gem, size);
 
 	/* If we don't have caching at this size, don't actually round the
 	 * allocation up.
@@ -750,7 +750,7 @@ retry:
 			 * of the list, as it will likely be hot in the GPU
 			 * cache and in the aperture for us.
 			 */
-			bo_gem = DRMLISTENTRY(drm_intel_bo_gem,
+			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
 					      bucket->head.prev, head);
 			DRMLISTDEL(&bo_gem->head);
 			alloc_from_cache = true;
@@ -764,27 +764,27 @@ retry:
 			 * allocating a new buffer is probably faster than
 			 * waiting for the GPU to finish.
 			 */
-			bo_gem = DRMLISTENTRY(drm_intel_bo_gem,
+			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
 					      bucket->head.next, head);
-			if (!drm_intel_gem_bo_busy(&bo_gem->bo)) {
+			if (!drm_bacon_gem_bo_busy(&bo_gem->bo)) {
 				alloc_from_cache = true;
 				DRMLISTDEL(&bo_gem->head);
 			}
 		}
 
 		if (alloc_from_cache) {
-			if (!drm_intel_gem_bo_madvise_internal
+			if (!drm_bacon_gem_bo_madvise_internal
 			    (bufmgr_gem, bo_gem, I915_MADV_WILLNEED)) {
-				drm_intel_gem_bo_free(&bo_gem->bo);
-				drm_intel_gem_bo_cache_purge_bucket(bufmgr_gem,
+				drm_bacon_gem_bo_free(&bo_gem->bo);
+				drm_bacon_gem_bo_cache_purge_bucket(bufmgr_gem,
 								    bucket);
 				goto retry;
 			}
 
-			if (drm_intel_gem_bo_set_tiling_internal(&bo_gem->bo,
+			if (drm_bacon_gem_bo_set_tiling_internal(&bo_gem->bo,
 								 tiling_mode,
 								 stride)) {
-				drm_intel_gem_bo_free(&bo_gem->bo);
+				drm_bacon_gem_bo_free(&bo_gem->bo);
 				goto retry;
 			}
 		}
@@ -797,7 +797,7 @@ retry:
 		if (!bo_gem)
 			goto err;
 
-		/* drm_intel_gem_bo_free calls DRMLISTDEL() for an uninitialized
+		/* drm_bacon_gem_bo_free calls DRMLISTDEL() for an uninitialized
 		   list (vma_list), so better set the list head here */
 		DRMINITLISTHEAD(&bo_gem->vma_list);
 
@@ -827,7 +827,7 @@ retry:
 		bo_gem->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
 		bo_gem->stride = 0;
 
-		if (drm_intel_gem_bo_set_tiling_internal(&bo_gem->bo,
+		if (drm_bacon_gem_bo_set_tiling_internal(&bo_gem->bo,
 							 tiling_mode,
 							 stride))
 			goto err_free;
@@ -841,7 +841,7 @@ retry:
 	bo_gem->has_error = false;
 	bo_gem->reusable = true;
 
-	drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, alignment);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, alignment);
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 
 	DBG("bo_create: buf %d (%s) %ldb\n",
@@ -850,40 +850,40 @@ retry:
 	return &bo_gem->bo;
 
 err_free:
-	drm_intel_gem_bo_free(&bo_gem->bo);
+	drm_bacon_gem_bo_free(&bo_gem->bo);
 err:
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 	return NULL;
 }
 
-static drm_intel_bo *
-drm_intel_gem_bo_alloc_for_render(drm_intel_bufmgr *bufmgr,
+static drm_bacon_bo *
+drm_bacon_gem_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr,
 				  const char *name,
 				  unsigned long size,
 				  unsigned int alignment)
 {
-	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size,
+	return drm_bacon_gem_bo_alloc_internal(bufmgr, name, size,
 					       BO_ALLOC_FOR_RENDER,
 					       I915_TILING_NONE, 0,
 					       alignment);
 }
 
-static drm_intel_bo *
-drm_intel_gem_bo_alloc(drm_intel_bufmgr *bufmgr,
+static drm_bacon_bo *
+drm_bacon_gem_bo_alloc(drm_bacon_bufmgr *bufmgr,
 		       const char *name,
 		       unsigned long size,
 		       unsigned int alignment)
 {
-	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, 0,
+	return drm_bacon_gem_bo_alloc_internal(bufmgr, name, size, 0,
 					       I915_TILING_NONE, 0, 0);
 }
 
-static drm_intel_bo *
-drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
+static drm_bacon_bo *
+drm_bacon_gem_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
 			     int x, int y, int cpp, uint32_t *tiling_mode,
 			     unsigned long *pitch, unsigned long flags)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 	unsigned long size, stride;
 	uint32_t tiling;
 
@@ -917,21 +917,21 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 		aligned_y = ALIGN(y, height_alignment);
 
 		stride = x * cpp;
-		stride = drm_intel_gem_bo_tile_pitch(bufmgr_gem, stride, tiling_mode);
+		stride = drm_bacon_gem_bo_tile_pitch(bufmgr_gem, stride, tiling_mode);
 		size = stride * aligned_y;
-		size = drm_intel_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
+		size = drm_bacon_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
 	} while (*tiling_mode != tiling);
 	*pitch = stride;
 
 	if (tiling == I915_TILING_NONE)
 		stride = 0;
 
-	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, flags,
+	return drm_bacon_gem_bo_alloc_internal(bufmgr, name, size, flags,
 					       tiling, stride, 0);
 }
 
-static drm_intel_bo *
-drm_intel_gem_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
+static drm_bacon_bo *
+drm_bacon_gem_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 				const char *name,
 				void *addr,
 				uint32_t tiling_mode,
@@ -939,8 +939,8 @@ drm_intel_gem_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
 				unsigned long size,
 				unsigned long flags)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
-	drm_intel_bo_gem *bo_gem;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
+	drm_bacon_bo_gem *bo_gem;
 	int ret;
 	struct drm_i915_gem_userptr userptr;
 
@@ -999,7 +999,7 @@ drm_intel_gem_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
 	bo_gem->has_error = false;
 	bo_gem->reusable = false;
 
-	drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 
 	DBG("bo_create_userptr: "
@@ -1011,7 +1011,7 @@ drm_intel_gem_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
 }
 
 static bool
-has_userptr(drm_intel_bufmgr_gem *bufmgr_gem)
+has_userptr(drm_bacon_bufmgr_gem *bufmgr_gem)
 {
 	int ret;
 	void *ptr;
@@ -1056,8 +1056,8 @@ retry:
 	return true;
 }
 
-static drm_intel_bo *
-check_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
+static drm_bacon_bo *
+check_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 		       const char *name,
 		       void *addr,
 		       uint32_t tiling_mode,
@@ -1065,28 +1065,28 @@ check_bo_alloc_userptr(drm_intel_bufmgr *bufmgr,
 		       unsigned long size,
 		       unsigned long flags)
 {
-	if (has_userptr((drm_intel_bufmgr_gem *)bufmgr))
-		bufmgr->bo_alloc_userptr = drm_intel_gem_bo_alloc_userptr;
+	if (has_userptr((drm_bacon_bufmgr_gem *)bufmgr))
+		bufmgr->bo_alloc_userptr = drm_bacon_gem_bo_alloc_userptr;
 	else
 		bufmgr->bo_alloc_userptr = NULL;
 
-	return drm_intel_bo_alloc_userptr(bufmgr, name, addr,
+	return drm_bacon_bo_alloc_userptr(bufmgr, name, addr,
 					  tiling_mode, stride, size, flags);
 }
 
 /**
- * Returns a drm_intel_bo wrapping the given buffer object handle.
+ * Returns a drm_bacon_bo wrapping the given buffer object handle.
  *
  * This can be used when one application needs to pass a buffer object
  * to another.
  */
-drm_intel_bo *
-drm_intel_bo_gem_create_from_name(drm_intel_bufmgr *bufmgr,
+drm_bacon_bo *
+drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 				  const char *name,
 				  unsigned int handle)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
-	drm_intel_bo_gem *bo_gem;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
+	drm_bacon_bo_gem *bo_gem;
 	int ret;
 	struct drm_gem_open open_arg;
 	struct drm_i915_gem_get_tiling get_tiling;
@@ -1101,7 +1101,7 @@ drm_intel_bo_gem_create_from_name(drm_intel_bufmgr *bufmgr,
 	HASH_FIND(name_hh, bufmgr_gem->name_table,
 		  &handle, sizeof(handle), bo_gem);
 	if (bo_gem) {
-		drm_intel_gem_bo_reference(&bo_gem->bo);
+		drm_bacon_gem_bo_reference(&bo_gem->bo);
 		goto out;
 	}
 
@@ -1123,7 +1123,7 @@ drm_intel_bo_gem_create_from_name(drm_intel_bufmgr *bufmgr,
 	HASH_FIND(handle_hh, bufmgr_gem->handle_table,
 		  &open_arg.handle, sizeof(open_arg.handle), bo_gem);
 	if (bo_gem) {
-		drm_intel_gem_bo_reference(&bo_gem->bo);
+		drm_bacon_gem_bo_reference(&bo_gem->bo);
 		goto out;
 	}
 
@@ -1162,7 +1162,7 @@ drm_intel_bo_gem_create_from_name(drm_intel_bufmgr *bufmgr,
 	bo_gem->tiling_mode = get_tiling.tiling_mode;
 	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
-	drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
 	DBG("bo_create_from_handle: %d (%s)\n", handle, bo_gem->name);
 
 out:
@@ -1170,16 +1170,16 @@ out:
 	return &bo_gem->bo;
 
 err_unref:
-	drm_intel_gem_bo_free(&bo_gem->bo);
+	drm_bacon_gem_bo_free(&bo_gem->bo);
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 	return NULL;
 }
 
 static void
-drm_intel_gem_bo_free(drm_intel_bo *bo)
+drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_gem_close close;
 	int ret;
 
@@ -1215,10 +1215,10 @@ drm_intel_gem_bo_free(drm_intel_bo *bo)
 }
 
 static void
-drm_intel_gem_bo_mark_mmaps_incoherent(drm_intel_bo *bo)
+drm_bacon_gem_bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
 {
 #if HAVE_VALGRIND
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (bo_gem->mem_virtual)
 		VALGRIND_MAKE_MEM_NOACCESS(bo_gem->mem_virtual, bo->size);
@@ -1233,7 +1233,7 @@ drm_intel_gem_bo_mark_mmaps_incoherent(drm_intel_bo *bo)
 
 /** Frees all cached buffers significantly older than @time. */
 static void
-drm_intel_gem_cleanup_bo_cache(drm_intel_bufmgr_gem *bufmgr_gem, time_t time)
+drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr_gem *bufmgr_gem, time_t time)
 {
 	int i;
 
@@ -1241,27 +1241,27 @@ drm_intel_gem_cleanup_bo_cache(drm_intel_bufmgr_gem *bufmgr_gem, time_t time)
 		return;
 
 	for (i = 0; i < bufmgr_gem->num_buckets; i++) {
-		struct drm_intel_gem_bo_bucket *bucket =
+		struct drm_bacon_gem_bo_bucket *bucket =
 		    &bufmgr_gem->cache_bucket[i];
 
 		while (!DRMLISTEMPTY(&bucket->head)) {
-			drm_intel_bo_gem *bo_gem;
+			drm_bacon_bo_gem *bo_gem;
 
-			bo_gem = DRMLISTENTRY(drm_intel_bo_gem,
+			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
 					      bucket->head.next, head);
 			if (time - bo_gem->free_time <= 1)
 				break;
 
 			DRMLISTDEL(&bo_gem->head);
 
-			drm_intel_gem_bo_free(&bo_gem->bo);
+			drm_bacon_gem_bo_free(&bo_gem->bo);
 		}
 	}
 
 	bufmgr_gem->time = time;
 }
 
-static void drm_intel_gem_bo_purge_vma_cache(drm_intel_bufmgr_gem *bufmgr_gem)
+static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr_gem *bufmgr_gem)
 {
 	int limit;
 
@@ -1277,9 +1277,9 @@ static void drm_intel_gem_bo_purge_vma_cache(drm_intel_bufmgr_gem *bufmgr_gem)
 		limit = 0;
 
 	while (bufmgr_gem->vma_count > limit) {
-		drm_intel_bo_gem *bo_gem;
+		drm_bacon_bo_gem *bo_gem;
 
-		bo_gem = DRMLISTENTRY(drm_intel_bo_gem,
+		bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
 				      bufmgr_gem->vma_cache.next,
 				      vma_list);
 		assert(bo_gem->map_count == 0);
@@ -1303,8 +1303,8 @@ static void drm_intel_gem_bo_purge_vma_cache(drm_intel_bufmgr_gem *bufmgr_gem)
 	}
 }
 
-static void drm_intel_gem_bo_close_vma(drm_intel_bufmgr_gem *bufmgr_gem,
-				       drm_intel_bo_gem *bo_gem)
+static void drm_bacon_gem_bo_close_vma(drm_bacon_bufmgr_gem *bufmgr_gem,
+				       drm_bacon_bo_gem *bo_gem)
 {
 	bufmgr_gem->vma_open--;
 	DRMLISTADDTAIL(&bo_gem->vma_list, &bufmgr_gem->vma_cache);
@@ -1314,11 +1314,11 @@ static void drm_intel_gem_bo_close_vma(drm_intel_bufmgr_gem *bufmgr_gem,
 		bufmgr_gem->vma_count++;
 	if (bo_gem->gtt_virtual)
 		bufmgr_gem->vma_count++;
-	drm_intel_gem_bo_purge_vma_cache(bufmgr_gem);
+	drm_bacon_gem_bo_purge_vma_cache(bufmgr_gem);
 }
 
-static void drm_intel_gem_bo_open_vma(drm_intel_bufmgr_gem *bufmgr_gem,
-				      drm_intel_bo_gem *bo_gem)
+static void drm_bacon_gem_bo_open_vma(drm_bacon_bufmgr_gem *bufmgr_gem,
+				      drm_bacon_bo_gem *bo_gem)
 {
 	bufmgr_gem->vma_open++;
 	DRMLISTDEL(&bo_gem->vma_list);
@@ -1328,27 +1328,27 @@ static void drm_intel_gem_bo_open_vma(drm_intel_bufmgr_gem *bufmgr_gem,
 		bufmgr_gem->vma_count--;
 	if (bo_gem->gtt_virtual)
 		bufmgr_gem->vma_count--;
-	drm_intel_gem_bo_purge_vma_cache(bufmgr_gem);
+	drm_bacon_gem_bo_purge_vma_cache(bufmgr_gem);
 }
 
 static void
-drm_intel_gem_bo_unreference_final(drm_intel_bo *bo, time_t time)
+drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
-	struct drm_intel_gem_bo_bucket *bucket;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
+	struct drm_bacon_gem_bo_bucket *bucket;
 	int i;
 
 	/* Unreference all the target buffers */
 	for (i = 0; i < bo_gem->reloc_count; i++) {
 		if (bo_gem->reloc_target_info[i].bo != bo) {
-			drm_intel_gem_bo_unreference_locked_timed(bo_gem->
+			drm_bacon_gem_bo_unreference_locked_timed(bo_gem->
 								  reloc_target_info[i].bo,
 								  time);
 		}
 	}
 	for (i = 0; i < bo_gem->softpin_target_count; i++)
-		drm_intel_gem_bo_unreference_locked_timed(bo_gem->softpin_target[i],
+		drm_bacon_gem_bo_unreference_locked_timed(bo_gem->softpin_target[i],
 								  time);
 	bo_gem->kflags = 0;
 	bo_gem->reloc_count = 0;
@@ -1377,14 +1377,14 @@ drm_intel_gem_bo_unreference_final(drm_intel_bo *bo, time_t time)
 	if (bo_gem->map_count) {
 		DBG("bo freed with non-zero map-count %d\n", bo_gem->map_count);
 		bo_gem->map_count = 0;
-		drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
-		drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+		drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	}
 
-	bucket = drm_intel_gem_bo_bucket_for_size(bufmgr_gem, bo->size);
+	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr_gem, bo->size);
 	/* Put the buffer into our internal cache for reuse if we can. */
 	if (bufmgr_gem->bo_reuse && bo_gem->reusable && bucket != NULL &&
-	    drm_intel_gem_bo_madvise_internal(bufmgr_gem, bo_gem,
+	    drm_bacon_gem_bo_madvise_internal(bufmgr_gem, bo_gem,
 					      I915_MADV_DONTNEED)) {
 		bo_gem->free_time = time;
 
@@ -1393,29 +1393,29 @@ drm_intel_gem_bo_unreference_final(drm_intel_bo *bo, time_t time)
 
 		DRMLISTADDTAIL(&bo_gem->head, &bucket->head);
 	} else {
-		drm_intel_gem_bo_free(bo);
+		drm_bacon_gem_bo_free(bo);
 	}
 }
 
-static void drm_intel_gem_bo_unreference_locked_timed(drm_intel_bo *bo,
+static void drm_bacon_gem_bo_unreference_locked_timed(drm_bacon_bo *bo,
 						      time_t time)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	assert(atomic_read(&bo_gem->refcount) > 0);
 	if (atomic_dec_and_test(&bo_gem->refcount))
-		drm_intel_gem_bo_unreference_final(bo, time);
+		drm_bacon_gem_bo_unreference_final(bo, time);
 }
 
-static void drm_intel_gem_bo_unreference(drm_intel_bo *bo)
+static void drm_bacon_gem_bo_unreference(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	assert(atomic_read(&bo_gem->refcount) > 0);
 
 	if (atomic_add_unless(&bo_gem->refcount, -1, 1)) {
-		drm_intel_bufmgr_gem *bufmgr_gem =
-		    (drm_intel_bufmgr_gem *) bo->bufmgr;
+		drm_bacon_bufmgr_gem *bufmgr_gem =
+		    (drm_bacon_bufmgr_gem *) bo->bufmgr;
 		struct timespec time;
 
 		clock_gettime(CLOCK_MONOTONIC, &time);
@@ -1423,18 +1423,18 @@ static void drm_intel_gem_bo_unreference(drm_intel_bo *bo)
 		pthread_mutex_lock(&bufmgr_gem->lock);
 
 		if (atomic_dec_and_test(&bo_gem->refcount)) {
-			drm_intel_gem_bo_unreference_final(bo, time.tv_sec);
-			drm_intel_gem_cleanup_bo_cache(bufmgr_gem, time.tv_sec);
+			drm_bacon_gem_bo_unreference_final(bo, time.tv_sec);
+			drm_bacon_gem_cleanup_bo_cache(bufmgr_gem, time.tv_sec);
 		}
 
 		pthread_mutex_unlock(&bufmgr_gem->lock);
 	}
 }
 
-static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
+static int drm_bacon_gem_bo_map(drm_bacon_bo *bo, int write_enable)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
@@ -1447,7 +1447,7 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 	pthread_mutex_lock(&bufmgr_gem->lock);
 
 	if (bo_gem->map_count++ == 0)
-		drm_intel_gem_bo_open_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
 
 	if (!bo_gem->mem_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
@@ -1467,7 +1467,7 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 			    __FILE__, __LINE__, bo_gem->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
 			pthread_mutex_unlock(&bufmgr_gem->lock);
 			return ret;
 		}
@@ -1497,7 +1497,7 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 	if (write_enable)
 		bo_gem->mapped_cpu_write = true;
 
-	drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 
@@ -1505,17 +1505,17 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 }
 
 static int
-map_gtt(drm_intel_bo *bo)
+map_gtt(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
 
 	if (bo_gem->is_userptr)
 		return -EINVAL;
 
 	if (bo_gem->map_count++ == 0)
-		drm_intel_gem_bo_open_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
 
 	/* Get a mapping of the buffer if we haven't before. */
 	if (bo_gem->gtt_virtual == NULL) {
@@ -1538,7 +1538,7 @@ map_gtt(drm_intel_bo *bo)
 			    bo_gem->gem_handle, bo_gem->name,
 			    strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
 			return ret;
 		}
 
@@ -1554,7 +1554,7 @@ map_gtt(drm_intel_bo *bo)
 			    bo_gem->gem_handle, bo_gem->name,
 			    strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
 			return ret;
 		}
 	}
@@ -1568,10 +1568,10 @@ map_gtt(drm_intel_bo *bo)
 }
 
 int
-drm_intel_gem_bo_map_gtt(drm_intel_bo *bo)
+drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
@@ -1605,7 +1605,7 @@ drm_intel_gem_bo_map_gtt(drm_intel_bo *bo)
 		    strerror(errno));
 	}
 
-	drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->gtt_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 
@@ -1627,29 +1627,29 @@ drm_intel_gem_bo_map_gtt(drm_intel_bo *bo)
  */
 
 int
-drm_intel_gem_bo_map_unsynchronized(drm_intel_bo *bo)
+drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
 #ifdef HAVE_VALGRIND
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 #endif
 	int ret;
 
 	/* If the CPU cache isn't coherent with the GTT, then use a
 	 * regular synchronized mapping.  The problem is that we don't
 	 * track where the buffer was last used on the CPU side in
-	 * terms of drm_intel_bo_map vs drm_intel_gem_bo_map_gtt, so
+	 * terms of drm_bacon_bo_map vs drm_bacon_gem_bo_map_gtt, so
 	 * we would potentially corrupt the buffer even when the user
 	 * does reasonable things.
 	 */
 	if (!bufmgr_gem->has_llc)
-		return drm_intel_gem_bo_map_gtt(bo);
+		return drm_bacon_gem_bo_map_gtt(bo);
 
 	pthread_mutex_lock(&bufmgr_gem->lock);
 
 	ret = map_gtt(bo);
 	if (ret == 0) {
-		drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 		VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->gtt_virtual, bo->size));
 	}
 
@@ -1658,10 +1658,10 @@ drm_intel_gem_bo_map_unsynchronized(drm_intel_bo *bo)
 	return ret;
 }
 
-static int drm_intel_gem_bo_unmap(drm_intel_bo *bo)
+static int drm_bacon_gem_bo_unmap(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret = 0;
 
 	if (bo == NULL)
@@ -1670,7 +1670,7 @@ static int drm_intel_gem_bo_unmap(drm_intel_bo *bo)
 	if (bo_gem->is_userptr)
 		return 0;
 
-	bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+	bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
 
 	pthread_mutex_lock(&bufmgr_gem->lock);
 
@@ -1706,8 +1706,8 @@ static int drm_intel_gem_bo_unmap(drm_intel_bo *bo)
 	 * limits and cause later failures.
 	 */
 	if (--bo_gem->map_count == 0) {
-		drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
-		drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+		drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
+		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 		bo->virtual = NULL;
 	}
 	pthread_mutex_unlock(&bufmgr_gem->lock);
@@ -1716,17 +1716,17 @@ static int drm_intel_gem_bo_unmap(drm_intel_bo *bo)
 }
 
 int
-drm_intel_gem_bo_unmap_gtt(drm_intel_bo *bo)
+drm_bacon_gem_bo_unmap_gtt(drm_bacon_bo *bo)
 {
-	return drm_intel_gem_bo_unmap(bo);
+	return drm_bacon_gem_bo_unmap(bo);
 }
 
 static int
-drm_intel_gem_bo_subdata(drm_intel_bo *bo, unsigned long offset,
+drm_bacon_gem_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 			 unsigned long size, const void *data)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pwrite pwrite;
 	int ret;
 
@@ -1752,9 +1752,9 @@ drm_intel_gem_bo_subdata(drm_intel_bo *bo, unsigned long offset,
 }
 
 static int
-drm_intel_gem_get_pipe_from_crtc_id(drm_intel_bufmgr *bufmgr, int crtc_id)
+drm_bacon_gem_get_pipe_from_crtc_id(drm_bacon_bufmgr *bufmgr, int crtc_id)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	struct drm_i915_get_pipe_from_crtc_id get_pipe_from_crtc_id;
 	int ret;
 
@@ -1777,11 +1777,11 @@ drm_intel_gem_get_pipe_from_crtc_id(drm_intel_bufmgr *bufmgr, int crtc_id)
 }
 
 static int
-drm_intel_gem_bo_get_subdata(drm_intel_bo *bo, unsigned long offset,
+drm_bacon_gem_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 			     unsigned long size, void *data)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pread pread;
 	int ret;
 
@@ -1808,9 +1808,9 @@ drm_intel_gem_bo_get_subdata(drm_intel_bo *bo, unsigned long offset,
 
 /** Waits for all GPU rendering with the object to have completed. */
 static void
-drm_intel_gem_bo_wait_rendering(drm_intel_bo *bo)
+drm_bacon_gem_bo_wait_rendering(drm_bacon_bo *bo)
 {
-	drm_intel_gem_bo_start_gtt_access(bo, 1);
+	drm_bacon_gem_bo_start_gtt_access(bo, 1);
 }
 
 /**
@@ -1825,7 +1825,7 @@ drm_intel_gem_bo_wait_rendering(drm_intel_bo *bo)
  * value describes the error. Of particular interest is -ETIME when the wait has
  * failed to yield the desired result.
  *
- * Similar to drm_intel_gem_bo_wait_rendering except a timeout parameter allows
+ * Similar to drm_bacon_gem_bo_wait_rendering except a timeout parameter allows
  * the operation to give up after a certain amount of time. Another subtle
  * difference is the internal locking semantics are different (this variant does
  * not hold the lock for the duration of the wait). This makes the wait subject
@@ -1841,10 +1841,10 @@ drm_intel_gem_bo_wait_rendering(drm_intel_bo *bo)
  * promise, upgrade to latest stable kernels if this is the case.
  */
 int
-drm_intel_gem_bo_wait(drm_intel_bo *bo, int64_t timeout_ns)
+drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_wait wait;
 	int ret;
 
@@ -1852,10 +1852,10 @@ drm_intel_gem_bo_wait(drm_intel_bo *bo, int64_t timeout_ns)
 		DBG("%s:%d: Timed wait is not supported. Falling back to "
 		    "infinite wait\n", __FILE__, __LINE__);
 		if (timeout_ns) {
-			drm_intel_gem_bo_wait_rendering(bo);
+			drm_bacon_gem_bo_wait_rendering(bo);
 			return 0;
 		} else {
-			return drm_intel_gem_bo_busy(bo) ? -ETIME : 0;
+			return drm_bacon_gem_bo_busy(bo) ? -ETIME : 0;
 		}
 	}
 
@@ -1871,16 +1871,16 @@ drm_intel_gem_bo_wait(drm_intel_bo *bo, int64_t timeout_ns)
 
 /**
  * Sets the object to the GTT read and possibly write domain, used by the X
- * 2D driver in the absence of kernel support to do drm_intel_gem_bo_map_gtt().
+ * 2D driver in the absence of kernel support to do drm_bacon_gem_bo_map_gtt().
  *
- * In combination with drm_intel_gem_bo_pin() and manual fence management, we
+ * In combination with drm_bacon_gem_bo_pin() and manual fence management, we
  * can do tiled pixmaps this way.
  */
 void
-drm_intel_gem_bo_start_gtt_access(drm_intel_bo *bo, int write_enable)
+drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
@@ -1900,9 +1900,9 @@ drm_intel_gem_bo_start_gtt_access(drm_intel_bo *bo, int write_enable)
 }
 
 static void
-drm_intel_bufmgr_gem_destroy(drm_intel_bufmgr *bufmgr)
+drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	struct drm_gem_close close_bo;
 	int i, ret;
 
@@ -1914,16 +1914,16 @@ drm_intel_bufmgr_gem_destroy(drm_intel_bufmgr *bufmgr)
 
 	/* Free any cached buffer objects we were going to reuse */
 	for (i = 0; i < bufmgr_gem->num_buckets; i++) {
-		struct drm_intel_gem_bo_bucket *bucket =
+		struct drm_bacon_gem_bo_bucket *bucket =
 		    &bufmgr_gem->cache_bucket[i];
-		drm_intel_bo_gem *bo_gem;
+		drm_bacon_bo_gem *bo_gem;
 
 		while (!DRMLISTEMPTY(&bucket->head)) {
-			bo_gem = DRMLISTENTRY(drm_intel_bo_gem,
+			bo_gem = DRMLISTENTRY(drm_bacon_bo_gem,
 					      bucket->head.next, head);
 			DRMLISTDEL(&bo_gem->head);
 
-			drm_intel_gem_bo_free(&bo_gem->bo);
+			drm_bacon_gem_bo_free(&bo_gem->bo);
 		}
 	}
 
@@ -1952,14 +1952,14 @@ drm_intel_bufmgr_gem_destroy(drm_intel_bufmgr *bufmgr)
  * last known offset in target_bo.
  */
 static int
-do_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
-		 drm_intel_bo *target_bo, uint32_t target_offset,
+do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
+		 drm_bacon_bo *target_bo, uint32_t target_offset,
 		 uint32_t read_domains, uint32_t write_domain,
 		 bool need_fence)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
-	drm_intel_bo_gem *target_bo_gem = (drm_intel_bo_gem *) target_bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
+	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
 	bool fenced_command;
 
 	if (bo_gem->has_error)
@@ -1979,7 +1979,7 @@ do_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
 		need_fence = false;
 
 	/* Create a new relocation list if needed */
-	if (bo_gem->relocs == NULL && drm_intel_setup_reloc_list(bo))
+	if (bo_gem->relocs == NULL && drm_bacon_setup_reloc_list(bo))
 		return -ENOMEM;
 
 	/* Check overflow */
@@ -2009,7 +2009,7 @@ do_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
 
 	bo_gem->reloc_target_info[bo_gem->reloc_count].bo = target_bo;
 	if (target_bo != bo)
-		drm_intel_gem_bo_reference(target_bo);
+		drm_bacon_gem_bo_reference(target_bo);
 	if (fenced_command)
 		bo_gem->reloc_target_info[bo_gem->reloc_count].flags =
 			DRM_INTEL_RELOC_FENCE;
@@ -2029,9 +2029,9 @@ do_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
 }
 
 static void
-drm_intel_gem_bo_use_48b_address_range(drm_intel_bo *bo, uint32_t enable)
+drm_bacon_gem_bo_use_48b_address_range(drm_bacon_bo *bo, uint32_t enable)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (enable)
 		bo_gem->kflags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
@@ -2040,11 +2040,11 @@ drm_intel_gem_bo_use_48b_address_range(drm_intel_bo *bo, uint32_t enable)
 }
 
 static int
-drm_intel_gem_bo_add_softpin_target(drm_intel_bo *bo, drm_intel_bo *target_bo)
+drm_bacon_gem_bo_add_softpin_target(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
-	drm_intel_bo_gem *target_bo_gem = (drm_intel_bo_gem *) target_bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
+	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
 	if (bo_gem->has_error)
 		return -ENOMEM;
 
@@ -2064,29 +2064,29 @@ drm_intel_gem_bo_add_softpin_target(drm_intel_bo *bo, drm_intel_bo *target_bo)
 			new_size = bufmgr_gem->max_relocs;
 
 		bo_gem->softpin_target = realloc(bo_gem->softpin_target, new_size *
-				sizeof(drm_intel_bo *));
+				sizeof(drm_bacon_bo *));
 		if (!bo_gem->softpin_target)
 			return -ENOMEM;
 
 		bo_gem->softpin_target_size = new_size;
 	}
 	bo_gem->softpin_target[bo_gem->softpin_target_count] = target_bo;
-	drm_intel_gem_bo_reference(target_bo);
+	drm_bacon_gem_bo_reference(target_bo);
 	bo_gem->softpin_target_count++;
 
 	return 0;
 }
 
 static int
-drm_intel_gem_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
-			    drm_intel_bo *target_bo, uint32_t target_offset,
+drm_bacon_gem_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
+			    drm_bacon_bo *target_bo, uint32_t target_offset,
 			    uint32_t read_domains, uint32_t write_domain)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bo->bufmgr;
-	drm_intel_bo_gem *target_bo_gem = (drm_intel_bo_gem *)target_bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bo->bufmgr;
+	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *)target_bo;
 
 	if (target_bo_gem->kflags & EXEC_OBJECT_PINNED)
-		return drm_intel_gem_bo_add_softpin_target(bo, target_bo);
+		return drm_bacon_gem_bo_add_softpin_target(bo, target_bo);
 	else
 		return do_bo_emit_reloc(bo, offset, target_bo, target_offset,
 					read_domains, write_domain,
@@ -2094,8 +2094,8 @@ drm_intel_gem_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
 }
 
 static int
-drm_intel_gem_bo_emit_reloc_fence(drm_intel_bo *bo, uint32_t offset,
-				  drm_intel_bo *target_bo,
+drm_bacon_gem_bo_emit_reloc_fence(drm_bacon_bo *bo, uint32_t offset,
+				  drm_bacon_bo *target_bo,
 				  uint32_t target_offset,
 				  uint32_t read_domains, uint32_t write_domain)
 {
@@ -2104,9 +2104,9 @@ drm_intel_gem_bo_emit_reloc_fence(drm_intel_bo *bo, uint32_t offset,
 }
 
 int
-drm_intel_gem_bo_get_reloc_count(drm_intel_bo *bo)
+drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	return bo_gem->reloc_count;
 }
@@ -2116,21 +2116,21 @@ drm_intel_gem_bo_get_reloc_count(drm_intel_bo *bo)
  *
  * This allows a user to avoid a two-step process for state setup with
  * counting up all the buffer objects and doing a
- * drm_intel_bufmgr_check_aperture_space() before emitting any of the
+ * drm_bacon_bufmgr_check_aperture_space() before emitting any of the
  * relocations for the state setup.  Instead, save the state of the
- * batchbuffer including drm_intel_gem_get_reloc_count(), emit all the
+ * batchbuffer including drm_bacon_gem_get_reloc_count(), emit all the
  * state, and then check if it still fits in the aperture.
  *
- * Any further drm_intel_bufmgr_check_aperture_space() queries
+ * Any further drm_bacon_bufmgr_check_aperture_space() queries
  * involving this buffer in the tree are undefined after this call.
  *
  * This also removes all softpinned targets being referenced by the BO.
  */
 void
-drm_intel_gem_bo_clear_relocs(drm_intel_bo *bo, int start)
+drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int i;
 	struct timespec time;
 
@@ -2142,18 +2142,18 @@ drm_intel_gem_bo_clear_relocs(drm_intel_bo *bo, int start)
 	pthread_mutex_lock(&bufmgr_gem->lock);
 
 	for (i = start; i < bo_gem->reloc_count; i++) {
-		drm_intel_bo_gem *target_bo_gem = (drm_intel_bo_gem *) bo_gem->reloc_target_info[i].bo;
+		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->reloc_target_info[i].bo;
 		if (&target_bo_gem->bo != bo) {
 			bo_gem->reloc_tree_fences -= target_bo_gem->reloc_tree_fences;
-			drm_intel_gem_bo_unreference_locked_timed(&target_bo_gem->bo,
+			drm_bacon_gem_bo_unreference_locked_timed(&target_bo_gem->bo,
 								  time.tv_sec);
 		}
 	}
 	bo_gem->reloc_count = start;
 
 	for (i = 0; i < bo_gem->softpin_target_count; i++) {
-		drm_intel_bo_gem *target_bo_gem = (drm_intel_bo_gem *) bo_gem->softpin_target[i];
-		drm_intel_gem_bo_unreference_locked_timed(&target_bo_gem->bo, time.tv_sec);
+		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->softpin_target[i];
+		drm_bacon_gem_bo_unreference_locked_timed(&target_bo_gem->bo, time.tv_sec);
 	}
 	bo_gem->softpin_target_count = 0;
 
@@ -2167,79 +2167,79 @@ drm_intel_gem_bo_clear_relocs(drm_intel_bo *bo, int start)
  * index values into the validation list.
  */
 static void
-drm_intel_gem_bo_process_reloc(drm_intel_bo *bo)
+drm_bacon_gem_bo_process_reloc(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int i;
 
 	if (bo_gem->relocs == NULL)
 		return;
 
 	for (i = 0; i < bo_gem->reloc_count; i++) {
-		drm_intel_bo *target_bo = bo_gem->reloc_target_info[i].bo;
+		drm_bacon_bo *target_bo = bo_gem->reloc_target_info[i].bo;
 
 		if (target_bo == bo)
 			continue;
 
-		drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 
 		/* Continue walking the tree depth-first. */
-		drm_intel_gem_bo_process_reloc(target_bo);
+		drm_bacon_gem_bo_process_reloc(target_bo);
 
 		/* Add the target to the validate list */
-		drm_intel_add_validate_buffer(target_bo);
+		drm_bacon_add_validate_buffer(target_bo);
 	}
 }
 
 static void
-drm_intel_gem_bo_process_reloc2(drm_intel_bo *bo)
+drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *)bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
 	int i;
 
 	if (bo_gem->relocs == NULL && bo_gem->softpin_target == NULL)
 		return;
 
 	for (i = 0; i < bo_gem->reloc_count; i++) {
-		drm_intel_bo *target_bo = bo_gem->reloc_target_info[i].bo;
+		drm_bacon_bo *target_bo = bo_gem->reloc_target_info[i].bo;
 		int need_fence;
 
 		if (target_bo == bo)
 			continue;
 
-		drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 
 		/* Continue walking the tree depth-first. */
-		drm_intel_gem_bo_process_reloc2(target_bo);
+		drm_bacon_gem_bo_process_reloc2(target_bo);
 
 		need_fence = (bo_gem->reloc_target_info[i].flags &
 			      DRM_INTEL_RELOC_FENCE);
 
 		/* Add the target to the validate list */
-		drm_intel_add_validate_buffer2(target_bo, need_fence);
+		drm_bacon_add_validate_buffer2(target_bo, need_fence);
 	}
 
 	for (i = 0; i < bo_gem->softpin_target_count; i++) {
-		drm_intel_bo *target_bo = bo_gem->softpin_target[i];
+		drm_bacon_bo *target_bo = bo_gem->softpin_target[i];
 
 		if (target_bo == bo)
 			continue;
 
-		drm_intel_gem_bo_mark_mmaps_incoherent(bo);
-		drm_intel_gem_bo_process_reloc2(target_bo);
-		drm_intel_add_validate_buffer2(target_bo, false);
+		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
+		drm_bacon_gem_bo_process_reloc2(target_bo);
+		drm_bacon_add_validate_buffer2(target_bo, false);
 	}
 }
 
 
 static void
-drm_intel_update_buffer_offsets(drm_intel_bufmgr_gem *bufmgr_gem)
+drm_bacon_update_buffer_offsets(drm_bacon_bufmgr_gem *bufmgr_gem)
 {
 	int i;
 
 	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_intel_bo *bo = bufmgr_gem->exec_bos[i];
-		drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+		drm_bacon_bo *bo = bufmgr_gem->exec_bos[i];
+		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 		/* Update the buffer offset */
 		if (bufmgr_gem->exec_objects[i].offset != bo->offset64) {
@@ -2256,13 +2256,13 @@ drm_intel_update_buffer_offsets(drm_intel_bufmgr_gem *bufmgr_gem)
 }
 
 static void
-drm_intel_update_buffer_offsets2 (drm_intel_bufmgr_gem *bufmgr_gem)
+drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr_gem *bufmgr_gem)
 {
 	int i;
 
 	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_intel_bo *bo = bufmgr_gem->exec_bos[i];
-		drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *)bo;
+		drm_bacon_bo *bo = bufmgr_gem->exec_bos[i];
+		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
 
 		/* Update the buffer offset */
 		if (bufmgr_gem->exec2_objects[i].offset != bo->offset64) {
@@ -2283,10 +2283,10 @@ drm_intel_update_buffer_offsets2 (drm_intel_bufmgr_gem *bufmgr_gem)
 }
 
 static int
-drm_intel_gem_bo_exec(drm_intel_bo *bo, int used,
+drm_bacon_gem_bo_exec(drm_bacon_bo *bo, int used,
 		      drm_clip_rect_t * cliprects, int num_cliprects, int DR4)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
 	struct drm_i915_gem_execbuffer execbuf;
 	int ret, i;
 
@@ -2295,12 +2295,12 @@ drm_intel_gem_bo_exec(drm_intel_bo *bo, int used,
 
 	pthread_mutex_lock(&bufmgr_gem->lock);
 	/* Update indices and set up the validate list. */
-	drm_intel_gem_bo_process_reloc(bo);
+	drm_bacon_gem_bo_process_reloc(bo);
 
 	/* Add the batch buffer to the validation list.  There are no
 	 * relocations pointing to it.
 	 */
-	drm_intel_add_validate_buffer(bo);
+	drm_bacon_add_validate_buffer(bo);
 
 	memclear(execbuf);
 	execbuf.buffers_ptr = (uintptr_t) bufmgr_gem->exec_objects;
@@ -2320,22 +2320,22 @@ drm_intel_gem_bo_exec(drm_intel_bo *bo, int used,
 		if (errno == ENOSPC) {
 			DBG("Execbuffer fails to pin. "
 			    "Estimate: %u. Actual: %u. Available: %u\n",
-			    drm_intel_gem_estimate_batch_space(bufmgr_gem->exec_bos,
+			    drm_bacon_gem_estimate_batch_space(bufmgr_gem->exec_bos,
 							       bufmgr_gem->
 							       exec_count),
-			    drm_intel_gem_compute_batch_space(bufmgr_gem->exec_bos,
+			    drm_bacon_gem_compute_batch_space(bufmgr_gem->exec_bos,
 							      bufmgr_gem->
 							      exec_count),
 			    (unsigned int)bufmgr_gem->gtt_size);
 		}
 	}
-	drm_intel_update_buffer_offsets(bufmgr_gem);
+	drm_bacon_update_buffer_offsets(bufmgr_gem);
 
 	if (bufmgr_gem->bufmgr.debug)
-		drm_intel_gem_dump_validation_list(bufmgr_gem);
+		drm_bacon_gem_dump_validation_list(bufmgr_gem);
 
 	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_intel_bo_gem *bo_gem = to_bo_gem(bufmgr_gem->exec_bos[i]);
+		drm_bacon_bo_gem *bo_gem = to_bo_gem(bufmgr_gem->exec_bos[i]);
 
 		bo_gem->idle = false;
 
@@ -2350,12 +2350,12 @@ drm_intel_gem_bo_exec(drm_intel_bo *bo, int used,
 }
 
 static int
-do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
+do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 	 drm_clip_rect_t *cliprects, int num_cliprects, int DR4,
 	 int in_fence, int *out_fence,
 	 unsigned int flags)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bo->bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bo->bufmgr;
 	struct drm_i915_gem_execbuffer2 execbuf;
 	int ret = 0;
 	int i;
@@ -2385,12 +2385,12 @@ do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
 
 	pthread_mutex_lock(&bufmgr_gem->lock);
 	/* Update indices and set up the validate list. */
-	drm_intel_gem_bo_process_reloc2(bo);
+	drm_bacon_gem_bo_process_reloc2(bo);
 
 	/* Add the batch buffer to the validation list.  There are no relocations
 	 * pointing to it.
 	 */
-	drm_intel_add_validate_buffer2(bo, 0);
+	drm_bacon_add_validate_buffer2(bo, 0);
 
 	memclear(execbuf);
 	execbuf.buffers_ptr = (uintptr_t)bufmgr_gem->exec2_objects;
@@ -2427,24 +2427,24 @@ do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
 		if (ret == -ENOSPC) {
 			DBG("Execbuffer fails to pin. "
 			    "Estimate: %u. Actual: %u. Available: %u\n",
-			    drm_intel_gem_estimate_batch_space(bufmgr_gem->exec_bos,
+			    drm_bacon_gem_estimate_batch_space(bufmgr_gem->exec_bos,
 							       bufmgr_gem->exec_count),
-			    drm_intel_gem_compute_batch_space(bufmgr_gem->exec_bos,
+			    drm_bacon_gem_compute_batch_space(bufmgr_gem->exec_bos,
 							      bufmgr_gem->exec_count),
 			    (unsigned int) bufmgr_gem->gtt_size);
 		}
 	}
-	drm_intel_update_buffer_offsets2(bufmgr_gem);
+	drm_bacon_update_buffer_offsets2(bufmgr_gem);
 
 	if (ret == 0 && out_fence != NULL)
 		*out_fence = execbuf.rsvd2 >> 32;
 
 skip_execution:
 	if (bufmgr_gem->bufmgr.debug)
-		drm_intel_gem_dump_validation_list(bufmgr_gem);
+		drm_bacon_gem_dump_validation_list(bufmgr_gem);
 
 	for (i = 0; i < bufmgr_gem->exec_count; i++) {
-		drm_intel_bo_gem *bo_gem = to_bo_gem(bufmgr_gem->exec_bos[i]);
+		drm_bacon_bo_gem *bo_gem = to_bo_gem(bufmgr_gem->exec_bos[i]);
 
 		bo_gem->idle = false;
 
@@ -2459,7 +2459,7 @@ skip_execution:
 }
 
 static int
-drm_intel_gem_bo_exec2(drm_intel_bo *bo, int used,
+drm_bacon_gem_bo_exec2(drm_bacon_bo *bo, int used,
 		       drm_clip_rect_t *cliprects, int num_cliprects,
 		       int DR4)
 {
@@ -2468,7 +2468,7 @@ drm_intel_gem_bo_exec2(drm_intel_bo *bo, int used,
 }
 
 static int
-drm_intel_gem_bo_mrb_exec2(drm_intel_bo *bo, int used,
+drm_bacon_gem_bo_mrb_exec2(drm_bacon_bo *bo, int used,
 			drm_clip_rect_t *cliprects, int num_cliprects, int DR4,
 			unsigned int flags)
 {
@@ -2477,15 +2477,15 @@ drm_intel_gem_bo_mrb_exec2(drm_intel_bo *bo, int used,
 }
 
 int
-drm_intel_gem_bo_context_exec(drm_intel_bo *bo, drm_intel_context *ctx,
+drm_bacon_gem_bo_context_exec(drm_bacon_bo *bo, drm_bacon_context *ctx,
 			      int used, unsigned int flags)
 {
 	return do_exec2(bo, used, ctx, NULL, 0, 0, -1, NULL, flags);
 }
 
 int
-drm_intel_gem_bo_fence_exec(drm_intel_bo *bo,
-			    drm_intel_context *ctx,
+drm_bacon_gem_bo_fence_exec(drm_bacon_bo *bo,
+			    drm_bacon_context *ctx,
 			    int used,
 			    int in_fence,
 			    int *out_fence,
@@ -2495,10 +2495,10 @@ drm_intel_gem_bo_fence_exec(drm_intel_bo *bo,
 }
 
 static int
-drm_intel_gem_bo_pin(drm_intel_bo *bo, uint32_t alignment)
+drm_bacon_gem_bo_pin(drm_bacon_bo *bo, uint32_t alignment)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pin pin;
 	int ret;
 
@@ -2518,10 +2518,10 @@ drm_intel_gem_bo_pin(drm_intel_bo *bo, uint32_t alignment)
 }
 
 static int
-drm_intel_gem_bo_unpin(drm_intel_bo *bo)
+drm_bacon_gem_bo_unpin(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_unpin unpin;
 	int ret;
 
@@ -2536,12 +2536,12 @@ drm_intel_gem_bo_unpin(drm_intel_bo *bo)
 }
 
 static int
-drm_intel_gem_bo_set_tiling_internal(drm_intel_bo *bo,
+drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 				     uint32_t tiling_mode,
 				     uint32_t stride)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_tiling set_tiling;
 	int ret;
 
@@ -2574,11 +2574,11 @@ drm_intel_gem_bo_set_tiling_internal(drm_intel_bo *bo,
 }
 
 static int
-drm_intel_gem_bo_set_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+drm_bacon_gem_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			    uint32_t stride)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
 
 	/* Tiling with userptr surfaces is not supported
@@ -2593,19 +2593,19 @@ drm_intel_gem_bo_set_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
 	if (*tiling_mode == I915_TILING_NONE)
 		stride = 0;
 
-	ret = drm_intel_gem_bo_set_tiling_internal(bo, *tiling_mode, stride);
+	ret = drm_bacon_gem_bo_set_tiling_internal(bo, *tiling_mode, stride);
 	if (ret == 0)
-		drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
+		drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
 
 	*tiling_mode = bo_gem->tiling_mode;
 	return ret;
 }
 
 static int
-drm_intel_gem_bo_get_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
+drm_bacon_gem_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			    uint32_t * swizzle_mode)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	*tiling_mode = bo_gem->tiling_mode;
 	*swizzle_mode = bo_gem->swizzle_mode;
@@ -2613,9 +2613,9 @@ drm_intel_gem_bo_get_tiling(drm_intel_bo *bo, uint32_t * tiling_mode,
 }
 
 static int
-drm_intel_gem_bo_set_softpin_offset(drm_intel_bo *bo, uint64_t offset)
+drm_bacon_gem_bo_set_softpin_offset(drm_bacon_bo *bo, uint64_t offset)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	bo->offset64 = offset;
 	bo->offset = offset;
@@ -2624,13 +2624,13 @@ drm_intel_gem_bo_set_softpin_offset(drm_intel_bo *bo, uint64_t offset)
 	return 0;
 }
 
-drm_intel_bo *
-drm_intel_bo_gem_create_from_prime(drm_intel_bufmgr *bufmgr, int prime_fd, int size)
+drm_bacon_bo *
+drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int size)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 	int ret;
 	uint32_t handle;
-	drm_intel_bo_gem *bo_gem;
+	drm_bacon_bo_gem *bo_gem;
 	struct drm_i915_gem_get_tiling get_tiling;
 
 	pthread_mutex_lock(&bufmgr_gem->lock);
@@ -2649,7 +2649,7 @@ drm_intel_bo_gem_create_from_prime(drm_intel_bufmgr *bufmgr, int prime_fd, int s
 	HASH_FIND(handle_hh, bufmgr_gem->handle_table,
 		  &handle, sizeof(handle), bo_gem);
 	if (bo_gem) {
-		drm_intel_gem_bo_reference(&bo_gem->bo);
+		drm_bacon_gem_bo_reference(&bo_gem->bo);
 		goto out;
 	}
 
@@ -2695,23 +2695,23 @@ drm_intel_bo_gem_create_from_prime(drm_intel_bufmgr *bufmgr, int prime_fd, int s
 	bo_gem->tiling_mode = get_tiling.tiling_mode;
 	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
-	drm_intel_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
+	drm_bacon_bo_gem_set_in_aperture_size(bufmgr_gem, bo_gem, 0);
 
 out:
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 	return &bo_gem->bo;
 
 err:
-	drm_intel_gem_bo_free(&bo_gem->bo);
+	drm_bacon_gem_bo_free(&bo_gem->bo);
 	pthread_mutex_unlock(&bufmgr_gem->lock);
 	return NULL;
 }
 
 int
-drm_intel_bo_gem_export_to_prime(drm_intel_bo *bo, int *prime_fd)
+drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (drmPrimeHandleToFD(bufmgr_gem->fd, bo_gem->gem_handle,
 			       DRM_CLOEXEC, prime_fd) != 0)
@@ -2723,10 +2723,10 @@ drm_intel_bo_gem_export_to_prime(drm_intel_bo *bo, int *prime_fd)
 }
 
 static int
-drm_intel_gem_bo_flink(drm_intel_bo *bo, uint32_t * name)
+drm_bacon_gem_bo_flink(drm_bacon_bo *bo, uint32_t * name)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (!bo_gem->global_name) {
 		struct drm_gem_flink flink;
@@ -2760,9 +2760,9 @@ drm_intel_gem_bo_flink(drm_intel_bo *bo, uint32_t * name)
  * in flight at once.
  */
 void
-drm_intel_bufmgr_gem_enable_reuse(drm_intel_bufmgr *bufmgr)
+drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 
 	bufmgr_gem->bo_reuse = true;
 }
@@ -2778,13 +2778,13 @@ drm_intel_bufmgr_gem_enable_reuse(drm_intel_bufmgr *bufmgr)
  * independent command streams).
  *
  * Note the kernel must advertise support via I915_PARAM_HAS_EXEC_ASYNC,
- * which can be checked using drm_intel_bufmgr_can_disable_implicit_sync,
+ * which can be checked using drm_bacon_bufmgr_can_disable_implicit_sync,
  * or subsequent execbufs involving the bo will generate EINVAL.
  */
 void
-drm_intel_gem_bo_disable_implicit_sync(drm_intel_bo *bo)
+drm_bacon_gem_bo_disable_implicit_sync(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	bo_gem->kflags |= EXEC_OBJECT_ASYNC;
 }
@@ -2795,27 +2795,27 @@ drm_intel_gem_bo_disable_implicit_sync(drm_intel_bo *bo)
  * This is the default behaviour of the kernel, to wait upon prior writes
  * completing on the object before rendering with it, or to wait for prior
  * reads to complete before writing into the object.
- * drm_intel_gem_bo_disable_implicit_sync() can stop this behaviour, telling
+ * drm_bacon_gem_bo_disable_implicit_sync() can stop this behaviour, telling
  * the kernel never to insert a stall before using the object. Then this
  * function can be used to restore the implicit sync before subsequent
  * rendering.
  */
 void
-drm_intel_gem_bo_enable_implicit_sync(drm_intel_bo *bo)
+drm_bacon_gem_bo_enable_implicit_sync(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	bo_gem->kflags &= ~EXEC_OBJECT_ASYNC;
 }
 
 /**
  * Query whether the kernel supports disabling of its implicit synchronisation
- * before execbuf. See drm_intel_gem_bo_disable_implicit_sync()
+ * before execbuf. See drm_bacon_gem_bo_disable_implicit_sync()
  */
 int
-drm_intel_bufmgr_gem_can_disable_implicit_sync(drm_intel_bufmgr *bufmgr)
+drm_bacon_bufmgr_gem_can_disable_implicit_sync(drm_bacon_bufmgr *bufmgr)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
 
 	return bufmgr_gem->has_exec_async;
 }
@@ -2828,11 +2828,11 @@ drm_intel_bufmgr_gem_can_disable_implicit_sync(drm_intel_bufmgr *bufmgr)
  * register allocated.
  */
 void
-drm_intel_bufmgr_gem_enable_fenced_relocs(drm_intel_bufmgr *bufmgr)
+drm_bacon_bufmgr_gem_enable_fenced_relocs(drm_bacon_bufmgr *bufmgr)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 
-	if (bufmgr_gem->bufmgr.bo_exec == drm_intel_gem_bo_exec2)
+	if (bufmgr_gem->bufmgr.bo_exec == drm_bacon_gem_bo_exec2)
 		bufmgr_gem->fenced_relocs = true;
 }
 
@@ -2841,9 +2841,9 @@ drm_intel_bufmgr_gem_enable_fenced_relocs(drm_intel_bufmgr *bufmgr)
  * rooted at bo.
  */
 static int
-drm_intel_gem_bo_get_aperture_space(drm_intel_bo *bo)
+drm_bacon_gem_bo_get_aperture_space(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int i;
 	int total = 0;
 
@@ -2855,7 +2855,7 @@ drm_intel_gem_bo_get_aperture_space(drm_intel_bo *bo)
 
 	for (i = 0; i < bo_gem->reloc_count; i++)
 		total +=
-		    drm_intel_gem_bo_get_aperture_space(bo_gem->
+		    drm_bacon_gem_bo_get_aperture_space(bo_gem->
 							reloc_target_info[i].bo);
 
 	return total;
@@ -2870,13 +2870,13 @@ drm_intel_gem_bo_get_aperture_space(drm_intel_bo *bo)
  * This function over-counts if the same buffer is used multiple times.
  */
 static unsigned int
-drm_intel_gem_total_fences(drm_intel_bo ** bo_array, int count)
+drm_bacon_gem_total_fences(drm_bacon_bo ** bo_array, int count)
 {
 	int i;
 	unsigned int total = 0;
 
 	for (i = 0; i < count; i++) {
-		drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo_array[i];
+		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo_array[i];
 
 		if (bo_gem == NULL)
 			continue;
@@ -2887,13 +2887,13 @@ drm_intel_gem_total_fences(drm_intel_bo ** bo_array, int count)
 }
 
 /**
- * Clear the flag set by drm_intel_gem_bo_get_aperture_space() so we're ready
- * for the next drm_intel_bufmgr_check_aperture_space() call.
+ * Clear the flag set by drm_bacon_gem_bo_get_aperture_space() so we're ready
+ * for the next drm_bacon_bufmgr_check_aperture_space() call.
  */
 static void
-drm_intel_gem_bo_clear_aperture_space_flag(drm_intel_bo *bo)
+drm_bacon_gem_bo_clear_aperture_space_flag(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int i;
 
 	if (bo == NULL || !bo_gem->included_in_check_aperture)
@@ -2902,7 +2902,7 @@ drm_intel_gem_bo_clear_aperture_space_flag(drm_intel_bo *bo)
 	bo_gem->included_in_check_aperture = false;
 
 	for (i = 0; i < bo_gem->reloc_count; i++)
-		drm_intel_gem_bo_clear_aperture_space_flag(bo_gem->
+		drm_bacon_gem_bo_clear_aperture_space_flag(bo_gem->
 							   reloc_target_info[i].bo);
 }
 
@@ -2911,13 +2911,13 @@ drm_intel_gem_bo_clear_aperture_space_flag(drm_intel_bo *bo)
  * for a collection of buffers. This may double-count some buffers.
  */
 static unsigned int
-drm_intel_gem_estimate_batch_space(drm_intel_bo **bo_array, int count)
+drm_bacon_gem_estimate_batch_space(drm_bacon_bo **bo_array, int count)
 {
 	int i;
 	unsigned int total = 0;
 
 	for (i = 0; i < count; i++) {
-		drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo_array[i];
+		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo_array[i];
 		if (bo_gem != NULL)
 			total += bo_gem->reloc_tree_size;
 	}
@@ -2930,13 +2930,13 @@ drm_intel_gem_estimate_batch_space(drm_intel_bo **bo_array, int count)
  * at every buffer in the set.
  */
 static unsigned int
-drm_intel_gem_compute_batch_space(drm_intel_bo **bo_array, int count)
+drm_bacon_gem_compute_batch_space(drm_bacon_bo **bo_array, int count)
 {
 	int i;
 	unsigned int total = 0;
 
 	for (i = 0; i < count; i++) {
-		total += drm_intel_gem_bo_get_aperture_space(bo_array[i]);
+		total += drm_bacon_gem_bo_get_aperture_space(bo_array[i]);
 		/* For the first buffer object in the array, we get an
 		 * accurate count back for its reloc_tree size (since nothing
 		 * had been flagged as being counted yet).  We can save that
@@ -2947,14 +2947,14 @@ drm_intel_gem_compute_batch_space(drm_intel_bo **bo_array, int count)
 		 * walk on every new batch emit.
 		 */
 		if (i == 0) {
-			drm_intel_bo_gem *bo_gem =
-			    (drm_intel_bo_gem *) bo_array[i];
+			drm_bacon_bo_gem *bo_gem =
+			    (drm_bacon_bo_gem *) bo_array[i];
 			bo_gem->reloc_tree_size = total;
 		}
 	}
 
 	for (i = 0; i < count; i++)
-		drm_intel_gem_bo_clear_aperture_space_flag(bo_array[i]);
+		drm_bacon_gem_bo_clear_aperture_space_flag(bo_array[i]);
 	return total;
 }
 
@@ -2975,25 +2975,25 @@ drm_intel_gem_compute_batch_space(drm_intel_bo **bo_array, int count)
  * get better parallelism.
  */
 static int
-drm_intel_gem_check_aperture_space(drm_intel_bo **bo_array, int count)
+drm_bacon_gem_check_aperture_space(drm_bacon_bo **bo_array, int count)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem =
-	    (drm_intel_bufmgr_gem *) bo_array[0]->bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem =
+	    (drm_bacon_bufmgr_gem *) bo_array[0]->bufmgr;
 	unsigned int total = 0;
 	unsigned int threshold = bufmgr_gem->gtt_size * 3 / 4;
 	int total_fences;
 
 	/* Check for fence reg constraints if necessary */
 	if (bufmgr_gem->available_fences) {
-		total_fences = drm_intel_gem_total_fences(bo_array, count);
+		total_fences = drm_bacon_gem_total_fences(bo_array, count);
 		if (total_fences > bufmgr_gem->available_fences)
 			return -ENOSPC;
 	}
 
-	total = drm_intel_gem_estimate_batch_space(bo_array, count);
+	total = drm_bacon_gem_estimate_batch_space(bo_array, count);
 
 	if (total > threshold)
-		total = drm_intel_gem_compute_batch_space(bo_array, count);
+		total = drm_bacon_gem_compute_batch_space(bo_array, count);
 
 	if (total > threshold) {
 		DBG("check_space: overflowed available aperture, "
@@ -3012,26 +3012,26 @@ drm_intel_gem_check_aperture_space(drm_intel_bo **bo_array, int count)
  * as scanout buffers
  */
 static int
-drm_intel_gem_bo_disable_reuse(drm_intel_bo *bo)
+drm_bacon_gem_bo_disable_reuse(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	bo_gem->reusable = false;
 	return 0;
 }
 
 static int
-drm_intel_gem_bo_is_reusable(drm_intel_bo *bo)
+drm_bacon_gem_bo_is_reusable(drm_bacon_bo *bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	return bo_gem->reusable;
 }
 
 static int
-_drm_intel_gem_bo_references(drm_intel_bo *bo, drm_intel_bo *target_bo)
+_drm_bacon_gem_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 {
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int i;
 
 	for (i = 0; i < bo_gem->reloc_count; i++) {
@@ -3039,7 +3039,7 @@ _drm_intel_gem_bo_references(drm_intel_bo *bo, drm_intel_bo *target_bo)
 			return 1;
 		if (bo == bo_gem->reloc_target_info[i].bo)
 			continue;
-		if (_drm_intel_gem_bo_references(bo_gem->reloc_target_info[i].bo,
+		if (_drm_bacon_gem_bo_references(bo_gem->reloc_target_info[i].bo,
 						target_bo))
 			return 1;
 	}
@@ -3047,7 +3047,7 @@ _drm_intel_gem_bo_references(drm_intel_bo *bo, drm_intel_bo *target_bo)
 	for (i = 0; i< bo_gem->softpin_target_count; i++) {
 		if (bo_gem->softpin_target[i] == target_bo)
 			return 1;
-		if (_drm_intel_gem_bo_references(bo_gem->softpin_target[i], target_bo))
+		if (_drm_bacon_gem_bo_references(bo_gem->softpin_target[i], target_bo))
 			return 1;
 	}
 
@@ -3056,19 +3056,19 @@ _drm_intel_gem_bo_references(drm_intel_bo *bo, drm_intel_bo *target_bo)
 
 /** Return true if target_bo is referenced by bo's relocation tree. */
 static int
-drm_intel_gem_bo_references(drm_intel_bo *bo, drm_intel_bo *target_bo)
+drm_bacon_gem_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 {
-	drm_intel_bo_gem *target_bo_gem = (drm_intel_bo_gem *) target_bo;
+	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
 
 	if (bo == NULL || target_bo == NULL)
 		return 0;
 	if (target_bo_gem->used_as_reloc_target)
-		return _drm_intel_gem_bo_references(bo, target_bo);
+		return _drm_bacon_gem_bo_references(bo, target_bo);
 	return 0;
 }
 
 static void
-add_bucket(drm_intel_bufmgr_gem *bufmgr_gem, int size)
+add_bucket(drm_bacon_bufmgr_gem *bufmgr_gem, int size)
 {
 	unsigned int i = bufmgr_gem->num_buckets;
 
@@ -3080,7 +3080,7 @@ add_bucket(drm_intel_bufmgr_gem *bufmgr_gem, int size)
 }
 
 static void
-init_cache_buckets(drm_intel_bufmgr_gem *bufmgr_gem)
+init_cache_buckets(drm_bacon_bufmgr_gem *bufmgr_gem)
 {
 	unsigned long size, cache_max_size = 64 * 1024 * 1024;
 
@@ -3107,13 +3107,13 @@ init_cache_buckets(drm_intel_bufmgr_gem *bufmgr_gem)
 }
 
 void
-drm_intel_bufmgr_gem_set_vma_cache_size(drm_intel_bufmgr *bufmgr, int limit)
+drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr, int limit)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 
 	bufmgr_gem->vma_max = limit;
 
-	drm_intel_gem_bo_purge_vma_cache(bufmgr_gem);
+	drm_bacon_gem_bo_purge_vma_cache(bufmgr_gem);
 }
 
 static int
@@ -3149,7 +3149,7 @@ parse_devid_override(const char *devid_override)
  * INTEL_DEVID_OVERRIDE environment variable to the desired ID.
  */
 static int
-get_pci_device_id(drm_intel_bufmgr_gem *bufmgr_gem)
+get_pci_device_id(drm_bacon_bufmgr_gem *bufmgr_gem)
 {
 	char *devid_override;
 	int devid = 0;
@@ -3176,19 +3176,19 @@ get_pci_device_id(drm_intel_bufmgr_gem *bufmgr_gem)
 }
 
 int
-drm_intel_bufmgr_gem_get_devid(drm_intel_bufmgr *bufmgr)
+drm_bacon_bufmgr_gem_get_devid(drm_bacon_bufmgr *bufmgr)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 
 	return bufmgr_gem->pci_device;
 }
 
-drm_intel_context *
-drm_intel_gem_context_create(drm_intel_bufmgr *bufmgr)
+drm_bacon_context *
+drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 	struct drm_i915_gem_context_create create;
-	drm_intel_context *context = NULL;
+	drm_bacon_context *context = NULL;
 	int ret;
 
 	context = calloc(1, sizeof(*context));
@@ -3211,7 +3211,7 @@ drm_intel_gem_context_create(drm_intel_bufmgr *bufmgr)
 }
 
 int
-drm_intel_gem_context_get_id(drm_intel_context *ctx, uint32_t *ctx_id)
+drm_bacon_gem_context_get_id(drm_bacon_context *ctx, uint32_t *ctx_id)
 {
 	if (ctx == NULL)
 		return -EINVAL;
@@ -3222,9 +3222,9 @@ drm_intel_gem_context_get_id(drm_intel_context *ctx, uint32_t *ctx_id)
 }
 
 void
-drm_intel_gem_context_destroy(drm_intel_context *ctx)
+drm_bacon_gem_context_destroy(drm_bacon_context *ctx)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem;
+	drm_bacon_bufmgr_gem *bufmgr_gem;
 	struct drm_i915_gem_context_destroy destroy;
 	int ret;
 
@@ -3233,7 +3233,7 @@ drm_intel_gem_context_destroy(drm_intel_context *ctx)
 
 	memclear(destroy);
 
-	bufmgr_gem = (drm_intel_bufmgr_gem *)ctx->bufmgr;
+	bufmgr_gem = (drm_bacon_bufmgr_gem *)ctx->bufmgr;
 	destroy.ctx_id = ctx->ctx_id;
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_CONTEXT_DESTROY,
 		       &destroy);
@@ -3245,12 +3245,12 @@ drm_intel_gem_context_destroy(drm_intel_context *ctx)
 }
 
 int
-drm_intel_get_reset_stats(drm_intel_context *ctx,
+drm_bacon_get_reset_stats(drm_bacon_context *ctx,
 			  uint32_t *reset_count,
 			  uint32_t *active,
 			  uint32_t *pending)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem;
+	drm_bacon_bufmgr_gem *bufmgr_gem;
 	struct drm_i915_reset_stats stats;
 	int ret;
 
@@ -3259,7 +3259,7 @@ drm_intel_get_reset_stats(drm_intel_context *ctx,
 
 	memclear(stats);
 
-	bufmgr_gem = (drm_intel_bufmgr_gem *)ctx->bufmgr;
+	bufmgr_gem = (drm_bacon_bufmgr_gem *)ctx->bufmgr;
 	stats.ctx_id = ctx->ctx_id;
 	ret = drmIoctl(bufmgr_gem->fd,
 		       DRM_IOCTL_I915_GET_RESET_STATS,
@@ -3279,11 +3279,11 @@ drm_intel_get_reset_stats(drm_intel_context *ctx,
 }
 
 int
-drm_intel_reg_read(drm_intel_bufmgr *bufmgr,
+drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 		   uint32_t offset,
 		   uint64_t *result)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 	struct drm_i915_reg_read reg_read;
 	int ret;
 
@@ -3297,7 +3297,7 @@ drm_intel_reg_read(drm_intel_bufmgr *bufmgr,
 }
 
 int
-drm_intel_get_subslice_total(int fd, unsigned int *subslice_total)
+drm_bacon_get_subslice_total(int fd, unsigned int *subslice_total)
 {
 	drm_i915_getparam_t gp;
 	int ret;
@@ -3313,7 +3313,7 @@ drm_intel_get_subslice_total(int fd, unsigned int *subslice_total)
 }
 
 int
-drm_intel_get_eu_total(int fd, unsigned int *eu_total)
+drm_bacon_get_eu_total(int fd, unsigned int *eu_total)
 {
 	drm_i915_getparam_t gp;
 	int ret;
@@ -3329,7 +3329,7 @@ drm_intel_get_eu_total(int fd, unsigned int *eu_total)
 }
 
 int
-drm_intel_get_pooled_eu(int fd)
+drm_bacon_get_pooled_eu(int fd)
 {
 	drm_i915_getparam_t gp;
 	int ret = -1;
@@ -3344,7 +3344,7 @@ drm_intel_get_pooled_eu(int fd)
 }
 
 int
-drm_intel_get_min_eu_in_pool(int fd)
+drm_bacon_get_min_eu_in_pool(int fd)
 {
 	drm_i915_getparam_t gp;
 	int ret = -1;
@@ -3361,10 +3361,10 @@ drm_intel_get_min_eu_in_pool(int fd)
 static pthread_mutex_t bufmgr_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static drmMMListHead bufmgr_list = { &bufmgr_list, &bufmgr_list };
 
-static drm_intel_bufmgr_gem *
-drm_intel_bufmgr_gem_find(int fd)
+static drm_bacon_bufmgr_gem *
+drm_bacon_bufmgr_gem_find(int fd)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem;
+	drm_bacon_bufmgr_gem *bufmgr_gem;
 
 	DRMLISTFOREACHENTRY(bufmgr_gem, &bufmgr_list, managers) {
 		if (bufmgr_gem->fd == fd) {
@@ -3377,26 +3377,26 @@ drm_intel_bufmgr_gem_find(int fd)
 }
 
 static void
-drm_intel_bufmgr_gem_unref(drm_intel_bufmgr *bufmgr)
+drm_bacon_bufmgr_gem_unref(drm_bacon_bufmgr *bufmgr)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
 
 	if (atomic_add_unless(&bufmgr_gem->refcount, -1, 1)) {
 		pthread_mutex_lock(&bufmgr_list_mutex);
 
 		if (atomic_dec_and_test(&bufmgr_gem->refcount)) {
 			DRMLISTDEL(&bufmgr_gem->managers);
-			drm_intel_bufmgr_gem_destroy(bufmgr);
+			drm_bacon_bufmgr_gem_destroy(bufmgr);
 		}
 
 		pthread_mutex_unlock(&bufmgr_list_mutex);
 	}
 }
 
-void *drm_intel_gem_bo_map__gtt(drm_intel_bo *bo)
+void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (bo_gem->gtt_virtual)
 		return bo_gem->gtt_virtual;
@@ -3413,7 +3413,7 @@ void *drm_intel_gem_bo_map__gtt(drm_intel_bo *bo)
 		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
 
 		if (bo_gem->map_count++ == 0)
-			drm_intel_gem_bo_open_vma(bufmgr_gem, bo_gem);
+			drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo_gem->gem_handle;
@@ -3430,7 +3430,7 @@ void *drm_intel_gem_bo_map__gtt(drm_intel_bo *bo)
 		}
 		if (ptr == MAP_FAILED) {
 			if (--bo_gem->map_count == 0)
-				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
 			ptr = NULL;
 		}
 
@@ -3441,10 +3441,10 @@ void *drm_intel_gem_bo_map__gtt(drm_intel_bo *bo)
 	return bo_gem->gtt_virtual;
 }
 
-void *drm_intel_gem_bo_map__cpu(drm_intel_bo *bo)
+void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (bo_gem->mem_virtual)
 		return bo_gem->mem_virtual;
@@ -3459,7 +3459,7 @@ void *drm_intel_gem_bo_map__cpu(drm_intel_bo *bo)
 		struct drm_i915_gem_mmap mmap_arg;
 
 		if (bo_gem->map_count++ == 0)
-			drm_intel_gem_bo_open_vma(bufmgr_gem, bo_gem);
+			drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
 		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
@@ -3474,7 +3474,7 @@ void *drm_intel_gem_bo_map__cpu(drm_intel_bo *bo)
 			    __FILE__, __LINE__, bo_gem->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
 			bo_gem->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
@@ -3485,10 +3485,10 @@ void *drm_intel_gem_bo_map__cpu(drm_intel_bo *bo)
 	return bo_gem->mem_virtual;
 }
 
-void *drm_intel_gem_bo_map__wc(drm_intel_bo *bo)
+void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
+	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (bo_gem->wc_virtual)
 		return bo_gem->wc_virtual;
@@ -3501,7 +3501,7 @@ void *drm_intel_gem_bo_map__wc(drm_intel_bo *bo)
 		struct drm_i915_gem_mmap mmap_arg;
 
 		if (bo_gem->map_count++ == 0)
-			drm_intel_gem_bo_open_vma(bufmgr_gem, bo_gem);
+			drm_bacon_gem_bo_open_vma(bufmgr_gem, bo_gem);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
 		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
@@ -3517,7 +3517,7 @@ void *drm_intel_gem_bo_map__wc(drm_intel_bo *bo)
 			    __FILE__, __LINE__, bo_gem->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
-				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
+				drm_bacon_gem_bo_close_vma(bufmgr_gem, bo_gem);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
 			bo_gem->wc_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
@@ -3534,10 +3534,10 @@ void *drm_intel_gem_bo_map__wc(drm_intel_bo *bo)
  *
  * \param fd File descriptor of the opened DRM device.
  */
-drm_intel_bufmgr *
-drm_intel_bufmgr_gem_init(int fd, int batch_size)
+drm_bacon_bufmgr *
+drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 {
-	drm_intel_bufmgr_gem *bufmgr_gem;
+	drm_bacon_bufmgr_gem *bufmgr_gem;
 	struct drm_i915_gem_get_aperture aperture;
 	drm_i915_getparam_t gp;
 	int ret, tmp;
@@ -3545,7 +3545,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 
 	pthread_mutex_lock(&bufmgr_list_mutex);
 
-	bufmgr_gem = drm_intel_bufmgr_gem_find(fd);
+	bufmgr_gem = drm_bacon_bufmgr_gem_find(fd);
 	if (bufmgr_gem)
 		goto exit;
 
@@ -3660,7 +3660,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 	gp.param = I915_PARAM_HAS_EXEC_SOFTPIN;
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	if (ret == 0 && *gp.value > 0)
-		bufmgr_gem->bufmgr.bo_set_softpin_offset = drm_intel_gem_bo_set_softpin_offset;
+		bufmgr_gem->bufmgr.bo_set_softpin_offset = drm_bacon_gem_bo_set_softpin_offset;
 
 	if (bufmgr_gem->gen < 4) {
 		gp.param = I915_PARAM_NUM_FENCES_AVAIL;
@@ -3692,7 +3692,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 		gp.param = I915_PARAM_HAS_ALIASING_PPGTT;
 		ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 		if (ret == 0 && *gp.value == 3)
-			bufmgr_gem->bufmgr.bo_use_48b_address_range = drm_intel_gem_bo_use_48b_address_range;
+			bufmgr_gem->bufmgr.bo_use_48b_address_range = drm_bacon_gem_bo_use_48b_address_range;
 	}
 
 	/* Let's go with one relocation per every 2 dwords (but round down a bit
@@ -3703,41 +3703,41 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 	 */
 	bufmgr_gem->max_relocs = batch_size / sizeof(uint32_t) / 2 - 2;
 
-	bufmgr_gem->bufmgr.bo_alloc = drm_intel_gem_bo_alloc;
+	bufmgr_gem->bufmgr.bo_alloc = drm_bacon_gem_bo_alloc;
 	bufmgr_gem->bufmgr.bo_alloc_for_render =
-	    drm_intel_gem_bo_alloc_for_render;
-	bufmgr_gem->bufmgr.bo_alloc_tiled = drm_intel_gem_bo_alloc_tiled;
-	bufmgr_gem->bufmgr.bo_reference = drm_intel_gem_bo_reference;
-	bufmgr_gem->bufmgr.bo_unreference = drm_intel_gem_bo_unreference;
-	bufmgr_gem->bufmgr.bo_map = drm_intel_gem_bo_map;
-	bufmgr_gem->bufmgr.bo_unmap = drm_intel_gem_bo_unmap;
-	bufmgr_gem->bufmgr.bo_subdata = drm_intel_gem_bo_subdata;
-	bufmgr_gem->bufmgr.bo_get_subdata = drm_intel_gem_bo_get_subdata;
-	bufmgr_gem->bufmgr.bo_wait_rendering = drm_intel_gem_bo_wait_rendering;
-	bufmgr_gem->bufmgr.bo_emit_reloc = drm_intel_gem_bo_emit_reloc;
-	bufmgr_gem->bufmgr.bo_emit_reloc_fence = drm_intel_gem_bo_emit_reloc_fence;
-	bufmgr_gem->bufmgr.bo_pin = drm_intel_gem_bo_pin;
-	bufmgr_gem->bufmgr.bo_unpin = drm_intel_gem_bo_unpin;
-	bufmgr_gem->bufmgr.bo_get_tiling = drm_intel_gem_bo_get_tiling;
-	bufmgr_gem->bufmgr.bo_set_tiling = drm_intel_gem_bo_set_tiling;
-	bufmgr_gem->bufmgr.bo_flink = drm_intel_gem_bo_flink;
+	    drm_bacon_gem_bo_alloc_for_render;
+	bufmgr_gem->bufmgr.bo_alloc_tiled = drm_bacon_gem_bo_alloc_tiled;
+	bufmgr_gem->bufmgr.bo_reference = drm_bacon_gem_bo_reference;
+	bufmgr_gem->bufmgr.bo_unreference = drm_bacon_gem_bo_unreference;
+	bufmgr_gem->bufmgr.bo_map = drm_bacon_gem_bo_map;
+	bufmgr_gem->bufmgr.bo_unmap = drm_bacon_gem_bo_unmap;
+	bufmgr_gem->bufmgr.bo_subdata = drm_bacon_gem_bo_subdata;
+	bufmgr_gem->bufmgr.bo_get_subdata = drm_bacon_gem_bo_get_subdata;
+	bufmgr_gem->bufmgr.bo_wait_rendering = drm_bacon_gem_bo_wait_rendering;
+	bufmgr_gem->bufmgr.bo_emit_reloc = drm_bacon_gem_bo_emit_reloc;
+	bufmgr_gem->bufmgr.bo_emit_reloc_fence = drm_bacon_gem_bo_emit_reloc_fence;
+	bufmgr_gem->bufmgr.bo_pin = drm_bacon_gem_bo_pin;
+	bufmgr_gem->bufmgr.bo_unpin = drm_bacon_gem_bo_unpin;
+	bufmgr_gem->bufmgr.bo_get_tiling = drm_bacon_gem_bo_get_tiling;
+	bufmgr_gem->bufmgr.bo_set_tiling = drm_bacon_gem_bo_set_tiling;
+	bufmgr_gem->bufmgr.bo_flink = drm_bacon_gem_bo_flink;
 	/* Use the new one if available */
 	if (exec2) {
-		bufmgr_gem->bufmgr.bo_exec = drm_intel_gem_bo_exec2;
-		bufmgr_gem->bufmgr.bo_mrb_exec = drm_intel_gem_bo_mrb_exec2;
+		bufmgr_gem->bufmgr.bo_exec = drm_bacon_gem_bo_exec2;
+		bufmgr_gem->bufmgr.bo_mrb_exec = drm_bacon_gem_bo_mrb_exec2;
 	} else
-		bufmgr_gem->bufmgr.bo_exec = drm_intel_gem_bo_exec;
-	bufmgr_gem->bufmgr.bo_busy = drm_intel_gem_bo_busy;
-	bufmgr_gem->bufmgr.bo_madvise = drm_intel_gem_bo_madvise;
-	bufmgr_gem->bufmgr.destroy = drm_intel_bufmgr_gem_unref;
+		bufmgr_gem->bufmgr.bo_exec = drm_bacon_gem_bo_exec;
+	bufmgr_gem->bufmgr.bo_busy = drm_bacon_gem_bo_busy;
+	bufmgr_gem->bufmgr.bo_madvise = drm_bacon_gem_bo_madvise;
+	bufmgr_gem->bufmgr.destroy = drm_bacon_bufmgr_gem_unref;
 	bufmgr_gem->bufmgr.debug = 0;
 	bufmgr_gem->bufmgr.check_aperture_space =
-	    drm_intel_gem_check_aperture_space;
-	bufmgr_gem->bufmgr.bo_disable_reuse = drm_intel_gem_bo_disable_reuse;
-	bufmgr_gem->bufmgr.bo_is_reusable = drm_intel_gem_bo_is_reusable;
+	    drm_bacon_gem_check_aperture_space;
+	bufmgr_gem->bufmgr.bo_disable_reuse = drm_bacon_gem_bo_disable_reuse;
+	bufmgr_gem->bufmgr.bo_is_reusable = drm_bacon_gem_bo_is_reusable;
 	bufmgr_gem->bufmgr.get_pipe_from_crtc_id =
-	    drm_intel_gem_get_pipe_from_crtc_id;
-	bufmgr_gem->bufmgr.bo_references = drm_intel_gem_bo_references;
+	    drm_bacon_gem_get_pipe_from_crtc_id;
+	bufmgr_gem->bufmgr.bo_references = drm_bacon_gem_bo_references;
 
 	init_cache_buckets(bufmgr_gem);
 
