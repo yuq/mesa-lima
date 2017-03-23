@@ -4133,13 +4133,13 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    const glsl_type *sampler_type = ir->sampler->type;
    unsigned sampler_array_size = 1, sampler_base = 0;
    uint16_t sampler_index = 0;
-   bool is_cube_array = false;
+   bool is_cube_array = false, is_cube_shadow = false;
    unsigned i;
 
-   /* if we are a cube array sampler */
-   if ((sampler_type->sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE &&
-        sampler_type->sampler_array)) {
-      is_cube_array = true;
+   /* if we are a cube array sampler or a cube shadow */
+   if (sampler_type->sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE) {
+      is_cube_array = sampler_type->sampler_array;
+      is_cube_shadow = sampler_type->sampler_shadow;
    }
 
    if (ir->coordinate) {
@@ -4177,8 +4177,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       }
       break;
    case ir_txb:
-      if (is_cube_array ||
-          sampler_type == glsl_type::samplerCubeShadow_type) {
+      if (is_cube_array || is_cube_shadow) {
          opcode = TGSI_OPCODE_TXB2;
       }
       else {
