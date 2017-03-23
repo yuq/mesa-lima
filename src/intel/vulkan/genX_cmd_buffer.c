@@ -305,8 +305,8 @@ color_attachment_compute_aux_usage(struct anv_device *device,
           * doesn't also support color compression.
           */
          att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
-      } else if (GEN_GEN == 8) {
-         /* Broadwell can sample from fast-cleared images */
+      } else if (GEN_GEN >= 8) {
+         /* Broadwell/Skylake can sample from fast-cleared images */
          att_state->input_aux_usage = ISL_AUX_USAGE_CCS_D;
       } else {
          /* Ivy Bridge and Haswell cannot */
