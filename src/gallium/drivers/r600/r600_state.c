@@ -983,6 +983,11 @@ static void r600_init_color_surface(struct r600_context *rctx,
 							   PIPE_USAGE_DEFAULT,
 							   cmask.size, cmask.alignment);
 
+			if (unlikely(!rctx->dummy_cmask)) {
+				surf->color_initialized = false;
+				return;
+			}
+
 			/* Set the contents to 0xCC. */
 			ptr = pipe_buffer_map(&rctx->b.b, &rctx->dummy_cmask->b.b, PIPE_TRANSFER_WRITE, &transfer);
 			memset(ptr, 0xCC, cmask.size);
@@ -999,6 +1004,11 @@ static void r600_init_color_surface(struct r600_context *rctx,
 				r600_aligned_buffer_create(&rscreen->b.b, 0,
 							   PIPE_USAGE_DEFAULT,
 							   fmask.size, fmask.alignment);
+
+			if (unlikely(!rctx->dummy_fmask)) {
+				surf->color_initialized = false;
+				return;
+			}
 		}
 		r600_resource_reference(&surf->cb_buffer_fmask, rctx->dummy_fmask);
 
