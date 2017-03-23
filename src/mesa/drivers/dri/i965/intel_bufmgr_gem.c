@@ -61,12 +61,12 @@
 #include "libdrm_macros.h"
 #include "main/macros.h"
 #include "util/macros.h"
+#include "util/hash_table.h"
 #include "util/list.h"
 #include "brw_bufmgr.h"
 #include "string.h"
 
 #include "i915_drm.h"
-#include "uthash.h"
 
 #ifdef HAVE_VALGRIND
 #include <valgrind.h>
@@ -139,8 +139,8 @@ typedef struct _drm_bacon_bufmgr {
 
 	struct list_head managers;
 
-	drm_bacon_bo_gem *name_table;
-	drm_bacon_bo_gem *handle_table;
+	struct hash_table *name_table;
+	struct hash_table *handle_table;
 
 	struct list_head vma_cache;
 	int vma_count, vma_open, vma_max;
@@ -168,9 +168,6 @@ struct _drm_bacon_bo_gem {
          * List contains both flink named and prime fd'd objects
 	 */
 	unsigned int global_name;
-
-	UT_hash_handle handle_hh;
-	UT_hash_handle name_hh;
 
 	/**
 	 * Index of the buffer within the validation list while preparing a
@@ -270,6 +267,25 @@ static void drm_bacon_gem_bo_free(drm_bacon_bo *bo);
 static inline drm_bacon_bo_gem *to_bo_gem(drm_bacon_bo *bo)
 {
         return (drm_bacon_bo_gem *)bo;
+}
+
+static uint32_t
+key_hash_uint(const void *key)
+{
+	return _mesa_hash_data(key, 4);
+}
+
+static bool
+key_uint_equal(const void *a, const void *b)
+{
+	return *((unsigned *) a) == *((unsigned *) b);
+}
+
+static drm_bacon_bo_gem *
+hash_find_bo(struct hash_table *ht, unsigned int key)
+{
+	struct hash_entry *entry = _mesa_hash_table_search(ht, &key);
+	return entry ? (drm_bacon_bo_gem *) entry->data : NULL;
 }
 
 static unsigned long
@@ -635,9 +651,8 @@ retry:
 		}
 
 		bo_gem->gem_handle = create.handle;
-		HASH_ADD(handle_hh, bufmgr->handle_table,
-			 gem_handle, sizeof(bo_gem->gem_handle),
-			 bo_gem);
+		_mesa_hash_table_insert(bufmgr->handle_table,
+					&bo_gem->gem_handle, bo_gem);
 
 		bo_gem->bo.handle = bo_gem->gem_handle;
 		bo_gem->bo.bufmgr = bufmgr;
@@ -767,8 +782,7 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	 * provides a sufficiently fast match.
 	 */
 	pthread_mutex_lock(&bufmgr->lock);
-	HASH_FIND(name_hh, bufmgr->name_table,
-		  &handle, sizeof(handle), bo_gem);
+	bo_gem = hash_find_bo(bufmgr->name_table, handle);
 	if (bo_gem) {
 		drm_bacon_bo_reference(&bo_gem->bo);
 		goto out;
@@ -789,8 +803,7 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
          * object from the kernel before by looking through the list
          * again for a matching gem_handle
          */
-	HASH_FIND(handle_hh, bufmgr->handle_table,
-		  &open_arg.handle, sizeof(open_arg.handle), bo_gem);
+	bo_gem = hash_find_bo(bufmgr->handle_table, open_arg.handle);
 	if (bo_gem) {
 		drm_bacon_bo_reference(&bo_gem->bo);
 		goto out;
@@ -814,10 +827,10 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	bo_gem->global_name = handle;
 	bo_gem->reusable = false;
 
-	HASH_ADD(handle_hh, bufmgr->handle_table,
-		 gem_handle, sizeof(bo_gem->gem_handle), bo_gem);
-	HASH_ADD(name_hh, bufmgr->name_table,
-		 global_name, sizeof(bo_gem->global_name), bo_gem);
+	_mesa_hash_table_insert(bufmgr->handle_table,
+				&bo_gem->gem_handle, bo_gem);
+	_mesa_hash_table_insert(bufmgr->name_table,
+				&bo_gem->global_name, bo_gem);
 
 	memclear(get_tiling);
 	get_tiling.handle = bo_gem->gem_handle;
@@ -849,6 +862,7 @@ drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_gem_close close;
+	struct hash_entry *entry;
 	int ret;
 
 	list_del(&bo_gem->vma_list);
@@ -867,9 +881,14 @@ drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 		bufmgr->vma_count--;
 	}
 
-	if (bo_gem->global_name)
-		HASH_DELETE(name_hh, bufmgr->name_table, bo_gem);
-	HASH_DELETE(handle_hh, bufmgr->handle_table, bo_gem);
+	if (bo_gem->global_name) {
+		entry = _mesa_hash_table_search(bufmgr->name_table,
+						&bo_gem->global_name);
+		_mesa_hash_table_remove(bufmgr->name_table, entry);
+	}
+	entry = _mesa_hash_table_search(bufmgr->handle_table,
+					&bo_gem->gem_handle);
+	_mesa_hash_table_remove(bufmgr->handle_table, entry);
 
 	/* Close this object */
 	memclear(close);
@@ -1523,6 +1542,9 @@ drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 		}
 	}
 
+	_mesa_hash_table_destroy(bufmgr->name_table, NULL);
+	_mesa_hash_table_destroy(bufmgr->handle_table, NULL);
+
 	free(bufmgr);
 }
 
@@ -1894,8 +1916,7 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	 * for named buffers, we must not create two bo's pointing at the same
 	 * kernel object
 	 */
-	HASH_FIND(handle_hh, bufmgr->handle_table,
-		  &handle, sizeof(handle), bo_gem);
+	bo_gem = hash_find_bo(bufmgr->handle_table, handle);
 	if (bo_gem) {
 		drm_bacon_bo_reference(&bo_gem->bo);
 		goto out;
@@ -1923,8 +1944,8 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	bo_gem->bo.bufmgr = bufmgr;
 
 	bo_gem->gem_handle = handle;
-	HASH_ADD(handle_hh, bufmgr->handle_table,
-		 gem_handle, sizeof(bo_gem->gem_handle), bo_gem);
+	_mesa_hash_table_insert(bufmgr->handle_table,
+				&bo_gem->gem_handle, bo_gem);
 
 	bo_gem->name = "prime";
 	bo_gem->validate_index = -1;
@@ -1988,9 +2009,8 @@ drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 			bo_gem->global_name = flink.name;
 			bo_gem->reusable = false;
 
-			HASH_ADD(name_hh, bufmgr->name_table,
-				 global_name, sizeof(bo_gem->global_name),
-				 bo_gem);
+			_mesa_hash_table_insert(bufmgr->name_table,
+						&bo_gem->global_name, bo_gem);
 		}
 		pthread_mutex_unlock(&bufmgr->lock);
 	}
@@ -2564,6 +2584,11 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 	bufmgr->vma_max = -1; /* unlimited by default */
 
 	list_add(&bufmgr->managers, &bufmgr_list);
+
+	bufmgr->name_table =
+		_mesa_hash_table_create(NULL, key_hash_uint, key_uint_equal);
+	bufmgr->handle_table =
+		_mesa_hash_table_create(NULL, key_hash_uint, key_uint_equal);
 
 exit:
 	pthread_mutex_unlock(&bufmgr_list_mutex);
