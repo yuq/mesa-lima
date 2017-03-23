@@ -258,7 +258,7 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
       st->active_states = st_get_active_states(ctx);
    }
 
-   if (new_state & _NEW_TEXTURE) {
+   if (new_state & _NEW_TEXTURE_OBJECT) {
       st->dirty |= st->active_states &
                    (ST_NEW_SAMPLER_VIEWS |
                     ST_NEW_SAMPLERS |

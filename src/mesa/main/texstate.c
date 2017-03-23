@@ -306,7 +306,7 @@ _mesa_ActiveTexture(GLenum texture)
       return;
    }
 
-   FLUSH_VERTICES(ctx, _NEW_TEXTURE);
+   FLUSH_VERTICES(ctx, _NEW_TEXTURE_STATE);
 
    ctx->Texture.CurrentUnit = texUnit;
    if (ctx->Transform.MatrixMode == GL_TEXTURE) {

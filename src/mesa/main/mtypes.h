@@ -4100,10 +4100,10 @@ struct gl_matrix_stack
 #define _NEW_POLYGONSTIPPLE    (1u << 13)  /**< gl_context::PolygonStipple */
 #define _NEW_SCISSOR           (1u << 14)  /**< gl_context::Scissor */
 #define _NEW_STENCIL           (1u << 15)  /**< gl_context::Stencil */
-#define _NEW_TEXTURE           (1u << 16)  /**< gl_context::Texture */
+#define _NEW_TEXTURE_OBJECT    (1u << 16)  /**< gl_context::Texture (bindings only) */
 #define _NEW_TRANSFORM         (1u << 17)  /**< gl_context::Transform */
 #define _NEW_VIEWPORT          (1u << 18)  /**< gl_context::Viewport */
-/* gap, re-use for core Mesa state only; use ctx->DriverFlags otherwise */
+#define _NEW_TEXTURE_STATE     (1u << 19)  /**< gl_context::Texture (states only) */
 #define _NEW_ARRAY             (1u << 20)  /**< gl_context::Array */
 #define _NEW_RENDERMODE        (1u << 21)  /**< gl_context::RenderMode, etc */
 #define _NEW_BUFFERS           (1u << 22)  /**< gl_context::Visual, DrawBuffer, */
@@ -4124,8 +4124,10 @@ struct gl_matrix_stack
  * Composite state flags
  */
 /*@{*/
+#define _NEW_TEXTURE   (_NEW_TEXTURE_OBJECT | _NEW_TEXTURE_STATE)
+
 #define _MESA_NEW_NEED_EYE_COORDS         (_NEW_LIGHT |		\
-                                           _NEW_TEXTURE |	\
+                                           _NEW_TEXTURE_STATE |	\
                                            _NEW_POINT |		\
                                            _NEW_PROGRAM |	\
                                            _NEW_MODELVIEW)

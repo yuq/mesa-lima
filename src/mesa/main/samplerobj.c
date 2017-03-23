@@ -226,7 +226,7 @@ _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
             /* If the sampler is currently bound, unbind it. */
             for (j = 0; j < ctx->Const.MaxCombinedTextureImageUnits; j++) {
                if (ctx->Texture.Unit[j].Sampler == sampObj) {
-                  FLUSH_VERTICES(ctx, _NEW_TEXTURE);
+                  FLUSH_VERTICES(ctx, _NEW_TEXTURE_OBJECT);
                   _mesa_reference_sampler_object(ctx, &ctx->Texture.Unit[j].Sampler, NULL);
                }
             }
@@ -258,7 +258,7 @@ _mesa_bind_sampler(struct gl_context *ctx, GLuint unit,
                    struct gl_sampler_object *sampObj)
 {
    if (ctx->Texture.Unit[unit].Sampler != sampObj) {
-      FLUSH_VERTICES(ctx, _NEW_TEXTURE);
+      FLUSH_VERTICES(ctx, _NEW_TEXTURE_OBJECT);
    }
 
    _mesa_reference_sampler_object(ctx, &ctx->Texture.Unit[unit].Sampler,
@@ -374,7 +374,7 @@ _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
             _mesa_reference_sampler_object(ctx,
                                            &ctx->Texture.Unit[unit].Sampler,
                                            sampObj);
-            ctx->NewState |= _NEW_TEXTURE;
+            ctx->NewState |= _NEW_TEXTURE_OBJECT;
          }
       }
 
@@ -388,7 +388,7 @@ _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
             _mesa_reference_sampler_object(ctx,
                                            &ctx->Texture.Unit[unit].Sampler,
                                            NULL);
-            ctx->NewState |= _NEW_TEXTURE;
+            ctx->NewState |= _NEW_TEXTURE_OBJECT;
          }
       }
    }
@@ -430,7 +430,7 @@ validate_texture_wrap_mode(struct gl_context *ctx, GLenum wrap)
 static inline void
 flush(struct gl_context *ctx)
 {
-   FLUSH_VERTICES(ctx, _NEW_TEXTURE);
+   FLUSH_VERTICES(ctx, _NEW_TEXTURE_OBJECT);
 }
 
 void

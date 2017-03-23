@@ -3225,7 +3225,7 @@ _mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
 
          check_gen_mipmap(ctx, target, texObj, level);
 
-         /* NOTE: Don't signal _NEW_TEXTURE since we've only changed
+         /* NOTE: Don't signal _NEW_TEXTURE_OBJECT since we've only changed
           * the texel data, not the texture format, size, etc.
           */
       }
@@ -3817,7 +3817,7 @@ _mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
 
          check_gen_mipmap(ctx, target, texObj, level);
 
-         /* NOTE: Don't signal _NEW_TEXTURE since we've only changed
+         /* NOTE: Don't signal _NEW_TEXTURE_OBJECT since we've only changed
           * the texel data, not the texture format, size, etc.
           */
       }
@@ -4523,7 +4523,7 @@ _mesa_compressed_texture_sub_image(struct gl_context *ctx, GLuint dims,
 
          check_gen_mipmap(ctx, target, texObj, level);
 
-         /* NOTE: Don't signal _NEW_TEXTURE since we've only changed
+         /* NOTE: Don't signal _NEW_TEXTURE_OBJECT since we've only changed
           * the texel data, not the texture format, size, etc.
           */
       }
