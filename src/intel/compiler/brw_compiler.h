@@ -292,6 +292,7 @@ struct brw_wm_prog_key {
    bool clamp_fragment_color:1;
    bool persample_interp:1;
    bool multisample_fbo:1;
+   bool frag_coord_adds_sample_pos:1;
    enum brw_wm_aa_enable line_aa:2;
    bool high_quality_derivatives:1;
    bool force_dual_color_blend:1;

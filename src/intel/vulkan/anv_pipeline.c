@@ -87,12 +87,14 @@ void anv_DestroyShaderModule(
  * we can't do that yet because we don't have the ability to copy nir.
  */
 static nir_shader *
-anv_shader_compile_to_nir(struct anv_device *device,
+anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
                           struct anv_shader_module *module,
                           const char *entrypoint_name,
                           gl_shader_stage stage,
                           const VkSpecializationInfo *spec_info)
 {
+   const struct anv_device *device = pipeline->device;
+
    const struct brw_compiler *compiler =
       device->instance->physicalDevice.compiler;
    const nir_shader_compiler_options *nir_options =
@@ -158,7 +160,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
               nir_var_shader_in | nir_var_shader_out | nir_var_system_value);
 
    if (stage == MESA_SHADER_FRAGMENT)
-      NIR_PASS_V(nir, nir_lower_wpos_center, false);
+      NIR_PASS_V(nir, nir_lower_wpos_center, pipeline->sample_shading_enable);
 
    /* Now that we've deleted all but the main function, we can go ahead and
     * lower the rest of the constant initializers.
@@ -304,14 +306,19 @@ populate_wm_prog_key(const struct anv_pipeline *pipeline,
                           info->pMultisampleState &&
                           info->pMultisampleState->alphaToCoverageEnable;
 
-   if (info->pMultisampleState && info->pMultisampleState->rasterizationSamples > 1) {
+   if (info->pMultisampleState) {
       /* We should probably pull this out of the shader, but it's fairly
        * harmless to compute it and then let dead-code take care of it.
        */
-      key->persample_interp =
-         (info->pMultisampleState->minSampleShading *
-          info->pMultisampleState->rasterizationSamples) > 1;
-      key->multisample_fbo = true;
+      if (info->pMultisampleState->rasterizationSamples > 1) {
+         key->persample_interp =
+            (info->pMultisampleState->minSampleShading *
+             info->pMultisampleState->rasterizationSamples) > 1;
+         key->multisample_fbo = true;
+      }
+
+      key->frag_coord_adds_sample_pos =
+         info->pMultisampleState->sampleShadingEnable;
    }
 }
 
@@ -333,7 +340,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
                      struct brw_stage_prog_data *prog_data,
                      struct anv_pipeline_bind_map *map)
 {
-   nir_shader *nir = anv_shader_compile_to_nir(pipeline->device,
+   nir_shader *nir = anv_shader_compile_to_nir(pipeline,
                                                module, entrypoint, stage,
                                                spec_info);
    if (nir == NULL)
@@ -1206,6 +1213,9 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    copy_non_dynamic_state(pipeline, pCreateInfo);
    pipeline->depth_clamp_enable = pCreateInfo->pRasterizationState &&
                                   pCreateInfo->pRasterizationState->depthClampEnable;
+
+   pipeline->sample_shading_enable = pCreateInfo->pMultisampleState &&
+                                     pCreateInfo->pMultisampleState->sampleShadingEnable;
 
    pipeline->needs_data_cache = false;
 
