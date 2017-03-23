@@ -469,9 +469,6 @@ struct dd_function_table {
     * \name Vertex/fragment program functions
     */
    /*@{*/
-   /** Bind a vertex/fragment program */
-   void (*BindProgram)(struct gl_context *ctx, GLenum target,
-                       struct gl_program *prog);
    /** Allocate a new program */
    struct gl_program * (*NewProgram)(struct gl_context *ctx, GLenum target,
                                      GLuint id, bool is_arb_asm);

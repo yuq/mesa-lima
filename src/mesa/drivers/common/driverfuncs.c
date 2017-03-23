@@ -113,7 +113,6 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
    driver->DrawTex = _mesa_meta_DrawTex;
 
    /* Vertex/fragment programs */
-   driver->BindProgram = NULL;
    driver->NewProgram = _mesa_new_program;
    driver->DeleteProgram = _mesa_delete_program;
 

@@ -80,8 +80,7 @@ update_program_enables(struct gl_context *ctx)
 
 /**
  * Update the ctx->*Program._Current pointers to point to the
- * current/active programs.  Then call ctx->Driver.BindProgram() to
- * tell the driver which programs to use.
+ * current/active programs.
  *
  * Programs may come from 3 sources: GLSL shaders, ARB/NV_vertex/fragment
  * programs or programs derived from fixed-function state.
@@ -238,53 +237,13 @@ update_program(struct gl_context *ctx)
 
    /* Let the driver know what's happening:
     */
-   if (ctx->FragmentProgram._Current != prevFP) {
+   if (ctx->FragmentProgram._Current != prevFP ||
+       ctx->VertexProgram._Current != prevVP ||
+       ctx->GeometryProgram._Current != prevGP ||
+       ctx->TessEvalProgram._Current != prevTEP ||
+       ctx->TessCtrlProgram._Current != prevTCP ||
+       ctx->ComputeProgram._Current != prevCP)
       new_state |= _NEW_PROGRAM;
-      if (ctx->Driver.BindProgram) {
-         ctx->Driver.BindProgram(ctx, GL_FRAGMENT_PROGRAM_ARB,
-                                 ctx->FragmentProgram._Current);
-      }
-   }
-
-   if (ctx->GeometryProgram._Current != prevGP) {
-      new_state |= _NEW_PROGRAM;
-      if (ctx->Driver.BindProgram) {
-         ctx->Driver.BindProgram(ctx, GL_GEOMETRY_PROGRAM_NV,
-                                 ctx->GeometryProgram._Current);
-      }
-   }
-
-   if (ctx->TessEvalProgram._Current != prevTEP) {
-      new_state |= _NEW_PROGRAM;
-      if (ctx->Driver.BindProgram) {
-         ctx->Driver.BindProgram(ctx, GL_TESS_EVALUATION_PROGRAM_NV,
-                                 ctx->TessEvalProgram._Current);
-      }
-   }
-
-   if (ctx->TessCtrlProgram._Current != prevTCP) {
-      new_state |= _NEW_PROGRAM;
-      if (ctx->Driver.BindProgram) {
-         ctx->Driver.BindProgram(ctx, GL_TESS_CONTROL_PROGRAM_NV,
-                                 ctx->TessCtrlProgram._Current);
-      }
-   }
-
-   if (ctx->VertexProgram._Current != prevVP) {
-      new_state |= _NEW_PROGRAM;
-      if (ctx->Driver.BindProgram) {
-         ctx->Driver.BindProgram(ctx, GL_VERTEX_PROGRAM_ARB,
-                                 ctx->VertexProgram._Current);
-      }
-   }
-
-   if (ctx->ComputeProgram._Current != prevCP) {
-      new_state |= _NEW_PROGRAM;
-      if (ctx->Driver.BindProgram) {
-         ctx->Driver.BindProgram(ctx, GL_COMPUTE_PROGRAM_NV,
-                                 ctx->ComputeProgram._Current);
-      }
-   }
 
    return new_state;
 }
