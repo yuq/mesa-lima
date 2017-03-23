@@ -187,6 +187,8 @@ _mesa_glthread_is_compat_bind_vertex_array(const struct gl_context *ctx)
 struct marshal_cmd_ShaderSource;
 struct marshal_cmd_Flush;
 struct marshal_cmd_BindBuffer;
+struct marshal_cmd_BufferData;
+struct marshal_cmd_BufferSubData;
 
 void GLAPIENTRY
 _mesa_marshal_ShaderSource(GLuint shader, GLsizei count,
@@ -209,5 +211,21 @@ _mesa_marshal_BindBuffer(GLenum target, GLuint buffer);
 void
 _mesa_unmarshal_BindBuffer(struct gl_context *ctx,
                            const struct marshal_cmd_BindBuffer *cmd);
+
+void
+_mesa_unmarshal_BufferData(struct gl_context *ctx,
+                           const struct marshal_cmd_BufferData *cmd);
+
+void GLAPIENTRY
+_mesa_marshal_BufferData(GLenum target, GLsizeiptr size, const GLvoid * data,
+                         GLenum usage);
+
+void
+_mesa_unmarshal_BufferSubData(struct gl_context *ctx,
+                              const struct marshal_cmd_BufferSubData *cmd);
+
+void GLAPIENTRY
+_mesa_marshal_BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size,
+                            const GLvoid * data);
 
 #endif /* MARSHAL_H */

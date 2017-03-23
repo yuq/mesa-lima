@@ -5033,7 +5033,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="BufferData" es1="1.1" es2="2.0">
+    <function name="BufferData" es1="1.1" es2="2.0" marshal="custom">
         <param name="target" type="GLenum"/>
         <param name="size" type="GLsizeiptr" counter="true"/>
         <param name="data" type="const GLvoid *" count="size" img_null_flag="true"/>
@@ -5041,7 +5041,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="BufferSubData" es1="1.1" es2="2.0">
+    <function name="BufferSubData" es1="1.1" es2="2.0" marshal="custom">
         <param name="target" type="GLenum"/>
         <param name="offset" type="GLintptr"/>
         <param name="size" type="GLsizeiptr" counter="true"/>

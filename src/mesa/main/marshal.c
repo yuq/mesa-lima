@@ -259,4 +259,129 @@ _mesa_marshal_BindBuffer(GLenum target, GLuint buffer)
    }
 }
 
+/* BufferData: marshalled asynchronously */
+struct marshal_cmd_BufferData
+{
+   struct marshal_cmd_base cmd_base;
+   GLenum target;
+   GLsizeiptr size;
+   GLenum usage;
+   bool data_null; /* If set, no data follows for "data" */
+   /* Next size bytes are GLvoid data[size] */
+};
+
+void
+_mesa_unmarshal_BufferData(struct gl_context *ctx,
+                           const struct marshal_cmd_BufferData *cmd)
+{
+   const GLenum target = cmd->target;
+   const GLsizeiptr size = cmd->size;
+   const GLenum usage = cmd->usage;
+   const char *variable_data = (const char *) (cmd + 1);
+   const GLvoid *data = (const GLvoid *) variable_data;
+
+   if (cmd->data_null)
+      data = NULL;
+   else
+      variable_data += size;
+
+   CALL_BufferData(ctx->CurrentServerDispatch, (target, size, data, usage));
+}
+
+void GLAPIENTRY
+_mesa_marshal_BufferData(GLenum target, GLsizeiptr size, const GLvoid * data,
+                         GLenum usage)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   size_t cmd_size =
+      sizeof(struct marshal_cmd_BufferData) + (data ? size : 0);
+   debug_print_marshal("BufferData");
+
+   if (unlikely(size < 0)) {
+      _mesa_glthread_finish(ctx);
+      _mesa_error(ctx, GL_INVALID_VALUE, "BufferData(size < 0)");
+      return;
+   }
+
+   if (target != GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD &&
+       cmd_size <= MARSHAL_MAX_CMD_SIZE) {
+      struct marshal_cmd_BufferData *cmd =
+         _mesa_glthread_allocate_command(ctx, DISPATCH_CMD_BufferData,
+                                         cmd_size);
+
+      cmd->target = target;
+      cmd->size = size;
+      cmd->usage = usage;
+      char *variable_data = (char *) (cmd + 1);
+      cmd->data_null = !data;
+      if (!cmd->data_null) {
+         memcpy(variable_data, data, size);
+         variable_data += size;
+      }
+      _mesa_post_marshal_hook(ctx);
+   } else {
+      _mesa_glthread_finish(ctx);
+      CALL_BufferData(ctx->CurrentServerDispatch,
+                      (target, size, data, usage));
+   }
+}
+
+/* BufferSubData: marshalled asynchronously */
+struct marshal_cmd_BufferSubData
+{
+   struct marshal_cmd_base cmd_base;
+   GLenum target;
+   GLintptr offset;
+   GLsizeiptr size;
+   /* Next size bytes are GLvoid data[size] */
+};
+
+void
+_mesa_unmarshal_BufferSubData(struct gl_context *ctx,
+                              const struct marshal_cmd_BufferSubData *cmd)
+{
+   const GLenum target = cmd->target;
+   const GLintptr offset = cmd->offset;
+   const GLsizeiptr size = cmd->size;
+   const char *variable_data = (const char *) (cmd + 1);
+   const GLvoid *data = (const GLvoid *) variable_data;
+
+   variable_data += size;
+   CALL_BufferSubData(ctx->CurrentServerDispatch,
+                      (target, offset, size, data));
+}
+
+void GLAPIENTRY
+_mesa_marshal_BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size,
+                            const GLvoid * data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   size_t cmd_size = sizeof(struct marshal_cmd_BufferSubData) + size;
+
+   debug_print_marshal("BufferSubData");
+   if (unlikely(size < 0)) {
+      _mesa_glthread_finish(ctx);
+      _mesa_error(ctx, GL_INVALID_VALUE, "BufferSubData(size < 0)");
+      return;
+   }
+
+   if (target != GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD &&
+       cmd_size <= MARSHAL_MAX_CMD_SIZE) {
+      struct marshal_cmd_BufferSubData *cmd =
+         _mesa_glthread_allocate_command(ctx, DISPATCH_CMD_BufferSubData,
+                                         cmd_size);
+      cmd->target = target;
+      cmd->offset = offset;
+      cmd->size = size;
+      char *variable_data = (char *) (cmd + 1);
+      memcpy(variable_data, data, size);
+      variable_data += size;
+      _mesa_post_marshal_hook(ctx);
+   } else {
+      _mesa_glthread_finish(ctx);
+      CALL_BufferSubData(ctx->CurrentServerDispatch,
+                         (target, offset, size, data));
+   }
+}
+
 #endif
