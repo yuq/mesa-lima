@@ -370,6 +370,10 @@ static const VkExtensionProperties device_extensions[] = {
       .extensionName = VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
       .specVersion = 1,
    },
+   {
+      .extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
+      .specVersion = 1,
+   },
 };
 
 static void *

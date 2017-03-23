@@ -128,6 +128,7 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
       .tessellation = true,
       .draw_parameters = true,
       .image_write_without_format = true,
+      .multiview = true,
    };
 
    nir_function *entry_point =
