@@ -174,7 +174,10 @@ AM_CFLAGS += \
 GL_LIB_VERSION=1:2
 endif
 
+# Push the libdrm furhter up, as due to libtool bug we might end up relinking
+# against the system one.
 GL_LIBS = \
+	$(LIBDRM_LIBS) \
 	libglx.la \
 	$(top_builddir)/src/mapi/glapi/libglapi.la \
 	$(SHARED_GLAPI_LIB) \
