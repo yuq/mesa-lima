@@ -26,6 +26,7 @@
 
 #include "anv_private.h"
 #include "vk_format_info.h"
+#include "util/vk_util.h"
 
 #include "common/gen_l3_config.h"
 #include "genxml/gen_macros.h"
@@ -49,6 +50,17 @@ emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
       lri.DataDWord        = imm;
    }
 }
+
+#if GEN_IS_HASWELL || GEN_GEN >= 8
+static void
+emit_lrr(struct anv_batch *batch, uint32_t dst, uint32_t src)
+{
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_REG), lrr) {
+      lrr.SourceRegisterAddress        = src;
+      lrr.DestinationRegisterAddress   = dst;
+   }
+}
+#endif
 
 void
 genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
@@ -1494,7 +1506,12 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
             .MemoryObjectControlState = GENX(MOCS),
 #else
             .BufferAccessType = pipeline->instancing_enable[vb] ? INSTANCEDATA : VERTEXDATA,
-            .InstanceDataStepRate = 1,
+            /* Our implementation of VK_KHR_multiview uses instancing to draw
+             * the different views.  If the client asks for instancing, we
+             * need to use the Instance Data Step Rate to ensure that we
+             * repeat the client's per-instance data once for each view.
+             */
+            .InstanceDataStepRate = anv_subpass_view_count(pipeline->subpass),
             .VertexBufferMemoryObjectControlState = GENX(MOCS),
 #endif
 
@@ -1684,6 +1701,11 @@ void genX(CmdDraw)(
    if (vs_prog_data->uses_drawid)
       emit_draw_index(cmd_buffer, 0);
 
+   /* Our implementation of VK_KHR_multiview uses instancing to draw the
+    * different views.  We need to multiply instanceCount by the view count.
+    */
+   instanceCount *= anv_subpass_view_count(cmd_buffer->state.subpass);
+
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType         = SEQUENTIAL;
       prim.PrimitiveTopologyType    = pipeline->topology;
@@ -1717,6 +1739,11 @@ void genX(CmdDrawIndexed)(
    if (vs_prog_data->uses_drawid)
       emit_draw_index(cmd_buffer, 0);
 
+   /* Our implementation of VK_KHR_multiview uses instancing to draw the
+    * different views.  We need to multiply instanceCount by the view count.
+    */
+   instanceCount *= anv_subpass_view_count(cmd_buffer->state.subpass);
+
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType         = RANDOM;
       prim.PrimitiveTopologyType    = pipeline->topology;
@@ -1736,6 +1763,75 @@ void genX(CmdDrawIndexed)(
 #define GEN7_3DPRIM_START_INSTANCE      0x243C
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
 
+/* MI_MATH only exists on Haswell+ */
+#if GEN_IS_HASWELL || GEN_GEN >= 8
+
+static uint32_t
+mi_alu(uint32_t opcode, uint32_t op1, uint32_t op2)
+{
+   struct GENX(MI_MATH_ALU_INSTRUCTION) instr = {
+      .ALUOpcode = opcode,
+      .Operand1 = op1,
+      .Operand2 = op2,
+   };
+
+   uint32_t dw;
+   GENX(MI_MATH_ALU_INSTRUCTION_pack)(NULL, &dw, &instr);
+
+   return dw;
+}
+
+#define CS_GPR(n) (0x2600 + (n) * 8)
+
+/* Emit dwords to multiply GPR0 by N */
+static void
+build_alu_multiply_gpr0(uint32_t *dw, unsigned *dw_count, uint32_t N)
+{
+   VK_OUTARRAY_MAKE(out, dw, dw_count);
+
+#define append_alu(opcode, operand1, operand2) \
+   vk_outarray_append(&out, alu_dw) *alu_dw = mi_alu(opcode, operand1, operand2)
+
+   assert(N > 0);
+   unsigned top_bit = 31 - __builtin_clz(N);
+   for (int i = top_bit - 1; i >= 0; i--) {
+      /* We get our initial data in GPR0 and we write the final data out to
+       * GPR0 but we use GPR1 as our scratch register.
+       */
+      unsigned src_reg = i == top_bit - 1 ? MI_ALU_REG0 : MI_ALU_REG1;
+      unsigned dst_reg = i == 0 ? MI_ALU_REG0 : MI_ALU_REG1;
+
+      /* Shift the current value left by 1 */
+      append_alu(MI_ALU_LOAD, MI_ALU_SRCA, src_reg);
+      append_alu(MI_ALU_LOAD, MI_ALU_SRCB, src_reg);
+      append_alu(MI_ALU_ADD, 0, 0);
+
+      if (N & (1 << i)) {
+         /* Store ACCU to R1 and add R0 to R1 */
+         append_alu(MI_ALU_STORE, MI_ALU_REG1, MI_ALU_ACCU);
+         append_alu(MI_ALU_LOAD, MI_ALU_SRCA, MI_ALU_REG0);
+         append_alu(MI_ALU_LOAD, MI_ALU_SRCB, MI_ALU_REG1);
+         append_alu(MI_ALU_ADD, 0, 0);
+      }
+
+      append_alu(MI_ALU_STORE, dst_reg, MI_ALU_ACCU);
+   }
+
+#undef append_alu
+}
+
+static void
+emit_mul_gpr0(struct anv_batch *batch, uint32_t N)
+{
+   uint32_t num_dwords;
+   build_alu_multiply_gpr0(NULL, &num_dwords, N);
+
+   uint32_t *dw = anv_batch_emitn(batch, 1 + num_dwords, GENX(MI_MATH));
+   build_alu_multiply_gpr0(dw + 1, &num_dwords, N);
+}
+
+#endif /* GEN_IS_HASWELL || GEN_GEN >= 8 */
+
 static void
 load_indirect_parameters(struct anv_cmd_buffer *cmd_buffer,
                          struct anv_buffer *buffer, uint64_t offset,
@@ -1746,7 +1842,22 @@ load_indirect_parameters(struct anv_cmd_buffer *cmd_buffer,
    uint32_t bo_offset = buffer->offset + offset;
 
    emit_lrm(batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
-   emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+
+   unsigned view_count = anv_subpass_view_count(cmd_buffer->state.subpass);
+   if (view_count > 1) {
+#if GEN_IS_HASWELL || GEN_GEN >= 8
+      emit_lrm(batch, CS_GPR(0), bo, bo_offset + 4);
+      emit_mul_gpr0(batch, view_count);
+      emit_lrr(batch, GEN7_3DPRIM_INSTANCE_COUNT, CS_GPR(0));
+#else
+      anv_finishme("Multiview + indirect draw requires MI_MATH\n"
+                   "MI_MATH is not supported on Ivy Bridge");
+      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+#endif
+   } else {
+      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+   }
+
    emit_lrm(batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
 
    if (indexed) {
@@ -2349,6 +2460,16 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.subpass = subpass;
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
+
+   /* Our implementation of VK_KHR_multiview uses instancing to draw the
+    * different views.  If the client asks for instancing, we need to use the
+    * Instance Data Step Rate to ensure that we repeat the client's
+    * per-instance data once for each view.  Since this bit is in
+    * VERTEX_BUFFER_STATE on gen7, we need to dirty vertex buffers at the top
+    * of each subpass.
+    */
+   if (GEN_GEN == 7)
+      cmd_buffer->state.vb_dirty |= ~0;
 
    /* Perform transitions to the subpass layout before any writes have
     * occurred.

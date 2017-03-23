@@ -155,9 +155,12 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING), vfi) {
          vfi.InstancingEnable = pipeline->instancing_enable[desc->binding];
          vfi.VertexElementIndex = slot;
-         /* Vulkan so far doesn't have an instance divisor, so
-          * this is always 1 (ignored if not instancing). */
-         vfi.InstanceDataStepRate = 1;
+         /* Our implementation of VK_KHX_multiview uses instancing to draw
+          * the different views.  If the client asks for instancing, we
+          * need to use the Instance Data Step Rate to ensure that we
+          * repeat the client's per-instance data once for each view.
+          */
+         vfi.InstanceDataStepRate = anv_subpass_view_count(pipeline->subpass);
       }
 #endif
    }

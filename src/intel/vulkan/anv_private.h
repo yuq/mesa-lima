@@ -2173,6 +2173,12 @@ struct anv_subpass {
    bool                                         has_resolve;
 };
 
+static inline unsigned
+anv_subpass_view_count(const struct anv_subpass *subpass)
+{
+   return MAX2(1, _mesa_bitcount(subpass->view_mask));
+}
+
 enum anv_subpass_usage {
    ANV_SUBPASS_USAGE_DRAW =         (1 << 0),
    ANV_SUBPASS_USAGE_INPUT =        (1 << 1),
