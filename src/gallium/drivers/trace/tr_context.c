@@ -1627,6 +1627,25 @@ trace_context_memory_barrier(struct pipe_context *_context,
 }
 
 
+static bool
+trace_context_resource_commit(struct pipe_context *_context,
+                              struct pipe_resource *resource,
+                              unsigned level, struct pipe_box *box, bool commit)
+{
+   struct trace_context *tr_context = trace_context(_context);
+   struct pipe_context *context = tr_context->pipe;
+
+   trace_dump_call_begin("pipe_context", "resource_commit");
+   trace_dump_arg(ptr, context);
+   trace_dump_arg(ptr, resource);
+   trace_dump_arg(uint, level);
+   trace_dump_arg(box, box);
+   trace_dump_arg(bool, commit);
+   trace_dump_call_end();
+
+   return context->resource_commit(context, resource, level, box, commit);
+}
+
 static void
 trace_context_set_tess_state(struct pipe_context *_context,
                              const float default_outer_level[4],
@@ -1800,6 +1819,7 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(generate_mipmap);
    TR_CTX_INIT(texture_barrier);
    TR_CTX_INIT(memory_barrier);
+   TR_CTX_INIT(resource_commit);
    TR_CTX_INIT(set_tess_state);
    TR_CTX_INIT(set_shader_buffers);
    TR_CTX_INIT(launch_grid);
