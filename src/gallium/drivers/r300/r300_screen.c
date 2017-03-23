@@ -216,7 +216,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_QUERY_BUFFER_OBJECT:
         case PIPE_CAP_QUERY_MEMORY_INFO:
         case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
-	case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
+        case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
         case PIPE_CAP_CULL_DISTANCE:
         case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
         case PIPE_CAP_TGSI_VOTE:
@@ -246,7 +246,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_VERTEX_BUFFER_STRIDE_4BYTE_ALIGNED_ONLY:
         case PIPE_CAP_VERTEX_ELEMENT_SRC_OFFSET_4BYTE_ALIGNED_ONLY:
             return r300screen->caps.has_tcl;
-	case PIPE_CAP_TGSI_TEXCOORD:
+        case PIPE_CAP_TGSI_TEXCOORD:
             return 0;
 
         /* Texturing. */
@@ -259,7 +259,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         /* Render targets. */
         case PIPE_CAP_MAX_RENDER_TARGETS:
             return 4;
-	case PIPE_CAP_ENDIANNESS:
+        case PIPE_CAP_ENDIANNESS:
             return PIPE_ENDIAN_LITTLE;
 
         case PIPE_CAP_MAX_VIEWPORTS:
