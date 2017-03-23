@@ -158,7 +158,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
               nir_var_shader_in | nir_var_shader_out | nir_var_system_value);
 
    if (stage == MESA_SHADER_FRAGMENT)
-      NIR_PASS_V(nir, nir_lower_wpos_center);
+      NIR_PASS_V(nir, nir_lower_wpos_center, false);
 
    /* Now that we've deleted all but the main function, we can go ahead and
     * lower the rest of the constant initializers.
