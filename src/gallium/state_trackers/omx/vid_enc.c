@@ -1092,8 +1092,10 @@ static void enc_HandleTask(omx_base_PortType *port, struct encode_task *task,
    priv->s_pipe->flush(priv->s_pipe, NULL, 0);
 
    /* -------------- allocate output buffer --------- */
-   task->bitstream = pipe_buffer_create(priv->s_pipe->screen, PIPE_BIND_VERTEX_BUFFER,
-                                        PIPE_USAGE_STREAM, size);
+   task->bitstream = pipe_buffer_create(priv->s_pipe->screen,
+                                        PIPE_BIND_VERTEX_BUFFER,
+                                        PIPE_USAGE_STAGING, /* map for read */
+                                        size);
 
    picture.picture_type = picture_type;
    picture.pic_order_cnt = task->pic_order_cnt;
