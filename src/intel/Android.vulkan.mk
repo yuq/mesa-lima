@@ -58,9 +58,10 @@ $(intermediates)/vulkan/dummy.c:
 	@echo "Gen Dummy: $(PRIVATE_MODULE) <= $(notdir $(@))"
 	$(hide) touch $@
 
-$(intermediates)/vulkan/anv_entrypoints.h:
-	$(VK_ENTRYPOINTS_SCRIPT) header $@ --xml $(MESA_TOP)/src/vulkan/registry/vk.xml
-
+$(intermediates)/vulkan/anv_entrypoints.h: $(intermediates)/vulkan/dummy.c
+	$(VK_ENTRYPOINTS_SCRIPT) \
+		--outdir $(dir $@) \
+		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
         $(intermediates)
@@ -177,13 +178,18 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_genxml \
 	libmesa_vulkan_util
 
+# The rule generates both C and H files, but due to some strange
+# reason generating the files once leads to link-time issues.
+# Work around create them here as well - we're safe from race
+# conditions since they are stored in another location.
+
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_entrypoints.c
 
-$(intermediates)/vulknan/anv_entrypoints.c:
+$(intermediates)/vulkan/anv_entrypoints.c:
+	@mkdir -p $(dir $@)
 	$(VK_ENTRYPOINTS_SCRIPT) \
 		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
-		--outdir $(intermediates)/vulkan
-$(intermediates)/vulkan/anv_entrypoints.h: $(intermediates)/vulkan/anv_entrypoints.c
+		--outdir $(dir $@)
 
 LOCAL_SHARED_LIBRARIES := libdrm_intel
 
