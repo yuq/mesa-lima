@@ -406,8 +406,11 @@ _mesa_update_state_locked( struct gl_context *ctx )
    if (new_state & (_NEW_MODELVIEW|_NEW_PROJECTION))
       _mesa_update_modelview_project( ctx, new_state );
 
-   if (new_state & (_NEW_PROGRAM|_NEW_TEXTURE|_NEW_TEXTURE_MATRIX))
-      _mesa_update_texture( ctx, new_state );
+   if (new_state & _NEW_TEXTURE_MATRIX)
+      _mesa_update_texture_matrices(ctx);
+
+   if (new_state & (_NEW_TEXTURE | _NEW_PROGRAM))
+      _mesa_update_texture_state(ctx);
 
    if (new_state & _NEW_POLYGON)
       update_frontbit( ctx );

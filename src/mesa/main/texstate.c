@@ -355,8 +355,8 @@ _mesa_ClientActiveTexture(GLenum texture)
  *
  * \param ctx GL context.
  */
-static void
-update_texture_matrices( struct gl_context *ctx )
+void
+_mesa_update_texture_matrices(struct gl_context *ctx)
 {
    GLuint u;
 
@@ -691,8 +691,8 @@ update_ff_texture_state(struct gl_context *ctx,
  *
  * \param ctx GL context.
  */
-static void
-update_texture_state( struct gl_context *ctx )
+void
+_mesa_update_texture_state(struct gl_context *ctx)
 {
    struct gl_program *prog[MESA_SHADER_STAGES];
    int i;
@@ -744,20 +744,6 @@ update_texture_state( struct gl_context *ctx )
 
    if (!prog[MESA_SHADER_FRAGMENT] || !prog[MESA_SHADER_VERTEX])
       update_texgen(ctx);
-}
-
-
-/**
- * Update texture-related derived state.
- */
-void
-_mesa_update_texture( struct gl_context *ctx, GLuint new_state )
-{
-   if (new_state & _NEW_TEXTURE_MATRIX)
-      update_texture_matrices( ctx );
-
-   if (new_state & (_NEW_TEXTURE | _NEW_PROGRAM))
-      update_texture_state( ctx );
 }
 
 
