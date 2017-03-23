@@ -315,7 +315,7 @@ gbm_bo_get_stride_for_plane(struct gbm_bo *bo, int plane);
 uint32_t
 gbm_bo_get_format(struct gbm_bo *bo);
 
-int64_t
+uint32_t
 gbm_bo_get_offset(struct gbm_bo *bo, int plane);
 
 struct gbm_device *

@@ -81,7 +81,7 @@ struct gbm_device {
    int (*bo_get_planes)(struct gbm_bo *bo);
    union gbm_bo_handle (*bo_get_handle)(struct gbm_bo *bo, int plane);
    uint32_t (*bo_get_stride)(struct gbm_bo *bo, int plane);
-   int64_t (*bo_get_offset)(struct gbm_bo *bo, int plane);
+   uint32_t (*bo_get_offset)(struct gbm_bo *bo, int plane);
    uint64_t (*bo_get_modifier)(struct gbm_bo *bo);
    void (*bo_destroy)(struct gbm_bo *bo);
 

@@ -203,7 +203,7 @@ gbm_bo_get_format(struct gbm_bo *bo)
  * \param bo The buffer object
  * \return The offset
  */
-GBM_EXPORT int64_t
+GBM_EXPORT uint32_t
 gbm_bo_get_offset(struct gbm_bo *bo, int plane)
 {
    return bo->gbm->bo_get_offset(bo, plane);

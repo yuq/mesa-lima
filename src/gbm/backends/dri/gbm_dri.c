@@ -710,22 +710,23 @@ gbm_dri_bo_get_stride(struct gbm_bo *_bo, int plane)
    return (uint32_t)stride;
 }
 
-static int64_t
+static uint32_t
 gbm_dri_bo_get_offset(struct gbm_bo *_bo, int plane)
 {
    struct gbm_dri_device *dri = gbm_dri_device(_bo->gbm);
    struct gbm_dri_bo *bo = gbm_dri_bo(_bo);
    int offset = 0;
 
-   if (!dri->image || dri->image->base.version < 13 || !dri->image->fromPlanar) {
-      errno = ENOSYS;
-      return -1;
-   }
+   /* These error cases do not actually return an error code, as the user
+    * will also fail to obtain the handle/FD from the BO. In that case, the
+    * offset is irrelevant, as they have no buffer to offset into, so
+    * returning 0 is harmless.
+    */
+   if (!dri->image || dri->image->base.version < 13 || !dri->image->fromPlanar)
+      return 0;
 
-   if (plane >= get_number_planes(dri, bo->image)) {
-      errno = EINVAL;
-      return -2;
-   }
+   if (plane >= get_number_planes(dri, bo->image))
+      return 0;
 
     /* Dumb images have no offset */
    if (bo->image == NULL) {
