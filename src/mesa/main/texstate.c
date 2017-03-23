@@ -350,8 +350,8 @@ _mesa_ClientActiveTexture(GLenum texture)
 /**
  * \note This routine refers to derived texture attribute values to
  * compute the ENABLE_TEXMAT flags, but is only called on
- * _NEW_TEXTURE_MATRIX.  On changes to _NEW_TEXTURE, the ENABLE_TEXMAT
- * flags are updated by _mesa_update_textures(), below.
+ * _NEW_TEXTURE_MATRIX.  On changes to _NEW_TEXTURE_OBJECT/STATE,
+ * the ENABLE_TEXMAT flags are updated by _mesa_update_textures(), below.
  *
  * \param ctx GL context.
  */
@@ -686,8 +686,9 @@ update_ff_texture_state(struct gl_context *ctx,
 /**
  * \note This routine refers to derived texture matrix values to
  * compute the ENABLE_TEXMAT flags, but is only called on
- * _NEW_TEXTURE.  On changes to _NEW_TEXTURE_MATRIX, the ENABLE_TEXMAT
- * flags are updated by _mesa_update_texture_matrices, above.
+ * _NEW_TEXTURE_OBJECT/STATE.  On changes to _NEW_TEXTURE_MATRIX,
+ * the ENABLE_TEXMAT flags are updated by _mesa_update_texture_matrices,
+ * above.
  *
  * \param ctx GL context.
  */
@@ -711,7 +712,7 @@ _mesa_update_texture_state(struct gl_context *ctx)
    }
 
    /* TODO: only set this if there are actual changes */
-   ctx->NewState |= _NEW_TEXTURE;
+   ctx->NewState |= _NEW_TEXTURE_OBJECT | _NEW_TEXTURE_STATE;
 
    ctx->Texture._GenFlags = 0x0;
    ctx->Texture._TexMatEnabled = 0x0;

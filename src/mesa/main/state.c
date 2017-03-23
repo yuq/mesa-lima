@@ -384,15 +384,15 @@ _mesa_update_state_locked( struct gl_context *ctx )
 
    /* Determine which state flags effect vertex/fragment program state */
    if (ctx->FragmentProgram._MaintainTexEnvProgram) {
-      prog_flags |= (_NEW_BUFFERS | _NEW_TEXTURE | _NEW_FOG |
+      prog_flags |= (_NEW_BUFFERS | _NEW_TEXTURE_OBJECT | _NEW_FOG |
 		     _NEW_VARYING_VP_INPUTS | _NEW_LIGHT | _NEW_POINT |
 		     _NEW_RENDERMODE | _NEW_PROGRAM | _NEW_FRAG_CLAMP |
-		     _NEW_COLOR);
+		     _NEW_COLOR | _NEW_TEXTURE_STATE);
    }
    if (ctx->VertexProgram._MaintainTnlProgram) {
-      prog_flags |= (_NEW_VARYING_VP_INPUTS | _NEW_TEXTURE |
+      prog_flags |= (_NEW_VARYING_VP_INPUTS | _NEW_TEXTURE_OBJECT |
                      _NEW_TEXTURE_MATRIX | _NEW_TRANSFORM | _NEW_POINT |
-                     _NEW_FOG | _NEW_LIGHT |
+                     _NEW_FOG | _NEW_LIGHT | _NEW_TEXTURE_STATE |
                      _MESA_NEW_NEED_EYE_COORDS);
    }
 
@@ -409,7 +409,7 @@ _mesa_update_state_locked( struct gl_context *ctx )
    if (new_state & _NEW_TEXTURE_MATRIX)
       _mesa_update_texture_matrices(ctx);
 
-   if (new_state & (_NEW_TEXTURE | _NEW_PROGRAM))
+   if (new_state & (_NEW_TEXTURE_OBJECT | _NEW_TEXTURE_STATE | _NEW_PROGRAM))
       _mesa_update_texture_state(ctx);
 
    if (new_state & _NEW_POLYGON)
