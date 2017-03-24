@@ -582,12 +582,6 @@
     <field name="Blend Constant Color Alpha" start="160" end="191" type="float"/>
   </struct>
 
-  <struct name="BLACK_LEVEL_CORRECTION_STATE_-_DW75..76" length="2">
-    <field name="Black Point Offset R" start="0" end="12" type="int" default="0"/>
-    <field name="Black Point Offset G" start="45" end="57" type="int"/>
-    <field name="Black Point Offset B" start="32" end="44" type="int"/>
-  </struct>
-
   <struct name="INTERFACE_DESCRIPTOR_DATA" length="8">
     <field name="Kernel Start Pointer" start="6" end="47" type="offset"/>
     <field name="Denorm Mode" start="83" end="83" type="uint">
