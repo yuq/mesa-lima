@@ -384,6 +384,14 @@ enum pipe_flush_flags
 #define PIPE_CONTEXT_ROBUST_BUFFER_ACCESS (1 << 2)
 
 /**
+ * Prefer threaded pipe_context. It also implies that video codec functions
+ * will not be used. (they will be either no-ops or NULL when threading is
+ * enabled)
+ */
+#define PIPE_CONTEXT_PREFER_THREADED   (1 << 3)
+
+
+/**
  * Flags for pipe_context::memory_barrier.
  */
 #define PIPE_BARRIER_MAPPED_BUFFER     (1 << 0)

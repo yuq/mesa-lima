@@ -647,7 +647,7 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    struct pipe_context *pipe;
    struct gl_config mode;
    gl_api api;
-   unsigned ctx_flags = 0;
+   unsigned ctx_flags = PIPE_CONTEXT_PREFER_THREADED;
 
    if (!(stapi->profile_mask & (1 << attribs->profile)))
       return NULL;
