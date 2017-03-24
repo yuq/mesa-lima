@@ -642,6 +642,21 @@ disk_cache_remove(struct disk_cache *cache, const cache_key key)
 }
 
 static ssize_t
+read_all(int fd, void *buf, size_t count)
+{
+   char *in = buf;
+   ssize_t read_ret;
+   size_t done;
+
+   for (done = 0; done < count; done += read_ret) {
+      read_ret = read(fd, in + done, count - done);
+      if (read_ret == -1 || read_ret == 0)
+         return -1;
+   }
+   return done;
+}
+
+static ssize_t
 write_all(int fd, const void *buf, size_t count)
 {
    const char *out = buf;
@@ -938,7 +953,7 @@ inflate_cache_data(uint8_t *in_data, size_t in_data_size,
 void *
 disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
 {
-   int fd = -1, ret, len;
+   int fd = -1, ret;
    struct stat sb;
    char *filename = NULL;
    uint8_t *data = NULL;
@@ -969,12 +984,10 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
       goto fail;
 
    assert(sb.st_size > ck_size);
-   for (len = 0; len < ck_size; len += ret) {
-      ret = read(fd, ((uint8_t *) file_header) + len, ck_size - len);
-      if (ret == -1) {
-         free(file_header);
-         goto fail;
-      }
+   ret = read_all(fd, file_header, ck_size);
+   if (ret == -1) {
+      free(file_header);
+      goto fail;
    }
 
    assert(memcmp(cache->driver_keys_blob, file_header, ck_size) == 0);
@@ -992,19 +1005,15 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
    /* Load the CRC that was created when the file was written. */
    struct cache_entry_file_data cf_data;
    size_t cf_data_size = sizeof(cf_data);
-   for (len = 0; len < cf_data_size; len += ret) {
-      ret = read(fd, ((uint8_t *) &cf_data) + len, cf_data_size - len);
-      if (ret == -1)
-         goto fail;
-   }
+   ret = read_all(fd, &cf_data, cf_data_size);
+   if (ret == -1)
+      goto fail;
 
    /* Load the actual cache data. */
    size_t cache_data_size = sb.st_size - cf_data_size - ck_size;
-   for (len = 0; len < cache_data_size; len += ret) {
-      ret = read(fd, data + len, cache_data_size - len);
-      if (ret == -1)
-         goto fail;
-   }
+   ret = read_all(fd, data, cache_data_size);
+   if (ret == -1)
+      goto fail;
 
    /* Uncompress the cache data */
    uncompressed_data = malloc(cf_data.uncompressed_size);
