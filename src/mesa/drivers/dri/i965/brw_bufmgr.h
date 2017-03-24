@@ -142,8 +142,6 @@ int drm_bacon_bo_emit_reloc_fence(drm_bacon_bo *bo, uint32_t offset,
 				  drm_bacon_bo *target_bo,
 				  uint32_t target_offset,
 				  uint32_t read_domains, uint32_t write_domain);
-int drm_bacon_bo_pin(drm_bacon_bo *bo, uint32_t alignment);
-int drm_bacon_bo_unpin(drm_bacon_bo *bo);
 int drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			    uint32_t stride);
 int drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
@@ -151,7 +149,6 @@ int drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 int drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t * name);
 int drm_bacon_bo_busy(drm_bacon_bo *bo);
 int drm_bacon_bo_madvise(drm_bacon_bo *bo, int madv);
-int drm_bacon_bo_use_48b_address_range(drm_bacon_bo *bo, uint32_t enable);
 int drm_bacon_bo_set_softpin_offset(drm_bacon_bo *bo, uint64_t offset);
 
 int drm_bacon_bo_disable_reuse(drm_bacon_bo *bo);
@@ -169,7 +166,6 @@ void drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr,
 					     int limit);
 int drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo);
 int drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo);
-int drm_bacon_gem_bo_unmap_gtt(drm_bacon_bo *bo);
 
 #define HAVE_DRM_INTEL_GEM_BO_DISABLE_IMPLICIT_SYNC 1
 int drm_bacon_bufmgr_gem_can_disable_implicit_sync(drm_bacon_bufmgr *bufmgr);
@@ -183,8 +179,6 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo);
 int drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo);
 void drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start);
 void drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable);
-
-int drm_bacon_get_pipe_from_crtc_id(drm_bacon_bufmgr *bufmgr, int crtc_id);
 
 int drm_bacon_bufmgr_gem_get_devid(drm_bacon_bufmgr *bufmgr);
 int drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns);
@@ -214,12 +208,6 @@ int drm_bacon_get_reset_stats(drm_bacon_context *ctx,
 			      uint32_t *reset_count,
 			      uint32_t *active,
 			      uint32_t *pending);
-
-int drm_bacon_get_subslice_total(int fd, unsigned int *subslice_total);
-int drm_bacon_get_eu_total(int fd, unsigned int *eu_total);
-
-int drm_bacon_get_pooled_eu(int fd);
-int drm_bacon_get_min_eu_in_pool(int fd);
 
 /** @{ */
 

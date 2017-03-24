@@ -206,36 +206,6 @@ drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 					 read_domains, write_domain);
 }
 
-/* For fence registers, not GL fences */
-int
-drm_bacon_bo_emit_reloc_fence(drm_bacon_bo *bo, uint32_t offset,
-			      drm_bacon_bo *target_bo, uint32_t target_offset,
-			      uint32_t read_domains, uint32_t write_domain)
-{
-	return bo->bufmgr->bo_emit_reloc_fence(bo, offset,
-					       target_bo, target_offset,
-					       read_domains, write_domain);
-}
-
-
-int
-drm_bacon_bo_pin(drm_bacon_bo *bo, uint32_t alignment)
-{
-	if (bo->bufmgr->bo_pin)
-		return bo->bufmgr->bo_pin(bo, alignment);
-
-	return -ENODEV;
-}
-
-int
-drm_bacon_bo_unpin(drm_bacon_bo *bo)
-{
-	if (bo->bufmgr->bo_unpin)
-		return bo->bufmgr->bo_unpin(bo);
-
-	return -ENODEV;
-}
-
 int
 drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			uint32_t stride)
@@ -301,26 +271,7 @@ drm_bacon_bo_madvise(drm_bacon_bo *bo, int madv)
 }
 
 int
-drm_bacon_bo_use_48b_address_range(drm_bacon_bo *bo, uint32_t enable)
-{
-	if (bo->bufmgr->bo_use_48b_address_range) {
-		bo->bufmgr->bo_use_48b_address_range(bo, enable);
-		return 0;
-	}
-
-	return -ENODEV;
-}
-
-int
 drm_bacon_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 {
 	return bo->bufmgr->bo_references(bo, target_bo);
-}
-
-int
-drm_bacon_get_pipe_from_crtc_id(drm_bacon_bufmgr *bufmgr, int crtc_id)
-{
-	if (bufmgr->get_pipe_from_crtc_id)
-		return bufmgr->get_pipe_from_crtc_id(bufmgr, crtc_id);
-	return -1;
 }

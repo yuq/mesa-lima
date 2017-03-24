@@ -23,13 +23,6 @@
 #ifndef LIBDRM_LIBDRM_H
 #define LIBDRM_LIBDRM_H
 
-#if defined(HAVE_VISIBILITY)
-#  define drm_private __attribute__((visibility("hidden")))
-#else
-#  define drm_private
-#endif
-
-
 /**
  * Static (compile-time) assertion.
  * Basically, use COND to dimension an array.  If COND is false/zero the

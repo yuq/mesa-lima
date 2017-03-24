@@ -579,9 +579,6 @@ drm_bacon_add_validate_buffer2(drm_bacon_bo *bo, int need_fence)
 	bufmgr_gem->exec_count++;
 }
 
-#define RELOC_BUF_SIZE(x) ((I915_RELOC_HEADER + x * I915_RELOC0_STRIDE) * \
-	sizeof(uint32_t))
-
 static void
 drm_bacon_bo_gem_set_in_aperture_size(drm_bacon_bufmgr_gem *bufmgr_gem,
 				      drm_bacon_bo_gem *bo_gem,
@@ -1725,12 +1722,6 @@ static int drm_bacon_gem_bo_unmap(drm_bacon_bo *bo)
 	return ret;
 }
 
-int
-drm_bacon_gem_bo_unmap_gtt(drm_bacon_bo *bo)
-{
-	return drm_bacon_gem_bo_unmap(bo);
-}
-
 static int
 drm_bacon_gem_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 			 unsigned long size, const void *data)
@@ -1759,31 +1750,6 @@ drm_bacon_gem_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 	}
 
 	return ret;
-}
-
-static int
-drm_bacon_gem_get_pipe_from_crtc_id(drm_bacon_bufmgr *bufmgr, int crtc_id)
-{
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bufmgr;
-	struct drm_i915_get_pipe_from_crtc_id get_pipe_from_crtc_id;
-	int ret;
-
-	memclear(get_pipe_from_crtc_id);
-	get_pipe_from_crtc_id.crtc_id = crtc_id;
-	ret = drmIoctl(bufmgr_gem->fd,
-		       DRM_IOCTL_I915_GET_PIPE_FROM_CRTC_ID,
-		       &get_pipe_from_crtc_id);
-	if (ret != 0) {
-		/* We return -1 here to signal that we don't
-		 * know which pipe is associated with this crtc.
-		 * This lets the caller know that this information
-		 * isn't available; using the wrong pipe for
-		 * vblank waiting can cause the chipset to lock up
-		 */
-		return -1;
-	}
-
-	return get_pipe_from_crtc_id.pipe;
 }
 
 static int
@@ -2038,17 +2004,6 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 	return 0;
 }
 
-static void
-drm_bacon_gem_bo_use_48b_address_range(drm_bacon_bo *bo, uint32_t enable)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	if (enable)
-		bo_gem->kflags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
-	else
-		bo_gem->kflags &= ~EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
-}
-
 static int
 drm_bacon_gem_bo_add_softpin_target(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 {
@@ -2101,16 +2056,6 @@ drm_bacon_gem_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 		return do_bo_emit_reloc(bo, offset, target_bo, target_offset,
 					read_domains, write_domain,
 					!bufmgr_gem->fenced_relocs);
-}
-
-static int
-drm_bacon_gem_bo_emit_reloc_fence(drm_bacon_bo *bo, uint32_t offset,
-				  drm_bacon_bo *target_bo,
-				  uint32_t target_offset,
-				  uint32_t read_domains, uint32_t write_domain)
-{
-	return do_bo_emit_reloc(bo, offset, target_bo, target_offset,
-				read_domains, write_domain, true);
 }
 
 int
@@ -2502,47 +2447,6 @@ drm_bacon_gem_bo_fence_exec(drm_bacon_bo *bo,
 			    unsigned int flags)
 {
 	return do_exec2(bo, used, ctx, NULL, 0, 0, in_fence, out_fence, flags);
-}
-
-static int
-drm_bacon_gem_bo_pin(drm_bacon_bo *bo, uint32_t alignment)
-{
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	struct drm_i915_gem_pin pin;
-	int ret;
-
-	memclear(pin);
-	pin.handle = bo_gem->gem_handle;
-	pin.alignment = alignment;
-
-	ret = drmIoctl(bufmgr_gem->fd,
-		       DRM_IOCTL_I915_GEM_PIN,
-		       &pin);
-	if (ret != 0)
-		return -errno;
-
-	bo->offset64 = pin.offset;
-	bo->offset = pin.offset;
-	return 0;
-}
-
-static int
-drm_bacon_gem_bo_unpin(drm_bacon_bo *bo)
-{
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	struct drm_i915_gem_unpin unpin;
-	int ret;
-
-	memclear(unpin);
-	unpin.handle = bo_gem->gem_handle;
-
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GEM_UNPIN, &unpin);
-	if (ret != 0)
-		return -errno;
-
-	return 0;
 }
 
 static int
@@ -3306,68 +3210,6 @@ drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 	return ret;
 }
 
-int
-drm_bacon_get_subslice_total(int fd, unsigned int *subslice_total)
-{
-	drm_i915_getparam_t gp;
-	int ret;
-
-	memclear(gp);
-	gp.value = (int*)subslice_total;
-	gp.param = I915_PARAM_SUBSLICE_TOTAL;
-	ret = drmIoctl(fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	if (ret)
-		return -errno;
-
-	return 0;
-}
-
-int
-drm_bacon_get_eu_total(int fd, unsigned int *eu_total)
-{
-	drm_i915_getparam_t gp;
-	int ret;
-
-	memclear(gp);
-	gp.value = (int*)eu_total;
-	gp.param = I915_PARAM_EU_TOTAL;
-	ret = drmIoctl(fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	if (ret)
-		return -errno;
-
-	return 0;
-}
-
-int
-drm_bacon_get_pooled_eu(int fd)
-{
-	drm_i915_getparam_t gp;
-	int ret = -1;
-
-	memclear(gp);
-	gp.param = I915_PARAM_HAS_POOLED_EU;
-	gp.value = &ret;
-	if (drmIoctl(fd, DRM_IOCTL_I915_GETPARAM, &gp))
-		return -errno;
-
-	return ret;
-}
-
-int
-drm_bacon_get_min_eu_in_pool(int fd)
-{
-	drm_i915_getparam_t gp;
-	int ret = -1;
-
-	memclear(gp);
-	gp.param = I915_PARAM_MIN_EU_IN_POOL;
-	gp.value = &ret;
-	if (drmIoctl(fd, DRM_IOCTL_I915_GETPARAM, &gp))
-		return -errno;
-
-	return ret;
-}
-
 static pthread_mutex_t bufmgr_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct list_head bufmgr_list = { &bufmgr_list, &bufmgr_list };
 
@@ -3697,13 +3539,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 		}
 	}
 
-	if (bufmgr_gem->gen >= 8) {
-		gp.param = I915_PARAM_HAS_ALIASING_PPGTT;
-		ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-		if (ret == 0 && *gp.value == 3)
-			bufmgr_gem->bufmgr.bo_use_48b_address_range = drm_bacon_gem_bo_use_48b_address_range;
-	}
-
 	/* Let's go with one relocation per every 2 dwords (but round down a bit
 	 * since a power of two will mean an extra page allocation for the reloc
 	 * buffer).
@@ -3724,9 +3559,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	bufmgr_gem->bufmgr.bo_get_subdata = drm_bacon_gem_bo_get_subdata;
 	bufmgr_gem->bufmgr.bo_wait_rendering = drm_bacon_gem_bo_wait_rendering;
 	bufmgr_gem->bufmgr.bo_emit_reloc = drm_bacon_gem_bo_emit_reloc;
-	bufmgr_gem->bufmgr.bo_emit_reloc_fence = drm_bacon_gem_bo_emit_reloc_fence;
-	bufmgr_gem->bufmgr.bo_pin = drm_bacon_gem_bo_pin;
-	bufmgr_gem->bufmgr.bo_unpin = drm_bacon_gem_bo_unpin;
 	bufmgr_gem->bufmgr.bo_get_tiling = drm_bacon_gem_bo_get_tiling;
 	bufmgr_gem->bufmgr.bo_set_tiling = drm_bacon_gem_bo_set_tiling;
 	bufmgr_gem->bufmgr.bo_flink = drm_bacon_gem_bo_flink;
@@ -3744,8 +3576,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	    drm_bacon_gem_check_aperture_space;
 	bufmgr_gem->bufmgr.bo_disable_reuse = drm_bacon_gem_bo_disable_reuse;
 	bufmgr_gem->bufmgr.bo_is_reusable = drm_bacon_gem_bo_is_reusable;
-	bufmgr_gem->bufmgr.get_pipe_from_crtc_id =
-	    drm_bacon_gem_get_pipe_from_crtc_id;
 	bufmgr_gem->bufmgr.bo_references = drm_bacon_gem_bo_references;
 
 	init_cache_buckets(bufmgr_gem);
