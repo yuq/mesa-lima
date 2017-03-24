@@ -1828,13 +1828,13 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
                         const struct anv_image *image,
                         const VkImageAspectFlags aspects,
                         const VkImageLayout layout);
-static inline uint32_t
-anv_get_layerCount(const struct anv_image *image,
-                   const VkImageSubresourceRange *range)
-{
-   return range->layerCount == VK_REMAINING_ARRAY_LAYERS ?
-          image->array_size - range->baseArrayLayer : range->layerCount;
-}
+
+/* This is defined as a macro so that it works for both
+ * VkImageSubresourceRange and VkImageSubresourceLayers
+ */
+#define anv_get_layerCount(_image, _range) \
+   ((_range)->layerCount == VK_REMAINING_ARRAY_LAYERS ? \
+    (_image)->array_size - (_range)->baseArrayLayer : (_range)->layerCount)
 
 static inline uint32_t
 anv_get_levelCount(const struct anv_image *image,
