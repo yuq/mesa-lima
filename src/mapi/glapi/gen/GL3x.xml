@@ -129,7 +129,7 @@
     <param name="value" type="const GLuint *"/>
   </function>
 
-  <function name="ClearBufferfv" es2="3.0">
+  <function name="ClearBufferfv" es2="3.0" marshal="custom">
     <param name="buffer" type="GLenum"/>
     <param name="drawbuffer" type="GLint"/>
     <param name="value" type="const GLfloat *"/>

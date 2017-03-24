@@ -189,6 +189,7 @@ struct marshal_cmd_Flush;
 struct marshal_cmd_BindBuffer;
 struct marshal_cmd_BufferData;
 struct marshal_cmd_BufferSubData;
+struct marshal_cmd_ClearBufferfv;
 
 void GLAPIENTRY
 _mesa_marshal_ShaderSource(GLuint shader, GLsizei count,
@@ -227,5 +228,13 @@ _mesa_unmarshal_BufferSubData(struct gl_context *ctx,
 void GLAPIENTRY
 _mesa_marshal_BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size,
                             const GLvoid * data);
+
+void
+_mesa_unmarshal_ClearBufferfv(struct gl_context *ctx,
+                              const struct marshal_cmd_ClearBufferfv *cmd);
+
+void GLAPIENTRY
+_mesa_marshal_ClearBufferfv(GLenum buffer, GLint drawbuffer,
+                            const GLfloat *value);
 
 #endif /* MARSHAL_H */
