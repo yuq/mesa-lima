@@ -404,7 +404,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 		va += base_level_info->offset;
 	}
 
-	if (tex->dcc_offset && first_level < tex->surface.num_dcc_levels) {
+	if (vi_dcc_enabled(tex, first_level)) {
 		meta_va = (!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 			  tex->dcc_offset;
 
@@ -750,8 +750,7 @@ static void si_set_shader_image(struct si_context *ctx,
 		struct r600_texture *tex = (struct r600_texture *)res;
 		unsigned level = view->u.tex.level;
 		unsigned width, height, depth;
-		bool uses_dcc = tex->dcc_offset &&
-				level < tex->surface.num_dcc_levels;
+		bool uses_dcc = vi_dcc_enabled(tex, level);
 
 		assert(!tex->is_depth);
 		assert(tex->fmask.size == 0);

@@ -959,6 +959,12 @@ r600_can_sample_zs(struct r600_texture *tex, bool stencil_sampler)
 	       (!stencil_sampler && tex->can_sample_z);
 }
 
+static inline bool
+vi_dcc_enabled(struct r600_texture *tex, unsigned level)
+{
+	return tex->dcc_offset && level < tex->surface.num_dcc_levels;
+}
+
 #define COMPUTE_DBG(rscreen, fmt, args...) \
 	do { \
 		if ((rscreen->b.debug_flags & DBG_COMPUTE)) fprintf(stderr, fmt, ##args); \

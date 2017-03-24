@@ -427,8 +427,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 
 		/* disable levels without DCC */
 		for (int i = first_level; i <= last_level; i++) {
-			if (!rtex->dcc_offset ||
-			    i >= rtex->surface.num_dcc_levels)
+			if (!vi_dcc_enabled(rtex, i))
 				level_mask &= ~(1 << i);
 		}
 	} else if (rtex->fmask.size) {
@@ -1039,8 +1038,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 		 * it's being overwritten anyway, clear it to uncompressed.
 		 * This is still the fastest codepath even with this clear.
 		 */
-		if (dst->dcc_offset &&
-		    info->dst.level < dst->surface.num_dcc_levels) {
+		if (vi_dcc_enabled(dst, info->dst.level)) {
 			/* TODO: Implement per-level DCC clears for GFX9. */
 			if (sctx->b.chip_class >= GFX9 &&
 			    info->dst.resource->last_level != 0)

@@ -72,8 +72,8 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 	 *   src: Use the 3D path. DCC decompression is expensive.
 	 *   dst: Use the 3D path to compress the pixels with DCC.
 	 */
-	if ((rsrc->dcc_offset && src_level < rsrc->surface.num_dcc_levels) ||
-	    (rdst->dcc_offset && dst_level < rdst->surface.num_dcc_levels))
+	if (vi_dcc_enabled(rsrc, src_level) ||
+	    vi_dcc_enabled(rdst, dst_level))
 		return false;
 
 	/* CMASK as:
@@ -1912,8 +1912,7 @@ void vi_dcc_disable_if_incompatible_format(struct r600_common_context *rctx,
 {
 	struct r600_texture *rtex = (struct r600_texture *)tex;
 
-	if (rtex->dcc_offset &&
-	    level < rtex->surface.num_dcc_levels &&
+	if (vi_dcc_enabled(rtex, level) &&
 	    !vi_dcc_formats_compatible(tex->format, view_format))
 		if (!r600_texture_disable_dcc(rctx, (struct r600_texture*)tex))
 			rctx->decompress_dcc(&rctx->b, rtex);
@@ -2485,7 +2484,7 @@ void vi_dcc_clear_level(struct r600_common_context *rctx,
 	struct pipe_resource *dcc_buffer;
 	uint64_t dcc_offset, clear_size;
 
-	assert(rtex->dcc_offset && level < rtex->surface.num_dcc_levels);
+	assert(vi_dcc_enabled(rtex, level));
 
 	if (rtex->dcc_separate_buffer) {
 		dcc_buffer = &rtex->dcc_separate_buffer->b.b;
@@ -2701,7 +2700,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		}
 
 		/* Try to clear DCC first, otherwise try CMASK. */
-		if (tex->dcc_offset && tex->surface.num_dcc_levels) {
+		if (vi_dcc_enabled(tex, 0)) {
 			uint32_t reset_value;
 			bool clear_words_needed;
 
