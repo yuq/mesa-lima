@@ -39,7 +39,7 @@ struct stw_context
    struct st_context_iface *st;
    DHGLRC dhglrc;
    int iPixelFormat;
-   HDC hdc;
+   HDC hDrawDC;
    HDC hReadDC;
    BOOL shared;
 
@@ -62,7 +62,7 @@ HDC stw_get_current_dc( void );
 
 HDC stw_get_current_read_dc( void );
 
-BOOL stw_make_current( HDC hdc, HDC hReadDC, DHGLRC dhglrc );
+BOOL stw_make_current( HDC hDrawDC, HDC hReadDC, DHGLRC dhglrc );
 
 void stw_notify_current_locked( struct stw_framebuffer *fb );
 

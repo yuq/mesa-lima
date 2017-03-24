@@ -186,7 +186,7 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
    if (ctx == NULL)
       goto no_ctx;
 
-   ctx->hdc = hdc;
+   ctx->hDrawDC = hdc;
    ctx->hReadDC = hdc;
    ctx->iPixelFormat = iPixelFormat;
    ctx->shared = shareCtx != NULL;
@@ -387,7 +387,7 @@ stw_get_current_dc( void )
    if (!ctx)
       return NULL;
 
-   return ctx->hdc;
+   return ctx->hDrawDC;
 }
 
 HDC
@@ -403,7 +403,7 @@ stw_get_current_read_dc( void )
 }
 
 BOOL
-stw_make_current(HDC hdc, HDC hReadDC, DHGLRC dhglrc)
+stw_make_current(HDC hDrawDC, HDC hReadDC, DHGLRC dhglrc)
 {
    struct stw_context *old_ctx = NULL;
    struct stw_context *ctx = NULL;
@@ -415,7 +415,7 @@ stw_make_current(HDC hdc, HDC hReadDC, DHGLRC dhglrc)
    old_ctx = stw_current_context();
    if (old_ctx != NULL) {
       if (old_ctx->dhglrc == dhglrc) {
-         if (old_ctx->hdc == hdc && old_ctx->hReadDC == hReadDC) {
+         if (old_ctx->hDrawDC == hDrawDC && old_ctx->hReadDC == hReadDC) {
             /* Return if already current. */
             return TRUE;
          }
@@ -442,7 +442,7 @@ stw_make_current(HDC hdc, HDC hReadDC, DHGLRC dhglrc)
       }
 
       /* This call locks fb's mutex */
-      fb = stw_framebuffer_from_hdc( hdc );
+      fb = stw_framebuffer_from_hdc( hDrawDC );
       if (fb) {
          stw_framebuffer_update(fb);
       }
@@ -452,9 +452,9 @@ stw_make_current(HDC hdc, HDC hReadDC, DHGLRC dhglrc)
           * pixel format in some cases, so we must create a framebuffer for
           * those here.
           */
-         int iPixelFormat = GetPixelFormat(hdc);
+         int iPixelFormat = GetPixelFormat(hDrawDC);
          if (iPixelFormat)
-            fb = stw_framebuffer_create( hdc, iPixelFormat );
+            fb = stw_framebuffer_create( hDrawDC, iPixelFormat );
          if (!fb)
             goto fail;
       }
@@ -466,7 +466,7 @@ stw_make_current(HDC hdc, HDC hReadDC, DHGLRC dhglrc)
       }
 
       /* Bind the new framebuffer */
-      ctx->hdc = hdc;
+      ctx->hDrawDC = hDrawDC;
       ctx->hReadDC = hReadDC;
 
       struct stw_framebuffer *old_fb = ctx->current_framebuffer;
