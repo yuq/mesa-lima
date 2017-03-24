@@ -28,6 +28,7 @@
 #ifndef U_DEBUG_STACK_H_
 #define U_DEBUG_STACK_H_
 
+#include <stdio.h>
 
 /**
  * @file
@@ -64,6 +65,10 @@ void
 debug_backtrace_dump(const struct debug_stack_frame *backtrace, 
                      unsigned nr_frames);
 
+void
+debug_backtrace_print(FILE *f,
+                      const struct debug_stack_frame *backtrace,
+                      unsigned nr_frames);
 
 #ifdef	__cplusplus
 }

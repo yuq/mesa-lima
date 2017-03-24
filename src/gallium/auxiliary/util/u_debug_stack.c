@@ -162,3 +162,20 @@ debug_backtrace_dump(const struct debug_stack_frame *backtrace,
    }
 }
 
+
+void
+debug_backtrace_print(FILE *f,
+                      const struct debug_stack_frame *backtrace,
+                      unsigned nr_frames)
+{
+   unsigned i;
+
+   for (i = 0; i < nr_frames; ++i) {
+      const char *symbol;
+      if (!backtrace[i].function)
+         break;
+      symbol = debug_symbol_name_cached(backtrace[i].function);
+      if (symbol)
+         fprintf(f, "%s\n", symbol);
+   }
+}
