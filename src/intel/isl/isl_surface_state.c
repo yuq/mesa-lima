@@ -548,16 +548,17 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       uint32_t pitch_in_tiles =
          info->aux_surf->row_pitch / tile_info.phys_extent_B.width;
 
+      s.AuxiliarySurfaceBaseAddress = info->aux_address;
+      s.AuxiliarySurfacePitch = pitch_in_tiles - 1;
+
 #if GEN_GEN >= 8
       assert(GEN_GEN >= 9 || info->aux_usage != ISL_AUX_USAGE_CCS_E);
-      s.AuxiliarySurfacePitch = pitch_in_tiles - 1;
       /* Auxiliary surfaces in ISL have compressed formats but the hardware
        * doesn't expect our definition of the compression, it expects qpitch
        * in units of samples on the main surface.
        */
       s.AuxiliarySurfaceQPitch =
          isl_surf_get_array_pitch_sa_rows(info->aux_surf) >> 2;
-      s.AuxiliarySurfaceBaseAddress = info->aux_address;
 
       if (info->aux_usage == ISL_AUX_USAGE_HIZ) {
          /* The number of samples must be 1 */
@@ -582,8 +583,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #else
       assert(info->aux_usage == ISL_AUX_USAGE_MCS ||
              info->aux_usage == ISL_AUX_USAGE_CCS_D);
-      s.MCSBaseAddress = info->aux_address,
-      s.MCSSurfacePitch = pitch_in_tiles - 1;
       s.MCSEnable = true;
 #endif
    }
