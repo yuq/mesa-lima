@@ -1183,16 +1183,28 @@ vec4_visitor::emit_conversion_from_double(dst_reg dst, src_reg src,
       return;
    }
 
+   enum opcode op;
+   switch (dst.type) {
+   case BRW_REGISTER_TYPE_D:
+      op = VEC4_OPCODE_DOUBLE_TO_D32;
+      break;
+   case BRW_REGISTER_TYPE_UD:
+      op = VEC4_OPCODE_DOUBLE_TO_U32;
+      break;
+   case BRW_REGISTER_TYPE_F:
+      op = VEC4_OPCODE_DOUBLE_TO_F32;
+      break;
+   default:
+      unreachable("Unknown conversion");
+   }
+
    dst_reg temp = dst_reg(this, glsl_type::dvec4_type);
    emit(MOV(temp, src));
-
    dst_reg temp2 = dst_reg(this, glsl_type::dvec4_type);
-   temp2 = retype(temp2, dst.type);
-   emit(VEC4_OPCODE_FROM_DOUBLE, temp2, src_reg(temp))
-      ->size_written = 2 * REG_SIZE;
+   emit(op, temp2, src_reg(temp));
 
-   emit(VEC4_OPCODE_PICK_LOW_32BIT, temp2, src_reg(retype(temp2, BRW_REGISTER_TYPE_DF)));
-   vec4_instruction *inst = emit(MOV(dst, src_reg(temp2)));
+   emit(VEC4_OPCODE_PICK_LOW_32BIT, retype(temp2, dst.type), src_reg(temp2));
+   vec4_instruction *inst = emit(MOV(dst, src_reg(retype(temp2, dst.type))));
    inst->saturate = saturate;
 }
 

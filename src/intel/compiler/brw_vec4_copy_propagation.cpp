@@ -293,7 +293,9 @@ static bool
 is_align1_opcode(unsigned opcode)
 {
    switch (opcode) {
-   case VEC4_OPCODE_FROM_DOUBLE:
+   case VEC4_OPCODE_DOUBLE_TO_F32:
+   case VEC4_OPCODE_DOUBLE_TO_D32:
+   case VEC4_OPCODE_DOUBLE_TO_U32:
    case VEC4_OPCODE_TO_DOUBLE:
    case VEC4_OPCODE_PICK_LOW_32BIT:
    case VEC4_OPCODE_PICK_HIGH_32BIT:

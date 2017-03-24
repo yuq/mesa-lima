@@ -1940,9 +1940,28 @@ generate_code(struct brw_codegen *p,
          break;
       }
 
-      case VEC4_OPCODE_FROM_DOUBLE: {
+      case VEC4_OPCODE_DOUBLE_TO_F32:
+      case VEC4_OPCODE_DOUBLE_TO_D32:
+      case VEC4_OPCODE_DOUBLE_TO_U32: {
          assert(type_sz(src[0].type) == 8);
-         assert(type_sz(dst.type) == 4);
+         assert(type_sz(dst.type) == 8);
+
+         brw_reg_type dst_type;
+
+         switch (inst->opcode) {
+         case VEC4_OPCODE_DOUBLE_TO_F32:
+            dst_type = BRW_REGISTER_TYPE_F;
+            break;
+         case VEC4_OPCODE_DOUBLE_TO_D32:
+            dst_type = BRW_REGISTER_TYPE_D;
+            break;
+         case VEC4_OPCODE_DOUBLE_TO_U32:
+            dst_type = BRW_REGISTER_TYPE_UD;
+            break;
+         default:
+            unreachable("Not supported conversion");
+         }
+         dst = retype(dst, dst_type);
 
          brw_set_default_access_mode(p, BRW_ALIGN_1);
 
