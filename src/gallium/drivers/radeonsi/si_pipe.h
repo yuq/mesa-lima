@@ -127,6 +127,7 @@ struct si_sampler_view {
 	unsigned			base_level;
 	unsigned			block_width;
 	bool is_stencil_sampler;
+	bool dcc_incompatible;
 };
 
 #define SI_SAMPLER_STATE_MAGIC 0x34f1c35a

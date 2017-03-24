@@ -3437,9 +3437,10 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		}
 	}
 
-	vi_disable_dcc_if_incompatible_format(&sctx->b, texture,
-					      state->u.tex.first_level,
-					      state->format);
+	view->dcc_incompatible =
+		vi_dcc_formats_are_incompatible(texture,
+						state->u.tex.first_level,
+						state->format);
 
 	si_make_texture_descriptor(sctx->screen, tmp, true,
 				   state->target, pipe_format, state_swizzle,

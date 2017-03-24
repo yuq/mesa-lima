@@ -480,12 +480,21 @@ static void si_set_sampler_view(struct si_context *sctx,
 
 	if (view) {
 		struct r600_texture *rtex = (struct r600_texture *)view->texture;
+		bool is_buffer = rtex->resource.b.b.target == PIPE_BUFFER;
+
+		if (unlikely(!is_buffer && rview->dcc_incompatible)) {
+			if (vi_dcc_enabled(rtex, view->u.tex.first_level))
+				if (!r600_texture_disable_dcc(&sctx->b, rtex))
+					sctx->b.decompress_dcc(&sctx->b.b, rtex);
+
+			rview->dcc_incompatible = false;
+		}
 
 		assert(rtex); /* views with texture == NULL aren't supported */
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(desc, rview->state, 8*4);
 
-		if (rtex->resource.b.b.target == PIPE_BUFFER) {
+		if (is_buffer) {
 			rtex->resource.bind_history |= PIPE_BIND_SAMPLER_VIEW;
 
 			si_set_buf_desc_address(&rtex->resource,
@@ -505,8 +514,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 						       desc);
 		}
 
-		if (rtex->resource.b.b.target != PIPE_BUFFER &&
-		    rtex->fmask.size) {
+		if (!is_buffer && rtex->fmask.size) {
 			memcpy(desc + 8,
 			       rview->fmask_state, 8*4);
 		} else {
