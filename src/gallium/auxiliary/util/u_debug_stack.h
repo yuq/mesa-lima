@@ -30,6 +30,11 @@
 
 #include <stdio.h>
 
+#ifdef HAVE_LIBUNWIND
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+#endif
+
 /**
  * @file
  * Stack backtracing.
@@ -46,15 +51,21 @@ extern "C" {
 /**
  * Represent a frame from a stack backtrace.
  *
- * XXX: Do not change this.
+#if defined(PIPE_OS_WINDOWS) && !defined(HAVE_LIBUNWIND)
+ * XXX: Do not change this. (passed to Windows' CaptureStackBackTrace())
+#endif
  *
  * TODO: This should be refactored as a void * typedef.
  */
 struct debug_stack_frame 
 {
+#ifdef HAVE_LIBUNWIND
+   char buf[128];
+#else
    const void *function;
+#endif
 };
-   
+
 
 void
 debug_backtrace_capture(struct debug_stack_frame *backtrace,

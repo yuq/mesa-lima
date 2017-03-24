@@ -1025,6 +1025,30 @@ AC_SUBST([LLVM_LIBS])
 AC_SUBST([LLVM_LDFLAGS])
 AC_SUBST([LLVM_INCLUDEDIR])
 
+dnl
+dnl libunwind
+dnl
+AC_ARG_ENABLE([libunwind],
+    [AS_HELP_STRING([--enable-libunwind],
+            [Use libunwind for backtracing (default: auto)])],
+        [LIBUNWIND="$enableval"],
+        [LIBUNWIND="auto"])
+
+PKG_CHECK_MODULES(LIBUNWIND, libunwind, [HAVE_LIBUNWIND=yes], [HAVE_LIBUNWIND=no])
+if test "x$LIBUNWIND" = "xauto"; then
+    LIBUNWIND="$HAVE_LIBUNWIND"
+fi
+
+if test "x$LIBUNWIND" = "xyes"; then
+    if test "x$HAVE_LIBUNWIND" != "xyes"; then
+        AC_MSG_ERROR([libunwind requested but not installed.])
+    fi
+    AC_DEFINE(HAVE_LIBUNWIND, 1, [Have libunwind support])
+fi
+
+AM_CONDITIONAL(HAVE_LIBUNWIND, [test "x$LIBUNWIND" = xyes])
+
+
 dnl Options for APIs
 AC_ARG_ENABLE([opengl],
     [AS_HELP_STRING([--disable-opengl],
