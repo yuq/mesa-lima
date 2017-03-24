@@ -1413,9 +1413,9 @@
     <field name="Depth Buffer Clear" start="158" end="158" type="bool"/>
     <field name="Depth Buffer Resolve Enable" start="156" end="156" type="bool"/>
     <field name="Hierarchical Depth Buffer Resolve Enable" start="155" end="155" type="bool"/>
-    <field name="Dispatch GRF Start Register For Constant/Setup Data [0]" start="144" end="150" type="uint"/>
-    <field name="Dispatch GRF Start Register For Constant/Setup Data [1]" start="136" end="142" type="uint"/>
-    <field name="Dispatch GRF Start Register For Constant/Setup Data [2]" start="128" end="134" type="uint"/>
+    <field name="Dispatch GRF Start Register For Constant/Setup Data 0" start="144" end="150" type="uint"/>
+    <field name="Dispatch GRF Start Register For Constant/Setup Data 1" start="136" end="142" type="uint"/>
+    <field name="Dispatch GRF Start Register For Constant/Setup Data 2" start="128" end="134" type="uint"/>
     <field name="Maximum Number of Threads" start="185" end="191" type="uint"/>
     <field name="Legacy Diamond Line Rasterization" start="183" end="183" type="bool"/>
     <field name="Pixel Shader Kills Pixel" start="182" end="182" type="bool"/>
