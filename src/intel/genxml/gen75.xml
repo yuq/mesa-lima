@@ -1037,7 +1037,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="2"/>
     <field name="Front Winding" start="52" end="52" type="uint"/>
     <field name="Vertex Sub Pixel Precision Select" start="51" end="51" type="uint"/>
-    <field name="EarlyCull Enable" start="50" end="50" type="bool"/>
+    <field name="Early Cull Enable" start="50" end="50" type="bool"/>
     <field name="Cull Mode" start="48" end="49" type="uint" prefix="CULLMODE">
       <value name="BOTH" value="0"/>
       <value name="NONE" value="1"/>
@@ -1051,9 +1051,9 @@
       <value name="APIMODE_OGL" value="0"/>
       <value name="APIMODE_D3D" value="1"/>
     </field>
-    <field name="Viewport XY ClipTest Enable" start="92" end="92" type="bool"/>
-    <field name="Viewport Z ClipTest Enable" start="91" end="91" type="bool"/>
-    <field name="Guardband ClipTest Enable" start="90" end="90" type="bool"/>
+    <field name="Viewport XY Clip Test Enable" start="92" end="92" type="bool"/>
+    <field name="Viewport Z Clip Test Enable" start="91" end="91" type="bool"/>
+    <field name="Guardband Clip Test Enable" start="90" end="90" type="bool"/>
     <field name="User Clip Distance Clip Test Enable Bitmask" start="80" end="87" type="uint"/>
     <field name="Clip Mode" start="77" end="79" type="uint">
       <value name="CLIPMODE_NORMAL" value="0"/>
@@ -1078,8 +1078,8 @@
     </field>
     <field name="Minimum Point Width" start="113" end="123" type="u8.3"/>
     <field name="Maximum Point Width" start="102" end="112" type="u8.3"/>
-    <field name="Force Zero RTAIndex Enable" start="101" end="101" type="bool"/>
-    <field name="Maximum VPIndex" start="96" end="99" type="uint"/>
+    <field name="Force Zero RTA Index Enable" start="101" end="101" type="bool"/>
+    <field name="Maximum VP Index" start="96" end="99" type="uint"/>
   </instruction>
 
   <instruction name="3DSTATE_CONSTANT_DS" bias="2" length="7">
@@ -1350,7 +1350,7 @@
     <field name="Illegal Opcode Exception Enable" start="77" end="77" type="bool"/>
     <field name="GS accesses UAV" start="76" end="76" type="uint"/>
     <field name="Mask Stack Exception Enable" start="75" end="75" type="bool"/>
-    <field name="Software  Exception Enable" start="71" end="71" type="bool"/>
+    <field name="Software Exception Enable" start="71" end="71" type="bool"/>
     <field name="Scratch Space Base Pointer" start="106" end="127" type="address"/>
     <field name="Per-Thread Scratch Space" start="96" end="99" type="uint"/>
     <field name="Output Vertex Size" start="151" end="156" type="uint"/>
@@ -1562,7 +1562,7 @@
     </field>
     <field name="Illegal Opcode Exception Enable" start="77" end="77" type="bool"/>
     <field name="Mask Stack Exception Enable" start="75" end="75" type="bool"/>
-    <field name="Software  Exception Enable" start="71" end="71" type="bool"/>
+    <field name="Software Exception Enable" start="71" end="71" type="bool"/>
     <field name="Scratch Space Base Pointer" start="106" end="127" type="address"/>
     <field name="Per Thread Scratch Space" start="96" end="99" type="uint"/>
     <field name="Maximum Number of Threads" start="151" end="159" type="uint"/>
@@ -1859,7 +1859,7 @@
     <field name="Line Stipple Enable" start="78" end="78" type="bool"/>
     <field name="Scissor Rectangle Enable" start="75" end="75" type="bool"/>
     <field name="RT Independent Rasterization Enable" start="74" end="74" type="bool"/>
-    <field name="Multisample Rasterization  Mode" start="72" end="73" type="uint"/>
+    <field name="Multisample Rasterization Mode" start="72" end="73" type="uint"/>
     <field name="Last Pixel Enable" start="127" end="127" type="bool"/>
     <field name="Triangle Strip/List Provoking Vertex Select" start="125" end="126" type="uint">
       <value name="Vertex 0" value="0"/>
@@ -2119,7 +2119,7 @@
     </field>
     <field name="Illegal Opcode Exception Enable" start="77" end="77" type="bool"/>
     <field name="VS accesses UAV" start="76" end="76" type="bool"/>
-    <field name="Software  Exception Enable" start="71" end="71" type="bool"/>
+    <field name="Software Exception Enable" start="71" end="71" type="bool"/>
     <field name="Scratch Space Base Pointer" start="106" end="127" type="address"/>
     <field name="Per-Thread Scratch Space" start="96" end="99" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="148" end="152" type="uint"/>
@@ -2839,7 +2839,7 @@
     <field name="Indirect State Pointers Disable" start="41" end="41" type="bool"/>
     <field name="Notify Enable" start="40" end="40" type="bool"/>
     <field name="Pipe Control Flush Enable" start="39" end="39" type="bool"/>
-    <field name="DC  Flush Enable" start="37" end="37" type="bool"/>
+    <field name="DC Flush Enable" start="37" end="37" type="bool"/>
     <field name="VF Cache Invalidation Enable" start="36" end="36" type="bool"/>
     <field name="Constant Cache Invalidation Enable" start="35" end="35" type="bool"/>
     <field name="State Cache Invalidation Enable" start="34" end="34" type="bool"/>

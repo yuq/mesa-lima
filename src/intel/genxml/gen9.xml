@@ -1520,7 +1520,7 @@
     <field name="Illegal Opcode Exception Enable" start="109" end="109" type="bool"/>
     <field name="Accesses UAV" start="108" end="108" type="bool"/>
     <field name="Mask Stack Exception Enable" start="107" end="107" type="bool"/>
-    <field name="Software  Exception Enable" start="103" end="103" type="bool"/>
+    <field name="Software Exception Enable" start="103" end="103" type="bool"/>
     <field name="Expected Vertex Count" start="96" end="101" type="uint"/>
     <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
     <field name="Per-Thread Scratch Space" start="128" end="131" type="uint"/>
@@ -1732,7 +1732,7 @@
     </field>
     <field name="Illegal Opcode Exception Enable" start="109" end="109" type="bool"/>
     <field name="Mask Stack Exception Enable" start="107" end="107" type="bool"/>
-    <field name="Software  Exception Enable" start="103" end="103" type="bool"/>
+    <field name="Software Exception Enable" start="103" end="103" type="bool"/>
     <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
     <field name="Per Thread Scratch Space" start="128" end="131" type="uint"/>
     <field name="Maximum Number of Threads Per PSD" start="215" end="223" type="uint"/>
@@ -2508,7 +2508,7 @@
     <field name="Accesses UAV" start="108" end="108" type="bool"/>
     <field name="Software Exception Enable" start="103" end="103" type="bool"/>
     <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
-    <field name="Per-Thread Scratch Space " start="128" end="131" type="uint"/>
+    <field name="Per-Thread Scratch Space" start="128" end="131" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="212" end="216" type="uint"/>
     <field name="Vertex URB Entry Read Length" start="203" end="208" type="uint"/>
     <field name="Vertex URB Entry Read Offset" start="196" end="201" type="uint"/>
@@ -3382,7 +3382,7 @@
     <field name="Indirect State Pointers Disable" start="41" end="41" type="bool"/>
     <field name="Notify Enable" start="40" end="40" type="bool"/>
     <field name="Pipe Control Flush Enable" start="39" end="39" type="bool"/>
-    <field name="DC  Flush Enable" start="37" end="37" type="bool"/>
+    <field name="DC Flush Enable" start="37" end="37" type="bool"/>
     <field name="VF Cache Invalidation Enable" start="36" end="36" type="bool"/>
     <field name="Constant Cache Invalidation Enable" start="35" end="35" type="bool"/>
     <field name="State Cache Invalidation Enable" start="34" end="34" type="bool"/>

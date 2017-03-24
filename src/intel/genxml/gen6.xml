@@ -811,9 +811,9 @@
       <value name="APIMODE_OGL" value="0"/>
       <value name="APIMODE_D3D" value="1"/>
     </field>
-    <field name="Viewport XY ClipTest Enable" start="92" end="92" type="bool"/>
-    <field name="Viewport Z ClipTest Enable" start="91" end="91" type="bool"/>
-    <field name="Guardband ClipTest Enable" start="90" end="90" type="bool"/>
+    <field name="Viewport XY Clip Test Enable" start="92" end="92" type="bool"/>
+    <field name="Viewport Z Clip Test Enable" start="91" end="91" type="bool"/>
+    <field name="Guardband Clip Test Enable" start="90" end="90" type="bool"/>
     <field name="User Clip Distance Clip Test Enable Bitmask" start="80" end="87" type="uint"/>
     <field name="Clip Mode" start="77" end="79" type="uint">
       <value name="CLIPMODE_NORMAL" value="0"/>
@@ -839,8 +839,8 @@
     </field>
     <field name="Minimum Point Width" start="113" end="123" type="u8.3"/>
     <field name="Maximum Point Width" start="102" end="112" type="u8.3"/>
-    <field name="Force Zero RTAIndex Enable" start="101" end="101" type="bool"/>
-    <field name="Maximum VPIndex" start="96" end="99" type="uint"/>
+    <field name="Force Zero RTA Index Enable" start="101" end="101" type="bool"/>
+    <field name="Maximum VP Index" start="96" end="99" type="uint"/>
   </instruction>
 
   <instruction name="3DSTATE_CONSTANT_GS" bias="2" length="5">
@@ -996,7 +996,7 @@
     </field>
     <field name="Illegal Opcode Exception Enable" start="77" end="77" type="bool"/>
     <field name="Mask Stack Exception Enable" start="75" end="75" type="bool"/>
-    <field name="Software  Exception Enable" start="71" end="71" type="bool"/>
+    <field name="Software Exception Enable" start="71" end="71" type="bool"/>
     <field name="Scratch Space Base Pointer" start="106" end="127" type="address"/>
     <field name="Per-Thread Scratch Space" start="96" end="99" type="uint"/>
     <field name="Vertex URB Entry Read Length" start="139" end="144" type="uint"/>
@@ -1230,7 +1230,7 @@
       <value name="4.0 pixels" value="3"/>
     </field>
     <field name="Scissor Rectangle Enable" start="107" end="107" type="bool"/>
-    <field name="Multisample Rasterization  Mode" start="104" end="105" type="uint"/>
+    <field name="Multisample Rasterization Mode" start="104" end="105" type="uint"/>
     <field name="Last Pixel Enable" start="159" end="159" type="bool"/>
     <field name="Triangle Strip/List Provoking Vertex Select" start="157" end="158" type="uint">
       <value name="Vertex 0" value="0"/>
@@ -1374,7 +1374,7 @@
       <value name="Alternate" value="1"/>
     </field>
     <field name="Illegal Opcode Exception Enable" start="77" end="77" type="bool"/>
-    <field name="Software  Exception Enable" start="71" end="71" type="bool"/>
+    <field name="Software Exception Enable" start="71" end="71" type="bool"/>
     <field name="Scratch Space Base Pointer" start="106" end="127" type="address"/>
     <field name="Per-Thread Scratch Space" start="96" end="99" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="148" end="152" type="uint"/>
