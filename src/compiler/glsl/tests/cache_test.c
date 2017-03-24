@@ -128,7 +128,7 @@ rmrf_local(const char *path)
 }
 
 static void
-check_directories_created(char *cache_dir)
+check_directories_created(const char *cache_dir)
 {
    bool sub_dirs_created = false;
 
@@ -144,7 +144,7 @@ check_directories_created(char *cache_dir)
       }
    }
 
-   expect_true(sub_dirs_created, "create timestamp and gpu ip sub dirs");
+   expect_true(sub_dirs_created, "create sub dirs");
 }
 
 #define CACHE_TEST_TMP "./cache-test-tmp"
@@ -208,7 +208,7 @@ test_disk_cache_create(void)
 }
 
 static bool
-does_cache_contain(struct disk_cache *cache, cache_key key)
+does_cache_contain(struct disk_cache *cache, const cache_key key)
 {
    void *result;
 
@@ -223,7 +223,7 @@ does_cache_contain(struct disk_cache *cache, cache_key key)
 }
 
 static void
-wait_until_file_written(struct disk_cache *cache, cache_key key)
+wait_until_file_written(struct disk_cache *cache, const cache_key key)
 {
    struct timespec req;
    struct timespec rem;
