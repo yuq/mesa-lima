@@ -3024,21 +3024,8 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	}
 
 	memclear(aperture);
-	ret = drmIoctl(bufmgr->fd,
-		       DRM_IOCTL_I915_GEM_GET_APERTURE,
-		       &aperture);
-
-	if (ret == 0)
-		bufmgr->gtt_size = aperture.aper_available_size;
-	else {
-		fprintf(stderr, "DRM_IOCTL_I915_GEM_APERTURE failed: %s\n",
-			strerror(errno));
-		bufmgr->gtt_size = 128 * 1024 * 1024;
-		fprintf(stderr, "Assuming %dkB available aperture size.\n"
-			"May lead to reduced performance or incorrect "
-			"rendering.\n",
-			(int)bufmgr->gtt_size / 1024);
-	}
+	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
+	bufmgr->gtt_size = aperture.aper_available_size;
 
 	bufmgr->pci_device = get_pci_device_id(bufmgr);
 
