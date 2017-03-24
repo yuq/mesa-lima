@@ -2439,6 +2439,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	struct r600_texture *rtex;
 	bool old_any_dst_linear = sctx->framebuffer.any_dst_linear;
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
+	bool unbound = false;
 	int i;
 
 	for (i = 0; i < sctx->framebuffer.state.nr_cbufs; i++) {
@@ -2448,6 +2449,34 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		rtex = (struct r600_texture*)sctx->framebuffer.state.cbufs[i]->texture;
 		if (rtex->dcc_gather_statistics)
 			vi_separate_dcc_stop_query(ctx, rtex);
+	}
+
+	/* Disable DCC if the formats are incompatible. */
+	for (i = 0; i < state->nr_cbufs; i++) {
+		if (!state->cbufs[i])
+			continue;
+
+		surf = (struct r600_surface*)state->cbufs[i];
+		rtex = (struct r600_texture*)surf->base.texture;
+
+		if (!surf->dcc_incompatible)
+			continue;
+
+		/* Since the DCC decompression calls back into set_framebuffer-
+		 * _state, we need to unbind the framebuffer, so that
+		 * vi_separate_dcc_stop_query isn't called twice with the same
+		 * color buffer.
+		 */
+		if (!unbound) {
+			util_copy_framebuffer_state(&sctx->framebuffer.state, NULL);
+			unbound = true;
+		}
+
+		if (vi_dcc_enabled(rtex, surf->base.u.tex.level))
+			if (!r600_texture_disable_dcc(&sctx->b, rtex))
+				sctx->b.decompress_dcc(ctx, rtex);
+
+		surf->dcc_incompatible = false;
 	}
 
 	/* Only flush TC when changing the framebuffer state, because

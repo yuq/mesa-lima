@@ -1903,6 +1903,18 @@ bool vi_dcc_formats_compatible(enum pipe_format format1,
 	       type1 == type2;
 }
 
+bool vi_dcc_formats_are_incompatible(struct pipe_resource *tex,
+				     unsigned level,
+				     enum pipe_format view_format)
+{
+	struct r600_texture *rtex = (struct r600_texture *)tex;
+
+	return vi_dcc_enabled(rtex, level) &&
+	       !vi_dcc_formats_compatible(tex->format, view_format);
+}
+
+/* This can't be merged with the above function, because
+ * vi_dcc_formats_compatible should be called only when DCC is enabled. */
 void vi_disable_dcc_if_incompatible_format(struct r600_common_context *rctx,
 					   struct pipe_resource *tex,
 					   unsigned level,
@@ -1922,7 +1934,6 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 						unsigned width0, unsigned height0,
 						unsigned width, unsigned height)
 {
-	struct r600_common_context *rctx = (struct r600_common_context*)pipe;
 	struct r600_surface *surface = CALLOC_STRUCT(r600_surface);
 
 	if (!surface)
@@ -1942,11 +1953,10 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 	surface->width0 = width0;
 	surface->height0 = height0;
 
-	if (texture->target != PIPE_BUFFER)
-		vi_disable_dcc_if_incompatible_format(rctx, texture,
-						      templ->u.tex.level,
-						      templ->format);
-
+	surface->dcc_incompatible =
+		texture->target != PIPE_BUFFER &&
+		vi_dcc_formats_are_incompatible(texture, templ->u.tex.level,
+						templ->format);
 	return &surface->base;
 }
 
