@@ -939,18 +939,14 @@
     </field>
     <field name="Surface Pitch" start="32" end="48" type="uint"/>
     <field name="Surface Base Address" start="64" end="95" type="address"/>
-    <field name="Height" start="115" end="127" type="uint">
-      <value name="SURFTYPE_1D:  must be zero" value="0"/>
-    </field>
+    <field name="Height" start="115" end="127" type="uint"/>
     <field name="Width" start="102" end="114" type="uint"/>
     <field name="LOD" start="98" end="101" type="uint"/>
     <field name="MIP Map Layout Mode" start="97" end="97" type="uint">
       <value name="MIPLAYOUT_BELOW" value="0"/>
       <value name="MIPLAYOUT_RIGHT" value="1"/>
     </field>
-    <field name="Depth" start="149" end="159" type="uint">
-      <value name="SURFTYPE_CUBE:  must be zero" value="0"/>
-    </field>
+    <field name="Depth" start="149" end="159" type="uint"/>
     <field name="Minimum Array Element" start="138" end="148" type="uint"/>
     <field name="Render Target View Extent" start="129" end="137" type="uint"/>
     <field name="Depth Coordinate Offset Y" start="176" end="191" type="int"/>
