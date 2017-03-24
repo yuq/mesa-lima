@@ -119,7 +119,7 @@ GENXML_XML_FILES = \
 	genxml/gen8.xml \
 	genxml/gen9.xml
 
-GENXML_GENERATED_FILES = \
+GENXML_GENERATED_PACK_FILES = \
 	genxml/gen4_pack.h \
 	genxml/gen45_pack.h \
 	genxml/gen5_pack.h \
@@ -128,6 +128,10 @@ GENXML_GENERATED_FILES = \
 	genxml/gen75_pack.h \
 	genxml/gen8_pack.h \
 	genxml/gen9_pack.h
+
+GENXML_GENERATED_FILES = \
+	$(GENXML_GENERATED_PACK_FILES) \
+	genxml/genX_bits.h
 
 AUBINATOR_GENERATED_FILES = \
 	genxml/gen6_xml.h \

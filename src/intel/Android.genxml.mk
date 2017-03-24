@@ -46,8 +46,15 @@ LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, $(GENXML_GENERATED_FIL
 define header-gen
 	@mkdir -p $(dir $@)
 	@echo "Gen Header: $(PRIVATE_MODULE) <= $(notdir $(@))"
-	$(hide) $(PRIVATE_SCRIPT) $(PRIVATE_XML) > $@
+	$(hide) $(PRIVATE_SCRIPT) $(PRIVATE_SCRIPT_FLAGS) $(PRIVATE_XML) > $@
 endef
+
+$(intermediates)/genxml/genX_bits.h: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/genxml/gen_bits_header.py
+$(intermediates)/genxml/genX_bits.h: PRIVATE_SCRIPT_FLAGS := --cpp-guard=GENX_BITS_H
+$(intermediates)/genxml/genX_bits.h: PRIVATE_XML := $(addprefix $(LOCAL_PATH)/,$(GENXML_XML_FILES))
+$(intermediates)/genxml/genX_bits.h: $(LOCAL_PATH)/genxml/gen_bits_header.py
+$(intermediates)/genxml/genX_bits.h: $(addprefix $(LOCAL_PATH)/,$(GENXML_XML_FILES))
+	$(call header-gen)
 
 $(intermediates)/genxml/gen4_pack.h: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/genxml/gen_pack_header.py
 $(intermediates)/genxml/gen4_pack.h: PRIVATE_XML := $(LOCAL_PATH)/genxml/gen4.xml

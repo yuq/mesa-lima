@@ -1,2 +1,3 @@
+gen*_bits.h
 gen*_pack.h
 gen*_xml.h
