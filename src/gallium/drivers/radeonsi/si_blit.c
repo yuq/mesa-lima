@@ -946,6 +946,11 @@ void si_resource_copy_region(struct pipe_context *ctx,
 		}
 	}
 
+	vi_dcc_disable_if_incompatible_format(&sctx->b, dst, dst_level,
+					      dst_templ.format);
+	vi_dcc_disable_if_incompatible_format(&sctx->b, src, src_level,
+					      src_templ.format);
+
 	/* Initialize the surface. */
 	dst_view = r600_create_surface_custom(ctx, dst, &dst_templ,
 					      dst_width0, dst_height0,
