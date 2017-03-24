@@ -80,7 +80,8 @@ static void cik_sdma_clear_buffer(struct pipe_context *ctx,
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = r600_resource(dst);
 
-	if (!cs || offset % 4 != 0 || size % 4 != 0) {
+	if (!cs || offset % 4 != 0 || size % 4 != 0 ||
+	    dst->flags & PIPE_RESOURCE_FLAG_SPARSE) {
 		ctx->clear_buffer(ctx, dst, offset, size, &clear_value, 4);
 		return;
 	}
@@ -526,7 +527,9 @@ static void cik_sdma_copy(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	if (!sctx->b.dma.cs)
+	if (!sctx->b.dma.cs ||
+	    src->flags & PIPE_RESOURCE_FLAG_SPARSE ||
+	    dst->flags & PIPE_RESOURCE_FLAG_SPARSE)
 		goto fallback;
 
 	if (dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER) {

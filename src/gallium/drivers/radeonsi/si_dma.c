@@ -89,7 +89,8 @@ static void si_dma_clear_buffer(struct pipe_context *ctx,
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = r600_resource(dst);
 
-	if (!cs || offset % 4 != 0 || size % 4 != 0) {
+	if (!cs || offset % 4 != 0 || size % 4 != 0 ||
+	    dst->flags & PIPE_RESOURCE_FLAG_SPARSE) {
 		ctx->clear_buffer(ctx, dst, offset, size, &clear_value, 4);
 		return;
 	}
@@ -233,7 +234,9 @@ static void si_dma_copy(struct pipe_context *ctx,
 	unsigned src_x, src_y;
 	unsigned dst_x = dstx, dst_y = dsty, dst_z = dstz;
 
-	if (sctx->b.dma.cs == NULL) {
+	if (sctx->b.dma.cs == NULL ||
+	    src->flags & PIPE_RESOURCE_FLAG_SPARSE ||
+	    dst->flags & PIPE_RESOURCE_FLAG_SPARSE) {
 		goto fallback;
 	}
 
