@@ -34,11 +34,7 @@
 
 #include "gen_decoder.h"
 
-#include "genxml/gen6_xml.h"
-#include "genxml/gen7_xml.h"
-#include "genxml/gen75_xml.h"
-#include "genxml/gen8_xml.h"
-#include "genxml/gen9_xml.h"
+#include "genxml/genX_xml.h"
 
 #define XML_BUFFER_SIZE 4096
 
@@ -481,35 +477,6 @@ devinfo_to_gen(const struct gen_device_info *devinfo)
    return value;
 }
 
-static const struct {
-   int gen;
-   const uint8_t *data;
-   size_t data_length;
-} gen_data[] = {
-   { .gen = 60, .data = gen6_xml, .data_length = sizeof(gen6_xml) },
-   { .gen = 70, .data = gen7_xml, .data_length = sizeof(gen7_xml) },
-   { .gen = 75, .data = gen75_xml, .data_length = sizeof(gen75_xml) },
-   { .gen = 80, .data = gen8_xml, .data_length = sizeof(gen8_xml) },
-   { .gen = 90, .data = gen9_xml, .data_length = sizeof(gen9_xml) }
-};
-
-static const uint8_t *
-devinfo_to_xml_data(const struct gen_device_info *devinfo,
-                    uint32_t *data_length)
-{
-   int i, gen = devinfo_to_gen(devinfo);
-
-   for (i = 0; i < ARRAY_SIZE(gen_data); i++) {
-      if (gen_data[i].gen == gen) {
-         *data_length = gen_data[i].data_length;
-         return gen_data[i].data;
-      }
-   }
-
-   unreachable("Unknown generation");
-   return NULL;
-}
-
 static uint32_t zlib_inflate(const void *compressed_data,
                              uint32_t compressed_len,
                              void **out_ptr)
@@ -563,9 +530,22 @@ gen_spec_load(const struct gen_device_info *devinfo)
 {
    struct parser_context ctx;
    void *buf;
-   const void *zlib_data;
-   void *text_data;
-   uint32_t zlib_length = 0, text_length;
+   uint8_t *text_data;
+   uint32_t text_offset = 0, text_length = 0, total_length;
+   uint32_t gen_10 = devinfo_to_gen(devinfo);
+
+   for (int i = 0; i < ARRAY_SIZE(genxml_files_table); i++) {
+      if (genxml_files_table[i].gen_10 == gen_10) {
+         text_offset = genxml_files_table[i].offset;
+         text_length = genxml_files_table[i].length;
+         break;
+      }
+   }
+
+   if (text_length == 0) {
+      fprintf(stderr, "unable to find gen (%u) data\n", gen_10);
+      return NULL;
+   }
 
    memset(&ctx, 0, sizeof ctx);
    ctx.parser = XML_ParserCreate(NULL);
@@ -580,11 +560,13 @@ gen_spec_load(const struct gen_device_info *devinfo)
 
    ctx.spec = xzalloc(sizeof(*ctx.spec));
 
-   zlib_data = devinfo_to_xml_data(devinfo, &zlib_length);
-   text_length = zlib_inflate(zlib_data, zlib_length, &text_data);
+   total_length = zlib_inflate(compress_genxmls,
+                               sizeof(compress_genxmls),
+                               (void **) &text_data);
+   assert(text_offset + text_length <= total_length);
 
    buf = XML_GetBuffer(ctx.parser, text_length);
-   memcpy(buf, text_data, text_length);
+   memcpy(buf, &text_data[text_offset], text_length);
 
    if (XML_ParseBuffer(ctx.parser, text_length, true) == 0) {
       fprintf(stderr,

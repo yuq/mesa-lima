@@ -131,14 +131,8 @@ GENXML_GENERATED_PACK_FILES = \
 
 GENXML_GENERATED_FILES = \
 	$(GENXML_GENERATED_PACK_FILES) \
-	genxml/genX_bits.h
-
-AUBINATOR_GENERATED_FILES = \
-	genxml/gen6_xml.h \
-	genxml/gen7_xml.h \
-	genxml/gen75_xml.h \
-	genxml/gen8_xml.h \
-	genxml/gen9_xml.h
+	genxml/genX_bits.h \
+	genxml/genX_xml.h
 
 ISL_FILES = \
 	isl/isl.c \

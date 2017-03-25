@@ -20,13 +20,11 @@
 # IN THE SOFTWARE.
 
 BUILT_SOURCES += \
-	$(GENXML_GENERATED_FILES) \
-	$(AUBINATOR_GENERATED_FILES)
+	$(GENXML_GENERATED_FILES)
 
 EXTRA_DIST += \
 	$(GENXML_XML_FILES) \
-	$(GENXML_GENERATED_FILES) \
-	$(AUBINATOR_GENERATED_FILES)
+	$(GENXML_GENERATED_FILES)
 
 SUFFIXES = _pack.h _xml.h .xml
 
@@ -36,11 +34,9 @@ $(GENXML_GENERATED_PACK_FILES): genxml/gen_pack_header.py
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) $(srcdir)/genxml/gen_pack_header.py $< > $@ || ($(RM) $@; false)
 
-$(AUBINATOR_GENERATED_FILES): genxml/gen_zipped_file.py
-
-.xml_xml.h:
+genxml/genX_xml.h: $(GENXML_XML_FILES) genxml/gen_zipped_file.py
 	$(MKDIR_GEN)
-	$(AM_V_GEN) $(PYTHON2) $(srcdir)/genxml/gen_zipped_file.py $< > $@ || ($(RM) $@; false)
+	$(AM_V_GEN) $(PYTHON2) $(srcdir)/genxml/gen_zipped_file.py $(GENXML_XML_FILES) > $@ || ($(RM) $@; false)
 
 genxml/genX_bits.h: genxml/gen_bits_header.py $(GENXML_XML_FILES)
 	$(MKDIR_GEN)
