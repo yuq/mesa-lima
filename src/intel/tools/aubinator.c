@@ -1136,6 +1136,8 @@ int main(int argc, char *argv[])
       const char *name;
       int pci_id;
    } gens[] = {
+      { "ilk", 0x0046 }, /* Intel(R) Ironlake Mobile */
+      { "snb", 0x0126 }, /* Intel(R) Sandybridge Mobile GT2 */
       { "ivb", 0x0166 }, /* Intel(R) Ivybridge Mobile GT2 */
       { "hsw", 0x0416 }, /* Intel(R) Haswell Mobile GT2 */
       { "byt", 0x0155 }, /* Intel(R) Bay Trail */
