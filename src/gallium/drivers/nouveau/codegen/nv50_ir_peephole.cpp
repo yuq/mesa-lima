@@ -3195,7 +3195,8 @@ class PostRaLoadPropagation : public Pass
 private:
    virtual bool visit(Instruction *);
 
-   void handleMAD(Instruction *);
+   void handleMADforNV50(Instruction *);
+   void handleMADforNVC0(Instruction *);
 };
 
 static bool
@@ -3210,7 +3211,7 @@ post_ra_dead(Instruction *i)
 // Fold Immediate into MAD; must be done after register allocation due to
 // constraint SDST == SSRC2
 void
-PostRaLoadPropagation::handleMAD(Instruction *i)
+PostRaLoadPropagation::handleMADforNV50(Instruction *i)
 {
    if (i->def(0).getFile() != FILE_GPR ||
        i->src(0).getFile() != FILE_GPR ||
@@ -3263,12 +3264,54 @@ PostRaLoadPropagation::handleMAD(Instruction *i)
    }
 }
 
+void
+PostRaLoadPropagation::handleMADforNVC0(Instruction *i)
+{
+   if (i->def(0).getFile() != FILE_GPR ||
+       i->src(0).getFile() != FILE_GPR ||
+       i->src(1).getFile() != FILE_GPR ||
+       i->src(2).getFile() != FILE_GPR ||
+       i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id)
+      return;
+
+   // TODO: gm107 can also do this for S32, maybe other chipsets as well
+   if (i->dType != TYPE_F32)
+      return;
+
+   if ((i->src(2).mod | Modifier(NV50_IR_MOD_NEG)) != Modifier(NV50_IR_MOD_NEG))
+      return;
+
+   ImmediateValue val;
+   int s;
+
+   if (i->src(0).getImmediate(val))
+      s = 1;
+   else if (i->src(1).getImmediate(val))
+      s = 0;
+   else
+      return;
+
+   if ((i->src(s).mod | Modifier(NV50_IR_MOD_NEG)) != Modifier(NV50_IR_MOD_NEG))
+      return;
+
+   if (s == 1)
+      i->swapSources(0, 1);
+
+   Instruction *imm = i->getSrc(1)->getInsn();
+   i->setSrc(1, imm->getSrc(0));
+   if (post_ra_dead(imm))
+      delete_Instruction(prog, imm);
+}
+
 bool
 PostRaLoadPropagation::visit(Instruction *i)
 {
    switch (i->op) {
    case OP_MAD:
-      handleMAD(i);
+      if (prog->getTarget()->getChipset() < 0xc0)
+         handleMADforNV50(i);
+      else
+         handleMADforNVC0(i);
       break;
    default:
       break;
@@ -3698,7 +3741,7 @@ bool
 Program::optimizePostRA(int level)
 {
    RUN_PASS(2, FlatteningPass, run);
-   if (getTarget()->getChipset() < 0xc0)
+   if (getTarget()->getChipset() < NVISA_GK20A_CHIPSET)
       RUN_PASS(2, PostRaLoadPropagation, run);
 
    return true;
