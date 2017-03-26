@@ -1311,7 +1311,7 @@ CodeEmitterGM107::emitFMUL()
 void
 CodeEmitterGM107::emitFFMA()
 {
-   /*XXX: ffma32i exists, but not using it as third src overlaps dst */
+   bool isLongIMMD = false;
    switch(insn->src(2).getFile()) {
    case FILE_GPR:
       switch (insn->src(1).getFile()) {
@@ -1324,14 +1324,22 @@ CodeEmitterGM107::emitFFMA()
          emitCBUF(0x22, -1, 0x14, 16, 2, insn->src(1));
          break;
       case FILE_IMMEDIATE:
-         emitInsn(0x32800000);
-         emitIMMD(0x14, 19, insn->src(1));
+         if (longIMMD(insn->getSrc(1))) {
+            assert(insn->getDef(0)->reg.data.id == insn->getSrc(2)->reg.data.id);
+            isLongIMMD = true;
+            emitInsn(0x0c000000);
+            emitIMMD(0x14, 32, insn->src(1));
+         } else {
+            emitInsn(0x32800000);
+            emitIMMD(0x14, 19, insn->src(1));
+         }
          break;
       default:
          assert(!"bad src1 file");
          break;
       }
-      emitGPR (0x27, insn->src(2));
+      if (!isLongIMMD)
+         emitGPR (0x27, insn->src(2));
       break;
    case FILE_MEMORY_CONST:
       emitInsn(0x51800000);
@@ -1342,11 +1350,19 @@ CodeEmitterGM107::emitFFMA()
       assert(!"bad src2 file");
       break;
    }
-   emitRND (0x33);
-   emitSAT (0x32);
-   emitNEG (0x31, insn->src(2));
-   emitNEG2(0x30, insn->src(0), insn->src(1));
-   emitCC  (0x2f);
+
+   if (isLongIMMD) {
+      emitNEG (0x39, insn->src(2));
+      emitNEG2(0x38, insn->src(0), insn->src(1));
+      emitSAT (0x37);
+      emitCC  (0x34);
+   } else {
+      emitRND (0x33);
+      emitSAT (0x32);
+      emitNEG (0x31, insn->src(2));
+      emitNEG2(0x30, insn->src(0), insn->src(1));
+      emitCC  (0x2f);
+   }
 
    emitFMZ(0x35, 2);
    emitGPR(0x08, insn->src(0));

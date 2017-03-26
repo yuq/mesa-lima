@@ -3741,8 +3741,7 @@ bool
 Program::optimizePostRA(int level)
 {
    RUN_PASS(2, FlatteningPass, run);
-   if (getTarget()->getChipset() < NVISA_GM107_CHIPSET)
-      RUN_PASS(2, PostRaLoadPropagation, run);
+   RUN_PASS(2, PostRaLoadPropagation, run);
 
    return true;
 }
