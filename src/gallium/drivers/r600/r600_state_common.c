@@ -1678,6 +1678,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	bool render_cond_bit = rctx->b.render_cond && !rctx->b.render_cond_force_off;
 	uint64_t mask;
 	unsigned num_patches, dirty_tex_counter;
+	int index_bias;
 
 	if (!info.indirect && !info.count && (info.indexed || !info.count_from_stream_output)) {
 		return;
@@ -1774,18 +1775,19 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				      ib.user_buffer, &ib.offset, &ib.buffer);
 			ib.user_buffer = NULL;
 		}
+		index_bias = info.index_bias;
 	} else {
-		info.index_bias = info.start;
+		index_bias = info.start;
 	}
 
 	/* Set the index offset and primitive restart. */
 	if (rctx->vgt_state.vgt_multi_prim_ib_reset_en != info.primitive_restart ||
 	    rctx->vgt_state.vgt_multi_prim_ib_reset_indx != info.restart_index ||
-	    rctx->vgt_state.vgt_indx_offset != info.index_bias ||
+	    rctx->vgt_state.vgt_indx_offset != index_bias ||
 	    (rctx->vgt_state.last_draw_was_indirect && !info.indirect)) {
 		rctx->vgt_state.vgt_multi_prim_ib_reset_en = info.primitive_restart;
 		rctx->vgt_state.vgt_multi_prim_ib_reset_indx = info.restart_index;
-		rctx->vgt_state.vgt_indx_offset = info.index_bias;
+		rctx->vgt_state.vgt_indx_offset = index_bias;
 		r600_mark_atom_dirty(rctx, &rctx->vgt_state.atom);
 	}
 
