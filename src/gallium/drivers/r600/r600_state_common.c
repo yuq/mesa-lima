@@ -1683,7 +1683,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		return;
 	}
 
-	if (!rctx->vs_shader || !rctx->ps_shader) {
+	if (unlikely(!rctx->vs_shader || !rctx->ps_shader)) {
 		assert(0);
 		return;
 	}
@@ -1695,7 +1695,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 	/* Re-emit the framebuffer state if needed. */
 	dirty_tex_counter = p_atomic_read(&rctx->b.screen->dirty_tex_counter);
-	if (dirty_tex_counter != rctx->b.last_dirty_tex_counter) {
+	if (unlikely(dirty_tex_counter != rctx->b.last_dirty_tex_counter)) {
 		rctx->b.last_dirty_tex_counter = dirty_tex_counter;
 		r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
 	}
@@ -1884,12 +1884,10 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	}
 
 	/* Draw packets. */
-	if (!info->indirect) {
+	if (likely(!info->indirect)) {
 		radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
 		radeon_emit(cs, info->instance_count);
-	}
-
-	if (unlikely(info->indirect)) {
+	} else {
 		uint64_t va = r600_resource(info->indirect)->gpu_address;
 		assert(rctx->b.chip_class >= EVERGREEN);
 
