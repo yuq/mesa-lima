@@ -47,7 +47,7 @@ private:
 private:
    void emitForm_21(const Instruction *, uint32_t opc2, uint32_t opc1);
    void emitForm_C(const Instruction *, uint32_t opc, uint8_t ctg);
-   void emitForm_L(const Instruction *, uint32_t opc, uint8_t ctg, Modifier);
+   void emitForm_L(const Instruction *, uint32_t opc, uint8_t ctg, Modifier, int sCount = 3);
 
    void emitPredicate(const Instruction *);
 
@@ -365,7 +365,7 @@ CodeEmitterGK110::setImmediate32(const Instruction *i, const int s,
 
 void
 CodeEmitterGK110::emitForm_L(const Instruction *i, uint32_t opc, uint8_t ctg,
-                             Modifier mod)
+                             Modifier mod, int sCount)
 {
    code[0] = ctg;
    code[1] = opc << 20;
@@ -374,7 +374,7 @@ CodeEmitterGK110::emitForm_L(const Instruction *i, uint32_t opc, uint8_t ctg,
 
    defId(i->def(0), 2);
 
-   for (int s = 0; s < 3 && i->srcExists(s); ++s) {
+   for (int s = 0; s < sCount && i->srcExists(s); ++s) {
       switch (i->src(s).getFile()) {
       case FILE_GPR:
          srcId(i->src(s), s ? 42 : 10);
@@ -487,25 +487,41 @@ CodeEmitterGK110::emitNOP(const Instruction *i)
 void
 CodeEmitterGK110::emitFMAD(const Instruction *i)
 {
-   assert(!isLIMM(i->src(1), TYPE_F32));
-
-   emitForm_21(i, 0x0c0, 0x940);
-
-   NEG_(34, 2);
-   SAT_(35);
-   RND_(36, F);
-   FTZ_(38);
-   DNZ_(39);
-
    bool neg1 = (i->src(0).mod ^ i->src(1).mod).neg();
 
-   if (code[0] & 0x1) {
-      if (neg1)
-         code[1] ^= 1 << 27;
-   } else
-   if (neg1) {
-      code[1] |= 1 << 19;
+   if (isLIMM(i->src(1), TYPE_F32)) {
+      assert(i->getDef(0)->reg.data.id == i->getSrc(2)->reg.data.id);
+
+      // last source is dst, so force 2 sources
+      emitForm_L(i, 0x600, 0x0, 0, 2);
+
+      if (i->flagsDef >= 0)
+         code[1] |= 1 << 23;
+
+      SAT_(3a);
+      NEG_(3c, 2);
+
+      if (neg1) {
+         code[1] |= 1 << 27;
+      }
+   } else {
+      emitForm_21(i, 0x0c0, 0x940);
+
+      NEG_(34, 2);
+      SAT_(35);
+      RND_(36, F);
+
+      if (code[0] & 0x1) {
+         if (neg1)
+            code[1] ^= 1 << 27;
+      } else
+      if (neg1) {
+         code[1] |= 1 << 19;
+      }
    }
+
+   FTZ_(38);
+   DNZ_(39);
 }
 
 void
