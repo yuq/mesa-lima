@@ -1116,14 +1116,14 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
     case NINED3DSPSM_DW:
         tmp = tx_scratch(tx);
         /* NOTE: app is not allowed to read w with this modifier */
-        ureg_RCP(ureg, ureg_writemask(tmp, NINED3DSP_WRITEMASK_3), src);
+        ureg_RCP(ureg, ureg_writemask(tmp, NINED3DSP_WRITEMASK_3), ureg_scalar(src, TGSI_SWIZZLE_W));
         ureg_MUL(ureg, tmp, src, ureg_swizzle(ureg_src(tmp), NINE_SWIZZLE4(W,W,W,W)));
         src = ureg_src(tmp);
         break;
     case NINED3DSPSM_DZ:
         tmp = tx_scratch(tx);
         /* NOTE: app is not allowed to read z with this modifier */
-        ureg_RCP(ureg, ureg_writemask(tmp, NINED3DSP_WRITEMASK_2), src);
+        ureg_RCP(ureg, ureg_writemask(tmp, NINED3DSP_WRITEMASK_2), ureg_scalar(src, TGSI_SWIZZLE_Z));
         ureg_MUL(ureg, tmp, src, ureg_swizzle(ureg_src(tmp), NINE_SWIZZLE4(Z,Z,Z,Z)));
         src = ureg_src(tmp);
         break;
