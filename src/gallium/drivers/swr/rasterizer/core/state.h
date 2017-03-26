@@ -201,9 +201,12 @@ struct SWR_VS_CONTEXT
     simdvertex* pVin;           // IN: SIMD input vertex data store
     simdvertex* pVout;          // OUT: SIMD output vertex data store
 
-    uint32_t InstanceID;    // IN: Instance ID, constant across all verts of the SIMD
-    simdscalari VertexID;   // IN: Vertex ID
-    simdscalari mask;       // IN: Active mask for shader
+    uint32_t InstanceID;        // IN: Instance ID, constant across all verts of the SIMD
+    simdscalari VertexID;       // IN: Vertex ID
+    simdscalari mask;           // IN: Active mask for shader
+#if USE_SIMD16_FRONTEND
+    uint32_t AlternateOffset;   // IN: amount to offset for interleaving even/odd simd8 in simd16vertex output
+#endif
 };
 
 /////////////////////////////////////////////////////////////////////////

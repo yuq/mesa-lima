@@ -1543,6 +1543,8 @@ void ProcessDraw(
 
     vsContext_lo.pVin = &vin_lo;
     vsContext_hi.pVin = &vin_hi;
+    vsContext_lo.AlternateOffset = 0;
+    vsContext_hi.AlternateOffset = 1;
 
     SWR_FETCH_CONTEXT   fetchInfo_lo = { 0 };
 
@@ -1612,20 +1614,18 @@ void ProcessDraw(
                 pvCutIndices_hi = &reinterpret_cast<simdmask *>(&pa.GetNextVsIndices())[1];
             }
 
-            simdvertex vout_lo;
-            simdvertex vout_hi;
-
-            vsContext_lo.pVout = &vout_lo;
-            vsContext_hi.pVout = &vout_hi;
-
             simd16vertex &vout = pa.GetNextVsOutput();
+
+            vsContext_lo.pVout = reinterpret_cast<simdvertex *>(&vout);
+            vsContext_hi.pVout = reinterpret_cast<simdvertex *>(&vout);
 
             if (i < endVertex)
             {
                 // 1. Execute FS/VS for a single SIMD.
                 AR_BEGIN(FEFetchShader, pDC->drawId);
                 state.pfnFetchFunc(fetchInfo_lo, vin_lo);
-                if ((i + KNOB_SIMD_WIDTH) < endVertex)
+
+                if ((i + KNOB_SIMD_WIDTH) < endVertex)  // 1/2 of KNOB_SIMD16_WIDTH
                 {
                     state.pfnFetchFunc(fetchInfo_hi, vin_hi);
                 }
@@ -1655,35 +1655,9 @@ void ProcessDraw(
                     AR_BEGIN(FEVertexShader, pDC->drawId);
                     state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_lo);
 
-                    // copy SIMD vout_lo to lo part of SIMD16 vout
-                    {
-                        const uint32_t attribCount = sizeof(vout.attrib) / sizeof(vout.attrib[0]);
-
-                        for (uint32_t i = 0; i < attribCount; i += 1)
-                        {
-                            for (uint32_t j = 0; j < 4; j += 1)
-                            {
-                                vout.attrib[i][j] = _simd16_insert_ps(_simd16_setzero_ps(), vout_lo.attrib[i][j], 0);
-                            }
-                        }
-                    }
-
-                    if ((i + KNOB_SIMD_WIDTH) < endVertex)
+                    if ((i + KNOB_SIMD_WIDTH) < endVertex)  // 1/2 of KNOB_SIMD16_WIDTH
                     {
                         state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_hi);
-
-                        // copy SIMD vout_hi to hi part of SIMD16 vout
-                        {
-                            const uint32_t attribCount = sizeof(vout.attrib) / sizeof(vout.attrib[0]);
-
-                            for (uint32_t i = 0; i < attribCount; i += 1)
-                            {
-                                for (uint32_t j = 0; j < 4; j += 1)
-                                {
-                                    vout.attrib[i][j] = _simd16_insert_ps(vout.attrib[i][j], vout_hi.attrib[i][j], 1);
-                                }
-                            }
-                        }
                     }
                     AR_END(FEVertexShader, 0);
 
