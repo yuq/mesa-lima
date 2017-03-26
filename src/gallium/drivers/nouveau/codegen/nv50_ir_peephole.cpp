@@ -3190,10 +3190,12 @@ FlatteningPass::tryPredicateConditional(BasicBlock *bb)
 // constraint SDST == SSRC2
 // TODO:
 // Does NVC0+ have other situations where this pass makes sense?
-class NV50PostRaConstantFolding : public Pass
+class PostRaLoadPropagation : public Pass
 {
 private:
-   virtual bool visit(BasicBlock *);
+   virtual bool visit(Instruction *);
+
+   void handleMAD(Instruction *);
 };
 
 static bool
@@ -3205,68 +3207,71 @@ post_ra_dead(Instruction *i)
    return true;
 }
 
-bool
-NV50PostRaConstantFolding::visit(BasicBlock *bb)
+// Fold Immediate into MAD; must be done after register allocation due to
+// constraint SDST == SSRC2
+void
+PostRaLoadPropagation::handleMAD(Instruction *i)
 {
+   if (i->def(0).getFile() != FILE_GPR ||
+       i->src(0).getFile() != FILE_GPR ||
+       i->src(1).getFile() != FILE_GPR ||
+       i->src(2).getFile() != FILE_GPR ||
+       i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id)
+      return;
+
+   if (i->getDef(0)->reg.data.id >= 64 ||
+       i->getSrc(0)->reg.data.id >= 64)
+      return;
+
+   if (i->flagsSrc >= 0 && i->getSrc(i->flagsSrc)->reg.data.id != 0)
+      return;
+
+   if (i->getPredicate())
+      return;
+
    Value *vtmp;
-   Instruction *def;
+   Instruction *def = i->getSrc(1)->getInsn();
 
-   for (Instruction *i = bb->getFirst(); i; i = i->next) {
-      switch (i->op) {
-      case OP_MAD:
-         if (i->def(0).getFile() != FILE_GPR ||
-             i->src(0).getFile() != FILE_GPR ||
-             i->src(1).getFile() != FILE_GPR ||
-             i->src(2).getFile() != FILE_GPR ||
-             i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id)
-            break;
-
-         if (i->getDef(0)->reg.data.id >= 64 ||
-             i->getSrc(0)->reg.data.id >= 64)
-            break;
-
-         if (i->flagsSrc >= 0 && i->getSrc(i->flagsSrc)->reg.data.id != 0)
-            break;
-
-         if (i->getPredicate())
-            break;
-
-         def = i->getSrc(1)->getInsn();
-         if (def && def->op == OP_SPLIT && typeSizeof(def->sType) == 4)
-            def = def->getSrc(0)->getInsn();
-         if (def && def->op == OP_MOV && def->src(0).getFile() == FILE_IMMEDIATE) {
-            vtmp = i->getSrc(1);
-            if (isFloatType(i->sType)) {
-               i->setSrc(1, def->getSrc(0));
-            } else {
-               ImmediateValue val;
-               bool ret = def->src(0).getImmediate(val);
-               assert(ret);
-               if (i->getSrc(1)->reg.data.id & 1)
-                  val.reg.data.u32 >>= 16;
-               val.reg.data.u32 &= 0xffff;
-               i->setSrc(1, new_ImmediateValue(bb->getProgram(), val.reg.data.u32));
-            }
-
-            /* There's no post-RA dead code elimination, so do it here
-             * XXX: if we add more code-removing post-RA passes, we might
-             *      want to create a post-RA dead-code elim pass */
-            if (post_ra_dead(vtmp->getInsn())) {
-               Value *src = vtmp->getInsn()->getSrc(0);
-               // Careful -- splits will have already been removed from the
-               // functions. Don't double-delete.
-               if (vtmp->getInsn()->bb)
-                  delete_Instruction(prog, vtmp->getInsn());
-               if (src->getInsn() && post_ra_dead(src->getInsn()))
-                  delete_Instruction(prog, src->getInsn());
-            }
-
-            break;
-         }
-         break;
-      default:
-         break;
+   if (def && def->op == OP_SPLIT && typeSizeof(def->sType) == 4)
+      def = def->getSrc(0)->getInsn();
+   if (def && def->op == OP_MOV && def->src(0).getFile() == FILE_IMMEDIATE) {
+      vtmp = i->getSrc(1);
+      if (isFloatType(i->sType)) {
+         i->setSrc(1, def->getSrc(0));
+      } else {
+         ImmediateValue val;
+         bool ret = def->src(0).getImmediate(val);
+         assert(ret);
+         if (i->getSrc(1)->reg.data.id & 1)
+            val.reg.data.u32 >>= 16;
+         val.reg.data.u32 &= 0xffff;
+         i->setSrc(1, new_ImmediateValue(prog, val.reg.data.u32));
       }
+
+      /* There's no post-RA dead code elimination, so do it here
+       * XXX: if we add more code-removing post-RA passes, we might
+       *      want to create a post-RA dead-code elim pass */
+      if (post_ra_dead(vtmp->getInsn())) {
+         Value *src = vtmp->getInsn()->getSrc(0);
+         // Careful -- splits will have already been removed from the
+         // functions. Don't double-delete.
+         if (vtmp->getInsn()->bb)
+            delete_Instruction(prog, vtmp->getInsn());
+         if (src->getInsn() && post_ra_dead(src->getInsn()))
+            delete_Instruction(prog, src->getInsn());
+      }
+   }
+}
+
+bool
+PostRaLoadPropagation::visit(Instruction *i)
+{
+   switch (i->op) {
+   case OP_MAD:
+      handleMAD(i);
+      break;
+   default:
+      break;
    }
 
    return true;
@@ -3694,7 +3699,7 @@ Program::optimizePostRA(int level)
 {
    RUN_PASS(2, FlatteningPass, run);
    if (getTarget()->getChipset() < 0xc0)
-      RUN_PASS(2, NV50PostRaConstantFolding, run);
+      RUN_PASS(2, PostRaLoadPropagation, run);
 
    return true;
 }
