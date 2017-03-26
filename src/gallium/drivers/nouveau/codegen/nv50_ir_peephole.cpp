@@ -3307,6 +3307,7 @@ bool
 PostRaLoadPropagation::visit(Instruction *i)
 {
    switch (i->op) {
+   case OP_FMA:
    case OP_MAD:
       if (prog->getTarget()->getChipset() < 0xc0)
          handleMADforNV50(i);
