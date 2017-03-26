@@ -1409,6 +1409,23 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    /* This is used to flag a shader retrieved from cache */
    prog->data->LinkStatus = linking_skipped;
 
+   /* Since the program load was successful, CompileStatus of all shaders at
+    * this point should normally be compile_skipped. However because of how
+    * the eviction works, it may happen that some of the individual shader keys
+    * have been evicted, resulting in unnecessary recompiles on this load, so
+    * mark them again to skip such recompiles next time.
+    */
+   char sha1_buf[41];
+   for (unsigned i = 0; i < prog->NumShaders; i++) {
+      if (prog->Shaders[i]->CompileStatus == compile_success) {
+         disk_cache_put_key(cache, prog->Shaders[i]->sha1);
+         if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
+            _mesa_sha1_format(sha1_buf, prog->Shaders[i]->sha1);
+            fprintf(stderr, "re-marking shader: %s\n", sha1_buf);
+         }
+      }
+   }
+
    free (buffer);
 
    return true;
