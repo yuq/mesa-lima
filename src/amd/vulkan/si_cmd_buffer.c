@@ -582,7 +582,7 @@ radv_prims_for_vertices(struct radv_prim_vertex_count *info, unsigned num)
 
 uint32_t
 si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
-			  bool instanced_or_indirect_draw,
+			  bool instanced_draw, bool indirect_draw,
 			  uint32_t draw_vertex_count)
 {
 	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
@@ -603,8 +603,8 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
 		primgroup_size = 64;  /* recommended with a GS */
 
-	multi_instances_smaller_than_primgroup = (instanced_or_indirect_draw ||
-						  num_prims < primgroup_size);
+	multi_instances_smaller_than_primgroup = indirect_draw || (instanced_draw &&
+								   num_prims < primgroup_size);
 	/* TODO TES */
 
 	/* TODO linestipple */
@@ -629,7 +629,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		 * We don't know that for indirect drawing, so treat it as
 		 * always problematic. */
 		if (family == CHIP_HAWAII &&
-		    instanced_or_indirect_draw)
+		    (instanced_draw || indirect_draw))
 			wd_switch_on_eop = true;
 
 		/* Performance recommendation for 4 SE Gfx7-8 parts if
@@ -655,7 +655,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 
 		/* Instancing bug on Bonaire. */
 		if (family == CHIP_BONAIRE && ia_switch_on_eoi &&
-		    instanced_or_indirect_draw)
+		    (instanced_draw || indirect_draw))
 			partial_vs_wave = true;
 
 		/* If the WD switch is false, the IA switch must be false too. */
@@ -673,7 +673,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		/* Hw bug with single-primitive instances and SWITCH_ON_EOI
 		 * on multi-SE chips. */
 		if (info->max_se >= 2 && ia_switch_on_eoi &&
-		    (instanced_or_indirect_draw &&
+		    ((instanced_draw || indirect_draw) &&
 		     num_prims <= 1))
 			cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_VGT_FLUSH;
 	}

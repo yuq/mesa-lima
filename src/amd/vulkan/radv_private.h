@@ -759,7 +759,8 @@ void si_write_viewport(struct radeon_winsys_cs *cs, int first_vp,
 void si_write_scissors(struct radeon_winsys_cs *cs, int first,
 		       int count, const VkRect2D *scissors);
 uint32_t si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
-				   bool instanced_or_indirect_draw, uint32_t draw_vertex_count);
+				   bool instanced_draw, bool indirect_draw,
+				   uint32_t draw_vertex_count);
 void si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
                             enum chip_class chip_class,
                             bool is_mec,
