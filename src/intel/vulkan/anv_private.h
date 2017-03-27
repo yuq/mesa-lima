@@ -637,6 +637,9 @@ void anv_device_finish_blorp(struct anv_device *device);
 VkResult anv_device_execbuf(struct anv_device *device,
                             struct drm_i915_gem_execbuffer2 *execbuf,
                             struct anv_bo **execbuf_bos);
+VkResult anv_device_query_status(struct anv_device *device);
+VkResult anv_device_wait(struct anv_device *device, struct anv_bo *bo,
+                         int64_t timeout);
 
 void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size, uint32_t flags);
@@ -654,6 +657,8 @@ int anv_gem_destroy_context(struct anv_device *device, int context);
 int anv_gem_get_param(int fd, uint32_t param);
 bool anv_gem_get_bit6_swizzle(int fd, uint32_t tiling);
 int anv_gem_get_aperture(int fd, uint64_t *size);
+int anv_gem_gpu_get_reset_stats(struct anv_device *device,
+                                uint32_t *active, uint32_t *pending);
 int anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle);
 uint32_t anv_gem_fd_to_handle(struct anv_device *device, int fd);
 int anv_gem_set_caching(struct anv_device *device, uint32_t gem_handle, uint32_t caching);

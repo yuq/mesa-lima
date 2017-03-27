@@ -143,8 +143,6 @@ VkResult genX(GetQueryPoolResults)(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
-   int64_t timeout = INT64_MAX;
-   int ret;
 
    assert(pool->type == VK_QUERY_TYPE_OCCLUSION ||
           pool->type == VK_QUERY_TYPE_PIPELINE_STATISTICS ||
@@ -157,12 +155,9 @@ VkResult genX(GetQueryPoolResults)(
       return VK_SUCCESS;
 
    if (flags & VK_QUERY_RESULT_WAIT_BIT) {
-      ret = anv_gem_wait(device, pool->bo.gem_handle, &timeout);
-      if (ret == -1) {
-         /* We don't know the real error. */
-         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                          "gem_wait failed %m");
-      }
+      VkResult result = anv_device_wait(device, &pool->bo, INT64_MAX);
+      if (result != VK_SUCCESS)
+         return result;
    }
 
    void *data_end = pData + dataSize;

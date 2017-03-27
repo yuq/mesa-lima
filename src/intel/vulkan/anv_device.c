@@ -888,8 +888,6 @@ anv_device_submit_simple_batch(struct anv_device *device,
    struct anv_bo bo, *exec_bos[1];
    VkResult result = VK_SUCCESS;
    uint32_t size;
-   int64_t timeout;
-   int ret;
 
    /* Kernel driver requires 8 byte aligned batch length */
    size = align_u32(batch->next - batch->start, 8);
@@ -929,14 +927,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    if (result != VK_SUCCESS)
       goto fail;
 
-   timeout = INT64_MAX;
-   ret = anv_gem_wait(device, bo.gem_handle, &timeout);
-   if (ret != 0) {
-      /* We don't know the real error. */
-      device->lost = true;
-      result = vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
-      goto fail;
-   }
+   result = anv_device_wait(device, &bo, INT64_MAX);
 
  fail:
    anv_bo_pool_free(&device->batch_bo_pool, &bo);
@@ -1268,6 +1259,58 @@ anv_device_execbuf(struct anv_device *device,
    return VK_SUCCESS;
 }
 
+VkResult
+anv_device_query_status(struct anv_device *device)
+{
+   /* This isn't likely as most of the callers of this function already check
+    * for it.  However, it doesn't hurt to check and it potentially lets us
+    * avoid an ioctl.
+    */
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
+   uint32_t active, pending;
+   int ret = anv_gem_gpu_get_reset_stats(device, &active, &pending);
+   if (ret == -1) {
+      /* We don't know the real error. */
+      device->lost = true;
+      return vk_errorf(VK_ERROR_DEVICE_LOST, "get_reset_stats failed: %m");
+   }
+
+   if (active) {
+      device->lost = true;
+      return vk_errorf(VK_ERROR_DEVICE_LOST,
+                       "GPU hung on one of our command buffers");
+   } else if (pending) {
+      device->lost = true;
+      return vk_errorf(VK_ERROR_DEVICE_LOST,
+                       "GPU hung with commands in-flight");
+   }
+
+   return VK_SUCCESS;
+}
+
+VkResult
+anv_device_wait(struct anv_device *device, struct anv_bo *bo,
+                int64_t timeout)
+{
+   int ret = anv_gem_wait(device, bo->gem_handle, &timeout);
+   if (ret == -1 && errno == ETIME) {
+      return VK_TIMEOUT;
+   } else if (ret == -1) {
+      /* We don't know the real error. */
+      device->lost = true;
+      return vk_errorf(VK_ERROR_DEVICE_LOST, "gem wait failed: %m");
+   }
+
+   /* Query for device status after the wait.  If the BO we're waiting on got
+    * caught in a GPU hang we don't want to return VK_SUCCESS to the client
+    * because it clearly doesn't have valid data.  Yes, this most likely means
+    * an ioctl, but we just did an ioctl to wait so it's no great loss.
+    */
+   return anv_device_query_status(device);
+}
+
 VkResult anv_QueueSubmit(
     VkQueue                                     _queue,
     uint32_t                                    submitCount,
@@ -1277,10 +1320,17 @@ VkResult anv_QueueSubmit(
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
    struct anv_device *device = queue->device;
-   if (unlikely(device->lost))
-      return VK_ERROR_DEVICE_LOST;
 
-   VkResult result = VK_SUCCESS;
+   /* Query for device status prior to submitting.  Technically, we don't need
+    * to do this.  However, if we have a client that's submitting piles of
+    * garbage, we would rather break as early as possible to keep the GPU
+    * hanging contained.  If we don't check here, we'll either be waiting for
+    * the kernel to kick us or we'll have to wait until the client waits on a
+    * fence before we actually know whether or not we've hung.
+    */
+   VkResult result = anv_device_query_status(device);
+   if (result != VK_SUCCESS)
+      return result;
 
    /* We lock around QueueSubmit for three main reasons:
     *
@@ -1806,9 +1856,6 @@ VkResult anv_GetFenceStatus(
    if (unlikely(device->lost))
       return VK_ERROR_DEVICE_LOST;
 
-   int64_t t = 0;
-   int ret;
-
    switch (fence->state) {
    case ANV_FENCE_STATE_RESET:
       /* If it hasn't even been sent off to the GPU yet, it's not ready */
@@ -1818,15 +1865,18 @@ VkResult anv_GetFenceStatus(
       /* It's been signaled, return success */
       return VK_SUCCESS;
 
-   case ANV_FENCE_STATE_SUBMITTED:
-      /* It's been submitted to the GPU but we don't know if it's done yet. */
-      ret = anv_gem_wait(device, fence->bo.gem_handle, &t);
-      if (ret == 0) {
+   case ANV_FENCE_STATE_SUBMITTED: {
+      VkResult result = anv_device_wait(device, &fence->bo, 0);
+      switch (result) {
+      case VK_SUCCESS:
          fence->state = ANV_FENCE_STATE_SIGNALED;
          return VK_SUCCESS;
-      } else {
+      case VK_TIMEOUT:
          return VK_NOT_READY;
+      default:
+         return result;
       }
+   }
    default:
       unreachable("Invalid fence status");
    }
@@ -1888,20 +1938,20 @@ VkResult anv_WaitForFences(
             /* These are the fences we really care about.  Go ahead and wait
              * on it until we hit a timeout.
              */
-            ret = anv_gem_wait(device, fence->bo.gem_handle, &timeout);
-            if (ret == -1 && errno == ETIME) {
-               result = VK_TIMEOUT;
-               goto done;
-            } else if (ret == -1) {
-               /* We don't know the real error. */
-                device->lost = true;
-               return vk_errorf(VK_ERROR_DEVICE_LOST, "gem wait failed: %m");
-            } else {
+            result = anv_device_wait(device, &fence->bo, timeout);
+            switch (result) {
+            case VK_SUCCESS:
                fence->state = ANV_FENCE_STATE_SIGNALED;
                signaled_fences = true;
                if (!waitAll)
-                  return VK_SUCCESS;
-               continue;
+                  goto done;
+               break;
+
+            case VK_TIMEOUT:
+               goto done;
+
+            default:
+               return result;
             }
          }
       }
