@@ -269,7 +269,7 @@ struct marshal_cmd_BufferData
    GLsizeiptr size;
    GLenum usage;
    bool data_null; /* If set, no data follows for "data" */
-   /* Next size bytes are GLvoid data[size] */
+   /* Next size bytes are GLubyte data[size] */
 };
 
 void
@@ -279,13 +279,12 @@ _mesa_unmarshal_BufferData(struct gl_context *ctx,
    const GLenum target = cmd->target;
    const GLsizeiptr size = cmd->size;
    const GLenum usage = cmd->usage;
-   const char *variable_data = (const char *) (cmd + 1);
-   const GLvoid *data = (const GLvoid *) variable_data;
+   const void *data;
 
    if (cmd->data_null)
       data = NULL;
    else
-      variable_data += size;
+      data = (const void *) (cmd + 1);
 
    CALL_BufferData(ctx->CurrentServerDispatch, (target, size, data, usage));
 }
@@ -314,11 +313,10 @@ _mesa_marshal_BufferData(GLenum target, GLsizeiptr size, const GLvoid * data,
       cmd->target = target;
       cmd->size = size;
       cmd->usage = usage;
-      char *variable_data = (char *) (cmd + 1);
       cmd->data_null = !data;
-      if (!cmd->data_null) {
+      if (data) {
+         char *variable_data = (char *) (cmd + 1);
          memcpy(variable_data, data, size);
-         variable_data += size;
       }
       _mesa_post_marshal_hook(ctx);
    } else {
@@ -335,7 +333,7 @@ struct marshal_cmd_BufferSubData
    GLenum target;
    GLintptr offset;
    GLsizeiptr size;
-   /* Next size bytes are GLvoid data[size] */
+   /* Next size bytes are GLubyte data[size] */
 };
 
 void
@@ -345,10 +343,8 @@ _mesa_unmarshal_BufferSubData(struct gl_context *ctx,
    const GLenum target = cmd->target;
    const GLintptr offset = cmd->offset;
    const GLsizeiptr size = cmd->size;
-   const char *variable_data = (const char *) (cmd + 1);
-   const GLvoid *data = (const GLvoid *) variable_data;
+   const void *data = (const void *) (cmd + 1);
 
-   variable_data += size;
    CALL_BufferSubData(ctx->CurrentServerDispatch,
                       (target, offset, size, data));
 }
@@ -377,7 +373,6 @@ _mesa_marshal_BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size,
       cmd->size = size;
       char *variable_data = (char *) (cmd + 1);
       memcpy(variable_data, data, size);
-      variable_data += size;
       _mesa_post_marshal_hook(ctx);
    } else {
       _mesa_glthread_finish(ctx);
