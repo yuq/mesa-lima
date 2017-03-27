@@ -940,7 +940,7 @@ lower_continue:
              */
             move_outer_block_inside(ir, &return_if->else_instructions);
 
-            /* In case the loop is embeded inside an if add a new return to
+            /* In case the loop is embedded inside an if add a new return to
              * the return flag then branch and let a future pass tidy it up.
              */
             if (this->function.signature->return_type->is_void())
