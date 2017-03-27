@@ -29,6 +29,7 @@
 #include "radeon/radeon_uvd.h"
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"
+#include "util/u_tests.h"
 #include "vl/vl_decoder.h"
 #include "../ddebug/dd_util.h"
 
@@ -780,6 +781,37 @@ static void si_handle_env_var_force_family(struct si_screen *sscreen)
 	exit(1);
 }
 
+static void si_test_vmfault(struct si_screen *sscreen)
+{
+	struct pipe_context *ctx = sscreen->b.aux_context;
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct pipe_resource *buf =
+		pipe_buffer_create(&sscreen->b.b, 0, PIPE_USAGE_DEFAULT, 64);
+
+	if (!buf) {
+		puts("Buffer allocation failed.");
+		exit(1);
+	}
+
+	r600_resource(buf)->gpu_address = 0; /* cause a VM fault */
+
+	if (sscreen->b.debug_flags & DBG_TEST_VMFAULT_CP) {
+		si_copy_buffer(sctx, buf, buf, 0, 4, 4, 0);
+		ctx->flush(ctx, NULL, 0);
+		puts("VM fault test: CP - done.");
+	}
+	if (sscreen->b.debug_flags & DBG_TEST_VMFAULT_SDMA) {
+		sctx->b.dma_clear_buffer(ctx, buf, 0, 4, 0);
+		ctx->flush(ctx, NULL, 0);
+		puts("VM fault test: SDMA - done.");
+	}
+	if (sscreen->b.debug_flags & DBG_TEST_VMFAULT_SHADER) {
+		util_test_constant_buffer(ctx, buf);
+		puts("VM fault test: Shader - done.");
+	}
+	exit(0);
+}
+
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
@@ -885,6 +917,11 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 	if (sscreen->b.debug_flags & DBG_TEST_DMA)
 		r600_test_dma(&sscreen->b);
+
+	if (sscreen->b.debug_flags & (DBG_TEST_VMFAULT_CP |
+				      DBG_TEST_VMFAULT_SDMA |
+				      DBG_TEST_VMFAULT_SHADER))
+		si_test_vmfault(sscreen);
 
 	return &sscreen->b.b;
 }

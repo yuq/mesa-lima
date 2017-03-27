@@ -709,6 +709,9 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "nooptvariant", DBG_NO_OPT_VARIANT, "Disable compiling optimized shader variants." },
 
 	{ "testdma", DBG_TEST_DMA, "Invoke SDMA tests and exit." },
+	{ "testvmfaultcp", DBG_TEST_VMFAULT_CP, "Invoke a CP VM fault test and exit." },
+	{ "testvmfaultsdma", DBG_TEST_VMFAULT_SDMA, "Invoke a SDMA VM fault test and exit." },
+	{ "testvmfaultshader", DBG_TEST_VMFAULT_SHADER, "Invoke a shader VM fault test and exit." },
 
 	/* features */
 	{ "nodma", DBG_NO_ASYNC_DMA, "Disable asynchronous DMA" },
