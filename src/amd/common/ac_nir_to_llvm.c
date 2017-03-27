@@ -2818,10 +2818,15 @@ static LLVMValueRef visit_image_size(struct nir_to_llvm_context *ctx,
 	return res;
 }
 
-static void emit_waitcnt(struct nir_to_llvm_context *ctx)
+#define NOOP_WAITCNT 0xf7f
+#define LGKM_CNT 0x07f
+#define VM_CNT 0xf70
+
+static void emit_waitcnt(struct nir_to_llvm_context *ctx,
+			 unsigned simm16)
 {
 	LLVMValueRef args[1] = {
-		LLVMConstInt(ctx->i32, 0xf70, false),
+		LLVMConstInt(ctx->i32, simm16, false),
 	};
 	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.waitcnt",
 			   ctx->voidt, args, 1, 0);
@@ -3297,7 +3302,7 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		emit_discard_if(ctx, instr);
 		break;
 	case nir_intrinsic_memory_barrier:
-		emit_waitcnt(ctx);
+		emit_waitcnt(ctx, VM_CNT);
 		break;
 	case nir_intrinsic_barrier:
 		emit_barrier(ctx);
