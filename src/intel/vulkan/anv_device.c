@@ -1857,6 +1857,7 @@ VkResult anv_WaitForFences(
     */
    int64_t timeout = MIN2(_timeout, INT64_MAX);
 
+   VkResult result = VK_SUCCESS;
    uint32_t pending_fences = fenceCount;
    while (pending_fences) {
       pending_fences = 0;
@@ -1877,8 +1878,10 @@ VkResult anv_WaitForFences(
             /* This fence is not pending.  If waitAll isn't set, we can return
              * early.  Otherwise, we have to keep going.
              */
-            if (!waitAll)
-               return VK_SUCCESS;
+            if (!waitAll) {
+               result = VK_SUCCESS;
+               goto done;
+            }
             continue;
 
          case ANV_FENCE_STATE_SUBMITTED:
@@ -1887,7 +1890,8 @@ VkResult anv_WaitForFences(
              */
             ret = anv_gem_wait(device, fence->bo.gem_handle, &timeout);
             if (ret == -1 && errno == ETIME) {
-               return VK_TIMEOUT;
+               result = VK_TIMEOUT;
+               goto done;
             } else if (ret == -1) {
                /* We don't know the real error. */
                 device->lost = true;
@@ -1950,7 +1954,8 @@ VkResult anv_WaitForFences(
 
             if (time_elapsed >= timeout) {
                pthread_mutex_unlock(&device->mutex);
-               return VK_TIMEOUT;
+               result = VK_TIMEOUT;
+               goto done;
             }
 
             timeout -= time_elapsed;
@@ -1960,7 +1965,11 @@ VkResult anv_WaitForFences(
       }
    }
 
-   return VK_SUCCESS;
+done:
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
+   return result;
 }
 
 // Queue semaphore functions
