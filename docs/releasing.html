@@ -125,11 +125,14 @@ Currently Ilia Mirkin and AMD devs have requested "permanent" exception.
 <li>make distcheck, scons and scons check must pass
 <li>Testing with different version of system components - LLVM and others is also
 performed where possible.
+<li>As a general rule, testing with various combinations of configure
+switches, depending on the specific patchset.
 </ul>
 
 <p>
-Achieved by combination of local ad-hoc scripts and AppVeyor plus Travis-CI,
-the latter as part of their Github integration.
+Achieved by combination of local ad-hoc scripts, mingw-w64 cross
+compilation and AppVeyor plus Travis-CI, the latter as part of their
+Github integration.
 </p>
 
 <p>
