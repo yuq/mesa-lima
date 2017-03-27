@@ -502,7 +502,8 @@ radv_emit_graphics_raster_state(struct radv_cmd_buffer *cmd_buffer,
 static void
 radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_pipeline *pipeline,
-		struct radv_shader_variant *shader)
+		struct radv_shader_variant *shader,
+		struct ac_vs_output_info *outinfo)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	uint64_t va = ws->buffer_get_va(shader->bo);
@@ -510,19 +511,19 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
 
-	export_count = MAX2(1, shader->info.vs.param_exports);
+	export_count = MAX2(1, outinfo->param_exports);
 	radeon_set_context_reg(cmd_buffer->cs, R_0286C4_SPI_VS_OUT_CONFIG,
 			       S_0286C4_VS_EXPORT_COUNT(export_count - 1));
 
 	radeon_set_context_reg(cmd_buffer->cs, R_02870C_SPI_SHADER_POS_FORMAT,
 			       S_02870C_POS0_EXPORT_FORMAT(V_02870C_SPI_SHADER_4COMP) |
-			       S_02870C_POS1_EXPORT_FORMAT(shader->info.vs.pos_exports > 1 ?
+			       S_02870C_POS1_EXPORT_FORMAT(outinfo->pos_exports > 1 ?
 							   V_02870C_SPI_SHADER_4COMP :
 							   V_02870C_SPI_SHADER_NONE) |
-			       S_02870C_POS2_EXPORT_FORMAT(shader->info.vs.pos_exports > 2 ?
+			       S_02870C_POS2_EXPORT_FORMAT(outinfo->pos_exports > 2 ?
 							   V_02870C_SPI_SHADER_4COMP :
 							   V_02870C_SPI_SHADER_NONE) |
-			       S_02870C_POS3_EXPORT_FORMAT(shader->info.vs.pos_exports > 3 ?
+			       S_02870C_POS3_EXPORT_FORMAT(outinfo->pos_exports > 3 ?
 							   V_02870C_SPI_SHADER_4COMP :
 							   V_02870C_SPI_SHADER_NONE));
 
@@ -540,17 +541,17 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 			       S_028818_VPORT_Z_SCALE_ENA(1) | S_028818_VPORT_Z_OFFSET_ENA(1));
 
 	unsigned clip_dist_mask, cull_dist_mask, total_mask;
-	clip_dist_mask = shader->info.vs.clip_dist_mask;
-	cull_dist_mask = shader->info.vs.cull_dist_mask;
+	clip_dist_mask = outinfo->clip_dist_mask;
+	cull_dist_mask = outinfo->cull_dist_mask;
 	total_mask = clip_dist_mask | cull_dist_mask;
 
 	radeon_set_context_reg(cmd_buffer->cs, R_02881C_PA_CL_VS_OUT_CNTL,
-			       S_02881C_USE_VTX_POINT_SIZE(shader->info.vs.writes_pointsize) |
-			       S_02881C_USE_VTX_RENDER_TARGET_INDX(shader->info.vs.writes_layer) |
-			       S_02881C_USE_VTX_VIEWPORT_INDX(shader->info.vs.writes_viewport_index) |
-			       S_02881C_VS_OUT_MISC_VEC_ENA(shader->info.vs.writes_pointsize ||
-							    shader->info.vs.writes_layer ||
-							    shader->info.vs.writes_viewport_index) |
+			       S_02881C_USE_VTX_POINT_SIZE(outinfo->writes_pointsize) |
+			       S_02881C_USE_VTX_RENDER_TARGET_INDX(outinfo->writes_layer) |
+			       S_02881C_USE_VTX_VIEWPORT_INDX(outinfo->writes_viewport_index) |
+			       S_02881C_VS_OUT_MISC_VEC_ENA(outinfo->writes_pointsize ||
+							    outinfo->writes_layer ||
+							    outinfo->writes_viewport_index) |
 			       S_02881C_VS_OUT_CCDIST0_VEC_ENA((total_mask & 0x0f) != 0) |
 			       S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xf0) != 0) |
 			       pipeline->graphics.raster.pa_cl_vs_out_cntl |
@@ -558,12 +559,13 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 			       clip_dist_mask);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028AB4_VGT_REUSE_OFF,
-			       S_028AB4_REUSE_OFF(shader->info.vs.writes_viewport_index));
+			       S_028AB4_REUSE_OFF(outinfo->writes_viewport_index));
 }
 
 static void
 radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
-		struct radv_shader_variant *shader)
+		struct radv_shader_variant *shader,
+		struct ac_es_output_info *outinfo)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	uint64_t va = ws->buffer_get_va(shader->bo);
@@ -571,7 +573,7 @@ radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
-			       shader->info.vs.esgs_itemsize / 4);
+			       outinfo->esgs_itemsize / 4);
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B320_SPI_SHADER_PGM_LO_ES, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
 	radeon_emit(cmd_buffer->cs, va >> 40);
@@ -590,9 +592,9 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 	vs = pipeline->shaders[MESA_SHADER_VERTEX];
 
 	if (vs->info.vs.as_es)
-		radv_emit_hw_es(cmd_buffer, vs);
+		radv_emit_hw_es(cmd_buffer, vs, &vs->info.vs.es_info);
 	else
-		radv_emit_hw_vs(cmd_buffer, pipeline, vs);
+		radv_emit_hw_vs(cmd_buffer, pipeline, vs, &vs->info.vs.outinfo);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028A84_VGT_PRIMITIVEID_EN, 0);
 }
@@ -666,7 +668,7 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cmd_buffer->cs, gs->rsrc1);
 	radeon_emit(cmd_buffer->cs, gs->rsrc2);
 
-	radv_emit_hw_vs(cmd_buffer, pipeline, pipeline->gs_copy_shader);
+	radv_emit_hw_vs(cmd_buffer, pipeline, pipeline->gs_copy_shader, &pipeline->gs_copy_shader->info.vs.outinfo);
 
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_GEOMETRY,
 							     AC_UD_GS_VS_RING_STRIDE_ENTRIES);
@@ -696,10 +698,14 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 	struct radv_blend_state *blend = &pipeline->graphics.blend;
 	unsigned ps_offset = 0;
 	unsigned z_order;
+	struct ac_vs_output_info *outinfo;
 	assert (pipeline->shaders[MESA_SHADER_FRAGMENT]);
 
 	ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
 	vs = radv_pipeline_has_gs(pipeline) ? pipeline->gs_copy_shader : pipeline->shaders[MESA_SHADER_VERTEX];
+
+	outinfo = &vs->info.vs.outinfo;
+
 	va = ws->buffer_get_va(ps->bo);
 	ws->cs_add_buffer(cmd_buffer->cs, ps->bo, 8);
 
@@ -757,20 +763,20 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 		ps_offset++;
 	}
 
-	if (ps->info.fs.prim_id_input && (vs->info.vs.prim_id_output != 0xffffffff)) {
+	if (ps->info.fs.prim_id_input && (outinfo->prim_id_output != 0xffffffff)) {
 		unsigned vs_offset, flat_shade;
 		unsigned val;
-		vs_offset = vs->info.vs.prim_id_output;
+		vs_offset = outinfo->prim_id_output;
 		flat_shade = true;
 		val = S_028644_OFFSET(vs_offset) | S_028644_FLAT_SHADE(flat_shade);
 		radeon_set_context_reg(cmd_buffer->cs, R_028644_SPI_PS_INPUT_CNTL_0 + 4 * ps_offset, val);
 		++ps_offset;
 	}
 
-	if (ps->info.fs.layer_input && (vs->info.vs.layer_output != 0xffffffff)) {
+	if (ps->info.fs.layer_input && (outinfo->layer_output != 0xffffffff)) {
 		unsigned vs_offset, flat_shade;
 		unsigned val;
-		vs_offset = vs->info.vs.layer_output;
+		vs_offset = outinfo->layer_output;
 		flat_shade = true;
 		val = S_028644_OFFSET(vs_offset) | S_028644_FLAT_SHADE(flat_shade);
 		radeon_set_context_reg(cmd_buffer->cs, R_028644_SPI_PS_INPUT_CNTL_0 + 4 * ps_offset, val);
@@ -785,20 +791,20 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 			continue;
 
 
-		if (!(vs->info.vs.export_mask & (1u << i))) {
+		if (!(outinfo->export_mask & (1u << i))) {
 			radeon_set_context_reg(cmd_buffer->cs, R_028644_SPI_PS_INPUT_CNTL_0 + 4 * ps_offset,
 					       S_028644_OFFSET(0x20));
 			++ps_offset;
 			continue;
 		}
 
-		vs_offset = util_bitcount(vs->info.vs.export_mask & ((1u << i) - 1));
-		if (vs->info.vs.prim_id_output != 0xffffffff) {
-			if (vs_offset >= vs->info.vs.prim_id_output)
+		vs_offset = util_bitcount(outinfo->export_mask & ((1u << i) - 1));
+		if (outinfo->prim_id_output != 0xffffffff) {
+			if (vs_offset >= outinfo->prim_id_output)
 				vs_offset++;
 		}
-		if (vs->info.vs.layer_output != 0xffffffff) {
-			if (vs_offset >= vs->info.vs.layer_output)
+		if (outinfo->layer_output != 0xffffffff) {
+			if (vs_offset >= outinfo->layer_output)
 			  vs_offset++;
 		}
 		flat_shade = !!(ps->info.fs.flat_shaded_mask & (1u << ps_offset));

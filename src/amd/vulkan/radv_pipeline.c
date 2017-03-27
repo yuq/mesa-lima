@@ -1467,15 +1467,15 @@ calculate_gs_ring_sizes(struct radv_pipeline *pipeline)
 	unsigned alignment = 256 * num_se;
 	/* The maximum size is 63.999 MB per SE. */
 	unsigned max_size = ((unsigned)(63.999 * 1024 * 1024) & ~255) * num_se;
-
+	struct ac_es_output_info *es_info = &pipeline->shaders[MESA_SHADER_VERTEX]->info.vs.es_info;
 	struct ac_shader_variant_info *gs_info = &pipeline->shaders[MESA_SHADER_GEOMETRY]->info;
-	struct ac_shader_variant_info *es_info = &pipeline->shaders[MESA_SHADER_VERTEX]->info;
+
 	/* Calculate the minimum size. */
-	unsigned min_esgs_ring_size = align(es_info->vs.esgs_itemsize * gs_vertex_reuse *
+	unsigned min_esgs_ring_size = align(es_info->esgs_itemsize * gs_vertex_reuse *
 					    wave_size, alignment);
 	/* These are recommended sizes, not minimum sizes. */
 	unsigned esgs_ring_size = max_gs_waves * 2 * wave_size *
-		es_info->vs.esgs_itemsize * gs_info->gs.vertices_in;
+		es_info->esgs_itemsize * gs_info->gs.vertices_in;
 	unsigned gsvs_ring_size = max_gs_waves * 2 * wave_size *
 		gs_info->gs.max_gsvs_emit_size * 1; // no streams in VK (gs->max_gs_stream + 1);
 

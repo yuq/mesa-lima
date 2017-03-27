@@ -4228,11 +4228,11 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 			int length = glsl_get_length(variable->type);
 			if (idx == VARYING_SLOT_CLIP_DIST0) {
 				if (ctx->stage == MESA_SHADER_VERTEX)
-					ctx->shader_info->vs.clip_dist_mask = (1 << length) - 1;
+					ctx->shader_info->vs.outinfo.clip_dist_mask = (1 << length) - 1;
 				ctx->num_output_clips = length;
 			} else if (idx == VARYING_SLOT_CULL_DIST0) {
 				if (ctx->stage == MESA_SHADER_VERTEX)
-					ctx->shader_info->vs.cull_dist_mask = (1 << length) - 1;
+					ctx->shader_info->vs.outinfo.cull_dist_mask = (1 << length) - 1;
 				ctx->num_output_culls = length;
 			}
 			if (length > 4)
@@ -4448,7 +4448,8 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 }
 
 static void
-handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
+handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
+		       struct ac_vs_output_info *outinfo)
 {
 	uint32_t param_count = 0;
 	unsigned target;
@@ -4461,14 +4462,14 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 						       (1ull << VARYING_SLOT_CULL_DIST0) |
 						       (1ull << VARYING_SLOT_CULL_DIST1));
 
-	ctx->shader_info->vs.prim_id_output = 0xffffffff;
-	ctx->shader_info->vs.layer_output = 0xffffffff;
+	outinfo->prim_id_output = 0xffffffff;
+	outinfo->layer_output = 0xffffffff;
 	if (clip_mask) {
 		LLVMValueRef slots[8];
 		unsigned j;
 
-		if (ctx->shader_info->vs.cull_dist_mask)
-			ctx->shader_info->vs.cull_dist_mask <<= ctx->num_output_clips;
+		if (outinfo->cull_dist_mask)
+			outinfo->cull_dist_mask <<= ctx->num_output_clips;
 
 		i = VARYING_SLOT_CLIP_DIST0;
 		for (j = 0; j < ctx->num_output_clips; j++)
@@ -4513,25 +4514,25 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 			   i == VARYING_SLOT_CULL_DIST1) {
 			continue;
 		} else if (i == VARYING_SLOT_PSIZ) {
-			ctx->shader_info->vs.writes_pointsize = true;
+			outinfo->writes_pointsize = true;
 			psize_value = values[0];
 			continue;
 		} else if (i == VARYING_SLOT_LAYER) {
-			ctx->shader_info->vs.writes_layer = true;
+			outinfo->writes_layer = true;
 			layer_value = values[0];
-			ctx->shader_info->vs.layer_output = param_count;
+			outinfo->layer_output = param_count;
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			param_count++;
 		} else if (i == VARYING_SLOT_VIEWPORT) {
-			ctx->shader_info->vs.writes_viewport_index = true;
+			outinfo->writes_viewport_index = true;
 			viewport_index_value = values[0];
 			continue;
 		} else if (i == VARYING_SLOT_PRIMITIVE_ID) {
-			ctx->shader_info->vs.prim_id_output = param_count;
+			outinfo->prim_id_output = param_count;
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			param_count++;
 		} else if (i >= VARYING_SLOT_VAR0) {
-			ctx->shader_info->vs.export_mask |= 1u << (i - VARYING_SLOT_VAR0);
+			outinfo->export_mask |= 1u << (i - VARYING_SLOT_VAR0);
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			param_count++;
 		}
@@ -4560,9 +4561,9 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		pos_args[0].out[3] = ctx->f32one;  /* W */
 	}
 
-	uint32_t mask = ((ctx->shader_info->vs.writes_pointsize == true ? 1 : 0) |
-			 (ctx->shader_info->vs.writes_layer == true ? 4 : 0) |
-			 (ctx->shader_info->vs.writes_viewport_index == true ? 8 : 0));
+	uint32_t mask = ((outinfo->writes_pointsize == true ? 1 : 0) |
+			 (outinfo->writes_layer == true ? 4 : 0) |
+			 (outinfo->writes_viewport_index == true ? 8 : 0));
 	if (mask) {
 		pos_args[1].enabled_channels = mask;
 		pos_args[1].valid_mask = 0;
@@ -4574,11 +4575,11 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		pos_args[1].out[2] = ctx->f32zero; /* Z */
 		pos_args[1].out[3] = ctx->f32zero;  /* W */
 
-		if (ctx->shader_info->vs.writes_pointsize == true)
+		if (outinfo->writes_pointsize == true)
 			pos_args[1].out[0] = psize_value;
-		if (ctx->shader_info->vs.writes_layer == true)
+		if (outinfo->writes_layer == true)
 			pos_args[1].out[2] = layer_value;
-		if (ctx->shader_info->vs.writes_viewport_index == true)
+		if (outinfo->writes_viewport_index == true)
 			pos_args[1].out[3] = viewport_index_value;
 	}
 	for (i = 0; i < 4; i++) {
@@ -4598,12 +4599,13 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		ac_build_export(&ctx->ac, &pos_args[i]);
 	}
 
-	ctx->shader_info->vs.pos_exports = num_pos_exports;
-	ctx->shader_info->vs.param_exports = param_count;
+	outinfo->pos_exports = num_pos_exports;
+	outinfo->param_exports = param_count;
 }
 
 static void
-handle_es_outputs_post(struct nir_to_llvm_context *ctx)
+handle_es_outputs_post(struct nir_to_llvm_context *ctx,
+		       struct ac_es_output_info *outinfo)
 {
 	int j;
 	uint64_t max_output_written = 0;
@@ -4638,7 +4640,7 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx)
 					       1, 1, true, true);
 		}
 	}
-	ctx->shader_info->vs.esgs_itemsize = (max_output_written + 1) * 16;
+	outinfo->esgs_itemsize = (max_output_written + 1) * 16;
 }
 
 static void
@@ -4761,9 +4763,9 @@ handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 	switch (ctx->stage) {
 	case MESA_SHADER_VERTEX:
 		if (ctx->options->key.vs.as_es)
-			handle_es_outputs_post(ctx);
+			handle_es_outputs_post(ctx, &ctx->shader_info->vs.es_info);
 		else
-			handle_vs_outputs_post(ctx);
+			handle_vs_outputs_post(ctx, &ctx->shader_info->vs.outinfo);
 		break;
 	case MESA_SHADER_FRAGMENT:
 		handle_fs_outputs_post(ctx);
@@ -5170,7 +5172,7 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 		}
 		idx += slot_inc;
 	}
-	handle_vs_outputs_post(ctx);
+	handle_vs_outputs_post(ctx, &ctx->shader_info->vs.outinfo);
 }
 
 void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,

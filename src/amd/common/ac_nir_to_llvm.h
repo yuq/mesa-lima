@@ -91,6 +91,23 @@ struct ac_userdata_locations {
 	struct ac_userdata_info shader_data[AC_UD_MAX_UD];
 };
 
+struct ac_vs_output_info {
+	uint8_t clip_dist_mask;
+	uint8_t cull_dist_mask;
+	bool writes_pointsize;
+	bool writes_layer;
+	bool writes_viewport_index;
+	uint32_t prim_id_output;
+	uint32_t layer_output;
+	uint32_t export_mask;
+	unsigned param_exports;
+	unsigned pos_exports;
+};
+
+struct ac_es_output_info {
+	uint32_t esgs_itemsize;
+};
+
 struct ac_shader_variant_info {
 	struct ac_userdata_locations user_sgprs_locs;
 	unsigned num_user_sgprs;
@@ -98,19 +115,10 @@ struct ac_shader_variant_info {
 	unsigned num_input_vgprs;
 	union {
 		struct {
-			unsigned param_exports;
-			unsigned pos_exports;
+			struct ac_vs_output_info outinfo;
+			struct ac_es_output_info es_info;
 			unsigned vgpr_comp_cnt;
-			uint32_t export_mask;
-			bool writes_pointsize;
-			bool writes_layer;
-			bool writes_viewport_index;
 			bool as_es;
-			uint8_t clip_dist_mask;
-			uint8_t cull_dist_mask;
-			uint32_t esgs_itemsize;
-			uint32_t prim_id_output;
-			uint32_t layer_output;
 		} vs;
 		struct {
 			unsigned num_interp;
