@@ -1163,10 +1163,13 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	int ps_iter_samples = 1;
 	uint32_t mask = 0xffff;
 
-	ms->num_samples = vkms->rasterizationSamples;
+	if (vkms)
+		ms->num_samples = vkms->rasterizationSamples;
+	else
+		ms->num_samples = 1;
 
 	if (pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.force_persample) {
-		ps_iter_samples = vkms->rasterizationSamples;
+		ps_iter_samples = ms->num_samples;
 	}
 
 	ms->pa_sc_line_cntl = S_028BDC_DX10_DIAMOND_TEST_ENA(1);
@@ -1184,8 +1187,8 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 		EG_S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
 		EG_S_028A4C_FORCE_EOV_REZ_ENABLE(1);
 
-	if (vkms->rasterizationSamples > 1) {
-		unsigned log_samples = util_logbase2(vkms->rasterizationSamples);
+	if (ms->num_samples > 1) {
+		unsigned log_samples = util_logbase2(ms->num_samples);
 		unsigned log_ps_iter_samples = util_logbase2(util_next_power_of_two(ps_iter_samples));
 		ms->pa_sc_mode_cntl_0 = S_028A48_MSAA_ENABLE(1);
 		ms->pa_sc_line_cntl |= S_028BDC_EXPAND_LINE_WIDTH(1); /* CM_R_028BDC_PA_SC_LINE_CNTL */
@@ -1199,11 +1202,12 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 		ms->pa_sc_mode_cntl_1 |= EG_S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1);
 	}
 
-	if (vkms->alphaToCoverageEnable)
-		blend->db_alpha_to_mask |= S_028B70_ALPHA_TO_MASK_ENABLE(1);
+	if (vkms) {
+		if (vkms->alphaToCoverageEnable)
+			blend->db_alpha_to_mask |= S_028B70_ALPHA_TO_MASK_ENABLE(1);
 
-	if (vkms->pSampleMask) {
-		mask = vkms->pSampleMask[0] & 0xffff;
+		if (vkms->pSampleMask)
+			mask = vkms->pSampleMask[0] & 0xffff;
 	}
 
 	ms->pa_sc_aa_mask[0] = mask | (mask << 16);
