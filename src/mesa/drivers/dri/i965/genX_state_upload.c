@@ -38,8 +38,10 @@
 #include "intel_buffer_objects.h"
 #include "intel_fbo.h"
 
+#include "main/enums.h"
 #include "main/fbobject.h"
 #include "main/framebuffer.h"
+#include "main/glformats.h"
 #include "main/stencil.h"
 #include "main/transformfeedback.h"
 #include "main/viewport.h"
@@ -1449,6 +1451,221 @@ static const struct brw_tracked_state genX(gs_state) = {
    .emit = genX(upload_gs_state),
 };
 
+/* ---------------------------------------------------------------------- */
+
+#define blend_factor(x) brw_translate_blend_factor(x)
+#define blend_eqn(x) brw_translate_blend_equation(x)
+
+static void
+genX(upload_blend_state)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   int size;
+
+   /* We need at least one BLEND_STATE written, because we might do
+    * thread dispatch even if _NumColorDrawBuffers is 0 (for example
+    * for computed depth or alpha test), which will do an FB write
+    * with render target 0, which will reference BLEND_STATE[0] for
+    * alpha test enable.
+    */
+   int nr_draw_buffers = ctx->DrawBuffer->_NumColorDrawBuffers;
+   if (nr_draw_buffers == 0 && ctx->Color.AlphaEnabled)
+      nr_draw_buffers = 1;
+
+   size = GENX(BLEND_STATE_ENTRY_length) * 4 * nr_draw_buffers;
+#if GEN_GEN >= 8
+   size += GENX(BLEND_STATE_length) * 4;
+#endif
+
+   uint32_t *blend_map;
+   blend_map = brw_state_batch(brw, size, 64, &brw->cc.blend_state_offset);
+
+#if GEN_GEN >= 8
+   struct GENX(BLEND_STATE) blend = { 0 };
+   {
+#else
+   for (int i = 0; i < nr_draw_buffers; i++) {
+      struct GENX(BLEND_STATE_ENTRY) entry = { 0 };
+#define blend entry
+#endif
+      /* OpenGL specification 3.3 (page 196), section 4.1.3 says:
+       * "If drawbuffer zero is not NONE and the buffer it references has an
+       * integer format, the SAMPLE_ALPHA_TO_COVERAGE and SAMPLE_ALPHA_TO_ONE
+       * operations are skipped."
+       */
+      if (!(ctx->DrawBuffer->_IntegerBuffers & 0x1)) {
+         /* _NEW_MULTISAMPLE */
+         if (_mesa_is_multisample_enabled(ctx)) {
+            if (ctx->Multisample.SampleAlphaToCoverage) {
+               blend.AlphaToCoverageEnable = true;
+               blend.AlphaToCoverageDitherEnable = GEN_GEN >= 7;
+            }
+            if (ctx->Multisample.SampleAlphaToOne)
+               blend.AlphaToOneEnable = true;
+         }
+
+         /* _NEW_COLOR */
+         if (ctx->Color.AlphaEnabled) {
+            blend.AlphaTestEnable = true;
+            blend.AlphaTestFunction =
+               intel_translate_compare_func(ctx->Color.AlphaFunc);
+         }
+
+         if (ctx->Color.DitherFlag) {
+            blend.ColorDitherEnable = true;
+         }
+      }
+
+#if GEN_GEN >= 8
+      for (int i = 0; i < nr_draw_buffers; i++) {
+         struct GENX(BLEND_STATE_ENTRY) entry = { 0 };
+#else
+      {
+#endif
+
+         /* _NEW_BUFFERS */
+         struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[i];
+
+         /* Used for implementing the following bit of GL_EXT_texture_integer:
+          * "Per-fragment operations that require floating-point color
+          *  components, including multisample alpha operations, alpha test,
+          *  blending, and dithering, have no effect when the corresponding
+          *  colors are written to an integer color buffer."
+          */
+         bool integer = ctx->DrawBuffer->_IntegerBuffers & (0x1 << i);
+
+         /* _NEW_COLOR */
+         if (ctx->Color.ColorLogicOpEnabled) {
+            GLenum rb_type = rb ? _mesa_get_format_datatype(rb->Format)
+                                : GL_UNSIGNED_NORMALIZED;
+            WARN_ONCE(ctx->Color.LogicOp != GL_COPY &&
+                      rb_type != GL_UNSIGNED_NORMALIZED &&
+                      rb_type != GL_FLOAT, "Ignoring %s logic op on %s "
+                      "renderbuffer\n",
+                      _mesa_enum_to_string(ctx->Color.LogicOp),
+                      _mesa_enum_to_string(rb_type));
+            if (GEN_GEN >= 8 || rb_type == GL_UNSIGNED_NORMALIZED) {
+               entry.LogicOpEnable = true;
+               entry.LogicOpFunction =
+                  intel_translate_logic_op(ctx->Color.LogicOp);
+            }
+         } else if (ctx->Color.BlendEnabled & (1 << i) && !integer &&
+                    !ctx->Color._AdvancedBlendMode) {
+            GLenum eqRGB = ctx->Color.Blend[i].EquationRGB;
+            GLenum eqA = ctx->Color.Blend[i].EquationA;
+            GLenum srcRGB = ctx->Color.Blend[i].SrcRGB;
+            GLenum dstRGB = ctx->Color.Blend[i].DstRGB;
+            GLenum srcA = ctx->Color.Blend[i].SrcA;
+            GLenum dstA = ctx->Color.Blend[i].DstA;
+
+            if (eqRGB == GL_MIN || eqRGB == GL_MAX)
+               srcRGB = dstRGB = GL_ONE;
+
+            if (eqA == GL_MIN || eqA == GL_MAX)
+               srcA = dstA = GL_ONE;
+
+            /* Due to hardware limitations, the destination may have information
+             * in an alpha channel even when the format specifies no alpha
+             * channel. In order to avoid getting any incorrect blending due to
+             * that alpha channel, coerce the blend factors to values that will
+             * not read the alpha channel, but will instead use the correct
+             * implicit value for alpha.
+             */
+            if (rb && !_mesa_base_format_has_channel(rb->_BaseFormat,
+                                                     GL_TEXTURE_ALPHA_TYPE)) {
+               srcRGB = brw_fix_xRGB_alpha(srcRGB);
+               srcA = brw_fix_xRGB_alpha(srcA);
+               dstRGB = brw_fix_xRGB_alpha(dstRGB);
+               dstA = brw_fix_xRGB_alpha(dstA);
+            }
+
+            entry.ColorBufferBlendEnable = true;
+            entry.DestinationBlendFactor = blend_factor(dstRGB);
+            entry.SourceBlendFactor = blend_factor(srcRGB);
+            entry.DestinationAlphaBlendFactor = blend_factor(dstA);
+            entry.SourceAlphaBlendFactor = blend_factor(srcA);
+            entry.ColorBlendFunction = blend_eqn(eqRGB);
+            entry.AlphaBlendFunction = blend_eqn(eqA);
+
+            if (srcA != srcRGB || dstA != dstRGB || eqA != eqRGB)
+               blend.IndependentAlphaBlendEnable = true;
+         }
+
+         /* See section 8.1.6 "Pre-Blend Color Clamping" of the
+          * SandyBridge PRM Volume 2 Part 1 for HW requirements.
+          *
+          * We do our ARB_color_buffer_float CLAMP_FRAGMENT_COLOR
+          * clamping in the fragment shader.  For its clamping of
+          * blending, the spec says:
+          *
+          *     "RESOLVED: For fixed-point color buffers, the inputs and
+          *      the result of the blending equation are clamped.  For
+          *      floating-point color buffers, no clamping occurs."
+          *
+          * So, generally, we want clamping to the render target's range.
+          * And, good news, the hardware tables for both pre- and
+          * post-blend color clamping are either ignored, or any are
+          * allowed, or clamping is required but RT range clamping is a
+          * valid option.
+          */
+         entry.PreBlendColorClampEnable = true;
+         entry.PostBlendColorClampEnable = true;
+         entry.ColorClampRange = COLORCLAMP_RTFORMAT;
+
+         entry.WriteDisableRed   = !ctx->Color.ColorMask[i][0];
+         entry.WriteDisableGreen = !ctx->Color.ColorMask[i][1];
+         entry.WriteDisableBlue  = !ctx->Color.ColorMask[i][2];
+         entry.WriteDisableAlpha = !ctx->Color.ColorMask[i][3];
+
+         /* From the BLEND_STATE docs, DWord 0, Bit 29 (AlphaToOne Enable):
+          * "If Dual Source Blending is enabled, this bit must be disabled."
+          */
+         WARN_ONCE(ctx->Color.Blend[i]._UsesDualSrc &&
+                   _mesa_is_multisample_enabled(ctx) &&
+                   ctx->Multisample.SampleAlphaToOne,
+                   "HW workaround: disabling alpha to one with dual src "
+                   "blending\n");
+         if (ctx->Color.Blend[i]._UsesDualSrc)
+            blend.AlphaToOneEnable = false;
+#if GEN_GEN >= 8
+         GENX(BLEND_STATE_ENTRY_pack)(NULL, &blend_map[1 + i * 2], &entry);
+#else
+         GENX(BLEND_STATE_ENTRY_pack)(NULL, &blend_map[i * 2], &entry);
+#endif
+      }
+   }
+
+#if GEN_GEN >= 8
+   GENX(BLEND_STATE_pack)(NULL, blend_map, &blend);
+#endif
+
+#if GEN_GEN < 7
+   brw_batch_emit(brw, GENX(3DSTATE_CC_STATE_POINTERS), ptr) {
+      ptr.PointertoBLEND_STATE = brw->cc.blend_state_offset;
+      ptr.BLEND_STATEChange = true;
+   }
+#else
+   brw_batch_emit(brw, GENX(3DSTATE_BLEND_STATE_POINTERS), ptr) {
+      ptr.BlendStatePointer = brw->cc.blend_state_offset;
+#if GEN_GEN >= 8
+      ptr.BlendStatePointerValid = true;
+#endif
+   }
+#endif
+}
+
+static const struct brw_tracked_state genX(blend_state) = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS |
+              _NEW_COLOR |
+              _NEW_MULTISAMPLE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_STATE_BASE_ADDRESS,
+   },
+   .emit = genX(upload_blend_state),
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -2297,6 +2514,97 @@ const struct brw_tracked_state genX(ps_extra) = {
    },
    .emit = genX(upload_ps_extra),
 };
+
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_ps_blend)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_BUFFERS */
+   struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[0];
+   const bool buffer0_is_integer = ctx->DrawBuffer->_IntegerBuffers & 0x1;
+
+   /* _NEW_COLOR */
+   struct gl_colorbuffer_attrib *color = &ctx->Color;
+
+   brw_batch_emit(brw, GENX(3DSTATE_PS_BLEND), pb) {
+      /* BRW_NEW_FRAGMENT_PROGRAM | _NEW_BUFFERS | _NEW_COLOR */
+      pb.HasWriteableRT = brw_color_buffer_write_enabled(brw);
+
+      if (!buffer0_is_integer) {
+         /* _NEW_MULTISAMPLE */
+         pb.AlphaToCoverageEnable =
+            _mesa_is_multisample_enabled(ctx) &&
+            ctx->Multisample.SampleAlphaToCoverage;
+
+         pb.AlphaTestEnable = color->AlphaEnabled;
+      }
+
+      /* Used for implementing the following bit of GL_EXT_texture_integer:
+       * "Per-fragment operations that require floating-point color
+       *  components, including multisample alpha operations, alpha test,
+       *  blending, and dithering, have no effect when the corresponding
+       *  colors are written to an integer color buffer."
+       *
+       * The OpenGL specification 3.3 (page 196), section 4.1.3 says:
+       * "If drawbuffer zero is not NONE and the buffer it references has an
+       *  integer format, the SAMPLE_ALPHA_TO_COVERAGE and SAMPLE_ALPHA_TO_ONE
+       *  operations are skipped."
+       */
+      if (rb && !buffer0_is_integer && (color->BlendEnabled & 1)) {
+         GLenum eqRGB = color->Blend[0].EquationRGB;
+         GLenum eqA = color->Blend[0].EquationA;
+         GLenum srcRGB = color->Blend[0].SrcRGB;
+         GLenum dstRGB = color->Blend[0].DstRGB;
+         GLenum srcA = color->Blend[0].SrcA;
+         GLenum dstA = color->Blend[0].DstA;
+
+         if (eqRGB == GL_MIN || eqRGB == GL_MAX)
+            srcRGB = dstRGB = GL_ONE;
+
+         if (eqA == GL_MIN || eqA == GL_MAX)
+            srcA = dstA = GL_ONE;
+
+         /* Due to hardware limitations, the destination may have information
+          * in an alpha channel even when the format specifies no alpha
+          * channel. In order to avoid getting any incorrect blending due to
+          * that alpha channel, coerce the blend factors to values that will
+          * not read the alpha channel, but will instead use the correct
+          * implicit value for alpha.
+          */
+         if (!_mesa_base_format_has_channel(rb->_BaseFormat,
+                                            GL_TEXTURE_ALPHA_TYPE)) {
+            srcRGB = brw_fix_xRGB_alpha(srcRGB);
+            srcA = brw_fix_xRGB_alpha(srcA);
+            dstRGB = brw_fix_xRGB_alpha(dstRGB);
+            dstA = brw_fix_xRGB_alpha(dstA);
+         }
+
+         pb.ColorBufferBlendEnable = true;
+         pb.SourceAlphaBlendFactor = brw_translate_blend_factor(srcA);
+         pb.DestinationAlphaBlendFactor = brw_translate_blend_factor(dstA);
+         pb.SourceBlendFactor = brw_translate_blend_factor(srcRGB);
+         pb.DestinationBlendFactor = brw_translate_blend_factor(dstRGB);
+
+         pb.IndependentAlphaBlendEnable =
+            srcA != srcRGB || dstA != dstRGB || eqA != eqRGB;
+      }
+   }
+}
+
+static const struct brw_tracked_state genX(ps_blend) = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS |
+              _NEW_COLOR |
+              _NEW_MULTISAMPLE,
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_CONTEXT |
+             BRW_NEW_FRAGMENT_PROGRAM,
+   },
+   .emit = genX(upload_ps_blend)
+};
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -2373,7 +2681,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen6_viewport_state,	/* must do after *_vp stages */
 
       &gen6_urb,
-      &gen6_blend_state,		/* must do before cc unit */
+      &genX(blend_state),		/* must do before cc unit */
       &gen6_color_calc_state,	/* must do before cc unit */
       &gen6_depth_stencil_state,	/* must do before cc unit */
 
@@ -2438,7 +2746,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_l3_state,
       &gen7_push_constant_space,
       &gen7_urb,
-      &gen6_blend_state,		/* must do before cc unit */
+      &genX(blend_state),		/* must do before cc unit */
       &gen6_color_calc_state,	/* must do before cc unit */
       &genX(depth_stencil_state),	/* must do before cc unit */
 
@@ -2526,7 +2834,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_l3_state,
       &gen7_push_constant_space,
       &gen7_urb,
-      &gen8_blend_state,
+      &genX(blend_state),
       &gen6_color_calc_state,
 
       &brw_vs_image_surfaces, /* Before vs push/pull constants and binding table */
@@ -2585,7 +2893,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(raster_state),
       &genX(sbe_state),
       &genX(sf_state),
-      &gen8_ps_blend,
+      &genX(ps_blend),
       &genX(ps_extra),
       &genX(ps_state),
       &genX(depth_stencil_state),

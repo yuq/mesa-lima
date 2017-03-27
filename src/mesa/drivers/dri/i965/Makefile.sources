@@ -99,7 +99,6 @@ i965_FILES = \
 	gen7_te_state.c \
 	gen7_urb.c \
 	gen7_wm_surface_state.c \
-	gen8_blend_state.c \
 	gen8_depth_state.c \
 	gen8_draw_upload.c \
 	gen8_multisample_state.c \
