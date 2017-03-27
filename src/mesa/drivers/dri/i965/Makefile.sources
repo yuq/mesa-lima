@@ -92,24 +92,18 @@ i965_FILES = \
 	gen6_wm_state.c \
 	gen7_cs_state.c \
 	gen7_ds_state.c \
-	gen7_gs_state.c \
 	gen7_hs_state.c \
 	gen7_l3_state.c \
 	gen7_misc_state.c \
 	gen7_sol_state.c \
 	gen7_te_state.c \
 	gen7_urb.c \
-	gen7_viewport_state.c \
 	gen7_wm_surface_state.c \
 	gen8_blend_state.c \
 	gen8_depth_state.c \
 	gen8_draw_upload.c \
-	gen8_ds_state.c \
-	gen8_gs_state.c \
-	gen8_hs_state.c \
 	gen8_multisample_state.c \
 	gen8_surface_state.c \
-	gen8_viewport_state.c \
 	hsw_queryobj.c \
 	hsw_sol.c \
 	intel_batchbuffer.c \

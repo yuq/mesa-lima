@@ -109,9 +109,7 @@ extern const struct brw_tracked_state brw_cs_state;
 extern const struct brw_tracked_state gen7_cs_push_constants;
 extern const struct brw_tracked_state gen6_binding_table_pointers;
 extern const struct brw_tracked_state gen6_blend_state;
-extern const struct brw_tracked_state gen6_sf_and_clip_viewports;
 extern const struct brw_tracked_state gen6_color_calc_state;
-extern const struct brw_tracked_state gen6_gs_state;
 extern const struct brw_tracked_state gen6_gs_push_constants;
 extern const struct brw_tracked_state gen6_gs_binding_table;
 extern const struct brw_tracked_state gen6_multisample_state;
@@ -125,26 +123,18 @@ extern const struct brw_tracked_state gen6_viewport_state;
 extern const struct brw_tracked_state gen6_vs_push_constants;
 extern const struct brw_tracked_state gen6_wm_push_constants;
 extern const struct brw_tracked_state gen7_depthbuffer;
-extern const struct brw_tracked_state gen7_ds_state;
-extern const struct brw_tracked_state gen7_gs_state;
 extern const struct brw_tracked_state gen7_tcs_push_constants;
-extern const struct brw_tracked_state gen7_hs_state;
 extern const struct brw_tracked_state gen7_l3_state;
 extern const struct brw_tracked_state gen7_push_constant_space;
-extern const struct brw_tracked_state gen7_sf_clip_viewport;
 extern const struct brw_tracked_state gen7_te_state;
 extern const struct brw_tracked_state gen7_tes_push_constants;
 extern const struct brw_tracked_state gen7_urb;
 extern const struct brw_tracked_state haswell_cut_index;
 extern const struct brw_tracked_state gen8_blend_state;
-extern const struct brw_tracked_state gen8_ds_state;
-extern const struct brw_tracked_state gen8_gs_state;
-extern const struct brw_tracked_state gen8_hs_state;
 extern const struct brw_tracked_state gen8_index_buffer;
 extern const struct brw_tracked_state gen8_multisample_state;
 extern const struct brw_tracked_state gen8_pma_fix;
 extern const struct brw_tracked_state gen8_ps_blend;
-extern const struct brw_tracked_state gen8_sf_clip_viewport;
 extern const struct brw_tracked_state gen8_vertices;
 extern const struct brw_tracked_state gen8_vf_topology;
 extern const struct brw_tracked_state brw_cs_work_groups_surface;
@@ -383,12 +373,6 @@ use_state_point_size(const struct brw_context *brw)
           (brw->vue_map_geom_out.slots_valid & VARYING_BIT_PSIZ) == 0;
 }
 
-void brw_calculate_guardband_size(const struct gen_device_info *devinfo,
-                                  uint32_t fb_width, uint32_t fb_height,
-                                  float m00, float m11, float m30, float m31,
-                                  float *xmin, float *xmax,
-                                  float *ymin, float *ymax);
-
 void brw_copy_pipeline_atoms(struct brw_context *brw,
                              enum brw_pipeline pipeline,
                              const struct brw_tracked_state **atoms,
@@ -401,6 +385,8 @@ void gen7_init_atoms(struct brw_context *brw);
 void gen75_init_atoms(struct brw_context *brw);
 void gen8_init_atoms(struct brw_context *brw);
 void gen9_init_atoms(struct brw_context *brw);
+
+void upload_gs_state_for_tf(struct brw_context *brw);
 
 #ifdef __cplusplus
 }

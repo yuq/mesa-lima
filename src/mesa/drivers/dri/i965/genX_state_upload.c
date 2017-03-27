@@ -42,6 +42,7 @@
 #include "main/framebuffer.h"
 #include "main/stencil.h"
 #include "main/transformfeedback.h"
+#include "main/viewport.h"
 
 UNUSED static void *
 emit_dwords(struct brw_context *brw, unsigned n)
@@ -1075,6 +1076,379 @@ static const struct brw_tracked_state genX(vs_state) = {
    .emit = genX(upload_vs_state),
 };
 
+/* ---------------------------------------------------------------------- */
+
+static void
+brw_calculate_guardband_size(const struct gen_device_info *devinfo,
+                             uint32_t fb_width, uint32_t fb_height,
+                             float m00, float m11, float m30, float m31,
+                             float *xmin, float *xmax,
+                             float *ymin, float *ymax)
+{
+   /* According to the "Vertex X,Y Clamping and Quantization" section of the
+    * Strips and Fans documentation:
+    *
+    * "The vertex X and Y screen-space coordinates are also /clamped/ to the
+    *  fixed-point "guardband" range supported by the rasterization hardware"
+    *
+    * and
+    *
+    * "In almost all circumstances, if an object’s vertices are actually
+    *  modified by this clamping (i.e., had X or Y coordinates outside of
+    *  the guardband extent the rendered object will not match the intended
+    *  result.  Therefore software should take steps to ensure that this does
+    *  not happen - e.g., by clipping objects such that they do not exceed
+    *  these limits after the Drawing Rectangle is applied."
+    *
+    * I believe the fundamental restriction is that the rasterizer (in
+    * the SF/WM stages) have a limit on the number of pixels that can be
+    * rasterized.  We need to ensure any coordinates beyond the rasterizer
+    * limit are handled by the clipper.  So effectively that limit becomes
+    * the clipper's guardband size.
+    *
+    * It goes on to say:
+    *
+    * "In addition, in order to be correctly rendered, objects must have a
+    *  screenspace bounding box not exceeding 8K in the X or Y direction.
+    *  This additional restriction must also be comprehended by software,
+    *  i.e., enforced by use of clipping."
+    *
+    * This makes no sense.  Gen7+ hardware supports 16K render targets,
+    * and you definitely need to be able to draw polygons that fill the
+    * surface.  Our assumption is that the rasterizer was limited to 8K
+    * on Sandybridge, which only supports 8K surfaces, and it was actually
+    * increased to 16K on Ivybridge and later.
+    *
+    * So, limit the guardband to 16K on Gen7+ and 8K on Sandybridge.
+    */
+   const float gb_size = devinfo->gen >= 7 ? 16384.0f : 8192.0f;
+
+   if (m00 != 0 && m11 != 0) {
+      /* First, we compute the screen-space render area */
+      const float ss_ra_xmin = MIN3(        0, m30 + m00, m30 - m00);
+      const float ss_ra_xmax = MAX3( fb_width, m30 + m00, m30 - m00);
+      const float ss_ra_ymin = MIN3(        0, m31 + m11, m31 - m11);
+      const float ss_ra_ymax = MAX3(fb_height, m31 + m11, m31 - m11);
+
+      /* We want the guardband to be centered on that */
+      const float ss_gb_xmin = (ss_ra_xmin + ss_ra_xmax) / 2 - gb_size;
+      const float ss_gb_xmax = (ss_ra_xmin + ss_ra_xmax) / 2 + gb_size;
+      const float ss_gb_ymin = (ss_ra_ymin + ss_ra_ymax) / 2 - gb_size;
+      const float ss_gb_ymax = (ss_ra_ymin + ss_ra_ymax) / 2 + gb_size;
+
+      /* Now we need it in native device coordinates */
+      const float ndc_gb_xmin = (ss_gb_xmin - m30) / m00;
+      const float ndc_gb_xmax = (ss_gb_xmax - m30) / m00;
+      const float ndc_gb_ymin = (ss_gb_ymin - m31) / m11;
+      const float ndc_gb_ymax = (ss_gb_ymax - m31) / m11;
+
+      /* Thanks to Y-flipping and ORIGIN_UPPER_LEFT, the Y coordinates may be
+       * flipped upside-down.  X should be fine though.
+       */
+      assert(ndc_gb_xmin <= ndc_gb_xmax);
+      *xmin = ndc_gb_xmin;
+      *xmax = ndc_gb_xmax;
+      *ymin = MIN2(ndc_gb_ymin, ndc_gb_ymax);
+      *ymax = MAX2(ndc_gb_ymin, ndc_gb_ymax);
+   } else {
+      /* The viewport scales to 0, so nothing will be rendered. */
+      *xmin = 0.0f;
+      *xmax = 0.0f;
+      *ymin = 0.0f;
+      *ymax = 0.0f;
+   }
+}
+
+static void
+genX(upload_sf_clip_viewport)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   float y_scale, y_bias;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   /* BRW_NEW_VIEWPORT_COUNT */
+   const unsigned viewport_count = brw->clip.viewport_count;
+
+   /* _NEW_BUFFERS */
+   const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+   const uint32_t fb_width = (float)_mesa_geometric_width(ctx->DrawBuffer);
+   const uint32_t fb_height = (float)_mesa_geometric_height(ctx->DrawBuffer);
+
+#if GEN_GEN >= 7
+#define clv sfv
+   struct GENX(SF_CLIP_VIEWPORT) sfv;
+   uint32_t sf_clip_vp_offset;
+   uint32_t *sf_clip_map = brw_state_batch(brw, 16 * 4 * viewport_count,
+                                           64, &sf_clip_vp_offset);
+#else
+   struct GENX(SF_VIEWPORT) sfv;
+   struct GENX(CLIP_VIEWPORT) clv;
+   uint32_t *sf_map = brw_state_batch(brw, 8 * 4 * viewport_count,
+                                      32, &brw->sf.vp_offset);
+   uint32_t *clip_map = brw_state_batch(brw, 4 * 4 * viewport_count,
+                                        32, &brw->clip.vp_offset);
+#endif
+
+   /* _NEW_BUFFERS */
+   if (render_to_fbo) {
+      y_scale = 1.0;
+      y_bias = 0;
+   } else {
+      y_scale = -1.0;
+      y_bias = (float)fb_height;
+   }
+
+   for (unsigned i = 0; i < brw->clip.viewport_count; i++) {
+      /* _NEW_VIEWPORT: Guardband Clipping */
+      float scale[3], translate[3], gb_xmin, gb_xmax, gb_ymin, gb_ymax;
+      _mesa_get_viewport_xform(ctx, i, scale, translate);
+
+      sfv.ViewportMatrixElementm00 = scale[0];
+      sfv.ViewportMatrixElementm11 = scale[1] * y_scale,
+      sfv.ViewportMatrixElementm22 = scale[2],
+      sfv.ViewportMatrixElementm30 = translate[0],
+      sfv.ViewportMatrixElementm31 = translate[1] * y_scale + y_bias,
+      sfv.ViewportMatrixElementm32 = translate[2],
+      brw_calculate_guardband_size(devinfo, fb_width, fb_height,
+                                   sfv.ViewportMatrixElementm00,
+                                   sfv.ViewportMatrixElementm11,
+                                   sfv.ViewportMatrixElementm30,
+                                   sfv.ViewportMatrixElementm31,
+                                   &gb_xmin, &gb_xmax, &gb_ymin, &gb_ymax);
+
+
+      clv.XMinClipGuardband = gb_xmin;
+      clv.XMaxClipGuardband = gb_xmax;
+      clv.YMinClipGuardband = gb_ymin;
+      clv.YMaxClipGuardband = gb_ymax;
+
+#if GEN_GEN >= 8
+      /* _NEW_VIEWPORT | _NEW_BUFFERS: Screen Space Viewport
+       * The hardware will take the intersection of the drawing rectangle,
+       * scissor rectangle, and the viewport extents. We don't need to be
+       * smart, and can therefore just program the viewport extents.
+       */
+      const float viewport_Xmax =
+         ctx->ViewportArray[i].X + ctx->ViewportArray[i].Width;
+      const float viewport_Ymax =
+         ctx->ViewportArray[i].Y + ctx->ViewportArray[i].Height;
+
+      if (render_to_fbo) {
+         sfv.XMinViewPort = ctx->ViewportArray[i].X;
+         sfv.XMaxViewPort = viewport_Xmax - 1;
+         sfv.YMinViewPort = ctx->ViewportArray[i].Y;
+         sfv.YMaxViewPort = viewport_Ymax - 1;
+      } else {
+         sfv.XMinViewPort = ctx->ViewportArray[i].X;
+         sfv.XMaxViewPort = viewport_Xmax - 1;
+         sfv.YMinViewPort = fb_height - viewport_Ymax;
+         sfv.YMaxViewPort = fb_height - ctx->ViewportArray[i].Y - 1;
+      }
+#endif
+
+#if GEN_GEN >= 7
+      GENX(SF_CLIP_VIEWPORT_pack)(NULL, sf_clip_map, &sfv);
+      sf_clip_map += 16;
+#else
+      GENX(SF_VIEWPORT_pack)(NULL, sf_map, &sfv);
+      GENX(CLIP_VIEWPORT_pack)(NULL, clip_map, &clv);
+      sf_map += 8;
+      clip_map += 4;
+#endif
+   }
+
+#if GEN_GEN >= 7
+   brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP), ptr) {
+      ptr.SFClipViewportPointer = sf_clip_vp_offset;
+   }
+#else
+   brw->ctx.NewDriverState |= BRW_NEW_SF_VP | BRW_NEW_CLIP_VP;
+#endif
+}
+
+static const struct brw_tracked_state genX(sf_clip_viewport) = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS |
+              _NEW_VIEWPORT,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_VIEWPORT_COUNT,
+   },
+   .emit = genX(upload_sf_clip_viewport),
+};
+
+static void
+genX(upload_gs_state)(struct brw_context *brw)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   const struct brw_stage_state *stage_state = &brw->gs.base;
+   /* BRW_NEW_GEOMETRY_PROGRAM */
+   bool active = brw->geometry_program;
+
+   /* BRW_NEW_GS_PROG_DATA */
+   struct brw_stage_prog_data *stage_prog_data = stage_state->prog_data;
+   const struct brw_vue_prog_data *vue_prog_data =
+      brw_vue_prog_data(stage_prog_data);
+#if GEN_GEN >= 7
+   const struct brw_gs_prog_data *gs_prog_data =
+      brw_gs_prog_data(stage_prog_data);
+#endif
+
+#if GEN_GEN < 7
+   brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_GS), cgs) {
+      if (active && stage_state->push_const_size != 0) {
+         cgs.Buffer0Valid = true;
+         cgs.PointertoGSConstantBuffer0 = stage_state->push_const_offset;
+         cgs.GSConstantBuffer0ReadLength = stage_state->push_const_size - 1;
+      }
+   }
+#endif
+
+#if GEN_GEN == 7 && !GEN_IS_HASWELL
+   /**
+    * From Graphics BSpec: 3D-Media-GPGPU Engine > 3D Pipeline Stages >
+    * Geometry > Geometry Shader > State:
+    *
+    *     "Note: Because of corruption in IVB:GT2, software needs to flush the
+    *     whole fixed function pipeline when the GS enable changes value in
+    *     the 3DSTATE_GS."
+    *
+    * The hardware architects have clarified that in this context "flush the
+    * whole fixed function pipeline" means to emit a PIPE_CONTROL with the "CS
+    * Stall" bit set.
+    */
+   if (brw->gt == 2 && brw->gs.enabled != active)
+      gen7_emit_cs_stall_flush(brw);
+#endif
+
+   if (active) {
+      brw_batch_emit(brw, GENX(3DSTATE_GS), gs) {
+         INIT_THREAD_DISPATCH_FIELDS(gs, Vertex);
+
+#if GEN_GEN >= 7
+         gs.OutputVertexSize = gs_prog_data->output_vertex_size_hwords * 2 - 1;
+         gs.OutputTopology = gs_prog_data->output_topology;
+         gs.ControlDataHeaderSize =
+            gs_prog_data->control_data_header_size_hwords;
+
+         gs.InstanceControl = gs_prog_data->invocations - 1;
+         gs.DispatchMode = vue_prog_data->dispatch_mode;
+
+         gs.IncludePrimitiveID = gs_prog_data->include_primitive_id;
+
+         gs.ControlDataFormat = gs_prog_data->control_data_format;
+#endif
+
+         /* Note: the meaning of the GEN7_GS_REORDER_TRAILING bit changes between
+          * Ivy Bridge and Haswell.
+          *
+          * On Ivy Bridge, setting this bit causes the vertices of a triangle
+          * strip to be delivered to the geometry shader in an order that does
+          * not strictly follow the OpenGL spec, but preserves triangle
+          * orientation.  For example, if the vertices are (1, 2, 3, 4, 5), then
+          * the geometry shader sees triangles:
+          *
+          * (1, 2, 3), (2, 4, 3), (3, 4, 5)
+          *
+          * (Clearing the bit is even worse, because it fails to preserve
+          * orientation).
+          *
+          * Triangle strips with adjacency always ordered in a way that preserves
+          * triangle orientation but does not strictly follow the OpenGL spec,
+          * regardless of the setting of this bit.
+          *
+          * On Haswell, both triangle strips and triangle strips with adjacency
+          * are always ordered in a way that preserves triangle orientation.
+          * Setting this bit causes the ordering to strictly follow the OpenGL
+          * spec.
+          *
+          * So in either case we want to set the bit.  Unfortunately on Ivy
+          * Bridge this will get the order close to correct but not perfect.
+          */
+         gs.ReorderMode = TRAILING;
+         gs.MaximumNumberofThreads =
+            GEN_GEN == 8 ? (devinfo->max_gs_threads / 2 - 1)
+                         : (devinfo->max_gs_threads - 1);
+
+#if GEN_GEN < 7
+         gs.SOStatisticsEnable = true;
+         gs.RenderingEnabled = 1;
+         if (brw->geometry_program->info.has_transform_feedback_varyings)
+            gs.SVBIPayloadEnable = true;
+
+         /* GEN6_GS_SPF_MODE and GEN6_GS_VECTOR_MASK_ENABLE are enabled as it
+          * was previously done for gen6.
+          *
+          * TODO: test with both disabled to see if the HW is behaving
+          * as expected, like in gen7.
+          */
+         gs.SingleProgramFlow = true;
+         gs.VectorMaskEnable = true;
+#endif
+
+#if GEN_GEN >= 8
+         gs.ExpectedVertexCount = gs_prog_data->vertices_in;
+
+         if (gs_prog_data->static_vertex_count != -1) {
+            gs.StaticOutput = true;
+            gs.StaticOutputVertexCount = gs_prog_data->static_vertex_count;
+         }
+         gs.IncludeVertexHandles = vue_prog_data->include_vue_handles;
+
+         gs.UserClipDistanceCullTestEnableBitmask =
+            vue_prog_data->cull_distance_mask;
+
+         const int urb_entry_write_offset = 1;
+         const uint32_t urb_entry_output_length =
+            DIV_ROUND_UP(vue_prog_data->vue_map.num_slots, 2) -
+            urb_entry_write_offset;
+
+         gs.VertexURBEntryOutputReadOffset = urb_entry_write_offset;
+         gs.VertexURBEntryOutputLength = MAX2(urb_entry_output_length, 1);
+#endif
+      }
+#if GEN_GEN < 7
+   } else if (brw->ff_gs.prog_active)  {
+      /* In gen6, transform feedback for the VS stage is done with an ad-hoc GS
+       * program. This function provides the needed 3DSTATE_GS for this.
+       */
+      upload_gs_state_for_tf(brw);
+#endif
+   } else {
+      brw_batch_emit(brw, GENX(3DSTATE_GS), gs) {
+         gs.StatisticsEnable = true;
+#if GEN_GEN < 7
+         gs.RenderingEnabled = true;
+#endif
+
+#if GEN_GEN < 8
+         gs.DispatchGRFStartRegisterForURBData = 1;
+#if GEN_GEN >= 7
+         gs.IncludeVertexHandles = true;
+#endif
+#endif
+      }
+   }
+#if GEN_GEN < 7
+   brw->gs.enabled = active;
+#endif
+}
+
+static const struct brw_tracked_state genX(gs_state) = {
+   .dirty = {
+      .mesa  = (GEN_GEN < 7 ? _NEW_PROGRAM_CONSTANTS : 0),
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_CONTEXT |
+               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
+               (GEN_GEN < 7 ? BRW_NEW_FF_GS_PROG_DATA |
+                              BRW_NEW_PUSH_CONSTANT_ALLOCATION
+                            : 0),
+   },
+   .emit = genX(upload_gs_state),
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -1630,6 +2004,90 @@ static const struct brw_tracked_state genX(ps_state) = {
    .emit = genX(upload_ps),
 };
 
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_hs_state)(struct brw_context *brw)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   struct brw_stage_state *stage_state = &brw->tcs.base;
+   struct brw_stage_prog_data *stage_prog_data = stage_state->prog_data;
+   const struct brw_vue_prog_data *vue_prog_data =
+      brw_vue_prog_data(stage_prog_data);
+
+   /* BRW_NEW_TES_PROG_DATA */
+   struct brw_tcs_prog_data *tcs_prog_data =
+      brw_tcs_prog_data(stage_prog_data);
+
+   if (!tcs_prog_data) {
+      brw_batch_emit(brw, GENX(3DSTATE_HS), hs);
+   } else {
+      brw_batch_emit(brw, GENX(3DSTATE_HS), hs) {
+         INIT_THREAD_DISPATCH_FIELDS(hs, Vertex);
+
+         hs.InstanceCount = tcs_prog_data->instances - 1;
+         hs.IncludeVertexHandles = true;
+
+         hs.MaximumNumberofThreads = devinfo->max_tcs_threads - 1;
+      }
+   }
+}
+
+static const struct brw_tracked_state genX(hs_state) = {
+   .dirty = {
+      .mesa  = 0,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_TCS_PROG_DATA |
+               BRW_NEW_TESS_PROGRAMS,
+   },
+   .emit = genX(upload_hs_state),
+};
+
+static void
+genX(upload_ds_state)(struct brw_context *brw)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   const struct brw_stage_state *stage_state = &brw->tes.base;
+   struct brw_stage_prog_data *stage_prog_data = stage_state->prog_data;
+
+   /* BRW_NEW_TES_PROG_DATA */
+   const struct brw_tes_prog_data *tes_prog_data =
+      brw_tes_prog_data(stage_prog_data);
+   const struct brw_vue_prog_data *vue_prog_data =
+      brw_vue_prog_data(stage_prog_data);
+
+   if (!tes_prog_data) {
+      brw_batch_emit(brw, GENX(3DSTATE_DS), ds);
+   } else {
+      brw_batch_emit(brw, GENX(3DSTATE_DS), ds) {
+         INIT_THREAD_DISPATCH_FIELDS(ds, Patch);
+
+        ds.MaximumNumberofThreads = devinfo->max_tes_threads - 1;
+        ds.ComputeWCoordinateEnable =
+           tes_prog_data->domain == BRW_TESS_DOMAIN_TRI;
+
+#if GEN_GEN >= 8
+        if (vue_prog_data->dispatch_mode == DISPATCH_MODE_SIMD8)
+           ds.DispatchMode = DISPATCH_MODE_SIMD8_SINGLE_PATCH;
+        ds.UserClipDistanceCullTestEnableBitmask =
+            vue_prog_data->cull_distance_mask;
+#endif
+      }
+   }
+}
+
+static const struct brw_tracked_state genX(ds_state) = {
+   .dirty = {
+      .mesa  = 0,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_TESS_PROGRAMS |
+               BRW_NEW_TES_PROG_DATA,
+   },
+   .emit = genX(upload_ds_state),
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -1907,7 +2365,7 @@ genX(init_atoms)(struct brw_context *brw)
 #elif GEN_GEN == 6
    static const struct brw_tracked_state *render_atoms[] =
    {
-      &gen6_sf_and_clip_viewports,
+      &genX(sf_clip_viewport),
 
       /* Command packets: */
 
@@ -1947,7 +2405,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen6_multisample_state,
 
       &genX(vs_state),
-      &gen6_gs_state,
+      &genX(gs_state),
       &genX(clip_state),
       &genX(sf_state),
       &genX(wm_state),
@@ -1975,7 +2433,7 @@ genX(init_atoms)(struct brw_context *brw)
       /* Command packets: */
 
       &brw_cc_vp,
-      &gen7_sf_clip_viewport,
+      &genX(sf_clip_viewport),
 
       &gen7_l3_state,
       &gen7_push_constant_space,
@@ -2031,10 +2489,10 @@ genX(init_atoms)(struct brw_context *brw)
       &gen6_multisample_state,
 
       &genX(vs_state),
-      &gen7_hs_state,
+      &genX(hs_state),
       &gen7_te_state,
-      &gen7_ds_state,
-      &gen7_gs_state,
+      &genX(ds_state),
+      &genX(gs_state),
       &genX(sol_state),
       &genX(clip_state),
       &genX(sbe_state),
@@ -2063,7 +2521,7 @@ genX(init_atoms)(struct brw_context *brw)
    static const struct brw_tracked_state *render_atoms[] =
    {
       &brw_cc_vp,
-      &gen8_sf_clip_viewport,
+      &genX(sf_clip_viewport),
 
       &gen7_l3_state,
       &gen7_push_constant_space,
@@ -2118,10 +2576,10 @@ genX(init_atoms)(struct brw_context *brw)
       &gen8_multisample_state,
 
       &genX(vs_state),
-      &gen8_hs_state,
+      &genX(hs_state),
       &gen7_te_state,
-      &gen8_ds_state,
-      &gen8_gs_state,
+      &genX(ds_state),
+      &genX(gs_state),
       &genX(sol_state),
       &genX(clip_state),
       &genX(raster_state),
