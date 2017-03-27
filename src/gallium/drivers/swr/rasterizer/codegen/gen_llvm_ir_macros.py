@@ -140,10 +140,9 @@ def parse_ir_builder(input_file):
                     ignore = False
 
                     # The following functions need to be ignored.
-                    if func_name == 'CreateInsertNUWNSWBinOp':
-                        ignore = True
-
-                    if func_name == 'CreateMaskedIntrinsic':
+                    if (func_name == 'CreateInsertNUWNSWBinOp' or
+                        func_name == 'CreateMaskedIntrinsic' or
+                        func_name == 'CreateAlignmentAssumptionHelper'):
                         ignore = True
 
                     # Convert CamelCase to CAMEL_CASE
