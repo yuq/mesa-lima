@@ -888,8 +888,6 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 
 	if (blend_mrt0_is_dual_src)
 		col_format |= (col_format & 0xf) << 4;
-	if (!col_format)
-		col_format |= V_028714_SPI_SHADER_32_R;
 	blend->spi_shader_col_format = col_format;
 }
 
@@ -1602,6 +1600,25 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	pipeline->graphics.prim_restart_enable = !!pCreateInfo->pInputAssemblyState->primitiveRestartEnable;
 	/* prim vertex count will need TESS changes */
 	pipeline->graphics.prim_vertex_count = prim_size_table[pipeline->graphics.prim];
+
+	/* Ensure that some export memory is always allocated, for two reasons:
+	 *
+	 * 1) Correctness: The hardware ignores the EXEC mask if no export
+	 *    memory is allocated, so KILL and alpha test do not work correctly
+	 *    without this.
+	 * 2) Performance: Every shader needs at least a NULL export, even when
+	 *    it writes no color/depth output. The NULL export instruction
+	 *    stalls without this setting.
+	 *
+	 * Don't add this to CB_SHADER_MASK.
+	 */
+	if (!pipeline->graphics.blend.spi_shader_col_format) {
+		struct radv_shader_variant *ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
+		if (!ps->info.fs.writes_z &&
+		    !ps->info.fs.writes_stencil &&
+		    !ps->info.fs.writes_sample_mask)
+			pipeline->graphics.blend.spi_shader_col_format = V_028714_SPI_SHADER_32_R;
+	}
 	
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
