@@ -47,6 +47,12 @@
 #include "swr_state.h"
 #include "swr_screen.h"
 
+#if HAVE_LLVM < 0x0500
+namespace llvm {
+typedef AttributeSet AttributeList;
+}
+#endif
+
 using namespace SwrJit;
 using namespace llvm;
 
@@ -522,8 +528,8 @@ BuilderSWR::CompileGS(struct swr_context *ctx, swr_jit_gs_key &key)
 
    AttrBuilder attrBuilder;
    attrBuilder.addStackAlignmentAttr(JM()->mVWidth * sizeof(float));
-   AttributeSet attrSet = AttributeSet::get(
-      JM()->mContext, AttributeSet::FunctionIndex, attrBuilder);
+   AttributeList attrSet = AttributeList::get(
+      JM()->mContext, AttributeList::FunctionIndex, attrBuilder);
 
    std::vector<Type *> gsArgs{PointerType::get(Gen_swr_draw_context(JM()), 0),
                               PointerType::get(Gen_SWR_GS_CONTEXT(JM()), 0)};
@@ -535,7 +541,7 @@ BuilderSWR::CompileGS(struct swr_context *ctx, swr_jit_gs_key &key)
                                      GlobalValue::ExternalLinkage,
                                      "GS",
                                      JM()->mpCurrentModule);
-   pFunction->addAttributes(AttributeSet::FunctionIndex, attrSet);
+   pFunction->addAttributes(AttributeList::FunctionIndex, attrSet);
 
    BasicBlock *block = BasicBlock::Create(JM()->mContext, "entry", pFunction);
    IRB()->SetInsertPoint(block);
@@ -661,8 +667,8 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
 
    AttrBuilder attrBuilder;
    attrBuilder.addStackAlignmentAttr(JM()->mVWidth * sizeof(float));
-   AttributeSet attrSet = AttributeSet::get(
-      JM()->mContext, AttributeSet::FunctionIndex, attrBuilder);
+   AttributeList attrSet = AttributeList::get(
+      JM()->mContext, AttributeList::FunctionIndex, attrBuilder);
 
    std::vector<Type *> vsArgs{PointerType::get(Gen_swr_draw_context(JM()), 0),
                               PointerType::get(Gen_SWR_VS_CONTEXT(JM()), 0)};
@@ -674,7 +680,7 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
                                      GlobalValue::ExternalLinkage,
                                      "VS",
                                      JM()->mpCurrentModule);
-   pFunction->addAttributes(AttributeSet::FunctionIndex, attrSet);
+   pFunction->addAttributes(AttributeList::FunctionIndex, attrSet);
 
    BasicBlock *block = BasicBlock::Create(JM()->mContext, "entry", pFunction);
    IRB()->SetInsertPoint(block);
@@ -872,8 +878,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
    AttrBuilder attrBuilder;
    attrBuilder.addStackAlignmentAttr(JM()->mVWidth * sizeof(float));
-   AttributeSet attrSet = AttributeSet::get(
-      JM()->mContext, AttributeSet::FunctionIndex, attrBuilder);
+   AttributeList attrSet = AttributeList::get(
+      JM()->mContext, AttributeList::FunctionIndex, attrBuilder);
 
    std::vector<Type *> fsArgs{PointerType::get(Gen_swr_draw_context(JM()), 0),
                               PointerType::get(Gen_SWR_PS_CONTEXT(JM()), 0)};
@@ -884,7 +890,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
                                      GlobalValue::ExternalLinkage,
                                      "FS",
                                      JM()->mpCurrentModule);
-   pFunction->addAttributes(AttributeSet::FunctionIndex, attrSet);
+   pFunction->addAttributes(AttributeList::FunctionIndex, attrSet);
 
    BasicBlock *block = BasicBlock::Create(JM()->mContext, "entry", pFunction);
    IRB()->SetInsertPoint(block);
