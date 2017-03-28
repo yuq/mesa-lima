@@ -84,7 +84,8 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 		command |= S_414_RAW_WAIT(1);
 
 	/* Src and dst flags. */
-	if (sctx->b.chip_class >= GFX9 && src_va == dst_va)
+	if (sctx->b.chip_class >= GFX9 && !(flags & CP_DMA_CLEAR) &&
+	    src_va == dst_va)
 		header |= S_411_DSL_SEL(V_411_NOWHERE); /* prefetch only */
 	else if (flags & CP_DMA_USE_L2)
 		header |= S_411_DSL_SEL(V_411_DST_ADDR_TC_L2);
