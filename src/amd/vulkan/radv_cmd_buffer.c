@@ -697,9 +697,12 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_028238_CB_TARGET_MASK, blend->cb_target_mask);
 	radeon_set_context_reg(cmd_buffer->cs, R_02823C_CB_SHADER_MASK, blend->cb_shader_mask);
 
-	radeon_set_context_reg_seq(cmd_buffer->cs, R_028644_SPI_PS_INPUT_CNTL_0, pipeline->graphics.ps_input_cntl_num);
-	for (unsigned i = 0; i < pipeline->graphics.ps_input_cntl_num; i++)
-		radeon_emit(cmd_buffer->cs, pipeline->graphics.ps_input_cntl[i]);
+	if (pipeline->graphics.ps_input_cntl_num) {
+		radeon_set_context_reg_seq(cmd_buffer->cs, R_028644_SPI_PS_INPUT_CNTL_0, pipeline->graphics.ps_input_cntl_num);
+		for (unsigned i = 0; i < pipeline->graphics.ps_input_cntl_num; i++) {
+			radeon_emit(cmd_buffer->cs, pipeline->graphics.ps_input_cntl[i]);
+		}
+	}
 }
 
 static void
