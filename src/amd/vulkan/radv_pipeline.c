@@ -1641,14 +1641,31 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	 *
 	 * Don't add this to CB_SHADER_MASK.
 	 */
+	struct radv_shader_variant *ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
 	if (!pipeline->graphics.blend.spi_shader_col_format) {
-		struct radv_shader_variant *ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
 		if (!ps->info.fs.writes_z &&
 		    !ps->info.fs.writes_stencil &&
 		    !ps->info.fs.writes_sample_mask)
 			pipeline->graphics.blend.spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 	}
 	
+	unsigned z_order;
+	pipeline->graphics.db_shader_control = 0;
+	if (ps->info.fs.early_fragment_test || !ps->info.fs.writes_memory)
+		z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
+	else
+		z_order = V_02880C_LATE_Z;
+
+	pipeline->graphics.db_shader_control =
+		S_02880C_Z_EXPORT_ENABLE(ps->info.fs.writes_z) |
+		S_02880C_STENCIL_TEST_VAL_EXPORT_ENABLE(ps->info.fs.writes_stencil) |
+		S_02880C_KILL_ENABLE(!!ps->info.fs.can_discard) |
+		S_02880C_MASK_EXPORT_ENABLE(ps->info.fs.writes_sample_mask) |
+		S_02880C_Z_ORDER(z_order) |
+		S_02880C_DEPTH_BEFORE_SHADER(ps->info.fs.early_fragment_test) |
+		S_02880C_EXEC_ON_HIER_FAIL(ps->info.fs.writes_memory) |
+		S_02880C_EXEC_ON_NOOP(ps->info.fs.writes_memory);
+
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
 	for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {
