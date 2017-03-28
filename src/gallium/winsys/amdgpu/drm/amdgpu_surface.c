@@ -655,6 +655,13 @@ static int gfx9_compute_miptree(struct amdgpu_winsys *ws,
    surf->u.gfx9.surf.swizzle_mode = in->swizzleMode;
    surf->u.gfx9.surf.epitch = out.epitchIsHeight ? out.mipChainHeight - 1 :
                                                    out.mipChainPitch - 1;
+
+   /* CMASK fast clear uses these even if FMASK isn't allocated.
+    * FMASK only supports the Z swizzle modes, whose numbers are multiples of 4.
+    */
+   surf->u.gfx9.fmask.swizzle_mode = surf->u.gfx9.surf.swizzle_mode & ~0x3;
+   surf->u.gfx9.fmask.epitch = surf->u.gfx9.surf.epitch;
+
    surf->u.gfx9.surf_slice_size = out.sliceSize;
    surf->u.gfx9.surf_pitch = out.pitch;
    surf->u.gfx9.surf_height = out.height;

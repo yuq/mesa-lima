@@ -2639,10 +2639,6 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 	if (rctx->render_cond)
 		return;
 
-	/* TODO: fix CMASK and DCC fast clear */
-	if (rctx->chip_class >= GFX9)
-		return;
-
 	for (i = 0; i < fb->nr_cbufs; i++) {
 		struct r600_texture *tex;
 		unsigned clear_bit = PIPE_CLEAR_COLOR0 << i;
@@ -2709,6 +2705,10 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		if (vi_dcc_enabled(tex, 0)) {
 			uint32_t reset_value;
 			bool clear_words_needed;
+
+			/* TODO: fix DCC clear */
+			if (rctx->chip_class >= GFX9)
+				continue;
 
 			if (rctx->screen->debug_flags & DBG_NO_DCC_CLEAR)
 				continue;
