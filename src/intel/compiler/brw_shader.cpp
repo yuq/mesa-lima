@@ -157,6 +157,15 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       if (devinfo->gen >= 6 && op == BRW_OPCODE_DO)
          return "do";
 
+      /* The following conversion opcodes doesn't exist on Gen8+, but we use
+       * then to mark that we want to do the conversion.
+       */
+      if (devinfo->gen > 7 && op == BRW_OPCODE_F32TO16)
+         return "f32to16";
+
+      if (devinfo->gen > 7 && op == BRW_OPCODE_F16TO32)
+         return "f16to32";
+
       assert(brw_opcode_desc(devinfo, op)->name);
       return brw_opcode_desc(devinfo, op)->name;
    case FS_OPCODE_FB_WRITE:
