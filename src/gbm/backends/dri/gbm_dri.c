@@ -253,7 +253,7 @@ struct dri_extension_match {
 };
 
 static struct dri_extension_match dri_core_extensions[] = {
-   { __DRI2_FLUSH, 1, offsetof(struct gbm_dri_device, flush) },
+   { __DRI2_FLUSH, 4, offsetof(struct gbm_dri_device, flush) },
    { __DRI_IMAGE, 1, offsetof(struct gbm_dri_device, image) },
    { __DRI2_FENCE, 1, offsetof(struct gbm_dri_device, fence), 1 },
    { __DRI2_INTEROP, 1, offsetof(struct gbm_dri_device, interop), 1 },
@@ -1239,6 +1239,13 @@ gbm_dri_bo_unmap(struct gbm_bo *_bo, void *map_data)
       return;
 
    dri->image->unmapImage(dri->context, bo->image, map_data);
+
+   /*
+    * Not all DRI drivers use direct maps. They may queue up DMA operations
+    * on the mapping context. Since there is no explicit gbm flush
+    * mechanism, we need to flush here.
+    */
+   dri->flush->flush_with_flags(dri->context, NULL, __DRI2_FLUSH_CONTEXT, 0);
 }
 
 
