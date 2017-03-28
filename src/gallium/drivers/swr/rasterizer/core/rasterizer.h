@@ -115,8 +115,7 @@ template <typename NumSamplesT, typename CenterPatternT, typename ConservativeT,
 struct RasterizerTraits final : public ConservativeRastBETraits<ConservativeT, InputCoverageT>,
                                 public RasterEdgeTraits<RasterScissorEdgesT, ConservativeT, std::integral_constant<uint32_t, EdgeEnableT::value>>
 {
-    typedef MultisampleTraits<static_cast<SWR_MULTISAMPLE_COUNT>(NumSamplesT::value), 
-                                          (CenterPatternT::value ? SWR_MSAA_CENTER_PATTERN : SWR_MSAA_STANDARD_PATTERN)> MT;
+    typedef MultisampleTraits<static_cast<SWR_MULTISAMPLE_COUNT>(NumSamplesT::value), CenterPatternT::value> MT;
 
     /// Fixed point precision the rasterizer is using
     typedef FixedPointTraits<Fixed_16_8> PrecisionT;

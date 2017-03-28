@@ -640,9 +640,8 @@ void BinTriangles(
     else
     {
         // degenerate triangles won't be sent to rasterizer; just enable all edges
-        pfnWork = GetRasterizerFunc(rastState.sampleCount, (rastState.samplePattern == SWR_MSAA_CENTER_PATTERN),
-            (rastState.conservativeRast > 0), (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID,
-            (state.scissorsTileAligned == false));
+        pfnWork = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, (rastState.conservativeRast > 0), 
+            (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID, (state.scissorsTileAligned == false));
     }
 
     if (!triMask)
@@ -658,7 +657,7 @@ void BinTriangles(
     // only discard for non-MSAA case and when conservative rast is disabled
     // (xmin + 127) & ~255
     // (xmax + 128) & ~255
-    if((rastState.sampleCount == SWR_MULTISAMPLE_1X || rastState.samplePattern == SWR_MSAA_CENTER_PATTERN) &&
+    if((rastState.sampleCount == SWR_MULTISAMPLE_1X || rastState.bIsCenterPattern) &&
         (!CT::IsConservativeT::value))
     {
         origTriMask = triMask;
@@ -787,9 +786,8 @@ endBinTriangles:
         {
             // only rasterize valid edges if we have a degenerate primitive
             int32_t triEdgeEnable = (edgeEnable >> (triIndex * 3)) & ALL_EDGES_VALID;
-            work.pfnWork = GetRasterizerFunc(rastState.sampleCount, (rastState.samplePattern == SWR_MSAA_CENTER_PATTERN),
-                (rastState.conservativeRast > 0), (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable,
-                (state.scissorsTileAligned == false));
+            work.pfnWork = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, (rastState.conservativeRast > 0), 
+                (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable, (state.scissorsTileAligned == false));
 
             // Degenerate triangles are required to be constant interpolated
             isDegenerate = (triEdgeEnable != ALL_EDGES_VALID) ? true : false;

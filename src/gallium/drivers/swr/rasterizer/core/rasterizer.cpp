@@ -1118,8 +1118,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     __m256d vEdgeTileBbox[3];
     if (NumCoverageSamplesT::value > 1)
     {
-        __m128i vTileSampleBBoxXh = RT::MT::TileSampleOffsetsX();
-        __m128i vTileSampleBBoxYh = RT::MT::TileSampleOffsetsY();
+        const SWR_MULTISAMPLE_POS &samplePos = rastState.samplePositions;
+        const __m128i vTileSampleBBoxXh = samplePos.TileSampleOffsetsX();
+        const __m128i vTileSampleBBoxYh = samplePos.TileSampleOffsetsY();
 
         __m256d vTileSampleBBoxXFix8 = _mm256_cvtepi32_pd(vTileSampleBBoxXh);
         __m256d vTileSampleBBoxYFix8 = _mm256_cvtepi32_pd(vTileSampleBBoxYh);
@@ -1206,8 +1207,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                         }
                         else
                         {
-                            __m128i vSampleOffsetXh = RT::MT::vXi(sampleNum);
-                            __m128i vSampleOffsetYh = RT::MT::vYi(sampleNum);
+                            const SWR_MULTISAMPLE_POS &samplePos = rastState.samplePositions;
+                            __m128i vSampleOffsetXh = samplePos.vXi(sampleNum);
+                            __m128i vSampleOffsetYh = samplePos.vYi(sampleNum);
                             __m256d vSampleOffsetX = _mm256_cvtepi32_pd(vSampleOffsetXh);
                             __m256d vSampleOffsetY = _mm256_cvtepi32_pd(vSampleOffsetYh);
 
@@ -1340,7 +1342,7 @@ void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile,
     // setup triangle rasterizer function
     PFN_WORK_FUNC pfnTriRast;
     // conservative rast not supported for points/lines
-    pfnTriRast = GetRasterizerFunc(rastState.sampleCount, (rastState.samplePattern == SWR_MSAA_CENTER_PATTERN), false, 
+    pfnTriRast = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, false, 
                                    SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (pDC->pState->state.scissorsTileAligned == false));
 
     // overwrite texcoords for point sprites
@@ -1673,7 +1675,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     // setup triangle rasterizer function
     PFN_WORK_FUNC pfnTriRast;
     // conservative rast not supported for points/lines
-    pfnTriRast = GetRasterizerFunc(rastState.sampleCount, (rastState.samplePattern == SWR_MSAA_CENTER_PATTERN), false, 
+    pfnTriRast = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, false, 
                                    SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (pDC->pState->state.scissorsTileAligned == false));
 
     // make sure this macrotile intersects the triangle

@@ -1061,8 +1061,6 @@ swr_update_derived(struct pipe_context *pipe,
          rasterizer->sprite_coord_mode == PIPE_SPRITE_COORD_UPPER_LEFT;
 
       /* XXX TODO: Add multisample */
-      rastState->msaaRastEnable = false;
-      rastState->rastMode = SWR_MSAA_RASTMODE_OFF_PIXEL;
       rastState->sampleCount = SWR_MULTISAMPLE_1X;
       rastState->forcedSampleCount = false;
 

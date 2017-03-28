@@ -60,6 +60,8 @@ def gen_llvm_type(type, name, is_pointer, is_pointer_pointer, is_array, is_array
             llvm_type = 'VectorType::get(Type::getFloatTy(ctx), pJitMgr->mVWidth)'
         elif type == 'simdscalari':
             llvm_type = 'VectorType::get(Type::getInt32Ty(ctx), pJitMgr->mVWidth)'
+        elif type == '__m128i':
+            llvm_type = 'VectorType::get(Type::getInt32Ty(ctx), 4)'
         elif type == 'SIMD8::vector_t':
             llvm_type = 'VectorType::get(Type::getFloatTy(ctx), 8)'
         elif type == 'SIMD8::vectori_t':
@@ -144,6 +146,26 @@ def gen_llvm_types(input_file, output_file):
                         is_llvm_struct = True
                     else:
                         is_llvm_struct = False
+
+                    ###########################################
+                    # Is field the start of a function? Tells script to ignore it
+                    is_llvm_func_start = re.search(r'@llvm_func_start', line)
+
+                    if is_llvm_func_start is not None:
+                        while not end_of_struct and idx < len(lines)-1:
+                            idx += 1
+                            line = lines[idx].rstrip()
+                            is_llvm_func_end = re.search(r'@llvm_func_end', line)
+                            if is_llvm_func_end is not None:
+                                break;
+                        continue
+
+                    ###########################################
+                    # Is field a function? Tells script to ignore it
+                    is_llvm_func = re.search(r'@llvm_func', line)
+
+                    if is_llvm_func is not None:
+                        continue
 
                     ###########################################
                     # Is field a llvm enum? Tells script to treat type as an enum and replaced with uint32 type.

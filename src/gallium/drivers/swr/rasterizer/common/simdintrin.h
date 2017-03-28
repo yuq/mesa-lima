@@ -648,6 +648,13 @@ simdscalari _simd_blendv_epi32(simdscalari a, simdscalari b, simdscalari mask)
     return _simd_castps_si(_simd_blendv_ps(_simd_castsi_ps(a), _simd_castsi_ps(b), _simd_castsi_ps(mask)));
 }
 
+template<int mask>
+INLINE
+__m128i _simd_blend4_epi32(__m128i a, __m128i b)
+{
+    return _mm_castps_si128(_mm_blend_ps(_mm_castsi128_ps(a), _mm_castsi128_ps(b), mask));
+}
+
 // convert bitmask to vector mask
 INLINE
 simdscalar vMask(int32_t mask)

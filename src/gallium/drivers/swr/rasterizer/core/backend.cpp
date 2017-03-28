@@ -468,7 +468,8 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     SetupRenderBuffers(pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
 
     SWR_PS_CONTEXT psContext;
-    SetupPixelShaderContext<T>(&psContext, work);
+    const SWR_MULTISAMPLE_POS& samplePos = state.rastState.samplePositions;
+    SetupPixelShaderContext<T>(&psContext, samplePos, work);
 
     AR_END(BESetup, 1);
 
@@ -517,7 +518,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
                 CalcPixelBarycentrics(coeffs, psContext);
 
-                CalcCentroid<T, true>(&psContext, coeffs, work.coverageMask, state.blendState.sampleMask);
+                CalcCentroid<T, true>(&psContext, samplePos, coeffs, work.coverageMask, state.blendState.sampleMask);
 
                 // interpolate and quantize z
                 psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.center, psContext.vJ.center);
@@ -663,7 +664,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     SetupRenderBuffers(pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
 
     SWR_PS_CONTEXT psContext;
-    SetupPixelShaderContext<T>(&psContext, work);
+    const SWR_MULTISAMPLE_POS& samplePos = state.rastState.samplePositions;
+    SetupPixelShaderContext<T>(&psContext, samplePos, work);
 
     AR_END(BESetup, 0);
 
@@ -696,7 +698,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
             CalcPixelBarycentrics(coeffs, psContext);
 
-            CalcCentroid<T, false>(&psContext, coeffs, work.coverageMask, state.blendState.sampleMask);
+            CalcCentroid<T, false>(&psContext, samplePos, coeffs, work.coverageMask, state.blendState.sampleMask);
 
             AR_END(BEBarycentric, 0);
 
@@ -725,8 +727,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     AR_BEGIN(BEBarycentric, pDC->drawId);
 
                     // calculate per sample positions
-                    psContext.vX.sample = _simd_add_ps(psContext.vX.UL, T::MultisampleT::vX(sample));
-                    psContext.vY.sample = _simd_add_ps(psContext.vY.UL, T::MultisampleT::vY(sample));
+                    psContext.vX.sample = _simd_add_ps(psContext.vX.UL, samplePos.vX(sample));
+                    psContext.vY.sample = _simd_add_ps(psContext.vY.UL, samplePos.vY(sample));
 
                     CalcSampleBarycentrics(coeffs, psContext);
 
@@ -870,7 +872,7 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
     AR_BEGIN(BENullBackend, pDC->drawId);
     ///@todo: handle center multisample pattern
-    typedef SwrBackendTraits<sampleCountT, SWR_MSAA_STANDARD_PATTERN> T;
+    typedef SwrBackendTraits<sampleCountT, false> T;
     AR_BEGIN(BESetup, pDC->drawId);
 
     const API_STATE &state = GetApiState(pDC);
@@ -889,7 +891,7 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
     simdscalar vYSamplePosUL = _simd_add_ps(vULOffsetsY, _simd_set1_ps(static_cast<float>(y)));
 
     const simdscalar dy = _simd_set1_ps(static_cast<float>(SIMD_TILE_Y_DIM));
-
+    const SWR_MULTISAMPLE_POS& samplePos = state.rastState.samplePositions;
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         simdscalar vXSamplePosUL = _simd_add_ps(vULOffsetsX, _simd_set1_ps(static_cast<float>(x)));
@@ -928,8 +930,8 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                     AR_BEGIN(BEBarycentric, pDC->drawId);
 
                     // calculate per sample positions
-                    psContext.vX.sample = _simd_add_ps(vXSamplePosUL, T::MultisampleT::vX(sample));
-                    psContext.vY.sample = _simd_add_ps(vYSamplePosUL, T::MultisampleT::vY(sample));
+                    psContext.vX.sample = _simd_add_ps(vXSamplePosUL, samplePos.vX(sample));
+                    psContext.vY.sample = _simd_add_ps(vYSamplePosUL, samplePos.vY(sample));
 
                     CalcSampleBarycentrics(coeffs, psContext);
 
@@ -995,7 +997,7 @@ PFN_BACKEND_FUNC gBackendSingleSample[SWR_INPUT_COVERAGE_COUNT]
                                      [2] // canEarlyZ
                                      = {};
 PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_COUNT]
-                                       [SWR_MSAA_SAMPLE_PATTERN_COUNT]
+                                       [2] // isCenterPattern
                                        [SWR_INPUT_COVERAGE_COUNT]
                                        [2] // centroid
                                        [2] // forcedSampleCount
@@ -1024,21 +1026,6 @@ struct BEChooser
             SWR_ASSERT(0 && "Invalid backend func\n");
             return nullptr;
             break;
-        }
-    }
-
-    // Recursively parse args
-    template <typename... TArgsT>
-    static PFN_BACKEND_FUNC GetFunc(SWR_MSAA_SAMPLE_PATTERN tArg, TArgsT... remainingArgs)
-    {
-        switch(tArg)
-        {
-        case SWR_MSAA_CENTER_PATTERN: return BEChooser<ArgsT..., SWR_MSAA_CENTER_PATTERN>::GetFunc(remainingArgs...); break;
-        case SWR_MSAA_STANDARD_PATTERN: return BEChooser<ArgsT..., SWR_MSAA_STANDARD_PATTERN>::GetFunc(remainingArgs...); break;
-        default:
-        SWR_ASSERT(0 && "Invalid sample pattern\n");
-        return BEChooser<ArgsT..., SWR_MSAA_STANDARD_PATTERN>::GetFunc(remainingArgs...);
-        break;
         }
     }
 
@@ -1098,7 +1085,7 @@ void InitBackendSingleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_INPUT_COVERAGE_COU
             for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
             {
                 table[inputCoverage][isCentroid][canEarlyZ] =
-                    BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, (SWR_INPUT_COVERAGE)inputCoverage,
+                    BEChooser<>::GetFunc(SWR_MULTISAMPLE_1X, false, (SWR_INPUT_COVERAGE)inputCoverage,
                                          (isCentroid > 0), false, (canEarlyZ > 0), SWR_BACKEND_SINGLE_SAMPLE);
             }
         }
@@ -1116,7 +1103,7 @@ void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[SWR_MULTISAMPLE_TYPE_C
                 for(uint32_t canEarlyZ = 0; canEarlyZ < 2; canEarlyZ++)
                 {
                     table[sampleCount][inputCoverage][centroid][canEarlyZ] =
-                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN, (SWR_INPUT_COVERAGE)inputCoverage, 
+                        BEChooser<>::GetFunc((SWR_MULTISAMPLE_COUNT)sampleCount, false, (SWR_INPUT_COVERAGE)inputCoverage, 
                                              (centroid > 0), false, (canEarlyZ > 0), (SWR_BACKEND_FUNCS)SWR_BACKEND_MSAA_SAMPLE_RATE);
                 }
             }

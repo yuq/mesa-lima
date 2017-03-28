@@ -793,7 +793,6 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     const SWR_RASTSTATE &rastState = pState->state.rastState;
     const SWR_PS_STATE &psState = pState->state.psState;
     BACKEND_FUNCS& backendFuncs = pState->backendFuncs;
-    const uint32_t forcedSampleCount = (rastState.forcedSampleCount) ? 1 : 0;
 
     // setup backend
     if (psState.pfnPixelShader == nullptr)
@@ -802,7 +801,8 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     }
     else
     {
-        const bool bMultisampleEnable = ((rastState.sampleCount > SWR_MULTISAMPLE_1X) || rastState.forcedSampleCount) ? 1 : 0;
+        const uint32_t forcedSampleCount = (rastState.forcedSampleCount) ? 1 : 0;
+        const bool bMultisampleEnable = ((rastState.sampleCount > SWR_MULTISAMPLE_1X) || forcedSampleCount) ? 1 : 0;
         const uint32_t centroid = ((psState.barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0) ? 1 : 0;
         const uint32_t canEarlyZ = (psState.forceEarlyZ || (!psState.writesODepth && !psState.usesSourceDepth && !psState.usesUAV)) ? 1 : 0;
         SWR_BARYCENTRICS_MASK barycentricsMask = (SWR_BARYCENTRICS_MASK)psState.barycentricsMask;
@@ -815,7 +815,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
             {
                 // always need to generate I & J per sample for Z interpolation
                 barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
-                backendFuncs.pfnBackend = gBackendPixelRateTable[rastState.sampleCount][rastState.samplePattern][psState.inputCoverage]
+                backendFuncs.pfnBackend = gBackendPixelRateTable[rastState.sampleCount][rastState.bIsCenterPattern][psState.inputCoverage]
                                                                 [centroid][forcedSampleCount][canEarlyZ]
                     ;
             }
@@ -827,7 +827,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
             }
             break;
         case SWR_SHADING_RATE_SAMPLE:
-            SWR_ASSERT(rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
+            SWR_ASSERT(rastState.bIsCenterPattern != true);
             // always need to generate I & J per sample for Z interpolation
             barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
             backendFuncs.pfnBackend = gBackendSampleRateTable[rastState.sampleCount][psState.inputCoverage][centroid][canEarlyZ];
