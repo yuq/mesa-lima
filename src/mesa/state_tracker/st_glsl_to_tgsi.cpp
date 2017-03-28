@@ -5290,6 +5290,21 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
                }
             }
          }
+
+         if (inst->resource.file == PROGRAM_TEMPORARY) {
+            int src_chans;
+
+            src_chans  = 1 << GET_SWZ(inst->resource.swizzle, 0);
+            src_chans |= 1 << GET_SWZ(inst->resource.swizzle, 1);
+            src_chans |= 1 << GET_SWZ(inst->resource.swizzle, 2);
+            src_chans |= 1 << GET_SWZ(inst->resource.swizzle, 3);
+
+            for (int c = 0; c < 4; c++) {
+               if (src_chans & (1 << c))
+                  writes[4 * inst->resource.index + c] = NULL;
+            }
+         }
+
          break;
       }
 
