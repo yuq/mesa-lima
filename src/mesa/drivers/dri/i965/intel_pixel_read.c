@@ -142,7 +142,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
 
    bo = irb->mt->bo;
 
-   if (drm_bacon_bo_references(brw->batch.bo, bo)) {
+   if (brw_batch_references(&brw->batch, bo)) {
       perf_debug("Flushing before mapping a referenced bo.\n");
       intel_batchbuffer_flush(brw);
    }

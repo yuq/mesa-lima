@@ -271,7 +271,7 @@ brw_buffer_subdata(struct gl_context *ctx,
 
    busy =
       drm_bacon_bo_busy(intel_obj->buffer) ||
-      drm_bacon_bo_references(brw->batch.bo, intel_obj->buffer);
+      brw_batch_references(&brw->batch, intel_obj->buffer);
 
    if (busy) {
       if (size == intel_obj->Base.Size) {
@@ -330,7 +330,7 @@ brw_get_buffer_subdata(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
 
    assert(intel_obj);
-   if (drm_bacon_bo_references(brw->batch.bo, intel_obj->buffer)) {
+   if (brw_batch_references(&brw->batch, intel_obj->buffer)) {
       intel_batchbuffer_flush(brw);
    }
    drm_bacon_bo_get_subdata(intel_obj->buffer, offset, size, data);
@@ -389,7 +389,7 @@ brw_map_buffer_range(struct gl_context *ctx,
     * achieve the required synchronization.
     */
    if (!(access & GL_MAP_UNSYNCHRONIZED_BIT)) {
-      if (drm_bacon_bo_references(brw->batch.bo, intel_obj->buffer)) {
+      if (brw_batch_references(&brw->batch, intel_obj->buffer)) {
 	 if (access & GL_MAP_INVALIDATE_BUFFER_BIT) {
 	    drm_bacon_bo_unreference(intel_obj->buffer);
 	    alloc_buffer_object(brw, intel_obj);

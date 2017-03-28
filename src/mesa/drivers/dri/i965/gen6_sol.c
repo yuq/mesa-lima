@@ -241,7 +241,7 @@ tally_prims_generated(struct brw_context *brw,
    /* If the current batch is still contributing to the number of primitives
     * generated, flush it now so the results will be present when mapped.
     */
-   if (drm_bacon_bo_references(brw->batch.bo, obj->prim_count_bo))
+   if (brw_batch_references(&brw->batch, obj->prim_count_bo))
       intel_batchbuffer_flush(brw);
 
    if (unlikely(brw->perf_debug && drm_bacon_bo_busy(obj->prim_count_bo)))

@@ -467,7 +467,7 @@ flush_batch_if_needed(struct brw_context *brw, struct brw_query_object *query)
     * (for example, due to being full).  Record that it's been flushed.
     */
    query->flushed = query->flushed ||
-      !drm_bacon_bo_references(brw->batch.bo, query->bo);
+                    !brw_batch_references(&brw->batch, query->bo);
 
    if (!query->flushed)
       intel_batchbuffer_flush(brw);

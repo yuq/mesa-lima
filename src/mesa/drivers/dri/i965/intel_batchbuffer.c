@@ -576,6 +576,11 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
    return ret;
 }
 
+bool
+brw_batch_references(struct intel_batchbuffer *batch, drm_bacon_bo *bo)
+{
+   return drm_bacon_bo_references(batch->bo, bo);
+}
 
 /*  This is the only way buffers get added to the validate list.
  */

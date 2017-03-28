@@ -2457,7 +2457,7 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
 
    drm_bacon_bo *bo = mt->bo;
 
-   if (drm_bacon_bo_references(brw->batch.bo, bo))
+   if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
 
    /* brw_bo_map() uses a WB mmaping of the buffer's backing storage. It

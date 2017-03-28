@@ -1132,7 +1132,7 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
    /* If the current batch references our results bo then we need to
     * flush first...
     */
-   if (drm_bacon_bo_references(brw->batch.bo, bo))
+   if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
 
    if (unlikely(brw->perf_debug)) {
@@ -1157,12 +1157,12 @@ brw_is_perf_query_ready(struct gl_context *ctx,
    case OA_COUNTERS:
       return (obj->oa.results_accumulated ||
               (obj->oa.bo &&
-               !drm_bacon_bo_references(brw->batch.bo, obj->oa.bo) &&
+               !brw_batch_references(&brw->batch, obj->oa.bo) &&
                !drm_bacon_bo_busy(obj->oa.bo)));
 
    case PIPELINE_STATS:
       return (obj->pipeline_stats.bo &&
-              !drm_bacon_bo_references(brw->batch.bo, obj->pipeline_stats.bo) &&
+              !brw_batch_references(&brw->batch, obj->pipeline_stats.bo) &&
               !drm_bacon_bo_busy(obj->pipeline_stats.bo));
    }
 
