@@ -240,23 +240,6 @@ EXTRA_DIST = \
 	rasterizer/codegen/gen_common.py \
 	rasterizer/codegen/gen_knobs.py \
 	rasterizer/codegen/knob_defs.py \
-	rasterizer/codegen/mako/ast.py \
-	rasterizer/codegen/mako/_ast_util.py \
-	rasterizer/codegen/mako/cache.py \
-	rasterizer/codegen/mako/cmd.py \
-	rasterizer/codegen/mako/codegen.py \
-	rasterizer/codegen/mako/compat.py \
-	rasterizer/codegen/mako/exceptions.py \
-	rasterizer/codegen/mako/filters.py \
-	rasterizer/codegen/mako/__init__.py \
-	rasterizer/codegen/mako/lexer.py \
-	rasterizer/codegen/mako/lookup.py \
-	rasterizer/codegen/mako/parsetree.py \
-	rasterizer/codegen/mako/pygen.py \
-	rasterizer/codegen/mako/pyparser.py \
-	rasterizer/codegen/mako/runtime.py \
-	rasterizer/codegen/mako/template.py \
-	rasterizer/codegen/mako/util.py \
 	rasterizer/codegen/templates/gen_ar_event.cpp \
 	rasterizer/codegen/templates/gen_ar_event.hpp \
 	rasterizer/codegen/templates/gen_ar_eventhandler.hpp \
