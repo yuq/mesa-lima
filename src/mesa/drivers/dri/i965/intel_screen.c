@@ -1368,6 +1368,9 @@ static bool
 intel_detect_pipelined_register(struct intel_screen *screen,
                                 int reg, uint32_t expected_value, bool reset)
 {
+   if (screen->no_hw)
+      return false;
+
    drm_bacon_bo *results, *bo;
    uint32_t *batch;
    uint32_t offset = 0;
@@ -1395,11 +1398,14 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    /* Save the register's value back to the buffer. */
    *batch++ = MI_STORE_REGISTER_MEM | (3 - 2);
    *batch++ = reg;
-   drm_bacon_bo_emit_reloc(bo, (char *)batch -(char *)bo->virtual,
-                           results, offset*sizeof(uint32_t),
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           I915_GEM_DOMAIN_INSTRUCTION);
-   *batch++ = ((uint32_t) results->offset64) + offset*sizeof(uint32_t);
+   struct drm_i915_gem_relocation_entry reloc = {
+      .offset = (char *) batch - (char *) bo->virtual,
+      .delta = offset * sizeof(uint32_t),
+      .target_handle = results->handle,
+      .read_domains = I915_GEM_DOMAIN_INSTRUCTION,
+      .write_domain = I915_GEM_DOMAIN_INSTRUCTION,
+   };
+   *batch++ = reloc.presumed_offset + reloc.delta;
 
    /* And afterwards clear the register */
    if (reset) {
@@ -1410,8 +1416,29 @@ intel_detect_pipelined_register(struct intel_screen *screen,
 
    *batch++ = MI_BATCH_BUFFER_END;
 
-   drm_bacon_bo_mrb_exec(bo, ALIGN((char *)batch - (char *)bo->virtual, 8),
-                         I915_EXEC_RENDER);
+   struct drm_i915_gem_exec_object2 exec_objects[2] = {
+      {
+         .handle = results->handle,
+      },
+      {
+         .handle = bo->handle,
+         .relocation_count = 1,
+         .relocs_ptr = (uintptr_t) &reloc,
+      }
+   };
+
+   struct drm_i915_gem_execbuffer2 execbuf = {
+      .buffers_ptr = (uintptr_t) exec_objects,
+      .buffer_count = 2,
+      .batch_len = ALIGN((char *) batch - (char *) bo->virtual, 8),
+      .flags = I915_EXEC_RENDER,
+   };
+
+   /* Don't bother with error checking - if the execbuf fails, the
+    * value won't be written and we'll just report that there's no access.
+    */
+   __DRIscreen *dri_screen = screen->driScrnPriv;
+   drmIoctl(dri_screen->fd, DRM_IOCTL_I915_GEM_EXECBUFFER2, &execbuf);
 
    /* Check whether the value got written. */
    if (drm_bacon_bo_map(results, false) == 0) {
