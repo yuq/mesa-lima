@@ -419,10 +419,10 @@ void ProcessDiscardInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint3
 }
 
 #if KNOB_SIMD_WIDTH == 8
-const __m256 vCenterOffsetsX = {0.5, 1.5, 0.5, 1.5, 2.5, 3.5, 2.5, 3.5};
-const __m256 vCenterOffsetsY = {0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5};
-const __m256 vULOffsetsX = {0.0, 1.0, 0.0, 1.0, 2.0, 3.0, 2.0, 3.0};
-const __m256 vULOffsetsY = {0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
+const simdscalar vCenterOffsetsX = __m256{0.5, 1.5, 0.5, 1.5, 2.5, 3.5, 2.5, 3.5};
+const simdscalar vCenterOffsetsY = __m256{0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5};
+const simdscalar vULOffsetsX = __m256{0.0, 1.0, 0.0, 1.0, 2.0, 3.0, 2.0, 3.0};
+const simdscalar vULOffsetsY = __m256{0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
 #else
 #error Unsupported vector width
 #endif

@@ -509,9 +509,9 @@ struct ConvertPixelsSOAtoAOS < R32G32B32A32_FLOAT, B5G6R5_UNORM >
 
         // pack
         simdscalari packed = _simd_castps_si(dst.x);
-        packed = _simd_or_si(packed, _simd_slli_epi32(_simd_castps_si(dst.y), FormatTraits<DstFormat>::GetBPC(0)));
-        packed = _simd_or_si(packed, _simd_slli_epi32(_simd_castps_si(dst.z), FormatTraits<DstFormat>::GetBPC(0) +
-                                                                              FormatTraits<DstFormat>::GetBPC(1)));
+        packed = _simd_or_si(packed, _simd_slli_epi32(_simd_castps_si(dst.y), FormatTraits<DstFormat>::GetConstBPC(0)));
+        packed = _simd_or_si(packed, _simd_slli_epi32(_simd_castps_si(dst.z), FormatTraits<DstFormat>::GetConstBPC(0) +
+                                                                              FormatTraits<DstFormat>::GetConstBPC(1)));
 
         // pack low 16 bits of each 32 bit lane to low 128 bits of dst
         uint32_t *pPacked = (uint32_t*)&packed;
@@ -727,10 +727,10 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst, uint8_t* pDst
     vComp3 = _simd_mul_ps(vComp3, _simd_set1_ps(FormatTraits<DstFormat>::fromFloat(3)));
 
     // moving to 8 wide integer vector types
-    __m256i src0 = _simd_cvtps_epi32(vComp0); // padded byte rrrrrrrr
-    __m256i src1 = _simd_cvtps_epi32(vComp1); // padded byte gggggggg 
-    __m256i src2 = _simd_cvtps_epi32(vComp2); // padded byte bbbbbbbb 
-    __m256i src3 = _simd_cvtps_epi32(vComp3); // padded byte aaaaaaaa
+    simdscalari src0 = _simd_cvtps_epi32(vComp0); // padded byte rrrrrrrr
+    simdscalari src1 = _simd_cvtps_epi32(vComp1); // padded byte gggggggg 
+    simdscalari src2 = _simd_cvtps_epi32(vComp2); // padded byte bbbbbbbb 
+    simdscalari src3 = _simd_cvtps_epi32(vComp3); // padded byte aaaaaaaa
 
 #if KNOB_ARCH <= KNOB_ARCH_AVX
 
@@ -766,7 +766,7 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst, uint8_t* pDst
     __m128i vRow00 = _mm_unpacklo_epi64(srcLo0, srcHi0);  // abgrabgrabgrabgrabgrabgrabgrabgr
     __m128i vRow10 = _mm_unpackhi_epi64(srcLo0, srcHi0);
 
-    __m256i final = _mm256_castsi128_si256(vRow00);
+    simdscalari final = _mm256_castsi128_si256(vRow00);
     final = _mm256_insertf128_si256(final, vRow10, 1);
 
 #else
@@ -779,7 +779,7 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst, uint8_t* pDst
     src0 = _mm256_or_si256(src0, src1);
     src2 = _mm256_or_si256(src2, src3);
 
-    __m256i final = _mm256_or_si256(src0, src2);
+    simdscalari final = _mm256_or_si256(src0, src2);
 
     // adjust the data to get the tiling order correct 0 1 2 3 -> 0 2 1 3
     final = _mm256_permute4x64_epi64(final, 0xD8);
@@ -886,9 +886,9 @@ INLINE static void FlatConvertNoAlpha(const uint8_t* pSrc, uint8_t* pDst, uint8_
     vComp2 = _simd_mul_ps(vComp2, _simd_set1_ps(FormatTraits<DstFormat>::fromFloat(2)));
 
     // moving to 8 wide integer vector types
-    __m256i src0 = _simd_cvtps_epi32(vComp0); // padded byte rrrrrrrr
-    __m256i src1 = _simd_cvtps_epi32(vComp1); // padded byte gggggggg 
-    __m256i src2 = _simd_cvtps_epi32(vComp2); // padded byte bbbbbbbb 
+    simdscalari src0 = _simd_cvtps_epi32(vComp0); // padded byte rrrrrrrr
+    simdscalari src1 = _simd_cvtps_epi32(vComp1); // padded byte gggggggg 
+    simdscalari src2 = _simd_cvtps_epi32(vComp2); // padded byte bbbbbbbb 
 
 #if KNOB_ARCH <= KNOB_ARCH_AVX
 
@@ -918,7 +918,7 @@ INLINE static void FlatConvertNoAlpha(const uint8_t* pSrc, uint8_t* pDst, uint8_
     __m128i vRow00 = _mm_unpacklo_epi64(srcLo0, srcHi0);  // 0bgr0bgr0bgr0bgr0bgr0bgr0bgr0bgr
     __m128i vRow10 = _mm_unpackhi_epi64(srcLo0, srcHi0);
 
-    __m256i final = _mm256_castsi128_si256(vRow00);
+    simdscalari final = _mm256_castsi128_si256(vRow00);
     final = _mm256_insertf128_si256(final, vRow10, 1);
 
 #else
@@ -929,7 +929,7 @@ INLINE static void FlatConvertNoAlpha(const uint8_t* pSrc, uint8_t* pDst, uint8_
 
     src0 = _mm256_or_si256(src0, src1);
 
-    __m256i final = _mm256_or_si256(src0, src2);
+    simdscalari final = _mm256_or_si256(src0, src2);
 
     // adjust the data to get the tiling order correct 0 1 2 3 -> 0 2 1 3
     final = _mm256_permute4x64_epi64(final, 0xD8);

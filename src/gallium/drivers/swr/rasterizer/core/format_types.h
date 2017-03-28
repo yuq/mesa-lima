@@ -1289,6 +1289,13 @@ struct ComponentTraits
         return CompType[comp];
     }
 
+    INLINE static constexpr uint32_t GetConstBPC(uint32_t comp)
+    {
+        return (comp == 3) ? NumBitsW :
+            ((comp == 2) ? NumBitsZ :
+                ((comp == 1) ? NumBitsY : NumBitsX) );
+    }
+
     INLINE static uint32_t GetBPC(uint32_t comp)
     {
         static const uint32_t MyBpc[4]{ NumBitsX, NumBitsY, NumBitsZ, NumBitsW };
