@@ -1089,7 +1089,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
-	struct pipe_index_buffer ib = {};
+	const struct pipe_index_buffer *ib = &sctx->index_buffer;
+	struct pipe_index_buffer ib_tmp; /* for index buffer uploads only */
 	unsigned mask, dirty_tex_counter, rast_prim;
 
 	if (likely(!info->indirect)) {
@@ -1174,18 +1175,13 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!si_upload_graphics_shader_descriptors(sctx))
 		return;
 
-	if (info->indexed) {
-		/* Initialize the index buffer struct. */
-		pipe_resource_reference(&ib.buffer, sctx->index_buffer.buffer);
-		ib.user_buffer = sctx->index_buffer.user_buffer;
-		ib.index_size = sctx->index_buffer.index_size;
-		ib.offset = sctx->index_buffer.offset;
+	ib_tmp.buffer = NULL;
 
+	if (info->indexed) {
 		/* Translate or upload, if needed. */
 		/* 8-bit indices are supported on VI. */
-		if (sctx->b.chip_class <= CIK && ib.index_size == 1) {
-			struct pipe_resource *out_buffer = NULL;
-			unsigned out_offset, start, count, start_offset, size;
+		if (sctx->b.chip_class <= CIK && ib->index_size == 1) {
+			unsigned start, count, start_offset, size;
 			void *ptr;
 
 			si_get_draw_start_count(sctx, info, &start, &count);
@@ -1195,43 +1191,42 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			u_upload_alloc(ctx->stream_uploader, start_offset,
 				       size,
 				       si_optimal_tcc_alignment(sctx, size),
-				       &out_offset, &out_buffer, &ptr);
-			if (!out_buffer) {
-				pipe_resource_reference(&ib.buffer, NULL);
+				       &ib_tmp.offset, &ib_tmp.buffer, &ptr);
+			if (!ib_tmp.buffer)
 				return;
-			}
 
-			util_shorten_ubyte_elts_to_userptr(&sctx->b.b, &ib, 0, 0,
-							   ib.offset + start,
+			util_shorten_ubyte_elts_to_userptr(&sctx->b.b, ib, 0, 0,
+							   ib->offset + start,
 							   count, ptr);
 
-			pipe_resource_reference(&ib.buffer, NULL);
-			ib.user_buffer = NULL;
-			ib.buffer = out_buffer;
 			/* info->start will be added by the drawing code */
-			ib.offset = out_offset - start_offset;
-			ib.index_size = 2;
-		} else if (ib.user_buffer && !ib.buffer) {
+			ib_tmp.offset -= start_offset;
+			ib_tmp.index_size = 2;
+			ib = &ib_tmp;
+		} else if (ib->user_buffer && !ib->buffer) {
 			unsigned start, count, start_offset;
 
 			si_get_draw_start_count(sctx, info, &start, &count);
-			start_offset = start * ib.index_size;
+			start_offset = start * ib->index_size;
 
 			u_upload_data(ctx->stream_uploader, start_offset,
-				      count * ib.index_size,
+				      count * ib->index_size,
 				      sctx->screen->b.info.tcc_cache_line_size,
-				      (char*)ib.user_buffer + start_offset,
-				      &ib.offset, &ib.buffer);
-			if (!ib.buffer)
+				      (char*)ib->user_buffer + start_offset,
+				      &ib_tmp.offset, &ib_tmp.buffer);
+			if (!ib_tmp.buffer)
 				return;
+
 			/* info->start will be added by the drawing code */
-			ib.offset -= start_offset;
+			ib_tmp.offset -= start_offset;
+			ib_tmp.index_size = ib->index_size;
+			ib = &ib_tmp;
 		} else if (sctx->b.chip_class <= CIK &&
-			   r600_resource(ib.buffer)->TC_L2_dirty) {
+			   r600_resource(ib->buffer)->TC_L2_dirty) {
 			/* VI reads index buffers through TC L2, so it doesn't
 			 * need this. */
 			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-			r600_resource(ib.buffer)->TC_L2_dirty = false;
+			r600_resource(ib->buffer)->TC_L2_dirty = false;
 		}
 	}
 
@@ -1297,7 +1292,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	si_emit_draw_registers(sctx, info);
 
 	si_ce_pre_draw_synchronization(sctx);
-	si_emit_draw_packets(sctx, info, &ib);
+	si_emit_draw_packets(sctx, info, ib);
 	si_ce_post_draw_synchronization(sctx);
 
 	if (sctx->trace_buf)
@@ -1343,7 +1338,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		sctx->framebuffer.do_update_surf_dirtiness = false;
 	}
 
-	pipe_resource_reference(&ib.buffer, NULL);
+	pipe_resource_reference(&ib_tmp.buffer, NULL);
 	sctx->b.num_draw_calls++;
 	if (G_0286E8_WAVESIZE(sctx->spi_tmpring_size))
 		sctx->b.num_spill_draw_calls++;
