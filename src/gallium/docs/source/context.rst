@@ -757,6 +757,26 @@ notifications are single-shot, i.e. subsequent calls to
 * ``set_device_reset_callback`` sets a callback which will be called when
   a device reset is detected. The callback is only called synchronously.
 
+Bindless
+^^^^^^^^
+
+If PIPE_CAP_BINDLESS_TEXTURE is TRUE, the following ``pipe_context`` functions
+are used to create/delete bindless handles, and to make them resident in the
+current context when they are going to be used by shaders.
+
+* ``create_texture_handle`` creates a 64-bit unsigned integer texture handle
+  that is going to be directly used in shaders.
+* ``delete_texture_handle`` deletes a 64-bit unsigned integer texture handle.
+* ``make_texture_handle_resident`` makes a 64-bit unsigned texture handle
+  resident in the current context to be accessible by shaders for texture
+  mapping.
+* ``create_image_handle`` creates a 64-bit unsigned integer image handle that
+  is going to be directly used in shaders.
+* ``delete_image_handle`` deletes a 64-bit unsigned integer image handle.
+* ``make_image_handle_resident`` makes a 64-bit unsigned integer image handle
+  resident in the current context to be accessible by shaders for image loads,
+  stores and atomic operations.
+
 Using several contexts
 ----------------------
 
