@@ -4573,7 +4573,7 @@ static void tex_fetch_args(
 			address[count++] = filler;
 		} else if (target == TGSI_TEXTURE_1D_ARRAY ||
 			   target == TGSI_TEXTURE_SHADOW1D_ARRAY) {
-			address[count] = coords[count - 1];
+			address[count] = address[count - 1];
 			address[count - 1] = filler;
 			count++;
 		}
