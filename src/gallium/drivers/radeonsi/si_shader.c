@@ -4609,9 +4609,8 @@ static void tex_fetch_args(
 	 * The sample index should be adjusted as follows:
 	 *   sample_index = (fmask >> (sample_index * 4)) & 0xF;
 	 */
-	if (ctx->screen->b.chip_class <= VI && /* TODO: fix FMASK on GFX9 */
-	    (target == TGSI_TEXTURE_2D_MSAA ||
-	     target == TGSI_TEXTURE_2D_ARRAY_MSAA)) {
+	if (target == TGSI_TEXTURE_2D_MSAA ||
+	    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
 		struct lp_build_context *uint_bld = &bld_base->uint_bld;
 		struct lp_build_emit_data txf_emit_data = *emit_data;
 		LLVMValueRef txf_address[4];

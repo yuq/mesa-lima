@@ -753,7 +753,7 @@ static int gfx9_compute_miptree(struct amdgpu_winsys *ws,
          if (ret != ADDR_OK)
             return ret;
 
-         surf->u.gfx9.fmask.swizzle_mode = in->swizzleMode;
+         surf->u.gfx9.fmask.swizzle_mode = fin.swizzleMode;
          surf->u.gfx9.fmask.epitch = fout.pitch - 1;
          surf->u.gfx9.fmask_size = fout.fmaskBytes;
          surf->u.gfx9.fmask_alignment = fout.baseAlign;

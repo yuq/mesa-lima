@@ -2198,8 +2198,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 				S_028C74_NUM_FRAGMENTS(log_samples);
 
 		if (rtex->fmask.size) {
-			 /* TODO: fix FMASK on GFX9: */
-			color_info |= S_028C70_COMPRESSION(sctx->b.chip_class <= VI);
+			color_info |= S_028C70_COMPRESSION(1);
 			unsigned fmask_bankh = util_logbase2(rtex->fmask.bank_height);
 
 			if (sctx->b.chip_class == SI) {
