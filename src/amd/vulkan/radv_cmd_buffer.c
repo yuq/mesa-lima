@@ -599,27 +599,6 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_028A84_VGT_PRIMITIVEID_EN, 0);
 }
 
-static uint32_t si_vgt_gs_mode(struct radv_shader_variant *gs)
-{
-	unsigned gs_max_vert_out = gs->info.gs.vertices_out;
-	unsigned cut_mode;
-
-	if (gs_max_vert_out <= 128) {
-		cut_mode = V_028A40_GS_CUT_128;
-	} else if (gs_max_vert_out <= 256) {
-		cut_mode = V_028A40_GS_CUT_256;
-	} else if (gs_max_vert_out <= 512) {
-		cut_mode = V_028A40_GS_CUT_512;
-	} else {
-		assert(gs_max_vert_out <= 1024);
-		cut_mode = V_028A40_GS_CUT_1024;
-	}
-
-	return S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
-	       S_028A40_CUT_MODE(cut_mode)|
-	       S_028A40_ES_WRITE_OPTIMIZE(1) |
-	       S_028A40_GS_WRITE_OPTIMIZE(1);
-}
 
 static void
 radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
@@ -629,13 +608,11 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 	struct radv_shader_variant *gs;
 	uint64_t va;
 
-	gs = pipeline->shaders[MESA_SHADER_GEOMETRY];
-	if (!gs) {
-		radeon_set_context_reg(cmd_buffer->cs, R_028A40_VGT_GS_MODE, 0);
-		return;
-	}
+	radeon_set_context_reg(cmd_buffer->cs, R_028A40_VGT_GS_MODE, pipeline->graphics.vgt_gs_mode);
 
-	radeon_set_context_reg(cmd_buffer->cs, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(gs));
+	gs = pipeline->shaders[MESA_SHADER_GEOMETRY];
+	if (!gs)
+		return;
 
 	uint32_t gsvs_itemsize = gs->info.gs.max_gsvs_emit_size >> 2;
 

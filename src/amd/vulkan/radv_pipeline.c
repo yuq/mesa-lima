@@ -1505,6 +1505,28 @@ static const struct radv_prim_vertex_count prim_size_table[] = {
 	[V_008958_DI_PT_2D_TRI_STRIP] = {0, 0},
 };
 
+static uint32_t si_vgt_gs_mode(struct radv_shader_variant *gs)
+{
+	unsigned gs_max_vert_out = gs->info.gs.vertices_out;
+	unsigned cut_mode;
+
+	if (gs_max_vert_out <= 128) {
+		cut_mode = V_028A40_GS_CUT_128;
+	} else if (gs_max_vert_out <= 256) {
+		cut_mode = V_028A40_GS_CUT_256;
+	} else if (gs_max_vert_out <= 512) {
+		cut_mode = V_028A40_GS_CUT_512;
+	} else {
+		assert(gs_max_vert_out <= 1024);
+		cut_mode = V_028A40_GS_CUT_1024;
+	}
+
+	return S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
+	       S_028A40_CUT_MODE(cut_mode)|
+	       S_028A40_ES_WRITE_OPTIMIZE(1) |
+	       S_028A40_GS_WRITE_OPTIMIZE(1);
+}
+
 VkResult
 radv_pipeline_init(struct radv_pipeline *pipeline,
 		   struct radv_device *device,
@@ -1559,7 +1581,10 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_GEOMETRY);
 		calculate_gs_ring_sizes(pipeline);
-	}
+
+		pipeline->graphics.vgt_gs_mode = si_vgt_gs_mode(pipeline->shaders[MESA_SHADER_GEOMETRY]);
+	} else
+		pipeline->graphics.vgt_gs_mode = 0;
 
 	if (!modules[MESA_SHADER_FRAGMENT]) {
 		nir_builder fs_b;
