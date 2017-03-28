@@ -64,18 +64,12 @@ void intel_batchbuffer_data(struct brw_context *brw,
                             const void *data, GLuint bytes,
                             enum brw_gpu_ring ring);
 
-uint32_t intel_batchbuffer_reloc(struct intel_batchbuffer *batch,
+uint64_t intel_batchbuffer_reloc(struct intel_batchbuffer *batch,
                                  drm_intel_bo *buffer,
                                  uint32_t offset,
                                  uint32_t read_domains,
                                  uint32_t write_domain,
                                  uint32_t delta);
-uint64_t intel_batchbuffer_reloc64(struct intel_batchbuffer *batch,
-                                   drm_intel_bo *buffer,
-                                   uint32_t offset,
-                                   uint32_t read_domains,
-                                   uint32_t write_domain,
-                                   uint32_t delta);
 
 #define USED_BATCH(batch) ((uintptr_t)((batch).map_next - (batch).map))
 
@@ -161,23 +155,22 @@ intel_batchbuffer_advance(struct brw_context *brw)
 #define OUT_BATCH(d) *__map++ = (d)
 #define OUT_BATCH_F(f) OUT_BATCH(float_as_int((f)))
 
-#define OUT_RELOC(buf, read_domains, write_domain, delta) do {    \
-   uint32_t __offset = (__map - brw->batch.map) * 4;              \
-   OUT_BATCH(intel_batchbuffer_reloc(&brw->batch, (buf), __offset, \
-                                     (read_domains),              \
-                                     (write_domain),              \
-                                     (delta)));                   \
+#define OUT_RELOC(buf, read_domains, write_domain, delta) do {          \
+   uint32_t __offset = (__map - brw->batch.map) * 4;                    \
+   uint32_t reloc =                                                     \
+      intel_batchbuffer_reloc(&brw->batch, (buf), __offset,             \
+                              (read_domains), (write_domain), (delta)); \
+   OUT_BATCH(reloc);                                                    \
 } while (0)
 
 /* Handle 48-bit address relocations for Gen8+ */
-#define OUT_RELOC64(buf, read_domains, write_domain, delta) do {      \
-   uint32_t __offset = (__map - brw->batch.map) * 4;                  \
-   uint64_t reloc64 = intel_batchbuffer_reloc64(&brw->batch, (buf), __offset, \
-                                                (read_domains),       \
-                                                (write_domain),       \
-                                                (delta));             \
-   OUT_BATCH(reloc64);                                                \
-   OUT_BATCH(reloc64 >> 32);                                          \
+#define OUT_RELOC64(buf, read_domains, write_domain, delta) do {        \
+   uint32_t __offset = (__map - brw->batch.map) * 4;                    \
+   uint64_t reloc64 =                                                   \
+      intel_batchbuffer_reloc(&brw->batch, (buf), __offset,             \
+                              (read_domains), (write_domain), (delta)); \
+   OUT_BATCH(reloc64);                                                  \
+   OUT_BATCH(reloc64 >> 32);                                            \
 } while (0)
 
 #define ADVANCE_BATCH()                  \

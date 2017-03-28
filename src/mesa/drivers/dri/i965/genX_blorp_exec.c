@@ -55,17 +55,10 @@ blorp_emit_reloc(struct blorp_batch *batch,
    struct brw_context *brw = batch->driver_batch;
 
    uint32_t offset = (char *)location - (char *)brw->batch.map;
-   if (brw->gen >= 8) {
-      return intel_batchbuffer_reloc64(&brw->batch, address.buffer, offset,
-                                       address.read_domains,
-                                       address.write_domain,
-                                       address.offset + delta);
-   } else {
-      return intel_batchbuffer_reloc(&brw->batch, address.buffer, offset,
-                                     address.read_domains,
-                                     address.write_domain,
-                                     address.offset + delta);
-   }
+   return intel_batchbuffer_reloc(&brw->batch, address.buffer, offset,
+                                  address.read_domains,
+                                  address.write_domain,
+                                  address.offset + delta);
 }
 
 static void

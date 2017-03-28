@@ -576,7 +576,7 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
 
 /*  This is the only way buffers get added to the validate list.
  */
-uint32_t
+uint64_t
 intel_batchbuffer_reloc(struct intel_batchbuffer *batch,
                         drm_intel_bo *buffer, uint32_t offset,
                         uint32_t read_domains, uint32_t write_domain,
@@ -596,26 +596,6 @@ intel_batchbuffer_reloc(struct intel_batchbuffer *batch,
     */
    return buffer->offset64 + delta;
 }
-
-uint64_t
-intel_batchbuffer_reloc64(struct intel_batchbuffer *batch,
-                          drm_intel_bo *buffer, uint32_t offset,
-                          uint32_t read_domains, uint32_t write_domain,
-                          uint32_t delta)
-{
-   int ret = drm_intel_bo_emit_reloc(batch->bo, offset,
-                                     buffer, delta,
-                                     read_domains, write_domain);
-   assert(ret == 0);
-   (void) ret;
-
-   /* Using the old buffer offset, write in what the right data would be, in
-    * case the buffer doesn't move and we can short-circuit the relocation
-    * processing in the kernel
-    */
-   return buffer->offset64 + delta;
-}
-
 
 void
 intel_batchbuffer_data(struct brw_context *brw,
