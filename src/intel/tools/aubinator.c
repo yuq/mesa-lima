@@ -725,8 +725,10 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
          decode_group(inst, p, 0);
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
-            if (gen_group_get_opcode(inst) == custom_handlers[i].opcode)
+            if (gen_group_get_opcode(inst) == custom_handlers[i].opcode) {
                custom_handlers[i].handle(spec, p);
+               break;
+            }
          }
       }
 
