@@ -104,10 +104,9 @@ brw_emit_sampler_state(struct brw_context *brw,
    ss[2] = border_color_offset;
    if (brw->gen < 6) {
       ss[2] += brw->batch.bo->offset64; /* reloc */
-      drm_bacon_bo_emit_reloc(brw->batch.bo,
-                              batch_offset_for_sampler_state + 8,
-                              brw->batch.bo, border_color_offset,
-                              I915_GEM_DOMAIN_SAMPLER, 0);
+      brw_emit_reloc(&brw->batch, batch_offset_for_sampler_state + 8,
+                     brw->batch.bo, border_color_offset,
+                     I915_GEM_DOMAIN_SAMPLER, 0);
    }
 
    ss[3] = SET_FIELD(max_anisotropy, BRW_SAMPLER_MAX_ANISOTROPY) |

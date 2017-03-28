@@ -29,6 +29,7 @@
   *   Keith Whitwell <keithw@vmware.com>
   */
 
+#include "intel_batchbuffer.h"
 #include "brw_context.h"
 #include "brw_state.h"
 #include "brw_defines.h"
@@ -136,11 +137,11 @@ brw_upload_clip_unit(struct brw_context *brw)
          (brw->batch.bo->offset64 + brw->clip.vp_offset) >> 5;
 
       /* emit clip viewport relocation */
-      drm_bacon_bo_emit_reloc(brw->batch.bo,
-                              (brw->clip.state_offset +
-                               offsetof(struct brw_clip_unit_state, clip6)),
-                              brw->batch.bo, brw->clip.vp_offset,
-                              I915_GEM_DOMAIN_INSTRUCTION, 0);
+      brw_emit_reloc(&brw->batch,
+                     (brw->clip.state_offset +
+                      offsetof(struct brw_clip_unit_state, clip6)),
+                     brw->batch.bo, brw->clip.vp_offset,
+                     I915_GEM_DOMAIN_INSTRUCTION, 0);
    }
 
    /* _NEW_TRANSFORM */

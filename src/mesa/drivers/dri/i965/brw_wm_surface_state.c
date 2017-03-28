@@ -168,10 +168,8 @@ brw_emit_surface_state(struct brw_context *brw,
                        .mocs = mocs, .clear_color = clear_color,
                        .x_offset_sa = tile_x, .y_offset_sa = tile_y);
 
-   drm_bacon_bo_emit_reloc(brw->batch.bo,
-                           *surf_offset + brw->isl_dev.ss.addr_offset,
-                           mt->bo, offset,
-                           read_domains, write_domains);
+   brw_emit_reloc(&brw->batch, *surf_offset + brw->isl_dev.ss.addr_offset,
+                  mt->bo, offset, read_domains, write_domains);
 
    if (aux_surf) {
       /* On gen7 and prior, the upper 20 bits of surface state DWORD 6 are the
@@ -182,10 +180,10 @@ brw_emit_surface_state(struct brw_context *brw,
        */
       assert((aux_offset & 0xfff) == 0);
       uint32_t *aux_addr = state + brw->isl_dev.ss.aux_addr_offset;
-      drm_bacon_bo_emit_reloc(brw->batch.bo,
-                              *surf_offset + brw->isl_dev.ss.aux_addr_offset,
-                              aux_bo, *aux_addr - aux_bo->offset64,
-                              read_domains, write_domains);
+      brw_emit_reloc(&brw->batch,
+                     *surf_offset + brw->isl_dev.ss.aux_addr_offset,
+                     aux_bo, *aux_addr - aux_bo->offset64,
+                     read_domains, write_domains);
    }
 }
 
@@ -667,11 +665,10 @@ brw_emit_buffer_surface_state(struct brw_context *brw,
                          .mocs = tex_mocs[brw->gen]);
 
    if (bo) {
-      drm_bacon_bo_emit_reloc(brw->batch.bo,
-                              *out_offset + brw->isl_dev.ss.addr_offset,
-                              bo, buffer_offset,
-                              I915_GEM_DOMAIN_SAMPLER,
-                              (rw ? I915_GEM_DOMAIN_SAMPLER : 0));
+      brw_emit_reloc(&brw->batch, *out_offset + brw->isl_dev.ss.addr_offset,
+                     bo, buffer_offset,
+                     I915_GEM_DOMAIN_SAMPLER,
+                     (rw ? I915_GEM_DOMAIN_SAMPLER : 0));
    }
 }
 
@@ -842,10 +839,8 @@ brw_update_sol_surface(struct brw_context *brw,
    surf[5] = 0;
 
    /* Emit relocation to surface contents. */
-   drm_bacon_bo_emit_reloc(brw->batch.bo,
-			   *out_offset + 4,
-			   bo, offset_bytes,
-			   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
+   brw_emit_reloc(&brw->batch, *out_offset + 4, bo, offset_bytes,
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
 }
 
 /* Creates a new WM constant buffer reflecting the current fragment program's
@@ -968,10 +963,8 @@ brw_emit_null_surface_state(struct brw_context *brw,
    surf[5] = 0;
 
    if (bo) {
-      drm_bacon_bo_emit_reloc(brw->batch.bo,
-                              *out_offset + 4,
-                              bo, 0,
-                              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
+      brw_emit_reloc(&brw->batch, *out_offset + 4, bo, 0,
+                     I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
    }
 }
 
@@ -1071,12 +1064,8 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
       }
    }
 
-   drm_bacon_bo_emit_reloc(brw->batch.bo,
-                           offset + 4,
-                           mt->bo,
-                           surf[1] - mt->bo->offset64,
-                           I915_GEM_DOMAIN_RENDER,
-                           I915_GEM_DOMAIN_RENDER);
+   brw_emit_reloc(&brw->batch, offset + 4, mt->bo, surf[1] - mt->bo->offset64,
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
 
    return offset;
 }

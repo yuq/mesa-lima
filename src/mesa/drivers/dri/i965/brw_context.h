@@ -1609,24 +1609,6 @@ brw_program_const(const struct gl_program *p)
    return (const struct brw_program *) p;
 }
 
-static inline uint32_t
-brw_program_reloc(struct brw_context *brw, uint32_t state_offset,
-		  uint32_t prog_offset)
-{
-   if (brw->gen >= 5) {
-      /* Using state base address. */
-      return prog_offset;
-   }
-
-   drm_bacon_bo_emit_reloc(brw->batch.bo,
-			   state_offset,
-			   brw->cache.bo,
-			   prog_offset,
-			   I915_GEM_DOMAIN_INSTRUCTION, 0);
-
-   return brw->cache.bo->offset64 + prog_offset;
-}
-
 static inline bool
 brw_depth_writes_enabled(const struct brw_context *brw)
 {
