@@ -963,6 +963,8 @@ struct radv_pipeline {
 			bool prim_restart_enable;
 			unsigned esgs_ring_size;
 			unsigned gsvs_ring_size;
+			uint32_t ps_input_cntl[32];
+			uint32_t ps_input_cntl_num;
 			struct radv_prim_vertex_count prim_vertex_count;
 		} graphics;
 	};
