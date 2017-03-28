@@ -965,6 +965,7 @@ struct radv_pipeline {
 			uint32_t ps_input_cntl[32];
 			uint32_t ps_input_cntl_num;
 			uint32_t pa_cl_vs_out_cntl;
+			uint32_t vgt_shader_stages_en;
 			struct radv_prim_vertex_count prim_vertex_count;
 		} graphics;
 	};

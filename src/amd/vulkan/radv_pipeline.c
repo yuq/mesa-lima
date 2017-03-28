@@ -1771,7 +1771,14 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 	calculate_pa_cl_vs_out_cntl(pipeline);
 	calculate_ps_inputs(pipeline);
-	
+
+	uint32_t stages = 0;
+	if (radv_pipeline_has_gs(pipeline))
+		stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
+			S_028B54_GS_EN(1) |
+			S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+	pipeline->graphics.vgt_shader_stages_en = stages;
+
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
 	for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {

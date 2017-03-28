@@ -1286,14 +1286,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 	}
 
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE) {
-		uint32_t stages = 0;
-
-		if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
-			stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
-				S_028B54_GS_EN(1) |
-				S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
-
-		radeon_set_context_reg(cmd_buffer->cs, R_028B54_VGT_SHADER_STAGES_EN, stages);
+		radeon_set_context_reg(cmd_buffer->cs, R_028B54_VGT_SHADER_STAGES_EN, pipeline->graphics.vgt_shader_stages_en);
 
 		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
 			radeon_set_context_reg_idx(cmd_buffer->cs, R_028B58_VGT_LS_HS_CONFIG, 2, ls_hs_config);
