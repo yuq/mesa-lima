@@ -46,6 +46,7 @@ __m128i fpToFixedPoint(const __m128 vIn)
 // Selector for correct templated RasterizeTriangle function
 PFN_WORK_FUNC GetRasterizerFunc(
     uint32_t numSamples,
+    bool IsCenter,
     bool IsConservative,
     uint32_t InputCoverage,
     uint32_t EdgeEnable,
@@ -110,19 +111,20 @@ struct RasterEdgeTraits<std::false_type, std::false_type, EdgeMaskT>
 /// @tparam InputCoverageT: what type of input coverage is the PS expecting?
 /// (only used with conservative rasterization)
 /// @tparam RasterScissorEdgesT: do we need to rasterize with a scissor?
-template <typename NumSamplesT, typename ConservativeT, typename InputCoverageT, typename EdgeEnableT, typename RasterScissorEdgesT>
+template <typename NumSamplesT, typename CenterPatternT, typename ConservativeT, typename InputCoverageT, typename EdgeEnableT, typename RasterScissorEdgesT>
 struct RasterizerTraits final : public ConservativeRastBETraits<ConservativeT, InputCoverageT>,
                                 public RasterEdgeTraits<RasterScissorEdgesT, ConservativeT, std::integral_constant<uint32_t, EdgeEnableT::value>>
 {
-    typedef MultisampleTraits<static_cast<SWR_MULTISAMPLE_COUNT>(NumSamplesT::value)> MT;
+    typedef MultisampleTraits<static_cast<SWR_MULTISAMPLE_COUNT>(NumSamplesT::value), 
+                                          (CenterPatternT::value ? SWR_MSAA_CENTER_PATTERN : SWR_MSAA_STANDARD_PATTERN)> MT;
 
     /// Fixed point precision the rasterizer is using
     typedef FixedPointTraits<Fixed_16_8> PrecisionT;
     /// Fixed point precision of the edge tests used during rasterization
     typedef FixedPointTraits<Fixed_X_16> EdgePrecisionT;
 
-    // If conservative rast is enabled, only need a single sample coverage test, with the result copied to all samples
-    typedef std::integral_constant<int, (ConservativeT::value) ? 1 : MT::numSamples> NumRasterSamplesT;
+    // If conservative rast or MSAA center pattern is enabled, only need a single sample coverage test, with the result copied to all samples
+    typedef std::integral_constant<int, ConservativeT::value ? 1 : MT::numCoverageSamples> NumCoverageSamplesT;
 
     static_assert(EdgePrecisionT::BitsT::value >=  ConservativeRastBETraits<ConservativeT, InputCoverageT>::ConservativePrecisionT::BitsT::value,
                   "Rasterizer edge fixed point precision < required conservative rast precision");

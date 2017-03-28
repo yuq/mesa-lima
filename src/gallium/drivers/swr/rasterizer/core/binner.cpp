@@ -599,9 +599,6 @@ void BinTriangles(
     uint32_t *pPrimID = (uint32_t *)&primID;
     const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
     DWORD triIndex = 0;
-    // for center sample pattern, all samples are at pixel center; calculate coverage
-    // once at center and broadcast the results in the backend
-    const SWR_MULTISAMPLE_COUNT sampleCount = (rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN) ? rastState.sampleCount : SWR_MULTISAMPLE_1X;
     uint32_t edgeEnable;
     PFN_WORK_FUNC pfnWork;
     if (CT::IsConservativeT::value)
@@ -643,8 +640,8 @@ void BinTriangles(
     else
     {
         // degenerate triangles won't be sent to rasterizer; just enable all edges
-        pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
-            (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID,
+        pfnWork = GetRasterizerFunc(rastState.sampleCount, (rastState.samplePattern == SWR_MSAA_CENTER_PATTERN),
+            (rastState.conservativeRast > 0), (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID,
             (state.scissorsTileAligned == false));
     }
 
@@ -661,7 +658,8 @@ void BinTriangles(
     // only discard for non-MSAA case and when conservative rast is disabled
     // (xmin + 127) & ~255
     // (xmax + 128) & ~255
-    if (rastState.sampleCount == SWR_MULTISAMPLE_1X && (!CT::IsConservativeT::value))
+    if((rastState.sampleCount == SWR_MULTISAMPLE_1X || rastState.samplePattern == SWR_MSAA_CENTER_PATTERN) &&
+        (!CT::IsConservativeT::value))
     {
         origTriMask = triMask;
 
@@ -789,8 +787,8 @@ endBinTriangles:
         {
             // only rasterize valid edges if we have a degenerate primitive
             int32_t triEdgeEnable = (edgeEnable >> (triIndex * 3)) & ALL_EDGES_VALID;
-            work.pfnWork = GetRasterizerFunc(sampleCount, (rastState.conservativeRast > 0),
-                (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable,
+            work.pfnWork = GetRasterizerFunc(rastState.sampleCount, (rastState.samplePattern == SWR_MSAA_CENTER_PATTERN),
+                (rastState.conservativeRast > 0), (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable,
                 (state.scissorsTileAligned == false));
 
             // Degenerate triangles are required to be constant interpolated
