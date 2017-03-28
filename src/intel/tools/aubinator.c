@@ -682,17 +682,18 @@ static void
 parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
 {
    uint32_t *p, *end = cmds + size / 4;
-   unsigned int length, i;
+   int length, i;
    struct gen_group *inst;
 
    for (p = cmds; p < end; p += length) {
       inst = gen_spec_find_instruction(spec, p);
+      length = gen_group_get_length(inst, p);
+      assert(inst == NULL || length > 0);
+      length = MAX2(1, length);
       if (inst == NULL) {
          fprintf(outfile, "unknown instruction %08x\n", p[0]);
-         length = (p[0] & 0xff) + 2;
          continue;
       }
-      length = gen_group_get_length(inst, p);
 
       const char *color, *reset_color = NORMAL;
       uint64_t offset;

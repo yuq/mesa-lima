@@ -692,28 +692,36 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
 
    case 3: /* Render */ {
       uint32_t subtype = field(h, 27, 28);
+      uint32_t opcode = field(h, 24, 26);
       switch (subtype) {
       case 0:
-         return field(h, 0, 7) + 2;
+         if (opcode < 2)
+            return field(h, 0, 7) + 2;
+         else
+            return -1;
       case 1:
-         return 1;
+         if (opcode < 2)
+            return 1;
+         else
+            return -1;
       case 2: {
-         uint32_t opcode = field(h, 24, 26);
-         assert(opcode < 3 /* 3 and above currently reserved */);
          if (opcode == 0)
             return field(h, 0, 7) + 2;
          else if (opcode < 3)
             return field(h, 0, 15) + 2;
          else
-            return 1; /* FIXME: if more opcodes are added */
+            return -1;
       }
       case 3:
-         return field(h, 0, 7) + 2;
+         if (opcode < 4)
+            return field(h, 0, 7) + 2;
+         else
+            return -1;
       }
    }
    }
 
-   unreachable("bad opcode");
+   return -1;
 }
 
 void

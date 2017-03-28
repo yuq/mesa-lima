@@ -217,7 +217,7 @@ static void decode(struct gen_spec *spec,
                    int *count)
 {
    uint32_t *p, *end = (data + *count);
-   unsigned int length;
+   int length;
    struct gen_group *inst;
 
    for (p = data; p < end; p += length) {
@@ -226,9 +226,11 @@ static void decode(struct gen_spec *spec,
       uint64_t offset = gtt_offset + 4 * (p - data);
 
       inst = gen_spec_find_instruction(spec, p);
+      length = gen_group_get_length(inst, p);
+      assert(inst == NULL || length > 0);
+      length = MAX2(1, length);
       if (inst == NULL) {
          printf("unknown instruction %08x\n", p[0]);
-         length = (p[0] & 0xff) + 2;
          continue;
       }
       if (option_color == COLOR_NEVER) {
@@ -241,7 +243,6 @@ static void decode(struct gen_spec *spec,
 
       gen_print_group(stdout, inst, offset, p,
                       option_color == COLOR_ALWAYS);
-      length = gen_group_get_length(inst, p);
    }
 }
 

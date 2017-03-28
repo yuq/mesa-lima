@@ -220,7 +220,7 @@ do_batch_dump(struct brw_context *brw)
    uint32_t *data = batch->bo->virtual ? batch->bo->virtual : batch->map;
    uint32_t *end = data + USED_BATCH(*batch);
    uint32_t gtt_offset = batch->bo->virtual ? batch->bo->offset64 : 0;
-   unsigned int length;
+   int length;
 
    bool color = INTEL_DEBUG & DEBUG_COLOR;
    const char *header_color = color ? BLUE_HEADER : "";
@@ -228,9 +228,11 @@ do_batch_dump(struct brw_context *brw)
 
    for (uint32_t *p = data; p < end; p += length) {
       struct gen_group *inst = gen_spec_find_instruction(spec, p);
+      length = gen_group_get_length(inst, p);
+      assert(inst == NULL || length > 0);
+      length = MAX2(1, length);
       if (inst == NULL) {
          fprintf(stderr, "unknown instruction %08x\n", p[0]);
-         length = (p[0] & 0xff) + 2;
          continue;
       }
 
@@ -316,8 +318,6 @@ do_batch_dump(struct brw_context *brw)
                        gtt_offset, p[1] & ~0x3fu, color);
          break;
       }
-
-      length = gen_group_get_length(inst, p);
    }
 
    if (ret == 0) {
