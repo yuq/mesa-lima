@@ -697,8 +697,16 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
          return field(h, 0, 7) + 2;
       case 1:
          return 1;
-      case 2:
-         return 2;
+      case 2: {
+         uint32_t opcode = field(h, 24, 26);
+         assert(opcode < 3 /* 3 and above currently reserved */);
+         if (opcode == 0)
+            return field(h, 0, 7) + 2;
+         else if (opcode < 3)
+            return field(h, 0, 15) + 2;
+         else
+            return 1; /* FIXME: if more opcodes are added */
+      }
       case 3:
          return field(h, 0, 7) + 2;
       }
