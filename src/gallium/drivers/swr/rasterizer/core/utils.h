@@ -291,7 +291,7 @@ struct Transpose8_8_8_8
         simdscalari src = _simd_load_si((const simdscalari*)pSrc);
 
 #if KNOB_SIMD_WIDTH == 8
-#if KNOB_ARCH == KNOB_ARCH_AVX
+#if KNOB_ARCH <= KNOB_ARCH_AVX
         __m128i c0c1 = _mm256_castsi256_si128(src);                                           // rrrrrrrrgggggggg
         __m128i c2c3 = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(src), 1));  // bbbbbbbbaaaaaaaa
         __m128i c0c2 = _mm_unpacklo_epi64(c0c1, c2c3);                                        // rrrrrrrrbbbbbbbb
@@ -302,7 +302,7 @@ struct Transpose8_8_8_8
         __m128i c0123hi = _mm_unpackhi_epi16(c01, c23);                                       // rgbargbargbargba
         _mm_store_si128((__m128i*)pDst, c0123lo);
         _mm_store_si128((__m128i*)(pDst + 16), c0123hi);
-#elif KNOB_ARCH == KNOB_ARCH_AVX2
+#else
         simdscalari dst01 = _mm256_shuffle_epi8(src,
             _mm256_set_epi32(0x0f078080, 0x0e068080, 0x0d058080, 0x0c048080, 0x80800b03, 0x80800a02, 0x80800901, 0x80800800));
         simdscalari dst23 = _mm256_permute2x128_si256(src, src, 0x01);

@@ -732,7 +732,7 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst, uint8_t* pDst
     __m256i src2 = _simd_cvtps_epi32(vComp2); // padded byte bbbbbbbb 
     __m256i src3 = _simd_cvtps_epi32(vComp3); // padded byte aaaaaaaa
 
-#if KNOB_ARCH == KNOB_ARCH_AVX
+#if KNOB_ARCH <= KNOB_ARCH_AVX
 
     // splitting into two sets of 4 wide integer vector types
     // because AVX doesn't have instructions to support this operation at 8 wide
@@ -769,7 +769,7 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst, uint8_t* pDst
     __m256i final = _mm256_castsi128_si256(vRow00);
     final = _mm256_insertf128_si256(final, vRow10, 1);
 
-#elif KNOB_ARCH >= KNOB_ARCH_AVX2
+#else
 
     // logic is as above, only wider
     src1 = _mm256_slli_si256(src1, 1);
@@ -780,16 +780,9 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst, uint8_t* pDst
     src2 = _mm256_or_si256(src2, src3);
 
     __m256i final = _mm256_or_si256(src0, src2);
-#if 0
-
-    __m256i perm = _mm256_set_epi32(7, 6, 3, 2, 5, 4, 1, 0);
-
-    final = _mm256_permutevar8x32_epi32(final, perm);
-#else
 
     // adjust the data to get the tiling order correct 0 1 2 3 -> 0 2 1 3
     final = _mm256_permute4x64_epi64(final, 0xD8);
-#endif
 #endif
 
     _simd_storeu2_si((__m128i*)pDst1, (__m128i*)pDst, final);
@@ -897,7 +890,7 @@ INLINE static void FlatConvertNoAlpha(const uint8_t* pSrc, uint8_t* pDst, uint8_
     __m256i src1 = _simd_cvtps_epi32(vComp1); // padded byte gggggggg 
     __m256i src2 = _simd_cvtps_epi32(vComp2); // padded byte bbbbbbbb 
 
-#if KNOB_ARCH == KNOB_ARCH_AVX
+#if KNOB_ARCH <= KNOB_ARCH_AVX
 
     // splitting into two sets of 4 wide integer vector types
     // because AVX doesn't have instructions to support this operation at 8 wide
@@ -928,7 +921,7 @@ INLINE static void FlatConvertNoAlpha(const uint8_t* pSrc, uint8_t* pDst, uint8_
     __m256i final = _mm256_castsi128_si256(vRow00);
     final = _mm256_insertf128_si256(final, vRow10, 1);
 
-#elif KNOB_ARCH >= KNOB_ARCH_AVX2
+#else
 
                                               // logic is as above, only wider
     src1 = _mm256_slli_si256(src1, 1);

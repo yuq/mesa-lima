@@ -100,7 +100,7 @@ struct PackTraits<8, false>
     static simdscalar unpack(simdscalar &in)
     {
 #if KNOB_SIMD_WIDTH == 8
-#if KNOB_ARCH==KNOB_ARCH_AVX
+#if KNOB_ARCH <= KNOB_ARCH_AVX
         __m128i src = _mm_castps_si128(_mm256_castps256_ps128(in));
         __m128i resLo = _mm_cvtepu8_epi32(src);
         __m128i resHi = _mm_shuffle_epi8(src,
@@ -109,7 +109,7 @@ struct PackTraits<8, false>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH>=KNOB_ARCH_AVX2
+#else
         return _mm256_castsi256_ps(_mm256_cvtepu8_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else
@@ -214,7 +214,7 @@ struct PackTraits<8, true>
     static simdscalar unpack(simdscalar &in)
     {
 #if KNOB_SIMD_WIDTH == 8
-#if KNOB_ARCH==KNOB_ARCH_AVX
+#if KNOB_ARCH <= KNOB_ARCH_AVX
         SWR_INVALID("I think this may be incorrect.");
         __m128i src = _mm_castps_si128(_mm256_castps256_ps128(in));
         __m128i resLo = _mm_cvtepi8_epi32(src);
@@ -224,7 +224,7 @@ struct PackTraits<8, true>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH>=KNOB_ARCH_AVX2
+#else
         return _mm256_castsi256_ps(_mm256_cvtepi8_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else
@@ -329,7 +329,7 @@ struct PackTraits<16, false>
     static simdscalar unpack(simdscalar &in)
     {
 #if KNOB_SIMD_WIDTH == 8
-#if KNOB_ARCH==KNOB_ARCH_AVX
+#if KNOB_ARCH <= KNOB_ARCH_AVX
         __m128i src = _mm_castps_si128(_mm256_castps256_ps128(in));
         __m128i resLo = _mm_cvtepu16_epi32(src);
         __m128i resHi = _mm_shuffle_epi8(src,
@@ -338,7 +338,7 @@ struct PackTraits<16, false>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH>=KNOB_ARCH_AVX2
+#else
         return _mm256_castsi256_ps(_mm256_cvtepu16_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else
@@ -427,7 +427,7 @@ struct PackTraits<16, true>
     static simdscalar unpack(simdscalar &in)
     {
 #if KNOB_SIMD_WIDTH == 8
-#if KNOB_ARCH==KNOB_ARCH_AVX
+#if KNOB_ARCH <= KNOB_ARCH_AVX
         SWR_INVALID("I think this may be incorrect.");
         __m128i src = _mm_castps_si128(_mm256_castps256_ps128(in));
         __m128i resLo = _mm_cvtepi16_epi32(src);
@@ -437,7 +437,7 @@ struct PackTraits<16, true>
         __m256i result = _mm256_castsi128_si256(resLo);
         result = _mm256_insertf128_si256(result, resHi, 1);
         return _mm256_castsi256_ps(result);
-#elif KNOB_ARCH>=KNOB_ARCH_AVX2
+#else
         return _mm256_castsi256_ps(_mm256_cvtepi16_epi32(_mm_castps_si128(_mm256_castps256_ps128(in))));
 #endif
 #else
@@ -1087,7 +1087,6 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 32> : PackTraits<32>
     static inline simdscalar convertSrgb(simdscalar &in)
     {
 #if KNOB_SIMD_WIDTH == 8
-#if (KNOB_ARCH == KNOB_ARCH_AVX || KNOB_ARCH == KNOB_ARCH_AVX2)
         __m128 srcLo = _mm256_extractf128_ps(in, 0);
         __m128 srcHi = _mm256_extractf128_ps(in, 1);
 
@@ -1096,7 +1095,6 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 32> : PackTraits<32>
 
         in = _mm256_insertf128_ps(in, srcLo, 0);
         in = _mm256_insertf128_ps(in, srcHi, 1);
-#endif
 #else
 #error Unsupported vector width
 #endif
