@@ -1126,7 +1126,7 @@ radv_pipeline_init_raster_state(struct radv_pipeline *pipeline,
 		S_0286D4_PNT_SPRITE_OVRD_W(V_0286D4_SPI_PNT_SPRITE_SEL_1) |
 		S_0286D4_PNT_SPRITE_TOP_1(0); // vulkan is top to bottom - 1.0 at bottom
 
-	raster->pa_cl_vs_out_cntl = S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(1);
+
 	raster->pa_cl_clip_cntl = S_028810_PS_UCP_MODE(3) |
 		S_028810_DX_CLIP_SPACE_DEF(1) | // vulkan uses DX conventions.
 		S_028810_ZCLIP_NEAR_DISABLE(vkraster->depthClampEnable ? 1 : 0) |
@@ -1527,6 +1527,33 @@ static uint32_t si_vgt_gs_mode(struct radv_shader_variant *gs)
 	       S_028A40_GS_WRITE_OPTIMIZE(1);
 }
 
+static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
+{
+	struct radv_shader_variant *vs;
+	vs = radv_pipeline_has_gs(pipeline) ? pipeline->gs_copy_shader : pipeline->shaders[MESA_SHADER_VERTEX];
+
+	struct ac_vs_output_info *outinfo = &vs->info.vs.outinfo;
+
+	unsigned clip_dist_mask, cull_dist_mask, total_mask;
+	clip_dist_mask = outinfo->clip_dist_mask;
+	cull_dist_mask = outinfo->cull_dist_mask;
+	total_mask = clip_dist_mask | cull_dist_mask;
+
+	bool misc_vec_ena = outinfo->writes_pointsize ||
+		outinfo->writes_layer ||
+		outinfo->writes_viewport_index;
+	pipeline->graphics.pa_cl_vs_out_cntl =
+		S_02881C_USE_VTX_POINT_SIZE(outinfo->writes_pointsize) |
+		S_02881C_USE_VTX_RENDER_TARGET_INDX(outinfo->writes_layer) |
+		S_02881C_USE_VTX_VIEWPORT_INDX(outinfo->writes_viewport_index) |
+		S_02881C_VS_OUT_MISC_VEC_ENA(misc_vec_ena) |
+		S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(misc_vec_ena) |
+		S_02881C_VS_OUT_CCDIST0_VEC_ENA((total_mask & 0x0f) != 0) |
+		S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xf0) != 0) |
+		cull_dist_mask << 8 |
+		clip_dist_mask;
+
+}
 static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 {
 	struct radv_shader_variant *ps, *vs;
@@ -1742,7 +1769,9 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		ps->info.fs.writes_z ? V_028710_SPI_SHADER_32_R :
 		V_028710_SPI_SHADER_ZERO;
 
+	calculate_pa_cl_vs_out_cntl(pipeline);
 	calculate_ps_inputs(pipeline);
+	
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
 	for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {

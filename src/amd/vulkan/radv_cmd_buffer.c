@@ -540,23 +540,9 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 			       S_028818_VPORT_Y_SCALE_ENA(1) | S_028818_VPORT_Y_OFFSET_ENA(1) |
 			       S_028818_VPORT_Z_SCALE_ENA(1) | S_028818_VPORT_Z_OFFSET_ENA(1));
 
-	unsigned clip_dist_mask, cull_dist_mask, total_mask;
-	clip_dist_mask = outinfo->clip_dist_mask;
-	cull_dist_mask = outinfo->cull_dist_mask;
-	total_mask = clip_dist_mask | cull_dist_mask;
 
 	radeon_set_context_reg(cmd_buffer->cs, R_02881C_PA_CL_VS_OUT_CNTL,
-			       S_02881C_USE_VTX_POINT_SIZE(outinfo->writes_pointsize) |
-			       S_02881C_USE_VTX_RENDER_TARGET_INDX(outinfo->writes_layer) |
-			       S_02881C_USE_VTX_VIEWPORT_INDX(outinfo->writes_viewport_index) |
-			       S_02881C_VS_OUT_MISC_VEC_ENA(outinfo->writes_pointsize ||
-							    outinfo->writes_layer ||
-							    outinfo->writes_viewport_index) |
-			       S_02881C_VS_OUT_CCDIST0_VEC_ENA((total_mask & 0x0f) != 0) |
-			       S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xf0) != 0) |
-			       pipeline->graphics.raster.pa_cl_vs_out_cntl |
-			       cull_dist_mask << 8 |
-			       clip_dist_mask);
+			       pipeline->graphics.pa_cl_vs_out_cntl);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028AB4_VGT_REUSE_OFF,
 			       S_028AB4_REUSE_OFF(outinfo->writes_viewport_index));

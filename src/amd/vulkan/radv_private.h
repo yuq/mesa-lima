@@ -905,7 +905,6 @@ unsigned radv_format_meta_fs_key(VkFormat format);
 
 struct radv_raster_state {
 	uint32_t pa_cl_clip_cntl;
-	uint32_t pa_cl_vs_out_cntl;
 	uint32_t spi_interp_control;
 	uint32_t pa_su_point_size;
 	uint32_t pa_su_point_minmax;
@@ -965,6 +964,7 @@ struct radv_pipeline {
 			unsigned gsvs_ring_size;
 			uint32_t ps_input_cntl[32];
 			uint32_t ps_input_cntl_num;
+			uint32_t pa_cl_vs_out_cntl;
 			struct radv_prim_vertex_count prim_vertex_count;
 		} graphics;
 	};
