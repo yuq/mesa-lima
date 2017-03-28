@@ -956,6 +956,7 @@ struct radv_pipeline {
 			struct radv_raster_state raster;
 			struct radv_multisample_state ms;
 			uint32_t db_shader_control;
+			uint32_t shader_z_format;
 			unsigned prim;
 			unsigned gs_out;
 			uint32_t vgt_gs_mode;

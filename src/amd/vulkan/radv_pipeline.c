@@ -1666,6 +1666,12 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		S_02880C_EXEC_ON_HIER_FAIL(ps->info.fs.writes_memory) |
 		S_02880C_EXEC_ON_NOOP(ps->info.fs.writes_memory);
 
+	pipeline->graphics.shader_z_format =
+		ps->info.fs.writes_sample_mask ? V_028710_SPI_SHADER_32_ABGR :
+		ps->info.fs.writes_stencil ? V_028710_SPI_SHADER_32_GR :
+		ps->info.fs.writes_z ? V_028710_SPI_SHADER_32_R :
+		V_028710_SPI_SHADER_ZERO;
+
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
 	for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {

@@ -709,10 +709,7 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028710_SPI_SHADER_Z_FORMAT,
-			       ps->info.fs.writes_sample_mask ? V_028710_SPI_SHADER_32_ABGR :
-			       ps->info.fs.writes_stencil ? V_028710_SPI_SHADER_32_GR :
-			       ps->info.fs.writes_z ? V_028710_SPI_SHADER_32_R :
-			       V_028710_SPI_SHADER_ZERO);
+			       pipeline->graphics.shader_z_format);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028714_SPI_SHADER_COL_FORMAT, blend->spi_shader_col_format);
 
