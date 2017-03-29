@@ -25,6 +25,7 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "main/errors.h"
 #include "main/texobj.h"
 #include "main/teximage.h"
 #include "util/u_inlines.h"
@@ -44,9 +45,11 @@
  * FIXME: I think this should operate on resources, not surfaces
  */
 static struct pipe_surface *
-st_egl_image_get_surface(struct gl_context *ctx, GLeglImageOES image_handle)
+st_egl_image_get_surface(struct gl_context *ctx, GLeglImageOES image_handle,
+                         unsigned usage, const char *error)
 {
    struct st_context *st = st_context(ctx);
+   struct pipe_screen *screen = st->pipe->screen;
    struct st_manager *smapi =
       (struct st_manager *) st->iface.st_context_private;
    struct st_egl_image stimg;
@@ -56,8 +59,18 @@ st_egl_image_get_surface(struct gl_context *ctx, GLeglImageOES image_handle)
       return NULL;
 
    memset(&stimg, 0, sizeof(stimg));
-   if (!smapi->get_egl_image(smapi, (void *) image_handle, &stimg))
+   if (!smapi->get_egl_image(smapi, (void *) image_handle, &stimg)) {
+      /* image_handle does not refer to a valid EGL image object */
+      _mesa_error(ctx, GL_INVALID_VALUE, error);
       return NULL;
+   }
+
+   if (!screen->is_format_supported(screen, stimg.format, PIPE_TEXTURE_2D,
+                                    stimg.texture->nr_samples, usage)) {
+      /* unable to specify a texture object using the specified EGL image */
+      _mesa_error(ctx, GL_INVALID_OPERATION, error);
+      return NULL;
+   }
 
    u_surface_default_template(&surf_tmpl, stimg.texture);
    surf_tmpl.format = stimg.format;
@@ -108,7 +121,8 @@ st_egl_image_target_renderbuffer_storage(struct gl_context *ctx,
    struct st_renderbuffer *strb = st_renderbuffer(rb);
    struct pipe_surface *ps;
 
-   ps = st_egl_image_get_surface(ctx, image_handle);
+   ps = st_egl_image_get_surface(ctx, image_handle, PIPE_BIND_RENDER_TARGET,
+				 "glEGLImageTargetRenderbufferStorage");
    if (ps) {
       strb->Base.Width = ps->width;
       strb->Base.Height = ps->height;
@@ -192,7 +206,8 @@ st_egl_image_target_texture_2d(struct gl_context *ctx, GLenum target,
 {
    struct pipe_surface *ps;
 
-   ps = st_egl_image_get_surface(ctx, image_handle);
+   ps = st_egl_image_get_surface(ctx, image_handle, PIPE_BIND_SAMPLER_VIEW,
+				 "glEGLImageTargetTexture2D");
    if (ps) {
       st_bind_surface(ctx, target, texObj, texImage, ps);
       pipe_surface_reference(&ps, NULL);
