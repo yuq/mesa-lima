@@ -59,6 +59,8 @@ VkResult radv_CreateDescriptorSetLayout(
 	if (!set_layout)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+	set_layout->flags = pCreateInfo->flags;
+
 	/* We just allocate all the samplers at the end of the struct */
 	uint32_t *samplers = (uint32_t*)&set_layout->binding[max_binding + 1];
 
@@ -79,6 +81,7 @@ VkResult radv_CreateDescriptorSetLayout(
 		switch (binding->descriptorType) {
 		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
 		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+			assert(!(pCreateInfo->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR));
 			set_layout->binding[b].dynamic_offset_count = 1;
 			set_layout->dynamic_shader_stages |= binding->stageFlags;
 			set_layout->binding[b].size = 0;
@@ -499,6 +502,8 @@ VkResult radv_AllocateDescriptorSets(
 		RADV_FROM_HANDLE(radv_descriptor_set_layout, layout,
 				 pAllocateInfo->pSetLayouts[i]);
 
+		assert(!(layout->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR));
+
 		result = radv_descriptor_set_create(device, pool, NULL, layout, &set);
 		if (result != VK_SUCCESS)
 			break;
@@ -656,6 +661,12 @@ void radv_update_descriptor_sets(
 			set->layout->binding + writeset->dstBinding;
 		uint32_t *ptr = set->mapped_ptr;
 		struct radeon_winsys_bo **buffer_list =  set->descriptors;
+		/* Immutable samplers are not copied into push descriptors when they are
+		 * allocated, so if we are writing push descriptors we have to copy the
+		 * immutable samplers into them now.
+		 */
+		const bool copy_immutable_samplers = cmd_buffer &&
+			binding_layout->immutable_samplers && !binding_layout->immutable_samplers_equal;
 
 		ptr += binding_layout->offset / 4;
 		ptr += binding_layout->size * writeset->dstArrayElement / 4;
@@ -667,6 +678,7 @@ void radv_update_descriptor_sets(
 			case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
 				unsigned idx = writeset->dstArrayElement + j;
 				idx += binding_layout->dynamic_offset_offset;
+				assert(!(set->layout->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR));
 				write_dynamic_buffer_descriptor(device, set->dynamic_descriptors + idx,
 								buffer_list, writeset->pBufferInfo + j);
 				break;
@@ -691,11 +703,19 @@ void radv_update_descriptor_sets(
 				write_combined_image_sampler_descriptor(device, cmd_buffer, ptr, buffer_list,
 									writeset->pImageInfo + j,
 									!binding_layout->immutable_samplers);
+				if (copy_immutable_samplers) {
+					const unsigned idx = writeset->dstArrayElement + j;
+					memcpy(ptr + 16, binding_layout->immutable_samplers + 4 * idx, 16);
+				}
 				break;
 			case VK_DESCRIPTOR_TYPE_SAMPLER:
-				if (!binding_layout->immutable_samplers)
+				if (!binding_layout->immutable_samplers) {
 					write_sampler_descriptor(device, ptr,
 					                         writeset->pImageInfo + j);
+				} else if (copy_immutable_samplers) {
+					unsigned idx = writeset->dstArrayElement + j;
+					memcpy(ptr, binding_layout->immutable_samplers + 4 * idx, 16);
+				}
 				break;
 			default:
 				unreachable("unimplemented descriptor type");

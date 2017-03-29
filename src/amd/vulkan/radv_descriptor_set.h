@@ -49,6 +49,9 @@ struct radv_descriptor_set_binding_layout {
 };
 
 struct radv_descriptor_set_layout {
+   /* The create flags for this descriptor set layout */
+   VkDescriptorSetLayoutCreateFlags flags;
+
    /* Number of bindings in this descriptor set */
    uint16_t binding_count;
 

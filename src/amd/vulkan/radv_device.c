@@ -100,6 +100,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.specVersion = 1,
 	},
 	{
+		.extensionName = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+	{
 		.extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
 		.specVersion = 1,
 	},
@@ -665,7 +669,20 @@ void radv_GetPhysicalDeviceProperties2KHR(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceProperties2KHR             *pProperties)
 {
-	return radv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
+	radv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
+
+	vk_foreach_struct(ext, pProperties->pNext) {
+		switch (ext->sType) {
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR: {
+			VkPhysicalDevicePushDescriptorPropertiesKHR *properties =
+				(VkPhysicalDevicePushDescriptorPropertiesKHR *) ext;
+			properties->maxPushDescriptors = MAX_PUSH_DESCRIPTORS;
+			break;
+		}
+		default:
+			break;
+		}
+	}
 }
 
 static void radv_get_physical_device_queue_family_properties(

@@ -79,6 +79,7 @@ typedef uint32_t xcb_window_t;
 #define MAX_VIEWPORTS   16
 #define MAX_SCISSORS    16
 #define MAX_PUSH_CONSTANTS_SIZE 128
+#define MAX_PUSH_DESCRIPTORS 32
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_SAMPLES_LOG2 4
 #define NUM_META_FS_KEYS 11
@@ -549,6 +550,12 @@ struct radv_descriptor_set {
 	struct radeon_winsys_bo *descriptors[0];
 };
 
+struct radv_push_descriptor_set
+{
+	struct radv_descriptor_set set;
+	uint32_t capacity;
+};
+
 struct radv_descriptor_pool {
 	struct radeon_winsys_bo *bo;
 	uint8_t *mapped_ptr;
@@ -682,6 +689,7 @@ struct radv_cmd_state {
 	uint32_t                                      vb_dirty;
 	radv_cmd_dirty_mask_t                         dirty;
 	bool                                          vertex_descriptors_dirty;
+	bool                                          push_descriptors_dirty;
 
 	struct radv_pipeline *                        pipeline;
 	struct radv_pipeline *                        emitted_pipeline;
@@ -739,6 +747,7 @@ struct radv_cmd_buffer {
 	uint8_t push_constants[MAX_PUSH_CONSTANTS_SIZE];
 	uint32_t dynamic_buffers[4 * MAX_DYNAMIC_BUFFERS];
 	VkShaderStageFlags push_constant_stages;
+	struct radv_push_descriptor_set push_descriptors;
 
 	struct radv_cmd_buffer_upload upload;
 
