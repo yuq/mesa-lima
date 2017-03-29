@@ -844,36 +844,6 @@ st_manager_flush_frontbuffer(struct st_context *st)
 }
 
 /**
- * Return the surface of an EGLImage.
- * FIXME: I think this should operate on resources, not surfaces
- */
-struct pipe_surface *
-st_manager_get_egl_image_surface(struct st_context *st, void *eglimg)
-{
-   struct st_manager *smapi =
-      (struct st_manager *) st->iface.st_context_private;
-   struct st_egl_image stimg;
-   struct pipe_surface *ps, surf_tmpl;
-
-   if (!smapi || !smapi->get_egl_image)
-      return NULL;
-
-   memset(&stimg, 0, sizeof(stimg));
-   if (!smapi->get_egl_image(smapi, eglimg, &stimg))
-      return NULL;
-
-   u_surface_default_template(&surf_tmpl, stimg.texture);
-   surf_tmpl.format = stimg.format;
-   surf_tmpl.u.tex.level = stimg.level;
-   surf_tmpl.u.tex.first_layer = stimg.layer;
-   surf_tmpl.u.tex.last_layer = stimg.layer;
-   ps = st->pipe->create_surface(st->pipe, stimg.texture, &surf_tmpl);
-   pipe_resource_reference(&stimg.texture, NULL);
-
-   return ps;
-}
-
-/**
  * Re-validate the framebuffers.
  */
 void
