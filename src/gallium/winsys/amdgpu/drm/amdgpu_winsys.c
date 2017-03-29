@@ -61,10 +61,6 @@
 #define     CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_8X16   16
 #define     CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_16X16  17
 
-#ifndef AMDGPU_INFO_NUM_EVICTIONS
-#define AMDGPU_INFO_NUM_EVICTIONS		0x18
-#endif
-
 static struct util_hash_table *dev_tab = NULL;
 static mtx_t dev_tab_mutex = _MTX_INITIALIZER_NP;
 
