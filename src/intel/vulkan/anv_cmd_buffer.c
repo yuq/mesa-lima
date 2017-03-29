@@ -120,7 +120,12 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->batch.status = VK_SUCCESS;
 
    memset(&state->descriptors, 0, sizeof(state->descriptors));
-   memset(&state->push_constants, 0, sizeof(state->push_constants));
+   for (uint32_t i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (state->push_constants[i] != NULL) {
+         vk_free(&cmd_buffer->pool->alloc, state->push_constants[i]);
+         state->push_constants[i] = NULL;
+      }
+   }
    memset(state->binding_tables, 0, sizeof(state->binding_tables));
    memset(state->samplers, 0, sizeof(state->samplers));
 
@@ -193,6 +198,9 @@ static VkResult anv_create_cmd_buffer(
 
    cmd_buffer->batch.status = VK_SUCCESS;
 
+   for (uint32_t i = 0; i < MESA_SHADER_STAGES; i++) {
+      cmd_buffer->state.push_constants[i] = NULL;
+   }
    cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    cmd_buffer->device = device;
    cmd_buffer->pool = pool;
