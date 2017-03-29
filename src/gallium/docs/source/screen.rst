@@ -376,6 +376,7 @@ The integer capabilities:
   operations are supported.
 * ``PIPE_CAP_TGSI_TEX_TXF_LZ``: Whether TEX_LZ and TXF_LZ opcodes are
   supported.
+* ``PIPE_CAP_TGSI_CLOCK``: Whether the CLOCK opcode is supported.
 
 
 .. _pipe_capf:

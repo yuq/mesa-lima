@@ -319,6 +319,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_INT64:
    case PIPE_CAP_INT64_DIVMOD:
    case PIPE_CAP_TGSI_TEX_TXF_LZ:
+   case PIPE_CAP_TGSI_CLOCK:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
