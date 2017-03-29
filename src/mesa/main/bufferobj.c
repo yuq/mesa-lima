@@ -1562,7 +1562,7 @@ validate_buffer_storage(struct gl_context *ctx,
       return false;
    }
 
-   if (bufObj->Immutable) {
+   if (bufObj->Immutable || bufObj->HandleAllocated) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(immutable)", func);
       return false;
    }
@@ -1726,7 +1726,7 @@ _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
       return;
    }
 
-   if (bufObj->Immutable) {
+   if (bufObj->Immutable || bufObj->HandleAllocated) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(immutable)", func);
       return;
    }
