@@ -693,9 +693,9 @@ void radv_update_descriptor_sets(
 									!binding_layout->immutable_samplers);
 				break;
 			case VK_DESCRIPTOR_TYPE_SAMPLER:
-				assert(!binding_layout->immutable_samplers);
-				write_sampler_descriptor(device, ptr,
-							 writeset->pImageInfo + j);
+				if (!binding_layout->immutable_samplers)
+					write_sampler_descriptor(device, ptr,
+					                         writeset->pImageInfo + j);
 				break;
 			default:
 				unreachable("unimplemented descriptor type");
