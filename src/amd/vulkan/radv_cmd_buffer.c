@@ -1988,6 +1988,30 @@ void radv_CmdPushDescriptorSetKHR(
 	cmd_buffer->state.push_descriptors_dirty = true;
 }
 
+void radv_CmdPushDescriptorSetWithTemplateKHR(
+	VkCommandBuffer                             commandBuffer,
+	VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
+	VkPipelineLayout                            _layout,
+	uint32_t                                    set,
+	const void*                                 pData)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_pipeline_layout, layout, _layout);
+	struct radv_descriptor_set *push_set = &cmd_buffer->push_descriptors.set;
+
+	assert(layout->set[set].layout->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR);
+
+	if (!radv_init_push_descriptor_set(cmd_buffer, push_set, layout->set[set].layout))
+		return;
+
+	radv_update_descriptor_set_with_template(cmd_buffer->device, cmd_buffer, push_set,
+						 descriptorUpdateTemplate, pData);
+
+	cmd_buffer->state.descriptors[set] = push_set;
+	cmd_buffer->state.descriptors_dirty |= (1 << set);
+	cmd_buffer->state.push_descriptors_dirty = true;
+}
+
 void radv_CmdPushConstants(VkCommandBuffer commandBuffer,
 			   VkPipelineLayout layout,
 			   VkShaderStageFlags stageFlags,
