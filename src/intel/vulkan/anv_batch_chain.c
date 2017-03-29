@@ -1277,8 +1277,10 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       adjust_relocations_to_state_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
                                        cmd_buffer->last_ss_pool_center);
 
-      anv_execbuf_add_bo(&execbuf, &(*bbo)->bo, &(*bbo)->relocs,
-                         &cmd_buffer->pool->alloc);
+      result = anv_execbuf_add_bo(&execbuf, &(*bbo)->bo, &(*bbo)->relocs,
+                                  &cmd_buffer->pool->alloc);
+      if (result != VK_SUCCESS)
+         return result;
    }
 
    /* Now that we've adjusted all of the surface state relocations, we need to
