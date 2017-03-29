@@ -1344,6 +1344,16 @@ radv_temp_descriptor_set_create(struct radv_device *device,
 void
 radv_temp_descriptor_set_destroy(struct radv_device *device,
 				 VkDescriptorSet _set);
+
+void
+radv_update_descriptor_sets(struct radv_device *device,
+                            struct radv_cmd_buffer *cmd_buffer,
+                            VkDescriptorSet overrideSet,
+                            uint32_t descriptorWriteCount,
+                            const VkWriteDescriptorSet *pDescriptorWrites,
+                            uint32_t descriptorCopyCount,
+                            const VkCopyDescriptorSet *pDescriptorCopies);
+
 void radv_initialise_cmask(struct radv_cmd_buffer *cmd_buffer,
 			   struct radv_image *image, uint32_t value);
 void radv_initialize_dcc(struct radv_cmd_buffer *cmd_buffer,

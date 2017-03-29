@@ -531,6 +531,7 @@ VkResult radv_FreeDescriptorSets(
 }
 
 static void write_texel_buffer_descriptor(struct radv_device *device,
+					  struct radv_cmd_buffer *cmd_buffer,
 					  unsigned *dst,
 					  struct radeon_winsys_bo **buffer_list,
 					  const VkBufferView _buffer_view)
@@ -538,10 +539,15 @@ static void write_texel_buffer_descriptor(struct radv_device *device,
 	RADV_FROM_HANDLE(radv_buffer_view, buffer_view, _buffer_view);
 
 	memcpy(dst, buffer_view->state, 4 * 4);
-	*buffer_list = buffer_view->bo;
+
+	if (cmd_buffer)
+		device->ws->cs_add_buffer(cmd_buffer->cs, buffer_view->bo, 7);
+	else
+		*buffer_list = buffer_view->bo;
 }
 
 static void write_buffer_descriptor(struct radv_device *device,
+                                    struct radv_cmd_buffer *cmd_buffer,
                                     unsigned *dst,
                                     struct radeon_winsys_bo **buffer_list,
                                     const VkDescriptorBufferInfo *buffer_info)
@@ -564,7 +570,10 @@ static void write_buffer_descriptor(struct radv_device *device,
 		S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
 		S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
 
-	*buffer_list = buffer->bo;
+	if (cmd_buffer)
+		device->ws->cs_add_buffer(cmd_buffer->cs, buffer->bo, 7);
+	else
+		*buffer_list = buffer->bo;
 }
 
 static void write_dynamic_buffer_descriptor(struct radv_device *device,
@@ -588,6 +597,7 @@ static void write_dynamic_buffer_descriptor(struct radv_device *device,
 
 static void
 write_image_descriptor(struct radv_device *device,
+		       struct radv_cmd_buffer *cmd_buffer,
 		       unsigned *dst,
 		       struct radeon_winsys_bo **buffer_list,
 		       const VkDescriptorImageInfo *image_info)
@@ -595,11 +605,16 @@ write_image_descriptor(struct radv_device *device,
 	RADV_FROM_HANDLE(radv_image_view, iview, image_info->imageView);
 	memcpy(dst, iview->descriptor, 8 * 4);
 	memcpy(dst + 8, iview->fmask_descriptor, 8 * 4);
-	*buffer_list = iview->bo;
+
+	if (cmd_buffer)
+		device->ws->cs_add_buffer(cmd_buffer->cs, iview->bo, 7);
+	else
+		*buffer_list = iview->bo;
 }
 
 static void
 write_combined_image_sampler_descriptor(struct radv_device *device,
+					struct radv_cmd_buffer *cmd_buffer,
 					unsigned *dst,
 					struct radeon_winsys_bo **buffer_list,
 					const VkDescriptorImageInfo *image_info,
@@ -607,7 +622,7 @@ write_combined_image_sampler_descriptor(struct radv_device *device,
 {
 	RADV_FROM_HANDLE(radv_sampler, sampler, image_info->sampler);
 
-	write_image_descriptor(device, dst, buffer_list, image_info);
+	write_image_descriptor(device, cmd_buffer, dst, buffer_list, image_info);
 	/* copy over sampler state */
 	if (has_sampler)
 		memcpy(dst + 16, sampler->state, 16);
@@ -623,18 +638,20 @@ write_sampler_descriptor(struct radv_device *device,
 	memcpy(dst, sampler->state, 16);
 }
 
-void radv_UpdateDescriptorSets(
-	VkDevice                                    _device,
+void radv_update_descriptor_sets(
+	struct radv_device*                         device,
+	struct radv_cmd_buffer*                     cmd_buffer,
+	VkDescriptorSet                             dstSetOverride,
 	uint32_t                                    descriptorWriteCount,
 	const VkWriteDescriptorSet*                 pDescriptorWrites,
 	uint32_t                                    descriptorCopyCount,
 	const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
-	RADV_FROM_HANDLE(radv_device, device, _device);
 	uint32_t i, j;
 	for (i = 0; i < descriptorWriteCount; i++) {
 		const VkWriteDescriptorSet *writeset = &pDescriptorWrites[i];
-		RADV_FROM_HANDLE(radv_descriptor_set, set, writeset->dstSet);
+		RADV_FROM_HANDLE(radv_descriptor_set, set,
+		                 dstSetOverride ? dstSetOverride : writeset->dstSet);
 		const struct radv_descriptor_set_binding_layout *binding_layout =
 			set->layout->binding + writeset->dstBinding;
 		uint32_t *ptr = set->mapped_ptr;
@@ -656,22 +673,22 @@ void radv_UpdateDescriptorSets(
 			}
 			case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 			case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-				write_buffer_descriptor(device, ptr, buffer_list,
+				write_buffer_descriptor(device, cmd_buffer, ptr, buffer_list,
 							writeset->pBufferInfo + j);
 				break;
 			case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
 			case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-				write_texel_buffer_descriptor(device, ptr, buffer_list,
+				write_texel_buffer_descriptor(device, cmd_buffer, ptr, buffer_list,
 							      writeset->pTexelBufferView[j]);
 				break;
 			case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 			case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
 			case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-				write_image_descriptor(device, ptr, buffer_list,
+				write_image_descriptor(device, cmd_buffer, ptr, buffer_list,
 						       writeset->pImageInfo + j);
 				break;
 			case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-				write_combined_image_sampler_descriptor(device, ptr, buffer_list,
+				write_combined_image_sampler_descriptor(device, cmd_buffer, ptr, buffer_list,
 									writeset->pImageInfo + j,
 									!binding_layout->immutable_samplers);
 				break;
@@ -691,4 +708,17 @@ void radv_UpdateDescriptorSets(
 	}
 	if (descriptorCopyCount)
 		radv_finishme("copy descriptors");
+}
+
+void radv_UpdateDescriptorSets(
+	VkDevice                                    _device,
+	uint32_t                                    descriptorWriteCount,
+	const VkWriteDescriptorSet*                 pDescriptorWrites,
+	uint32_t                                    descriptorCopyCount,
+	const VkCopyDescriptorSet*                  pDescriptorCopies)
+{
+	RADV_FROM_HANDLE(radv_device, device, _device);
+
+	radv_update_descriptor_sets(device, NULL, VK_NULL_HANDLE, descriptorWriteCount, pDescriptorWrites,
+			            descriptorCopyCount, pDescriptorCopies);
 }
