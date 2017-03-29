@@ -424,6 +424,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_CLOCK:
 		return HAVE_LLVM >= 0x0309;
 
+	case PIPE_CAP_TGSI_VOTE:
+		return HAVE_LLVM >= 0x0400;
+
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
 		return !SI_BIG_ENDIAN && sscreen->b.info.has_userptr;
 
@@ -480,7 +483,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
-	case PIPE_CAP_TGSI_VOTE:
 	case PIPE_CAP_MAX_WINDOW_RECTANGLES:
 	case PIPE_CAP_NATIVE_FENCE_FD:
 	case PIPE_CAP_TGSI_FS_FBFETCH:
