@@ -90,22 +90,6 @@ atomic_add_unless(int *v, int add, int unless)
    return c == unless;
 }
 
-/**
- * upper_32_bits - return bits 32-63 of a number
- * @n: the number we're accessing
- *
- * A basic shift-right of a 64- or 32-bit quantity.  Use this to suppress
- * the "right shift count >= width of type" warning when that quantity is
- * 32-bits.
- */
-#define upper_32_bits(n) ((__u32)(((n) >> 16) >> 16))
-
-/**
- * lower_32_bits - return bits 0-31 of a number
- * @n: the number we're accessing
- */
-#define lower_32_bits(n) ((__u32)(n))
-
 struct _drm_bacon_context {
 	unsigned int ctx_id;
 	struct _drm_bacon_bufmgr *bufmgr;
@@ -121,14 +105,7 @@ struct drm_bacon_gem_bo_bucket {
 typedef struct _drm_bacon_bufmgr {
 	int fd;
 
-	int max_relocs;
-
 	pthread_mutex_t lock;
-
-	struct drm_i915_gem_exec_object2 *exec2_objects;
-	drm_bacon_bo **exec_bos;
-	int exec_size;
-	int exec_count;
 
 	/** Array of lists of cached gem objects of power-of-two sizes */
 	struct drm_bacon_gem_bo_bucket cache_bucket[14 * 4];
@@ -141,10 +118,8 @@ typedef struct _drm_bacon_bufmgr {
 	struct list_head vma_cache;
 	int vma_count, vma_open, vma_max;
 
-	uint64_t gtt_size;
 	unsigned int has_llc : 1;
 	unsigned int bo_reuse : 1;
-	unsigned int no_exec : 1;
 } drm_bacon_bufmgr;
 
 struct _drm_bacon_bo_gem {
@@ -162,12 +137,6 @@ struct _drm_bacon_bo_gem {
 	unsigned int global_name;
 
 	/**
-	 * Index of the buffer within the validation list while preparing a
-	 * batchbuffer execution.
-	 */
-	int validate_index;
-
-	/**
 	 * Current tiling mode
 	 */
 	uint32_t tiling_mode;
@@ -176,14 +145,6 @@ struct _drm_bacon_bo_gem {
 
 	time_t free_time;
 
-	/** Array passed to the DRM containing relocation information. */
-	struct drm_i915_gem_relocation_entry *relocs;
-	/**
-	 * Array of info structs corresponding to relocs[i].target_handle etc
-	 */
-	drm_bacon_bo **reloc_bos;
-	/** Number of entries in relocs */
-	int reloc_count;
 	/** Mapped address for the buffer, saved across map/unmap cycles */
 	void *mem_virtual;
 	/** GTT virtual address for the buffer, saved across map/unmap cycles */
@@ -197,59 +158,15 @@ struct _drm_bacon_bo_gem {
 	struct list_head head;
 
 	/**
-	 * Boolean of whether this BO and its children have been included in
-	 * the current drm_bacon_bufmgr_check_aperture_space() total.
-	 */
-	bool included_in_check_aperture;
-
-	/**
-	 * Boolean of whether this buffer has been used as a relocation
-	 * target and had its size accounted for, and thus can't have any
-	 * further relocations added to it.
-	 */
-	bool used_as_reloc_target;
-
-	/**
-	 * Boolean of whether we have encountered an error whilst building the relocation tree.
-	 */
-	bool has_error;
-
-	/**
 	 * Boolean of whether this buffer can be re-used
 	 */
 	bool reusable;
-
-	/**
-	 * Boolean of whether the GPU is definitely not accessing the buffer.
-	 *
-	 * This is only valid when reusable, since non-reusable
-	 * buffers are those that have been shared with other
-	 * processes, so we don't know their state.
-	 */
-	bool idle;
-
-	/**
-	 * Size in bytes of this buffer and its relocation descendents.
-	 *
-	 * Used to avoid costly tree walking in
-	 * drm_bacon_bufmgr_check_aperture in the common case.
-	 */
-	int reloc_tree_size;
 };
-
-static unsigned int
-drm_bacon_gem_estimate_batch_space(drm_bacon_bo ** bo_array, int count);
-
-static unsigned int
-drm_bacon_gem_compute_batch_space(drm_bacon_bo ** bo_array, int count);
 
 static int
 drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 				     uint32_t tiling_mode,
 				     uint32_t stride);
-
-static void drm_bacon_gem_bo_unreference_locked_timed(drm_bacon_bo *bo,
-						      time_t time);
 
 static void drm_bacon_gem_bo_free(drm_bacon_bo *bo);
 
@@ -331,137 +248,12 @@ drm_bacon_gem_bo_bucket_for_size(drm_bacon_bufmgr *bufmgr,
 	return NULL;
 }
 
-static void
-drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr *bufmgr)
-{
-	int i, j;
-
-	for (i = 0; i < bufmgr->exec_count; i++) {
-		drm_bacon_bo *bo = bufmgr->exec_bos[i];
-		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-		if (bo_gem->relocs == NULL) {
-			DBG("%2d: %d (%s)\n", i, bo_gem->gem_handle,
-			    bo_gem->name);
-			continue;
-		}
-
-		for (j = 0; j < bo_gem->reloc_count; j++) {
-			drm_bacon_bo *target_bo = bo_gem->reloc_bos[j];
-			drm_bacon_bo_gem *target_gem =
-			    (drm_bacon_bo_gem *) target_bo;
-
-			DBG("%2d: %d (%s)@0x%08x %08x -> "
-			    "%d (%s)@0x%08x %08x + 0x%08x\n",
-			    i,
-			    bo_gem->gem_handle,
-			    bo_gem->name,
-			    upper_32_bits(bo_gem->relocs[j].offset),
-			    lower_32_bits(bo_gem->relocs[j].offset),
-			    target_gem->gem_handle,
-			    target_gem->name,
-			    upper_32_bits(target_bo->offset64),
-			    lower_32_bits(target_bo->offset64),
-			    bo_gem->relocs[j].delta);
-		}
-	}
-}
-
 inline void
 drm_bacon_bo_reference(drm_bacon_bo *bo)
 {
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	p_atomic_inc(&bo_gem->refcount);
-}
-
-static void
-drm_bacon_add_validate_buffer2(drm_bacon_bo *bo)
-{
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
-	int index;
-
-	if (bo_gem->validate_index != -1)
-		return;
-
-	/* Extend the array of validation entries as necessary. */
-	if (bufmgr->exec_count == bufmgr->exec_size) {
-		int new_size = bufmgr->exec_size * 2;
-
-		if (new_size == 0)
-			new_size = 5;
-
-		bufmgr->exec2_objects =
-			realloc(bufmgr->exec2_objects,
-				sizeof(*bufmgr->exec2_objects) * new_size);
-		bufmgr->exec_bos =
-			realloc(bufmgr->exec_bos,
-				sizeof(*bufmgr->exec_bos) * new_size);
-		bufmgr->exec_size = new_size;
-	}
-
-	index = bufmgr->exec_count;
-	bo_gem->validate_index = index;
-	/* Fill in array entry */
-	bufmgr->exec2_objects[index].handle = bo_gem->gem_handle;
-	bufmgr->exec2_objects[index].relocation_count = bo_gem->reloc_count;
-	bufmgr->exec2_objects[index].relocs_ptr = (uintptr_t)bo_gem->relocs;
-	bufmgr->exec2_objects[index].alignment = bo->align;
-	bufmgr->exec2_objects[index].offset = bo->offset64;
-	bufmgr->exec2_objects[index].flags = 0;
-	bufmgr->exec2_objects[index].rsvd1 = 0;
-	bufmgr->exec2_objects[index].rsvd2 = 0;
-	bufmgr->exec_bos[index] = bo;
-	bufmgr->exec_count++;
-}
-
-static void
-drm_bacon_bo_gem_set_in_aperture_size(drm_bacon_bufmgr *bufmgr,
-				      drm_bacon_bo_gem *bo_gem,
-				      unsigned int alignment)
-{
-	unsigned int size;
-
-	assert(!bo_gem->used_as_reloc_target);
-
-	/* The older chipsets are far-less flexible in terms of tiling,
-	 * and require tiled buffer to be size aligned in the aperture.
-	 * This means that in the worst possible case we will need a hole
-	 * twice as large as the object in order for it to fit into the
-	 * aperture. Optimal packing is for wimps.
-	 */
-	size = bo_gem->bo.size;
-
-	bo_gem->reloc_tree_size = size + alignment;
-}
-
-static int
-drm_bacon_setup_reloc_list(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	unsigned int max_relocs = bufmgr->max_relocs;
-
-	if (bo->size / 4 < max_relocs)
-		max_relocs = bo->size / 4;
-
-	bo_gem->relocs = malloc(max_relocs *
-				sizeof(struct drm_i915_gem_relocation_entry));
-	bo_gem->reloc_bos = malloc(max_relocs * sizeof(drm_bacon_bo *));
-	if (bo_gem->relocs == NULL || bo_gem->reloc_bos == NULL) {
-		bo_gem->has_error = true;
-
-		free (bo_gem->relocs);
-		bo_gem->relocs = NULL;
-
-		free (bo_gem->reloc_bos);
-		bo_gem->reloc_bos = NULL;
-
-		return 1;
-	}
-
-	return 0;
 }
 
 int
@@ -472,15 +264,12 @@ drm_bacon_bo_busy(drm_bacon_bo *bo)
 	struct drm_i915_gem_busy busy;
 	int ret;
 
-	if (bo_gem->reusable && bo_gem->idle)
-		return false;
-
 	memclear(busy);
 	busy.handle = bo_gem->gem_handle;
 
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_BUSY, &busy);
 	if (ret == 0) {
-		bo_gem->idle = !busy.busy;
+		bo->idle = !busy.busy;
 		return busy.busy;
 	} else {
 		return false;
@@ -658,12 +447,8 @@ retry:
 
 	bo_gem->name = name;
 	p_atomic_set(&bo_gem->refcount, 1);
-	bo_gem->validate_index = -1;
-	bo_gem->used_as_reloc_target = false;
-	bo_gem->has_error = false;
 	bo_gem->reusable = true;
 
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, alignment);
 	pthread_mutex_unlock(&bufmgr->lock);
 
 	DBG("bo_create: buf %d (%s) %ldb\n",
@@ -809,7 +594,6 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	bo_gem->bo.virtual = NULL;
 	bo_gem->bo.bufmgr = bufmgr;
 	bo_gem->name = name;
-	bo_gem->validate_index = -1;
 	bo_gem->gem_handle = open_arg.handle;
 	bo_gem->bo.handle = open_arg.handle;
 	bo_gem->global_name = handle;
@@ -831,7 +615,6 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	bo_gem->tiling_mode = get_tiling.tiling_mode;
 	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
 	DBG("bo_create_from_handle: %d (%s)\n", handle, bo_gem->name);
 
 out:
@@ -1012,31 +795,9 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_bacon_gem_bo_bucket *bucket;
-	int i;
-
-	/* Unreference all the target buffers */
-	for (i = 0; i < bo_gem->reloc_count; i++) {
-		if (bo_gem->reloc_bos[i] != bo) {
-			drm_bacon_gem_bo_unreference_locked_timed(bo_gem->
-								  reloc_bos[i],
-								  time);
-		}
-	}
-	bo_gem->reloc_count = 0;
-	bo_gem->used_as_reloc_target = false;
 
 	DBG("bo_unreference final: %d (%s)\n",
 	    bo_gem->gem_handle, bo_gem->name);
-
-	/* release memory associated with this object */
-	if (bo_gem->reloc_bos) {
-		free(bo_gem->reloc_bos);
-		bo_gem->reloc_bos = NULL;
-	}
-	if (bo_gem->relocs) {
-		free(bo_gem->relocs);
-		bo_gem->relocs = NULL;
-	}
 
 	/* Clear any left-over mappings */
 	if (bo_gem->map_count) {
@@ -1054,22 +815,11 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 		bo_gem->free_time = time;
 
 		bo_gem->name = NULL;
-		bo_gem->validate_index = -1;
 
 		list_addtail(&bo_gem->head, &bucket->head);
 	} else {
 		drm_bacon_gem_bo_free(bo);
 	}
-}
-
-static void drm_bacon_gem_bo_unreference_locked_timed(drm_bacon_bo *bo,
-						      time_t time)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	assert(p_atomic_read(&bo_gem->refcount) > 0);
-	if (p_atomic_dec_zero(&bo_gem->refcount))
-		drm_bacon_gem_bo_unreference_final(bo, time);
 }
 
 void
@@ -1489,9 +1239,6 @@ drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 void
 drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 {
-	free(bufmgr->exec2_objects);
-	free(bufmgr->exec_bos);
-
 	pthread_mutex_destroy(&bufmgr->lock);
 
 	/* Free any cached buffer objects we were going to reuse */
@@ -1513,282 +1260,6 @@ drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 	_mesa_hash_table_destroy(bufmgr->handle_table, NULL);
 
 	free(bufmgr);
-}
-
-/**
- * Adds the target buffer to the validation list and adds the relocation
- * to the reloc_buffer's relocation list.
- *
- * The relocation entry at the given offset must already contain the
- * precomputed relocation value, because the kernel will optimize out
- * the relocation entry write when the buffer hasn't moved from the
- * last known offset in target_bo.
- */
-int
-drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
-			drm_bacon_bo *target_bo, uint32_t target_offset,
-			uint32_t read_domains, uint32_t write_domain)
-{
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
-
-	if (bo_gem->has_error)
-		return -ENOMEM;
-
-	if (target_bo_gem->has_error) {
-		bo_gem->has_error = true;
-		return -ENOMEM;
-	}
-
-	/* Create a new relocation list if needed */
-	if (bo_gem->relocs == NULL && drm_bacon_setup_reloc_list(bo))
-		return -ENOMEM;
-
-	/* Check overflow */
-	assert(bo_gem->reloc_count < bufmgr->max_relocs);
-
-	/* Check args */
-	assert(offset <= bo->size - 4);
-	assert((write_domain & (write_domain - 1)) == 0);
-
-	/* Make sure that we're not adding a reloc to something whose size has
-	 * already been accounted for.
-	 */
-	assert(!bo_gem->used_as_reloc_target);
-	if (target_bo_gem != bo_gem) {
-		target_bo_gem->used_as_reloc_target = true;
-		bo_gem->reloc_tree_size += target_bo_gem->reloc_tree_size;
-	}
-
-	bo_gem->reloc_bos[bo_gem->reloc_count] = target_bo;
-	if (target_bo != bo)
-		drm_bacon_bo_reference(target_bo);
-
-	bo_gem->relocs[bo_gem->reloc_count].offset = offset;
-	bo_gem->relocs[bo_gem->reloc_count].delta = target_offset;
-	bo_gem->relocs[bo_gem->reloc_count].target_handle =
-	    target_bo_gem->gem_handle;
-	bo_gem->relocs[bo_gem->reloc_count].read_domains = read_domains;
-	bo_gem->relocs[bo_gem->reloc_count].write_domain = write_domain;
-	bo_gem->relocs[bo_gem->reloc_count].presumed_offset = target_bo->offset64;
-	bo_gem->reloc_count++;
-
-	return 0;
-}
-
-int
-drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	return bo_gem->reloc_count;
-}
-
-/**
- * Removes existing relocation entries in the BO after "start".
- *
- * This allows a user to avoid a two-step process for state setup with
- * counting up all the buffer objects and doing a
- * drm_bacon_bufmgr_check_aperture_space() before emitting any of the
- * relocations for the state setup.  Instead, save the state of the
- * batchbuffer including drm_bacon_gem_get_reloc_count(), emit all the
- * state, and then check if it still fits in the aperture.
- *
- * Any further drm_bacon_bufmgr_check_aperture_space() queries
- * involving this buffer in the tree are undefined after this call.
- */
-void
-drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
-{
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	int i;
-	struct timespec time;
-
-	clock_gettime(CLOCK_MONOTONIC, &time);
-
-	assert(bo_gem->reloc_count >= start);
-
-	/* Unreference the cleared target buffers */
-	pthread_mutex_lock(&bufmgr->lock);
-
-	for (i = start; i < bo_gem->reloc_count; i++) {
-		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->reloc_bos[i];
-		if (&target_bo_gem->bo != bo) {
-			drm_bacon_gem_bo_unreference_locked_timed(&target_bo_gem->bo,
-								  time.tv_sec);
-		}
-	}
-	bo_gem->reloc_count = start;
-
-	pthread_mutex_unlock(&bufmgr->lock);
-
-}
-
-static void
-drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
-	int i;
-
-	if (bo_gem->relocs == NULL)
-		return;
-
-	for (i = 0; i < bo_gem->reloc_count; i++) {
-		drm_bacon_bo *target_bo = bo_gem->reloc_bos[i];
-
-		if (target_bo == bo)
-			continue;
-
-		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
-
-		/* Continue walking the tree depth-first. */
-		drm_bacon_gem_bo_process_reloc2(target_bo);
-
-		/* Add the target to the validate list */
-		drm_bacon_add_validate_buffer2(target_bo);
-	}
-}
-
-static void
-drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr *bufmgr)
-{
-	int i;
-
-	for (i = 0; i < bufmgr->exec_count; i++) {
-		drm_bacon_bo *bo = bufmgr->exec_bos[i];
-		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
-
-		/* Update the buffer offset */
-		if (bufmgr->exec2_objects[i].offset != bo->offset64) {
-			DBG("BO %d (%s) migrated: 0x%08x %08x -> 0x%08x %08x\n",
-			    bo_gem->gem_handle, bo_gem->name,
-			    upper_32_bits(bo->offset64),
-			    lower_32_bits(bo->offset64),
-			    upper_32_bits(bufmgr->exec2_objects[i].offset),
-			    lower_32_bits(bufmgr->exec2_objects[i].offset));
-			bo->offset64 = bufmgr->exec2_objects[i].offset;
-		}
-	}
-}
-
-static int
-do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
-	 int in_fence, int *out_fence,
-	 unsigned int flags)
-{
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	struct drm_i915_gem_execbuffer2 execbuf;
-	int ret = 0;
-	int i;
-
-	if (to_bo_gem(bo)->has_error)
-		return -ENOMEM;
-
-	pthread_mutex_lock(&bufmgr->lock);
-	/* Update indices and set up the validate list. */
-	drm_bacon_gem_bo_process_reloc2(bo);
-
-	/* Add the batch buffer to the validation list.  There are no relocations
-	 * pointing to it.
-	 */
-	drm_bacon_add_validate_buffer2(bo);
-
-	memclear(execbuf);
-	execbuf.buffers_ptr = (uintptr_t)bufmgr->exec2_objects;
-	execbuf.buffer_count = bufmgr->exec_count;
-	execbuf.batch_start_offset = 0;
-	execbuf.batch_len = used;
-	execbuf.cliprects_ptr = 0;
-	execbuf.num_cliprects = 0;
-	execbuf.DR1 = 0;
-	execbuf.DR4 = 0;
-	execbuf.flags = flags;
-	if (ctx == NULL)
-		i915_execbuffer2_set_context_id(execbuf, 0);
-	else
-		i915_execbuffer2_set_context_id(execbuf, ctx->ctx_id);
-	execbuf.rsvd2 = 0;
-	if (in_fence != -1) {
-		execbuf.rsvd2 = in_fence;
-		execbuf.flags |= I915_EXEC_FENCE_IN;
-	}
-	if (out_fence != NULL) {
-		*out_fence = -1;
-		execbuf.flags |= I915_EXEC_FENCE_OUT;
-	}
-
-	if (bufmgr->no_exec)
-		goto skip_execution;
-
-	ret = drmIoctl(bufmgr->fd,
-		       DRM_IOCTL_I915_GEM_EXECBUFFER2_WR,
-		       &execbuf);
-	if (ret != 0) {
-		ret = -errno;
-		if (ret == -ENOSPC) {
-			DBG("Execbuffer fails to pin. "
-			    "Estimate: %u. Actual: %u. Available: %u\n",
-			    drm_bacon_gem_estimate_batch_space(bufmgr->exec_bos,
-							       bufmgr->exec_count),
-			    drm_bacon_gem_compute_batch_space(bufmgr->exec_bos,
-							      bufmgr->exec_count),
-			    (unsigned int) bufmgr->gtt_size);
-		}
-	}
-	drm_bacon_update_buffer_offsets2(bufmgr);
-
-	if (ret == 0 && out_fence != NULL)
-		*out_fence = execbuf.rsvd2 >> 32;
-
-skip_execution:
-	if (INTEL_DEBUG & DEBUG_BUFMGR)
-		drm_bacon_gem_dump_validation_list(bufmgr);
-
-	for (i = 0; i < bufmgr->exec_count; i++) {
-		drm_bacon_bo_gem *bo_gem = to_bo_gem(bufmgr->exec_bos[i]);
-
-		bo_gem->idle = false;
-
-		/* Disconnect the buffer from the validate list */
-		bo_gem->validate_index = -1;
-		bufmgr->exec_bos[i] = NULL;
-	}
-	bufmgr->exec_count = 0;
-	pthread_mutex_unlock(&bufmgr->lock);
-
-	return ret;
-}
-
-int
-drm_bacon_bo_exec(drm_bacon_bo *bo, int used)
-{
-	return do_exec2(bo, used, NULL, -1, NULL, I915_EXEC_RENDER);
-}
-
-int
-drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used, unsigned int flags)
-{
-	return do_exec2(bo, used, NULL, -1, NULL, flags);
-}
-
-int
-drm_bacon_gem_bo_context_exec(drm_bacon_bo *bo, drm_bacon_context *ctx,
-			      int used, unsigned int flags)
-{
-	return do_exec2(bo, used, ctx, -1, NULL, flags);
-}
-
-int
-drm_bacon_gem_bo_fence_exec(drm_bacon_bo *bo,
-			    drm_bacon_context *ctx,
-			    int used,
-			    int in_fence,
-			    int *out_fence,
-			    unsigned int flags)
-{
-	return do_exec2(bo, used, ctx, in_fence, out_fence, flags);
 }
 
 static int
@@ -1833,7 +1304,6 @@ int
 drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			uint32_t stride)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
 
@@ -1844,8 +1314,6 @@ drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 		stride = 0;
 
 	ret = drm_bacon_gem_bo_set_tiling_internal(bo, *tiling_mode, stride);
-	if (ret == 0)
-		drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
 
 	*tiling_mode = bo_gem->tiling_mode;
 	return ret;
@@ -1915,9 +1383,6 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 				&bo_gem->gem_handle, bo_gem);
 
 	bo_gem->name = "prime";
-	bo_gem->validate_index = -1;
-	bo_gem->used_as_reloc_target = false;
-	bo_gem->has_error = false;
 	bo_gem->reusable = false;
 
 	memclear(get_tiling);
@@ -1930,7 +1395,6 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	bo_gem->tiling_mode = get_tiling.tiling_mode;
 	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
-	drm_bacon_bo_gem_set_in_aperture_size(bufmgr, bo_gem, 0);
 
 out:
 	pthread_mutex_unlock(&bufmgr->lock);
@@ -1999,141 +1463,6 @@ drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr)
 	bufmgr->bo_reuse = true;
 }
 
-/**
- * Return the additional aperture space required by the tree of buffer objects
- * rooted at bo.
- */
-static int
-drm_bacon_gem_bo_get_aperture_space(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	int i;
-	int total = 0;
-
-	if (bo == NULL || bo_gem->included_in_check_aperture)
-		return 0;
-
-	total += bo->size;
-	bo_gem->included_in_check_aperture = true;
-
-	for (i = 0; i < bo_gem->reloc_count; i++)
-		total +=
-		    drm_bacon_gem_bo_get_aperture_space(bo_gem->reloc_bos[i]);
-
-	return total;
-}
-
-/**
- * Clear the flag set by drm_bacon_gem_bo_get_aperture_space() so we're ready
- * for the next drm_bacon_bufmgr_check_aperture_space() call.
- */
-static void
-drm_bacon_gem_bo_clear_aperture_space_flag(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	int i;
-
-	if (bo == NULL || !bo_gem->included_in_check_aperture)
-		return;
-
-	bo_gem->included_in_check_aperture = false;
-
-	for (i = 0; i < bo_gem->reloc_count; i++)
-		drm_bacon_gem_bo_clear_aperture_space_flag(bo_gem->reloc_bos[i]);
-}
-
-/**
- * Return a conservative estimate for the amount of aperture required
- * for a collection of buffers. This may double-count some buffers.
- */
-static unsigned int
-drm_bacon_gem_estimate_batch_space(drm_bacon_bo **bo_array, int count)
-{
-	int i;
-	unsigned int total = 0;
-
-	for (i = 0; i < count; i++) {
-		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo_array[i];
-		if (bo_gem != NULL)
-			total += bo_gem->reloc_tree_size;
-	}
-	return total;
-}
-
-/**
- * Return the amount of aperture needed for a collection of buffers.
- * This avoids double counting any buffers, at the cost of looking
- * at every buffer in the set.
- */
-static unsigned int
-drm_bacon_gem_compute_batch_space(drm_bacon_bo **bo_array, int count)
-{
-	int i;
-	unsigned int total = 0;
-
-	for (i = 0; i < count; i++) {
-		total += drm_bacon_gem_bo_get_aperture_space(bo_array[i]);
-		/* For the first buffer object in the array, we get an
-		 * accurate count back for its reloc_tree size (since nothing
-		 * had been flagged as being counted yet).  We can save that
-		 * value out as a more conservative reloc_tree_size that
-		 * avoids double-counting target buffers.  Since the first
-		 * buffer happens to usually be the batch buffer in our
-		 * callers, this can pull us back from doing the tree
-		 * walk on every new batch emit.
-		 */
-		if (i == 0) {
-			drm_bacon_bo_gem *bo_gem =
-			    (drm_bacon_bo_gem *) bo_array[i];
-			bo_gem->reloc_tree_size = total;
-		}
-	}
-
-	for (i = 0; i < count; i++)
-		drm_bacon_gem_bo_clear_aperture_space_flag(bo_array[i]);
-	return total;
-}
-
-/**
- * Return -1 if the batchbuffer should be flushed before attempting to
- * emit rendering referencing the buffers pointed to by bo_array.
- *
- * This is required because if we try to emit a batchbuffer with relocations
- * to a tree of buffers that won't simultaneously fit in the aperture,
- * the rendering will return an error at a point where the software is not
- * prepared to recover from it.
- *
- * However, we also want to emit the batchbuffer significantly before we reach
- * the limit, as a series of batchbuffers each of which references buffers
- * covering almost all of the aperture means that at each emit we end up
- * waiting to evict a buffer from the last rendering, and we get synchronous
- * performance.  By emitting smaller batchbuffers, we eat some CPU overhead to
- * get better parallelism.
- */
-int
-drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo **bo_array, int count)
-{
-	drm_bacon_bufmgr *bufmgr = bo_array[0]->bufmgr;
-	unsigned int total = 0;
-	unsigned int threshold = bufmgr->gtt_size * 3 / 4;
-
-	total = drm_bacon_gem_estimate_batch_space(bo_array, count);
-
-	if (total > threshold)
-		total = drm_bacon_gem_compute_batch_space(bo_array, count);
-
-	if (total > threshold) {
-		DBG("check_space: overflowed available aperture, "
-		    "%dkb vs %dkb\n",
-		    total / 1024, (int)bufmgr->gtt_size / 1024);
-		return -ENOSPC;
-	} else {
-		DBG("drm_check_space: total %dkb vs bufgr %dkb\n", total / 1024,
-		    (int)bufmgr->gtt_size / 1024);
-		return 0;
-	}
-}
-
 /*
  * Disable buffer reuse for objects which are shared with the kernel
  * as scanout buffers
@@ -2153,38 +1482,6 @@ drm_bacon_bo_is_reusable(drm_bacon_bo *bo)
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	return bo_gem->reusable;
-}
-
-static int
-_drm_bacon_gem_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-	int i;
-
-	for (i = 0; i < bo_gem->reloc_count; i++) {
-		if (bo_gem->reloc_bos[i] == target_bo)
-			return 1;
-		if (bo == bo_gem->reloc_bos[i])
-			continue;
-		if (_drm_bacon_gem_bo_references(bo_gem->reloc_bos[i],
-						target_bo))
-			return 1;
-	}
-
-	return 0;
-}
-
-/** Return true if target_bo is referenced by bo's relocation tree. */
-int
-drm_bacon_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
-{
-	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
-
-	if (bo == NULL || target_bo == NULL)
-		return 0;
-	if (target_bo_gem->used_as_reloc_target)
-		return _drm_bacon_gem_bo_references(bo, target_bo);
-	return 0;
 }
 
 static void
@@ -2476,7 +1773,6 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
                           int fd, int batch_size)
 {
 	drm_bacon_bufmgr *bufmgr;
-	struct drm_i915_gem_get_aperture aperture;
 
 	bufmgr = calloc(1, sizeof(*bufmgr));
 	if (bufmgr == NULL)
@@ -2498,19 +1794,7 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 		return NULL;
 	}
 
-	memclear(aperture);
-	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
-	bufmgr->gtt_size = aperture.aper_available_size;
-
 	bufmgr->has_llc = devinfo->has_llc;
-
-	/* Let's go with one relocation per every 2 dwords (but round down a bit
-	 * since a power of two will mean an extra page allocation for the reloc
-	 * buffer).
-	 *
-	 * Every 4 was too few for the blender benchmark.
-	 */
-	bufmgr->max_relocs = batch_size / sizeof(uint32_t) / 2 - 2;
 
 	init_cache_buckets(bufmgr);
 

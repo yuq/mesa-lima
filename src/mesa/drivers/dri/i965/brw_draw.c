@@ -601,7 +601,7 @@ retry:
 
       brw->no_batch_wrap = false;
 
-      if (drm_bacon_bufmgr_check_aperture_space(&brw->batch.bo, 1)) {
+      if (!brw_batch_has_aperture_space(brw, 0)) {
          if (!fail_next) {
             intel_batchbuffer_reset_to_saved(brw);
             intel_batchbuffer_flush(brw);

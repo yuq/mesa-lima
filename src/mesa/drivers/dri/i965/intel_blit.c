@@ -498,10 +498,9 @@ intelEmitCopyBlit(struct brw_context *brw,
 		  GLshort w, GLshort h,
 		  GLenum logic_op)
 {
-   GLuint CMD, BR13, pass = 0;
+   GLuint CMD, BR13;
    int dst_y2 = dst_y + h;
    int dst_x2 = dst_x + w;
-   drm_bacon_bo *aper_array[3];
    bool dst_y_tiled = dst_tiling == I915_TILING_Y;
    bool src_y_tiled = src_tiling == I915_TILING_Y;
    uint32_t src_tile_w, src_tile_h;
@@ -510,20 +509,13 @@ intelEmitCopyBlit(struct brw_context *brw,
    if ((dst_y_tiled || src_y_tiled) && brw->gen < 6)
       return false;
 
+   const unsigned bo_sizes = dst_buffer->size + src_buffer->size;
+
    /* do space check before going any further */
-   do {
-       aper_array[0] = brw->batch.bo;
-       aper_array[1] = dst_buffer;
-       aper_array[2] = src_buffer;
+   if (!brw_batch_has_aperture_space(brw, bo_sizes))
+      intel_batchbuffer_flush(brw);
 
-       if (drm_bacon_bufmgr_check_aperture_space(aper_array, 3) != 0) {
-           intel_batchbuffer_flush(brw);
-           pass++;
-       } else
-           break;
-   } while (pass < 2);
-
-   if (pass >= 2)
+   if (!brw_batch_has_aperture_space(brw, bo_sizes))
       return false;
 
    unsigned length = brw->gen >= 8 ? 10 : 8;
@@ -780,7 +772,6 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
 {
    uint32_t BR13, CMD;
    int pitch, cpp;
-   drm_bacon_bo *aper_array[2];
 
    pitch = mt->pitch;
    cpp = mt->cpp;
@@ -799,13 +790,8 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
    BR13 |= pitch;
 
    /* do space check before going any further */
-   aper_array[0] = brw->batch.bo;
-   aper_array[1] = mt->bo;
-
-   if (drm_bacon_bufmgr_check_aperture_space(aper_array,
-					     ARRAY_SIZE(aper_array)) != 0) {
+   if (!brw_batch_has_aperture_space(brw, mt->bo->size))
       intel_batchbuffer_flush(brw);
-   }
 
    unsigned length = brw->gen >= 8 ? 7 : 6;
    bool dst_y_tiled = mt->tiling == I915_TILING_Y;

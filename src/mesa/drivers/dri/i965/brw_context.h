@@ -477,9 +477,21 @@ struct intel_batchbuffer {
    bool needs_sol_reset;
    bool state_base_address_emitted;
 
+   struct drm_i915_gem_relocation_entry *relocs;
+   int reloc_count;
+   int reloc_array_size;
+   /** The validation list */
+   struct drm_i915_gem_exec_object2 *exec_objects;
+   drm_bacon_bo **exec_bos;
+   int exec_count;
+   int exec_array_size;
+   /** The amount of aperture space (in bytes) used by all exec_bos */
+   int aperture_space;
+
    struct {
       uint32_t *map_next;
       int reloc_count;
+      int exec_count;
    } saved;
 
    /** Map from batch offset to brw_state_batch data (with DEBUG_BATCH) */

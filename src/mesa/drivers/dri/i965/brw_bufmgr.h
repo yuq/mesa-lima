@@ -88,6 +88,15 @@ struct _drm_bacon_bo {
 	 * entries when calling drm_bacon_bo_emit_reloc()
 	 */
 	uint64_t offset64;
+
+	/**
+	 * Boolean of whether the GPU is definitely not accessing the buffer.
+	 *
+	 * This is only valid when reusable, since non-reusable
+	 * buffers are those that have been shared with other
+	 * processes, so we don't know their state.
+	 */
+	bool idle;
 };
 
 #define BO_ALLOC_FOR_RENDER (1<<0)
@@ -178,37 +187,6 @@ void drm_bacon_bo_wait_rendering(drm_bacon_bo *bo);
  */
 void drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr);
 
-/** Executes the command buffer pointed to by bo. */
-int drm_bacon_bo_exec(drm_bacon_bo *bo, int used);
-
-/** Executes the command buffer pointed to by bo on the selected ring buffer */
-int drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used, unsigned int flags);
-int drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo ** bo_array, int count);
-
-/**
- * Add relocation entry in reloc_buf, which will be updated with the
- * target buffer's real offset on on command submission.
- *
- * Relocations remain in place for the lifetime of the buffer object.
- *
- * \param bo Buffer to write the relocation into.
- * \param offset Byte offset within reloc_bo of the pointer to
- *                      target_bo.
- * \param target_bo Buffer whose offset should be written into the
- *                  relocation entry.
- * \param target_offset Constant value to be added to target_bo's
- *                      offset in relocation entry.
- * \param read_domains GEM read domains which the buffer will be
- *                      read into by the command that this relocation
- *                      is part of.
- * \param write_domains GEM read domains which the buffer will be
- *                      dirtied in by the command that this
- *                      relocation is part of.
- */
-int drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
-			    drm_bacon_bo *target_bo, uint32_t target_offset,
-			    uint32_t read_domains, uint32_t write_domain);
-
 /**
  * Ask that the buffer be placed in tiling mode
  *
@@ -271,9 +249,6 @@ int drm_bacon_bo_disable_reuse(drm_bacon_bo *bo);
  */
 int drm_bacon_bo_is_reusable(drm_bacon_bo *bo);
 
-/** Returns true if target_bo is in the relocation tree rooted at bo. */
-int drm_bacon_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo);
-
 /* drm_bacon_bufmgr_gem.c */
 drm_bacon_bufmgr *drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 					    int fd, int batch_size);
@@ -290,8 +265,6 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo);
 void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo);
 void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo);
 
-int drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo);
-void drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start);
 void drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable);
 
 int drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns);
@@ -300,14 +273,6 @@ drm_bacon_context *drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr);
 int drm_bacon_gem_context_get_id(drm_bacon_context *ctx,
                                  uint32_t *ctx_id);
 void drm_bacon_gem_context_destroy(drm_bacon_context *ctx);
-int drm_bacon_gem_bo_context_exec(drm_bacon_bo *bo, drm_bacon_context *ctx,
-				  int used, unsigned int flags);
-int drm_bacon_gem_bo_fence_exec(drm_bacon_bo *bo,
-				drm_bacon_context *ctx,
-				int used,
-				int in_fence,
-				int *out_fence,
-				unsigned int flags);
 
 int drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd);
 drm_bacon_bo *drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr,

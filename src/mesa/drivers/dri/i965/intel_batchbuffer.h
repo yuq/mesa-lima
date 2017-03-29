@@ -65,6 +65,9 @@ void intel_batchbuffer_data(struct brw_context *brw,
                             const void *data, GLuint bytes,
                             enum brw_gpu_ring ring);
 
+bool brw_batch_has_aperture_space(struct brw_context *brw,
+                                  unsigned extra_space_in_bytes);
+
 bool brw_batch_references(struct intel_batchbuffer *batch, drm_bacon_bo *bo);
 
 uint64_t brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
