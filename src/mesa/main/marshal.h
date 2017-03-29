@@ -119,6 +119,19 @@ _mesa_glthread_is_non_vbo_draw_elements(const struct gl_context *ctx)
 
 #define DEBUG_MARSHAL_PRINT_CALLS 0
 
+/**
+ * This is printed when we have fallen back to a sync. This can happen when
+ * MARSHAL_MAX_CMD_SIZE is exceeded.
+ */
+static inline void
+debug_print_sync_fallback(const char *func)
+{
+#if DEBUG_MARSHAL_PRINT_CALLS
+   printf("fallback to sync: %s\n", func);
+#endif
+}
+
+
 static inline void
 debug_print_sync(const char *func)
 {

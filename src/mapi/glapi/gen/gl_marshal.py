@@ -91,6 +91,7 @@ class PrintCode(gl_XML.gl_print_base):
 
     def print_sync_dispatch(self, func):
         out('_mesa_glthread_finish(ctx);')
+        out('debug_print_sync_fallback("{0}");'.format(func.name))
         self.print_sync_call(func)
 
     def print_sync_body(self, func):
