@@ -43,7 +43,7 @@ loadersource = env.ParseSourceList('Makefile.sources', [
 
 if not env['msvc'] :
     env.Append(CCFLAGS = [
-        '-std=c++11',
+        '-std=c++14',
     ])
 
 swrroot = '#src/gallium/drivers/swr/'
