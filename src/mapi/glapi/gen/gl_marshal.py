@@ -204,7 +204,7 @@ class PrintCode(gl_XML.gl_print_base):
             self.print_sync_call(func)
         out('}')
 
-    def validate_count_or_return(self, func):
+    def validate_count_or_fallback(self, func):
         # Check that any counts for variable-length arguments might be < 0, in
         # which case the command alloc or the memcpy would blow up before we
         # get to the validation in Mesa core.
@@ -212,12 +212,14 @@ class PrintCode(gl_XML.gl_print_base):
             if p.is_variable_length():
                 out('if (unlikely({0} < 0)) {{'.format(p.size_string()))
                 with indent():
-                    out('_mesa_glthread_finish(ctx);')
-                    out('_mesa_error(ctx, GL_INVALID_VALUE, "{0}({1} < 0)");'.format(func.name, p.size_string()))
-                    out('return;')
+                    out('goto fallback_to_sync;')
                 out('}')
+                return True
+        return False
+
 
     def print_async_marshal(self, func):
+        need_fallback_sync = False
         out('static void GLAPIENTRY')
         out('_mesa_marshal_{0}({1})'.format(
                 func.name, func.get_parameter_string()))
@@ -236,7 +238,7 @@ class PrintCode(gl_XML.gl_print_base):
 
             out('debug_print_marshal("{0}");'.format(func.name))
 
-            self.validate_count_or_return(func)
+            need_fallback_sync = self.validate_count_or_fallback(func)
 
             if func.marshal_fail:
                 out('if ({0}) {{'.format(func.marshal_fail))
@@ -250,10 +252,14 @@ class PrintCode(gl_XML.gl_print_base):
             out('if (cmd_size <= MARSHAL_MAX_CMD_SIZE) {')
             with indent():
                 self.print_async_dispatch(func)
-            out('} else {')
-            with indent():
-                self.print_sync_dispatch(func)
+                out('return;')
             out('}')
+
+        out('')
+        if need_fallback_sync:
+            out('fallback_to_sync:')
+        with indent():
+            self.print_sync_dispatch(func)
 
         out('}')
 
