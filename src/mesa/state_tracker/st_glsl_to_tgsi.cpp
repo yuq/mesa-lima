@@ -3880,39 +3880,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
    inst->sampler_array_size = sampler_array_size;
    inst->sampler_base = sampler_base;
 
-   switch (type->sampler_dimensionality) {
-   case GLSL_SAMPLER_DIM_1D:
-      inst->tex_target = (type->sampler_array)
-         ? TEXTURE_1D_ARRAY_INDEX : TEXTURE_1D_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_2D:
-      inst->tex_target = (type->sampler_array)
-         ? TEXTURE_2D_ARRAY_INDEX : TEXTURE_2D_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_3D:
-      inst->tex_target = TEXTURE_3D_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_CUBE:
-      inst->tex_target = (type->sampler_array)
-         ? TEXTURE_CUBE_ARRAY_INDEX : TEXTURE_CUBE_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_RECT:
-      inst->tex_target = TEXTURE_RECT_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_BUF:
-      inst->tex_target = TEXTURE_BUFFER_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_EXTERNAL:
-      inst->tex_target = TEXTURE_EXTERNAL_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_MS:
-      inst->tex_target = (type->sampler_array)
-         ? TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX : TEXTURE_2D_MULTISAMPLE_INDEX;
-      break;
-   default:
-      assert(!"Should not get here.");
-   }
-
+   inst->tex_target = type->sampler_index();
    inst->image_format = st_mesa_format_to_pipe_format(st_context(ctx),
          _mesa_get_shader_image_format(imgvar->data.image_format));
 
@@ -4415,39 +4383,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       inst->tex_offset_num_offset = i;
    }
 
-   switch (sampler_type->sampler_dimensionality) {
-   case GLSL_SAMPLER_DIM_1D:
-      inst->tex_target = (sampler_type->sampler_array)
-         ? TEXTURE_1D_ARRAY_INDEX : TEXTURE_1D_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_2D:
-      inst->tex_target = (sampler_type->sampler_array)
-         ? TEXTURE_2D_ARRAY_INDEX : TEXTURE_2D_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_3D:
-      inst->tex_target = TEXTURE_3D_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_CUBE:
-      inst->tex_target = (sampler_type->sampler_array)
-         ? TEXTURE_CUBE_ARRAY_INDEX : TEXTURE_CUBE_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_RECT:
-      inst->tex_target = TEXTURE_RECT_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_BUF:
-      inst->tex_target = TEXTURE_BUFFER_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_EXTERNAL:
-      inst->tex_target = TEXTURE_EXTERNAL_INDEX;
-      break;
-   case GLSL_SAMPLER_DIM_MS:
-      inst->tex_target = (sampler_type->sampler_array)
-         ? TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX : TEXTURE_2D_MULTISAMPLE_INDEX;
-      break;
-   default:
-      assert(!"Should not get here.");
-   }
-
+   inst->tex_target = sampler_type->sampler_index();
    inst->tex_type = ir->type->base_type;
 
    this->result = result_src;
