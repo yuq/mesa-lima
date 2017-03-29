@@ -83,6 +83,16 @@ struct simdBBox
     simdscalari xmax;
 };
 
+#if ENABLE_AVX512_SIMD16
+struct simd16BBox
+{
+    simd16scalari ymin;
+    simd16scalari ymax;
+    simd16scalari xmin;
+    simd16scalari xmax;
+};
+
+#endif
 INLINE
 void vTranspose(__m128 &row0, __m128 &row1, __m128 &row2, __m128 &row3)
 {

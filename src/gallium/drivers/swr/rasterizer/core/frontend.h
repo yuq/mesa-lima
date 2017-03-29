@@ -112,6 +112,23 @@ void triangleSetupABIntVertical(const simdscalari vX[3], const simdscalari vY[3]
     vB[1] = _simd_sub_epi32(vX[2], vX[1]);
     vB[2] = _simd_sub_epi32(vX[0], vX[2]);
 }
+
+#if ENABLE_AVX512_SIMD16
+INLINE
+void triangleSetupABIntVertical(const simd16scalari vX[3], const simd16scalari vY[3], simd16scalari(&vA)[3], simd16scalari(&vB)[3])
+{
+    // A = y0 - y1
+    // B = x1 - x0
+    vA[0] = _simd16_sub_epi32(vY[0], vY[1]);
+    vA[1] = _simd16_sub_epi32(vY[1], vY[2]);
+    vA[2] = _simd16_sub_epi32(vY[2], vY[0]);
+
+    vB[0] = _simd16_sub_epi32(vX[1], vX[0]);
+    vB[1] = _simd16_sub_epi32(vX[2], vX[1]);
+    vB[2] = _simd16_sub_epi32(vX[0], vX[2]);
+}
+
+#endif
 // Calculate the determinant of the triangle
 // 2 vectors between the 3 points: P, Q
 // Px = x0-x2, Py = y0-y2
@@ -185,6 +202,44 @@ void calcDeterminantIntVertical(const simdscalari vA[3], const simdscalari vB[3]
     pvDet[1] = vResultHi;
 }
 
+#if ENABLE_AVX512_SIMD16
+INLINE
+void calcDeterminantIntVertical(const simd16scalari vA[3], const simd16scalari vB[3], simd16scalari *pvDet)
+{
+    // refer to calcDeterminantInt comment for calculation explanation
+    // A1*B2
+    simd16scalari vA1Lo = _simd16_unpacklo_epi32(vA[1], vA[1]); // 0 0 1 1 4 4 5 5
+    simd16scalari vA1Hi = _simd16_unpackhi_epi32(vA[1], vA[1]); // 2 2 3 3 6 6 7 7
+
+    simd16scalari vB2Lo = _simd16_unpacklo_epi32(vB[2], vB[2]);
+    simd16scalari vB2Hi = _simd16_unpackhi_epi32(vB[2], vB[2]);
+
+    simd16scalari vA1B2Lo = _simd16_mul_epi32(vA1Lo, vB2Lo);    // 0 1 4 5
+    simd16scalari vA1B2Hi = _simd16_mul_epi32(vA1Hi, vB2Hi);    // 2 3 6 7
+
+    // B1*A2
+    simd16scalari vA2Lo = _simd16_unpacklo_epi32(vA[2], vA[2]);
+    simd16scalari vA2Hi = _simd16_unpackhi_epi32(vA[2], vA[2]);
+
+    simd16scalari vB1Lo = _simd16_unpacklo_epi32(vB[1], vB[1]);
+    simd16scalari vB1Hi = _simd16_unpackhi_epi32(vB[1], vB[1]);
+
+    simd16scalari vA2B1Lo = _simd16_mul_epi32(vA2Lo, vB1Lo);
+    simd16scalari vA2B1Hi = _simd16_mul_epi32(vA2Hi, vB1Hi);
+
+    // A1*B2 - A2*B1
+    simd16scalari detLo = _simd16_sub_epi64(vA1B2Lo, vA2B1Lo);
+    simd16scalari detHi = _simd16_sub_epi64(vA1B2Hi, vA2B1Hi);
+
+    // shuffle 0 1 4 5 -> 0 1 2 3
+    simd16scalari vResultLo = _simd16_permute2f128_si(detLo, detHi, 0x20);
+    simd16scalari vResultHi = _simd16_permute2f128_si(detLo, detHi, 0x31);
+
+    pvDet[0] = vResultLo;
+    pvDet[1] = vResultHi;
+}
+
+#endif
 INLINE
 void triangleSetupC(const __m128 vX, const __m128 vY, const __m128 vA, const __m128 &vB, __m128 &vC)
 {
@@ -227,6 +282,27 @@ void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices)
     }
 }
 
+#if USE_SIMD16_FRONTEND
+template<uint32_t NumVerts>
+INLINE
+void viewportTransform(simd16vector *v, const SWR_VIEWPORT_MATRICES & vpMatrices)
+{
+    const simd16scalar m00 = _simd16_broadcast_ss(&vpMatrices.m00[0]);
+    const simd16scalar m30 = _simd16_broadcast_ss(&vpMatrices.m30[0]);
+    const simd16scalar m11 = _simd16_broadcast_ss(&vpMatrices.m11[0]);
+    const simd16scalar m31 = _simd16_broadcast_ss(&vpMatrices.m31[0]);
+    const simd16scalar m22 = _simd16_broadcast_ss(&vpMatrices.m22[0]);
+    const simd16scalar m32 = _simd16_broadcast_ss(&vpMatrices.m32[0]);
+
+    for (uint32_t i = 0; i < NumVerts; ++i)
+    {
+        v[i].x = _simd16_fmadd_ps(v[i].x, m00, m30);
+        v[i].y = _simd16_fmadd_ps(v[i].y, m11, m31);
+        v[i].z = _simd16_fmadd_ps(v[i].z, m22, m32);
+    }
+}
+
+#endif
 template<uint32_t NumVerts>
 INLINE
 void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices, simdscalari vViewportIdx)
@@ -247,6 +323,28 @@ void viewportTransform(simdvector *v, const SWR_VIEWPORT_MATRICES & vpMatrices, 
     }
 }
 
+#if USE_SIMD16_FRONTEND
+template<uint32_t NumVerts>
+INLINE
+void viewportTransform(simd16vector *v, const SWR_VIEWPORT_MATRICES & vpMatrices, simd16scalari vViewportIdx)
+{
+    // perform a gather of each matrix element based on the viewport array indexes
+    const simd16scalar m00 = _simd16_i32gather_ps(&vpMatrices.m00[0], vViewportIdx, 4);
+    const simd16scalar m30 = _simd16_i32gather_ps(&vpMatrices.m30[0], vViewportIdx, 4);
+    const simd16scalar m11 = _simd16_i32gather_ps(&vpMatrices.m11[0], vViewportIdx, 4);
+    const simd16scalar m31 = _simd16_i32gather_ps(&vpMatrices.m31[0], vViewportIdx, 4);
+    const simd16scalar m22 = _simd16_i32gather_ps(&vpMatrices.m22[0], vViewportIdx, 4);
+    const simd16scalar m32 = _simd16_i32gather_ps(&vpMatrices.m32[0], vViewportIdx, 4);
+
+    for (uint32_t i = 0; i < NumVerts; ++i)
+    {
+        v[i].x = _simd16_fmadd_ps(v[i].x, m00, m30);
+        v[i].y = _simd16_fmadd_ps(v[i].y, m11, m31);
+        v[i].z = _simd16_fmadd_ps(v[i].z, m22, m32);
+    }
+}
+
+#endif
 INLINE
 void calcBoundingBoxInt(const __m128i &vX, const __m128i &vY, SWR_RECT &bbox)
 {

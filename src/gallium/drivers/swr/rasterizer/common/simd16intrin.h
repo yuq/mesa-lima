@@ -46,10 +46,6 @@ struct simd16scalari
 };
 typedef uint16_t simd16mask;
 
-#define _simd16_masklo(mask) ((mask) & 0xFF)
-#define _simd16_maskhi(mask) (((mask) >> 8))
-#define _simd16_setmask(hi, lo) (((hi) << 8) | (lo))
-
 #else
 typedef __m512 simd16scalar;
 typedef __m512d simd16scalard;
@@ -59,6 +55,10 @@ typedef __mmask16 simd16mask;
 #else
 #error Unsupported vector width
 #endif//KNOB_SIMD16_WIDTH == 16
+
+#define _simd16_masklo(mask) ((mask) & 0xFF)
+#define _simd16_maskhi(mask) (((mask) >> 8) & 0xFF)
+#define _simd16_setmask(hi, lo) (((hi) << 8) | (lo))
 
 OSALIGN(union, KNOB_SIMD16_BYTES) simd16vector
 {
@@ -383,32 +383,26 @@ SIMD16_EMU_AVX512_2(simd16scalar, _simd16_max_ps, _mm256_max_ps)
 
 INLINE simd16mask _simd16_movemask_ps(simd16scalar a)
 {
-    simd16mask mask;
+    simdmask mask_lo = _mm256_movemask_ps(a.lo);
+    simdmask mask_hi = _mm256_movemask_ps(a.hi);
 
-    reinterpret_cast<uint8_t *>(&mask)[0] = _mm256_movemask_ps(a.lo);
-    reinterpret_cast<uint8_t *>(&mask)[1] = _mm256_movemask_ps(a.hi);
-
-    return mask;
+    return static_cast<simd16mask>(mask_lo) | (static_cast<simd16mask>(mask_hi) << 8);
 }
 
 INLINE simd16mask _simd16_movemask_pd(simd16scalard a)
 {
-    simd16mask mask;
+    simdmask mask_lo = _mm256_movemask_pd(a.lo);
+    simdmask mask_hi = _mm256_movemask_pd(a.hi);
 
-    reinterpret_cast<uint8_t *>(&mask)[0] = _mm256_movemask_pd(a.lo);
-    reinterpret_cast<uint8_t *>(&mask)[1] = _mm256_movemask_pd(a.hi);
-
-    return mask;
+    return static_cast<simd16mask>(mask_lo) | (static_cast<simd16mask>(mask_hi) << 4);
 }
 
-INLINE simd16mask _simd16_movemask_epi8(simd16scalari a)
+INLINE uint64_t _simd16_movemask_epi8(simd16scalari a)
 {
-    simd16mask mask;
+    uint32_t mask_lo = _mm256_movemask_epi8(a.lo);
+    uint32_t mask_hi = _mm256_movemask_epi8(a.hi);
 
-    reinterpret_cast<uint8_t *>(&mask)[0] = _mm256_movemask_epi8(a.lo);
-    reinterpret_cast<uint8_t *>(&mask)[1] = _mm256_movemask_epi8(a.hi);
-
-    return mask;
+    return static_cast<uint64_t>(mask_lo) | (static_cast<uint64_t>(mask_hi) << 32);
 }
 
 INLINE simd16scalari _simd16_cvtps_epi32(simd16scalar a)
@@ -809,12 +803,10 @@ INLINE simd16mask _simd16_scalari2mask(simd16scalari mask)
     return _mm512_cmpneq_epu32_mask(mask, _mm512_setzero_epi32());
 }
 
-#if 0
 INLINE simd16mask _simd16_scalard2mask(simd16scalard mask)
 {
-    return _mm512_cmpneq_epu64_mask(mask, _mm512_setzero_epi64());
+    return _mm512_cmpneq_epu64_mask(_mm512_castpd_si512(mask), _mm512_setzero_si512());
 }
-#endif
 
 #define _simd16_setzero_ps      _mm512_setzero_ps
 #define _simd16_setzero_si      _mm512_setzero_si512
@@ -889,6 +881,7 @@ INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, cons
 }
 
 #define _simd16_mul_ps          _mm512_mul_ps
+#define _simd16_div_ps          _mm512_div_ps
 #define _simd16_add_ps          _mm512_add_ps
 #define _simd16_sub_ps          _mm512_sub_ps
 #define _simd16_rsqrt_ps        _mm512_rsqrt14_ps
@@ -900,12 +893,10 @@ INLINE simd16mask _simd16_movemask_ps(simd16scalar a)
     return  _simd16_scalari2mask(_mm512_castps_si512(a));
 }
 
-#if 0
 INLINE simd16mask _simd16_movemask_pd(simd16scalard a)
 {
-    return  _simd16_scalard2mask(_mm512i_castpd_si512(a));
+    return  _simd16_scalard2mask(a);
 }
-#endif
 
 #if 0
 INLINE int _simd16_movemask_epi8(simd16scalari a)
@@ -1040,7 +1031,6 @@ INLINE simd16scalar _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *
 #define _simd16_mask_i32gather_ps(a, m, index, mask, scale) _simd16_mask_i32gather_ps_temp<scale>(a, m, index, mask)
 
 #define _simd16_abs_epi32         _mm512_abs_epi32
-#define _simd16_cmpeq_epi64       _mm512_abs_epi32
 
 INLINE simd16scalari _simd16_cmpeq_epi64(simd16scalari a, simd16scalari b)
 {
