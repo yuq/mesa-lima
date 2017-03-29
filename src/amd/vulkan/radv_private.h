@@ -968,6 +968,7 @@ struct radv_pipeline {
 			uint32_t pa_cl_vs_out_cntl;
 			uint32_t vgt_shader_stages_en;
 			struct radv_prim_vertex_count prim_vertex_count;
+ 			bool can_use_guardband;
 		} graphics;
 	};
 

@@ -1215,6 +1215,28 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	ms->pa_sc_aa_mask[1] = mask | (mask << 16);
 }
 
+static bool
+radv_prim_can_use_guardband(enum VkPrimitiveTopology topology)
+{
+	switch (topology) {
+	case VK_PRIMITIVE_TOPOLOGY_POINT_LIST:
+	case VK_PRIMITIVE_TOPOLOGY_LINE_LIST:
+	case VK_PRIMITIVE_TOPOLOGY_LINE_STRIP:
+	case VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY:
+	case VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY:
+		return false;
+	case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
+	case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
+	case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN:
+	case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY:
+	case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY:
+	case VK_PRIMITIVE_TOPOLOGY_PATCH_LIST:
+		return true;
+	default:
+		unreachable("unhandled primitive type");
+	}
+}
+
 static uint32_t
 si_translate_prim(enum VkPrimitiveTopology topology)
 {
@@ -1715,14 +1737,18 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	radv_pipeline_init_raster_state(pipeline, pCreateInfo);
 	radv_pipeline_init_multisample_state(pipeline, pCreateInfo);
 	pipeline->graphics.prim = si_translate_prim(pCreateInfo->pInputAssemblyState->topology);
+	pipeline->graphics.can_use_guardband = radv_prim_can_use_guardband(pCreateInfo->pInputAssemblyState->topology);
+
 	if (radv_pipeline_has_gs(pipeline)) {
 		pipeline->graphics.gs_out = si_conv_gl_prim_to_gs_out(pipeline->shaders[MESA_SHADER_GEOMETRY]->info.gs.output_prim);
+		pipeline->graphics.can_use_guardband = pipeline->graphics.gs_out == V_028A6C_OUTPRIM_TYPE_TRISTRIP;
 	} else {
 		pipeline->graphics.gs_out = si_conv_prim_to_gs_out(pCreateInfo->pInputAssemblyState->topology);
 	}
 	if (extra && extra->use_rectlist) {
 		pipeline->graphics.prim = V_008958_DI_PT_RECTLIST;
 		pipeline->graphics.gs_out = V_028A6C_OUTPRIM_TYPE_TRISTRIP;
+		pipeline->graphics.can_use_guardband = true;
 	}
 	pipeline->graphics.prim_restart_enable = !!pCreateInfo->pInputAssemblyState->primitiveRestartEnable;
 	/* prim vertex count will need TESS changes */

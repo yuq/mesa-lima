@@ -730,6 +730,11 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_0286E8_SPI_TMPRING_SIZE,
 			       S_0286E8_WAVES(pipeline->max_waves) |
 			       S_0286E8_WAVESIZE(pipeline->scratch_bytes_per_wave >> 10));
+
+	if (!cmd_buffer->state.emitted_pipeline ||
+	    cmd_buffer->state.emitted_pipeline->graphics.can_use_guardband !=
+	     pipeline->graphics.can_use_guardband)
+		cmd_buffer->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_SCISSOR;
 	cmd_buffer->state.emitted_pipeline = pipeline;
 }
 
