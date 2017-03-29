@@ -151,10 +151,6 @@ typedef struct _drm_bacon_bufmgr {
 	unsigned int no_exec : 1;
 } drm_bacon_bufmgr;
 
-typedef struct _drm_bacon_reloc_target_info {
-	drm_bacon_bo *bo;
-} drm_bacon_reloc_target;
-
 struct _drm_bacon_bo_gem {
 	drm_bacon_bo bo;
 
@@ -189,7 +185,7 @@ struct _drm_bacon_bo_gem {
 	/**
 	 * Array of info structs corresponding to relocs[i].target_handle etc
 	 */
-	drm_bacon_reloc_target *reloc_target_info;
+	drm_bacon_bo **reloc_bos;
 	/** Number of entries in relocs */
 	int reloc_count;
 	/** Mapped address for the buffer, saved across map/unmap cycles */
@@ -358,7 +354,7 @@ drm_bacon_gem_dump_validation_list(drm_bacon_bufmgr *bufmgr)
 		}
 
 		for (j = 0; j < bo_gem->reloc_count; j++) {
-			drm_bacon_bo *target_bo = bo_gem->reloc_target_info[j].bo;
+			drm_bacon_bo *target_bo = bo_gem->reloc_bos[j];
 			drm_bacon_bo_gem *target_gem =
 			    (drm_bacon_bo_gem *) target_bo;
 
@@ -459,16 +455,15 @@ drm_bacon_setup_reloc_list(drm_bacon_bo *bo)
 
 	bo_gem->relocs = malloc(max_relocs *
 				sizeof(struct drm_i915_gem_relocation_entry));
-	bo_gem->reloc_target_info = malloc(max_relocs *
-					   sizeof(drm_bacon_reloc_target));
-	if (bo_gem->relocs == NULL || bo_gem->reloc_target_info == NULL) {
+	bo_gem->reloc_bos = malloc(max_relocs * sizeof(drm_bacon_bo *));
+	if (bo_gem->relocs == NULL || bo_gem->reloc_bos == NULL) {
 		bo_gem->has_error = true;
 
 		free (bo_gem->relocs);
 		bo_gem->relocs = NULL;
 
-		free (bo_gem->reloc_target_info);
-		bo_gem->reloc_target_info = NULL;
+		free (bo_gem->reloc_bos);
+		bo_gem->reloc_bos = NULL;
 
 		return 1;
 	}
@@ -1028,9 +1023,9 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 
 	/* Unreference all the target buffers */
 	for (i = 0; i < bo_gem->reloc_count; i++) {
-		if (bo_gem->reloc_target_info[i].bo != bo) {
+		if (bo_gem->reloc_bos[i] != bo) {
 			drm_bacon_gem_bo_unreference_locked_timed(bo_gem->
-								  reloc_target_info[i].bo,
+								  reloc_bos[i],
 								  time);
 		}
 	}
@@ -1041,9 +1036,9 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	    bo_gem->gem_handle, bo_gem->name);
 
 	/* release memory associated with this object */
-	if (bo_gem->reloc_target_info) {
-		free(bo_gem->reloc_target_info);
-		bo_gem->reloc_target_info = NULL;
+	if (bo_gem->reloc_bos) {
+		free(bo_gem->reloc_bos);
+		bo_gem->reloc_bos = NULL;
 	}
 	if (bo_gem->relocs) {
 		free(bo_gem->relocs);
@@ -1594,7 +1589,7 @@ drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 		bo_gem->reloc_tree_size += target_bo_gem->reloc_tree_size;
 	}
 
-	bo_gem->reloc_target_info[bo_gem->reloc_count].bo = target_bo;
+	bo_gem->reloc_bos[bo_gem->reloc_count] = target_bo;
 	if (target_bo != bo)
 		drm_bacon_bo_reference(target_bo);
 
@@ -1647,7 +1642,7 @@ drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 	pthread_mutex_lock(&bufmgr->lock);
 
 	for (i = start; i < bo_gem->reloc_count; i++) {
-		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->reloc_target_info[i].bo;
+		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->reloc_bos[i];
 		if (&target_bo_gem->bo != bo) {
 			drm_bacon_gem_bo_unreference_locked_timed(&target_bo_gem->bo,
 								  time.tv_sec);
@@ -1669,7 +1664,7 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 		return;
 
 	for (i = 0; i < bo_gem->reloc_count; i++) {
-		drm_bacon_bo *target_bo = bo_gem->reloc_target_info[i].bo;
+		drm_bacon_bo *target_bo = bo_gem->reloc_bos[i];
 
 		if (target_bo == bo)
 			continue;
@@ -2051,8 +2046,7 @@ drm_bacon_gem_bo_get_aperture_space(drm_bacon_bo *bo)
 
 	for (i = 0; i < bo_gem->reloc_count; i++)
 		total +=
-		    drm_bacon_gem_bo_get_aperture_space(bo_gem->
-							reloc_target_info[i].bo);
+		    drm_bacon_gem_bo_get_aperture_space(bo_gem->reloc_bos[i]);
 
 	return total;
 }
@@ -2073,8 +2067,7 @@ drm_bacon_gem_bo_clear_aperture_space_flag(drm_bacon_bo *bo)
 	bo_gem->included_in_check_aperture = false;
 
 	for (i = 0; i < bo_gem->reloc_count; i++)
-		drm_bacon_gem_bo_clear_aperture_space_flag(bo_gem->
-							   reloc_target_info[i].bo);
+		drm_bacon_gem_bo_clear_aperture_space_flag(bo_gem->reloc_bos[i]);
 }
 
 /**
@@ -2197,11 +2190,11 @@ _drm_bacon_gem_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo)
 	int i;
 
 	for (i = 0; i < bo_gem->reloc_count; i++) {
-		if (bo_gem->reloc_target_info[i].bo == target_bo)
+		if (bo_gem->reloc_bos[i] == target_bo)
 			return 1;
-		if (bo == bo_gem->reloc_target_info[i].bo)
+		if (bo == bo_gem->reloc_bos[i])
 			continue;
-		if (_drm_bacon_gem_bo_references(bo_gem->reloc_target_info[i].bo,
+		if (_drm_bacon_gem_bo_references(bo_gem->reloc_bos[i],
 						target_bo))
 			return 1;
 	}
