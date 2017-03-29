@@ -144,8 +144,6 @@ struct nir_to_llvm_context {
 	int num_locals;
 	LLVMValueRef *locals;
 	bool has_ddxy;
-	uint8_t num_input_clips;
-	uint8_t num_input_culls;
 	uint8_t num_output_clips;
 	uint8_t num_output_culls;
 
@@ -170,12 +168,9 @@ static unsigned shader_io_get_unique_index(gl_varying_slot slot)
 		return 0;
 	if (slot == VARYING_SLOT_PSIZ)
 		return 1;
-	if (slot == VARYING_SLOT_CLIP_DIST0 ||
-	    slot == VARYING_SLOT_CULL_DIST0)
+	if (slot == VARYING_SLOT_CLIP_DIST0)
 		return 2;
-	if (slot == VARYING_SLOT_CLIP_DIST1 ||
-	    slot == VARYING_SLOT_CULL_DIST1)
-		return 3;
+	/* 3 is reserved for clip dist as well */
 	if (slot >= VARYING_SLOT_VAR0 && slot <= VARYING_SLOT_VAR31)
 		return 4 + (slot - VARYING_SLOT_VAR0);
 	unreachable("illegal slot in get unique index\n");
@@ -2162,7 +2157,6 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 	unsigned param, vtx_offset_param;
 	LLVMValueRef value[4], result;
 	unsigned vertex_index;
-	unsigned cull_offset = 0;
 	radv_get_deref_offset(ctx, &instr->variables[0]->deref,
 			      false, &vertex_index,
 			      &const_index, &indir_index);
@@ -2172,13 +2166,11 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 				  LLVMConstInt(ctx->i32, 4, false), "");
 
 	param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
-	if (instr->variables[0]->var->data.location == VARYING_SLOT_CULL_DIST0)
-		cull_offset += ctx->num_input_clips;
 	for (unsigned i = 0; i < instr->num_components; i++) {
 
 		args[0] = ctx->esgs_ring;
 		args[1] = vtx_offset;
-		args[2] = LLVMConstInt(ctx->i32, (param * 4 + i + const_index + cull_offset) * 256, false);
+		args[2] = LLVMConstInt(ctx->i32, (param * 4 + i + const_index) * 256, false);
 		args[3] = ctx->i32zero;
 		args[4] = ctx->i32one; /* OFFEN */
 		args[5] = ctx->i32zero; /* IDXEN */
@@ -2333,8 +2325,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 
 			value = llvm_extract_elem(ctx, src, chan);
 
-			if (instr->variables[0]->var->data.location == VARYING_SLOT_CLIP_DIST0 ||
-			    instr->variables[0]->var->data.location == VARYING_SLOT_CULL_DIST0)
+			if (instr->variables[0]->var->data.compact)
 				stride = 1;
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
@@ -3090,7 +3081,7 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	LLVMValueRef gs_next_vertex;
 	LLVMValueRef can_emit, kill;
 	int idx;
-	int clip_cull_slot = -1;
+
 	assert(instr->const_index[0] == 0);
 	/* Write vertex attribute values to GSVS ring */
 	gs_next_vertex = LLVMBuildLoad(ctx->builder,
@@ -3115,39 +3106,22 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef *out_ptr = &ctx->outputs[i * 4];
 		int length = 4;
-		int start = 0;
 		int slot = idx;
 		int slot_inc = 1;
 
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
-		if (i == VARYING_SLOT_CLIP_DIST1 ||
-		    i == VARYING_SLOT_CULL_DIST1)
-			continue;
-
-		if (i == VARYING_SLOT_CLIP_DIST0 ||
-		    i == VARYING_SLOT_CULL_DIST0) {
+		if (i == VARYING_SLOT_CLIP_DIST0) {
 			/* pack clip and cull into a single set of slots */
-			if (clip_cull_slot == -1) {
-				clip_cull_slot = idx;
-				if (ctx->num_output_clips + ctx->num_output_culls > 4)
-					slot_inc = 2;
-			} else {
-				slot = clip_cull_slot;
-				slot_inc = 0;
-			}
-			if (i == VARYING_SLOT_CLIP_DIST0)
-				length = ctx->num_output_clips;
-			if (i == VARYING_SLOT_CULL_DIST0) {
-				start = ctx->num_output_clips;
-				length = ctx->num_output_culls;
-			}
+			length = ctx->num_output_clips + ctx->num_output_culls;
+			if (length > 4)
+				slot_inc = 2;
 		}
 		for (unsigned j = 0; j < length; j++) {
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder,
 							     out_ptr[j], "");
-			LLVMValueRef voffset = LLVMConstInt(ctx->i32, (slot * 4 + j + start) * ctx->gs_max_out_vertices, false);
+			LLVMValueRef voffset = LLVMConstInt(ctx->i32, (slot * 4 + j) * ctx->gs_max_out_vertices, false);
 			voffset = LLVMBuildAdd(ctx->builder, voffset, gs_next_vertex, "");
 			voffset = LLVMBuildMul(ctx->builder, voffset, LLVMConstInt(ctx->i32, 4, false), "");
 
@@ -4026,22 +4000,6 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 	}
 }
 
-static void
-handle_gs_input_decl(struct nir_to_llvm_context *ctx,
-		     struct nir_variable *variable)
-{
-	int idx = variable->data.location;
-
-	if (idx == VARYING_SLOT_CLIP_DIST0 ||
-	    idx == VARYING_SLOT_CULL_DIST0) {
-		int length = glsl_get_length(glsl_get_array_element(variable->type));
-		if (idx == VARYING_SLOT_CLIP_DIST0)
-			ctx->num_input_clips = length;
-		else
-			ctx->num_input_culls = length;
-	}
-}
-
 static void interp_fs_input(struct nir_to_llvm_context *ctx,
 			    unsigned attr,
 			    LLVMValueRef interp_param,
@@ -4134,9 +4092,6 @@ handle_shader_input_decl(struct nir_to_llvm_context *ctx,
 	case MESA_SHADER_FRAGMENT:
 		handle_fs_input_decl(ctx, variable);
 		break;
-	case MESA_SHADER_GEOMETRY:
-		handle_gs_input_decl(ctx, variable);
-		break;
 	default:
 		break;
 	}
@@ -4223,29 +4178,26 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 {
 	int idx = variable->data.location + variable->data.index;
 	unsigned attrib_count = glsl_count_attribute_slots(variable->type, false);
-
+	unsigned mask_attribs;
 	variable->data.driver_location = idx * 4;
 
 	if (ctx->stage == MESA_SHADER_VERTEX ||
 	    ctx->stage == MESA_SHADER_GEOMETRY) {
-		if (idx == VARYING_SLOT_CLIP_DIST0 ||
-		    idx == VARYING_SLOT_CULL_DIST0) {
-			int length = glsl_get_length(variable->type);
-			if (idx == VARYING_SLOT_CLIP_DIST0) {
-				if (ctx->stage == MESA_SHADER_VERTEX)
-					ctx->shader_info->vs.outinfo.clip_dist_mask = (1 << length) - 1;
-				ctx->num_output_clips = length;
-			} else if (idx == VARYING_SLOT_CULL_DIST0) {
-				if (ctx->stage == MESA_SHADER_VERTEX)
-					ctx->shader_info->vs.outinfo.cull_dist_mask = (1 << length) - 1;
-				ctx->num_output_culls = length;
+		if (idx == VARYING_SLOT_CLIP_DIST0) {
+			int length = ctx->num_output_clips + ctx->num_output_culls;
+			if (ctx->stage == MESA_SHADER_VERTEX) {
+				ctx->shader_info->vs.outinfo.clip_dist_mask = (1 << ctx->num_output_clips) - 1;
+				ctx->shader_info->vs.outinfo.cull_dist_mask = (1 << ctx->num_output_culls) - 1;
 			}
+
 			if (length > 4)
 				attrib_count = 2;
 			else
 				attrib_count = 1;
 		}
-	}
+		mask_attribs = 1 << idx;
+	} else
+		mask_attribs = ((1ull << attrib_count) - 1) << idx;
 
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
@@ -4253,7 +4205,7 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 		                       si_build_alloca_undef(ctx, ctx->f32, "");
 		}
 	}
-	ctx->output_mask |= ((1ull << attrib_count) - 1) << idx;
+	ctx->output_mask |= mask_attribs;
 }
 
 static void
@@ -4462,14 +4414,10 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 	struct ac_export_args args, pos_args[4] = {};
 	LLVMValueRef psize_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	int i;
-	const uint64_t clip_mask = ctx->output_mask & ((1ull << VARYING_SLOT_CLIP_DIST0) |
-						       (1ull << VARYING_SLOT_CLIP_DIST1) |
-						       (1ull << VARYING_SLOT_CULL_DIST0) |
-						       (1ull << VARYING_SLOT_CULL_DIST1));
 
 	outinfo->prim_id_output = 0xffffffff;
 	outinfo->layer_output = 0xffffffff;
-	if (clip_mask) {
+	if (ctx->output_mask & (1ull << VARYING_SLOT_CLIP_DIST0)) {
 		LLVMValueRef slots[8];
 		unsigned j;
 
@@ -4477,13 +4425,9 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 			outinfo->cull_dist_mask <<= ctx->num_output_clips;
 
 		i = VARYING_SLOT_CLIP_DIST0;
-		for (j = 0; j < ctx->num_output_clips; j++)
+		for (j = 0; j < ctx->num_output_clips + ctx->num_output_culls; j++)
 			slots[j] = to_float(ctx, LLVMBuildLoad(ctx->builder,
 							       ctx->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
-		i = VARYING_SLOT_CULL_DIST0;
-		for (j = 0; j < ctx->num_output_culls; j++)
-			slots[ctx->num_output_clips + j] = to_float(ctx, LLVMBuildLoad(ctx->builder,
-									   ctx->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
 
 		for (i = ctx->num_output_clips + ctx->num_output_culls; i < 8; i++)
 			slots[i] = LLVMGetUndef(ctx->f32);
@@ -4513,10 +4457,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 
 		if (i == VARYING_SLOT_POS) {
 			target = V_008DFC_SQ_EXP_POS;
-		} else if (i == VARYING_SLOT_CLIP_DIST0 ||
-			   i == VARYING_SLOT_CLIP_DIST1 ||
-			   i == VARYING_SLOT_CULL_DIST0 ||
-			   i == VARYING_SLOT_CULL_DIST1) {
+		} else if (i == VARYING_SLOT_CLIP_DIST0) {
 			continue;
 		} else if (i == VARYING_SLOT_PSIZ) {
 			outinfo->writes_pointsize = true;
@@ -4622,12 +4563,9 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
-		if (i == VARYING_SLOT_CLIP_DIST0) {
-			length = ctx->num_output_clips;
-		} else if (i == VARYING_SLOT_CULL_DIST0) {
-			start = ctx->num_output_clips;
-			length = ctx->num_output_culls;
-		}
+		if (i == VARYING_SLOT_CLIP_DIST0)
+			length = ctx->num_output_clips + ctx->num_output_culls;
+
 		param_index = shader_io_get_unique_index(i);
 
 		if (param_index > max_output_written)
@@ -4922,6 +4860,9 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	if (nir->stage == MESA_SHADER_FRAGMENT)
 		handle_fs_inputs_pre(&ctx, nir);
 
+	ctx.num_output_clips = nir->info->clip_distance_array_size;
+	ctx.num_output_culls = nir->info->cull_distance_array_size;
+
 	nir_foreach_variable(variable, &nir->outputs)
 		handle_shader_output_decl(&ctx, variable);
 
@@ -5128,42 +5069,25 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 	args[8] = ctx->i32zero; /* TFE */
 
 	int idx = 0;
-	int clip_cull_slot = -1;
+
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
 		int length = 4;
-		int start = 0;
 		int slot = idx;
 		int slot_inc = 1;
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
-		if (i == VARYING_SLOT_CLIP_DIST1 ||
-		    i == VARYING_SLOT_CULL_DIST1)
-			continue;
-
-		if (i == VARYING_SLOT_CLIP_DIST0 ||
-		    i == VARYING_SLOT_CULL_DIST0) {
+		if (i == VARYING_SLOT_CLIP_DIST0) {
 			/* unpack clip and cull from a single set of slots */
-			if (clip_cull_slot == -1) {
-				clip_cull_slot = idx;
-				if (ctx->num_output_clips + ctx->num_output_culls > 4)
-					slot_inc = 2;
-			} else {
-				slot = clip_cull_slot;
-				slot_inc = 0;
-			}
-			if (i == VARYING_SLOT_CLIP_DIST0)
-				length = ctx->num_output_clips;
-			if (i == VARYING_SLOT_CULL_DIST0) {
-				start = ctx->num_output_clips;
-				length = ctx->num_output_culls;
-			}
+			length = ctx->num_output_clips + ctx->num_output_culls;
+			if (length > 4)
+				slot_inc = 2;
 		}
 
 		for (unsigned j = 0; j < length; j++) {
 			LLVMValueRef value;
 			args[2] = LLVMConstInt(ctx->i32,
-					       (slot * 4 + j + start) *
+					       (slot * 4 + j) *
 					       ctx->gs_max_out_vertices * 16 * 4, false);
 
 			value = ac_build_intrinsic(&ctx->ac,
@@ -5209,6 +5133,9 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	ctx.gs_max_out_vertices = geom_shader->info->gs.vertices_out;
 	ac_setup_rings(&ctx);
+
+	ctx.num_output_clips = geom_shader->info->clip_distance_array_size;
+	ctx.num_output_culls = geom_shader->info->cull_distance_array_size;
 
 	nir_foreach_variable(variable, &geom_shader->outputs)
 		handle_shader_output_decl(&ctx, variable);

@@ -246,6 +246,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		 */
 		NIR_PASS_V(nir, nir_lower_constant_initializers, ~0);
 		NIR_PASS_V(nir, nir_lower_system_values);
+		NIR_PASS_V(nir, nir_lower_clip_cull_distance_arrays);
 	}
 
 	/* Vulkan uses the separate-shader linking model */
