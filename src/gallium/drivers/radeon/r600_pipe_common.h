@@ -801,7 +801,7 @@ struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ);
 bool vi_dcc_formats_compatible(enum pipe_format format1,
 			       enum pipe_format format2);
-void vi_dcc_disable_if_incompatible_format(struct r600_common_context *rctx,
+void vi_disable_dcc_if_incompatible_format(struct r600_common_context *rctx,
 					   struct pipe_resource *tex,
 					   unsigned level,
 					   enum pipe_format view_format);

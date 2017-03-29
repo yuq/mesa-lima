@@ -1905,7 +1905,7 @@ bool vi_dcc_formats_compatible(enum pipe_format format1,
 	       type1 == type2;
 }
 
-void vi_dcc_disable_if_incompatible_format(struct r600_common_context *rctx,
+void vi_disable_dcc_if_incompatible_format(struct r600_common_context *rctx,
 					   struct pipe_resource *tex,
 					   unsigned level,
 					   enum pipe_format view_format)
@@ -1945,7 +1945,7 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 	surface->height0 = height0;
 
 	if (texture->target != PIPE_BUFFER)
-		vi_dcc_disable_if_incompatible_format(rctx, texture,
+		vi_disable_dcc_if_incompatible_format(rctx, texture,
 						      templ->u.tex.level,
 						      templ->format);
 

@@ -3408,7 +3408,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		}
 	}
 
-	vi_dcc_disable_if_incompatible_format(&sctx->b, texture,
+	vi_disable_dcc_if_incompatible_format(&sctx->b, texture,
 					      state->u.tex.first_level,
 					      state->format);
 
