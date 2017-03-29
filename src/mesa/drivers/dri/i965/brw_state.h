@@ -125,7 +125,6 @@ extern const struct brw_tracked_state gen7_depthbuffer;
 extern const struct brw_tracked_state gen7_tcs_push_constants;
 extern const struct brw_tracked_state gen7_l3_state;
 extern const struct brw_tracked_state gen7_push_constant_space;
-extern const struct brw_tracked_state gen7_te_state;
 extern const struct brw_tracked_state gen7_tes_push_constants;
 extern const struct brw_tracked_state gen7_urb;
 extern const struct brw_tracked_state haswell_cut_index;

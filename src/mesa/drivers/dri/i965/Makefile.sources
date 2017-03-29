@@ -96,7 +96,6 @@ i965_FILES = \
 	gen7_l3_state.c \
 	gen7_misc_state.c \
 	gen7_sol_state.c \
-	gen7_te_state.c \
 	gen7_urb.c \
 	gen7_wm_surface_state.c \
 	gen8_depth_state.c \
