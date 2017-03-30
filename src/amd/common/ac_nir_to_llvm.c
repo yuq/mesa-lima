@@ -92,6 +92,8 @@ struct nir_to_llvm_context {
 
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring;
+	LLVMValueRef hs_ring_tess_offchip;
+	LLVMValueRef hs_ring_tess_factor;
 
 	LLVMValueRef prim_mask;
 	LLVMValueRef sample_positions;
@@ -432,6 +434,8 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	/* until we sort out scratch/global buffers always assign ring offsets for gs/vs/es */
 	if (ctx->stage == MESA_SHADER_GEOMETRY ||
 	    ctx->stage == MESA_SHADER_VERTEX ||
+	    ctx->stage == MESA_SHADER_TESS_CTRL ||
+	    ctx->stage == MESA_SHADER_TESS_EVAL ||
 	    ctx->is_gs_copy_shader)
 		need_ring_offsets = true;
 
@@ -4758,7 +4762,8 @@ static void ac_llvm_finalize_module(struct nir_to_llvm_context * ctx)
 static void
 ac_setup_rings(struct nir_to_llvm_context *ctx)
 {
-	if (ctx->stage == MESA_SHADER_VERTEX && ctx->options->key.vs.as_es) {
+	if ((ctx->stage == MESA_SHADER_VERTEX && ctx->options->key.vs.as_es) ||
+	    (ctx->stage == MESA_SHADER_TESS_EVAL && ctx->options->key.tes.as_es)) {
 		ctx->esgs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_ESGS_VS, false));
 	}
 
@@ -4778,6 +4783,12 @@ ac_setup_rings(struct nir_to_llvm_context *ctx)
 		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->builder, ctx->gsvs_ring, tmp, ctx->i32one, "");
 
 		ctx->gsvs_ring = LLVMBuildBitCast(ctx->builder, ctx->gsvs_ring, ctx->v16i8, "");
+	}
+
+	if (ctx->stage == MESA_SHADER_TESS_CTRL ||
+	    ctx->stage == MESA_SHADER_TESS_EVAL) {
+		ctx->hs_ring_tess_offchip = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_HS_TESS_OFFCHIP, false));
+		ctx->hs_ring_tess_factor = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_HS_TESS_FACTOR, false));
 	}
 }
 

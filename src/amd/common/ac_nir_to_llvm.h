@@ -107,6 +107,8 @@ enum ac_ud_index {
 #define RING_ESGS_GS 2
 #define RING_GSVS_VS 3
 #define RING_GSVS_GS 4
+#define RING_HS_TESS_FACTOR 5
+#define RING_HS_TESS_OFFCHIP 6
 
 // Match MAX_SETS from radv_descriptor_set.h
 #define AC_UD_MAX_SETS MAX_SETS
