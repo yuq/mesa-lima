@@ -4205,9 +4205,9 @@ enum desc_type {
 /**
  * Load an image view, fmask view. or sampler state descriptor.
  */
-static LLVMValueRef load_sampler_desc_custom(struct si_shader_context *ctx,
-					     LLVMValueRef list, LLVMValueRef index,
-					     enum desc_type type)
+static LLVMValueRef load_sampler_desc(struct si_shader_context *ctx,
+				      LLVMValueRef list, LLVMValueRef index,
+				      enum desc_type type)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
@@ -4239,15 +4239,6 @@ static LLVMValueRef load_sampler_desc_custom(struct si_shader_context *ctx,
 	}
 
 	return ac_build_indexed_load_const(&ctx->ac, list, index);
-}
-
-static LLVMValueRef load_sampler_desc(struct si_shader_context *ctx,
-				     LLVMValueRef index, enum desc_type type)
-{
-	LLVMValueRef list = LLVMGetParam(ctx->main_fn,
-					 SI_PARAM_SAMPLERS);
-
-	return load_sampler_desc_custom(ctx, list, index, type);
 }
 
 /* Disable anisotropic filtering if BASE_LEVEL == LAST_LEVEL.
@@ -4285,6 +4276,7 @@ static void tex_fetch_ptrs(
 	LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr, LLVMValueRef *fmask_ptr)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMValueRef list = LLVMGetParam(ctx->main_fn, SI_PARAM_SAMPLERS);
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	const struct tgsi_full_src_register *reg;
 	unsigned target = inst->Texture.Texture;
@@ -4304,9 +4296,9 @@ static void tex_fetch_ptrs(
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER)
-		*res_ptr = load_sampler_desc(ctx, index, DESC_BUFFER);
+		*res_ptr = load_sampler_desc(ctx, list, index, DESC_BUFFER);
 	else
-		*res_ptr = load_sampler_desc(ctx, index, DESC_IMAGE);
+		*res_ptr = load_sampler_desc(ctx, list, index, DESC_IMAGE);
 
 	if (samp_ptr)
 		*samp_ptr = NULL;
@@ -4316,10 +4308,12 @@ static void tex_fetch_ptrs(
 	if (target == TGSI_TEXTURE_2D_MSAA ||
 	    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
 		if (fmask_ptr)
-			*fmask_ptr = load_sampler_desc(ctx, index, DESC_FMASK);
+			*fmask_ptr = load_sampler_desc(ctx, list, index,
+						       DESC_FMASK);
 	} else if (target != TGSI_TEXTURE_BUFFER) {
 		if (samp_ptr) {
-			*samp_ptr = load_sampler_desc(ctx, index, DESC_SAMPLER);
+			*samp_ptr = load_sampler_desc(ctx, list, index,
+						      DESC_SAMPLER);
 			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 		}
 	}
