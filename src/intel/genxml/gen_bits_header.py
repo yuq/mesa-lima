@@ -70,6 +70,39 @@ from operator import itemgetter
 #include "common/gen_device_info.h"
 #include "util/macros.h"
 
+<%def name="emit_per_gen_prop_func(item, prop)">
+%if item.has_prop(prop):
+% for gen, value in sorted(item.iter_prop(prop), reverse=True):
+#define ${gen.prefix(item.token_name)}_${prop}  ${value}
+% endfor
+
+static inline uint32_t ATTRIBUTE_PURE
+${item.token_name}_${prop}(const struct gen_device_info *devinfo)
+{
+   switch (devinfo->gen) {
+   case 9: return ${item.get_prop(prop, 9)};
+   case 8: return ${item.get_prop(prop, 8)};
+   case 7:
+      if (devinfo->is_haswell) {
+         return ${item.get_prop(prop, 7.5)};
+      } else {
+         return ${item.get_prop(prop, 7)};
+      }
+   case 6: return ${item.get_prop(prop, 6)};
+   case 5: return ${item.get_prop(prop, 5)};
+   case 4:
+      if (devinfo->is_g4x) {
+         return ${item.get_prop(prop, 4.5)};
+      } else {
+         return ${item.get_prop(prop, 4)};
+      }
+   default:
+      unreachable("Invalid hardware generation");
+   }
+}
+%endif
+</%def>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -77,34 +110,8 @@ extern "C" {
 % for _, field in sorted(container.fields.iteritems(), key=itemgetter(0)):
 
 /* ${container.name}::${field.name} */
-% for gen, bits in sorted(field.bits_by_gen.iteritems(), reverse=True):
-#define ${gen.prefix(field.token_name, padded=True)}    ${bits}
-% endfor
 
-static inline uint32_t ATTRIBUTE_PURE
-${field.token_name}(const struct gen_device_info *devinfo)
-{
-   switch (devinfo->gen) {
-   case 9: return ${field.bits(9)};
-   case 8: return ${field.bits(8)};
-   case 7:
-      if (devinfo->is_haswell) {
-         return ${field.bits(7.5)};
-      } else {
-         return ${field.bits(7)};
-      }
-   case 6: return ${field.bits(6)};
-   case 5: return ${field.bits(5)};
-   case 4:
-      if (devinfo->is_g4x) {
-         return ${field.bits(4.5)};
-      } else {
-         return ${field.bits(4)};
-      }
-   default:
-      unreachable("Invalid hardware generation");
-   }
-}
+${emit_per_gen_prop_func(field, 'bits')}
 
 % endfor
 % endfor
@@ -167,19 +174,16 @@ class Gen(object):
     def __eq__(self, other):
         return self.tenx == other.tenx
 
-    def prefix(self, token, padded=False):
+    def prefix(self, token):
         gen = self.tenx
-        pad = ''
 
         if gen % 10 == 0:
             gen //= 10
-            if padded:
-                pad = ' '
 
         if token[0] == '_':
             token = token[1:]
 
-        return 'GEN{}_{}{}'.format(gen, token, pad)
+        return 'GEN{}_{}'.format(gen, token)
 
 class Container(object):
 
@@ -199,7 +203,7 @@ class Field(object):
 
     def __init__(self, container, name):
         self.name = name
-        self.token_name = safe_name('_'.join([container.name, self.name, 'bits']))
+        self.token_name = safe_name('_'.join([container.name, self.name]))
         self.bits_by_gen = {}
 
     def add_gen(self, gen, xml_attrs):
@@ -208,10 +212,23 @@ class Field(object):
         end = int(xml_attrs['end'])
         self.bits_by_gen[gen] = 1 + end - start
 
-    def bits(self, gen):
+    def has_prop(self, prop):
+        return True
+
+    def iter_prop(self, prop):
+        if prop == 'bits':
+            return self.bits_by_gen.iteritems()
+        else:
+            raise ValueError('Invalid property: "{0}"'.format(prop))
+
+    def get_prop(self, prop, gen):
         if not isinstance(gen, Gen):
             gen = Gen(gen)
-        return self.bits_by_gen.get(gen, 0)
+
+        if prop == 'bits':
+            return self.bits_by_gen.get(gen, 0)
+        else:
+            raise ValueError('Invalid property: "{0}"'.format(prop))
 
 class XmlParser(object):
 
