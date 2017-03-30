@@ -950,6 +950,17 @@ static const __DRIimageExtension intelImageExtension = {
     .createImageWithModifiers           = intel_create_image_with_modifiers,
 };
 
+static uint64_t
+get_aperture_size(int fd)
+{
+   struct drm_i915_gem_get_aperture aperture;
+
+   if (drmIoctl(fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture) != 0)
+      return 0;
+
+   return aperture.aper_size;
+}
+
 static int
 brw_query_renderer_integer(__DRIscreen *dri_screen,
                            int param, unsigned int *value)
@@ -972,10 +983,7 @@ brw_query_renderer_integer(__DRIscreen *dri_screen,
        * assume that there's some fragmentation, and we start doing extra
        * flushing, etc.  That's the big cliff apps will care about.
        */
-      size_t aper_size;
-      size_t mappable_size;
-
-      drm_intel_get_aperture_sizes(dri_screen->fd, &mappable_size, &aper_size);
+      uint64_t aper_size = get_aperture_size(dri_screen->fd);
 
       const unsigned gpu_mappable_megabytes =
          (aper_size / (1024 * 1024)) * 3 / 4;
