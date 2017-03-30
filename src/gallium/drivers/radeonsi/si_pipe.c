@@ -431,6 +431,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_VOTE:
 		return HAVE_LLVM >= 0x0400;
 
+	case PIPE_CAP_TGSI_BALLOT:
+		return HAVE_LLVM >= 0x0500;
+
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
 		return !SI_BIG_ENDIAN && sscreen->b.info.has_userptr;
 
@@ -503,7 +506,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
 	case PIPE_CAP_UMA:
 	case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
-	case PIPE_CAP_TGSI_BALLOT:
 		return 0;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
