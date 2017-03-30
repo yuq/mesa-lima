@@ -280,16 +280,12 @@ _mesa_update_array_format(struct gl_context *ctx,
                           GLuint attrib, GLint size, GLenum type,
                           GLenum format, GLboolean normalized,
                           GLboolean integer, GLboolean doubles,
-                          GLuint relativeOffset, bool flush_vertices)
+                          GLuint relativeOffset)
 {
    struct gl_array_attributes *const array = &vao->VertexAttrib[attrib];
    GLint elementSize;
 
    assert(size <= 4);
-
-   if (flush_vertices) {
-      FLUSH_VERTICES(ctx, 0);
-   }
 
    elementSize = _mesa_bytes_per_vertex_attrib(size, type);
    assert(elementSize != -1);
@@ -439,8 +435,7 @@ update_array_format(struct gl_context *ctx,
    }
 
    _mesa_update_array_format(ctx, vao, attrib, size, type, format,
-                             normalized, integer, doubles, relativeOffset,
-                             false);
+                             normalized, integer, doubles, relativeOffset);
 
    return true;
 }
