@@ -282,10 +282,12 @@ static const char *radv_get_shader_name(struct radv_shader_variant *var,
 					gl_shader_stage stage)
 {
 	switch (stage) {
-	case MESA_SHADER_VERTEX: return var->info.vs.as_es ? "Vertex Shader as ES" : "Vertex Shader as VS";
+	case MESA_SHADER_VERTEX: return var->info.vs.as_ls ? "Vertex Shader as LS" : var->info.vs.as_es ? "Vertex Shader as ES" : "Vertex Shader as VS";
 	case MESA_SHADER_GEOMETRY: return "Geometry Shader";
 	case MESA_SHADER_FRAGMENT: return "Pixel Shader";
 	case MESA_SHADER_COMPUTE: return "Compute Shader";
+	case MESA_SHADER_TESS_CTRL: return "Tessellation Control Shader";
+	case MESA_SHADER_TESS_EVAL: return var->info.tes.as_es ? "Tessellation Evaluation Shader as ES" : "Tessellation Evaluation Shader as VS";
 	default:
 		return "Unknown shader";
 	};
