@@ -284,30 +284,33 @@ need_saturate( GLuint mode )
  * constants instead.
  *
  * This function figures out all the inputs that the fragment program
- * has access to.  The bitmask is later reduced to just those which
- * are actually referenced.
+ * has access to and filters input bitmask.
  */
-static GLbitfield get_fp_input_mask( struct gl_context *ctx )
+static GLbitfield filter_fp_input_mask( GLbitfield fp_inputs,
+		    struct gl_context *ctx )
 {
-   /* _NEW_PROGRAM */
-   const GLboolean vertexShader =
-      ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] != NULL;
-   const GLboolean vertexProgram = ctx->VertexProgram._Enabled;
-   GLbitfield fp_inputs = 0x0;
-
    if (ctx->VertexProgram._Overriden) {
       /* Somebody's messing with the vertex program and we don't have
        * a clue what's happening.  Assume that it could be producing
        * all possible outputs.
        */
-      fp_inputs = ~0;
+      return fp_inputs;
    }
-   else if (ctx->RenderMode == GL_FEEDBACK) {
+
+   if (ctx->RenderMode == GL_FEEDBACK) {
       /* _NEW_RENDERMODE */
-      fp_inputs = (VARYING_BIT_COL0 | VARYING_BIT_TEX0);
+      return fp_inputs & (VARYING_BIT_COL0 | VARYING_BIT_TEX0);
    }
-   else if (!(vertexProgram || vertexShader)) {
+
+   /* _NEW_PROGRAM */
+   const GLboolean vertexShader =
+         ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] != NULL;
+   const GLboolean vertexProgram = ctx->VertexProgram._Enabled;
+
+   if (!(vertexProgram || vertexShader)) {
       /* Fixed function vertex logic */
+      GLbitfield possible_inputs = 0;
+
       /* _NEW_VARYING_VP_INPUTS */
       GLbitfield64 varying_inputs = ctx->varying_vp_inputs;
 
@@ -315,69 +318,66 @@ static GLbitfield get_fp_input_mask( struct gl_context *ctx )
        * vertex program:
        */
       /* _NEW_POINT */
-      if (ctx->Point.PointSprite)
-         varying_inputs |= VARYING_BITS_TEX_ANY;
+      if (ctx->Point.PointSprite) {
+         /* All texture varyings are possible to use */
+         possible_inputs = VARYING_BITS_TEX_ANY;
+      }
+      else {
+         /* _NEW_TEXTURE_STATE */
+         const GLbitfield possible_tex_inputs =
+               ctx->Texture._TexGenEnabled |
+               ctx->Texture._TexMatEnabled |
+               ((varying_inputs & VERT_BIT_TEX_ANY) >> VERT_ATTRIB_TEX0);
+
+         possible_inputs = (possible_tex_inputs << VARYING_SLOT_TEX0);
+      }
 
       /* First look at what values may be computed by the generated
        * vertex program:
        */
       /* _NEW_LIGHT */
       if (ctx->Light.Enabled) {
-         fp_inputs |= VARYING_BIT_COL0;
+         possible_inputs |= VARYING_BIT_COL0;
 
          if (texenv_doing_secondary_color(ctx))
-            fp_inputs |= VARYING_BIT_COL1;
+            possible_inputs |= VARYING_BIT_COL1;
       }
-
-      /* _NEW_TEXTURE_STATE */
-      fp_inputs |= (ctx->Texture._TexGenEnabled |
-                    ctx->Texture._TexMatEnabled) << VARYING_SLOT_TEX0;
 
       /* Then look at what might be varying as a result of enabled
        * arrays, etc:
        */
       if (varying_inputs & VERT_BIT_COLOR0)
-         fp_inputs |= VARYING_BIT_COL0;
+         possible_inputs |= VARYING_BIT_COL0;
       if (varying_inputs & VERT_BIT_COLOR1)
-         fp_inputs |= VARYING_BIT_COL1;
+         possible_inputs |= VARYING_BIT_COL1;
 
-      fp_inputs |= (((varying_inputs & VERT_BIT_TEX_ANY) >> VERT_ATTRIB_TEX0) 
-                    << VARYING_SLOT_TEX0);
-
+      return fp_inputs & possible_inputs;
    }
-   else {
-      /* calculate from vp->outputs */
-      struct gl_program *vprog;
-      GLbitfield64 vp_outputs;
 
-      /* Choose GLSL vertex shader over ARB vertex program.  Need this
-       * since vertex shader state validation comes after fragment state
-       * validation (see additional comments in state.c).
-       */
-      if (vertexShader)
-         vprog = ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
-      else
-         vprog = ctx->VertexProgram.Current;
+   /* calculate from vp->outputs */
+   struct gl_program *vprog;
 
-      vp_outputs = vprog->info.outputs_written;
+   /* Choose GLSL vertex shader over ARB vertex program.  Need this
+    * since vertex shader state validation comes after fragment state
+    * validation (see additional comments in state.c).
+    */
+   if (vertexShader)
+      vprog = ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
+   else
+      vprog = ctx->VertexProgram.Current;
 
-      /* These get generated in the setup routine regardless of the
-       * vertex program:
-       */
-      /* _NEW_POINT */
-      if (ctx->Point.PointSprite)
-         vp_outputs |= VARYING_BITS_TEX_ANY;
+   GLbitfield possible_inputs = vprog->info.outputs_written;
 
-      if (vp_outputs & (1 << VARYING_SLOT_COL0))
-         fp_inputs |= VARYING_BIT_COL0;
-      if (vp_outputs & (1 << VARYING_SLOT_COL1))
-         fp_inputs |= VARYING_BIT_COL1;
-
-      fp_inputs |= (((vp_outputs & VARYING_BITS_TEX_ANY) >> VARYING_SLOT_TEX0) 
-                    << VARYING_SLOT_TEX0);
+   /* These get generated in the setup routine regardless of the
+    * vertex program:
+    */
+   /* _NEW_POINT */
+   if (ctx->Point.PointSprite) {
+      /* All texture varyings are possible to use */
+      possible_inputs |= VARYING_BITS_TEX_ANY;
    }
-   
-   return fp_inputs;
+
+   return fp_inputs & possible_inputs;
 }
 
 
@@ -389,7 +389,6 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
 {
    GLuint j;
    GLbitfield inputs_referenced = VARYING_BIT_COL0;
-   const GLbitfield inputs_available = get_fp_input_mask( ctx );
    GLbitfield mask;
    GLuint keySize;
 
@@ -461,7 +460,7 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
       key->num_draw_buffers = 1;
    }
 
-   key->inputs_available = (inputs_available & inputs_referenced);
+   key->inputs_available = filter_fp_input_mask(inputs_referenced, ctx);
 
    /* compute size of state key, ignoring unused texture units */
    keySize = sizeof(*key) - sizeof(key->unit)
