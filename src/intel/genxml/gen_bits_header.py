@@ -73,9 +73,10 @@ from operator import itemgetter
 #ifdef __cplusplus
 extern "C" {
 #endif
-% for _, field in sorted(fields.iteritems(), key=itemgetter(0)):
+% for _, container in sorted(containers.iteritems(), key=itemgetter(0)):
+% for _, field in sorted(container.fields.iteritems(), key=itemgetter(0)):
 
-/* ${field.container_name}::${field.name} */
+/* ${container.name}::${field.name} */
 % for gen, bits in sorted(field.bits_by_gen.iteritems(), reverse=True):
 #define ${gen.prefix(field.token_name, padded=True)}    ${bits}
 % endfor
@@ -104,6 +105,8 @@ ${field.token_name}(const struct gen_device_info *devinfo)
       unreachable("Invalid hardware generation");
    }
 }
+
+% endfor
 % endfor
 
 #ifdef __cplusplus
@@ -178,12 +181,25 @@ class Gen(object):
 
         return 'GEN{}_{}{}'.format(gen, token, pad)
 
+class Container(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.fields = {}
+
+    def get_field(self, field_name, create=False):
+        if field_name not in self.fields:
+            if create:
+                self.fields[field_name] = Field(self, field_name)
+            else:
+                return None
+        return self.fields[field_name]
+
 class Field(object):
 
-    def __init__(self, container_name, name):
-        self.container_name = container_name
+    def __init__(self, container, name):
         self.name = name
-        self.token_name = safe_name('_'.join([self.container_name, self.name, 'bits']))
+        self.token_name = safe_name('_'.join([container.name, self.name, 'bits']))
         self.bits_by_gen = {}
 
     def add_gen(self, gen, xml_attrs):
@@ -199,14 +215,14 @@ class Field(object):
 
 class XmlParser(object):
 
-    def __init__(self, fields):
+    def __init__(self, containers):
         self.parser = xml.parsers.expat.ParserCreate()
         self.parser.StartElementHandler = self.start_element
         self.parser.EndElementHandler = self.end_element
 
         self.gen = None
-        self.container_name = None
-        self.fields = fields
+        self.containers = containers
+        self.container = None
 
     def parse(self, filename):
         with open(filename) as f:
@@ -226,26 +242,26 @@ class XmlParser(object):
         if name == 'genxml':
             self.gen = None
         elif name in ('instruction', 'struct', 'register'):
-            self.container_name = None
+            self.container = None
         else:
             pass
 
     def start_container(self, attrs):
-        assert self.container_name is None
-        self.container_name = attrs['name']
+        assert self.container is None
+        name = attrs['name']
+        if name not in self.containers:
+            self.containers[name] = Container(name)
+        self.container = self.containers[name]
 
     def start_field(self, attrs):
-        if self.container_name is None:
+        if self.container is None:
             return
 
         field_name = attrs.get('name', None)
         if not field_name:
             return
 
-        key = (self.container_name, field_name)
-        if key not in self.fields:
-            self.fields[key] = Field(self.container_name, field_name)
-        self.fields[key].add_gen(self.gen, attrs)
+        self.container.get_field(field_name, True).add_gen(self.gen, attrs)
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -268,14 +284,14 @@ def parse_args():
 def main():
     pargs = parse_args()
 
-    # Maps (container_name, field_name) => Field
-    fields = {}
+    # Maps name => Container
+    containers = {}
 
     for source in pargs.xml_sources:
-        XmlParser(fields).parse(source)
+        XmlParser(containers).parse(source)
 
     with open(pargs.output, 'wb') as f:
-        f.write(TEMPLATE.render(fields=fields, guard=pargs.cpp_guard))
+        f.write(TEMPLATE.render(containers=containers, guard=pargs.cpp_guard))
 
 if __name__ == '__main__':
     main()
