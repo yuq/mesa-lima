@@ -4568,8 +4568,7 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 
 		param_index = shader_io_get_unique_index(i);
 
-		if (param_index > max_output_written)
-			max_output_written = param_index;
+		max_output_written = MAX2(param_index + (length > 4), max_output_written);
 
 		for (j = 0; j < length; j++) {
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder, out_ptr[j], "");
