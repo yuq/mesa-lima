@@ -3249,6 +3249,24 @@ static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
 			       CONST_ADDR_SPACE);
 }
 
+static LLVMValueRef load_image_desc(struct si_shader_context *ctx,
+				    LLVMValueRef list, LLVMValueRef index,
+				    unsigned target)
+{
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+
+	if (target == TGSI_TEXTURE_BUFFER) {
+		index = LLVMBuildMul(builder, index,
+				     LLVMConstInt(ctx->i32, 2, 0), "");
+		index = LLVMBuildAdd(builder, index,
+				     LLVMConstInt(ctx->i32, 1, 0), "");
+		list = LLVMBuildPointerCast(builder, list,
+					    const_array(ctx->v4i32, 0), "");
+	}
+
+	return ac_build_indexed_load_const(&ctx->ac, list, index);
+}
+
 /**
  * Load the resource descriptor for \p image.
  */
@@ -3262,8 +3280,8 @@ image_fetch_rsrc(
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->main_fn,
 					     SI_PARAM_IMAGES);
-	LLVMValueRef index, tmp;
-	bool dcc_off = target != TGSI_TEXTURE_BUFFER && is_store;
+	LLVMValueRef index;
+	bool dcc_off = is_store;
 
 	assert(image->Register.File == TGSI_FILE_IMAGE);
 
@@ -3274,8 +3292,7 @@ image_fetch_rsrc(
 
 		index = LLVMConstInt(ctx->i32, image->Register.Index, 0);
 
-		if (images_writemask & (1 << image->Register.Index) &&
-		    target != TGSI_TEXTURE_BUFFER)
+		if (images_writemask & (1 << image->Register.Index))
 			dcc_off = true;
 	} else {
 		/* From the GL_ARB_shader_image_load_store extension spec:
@@ -3292,23 +3309,9 @@ image_fetch_rsrc(
 						   SI_NUM_IMAGES);
 	}
 
-	if (target == TGSI_TEXTURE_BUFFER) {
-		LLVMBuilderRef builder = ctx->gallivm.builder;
-
-		rsrc_ptr = LLVMBuildPointerCast(builder, rsrc_ptr,
-						const_array(ctx->v4i32, 0), "");
-		index = LLVMBuildMul(builder, index,
-				     LLVMConstInt(ctx->i32, 2, 0), "");
-		index = LLVMBuildAdd(builder, index,
-				     LLVMConstInt(ctx->i32, 1, 0), "");
-		*rsrc = ac_build_indexed_load_const(&ctx->ac, rsrc_ptr, index);
-		return;
-	}
-
-	tmp = ac_build_indexed_load_const(&ctx->ac, rsrc_ptr, index);
-	if (dcc_off)
-		tmp = force_dcc_off(ctx, tmp);
-	*rsrc = tmp;
+	*rsrc = load_image_desc(ctx, rsrc_ptr, index, target);
+	if (dcc_off && target != TGSI_TEXTURE_BUFFER)
+		*rsrc = force_dcc_off(ctx, *rsrc);
 }
 
 static LLVMValueRef image_fetch_coords(
