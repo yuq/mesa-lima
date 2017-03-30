@@ -148,19 +148,16 @@ typedef struct _drm_bacon_bufmgr_gem {
 	int vma_count, vma_open, vma_max;
 
 	uint64_t gtt_size;
-	int available_fences;
 	int pci_device;
 	int gen;
 	unsigned int has_bsd : 1;
 	unsigned int has_blt : 1;
-	unsigned int has_relaxed_fencing : 1;
 	unsigned int has_llc : 1;
 	unsigned int has_wait_timeout : 1;
 	unsigned int bo_reuse : 1;
 	unsigned int no_exec : 1;
 	unsigned int has_vebox : 1;
 	unsigned int has_exec_async : 1;
-	bool fenced_relocs;
 
 	struct {
 		void *ptr;
@@ -169,11 +166,8 @@ typedef struct _drm_bacon_bufmgr_gem {
 
 } drm_bacon_bufmgr_gem;
 
-#define DRM_INTEL_RELOC_FENCE (1<<0)
-
 typedef struct _drm_bacon_reloc_target_info {
 	drm_bacon_bo *bo;
-	int flags;
 } drm_bacon_reloc_target;
 
 struct _drm_bacon_bo_gem {
@@ -287,12 +281,6 @@ struct _drm_bacon_bo_gem {
 	 */
 	int reloc_tree_size;
 
-	/**
-	 * Number of potential fence registers required by this buffer and its
-	 * relocations.
-	 */
-	int reloc_tree_fences;
-
 	/** Flags that we may need to do the SW_FINISH ioctl on unmap. */
 	bool mapped_cpu_write;
 };
@@ -328,38 +316,11 @@ static unsigned long
 drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr_gem *bufmgr_gem, unsigned long size,
 			   uint32_t *tiling_mode)
 {
-	unsigned long min_size, max_size;
-	unsigned long i;
-
 	if (*tiling_mode == I915_TILING_NONE)
 		return size;
 
 	/* 965+ just need multiples of page size for tiling */
-	if (bufmgr_gem->gen >= 4)
-		return ROUND_UP_TO(size, 4096);
-
-	/* Older chips need powers of two, of at least 512k or 1M */
-	if (bufmgr_gem->gen == 3) {
-		min_size = 1024*1024;
-		max_size = 128*1024*1024;
-	} else {
-		min_size = 512*1024;
-		max_size = 64*1024*1024;
-	}
-
-	if (size > max_size) {
-		*tiling_mode = I915_TILING_NONE;
-		return size;
-	}
-
-	/* Do we need to allocate every page for the fence? */
-	if (bufmgr_gem->has_relaxed_fencing)
-		return ROUND_UP_TO(size, 4096);
-
-	for (i = min_size; i < size; i <<= 1)
-		;
-
-	return i;
+	return ROUND_UP_TO(size, 4096);
 }
 
 /*
@@ -372,7 +333,6 @@ drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr_gem *bufmgr_gem,
 			    unsigned long pitch, uint32_t *tiling_mode)
 {
 	unsigned long tile_width;
-	unsigned long i;
 
 	/* If untiled, then just align it so that we can do rendering
 	 * to it with the 3D engine.
@@ -380,30 +340,13 @@ drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr_gem *bufmgr_gem,
 	if (*tiling_mode == I915_TILING_NONE)
 		return ALIGN(pitch, 64);
 
-	if (*tiling_mode == I915_TILING_X
-			|| (IS_915(bufmgr_gem->pci_device)
-			    && *tiling_mode == I915_TILING_Y))
+	if (*tiling_mode == I915_TILING_X)
 		tile_width = 512;
 	else
 		tile_width = 128;
 
 	/* 965 is flexible */
-	if (bufmgr_gem->gen >= 4)
-		return ROUND_UP_TO(pitch, tile_width);
-
-	/* The older hardware has a maximum pitch of 8192 with tiled
-	 * surfaces, so fallback to untiled if it's too large.
-	 */
-	if (pitch > 8192) {
-		*tiling_mode = I915_TILING_NONE;
-		return ALIGN(pitch, 64);
-	}
-
-	/* Pre-965 needs power of two tile width */
-	for (i = tile_width; i < pitch; i <<= 1)
-		;
-
-	return i;
+	return ROUND_UP_TO(pitch, tile_width);
 }
 
 static struct drm_bacon_gem_bo_bucket *
@@ -532,21 +475,14 @@ drm_bacon_add_validate_buffer(drm_bacon_bo *bo)
 }
 
 static void
-drm_bacon_add_validate_buffer2(drm_bacon_bo *bo, int need_fence)
+drm_bacon_add_validate_buffer2(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *)bo;
 	int index;
-	unsigned long flags;
 
-	flags = 0;
-	if (need_fence)
-		flags |= EXEC_OBJECT_NEEDS_FENCE;
-
-	if (bo_gem->validate_index != -1) {
-		bufmgr_gem->exec2_objects[bo_gem->validate_index].flags |= flags;
+	if (bo_gem->validate_index != -1)
 		return;
-	}
 
 	/* Extend the array of validation entries as necessary. */
 	if (bufmgr_gem->exec_count == bufmgr_gem->exec_size) {
@@ -572,7 +508,7 @@ drm_bacon_add_validate_buffer2(drm_bacon_bo *bo, int need_fence)
 	bufmgr_gem->exec2_objects[index].relocs_ptr = (uintptr_t)bo_gem->relocs;
 	bufmgr_gem->exec2_objects[index].alignment = bo->align;
 	bufmgr_gem->exec2_objects[index].offset = bo->offset64;
-	bufmgr_gem->exec2_objects[index].flags = bo_gem->kflags | flags;
+	bufmgr_gem->exec2_objects[index].flags = bo_gem->kflags;
 	bufmgr_gem->exec2_objects[index].rsvd1 = 0;
 	bufmgr_gem->exec2_objects[index].rsvd2 = 0;
 	bufmgr_gem->exec_bos[index] = bo;
@@ -595,23 +531,6 @@ drm_bacon_bo_gem_set_in_aperture_size(drm_bacon_bufmgr_gem *bufmgr_gem,
 	 * aperture. Optimal packing is for wimps.
 	 */
 	size = bo_gem->bo.size;
-	if (bufmgr_gem->gen < 4 && bo_gem->tiling_mode != I915_TILING_NONE) {
-		unsigned int min_size;
-
-		if (bufmgr_gem->has_relaxed_fencing) {
-			if (bufmgr_gem->gen == 3)
-				min_size = 1024*1024;
-			else
-				min_size = 512*1024;
-
-			while (min_size < size)
-				min_size *= 2;
-		} else
-			min_size = size;
-
-		/* Account for worst-case alignment. */
-		alignment = MAX2(alignment, min_size);
-	}
 
 	bo_gem->reloc_tree_size = size + alignment;
 }
@@ -843,7 +762,6 @@ retry:
 	bo_gem->name = name;
 	p_atomic_set(&bo_gem->refcount, 1);
 	bo_gem->validate_index = -1;
-	bo_gem->reloc_tree_fences = 0;
 	bo_gem->used_as_reloc_target = false;
 	bo_gem->has_error = false;
 	bo_gem->reusable = true;
@@ -913,11 +831,7 @@ drm_bacon_gem_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
 		aligned_y = y;
 		height_alignment = 2;
 
-		if ((bufmgr_gem->gen == 2) && tiling != I915_TILING_NONE)
-			height_alignment = 16;
-		else if (tiling == I915_TILING_X
-			|| (IS_915(bufmgr_gem->pci_device)
-			    && tiling == I915_TILING_Y))
+		if (tiling == I915_TILING_X)
 			height_alignment = 8;
 		else if (tiling == I915_TILING_Y)
 			height_alignment = 32;
@@ -1001,7 +915,6 @@ drm_bacon_gem_bo_alloc_userptr(drm_bacon_bufmgr *bufmgr,
 
 	bo_gem->name = name;
 	bo_gem->validate_index = -1;
-	bo_gem->reloc_tree_fences = 0;
 	bo_gem->used_as_reloc_target = false;
 	bo_gem->has_error = false;
 	bo_gem->reusable = false;
@@ -1930,13 +1843,11 @@ drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
 static int
 do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 		 drm_bacon_bo *target_bo, uint32_t target_offset,
-		 uint32_t read_domains, uint32_t write_domain,
-		 bool need_fence)
+		 uint32_t read_domains, uint32_t write_domain)
 {
 	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *) bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) target_bo;
-	bool fenced_command;
 
 	if (bo_gem->has_error)
 		return -ENOMEM;
@@ -1945,14 +1856,6 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 		bo_gem->has_error = true;
 		return -ENOMEM;
 	}
-
-	/* We never use HW fences for rendering on 965+ */
-	if (bufmgr_gem->gen >= 4)
-		need_fence = false;
-
-	fenced_command = need_fence;
-	if (target_bo_gem->tiling_mode == I915_TILING_NONE)
-		need_fence = false;
 
 	/* Create a new relocation list if needed */
 	if (bo_gem->relocs == NULL && drm_bacon_setup_reloc_list(bo))
@@ -1965,14 +1868,6 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 	assert(offset <= bo->size - 4);
 	assert((write_domain & (write_domain - 1)) == 0);
 
-	/* An object needing a fence is a tiled buffer, so it won't have
-	 * relocs to other buffers.
-	 */
-	if (need_fence) {
-		assert(target_bo_gem->reloc_count == 0);
-		target_bo_gem->reloc_tree_fences = 1;
-	}
-
 	/* Make sure that we're not adding a reloc to something whose size has
 	 * already been accounted for.
 	 */
@@ -1980,17 +1875,11 @@ do_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 	if (target_bo_gem != bo_gem) {
 		target_bo_gem->used_as_reloc_target = true;
 		bo_gem->reloc_tree_size += target_bo_gem->reloc_tree_size;
-		bo_gem->reloc_tree_fences += target_bo_gem->reloc_tree_fences;
 	}
 
 	bo_gem->reloc_target_info[bo_gem->reloc_count].bo = target_bo;
 	if (target_bo != bo)
 		drm_bacon_gem_bo_reference(target_bo);
-	if (fenced_command)
-		bo_gem->reloc_target_info[bo_gem->reloc_count].flags =
-			DRM_INTEL_RELOC_FENCE;
-	else
-		bo_gem->reloc_target_info[bo_gem->reloc_count].flags = 0;
 
 	bo_gem->relocs[bo_gem->reloc_count].offset = offset;
 	bo_gem->relocs[bo_gem->reloc_count].delta = target_offset;
@@ -2047,15 +1936,13 @@ drm_bacon_gem_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 			    drm_bacon_bo *target_bo, uint32_t target_offset,
 			    uint32_t read_domains, uint32_t write_domain)
 {
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bo->bufmgr;
 	drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *)target_bo;
 
 	if (target_bo_gem->kflags & EXEC_OBJECT_PINNED)
 		return drm_bacon_gem_bo_add_softpin_target(bo, target_bo);
 	else
 		return do_bo_emit_reloc(bo, offset, target_bo, target_offset,
-					read_domains, write_domain,
-					!bufmgr_gem->fenced_relocs);
+					read_domains, write_domain);
 }
 
 int
@@ -2099,7 +1986,6 @@ drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start)
 	for (i = start; i < bo_gem->reloc_count; i++) {
 		drm_bacon_bo_gem *target_bo_gem = (drm_bacon_bo_gem *) bo_gem->reloc_target_info[i].bo;
 		if (&target_bo_gem->bo != bo) {
-			bo_gem->reloc_tree_fences -= target_bo_gem->reloc_tree_fences;
 			drm_bacon_gem_bo_unreference_locked_timed(&target_bo_gem->bo,
 								  time.tv_sec);
 		}
@@ -2157,7 +2043,6 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 
 	for (i = 0; i < bo_gem->reloc_count; i++) {
 		drm_bacon_bo *target_bo = bo_gem->reloc_target_info[i].bo;
-		int need_fence;
 
 		if (target_bo == bo)
 			continue;
@@ -2167,11 +2052,8 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 		/* Continue walking the tree depth-first. */
 		drm_bacon_gem_bo_process_reloc2(target_bo);
 
-		need_fence = (bo_gem->reloc_target_info[i].flags &
-			      DRM_INTEL_RELOC_FENCE);
-
 		/* Add the target to the validate list */
-		drm_bacon_add_validate_buffer2(target_bo, need_fence);
+		drm_bacon_add_validate_buffer2(target_bo);
 	}
 
 	for (i = 0; i < bo_gem->softpin_target_count; i++) {
@@ -2182,7 +2064,7 @@ drm_bacon_gem_bo_process_reloc2(drm_bacon_bo *bo)
 
 		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 		drm_bacon_gem_bo_process_reloc2(target_bo);
-		drm_bacon_add_validate_buffer2(target_bo, false);
+		drm_bacon_add_validate_buffer2(target_bo);
 	}
 }
 
@@ -2345,7 +2227,7 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 	/* Add the batch buffer to the validation list.  There are no relocations
 	 * pointing to it.
 	 */
-	drm_bacon_add_validate_buffer2(bo, 0);
+	drm_bacon_add_validate_buffer2(bo);
 
 	memclear(execbuf);
 	execbuf.buffers_ptr = (uintptr_t)bufmgr_gem->exec2_objects;
@@ -2594,7 +2476,6 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 
 	bo_gem->name = "prime";
 	bo_gem->validate_index = -1;
-	bo_gem->reloc_tree_fences = 0;
 	bo_gem->used_as_reloc_target = false;
 	bo_gem->has_error = false;
 	bo_gem->reusable = false;
@@ -2735,22 +2616,6 @@ drm_bacon_bufmgr_gem_can_disable_implicit_sync(drm_bacon_bufmgr *bufmgr)
 }
 
 /**
- * Enable use of fenced reloc type.
- *
- * New code should enable this to avoid unnecessary fence register
- * allocation.  If this option is not enabled, all relocs will have fence
- * register allocated.
- */
-void
-drm_bacon_bufmgr_gem_enable_fenced_relocs(drm_bacon_bufmgr *bufmgr)
-{
-	drm_bacon_bufmgr_gem *bufmgr_gem = (drm_bacon_bufmgr_gem *)bufmgr;
-
-	if (bufmgr_gem->bufmgr.bo_exec == drm_bacon_gem_bo_exec2)
-		bufmgr_gem->fenced_relocs = true;
-}
-
-/**
  * Return the additional aperture space required by the tree of buffer objects
  * rooted at bo.
  */
@@ -2772,31 +2637,6 @@ drm_bacon_gem_bo_get_aperture_space(drm_bacon_bo *bo)
 		    drm_bacon_gem_bo_get_aperture_space(bo_gem->
 							reloc_target_info[i].bo);
 
-	return total;
-}
-
-/**
- * Count the number of buffers in this list that need a fence reg
- *
- * If the count is greater than the number of available regs, we'll have
- * to ask the caller to resubmit a batch with fewer tiled buffers.
- *
- * This function over-counts if the same buffer is used multiple times.
- */
-static unsigned int
-drm_bacon_gem_total_fences(drm_bacon_bo ** bo_array, int count)
-{
-	int i;
-	unsigned int total = 0;
-
-	for (i = 0; i < count; i++) {
-		drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo_array[i];
-
-		if (bo_gem == NULL)
-			continue;
-
-		total += bo_gem->reloc_tree_fences;
-	}
 	return total;
 }
 
@@ -2895,14 +2735,6 @@ drm_bacon_gem_check_aperture_space(drm_bacon_bo **bo_array, int count)
 	    (drm_bacon_bufmgr_gem *) bo_array[0]->bufmgr;
 	unsigned int total = 0;
 	unsigned int threshold = bufmgr_gem->gtt_size * 3 / 4;
-	int total_fences;
-
-	/* Check for fence reg constraints if necessary */
-	if (bufmgr_gem->available_fences) {
-		total_fences = drm_bacon_gem_total_fences(bo_array, count);
-		if (total_fences > bufmgr_gem->available_fences)
-			return -ENOSPC;
-	}
 
 	total = drm_bacon_gem_estimate_batch_space(bo_array, count);
 
@@ -3432,11 +3264,7 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 
 	bufmgr_gem->pci_device = get_pci_device_id(bufmgr_gem);
 
-	if (IS_GEN2(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 2;
-	else if (IS_GEN3(bufmgr_gem->pci_device))
-		bufmgr_gem->gen = 3;
-	else if (IS_GEN4(bufmgr_gem->pci_device))
+	if (IS_GEN4(bufmgr_gem->pci_device))
 		bufmgr_gem->gen = 4;
 	else if (IS_GEN5(bufmgr_gem->pci_device))
 		bufmgr_gem->gen = 5;
@@ -3454,15 +3282,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 		goto exit;
 	}
 
-	if (IS_GEN3(bufmgr_gem->pci_device) &&
-	    bufmgr_gem->gtt_size > 256*1024*1024) {
-		/* The unmappable part of gtt on gen 3 (i.e. above 256MB) can't
-		 * be used for tiled blits. To simplify the accounting, just
-		 * subtract the unmappable part (fixed to 256MB on all known
-		 * gen3 devices) if the kernel advertises it. */
-		bufmgr_gem->gtt_size -= 256*1024*1024;
-	}
-
 	memclear(gp);
 	gp.value = &tmp;
 
@@ -3478,10 +3297,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	gp.param = I915_PARAM_HAS_BLT;
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	bufmgr_gem->has_blt = ret == 0;
-
-	gp.param = I915_PARAM_HAS_RELAXED_FENCING;
-	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr_gem->has_relaxed_fencing = ret == 0;
 
 	gp.param = I915_PARAM_HAS_EXEC_ASYNC;
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
@@ -3512,32 +3327,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	if (ret == 0 && *gp.value > 0)
 		bufmgr_gem->bufmgr.bo_set_softpin_offset = drm_bacon_gem_bo_set_softpin_offset;
-
-	if (bufmgr_gem->gen < 4) {
-		gp.param = I915_PARAM_NUM_FENCES_AVAIL;
-		gp.value = &bufmgr_gem->available_fences;
-		ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-		if (ret) {
-			fprintf(stderr, "get fences failed: %d [%d]\n", ret,
-				errno);
-			fprintf(stderr, "param: %d, val: %d\n", gp.param,
-				*gp.value);
-			bufmgr_gem->available_fences = 0;
-		} else {
-			/* XXX The kernel reports the total number of fences,
-			 * including any that may be pinned.
-			 *
-			 * We presume that there will be at least one pinned
-			 * fence for the scanout buffer, but there may be more
-			 * than one scanout and the user may be manually
-			 * pinning buffers. Let's move to execbuffer2 and
-			 * thereby forget the insanity of using fences...
-			 */
-			bufmgr_gem->available_fences -= 2;
-			if (bufmgr_gem->available_fences < 0)
-				bufmgr_gem->available_fences = 0;
-		}
-	}
 
 	/* Let's go with one relocation per every 2 dwords (but round down a bit
 	 * since a power of two will mean an extra page allocation for the reloc

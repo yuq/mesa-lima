@@ -138,10 +138,6 @@ int drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo ** bo_array, int count);
 int drm_bacon_bo_emit_reloc(drm_bacon_bo *bo, uint32_t offset,
 			    drm_bacon_bo *target_bo, uint32_t target_offset,
 			    uint32_t read_domains, uint32_t write_domain);
-int drm_bacon_bo_emit_reloc_fence(drm_bacon_bo *bo, uint32_t offset,
-				  drm_bacon_bo *target_bo,
-				  uint32_t target_offset,
-				  uint32_t read_domains, uint32_t write_domain);
 int drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			    uint32_t stride);
 int drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
@@ -161,7 +157,6 @@ drm_bacon_bo *drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 						const char *name,
 						unsigned int handle);
 void drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr);
-void drm_bacon_bufmgr_gem_enable_fenced_relocs(drm_bacon_bufmgr *bufmgr);
 void drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr,
 					     int limit);
 int drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo);

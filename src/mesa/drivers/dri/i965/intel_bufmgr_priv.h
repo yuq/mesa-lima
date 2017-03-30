@@ -188,11 +188,6 @@ struct _drm_bacon_bufmgr {
 	int (*bo_emit_reloc) (drm_bacon_bo *bo, uint32_t offset,
 			      drm_bacon_bo *target_bo, uint32_t target_offset,
 			      uint32_t read_domains, uint32_t write_domain);
-	int (*bo_emit_reloc_fence)(drm_bacon_bo *bo, uint32_t offset,
-				   drm_bacon_bo *target_bo,
-				   uint32_t target_offset,
-				   uint32_t read_domains,
-				   uint32_t write_domain);
 
 	/** Executes the command buffer pointed to by bo. */
 	int (*bo_exec) (drm_bacon_bo *bo, int used,
