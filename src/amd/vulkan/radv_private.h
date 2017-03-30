@@ -459,12 +459,15 @@ struct radv_queue {
 	uint32_t compute_scratch_size;
 	uint32_t esgs_ring_size;
 	uint32_t gsvs_ring_size;
+	bool has_tess_rings;
 
 	struct radeon_winsys_bo *scratch_bo;
 	struct radeon_winsys_bo *descriptor_bo;
 	struct radeon_winsys_bo *compute_scratch_bo;
 	struct radeon_winsys_bo *esgs_ring_bo;
 	struct radeon_winsys_bo *gsvs_ring_bo;
+	struct radeon_winsys_bo *tess_factor_ring_bo;
+	struct radeon_winsys_bo *tess_offchip_ring_bo;
 	struct radeon_winsys_cs *initial_preamble_cs;
 	struct radeon_winsys_cs *continue_preamble_cs;
 };
@@ -744,6 +747,7 @@ struct radv_cmd_buffer {
 	uint32_t compute_scratch_size_needed;
 	uint32_t esgs_ring_size_needed;
 	uint32_t gsvs_ring_size_needed;
+	bool tess_rings_needed;
 
 	int ring_offsets_idx; /* just used for verification */
 };

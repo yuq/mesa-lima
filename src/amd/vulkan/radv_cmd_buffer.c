@@ -221,6 +221,7 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 	cmd_buffer->compute_scratch_size_needed = 0;
 	cmd_buffer->esgs_ring_size_needed = 0;
 	cmd_buffer->gsvs_ring_size_needed = 0;
+	cmd_buffer->tess_rings_needed = false;
 
 	if (cmd_buffer->upload.upload_bo)
 		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs,
@@ -1903,6 +1904,9 @@ void radv_CmdBindPipeline(
 		if (pipeline->graphics.gsvs_ring_size > cmd_buffer->gsvs_ring_size_needed)
 			cmd_buffer->gsvs_ring_size_needed = pipeline->graphics.gsvs_ring_size;
 
+		if (radv_pipeline_has_tess(pipeline))
+			cmd_buffer->tess_rings_needed = true;
+
 		if (radv_pipeline_has_gs(pipeline)) {
 			struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_GEOMETRY,
 									     AC_UD_SCRATCH_RING_OFFSETS);
@@ -2070,6 +2074,8 @@ void radv_CmdExecuteCommands(
 			primary->esgs_ring_size_needed = secondary->esgs_ring_size_needed;
 		if (secondary->gsvs_ring_size_needed > primary->gsvs_ring_size_needed)
 			primary->gsvs_ring_size_needed = secondary->gsvs_ring_size_needed;
+		if (secondary->tess_rings_needed)
+			primary->tess_rings_needed = true;
 
 		if (secondary->ring_offsets_idx != -1) {
 			if (primary->ring_offsets_idx == -1)
