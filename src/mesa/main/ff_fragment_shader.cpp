@@ -68,14 +68,6 @@ using namespace ir_builder;
  */
 
 
-struct texenvprog_cache_item
-{
-   GLuint hash;
-   void *key;
-   struct gl_shader_program *data;
-   struct texenvprog_cache_item *next;
-};
-
 static GLboolean
 texenv_doing_secondary_color(struct gl_context *ctx)
 {
