@@ -936,6 +936,18 @@ struct radv_prim_vertex_count {
 	uint8_t incr;
 };
 
+struct radv_tessellation_state {
+	uint32_t ls_hs_config;
+	uint32_t tcs_in_layout;
+	uint32_t tcs_out_layout;
+	uint32_t tcs_out_offsets;
+	uint32_t offchip_layout;
+	unsigned num_patches;
+	unsigned lds_size;
+	unsigned num_tcs_input_cp;
+	uint32_t tf_param;
+};
+
 struct radv_pipeline {
 	struct radv_device *                          device;
 	uint32_t                                     dynamic_state_mask;
@@ -962,6 +974,7 @@ struct radv_pipeline {
 			struct radv_depth_stencil_state ds;
 			struct radv_raster_state raster;
 			struct radv_multisample_state ms;
+			struct radv_tessellation_state tess;
 			uint32_t db_shader_control;
 			uint32_t shader_z_format;
 			unsigned prim;
