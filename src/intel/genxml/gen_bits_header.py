@@ -107,6 +107,11 @@ ${item.token_name}_${prop}(const struct gen_device_info *devinfo)
 extern "C" {
 #endif
 % for _, container in sorted(containers.iteritems(), key=itemgetter(0)):
+
+/* ${container.name} */
+
+${emit_per_gen_prop_func(container, 'length')}
+
 % for _, field in sorted(container.fields.iteritems(), key=itemgetter(0)):
 
 /* ${container.name}::${field.name} */
@@ -191,7 +196,14 @@ class Container(object):
 
     def __init__(self, name):
         self.name = name
+        self.token_name = safe_name(name)
+        self.length_by_gen = {}
         self.fields = {}
+
+    def add_gen(self, gen, xml_attrs):
+        assert isinstance(gen, Gen)
+        if 'length' in xml_attrs:
+            self.length_by_gen[gen] = xml_attrs['length']
 
     def get_field(self, field_name, create=False):
         if field_name not in self.fields:
@@ -200,6 +212,27 @@ class Container(object):
             else:
                 return None
         return self.fields[field_name]
+
+    def has_prop(self, prop):
+        if prop == 'length':
+            return bool(self.length_by_gen)
+        else:
+            raise ValueError('Invalid property: "{0}"'.format(prop))
+
+    def iter_prop(self, prop):
+        if prop == 'length':
+            return self.length_by_gen.iteritems()
+        else:
+            raise ValueError('Invalid property: "{0}"'.format(prop))
+
+    def get_prop(self, prop, gen):
+        if not isinstance(gen, Gen):
+            gen = Gen(gen)
+
+        if prop == 'length':
+            return self.length_by_gen.get(gen, 0)
+        else:
+            raise ValueError('Invalid property: "{0}"'.format(prop))
 
 class Field(object):
 
@@ -277,6 +310,7 @@ class XmlParser(object):
         if name not in self.containers:
             self.containers[name] = Container(name)
         self.container = self.containers[name]
+        self.container.add_gen(self.gen, attrs)
 
     def start_field(self, attrs):
         if self.container is None:
