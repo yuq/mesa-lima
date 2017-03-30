@@ -2369,6 +2369,15 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
    case ir_unop_vote_eq:
       emit_asm(ir, TGSI_OPCODE_VOTE_EQ, result_dst, op[0]);
       break;
+   case ir_unop_ballot:
+      emit_asm(ir, TGSI_OPCODE_BALLOT, result_dst, op[0]);
+      break;
+   case ir_unop_read_first_invocation:
+      emit_asm(ir, TGSI_OPCODE_READ_FIRST, result_dst, op[0]);
+      break;
+   case ir_binop_read_invocation:
+      emit_asm(ir, TGSI_OPCODE_READ_INVOC, result_dst, op[0], op[1]);
+      break;
    case ir_unop_u2i64:
    case ir_unop_u2u64:
    case ir_unop_b2i64: {
