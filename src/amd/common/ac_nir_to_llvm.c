@@ -4181,6 +4181,7 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 	unsigned mask_attribs;
 	variable->data.driver_location = idx * 4;
 
+	mask_attribs = ((1ull << attrib_count) - 1) << idx;
 	if (ctx->stage == MESA_SHADER_VERTEX ||
 	    ctx->stage == MESA_SHADER_GEOMETRY) {
 		if (idx == VARYING_SLOT_CLIP_DIST0) {
@@ -4194,10 +4195,9 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 				attrib_count = 2;
 			else
 				attrib_count = 1;
+			mask_attribs = 1 << idx;
 		}
-		mask_attribs = 1 << idx;
-	} else
-		mask_attribs = ((1ull << attrib_count) - 1) << idx;
+	}
 
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
