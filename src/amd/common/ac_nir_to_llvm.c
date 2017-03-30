@@ -2917,9 +2917,17 @@ static void emit_waitcnt(struct nir_to_llvm_context *ctx,
 
 static void emit_barrier(struct nir_to_llvm_context *ctx)
 {
-	// TODO tess
+	/* SI only (thanks to a hw bug workaround):
+	 * The real barrier instruction isn’t needed, because an entire patch
+	 * always fits into a single wave.
+	 */
+	if (ctx->options->chip_class == SI &&
+	    ctx->stage == MESA_SHADER_TESS_CTRL) {
+		emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
+		return;
+	}
 	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.barrier",
-			   ctx->voidt, NULL, 0, 0);
+			   ctx->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
 
 static void emit_discard_if(struct nir_to_llvm_context *ctx,
