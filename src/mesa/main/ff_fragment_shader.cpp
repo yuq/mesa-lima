@@ -449,10 +449,8 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
    }
 
    /* _NEW_FOG */
-   if (ctx->Fog.Enabled) {
+   if (ctx->Fog.Enabled)
       key->fog_mode = translate_fog_mode(ctx->Fog.Mode);
-      inputs_referenced |= VARYING_BIT_FOGC; /* maybe */
-   }
 
    /* _NEW_BUFFERS */
    key->num_draw_buffers = ctx->DrawBuffer->_NumColorDrawBuffers;
