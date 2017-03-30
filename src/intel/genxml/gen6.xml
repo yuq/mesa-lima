@@ -394,10 +394,10 @@
   </struct>
 
   <struct name="CLIP_VIEWPORT" length="4">
-    <field name="XMin Clip Guardband" start="0" end="31" type="uint"/>
-    <field name="XMax Clip Guardband" start="32" end="63" type="uint"/>
-    <field name="YMin Clip Guardband" start="64" end="95" type="uint"/>
-    <field name="YMax Clip Guardband" start="96" end="127" type="uint"/>
+    <field name="XMin Clip Guardband" start="0" end="31" type="float"/>
+    <field name="XMax Clip Guardband" start="32" end="63" type="float"/>
+    <field name="YMin Clip Guardband" start="64" end="95" type="float"/>
+    <field name="YMax Clip Guardband" start="96" end="127" type="float"/>
   </struct>
 
   <struct name="SCISSOR_RECT" length="2">
