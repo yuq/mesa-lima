@@ -589,6 +589,131 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	return variant;
 }
 
+static union ac_shader_variant_key
+radv_compute_tes_key(bool as_es)
+{
+	union ac_shader_variant_key key;
+	memset(&key, 0, sizeof(key));
+	key.tes.as_es = as_es;
+	return key;
+}
+
+static union ac_shader_variant_key
+radv_compute_tcs_key(unsigned primitive_mode, unsigned input_vertices)
+{
+	union ac_shader_variant_key key;
+	memset(&key, 0, sizeof(key));
+	key.tcs.primitive_mode = primitive_mode;
+	key.tcs.input_vertices = input_vertices;
+	return key;
+}
+
+static void
+radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
+			   struct radv_pipeline_cache *cache,
+			   struct radv_shader_module *tcs_module,
+			   struct radv_shader_module *tes_module,
+			   const char *tcs_entrypoint,
+			   const char *tes_entrypoint,
+			   const VkSpecializationInfo *tcs_spec_info,
+			   const VkSpecializationInfo *tes_spec_info,
+			   struct radv_pipeline_layout *layout,
+			   unsigned input_vertices)
+{
+	unsigned char tcs_sha1[20], tes_sha1[20];
+	struct radv_shader_variant *tes_variant = NULL, *tcs_variant = NULL;
+	nir_shader *tes_nir, *tcs_nir;
+	void *tes_code = NULL, *tcs_code = NULL;
+	unsigned tes_code_size = 0, tcs_code_size = 0;
+	union ac_shader_variant_key tes_key = radv_compute_tes_key(radv_pipeline_has_gs(pipeline));
+	union ac_shader_variant_key tcs_key;
+	bool dump = (pipeline->device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
+
+	if (tes_module->nir)
+		_mesa_sha1_compute(tes_module->nir->info->name,
+				   strlen(tes_module->nir->info->name),
+				   tes_module->sha1);
+	radv_hash_shader(tes_sha1, tes_module, tes_entrypoint, tes_spec_info, layout, &tes_key, 0);
+
+	tes_variant = radv_create_shader_variant_from_pipeline_cache(pipeline->device,
+								     cache,
+								     tes_sha1);
+
+	if (tes_variant) {
+		tcs_key = radv_compute_tcs_key(tes_variant->info.tes.primitive_mode, input_vertices);
+
+		if (tcs_module->nir)
+			_mesa_sha1_compute(tcs_module->nir->info->name,
+					   strlen(tcs_module->nir->info->name),
+					   tcs_module->sha1);
+
+		radv_hash_shader(tcs_sha1, tcs_module, tcs_entrypoint, tcs_spec_info, layout, &tcs_key, 0);
+
+		tcs_variant = radv_create_shader_variant_from_pipeline_cache(pipeline->device,
+									     cache,
+									     tcs_sha1);
+	}
+
+	if (tcs_variant && tes_variant) {
+		pipeline->shaders[MESA_SHADER_TESS_CTRL] = tcs_variant;
+		pipeline->shaders[MESA_SHADER_TESS_EVAL] = tes_variant;
+		return;
+	}
+
+	tes_nir = radv_shader_compile_to_nir(pipeline->device,
+					     tes_module, tes_entrypoint, MESA_SHADER_TESS_EVAL,
+					     tes_spec_info, dump);
+	if (tes_nir == NULL)
+		return;
+
+	tcs_nir = radv_shader_compile_to_nir(pipeline->device,
+					     tcs_module, tcs_entrypoint, MESA_SHADER_TESS_CTRL,
+					     tcs_spec_info, dump);
+	if (tcs_nir == NULL)
+		return;
+
+	nir_lower_tes_patch_vertices(tes_nir,
+				     tcs_nir->info->tess.tcs_vertices_out);
+
+	tes_variant = radv_shader_variant_create(pipeline->device, tes_nir,
+						 layout, &tes_key, &tes_code,
+						 &tes_code_size, dump);
+
+	tcs_key = radv_compute_tcs_key(tes_nir->info->tess.primitive_mode, input_vertices);
+	if (tcs_module->nir)
+		_mesa_sha1_compute(tcs_module->nir->info->name,
+				   strlen(tcs_module->nir->info->name),
+				   tcs_module->sha1);
+
+	radv_hash_shader(tcs_sha1, tcs_module, tcs_entrypoint, tcs_spec_info, layout, &tcs_key, 0);
+
+	tcs_variant = radv_shader_variant_create(pipeline->device, tcs_nir,
+						 layout, &tcs_key, &tcs_code,
+						 &tcs_code_size, dump);
+
+	if (!tes_module->nir)
+		ralloc_free(tes_nir);
+
+	if (!tcs_module->nir)
+		ralloc_free(tcs_nir);
+
+	if (tes_variant)
+		tes_variant = radv_pipeline_cache_insert_shader(cache, tes_sha1, tes_variant,
+								tes_code, tes_code_size);
+
+	if (tcs_variant)
+		tcs_variant = radv_pipeline_cache_insert_shader(cache, tcs_sha1, tcs_variant,
+								tcs_code, tcs_code_size);
+
+	if (tes_code)
+		free(tes_code);
+	if (tcs_code)
+		free(tcs_code);
+	pipeline->shaders[MESA_SHADER_TESS_CTRL] = tcs_variant;
+	pipeline->shaders[MESA_SHADER_TESS_EVAL] = tes_variant;
+	return;
+}
+
 static VkResult
 radv_pipeline_scratch_init(struct radv_device *device,
                            struct radv_pipeline *pipeline)
@@ -1875,6 +2000,23 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		pipeline->graphics.vgt_gs_mode = si_vgt_gs_mode(pipeline->shaders[MESA_SHADER_GEOMETRY]);
 	} else
 		pipeline->graphics.vgt_gs_mode = 0;
+
+	if (modules[MESA_SHADER_TESS_EVAL]) {
+		assert(modules[MESA_SHADER_TESS_CTRL]);
+
+		radv_tess_pipeline_compile(pipeline,
+					   cache,
+					   modules[MESA_SHADER_TESS_CTRL],
+					   modules[MESA_SHADER_TESS_EVAL],
+					   pStages[MESA_SHADER_TESS_CTRL]->pName,
+					   pStages[MESA_SHADER_TESS_EVAL]->pName,
+					   pStages[MESA_SHADER_TESS_CTRL]->pSpecializationInfo,
+					   pStages[MESA_SHADER_TESS_EVAL]->pSpecializationInfo,
+					   pipeline->layout,
+					   pCreateInfo->pTessellationState->patchControlPoints);
+		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_TESS_EVAL) |
+			mesa_to_vk_shader_stage(MESA_SHADER_TESS_CTRL);
+	}
 
 	if (!modules[MESA_SHADER_FRAGMENT]) {
 		nir_builder fs_b;
