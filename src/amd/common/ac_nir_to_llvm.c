@@ -80,8 +80,21 @@ struct nir_to_llvm_context {
 	LLVMValueRef rel_auto_id;
 	LLVMValueRef vs_prim_id;
 	LLVMValueRef instance_id;
-
+	LLVMValueRef ls_out_layout;
 	LLVMValueRef es2gs_offset;
+
+	LLVMValueRef tcs_offchip_layout;
+	LLVMValueRef tcs_out_offsets;
+	LLVMValueRef tcs_out_layout;
+	LLVMValueRef tcs_in_layout;
+	LLVMValueRef oc_lds;
+	LLVMValueRef tess_factor_offset;
+	LLVMValueRef tcs_patch_id;
+	LLVMValueRef tcs_rel_ids;
+	LLVMValueRef tes_rel_patch_id;
+	LLVMValueRef tes_patch_id;
+	LLVMValueRef tes_u;
+	LLVMValueRef tes_v;
 
 	LLVMValueRef gsvs_ring_stride;
 	LLVMValueRef gsvs_num_entries;
@@ -484,6 +497,10 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		user_sgpr_count = arg_idx;
 		if (ctx->options->key.vs.as_es)
 			arg_types[arg_idx++] = ctx->i32; //es2gs offset
+		else if (ctx->options->key.vs.as_ls) {
+			arg_types[arg_idx++] = ctx->i32; //ls out layout
+			user_sgpr_count++;
+		}
 		sgpr_count = arg_idx;
 		arg_types[arg_idx++] = ctx->i32; // vertex id
 		if (!ctx->is_gs_copy_shader) {
@@ -491,6 +508,35 @@ static void create_function(struct nir_to_llvm_context *ctx)
 			arg_types[arg_idx++] = ctx->i32; // vs prim id
 			arg_types[arg_idx++] = ctx->i32; // instance id
 		}
+		break;
+	case MESA_SHADER_TESS_CTRL:
+		arg_types[arg_idx++] = ctx->i32; // tcs offchip layout
+		arg_types[arg_idx++] = ctx->i32; // tcs out offsets
+		arg_types[arg_idx++] = ctx->i32; // tcs out layout
+		arg_types[arg_idx++] = ctx->i32; // tcs in layout
+		user_sgpr_count = arg_idx;
+		arg_types[arg_idx++] = ctx->i32; // param oc lds
+		arg_types[arg_idx++] = ctx->i32; // tess factor offset
+		sgpr_count = arg_idx;
+		arg_types[arg_idx++] = ctx->i32; // patch id
+		arg_types[arg_idx++] = ctx->i32; // rel ids;
+		break;
+	case MESA_SHADER_TESS_EVAL:
+		arg_types[arg_idx++] = ctx->i32; // tcs offchip layout
+		user_sgpr_count = arg_idx;
+		if (ctx->options->key.tes.as_es) {
+			arg_types[arg_idx++] = ctx->i32; // OC LDS
+			arg_types[arg_idx++] = ctx->i32; //
+			arg_types[arg_idx++] = ctx->i32; // es2gs offset
+		} else {
+			arg_types[arg_idx++] = ctx->i32; //
+			arg_types[arg_idx++] = ctx->i32; // OC LDS
+		}
+		sgpr_count = arg_idx;
+		arg_types[arg_idx++] = ctx->f32; // tes_u
+		arg_types[arg_idx++] = ctx->f32; // tes_v
+		arg_types[arg_idx++] = ctx->i32; // tes rel patch id
+		arg_types[arg_idx++] = ctx->i32; // tes patch id
 		break;
 	case MESA_SHADER_GEOMETRY:
 		arg_types[arg_idx++] = ctx->i32; // gsvs stride
@@ -612,12 +658,46 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		}
 		if (ctx->options->key.vs.as_es)
 			ctx->es2gs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
+		else if (ctx->options->key.vs.as_ls) {
+			set_userdata_location_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT, user_sgpr_idx, 1);
+			user_sgpr_idx += 1;
+			ctx->ls_out_layout = LLVMGetParam(ctx->main_function, arg_idx++);
+		}
 		ctx->vertex_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		if (!ctx->is_gs_copy_shader) {
 			ctx->rel_auto_id = LLVMGetParam(ctx->main_function, arg_idx++);
 			ctx->vs_prim_id = LLVMGetParam(ctx->main_function, arg_idx++);
 			ctx->instance_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		}
+		break;
+	case MESA_SHADER_TESS_CTRL:
+		set_userdata_location_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, user_sgpr_idx, 4);
+		user_sgpr_idx += 4;
+		ctx->tcs_offchip_layout = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tcs_out_offsets = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tcs_out_layout = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tcs_in_layout = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->oc_lds = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tess_factor_offset = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tcs_patch_id = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tcs_rel_ids = LLVMGetParam(ctx->main_function, arg_idx++);
+		break;
+	case MESA_SHADER_TESS_EVAL:
+		set_userdata_location_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, user_sgpr_idx, 1);
+		user_sgpr_idx += 1;
+		ctx->tcs_offchip_layout = LLVMGetParam(ctx->main_function, arg_idx++);
+		if (ctx->options->key.tes.as_es) {
+			ctx->oc_lds = LLVMGetParam(ctx->main_function, arg_idx++);
+			arg_idx++;
+			ctx->es2gs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
+		} else {
+			arg_idx++;
+			ctx->oc_lds = LLVMGetParam(ctx->main_function, arg_idx++);
+		}
+		ctx->tes_u = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tes_v = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tes_rel_patch_id = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->tes_patch_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_GEOMETRY:
 		set_userdata_location_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES, user_sgpr_idx, 2);
