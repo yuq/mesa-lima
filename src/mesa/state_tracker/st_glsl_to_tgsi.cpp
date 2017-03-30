@@ -3963,6 +3963,16 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
       visit_image_intrinsic(ir);
       return;
 
+   case ir_intrinsic_shader_clock: {
+      ir->return_deref->accept(this);
+
+      st_dst_reg dst = st_dst_reg(this->result);
+      dst.writemask = TGSI_WRITEMASK_XY;
+
+      emit_asm(ir, TGSI_OPCODE_CLOCK, dst);
+      return;
+   }
+
    case ir_intrinsic_invalid:
    case ir_intrinsic_generic_load:
    case ir_intrinsic_generic_store:
@@ -3974,7 +3984,6 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
    case ir_intrinsic_generic_atomic_max:
    case ir_intrinsic_generic_atomic_exchange:
    case ir_intrinsic_generic_atomic_comp_swap:
-   case ir_intrinsic_shader_clock:
       unreachable("Invalid intrinsic");
    }
 }
