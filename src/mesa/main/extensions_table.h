@@ -107,6 +107,7 @@ EXT(ARB_seamless_cubemap_per_texture        , AMD_seamless_cubemap_per_texture  
 EXT(ARB_separate_shader_objects             , dummy_true                             , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_shader_atomic_counter_ops           , ARB_shader_atomic_counter_ops          , GLL, GLC,  x ,  x , 2015)
 EXT(ARB_shader_atomic_counters              , ARB_shader_atomic_counters             , GLL, GLC,  x ,  x , 2011)
+EXT(ARB_shader_ballot                       , ARB_shader_ballot                      , GLL, GLC,  x ,  x , 2015)
 EXT(ARB_shader_bit_encoding                 , ARB_shader_bit_encoding                , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_shader_clock                        , ARB_shader_clock                       , GLL, GLC,  x ,  x , 2015)
 EXT(ARB_shader_draw_parameters              , ARB_shader_draw_parameters             , GLL, GLC,  x ,  x , 2013)
