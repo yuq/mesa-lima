@@ -5213,6 +5213,23 @@ static void vote_eq_emit(
 		LLVMBuildSExt(gallivm->builder, tmp, ctx->i32, "");
 }
 
+static void ballot_emit(
+	const struct lp_build_tgsi_action *action,
+	struct lp_build_tgsi_context *bld_base,
+	struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+	LLVMValueRef tmp;
+
+	tmp = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
+	tmp = si_emit_ballot(ctx, tmp);
+	tmp = LLVMBuildBitCast(builder, tmp, ctx->v2i32, "");
+
+	emit_data->output[0] = LLVMBuildExtractElement(builder, tmp, ctx->i32_0, "");
+	emit_data->output[1] = LLVMBuildExtractElement(builder, tmp, ctx->i32_1, "");
+}
+
 static unsigned si_llvm_get_stream(struct lp_build_tgsi_context *bld_base,
 				       struct lp_build_emit_data *emit_data)
 {
@@ -6661,6 +6678,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_VOTE_ALL].emit = vote_all_emit;
 	bld_base->op_actions[TGSI_OPCODE_VOTE_ANY].emit = vote_any_emit;
 	bld_base->op_actions[TGSI_OPCODE_VOTE_EQ].emit = vote_eq_emit;
+	bld_base->op_actions[TGSI_OPCODE_BALLOT].emit = ballot_emit;
 
 	bld_base->op_actions[TGSI_OPCODE_EMIT].emit = si_llvm_emit_vertex;
 	bld_base->op_actions[TGSI_OPCODE_ENDPRIM].emit = si_llvm_emit_primitive;
