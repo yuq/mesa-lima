@@ -487,6 +487,8 @@ struct radv_device {
 	uint64_t debug_flags;
 
 	bool llvm_supports_spill;
+	bool has_distributed_tess;
+	uint32_t tess_offchip_block_dw_size;
 	uint32_t scratch_waves;
 
 	uint32_t gs_table_depth;

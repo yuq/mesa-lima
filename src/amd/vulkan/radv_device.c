@@ -962,6 +962,12 @@ VkResult radv_CreateDevice(
 
 	radv_device_init_gs_info(device);
 
+	device->tess_offchip_block_dw_size =
+		device->physical_device->rad_info.family == CHIP_HAWAII ? 4096 : 8192;
+	device->has_distributed_tess =
+		device->physical_device->rad_info.chip_class >= VI &&
+		device->physical_device->rad_info.max_se >= 2;
+
 	result = radv_device_init_meta(device);
 	if (result != VK_SUCCESS)
 		goto fail;
