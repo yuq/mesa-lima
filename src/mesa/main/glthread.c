@@ -194,16 +194,12 @@ _mesa_glthread_restore_dispatch(struct gl_context *ctx)
    }
 }
 
-void
-_mesa_glthread_flush_batch(struct gl_context *ctx)
+static void
+_mesa_glthread_flush_batch_locked(struct gl_context *ctx)
 {
    struct glthread_state *glthread = ctx->GLThread;
-   struct glthread_batch *batch;
+   struct glthread_batch *batch = glthread->batch;
 
-   if (!glthread)
-      return;
-
-   batch = glthread->batch;
    if (!batch->used)
       return;
 
@@ -223,10 +219,26 @@ _mesa_glthread_flush_batch(struct gl_context *ctx)
       return;
    }
 
-   pthread_mutex_lock(&glthread->mutex);
    *glthread->batch_queue_tail = batch;
    glthread->batch_queue_tail = &batch->next;
    pthread_cond_broadcast(&glthread->new_work);
+}
+
+void
+_mesa_glthread_flush_batch(struct gl_context *ctx)
+{
+   struct glthread_state *glthread = ctx->GLThread;
+   struct glthread_batch *batch;
+
+   if (!glthread)
+      return;
+
+   batch = glthread->batch;
+   if (!batch->used)
+      return;
+
+   pthread_mutex_lock(&glthread->mutex);
+   _mesa_glthread_flush_batch_locked(ctx);
    pthread_mutex_unlock(&glthread->mutex);
 }
 
@@ -252,12 +264,20 @@ _mesa_glthread_finish(struct gl_context *ctx)
    if (pthread_self() == glthread->thread)
       return;
 
-   _mesa_glthread_flush_batch(ctx);
-
    pthread_mutex_lock(&glthread->mutex);
 
-   while (glthread->batch_queue || glthread->busy)
-      pthread_cond_wait(&glthread->work_done, &glthread->mutex);
+   if (!(glthread->batch_queue || glthread->busy)) {
+      if (glthread->batch && glthread->batch->used) {
+         struct _glapi_table *dispatch = _glapi_get_dispatch();
+         glthread_unmarshal_batch(ctx, glthread->batch);
+         _glapi_set_dispatch(dispatch);
+         glthread_allocate_batch(ctx);
+      }
+   } else {
+      _mesa_glthread_flush_batch_locked(ctx);
+      while (glthread->batch_queue || glthread->busy)
+         pthread_cond_wait(&glthread->work_done, &glthread->mutex);
+   }
 
    pthread_mutex_unlock(&glthread->mutex);
 }
