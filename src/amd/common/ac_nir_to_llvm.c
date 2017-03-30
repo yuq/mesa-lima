@@ -4320,12 +4320,17 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 
 	mask_attribs = ((1ull << attrib_count) - 1) << idx;
 	if (ctx->stage == MESA_SHADER_VERTEX ||
+	    ctx->stage == MESA_SHADER_TESS_EVAL ||
 	    ctx->stage == MESA_SHADER_GEOMETRY) {
 		if (idx == VARYING_SLOT_CLIP_DIST0) {
 			int length = ctx->num_output_clips + ctx->num_output_culls;
 			if (ctx->stage == MESA_SHADER_VERTEX) {
 				ctx->shader_info->vs.outinfo.clip_dist_mask = (1 << ctx->num_output_clips) - 1;
 				ctx->shader_info->vs.outinfo.cull_dist_mask = (1 << ctx->num_output_culls) - 1;
+			}
+			if (ctx->stage == MESA_SHADER_TESS_EVAL) {
+				ctx->shader_info->tes.outinfo.clip_dist_mask = (1 << ctx->num_output_clips) - 1;
+				ctx->shader_info->tes.outinfo.cull_dist_mask = (1 << ctx->num_output_culls) - 1;
 			}
 
 			if (length > 4)
