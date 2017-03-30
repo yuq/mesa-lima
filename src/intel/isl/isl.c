@@ -83,6 +83,32 @@ isl_device_init(struct isl_device *dev,
     */
    dev->ss.aux_addr_offset =
       (RENDER_SURFACE_STATE_AuxiliarySurfaceBaseAddress_start(info) & ~31) / 8;
+
+   dev->ds.size =
+      _3DSTATE_DEPTH_BUFFER_length(info) * 4 +
+      _3DSTATE_STENCIL_BUFFER_length(info) * 4 +
+      _3DSTATE_HIER_DEPTH_BUFFER_length(info) * 4 +
+      _3DSTATE_CLEAR_PARAMS_length(info) * 4;
+
+   assert(_3DSTATE_DEPTH_BUFFER_SurfaceBaseAddress_start(info) % 8 == 0);
+   dev->ds.depth_offset =
+      _3DSTATE_DEPTH_BUFFER_SurfaceBaseAddress_start(info) / 8;
+
+   if (info->has_hiz_and_separate_stencil) {
+      assert(_3DSTATE_STENCIL_BUFFER_SurfaceBaseAddress_start(info) % 8 == 0);
+      dev->ds.stencil_offset =
+         _3DSTATE_DEPTH_BUFFER_length(info) * 4 +
+         _3DSTATE_STENCIL_BUFFER_SurfaceBaseAddress_start(info) / 8;
+
+      assert(_3DSTATE_HIER_DEPTH_BUFFER_SurfaceBaseAddress_start(info) % 8 == 0);
+      dev->ds.hiz_offset =
+         _3DSTATE_DEPTH_BUFFER_length(info) * 4 +
+         _3DSTATE_STENCIL_BUFFER_length(info) * 4 +
+         _3DSTATE_HIER_DEPTH_BUFFER_SurfaceBaseAddress_start(info) / 8;
+   } else {
+      dev->ds.stencil_offset = 0;
+      dev->ds.hiz_offset = 0;
+   }
 }
 
 /**
@@ -1678,6 +1704,73 @@ isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
       break;
    case 9:
       isl_gen9_buffer_fill_state_s(state, info);
+      break;
+   default:
+      assert(!"Cannot fill surface state for this gen");
+   }
+}
+
+void
+isl_emit_depth_stencil_hiz_s(const struct isl_device *dev, void *batch,
+                             const struct isl_depth_stencil_hiz_emit_info *restrict info)
+{
+   if (info->depth_surf && info->stencil_surf) {
+      if (!dev->info->has_hiz_and_separate_stencil) {
+         assert(info->depth_surf == info->stencil_surf);
+         assert(info->depth_address == info->stencil_address);
+      }
+      assert(info->depth_surf->dim == info->stencil_surf->dim);
+   }
+
+   if (info->depth_surf) {
+      assert((info->depth_surf->usage & ISL_SURF_USAGE_DEPTH_BIT));
+      if (info->depth_surf->dim == ISL_SURF_DIM_3D) {
+         assert(info->view->base_array_layer + info->view->array_len <=
+                info->depth_surf->logical_level0_px.depth);
+      } else {
+         assert(info->view->base_array_layer + info->view->array_len <=
+                info->depth_surf->logical_level0_px.array_len);
+      }
+   }
+
+   if (info->stencil_surf) {
+      assert((info->stencil_surf->usage & ISL_SURF_USAGE_STENCIL_BIT));
+      if (info->stencil_surf->dim == ISL_SURF_DIM_3D) {
+         assert(info->view->base_array_layer + info->view->array_len <=
+                info->stencil_surf->logical_level0_px.depth);
+      } else {
+         assert(info->view->base_array_layer + info->view->array_len <=
+                info->stencil_surf->logical_level0_px.array_len);
+      }
+   }
+
+   switch (ISL_DEV_GEN(dev)) {
+   case 4:
+      if (ISL_DEV_IS_G4X(dev)) {
+         /* G45 surface state is the same as gen5 */
+         isl_gen5_emit_depth_stencil_hiz_s(dev, batch, info);
+      } else {
+         isl_gen4_emit_depth_stencil_hiz_s(dev, batch, info);
+      }
+      break;
+   case 5:
+      isl_gen5_emit_depth_stencil_hiz_s(dev, batch, info);
+      break;
+   case 6:
+      isl_gen6_emit_depth_stencil_hiz_s(dev, batch, info);
+      break;
+   case 7:
+      if (ISL_DEV_IS_HASWELL(dev)) {
+         isl_gen75_emit_depth_stencil_hiz_s(dev, batch, info);
+      } else {
+         isl_gen7_emit_depth_stencil_hiz_s(dev, batch, info);
+      }
+      break;
+   case 8:
+      isl_gen8_emit_depth_stencil_hiz_s(dev, batch, info);
+      break;
+   case 9:
+      isl_gen9_emit_depth_stencil_hiz_s(dev, batch, info);
       break;
    default:
       assert(!"Cannot fill surface state for this gen");

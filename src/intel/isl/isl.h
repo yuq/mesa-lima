@@ -682,6 +682,17 @@ struct isl_device {
       uint8_t addr_offset;
       uint8_t aux_addr_offset;
    } ss;
+
+   /**
+    * Describes the layout of the depth/stencil/hiz commands as emitted by
+    * isl_emit_depth_stencil_hiz.
+    */
+   struct {
+      uint8_t size;
+      uint8_t depth_offset;
+      uint8_t stencil_offset;
+      uint8_t hiz_offset;
+   } ds;
 };
 
 struct isl_extent2d {
@@ -1017,6 +1028,61 @@ struct isl_buffer_fill_state_info {
    uint32_t stride;
 };
 
+struct isl_depth_stencil_hiz_emit_info {
+   /**
+    * The depth surface
+    */
+   const struct isl_surf *depth_surf;
+
+   /**
+    * The stencil surface
+    *
+    * If separate stencil is not available, this must point to the same
+    * isl_surf as depth_surf.
+    */
+   const struct isl_surf *stencil_surf;
+
+   /**
+    * The view into the depth and stencil surfaces.
+    *
+    * This view applies to both surfaces simultaneously.
+    */
+   const struct isl_view *view;
+
+   /**
+    * The address of the depth surface in GPU memory
+    */
+   uint64_t depth_address;
+
+   /**
+    * The address of the stencil surface in GPU memory
+    *
+    * If separate stencil is not available, this must have the same value as
+    * depth_address.
+    */
+   uint64_t stencil_address;
+
+   /**
+    * The Memory Object Control state for depth and stencil buffers
+    *
+    * Both depth and stencil will get the same MOCS value.  The exact format
+    * of this value depends on hardware generation.
+    */
+   uint32_t mocs;
+
+   /**
+    * The HiZ surfae or NULL if HiZ is disabled.
+    */
+   const struct isl_surf *hiz_surf;
+   enum isl_aux_usage hiz_usage;
+   uint64_t hiz_address;
+
+   /**
+    * The depth clear value
+    */
+   float depth_clear_value;
+};
+
 extern const struct isl_format_layout isl_format_layouts[];
 
 void
@@ -1314,6 +1380,14 @@ isl_surf_fill_state_s(const struct isl_device *dev, void *state,
 void
 isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
                         const struct isl_buffer_fill_state_info *restrict info);
+
+#define isl_emit_depth_stencil_hiz(dev, batch, ...) \
+   isl_emit_depth_stencil_hiz_s((dev), (batch), \
+                                &(struct isl_depth_stencil_hiz_emit_info) {  __VA_ARGS__ })
+
+void
+isl_emit_depth_stencil_hiz_s(const struct isl_device *dev, void *batch,
+                             const struct isl_depth_stencil_hiz_emit_info *restrict info);
 
 void
 isl_surf_fill_image_param(const struct isl_device *dev,
