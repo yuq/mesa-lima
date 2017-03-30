@@ -305,6 +305,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_CLOCK:
 	case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
 	case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
+	case PIPE_CAP_TGSI_BALLOT:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
