@@ -43,7 +43,7 @@ struct ac_shader_binary;
 
 #define RADEON_LLVM_INITIAL_CF_DEPTH 4
 
-#define RADEON_LLVM_MAX_SYSTEM_VALUES 4
+#define RADEON_LLVM_MAX_SYSTEM_VALUES 11
 #define RADEON_LLVM_MAX_ADDRS 16
 
 struct si_llvm_flow;

@@ -1376,6 +1376,8 @@ static void declare_system_value(struct si_shader_context *ctx,
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMValueRef value = 0;
 
+	assert(index < RADEON_LLVM_MAX_SYSTEM_VALUES);
+
 	switch (decl->Semantic.Name) {
 	case TGSI_SEMANTIC_INSTANCEID:
 		value = LLVMGetParam(ctx->main_fn,
