@@ -42,9 +42,4 @@
 struct _drm_bacon_bufmgr {
 };
 
-struct _drm_bacon_context {
-	unsigned int ctx_id;
-	struct _drm_bacon_bufmgr *bufmgr;
-};
-
 #endif /* INTEL_BUFMGR_PRIV_H */

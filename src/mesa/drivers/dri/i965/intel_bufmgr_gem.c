@@ -107,6 +107,11 @@ atomic_add_unless(int *v, int add, int unless)
  */
 #define lower_32_bits(n) ((__u32)(n))
 
+struct _drm_bacon_context {
+	unsigned int ctx_id;
+	struct _drm_bacon_bufmgr *bufmgr;
+};
+
 typedef struct _drm_bacon_bo_gem drm_bacon_bo_gem;
 
 struct drm_bacon_gem_bo_bucket {
