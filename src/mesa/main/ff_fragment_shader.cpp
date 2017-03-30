@@ -100,7 +100,7 @@ struct mode_opt {
 };
 
 struct state_key {
-   GLuint nr_enabled_units:8;
+   GLuint nr_enabled_units:4;
    GLuint separate_specular:1;
    GLuint fog_mode:2;          /**< FOG_x */
    GLuint inputs_available:12;
