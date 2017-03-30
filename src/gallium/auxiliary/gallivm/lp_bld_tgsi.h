@@ -643,6 +643,13 @@ lp_build_tgsi_inst_llvm(
    const struct tgsi_full_instruction *inst);
 
 LLVMValueRef
+lp_build_emit_fetch_src(
+   struct lp_build_tgsi_context *bld_base,
+   const struct tgsi_full_src_register *reg,
+   enum tgsi_opcode_type stype,
+   const unsigned chan_index);
+
+LLVMValueRef
 lp_build_emit_fetch(
    struct lp_build_tgsi_context *bld_base,
    const struct tgsi_full_instruction *inst,
