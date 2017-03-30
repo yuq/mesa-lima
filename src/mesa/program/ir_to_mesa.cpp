@@ -2979,9 +2979,7 @@ get_mesa_program(struct gl_context *ctx,
       prog->info.fs.depth_layout = shader_program->FragDepthLayout;
    }
 
-   if ((ctx->_Shader->Flags & GLSL_NO_OPT) == 0) {
-      _mesa_optimize_program(ctx, prog, prog);
-   }
+   _mesa_optimize_program(ctx, prog, prog);
 
    /* This has to be done last.  Any operation that can cause
     * prog->ParameterValues to get reallocated (e.g., anything that adds a

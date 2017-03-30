@@ -2883,14 +2883,13 @@ struct gl_shader_program
 #define GLSL_DUMP      0x1  /**< Dump shaders to stdout */
 #define GLSL_LOG       0x2  /**< Write shaders to files */
 #define GLSL_OPT       0x4  /**< Force optimizations (override pragmas) */
-#define GLSL_NO_OPT    0x8  /**< Force no optimizations (override pragmas) */
-#define GLSL_UNIFORMS 0x10  /**< Print glUniform calls */
-#define GLSL_NOP_VERT 0x20  /**< Force no-op vertex shaders */
-#define GLSL_NOP_FRAG 0x40  /**< Force no-op fragment shaders */
-#define GLSL_USE_PROG 0x80  /**< Log glUseProgram calls */
-#define GLSL_REPORT_ERRORS 0x100  /**< Print compilation errors */
-#define GLSL_DUMP_ON_ERROR 0x200 /**< Dump shaders to stderr on compile error */
-#define GLSL_CACHE_INFO 0x400 /**< Print debug information about shader cache */
+#define GLSL_UNIFORMS  0x8  /**< Print glUniform calls */
+#define GLSL_NOP_VERT 0x10  /**< Force no-op vertex shaders */
+#define GLSL_NOP_FRAG 0x20  /**< Force no-op fragment shaders */
+#define GLSL_USE_PROG 0x40  /**< Log glUseProgram calls */
+#define GLSL_REPORT_ERRORS 0x80  /**< Print compilation errors */
+#define GLSL_DUMP_ON_ERROR 0x100 /**< Dump shaders to stderr on compile error */
+#define GLSL_CACHE_INFO 0x200 /**< Print debug information about shader cache */
 
 
 /**

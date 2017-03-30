@@ -83,8 +83,6 @@ _mesa_get_shader_flags(void)
          flags |= GLSL_NOP_VERT;
       if (strstr(env, "nopfrag"))
          flags |= GLSL_NOP_FRAG;
-      if (strstr(env, "nopt"))
-         flags |= GLSL_NO_OPT;
       else if (strstr(env, "opt"))
          flags |= GLSL_OPT;
       if (strstr(env, "uniform"))
