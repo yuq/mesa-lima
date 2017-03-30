@@ -167,6 +167,10 @@ struct nir_to_llvm_context {
 	bool is_gs_copy_shader;
 	LLVMValueRef gs_next_vertex;
 	unsigned gs_max_out_vertices;
+
+	unsigned tes_primitive_mode;
+	uint64_t tess_outputs_written;
+	uint64_t tess_patch_outputs_written;
 };
 
 static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
@@ -4956,6 +4960,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		ctx.gs_next_vertex = ac_build_alloca(&ctx, ctx.i32, "gs_next_vertex");
 
 		ctx.gs_max_out_vertices = nir->info->gs.vertices_out;
+	} else if (nir->stage == MESA_SHADER_TESS_EVAL) {
+		ctx.tes_primitive_mode = nir->info->tess.primitive_mode;
 	}
 
 	ac_setup_rings(&ctx);
@@ -4997,7 +5003,13 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		shader_info->gs.gsvs_vertex_size = (util_bitcount64(ctx.output_mask) + addclip) * 16;
 		shader_info->gs.max_gsvs_emit_size = shader_info->gs.gsvs_vertex_size *
 			nir->info->gs.vertices_out;
+	} else if (nir->stage == MESA_SHADER_TESS_CTRL) {
+		shader_info->tcs.outputs_written = ctx.tess_outputs_written;
+		shader_info->tcs.patch_outputs_written = ctx.tess_patch_outputs_written;
+	} else if (nir->stage == MESA_SHADER_VERTEX && ctx.options->key.vs.as_ls) {
+		shader_info->vs.outputs_written = ctx.tess_outputs_written;
 	}
+
 	return ctx.module;
 }
 
@@ -5154,8 +5166,22 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 		shader_info->gs.output_prim = nir->info->gs.output_primitive;
 		shader_info->gs.invocations = nir->info->gs.invocations;
 		break;
+	case MESA_SHADER_TESS_EVAL:
+		shader_info->tes.primitive_mode = nir->info->tess.primitive_mode;
+		shader_info->tes.spacing = nir->info->tess.spacing;
+		shader_info->tes.ccw = nir->info->tess.ccw;
+		shader_info->tes.point_mode = nir->info->tess.point_mode;
+		shader_info->tes.as_es = options->key.tes.as_es;
+		break;
+	case MESA_SHADER_TESS_CTRL:
+		shader_info->tcs.tcs_vertices_out = nir->info->tess.tcs_vertices_out;
+		break;
 	case MESA_SHADER_VERTEX:
 		shader_info->vs.as_es = options->key.vs.as_es;
+		shader_info->vs.as_ls = options->key.vs.as_ls;
+		/* in LS mode we need at least 1, invocation id needs 3, handled elsewhere */
+		if (options->key.vs.as_ls)
+			shader_info->vs.vgpr_comp_cnt = MAX2(1, shader_info->vs.vgpr_comp_cnt);
 		break;
 	default:
 		break;
