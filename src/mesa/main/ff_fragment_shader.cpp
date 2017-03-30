@@ -101,7 +101,6 @@ struct mode_opt {
 
 struct state_key {
    GLuint nr_enabled_units:8;
-   GLuint enabled_units:8;
    GLuint separate_specular:1;
    GLuint fog_mode:2;          /**< FOG_x */
    GLuint inputs_available:12;
@@ -421,7 +420,6 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
       format = _mesa_texture_base_format(texObj);
 
       key->unit[i].enabled = 1;
-      key->enabled_units |= (1<<i);
       key->nr_enabled_units = i + 1;
       inputs_referenced |= VARYING_BIT_TEX(i);
 
@@ -1136,7 +1134,7 @@ emit_instructions(texenv_fragment_program *p)
    struct state_key *key = p->state;
    GLuint unit;
 
-   if (key->enabled_units) {
+   if (key->nr_enabled_units) {
       /* First pass - to support texture_env_crossbar, first identify
        * all referenced texture sources and emit texld instructions
        * for each:
