@@ -83,6 +83,13 @@ enum ac_ud_index {
 	AC_UD_MAX_UD = AC_UD_VS_MAX_UD,
 };
 
+/* descriptor index into scratch ring offsets */
+#define RING_SCRATCH 0
+#define RING_ESGS_VS 1
+#define RING_ESGS_GS 2
+#define RING_GSVS_VS 3
+#define RING_GSVS_GS 4
+
 // Match MAX_SETS from radv_descriptor_set.h
 #define AC_UD_MAX_SETS MAX_SETS
 
