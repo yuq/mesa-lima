@@ -414,8 +414,7 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
       key->unit[i].enabled = 1;
       inputs_referenced |= VARYING_BIT_TEX(i);
 
-      key->unit[i].source_index = _mesa_tex_target_to_index(ctx,
-                                                            texObj->Target);
+      key->unit[i].source_index = texObj->TargetIndex;
 
       key->unit[i].shadow =
          ((samp->CompareMode == GL_COMPARE_R_TO_TEXTURE) &&
