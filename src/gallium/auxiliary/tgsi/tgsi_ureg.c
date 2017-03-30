@@ -1140,8 +1140,6 @@ ureg_emit_dst( struct ureg_program *ureg,
    unsigned n = 0;
 
    assert(dst.File != TGSI_FILE_NULL);
-   assert(dst.File != TGSI_FILE_CONSTANT);
-   assert(dst.File != TGSI_FILE_INPUT);
    assert(dst.File != TGSI_FILE_SAMPLER);
    assert(dst.File != TGSI_FILE_SAMPLER_VIEW);
    assert(dst.File != TGSI_FILE_IMMEDIATE);
