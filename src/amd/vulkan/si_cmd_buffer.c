@@ -414,7 +414,8 @@ si_emit_config(struct radv_physical_device *physical_device,
 		radeon_set_context_reg(cs, R_028424_CB_DCC_CONTROL,
 				       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
 				       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
-		radeon_set_context_reg(cs, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
+		if (physical_device->rad_info.family < CHIP_POLARIS10)
+			radeon_set_context_reg(cs, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
 		radeon_set_context_reg(cs, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
 
 		vgt_tess_distribution = S_028B50_ACCUM_ISOLINE(32) |

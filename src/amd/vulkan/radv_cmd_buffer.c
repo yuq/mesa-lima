@@ -716,6 +716,21 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
+static void polaris_set_vgt_vertex_reuse(struct radv_cmd_buffer *cmd_buffer,
+					 struct radv_pipeline *pipeline)
+{
+	uint32_t vtx_reuse_depth = 30;
+	if (cmd_buffer->device->physical_device->rad_info.family < CHIP_POLARIS10)
+		return;
+
+	if (pipeline->shaders[MESA_SHADER_TESS_EVAL]) {
+		if (pipeline->shaders[MESA_SHADER_TESS_EVAL]->info.tes.spacing == TESS_SPACING_FRACTIONAL_ODD)
+			vtx_reuse_depth = 14;
+	}
+	radeon_set_context_reg(cmd_buffer->cs, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL,
+			       vtx_reuse_depth);
+}
+
 static void
 radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer,
 			    struct radv_pipeline *pipeline)
@@ -730,6 +745,7 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer,
 	radv_emit_vertex_shader(cmd_buffer, pipeline);
 	radv_emit_geometry_shader(cmd_buffer, pipeline);
 	radv_emit_fragment_shader(cmd_buffer, pipeline);
+	polaris_set_vgt_vertex_reuse(cmd_buffer, pipeline);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
 			       pipeline->graphics.prim_restart_enable);
