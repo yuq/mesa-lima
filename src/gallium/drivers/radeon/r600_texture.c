@@ -1438,9 +1438,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 
 	/* Validate that addrlib arrived at the same surface parameters. */
 	if (rscreen->chip_class >= GFX9) {
-		struct gfx9_surf_layout *gfx9 = &surface.u.gfx9;
-
-		assert(metadata.u.gfx9.swizzle_mode == gfx9->surf.swizzle_mode);
+		assert(metadata.u.gfx9.swizzle_mode == surface.u.gfx9.surf.swizzle_mode);
 	}
 
 	return &rtex->resource.b.b;
