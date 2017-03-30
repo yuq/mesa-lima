@@ -487,6 +487,12 @@ shader_atomic_counter_ops(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+shader_ballot(const _mesa_glsl_parse_state *state)
+{
+   return state->ARB_shader_ballot_enable;
+}
+
+static bool
 shader_clock(const _mesa_glsl_parse_state *state)
 {
    return state->ARB_shader_clock_enable;
@@ -941,6 +947,10 @@ private:
       enum ir_intrinsic_id id);
    ir_function_signature *_memory_barrier(const char *intrinsic_name,
                                           builtin_available_predicate avail);
+
+   ir_function_signature *_ballot();
+   ir_function_signature *_read_first_invocation(const glsl_type *type);
+   ir_function_signature *_read_invocation(const glsl_type *type);
 
    ir_function_signature *_shader_clock_intrinsic(builtin_available_predicate avail,
                                                   const glsl_type *type);
@@ -3110,6 +3120,42 @@ builtin_builder::create_builtins()
    add_function("memoryBarrierShared",
                 _memory_barrier("__intrinsic_memory_barrier_shared",
                                 compute_shader),
+                NULL);
+
+   add_function("ballotARB", _ballot(), NULL);
+
+   add_function("readInvocationARB",
+                _read_invocation(glsl_type::float_type),
+                _read_invocation(glsl_type::vec2_type),
+                _read_invocation(glsl_type::vec3_type),
+                _read_invocation(glsl_type::vec4_type),
+
+                _read_invocation(glsl_type::int_type),
+                _read_invocation(glsl_type::ivec2_type),
+                _read_invocation(glsl_type::ivec3_type),
+                _read_invocation(glsl_type::ivec4_type),
+
+                _read_invocation(glsl_type::uint_type),
+                _read_invocation(glsl_type::uvec2_type),
+                _read_invocation(glsl_type::uvec3_type),
+                _read_invocation(glsl_type::uvec4_type),
+                NULL);
+
+   add_function("readFirstInvocationARB",
+                _read_first_invocation(glsl_type::float_type),
+                _read_first_invocation(glsl_type::vec2_type),
+                _read_first_invocation(glsl_type::vec3_type),
+                _read_first_invocation(glsl_type::vec4_type),
+
+                _read_first_invocation(glsl_type::int_type),
+                _read_first_invocation(glsl_type::ivec2_type),
+                _read_first_invocation(glsl_type::ivec3_type),
+                _read_first_invocation(glsl_type::ivec4_type),
+
+                _read_first_invocation(glsl_type::uint_type),
+                _read_first_invocation(glsl_type::uvec2_type),
+                _read_first_invocation(glsl_type::uvec3_type),
+                _read_first_invocation(glsl_type::uvec4_type),
                 NULL);
 
    add_function("clock2x32ARB",
@@ -5950,6 +5996,37 @@ builtin_builder::_memory_barrier(const char *intrinsic_name,
    MAKE_SIG(glsl_type::void_type, avail, 0);
    body.emit(call(shader->symbols->get_function(intrinsic_name),
                   NULL, sig->parameters));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_ballot()
+{
+   ir_variable *value = in_var(glsl_type::bool_type, "value");
+
+   MAKE_SIG(glsl_type::uint64_t_type, shader_ballot, 1, value);
+   body.emit(ret(expr(ir_unop_ballot, value)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_read_first_invocation(const glsl_type *type)
+{
+   ir_variable *value = in_var(type, "value");
+
+   MAKE_SIG(type, shader_ballot, 1, value);
+   body.emit(ret(expr(ir_unop_read_first_invocation, value)));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_read_invocation(const glsl_type *type)
+{
+   ir_variable *value = in_var(type, "value");
+   ir_variable *invocation = in_var(glsl_type::uint_type, "invocation");
+
+   MAKE_SIG(type, shader_ballot, 2, value, invocation);
+   body.emit(ret(expr(ir_binop_read_invocation, value, invocation)));
    return sig;
 }
 
