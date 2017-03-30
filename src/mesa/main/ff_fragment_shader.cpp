@@ -402,24 +402,21 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
       const struct gl_texture_unit *texUnit = &ctx->Texture.Unit[i];
       const struct gl_texture_object *texObj = texUnit->_Current;
       const struct gl_tex_env_combine_state *comb = texUnit->_CurrentCombine;
-      const struct gl_sampler_object *samp;
-      GLenum format;
 
       if (!texObj)
          continue;
-
-      samp = _mesa_get_samplerobj(ctx, i);
-      format = _mesa_texture_base_format(texObj);
 
       key->unit[i].enabled = 1;
       inputs_referenced |= VARYING_BIT_TEX(i);
 
       key->unit[i].source_index = texObj->TargetIndex;
 
-      key->unit[i].shadow =
-         ((samp->CompareMode == GL_COMPARE_R_TO_TEXTURE) &&
-          ((format == GL_DEPTH_COMPONENT) || 
-           (format == GL_DEPTH_STENCIL_EXT)));
+      const struct gl_sampler_object *samp = _mesa_get_samplerobj(ctx, i);
+      if (samp->CompareMode == GL_COMPARE_R_TO_TEXTURE) {
+         const GLenum format = _mesa_texture_base_format(texObj);
+         key->unit[i].shadow = (format == GL_DEPTH_COMPONENT ||
+				format == GL_DEPTH_STENCIL_EXT);
+      }
 
       key->unit[i].NumArgsRGB = comb->_NumArgsRGB;
       key->unit[i].NumArgsA = comb->_NumArgsA;
