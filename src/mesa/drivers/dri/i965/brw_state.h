@@ -114,7 +114,6 @@ extern const struct brw_tracked_state gen6_gs_binding_table;
 extern const struct brw_tracked_state gen6_multisample_state;
 extern const struct brw_tracked_state gen6_renderbuffer_surfaces;
 extern const struct brw_tracked_state gen6_sampler_state;
-extern const struct brw_tracked_state gen6_scissor_state;
 extern const struct brw_tracked_state gen6_sol_surface;
 extern const struct brw_tracked_state gen6_sf_vp;
 extern const struct brw_tracked_state gen6_urb;
