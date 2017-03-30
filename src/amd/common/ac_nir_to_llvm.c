@@ -548,6 +548,14 @@ static void set_userdata_location_indirect(struct ac_userdata_info *ud_info, uin
 }
 #endif
 
+static void declare_tess_lds(struct nir_to_llvm_context *ctx)
+{
+	unsigned lds_size = ctx->options->chip_class >= CIK ? 65536 : 32768;
+	ctx->lds = LLVMBuildIntToPtr(ctx->builder, ctx->i32zero,
+				     LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), LOCAL_ADDR_SPACE),
+		"tess_lds");
+}
+
 static void create_function(struct nir_to_llvm_context *ctx)
 {
 	LLVMTypeRef arg_types[23];
@@ -785,6 +793,8 @@ static void create_function(struct nir_to_llvm_context *ctx)
 			ctx->vs_prim_id = LLVMGetParam(ctx->main_function, arg_idx++);
 			ctx->instance_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		}
+		if (ctx->options->key.vs.as_ls)
+			declare_tess_lds(ctx);
 		break;
 	case MESA_SHADER_TESS_CTRL:
 		set_userdata_location_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, user_sgpr_idx, 4);
@@ -797,6 +807,8 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		ctx->tess_factor_offset = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->tcs_patch_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->tcs_rel_ids = LLVMGetParam(ctx->main_function, arg_idx++);
+
+		declare_tess_lds(ctx);
 		break;
 	case MESA_SHADER_TESS_EVAL:
 		set_userdata_location_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, user_sgpr_idx, 1);
