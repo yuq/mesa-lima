@@ -117,21 +117,6 @@ struct state_key {
    } unit[MAX_TEXTURE_COORD_UNITS];
 };
 
-#define FOG_NONE    0
-#define FOG_LINEAR  1
-#define FOG_EXP     2
-#define FOG_EXP2    3
-
-static GLuint translate_fog_mode( GLenum mode )
-{
-   switch (mode) {
-   case GL_LINEAR: return FOG_LINEAR;
-   case GL_EXP: return FOG_EXP;
-   case GL_EXP2: return FOG_EXP2;
-   default: return FOG_NONE;
-   }
-}
-
 #define OPR_SRC_COLOR           0
 #define OPR_ONE_MINUS_SRC_COLOR 1
 #define OPR_SRC_ALPHA           2
@@ -446,8 +431,7 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
    }
 
    /* _NEW_FOG */
-   if (ctx->Fog.Enabled)
-      key->fog_mode = translate_fog_mode(ctx->Fog.Mode);
+   key->fog_mode = ctx->Fog._PackedEnabledMode;
 
    /* _NEW_BUFFERS */
    key->num_draw_buffers = ctx->DrawBuffer->_NumColorDrawBuffers;
