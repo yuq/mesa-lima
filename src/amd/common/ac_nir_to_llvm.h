@@ -30,6 +30,7 @@
 #include "amd_family.h"
 #include "../vulkan/radv_descriptor_set.h"
 
+#include "shader_enums.h"
 struct ac_shader_binary;
 struct ac_shader_config;
 struct nir_shader;
@@ -39,6 +40,16 @@ struct radv_pipeline_layout;
 struct ac_vs_variant_key {
 	uint32_t instance_rate_inputs;
 	uint32_t as_es:1;
+	uint32_t as_ls:1;
+};
+
+struct ac_tes_variant_key {
+	uint32_t as_es:1;
+};
+
+struct ac_tcs_variant_key {
+	unsigned primitive_mode;
+	unsigned input_vertices;
 };
 
 struct ac_fs_variant_key {
@@ -49,6 +60,8 @@ struct ac_fs_variant_key {
 union ac_shader_variant_key {
 	struct ac_vs_variant_key vs;
 	struct ac_fs_variant_key fs;
+	struct ac_tes_variant_key tes;
+	struct ac_tcs_variant_key tcs;
 };
 
 struct ac_nir_compiler_options {
@@ -73,6 +86,7 @@ enum ac_ud_index {
 	AC_UD_SHADER_START = 2,
 	AC_UD_VS_VERTEX_BUFFERS = AC_UD_SHADER_START,
 	AC_UD_VS_BASE_VERTEX_START_INSTANCE,
+	AC_UD_VS_LS_TCS_IN_LAYOUT,
 	AC_UD_VS_MAX_UD,
 	AC_UD_PS_SAMPLE_POS = AC_UD_SHADER_START,
 	AC_UD_PS_MAX_UD,
@@ -80,6 +94,10 @@ enum ac_ud_index {
 	AC_UD_CS_MAX_UD,
 	AC_UD_GS_VS_RING_STRIDE_ENTRIES = AC_UD_SHADER_START,
 	AC_UD_GS_MAX_UD,
+	AC_UD_TCS_OFFCHIP_LAYOUT = AC_UD_SHADER_START,
+	AC_UD_TCS_MAX_UD,
+	AC_UD_TES_OFFCHIP_LAYOUT = AC_UD_SHADER_START,
+	AC_UD_TES_MAX_UD,
 	AC_UD_MAX_UD = AC_UD_VS_MAX_UD,
 };
 
@@ -120,12 +138,15 @@ struct ac_shader_variant_info {
 	unsigned num_user_sgprs;
 	unsigned num_input_sgprs;
 	unsigned num_input_vgprs;
+
 	union {
 		struct {
 			struct ac_vs_output_info outinfo;
 			struct ac_es_output_info es_info;
 			unsigned vgpr_comp_cnt;
 			bool as_es;
+			bool as_ls;
+			uint64_t outputs_written;
 		} vs;
 		struct {
 			unsigned num_interp;
@@ -154,6 +175,25 @@ struct ac_shader_variant_info {
 			unsigned gsvs_vertex_size;
 			unsigned max_gsvs_emit_size;
 		} gs;
+		struct {
+			bool uses_prim_id;
+			unsigned tcs_vertices_out;
+			/* Which outputs are actually written */
+			uint64_t outputs_written;
+			/* Which patch outputs are actually written */
+			uint32_t patch_outputs_written;
+
+		} tcs;
+		struct {
+			struct ac_vs_output_info outinfo;
+			struct ac_es_output_info es_info;
+			bool as_es;
+			unsigned primitive_mode;
+			enum gl_tess_spacing spacing;
+			bool ccw;
+			bool point_mode;
+			bool uses_prim_id;
+		} tes;
 	};
 };
 
