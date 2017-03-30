@@ -5230,6 +5230,39 @@ static void ballot_emit(
 	emit_data->output[1] = LLVMBuildExtractElement(builder, tmp, ctx->i32_1, "");
 }
 
+static void read_invoc_fetch_args(
+	struct lp_build_tgsi_context *bld_base,
+	struct lp_build_emit_data *emit_data)
+{
+	emit_data->args[0] = lp_build_emit_fetch(bld_base, emit_data->inst,
+						 0, emit_data->src_chan);
+
+	/* Always read the source invocation (= lane) from the X channel. */
+	emit_data->args[1] = lp_build_emit_fetch(bld_base, emit_data->inst,
+						 1, TGSI_CHAN_X);
+	emit_data->arg_count = 2;
+}
+
+static void read_lane_emit(
+	const struct lp_build_tgsi_action *action,
+	struct lp_build_tgsi_context *bld_base,
+	struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+
+	for (unsigned i = 0; i < emit_data->arg_count; ++i) {
+		emit_data->args[i] = LLVMBuildBitCast(builder, emit_data->args[i],
+						      ctx->i32, "");
+	}
+
+	emit_data->output[emit_data->chan] =
+		ac_build_intrinsic(&ctx->ac, action->intr_name,
+				   ctx->i32, emit_data->args, emit_data->arg_count,
+				   AC_FUNC_ATTR_READNONE |
+				   AC_FUNC_ATTR_CONVERGENT);
+}
+
 static unsigned si_llvm_get_stream(struct lp_build_tgsi_context *bld_base,
 				       struct lp_build_emit_data *emit_data)
 {
@@ -6679,6 +6712,11 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_VOTE_ANY].emit = vote_any_emit;
 	bld_base->op_actions[TGSI_OPCODE_VOTE_EQ].emit = vote_eq_emit;
 	bld_base->op_actions[TGSI_OPCODE_BALLOT].emit = ballot_emit;
+	bld_base->op_actions[TGSI_OPCODE_READ_FIRST].intr_name = "llvm.amdgcn.readfirstlane";
+	bld_base->op_actions[TGSI_OPCODE_READ_FIRST].emit = read_lane_emit;
+	bld_base->op_actions[TGSI_OPCODE_READ_INVOC].intr_name = "llvm.amdgcn.readlane";
+	bld_base->op_actions[TGSI_OPCODE_READ_INVOC].fetch_args = read_invoc_fetch_args;
+	bld_base->op_actions[TGSI_OPCODE_READ_INVOC].emit = read_lane_emit;
 
 	bld_base->op_actions[TGSI_OPCODE_EMIT].emit = si_llvm_emit_vertex;
 	bld_base->op_actions[TGSI_OPCODE_ENDPRIM].emit = si_llvm_emit_primitive;
