@@ -123,7 +123,7 @@ struct state_key {
 
       struct mode_opt OptRGB[MAX_COMBINER_TERMS];
       struct mode_opt OptA[MAX_COMBINER_TERMS];
-   } unit[MAX_TEXTURE_UNITS];
+   } unit[MAX_TEXTURE_COORD_UNITS];
 };
 
 #define FOG_NONE    0
