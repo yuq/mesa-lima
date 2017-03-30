@@ -5217,6 +5217,241 @@ handle_ls_outputs_post(struct nir_to_llvm_context *ctx)
 	}
 }
 
+struct ac_build_if_state
+{
+	struct nir_to_llvm_context *ctx;
+	LLVMValueRef condition;
+	LLVMBasicBlockRef entry_block;
+	LLVMBasicBlockRef true_block;
+	LLVMBasicBlockRef false_block;
+	LLVMBasicBlockRef merge_block;
+};
+
+static LLVMBasicBlockRef
+ac_build_insert_new_block(struct nir_to_llvm_context *ctx, const char *name)
+{
+	LLVMBasicBlockRef current_block;
+	LLVMBasicBlockRef next_block;
+	LLVMBasicBlockRef new_block;
+
+	/* get current basic block */
+	current_block = LLVMGetInsertBlock(ctx->builder);
+
+	/* chqeck if there's another block after this one */
+	next_block = LLVMGetNextBasicBlock(current_block);
+	if (next_block) {
+		/* insert the new block before the next block */
+		new_block = LLVMInsertBasicBlockInContext(ctx->context, next_block, name);
+	}
+	else {
+		/* append new block after current block */
+		LLVMValueRef function = LLVMGetBasicBlockParent(current_block);
+		new_block = LLVMAppendBasicBlockInContext(ctx->context, function, name);
+	}
+	return new_block;
+}
+
+static void
+ac_nir_build_if(struct ac_build_if_state *ifthen,
+		struct nir_to_llvm_context *ctx,
+		LLVMValueRef condition)
+{
+	LLVMBasicBlockRef block = LLVMGetInsertBlock(ctx->builder);
+
+	memset(ifthen, 0, sizeof *ifthen);
+	ifthen->ctx = ctx;
+	ifthen->condition = condition;
+	ifthen->entry_block = block;
+
+	/* create endif/merge basic block for the phi functions */
+	ifthen->merge_block = ac_build_insert_new_block(ctx, "endif-block");
+
+	/* create/insert true_block before merge_block */
+	ifthen->true_block =
+		LLVMInsertBasicBlockInContext(ctx->context,
+					      ifthen->merge_block,
+					      "if-true-block");
+
+	/* successive code goes into the true block */
+	LLVMPositionBuilderAtEnd(ctx->builder, ifthen->true_block);
+}
+
+/**
+ * End a conditional.
+ */
+static void
+ac_nir_build_endif(struct ac_build_if_state *ifthen)
+{
+	LLVMBuilderRef builder = ifthen->ctx->builder;
+
+	/* Insert branch to the merge block from current block */
+	LLVMBuildBr(builder, ifthen->merge_block);
+
+	/*
+	 * Now patch in the various branch instructions.
+	 */
+
+	/* Insert the conditional branch instruction at the end of entry_block */
+	LLVMPositionBuilderAtEnd(builder, ifthen->entry_block);
+	if (ifthen->false_block) {
+		/* we have an else clause */
+		LLVMBuildCondBr(builder, ifthen->condition,
+				ifthen->true_block, ifthen->false_block);
+	}
+	else {
+		/* no else clause */
+		LLVMBuildCondBr(builder, ifthen->condition,
+				ifthen->true_block, ifthen->merge_block);
+	}
+
+	/* Resume building code at end of the ifthen->merge_block */
+	LLVMPositionBuilderAtEnd(builder, ifthen->merge_block);
+}
+
+static void
+write_tess_factors(struct nir_to_llvm_context *ctx)
+{
+	unsigned stride, outer_comps, inner_comps;
+	struct ac_build_if_state if_ctx, inner_if_ctx;
+	LLVMValueRef invocation_id = unpack_param(ctx, ctx->tcs_rel_ids, 8, 5);
+	LLVMValueRef rel_patch_id = unpack_param(ctx, ctx->tcs_rel_ids, 0, 8);
+	unsigned tess_inner_index, tess_outer_index;
+	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
+	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];
+	int i;
+	emit_barrier(ctx);
+
+	switch (ctx->options->key.tcs.primitive_mode) {
+	case GL_ISOLINES:
+		stride = 2;
+		outer_comps = 2;
+		inner_comps = 0;
+		break;
+	case GL_TRIANGLES:
+		stride = 4;
+		outer_comps = 3;
+		inner_comps = 1;
+		break;
+	case GL_QUADS:
+		stride = 6;
+		outer_comps = 4;
+		inner_comps = 2;
+		break;
+	default:
+		return;
+	}
+
+	ac_nir_build_if(&if_ctx, ctx,
+			LLVMBuildICmp(ctx->builder, LLVMIntEQ,
+				      invocation_id, ctx->i32zero, ""));
+
+	tess_inner_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_INNER);
+	tess_outer_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_OUTER);
+
+	mark_tess_output(ctx, true, tess_inner_index);
+	mark_tess_output(ctx, true, tess_outer_index);
+	lds_base = get_tcs_out_current_patch_data_offset(ctx);
+	lds_inner = LLVMBuildAdd(ctx->builder, lds_base,
+				 LLVMConstInt(ctx->i32, tess_inner_index * 4, false), "");
+	lds_outer = LLVMBuildAdd(ctx->builder, lds_base,
+				 LLVMConstInt(ctx->i32, tess_outer_index * 4, false), "");
+
+	for (i = 0; i < 4; i++) {
+		inner[i] = LLVMGetUndef(ctx->i32);
+		outer[i] = LLVMGetUndef(ctx->i32);
+	}
+
+	// LINES reverseal
+	if (ctx->options->key.tcs.primitive_mode == GL_ISOLINES) {
+		outer[0] = out[1] = lds_load(ctx, lds_outer);
+		lds_outer = LLVMBuildAdd(ctx->builder, lds_outer,
+					 LLVMConstInt(ctx->i32, 1, false), "");
+		outer[1] = out[0] = lds_load(ctx, lds_outer);
+	} else {
+		for (i = 0; i < outer_comps; i++) {
+			outer[i] = out[i] =
+				lds_load(ctx, lds_outer);
+			lds_outer = LLVMBuildAdd(ctx->builder, lds_outer,
+						 LLVMConstInt(ctx->i32, 1, false), "");
+		}
+		for (i = 0; i < inner_comps; i++) {
+			inner[i] = out[outer_comps+i] =
+				lds_load(ctx, lds_inner);
+			lds_inner = LLVMBuildAdd(ctx->builder, lds_inner,
+						 LLVMConstInt(ctx->i32, 1, false), "");
+		}
+	}
+
+	/* Convert the outputs to vectors for stores. */
+	vec0 = ac_build_gather_values(&ctx->ac, out, MIN2(stride, 4));
+	vec1 = NULL;
+
+	if (stride > 4)
+		vec1 = ac_build_gather_values(&ctx->ac, out + 4, stride - 4);
+
+
+	buffer = ctx->hs_ring_tess_factor;
+	tf_base = ctx->tess_factor_offset;
+	byteoffset = LLVMBuildMul(ctx->builder, rel_patch_id,
+				  LLVMConstInt(ctx->i32, 4 * stride, false), "");
+
+	ac_nir_build_if(&inner_if_ctx, ctx,
+		    LLVMBuildICmp(ctx->builder, LLVMIntEQ,
+				  rel_patch_id, ctx->i32zero, ""));
+
+	/* Store the dynamic HS control word. */
+	ac_build_buffer_store_dword(&ctx->ac, buffer,
+				    LLVMConstInt(ctx->i32, 0x80000000, false),
+				    1, ctx->i32zero, tf_base,
+				    0, 1, 0, true, false);
+	ac_nir_build_endif(&inner_if_ctx);
+
+	/* Store the tessellation factors. */
+	ac_build_buffer_store_dword(&ctx->ac, buffer, vec0,
+				    MIN2(stride, 4), byteoffset, tf_base,
+				    4, 1, 0, true, false);
+	if (vec1)
+		ac_build_buffer_store_dword(&ctx->ac, buffer, vec1,
+					    stride - 4, byteoffset, tf_base,
+					    20, 1, 0, true, false);
+
+	//TODO store to offchip for TES to read - only if TES reads them
+	if (1) {
+		LLVMValueRef inner_vec, outer_vec, tf_outer_offset;
+		LLVMValueRef tf_inner_offset;
+		unsigned param_outer, param_inner;
+
+		param_outer = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_OUTER);
+		tf_outer_offset = get_tcs_tes_buffer_address(ctx, NULL,
+							     LLVMConstInt(ctx->i32, param_outer, 0));
+
+		outer_vec = ac_build_gather_values(&ctx->ac, outer,
+						   util_next_power_of_two(outer_comps));
+
+		ac_build_buffer_store_dword(&ctx->ac, ctx->hs_ring_tess_offchip, outer_vec,
+					    outer_comps, tf_outer_offset,
+					    ctx->oc_lds, 0, 1, 0, true, false);
+		if (inner_comps) {
+			param_inner = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_INNER);
+			tf_inner_offset = get_tcs_tes_buffer_address(ctx, NULL,
+								     LLVMConstInt(ctx->i32, param_inner, 0));
+
+			inner_vec = inner_comps == 1 ? inner[0] :
+				ac_build_gather_values(&ctx->ac, inner, inner_comps);
+			ac_build_buffer_store_dword(&ctx->ac, ctx->hs_ring_tess_offchip, inner_vec,
+						    inner_comps, tf_inner_offset,
+						    ctx->oc_lds, 0, 1, 0, true, false);
+		}
+	}
+	ac_nir_build_endif(&if_ctx);
+}
+
+static void
+handle_tcs_outputs_post(struct nir_to_llvm_context *ctx)
+{
+	write_tess_factors(ctx);
+}
+
 static void
 si_export_mrt_color(struct nir_to_llvm_context *ctx,
 		    LLVMValueRef *color, unsigned param, bool is_last)
@@ -5348,6 +5583,9 @@ handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 		break;
 	case MESA_SHADER_GEOMETRY:
 		emit_gs_epilogue(ctx);
+		break;
+	case MESA_SHADER_TESS_CTRL:
+		handle_tcs_outputs_post(ctx);
 		break;
 	case MESA_SHADER_TESS_EVAL:
 		if (ctx->options->key.tes.as_es)
