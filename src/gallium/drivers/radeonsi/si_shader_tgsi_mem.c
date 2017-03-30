@@ -1206,6 +1206,18 @@ static void tex_fetch_ptrs(
 				     si_get_sampler_slot(reg->Register.Index), 0);
 	}
 
+	if (reg->Register.File != TGSI_FILE_SAMPLER) {
+		struct gallivm_state *gallivm = &ctx->gallivm;
+		LLVMBuilderRef builder = gallivm->builder;
+
+		LLVMValueRef ptr =
+			lp_build_emit_fetch_src(bld_base, reg,
+						TGSI_TYPE_UNSIGNED64, 0);
+		list = LLVMBuildIntToPtr(builder, ptr,
+					 si_const_array(ctx->v8i32, 0), "");
+		index = LLVMConstInt(ctx->i32, 0, 0);
+	}
+
 	if (target == TGSI_TEXTURE_BUFFER)
 		*res_ptr = load_sampler_desc(ctx, list, index, DESC_BUFFER);
 	else
@@ -1783,9 +1795,6 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	/* The hardware needs special lowering for Gather4 with integer formats. */
 	if (ctx->screen->b.chip_class <= VI &&
 	    opcode == TGSI_OPCODE_TG4) {
-		const unsigned src_idx = 2;
-
-		assert(inst->Src[src_idx].Register.File == TGSI_FILE_SAMPLER);
 		assert(inst->Texture.ReturnType != TGSI_RETURN_TYPE_UNKNOWN);
 
 		if (inst->Texture.ReturnType == TGSI_RETURN_TYPE_SINT ||
