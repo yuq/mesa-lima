@@ -396,8 +396,9 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
 
    /* _NEW_TEXTURE_OBJECT */
    mask = ctx->Texture._EnabledCoordUnits;
+   int i = -1;
    while (mask) {
-      const int i = u_bit_scan(&mask);
+      i = u_bit_scan(&mask);
       const struct gl_texture_unit *texUnit = &ctx->Texture.Unit[i];
       const struct gl_texture_object *texObj = texUnit->_Current;
       const struct gl_tex_env_combine_state *comb = texUnit->_CurrentCombine;
@@ -411,7 +412,6 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
       format = _mesa_texture_base_format(texObj);
 
       key->unit[i].enabled = 1;
-      key->nr_enabled_units = i + 1;
       inputs_referenced |= VARYING_BIT_TEX(i);
 
       key->unit[i].source_index = _mesa_tex_target_to_index(ctx,
@@ -440,6 +440,8 @@ static GLuint make_state_key( struct gl_context *ctx,  struct state_key *key )
          key->unit[i].OptA[j].Source = translate_source(comb->SourceA[j]);
       }
    }
+
+   key->nr_enabled_units = i + 1;
 
    /* _NEW_LIGHT | _NEW_FOG */
    if (texenv_doing_secondary_color(ctx)) {
