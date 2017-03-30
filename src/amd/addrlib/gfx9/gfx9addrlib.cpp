@@ -2159,7 +2159,7 @@ ADDR_E_RETURNCODE Gfx9Lib::HwlComputeBlock256Equation(
     // Post validation
     if (ret == ADDR_OK)
     {
-        //Dim2d microBlockDim = Block256b[elementBytesLog2];
+        Dim2d microBlockDim = Block256b[elementBytesLog2];
         ADDR_ASSERT((2u << GetMaxValidChannelIndex(pEquation->addr, 8, 0)) ==
                     (microBlockDim.w * (1 << elementBytesLog2)));
         ADDR_ASSERT((2u << GetMaxValidChannelIndex(pEquation->addr, 8, 1)) == microBlockDim.h);

@@ -978,7 +978,7 @@ BOOL_32 EgBasedLib::SanityCheckMacroTiled(
     ) const
 {
     BOOL_32 valid       = TRUE;
-    //UINT_32 numPipes    = HwlGetPipes(pTileInfo);
+    UINT_32 numPipes    = HwlGetPipes(pTileInfo);
 
     switch (pTileInfo->banks)
     {
@@ -4748,7 +4748,7 @@ UINT_64 EgBasedLib::HwlGetSizeAdjustmentMicroTiled(
     ) const
 {
     UINT_64 logicalSliceSize;
-    //UINT_64 physicalSliceSize;
+    UINT_64 physicalSliceSize;
 
     UINT_32 pitch   = *pPitch;
     UINT_32 height  = *pHeight;
@@ -4757,7 +4757,7 @@ UINT_64 EgBasedLib::HwlGetSizeAdjustmentMicroTiled(
     logicalSliceSize = BITS_TO_BYTES(static_cast<UINT_64>(pitch) * height * bpp * numSamples);
 
     // Physical slice: multiplied by thickness
-    //physicalSliceSize =  logicalSliceSize * thickness;
+    physicalSliceSize =  logicalSliceSize * thickness;
 
     //
     // R800 will always pad physical slice size to baseAlign which is pipe_interleave_bytes
