@@ -410,16 +410,24 @@ si_emit_config(struct radv_physical_device *physical_device,
 	}
 
 	if (physical_device->rad_info.chip_class >= VI) {
+		uint32_t vgt_tess_distribution;
 		radeon_set_context_reg(cs, R_028424_CB_DCC_CONTROL,
 				       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
 				       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
 		radeon_set_context_reg(cs, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
 		radeon_set_context_reg(cs, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
+
+		vgt_tess_distribution = S_028B50_ACCUM_ISOLINE(32) |
+			S_028B50_ACCUM_TRI(11) |
+			S_028B50_ACCUM_QUAD(11) |
+			S_028B50_DONUT_SPLIT(16);
+
+		if (physical_device->rad_info.family == CHIP_FIJI ||
+		    physical_device->rad_info.family >= CHIP_POLARIS10)
+			vgt_tess_distribution |= S_028B50_TRAP_SPLIT(3);
+
 		radeon_set_context_reg(cs, R_028B50_VGT_TESS_DISTRIBUTION,
-				       S_028B50_ACCUM_ISOLINE(32) |
-				       S_028B50_ACCUM_TRI(11) |
-				       S_028B50_ACCUM_QUAD(11) |
-				       S_028B50_DONUT_SPLIT(16));
+				       vgt_tess_distribution);
 	} else {
 		radeon_set_context_reg(cs, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 14);
 		radeon_set_context_reg(cs, R_028C5C_VGT_OUT_DEALLOC_CNTL, 16);
