@@ -792,107 +792,54 @@ static void
 blorp_emit_depth_stencil_config(struct blorp_batch *batch,
                                 const struct blorp_params *params)
 {
+   const struct isl_device *isl_dev = batch->blorp->isl_dev;
+
+   uint32_t *dw = blorp_emit_dwords(batch, isl_dev->ds.size / 4);
+   if (dw == NULL)
+      return;
+
+   struct isl_depth_stencil_hiz_emit_info info = {
 #if GEN_GEN >= 7
-   const uint32_t mocs = 1; /* GEN7_MOCS_L3 */
+      .mocs = 1, /* GEN7_MOCS_L3 */
 #else
-   const uint32_t mocs = 0;
+      .mocs = 0,
 #endif
+   };
 
-   blorp_emit(batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
-#if GEN_GEN >= 7
-      db.DepthWriteEnable = params->depth.enabled;
-      db.StencilWriteEnable = params->stencil.enabled;
-#endif
+   if (params->depth.enabled) {
+      info.view = &params->depth.view;
+   } else if (params->stencil.enabled) {
+      info.view = &params->stencil.view;
+   }
 
-#if GEN_GEN <= 6
-      db.SeparateStencilBufferEnable = true;
-#endif
+   if (params->depth.enabled) {
+      info.depth_surf = &params->depth.surf;
 
-      if (params->depth.enabled) {
-         db.SurfaceFormat = params->depth_format;
-         db.SurfaceType = isl_to_gen_ds_surftype[params->depth.surf.dim];
+      info.depth_address =
+         blorp_emit_reloc(batch, dw + isl_dev->ds.depth_offset / 4,
+                          params->depth.addr, 0);
 
-#if GEN_GEN <= 6
-         db.TiledSurface = true;
-         db.TileWalk = TILEWALK_YMAJOR;
-         db.MIPMapLayoutMode = MIPLAYOUT_BELOW;
-#endif
+      info.hiz_usage = params->depth.aux_usage;
+      if (info.hiz_usage == ISL_AUX_USAGE_HIZ) {
+         info.hiz_surf = &params->depth.aux_surf;
 
-         db.HierarchicalDepthBufferEnable =
-            params->depth.aux_usage == ISL_AUX_USAGE_HIZ;
+         info.hiz_address =
+            blorp_emit_reloc(batch, dw + isl_dev->ds.hiz_offset / 4,
+                             params->depth.aux_addr, 0);
 
-         db.Width = params->depth.surf.logical_level0_px.width - 1;
-         db.Height = params->depth.surf.logical_level0_px.height - 1;
-         db.RenderTargetViewExtent = db.Depth =
-            params->depth.view.array_len - 1;
-
-         db.LOD = params->depth.view.base_level;
-         db.MinimumArrayElement = params->depth.view.base_array_layer;
-
-         db.SurfacePitch = params->depth.surf.row_pitch - 1;
-#if GEN_GEN >= 8
-         db.SurfaceQPitch =
-            isl_surf_get_array_pitch_el_rows(&params->depth.surf) >> 2,
-#endif
-
-         db.SurfaceBaseAddress = params->depth.addr;
-         db.DepthBufferMOCS = mocs;
-      } else if (params->stencil.enabled) {
-         db.SurfaceFormat = D32_FLOAT;
-         db.SurfaceType = isl_to_gen_ds_surftype[params->stencil.surf.dim];
-
-         db.Width = params->stencil.surf.logical_level0_px.width - 1;
-         db.Height = params->stencil.surf.logical_level0_px.height - 1;
-         db.RenderTargetViewExtent = db.Depth =
-            params->stencil.view.array_len - 1;
-
-         db.LOD = params->stencil.view.base_level;
-         db.MinimumArrayElement = params->stencil.view.base_array_layer;
-      } else {
-         db.SurfaceType = SURFTYPE_NULL;
-         db.SurfaceFormat = D32_FLOAT;
+         info.depth_clear_value = params->depth.clear_color.u32[0];
       }
    }
 
-   blorp_emit(batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
-      if (params->stencil.enabled) {
-#if GEN_GEN >= 8 || GEN_IS_HASWELL
-         sb.StencilBufferEnable = true;
-#endif
+   if (params->stencil.enabled) {
+      info.stencil_surf = &params->stencil.surf;
 
-         sb.SurfacePitch = params->stencil.surf.row_pitch - 1,
-#if GEN_GEN >= 8
-         sb.SurfaceQPitch =
-            isl_surf_get_array_pitch_el_rows(&params->stencil.surf) >> 2,
-#endif
-
-         sb.SurfaceBaseAddress = params->stencil.addr;
-         sb.StencilBufferMOCS = batch->blorp->mocs.tex;
-      }
+      info.stencil_address =
+         blorp_emit_reloc(batch, dw + isl_dev->ds.stencil_offset / 4,
+                          params->stencil.addr, 0);
    }
 
-   blorp_emit(batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hiz) {
-      if (params->depth.aux_usage == ISL_AUX_USAGE_HIZ) {
-         hiz.SurfacePitch = params->depth.aux_surf.row_pitch - 1;
-         hiz.SurfaceBaseAddress = params->depth.aux_addr;
-         hiz.HierarchicalDepthBufferMOCS = mocs;
-#if GEN_GEN >= 8
-         hiz.SurfaceQPitch =
-            isl_surf_get_array_pitch_sa_rows(&params->depth.aux_surf) >> 2;
-#endif
-      }
-   }
-
-   /* 3DSTATE_CLEAR_PARAMS
-    *
-    * From the Sandybridge PRM, Volume 2, Part 1, Section 3DSTATE_CLEAR_PARAMS:
-    *   [DevSNB] 3DSTATE_CLEAR_PARAMS packet must follow the DEPTH_BUFFER_STATE
-    *   packet when HiZ is enabled and the DEPTH_BUFFER_STATE changes.
-    */
-   blorp_emit(batch, GENX(3DSTATE_CLEAR_PARAMS), clear) {
-      clear.DepthClearValueValid = true;
-      clear.DepthClearValue = params->depth.clear_color.u32[0];
-   }
+   isl_emit_depth_stencil_hiz_s(isl_dev, dw, &info);
 }
 
 static uint32_t
