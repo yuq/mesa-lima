@@ -668,13 +668,41 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t num_prims = radv_prims_for_vertices(&cmd_buffer->state.pipeline->graphics.prim_vertex_count, draw_vertex_count);
 	bool multi_instances_smaller_than_primgroup;
 
-	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
+	if (radv_pipeline_has_tess(cmd_buffer->state.pipeline))
+		primgroup_size = cmd_buffer->state.pipeline->graphics.tess.num_patches;
+	else if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
 		primgroup_size = 64;  /* recommended with a GS */
 
 	multi_instances_smaller_than_primgroup = indirect_draw || (instanced_draw &&
 								   num_prims < primgroup_size);
-	/* TODO TES */
+	if (radv_pipeline_has_tess(cmd_buffer->state.pipeline)) {
+		/* SWITCH_ON_EOI must be set if PrimID is used. */
+		if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.uses_prim_id ||
+		    cmd_buffer->state.pipeline->shaders[MESA_SHADER_TESS_EVAL]->info.tes.uses_prim_id)
+			ia_switch_on_eoi = true;
 
+		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
+		if ((family == CHIP_TAHITI ||
+		     family == CHIP_PITCAIRN ||
+		     family == CHIP_BONAIRE) &&
+		    radv_pipeline_has_gs(cmd_buffer->state.pipeline))
+			partial_vs_wave = true;
+
+		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
+		if (cmd_buffer->device->has_distributed_tess) {
+			if (radv_pipeline_has_gs(cmd_buffer->state.pipeline)) {
+				partial_es_wave = true;
+
+				if (family == CHIP_TONGA ||
+				    family == CHIP_FIJI ||
+				    family == CHIP_POLARIS10 ||
+				    family == CHIP_POLARIS11)
+					partial_vs_wave = true;
+			} else {
+				partial_vs_wave = true;
+			}
+		}
+	}
 	/* TODO linestipple */
 
 	if (chip_class >= CIK) {
