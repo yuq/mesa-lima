@@ -2173,208 +2173,68 @@ genX(cmd_buffer_emit_gen7_depth_flush)(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
-static uint32_t
-depth_stencil_surface_type(enum isl_surf_dim dim)
-{
-   switch (dim) {
-   case ISL_SURF_DIM_1D:
-      if (GEN_GEN >= 9) {
-         /* From the Sky Lake PRM, 3DSTATAE_DEPTH_BUFFER::SurfaceType
-          *
-          *    Programming Notes:
-          *    The Surface Type of the depth buffer must be the same as the
-          *    Surface Type of the render target(s) (defined in
-          *    SURFACE_STATE), unless either the depth buffer or render
-          *    targets are SURFTYPE_NULL (see exception below for SKL).  1D
-          *    surface type not allowed for depth surface and stencil surface.
-          *
-          *    Workaround:
-          *    If depth/stencil is enabled with 1D render target,
-          *    depth/stencil surface type needs to be set to 2D surface type
-          *    and height set to 1. Depth will use (legacy) TileY and stencil
-          *    will use TileW. For this case only, the Surface Type of the
-          *    depth buffer can be 2D while the Surface Type of the render
-          *    target(s) are 1D, representing an exception to a programming
-          *    note above.
-          */
-         return SURFTYPE_2D;
-      } else {
-         return SURFTYPE_1D;
-      }
-   case ISL_SURF_DIM_2D:
-      return SURFTYPE_2D;
-   case ISL_SURF_DIM_3D:
-      if (GEN_GEN >= 9) {
-         /* The Sky Lake docs list the value for 3D as "Reserved".  However,
-          * they have the exact same layout as 2D arrays on gen9+, so we can
-          * just use 2D here.
-          */
-         return SURFTYPE_2D;
-      } else {
-         return SURFTYPE_3D;
-      }
-   default:
-      unreachable("Invalid surface dimension");
-   }
-}
-
 static void
 cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
-   const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = iview ? iview->image : NULL;
-   const bool has_depth = image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
-   const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
-   const bool has_hiz = image != NULL &&
-      cmd_buffer->state.attachments[ds].aux_usage == ISL_AUX_USAGE_HIZ;
-   const bool has_stencil =
-      image && (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT);
-
-   cmd_buffer->state.hiz_enabled = has_hiz;
 
    /* FIXME: Width and Height are wrong */
 
    genX(cmd_buffer_emit_gen7_depth_flush)(cmd_buffer);
 
-   /* Emit 3DSTATE_DEPTH_BUFFER */
-   if (has_depth) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
-         db.SurfaceType                   =
-            depth_stencil_surface_type(image->depth_surface.isl.dim);
-         db.DepthWriteEnable              = true;
-         db.StencilWriteEnable            = has_stencil;
-         db.HierarchicalDepthBufferEnable = has_hiz;
+   uint32_t *dw = anv_batch_emit_dwords(&cmd_buffer->batch,
+                                        device->isl_dev.ds.size / 4);
+   if (dw == NULL)
+      return;
 
-         db.SurfaceFormat = isl_surf_get_depth_format(&device->isl_dev,
-                                                      &image->depth_surface.isl);
+   struct isl_depth_stencil_hiz_emit_info info = {
+      .mocs = device->default_mocs,
+   };
 
-         db.SurfaceBaseAddress = (struct anv_address) {
-            .bo = image->bo,
-            .offset = image->offset + image->depth_surface.offset,
-         };
-         db.DepthBufferObjectControlState = GENX(MOCS);
+   if (iview)
+      info.view = &iview->isl;
 
-         db.SurfacePitch         = image->depth_surface.isl.row_pitch - 1;
-         db.Height               = image->extent.height - 1;
-         db.Width                = image->extent.width - 1;
-         db.LOD                  = iview->isl.base_level;
-         db.MinimumArrayElement  = iview->isl.base_array_layer;
+   if (image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+      info.depth_surf = &image->depth_surface.isl;
 
-         assert(image->depth_surface.isl.dim != ISL_SURF_DIM_3D);
-         db.Depth =
-         db.RenderTargetViewExtent = iview->isl.array_len - 1;
+      info.depth_address =
+         anv_batch_emit_reloc(&cmd_buffer->batch,
+                              dw + device->isl_dev.ds.depth_offset / 4,
+                              image->bo,
+                              image->offset + image->depth_surface.offset);
 
-#if GEN_GEN >= 8
-         db.SurfaceQPitch =
-            isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2;
-#endif
-      }
-   } else {
-      /* Even when no depth buffer is present, the hardware requires that
-       * 3DSTATE_DEPTH_BUFFER be programmed correctly. The Broadwell PRM says:
-       *
-       *    If a null depth buffer is bound, the driver must instead bind depth as:
-       *       3DSTATE_DEPTH.SurfaceType = SURFTYPE_2D
-       *       3DSTATE_DEPTH.Width = 1
-       *       3DSTATE_DEPTH.Height = 1
-       *       3DSTATE_DEPTH.SuraceFormat = D16_UNORM
-       *       3DSTATE_DEPTH.SurfaceBaseAddress = 0
-       *       3DSTATE_DEPTH.HierarchicalDepthBufferEnable = 0
-       *       3DSTATE_WM_DEPTH_STENCIL.DepthTestEnable = 0
-       *       3DSTATE_WM_DEPTH_STENCIL.DepthBufferWriteEnable = 0
-       *
-       * The PRM is wrong, though. The width and height must be programmed to
-       * actual framebuffer's width and height, even when neither depth buffer
-       * nor stencil buffer is present.  Also, D16_UNORM is not allowed to
-       * be combined with a stencil buffer so we use D32_FLOAT instead.
-       */
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
-         if (has_stencil) {
-            db.SurfaceType       =
-               depth_stencil_surface_type(image->stencil_surface.isl.dim);
-         } else {
-            db.SurfaceType       = SURFTYPE_2D;
-         }
-         db.SurfaceFormat        = D32_FLOAT;
-         db.Width                = MAX2(fb->width, 1) - 1;
-         db.Height               = MAX2(fb->height, 1) - 1;
-         db.StencilWriteEnable   = has_stencil;
+      const uint32_t ds =
+         cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
+      info.hiz_usage = cmd_buffer->state.attachments[ds].aux_usage;
+      if (info.hiz_usage == ISL_AUX_USAGE_HIZ) {
+         info.hiz_surf = &image->aux_surface.isl;
+
+         info.hiz_address =
+            anv_batch_emit_reloc(&cmd_buffer->batch,
+                                 dw + device->isl_dev.ds.hiz_offset / 4,
+                                 image->bo,
+                                 image->offset + image->aux_surface.offset);
+
+         info.depth_clear_value = ANV_HZ_FC_VAL;
       }
    }
 
-   if (has_hiz) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hdb) {
-         hdb.HierarchicalDepthBufferObjectControlState = GENX(MOCS);
-         hdb.SurfacePitch = image->aux_surface.isl.row_pitch - 1;
-         hdb.SurfaceBaseAddress = (struct anv_address) {
-            .bo = image->bo,
-            .offset = image->offset + image->aux_surface.offset,
-         };
-#if GEN_GEN >= 8
-         /* From the SKL PRM Vol2a:
-          *
-          *    The interpretation of this field is dependent on Surface Type
-          *    as follows:
-          *    - SURFTYPE_1D: distance in pixels between array slices
-          *    - SURFTYPE_2D/CUBE: distance in rows between array slices
-          *    - SURFTYPE_3D: distance in rows between R - slices
-          *
-          * Unfortunately, the docs aren't 100% accurate here.  They fail to
-          * mention that the 1-D rule only applies to linear 1-D images.
-          * Since depth and HiZ buffers are always tiled, they are treated as
-          * 2-D images.  Prior to Sky Lake, this field is always in rows.
-          */
-         hdb.SurfaceQPitch =
-            isl_surf_get_array_pitch_sa_rows(&image->aux_surface.isl) >> 2;
-#endif
-      }
-   } else {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hdb);
+   if (image && (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+      info.stencil_surf = &image->stencil_surface.isl;
+
+      info.stencil_address =
+         anv_batch_emit_reloc(&cmd_buffer->batch,
+                              dw + device->isl_dev.ds.stencil_offset / 4,
+                              image->bo,
+                              image->offset + image->stencil_surface.offset);
    }
 
-   /* Emit 3DSTATE_STENCIL_BUFFER */
-   if (has_stencil) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
-#if GEN_GEN >= 8 || GEN_IS_HASWELL
-         sb.StencilBufferEnable = true;
-#endif
-         sb.StencilBufferObjectControlState = GENX(MOCS);
+   isl_emit_depth_stencil_hiz_s(&device->isl_dev, dw, &info);
 
-         sb.SurfacePitch = image->stencil_surface.isl.row_pitch - 1;
-
-#if GEN_GEN >= 8
-         sb.SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2;
-#endif
-         sb.SurfaceBaseAddress = (struct anv_address) {
-            .bo = image->bo,
-            .offset = image->offset + image->stencil_surface.offset,
-         };
-      }
-   } else {
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
-   }
-
-   /* From the IVB PRM Vol2P1, 11.5.5.4 3DSTATE_CLEAR_PARAMS:
-    *
-    *    3DSTATE_CLEAR_PARAMS must always be programmed in the along with
-    *    the other Depth/Stencil state commands(i.e. 3DSTATE_DEPTH_BUFFER,
-    *    3DSTATE_STENCIL_BUFFER, or 3DSTATE_HIER_DEPTH_BUFFER)
-    *
-    * Testing also shows that some variant of this restriction may exist HSW+.
-    * On BDW+, it is not possible to emit 2 of these packets consecutively when
-    * both have DepthClearValueValid set. An analysis of such state programming
-    * on SKL showed that the GPU doesn't register the latter packet's clear
-    * value.
-    */
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp) {
-      if (has_hiz) {
-         cp.DepthClearValueValid = true;
-         cp.DepthClearValue = ANV_HZ_FC_VAL;
-      }
-   }
+   cmd_buffer->state.hiz_enabled = info.hiz_usage == ISL_AUX_USAGE_HIZ;
 }
 
 

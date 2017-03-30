@@ -1071,7 +1071,7 @@ struct isl_depth_stencil_hiz_emit_info {
    uint32_t mocs;
 
    /**
-    * The HiZ surfae or NULL if HiZ is disabled.
+    * The HiZ surface or NULL if HiZ is disabled.
     */
    const struct isl_surf *hiz_surf;
    enum isl_aux_usage hiz_usage;
