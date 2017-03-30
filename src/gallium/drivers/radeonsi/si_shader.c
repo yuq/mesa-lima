@@ -1586,6 +1586,46 @@ static void declare_system_value(struct si_shader_context *ctx,
 		}
 		break;
 
+	case TGSI_SEMANTIC_SUBGROUP_SIZE:
+		value = LLVMConstInt(ctx->i32, 64, 0);
+		break;
+
+	case TGSI_SEMANTIC_SUBGROUP_INVOCATION:
+		value = ac_get_thread_id(&ctx->ac);
+		break;
+
+	case TGSI_SEMANTIC_SUBGROUP_EQ_MASK:
+	{
+		LLVMValueRef id = ac_get_thread_id(&ctx->ac);
+		id = LLVMBuildZExt(gallivm->builder, id, ctx->i64, "");
+		value = LLVMBuildShl(gallivm->builder, LLVMConstInt(ctx->i64, 1, 0), id, "");
+		value = LLVMBuildBitCast(gallivm->builder, value, ctx->v2i32, "");
+		break;
+	}
+
+	case TGSI_SEMANTIC_SUBGROUP_GE_MASK:
+	case TGSI_SEMANTIC_SUBGROUP_GT_MASK:
+	case TGSI_SEMANTIC_SUBGROUP_LE_MASK:
+	case TGSI_SEMANTIC_SUBGROUP_LT_MASK:
+	{
+		LLVMValueRef id = ac_get_thread_id(&ctx->ac);
+		if (decl->Semantic.Name == TGSI_SEMANTIC_SUBGROUP_GT_MASK ||
+		    decl->Semantic.Name == TGSI_SEMANTIC_SUBGROUP_LE_MASK) {
+			/* All bits set except LSB */
+			value = LLVMConstInt(ctx->i64, -2, 0);
+		} else {
+			/* All bits set */
+			value = LLVMConstInt(ctx->i64, -1, 0);
+		}
+		id = LLVMBuildZExt(gallivm->builder, id, ctx->i64, "");
+		value = LLVMBuildShl(gallivm->builder, value, id, "");
+		if (decl->Semantic.Name == TGSI_SEMANTIC_SUBGROUP_LE_MASK ||
+		    decl->Semantic.Name == TGSI_SEMANTIC_SUBGROUP_LT_MASK)
+			value = LLVMBuildNot(gallivm->builder, value, "");
+		value = LLVMBuildBitCast(gallivm->builder, value, ctx->v2i32, "");
+		break;
+	}
+
 	default:
 		assert(!"unknown system value");
 		return;
