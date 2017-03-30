@@ -113,6 +113,8 @@ extern "C" {
 
 ${emit_per_gen_prop_func(field, 'bits')}
 
+${emit_per_gen_prop_func(field, 'start')}
+
 % endfor
 % endfor
 
@@ -205,11 +207,13 @@ class Field(object):
         self.name = name
         self.token_name = safe_name('_'.join([container.name, self.name]))
         self.bits_by_gen = {}
+        self.start_by_gen = {}
 
     def add_gen(self, gen, xml_attrs):
         assert isinstance(gen, Gen)
         start = int(xml_attrs['start'])
         end = int(xml_attrs['end'])
+        self.start_by_gen[gen] = start
         self.bits_by_gen[gen] = 1 + end - start
 
     def has_prop(self, prop):
@@ -218,6 +222,8 @@ class Field(object):
     def iter_prop(self, prop):
         if prop == 'bits':
             return self.bits_by_gen.iteritems()
+        elif prop == 'start':
+            return self.start_by_gen.iteritems()
         else:
             raise ValueError('Invalid property: "{0}"'.format(prop))
 
@@ -227,6 +233,8 @@ class Field(object):
 
         if prop == 'bits':
             return self.bits_by_gen.get(gen, 0)
+        elif prop == 'start':
+            return self.start_by_gen.get(gen, 0)
         else:
             raise ValueError('Invalid property: "{0}"'.format(prop))
 
