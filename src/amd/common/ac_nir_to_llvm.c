@@ -4559,7 +4559,7 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 		LLVMValueRef *out_ptr = &ctx->outputs[i * 4];
 		int param_index;
 		int length = 4;
-		int start = 0;
+
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
@@ -4579,7 +4579,7 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 					       ctx->esgs_ring,
 					       out_val, 1,
 					       NULL, ctx->es2gs_offset,
-					       (4 * param_index + j + start) * 4,
+					       (4 * param_index + j) * 4,
 					       1, 1, true, true);
 		}
 	}
