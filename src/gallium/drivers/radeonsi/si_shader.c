@@ -3157,6 +3157,25 @@ static void membar_emit(
 		emit_waitcnt(ctx, waitcnt);
 }
 
+static void clock_emit(
+		const struct lp_build_tgsi_action *action,
+		struct lp_build_tgsi_context *bld_base,
+		struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	LLVMValueRef tmp;
+
+	tmp = lp_build_intrinsic(gallivm->builder, "llvm.readcyclecounter",
+				 ctx->i64, NULL, 0, 0);
+	tmp = LLVMBuildBitCast(gallivm->builder, tmp, ctx->v2i32, "");
+
+	emit_data->output[0] =
+		LLVMBuildExtractElement(gallivm->builder, tmp, ctx->i32_0, "");
+	emit_data->output[1] =
+		LLVMBuildExtractElement(gallivm->builder, tmp, ctx->i32_1, "");
+}
+
 static LLVMValueRef
 shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 			 const struct tgsi_full_src_register *reg)
@@ -6547,6 +6566,8 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX].intr_name = "smax";
 
 	bld_base->op_actions[TGSI_OPCODE_MEMBAR].emit = membar_emit;
+
+	bld_base->op_actions[TGSI_OPCODE_CLOCK].emit = clock_emit;
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
