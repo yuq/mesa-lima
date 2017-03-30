@@ -378,21 +378,24 @@ static void radv_fill_shader_variant(struct radv_device *device,
 		radv_finishme("shader scratch support only available with LLVM 4.0");
 
 	variant->code_size = binary->code_size;
+	variant->rsrc2 = S_00B12C_USER_SGPR(variant->info.num_user_sgprs) |
+			S_00B12C_SCRATCH_EN(scratch_enabled);
 
 	switch (stage) {
+	case MESA_SHADER_TESS_EVAL:
+		vgpr_comp_cnt = 3;
+		/* fallthrough */
+	case MESA_SHADER_TESS_CTRL:
+		variant->rsrc2 |= S_00B42C_OC_LDS_EN(1);
+		break;
 	case MESA_SHADER_VERTEX:
 	case MESA_SHADER_GEOMETRY:
-		variant->rsrc2 = S_00B12C_USER_SGPR(variant->info.num_user_sgprs) |
-			S_00B12C_SCRATCH_EN(scratch_enabled);
 		vgpr_comp_cnt = variant->info.vs.vgpr_comp_cnt;
 		break;
 	case MESA_SHADER_FRAGMENT:
-		variant->rsrc2 = S_00B12C_USER_SGPR(variant->info.num_user_sgprs) |
-			S_00B12C_SCRATCH_EN(scratch_enabled);
 		break;
 	case MESA_SHADER_COMPUTE:
-		variant->rsrc2 = S_00B84C_USER_SGPR(variant->info.num_user_sgprs) |
-			S_00B84C_SCRATCH_EN(scratch_enabled) |
+		variant->rsrc2 |=
 			S_00B84C_TGID_X_EN(1) | S_00B84C_TGID_Y_EN(1) |
 			S_00B84C_TGID_Z_EN(1) | S_00B84C_TIDIG_COMP_CNT(2) |
 			S_00B84C_TG_SIZE_EN(1) |
