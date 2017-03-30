@@ -212,6 +212,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			.float64 = true,
 			.image_read_without_format = true,
 			.image_write_without_format = true,
+			.tessellation = true,
 		};
 		entry_point = spirv_to_nir(spirv, module->size / 4,
 					   spec_entries, num_spec_entries,
