@@ -862,27 +862,13 @@ emit_cb_state(struct anv_pipeline *pipeline,
 {
    struct anv_device *device = pipeline->device;
 
-   const uint32_t num_dwords = GENX(BLEND_STATE_length);
-   pipeline->blend_state =
-      anv_state_pool_alloc(&device->dynamic_state_pool, num_dwords * 4, 64);
 
    struct GENX(BLEND_STATE) blend_state = {
 #if GEN_GEN >= 8
       .AlphaToCoverageEnable = ms_info && ms_info->alphaToCoverageEnable,
       .AlphaToOneEnable = ms_info && ms_info->alphaToOneEnable,
-#else
-      /* Make sure it gets zeroed */
-      .Entry = { { 0, }, },
 #endif
    };
-
-   /* Default everything to disabled */
-   for (uint32_t i = 0; i < 8; i++) {
-      blend_state.Entry[i].WriteDisableAlpha = true;
-      blend_state.Entry[i].WriteDisableRed = true;
-      blend_state.Entry[i].WriteDisableGreen = true;
-      blend_state.Entry[i].WriteDisableBlue = true;
-   }
 
    uint32_t surface_count = 0;
    struct anv_pipeline_bind_map *map;
@@ -891,7 +877,17 @@ emit_cb_state(struct anv_pipeline *pipeline,
       surface_count = map->surface_count;
    }
 
+   const uint32_t num_dwords = GENX(BLEND_STATE_length) +
+      GENX(BLEND_STATE_ENTRY_length) * surface_count;
+   pipeline->blend_state =
+      anv_state_pool_alloc(&device->dynamic_state_pool, num_dwords * 4, 64);
+
    bool has_writeable_rt = false;
+   uint32_t *state_pos = pipeline->blend_state.map;
+   state_pos += GENX(BLEND_STATE_length);
+#if GEN_GEN >= 8
+   struct GENX(BLEND_STATE_ENTRY) bs0 = { 0 };
+#endif
    for (unsigned i = 0; i < surface_count; i++) {
       struct anv_pipeline_binding *binding = &map->surface_to_descriptor[i];
 
@@ -902,14 +898,24 @@ emit_cb_state(struct anv_pipeline *pipeline,
       /* We can have at most 8 attachments */
       assert(i < 8);
 
-      if (info == NULL || binding->index >= info->attachmentCount)
+      if (info == NULL || binding->index >= info->attachmentCount) {
+         /* Default everything to disabled */
+         struct GENX(BLEND_STATE_ENTRY) entry = {
+            .WriteDisableAlpha = true,
+            .WriteDisableRed = true,
+            .WriteDisableGreen = true,
+            .WriteDisableBlue = true,
+         };
+         GENX(BLEND_STATE_ENTRY_pack)(NULL, state_pos, &entry);
+         state_pos += GENX(BLEND_STATE_ENTRY_length);
          continue;
+      }
 
       assert(binding->binding == 0);
       const VkPipelineColorBlendAttachmentState *a =
          &info->pAttachments[binding->index];
 
-      blend_state.Entry[i] = (struct GENX(BLEND_STATE_ENTRY)) {
+      struct GENX(BLEND_STATE_ENTRY) entry = {
 #if GEN_GEN < 8
          .AlphaToCoverageEnable = ms_info && ms_info->alphaToCoverageEnable,
          .AlphaToOneEnable = ms_info && ms_info->alphaToOneEnable,
@@ -938,7 +944,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
 #if GEN_GEN >= 8
          blend_state.IndependentAlphaBlendEnable = true;
 #else
-         blend_state.Entry[i].IndependentAlphaBlendEnable = true;
+         entry.IndependentAlphaBlendEnable = true;
 #endif
       }
 
@@ -953,26 +959,31 @@ emit_cb_state(struct anv_pipeline *pipeline,
        */
       if (a->colorBlendOp == VK_BLEND_OP_MIN ||
           a->colorBlendOp == VK_BLEND_OP_MAX) {
-         blend_state.Entry[i].SourceBlendFactor = BLENDFACTOR_ONE;
-         blend_state.Entry[i].DestinationBlendFactor = BLENDFACTOR_ONE;
+         entry.SourceBlendFactor = BLENDFACTOR_ONE;
+         entry.DestinationBlendFactor = BLENDFACTOR_ONE;
       }
       if (a->alphaBlendOp == VK_BLEND_OP_MIN ||
           a->alphaBlendOp == VK_BLEND_OP_MAX) {
-         blend_state.Entry[i].SourceAlphaBlendFactor = BLENDFACTOR_ONE;
-         blend_state.Entry[i].DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
+         entry.SourceAlphaBlendFactor = BLENDFACTOR_ONE;
+         entry.DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
       }
+      GENX(BLEND_STATE_ENTRY_pack)(NULL, state_pos, &entry);
+      state_pos += GENX(BLEND_STATE_ENTRY_length);
+#if GEN_GEN >= 8
+      if (i == 0)
+         bs0 = entry;
+#endif
    }
 
 #if GEN_GEN >= 8
-   struct GENX(BLEND_STATE_ENTRY) *bs0 = &blend_state.Entry[0];
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_BLEND), blend) {
       blend.AlphaToCoverageEnable         = blend_state.AlphaToCoverageEnable;
       blend.HasWriteableRT                = has_writeable_rt;
-      blend.ColorBufferBlendEnable        = bs0->ColorBufferBlendEnable;
-      blend.SourceAlphaBlendFactor        = bs0->SourceAlphaBlendFactor;
-      blend.DestinationAlphaBlendFactor   = bs0->DestinationAlphaBlendFactor;
-      blend.SourceBlendFactor             = bs0->SourceBlendFactor;
-      blend.DestinationBlendFactor        = bs0->DestinationBlendFactor;
+      blend.ColorBufferBlendEnable        = bs0.ColorBufferBlendEnable;
+      blend.SourceAlphaBlendFactor        = bs0.SourceAlphaBlendFactor;
+      blend.DestinationAlphaBlendFactor   = bs0.DestinationAlphaBlendFactor;
+      blend.SourceBlendFactor             = bs0.SourceBlendFactor;
+      blend.DestinationBlendFactor        = bs0.DestinationBlendFactor;
       blend.AlphaTestEnable               = false;
       blend.IndependentAlphaBlendEnable   =
          blend_state.IndependentAlphaBlendEnable;

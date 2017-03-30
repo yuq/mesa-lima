@@ -507,8 +507,8 @@
     <field name="Post-Blend Color Clamp Enable" start="32" end="32" type="bool"/>
   </struct>
 
-  <struct name="BLEND_STATE" length="16">
-    <group count="8" start="0" size="64">
+  <struct name="BLEND_STATE" length="0">
+    <group count="0" start="0" size="64">
       <field name="Entry" start="0" end="63" type="BLEND_STATE_ENTRY"/>
     </group>
   </struct>

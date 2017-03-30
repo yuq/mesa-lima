@@ -858,19 +858,34 @@ static uint32_t
 blorp_emit_blend_state(struct blorp_batch *batch,
                        const struct blorp_params *params)
 {
-   uint32_t offset;
-   blorp_emit_dynamic(batch, GENX(BLEND_STATE), blend, 64, &offset) {
-      for (unsigned i = 0; i < params->num_draw_buffers; ++i) {
-         blend.Entry[i].PreBlendColorClampEnable = true;
-         blend.Entry[i].PostBlendColorClampEnable = true;
-         blend.Entry[i].ColorClampRange = COLORCLAMP_RTFORMAT;
+   struct GENX(BLEND_STATE) blend;
+   memset(&blend, 0, sizeof(blend));
 
-         blend.Entry[i].WriteDisableRed = params->color_write_disable[0];
-         blend.Entry[i].WriteDisableGreen = params->color_write_disable[1];
-         blend.Entry[i].WriteDisableBlue = params->color_write_disable[2];
-         blend.Entry[i].WriteDisableAlpha = params->color_write_disable[3];
-      }
+   uint32_t offset;
+   int size = GENX(BLEND_STATE_length) * 4;
+   size += GENX(BLEND_STATE_ENTRY_length) * 4 * params->num_draw_buffers;
+   uint32_t *state = blorp_alloc_dynamic_state(batch, size, 64, &offset);
+   uint32_t *pos = state;
+
+   GENX(BLEND_STATE_pack)(NULL, pos, &blend);
+   pos += GENX(BLEND_STATE_length);
+
+   for (unsigned i = 0; i < params->num_draw_buffers; ++i) {
+      struct GENX(BLEND_STATE_ENTRY) entry = {
+         .PreBlendColorClampEnable = true,
+         .PostBlendColorClampEnable = true,
+         .ColorClampRange = COLORCLAMP_RTFORMAT,
+
+         .WriteDisableRed = params->color_write_disable[0],
+         .WriteDisableGreen = params->color_write_disable[1],
+         .WriteDisableBlue = params->color_write_disable[2],
+         .WriteDisableAlpha = params->color_write_disable[3],
+      };
+      GENX(BLEND_STATE_ENTRY_pack)(NULL, pos, &entry);
+      pos += GENX(BLEND_STATE_ENTRY_length);
    }
+
+   blorp_flush_range(batch, state, size);
 
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_BLEND_STATE_POINTERS), sp) {
