@@ -61,14 +61,14 @@ st_egl_image_get_surface(struct gl_context *ctx, GLeglImageOES image_handle,
    memset(&stimg, 0, sizeof(stimg));
    if (!smapi->get_egl_image(smapi, (void *) image_handle, &stimg)) {
       /* image_handle does not refer to a valid EGL image object */
-      _mesa_error(ctx, GL_INVALID_VALUE, error);
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(image handle not found)", error);
       return NULL;
    }
 
    if (!screen->is_format_supported(screen, stimg.format, PIPE_TEXTURE_2D,
                                     stimg.texture->nr_samples, usage)) {
       /* unable to specify a texture object using the specified EGL image */
-      _mesa_error(ctx, GL_INVALID_OPERATION, error);
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(format not supported)", error);
       return NULL;
    }
 
