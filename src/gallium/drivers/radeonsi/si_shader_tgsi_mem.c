@@ -184,8 +184,6 @@ image_fetch_rsrc(
 	LLVMValueRef index;
 	bool dcc_off = is_store;
 
-	assert(image->Register.File == TGSI_FILE_IMAGE);
-
 	if (!image->Register.Indirect) {
 		const struct tgsi_shader_info *info = bld_base->info;
 		unsigned images_writemask = info->images_store |
@@ -212,6 +210,18 @@ image_fetch_rsrc(
 		index = LLVMBuildSub(ctx->gallivm.builder,
 				     LLVMConstInt(ctx->i32, SI_NUM_IMAGES - 1, 0),
 				     index, "");
+	}
+
+	if (image->Register.File != TGSI_FILE_IMAGE) {
+		struct gallivm_state *gallivm = &ctx->gallivm;
+		LLVMBuilderRef builder = gallivm->builder;
+
+		LLVMValueRef ptr =
+			lp_build_emit_fetch_src(bld_base, image,
+						TGSI_TYPE_UNSIGNED64, 0);
+		rsrc_ptr = LLVMBuildIntToPtr(builder, ptr,
+					     si_const_array(ctx->v8i32, 0), "");
+		index = LLVMConstInt(ctx->i32, 0, 0);
 	}
 
 	*rsrc = load_image_desc(ctx, rsrc_ptr, index, target);
@@ -373,7 +383,8 @@ static void load_fetch_args(
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
-	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
+	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE ||
+		   tgsi_is_bindless_image_file(inst->Src[0].Register.File)) {
 		LLVMValueRef coords;
 
 		image_fetch_rsrc(bld_base, &inst->Src[0], false, target, &rsrc);
@@ -537,8 +548,9 @@ static bool is_oneway_access_only(const struct tgsi_full_instruction *inst,
 	 * images.
 	 */
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
-	    (inst->Src[0].Register.File == TGSI_FILE_IMAGE &&
-	     inst->Memory.Texture == TGSI_TEXTURE_BUFFER)) {
+	    (inst->Memory.Texture == TGSI_TEXTURE_BUFFER &&
+	     (inst->Src[0].Register.File == TGSI_FILE_IMAGE ||
+	      tgsi_is_bindless_image_file(inst->Src[0].Register.File)))) {
 		if (!shader_buffers_reverse_access_mask &&
 		    !(info->images_buffers & images_reverse_access_mask))
 			return true;
@@ -639,7 +651,8 @@ static void store_fetch_args(
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
-	} else if (inst->Dst[0].Register.File == TGSI_FILE_IMAGE) {
+	} else if (inst->Dst[0].Register.File == TGSI_FILE_IMAGE ||
+		   tgsi_is_bindless_image_file(inst->Dst[0].Register.File)) {
 		unsigned target = inst->Memory.Texture;
 		LLVMValueRef coords;
 
@@ -858,7 +871,8 @@ static void atomic_fetch_args(
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, true, false);
-	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
+	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE ||
+		   tgsi_is_bindless_image_file(inst->Src[0].Register.File)) {
 		unsigned target = inst->Memory.Texture;
 		LLVMValueRef coords;
 
