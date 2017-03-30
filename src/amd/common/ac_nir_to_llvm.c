@@ -3253,6 +3253,26 @@ visit_end_primitive(struct nir_to_llvm_context *ctx,
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
 }
 
+static LLVMValueRef
+visit_load_tess_coord(struct nir_to_llvm_context *ctx,
+		      nir_intrinsic_instr *instr)
+{
+	LLVMValueRef coord[4] = {
+		ctx->tes_u,
+		ctx->tes_v,
+		ctx->f32zero,
+		ctx->f32zero,
+	};
+
+	if (ctx->tes_primitive_mode == GL_TRIANGLES)
+		coord[2] = LLVMBuildFSub(ctx->builder, ctx->f32one,
+					LLVMBuildFAdd(ctx->builder, coord[0], coord[1], ""), "");
+
+	LLVMValueRef result = ac_build_gather_values(&ctx->ac, coord, instr->num_components);
+	return LLVMBuildBitCast(ctx->builder, result,
+				get_def_type(ctx, &instr->dest.ssa), "");
+}
+
 static void visit_intrinsic(struct nir_to_llvm_context *ctx,
                             nir_intrinsic_instr *instr)
 {
@@ -3282,11 +3302,18 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		result = ctx->draw_index;
 		break;
 	case nir_intrinsic_load_invocation_id:
-		result = ctx->gs_invocation_id;
+		if (ctx->stage == MESA_SHADER_TESS_CTRL)
+			result = unpack_param(ctx, ctx->tcs_rel_ids, 8, 5);
+		else
+			result = ctx->gs_invocation_id;
 		break;
 	case nir_intrinsic_load_primitive_id:
 		if (ctx->stage == MESA_SHADER_GEOMETRY)
 			result = ctx->gs_prim_id;
+		else if (ctx->stage == MESA_SHADER_TESS_CTRL)
+			result = ctx->tcs_patch_id;
+		else if (ctx->stage == MESA_SHADER_TESS_EVAL)
+			result = ctx->tes_patch_id;
 		else
 			fprintf(stderr, "Unknown primitive id intrinsic: %d", ctx->stage);
 		break;
@@ -3407,6 +3434,12 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		break;
 	case nir_intrinsic_end_primitive:
 		visit_end_primitive(ctx, instr);
+		break;
+	case nir_intrinsic_load_tess_coord:
+		result = visit_load_tess_coord(ctx, instr);
+		break;
+	case nir_intrinsic_load_patch_vertices_in:
+		result = LLVMConstInt(ctx->i32, ctx->options->key.tcs.input_vertices, false);
 		break;
 	default:
 		fprintf(stderr, "Unknown intrinsic: ");
