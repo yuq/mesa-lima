@@ -210,7 +210,7 @@ vlVdpPresentationQueueDisplay(VdpPresentationQueue presentation_queue,
 
    struct pipe_context *pipe;
    struct pipe_resource *tex;
-   struct pipe_surface surf_templ, *surf_draw;
+   struct pipe_surface surf_templ, *surf_draw = NULL;
    struct u_rect src_rect, dst_clip, *dirty_area;
 
    struct vl_compositor *compositor;
