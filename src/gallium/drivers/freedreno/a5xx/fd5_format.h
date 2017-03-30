@@ -31,6 +31,9 @@
 
 #include "a5xx.xml.h"
 
+// XXX temp hack
+#define CP_LOAD_STATE_2_EXT_SRC_ADDR_HI CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI
+
 enum a5xx_vtx_fmt fd5_pipe2vtx(enum pipe_format format);
 enum a5xx_tex_fmt fd5_pipe2tex(enum pipe_format format);
 enum a5xx_color_fmt fd5_pipe2color(enum pipe_format format);
