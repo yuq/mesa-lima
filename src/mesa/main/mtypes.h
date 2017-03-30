@@ -575,12 +575,26 @@ struct gl_eval_attrib
 
 
 /**
+ * Compressed fog mode.
+ */
+enum gl_fog_mode
+{
+   FOG_NONE,
+   FOG_LINEAR,
+   FOG_EXP,
+   FOG_EXP2,
+};
+
+
+/**
  * Fog attribute group (GL_FOG_BIT).
  */
 struct gl_fog_attrib
 {
    GLboolean Enabled;		/**< Fog enabled flag */
    GLboolean ColorSumEnabled;
+   uint8_t _PackedMode;		/**< Fog mode as 2 bits */
+   uint8_t _PackedEnabledMode;	/**< Masked CompressedMode */
    GLfloat ColorUnclamped[4];            /**< Fog color */
    GLfloat Color[4];		/**< Fog color */
    GLfloat Density;		/**< Density >= 0.0 */
