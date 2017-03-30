@@ -295,11 +295,8 @@ struct anv_bo {
    uint64_t size;
    void *map;
 
-   /* We need to set the WRITE flag on winsys bos so GEM will know we're
-    * writing to them and synchronize uses on other rings (eg if the display
-    * server uses the blitter ring).
-    */
-   bool is_winsys_bo;
+   /** Flags to pass to the kernel through drm_i915_exec_object2::flags */
+   uint32_t flags;
 };
 
 static inline void
@@ -310,7 +307,7 @@ anv_bo_init(struct anv_bo *bo, uint32_t gem_handle, uint64_t size)
    bo->offset = -1;
    bo->size = size;
    bo->map = NULL;
-   bo->is_winsys_bo = false;
+   bo->flags = 0;
 }
 
 /* Represents a lock-free linked list of "free" things.  This is used by

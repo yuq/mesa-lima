@@ -149,7 +149,7 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    int index;
 
    const uint32_t domain =
-      target_bo->is_winsys_bo ? I915_GEM_DOMAIN_RENDER : 0;
+      (target_bo->flags & EXEC_OBJECT_WRITE) ? I915_GEM_DOMAIN_RENDER : 0;
 
    VkResult result = anv_reloc_list_grow(list, alloc, 1);
    if (result != VK_SUCCESS)
@@ -1036,7 +1036,7 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
       obj->relocs_ptr = 0;
       obj->alignment = 0;
       obj->offset = bo->offset;
-      obj->flags = bo->is_winsys_bo ? EXEC_OBJECT_WRITE : 0;
+      obj->flags = bo->flags;
       obj->rsvd1 = 0;
       obj->rsvd2 = 0;
    }

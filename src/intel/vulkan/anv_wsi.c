@@ -201,7 +201,12 @@ x11_anv_wsi_image_create(VkDevice device_h,
       goto fail_create_image;
 
    memory = anv_device_memory_from_handle(memory_h);
-   memory->bo.is_winsys_bo = true;
+
+   /* We need to set the WRITE flag on window system buffers so that GEM will
+    * know we're writing to them and synchronize uses on other rings (eg if
+    * the display server uses the blitter ring).
+    */
+   memory->bo.flags |= EXEC_OBJECT_WRITE;
 
    anv_BindImageMemory(device_h, image_h, memory_h, 0);
 
