@@ -2908,6 +2908,82 @@ st_TexParameter(struct gl_context *ctx,
 }
 
 
+static GLuint64
+st_NewTextureHandle(struct gl_context *ctx, struct gl_texture_object *texObj,
+                    struct gl_sampler_object *sampObj)
+{
+   struct st_context *st = st_context(ctx);
+   struct st_texture_object *stObj = st_texture_object(texObj);
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_sampler_view *view;
+   struct pipe_sampler_state sampler;
+
+   if (!st_finalize_texture(ctx, pipe, texObj, 0))
+      return 0;
+
+   st_convert_sampler(st, texObj, sampObj, &sampler);
+
+   view = st_get_texture_sampler_view_from_stobj(st, stObj, sampObj, 0);
+
+   return pipe->create_texture_handle(pipe, view, &sampler);
+}
+
+
+static void
+st_DeleteTextureHandle(struct gl_context *ctx, GLuint64 handle)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+
+   pipe->delete_texture_handle(pipe, handle);
+}
+
+
+static void
+st_MakeTextureHandleResident(struct gl_context *ctx, GLuint64 handle,
+                             bool resident)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+
+   pipe->make_texture_handle_resident(pipe, handle, resident);
+}
+
+
+static GLuint64
+st_NewImageHandle(struct gl_context *ctx, struct gl_image_unit *imgObj)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_image_view image;
+
+   st_convert_image(st, imgObj, &image);
+
+   return pipe->create_image_handle(pipe, &image);
+}
+
+
+static void
+st_DeleteImageHandle(struct gl_context *ctx, GLuint64 handle)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+
+   pipe->delete_image_handle(pipe, handle);
+}
+
+
+static void
+st_MakeImageHandleResident(struct gl_context *ctx, GLuint64 handle,
+                           GLenum access, bool resident)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+
+   pipe->make_image_handle_resident(pipe, handle, access, resident);
+}
+
+
 void
 st_init_texture_functions(struct dd_function_table *functions)
 {
@@ -2942,4 +3018,12 @@ st_init_texture_functions(struct dd_function_table *functions)
    functions->ClearTexSubImage = st_ClearTexSubImage;
 
    functions->TexParameter = st_TexParameter;
+
+   /* bindless functions */
+   functions->NewTextureHandle = st_NewTextureHandle;
+   functions->DeleteTextureHandle = st_DeleteTextureHandle;
+   functions->MakeTextureHandleResident = st_MakeTextureHandleResident;
+   functions->NewImageHandle = st_NewImageHandle;
+   functions->DeleteImageHandle = st_DeleteImageHandle;
+   functions->MakeImageHandleResident = st_MakeImageHandleResident;
 }
