@@ -320,7 +320,7 @@ _mesa_update_array_format(struct gl_context *ctx,
 }
 
 /**
- * Does error checking and updates the format in an attrib array.
+ * Does error checking of the format in an attrib array.
  *
  * Called by update_array() and VertexAttrib*Format().
  *
@@ -335,19 +335,18 @@ _mesa_update_array_format(struct gl_context *ctx,
  * \param integer      Integer-valued values (will not be normalized to [-1, 1])
  * \param doubles      Double values not reduced to floats
  * \param relativeOffset Offset of the first element relative to the binding offset.
+ * \return bool True if validation is successful, False otherwise.
  */
 static bool
-update_array_format(struct gl_context *ctx,
-                    const char *func,
-                    struct gl_vertex_array_object *vao,
-                    GLuint attrib, GLbitfield legalTypesMask,
-                    GLint sizeMin, GLint sizeMax,
-                    GLint size, GLenum type,
-                    GLboolean normalized, GLboolean integer, GLboolean doubles,
-                    GLuint relativeOffset)
+validate_array_format(struct gl_context *ctx, const char *func,
+                      struct gl_vertex_array_object *vao,
+                      GLuint attrib, GLbitfield legalTypesMask,
+                      GLint sizeMin, GLint sizeMax,
+                      GLint size, GLenum type, GLboolean normalized,
+                      GLboolean integer, GLboolean doubles,
+                      GLuint relativeOffset, GLenum format)
 {
    GLbitfield typeBit;
-   GLenum format = get_array_format(ctx, sizeMax, &size);
 
    /* at most, one of these bools can be true */
    assert((int) normalized + (int) integer + (int) doubles <= 1);
@@ -440,9 +439,6 @@ update_array_format(struct gl_context *ctx,
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(size=%d)", func, size);
       return false;
    }
-
-   _mesa_update_array_format(ctx, vao, attrib, size, type, format,
-                             normalized, integer, doubles, relativeOffset);
 
    return true;
 }
@@ -547,15 +543,20 @@ update_array(struct gl_context *ctx,
              const GLvoid *ptr)
 {
    struct gl_vertex_array_object *vao = ctx->Array.VAO;
+   GLenum format = get_array_format(ctx, sizeMax, &size);
 
    validate_array(ctx, func, attrib, legalTypesMask, sizeMin, sizeMax,
                   size, type, stride, normalized, integer, doubles, ptr);
 
-   if (!update_array_format(ctx, func, vao, attrib,
-                            legalTypesMask, sizeMin, sizeMax,
-                            size, type, normalized, integer, doubles, 0)) {
+   if (!validate_array_format(ctx, func, vao, attrib,
+                              legalTypesMask, sizeMin, sizeMax,
+                              size, type, normalized, integer, doubles, 0,
+                              format)) {
       return;
    }
+
+   _mesa_update_array_format(ctx, vao, attrib, size, type, format,
+                             normalized, integer, doubles, 0);
 
    /* Reset the vertex attrib binding */
    vertex_attrib_binding(ctx, vao, attrib, attrib);
@@ -2007,11 +2008,13 @@ static void
 vertex_attrib_format(GLuint attribIndex, GLint size, GLenum type,
                      GLboolean normalized, GLboolean integer,
                      GLboolean doubles, GLbitfield legalTypes,
-                     GLsizei maxSize, GLuint relativeOffset,
+                     GLsizei sizeMax, GLuint relativeOffset,
                      const char *func)
 {
    GET_CURRENT_CONTEXT(ctx);
    ASSERT_OUTSIDE_BEGIN_END(ctx);
+
+   GLenum format = get_array_format(ctx, sizeMax, &size);
 
    /* The ARB_vertex_attrib_binding spec says:
     *
@@ -2047,10 +2050,18 @@ vertex_attrib_format(GLuint attribIndex, GLint size, GLenum type,
 
    FLUSH_VERTICES(ctx, 0);
 
-   update_array_format(ctx, func, ctx->Array.VAO,
-                       VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, maxSize, size, type,
-                       normalized, integer, doubles, relativeOffset);
+   if (!validate_array_format(ctx, func, ctx->Array.VAO,
+                              VERT_ATTRIB_GENERIC(attribIndex),
+                              legalTypes, 1, sizeMax, size, type,
+                              normalized, integer, doubles, relativeOffset,
+                              format)) {
+      return;
+   }
+
+   _mesa_update_array_format(ctx, ctx->Array.VAO,
+                             VERT_ATTRIB_GENERIC(attribIndex), size, type,
+                             format, normalized, integer, doubles,
+                             relativeOffset);
 }
 
 
@@ -2089,13 +2100,15 @@ static void
 vertex_array_attrib_format(GLuint vaobj, GLuint attribIndex, GLint size,
                            GLenum type, GLboolean normalized,
                            GLboolean integer, GLboolean doubles,
-                           GLbitfield legalTypes, GLsizei maxSize,
+                           GLbitfield legalTypes, GLsizei sizeMax,
                            GLuint relativeOffset, const char *func)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_vertex_array_object *vao;
 
    ASSERT_OUTSIDE_BEGIN_END(ctx);
+
+   GLenum format = get_array_format(ctx, sizeMax, &size);
 
    /* The ARB_direct_state_access spec says:
     *
@@ -2121,10 +2134,16 @@ vertex_array_attrib_format(GLuint vaobj, GLuint attribIndex, GLint size,
 
    FLUSH_VERTICES(ctx, 0);
 
-   update_array_format(ctx, func, vao,
-                       VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, maxSize, size, type, normalized,
-                       integer, doubles, relativeOffset);
+   if (!validate_array_format(ctx, func, vao,
+                              VERT_ATTRIB_GENERIC(attribIndex),
+                              legalTypes, 1, sizeMax, size, type, normalized,
+                              integer, doubles, relativeOffset, format)) {
+      return;
+   }
+
+   _mesa_update_array_format(ctx, vao, VERT_ATTRIB_GENERIC(attribIndex), size,
+                             type, format, normalized, integer, doubles,
+                             relativeOffset);
 }
 
 
