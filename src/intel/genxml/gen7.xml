@@ -1602,7 +1602,12 @@
       <value name="4.0 pixels" value="3"/>
     </field>
     <field name="Scissor Rectangle Enable" start="75" end="75" type="bool"/>
-    <field name="Multisample Rasterization Mode" start="72" end="73" type="uint"/>
+    <field name="Multisample Rasterization Mode" start="72" end="73" type="uint">
+      <value name="MSRASTMODE_OFF_PIXEL" value="0"/>
+      <value name="MSRASTMODE_OFF_PATTERN" value="1"/>
+      <value name="MSRASTMODE_ON_PIXEL" value="2"/>
+      <value name="MSRASTMODE_ON_PATTERN" value="3"/>
+   </field>
     <field name="Last Pixel Enable" start="127" end="127" type="bool"/>
     <field name="Triangle Strip/List Provoking Vertex Select" start="125" end="126" type="uint">
       <value name="Vertex 0" value="0"/>
