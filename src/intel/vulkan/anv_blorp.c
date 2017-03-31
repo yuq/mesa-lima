@@ -1361,8 +1361,10 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
 static void
 resolve_image(struct blorp_batch *batch,
               const struct anv_image *src_image,
+              enum isl_aux_usage src_aux_usage,
               uint32_t src_level, uint32_t src_layer,
               const struct anv_image *dst_image,
+              enum isl_aux_usage dst_aux_usage,
               uint32_t dst_level, uint32_t dst_layer,
               VkImageAspectFlags aspect_mask,
               uint32_t src_x, uint32_t src_y, uint32_t dst_x, uint32_t dst_y,
@@ -1379,9 +1381,9 @@ resolve_image(struct blorp_batch *batch,
 
       struct blorp_surf src_surf, dst_surf;
       get_blorp_surf_for_anv_image(src_image, aspect,
-                                   src_image->aux_usage, &src_surf);
+                                   src_aux_usage, &src_surf);
       get_blorp_surf_for_anv_image(dst_image, aspect,
-                                   dst_image->aux_usage, &dst_surf);
+                                   dst_aux_usage, &dst_surf);
 
       blorp_blit(batch,
                  &src_surf, src_level, src_layer,
@@ -1421,9 +1423,11 @@ void anv_CmdResolveImage(
 
       for (uint32_t layer = 0; layer < layer_count; layer++) {
          resolve_image(&batch,
-                       src_image, pRegions[r].srcSubresource.mipLevel,
+                       src_image, src_image->aux_usage,
+                       pRegions[r].srcSubresource.mipLevel,
                        pRegions[r].srcSubresource.baseArrayLayer + layer,
-                       dst_image, pRegions[r].dstSubresource.mipLevel,
+                       dst_image, dst_image->aux_usage,
+                       pRegions[r].dstSubresource.mipLevel,
                        pRegions[r].dstSubresource.baseArrayLayer + layer,
                        pRegions[r].dstSubresource.aspectMask,
                        pRegions[r].srcOffset.x, pRegions[r].srcOffset.y,
@@ -1608,8 +1612,11 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 
+   const uint32_t aux_layers =
+      anv_image_aux_layers(image, iview->isl.base_level);
    anv_ccs_resolve(cmd_buffer, att_state->color_rt_state, image,
-                   iview->isl.base_level, fb->layers, resolve_op);
+                   iview->isl.base_level, MIN2(fb->layers, aux_layers),
+                   resolve_op);
 
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
@@ -1669,6 +1676,11 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
          struct anv_image_view *src_iview = fb->attachments[src_att];
          struct anv_image_view *dst_iview = fb->attachments[dst_att];
 
+         enum isl_aux_usage src_aux_usage =
+            cmd_buffer->state.attachments[src_att].aux_usage;
+         enum isl_aux_usage dst_aux_usage =
+            cmd_buffer->state.attachments[dst_att].aux_usage;
+
          const VkRect2D render_area = cmd_buffer->state.render_area;
 
          assert(src_iview->aspect_mask == dst_iview->aspect_mask);
@@ -1676,10 +1688,10 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
          struct blorp_batch batch;
          blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
-         resolve_image(&batch, src_iview->image,
+         resolve_image(&batch, src_iview->image, src_aux_usage,
                        src_iview->isl.base_level,
                        src_iview->isl.base_array_layer,
-                       dst_iview->image,
+                       dst_iview->image, dst_aux_usage,
                        dst_iview->isl.base_level,
                        dst_iview->isl.base_array_layer,
                        src_iview->aspect_mask,
