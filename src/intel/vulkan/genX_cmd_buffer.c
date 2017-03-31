@@ -597,6 +597,18 @@ genX(BeginCommandBuffer)(
 
    genX(cmd_buffer_emit_state_base_address)(cmd_buffer);
 
+   /* We sometimes store vertex data in the dynamic state buffer for blorp
+    * operations and our dynamic state stream may re-use data from previous
+    * command buffers.  In order to prevent stale cache data, we flush the VF
+    * cache.  We could do this on every blorp call but that's not really
+    * needed as all of the data will get written by the CPU prior to the GPU
+    * executing anything.  The chances are fairly high that they will use
+    * blorp at least once per primary command buffer so it shouldn't be
+    * wasted.
+    */
+   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY)
+      cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_VF_CACHE_INVALIDATE_BIT;
+
    VkResult result = VK_SUCCESS;
    if (cmd_buffer->usage_flags &
        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
