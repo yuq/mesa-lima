@@ -52,10 +52,6 @@ _eglSetLogProc(_EGLLogProc logger);
 
 
 extern void
-_eglSetLogLevel(EGLint level);
-
-
-extern void
 _eglLog(EGLint level, const char *fmtStr, ...);
 
 

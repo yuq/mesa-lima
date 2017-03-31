@@ -102,27 +102,6 @@ _eglSetLogProc(_EGLLogProc logger)
 
 
 /**
- * Set the log reporting level.
- */
-void
-_eglSetLogLevel(EGLint level)
-{
-   switch (level) {
-   case _EGL_FATAL:
-   case _EGL_WARNING:
-   case _EGL_INFO:
-   case _EGL_DEBUG:
-      mtx_lock(&logging.mutex);
-      logging.level = level;
-      mtx_unlock(&logging.mutex);
-      break;
-   default:
-      break;
-   }
-}
-
-
-/**
  * The default logger.  It prints the message to stderr.
  */
 static void
