@@ -2282,14 +2282,6 @@ drm_intel_update_buffer_offsets2 (drm_intel_bufmgr_gem *bufmgr_gem)
 	}
 }
 
-void
-drm_intel_gem_bo_aub_dump_bmp(drm_intel_bo *bo,
-			      int x1, int y1, int width, int height,
-			      enum aub_dump_bmp_format format,
-			      int pitch, int offset)
-{
-}
-
 static int
 drm_intel_gem_bo_exec(drm_intel_bo *bo, int used,
 		      drm_clip_rect_t * cliprects, int num_cliprects, int DR4)
@@ -3191,36 +3183,6 @@ drm_intel_bufmgr_gem_get_devid(drm_intel_bufmgr *bufmgr)
 	return bufmgr_gem->pci_device;
 }
 
-/**
- * Sets the AUB filename.
- *
- * This function has to be called before drm_intel_bufmgr_gem_set_aub_dump()
- * for it to have any effect.
- */
-void
-drm_intel_bufmgr_gem_set_aub_filename(drm_intel_bufmgr *bufmgr,
-				      const char *filename)
-{
-}
-
-/**
- * Sets up AUB dumping.
- *
- * This is a trace file format that can be used with the simulator.
- * Packets are emitted in a format somewhat like GPU command packets.
- * You can set up a GTT and upload your objects into the referenced
- * space, then send off batchbuffers and get BMPs out the other end.
- */
-void
-drm_intel_bufmgr_gem_set_aub_dump(drm_intel_bufmgr *bufmgr, int enable)
-{
-	fprintf(stderr, "libdrm aub dumping is deprecated.\n\n"
-		"Use intel_aubdump from intel-gpu-tools instead.  Install intel-gpu-tools,\n"
-		"then run (for example)\n\n"
-		"\t$ intel_aubdump --output=trace.aub glxgears -geometry 500x500\n\n"
-		"See the intel_aubdump man page for more details.\n");
-}
-
 drm_intel_context *
 drm_intel_gem_context_create(drm_intel_bufmgr *bufmgr)
 {
@@ -3394,34 +3356,6 @@ drm_intel_get_min_eu_in_pool(int fd)
 		return -errno;
 
 	return ret;
-}
-
-/**
- * Annotate the given bo for use in aub dumping.
- *
- * \param annotations is an array of drm_intel_aub_annotation objects
- * describing the type of data in various sections of the bo.  Each
- * element of the array specifies the type and subtype of a section of
- * the bo, and the past-the-end offset of that section.  The elements
- * of \c annotations must be sorted so that ending_offset is
- * increasing.
- *
- * \param count is the number of elements in the \c annotations array.
- * If \c count is zero, then \c annotations will not be dereferenced.
- *
- * Annotations are copied into a private data structure, so caller may
- * re-use the memory pointed to by \c annotations after the call
- * returns.
- *
- * Annotations are stored for the lifetime of the bo; to reset to the
- * default state (no annotations), call this function with a \c count
- * of zero.
- */
-void
-drm_intel_bufmgr_gem_set_aub_annotations(drm_intel_bo *bo,
-					 drm_intel_aub_annotation *annotations,
-					 unsigned count)
-{
 }
 
 static pthread_mutex_t bufmgr_list_mutex = PTHREAD_MUTEX_INITIALIZER;
