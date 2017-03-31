@@ -438,10 +438,8 @@ update_array_format(struct gl_context *ctx,
    return true;
 }
 
-
 /**
- * Do error checking and update state for glVertex/Color/TexCoord/...Pointer
- * functions.
+ * Do error checking for glVertex/Color/TexCoord/...Pointer functions.
  *
  * \param func  name of calling function used for error reporting
  * \param attrib  the attribute array index to update
@@ -457,17 +455,14 @@ update_array_format(struct gl_context *ctx,
  * \param ptr  the address (or offset inside VBO) of the array data
  */
 static void
-update_array(struct gl_context *ctx,
-             const char *func,
-             GLuint attrib, GLbitfield legalTypesMask,
-             GLint sizeMin, GLint sizeMax,
-             GLint size, GLenum type, GLsizei stride,
-             GLboolean normalized, GLboolean integer, GLboolean doubles,
-             const GLvoid *ptr)
+validate_array(struct gl_context *ctx, const char *func,
+               GLuint attrib, GLbitfield legalTypesMask,
+               GLint sizeMin, GLint sizeMax,
+               GLint size, GLenum type, GLsizei stride,
+               GLboolean normalized, GLboolean integer, GLboolean doubles,
+               const GLvoid *ptr)
 {
    struct gl_vertex_array_object *vao = ctx->Array.VAO;
-   struct gl_array_attributes *array;
-   GLsizei effectiveStride;
 
    /* Page 407 (page 423 of the PDF) of the OpenGL 3.0 spec says:
     *
@@ -514,6 +509,38 @@ update_array(struct gl_context *ctx,
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-VBO array)", func);
       return;
    }
+}
+
+
+/**
+ * Update state for glVertex/Color/TexCoord/...Pointer functions.
+ *
+ * \param func  name of calling function used for error reporting
+ * \param attrib  the attribute array index to update
+ * \param legalTypes  bitmask of *_BIT above indicating legal datatypes
+ * \param sizeMin  min allowable size value
+ * \param sizeMax  max allowable size value (may also be BGRA_OR_4)
+ * \param size  components per element (1, 2, 3 or 4)
+ * \param type  datatype of each component (GL_FLOAT, GL_INT, etc)
+ * \param stride  stride between elements, in elements
+ * \param normalized  are integer types converted to floats in [-1, 1]?
+ * \param integer  integer-valued values (will not be normalized to [-1,1])
+ * \param doubles  Double values not reduced to floats
+ * \param ptr  the address (or offset inside VBO) of the array data
+ */
+static void
+update_array(struct gl_context *ctx,
+             const char *func,
+             GLuint attrib, GLbitfield legalTypesMask,
+             GLint sizeMin, GLint sizeMax,
+             GLint size, GLenum type, GLsizei stride,
+             GLboolean normalized, GLboolean integer, GLboolean doubles,
+             const GLvoid *ptr)
+{
+   struct gl_vertex_array_object *vao = ctx->Array.VAO;
+
+   validate_array(ctx, func, attrib, legalTypesMask, sizeMin, sizeMax,
+                  size, type, stride, normalized, integer, doubles, ptr);
 
    if (!update_array_format(ctx, func, vao, attrib,
                             legalTypesMask, sizeMin, sizeMax,
@@ -525,12 +552,12 @@ update_array(struct gl_context *ctx,
    vertex_attrib_binding(ctx, vao, attrib, attrib);
 
    /* The Stride and Ptr fields are not set by update_array_format() */
-   array = &vao->VertexAttrib[attrib];
+   struct gl_array_attributes *array = &vao->VertexAttrib[attrib];
    array->Stride = stride;
    array->Ptr = ptr;
 
    /* Update the vertex buffer binding */
-   effectiveStride = stride != 0 ? stride : array->_ElementSize;
+   GLsizei effectiveStride = stride != 0 ? stride : array->_ElementSize;
    _mesa_bind_vertex_buffer(ctx, vao, attrib,
                             ctx->Array.ArrayBufferObj, (GLintptr) ptr,
                             effectiveStride);
