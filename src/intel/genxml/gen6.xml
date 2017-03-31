@@ -1014,7 +1014,7 @@
     <field name="SVBI Payload Enable" start="220" end="220" type="bool"/>
     <field name="SVBI Post-Increment Enable" start="219" end="219" type="bool"/>
     <field name="SVBI Post-Increment Value" start="208" end="217" type="uint"/>
-    <field name="Function Enable" start="207" end="207" type="bool"/>
+    <field name="Enable" start="207" end="207" type="bool"/>
   </instruction>
 
   <instruction name="3DSTATE_GS_SVB_INDEX" bias="2" length="7">

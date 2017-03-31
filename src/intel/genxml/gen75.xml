@@ -1292,7 +1292,7 @@
     <field name="Statistics Enable" start="170" end="170" type="bool"/>
     <field name="Compute W Coordinate Enable" start="162" end="162" type="bool"/>
     <field name="DS Cache Disable" start="161" end="161" type="bool"/>
-    <field name="Function Enable" start="160" end="160" type="bool"/>
+    <field name="Enable" start="160" end="160" type="bool"/>
   </instruction>
 
   <instruction name="3DSTATE_GATHER_CONSTANT_DS" bias="2">
@@ -1440,7 +1440,7 @@
       <value name="TRAILING" value="1"/>
     </field>
     <field name="Discard Adjacency" start="161" end="161" type="bool"/>
-    <field name="Function Enable" start="160" end="160" type="bool"/>
+    <field name="Enable" start="160" end="160" type="bool"/>
     <field name="Control Data Format" start="223" end="223" type="uint">
       <value name="GSCTL_CUT" value="0"/>
       <value name="GSCTL_SID" value="1"/>
@@ -1484,7 +1484,7 @@
     <field name="Illegal Opcode Exception Enable" start="45" end="45" type="bool"/>
     <field name="Software Exception Enable" start="44" end="44" type="bool"/>
     <field name="Maximum Number of Threads" start="32" end="39" type="uint"/>
-    <field name="Function Enable" start="95" end="95" type="bool"/>
+    <field name="Enable" start="95" end="95" type="bool"/>
     <field name="Statistics Enable" start="93" end="93" type="bool"/>
     <field name="Instance Count" start="64" end="67" type="uint"/>
     <field name="Kernel Start Pointer" start="102" end="127" type="offset"/>

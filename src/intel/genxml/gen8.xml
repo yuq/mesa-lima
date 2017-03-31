@@ -1350,7 +1350,7 @@
     </field>
     <field name="Compute W Coordinate Enable" start="226" end="226" type="bool"/>
     <field name="Cache Disable" start="225" end="225" type="bool"/>
-    <field name="Function Enable" start="224" end="224" type="bool"/>
+    <field name="Enable" start="224" end="224" type="bool"/>
     <field name="Vertex URB Entry Output Read Offset" start="277" end="282" type="uint"/>
     <field name="Vertex URB Entry Output Length" start="272" end="276" type="uint"/>
     <field name="User Clip Distance Clip Test Enable Bitmask" start="264" end="271" type="uint"/>
@@ -1506,7 +1506,7 @@
       <value name="TRAILING" value="1"/>
     </field>
     <field name="Discard Adjacency" start="225" end="225" type="bool"/>
-    <field name="Function Enable" start="224" end="224" type="bool"/>
+    <field name="Enable" start="224" end="224" type="bool"/>
     <field name="Control Data Format" start="287" end="287" type="uint">
       <value name="CUT" value="0"/>
       <value name="SID" value="1"/>
@@ -1555,7 +1555,7 @@
     </field>
     <field name="Illegal Opcode Exception Enable" start="45" end="45" type="bool"/>
     <field name="Software Exception Enable" start="44" end="44" type="bool"/>
-    <field name="Function Enable" start="95" end="95" type="bool"/>
+    <field name="Enable" start="95" end="95" type="bool"/>
     <field name="Statistics Enable" start="93" end="93" type="bool"/>
     <field name="Maximum Number of Threads" start="72" end="80" type="uint"/>
     <field name="Instance Count" start="64" end="67" type="uint"/>
