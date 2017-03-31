@@ -4887,7 +4887,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ralloc_free(ctx.phis);
 
 	if (nir->stage == MESA_SHADER_GEOMETRY) {
-		shader_info->gs.gsvs_vertex_size = util_bitcount64(ctx.output_mask) * 16;
+		unsigned addclip = ctx.num_output_clips + ctx.num_output_culls > 4;
+		shader_info->gs.gsvs_vertex_size = (util_bitcount64(ctx.output_mask) + addclip) * 16;
 		shader_info->gs.max_gsvs_emit_size = shader_info->gs.gsvs_vertex_size *
 			nir->info->gs.vertices_out;
 	}
