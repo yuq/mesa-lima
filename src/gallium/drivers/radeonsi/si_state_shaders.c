@@ -113,7 +113,8 @@ static void *si_get_shader_binary(struct si_shader *shader)
 	/* There is always a size of data followed by the data itself. */
 	unsigned relocs_size = shader->binary.reloc_count *
 			       sizeof(shader->binary.relocs[0]);
-	unsigned disasm_size = strlen(shader->binary.disasm_string) + 1;
+	unsigned disasm_size = shader->binary.disasm_string ?
+			       strlen(shader->binary.disasm_string) + 1 : 0;
 	unsigned llvm_ir_size = shader->binary.llvm_ir_string ?
 				strlen(shader->binary.llvm_ir_string) + 1 : 0;
 	unsigned size =
