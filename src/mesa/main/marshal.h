@@ -197,12 +197,20 @@ _mesa_glthread_is_compat_bind_vertex_array(const struct gl_context *ctx)
    return ctx->API != API_OPENGL_CORE;
 }
 
+struct marshal_cmd_Enable;
 struct marshal_cmd_ShaderSource;
 struct marshal_cmd_Flush;
 struct marshal_cmd_BindBuffer;
 struct marshal_cmd_BufferData;
 struct marshal_cmd_BufferSubData;
 struct marshal_cmd_ClearBufferfv;
+
+void
+_mesa_unmarshal_Enable(struct gl_context *ctx,
+                       const struct marshal_cmd_Enable *cmd);
+
+void GLAPIENTRY
+_mesa_marshal_Enable(GLenum cap);
 
 void GLAPIENTRY
 _mesa_marshal_ShaderSource(GLuint shader, GLsizei count,

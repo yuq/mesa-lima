@@ -2361,7 +2361,7 @@
         <glx rop="138" handcode="client"/>
     </function>
 
-    <function name="Enable" es1="1.0" es2="2.0">
+    <function name="Enable" es1="1.0" es2="2.0" marshal="custom">
         <param name="cap" type="GLenum"/>
         <glx rop="139" handcode="client"/>
     </function>
