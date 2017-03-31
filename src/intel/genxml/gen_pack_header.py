@@ -347,7 +347,7 @@ class Group(object):
                 dwords[index + 1] = dwords[index]
                 index = index + 1
 
-    def emit_pack_function(self):
+    def collect_dwords_and_length(self):
         dwords = {}
         self.collect_dwords(dwords, 0, "")
 
@@ -357,9 +357,14 @@ class Group(object):
         # index we've seen plus one.
         if self.size > 0:
             length = self.size // 32
-        else:
+        elif dwords:
             length = max(dwords.keys()) + 1
+        else:
+            length = 0
 
+        return (dwords, length)
+
+    def emit_pack_function(self, dwords, length):
         for index in range(length):
             # Handle MBZ dwords
             if not index in dwords:
@@ -576,10 +581,12 @@ class Parser(object):
         print("static inline void\n%s_pack(__gen_user_data *data, void * restrict dst,\n%sconst struct %s * restrict values)\n{" %
               (name, ' ' * (len(name) + 6), name))
 
-        # Cast dst to make header C++ friendly
-        print("   uint32_t * restrict dw = (uint32_t * restrict) dst;")
+        (dwords, length) = group.collect_dwords_and_length()
+        if length:
+            # Cast dst to make header C++ friendly
+            print("   uint32_t * restrict dw = (uint32_t * restrict) dst;")
 
-        group.emit_pack_function()
+            group.emit_pack_function(dwords, length)
 
         print("}\n")
 
