@@ -795,7 +795,7 @@ void BinTriangles(
     {
         // degenerate triangles won't be sent to rasterizer; just enable all edges
         pfnWork = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, (rastState.conservativeRast > 0), 
-            (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID, (state.scissorsTileAligned == false));
+            (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, EdgeValToEdgeState(ALL_EDGES_VALID), (state.scissorsTileAligned == false));
     }
 
     if (!triMask)
@@ -941,7 +941,7 @@ endBinTriangles:
             // only rasterize valid edges if we have a degenerate primitive
             int32_t triEdgeEnable = (edgeEnable >> (triIndex * 3)) & ALL_EDGES_VALID;
             work.pfnWork = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, (rastState.conservativeRast > 0), 
-                (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable, (state.scissorsTileAligned == false));
+                (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, EdgeValToEdgeState(triEdgeEnable), (state.scissorsTileAligned == false));
 
             // Degenerate triangles are required to be constant interpolated
             isDegenerate = (triEdgeEnable != ALL_EDGES_VALID) ? true : false;
@@ -1236,7 +1236,7 @@ void BinTriangles_simd16(
     {
         // degenerate triangles won't be sent to rasterizer; just enable all edges
         pfnWork = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, (rastState.conservativeRast > 0),
-            (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, ALL_EDGES_VALID, (state.scissorsTileAligned == false));
+            (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, EdgeValToEdgeState(ALL_EDGES_VALID), (state.scissorsTileAligned == false));
     }
 
     if (!triMask)
@@ -1396,7 +1396,7 @@ endBinTriangles:
             // only rasterize valid edges if we have a degenerate primitive
             int32_t triEdgeEnable = (edgeEnable >> (triIndex * 3)) & ALL_EDGES_VALID;
             work.pfnWork = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, (rastState.conservativeRast > 0),
-                (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, triEdgeEnable, (state.scissorsTileAligned == false));
+                (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, EdgeValToEdgeState(triEdgeEnable), (state.scissorsTileAligned == false));
 
             // Degenerate triangles are required to be constant interpolated
             isDegenerate = (triEdgeEnable != ALL_EDGES_VALID) ? true : false;

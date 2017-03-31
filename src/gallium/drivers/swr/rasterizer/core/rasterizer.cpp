@@ -1343,7 +1343,7 @@ void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile,
     PFN_WORK_FUNC pfnTriRast;
     // conservative rast not supported for points/lines
     pfnTriRast = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, false, 
-                                   SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (pDC->pState->state.scissorsTileAligned == false));
+                                   SWR_INPUT_COVERAGE_NONE, EdgeValToEdgeState(ALL_EDGES_VALID), (pDC->pState->state.scissorsTileAligned == false));
 
     // overwrite texcoords for point sprites
     if (isPointSpriteTexCoordEnabled)
@@ -1676,7 +1676,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     PFN_WORK_FUNC pfnTriRast;
     // conservative rast not supported for points/lines
     pfnTriRast = GetRasterizerFunc(rastState.sampleCount, rastState.bIsCenterPattern, false, 
-                                   SWR_INPUT_COVERAGE_NONE, ALL_EDGES_VALID, (pDC->pState->state.scissorsTileAligned == false));
+                                   SWR_INPUT_COVERAGE_NONE, EdgeValToEdgeState(ALL_EDGES_VALID), (pDC->pState->state.scissorsTileAligned == false));
 
     // make sure this macrotile intersects the triangle
     __m128i vXai = fpToFixedPoint(vXa);
@@ -1798,6 +1798,6 @@ PFN_WORK_FUNC GetRasterizerFunc(
         IsCenter,
         IsConservative,
         IntArg<SWR_INPUT_COVERAGE_NONE, SWR_INPUT_COVERAGE_COUNT-1>{InputCoverage},
-        IntArg<0, VALID_TRI_EDGE_COUNT-1>{EdgeEnable},
+        IntArg<0, STATE_VALID_TRI_EDGE_COUNT-1>{EdgeEnable},
         RasterizeScissorEdges);
 }
