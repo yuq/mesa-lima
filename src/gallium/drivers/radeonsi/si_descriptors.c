@@ -95,6 +95,21 @@ static uint32_t null_image_descriptor[8] = {
 	 * descriptor */
 };
 
+static void si_init_descriptor_list(uint32_t *desc_list,
+				    unsigned element_dw_size,
+				    unsigned num_elements,
+				    const uint32_t *null_descriptor)
+{
+	int i;
+
+	/* Initialize the array to NULL descriptors if the element size is 8. */
+	if (null_descriptor) {
+		assert(element_dw_size % 8 == 0);
+		for (i = 0; i < num_elements * element_dw_size / 8; i++)
+			memcpy(desc_list + i * 8, null_descriptor, 8 * 4);
+	}
+}
+
 static void si_init_descriptors(struct si_context *sctx,
 				struct si_descriptors *desc,
 				unsigned shader_userdata_index,
