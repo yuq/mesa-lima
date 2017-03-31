@@ -72,17 +72,16 @@ static struct {
    EGLBoolean initialized;
    EGLint level;
 } logging = {
-   _MTX_INITIALIZER_NP,
-   EGL_FALSE,
-   FALLBACK_LOG_LEVEL,
+   .mutex = _MTX_INITIALIZER_NP,
+   .initialized = EGL_FALSE,
+   .level = FALLBACK_LOG_LEVEL,
 };
 
 static const char *level_strings[] = {
-   /* the order is important */
-   "fatal",
-   "warning",
-   "info",
-   "debug",
+   [_EGL_FATAL] = "fatal",
+   [_EGL_WARNING]  = "warning",
+   [_EGL_INFO] = "info",
+   [_EGL_DEBUG] = "debug",
 };
 
 
