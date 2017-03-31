@@ -3131,7 +3131,6 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
  * Optionally, a value can be passed through the inline assembly to prevent
  * LLVM from hoisting calls to ReadNone functions.
  */
-#if 0 /* unused currently */
 static void emit_optimization_barrier(struct si_shader_context *ctx,
 				      LLVMValueRef *pvgpr)
 {
@@ -3165,7 +3164,6 @@ static void emit_optimization_barrier(struct si_shader_context *ctx,
 		*pvgpr = vgpr;
 	}
 }
-#endif
 
 /* Combine these with & instead of |. */
 #define NOOP_WAITCNT 0xf7f
@@ -5176,8 +5174,13 @@ static LLVMValueRef si_emit_ballot(struct si_shader_context *ctx,
 		LLVMConstInt(ctx->i32, LLVMIntNE, 0)
 	};
 
-	if (LLVMTypeOf(value) != ctx->i32)
-		args[0] = LLVMBuildBitCast(gallivm->builder, value, ctx->i32, "");
+	/* We currently have no other way to prevent LLVM from lifting the icmp
+	 * calls to a dominating basic block.
+	 */
+	emit_optimization_barrier(ctx, &args[0]);
+
+	if (LLVMTypeOf(args[0]) != ctx->i32)
+		args[0] = LLVMBuildBitCast(gallivm->builder, args[0], ctx->i32, "");
 
 	return lp_build_intrinsic(gallivm->builder,
 				  "llvm.amdgcn.icmp.i32",
@@ -5281,6 +5284,11 @@ static void read_lane_emit(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = ctx->gallivm.builder;
+
+	/* We currently have no other way to prevent LLVM from lifting the icmp
+	 * calls to a dominating basic block.
+	 */
+	emit_optimization_barrier(ctx, &emit_data->args[0]);
 
 	for (unsigned i = 0; i < emit_data->arg_count; ++i) {
 		emit_data->args[i] = LLVMBuildBitCast(builder, emit_data->args[i],
