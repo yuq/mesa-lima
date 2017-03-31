@@ -625,8 +625,15 @@ vbo_exec_DrawArrays(GLenum mode, GLint start, GLsizei count)
       _mesa_debug(ctx, "glDrawArrays(%s, %d, %d)\n",
                   _mesa_enum_to_string(mode), start, count);
 
-   if (!_mesa_validate_DrawArrays(ctx, mode, count))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawArrays(ctx, mode, count))
+         return;
+   }
 
    if (0)
       check_draw_arrays_data(ctx, start, count);
@@ -652,9 +659,17 @@ vbo_exec_DrawArraysInstanced(GLenum mode, GLint start, GLsizei count,
       _mesa_debug(ctx, "glDrawArraysInstanced(%s, %d, %d, %d)\n",
                   _mesa_enum_to_string(mode), start, count, numInstances);
 
-   if (!_mesa_validate_DrawArraysInstanced(ctx, mode, start, count,
-                                           numInstances))
-      return;
+
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawArraysInstanced(ctx, mode, start, count,
+                                              numInstances))
+         return;
+   }
 
    if (0)
       check_draw_arrays_data(ctx, start, count);
@@ -682,9 +697,16 @@ vbo_exec_DrawArraysInstancedBaseInstance(GLenum mode, GLint first,
                   _mesa_enum_to_string(mode), first, count,
                   numInstances, baseInstance);
 
-   if (!_mesa_validate_DrawArraysInstanced(ctx, mode, first, count,
-                                           numInstances))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawArraysInstanced(ctx, mode, first, count,
+                                              numInstances))
+         return;
+   }
 
    if (0)
       check_draw_arrays_data(ctx, first, count);
@@ -1567,8 +1589,15 @@ vbo_exec_DrawArraysIndirect(GLenum mode, const GLvoid *indirect)
       _mesa_debug(ctx, "glDrawArraysIndirect(%s, %p)\n",
                   _mesa_enum_to_string(mode), indirect);
 
-   if (!_mesa_validate_DrawArraysIndirect(ctx, mode, indirect))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawArraysIndirect(ctx, mode, indirect))
+         return;
+   }
 
    if (skip_validated_draw(ctx))
       return;
