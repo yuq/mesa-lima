@@ -764,6 +764,60 @@ dd_context_dump_debug_state(struct pipe_context *_pipe, FILE *stream,
    return pipe->dump_debug_state(pipe, stream, flags);
 }
 
+static uint64_t
+dd_context_create_texture_handle(struct pipe_context *_pipe,
+                                 struct pipe_sampler_view *view,
+                                 const struct pipe_sampler_state *state)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   return pipe->create_texture_handle(pipe, view, state);
+}
+
+static void
+dd_context_delete_texture_handle(struct pipe_context *_pipe, uint64_t handle)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   pipe->delete_texture_handle(pipe, handle);
+}
+
+static void
+dd_context_make_texture_handle_resident(struct pipe_context *_pipe,
+                                        uint64_t handle, bool resident)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   pipe->make_texture_handle_resident(pipe, handle, resident);
+}
+
+static uint64_t
+dd_context_create_image_handle(struct pipe_context *_pipe,
+                               const struct pipe_image_view *image)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   return pipe->create_image_handle(pipe, image);
+}
+
+static void
+dd_context_delete_image_handle(struct pipe_context *_pipe, uint64_t handle)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   pipe->delete_image_handle(pipe, handle);
+}
+
+static void
+dd_context_make_image_handle_resident(struct pipe_context *_pipe,
+                                      uint64_t handle, unsigned access,
+                                      bool resident)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   pipe->make_image_handle_resident(pipe, handle, access, resident);
+}
+
 struct pipe_context *
 dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
 {
@@ -866,6 +920,12 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    CTX_INIT(set_device_reset_callback);
    CTX_INIT(dump_debug_state);
    CTX_INIT(emit_string_marker);
+   CTX_INIT(create_texture_handle);
+   CTX_INIT(delete_texture_handle);
+   CTX_INIT(make_texture_handle_resident);
+   CTX_INIT(create_image_handle);
+   CTX_INIT(delete_image_handle);
+   CTX_INIT(make_image_handle_resident);
 
    dd_init_draw_functions(dctx);
 
