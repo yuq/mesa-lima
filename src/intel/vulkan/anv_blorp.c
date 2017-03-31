@@ -690,11 +690,18 @@ void anv_CmdUpdateBuffer(
 
    assert(max_update_size < MAX_SURFACE_DIM * 4);
 
+   /* We're about to read data that was written from the CPU.  Flush the
+    * texture cache so we don't get anything stale.
+    */
+   cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT;
+
    while (dataSize) {
       const uint32_t copy_size = MIN2(dataSize, max_update_size);
 
       struct anv_state tmp_data =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, copy_size, 64);
+
+      anv_state_flush(cmd_buffer->device, tmp_data);
 
       memcpy(tmp_data.map, pData, copy_size);
 
