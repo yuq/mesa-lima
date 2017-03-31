@@ -254,4 +254,8 @@ st_create_color_map_texture(struct gl_context *ctx);
 bool
 st_etc_fallback(struct st_context *st, struct gl_texture_image *texImage);
 
+void
+st_convert_image(const struct st_context *st, const struct gl_image_unit *u,
+                 struct pipe_image_view *img);
+
 #endif
