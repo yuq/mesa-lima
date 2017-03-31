@@ -126,6 +126,9 @@ static void init_amdgpu_target()
 	LLVMInitializeAMDGPUTargetMC();
 	LLVMInitializeAMDGPUAsmPrinter();
 
+	/* For inline assembly. */
+	LLVMInitializeAMDGPUAsmParser();
+
 	if (HAVE_LLVM >= 0x0400) {
 		/*
 		 * Workaround for bug in llvm 4.0 that causes image intrinsics

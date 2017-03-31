@@ -72,6 +72,8 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 			       FILE *f);
 
+static unsigned llvm_get_type_size(LLVMTypeRef type);
+
 static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
 static void si_build_vs_epilog_function(struct si_shader_context *ctx,
@@ -3125,14 +3127,43 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 /* Prevent optimizations (at least of memory accesses) across the current
  * point in the program by emitting empty inline assembly that is marked as
  * having side effects.
+ *
+ * Optionally, a value can be passed through the inline assembly to prevent
+ * LLVM from hoisting calls to ReadNone functions.
  */
 #if 0 /* unused currently */
-static void emit_optimization_barrier(struct si_shader_context *ctx)
+static void emit_optimization_barrier(struct si_shader_context *ctx,
+				      LLVMValueRef *pvgpr)
 {
+	static int counter = 0;
+
 	LLVMBuilderRef builder = ctx->gallivm.builder;
-	LLVMTypeRef ftype = LLVMFunctionType(ctx->voidt, NULL, 0, false);
-	LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, "", "", true, false);
-	LLVMBuildCall(builder, inlineasm, NULL, 0, "");
+	char code[16];
+
+	snprintf(code, sizeof(code), "; %d", p_atomic_inc_return(&counter));
+
+	if (!pvgpr) {
+		LLVMTypeRef ftype = LLVMFunctionType(ctx->voidt, NULL, 0, false);
+		LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, code, "", true, false);
+		LLVMBuildCall(builder, inlineasm, NULL, 0, "");
+	} else {
+		LLVMTypeRef ftype = LLVMFunctionType(ctx->i32, &ctx->i32, 1, false);
+		LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, code, "=v,0", true, false);
+		LLVMValueRef vgpr = *pvgpr;
+		LLVMTypeRef vgpr_type = LLVMTypeOf(vgpr);
+		unsigned vgpr_size = llvm_get_type_size(vgpr_type);
+		LLVMValueRef vgpr0;
+
+		assert(vgpr_size % 4 == 0);
+
+		vgpr = LLVMBuildBitCast(builder, vgpr, LLVMVectorType(ctx->i32, vgpr_size / 4), "");
+		vgpr0 = LLVMBuildExtractElement(builder, vgpr, ctx->i32_0, "");
+		vgpr0 = LLVMBuildCall(builder, inlineasm, &vgpr0, 1, "");
+		vgpr = LLVMBuildInsertElement(builder, vgpr, vgpr0, ctx->i32_0, "");
+		vgpr = LLVMBuildBitCast(builder, vgpr, vgpr_type, "");
+
+		*pvgpr = vgpr;
+	}
 }
 #endif
 
