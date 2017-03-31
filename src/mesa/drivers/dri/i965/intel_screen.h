@@ -50,6 +50,9 @@ struct intel_screen
 
    uint64_t max_gtt_map_object_size;
 
+   /** Bytes of aperture usage beyond which execbuf is likely to fail. */
+   uint64_t aperture_threshold;
+
    bool no_hw;
    bool hw_has_swizzling;
    bool has_exec_fence; /**< I915_PARAM_HAS_EXEC_FENCE */

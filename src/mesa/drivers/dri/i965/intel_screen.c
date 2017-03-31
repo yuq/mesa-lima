@@ -983,10 +983,8 @@ brw_query_renderer_integer(__DRIscreen *dri_screen,
        * assume that there's some fragmentation, and we start doing extra
        * flushing, etc.  That's the big cliff apps will care about.
        */
-      uint64_t aper_size = get_aperture_size(dri_screen->fd);
-
       const unsigned gpu_mappable_megabytes =
-         (aper_size / (1024 * 1024)) * 3 / 4;
+         screen->aperture_threshold / (1024 * 1024);
 
       const long system_memory_pages = sysconf(_SC_PHYS_PAGES);
       const long system_page_size = sysconf(_SC_PAGE_SIZE);
@@ -1859,6 +1857,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
        */
       screen->max_gtt_map_object_size = gtt_size / 4;
    }
+
+   screen->aperture_threshold = get_aperture_size(dri_screen->fd) * 3 / 4;
 
    screen->hw_has_swizzling = intel_detect_swizzling(screen);
    screen->hw_has_timestamp = intel_detect_timestamp(screen);
