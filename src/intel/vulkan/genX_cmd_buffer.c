@@ -255,6 +255,11 @@ color_attachment_compute_aux_usage(struct anv_device * device,
 
    att_state->clear_color_is_zero_one =
       color_is_zero_one(att_state->clear_value.color, iview->isl.format);
+   att_state->clear_color_is_zero =
+      att_state->clear_value.color.uint32[0] == 0 &&
+      att_state->clear_value.color.uint32[1] == 0 &&
+      att_state->clear_value.color.uint32[2] == 0 &&
+      att_state->clear_value.color.uint32[3] == 0;
 
    if (att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
       /* Start off assuming fast clears are possible */
@@ -297,6 +302,17 @@ color_attachment_compute_aux_usage(struct anv_device * device,
             anv_perf_warn("Not fast-clearing the first layer in "
                           "a multi-layer fast clear.");
          }
+      }
+
+      /* We only allow fast clears in the GENERAL layout if the auxiliary
+       * buffer is always enabled and the fast-clear value is all 0's. See
+       * add_fast_clear_state_buffer() for more information.
+       */
+      if (cmd_state->pass->attachments[att].first_subpass_layout ==
+          VK_IMAGE_LAYOUT_GENERAL &&
+          (!att_state->clear_color_is_zero ||
+           iview->image->aux_usage == ISL_AUX_USAGE_NONE)) {
+         att_state->fast_clear = false;
       }
 
       if (att_state->fast_clear) {

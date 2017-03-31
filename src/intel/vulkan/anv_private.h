@@ -1490,6 +1490,7 @@ struct anv_attachment_state {
    bool                                         fast_clear;
    VkClearValue                                 clear_value;
    bool                                         clear_color_is_zero_one;
+   bool                                         clear_color_is_zero;
 };
 
 /** State required while building cmd buffer */
@@ -2308,6 +2309,7 @@ struct anv_render_pass_attachment {
    VkAttachmentLoadOp                           stencil_load_op;
    VkImageLayout                                initial_layout;
    VkImageLayout                                final_layout;
+   VkImageLayout                                first_subpass_layout;
 
    /* An array, indexed by subpass id, of how the attachment will be used. */
    enum anv_subpass_usage *                     subpass_usage;
