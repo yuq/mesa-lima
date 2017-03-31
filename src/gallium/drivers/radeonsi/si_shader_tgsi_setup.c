@@ -762,13 +762,29 @@ static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 				       unsigned swizzle)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = &ctx->gallivm;
-
+	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef cval = ctx->system_values[reg->Register.Index];
-	if (LLVMGetTypeKind(LLVMTypeOf(cval)) == LLVMVectorTypeKind) {
-		cval = LLVMBuildExtractElement(gallivm->builder, cval,
-					       LLVMConstInt(ctx->i32, swizzle, 0), "");
+
+	if (tgsi_type_is_64bit(type)) {
+		LLVMValueRef lo, hi;
+
+		assert(swizzle == 0 || swizzle == 2);
+
+		lo = LLVMBuildExtractElement(
+			builder, cval, LLVMConstInt(ctx->i32, swizzle, 0), "");
+		hi = LLVMBuildExtractElement(
+			builder, cval, LLVMConstInt(ctx->i32, swizzle + 1, 0), "");
+
+		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
 	}
+
+	if (LLVMGetTypeKind(LLVMTypeOf(cval)) == LLVMVectorTypeKind) {
+		cval = LLVMBuildExtractElement(
+			builder, cval, LLVMConstInt(ctx->i32, swizzle, 0), "");
+	} else {
+		assert(swizzle == 0);
+	}
+
 	return bitcast(bld_base, type, cval);
 }
 
