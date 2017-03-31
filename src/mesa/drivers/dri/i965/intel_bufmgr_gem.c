@@ -119,8 +119,6 @@ struct drm_bacon_gem_bo_bucket {
 };
 
 typedef struct _drm_bacon_bufmgr {
-	int refcount;
-
 	int fd;
 
 	int max_relocs;
@@ -136,8 +134,6 @@ typedef struct _drm_bacon_bufmgr {
 	struct drm_bacon_gem_bo_bucket cache_bucket[14 * 4];
 	int num_buckets;
 	time_t time;
-
-	struct list_head managers;
 
 	struct hash_table *name_table;
 	struct hash_table *handle_table;
@@ -1514,8 +1510,8 @@ drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 	}
 }
 
-static void
-drm_bacon_bufmgr_gem_destroy(drm_bacon_bufmgr *bufmgr)
+void
+drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 {
 	free(bufmgr->exec2_objects);
 	free(bufmgr->exec_bos);
@@ -2369,38 +2365,6 @@ drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 	return ret;
 }
 
-static pthread_mutex_t bufmgr_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-static struct list_head bufmgr_list = { &bufmgr_list, &bufmgr_list };
-
-static drm_bacon_bufmgr *
-drm_bacon_bufmgr_gem_find(int fd)
-{
-	list_for_each_entry(drm_bacon_bufmgr,
-                            bufmgr, &bufmgr_list, managers) {
-		if (bufmgr->fd == fd) {
-			p_atomic_inc(&bufmgr->refcount);
-			return bufmgr;
-		}
-	}
-
-	return NULL;
-}
-
-void
-drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
-{
-	if (atomic_add_unless(&bufmgr->refcount, -1, 1)) {
-		pthread_mutex_lock(&bufmgr_list_mutex);
-
-		if (p_atomic_dec_zero(&bufmgr->refcount)) {
-			list_del(&bufmgr->managers);
-			drm_bacon_bufmgr_gem_destroy(bufmgr);
-		}
-
-		pthread_mutex_unlock(&bufmgr_list_mutex);
-	}
-}
-
 void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
@@ -2538,23 +2502,24 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 	drm_bacon_bufmgr *bufmgr;
 	struct drm_i915_gem_get_aperture aperture;
 
-	pthread_mutex_lock(&bufmgr_list_mutex);
-
-	bufmgr = drm_bacon_bufmgr_gem_find(fd);
-	if (bufmgr)
-		goto exit;
-
 	bufmgr = calloc(1, sizeof(*bufmgr));
 	if (bufmgr == NULL)
-		goto exit;
+		return NULL;
 
+	/* Handles to buffer objects belong to the device fd and are not
+	 * reference counted by the kernel.  If the same fd is used by
+	 * multiple parties (threads sharing the same screen bufmgr, or
+	 * even worse the same device fd passed to multiple libraries)
+	 * ownership of those handles is shared by those independent parties.
+	 *
+	 * Don't do this! Ensure that each library/bufmgr has its own device
+	 * fd so that its namespace does not clash with another.
+	 */
 	bufmgr->fd = fd;
-	p_atomic_set(&bufmgr->refcount, 1);
 
 	if (pthread_mutex_init(&bufmgr->lock, NULL) != 0) {
 		free(bufmgr);
-		bufmgr = NULL;
-		goto exit;
+		return NULL;
 	}
 
 	memclear(aperture);
@@ -2576,15 +2541,10 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 	list_inithead(&bufmgr->vma_cache);
 	bufmgr->vma_max = -1; /* unlimited by default */
 
-	list_add(&bufmgr->managers, &bufmgr_list);
-
 	bufmgr->name_table =
 		_mesa_hash_table_create(NULL, key_hash_uint, key_uint_equal);
 	bufmgr->handle_table =
 		_mesa_hash_table_create(NULL, key_hash_uint, key_uint_equal);
-
-exit:
-	pthread_mutex_unlock(&bufmgr_list_mutex);
 
 	return bufmgr;
 }
