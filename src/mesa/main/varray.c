@@ -258,6 +258,24 @@ get_legal_types_mask(const struct gl_context *ctx)
    return legalTypesMask;
 }
 
+static GLenum
+get_array_format(const struct gl_context *ctx, GLint sizeMax, GLint *size)
+{
+   GLenum format = GL_RGBA;
+
+   /* Do size parameter checking.
+    * If sizeMax = BGRA_OR_4 it means that size = GL_BGRA is legal and
+    * must be handled specially.
+    */
+   if (ctx->Extensions.EXT_vertex_array_bgra && sizeMax == BGRA_OR_4 &&
+       *size == GL_BGRA) {
+      format = GL_BGRA;
+      *size = 4;
+   }
+
+   return format;
+}
+
 
 /**
  * \param attrib         The index of the attribute array
@@ -329,7 +347,7 @@ update_array_format(struct gl_context *ctx,
                     GLuint relativeOffset)
 {
    GLbitfield typeBit;
-   GLenum format = GL_RGBA;
+   GLenum format = get_array_format(ctx, sizeMax, &size);
 
    /* at most, one of these bools can be true */
    assert((int) normalized + (int) integer + (int) doubles <= 1);
@@ -359,13 +377,7 @@ update_array_format(struct gl_context *ctx,
       return false;
    }
 
-   /* Do size parameter checking.
-    * If sizeMax = BGRA_OR_4 it means that size = GL_BGRA is legal and
-    * must be handled specially.
-    */
-   if (ctx->Extensions.EXT_vertex_array_bgra &&
-       sizeMax == BGRA_OR_4 &&
-       size == GL_BGRA) {
+   if (format == GL_BGRA) {
       /* Page 298 of the PDF of the OpenGL 4.3 (Core Profile) spec says:
        *
        * "An INVALID_OPERATION error is generated under any of the following
@@ -397,9 +409,6 @@ update_array_format(struct gl_context *ctx,
                      "%s(size=GL_BGRA and normalized=GL_FALSE)", func);
          return false;
       }
-
-      format = GL_BGRA;
-      size = 4;
    }
    else if (size < sizeMin || size > sizeMax || size > 4) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(size=%d)", func, size);
