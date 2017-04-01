@@ -92,6 +92,11 @@ struct swr_blend_state {
    RENDER_TARGET_BLEND_COMPILE_STATE compileState[PIPE_MAX_COLOR_BUFS];
 };
 
+struct swr_poly_stipple {
+   struct pipe_poly_stipple pipe;
+   bool prim_is_poly;
+};
+
 /*
  * Derived SWR API DrawState
  * For convenience of making simple changes without re-deriving state.

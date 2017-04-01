@@ -40,6 +40,7 @@
 #include "util/u_helpers.h"
 #include "util/u_framebuffer.h"
 #include "util/u_viewport.h"
+#include "util/u_prim.h"
 
 #include "swr_state.h"
 #include "swr_context.h"
@@ -609,7 +610,7 @@ swr_set_polygon_stipple(struct pipe_context *pipe,
 {
    struct swr_context *ctx = swr_context(pipe);
 
-   ctx->poly_stipple = *stipple; /* struct copy */
+   ctx->poly_stipple.pipe = *stipple; /* struct copy */
    ctx->dirty |= SWR_NEW_STIPPLE;
 }
 
@@ -984,6 +985,17 @@ swr_user_vbuf_range(const struct pipe_draw_info *info,
       *base = 0;
       *size = velems->stream_pitch[i];
    }
+}
+
+static void
+swr_update_poly_stipple(struct swr_context *ctx)
+{
+   struct swr_draw_context *pDC = &ctx->swrDC;
+
+   assert(sizeof(ctx->poly_stipple.pipe.stipple) == sizeof(pDC->polyStipple));
+   memcpy(pDC->polyStipple,
+          ctx->poly_stipple.pipe.stipple,
+          sizeof(ctx->poly_stipple.pipe.stipple));
 }
 
 void
@@ -1407,6 +1419,17 @@ swr_update_derived(struct pipe_context *pipe,
       }
    }
 
+   /* work around the fact that poly stipple also affects lines */
+   /* and points, since we rasterize them as triangles, too */
+   /* Has to be before fragment shader, since it sets SWR_NEW_FS */
+   if (p_draw_info) {
+      bool new_prim_is_poly = (u_reduced_prim(p_draw_info->mode) == PIPE_PRIM_TRIANGLES);
+      if (new_prim_is_poly != ctx->poly_stipple.prim_is_poly) {
+         ctx->dirty |= SWR_NEW_FS;
+         ctx->poly_stipple.prim_is_poly = new_prim_is_poly;
+      }
+   }
+
    /* FragmentShader */
    if (ctx->dirty & (SWR_NEW_FS |
                      SWR_NEW_VS |
@@ -1661,7 +1684,7 @@ swr_update_derived(struct pipe_context *pipe,
    }
 
    if (ctx->dirty & SWR_NEW_STIPPLE) {
-      /* XXX What to do with this one??? SWR doesn't stipple */
+      swr_update_poly_stipple(ctx);
    }
 
    if (ctx->dirty & (SWR_NEW_VS | SWR_NEW_SO | SWR_NEW_RASTERIZER)) {

@@ -165,6 +165,9 @@ swr_generate_fs_key(struct swr_jit_fs_key &key,
           sizeof(key.vs_output_semantic_idx));
 
    swr_generate_sampler_key(swr_fs->info, ctx, PIPE_SHADER_FRAGMENT, key);
+
+   key.poly_stipple_enable = ctx->rasterizer->poly_stipple_enable &&
+      ctx->poly_stipple.prim_is_poly;
 }
 
 void
@@ -1099,17 +1102,58 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
    memset(&system_values, 0, sizeof(system_values));
 
    struct lp_build_mask_context mask;
+   bool uses_mask = false;
 
-   if (swr_fs->info.base.uses_kill) {
-      Value *mask_val = LOAD(pPS, {0, SWR_PS_CONTEXT_activeMask}, "activeMask");
+   if (swr_fs->info.base.uses_kill ||
+       key.poly_stipple_enable) {
+      Value *vActiveMask = NULL;
+      if (swr_fs->info.base.uses_kill) {
+         vActiveMask = LOAD(pPS, {0, SWR_PS_CONTEXT_activeMask}, "activeMask");
+      }
+      if (key.poly_stipple_enable) {
+         // first get fragment xy coords and clip to stipple bounds
+         Value *vXf = LOAD(pPS, {0, SWR_PS_CONTEXT_vX, PixelPositions_UL});
+         Value *vYf = LOAD(pPS, {0, SWR_PS_CONTEXT_vY, PixelPositions_UL});
+         Value *vXu = FP_TO_UI(vXf, mSimdInt32Ty);
+         Value *vYu = FP_TO_UI(vYf, mSimdInt32Ty);
+
+         // stipple pattern is 32x32, which means that one line of stipple
+         // is stored in one word:
+         // vXstipple is bit offset inside 32-bit stipple word
+         // vYstipple is word index is stipple array
+         Value *vXstipple = AND(vXu, VIMMED1(0x1f)); // & (32-1)
+         Value *vYstipple = AND(vYu, VIMMED1(0x1f)); // & (32-1)
+
+         // grab stipple pattern base address
+         Value *stipplePtr = GEP(hPrivateData, {0, swr_draw_context_polyStipple, 0});
+         stipplePtr = BITCAST(stipplePtr, mInt8PtrTy);
+
+         // peform a gather to grab stipple words for each lane
+         Value *vStipple = GATHERDD(VUNDEF_I(), stipplePtr, vYstipple,
+                                    VIMMED1(0xffffffff), C((char)4));
+
+         // create a mask with one bit corresponding to the x stipple
+         // and AND it with the pattern, to see if we have a bit
+         Value *vBitMask = LSHR(VIMMED1(0x80000000), vXstipple);
+         Value *vStippleMask = AND(vStipple, vBitMask);
+         vStippleMask = ICMP_NE(vStippleMask, VIMMED1(0));
+         vStippleMask = VMASK(vStippleMask);
+
+         if (swr_fs->info.base.uses_kill) {
+            vActiveMask = AND(vActiveMask, vStippleMask);
+         } else {
+            vActiveMask = vStippleMask;
+         }
+      }
       lp_build_mask_begin(
-         &mask, gallivm, lp_type_float_vec(32, 32 * 8), wrap(mask_val));
+         &mask, gallivm, lp_type_float_vec(32, 32 * 8), wrap(vActiveMask));
+      uses_mask = true;
    }
 
    lp_build_tgsi_soa(gallivm,
                      swr_fs->pipe.tokens,
                      lp_type_float_vec(32, 32 * 8),
-                     swr_fs->info.base.uses_kill ? &mask : NULL, // mask
+                     uses_mask ? &mask : NULL, // mask
                      wrap(consts_ptr),
                      wrap(const_sizes_ptr),
                      &system_values,
@@ -1172,13 +1216,13 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
    }
 
    LLVMValueRef mask_result = 0;
-   if (swr_fs->info.base.uses_kill) {
+   if (uses_mask) {
       mask_result = lp_build_mask_end(&mask);
    }
 
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
-   if (swr_fs->info.base.uses_kill) {
+   if (uses_mask) {
       STORE(unwrap(mask_result), pPS, {0, SWR_PS_CONTEXT_activeMask});
    }
 
