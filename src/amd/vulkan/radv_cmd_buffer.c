@@ -1903,9 +1903,6 @@ void radv_CmdBindDescriptorSets(
 	RADV_FROM_HANDLE(radv_pipeline_layout, layout, _layout);
 	unsigned dyn_idx = 0;
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
-							   cmd_buffer->cs, MAX_SETS * 4 * 6);
-
 	for (unsigned i = 0; i < descriptorSetCount; ++i) {
 		unsigned idx = i + firstSet;
 		RADV_FROM_HANDLE(radv_descriptor_set, set, pDescriptorSets[i]);
@@ -1931,8 +1928,6 @@ void radv_CmdBindDescriptorSets(
 			                     set->layout->dynamic_shader_stages;
 		}
 	}
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
 
 static bool radv_init_push_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
