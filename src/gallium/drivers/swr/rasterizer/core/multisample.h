@@ -71,17 +71,17 @@ struct MultisampleTraits
 template<>
 struct MultisampleTraits<SWR_MULTISAMPLE_1X, false>
 {
-    INLINE static float X(uint32_t sampleNum) {return samplePosX;};
-    INLINE static float Y(uint32_t sampleNum) {return samplePosY;};
+    INLINE static float X(uint32_t sampleNum) {return samplePosX[sampleNum];};
+    INLINE static float Y(uint32_t sampleNum) {return samplePosY[sampleNum];};
     INLINE static simdscalari FullSampleMask(){return _simd_set1_epi32(0x1);};
 
-    static const uint32_t samplePosXi;
-    static const uint32_t samplePosYi;
-    static const float samplePosX;
-    static const float samplePosY;
     static const uint32_t numSamples = 1;
+    static const uint32_t numCoverageSamples = 1;
     static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_1X;
-    static const uint32_t numCoverageSamples = 1; 
+    static constexpr uint32_t samplePosXi[1] = { 0x80 };
+    static constexpr uint32_t samplePosYi[1] = { 0x80 };
+    static constexpr float samplePosX[1] = { 0.5f };
+    static constexpr float samplePosY[1] = { 0.5f };
 };
 
 template<>
@@ -92,10 +92,12 @@ struct MultisampleTraits<SWR_MULTISAMPLE_1X, true>
     INLINE static simdscalari FullSampleMask(){return _simd_set1_epi32(0x1);};
     
     static const uint32_t numSamples = 1;
-    static const float samplePosX;
-    static const float samplePosY;
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_1X;
     static const uint32_t numCoverageSamples = 1;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_1X;
+    static constexpr uint32_t samplePosXi[1] = { 0x80 };
+    static constexpr uint32_t samplePosYi[1] = { 0x80 };
+    static constexpr float samplePosX[1] = { 0.5f };
+    static constexpr float samplePosY[1] = { 0.5f };
 };
 
 template<>
@@ -109,13 +111,13 @@ struct MultisampleTraits<SWR_MULTISAMPLE_2X, false>
          return mask;
     }
 
-    static const uint32_t samplePosXi[2];
-    static const uint32_t samplePosYi[2];
-    static const float samplePosX[2];
-    static const float samplePosY[2];
     static const uint32_t numSamples = 2;
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_2X;
     static const uint32_t numCoverageSamples = 2;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_2X;
+    static constexpr uint32_t samplePosXi[2] = { 0xC0, 0x40 };
+    static constexpr uint32_t samplePosYi[2] = { 0xC0, 0x40 };
+    static constexpr float samplePosX[2] = {0.75f, 0.25f};
+    static constexpr float samplePosY[2] = {0.75f, 0.25f};
 };
 
 template<>
@@ -129,10 +131,12 @@ struct MultisampleTraits<SWR_MULTISAMPLE_2X, true>
          return mask;
     }
     static const uint32_t numSamples = 2;
-    static const float samplePosX[2];
-    static const float samplePosY[2];
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_2X;
     static const uint32_t numCoverageSamples = 1;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_2X;
+    static constexpr uint32_t samplePosXi[2] = { 0x80 , 0x80 };
+    static constexpr uint32_t samplePosYi[2] = { 0x80 , 0x80 };
+    static constexpr float samplePosX[2] = { 0.5f, 0.5f };
+    static constexpr float samplePosY[2] = { 0.5f, 0.5f };
 };
 
 template<>
@@ -146,13 +150,13 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X, false>
         return mask;
     }
 
-    static const uint32_t samplePosXi[4];
-    static const uint32_t samplePosYi[4];
-    static const float samplePosX[4];
-    static const float samplePosY[4];
     static const uint32_t numSamples = 4;
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_4X;
     static const uint32_t numCoverageSamples = 4;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_4X;
+    static constexpr uint32_t samplePosXi[4] = { 0x60, 0xE0, 0x20, 0xA0 };
+    static constexpr uint32_t samplePosYi[4] = { 0x20, 0x60, 0xA0, 0xE0 };
+    static constexpr float samplePosX[4] = { 0.375f, 0.875f, 0.125f, 0.625f };
+    static constexpr float samplePosY[4] = { 0.125f, 0.375f, 0.625f, 0.875f };
 };
 
 template<>
@@ -167,10 +171,12 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X, true>
     }
 
     static const uint32_t numSamples = 4;
-    static const float samplePosX[4];
-    static const float samplePosY[4];
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_4X;
     static const uint32_t numCoverageSamples = 1;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_4X;
+    static constexpr uint32_t samplePosXi[4] = { 0x80, 0x80, 0x80, 0x80 };
+    static constexpr uint32_t samplePosYi[4] = { 0x80, 0x80, 0x80, 0x80 };
+    static constexpr float samplePosX[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+    static constexpr float samplePosY[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
 };
 
 template<>
@@ -184,13 +190,13 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X, false>
         return mask;
     }
 
-    static const uint32_t samplePosXi[8];
-    static const uint32_t samplePosYi[8];
-    static const float samplePosX[8];
-    static const float samplePosY[8];
     static const uint32_t numSamples = 8;
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_8X;
     static const uint32_t numCoverageSamples = 8;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_8X;
+    static constexpr uint32_t samplePosXi[8] = { 0x90, 0x70, 0xD0, 0x50, 0x30, 0x10, 0xB0, 0xF0 };
+    static constexpr uint32_t samplePosYi[8] = { 0x50, 0xB0, 0x90, 0x30, 0xD0, 0x70, 0xF0, 0x10 };
+    static constexpr float samplePosX[8] = { 0.5625f, 0.4375f, 0.8125f, 0.3125f, 0.1875f, 0.0625f, 0.6875f, 0.9375f };
+    static constexpr float samplePosY[8] = { 0.3125f, 0.6875f, 0.5625f, 0.1875f, 0.8125f, 0.4375f, 0.9375f, 0.0625f };
 };
 
 template<>
@@ -204,10 +210,12 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X, true>
         return mask;
     }
     static const uint32_t numSamples = 8;
-    static const float samplePosX[8];
-    static const float samplePosY[8];
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_8X;
     static const uint32_t numCoverageSamples = 1;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_8X;
+    static constexpr uint32_t samplePosXi[8] = { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80 };
+    static constexpr uint32_t samplePosYi[8] = { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80 };
+    static constexpr float samplePosX[8] = { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
+    static constexpr float samplePosY[8] = { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
 };
 
 template<>
@@ -221,13 +229,13 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X, false>
         return mask;
     }
 
-    static const uint32_t samplePosXi[16];
-    static const uint32_t samplePosYi[16];
-    static const float samplePosX[16];
-    static const float samplePosY[16];
     static const uint32_t numSamples = 16;
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_16X;
     static const uint32_t numCoverageSamples = 16;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_16X;
+    static constexpr uint32_t samplePosXi[16] = { 0x90, 0x70, 0x50, 0xC0, 0x30, 0xA0, 0xD0, 0xB0, 0x60, 0x80, 0x40, 0x20, 0x00, 0xF0, 0xE0, 0x10 };
+    static constexpr uint32_t samplePosYi[16] = { 0x90, 0x50, 0xA0, 0x70, 0x60, 0xD0, 0xB0, 0x30, 0xE0, 0x10, 0x20, 0xC0, 0x80, 0x40, 0xF0, 0x00 };
+    static constexpr float samplePosX[16] = { 0.5625f, 0.4375f, 0.3125f, 0.7500f, 0.1875f, 0.6250f, 0.8125f, 0.6875f, 0.3750f, 0.5000f, 0.2500f, 0.1250f, 0.0000f, 0.9375f, 0.8750f, 0.0625f };
+    static constexpr float samplePosY[16] = { 0.5625f, 0.3125f, 0.6250f, 0.4375f, 0.3750f, 0.8125f, 0.6875f, 0.1875f, 0.8750f, 0.0625f, 0.1250f, 0.7500f, 0.5000f, 0.2500f, 0.9375f, 0.0000f };
 };
 
 template<>
@@ -241,10 +249,12 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X, true>
         return mask;
     }
     static const uint32_t numSamples = 16;
-    static const float samplePosX[16];
-    static const float samplePosY[16];
-    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_16X;
     static const uint32_t numCoverageSamples = 1;
+    static const SWR_MULTISAMPLE_COUNT sampleCount = SWR_MULTISAMPLE_16X;
+    static constexpr uint32_t samplePosXi[16] = { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80 };
+    static constexpr uint32_t samplePosYi[16] = { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80 };
+    static constexpr float samplePosX[16] = { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
+    static constexpr float samplePosY[16] = { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
 };
 
 INLINE
@@ -255,8 +265,8 @@ bool isNonStandardPattern(const SWR_MULTISAMPLE_COUNT sampleCount, const SWR_MUL
     switch(sampleCount)
     {
     case SWR_MULTISAMPLE_1X:
-        standardPosX = &MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosXi;
-        standardPosY = &MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosYi;
+        standardPosX = MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosXi;
+        standardPosY = MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosYi;
         break;
     case SWR_MULTISAMPLE_2X:
         standardPosX = MultisampleTraits<SWR_MULTISAMPLE_2X>::samplePosXi;

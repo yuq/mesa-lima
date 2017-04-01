@@ -38,14 +38,24 @@ def main(args=sys.argv[1:]):
     parser.add_argument('--cpp', help="Generate cpp file(s)", action='store_true', default=False)
     parser.add_argument('--cmake', help="Generate cmake file", action='store_true', default=False)
 
-
     args = parser.parse_args(args);
+
+    class backendStrs :
+        def __init__(self) :
+            self.outFileName = 'gen_BackendPixelRate%s.cpp'
+            self.functionTableName = 'gBackendPixelRateTable'
+            self.funcInstanceHeader = ' = BackendPixelRate<SwrBackendTraits<'
+            self.template = 'gen_backend.cpp'
+            self.cmakeFileName = 'gen_backends.cmake'
+            self.cmakeSrcVar = 'GEN_BACKEND_SOURCES'
+
+    backend = backendStrs()
 
     output_list = []
     for x in args.dim:
         output_list.append(list(range(x)))
 
-    # generate all permutations possible for template paremeter inputs
+    # generate all permutations possible for template parameter inputs
     output_combinations = list(itertools.product(*output_list))
     output_list = []
 
@@ -53,12 +63,12 @@ def main(args=sys.argv[1:]):
     for x in range(len(output_combinations)):
         # separate each template peram into its own list member
         new_list = [output_combinations[x][i] for i in range(len(output_combinations[x]))]
-        tempStr = 'gBackendPixelRateTable'
+        tempStr = backend.functionTableName
         #print each list member as an index in the multidimensional array
         for i in new_list:
             tempStr += '[' + str(i) + ']'
         #map each entry in the permuation as its own string member, store as the template instantiation string
-        tempStr += " = BackendPixelRate<SwrBackendTraits<" + ','.join(map(str, output_combinations[x])) + '>>;'
+        tempStr += backend.funcInstanceHeader + ','.join(map(str, output_combinations[x])) + '>>;'
         #append the line of c++ code in the list of output lines
         output_list.append(tempStr)
 
@@ -72,8 +82,8 @@ def main(args=sys.argv[1:]):
 
     # generate .cpp files
     if args.cpp:
-        baseCppName = os.path.join(args.outdir, 'gen_BackendPixelRate%s.cpp')
-        templateCpp = os.path.join(thisDir, 'templates', 'gen_backend.cpp')
+        baseCppName = os.path.join(args.outdir, backend.outFileName)
+        templateCpp = os.path.join(thisDir, 'templates', backend.template)
 
         for fileNum in range(numFiles):
             filename = baseCppName % str(fileNum)
@@ -88,12 +98,13 @@ def main(args=sys.argv[1:]):
     # generate gen_backend.cmake file
     if args.cmake:
         templateCmake = os.path.join(thisDir, 'templates', 'gen_backend.cmake')
-        cmakeFile = os.path.join(args.outdir, 'gen_backends.cmake')
+        cmakeFile = os.path.join(args.outdir, backend.cmakeFileName)
         #print('Generating', cmakeFile)
         MakoTemplateWriter.to_file(
             templateCmake,
             cmakeFile,
             cmdline=sys.argv,
+            srcVar=backend.cmakeSrcVar,
             numFiles=numFiles,
             baseCppName='${RASTY_GEN_SRC_DIR}/backends/' + os.path.basename(baseCppName))
 
