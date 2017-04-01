@@ -158,7 +158,13 @@ struct pipe_rasterizer_state
    unsigned line_stipple_factor:8;  /**< [1..256] actually */
    unsigned line_stipple_pattern:16;
 
-   uint32_t sprite_coord_enable; /* referring to 32 TEXCOORD/GENERIC inputs */
+   /**
+    * Replace the given TEXCOORD inputs with point coordinates, max. 8 inputs.
+    * If TEXCOORD (including PCOORD) are unsupported, replace GENERIC inputs
+    * instead. Max. 9 inputs: 8x GENERIC to emulate TEXCOORD, and 1x GENERIC
+    * to emulate PCOORD.
+    */
+   uint16_t sprite_coord_enable; /* 0-7: TEXCOORD/GENERIC, 8: PCOORD */
 
    float line_width;
    float point_size;           /**< used when no per-vertex size */
