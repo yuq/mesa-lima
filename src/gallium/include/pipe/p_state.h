@@ -355,12 +355,12 @@ struct pipe_stencil_ref
  */
 struct pipe_framebuffer_state
 {
-   unsigned width, height;
-   unsigned samples; /**< Number of samples in a no-attachment framebuffer */
-   unsigned layers;  /**< Number of layers  in a no-attachment framebuffer */
+   uint16_t width, height;
+   uint16_t layers;  /**< Number of layers  in a no-attachment framebuffer */
+   ubyte samples; /**< Number of samples in a no-attachment framebuffer */
 
    /** multiple color buffers for multiple render targets */
-   unsigned nr_cbufs;
+   ubyte nr_cbufs;
    struct pipe_surface *cbufs[PIPE_MAX_COLOR_BUFS];
 
    struct pipe_surface *zsbuf;      /**< Z/stencil buffer */
