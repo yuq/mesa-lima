@@ -407,15 +407,14 @@ union pipe_surface_desc {
 struct pipe_surface
 {
    struct pipe_reference reference;
+   enum pipe_format format:16;
+   unsigned writable:1;          /**< writable shader resource */
    struct pipe_resource *texture; /**< resource into which this is a view  */
    struct pipe_context *context; /**< context this surface belongs to */
-   enum pipe_format format;
 
    /* XXX width/height should be removed */
-   unsigned width;               /**< logical width in pixels */
-   unsigned height;              /**< logical height in pixels */
-
-   unsigned writable:1;          /**< writable shader resource */
+   uint16_t width;               /**< logical width in pixels */
+   uint16_t height;              /**< logical height in pixels */
 
    union pipe_surface_desc u;
 };
