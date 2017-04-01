@@ -426,8 +426,12 @@ struct pipe_surface
 struct pipe_sampler_view
 {
    struct pipe_reference reference;
-   enum pipe_texture_target target; /**< PIPE_TEXTURE_x */
-   enum pipe_format format;      /**< typed PIPE_FORMAT_x */
+   enum pipe_format format:16;      /**< typed PIPE_FORMAT_x */
+   enum pipe_texture_target target:4; /**< PIPE_TEXTURE_x */
+   unsigned swizzle_r:3;         /**< PIPE_SWIZZLE_x for red component */
+   unsigned swizzle_g:3;         /**< PIPE_SWIZZLE_x for green component */
+   unsigned swizzle_b:3;         /**< PIPE_SWIZZLE_x for blue component */
+   unsigned swizzle_a:3;         /**< PIPE_SWIZZLE_x for alpha component */
    struct pipe_resource *texture; /**< texture into which this is a view  */
    struct pipe_context *context; /**< context this view belongs to */
    union {
@@ -442,10 +446,6 @@ struct pipe_sampler_view
          unsigned size;     /**< size of the readable sub-range in bytes */
       } buf;
    } u;
-   unsigned swizzle_r:3;         /**< PIPE_SWIZZLE_x for red component */
-   unsigned swizzle_g:3;         /**< PIPE_SWIZZLE_x for green component */
-   unsigned swizzle_b:3;         /**< PIPE_SWIZZLE_x for blue component */
-   unsigned swizzle_a:3;         /**< PIPE_SWIZZLE_x for alpha component */
 };
 
 
