@@ -801,7 +801,7 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 
 	} else {
 		param_base = reg.Register.Index;
-		param_index = LLVMConstInt(ctx->i32, 0, 0);
+		param_index = ctx->i32_0;
 	}
 
 	param_index_base = si_shader_io_get_unique_index(name[param_base],
@@ -883,7 +883,7 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
-				       LLVMConstInt(ctx->i32, 1, 0));
+				       ctx->i32_1);
 		value2 = ac_build_indexed_load(&ctx->ac, ctx->lds, dw_addr, false);
 		return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 	}
@@ -1871,7 +1871,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef min_rgb = LLVMConstInt(ctx->i32,
 			is_int8 ? -128 : is_int10 ? -512 : -32768, 0);
 		LLVMValueRef max_alpha =
-			!is_int10 ? max_rgb : LLVMConstInt(ctx->i32, 1, 0);
+			!is_int10 ? max_rgb : ctx->i32_1;
 		LLVMValueRef min_alpha =
 			!is_int10 ? min_rgb : LLVMConstInt(ctx->i32, -2, 0);
 
@@ -2065,7 +2065,7 @@ static void emit_streamout_output(struct si_shader_context *ctx,
 	ac_build_buffer_store_dword(&ctx->ac, so_buffers[buf_idx],
 				    vdata, num_comps,
 				    so_write_offsets[buf_idx],
-				    LLVMConstInt(ctx->i32, 0, 0),
+				    ctx->i32_0,
 				    stream_out->dst_offset * 4, 1, 1, true, false);
 }
 
@@ -2505,7 +2505,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	/* Store the dynamic HS control word. */
 	ac_build_buffer_store_dword(&ctx->ac, buffer,
 				    LLVMConstInt(ctx->i32, 0x80000000, 0),
-				    1, LLVMConstInt(ctx->i32, 0, 0), tf_base,
+				    1, ctx->i32_0, tf_base,
 				    0, 1, 0, true, false);
 
 	lp_build_endif(&inner_if_ctx);
@@ -3070,7 +3070,7 @@ static LLVMValueRef get_buffer_size(
 		 */
 		LLVMValueRef stride =
 			LLVMBuildExtractElement(builder, descriptor,
-						LLVMConstInt(ctx->i32, 1, 0), "");
+						ctx->i32_1, "");
 		stride = LLVMBuildLShr(builder, stride,
 				       LLVMConstInt(ctx->i32, 16, 0), "");
 		stride = LLVMBuildAnd(builder, stride,
@@ -3243,7 +3243,7 @@ static LLVMValueRef load_image_desc(struct si_shader_context *ctx,
 		index = LLVMBuildMul(builder, index,
 				     LLVMConstInt(ctx->i32, 2, 0), "");
 		index = LLVMBuildAdd(builder, index,
-				     LLVMConstInt(ctx->i32, 1, 0), "");
+				     ctx->i32_1, "");
 		list = LLVMBuildPointerCast(builder, list,
 					    const_array(ctx->v4i32, 0), "");
 	}
@@ -4101,7 +4101,7 @@ static LLVMValueRef fix_resinfo(struct si_shader_context *ctx,
 			LLVMBuildExtractElement(builder, out,
 						LLVMConstInt(ctx->i32, 2, 0), "");
 		out = LLVMBuildInsertElement(builder, out, layers,
-					     LLVMConstInt(ctx->i32, 1, 0), "");
+					     ctx->i32_1, "");
 	}
 
 	/* Divide the number of layers by 6 to get the number of cubes. */
@@ -4207,14 +4207,14 @@ static LLVMValueRef load_sampler_desc(struct si_shader_context *ctx,
 	case DESC_BUFFER:
 		/* The buffer is in [4:7]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
-		index = LLVMBuildAdd(builder, index, LLVMConstInt(ctx->i32, 1, 0), "");
+		index = LLVMBuildAdd(builder, index, ctx->i32_1, "");
 		list = LLVMBuildPointerCast(builder, list,
 					    const_array(ctx->v4i32, 0), "");
 		break;
 	case DESC_FMASK:
 		/* The FMASK is at [8:15]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 2, 0), "");
-		index = LLVMBuildAdd(builder, index, LLVMConstInt(ctx->i32, 1, 0), "");
+		index = LLVMBuildAdd(builder, index, ctx->i32_1, "");
 		break;
 	case DESC_SAMPLER:
 		/* The sampler state is at [12:15]. */
@@ -4251,10 +4251,10 @@ static LLVMValueRef sici_fix_sampler_aniso(struct si_shader_context *ctx,
 	img7 = LLVMBuildExtractElement(builder, res,
 				       LLVMConstInt(ctx->i32, 7, 0), "");
 	samp0 = LLVMBuildExtractElement(builder, samp,
-					LLVMConstInt(ctx->i32, 0, 0), "");
+					ctx->i32_0, "");
 	samp0 = LLVMBuildAnd(builder, samp0, img7, "");
 	return LLVMBuildInsertElement(builder, samp, samp0,
-				      LLVMConstInt(ctx->i32, 0, 0), "");
+				      ctx->i32_0, "");
 }
 
 static void tex_fetch_ptrs(
@@ -4903,7 +4903,7 @@ static void si_llvm_emit_txqs(
 				LLVMConstInt(ctx->i32, 16, 0), "");
 	samples = LLVMBuildAnd(builder, samples,
 			       LLVMConstInt(ctx->i32, 0xf, 0), "");
-	samples = LLVMBuildShl(builder, LLVMConstInt(ctx->i32, 1, 0),
+	samples = LLVMBuildShl(builder, ctx->i32_1,
 			       samples, "");
 
 	emit_data->output[emit_data->chan] = samples;
@@ -4994,12 +4994,12 @@ static void interp_fetch_args(
 
 		emit_data->args[0] = LLVMBuildExtractElement(gallivm->builder,
 							     sample_position,
-							     LLVMConstInt(ctx->i32, 0, 0), "");
+							     ctx->i32_0, "");
 
 		emit_data->args[0] = LLVMBuildFSub(gallivm->builder, emit_data->args[0], halfval, "");
 		emit_data->args[1] = LLVMBuildExtractElement(gallivm->builder,
 							     sample_position,
-							     LLVMConstInt(ctx->i32, 1, 0), "");
+							     ctx->i32_1, "");
 		emit_data->args[1] = LLVMBuildFSub(gallivm->builder, emit_data->args[1], halfval, "");
 		emit_data->arg_count = 2;
 	}
@@ -5277,7 +5277,7 @@ static void si_llvm_emit_vertex(
 	}
 
 	gs_next_vertex = lp_build_add(uint, gs_next_vertex,
-				      LLVMConstInt(ctx->i32, 1, 0));
+				      ctx->i32_1);
 
 	LLVMBuildStore(gallivm->builder, gs_next_vertex, ctx->gs_next_vertex[stream]);
 
