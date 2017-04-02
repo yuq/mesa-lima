@@ -128,12 +128,15 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
    new_info.primitive_restart = info->primitive_restart;
    new_info.restart_index = info->restart_index;
    if (info->indexed) {
+      enum pipe_prim_type mode = 0;
+
       u_index_translator(pc->primtypes_mask,
                          info->mode, pc->saved_ib.index_size, info->count,
                          pc->api_pv, pc->api_pv,
                          info->primitive_restart ? PR_ENABLE : PR_DISABLE,
-                         &new_info.mode, &new_ib.index_size, &new_info.count,
+                         &mode, &new_ib.index_size, &new_info.count,
                          &trans_func);
+      new_info.mode = mode;
       src = ib->user_buffer;
       if (!src) {
          src = pipe_buffer_map(pc->pipe, ib->buffer,
@@ -142,11 +145,14 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
       src = (const uint8_t *)src + ib->offset;
    }
    else {
+      enum pipe_prim_type mode = 0;
+
       u_index_generator(pc->primtypes_mask,
                         info->mode, info->start, info->count,
                         pc->api_pv, pc->api_pv,
-                        &new_info.mode, &new_ib.index_size, &new_info.count,
+                        &mode, &new_ib.index_size, &new_info.count,
                         &gen_func);
+      new_info.mode = mode;
    }
 
    u_upload_alloc(pc->pipe->stream_uploader, 0, new_ib.index_size * new_info.count, 4,

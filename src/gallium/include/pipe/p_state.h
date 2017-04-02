@@ -644,7 +644,7 @@ struct pipe_index_buffer
 struct pipe_draw_info
 {
    boolean indexed;  /**< use index buffer */
-   enum pipe_prim_type mode;  /**< the mode of the primitive */
+   enum pipe_prim_type mode:8;  /**< the mode of the primitive */
    boolean primitive_restart;
    ubyte vertices_per_patch; /**< the number of vertices per patch */
 
