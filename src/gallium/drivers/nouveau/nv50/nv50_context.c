@@ -62,9 +62,9 @@ nv50_memory_barrier(struct pipe_context *pipe, unsigned flags)
 
    if (flags & PIPE_BARRIER_MAPPED_BUFFER) {
       for (i = 0; i < nv50->num_vtxbufs; ++i) {
-         if (!nv50->vtxbuf[i].buffer)
+         if (!nv50->vtxbuf[i].buffer.resource && !nv50->vtxbuf[i].is_user_buffer)
             continue;
-         if (nv50->vtxbuf[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT)
+         if (nv50->vtxbuf[i].buffer.resource->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT)
             nv50->base.vbo_dirty = true;
       }
 
@@ -144,7 +144,7 @@ nv50_context_unreference_resources(struct nv50_context *nv50)
 
    assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
    for (i = 0; i < nv50->num_vtxbufs; ++i)
-      pipe_resource_reference(&nv50->vtxbuf[i].buffer, NULL);
+      pipe_resource_reference(&nv50->vtxbuf[i].buffer.resource, NULL);
 
    pipe_resource_reference(&nv50->idxbuf.buffer, NULL);
 
@@ -230,7 +230,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
 
       assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
       for (i = 0; i < nv50->num_vtxbufs; ++i) {
-         if (nv50->vtxbuf[i].buffer == res) {
+         if (nv50->vtxbuf[i].buffer.resource == res) {
             nv50->dirty_3d |= NV50_NEW_3D_ARRAYS;
             nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_VERTEX);
             if (!--ref)

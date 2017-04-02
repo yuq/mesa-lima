@@ -428,11 +428,11 @@ etna_set_vertex_buffers(struct pipe_context *pctx, unsigned start_slot,
       struct compiled_set_vertex_buffer *cs = &so->cvb[idx];
       struct pipe_vertex_buffer *vbi = &so->vb[idx];
 
-      assert(!vbi->user_buffer); /* XXX support user_buffer using
-                                    etna_usermem_map */
+      assert(!vbi->is_user_buffer); /* XXX support user_buffer using
+                                       etna_usermem_map */
 
-      if (vbi->buffer) { /* GPU buffer */
-         cs->FE_VERTEX_STREAM_BASE_ADDR.bo = etna_resource(vbi->buffer)->bo;
+      if (vbi->buffer.resource) { /* GPU buffer */
+         cs->FE_VERTEX_STREAM_BASE_ADDR.bo = etna_resource(vbi->buffer.resource)->bo;
          cs->FE_VERTEX_STREAM_BASE_ADDR.offset = vbi->buffer_offset;
          cs->FE_VERTEX_STREAM_BASE_ADDR.flags = ETNA_RELOC_READ;
          cs->FE_VERTEX_STREAM_CONTROL =

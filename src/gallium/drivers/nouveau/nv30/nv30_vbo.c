@@ -40,7 +40,7 @@ nv30_emit_vtxattr(struct nv30_context *nv30, struct pipe_vertex_buffer *vb,
 {
    const unsigned nc = util_format_get_nr_components(ve->src_format);
    struct nouveau_pushbuf *push = nv30->base.pushbuf;
-   struct nv04_resource *res = nv04_resource(vb->buffer);
+   struct nv04_resource *res = nv04_resource(vb->buffer.resource);
    const struct util_format_description *desc =
       util_format_description(ve->src_format);
    const void *data;
@@ -102,12 +102,12 @@ nv30_prevalidate_vbufs(struct nv30_context *nv30)
 
    for (i = 0; i < nv30->num_vtxbufs; i++) {
       vb = &nv30->vtxbuf[i];
-      if (!vb->stride || !vb->buffer) /* NOTE: user_buffer not implemented */
+      if (!vb->stride || !vb->buffer.resource) /* NOTE: user_buffer not implemented */
          continue;
-      buf = nv04_resource(vb->buffer);
+      buf = nv04_resource(vb->buffer.resource);
 
       /* NOTE: user buffers with temporary storage count as mapped by GPU */
-      if (!nouveau_resource_mapped_by_gpu(vb->buffer)) {
+      if (!nouveau_resource_mapped_by_gpu(vb->buffer.resource)) {
          if (nv30->vbo_push_hint) {
             nv30->vbo_fifo = ~0;
             continue;
@@ -138,7 +138,7 @@ nv30_update_user_vbufs(struct nv30_context *nv30)
       struct pipe_vertex_element *ve = &nv30->vertex->pipe[i];
       const int b = ve->vertex_buffer_index;
       struct pipe_vertex_buffer *vb = &nv30->vtxbuf[b];
-      struct nv04_resource *buf = nv04_resource(vb->buffer);
+      struct nv04_resource *buf = nv04_resource(vb->buffer.resource);
 
       if (!(nv30->vbo_user & (1 << b)))
          continue;
@@ -173,7 +173,7 @@ nv30_release_user_vbufs(struct nv30_context *nv30)
       int i = ffs(vbo_user) - 1;
       vbo_user &= ~(1 << i);
 
-      nouveau_buffer_release_gpu_storage(nv04_resource(nv30->vtxbuf[i].buffer));
+      nouveau_buffer_release_gpu_storage(nv04_resource(nv30->vtxbuf[i].buffer.resource));
    }
 
    nouveau_bufctx_reset(nv30->bufctx, BUFCTX_VTXTMP);
@@ -235,7 +235,7 @@ nv30_vbo_validate(struct nv30_context *nv30)
       vb = &nv30->vtxbuf[ve->vertex_buffer_index];
       user = (nv30->vbo_user & (1 << ve->vertex_buffer_index));
 
-      res = nv04_resource(vb->buffer);
+      res = nv04_resource(vb->buffer.resource);
 
       if (nv30->vbo_fifo || unlikely(vb->stride == 0)) {
          if (!nv30->vbo_fifo)
@@ -583,9 +583,9 @@ nv30_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    for (i = 0; i < nv30->num_vtxbufs && !nv30->base.vbo_dirty; ++i) {
-      if (!nv30->vtxbuf[i].buffer)
+      if (!nv30->vtxbuf[i].buffer.resource)
          continue;
-      if (nv30->vtxbuf[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
+      if (nv30->vtxbuf[i].buffer.resource->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
          nv30->base.vbo_dirty = true;
    }
 

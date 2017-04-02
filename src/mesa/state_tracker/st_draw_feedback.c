@@ -194,27 +194,27 @@ st_feedback_draw_vbo(struct gl_context *ctx,
          struct st_buffer_object *stobj = st_buffer_object(bufobj);
          assert(stobj->buffer);
 
-         vbuffers[attr].buffer = NULL;
-         vbuffers[attr].user_buffer = NULL;
-         pipe_resource_reference(&vbuffers[attr].buffer, stobj->buffer);
+         vbuffers[attr].buffer.resource = NULL;
+         vbuffers[attr].is_user_buffer = false;
+         pipe_resource_reference(&vbuffers[attr].buffer.resource, stobj->buffer);
          vbuffers[attr].buffer_offset = pointer_to_offset(low_addr);
          velements[attr].src_offset = arrays[mesaAttr]->Ptr - low_addr;
 
          /* map the attrib buffer */
-         map = pipe_buffer_map(pipe, vbuffers[attr].buffer,
+         map = pipe_buffer_map(pipe, vbuffers[attr].buffer.resource,
                                PIPE_TRANSFER_READ,
                                &vb_transfer[attr]);
          draw_set_mapped_vertex_buffer(draw, attr, map,
-                                       vbuffers[attr].buffer->width0);
+                                       vbuffers[attr].buffer.resource->width0);
       }
       else {
-         vbuffers[attr].buffer = NULL;
-         vbuffers[attr].user_buffer = arrays[mesaAttr]->Ptr;
+         vbuffers[attr].buffer.user = arrays[mesaAttr]->Ptr;
+         vbuffers[attr].is_user_buffer = true;
          vbuffers[attr].buffer_offset = 0;
          velements[attr].src_offset = 0;
 
-         draw_set_mapped_vertex_buffer(draw, attr, vbuffers[attr].user_buffer,
-                                       ~0);
+         draw_set_mapped_vertex_buffer(draw, attr,
+                                       vbuffers[attr].buffer.user, ~0);
       }
 
       /* common-case setup */
@@ -292,7 +292,7 @@ st_feedback_draw_vbo(struct gl_context *ctx,
       if (vb_transfer[attr])
          pipe_buffer_unmap(pipe, vb_transfer[attr]);
       draw_set_mapped_vertex_buffer(draw, attr, NULL, 0);
-      pipe_resource_reference(&vbuffers[attr].buffer, NULL);
+      pipe_vertex_buffer_unreference(&vbuffers[attr]);
    }
    draw_set_vertex_buffers(draw, 0, vp->num_inputs, NULL);
 }

@@ -941,7 +941,7 @@ nvc0_set_vertex_buffers(struct pipe_context *pipe,
     for (i = 0; i < count; ++i) {
        unsigned dst_index = start_slot + i;
 
-       if (vb[i].user_buffer) {
+       if (vb[i].is_user_buffer) {
           nvc0->vbo_user |= 1 << dst_index;
           if (!vb[i].stride && nvc0->screen->eng3d->oclass < GM107_3D_CLASS)
              nvc0->constant_vbos |= 1 << dst_index;
@@ -952,8 +952,8 @@ nvc0_set_vertex_buffers(struct pipe_context *pipe,
           nvc0->vbo_user &= ~(1 << dst_index);
           nvc0->constant_vbos &= ~(1 << dst_index);
 
-          if (vb[i].buffer &&
-              vb[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
+          if (vb[i].buffer.resource &&
+              vb[i].buffer.resource->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
              nvc0->vtxbufs_coherent |= (1 << dst_index);
           else
              nvc0->vtxbufs_coherent &= ~(1 << dst_index);

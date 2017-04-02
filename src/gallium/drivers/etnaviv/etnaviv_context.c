@@ -234,8 +234,8 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    /* Mark VBOs as being read */
    for (i = 0; i < ctx->vertex_buffer.count; i++) {
-      assert(!ctx->vertex_buffer.vb[i].user_buffer);
-      resource_read(ctx, ctx->vertex_buffer.vb[i].buffer);
+      assert(!ctx->vertex_buffer.vb[i].is_user_buffer);
+      resource_read(ctx, ctx->vertex_buffer.vb[i].buffer.resource);
    }
 
    /* Mark index buffer as being read */

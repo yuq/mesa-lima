@@ -419,10 +419,11 @@ nv30_render_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    for (i = 0; i < nv30->num_vtxbufs; i++) {
-      const void *map = nv30->vtxbuf[i].user_buffer;
+      const void *map = nv30->vtxbuf[i].is_user_buffer ?
+                           nv30->vtxbuf[i].buffer.user : NULL;
       if (!map) {
-         if (nv30->vtxbuf[i].buffer)
-            map = pipe_buffer_map(pipe, nv30->vtxbuf[i].buffer,
+         if (nv30->vtxbuf[i].buffer.resource)
+            map = pipe_buffer_map(pipe, nv30->vtxbuf[i].buffer.resource,
                                   PIPE_TRANSFER_UNSYNCHRONIZED |
                                   PIPE_TRANSFER_READ, &transfer[i]);
       }

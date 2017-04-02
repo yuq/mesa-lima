@@ -377,13 +377,12 @@ void u_vbuf_destroy(struct u_vbuf *mgr)
 
    mgr->pipe->set_vertex_buffers(mgr->pipe, 0, num_vb, NULL);
 
-   for (i = 0; i < PIPE_MAX_ATTRIBS; i++) {
-      pipe_resource_reference(&mgr->vertex_buffer[i].buffer, NULL);
-   }
-   for (i = 0; i < PIPE_MAX_ATTRIBS; i++) {
-      pipe_resource_reference(&mgr->real_vertex_buffer[i].buffer, NULL);
-   }
-   pipe_resource_reference(&mgr->aux_vertex_buffer_saved.buffer, NULL);
+   for (i = 0; i < PIPE_MAX_ATTRIBS; i++)
+      pipe_vertex_buffer_unreference(&mgr->vertex_buffer[i]);
+   for (i = 0; i < PIPE_MAX_ATTRIBS; i++)
+      pipe_vertex_buffer_unreference(&mgr->real_vertex_buffer[i]);
+
+   pipe_vertex_buffer_unreference(&mgr->aux_vertex_buffer_saved);
 
    translate_cache_destroy(mgr->translate_cache);
    cso_cache_delete(mgr->cso_cache);
@@ -417,17 +416,17 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
       vb = &mgr->vertex_buffer[i];
       offset = vb->buffer_offset + vb->stride * start_vertex;
 
-      if (vb->user_buffer) {
-         map = (uint8_t*)vb->user_buffer + offset;
+      if (vb->is_user_buffer) {
+         map = (uint8_t*)vb->buffer.user + offset;
       } else {
          unsigned size = vb->stride ? num_vertices * vb->stride
                                     : sizeof(double)*4;
 
-         if (offset+size > vb->buffer->width0) {
-            size = vb->buffer->width0 - offset;
+         if (offset+size > vb->buffer.resource->width0) {
+            size = vb->buffer.resource->width0 - offset;
          }
 
-         map = pipe_buffer_map_range(mgr->pipe, vb->buffer, offset, size,
+         map = pipe_buffer_map_range(mgr->pipe, vb->buffer.resource, offset, size,
                                      PIPE_TRANSFER_READ, &vb_transfer[i]);
       }
 
@@ -510,8 +509,8 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
 
    /* Move the buffer reference. */
    pipe_resource_reference(
-      &mgr->real_vertex_buffer[out_vb].buffer, NULL);
-   mgr->real_vertex_buffer[out_vb].buffer = out_buffer;
+      &mgr->real_vertex_buffer[out_vb].buffer.resource, NULL);
+   mgr->real_vertex_buffer[out_vb].buffer.resource = out_buffer;
 
    return PIPE_OK;
 }
@@ -721,7 +720,7 @@ static void u_vbuf_translate_end(struct u_vbuf *mgr)
    for (i = 0; i < VB_NUM; i++) {
       unsigned vb = mgr->fallback_vbs[i];
       if (vb != ~0u) {
-         pipe_resource_reference(&mgr->real_vertex_buffer[vb].buffer, NULL);
+         pipe_resource_reference(&mgr->real_vertex_buffer[vb].buffer.resource, NULL);
          mgr->fallback_vbs[i] = ~0;
 
          /* This will cause the buffer to be unbound in the driver later. */
@@ -830,8 +829,8 @@ void u_vbuf_set_vertex_buffers(struct u_vbuf *mgr,
       for (i = 0; i < count; i++) {
          unsigned dst_index = start_slot + i;
 
-         pipe_resource_reference(&mgr->vertex_buffer[dst_index].buffer, NULL);
-         pipe_resource_reference(&mgr->real_vertex_buffer[dst_index].buffer,
+         pipe_vertex_buffer_unreference(&mgr->vertex_buffer[dst_index]);
+         pipe_resource_reference(&mgr->real_vertex_buffer[dst_index].buffer.resource,
                                  NULL);
       }
 
@@ -845,18 +844,13 @@ void u_vbuf_set_vertex_buffers(struct u_vbuf *mgr,
       struct pipe_vertex_buffer *orig_vb = &mgr->vertex_buffer[dst_index];
       struct pipe_vertex_buffer *real_vb = &mgr->real_vertex_buffer[dst_index];
 
-      if (!vb->buffer && !vb->user_buffer) {
-         pipe_resource_reference(&orig_vb->buffer, NULL);
-         pipe_resource_reference(&real_vb->buffer, NULL);
-         real_vb->user_buffer = NULL;
+      if (!vb->buffer.resource) {
+         pipe_vertex_buffer_unreference(orig_vb);
+         pipe_vertex_buffer_unreference(real_vb);
          continue;
       }
 
-      pipe_resource_reference(&orig_vb->buffer, vb->buffer);
-      orig_vb->user_buffer = vb->user_buffer;
-
-      real_vb->buffer_offset = orig_vb->buffer_offset = vb->buffer_offset;
-      real_vb->stride = orig_vb->stride = vb->stride;
+      pipe_vertex_buffer_reference(orig_vb, vb);
 
       if (vb->stride) {
          nonzero_stride_vb_mask |= 1 << dst_index;
@@ -866,18 +860,23 @@ void u_vbuf_set_vertex_buffers(struct u_vbuf *mgr,
       if ((!mgr->caps.buffer_offset_unaligned && vb->buffer_offset % 4 != 0) ||
           (!mgr->caps.buffer_stride_unaligned && vb->stride % 4 != 0)) {
          incompatible_vb_mask |= 1 << dst_index;
-         pipe_resource_reference(&real_vb->buffer, NULL);
+         real_vb->buffer_offset = vb->buffer_offset;
+         real_vb->stride = vb->stride;
+         pipe_vertex_buffer_unreference(real_vb);
+         real_vb->is_user_buffer = false;
          continue;
       }
 
-      if (!mgr->caps.user_vertex_buffers && vb->user_buffer) {
+      if (!mgr->caps.user_vertex_buffers && vb->is_user_buffer) {
          user_vb_mask |= 1 << dst_index;
-         pipe_resource_reference(&real_vb->buffer, NULL);
+         real_vb->buffer_offset = vb->buffer_offset;
+         real_vb->stride = vb->stride;
+         pipe_vertex_buffer_unreference(real_vb);
+         real_vb->is_user_buffer = false;
          continue;
       }
 
-      pipe_resource_reference(&real_vb->buffer, vb->buffer);
-      real_vb->user_buffer = vb->user_buffer;
+      pipe_vertex_buffer_reference(real_vb, vb);
    }
 
    mgr->user_vb_mask |= user_vb_mask;
@@ -933,7 +932,7 @@ u_vbuf_upload_buffers(struct u_vbuf *mgr,
          continue;
       }
 
-      if (!vb->user_buffer) {
+      if (!vb->is_user_buffer) {
          continue;
       }
 
@@ -983,11 +982,11 @@ u_vbuf_upload_buffers(struct u_vbuf *mgr,
       assert(start < end);
 
       real_vb = &mgr->real_vertex_buffer[i];
-      ptr = mgr->vertex_buffer[i].user_buffer;
+      ptr = mgr->vertex_buffer[i].buffer.user;
 
-      u_upload_data(mgr->pipe->stream_uploader, start, end - start, 4, ptr + start,
-                    &real_vb->buffer_offset, &real_vb->buffer);
-      if (!real_vb->buffer)
+      u_upload_data(mgr->pipe->stream_uploader, start, end - start, 4,
+                    ptr + start, &real_vb->buffer_offset, &real_vb->buffer.resource);
+      if (!real_vb->buffer.resource)
          return PIPE_ERROR_OUT_OF_MEMORY;
 
       real_vb->buffer_offset -= start;
@@ -1320,16 +1319,13 @@ void u_vbuf_restore_vertex_elements(struct u_vbuf *mgr)
 
 void u_vbuf_save_aux_vertex_buffer_slot(struct u_vbuf *mgr)
 {
-   struct pipe_vertex_buffer *vb =
-         &mgr->vertex_buffer[mgr->aux_vertex_buffer_slot];
-
-   pipe_resource_reference(&mgr->aux_vertex_buffer_saved.buffer, vb->buffer);
-   memcpy(&mgr->aux_vertex_buffer_saved, vb, sizeof(*vb));
+   pipe_vertex_buffer_reference(&mgr->aux_vertex_buffer_saved,
+                           &mgr->vertex_buffer[mgr->aux_vertex_buffer_slot]);
 }
 
 void u_vbuf_restore_aux_vertex_buffer_slot(struct u_vbuf *mgr)
 {
    u_vbuf_set_vertex_buffers(mgr, mgr->aux_vertex_buffer_slot, 1,
                              &mgr->aux_vertex_buffer_saved);
-   pipe_resource_reference(&mgr->aux_vertex_buffer_saved.buffer, NULL);
+   pipe_vertex_buffer_unreference(&mgr->aux_vertex_buffer_saved);
 }

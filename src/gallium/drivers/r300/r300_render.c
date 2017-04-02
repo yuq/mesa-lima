@@ -373,7 +373,7 @@ static void r300_draw_arrays_immediate(struct r300_context *r300,
         /* Map the buffer. */
         if (!map[vbi]) {
             map[vbi] = (uint32_t*)r300->rws->buffer_map(
-                r300_resource(vbuf->buffer)->buf,
+                r300_resource(vbuf->buffer.resource)->buf,
                 r300->cs, PIPE_TRANSFER_READ | PIPE_TRANSFER_UNSYNCHRONIZED);
             map[vbi] += (vbuf->buffer_offset / 4) + stride[i] * info->start;
         }
@@ -741,13 +741,13 @@ static unsigned r300_max_vertex_count(struct r300_context *r300)
       unsigned size, max_count, value;
 
       /* We're not interested in constant and per-instance attribs. */
-      if (!vb->buffer ||
+      if (!vb->buffer.resource ||
           !vb->stride ||
           velems[i].instance_divisor) {
          continue;
       }
 
-      size = vb->buffer->width0;
+      size = vb->buffer.resource->width0;
 
       /* Subtract buffer_offset. */
       value = vb->buffer_offset;

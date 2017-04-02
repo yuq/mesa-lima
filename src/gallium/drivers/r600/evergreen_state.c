@@ -1953,7 +1953,7 @@ static void evergreen_emit_vertex_buffers(struct r600_context *rctx,
 		unsigned buffer_index = u_bit_scan(&dirty_mask);
 
 		vb = &state->vb[buffer_index];
-		rbuffer = (struct r600_resource*)vb->buffer;
+		rbuffer = (struct r600_resource*)vb->buffer.resource;
 		assert(rbuffer);
 
 		va = rbuffer->gpu_address + vb->buffer_offset;

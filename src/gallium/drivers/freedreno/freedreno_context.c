@@ -210,7 +210,7 @@ fd_context_setup_common_vbos(struct fd_context *ctx)
 			}});
 	ctx->solid_vbuf_state.vertexbuf.count = 1;
 	ctx->solid_vbuf_state.vertexbuf.vb[0].stride = 12;
-	ctx->solid_vbuf_state.vertexbuf.vb[0].buffer = ctx->solid_vbuf;
+	ctx->solid_vbuf_state.vertexbuf.vb[0].buffer.resource = ctx->solid_vbuf;
 
 	/* setup blit_vbuf_state: */
 	ctx->blit_vbuf_state.vtx = pctx->create_vertex_elements_state(
@@ -225,9 +225,9 @@ fd_context_setup_common_vbos(struct fd_context *ctx)
 			}});
 	ctx->blit_vbuf_state.vertexbuf.count = 2;
 	ctx->blit_vbuf_state.vertexbuf.vb[0].stride = 8;
-	ctx->blit_vbuf_state.vertexbuf.vb[0].buffer = ctx->blit_texcoord_vbuf;
+	ctx->blit_vbuf_state.vertexbuf.vb[0].buffer.resource = ctx->blit_texcoord_vbuf;
 	ctx->blit_vbuf_state.vertexbuf.vb[1].stride = 12;
-	ctx->blit_vbuf_state.vertexbuf.vb[1].buffer = ctx->solid_vbuf;
+	ctx->blit_vbuf_state.vertexbuf.vb[1].buffer.resource = ctx->solid_vbuf;
 }
 
 void

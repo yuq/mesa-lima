@@ -82,14 +82,15 @@ softpipe_draw_vbo(struct pipe_context *pipe,
 
    /* Map vertex buffers */
    for (i = 0; i < sp->num_vertex_buffers; i++) {
-      const void *buf = sp->vertex_buffer[i].user_buffer;
+      const void *buf = sp->vertex_buffer[i].is_user_buffer ?
+                           sp->vertex_buffer[i].buffer.user : NULL;
       size_t size = ~0;
       if (!buf) {
-         if (!sp->vertex_buffer[i].buffer) {
+         if (!sp->vertex_buffer[i].buffer.resource) {
             continue;
          }
-         buf = softpipe_resource_data(sp->vertex_buffer[i].buffer);
-         size = sp->vertex_buffer[i].buffer->width0;
+         buf = softpipe_resource_data(sp->vertex_buffer[i].buffer.resource);
+         size = sp->vertex_buffer[i].buffer.resource->width0;
       }
       draw_set_mapped_vertex_buffer(draw, i, buf, size);
    }

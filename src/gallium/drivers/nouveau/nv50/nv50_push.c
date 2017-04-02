@@ -264,11 +264,11 @@ nv50_push_vbo(struct nv50_context *nv50, const struct pipe_draw_info *info)
       const struct pipe_vertex_buffer *vb = &nv50->vtxbuf[i];
       const uint8_t *data;
 
-      if (unlikely(vb->buffer))
+      if (unlikely(!vb->is_user_buffer))
          data = nouveau_resource_map_offset(&nv50->base,
-            nv04_resource(vb->buffer), vb->buffer_offset, NOUVEAU_BO_RD);
+            nv04_resource(vb->buffer.resource), vb->buffer_offset, NOUVEAU_BO_RD);
       else
-         data = vb->user_buffer;
+         data = vb->buffer.user;
 
       if (apply_bias && likely(!(nv50->vertex->instance_bufs & (1 << i))))
          data += (ptrdiff_t)info->index_bias * vb->stride;

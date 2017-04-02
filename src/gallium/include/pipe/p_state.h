@@ -534,7 +534,6 @@ struct pipe_transfer
 };
 
 
-
 /**
  * A vertex buffer.  Typically, all the vertex data/attributes for
  * drawing something will be in one buffer.  But it's also possible, for
@@ -542,10 +541,14 @@ struct pipe_transfer
  */
 struct pipe_vertex_buffer
 {
-   unsigned stride;    /**< stride to same attrib in next vertex, in bytes */
+   uint16_t stride;    /**< stride to same attrib in next vertex, in bytes */
+   bool is_user_buffer;
    unsigned buffer_offset;  /**< offset to start of data in buffer, in bytes */
-   struct pipe_resource *buffer;  /**< the actual buffer */
-   const void *user_buffer;  /**< pointer to a user buffer if buffer == NULL */
+
+   union {
+      struct pipe_resource *resource;  /**< the actual buffer */
+      const void *user;  /**< pointer to a user buffer */
+   } buffer;
 };
 
 

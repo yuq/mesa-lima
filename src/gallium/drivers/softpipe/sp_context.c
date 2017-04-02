@@ -114,7 +114,7 @@ softpipe_destroy( struct pipe_context *pipe )
    }
 
    for (i = 0; i < softpipe->num_vertex_buffers; i++) {
-      pipe_resource_reference(&softpipe->vertex_buffer[i].buffer, NULL);
+      pipe_vertex_buffer_unreference(&softpipe->vertex_buffer[i]);
    }
 
    tgsi_exec_machine_destroy(softpipe->fs_machine);

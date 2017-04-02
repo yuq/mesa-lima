@@ -58,7 +58,7 @@ fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 
 	/* VBOs */
 	for (unsigned i = 0; i < ctx->vtx.vertexbuf.count && !(ctx->dirty & FD_DIRTY_VTXBUF); i++) {
-		if (ctx->vtx.vertexbuf.vb[i].buffer == prsc)
+		if (ctx->vtx.vertexbuf.vb[i].buffer.resource == prsc)
 			ctx->dirty |= FD_DIRTY_VTXBUF;
 	}
 

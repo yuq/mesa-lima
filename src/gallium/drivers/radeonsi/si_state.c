@@ -3845,7 +3845,7 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 			const struct pipe_vertex_buffer *src = buffers + i;
 			struct pipe_vertex_buffer *dsti = dst + i;
 
-			if (unlikely(src->user_buffer)) {
+			if (unlikely(src->is_user_buffer)) {
 				/* Zero-stride attribs only. */
 				assert(src->stride == 0);
 
@@ -3856,14 +3856,14 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 				 * Use const_uploader to upload into VRAM directly.
 				 */
 				u_upload_data(sctx->b.b.const_uploader, 0, 32, 32,
-					      src->user_buffer,
+					      src->buffer.user,
 					      &dsti->buffer_offset,
-					      &dsti->buffer);
+					      &dsti->buffer.resource);
 				dsti->stride = 0;
 			} else {
-				struct pipe_resource *buf = src->buffer;
+				struct pipe_resource *buf = src->buffer.resource;
 
-				pipe_resource_reference(&dsti->buffer, buf);
+				pipe_resource_reference(&dsti->buffer.resource, buf);
 				dsti->buffer_offset = src->buffer_offset;
 				dsti->stride = src->stride;
 				r600_context_add_resource_size(ctx, buf);
@@ -3873,7 +3873,7 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 		}
 	} else {
 		for (i = 0; i < count; i++) {
-			pipe_resource_reference(&dst[i].buffer, NULL);
+			pipe_resource_reference(&dst[i].buffer.resource, NULL);
 		}
 	}
 	sctx->vertex_buffers_dirty = true;

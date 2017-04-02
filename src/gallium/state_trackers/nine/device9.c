@@ -2815,26 +2815,27 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
 
     vtxbuf.stride = VertexStreamZeroStride;
     vtxbuf.buffer_offset = 0;
-    vtxbuf.buffer = NULL;
-    vtxbuf.user_buffer = pVertexStreamZeroData;
+    vtxbuf.is_user_buffer = true;
+    vtxbuf.buffer.user = pVertexStreamZeroData;
 
     if (!This->driver_caps.user_vbufs) {
+        vtxbuf.is_user_buffer = false;
+        vtxbuf.buffer.resource = NULL;
         u_upload_data(This->vertex_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * VertexStreamZeroStride, /* XXX */
                       4,
-                      vtxbuf.user_buffer,
+                      pVertexStreamZeroData,
                       &vtxbuf.buffer_offset,
-                      &vtxbuf.buffer);
+                      &vtxbuf.buffer.resource);
         u_upload_unmap(This->vertex_uploader);
-        vtxbuf.user_buffer = NULL;
     }
 
     NineBeforeDraw(This);
     nine_context_draw_primitive_from_vtxbuf(This, PrimitiveType, PrimitiveCount, &vtxbuf);
     NineAfterDraw(This);
 
-    pipe_resource_reference(&vtxbuf.buffer, NULL);
+    pipe_vertex_buffer_unreference(&vtxbuf);
 
     NineDevice9_PauseRecording(This);
     NineDevice9_SetStreamSource(This, 0, NULL, 0, 0);
@@ -2872,8 +2873,8 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
 
     vbuf.stride = VertexStreamZeroStride;
     vbuf.buffer_offset = 0;
-    vbuf.buffer = NULL;
-    vbuf.user_buffer = pVertexStreamZeroData;
+    vbuf.is_user_buffer = true;
+    vbuf.buffer.user = pVertexStreamZeroData;
 
     ibuf.index_size = (IndexDataFormat == D3DFMT_INDEX16) ? 2 : 4;
     ibuf.offset = 0;
@@ -2882,17 +2883,18 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
 
     if (!This->driver_caps.user_vbufs) {
         const unsigned base = MinVertexIndex * VertexStreamZeroStride;
+        vbuf.is_user_buffer = false;
+        vbuf.buffer.resource = NULL;
         u_upload_data(This->vertex_uploader,
                       base,
                       NumVertices * VertexStreamZeroStride, /* XXX */
                       4,
-                      (const uint8_t *)vbuf.user_buffer + base,
+                      (const uint8_t *)pVertexStreamZeroData + base,
                       &vbuf.buffer_offset,
-                      &vbuf.buffer);
+                      &vbuf.buffer.resource);
         u_upload_unmap(This->vertex_uploader);
         /* Won't be used: */
         vbuf.buffer_offset -= base;
-        vbuf.user_buffer = NULL;
     }
     if (This->csmt_active) {
         u_upload_data(This->pipe_secondary->stream_uploader,
@@ -2915,7 +2917,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
                                                            &ibuf);
     NineAfterDraw(This);
 
-    pipe_resource_reference(&vbuf.buffer, NULL);
+    pipe_vertex_buffer_unreference(&vbuf);
     pipe_resource_reference(&ibuf.buffer, NULL);
 
     NineDevice9_PauseRecording(This);

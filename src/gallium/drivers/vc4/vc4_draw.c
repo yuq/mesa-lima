@@ -186,7 +186,7 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
                 struct pipe_vertex_element *elem = &vtx->pipe[i];
                 struct pipe_vertex_buffer *vb =
                         &vertexbuf->vb[elem->vertex_buffer_index];
-                struct vc4_resource *rsc = vc4_resource(vb->buffer);
+                struct vc4_resource *rsc = vc4_resource(vb->buffer.resource);
                 /* not vc4->dirty tracked: vc4->last_index_bias */
                 uint32_t offset = (vb->buffer_offset +
                                    elem->src_offset +

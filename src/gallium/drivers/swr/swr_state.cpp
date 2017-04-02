@@ -744,8 +744,8 @@ swr_update_resource_status(struct pipe_context *pipe,
    /* VBO vertex buffers */
    for (uint32_t i = 0; i < ctx->num_vertex_buffers; i++) {
       struct pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
-      if (!vb->user_buffer)
-         swr_resource_read(vb->buffer);
+      if (!vb->is_user_buffer)
+         swr_resource_read(vb->buffer.resource);
    }
 
    /* VBO index buffer */
@@ -1236,7 +1236,7 @@ swr_update_derived(struct pipe_context *pipe,
       for (UINT i = 0; i < ctx->num_vertex_buffers; i++) {
          struct pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
 
-         if (!vb->user_buffer)
+         if (!vb->is_user_buffer)
             continue;
 
          uint32_t elems, base, size;
@@ -1258,16 +1258,16 @@ swr_update_derived(struct pipe_context *pipe,
          struct pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
 
          pitch = vb->stride;
-         if (!vb->user_buffer) {
+         if (!vb->is_user_buffer) {
             /* VBO
              * size is based on buffer->width0 rather than info.max_index
              * to prevent having to validate VBO on each draw */
-            size = vb->buffer->width0;
+            size = vb->buffer.resource->width0;
             elems = size / pitch;
             partial_inbounds = size % pitch;
             min_vertex_index = 0;
 
-            p_data = swr_resource_data(vb->buffer) + vb->buffer_offset;
+            p_data = swr_resource_data(vb->buffer.resource) + vb->buffer_offset;
          } else {
             /* Client buffer
              * client memory is one-time use, re-trigger SWR_NEW_VERTEX to
@@ -1281,7 +1281,7 @@ swr_update_derived(struct pipe_context *pipe,
 
             /* Copy only needed vertices to scratch space */
             size = AlignUp(size, 4);
-            const void *ptr = (const uint8_t *) vb->user_buffer + base;
+            const void *ptr = (const uint8_t *) vb->buffer.user + base;
             memcpy(scratch, ptr, size);
             ptr = scratch;
             scratch += size;

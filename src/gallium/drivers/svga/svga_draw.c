@@ -74,7 +74,7 @@ svga_hwtnl_destroy(struct svga_hwtnl *hwtnl)
    }
 
    for (i = 0; i < hwtnl->cmd.vbuf_count; i++)
-      pipe_resource_reference(&hwtnl->cmd.vbufs[i].buffer, NULL);
+      pipe_vertex_buffer_unreference(&hwtnl->cmd.vbufs[i]);
 
    for (i = 0; i < hwtnl->cmd.prim_count; i++)
       pipe_resource_reference(&hwtnl->cmd.prim_ib[i], NULL);
@@ -139,16 +139,12 @@ svga_hwtnl_vertex_buffers(struct svga_hwtnl *hwtnl,
    unsigned i;
 
    for (i = 0; i < count; i++) {
-      pipe_resource_reference(&dst[i].buffer, src[i].buffer);
-      dst[i].user_buffer = src[i].user_buffer;
-      dst[i].stride = src[i].stride;
-      dst[i].buffer_offset = src[i].buffer_offset;
+      pipe_vertex_buffer_reference(&dst[i], &src[i]);
    }
 
    /* release old buffer references */
    for ( ; i < hwtnl->cmd.vbuf_count; i++) {
-      pipe_resource_reference(&dst[i].buffer, NULL);
-      dst[i].user_buffer = NULL;  /* just to be safe */
+      pipe_vertex_buffer_unreference(&dst[i]);
       /* don't bother zeroing stride/offset fields */
    }
 
@@ -175,7 +171,7 @@ svga_hwtnl_is_buffer_referred(struct svga_hwtnl *hwtnl,
    }
 
    for (i = 0; i < hwtnl->cmd.vbuf_count; ++i) {
-      if (hwtnl->cmd.vbufs[i].buffer == buffer) {
+      if (hwtnl->cmd.vbufs[i].buffer.resource == buffer) {
          return TRUE;
       }
    }
@@ -205,7 +201,7 @@ draw_vgpu9(struct svga_hwtnl *hwtnl)
 
    for (i = 0; i < hwtnl->cmd.vdecl_count; i++) {
       unsigned j = hwtnl->cmd.vdecl_buffer_index[i];
-      handle = svga_buffer_handle(svga, hwtnl->cmd.vbufs[j].buffer);
+      handle = svga_buffer_handle(svga, hwtnl->cmd.vbufs[j].buffer.resource);
       if (!handle)
          return PIPE_ERROR_OUT_OF_MEMORY;
 
@@ -526,7 +522,7 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
 
    /* Get handle for each referenced vertex buffer */
    for (i = 0; i < vbuf_count; i++) {
-      struct svga_buffer *sbuf = svga_buffer(hwtnl->cmd.vbufs[i].buffer);
+      struct svga_buffer *sbuf = svga_buffer(hwtnl->cmd.vbufs[i].buffer.resource);
 
       if (sbuf) {
          assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_VERTEX_BUFFER);
@@ -800,7 +796,7 @@ check_draw_params(struct svga_hwtnl *hwtnl,
    for (i = 0; i < hwtnl->cmd.vdecl_count; i++) {
       unsigned j = hwtnl->cmd.vdecl_buffer_index[i];
       const struct pipe_vertex_buffer *vb = &hwtnl->cmd.vbufs[j];
-      unsigned size = vb->buffer ? vb->buffer->width0 : 0;
+      unsigned size = vb->buffer.resource ? vb->buffer.resource->width0 : 0;
       unsigned offset = hwtnl->cmd.vdecl[i].array.offset;
       unsigned stride = hwtnl->cmd.vdecl[i].array.stride;
       int index_bias = (int) range->indexBias + hwtnl->index_bias;

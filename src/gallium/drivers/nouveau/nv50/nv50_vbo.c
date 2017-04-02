@@ -141,13 +141,13 @@ nv50_emit_vtxattr(struct nv50_context *nv50, struct pipe_vertex_buffer *vb,
                   struct pipe_vertex_element *ve, unsigned attr)
 {
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
-   const void *data = (const uint8_t *)vb->user_buffer + ve->src_offset;
+   const void *data = (const uint8_t *)vb->buffer.user + ve->src_offset;
    float v[4];
    const unsigned nc = util_format_get_nr_components(ve->src_format);
    const struct util_format_description *desc =
       util_format_description(ve->src_format);
 
-   assert(vb->user_buffer);
+   assert(vb->is_user_buffer);
 
    if (desc->channel[0].pure_integer) {
       if (desc->channel[0].type == UTIL_FORMAT_TYPE_SIGNED) {
@@ -200,7 +200,7 @@ nv50_user_vbuf_range(struct nv50_context *nv50, unsigned vbi,
    if (unlikely(nv50->vertex->instance_bufs & (1 << vbi))) {
       /* TODO: use min and max instance divisor to get a proper range */
       *base = 0;
-      *size = nv50->vtxbuf[vbi].buffer->width0;
+      *size = nv50->vtxbuf[vbi].buffer.resource->width0;
    } else {
       /* NOTE: if there are user buffers, we *must* have index bounds */
       assert(nv50->vb_elt_limit != ~0);
@@ -227,7 +227,7 @@ nv50_upload_user_buffers(struct nv50_context *nv50,
       nv50_user_vbuf_range(nv50, b, &base, &size);
 
       limits[b] = base + size - 1;
-      addrs[b] = nouveau_scratch_data(&nv50->base, vb->user_buffer, base, size,
+      addrs[b] = nouveau_scratch_data(&nv50->base, vb->buffer.user, base, size,
                                       &bo);
       if (addrs[b])
          BCTX_REFN_bo(nv50->bufctx_3d, 3D_VERTEX_TMP, NOUVEAU_BO_GART |
@@ -266,7 +266,7 @@ nv50_update_user_vbufs(struct nv50_context *nv50)
          struct nouveau_bo *bo;
          const uint32_t bo_flags = NOUVEAU_BO_GART | NOUVEAU_BO_RD;
          written |= 1 << b;
-         address[b] = nouveau_scratch_data(&nv50->base, vb->user_buffer,
+         address[b] = nouveau_scratch_data(&nv50->base, vb->buffer.user,
                                            base, size, &bo);
          if (address[b])
             BCTX_REFN_bo(nv50->bufctx_3d, 3D_VERTEX_TMP, bo_flags, bo);
@@ -317,8 +317,9 @@ nv50_vertex_arrays_validate(struct nv50_context *nv50)
       /* if vertex buffer was written by GPU - flush VBO cache */
       assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
       for (i = 0; i < nv50->num_vtxbufs; ++i) {
-         struct nv04_resource *buf = nv04_resource(nv50->vtxbuf[i].buffer);
-         if (buf && buf->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
+         struct nv04_resource *buf = nv04_resource(nv50->vtxbuf[i].buffer.resource);
+         if (!nv50->vtxbuf[i].is_user_buffer &&
+             buf && buf->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
             buf->status &= ~NOUVEAU_BUFFER_STATUS_GPU_WRITING;
             nv50->base.vbo_dirty = true;
          }
@@ -386,12 +387,12 @@ nv50_vertex_arrays_validate(struct nv50_context *nv50)
          address = addrs[b] + ve->pipe.src_offset;
          limit = addrs[b] + limits[b];
       } else
-      if (!vb->buffer) {
+      if (!vb->buffer.resource) {
          BEGIN_NV04(push, NV50_3D(VERTEX_ARRAY_FETCH(i)), 1);
          PUSH_DATA (push, 0);
          continue;
       } else {
-         struct nv04_resource *buf = nv04_resource(vb->buffer);
+         struct nv04_resource *buf = nv04_resource(vb->buffer.resource);
          if (!(refd & (1 << b))) {
             refd |= 1 << b;
             BCTX_REFN(nv50->bufctx_3d, 3D_VERTEX, buf, RD);

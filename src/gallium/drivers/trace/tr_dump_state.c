@@ -653,9 +653,9 @@ void trace_dump_vertex_buffer(const struct pipe_vertex_buffer *state)
    trace_dump_struct_begin("pipe_vertex_buffer");
 
    trace_dump_member(uint, state, stride);
+   trace_dump_member(bool, state, is_user_buffer);
    trace_dump_member(uint, state, buffer_offset);
-   trace_dump_member(ptr, state, buffer);
-   trace_dump_member(ptr, state, user_buffer);
+   trace_dump_member(ptr, state, buffer.resource);
 
    trace_dump_struct_end();
 }

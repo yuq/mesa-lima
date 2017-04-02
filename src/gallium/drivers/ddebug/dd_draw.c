@@ -308,11 +308,10 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
    dd_dump_render_condition(dstate, f);
 
    for (i = 0; i < PIPE_MAX_ATTRIBS; i++)
-      if (dstate->vertex_buffers[i].buffer ||
-          dstate->vertex_buffers[i].user_buffer) {
+      if (dstate->vertex_buffers[i].buffer.resource) {
          DUMP_I(vertex_buffer, &dstate->vertex_buffers[i], i);
-         if (dstate->vertex_buffers[i].buffer)
-            DUMP_M(resource, &dstate->vertex_buffers[i], buffer);
+         if (!dstate->vertex_buffers[i].is_user_buffer)
+            DUMP_M(resource, &dstate->vertex_buffers[i], buffer.resource);
       }
 
    if (dstate->velems) {
@@ -765,7 +764,7 @@ dd_unreference_copy_of_draw_state(struct dd_draw_state_copy *state)
    util_set_index_buffer(&dst->index_buffer, NULL);
 
    for (i = 0; i < ARRAY_SIZE(dst->vertex_buffers); i++)
-      pipe_resource_reference(&dst->vertex_buffers[i].buffer, NULL);
+      pipe_vertex_buffer_unreference(&dst->vertex_buffers[i]);
    for (i = 0; i < ARRAY_SIZE(dst->so_targets); i++)
       pipe_so_target_reference(&dst->so_targets[i], NULL);
 
@@ -802,10 +801,8 @@ dd_copy_draw_state(struct dd_draw_state *dst, struct dd_draw_state *src)
    util_set_index_buffer(&dst->index_buffer, &src->index_buffer);
 
    for (i = 0; i < ARRAY_SIZE(src->vertex_buffers); i++) {
-      pipe_resource_reference(&dst->vertex_buffers[i].buffer,
-                              src->vertex_buffers[i].buffer);
-      memcpy(&dst->vertex_buffers[i], &src->vertex_buffers[i],
-             sizeof(src->vertex_buffers[i]));
+      pipe_vertex_buffer_reference(&dst->vertex_buffers[i],
+                                   &src->vertex_buffers[i]);
    }
 
    dst->num_so_targets = src->num_so_targets;

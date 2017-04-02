@@ -1008,11 +1008,11 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 
 		if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
 			continue;
-		if (!sctx->vertex_buffer[vb].buffer)
+		if (!sctx->vertex_buffer[vb].buffer.resource)
 			continue;
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				      (struct r600_resource*)sctx->vertex_buffer[vb].buffer,
+				      (struct r600_resource*)sctx->vertex_buffer[vb].buffer.resource,
 				      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 	}
 
@@ -1071,7 +1071,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		uint32_t *desc = &ptr[i*4];
 
 		vb = &sctx->vertex_buffer[vbo_index];
-		rbuffer = (struct r600_resource*)vb->buffer;
+		rbuffer = (struct r600_resource*)vb->buffer.resource;
 		if (!rbuffer) {
 			memset(desc, 0, 16);
 			continue;
@@ -1087,18 +1087,18 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 
 		if (sctx->b.chip_class != VI && vb->stride) {
 			/* Round up by rounding down and adding 1 */
-			desc[2] = (vb->buffer->width0 - offset -
+			desc[2] = (vb->buffer.resource->width0 - offset -
 				   velems->format_size[i]) /
 				  vb->stride + 1;
 		} else {
-			desc[2] = vb->buffer->width0 - offset;
+			desc[2] = vb->buffer.resource->width0 - offset;
 		}
 
 		desc[3] = velems->rsrc_word3[i];
 
 		if (first_vb_use_mask & (1 << i)) {
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-					      (struct r600_resource*)vb->buffer,
+					      (struct r600_resource*)vb->buffer.resource,
 					      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 		}
 	}
@@ -1658,10 +1658,10 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 
 			if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
 				continue;
-			if (!sctx->vertex_buffer[vb].buffer)
+			if (!sctx->vertex_buffer[vb].buffer.resource)
 				continue;
 
-			if (sctx->vertex_buffer[vb].buffer == buf) {
+			if (sctx->vertex_buffer[vb].buffer.resource == buf) {
 				sctx->vertex_buffers_dirty = true;
 				break;
 			}

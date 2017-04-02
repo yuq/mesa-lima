@@ -863,9 +863,9 @@ util_dump_vertex_buffer(FILE *stream, const struct pipe_vertex_buffer *state)
    util_dump_struct_begin(stream, "pipe_vertex_buffer");
 
    util_dump_member(stream, uint, state, stride);
+   util_dump_member(stream, bool, state, is_user_buffer);
    util_dump_member(stream, uint, state, buffer_offset);
-   util_dump_member(stream, ptr, state, buffer);
-   util_dump_member(stream, ptr, state, user_buffer);
+   util_dump_member(stream, ptr, state, buffer.resource);
 
    util_dump_struct_end(stream);
 }

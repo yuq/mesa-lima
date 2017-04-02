@@ -1773,12 +1773,12 @@ static void r300_set_vertex_buffers_swtcl(struct pipe_context* pipe,
         return;
 
     for (i = 0; i < count; i++) {
-        if (buffers[i].user_buffer) {
+        if (buffers[i].is_user_buffer) {
             draw_set_mapped_vertex_buffer(r300->draw, start_slot + i,
-                                          buffers[i].user_buffer, ~0);
-        } else if (buffers[i].buffer) {
+                                          buffers[i].buffer.user, ~0);
+        } else if (buffers[i].buffer.resource) {
             draw_set_mapped_vertex_buffer(r300->draw, start_slot + i,
-                                          r300_resource(buffers[i].buffer)->malloced_buffer, ~0);
+                                          r300_resource(buffers[i].buffer.resource)->malloced_buffer, ~0);
         }
     }
 }

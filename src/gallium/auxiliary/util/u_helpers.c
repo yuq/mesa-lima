@@ -51,10 +51,13 @@ void util_set_vertex_buffers_mask(struct pipe_vertex_buffer *dst,
 
    if (src) {
       for (i = 0; i < count; i++) {
-         if (src[i].buffer || src[i].user_buffer) {
+         if (src[i].buffer.resource)
             bitmask |= 1 << i;
-         }
-         pipe_resource_reference(&dst[i].buffer, src[i].buffer);
+
+         pipe_vertex_buffer_unreference(&dst[i]);
+
+         if (!src[i].is_user_buffer)
+            pipe_resource_reference(&dst[i].buffer.resource, src[i].buffer.resource);
       }
 
       /* Copy over the other members of pipe_vertex_buffer. */
@@ -65,10 +68,8 @@ void util_set_vertex_buffers_mask(struct pipe_vertex_buffer *dst,
    }
    else {
       /* Unreference the buffers. */
-      for (i = 0; i < count; i++) {
-         pipe_resource_reference(&dst[i].buffer, NULL);
-         dst[i].user_buffer = NULL;
-      }
+      for (i = 0; i < count; i++)
+         pipe_vertex_buffer_unreference(&dst[i]);
 
       *enabled_buffers &= ~(((1ull << count) - 1) << start_slot);
    }
@@ -87,7 +88,7 @@ void util_set_vertex_buffers_count(struct pipe_vertex_buffer *dst,
    uint32_t enabled_buffers = 0;
 
    for (i = 0; i < *dst_count; i++) {
-      if (dst[i].buffer || dst[i].user_buffer)
+      if (dst[i].buffer.resource)
          enabled_buffers |= (1ull << i);
    }
 

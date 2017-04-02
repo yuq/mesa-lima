@@ -899,9 +899,9 @@ update_vertex_buffers(struct NineDevice9 *device)
 
     if (context->dummy_vbo_bound_at >= 0) {
         if (!context->vbo_bound_done) {
-            dummy_vtxbuf.buffer = device->dummy_vbo;
+            dummy_vtxbuf.buffer.resource = device->dummy_vbo;
             dummy_vtxbuf.stride = 0;
-            dummy_vtxbuf.user_buffer = NULL;
+            dummy_vtxbuf.is_user_buffer = false;
             dummy_vtxbuf.buffer_offset = 0;
             pipe->set_vertex_buffers(pipe, context->dummy_vbo_bound_at,
                                      1, &dummy_vtxbuf);
@@ -912,7 +912,7 @@ update_vertex_buffers(struct NineDevice9 *device)
 
     for (i = 0; mask; mask >>= 1, ++i) {
         if (mask & 1) {
-            if (context->vtxbuf[i].buffer)
+            if (context->vtxbuf[i].buffer.resource)
                 pipe->set_vertex_buffers(pipe, i, 1, &context->vtxbuf[i]);
             else
                 pipe->set_vertex_buffers(pipe, i, 1, NULL);
@@ -1526,7 +1526,7 @@ CSMT_ITEM_NO_WAIT(nine_context_set_stream_source_apply,
 
     context->vtxbuf[i].stride = Stride;
     context->vtxbuf[i].buffer_offset = OffsetInBytes;
-    pipe_resource_reference(&context->vtxbuf[i].buffer, res);
+    pipe_resource_reference(&context->vtxbuf[i].buffer.resource, res);
 
     context->changed.vtxbuf |= 1 << StreamNumber;
 }
@@ -2609,7 +2609,7 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive,
 CSMT_ITEM_NO_WAIT(nine_context_draw_primitive_from_vtxbuf,
                   ARG_VAL(D3DPRIMITIVETYPE, PrimitiveType),
                   ARG_VAL(UINT, PrimitiveCount),
-                  ARG_BIND_BUF(struct pipe_vertex_buffer, vtxbuf))
+                  ARG_BIND_VBUF(struct pipe_vertex_buffer, vtxbuf))
 {
     struct nine_context *context = &device->context;
     struct pipe_draw_info info;
@@ -2633,8 +2633,8 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf,
                   ARG_VAL(UINT, MinVertexIndex),
                   ARG_VAL(UINT, NumVertices),
                   ARG_VAL(UINT, PrimitiveCount),
-                  ARG_BIND_BUF(struct pipe_vertex_buffer, vbuf),
-                  ARG_BIND_BUF(struct pipe_index_buffer, ibuf))
+                  ARG_BIND_VBUF(struct pipe_vertex_buffer, vbuf),
+                  ARG_BIND_IBUF(struct pipe_index_buffer, ibuf))
 {
     struct nine_context *context = &device->context;
     struct pipe_draw_info info;
@@ -3145,7 +3145,7 @@ nine_context_clear(struct NineDevice9 *device)
     nine_bind(&context->ps, NULL);
     nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
-        pipe_resource_reference(&context->vtxbuf[i].buffer, NULL);
+        pipe_vertex_buffer_unreference(&context->vtxbuf[i]);
     pipe_resource_reference(&context->idxbuf.buffer, NULL);
 
     for (i = 0; i < NINE_MAX_SAMPLERS; ++i) {
@@ -3283,33 +3283,36 @@ update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_
                 unsigned offset;
                 struct pipe_resource *buf;
                 struct pipe_box box;
+                void *userbuf;
 
                 vtxbuf = state->vtxbuf[i];
-                vtxbuf.buffer = NineVertexBuffer9_GetResource(state->stream[i], &offset);
+                buf = NineVertexBuffer9_GetResource(state->stream[i], &offset);
 
-                DBG("Locking %p (offset %d, length %d)\n", vtxbuf.buffer,
+                DBG("Locking %p (offset %d, length %d)\n", buf,
                     vtxbuf.buffer_offset, num_vertices * vtxbuf.stride);
 
                 u_box_1d(vtxbuf.buffer_offset + offset + start_vertice * vtxbuf.stride,
                          num_vertices * vtxbuf.stride, &box);
-                buf = vtxbuf.buffer;
-                vtxbuf.user_buffer = pipe->transfer_map(pipe, buf, 0, PIPE_TRANSFER_READ, &box,
-                                                        &(sw_internal->transfers_so[i]));
-                vtxbuf.buffer = NULL;
+
+                userbuf = pipe->transfer_map(pipe, buf, 0, PIPE_TRANSFER_READ, &box,
+                                             &(sw_internal->transfers_so[i]));
+                vtxbuf.is_user_buffer = true;
+                vtxbuf.buffer.user = userbuf;
+
                 if (!device->driver_caps.user_sw_vbufs) {
+                    vtxbuf.buffer.resource = NULL;
+                    vtxbuf.is_user_buffer = false;
                     u_upload_data(device->pipe_sw->stream_uploader,
                                   0,
                                   box.width,
                                   16,
-                                  vtxbuf.user_buffer,
+                                  userbuf,
                                   &(vtxbuf.buffer_offset),
-                                  &(vtxbuf.buffer));
+                                  &(vtxbuf.buffer.resource));
                     u_upload_unmap(device->pipe_sw->stream_uploader);
-                    vtxbuf.user_buffer = NULL;
                 }
                 pipe_sw->set_vertex_buffers(pipe_sw, i, 1, &vtxbuf);
-                if (vtxbuf.buffer)
-                    pipe_resource_reference(&vtxbuf.buffer, NULL);
+                pipe_vertex_buffer_unreference(&vtxbuf);
             } else
                 pipe_sw->set_vertex_buffers(pipe_sw, i, 1, NULL);
         }

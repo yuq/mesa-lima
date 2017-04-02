@@ -209,9 +209,9 @@ nv30_push_vbo(struct nv30_context *nv30, const struct pipe_draw_info *info)
    for (i = 0; i < nv30->num_vtxbufs; ++i) {
       uint8_t *data;
       struct pipe_vertex_buffer *vb = &nv30->vtxbuf[i];
-      struct nv04_resource *res = nv04_resource(vb->buffer);
+      struct nv04_resource *res = nv04_resource(vb->buffer.resource);
 
-      if (!vb->buffer && !vb->user_buffer) {
+      if (!vb->buffer.resource) {
          continue;
       }
 
@@ -281,8 +281,8 @@ nv30_push_vbo(struct nv30_context *nv30, const struct pipe_draw_info *info)
       nouveau_resource_unmap(nv04_resource(nv30->idxbuf.buffer));
 
    for (i = 0; i < nv30->num_vtxbufs; ++i) {
-      if (nv30->vtxbuf[i].buffer) {
-         nouveau_resource_unmap(nv04_resource(nv30->vtxbuf[i].buffer));
+      if (nv30->vtxbuf[i].buffer.resource) {
+         nouveau_resource_unmap(nv04_resource(nv30->vtxbuf[i].buffer.resource));
       }
    }
 

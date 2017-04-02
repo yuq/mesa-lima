@@ -206,9 +206,8 @@ void draw_destroy( struct draw_context *draw )
       }
    }
 
-   for (i = 0; i < draw->pt.nr_vertex_buffers; i++) {
-      pipe_resource_reference(&draw->pt.vertex_buffer[i].buffer, NULL);
-   }
+   for (i = 0; i < draw->pt.nr_vertex_buffers; i++)
+      pipe_vertex_buffer_unreference(&draw->pt.vertex_buffer[i]);
 
    /* Not so fast -- we're just borrowing this at the moment.
     * 

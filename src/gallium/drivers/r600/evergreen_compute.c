@@ -146,8 +146,8 @@ static void evergreen_cs_set_vertex_buffer(struct r600_context *rctx,
 	struct pipe_vertex_buffer *vb = &state->vb[vb_index];
 	vb->stride = 1;
 	vb->buffer_offset = offset;
-	vb->buffer = buffer;
-	vb->user_buffer = NULL;
+	vb->buffer.resource = buffer;
+	vb->is_user_buffer = false;
 
 	/* The vertex instructions in the compute shaders use the texture cache,
 	 * so we need to invalidate it. */

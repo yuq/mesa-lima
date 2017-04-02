@@ -70,9 +70,9 @@ svga_swtnl_draw_vbo(struct svga_context *svga,
     * Map vertex buffers
     */
    for (i = 0; i < svga->curr.num_vertex_buffers; i++) {
-      if (svga->curr.vb[i].buffer) {
+      if (svga->curr.vb[i].buffer.resource) {
          map = pipe_buffer_map(&svga->pipe,
-                               svga->curr.vb[i].buffer,
+                               svga->curr.vb[i].buffer.resource,
                                PIPE_TRANSFER_READ,
                                &vb_transfer[i]);
 
@@ -120,7 +120,7 @@ svga_swtnl_draw_vbo(struct svga_context *svga,
     * unmap vertex/index buffers
     */
    for (i = 0; i < svga->curr.num_vertex_buffers; i++) {
-      if (svga->curr.vb[i].buffer) {
+      if (svga->curr.vb[i].buffer.resource) {
          pipe_buffer_unmap(&svga->pipe, vb_transfer[i]);
          draw_set_mapped_vertex_buffer(draw, i, NULL, 0);
       }

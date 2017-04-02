@@ -1060,7 +1060,7 @@ nv50_set_vertex_buffers(struct pipe_context *pipe,
    for (i = 0; i < count; ++i) {
       unsigned dst_index = start_slot + i;
 
-      if (!vb[i].buffer && vb[i].user_buffer) {
+      if (vb[i].is_user_buffer) {
          nv50->vbo_user |= 1 << dst_index;
          if (!vb[i].stride)
             nv50->vbo_constant |= 1 << dst_index;
@@ -1071,8 +1071,8 @@ nv50_set_vertex_buffers(struct pipe_context *pipe,
          nv50->vbo_user &= ~(1 << dst_index);
          nv50->vbo_constant &= ~(1 << dst_index);
 
-         if (vb[i].buffer &&
-             vb[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
+         if (vb[i].buffer.resource &&
+             vb[i].buffer.resource->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
             nv50->vtxbufs_coherent |= (1 << dst_index);
          else
             nv50->vtxbufs_coherent &= ~(1 << dst_index);

@@ -245,10 +245,10 @@ svga_vbuf_submit_state( struct svga_vbuf_render *svga_render )
    /* Specify the vertex buffer (there's only ever one) */
    {
       struct pipe_vertex_buffer vb;
-      vb.buffer = svga_render->vbuf;
+      vb.is_user_buffer = false;
+      vb.buffer.resource = svga_render->vbuf;
       vb.buffer_offset = svga_render->vdecl_offset;
       vb.stride = vdecl[0].array.stride;
-      vb.user_buffer = NULL;
       svga_hwtnl_vertex_buffers(svga->hwtnl, 1, &vb);
    }
 

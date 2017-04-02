@@ -69,11 +69,11 @@ nvc0_vertex_configure_translate(struct nvc0_context *nvc0, int32_t index_bias)
       const uint8_t *map;
       const struct pipe_vertex_buffer *vb = &nvc0->vtxbuf[i];
 
-      if (likely(!vb->buffer))
-         map = (const uint8_t *)vb->user_buffer;
+      if (likely(vb->is_user_buffer))
+         map = (const uint8_t *)vb->buffer.user;
       else
          map = nouveau_resource_map_offset(&nvc0->base,
-            nv04_resource(vb->buffer), vb->buffer_offset, NOUVEAU_BO_RD);
+            nv04_resource(vb->buffer.resource), vb->buffer_offset, NOUVEAU_BO_RD);
 
       if (index_bias && !unlikely(nvc0->vertex->instance_bufs & (1 << i)))
          map += (intptr_t)index_bias * vb->stride;
@@ -101,16 +101,16 @@ nvc0_push_map_edgeflag(struct push_context *ctx, struct nvc0_context *nvc0,
    unsigned attr = nvc0->vertprog->vp.edgeflag;
    struct pipe_vertex_element *ve = &nvc0->vertex->element[attr].pipe;
    struct pipe_vertex_buffer *vb = &nvc0->vtxbuf[ve->vertex_buffer_index];
-   struct nv04_resource *buf = nv04_resource(vb->buffer);
+   struct nv04_resource *buf = nv04_resource(vb->buffer.resource);
 
    ctx->edgeflag.stride = vb->stride;
    ctx->edgeflag.width = util_format_get_blocksize(ve->src_format);
-   if (buf) {
+   if (!vb->is_user_buffer) {
       unsigned offset = vb->buffer_offset + ve->src_offset;
       ctx->edgeflag.data = nouveau_resource_map_offset(&nvc0->base,
                            buf, offset, NOUVEAU_BO_RD);
    } else {
-      ctx->edgeflag.data = (const uint8_t *)vb->user_buffer + ve->src_offset;
+      ctx->edgeflag.data = (const uint8_t *)vb->buffer.user + ve->src_offset;
    }
 
    if (index_bias)
@@ -586,7 +586,7 @@ nvc0_push_vbo(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    if (info->indexed)
       nouveau_resource_unmap(nv04_resource(nvc0->idxbuf.buffer));
    for (i = 0; i < nvc0->num_vtxbufs; ++i)
-      nouveau_resource_unmap(nv04_resource(nvc0->vtxbuf[i].buffer));
+      nouveau_resource_unmap(nv04_resource(nvc0->vtxbuf[i].buffer.resource));
 
    NOUVEAU_DRV_STAT(&nvc0->screen->base, draw_calls_fallback_count, 1);
 }

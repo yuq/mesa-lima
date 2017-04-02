@@ -69,8 +69,8 @@ emit_vertexbufs(struct fd_context *ctx)
 		struct pipe_vertex_buffer *vb =
 				&vertexbuf->vb[elem->vertex_buffer_index];
 		bufs[i].offset = vb->buffer_offset;
-		bufs[i].size = fd_bo_size(fd_resource(vb->buffer)->bo);
-		bufs[i].prsc = vb->buffer;
+		bufs[i].size = fd_bo_size(fd_resource(vb->buffer.resource)->bo);
+		bufs[i].prsc = vb->buffer.resource;
 	}
 
 	// NOTE I believe the 0x78 (or 0x9c in solid_vp) relates to the

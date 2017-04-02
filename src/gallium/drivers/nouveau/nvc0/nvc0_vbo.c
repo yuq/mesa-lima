@@ -176,8 +176,8 @@ nvc0_set_constant_vertex_attrib(struct nvc0_context *nvc0, const unsigned a)
    uint32_t mode;
    const struct util_format_description *desc;
    void *dst;
-   const void *src = (const uint8_t *)vb->user_buffer + ve->src_offset;
-   assert(!vb->buffer);
+   const void *src = (const uint8_t *)vb->buffer.user + ve->src_offset;
+   assert(vb->is_user_buffer);
 
    desc = util_format_description(ve->src_format);
 
@@ -254,7 +254,7 @@ nvc0_update_user_vbufs(struct nvc0_context *nvc0)
          struct nouveau_bo *bo;
          const uint32_t bo_flags = NOUVEAU_BO_RD | NOUVEAU_BO_GART;
          written |= 1 << b;
-         address[b] = nouveau_scratch_data(&nvc0->base, vb->user_buffer,
+         address[b] = nouveau_scratch_data(&nvc0->base, vb->buffer.user,
                                            base, size, &bo);
          if (bo)
             BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, bo_flags, bo);
@@ -289,7 +289,7 @@ nvc0_update_user_vbufs_shared(struct nvc0_context *nvc0)
 
       nvc0_user_vbuf_range(nvc0, b, &base, &size);
 
-      address = nouveau_scratch_data(&nvc0->base, nvc0->vtxbuf[b].user_buffer,
+      address = nouveau_scratch_data(&nvc0->base, nvc0->vtxbuf[b].buffer.user,
                                      base, size, &bo);
       if (bo)
          BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, bo_flags, bo);
@@ -346,9 +346,9 @@ nvc0_validate_vertex_buffers(struct nvc0_context *nvc0)
          /* address/value set in nvc0_update_user_vbufs */
          continue;
       }
-      res = nv04_resource(vb->buffer);
+      res = nv04_resource(vb->buffer.resource);
       offset = ve->pipe.src_offset + vb->buffer_offset;
-      limit = vb->buffer->width0 - 1;
+      limit = vb->buffer.resource->width0 - 1;
 
       if (unlikely(ve->pipe.instance_divisor)) {
          BEGIN_NVC0(push, NVC0_3D(VERTEX_ARRAY_FETCH(i)), 4);
@@ -395,12 +395,12 @@ nvc0_validate_vertex_buffers_shared(struct nvc0_context *nvc0)
          }
          /* address/value set in nvc0_update_user_vbufs_shared */
          continue;
-      } else if (!vb->buffer) {
+      } else if (!vb->buffer.resource) {
          /* there can be holes in the vertex buffer lists */
          IMMED_NVC0(push, NVC0_3D(VERTEX_ARRAY_FETCH(b)), 0);
          continue;
       }
-      buf = nv04_resource(vb->buffer);
+      buf = nv04_resource(vb->buffer.resource);
       offset = vb->buffer_offset;
       limit = buf->base.width0 - 1;
 

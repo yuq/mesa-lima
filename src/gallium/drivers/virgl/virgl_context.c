@@ -124,7 +124,7 @@ static void virgl_attach_res_vertex_buffers(struct virgl_context *vctx)
    unsigned i;
 
    for (i = 0; i < vctx->num_vertex_buffers; i++) {
-      res = virgl_resource(vctx->vertex_buffer[i].buffer);
+      res = virgl_resource(vctx->vertex_buffer[i].buffer.resource);
       if (res)
          vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
    }

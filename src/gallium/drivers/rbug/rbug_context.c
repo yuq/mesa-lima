@@ -778,8 +778,11 @@ rbug_set_vertex_buffers(struct pipe_context *_pipe,
 
    if (num_buffers && _buffers) {
       memcpy(unwrapped_buffers, _buffers, num_buffers * sizeof(*_buffers));
-      for (i = 0; i < num_buffers; i++)
-         unwrapped_buffers[i].buffer = rbug_resource_unwrap(_buffers[i].buffer);
+      for (i = 0; i < num_buffers; i++) {
+         if (!_buffers[i].is_user_buffer)
+            unwrapped_buffers[i].buffer.resource =
+               rbug_resource_unwrap(_buffers[i].buffer.resource);
+      }
       buffers = unwrapped_buffers;
    }
 

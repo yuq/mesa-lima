@@ -562,21 +562,21 @@ static void r600_set_vertex_buffers(struct pipe_context *ctx,
 	if (input) {
 		for (i = 0; i < count; i++) {
 			if (memcmp(&input[i], &vb[i], sizeof(struct pipe_vertex_buffer))) {
-				if (input[i].buffer) {
+				if (input[i].buffer.resource) {
 					vb[i].stride = input[i].stride;
 					vb[i].buffer_offset = input[i].buffer_offset;
-					pipe_resource_reference(&vb[i].buffer, input[i].buffer);
+					pipe_resource_reference(&vb[i].buffer.resource, input[i].buffer.resource);
 					new_buffer_mask |= 1 << i;
-					r600_context_add_resource_size(ctx, input[i].buffer);
+					r600_context_add_resource_size(ctx, input[i].buffer.resource);
 				} else {
-					pipe_resource_reference(&vb[i].buffer, NULL);
+					pipe_resource_reference(&vb[i].buffer.resource, NULL);
 					disable_mask |= 1 << i;
 				}
 			}
 		}
 	} else {
 		for (i = 0; i < count; i++) {
-			pipe_resource_reference(&vb[i].buffer, NULL);
+			pipe_resource_reference(&vb[i].buffer.resource, NULL);
 		}
 		disable_mask = ((1ull << count) - 1);
 	}
@@ -2838,7 +2838,7 @@ static void r600_invalidate_buffer(struct pipe_context *ctx, struct pipe_resourc
 	mask = rctx->vertex_buffer_state.enabled_mask;
 	while (mask) {
 		i = u_bit_scan(&mask);
-		if (rctx->vertex_buffer_state.vb[i].buffer == &rbuffer->b.b) {
+		if (rctx->vertex_buffer_state.vb[i].buffer.resource == &rbuffer->b.b) {
 			rctx->vertex_buffer_state.dirty_mask |= 1 << i;
 			r600_vertex_buffers_dirty(rctx);
 		}

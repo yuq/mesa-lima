@@ -694,7 +694,7 @@ st_DrawAtlasBitmaps(struct gl_context *ctx,
    vb.stride = sizeof(struct st_util_vertex);
 
    u_upload_alloc(pipe->stream_uploader, 0, num_vert_bytes, 4,
-                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
+                  &vb.buffer_offset, &vb.buffer.resource, (void **) &verts);
 
    if (unlikely(!verts)) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY, "glCallLists(bitmap text)");
@@ -781,7 +781,7 @@ st_DrawAtlasBitmaps(struct gl_context *ctx,
 out:
    restore_render_state(ctx);
 
-   pipe_resource_reference(&vb.buffer, NULL);
+   pipe_resource_reference(&vb.buffer.resource, NULL);
 
    pipe_sampler_view_reference(&sv, NULL);
 

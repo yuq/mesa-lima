@@ -385,8 +385,8 @@ st_draw_quad(struct st_context *st,
 
    u_upload_alloc(st->pipe->stream_uploader, 0,
                   4 * sizeof(struct st_util_vertex), 4,
-                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
-   if (!vb.buffer) {
+                  &vb.buffer_offset, &vb.buffer.resource, (void **) &verts);
+   if (!vb.buffer.resource) {
       return false;
    }
 
@@ -453,7 +453,7 @@ st_draw_quad(struct st_context *st,
       cso_draw_arrays(st->cso_context, PIPE_PRIM_TRIANGLE_FAN, 0, 4);
    }
 
-   pipe_resource_reference(&vb.buffer, NULL);
+   pipe_resource_reference(&vb.buffer.resource, NULL);
 
    return true;
 }

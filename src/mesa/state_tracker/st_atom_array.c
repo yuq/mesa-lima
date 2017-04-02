@@ -507,8 +507,8 @@ setup_interleaved_attribs(struct st_context *st,
     */
    if (vpv->num_inputs == 0) {
       /* just defensive coding here */
-      vbuffer->buffer = NULL;
-      vbuffer->user_buffer = NULL;
+      vbuffer->buffer.resource = NULL;
+      vbuffer->is_user_buffer = false;
       vbuffer->buffer_offset = 0;
       vbuffer->stride = 0;
    }
@@ -520,15 +520,15 @@ setup_interleaved_attribs(struct st_context *st,
          return FALSE; /* out-of-memory error probably */
       }
 
-      vbuffer->buffer = stobj->buffer;
-      vbuffer->user_buffer = NULL;
+      vbuffer->buffer.resource = stobj->buffer;
+      vbuffer->is_user_buffer = false;
       vbuffer->buffer_offset = pointer_to_offset(low_addr);
       vbuffer->stride = stride;
    }
    else {
       /* all interleaved arrays in user memory */
-      vbuffer->buffer = NULL;
-      vbuffer->user_buffer = low_addr;
+      vbuffer->buffer.user = low_addr;
+      vbuffer->is_user_buffer = !!low_addr; /* if NULL, then unbind */
       vbuffer->buffer_offset = 0;
       vbuffer->stride = stride;
    }
@@ -584,8 +584,8 @@ setup_non_interleaved_attribs(struct st_context *st,
             return FALSE; /* out-of-memory error probably */
          }
 
-         vbuffer[bufidx].buffer = stobj->buffer;
-         vbuffer[bufidx].user_buffer = NULL;
+         vbuffer[bufidx].buffer.resource = stobj->buffer;
+         vbuffer[bufidx].is_user_buffer = false;
          vbuffer[bufidx].buffer_offset = pointer_to_offset(array->Ptr);
       }
       else {
@@ -603,8 +603,8 @@ setup_non_interleaved_attribs(struct st_context *st,
 
          assert(ptr);
 
-         vbuffer[bufidx].buffer = NULL;
-         vbuffer[bufidx].user_buffer = ptr;
+         vbuffer[bufidx].buffer.user = ptr;
+         vbuffer[bufidx].is_user_buffer = !!ptr; /* if NULL, then unbind */
          vbuffer[bufidx].buffer_offset = 0;
       }
 
