@@ -348,7 +348,7 @@ struct si_context {
 	int			last_multi_vgt_param;
 	int			last_rast_prim;
 	unsigned		last_sc_line_stipple;
-	int			current_rast_prim; /* primitive type after TES, GS */
+	enum pipe_prim_type	current_rast_prim; /* primitive type after TES, GS */
 	bool			gs_tri_strip_adj_fix;
 
 	/* Scratch buffer */

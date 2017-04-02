@@ -468,7 +468,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	unsigned rast_prim = sctx->current_rast_prim;
+	enum pipe_prim_type rast_prim = sctx->current_rast_prim;
 	struct si_state_rasterizer *rs = sctx->emitted.named.rasterizer;
 
 	/* Skip this if not rendering lines. */
@@ -1091,7 +1091,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	const struct pipe_index_buffer *ib = &sctx->index_buffer;
 	struct pipe_index_buffer ib_tmp; /* for index buffer uploads only */
-	unsigned mask, dirty_tex_counter, rast_prim;
+	unsigned mask, dirty_tex_counter;
+	enum pipe_prim_type rast_prim;
 
 	if (likely(!info->indirect)) {
 		/* SI-CI treat instance_count==0 as instance_count==1. There is
