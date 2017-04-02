@@ -1220,13 +1220,13 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			ib_tmp.index_size = 2;
 			ib = &ib_tmp;
 		} else if (ib->user_buffer && !ib->buffer) {
-			unsigned start, count, start_offset;
+			unsigned start_offset;
 
-			si_get_draw_start_count(sctx, info, &start, &count);
-			start_offset = start * ib->index_size;
+			assert(!info->indirect);
+			start_offset = info->start * ib->index_size;
 
 			u_upload_data(ctx->stream_uploader, start_offset,
-				      count * ib->index_size,
+				      info->count * ib->index_size,
 				      sctx->screen->b.info.tcc_cache_line_size,
 				      (char*)ib->user_buffer + start_offset,
 				      &ib_tmp.offset, &ib_tmp.buffer);
