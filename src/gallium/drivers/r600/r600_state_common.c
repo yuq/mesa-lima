@@ -1670,19 +1670,24 @@ void r600_emit_clip_misc_state(struct r600_context *rctx, struct r600_atom *atom
 static inline void r600_emit_rasterizer_prim_state(struct r600_context *rctx)
 {
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
-	unsigned ls_mask = 0;
 	enum pipe_prim_type rast_prim = rctx->current_rast_prim;
+
+	/* Skip this if not rendering lines. */
+	if (rast_prim != PIPE_PRIM_LINES &&
+	    rast_prim != PIPE_PRIM_LINE_LOOP &&
+	    rast_prim != PIPE_PRIM_LINE_STRIP &&
+	    rast_prim != PIPE_PRIM_LINES_ADJACENCY &&
+	    rast_prim != PIPE_PRIM_LINE_STRIP_ADJACENCY)
+		return;
+
 	if (rast_prim == rctx->last_rast_prim)
 		return;
 
-	if (rast_prim == PIPE_PRIM_LINES)
-		ls_mask = 1;
-	else if (rast_prim == PIPE_PRIM_LINE_STRIP ||
-		 rast_prim == PIPE_PRIM_LINE_LOOP)
-		ls_mask = 2;
-
+	/* For lines, reset the stipple pattern at each primitive. Otherwise,
+	 * reset the stipple pattern at each packet (line strips, line loops).
+	 */
 	radeon_set_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
-			       S_028A0C_AUTO_RESET_CNTL(ls_mask) |
+			       S_028A0C_AUTO_RESET_CNTL(rast_prim == PIPE_PRIM_LINES ? 1 : 2) |
 			       (rctx->rasterizer ? rctx->rasterizer->pa_sc_line_stipple : 0));
 	rctx->last_rast_prim = rast_prim;
 }
