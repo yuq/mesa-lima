@@ -628,19 +628,6 @@ struct pipe_vertex_element
 };
 
 
-/**
- * An index buffer.  When an index buffer is bound, all indices to vertices
- * will be looked up in the buffer.
- */
-struct pipe_index_buffer
-{
-   unsigned index_size;  /**< size of an index, in bytes */
-   unsigned offset;  /**< offset to start of data in buffer, in bytes */
-   struct pipe_resource *buffer; /**< the actual buffer */
-   const void *user_buffer;  /**< pointer to a user buffer if buffer == NULL */
-};
-
-
 struct pipe_draw_indirect_info
 {
    unsigned offset; /**< must be 4 byte aligned */
@@ -650,7 +637,7 @@ struct pipe_draw_indirect_info
 
    /* Indirect draw parameters resource is laid out as follows:
     *
-    * if indexed is TRUE:
+    * if using indexed drawing:
     *  struct {
     *     uint32_t count;
     *     uint32_t instance_count;
@@ -680,12 +667,18 @@ struct pipe_draw_indirect_info
  */
 struct pipe_draw_info
 {
-   boolean indexed;  /**< use index buffer */
+   ubyte index_size;  /**< if 0, the draw is not indexed. */
    enum pipe_prim_type mode:8;  /**< the mode of the primitive */
-   boolean primitive_restart;
+   unsigned primitive_restart:1;
+   unsigned has_user_indices:1; /**< if true, use index.user_buffer */
    ubyte vertices_per_patch; /**< the number of vertices per patch */
 
-   unsigned start;  /**< the index of the first vertex */
+   /**
+    * Direct draws: start is the index of the first vertex
+    * Non-indexed indirect draws: not used
+    * Indexed indirect draws: start is added to the indirect start.
+    */
+   unsigned start;
    unsigned count;  /**< number of vertices */
 
    unsigned start_instance; /**< first instance id */
@@ -706,6 +699,17 @@ struct pipe_draw_info
    unsigned restart_index;
 
    /* Pointers must be at the end for an optimal structure layout on 64-bit. */
+
+   /**
+    * An index buffer.  When an index buffer is bound, all indices to vertices
+    * will be looked up from the buffer.
+    *
+    * If has_user_indices, use index.user, else use index.resource.
+    */
+   union {
+      struct pipe_resource *resource;  /**< real buffer */
+      const void *user;  /**< pointer to a user buffer */
+   } index;
 
    struct pipe_draw_indirect_info *indirect; /**< Indirect draw. */
 

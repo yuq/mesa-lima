@@ -67,7 +67,7 @@
 #define VC4_DIRTY_CONSTBUF      (1 << 13)
 #define VC4_DIRTY_VTXSTATE      (1 << 14)
 #define VC4_DIRTY_VTXBUF        (1 << 15)
-#define VC4_DIRTY_INDEXBUF      (1 << 16)
+
 #define VC4_DIRTY_SCISSOR       (1 << 17)
 #define VC4_DIRTY_FLAT_SHADE_FLAGS (1 << 18)
 #define VC4_DIRTY_PRIM_MODE     (1 << 19)
@@ -377,7 +377,6 @@ struct vc4_context {
         struct pipe_viewport_state viewport;
         struct vc4_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
         struct vc4_vertexbuf_stateobj vertexbuf;
-        struct pipe_index_buffer indexbuf;
         /** @} */
 };
 

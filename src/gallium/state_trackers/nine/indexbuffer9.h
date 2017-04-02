@@ -29,7 +29,6 @@
 
 struct pipe_screen;
 struct pipe_context;
-struct pipe_index_buffer;
 struct pipe_transfer;
 struct NineDevice9;
 
@@ -38,7 +37,9 @@ struct NineIndexBuffer9
     struct NineBuffer9 base;
 
     /* g3d stuff */
-    struct pipe_index_buffer buffer;
+    struct pipe_resource *buffer;
+    unsigned offset;
+    unsigned index_size;
 
     D3DINDEXBUFFER_DESC desc;
 };
@@ -63,7 +64,7 @@ NineIndexBuffer9_dtor( struct NineIndexBuffer9 *This );
 
 /*** Nine private ***/
 
-const struct pipe_index_buffer *
+struct pipe_resource *
 NineIndexBuffer9_GetBuffer( struct NineIndexBuffer9 *This );
 
 /*** Direct3D public ***/

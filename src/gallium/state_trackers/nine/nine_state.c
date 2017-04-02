@@ -1100,17 +1100,6 @@ commit_rasterizer(struct NineDevice9 *device)
 }
 
 static inline void
-commit_index_buffer(struct NineDevice9 *device)
-{
-    struct nine_context *context = &device->context;
-    struct pipe_context *pipe = context->pipe;
-    if (context->idxbuf.buffer)
-        pipe->set_index_buffer(pipe, &context->idxbuf);
-    else
-        pipe->set_index_buffer(pipe, NULL);
-}
-
-static inline void
 commit_vs_constants(struct NineDevice9 *device)
 {
     struct nine_context *context = &device->context;
@@ -1235,8 +1224,6 @@ nine_update_state(struct NineDevice9 *device)
             update_viewport(device);
         if (group & (NINE_STATE_VDECL | NINE_STATE_VS | NINE_STATE_STREAMFREQ))
             update_vertex_elements(device);
-        if (group & NINE_STATE_IDXBUF)
-            commit_index_buffer(device);
     }
 
     if (likely(group & (NINE_STATE_FREQUENT | NINE_STATE_VS | NINE_STATE_PS | NINE_STATE_SWVP))) {
@@ -1575,10 +1562,9 @@ CSMT_ITEM_NO_WAIT(nine_context_set_indices_apply,
 {
     struct nine_context *context = &device->context;
 
-    context->idxbuf.index_size = IndexSize;
-    context->idxbuf.offset = OffsetInBytes;
-    pipe_resource_reference(&context->idxbuf.buffer, res);
-    context->idxbuf.user_buffer = NULL;
+    context->index_size = IndexSize;
+    context->index_offset = OffsetInBytes;
+    pipe_resource_reference(&context->idxbuf, res);
 
     context->changed.group |= NINE_STATE_IDXBUF;
 }
@@ -1587,16 +1573,14 @@ void
 nine_context_set_indices(struct NineDevice9 *device,
                          struct NineIndexBuffer9 *idxbuf)
 {
-    const struct pipe_index_buffer *pipe_idxbuf;
     struct pipe_resource *res = NULL;
     UINT IndexSize = 0;
     UINT OffsetInBytes = 0;
 
     if (idxbuf) {
-        pipe_idxbuf = NineIndexBuffer9_GetBuffer(idxbuf);
-        IndexSize = pipe_idxbuf->index_size;
-        res = pipe_idxbuf->buffer;
-        OffsetInBytes = pipe_idxbuf->offset;
+        res = NineIndexBuffer9_GetBuffer(idxbuf);
+        IndexSize = idxbuf->index_size;
+        OffsetInBytes = idxbuf->offset;
     }
 
     nine_context_set_indices_apply(device, res, IndexSize, OffsetInBytes);
@@ -2572,7 +2556,7 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_primitive,
     nine_update_state(device);
 
     init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
-    info.indexed = FALSE;
+    info.index_size = 0;
     info.start = StartVertex;
     info.index_bias = 0;
     info.min_index = info.start;
@@ -2595,12 +2579,13 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive,
     nine_update_state(device);
 
     init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
-    info.indexed = TRUE;
-    info.start = StartIndex;
+    info.index_size = context->index_size;
+    info.start = context->index_offset / context->index_size + StartIndex;
     info.index_bias = BaseVertexIndex;
     /* These don't include index bias: */
     info.min_index = MinVertexIndex;
     info.max_index = MinVertexIndex + NumVertices - 1;
+    info.index.resource = context->idxbuf;
 
     context->pipe->draw_vbo(context->pipe, &info);
 }
@@ -2616,7 +2601,7 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_primitive_from_vtxbuf,
     nine_update_state(device);
 
     init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
-    info.indexed = FALSE;
+    info.index_size = 0;
     info.start = 0;
     info.index_bias = 0;
     info.min_index = 0;
@@ -2633,7 +2618,10 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf,
                   ARG_VAL(UINT, NumVertices),
                   ARG_VAL(UINT, PrimitiveCount),
                   ARG_BIND_VBUF(struct pipe_vertex_buffer, vbuf),
-                  ARG_BIND_IBUF(struct pipe_index_buffer, ibuf))
+                  ARG_BIND_RES(struct pipe_resource, ibuf),
+                  ARG_VAL(void *, user_ibuf),
+                  ARG_VAL(UINT, index_offset),
+		  ARG_VAL(UINT, index_size))
 {
     struct nine_context *context = &device->context;
     struct pipe_draw_info info;
@@ -2641,13 +2629,18 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf,
     nine_update_state(device);
 
     init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
-    info.indexed = TRUE;
-    info.start = 0;
+    info.index_size = index_size;
+    info.start = index_offset / info.index_size;
     info.index_bias = 0;
     info.min_index = MinVertexIndex;
     info.max_index = MinVertexIndex + NumVertices - 1;
+    info.has_user_indices = ibuf == NULL;
+    if (ibuf)
+        info.index.resource = ibuf;
+    else
+        info.index.user = user_ibuf;
+
     context->pipe->set_vertex_buffers(context->pipe, 0, 1, vbuf);
-    context->pipe->set_index_buffer(context->pipe, ibuf);
 
     context->pipe->draw_vbo(context->pipe, &info);
 }
@@ -3135,7 +3128,6 @@ nine_context_clear(struct NineDevice9 *device)
     cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, 0, NULL);
 
     pipe->set_vertex_buffers(pipe, 0, device->caps.MaxStreams, NULL);
-    pipe->set_index_buffer(pipe, NULL);
 
     for (i = 0; i < ARRAY_SIZE(context->rt); ++i)
        nine_bind(&context->rt[i], NULL);
@@ -3145,7 +3137,7 @@ nine_context_clear(struct NineDevice9 *device)
     nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
         pipe_vertex_buffer_unreference(&context->vtxbuf[i]);
-    pipe_resource_reference(&context->idxbuf.buffer, NULL);
+    pipe_resource_reference(&context->idxbuf, NULL);
 
     for (i = 0; i < NINE_MAX_SAMPLERS; ++i) {
         context->texture[i].enabled = FALSE;

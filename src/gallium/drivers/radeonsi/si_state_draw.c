@@ -552,7 +552,7 @@ static void si_emit_vs_state(struct si_context *sctx,
 			     const struct pipe_draw_info *info)
 {
 	sctx->current_vs_state &= C_VS_STATE_INDEXED;
-	sctx->current_vs_state |= S_VS_STATE_INDEXED(!!info->indexed);
+	sctx->current_vs_state |= S_VS_STATE_INDEXED(!!info->index_size);
 
 	if (sctx->current_vs_state != sctx->last_vs_state) {
 		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
@@ -625,7 +625,9 @@ static void si_emit_draw_registers(struct si_context *sctx,
 
 static void si_emit_draw_packets(struct si_context *sctx,
 				 const struct pipe_draw_info *info,
-				 const struct pipe_index_buffer *ib)
+				 struct pipe_resource *indexbuf,
+				 unsigned index_size,
+				 unsigned index_offset)
 {
 	struct pipe_draw_indirect_info *indirect = info->indirect;
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
@@ -658,12 +660,12 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	}
 
 	/* draw packet */
-	if (info->indexed) {
-		if (ib->index_size != sctx->last_index_size) {
+	if (index_size) {
+		if (index_size != sctx->last_index_size) {
 			unsigned index_type;
 
 			/* index type */
-			switch (ib->index_size) {
+			switch (index_size) {
 			case 1:
 				index_type = V_028A7C_VGT_INDEX_8;
 				break;
@@ -690,15 +692,15 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				radeon_emit(cs, index_type);
 			}
 
-			sctx->last_index_size = ib->index_size;
+			sctx->last_index_size = index_size;
 		}
 
-		index_max_size = (ib->buffer->width0 - ib->offset) /
-				  ib->index_size;
-		index_va = r600_resource(ib->buffer)->gpu_address + ib->offset;
+		index_max_size = (indexbuf->width0 - index_offset) /
+				  index_size;
+		index_va = r600_resource(indexbuf)->gpu_address + index_offset;
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				      (struct r600_resource *)ib->buffer,
+				      (struct r600_resource *)indexbuf,
 				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
 	} else {
 		/* On CI and later, non-indexed draws overwrite VGT_INDEX_TYPE,
@@ -724,12 +726,12 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				      (struct r600_resource *)indirect->buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
-		unsigned di_src_sel = info->indexed ? V_0287F0_DI_SRC_SEL_DMA
+		unsigned di_src_sel = index_size ? V_0287F0_DI_SRC_SEL_DMA
 						    : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
 
 		assert(indirect->offset % 4 == 0);
 
-		if (info->indexed) {
+		if (index_size) {
 			radeon_emit(cs, PKT3(PKT3_INDEX_BASE, 1, 0));
 			radeon_emit(cs, index_va);
 			radeon_emit(cs, index_va >> 32);
@@ -739,7 +741,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		}
 
 		if (!sctx->screen->has_draw_indirect_multi) {
-			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT
+			radeon_emit(cs, PKT3(index_size ? PKT3_DRAW_INDEX_INDIRECT
 							   : PKT3_DRAW_INDIRECT,
 					     3, render_cond_bit));
 			radeon_emit(cs, indirect->offset);
@@ -760,7 +762,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				count_va = params_buf->gpu_address + indirect->indirect_draw_count_offset;
 			}
 
-			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
+			radeon_emit(cs, PKT3(index_size ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
 							     PKT3_DRAW_INDIRECT_MULTI,
 					     8, render_cond_bit));
 			radeon_emit(cs, indirect->offset);
@@ -782,7 +784,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, info->instance_count);
 
 		/* Base vertex and start instance. */
-		base_vertex = info->indexed ? info->index_bias : info->start;
+		base_vertex = index_size ? info->index_bias : info->start;
 
 		if (base_vertex != sctx->last_base_vertex ||
 		    sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
@@ -800,8 +802,8 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			sctx->last_sh_base_reg = sh_base_reg;
 		}
 
-		if (info->indexed) {
-			index_va += info->start * ib->index_size;
+		if (index_size) {
+			index_va += info->start * index_size;
 
 			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_2, 4, render_cond_bit));
 			radeon_emit(cs, index_max_size);
@@ -1160,11 +1162,12 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
-	const struct pipe_index_buffer *ib = &sctx->index_buffer;
-	struct pipe_index_buffer ib_tmp; /* for index buffer uploads only */
+	struct pipe_resource *indexbuf = info->index.resource;
 	unsigned mask, dirty_tex_counter;
 	enum pipe_prim_type rast_prim;
 	unsigned num_patches = 0;
+	unsigned index_size = info->index_size;
+	unsigned index_offset = info->indirect ? info->start * index_size : 0;
 
 	if (likely(!info->indirect)) {
 		/* SI-CI treat instance_count==0 as instance_count==1. There is
@@ -1176,7 +1179,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 		/* Handle count == 0. */
 		if (unlikely(!info->count &&
-			     (info->indexed || !info->count_from_stream_output)))
+			     (index_size || !info->count_from_stream_output)))
 			return;
 	}
 
@@ -1248,58 +1251,55 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!si_upload_graphics_shader_descriptors(sctx))
 		return;
 
-	ib_tmp.buffer = NULL;
-
-	if (info->indexed) {
+	if (index_size) {
 		/* Translate or upload, if needed. */
 		/* 8-bit indices are supported on VI. */
-		if (sctx->b.chip_class <= CIK && ib->index_size == 1) {
-			unsigned start, count, start_offset, size;
+		if (sctx->b.chip_class <= CIK && index_size == 1) {
+			unsigned start, count, start_offset, size, offset;
 			void *ptr;
 
 			si_get_draw_start_count(sctx, info, &start, &count);
 			start_offset = start * 2;
 			size = count * 2;
 
+			indexbuf = NULL;
 			u_upload_alloc(ctx->stream_uploader, start_offset,
 				       size,
 				       si_optimal_tcc_alignment(sctx, size),
-				       &ib_tmp.offset, &ib_tmp.buffer, &ptr);
-			if (!ib_tmp.buffer)
+				       &offset, &indexbuf, &ptr);
+			if (!indexbuf)
 				return;
 
-			util_shorten_ubyte_elts_to_userptr(&sctx->b.b, ib, 0, 0,
-							   ib->offset + start,
+			util_shorten_ubyte_elts_to_userptr(&sctx->b.b, info, 0, 0,
+							   index_offset + start,
 							   count, ptr);
 
 			/* info->start will be added by the drawing code */
-			ib_tmp.offset -= start_offset;
-			ib_tmp.index_size = 2;
-			ib = &ib_tmp;
-		} else if (ib->user_buffer && !ib->buffer) {
+			index_offset = offset - start_offset;
+			index_size = 2;
+		} else if (info->has_user_indices) {
 			unsigned start_offset;
 
 			assert(!info->indirect);
-			start_offset = info->start * ib->index_size;
+			start_offset = info->start * index_size;
 
+			indexbuf = NULL;
 			u_upload_data(ctx->stream_uploader, start_offset,
-				      info->count * ib->index_size,
+				      info->count * index_size,
 				      sctx->screen->b.info.tcc_cache_line_size,
-				      (char*)ib->user_buffer + start_offset,
-				      &ib_tmp.offset, &ib_tmp.buffer);
-			if (!ib_tmp.buffer)
+				      (char*)info->index.user + start_offset,
+				      &index_offset, &indexbuf);
+			if (!indexbuf)
 				return;
 
 			/* info->start will be added by the drawing code */
-			ib_tmp.offset -= start_offset;
-			ib_tmp.index_size = ib->index_size;
-			ib = &ib_tmp;
+			index_offset -= start_offset;
 		} else if (sctx->b.chip_class <= CIK &&
-			   r600_resource(ib->buffer)->TC_L2_dirty) {
+			   r600_resource(indexbuf)->TC_L2_dirty) {
 			/* VI reads index buffers through TC L2, so it doesn't
 			 * need this. */
 			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-			r600_resource(ib->buffer)->TC_L2_dirty = false;
+			r600_resource(indexbuf)->TC_L2_dirty = false;
 		}
 	}
 
@@ -1370,7 +1370,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	si_emit_draw_registers(sctx, info, num_patches);
 
 	si_ce_pre_draw_synchronization(sctx);
-	si_emit_draw_packets(sctx, info, ib);
+	si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);
 	si_ce_post_draw_synchronization(sctx);
 
 	if (sctx->trace_buf)
@@ -1416,12 +1416,13 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		sctx->framebuffer.do_update_surf_dirtiness = false;
 	}
 
-	pipe_resource_reference(&ib_tmp.buffer, NULL);
 	sctx->b.num_draw_calls++;
 	if (info->primitive_restart)
 		sctx->b.num_prim_restart_calls++;
 	if (G_0286E8_WAVESIZE(sctx->spi_tmpring_size))
 		sctx->b.num_spill_draw_calls++;
+	if (index_size && indexbuf != info->index.resource)
+		pipe_resource_reference(&indexbuf, NULL);
 }
 
 void si_trace_emit(struct si_context *sctx)

@@ -3879,24 +3879,6 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 	sctx->vertex_buffers_dirty = true;
 }
 
-static void si_set_index_buffer(struct pipe_context *ctx,
-				const struct pipe_index_buffer *ib)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-
-	if (ib) {
-		struct pipe_resource *buf = ib->buffer;
-
-		pipe_resource_reference(&sctx->index_buffer.buffer, buf);
-	        memcpy(&sctx->index_buffer, ib, sizeof(*ib));
-		r600_context_add_resource_size(ctx, buf);
-		if (buf)
-			r600_resource(buf)->bind_history |= PIPE_BIND_INDEX_BUFFER;
-	} else {
-		pipe_resource_reference(&sctx->index_buffer.buffer, NULL);
-	}
-}
-
 /*
  * Misc
  */
@@ -4051,7 +4033,6 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.bind_vertex_elements_state = si_bind_vertex_elements;
 	sctx->b.b.delete_vertex_elements_state = si_delete_vertex_element;
 	sctx->b.b.set_vertex_buffers = si_set_vertex_buffers;
-	sctx->b.b.set_index_buffer = si_set_index_buffer;
 
 	sctx->b.b.texture_barrier = si_texture_barrier;
 	sctx->b.b.memory_barrier = si_memory_barrier;

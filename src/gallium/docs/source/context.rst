@@ -53,8 +53,6 @@ buffers, surfaces) are bound to the driver.
 
 * ``set_vertex_buffers``
 
-* ``set_index_buffer``
-
 
 Non-CSO State
 ^^^^^^^^^^^^^
@@ -290,8 +288,8 @@ the mode of the primitive and the vertices to be fetched, in the range between
 Every instance with instanceID in the range between ``start_instance`` and
 ``start_instance``+``instance_count``-1, inclusive, will be drawn.
 
-If there is an index buffer bound, and ``indexed`` field is true, all vertex
-indices will be looked up in the index buffer.
+If  ``index_size`` != 0, all vertex indices will be looked up from the index
+buffer.
 
 In indexed draw, ``min_index`` and ``max_index`` respectively provide a lower
 and upper bound of the indices contained in the index buffer inside the range

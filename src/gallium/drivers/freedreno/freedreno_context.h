@@ -126,7 +126,7 @@ enum fd_dirty_3d_state {
 	FD_DIRTY_VIEWPORT    = BIT(8),
 	FD_DIRTY_VTXSTATE    = BIT(9),
 	FD_DIRTY_VTXBUF      = BIT(10),
-	FD_DIRTY_INDEXBUF    = BIT(11),
+
 	FD_DIRTY_SCISSOR     = BIT(12),
 	FD_DIRTY_STREAMOUT   = BIT(13),
 	FD_DIRTY_UCP         = BIT(14),
@@ -273,7 +273,6 @@ struct fd_context {
 	struct pipe_viewport_state viewport;
 	struct fd_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
 	struct fd_shaderbuf_stateobj shaderbuf[PIPE_SHADER_TYPES];
-	struct pipe_index_buffer indexbuf;
 	struct fd_streamout_stateobj streamout;
 	struct pipe_clip_state ucp;
 
@@ -296,7 +295,8 @@ struct fd_context {
 	void (*emit_sysmem_fini)(struct fd_batch *batch);
 
 	/* draw: */
-	bool (*draw_vbo)(struct fd_context *ctx, const struct pipe_draw_info *info);
+	bool (*draw_vbo)(struct fd_context *ctx, const struct pipe_draw_info *info,
+                         unsigned index_offset);
 	void (*clear)(struct fd_context *ctx, unsigned buffers,
 			const union pipe_color_union *color, double depth, unsigned stencil);
 

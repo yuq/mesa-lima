@@ -314,7 +314,6 @@ struct si_context {
 	/* Vertex and index buffers. */
 	bool				vertex_buffers_dirty;
 	bool				vertex_buffer_pointer_dirty;
-	struct pipe_index_buffer	index_buffer;
 	struct pipe_vertex_buffer	vertex_buffer[SI_NUM_VERTEX_BUFFERS];
 
 	/* MSAA config state. */

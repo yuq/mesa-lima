@@ -244,7 +244,7 @@ nv50_push_vbo(struct nv50_context *nv50, const struct pipe_draw_info *info)
    unsigned i, index_size;
    unsigned inst_count = info->instance_count;
    unsigned vert_count = info->count;
-   bool apply_bias = info->indexed && info->index_bias;
+   bool apply_bias = info->index_size && info->index_bias;
 
    ctx.push = nv50->base.pushbuf;
    ctx.translate = nv50->vertex->translate;
@@ -276,17 +276,17 @@ nv50_push_vbo(struct nv50_context *nv50, const struct pipe_draw_info *info)
       ctx.translate->set_buffer(ctx.translate, i, data, vb->stride, ~0);
    }
 
-   if (info->indexed) {
-      if (nv50->idxbuf.buffer) {
+   if (info->index_size) {
+      if (!info->has_user_indices) {
          ctx.idxbuf = nouveau_resource_map_offset(&nv50->base,
-            nv04_resource(nv50->idxbuf.buffer), nv50->idxbuf.offset,
+            nv04_resource(info->index.resource), info->start * info->index_size,
             NOUVEAU_BO_RD);
       } else {
-         ctx.idxbuf = nv50->idxbuf.user_buffer;
+         ctx.idxbuf = info->index.user;
       }
       if (!ctx.idxbuf)
          return;
-      index_size = nv50->idxbuf.index_size;
+      index_size = info->index_size;
       ctx.primitive_restart = info->primitive_restart;
       ctx.restart_index = info->restart_index;
    } else {

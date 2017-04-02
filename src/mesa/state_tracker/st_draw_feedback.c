@@ -128,7 +128,6 @@ st_feedback_draw_vbo(struct gl_context *ctx,
    const struct pipe_shader_state *vs;
    struct pipe_vertex_buffer vbuffers[PIPE_MAX_SHADER_INPUTS];
    struct pipe_vertex_element velements[PIPE_MAX_ATTRIBS];
-   struct pipe_index_buffer ibuffer;
    struct pipe_transfer *vb_transfer[PIPE_MAX_ATTRIBS] = {NULL};
    struct pipe_transfer *ib_transfer = NULL;
    const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
@@ -238,31 +237,29 @@ st_feedback_draw_vbo(struct gl_context *ctx,
    draw_set_vertex_buffers(draw, 0, vp->num_inputs, vbuffers);
    draw_set_vertex_elements(draw, vp->num_inputs, velements);
 
-   memset(&ibuffer, 0, sizeof(ibuffer));
+   unsigned start = 0;
+
    if (ib) {
       struct gl_buffer_object *bufobj = ib->obj;
+      unsigned index_size = ib->index_size;
 
-      ibuffer.index_size = ib->index_size;
-      if (ibuffer.index_size == 0)
+      if (index_size == 0)
          goto out_unref_vertex;
 
       if (bufobj && bufobj->Name) {
          struct st_buffer_object *stobj = st_buffer_object(bufobj);
 
-         pipe_resource_reference(&ibuffer.buffer, stobj->buffer);
-         ibuffer.offset = pointer_to_offset(ib->ptr);
-
+         start = pointer_to_offset(ib->ptr) / index_size;
          mapped_indices = pipe_buffer_map(pipe, stobj->buffer,
                                           PIPE_TRANSFER_READ, &ib_transfer);
       }
       else {
-         /* skip setting ibuffer.buffer as the draw module does not use it */
          mapped_indices = ib->ptr;
       }
 
       draw_set_indexes(draw,
-                       (ubyte *) mapped_indices + ibuffer.offset,
-                       ibuffer.index_size, ~0);
+                       (ubyte *) mapped_indices,
+                       index_size, ~0);
    }
 
    /* set the constant buffer */
@@ -273,7 +270,7 @@ st_feedback_draw_vbo(struct gl_context *ctx,
 
    /* draw here */
    for (i = 0; i < nr_prims; i++) {
-      draw_arrays(draw, prims[i].mode, prims[i].start, prims[i].count);
+      draw_arrays(draw, prims[i].mode, start + prims[i].start, prims[i].count);
    }
 
 
@@ -284,7 +281,6 @@ st_feedback_draw_vbo(struct gl_context *ctx,
       draw_set_indexes(draw, NULL, 0, 0);
       if (ib_transfer)
          pipe_buffer_unmap(pipe, ib_transfer);
-      pipe_resource_reference(&ibuffer.buffer, NULL);
    }
 
  out_unref_vertex:

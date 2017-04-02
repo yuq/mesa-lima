@@ -188,11 +188,6 @@ static void noop_delete_state(struct pipe_context *ctx, void *state)
    FREE(state);
 }
 
-static void noop_set_index_buffer(struct pipe_context *ctx,
-                                  const struct pipe_index_buffer *ib)
-{
-}
-
 static void noop_set_vertex_buffers(struct pipe_context *ctx,
                                     unsigned start_slot, unsigned count,
                                     const struct pipe_vertex_buffer *buffers)
@@ -298,7 +293,6 @@ void noop_init_state_functions(struct pipe_context *ctx)
    ctx->set_scissor_states = noop_set_scissor_states;
    ctx->set_stencil_ref = noop_set_stencil_ref;
    ctx->set_vertex_buffers = noop_set_vertex_buffers;
-   ctx->set_index_buffer = noop_set_index_buffer;
    ctx->set_viewport_states = noop_set_viewport_states;
    ctx->sampler_view_destroy = noop_sampler_view_destroy;
    ctx->surface_destroy = noop_surface_destroy;

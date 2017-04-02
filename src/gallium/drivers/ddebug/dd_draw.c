@@ -289,11 +289,6 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
    int sh, i;
 
    DUMP(draw_info, info);
-   if (info->indexed) {
-      DUMP(index_buffer, &dstate->index_buffer);
-      if (dstate->index_buffer.buffer)
-         DUMP_M(resource, &dstate->index_buffer, buffer);
-   }
    if (info->count_from_stream_output)
       DUMP_M(stream_output_target, info,
              count_from_stream_output);
@@ -624,6 +619,11 @@ dd_unreference_copy_of_call(struct dd_call *dst)
       pipe_so_target_reference(&dst->info.draw_vbo.draw.count_from_stream_output, NULL);
       pipe_resource_reference(&dst->info.draw_vbo.indirect.buffer, NULL);
       pipe_resource_reference(&dst->info.draw_vbo.indirect.indirect_draw_count, NULL);
+      if (dst->info.draw_vbo.draw.index_size &&
+          !dst->info.draw_vbo.draw.has_user_indices)
+         pipe_resource_reference(&dst->info.draw_vbo.draw.index.resource, NULL);
+      else
+         dst->info.draw_vbo.draw.index.user = NULL;
       break;
    case CALL_LAUNCH_GRID:
       pipe_resource_reference(&dst->info.launch_grid.indirect, NULL);
@@ -669,6 +669,19 @@ dd_copy_call(struct dd_call *dst, struct dd_call *src)
                               src->info.draw_vbo.indirect.buffer);
       pipe_resource_reference(&dst->info.draw_vbo.indirect.indirect_draw_count,
                               src->info.draw_vbo.indirect.indirect_draw_count);
+
+      if (dst->info.draw_vbo.draw.index_size &&
+          !dst->info.draw_vbo.draw.has_user_indices)
+         pipe_resource_reference(&dst->info.draw_vbo.draw.index.resource, NULL);
+      else
+         dst->info.draw_vbo.draw.index.user = NULL;
+
+      if (src->info.draw_vbo.draw.index_size &&
+          !src->info.draw_vbo.draw.has_user_indices) {
+         pipe_resource_reference(&dst->info.draw_vbo.draw.index.resource,
+                                 src->info.draw_vbo.draw.index.resource);
+      }
+
       dst->info.draw_vbo = src->info.draw_vbo;
       if (!src->info.draw_vbo.draw.indirect)
          dst->info.draw_vbo.draw.indirect = NULL;
@@ -728,8 +741,6 @@ dd_init_copy_of_draw_state(struct dd_draw_state_copy *state)
    /* Just clear pointers to gallium objects. Don't clear the whole structure,
     * because it would kill performance with its size of 130 KB.
     */
-   memset(&state->base.index_buffer, 0,
-          sizeof(state->base.index_buffer));
    memset(state->base.vertex_buffers, 0,
           sizeof(state->base.vertex_buffers));
    memset(state->base.so_targets, 0,
@@ -767,8 +778,6 @@ dd_unreference_copy_of_draw_state(struct dd_draw_state_copy *state)
    struct dd_draw_state *dst = &state->base;
    unsigned i,j;
 
-   util_set_index_buffer(&dst->index_buffer, NULL);
-
    for (i = 0; i < ARRAY_SIZE(dst->vertex_buffers); i++)
       pipe_vertex_buffer_unreference(&dst->vertex_buffers[i]);
    for (i = 0; i < ARRAY_SIZE(dst->so_targets); i++)
@@ -803,8 +812,6 @@ dd_copy_draw_state(struct dd_draw_state *dst, struct dd_draw_state *src)
    } else {
       dst->render_cond.query = NULL;
    }
-
-   util_set_index_buffer(&dst->index_buffer, &src->index_buffer);
 
    for (i = 0; i < ARRAY_SIZE(src->vertex_buffers); i++) {
       pipe_vertex_buffer_reference(&dst->vertex_buffers[i],

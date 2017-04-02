@@ -459,10 +459,11 @@ nv30_draw_elements_inline_u32_short(struct nouveau_pushbuf *push,
 
 static void
 nv30_draw_elements(struct nv30_context *nv30, bool shorten,
+                   const struct pipe_draw_info *info,
                    unsigned mode, unsigned start, unsigned count,
-                   unsigned instance_count, int32_t index_bias)
+                   unsigned instance_count, int32_t index_bias,
+		   unsigned index_size)
 {
-   const unsigned index_size = nv30->idxbuf.index_size;
    struct nouveau_pushbuf *push = nv30->base.pushbuf;
    struct nouveau_object *eng3d = nv30->screen->eng3d;
    unsigned prim = nv30_prim_gl(mode);
@@ -474,9 +475,9 @@ nv30_draw_elements(struct nv30_context *nv30, bool shorten,
    }
 
    if (eng3d->oclass == NV40_3D_CLASS && index_size > 1 &&
-       nv30->idxbuf.buffer) {
-      struct nv04_resource *res = nv04_resource(nv30->idxbuf.buffer);
-      unsigned offset = nv30->idxbuf.offset;
+       !info->has_user_indices) {
+      struct nv04_resource *res = nv04_resource(info->index.resource);
+      unsigned offset = 0;
 
       assert(nouveau_resource_mapped_by_gpu(&res->base));
 
@@ -511,12 +512,12 @@ nv30_draw_elements(struct nv30_context *nv30, bool shorten,
       PUSH_RESET(push, BUFCTX_IDXBUF);
    } else {
       const void *data;
-      if (nv30->idxbuf.buffer)
+      if (!info->has_user_indices)
          data = nouveau_resource_map_offset(&nv30->base,
-                                            nv04_resource(nv30->idxbuf.buffer),
-                                            nv30->idxbuf.offset, NOUVEAU_BO_RD);
+                                            nv04_resource(info->index.resource),
+                                            start * index_size, NOUVEAU_BO_RD);
       else
-         data = nv30->idxbuf.user_buffer;
+         data = info->index.user;
       if (!data)
          return;
 
@@ -559,7 +560,7 @@ nv30_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
     * if index count is larger and we expect repeated vertices, suggest upload.
     */
    nv30->vbo_push_hint = /* the 64 is heuristic */
-      !(info->indexed &&
+      !(info->index_size &&
         ((info->max_index - info->min_index + 64) < info->count));
 
    nv30->vbo_min_index = info->min_index;
@@ -589,8 +590,8 @@ nv30_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
          nv30->base.vbo_dirty = true;
    }
 
-   if (!nv30->base.vbo_dirty && nv30->idxbuf.buffer &&
-       nv30->idxbuf.buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
+   if (!nv30->base.vbo_dirty && info->index_size && !info->has_user_indices &&
+       info->index.resource->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
       nv30->base.vbo_dirty = true;
 
    if (nv30->base.vbo_dirty) {
@@ -599,7 +600,7 @@ nv30_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       nv30->base.vbo_dirty = false;
    }
 
-   if (!info->indexed) {
+   if (!info->index_size) {
       nv30_draw_arrays(nv30,
                        info->mode, info->start, info->count,
                        info->instance_count);
@@ -628,9 +629,9 @@ nv30_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
             shorten = false;
       }
 
-      nv30_draw_elements(nv30, shorten,
+      nv30_draw_elements(nv30, shorten, info,
                          info->mode, info->start, info->count,
-                         info->instance_count, info->index_bias);
+                         info->instance_count, info->index_bias, info->index_size);
    }
 
    nv30_state_release(nv30);

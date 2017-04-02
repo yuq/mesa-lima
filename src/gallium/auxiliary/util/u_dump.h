@@ -173,9 +173,6 @@ util_dump_constant_buffer(FILE *stream,
                           const struct pipe_constant_buffer *state);
 
 void
-util_dump_index_buffer(FILE *stream, const struct pipe_index_buffer *state);
-
-void
 util_dump_vertex_buffer(FILE *stream,
                         const struct pipe_vertex_buffer *state);
 

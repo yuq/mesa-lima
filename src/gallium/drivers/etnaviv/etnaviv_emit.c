@@ -369,8 +369,7 @@ etna_emit_state(struct etna_context *ctx)
 
       /*03818*/ EMIT_STATE(GL_MULTI_SAMPLE_CONFIG, val);
    }
-   if (likely(dirty & (ETNA_DIRTY_INDEX_BUFFER)) &&
-       ctx->index_buffer.ib.buffer) {
+   if (likely(dirty & (ETNA_DIRTY_INDEX_BUFFER))) {
       /*00644*/ EMIT_STATE_RELOC(FE_INDEX_STREAM_BASE_ADDR, &ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR);
       /*00648*/ EMIT_STATE(FE_INDEX_STREAM_CONTROL, ctx->index_buffer.FE_INDEX_STREAM_CONTROL);
    }

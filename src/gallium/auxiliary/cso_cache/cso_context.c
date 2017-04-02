@@ -349,8 +349,6 @@ void cso_destroy_context( struct cso_context *ctx )
    unsigned i;
 
    if (ctx->pipe) {
-      ctx->pipe->set_index_buffer(ctx->pipe, NULL);
-
       ctx->pipe->bind_blend_state( ctx->pipe, NULL );
       ctx->pipe->bind_rasterizer_state( ctx->pipe, NULL );
 
@@ -1695,20 +1693,6 @@ cso_restore_state(struct cso_context *cso)
 
 
 /* drawing */
-
-void
-cso_set_index_buffer(struct cso_context *cso,
-                     const struct pipe_index_buffer *ib)
-{
-   struct u_vbuf *vbuf = cso->vbuf;
-
-   if (vbuf) {
-      u_vbuf_set_index_buffer(vbuf, ib);
-   } else {
-      struct pipe_context *pipe = cso->pipe;
-      pipe->set_index_buffer(pipe, ib);
-   }
-}
 
 void
 cso_draw_vbo(struct cso_context *cso,

@@ -136,7 +136,7 @@ util_draw_indirect(struct pipe_context *pipe,
    struct pipe_draw_info info;
    struct pipe_transfer *transfer;
    uint32_t *params;
-   const unsigned num_params = info_in->indexed ? 5 : 4;
+   const unsigned num_params = info_in->index_size ? 5 : 4;
 
    assert(info_in->indirect);
    assert(!info_in->count_from_stream_output);
@@ -158,8 +158,8 @@ util_draw_indirect(struct pipe_context *pipe,
    info.count = params[0];
    info.instance_count = params[1];
    info.start = params[2];
-   info.index_bias = info_in->indexed ? params[3] : 0;
-   info.start_instance = info_in->indexed ? params[4] : params[3];
+   info.index_bias = info_in->index_size ? params[3] : 0;
+   info.start_instance = info_in->index_size ? params[4] : params[3];
    info.indirect = NULL;
 
    pipe_buffer_unmap(pipe, transfer);

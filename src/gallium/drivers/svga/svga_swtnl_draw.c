@@ -38,7 +38,9 @@
 
 enum pipe_error
 svga_swtnl_draw_vbo(struct svga_context *svga,
-                    const struct pipe_draw_info *info)
+                    const struct pipe_draw_info *info,
+                    struct pipe_resource *indexbuf,
+                    unsigned index_offset)
 {
    struct pipe_transfer *vb_transfer[PIPE_MAX_ATTRIBS] = { 0 };
    struct pipe_transfer *ib_transfer = NULL;
@@ -83,13 +85,14 @@ svga_swtnl_draw_vbo(struct svga_context *svga,
 
    /* Map index buffer, if present */
    map = NULL;
-   if (info->indexed && svga->curr.ib.buffer) {
-      map = pipe_buffer_map(&svga->pipe, svga->curr.ib.buffer,
+   if (info->index_size && indexbuf) {
+      map = pipe_buffer_map(&svga->pipe, indexbuf,
                             PIPE_TRANSFER_READ,
                             &ib_transfer);
+      map = (ubyte *) map + index_offset;
       draw_set_indexes(draw,
-                       (const ubyte *) map + svga->curr.ib.offset,
-                       svga->curr.ib.index_size, ~0);
+                       (const ubyte *) map,
+                       info->index_size, ~0);
    }
 
    /* Map constant buffers */

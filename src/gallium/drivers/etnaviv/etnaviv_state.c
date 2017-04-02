@@ -447,34 +447,6 @@ etna_set_vertex_buffers(struct pipe_context *pctx, unsigned start_slot,
 }
 
 static void
-etna_set_index_buffer(struct pipe_context *pctx, const struct pipe_index_buffer *ib)
-{
-   struct etna_context *ctx = etna_context(pctx);
-   uint32_t ctrl;
-
-   if (ib) {
-      pipe_resource_reference(&ctx->index_buffer.ib.buffer, ib->buffer);
-      memcpy(&ctx->index_buffer.ib, ib, sizeof(ctx->index_buffer.ib));
-      ctrl = translate_index_size(ctx->index_buffer.ib.index_size);
-   } else {
-      pipe_resource_reference(&ctx->index_buffer.ib.buffer, NULL);
-      ctrl = 0;
-   }
-
-   if (ctx->index_buffer.ib.buffer && ctrl != ETNA_NO_MATCH) {
-      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo = etna_resource(ctx->index_buffer.ib.buffer)->bo;
-      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.offset = ctx->index_buffer.ib.offset;
-      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.flags = ETNA_RELOC_READ;
-      ctx->index_buffer.FE_INDEX_STREAM_CONTROL = ctrl;
-   } else {
-      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo = NULL;
-      ctx->index_buffer.FE_INDEX_STREAM_CONTROL = 0;
-   }
-
-   ctx->dirty |= ETNA_DIRTY_INDEX_BUFFER;
-}
-
-static void
 etna_blend_state_bind(struct pipe_context *pctx, void *bs)
 {
    struct etna_context *ctx = etna_context(pctx);
@@ -652,7 +624,6 @@ etna_state_init(struct pipe_context *pctx)
    pctx->set_viewport_states = etna_set_viewport_states;
 
    pctx->set_vertex_buffers = etna_set_vertex_buffers;
-   pctx->set_index_buffer = etna_set_index_buffer;
 
    pctx->bind_blend_state = etna_blend_state_bind;
    pctx->delete_blend_state = etna_blend_state_delete;

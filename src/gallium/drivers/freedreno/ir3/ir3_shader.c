@@ -723,7 +723,7 @@ ir3_emit_vs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *rin
 		uint32_t offset = v->constbase.driver_param;
 		if (v->constlen > offset) {
 			uint32_t vertex_params[IR3_DP_VS_COUNT] = {
-				[IR3_DP_VTXID_BASE] = info->indexed ?
+				[IR3_DP_VTXID_BASE] = info->index_size ?
 						info->index_bias : info->start,
 				[IR3_DP_VTXCNT_MAX] = max_tf_vtx(ctx, v),
 			};

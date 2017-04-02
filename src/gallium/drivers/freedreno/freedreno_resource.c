@@ -62,10 +62,6 @@ fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 			ctx->dirty |= FD_DIRTY_VTXBUF;
 	}
 
-	/* Index buffer */
-	if (ctx->indexbuf.buffer == prsc)
-		ctx->dirty |= FD_DIRTY_INDEXBUF;
-
 	/* per-shader-stage resources: */
 	for (unsigned stage = 0; stage < PIPE_SHADER_TYPES; stage++) {
 		/* Constbufs.. note that constbuf[0] is normal uniforms emitted in

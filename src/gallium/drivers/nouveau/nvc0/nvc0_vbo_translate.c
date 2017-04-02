@@ -83,14 +83,16 @@ nvc0_vertex_configure_translate(struct nvc0_context *nvc0, int32_t index_bias)
 }
 
 static inline void
-nvc0_push_map_idxbuf(struct push_context *ctx, struct nvc0_context *nvc0)
+nvc0_push_map_idxbuf(struct push_context *ctx, struct nvc0_context *nvc0,
+                     const struct pipe_draw_info *info,
+                     unsigned offset)
 {
-   if (nvc0->idxbuf.buffer) {
-      struct nv04_resource *buf = nv04_resource(nvc0->idxbuf.buffer);
+   if (!info->has_user_indices) {
+      struct nv04_resource *buf = nv04_resource(info->index.resource);
       ctx->idxbuf = nouveau_resource_map_offset(&nvc0->base,
-         buf, nvc0->idxbuf.offset, NOUVEAU_BO_RD);
+         buf, offset, NOUVEAU_BO_RD);
    } else {
-      ctx->idxbuf = nvc0->idxbuf.user_buffer;
+      ctx->idxbuf = info->index.user;
    }
 }
 
@@ -499,16 +501,16 @@ nvc0_push_vbo(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
        */
       BEGIN_NVC0(ctx.push, NVC0_3D(PRIM_RESTART_ENABLE), 2);
       PUSH_DATA (ctx.push, 1);
-      PUSH_DATA (ctx.push, info->indexed ? 0xffffffff : info->restart_index);
+      PUSH_DATA (ctx.push, info->index_size ? 0xffffffff : info->restart_index);
    } else
    if (nvc0->state.prim_restart) {
       IMMED_NVC0(ctx.push, NVC0_3D(PRIM_RESTART_ENABLE), 0);
    }
    nvc0->state.prim_restart = info->primitive_restart;
 
-   if (info->indexed) {
-      nvc0_push_map_idxbuf(&ctx, nvc0);
-      index_size = nvc0->idxbuf.index_size;
+   if (info->index_size) {
+      nvc0_push_map_idxbuf(&ctx, nvc0, info, info->start * info->index_size);
+      index_size = info->index_size;
    } else {
       if (unlikely(info->count_from_stream_output)) {
          struct pipe_context *pipe = &nvc0->base.pipe;
@@ -583,8 +585,8 @@ nvc0_push_vbo(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
       IMMED_NVC0(ctx.push, NVC0_3D(VERTEX_ARRAY_FETCH(1)), 0);
    }
 
-   if (info->indexed)
-      nouveau_resource_unmap(nv04_resource(nvc0->idxbuf.buffer));
+   if (info->index_size && !info->has_user_indices)
+      nouveau_resource_unmap(nv04_resource(info->index.resource));
    for (i = 0; i < nvc0->num_vtxbufs; ++i)
       nouveau_resource_unmap(nv04_resource(nvc0->vtxbuf[i].buffer.resource));
 
@@ -626,7 +628,7 @@ nvc0_push_upload_vertex_ids(struct push_context *ctx,
    uint64_t va;
    uint32_t *data;
    uint32_t format;
-   unsigned index_size = nvc0->idxbuf.index_size;
+   unsigned index_size = info->index_size;
    unsigned i;
    unsigned a = nvc0->vertex->num_elements;
 
@@ -639,11 +641,11 @@ nvc0_push_upload_vertex_ids(struct push_context *ctx,
                 bo);
    nouveau_pushbuf_validate(push);
 
-   if (info->indexed) {
+   if (info->index_size) {
       if (!info->index_bias) {
          memcpy(data, ctx->idxbuf, info->count * index_size);
       } else {
-         switch (nvc0->idxbuf.index_size) {
+         switch (info->index_size) {
          case 1:
             copy_indices_u8(data, ctx->idxbuf, info->index_bias, info->count);
             break;

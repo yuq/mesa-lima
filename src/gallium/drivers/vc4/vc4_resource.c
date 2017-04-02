@@ -979,12 +979,13 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
  */
 struct pipe_resource *
 vc4_get_shadow_index_buffer(struct pipe_context *pctx,
-                            const struct pipe_index_buffer *ib,
+                            const struct pipe_draw_info *info,
+                            uint32_t offset,
                             uint32_t count,
                             uint32_t *shadow_offset)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct vc4_resource *orig = vc4_resource(ib->buffer);
+        struct vc4_resource *orig = vc4_resource(info->index.resource);
         perf_debug("Fallback conversion for %d uint indices\n", count);
 
         void *data;
@@ -995,11 +996,11 @@ vc4_get_shadow_index_buffer(struct pipe_context *pctx,
 
         struct pipe_transfer *src_transfer = NULL;
         const uint32_t *src;
-        if (ib->user_buffer) {
-                src = ib->user_buffer;
+        if (info->has_user_indices) {
+                src = info->index.user;
         } else {
                 src = pipe_buffer_map_range(pctx, &orig->base.b,
-                                            ib->offset,
+                                            offset,
                                             count * 4,
                                             PIPE_TRANSFER_READ, &src_transfer);
         }

@@ -398,7 +398,7 @@ int virgl_encoder_set_vertex_buffers(struct virgl_context *ctx,
 }
 
 int virgl_encoder_set_index_buffer(struct virgl_context *ctx,
-                                  const struct pipe_index_buffer *ib)
+                                  const struct virgl_indexbuf *ib)
 {
    int length = VIRGL_SET_INDEX_BUFFER_SIZE(ib);
    struct virgl_resource *res = NULL;
@@ -409,7 +409,7 @@ int virgl_encoder_set_index_buffer(struct virgl_context *ctx,
    virgl_encoder_write_res(ctx, res);
    if (ib) {
       virgl_encoder_write_dword(ctx->cbuf, ib->index_size);
-      virgl_encoder_write_dword(ctx->cbuf, ib->offset);
+      virgl_encoder_write_dword(ctx->cbuf, 0);
    }
    return 0;
 }
@@ -421,7 +421,7 @@ int virgl_encoder_draw_vbo(struct virgl_context *ctx,
    virgl_encoder_write_dword(ctx->cbuf, info->start);
    virgl_encoder_write_dword(ctx->cbuf, info->count);
    virgl_encoder_write_dword(ctx->cbuf, info->mode);
-   virgl_encoder_write_dword(ctx->cbuf, info->indexed);
+   virgl_encoder_write_dword(ctx->cbuf, !!info->index_size);
    virgl_encoder_write_dword(ctx->cbuf, info->instance_count);
    virgl_encoder_write_dword(ctx->cbuf, info->index_bias);
    virgl_encoder_write_dword(ctx->cbuf, info->start_instance);

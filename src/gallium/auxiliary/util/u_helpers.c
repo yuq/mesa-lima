@@ -98,48 +98,24 @@ void util_set_vertex_buffers_count(struct pipe_vertex_buffer *dst,
    *dst_count = util_last_bit(enabled_buffers);
 }
 
-
-void
-util_set_index_buffer(struct pipe_index_buffer *dst,
-                      const struct pipe_index_buffer *src)
-{
-   if (src) {
-      pipe_resource_reference(&dst->buffer, src->buffer);
-      memcpy(dst, src, sizeof(*dst));
-   }
-   else {
-      pipe_resource_reference(&dst->buffer, NULL);
-      memset(dst, 0, sizeof(*dst));
-   }
-}
-
 /**
  * Given a user index buffer, save the structure to "saved", and upload it.
  */
 bool
-util_save_and_upload_index_buffer(struct pipe_context *pipe,
-                                  const struct pipe_draw_info *info,
-                                  const struct pipe_index_buffer *ib,
-                                  struct pipe_index_buffer *out_saved)
+util_upload_index_buffer(struct pipe_context *pipe,
+                         const struct pipe_draw_info *info,
+                         struct pipe_resource **out_buffer,
+                         unsigned *out_offset)
 {
-   struct pipe_index_buffer new_ib = {0};
-   unsigned start_offset = info->start * ib->index_size;
+   unsigned start_offset = info->start * info->index_size;
 
    u_upload_data(pipe->stream_uploader, start_offset,
-                 info->count * ib->index_size, 4,
-                 (char*)ib->user_buffer + start_offset,
-                 &new_ib.offset, &new_ib.buffer);
-   if (!new_ib.buffer)
-      return false;
+                 info->count * info->index_size, 4,
+                 (char*)info->index.user + start_offset,
+                 out_offset, out_buffer);
    u_upload_unmap(pipe->stream_uploader);
-
-   new_ib.offset -= start_offset;
-   new_ib.index_size = ib->index_size;
-
-   util_set_index_buffer(out_saved, ib);
-   pipe->set_index_buffer(pipe, &new_ib);
-   pipe_resource_reference(&new_ib.buffer, NULL);
-   return true;
+   *out_offset -= start_offset;
+   return *out_buffer != NULL;
 }
 
 struct pipe_query *

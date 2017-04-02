@@ -80,7 +80,8 @@ emit_vertexbufs(struct fd_context *ctx)
 }
 
 static bool
-fd2_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
+fd2_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
+             unsigned index_offset)
 {
 	struct fd_ringbuffer *ring = ctx->batch->draw;
 

@@ -834,25 +834,6 @@ util_dump_constant_buffer(FILE *stream,
 
 
 void
-util_dump_index_buffer(FILE *stream, const struct pipe_index_buffer *state)
-{
-   if (!state) {
-      util_dump_null(stream);
-      return;
-   }
-
-   util_dump_struct_begin(stream, "pipe_index_buffer");
-
-   util_dump_member(stream, uint, state, index_size);
-   util_dump_member(stream, uint, state, offset);
-   util_dump_member(stream, ptr, state, buffer);
-   util_dump_member(stream, ptr, state, user_buffer);
-
-   util_dump_struct_end(stream);
-}
-
-
-void
 util_dump_vertex_buffer(FILE *stream, const struct pipe_vertex_buffer *state)
 {
    if (!state) {
@@ -919,7 +900,8 @@ util_dump_draw_info(FILE *stream, const struct pipe_draw_info *state)
 
    util_dump_struct_begin(stream, "pipe_draw_info");
 
-   util_dump_member(stream, bool, state, indexed);
+   util_dump_member(stream, uint, state, index_size);
+   util_dump_member(stream, uint, state, has_user_indices);
 
    util_dump_member(stream, enum_prim_mode, state, mode);
    util_dump_member(stream, uint, state, start);
@@ -939,6 +921,7 @@ util_dump_draw_info(FILE *stream, const struct pipe_draw_info *state)
    util_dump_member(stream, bool, state, primitive_restart);
    util_dump_member(stream, uint, state, restart_index);
 
+   util_dump_member(stream, ptr, state, index.resource);
    util_dump_member(stream, ptr, state, count_from_stream_output);
 
    if (!state->indirect) {

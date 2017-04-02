@@ -85,17 +85,16 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	if (!fd_supported_prim(ctx, info->mode)) {
 		if (ctx->streamout.num_targets > 0)
 			debug_error("stream-out with emulated prims");
-		util_primconvert_save_index_buffer(ctx->primconvert, &ctx->indexbuf);
 		util_primconvert_save_rasterizer_state(ctx->primconvert, ctx->rasterizer);
 		util_primconvert_draw_vbo(ctx->primconvert, info);
 		return;
 	}
 
 	/* Upload a user index buffer. */
-	struct pipe_index_buffer ibuffer_saved = {};
-	if (info->indexed && ctx->indexbuf.user_buffer &&
-	    !util_save_and_upload_index_buffer(pctx, info, &ctx->indexbuf,
-					       &ibuffer_saved)) {
+	struct pipe_resource *indexbuf = info->has_user_indices ? NULL : info->index.resource;
+        unsigned index_offset = 0;
+	if (info->index_size && info->has_user_indices &&
+	    !util_upload_index_buffer(pctx, info, &indexbuf, &index_offset)) {
 		return;
 	}
 
@@ -169,7 +168,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	}
 
 	/* Mark index buffer as being read */
-	resource_read(batch, ctx->indexbuf.buffer);
+	resource_read(batch, indexbuf);
 
 	/* Mark textures as being read */
 	foreach_bit(i, ctx->tex[PIPE_SHADER_VERTEX].valid_textures)
@@ -215,7 +214,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
-	if (ctx->draw_vbo(ctx, info))
+	if (ctx->draw_vbo(ctx, info, index_offset))
 		batch->needs_flush = true;
 
 	for (i = 0; i < ctx->streamout.num_targets; i++)
@@ -225,9 +224,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		fd_context_all_dirty(ctx);
 
 	fd_batch_check_size(batch);
-
-	if (info->indexed && ibuffer_saved.user_buffer)
-           pctx->set_index_buffer(pctx, &ibuffer_saved);
+	if (info->index_size && indexbuf != info->index.resource)
+		pipe_resource_reference(&indexbuf, NULL);
 }
 
 /* Generic clear implementation (partially) using u_blitter: */
@@ -286,7 +284,7 @@ fd_blitter_clear(struct pipe_context *pctx, unsigned buffers,
 		.max_index = 1,
 		.instance_count = 1,
 	};
-	ctx->draw_vbo(ctx, &info);
+	ctx->draw_vbo(ctx, &info, 0);
 
 	util_blitter_restore_constant_buffer_state(blitter);
 	util_blitter_restore_vertex_states(blitter);

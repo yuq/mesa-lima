@@ -121,9 +121,10 @@ struct pipe_resource *vc4_resource_create(struct pipe_screen *pscreen,
 void vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
                                          struct pipe_sampler_view *view);
 struct pipe_resource *vc4_get_shadow_index_buffer(struct pipe_context *pctx,
-                                                  const struct pipe_index_buffer *ib,
+                                                  const struct pipe_draw_info *info,
+                                                  uint32_t offset,
                                                   uint32_t count,
-                                                  uint32_t *offset);
+                                                  uint32_t *shadow_offset);
 void vc4_dump_surface(struct pipe_surface *psurf);
 
 #endif /* VC4_RESOURCE_H */

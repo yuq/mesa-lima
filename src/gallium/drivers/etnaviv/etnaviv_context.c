@@ -92,7 +92,7 @@ etna_update_state_for_draw(struct etna_context *ctx, const struct pipe_draw_info
     *   buffer state as dirty
     */
 
-   if (info->indexed) {
+   if (info->index_size) {
       uint32_t new_control = ctx->index_buffer.FE_INDEX_STREAM_CONTROL;
 
       if (info->primitive_restart)
@@ -159,7 +159,6 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (!(ctx->prim_hwsupport & (1 << info->mode))) {
       struct primconvert_context *primconvert = ctx->primconvert;
-      util_primconvert_save_index_buffer(primconvert, &ctx->index_buffer.ib);
       util_primconvert_save_rasterizer_state(primconvert, ctx->rasterizer);
       util_primconvert_draw_vbo(primconvert, info);
       return;
@@ -178,15 +177,23 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    }
 
    /* Upload a user index buffer. */
-   struct pipe_index_buffer ibuffer_saved = {};
-   if (info->indexed && ctx->index_buffer.ib.user_buffer &&
-       !util_save_and_upload_index_buffer(pctx, info, &ctx->index_buffer.ib,
-                                          &ibuffer_saved)) {
+   unsigned index_offset = 0;
+   struct pipe_resource *indexbuf = info->has_user_indices ? NULL : info->index.resource;
+   if (info->index_size && info->has_user_indices &&
+       !util_upload_index_buffer(pctx, info, &indexbuf, &index_offset)) {
       BUG("Index buffer upload failed.");
       return;
    }
 
-   if (info->indexed && !ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo) {
+   if (info->index_size && indexbuf) {
+      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo = etna_resource(indexbuf)->bo;
+      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.offset = index_offset;
+      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.flags = ETNA_RELOC_READ;
+      ctx->index_buffer.FE_INDEX_STREAM_CONTROL = translate_index_size(info->index_size);
+      ctx->dirty |= ETNA_DIRTY_INDEX_BUFFER;
+   }
+
+   if (info->index_size && !ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo) {
       BUG("Unsupported or no index buffer");
       return;
    }
@@ -239,7 +246,7 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    }
 
    /* Mark index buffer as being read */
-   resource_read(ctx, ctx->index_buffer.ib.buffer);
+   resource_read(ctx, indexbuf);
 
    /* Mark textures as being read */
    for (i = 0; i < PIPE_MAX_SAMPLERS; i++)
@@ -255,7 +262,7 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    /* First, sync state, then emit DRAW_PRIMITIVES or DRAW_INDEXED_PRIMITIVES */
    etna_emit_state(ctx);
 
-   if (info->indexed)
+   if (info->index_size)
       etna_draw_indexed_primitives(ctx->stream, draw_mode, info->start, prims, info->index_bias);
    else
       etna_draw_primitives(ctx->stream, draw_mode, info->start, prims);
@@ -274,8 +281,8 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       etna_resource(ctx->framebuffer.cbuf->texture)->seqno++;
    if (ctx->framebuffer.zsbuf)
       etna_resource(ctx->framebuffer.zsbuf->texture)->seqno++;
-   if (info->indexed && ibuffer_saved.user_buffer)
-      pctx->set_index_buffer(pctx, &ibuffer_saved);
+   if (info->index_size && indexbuf != info->index.resource)
+      pipe_resource_reference(&indexbuf, NULL);
 }
 
 static void

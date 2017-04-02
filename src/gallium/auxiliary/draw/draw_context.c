@@ -777,9 +777,6 @@ void draw_set_render( struct draw_context *draw,
 /**
  * Tell the draw module where vertex indexes/elements are located, and
  * their size (in bytes).
- *
- * Note: the caller must apply the pipe_index_buffer::offset value to
- * the address.  The draw module doesn't do that.
  */
 void
 draw_set_indexes(struct draw_context *draw,

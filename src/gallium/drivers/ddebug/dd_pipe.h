@@ -156,7 +156,6 @@ struct dd_draw_state
       unsigned mode;
    } render_cond;
 
-   struct pipe_index_buffer index_buffer;
    struct pipe_vertex_buffer vertex_buffers[PIPE_MAX_ATTRIBS];
 
    unsigned num_so_targets;

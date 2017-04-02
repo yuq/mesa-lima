@@ -72,7 +72,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, add_sat(info->min_index, info->index_bias)); /* VFD_INDEX_MIN */
 	OUT_RING(ring, add_sat(info->max_index, info->index_bias)); /* VFD_INDEX_MAX */
 	OUT_RING(ring, info->start_instance);   /* VFD_INSTANCEID_OFFSET */
-	OUT_RING(ring, info->indexed ? info->index_bias : info->start); /* VFD_INDEX_OFFSET */
+	OUT_RING(ring, info->index_size ? info->index_bias : info->start); /* VFD_INDEX_OFFSET */
 
 	OUT_PKT0(ring, REG_A3XX_PC_RESTART_INDEX, 1);
 	OUT_RING(ring, info->primitive_restart ? /* PC_RESTART_INDEX */
@@ -115,7 +115,8 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 }
 
 static bool
-fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
+fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
+             unsigned index_offset)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd3_emit emit = {

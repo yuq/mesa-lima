@@ -53,7 +53,6 @@ struct pipe_grid_info;
 struct pipe_fence_handle;
 struct pipe_framebuffer_state;
 struct pipe_image_view;
-struct pipe_index_buffer;
 struct pipe_query;
 struct pipe_poly_stipple;
 struct pipe_rasterizer_state;
@@ -353,9 +352,6 @@ struct pipe_context {
                                unsigned start_slot,
                                unsigned num_buffers,
                                const struct pipe_vertex_buffer * );
-
-   void (*set_index_buffer)( struct pipe_context *pipe,
-                             const struct pipe_index_buffer * );
 
    /*@}*/
 

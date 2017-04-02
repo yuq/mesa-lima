@@ -68,10 +68,6 @@ nv50_memory_barrier(struct pipe_context *pipe, unsigned flags)
             nv50->base.vbo_dirty = true;
       }
 
-      if (nv50->idxbuf.buffer &&
-          nv50->idxbuf.buffer->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT)
-         nv50->base.vbo_dirty = true;
-
       for (s = 0; s < 3 && !nv50->cb_dirty; ++s) {
          uint32_t valid = nv50->constbuf_valid[s];
 
@@ -145,8 +141,6 @@ nv50_context_unreference_resources(struct nv50_context *nv50)
    assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
    for (i = 0; i < nv50->num_vtxbufs; ++i)
       pipe_resource_reference(&nv50->vtxbuf[i].buffer.resource, NULL);
-
-   pipe_resource_reference(&nv50->idxbuf.buffer, NULL);
 
    for (s = 0; s < 3; ++s) {
       assert(nv50->num_textures[s] <= PIPE_MAX_SAMPLERS);
@@ -236,14 +230,6 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
             if (!--ref)
                return ref;
          }
-      }
-
-      if (nv50->idxbuf.buffer == res) {
-         /* Just rebind to the bufctx as there is no separate dirty bit */
-         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_INDEX);
-         BCTX_REFN(nv50->bufctx_3d, 3D_INDEX, nv04_resource(res), RD);
-         if (!--ref)
-            return ref;
       }
 
       for (s = 0; s < 3; ++s) {

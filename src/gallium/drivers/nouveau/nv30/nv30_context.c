@@ -123,13 +123,6 @@ nv30_invalidate_resource_storage(struct nouveau_context *nv,
          }
       }
    }
-   if (res->bind & PIPE_BIND_INDEX_BUFFER) {
-      if (nv30->idxbuf.buffer == res) {
-         nouveau_bufctx_reset(nv30->bufctx, BUFCTX_IDXBUF);
-         if (!--ref)
-            return ref;
-      }
-   }
 
    if (res->bind & PIPE_BIND_SAMPLER_VIEW) {
       for (i = 0; i < nv30->fragprog.num_textures; ++i) {

@@ -509,9 +509,6 @@ struct r600_context {
 	 * the GPU addresses are updated. */
 	struct list_head		texture_buffers;
 
-	/* Index buffer. */
-	struct pipe_index_buffer	index_buffer;
-
 	/* Last draw state (-1 = unset). */
 	enum pipe_prim_type		last_primitive_type; /* Last primitive type used in draw_vbo. */
 	enum pipe_prim_type		current_rast_prim; /* primitive type after TES, GS */

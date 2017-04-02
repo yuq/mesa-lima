@@ -277,24 +277,6 @@ fd_set_vertex_buffers(struct pipe_context *pctx,
 }
 
 static void
-fd_set_index_buffer(struct pipe_context *pctx,
-		const struct pipe_index_buffer *ib)
-{
-	struct fd_context *ctx = fd_context(pctx);
-
-	if (ib) {
-		pipe_resource_reference(&ctx->indexbuf.buffer, ib->buffer);
-		ctx->indexbuf.index_size = ib->index_size;
-		ctx->indexbuf.offset = ib->offset;
-		ctx->indexbuf.user_buffer = ib->user_buffer;
-	} else {
-		pipe_resource_reference(&ctx->indexbuf.buffer, NULL);
-	}
-
-	ctx->dirty |= FD_DIRTY_INDEXBUF;
-}
-
-static void
 fd_blend_state_bind(struct pipe_context *pctx, void *hwcso)
 {
 	struct fd_context *ctx = fd_context(pctx);
@@ -492,7 +474,6 @@ fd_state_init(struct pipe_context *pctx)
 	pctx->set_viewport_states = fd_set_viewport_states;
 
 	pctx->set_vertex_buffers = fd_set_vertex_buffers;
-	pctx->set_index_buffer = fd_set_index_buffer;
 
 	pctx->bind_blend_state = fd_blend_state_bind;
 	pctx->delete_blend_state = fd_blend_state_delete;

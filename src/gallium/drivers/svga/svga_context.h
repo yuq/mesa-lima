@@ -268,7 +268,6 @@ struct svga_state
    struct svga_geometry_shader *gs;      /* derived GS */
 
    struct pipe_vertex_buffer vb[PIPE_MAX_ATTRIBS];
-   struct pipe_index_buffer ib;
    /** Constant buffers for each shader.
     * The size should probably always match with that of
     * svga_shader_emitter_v10.num_shader_consts.

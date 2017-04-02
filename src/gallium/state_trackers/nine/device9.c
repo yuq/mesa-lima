@@ -2856,7 +2856,6 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
                                     UINT VertexStreamZeroStride )
 {
     struct pipe_vertex_buffer vbuf;
-    struct pipe_index_buffer ibuf;
 
     DBG("iface %p, PrimitiveType %u, MinVertexIndex %u, NumVertices %u "
         "PrimitiveCount %u, pIndexData %p, IndexDataFormat %u "
@@ -2876,10 +2875,8 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
     vbuf.is_user_buffer = true;
     vbuf.buffer.user = pVertexStreamZeroData;
 
-    ibuf.index_size = (IndexDataFormat == D3DFMT_INDEX16) ? 2 : 4;
-    ibuf.offset = 0;
-    ibuf.buffer = NULL;
-    ibuf.user_buffer = pIndexData;
+    unsigned index_size = (IndexDataFormat == D3DFMT_INDEX16) ? 2 : 4;
+    struct pipe_resource *ibuf = NULL;
 
     if (!This->driver_caps.user_vbufs) {
         const unsigned base = MinVertexIndex * VertexStreamZeroStride;
@@ -2896,16 +2893,17 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
         /* Won't be used: */
         vbuf.buffer_offset -= base;
     }
+
+    unsigned index_offset = 0;
     if (This->csmt_active) {
         u_upload_data(This->pipe_secondary->stream_uploader,
                       0,
-                      (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * ibuf.index_size,
+                      (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * index_size,
                       4,
-                      ibuf.user_buffer,
-                      &ibuf.offset,
-                      &ibuf.buffer);
+                      pIndexData,
+                      &index_offset,
+                      &ibuf);
         u_upload_unmap(This->pipe_secondary->stream_uploader);
-        ibuf.user_buffer = NULL;
     }
 
     NineBeforeDraw(This);
@@ -2914,11 +2912,14 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
                                                            NumVertices,
                                                            PrimitiveCount,
                                                            &vbuf,
-                                                           &ibuf);
+                                                           ibuf,
+                                                           ibuf ? NULL : (void*)pIndexData,
+                                                           index_offset,
+							   index_size);
     NineAfterDraw(This);
 
     pipe_vertex_buffer_unreference(&vbuf);
-    pipe_resource_reference(&ibuf.buffer, NULL);
+    pipe_resource_reference(&ibuf, NULL);
 
     NineDevice9_PauseRecording(This);
     NineDevice9_SetIndices(This, NULL);
@@ -3032,7 +3033,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
     draw.count_from_stream_output = NULL;
     draw.indirect = NULL;
     draw.instance_count = 1;
-    draw.indexed = FALSE;
+    draw.index_size = 0;
     draw.start = 0;
     draw.index_bias = 0;
     draw.min_index = 0;

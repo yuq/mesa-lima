@@ -86,44 +86,14 @@ all_varyings_in_vbos(const struct gl_vertex_array *arrays[])
 
 
 /**
- * Basically, translate Mesa's index buffer information into
- * a pipe_index_buffer object.
- */
-static void
-setup_index_buffer(struct st_context *st,
-                   const struct _mesa_index_buffer *ib)
-{
-   struct pipe_index_buffer ibuffer;
-   struct gl_buffer_object *bufobj = ib->obj;
-
-   ibuffer.index_size = ib->index_size;
-
-   /* get/create the index buffer object */
-   if (_mesa_is_bufferobj(bufobj)) {
-      /* indices are in a real VBO */
-      ibuffer.buffer = st_buffer_object(bufobj)->buffer;
-      ibuffer.offset = pointer_to_offset(ib->ptr);
-      ibuffer.user_buffer = NULL;
-   }
-   else {
-      /* indices are in user space memory */
-      ibuffer.buffer = NULL;
-      ibuffer.offset = 0;
-      ibuffer.user_buffer = ib->ptr;
-   }
-
-   cso_set_index_buffer(st->cso_context, &ibuffer);
-}
-
-
-/**
  * Set the restart index.
  */
 static void
-setup_primitive_restart(struct gl_context *ctx, struct pipe_draw_info *info,
-                        unsigned index_size)
+setup_primitive_restart(struct gl_context *ctx, struct pipe_draw_info *info)
 {
    if (ctx->Array._PrimitiveRestart) {
+      unsigned index_size = info->index_size;
+
       info->restart_index =
          _mesa_primitive_restart_index(ctx, index_size);
 
@@ -176,6 +146,7 @@ st_draw_vbo(struct gl_context *ctx,
    struct pipe_draw_info info;
    const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
    unsigned i;
+   unsigned start = 0;
 
    /* Mesa core state should have been validated already */
    assert(ctx->NewState == 0x0);
@@ -198,19 +169,29 @@ st_draw_vbo(struct gl_context *ctx,
    util_draw_init_info(&info);
 
    if (ib) {
+      struct gl_buffer_object *bufobj = ib->obj;
+
       /* Get index bounds for user buffers. */
       if (!index_bounds_valid)
          if (!all_varyings_in_vbos(arrays))
             vbo_get_minmax_indices(ctx, prims, ib, &min_index, &max_index,
                                    nr_prims);
 
-      setup_index_buffer(st, ib);
-
-      info.indexed = TRUE;
+      info.index_size = ib->index_size;
       info.min_index = min_index;
       info.max_index = max_index;
 
-      setup_primitive_restart(ctx, &info, ib->index_size);
+      if (_mesa_is_bufferobj(bufobj)) {
+         /* indices are in a real VBO */
+         info.index.resource = st_buffer_object(bufobj)->buffer;
+         start = pointer_to_offset(ib->ptr) / info.index_size;
+      } else {
+         /* indices are in user space memory */
+         info.has_user_indices = true;
+         info.index.user = ib->ptr;
+      }
+
+      setup_primitive_restart(ctx, &info);
    }
    else {
       /* Transform feedback drawing is always non-indexed. */
@@ -226,7 +207,7 @@ st_draw_vbo(struct gl_context *ctx,
    /* do actual drawing */
    for (i = 0; i < nr_prims; i++) {
       info.mode = translate_prim(ctx, prims[i].mode);
-      info.start = prims[i].start;
+      info.start = start + prims[i].start;
       info.count = prims[i].count;
       info.start_instance = prims[i].base_instance;
       info.instance_count = prims[i].num_instances;
@@ -239,11 +220,11 @@ st_draw_vbo(struct gl_context *ctx,
       }
 
       if (ST_DEBUG & DEBUG_DRAW) {
-         debug_printf("st/draw: mode %s  start %u  count %u  indexed %d\n",
+         debug_printf("st/draw: mode %s  start %u  count %u  index_size %d\n",
                       u_prim_name(info.mode),
                       info.start,
                       info.count,
-                      info.indexed);
+                      info.index_size);
       }
 
       /* Don't call u_trim_pipe_prim. Drivers should do it if they need it. */
@@ -284,14 +265,20 @@ st_indirect_draw_vbo(struct gl_context *ctx,
 
    memset(&indirect, 0, sizeof(indirect));
    util_draw_init_info(&info);
+   info.start = 0; /* index offset / index size */
 
    if (ib) {
-      setup_index_buffer(st, ib);
+      struct gl_buffer_object *bufobj = ib->obj;
 
-      info.indexed = TRUE;
+      /* indices are always in a real VBO */
+      assert(_mesa_is_bufferobj(bufobj));
+
+      info.index_size = ib->index_size;
+      info.index.resource = st_buffer_object(bufobj)->buffer;
+      info.start = pointer_to_offset(ib->ptr) / info.index_size;
 
       /* Primitive restart is not handled by the VBO module in this case. */
-      setup_primitive_restart(ctx, &info, ib->index_size);
+      setup_primitive_restart(ctx, &info);
    }
 
    info.mode = translate_prim(ctx, mode);
@@ -301,10 +288,10 @@ st_indirect_draw_vbo(struct gl_context *ctx,
    indirect.offset = indirect_offset;
 
    if (ST_DEBUG & DEBUG_DRAW) {
-      debug_printf("st/draw indirect: mode %s drawcount %d indexed %d\n",
+      debug_printf("st/draw indirect: mode %s drawcount %d index_size %d\n",
                    u_prim_name(info.mode),
                    draw_count,
-                   info.indexed);
+                   info.index_size);
    }
 
    if (!st->has_multi_draw_indirect) {

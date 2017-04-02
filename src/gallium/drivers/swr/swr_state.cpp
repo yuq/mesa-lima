@@ -591,20 +591,6 @@ swr_set_vertex_buffers(struct pipe_context *pipe,
 
 
 static void
-swr_set_index_buffer(struct pipe_context *pipe,
-                     const struct pipe_index_buffer *ib)
-{
-   struct swr_context *ctx = swr_context(pipe);
-
-   if (ib)
-      memcpy(&ctx->index_buffer, ib, sizeof(ctx->index_buffer));
-   else
-      memset(&ctx->index_buffer, 0, sizeof(ctx->index_buffer));
-
-   ctx->dirty |= SWR_NEW_VERTEX;
-}
-
-static void
 swr_set_polygon_stipple(struct pipe_context *pipe,
                         const struct pipe_poly_stipple *stipple)
 {
@@ -749,10 +735,9 @@ swr_update_resource_status(struct pipe_context *pipe,
    }
 
    /* VBO index buffer */
-   if (p_draw_info && p_draw_info->indexed) {
-      struct pipe_index_buffer *ib = &ctx->index_buffer;
-      if (!ib->user_buffer)
-         swr_resource_read(ib->buffer);
+   if (p_draw_info && p_draw_info->index_size) {
+      if (!p_draw_info->has_user_indices)
+         swr_resource_read(p_draw_info->index.resource);
    }
 
    /* transform feedback buffers */
@@ -1222,7 +1207,10 @@ swr_update_derived(struct pipe_context *pipe,
 
    /* Set vertex & index buffers */
    /* (using draw info if called by swr_draw_vbo) */
-   if (ctx->dirty & SWR_NEW_VERTEX) {
+   /* TODO: This is always true, because the index buffer comes from
+    * pipe_draw_info.
+    */
+   if (1 || ctx->dirty & SWR_NEW_VERTEX) {
       uint32_t scratch_total;
       uint8_t *scratch = NULL;
 
@@ -1303,20 +1291,19 @@ swr_update_derived(struct pipe_context *pipe,
 
       /* index buffer, if required (info passed in by swr_draw_vbo) */
       SWR_FORMAT index_type = R32_UINT; /* Default for non-indexed draws */
-      if (info.indexed) {
+      if (info.index_size) {
          const uint8_t *p_data;
          uint32_t size, pitch;
-         struct pipe_index_buffer *ib = &ctx->index_buffer;
 
-         pitch = ib->index_size ? ib->index_size : sizeof(uint32_t);
+         pitch = p_draw_info->index_size ? p_draw_info->index_size : sizeof(uint32_t);
          index_type = swr_convert_index_type(pitch);
 
-         if (!ib->user_buffer) {
+         if (!info.has_user_indices) {
             /* VBO
              * size is based on buffer->width0 rather than info.count
              * to prevent having to validate VBO on each draw */
-            size = ib->buffer->width0;
-            p_data = swr_resource_data(ib->buffer) + ib->offset;
+            size = info.index.resource->width0;
+            p_data = swr_resource_data(info.index.resource);
          } else {
             /* Client buffer
              * client memory is one-time use, re-trigger SWR_NEW_VERTEX to
@@ -1327,14 +1314,14 @@ swr_update_derived(struct pipe_context *pipe,
             size = AlignUp(size, 4);
 
             /* Copy indices to scratch space */
-            const void *ptr = ib->user_buffer;
+            const void *ptr = info.index.user;
             ptr = swr_copy_to_scratch_space(
                ctx, &ctx->scratch->index_buffer, ptr, size);
             p_data = (const uint8_t *)ptr;
          }
 
          SWR_INDEX_BUFFER_STATE swrIndexBuffer;
-         swrIndexBuffer.format = swr_convert_index_type(ib->index_size);
+         swrIndexBuffer.format = swr_convert_index_type(p_draw_info->index_size);
          swrIndexBuffer.pIndices = p_data;
          swrIndexBuffer.size = size;
 
@@ -1852,7 +1839,6 @@ swr_state_init(struct pipe_context *pipe)
    pipe->delete_vertex_elements_state = swr_delete_vertex_elements_state;
 
    pipe->set_vertex_buffers = swr_set_vertex_buffers;
-   pipe->set_index_buffer = swr_set_index_buffer;
 
    pipe->set_polygon_stipple = swr_set_polygon_stipple;
    pipe->set_clip_state = swr_set_clip_state;

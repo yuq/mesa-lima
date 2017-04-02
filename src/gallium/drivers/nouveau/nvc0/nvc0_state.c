@@ -962,31 +962,6 @@ nvc0_set_vertex_buffers(struct pipe_context *pipe,
 }
 
 static void
-nvc0_set_index_buffer(struct pipe_context *pipe,
-                      const struct pipe_index_buffer *ib)
-{
-    struct nvc0_context *nvc0 = nvc0_context(pipe);
-
-    if (nvc0->idxbuf.buffer)
-       nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_IDX);
-
-    if (ib) {
-       pipe_resource_reference(&nvc0->idxbuf.buffer, ib->buffer);
-       nvc0->idxbuf.index_size = ib->index_size;
-       if (ib->buffer) {
-          nvc0->idxbuf.offset = ib->offset;
-          nvc0->dirty_3d |= NVC0_NEW_3D_IDXBUF;
-       } else {
-          nvc0->idxbuf.user_buffer = ib->user_buffer;
-          nvc0->dirty_3d &= ~NVC0_NEW_3D_IDXBUF;
-       }
-    } else {
-       nvc0->dirty_3d &= ~NVC0_NEW_3D_IDXBUF;
-       pipe_resource_reference(&nvc0->idxbuf.buffer, NULL);
-    }
-}
-
-static void
 nvc0_vertex_state_bind(struct pipe_context *pipe, void *hwcso)
 {
     struct nvc0_context *nvc0 = nvc0_context(pipe);
@@ -1426,7 +1401,6 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
    pipe->bind_vertex_elements_state = nvc0_vertex_state_bind;
 
    pipe->set_vertex_buffers = nvc0_set_vertex_buffers;
-   pipe->set_index_buffer = nvc0_set_index_buffer;
 
    pipe->create_stream_output_target = nvc0_so_target_create;
    pipe->stream_output_target_destroy = nvc0_so_target_destroy;

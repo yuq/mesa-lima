@@ -622,7 +622,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			val |= A3XX_PC_PRIM_VTX_CNTL_STRIDE_IN_VPC(stride_in_vpc);
 		}
 
-		if (info->indexed && info->primitive_restart) {
+		if (info->index_size && info->primitive_restart) {
 			val |= A3XX_PC_PRIM_VTX_CNTL_PRIMITIVE_RESTART;
 		}
 

@@ -595,12 +595,13 @@ nv50_draw_elements_inline_u32_short(struct nouveau_pushbuf *push,
 
 static void
 nv50_draw_elements(struct nv50_context *nv50, bool shorten,
+                   const struct pipe_draw_info *info,
                    unsigned mode, unsigned start, unsigned count,
-                   unsigned instance_count, int32_t index_bias)
+                   unsigned instance_count, int32_t index_bias,
+		   unsigned index_size)
 {
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    unsigned prim;
-   const unsigned index_size = nv50->idxbuf.index_size;
 
    prim = nv50_prim_gl(mode);
 
@@ -614,15 +615,15 @@ nv50_draw_elements(struct nv50_context *nv50, bool shorten,
       nv50->state.index_bias = index_bias;
    }
 
-   if (nv50->idxbuf.buffer) {
-      struct nv04_resource *buf = nv04_resource(nv50->idxbuf.buffer);
+   if (!info->has_user_indices) {
+      struct nv04_resource *buf = nv04_resource(info->index.resource);
       unsigned pb_start;
       unsigned pb_bytes;
-      const unsigned base = (buf->offset + nv50->idxbuf.offset) & ~3;
+      const unsigned base = buf->offset & ~3;
 
-      start += ((buf->offset + nv50->idxbuf.offset) & 3) >> (index_size >> 1);
+      start += (buf->offset & 3) >> (index_size >> 1);
 
-      assert(nouveau_resource_mapped_by_gpu(nv50->idxbuf.buffer));
+      assert(nouveau_resource_mapped_by_gpu(info->index.resource));
 
       /* This shouldn't have to be here. The going theory is that the buffer
        * is being filled in by PGRAPH, and it's not done yet by the time it
@@ -675,7 +676,7 @@ nv50_draw_elements(struct nv50_context *nv50, bool shorten,
          prim |= NV50_3D_VERTEX_BEGIN_GL_INSTANCE_NEXT;
       }
    } else {
-      const void *data = nv50->idxbuf.user_buffer;
+      const void *data = info->index.user;
 
       while (instance_count--) {
          BEGIN_NV04(push, NV50_3D(VERTEX_BEGIN_GL), 1);
@@ -769,6 +770,11 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    bool tex_dirty = false;
    int s;
 
+   if (info->index_size && !info->has_user_indices) {
+      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_INDEX);
+      BCTX_REFN(nv50->bufctx_3d, 3D_INDEX, nv04_resource(info->index.resource), RD);
+   }
+
    /* NOTE: caller must ensure that (min_index + index_bias) is >= 0 */
    nv50->vb_elt_first = info->min_index + info->index_bias;
    nv50->vb_elt_limit = info->max_index - info->min_index;
@@ -779,7 +785,7 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
     * if index count is larger and we expect repeated vertices, suggest upload.
     */
    nv50->vbo_push_hint = /* the 64 is heuristic */
-      !(info->indexed && ((nv50->vb_elt_limit + 64) < info->count));
+      !(info->index_size && ((nv50->vb_elt_limit + 64) < info->count));
 
    if (nv50->vbo_user && !(nv50->dirty_3d & (NV50_NEW_3D_ARRAYS | NV50_NEW_3D_VERTEX))) {
       if (!!nv50->vbo_fifo != nv50->vbo_push_hint)
@@ -853,7 +859,7 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       nv50->base.vbo_dirty = false;
    }
 
-   if (info->indexed) {
+   if (info->index_size) {
       bool shorten = info->max_index <= 65535;
 
       if (info->primitive_restart != nv50->state.prim_restart) {
@@ -878,9 +884,9 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
             shorten = false;
       }
 
-      nv50_draw_elements(nv50, shorten,
+      nv50_draw_elements(nv50, shorten, info,
                          info->mode, info->start, info->count,
-                         info->instance_count, info->index_bias);
+                         info->instance_count, info->index_bias, info->index_size);
    } else
    if (unlikely(info->count_from_stream_output)) {
       nva0_draw_stream_output(nv50, info);

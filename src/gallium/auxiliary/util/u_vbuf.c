@@ -162,9 +162,6 @@ struct u_vbuf {
    uint32_t dirty_real_vb_mask; /* which buffers are dirty since the last
                                    call of set_vertex_buffers */
 
-   /* The index buffer. */
-   struct pipe_index_buffer index_buffer;
-
    /* Vertex elements. */
    struct u_vbuf_elements *ve, *ve_saved;
 
@@ -372,9 +369,6 @@ void u_vbuf_destroy(struct u_vbuf *mgr)
    unsigned num_vb = screen->get_shader_param(screen, PIPE_SHADER_VERTEX,
                                               PIPE_SHADER_CAP_MAX_INPUTS);
 
-   mgr->pipe->set_index_buffer(mgr->pipe, NULL);
-   pipe_resource_reference(&mgr->index_buffer.buffer, NULL);
-
    mgr->pipe->set_vertex_buffers(mgr->pipe, 0, num_vb, NULL);
 
    for (i = 0; i < PIPE_MAX_ATTRIBS; i++)
@@ -391,10 +385,10 @@ void u_vbuf_destroy(struct u_vbuf *mgr)
 
 static enum pipe_error
 u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
+                         const struct pipe_draw_info *info,
                          unsigned vb_mask, unsigned out_vb,
                          int start_vertex, unsigned num_vertices,
-                         int start_index, unsigned num_indices, int min_index,
-                         boolean unroll_indices)
+                         int min_index, boolean unroll_indices)
 {
    struct translate *tr;
    struct pipe_transfer *vb_transfer[PIPE_MAX_ATTRIBS] = {0};
@@ -440,38 +434,35 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
 
    /* Translate. */
    if (unroll_indices) {
-      struct pipe_index_buffer *ib = &mgr->index_buffer;
       struct pipe_transfer *transfer = NULL;
-      unsigned offset = ib->offset + start_index * ib->index_size;
+      unsigned offset = info->start * info->index_size;
       uint8_t *map;
-
-      assert((ib->buffer || ib->user_buffer) && ib->index_size);
 
       /* Create and map the output buffer. */
       u_upload_alloc(mgr->pipe->stream_uploader, 0,
-                     key->output_stride * num_indices, 4,
+                     key->output_stride * info->count, 4,
                      &out_offset, &out_buffer,
                      (void**)&out_map);
       if (!out_buffer)
          return PIPE_ERROR_OUT_OF_MEMORY;
 
-      if (ib->user_buffer) {
-         map = (uint8_t*)ib->user_buffer + offset;
+      if (info->has_user_indices) {
+         map = (uint8_t*)info->index.user + offset;
       } else {
-         map = pipe_buffer_map_range(mgr->pipe, ib->buffer, offset,
-                                     num_indices * ib->index_size,
+         map = pipe_buffer_map_range(mgr->pipe, info->index.resource, offset,
+                                     info->count * info->index_size,
                                      PIPE_TRANSFER_READ, &transfer);
       }
 
-      switch (ib->index_size) {
+      switch (info->index_size) {
       case 4:
-         tr->run_elts(tr, (unsigned*)map, num_indices, 0, 0, out_map);
+         tr->run_elts(tr, (unsigned*)map, info->count, 0, 0, out_map);
          break;
       case 2:
-         tr->run_elts16(tr, (uint16_t*)map, num_indices, 0, 0, out_map);
+         tr->run_elts16(tr, (uint16_t*)map, info->count, 0, 0, out_map);
          break;
       case 1:
-         tr->run_elts8(tr, map, num_indices, 0, 0, out_map);
+         tr->run_elts8(tr, map, info->count, 0, 0, out_map);
          break;
       }
 
@@ -556,10 +547,9 @@ u_vbuf_translate_find_free_vb_slots(struct u_vbuf *mgr,
 
 static boolean
 u_vbuf_translate_begin(struct u_vbuf *mgr,
+                       const struct pipe_draw_info *info,
                        int start_vertex, unsigned num_vertices,
-                       int start_instance, unsigned num_instances,
-                       int start_index, unsigned num_indices, int min_index,
-                       boolean unroll_indices)
+                       int min_index, boolean unroll_indices)
 {
    unsigned mask[VB_NUM] = {0};
    struct translate_key key[VB_NUM];
@@ -569,15 +559,15 @@ u_vbuf_translate_begin(struct u_vbuf *mgr,
                                    mgr->ve->used_vb_mask;
 
    int start[VB_NUM] = {
-      start_vertex,     /* VERTEX */
-      start_instance,   /* INSTANCE */
-      0                 /* CONST */
+      start_vertex,           /* VERTEX */
+      info->start_instance,   /* INSTANCE */
+      0                       /* CONST */
    };
 
    unsigned num[VB_NUM] = {
-      num_vertices,     /* VERTEX */
-      num_instances,    /* INSTANCE */
-      1                 /* CONST */
+      num_vertices,           /* VERTEX */
+      info->instance_count,   /* INSTANCE */
+      1                       /* CONST */
    };
 
    memset(key, 0, sizeof(key));
@@ -664,10 +654,9 @@ u_vbuf_translate_begin(struct u_vbuf *mgr,
    for (type = 0; type < VB_NUM; type++) {
       if (key[type].nr_elements) {
          enum pipe_error err;
-         err = u_vbuf_translate_buffers(mgr, &key[type], mask[type],
+         err = u_vbuf_translate_buffers(mgr, &key[type], info, mask[type],
                                         mgr->fallback_vbs[type],
-                                        start[type], num[type],
-                                        start_index, num_indices, min_index,
+                                        start[type], num[type], min_index,
                                         unroll_indices && type == VB_VERTEX);
          if (err != PIPE_OK)
             return FALSE;
@@ -889,22 +878,6 @@ void u_vbuf_set_vertex_buffers(struct u_vbuf *mgr,
    mgr->dirty_real_vb_mask |= ~mask;
 }
 
-void u_vbuf_set_index_buffer(struct u_vbuf *mgr,
-                             const struct pipe_index_buffer *ib)
-{
-   struct pipe_context *pipe = mgr->pipe;
-
-   if (ib) {
-      assert(ib->offset % ib->index_size == 0);
-      pipe_resource_reference(&mgr->index_buffer.buffer, ib->buffer);
-      memcpy(&mgr->index_buffer, ib, sizeof(*ib));
-   } else {
-      pipe_resource_reference(&mgr->index_buffer.buffer, NULL);
-   }
-
-   pipe->set_index_buffer(pipe, ib);
-}
-
 static enum pipe_error
 u_vbuf_upload_buffers(struct u_vbuf *mgr,
                       int start_vertex, unsigned num_vertices,
@@ -1023,42 +996,38 @@ static boolean u_vbuf_mapping_vertex_buffer_blocks(const struct u_vbuf *mgr)
 }
 
 static void u_vbuf_get_minmax_index(struct pipe_context *pipe,
-                                    struct pipe_index_buffer *ib,
-                                    boolean primitive_restart,
-                                    unsigned restart_index,
-                                    unsigned start, unsigned count,
-                                    int *out_min_index,
-                                    int *out_max_index)
+                                    const struct pipe_draw_info *info,
+                                    int *out_min_index, int *out_max_index)
 {
    struct pipe_transfer *transfer = NULL;
    const void *indices;
    unsigned i;
 
-   if (ib->user_buffer) {
-      indices = (uint8_t*)ib->user_buffer +
-                ib->offset + start * ib->index_size;
+   if (info->has_user_indices) {
+      indices = (uint8_t*)info->index.user +
+                info->start * info->index_size;
    } else {
-      indices = pipe_buffer_map_range(pipe, ib->buffer,
-                                      ib->offset + start * ib->index_size,
-                                      count * ib->index_size,
+      indices = pipe_buffer_map_range(pipe, info->index.resource,
+                                      info->start * info->index_size,
+                                      info->count * info->index_size,
                                       PIPE_TRANSFER_READ, &transfer);
    }
 
-   switch (ib->index_size) {
+   switch (info->index_size) {
    case 4: {
       const unsigned *ui_indices = (const unsigned*)indices;
       unsigned max_ui = 0;
       unsigned min_ui = ~0U;
-      if (primitive_restart) {
-         for (i = 0; i < count; i++) {
-            if (ui_indices[i] != restart_index) {
+      if (info->primitive_restart) {
+         for (i = 0; i < info->count; i++) {
+            if (ui_indices[i] != info->restart_index) {
                if (ui_indices[i] > max_ui) max_ui = ui_indices[i];
                if (ui_indices[i] < min_ui) min_ui = ui_indices[i];
             }
          }
       }
       else {
-         for (i = 0; i < count; i++) {
+         for (i = 0; i < info->count; i++) {
             if (ui_indices[i] > max_ui) max_ui = ui_indices[i];
             if (ui_indices[i] < min_ui) min_ui = ui_indices[i];
          }
@@ -1071,16 +1040,16 @@ static void u_vbuf_get_minmax_index(struct pipe_context *pipe,
       const unsigned short *us_indices = (const unsigned short*)indices;
       unsigned max_us = 0;
       unsigned min_us = ~0U;
-      if (primitive_restart) {
-         for (i = 0; i < count; i++) {
-            if (us_indices[i] != restart_index) {
+      if (info->primitive_restart) {
+         for (i = 0; i < info->count; i++) {
+            if (us_indices[i] != info->restart_index) {
                if (us_indices[i] > max_us) max_us = us_indices[i];
                if (us_indices[i] < min_us) min_us = us_indices[i];
             }
          }
       }
       else {
-         for (i = 0; i < count; i++) {
+         for (i = 0; i < info->count; i++) {
             if (us_indices[i] > max_us) max_us = us_indices[i];
             if (us_indices[i] < min_us) min_us = us_indices[i];
          }
@@ -1093,16 +1062,16 @@ static void u_vbuf_get_minmax_index(struct pipe_context *pipe,
       const unsigned char *ub_indices = (const unsigned char*)indices;
       unsigned max_ub = 0;
       unsigned min_ub = ~0U;
-      if (primitive_restart) {
-         for (i = 0; i < count; i++) {
-            if (ub_indices[i] != restart_index) {
+      if (info->primitive_restart) {
+         for (i = 0; i < info->count; i++) {
+            if (ub_indices[i] != info->restart_index) {
                if (ub_indices[i] > max_ub) max_ub = ub_indices[i];
                if (ub_indices[i] < min_ub) min_ub = ub_indices[i];
             }
          }
       }
       else {
-         for (i = 0; i < count; i++) {
+         for (i = 0; i < info->count; i++) {
             if (ub_indices[i] > max_ub) max_ub = ub_indices[i];
             if (ub_indices[i] < min_ub) min_ub = ub_indices[i];
          }
@@ -1167,7 +1136,7 @@ void u_vbuf_draw_vbo(struct u_vbuf *mgr, const struct pipe_draw_info *info)
       struct pipe_transfer *transfer = NULL;
       int *data;
 
-      if (new_info.indexed) {
+      if (new_info.index_size) {
          data = pipe_buffer_map_range(pipe, new_info.indirect->buffer,
                                       new_info.indirect->offset, 20,
                                       PIPE_TRANSFER_READ, &transfer);
@@ -1188,7 +1157,7 @@ void u_vbuf_draw_vbo(struct u_vbuf *mgr, const struct pipe_draw_info *info)
       new_info.indirect = NULL;
    }
 
-   if (new_info.indexed) {
+   if (new_info.index_size) {
       /* See if anything needs to be done for per-vertex attribs. */
       if (u_vbuf_need_minmax_index(mgr)) {
          int max_index;
@@ -1197,10 +1166,8 @@ void u_vbuf_draw_vbo(struct u_vbuf *mgr, const struct pipe_draw_info *info)
             min_index = new_info.min_index;
             max_index = new_info.max_index;
          } else {
-            u_vbuf_get_minmax_index(mgr->pipe, &mgr->index_buffer,
-                                    new_info.primitive_restart,
-                                    new_info.restart_index, new_info.start,
-                                    new_info.count, &min_index, &max_index);
+            u_vbuf_get_minmax_index(mgr->pipe, &new_info,
+                                    &min_index, &max_index);
          }
 
          assert(min_index <= max_index);
@@ -1236,16 +1203,14 @@ void u_vbuf_draw_vbo(struct u_vbuf *mgr, const struct pipe_draw_info *info)
    if (unroll_indices ||
        incompatible_vb_mask ||
        mgr->ve->incompatible_elem_mask) {
-      if (!u_vbuf_translate_begin(mgr, start_vertex, num_vertices,
-                                  new_info.start_instance,
-                                  new_info.instance_count, new_info.start,
-                                  new_info.count, min_index, unroll_indices)) {
+      if (!u_vbuf_translate_begin(mgr, &new_info, start_vertex, num_vertices,
+                                  min_index, unroll_indices)) {
          debug_warn_once("u_vbuf_translate_begin() failed");
          return;
       }
 
       if (unroll_indices) {
-         new_info.indexed = FALSE;
+         new_info.index_size = 0;
          new_info.index_bias = 0;
          new_info.min_index = 0;
          new_info.max_index = new_info.count - 1;

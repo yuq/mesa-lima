@@ -1034,24 +1034,6 @@ trace_context_set_vertex_buffers(struct pipe_context *_pipe,
 }
 
 
-static void
-trace_context_set_index_buffer(struct pipe_context *_pipe,
-                               const struct pipe_index_buffer *ib)
-{
-   struct trace_context *tr_ctx = trace_context(_pipe);
-   struct pipe_context *pipe = tr_ctx->pipe;
-
-   trace_dump_call_begin("pipe_context", "set_index_buffer");
-
-   trace_dump_arg(ptr, pipe);
-   trace_dump_arg(index_buffer, ib);
-
-   pipe->set_index_buffer(pipe, ib);
-
-   trace_dump_call_end();
-}
-
-
 static struct pipe_stream_output_target *
 trace_context_create_stream_output_target(struct pipe_context *_pipe,
                                           struct pipe_resource *res,
@@ -1804,7 +1786,6 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(create_surface);
    TR_CTX_INIT(surface_destroy);
    TR_CTX_INIT(set_vertex_buffers);
-   TR_CTX_INIT(set_index_buffer);
    TR_CTX_INIT(create_stream_output_target);
    TR_CTX_INIT(stream_output_target_destroy);
    TR_CTX_INIT(set_stream_output_targets);

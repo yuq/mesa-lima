@@ -222,10 +222,6 @@ void cso_restore_constant_buffer_slot0(struct cso_context *cso,
 /* drawing */
 
 void
-cso_set_index_buffer(struct cso_context *cso,
-                     const struct pipe_index_buffer *ib);
-
-void
 cso_draw_vbo(struct cso_context *cso,
              const struct pipe_draw_info *info);
 

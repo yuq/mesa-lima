@@ -42,7 +42,7 @@
 
 static void
 draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
-		struct fd5_emit *emit)
+		struct fd5_emit *emit, unsigned index_offset)
 {
 	const struct pipe_draw_info *info = emit->info;
 	enum pc_di_primtype primtype = ctx->primtypes[info->mode];
@@ -53,7 +53,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		fd5_emit_vertex_bufs(ring, emit);
 
 	OUT_PKT4(ring, REG_A5XX_VFD_INDEX_OFFSET, 2);
-	OUT_RING(ring, info->indexed ? info->index_bias : info->start); /* VFD_INDEX_OFFSET */
+	OUT_RING(ring, info->index_size ? info->index_bias : info->start); /* VFD_INDEX_OFFSET */
 	OUT_RING(ring, info->start_instance);   /* ??? UNKNOWN_2209 */
 
 	OUT_PKT4(ring, REG_A5XX_PC_RESTART_INDEX, 1);
@@ -63,7 +63,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	fd5_emit_render_cntl(ctx, false);
 	fd5_draw_emit(ctx->batch, ring, primtype,
 			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
-			info);
+			info, index_offset);
 }
 
 /* fixup dirty shader state in case some "unrelated" (from the state-
@@ -92,7 +92,8 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 }
 
 static bool
-fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
+fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
+             unsigned index_offset)
 {
 	struct fd5_context *fd5_ctx = fd5_context(ctx);
 	struct fd5_emit emit = {
@@ -136,7 +137,7 @@ fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;
 
-	draw_impl(ctx, ctx->batch->draw, &emit);
+	draw_impl(ctx, ctx->batch->draw, &emit, index_offset);
 
 //	/* and now binning pass: */
 //	emit.key.binning_pass = true;
