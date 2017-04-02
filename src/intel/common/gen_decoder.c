@@ -723,7 +723,6 @@ gen_get_enum_name(struct gen_enum *e, uint64_t value)
 bool
 gen_field_iterator_next(struct gen_field_iterator *iter)
 {
-   struct gen_field *f;
    union {
       uint64_t qw;
       float f;
@@ -732,39 +731,38 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    if (iter->i == iter->group->nfields)
       return false;
 
-   f = iter->group->fields[iter->i++];
-   iter->name = f->name;
-   iter->dword = f->start / 32;
+   iter->field = iter->group->fields[iter->i++];
+   iter->name = iter->field->name;
+   iter->dword = iter->field->start / 32;
    iter->struct_desc = NULL;
 
-   if ((f->end - f->start) > 32)
+   if ((iter->field->end - iter->field->start) > 32)
       v.qw = ((uint64_t) iter->p[iter->dword+1] << 32) | iter->p[iter->dword];
    else
       v.qw = iter->p[iter->dword];
 
    const char *enum_name = NULL;
 
-   switch (f->type.kind) {
+   switch (iter->field->type.kind) {
    case GEN_TYPE_UNKNOWN:
    case GEN_TYPE_INT: {
-      uint64_t value = field(v.qw, f->start, f->end);
-      snprintf(iter->value, sizeof(iter->value),
-               "%"PRId64, value);
-      enum_name = gen_get_enum_name(&f->inline_enum, value);
+      uint64_t value = field(v.qw, iter->field->start, iter->field->end);
+      snprintf(iter->value, sizeof(iter->value), "%"PRId64, value);
+      enum_name = gen_get_enum_name(&iter->field->inline_enum, value);
       break;
    }
    case GEN_TYPE_UINT: {
-      uint64_t value = field(v.qw, f->start, f->end);
-      snprintf(iter->value, sizeof(iter->value),
-               "%"PRIu64, value);
-      enum_name = gen_get_enum_name(&f->inline_enum, value);
+      uint64_t value = field(v.qw, iter->field->start, iter->field->end);
+      snprintf(iter->value, sizeof(iter->value), "%"PRIu64, value);
+      enum_name = gen_get_enum_name(&iter->field->inline_enum, value);
       break;
    }
    case GEN_TYPE_BOOL: {
       const char *true_string =
          iter->print_colors ? "\e[0;35mtrue\e[0m" : "true";
-      snprintf(iter->value, sizeof(iter->value),
-               "%s", field(v.qw, f->start, f->end) ? true_string : "false");
+      snprintf(iter->value, sizeof(iter->value), "%s",
+               field(v.qw, iter->field->start, iter->field->end) ?
+               true_string : "false");
       break;
    }
    case GEN_TYPE_FLOAT:
@@ -772,18 +770,20 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
       break;
    case GEN_TYPE_ADDRESS:
    case GEN_TYPE_OFFSET:
-      snprintf(iter->value, sizeof(iter->value),
-               "0x%08"PRIx64, field_address(v.qw, f->start, f->end));
+      snprintf(iter->value, sizeof(iter->value), "0x%08"PRIx64,
+               field_address(v.qw, iter->field->start, iter->field->end));
       break;
    case GEN_TYPE_STRUCT:
-      snprintf(iter->value, sizeof(iter->value),
-               "<struct %s>", f->type.gen_struct->name);
+      snprintf(iter->value, sizeof(iter->value), "<struct %s>",
+               iter->field->type.gen_struct->name);
       iter->struct_desc =
-         gen_spec_find_struct(iter->group->spec, f->type.gen_struct->name);
+         gen_spec_find_struct(iter->group->spec,
+                              iter->field->type.gen_struct->name);
       break;
    case GEN_TYPE_UFIXED:
-      snprintf(iter->value, sizeof(iter->value),
-               "%f", (float) field(v.qw, f->start, f->end) / (1 << f->type.f));
+      snprintf(iter->value, sizeof(iter->value), "%f",
+               (float) field(v.qw, iter->field->start,
+                             iter->field->end) / (1 << iter->field->type.f));
       break;
    case GEN_TYPE_SFIXED:
       /* FIXME: Sign extend extracted field. */
@@ -792,10 +792,10 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    case GEN_TYPE_MBO:
        break;
    case GEN_TYPE_ENUM: {
-      uint64_t value = field(v.qw, f->start, f->end);
+      uint64_t value = field(v.qw, iter->field->start, iter->field->end);
       snprintf(iter->value, sizeof(iter->value),
                "%"PRId64, value);
-      enum_name = gen_get_enum_name(f->type.gen_enum, value);
+      enum_name = gen_get_enum_name(iter->field->type.gen_enum, value);
       break;
    }
    }

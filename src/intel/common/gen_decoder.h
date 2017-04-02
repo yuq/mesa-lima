@@ -58,6 +58,7 @@ struct gen_field_iterator {
    const uint32_t *p;
    int dword; /**< current field starts at &p[dword] */
    int i;
+   struct gen_field *field;
    bool print_colors;
 };
 
