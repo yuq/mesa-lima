@@ -404,26 +404,28 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 		va += base_level_info->offset;
 	}
 
-	if (vi_dcc_enabled(tex, first_level)) {
-		meta_va = (!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
-			  tex->dcc_offset;
-
-		if (sscreen->b.chip_class <= VI)
-			meta_va += base_level_info->dcc_offset;
-	} else if (tex->tc_compatible_htile && !is_stencil) {
-		meta_va = tex->htile_buffer->gpu_address;
-	}
-
 	state[0] = va >> 8;
 	state[1] &= C_008F14_BASE_ADDRESS_HI;
 	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
 
-	state[6] &= C_008F28_COMPRESSION_EN;
-	state[7] = 0;
+	if (sscreen->b.chip_class >= VI) {
+		state[6] &= C_008F28_COMPRESSION_EN;
+		state[7] = 0;
 
-	if (meta_va) {
-		state[6] |= S_008F28_COMPRESSION_EN(1);
-		state[7] = meta_va >> 8;
+		if (vi_dcc_enabled(tex, first_level)) {
+			meta_va = (!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
+				  tex->dcc_offset;
+
+			if (sscreen->b.chip_class <= VI)
+				meta_va += base_level_info->dcc_offset;
+		} else if (tex->tc_compatible_htile && !is_stencil) {
+			meta_va = tex->htile_buffer->gpu_address;
+		}
+
+		if (meta_va) {
+			state[6] |= S_008F28_COMPRESSION_EN(1);
+			state[7] = meta_va >> 8;
+		}
 	}
 
 	if (sscreen->b.chip_class >= GFX9) {
