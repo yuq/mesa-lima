@@ -497,14 +497,14 @@ struct pipe_resource
 {
    struct pipe_reference reference;
    struct pipe_screen *screen; /**< screen that this texture belongs to */
-   enum pipe_texture_target target; /**< PIPE_TEXTURE_x */
-   enum pipe_format format;         /**< PIPE_FORMAT_x */
 
-   unsigned width0;
-   unsigned height0;
-   unsigned depth0;
-   unsigned array_size;
+   unsigned width0; /**< Used by both buffers and textures. */
+   uint16_t height0; /* Textures: The maximum height/depth/array_size is 16k. */
+   uint16_t depth0;
+   uint16_t array_size;
 
+   enum pipe_format format:16;         /**< PIPE_FORMAT_x */
+   enum pipe_texture_target target:8; /**< PIPE_TEXTURE_x */
    unsigned last_level:8;    /**< Index of last mipmap level present/defined */
    unsigned nr_samples:8;    /**< for multisampled surfaces, nr of samples */
    unsigned usage:8;         /**< PIPE_USAGE_x (not a bitmask) */

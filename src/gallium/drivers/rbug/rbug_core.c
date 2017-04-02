@@ -205,7 +205,7 @@ rbug_texture_info(struct rbug_rbug *tr_rbug, struct rbug_header *header, uint32_
    struct rbug_proto_texture_info *gpti = (struct rbug_proto_texture_info *)header;
    struct rbug_list *ptr;
    struct pipe_resource *t;
-   unsigned num_layers;
+   uint16_t num_layers;
 
    mtx_lock(&rb_screen->list_mutex);
    foreach(ptr, &rb_screen->resources) {

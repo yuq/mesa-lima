@@ -202,13 +202,13 @@ st_texture_create(struct st_context *st,
 
 extern void
 st_gl_texture_dims_to_pipe_dims(GLenum texture,
-                                GLuint widthIn,
-                                GLuint heightIn,
-                                GLuint depthIn,
-                                GLuint *widthOut,
-                                GLuint *heightOut,
-                                GLuint *depthOut,
-                                GLuint *layersOut);
+                                unsigned widthIn,
+                                uint16_t heightIn,
+                                uint16_t depthIn,
+                                unsigned *widthOut,
+                                uint16_t *heightOut,
+                                uint16_t *depthOut,
+                                uint16_t *layersOut);
 
 /* Check if an image fits into an existing texture object.
  */

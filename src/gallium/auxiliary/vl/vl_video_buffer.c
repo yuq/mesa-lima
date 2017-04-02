@@ -248,6 +248,8 @@ vl_video_buffer_template(struct pipe_resource *templ,
                          unsigned depth, unsigned array_size,
                          unsigned usage, unsigned plane)
 {
+   unsigned height = tmpl->height;
+
    memset(templ, 0, sizeof(*templ));
    if (depth > 1)
       templ->target = PIPE_TEXTURE_3D;
@@ -257,14 +259,14 @@ vl_video_buffer_template(struct pipe_resource *templ,
       templ->target = PIPE_TEXTURE_2D;
    templ->format = resource_format;
    templ->width0 = tmpl->width;
-   templ->height0 = tmpl->height;
    templ->depth0 = depth;
    templ->array_size = array_size;
    templ->bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET | tmpl->bind;
    templ->usage = usage;
 
-   vl_video_buffer_adjust_size(&templ->width0, &templ->height0, plane,
+   vl_video_buffer_adjust_size(&templ->width0, &height, plane,
                                tmpl->chroma_format, false);
+   templ->height0 = height;
 }
 
 static void
