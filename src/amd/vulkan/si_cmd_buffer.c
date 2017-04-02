@@ -627,9 +627,9 @@ si_write_scissors(struct radeon_winsys_cs *cs, int first,
 	}
 
 	radeon_set_context_reg_seq(cs, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 4);
-	radeon_emit(cs, fui(guardband_x));
-	radeon_emit(cs, fui(1.0));
 	radeon_emit(cs, fui(guardband_y));
+	radeon_emit(cs, fui(1.0));
+	radeon_emit(cs, fui(guardband_x));
 	radeon_emit(cs, fui(1.0));
 }
 
