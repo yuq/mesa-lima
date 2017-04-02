@@ -264,7 +264,7 @@ retry:
     */
    brw->ctx.NewDriverState |= BRW_NEW_BLORP;
    brw->no_depth_or_stencil = false;
-   brw->ib.type = -1;
+   brw->ib.index_size = -1;
 
    if (params->dst.enabled)
       brw_render_cache_set_add_bo(brw, params->dst.addr.buffer);

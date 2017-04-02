@@ -389,7 +389,7 @@ brw_new_batch(struct brw_context *brw)
 
    brw->ctx.NewDriverState |= BRW_NEW_BATCH;
 
-   brw->ib.type = -1;
+   brw->ib.index_size = -1;
 
    /* We need to periodically reap the shader time results, because rollover
     * happens every few seconds.  We also want to see results every once in a

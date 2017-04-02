@@ -52,14 +52,14 @@ can_cut_index_handle_restart_index(struct gl_context *ctx,
 
    bool cut_index_will_work;
 
-   switch (ib->type) {
-   case GL_UNSIGNED_BYTE:
+   switch (ib->index_size) {
+   case 1:
       cut_index_will_work = ctx->Array.RestartIndex == 0xff;
       break;
-   case GL_UNSIGNED_SHORT:
+   case 2:
       cut_index_will_work = ctx->Array.RestartIndex == 0xffff;
       break;
-   case GL_UNSIGNED_INT:
+   case 4:
       cut_index_will_work = ctx->Array.RestartIndex == 0xffffffff;
       break;
    default:
@@ -193,7 +193,7 @@ haswell_upload_cut_index(struct brw_context *brw)
    /* BRW_NEW_INDEX_BUFFER */
    unsigned cut_index;
    if (brw->ib.ib) {
-      cut_index = _mesa_primitive_restart_index(ctx, brw->ib.type);
+      cut_index = _mesa_primitive_restart_index(ctx, brw->ib.index_size);
    } else {
       /* There's no index buffer, but primitive restart may still apply
        * to glDrawArrays and such.  FIXED_INDEX mode only applies to drawing

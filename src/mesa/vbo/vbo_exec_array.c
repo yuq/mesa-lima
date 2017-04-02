@@ -861,7 +861,7 @@ vbo_validated_drawrangeelements(struct gl_context *ctx, GLenum mode,
    vbo_bind_arrays(ctx);
 
    ib.count = count;
-   ib.type = type;
+   ib.index_size = vbo_sizeof_ib_type(type);
    ib.obj = ctx->Array.VAO->IndexBufferObj;
    ib.ptr = indices;
 
@@ -1297,7 +1297,7 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
 
    if (!fallback) {
       ib.count = (max_index_ptr - min_index_ptr) / index_type_size;
-      ib.type = type;
+      ib.index_size = vbo_sizeof_ib_type(type);
       ib.obj = ctx->Array.VAO->IndexBufferObj;
       ib.ptr = (void *) min_index_ptr;
 
@@ -1330,7 +1330,7 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
          if (count[i] == 0)
             continue;
          ib.count = count[i];
-         ib.type = type;
+         ib.index_size = vbo_sizeof_ib_type(type);
          ib.obj = ctx->Array.VAO->IndexBufferObj;
          ib.ptr = indices[i];
 
@@ -1574,7 +1574,7 @@ vbo_validated_drawelementsindirect(struct gl_context *ctx,
    vbo_bind_arrays(ctx);
 
    ib.count = 0;                /* unknown */
-   ib.type = type;
+   ib.index_size = vbo_sizeof_ib_type(type);
    ib.obj = ctx->Array.VAO->IndexBufferObj;
    ib.ptr = NULL;
 
@@ -1606,7 +1606,7 @@ vbo_validated_multidrawelementsindirect(struct gl_context *ctx,
    /* NOTE: IndexBufferObj is guaranteed to be a VBO. */
 
    ib.count = 0;                /* unknown */
-   ib.type = type;
+   ib.index_size = vbo_sizeof_ib_type(type);
    ib.obj = ctx->Array.VAO->IndexBufferObj;
    ib.ptr = NULL;
 
@@ -1776,7 +1776,7 @@ vbo_validated_multidrawelementsindirectcount(struct gl_context *ctx,
    /* NOTE: IndexBufferObj is guaranteed to be a VBO. */
 
    ib.count = 0;                /* unknown */
-   ib.type = type;
+   ib.index_size = vbo_sizeof_ib_type(type);
    ib.obj = ctx->Array.VAO->IndexBufferObj;
    ib.ptr = NULL;
 

@@ -1804,7 +1804,8 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
 
 
 unsigned
-_mesa_primitive_restart_index(const struct gl_context *ctx, GLenum ib_type)
+_mesa_primitive_restart_index(const struct gl_context *ctx,
+                              unsigned index_size)
 {
    /* From the OpenGL 4.3 core specification, page 302:
     * "If both PRIMITIVE_RESTART and PRIMITIVE_RESTART_FIXED_INDEX are
@@ -1812,15 +1813,15 @@ _mesa_primitive_restart_index(const struct gl_context *ctx, GLenum ib_type)
     *  is used."
     */
    if (ctx->Array.PrimitiveRestartFixedIndex) {
-      switch (ib_type) {
-      case GL_UNSIGNED_BYTE:
+      switch (index_size) {
+      case 1:
          return 0xff;
-      case GL_UNSIGNED_SHORT:
+      case 2:
          return 0xffff;
-      case GL_UNSIGNED_INT:
+      case 4:
          return 0xffffffff;
       default:
-         assert(!"_mesa_primitive_restart_index: Invalid index buffer type.");
+         assert(!"_mesa_primitive_restart_index: Invalid index size.");
       }
    }
 

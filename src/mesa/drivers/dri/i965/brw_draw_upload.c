@@ -1174,7 +1174,7 @@ brw_upload_indices(struct brw_context *brw)
    if (index_buffer == NULL)
       return;
 
-   ib_type_size = _mesa_sizeof_type(index_buffer->type);
+   ib_type_size = index_buffer->index_size;
    ib_size = index_buffer->count ? ib_type_size * index_buffer->count :
                                    index_buffer->obj->Size;
    bufferobj = index_buffer->obj;
@@ -1231,8 +1231,8 @@ brw_upload_indices(struct brw_context *brw)
    if (brw->ib.bo != old_bo)
       brw->ctx.NewDriverState |= BRW_NEW_INDEX_BUFFER;
 
-   if (index_buffer->type != brw->ib.type) {
-      brw->ib.type = index_buffer->type;
+   if (index_buffer->index_size != brw->ib.index_size) {
+      brw->ib.index_size = index_buffer->index_size;
       brw->ctx.NewDriverState |= BRW_NEW_INDEX_BUFFER;
    }
 }
@@ -1264,7 +1264,7 @@ brw_emit_index_buffer(struct brw_context *brw)
    BEGIN_BATCH(3);
    OUT_BATCH(CMD_INDEX_BUFFER << 16 |
              cut_index_setting |
-             brw_get_index_type(index_buffer->type) |
+             brw_get_index_type(index_buffer->index_size) |
              1);
    OUT_RELOC(brw->ib.bo,
              I915_GEM_DOMAIN_VERTEX, 0,

@@ -885,7 +885,7 @@ struct brw_context
       /* Updates are signaled by BRW_NEW_INDEX_BUFFER. */
       struct brw_bo *bo;
       uint32_t size;
-      GLuint type;
+      unsigned index_size;
 
       /* Offset to index buffer index to use in CMD_3D_PRIM so that we can
        * avoid re-uploading the IB packet over and over if we're actually
@@ -1401,23 +1401,12 @@ unsigned brw_get_vertex_surface_type(struct brw_context *brw,
                                      const struct gl_vertex_array *glarray);
 
 static inline unsigned
-brw_get_index_type(GLenum type)
+brw_get_index_type(unsigned index_size)
 {
-   assert((type == GL_UNSIGNED_BYTE)
-          || (type == GL_UNSIGNED_SHORT)
-          || (type == GL_UNSIGNED_INT));
-
-   /* The possible values for type are GL_UNSIGNED_BYTE (0x1401),
-    * GL_UNSIGNED_SHORT (0x1403), and GL_UNSIGNED_INT (0x1405) which we want
-    * to map to scale factors of 0, 1, and 2, respectively.  These scale
-    * factors are then left-shfited by 8 to be in the correct position in the
-    * CMD_INDEX_BUFFER packet.
-    *
-    * Subtracting 0x1401 gives 0, 2, and 4.  Shifting left by 7 afterwards
-    * gives 0x00000000, 0x00000100, and 0x00000200.  These just happen to be
-    * the values the need to be written in the CMD_INDEX_BUFFER packet.
+   /* The hw needs 0x00000000, 0x00000100, and 0x00000200 for ubyte, ushort,
+    * and uint, respectively.
     */
-   return (type - 0x1401) << 7;
+   return (index_size >> 1) << 8;
 }
 
 void brw_prepare_vertices(struct brw_context *brw);
