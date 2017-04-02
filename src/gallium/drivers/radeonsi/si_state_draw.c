@@ -627,6 +627,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				 const struct pipe_draw_info *info,
 				 const struct pipe_index_buffer *ib)
 {
+	struct pipe_draw_indirect_info *indirect = info->indirect;
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned sh_base_reg = sctx->shader_userdata.sh_base[PIPE_SHADER_VERTEX];
 	bool render_cond_bit = sctx->b.render_cond && !sctx->b.render_cond_force_off;
@@ -707,8 +708,8 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			sctx->last_index_size = -1;
 	}
 
-	if (info->indirect) {
-		uint64_t indirect_va = r600_resource(info->indirect)->gpu_address;
+	if (indirect) {
+		uint64_t indirect_va = r600_resource(indirect->buffer)->gpu_address;
 
 		assert(indirect_va % 8 == 0);
 
@@ -720,13 +721,13 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, indirect_va >> 32);
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				      (struct r600_resource *)info->indirect,
+				      (struct r600_resource *)indirect->buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
 		unsigned di_src_sel = info->indexed ? V_0287F0_DI_SRC_SEL_DMA
 						    : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
 
-		assert(info->indirect_offset % 4 == 0);
+		assert(indirect->offset % 4 == 0);
 
 		if (info->indexed) {
 			radeon_emit(cs, PKT3(PKT3_INDEX_BASE, 1, 0));
@@ -741,37 +742,37 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT
 							   : PKT3_DRAW_INDIRECT,
 					     3, render_cond_bit));
-			radeon_emit(cs, info->indirect_offset);
+			radeon_emit(cs, indirect->offset);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, di_src_sel);
 		} else {
 			uint64_t count_va = 0;
 
-			if (info->indirect_params) {
+			if (indirect->indirect_draw_count) {
 				struct r600_resource *params_buf =
-					(struct r600_resource *)info->indirect_params;
+					(struct r600_resource *)indirect->indirect_draw_count;
 
 				radeon_add_to_buffer_list(
 					&sctx->b, &sctx->b.gfx, params_buf,
 					RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
-				count_va = params_buf->gpu_address + info->indirect_params_offset;
+				count_va = params_buf->gpu_address + indirect->indirect_draw_count_offset;
 			}
 
 			radeon_emit(cs, PKT3(info->indexed ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
 							     PKT3_DRAW_INDIRECT_MULTI,
 					     8, render_cond_bit));
-			radeon_emit(cs, info->indirect_offset);
+			radeon_emit(cs, indirect->offset);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, ((sh_base_reg + SI_SGPR_DRAWID * 4 - SI_SH_REG_OFFSET) >> 2) |
 					S_2C3_DRAW_INDEX_ENABLE(1) |
-					S_2C3_COUNT_INDIRECT_ENABLE(!!info->indirect_params));
-			radeon_emit(cs, info->indirect_count);
+					S_2C3_COUNT_INDIRECT_ENABLE(!!indirect->indirect_draw_count));
+			radeon_emit(cs, indirect->draw_count);
 			radeon_emit(cs, count_va);
 			radeon_emit(cs, count_va >> 32);
-			radeon_emit(cs, info->indirect_stride);
+			radeon_emit(cs, indirect->stride);
 			radeon_emit(cs, di_src_sel);
 		}
 	} else {
@@ -1072,17 +1073,19 @@ static void si_get_draw_start_count(struct si_context *sctx,
 				    const struct pipe_draw_info *info,
 				    unsigned *start, unsigned *count)
 {
-	if (info->indirect) {
+	struct pipe_draw_indirect_info *indirect = info->indirect;
+
+	if (indirect) {
 		unsigned indirect_count;
 		struct pipe_transfer *transfer;
 		unsigned begin, end;
 		unsigned map_size;
 		unsigned *data;
 
-		if (info->indirect_params) {
+		if (indirect->indirect_draw_count) {
 			data = pipe_buffer_map_range(&sctx->b.b,
-					info->indirect_params,
-					info->indirect_params_offset,
+					indirect->indirect_draw_count,
+					indirect->indirect_draw_count_offset,
 					sizeof(unsigned),
 					PIPE_TRANSFER_READ, &transfer);
 
@@ -1090,7 +1093,7 @@ static void si_get_draw_start_count(struct si_context *sctx,
 
 			pipe_buffer_unmap(&sctx->b.b, transfer);
 		} else {
-			indirect_count = info->indirect_count;
+			indirect_count = indirect->draw_count;
 		}
 
 		if (!indirect_count) {
@@ -1098,9 +1101,9 @@ static void si_get_draw_start_count(struct si_context *sctx,
 			return;
 		}
 
-		map_size = (indirect_count - 1) * info->indirect_stride + 3 * sizeof(unsigned);
-		data = pipe_buffer_map_range(&sctx->b.b, info->indirect,
-					     info->indirect_offset, map_size,
+		map_size = (indirect_count - 1) * indirect->stride + 3 * sizeof(unsigned);
+		data = pipe_buffer_map_range(&sctx->b.b, indirect->buffer,
+					     indirect->offset, map_size,
 					     PIPE_TRANSFER_READ, &transfer);
 
 		begin = UINT_MAX;
@@ -1115,7 +1118,7 @@ static void si_get_draw_start_count(struct si_context *sctx,
 				end = MAX2(end, start + count);
 			}
 
-			data += info->indirect_stride / sizeof(unsigned);
+			data += indirect->stride / sizeof(unsigned);
 		}
 
 		pipe_buffer_unmap(&sctx->b.b, transfer);
@@ -1301,18 +1304,20 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	if (info->indirect) {
-		/* Add the buffer size for memory checking in need_cs_space. */
-		r600_context_add_resource_size(ctx, info->indirect);
+		struct pipe_draw_indirect_info *indirect = info->indirect;
 
-		if (r600_resource(info->indirect)->TC_L2_dirty) {
+		/* Add the buffer size for memory checking in need_cs_space. */
+		r600_context_add_resource_size(ctx, indirect->buffer);
+
+		if (r600_resource(indirect->buffer)->TC_L2_dirty) {
 			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-			r600_resource(info->indirect)->TC_L2_dirty = false;
+			r600_resource(indirect->buffer)->TC_L2_dirty = false;
 		}
 
-		if (info->indirect_params &&
-		    r600_resource(info->indirect_params)->TC_L2_dirty) {
+		if (indirect->indirect_draw_count &&
+		    r600_resource(indirect->indirect_draw_count)->TC_L2_dirty) {
 			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-			r600_resource(info->indirect_params)->TC_L2_dirty = false;
+			r600_resource(indirect->indirect_draw_count)->TC_L2_dirty = false;
 		}
 	}
 

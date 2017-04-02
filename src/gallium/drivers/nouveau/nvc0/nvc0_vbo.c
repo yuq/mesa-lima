@@ -818,10 +818,10 @@ static void
 nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   struct nv04_resource *buf = nv04_resource(info->indirect);
-   struct nv04_resource *buf_count = nv04_resource(info->indirect_params);
-   unsigned size, macro, count = info->indirect_count, drawid = info->drawid;
-   uint32_t offset = buf->offset + info->indirect_offset;
+   struct nv04_resource *buf = nv04_resource(info->indirect->buffer);
+   struct nv04_resource *buf_count = nv04_resource(info->indirect->indirect_draw_count);
+   unsigned size, macro, count = info->indirect->draw_count, drawid = info->drawid;
+   uint32_t offset = buf->offset + info->indirect->offset;
    struct nvc0_screen *screen = nvc0->screen;
 
    PUSH_SPACE(push, 7);
@@ -870,7 +870,7 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
     */
    while (count) {
       unsigned draws = count, pushes, i;
-      if (info->indirect_stride == size * 4) {
+      if (info->indirect->stride == size * 4) {
          draws = MIN2(draws, (NV04_PFIFO_MAX_PACKET_LEN - 4) / size);
          pushes = 1;
       } else {
@@ -890,20 +890,20 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
       if (buf_count) {
          nouveau_pushbuf_data(push,
                               buf_count->bo,
-                              buf_count->offset + info->indirect_params_offset,
+                              buf_count->offset + info->indirect->indirect_draw_count_offset,
                               NVC0_IB_ENTRY_1_NO_PREFETCH | 4);
       }
       if (pushes == 1) {
          nouveau_pushbuf_data(push,
                               buf->bo, offset,
                               NVC0_IB_ENTRY_1_NO_PREFETCH | (size * 4 * draws));
-         offset += draws * info->indirect_stride;
+         offset += draws * info->indirect->stride;
       } else {
          for (i = 0; i < pushes; i++) {
             nouveau_pushbuf_data(push,
                                  buf->bo, offset,
                                  NVC0_IB_ENTRY_1_NO_PREFETCH | (size * 4));
-            offset += info->indirect_stride;
+            offset += info->indirect->stride;
          }
       }
       count -= draws;

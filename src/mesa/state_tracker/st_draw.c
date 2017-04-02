@@ -264,6 +264,7 @@ st_indirect_draw_vbo(struct gl_context *ctx,
 {
    struct st_context *st = st_context(ctx);
    struct pipe_draw_info info;
+   struct pipe_draw_indirect_info indirect;
 
    /* Mesa core state should have been validated already */
    assert(ctx->NewState == 0x0);
@@ -281,6 +282,7 @@ st_indirect_draw_vbo(struct gl_context *ctx,
       return;
    }
 
+   memset(&indirect, 0, sizeof(indirect));
    util_draw_init_info(&info);
 
    if (ib) {
@@ -294,8 +296,9 @@ st_indirect_draw_vbo(struct gl_context *ctx,
 
    info.mode = translate_prim(ctx, mode);
    info.vertices_per_patch = ctx->TessCtrlProgram.patch_vertices;
-   info.indirect = st_buffer_object(indirect_data)->buffer;
-   info.indirect_offset = indirect_offset;
+   info.indirect = &indirect;
+   indirect.buffer = st_buffer_object(indirect_data)->buffer;
+   indirect.offset = indirect_offset;
 
    if (ST_DEBUG & DEBUG_DRAW) {
       debug_printf("st/draw indirect: mode %s drawcount %d indexed %d\n",
@@ -308,18 +311,18 @@ st_indirect_draw_vbo(struct gl_context *ctx,
       int i;
 
       assert(!indirect_params);
-      info.indirect_count = 1;
+      indirect.draw_count = 1;
       for (i = 0; i < draw_count; i++) {
          info.drawid = i;
          cso_draw_vbo(st->cso_context, &info);
-         info.indirect_offset += stride;
+         indirect.offset += stride;
       }
    } else {
-      info.indirect_count = draw_count;
-      info.indirect_stride = stride;
+      indirect.draw_count = draw_count;
+      indirect.stride = stride;
       if (indirect_params) {
-         info.indirect_params = st_buffer_object(indirect_params)->buffer;
-         info.indirect_params_offset = indirect_params_offset;
+         indirect.indirect_draw_count = st_buffer_object(indirect_params)->buffer;
+         indirect.indirect_draw_count_offset = indirect_params_offset;
       }
       cso_draw_vbo(st->cso_context, &info);
    }

@@ -297,10 +297,12 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
    if (info->count_from_stream_output)
       DUMP_M(stream_output_target, info,
              count_from_stream_output);
-   if (info->indirect)
-      DUMP_M(resource, info, indirect);
-   if (info->indirect_params)
-      DUMP_M(resource, info, indirect_params);
+   if (info->indirect) {
+      DUMP_M(resource, info, indirect->buffer);
+      if (info->indirect->indirect_draw_count)
+         DUMP_M(resource, info, indirect->indirect_draw_count);
+   }
+
    fprintf(f, "\n");
 
    /* TODO: dump active queries */
@@ -500,7 +502,7 @@ dd_dump_call(FILE *f, struct dd_draw_state *state, struct dd_call *call)
 {
    switch (call->type) {
    case CALL_DRAW_VBO:
-      dd_dump_draw_vbo(state, &call->info.draw_vbo, f);
+      dd_dump_draw_vbo(state, &call->info.draw_vbo.draw, f);
       break;
    case CALL_LAUNCH_GRID:
       dd_dump_launch_grid(state, &call->info.launch_grid, f);
@@ -619,9 +621,9 @@ dd_unreference_copy_of_call(struct dd_call *dst)
 {
    switch (dst->type) {
    case CALL_DRAW_VBO:
-      pipe_so_target_reference(&dst->info.draw_vbo.count_from_stream_output, NULL);
-      pipe_resource_reference(&dst->info.draw_vbo.indirect, NULL);
-      pipe_resource_reference(&dst->info.draw_vbo.indirect_params, NULL);
+      pipe_so_target_reference(&dst->info.draw_vbo.draw.count_from_stream_output, NULL);
+      pipe_resource_reference(&dst->info.draw_vbo.indirect.buffer, NULL);
+      pipe_resource_reference(&dst->info.draw_vbo.indirect.indirect_draw_count, NULL);
       break;
    case CALL_LAUNCH_GRID:
       pipe_resource_reference(&dst->info.launch_grid.indirect, NULL);
@@ -661,13 +663,17 @@ dd_copy_call(struct dd_call *dst, struct dd_call *src)
 
    switch (src->type) {
    case CALL_DRAW_VBO:
-      pipe_so_target_reference(&dst->info.draw_vbo.count_from_stream_output,
-                               src->info.draw_vbo.count_from_stream_output);
-      pipe_resource_reference(&dst->info.draw_vbo.indirect,
-                              src->info.draw_vbo.indirect);
-      pipe_resource_reference(&dst->info.draw_vbo.indirect_params,
-                              src->info.draw_vbo.indirect_params);
+      pipe_so_target_reference(&dst->info.draw_vbo.draw.count_from_stream_output,
+                               src->info.draw_vbo.draw.count_from_stream_output);
+      pipe_resource_reference(&dst->info.draw_vbo.indirect.buffer,
+                              src->info.draw_vbo.indirect.buffer);
+      pipe_resource_reference(&dst->info.draw_vbo.indirect.indirect_draw_count,
+                              src->info.draw_vbo.indirect.indirect_draw_count);
       dst->info.draw_vbo = src->info.draw_vbo;
+      if (!src->info.draw_vbo.draw.indirect)
+         dst->info.draw_vbo.draw.indirect = NULL;
+      else
+         dst->info.draw_vbo.draw.indirect = &dst->info.draw_vbo.indirect;
       break;
    case CALL_LAUNCH_GRID:
       pipe_resource_reference(&dst->info.launch_grid.indirect,
@@ -1173,7 +1179,13 @@ dd_context_draw_vbo(struct pipe_context *_pipe,
    struct dd_call call;
 
    call.type = CALL_DRAW_VBO;
-   call.info.draw_vbo = *info;
+   call.info.draw_vbo.draw = *info;
+   if (info->indirect) {
+      call.info.draw_vbo.indirect = *info->indirect;
+      call.info.draw_vbo.draw.indirect = &call.info.draw_vbo.indirect;
+   } else {
+      memset(&call.info.draw_vbo.indirect, 0, sizeof(*info->indirect));
+   }
 
    dd_before_draw(dctx);
    pipe->draw_vbo(pipe, info);

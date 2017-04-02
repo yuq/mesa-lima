@@ -2559,7 +2559,6 @@ init_draw_info(struct pipe_draw_info *info,
     info->restart_index = 0;
     info->count_from_stream_output = NULL;
     info->indirect = NULL;
-    info->indirect_params = NULL;
 }
 
 CSMT_ITEM_NO_WAIT(nine_context_draw_primitive,

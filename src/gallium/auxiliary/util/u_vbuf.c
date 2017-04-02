@@ -1168,15 +1168,15 @@ void u_vbuf_draw_vbo(struct u_vbuf *mgr, const struct pipe_draw_info *info)
       int *data;
 
       if (new_info.indexed) {
-         data = pipe_buffer_map_range(pipe, new_info.indirect,
-                                      new_info.indirect_offset, 20,
+         data = pipe_buffer_map_range(pipe, new_info.indirect->buffer,
+                                      new_info.indirect->offset, 20,
                                       PIPE_TRANSFER_READ, &transfer);
          new_info.index_bias = data[3];
          new_info.start_instance = data[4];
       }
       else {
-         data = pipe_buffer_map_range(pipe, new_info.indirect,
-                                      new_info.indirect_offset, 16,
+         data = pipe_buffer_map_range(pipe, new_info.indirect->buffer,
+                                      new_info.indirect->offset, 16,
                                       PIPE_TRANSFER_READ, &transfer);
          new_info.start_instance = data[3];
       }

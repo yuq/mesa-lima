@@ -641,6 +641,40 @@ struct pipe_index_buffer
 };
 
 
+struct pipe_draw_indirect_info
+{
+   unsigned offset; /**< must be 4 byte aligned */
+   unsigned stride; /**< must be 4 byte aligned */
+   unsigned draw_count; /**< number of indirect draws */
+   unsigned indirect_draw_count_offset; /**< must be 4 byte aligned */
+
+   /* Indirect draw parameters resource is laid out as follows:
+    *
+    * if indexed is TRUE:
+    *  struct {
+    *     uint32_t count;
+    *     uint32_t instance_count;
+    *     uint32_t start;
+    *     int32_t index_bias;
+    *     uint32_t start_instance;
+    *  };
+    * otherwise:
+    *  struct {
+    *     uint32_t count;
+    *     uint32_t instance_count;
+    *     uint32_t start;
+    *     uint32_t start_instance;
+    *  };
+    */
+   struct pipe_resource *buffer;
+
+   /* Indirect draw count resource: If not NULL, contains a 32-bit value which
+    * is to be used as the real draw_count.
+    */
+   struct pipe_resource *indirect_draw_count;
+};
+
+
 /**
  * Information to describe a draw_vbo call.
  */
@@ -671,40 +705,9 @@ struct pipe_draw_info
     */
    unsigned restart_index;
 
-   unsigned indirect_offset; /**< must be 4 byte aligned */
-   unsigned indirect_stride; /**< must be 4 byte aligned */
-   unsigned indirect_count; /**< number of indirect draws */
-
-   unsigned indirect_params_offset; /**< must be 4 byte aligned */
-
    /* Pointers must be at the end for an optimal structure layout on 64-bit. */
 
-   /* Indirect draw parameters resource: If not NULL, most values are taken
-    * from this buffer instead, which is laid out as follows:
-    *
-    * if indexed is TRUE:
-    *  struct {
-    *     uint32_t count;
-    *     uint32_t instance_count;
-    *     uint32_t start;
-    *     int32_t index_bias;
-    *     uint32_t start_instance;
-    *  };
-    * otherwise:
-    *  struct {
-    *     uint32_t count;
-    *     uint32_t instance_count;
-    *     uint32_t start;
-    *     uint32_t start_instance;
-    *  };
-    */
-   struct pipe_resource *indirect;
-
-   /* Indirect draw count resource: If not NULL, contains a 32-bit value which
-    * is to be used as the real indirect_count. In that case indirect_count
-    * becomes the maximum possible value.
-    */
-   struct pipe_resource *indirect_params;
+   struct pipe_draw_indirect_info *indirect; /**< Indirect draw. */
 
    /**
     * Stream output target. If not NULL, it's used to provide the 'count'

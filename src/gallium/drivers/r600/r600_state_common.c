@@ -1770,11 +1770,11 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			}
 			else {
 				/* Have to get start/count from indirect buffer, slow path ahead... */
-				struct r600_resource *indirect_resource = (struct r600_resource *)info->indirect;
+				struct r600_resource *indirect_resource = (struct r600_resource *)info->indirect->buffer;
 				unsigned *data = r600_buffer_map_sync_with_rings(&rctx->b, indirect_resource,
 					PIPE_TRANSFER_READ);
 				if (data) {
-					data += info->indirect_offset / sizeof(unsigned);
+					data += info->indirect->offset / sizeof(unsigned);
 					start = data[2] * ib.index_size;
 					count = data[0];
 				}
@@ -1918,7 +1918,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
 		radeon_emit(cs, info->instance_count);
 	} else {
-		uint64_t va = r600_resource(info->indirect)->gpu_address;
+		uint64_t va = r600_resource(info->indirect->buffer)->gpu_address;
 		assert(rctx->b.chip_class >= EVERGREEN);
 
 		// Invalidate so non-indirect draw calls reset this state
@@ -1932,7 +1932,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
-							  (struct r600_resource*)info->indirect,
+							  (struct r600_resource*)info->indirect->buffer,
 							  RADEON_USAGE_READ,
                                                           RADEON_PRIO_DRAW_INDIRECT));
 	}
@@ -1982,7 +1982,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				radeon_emit(cs, max_size);
 
 				radeon_emit(cs, PKT3(EG_PKT3_DRAW_INDEX_INDIRECT, 1, render_cond_bit));
-				radeon_emit(cs, info->indirect_offset);
+				radeon_emit(cs, info->indirect->offset);
 				radeon_emit(cs, V_0287F0_DI_SRC_SEL_DMA);
 			}
 		}
@@ -2012,7 +2012,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		}
 		else {
 			radeon_emit(cs, PKT3(EG_PKT3_DRAW_INDIRECT, 1, render_cond_bit));
-			radeon_emit(cs, info->indirect_offset);
+			radeon_emit(cs, info->indirect->offset);
 		}
 		radeon_emit(cs, V_0287F0_DI_SRC_SEL_AUTO_INDEX |
 				(info->count_from_stream_output ? S_0287F0_USE_OPAQUE(1) : 0));

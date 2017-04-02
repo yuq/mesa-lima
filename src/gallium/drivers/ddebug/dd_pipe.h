@@ -104,12 +104,17 @@ struct call_generate_mipmap {
    unsigned last_layer;
 };
 
+struct call_draw_info {
+   struct pipe_draw_info draw;
+   struct pipe_draw_indirect_info indirect;
+};
+
 struct dd_call
 {
    enum call_type type;
 
    union {
-      struct pipe_draw_info draw_vbo;
+      struct call_draw_info draw_vbo;
       struct pipe_grid_info launch_grid;
       struct call_resource_copy_region resource_copy_region;
       struct pipe_blit_info blit;

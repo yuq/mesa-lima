@@ -145,8 +145,8 @@ util_draw_indirect(struct pipe_context *pipe,
 
    params = (uint32_t *)
       pipe_buffer_map_range(pipe,
-                            info_in->indirect,
-                            info_in->indirect_offset,
+                            info_in->indirect->buffer,
+                            info_in->indirect->offset,
                             num_params * sizeof(uint32_t),
                             PIPE_TRANSFER_READ,
                             &transfer);
