@@ -300,14 +300,12 @@ get_tcs_out_current_patch_data_offset(struct si_shader_context *ctx)
 }
 
 static LLVMValueRef get_instance_index_for_fetch(
-	struct si_shader_context *radeon_bld,
+	struct si_shader_context *ctx,
 	unsigned param_start_instance, unsigned divisor)
 {
-	struct si_shader_context *ctx =
-		si_shader_context(&radeon_bld->bld_base);
-	struct gallivm_state *gallivm = radeon_bld->bld_base.base.gallivm;
+	struct gallivm_state *gallivm = ctx->bld_base.base.gallivm;
 
-	LLVMValueRef result = LLVMGetParam(radeon_bld->main_fn,
+	LLVMValueRef result = LLVMGetParam(ctx->main_fn,
 					   ctx->param_instance_id);
 
 	/* The division must be done before START_INSTANCE is added. */
@@ -316,7 +314,7 @@ static LLVMValueRef get_instance_index_for_fetch(
 				lp_build_const_int32(gallivm, divisor), "");
 
 	return LLVMBuildAdd(gallivm->builder, result,
-			    LLVMGetParam(radeon_bld->main_fn, param_start_instance), "");
+			    LLVMGetParam(ctx->main_fn, param_start_instance), "");
 }
 
 /* Bitcast <4 x float> to <2 x double>, extract the component, and convert
@@ -1286,16 +1284,14 @@ static void interp_fs_input(struct si_shader_context *ctx,
 }
 
 static void declare_input_fs(
-	struct si_shader_context *radeon_bld,
+	struct si_shader_context *ctx,
 	unsigned input_index,
 	const struct tgsi_full_declaration *decl,
 	LLVMValueRef out[4])
 {
-	struct lp_build_context *base = &radeon_bld->bld_base.base;
-	struct si_shader_context *ctx =
-		si_shader_context(&radeon_bld->bld_base);
+	struct lp_build_context *base = &ctx->bld_base.base;
 	struct si_shader *shader = ctx->shader;
-	LLVMValueRef main_fn = radeon_bld->main_fn;
+	LLVMValueRef main_fn = ctx->main_fn;
 	LLVMValueRef interp_param = NULL;
 	int interp_param_idx;
 
@@ -1335,10 +1331,9 @@ static void declare_input_fs(
 			&out[0]);
 }
 
-static LLVMValueRef get_sample_id(struct si_shader_context *radeon_bld)
+static LLVMValueRef get_sample_id(struct si_shader_context *ctx)
 {
-	return unpack_param(si_shader_context(&radeon_bld->bld_base),
-			    SI_PARAM_ANCILLARY, 8, 4);
+	return unpack_param(ctx, SI_PARAM_ANCILLARY, 8, 4);
 }
 
 
@@ -1357,12 +1352,10 @@ static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
 				  LP_FUNC_ATTR_LEGACY);
 }
 
-static LLVMValueRef load_sample_position(struct si_shader_context *radeon_bld, LLVMValueRef sample_id)
+static LLVMValueRef load_sample_position(struct si_shader_context *ctx, LLVMValueRef sample_id)
 {
-	struct si_shader_context *ctx =
-		si_shader_context(&radeon_bld->bld_base);
-	struct lp_build_context *uint_bld = &radeon_bld->bld_base.uint_bld;
-	struct gallivm_state *gallivm = &radeon_bld->gallivm;
+	struct lp_build_context *uint_bld = &ctx->bld_base.uint_bld;
+	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef desc = LLVMGetParam(ctx->main_fn, SI_PARAM_RW_BUFFERS);
 	LLVMValueRef buf_index = lp_build_const_int32(gallivm, SI_PS_CONST_SAMPLE_POSITIONS);
@@ -1382,48 +1375,45 @@ static LLVMValueRef load_sample_position(struct si_shader_context *radeon_bld, L
 	return lp_build_gather_values(gallivm, pos, 4);
 }
 
-static void declare_system_value(
-	struct si_shader_context *radeon_bld,
-	unsigned index,
-	const struct tgsi_full_declaration *decl)
+static void declare_system_value(struct si_shader_context *ctx,
+				 unsigned index,
+				 const struct tgsi_full_declaration *decl)
 {
-	struct si_shader_context *ctx =
-		si_shader_context(&radeon_bld->bld_base);
-	struct lp_build_context *bld = &radeon_bld->bld_base.base;
-	struct gallivm_state *gallivm = &radeon_bld->gallivm;
+	struct lp_build_context *bld = &ctx->bld_base.base;
+	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMValueRef value = 0;
 
 	switch (decl->Semantic.Name) {
 	case TGSI_SEMANTIC_INSTANCEID:
-		value = LLVMGetParam(radeon_bld->main_fn,
+		value = LLVMGetParam(ctx->main_fn,
 				     ctx->param_instance_id);
 		break;
 
 	case TGSI_SEMANTIC_VERTEXID:
 		value = LLVMBuildAdd(gallivm->builder,
-				     LLVMGetParam(radeon_bld->main_fn,
+				     LLVMGetParam(ctx->main_fn,
 						  ctx->param_vertex_id),
-				     LLVMGetParam(radeon_bld->main_fn,
+				     LLVMGetParam(ctx->main_fn,
 						  SI_PARAM_BASE_VERTEX), "");
 		break;
 
 	case TGSI_SEMANTIC_VERTEXID_NOBASE:
-		value = LLVMGetParam(radeon_bld->main_fn,
+		value = LLVMGetParam(ctx->main_fn,
 				     ctx->param_vertex_id);
 		break;
 
 	case TGSI_SEMANTIC_BASEVERTEX:
-		value = LLVMGetParam(radeon_bld->main_fn,
+		value = LLVMGetParam(ctx->main_fn,
 				     SI_PARAM_BASE_VERTEX);
 		break;
 
 	case TGSI_SEMANTIC_BASEINSTANCE:
-		value = LLVMGetParam(radeon_bld->main_fn,
+		value = LLVMGetParam(ctx->main_fn,
 				     SI_PARAM_START_INSTANCE);
 		break;
 
 	case TGSI_SEMANTIC_DRAWID:
-		value = LLVMGetParam(radeon_bld->main_fn,
+		value = LLVMGetParam(ctx->main_fn,
 				     SI_PARAM_DRAWID);
 		break;
 
@@ -1431,7 +1421,7 @@ static void declare_system_value(
 		if (ctx->type == PIPE_SHADER_TESS_CTRL)
 			value = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
 		else if (ctx->type == PIPE_SHADER_GEOMETRY)
-			value = LLVMGetParam(radeon_bld->main_fn,
+			value = LLVMGetParam(ctx->main_fn,
 					     SI_PARAM_GS_INSTANCE_ID);
 		else
 			assert(!"INVOCATIONID not implemented");
@@ -1440,11 +1430,11 @@ static void declare_system_value(
 	case TGSI_SEMANTIC_POSITION:
 	{
 		LLVMValueRef pos[4] = {
-			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_X_FLOAT),
-			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_Y_FLOAT),
-			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_Z_FLOAT),
-			lp_build_emit_llvm_unary(&radeon_bld->bld_base, TGSI_OPCODE_RCP,
-						 LLVMGetParam(radeon_bld->main_fn,
+			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_X_FLOAT),
+			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_Y_FLOAT),
+			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_Z_FLOAT),
+			lp_build_emit_llvm_unary(&ctx->bld_base, TGSI_OPCODE_RCP,
+						 LLVMGetParam(ctx->main_fn,
 							      SI_PARAM_POS_W_FLOAT)),
 		};
 		value = lp_build_gather_values(gallivm, pos, 4);
@@ -1452,23 +1442,23 @@ static void declare_system_value(
 	}
 
 	case TGSI_SEMANTIC_FACE:
-		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_FRONT_FACE);
+		value = LLVMGetParam(ctx->main_fn, SI_PARAM_FRONT_FACE);
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEID:
-		value = get_sample_id(radeon_bld);
+		value = get_sample_id(ctx);
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEPOS: {
 		LLVMValueRef pos[4] = {
-			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_X_FLOAT),
-			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_Y_FLOAT),
+			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_X_FLOAT),
+			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_Y_FLOAT),
 			lp_build_const_float(gallivm, 0),
 			lp_build_const_float(gallivm, 0)
 		};
-		pos[0] = lp_build_emit_llvm_unary(&radeon_bld->bld_base,
+		pos[0] = lp_build_emit_llvm_unary(&ctx->bld_base,
 						  TGSI_OPCODE_FRC, pos[0]);
-		pos[1] = lp_build_emit_llvm_unary(&radeon_bld->bld_base,
+		pos[1] = lp_build_emit_llvm_unary(&ctx->bld_base,
 						  TGSI_OPCODE_FRC, pos[1]);
 		value = lp_build_gather_values(gallivm, pos, 4);
 		break;
@@ -1478,14 +1468,14 @@ static void declare_system_value(
 		/* This can only occur with the OpenGL Core profile, which
 		 * doesn't support smoothing.
 		 */
-		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
+		value = LLVMGetParam(ctx->main_fn, SI_PARAM_SAMPLE_COVERAGE);
 		break;
 
 	case TGSI_SEMANTIC_TESSCOORD:
 	{
 		LLVMValueRef coord[4] = {
-			LLVMGetParam(radeon_bld->main_fn, ctx->param_tes_u),
-			LLVMGetParam(radeon_bld->main_fn, ctx->param_tes_v),
+			LLVMGetParam(ctx->main_fn, ctx->param_tes_u),
+			LLVMGetParam(ctx->main_fn, ctx->param_tes_v),
 			bld->zero,
 			bld->zero
 		};
@@ -1524,7 +1514,7 @@ static void declare_system_value(
 		addr = get_tcs_tes_buffer_address(ctx, get_rel_patch_id(ctx), NULL,
 		                          lp_build_const_int32(gallivm, param));
 
-		value = buffer_load(&radeon_bld->bld_base, TGSI_TYPE_FLOAT,
+		value = buffer_load(&ctx->bld_base, TGSI_TYPE_FLOAT,
 		                    ~0, buffer, base, addr, true);
 
 		break;
@@ -1549,11 +1539,11 @@ static void declare_system_value(
 	}
 
 	case TGSI_SEMANTIC_PRIMID:
-		value = get_primitive_id(&radeon_bld->bld_base, 0);
+		value = get_primitive_id(&ctx->bld_base, 0);
 		break;
 
 	case TGSI_SEMANTIC_GRID_SIZE:
-		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_GRID_SIZE);
+		value = LLVMGetParam(ctx->main_fn, SI_PARAM_GRID_SIZE);
 		break;
 
 	case TGSI_SEMANTIC_BLOCK_SIZE:
@@ -1574,17 +1564,17 @@ static void declare_system_value(
 
 			value = lp_build_gather_values(gallivm, values, 3);
 		} else {
-			value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_BLOCK_SIZE);
+			value = LLVMGetParam(ctx->main_fn, SI_PARAM_BLOCK_SIZE);
 		}
 		break;
 	}
 
 	case TGSI_SEMANTIC_BLOCK_ID:
-		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_BLOCK_ID);
+		value = LLVMGetParam(ctx->main_fn, SI_PARAM_BLOCK_ID);
 		break;
 
 	case TGSI_SEMANTIC_THREAD_ID:
-		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_THREAD_ID);
+		value = LLVMGetParam(ctx->main_fn, SI_PARAM_THREAD_ID);
 		break;
 
 	case TGSI_SEMANTIC_HELPER_INVOCATION:
@@ -1606,16 +1596,14 @@ static void declare_system_value(
 		return;
 	}
 
-	radeon_bld->system_values[index] = value;
+	ctx->system_values[index] = value;
 }
 
-static void declare_compute_memory(struct si_shader_context *radeon_bld,
+static void declare_compute_memory(struct si_shader_context *ctx,
                                    const struct tgsi_full_declaration *decl)
 {
-	struct si_shader_context *ctx =
-		si_shader_context(&radeon_bld->bld_base);
 	struct si_shader_selector *sel = ctx->shader->selector;
-	struct gallivm_state *gallivm = &radeon_bld->gallivm;
+	struct gallivm_state *gallivm = &ctx->gallivm;
 
 	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, LOCAL_ADDR_SPACE);
 	LLVMValueRef var;
