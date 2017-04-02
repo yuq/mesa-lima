@@ -512,7 +512,7 @@ static void emit_bfe(const struct lp_build_tgsi_action *action,
 
 	/* Correct for GLSL semantics. */
 	cond = LLVMBuildICmp(builder, LLVMIntUGE, emit_data->args[2],
-			     lp_build_const_int32(gallivm, 32), "");
+			     LLVMConstInt(ctx->i32, 32, 0), "");
 	emit_data->output[emit_data->chan] =
 		LLVMBuildSelect(builder, cond, emit_data->args[0], bfe_sm5, "");
 }

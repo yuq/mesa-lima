@@ -295,7 +295,7 @@ LLVMValueRef si_llvm_bound_index(struct si_shader_context *ctx,
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
-	LLVMValueRef c_max = lp_build_const_int32(gallivm, num - 1);
+	LLVMValueRef c_max = LLVMConstInt(ctx->i32, num - 1, 0);
 	LLVMValueRef cc;
 
 	if (util_is_power_of_two(num)) {
@@ -428,10 +428,10 @@ emit_array_index(struct si_shader_context *ctx,
 	struct gallivm_state *gallivm = ctx->bld_base.base.gallivm;
 
 	if (!reg) {
-		return lp_build_const_int32(gallivm, offset);
+		return LLVMConstInt(ctx->i32, offset, 0);
 	}
 	LLVMValueRef addr = LLVMBuildLoad(gallivm->builder, ctx->addrs[reg->Index][reg->Swizzle], "");
-	return LLVMBuildAdd(gallivm->builder, addr, lp_build_const_int32(gallivm, offset), "");
+	return LLVMBuildAdd(gallivm->builder, addr, LLVMConstInt(ctx->i32, offset, 0), "");
 }
 
 /**
@@ -491,13 +491,12 @@ get_pointer_into_array(struct si_shader_context *ctx,
 
 	index = LLVMBuildMul(
 		builder, index,
-		lp_build_const_int32(gallivm, util_bitcount(array->writemask)),
+		LLVMConstInt(ctx->i32, util_bitcount(array->writemask), 0),
 		"");
 	index = LLVMBuildAdd(
 		builder, index,
-		lp_build_const_int32(
-			gallivm,
-			util_bitcount(array->writemask & ((1 << swizzle) - 1))),
+		LLVMConstInt(ctx->i32,
+			     util_bitcount(array->writemask & ((1 << swizzle) - 1)), 0),
 		"");
 	idxs[0] = ctx->bld_base.uint_bld.zero;
 	idxs[1] = index;
@@ -533,7 +532,6 @@ emit_array_fetch(struct lp_build_tgsi_context *bld_base,
 		 unsigned swizzle)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = ctx->bld_base.base.gallivm;
 
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 
@@ -548,7 +546,7 @@ emit_array_fetch(struct lp_build_tgsi_context *bld_base,
 		tmp_reg.Register.Index = i + range.First;
 		LLVMValueRef temp = si_llvm_emit_fetch(bld_base, &tmp_reg, type, swizzle);
 		result = LLVMBuildInsertElement(builder, result, temp,
-			lp_build_const_int32(gallivm, i), "array_vector");
+			LLVMConstInt(ctx->i32, i, 0), "array_vector");
 	}
 	return result;
 }
@@ -631,7 +629,7 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 				continue;
 			}
 			value = LLVMBuildExtractElement(builder, array,
-				lp_build_const_int32(gallivm, i), "");
+				LLVMConstInt(ctx->i32, i, 0), "");
 			LLVMBuildStore(builder, value, temp_ptr);
 		}
 	}
@@ -769,7 +767,7 @@ static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 	LLVMValueRef cval = ctx->system_values[reg->Register.Index];
 	if (LLVMGetTypeKind(LLVMTypeOf(cval)) == LLVMVectorTypeKind) {
 		cval = LLVMBuildExtractElement(gallivm->builder, cval,
-					       lp_build_const_int32(gallivm, swizzle), "");
+					       LLVMConstInt(ctx->i32, swizzle, 0), "");
 	}
 	return bitcast(bld_base, type, cval);
 }
@@ -885,7 +883,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 					snprintf(name, sizeof(name), "TEMP%d.%c",
 						 first + i / 4, "xyzw"[i % 4]);
 #endif
-					idxs[1] = lp_build_const_int32(bld_base->base.gallivm, j);
+					idxs[1] = LLVMConstInt(ctx->i32, j, 0);
 					ptr = LLVMBuildGEP(builder, array_alloca, idxs, 2, name);
 					j++;
 				} else {
@@ -978,7 +976,7 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 	if (is_vec_store) {
 		LLVMValueRef values[4] = {};
 		TGSI_FOR_EACH_DST0_ENABLED_CHANNEL(inst, chan) {
-			LLVMValueRef index = lp_build_const_int32(gallivm, chan);
+			LLVMValueRef index = LLVMConstInt(ctx->i32, chan, 0);
 			values[chan]  = LLVMBuildExtractElement(gallivm->builder,
 							dst[0], index, "");
 		}
