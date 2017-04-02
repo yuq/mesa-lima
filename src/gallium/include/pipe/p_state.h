@@ -478,12 +478,15 @@ struct pipe_image_view
  */
 struct pipe_box
 {
+   /* Fields only used by textures use int16_t instead of int.
+    * x and width are used by buffers, so they need the full 32-bit range.
+    */
    int x;
-   int y;
-   int z;
+   int16_t y;
+   int16_t z;
    int width;
-   int height;
-   int depth;
+   int16_t height;
+   int16_t depth;
 };
 
 
