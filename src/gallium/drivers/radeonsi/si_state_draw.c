@@ -653,31 +653,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			sctx->last_index_size = -1;
 	}
 
-	if (!info->indirect) {
-		int base_vertex;
-
-		radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
-		radeon_emit(cs, info->instance_count);
-
-		/* Base vertex and start instance. */
-		base_vertex = info->indexed ? info->index_bias : info->start;
-
-		if (base_vertex != sctx->last_base_vertex ||
-		    sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
-		    info->start_instance != sctx->last_start_instance ||
-		    info->drawid != sctx->last_drawid ||
-		    sh_base_reg != sctx->last_sh_base_reg) {
-			radeon_set_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 3);
-			radeon_emit(cs, base_vertex);
-			radeon_emit(cs, info->start_instance);
-			radeon_emit(cs, info->drawid);
-
-			sctx->last_base_vertex = base_vertex;
-			sctx->last_start_instance = info->start_instance;
-			sctx->last_drawid = info->drawid;
-			sctx->last_sh_base_reg = sh_base_reg;
-		}
-	} else {
+	if (info->indirect) {
 		uint64_t indirect_va = r600_resource(info->indirect)->gpu_address;
 
 		assert(indirect_va % 8 == 0);
@@ -692,9 +668,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource *)info->indirect,
 				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
-	}
 
-	if (info->indirect) {
 		unsigned di_src_sel = info->indexed ? V_0287F0_DI_SRC_SEL_DMA
 						    : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
 
@@ -747,6 +721,30 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, di_src_sel);
 		}
 	} else {
+		int base_vertex;
+
+		radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
+		radeon_emit(cs, info->instance_count);
+
+		/* Base vertex and start instance. */
+		base_vertex = info->indexed ? info->index_bias : info->start;
+
+		if (base_vertex != sctx->last_base_vertex ||
+		    sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
+		    info->start_instance != sctx->last_start_instance ||
+		    info->drawid != sctx->last_drawid ||
+		    sh_base_reg != sctx->last_sh_base_reg) {
+			radeon_set_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 3);
+			radeon_emit(cs, base_vertex);
+			radeon_emit(cs, info->start_instance);
+			radeon_emit(cs, info->drawid);
+
+			sctx->last_base_vertex = base_vertex;
+			sctx->last_start_instance = info->start_instance;
+			sctx->last_drawid = info->drawid;
+			sctx->last_sh_base_reg = sh_base_reg;
+		}
+
 		if (info->indexed) {
 			index_va += info->start * ib->index_size;
 
