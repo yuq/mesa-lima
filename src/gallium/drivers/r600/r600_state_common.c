@@ -712,49 +712,47 @@ static void r600_update_compressed_colortex_mask(struct r600_samplerview_state *
 }
 
 /* Compute the key for the hw shader variant */
-static inline union r600_shader_key r600_shader_selector_key(struct pipe_context * ctx,
-		struct r600_pipe_shader_selector * sel)
+static inline void r600_shader_selector_key(const struct pipe_context *ctx,
+		const struct r600_pipe_shader_selector *sel,
+		union r600_shader_key *key)
 {
-	struct r600_context *rctx = (struct r600_context *)ctx;
-	union r600_shader_key key;
-	memset(&key, 0, sizeof(key));
+	const struct r600_context *rctx = (struct r600_context *)ctx;
+	memset(key, 0, sizeof(*key));
 
 	switch (sel->type) {
 	case PIPE_SHADER_VERTEX: {
-		key.vs.as_ls = (rctx->tes_shader != NULL);
-		if (!key.vs.as_ls)
-			key.vs.as_es = (rctx->gs_shader != NULL);
+		key->vs.as_ls = (rctx->tes_shader != NULL);
+		if (!key->vs.as_ls)
+			key->vs.as_es = (rctx->gs_shader != NULL);
 
 		if (rctx->ps_shader->current->shader.gs_prim_id_input && !rctx->gs_shader) {
-			key.vs.as_gs_a = true;
-			key.vs.prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
+			key->vs.as_gs_a = true;
+			key->vs.prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
 		}
 		break;
 	}
 	case PIPE_SHADER_GEOMETRY:
 		break;
 	case PIPE_SHADER_FRAGMENT: {
-		key.ps.color_two_side = rctx->rasterizer && rctx->rasterizer->two_side;
-		key.ps.alpha_to_one = rctx->alpha_to_one &&
+		key->ps.color_two_side = rctx->rasterizer && rctx->rasterizer->two_side;
+		key->ps.alpha_to_one = rctx->alpha_to_one &&
 				      rctx->rasterizer && rctx->rasterizer->multisample_enable &&
 				      !rctx->framebuffer.cb0_is_integer;
-		key.ps.nr_cbufs = rctx->framebuffer.state.nr_cbufs;
+		key->ps.nr_cbufs = rctx->framebuffer.state.nr_cbufs;
 		/* Dual-source blending only makes sense with nr_cbufs == 1. */
-		if (key.ps.nr_cbufs == 1 && rctx->dual_src_blend)
-			key.ps.nr_cbufs = 2;
+		if (key->ps.nr_cbufs == 1 && rctx->dual_src_blend)
+			key->ps.nr_cbufs = 2;
 		break;
 	}
 	case PIPE_SHADER_TESS_EVAL:
-		key.tes.as_es = (rctx->gs_shader != NULL);
+		key->tes.as_es = (rctx->gs_shader != NULL);
 		break;
 	case PIPE_SHADER_TESS_CTRL:
-		key.tcs.prim_mode = rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+		key->tcs.prim_mode = rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 		break;
 	default:
 		assert(0);
 	}
-
-	return key;
 }
 
 /* Select the hw shader variant depending on the current state.
@@ -767,8 +765,7 @@ static int r600_shader_select(struct pipe_context *ctx,
 	struct r600_pipe_shader * shader = NULL;
 	int r;
 
-	memset(&key, 0, sizeof(key));
-	key = r600_shader_selector_key(ctx, sel);
+	r600_shader_selector_key(ctx, sel, &key);
 
 	/* Check if we don't need to change anything.
 	 * This path is also used for most shaders that don't need multiple
@@ -812,7 +809,7 @@ static int r600_shader_select(struct pipe_context *ctx,
 		if (sel->type == PIPE_SHADER_FRAGMENT &&
 				sel->num_shaders == 0) {
 			sel->nr_ps_max_color_exports = shader->shader.nr_ps_max_color_exports;
-			key = r600_shader_selector_key(ctx, sel);
+			r600_shader_selector_key(ctx, sel, &key);
 		}
 
 		memcpy(&shader->key, &key, sizeof(key));
