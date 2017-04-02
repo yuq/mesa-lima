@@ -99,8 +99,7 @@ static void
 decode_group(struct gen_group *strct, const uint32_t *p, int starting_dword)
 {
    uint64_t offset = option_print_offsets ? (void *) p - gtt : 0;
-   gen_print_group(outfile, strct, offset, p, starting_dword,
-                   option_color == COLOR_ALWAYS);
+   gen_print_group(outfile, strct, offset, p, option_color == COLOR_ALWAYS);
 }
 
 static void
@@ -722,7 +721,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
               gen_group_get_name(inst), reset_color);
 
       if (option_full_decode) {
-         decode_group(inst, p, 1);
+         decode_group(inst, p, 0);
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
             if (gen_group_get_opcode(inst) == custom_handlers[i].opcode)

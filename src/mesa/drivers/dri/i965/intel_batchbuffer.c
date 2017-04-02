@@ -180,7 +180,7 @@ decode_struct(struct brw_context *brw, struct gen_spec *spec,
 
    fprintf(stderr, "%s\n", struct_name);
    gen_print_group(stderr, group, gtt_offset + offset,
-                   &data[offset / 4], 0, color);
+                   &data[offset / 4], color);
 }
 
 static void
@@ -197,7 +197,7 @@ decode_structs(struct brw_context *brw, struct gen_spec *spec,
    for (int i = 0; i < entries; i++) {
       fprintf(stderr, "%s %d\n", struct_name, i);
       gen_print_group(stderr, group, gtt_offset + offset,
-                      &data[(offset + i * struct_size) / 4], 0, color);
+                      &data[(offset + i * struct_size) / 4], color);
    }
 }
 
@@ -239,7 +239,7 @@ do_batch_dump(struct brw_context *brw)
       fprintf(stderr, "%s0x%08"PRIx64":  0x%08x:  %-80s%s\n", header_color,
               offset, p[0], gen_group_get_name(inst), reset_color);
 
-      gen_print_group(stderr, inst, offset, p, 1, color);
+      gen_print_group(stderr, inst, offset, p, color);
 
       switch (gen_group_get_opcode(inst) >> 16) {
       case _3DSTATE_PIPELINED_POINTERS:
@@ -261,7 +261,7 @@ do_batch_dump(struct brw_context *brw)
          for (int i = 0; i < bt_entries; i++) {
             fprintf(stderr, "SURFACE_STATE - BTI = %d\n", i);
             gen_print_group(stderr, group, gtt_offset + bt_pointers[i],
-                            &data[bt_pointers[i] / 4], 0, color);
+                            &data[bt_pointers[i] / 4], color);
          }
          break;
       }

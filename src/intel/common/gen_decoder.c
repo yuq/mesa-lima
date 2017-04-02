@@ -817,10 +817,23 @@ print_dword_header(FILE *outfile,
            offset + 4 * iter->dword, iter->p[iter->dword], iter->dword);
 }
 
+static bool
+is_header_field(struct gen_group *group, struct gen_field *field)
+{
+   uint32_t bits;
+
+   if (field->start > 32)
+      return false;
+
+   bits = (1U << (field->end - field->start + 1)) - 1;
+   bits <<= field->start;
+
+   return (group->opcode_mask & bits) != 0;
+}
+
 void
 gen_print_group(FILE *outfile, struct gen_group *group,
-                uint64_t offset, const uint32_t *p,
-                int starting_dword, bool color)
+                uint64_t offset, const uint32_t *p, bool color)
 {
    struct gen_field_iterator iter;
    int last_dword = 0;
@@ -831,13 +844,13 @@ gen_print_group(FILE *outfile, struct gen_group *group,
          print_dword_header(outfile, &iter, offset);
          last_dword = iter.dword;
       }
-      if (iter.dword >= starting_dword) {
+      if (!is_header_field(group, iter.field)) {
          fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
          if (iter.struct_desc) {
             uint64_t struct_offset = offset + 4 * iter.dword;
             print_dword_header(outfile, &iter, struct_offset);
             gen_print_group(outfile, iter.struct_desc, struct_offset,
-                            &p[iter.dword], 0, color);
+                            &p[iter.dword], color);
          }
       }
    }

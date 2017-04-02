@@ -134,6 +134,6 @@ bool gen_field_iterator_next(struct gen_field_iterator *iter);
 void gen_print_group(FILE *out,
                      struct gen_group *group,
                      uint64_t offset, const uint32_t *p,
-                     int starting_dword, bool color);
+                     bool color);
 
 #endif /* GEN_DECODER_H */
