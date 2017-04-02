@@ -68,7 +68,7 @@
 #if defined(_WIN32) && (_MSC_VER >= 1400)
     #define ADDR_ANALYSIS_ASSUME(expr) __analysis_assume(expr)
 #else
-    #define ADDR_ANALYSIS_ASSUME(expr) do { } while (0)
+    #define ADDR_ANALYSIS_ASSUME(expr) do { (void)(expr); } while (0)
 #endif
 
 #if DEBUG
