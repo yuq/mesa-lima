@@ -3254,7 +3254,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 				num_format = V_008F14_IMG_FMASK_32_8_8;
 				break;
 			default:
-				assert(0);
+				unreachable("invalid nr_samples");
 			}
 		} else {
 			switch (res->nr_samples) {
@@ -3268,7 +3268,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 				data_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S8_F8;
 				break;
 			default:
-				assert(0);
+				unreachable("invalid nr_samples");
 			}
 			num_format = V_008F14_IMG_NUM_FORMAT_UINT;
 		}
