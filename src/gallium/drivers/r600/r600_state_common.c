@@ -1666,6 +1666,27 @@ void r600_emit_clip_misc_state(struct r600_context *rctx, struct r600_atom *atom
 				       S_028AB4_REUSE_OFF(state->vs_out_viewport));
 }
 
+/* rast_prim is the primitive type after GS. */
+static inline void r600_emit_rasterizer_prim_state(struct r600_context *rctx)
+{
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	unsigned ls_mask = 0;
+	enum pipe_prim_type rast_prim = rctx->current_rast_prim;
+	if (rast_prim == rctx->last_rast_prim)
+		return;
+
+	if (rast_prim == PIPE_PRIM_LINES)
+		ls_mask = 1;
+	else if (rast_prim == PIPE_PRIM_LINE_STRIP ||
+		 rast_prim == PIPE_PRIM_LINE_LOOP)
+		ls_mask = 2;
+
+	radeon_set_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
+			       S_028A0C_AUTO_RESET_CNTL(ls_mask) |
+			       (rctx->rasterizer ? rctx->rasterizer->pa_sc_line_stipple : 0));
+	rctx->last_rast_prim = rast_prim;
+}
+
 static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
@@ -1703,6 +1724,10 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		 */
 		return;
 	}
+
+	rctx->current_rast_prim = (rctx->gs_shader)? rctx->gs_shader->gs_output_prim
+		: (rctx->tes_shader)? rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE]
+		: info->mode;
 
 	if (info->indexed) {
 		/* Initialize the index buffer struct. */
@@ -1863,17 +1888,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 	/* Update the primitive type. */
 	if (rctx->last_primitive_type != info->mode) {
-		unsigned ls_mask = 0;
-
-		if (info->mode == PIPE_PRIM_LINES)
-			ls_mask = 1;
-		else if (info->mode == PIPE_PRIM_LINE_STRIP ||
-			 info->mode == PIPE_PRIM_LINE_LOOP)
-			ls_mask = 2;
-
-		radeon_set_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
-				       S_028A0C_AUTO_RESET_CNTL(ls_mask) |
-				       (rctx->rasterizer ? rctx->rasterizer->pa_sc_line_stipple : 0));
+		r600_emit_rasterizer_prim_state(rctx);
 		radeon_set_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE,
 				      r600_conv_pipe_prim(info->mode));
 

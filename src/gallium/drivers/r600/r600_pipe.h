@@ -322,9 +322,9 @@ struct r600_pipe_shader_selector {
 	enum pipe_shader_type	type;
 
 	/* geometry shader properties */
-	unsigned	gs_output_prim;
-	unsigned	gs_max_out_vertices;
-	unsigned	gs_num_invocations;
+	enum pipe_prim_type	gs_output_prim;
+	unsigned		gs_max_out_vertices;
+	unsigned		gs_num_invocations;
 
 	/* TCS/VS */
 	uint64_t        lds_patch_outputs_written_mask;
@@ -512,6 +512,8 @@ struct r600_context {
 
 	/* Last draw state (-1 = unset). */
 	enum pipe_prim_type		last_primitive_type; /* Last primitive type used in draw_vbo. */
+	enum pipe_prim_type		current_rast_prim; /* primitive type after TES, GS */
+	enum pipe_prim_type		last_rast_prim;
 	unsigned			last_start_instance;
 
 	void				*sb_context;
