@@ -200,22 +200,25 @@ vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
                                                  surface->buf ? NULL :
 						 &desc.region);
 
-      if (surface->sid == SVGA3D_INVALID_ID && surface->buf) {
-
-         /*
-          * Kernel refused to allocate a surface for us.
-          * Perhaps something was wrong with our buffer?
-          * This is really a guard against future new size requirements
-          * on the backing buffers.
-          */
-         vmw_svga_winsys_buffer_destroy(sws, surface->buf);
-         surface->buf = NULL;
-         surface->sid = vmw_ioctl_gb_surface_create(vws, flags, format, usage,
-                                                    size, numLayers,
-                                                    numMipLevels, sampleCount,
-                                                    0, &desc.region);
-         if (surface->sid == SVGA3D_INVALID_ID)
+      if (surface->sid == SVGA3D_INVALID_ID) {
+         if (surface->buf == NULL) {
             goto no_sid;
+         } else {
+            /*
+             * Kernel refused to allocate a surface for us.
+             * Perhaps something was wrong with our buffer?
+             * This is really a guard against future new size requirements
+             * on the backing buffers.
+             */
+            vmw_svga_winsys_buffer_destroy(sws, surface->buf);
+            surface->buf = NULL;
+            surface->sid = vmw_ioctl_gb_surface_create(vws, flags, format, usage,
+                                                       size, numLayers,
+                                                       numMipLevels, sampleCount,
+                                                       0, &desc.region);
+            if (surface->sid == SVGA3D_INVALID_ID)
+               goto no_sid;
+         }
       }
 
       /*
