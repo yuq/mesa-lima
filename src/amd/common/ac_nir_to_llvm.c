@@ -4564,7 +4564,6 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 	LLVMValueRef t_list_ptr = ctx->vertex_buffers;
 	LLVMValueRef t_offset;
 	LLVMValueRef t_list;
-	LLVMValueRef args[3];
 	LLVMValueRef input;
 	LLVMValueRef buffer_index;
 	int index = variable->data.location - VERT_ATTRIB_GENERIC0;
@@ -4586,13 +4585,11 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 		t_offset = LLVMConstInt(ctx->i32, index + i, false);
 
 		t_list = ac_build_indexed_load_const(&ctx->ac, t_list_ptr, t_offset);
-		args[0] = t_list;
-		args[1] = LLVMConstInt(ctx->i32, 0, false);
-		args[2] = buffer_index;
-		input = ac_build_intrinsic(&ctx->ac,
-			"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
-			AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND |
-			AC_FUNC_ATTR_LEGACY);
+
+		input = ac_build_buffer_load_format(&ctx->ac, t_list,
+						    buffer_index,
+						    LLVMConstInt(ctx->i32, 0, false),
+						    true);
 
 		for (unsigned chan = 0; chan < 4; chan++) {
 			LLVMValueRef llvm_chan = LLVMConstInt(ctx->i32, chan, false);
