@@ -1310,6 +1310,7 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 
    case nir_op_iadd:
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
+      /* fall through */
    case nir_op_fadd:
       inst = emit(ADD(dst, op[0], op[1]));
       inst->saturate = instr->dest.saturate;
@@ -1540,6 +1541,7 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_imin:
    case nir_op_umin:
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
+      /* fall through */
    case nir_op_fmin:
       inst = emit_minmax(BRW_CONDITIONAL_L, dst, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
@@ -1548,6 +1550,7 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_imax:
    case nir_op_umax:
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
+      /* fall through */
    case nir_op_fmax:
       inst = emit_minmax(BRW_CONDITIONAL_GE, dst, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
@@ -2054,6 +2057,7 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_iabs:
    case nir_op_ineg:
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
+      /* fall through */
    case nir_op_fabs:
    case nir_op_fneg:
    case nir_op_fsat:
