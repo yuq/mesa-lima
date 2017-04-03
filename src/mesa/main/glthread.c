@@ -53,7 +53,8 @@ glthread_allocate_batch(struct gl_context *ctx)
 }
 
 static void
-glthread_unmarshal_batch(struct gl_context *ctx, struct glthread_batch *batch)
+glthread_unmarshal_batch(struct gl_context *ctx, struct glthread_batch *batch,
+                         const bool release_batch)
 {
    size_t pos = 0;
 
@@ -64,7 +65,10 @@ glthread_unmarshal_batch(struct gl_context *ctx, struct glthread_batch *batch)
 
    assert(pos == batch->used);
 
-   free(batch);
+   if (release_batch)
+      free(batch);
+   else
+      batch->used = 0;
 }
 
 static void *
@@ -103,7 +107,7 @@ glthread_worker(void *data)
       glthread->busy = true;
       pthread_mutex_unlock(&glthread->mutex);
 
-      glthread_unmarshal_batch(ctx, batch);
+      glthread_unmarshal_batch(ctx, batch, true);
 
       pthread_mutex_lock(&glthread->mutex);
       glthread->busy = false;
@@ -214,7 +218,7 @@ _mesa_glthread_flush_batch_locked(struct gl_context *ctx)
     * need to restore it when it returns.
     */
    if (false) {
-      glthread_unmarshal_batch(ctx, batch);
+      glthread_unmarshal_batch(ctx, batch, true);
       _glapi_set_dispatch(ctx->CurrentClientDispatch);
       return;
    }
@@ -269,9 +273,8 @@ _mesa_glthread_finish(struct gl_context *ctx)
    if (!(glthread->batch_queue || glthread->busy)) {
       if (glthread->batch && glthread->batch->used) {
          struct _glapi_table *dispatch = _glapi_get_dispatch();
-         glthread_unmarshal_batch(ctx, glthread->batch);
+         glthread_unmarshal_batch(ctx, glthread->batch, false);
          _glapi_set_dispatch(dispatch);
-         glthread_allocate_batch(ctx);
       }
    } else {
       _mesa_glthread_flush_batch_locked(ctx);
