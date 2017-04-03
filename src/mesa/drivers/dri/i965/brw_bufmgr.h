@@ -37,6 +37,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "util/list.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -95,6 +96,42 @@ struct _drm_bacon_bo {
 	 * processes, so we don't know their state.
 	 */
 	bool idle;
+
+	int refcount;
+	const char *name;
+
+	/**
+	 * Kenel-assigned global name for this object
+         *
+         * List contains both flink named and prime fd'd objects
+	 */
+	unsigned int global_name;
+
+	/**
+	 * Current tiling mode
+	 */
+	uint32_t tiling_mode;
+	uint32_t swizzle_mode;
+	unsigned long stride;
+
+	time_t free_time;
+
+	/** Mapped address for the buffer, saved across map/unmap cycles */
+	void *mem_virtual;
+	/** GTT virtual address for the buffer, saved across map/unmap cycles */
+	void *gtt_virtual;
+	/** WC CPU address for the buffer, saved across map/unmap cycles */
+	void *wc_virtual;
+	int map_count;
+	struct list_head vma_list;
+
+	/** BO cache list */
+	struct list_head head;
+
+	/**
+	 * Boolean of whether this buffer can be re-used
+	 */
+	bool reusable;
 };
 
 #define BO_ALLOC_FOR_RENDER (1<<0)

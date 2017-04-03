@@ -95,8 +95,6 @@ struct _drm_bacon_context {
 	struct _drm_bacon_bufmgr *bufmgr;
 };
 
-typedef struct _drm_bacon_bo_gem drm_bacon_bo_gem;
-
 struct drm_bacon_gem_bo_bucket {
 	struct list_head head;
 	unsigned long size;
@@ -122,57 +120,12 @@ typedef struct _drm_bacon_bufmgr {
 	unsigned int bo_reuse : 1;
 } drm_bacon_bufmgr;
 
-struct _drm_bacon_bo_gem {
-	drm_bacon_bo bo;
-
-	int refcount;
-	const char *name;
-
-	/**
-	 * Kenel-assigned global name for this object
-         *
-         * List contains both flink named and prime fd'd objects
-	 */
-	unsigned int global_name;
-
-	/**
-	 * Current tiling mode
-	 */
-	uint32_t tiling_mode;
-	uint32_t swizzle_mode;
-	unsigned long stride;
-
-	time_t free_time;
-
-	/** Mapped address for the buffer, saved across map/unmap cycles */
-	void *mem_virtual;
-	/** GTT virtual address for the buffer, saved across map/unmap cycles */
-	void *gtt_virtual;
-	/** WC CPU address for the buffer, saved across map/unmap cycles */
-	void *wc_virtual;
-	int map_count;
-	struct list_head vma_list;
-
-	/** BO cache list */
-	struct list_head head;
-
-	/**
-	 * Boolean of whether this buffer can be re-used
-	 */
-	bool reusable;
-};
-
 static int
 drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 				     uint32_t tiling_mode,
 				     uint32_t stride);
 
 static void drm_bacon_gem_bo_free(drm_bacon_bo *bo);
-
-static inline drm_bacon_bo_gem *to_bo_gem(drm_bacon_bo *bo)
-{
-        return (drm_bacon_bo_gem *)bo;
-}
 
 static uint32_t
 key_hash_uint(const void *key)
@@ -186,11 +139,11 @@ key_uint_equal(const void *a, const void *b)
 	return *((unsigned *) a) == *((unsigned *) b);
 }
 
-static drm_bacon_bo_gem *
+static drm_bacon_bo *
 hash_find_bo(struct hash_table *ht, unsigned int key)
 {
 	struct hash_entry *entry = _mesa_hash_table_search(ht, &key);
-	return entry ? (drm_bacon_bo_gem *) entry->data : NULL;
+	return entry ? (drm_bacon_bo *) entry->data : NULL;
 }
 
 static unsigned long
@@ -250,9 +203,7 @@ drm_bacon_gem_bo_bucket_for_size(drm_bacon_bufmgr *bufmgr,
 inline void
 drm_bacon_bo_reference(drm_bacon_bo *bo)
 {
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	p_atomic_inc(&bo_gem->refcount);
+	p_atomic_inc(&bo->refcount);
 }
 
 int
@@ -277,12 +228,12 @@ drm_bacon_bo_busy(drm_bacon_bo *bo)
 
 static int
 drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr *bufmgr,
-				  drm_bacon_bo_gem *bo_gem, int state)
+				  drm_bacon_bo *bo, int state)
 {
 	struct drm_i915_gem_madvise madv;
 
 	memclear(madv);
-	madv.handle = bo_gem->bo.gem_handle;
+	madv.handle = bo->gem_handle;
 	madv.madv = state;
 	madv.retained = 1;
 	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MADVISE, &madv);
@@ -293,9 +244,7 @@ drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr *bufmgr,
 int
 drm_bacon_bo_madvise(drm_bacon_bo *bo, int madv)
 {
-	return drm_bacon_gem_bo_madvise_internal(bo->bufmgr,
-						 (drm_bacon_bo_gem *) bo,
-						 madv);
+	return drm_bacon_gem_bo_madvise_internal(bo->bufmgr, bo, madv);
 }
 
 /* drop the oldest entries that have been purged by the kernel */
@@ -304,16 +253,15 @@ drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr *bufmgr,
 				    struct drm_bacon_gem_bo_bucket *bucket)
 {
 	while (!list_empty(&bucket->head)) {
-		drm_bacon_bo_gem *bo_gem;
+		drm_bacon_bo *bo;
 
-		bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
-				    bucket->head.next, head);
+		bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
 		if (drm_bacon_gem_bo_madvise_internal
-		    (bufmgr, bo_gem, I915_MADV_DONTNEED))
+		    (bufmgr, bo, I915_MADV_DONTNEED))
 			break;
 
-		list_del(&bo_gem->head);
-		drm_bacon_gem_bo_free(&bo_gem->bo);
+		list_del(&bo->head);
+		drm_bacon_gem_bo_free(bo);
 	}
 }
 
@@ -326,7 +274,7 @@ drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 				unsigned long stride,
 				unsigned int alignment)
 {
-	drm_bacon_bo_gem *bo_gem;
+	drm_bacon_bo *bo;
 	unsigned int page_size = getpagesize();
 	int ret;
 	struct drm_bacon_gem_bo_bucket *bucket;
@@ -361,11 +309,10 @@ retry:
 			 * of the list, as it will likely be hot in the GPU
 			 * cache and in the aperture for us.
 			 */
-			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
-					    bucket->head.prev, head);
-			list_del(&bo_gem->head);
+			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.prev, head);
+			list_del(&bo->head);
 			alloc_from_cache = true;
-			bo_gem->bo.align = alignment;
+			bo->align = alignment;
 		} else {
 			assert(alignment == 0);
 			/* For non-render-target BOs (where we're probably
@@ -375,27 +322,26 @@ retry:
 			 * allocating a new buffer is probably faster than
 			 * waiting for the GPU to finish.
 			 */
-			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
-					    bucket->head.next, head);
-			if (!drm_bacon_bo_busy(&bo_gem->bo)) {
+			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
+			if (!drm_bacon_bo_busy(bo)) {
 				alloc_from_cache = true;
-				list_del(&bo_gem->head);
+				list_del(&bo->head);
 			}
 		}
 
 		if (alloc_from_cache) {
 			if (!drm_bacon_gem_bo_madvise_internal
-			    (bufmgr, bo_gem, I915_MADV_WILLNEED)) {
-				drm_bacon_gem_bo_free(&bo_gem->bo);
+			    (bufmgr, bo, I915_MADV_WILLNEED)) {
+				drm_bacon_gem_bo_free(bo);
 				drm_bacon_gem_bo_cache_purge_bucket(bufmgr,
 								    bucket);
 				goto retry;
 			}
 
-			if (drm_bacon_gem_bo_set_tiling_internal(&bo_gem->bo,
+			if (drm_bacon_gem_bo_set_tiling_internal(bo,
 								 tiling_mode,
 								 stride)) {
-				drm_bacon_gem_bo_free(&bo_gem->bo);
+				drm_bacon_gem_bo_free(bo);
 				goto retry;
 			}
 		}
@@ -404,15 +350,15 @@ retry:
 	if (!alloc_from_cache) {
 		struct drm_i915_gem_create create;
 
-		bo_gem = calloc(1, sizeof(*bo_gem));
-		if (!bo_gem)
+		bo = calloc(1, sizeof(*bo));
+		if (!bo)
 			goto err;
 
 		/* drm_bacon_gem_bo_free calls list_del() for an uninitialized
 		   list (vma_list), so better set the list head here */
-		list_inithead(&bo_gem->vma_list);
+		list_inithead(&bo->vma_list);
 
-		bo_gem->bo.size = bo_size;
+		bo->size = bo_size;
 
 		memclear(create);
 		create.size = bo_size;
@@ -421,40 +367,40 @@ retry:
 			       DRM_IOCTL_I915_GEM_CREATE,
 			       &create);
 		if (ret != 0) {
-			free(bo_gem);
+			free(bo);
 			goto err;
 		}
 
-		bo_gem->bo.gem_handle = create.handle;
+		bo->gem_handle = create.handle;
 		_mesa_hash_table_insert(bufmgr->handle_table,
-					&bo_gem->bo.gem_handle, bo_gem);
+					&bo->gem_handle, bo);
 
-		bo_gem->bo.bufmgr = bufmgr;
-		bo_gem->bo.align = alignment;
+		bo->bufmgr = bufmgr;
+		bo->align = alignment;
 
-		bo_gem->tiling_mode = I915_TILING_NONE;
-		bo_gem->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
-		bo_gem->stride = 0;
+		bo->tiling_mode = I915_TILING_NONE;
+		bo->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
+		bo->stride = 0;
 
-		if (drm_bacon_gem_bo_set_tiling_internal(&bo_gem->bo,
+		if (drm_bacon_gem_bo_set_tiling_internal(bo,
 							 tiling_mode,
 							 stride))
 			goto err_free;
 	}
 
-	bo_gem->name = name;
-	p_atomic_set(&bo_gem->refcount, 1);
-	bo_gem->reusable = true;
+	bo->name = name;
+	p_atomic_set(&bo->refcount, 1);
+	bo->reusable = true;
 
 	pthread_mutex_unlock(&bufmgr->lock);
 
 	DBG("bo_create: buf %d (%s) %ldb\n",
-	    bo_gem->bo.gem_handle, bo_gem->name, size);
+	    bo->gem_handle, bo->name, size);
 
-	return &bo_gem->bo;
+	return bo;
 
 err_free:
-	drm_bacon_gem_bo_free(&bo_gem->bo);
+	drm_bacon_gem_bo_free(bo);
 err:
 	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
@@ -540,7 +486,7 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 				  const char *name,
 				  unsigned int handle)
 {
-	drm_bacon_bo_gem *bo_gem;
+	drm_bacon_bo *bo;
 	int ret;
 	struct drm_gem_open open_arg;
 	struct drm_i915_gem_get_tiling get_tiling;
@@ -552,9 +498,9 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	 * provides a sufficiently fast match.
 	 */
 	pthread_mutex_lock(&bufmgr->lock);
-	bo_gem = hash_find_bo(bufmgr->name_table, handle);
-	if (bo_gem) {
-		drm_bacon_bo_reference(&bo_gem->bo);
+	bo = hash_find_bo(bufmgr->name_table, handle);
+	if (bo) {
+		drm_bacon_bo_reference(bo);
 		goto out;
 	}
 
@@ -566,59 +512,57 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	if (ret != 0) {
 		DBG("Couldn't reference %s handle 0x%08x: %s\n",
 		    name, handle, strerror(errno));
-		bo_gem = NULL;
+		bo = NULL;
 		goto out;
 	}
         /* Now see if someone has used a prime handle to get this
          * object from the kernel before by looking through the list
          * again for a matching gem_handle
          */
-	bo_gem = hash_find_bo(bufmgr->handle_table, open_arg.handle);
-	if (bo_gem) {
-		drm_bacon_bo_reference(&bo_gem->bo);
+	bo = hash_find_bo(bufmgr->handle_table, open_arg.handle);
+	if (bo) {
+		drm_bacon_bo_reference(bo);
 		goto out;
 	}
 
-	bo_gem = calloc(1, sizeof(*bo_gem));
-	if (!bo_gem)
+	bo = calloc(1, sizeof(*bo));
+	if (!bo)
 		goto out;
 
-	p_atomic_set(&bo_gem->refcount, 1);
-	list_inithead(&bo_gem->vma_list);
+	p_atomic_set(&bo->refcount, 1);
+	list_inithead(&bo->vma_list);
 
-	bo_gem->bo.size = open_arg.size;
-	bo_gem->bo.offset64 = 0;
-	bo_gem->bo.virtual = NULL;
-	bo_gem->bo.bufmgr = bufmgr;
-	bo_gem->bo.gem_handle = open_arg.handle;
-	bo_gem->name = name;
-	bo_gem->global_name = handle;
-	bo_gem->reusable = false;
+	bo->size = open_arg.size;
+	bo->offset64 = 0;
+	bo->virtual = NULL;
+	bo->bufmgr = bufmgr;
+	bo->gem_handle = open_arg.handle;
+	bo->name = name;
+	bo->global_name = handle;
+	bo->reusable = false;
 
-	_mesa_hash_table_insert(bufmgr->handle_table,
-				&bo_gem->bo.gem_handle, bo_gem);
-	_mesa_hash_table_insert(bufmgr->name_table,
-				&bo_gem->global_name, bo_gem);
+	_mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
+	_mesa_hash_table_insert(bufmgr->name_table, &bo->global_name, bo);
 
 	memclear(get_tiling);
-	get_tiling.handle = bo_gem->bo.gem_handle;
+	get_tiling.handle = bo->gem_handle;
 	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_GET_TILING,
 		       &get_tiling);
 	if (ret != 0)
 		goto err_unref;
 
-	bo_gem->tiling_mode = get_tiling.tiling_mode;
-	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
+	bo->tiling_mode = get_tiling.tiling_mode;
+	bo->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
-	DBG("bo_create_from_handle: %d (%s)\n", handle, bo_gem->name);
+	DBG("bo_create_from_handle: %d (%s)\n", handle, bo->name);
 
 out:
 	pthread_mutex_unlock(&bufmgr->lock);
-	return &bo_gem->bo;
+	return bo;
 
 err_unref:
-	drm_bacon_gem_bo_free(&bo_gem->bo);
+	drm_bacon_gem_bo_free(bo);
 	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
 }
@@ -627,30 +571,29 @@ static void
 drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_gem_close close;
 	struct hash_entry *entry;
 	int ret;
 
-	list_del(&bo_gem->vma_list);
-	if (bo_gem->mem_virtual) {
-		VG(VALGRIND_FREELIKE_BLOCK(bo_gem->mem_virtual, 0));
-		drm_munmap(bo_gem->mem_virtual, bo_gem->bo.size);
+	list_del(&bo->vma_list);
+	if (bo->mem_virtual) {
+		VG(VALGRIND_FREELIKE_BLOCK(bo->mem_virtual, 0));
+		drm_munmap(bo->mem_virtual, bo->size);
 		bufmgr->vma_count--;
 	}
-	if (bo_gem->wc_virtual) {
-		VG(VALGRIND_FREELIKE_BLOCK(bo_gem->wc_virtual, 0));
-		drm_munmap(bo_gem->wc_virtual, bo_gem->bo.size);
+	if (bo->wc_virtual) {
+		VG(VALGRIND_FREELIKE_BLOCK(bo->wc_virtual, 0));
+		drm_munmap(bo->wc_virtual, bo->size);
 		bufmgr->vma_count--;
 	}
-	if (bo_gem->gtt_virtual) {
-		drm_munmap(bo_gem->gtt_virtual, bo_gem->bo.size);
+	if (bo->gtt_virtual) {
+		drm_munmap(bo->gtt_virtual, bo->size);
 		bufmgr->vma_count--;
 	}
 
-	if (bo_gem->global_name) {
+	if (bo->global_name) {
 		entry = _mesa_hash_table_search(bufmgr->name_table,
-						&bo_gem->global_name);
+						&bo->global_name);
 		_mesa_hash_table_remove(bufmgr->name_table, entry);
 	}
 	entry = _mesa_hash_table_search(bufmgr->handle_table,
@@ -663,7 +606,7 @@ drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_CLOSE, &close);
 	if (ret != 0) {
 		DBG("DRM_IOCTL_GEM_CLOSE %d failed (%s): %s\n",
-		    bo->gem_handle, bo_gem->name, strerror(errno));
+		    bo->gem_handle, bo->name, strerror(errno));
 	}
 	free(bo);
 }
@@ -672,16 +615,14 @@ static void
 drm_bacon_gem_bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
 {
 #if HAVE_VALGRIND
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
+	if (bo->mem_virtual)
+		VALGRIND_MAKE_MEM_NOACCESS(bo->mem_virtual, bo->size);
 
-	if (bo_gem->mem_virtual)
-		VALGRIND_MAKE_MEM_NOACCESS(bo_gem->mem_virtual, bo->size);
+	if (bo->wc_virtual)
+		VALGRIND_MAKE_MEM_NOACCESS(bo->wc_virtual, bo->size);
 
-	if (bo_gem->wc_virtual)
-		VALGRIND_MAKE_MEM_NOACCESS(bo_gem->wc_virtual, bo->size);
-
-	if (bo_gem->gtt_virtual)
-		VALGRIND_MAKE_MEM_NOACCESS(bo_gem->gtt_virtual, bo->size);
+	if (bo->gtt_virtual)
+		VALGRIND_MAKE_MEM_NOACCESS(bo->gtt_virtual, bo->size);
 #endif
 }
 
@@ -699,16 +640,15 @@ drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
 		    &bufmgr->cache_bucket[i];
 
 		while (!list_empty(&bucket->head)) {
-			drm_bacon_bo_gem *bo_gem;
+			drm_bacon_bo *bo;
 
-			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
-					    bucket->head.next, head);
-			if (time - bo_gem->free_time <= 1)
+			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
+			if (time - bo->free_time <= 1)
 				break;
 
-			list_del(&bo_gem->head);
+			list_del(&bo->head);
 
-			drm_bacon_gem_bo_free(&bo_gem->bo);
+			drm_bacon_gem_bo_free(bo);
 		}
 	}
 
@@ -731,56 +671,54 @@ static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr *bufmgr)
 		limit = 0;
 
 	while (bufmgr->vma_count > limit) {
-		drm_bacon_bo_gem *bo_gem;
+		drm_bacon_bo *bo;
 
-		bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
-				    bufmgr->vma_cache.next,
-				    vma_list);
-		assert(bo_gem->map_count == 0);
-		list_delinit(&bo_gem->vma_list);
+		bo = LIST_ENTRY(drm_bacon_bo, bufmgr->vma_cache.next, vma_list);
+		assert(bo->map_count == 0);
+		list_delinit(&bo->vma_list);
 
-		if (bo_gem->mem_virtual) {
-			drm_munmap(bo_gem->mem_virtual, bo_gem->bo.size);
-			bo_gem->mem_virtual = NULL;
+		if (bo->mem_virtual) {
+			drm_munmap(bo->mem_virtual, bo->size);
+			bo->mem_virtual = NULL;
 			bufmgr->vma_count--;
 		}
-		if (bo_gem->wc_virtual) {
-			drm_munmap(bo_gem->wc_virtual, bo_gem->bo.size);
-			bo_gem->wc_virtual = NULL;
+		if (bo->wc_virtual) {
+			drm_munmap(bo->wc_virtual, bo->size);
+			bo->wc_virtual = NULL;
 			bufmgr->vma_count--;
 		}
-		if (bo_gem->gtt_virtual) {
-			drm_munmap(bo_gem->gtt_virtual, bo_gem->bo.size);
-			bo_gem->gtt_virtual = NULL;
+		if (bo->gtt_virtual) {
+			drm_munmap(bo->gtt_virtual, bo->size);
+			bo->gtt_virtual = NULL;
 			bufmgr->vma_count--;
 		}
 	}
 }
 
 static void drm_bacon_gem_bo_close_vma(drm_bacon_bufmgr *bufmgr,
-				       drm_bacon_bo_gem *bo_gem)
+				       drm_bacon_bo *bo)
 {
 	bufmgr->vma_open--;
-	list_addtail(&bo_gem->vma_list, &bufmgr->vma_cache);
-	if (bo_gem->mem_virtual)
+	list_addtail(&bo->vma_list, &bufmgr->vma_cache);
+	if (bo->mem_virtual)
 		bufmgr->vma_count++;
-	if (bo_gem->wc_virtual)
+	if (bo->wc_virtual)
 		bufmgr->vma_count++;
-	if (bo_gem->gtt_virtual)
+	if (bo->gtt_virtual)
 		bufmgr->vma_count++;
 	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
 }
 
 static void drm_bacon_gem_bo_open_vma(drm_bacon_bufmgr *bufmgr,
-				      drm_bacon_bo_gem *bo_gem)
+				      drm_bacon_bo *bo)
 {
 	bufmgr->vma_open++;
-	list_del(&bo_gem->vma_list);
-	if (bo_gem->mem_virtual)
+	list_del(&bo->vma_list);
+	if (bo->mem_virtual)
 		bufmgr->vma_count--;
-	if (bo_gem->wc_virtual)
+	if (bo->wc_virtual)
 		bufmgr->vma_count--;
-	if (bo_gem->gtt_virtual)
+	if (bo->gtt_virtual)
 		bufmgr->vma_count--;
 	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
 }
@@ -789,30 +727,29 @@ static void
 drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_bacon_gem_bo_bucket *bucket;
 
 	DBG("bo_unreference final: %d (%s)\n",
-	    bo->gem_handle, bo_gem->name);
+	    bo->gem_handle, bo->name);
 
 	/* Clear any left-over mappings */
-	if (bo_gem->map_count) {
-		DBG("bo freed with non-zero map-count %d\n", bo_gem->map_count);
-		bo_gem->map_count = 0;
-		drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+	if (bo->map_count) {
+		DBG("bo freed with non-zero map-count %d\n", bo->map_count);
+		bo->map_count = 0;
+		drm_bacon_gem_bo_close_vma(bufmgr, bo);
 		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	}
 
 	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr, bo->size);
 	/* Put the buffer into our internal cache for reuse if we can. */
-	if (bufmgr->bo_reuse && bo_gem->reusable && bucket != NULL &&
-	    drm_bacon_gem_bo_madvise_internal(bufmgr, bo_gem,
+	if (bufmgr->bo_reuse && bo->reusable && bucket != NULL &&
+	    drm_bacon_gem_bo_madvise_internal(bufmgr, bo,
 					      I915_MADV_DONTNEED)) {
-		bo_gem->free_time = time;
+		bo->free_time = time;
 
-		bo_gem->name = NULL;
+		bo->name = NULL;
 
-		list_addtail(&bo_gem->head, &bucket->head);
+		list_addtail(&bo->head, &bucket->head);
 	} else {
 		drm_bacon_gem_bo_free(bo);
 	}
@@ -821,14 +758,12 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 void
 drm_bacon_bo_unreference(drm_bacon_bo *bo)
 {
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
 	if (bo == NULL)
 		return;
 
-	assert(p_atomic_read(&bo_gem->refcount) > 0);
+	assert(p_atomic_read(&bo->refcount) > 0);
 
-	if (atomic_add_unless(&bo_gem->refcount, -1, 1)) {
+	if (atomic_add_unless(&bo->refcount, -1, 1)) {
 		drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 		struct timespec time;
 
@@ -836,7 +771,7 @@ drm_bacon_bo_unreference(drm_bacon_bo *bo)
 
 		pthread_mutex_lock(&bufmgr->lock);
 
-		if (p_atomic_dec_zero(&bo_gem->refcount)) {
+		if (p_atomic_dec_zero(&bo->refcount)) {
 			drm_bacon_gem_bo_unreference_final(bo, time.tv_sec);
 			drm_bacon_gem_cleanup_bo_cache(bufmgr, time.tv_sec);
 		}
@@ -849,20 +784,19 @@ int
 drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
 	pthread_mutex_lock(&bufmgr->lock);
 
-	if (bo_gem->map_count++ == 0)
-		drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
+	if (bo->map_count++ == 0)
+		drm_bacon_gem_bo_open_vma(bufmgr, bo);
 
-	if (!bo_gem->mem_virtual) {
+	if (!bo->mem_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
-		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo->name, bo->map_count);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo->gem_handle;
@@ -874,18 +808,18 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 			ret = -errno;
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
 			    __FILE__, __LINE__, bo->gem_handle,
-			    bo_gem->name, strerror(errno));
-			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+			    bo->name, strerror(errno));
+			if (--bo->map_count == 0)
+				drm_bacon_gem_bo_close_vma(bufmgr, bo);
 			pthread_mutex_unlock(&bufmgr->lock);
 			return ret;
 		}
 		VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
-		bo_gem->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
+		bo->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
 	}
-	DBG("bo_map: %d (%s) -> %p\n", bo->gem_handle, bo_gem->name,
-	    bo_gem->mem_virtual);
-	bo->virtual = bo_gem->mem_virtual;
+	DBG("bo_map: %d (%s) -> %p\n", bo->gem_handle, bo->name,
+	    bo->mem_virtual);
+	bo->virtual = bo->mem_virtual;
 
 	memclear(set_domain);
 	set_domain.handle = bo->gem_handle;
@@ -904,7 +838,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 	}
 
 	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
-	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
+	VG(VALGRIND_MAKE_MEM_DEFINED(bo->mem_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr->lock);
 
 	return 0;
@@ -914,18 +848,17 @@ static int
 map_gtt(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
 
-	if (bo_gem->map_count++ == 0)
-		drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
+	if (bo->map_count++ == 0)
+		drm_bacon_gem_bo_open_vma(bufmgr, bo);
 
 	/* Get a mapping of the buffer if we haven't before. */
-	if (bo_gem->gtt_virtual == NULL) {
+	if (bo->gtt_virtual == NULL) {
 		struct drm_i915_gem_mmap_gtt mmap_arg;
 
 		DBG("bo_map_gtt: mmap %d (%s), map_count=%d\n",
-		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo->name, bo->map_count);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo->gem_handle;
@@ -938,34 +871,34 @@ map_gtt(drm_bacon_bo *bo)
 			ret = -errno;
 			DBG("%s:%d: Error preparing buffer map %d (%s): %s .\n",
 			    __FILE__, __LINE__,
-			    bo->gem_handle, bo_gem->name,
+			    bo->gem_handle, bo->name,
 			    strerror(errno));
-			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+			if (--bo->map_count == 0)
+				drm_bacon_gem_bo_close_vma(bufmgr, bo);
 			return ret;
 		}
 
 		/* and mmap it */
-		bo_gem->gtt_virtual = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
+		bo->gtt_virtual = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
 					       MAP_SHARED, bufmgr->fd,
 					       mmap_arg.offset);
-		if (bo_gem->gtt_virtual == MAP_FAILED) {
-			bo_gem->gtt_virtual = NULL;
+		if (bo->gtt_virtual == MAP_FAILED) {
+			bo->gtt_virtual = NULL;
 			ret = -errno;
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
 			    __FILE__, __LINE__,
-			    bo->gem_handle, bo_gem->name,
+			    bo->gem_handle, bo->name,
 			    strerror(errno));
-			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+			if (--bo->map_count == 0)
+				drm_bacon_gem_bo_close_vma(bufmgr, bo);
 			return ret;
 		}
 	}
 
-	bo->virtual = bo_gem->gtt_virtual;
+	bo->virtual = bo->gtt_virtual;
 
-	DBG("bo_map_gtt: %d (%s) -> %p\n", bo->gem_handle, bo_gem->name,
-	    bo_gem->gtt_virtual);
+	DBG("bo_map_gtt: %d (%s) -> %p\n", bo->gem_handle, bo->name,
+	    bo->gtt_virtual);
 
 	return 0;
 }
@@ -974,7 +907,6 @@ int
 drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
@@ -1009,7 +941,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 	}
 
 	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
-	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->gtt_virtual, bo->size));
+	VG(VALGRIND_MAKE_MEM_DEFINED(bo->gtt_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr->lock);
 
 	return 0;
@@ -1033,9 +965,6 @@ int
 drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-#ifdef HAVE_VALGRIND
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-#endif
 	int ret;
 
 	/* If the CPU cache isn't coherent with the GTT, then use a
@@ -1053,7 +982,7 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 	ret = map_gtt(bo);
 	if (ret == 0) {
 		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
-		VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->gtt_virtual, bo->size));
+		VG(VALGRIND_MAKE_MEM_DEFINED(bo->gtt_virtual, bo->size));
 	}
 
 	pthread_mutex_unlock(&bufmgr->lock);
@@ -1065,7 +994,6 @@ int
 drm_bacon_bo_unmap(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret = 0;
 
 	if (bo == NULL)
@@ -1073,7 +1001,7 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 
 	pthread_mutex_lock(&bufmgr->lock);
 
-	if (bo_gem->map_count <= 0) {
+	if (bo->map_count <= 0) {
 		DBG("attempted to unmap an unmapped bo\n");
 		pthread_mutex_unlock(&bufmgr->lock);
 		/* Preserve the old behaviour of just treating this as a
@@ -1086,8 +1014,8 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 	 * an open vma for every bo as that will exhaust the system
 	 * limits and cause later failures.
 	 */
-	if (--bo_gem->map_count == 0) {
-		drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+	if (--bo->map_count == 0) {
+		drm_bacon_gem_bo_close_vma(bufmgr, bo);
 		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 		bo->virtual = NULL;
 	}
@@ -1237,14 +1165,13 @@ drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 	for (int i = 0; i < bufmgr->num_buckets; i++) {
 		struct drm_bacon_gem_bo_bucket *bucket =
 		    &bufmgr->cache_bucket[i];
-		drm_bacon_bo_gem *bo_gem;
+		drm_bacon_bo *bo;
 
 		while (!list_empty(&bucket->head)) {
-			bo_gem = LIST_ENTRY(drm_bacon_bo_gem,
-					    bucket->head.next, head);
-			list_del(&bo_gem->head);
+			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
+			list_del(&bo->head);
 
-			drm_bacon_gem_bo_free(&bo_gem->bo);
+			drm_bacon_gem_bo_free(bo);
 		}
 	}
 
@@ -1260,13 +1187,12 @@ drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 				     uint32_t stride)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_tiling set_tiling;
 	int ret;
 
-	if (bo_gem->global_name == 0 &&
-	    tiling_mode == bo_gem->tiling_mode &&
-	    stride == bo_gem->stride)
+	if (bo->global_name == 0 &&
+	    tiling_mode == bo->tiling_mode &&
+	    stride == bo->stride)
 		return 0;
 
 	memset(&set_tiling, 0, sizeof(set_tiling));
@@ -1286,9 +1212,9 @@ drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 	if (ret == -1)
 		return -errno;
 
-	bo_gem->tiling_mode = set_tiling.tiling_mode;
-	bo_gem->swizzle_mode = set_tiling.swizzle_mode;
-	bo_gem->stride = set_tiling.stride;
+	bo->tiling_mode = set_tiling.tiling_mode;
+	bo->swizzle_mode = set_tiling.swizzle_mode;
+	bo->stride = set_tiling.stride;
 	return 0;
 }
 
@@ -1296,7 +1222,6 @@ int
 drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			uint32_t stride)
 {
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	int ret;
 
 	/* Linear buffers have no stride. By ensuring that we only ever use
@@ -1307,7 +1232,7 @@ drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 
 	ret = drm_bacon_gem_bo_set_tiling_internal(bo, *tiling_mode, stride);
 
-	*tiling_mode = bo_gem->tiling_mode;
+	*tiling_mode = bo->tiling_mode;
 	return ret;
 }
 
@@ -1315,10 +1240,8 @@ int
 drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 			uint32_t *swizzle_mode)
 {
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	*tiling_mode = bo_gem->tiling_mode;
-	*swizzle_mode = bo_gem->swizzle_mode;
+	*tiling_mode = bo->tiling_mode;
+	*swizzle_mode = bo->swizzle_mode;
 	return 0;
 }
 
@@ -1327,7 +1250,7 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 {
 	int ret;
 	uint32_t handle;
-	drm_bacon_bo_gem *bo_gem;
+	drm_bacon_bo *bo;
 	struct drm_i915_gem_get_tiling get_tiling;
 
 	pthread_mutex_lock(&bufmgr->lock);
@@ -1343,18 +1266,18 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	 * for named buffers, we must not create two bo's pointing at the same
 	 * kernel object
 	 */
-	bo_gem = hash_find_bo(bufmgr->handle_table, handle);
-	if (bo_gem) {
-		drm_bacon_bo_reference(&bo_gem->bo);
+	bo = hash_find_bo(bufmgr->handle_table, handle);
+	if (bo) {
+		drm_bacon_bo_reference(bo);
 		goto out;
 	}
 
-	bo_gem = calloc(1, sizeof(*bo_gem));
-	if (!bo_gem)
+	bo = calloc(1, sizeof(*bo));
+	if (!bo)
 		goto out;
 
-	p_atomic_set(&bo_gem->refcount, 1);
-	list_inithead(&bo_gem->vma_list);
+	p_atomic_set(&bo->refcount, 1);
+	list_inithead(&bo->vma_list);
 
 	/* Determine size of bo.  The fd-to-handle ioctl really should
 	 * return the size, but it doesn't.  If we have kernel 3.12 or
@@ -1363,36 +1286,36 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	 * provided (estimated or guess size). */
 	ret = lseek(prime_fd, 0, SEEK_END);
 	if (ret != -1)
-		bo_gem->bo.size = ret;
+		bo->size = ret;
 	else
-		bo_gem->bo.size = size;
+		bo->size = size;
 
-	bo_gem->bo.bufmgr = bufmgr;
+	bo->bufmgr = bufmgr;
 
-	bo_gem->bo.gem_handle = handle;
+	bo->gem_handle = handle;
 	_mesa_hash_table_insert(bufmgr->handle_table,
-				&bo_gem->bo.gem_handle, bo_gem);
+				&bo->gem_handle, bo);
 
-	bo_gem->name = "prime";
-	bo_gem->reusable = false;
+	bo->name = "prime";
+	bo->reusable = false;
 
 	memclear(get_tiling);
-	get_tiling.handle = bo_gem->bo.gem_handle;
+	get_tiling.handle = bo->gem_handle;
 	if (drmIoctl(bufmgr->fd,
 		     DRM_IOCTL_I915_GEM_GET_TILING,
 		     &get_tiling))
 		goto err;
 
-	bo_gem->tiling_mode = get_tiling.tiling_mode;
-	bo_gem->swizzle_mode = get_tiling.swizzle_mode;
+	bo->tiling_mode = get_tiling.tiling_mode;
+	bo->swizzle_mode = get_tiling.swizzle_mode;
 	/* XXX stride is unknown */
 
 out:
 	pthread_mutex_unlock(&bufmgr->lock);
-	return &bo_gem->bo;
+	return bo;
 
 err:
-	drm_bacon_gem_bo_free(&bo_gem->bo);
+	drm_bacon_gem_bo_free(bo);
 	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
 }
@@ -1401,13 +1324,12 @@ int
 drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
 	if (drmPrimeHandleToFD(bufmgr->fd, bo->gem_handle,
 			       DRM_CLOEXEC, prime_fd) != 0)
 		return -errno;
 
-	bo_gem->reusable = false;
+	bo->reusable = false;
 
 	return 0;
 }
@@ -1416,9 +1338,8 @@ int
 drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	if (!bo_gem->global_name) {
+	if (!bo->global_name) {
 		struct drm_gem_flink flink;
 
 		memclear(flink);
@@ -1427,17 +1348,17 @@ drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 			return -errno;
 
 		pthread_mutex_lock(&bufmgr->lock);
-		if (!bo_gem->global_name) {
-			bo_gem->global_name = flink.name;
-			bo_gem->reusable = false;
+		if (!bo->global_name) {
+			bo->global_name = flink.name;
+			bo->reusable = false;
 
 			_mesa_hash_table_insert(bufmgr->name_table,
-						&bo_gem->global_name, bo_gem);
+						&bo->global_name, bo);
 		}
 		pthread_mutex_unlock(&bufmgr->lock);
 	}
 
-	*name = bo_gem->global_name;
+	*name = bo->global_name;
 	return 0;
 }
 
@@ -1461,18 +1382,14 @@ drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr)
 int
 drm_bacon_bo_disable_reuse(drm_bacon_bo *bo)
 {
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	bo_gem->reusable = false;
+	bo->reusable = false;
 	return 0;
 }
 
 int
 drm_bacon_bo_is_reusable(drm_bacon_bo *bo)
 {
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	return bo_gem->reusable;
+	return bo->reusable;
 }
 
 static void
@@ -1632,21 +1549,20 @@ drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	if (bo_gem->gtt_virtual)
-		return bo_gem->gtt_virtual;
+	if (bo->gtt_virtual)
+		return bo->gtt_virtual;
 
 	pthread_mutex_lock(&bufmgr->lock);
-	if (bo_gem->gtt_virtual == NULL) {
+	if (bo->gtt_virtual == NULL) {
 		struct drm_i915_gem_mmap_gtt mmap_arg;
 		void *ptr;
 
 		DBG("bo_map_gtt: mmap %d (%s), map_count=%d\n",
-		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo->name, bo->map_count);
 
-		if (bo_gem->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
+		if (bo->map_count++ == 0)
+			drm_bacon_gem_bo_open_vma(bufmgr, bo);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo->gem_handle;
@@ -1662,35 +1578,34 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 				       mmap_arg.offset);
 		}
 		if (ptr == MAP_FAILED) {
-			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+			if (--bo->map_count == 0)
+				drm_bacon_gem_bo_close_vma(bufmgr, bo);
 			ptr = NULL;
 		}
 
-		bo_gem->gtt_virtual = ptr;
+		bo->gtt_virtual = ptr;
 	}
 	pthread_mutex_unlock(&bufmgr->lock);
 
-	return bo_gem->gtt_virtual;
+	return bo->gtt_virtual;
 }
 
 void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	if (bo_gem->mem_virtual)
-		return bo_gem->mem_virtual;
+	if (bo->mem_virtual)
+		return bo->mem_virtual;
 
 	pthread_mutex_lock(&bufmgr->lock);
-	if (!bo_gem->mem_virtual) {
+	if (!bo->mem_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
 
-		if (bo_gem->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
+		if (bo->map_count++ == 0)
+			drm_bacon_gem_bo_open_vma(bufmgr, bo);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
-		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo->name, bo->map_count);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo->gem_handle;
@@ -1700,36 +1615,35 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 			     &mmap_arg)) {
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
 			    __FILE__, __LINE__, bo->gem_handle,
-			    bo_gem->name, strerror(errno));
-			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+			    bo->name, strerror(errno));
+			if (--bo->map_count == 0)
+				drm_bacon_gem_bo_close_vma(bufmgr, bo);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
-			bo_gem->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
+			bo->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
 		}
 	}
 	pthread_mutex_unlock(&bufmgr->lock);
 
-	return bo_gem->mem_virtual;
+	return bo->mem_virtual;
 }
 
 void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	if (bo_gem->wc_virtual)
-		return bo_gem->wc_virtual;
+	if (bo->wc_virtual)
+		return bo->wc_virtual;
 
 	pthread_mutex_lock(&bufmgr->lock);
-	if (!bo_gem->wc_virtual) {
+	if (!bo->wc_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
 
-		if (bo_gem->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
+		if (bo->map_count++ == 0)
+			drm_bacon_gem_bo_open_vma(bufmgr, bo);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
-		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo->name, bo->map_count);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo->gem_handle;
@@ -1740,17 +1654,17 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 			     &mmap_arg)) {
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
 			    __FILE__, __LINE__, bo->gem_handle,
-			    bo_gem->name, strerror(errno));
-			if (--bo_gem->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
+			    bo->name, strerror(errno));
+			if (--bo->map_count == 0)
+				drm_bacon_gem_bo_close_vma(bufmgr, bo);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
-			bo_gem->wc_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
+			bo->wc_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
 		}
 	}
 	pthread_mutex_unlock(&bufmgr->lock);
 
-	return bo_gem->wc_virtual;
+	return bo->wc_virtual;
 }
 
 /**
