@@ -31,6 +31,38 @@ extern "C" {
 #endif
 
 /**
+ * \name Internal functions
+ */
+/*@{*/
+
+void
+_mesa_init_resident_handles(struct gl_context *ctx);
+void
+_mesa_free_resident_handles(struct gl_context *ctx);
+
+void
+_mesa_init_shared_handles(struct gl_shared_state *shared);
+void
+_mesa_free_shared_handles(struct gl_shared_state *shared);
+
+void
+_mesa_init_texture_handles(struct gl_texture_object *texObj);
+void
+_mesa_make_texture_handles_non_resident(struct gl_context *ctx,
+                                        struct gl_texture_object *texObj);
+void
+_mesa_delete_texture_handles(struct gl_context *ctx,
+                             struct gl_texture_object *texObj);
+
+void
+_mesa_init_sampler_handles(struct gl_sampler_object *sampObj);
+void
+_mesa_delete_sampler_handles(struct gl_context *ctx,
+                             struct gl_sampler_object *sampObj);
+
+/*@}*/
+
+/**
  * \name API functions
  */
 /*@{*/

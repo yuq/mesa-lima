@@ -38,6 +38,7 @@
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
+#include "main/texturebindless.h"
 
 
 struct gl_sampler_object *
@@ -61,6 +62,7 @@ static void
 delete_sampler_object(struct gl_context *ctx,
                       struct gl_sampler_object *sampObj)
 {
+   _mesa_delete_sampler_handles(ctx, sampObj);
    mtx_destroy(&sampObj->Mutex);
    free(sampObj->Label);
    free(sampObj);
@@ -132,6 +134,10 @@ _mesa_init_sampler_object(struct gl_sampler_object *sampObj, GLuint name)
    sampObj->CompareFunc = GL_LEQUAL;
    sampObj->sRGBDecode = GL_DECODE_EXT;
    sampObj->CubeMapSeamless = GL_FALSE;
+   sampObj->HandleAllocated = GL_FALSE;
+
+   /* GL_ARB_bindless_texture */
+   _mesa_init_sampler_handles(sampObj);
 }
 
 /**

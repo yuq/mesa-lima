@@ -47,6 +47,7 @@
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
 #include "compiler/glsl/list.h"
 #include "util/bitscan.h"
+#include "util/u_dynarray.h"
 
 
 #ifdef __cplusplus
@@ -988,6 +989,10 @@ struct gl_sampler_object
    GLenum CompareFunc;		/**< GL_ARB_shadow */
    GLenum sRGBDecode;           /**< GL_DECODE_EXT or GL_SKIP_DECODE_EXT */
    GLboolean CubeMapSeamless;   /**< GL_AMD_seamless_cubemap_per_texture */
+
+   /** GL_ARB_bindless_texture */
+   struct util_dynarray Handles;
+   bool HandleAllocated;
 };
 
 
@@ -1052,6 +1057,11 @@ struct gl_texture_object
 
    /** GL_ARB_shader_image_load_store */
    GLenum ImageFormatCompatibilityType;
+
+   /** GL_ARB_bindless_texture */
+   struct util_dynarray SamplerHandles;
+   struct util_dynarray ImageHandles;
+   bool HandleAllocated;
 };
 
 
@@ -1404,6 +1414,8 @@ struct gl_buffer_object
    unsigned MinMaxCacheHitIndices;
    unsigned MinMaxCacheMissIndices;
    bool MinMaxCacheDirty;
+
+   bool HandleAllocated; /**< GL_ARB_bindless_texture */
 };
 
 
@@ -3212,6 +3224,11 @@ struct gl_shared_state
    /** GL_ARB_sampler_objects */
    struct _mesa_HashTable *SamplerObjects;
 
+   /* GL_ARB_bindless_texture */
+   struct hash_table_u64 *TextureHandles;
+   struct hash_table_u64 *ImageHandles;
+   mtx_t HandlesMutex; /**< For texture/image handles safety */
+
    /**
     * Some context in this share group was affected by a GPU reset
     *
@@ -4515,6 +4532,19 @@ struct gl_subroutine_index_binding
    GLuint *IndexPtr;
 };
 
+struct gl_texture_handle_object
+{
+   struct gl_texture_object *texObj;
+   struct gl_sampler_object *sampObj;
+   GLuint64 handle;
+};
+
+struct gl_image_handle_object
+{
+   struct gl_image_unit imgObj;
+   GLuint64 handle;
+};
+
 /**
  * Mesa rendering context.
  *
@@ -4869,6 +4899,14 @@ struct gl_context
    GLfloat PrimitiveBoundingBox[8];
 
    struct disk_cache *Cache;
+
+   /**
+    * \name GL_ARB_bindless_texture
+    */
+   /*@{*/
+   struct hash_table_u64 *ResidentTextureHandles;
+   struct hash_table_u64 *ResidentImageHandles;
+   /*@}*/
 };
 
 /**
