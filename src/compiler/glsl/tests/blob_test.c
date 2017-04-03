@@ -184,7 +184,7 @@ test_write_and_read_functions (void)
                 "read_consumes_all_bytes");
    expect_equal(false, reader.overrun, "read_does_not_overrun");
 
-   free(blob);
+   blob_destroy(blob);
 }
 
 /* Test that data values are written and read with proper alignment. */
@@ -242,7 +242,7 @@ test_alignment(void)
                    "aligned read of intptr_t");
    }
 
-   free(blob);
+   blob_destroy(blob);
 }
 
 /* Test that we detect overrun. */
@@ -264,7 +264,7 @@ test_overrun(void)
    expect_equal(0, blob_read_uint32(&reader), "read at overrun");
    expect_equal(true, reader.overrun, "overrun flag set");
 
-   free(blob);
+   blob_destroy(blob);
 }
 
 /* Test that we can read and write some large objects, (exercising the code in
@@ -308,7 +308,7 @@ test_big_objects(void)
    expect_equal(false, reader.overrun,
                 "overrun flag not set reading large objects");
 
-   free(blob);
+   blob_destroy(blob);
    ralloc_free(ctx);
 }
 
