@@ -180,6 +180,60 @@ check_draw_arrays_data(struct gl_context *ctx, GLint start, GLsizei count)
 
 
 /**
+ * Check if we should skip the draw call even after validation was successful.
+ */
+static bool
+skip_validated_draw(struct gl_context *ctx)
+{
+   switch (ctx->API) {
+   case API_OPENGLES2:
+      /* For ES2, we can draw if we have a vertex program/shader). */
+      return ctx->VertexProgram._Current == NULL;
+
+   case API_OPENGLES:
+      /* For OpenGL ES, only draw if we have vertex positions
+       */
+      if (ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled)
+         return false;
+      break;
+
+   case API_OPENGL_CORE:
+      /* Section 7.3 (Program Objects) of the OpenGL 4.5 Core Profile spec
+       * says:
+       *
+       *     "If there is no active program for the vertex or fragment shader
+       *     stages, the results of vertex and/or fragment processing will be
+       *     undefined. However, this is not an error."
+       *
+       * The fragment shader is not tested here because other state (e.g.,
+       * GL_RASTERIZER_DISCARD) affects whether or not we actually care.
+       */
+      return ctx->VertexProgram._Current == NULL;
+
+   case API_OPENGL_COMPAT:
+      if (ctx->VertexProgram._Current != NULL) {
+         /* Draw regardless of whether or not we have any vertex arrays.
+          * (Ex: could draw a point using a constant vertex pos)
+          */
+         return false;
+      } else {
+         /* Draw if we have vertex positions (GL_VERTEX_ARRAY or generic
+          * array [0]).
+          */
+         return (!ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled &&
+                 !ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC0].Enabled);
+      }
+      break;
+
+   default:
+      unreachable("Invalid API value in check_valid_to_render()");
+   }
+
+   return false;
+}
+
+
+/**
  * Print info/data for glDrawArrays(), for debugging.
  */
 static void
@@ -409,6 +463,9 @@ vbo_draw_arrays(struct gl_context *ctx, GLenum mode, GLint start,
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct _mesa_prim prim[2];
+
+   if (skip_validated_draw(ctx))
+      return;
 
    vbo_bind_arrays(ctx);
 
@@ -739,6 +796,25 @@ dump_element_buffer(struct gl_context *ctx, GLenum type)
 #endif
 
 
+static bool
+skip_draw_elements(struct gl_context *ctx, GLsizei count,
+                   const GLvoid *indices)
+{
+   if (count == 0)
+      return true;
+
+   /* Not using a VBO for indices, so avoid NULL pointer derefs later.
+    */
+   if (!_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj) && indices == NULL)
+      return true;
+
+   if (skip_validated_draw(ctx))
+      return true;
+
+   return false;
+}
+
+
 /**
  * Inner support for both _mesa_DrawElements and _mesa_DrawRangeElements.
  * Do the rendering for a glDrawElements or glDrawRangeElements call after
@@ -756,6 +832,9 @@ vbo_validated_drawrangeelements(struct gl_context *ctx, GLenum mode,
    struct vbo_context *vbo = vbo_context(ctx);
    struct _mesa_index_buffer ib;
    struct _mesa_prim prim[1];
+
+   if (skip_draw_elements(ctx, count, indices))
+      return;
 
    vbo_bind_arrays(ctx);
 
@@ -1230,6 +1309,9 @@ vbo_exec_MultiDrawElements(GLenum mode,
                                          primcount))
       return;
 
+   if (skip_validated_draw(ctx))
+      return;
+
    vbo_validated_multidrawelements(ctx, mode, count, type, indices, primcount,
                                    NULL);
 }
@@ -1246,6 +1328,9 @@ vbo_exec_MultiDrawElementsBaseVertex(GLenum mode,
 
    if (!_mesa_validate_MultiDrawElements(ctx, mode, count, type, indices,
                                          primcount))
+      return;
+
+   if (skip_validated_draw(ctx))
       return;
 
    vbo_validated_multidrawelements(ctx, mode, count, type, indices, primcount,
@@ -1274,6 +1359,9 @@ vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
       vbo_draw_arrays(ctx, mode, 0, n, numInstances, 0, 0);
       return;
    }
+
+   if (skip_validated_draw(ctx))
+      return;
 
    vbo_bind_arrays(ctx);
 
@@ -1482,6 +1570,9 @@ vbo_exec_DrawArraysIndirect(GLenum mode, const GLvoid *indirect)
    if (!_mesa_validate_DrawArraysIndirect(ctx, mode, indirect))
       return;
 
+   if (skip_validated_draw(ctx))
+      return;
+
    vbo_validated_drawarraysindirect(ctx, mode, indirect);
 }
 
@@ -1497,6 +1588,9 @@ vbo_exec_DrawElementsIndirect(GLenum mode, GLenum type, const GLvoid *indirect)
                   _mesa_enum_to_string(type), indirect);
 
    if (!_mesa_validate_DrawElementsIndirect(ctx, mode, type, indirect))
+      return;
+
+   if (skip_validated_draw(ctx))
       return;
 
    vbo_validated_drawelementsindirect(ctx, mode, type, indirect);
@@ -1519,6 +1613,9 @@ vbo_exec_MultiDrawArraysIndirect(GLenum mode, const GLvoid *indirect,
 
    if (!_mesa_validate_MultiDrawArraysIndirect(ctx, mode, indirect,
                                                primcount, stride))
+      return;
+
+   if (skip_validated_draw(ctx))
       return;
 
    vbo_validated_multidrawarraysindirect(ctx, mode, indirect,
@@ -1544,6 +1641,9 @@ vbo_exec_MultiDrawElementsIndirect(GLenum mode, GLenum type,
 
    if (!_mesa_validate_MultiDrawElementsIndirect(ctx, mode, type, indirect,
                                                  primcount, stride))
+      return;
+
+   if (skip_validated_draw(ctx))
       return;
 
    vbo_validated_multidrawelementsindirect(ctx, mode, type, indirect,
@@ -1634,6 +1734,9 @@ vbo_exec_MultiDrawArraysIndirectCount(GLenum mode, GLintptr indirect,
                                                     maxdrawcount, stride))
       return;
 
+   if (skip_validated_draw(ctx))
+      return;
+
    vbo_validated_multidrawarraysindirectcount(ctx, mode, indirect, drawcount,
                                               maxdrawcount, stride);
 }
@@ -1660,6 +1763,9 @@ vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
    if (!_mesa_validate_MultiDrawElementsIndirectCount(ctx, mode, type,
                                                       indirect, drawcount,
                                                       maxdrawcount, stride))
+      return;
+
+   if (skip_validated_draw(ctx))
       return;
 
    vbo_validated_multidrawelementsindirectcount(ctx, mode, type, indirect,

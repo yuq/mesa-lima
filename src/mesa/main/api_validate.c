@@ -290,15 +290,6 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
                      "%s(tess ctrl shader is missing)", function);
          return false;
       }
-
-      /* For ES2, we can draw if we have a vertex program/shader). */
-      return ctx->VertexProgram._Current != NULL;
-
-   case API_OPENGLES:
-      /* For OpenGL ES, only draw if we have vertex positions
-       */
-      if (!ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled)
-         return false;
       break;
 
    case API_OPENGL_CORE:
@@ -312,32 +303,10 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s(no VAO bound)", function);
          return false;
       }
+      break;
 
-      /* Section 7.3 (Program Objects) of the OpenGL 4.5 Core Profile spec
-       * says:
-       *
-       *     "If there is no active program for the vertex or fragment shader
-       *     stages, the results of vertex and/or fragment processing will be
-       *     undefined. However, this is not an error."
-       *
-       * The fragment shader is not tested here because other state (e.g.,
-       * GL_RASTERIZER_DISCARD) affects whether or not we actually care.
-       */
-      return ctx->VertexProgram._Current != NULL;
-
+   case API_OPENGLES:
    case API_OPENGL_COMPAT:
-      if (ctx->VertexProgram._Current != NULL) {
-         /* Draw regardless of whether or not we have any vertex arrays.
-          * (Ex: could draw a point using a constant vertex pos)
-          */
-         return true;
-      } else {
-         /* Draw if we have vertex positions (GL_VERTEX_ARRAY or generic
-          * array [0]).
-          */
-         return (ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled ||
-                 ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC0].Enabled);
-      }
       break;
 
    default:
@@ -698,14 +667,6 @@ validate_DrawElements_common(struct gl_context *ctx,
       return false;
 
    if (!check_valid_to_render(ctx, caller))
-      return false;
-
-   /* Not using a VBO for indices, so avoid NULL pointer derefs later.
-    */
-   if (!_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj) && indices == NULL)
-      return false;
-
-   if (count == 0)
       return false;
 
    return true;
