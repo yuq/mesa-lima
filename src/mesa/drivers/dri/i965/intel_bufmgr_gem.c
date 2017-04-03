@@ -149,7 +149,6 @@ typedef struct _drm_bacon_bufmgr {
 	unsigned int has_llc : 1;
 	unsigned int bo_reuse : 1;
 	unsigned int no_exec : 1;
-	unsigned int has_exec_async : 1;
 } drm_bacon_bufmgr;
 
 typedef struct _drm_bacon_reloc_target_info {
@@ -2017,57 +2016,6 @@ drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr)
 }
 
 /**
- * Disables implicit synchronisation before executing the bo
- *
- * This will cause rendering corruption unless you correctly manage explicit
- * fences for all rendering involving this buffer - including use by others.
- * Disabling the implicit serialisation is only required if that serialisation
- * is too coarse (for example, you have split the buffer into many
- * non-overlapping regions and are sharing the whole buffer between concurrent
- * independent command streams).
- *
- * Note the kernel must advertise support via I915_PARAM_HAS_EXEC_ASYNC,
- * which can be checked using drm_bacon_bufmgr_can_disable_implicit_sync,
- * or subsequent execbufs involving the bo will generate EINVAL.
- */
-void
-drm_bacon_gem_bo_disable_implicit_sync(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	bo_gem->kflags |= EXEC_OBJECT_ASYNC;
-}
-
-/**
- * Enables implicit synchronisation before executing the bo
- *
- * This is the default behaviour of the kernel, to wait upon prior writes
- * completing on the object before rendering with it, or to wait for prior
- * reads to complete before writing into the object.
- * drm_bacon_gem_bo_disable_implicit_sync() can stop this behaviour, telling
- * the kernel never to insert a stall before using the object. Then this
- * function can be used to restore the implicit sync before subsequent
- * rendering.
- */
-void
-drm_bacon_gem_bo_enable_implicit_sync(drm_bacon_bo *bo)
-{
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
-
-	bo_gem->kflags &= ~EXEC_OBJECT_ASYNC;
-}
-
-/**
- * Query whether the kernel supports disabling of its implicit synchronisation
- * before execbuf. See drm_bacon_gem_bo_disable_implicit_sync()
- */
-int
-drm_bacon_bufmgr_gem_can_disable_implicit_sync(drm_bacon_bufmgr *bufmgr)
-{
-	return bufmgr->has_exec_async;
-}
-
-/**
  * Return the additional aperture space required by the tree of buffer objects
  * rooted at bo.
  */
@@ -2579,8 +2527,6 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 {
 	drm_bacon_bufmgr *bufmgr;
 	struct drm_i915_gem_get_aperture aperture;
-	drm_i915_getparam_t gp;
-	int ret, tmp;
 
 	pthread_mutex_lock(&bufmgr_list_mutex);
 
@@ -2604,13 +2550,6 @@ drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
 	memclear(aperture);
 	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
 	bufmgr->gtt_size = aperture.aper_available_size;
-
-	memclear(gp);
-	gp.value = &tmp;
-
-	gp.param = I915_PARAM_HAS_EXEC_ASYNC;
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	bufmgr->has_exec_async = ret == 0;
 
 	bufmgr->has_llc = devinfo->has_llc;
 

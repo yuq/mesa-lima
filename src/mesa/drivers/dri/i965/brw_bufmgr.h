@@ -286,11 +286,6 @@ void drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr,
 int drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo);
 int drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo);
 
-#define HAVE_DRM_INTEL_GEM_BO_DISABLE_IMPLICIT_SYNC 1
-int drm_bacon_bufmgr_gem_can_disable_implicit_sync(drm_bacon_bufmgr *bufmgr);
-void drm_bacon_gem_bo_disable_implicit_sync(drm_bacon_bo *bo);
-void drm_bacon_gem_bo_enable_implicit_sync(drm_bacon_bo *bo);
-
 void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo);
 void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo);
 void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo);
