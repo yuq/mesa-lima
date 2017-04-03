@@ -2460,7 +2460,19 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
    if (drm_intel_bo_references(brw->batch.bo, bo))
       intel_batchbuffer_flush(brw);
 
-   if (mt->tiling != I915_TILING_NONE)
+   /* brw_bo_map() uses a WB mmaping of the buffer's backing storage. It
+    * will utilize the CPU cache even if the buffer is incoherent with the
+    * GPU (i.e. any writes will be stored in the cache and not flushed to
+    * memory and so will be invisible to the GPU or display engine). This
+    * is the majority of buffers on a !llc machine, but even on a llc
+    * almost all scanouts are incoherent with the CPU. A WB write into the
+    * backing storage of the current scanout will not be immediately
+    * visible on the screen. The transfer from cache to screen is slow and
+    * indeterministic causing visible glitching on the screen. Never use
+    * this WB mapping for writes to an active scanout (reads are fine, so
+    * long as cache consistency is maintained).
+    */
+   if (mt->tiling != I915_TILING_NONE || mt->is_scanout)
       brw_bo_map_gtt(brw, bo, "miptree");
    else
       brw_bo_map(brw, bo, true, "miptree");
