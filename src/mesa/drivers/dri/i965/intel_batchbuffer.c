@@ -516,7 +516,7 @@ add_exec_bo(struct intel_batchbuffer *batch, drm_bacon_bo *bo)
 
    struct drm_i915_gem_exec_object2 *validation_entry =
       &batch->exec_objects[batch->exec_count];
-   validation_entry->handle = bo->handle;
+   validation_entry->handle = bo->gem_handle;
    if (bo == batch->bo) {
       validation_entry->relocation_count = batch->reloc_count;
       validation_entry->relocs_ptr = (uintptr_t) batch->relocs;
@@ -581,7 +581,7 @@ execbuffer(int fd,
       /* Update drm_bacon_bo::offset64 */
       if (batch->exec_objects[i].offset != bo->offset64) {
          DBG("BO %d migrated: 0x%" PRIx64 " -> 0x%llx\n",
-             bo->handle, bo->offset64, batch->exec_objects[i].offset);
+             bo->gem_handle, bo->offset64, batch->exec_objects[i].offset);
          bo->offset64 = batch->exec_objects[i].offset;
       }
    }
@@ -757,7 +757,7 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
 
    reloc->offset = batch_offset;
    reloc->delta = target_offset;
-   reloc->target_handle = target->handle;
+   reloc->target_handle = target->gem_handle;
    reloc->read_domains = read_domains;
    reloc->write_domain = write_domain;
    reloc->presumed_offset = target->offset64;

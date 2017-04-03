@@ -657,7 +657,7 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
       *value = image->pitch;
       return true;
    case __DRI_IMAGE_ATTRIB_HANDLE:
-      *value = image->bo->handle;
+      *value = image->bo->gem_handle;
       return true;
    case __DRI_IMAGE_ATTRIB_NAME:
       return !drm_bacon_bo_flink(image->bo, (uint32_t *) value);
@@ -1401,7 +1401,7 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    struct drm_i915_gem_relocation_entry reloc = {
       .offset = (char *) batch - (char *) bo->virtual,
       .delta = offset * sizeof(uint32_t),
-      .target_handle = results->handle,
+      .target_handle = results->gem_handle,
       .read_domains = I915_GEM_DOMAIN_INSTRUCTION,
       .write_domain = I915_GEM_DOMAIN_INSTRUCTION,
    };
@@ -1418,10 +1418,10 @@ intel_detect_pipelined_register(struct intel_screen *screen,
 
    struct drm_i915_gem_exec_object2 exec_objects[2] = {
       {
-         .handle = results->handle,
+         .handle = results->gem_handle,
       },
       {
-         .handle = bo->handle,
+         .handle = bo->gem_handle,
          .relocation_count = 1,
          .relocs_ptr = (uintptr_t) &reloc,
       }

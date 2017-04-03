@@ -77,10 +77,8 @@ struct _drm_bacon_bo {
 	/** Buffer manager context associated with this buffer object */
 	drm_bacon_bufmgr *bufmgr;
 
-	/**
-	 * MM-specific handle for accessing object
-	 */
-	int handle;
+	/** The GEM handle for this buffer object. */
+	uint32_t gem_handle;
 
 	/**
 	 * Last seen card virtual address (offset from the beginning of the

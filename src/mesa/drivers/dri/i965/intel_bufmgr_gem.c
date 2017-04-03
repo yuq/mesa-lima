@@ -126,7 +126,6 @@ struct _drm_bacon_bo_gem {
 	drm_bacon_bo bo;
 
 	int refcount;
-	uint32_t gem_handle;
 	const char *name;
 
 	/**
@@ -260,12 +259,11 @@ int
 drm_bacon_bo_busy(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_busy busy;
 	int ret;
 
 	memclear(busy);
-	busy.handle = bo_gem->gem_handle;
+	busy.handle = bo->gem_handle;
 
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_BUSY, &busy);
 	if (ret == 0) {
@@ -284,7 +282,7 @@ drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr *bufmgr,
 	struct drm_i915_gem_madvise madv;
 
 	memclear(madv);
-	madv.handle = bo_gem->gem_handle;
+	madv.handle = bo_gem->bo.gem_handle;
 	madv.madv = state;
 	madv.retained = 1;
 	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MADVISE, &madv);
@@ -427,11 +425,10 @@ retry:
 			goto err;
 		}
 
-		bo_gem->gem_handle = create.handle;
+		bo_gem->bo.gem_handle = create.handle;
 		_mesa_hash_table_insert(bufmgr->handle_table,
-					&bo_gem->gem_handle, bo_gem);
+					&bo_gem->bo.gem_handle, bo_gem);
 
-		bo_gem->bo.handle = bo_gem->gem_handle;
 		bo_gem->bo.bufmgr = bufmgr;
 		bo_gem->bo.align = alignment;
 
@@ -452,7 +449,7 @@ retry:
 	pthread_mutex_unlock(&bufmgr->lock);
 
 	DBG("bo_create: buf %d (%s) %ldb\n",
-	    bo_gem->gem_handle, bo_gem->name, size);
+	    bo_gem->bo.gem_handle, bo_gem->name, size);
 
 	return &bo_gem->bo;
 
@@ -593,19 +590,18 @@ drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 	bo_gem->bo.offset64 = 0;
 	bo_gem->bo.virtual = NULL;
 	bo_gem->bo.bufmgr = bufmgr;
+	bo_gem->bo.gem_handle = open_arg.handle;
 	bo_gem->name = name;
-	bo_gem->gem_handle = open_arg.handle;
-	bo_gem->bo.handle = open_arg.handle;
 	bo_gem->global_name = handle;
 	bo_gem->reusable = false;
 
 	_mesa_hash_table_insert(bufmgr->handle_table,
-				&bo_gem->gem_handle, bo_gem);
+				&bo_gem->bo.gem_handle, bo_gem);
 	_mesa_hash_table_insert(bufmgr->name_table,
 				&bo_gem->global_name, bo_gem);
 
 	memclear(get_tiling);
-	get_tiling.handle = bo_gem->gem_handle;
+	get_tiling.handle = bo_gem->bo.gem_handle;
 	ret = drmIoctl(bufmgr->fd,
 		       DRM_IOCTL_I915_GEM_GET_TILING,
 		       &get_tiling);
@@ -658,16 +654,16 @@ drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 		_mesa_hash_table_remove(bufmgr->name_table, entry);
 	}
 	entry = _mesa_hash_table_search(bufmgr->handle_table,
-					&bo_gem->gem_handle);
+					&bo->gem_handle);
 	_mesa_hash_table_remove(bufmgr->handle_table, entry);
 
 	/* Close this object */
 	memclear(close);
-	close.handle = bo_gem->gem_handle;
+	close.handle = bo->gem_handle;
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_CLOSE, &close);
 	if (ret != 0) {
 		DBG("DRM_IOCTL_GEM_CLOSE %d failed (%s): %s\n",
-		    bo_gem->gem_handle, bo_gem->name, strerror(errno));
+		    bo->gem_handle, bo_gem->name, strerror(errno));
 	}
 	free(bo);
 }
@@ -797,7 +793,7 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	struct drm_bacon_gem_bo_bucket *bucket;
 
 	DBG("bo_unreference final: %d (%s)\n",
-	    bo_gem->gem_handle, bo_gem->name);
+	    bo->gem_handle, bo_gem->name);
 
 	/* Clear any left-over mappings */
 	if (bo_gem->map_count) {
@@ -866,10 +862,10 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		struct drm_i915_gem_mmap mmap_arg;
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
-		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
 
 		memclear(mmap_arg);
-		mmap_arg.handle = bo_gem->gem_handle;
+		mmap_arg.handle = bo->gem_handle;
 		mmap_arg.size = bo->size;
 		ret = drmIoctl(bufmgr->fd,
 			       DRM_IOCTL_I915_GEM_MMAP,
@@ -877,7 +873,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		if (ret != 0) {
 			ret = -errno;
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
-			    __FILE__, __LINE__, bo_gem->gem_handle,
+			    __FILE__, __LINE__, bo->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
 				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
@@ -887,12 +883,12 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
 		bo_gem->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
 	}
-	DBG("bo_map: %d (%s) -> %p\n", bo_gem->gem_handle, bo_gem->name,
+	DBG("bo_map: %d (%s) -> %p\n", bo->gem_handle, bo_gem->name,
 	    bo_gem->mem_virtual);
 	bo->virtual = bo_gem->mem_virtual;
 
 	memclear(set_domain);
-	set_domain.handle = bo_gem->gem_handle;
+	set_domain.handle = bo->gem_handle;
 	set_domain.read_domains = I915_GEM_DOMAIN_CPU;
 	if (write_enable)
 		set_domain.write_domain = I915_GEM_DOMAIN_CPU;
@@ -903,7 +899,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		       &set_domain);
 	if (ret != 0) {
 		DBG("%s:%d: Error setting to CPU domain %d: %s\n",
-		    __FILE__, __LINE__, bo_gem->gem_handle,
+		    __FILE__, __LINE__, bo->gem_handle,
 		    strerror(errno));
 	}
 
@@ -929,10 +925,10 @@ map_gtt(drm_bacon_bo *bo)
 		struct drm_i915_gem_mmap_gtt mmap_arg;
 
 		DBG("bo_map_gtt: mmap %d (%s), map_count=%d\n",
-		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
 
 		memclear(mmap_arg);
-		mmap_arg.handle = bo_gem->gem_handle;
+		mmap_arg.handle = bo->gem_handle;
 
 		/* Get the fake offset back... */
 		ret = drmIoctl(bufmgr->fd,
@@ -942,7 +938,7 @@ map_gtt(drm_bacon_bo *bo)
 			ret = -errno;
 			DBG("%s:%d: Error preparing buffer map %d (%s): %s .\n",
 			    __FILE__, __LINE__,
-			    bo_gem->gem_handle, bo_gem->name,
+			    bo->gem_handle, bo_gem->name,
 			    strerror(errno));
 			if (--bo_gem->map_count == 0)
 				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
@@ -958,7 +954,7 @@ map_gtt(drm_bacon_bo *bo)
 			ret = -errno;
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
 			    __FILE__, __LINE__,
-			    bo_gem->gem_handle, bo_gem->name,
+			    bo->gem_handle, bo_gem->name,
 			    strerror(errno));
 			if (--bo_gem->map_count == 0)
 				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
@@ -968,7 +964,7 @@ map_gtt(drm_bacon_bo *bo)
 
 	bo->virtual = bo_gem->gtt_virtual;
 
-	DBG("bo_map_gtt: %d (%s) -> %p\n", bo_gem->gem_handle, bo_gem->name,
+	DBG("bo_map_gtt: %d (%s) -> %p\n", bo->gem_handle, bo_gem->name,
 	    bo_gem->gtt_virtual);
 
 	return 0;
@@ -1000,7 +996,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 	 * rendering and it still happens to be bound to the GTT.
 	 */
 	memclear(set_domain);
-	set_domain.handle = bo_gem->gem_handle;
+	set_domain.handle = bo->gem_handle;
 	set_domain.read_domains = I915_GEM_DOMAIN_GTT;
 	set_domain.write_domain = I915_GEM_DOMAIN_GTT;
 	ret = drmIoctl(bufmgr->fd,
@@ -1008,7 +1004,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 		       &set_domain);
 	if (ret != 0) {
 		DBG("%s:%d: Error setting domain %d: %s\n",
-		    __FILE__, __LINE__, bo_gem->gem_handle,
+		    __FILE__, __LINE__, bo->gem_handle,
 		    strerror(errno));
 	}
 
@@ -1105,12 +1101,11 @@ drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 		     unsigned long size, const void *data)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pwrite pwrite;
 	int ret;
 
 	memclear(pwrite);
-	pwrite.handle = bo_gem->gem_handle;
+	pwrite.handle = bo->gem_handle;
 	pwrite.offset = offset;
 	pwrite.size = size;
 	pwrite.data_ptr = (uint64_t) (uintptr_t) data;
@@ -1120,7 +1115,7 @@ drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 	if (ret != 0) {
 		ret = -errno;
 		DBG("%s:%d: Error writing data to buffer %d: (%d %d) %s .\n",
-		    __FILE__, __LINE__, bo_gem->gem_handle, (int)offset,
+		    __FILE__, __LINE__, bo->gem_handle, (int)offset,
 		    (int)size, strerror(errno));
 	}
 
@@ -1132,12 +1127,11 @@ drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 			 unsigned long size, void *data)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_pread pread;
 	int ret;
 
 	memclear(pread);
-	pread.handle = bo_gem->gem_handle;
+	pread.handle = bo->gem_handle;
 	pread.offset = offset;
 	pread.size = size;
 	pread.data_ptr = (uint64_t) (uintptr_t) data;
@@ -1147,7 +1141,7 @@ drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 	if (ret != 0) {
 		ret = -errno;
 		DBG("%s:%d: Error reading data from buffer %d: (%d %d) %s .\n",
-		    __FILE__, __LINE__, bo_gem->gem_handle, (int)offset,
+		    __FILE__, __LINE__, bo->gem_handle, (int)offset,
 		    (int)size, strerror(errno));
 	}
 
@@ -1192,12 +1186,11 @@ int
 drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_wait wait;
 	int ret;
 
 	memclear(wait);
-	wait.bo_handle = bo_gem->gem_handle;
+	wait.bo_handle = bo->gem_handle;
 	wait.timeout_ns = timeout_ns;
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_WAIT, &wait);
 	if (ret == -1)
@@ -1217,12 +1210,11 @@ void
 drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
 	memclear(set_domain);
-	set_domain.handle = bo_gem->gem_handle;
+	set_domain.handle = bo->gem_handle;
 	set_domain.read_domains = I915_GEM_DOMAIN_GTT;
 	set_domain.write_domain = write_enable ? I915_GEM_DOMAIN_GTT : 0;
 	ret = drmIoctl(bufmgr->fd,
@@ -1230,7 +1222,7 @@ drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 		       &set_domain);
 	if (ret != 0) {
 		DBG("%s:%d: Error setting memory domains %d (%08x %08x): %s .\n",
-		    __FILE__, __LINE__, bo_gem->gem_handle,
+		    __FILE__, __LINE__, bo->gem_handle,
 		    set_domain.read_domains, set_domain.write_domain,
 		    strerror(errno));
 	}
@@ -1283,7 +1275,7 @@ drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
 		 * input on the error path, so we have to open code
 		 * rmIoctl.
 		 */
-		set_tiling.handle = bo_gem->gem_handle;
+		set_tiling.handle = bo->gem_handle;
 		set_tiling.tiling_mode = tiling_mode;
 		set_tiling.stride = stride;
 
@@ -1375,18 +1367,17 @@ drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int s
 	else
 		bo_gem->bo.size = size;
 
-	bo_gem->bo.handle = handle;
 	bo_gem->bo.bufmgr = bufmgr;
 
-	bo_gem->gem_handle = handle;
+	bo_gem->bo.gem_handle = handle;
 	_mesa_hash_table_insert(bufmgr->handle_table,
-				&bo_gem->gem_handle, bo_gem);
+				&bo_gem->bo.gem_handle, bo_gem);
 
 	bo_gem->name = "prime";
 	bo_gem->reusable = false;
 
 	memclear(get_tiling);
-	get_tiling.handle = bo_gem->gem_handle;
+	get_tiling.handle = bo_gem->bo.gem_handle;
 	if (drmIoctl(bufmgr->fd,
 		     DRM_IOCTL_I915_GEM_GET_TILING,
 		     &get_tiling))
@@ -1412,7 +1403,7 @@ drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	drm_bacon_bo_gem *bo_gem = (drm_bacon_bo_gem *) bo;
 
-	if (drmPrimeHandleToFD(bufmgr->fd, bo_gem->gem_handle,
+	if (drmPrimeHandleToFD(bufmgr->fd, bo->gem_handle,
 			       DRM_CLOEXEC, prime_fd) != 0)
 		return -errno;
 
@@ -1431,7 +1422,7 @@ drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 		struct drm_gem_flink flink;
 
 		memclear(flink);
-		flink.handle = bo_gem->gem_handle;
+		flink.handle = bo->gem_handle;
 		if (drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_FLINK, &flink))
 			return -errno;
 
@@ -1652,13 +1643,13 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 		void *ptr;
 
 		DBG("bo_map_gtt: mmap %d (%s), map_count=%d\n",
-		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
 
 		if (bo_gem->map_count++ == 0)
 			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 		memclear(mmap_arg);
-		mmap_arg.handle = bo_gem->gem_handle;
+		mmap_arg.handle = bo->gem_handle;
 
 		/* Get the fake offset back... */
 		ptr = MAP_FAILED;
@@ -1699,16 +1690,16 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
-		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
 
 		memclear(mmap_arg);
-		mmap_arg.handle = bo_gem->gem_handle;
+		mmap_arg.handle = bo->gem_handle;
 		mmap_arg.size = bo->size;
 		if (drmIoctl(bufmgr->fd,
 			     DRM_IOCTL_I915_GEM_MMAP,
 			     &mmap_arg)) {
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
-			    __FILE__, __LINE__, bo_gem->gem_handle,
+			    __FILE__, __LINE__, bo->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
 				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
@@ -1738,17 +1729,17 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 			drm_bacon_gem_bo_open_vma(bufmgr, bo_gem);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
-		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
+		    bo->gem_handle, bo_gem->name, bo_gem->map_count);
 
 		memclear(mmap_arg);
-		mmap_arg.handle = bo_gem->gem_handle;
+		mmap_arg.handle = bo->gem_handle;
 		mmap_arg.size = bo->size;
 		mmap_arg.flags = I915_MMAP_WC;
 		if (drmIoctl(bufmgr->fd,
 			     DRM_IOCTL_I915_GEM_MMAP,
 			     &mmap_arg)) {
 			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
-			    __FILE__, __LINE__, bo_gem->gem_handle,
+			    __FILE__, __LINE__, bo->gem_handle,
 			    bo_gem->name, strerror(errno));
 			if (--bo_gem->map_count == 0)
 				drm_bacon_gem_bo_close_vma(bufmgr, bo_gem);
