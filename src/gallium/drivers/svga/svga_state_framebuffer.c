@@ -71,6 +71,10 @@ emit_fb_vgpu9(struct svga_context *svga)
          if (svga->curr.nr_fbs++ > MAX_RT_PER_BATCH)
             return PIPE_ERROR_OUT_OF_MEMORY;
 
+         /* Check to see if we need to propagate the render target surface */
+         if (hw->cbufs[i] && svga_surface_needs_propagation(hw->cbufs[i]))
+            svga_propagate_surface(svga, hw->cbufs[i], TRUE);
+
          ret = SVGA3D_SetRenderTarget(svga->swc, SVGA3D_RT_COLOR0 + i,
                                       curr->cbufs[i]);
          if (ret != PIPE_OK)
@@ -84,6 +88,10 @@ emit_fb_vgpu9(struct svga_context *svga)
       ret = SVGA3D_SetRenderTarget(svga->swc, SVGA3D_RT_DEPTH, curr->zsbuf);
       if (ret != PIPE_OK)
          return ret;
+
+      /* Check to see if we need to propagate the depth stencil surface */
+      if (hw->zsbuf && svga_surface_needs_propagation(hw->zsbuf))
+         svga_propagate_surface(svga, hw->zsbuf, TRUE);
 
       if (curr->zsbuf &&
           util_format_is_depth_and_stencil(curr->zsbuf->format)) {
