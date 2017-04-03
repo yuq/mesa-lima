@@ -47,11 +47,15 @@ tools_aubinator_LDADD = \
 
 
 tools_aubinator_error_decode_SOURCES = \
-	tools/aubinator_error_decode.c
+	tools/aubinator_error_decode.c \
+	tools/disasm.c \
+	tools/gen_disasm.h
 
 tools_aubinator_error_decode_LDADD = \
 	common/libintel_common.la \
+	compiler/libintel_compiler.la \
 	$(top_builddir)/src/util/libmesautil.la \
+	$(PTHREAD_LIBS) \
 	$(EXPAT_LIBS) \
 	$(ZLIB_LIBS)
 
