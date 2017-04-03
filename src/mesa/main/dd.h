@@ -1225,6 +1225,8 @@ typedef struct {
    void (GLAPIENTRYP VertexAttribL3dv)( GLuint index, const GLdouble *v);
    void (GLAPIENTRYP VertexAttribL4dv)( GLuint index, const GLdouble *v);
 
+   void (GLAPIENTRYP VertexAttribL1ui64ARB)( GLuint index, GLuint64EXT x);
+   void (GLAPIENTRYP VertexAttribL1ui64vARB)( GLuint index, const GLuint64EXT *v);
 } GLvertexformat;
 
 

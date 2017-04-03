@@ -1529,6 +1529,16 @@ _mesa_VertexAttribL1dv(GLuint index, const GLdouble *v)
 }
 
 void GLAPIENTRY
+_mesa_VertexAttribL1ui64ARB(GLuint index, GLuint64EXT x)
+{
+}
+
+void GLAPIENTRY
+_mesa_VertexAttribL1ui64vARB(GLuint index, const GLuint64EXT *v)
+{
+}
+
+void GLAPIENTRY
 _mesa_VertexAttribL2dv(GLuint index, const GLdouble *v)
 {
    ATTRIB2_D(index, v[0], v[1]);
@@ -1789,5 +1799,9 @@ _mesa_loopback_init_api_table(const struct gl_context *ctx,
       SET_VertexAttribL2dv(dest, _mesa_VertexAttribL2dv);
       SET_VertexAttribL3dv(dest, _mesa_VertexAttribL3dv);
       SET_VertexAttribL4dv(dest, _mesa_VertexAttribL4dv);
+
+      /* GL_ARB_bindless_texture */
+      SET_VertexAttribL1ui64ARB(dest, _mesa_VertexAttribL1ui64ARB);
+      SET_VertexAttribL1ui64vARB(dest, _mesa_VertexAttribL1ui64vARB);
    }
 }

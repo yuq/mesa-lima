@@ -1302,6 +1302,15 @@ TAG(VertexAttribL4dv)(GLuint index, const GLdouble * v)
       ERROR(GL_INVALID_VALUE);
 }
 
+static void GLAPIENTRY
+TAG(VertexAttribL1ui64ARB)(GLuint index, GLuint64EXT x)
+{
+}
+
+static void GLAPIENTRY
+TAG(VertexAttribL1ui64vARB)(GLuint index, const GLuint64EXT *v)
+{
+}
 
 #undef ATTR1FV
 #undef ATTR2FV

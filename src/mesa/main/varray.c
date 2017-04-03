@@ -1353,6 +1353,11 @@ _mesa_GetVertexAttribiv(GLuint index, GLenum pname, GLint *params)
    }
 }
 
+void GLAPIENTRY
+_mesa_GetVertexAttribLui64vARB(GLuint index, GLenum pname, GLuint64EXT *params)
+{
+}
+
 
 /** GL 3.0 */
 void GLAPIENTRY

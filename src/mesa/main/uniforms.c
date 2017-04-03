@@ -294,6 +294,18 @@ _mesa_Uniform4iv(GLint location, GLsizei count, const GLint * value)
    _mesa_uniform(location, count, value, ctx, ctx->_Shader->ActiveProgram, GLSL_TYPE_INT, 4);
 }
 
+void GLAPIENTRY
+_mesa_UniformHandleui64ARB(GLint location, GLuint64 value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformHandleui64vARB(GLint location, GLsizei count,
+                            const GLuint64 *value)
+{
+}
+
+
 /** Same as above with direct state access **/
 void GLAPIENTRY
 _mesa_ProgramUniform1f(GLuint program, GLint location, GLfloat v0)
@@ -483,6 +495,18 @@ _mesa_ProgramUniform4iv(GLuint program, GLint location, GLsizei count,
       _mesa_lookup_shader_program_err(ctx, program,
             "glProgramUniform4iv");
    _mesa_uniform(location, count, value, ctx, shProg, GLSL_TYPE_INT, 4);
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformHandleui64ARB(GLuint program, GLint location,
+                                  GLuint64 value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformHandleui64vARB(GLuint program, GLint location,
+                                   GLsizei count, const GLuint64 *values)
+{
 }
 
 

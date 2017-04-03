@@ -113,6 +113,18 @@ _mesa_UniformMatrix4x3fv(GLint location, GLsizei count, GLboolean transpose,
                          const GLfloat *value);
 
 void GLAPIENTRY
+_mesa_UniformHandleui64ARB(GLint location, GLuint64 value);
+void GLAPIENTRY
+_mesa_UniformHandleui64vARB(GLint location, GLsizei count,
+                            const GLuint64 *value);
+void GLAPIENTRY
+_mesa_ProgramUniformHandleui64ARB(GLuint program, GLint location,
+                                  GLuint64 value);
+void GLAPIENTRY
+_mesa_ProgramUniformHandleui64vARB(GLuint program, GLint location,
+                                   GLsizei count, const GLuint64 *values);
+
+void GLAPIENTRY
 _mesa_ProgramUniform1f(GLuint program, GLint, GLfloat);
 void GLAPIENTRY
 _mesa_ProgramUniform2f(GLuint program, GLint, GLfloat, GLfloat);

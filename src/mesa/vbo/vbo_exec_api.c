@@ -1089,6 +1089,9 @@ vbo_exec_vtxfmt_init(struct vbo_exec_context *exec)
    vfmt->VertexAttribL2dv = vbo_VertexAttribL2dv;
    vfmt->VertexAttribL3dv = vbo_VertexAttribL3dv;
    vfmt->VertexAttribL4dv = vbo_VertexAttribL4dv;
+
+   vfmt->VertexAttribL1ui64ARB = vbo_VertexAttribL1ui64ARB;
+   vfmt->VertexAttribL1ui64vARB = vbo_VertexAttribL1ui64vARB;
 }
 
 
