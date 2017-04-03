@@ -621,7 +621,7 @@ static inline bool is_load(struct ir3_instruction *instr)
 	case OPC_LDP:
 	case OPC_L2G:
 	case OPC_LDLW:
-	case OPC_LDC_4:
+	case OPC_LDC:
 	case OPC_LDLV:
 		/* probably some others too.. */
 		return true;

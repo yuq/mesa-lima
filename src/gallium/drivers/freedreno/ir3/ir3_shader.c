@@ -223,7 +223,6 @@ ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key,
 	 */
 	switch (shader->type) {
 	case SHADER_FRAGMENT:
-	case SHADER_COMPUTE:
 		key.binning_pass = false;
 		if (key.has_per_samp) {
 			key.vsaturate_s = 0;
@@ -242,6 +241,9 @@ ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key,
 			key.fsaturate_r = 0;
 			key.fastc_srgb = 0;
 		}
+		break;
+	default:
+		/* TODO */
 		break;
 	}
 
@@ -418,7 +420,8 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 		}
 		debug_printf("\n");
 		break;
-	case SHADER_COMPUTE:
+	default:
+		/* TODO */
 		break;
 	}
 
@@ -462,7 +465,8 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 		if (so->frag_face)
 			debug_printf("; fragface: hr0.x\n");
 		break;
-	case SHADER_COMPUTE:
+	default:
+		/* TODO */
 		break;
 	}
 

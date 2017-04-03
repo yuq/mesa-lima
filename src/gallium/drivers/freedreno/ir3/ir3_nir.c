@@ -114,7 +114,6 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 	if (key) {
 		switch (shader->type) {
 		case SHADER_FRAGMENT:
-		case SHADER_COMPUTE:
 			tex_options.saturate_s = key->fsaturate_s;
 			tex_options.saturate_t = key->fsaturate_t;
 			tex_options.saturate_r = key->fsaturate_r;
@@ -123,6 +122,9 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 			tex_options.saturate_s = key->vsaturate_s;
 			tex_options.saturate_t = key->vsaturate_t;
 			tex_options.saturate_r = key->vsaturate_r;
+			break;
+		default:
+			/* TODO */
 			break;
 		}
 	}
