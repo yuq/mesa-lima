@@ -185,8 +185,6 @@ struct _drm_bacon_bo_gem {
 	uint32_t swizzle_mode;
 	unsigned long stride;
 
-	unsigned long kflags;
-
 	time_t free_time;
 
 	/** Array passed to the DRM containing relocation information. */
@@ -406,7 +404,7 @@ drm_bacon_add_validate_buffer2(drm_bacon_bo *bo)
 	bufmgr->exec2_objects[index].relocs_ptr = (uintptr_t)bo_gem->relocs;
 	bufmgr->exec2_objects[index].alignment = bo->align;
 	bufmgr->exec2_objects[index].offset = bo->offset64;
-	bufmgr->exec2_objects[index].flags = bo_gem->kflags;
+	bufmgr->exec2_objects[index].flags = 0;
 	bufmgr->exec2_objects[index].rsvd1 = 0;
 	bufmgr->exec2_objects[index].rsvd2 = 0;
 	bufmgr->exec_bos[index] = bo;
@@ -1017,7 +1015,6 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 								  time);
 		}
 	}
-	bo_gem->kflags = 0;
 	bo_gem->reloc_count = 0;
 	bo_gem->used_as_reloc_target = false;
 
