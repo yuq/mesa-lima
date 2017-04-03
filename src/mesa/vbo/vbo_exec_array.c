@@ -1038,8 +1038,15 @@ vbo_exec_DrawElements(GLenum mode, GLsizei count, GLenum type,
                   _mesa_enum_to_string(mode), count,
                   _mesa_enum_to_string(type), indices);
 
-   if (!_mesa_validate_DrawElements(ctx, mode, count, type, indices))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawElements(ctx, mode, count, type, indices))
+         return;
+   }
 
    vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
                                    count, type, indices, 0, 1, 0);
@@ -1056,12 +1063,19 @@ vbo_exec_DrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type,
    GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_DRAW)
-      _mesa_debug(ctx, "glDrawElementsBaseVertex(%s, %d, %s, %p, %d)\n",
+      _mesa_debug(ctx, "glDrawElements(%s, %u, %s, %p)\n",
                   _mesa_enum_to_string(mode), count,
-                  _mesa_enum_to_string(type), indices, basevertex);
+                  _mesa_enum_to_string(type), indices);
 
-   if (!_mesa_validate_DrawElements(ctx, mode, count, type, indices))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawElements(ctx, mode, count, type, indices))
+         return;
+   }
 
    vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
                                    count, type, indices, basevertex, 1, 0);
@@ -1078,13 +1092,20 @@ vbo_exec_DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type,
    GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_DRAW)
-      _mesa_debug(ctx, "glDrawElementsInstanced(%s, %d, %s, %p, %d)\n",
+      _mesa_debug(ctx, "glDrawElements(%s, %u, %s, %p)\n",
                   _mesa_enum_to_string(mode), count,
-                  _mesa_enum_to_string(type), indices, numInstances);
+                  _mesa_enum_to_string(type), indices);
 
-   if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type, indices,
-                                             numInstances))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type,
+                                                indices, numInstances))
+         return;
+   }
 
    vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
                                    count, type, indices, 0, numInstances, 0);
@@ -1104,14 +1125,22 @@ vbo_exec_DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count,
 
    if (MESA_VERBOSE & VERBOSE_DRAW)
       _mesa_debug(ctx,
-                  "glDrawElementsInstancedBaseVertex(%s, %d, %s, %p, %d; %d)\n",
+                  "glDrawElementsInstancedBaseVertex"
+                  "(%s, %d, %s, %p, %d; %d)\n",
                   _mesa_enum_to_string(mode), count,
                   _mesa_enum_to_string(type), indices,
                   numInstances, basevertex);
 
-   if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type, indices,
-                                             numInstances))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type,
+                                                indices, numInstances))
+         return;
+   }
 
    vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
                                    count, type, indices,
@@ -1139,9 +1168,16 @@ vbo_exec_DrawElementsInstancedBaseInstance(GLenum mode, GLsizei count,
                   _mesa_enum_to_string(type), indices,
                   numInstances, baseInstance);
 
-   if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type, indices,
-                                             numInstances))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type,
+                                                indices, numInstances))
+         return;
+   }
 
    vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
                                    count, type, indices, 0, numInstances,
@@ -1171,9 +1207,16 @@ vbo_exec_DrawElementsInstancedBaseVertexBaseInstance(GLenum mode,
                   _mesa_enum_to_string(type), indices,
                   numInstances, basevertex, baseInstance);
 
-   if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type, indices,
-                                             numInstances))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawElementsInstanced(ctx, mode, count, type,
+                                                indices, numInstances))
+         return;
+   }
 
    vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
                                    count, type, indices, basevertex,
@@ -1616,8 +1659,15 @@ vbo_exec_DrawElementsIndirect(GLenum mode, GLenum type, const GLvoid *indirect)
                   _mesa_enum_to_string(mode),
                   _mesa_enum_to_string(type), indirect);
 
-   if (!_mesa_validate_DrawElementsIndirect(ctx, mode, type, indirect))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawElementsIndirect(ctx, mode, type, indirect))
+         return;
+   }
 
    if (skip_validated_draw(ctx))
       return;
