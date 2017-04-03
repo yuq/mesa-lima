@@ -3556,12 +3556,10 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 		location = INTERP_CENTROID;
 		break;
 	case nir_intrinsic_interp_var_at_sample:
-		location = INTERP_SAMPLE;
-		src0 = get_src(ctx, instr->src[0]);
-		break;
 	case nir_intrinsic_interp_var_at_offset:
 		location = INTERP_CENTER;
 		src0 = get_src(ctx, instr->src[0]);
+		break;
 	default:
 		break;
 	}
