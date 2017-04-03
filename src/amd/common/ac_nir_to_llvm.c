@@ -109,7 +109,7 @@ struct nir_to_llvm_context {
 	LLVMValueRef hs_ring_tess_factor;
 
 	LLVMValueRef prim_mask;
-	LLVMValueRef sample_positions;
+	LLVMValueRef sample_pos_offset;
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 	LLVMValueRef front_face;
@@ -573,6 +573,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	    ctx->stage == MESA_SHADER_VERTEX ||
 	    ctx->stage == MESA_SHADER_TESS_CTRL ||
 	    ctx->stage == MESA_SHADER_TESS_EVAL ||
+	    ctx->stage == MESA_SHADER_FRAGMENT ||
 	    ctx->is_gs_copy_shader)
 		need_ring_offsets = true;
 
@@ -584,7 +585,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		need_push_constants = false;
 
 	if (need_ring_offsets && !ctx->options->supports_spill) {
-		arg_types[arg_idx++] = const_array(ctx->v16i8, 8); /* address of rings */
+		arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* address of rings */
 	}
 
 	/* 1 for each descriptor set */
@@ -679,7 +680,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		arg_types[arg_idx++] = ctx->i32; // GS instance id
 		break;
 	case MESA_SHADER_FRAGMENT:
-		arg_types[arg_idx++] = const_array(ctx->f32, 32); /* sample positions */
+		arg_types[arg_idx++] = ctx->i32; /* sample position offset */
 		user_sgpr_count = arg_idx;
 		arg_types[arg_idx++] = ctx->i32; /* prim mask */
 		sgpr_count = arg_idx;
@@ -735,7 +736,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 							       LLVMPointerType(ctx->i8, CONST_ADDR_SPACE),
 							       NULL, 0, AC_FUNC_ATTR_READNONE);
 			ctx->ring_offsets = LLVMBuildBitCast(ctx->builder, ctx->ring_offsets,
-							     const_array(ctx->v16i8, 8), "");
+							     const_array(ctx->v16i8, 16), "");
 		} else
 			ctx->ring_offsets = LLVMGetParam(ctx->main_function, arg_idx++);
 	}
@@ -844,9 +845,9 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		ctx->gs_invocation_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_FRAGMENT:
-		set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS, user_sgpr_idx, 2);
-		user_sgpr_idx += 2;
-		ctx->sample_positions = LLVMGetParam(ctx->main_function, arg_idx++);
+		set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS_OFFSET, user_sgpr_idx, 1);
+		user_sgpr_idx += 1;
+		ctx->sample_pos_offset = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->prim_mask = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->persp_sample = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->persp_center = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -3518,15 +3519,17 @@ static LLVMValueRef lookup_interp_param(struct nir_to_llvm_context *ctx,
 static LLVMValueRef load_sample_position(struct nir_to_llvm_context *ctx,
 					 LLVMValueRef sample_id)
 {
-	/* offset = sample_id * 8  (8 = 2 floats containing samplepos.xy) */
-	LLVMValueRef offset0 = LLVMBuildMul(ctx->builder, sample_id, LLVMConstInt(ctx->i32, 8, false), "");
-	LLVMValueRef offset1 = LLVMBuildAdd(ctx->builder, offset0, LLVMConstInt(ctx->i32, 4, false), "");
-	LLVMValueRef result[2];
+	LLVMValueRef result;
+	LLVMValueRef ptr = ac_build_gep0(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_PS_SAMPLE_POSITIONS, false));
 
-	result[0] = ac_build_indexed_load_const(&ctx->ac, ctx->sample_positions, offset0);
-	result[1] = ac_build_indexed_load_const(&ctx->ac, ctx->sample_positions, offset1);
+	ptr = LLVMBuildBitCast(ctx->builder, ptr,
+			       const_array(ctx->v2f32, 64), "");
 
-	return ac_build_gather_values(&ctx->ac, result, 2);
+	sample_id = LLVMBuildAdd(ctx->builder, sample_id, ctx->sample_pos_offset, "");
+	result = ac_build_indexed_load(&ctx->ac, ptr, sample_id, false);
+
+	ctx->shader_info->fs.uses_sample_positions = true;
+	return result;
 }
 
 static LLVMValueRef load_sample_pos(struct nir_to_llvm_context *ctx)

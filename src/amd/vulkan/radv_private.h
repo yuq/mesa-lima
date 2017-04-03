@@ -460,6 +460,7 @@ struct radv_queue {
 	uint32_t esgs_ring_size;
 	uint32_t gsvs_ring_size;
 	bool has_tess_rings;
+	bool has_sample_positions;
 
 	struct radeon_winsys_bo *scratch_bo;
 	struct radeon_winsys_bo *descriptor_bo;
@@ -748,6 +749,7 @@ struct radv_cmd_buffer {
 	uint32_t esgs_ring_size_needed;
 	uint32_t gsvs_ring_size_needed;
 	bool tess_rings_needed;
+	bool sample_positions_needed;
 
 	int ring_offsets_idx; /* just used for verification */
 };

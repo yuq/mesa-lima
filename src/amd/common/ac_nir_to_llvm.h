@@ -88,7 +88,7 @@ enum ac_ud_index {
 	AC_UD_VS_BASE_VERTEX_START_INSTANCE,
 	AC_UD_VS_LS_TCS_IN_LAYOUT,
 	AC_UD_VS_MAX_UD,
-	AC_UD_PS_SAMPLE_POS = AC_UD_SHADER_START,
+	AC_UD_PS_SAMPLE_POS_OFFSET = AC_UD_SHADER_START,
 	AC_UD_PS_MAX_UD,
 	AC_UD_CS_GRID_SIZE = AC_UD_SHADER_START,
 	AC_UD_CS_MAX_UD,
@@ -109,6 +109,7 @@ enum ac_ud_index {
 #define RING_GSVS_GS 4
 #define RING_HS_TESS_FACTOR 5
 #define RING_HS_TESS_OFFCHIP 6
+#define RING_PS_SAMPLE_POSITIONS 7
 
 // Match MAX_SETS from radv_descriptor_set.h
 #define AC_UD_MAX_SETS MAX_SETS
@@ -165,6 +166,7 @@ struct ac_shader_variant_info {
 			bool force_persample;
 			bool prim_id_input;
 			bool layer_input;
+			bool uses_sample_positions;
 		} fs;
 		struct {
 			unsigned block_size[3];

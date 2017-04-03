@@ -1188,6 +1188,7 @@ static void radv_dump_trace(struct radv_device *device,
 static void
 fill_geom_tess_rings(struct radv_queue *queue,
 		     uint32_t *map,
+		     bool add_sample_positions,
 		     uint32_t esgs_ring_size,
 		     struct radeon_winsys_bo *esgs_ring_bo,
 		     uint32_t gsvs_ring_size,
@@ -1315,6 +1316,18 @@ fill_geom_tess_rings(struct radv_queue *queue,
 		S_008F0C_ELEMENT_SIZE(0) |
 		S_008F0C_INDEX_STRIDE(0) |
 		S_008F0C_ADD_TID_ENABLE(false);
+	desc += 4;
+
+	/* add sample positions after all rings */
+	memcpy(desc, queue->device->sample_locations_1x, 8);
+	desc += 2;
+	memcpy(desc, queue->device->sample_locations_2x, 16);
+	desc += 4;
+	memcpy(desc, queue->device->sample_locations_4x, 32);
+	desc += 8;
+	memcpy(desc, queue->device->sample_locations_8x, 64);
+	desc += 16;
+	memcpy(desc, queue->device->sample_locations_16x, 128);
 }
 
 static unsigned
@@ -1374,6 +1387,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		     uint32_t esgs_ring_size,
 		     uint32_t gsvs_ring_size,
 		     bool needs_tess_rings,
+		     bool needs_sample_positions,
                      struct radeon_winsys_cs **initial_preamble_cs,
                      struct radeon_winsys_cs **continue_preamble_cs)
 {
@@ -1385,13 +1399,17 @@ radv_get_preamble_cs(struct radv_queue *queue,
 	struct radeon_winsys_bo *tess_factor_ring_bo = NULL;
 	struct radeon_winsys_bo *tess_offchip_ring_bo = NULL;
 	struct radeon_winsys_cs *dest_cs[2] = {0};
-	bool add_tess_rings = false;
+	bool add_tess_rings = false, add_sample_positions = false;
 	unsigned tess_factor_ring_size = 0, tess_offchip_ring_size = 0;
 	unsigned max_offchip_buffers;
 	unsigned hs_offchip_param = 0;
 	if (!queue->has_tess_rings) {
 		if (needs_tess_rings)
 			add_tess_rings = true;
+	}
+	if (!queue->has_sample_positions) {
+		if (needs_sample_positions)
+			add_sample_positions = true;
 	}
 	tess_factor_ring_size = 32768 * queue->device->physical_device->rad_info.max_se;
 	hs_offchip_param = radv_get_hs_offchip_param(queue->device,
@@ -1403,7 +1421,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 	    compute_scratch_size <= queue->compute_scratch_size &&
 	    esgs_ring_size <= queue->esgs_ring_size &&
 	    gsvs_ring_size <= queue->gsvs_ring_size &&
-	    !add_tess_rings &&
+	    !add_tess_rings && !add_sample_positions &&
 	    queue->initial_preamble_cs) {
 		*initial_preamble_cs = queue->initial_preamble_cs;
 		*continue_preamble_cs = queue->continue_preamble_cs;
@@ -1485,11 +1503,14 @@ radv_get_preamble_cs(struct radv_queue *queue,
 	    esgs_ring_bo != queue->esgs_ring_bo ||
 	    gsvs_ring_bo != queue->gsvs_ring_bo ||
 	    tess_factor_ring_bo != queue->tess_factor_ring_bo ||
-	    tess_offchip_ring_bo != queue->tess_offchip_ring_bo) {
+	    tess_offchip_ring_bo != queue->tess_offchip_ring_bo || add_sample_positions) {
 		uint32_t size = 0;
 		if (gsvs_ring_bo || esgs_ring_bo ||
-		    tess_factor_ring_bo || tess_offchip_ring_bo)
+		    tess_factor_ring_bo || tess_offchip_ring_bo || add_sample_positions) {
 			size = 112; /* 2 dword + 2 padding + 4 dword * 6 */
+			if (add_sample_positions)
+				size += 256; /* 32+16+8+4+2+1 samples * 4 * 2 = 248 bytes. */
+		}
 		else if (scratch_bo)
 			size = 8; /* 2 dword */
 
@@ -1541,8 +1562,9 @@ radv_get_preamble_cs(struct radv_queue *queue,
 				map[1] = rsrc1;
 			}
 
-			if (esgs_ring_bo || gsvs_ring_bo || tess_factor_ring_bo || tess_offchip_ring_bo)
-				fill_geom_tess_rings(queue, map,
+			if (esgs_ring_bo || gsvs_ring_bo || tess_factor_ring_bo || tess_offchip_ring_bo ||
+			    add_sample_positions)
+				fill_geom_tess_rings(queue, map, add_sample_positions,
 						     esgs_ring_size, esgs_ring_bo,
 						     gsvs_ring_size, gsvs_ring_bo,
 						     tess_factor_ring_size, tess_factor_ring_bo,
@@ -1685,6 +1707,9 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		queue->descriptor_bo = descriptor_bo;
 	}
 
+	if (add_sample_positions)
+		queue->has_sample_positions = true;
+
 	*initial_preamble_cs = queue->initial_preamble_cs;
 	*continue_preamble_cs = queue->continue_preamble_cs;
 	if (!scratch_size && !compute_scratch_size && !esgs_ring_size && !gsvs_ring_size)
@@ -1730,6 +1755,7 @@ VkResult radv_QueueSubmit(
 	VkResult result;
 	bool fence_emitted = false;
 	bool tess_rings_needed = false;
+	bool sample_positions_needed = false;
 
 	/* Do this first so failing to allocate scratch buffers can't result in
 	 * partially executed submissions. */
@@ -1744,11 +1770,13 @@ VkResult radv_QueueSubmit(
 			esgs_ring_size = MAX2(esgs_ring_size, cmd_buffer->esgs_ring_size_needed);
 			gsvs_ring_size = MAX2(gsvs_ring_size, cmd_buffer->gsvs_ring_size_needed);
 			tess_rings_needed |= cmd_buffer->tess_rings_needed;
+			sample_positions_needed |= cmd_buffer->sample_positions_needed;
 		}
 	}
 
 	result = radv_get_preamble_cs(queue, scratch_size, compute_scratch_size,
 	                              esgs_ring_size, gsvs_ring_size, tess_rings_needed,
+				      sample_positions_needed,
 	                              &initial_preamble_cs, &continue_preamble_cs);
 	if (result != VK_SUCCESS)
 		return result;

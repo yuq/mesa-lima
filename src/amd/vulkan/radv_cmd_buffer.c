@@ -222,6 +222,7 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 	cmd_buffer->esgs_ring_size_needed = 0;
 	cmd_buffer->gsvs_ring_size_needed = 0;
 	cmd_buffer->tess_rings_needed = false;
+	cmd_buffer->sample_positions_needed = false;
 
 	if (cmd_buffer->upload.upload_bo)
 		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs,
@@ -452,37 +453,35 @@ radv_update_multisample_state(struct radv_cmd_buffer *cmd_buffer,
 
 	radv_cayman_emit_msaa_sample_locs(cmd_buffer->cs, num_samples);
 
-	uint32_t samples_offset;
-	void *samples_ptr;
-	void *src;
-	radv_cmd_buffer_upload_alloc(cmd_buffer, num_samples * 4 * 2, 256, &samples_offset,
-				     &samples_ptr);
-	switch (num_samples) {
-	case 1:
-		src = cmd_buffer->device->sample_locations_1x;
-		break;
-	case 2:
-		src = cmd_buffer->device->sample_locations_2x;
-		break;
-	case 4:
-		src = cmd_buffer->device->sample_locations_4x;
-		break;
-	case 8:
-		src = cmd_buffer->device->sample_locations_8x;
-		break;
-	case 16:
-		src = cmd_buffer->device->sample_locations_16x;
-		break;
-	default:
-		unreachable("unknown number of samples");
+	if (pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.uses_sample_positions) {
+		uint32_t offset;
+		struct ac_userdata_info *loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_FRAGMENT, AC_UD_PS_SAMPLE_POS_OFFSET);
+		uint32_t base_reg = shader_stage_to_user_data_0(MESA_SHADER_FRAGMENT, radv_pipeline_has_gs(pipeline), radv_pipeline_has_tess(pipeline));
+		if (loc->sgpr_idx == -1)
+			return;
+		assert(loc->num_sgprs == 1);
+		assert(!loc->indirect);
+		switch (num_samples) {
+		default:
+			offset = 0;
+			break;
+		case 2:
+			offset = 1;
+			break;
+		case 4:
+			offset = 3;
+			break;
+		case 8:
+			offset = 7;
+			break;
+		case 16:
+			offset = 15;
+			break;
+		}
+
+		radeon_set_sh_reg(cmd_buffer->cs, base_reg + loc->sgpr_idx * 4, offset);
+		cmd_buffer->sample_positions_needed = true;
 	}
-	memcpy(samples_ptr, src, num_samples * 4 * 2);
-
-	uint64_t va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
-	va += samples_offset;
-
-	radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_FRAGMENT,
-				   AC_UD_PS_SAMPLE_POS, va);
 }
 
 static void
@@ -2197,6 +2196,8 @@ void radv_CmdExecuteCommands(
 			primary->gsvs_ring_size_needed = secondary->gsvs_ring_size_needed;
 		if (secondary->tess_rings_needed)
 			primary->tess_rings_needed = true;
+		if (secondary->sample_positions_needed)
+			primary->sample_positions_needed = true;
 
 		if (secondary->ring_offsets_idx != -1) {
 			if (primary->ring_offsets_idx == -1)
