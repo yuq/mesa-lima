@@ -274,6 +274,16 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    input_layout_mask.flags.q.sample = 1;
    input_layout_mask.flags.q.smooth = 1;
 
+   if (state->has_bindless()) {
+      /* Allow to use image qualifiers with shader inputs/outputs. */
+      input_layout_mask.flags.q.coherent = 1;
+      input_layout_mask.flags.q._volatile = 1;
+      input_layout_mask.flags.q.restrict_flag = 1;
+      input_layout_mask.flags.q.read_only = 1;
+      input_layout_mask.flags.q.write_only = 1;
+      input_layout_mask.flags.q.explicit_image_format = 1;
+   }
+
    /* Uniform block layout qualifiers get to overwrite each
     * other (rightmost having priority), while all other
     * qualifiers currently don't allow duplicates.
