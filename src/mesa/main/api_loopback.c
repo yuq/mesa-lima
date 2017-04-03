@@ -89,6 +89,8 @@
 #define ATTRIB3_D(index,x,y,z)     CALL_VertexAttribL3d(GET_DISPATCH(), (index,x,y,z))
 #define ATTRIB4_D(index,x,y,z,w)    CALL_VertexAttribL4d(GET_DISPATCH(), (index,x,y,z,w))
 
+#define ATTRIB1_UI64(index, x)     CALL_VertexAttribL1ui64ARB(GET_DISPATCH(), (index, x))
+
 void GLAPIENTRY
 _mesa_Color3b( GLbyte red, GLbyte green, GLbyte blue )
 {
@@ -1531,11 +1533,13 @@ _mesa_VertexAttribL1dv(GLuint index, const GLdouble *v)
 void GLAPIENTRY
 _mesa_VertexAttribL1ui64ARB(GLuint index, GLuint64EXT x)
 {
+   ATTRIB1_UI64(index, x);
 }
 
 void GLAPIENTRY
 _mesa_VertexAttribL1ui64vARB(GLuint index, const GLuint64EXT *v)
 {
+   ATTRIB1_UI64(index, v[0]);
 }
 
 void GLAPIENTRY

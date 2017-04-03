@@ -175,6 +175,7 @@ vbo_attrtype_to_integer_flag(GLenum format)
       return GL_FALSE;
    case GL_INT:
    case GL_UNSIGNED_INT:
+   case GL_UNSIGNED_INT64_ARB:
       return GL_TRUE;
    default:
       assert(0);
@@ -189,6 +190,7 @@ vbo_attrtype_to_double_flag(GLenum format)
    case GL_FLOAT:
    case GL_INT:
    case GL_UNSIGNED_INT:
+   case GL_UNSIGNED_INT64_ARB:
       return GL_FALSE;
    case GL_DOUBLE:
       return GL_TRUE;

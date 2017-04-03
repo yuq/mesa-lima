@@ -1356,6 +1356,24 @@ _mesa_GetVertexAttribiv(GLuint index, GLenum pname, GLint *params)
 void GLAPIENTRY
 _mesa_GetVertexAttribLui64vARB(GLuint index, GLenum pname, GLuint64EXT *params)
 {
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (pname == GL_CURRENT_VERTEX_ATTRIB_ARB) {
+      const GLuint64 *v =
+         (const GLuint64 *)get_current_attrib(ctx, index,
+                                              "glGetVertexAttribLui64vARB");
+      if (v != NULL) {
+         params[0] = v[0];
+         params[1] = v[1];
+         params[2] = v[2];
+         params[3] = v[3];
+      }
+   }
+   else {
+      params[0] = (GLuint64) get_vertex_array_attrib(ctx, ctx->Array.VAO,
+                                                     index, pname,
+                                                     "glGetVertexAttribLui64vARB");
+   }
 }
 
 
