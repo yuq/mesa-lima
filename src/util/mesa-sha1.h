@@ -24,6 +24,7 @@
 #define MESA_SHA1_H
 
 #include <stdlib.h>
+#include "c99_compat.h"
 #include "sha1/sha1.h"
 
 #ifdef __cplusplus
