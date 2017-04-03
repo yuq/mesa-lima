@@ -88,38 +88,38 @@ static void
 emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so)
 {
 	const struct ir3_info *si = &so->info;
-	enum adreno_state_block sb;
-	enum adreno_state_src src;
+	enum a4xx_state_block sb;
+	enum a4xx_state_src src;
 	uint32_t i, sz, *bin;
 
 	if (so->type == SHADER_VERTEX) {
-		sb = SB_VERT_SHADER;
+		sb = SB4_VS_SHADER;
 	} else {
-		sb = SB_FRAG_SHADER;
+		sb = SB4_FS_SHADER;
 	}
 
 	if (fd_mesa_debug & FD_DBG_DIRECT) {
 		sz = si->sizedwords;
-		src = SS_DIRECT;
+		src = SS4_DIRECT;
 		bin = fd_bo_map(so->bo);
 	} else {
 		sz = 0;
-		src = 2;  // enums different on a5xx..
+		src = SS4_INDIRECT;
 		bin = NULL;
 	}
 
-	OUT_PKT7(ring, CP_LOAD_STATE, 3 + sz);
-	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(0) |
-			CP_LOAD_STATE_0_STATE_SRC(src) |
-			CP_LOAD_STATE_0_STATE_BLOCK(sb) |
-			CP_LOAD_STATE_0_NUM_UNIT(so->instrlen));
+	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + sz);
+	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(0) |
+			CP_LOAD_STATE4_0_STATE_SRC(src) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(sb) |
+			CP_LOAD_STATE4_0_NUM_UNIT(so->instrlen));
 	if (bin) {
-		OUT_RING(ring, CP_LOAD_STATE_1_EXT_SRC_ADDR(0) |
-				CP_LOAD_STATE_1_STATE_TYPE(ST_SHADER));
-		OUT_RING(ring, CP_LOAD_STATE_2_EXT_SRC_ADDR_HI(0));
+		OUT_RING(ring, CP_LOAD_STATE4_1_EXT_SRC_ADDR(0) |
+				CP_LOAD_STATE4_1_STATE_TYPE(ST4_SHADER));
+		OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
 	} else {
 		OUT_RELOC(ring, so->bo, 0,
-				CP_LOAD_STATE_1_STATE_TYPE(ST_SHADER), 0);
+				CP_LOAD_STATE4_1_STATE_TYPE(ST4_SHADER), 0);
 	}
 
 	/* for how clever coverity is, it is sometimes rather dull, and

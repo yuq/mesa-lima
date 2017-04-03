@@ -43,9 +43,9 @@
 #include "fd5_format.h"
 #include "fd5_zsa.h"
 
-static const enum adreno_state_block sb[] = {
-	[SHADER_VERTEX]   = SB_VERT_SHADER,
-	[SHADER_FRAGMENT] = SB_FRAG_SHADER,
+static const enum a4xx_state_block sb[] = {
+	[SHADER_VERTEX]   = SB4_VS_SHADER,
+	[SHADER_FRAGMENT] = SB4_FS_SHADER,
 };
 
 /* regid:          base const register
@@ -58,32 +58,32 @@ fd5_emit_const(struct fd_ringbuffer *ring, enum shader_t type,
 		const uint32_t *dwords, struct pipe_resource *prsc)
 {
 	uint32_t i, sz;
-	enum adreno_state_src src;
+	enum a4xx_state_src src;
 
 	debug_assert((regid % 4) == 0);
 	debug_assert((sizedwords % 4) == 0);
 
 	if (prsc) {
 		sz = 0;
-		src = 0x2;  // TODO ??
+		src = SS4_INDIRECT;
 	} else {
 		sz = sizedwords;
-		src = SS_DIRECT;
+		src = SS4_DIRECT;
 	}
 
-	OUT_PKT7(ring, CP_LOAD_STATE, 3 + sz);
-	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(regid/4) |
-			CP_LOAD_STATE_0_STATE_SRC(src) |
-			CP_LOAD_STATE_0_STATE_BLOCK(sb[type]) |
-			CP_LOAD_STATE_0_NUM_UNIT(sizedwords/4));
+	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + sz);
+	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(regid/4) |
+			CP_LOAD_STATE4_0_STATE_SRC(src) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(sb[type]) |
+			CP_LOAD_STATE4_0_NUM_UNIT(sizedwords/4));
 	if (prsc) {
 		struct fd_bo *bo = fd_resource(prsc)->bo;
 		OUT_RELOC(ring, bo, offset,
-				CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS), 0);
+				CP_LOAD_STATE4_1_STATE_TYPE(ST4_CONSTANTS), 0);
 	} else {
-		OUT_RING(ring, CP_LOAD_STATE_1_EXT_SRC_ADDR(0) |
-				CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS));
-		OUT_RING(ring, CP_LOAD_STATE_2_EXT_SRC_ADDR_HI(0));
+		OUT_RING(ring, CP_LOAD_STATE4_1_EXT_SRC_ADDR(0) |
+				CP_LOAD_STATE4_1_STATE_TYPE(ST4_CONSTANTS));
+		OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
 		dwords = (uint32_t *)&((uint8_t *)dwords)[offset];
 	}
 	for (i = 0; i < sz; i++) {
@@ -100,14 +100,14 @@ fd5_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
 
 	debug_assert((regid % 4) == 0);
 
-	OUT_PKT7(ring, CP_LOAD_STATE, 3 + (2 * anum));
-	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(regid/4) |
-			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
-			CP_LOAD_STATE_0_STATE_BLOCK(sb[type]) |
-			CP_LOAD_STATE_0_NUM_UNIT(anum/2));
-	OUT_RING(ring, CP_LOAD_STATE_1_EXT_SRC_ADDR(0) |
-			CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS));
-	OUT_RING(ring, CP_LOAD_STATE_2_EXT_SRC_ADDR_HI(0));
+	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (2 * anum));
+	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(regid/4) |
+			CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(sb[type]) |
+			CP_LOAD_STATE4_0_NUM_UNIT(anum/2));
+	OUT_RING(ring, CP_LOAD_STATE4_1_EXT_SRC_ADDR(0) |
+			CP_LOAD_STATE4_1_STATE_TYPE(ST4_CONSTANTS));
+	OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
 
 	for (i = 0; i < num; i++) {
 		if (prscs[i]) {
@@ -276,22 +276,22 @@ emit_border_color(struct fd_context *ctx, struct fd_ringbuffer *ring)
 
 static bool
 emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
-		enum adreno_state_block sb, struct fd_texture_stateobj *tex)
+		enum a4xx_state_block sb, struct fd_texture_stateobj *tex)
 {
 	bool needs_border = false;
-	unsigned bcolor_offset = (sb == SB_FRAG_TEX) ? ctx->verttex.num_samplers : 0;
+	unsigned bcolor_offset = (sb == SB4_FS_TEX) ? ctx->verttex.num_samplers : 0;
 	unsigned i;
 
 	if (tex->num_samplers > 0) {
 		/* output sampler state: */
-		OUT_PKT7(ring, CP_LOAD_STATE, 3 + (4 * tex->num_samplers));
-		OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(0) |
-				CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
-				CP_LOAD_STATE_0_STATE_BLOCK(sb) |
-				CP_LOAD_STATE_0_NUM_UNIT(tex->num_samplers));
-		OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_SHADER) |
-				CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
-		OUT_RING(ring, CP_LOAD_STATE_2_EXT_SRC_ADDR_HI(0));
+		OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (4 * tex->num_samplers));
+		OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(0) |
+				CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
+				CP_LOAD_STATE4_0_STATE_BLOCK(sb) |
+				CP_LOAD_STATE4_0_NUM_UNIT(tex->num_samplers));
+		OUT_RING(ring, CP_LOAD_STATE4_1_STATE_TYPE(ST4_SHADER) |
+				CP_LOAD_STATE4_1_EXT_SRC_ADDR(0));
+		OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
 		for (i = 0; i < tex->num_samplers; i++) {
 			static const struct fd5_sampler_stateobj dummy_sampler = {};
 			const struct fd5_sampler_stateobj *sampler = tex->samplers[i] ?
@@ -311,14 +311,14 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		unsigned num_textures = tex->num_textures;
 
 		/* emit texture state: */
-		OUT_PKT7(ring, CP_LOAD_STATE, 3 + (12 * num_textures));
-		OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(0) |
-				CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
-				CP_LOAD_STATE_0_STATE_BLOCK(sb) |
-				CP_LOAD_STATE_0_NUM_UNIT(num_textures));
-		OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS) |
-				CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
-		OUT_RING(ring, CP_LOAD_STATE_2_EXT_SRC_ADDR_HI(0));
+		OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (12 * num_textures));
+		OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(0) |
+				CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
+				CP_LOAD_STATE4_0_STATE_BLOCK(sb) |
+				CP_LOAD_STATE4_0_NUM_UNIT(num_textures));
+		OUT_RING(ring, CP_LOAD_STATE4_1_STATE_TYPE(ST4_CONSTANTS) |
+				CP_LOAD_STATE4_1_EXT_SRC_ADDR(0));
+		OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
 		for (i = 0; i < tex->num_textures; i++) {
 			static const struct fd5_pipe_sampler_view dummy_view = {};
 			const struct fd5_pipe_sampler_view *view = tex->textures[i] ?
@@ -653,7 +653,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_VERTTEX) {
 		if (vp->has_samp) {
-			needs_border |= emit_textures(ctx, ring, SB_VERT_TEX, &ctx->verttex);
+			needs_border |= emit_textures(ctx, ring, SB4_VS_TEX, &ctx->verttex);
 			OUT_PKT4(ring, REG_A5XX_TPL1_VS_TEX_COUNT, 1);
 			OUT_RING(ring, ctx->verttex.num_textures);
 		} else {
@@ -663,7 +663,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_FRAGTEX) {
 		if (fp->has_samp) {
-			needs_border |= emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->fragtex);
+			needs_border |= emit_textures(ctx, ring, SB4_FS_TEX, &ctx->fragtex);
 			OUT_PKT4(ring, REG_A5XX_TPL1_FS_TEX_COUNT, 1);
 			OUT_RING(ring, ctx->fragtex.num_textures);
 		} else {
