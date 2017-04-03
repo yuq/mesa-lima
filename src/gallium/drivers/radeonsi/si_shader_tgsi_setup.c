@@ -687,7 +687,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 	case TGSI_FILE_IMMEDIATE: {
 		LLVMTypeRef ctype = tgsi2llvmtype(bld_base, type);
 		if (tgsi_type_is_64bit(type)) {
-			result = LLVMGetUndef(LLVMVectorType(LLVMIntTypeInContext(bld_base->base.gallivm->context, 32), bld_base->base.type.length * 2));
+			result = LLVMGetUndef(LLVMVectorType(ctx->i32, bld_base->base.type.length * 2));
 			result = LLVMConstInsertElement(result,
 							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle],
 							ctx->i32_0);
@@ -787,7 +787,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 				 ctx->addrs[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
-					ctx->bld_base.uint_bld.elem_type, "");
+					ctx->i32, "");
 			}
 		}
 		break;
@@ -836,7 +836,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			    /* TODO: VGPR indexing is buggy on GFX9. */
 			    ctx->screen->b.chip_class == GFX9) {
 				array_alloca = LLVMBuildAlloca(builder,
-					LLVMArrayType(bld_base->base.vec_type,
+					LLVMArrayType(ctx->f32,
 						      array_size), "array");
 				ctx->temp_array_allocas[id] = array_alloca;
 			}
@@ -854,7 +854,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 #endif
 				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
 					lp_build_alloca_undef(bld_base->base.gallivm,
-							      bld_base->base.vec_type,
+							      ctx->f32,
 							      name);
 			}
 		} else {
@@ -873,7 +873,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				 */
 				ctx->undef_alloca = lp_build_alloca_undef(
 					bld_base->base.gallivm,
-					bld_base->base.vec_type, "undef");
+					ctx->f32, "undef");
 			}
 
 			for (i = 0; i < decl_size; ++i) {
@@ -939,7 +939,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 #endif
 				ctx->outputs[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
-					ctx->bld_base.base.elem_type, name);
+					ctx->f32, name);
 			}
 		}
 		break;
@@ -1032,7 +1032,7 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 				LLVMBuildStore(builder, value, temp_ptr);
 			else {
 				LLVMValueRef ptr = LLVMBuildBitCast(builder, value,
-								    LLVMVectorType(LLVMIntTypeInContext(bld_base->base.gallivm->context, 32), 2), "");
+								    LLVMVectorType(ctx->i32, 2), "");
 				LLVMValueRef val2;
 				value = LLVMBuildExtractElement(builder, ptr,
 								ctx->i32_0, "");
@@ -1229,7 +1229,7 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 
 	for (i = 0; i < 4; ++i) {
 		ctx->imms[ctx->imms_num * TGSI_NUM_CHANNELS + i] =
-				LLVMConstInt(bld_base->uint_bld.elem_type, imm->u[i].Uint, false   );
+				LLVMConstInt(ctx->i32, imm->u[i].Uint, false   );
 	}
 
 	ctx->imms_num++;

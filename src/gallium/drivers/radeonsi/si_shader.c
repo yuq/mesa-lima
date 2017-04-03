@@ -3313,7 +3313,7 @@ static LLVMValueRef image_fetch_coords(
 
 	for (chan = 0; chan < num_coords; ++chan) {
 		tmp = lp_build_emit_fetch(bld_base, inst, src, chan);
-		tmp = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+		tmp = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
 		coords[chan] = tmp;
 	}
 
@@ -3421,7 +3421,7 @@ static void load_fetch_args(
 	unsigned target = inst->Memory.Texture;
 	LLVMValueRef rsrc;
 
-	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
+	emit_data->dst_type = ctx->v4f32;
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
 		LLVMBuilderRef builder = gallivm->builder;
@@ -3431,7 +3431,7 @@ static void load_fetch_args(
 		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0]);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
-		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
@@ -3529,18 +3529,17 @@ static void load_emit_memory(
 		struct lp_build_emit_data *emit_data)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	struct lp_build_context *base = &ctx->bld_base.base;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	unsigned writemask = inst->Dst[0].Register.WriteMask;
 	LLVMValueRef channels[4], ptr, derived_ptr, index;
 	int chan;
 
-	ptr = get_memory_ptr(ctx, inst, base->elem_type, 1);
+	ptr = get_memory_ptr(ctx, inst, ctx->f32, 1);
 
 	for (chan = 0; chan < 4; ++chan) {
 		if (!(writemask & (1 << chan))) {
-			channels[chan] = LLVMGetUndef(base->elem_type);
+			channels[chan] = LLVMGetUndef(ctx->f32);
 			continue;
 		}
 
@@ -3699,7 +3698,7 @@ static void store_fetch_args(
 		rsrc = shader_buffer_fetch_rsrc(ctx, &memory);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 0, 0);
-		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
@@ -3812,13 +3811,12 @@ static void store_emit_memory(
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	struct lp_build_context *base = &ctx->bld_base.base;
 	LLVMBuilderRef builder = gallivm->builder;
 	unsigned writemask = inst->Dst[0].Register.WriteMask;
 	LLVMValueRef ptr, derived_ptr, data, index;
 	int chan;
 
-	ptr = get_memory_ptr(ctx, inst, base->elem_type, 0);
+	ptr = get_memory_ptr(ctx, inst, ctx->f32, 0);
 
 	for (chan = 0; chan < 4; ++chan) {
 		if (!(writemask & (1 << chan))) {
@@ -3897,14 +3895,14 @@ static void atomic_fetch_args(
 	LLVMValueRef rsrc;
 	LLVMValueRef tmp;
 
-	emit_data->dst_type = bld_base->base.elem_type;
+	emit_data->dst_type = ctx->f32;
 
 	tmp = lp_build_emit_fetch(bld_base, inst, 2, 0);
-	data1 = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+	data1 = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
 		tmp = lp_build_emit_fetch(bld_base, inst, 3, 0);
-		data2 = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+		data2 = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
 	}
 
 	/* llvm.amdgcn.image/buffer.atomic.cmpswap reflect the hardware order
@@ -3920,7 +3918,7 @@ static void atomic_fetch_args(
 		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0]);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
-		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, true, false);
@@ -4049,10 +4047,10 @@ static void atomic_emit(
 	}
 
 	tmp = lp_build_intrinsic(
-		builder, intrinsic_name, bld_base->uint_bld.elem_type,
+		builder, intrinsic_name, ctx->i32,
 		emit_data->args, emit_data->arg_count, 0);
 	emit_data->output[emit_data->chan] =
-		LLVMBuildBitCast(builder, tmp, bld_base->base.elem_type, "");
+		LLVMBuildBitCast(builder, tmp, ctx->f32, "");
 }
 
 static void set_tex_fetch_args(struct si_shader_context *ctx,
