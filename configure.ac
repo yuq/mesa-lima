@@ -515,6 +515,12 @@ AC_ARG_ENABLE([profile],
     [enable_profile=no]
 )
 
+AC_ARG_ENABLE([sanitize],
+    [AS_HELP_STRING([--enable-sanitize@<:@=address|undefined@:>@],
+        [enable code sanitizer @<:@default=disabled@:>@])],
+    [enable_sanitize="$enableval"],
+    [enable_sanitize=no])
+
 if test "x$enable_profile" = xyes; then
     DEFINES="$DEFINES -DPROFILE"
     if test "x$GCC" = xyes; then
@@ -548,6 +554,21 @@ if test "x$enable_debug" = xyes; then
     fi
 else
    DEFINES="$DEFINES -DNDEBUG"
+fi
+
+if test "x$enable_sanitize" != xno; then
+    if test "x$enable_profile" = xyes; then
+        AC_MSG_WARN([Sanitize and Profile are enabled at the same time])
+    fi
+
+    CFLAGS="$CFLAGS -fsanitize=$enable_sanitize"
+    CXXFLAGS="$CXXFLAGS -fsanitize=$enable_sanitize"
+    LDFLAGS="$LDFLAGS -fsanitize=$enable_sanitize"
+
+    AC_LINK_IFELSE(
+        [AC_LANG_SOURCE([int main(){return 0;}])],
+        [],
+        [AC_MSG_FAILURE([sanitize flags '$enable_sanitize' not supported])])
 fi
 
 dnl
@@ -590,7 +611,12 @@ case "$host_os" in
 openbsd* | darwin* )
     LD_NO_UNDEFINED="" ;;
 *)
-    LD_NO_UNDEFINED="-Wl,--no-undefined" ;;
+    if test "x$enable_sanitize" = xno; then
+        LD_NO_UNDEFINED="-Wl,--no-undefined"
+    else
+        LD_NO_UNDEFINED=""
+    fi
+    ;;
 esac
 
 AC_SUBST([LD_NO_UNDEFINED])
