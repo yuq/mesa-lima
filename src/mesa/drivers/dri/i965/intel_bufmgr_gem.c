@@ -121,11 +121,9 @@ typedef struct _drm_bacon_bufmgr {
 } drm_bacon_bufmgr;
 
 static int
-drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
-				     uint32_t tiling_mode,
-				     uint32_t stride);
+bo_set_tiling_internal(drm_bacon_bo *bo, uint32_t tiling_mode, uint32_t stride);
 
-static void drm_bacon_gem_bo_free(drm_bacon_bo *bo);
+static void bo_free(drm_bacon_bo *bo);
 
 static uint32_t
 key_hash_uint(const void *key)
@@ -147,8 +145,8 @@ hash_find_bo(struct hash_table *ht, unsigned int key)
 }
 
 static unsigned long
-drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr *bufmgr, unsigned long size,
-			   uint32_t *tiling_mode)
+bo_tile_size(drm_bacon_bufmgr *bufmgr, unsigned long size,
+	     uint32_t *tiling_mode)
 {
 	if (*tiling_mode == I915_TILING_NONE)
 		return size;
@@ -163,8 +161,8 @@ drm_bacon_gem_bo_tile_size(drm_bacon_bufmgr *bufmgr, unsigned long size,
  * change.
  */
 static unsigned long
-drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr *bufmgr,
-			    unsigned long pitch, uint32_t *tiling_mode)
+bo_tile_pitch(drm_bacon_bufmgr *bufmgr,
+	      unsigned long pitch, uint32_t *tiling_mode)
 {
 	unsigned long tile_width;
 
@@ -184,8 +182,7 @@ drm_bacon_gem_bo_tile_pitch(drm_bacon_bufmgr *bufmgr,
 }
 
 static struct drm_bacon_gem_bo_bucket *
-drm_bacon_gem_bo_bucket_for_size(drm_bacon_bufmgr *bufmgr,
-				 unsigned long size)
+bucket_for_size(drm_bacon_bufmgr *bufmgr, unsigned long size)
 {
 	int i;
 
@@ -253,18 +250,18 @@ drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr *bufmgr,
 			break;
 
 		list_del(&bo->head);
-		drm_bacon_gem_bo_free(bo);
+		bo_free(bo);
 	}
 }
 
 static drm_bacon_bo *
-drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
-				const char *name,
-				unsigned long size,
-				unsigned long flags,
-				uint32_t tiling_mode,
-				unsigned long stride,
-				unsigned int alignment)
+bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
+		  const char *name,
+		  unsigned long size,
+		  unsigned long flags,
+		  uint32_t tiling_mode,
+		  unsigned long stride,
+		  unsigned int alignment)
 {
 	drm_bacon_bo *bo;
 	unsigned int page_size = getpagesize();
@@ -278,7 +275,7 @@ drm_bacon_gem_bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 		for_render = true;
 
 	/* Round the allocated size up to a power of two number of pages. */
-	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr, size);
+	bucket = bucket_for_size(bufmgr, size);
 
 	/* If we don't have caching at this size, don't actually round the
 	 * allocation up.
@@ -323,16 +320,14 @@ retry:
 
 		if (alloc_from_cache) {
 			if (!drm_bacon_bo_madvise(bo, I915_MADV_WILLNEED)) {
-				drm_bacon_gem_bo_free(bo);
+				bo_free(bo);
 				drm_bacon_gem_bo_cache_purge_bucket(bufmgr,
 								    bucket);
 				goto retry;
 			}
 
-			if (drm_bacon_gem_bo_set_tiling_internal(bo,
-								 tiling_mode,
-								 stride)) {
-				drm_bacon_gem_bo_free(bo);
+			if (bo_set_tiling_internal(bo, tiling_mode, stride)) {
+				bo_free(bo);
 				goto retry;
 			}
 		}
@@ -345,7 +340,7 @@ retry:
 		if (!bo)
 			goto err;
 
-		/* drm_bacon_gem_bo_free calls list_del() for an uninitialized
+		/* bo_free calls list_del() for an uninitialized
 		   list (vma_list), so better set the list head here */
 		list_inithead(&bo->vma_list);
 
@@ -373,9 +368,7 @@ retry:
 		bo->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
 		bo->stride = 0;
 
-		if (drm_bacon_gem_bo_set_tiling_internal(bo,
-							 tiling_mode,
-							 stride))
+		if (bo_set_tiling_internal(bo, tiling_mode, stride))
 			goto err_free;
 	}
 
@@ -391,7 +384,7 @@ retry:
 	return bo;
 
 err_free:
-	drm_bacon_gem_bo_free(bo);
+	bo_free(bo);
 err:
 	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
@@ -403,10 +396,8 @@ drm_bacon_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr,
 			      unsigned long size,
 			      unsigned int alignment)
 {
-	return drm_bacon_gem_bo_alloc_internal(bufmgr, name, size,
-					       BO_ALLOC_FOR_RENDER,
-					       I915_TILING_NONE, 0,
-					       alignment);
+	return bo_alloc_internal(bufmgr, name, size, BO_ALLOC_FOR_RENDER,
+				 I915_TILING_NONE, 0, alignment);
 }
 
 drm_bacon_bo *
@@ -415,8 +406,7 @@ drm_bacon_bo_alloc(drm_bacon_bufmgr *bufmgr,
 		   unsigned long size,
 		   unsigned int alignment)
 {
-	return drm_bacon_gem_bo_alloc_internal(bufmgr, name, size, 0,
-					       I915_TILING_NONE, 0, 0);
+	return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0, 0);
 }
 
 drm_bacon_bo *
@@ -453,17 +443,16 @@ drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
 		aligned_y = ALIGN(y, height_alignment);
 
 		stride = x * cpp;
-		stride = drm_bacon_gem_bo_tile_pitch(bufmgr, stride, tiling_mode);
+		stride = bo_tile_pitch(bufmgr, stride, tiling_mode);
 		size = stride * aligned_y;
-		size = drm_bacon_gem_bo_tile_size(bufmgr, size, tiling_mode);
+		size = bo_tile_size(bufmgr, size, tiling_mode);
 	} while (*tiling_mode != tiling);
 	*pitch = stride;
 
 	if (tiling == I915_TILING_NONE)
 		stride = 0;
 
-	return drm_bacon_gem_bo_alloc_internal(bufmgr, name, size, flags,
-					       tiling, stride, 0);
+	return bo_alloc_internal(bufmgr, name, size, flags, tiling, stride, 0);
 }
 
 /**
@@ -553,13 +542,13 @@ out:
 	return bo;
 
 err_unref:
-	drm_bacon_gem_bo_free(bo);
+	bo_free(bo);
 	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
 }
 
 static void
-drm_bacon_gem_bo_free(drm_bacon_bo *bo)
+bo_free(drm_bacon_bo *bo)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_gem_close close;
@@ -603,7 +592,7 @@ drm_bacon_gem_bo_free(drm_bacon_bo *bo)
 }
 
 static void
-drm_bacon_gem_bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
+bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
 {
 #if HAVE_VALGRIND
 	if (bo->mem_virtual)
@@ -619,7 +608,7 @@ drm_bacon_gem_bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
 
 /** Frees all cached buffers significantly older than @time. */
 static void
-drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
+cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
 {
 	int i;
 
@@ -639,14 +628,15 @@ drm_bacon_gem_cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
 
 			list_del(&bo->head);
 
-			drm_bacon_gem_bo_free(bo);
+			bo_free(bo);
 		}
 	}
 
 	bufmgr->time = time;
 }
 
-static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr *bufmgr)
+static void
+bo_purge_vma_cache(drm_bacon_bufmgr *bufmgr)
 {
 	int limit;
 
@@ -686,8 +676,8 @@ static void drm_bacon_gem_bo_purge_vma_cache(drm_bacon_bufmgr *bufmgr)
 	}
 }
 
-static void drm_bacon_gem_bo_close_vma(drm_bacon_bufmgr *bufmgr,
-				       drm_bacon_bo *bo)
+static void
+bo_close_vma(drm_bacon_bufmgr *bufmgr, drm_bacon_bo *bo)
 {
 	bufmgr->vma_open--;
 	list_addtail(&bo->vma_list, &bufmgr->vma_cache);
@@ -697,11 +687,11 @@ static void drm_bacon_gem_bo_close_vma(drm_bacon_bufmgr *bufmgr,
 		bufmgr->vma_count++;
 	if (bo->gtt_virtual)
 		bufmgr->vma_count++;
-	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
+	bo_purge_vma_cache(bufmgr);
 }
 
-static void drm_bacon_gem_bo_open_vma(drm_bacon_bufmgr *bufmgr,
-				      drm_bacon_bo *bo)
+static void
+bo_open_vma(drm_bacon_bufmgr *bufmgr, drm_bacon_bo *bo)
 {
 	bufmgr->vma_open++;
 	list_del(&bo->vma_list);
@@ -711,11 +701,11 @@ static void drm_bacon_gem_bo_open_vma(drm_bacon_bufmgr *bufmgr,
 		bufmgr->vma_count--;
 	if (bo->gtt_virtual)
 		bufmgr->vma_count--;
-	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
+	bo_purge_vma_cache(bufmgr);
 }
 
 static void
-drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
+bo_unreference_final(drm_bacon_bo *bo, time_t time)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_bacon_gem_bo_bucket *bucket;
@@ -727,11 +717,11 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	if (bo->map_count) {
 		DBG("bo freed with non-zero map-count %d\n", bo->map_count);
 		bo->map_count = 0;
-		drm_bacon_gem_bo_close_vma(bufmgr, bo);
-		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
+		bo_close_vma(bufmgr, bo);
+		bo_mark_mmaps_incoherent(bo);
 	}
 
-	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr, bo->size);
+	bucket = bucket_for_size(bufmgr, bo->size);
 	/* Put the buffer into our internal cache for reuse if we can. */
 	if (bufmgr->bo_reuse && bo->reusable && bucket != NULL &&
 	    drm_bacon_bo_madvise(bo, I915_MADV_DONTNEED)) {
@@ -741,7 +731,7 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 
 		list_addtail(&bo->head, &bucket->head);
 	} else {
-		drm_bacon_gem_bo_free(bo);
+		bo_free(bo);
 	}
 }
 
@@ -762,8 +752,8 @@ drm_bacon_bo_unreference(drm_bacon_bo *bo)
 		pthread_mutex_lock(&bufmgr->lock);
 
 		if (p_atomic_dec_zero(&bo->refcount)) {
-			drm_bacon_gem_bo_unreference_final(bo, time.tv_sec);
-			drm_bacon_gem_cleanup_bo_cache(bufmgr, time.tv_sec);
+			bo_unreference_final(bo, time.tv_sec);
+			cleanup_bo_cache(bufmgr, time.tv_sec);
 		}
 
 		pthread_mutex_unlock(&bufmgr->lock);
@@ -780,7 +770,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 	pthread_mutex_lock(&bufmgr->lock);
 
 	if (bo->map_count++ == 0)
-		drm_bacon_gem_bo_open_vma(bufmgr, bo);
+		bo_open_vma(bufmgr, bo);
 
 	if (!bo->mem_virtual) {
 		struct drm_i915_gem_mmap mmap_arg;
@@ -800,7 +790,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 			    __FILE__, __LINE__, bo->gem_handle,
 			    bo->name, strerror(errno));
 			if (--bo->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo);
+				bo_close_vma(bufmgr, bo);
 			pthread_mutex_unlock(&bufmgr->lock);
 			return ret;
 		}
@@ -827,7 +817,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		    strerror(errno));
 	}
 
-	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
+	bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo->mem_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr->lock);
 
@@ -841,7 +831,7 @@ map_gtt(drm_bacon_bo *bo)
 	int ret;
 
 	if (bo->map_count++ == 0)
-		drm_bacon_gem_bo_open_vma(bufmgr, bo);
+		bo_open_vma(bufmgr, bo);
 
 	/* Get a mapping of the buffer if we haven't before. */
 	if (bo->gtt_virtual == NULL) {
@@ -864,7 +854,7 @@ map_gtt(drm_bacon_bo *bo)
 			    bo->gem_handle, bo->name,
 			    strerror(errno));
 			if (--bo->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo);
+				bo_close_vma(bufmgr, bo);
 			return ret;
 		}
 
@@ -880,7 +870,7 @@ map_gtt(drm_bacon_bo *bo)
 			    bo->gem_handle, bo->name,
 			    strerror(errno));
 			if (--bo->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo);
+				bo_close_vma(bufmgr, bo);
 			return ret;
 		}
 	}
@@ -930,7 +920,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 		    strerror(errno));
 	}
 
-	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
+	bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo->gtt_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr->lock);
 
@@ -971,7 +961,7 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 
 	ret = map_gtt(bo);
 	if (ret == 0) {
-		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
+		bo_mark_mmaps_incoherent(bo);
 		VG(VALGRIND_MAKE_MEM_DEFINED(bo->gtt_virtual, bo->size));
 	}
 
@@ -1005,8 +995,8 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 	 * limits and cause later failures.
 	 */
 	if (--bo->map_count == 0) {
-		drm_bacon_gem_bo_close_vma(bufmgr, bo);
-		drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
+		bo_close_vma(bufmgr, bo);
+		bo_mark_mmaps_incoherent(bo);
 		bo->virtual = NULL;
 	}
 	pthread_mutex_unlock(&bufmgr->lock);
@@ -1161,7 +1151,7 @@ drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
 			list_del(&bo->head);
 
-			drm_bacon_gem_bo_free(bo);
+			bo_free(bo);
 		}
 	}
 
@@ -1172,9 +1162,7 @@ drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 }
 
 static int
-drm_bacon_gem_bo_set_tiling_internal(drm_bacon_bo *bo,
-				     uint32_t tiling_mode,
-				     uint32_t stride)
+bo_set_tiling_internal(drm_bacon_bo *bo, uint32_t tiling_mode, uint32_t stride)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_tiling set_tiling;
@@ -1220,7 +1208,7 @@ drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 	if (*tiling_mode == I915_TILING_NONE)
 		stride = 0;
 
-	ret = drm_bacon_gem_bo_set_tiling_internal(bo, *tiling_mode, stride);
+	ret = bo_set_tiling_internal(bo, *tiling_mode, stride);
 
 	*tiling_mode = bo->tiling_mode;
 	return ret;
@@ -1305,7 +1293,7 @@ out:
 	return bo;
 
 err:
-	drm_bacon_gem_bo_free(bo);
+	bo_free(bo);
 	pthread_mutex_unlock(&bufmgr->lock);
 	return NULL;
 }
@@ -1426,7 +1414,7 @@ drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr, int limit)
 {
 	bufmgr->vma_max = limit;
 
-	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
+	bo_purge_vma_cache(bufmgr);
 }
 
 drm_bacon_context *
@@ -1552,7 +1540,7 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 		    bo->gem_handle, bo->name, bo->map_count);
 
 		if (bo->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr, bo);
+			bo_open_vma(bufmgr, bo);
 
 		memclear(mmap_arg);
 		mmap_arg.handle = bo->gem_handle;
@@ -1569,7 +1557,7 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 		}
 		if (ptr == MAP_FAILED) {
 			if (--bo->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo);
+				bo_close_vma(bufmgr, bo);
 			ptr = NULL;
 		}
 
@@ -1592,7 +1580,7 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 		struct drm_i915_gem_mmap mmap_arg;
 
 		if (bo->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr, bo);
+			bo_open_vma(bufmgr, bo);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
 		    bo->gem_handle, bo->name, bo->map_count);
@@ -1607,7 +1595,7 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 			    __FILE__, __LINE__, bo->gem_handle,
 			    bo->name, strerror(errno));
 			if (--bo->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo);
+				bo_close_vma(bufmgr, bo);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
 			bo->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
@@ -1630,7 +1618,7 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 		struct drm_i915_gem_mmap mmap_arg;
 
 		if (bo->map_count++ == 0)
-			drm_bacon_gem_bo_open_vma(bufmgr, bo);
+			bo_open_vma(bufmgr, bo);
 
 		DBG("bo_map: %d (%s), map_count=%d\n",
 		    bo->gem_handle, bo->name, bo->map_count);
@@ -1646,7 +1634,7 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 			    __FILE__, __LINE__, bo->gem_handle,
 			    bo->name, strerror(errno));
 			if (--bo->map_count == 0)
-				drm_bacon_gem_bo_close_vma(bufmgr, bo);
+				bo_close_vma(bufmgr, bo);
 		} else {
 			VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
 			bo->wc_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
