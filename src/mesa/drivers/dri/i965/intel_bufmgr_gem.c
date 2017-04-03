@@ -226,9 +226,8 @@ drm_bacon_bo_busy(drm_bacon_bo *bo)
 	return (ret == 0 && busy.busy);
 }
 
-static int
-drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr *bufmgr,
-				  drm_bacon_bo *bo, int state)
+int
+drm_bacon_bo_madvise(drm_bacon_bo *bo, int state)
 {
 	struct drm_i915_gem_madvise madv;
 
@@ -236,15 +235,9 @@ drm_bacon_gem_bo_madvise_internal(drm_bacon_bufmgr *bufmgr,
 	madv.handle = bo->gem_handle;
 	madv.madv = state;
 	madv.retained = 1;
-	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MADVISE, &madv);
+	drmIoctl(bo->bufmgr->fd, DRM_IOCTL_I915_GEM_MADVISE, &madv);
 
 	return madv.retained;
-}
-
-int
-drm_bacon_bo_madvise(drm_bacon_bo *bo, int madv)
-{
-	return drm_bacon_gem_bo_madvise_internal(bo->bufmgr, bo, madv);
 }
 
 /* drop the oldest entries that have been purged by the kernel */
@@ -256,8 +249,7 @@ drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr *bufmgr,
 		drm_bacon_bo *bo;
 
 		bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
-		if (drm_bacon_gem_bo_madvise_internal
-		    (bufmgr, bo, I915_MADV_DONTNEED))
+		if (drm_bacon_bo_madvise(bo, I915_MADV_DONTNEED))
 			break;
 
 		list_del(&bo->head);
@@ -330,8 +322,7 @@ retry:
 		}
 
 		if (alloc_from_cache) {
-			if (!drm_bacon_gem_bo_madvise_internal
-			    (bufmgr, bo, I915_MADV_WILLNEED)) {
+			if (!drm_bacon_bo_madvise(bo, I915_MADV_WILLNEED)) {
 				drm_bacon_gem_bo_free(bo);
 				drm_bacon_gem_bo_cache_purge_bucket(bufmgr,
 								    bucket);
@@ -743,8 +734,7 @@ drm_bacon_gem_bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	bucket = drm_bacon_gem_bo_bucket_for_size(bufmgr, bo->size);
 	/* Put the buffer into our internal cache for reuse if we can. */
 	if (bufmgr->bo_reuse && bo->reusable && bucket != NULL &&
-	    drm_bacon_gem_bo_madvise_internal(bufmgr, bo,
-					      I915_MADV_DONTNEED)) {
+	    drm_bacon_bo_madvise(bo, I915_MADV_DONTNEED)) {
 		bo->free_time = time;
 
 		bo->name = NULL;
