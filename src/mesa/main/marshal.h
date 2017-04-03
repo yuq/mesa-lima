@@ -32,6 +32,7 @@
 
 #include "main/glthread.h"
 #include "main/context.h"
+#include "main/macros.h"
 
 struct marshal_cmd_base
 {
@@ -55,15 +56,16 @@ _mesa_glthread_allocate_command(struct gl_context *ctx,
 {
    struct glthread_state *glthread = ctx->GLThread;
    struct marshal_cmd_base *cmd_base;
+   const size_t aligned_size = ALIGN(size, 8);
 
    if (unlikely(glthread->batch->used + size > MARSHAL_MAX_CMD_SIZE))
       _mesa_glthread_flush_batch(ctx);
 
    cmd_base = (struct marshal_cmd_base *)
       &glthread->batch->buffer[glthread->batch->used];
-   glthread->batch->used += size;
+   glthread->batch->used += aligned_size;
    cmd_base->cmd_id = cmd_id;
-   cmd_base->cmd_size = size;
+   cmd_base->cmd_size = aligned_size;
    return cmd_base;
 }
 
