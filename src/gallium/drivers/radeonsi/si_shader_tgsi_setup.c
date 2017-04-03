@@ -498,7 +498,7 @@ get_pointer_into_array(struct si_shader_context *ctx,
 		LLVMConstInt(ctx->i32,
 			     util_bitcount(array->writemask & ((1 << swizzle) - 1)), 0),
 		"");
-	idxs[0] = ctx->bld_base.uint_bld.zero;
+	idxs[0] = ctx->i32_0;
 	idxs[1] = index;
 	return LLVMBuildGEP(builder, alloca, idxs, 2, "");
 }
@@ -569,7 +569,7 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef val = LLVMBuildLoad(builder, ptr, "");
 		if (tgsi_type_is_64bit(type)) {
 			LLVMValueRef ptr_hi, val_hi;
-			ptr_hi = LLVMBuildGEP(builder, ptr, &bld_base->uint_bld.one, 1, "");
+			ptr_hi = LLVMBuildGEP(builder, ptr, &ctx->i32_1, 1, "");
 			val_hi = LLVMBuildLoad(builder, ptr_hi, "");
 			val = si_llvm_emit_fetch_64bit(bld_base, type, val, val_hi);
 		}
@@ -690,10 +690,10 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 			result = LLVMGetUndef(LLVMVectorType(LLVMIntTypeInContext(bld_base->base.gallivm->context, 32), bld_base->base.type.length * 2));
 			result = LLVMConstInsertElement(result,
 							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle],
-							bld_base->int_bld.zero);
+							ctx->i32_0);
 			result = LLVMConstInsertElement(result,
 							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle + 1],
-							bld_base->int_bld.one);
+							ctx->i32_1);
 			return LLVMConstBitCast(result, ctype);
 		} else {
 			return LLVMConstBitCast(ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle], ctype);
@@ -859,7 +859,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			}
 		} else {
 			LLVMValueRef idxs[2] = {
-				bld_base->uint_bld.zero,
+				ctx->i32_0,
 				NULL
 			};
 			unsigned j = 0;
@@ -1035,9 +1035,9 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 								    LLVMVectorType(LLVMIntTypeInContext(bld_base->base.gallivm->context, 32), 2), "");
 				LLVMValueRef val2;
 				value = LLVMBuildExtractElement(builder, ptr,
-								bld_base->uint_bld.zero, "");
+								ctx->i32_0, "");
 				val2 = LLVMBuildExtractElement(builder, ptr,
-								bld_base->uint_bld.one, "");
+							       ctx->i32_1, "");
 
 				LLVMBuildStore(builder, bitcast(bld_base, TGSI_TYPE_FLOAT, value), temp_ptr);
 				LLVMBuildStore(builder, bitcast(bld_base, TGSI_TYPE_FLOAT, val2), temp_ptr2);

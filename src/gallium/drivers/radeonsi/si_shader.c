@@ -545,7 +545,7 @@ static LLVMValueRef get_primitive_id(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	if (swizzle > 0)
-		return bld_base->uint_bld.zero;
+		return ctx->i32_0;
 
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
@@ -562,7 +562,7 @@ static LLVMValueRef get_primitive_id(struct lp_build_tgsi_context *bld_base,
 				    SI_PARAM_PRIMITIVE_ID);
 	default:
 		assert(0);
-		return bld_base->uint_bld.zero;
+		return ctx->i32_0;
 	}
 }
 
@@ -1103,14 +1103,14 @@ static LLVMValueRef fetch_input_gs(
 	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
 	soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle) * 256, 0);
 
-	value = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1, uint->zero,
+	value = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1, ctx->i32_0,
 				     vtx_offset, soffset, 0, 1, 0, true);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle + 1) * 256, 0);
 
 		value2 = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1,
-					      uint->zero, vtx_offset, soffset,
+					      ctx->i32_0, vtx_offset, soffset,
 					      0, 1, 0, true);
 		return si_llvm_emit_fetch_64bit(bld_base, type,
 						value, value2);
@@ -1176,7 +1176,6 @@ static void interp_fs_input(struct si_shader_context *ctx,
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 	struct lp_build_context *base = &bld_base->base;
-	struct lp_build_context *uint =	&bld_base->uint_bld;
 	struct gallivm_state *gallivm = base->gallivm;
 	LLVMValueRef attr_number;
 	LLVMValueRef i, j;
@@ -1205,9 +1204,9 @@ static void interp_fs_input(struct si_shader_context *ctx,
 						LLVMVectorType(ctx->f32, 2), "");
 
 		i = LLVMBuildExtractElement(gallivm->builder, interp_param,
-						uint->zero, "");
+						ctx->i32_0, "");
 		j = LLVMBuildExtractElement(gallivm->builder, interp_param,
-						uint->one, "");
+						ctx->i32_1, "");
 	}
 
 	if (semantic_name == TGSI_SEMANTIC_COLOR &&
@@ -1225,7 +1224,7 @@ static void interp_fs_input(struct si_shader_context *ctx,
 		back_attr_number = LLVMConstInt(ctx->i32, back_attr_offset, 0);
 
 		is_face_positive = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
-						 face, uint->zero, "");
+						 face, ctx->i32_0, "");
 
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			LLVMValueRef llvm_chan = LLVMConstInt(ctx->i32, chan, 0);
@@ -1255,10 +1254,10 @@ static void interp_fs_input(struct si_shader_context *ctx,
 		}
 	} else if (semantic_name == TGSI_SEMANTIC_FOG) {
 		if (interp) {
-			result[0] = ac_build_fs_interp(&ctx->ac, uint->zero,
+			result[0] = ac_build_fs_interp(&ctx->ac, ctx->i32_0,
 						       attr_number, prim_mask, i, j);
 		} else {
-			result[0] = ac_build_fs_interp_mov(&ctx->ac, uint->zero,
+			result[0] = ac_build_fs_interp_mov(&ctx->ac, ctx->i32_0,
 							   LLVMConstInt(ctx->i32, 2, 0), /* P0 */
 							   attr_number, prim_mask);
 		}
@@ -2313,7 +2312,7 @@ handle_semantic:
 							 ctx->i32, "");
 			edgeflag_value = lp_build_min(&bld_base->int_bld,
 						      edgeflag_value,
-						      bld_base->int_bld.one);
+						      ctx->i32_1);
 
 			/* The LLVM intrinsic expects a float. */
 			pos_args[1].out[1] = LLVMBuildBitCast(base->gallivm->builder,
@@ -2419,7 +2418,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	 */
 	lp_build_if(&if_ctx, gallivm,
 		    LLVMBuildICmp(gallivm->builder, LLVMIntEQ,
-				  invocation_id, bld_base->uint_bld.zero, ""));
+				  invocation_id, ctx->i32_0, ""));
 
 	/* Determine the layout of one tess factor element in the buffer. */
 	switch (shader->key.part.tcs.epilog.prim_mode) {
@@ -2500,7 +2499,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 
 	lp_build_if(&inner_if_ctx, gallivm,
 		    LLVMBuildICmp(gallivm->builder, LLVMIntEQ,
-				  rel_patch_id, bld_base->uint_bld.zero, ""));
+				  rel_patch_id, ctx->i32_0, ""));
 
 	/* Store the dynamic HS control word. */
 	ac_build_buffer_store_dword(&ctx->ac, buffer,
@@ -2582,9 +2581,9 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	rw_buffers = LLVMBuildPtrToInt(builder, rw_buffers, ctx->i64, "");
 	rw_buffers = LLVMBuildBitCast(builder, rw_buffers, ctx->v2i32, "");
 	rw0 = LLVMBuildExtractElement(builder, rw_buffers,
-				      bld_base->uint_bld.zero, "");
+				      ctx->i32_0, "");
 	rw1 = LLVMBuildExtractElement(builder, rw_buffers,
-				      bld_base->uint_bld.one, "");
+				      ctx->i32_1, "");
 	ret = LLVMBuildInsertValue(builder, ret, rw0, 0, "");
 	ret = LLVMBuildInsertValue(builder, ret, rw1, 1, "");
 
@@ -3321,11 +3320,11 @@ static LLVMValueRef image_fetch_coords(
 	/* 1D textures are allocated and used as 2D on GFX9. */
 	if (ctx->screen->b.chip_class >= GFX9) {
 		if (target == TGSI_TEXTURE_1D) {
-			coords[1] = bld_base->uint_bld.zero;
+			coords[1] = ctx->i32_0;
 			num_coords++;
 		} else if (target == TGSI_TEXTURE_1D_ARRAY) {
 			coords[2] = coords[1];
-			coords[1] = bld_base->uint_bld.zero;
+			coords[1] = ctx->i32_0;
 		}
 	}
 
@@ -3434,7 +3433,7 @@ static void load_fetch_args(
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
 		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
 
-		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
+		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
 	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
 		LLVMValueRef coords;
@@ -3444,7 +3443,7 @@ static void load_fetch_args(
 
 		if (target == TGSI_TEXTURE_BUFFER) {
 			buffer_append_args(ctx, emit_data, rsrc, coords,
-					   bld_base->uint_bld.zero, false, false);
+					   ctx->i32_0, false, false);
 		} else {
 			emit_data->args[0] = coords;
 			emit_data->args[1] = rsrc;
@@ -3702,7 +3701,7 @@ static void store_fetch_args(
 		tmp = lp_build_emit_fetch(bld_base, inst, 0, 0);
 		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
 
-		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
+		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
 	} else if (inst->Dst[0].Register.File == TGSI_FILE_IMAGE) {
 		unsigned target = inst->Memory.Texture;
@@ -3721,7 +3720,7 @@ static void store_fetch_args(
 		if (target == TGSI_TEXTURE_BUFFER) {
 			image_fetch_rsrc(bld_base, &memory, true, target, &rsrc);
 			buffer_append_args(ctx, emit_data, rsrc, coords,
-					   bld_base->uint_bld.zero, false, force_glc);
+					   ctx->i32_0, false, force_glc);
 		} else {
 			emit_data->args[1] = coords;
 			image_fetch_rsrc(bld_base, &memory, true, target,
@@ -3742,7 +3741,6 @@ static void store_emit_buffer(
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
-	struct lp_build_context *uint_bld = &ctx->bld_base.uint_bld;
 	LLVMValueRef base_data = emit_data->args[0];
 	LLVMValueRef base_offset = emit_data->args[3];
 	unsigned writemask = inst->Dst[0].Register.WriteMask;
@@ -3774,13 +3772,13 @@ static void store_emit_buffer(
 				LLVMConstInt(ctx->i32, start, 0), "");
 			data = LLVMBuildInsertElement(
 				builder, LLVMGetUndef(v2f32), tmp,
-				uint_bld->zero, "");
+				ctx->i32_0, "");
 
 			tmp = LLVMBuildExtractElement(
 				builder, base_data,
 				LLVMConstInt(ctx->i32, start + 1, 0), "");
 			data = LLVMBuildInsertElement(
-				builder, data, tmp, uint_bld->one, "");
+				builder, data, tmp, ctx->i32_1, "");
 
 			intrinsic_name = "llvm.amdgcn.buffer.store.v2f32";
 		} else {
@@ -3924,7 +3922,7 @@ static void atomic_fetch_args(
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
 		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
 
-		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
+		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, true, false);
 	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
 		unsigned target = inst->Memory.Texture;
@@ -3935,7 +3933,7 @@ static void atomic_fetch_args(
 
 		if (target == TGSI_TEXTURE_BUFFER) {
 			buffer_append_args(ctx, emit_data, rsrc, coords,
-					   bld_base->uint_bld.zero, true, false);
+					   ctx->i32_0, true, false);
 		} else {
 			emit_data->args[emit_data->arg_count++] = coords;
 			emit_data->args[emit_data->arg_count++] = rsrc;
@@ -4146,7 +4144,7 @@ static void resq_fetch_args(
 		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
 				 &res_ptr);
 		set_tex_fetch_args(ctx, emit_data, image_target,
-				   res_ptr, NULL, &bld_base->uint_bld.zero, 1,
+				   res_ptr, NULL, &ctx->i32_0, 1,
 				   0xf);
 	}
 }
@@ -4379,7 +4377,7 @@ static void tex_fetch_args(
 		emit_data->dst_type = ctx->v4f32;
 		emit_data->args[0] = LLVMBuildBitCast(gallivm->builder, res_ptr,
 						      ctx->v16i8, "");
-		emit_data->args[1] = bld_base->uint_bld.zero;
+		emit_data->args[1] = ctx->i32_0;
 		emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
 		emit_data->arg_count = 3;
 		return;
@@ -4545,7 +4543,7 @@ static void tex_fetch_args(
 
 		/* Use 0.5, so that we don't sample the border color. */
 		if (opcode == TGSI_OPCODE_TXF)
-			filler = bld_base->uint_bld.zero;
+			filler = ctx->i32_0;
 		else
 			filler = LLVMConstReal(ctx->f32, 0.5);
 
@@ -4592,7 +4590,6 @@ static void tex_fetch_args(
 	 */
 	if (target == TGSI_TEXTURE_2D_MSAA ||
 	    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
-		struct lp_build_context *uint_bld = &bld_base->uint_bld;
 		struct lp_build_emit_data txf_emit_data = *emit_data;
 		LLVMValueRef txf_address[4];
 		/* We only need .xy for non-arrays, and .xyz for arrays. */
@@ -4619,7 +4616,7 @@ static void tex_fetch_args(
 		LLVMValueRef fmask =
 			LLVMBuildExtractElement(gallivm->builder,
 						txf_emit_data.output[0],
-						uint_bld->zero, "");
+						ctx->i32_0, "");
 
 		unsigned sample_chan = txf_count; /* the sample index is last */
 
@@ -4641,11 +4638,11 @@ static void tex_fetch_args(
 
 		LLVMValueRef fmask_word1 =
 			LLVMBuildExtractElement(gallivm->builder, fmask_desc,
-						uint_bld->one, "");
+						ctx->i32_1, "");
 
 		LLVMValueRef word1_is_nonzero =
 			LLVMBuildICmp(gallivm->builder, LLVMIntNE,
-				      fmask_word1, uint_bld->zero, "");
+				      fmask_word1, ctx->i32_0, "");
 
 		/* Replace the MSAA sample index. */
 		address[sample_chan] =
@@ -4755,8 +4752,7 @@ static void si_lower_gather4_integer(struct si_shader_context *ctx,
 		txq_emit_data.inst = &txq_inst;
 		txq_emit_data.dst_type = ctx->v4i32;
 		set_tex_fetch_args(ctx, &txq_emit_data, target,
-				   args->resource, NULL,
-				   &ctx->bld_base.uint_bld.zero,
+				   args->resource, NULL, &ctx->i32_0,
 				   1, 0xf);
 		txq_emit(NULL, &ctx->bld_base, &txq_emit_data);
 
@@ -5012,7 +5008,6 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader *shader = ctx->shader;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct lp_build_context *uint = &bld_base->uint_bld;
 	LLVMValueRef interp_param;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	int input_index = inst->Src[0].Register.Index;
@@ -5091,9 +5086,9 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 			interp_param = LLVMBuildBitCast(gallivm->builder,
 				interp_param, LLVMVectorType(ctx->f32, 2), "");
 			LLVMValueRef i = LLVMBuildExtractElement(
-				gallivm->builder, interp_param, uint->zero, "");
+				gallivm->builder, interp_param, ctx->i32_0, "");
 			LLVMValueRef j = LLVMBuildExtractElement(
-				gallivm->builder, interp_param, uint->one, "");
+				gallivm->builder, interp_param, ctx->i32_1, "");
 			emit_data->output[chan] = ac_build_fs_interp(&ctx->ac,
 				llvm_chan, attr_number, params,
 				i, j);
@@ -5440,11 +5435,9 @@ static unsigned llvm_get_type_size(LLVMTypeRef type)
 static void declare_tess_lds(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
-	struct lp_build_context *uint = &bld_base->uint_bld;
 
 	unsigned lds_size = ctx->screen->b.chip_class >= CIK ? 65536 : 32768;
-	ctx->lds = LLVMBuildIntToPtr(gallivm->builder, uint->zero,
+	ctx->lds = LLVMBuildIntToPtr(gallivm->builder, ctx->i32_0,
 		LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), LOCAL_ADDR_SPACE),
 		"tess_lds");
 }
@@ -5761,7 +5754,6 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 			ac_build_indexed_load_const(&ctx->ac, buf_ptr, offset);
 	} else if (ctx->type == PIPE_SHADER_GEOMETRY) {
 		const struct si_shader_selector *sel = ctx->shader->selector;
-		struct lp_build_context *uint = &ctx->bld_base.uint_bld;
 		LLVMValueRef offset = LLVMConstInt(ctx->i32, SI_RING_GSVS, 0);
 		LLVMValueRef base_ring;
 
@@ -5796,20 +5788,20 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 			num_records = 64;
 
 			ring = LLVMBuildBitCast(builder, base_ring, v2i64, "");
-			tmp = LLVMBuildExtractElement(builder, ring, uint->zero, "");
+			tmp = LLVMBuildExtractElement(builder, ring, ctx->i32_0, "");
 			tmp = LLVMBuildAdd(builder, tmp,
 					   LLVMConstInt(ctx->i64,
 							stream_offset, 0), "");
 			stream_offset += stride * 64;
 
-			ring = LLVMBuildInsertElement(builder, ring, tmp, uint->zero, "");
+			ring = LLVMBuildInsertElement(builder, ring, tmp, ctx->i32_0, "");
 			ring = LLVMBuildBitCast(builder, ring, ctx->v4i32, "");
-			tmp = LLVMBuildExtractElement(builder, ring, uint->one, "");
+			tmp = LLVMBuildExtractElement(builder, ring, ctx->i32_1, "");
 			tmp = LLVMBuildOr(builder, tmp,
 				LLVMConstInt(ctx->i32,
 					     S_008F04_STRIDE(stride) |
 					     S_008F04_SWIZZLE_ENABLE(1), 0), "");
-			ring = LLVMBuildInsertElement(builder, ring, tmp, uint->one, "");
+			ring = LLVMBuildInsertElement(builder, ring, tmp, ctx->i32_1, "");
 			ring = LLVMBuildInsertElement(builder, ring,
 					LLVMConstInt(ctx->i32, num_records, 0),
 					LLVMConstInt(ctx->i32, 2, 0), "");
@@ -6378,7 +6370,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	if (gs_selector->so.num_outputs)
 		stream_id = unpack_param(&ctx, ctx.param_streamout_config, 24, 2);
 	else
-		stream_id = uint->zero;
+		stream_id = ctx.i32_0;
 
 	/* Fill in output information. */
 	for (i = 0; i < gsinfo->num_outputs; ++i) {
@@ -6428,7 +6420,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 				outputs[i].values[chan] =
 					ac_build_buffer_load(&ctx.ac,
 							     ctx.gsvs_ring[0], 1,
-							     uint->zero, voffset,
+							     ctx.i32_0, voffset,
 							     soffset, 0, 1, 1, true);
 			}
 		}
