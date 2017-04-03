@@ -235,9 +235,6 @@ struct _drm_bacon_bo_gem {
 	 * drm_bacon_bufmgr_check_aperture in the common case.
 	 */
 	int reloc_tree_size;
-
-	/** Flags that we may need to do the SW_FINISH ioctl on unmap. */
-	bool mapped_cpu_write;
 };
 
 static unsigned int
@@ -1160,9 +1157,6 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 		    strerror(errno));
 	}
 
-	if (write_enable)
-		bo_gem->mapped_cpu_write = true;
-
 	drm_bacon_gem_bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
 	pthread_mutex_unlock(&bufmgr->lock);
@@ -1340,24 +1334,6 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 		 * no-op rather than reporting the error.
 		 */
 		return 0;
-	}
-
-	if (bo_gem->mapped_cpu_write) {
-		struct drm_i915_gem_sw_finish sw_finish;
-
-		/* Cause a flush to happen if the buffer's pinned for
-		 * scanout, so the results show up in a timely manner.
-		 * Unlike GTT set domains, this only does work if the
-		 * buffer should be scanout-related.
-		 */
-		memclear(sw_finish);
-		sw_finish.handle = bo_gem->gem_handle;
-		ret = drmIoctl(bufmgr->fd,
-			       DRM_IOCTL_I915_GEM_SW_FINISH,
-			       &sw_finish);
-		ret = ret == -1 ? -errno : 0;
-
-		bo_gem->mapped_cpu_write = false;
 	}
 
 	/* We need to unmap after every innovation as we cannot track
