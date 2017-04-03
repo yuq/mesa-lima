@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef SHA1_H
-#define SHA1_H
+#ifndef MESA_SHA1_H
+#define MESA_SHA1_H
 
 #include <stdlib.h>
 #include "sha1/sha1.h"
