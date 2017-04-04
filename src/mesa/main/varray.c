@@ -1772,15 +1772,17 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
    const GLuint genericIndex = VERT_ATTRIB_GENERIC(index);
    struct gl_vertex_array_object * const vao = ctx->Array.VAO;
 
-   if (!ctx->Extensions.ARB_instanced_arrays) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glVertexAttribDivisor()");
-      return;
-   }
+   if (!_mesa_is_no_error_enabled(ctx)) {
+      if (!ctx->Extensions.ARB_instanced_arrays) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "glVertexAttribDivisor()");
+         return;
+      }
 
-   if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glVertexAttribDivisor(index = %u)",
-                  index);
-      return;
+      if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "glVertexAttribDivisor(index = %u)", index);
+         return;
+      }
    }
 
    assert(genericIndex < ARRAY_SIZE(vao->VertexAttrib));
