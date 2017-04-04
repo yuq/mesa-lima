@@ -212,7 +212,7 @@ gen6_queryobj_get_results(struct gl_context *ctx,
    if (query->bo == NULL)
       return;
 
-   brw_bo_map(brw, query->bo, false, "query object");
+   drm_bacon_bo_map(query->bo, false);
    uint64_t *results = query->bo->virtual;
    switch (query->Base.Target) {
    case GL_TIME_ELAPSED:

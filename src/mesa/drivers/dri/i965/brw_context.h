@@ -1462,12 +1462,6 @@ uint32_t brw_depth_format(struct brw_context *brw, mesa_format format);
 /* brw_performance_query.c */
 void brw_init_performance_queries(struct brw_context *brw);
 
-/* intel_buffer_objects.c */
-int brw_bo_map(struct brw_context *brw, drm_bacon_bo *bo, int write_enable,
-               const char *bo_name);
-int brw_bo_map_gtt(struct brw_context *brw, drm_bacon_bo *bo,
-                   const char *bo_name);
-
 /* intel_extensions.c */
 extern void intelInitExtensions(struct gl_context *ctx);
 

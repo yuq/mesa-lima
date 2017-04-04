@@ -147,7 +147,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       intel_batchbuffer_flush(brw);
    }
 
-   error = brw_bo_map(brw, bo, false /* write enable */, "miptree");
+   error = drm_bacon_bo_map(bo, false /* write enable */);
    if (error) {
       DBG("%s: failed to map bo\n", __func__);
       return false;

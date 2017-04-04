@@ -39,46 +39,6 @@
 #include "intel_buffer_objects.h"
 #include "intel_batchbuffer.h"
 
-/**
- * Map a buffer object; issue performance warnings if mapping causes stalls.
- *
- * This matches the drm_bacon_bo_map API, but takes an additional human-readable
- * name for the buffer object to use in the performance debug message.
- */
-int
-brw_bo_map(struct brw_context *brw,
-           drm_bacon_bo *bo, int write_enable,
-           const char *bo_name)
-{
-   if (likely(!brw->perf_debug) || !drm_bacon_bo_busy(bo))
-      return drm_bacon_bo_map(bo, write_enable);
-
-   double start_time = get_time();
-
-   int ret = drm_bacon_bo_map(bo, write_enable);
-
-   perf_debug("CPU mapping a busy %s BO stalled and took %.03f ms.\n",
-              bo_name, (get_time() - start_time) * 1000);
-
-   return ret;
-}
-
-int
-brw_bo_map_gtt(struct brw_context *brw, drm_bacon_bo *bo, const char *bo_name)
-{
-   if (likely(!brw->perf_debug) || !drm_bacon_bo_busy(bo))
-      return drm_bacon_gem_bo_map_gtt(bo);
-
-   double start_time = get_time();
-
-   int ret = drm_bacon_gem_bo_map_gtt(bo);
-
-   perf_debug("GTT mapping a busy %s BO stalled and took %.03f ms.\n",
-              bo_name, (get_time() - start_time) * 1000);
-
-   return ret;
-}
-
 static void
 mark_buffer_gpu_usage(struct intel_buffer_object *intel_obj,
                                uint32_t offset, uint32_t size)
@@ -429,8 +389,8 @@ brw_map_buffer_range(struct gl_context *ctx,
                                                           intel_obj->map_extra[index],
                                                           alignment);
       if (brw->has_llc) {
-         brw_bo_map(brw, intel_obj->range_map_bo[index],
-                    (access & GL_MAP_WRITE_BIT) != 0, "range-map");
+         drm_bacon_bo_map(intel_obj->range_map_bo[index],
+                          (access & GL_MAP_WRITE_BIT) != 0);
       } else {
          drm_bacon_gem_bo_map_gtt(intel_obj->range_map_bo[index]);
       }
@@ -450,8 +410,7 @@ brw_map_buffer_range(struct gl_context *ctx,
       drm_bacon_gem_bo_map_gtt(intel_obj->buffer);
       mark_buffer_inactive(intel_obj);
    } else {
-      brw_bo_map(brw, intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0,
-                 "MapBufferRange");
+      drm_bacon_bo_map(intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
       mark_buffer_inactive(intel_obj);
    }
 
