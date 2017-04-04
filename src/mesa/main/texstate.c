@@ -704,11 +704,12 @@ _mesa_update_texture_state(struct gl_context *ctx)
       if (ctx->_Shader->CurrentProgram[i]) {
          prog[i] = ctx->_Shader->CurrentProgram[i];
       } else {
-         if (i == MESA_SHADER_FRAGMENT && ctx->FragmentProgram._Enabled)
-            prog[i] = ctx->FragmentProgram.Current;
-         else
-            prog[i] = NULL;
+         prog[i] = NULL;
       }
+   }
+
+   if (prog[MESA_SHADER_FRAGMENT] == NULL && ctx->FragmentProgram._Enabled) {
+      prog[MESA_SHADER_FRAGMENT] = ctx->FragmentProgram.Current;
    }
 
    /* TODO: only set this if there are actual changes */
