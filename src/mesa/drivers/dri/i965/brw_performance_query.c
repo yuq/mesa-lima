@@ -948,11 +948,7 @@ brw_begin_perf_query(struct gl_context *ctx,
       /* If the OA counters aren't already on, enable them. */
       if (brw->perfquery.oa_stream_fd == -1) {
          __DRIscreen *screen = brw->screen->driScrnPriv;
-         uint32_t ctx_id;
          int period_exponent;
-
-         if (drm_bacon_gem_context_get_id(brw->hw_ctx, &ctx_id) != 0)
-            return false;
 
          /* The timestamp for HSW+ increments every 80ns
           *
@@ -973,7 +969,7 @@ brw_begin_perf_query(struct gl_context *ctx,
                                        query->oa_format,
                                        period_exponent,
                                        screen->fd, /* drm fd */
-                                       ctx_id))
+                                       brw->hw_ctx))
             return false;
       } else {
          assert(brw->perfquery.current_oa_metrics_set_id ==

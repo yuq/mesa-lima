@@ -384,7 +384,7 @@ brw_new_batch(struct brw_context *brw)
     * would otherwise be stored in the context (which for all intents and
     * purposes means everything).
     */
-   if (brw->hw_ctx == NULL)
+   if (brw->hw_ctx == 0)
       brw->ctx.NewDriverState |= BRW_NEW_CONTEXT;
 
    brw->ctx.NewDriverState |= BRW_NEW_BATCH;
@@ -538,15 +538,12 @@ add_exec_bo(struct intel_batchbuffer *batch, drm_bacon_bo *bo)
 static int
 execbuffer(int fd,
            struct intel_batchbuffer *batch,
-           drm_bacon_context *ctx,
+           uint32_t ctx_id,
            int used,
            int in_fence,
            int *out_fence,
            int flags)
 {
-   uint32_t ctx_id = 0;
-   drm_bacon_gem_context_get_id(ctx, &ctx_id);
-
    struct drm_i915_gem_execbuffer2 execbuf = {
       .buffers_ptr = (uintptr_t) batch->exec_objects,
       .buffer_count = batch->exec_count,
@@ -623,7 +620,7 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
 	 flags |= I915_EXEC_GEN7_SOL_RESET;
 
       if (ret == 0) {
-         void *hw_ctx = batch->ring != RENDER_RING ? NULL : brw->hw_ctx;
+         uint32_t hw_ctx = batch->ring == RENDER_RING ? brw->hw_ctx : 0;
 
          /* Add the batch itself to the end of the validation list */
          add_exec_bo(batch, batch->bo);

@@ -90,11 +90,6 @@ atomic_add_unless(int *v, int add, int unless)
    return c == unless;
 }
 
-struct _drm_bacon_context {
-	unsigned int ctx_id;
-	struct _drm_bacon_bufmgr *bufmgr;
-};
-
 struct bo_cache_bucket {
 	struct list_head head;
 	unsigned long size;
@@ -1417,62 +1412,33 @@ drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr, int limit)
 	bo_purge_vma_cache(bufmgr);
 }
 
-drm_bacon_context *
-drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr)
+uint32_t
+brw_create_hw_context(drm_bacon_bufmgr *bufmgr)
 {
 	struct drm_i915_gem_context_create create;
-	drm_bacon_context *context = NULL;
 	int ret;
-
-	context = calloc(1, sizeof(*context));
-	if (!context)
-		return NULL;
 
 	memclear(create);
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_CONTEXT_CREATE, &create);
 	if (ret != 0) {
 		DBG("DRM_IOCTL_I915_GEM_CONTEXT_CREATE failed: %s\n",
 		    strerror(errno));
-		free(context);
-		return NULL;
+		return 0;
 	}
 
-	context->ctx_id = create.ctx_id;
-	context->bufmgr = bufmgr;
-
-	return context;
-}
-
-int
-drm_bacon_gem_context_get_id(drm_bacon_context *ctx, uint32_t *ctx_id)
-{
-	if (ctx == NULL)
-		return -EINVAL;
-
-	*ctx_id = ctx->ctx_id;
-
-	return 0;
+	return create.ctx_id;
 }
 
 void
-drm_bacon_gem_context_destroy(drm_bacon_context *ctx)
+brw_destroy_hw_context(drm_bacon_bufmgr *bufmgr, uint32_t ctx_id)
 {
-	struct drm_i915_gem_context_destroy destroy;
-	int ret;
+	struct drm_i915_gem_context_destroy d = { .ctx_id = ctx_id };
 
-	if (ctx == NULL)
-		return;
-
-	memclear(destroy);
-
-	destroy.ctx_id = ctx->ctx_id;
-	ret = drmIoctl(ctx->bufmgr->fd, DRM_IOCTL_I915_GEM_CONTEXT_DESTROY,
-		       &destroy);
-	if (ret != 0)
+	if (ctx_id != 0 &&
+	    drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_CONTEXT_DESTROY, &d) != 0) {
 		fprintf(stderr, "DRM_IOCTL_I915_GEM_CONTEXT_DESTROY failed: %s\n",
 			strerror(errno));
-
-	free(ctx);
+	}
 }
 
 int

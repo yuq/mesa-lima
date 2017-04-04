@@ -670,7 +670,7 @@ struct brw_context
 
    drm_bacon_bufmgr *bufmgr;
 
-   drm_bacon_context *hw_ctx;
+   uint32_t hw_ctx;
 
    /** BO for post-sync nonzero writes for gen6 workaround. */
    drm_bacon_bo *workaround_bo;

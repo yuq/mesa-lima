@@ -1094,7 +1094,7 @@ brwCreateContext(gl_api api,
        * This is required for transform feedback buffer offsets, query objects,
        * and also allows us to reduce how much state we have to emit.
        */
-      brw->hw_ctx = drm_bacon_gem_context_create(brw->bufmgr);
+      brw->hw_ctx = brw_create_hw_context(brw->bufmgr);
 
       if (!brw->hw_ctx) {
          fprintf(stderr, "Failed to create hardware context.\n");
@@ -1200,7 +1200,7 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    if (brw->wm.base.scratch_bo)
       drm_bacon_bo_unreference(brw->wm.base.scratch_bo);
 
-   drm_bacon_gem_context_destroy(brw->hw_ctx);
+   brw_destroy_hw_context(brw->bufmgr, brw->hw_ctx);
 
    if (ctx->swrast_context) {
       _swsetup_DestroyContext(&brw->ctx);

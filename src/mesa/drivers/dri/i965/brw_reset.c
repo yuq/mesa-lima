@@ -36,16 +36,13 @@ brw_get_graphics_reset_status(struct gl_context *ctx)
 {
    struct brw_context *brw = brw_context(ctx);
    __DRIscreen *dri_screen = brw->screen->driScrnPriv;
-   struct drm_i915_reset_stats stats;
+   struct drm_i915_reset_stats stats = { .ctx_id = brw->hw_ctx };
 
    /* If hardware contexts are not being used (or
     * DRM_IOCTL_I915_GET_RESET_STATS is not supported), this function should
     * not be accessible.
     */
-   assert(brw->hw_ctx != NULL);
-
-   memset(&stats, 0, sizeof(stats));
-   drm_bacon_gem_context_get_id(brw->hw_ctx, &stats.ctx_id);
+   assert(brw->hw_ctx != 0);
 
    /* A reset status other than NO_ERROR was returned last time. I915 returns
     * nonzero active/pending only if reset has been encountered and completed.
@@ -81,9 +78,7 @@ void
 brw_check_for_reset(struct brw_context *brw)
 {
    __DRIscreen *dri_screen = brw->screen->driScrnPriv;
-   struct drm_i915_reset_stats stats;
-   memset(&stats, 0, sizeof(stats));
-   drm_bacon_gem_context_get_id(brw->hw_ctx, &stats.ctx_id);
+   struct drm_i915_reset_stats stats = { .ctx_id = brw->hw_ctx };
 
    if (drmIoctl(dri_screen->fd, DRM_IOCTL_I915_GET_RESET_STATS, &stats) != 0)
       return;

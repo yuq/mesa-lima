@@ -46,7 +46,6 @@ extern "C" {
 struct gen_device_info;
 
 typedef struct _drm_bacon_bufmgr drm_bacon_bufmgr;
-typedef struct _drm_bacon_context drm_bacon_context;
 typedef struct _drm_bacon_bo drm_bacon_bo;
 
 struct _drm_bacon_bo {
@@ -304,10 +303,8 @@ void drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable);
 
 int drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns);
 
-drm_bacon_context *drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr);
-int drm_bacon_gem_context_get_id(drm_bacon_context *ctx,
-                                 uint32_t *ctx_id);
-void drm_bacon_gem_context_destroy(drm_bacon_context *ctx);
+uint32_t brw_create_hw_context(drm_bacon_bufmgr *bufmgr);
+void brw_destroy_hw_context(drm_bacon_bufmgr *bufmgr, uint32_t ctx_id);
 
 int drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd);
 drm_bacon_bo *drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr,
