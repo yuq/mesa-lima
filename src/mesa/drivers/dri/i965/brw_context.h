@@ -668,7 +668,7 @@ struct brw_context
 
    } vtbl;
 
-   drm_bacon_bufmgr *bufmgr;
+   struct brw_bufmgr *bufmgr;
 
    uint32_t hw_ctx;
 

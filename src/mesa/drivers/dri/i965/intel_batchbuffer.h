@@ -39,7 +39,7 @@ extern "C" {
 struct intel_batchbuffer;
 
 void intel_batchbuffer_init(struct intel_batchbuffer *batch,
-                            drm_bacon_bufmgr *bufmgr,
+                            struct brw_bufmgr *bufmgr,
                             bool has_llc);
 void intel_batchbuffer_free(struct intel_batchbuffer *batch);
 void intel_batchbuffer_save_state(struct brw_context *brw);

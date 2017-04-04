@@ -45,7 +45,6 @@ extern "C" {
 
 struct gen_device_info;
 
-typedef struct _drm_bacon_bufmgr drm_bacon_bufmgr;
 typedef struct _drm_bacon_bo drm_bacon_bo;
 
 struct _drm_bacon_bo {
@@ -75,7 +74,7 @@ struct _drm_bacon_bo {
 #endif
 
 	/** Buffer manager context associated with this buffer object */
-	drm_bacon_bufmgr *bufmgr;
+	struct brw_bufmgr *bufmgr;
 
 	/** The GEM handle for this buffer object. */
 	uint32_t gem_handle;
@@ -142,7 +141,7 @@ struct _drm_bacon_bo {
  * address space or graphics device aperture.  They must be mapped
  * using bo_map() or drm_bacon_gem_bo_map_gtt() to be used by the CPU.
  */
-drm_bacon_bo *drm_bacon_bo_alloc(drm_bacon_bufmgr *bufmgr, const char *name,
+drm_bacon_bo *drm_bacon_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
 				 unsigned long size, unsigned int alignment);
 /**
  * Allocate a buffer object, hinting that it will be used as a
@@ -150,7 +149,7 @@ drm_bacon_bo *drm_bacon_bo_alloc(drm_bacon_bufmgr *bufmgr, const char *name,
  *
  * This is otherwise the same as bo_alloc.
  */
-drm_bacon_bo *drm_bacon_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr,
+drm_bacon_bo *drm_bacon_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
 					    const char *name,
 					    unsigned long size,
 					    unsigned int alignment);
@@ -170,7 +169,7 @@ drm_bacon_bo *drm_bacon_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr,
  * 'tiling_mode' field on return, as well as the pitch value, which
  * may have been rounded up to accommodate for tiling restrictions.
  */
-drm_bacon_bo *drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr,
+drm_bacon_bo *drm_bacon_bo_alloc_tiled(struct brw_bufmgr *bufmgr,
 				       const char *name,
 				       int x, int y, int cpp,
 				       uint32_t *tiling_mode,
@@ -219,7 +218,7 @@ void drm_bacon_bo_wait_rendering(drm_bacon_bo *bo);
 /**
  * Tears down the buffer manager instance.
  */
-void drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr);
+void brw_bufmgr_destroy(struct brw_bufmgr *bufmgr);
 
 /**
  * Ask that the buffer be placed in tiling mode
@@ -284,13 +283,13 @@ int drm_bacon_bo_disable_reuse(drm_bacon_bo *bo);
 int drm_bacon_bo_is_reusable(drm_bacon_bo *bo);
 
 /* drm_bacon_bufmgr_gem.c */
-drm_bacon_bufmgr *drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
-					    int fd, int batch_size);
-drm_bacon_bo *drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
+struct brw_bufmgr *brw_bufmgr_init(struct gen_device_info *devinfo,
+                                   int fd, int batch_size);
+drm_bacon_bo *drm_bacon_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
 						const char *name,
 						unsigned int handle);
-void drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr);
-void drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr,
+void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
+void brw_bufmgr_gem_set_vma_cache_size(struct brw_bufmgr *bufmgr,
 					     int limit);
 int drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo);
 int drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo);
@@ -303,14 +302,14 @@ void drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable);
 
 int drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns);
 
-uint32_t brw_create_hw_context(drm_bacon_bufmgr *bufmgr);
-void brw_destroy_hw_context(drm_bacon_bufmgr *bufmgr, uint32_t ctx_id);
+uint32_t brw_create_hw_context(struct brw_bufmgr *bufmgr);
+void brw_destroy_hw_context(struct brw_bufmgr *bufmgr, uint32_t ctx_id);
 
 int drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd);
-drm_bacon_bo *drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr,
+drm_bacon_bo *drm_bacon_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr,
 						int prime_fd, int size);
 
-int drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
+int drm_bacon_reg_read(struct brw_bufmgr *bufmgr,
 		       uint32_t offset,
 		       uint64_t *result);
 

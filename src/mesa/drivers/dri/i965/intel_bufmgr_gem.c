@@ -95,7 +95,7 @@ struct bo_cache_bucket {
 	unsigned long size;
 };
 
-typedef struct _drm_bacon_bufmgr {
+struct brw_bufmgr {
 	int fd;
 
 	pthread_mutex_t lock;
@@ -113,7 +113,7 @@ typedef struct _drm_bacon_bufmgr {
 
 	unsigned int has_llc : 1;
 	unsigned int bo_reuse : 1;
-} drm_bacon_bufmgr;
+};
 
 static int
 bo_set_tiling_internal(drm_bacon_bo *bo, uint32_t tiling_mode, uint32_t stride);
@@ -140,7 +140,7 @@ hash_find_bo(struct hash_table *ht, unsigned int key)
 }
 
 static unsigned long
-bo_tile_size(drm_bacon_bufmgr *bufmgr, unsigned long size,
+bo_tile_size(struct brw_bufmgr *bufmgr, unsigned long size,
 	     uint32_t *tiling_mode)
 {
 	if (*tiling_mode == I915_TILING_NONE)
@@ -156,7 +156,7 @@ bo_tile_size(drm_bacon_bufmgr *bufmgr, unsigned long size,
  * change.
  */
 static unsigned long
-bo_tile_pitch(drm_bacon_bufmgr *bufmgr,
+bo_tile_pitch(struct brw_bufmgr *bufmgr,
 	      unsigned long pitch, uint32_t *tiling_mode)
 {
 	unsigned long tile_width;
@@ -177,7 +177,7 @@ bo_tile_pitch(drm_bacon_bufmgr *bufmgr,
 }
 
 static struct bo_cache_bucket *
-bucket_for_size(drm_bacon_bufmgr *bufmgr, unsigned long size)
+bucket_for_size(struct brw_bufmgr *bufmgr, unsigned long size)
 {
 	int i;
 
@@ -201,7 +201,7 @@ drm_bacon_bo_reference(drm_bacon_bo *bo)
 int
 drm_bacon_bo_busy(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_busy busy;
 	int ret;
 
@@ -234,7 +234,7 @@ drm_bacon_bo_madvise(drm_bacon_bo *bo, int state)
 
 /* drop the oldest entries that have been purged by the kernel */
 static void
-drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr *bufmgr,
+drm_bacon_gem_bo_cache_purge_bucket(struct brw_bufmgr *bufmgr,
 				    struct bo_cache_bucket *bucket)
 {
 	while (!list_empty(&bucket->head)) {
@@ -250,7 +250,7 @@ drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr *bufmgr,
 }
 
 static drm_bacon_bo *
-bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
+bo_alloc_internal(struct brw_bufmgr *bufmgr,
 		  const char *name,
 		  unsigned long size,
 		  unsigned long flags,
@@ -386,7 +386,7 @@ err:
 }
 
 drm_bacon_bo *
-drm_bacon_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr,
+drm_bacon_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
 			      const char *name,
 			      unsigned long size,
 			      unsigned int alignment)
@@ -396,7 +396,7 @@ drm_bacon_bo_alloc_for_render(drm_bacon_bufmgr *bufmgr,
 }
 
 drm_bacon_bo *
-drm_bacon_bo_alloc(drm_bacon_bufmgr *bufmgr,
+drm_bacon_bo_alloc(struct brw_bufmgr *bufmgr,
 		   const char *name,
 		   unsigned long size,
 		   unsigned int alignment)
@@ -405,7 +405,7 @@ drm_bacon_bo_alloc(drm_bacon_bufmgr *bufmgr,
 }
 
 drm_bacon_bo *
-drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
+drm_bacon_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
 			 int x, int y, int cpp, uint32_t *tiling_mode,
 			 unsigned long *pitch, unsigned long flags)
 {
@@ -457,7 +457,7 @@ drm_bacon_bo_alloc_tiled(drm_bacon_bufmgr *bufmgr, const char *name,
  * to another.
  */
 drm_bacon_bo *
-drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
+drm_bacon_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
 				  const char *name,
 				  unsigned int handle)
 {
@@ -545,7 +545,7 @@ err_unref:
 static void
 bo_free(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_gem_close close;
 	struct hash_entry *entry;
 	int ret;
@@ -603,7 +603,7 @@ bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
 
 /** Frees all cached buffers significantly older than @time. */
 static void
-cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
+cleanup_bo_cache(struct brw_bufmgr *bufmgr, time_t time)
 {
 	int i;
 
@@ -631,7 +631,7 @@ cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
 }
 
 static void
-bo_purge_vma_cache(drm_bacon_bufmgr *bufmgr)
+bo_purge_vma_cache(struct brw_bufmgr *bufmgr)
 {
 	int limit;
 
@@ -672,7 +672,7 @@ bo_purge_vma_cache(drm_bacon_bufmgr *bufmgr)
 }
 
 static void
-bo_close_vma(drm_bacon_bufmgr *bufmgr, drm_bacon_bo *bo)
+bo_close_vma(struct brw_bufmgr *bufmgr, drm_bacon_bo *bo)
 {
 	bufmgr->vma_open--;
 	list_addtail(&bo->vma_list, &bufmgr->vma_cache);
@@ -686,7 +686,7 @@ bo_close_vma(drm_bacon_bufmgr *bufmgr, drm_bacon_bo *bo)
 }
 
 static void
-bo_open_vma(drm_bacon_bufmgr *bufmgr, drm_bacon_bo *bo)
+bo_open_vma(struct brw_bufmgr *bufmgr, drm_bacon_bo *bo)
 {
 	bufmgr->vma_open++;
 	list_del(&bo->vma_list);
@@ -702,7 +702,7 @@ bo_open_vma(drm_bacon_bufmgr *bufmgr, drm_bacon_bo *bo)
 static void
 bo_unreference_final(drm_bacon_bo *bo, time_t time)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct bo_cache_bucket *bucket;
 
 	DBG("bo_unreference final: %d (%s)\n",
@@ -739,7 +739,7 @@ drm_bacon_bo_unreference(drm_bacon_bo *bo)
 	assert(p_atomic_read(&bo->refcount) > 0);
 
 	if (atomic_add_unless(&bo->refcount, -1, 1)) {
-		drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+		struct brw_bufmgr *bufmgr = bo->bufmgr;
 		struct timespec time;
 
 		clock_gettime(CLOCK_MONOTONIC, &time);
@@ -758,7 +758,7 @@ drm_bacon_bo_unreference(drm_bacon_bo *bo)
 int
 drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
@@ -822,7 +822,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 static int
 map_gtt(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	int ret;
 
 	if (bo->map_count++ == 0)
@@ -881,7 +881,7 @@ map_gtt(drm_bacon_bo *bo)
 int
 drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
@@ -939,7 +939,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
 int
 drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	int ret;
 
 	/* If the CPU cache isn't coherent with the GTT, then use a
@@ -968,7 +968,7 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 int
 drm_bacon_bo_unmap(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	int ret = 0;
 
 	if (bo == NULL)
@@ -1003,7 +1003,7 @@ int
 drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 		     unsigned long size, const void *data)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_pwrite pwrite;
 	int ret;
 
@@ -1029,7 +1029,7 @@ int
 drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 			 unsigned long size, void *data)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_pread pread;
 	int ret;
 
@@ -1088,7 +1088,7 @@ drm_bacon_bo_wait_rendering(drm_bacon_bo *bo)
 int
 drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_wait wait;
 	int ret;
 
@@ -1112,7 +1112,7 @@ drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 void
 drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_domain set_domain;
 	int ret;
 
@@ -1132,7 +1132,7 @@ drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
 }
 
 void
-drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
+brw_bufmgr_destroy(struct brw_bufmgr *bufmgr)
 {
 	pthread_mutex_destroy(&bufmgr->lock);
 
@@ -1159,7 +1159,7 @@ drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 static int
 bo_set_tiling_internal(drm_bacon_bo *bo, uint32_t tiling_mode, uint32_t stride)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_tiling set_tiling;
 	int ret;
 
@@ -1219,7 +1219,7 @@ drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 }
 
 drm_bacon_bo *
-drm_bacon_bo_gem_create_from_prime(drm_bacon_bufmgr *bufmgr, int prime_fd, int size)
+drm_bacon_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd, int size)
 {
 	int ret;
 	uint32_t handle;
@@ -1296,7 +1296,7 @@ err:
 int
 drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
 	if (drmPrimeHandleToFD(bufmgr->fd, bo->gem_handle,
 			       DRM_CLOEXEC, prime_fd) != 0)
@@ -1310,7 +1310,7 @@ drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 int
 drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
 	if (!bo->global_name) {
 		struct drm_gem_flink flink;
@@ -1343,7 +1343,7 @@ drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
  * in flight at once.
  */
 void
-drm_bacon_bufmgr_gem_enable_reuse(drm_bacon_bufmgr *bufmgr)
+brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr)
 {
 	bufmgr->bo_reuse = true;
 }
@@ -1366,7 +1366,7 @@ drm_bacon_bo_is_reusable(drm_bacon_bo *bo)
 }
 
 static void
-add_bucket(drm_bacon_bufmgr *bufmgr, int size)
+add_bucket(struct brw_bufmgr *bufmgr, int size)
 {
 	unsigned int i = bufmgr->num_buckets;
 
@@ -1378,7 +1378,7 @@ add_bucket(drm_bacon_bufmgr *bufmgr, int size)
 }
 
 static void
-init_cache_buckets(drm_bacon_bufmgr *bufmgr)
+init_cache_buckets(struct brw_bufmgr *bufmgr)
 {
 	unsigned long size, cache_max_size = 64 * 1024 * 1024;
 
@@ -1405,7 +1405,7 @@ init_cache_buckets(drm_bacon_bufmgr *bufmgr)
 }
 
 void
-drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr, int limit)
+brw_bufmgr_gem_set_vma_cache_size(struct brw_bufmgr *bufmgr, int limit)
 {
 	bufmgr->vma_max = limit;
 
@@ -1413,7 +1413,7 @@ drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr, int limit)
 }
 
 uint32_t
-brw_create_hw_context(drm_bacon_bufmgr *bufmgr)
+brw_create_hw_context(struct brw_bufmgr *bufmgr)
 {
 	struct drm_i915_gem_context_create create;
 	int ret;
@@ -1430,7 +1430,7 @@ brw_create_hw_context(drm_bacon_bufmgr *bufmgr)
 }
 
 void
-brw_destroy_hw_context(drm_bacon_bufmgr *bufmgr, uint32_t ctx_id)
+brw_destroy_hw_context(struct brw_bufmgr *bufmgr, uint32_t ctx_id)
 {
 	struct drm_i915_gem_context_destroy d = { .ctx_id = ctx_id };
 
@@ -1442,7 +1442,7 @@ brw_destroy_hw_context(drm_bacon_bufmgr *bufmgr, uint32_t ctx_id)
 }
 
 int
-drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
+drm_bacon_reg_read(struct brw_bufmgr *bufmgr,
 		   uint32_t offset,
 		   uint64_t *result)
 {
@@ -1460,7 +1460,7 @@ drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 
 void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
 	if (bo->gtt_virtual)
 		return bo->gtt_virtual;
@@ -1504,7 +1504,7 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 
 void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
 	if (bo->mem_virtual)
 		return bo->mem_virtual;
@@ -1542,7 +1542,7 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 
 void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
 {
-	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
+	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
 	if (bo->wc_virtual)
 		return bo->wc_virtual;
@@ -1585,11 +1585,10 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
  *
  * \param fd File descriptor of the opened DRM device.
  */
-drm_bacon_bufmgr *
-drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
-                          int fd, int batch_size)
+struct brw_bufmgr *
+brw_bufmgr_init(struct gen_device_info *devinfo, int fd, int batch_size)
 {
-	drm_bacon_bufmgr *bufmgr;
+	struct brw_bufmgr *bufmgr;
 
 	bufmgr = calloc(1, sizeof(*bufmgr));
 	if (bufmgr == NULL)
