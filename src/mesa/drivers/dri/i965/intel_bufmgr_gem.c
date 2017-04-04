@@ -95,7 +95,7 @@ struct _drm_bacon_context {
 	struct _drm_bacon_bufmgr *bufmgr;
 };
 
-struct drm_bacon_gem_bo_bucket {
+struct bo_cache_bucket {
 	struct list_head head;
 	unsigned long size;
 };
@@ -106,7 +106,7 @@ typedef struct _drm_bacon_bufmgr {
 	pthread_mutex_t lock;
 
 	/** Array of lists of cached gem objects of power-of-two sizes */
-	struct drm_bacon_gem_bo_bucket cache_bucket[14 * 4];
+	struct bo_cache_bucket cache_bucket[14 * 4];
 	int num_buckets;
 	time_t time;
 
@@ -181,13 +181,13 @@ bo_tile_pitch(drm_bacon_bufmgr *bufmgr,
 	return ALIGN(pitch, tile_width);
 }
 
-static struct drm_bacon_gem_bo_bucket *
+static struct bo_cache_bucket *
 bucket_for_size(drm_bacon_bufmgr *bufmgr, unsigned long size)
 {
 	int i;
 
 	for (i = 0; i < bufmgr->num_buckets; i++) {
-		struct drm_bacon_gem_bo_bucket *bucket =
+		struct bo_cache_bucket *bucket =
 		    &bufmgr->cache_bucket[i];
 		if (bucket->size >= size) {
 			return bucket;
@@ -240,7 +240,7 @@ drm_bacon_bo_madvise(drm_bacon_bo *bo, int state)
 /* drop the oldest entries that have been purged by the kernel */
 static void
 drm_bacon_gem_bo_cache_purge_bucket(drm_bacon_bufmgr *bufmgr,
-				    struct drm_bacon_gem_bo_bucket *bucket)
+				    struct bo_cache_bucket *bucket)
 {
 	while (!list_empty(&bucket->head)) {
 		drm_bacon_bo *bo;
@@ -266,7 +266,7 @@ bo_alloc_internal(drm_bacon_bufmgr *bufmgr,
 	drm_bacon_bo *bo;
 	unsigned int page_size = getpagesize();
 	int ret;
-	struct drm_bacon_gem_bo_bucket *bucket;
+	struct bo_cache_bucket *bucket;
 	bool alloc_from_cache;
 	unsigned long bo_size;
 	bool for_render = false;
@@ -616,7 +616,7 @@ cleanup_bo_cache(drm_bacon_bufmgr *bufmgr, time_t time)
 		return;
 
 	for (i = 0; i < bufmgr->num_buckets; i++) {
-		struct drm_bacon_gem_bo_bucket *bucket =
+		struct bo_cache_bucket *bucket =
 		    &bufmgr->cache_bucket[i];
 
 		while (!list_empty(&bucket->head)) {
@@ -708,7 +708,7 @@ static void
 bo_unreference_final(drm_bacon_bo *bo, time_t time)
 {
 	drm_bacon_bufmgr *bufmgr = bo->bufmgr;
-	struct drm_bacon_gem_bo_bucket *bucket;
+	struct bo_cache_bucket *bucket;
 
 	DBG("bo_unreference final: %d (%s)\n",
 	    bo->gem_handle, bo->name);
@@ -1143,7 +1143,7 @@ drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr)
 
 	/* Free any cached buffer objects we were going to reuse */
 	for (int i = 0; i < bufmgr->num_buckets; i++) {
-		struct drm_bacon_gem_bo_bucket *bucket =
+		struct bo_cache_bucket *bucket =
 		    &bufmgr->cache_bucket[i];
 		drm_bacon_bo *bo;
 
