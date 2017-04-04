@@ -1307,38 +1307,38 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          }
 
          if (ctx->Array.ArrayBufferObj == bufObj) {
-            _mesa_BindBuffer( GL_ARRAY_BUFFER_ARB, 0 );
+            bind_buffer_object(ctx, &ctx->Array.ArrayBufferObj, 0);
          }
          if (vao->IndexBufferObj == bufObj) {
-            _mesa_BindBuffer( GL_ELEMENT_ARRAY_BUFFER_ARB, 0 );
+            bind_buffer_object(ctx, &vao->IndexBufferObj, 0);
          }
 
          /* unbind ARB_draw_indirect binding point */
          if (ctx->DrawIndirectBuffer == bufObj) {
-            _mesa_BindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
+            bind_buffer_object(ctx, &ctx->DrawIndirectBuffer, 0);
          }
 
          /* unbind ARB_indirect_parameters binding point */
          if (ctx->ParameterBuffer == bufObj) {
-            _mesa_BindBuffer(GL_PARAMETER_BUFFER_ARB, 0);
+            bind_buffer_object(ctx, &ctx->ParameterBuffer, 0);
          }
 
          /* unbind ARB_compute_shader binding point */
          if (ctx->DispatchIndirectBuffer == bufObj) {
-            _mesa_BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
+            bind_buffer_object(ctx, &ctx->DispatchIndirectBuffer, 0);
          }
 
          /* unbind ARB_copy_buffer binding points */
          if (ctx->CopyReadBuffer == bufObj) {
-            _mesa_BindBuffer( GL_COPY_READ_BUFFER, 0 );
+            bind_buffer_object(ctx, &ctx->CopyReadBuffer, 0);
          }
          if (ctx->CopyWriteBuffer == bufObj) {
-            _mesa_BindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+            bind_buffer_object(ctx, &ctx->CopyWriteBuffer, 0);
          }
 
          /* unbind transform feedback binding points */
          if (ctx->TransformFeedback.CurrentBuffer == bufObj) {
-            _mesa_BindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
+            bind_buffer_object(ctx, &ctx->TransformFeedback.CurrentBuffer, 0);
          }
          for (j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
             if (ctx->TransformFeedback.CurrentObject->Buffers[j] == bufObj) {
@@ -1354,7 +1354,7 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          }
 
          if (ctx->UniformBuffer == bufObj) {
-            _mesa_BindBuffer( GL_UNIFORM_BUFFER, 0 );
+            bind_buffer_object(ctx, &ctx->UniformBuffer, 0);
          }
 
          /* unbind SSBO binding points */
@@ -1365,7 +1365,7 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          }
 
          if (ctx->ShaderStorageBuffer == bufObj) {
-            _mesa_BindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+            bind_buffer_object(ctx, &ctx->ShaderStorageBuffer, 0);
          }
 
          /* unbind Atomci Buffer binding points */
@@ -1376,28 +1376,28 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          }
 
          if (ctx->AtomicBuffer == bufObj) {
-            _mesa_BindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
+            bind_buffer_object(ctx, &ctx->AtomicBuffer, 0);
          }
 
          /* unbind any pixel pack/unpack pointers bound to this buffer */
          if (ctx->Pack.BufferObj == bufObj) {
-            _mesa_BindBuffer( GL_PIXEL_PACK_BUFFER_EXT, 0 );
+            bind_buffer_object(ctx, &ctx->Pack.BufferObj, 0);
          }
          if (ctx->Unpack.BufferObj == bufObj) {
-            _mesa_BindBuffer( GL_PIXEL_UNPACK_BUFFER_EXT, 0 );
+            bind_buffer_object(ctx, &ctx->Unpack.BufferObj, 0);
          }
 
          if (ctx->Texture.BufferObject == bufObj) {
-            _mesa_BindBuffer( GL_TEXTURE_BUFFER, 0 );
+            bind_buffer_object(ctx, &ctx->Texture.BufferObject, 0);
          }
 
          if (ctx->ExternalVirtualMemoryBuffer == bufObj) {
-            _mesa_BindBuffer(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, 0);
+            bind_buffer_object(ctx, &ctx->ExternalVirtualMemoryBuffer, 0);
          }
 
          /* unbind query buffer binding point */
          if (ctx->QueryBuffer == bufObj) {
-            _mesa_BindBuffer(GL_QUERY_BUFFER, 0);
+            bind_buffer_object(ctx, &ctx->QueryBuffer, 0);
          }
 
          /* The ID is immediately freed for re-use */
