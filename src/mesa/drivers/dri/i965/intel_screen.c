@@ -1411,7 +1411,6 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    *batch++ = MI_BATCH_BUFFER_END;
 
    drm_bacon_bo_mrb_exec(bo, ALIGN((char *)batch - (char *)bo->virtual, 8),
-                         NULL, 0, 0,
                          I915_EXEC_RENDER);
 
    /* Check whether the value got written. */

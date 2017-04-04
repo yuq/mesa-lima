@@ -488,7 +488,7 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
             assert(in_fence_fd == -1);
             assert(out_fence_fd == NULL);
             ret = drm_bacon_bo_mrb_exec(batch->bo, 4 * USED_BATCH(*batch),
-                                        NULL, 0, 0, flags);
+                                        flags);
 	 } else {
 	    ret = drm_bacon_gem_bo_fence_exec(batch->bo, brw->hw_ctx,
                                                 4 * USED_BATCH(*batch),

@@ -42,8 +42,6 @@
 extern "C" {
 #endif
 
-struct drm_clip_rect;
-
 typedef struct _drm_bacon_bufmgr drm_bacon_bufmgr;
 typedef struct _drm_bacon_context drm_bacon_context;
 typedef struct _drm_bacon_bo drm_bacon_bo;
@@ -198,13 +196,10 @@ void drm_bacon_bo_wait_rendering(drm_bacon_bo *bo);
 void drm_bacon_bufmgr_destroy(drm_bacon_bufmgr *bufmgr);
 
 /** Executes the command buffer pointed to by bo. */
-int drm_bacon_bo_exec(drm_bacon_bo *bo, int used,
-		      struct drm_clip_rect *cliprects, int num_cliprects, int DR4);
+int drm_bacon_bo_exec(drm_bacon_bo *bo, int used);
 
 /** Executes the command buffer pointed to by bo on the selected ring buffer */
-int drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used,
-			struct drm_clip_rect *cliprects, int num_cliprects, int DR4,
-			unsigned int flags);
+int drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used, unsigned int flags);
 int drm_bacon_bufmgr_check_aperture_space(drm_bacon_bo ** bo_array, int count);
 
 /**

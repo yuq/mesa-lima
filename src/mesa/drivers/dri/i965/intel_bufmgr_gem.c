@@ -2000,7 +2000,6 @@ drm_bacon_update_buffer_offsets2 (drm_bacon_bufmgr_gem *bufmgr_gem)
 
 static int
 do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
-	 drm_clip_rect_t *cliprects, int num_cliprects, int DR4,
 	 int in_fence, int *out_fence,
 	 unsigned int flags)
 {
@@ -2046,10 +2045,10 @@ do_exec2(drm_bacon_bo *bo, int used, drm_bacon_context *ctx,
 	execbuf.buffer_count = bufmgr_gem->exec_count;
 	execbuf.batch_start_offset = 0;
 	execbuf.batch_len = used;
-	execbuf.cliprects_ptr = (uintptr_t)cliprects;
-	execbuf.num_cliprects = num_cliprects;
+	execbuf.cliprects_ptr = 0;
+	execbuf.num_cliprects = 0;
 	execbuf.DR1 = 0;
-	execbuf.DR4 = DR4;
+	execbuf.DR4 = 0;
 	execbuf.flags = flags;
 	if (ctx == NULL)
 		i915_execbuffer2_set_context_id(execbuf, 0);
@@ -2108,28 +2107,22 @@ skip_execution:
 }
 
 int
-drm_bacon_bo_exec(drm_bacon_bo *bo, int used,
-		  drm_clip_rect_t *cliprects, int num_cliprects,
-		  int DR4)
+drm_bacon_bo_exec(drm_bacon_bo *bo, int used)
 {
-	return do_exec2(bo, used, NULL, cliprects, num_cliprects, DR4,
-			-1, NULL, I915_EXEC_RENDER);
+	return do_exec2(bo, used, NULL, -1, NULL, I915_EXEC_RENDER);
 }
 
 int
-drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used,
-		      drm_clip_rect_t *cliprects, int num_cliprects, int DR4,
-		      unsigned int flags)
+drm_bacon_bo_mrb_exec(drm_bacon_bo *bo, int used, unsigned int flags)
 {
-	return do_exec2(bo, used, NULL, cliprects, num_cliprects, DR4,
-			-1, NULL, flags);
+	return do_exec2(bo, used, NULL, -1, NULL, flags);
 }
 
 int
 drm_bacon_gem_bo_context_exec(drm_bacon_bo *bo, drm_bacon_context *ctx,
 			      int used, unsigned int flags)
 {
-	return do_exec2(bo, used, ctx, NULL, 0, 0, -1, NULL, flags);
+	return do_exec2(bo, used, ctx, -1, NULL, flags);
 }
 
 int
@@ -2140,7 +2133,7 @@ drm_bacon_gem_bo_fence_exec(drm_bacon_bo *bo,
 			    int *out_fence,
 			    unsigned int flags)
 {
-	return do_exec2(bo, used, ctx, NULL, 0, 0, in_fence, out_fence, flags);
+	return do_exec2(bo, used, ctx, in_fence, out_fence, flags);
 }
 
 static int
