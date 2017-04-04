@@ -143,15 +143,19 @@ frame_ip(const struct debug_stack_frame *frame)
 }
 
 static const char *
-frame_filename(const struct debug_stack_frame *frame)
+frame_info(const struct debug_stack_frame *frame, unsigned *offset)
 {
    Dl_info dlinfo;
+   const void *addr = frame_ip(frame);
 
 
-   if (dladdr(frame_ip(frame), &dlinfo) && dlinfo.dli_fname &&
-           *dlinfo.dli_fname)
-       return dlinfo.dli_fname;
+   if (dladdr(addr, &dlinfo) && dlinfo.dli_fname &&
+           *dlinfo.dli_fname) {
+      *offset = (unsigned)((uintptr_t)addr - (uintptr_t)dlinfo.dli_fbase);
+      return dlinfo.dli_fname;
+   }
 
+   *offset = 0;
    return "?";
 }
 
@@ -159,13 +163,14 @@ void
 debug_backtrace_dump(const struct debug_stack_frame *backtrace,
                      unsigned nr_frames)
 {
-   unsigned i;
+   unsigned i, offset;
+   const char *filename;
 
    for (i = 0; i < nr_frames; ++i) {
       if (!backtrace[i].start_ip)
          break;
-      debug_printf("\t%u: %s (%s+0x%x) [%p]\n", i,
-            frame_filename(&backtrace[i]),
+      filename = frame_info(&backtrace[i], &offset);
+      debug_printf("\t%s(+0x%x) (%s+0x%x) [%p]\n", filename, offset,
             backtrace[i].procname, backtrace[i].off,
             frame_ip(&backtrace[i]));
    }
@@ -176,13 +181,14 @@ debug_backtrace_print(FILE *f,
                       const struct debug_stack_frame *backtrace,
                       unsigned nr_frames)
 {
-   unsigned i;
+   unsigned i, offset;
+   const char *filename;
 
    for (i = 0; i < nr_frames; ++i) {
       if (!backtrace[i].start_ip)
          break;
-      fprintf(f, "\t%u: %s (%s+0x%x) [%p]\n", i,
-            frame_filename(&backtrace[i]),
+      filename = frame_info(&backtrace[i], &offset);
+      fprintf(f, "\t%s(+0x%x) (%s+0x%x) [%p]\n", filename, offset,
             backtrace[i].procname, backtrace[i].off,
             frame_ip(&backtrace[i]));
    }
