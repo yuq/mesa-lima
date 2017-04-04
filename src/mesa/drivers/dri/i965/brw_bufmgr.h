@@ -46,88 +46,88 @@ extern "C" {
 struct gen_device_info;
 
 struct brw_bo {
-	/**
-	 * Size in bytes of the buffer object.
-	 *
-	 * The size may be larger than the size originally requested for the
-	 * allocation, such as being aligned to page size.
-	 */
-	unsigned long size;
+   /**
+    * Size in bytes of the buffer object.
+    *
+    * The size may be larger than the size originally requested for the
+    * allocation, such as being aligned to page size.
+    */
+   unsigned long size;
 
-	/**
-	 * Alignment requirement for object
-	 *
-	 * Used for GTT mapping & pinning the object.
-	 */
-	unsigned long align;
+   /**
+    * Alignment requirement for object
+    *
+    * Used for GTT mapping & pinning the object.
+    */
+   unsigned long align;
 
-	/**
-	 * Virtual address for accessing the buffer data.  Only valid while
-	 * mapped.
-	 */
+   /**
+    * Virtual address for accessing the buffer data.  Only valid while
+    * mapped.
+    */
 #ifdef __cplusplus
-	void *virt;
+   void *virt;
 #else
-	void *virtual;
+   void *virtual;
 #endif
 
-	/** Buffer manager context associated with this buffer object */
-	struct brw_bufmgr *bufmgr;
+   /** Buffer manager context associated with this buffer object */
+   struct brw_bufmgr *bufmgr;
 
-	/** The GEM handle for this buffer object. */
-	uint32_t gem_handle;
+   /** The GEM handle for this buffer object. */
+   uint32_t gem_handle;
 
-	/**
-	 * Last seen card virtual address (offset from the beginning of the
-	 * aperture) for the object.  This should be used to fill relocation
-	 * entries when calling brw_bo_emit_reloc()
-	 */
-	uint64_t offset64;
+   /**
+    * Last seen card virtual address (offset from the beginning of the
+    * aperture) for the object.  This should be used to fill relocation
+    * entries when calling brw_bo_emit_reloc()
+    */
+   uint64_t offset64;
 
-	/**
-	 * Boolean of whether the GPU is definitely not accessing the buffer.
-	 *
-	 * This is only valid when reusable, since non-reusable
-	 * buffers are those that have been shared with other
-	 * processes, so we don't know their state.
-	 */
-	bool idle;
+   /**
+    * Boolean of whether the GPU is definitely not accessing the buffer.
+    *
+    * This is only valid when reusable, since non-reusable
+    * buffers are those that have been shared with other
+    * processes, so we don't know their state.
+    */
+   bool idle;
 
-	int refcount;
-	const char *name;
+   int refcount;
+   const char *name;
 
-	/**
-	 * Kenel-assigned global name for this object
-         *
-         * List contains both flink named and prime fd'd objects
-	 */
-	unsigned int global_name;
+   /**
+    * Kenel-assigned global name for this object
+    *
+    * List contains both flink named and prime fd'd objects
+    */
+   unsigned int global_name;
 
-	/**
-	 * Current tiling mode
-	 */
-	uint32_t tiling_mode;
-	uint32_t swizzle_mode;
-	unsigned long stride;
+   /**
+    * Current tiling mode
+    */
+   uint32_t tiling_mode;
+   uint32_t swizzle_mode;
+   unsigned long stride;
 
-	time_t free_time;
+   time_t free_time;
 
-	/** Mapped address for the buffer, saved across map/unmap cycles */
-	void *mem_virtual;
-	/** GTT virtual address for the buffer, saved across map/unmap cycles */
-	void *gtt_virtual;
-	/** WC CPU address for the buffer, saved across map/unmap cycles */
-	void *wc_virtual;
-	int map_count;
-	struct list_head vma_list;
+   /** Mapped address for the buffer, saved across map/unmap cycles */
+   void *mem_virtual;
+   /** GTT virtual address for the buffer, saved across map/unmap cycles */
+   void *gtt_virtual;
+   /** WC CPU address for the buffer, saved across map/unmap cycles */
+   void *wc_virtual;
+   int map_count;
+   struct list_head vma_list;
 
-	/** BO cache list */
-	struct list_head head;
+   /** BO cache list */
+   struct list_head head;
 
-	/**
-	 * Boolean of whether this buffer can be re-used
-	 */
-	bool reusable;
+   /**
+    * Boolean of whether this buffer can be re-used
+    */
+   bool reusable;
 };
 
 #define BO_ALLOC_FOR_RENDER (1<<0)
@@ -140,7 +140,7 @@ struct brw_bo {
  * using bo_map() or brw_bo_map_gtt() to be used by the CPU.
  */
 struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
-				 unsigned long size, unsigned int alignment);
+                            unsigned long size, unsigned int alignment);
 /**
  * Allocate a buffer object, hinting that it will be used as a
  * render target.
@@ -148,9 +148,9 @@ struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
  * This is otherwise the same as bo_alloc.
  */
 struct brw_bo *brw_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
-					    const char *name,
-					    unsigned long size,
-					    unsigned int alignment);
+                                       const char *name,
+                                       unsigned long size,
+                                       unsigned int alignment);
 
 /**
  * Allocate a tiled buffer object.
@@ -168,11 +168,11 @@ struct brw_bo *brw_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
  * may have been rounded up to accommodate for tiling restrictions.
  */
 struct brw_bo *brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr,
-				       const char *name,
-				       int x, int y, int cpp,
-				       uint32_t *tiling_mode,
-				       unsigned long *pitch,
-				       unsigned long flags);
+                                  const char *name,
+                                  int x, int y, int cpp,
+                                  uint32_t *tiling_mode,
+                                  unsigned long *pitch,
+                                  unsigned long flags);
 
 /** Takes a reference on a buffer object */
 void brw_bo_reference(struct brw_bo *bo);
@@ -200,10 +200,10 @@ int brw_bo_unmap(struct brw_bo *bo);
 
 /** Write data into an object. */
 int brw_bo_subdata(struct brw_bo *bo, unsigned long offset,
-			 unsigned long size, const void *data);
+                   unsigned long size, const void *data);
 /** Read data from an object. */
 int brw_bo_get_subdata(struct brw_bo *bo, unsigned long offset,
-			     unsigned long size, void *data);
+                       unsigned long size, void *data);
 /**
  * Waits for rendering to an object by the GPU to have completed.
  *
@@ -224,8 +224,8 @@ void brw_bufmgr_destroy(struct brw_bufmgr *bufmgr);
  * \param buf Buffer to set tiling mode for
  * \param tiling_mode desired, and returned tiling mode
  */
-int brw_bo_set_tiling(struct brw_bo *bo, uint32_t * tiling_mode,
-			    uint32_t stride);
+int brw_bo_set_tiling(struct brw_bo *bo, uint32_t *tiling_mode,
+                      uint32_t stride);
 /**
  * Get the current tiling (and resulting swizzling) mode for the bo.
  *
@@ -233,8 +233,8 @@ int brw_bo_set_tiling(struct brw_bo *bo, uint32_t * tiling_mode,
  * \param tiling_mode returned tiling mode
  * \param swizzle_mode returned swizzling mode
  */
-int brw_bo_get_tiling(struct brw_bo *bo, uint32_t * tiling_mode,
-			    uint32_t * swizzle_mode);
+int brw_bo_get_tiling(struct brw_bo *bo, uint32_t *tiling_mode,
+                      uint32_t *swizzle_mode);
 
 /**
  * Create a visible name for a buffer which can be used by other apps
@@ -242,7 +242,7 @@ int brw_bo_get_tiling(struct brw_bo *bo, uint32_t * tiling_mode,
  * \param buf Buffer to create a name for
  * \param name Returned name
  */
-int brw_bo_flink(struct brw_bo *bo, uint32_t * name);
+int brw_bo_flink(struct brw_bo *bo, uint32_t *name);
 
 /**
  * Returns 1 if mapping the buffer for write could cause the process
@@ -288,7 +288,7 @@ struct brw_bo *brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
                                            unsigned int handle);
 void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
 void brw_bufmgr_gem_set_vma_cache_size(struct brw_bufmgr *bufmgr,
-					     int limit);
+                                       int limit);
 int brw_bo_map_unsynchronized(struct brw_bo *bo);
 int brw_bo_map_gtt(struct brw_bo *bo);
 
@@ -305,14 +305,14 @@ void brw_destroy_hw_context(struct brw_bufmgr *bufmgr, uint32_t ctx_id);
 
 int brw_bo_gem_export_to_prime(struct brw_bo *bo, int *prime_fd);
 struct brw_bo *brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr,
-						int prime_fd, int size);
+                                            int prime_fd, int size);
 
-int brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset, uint64_t *result);
+int brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset,
+                 uint64_t *result);
 
 /** @{ */
 
 #if defined(__cplusplus)
 }
 #endif
-
 #endif /* INTEL_BUFMGR_H */
