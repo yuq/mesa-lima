@@ -42,6 +42,8 @@
 extern "C" {
 #endif
 
+struct gen_device_info;
+
 typedef struct _drm_bacon_bufmgr drm_bacon_bufmgr;
 typedef struct _drm_bacon_context drm_bacon_context;
 typedef struct _drm_bacon_bo drm_bacon_bo;
@@ -293,7 +295,8 @@ int drm_bacon_bo_is_reusable(drm_bacon_bo *bo);
 int drm_bacon_bo_references(drm_bacon_bo *bo, drm_bacon_bo *target_bo);
 
 /* drm_bacon_bufmgr_gem.c */
-drm_bacon_bufmgr *drm_bacon_bufmgr_gem_init(int fd, int batch_size);
+drm_bacon_bufmgr *drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
+					    int fd, int batch_size);
 drm_bacon_bo *drm_bacon_bo_gem_create_from_name(drm_bacon_bufmgr *bufmgr,
 						const char *name,
 						unsigned int handle);
@@ -316,7 +319,6 @@ int drm_bacon_gem_bo_get_reloc_count(drm_bacon_bo *bo);
 void drm_bacon_gem_bo_clear_relocs(drm_bacon_bo *bo, int start);
 void drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable);
 
-int drm_bacon_bufmgr_gem_get_devid(drm_bacon_bufmgr *bufmgr);
 int drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns);
 
 drm_bacon_context *drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr);

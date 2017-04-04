@@ -57,12 +57,12 @@
 #define ETIME ETIMEDOUT
 #endif
 #include "common/gen_debug.h"
+#include "common/gen_device_info.h"
 #include "libdrm_macros.h"
 #include "main/macros.h"
 #include "util/macros.h"
 #include "util/list.h"
 #include "brw_bufmgr.h"
-#include "intel_chipset.h"
 #include "string.h"
 
 #include "i915_drm.h"
@@ -146,8 +146,6 @@ typedef struct _drm_bacon_bufmgr {
 	int vma_count, vma_open, vma_max;
 
 	uint64_t gtt_size;
-	int pci_device;
-	int gen;
 	unsigned int has_bsd : 1;
 	unsigned int has_blt : 1;
 	unsigned int has_llc : 1;
@@ -2636,71 +2634,6 @@ drm_bacon_bufmgr_gem_set_vma_cache_size(drm_bacon_bufmgr *bufmgr, int limit)
 	drm_bacon_gem_bo_purge_vma_cache(bufmgr);
 }
 
-static int
-parse_devid_override(const char *devid_override)
-{
-	static const struct {
-		const char *name;
-		int pci_id;
-	} name_map[] = {
-		{ "brw", PCI_CHIP_I965_GM },
-		{ "g4x", PCI_CHIP_GM45_GM },
-		{ "ilk", PCI_CHIP_ILD_G },
-		{ "snb", PCI_CHIP_SANDYBRIDGE_M_GT2_PLUS },
-		{ "ivb", PCI_CHIP_IVYBRIDGE_S_GT2 },
-		{ "hsw", PCI_CHIP_HASWELL_CRW_E_GT3 },
-		{ "byt", PCI_CHIP_VALLEYVIEW_3 },
-		{ "bdw", 0x1620 | BDW_ULX },
-		{ "skl", PCI_CHIP_SKYLAKE_DT_GT2 },
-		{ "kbl", PCI_CHIP_KABYLAKE_DT_GT2 },
-	};
-	unsigned int i;
-
-	for (i = 0; i < ARRAY_SIZE(name_map); i++) {
-		if (!strcmp(name_map[i].name, devid_override))
-			return name_map[i].pci_id;
-	}
-
-	return strtod(devid_override, NULL);
-}
-
-/**
- * Get the PCI ID for the device.  This can be overridden by setting the
- * INTEL_DEVID_OVERRIDE environment variable to the desired ID.
- */
-static int
-get_pci_device_id(drm_bacon_bufmgr *bufmgr)
-{
-	char *devid_override;
-	int devid = 0;
-	int ret;
-	drm_i915_getparam_t gp;
-
-	if (geteuid() == getuid()) {
-		devid_override = getenv("INTEL_DEVID_OVERRIDE");
-		if (devid_override) {
-			bufmgr->no_exec = true;
-			return parse_devid_override(devid_override);
-		}
-	}
-
-	memclear(gp);
-	gp.param = I915_PARAM_CHIPSET_ID;
-	gp.value = &devid;
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	if (ret) {
-		fprintf(stderr, "get chip id failed: %d [%d]\n", ret, errno);
-		fprintf(stderr, "param: %d, val: %d\n", gp.param, *gp.value);
-	}
-	return devid;
-}
-
-int
-drm_bacon_bufmgr_gem_get_devid(drm_bacon_bufmgr *bufmgr)
-{
-	return bufmgr->pci_device;
-}
-
 drm_bacon_context *
 drm_bacon_gem_context_create(drm_bacon_bufmgr *bufmgr)
 {
@@ -2982,7 +2915,8 @@ void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
  * \param fd File descriptor of the opened DRM device.
  */
 drm_bacon_bufmgr *
-drm_bacon_bufmgr_gem_init(int fd, int batch_size)
+drm_bacon_bufmgr_gem_init(struct gen_device_info *devinfo,
+                          int fd, int batch_size)
 {
 	drm_bacon_bufmgr *bufmgr;
 	struct drm_i915_gem_get_aperture aperture;
@@ -3012,26 +2946,6 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
 	bufmgr->gtt_size = aperture.aper_available_size;
 
-	bufmgr->pci_device = get_pci_device_id(bufmgr);
-
-	if (IS_GEN4(bufmgr->pci_device))
-		bufmgr->gen = 4;
-	else if (IS_GEN5(bufmgr->pci_device))
-		bufmgr->gen = 5;
-	else if (IS_GEN6(bufmgr->pci_device))
-		bufmgr->gen = 6;
-	else if (IS_GEN7(bufmgr->pci_device))
-		bufmgr->gen = 7;
-	else if (IS_GEN8(bufmgr->pci_device))
-		bufmgr->gen = 8;
-	else if (IS_GEN9(bufmgr->pci_device))
-		bufmgr->gen = 9;
-	else {
-		free(bufmgr);
-		bufmgr = NULL;
-		goto exit;
-	}
-
 	memclear(gp);
 	gp.value = &tmp;
 
@@ -3047,16 +2961,7 @@ drm_bacon_bufmgr_gem_init(int fd, int batch_size)
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	bufmgr->has_exec_async = ret == 0;
 
-	gp.param = I915_PARAM_HAS_LLC;
-	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-	if (ret != 0) {
-		/* Kernel does not supports HAS_LLC query, fallback to GPU
-		 * generation detection and assume that we have LLC on GEN6/7
-		 */
-		bufmgr->has_llc = (IS_GEN6(bufmgr->pci_device) |
-				IS_GEN7(bufmgr->pci_device));
-	} else
-		bufmgr->has_llc = *gp.value;
+	bufmgr->has_llc = devinfo->has_llc;
 
 	gp.param = I915_PARAM_HAS_VEBOX;
 	ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GETPARAM, &gp);
