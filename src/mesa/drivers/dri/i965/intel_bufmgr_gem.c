@@ -1476,38 +1476,6 @@ drm_bacon_gem_context_destroy(drm_bacon_context *ctx)
 }
 
 int
-drm_bacon_get_reset_stats(drm_bacon_context *ctx,
-			  uint32_t *reset_count,
-			  uint32_t *active,
-			  uint32_t *pending)
-{
-	struct drm_i915_reset_stats stats;
-	int ret;
-
-	if (ctx == NULL)
-		return -EINVAL;
-
-	memclear(stats);
-
-	stats.ctx_id = ctx->ctx_id;
-	ret = drmIoctl(ctx->bufmgr->fd,
-		       DRM_IOCTL_I915_GET_RESET_STATS,
-		       &stats);
-	if (ret == 0) {
-		if (reset_count != NULL)
-			*reset_count = stats.reset_count;
-
-		if (active != NULL)
-			*active = stats.batch_active;
-
-		if (pending != NULL)
-			*pending = stats.batch_pending;
-	}
-
-	return ret;
-}
-
-int
 drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 		   uint32_t offset,
 		   uint64_t *result)

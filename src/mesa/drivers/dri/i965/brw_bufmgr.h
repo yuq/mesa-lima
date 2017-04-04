@@ -317,11 +317,6 @@ int drm_bacon_reg_read(drm_bacon_bufmgr *bufmgr,
 		       uint32_t offset,
 		       uint64_t *result);
 
-int drm_bacon_get_reset_stats(drm_bacon_context *ctx,
-			      uint32_t *reset_count,
-			      uint32_t *active,
-			      uint32_t *pending);
-
 /** @{ */
 
 #if defined(__cplusplus)
