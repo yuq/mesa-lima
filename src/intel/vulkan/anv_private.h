@@ -2083,6 +2083,35 @@ struct anv_image {
    struct anv_surface aux_surface;
 };
 
+/* Returns the number of auxiliary buffer levels attached to an image. */
+static inline uint8_t
+anv_image_aux_levels(const struct anv_image * const image)
+{
+   assert(image);
+   return image->aux_surface.isl.size > 0 ? image->aux_surface.isl.levels : 0;
+}
+
+/* Returns the number of auxiliary buffer layers attached to an image. */
+static inline uint32_t
+anv_image_aux_layers(const struct anv_image * const image,
+                     const uint8_t miplevel)
+{
+   assert(image);
+
+   /* The miplevel must exist in the main buffer. */
+   assert(miplevel < image->levels);
+
+   if (miplevel >= anv_image_aux_levels(image)) {
+      /* There are no layers with auxiliary data because the miplevel has no
+       * auxiliary data.
+       */
+      return 0;
+   } else {
+      return MAX2(image->aux_surface.isl.logical_level0_px.array_len,
+                  image->aux_surface.isl.logical_level0_px.depth >> miplevel);
+   }
+}
+
 /* Returns true if a HiZ-enabled depth buffer can be sampled from. */
 static inline bool
 anv_can_sample_with_hiz(const struct gen_device_info * const devinfo,

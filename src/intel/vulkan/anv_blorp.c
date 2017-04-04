@@ -1491,6 +1491,9 @@ anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
          blorp_layer_count = anv_get_layerCount(image, subresourceRange);
       }
 
+      assert(level < anv_image_aux_levels(image));
+      assert(blorp_base_layer + blorp_layer_count <=
+             anv_image_aux_layers(image, level));
       blorp_fast_clear(&batch, &surf, surf.surf->format,
                        level, blorp_base_layer, blorp_layer_count,
                        0, 0, extent.width, extent.height);
