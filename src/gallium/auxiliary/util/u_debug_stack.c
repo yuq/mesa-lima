@@ -62,7 +62,7 @@ debug_backtrace_capture(struct debug_stack_frame *backtrace,
    while ((start_frame > 0) && (unw_step(&cursor) > 0))
       start_frame--;
 
-   while (unw_step(&cursor) > 0) {
+   while ((i < nr_frames) && (unw_step(&cursor) > 0)) {
       char procname[256];
       const char *filename;
       unw_word_t off;
