@@ -247,6 +247,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_DOUBLES:
    case PIPE_CAP_INT64:
    case PIPE_CAP_TGSI_TEX_TXF_LZ:
+   case PIPE_CAP_TGSI_CLOCK:
       return 1;
    case PIPE_CAP_COMPUTE:
       return (class_3d < GP100_3D_CLASS);
@@ -287,7 +288,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_NATIVE_FENCE_FD:
    case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
    case PIPE_CAP_INT64_DIVMOD:
-   case PIPE_CAP_TGSI_CLOCK:
    case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
    case PIPE_CAP_TGSI_BALLOT:
       return 0;
