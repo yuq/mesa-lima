@@ -67,7 +67,7 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
 {
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;
-   drm_bacon_bo *bo = address.buffer;
+   struct brw_bo *bo = address.buffer;
 
    brw_emit_reloc(&brw->batch, ss_offset, bo, address.offset + delta,
                   address.read_domains, address.write_domain);
@@ -199,7 +199,7 @@ genX(blorp_exec)(struct blorp_batch *batch,
 retry:
    intel_batchbuffer_require_space(brw, estimated_max_batch_usage, RENDER_RING);
    intel_batchbuffer_save_state(brw);
-   drm_bacon_bo *saved_bo = brw->batch.bo;
+   struct brw_bo *saved_bo = brw->batch.bo;
    uint32_t saved_used = USED_BATCH(brw->batch);
    uint32_t saved_state_batch_offset = brw->batch.state_batch_offset;
 

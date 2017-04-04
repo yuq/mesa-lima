@@ -220,7 +220,7 @@ brw_emit_prim(struct brw_context *brw,
       ADVANCE_BATCH();
    } else if (prim->is_indirect) {
       struct gl_buffer_object *indirect_buffer = brw->ctx.DrawIndirectBuffer;
-      drm_bacon_bo *bo = intel_bufferobj_buffer(brw,
+      struct brw_bo *bo = intel_bufferobj_buffer(brw,
             intel_buffer_object(indirect_buffer),
             prim->indirect_offset, 5 * sizeof(GLuint));
 
@@ -291,7 +291,7 @@ brw_merge_inputs(struct brw_context *brw,
    GLuint i;
 
    for (i = 0; i < brw->vb.nr_buffers; i++) {
-      drm_bacon_bo_unreference(brw->vb.buffers[i].bo);
+      brw_bo_unreference(brw->vb.buffers[i].bo);
       brw->vb.buffers[i].bo = NULL;
    }
    brw->vb.nr_buffers = 0;
@@ -551,13 +551,13 @@ brw_try_draw_prims(struct gl_context *ctx,
 
       brw->draw.params.gl_basevertex = new_basevertex;
       brw->draw.params.gl_baseinstance = new_baseinstance;
-      drm_bacon_bo_unreference(brw->draw.draw_params_bo);
+      brw_bo_unreference(brw->draw.draw_params_bo);
 
       if (prims[i].is_indirect) {
          /* Point draw_params_bo at the indirect buffer. */
          brw->draw.draw_params_bo =
             intel_buffer_object(ctx->DrawIndirectBuffer)->buffer;
-         drm_bacon_bo_reference(brw->draw.draw_params_bo);
+         brw_bo_reference(brw->draw.draw_params_bo);
          brw->draw.draw_params_offset =
             prims[i].indirect_offset + (prims[i].indexed ? 12 : 8);
       } else {
@@ -575,7 +575,7 @@ brw_try_draw_prims(struct gl_context *ctx,
        * the loop.
        */
       brw->draw.gl_drawid = prims[i].draw_id;
-      drm_bacon_bo_unreference(brw->draw.draw_id_bo);
+      brw_bo_unreference(brw->draw.draw_id_bo);
       brw->draw.draw_id_bo = NULL;
       if (i > 0 && vs_prog_data->uses_drawid)
          brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
@@ -711,7 +711,7 @@ brw_draw_destroy(struct brw_context *brw)
    unsigned i;
 
    for (i = 0; i < brw->vb.nr_buffers; i++) {
-      drm_bacon_bo_unreference(brw->vb.buffers[i].bo);
+      brw_bo_unreference(brw->vb.buffers[i].bo);
       brw->vb.buffers[i].bo = NULL;
    }
    brw->vb.nr_buffers = 0;
@@ -721,6 +721,6 @@ brw_draw_destroy(struct brw_context *brw)
    }
    brw->vb.nr_enabled = 0;
 
-   drm_bacon_bo_unreference(brw->ib.bo);
+   brw_bo_unreference(brw->ib.bo);
    brw->ib.bo = NULL;
 }

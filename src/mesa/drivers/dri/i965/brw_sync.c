@@ -57,7 +57,7 @@ struct brw_fence {
    } type;
 
    union {
-      drm_bacon_bo *batch_bo;
+      struct brw_bo *batch_bo;
 
       /* This struct owns the fd. */
       int sync_fd;
@@ -96,7 +96,7 @@ brw_fence_finish(struct brw_fence *fence)
    switch (fence->type) {
    case BRW_FENCE_TYPE_BO_WAIT:
       if (fence->batch_bo)
-         drm_bacon_bo_unreference(fence->batch_bo);
+         brw_bo_unreference(fence->batch_bo);
       break;
    case BRW_FENCE_TYPE_SYNC_FD:
       if (fence->sync_fd != -1)
@@ -118,10 +118,10 @@ brw_fence_insert_locked(struct brw_context *brw, struct brw_fence *fence)
       assert(!fence->signalled);
 
       fence->batch_bo = brw->batch.bo;
-      drm_bacon_bo_reference(fence->batch_bo);
+      brw_bo_reference(fence->batch_bo);
 
       if (intel_batchbuffer_flush(brw) < 0) {
-         drm_bacon_bo_unreference(fence->batch_bo);
+         brw_bo_unreference(fence->batch_bo);
          fence->batch_bo = NULL;
          return false;
       }
@@ -179,10 +179,10 @@ brw_fence_has_completed_locked(struct brw_fence *fence)
          return false;
       }
 
-      if (drm_bacon_bo_busy(fence->batch_bo))
+      if (brw_bo_busy(fence->batch_bo))
          return false;
 
-      drm_bacon_bo_unreference(fence->batch_bo);
+      brw_bo_unreference(fence->batch_bo);
       fence->batch_bo = NULL;
       fence->signalled = true;
 
@@ -238,11 +238,11 @@ brw_fence_client_wait_locked(struct brw_context *brw, struct brw_fence *fence,
       if (timeout > INT64_MAX)
          timeout = INT64_MAX;
 
-      if (drm_bacon_gem_bo_wait(fence->batch_bo, timeout) != 0)
+      if (brw_bo_wait(fence->batch_bo, timeout) != 0)
          return false;
 
       fence->signalled = true;
-      drm_bacon_bo_unreference(fence->batch_bo);
+      brw_bo_unreference(fence->batch_bo);
       fence->batch_bo = NULL;
 
       return true;

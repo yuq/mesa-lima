@@ -69,7 +69,7 @@ set_query_availability(struct brw_context *brw, struct brw_query_object *query,
 
 static void
 write_primitives_generated(struct brw_context *brw,
-                           drm_bacon_bo *query_bo, int stream, int idx)
+                           struct brw_bo *query_bo, int stream, int idx)
 {
    brw_emit_mi_flush(brw);
 
@@ -85,7 +85,7 @@ write_primitives_generated(struct brw_context *brw,
 
 static void
 write_xfb_primitives_written(struct brw_context *brw,
-                             drm_bacon_bo *bo, int stream, int idx)
+                             struct brw_bo *bo, int stream, int idx)
 {
    brw_emit_mi_flush(brw);
 
@@ -100,7 +100,7 @@ write_xfb_primitives_written(struct brw_context *brw,
 
 static void
 write_xfb_overflow_streams(struct gl_context *ctx,
-                           drm_bacon_bo *bo, int stream, int count,
+                           struct brw_bo *bo, int stream, int count,
                            int idx)
 {
    struct brw_context *brw = brw_context(ctx);
@@ -156,7 +156,7 @@ pipeline_target_to_index(int target)
 }
 
 static void
-emit_pipeline_stat(struct brw_context *brw, drm_bacon_bo *bo,
+emit_pipeline_stat(struct brw_context *brw, struct brw_bo *bo,
                    int stream, int target, int idx)
 {
    /* One source of confusion is the tessellation shader statistics. The
@@ -212,7 +212,7 @@ gen6_queryobj_get_results(struct gl_context *ctx,
    if (query->bo == NULL)
       return;
 
-   drm_bacon_bo_map(query->bo, false);
+   brw_bo_map(query->bo, false);
    uint64_t *results = query->bo->virtual;
    switch (query->Base.Target) {
    case GL_TIME_ELAPSED:
@@ -288,12 +288,12 @@ gen6_queryobj_get_results(struct gl_context *ctx,
    default:
       unreachable("Unrecognized query target in brw_queryobj_get_results()");
    }
-   drm_bacon_bo_unmap(query->bo);
+   brw_bo_unmap(query->bo);
 
    /* Now that we've processed the data stored in the query's buffer object,
     * we can release it.
     */
-   drm_bacon_bo_unreference(query->bo);
+   brw_bo_unreference(query->bo);
    query->bo = NULL;
 
    query->Base.Ready = true;
@@ -312,8 +312,8 @@ gen6_begin_query(struct gl_context *ctx, struct gl_query_object *q)
    struct brw_query_object *query = (struct brw_query_object *)q;
 
    /* Since we're starting a new query, we need to throw away old results. */
-   drm_bacon_bo_unreference(query->bo);
-   query->bo = drm_bacon_bo_alloc(brw->bufmgr, "query results", 4096, 4096);
+   brw_bo_unreference(query->bo);
+   query->bo = brw_bo_alloc(brw->bufmgr, "query results", 4096, 4096);
 
    /* For ARB_query_buffer_object: The result is not available */
    set_query_availability(brw, query, false);
@@ -519,7 +519,7 @@ static void gen6_check_query(struct gl_context *ctx, struct gl_query_object *q)
     */
    flush_batch_if_needed(brw, query);
 
-   if (!drm_bacon_bo_busy(query->bo)) {
+   if (!brw_bo_busy(query->bo)) {
       gen6_queryobj_get_results(ctx, query);
    }
 }

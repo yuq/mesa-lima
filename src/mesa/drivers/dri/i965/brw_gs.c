@@ -124,7 +124,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
       st_index = brw_get_shader_time_index(brw, &gp->program, ST_GS, true);
 
    if (unlikely(brw->perf_debug)) {
-      start_busy = brw->batch.last_bo && drm_bacon_bo_busy(brw->batch.last_bo);
+      start_busy = brw->batch.last_bo && brw_bo_busy(brw->batch.last_bo);
       start_time = get_time();
    }
 
@@ -147,7 +147,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
       if (gp->compiled_once) {
          brw_gs_debug_recompile(brw, &gp->program, key);
       }
-      if (start_busy && !drm_bacon_bo_busy(brw->batch.last_bo)) {
+      if (start_busy && !brw_bo_busy(brw->batch.last_bo)) {
          perf_debug("GS compile took %.03f ms and stalled the GPU\n",
                     (get_time() - start_time) * 1000);
       }

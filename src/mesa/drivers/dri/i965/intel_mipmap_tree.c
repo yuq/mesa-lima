@@ -616,16 +616,16 @@ miptree_create(struct brw_context *brw,
 
    if (format == MESA_FORMAT_S_UINT8) {
       /* Align to size of W tile, 64x64. */
-      mt->bo = drm_bacon_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                        ALIGN(mt->total_width, 64),
-                                        ALIGN(mt->total_height, 64),
-                                        mt->cpp, &mt->tiling, &pitch,
-                                        alloc_flags);
+      mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                  ALIGN(mt->total_width, 64),
+                                  ALIGN(mt->total_height, 64),
+                                  mt->cpp, &mt->tiling, &pitch,
+                                  alloc_flags);
    } else {
-      mt->bo = drm_bacon_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                        mt->total_width, mt->total_height,
-                                        mt->cpp, &mt->tiling, &pitch,
-                                        alloc_flags);
+      mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                  mt->total_width, mt->total_height,
+                                  mt->cpp, &mt->tiling, &pitch,
+                                  alloc_flags);
    }
 
    mt->pitch = pitch;
@@ -665,8 +665,8 @@ intel_miptree_create(struct brw_context *brw,
                  mt->total_width, mt->total_height);
 
       mt->tiling = I915_TILING_X;
-      drm_bacon_bo_unreference(mt->bo);
-      mt->bo = drm_bacon_bo_alloc_tiled(brw->bufmgr, "miptree",
+      brw_bo_unreference(mt->bo);
+      mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
                                   mt->total_width, mt->total_height, mt->cpp,
                                   &mt->tiling, &pitch, alloc_flags);
       mt->pitch = pitch;
@@ -719,7 +719,7 @@ intel_miptree_create(struct brw_context *brw,
 
 struct intel_mipmap_tree *
 intel_miptree_create_for_bo(struct brw_context *brw,
-                            drm_bacon_bo *bo,
+                            struct brw_bo *bo,
                             mesa_format format,
                             uint32_t offset,
                             uint32_t width,
@@ -732,7 +732,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    uint32_t tiling, swizzle;
    GLenum target;
 
-   drm_bacon_bo_get_tiling(bo, &tiling, &swizzle);
+   brw_bo_get_tiling(bo, &tiling, &swizzle);
 
    /* Nothing will be able to use this miptree with the BO if the offset isn't
     * aligned.
@@ -761,7 +761,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    if (!mt)
       return NULL;
 
-   drm_bacon_bo_reference(bo);
+   brw_bo_reference(bo);
    mt->bo = bo;
    mt->pitch = pitch;
    mt->offset = offset;
@@ -783,7 +783,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 void
 intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
                                          struct intel_renderbuffer *irb,
-                                         drm_bacon_bo *bo,
+                                         struct brw_bo *bo,
                                          uint32_t width, uint32_t height,
                                          uint32_t pitch)
 {
@@ -914,7 +914,7 @@ intel_miptree_hiz_buffer_free(struct intel_miptree_hiz_buffer *hiz_buf)
    if (hiz_buf->mt)
       intel_miptree_release(&hiz_buf->mt);
    else
-      drm_bacon_bo_unreference(hiz_buf->aux_base.bo);
+      brw_bo_unreference(hiz_buf->aux_base.bo);
 
    free(hiz_buf);
 }
@@ -931,12 +931,12 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
 
       DBG("%s deleting %p\n", __func__, *mt);
 
-      drm_bacon_bo_unreference((*mt)->bo);
+      brw_bo_unreference((*mt)->bo);
       intel_miptree_release(&(*mt)->stencil_mt);
       intel_miptree_release(&(*mt)->r8stencil_mt);
       intel_miptree_hiz_buffer_free((*mt)->hiz_buf);
       if ((*mt)->mcs_buf) {
-         drm_bacon_bo_unreference((*mt)->mcs_buf->bo);
+         brw_bo_unreference((*mt)->mcs_buf->bo);
          free((*mt)->mcs_buf);
       }
       intel_resolve_map_clear(&(*mt)->hiz_map);
@@ -1386,16 +1386,16 @@ intel_miptree_init_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   const int ret = drm_bacon_gem_bo_map_gtt(mt->mcs_buf->bo);
+   const int ret = brw_bo_map_gtt(mt->mcs_buf->bo);
    if (unlikely(ret)) {
       fprintf(stderr, "Failed to map mcs buffer into GTT\n");
-      drm_bacon_bo_unreference(mt->mcs_buf->bo);
+      brw_bo_unreference(mt->mcs_buf->bo);
       free(mt->mcs_buf);
       return;
    }
    void *data = mt->mcs_buf->bo->virtual;
    memset(data, init_value, mt->mcs_buf->size);
-   drm_bacon_bo_unmap(mt->mcs_buf->bo);
+   brw_bo_unmap(mt->mcs_buf->bo);
 }
 
 static struct intel_miptree_aux_buffer *
@@ -1442,7 +1442,7 @@ intel_mcs_miptree_buf_create(struct brw_context *brw,
     * structure should go away. We use miptree create simply as a means to make
     * sure all the constraints for the buffer are satisfied.
     */
-   drm_bacon_bo_reference(temp_mt->bo);
+   brw_bo_reference(temp_mt->bo);
    intel_miptree_release(&temp_mt);
 
    return buf;
@@ -1551,7 +1551,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     * Therefore one can pass the ISL dimensions in terms of bytes instead of
     * trying to recalculate based on different format block sizes.
     */
-   buf->bo = drm_bacon_bo_alloc_tiled(brw->bufmgr, "ccs-miptree",
+   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, "ccs-miptree",
                                       buf->pitch, buf->size / buf->pitch,
                                       1, &tiling, &pitch, alloc_flags);
    if (buf->bo) {
@@ -1688,7 +1688,7 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
 
    unsigned long pitch;
    uint32_t tiling = I915_TILING_Y;
-   buf->aux_base.bo = drm_bacon_bo_alloc_tiled(brw->bufmgr, "hiz",
+   buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz",
                                                hz_width, hz_height, 1,
                                                &tiling, &pitch,
                                                BO_ALLOC_FOR_RENDER);
@@ -1696,7 +1696,7 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
       free(buf);
       return NULL;
    } else if (tiling != I915_TILING_Y) {
-      drm_bacon_bo_unreference(buf->aux_base.bo);
+      brw_bo_unreference(buf->aux_base.bo);
       free(buf);
       return NULL;
    }
@@ -1785,7 +1785,7 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
 
    unsigned long pitch;
    uint32_t tiling = I915_TILING_Y;
-   buf->aux_base.bo = drm_bacon_bo_alloc_tiled(brw->bufmgr, "hiz",
+   buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz",
                                                hz_width, hz_height, 1,
                                                &tiling, &pitch,
                                                BO_ALLOC_FOR_RENDER);
@@ -1793,7 +1793,7 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
       free(buf);
       return NULL;
    } else if (tiling != I915_TILING_Y) {
-      drm_bacon_bo_unreference(buf->aux_base.bo);
+      brw_bo_unreference(buf->aux_base.bo);
       free(buf);
       return NULL;
    }
@@ -2272,7 +2272,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
    if (mt->mcs_buf) {
       intel_miptree_all_slices_resolve_color(brw, mt, 0);
       mt->aux_disable |= (INTEL_AUX_DISABLE_CCS | INTEL_AUX_DISABLE_MCS);
-      drm_bacon_bo_unreference(mt->mcs_buf->bo);
+      brw_bo_unreference(mt->mcs_buf->bo);
       free(mt->mcs_buf);
       mt->mcs_buf = NULL;
 
@@ -2455,7 +2455,7 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
     */
    intel_miptree_all_slices_resolve_color(brw, mt, 0);
 
-   drm_bacon_bo *bo = mt->bo;
+   struct brw_bo *bo = mt->bo;
 
    if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
@@ -2473,9 +2473,9 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
     * long as cache consistency is maintained).
     */
    if (mt->tiling != I915_TILING_NONE || mt->is_scanout)
-      drm_bacon_gem_bo_map_gtt(bo);
+      brw_bo_map_gtt(bo);
    else
-      drm_bacon_bo_map(bo, true);
+      brw_bo_map(bo, true);
 
    return bo->virtual;
 }
@@ -2483,7 +2483,7 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
 static void
 intel_miptree_unmap_raw(struct intel_mipmap_tree *mt)
 {
-   drm_bacon_bo_unmap(mt->bo);
+   brw_bo_unmap(mt->bo);
 }
 
 static void

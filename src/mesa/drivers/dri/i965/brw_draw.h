@@ -34,7 +34,7 @@ struct brw_context;
 uint32_t *
 brw_emit_vertex_buffer_state(struct brw_context *brw,
                              unsigned buffer_nr,
-                             drm_bacon_bo *bo,
+                             struct brw_bo *bo,
                              unsigned start_offset,
                              unsigned end_offset,
                              unsigned stride,

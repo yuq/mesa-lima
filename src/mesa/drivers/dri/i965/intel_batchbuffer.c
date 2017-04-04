@@ -93,14 +93,14 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
                         bool has_llc)
 {
    if (batch->last_bo != NULL) {
-      drm_bacon_bo_unreference(batch->last_bo);
+      brw_bo_unreference(batch->last_bo);
       batch->last_bo = NULL;
    }
    batch->last_bo = batch->bo;
 
-   batch->bo = drm_bacon_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
+   batch->bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
    if (has_llc) {
-      drm_bacon_bo_map(batch->bo, true);
+      brw_bo_map(batch->bo, true);
       batch->map = batch->bo->virtual;
    }
    batch->map_next = batch->map;
@@ -140,7 +140,7 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
    for (int i = brw->batch.saved.exec_count;
         i < brw->batch.exec_count; i++) {
       if (brw->batch.exec_bos[i] != brw->batch.bo) {
-         drm_bacon_bo_unreference(brw->batch.exec_bos[i]);
+         brw_bo_unreference(brw->batch.exec_bos[i]);
       }
    }
    brw->batch.reloc_count = brw->batch.saved.reloc_count;
@@ -158,15 +158,15 @@ intel_batchbuffer_free(struct intel_batchbuffer *batch)
 
    for (int i = 0; i < batch->exec_count; i++) {
       if (batch->exec_bos[i] != batch->bo) {
-         drm_bacon_bo_unreference(batch->exec_bos[i]);
+         brw_bo_unreference(batch->exec_bos[i]);
       }
    }
    free(batch->relocs);
    free(batch->exec_bos);
    free(batch->exec_objects);
 
-   drm_bacon_bo_unreference(batch->last_bo);
-   drm_bacon_bo_unreference(batch->bo);
+   brw_bo_unreference(batch->last_bo);
+   brw_bo_unreference(batch->bo);
    if (batch->state_batch_sizes)
       _mesa_hash_table_destroy(batch->state_batch_sizes, NULL);
 }
@@ -240,7 +240,7 @@ do_batch_dump(struct brw_context *brw)
    if (batch->ring != RENDER_RING)
       return;
 
-   int ret = drm_bacon_bo_map(batch->bo, false);
+   int ret = brw_bo_map(batch->bo, false);
    if (ret != 0) {
       fprintf(stderr,
 	      "WARNING: failed to map batchbuffer (%s), "
@@ -351,7 +351,7 @@ do_batch_dump(struct brw_context *brw)
    }
 
    if (ret == 0) {
-      drm_bacon_bo_unmap(batch->bo);
+      brw_bo_unmap(batch->bo);
    }
 }
 #else
@@ -367,7 +367,7 @@ brw_new_batch(struct brw_context *brw)
    /* Unreference any BOs held by the previous batch, and reset counts. */
    for (int i = 0; i < brw->batch.exec_count; i++) {
       if (brw->batch.exec_bos[i] != brw->batch.bo) {
-         drm_bacon_bo_unreference(brw->batch.exec_bos[i]);
+         brw_bo_unreference(brw->batch.exec_bos[i]);
       }
       brw->batch.exec_bos[i] = NULL;
    }
@@ -475,8 +475,8 @@ throttle(struct brw_context *brw)
    if (brw->need_swap_throttle && brw->throttle_batch[0]) {
       if (brw->throttle_batch[1]) {
          if (!brw->disable_throttling)
-            drm_bacon_bo_wait_rendering(brw->throttle_batch[1]);
-         drm_bacon_bo_unreference(brw->throttle_batch[1]);
+            brw_bo_wait_rendering(brw->throttle_batch[1]);
+         brw_bo_unreference(brw->throttle_batch[1]);
       }
       brw->throttle_batch[1] = brw->throttle_batch[0];
       brw->throttle_batch[0] = NULL;
@@ -493,7 +493,7 @@ throttle(struct brw_context *brw)
 }
 
 static void
-add_exec_bo(struct intel_batchbuffer *batch, drm_bacon_bo *bo)
+add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 {
    if (bo != batch->bo) {
       for (int i = 0; i < batch->exec_count; i++) {
@@ -501,7 +501,7 @@ add_exec_bo(struct intel_batchbuffer *batch, drm_bacon_bo *bo)
             return;
       }
 
-      drm_bacon_bo_reference(bo);
+      brw_bo_reference(bo);
    }
 
    if (batch->exec_count == batch->exec_array_size) {
@@ -571,11 +571,11 @@ execbuffer(int fd,
       ret = -errno;
 
    for (int i = 0; i < batch->exec_count; i++) {
-      drm_bacon_bo *bo = batch->exec_bos[i];
+      struct brw_bo *bo = batch->exec_bos[i];
 
       bo->idle = false;
 
-      /* Update drm_bacon_bo::offset64 */
+      /* Update brw_bo::offset64 */
       if (batch->exec_objects[i].offset != bo->offset64) {
          DBG("BO %d migrated: 0x%" PRIx64 " -> 0x%llx\n",
              bo->gem_handle, bo->offset64, batch->exec_objects[i].offset);
@@ -597,11 +597,11 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
    int ret = 0;
 
    if (brw->has_llc) {
-      drm_bacon_bo_unmap(batch->bo);
+      brw_bo_unmap(batch->bo);
    } else {
-      ret = drm_bacon_bo_subdata(batch->bo, 0, 4 * USED_BATCH(*batch), batch->map);
+      ret = brw_bo_subdata(batch->bo, 0, 4 * USED_BATCH(*batch), batch->map);
       if (ret == 0 && batch->state_batch_offset != batch->bo->size) {
-	 ret = drm_bacon_bo_subdata(batch->bo,
+	 ret = brw_bo_subdata(batch->bo,
 				    batch->state_batch_offset,
 				    batch->bo->size - batch->state_batch_offset,
 				    (char *)batch->map + batch->state_batch_offset);
@@ -666,7 +666,7 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
 
    if (brw->throttle_batch[0] == NULL) {
       brw->throttle_batch[0] = brw->batch.bo;
-      drm_bacon_bo_reference(brw->throttle_batch[0]);
+      brw_bo_reference(brw->throttle_batch[0]);
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
@@ -700,7 +700,7 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
 
    if (unlikely(INTEL_DEBUG & DEBUG_SYNC)) {
       fprintf(stderr, "waiting for idle\n");
-      drm_bacon_bo_wait_rendering(brw->batch.bo);
+      brw_bo_wait_rendering(brw->batch.bo);
    }
 
    /* Start a new batch buffer. */
@@ -717,7 +717,7 @@ brw_batch_has_aperture_space(struct brw_context *brw, unsigned extra_space)
 }
 
 bool
-brw_batch_references(struct intel_batchbuffer *batch, drm_bacon_bo *bo)
+brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo)
 {
    for (int i = 0; i < batch->exec_count; i++) {
       if (batch->exec_bos[i] == bo)
@@ -730,7 +730,7 @@ brw_batch_references(struct intel_batchbuffer *batch, drm_bacon_bo *bo)
  */
 uint64_t
 brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
-               drm_bacon_bo *target, uint32_t target_offset,
+               struct brw_bo *target, uint32_t target_offset,
                uint32_t read_domains, uint32_t write_domain)
 {
    if (batch->reloc_count == batch->reloc_array_size) {
@@ -779,7 +779,7 @@ intel_batchbuffer_data(struct brw_context *brw,
 static void
 load_sized_register_mem(struct brw_context *brw,
                         uint32_t reg,
-                        drm_bacon_bo *bo,
+                        struct brw_bo *bo,
                         uint32_t read_domains, uint32_t write_domain,
                         uint32_t offset,
                         int size)
@@ -811,7 +811,7 @@ load_sized_register_mem(struct brw_context *brw,
 void
 brw_load_register_mem(struct brw_context *brw,
                       uint32_t reg,
-                      drm_bacon_bo *bo,
+                      struct brw_bo *bo,
                       uint32_t read_domains, uint32_t write_domain,
                       uint32_t offset)
 {
@@ -821,7 +821,7 @@ brw_load_register_mem(struct brw_context *brw,
 void
 brw_load_register_mem64(struct brw_context *brw,
                         uint32_t reg,
-                        drm_bacon_bo *bo,
+                        struct brw_bo *bo,
                         uint32_t read_domains, uint32_t write_domain,
                         uint32_t offset)
 {
@@ -833,7 +833,7 @@ brw_load_register_mem64(struct brw_context *brw,
  */
 void
 brw_store_register_mem32(struct brw_context *brw,
-                         drm_bacon_bo *bo, uint32_t reg, uint32_t offset)
+                         struct brw_bo *bo, uint32_t reg, uint32_t offset)
 {
    assert(brw->gen >= 6);
 
@@ -859,7 +859,7 @@ brw_store_register_mem32(struct brw_context *brw,
  */
 void
 brw_store_register_mem64(struct brw_context *brw,
-                         drm_bacon_bo *bo, uint32_t reg, uint32_t offset)
+                         struct brw_bo *bo, uint32_t reg, uint32_t offset)
 {
    assert(brw->gen >= 6);
 
@@ -960,7 +960,7 @@ brw_load_register_reg64(struct brw_context *brw, uint32_t src, uint32_t dest)
  * Write 32-bits of immediate data to a GPU memory buffer.
  */
 void
-brw_store_data_imm32(struct brw_context *brw, drm_bacon_bo *bo,
+brw_store_data_imm32(struct brw_context *brw, struct brw_bo *bo,
                      uint32_t offset, uint32_t imm)
 {
    assert(brw->gen >= 6);
@@ -983,7 +983,7 @@ brw_store_data_imm32(struct brw_context *brw, drm_bacon_bo *bo,
  * Write 64-bits of immediate data to a GPU memory buffer.
  */
 void
-brw_store_data_imm64(struct brw_context *brw, drm_bacon_bo *bo,
+brw_store_data_imm64(struct brw_context *brw, struct brw_bo *bo,
                      uint32_t offset, uint64_t imm)
 {
    assert(brw->gen >= 6);

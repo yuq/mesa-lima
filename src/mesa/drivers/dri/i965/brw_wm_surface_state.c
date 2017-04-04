@@ -133,7 +133,7 @@ brw_emit_surface_state(struct brw_context *brw,
 
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
 
-   drm_bacon_bo *aux_bo;
+   struct brw_bo *aux_bo;
    struct isl_surf *aux_surf = NULL, aux_surf_s;
    uint64_t aux_offset = 0;
    enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
@@ -645,7 +645,7 @@ brw_update_texture_surface(struct gl_context *ctx,
 void
 brw_emit_buffer_surface_state(struct brw_context *brw,
                               uint32_t *out_offset,
-                              drm_bacon_bo *bo,
+                              struct brw_bo *bo,
                               unsigned buffer_offset,
                               unsigned surface_format,
                               unsigned buffer_size,
@@ -682,7 +682,7 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
    struct intel_buffer_object *intel_obj =
       intel_buffer_object(tObj->BufferObject);
    uint32_t size = tObj->BufferSize;
-   drm_bacon_bo *bo = NULL;
+   struct brw_bo *bo = NULL;
    mesa_format format = tObj->_BufferObjectFormat;
    uint32_t brw_format = brw_isl_format_for_mesa_format(format);
    int texel_size = _mesa_get_format_bytes(format);
@@ -729,7 +729,7 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
  */
 void
 brw_create_constant_surface(struct brw_context *brw,
-			    drm_bacon_bo *bo,
+			    struct brw_bo *bo,
 			    uint32_t offset,
 			    uint32_t size,
 			    uint32_t *out_offset)
@@ -746,7 +746,7 @@ brw_create_constant_surface(struct brw_context *brw,
  */
 void
 brw_create_buffer_surface(struct brw_context *brw,
-                          drm_bacon_bo *bo,
+                          struct brw_bo *bo,
                           uint32_t offset,
                           uint32_t size,
                           uint32_t *out_offset)
@@ -775,7 +775,7 @@ brw_update_sol_surface(struct brw_context *brw,
 {
    struct intel_buffer_object *intel_bo = intel_buffer_object(buffer_obj);
    uint32_t offset_bytes = 4 * offset_dwords;
-   drm_bacon_bo *bo = intel_bufferobj_buffer(brw, intel_bo,
+   struct brw_bo *bo = intel_bufferobj_buffer(brw, intel_bo,
                                              offset_bytes,
                                              buffer_obj->Size - offset_bytes);
    uint32_t *surf = brw_state_batch(brw, 6 * 4, 32, out_offset);
@@ -909,7 +909,7 @@ brw_emit_null_surface_state(struct brw_context *brw,
     *     - Surface Format must be R8G8B8A8_UNORM.
     */
    unsigned surface_type = BRW_SURFACE_NULL;
-   drm_bacon_bo *bo = NULL;
+   struct brw_bo *bo = NULL;
    unsigned pitch_minus_1 = 0;
    uint32_t multisampling_state = 0;
    uint32_t *surf = brw_state_batch(brw, 6 * 4, 32, out_offset);
@@ -1399,7 +1399,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          GLsizeiptr size = binding->BufferObject->Size - binding->Offset;
          if (!binding->AutomaticSize)
             size = MIN2(size, binding->Size);
-         drm_bacon_bo *bo =
+         struct brw_bo *bo =
             intel_bufferobj_buffer(brw, intel_bo,
                                    binding->Offset,
                                    size);
@@ -1424,7 +1424,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          GLsizeiptr size = binding->BufferObject->Size - binding->Offset;
          if (!binding->AutomaticSize)
             size = MIN2(size, binding->Size);
-         drm_bacon_bo *bo =
+         struct brw_bo *bo =
             intel_bufferobj_buffer(brw, intel_bo,
                                    binding->Offset,
                                    size);
@@ -1499,7 +1499,7 @@ brw_upload_abo_surfaces(struct brw_context *brw,
             &ctx->AtomicBufferBindings[prog->sh.AtomicBuffers[i]->Binding];
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
-         drm_bacon_bo *bo = intel_bufferobj_buffer(
+         struct brw_bo *bo = intel_bufferobj_buffer(
             brw, intel_bo, binding->Offset, intel_bo->Base.Size - binding->Offset);
 
          brw_emit_buffer_surface_state(brw, &surf_offsets[i], bo,
@@ -1854,7 +1854,7 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
       const unsigned surf_idx =
          cs_prog_data->binding_table.work_groups_start;
       uint32_t *surf_offset = &brw->cs.base.surf_offset[surf_idx];
-      drm_bacon_bo *bo;
+      struct brw_bo *bo;
       uint32_t bo_offset;
 
       if (brw->compute.num_work_groups_bo == NULL) {

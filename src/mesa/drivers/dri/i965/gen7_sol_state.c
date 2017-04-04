@@ -52,7 +52,7 @@ upload_3dstate_so_buffers(struct brw_context *brw)
    for (i = 0; i < 4; i++) {
       struct intel_buffer_object *bufferobj =
 	 intel_buffer_object(xfb_obj->Buffers[i]);
-      drm_bacon_bo *bo;
+      struct brw_bo *bo;
       uint32_t start, end;
       uint32_t stride;
 

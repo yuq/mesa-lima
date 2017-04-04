@@ -68,10 +68,10 @@ void intel_batchbuffer_data(struct brw_context *brw,
 bool brw_batch_has_aperture_space(struct brw_context *brw,
                                   unsigned extra_space_in_bytes);
 
-bool brw_batch_references(struct intel_batchbuffer *batch, drm_bacon_bo *bo);
+bool brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo);
 
 uint64_t brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
-                        drm_bacon_bo *target, uint32_t target_offset,
+                        struct brw_bo *target, uint32_t target_offset,
                         uint32_t read_domains, uint32_t write_domain);
 
 static inline uint32_t

@@ -38,12 +38,12 @@
 #include "intel_mipmap_tree.h"
 
 static GLenum
-intel_buffer_purgeable(drm_bacon_bo *buffer)
+intel_buffer_purgeable(struct brw_bo *buffer)
 {
    int retained = 0;
 
    if (buffer != NULL)
-      retained = drm_bacon_bo_madvise(buffer, I915_MADV_DONTNEED);
+      retained = brw_bo_madvise(buffer, I915_MADV_DONTNEED);
 
    return retained ? GL_VOLATILE_APPLE : GL_RELEASED_APPLE;
 }
@@ -101,13 +101,13 @@ intel_render_object_purgeable(struct gl_context * ctx,
 }
 
 static int
-intel_bo_unpurgeable(drm_bacon_bo *buffer)
+intel_bo_unpurgeable(struct brw_bo *buffer)
 {
    int retained;
 
    retained = 0;
    if (buffer != NULL)
-      retained = drm_bacon_bo_madvise(buffer, I915_MADV_WILLNEED);
+      retained = brw_bo_madvise(buffer, I915_MADV_WILLNEED);
 
    return retained;
 }
@@ -125,7 +125,7 @@ intel_buffer_object_unpurgeable(struct gl_context * ctx,
       return GL_UNDEFINED_APPLE;
 
    if (option == GL_UNDEFINED_APPLE || !intel_bo_unpurgeable(intel->buffer)) {
-      drm_bacon_bo_unreference(intel->buffer);
+      brw_bo_unreference(intel->buffer);
       intel->buffer = NULL;
       return GL_UNDEFINED_APPLE;
    }

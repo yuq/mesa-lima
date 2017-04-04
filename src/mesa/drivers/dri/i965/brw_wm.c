@@ -172,7 +172,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&
-                    drm_bacon_bo_busy(brw->batch.last_bo));
+                    brw_bo_busy(brw->batch.last_bo));
       start_time = get_time();
    }
 
@@ -208,7 +208,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
          brw_wm_debug_recompile(brw, &fp->program, key);
       fp->compiled_once = true;
 
-      if (start_busy && !drm_bacon_bo_busy(brw->batch.last_bo)) {
+      if (start_busy && !brw_bo_busy(brw->batch.last_bo)) {
          perf_debug("FS compile took %.03f ms and stalled the GPU\n",
                     (get_time() - start_time) * 1000);
       }

@@ -66,7 +66,7 @@ struct intel_image_format {
 
 struct __DRIimageRec {
    struct intel_screen *screen;
-   drm_bacon_bo *bo;
+   struct brw_bo *bo;
    uint32_t pitch; /**< in bytes */
    GLenum internal_format;
    uint32_t dri_format;

@@ -116,9 +116,9 @@ struct brw_bufmgr {
 };
 
 static int
-bo_set_tiling_internal(drm_bacon_bo *bo, uint32_t tiling_mode, uint32_t stride);
+bo_set_tiling_internal(struct brw_bo *bo, uint32_t tiling_mode, uint32_t stride);
 
-static void bo_free(drm_bacon_bo *bo);
+static void bo_free(struct brw_bo *bo);
 
 static uint32_t
 key_hash_uint(const void *key)
@@ -132,11 +132,11 @@ key_uint_equal(const void *a, const void *b)
 	return *((unsigned *) a) == *((unsigned *) b);
 }
 
-static drm_bacon_bo *
+static struct brw_bo *
 hash_find_bo(struct hash_table *ht, unsigned int key)
 {
 	struct hash_entry *entry = _mesa_hash_table_search(ht, &key);
-	return entry ? (drm_bacon_bo *) entry->data : NULL;
+	return entry ? (struct brw_bo *) entry->data : NULL;
 }
 
 static unsigned long
@@ -193,13 +193,13 @@ bucket_for_size(struct brw_bufmgr *bufmgr, unsigned long size)
 }
 
 inline void
-drm_bacon_bo_reference(drm_bacon_bo *bo)
+brw_bo_reference(struct brw_bo *bo)
 {
 	p_atomic_inc(&bo->refcount);
 }
 
 int
-drm_bacon_bo_busy(drm_bacon_bo *bo)
+brw_bo_busy(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_busy busy;
@@ -219,7 +219,7 @@ drm_bacon_bo_busy(drm_bacon_bo *bo)
 }
 
 int
-drm_bacon_bo_madvise(drm_bacon_bo *bo, int state)
+brw_bo_madvise(struct brw_bo *bo, int state)
 {
 	struct drm_i915_gem_madvise madv;
 
@@ -234,14 +234,14 @@ drm_bacon_bo_madvise(drm_bacon_bo *bo, int state)
 
 /* drop the oldest entries that have been purged by the kernel */
 static void
-drm_bacon_gem_bo_cache_purge_bucket(struct brw_bufmgr *bufmgr,
+brw_bo_cache_purge_bucket(struct brw_bufmgr *bufmgr,
 				    struct bo_cache_bucket *bucket)
 {
 	while (!list_empty(&bucket->head)) {
-		drm_bacon_bo *bo;
+		struct brw_bo *bo;
 
-		bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
-		if (drm_bacon_bo_madvise(bo, I915_MADV_DONTNEED))
+		bo = LIST_ENTRY(struct brw_bo, bucket->head.next, head);
+		if (brw_bo_madvise(bo, I915_MADV_DONTNEED))
 			break;
 
 		list_del(&bo->head);
@@ -249,7 +249,7 @@ drm_bacon_gem_bo_cache_purge_bucket(struct brw_bufmgr *bufmgr,
 	}
 }
 
-static drm_bacon_bo *
+static struct brw_bo *
 bo_alloc_internal(struct brw_bufmgr *bufmgr,
 		  const char *name,
 		  unsigned long size,
@@ -258,7 +258,7 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
 		  unsigned long stride,
 		  unsigned int alignment)
 {
-	drm_bacon_bo *bo;
+	struct brw_bo *bo;
 	unsigned int page_size = getpagesize();
 	int ret;
 	struct bo_cache_bucket *bucket;
@@ -293,7 +293,7 @@ retry:
 			 * of the list, as it will likely be hot in the GPU
 			 * cache and in the aperture for us.
 			 */
-			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.prev, head);
+			bo = LIST_ENTRY(struct brw_bo, bucket->head.prev, head);
 			list_del(&bo->head);
 			alloc_from_cache = true;
 			bo->align = alignment;
@@ -306,17 +306,17 @@ retry:
 			 * allocating a new buffer is probably faster than
 			 * waiting for the GPU to finish.
 			 */
-			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
-			if (!drm_bacon_bo_busy(bo)) {
+			bo = LIST_ENTRY(struct brw_bo, bucket->head.next, head);
+			if (!brw_bo_busy(bo)) {
 				alloc_from_cache = true;
 				list_del(&bo->head);
 			}
 		}
 
 		if (alloc_from_cache) {
-			if (!drm_bacon_bo_madvise(bo, I915_MADV_WILLNEED)) {
+			if (!brw_bo_madvise(bo, I915_MADV_WILLNEED)) {
 				bo_free(bo);
-				drm_bacon_gem_bo_cache_purge_bucket(bufmgr,
+				brw_bo_cache_purge_bucket(bufmgr,
 								    bucket);
 				goto retry;
 			}
@@ -385,8 +385,8 @@ err:
 	return NULL;
 }
 
-drm_bacon_bo *
-drm_bacon_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
+struct brw_bo *
+brw_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
 			      const char *name,
 			      unsigned long size,
 			      unsigned int alignment)
@@ -395,8 +395,8 @@ drm_bacon_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
 				 I915_TILING_NONE, 0, alignment);
 }
 
-drm_bacon_bo *
-drm_bacon_bo_alloc(struct brw_bufmgr *bufmgr,
+struct brw_bo *
+brw_bo_alloc(struct brw_bufmgr *bufmgr,
 		   const char *name,
 		   unsigned long size,
 		   unsigned int alignment)
@@ -404,8 +404,8 @@ drm_bacon_bo_alloc(struct brw_bufmgr *bufmgr,
 	return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0, 0);
 }
 
-drm_bacon_bo *
-drm_bacon_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
+struct brw_bo *
+brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
 			 int x, int y, int cpp, uint32_t *tiling_mode,
 			 unsigned long *pitch, unsigned long flags)
 {
@@ -451,17 +451,17 @@ drm_bacon_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
 }
 
 /**
- * Returns a drm_bacon_bo wrapping the given buffer object handle.
+ * Returns a brw_bo wrapping the given buffer object handle.
  *
  * This can be used when one application needs to pass a buffer object
  * to another.
  */
-drm_bacon_bo *
-drm_bacon_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
+struct brw_bo *
+brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
 				  const char *name,
 				  unsigned int handle)
 {
-	drm_bacon_bo *bo;
+	struct brw_bo *bo;
 	int ret;
 	struct drm_gem_open open_arg;
 	struct drm_i915_gem_get_tiling get_tiling;
@@ -475,7 +475,7 @@ drm_bacon_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
 	pthread_mutex_lock(&bufmgr->lock);
 	bo = hash_find_bo(bufmgr->name_table, handle);
 	if (bo) {
-		drm_bacon_bo_reference(bo);
+		brw_bo_reference(bo);
 		goto out;
 	}
 
@@ -496,7 +496,7 @@ drm_bacon_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
          */
 	bo = hash_find_bo(bufmgr->handle_table, open_arg.handle);
 	if (bo) {
-		drm_bacon_bo_reference(bo);
+		brw_bo_reference(bo);
 		goto out;
 	}
 
@@ -543,7 +543,7 @@ err_unref:
 }
 
 static void
-bo_free(drm_bacon_bo *bo)
+bo_free(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_gem_close close;
@@ -587,7 +587,7 @@ bo_free(drm_bacon_bo *bo)
 }
 
 static void
-bo_mark_mmaps_incoherent(drm_bacon_bo *bo)
+bo_mark_mmaps_incoherent(struct brw_bo *bo)
 {
 #if HAVE_VALGRIND
 	if (bo->mem_virtual)
@@ -615,9 +615,9 @@ cleanup_bo_cache(struct brw_bufmgr *bufmgr, time_t time)
 		    &bufmgr->cache_bucket[i];
 
 		while (!list_empty(&bucket->head)) {
-			drm_bacon_bo *bo;
+			struct brw_bo *bo;
 
-			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
+			bo = LIST_ENTRY(struct brw_bo, bucket->head.next, head);
 			if (time - bo->free_time <= 1)
 				break;
 
@@ -647,9 +647,9 @@ bo_purge_vma_cache(struct brw_bufmgr *bufmgr)
 		limit = 0;
 
 	while (bufmgr->vma_count > limit) {
-		drm_bacon_bo *bo;
+		struct brw_bo *bo;
 
-		bo = LIST_ENTRY(drm_bacon_bo, bufmgr->vma_cache.next, vma_list);
+		bo = LIST_ENTRY(struct brw_bo, bufmgr->vma_cache.next, vma_list);
 		assert(bo->map_count == 0);
 		list_delinit(&bo->vma_list);
 
@@ -672,7 +672,7 @@ bo_purge_vma_cache(struct brw_bufmgr *bufmgr)
 }
 
 static void
-bo_close_vma(struct brw_bufmgr *bufmgr, drm_bacon_bo *bo)
+bo_close_vma(struct brw_bufmgr *bufmgr, struct brw_bo *bo)
 {
 	bufmgr->vma_open--;
 	list_addtail(&bo->vma_list, &bufmgr->vma_cache);
@@ -686,7 +686,7 @@ bo_close_vma(struct brw_bufmgr *bufmgr, drm_bacon_bo *bo)
 }
 
 static void
-bo_open_vma(struct brw_bufmgr *bufmgr, drm_bacon_bo *bo)
+bo_open_vma(struct brw_bufmgr *bufmgr, struct brw_bo *bo)
 {
 	bufmgr->vma_open++;
 	list_del(&bo->vma_list);
@@ -700,7 +700,7 @@ bo_open_vma(struct brw_bufmgr *bufmgr, drm_bacon_bo *bo)
 }
 
 static void
-bo_unreference_final(drm_bacon_bo *bo, time_t time)
+bo_unreference_final(struct brw_bo *bo, time_t time)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct bo_cache_bucket *bucket;
@@ -719,7 +719,7 @@ bo_unreference_final(drm_bacon_bo *bo, time_t time)
 	bucket = bucket_for_size(bufmgr, bo->size);
 	/* Put the buffer into our internal cache for reuse if we can. */
 	if (bufmgr->bo_reuse && bo->reusable && bucket != NULL &&
-	    drm_bacon_bo_madvise(bo, I915_MADV_DONTNEED)) {
+	    brw_bo_madvise(bo, I915_MADV_DONTNEED)) {
 		bo->free_time = time;
 
 		bo->name = NULL;
@@ -731,7 +731,7 @@ bo_unreference_final(drm_bacon_bo *bo, time_t time)
 }
 
 void
-drm_bacon_bo_unreference(drm_bacon_bo *bo)
+brw_bo_unreference(struct brw_bo *bo)
 {
 	if (bo == NULL)
 		return;
@@ -756,7 +756,7 @@ drm_bacon_bo_unreference(drm_bacon_bo *bo)
 }
 
 int
-drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
+brw_bo_map(struct brw_bo *bo, int write_enable)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_domain set_domain;
@@ -820,7 +820,7 @@ drm_bacon_bo_map(drm_bacon_bo *bo, int write_enable)
 }
 
 static int
-map_gtt(drm_bacon_bo *bo)
+map_gtt(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	int ret;
@@ -879,7 +879,7 @@ map_gtt(drm_bacon_bo *bo)
 }
 
 int
-drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
+brw_bo_map_gtt(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_domain set_domain;
@@ -937,7 +937,7 @@ drm_bacon_gem_bo_map_gtt(drm_bacon_bo *bo)
  */
 
 int
-drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
+brw_bo_map_unsynchronized(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	int ret;
@@ -945,12 +945,12 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 	/* If the CPU cache isn't coherent with the GTT, then use a
 	 * regular synchronized mapping.  The problem is that we don't
 	 * track where the buffer was last used on the CPU side in
-	 * terms of drm_bacon_bo_map vs drm_bacon_gem_bo_map_gtt, so
+	 * terms of brw_bo_map vs brw_bo_map_gtt, so
 	 * we would potentially corrupt the buffer even when the user
 	 * does reasonable things.
 	 */
 	if (!bufmgr->has_llc)
-		return drm_bacon_gem_bo_map_gtt(bo);
+		return brw_bo_map_gtt(bo);
 
 	pthread_mutex_lock(&bufmgr->lock);
 
@@ -966,7 +966,7 @@ drm_bacon_gem_bo_map_unsynchronized(drm_bacon_bo *bo)
 }
 
 int
-drm_bacon_bo_unmap(drm_bacon_bo *bo)
+brw_bo_unmap(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	int ret = 0;
@@ -1000,7 +1000,7 @@ drm_bacon_bo_unmap(drm_bacon_bo *bo)
 }
 
 int
-drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
+brw_bo_subdata(struct brw_bo *bo, unsigned long offset,
 		     unsigned long size, const void *data)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
@@ -1026,7 +1026,7 @@ drm_bacon_bo_subdata(drm_bacon_bo *bo, unsigned long offset,
 }
 
 int
-drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
+brw_bo_get_subdata(struct brw_bo *bo, unsigned long offset,
 			 unsigned long size, void *data)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
@@ -1053,9 +1053,9 @@ drm_bacon_bo_get_subdata(drm_bacon_bo *bo, unsigned long offset,
 
 /** Waits for all GPU rendering with the object to have completed. */
 void
-drm_bacon_bo_wait_rendering(drm_bacon_bo *bo)
+brw_bo_wait_rendering(struct brw_bo *bo)
 {
-	drm_bacon_gem_bo_start_gtt_access(bo, 1);
+	brw_bo_start_gtt_access(bo, 1);
 }
 
 /**
@@ -1070,7 +1070,7 @@ drm_bacon_bo_wait_rendering(drm_bacon_bo *bo)
  * value describes the error. Of particular interest is -ETIME when the wait has
  * failed to yield the desired result.
  *
- * Similar to drm_bacon_gem_bo_wait_rendering except a timeout parameter allows
+ * Similar to brw_bo_wait_rendering except a timeout parameter allows
  * the operation to give up after a certain amount of time. Another subtle
  * difference is the internal locking semantics are different (this variant does
  * not hold the lock for the duration of the wait). This makes the wait subject
@@ -1086,7 +1086,7 @@ drm_bacon_bo_wait_rendering(drm_bacon_bo *bo)
  * promise, upgrade to latest stable kernels if this is the case.
  */
 int
-drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
+brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_wait wait;
@@ -1104,13 +1104,13 @@ drm_bacon_gem_bo_wait(drm_bacon_bo *bo, int64_t timeout_ns)
 
 /**
  * Sets the object to the GTT read and possibly write domain, used by the X
- * 2D driver in the absence of kernel support to do drm_bacon_gem_bo_map_gtt().
+ * 2D driver in the absence of kernel support to do brw_bo_map_gtt().
  *
- * In combination with drm_bacon_gem_bo_pin() and manual fence management, we
+ * In combination with brw_bo_pin() and manual fence management, we
  * can do tiled pixmaps this way.
  */
 void
-drm_bacon_gem_bo_start_gtt_access(drm_bacon_bo *bo, int write_enable)
+brw_bo_start_gtt_access(struct brw_bo *bo, int write_enable)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_domain set_domain;
@@ -1140,10 +1140,10 @@ brw_bufmgr_destroy(struct brw_bufmgr *bufmgr)
 	for (int i = 0; i < bufmgr->num_buckets; i++) {
 		struct bo_cache_bucket *bucket =
 		    &bufmgr->cache_bucket[i];
-		drm_bacon_bo *bo;
+		struct brw_bo *bo;
 
 		while (!list_empty(&bucket->head)) {
-			bo = LIST_ENTRY(drm_bacon_bo, bucket->head.next, head);
+			bo = LIST_ENTRY(struct brw_bo, bucket->head.next, head);
 			list_del(&bo->head);
 
 			bo_free(bo);
@@ -1157,7 +1157,7 @@ brw_bufmgr_destroy(struct brw_bufmgr *bufmgr)
 }
 
 static int
-bo_set_tiling_internal(drm_bacon_bo *bo, uint32_t tiling_mode, uint32_t stride)
+bo_set_tiling_internal(struct brw_bo *bo, uint32_t tiling_mode, uint32_t stride)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 	struct drm_i915_gem_set_tiling set_tiling;
@@ -1192,7 +1192,7 @@ bo_set_tiling_internal(drm_bacon_bo *bo, uint32_t tiling_mode, uint32_t stride)
 }
 
 int
-drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
+brw_bo_set_tiling(struct brw_bo *bo, uint32_t * tiling_mode,
 			uint32_t stride)
 {
 	int ret;
@@ -1210,7 +1210,7 @@ drm_bacon_bo_set_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 }
 
 int
-drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
+brw_bo_get_tiling(struct brw_bo *bo, uint32_t * tiling_mode,
 			uint32_t *swizzle_mode)
 {
 	*tiling_mode = bo->tiling_mode;
@@ -1218,12 +1218,12 @@ drm_bacon_bo_get_tiling(drm_bacon_bo *bo, uint32_t * tiling_mode,
 	return 0;
 }
 
-drm_bacon_bo *
-drm_bacon_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd, int size)
+struct brw_bo *
+brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd, int size)
 {
 	int ret;
 	uint32_t handle;
-	drm_bacon_bo *bo;
+	struct brw_bo *bo;
 	struct drm_i915_gem_get_tiling get_tiling;
 
 	pthread_mutex_lock(&bufmgr->lock);
@@ -1241,7 +1241,7 @@ drm_bacon_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd, int 
 	 */
 	bo = hash_find_bo(bufmgr->handle_table, handle);
 	if (bo) {
-		drm_bacon_bo_reference(bo);
+		brw_bo_reference(bo);
 		goto out;
 	}
 
@@ -1294,7 +1294,7 @@ err:
 }
 
 int
-drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
+brw_bo_gem_export_to_prime(struct brw_bo *bo, int *prime_fd)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
@@ -1308,7 +1308,7 @@ drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd)
 }
 
 int
-drm_bacon_bo_flink(drm_bacon_bo *bo, uint32_t *name)
+brw_bo_flink(struct brw_bo *bo, uint32_t *name)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
@@ -1353,14 +1353,14 @@ brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr)
  * as scanout buffers
  */
 int
-drm_bacon_bo_disable_reuse(drm_bacon_bo *bo)
+brw_bo_disable_reuse(struct brw_bo *bo)
 {
 	bo->reusable = false;
 	return 0;
 }
 
 int
-drm_bacon_bo_is_reusable(drm_bacon_bo *bo)
+brw_bo_is_reusable(struct brw_bo *bo)
 {
 	return bo->reusable;
 }
@@ -1456,7 +1456,7 @@ brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset, uint64_t *result)
 	return ret;
 }
 
-void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
+void *brw_bo_map__gtt(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
@@ -1500,7 +1500,7 @@ void *drm_bacon_gem_bo_map__gtt(drm_bacon_bo *bo)
 	return bo->gtt_virtual;
 }
 
-void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
+void *brw_bo_map__cpu(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 
@@ -1538,7 +1538,7 @@ void *drm_bacon_gem_bo_map__cpu(drm_bacon_bo *bo)
 	return bo->mem_virtual;
 }
 
-void *drm_bacon_gem_bo_map__wc(drm_bacon_bo *bo)
+void *brw_bo_map__wc(struct brw_bo *bo)
 {
 	struct brw_bufmgr *bufmgr = bo->bufmgr;
 

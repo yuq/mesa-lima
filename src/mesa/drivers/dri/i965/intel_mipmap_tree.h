@@ -31,7 +31,7 @@
  * The hardware has a fixed layout of a texture depending on parameters such
  * as the target/type (2D, 3D, CUBE), width, height, pitch, and number of
  * mipmap levels.  The individual level/layer slices are each 2D rectangles of
- * pixels at some x/y offset from the start of the drm_bacon_bo.
+ * pixels at some x/y offset from the start of the brw_bo.
  *
  * Original OpenGL allowed texture miplevels to be specified in arbitrary
  * order, and a texture may change size over time.  Thus, each
@@ -279,7 +279,7 @@ struct intel_miptree_aux_buffer
     * @see RENDER_SURFACE_STATE.AuxiliarySurfaceBaseAddress
     * @see 3DSTATE_HIER_DEPTH_BUFFER.AuxiliarySurfaceBaseAddress
     */
-   drm_bacon_bo *bo;
+   struct brw_bo *bo;
 
    /**
     * Offset into bo where the surface starts.
@@ -345,7 +345,7 @@ struct intel_mipmap_tree
     * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceBaseAddress
     * @see 3DSTATE_STENCIL_BUFFER.SurfaceBaseAddress
     */
-   drm_bacon_bo *bo;
+   struct brw_bo *bo;
 
    /**
     * Pitch in bytes.
@@ -698,7 +698,7 @@ struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
 
 struct intel_mipmap_tree *
 intel_miptree_create_for_bo(struct brw_context *brw,
-                            drm_bacon_bo *bo,
+                            struct brw_bo *bo,
                             mesa_format format,
                             uint32_t offset,
                             uint32_t width,
@@ -710,7 +710,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 void
 intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
                                          struct intel_renderbuffer *irb,
-                                         drm_bacon_bo *bo,
+                                         struct brw_bo *bo,
                                          uint32_t width, uint32_t height,
                                          uint32_t pitch);
 

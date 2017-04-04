@@ -169,7 +169,7 @@ intel_update_framebuffer(struct gl_context *ctx,
 }
 
 static bool
-intel_disable_rb_aux_buffer(struct brw_context *brw, const drm_bacon_bo *bo)
+intel_disable_rb_aux_buffer(struct brw_context *brw, const struct brw_bo *bo)
 {
    const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
    bool found = false;
@@ -413,7 +413,7 @@ intel_finish(struct gl_context * ctx)
    intel_glFlush(ctx);
 
    if (brw->batch.last_bo)
-      drm_bacon_bo_wait_rendering(brw->batch.last_bo);
+      brw_bo_wait_rendering(brw->batch.last_bo);
 }
 
 static void
@@ -1188,17 +1188,17 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    brw_destroy_state(brw);
    brw_draw_destroy(brw);
 
-   drm_bacon_bo_unreference(brw->curbe.curbe_bo);
+   brw_bo_unreference(brw->curbe.curbe_bo);
    if (brw->vs.base.scratch_bo)
-      drm_bacon_bo_unreference(brw->vs.base.scratch_bo);
+      brw_bo_unreference(brw->vs.base.scratch_bo);
    if (brw->tcs.base.scratch_bo)
-      drm_bacon_bo_unreference(brw->tcs.base.scratch_bo);
+      brw_bo_unreference(brw->tcs.base.scratch_bo);
    if (brw->tes.base.scratch_bo)
-      drm_bacon_bo_unreference(brw->tes.base.scratch_bo);
+      brw_bo_unreference(brw->tes.base.scratch_bo);
    if (brw->gs.base.scratch_bo)
-      drm_bacon_bo_unreference(brw->gs.base.scratch_bo);
+      brw_bo_unreference(brw->gs.base.scratch_bo);
    if (brw->wm.base.scratch_bo)
-      drm_bacon_bo_unreference(brw->wm.base.scratch_bo);
+      brw_bo_unreference(brw->wm.base.scratch_bo);
 
    brw_destroy_hw_context(brw->bufmgr, brw->hw_ctx);
 
@@ -1214,8 +1214,8 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    brw_fini_pipe_control(brw);
    intel_batchbuffer_free(&brw->batch);
 
-   drm_bacon_bo_unreference(brw->throttle_batch[1]);
-   drm_bacon_bo_unreference(brw->throttle_batch[0]);
+   brw_bo_unreference(brw->throttle_batch[1]);
+   brw_bo_unreference(brw->throttle_batch[0]);
    brw->throttle_batch[1] = NULL;
    brw->throttle_batch[0] = NULL;
 
@@ -1600,7 +1600,7 @@ intel_query_dri2_buffers(struct brw_context *brw,
  *    DRI2BufferDepthStencil are handled as special cases.
  *
  * \param buffer_name is a human readable name, such as "dri2 front buffer",
- *        that is passed to drm_bacon_bo_gem_create_from_name().
+ *        that is passed to brw_bo_gem_create_from_name().
  *
  * \see intel_update_renderbuffers()
  */
@@ -1612,7 +1612,7 @@ intel_process_dri2_buffer(struct brw_context *brw,
                           const char *buffer_name)
 {
    struct gl_framebuffer *fb = drawable->driverPrivate;
-   drm_bacon_bo *bo;
+   struct brw_bo *bo;
 
    if (!rb)
       return;
@@ -1633,10 +1633,10 @@ intel_process_dri2_buffer(struct brw_context *brw,
    if (last_mt) {
        /* The bo already has a name because the miptree was created by a
 	* previous call to intel_process_dri2_buffer(). If a bo already has a
-	* name, then drm_bacon_bo_flink() is a low-cost getter.  It does not
+	* name, then brw_bo_flink() is a low-cost getter.  It does not
 	* create a new name.
 	*/
-      drm_bacon_bo_flink(last_mt->bo, &old_name);
+      brw_bo_flink(last_mt->bo, &old_name);
    }
 
    if (old_name == buffer->name)
@@ -1649,7 +1649,7 @@ intel_process_dri2_buffer(struct brw_context *brw,
               buffer->cpp, buffer->pitch);
    }
 
-   bo = drm_bacon_bo_gem_create_from_name(brw->bufmgr, buffer_name,
+   bo = brw_bo_gem_create_from_name(brw->bufmgr, buffer_name,
                                           buffer->name);
    if (!bo) {
       fprintf(stderr,
@@ -1674,7 +1674,7 @@ intel_process_dri2_buffer(struct brw_context *brw,
 
    assert(rb->mt);
 
-   drm_bacon_bo_unreference(bo);
+   brw_bo_unreference(bo);
 }
 
 /**

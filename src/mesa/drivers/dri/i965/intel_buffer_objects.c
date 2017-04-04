@@ -54,12 +54,12 @@ mark_buffer_inactive(struct intel_buffer_object *intel_obj)
    intel_obj->gpu_active_end = 0;
 }
 
-/** Allocates a new drm_bacon_bo to store the data for the buffer object. */
+/** Allocates a new brw_bo to store the data for the buffer object. */
 static void
 alloc_buffer_object(struct brw_context *brw,
                     struct intel_buffer_object *intel_obj)
 {
-   intel_obj->buffer = drm_bacon_bo_alloc(brw->bufmgr, "bufferobj",
+   intel_obj->buffer = brw_bo_alloc(brw->bufmgr, "bufferobj",
 					  intel_obj->Base.Size, 64);
 
    /* the buffer might be bound as a uniform buffer, need to update it
@@ -79,7 +79,7 @@ alloc_buffer_object(struct brw_context *brw,
 static void
 release_buffer(struct intel_buffer_object *intel_obj)
 {
-   drm_bacon_bo_unreference(intel_obj->buffer);
+   brw_bo_unreference(intel_obj->buffer);
    intel_obj->buffer = NULL;
 }
 
@@ -126,7 +126,7 @@ brw_delete_buffer(struct gl_context * ctx, struct gl_buffer_object *obj)
     */
    _mesa_buffer_unmap_all_mappings(ctx, obj);
 
-   drm_bacon_bo_unreference(intel_obj->buffer);
+   brw_bo_unreference(intel_obj->buffer);
    _mesa_delete_buffer_object(ctx, obj);
 }
 
@@ -173,7 +173,7 @@ brw_buffer_data(struct gl_context *ctx,
          return false;
 
       if (data != NULL)
-	 drm_bacon_bo_subdata(intel_obj->buffer, 0, size, data);
+	 brw_bo_subdata(intel_obj->buffer, 0, size, data);
    }
 
    return true;
@@ -217,9 +217,9 @@ brw_buffer_subdata(struct gl_context *ctx,
    if (offset + size <= intel_obj->gpu_active_start ||
        intel_obj->gpu_active_end <= offset) {
       if (brw->has_llc) {
-         drm_bacon_gem_bo_map_unsynchronized(intel_obj->buffer);
+         brw_bo_map_unsynchronized(intel_obj->buffer);
          memcpy(intel_obj->buffer->virtual + offset, data, size);
-         drm_bacon_bo_unmap(intel_obj->buffer);
+         brw_bo_unmap(intel_obj->buffer);
 
          if (intel_obj->gpu_active_end > intel_obj->gpu_active_start)
             intel_obj->prefer_stall_to_blit = true;
@@ -230,13 +230,13 @@ brw_buffer_subdata(struct gl_context *ctx,
    }
 
    busy =
-      drm_bacon_bo_busy(intel_obj->buffer) ||
+      brw_bo_busy(intel_obj->buffer) ||
       brw_batch_references(&brw->batch, intel_obj->buffer);
 
    if (busy) {
       if (size == intel_obj->Base.Size) {
 	 /* Replace the current busy bo so the subdata doesn't stall. */
-	 drm_bacon_bo_unreference(intel_obj->buffer);
+	 brw_bo_unreference(intel_obj->buffer);
 	 alloc_buffer_object(brw, intel_obj);
       } else if (!intel_obj->prefer_stall_to_blit) {
          perf_debug("Using a blit copy to avoid stalling on "
@@ -245,17 +245,17 @@ brw_buffer_subdata(struct gl_context *ctx,
                     (long)offset, (long)offset + size, (long)(size/1024),
                     intel_obj->gpu_active_start,
                     intel_obj->gpu_active_end);
-	 drm_bacon_bo *temp_bo =
-	    drm_bacon_bo_alloc(brw->bufmgr, "subdata temp", size, 64);
+	 struct brw_bo *temp_bo =
+	    brw_bo_alloc(brw->bufmgr, "subdata temp", size, 64);
 
-	 drm_bacon_bo_subdata(temp_bo, 0, size, data);
+	 brw_bo_subdata(temp_bo, 0, size, data);
 
 	 intel_emit_linear_blit(brw,
 				intel_obj->buffer, offset,
 				temp_bo, 0,
 				size);
 
-	 drm_bacon_bo_unreference(temp_bo);
+	 brw_bo_unreference(temp_bo);
          return;
       } else {
          perf_debug("Stalling on glBufferSubData(%ld, %ld) (%ldkb) to a busy "
@@ -268,7 +268,7 @@ brw_buffer_subdata(struct gl_context *ctx,
       }
    }
 
-   drm_bacon_bo_subdata(intel_obj->buffer, offset, size, data);
+   brw_bo_subdata(intel_obj->buffer, offset, size, data);
    mark_buffer_inactive(intel_obj);
 }
 
@@ -293,7 +293,7 @@ brw_get_buffer_subdata(struct gl_context *ctx,
    if (brw_batch_references(&brw->batch, intel_obj->buffer)) {
       intel_batchbuffer_flush(brw);
    }
-   drm_bacon_bo_get_subdata(intel_obj->buffer, offset, size, data);
+   brw_bo_get_subdata(intel_obj->buffer, offset, size, data);
 
    mark_buffer_inactive(intel_obj);
 }
@@ -351,16 +351,16 @@ brw_map_buffer_range(struct gl_context *ctx,
    if (!(access & GL_MAP_UNSYNCHRONIZED_BIT)) {
       if (brw_batch_references(&brw->batch, intel_obj->buffer)) {
 	 if (access & GL_MAP_INVALIDATE_BUFFER_BIT) {
-	    drm_bacon_bo_unreference(intel_obj->buffer);
+	    brw_bo_unreference(intel_obj->buffer);
 	    alloc_buffer_object(brw, intel_obj);
 	 } else {
             perf_debug("Stalling on the GPU for mapping a busy buffer "
                        "object\n");
 	    intel_batchbuffer_flush(brw);
 	 }
-      } else if (drm_bacon_bo_busy(intel_obj->buffer) &&
+      } else if (brw_bo_busy(intel_obj->buffer) &&
 		 (access & GL_MAP_INVALIDATE_BUFFER_BIT)) {
-	 drm_bacon_bo_unreference(intel_obj->buffer);
+	 brw_bo_unreference(intel_obj->buffer);
 	 alloc_buffer_object(brw, intel_obj);
       }
    }
@@ -376,23 +376,23 @@ brw_map_buffer_range(struct gl_context *ctx,
     */
    if (!(access & (GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_PERSISTENT_BIT)) &&
        (access & GL_MAP_INVALIDATE_RANGE_BIT) &&
-       drm_bacon_bo_busy(intel_obj->buffer)) {
+       brw_bo_busy(intel_obj->buffer)) {
       /* Ensure that the base alignment of the allocation meets the alignment
        * guarantees the driver has advertised to the application.
        */
       const unsigned alignment = ctx->Const.MinMapBufferAlignment;
 
       intel_obj->map_extra[index] = (uintptr_t) offset % alignment;
-      intel_obj->range_map_bo[index] = drm_bacon_bo_alloc(brw->bufmgr,
+      intel_obj->range_map_bo[index] = brw_bo_alloc(brw->bufmgr,
                                                           "BO blit temp",
                                                           length +
                                                           intel_obj->map_extra[index],
                                                           alignment);
       if (brw->has_llc) {
-         drm_bacon_bo_map(intel_obj->range_map_bo[index],
+         brw_bo_map(intel_obj->range_map_bo[index],
                           (access & GL_MAP_WRITE_BIT) != 0);
       } else {
-         drm_bacon_gem_bo_map_gtt(intel_obj->range_map_bo[index]);
+         brw_bo_map_gtt(intel_obj->range_map_bo[index]);
       }
       obj->Mappings[index].Pointer =
          intel_obj->range_map_bo[index]->virtual + intel_obj->map_extra[index];
@@ -401,16 +401,16 @@ brw_map_buffer_range(struct gl_context *ctx,
 
    if (access & GL_MAP_UNSYNCHRONIZED_BIT) {
       if (!brw->has_llc && brw->perf_debug &&
-          drm_bacon_bo_busy(intel_obj->buffer)) {
+          brw_bo_busy(intel_obj->buffer)) {
          perf_debug("MapBufferRange with GL_MAP_UNSYNCHRONIZED_BIT stalling (it's actually synchronized on non-LLC platforms)\n");
       }
-      drm_bacon_gem_bo_map_unsynchronized(intel_obj->buffer);
+      brw_bo_map_unsynchronized(intel_obj->buffer);
    } else if (!brw->has_llc && (!(access & GL_MAP_READ_BIT) ||
                               (access & GL_MAP_PERSISTENT_BIT))) {
-      drm_bacon_gem_bo_map_gtt(intel_obj->buffer);
+      brw_bo_map_gtt(intel_obj->buffer);
       mark_buffer_inactive(intel_obj);
    } else {
-      drm_bacon_bo_map(intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
+      brw_bo_map(intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
       mark_buffer_inactive(intel_obj);
    }
 
@@ -502,7 +502,7 @@ brw_unmap_buffer(struct gl_context *ctx,
    assert(intel_obj);
    assert(obj->Mappings[index].Pointer);
    if (intel_obj->range_map_bo[index] != NULL) {
-      drm_bacon_bo_unmap(intel_obj->range_map_bo[index]);
+      brw_bo_unmap(intel_obj->range_map_bo[index]);
 
       if (!(obj->Mappings[index].AccessFlags & GL_MAP_FLUSH_EXPLICIT_BIT)) {
          intel_emit_linear_blit(brw,
@@ -521,10 +521,10 @@ brw_unmap_buffer(struct gl_context *ctx,
        */
       brw_emit_mi_flush(brw);
 
-      drm_bacon_bo_unreference(intel_obj->range_map_bo[index]);
+      brw_bo_unreference(intel_obj->range_map_bo[index]);
       intel_obj->range_map_bo[index] = NULL;
    } else if (intel_obj->buffer != NULL) {
-      drm_bacon_bo_unmap(intel_obj->buffer);
+      brw_bo_unmap(intel_obj->buffer);
    }
    obj->Mappings[index].Pointer = NULL;
    obj->Mappings[index].Offset = 0;
@@ -540,7 +540,7 @@ brw_unmap_buffer(struct gl_context *ctx,
  * Anywhere that uses buffer objects in the pipeline should be using this to
  * mark the range of the buffer that is being accessed by the pipeline.
  */
-drm_bacon_bo *
+struct brw_bo *
 intel_bufferobj_buffer(struct brw_context *brw,
                        struct intel_buffer_object *intel_obj,
                        uint32_t offset, uint32_t size)
@@ -574,7 +574,7 @@ brw_copy_buffer_subdata(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct intel_buffer_object *intel_src = intel_buffer_object(src);
    struct intel_buffer_object *intel_dst = intel_buffer_object(dst);
-   drm_bacon_bo *src_bo, *dst_bo;
+   struct brw_bo *src_bo, *dst_bo;
 
    if (size == 0)
       return;
