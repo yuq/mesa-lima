@@ -3404,6 +3404,13 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          mkCvt(OP_CVT, TYPE_U32, dst0[c], TYPE_U8, val0);
       }
       break;
+   case TGSI_OPCODE_CLOCK:
+      // Stick the 32-bit clock into the high dword of the logical result.
+      if (!tgsi.getDst(0).isMasked(0))
+         mkOp1(OP_MOV, TYPE_U32, dst0[0], zero);
+      if (!tgsi.getDst(0).isMasked(1))
+         mkOp1(OP_RDSV, TYPE_U32, dst0[1], mkSysVal(SV_CLOCK, 0))->fixed = 1;
+      break;
    case TGSI_OPCODE_KILL_IF:
       val0 = new_LValue(func, FILE_PREDICATE);
       mask = 0;
