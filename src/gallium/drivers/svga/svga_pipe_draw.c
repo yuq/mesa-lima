@@ -45,6 +45,16 @@
 #include "svga_debug.h"
 #include "svga_resource_buffer.h"
 
+/* Returns TRUE if we are currently using flat shading.
+ */
+static boolean
+is_using_flat_shading(const struct svga_context *svga)
+{
+   return
+      svga->state.hw_draw.fs ? svga->state.hw_draw.fs->uses_flat_interp : FALSE;
+}
+
+
 static enum pipe_error
 retry_draw_range_elements( struct svga_context *svga,
                            struct pipe_resource *index_buffer,
@@ -74,7 +84,7 @@ retry_draw_range_elements( struct svga_context *svga,
     */
    svga_hwtnl_set_flatshade(svga->hwtnl,
                             svga->curr.rast->templ.flatshade ||
-                            svga->state.hw_draw.fs->uses_flat_interp,
+                            is_using_flat_shading(svga),
                             svga->curr.rast->templ.flatshade_first);
 
    ret = svga_hwtnl_draw_range_elements( svga->hwtnl,
@@ -126,7 +136,7 @@ retry_draw_arrays( struct svga_context *svga,
     */
    svga_hwtnl_set_flatshade(svga->hwtnl,
                             svga->curr.rast->templ.flatshade ||
-                            svga->state.hw_draw.fs->uses_flat_interp,
+                            is_using_flat_shading(svga),
                             svga->curr.rast->templ.flatshade_first);
 
    ret = svga_hwtnl_draw_arrays(svga->hwtnl, prim, start, count,

@@ -399,6 +399,8 @@ struct svga_hw_draw_state
 
    /* used for rebinding */
    unsigned default_constbuf_size[PIPE_SHADER_TYPES];
+
+   boolean rasterizer_discard; /* set if rasterization is disabled */
 };
 
 
@@ -583,6 +585,9 @@ struct svga_context
    /** Alternate rasterizer states created for point sprite */
    struct svga_rasterizer_state *rasterizer_no_cull[2];
 
+   /** Depth stencil state created to disable depth stencil test */
+   struct svga_depth_stencil_state *depthstencil_disable;
+
    /** Current conditional rendering predicate */
    struct {
       SVGA3dQueryId query_id;
@@ -590,6 +595,7 @@ struct svga_context
    } pred;
 
    boolean render_condition;
+   boolean disable_rasterizer; /* Set if to disable rasterization */
 };
 
 /* A flag for each state_tracker state object:

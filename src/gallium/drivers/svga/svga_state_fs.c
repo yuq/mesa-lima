@@ -408,6 +408,27 @@ emit_hw_fs(struct svga_context *svga, unsigned dirty)
 
    SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_EMITFS);
 
+   /* Disable rasterization if rasterizer_discard flag is set or
+    * vs/gs does not output position.
+    */
+   svga->disable_rasterizer =
+      svga->curr.rast->templ.rasterizer_discard ||
+      (svga->curr.gs && !svga->curr.gs->base.info.writes_position) ||
+      (!svga->curr.gs && !svga->curr.vs->base.info.writes_position);
+
+   /* Set FS to NULL when rasterization is to be disabled */
+   if (svga->disable_rasterizer) {
+      /* Set FS to NULL if it has not been done */
+      if (svga->state.hw_draw.fs) {
+         ret = svga_set_shader(svga, SVGA3D_SHADERTYPE_PS, NULL);
+         if (ret != PIPE_OK)
+            goto done;
+      }
+      svga->rebind.flags.fs = FALSE;
+      svga->state.hw_draw.fs = NULL;
+      goto done;
+   }
+
    /* SVGA_NEW_BLEND
     * SVGA_NEW_TEXTURE_BINDING
     * SVGA_NEW_RAST
