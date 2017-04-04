@@ -36,11 +36,11 @@ $(GENXML_GENERATED_PACK_FILES): genxml/gen_pack_header.py
 
 genxml/genX_xml.h: genxml/gen_zipped_file.py $(GENXML_XML_FILES)
 	$(MKDIR_GEN)
-	$(PYTHON_GEN) $< $(GENXML_XML_FILES:%=$(srcdir)/%) > $@ || ($(RM) $@; false)
+	$(PYTHON_GEN) $(srcdir)/genxml/gen_zipped_file.py $(GENXML_XML_FILES:%=$(srcdir)/%) > $@ || ($(RM) $@; false)
 
 genxml/genX_bits.h: genxml/gen_bits_header.py $(GENXML_XML_FILES)
 	$(MKDIR_GEN)
-	$(PYTHON_GEN) $< -o $@ $(addprefix $(srcdir)/,$(GENXML_XML_FILES))
+	$(PYTHON_GEN) $(srcdir)/genxml/gen_bits_header.py -o $@ $(GENXML_XML_FILES:%=$(srcdir)/%)
 
 EXTRA_DIST += \
 	genxml/genX_pack.h \
