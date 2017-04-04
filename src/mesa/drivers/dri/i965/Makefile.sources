@@ -2,6 +2,7 @@ i965_FILES = \
 	brw_binding_tables.c \
 	brw_blorp.c \
 	brw_blorp.h \
+	brw_bufmgr.c \
 	brw_bufmgr.h \
 	brw_cc.c \
 	brw_clear.c \
@@ -131,7 +132,6 @@ i965_FILES = \
 	intel_buffer_objects.h \
 	intel_buffers.c \
 	intel_buffers.h \
-	intel_bufmgr_gem.c \
 	intel_copy_image.c \
 	intel_extensions.c \
 	intel_fbo.c \
