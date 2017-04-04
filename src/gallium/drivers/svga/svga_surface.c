@@ -103,6 +103,43 @@ svga_texture_copy_handle(struct svga_context *svga,
 }
 
 
+/* A helper function to sync up the two surface handles.
+ */
+static void
+svga_texture_copy_handle_resource(struct svga_context *svga,
+                                  struct svga_texture *src_tex,
+                                  struct svga_winsys_surface *dst,
+                                  unsigned int numMipLevels,
+                                  unsigned int numLayers,
+                                  unsigned int zoffset,
+                                  unsigned int mipoffset,
+                                  unsigned int layeroffset)
+{
+   unsigned int i, j;
+
+   for (i = 0; i < numMipLevels; i++) {
+      unsigned int miplevel = i + mipoffset;
+
+      for (j = 0; j < numLayers; j++) {
+         if (svga_is_texture_level_defined(src_tex, j+layeroffset, miplevel)) {
+            unsigned depth = (zoffset < 0 ?
+                              u_minify(src_tex->b.b.depth0, miplevel) : 1);
+
+            svga_texture_copy_handle(svga,
+                                     src_tex->handle,
+                                     0, 0, zoffset,
+                                     miplevel,
+                                     j + layeroffset,
+                                     dst, 0, 0, 0, i, j,
+                                     u_minify(src_tex->b.b.width0, miplevel),
+                                     u_minify(src_tex->b.b.height0, miplevel),
+                                     depth);
+         }
+      }
+   }
+}
+
+
 struct svga_winsys_surface *
 svga_texture_view_surface(struct svga_context *svga,
                           struct svga_texture *tex,
@@ -118,7 +155,6 @@ svga_texture_view_surface(struct svga_context *svga,
 {
    struct svga_screen *ss = svga_screen(svga->pipe.screen);
    struct svga_winsys_surface *handle;
-   uint32_t i, j;
    unsigned z_offset = 0;
    boolean validated;
 
@@ -172,25 +208,10 @@ svga_texture_view_surface(struct svga_context *svga,
    if (zslice_pick >= 0)
       z_offset = zslice_pick;
 
-   for (i = 0; i < key->numMipLevels; i++) {
-      for (j = 0; j < key->numFaces * key->arraySize; j++) {
-         if (svga_is_texture_level_defined(tex, j + layer_pick, i + start_mip)) {
-            unsigned depth = (zslice_pick < 0 ?
-                              u_minify(tex->b.b.depth0, i + start_mip) :
-                              1);
-
-            svga_texture_copy_handle(svga,
-                                     tex->handle,
-                                     0, 0, z_offset,
-                                     i + start_mip,
-                                     j + layer_pick,
-                                     handle, 0, 0, 0, i, j,
-                                     u_minify(tex->b.b.width0, i + start_mip),
-                                     u_minify(tex->b.b.height0, i + start_mip),
-                                     depth);
-         }
-      }
-   }
+   svga_texture_copy_handle_resource(svga, tex, handle,
+                                     key->numMipLevels,
+                                     key->numFaces * key->arraySize,
+                                     z_offset, start_mip, layer_pick);
 
    return handle;
 }
@@ -374,11 +395,12 @@ svga_create_surface(struct pipe_context *pipe,
 static struct svga_surface *
 create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
+   struct svga_texture *tex = svga_texture(s->base.texture);
+
    SVGA_STATS_TIME_PUSH(svga_sws(svga),
                         SVGA_STATS_TIME_CREATEBACKEDSURFACEVIEW);
 
    if (!s->backed) {
-      struct svga_texture *tex = svga_texture(s->base.texture);
       struct pipe_surface *backed_view;
 
       backed_view = svga_create_surface_view(&svga->pipe,
@@ -389,6 +411,33 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
          return NULL;
 
       s->backed = svga_surface(backed_view);
+   }
+   else {
+      /*
+       * There is already an existing backing surface, but we still need to
+       * sync the handles.
+       */
+      struct svga_surface *bs = s->backed;
+      unsigned int layer, zslice;
+
+      assert(bs->handle);
+
+      switch (tex->b.b.target) {
+      case PIPE_TEXTURE_CUBE:
+      case PIPE_TEXTURE_1D_ARRAY:
+      case PIPE_TEXTURE_2D_ARRAY:
+         layer = s->base.u.tex.first_layer;
+         zslice = 0;
+         break;
+      default:
+         layer = 0;
+         zslice = s->base.u.tex.first_layer;
+      }
+
+      svga_texture_copy_handle_resource(svga, tex, bs->handle,
+                                        bs->key.numMipLevels,
+                                        bs->key.numFaces * bs->key.arraySize,
+                                        zslice, s->base.u.tex.level, layer);
    }
 
    svga_mark_surface_dirty(&s->backed->base);
