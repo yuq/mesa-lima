@@ -111,18 +111,25 @@ svga_texture_copy_handle_resource(struct svga_context *svga,
                                   struct svga_winsys_surface *dst,
                                   unsigned int numMipLevels,
                                   unsigned int numLayers,
-                                  unsigned int zoffset,
+                                  int zslice_pick,
                                   unsigned int mipoffset,
                                   unsigned int layeroffset)
 {
    unsigned int i, j;
+   unsigned int zoffset = 0;
+
+   /* A negative zslice_pick implies zoffset at 0, and depth to copy is
+    * from the depth of the texture at the particular mipmap level.
+    */
+   if (zslice_pick >= 0)
+      zoffset = zslice_pick;
 
    for (i = 0; i < numMipLevels; i++) {
       unsigned int miplevel = i + mipoffset;
 
       for (j = 0; j < numLayers; j++) {
          if (svga_is_texture_level_defined(src_tex, j+layeroffset, miplevel)) {
-            unsigned depth = (zoffset < 0 ?
+            unsigned depth = (zslice_pick < 0 ?
                               u_minify(src_tex->b.b.depth0, miplevel) : 1);
 
             svga_texture_copy_handle(svga,
@@ -155,7 +162,6 @@ svga_texture_view_surface(struct svga_context *svga,
 {
    struct svga_screen *ss = svga_screen(svga->pipe.screen);
    struct svga_winsys_surface *handle;
-   unsigned z_offset = 0;
    boolean validated;
 
    SVGA_DBG(DEBUG_PERF,
@@ -205,13 +211,10 @@ svga_texture_view_surface(struct svga_context *svga,
    if (layer_pick < 0)
       layer_pick = 0;
 
-   if (zslice_pick >= 0)
-      z_offset = zslice_pick;
-
    svga_texture_copy_handle_resource(svga, tex, handle,
                                      key->numMipLevels,
                                      key->numFaces * key->arraySize,
-                                     z_offset, start_mip, layer_pick);
+                                     zslice_pick, start_mip, layer_pick);
 
    return handle;
 }
