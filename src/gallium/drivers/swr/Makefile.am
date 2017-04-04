@@ -237,6 +237,7 @@ EXTRA_DIST = \
 	rasterizer/codegen/gen_llvm_types.py \
 	rasterizer/codegen/gen_archrast.py \
 	rasterizer/codegen/gen_backends.py \
+	rasterizer/codegen/gen_common.py \
 	rasterizer/codegen/gen_knobs.py \
 	rasterizer/codegen/knob_defs.py \
 	rasterizer/codegen/mako/ast.py \
