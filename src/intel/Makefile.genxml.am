@@ -47,4 +47,5 @@ EXTRA_DIST += \
 	genxml/gen_macros.h \
 	genxml/gen_pack_header.py \
 	genxml/gen_zipped_file.py \
+	genxml/gen_bits_header.py \
 	genxml/README
