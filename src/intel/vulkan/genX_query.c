@@ -131,6 +131,54 @@ cpu_write_query_result(void *dst_slot, VkQueryResultFlags flags,
    }
 }
 
+static bool
+query_is_available(struct anv_device *device, uint64_t *slot)
+{
+   if (!device->info.has_llc)
+      __builtin_ia32_clflush(slot);
+
+   return *(volatile uint64_t *)slot;
+}
+
+static VkResult
+wait_for_available(struct anv_device *device,
+                   struct anv_query_pool *pool, uint64_t *slot)
+{
+   while (true) {
+      if (query_is_available(device, slot))
+         return VK_SUCCESS;
+
+      int ret = anv_gem_busy(device, pool->bo.gem_handle);
+      if (ret == 1) {
+         /* The BO is still busy, keep waiting. */
+         continue;
+      } else if (ret == -1) {
+         /* We don't know the real error. */
+         device->lost = true;
+         return vk_errorf(VK_ERROR_DEVICE_LOST, "gem wait failed: %m");
+      } else {
+         assert(ret == 0);
+         /* The BO is no longer busy. */
+         if (query_is_available(device, slot)) {
+            return VK_SUCCESS;
+         } else {
+            VkResult status = anv_device_query_status(device);
+            if (status != VK_SUCCESS)
+               return status;
+
+            /* If we haven't seen availability yet, then we never will.  This
+             * can only happen if we have a client error where they call
+             * GetQueryPoolResults on a query that they haven't submitted to
+             * the GPU yet.  The spec allows us to do anything in this case,
+             * but returning VK_SUCCESS doesn't seem right and we shouldn't
+             * just keep spinning.
+             */
+            return VK_NOT_READY;
+         }
+      }
+   }
+}
+
 VkResult genX(GetQueryPoolResults)(
     VkDevice                                    _device,
     VkQueryPool                                 queryPool,
@@ -154,12 +202,6 @@ VkResult genX(GetQueryPoolResults)(
    if (pData == NULL)
       return VK_SUCCESS;
 
-   if (flags & VK_QUERY_RESULT_WAIT_BIT) {
-      VkResult result = anv_device_wait(device, &pool->bo, INT64_MAX);
-      if (result != VK_SUCCESS)
-         return result;
-   }
-
    void *data_end = pData + dataSize;
 
    if (!device->info.has_llc) {
@@ -175,6 +217,14 @@ VkResult genX(GetQueryPoolResults)(
 
       /* Availability is always at the start of the slot */
       bool available = slot[0];
+
+      if (!available && (flags & VK_QUERY_RESULT_WAIT_BIT)) {
+         status = wait_for_available(device, pool, slot);
+         if (status != VK_SUCCESS)
+            return status;
+
+         available = true;
+      }
 
       /* From the Vulkan 1.0.42 spec:
        *
