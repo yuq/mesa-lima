@@ -1324,13 +1324,13 @@ intel_detect_timestamp(struct intel_screen *screen)
     * More recent kernels offer an interface to read the full 36bits
     * everywhere.
     */
-   if (drm_bacon_reg_read(screen->bufmgr, TIMESTAMP | 1, &dummy) == 0)
+   if (brw_reg_read(screen->bufmgr, TIMESTAMP | 1, &dummy) == 0)
       return 3;
 
    /* Determine if we have a 32bit or 64bit kernel by inspecting the
     * upper 32bits for a rapidly changing timestamp.
     */
-   if (drm_bacon_reg_read(screen->bufmgr, TIMESTAMP, &last))
+   if (brw_reg_read(screen->bufmgr, TIMESTAMP, &last))
       return 0;
 
    upper = lower = 0;
@@ -1338,7 +1338,7 @@ intel_detect_timestamp(struct intel_screen *screen)
       /* The TIMESTAMP should change every 80ns, so several round trips
        * through the kernel should be enough to advance it.
        */
-      if (drm_bacon_reg_read(screen->bufmgr, TIMESTAMP, &dummy))
+      if (brw_reg_read(screen->bufmgr, TIMESTAMP, &dummy))
          return 0;
 
       upper += (dummy >> 32) != (last >> 32);

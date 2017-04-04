@@ -1442,9 +1442,7 @@ brw_destroy_hw_context(struct brw_bufmgr *bufmgr, uint32_t ctx_id)
 }
 
 int
-drm_bacon_reg_read(struct brw_bufmgr *bufmgr,
-		   uint32_t offset,
-		   uint64_t *result)
+brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset, uint64_t *result)
 {
 	struct drm_i915_reg_read reg_read;
 	int ret;

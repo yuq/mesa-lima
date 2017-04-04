@@ -309,9 +309,7 @@ int drm_bacon_bo_gem_export_to_prime(drm_bacon_bo *bo, int *prime_fd);
 drm_bacon_bo *drm_bacon_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr,
 						int prime_fd, int size);
 
-int drm_bacon_reg_read(struct brw_bufmgr *bufmgr,
-		       uint32_t offset,
-		       uint64_t *result);
+int brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset, uint64_t *result);
 
 /** @{ */
 
