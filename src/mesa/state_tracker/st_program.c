@@ -1798,6 +1798,19 @@ st_translate_compute_program(struct st_context *st,
    struct ureg_program *ureg;
    struct pipe_shader_state prog;
 
+   if (stcp->shader_program) {
+      nir_shader *nir = st_glsl_to_nir(st, &stcp->Base, stcp->shader_program,
+                                       MESA_SHADER_COMPUTE);
+
+      /* no compute variants: */
+      st_finalize_nir(st, &stcp->Base, nir);
+
+      stcp->tgsi.ir_type = PIPE_SHADER_IR_NIR;
+      stcp->tgsi.prog = nir;
+
+      return true;
+   }
+
    ureg = ureg_create_with_screen(PIPE_SHADER_COMPUTE, st->pipe->screen);
    if (ureg == NULL)
       return false;
