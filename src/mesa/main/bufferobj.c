@@ -1013,18 +1013,13 @@ _mesa_handle_bind_buffer_gen(struct gl_context *ctx,
  * Called by glBindBuffer() and other functions.
  */
 static void
-bind_buffer_object(struct gl_context *ctx, GLenum target, GLuint buffer)
+bind_buffer_object(struct gl_context *ctx,
+                   struct gl_buffer_object **bindTarget, GLuint buffer)
 {
    struct gl_buffer_object *oldBufObj;
    struct gl_buffer_object *newBufObj = NULL;
-   struct gl_buffer_object **bindTarget = NULL;
 
-   bindTarget = get_buffer_target(ctx, target);
-   if (!bindTarget) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBindBufferARB(target %s)",
-                  _mesa_enum_to_string(target));
-      return;
-   }
+   assert(bindTarget);
 
    /* Get pointer to old buffer object (to be unbound) */
    oldBufObj = *bindTarget;
@@ -1049,12 +1044,8 @@ bind_buffer_object(struct gl_context *ctx, GLenum target, GLuint buffer)
    }
 
    /* record usage history */
-   switch (target) {
-   case GL_PIXEL_PACK_BUFFER:
+   if (bindTarget == &ctx->Pack.BufferObj) {
       newBufObj->UsageHistory |= USAGE_PIXEL_PACK_BUFFER;
-      break;
-   default:
-      break;
    }
 
    /* bind new buffer */
@@ -1073,10 +1064,10 @@ _mesa_update_default_objects_buffer_objects(struct gl_context *ctx)
    /* Bind the NullBufferObj to remove references to those
     * in the shared context hash table.
     */
-   bind_buffer_object( ctx, GL_ARRAY_BUFFER_ARB, 0);
-   bind_buffer_object( ctx, GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-   bind_buffer_object( ctx, GL_PIXEL_PACK_BUFFER_ARB, 0);
-   bind_buffer_object( ctx, GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+   bind_buffer_object(ctx, &ctx->Array.ArrayBufferObj, 0);
+   bind_buffer_object(ctx, &ctx->Array.VAO->IndexBufferObj, 0);
+   bind_buffer_object(ctx, &ctx->Pack.BufferObj, 0);
+   bind_buffer_object(ctx, &ctx->Unpack.BufferObj, 0);
 }
 
 
@@ -1268,7 +1259,14 @@ _mesa_BindBuffer(GLenum target, GLuint buffer)
                   _mesa_enum_to_string(target), buffer);
    }
 
-   bind_buffer_object(ctx, target, buffer);
+   struct gl_buffer_object **bindTarget = get_buffer_target(ctx, target);
+   if (!bindTarget) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glBindBufferARB(target %s)",
+                  _mesa_enum_to_string(target));
+      return;
+   }
+
+   bind_buffer_object(ctx, bindTarget, buffer);
 }
 
 
