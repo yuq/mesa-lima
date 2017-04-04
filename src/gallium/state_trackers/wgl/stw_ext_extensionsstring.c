@@ -45,7 +45,7 @@ static const char *stw_extension_string =
    "WGL_EXT_create_context_es_profile "
    "WGL_EXT_create_context_es2_profile "
    "WGL_ARB_make_current_read "
-/*   "WGL_EXT_swap_interval " */
+   "WGL_EXT_swap_control "
    "WGL_EXT_extensions_string";
 
 
