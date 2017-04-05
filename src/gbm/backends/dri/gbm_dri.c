@@ -1266,6 +1266,9 @@ gbm_dri_surface_create(struct gbm_device *gbm,
       return NULL;
    }
 
+   if (count)
+      assert(modifiers);
+
    /* It's acceptable to create an image with INVALID modifier in the list,
     * but it cannot be on the only modifier (since it will certainly fail
     * later). While we could easily catch this after modifier creation, doing
