@@ -30,6 +30,12 @@ do
 		if grep -q ^$candidate already_picked ; then
 			continue
 		fi
+		# Or if it isn't in the ignore list.
+		if [ -f bin/.cherry-ignore ] ; then
+			if grep -q ^$candidate bin/.cherry-ignore ; then
+				continue
+			fi
+		fi
 		echo Commit $candidate references $sha
 	done
 done
