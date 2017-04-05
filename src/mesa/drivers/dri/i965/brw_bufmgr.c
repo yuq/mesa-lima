@@ -236,10 +236,7 @@ static void
 brw_bo_cache_purge_bucket(struct brw_bufmgr *bufmgr,
                           struct bo_cache_bucket *bucket)
 {
-   while (!list_empty(&bucket->head)) {
-      struct brw_bo *bo;
-
-      bo = LIST_ENTRY(struct brw_bo, bucket->head.next, head);
+   list_for_each_entry_safe(struct brw_bo, bo, &bucket->head, head) {
       if (brw_bo_madvise(bo, I915_MADV_DONTNEED))
          break;
 
@@ -596,10 +593,7 @@ cleanup_bo_cache(struct brw_bufmgr *bufmgr, time_t time)
    for (i = 0; i < bufmgr->num_buckets; i++) {
       struct bo_cache_bucket *bucket = &bufmgr->cache_bucket[i];
 
-      while (!list_empty(&bucket->head)) {
-         struct brw_bo *bo;
-
-         bo = LIST_ENTRY(struct brw_bo, bucket->head.next, head);
+      list_for_each_entry_safe(struct brw_bo, bo, &bucket->head, head) {
          if (time - bo->free_time <= 1)
             break;
 
@@ -1096,10 +1090,8 @@ brw_bufmgr_destroy(struct brw_bufmgr *bufmgr)
    /* Free any cached buffer objects we were going to reuse */
    for (int i = 0; i < bufmgr->num_buckets; i++) {
       struct bo_cache_bucket *bucket = &bufmgr->cache_bucket[i];
-      struct brw_bo *bo;
 
-      while (!list_empty(&bucket->head)) {
-         bo = LIST_ENTRY(struct brw_bo, bucket->head.next, head);
+      list_for_each_entry_safe(struct brw_bo, bo, &bucket->head, head) {
          list_del(&bo->head);
 
          bo_free(bo);
