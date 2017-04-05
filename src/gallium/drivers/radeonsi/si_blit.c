@@ -469,6 +469,19 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 }
 
 static void
+si_decompress_color_texture(struct si_context *sctx, struct r600_texture *tex,
+			    unsigned first_level, unsigned last_level)
+{
+	/* CMASK or DCC can be discarded and we can still end up here. */
+	if (!tex->cmask.size && !tex->fmask.size && !tex->dcc_offset)
+		return;
+
+	si_blit_decompress_color(&sctx->b.b, tex, first_level, last_level, 0,
+				 util_max_layer(&tex->resource.b.b, first_level),
+				 false);
+}
+
+static void
 si_decompress_sampler_color_textures(struct si_context *sctx,
 				     struct si_textures_info *textures)
 {
@@ -485,14 +498,9 @@ si_decompress_sampler_color_textures(struct si_context *sctx,
 		assert(view);
 
 		tex = (struct r600_texture *)view->texture;
-		/* CMASK or DCC can be discarded and we can still end up here. */
-		if (!tex->cmask.size && !tex->fmask.size && !tex->dcc_offset)
-			continue;
 
-		si_blit_decompress_color(&sctx->b.b, tex,
-					 view->u.tex.first_level, view->u.tex.last_level,
-					 0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level),
-					 false);
+		si_decompress_color_texture(sctx, tex, view->u.tex.first_level,
+					    view->u.tex.last_level);
 	}
 }
 
@@ -513,13 +521,9 @@ si_decompress_image_color_textures(struct si_context *sctx,
 		assert(view->resource->target != PIPE_BUFFER);
 
 		tex = (struct r600_texture *)view->resource;
-		if (!tex->cmask.size && !tex->fmask.size && !tex->dcc_offset)
-			continue;
 
-		si_blit_decompress_color(&sctx->b.b, tex,
-					 view->u.tex.level, view->u.tex.level,
-					 0, util_max_layer(&tex->resource.b.b, view->u.tex.level),
-					 false);
+		si_decompress_color_texture(sctx, tex, view->u.tex.level,
+					    view->u.tex.level);
 	}
 }
 
