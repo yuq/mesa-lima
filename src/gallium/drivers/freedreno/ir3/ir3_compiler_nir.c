@@ -1306,9 +1306,9 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		cond->regs[0]->num = regid(REG_P0, 0);
 
 		kill = ir3_KILL(b, cond, 0);
-		array_insert(ctx->ir->predicates, kill);
+		array_insert(ctx->ir, ctx->ir->predicates, kill);
 
-		array_insert(ctx->ir->keeps, kill);
+		array_insert(ctx->ir, ctx->ir->keeps, kill);
 		ctx->so->has_kill = true;
 
 		break;
@@ -1583,7 +1583,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_W, flags,
 				tex_idx, tex_idx, col0, col1);
 
-		array_insert(ctx->ir->astc_srgb, sam);
+		array_insert(ctx->ir, ctx->ir->astc_srgb, sam);
 
 		/* fixup .w component: */
 		split_dest(b, &dst[3], sam, 3, 1);
@@ -1972,7 +1972,7 @@ emit_stream_out(struct ir3_compile *ctx)
 			stg->cat6.type = TYPE_U32;
 			stg->cat6.dst_offset = (strmout->output[i].dst_offset + j) * 4;
 
-			array_insert(ctx->ir->keeps, stg);
+			array_insert(ctx->ir, ctx->ir->keeps, stg);
 		}
 	}
 
