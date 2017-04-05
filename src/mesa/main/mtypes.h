@@ -1939,7 +1939,6 @@ struct gl_program
    /** FIXME: This must be first until we split shader_info from nir_shader */
    struct shader_info info;
 
-   mtx_t Mutex;
    GLuint Id;
    GLint RefCount;
    GLubyte *String;  /**< Null-terminated program text */
