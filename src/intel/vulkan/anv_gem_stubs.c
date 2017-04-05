@@ -139,7 +139,26 @@ anv_gem_destroy_context(struct anv_device *device, int context)
 }
 
 int
+anv_gem_get_context_param(int fd, int context, uint32_t param, uint64_t *value)
+{
+   unreachable("Unused");
+}
+
+int
 anv_gem_get_aperture(int fd, uint64_t *size)
+{
+   unreachable("Unused");
+}
+
+bool
+anv_gem_supports_48b_addresses(int fd)
+{
+   unreachable("Unused");
+}
+
+int
+anv_gem_gpu_get_reset_stats(struct anv_device *device,
+                            uint32_t *active, uint32_t *pending)
 {
    unreachable("Unused");
 }
