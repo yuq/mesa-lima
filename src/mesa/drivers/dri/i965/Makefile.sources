@@ -87,11 +87,7 @@ i965_FILES = \
 	gen6_sol.c \
 	gen6_urb.c \
 	gen6_viewport_state.c \
-	gen6_vs_state.c \
-	gen6_wm_state.c \
 	gen7_cs_state.c \
-	gen7_ds_state.c \
-	gen7_hs_state.c \
 	gen7_l3_state.c \
 	gen7_misc_state.c \
 	gen7_sol_state.c \

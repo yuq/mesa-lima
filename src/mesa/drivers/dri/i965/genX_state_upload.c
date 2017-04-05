@@ -42,6 +42,7 @@
 #include "main/fbobject.h"
 #include "main/framebuffer.h"
 #include "main/glformats.h"
+#include "main/shaderapi.h"
 #include "main/stencil.h"
 #include "main/transformfeedback.h"
 #include "main/viewport.h"
@@ -97,6 +98,17 @@ render_bo(struct brw_bo *bo, uint32_t offset)
             .offset = offset,
             .read_domains = I915_GEM_DOMAIN_RENDER,
             .write_domain = I915_GEM_DOMAIN_RENDER,
+   };
+}
+
+static inline struct brw_address
+render_ro_bo(struct brw_bo *bo, uint32_t offset)
+{
+   return (struct brw_address) {
+            .bo = bo,
+            .offset = offset,
+            .read_domains = I915_GEM_DOMAIN_RENDER,
+            .write_domain = 0,
    };
 }
 
@@ -1750,6 +1762,144 @@ static const struct brw_tracked_state genX(scissor_state) = {
    .emit = genX(upload_scissor_state),
 };
 
+#if GEN_GEN >= 7
+UNUSED static const uint32_t push_constant_opcodes[] = {
+   [MESA_SHADER_VERTEX]                      = 21,
+   [MESA_SHADER_TESS_CTRL]                   = 25, /* HS */
+   [MESA_SHADER_TESS_EVAL]                   = 26, /* DS */
+   [MESA_SHADER_GEOMETRY]                    = 22,
+   [MESA_SHADER_FRAGMENT]                    = 23,
+   [MESA_SHADER_COMPUTE]                     = 0,
+};
+
+static void
+upload_constant_state(struct brw_context *brw,
+                      struct brw_stage_state *stage_state,
+                      bool active, uint32_t stage)
+{
+   UNUSED uint32_t mocs = GEN_GEN < 8 ? GEN7_MOCS_L3 : 0;
+   active = active && stage_state->push_const_size != 0;
+
+   brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_VS), pkt) {
+      pkt._3DCommandSubOpcode = push_constant_opcodes[stage];
+      if (active) {
+#if GEN_GEN >= 9
+         pkt.ConstantBody.ConstantBuffer2ReadLength =
+            stage_state->push_const_size;
+         pkt.ConstantBody.PointerToConstantBuffer2 =
+            render_ro_bo(brw->batch.bo, stage_state->push_const_offset);
+#else
+         pkt.ConstantBody.ConstantBuffer0ReadLength =
+            stage_state->push_const_size;
+         pkt.ConstantBody.PointerToConstantBuffer0.offset =
+            stage_state->push_const_offset | mocs;
+#endif
+      }
+   }
+
+   brw->ctx.NewDriverState |= GEN_GEN >= 9 ? BRW_NEW_SURFACES : 0;
+}
+#endif
+
+static void
+genX(upload_vs_push_constants)(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->vs.base;
+
+   /* _BRW_NEW_VERTEX_PROGRAM */
+   const struct brw_program *vp = brw_program_const(brw->vertex_program);
+   /* BRW_NEW_VS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;
+
+   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_VERTEX);
+   gen6_upload_push_constants(brw, &vp->program, prog_data, stage_state);
+
+#if GEN_GEN >= 7
+   if (GEN_GEN == 7 && !GEN_IS_HASWELL && !brw->is_baytrail)
+      gen7_emit_vs_workaround_flush(brw);
+
+   upload_constant_state(brw, stage_state, true /* active */,
+                         MESA_SHADER_VERTEX);
+#endif
+}
+
+static const struct brw_tracked_state genX(vs_push_constants) = {
+   .dirty = {
+      .mesa  = _NEW_PROGRAM_CONSTANTS |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+               BRW_NEW_VERTEX_PROGRAM |
+               BRW_NEW_VS_PROG_DATA,
+   },
+   .emit = genX(upload_vs_push_constants),
+};
+
+static void
+genX(upload_gs_push_constants)(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->gs.base;
+
+   /* BRW_NEW_GEOMETRY_PROGRAM */
+   const struct brw_program *gp = brw_program_const(brw->geometry_program);
+
+   if (gp) {
+      /* BRW_NEW_GS_PROG_DATA */
+      struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
+
+      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_GEOMETRY);
+      gen6_upload_push_constants(brw, &gp->program, prog_data, stage_state);
+   }
+
+#if GEN_GEN >= 7
+   upload_constant_state(brw, stage_state, gp, MESA_SHADER_GEOMETRY);
+#endif
+}
+
+static const struct brw_tracked_state genX(gs_push_constants) = {
+   .dirty = {
+      .mesa  = _NEW_PROGRAM_CONSTANTS |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+   },
+   .emit = genX(upload_gs_push_constants),
+};
+
+static void
+genX(upload_wm_push_constants)(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->wm.base;
+   /* BRW_NEW_FRAGMENT_PROGRAM */
+   const struct brw_program *fp = brw_program_const(brw->fragment_program);
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->wm.base.prog_data;
+
+   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_FRAGMENT);
+
+   gen6_upload_push_constants(brw, &fp->program, prog_data, stage_state);
+
+#if GEN_GEN >= 7
+   upload_constant_state(brw, stage_state, true, MESA_SHADER_FRAGMENT);
+#endif
+}
+
+static const struct brw_tracked_state genX(wm_push_constants) = {
+   .dirty = {
+      .mesa  = _NEW_PROGRAM_CONSTANTS,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+   },
+   .emit = genX(upload_wm_push_constants),
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -2426,6 +2576,68 @@ static const struct brw_tracked_state genX(te_state) = {
    .emit = upload_te_state,
 };
 
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_tes_push_constants)(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->tes.base;
+   /* BRW_NEW_TESS_PROGRAMS */
+   const struct brw_program *tep = brw_program_const(brw->tess_eval_program);
+
+   if (tep) {
+      /* BRW_NEW_TES_PROG_DATA */
+      const struct brw_stage_prog_data *prog_data = brw->tes.base.prog_data;
+      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_TESS_EVAL);
+      gen6_upload_push_constants(brw, &tep->program, prog_data, stage_state);
+   }
+
+   upload_constant_state(brw, stage_state, tep, MESA_SHADER_TESS_EVAL);
+}
+
+static const struct brw_tracked_state genX(tes_push_constants) = {
+   .dirty = {
+      .mesa  = _NEW_PROGRAM_CONSTANTS,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+               BRW_NEW_TESS_PROGRAMS |
+               BRW_NEW_TES_PROG_DATA,
+   },
+   .emit = genX(upload_tes_push_constants),
+};
+
+static void
+genX(upload_tcs_push_constants)(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->tcs.base;
+   /* BRW_NEW_TESS_PROGRAMS */
+   const struct brw_program *tcp = brw_program_const(brw->tess_ctrl_program);
+   bool active = brw->tess_eval_program;
+
+   if (active) {
+      /* BRW_NEW_TCS_PROG_DATA */
+      const struct brw_stage_prog_data *prog_data = brw->tcs.base.prog_data;
+
+      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_TESS_CTRL);
+      gen6_upload_push_constants(brw, &tcp->program, prog_data, stage_state);
+   }
+
+   upload_constant_state(brw, stage_state, active, MESA_SHADER_TESS_CTRL);
+}
+
+static const struct brw_tracked_state genX(tcs_push_constants) = {
+   .dirty = {
+      .mesa  = _NEW_PROGRAM_CONSTANTS,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_BLORP |
+               BRW_NEW_DEFAULT_TESS_LEVELS |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+               BRW_NEW_TESS_PROGRAMS |
+               BRW_NEW_TCS_PROG_DATA,
+   },
+   .emit = genX(upload_tcs_push_constants),
+};
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -2726,6 +2938,7 @@ static const struct brw_tracked_state genX(ps_blend) = {
    },
    .emit = genX(upload_ps_blend)
 };
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -2806,9 +3019,9 @@ genX(init_atoms)(struct brw_context *brw)
       &gen6_color_calc_state,	/* must do before cc unit */
       &gen6_depth_stencil_state,	/* must do before cc unit */
 
-      &gen6_vs_push_constants, /* Before vs_state */
-      &gen6_gs_push_constants, /* Before gs_state */
-      &gen6_wm_push_constants, /* Before wm_state */
+      &genX(vs_push_constants), /* Before vs_state */
+      &genX(gs_push_constants), /* Before gs_state */
+      &genX(wm_push_constants), /* Before wm_state */
 
       /* Surface state setup.  Must come before the VS/WM unit.  The binding
        * table upload must be last.
@@ -2877,11 +3090,11 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_gs_image_surfaces, /* Before gs push/pull constants and binding table */
       &brw_wm_image_surfaces, /* Before wm push/pull constants and binding table */
 
-      &gen6_vs_push_constants, /* Before vs_state */
-      &gen7_tcs_push_constants,
-      &gen7_tes_push_constants,
-      &gen6_gs_push_constants, /* Before gs_state */
-      &gen6_wm_push_constants, /* Before wm_surfaces and constant_buffer */
+      &genX(vs_push_constants), /* Before vs_state */
+      &genX(tcs_push_constants),
+      &genX(tes_push_constants),
+      &genX(gs_push_constants), /* Before gs_state */
+      &genX(wm_push_constants), /* Before wm_surfaces and constant_buffer */
 
       /* Surface state setup.  Must come before the VS/WM unit.  The binding
        * table upload must be last.
@@ -2964,11 +3177,11 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_gs_image_surfaces, /* Before gs push/pull constants and binding table */
       &brw_wm_image_surfaces, /* Before wm push/pull constants and binding table */
 
-      &gen6_vs_push_constants, /* Before vs_state */
-      &gen7_tcs_push_constants,
-      &gen7_tes_push_constants,
-      &gen6_gs_push_constants, /* Before gs_state */
-      &gen6_wm_push_constants, /* Before wm_surfaces and constant_buffer */
+      &genX(vs_push_constants), /* Before vs_state */
+      &genX(tcs_push_constants),
+      &genX(tes_push_constants),
+      &genX(gs_push_constants), /* Before gs_state */
+      &genX(wm_push_constants), /* Before wm_surfaces and constant_buffer */
 
       /* Surface state setup.  Must come before the VS/WM unit.  The binding
        * table upload must be last.

@@ -31,39 +31,6 @@
 #include "intel_batchbuffer.h"
 #include "main/shaderapi.h"
 
-static void
-gen6_upload_gs_push_constants(struct brw_context *brw)
-{
-   struct brw_stage_state *stage_state = &brw->gs.base;
-
-   /* BRW_NEW_GEOMETRY_PROGRAM */
-   const struct brw_program *gp = brw_program_const(brw->geometry_program);
-
-   if (gp) {
-      /* BRW_NEW_GS_PROG_DATA */
-      struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
-
-      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_GEOMETRY);
-      gen6_upload_push_constants(brw, &gp->program, prog_data, stage_state);
-   }
-
-   if (brw->gen >= 7)
-      gen7_upload_constant_state(brw, stage_state, gp, _3DSTATE_CONSTANT_GS);
-}
-
-const struct brw_tracked_state gen6_gs_push_constants = {
-   .dirty = {
-      .mesa  = _NEW_PROGRAM_CONSTANTS |
-               _NEW_TRANSFORM,
-      .brw   = BRW_NEW_BATCH |
-               BRW_NEW_BLORP |
-               BRW_NEW_GEOMETRY_PROGRAM |
-               BRW_NEW_GS_PROG_DATA |
-               BRW_NEW_PUSH_CONSTANT_ALLOCATION,
-   },
-   .emit = gen6_upload_gs_push_constants,
-};
-
 void
 upload_gs_state_for_tf(struct brw_context *brw)
 {
