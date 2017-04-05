@@ -854,18 +854,6 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
       }
    }
 
-   blorp_emit(batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hiz) {
-      if (params->depth.aux_usage == ISL_AUX_USAGE_HIZ) {
-         hiz.SurfacePitch = params->depth.aux_surf.row_pitch - 1;
-         hiz.SurfaceBaseAddress = params->depth.aux_addr;
-         hiz.HierarchicalDepthBufferMOCS = mocs;
-#if GEN_GEN >= 8
-         hiz.SurfaceQPitch =
-            isl_surf_get_array_pitch_sa_rows(&params->depth.aux_surf) >> 2;
-#endif
-      }
-   }
-
    blorp_emit(batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
       if (params->stencil.enabled) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
@@ -880,6 +868,18 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
 
          sb.SurfaceBaseAddress = params->stencil.addr;
          sb.StencilBufferMOCS = batch->blorp->mocs.tex;
+      }
+   }
+
+   blorp_emit(batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hiz) {
+      if (params->depth.aux_usage == ISL_AUX_USAGE_HIZ) {
+         hiz.SurfacePitch = params->depth.aux_surf.row_pitch - 1;
+         hiz.SurfaceBaseAddress = params->depth.aux_addr;
+         hiz.HierarchicalDepthBufferMOCS = mocs;
+#if GEN_GEN >= 8
+         hiz.SurfaceQPitch =
+            isl_surf_get_array_pitch_sa_rows(&params->depth.aux_surf) >> 2;
+#endif
       }
    }
 
