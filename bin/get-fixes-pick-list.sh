@@ -24,6 +24,13 @@ git log --reverse --grep="cherry picked from commit" $latest_branchpoint..HEAD |
 git log --reverse --pretty=%H -i --grep="fixes:" $latest_branchpoint..origin/master |\
 while read sha
 do
+	# Check to see whether the patch is on the ignore list ...
+	if [ -f bin/.cherry-ignore ] ; then
+		if grep -q ^$sha bin/.cherry-ignore ; then
+			continue
+		fi
+	fi
+
 	# For each one try to extract the tag
 	fixes_count=`git show $sha | grep -i "fixes:" | wc -l`
 	if [ "x$fixes_count" != x1 ] ; then
