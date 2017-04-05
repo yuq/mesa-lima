@@ -181,10 +181,11 @@ st_nir_assign_uniform_locations(struct gl_program *prog,
          continue;
 
       if (uniform->type->is_sampler()) {
-         unsigned val;
+         unsigned val = 0;
          bool found = shader_program->UniformHash->get(val, uniform->name);
          loc = shaderidx++;
          assert(found);
+         (void) found; /* silence unused var warning */
          /* this ensure that nir_lower_samplers looks at the correct
           * shader_program->UniformStorage[location]:
           */
