@@ -43,11 +43,6 @@
 #include "fd5_format.h"
 #include "fd5_zsa.h"
 
-static const enum a4xx_state_block sb[] = {
-	[SHADER_VERTEX]   = SB4_VS_SHADER,
-	[SHADER_FRAGMENT] = SB4_FS_SHADER,
-};
-
 /* regid:          base const register
  * prsc or dwords: buffer containing constant values
  * sizedwords:     size of const value buffer
@@ -74,7 +69,7 @@ fd5_emit_const(struct fd_ringbuffer *ring, enum shader_t type,
 	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + sz);
 	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(regid/4) |
 			CP_LOAD_STATE4_0_STATE_SRC(src) |
-			CP_LOAD_STATE4_0_STATE_BLOCK(sb[type]) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(fd4_stage2shadersb(type)) |
 			CP_LOAD_STATE4_0_NUM_UNIT(sizedwords/4));
 	if (prsc) {
 		struct fd_bo *bo = fd_resource(prsc)->bo;
@@ -103,7 +98,7 @@ fd5_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
 	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (2 * anum));
 	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(regid/4) |
 			CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
-			CP_LOAD_STATE4_0_STATE_BLOCK(sb[type]) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(fd4_stage2shadersb(type)) |
 			CP_LOAD_STATE4_0_NUM_UNIT(anum/2));
 	OUT_RING(ring, CP_LOAD_STATE4_1_EXT_SRC_ADDR(0) |
 			CP_LOAD_STATE4_1_STATE_TYPE(ST4_CONSTANTS));

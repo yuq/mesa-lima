@@ -88,15 +88,9 @@ static void
 emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so)
 {
 	const struct ir3_info *si = &so->info;
-	enum a4xx_state_block sb;
+	enum a4xx_state_block sb = fd4_stage2shadersb(so->type);
 	enum a4xx_state_src src;
 	uint32_t i, sz, *bin;
-
-	if (so->type == SHADER_VERTEX) {
-		sb = SB4_VS_SHADER;
-	} else {
-		sb = SB4_FS_SHADER;
-	}
 
 	if (fd_mesa_debug & FD_DBG_DIRECT) {
 		sz = si->sizedwords;
