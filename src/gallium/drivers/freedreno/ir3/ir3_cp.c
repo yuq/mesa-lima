@@ -576,15 +576,15 @@ ir3_cp(struct ir3 *ir, struct ir3_shader_variant *so)
 		}
 	}
 
-	for (unsigned i = 0; i < ir->keeps_count; i++) {
-		instr_cp(&ctx, ir->keeps[i]);
-		ir->keeps[i] = eliminate_output_mov(ir->keeps[i]);
-	}
-
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		if (block->condition) {
 			instr_cp(&ctx, block->condition);
 			block->condition = eliminate_output_mov(block->condition);
+		}
+
+		for (unsigned i = 0; i < block->keeps_count; i++) {
+			instr_cp(&ctx, block->keeps[i]);
+			block->keeps[i] = eliminate_output_mov(block->keeps[i]);
 		}
 	}
 }

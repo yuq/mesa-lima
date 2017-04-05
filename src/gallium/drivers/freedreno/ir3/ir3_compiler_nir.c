@@ -1308,7 +1308,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		kill = ir3_KILL(b, cond, 0);
 		array_insert(ctx->ir, ctx->ir->predicates, kill);
 
-		array_insert(ctx->ir, ctx->ir->keeps, kill);
+		array_insert(b, b->keeps, kill);
 		ctx->so->has_kill = true;
 
 		break;
@@ -1972,7 +1972,7 @@ emit_stream_out(struct ir3_compile *ctx)
 			stg->cat6.type = TYPE_U32;
 			stg->cat6.dst_offset = (strmout->output[i].dst_offset + j) * 4;
 
-			array_insert(ctx->ir, ctx->ir->keeps, stg);
+			array_insert(ctx->block, ctx->block->keeps, stg);
 		}
 	}
 
