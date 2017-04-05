@@ -7463,20 +7463,23 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 static void si_build_wrapper_function(struct si_shader_context *ctx,
 				      LLVMValueRef *parts,
 				      unsigned num_parts,
-				      unsigned main_part)
+				      unsigned main_part,
+				      unsigned next_shader_first_part)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = ctx->gallivm.builder;
 	/* PS epilog has one arg per color component */
 	LLVMTypeRef param_types[48];
-	LLVMValueRef out[48];
+	LLVMValueRef initial[48], out[48];
 	LLVMTypeRef function_type;
 	unsigned num_params;
-	unsigned num_out;
+	unsigned num_out, initial_num_out;
 	MAYBE_UNUSED unsigned num_out_sgpr; /* used in debug checks */
+	MAYBE_UNUSED unsigned initial_num_out_sgpr; /* used in debug checks */
 	unsigned num_sgprs, num_vgprs;
 	unsigned last_sgpr_param;
 	unsigned gprs;
+	struct lp_build_if_state if_state;
 
 	for (unsigned i = 0; i < num_parts; ++i) {
 		lp_add_function_attr(parts[i], -1, LP_FUNC_ATTR_ALWAYSINLINE);
@@ -7528,6 +7531,13 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 	si_create_function(ctx, "wrapper", NULL, 0, param_types, num_params, last_sgpr_param);
 
+	if (is_merged_shader(ctx->shader)) {
+		LLVMValueRef full_mask = LLVMConstInt(ctx->i64, ~0ull, 0);
+		lp_build_intrinsic(ctx->gallivm.builder,
+				   "llvm.amdgcn.init.exec", ctx->voidt,
+				   &full_mask, 1, LP_FUNC_ATTR_CONVERGENT);
+	}
+
 	/* Record the arguments of the function as if they were an output of
 	 * a previous part.
 	 */
@@ -7564,6 +7574,10 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 			num_out_sgpr = num_out;
 	}
 
+	memcpy(initial, out, sizeof(out));
+	initial_num_out = num_out;
+	initial_num_out_sgpr = num_out_sgpr;
+
 	/* Now chain the parts. */
 	for (unsigned part = 0; part < num_parts; ++part) {
 		LLVMValueRef in[48];
@@ -7573,6 +7587,24 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 		num_params = LLVMCountParams(parts[part]);
 		assert(num_params <= ARRAY_SIZE(param_types));
+
+		/* Merged shaders are executed conditionally depending
+		 * on the number of enabled threads passed in the input SGPRs. */
+		if (is_merged_shader(ctx->shader) &&
+		    (part == 0 || part == next_shader_first_part)) {
+			LLVMValueRef ena, count = initial[3];
+
+			/* The thread count for the 2nd shader is at bit-offset 8. */
+			if (part == next_shader_first_part) {
+				count = LLVMBuildLShr(builder, count,
+						      LLVMConstInt(ctx->i32, 8, 0), "");
+			}
+			count = LLVMBuildAnd(builder, count,
+					     LLVMConstInt(ctx->i32, 0x7f, 0), "");
+			ena = LLVMBuildICmp(builder, LLVMIntULT,
+					    ac_get_thread_id(&ctx->ac), count, "");
+			lp_build_if(&if_state, &ctx->gallivm, ena);
+		}
 
 		/* Derive arguments for the next part from outputs of the
 		 * previous one.
@@ -7621,9 +7653,33 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 		}
 
 		ret = LLVMBuildCall(builder, parts[part], in, num_params, "");
-		ret_type = LLVMTypeOf(ret);
+
+		if (is_merged_shader(ctx->shader) &&
+		    (part + 1 == next_shader_first_part ||
+		     part + 1 == num_parts)) {
+			lp_build_endif(&if_state);
+
+			if (part + 1 == next_shader_first_part) {
+				/* A barrier is required between 2 merged shaders. */
+				si_llvm_emit_barrier(NULL, &ctx->bld_base, NULL);
+
+				/* The second half of the merged shader should use
+				 * the inputs from the toplevel (wrapper) function,
+				 * not the return value from the last call.
+				 *
+				 * That's because the last call was executed condi-
+				 * tionally, so we can't consume it in the main
+				 * block.
+				 */
+				memcpy(out, initial, sizeof(initial));
+				num_out = initial_num_out;
+				num_out_sgpr = initial_num_out_sgpr;
+			}
+			continue;
+		}
 
 		/* Extract the returned GPRs. */
+		ret_type = LLVMTypeOf(ret);
 		num_out = 0;
 		num_out_sgpr = 0;
 
@@ -7711,19 +7767,70 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		}
 
 		si_build_wrapper_function(&ctx, parts, 1 + need_prolog + need_epilog,
-					  need_prolog ? 1 : 0);
+					  need_prolog ? 1 : 0, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_CTRL) {
-		LLVMValueRef parts[2];
-		union si_shader_part_key epilog_key;
+		if (sscreen->b.chip_class >= GFX9) {
+			struct si_shader_selector *ls = shader->key.part.tcs.ls;
+			LLVMValueRef parts[4];
 
-		parts[0] = ctx.main_fn;
+			/* TCS main part */
+			parts[2] = ctx.main_fn;
 
-		memset(&epilog_key, 0, sizeof(epilog_key));
-		epilog_key.tcs_epilog.states = shader->key.part.tcs.epilog;
-		si_build_tcs_epilog_function(&ctx, &epilog_key);
-		parts[1] = ctx.main_fn;
+			/* TCS epilog */
+			union si_shader_part_key tcs_epilog_key;
+			memset(&tcs_epilog_key, 0, sizeof(tcs_epilog_key));
+			tcs_epilog_key.tcs_epilog.states = shader->key.part.tcs.epilog;
+			si_build_tcs_epilog_function(&ctx, &tcs_epilog_key);
+			parts[3] = ctx.main_fn;
 
-		si_build_wrapper_function(&ctx, parts, 2, 0);
+			/* VS prolog */
+			if (ls->vs_needs_prolog) {
+				union si_shader_part_key vs_prolog_key;
+				si_get_vs_prolog_key(&ls->info,
+						     shader->info.num_input_sgprs,
+						     &shader->key.part.tcs.ls_prolog,
+						     shader, &vs_prolog_key);
+				vs_prolog_key.vs_prolog.is_monolithic = true;
+				si_build_vs_prolog_function(&ctx, &vs_prolog_key);
+				parts[0] = ctx.main_fn;
+			}
+
+			/* VS as LS main part */
+			struct si_shader shader_ls = {};
+			shader_ls.selector = ls;
+			shader_ls.key.as_ls = 1;
+			shader_ls.key.mono = shader->key.mono;
+			shader_ls.key.opt = shader->key.opt;
+			si_llvm_context_set_tgsi(&ctx, &shader_ls);
+
+			if (!si_compile_tgsi_main(&ctx, true)) {
+				si_llvm_dispose(&ctx);
+				return -1;
+			}
+			shader->info.uses_instanceid |= ls->info.uses_instanceid;
+			parts[1] = ctx.main_fn;
+
+			/* Reset the shader context. */
+			ctx.shader = shader;
+			ctx.type = PIPE_SHADER_TESS_CTRL;
+
+			si_build_wrapper_function(&ctx,
+						  parts + !ls->vs_needs_prolog,
+						  4 - !ls->vs_needs_prolog, 0,
+						  ls->vs_needs_prolog ? 2 : 1);
+		} else {
+			LLVMValueRef parts[2];
+			union si_shader_part_key epilog_key;
+
+			parts[0] = ctx.main_fn;
+
+			memset(&epilog_key, 0, sizeof(epilog_key));
+			epilog_key.tcs_epilog.states = shader->key.part.tcs.epilog;
+			si_build_tcs_epilog_function(&ctx, &epilog_key);
+			parts[1] = ctx.main_fn;
+
+			si_build_wrapper_function(&ctx, parts, 2, 0, 0);
+		}
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_EVAL &&
 		   !shader->key.as_es) {
 		LLVMValueRef parts[2];
@@ -7735,7 +7842,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		si_build_vs_epilog_function(&ctx, &epilog_key);
 		parts[1] = ctx.main_fn;
 
-		si_build_wrapper_function(&ctx, parts, 2, 0);
+		si_build_wrapper_function(&ctx, parts, 2, 0, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_GEOMETRY) {
 		LLVMValueRef parts[2];
 		union si_shader_part_key prolog_key;
@@ -7747,7 +7854,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		si_build_gs_prolog_function(&ctx, &prolog_key);
 		parts[0] = ctx.main_fn;
 
-		si_build_wrapper_function(&ctx, parts, 2, 1);
+		si_build_wrapper_function(&ctx, parts, 2, 1, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
 		LLVMValueRef parts[3];
 		union si_shader_part_key prolog_key;
@@ -7768,7 +7875,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		si_build_ps_epilog_function(&ctx, &epilog_key);
 		parts[need_prolog ? 2 : 1] = ctx.main_fn;
 
-		si_build_wrapper_function(&ctx, parts, need_prolog ? 3 : 2, need_prolog ? 1 : 0);
+		si_build_wrapper_function(&ctx, parts, need_prolog ? 3 : 2,
+					  need_prolog ? 1 : 0, 0);
 	}
 
 	/* Dump LLVM IR before any optimization passes */
@@ -8028,7 +8136,8 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 			   num_params, last_sgpr);
 	func = ctx->main_fn;
 
-	if (key->vs_prolog.num_merged_next_stage_vgprs)
+	if (key->vs_prolog.num_merged_next_stage_vgprs &&
+	    !key->vs_prolog.is_monolithic)
 		si_init_exec_from_input(ctx, 3, 0);
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
