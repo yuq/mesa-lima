@@ -36,7 +36,9 @@ do
 				continue
 			fi
 		fi
-		echo Commit $candidate references $sha
+		printf "Commit \"%s\" references %s\n" \
+		       "`git log -n1 --pretty=oneline $candidate`" \
+		       "$sha"
 	done
 done
 
