@@ -1328,6 +1328,31 @@ anv_device_query_status(struct anv_device *device)
 }
 
 VkResult
+anv_device_bo_busy(struct anv_device *device, struct anv_bo *bo)
+{
+   /* Note:  This only returns whether or not the BO is in use by an i915 GPU.
+    * Other usages of the BO (such as on different hardware) will not be
+    * flagged as "busy" by this ioctl.  Use with care.
+    */
+   int ret = anv_gem_busy(device, bo->gem_handle);
+   if (ret == 1) {
+      return VK_NOT_READY;
+   } else if (ret == -1) {
+      /* We don't know the real error. */
+      device->lost = true;
+      return vk_errorf(VK_ERROR_DEVICE_LOST, "gem wait failed: %m");
+   }
+
+   /* Query for device status after the busy call.  If the BO we're checking
+    * got caught in a GPU hang we don't want to return VK_SUCCESS to the
+    * client because it clearly doesn't have valid data.  Yes, this most
+    * likely means an ioctl, but we just did an ioctl to query the busy status
+    * so it's no great loss.
+    */
+   return anv_device_query_status(device);
+}
+
+VkResult
 anv_device_wait(struct anv_device *device, struct anv_bo *bo,
                 int64_t timeout)
 {
@@ -1906,14 +1931,11 @@ VkResult anv_GetFenceStatus(
       return VK_SUCCESS;
 
    case ANV_FENCE_STATE_SUBMITTED: {
-      VkResult result = anv_device_wait(device, &fence->bo, 0);
-      switch (result) {
-      case VK_SUCCESS:
+      VkResult result = anv_device_bo_busy(device, &fence->bo);
+      if (result == VK_SUCCESS) {
          fence->state = ANV_FENCE_STATE_SIGNALED;
          return VK_SUCCESS;
-      case VK_TIMEOUT:
-         return VK_NOT_READY;
-      default:
+      } else {
          return result;
       }
    }

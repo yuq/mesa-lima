@@ -147,6 +147,23 @@ anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
 }
 
 /**
+ * Returns 0, 1, or negative to indicate error
+ */
+int
+anv_gem_busy(struct anv_device *device, uint32_t gem_handle)
+{
+   struct drm_i915_gem_busy busy = {
+      .handle = gem_handle,
+   };
+
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_BUSY, &busy);
+   if (ret < 0)
+      return ret;
+
+   return busy.busy != 0;
+}
+
+/**
  * On error, \a timeout_ns holds the remaining time.
  */
 int

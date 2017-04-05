@@ -644,6 +644,7 @@ VkResult anv_device_execbuf(struct anv_device *device,
                             struct drm_i915_gem_execbuffer2 *execbuf,
                             struct anv_bo **execbuf_bos);
 VkResult anv_device_query_status(struct anv_device *device);
+VkResult anv_device_bo_busy(struct anv_device *device, struct anv_bo *bo);
 VkResult anv_device_wait(struct anv_device *device, struct anv_bo *bo,
                          int64_t timeout);
 
@@ -653,6 +654,7 @@ void anv_gem_munmap(void *p, uint64_t size);
 uint32_t anv_gem_create(struct anv_device *device, size_t size);
 void anv_gem_close(struct anv_device *device, uint32_t gem_handle);
 uint32_t anv_gem_userptr(struct anv_device *device, void *mem, size_t size);
+int anv_gem_busy(struct anv_device *device, uint32_t gem_handle);
 int anv_gem_wait(struct anv_device *device, uint32_t gem_handle, int64_t *timeout_ns);
 int anv_gem_execbuffer(struct anv_device *device,
                        struct drm_i915_gem_execbuffer2 *execbuf);
