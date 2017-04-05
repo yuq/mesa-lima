@@ -1323,7 +1323,6 @@ allocate_renderbuffer_locked(struct gl_context *ctx, GLuint renderbuffer,
    }
    assert(newRb->AllocStorage);
    _mesa_HashInsertLocked(ctx->Shared->RenderBuffers, renderbuffer, newRb);
-   newRb->RefCount = 1; /* referenced by hash table */
 
    return newRb;
 }

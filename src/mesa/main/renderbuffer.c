@@ -44,7 +44,7 @@ _mesa_init_renderbuffer(struct gl_renderbuffer *rb, GLuint name)
 
    rb->ClassID = 0;
    rb->Name = name;
-   rb->RefCount = 0;
+   rb->RefCount = 1;
    rb->Delete = _mesa_delete_renderbuffer;
 
    /* The rest of these should be set later by the caller of this function or
