@@ -100,8 +100,8 @@ struct vmw_winsys_screen
    dev_t device;
    int open_count;
 
-   pipe_condvar cs_cond;
-   pipe_mutex cs_mutex;
+   cnd_t cs_cond;
+   mtx_t cs_mutex;
 };
 
 

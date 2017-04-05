@@ -196,17 +196,17 @@ vmw_swc_flush(struct svga_winsys_context *swc,
 
    ret = pb_validate_validate(vswc->validate);
    if (ret != PIPE_OK) {
-      pipe_mutex_lock(vws->cs_mutex);
+      mtx_lock(&vws->cs_mutex);
       while (ret == PIPE_ERROR_RETRY) {
          ret = pb_validate_validate(vswc->validate);
          if (ret == PIPE_ERROR_RETRY) {
-            pipe_condvar_wait(vws->cs_cond, vws->cs_mutex);
+            cnd_wait(&vws->cs_cond, &vws->cs_mutex);
          }
       }
       if (ret != PIPE_OK) {
-         pipe_condvar_broadcast(vws->cs_cond);
+         cnd_broadcast(&vws->cs_cond);
       }
-      pipe_mutex_unlock(vws->cs_mutex);
+      mtx_unlock(&vws->cs_mutex);
    }
 
    assert(ret == PIPE_OK);
@@ -243,9 +243,9 @@ vmw_swc_flush(struct svga_winsys_context *swc,
                            &fence);
 
       pb_validate_fence(vswc->validate, fence);
-      pipe_mutex_lock(vws->cs_mutex);
-      pipe_condvar_broadcast(vws->cs_cond);
-      pipe_mutex_unlock(vws->cs_mutex);
+      mtx_lock(&vws->cs_mutex);
+      cnd_broadcast(&vws->cs_cond);
+      mtx_unlock(&vws->cs_mutex);
    }
 
    vswc->command.used = 0;
