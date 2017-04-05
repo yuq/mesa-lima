@@ -555,8 +555,10 @@ static void si_check_render_feedback_textures(struct si_context *sctx,
 			    surf->base.u.tex.level >= view->u.tex.first_level &&
 			    surf->base.u.tex.level <= view->u.tex.last_level &&
 			    surf->base.u.tex.first_layer <= view->u.tex.last_layer &&
-			    surf->base.u.tex.last_layer >= view->u.tex.first_layer)
+			    surf->base.u.tex.last_layer >= view->u.tex.first_layer) {
 				render_feedback = true;
+				break;
+			}
 		}
 
 		if (render_feedback)
@@ -595,8 +597,10 @@ static void si_check_render_feedback_images(struct si_context *sctx,
 			if (tex == (struct r600_texture*)surf->base.texture &&
 			    surf->base.u.tex.level == view->u.tex.level &&
 			    surf->base.u.tex.first_layer <= view->u.tex.last_layer &&
-			    surf->base.u.tex.last_layer >= view->u.tex.first_layer)
+			    surf->base.u.tex.last_layer >= view->u.tex.first_layer) {
 				render_feedback = true;
+				break;
+			}
 		}
 
 		if (render_feedback)
