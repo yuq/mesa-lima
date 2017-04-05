@@ -188,14 +188,12 @@ _mesa_reference_vao_(struct gl_context *ctx,
 
    if (*ptr) {
       /* Unreference the old array object */
-      GLboolean deleteFlag = GL_FALSE;
       struct gl_vertex_array_object *oldObj = *ptr;
 
       assert(oldObj->RefCount > 0);
       oldObj->RefCount--;
-      deleteFlag = (oldObj->RefCount == 0);
 
-      if (deleteFlag)
+      if (oldObj->RefCount == 0)
          _mesa_delete_vao(ctx, oldObj);
 
       *ptr = NULL;

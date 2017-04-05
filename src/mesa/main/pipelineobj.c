@@ -184,14 +184,12 @@ _mesa_reference_pipeline_object_(struct gl_context *ctx,
 
    if (*ptr) {
       /* Unreference the old pipeline object */
-      GLboolean deleteFlag = GL_FALSE;
       struct gl_pipeline_object *oldObj = *ptr;
 
       assert(oldObj->RefCount > 0);
       oldObj->RefCount--;
-      deleteFlag = (oldObj->RefCount == 0);
 
-      if (deleteFlag) {
+      if (oldObj->RefCount == 0) {
          _mesa_delete_pipeline_object(ctx, oldObj);
       }
 
