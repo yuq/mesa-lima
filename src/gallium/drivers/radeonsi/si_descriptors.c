@@ -559,6 +559,13 @@ static bool is_compressed_colortex(struct r600_texture *rtex)
 	       (rtex->dcc_offset && rtex->dirty_level_mask);
 }
 
+static bool depth_needs_decompression(struct r600_texture *rtex,
+				      struct si_sampler_view *sview)
+{
+	return rtex->db_compatible &&
+	       (!rtex->tc_compatible_htile || sview->is_stencil_sampler);
+}
+
 static void si_update_compressed_tex_shader_mask(struct si_context *sctx,
 						 unsigned shader)
 {
@@ -602,8 +609,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 				(struct r600_texture*)views[i]->texture;
 			struct si_sampler_view *rview = (struct si_sampler_view *)views[i];
 
-			if (rtex->db_compatible &&
-			    (!rtex->tc_compatible_htile || rview->is_stencil_sampler)) {
+			if (depth_needs_decompression(rtex, rview)) {
 				samplers->depth_texture_mask |= 1u << slot;
 			} else {
 				samplers->depth_texture_mask &= ~(1u << slot);
