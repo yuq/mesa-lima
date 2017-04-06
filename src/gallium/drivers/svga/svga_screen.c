@@ -988,6 +988,13 @@ svga_screen_create(struct svga_winsys_screen *sws)
       svgascreen->hw_version = SVGA3D_HWVERSION_WS65_B1;
    }
 
+   if (svgascreen->hw_version < SVGA3D_HWVERSION_WS8_B1) {
+      /* too old for 3D acceleration */
+      debug_printf("Hardware version 0x%x is too old for accerated 3D\n",
+                   svgascreen->hw_version);
+      goto error2;
+   }
+
    /*
     * The D16, D24X8, and D24S8 formats always do an implicit shadow compare
     * when sampled from, where as the DF16, DF24, and D24S8_INT do not.  So
