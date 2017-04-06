@@ -12,10 +12,8 @@ addons:
     sources:
       - llvm-toolchain-trusty-3.9
     packages:
-      - libdrm-dev
       - x11proto-xf86vidmode-dev
       - libexpat1-dev
-      - libxcb-dri2-0-dev
       - libx11-xcb-dev
       # LLVM packaging is broken and misses these dependencies
       - libedit-dev
