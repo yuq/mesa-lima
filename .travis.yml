@@ -79,6 +79,32 @@ matrix:
             - libexpat1-dev
             - libx11-xcb-dev
             - libelf-dev
+    - env:
+        - LABEL="scons SWR"
+        - BUILD=scons
+        - SCONSFLAGS="-j4"
+        - SCONS_TARGET="swr=1"
+        - LLVM_VERSION=3.9
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+        - OVERRIDE_CC="gcc-5"
+        - OVERRIDE_CXX="g++-5"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-3.9
+          packages:
+            - scons
+            # LLVM packaging is broken and misses these dependencies
+            - libedit-dev
+            # From sources above
+            - g++-5
+            - llvm-3.9-dev
+            # Common
+            - x11proto-xf86vidmode-dev
+            - libexpat1-dev
+            - libx11-xcb-dev
+            - libelf-dev
 
 install:
   - pip install --user mako
@@ -154,5 +180,7 @@ script:
     fi
 
   - if test "x$BUILD" = xscons; then
+      test -n "$OVERRIDE_CC" && export CC="$OVERRIDE_CC";
+      test -n "$OVERRIDE_CXX" && export CXX="$OVERRIDE_CXX";
       scons $SCONS_TARGET && scons $SCONS_TARGET check;
     fi
