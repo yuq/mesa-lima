@@ -243,6 +243,9 @@ static void decode(struct gen_spec *spec,
 
       gen_print_group(stdout, inst, offset, p,
                       option_color == COLOR_ALWAYS);
+
+      if (strcmp(inst->name, "MI_BATCH_BUFFER_END") == 0)
+         break;
    }
 }
 
