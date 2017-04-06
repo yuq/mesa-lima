@@ -456,7 +456,7 @@ static bool PaPatchListTerm(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         PaPatchList<TotalControlPoints>,
         PaPatchListSingle<TotalControlPoints>,
         0,
-        KNOB_SIMD_WIDTH,
+        PA_STATE_OPT::SIMD_WIDTH,
         true);
 
     return true;
@@ -509,7 +509,7 @@ static bool PaPatchListTerm_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector
         PaPatchList<TotalControlPoints>,
         PaPatchListSingle<TotalControlPoints>,
         0,
-        KNOB_SIMD16_WIDTH,
+        PA_STATE_OPT::SIMD_WIDTH,
         true);
 
     return true;
@@ -736,7 +736,7 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     }
 
 #endif
-    SetNextPaState(pa, PaTriList0, PaTriListSingle0, 0, KNOB_SIMD_WIDTH, true);
+    SetNextPaState(pa, PaTriList0, PaTriListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -783,7 +783,7 @@ bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v2[i] = _simd16_permute_ps(temp2, perm2);
     }
 
-    SetNextPaState_simd16(pa, PaTriList0_simd16, PaTriList0, PaTriListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaTriList0_simd16, PaTriList0, PaTriListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -1014,7 +1014,7 @@ bool PaTriStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         v2[i] = _simd_shuffle_ps(a0, s, _MM_SHUFFLE(2, 2, 2, 2));
     }
 
-    SetNextPaState(pa, PaTriStrip1, PaTriStripSingle0, 0, KNOB_SIMD_WIDTH);
+    SetNextPaState(pa, PaTriStrip1, PaTriStripSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -1052,7 +1052,7 @@ bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v2[i] = _simd16_shuffle_ps(a[i], shuff, _MM_SHUFFLE(2, 2, 2, 2));                           // a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
     }
 
-    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStrip1, PaTriStripSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStrip1, PaTriStripSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -1288,7 +1288,7 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         v1[i] = _simd_shuffle_ps(a0, v2[i], _MM_SHUFFLE(2, 1, 2, 1));
     }
 
-    SetNextPaState(pa, PaTriFan1, PaTriFanSingle0, 0, KNOB_SIMD_WIDTH);
+    SetNextPaState(pa, PaTriFan1, PaTriFanSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -1345,7 +1345,7 @@ bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v1[i] = _simd16_shuffle_ps(b[i], v2[i], _MM_SHUFFLE(2, 1, 2, 1));                           // b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
     }
 
-    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFan1, PaTriFanSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFan1, PaTriFanSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -1480,7 +1480,7 @@ bool PaQuadList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         v2[i] = _simd_shuffle_ps(s1, s2, _MM_SHUFFLE(3, 2, 3, 2));
     }
 
-    SetNextPaState(pa, PaQuadList0, PaQuadListSingle0, 0, KNOB_SIMD_WIDTH, true);
+    SetNextPaState(pa, PaQuadList0, PaQuadListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -1515,7 +1515,7 @@ bool PaQuadList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v2[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(3, 2, 3, 2));                          // a2 a3 a6 a7 aA aB aE aF b2 b3 b6 b7 bA bB bE bF
     }
 
-    SetNextPaState_simd16(pa, PaQuadList0_simd16, PaQuadList0, PaQuadListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaQuadList0_simd16, PaQuadList0, PaQuadListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -1735,7 +1735,7 @@ bool PaLineLoop1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         }
     }
 
-    SetNextPaState(pa, PaLineLoop1, PaLineLoopSingle0, 0, KNOB_SIMD_WIDTH);
+    SetNextPaState(pa, PaLineLoop1, PaLineLoopSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -1765,7 +1765,7 @@ bool PaLineLoop1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         }
     }
 
-    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoop1, PaLineLoopSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoop1, PaLineLoopSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -1847,7 +1847,7 @@ bool PaLineList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         verts[1].v[i] = _mm256_shuffle_ps(vALowBLow, vAHighBHigh, _MM_SHUFFLE(3, 1, 3, 1));
     }
 
-    SetNextPaState(pa, PaLineList0, PaLineListSingle0, 0, KNOB_SIMD_WIDTH, true);
+    SetNextPaState(pa, PaLineList0, PaLineListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -1879,7 +1879,7 @@ bool PaLineList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v1[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(3, 1, 3, 1));                          // a1 a3 a5 a7 a9 aB aD aF b1 b3 b5 b7 b9 bB bD bF
     }
 
-    SetNextPaState_simd16(pa, PaLineList0_simd16, PaLineList0, PaLineListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaLineList0_simd16, PaLineList0, PaLineListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -2065,7 +2065,7 @@ bool PaLineStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         verts[1].v[i] = _mm256_blend_ps(vPermA, vPermB, 0x88);
     }
 
-    SetNextPaState(pa, PaLineStrip1, PaLineStripSingle0, 0, KNOB_SIMD_WIDTH);
+    SetNextPaState(pa, PaLineStrip1, PaLineStripSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -2099,7 +2099,7 @@ bool PaLineStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v1[i] = _simd16_permute_ps(temp, perm);                                                     // a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0
     }
 
-    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStrip1, PaLineStripSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStrip1, PaLineStripSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
     return true;
 }
 
@@ -2253,7 +2253,7 @@ bool PaPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #endif
     verts[0] = a;  // points only have 1 vertex.
 
-    SetNextPaState(pa, PaPoints0, PaPointsSingle0, 0, KNOB_SIMD_WIDTH, true);
+    SetNextPaState(pa, PaPoints0, PaPointsSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -2264,7 +2264,7 @@ bool PaPoints0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 
     verts[0] = a;  // points only have 1 vertex.
 
-    SetNextPaState_simd16(pa, PaPoints0_simd16, PaPoints0, PaPointsSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaPoints0_simd16, PaPoints0, PaPointsSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -2394,7 +2394,7 @@ bool PaRectList1(
         v2[i] = _mm256_blend_ps(v2[i], tmp2, 0xAA);         //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
     }
 
-    SetNextPaState(pa, PaRectList1, PaRectListSingle0, 0, KNOB_SIMD_WIDTH, true);
+    SetNextPaState(pa, PaRectList1, PaRectListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -2410,7 +2410,7 @@ bool PaRectList2(
     simdvector verts[])
 {
     SWR_INVALID("Is rect list used for anything other then clears?");
-    SetNextPaState(pa, PaRectList0, PaRectListSingle0, 0, KNOB_SIMD_WIDTH, true);
+    SetNextPaState(pa, PaRectList0, PaRectListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -2524,7 +2524,7 @@ bool PaRectList1_simd16(
         v2[i] = _simd16_insert_ps(_simd16_setzero_ps(), v2_lo, 0);
     }
 
-    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectList1, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectList1, PaRectListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
@@ -2540,7 +2540,7 @@ bool PaRectList2_simd16(
     simd16vector verts[])
 {
     SWR_INVALID("Is rect list used for anything other then clears?");
-    SetNextPaState_simd16(pa, PaRectList0_simd16, PaRectList0, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    SetNextPaState_simd16(pa, PaRectList0_simd16, PaRectList0, PaRectListSingle0, 0, PA_STATE_OPT::SIMD_WIDTH, true);
     return true;
 }
 
