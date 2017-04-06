@@ -965,6 +965,24 @@ static unsigned si_get_alpha_test_func(struct si_context *sctx)
 	return PIPE_FUNC_ALWAYS;
 }
 
+static void si_shader_selector_key_vs(struct si_context *sctx,
+				      struct si_shader_selector *vs,
+				      struct si_shader_key *key,
+				      struct si_vs_prolog_bits *prolog_key)
+{
+	if (!sctx->vertex_elements)
+		return;
+
+	unsigned count = MIN2(vs->info.num_inputs,
+			      sctx->vertex_elements->count);
+	for (unsigned i = 0; i < count; ++i) {
+		prolog_key->instance_divisors[i] =
+			sctx->vertex_elements->elements[i].instance_divisor;
+	}
+
+	memcpy(key->mono.vs_fix_fetch, sctx->vertex_elements->fix_fetch, count);
+}
+
 static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 					 struct si_shader_selector *vs,
 					 struct si_shader_key *key)
@@ -1023,22 +1041,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 					  struct si_shader_key *key)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	unsigned i;
 
 	memset(key, 0, sizeof(*key));
 
 	switch (sel->type) {
 	case PIPE_SHADER_VERTEX:
-		if (sctx->vertex_elements) {
-			unsigned count = MIN2(sel->info.num_inputs,
-					      sctx->vertex_elements->count);
-			for (i = 0; i < count; ++i)
-				key->part.vs.prolog.instance_divisors[i] =
-					sctx->vertex_elements->elements[i].instance_divisor;
+		si_shader_selector_key_vs(sctx, sel, key, &key->part.vs.prolog);
 
-			memcpy(key->mono.vs_fix_fetch,
-			       sctx->vertex_elements->fix_fetch, count);
-		}
 		if (sctx->tes_shader.cso)
 			key->as_ls = 1;
 		else if (sctx->gs_shader.cso)
