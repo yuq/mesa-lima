@@ -451,7 +451,7 @@ _mesa_update_texture_renderbuffer(struct gl_context *ctx,
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "glFramebufferTexture()");
          return;
       }
-      _mesa_reference_renderbuffer(&att->Renderbuffer, rb);
+      att->Renderbuffer = rb;
 
       /* This can't get called on a texture renderbuffer, so set it to NULL
        * for clarity compared to user renderbuffers.

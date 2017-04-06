@@ -271,6 +271,11 @@ add_color_renderbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
          return GL_FALSE;
       }
 
+      /* Set refcount to 0 to avoid a leak since the _mesa_add_renderbuffer()
+       * call below will bump the initial refcount.
+       */
+      rb->RefCount = 0;
+
       rb->InternalFormat = GL_RGBA;
 
       rb->AllocStorage = soft_renderbuffer_storage;
