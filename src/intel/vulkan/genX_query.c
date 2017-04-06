@@ -90,6 +90,14 @@ VkResult genX(CreateQueryPool)(
    if (result != VK_SUCCESS)
       goto fail;
 
+   /* For query pools, we set the caching mode to I915_CACHING_CACHED.  On LLC
+    * platforms, this does nothing.  On non-LLC platforms, this means snooping
+    * which comes at a slight cost.  However, the buffers aren't big, won't be
+    * written frequently, and trying to handle the flushing manually without
+    * doing too much flushing is extremely painful.
+    */
+   anv_gem_set_caching(device, pool->bo.gem_handle, I915_CACHING_CACHED);
+
    pool->bo.map = anv_gem_mmap(device, pool->bo.gem_handle, 0, size, 0);
 
    *pQueryPool = anv_query_pool_to_handle(pool);
@@ -132,11 +140,8 @@ cpu_write_query_result(void *dst_slot, VkQueryResultFlags flags,
 }
 
 static bool
-query_is_available(struct anv_device *device, uint64_t *slot)
+query_is_available(uint64_t *slot)
 {
-   if (!device->info.has_llc)
-      __builtin_ia32_clflush(slot);
-
    return *(volatile uint64_t *)slot;
 }
 
@@ -145,7 +150,7 @@ wait_for_available(struct anv_device *device,
                    struct anv_query_pool *pool, uint64_t *slot)
 {
    while (true) {
-      if (query_is_available(device, slot))
+      if (query_is_available(slot))
          return VK_SUCCESS;
 
       int ret = anv_gem_busy(device, pool->bo.gem_handle);
@@ -159,7 +164,7 @@ wait_for_available(struct anv_device *device,
       } else {
          assert(ret == 0);
          /* The BO is no longer busy. */
-         if (query_is_available(device, slot)) {
+         if (query_is_available(slot)) {
             return VK_SUCCESS;
          } else {
             VkResult status = anv_device_query_status(device);
@@ -203,13 +208,6 @@ VkResult genX(GetQueryPoolResults)(
       return VK_SUCCESS;
 
    void *data_end = pData + dataSize;
-
-   if (!device->info.has_llc) {
-      uint64_t offset = firstQuery * pool->stride;
-      uint64_t size = queryCount * pool->stride;
-      anv_invalidate_range(pool->bo.map + offset,
-                           MIN2(size, pool->bo.size - offset));
-   }
 
    VkResult status = VK_SUCCESS;
    for (uint32_t i = 0; i < queryCount; i++) {
