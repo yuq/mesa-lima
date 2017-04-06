@@ -1129,23 +1129,6 @@ bo_set_tiling_internal(struct brw_bo *bo, uint32_t tiling_mode,
 }
 
 int
-brw_bo_set_tiling(struct brw_bo *bo, uint32_t *tiling_mode, uint32_t stride)
-{
-   int ret;
-
-   /* Linear buffers have no stride. By ensuring that we only ever use
-    * stride 0 with linear buffers, we simplify our code.
-    */
-   if (*tiling_mode == I915_TILING_NONE)
-      stride = 0;
-
-   ret = bo_set_tiling_internal(bo, *tiling_mode, stride);
-
-   *tiling_mode = bo->tiling_mode;
-   return ret;
-}
-
-int
 brw_bo_get_tiling(struct brw_bo *bo, uint32_t *tiling_mode,
                   uint32_t *swizzle_mode)
 {

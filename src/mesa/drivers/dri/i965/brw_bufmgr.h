@@ -209,14 +209,6 @@ void brw_bo_wait_rendering(struct brw_bo *bo);
 void brw_bufmgr_destroy(struct brw_bufmgr *bufmgr);
 
 /**
- * Ask that the buffer be placed in tiling mode
- *
- * \param buf Buffer to set tiling mode for
- * \param tiling_mode desired, and returned tiling mode
- */
-int brw_bo_set_tiling(struct brw_bo *bo, uint32_t *tiling_mode,
-                      uint32_t stride);
-/**
  * Get the current tiling (and resulting swizzling) mode for the bo.
  *
  * \param buf Buffer to get tiling mode for
