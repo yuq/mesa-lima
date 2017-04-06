@@ -114,6 +114,8 @@ script:
         --disable-llvm-shared-libs
         ;
       make && make check;
-    elif test x$BUILD = xscons; then
+    fi
+
+  - if test "x$BUILD" = xscons; then
       scons llvm=1 && scons llvm=1 check;
     fi
