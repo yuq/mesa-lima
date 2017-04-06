@@ -6930,21 +6930,28 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 /**
  * Compute the VS prolog key, which contains all the information needed to
  * build the VS prolog function, and set shader->info bits where needed.
+ *
+ * \param info             Shader info of the vertex shader.
+ * \param num_input_sgprs  Number of input SGPRs for the vertex shader.
+ * \param prolog_key       Key of the VS prolog
+ * \param shader_out       The vertex shader, or the next shader if merging LS+HS or ES+GS.
+ * \param key              Output shader part key.
  */
-static void si_get_vs_prolog_key(struct si_shader *shader,
+static void si_get_vs_prolog_key(const struct tgsi_shader_info *info,
+				 unsigned num_input_sgprs,
+				 const struct si_vs_prolog_bits *prolog_key,
+				 struct si_shader *shader_out,
 				 union si_shader_part_key *key)
 {
-	struct tgsi_shader_info *info = &shader->selector->info;
-
 	memset(key, 0, sizeof(*key));
-	key->vs_prolog.states = shader->key.part.vs.prolog;
-	key->vs_prolog.num_input_sgprs = shader->info.num_input_sgprs;
+	key->vs_prolog.states = *prolog_key;
+	key->vs_prolog.num_input_sgprs = num_input_sgprs;
 	key->vs_prolog.last_input = MAX2(1, info->num_inputs) - 1;
 
 	/* Set the instanceID flag. */
 	for (unsigned i = 0; i < info->num_inputs; i++)
 		if (key->vs_prolog.states.instance_divisors[i])
-			shader->info.uses_instanceid = true;
+			shader_out->info.uses_instanceid = true;
 }
 
 /**
@@ -7431,7 +7438,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 		if (need_prolog) {
 			union si_shader_part_key prolog_key;
-			si_get_vs_prolog_key(shader, &prolog_key);
+			si_get_vs_prolog_key(&sel->info,
+					     shader->info.num_input_sgprs,
+					     &shader->key.part.vs.prolog,
+					     shader, &prolog_key);
 			si_build_vs_prolog_function(&ctx, &prolog_key);
 			parts[0] = ctx.main_fn;
 		}
@@ -7880,8 +7890,10 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 		union si_shader_part_key prolog_key;
 
 		/* Get the prolog. */
-		si_get_vs_prolog_key(shader, &prolog_key);
-
+		si_get_vs_prolog_key(&shader->selector->info,
+				     shader->info.num_input_sgprs,
+				     &shader->key.part.vs.prolog,
+				     shader, &prolog_key);
 		shader->prolog =
 			si_get_shader_part(sscreen, &sscreen->vs_prologs,
 					   PIPE_SHADER_VERTEX, true,
