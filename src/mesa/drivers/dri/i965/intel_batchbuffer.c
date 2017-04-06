@@ -733,6 +733,8 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
                struct brw_bo *target, uint32_t target_offset,
                uint32_t read_domains, uint32_t write_domain)
 {
+   uint64_t offset64;
+
    if (batch->reloc_count == batch->reloc_array_size) {
       batch->reloc_array_size *= 2;
       batch->relocs = realloc(batch->relocs,
@@ -752,18 +754,20 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
 
    batch->reloc_count++;
 
+   /* ensure gcc doesn't reload */
+   offset64 = *((volatile uint64_t *)&target->offset64);
    reloc->offset = batch_offset;
    reloc->delta = target_offset;
    reloc->target_handle = target->gem_handle;
    reloc->read_domains = read_domains;
    reloc->write_domain = write_domain;
-   reloc->presumed_offset = target->offset64;
+   reloc->presumed_offset = offset64;
 
    /* Using the old buffer offset, write in what the right data would be, in
     * case the buffer doesn't move and we can short-circuit the relocation
     * processing in the kernel
     */
-   return target->offset64 + target_offset;
+   return offset64 + target_offset;
 }
 
 void
