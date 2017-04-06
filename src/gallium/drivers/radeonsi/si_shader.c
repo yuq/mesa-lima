@@ -6693,6 +6693,10 @@ static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
+		if (shader->selector->screen->b.chip_class >= GFX9) {
+			si_dump_shader_key_vs(key, &key->part.tcs.ls_prolog,
+					      "part.tcs.ls_prolog", f);
+		}
 		fprintf(f, "  part.tcs.epilog.prim_mode = %u\n", key->part.tcs.epilog.prim_mode);
 		fprintf(f, "  mono.ff_tcs_inputs_to_copy = 0x%"PRIx64"\n", key->mono.ff_tcs_inputs_to_copy);
 		break;
@@ -8007,9 +8011,19 @@ static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
 				       struct si_shader *shader,
 				       struct pipe_debug_callback *debug)
 {
-	union si_shader_part_key epilog_key;
+	if (sscreen->b.chip_class >= GFX9) {
+		struct si_shader *ls_main_part =
+			shader->key.part.tcs.ls->main_shader_part_ls;
+
+		if (!si_get_vs_prolog(sscreen, tm, shader, debug, ls_main_part,
+				      &shader->key.part.tcs.ls_prolog))
+			return false;
+
+		shader->previous_stage = ls_main_part;
+	}
 
 	/* Get the epilog. */
+	union si_shader_part_key epilog_key;
 	memset(&epilog_key, 0, sizeof(epilog_key));
 	epilog_key.tcs_epilog.states = shader->key.part.tcs.epilog;
 

@@ -1060,6 +1060,12 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		}
 		break;
 	case PIPE_SHADER_TESS_CTRL:
+		if (sctx->b.chip_class >= GFX9) {
+			si_shader_selector_key_vs(sctx, sctx->vs_shader.cso,
+						  key, &key->part.tcs.ls_prolog);
+			key->part.tcs.ls = sctx->vs_shader.cso;
+		}
+
 		key->part.tcs.epilog.prim_mode =
 			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 		key->part.tcs.epilog.tes_reads_tess_factors =

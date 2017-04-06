@@ -435,6 +435,8 @@ struct si_shader_key {
 			struct si_vs_epilog_bits epilog;
 		} vs;
 		struct {
+			struct si_vs_prolog_bits ls_prolog; /* for merged LS-HS */
+			struct si_shader_selector *ls;   /* for merged LS-HS */
 			struct si_tcs_epilog_bits epilog;
 		} tcs; /* tessellation control shader */
 		struct {
