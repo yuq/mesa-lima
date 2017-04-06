@@ -69,7 +69,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 				 struct lp_build_tgsi_context *bld_base,
 				 struct lp_build_emit_data *emit_data);
 
-static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
+static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
 			       FILE *f);
 
 static unsigned llvm_get_type_size(LLVMTypeRef type);
@@ -6383,7 +6383,7 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 {
 	if (!check_debug_option ||
 	    r600_can_dump_shader(&sscreen->b, processor))
-		si_dump_shader_key(processor, &shader->key, file);
+		si_dump_shader_key(processor, shader, file);
 
 	if (!check_debug_option && shader->binary.llvm_ir_string) {
 		fprintf(file, "\n%s - main shader part - LLVM IR:\n\n",
@@ -6645,28 +6645,38 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	return shader;
 }
 
-static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
+static void si_dump_shader_key_vs(struct si_shader_key *key,
+				  struct si_vs_prolog_bits *prolog,
+				  const char *prefix, FILE *f)
+{
+	fprintf(f, "  %s.instance_divisors = {", prefix);
+	for (int i = 0; i < ARRAY_SIZE(prolog->instance_divisors); i++) {
+		fprintf(f, !i ? "%u" : ", %u",
+			prolog->instance_divisors[i]);
+	}
+	fprintf(f, "}\n");
+
+	fprintf(f, "  mono.vs.fix_fetch = {");
+	for (int i = 0; i < SI_MAX_ATTRIBS; i++)
+		fprintf(f, !i ? "%u" : ", %u", key->mono.vs_fix_fetch[i]);
+	fprintf(f, "}\n");
+}
+
+static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
 			       FILE *f)
 {
-	int i;
+	struct si_shader_key *key = &shader->key;
 
 	fprintf(f, "SHADER KEY\n");
 
-	switch (shader) {
+	switch (processor) {
 	case PIPE_SHADER_VERTEX:
-		fprintf(f, "  part.vs.prolog.instance_divisors = {");
-		for (i = 0; i < ARRAY_SIZE(key->part.vs.prolog.instance_divisors); i++)
-			fprintf(f, !i ? "%u" : ", %u",
-				key->part.vs.prolog.instance_divisors[i]);
-		fprintf(f, "}\n");
-		fprintf(f, "  part.vs.epilog.export_prim_id = %u\n", key->part.vs.epilog.export_prim_id);
+		si_dump_shader_key_vs(key, &key->part.vs.prolog,
+				      "part.vs.prolog", f);
 		fprintf(f, "  as_es = %u\n", key->as_es);
 		fprintf(f, "  as_ls = %u\n", key->as_ls);
-
-		fprintf(f, "  mono.vs_fix_fetch = {");
-		for (i = 0; i < SI_MAX_ATTRIBS; i++)
-			fprintf(f, !i ? "%u" : ", %u", key->mono.vs_fix_fetch[i]);
-		fprintf(f, "}\n");
+		fprintf(f, "  part.vs.epilog.export_prim_id = %u\n",
+			key->part.vs.epilog.export_prim_id);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
@@ -6710,9 +6720,9 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 		assert(0);
 	}
 
-	if ((shader == PIPE_SHADER_GEOMETRY ||
-	     shader == PIPE_SHADER_TESS_EVAL ||
-	     shader == PIPE_SHADER_VERTEX) &&
+	if ((processor == PIPE_SHADER_GEOMETRY ||
+	     processor == PIPE_SHADER_TESS_EVAL ||
+	     processor == PIPE_SHADER_VERTEX) &&
 	    !key->as_es && !key->as_ls) {
 		fprintf(f, "  opt.hw_vs.kill_outputs = 0x%"PRIx64"\n", key->opt.hw_vs.kill_outputs);
 		fprintf(f, "  opt.hw_vs.kill_outputs2 = 0x%x\n", key->opt.hw_vs.kill_outputs2);
