@@ -1000,7 +1000,20 @@ brw_bo_get_subdata(struct brw_bo *bo, unsigned long offset,
 void
 brw_bo_wait_rendering(struct brw_bo *bo)
 {
-   brw_bo_start_gtt_access(bo, 1);
+   struct brw_bufmgr *bufmgr = bo->bufmgr;
+   struct drm_i915_gem_set_domain set_domain;
+   int ret;
+
+   memclear(set_domain);
+   set_domain.handle = bo->gem_handle;
+   set_domain.read_domains = I915_GEM_DOMAIN_GTT;
+   set_domain.write_domain = I915_GEM_DOMAIN_GTT;
+   ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &set_domain);
+   if (ret != 0) {
+      DBG("%s:%d: Error setting memory domains %d (%08x %08x): %s .\n",
+          __FILE__, __LINE__, bo->gem_handle,
+          set_domain.read_domains, set_domain.write_domain, strerror(errno));
+   }
 }
 
 /**
@@ -1045,32 +1058,6 @@ brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns)
       return -errno;
 
    return ret;
-}
-
-/**
- * Sets the object to the GTT read and possibly write domain, used by the X
- * 2D driver in the absence of kernel support to do brw_bo_map_gtt().
- *
- * In combination with brw_bo_pin() and manual fence management, we
- * can do tiled pixmaps this way.
- */
-void
-brw_bo_start_gtt_access(struct brw_bo *bo, int write_enable)
-{
-   struct brw_bufmgr *bufmgr = bo->bufmgr;
-   struct drm_i915_gem_set_domain set_domain;
-   int ret;
-
-   memclear(set_domain);
-   set_domain.handle = bo->gem_handle;
-   set_domain.read_domains = I915_GEM_DOMAIN_GTT;
-   set_domain.write_domain = write_enable ? I915_GEM_DOMAIN_GTT : 0;
-   ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &set_domain);
-   if (ret != 0) {
-      DBG("%s:%d: Error setting memory domains %d (%08x %08x): %s .\n",
-          __FILE__, __LINE__, bo->gem_handle,
-          set_domain.read_domains, set_domain.write_domain, strerror(errno));
-   }
 }
 
 void
