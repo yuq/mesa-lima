@@ -26,10 +26,16 @@
 #include "common/gen_device_info.h"
 #include "genxml/gen_macros.h"
 
+#include "main/bufferobj.h"
+#include "main/context.h"
+#include "main/enums.h"
+#include "main/macros.h"
+
 #include "brw_context.h"
 #if GEN_GEN == 6
 #include "brw_defines.h"
 #endif
+#include "brw_draw.h"
 #include "brw_state.h"
 #include "brw_wm.h"
 #include "brw_util.h"
@@ -123,6 +129,17 @@ instruction_bo(struct brw_bo *bo, uint32_t offset)
    };
 }
 
+static inline struct brw_address
+vertex_bo(struct brw_bo *bo, uint32_t offset)
+{
+   return (struct brw_address) {
+            .bo = bo,
+            .offset = offset,
+            .read_domains = I915_GEM_DOMAIN_VERTEX,
+            .write_domain = 0,
+   };
+}
+
 #include "genxml/genX_pack.h"
 
 #define _brw_cmd_length(cmd) cmd ## _length
@@ -155,6 +172,541 @@ instruction_bo(struct brw_bo *bo, uint32_t offset)
         __builtin_expect(_dst != NULL, 1);                         \
         _brw_cmd_pack(cmd)(brw, (void *)_dst, &name),              \
         _dst = NULL)
+
+static uint32_t *
+genX(emit_vertex_buffer_state)(struct brw_context *brw,
+                               uint32_t *dw,
+                               unsigned buffer_nr,
+                               struct brw_bo *bo,
+                               unsigned start_offset,
+                               unsigned end_offset,
+                               unsigned stride,
+                               unsigned step_rate)
+{
+   struct GENX(VERTEX_BUFFER_STATE) buf_state = {
+      .VertexBufferIndex = buffer_nr,
+      .BufferPitch = stride,
+      .BufferStartingAddress = vertex_bo(bo, start_offset),
+#if GEN_GEN >= 8
+      .BufferSize = end_offset - start_offset,
+#endif
+
+#if GEN_GEN >= 7
+      .AddressModifyEnable = true,
+#endif
+
+#if GEN_GEN < 8
+      .BufferAccessType = step_rate ? INSTANCEDATA : VERTEXDATA,
+      .InstanceDataStepRate = step_rate,
+#if GEN_GEN >= 5
+      .EndAddress = vertex_bo(bo, end_offset - 1),
+#endif
+#endif
+
+#if GEN_GEN == 9
+      .VertexBufferMOCS = SKL_MOCS_WB,
+#elif GEN_GEN == 8
+      .VertexBufferMOCS = BDW_MOCS_WB,
+#elif GEN_GEN == 7
+      .VertexBufferMOCS = GEN7_MOCS_L3,
+#endif
+   };
+
+   GENX(VERTEX_BUFFER_STATE_pack)(brw, dw, &buf_state);
+   return dw + GENX(VERTEX_BUFFER_STATE_length);
+}
+
+UNUSED static bool
+is_passthru_format(uint32_t format)
+{
+   switch (format) {
+   case ISL_FORMAT_R64_PASSTHRU:
+   case ISL_FORMAT_R64G64_PASSTHRU:
+   case ISL_FORMAT_R64G64B64_PASSTHRU:
+   case ISL_FORMAT_R64G64B64A64_PASSTHRU:
+      return true;
+   default:
+      return false;
+   }
+}
+
+UNUSED static int
+genX(uploads_needed)(uint32_t format)
+{
+   if (!is_passthru_format(format))
+      return 1;
+
+   switch (format) {
+   case ISL_FORMAT_R64_PASSTHRU:
+   case ISL_FORMAT_R64G64_PASSTHRU:
+      return 1;
+   case ISL_FORMAT_R64G64B64_PASSTHRU:
+   case ISL_FORMAT_R64G64B64A64_PASSTHRU:
+      return 2;
+   default:
+      unreachable("not reached");
+   }
+}
+
+/*
+ * Returns the format that we are finally going to use when upload a vertex
+ * element. It will only change if we are using *64*PASSTHRU formats, as for
+ * gen < 8 they need to be splitted on two *32*FLOAT formats.
+ *
+ * @upload points in which upload we are. Valid values are [0,1]
+ */
+static uint32_t
+downsize_format_if_needed(uint32_t format,
+                          int upload)
+{
+   assert(upload == 0 || upload == 1);
+
+   if (!is_passthru_format(format))
+      return format;
+
+   switch (format) {
+   case ISL_FORMAT_R64_PASSTHRU:
+      return ISL_FORMAT_R32G32_FLOAT;
+   case ISL_FORMAT_R64G64_PASSTHRU:
+      return ISL_FORMAT_R32G32B32A32_FLOAT;
+   case ISL_FORMAT_R64G64B64_PASSTHRU:
+      return !upload ? ISL_FORMAT_R32G32B32A32_FLOAT
+                     : ISL_FORMAT_R32G32_FLOAT;
+   case ISL_FORMAT_R64G64B64A64_PASSTHRU:
+      return ISL_FORMAT_R32G32B32A32_FLOAT;
+   default:
+      unreachable("not reached");
+   }
+}
+
+/*
+ * Returns the number of componentes associated with a format that is used on
+ * a 64 to 32 format split. See downsize_format()
+ */
+static int
+upload_format_size(uint32_t upload_format)
+{
+   switch (upload_format) {
+   case ISL_FORMAT_R32G32_FLOAT:
+      return 2;
+   case ISL_FORMAT_R32G32B32A32_FLOAT:
+      return 4;
+   default:
+      unreachable("not reached");
+   }
+}
+
+static void
+genX(emit_vertices)(struct brw_context *brw)
+{
+   uint32_t *dw;
+
+   brw_prepare_vertices(brw);
+   brw_prepare_shader_draw_parameters(brw);
+
+#if GEN_GEN < 6
+   brw_emit_query_begin(brw);
+#endif
+
+   const struct brw_vs_prog_data *vs_prog_data =
+      brw_vs_prog_data(brw->vs.base.prog_data);
+
+#if GEN_GEN >= 8
+   struct gl_context *ctx = &brw->ctx;
+   bool uses_edge_flag = (ctx->Polygon.FrontMode != GL_FILL ||
+                          ctx->Polygon.BackMode != GL_FILL);
+
+   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid) {
+      unsigned vue = brw->vb.nr_enabled;
+
+      /* The element for the edge flags must always be last, so we have to
+       * insert the SGVS before it in that case.
+       */
+      if (uses_edge_flag) {
+         assert(vue > 0);
+         vue--;
+      }
+
+      WARN_ONCE(vue >= 33,
+                "Trying to insert VID/IID past 33rd vertex element, "
+                "need to reorder the vertex attrbutes.");
+
+      brw_batch_emit(brw, GENX(3DSTATE_VF_SGVS), vfs) {
+         if (vs_prog_data->uses_vertexid) {
+            vfs.VertexIDEnable = true;
+            vfs.VertexIDComponentNumber = 2;
+            vfs.VertexIDElementOffset = vue;
+         }
+
+         if (vs_prog_data->uses_instanceid) {
+            vfs.InstanceIDEnable = true;
+            vfs.InstanceIDComponentNumber = 3;
+            vfs.InstanceIDElementOffset = vue;
+         }
+      }
+
+      brw_batch_emit(brw, GENX(3DSTATE_VF_INSTANCING), vfi) {
+         vfi.InstancingEnable = true;
+         vfi.VertexElementIndex = vue;
+      }
+   } else {
+      brw_batch_emit(brw, GENX(3DSTATE_VF_SGVS), vfs);
+   }
+
+   /* Normally we don't need an element for the SGVS attribute because the
+    * 3DSTATE_VF_SGVS instruction lets you store the generated attribute in an
+    * element that is past the list in 3DSTATE_VERTEX_ELEMENTS. However if
+    * we're using draw parameters then we need an element for the those
+    * values.  Additionally if there is an edge flag element then the SGVS
+    * can't be inserted past that so we need a dummy element to ensure that
+    * the edge flag is the last one.
+    */
+   const bool needs_sgvs_element = (vs_prog_data->uses_basevertex ||
+                                    vs_prog_data->uses_baseinstance ||
+                                    ((vs_prog_data->uses_instanceid ||
+                                      vs_prog_data->uses_vertexid)
+                                     && uses_edge_flag));
+#else
+   const bool needs_sgvs_element = (vs_prog_data->uses_basevertex ||
+                                    vs_prog_data->uses_baseinstance ||
+                                    vs_prog_data->uses_instanceid ||
+                                    vs_prog_data->uses_vertexid);
+#endif
+   unsigned nr_elements =
+      brw->vb.nr_enabled + needs_sgvs_element + vs_prog_data->uses_drawid;
+
+#if GEN_GEN < 8
+   /* If any of the formats of vb.enabled needs more that one upload, we need
+    * to add it to nr_elements
+    */
+   for (unsigned i = 0; i < brw->vb.nr_enabled; i++) {
+      struct brw_vertex_element *input = brw->vb.enabled[i];
+      uint32_t format = brw_get_vertex_surface_type(brw, input->glarray);
+
+      if (genX(uploads_needed(format)) > 1)
+         nr_elements++;
+   }
+#endif
+
+   /* If the VS doesn't read any inputs (calculating vertex position from
+    * a state variable for some reason, for example), emit a single pad
+    * VERTEX_ELEMENT struct and bail.
+    *
+    * The stale VB state stays in place, but they don't do anything unless
+    * a VE loads from them.
+    */
+   if (nr_elements == 0) {
+      dw = brw_batch_emitn(brw, GENX(3DSTATE_VERTEX_ELEMENTS), 1 + GENX(VERTEX_ELEMENT_STATE_length));
+      struct GENX(VERTEX_ELEMENT_STATE) elem = {
+         .Valid = true,
+         .SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT,
+         .Component0Control = VFCOMP_STORE_0,
+         .Component1Control = VFCOMP_STORE_0,
+         .Component2Control = VFCOMP_STORE_0,
+         .Component3Control = VFCOMP_STORE_1_FP,
+      };
+      GENX(VERTEX_ELEMENT_STATE_pack)(brw, dw, &elem);
+      return;
+   }
+
+   /* Now emit 3DSTATE_VERTEX_BUFFERS and 3DSTATE_VERTEX_ELEMENTS packets. */
+   const bool uses_draw_params =
+      vs_prog_data->uses_basevertex ||
+      vs_prog_data->uses_baseinstance;
+   const unsigned nr_buffers = brw->vb.nr_buffers +
+      uses_draw_params + vs_prog_data->uses_drawid;
+
+   if (nr_buffers) {
+#if GEN_GEN >= 6
+      assert(nr_buffers <= 33);
+#else
+      assert(nr_buffers <= 17);
+#endif
+      assert(nr_buffers <= (GEN_GEN >= 6 ? 33 : 17));
+
+      dw = brw_batch_emitn(brw, GENX(3DSTATE_VERTEX_BUFFERS),
+                           1 + GENX(VERTEX_BUFFER_STATE_length) * nr_buffers);
+
+      for (unsigned i = 0; i < brw->vb.nr_buffers; i++) {
+         const struct brw_vertex_buffer *buffer = &brw->vb.buffers[i];
+         /* Prior to Haswell and Bay Trail we have to use 4-component formats
+          * to fake 3-component ones.  In particular, we do this for
+          * half-float and 8 and 16-bit integer formats.  This means that the
+          * vertex element may poke over the end of the buffer by 2 bytes.
+          */
+         unsigned padding =
+            (GEN_GEN <= 7 && !brw->is_baytrail && !brw->is_haswell) * 2;
+         dw = genX(emit_vertex_buffer_state)(brw, dw, i, buffer->bo,
+                                             buffer->offset,
+                                             buffer->offset + buffer->size + padding,
+                                             buffer->stride,
+                                             buffer->step_rate);
+      }
+
+      if (uses_draw_params) {
+         dw = genX(emit_vertex_buffer_state)(brw, dw, brw->vb.nr_buffers,
+                                             brw->draw.draw_params_bo,
+                                             brw->draw.draw_params_offset,
+                                             brw->draw.draw_params_bo->size,
+                                             0 /* stride */,
+                                             0 /* step rate */);
+      }
+
+      if (vs_prog_data->uses_drawid) {
+         dw = genX(emit_vertex_buffer_state)(brw, dw, brw->vb.nr_buffers + 1,
+                                             brw->draw.draw_id_bo,
+                                             brw->draw.draw_id_offset,
+                                             brw->draw.draw_id_bo->size,
+                                             0 /* stride */,
+                                             0 /* step rate */);
+      }
+   }
+
+   /* The hardware allows one more VERTEX_ELEMENTS than VERTEX_BUFFERS,
+    * presumably for VertexID/InstanceID.
+    */
+#if GEN_GEN >= 6
+   assert(nr_elements <= 34);
+   struct brw_vertex_element *gen6_edgeflag_input = NULL;
+#else
+   assert(nr_elements <= 18);
+#endif
+
+   dw = brw_batch_emitn(brw, GENX(3DSTATE_VERTEX_ELEMENTS),
+                        1 + GENX(VERTEX_ELEMENT_STATE_length) * nr_elements);
+   unsigned i;
+   for (i = 0; i < brw->vb.nr_enabled; i++) {
+      struct brw_vertex_element *input = brw->vb.enabled[i];
+      uint32_t format = brw_get_vertex_surface_type(brw, input->glarray);
+      uint32_t comp0 = VFCOMP_STORE_SRC;
+      uint32_t comp1 = VFCOMP_STORE_SRC;
+      uint32_t comp2 = VFCOMP_STORE_SRC;
+      uint32_t comp3 = VFCOMP_STORE_SRC;
+      unsigned num_uploads = 1;
+
+#if GEN_GEN >= 8
+      /* From the BDW PRM, Volume 2d, page 588 (VERTEX_ELEMENT_STATE):
+       * "Any SourceElementFormat of *64*_PASSTHRU cannot be used with an
+       * element which has edge flag enabled."
+       */
+      assert(!(is_passthru_format(format) && uses_edge_flag));
+#endif
+
+      /* The gen4 driver expects edgeflag to come in as a float, and passes
+       * that float on to the tests in the clipper.  Mesa's current vertex
+       * attribute value for EdgeFlag is stored as a float, which works out.
+       * glEdgeFlagPointer, on the other hand, gives us an unnormalized
+       * integer ubyte.  Just rewrite that to convert to a float.
+       *
+       * Gen6+ passes edgeflag as sideband along with the vertex, instead
+       * of in the VUE.  We have to upload it sideband as the last vertex
+       * element according to the B-Spec.
+       */
+#if GEN_GEN >= 6
+      if (input == &brw->vb.inputs[VERT_ATTRIB_EDGEFLAG]) {
+         gen6_edgeflag_input = input;
+         continue;
+      }
+#endif
+
+#if GEN_GEN < 8
+      num_uploads = genX(uploads_needed(format));
+#endif
+
+      for (unsigned c = 0; c < num_uploads; c++) {
+         uint32_t upload_format = GEN_GEN >= 8 ? format :
+            downsize_format_if_needed(format, c);
+         /* If we need more that one upload, the offset stride would be 128
+          * bits (16 bytes), as for previous uploads we are using the full
+          * entry. */
+         unsigned int offset = input->offset + c * 16;
+         int size = input->glarray->Size;
+
+         if (GEN_GEN < 8 && is_passthru_format(format))
+            size = upload_format_size(upload_format);
+
+         switch (size) {
+            case 0: comp0 = VFCOMP_STORE_0;
+            case 1: comp1 = VFCOMP_STORE_0;
+            case 2: comp2 = VFCOMP_STORE_0;
+            case 3:
+               if (GEN_GEN >= 8 && input->glarray->Doubles) {
+                  comp3 = VFCOMP_STORE_0;
+               } else if (input->glarray->Integer) {
+                  comp3 = VFCOMP_STORE_1_INT;
+               } else {
+                  comp3 = VFCOMP_STORE_1_FP;
+               }
+
+               break;
+         }
+
+#if GEN_GEN >= 8
+         /* From the BDW PRM, Volume 2d, page 586 (VERTEX_ELEMENT_STATE):
+          *
+          *     "When SourceElementFormat is set to one of the *64*_PASSTHRU
+          *     formats, 64-bit components are stored in the URB without any
+          *     conversion. In this case, vertex elements must be written as 128
+          *     or 256 bits, with VFCOMP_STORE_0 being used to pad the output as
+          *     required. E.g., if R64_PASSTHRU is used to copy a 64-bit Red
+          *     component into the URB, Component 1 must be specified as
+          *     VFCOMP_STORE_0 (with Components 2,3 set to VFCOMP_NOSTORE) in
+          *     order to output a 128-bit vertex element, or Components 1-3 must
+          *     be specified as VFCOMP_STORE_0 in order to output a 256-bit vertex
+          *     element. Likewise, use of R64G64B64_PASSTHRU requires Component 3
+          *     to be specified as VFCOMP_STORE_0 in order to output a 256-bit
+          *     vertex element."
+          */
+         if (input->glarray->Doubles && !input->is_dual_slot) {
+            /* Store vertex elements which correspond to double and dvec2 vertex
+             * shader inputs as 128-bit vertex elements, instead of 256-bits.
+             */
+            comp2 = VFCOMP_NOSTORE;
+            comp3 = VFCOMP_NOSTORE;
+         }
+#endif
+
+         struct GENX(VERTEX_ELEMENT_STATE) elem_state = {
+            .VertexBufferIndex = input->buffer,
+            .Valid = true,
+            .SourceElementFormat = upload_format,
+            .SourceElementOffset = offset,
+            .Component0Control = comp0,
+            .Component1Control = comp1,
+            .Component2Control = comp2,
+            .Component3Control = comp3,
+#if GEN_GEN < 5
+            .DestinationElementOffset = i * 4,
+#endif
+         };
+
+         GENX(VERTEX_ELEMENT_STATE_pack)(brw, dw, &elem_state);
+         dw += GENX(VERTEX_ELEMENT_STATE_length);
+      }
+   }
+
+   if (needs_sgvs_element) {
+      struct GENX(VERTEX_ELEMENT_STATE) elem_state = {
+         .Valid = true,
+         .Component0Control = VFCOMP_STORE_0,
+         .Component1Control = VFCOMP_STORE_0,
+         .Component2Control = VFCOMP_STORE_0,
+         .Component3Control = VFCOMP_STORE_0,
+#if GEN_GEN < 5
+         .DestinationElementOffset = i * 4,
+#endif
+      };
+
+#if GEN_GEN >= 8
+      if (vs_prog_data->uses_basevertex ||
+          vs_prog_data->uses_baseinstance) {
+         elem_state.VertexBufferIndex = brw->vb.nr_buffers;
+         elem_state.SourceElementFormat = ISL_FORMAT_R32G32_UINT;
+         elem_state.Component0Control = VFCOMP_STORE_SRC;
+         elem_state.Component1Control = VFCOMP_STORE_SRC;
+      }
+#else
+      elem_state.VertexBufferIndex = brw->vb.nr_buffers;
+      elem_state.SourceElementFormat = ISL_FORMAT_R32G32_UINT;
+      if (vs_prog_data->uses_basevertex)
+         elem_state.Component0Control = VFCOMP_STORE_SRC;
+
+      if (vs_prog_data->uses_baseinstance)
+         elem_state.Component1Control = VFCOMP_STORE_SRC;
+
+      if (vs_prog_data->uses_vertexid)
+         elem_state.Component2Control = VFCOMP_STORE_VID;
+
+      if (vs_prog_data->uses_instanceid)
+         elem_state.Component3Control = VFCOMP_STORE_IID;
+#endif
+
+      GENX(VERTEX_ELEMENT_STATE_pack)(brw, dw, &elem_state);
+      dw += GENX(VERTEX_ELEMENT_STATE_length);
+   }
+
+   if (vs_prog_data->uses_drawid) {
+      struct GENX(VERTEX_ELEMENT_STATE) elem_state = {
+         .Valid = true,
+         .VertexBufferIndex = brw->vb.nr_buffers + 1,
+         .SourceElementFormat = ISL_FORMAT_R32_UINT,
+         .Component0Control = VFCOMP_STORE_SRC,
+         .Component1Control = VFCOMP_STORE_0,
+         .Component2Control = VFCOMP_STORE_0,
+         .Component3Control = VFCOMP_STORE_0,
+#if GEN_GEN < 5
+         .DestinationElementOffset = i * 4,
+#endif
+      };
+
+      GENX(VERTEX_ELEMENT_STATE_pack)(brw, dw, &elem_state);
+      dw += GENX(VERTEX_ELEMENT_STATE_length);
+   }
+
+#if GEN_GEN >= 6
+   if (gen6_edgeflag_input) {
+      uint32_t format =
+         brw_get_vertex_surface_type(brw, gen6_edgeflag_input->glarray);
+
+      struct GENX(VERTEX_ELEMENT_STATE) elem_state = {
+         .Valid = true,
+         .VertexBufferIndex = gen6_edgeflag_input->buffer,
+         .EdgeFlagEnable = true,
+         .SourceElementFormat = format,
+         .SourceElementOffset = gen6_edgeflag_input->offset,
+         .Component0Control = VFCOMP_STORE_SRC,
+         .Component1Control = VFCOMP_STORE_0,
+         .Component2Control = VFCOMP_STORE_0,
+         .Component3Control = VFCOMP_STORE_0,
+      };
+
+      GENX(VERTEX_ELEMENT_STATE_pack)(brw, dw, &elem_state);
+      dw += GENX(VERTEX_ELEMENT_STATE_length);
+   }
+#endif
+
+#if GEN_GEN >= 8
+   for (unsigned i = 0, j = 0; i < brw->vb.nr_enabled; i++) {
+      const struct brw_vertex_element *input = brw->vb.enabled[i];
+      const struct brw_vertex_buffer *buffer = &brw->vb.buffers[input->buffer];
+      unsigned element_index;
+
+      /* The edge flag element is reordered to be the last one in the code
+       * above so we need to compensate for that in the element indices used
+       * below.
+       */
+      if (input == gen6_edgeflag_input)
+         element_index = nr_elements - 1;
+      else
+         element_index = j++;
+
+      brw_batch_emit(brw, GENX(3DSTATE_VF_INSTANCING), vfi) {
+         vfi.VertexElementIndex = element_index;
+         vfi.InstancingEnable = buffer->step_rate != 0;
+         vfi.InstanceDataStepRate = buffer->step_rate;
+      }
+   }
+
+   if (vs_prog_data->uses_drawid) {
+      const unsigned element = brw->vb.nr_enabled + needs_sgvs_element;
+
+      brw_batch_emit(brw, GENX(3DSTATE_VF_INSTANCING), vfi) {
+         vfi.VertexElementIndex = element;
+      }
+   }
+#endif
+}
+
+static const struct brw_tracked_state genX(vertices) = {
+   .dirty = {
+      .mesa = _NEW_POLYGON,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_VERTICES |
+             BRW_NEW_VS_PROG_DATA,
+   },
+   .emit = genX(emit_vertices),
+};
 
 #if GEN_GEN >= 6
 /**
@@ -3000,7 +3552,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_drawing_rect,
       &brw_indices, /* must come before brw_vertices */
       &brw_index_buffer,
-      &brw_vertices,
+      &genX(vertices),
 
       &brw_constant_buffer
    };
@@ -3067,7 +3619,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       &brw_indices, /* must come before brw_vertices */
       &brw_index_buffer,
-      &brw_vertices,
+      &genX(vertices),
    };
 #elif GEN_GEN == 7
    static const struct brw_tracked_state *render_atoms[] =
@@ -3155,7 +3707,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       &brw_indices, /* must come before brw_vertices */
       &brw_index_buffer,
-      &brw_vertices,
+      &genX(vertices),
 
       &haswell_cut_index,
    };
@@ -3248,7 +3800,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       &brw_indices,
       &gen8_index_buffer,
-      &gen8_vertices,
+      &genX(vertices),
 
       &haswell_cut_index,
       &gen8_pma_fix,
