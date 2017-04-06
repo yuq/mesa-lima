@@ -1119,20 +1119,6 @@ _mesa_lookup_bufferobj_err(struct gl_context *ctx, GLuint buffer,
 }
 
 
-void
-_mesa_begin_bufferobj_lookups(struct gl_context *ctx)
-{
-   _mesa_HashLockMutex(ctx->Shared->BufferObjects);
-}
-
-
-void
-_mesa_end_bufferobj_lookups(struct gl_context *ctx)
-{
-   _mesa_HashUnlockMutex(ctx->Shared->BufferObjects);
-}
-
-
 /**
  * Look up a buffer object for a multi-bind function.
  *
@@ -1147,7 +1133,8 @@ _mesa_end_bufferobj_lookups(struct gl_context *ctx)
  * returns NULL.
  *
  * This function assumes that the caller has already locked the
- * hash table mutex by calling _mesa_begin_bufferobj_lookups().
+ * hash table mutex by calling
+ * _mesa_HashLockMutex(ctx->Shared->BufferObjects).
  */
 struct gl_buffer_object *
 _mesa_multi_bind_lookup_bufferobj(struct gl_context *ctx,
@@ -3253,7 +3240,7 @@ bind_uniform_buffers(struct gl_context *ctx, GLuint first, GLsizei count,
     *       parameters are valid and no other error occurs."
     */
 
-   _mesa_begin_bufferobj_lookups(ctx);
+   _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (i = 0; i < count; i++) {
       struct gl_uniform_buffer_binding *binding =
@@ -3313,7 +3300,7 @@ bind_uniform_buffers(struct gl_context *ctx, GLuint first, GLsizei count,
       }
    }
 
-   _mesa_end_bufferobj_lookups(ctx);
+   _mesa_HashUnlockMutex(ctx->Shared->BufferObjects);
 }
 
 static void
@@ -3365,7 +3352,7 @@ bind_shader_storage_buffers(struct gl_context *ctx, GLuint first,
     *       parameters are valid and no other error occurs."
     */
 
-   _mesa_begin_bufferobj_lookups(ctx);
+   _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (i = 0; i < count; i++) {
       struct gl_shader_storage_buffer_binding *binding =
@@ -3425,7 +3412,7 @@ bind_shader_storage_buffers(struct gl_context *ctx, GLuint first,
       }
    }
 
-   _mesa_end_bufferobj_lookups(ctx);
+   _mesa_HashUnlockMutex(ctx->Shared->BufferObjects);
 }
 
 static bool
@@ -3544,7 +3531,7 @@ bind_xfb_buffers(struct gl_context *ctx,
     *       parameters are valid and no other error occurs."
     */
 
-   _mesa_begin_bufferobj_lookups(ctx);
+   _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (i = 0; i < count; i++) {
       const GLuint index = first + i;
@@ -3610,7 +3597,7 @@ bind_xfb_buffers(struct gl_context *ctx,
                                               offset, size);
    }
 
-   _mesa_end_bufferobj_lookups(ctx);
+   _mesa_HashUnlockMutex(ctx->Shared->BufferObjects);
 }
 
 static bool
@@ -3707,7 +3694,7 @@ bind_atomic_buffers(struct gl_context *ctx,
     *       parameters are valid and no other error occurs."
     */
 
-   _mesa_begin_bufferobj_lookups(ctx);
+   _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (i = 0; i < count; i++) {
       struct gl_atomic_buffer_binding *binding =
@@ -3760,7 +3747,7 @@ bind_atomic_buffers(struct gl_context *ctx,
          set_atomic_buffer_binding(ctx, binding, bufObj, offset, size);
    }
 
-   _mesa_end_bufferobj_lookups(ctx);
+   _mesa_HashUnlockMutex(ctx->Shared->BufferObjects);
 }
 
 void GLAPIENTRY

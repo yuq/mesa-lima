@@ -1884,7 +1884,7 @@ vertex_array_vertex_buffers(struct gl_context *ctx,
     *       their parameters are valid and no other error occurs."
     */
 
-   _mesa_begin_bufferobj_lookups(ctx);
+   _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (i = 0; i < count; i++) {
       struct gl_buffer_object *vbo;
@@ -1935,7 +1935,7 @@ vertex_array_vertex_buffers(struct gl_context *ctx,
                                vbo, offsets[i], strides[i]);
    }
 
-   _mesa_end_bufferobj_lookups(ctx);
+   _mesa_HashUnlockMutex(ctx->Shared->BufferObjects);
 }
 
 
