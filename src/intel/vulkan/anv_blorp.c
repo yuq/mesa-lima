@@ -1108,14 +1108,19 @@ subpass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
 
    for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
       uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
+      if (a == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      assert(a < cmd_state->pass->attachment_count);
       if (cmd_state->attachments[a].pending_clear_aspects) {
          return true;
       }
    }
 
-   if (ds != VK_ATTACHMENT_UNUSED &&
-       cmd_state->attachments[ds].pending_clear_aspects) {
-      return true;
+   if (ds != VK_ATTACHMENT_UNUSED) {
+      assert(ds < cmd_state->pass->attachment_count);
+      if (cmd_state->attachments[ds].pending_clear_aspects)
+         return true;
    }
 
    return false;
@@ -1147,6 +1152,10 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
       const uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
+      if (a == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      assert(a < cmd_state->pass->attachment_count);
       struct anv_attachment_state *att_state = &cmd_state->attachments[a];
 
       if (!att_state->pending_clear_aspects)
@@ -1206,6 +1215,7 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
    }
 
    const uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
+   assert(ds == VK_ATTACHMENT_UNUSED || ds < cmd_state->pass->attachment_count);
 
    if (ds != VK_ATTACHMENT_UNUSED &&
        cmd_state->attachments[ds].pending_clear_aspects) {
@@ -1520,8 +1530,12 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    for (uint32_t i = 0; i < subpass->color_count; ++i) {
-      ccs_resolve_attachment(cmd_buffer, &batch,
-                             subpass->color_attachments[i].attachment);
+      const uint32_t att = subpass->color_attachments[i].attachment;
+      if (att == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      assert(att < cmd_buffer->state.pass->attachment_count);
+      ccs_resolve_attachment(cmd_buffer, &batch, att);
    }
 
    if (subpass->has_resolve) {
@@ -1539,6 +1553,9 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 
          if (dst_att == VK_ATTACHMENT_UNUSED)
             continue;
+
+         assert(src_att < cmd_buffer->state.pass->attachment_count);
+         assert(dst_att < cmd_buffer->state.pass->attachment_count);
 
          if (cmd_buffer->state.attachments[dst_att].pending_clear_aspects) {
             /* From the Vulkan 1.0 spec:
