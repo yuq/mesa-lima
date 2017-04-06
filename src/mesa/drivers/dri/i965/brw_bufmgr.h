@@ -119,7 +119,6 @@ struct brw_bo {
    /** WC CPU address for the buffer, saved across map/unmap cycles */
    void *wc_virtual;
    int map_count;
-   struct list_head vma_list;
 
    /** BO cache list */
    struct list_head head;
@@ -253,8 +252,6 @@ struct brw_bo *brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
                                            const char *name,
                                            unsigned int handle);
 void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
-void brw_bufmgr_gem_set_vma_cache_size(struct brw_bufmgr *bufmgr,
-                                       int limit);
 int brw_bo_map_unsynchronized(struct brw_bo *bo);
 int brw_bo_map_gtt(struct brw_bo *bo);
 

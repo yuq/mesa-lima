@@ -108,9 +108,6 @@ struct brw_bufmgr {
    struct hash_table *name_table;
    struct hash_table *handle_table;
 
-   struct list_head vma_cache;
-   int vma_count, vma_open, vma_max;
-
    unsigned int has_llc:1;
    unsigned int bo_reuse:1;
 };
@@ -329,10 +326,6 @@ retry:
       if (!bo)
          goto err;
 
-      /* bo_free calls list_del() for an uninitialized
-         list (vma_list), so better set the list head here */
-      list_inithead(&bo->vma_list);
-
       bo->size = bo_size;
 
       memclear(create);
@@ -480,7 +473,6 @@ brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
       goto out;
 
    p_atomic_set(&bo->refcount, 1);
-   list_inithead(&bo->vma_list);
 
    bo->size = open_arg.size;
    bo->offset64 = 0;
@@ -523,20 +515,16 @@ bo_free(struct brw_bo *bo)
    struct hash_entry *entry;
    int ret;
 
-   list_del(&bo->vma_list);
    if (bo->mem_virtual) {
       VG(VALGRIND_FREELIKE_BLOCK(bo->mem_virtual, 0));
       drm_munmap(bo->mem_virtual, bo->size);
-      bufmgr->vma_count--;
    }
    if (bo->wc_virtual) {
       VG(VALGRIND_FREELIKE_BLOCK(bo->wc_virtual, 0));
       drm_munmap(bo->wc_virtual, bo->size);
-      bufmgr->vma_count--;
    }
    if (bo->gtt_virtual) {
       drm_munmap(bo->gtt_virtual, bo->size);
-      bufmgr->vma_count--;
    }
 
    if (bo->global_name) {
@@ -598,75 +586,6 @@ cleanup_bo_cache(struct brw_bufmgr *bufmgr, time_t time)
 }
 
 static void
-bo_purge_vma_cache(struct brw_bufmgr *bufmgr)
-{
-   int limit;
-
-   DBG("%s: cached=%d, open=%d, limit=%d\n", __FUNCTION__,
-       bufmgr->vma_count, bufmgr->vma_open, bufmgr->vma_max);
-
-   if (bufmgr->vma_max < 0)
-      return;
-
-   /* We may need to evict a few entries in order to create new mmaps */
-   limit = bufmgr->vma_max - 2 * bufmgr->vma_open;
-   if (limit < 0)
-      limit = 0;
-
-   while (bufmgr->vma_count > limit) {
-      struct brw_bo *bo;
-
-      bo = LIST_ENTRY(struct brw_bo, bufmgr->vma_cache.next, vma_list);
-      assert(bo->map_count == 0);
-      list_delinit(&bo->vma_list);
-
-      if (bo->mem_virtual) {
-         drm_munmap(bo->mem_virtual, bo->size);
-         bo->mem_virtual = NULL;
-         bufmgr->vma_count--;
-      }
-      if (bo->wc_virtual) {
-         drm_munmap(bo->wc_virtual, bo->size);
-         bo->wc_virtual = NULL;
-         bufmgr->vma_count--;
-      }
-      if (bo->gtt_virtual) {
-         drm_munmap(bo->gtt_virtual, bo->size);
-         bo->gtt_virtual = NULL;
-         bufmgr->vma_count--;
-      }
-   }
-}
-
-static void
-bo_close_vma(struct brw_bufmgr *bufmgr, struct brw_bo *bo)
-{
-   bufmgr->vma_open--;
-   list_addtail(&bo->vma_list, &bufmgr->vma_cache);
-   if (bo->mem_virtual)
-      bufmgr->vma_count++;
-   if (bo->wc_virtual)
-      bufmgr->vma_count++;
-   if (bo->gtt_virtual)
-      bufmgr->vma_count++;
-   bo_purge_vma_cache(bufmgr);
-}
-
-static void
-bo_open_vma(struct brw_bufmgr *bufmgr, struct brw_bo *bo)
-{
-   bufmgr->vma_open++;
-   list_del(&bo->vma_list);
-   if (bo->mem_virtual)
-      bufmgr->vma_count--;
-   if (bo->wc_virtual)
-      bufmgr->vma_count--;
-   if (bo->gtt_virtual)
-      bufmgr->vma_count--;
-   bo_purge_vma_cache(bufmgr);
-}
-
-static void
 bo_unreference_final(struct brw_bo *bo, time_t time)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
@@ -678,7 +597,6 @@ bo_unreference_final(struct brw_bo *bo, time_t time)
    if (bo->map_count) {
       DBG("bo freed with non-zero map-count %d\n", bo->map_count);
       bo->map_count = 0;
-      bo_close_vma(bufmgr, bo);
       bo_mark_mmaps_incoherent(bo);
    }
 
@@ -730,9 +648,6 @@ brw_bo_map(struct brw_bo *bo, int write_enable)
 
    pthread_mutex_lock(&bufmgr->lock);
 
-   if (bo->map_count++ == 0)
-      bo_open_vma(bufmgr, bo);
-
    if (!bo->mem_virtual) {
       struct drm_i915_gem_mmap mmap_arg;
 
@@ -747,11 +662,10 @@ brw_bo_map(struct brw_bo *bo, int write_enable)
          ret = -errno;
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         if (--bo->map_count == 0)
-            bo_close_vma(bufmgr, bo);
          pthread_mutex_unlock(&bufmgr->lock);
          return ret;
       }
+      bo->map_count++;
       VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
       bo->mem_virtual = (void *) (uintptr_t) mmap_arg.addr_ptr;
    }
@@ -784,9 +698,6 @@ map_gtt(struct brw_bo *bo)
    struct brw_bufmgr *bufmgr = bo->bufmgr;
    int ret;
 
-   if (bo->map_count++ == 0)
-      bo_open_vma(bufmgr, bo);
-
    /* Get a mapping of the buffer if we haven't before. */
    if (bo->gtt_virtual == NULL) {
       struct drm_i915_gem_mmap_gtt mmap_arg;
@@ -803,8 +714,6 @@ map_gtt(struct brw_bo *bo)
          ret = -errno;
          DBG("%s:%d: Error preparing buffer map %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         if (--bo->map_count == 0)
-            bo_close_vma(bufmgr, bo);
          return ret;
       }
 
@@ -816,12 +725,11 @@ map_gtt(struct brw_bo *bo)
          ret = -errno;
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         if (--bo->map_count == 0)
-            bo_close_vma(bufmgr, bo);
          return ret;
       }
    }
 
+   bo->map_count++;
    bo->virtual = bo->gtt_virtual;
 
    DBG("bo_map_gtt: %d (%s) -> %p\n", bo->gem_handle, bo->name,
@@ -934,12 +842,7 @@ brw_bo_unmap(struct brw_bo *bo)
       return 0;
    }
 
-   /* We need to unmap after every innovation as we cannot track
-    * an open vma for every bo as that will exhaust the system
-    * limits and cause later failures.
-    */
    if (--bo->map_count == 0) {
-      bo_close_vma(bufmgr, bo);
       bo_mark_mmaps_incoherent(bo);
       bo->virtual = NULL;
    }
@@ -1158,7 +1061,6 @@ brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd,
       goto out;
 
    p_atomic_set(&bo->refcount, 1);
-   list_inithead(&bo->vma_list);
 
    /* Determine size of bo.  The fd-to-handle ioctl really should
     * return the size, but it doesn't.  If we have kernel 3.12 or
@@ -1291,14 +1193,6 @@ init_cache_buckets(struct brw_bufmgr *bufmgr)
    }
 }
 
-void
-brw_bufmgr_gem_set_vma_cache_size(struct brw_bufmgr *bufmgr, int limit)
-{
-   bufmgr->vma_max = limit;
-
-   bo_purge_vma_cache(bufmgr);
-}
-
 uint32_t
 brw_create_hw_context(struct brw_bufmgr *bufmgr)
 {
@@ -1358,9 +1252,6 @@ brw_bo_map__gtt(struct brw_bo *bo)
       DBG("bo_map_gtt: mmap %d (%s), map_count=%d\n",
           bo->gem_handle, bo->name, bo->map_count);
 
-      if (bo->map_count++ == 0)
-         bo_open_vma(bufmgr, bo);
-
       memclear(mmap_arg);
       mmap_arg.handle = bo->gem_handle;
 
@@ -1372,8 +1263,7 @@ brw_bo_map__gtt(struct brw_bo *bo)
                         MAP_SHARED, bufmgr->fd, mmap_arg.offset);
       }
       if (ptr == MAP_FAILED) {
-         if (--bo->map_count == 0)
-            bo_close_vma(bufmgr, bo);
+         --bo->map_count;
          ptr = NULL;
       }
 
@@ -1396,9 +1286,6 @@ brw_bo_map__cpu(struct brw_bo *bo)
    if (!bo->mem_virtual) {
       struct drm_i915_gem_mmap mmap_arg;
 
-      if (bo->map_count++ == 0)
-         bo_open_vma(bufmgr, bo);
-
       DBG("bo_map: %d (%s), map_count=%d\n",
           bo->gem_handle, bo->name, bo->map_count);
 
@@ -1408,9 +1295,8 @@ brw_bo_map__cpu(struct brw_bo *bo)
       if (drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg)) {
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         if (--bo->map_count == 0)
-            bo_close_vma(bufmgr, bo);
       } else {
+         bo->map_count++;
          VG(VALGRIND_MALLOCLIKE_BLOCK
             (mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
          bo->mem_virtual = (void *) (uintptr_t) mmap_arg.addr_ptr;
@@ -1433,9 +1319,6 @@ brw_bo_map__wc(struct brw_bo *bo)
    if (!bo->wc_virtual) {
       struct drm_i915_gem_mmap mmap_arg;
 
-      if (bo->map_count++ == 0)
-         bo_open_vma(bufmgr, bo);
-
       DBG("bo_map: %d (%s), map_count=%d\n",
           bo->gem_handle, bo->name, bo->map_count);
 
@@ -1446,9 +1329,8 @@ brw_bo_map__wc(struct brw_bo *bo)
       if (drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg)) {
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         if (--bo->map_count == 0)
-            bo_close_vma(bufmgr, bo);
       } else {
+         bo->map_count++;
          VG(VALGRIND_MALLOCLIKE_BLOCK
             (mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
          bo->wc_virtual = (void *) (uintptr_t) mmap_arg.addr_ptr;
@@ -1493,9 +1375,6 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd, int batch_size)
    bufmgr->has_llc = devinfo->has_llc;
 
    init_cache_buckets(bufmgr);
-
-   list_inithead(&bufmgr->vma_cache);
-   bufmgr->vma_max = -1;        /* unlimited by default */
 
    bufmgr->name_table =
       _mesa_hash_table_create(NULL, key_hash_uint, key_uint_equal);
