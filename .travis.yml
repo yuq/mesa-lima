@@ -5,8 +5,7 @@ dist: trusty
 
 cache:
   apt: true
-  directories:
-    - $HOME/.ccache
+  ccache: true
 
 addons:
   apt:
@@ -47,7 +46,6 @@ env:
     - BUILD=scons
 
 install:
-  - export PATH="/usr/lib/ccache:$PATH"
   - pip install --user mako
 
   # Since libdrm gets updated in configure.ac regularly, try to pick up the
