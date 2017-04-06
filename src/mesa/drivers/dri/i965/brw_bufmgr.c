@@ -1252,23 +1252,6 @@ brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr)
    bufmgr->bo_reuse = true;
 }
 
-/*
- * Disable buffer reuse for objects which are shared with the kernel
- * as scanout buffers
- */
-int
-brw_bo_disable_reuse(struct brw_bo *bo)
-{
-   bo->reusable = false;
-   return 0;
-}
-
-int
-brw_bo_is_reusable(struct brw_bo *bo)
-{
-   return bo->reusable;
-}
-
 static void
 add_bucket(struct brw_bufmgr *bufmgr, int size)
 {

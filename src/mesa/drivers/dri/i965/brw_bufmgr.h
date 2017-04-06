@@ -246,22 +246,6 @@ int brw_bo_busy(struct brw_bo *bo);
  */
 int brw_bo_madvise(struct brw_bo *bo, int madv);
 
-/**
- * Disable buffer reuse for buffers which will be shared in some way,
- * as with scanout buffers. When the buffer reference count goes to
- * zero, it will be freed and not placed in the reuse list.
- *
- * \param bo Buffer to disable reuse for
- */
-int brw_bo_disable_reuse(struct brw_bo *bo);
-
-/**
- * Query whether a buffer is reusable.
- *
- * \param bo Buffer to query
- */
-int brw_bo_is_reusable(struct brw_bo *bo);
-
 /* drm_bacon_bufmgr_gem.c */
 struct brw_bufmgr *brw_bufmgr_init(struct gen_device_info *devinfo,
                                    int fd, int batch_size);
