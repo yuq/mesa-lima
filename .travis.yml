@@ -36,6 +36,7 @@ env:
     - LLVM_PACKAGE="llvm-${LLVM_VERSION} llvm-${LLVM_VERSION}-dev"
     - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
+    - LD_LIBRARY_PATH="$HOME/prefix/lib:$LD_LIBRARY_PATH"
     - MAKEFLAGS=-j2
   matrix:
     - BUILD=make
