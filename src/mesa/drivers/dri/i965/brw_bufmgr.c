@@ -376,15 +376,6 @@ err:
 }
 
 struct brw_bo *
-brw_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
-                        const char *name,
-                        unsigned long size, unsigned int alignment)
-{
-   return bo_alloc_internal(bufmgr, name, size, BO_ALLOC_FOR_RENDER,
-                            I915_TILING_NONE, 0, alignment);
-}
-
-struct brw_bo *
 brw_bo_alloc(struct brw_bufmgr *bufmgr,
              const char *name, unsigned long size, unsigned int alignment)
 {

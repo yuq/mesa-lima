@@ -141,16 +141,6 @@ struct brw_bo {
  */
 struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
                             unsigned long size, unsigned int alignment);
-/**
- * Allocate a buffer object, hinting that it will be used as a
- * render target.
- *
- * This is otherwise the same as bo_alloc.
- */
-struct brw_bo *brw_bo_alloc_for_render(struct brw_bufmgr *bufmgr,
-                                       const char *name,
-                                       unsigned long size,
-                                       unsigned int alignment);
 
 /**
  * Allocate a tiled buffer object.
