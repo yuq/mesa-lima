@@ -38,10 +38,18 @@ env:
     - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
     - LD_LIBRARY_PATH="$HOME/prefix/lib:$LD_LIBRARY_PATH"
-    - MAKEFLAGS=-j2
-  matrix:
-    - BUILD=make
-    - BUILD=scons
+
+matrix:
+  include:
+    - env:
+        - LABEL="make"
+        - BUILD=make
+        - MAKEFLAGS=-j2
+    - env:
+        - LABEL="scons LLVM"
+        - BUILD=scons
+        - SCONSFLAGS="-j4"
+        - SCONS_TARGET="llvm=1"
 
 install:
   - pip install --user mako
@@ -117,5 +125,5 @@ script:
     fi
 
   - if test "x$BUILD" = xscons; then
-      scons llvm=1 && scons llvm=1 check;
+      scons $SCONS_TARGET && scons $SCONS_TARGET check;
     fi
