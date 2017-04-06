@@ -1297,15 +1297,14 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
 GLboolean GLAPIENTRY
 _mesa_IsRenderbuffer(GLuint renderbuffer)
 {
+   struct gl_renderbuffer *rb;
+
    GET_CURRENT_CONTEXT(ctx);
+
    ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, GL_FALSE);
-   if (renderbuffer) {
-      struct gl_renderbuffer *rb =
-         _mesa_lookup_renderbuffer(ctx, renderbuffer);
-      if (rb != NULL && rb != &DummyRenderbuffer)
-         return GL_TRUE;
-   }
-   return GL_FALSE;
+
+   rb = _mesa_lookup_renderbuffer(ctx, renderbuffer);
+   return rb != NULL && rb != &DummyRenderbuffer;
 }
 
 
