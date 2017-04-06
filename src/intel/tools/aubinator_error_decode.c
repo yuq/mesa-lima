@@ -239,7 +239,7 @@ static void decode(struct gen_spec *spec,
       printf("%s0x%08"PRIx64":  0x%08x:  %-80s%s\n",
              color, offset, p[0], gen_group_get_name(inst), reset_color);
 
-      gen_print_group(stdout, inst, offset, data,
+      gen_print_group(stdout, inst, offset, p,
                       option_color == COLOR_ALWAYS);
       length = gen_group_get_length(inst, p);
    }
