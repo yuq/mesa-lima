@@ -31,6 +31,9 @@ matrix:
         - MAKEFLAGS=-j2
         - LLVM_VERSION=3.9
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+        - DRI_DRIVERS="i915,i965,radeon,r200,swrast,nouveau"
+        - GALLIUM_DRIVERS="i915,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl,etnaviv,imx"
+        - VULKAN_DRIVERS="radeon"
       addons:
         apt:
           sources:
@@ -39,6 +42,36 @@ matrix:
             # LLVM packaging is broken and misses these dependencies
             - libedit-dev
             # From sources above
+            - llvm-3.9-dev
+            # Common
+            - x11proto-xf86vidmode-dev
+            - libexpat1-dev
+            - libx11-xcb-dev
+            - libelf-dev
+    - env:
+        # NOTE: Building SWR is 2x (yes two) times slower than all the other
+        # gallium drivers combined.
+        # Start this early so that it doesn't hunder the run time.
+        - LABEL="make Gallium Drivers SWR"
+        - BUILD=make
+        - MAKEFLAGS=-j2
+        - LLVM_VERSION=3.9
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+        - OVERRIDE_CC="gcc-5"
+        - OVERRIDE_CXX="g++-5"
+        - DRI_DRIVERS=""
+        - GALLIUM_DRIVERS="swr"
+        - VULKAN_DRIVERS=""
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-3.9
+          packages:
+            # LLVM packaging is broken and misses these dependencies
+            - libedit-dev
+            # From sources above
+            - g++-5
             - llvm-3.9-dev
             # Common
             - x11proto-xf86vidmode-dev
@@ -169,11 +202,13 @@ install:
 
 script:
   - if test "x$BUILD" = xmake; then
+      test -n "$OVERRIDE_CC" && export CC="$OVERRIDE_CC";
+      test -n "$OVERRIDE_CXX" && export CXX="$OVERRIDE_CXX";
       ./autogen.sh --enable-debug
         --with-platforms=x11,drm
-        --with-dri-drivers=i915,i965,radeon,r200,swrast,nouveau
-        --with-gallium-drivers=i915,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl,etnaviv,imx
-        --with-vulkan-drivers=radeon
+        --with-dri-drivers=$DRI_DRIVERS
+        --with-gallium-drivers=$GALLIUM_DRIVERS
+        --with-vulkan-drivers=$VULKAN_DRIVERS
         --disable-llvm-shared-libs
         ;
       make && make check;
