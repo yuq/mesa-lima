@@ -81,6 +81,12 @@ anv_gem_userptr(struct anv_device *device, void *mem, size_t size)
 }
 
 int
+anv_gem_busy(struct anv_device *device, uint32_t gem_handle)
+{
+   return 0;
+}
+
+int
 anv_gem_wait(struct anv_device *device, uint32_t gem_handle, int64_t *timeout_ns)
 {
    return 0;
