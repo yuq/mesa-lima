@@ -7,20 +7,6 @@ cache:
   apt: true
   ccache: true
 
-addons:
-  apt:
-    sources:
-      - llvm-toolchain-trusty-3.9
-    packages:
-      - x11proto-xf86vidmode-dev
-      - libexpat1-dev
-      - libx11-xcb-dev
-      # LLVM packaging is broken and misses these dependencies
-      - libedit-dev
-      - llvm-3.9-dev
-      - libelf-dev
-      - scons
-
 env:
   global:
     - XORG_RELEASES=http://xorg.freedesktop.org/releases/individual
@@ -34,8 +20,6 @@ env:
     - LIBXCB_VERSION=libxcb-1.11
     - LIBXSHMFENCE_VERSION=libxshmfence-1.2
     - LIBTXC_DXTN_VERSION=libtxc_dxtn-1.0.1
-    - LLVM_VERSION=3.9
-    - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
     - LD_LIBRARY_PATH="$HOME/prefix/lib:$LD_LIBRARY_PATH"
 
@@ -45,11 +29,56 @@ matrix:
         - LABEL="make"
         - BUILD=make
         - MAKEFLAGS=-j2
+        - LLVM_VERSION=3.9
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-3.9
+          packages:
+            # LLVM packaging is broken and misses these dependencies
+            - libedit-dev
+            # From sources above
+            - llvm-3.9-dev
+            # Common
+            - x11proto-xf86vidmode-dev
+            - libexpat1-dev
+            - libx11-xcb-dev
+            - libelf-dev
+    - env:
+        - LABEL="scons"
+        - BUILD=scons
+        - SCONSFLAGS="-j4"
+        # Explicitly disable.
+        - SCONS_TARGET="llvm=0"
+      addons:
+        apt:
+          packages:
+            - scons
+            # Common
+            - x11proto-xf86vidmode-dev
+            - libexpat1-dev
+            - libx11-xcb-dev
+            - libelf-dev
     - env:
         - LABEL="scons LLVM"
         - BUILD=scons
         - SCONSFLAGS="-j4"
         - SCONS_TARGET="llvm=1"
+        - LLVM_VERSION=3.3
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+      addons:
+        apt:
+          packages:
+            - scons
+            # LLVM packaging is broken and misses these dependencies
+            - libedit-dev
+            - llvm-3.3-dev
+            # Common
+            - x11proto-xf86vidmode-dev
+            - libexpat1-dev
+            - libx11-xcb-dev
+            - libelf-dev
 
 install:
   - pip install --user mako
