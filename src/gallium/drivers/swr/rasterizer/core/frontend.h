@@ -208,14 +208,34 @@ void calcDeterminantIntVertical(const simd16scalari vA[3], const simd16scalari v
 {
     // refer to calcDeterminantInt comment for calculation explanation
     // A1*B2
-    simd16scalari vA1Lo = _simd16_unpacklo_epi32(vA[1], vA[1]); // 0 0 1 1 4 4 5 5
-    simd16scalari vA1Hi = _simd16_unpackhi_epi32(vA[1], vA[1]); // 2 2 3 3 6 6 7 7
+
+#if 1
+    // TODO: get the native SIMD16 version working..
+
+    simdscalari vA_lo[3];
+    simdscalari vA_hi[3];
+    simdscalari vB_lo[3];
+    simdscalari vB_hi[3];
+
+    for (uint32_t i = 0; i < 3; i += 1)
+    {
+        vA_lo[i] = _simd16_extract_si(vA[i], 0);
+        vA_hi[i] = _simd16_extract_si(vA[i], 1);
+        vB_lo[i] = _simd16_extract_si(vB[i], 0);
+        vB_hi[i] = _simd16_extract_si(vB[i], 1);
+    }
+
+    calcDeterminantIntVertical(vA_lo, vB_lo, reinterpret_cast<simdscalari *>(&pvDet[0]));
+    calcDeterminantIntVertical(vA_hi, vB_hi, reinterpret_cast<simdscalari *>(&pvDet[1]));
+#else
+    simd16scalari vA1Lo = _simd16_unpacklo_epi32(vA[1], vA[1]); // 0 0 1 1 4 4 5 5 8 8 9 9 C C D D
+    simd16scalari vA1Hi = _simd16_unpackhi_epi32(vA[1], vA[1]); // 2 2 3 3 6 6 7 7 A A B B E E F F
 
     simd16scalari vB2Lo = _simd16_unpacklo_epi32(vB[2], vB[2]);
     simd16scalari vB2Hi = _simd16_unpackhi_epi32(vB[2], vB[2]);
 
-    simd16scalari vA1B2Lo = _simd16_mul_epi32(vA1Lo, vB2Lo);    // 0 1 4 5
-    simd16scalari vA1B2Hi = _simd16_mul_epi32(vA1Hi, vB2Hi);    // 2 3 6 7
+    simd16scalari vA1B2Lo = _simd16_mul_epi32(vA1Lo, vB2Lo);    // 0 1 4 5 8 9 C D
+    simd16scalari vA1B2Hi = _simd16_mul_epi32(vA1Hi, vB2Hi);    // 2 3 6 7 A B E F
 
     // B1*A2
     simd16scalari vA2Lo = _simd16_unpacklo_epi32(vA[2], vA[2]);
@@ -237,6 +257,7 @@ void calcDeterminantIntVertical(const simd16scalari vA[3], const simd16scalari v
 
     pvDet[0] = vResultLo;
     pvDet[1] = vResultHi;
+#endif
 }
 
 #endif

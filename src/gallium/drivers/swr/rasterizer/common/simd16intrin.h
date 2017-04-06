@@ -436,7 +436,7 @@ INLINE simd16scalar _simd16_cvtepi32_ps(simd16scalari a)
 }
 
 template <int comp>
-INLINE simd16scalar _simd16_cmp_ps(simd16scalar a, simd16scalar b)
+INLINE simd16scalar _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
 {
     simd16scalar result;
 
@@ -446,12 +446,14 @@ INLINE simd16scalar _simd16_cmp_ps(simd16scalar a, simd16scalar b)
     return result;
 }
 
-#define _simd16_cmplt_ps(a, b) _simd16_cmp_ps<_CMP_LT_OQ>(a, b)
-#define _simd16_cmpgt_ps(a, b) _simd16_cmp_ps<_CMP_GT_OQ>(a, b)
-#define _simd16_cmpneq_ps(a, b) _simd16_cmp_ps<_CMP_NEQ_OQ>(a, b)
-#define _simd16_cmpeq_ps(a, b) _simd16_cmp_ps<_CMP_EQ_OQ>(a, b)
-#define _simd16_cmpge_ps(a, b) _simd16_cmp_ps<_CMP_GE_OQ>(a, b)
-#define _simd16_cmple_ps(a, b) _simd16_cmp_ps<_CMP_LE_OQ>(a, b)
+#define _simd16_cmp_ps(a, b, comp)  _simd16_cmp_ps_temp<comp>(a, b)
+
+#define _simd16_cmplt_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_LT_OQ)
+#define _simd16_cmpgt_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_GT_OQ)
+#define _simd16_cmpneq_ps(a, b)     _simd16_cmp_ps(a, b, _CMP_NEQ_OQ)
+#define _simd16_cmpeq_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_EQ_OQ)
+#define _simd16_cmpge_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_GE_OQ)
+#define _simd16_cmple_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_LE_OQ)
 
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_and_ps, _simd_and_ps)
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_andnot_ps, _simd_andnot_ps)
@@ -525,8 +527,8 @@ SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmplt_epi32, _simd_cmplt_epi32)
 
 INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
 {
-    int lo = _mm256_testz_ps(a.lo, b.lo);
-    int hi = _mm256_testz_ps(a.hi, b.hi);
+    int lo = _simd_testz_ps(a.lo, b.lo);
+    int hi = _simd_testz_ps(a.hi, b.hi);
 
     return lo & hi;
 }
@@ -912,19 +914,19 @@ INLINE int _simd16_movemask_epi8(simd16scalari a)
 template <int comp>
 INLINE simd16scalar _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
 {
-    simd16mask k = _mm512_cmpeq_ps_mask(a, b);
+    simd16mask k = _mm512_cmp_ps_mask(a, b, comp);
 
     return _mm512_castsi512_ps(_mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF)));
 }
 
 #define _simd16_cmp_ps(a, b, comp)  _simd16_cmp_ps_temp<comp>(a, b)
 
-#define _simd16_cmplt_ps(a, b)      _simd16_cmp_ps<_CMP_LT_OQ>(a, b)
-#define _simd16_cmpgt_ps(a, b)      _simd16_cmp_ps<_CMP_GT_OQ>(a, b)
-#define _simd16_cmpneq_ps(a, b)     _simd16_cmp_ps<_CMP_NEQ_OQ>(a, b)
-#define _simd16_cmpeq_ps(a, b)      _simd16_cmp_ps<_CMP_EQ_OQ>(a, b)
-#define _simd16_cmpge_ps(a, b)      _simd16_cmp_ps<_CMP_GE_OQ>(a, b)
-#define _simd16_cmple_ps(a, b)      _simd16_cmp_ps<_CMP_LE_OQ>(a, b)
+#define _simd16_cmplt_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_LT_OQ)
+#define _simd16_cmpgt_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_GT_OQ)
+#define _simd16_cmpneq_ps(a, b)     _simd16_cmp_ps(a, b, _CMP_NEQ_OQ)
+#define _simd16_cmpeq_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_EQ_OQ)
+#define _simd16_cmpge_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_GE_OQ)
+#define _simd16_cmple_ps(a, b)      _simd16_cmp_ps(a, b, _CMP_LE_OQ)
 
 #define _simd16_castsi_ps           _mm512_castsi512_ps
 #define _simd16_castps_si           _mm512_castps_si512
@@ -982,16 +984,13 @@ INLINE simd16scalari _simd16_cmplt_epi32(simd16scalari a, simd16scalari b)
     return _mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-#if 0
 INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
 {
-    int lo = _mm256_testz_ps(a.lo, b.lo);
-    int hi = _mm256_testz_ps(a.hi, b.hi);
+    int lo = _simd_testz_ps(_simd16_extract_ps(a, 0), _simd16_extract_ps(b, 0));
+    int hi = _simd_testz_ps(_simd16_extract_ps(a, 1), _simd16_extract_ps(b, 1));
 
     return lo & hi;
 }
-
-#endif
 
 #define _simd16_unpacklo_ps       _mm512_unpacklo_ps
 #define _simd16_unpackhi_ps       _mm512_unpackhi_ps

@@ -1007,16 +1007,6 @@ endBinTriangles:
 }
 
 #if USE_SIMD16_FRONTEND
-inline uint32_t GetPrimMaskLo(uint32_t primMask)
-{
-    return primMask & 255;
-}
-
-inline uint32_t GetPrimMaskHi(uint32_t primMask)
-{
-    return (primMask >> 8) & 255;
-}
-
 template <typename CT>
 void BinTriangles_simd16(
     DRAW_CONTEXT *pDC,
@@ -1105,8 +1095,8 @@ void BinTriangles_simd16(
     calcDeterminantIntVertical(vAi, vBi, vDet);
 
     // cull zero area
-    simd16mask maskLo = _simd16_movemask_pd(_simd16_castsi_pd(_simd16_cmpeq_epi64(vDet[0], _simd16_setzero_si())));
-    simd16mask maskHi = _simd16_movemask_pd(_simd16_castsi_pd(_simd16_cmpeq_epi64(vDet[1], _simd16_setzero_si())));
+    uint32_t maskLo = _simd16_movemask_pd(_simd16_castsi_pd(_simd16_cmpeq_epi64(vDet[0], _simd16_setzero_si())));
+    uint32_t maskHi = _simd16_movemask_pd(_simd16_castsi_pd(_simd16_cmpeq_epi64(vDet[1], _simd16_setzero_si())));
 
     uint32_t cullZeroAreaMask = maskLo | (maskHi << (KNOB_SIMD16_WIDTH / 2));
 
@@ -1133,7 +1123,6 @@ void BinTriangles_simd16(
         maskLo = _simd16_movemask_pd(_simd16_castsi_pd(_simd16_cmpgt_epi64(_simd16_setzero_si(), vDet[0])));
         maskHi = _simd16_movemask_pd(_simd16_castsi_pd(_simd16_cmpgt_epi64(_simd16_setzero_si(), vDet[1])));
     }
-
     frontWindingTris = maskLo | (maskHi << (KNOB_SIMD16_WIDTH / 2));
 
     // cull
@@ -2756,7 +2745,7 @@ void BinLines_simd16(
         {
             viewportTransform<2>(prim, state.vpMatrices);
         }
-}
+    }
 
     // adjust for pixel center location
     simd16scalar offset = g_pixelOffsets_simd16[rastState.pixelLocation];
