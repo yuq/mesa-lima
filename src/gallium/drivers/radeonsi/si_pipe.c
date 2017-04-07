@@ -33,9 +33,6 @@
 #include "vl/vl_decoder.h"
 #include "../ddebug/dd_util.h"
 
-#define SI_LLVM_DEFAULT_FEATURES \
-	"+DumpCode,+vgpr-spilling,-fp32-denormals,-xnack"
-
 /*
  * pipe_context
  */
@@ -127,12 +124,16 @@ static LLVMTargetMachineRef
 si_create_llvm_target_machine(struct si_screen *sscreen)
 {
 	const char *triple = "amdgcn--";
+	char features[256];
+
+	snprintf(features, sizeof(features),
+		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s",
+		 sscreen->b.chip_class >= GFX9 ? ",+xnack" : ",-xnack",
+		 sscreen->b.debug_flags & DBG_SI_SCHED ? ",+si-scheduler" : "");
 
 	return LLVMCreateTargetMachine(si_llvm_get_amdgpu_target(triple), triple,
 				       r600_get_llvm_processor_name(sscreen->b.family),
-				       sscreen->b.debug_flags & DBG_SI_SCHED ?
-					       SI_LLVM_DEFAULT_FEATURES ",+si-scheduler" :
-					       SI_LLVM_DEFAULT_FEATURES,
+				       features,
 				       LLVMCodeGenLevelDefault,
 				       LLVMRelocDefault,
 				       LLVMCodeModelDefault);
