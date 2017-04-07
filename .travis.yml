@@ -26,14 +26,64 @@ env:
 matrix:
   include:
     - env:
-        - LABEL="make"
+        - LABEL="make loaders/classic DRI"
         - BUILD=make
         - MAKEFLAGS=-j2
+        - MAKE_CHECK_COMMAND="make check"
+        # XXX: Add wayland platform
+        - DRI_LOADERS="--enable-glx --enable-gbm --enable-egl --with-platforms=x11,drm,surfaceless --enable-osmesa"
+        - DRI_DRIVERS="i915,i965,radeon,r200,swrast,nouveau"
+        - GALLIUM_DRIVERS=""
+        - VULKAN_DRIVERS=""
+      addons:
+        apt:
+          packages:
+            - x11proto-xf86vidmode-dev
+            - libexpat1-dev
+            - libx11-xcb-dev
+    - env:
+        # NOTE: Building SWR is 2x (yes two) times slower than all the other
+        # gallium drivers combined.
+        # Start this early so that it doesn't hunder the run time.
+        - LABEL="make Gallium Drivers SWR"
+        - BUILD=make
+        - MAKEFLAGS=-j2
+        - MAKE_CHECK_COMMAND="true"
         - LLVM_VERSION=3.9
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-        - DRI_DRIVERS="i915,i965,radeon,r200,swrast,nouveau"
+        - OVERRIDE_CC="gcc-5"
+        - OVERRIDE_CXX="g++-5"
+        - DRI_LOADERS="--disable-glx --disable-gbm --disable-egl"
+        - DRI_DRIVERS=""
+        - GALLIUM_DRIVERS="swr"
+        - VULKAN_DRIVERS=""
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-3.9
+          packages:
+            # LLVM packaging is broken and misses these dependencies
+            - libedit-dev
+            # From sources above
+            - g++-5
+            - llvm-3.9-dev
+            # Common
+            - x11proto-xf86vidmode-dev
+            - libexpat1-dev
+            - libx11-xcb-dev
+            - libelf-dev
+    - env:
+        - LABEL="make Gallium Drivers Other"
+        - BUILD=make
+        - MAKEFLAGS=-j2
+        - MAKE_CHECK_COMMAND="true"
+        - LLVM_VERSION=3.9
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+        - DRI_LOADERS="--disable-glx --disable-gbm --disable-egl"
+        - DRI_DRIVERS=""
         - GALLIUM_DRIVERS="i915,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl,etnaviv,imx"
-        - VULKAN_DRIVERS="radeon"
+        - VULKAN_DRIVERS=""
       addons:
         apt:
           sources:
@@ -49,29 +99,27 @@ matrix:
             - libx11-xcb-dev
             - libelf-dev
     - env:
-        # NOTE: Building SWR is 2x (yes two) times slower than all the other
-        # gallium drivers combined.
-        # Start this early so that it doesn't hunder the run time.
-        - LABEL="make Gallium Drivers SWR"
+        - LABEL="make Vulkan"
         - BUILD=make
         - MAKEFLAGS=-j2
+        - MAKE_CHECK_COMMAND="make -C src/gtest check && make -C src/intel check"
         - LLVM_VERSION=3.9
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-        - OVERRIDE_CC="gcc-5"
-        - OVERRIDE_CXX="g++-5"
+        # XXX: we want to test the WSI, but those are enabled via the EGL toggles
+        # XXX: Add wayland platform
+        # XXX: Platform X11 dependencies are checked when --enable-glx is set
+        - DRI_LOADERS="--enable-glx --disable-gbm --enable-egl --with-platforms=x11"
         - DRI_DRIVERS=""
-        - GALLIUM_DRIVERS="swr"
-        - VULKAN_DRIVERS=""
+        - GALLIUM_DRIVERS=""
+        - VULKAN_DRIVERS="intel,radeon"
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-3.9
           packages:
             # LLVM packaging is broken and misses these dependencies
             - libedit-dev
             # From sources above
-            - g++-5
             - llvm-3.9-dev
             # Common
             - x11proto-xf86vidmode-dev
@@ -200,18 +248,34 @@ install:
       (cd $LIBTXC_DXTN_VERSION && ./configure --prefix=$HOME/prefix && make install);
     fi
 
+  # Generate the header since one is missing on the Travis instance
+  - mkdir -p linux
+  - printf "%s\n" \
+           "#ifndef _LINUX_MEMFD_H" \
+           "#define _LINUX_MEMFD_H" \
+           "" \
+           "#define __NR_memfd_create 319" \
+           "#define SYS_memfd_create __NR_memfd_create" \
+           "" \
+           "#define MFD_CLOEXEC             0x0001U" \
+           "#define MFD_ALLOW_SEALING       0x0002U" \
+           "" \
+           "#endif /* _LINUX_MEMFD_H */" > linux/memfd.h
+
 script:
   - if test "x$BUILD" = xmake; then
       test -n "$OVERRIDE_CC" && export CC="$OVERRIDE_CC";
       test -n "$OVERRIDE_CXX" && export CXX="$OVERRIDE_CXX";
+      export CC="$CC -isystem`pwd`";
+
       ./autogen.sh --enable-debug
-        --with-platforms=x11,drm
+        $DRI_LOADERS
         --with-dri-drivers=$DRI_DRIVERS
         --with-gallium-drivers=$GALLIUM_DRIVERS
         --with-vulkan-drivers=$VULKAN_DRIVERS
         --disable-llvm-shared-libs
-        ;
-      make && make check;
+        &&
+      make && eval $MAKE_CHECK_COMMAND;
     fi
 
   - if test "x$BUILD" = xscons; then
