@@ -555,8 +555,9 @@ static void si_set_sampler_view(struct si_context *sctx,
 
 static bool is_compressed_colortex(struct r600_texture *rtex)
 {
-	return rtex->cmask.size || rtex->fmask.size ||
-	       (rtex->dcc_offset && rtex->dirty_level_mask);
+	return rtex->fmask.size ||
+	       (rtex->dirty_level_mask &&
+		(rtex->cmask.size || rtex->dcc_offset));
 }
 
 static bool depth_needs_decompression(struct r600_texture *rtex,
