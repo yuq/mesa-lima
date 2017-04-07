@@ -2181,7 +2181,6 @@ struct anv_render_pass {
    uint32_t                                     attachment_count;
    uint32_t                                     subpass_count;
    VkAttachmentReference *                      subpass_attachments;
-   enum anv_subpass_usage *                     subpass_usages;
    struct anv_render_pass_attachment *          attachments;
    struct anv_subpass                           subpasses[0];
 };
