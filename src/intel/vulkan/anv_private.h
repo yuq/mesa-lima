@@ -269,6 +269,102 @@ void anv_loge_v(const char *format, va_list va);
 #define anv_assert(x)
 #endif
 
+/* A multi-pointer allocator
+ *
+ * When copying data structures from the user (such as a render pass), it's
+ * common to need to allocate data for a bunch of different things.  Instead
+ * of doing several allocations and having to handle all of the error checking
+ * that entails, it can be easier to do a single allocation.  This struct
+ * helps facilitate that.  The intended usage looks like this:
+ *
+ *    ANV_MULTIALLOC(ma)
+ *    anv_multialloc_add(&ma, &main_ptr, 1);
+ *    anv_multialloc_add(&ma, &substruct1, substruct1Count);
+ *    anv_multialloc_add(&ma, &substruct2, substruct2Count);
+ *
+ *    if (!anv_multialloc_alloc(&ma, pAllocator, VK_ALLOCATION_SCOPE_FOO))
+ *       return vk_error(VK_ERROR_OUT_OF_HOST_MEORY);
+ */
+struct anv_multialloc {
+    size_t size;
+    size_t align;
+
+    uint32_t ptr_count;
+    void **ptrs[8];
+};
+
+#define ANV_MULTIALLOC_INIT \
+   ((struct anv_multialloc) { 0, })
+
+#define ANV_MULTIALLOC(_name) \
+   struct anv_multialloc _name = ANV_MULTIALLOC_INIT
+
+__attribute__((always_inline))
+static inline void
+_anv_multialloc_add(struct anv_multialloc *ma,
+                    void **ptr, size_t size, size_t align)
+{
+   size_t offset = align_u64(ma->size, align);
+   ma->size = offset + size;
+   ma->align = MAX2(ma->align, align);
+
+   /* Store the offset in the pointer. */
+   *ptr = (void *)(uintptr_t)offset;
+
+   assert(ma->ptr_count < ARRAY_SIZE(ma->ptrs));
+   ma->ptrs[ma->ptr_count++] = ptr;
+}
+
+#define anv_multialloc_add(_ma, _ptr, _count) \
+   _anv_multialloc_add((_ma), (void **)(_ptr), \
+                       (_count) * sizeof(**(_ptr)), __alignof__(**(_ptr)))
+
+__attribute__((always_inline))
+static inline void *
+anv_multialloc_alloc(struct anv_multialloc *ma,
+                     const VkAllocationCallbacks *alloc,
+                     VkSystemAllocationScope scope)
+{
+   void *ptr = vk_alloc(alloc, ma->size, ma->align, scope);
+   if (!ptr)
+      return NULL;
+
+   /* Fill out each of the pointers with their final value.
+    *
+    *   for (uint32_t i = 0; i < ma->ptr_count; i++)
+    *      *ma->ptrs[i] = ptr + (uintptr_t)*ma->ptrs[i];
+    *
+    * Unfortunately, even though ma->ptr_count is basically guaranteed to be a
+    * constant, GCC is incapable of figuring this out and unrolling the loop
+    * so we have to give it a little help.
+    */
+   STATIC_ASSERT(ARRAY_SIZE(ma->ptrs) == 8);
+#define _ANV_MULTIALLOC_UPDATE_POINTER(_i) \
+   if ((_i) < ma->ptr_count) \
+      *ma->ptrs[_i] = ptr + (uintptr_t)*ma->ptrs[_i]
+   _ANV_MULTIALLOC_UPDATE_POINTER(0);
+   _ANV_MULTIALLOC_UPDATE_POINTER(1);
+   _ANV_MULTIALLOC_UPDATE_POINTER(2);
+   _ANV_MULTIALLOC_UPDATE_POINTER(3);
+   _ANV_MULTIALLOC_UPDATE_POINTER(4);
+   _ANV_MULTIALLOC_UPDATE_POINTER(5);
+   _ANV_MULTIALLOC_UPDATE_POINTER(6);
+   _ANV_MULTIALLOC_UPDATE_POINTER(7);
+#undef _ANV_MULTIALLOC_UPDATE_POINTER
+
+   return ptr;
+}
+
+__attribute__((always_inline))
+static inline void *
+anv_multialloc_alloc2(struct anv_multialloc *ma,
+                      const VkAllocationCallbacks *parent_alloc,
+                      const VkAllocationCallbacks *alloc,
+                      VkSystemAllocationScope scope)
+{
+   return anv_multialloc_alloc(ma, alloc ? alloc : parent_alloc, scope);
+}
+
 /**
  * A dynamically growable, circular buffer.  Elements are added at head and
  * removed from tail. head and tail are free-running uint32_t indices and we
