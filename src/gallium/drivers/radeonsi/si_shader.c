@@ -6349,6 +6349,8 @@ static unsigned si_get_shader_binary_size(struct si_shader *shader)
 		size += shader->prolog->binary.code_size;
 	if (shader->previous_stage)
 		size += shader->previous_stage->binary.code_size;
+	if (shader->prolog2)
+		size += shader->prolog2->binary.code_size;
 	if (shader->epilog)
 		size += shader->epilog->binary.code_size;
 	return size;
@@ -6360,6 +6362,8 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 		shader->prolog ? &shader->prolog->binary : NULL;
 	const struct ac_shader_binary *previous_stage =
 		shader->previous_stage ? &shader->previous_stage->binary : NULL;
+	const struct ac_shader_binary *prolog2 =
+		shader->prolog2 ? &shader->prolog2->binary : NULL;
 	const struct ac_shader_binary *epilog =
 		shader->epilog ? &shader->epilog->binary : NULL;
 	const struct ac_shader_binary *mainb = &shader->binary;
@@ -6369,7 +6373,9 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 
 	assert(!prolog || !prolog->rodata_size);
 	assert(!previous_stage || !previous_stage->rodata_size);
-	assert((!prolog && !previous_stage && !epilog) || !mainb->rodata_size);
+	assert(!prolog2 || !prolog2->rodata_size);
+	assert((!prolog && !previous_stage && !prolog2 && !epilog) ||
+	       !mainb->rodata_size);
 	assert(!epilog || !epilog->rodata_size);
 
 	/* GFX9 can fetch at most 128 bytes past the end of the shader.
@@ -6399,6 +6405,10 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 		util_memcpy_cpu_to_le32(ptr, previous_stage->code,
 					previous_stage->code_size);
 		ptr += previous_stage->code_size;
+	}
+	if (prolog2) {
+		util_memcpy_cpu_to_le32(ptr, prolog2->code, prolog2->code_size);
+		ptr += prolog2->code_size;
 	}
 
 	util_memcpy_cpu_to_le32(ptr, mainb->code, mainb->code_size);
@@ -6610,6 +6620,9 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		if (shader->previous_stage)
 			si_shader_dump_disassembly(&shader->previous_stage->binary,
 						   debug, "previous stage", file);
+		if (shader->prolog2)
+			si_shader_dump_disassembly(&shader->prolog2->binary,
+						   debug, "prolog2", file);
 
 		si_shader_dump_disassembly(&shader->binary, debug, "main", file);
 
@@ -9008,6 +9021,12 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 				     shader->previous_stage->config.scratch_bytes_per_wave);
 			shader->info.uses_instanceid |=
 				shader->previous_stage->info.uses_instanceid;
+		}
+		if (shader->prolog2) {
+			shader->config.num_sgprs = MAX2(shader->config.num_sgprs,
+							shader->prolog2->config.num_sgprs);
+			shader->config.num_vgprs = MAX2(shader->config.num_vgprs,
+							shader->prolog2->config.num_vgprs);
 		}
 		if (shader->epilog) {
 			shader->config.num_sgprs = MAX2(shader->config.num_sgprs,
