@@ -206,12 +206,7 @@ bool JitManager::SetupModuleFromIR(const uint8_t *pIR, size_t length)
         return false;
     }
 
-#if HAVE_LLVM == 0x307
-    // llvm-3.7 has mismatched setDataLyout/getDataLayout APIs
-    newModule->setDataLayout(*mpExec->getDataLayout());
-#else
     newModule->setDataLayout(mpExec->getDataLayout());
-#endif
 
     mpCurrentModule = newModule.get();
 #if defined(_WIN32)
@@ -256,12 +251,7 @@ void JitManager::DumpAsm(Function* pFunction, const char* fileName)
         sprintf(fName, "%s.%s.asm", funcName, fileName);
 #endif
 
-#if HAVE_LLVM == 0x306
-        raw_fd_ostream fd(fName, EC, llvm::sys::fs::F_None);
-        formatted_raw_ostream filestream(fd);
-#else
         raw_fd_ostream filestream(fName, EC, llvm::sys::fs::F_None);
-#endif
 
         legacy::PassManager* pMPasses = new legacy::PassManager();
         auto* pTarget = mpExec->getTargetMachine();

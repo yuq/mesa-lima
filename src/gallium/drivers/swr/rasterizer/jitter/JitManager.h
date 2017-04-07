@@ -61,15 +61,9 @@
 
 #include "llvm/Analysis/Passes.h"
 
-#if HAVE_LLVM == 0x306
-#include "llvm/PassManager.h"
-using FunctionPassManager = llvm::FunctionPassManager;
-using PassManager = llvm::PassManager;
-#else
 #include "llvm/IR/LegacyPassManager.h"
 using FunctionPassManager = llvm::legacy::FunctionPassManager;
 using PassManager = llvm::legacy::PassManager;
-#endif
 
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
