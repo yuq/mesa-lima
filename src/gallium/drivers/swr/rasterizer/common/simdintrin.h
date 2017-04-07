@@ -618,6 +618,7 @@ __m256i _simd_packs_epi32(__m256i a, __m256i b)
 #define _simd_loadu_si _mm256_loadu_si256
 #define _simd_sub_ps _mm256_sub_ps
 #define _simd_testz_ps _mm256_testz_ps
+#define _simd_testz_si _mm256_testz_si256
 #define _simd_xor_ps _mm256_xor_ps
 
 INLINE
