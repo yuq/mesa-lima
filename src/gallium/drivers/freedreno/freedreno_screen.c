@@ -76,7 +76,7 @@ static const struct debug_named_value debug_options[] = {
 		{"flush",     FD_DBG_FLUSH,  "Force flush after every draw"},
 		{"deqp",      FD_DBG_DEQP,   "Enable dEQP hacks"},
 		{"nir",       FD_DBG_NIR,    "Prefer NIR as native IR"},
-		{"reorder",   FD_DBG_REORDER,"Enable reordering for draws/blits"},
+		{"inorder",   FD_DBG_INORDER,"Disable reordering for draws/blits"},
 		{"bstat",     FD_DBG_BSTAT,  "Print batch stats at context destroy"},
 		{"nogrow",    FD_DBG_NOGROW, "Disable \"growable\" cmdstream buffers, even if kernel supports it"},
 		DEBUG_NAMED_VALUE_END
@@ -707,7 +707,7 @@ fd_screen_create(struct fd_device *dev)
 	 * buffers would be too much otherwise.
 	 */
 	if ((screen->gpu_id >= 300) && (fd_device_version(dev) >= FD_VERSION_UNLIMITED_CMDS))
-		screen->reorder = !!(fd_mesa_debug & FD_DBG_REORDER);
+		screen->reorder = !(fd_mesa_debug & FD_DBG_INORDER);
 
 	fd_bc_init(&screen->batch_cache);
 
