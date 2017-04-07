@@ -411,23 +411,15 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                  VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
-   bool need_null_state = false;
-   unsigned num_states = 0;
+   /* Reserve one for the NULL state. */
+   unsigned num_states = 1;
    for (uint32_t i = 0; i < pass->attachment_count; ++i) {
-      if (vk_format_is_color(pass->attachments[i].format)) {
+      if (vk_format_is_color(pass->attachments[i].format))
          num_states++;
-      } else {
-         /* We need a null state for any depth-stencil-only subpasses.
-          * Importantly, this includes depth/stencil clears so we create one
-          * whenever we have depth or stencil
-          */
-         need_null_state = true;
-      }
 
       if (need_input_attachment_state(&pass->attachments[i]))
          num_states++;
    }
-   num_states += need_null_state;
 
    const uint32_t ss_stride = align_u32(isl_dev->ss.size, isl_dev->ss.align);
    state->render_pass_states =
@@ -437,11 +429,9 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
    struct anv_state next_state = state->render_pass_states;
    next_state.alloc_size = isl_dev->ss.size;
 
-   if (need_null_state) {
-      state->null_surface_state = next_state;
-      next_state.offset += ss_stride;
-      next_state.map += ss_stride;
-   }
+   state->null_surface_state = next_state;
+   next_state.offset += ss_stride;
+   next_state.map += ss_stride;
 
    for (uint32_t i = 0; i < pass->attachment_count; ++i) {
       if (vk_format_is_color(pass->attachments[i].format)) {
@@ -463,24 +453,22 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
       ANV_FROM_HANDLE(anv_framebuffer, framebuffer, begin->framebuffer);
       assert(pass->attachment_count == framebuffer->attachment_count);
 
-      if (need_null_state) {
-         struct GENX(RENDER_SURFACE_STATE) null_ss = {
-            .SurfaceType = SURFTYPE_NULL,
-            .SurfaceArray = framebuffer->layers > 0,
-            .SurfaceFormat = ISL_FORMAT_R8G8B8A8_UNORM,
+      struct GENX(RENDER_SURFACE_STATE) null_ss = {
+         .SurfaceType = SURFTYPE_NULL,
+         .SurfaceArray = framebuffer->layers > 0,
+         .SurfaceFormat = ISL_FORMAT_R8G8B8A8_UNORM,
 #if GEN_GEN >= 8
-            .TileMode = YMAJOR,
+         .TileMode = YMAJOR,
 #else
-            .TiledSurface = true,
+         .TiledSurface = true,
 #endif
-            .Width = framebuffer->width - 1,
-            .Height = framebuffer->height - 1,
-            .Depth = framebuffer->layers - 1,
-            .RenderTargetViewExtent = framebuffer->layers - 1,
-         };
-         GENX(RENDER_SURFACE_STATE_pack)(NULL, state->null_surface_state.map,
-                                         &null_ss);
-      }
+         .Width = framebuffer->width - 1,
+         .Height = framebuffer->height - 1,
+         .Depth = framebuffer->layers - 1,
+         .RenderTargetViewExtent = framebuffer->layers - 1,
+      };
+      GENX(RENDER_SURFACE_STATE_pack)(NULL, state->null_surface_state.map,
+                                      &null_ss);
 
       for (uint32_t i = 0; i < pass->attachment_count; ++i) {
          struct anv_render_pass_attachment *att = &pass->attachments[i];
