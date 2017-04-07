@@ -42,7 +42,6 @@ VkResult anv_CreateDescriptorSetLayout(
     VkDescriptorSetLayout*                      pSetLayout)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_descriptor_set_layout *set_layout;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
 
@@ -54,18 +53,18 @@ VkResult anv_CreateDescriptorSetLayout(
          immutable_sampler_count += pCreateInfo->pBindings[j].descriptorCount;
    }
 
-   size_t size = sizeof(struct anv_descriptor_set_layout) +
-                 (max_binding + 1) * sizeof(set_layout->binding[0]) +
-                 immutable_sampler_count * sizeof(struct anv_sampler *);
+   struct anv_descriptor_set_layout *set_layout;
+   struct anv_descriptor_set_binding_layout *bindings;
+   struct anv_sampler **samplers;
 
-   set_layout = vk_alloc2(&device->alloc, pAllocator, size, 8,
-                           VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (!set_layout)
+   ANV_MULTIALLOC(ma);
+   anv_multialloc_add(&ma, &set_layout, 1);
+   anv_multialloc_add(&ma, &bindings, max_binding + 1);
+   anv_multialloc_add(&ma, &samplers, immutable_sampler_count);
+
+   if (!anv_multialloc_alloc2(&ma, &device->alloc, pAllocator,
+                              VK_SYSTEM_ALLOCATION_SCOPE_OBJECT))
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   /* We just allocate all the samplers at the end of the struct */
-   struct anv_sampler **samplers =
-      (struct anv_sampler **)&set_layout->binding[max_binding + 1];
 
    memset(set_layout, 0, sizeof(*set_layout));
    set_layout->binding_count = max_binding + 1;
