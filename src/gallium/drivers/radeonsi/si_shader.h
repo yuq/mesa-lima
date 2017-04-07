@@ -505,6 +505,7 @@ struct si_shader {
 	struct si_shader		*next_variant;
 
 	struct si_shader_part		*prolog;
+	struct si_shader		*previous_stage; /* for GFX9 */
 	struct si_shader_part		*epilog;
 
 	struct si_pm4_state		*pm4;

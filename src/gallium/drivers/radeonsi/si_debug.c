@@ -639,6 +639,10 @@ static void si_print_annotated_shader(struct si_shader *shader,
 		si_add_split_disasm(shader->prolog->binary.disasm_string,
 				    start_addr, &num_inst, instructions);
 	}
+	if (shader->previous_stage) {
+		si_add_split_disasm(shader->previous_stage->binary.disasm_string,
+				    start_addr, &num_inst, instructions);
+	}
 	si_add_split_disasm(shader->binary.disasm_string,
 			    start_addr, &num_inst, instructions);
 	if (shader->epilog) {
