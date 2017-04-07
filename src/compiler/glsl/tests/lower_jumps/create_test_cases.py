@@ -628,7 +628,10 @@ def test_lower_return_non_void_at_end_of_loop():
             loop(assign_x('a', const_float(1)) +
                  lowered_return_simple(const_float(2)) +
                  break_()) +
-            if_not_return_flag(assign_x('b', const_float(3)) +
+            if_return_flag(assign_x('return_value', '(var_ref return_value)') +
+                           assign_x('return_flag', const_bool(1)) +
+                           assign_x('execute_flag', const_bool(0)),
+                           assign_x('b', const_float(3)) +
                                lowered_return(const_float(4))) +
             final_return()
             ))
