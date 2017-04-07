@@ -872,7 +872,6 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
     AR_BEGIN(BENullBackend, pDC->drawId);
     ///@todo: handle center multisample pattern
-    typedef SwrBackendTraits<sampleCountT, false> T;
     AR_BEGIN(BESetup, pDC->drawId);
 
     const API_STATE &state = GetApiState(pDC);

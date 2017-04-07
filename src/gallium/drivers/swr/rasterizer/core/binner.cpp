@@ -2209,7 +2209,6 @@ void BinPostSetupLines(
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
-    const SWR_FRONTEND_STATE& feState = state.frontendState;
     const SWR_GS_STATE& gsState = state.gsState;
 
     // Select attribute processor
@@ -2640,16 +2639,9 @@ void BinLines(
     simdscalari primID,
     simdscalari viewportIdx)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
-
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
     const SWR_FRONTEND_STATE& feState = state.frontendState;
-    const SWR_GS_STATE& gsState = state.gsState;
-
-    // Select attribute processor
-    PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(2,
-        state.backendState.swizzleEnable, state.backendState.constantInterpolationMask);
 
     simdscalar vRecipW[2] = { _simd_set1_ps(1.0f), _simd_set1_ps(1.0f) };
 
