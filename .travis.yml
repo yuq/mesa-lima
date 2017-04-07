@@ -35,6 +35,7 @@ env:
     - XCBPROTO_VERSION=xcb-proto-1.11
     - LIBXCB_VERSION=libxcb-1.11
     - LIBXSHMFENCE_VERSION=libxshmfence-1.2
+    - LIBTXC_DXTN_VERSION=libtxc_dxtn-1.0.1
     - LLVM_VERSION=3.9
     - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
@@ -92,6 +93,19 @@ install:
   - wget $XORG_RELEASES/lib/$LIBXSHMFENCE_VERSION.tar.bz2
   - tar -jxvf $LIBXSHMFENCE_VERSION.tar.bz2
   - (cd $LIBXSHMFENCE_VERSION && ./configure --prefix=$HOME/prefix && make install)
+
+  # libtxc-dxtn uses the patented S3 Texture Compression
+  # algorithm. Therefore, we don't want to use this library but it is
+  # still possible through setting the USE_TXC_DXTN variable to yes in
+  # the travis web UI.
+  #
+  # According to Wikipedia, the patent expires on October 2, 2017:
+  # https://en.wikipedia.org/wiki/S3_Texture_Compression#Patent
+  - if test "x$USE_TXC_DXTN" = xyes; then
+      wget https://people.freedesktop.org/~cbrill/libtxc_dxtn/$LIBTXC_DXTN_VERSION.tar.bz2;
+      tar -jxvf $LIBTXC_DXTN_VERSION.tar.bz2;
+      (cd $LIBTXC_DXTN_VERSION && ./configure --prefix=$HOME/prefix && make install);
+    fi
 
 script:
   - if test "x$BUILD" = xmake; then
