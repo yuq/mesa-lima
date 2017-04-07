@@ -1149,8 +1149,8 @@ fail_notex:
 
 struct pipe_resource *
 svga_texture_from_handle(struct pipe_screen *screen,
-			 const struct pipe_resource *template,
-			 struct winsys_handle *whandle)
+                         const struct pipe_resource *template,
+                         struct winsys_handle *whandle)
 {
    struct svga_winsys_screen *sws = svga_winsys_screen(screen);
    struct svga_screen *ss = svga_screen(screen);
@@ -1172,42 +1172,18 @@ svga_texture_from_handle(struct pipe_screen *screen,
    if (!srf)
       return NULL;
 
-   if (svga_translate_format(svga_screen(screen), template->format,
-                             template->bind) != format) {
-      unsigned f1 = svga_translate_format(svga_screen(screen),
-                                          template->format, template->bind);
-      unsigned f2 = format;
-
-      /* It's okay for XRGB and ARGB or depth with/out stencil to get mixed up.
-       */
-      if (f1 == SVGA3D_B8G8R8A8_UNORM)
-         f1 = SVGA3D_A8R8G8B8;
-      if (f1 == SVGA3D_B8G8R8X8_UNORM)
-         f1 = SVGA3D_X8R8G8B8;
-
-      if ( !( (f1 == f2) ||
-              (f1 == SVGA3D_X8R8G8B8 && f2 == SVGA3D_A8R8G8B8) ||
-              (f1 == SVGA3D_X8R8G8B8 && f2 == SVGA3D_B8G8R8X8_UNORM) ||
-              (f1 == SVGA3D_A8R8G8B8 && f2 == SVGA3D_X8R8G8B8) ||
-              (f1 == SVGA3D_A8R8G8B8 && f2 == SVGA3D_B8G8R8A8_UNORM) ||
-              (f1 == SVGA3D_Z_D24X8 && f2 == SVGA3D_Z_D24S8) ||
-              (f1 == SVGA3D_Z_DF24 && f2 == SVGA3D_Z_D24S8_INT) ) ) {
-         debug_printf("%s wrong format %s != %s\n", __FUNCTION__,
-                      svga_format_name(f1), svga_format_name(f2));
-         return NULL;
-      }
-   }
+   if (!svga_format_is_shareable(ss, template->format, format,
+                                 template->bind, true))
+      goto out_unref;
 
    tex = CALLOC_STRUCT(svga_texture);
    if (!tex)
-      return NULL;
+      goto out_unref;
 
    tex->defined = CALLOC(template->depth0 * template->array_size,
                          sizeof(tex->defined[0]));
-   if (!tex->defined) {
-      FREE(tex);
-      return NULL;
-   }
+   if (!tex->defined)
+      goto out_no_defined;
 
    tex->b.b = *template;
    tex->b.vtbl = &svga_texture_vtbl;
@@ -1222,11 +1198,11 @@ svga_texture_from_handle(struct pipe_screen *screen,
 
    tex->rendered_to = CALLOC(1, sizeof(tex->rendered_to[0]));
    if (!tex->rendered_to)
-      goto fail;
+      goto out_no_rendered_to;
 
    tex->dirty = CALLOC(1, sizeof(tex->dirty[0]));
    if (!tex->dirty)
-      goto fail;
+      goto out_no_dirty;
 
    tex->imported = TRUE;
 
@@ -1234,14 +1210,14 @@ svga_texture_from_handle(struct pipe_screen *screen,
 
    return &tex->b.b;
 
-fail:
-   if (tex->defined)
-      FREE(tex->defined);
-   if (tex->rendered_to)
-      FREE(tex->rendered_to);
-   if (tex->dirty)
-      FREE(tex->dirty);
+out_no_dirty:
+   FREE(tex->rendered_to);
+out_no_rendered_to:
+   FREE(tex->defined);
+out_no_defined:
    FREE(tex);
+out_unref:
+   sws->surface_reference(sws, &srf, NULL);
    return NULL;
 }
 

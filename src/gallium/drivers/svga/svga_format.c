@@ -43,6 +43,11 @@ struct vgpu10_format_entry
    unsigned flags;
 };
 
+struct format_compat_entry
+{
+   enum pipe_format pformat;
+   const SVGA3dSurfaceFormat *compat_format;
+};
 
 static const struct vgpu10_format_entry format_conversion_table[] =
 {
@@ -1847,6 +1852,23 @@ static const struct format_cap format_cap_table[] = {
    }
 };
 
+static const SVGA3dSurfaceFormat compat_x8r8g8b8[] = {
+   SVGA3D_X8R8G8B8, SVGA3D_A8R8G8B8, SVGA3D_B8G8R8X8_UNORM,
+   SVGA3D_B8G8R8A8_UNORM, 0
+};
+static const SVGA3dSurfaceFormat compat_r8[] = {
+   SVGA3D_R8_UNORM, SVGA3D_NV12, SVGA3D_YV12, 0
+};
+static const SVGA3dSurfaceFormat compat_g8r8[] = {
+   SVGA3D_R8G8_UNORM, SVGA3D_NV12, 0
+};
+
+static const struct format_compat_entry format_compats[] = {
+   {PIPE_FORMAT_B8G8R8X8_UNORM, compat_x8r8g8b8},
+   {PIPE_FORMAT_B8G8R8A8_UNORM, compat_x8r8g8b8},
+   {PIPE_FORMAT_R8_UNORM, compat_r8},
+   {PIPE_FORMAT_R8G8_UNORM, compat_g8r8}
+};
 
 /**
  * Debug only:
@@ -2266,4 +2288,52 @@ svga_format_is_typeless(SVGA3dSurfaceFormat format)
    default:
       return false;
    }
+}
+
+
+/**
+ * \brief Can we import a surface with a given SVGA3D format as a texture?
+ *
+ * \param ss[in]  pointer to the svga screen.
+ * \param pformat[in]  pipe format of the local texture.
+ * \param sformat[in]  svga3d format of the imported surface.
+ * \param bind[in]  bind flags of the imported texture.
+ * \param verbose[in]  Print out incompatibilities in debug mode.
+ */
+bool
+svga_format_is_shareable(const struct svga_screen *ss,
+                         enum pipe_format pformat,
+                         SVGA3dSurfaceFormat sformat,
+                         unsigned bind,
+                         bool verbose)
+{
+   SVGA3dSurfaceFormat default_format =
+      svga_translate_format(ss, pformat, bind);
+   int i;
+
+   if (default_format == SVGA3D_FORMAT_INVALID)
+      return false;
+   if (default_format == sformat)
+      return true;
+
+   for (i = 0; i < ARRAY_SIZE(format_compats); ++i) {
+      if (format_compats[i].pformat == pformat) {
+         const SVGA3dSurfaceFormat *compat_format =
+            format_compats[i].compat_format;
+         while (*compat_format != 0) {
+            if (*compat_format == sformat)
+               return true;
+            compat_format++;
+         }
+      }
+   }
+
+   if (verbose) {
+      debug_printf("Incompatible imported surface format.\n");
+      debug_printf("Texture format: \"%s\". Imported format: \"%s\".\n",
+                   svga_format_name(default_format),
+                   svga_format_name(sformat));
+   }
+
+   return false;
 }
