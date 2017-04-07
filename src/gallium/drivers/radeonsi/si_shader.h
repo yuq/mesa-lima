@@ -334,10 +334,15 @@ struct si_shader_selector {
  * API shaders       VS | TCS | TES | GS |pass| PS
  * are compiled as:     |     |     |    |thru|
  *                      |     |     |    |    |
- * Only VS & PS:     VS | --  | --  | -- | -- | PS
- * With GS:          ES | --  | --  | GS | VS | PS
- * With Tessel.:     LS | HS  | VS  | -- | -- | PS
- * With both:        LS | HS  | ES  | GS | VS | PS
+ * Only VS & PS:     VS |     |     |    |    | PS
+ * GFX6 - with GS:   ES |     |     | GS | VS | PS
+ *      - with tess: LS | HS  | VS  |    |    | PS
+ *      - with both: LS | HS  | ES  | GS | VS | PS
+ * GFX9 - with GS:   -> |     |     | GS | VS | PS
+ *      - with tess: -> | HS  | VS  |    |    | PS
+ *      - with both: -> | HS  | ->  | GS | VS | PS
+ *
+ * -> = merged with the next stage
  */
 
 /* Common VS bits between the shader key and the prolog key. */
