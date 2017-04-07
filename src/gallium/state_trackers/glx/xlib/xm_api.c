@@ -453,11 +453,11 @@ choose_pixel_format(XMesaVisual v)
  * stencil sizes.
  */
 static enum pipe_format
-choose_depth_stencil_format(XMesaDisplay xmdpy, int depth, int stencil)
+choose_depth_stencil_format(XMesaDisplay xmdpy, int depth, int stencil,
+                            int sample_count)
 {
    const enum pipe_texture_target target = PIPE_TEXTURE_2D;
    const unsigned tex_usage = PIPE_BIND_DEPTH_STENCIL;
-   const unsigned sample_count = 0;
    enum pipe_format formats[8], fmt;
    int count, i;
 
@@ -861,8 +861,8 @@ XMesaVisual XMesaCreateVisual( Display *display,
 
       vis->numAuxBuffers = 0;
       vis->level = 0;
-      vis->sampleBuffers = 0;
-      vis->samples = 0;
+      vis->sampleBuffers = num_samples > 1;
+      vis->samples = num_samples;
    }
 
    v->stvis.buffer_mask = ST_ATTACHMENT_FRONT_LEFT_MASK;
@@ -875,6 +875,14 @@ XMesaVisual XMesaCreateVisual( Display *display,
    }
 
    v->stvis.color_format = choose_pixel_format(v);
+
+   /* Check format support at requested num_samples (for multisample) */
+   if (!xmdpy->screen->is_format_supported(xmdpy->screen,
+                                           v->stvis.color_format,
+                                           PIPE_TEXTURE_2D, num_samples,
+                                           PIPE_BIND_RENDER_TARGET))
+      v->stvis.color_format = PIPE_FORMAT_NONE;
+
    if (v->stvis.color_format == PIPE_FORMAT_NONE) {
       free(v->visinfo);
       free(v);
@@ -882,7 +890,8 @@ XMesaVisual XMesaCreateVisual( Display *display,
    }
 
    v->stvis.depth_stencil_format =
-      choose_depth_stencil_format(xmdpy, depth_size, stencil_size);
+      choose_depth_stencil_format(xmdpy, depth_size, stencil_size,
+                                  num_samples);
 
    v->stvis.accum_format = (accum_red_size +
          accum_green_size + accum_blue_size + accum_alpha_size) ?
