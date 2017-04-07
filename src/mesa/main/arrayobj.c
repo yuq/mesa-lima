@@ -71,7 +71,7 @@ _mesa_lookup_vao(struct gl_context *ctx, GLuint id)
       return NULL;
    else
       return (struct gl_vertex_array_object *)
-         _mesa_HashLookup(ctx->Array.Objects, id);
+         _mesa_HashLookupLocked(ctx->Array.Objects, id);
 }
 
 
@@ -108,7 +108,7 @@ _mesa_lookup_vao_err(struct gl_context *ctx, GLuint id, const char *caller)
          vao = ctx->Array.LastLookedUpVAO;
       } else {
          vao = (struct gl_vertex_array_object *)
-            _mesa_HashLookup(ctx->Array.Objects, id);
+            _mesa_HashLookupLocked(ctx->Array.Objects, id);
 
          /* The ARB_direct_state_access specification says:
           *
@@ -306,7 +306,7 @@ save_array_object(struct gl_context *ctx, struct gl_vertex_array_object *vao)
 {
    if (vao->Name > 0) {
       /* insert into hash table */
-      _mesa_HashInsert(ctx->Array.Objects, vao->Name, vao);
+      _mesa_HashInsertLocked(ctx->Array.Objects, vao->Name, vao);
    }
 }
 
@@ -320,7 +320,7 @@ remove_array_object(struct gl_context *ctx, struct gl_vertex_array_object *vao)
 {
    if (vao->Name > 0) {
       /* remove from hash table */
-      _mesa_HashRemove(ctx->Array.Objects, vao->Name);
+      _mesa_HashRemoveLocked(ctx->Array.Objects, vao->Name);
    }
 }
 

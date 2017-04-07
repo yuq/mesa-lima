@@ -144,7 +144,7 @@ _mesa_lookup_pipeline_object(struct gl_context *ctx, GLuint id)
       return NULL;
    else
       return (struct gl_pipeline_object *)
-         _mesa_HashLookup(ctx->Pipeline.Objects, id);
+         _mesa_HashLookupLocked(ctx->Pipeline.Objects, id);
 }
 
 /**
@@ -154,7 +154,7 @@ static void
 save_pipeline_object(struct gl_context *ctx, struct gl_pipeline_object *obj)
 {
    if (obj->Name > 0) {
-      _mesa_HashInsert(ctx->Pipeline.Objects, obj->Name, obj);
+      _mesa_HashInsertLocked(ctx->Pipeline.Objects, obj->Name, obj);
    }
 }
 
@@ -166,7 +166,7 @@ static void
 remove_pipeline_object(struct gl_context *ctx, struct gl_pipeline_object *obj)
 {
    if (obj->Name > 0) {
-      _mesa_HashRemove(ctx->Pipeline.Objects, obj->Name);
+      _mesa_HashRemoveLocked(ctx->Pipeline.Objects, obj->Name);
    }
 }
 
