@@ -187,40 +187,6 @@ void JitManager::SetupNewModule()
     mIsModuleFinalized = false;
 }
 
-//////////////////////////////////////////////////////////////////////////
-/// @brief Create new LLVM module from IR.
-bool JitManager::SetupModuleFromIR(const uint8_t *pIR, size_t length)
-{
-    std::unique_ptr<MemoryBuffer> pMem = MemoryBuffer::getMemBuffer(StringRef((const char*)pIR, length), "");
-
-    SMDiagnostic Err;
-    std::unique_ptr<Module> newModule = parseIR(pMem.get()->getMemBufferRef(), Err, mContext);
-
-
-    SWR_REL_ASSERT(
-        !(newModule == nullptr),
-        "Parse failed!\n"
-        "%s", Err.getMessage().data());
-    if (newModule == nullptr)
-    {
-        return false;
-    }
-
-    newModule->setDataLayout(mpExec->getDataLayout());
-
-    mpCurrentModule = newModule.get();
-#if defined(_WIN32)
-    // Needed for MCJIT on windows
-    Triple hostTriple(sys::getProcessTriple());
-    hostTriple.setObjectFormat(Triple::ELF);
-    newModule->setTargetTriple(hostTriple.getTriple());
-#endif // _WIN32
-
-    mpExec->addModule(std::move(newModule));
-    mIsModuleFinalized = false;
-
-    return true;
-}
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Dump function x86 assembly to file.
