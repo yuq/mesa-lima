@@ -490,7 +490,6 @@ BuilderSWR::swr_gs_llvm_epilogue(const struct lp_build_tgsi_gs_iface *gs_base,
                         LLVMValueRef emitted_prims_vec)
 {
    swr_gs_llvm_iface *iface = (swr_gs_llvm_iface*)gs_base;
-   SWR_GS_STATE *pGS = iface->pGsState;
 
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 

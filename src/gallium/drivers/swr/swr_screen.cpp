@@ -879,7 +879,6 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
 {
    struct swr_screen *screen = swr_screen(p_screen);
    struct swr_resource *spr = swr_resource(pt);
-   struct pipe_context *pipe = screen->pipe;
 
    if (spr->display_target) {
       /* If resource is display target, winsys manages the buffer and will
