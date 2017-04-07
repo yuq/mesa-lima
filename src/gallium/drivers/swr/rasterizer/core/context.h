@@ -219,7 +219,7 @@ typedef void(*PFN_PROCESS_PRIMS)(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t worke
 
 #if ENABLE_AVX512_SIMD16
 // function signature for pipeline stages that execute after primitive assembly
-typedef void(*PFN_PROCESS_PRIMS_SIMD16)(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[],
+typedef void(SIMDAPI *PFN_PROCESS_PRIMS_SIMD16)(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[],
     uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
 
 #endif

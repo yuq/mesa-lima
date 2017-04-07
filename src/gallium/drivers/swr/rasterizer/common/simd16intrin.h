@@ -60,6 +60,12 @@ typedef __mmask16 simd16mask;
 #define _simd16_maskhi(mask) (((mask) >> 8) & 0xFF)
 #define _simd16_setmask(hi, lo) (((hi) << 8) | (lo))
 
+#if defined(_WIN32)
+#define SIMDAPI __vectorcall
+#else
+#define SIMDAPI
+#endif
+
 OSALIGN(union, KNOB_SIMD16_BYTES) simd16vector
 {
     simd16scalar  v[4];
@@ -75,7 +81,7 @@ OSALIGN(union, KNOB_SIMD16_BYTES) simd16vector
 #if ENABLE_AVX512_EMULATION
 
 #define SIMD16_EMU_AVX512_0(type, func, intrin) \
-INLINE type func()\
+INLINE type SIMDAPI func()\
 {\
     type result;\
 \
@@ -86,7 +92,7 @@ INLINE type func()\
 }
 
 #define SIMD16_EMU_AVX512_1(type, func, intrin) \
-INLINE type func(type a)\
+INLINE type SIMDAPI func(type a)\
 {\
     type result;\
 \
@@ -97,7 +103,7 @@ INLINE type func(type a)\
 }
 
 #define SIMD16_EMU_AVX512_2(type, func, intrin) \
-INLINE type func(type a, type b)\
+INLINE type SIMDAPI func(type a, type b)\
 {\
     type result;\
 \
@@ -108,7 +114,7 @@ INLINE type func(type a, type b)\
 }
 
 #define SIMD16_EMU_AVX512_3(type, func, intrin) \
-INLINE type func(type a, type b, type c)\
+INLINE type SIMDAPI func(type a, type b, type c)\
 {\
     type result;\
 \
@@ -121,7 +127,7 @@ INLINE type func(type a, type b, type c)\
 SIMD16_EMU_AVX512_0(simd16scalar, _simd16_setzero_ps, _mm256_setzero_ps)
 SIMD16_EMU_AVX512_0(simd16scalari, _simd16_setzero_si, _mm256_setzero_si256)
 
-INLINE simd16scalar _simd16_set1_ps(float a)
+INLINE simd16scalar SIMDAPI _simd16_set1_ps(float a)
 {
     simd16scalar result;
 
@@ -131,7 +137,7 @@ INLINE simd16scalar _simd16_set1_ps(float a)
     return result;
 }
 
-INLINE simd16scalari _simd16_set1_epi8(char a)
+INLINE simd16scalari SIMDAPI _simd16_set1_epi8(char a)
 {
     simd16scalari result;
 
@@ -141,7 +147,7 @@ INLINE simd16scalari _simd16_set1_epi8(char a)
     return result;
 }
 
-INLINE simd16scalari _simd16_set1_epi32(int a)
+INLINE simd16scalari SIMDAPI _simd16_set1_epi32(int a)
 {
     simd16scalari result;
 
@@ -151,7 +157,7 @@ INLINE simd16scalari _simd16_set1_epi32(int a)
     return result;
 }
 
-INLINE simd16scalar _simd16_set_ps(float e15, float e14, float e13, float e12, float e11, float e10, float e9, float e8, float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
+INLINE simd16scalar SIMDAPI _simd16_set_ps(float e15, float e14, float e13, float e12, float e11, float e10, float e9, float e8, float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
 {
     simd16scalar result;
 
@@ -161,7 +167,7 @@ INLINE simd16scalar _simd16_set_ps(float e15, float e14, float e13, float e12, f
     return result;
 }
 
-INLINE simd16scalari _simd16_set_epi32(int e15, int e14, int e13, int e12, int e11, int e10, int e9, int e8, int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
+INLINE simd16scalari SIMDAPI _simd16_set_epi32(int e15, int e14, int e13, int e12, int e11, int e10, int e9, int e8, int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
 {
     simd16scalari result;
 
@@ -171,7 +177,7 @@ INLINE simd16scalari _simd16_set_epi32(int e15, int e14, int e13, int e12, int e
     return result;
 }
 
-INLINE simd16scalar _simd16_set_ps(float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
+INLINE simd16scalar SIMDAPI _simd16_set_ps(float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
 {
     simd16scalar result;
 
@@ -181,7 +187,7 @@ INLINE simd16scalar _simd16_set_ps(float e7, float e6, float e5, float e4, float
     return result;
 }
 
-INLINE simd16scalari _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
+INLINE simd16scalari SIMDAPI _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
 {
     simd16scalari result;
 
@@ -191,7 +197,7 @@ INLINE simd16scalari _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, i
     return result;
 }
 
-INLINE simd16scalar _simd16_load_ps(float const *m)
+INLINE simd16scalar SIMDAPI _simd16_load_ps(float const *m)
 {
     simd16scalar result;
 
@@ -203,7 +209,7 @@ INLINE simd16scalar _simd16_load_ps(float const *m)
     return result;
 }
 
-INLINE simd16scalar _simd16_loadu_ps(float const *m)
+INLINE simd16scalar SIMDAPI _simd16_loadu_ps(float const *m)
 {
     simd16scalar result;
 
@@ -215,7 +221,7 @@ INLINE simd16scalar _simd16_loadu_ps(float const *m)
     return result;
 }
 
-INLINE simd16scalar _simd16_load1_ps(float const *m)
+INLINE simd16scalar SIMDAPI _simd16_load1_ps(float const *m)
 {
     simd16scalar result;
 
@@ -225,7 +231,7 @@ INLINE simd16scalar _simd16_load1_ps(float const *m)
     return result;
 }
 
-INLINE simd16scalari _simd16_load_si(simd16scalari const *m)
+INLINE simd16scalari SIMDAPI _simd16_load_si(simd16scalari const *m)
 {
     simd16scalari result;
 
@@ -235,7 +241,7 @@ INLINE simd16scalari _simd16_load_si(simd16scalari const *m)
     return result;
 }
 
-INLINE simd16scalari _simd16_loadu_si(simd16scalari const *m)
+INLINE simd16scalari SIMDAPI _simd16_loadu_si(simd16scalari const *m)
 {
     simd16scalari result;
 
@@ -245,7 +251,7 @@ INLINE simd16scalari _simd16_loadu_si(simd16scalari const *m)
     return result;
 }
 
-INLINE simd16scalar _simd16_broadcast_ss(float const *m)
+INLINE simd16scalar SIMDAPI _simd16_broadcast_ss(float const *m)
 {
     simd16scalar result;
 
@@ -255,7 +261,7 @@ INLINE simd16scalar _simd16_broadcast_ss(float const *m)
     return result;
 }
 
-INLINE simd16scalar _simd16_broadcast_ps(__m128 const *m)
+INLINE simd16scalar SIMDAPI _simd16_broadcast_ps(__m128 const *m)
 {
     simd16scalar result;
 
@@ -265,7 +271,7 @@ INLINE simd16scalar _simd16_broadcast_ps(__m128 const *m)
     return result;
 }
 
-INLINE void _simd16_store_ps(float *m, simd16scalar a)
+INLINE void SIMDAPI _simd16_store_ps(float *m, simd16scalar a)
 {
     float *n = reinterpret_cast<float *>(reinterpret_cast<uint8_t *>(m) + sizeof(a.lo));
 
@@ -273,7 +279,7 @@ INLINE void _simd16_store_ps(float *m, simd16scalar a)
     _mm256_store_ps(n, a.hi);
 }
 
-INLINE void _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
+INLINE void SIMDAPI _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
 {
     float *n = reinterpret_cast<float *>(reinterpret_cast<uint8_t *>(m) + sizeof(a.lo));
 
@@ -281,13 +287,13 @@ INLINE void _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
     _mm256_maskstore_ps(n, mask.hi, a.hi);
 }
 
-INLINE void _simd16_store_si(simd16scalari *m, simd16scalari a)
+INLINE void SIMDAPI _simd16_store_si(simd16scalari *m, simd16scalari a)
 {
     _mm256_store_si256(&m[0].lo, a.lo);
     _mm256_store_si256(&m[0].hi, a.hi);
 }
 
-INLINE simdscalar _simd16_extract_ps(simd16scalar a, int imm8)
+INLINE simdscalar SIMDAPI _simd16_extract_ps(simd16scalar a, int imm8)
 {
     switch (imm8)
     {
@@ -299,7 +305,7 @@ INLINE simdscalar _simd16_extract_ps(simd16scalar a, int imm8)
     return _simd_set1_ps(0.0f);
 }
 
-INLINE simdscalari _simd16_extract_si(simd16scalari a, int imm8)
+INLINE simdscalari SIMDAPI _simd16_extract_si(simd16scalari a, int imm8)
 {
     switch (imm8)
     {
@@ -311,7 +317,7 @@ INLINE simdscalari _simd16_extract_si(simd16scalari a, int imm8)
     return _simd_set1_epi32(0);
 }
 
-INLINE simd16scalar _simd16_insert_ps(simd16scalar a, simdscalar b, int imm8)
+INLINE simd16scalar SIMDAPI _simd16_insert_ps(simd16scalar a, simdscalar b, int imm8)
 {
     switch (imm8)
     {
@@ -325,7 +331,7 @@ INLINE simd16scalar _simd16_insert_ps(simd16scalar a, simdscalar b, int imm8)
     return a;
 }
 
-INLINE simd16scalari _simd16_insert_si(simd16scalari a, simdscalari b, int imm8)
+INLINE simd16scalari SIMDAPI _simd16_insert_si(simd16scalari a, simdscalari b, int imm8)
 {
     switch (imm8)
     {
@@ -340,7 +346,7 @@ INLINE simd16scalari _simd16_insert_si(simd16scalari a, simdscalari b, int imm8)
 }
 
 template <simd16mask mask>
-INLINE simd16scalar _simd16_blend_ps_temp(simd16scalar a, simd16scalar b)
+INLINE simd16scalar SIMDAPI _simd16_blend_ps_temp(simd16scalar a, simd16scalar b)
 {
     simd16scalar result;
 
@@ -354,7 +360,7 @@ INLINE simd16scalar _simd16_blend_ps_temp(simd16scalar a, simd16scalar b)
 
 SIMD16_EMU_AVX512_3(simd16scalar, _simd16_blendv_ps, _mm256_blendv_ps)
 
-INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalar mask)
+INLINE simd16scalari SIMDAPI _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalar mask)
 {
     simd16scalari result;
 
@@ -364,7 +370,7 @@ INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, cons
     return result;
 }
 
-INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalari mask)
+INLINE simd16scalari SIMDAPI _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalari mask)
 {
     simd16scalari result;
 
@@ -381,7 +387,7 @@ SIMD16_EMU_AVX512_1(simd16scalar, _simd16_rsqrt_ps, _mm256_rsqrt_ps)
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_min_ps, _mm256_min_ps)
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_max_ps, _mm256_max_ps)
 
-INLINE simd16mask _simd16_movemask_ps(simd16scalar a)
+INLINE simd16mask SIMDAPI _simd16_movemask_ps(simd16scalar a)
 {
     simdmask mask_lo = _mm256_movemask_ps(a.lo);
     simdmask mask_hi = _mm256_movemask_ps(a.hi);
@@ -389,7 +395,7 @@ INLINE simd16mask _simd16_movemask_ps(simd16scalar a)
     return static_cast<simd16mask>(mask_lo) | (static_cast<simd16mask>(mask_hi) << 8);
 }
 
-INLINE simd16mask _simd16_movemask_pd(simd16scalard a)
+INLINE simd16mask SIMDAPI _simd16_movemask_pd(simd16scalard a)
 {
     simdmask mask_lo = _mm256_movemask_pd(a.lo);
     simdmask mask_hi = _mm256_movemask_pd(a.hi);
@@ -397,7 +403,7 @@ INLINE simd16mask _simd16_movemask_pd(simd16scalard a)
     return static_cast<simd16mask>(mask_lo) | (static_cast<simd16mask>(mask_hi) << 4);
 }
 
-INLINE uint64_t _simd16_movemask_epi8(simd16scalari a)
+INLINE uint64_t SIMDAPI _simd16_movemask_epi8(simd16scalari a)
 {
     uint32_t mask_lo = _mm256_movemask_epi8(a.lo);
     uint32_t mask_hi = _mm256_movemask_epi8(a.hi);
@@ -405,7 +411,7 @@ INLINE uint64_t _simd16_movemask_epi8(simd16scalari a)
     return static_cast<uint64_t>(mask_lo) | (static_cast<uint64_t>(mask_hi) << 32);
 }
 
-INLINE simd16scalari _simd16_cvtps_epi32(simd16scalar a)
+INLINE simd16scalari SIMDAPI _simd16_cvtps_epi32(simd16scalar a)
 {
     simd16scalari result;
 
@@ -415,7 +421,7 @@ INLINE simd16scalari _simd16_cvtps_epi32(simd16scalar a)
     return result;
 }
 
-INLINE simd16scalari _simd16_cvttps_epi32(simd16scalar a)
+INLINE simd16scalari SIMDAPI _simd16_cvttps_epi32(simd16scalar a)
 {
     simd16scalari result;
 
@@ -425,7 +431,7 @@ INLINE simd16scalari _simd16_cvttps_epi32(simd16scalar a)
     return result;
 }
 
-INLINE simd16scalar _simd16_cvtepi32_ps(simd16scalari a)
+INLINE simd16scalar SIMDAPI _simd16_cvtepi32_ps(simd16scalari a)
 {
     simd16scalar result;
 
@@ -436,7 +442,7 @@ INLINE simd16scalar _simd16_cvtepi32_ps(simd16scalari a)
 }
 
 template <int comp>
-INLINE simd16scalar _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
+INLINE simd16scalar SIMDAPI _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
 {
     simd16scalar result;
 
@@ -463,38 +469,38 @@ SIMD16_EMU_AVX512_2(simd16scalar, _simd16_xor_ps, _simd_xor_ps)
 SIMD16_EMU_AVX512_1(simd16scalar, _simd16_rcp_ps, _simd_rcp_ps)
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_div_ps, _simd_div_ps)
 
-INLINE simd16scalar _simd16_castsi_ps(simd16scalari a)
+INLINE simd16scalar SIMDAPI _simd16_castsi_ps(simd16scalari a)
 {
     return *reinterpret_cast<simd16scalar *>(&a);
 }
 
-INLINE simd16scalari _simd16_castps_si(simd16scalar a)
+INLINE simd16scalari SIMDAPI _simd16_castps_si(simd16scalar a)
 {
     return *reinterpret_cast<simd16scalari *>(&a);
 }
 
-INLINE simd16scalard _simd16_castsi_pd(simd16scalari a)
+INLINE simd16scalard SIMDAPI _simd16_castsi_pd(simd16scalari a)
 {
     return *reinterpret_cast<simd16scalard *>(&a);
 }
 
-INLINE simd16scalari _simd16_castpd_si(simd16scalard a)
+INLINE simd16scalari SIMDAPI _simd16_castpd_si(simd16scalard a)
 {
     return *reinterpret_cast<simd16scalari *>(&a);
 }
 
-INLINE simd16scalar _simd16_castpd_ps(simd16scalard a)
+INLINE simd16scalar SIMDAPI _simd16_castpd_ps(simd16scalard a)
 {
     return *reinterpret_cast<simd16scalar *>(&a);
 }
 
-INLINE simd16scalard _simd16_castps_pd(simd16scalar a)
+INLINE simd16scalard SIMDAPI _simd16_castps_pd(simd16scalar a)
 {
     return *reinterpret_cast<simd16scalard *>(&a);
 }
 
 template <int mode>
-INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
+INLINE simd16scalar SIMDAPI _simd16_round_ps_temp(simd16scalar a)
 {
     simd16scalar result;
 
@@ -525,7 +531,7 @@ SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi32, _simd_cmpeq_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi32, _simd_cmpgt_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmplt_epi32, _simd_cmplt_epi32)
 
-INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
+INLINE int SIMDAPI _simd16_testz_ps(simd16scalar a, simd16scalar b)
 {
     int lo = _simd_testz_ps(a.lo, b.lo);
     int hi = _simd_testz_ps(a.hi, b.hi);
@@ -550,7 +556,7 @@ SIMD16_EMU_AVX512_2(simd16scalari, _simd16_unpacklo_epi64, _simd_unpacklo_epi64)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_unpackhi_epi64, _simd_unpackhi_epi64)
 
 template <int imm8>
-INLINE simd16scalari _simd16_slli_epi32_temp(simd16scalari a)
+INLINE simd16scalari SIMDAPI _simd16_slli_epi32_temp(simd16scalari a)
 {
     simd16scalari result;
 
@@ -563,7 +569,7 @@ INLINE simd16scalari _simd16_slli_epi32_temp(simd16scalari a)
 #define _simd16_slli_epi32(a, imm8) _simd16_slli_epi32_temp<imm8>(a)
 
 template <int imm8>
-INLINE simd16scalari _simd16_srai_epi32_temp(simd16scalari a)
+INLINE simd16scalari SIMDAPI _simd16_srai_epi32_temp(simd16scalari a)
 {
     simd16scalari result;
 
@@ -576,7 +582,7 @@ INLINE simd16scalari _simd16_srai_epi32_temp(simd16scalari a)
 #define _simd16_srai_epi32(a, imm8) _simd16_srai_epi32_temp<imm8>(a)
 
 template <int imm8>
-INLINE simd16scalari _simd16_srli_epi32_temp(simd16scalari a)
+INLINE simd16scalari SIMDAPI _simd16_srli_epi32_temp(simd16scalari a)
 {
     simd16scalari result;
 
@@ -592,7 +598,7 @@ SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmadd_ps, _simd_fmadd_ps)
 SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmsub_ps, _simd_fmsub_ps)
 
 template <int scale>
-INLINE simd16scalar _simd16_i32gather_ps_temp(const float *m, simd16scalari index)
+INLINE simd16scalar SIMDAPI _simd16_i32gather_ps_temp(const float *m, simd16scalari index)
 {
     simd16scalar result;
 
@@ -605,7 +611,7 @@ INLINE simd16scalar _simd16_i32gather_ps_temp(const float *m, simd16scalari inde
 #define _simd16_i32gather_ps(m, index, scale) _simd16_i32gather_ps_temp<scale>(m, index)
 
 template <int scale>
-INLINE simd16scalar _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *m, simd16scalari index, simd16scalari mask)
+INLINE simd16scalar SIMDAPI _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *m, simd16scalari index, simd16scalari mask)
 {
     simd16scalar result;
 
@@ -629,7 +635,7 @@ SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi16, _simd_cmpgt_epi16)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi8, _simd_cmpeq_epi8)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi8, _simd_cmpgt_epi8)
 
-INLINE simd16scalar _simd16_permute_ps(simd16scalar a, simd16scalari i)
+INLINE simd16scalar SIMDAPI _simd16_permute_ps(simd16scalar a, simd16scalari i)
 {
     simd16scalar result;
 
@@ -647,7 +653,7 @@ INLINE simd16scalar _simd16_permute_ps(simd16scalar a, simd16scalari i)
     return result;
 }
 
-INLINE simd16scalari _simd16_permute_epi32(simd16scalari a, simd16scalari i)
+INLINE simd16scalari SIMDAPI _simd16_permute_epi32(simd16scalari a, simd16scalari i)
 {
     return _simd16_castps_si(_simd16_permute_ps(_simd16_castsi_ps(a), i));
 }
@@ -656,7 +662,7 @@ SIMD16_EMU_AVX512_2(simd16scalari, _simd16_srlv_epi32, _simd_srlv_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_sllv_epi32, _simd_sllv_epi32)
 
 template <int imm8>
-INLINE simd16scalar _simd16_permute2f128_ps_temp(simd16scalar a, simd16scalar b)
+INLINE simd16scalar SIMDAPI _simd16_permute2f128_ps_temp(simd16scalar a, simd16scalar b)
 {
     simd16scalar result;
 
@@ -669,7 +675,7 @@ INLINE simd16scalar _simd16_permute2f128_ps_temp(simd16scalar a, simd16scalar b)
 #define _simd16_permute2f128_ps(a, b, imm8) _simd16_permute2f128_ps_temp<imm8>(a, b)
 
 template <int imm8>
-INLINE simd16scalard _simd16_permute2f128_pd_temp(simd16scalard a, simd16scalard b)
+INLINE simd16scalard SIMDAPI _simd16_permute2f128_pd_temp(simd16scalard a, simd16scalard b)
 {
     simd16scalard result;
 
@@ -682,7 +688,7 @@ INLINE simd16scalard _simd16_permute2f128_pd_temp(simd16scalard a, simd16scalard
 #define _simd16_permute2f128_pd(a, b, imm8) _simd16_permute2f128_pd_temp<imm8>(a, b)
 
 template <int imm8>
-INLINE simd16scalari _simd16_permute2f128_si_temp(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_permute2f128_si_temp(simd16scalari a, simd16scalari b)
 {
     simd16scalari result;
 
@@ -695,7 +701,7 @@ INLINE simd16scalari _simd16_permute2f128_si_temp(simd16scalari a, simd16scalari
 #define _simd16_permute2f128_si(a, b, imm8) _simd16_permute2f128_si_temp<imm8>(a, b)
 
 template <int imm8>
-INLINE simd16scalar _simd16_shuffle_ps_temp(simd16scalar a, simd16scalar b)
+INLINE simd16scalar SIMDAPI _simd16_shuffle_ps_temp(simd16scalar a, simd16scalar b)
 {
     simd16scalar result;
 
@@ -708,7 +714,7 @@ INLINE simd16scalar _simd16_shuffle_ps_temp(simd16scalar a, simd16scalar b)
 #define _simd16_shuffle_ps(a, b, imm8) _simd16_shuffle_ps_temp<imm8>(a, b)
 
 template <int imm8>
-INLINE simd16scalard _simd16_shuffle_pd_temp(simd16scalard a, simd16scalard b)
+INLINE simd16scalard SIMDAPI _simd16_shuffle_pd_temp(simd16scalard a, simd16scalard b)
 {
     simd16scalard result;
 
@@ -721,7 +727,7 @@ INLINE simd16scalard _simd16_shuffle_pd_temp(simd16scalard a, simd16scalard b)
 #define _simd16_shuffle_pd(a, b, imm8) _simd16_shuffle_pd_temp<imm8>(a, b)
 
 template <int imm8>
-INLINE simd16scalari _simd16_shuffle_epi32_temp(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_shuffle_epi32_temp(simd16scalari a, simd16scalari b)
 {
     return _simd16_castps_si(_simd16_shuffle_ps(_simd16_castsi_ps(a), _simd16_castsi_ps(b), imm8));
 }
@@ -729,14 +735,14 @@ INLINE simd16scalari _simd16_shuffle_epi32_temp(simd16scalari a, simd16scalari b
 #define _simd16_shuffle_epi32(a, b, imm8) _simd16_shuffle_epi32_temp<imm8>(a, b)
 
 template <int imm8>
-INLINE simd16scalari _simd16_shuffle_epi64_temp(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_shuffle_epi64_temp(simd16scalari a, simd16scalari b)
 {
     return _simd16_castpd_si(_simd16_shuffle_pd(_simd16_castsi_pd(a), _simd16_castsi_pd(b), imm8));
 }
 
 #define _simd16_shuffle_epi64(a, b, imm8) _simd16_shuffle_epi64_temp<imm8>(a, b)
 
-INLINE simd16scalari _simd16_cvtepu8_epi16(simdscalari a)
+INLINE simd16scalari SIMDAPI _simd16_cvtepu8_epi16(simdscalari a)
 {
     simd16scalari result;
 
@@ -746,7 +752,7 @@ INLINE simd16scalari _simd16_cvtepu8_epi16(simdscalari a)
     return result;
 }
 
-INLINE simd16scalari _simd16_cvtepu8_epi32(__m128i a)
+INLINE simd16scalari SIMDAPI _simd16_cvtepu8_epi32(__m128i a)
 {
     simd16scalari result;
 
@@ -756,7 +762,7 @@ INLINE simd16scalari _simd16_cvtepu8_epi32(__m128i a)
     return result;
 }
 
-INLINE simd16scalari _simd16_cvtepu16_epi32(simdscalari a)
+INLINE simd16scalari SIMDAPI _simd16_cvtepu16_epi32(simdscalari a)
 {
     simd16scalari result;
 
@@ -771,23 +777,23 @@ SIMD16_EMU_AVX512_2(simd16scalari, _simd16_packs_epi16, _simd_packs_epi16)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_packus_epi32, _simd_packus_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_packs_epi32, _simd_packs_epi32)
 
-INLINE simd16mask _simd16_int2mask(int mask)
+INLINE simd16mask SIMDAPI _simd16_int2mask(int mask)
 {
     return mask;
 }
 
-INLINE int _simd16_mask2int(simd16mask mask)
+INLINE int SIMDAPI SIMDAPI _simd16_mask2int(simd16mask mask)
 {
     return mask;
 }
 
-INLINE simd16mask _simd16_cmplt_ps_mask(simd16scalar a, simd16scalar b)
+INLINE simd16mask SIMDAPI _simd16_cmplt_ps_mask(simd16scalar a, simd16scalar b)
 {
     return _simd16_movemask_ps(_simd16_cmplt_ps(a, b));
 }
 
 // convert bitmask to vector mask
-INLINE simd16scalar vMask16(int32_t mask)
+INLINE simd16scalar SIMDAPI vMask16(int32_t mask)
 {
     simd16scalari temp = _simd16_set1_epi32(mask);
 
@@ -800,12 +806,12 @@ INLINE simd16scalar vMask16(int32_t mask)
 
 #else
 
-INLINE simd16mask _simd16_scalari2mask(simd16scalari mask)
+INLINE simd16mask SIMDAPI _simd16_scalari2mask(simd16scalari mask)
 {
     return _mm512_cmpneq_epu32_mask(mask, _mm512_setzero_epi32());
 }
 
-INLINE simd16mask _simd16_scalard2mask(simd16scalard mask)
+INLINE simd16mask SIMDAPI _simd16_scalard2mask(simd16scalard mask)
 {
     return _mm512_cmpneq_epu64_mask(_mm512_castpd_si512(mask), _mm512_setzero_si512());
 }
@@ -816,22 +822,22 @@ INLINE simd16mask _simd16_scalard2mask(simd16scalard mask)
 #define _simd16_set1_epi8       _mm512_set1_epi8
 #define _simd16_set1_epi32      _mm512_set1_epi32
 
-INLINE simd16scalar _simd16_set_ps(float e15, float e14, float e13, float e12, float e11, float e10, float e9, float e8, float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
+INLINE simd16scalar SIMDAPI _simd16_set_ps(float e15, float e14, float e13, float e12, float e11, float e10, float e9, float e8, float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
 {
     return _mm512_set_ps(e15, e14, e13, e12, e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
 }
 
-INLINE simd16scalari _simd16_set_epi32(int e15, int e14, int e13, int e12, int e11, int e10, int e9, int e8, int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
+INLINE simd16scalari SIMDAPI _simd16_set_epi32(int e15, int e14, int e13, int e12, int e11, int e10, int e9, int e8, int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
 {
     return _mm512_set_epi32(e15, e14, e13, e12, e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
 }
 
-INLINE simd16scalar _simd16_set_ps(float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
+INLINE simd16scalar SIMDAPI _simd16_set_ps(float e7, float e6, float e5, float e4, float e3, float e2, float e1, float e0)
 {
     return _mm512_set_ps(e7, e6, e5, e4, e3, e2, e1, e0, e7, e6, e5, e4, e3, e2, e1, e0);
 }
 
-INLINE simd16scalari _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
+INLINE simd16scalari SIMDAPI _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
 {
     return _mm512_set_epi32(e7, e6, e5, e4, e3, e2, e1, e0, e7, e6, e5, e4, e3, e2, e1, e0);
 }
@@ -852,7 +858,7 @@ INLINE simd16scalari _simd16_set_epi32(int e7, int e6, int e5, int e4, int e3, i
 #define _simd16_insert_ps(a, b, imm8)  _mm512_castsi512_ps(_mm512_inserti64x4(_mm512_castps_si512(a), _mm256_castps_si256(b), imm8))
 #define _simd16_insert_si       _mm512_inserti64x4
 
-INLINE void _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
+INLINE void SIMDAPI _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
 {
     simd16mask k = _simd16_scalari2mask(mask);
 
@@ -861,21 +867,21 @@ INLINE void _simd16_maskstore_ps(float *m, simd16scalari mask, simd16scalar a)
 
 #define _simd16_blend_ps(a, b, mask)    _mm512_mask_blend_ps(mask, a, b)
 
-INLINE simd16scalar _simd16_blendv_ps(simd16scalar a, simd16scalar b, const simd16scalar mask)
+INLINE simd16scalar SIMDAPI _simd16_blendv_ps(simd16scalar a, simd16scalar b, const simd16scalar mask)
 {
     simd16mask k = _simd16_scalari2mask(_mm512_castps_si512(mask));
 
     return _mm512_mask_blend_ps(k, a, b);
 }
 
-INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalar mask)
+INLINE simd16scalari SIMDAPI _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalar mask)
 {
     simd16mask k = _simd16_scalari2mask(_mm512_castps_si512(mask));
 
     return _mm512_mask_blend_epi32(k, a, b);
 }
 
-INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalari mask)
+INLINE simd16scalari SIMDAPI _simd16_blendv_epi32(simd16scalari a, simd16scalari b, const simd16scalari mask)
 {
     simd16mask k = _simd16_scalari2mask(mask);
 
@@ -890,18 +896,18 @@ INLINE simd16scalari _simd16_blendv_epi32(simd16scalari a, simd16scalari b, cons
 #define _simd16_min_ps          _mm512_min_ps
 #define _simd16_max_ps          _mm512_max_ps
 
-INLINE simd16mask _simd16_movemask_ps(simd16scalar a)
+INLINE simd16mask SIMDAPI _simd16_movemask_ps(simd16scalar a)
 {
     return  _simd16_scalari2mask(_mm512_castps_si512(a));
 }
 
-INLINE simd16mask _simd16_movemask_pd(simd16scalard a)
+INLINE simd16mask SIMDAPI _simd16_movemask_pd(simd16scalard a)
 {
     return  _simd16_scalard2mask(a);
 }
 
 #if 0
-INLINE int _simd16_movemask_epi8(simd16scalari a)
+INLINE int SIMDAPI _simd16_movemask_epi8(simd16scalari a)
 {
     return  _simd16_scalar2mask(a);
 }
@@ -912,7 +918,7 @@ INLINE int _simd16_movemask_epi8(simd16scalari a)
 #define _simd16_cvtepi32_ps     _mm512_cvtepi32_ps
 
 template <int comp>
-INLINE simd16scalar _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
+INLINE simd16scalar SIMDAPI _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
 {
     simd16mask k = _mm512_cmp_ps_mask(a, b, comp);
 
@@ -941,7 +947,7 @@ INLINE simd16scalar _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
 #define _simd16_xor_ps              _mm512_xor_ps
 
 template <int mode>
-INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
+INLINE simd16scalar SIMDAPI _simd16_round_ps_temp(simd16scalar a)
 {
     return _mm512_roundscale_ps(a, mode);
 }
@@ -963,28 +969,28 @@ INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
 #define _simd16_or_si             _mm512_or_si512
 #define _simd16_xor_si            _mm512_xor_si512
 
-INLINE simd16scalari _simd16_cmpeq_epi32(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpeq_epi32(simd16scalari a, simd16scalari b)
 {
     simd16mask k = _mm512_cmpeq_epi32_mask(a, b);
 
     return _mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE simd16scalari _simd16_cmpgt_epi32(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpgt_epi32(simd16scalari a, simd16scalari b)
 {
     simd16mask k = _mm512_cmpgt_epi32_mask(a, b);
 
     return _mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE simd16scalari _simd16_cmplt_epi32(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmplt_epi32(simd16scalari a, simd16scalari b)
 {
     simd16mask k = _mm512_cmplt_epi32_mask(a, b);
 
     return _mm512_mask_blend_epi32(k, _mm512_setzero_epi32(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
+INLINE int SIMDAPI _simd16_testz_ps(simd16scalar a, simd16scalar b)
 {
     int lo = _simd_testz_ps(_simd16_extract_ps(a, 0), _simd16_extract_ps(b, 0));
     int hi = _simd_testz_ps(_simd16_extract_ps(a, 1), _simd16_extract_ps(b, 1));
@@ -1020,7 +1026,7 @@ INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
 #define _simd16_i32gather_ps(m, index, scale)               _mm512_i32gather_ps(index, m, scale)
 
 template <int scale>
-INLINE simd16scalar _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *m, simd16scalari index, simd16scalari mask)
+INLINE simd16scalar SIMDAPI _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *m, simd16scalari index, simd16scalari mask)
 {
     __mmask16 k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
 
@@ -1031,42 +1037,42 @@ INLINE simd16scalar _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *
 
 #define _simd16_abs_epi32         _mm512_abs_epi32
 
-INLINE simd16scalari _simd16_cmpeq_epi64(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpeq_epi64(simd16scalari a, simd16scalari b)
 {
     __mmask8 k = _mm512_cmpeq_epi64_mask(a, b);
 
     return _mm512_mask_blend_epi64(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE simd16scalari _simd16_cmpgt_epi64(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpgt_epi64(simd16scalari a, simd16scalari b)
 {
     __mmask8 k = _mm512_cmpgt_epi64_mask(a, b);
 
     return _mm512_mask_blend_epi64(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE simd16scalari _simd16_cmpeq_epi16(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpeq_epi16(simd16scalari a, simd16scalari b)
 {
     __mmask32 k = _mm512_cmpeq_epi16_mask(a, b);
 
     return _mm512_mask_blend_epi16(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE simd16scalari _simd16_cmpgt_epi16(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpgt_epi16(simd16scalari a, simd16scalari b)
 {
     __mmask32 k = _mm512_cmpgt_epi16_mask(a, b);
 
     return _mm512_mask_blend_epi16(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE simd16scalari _simd16_cmpeq_epi8(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpeq_epi8(simd16scalari a, simd16scalari b)
 {
     __mmask64 k = _mm512_cmpeq_epi8_mask(a, b);
 
     return _mm512_mask_blend_epi8(k, _mm512_setzero_si512(), _mm512_set1_epi32(0xFFFFFFFF));
 }
 
-INLINE simd16scalari _simd16_cmpgt_epi8(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_cmpgt_epi8(simd16scalari a, simd16scalari b)
 {
     __mmask64 k = _mm512_cmpgt_epi8_mask(a, b);
 
@@ -1091,7 +1097,7 @@ INLINE simd16scalari _simd16_cmpgt_epi8(simd16scalari a, simd16scalari b)
 #define _simd16_packs_epi32             _mm512_packs_epi32
 
 template <int imm8>
-INLINE simd16scalari _simd16_shuffle_epi32_temp(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_shuffle_epi32_temp(simd16scalari a, simd16scalari b)
 {
     return _simd16_castps_si(_simd16_shuffle_ps(_simd16_castsi_ps(a), _simd16_castsi_ps(b), imm8));
 }
@@ -1099,30 +1105,30 @@ INLINE simd16scalari _simd16_shuffle_epi32_temp(simd16scalari a, simd16scalari b
 #define _simd16_shuffle_epi32(a, b, imm8) _simd16_shuffle_epi32_temp<imm8>(a, b)
 
 template <int imm8>
-INLINE simd16scalari _simd16_shuffle_epi64_temp(simd16scalari a, simd16scalari b)
+INLINE simd16scalari SIMDAPI _simd16_shuffle_epi64_temp(simd16scalari a, simd16scalari b)
 {
     return _simd16_castpd_si(_simd16_shuffle_pd(_simd16_castsi_pd(a), _simd16_castsi_pd(b), imm8));
 }
 
 #define _simd16_shuffle_epi64(a, b, imm8) _simd16_shuffle_epi64_temp<imm8>(a, b)
 
-INLINE simd16mask _simd16_int2mask(int mask)
+INLINE simd16mask SIMDAPI _simd16_int2mask(int mask)
 {
     return _mm512_int2mask(mask);
 }
 
-INLINE int _simd16_mask2int(simd16mask mask)
+INLINE int SIMDAPI _simd16_mask2int(simd16mask mask)
 {
     return _mm512_mask2int(mask);
 }
 
-INLINE simd16mask _simd16_cmplt_ps_mask(simd16scalar a, simd16scalar b)
+INLINE simd16mask SIMDAPI _simd16_cmplt_ps_mask(simd16scalar a, simd16scalar b)
 {
     return _mm512_cmplt_ps_mask(a, b);
 }
 
 // convert bitmask to vector mask
-INLINE simd16scalar vMask16(int32_t mask)
+INLINE simd16scalar SIMDAPI vMask16(int32_t mask)
 {
     simd16scalari temp = _simd16_set1_epi32(mask);
 

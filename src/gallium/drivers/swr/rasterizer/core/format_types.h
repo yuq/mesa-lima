@@ -42,7 +42,7 @@ struct PackTraits
     static simdscalar pack(simdscalar &in) = delete;
 #if ENABLE_AVX512_SIMD16
     static simd16scalar loadSOA_16(const uint8_t *pSrc) = delete;
-    static void storeSOA(uint8_t *pDst, simd16scalar src) = delete;
+    static void SIMDAPI storeSOA(uint8_t *pDst, simd16scalar src) = delete;
     static simd16scalar unpack(simd16scalar &in) = delete;
     static simd16scalar pack(simd16scalar &in) = delete;
 #endif
@@ -62,7 +62,7 @@ struct PackTraits<0, false>
     static simdscalar pack(simdscalar &in) { return _simd_setzero_ps(); }
 #if ENABLE_AVX512_SIMD16
     static simd16scalar loadSOA_16(const uint8_t *pSrc) { return _simd16_setzero_ps(); }
-    static void storeSOA(uint8_t *pDst, simd16scalar src) { return; }
+    static void SIMDAPI storeSOA(uint8_t *pDst, simd16scalar src) { return; }
     static simd16scalar unpack(simd16scalar &in) { return _simd16_setzero_ps(); }
     static simd16scalar pack(simd16scalar &in) { return _simd16_setzero_ps(); }
 #endif
@@ -143,7 +143,7 @@ struct PackTraits<8, false>
         return result;
     }
 
-    static void storeSOA(uint8_t *pDst, simd16scalar src)
+    static void SIMDAPI storeSOA(uint8_t *pDst, simd16scalar src)
     {
         // store simd16 bytes
         _mm_store_ps(reinterpret_cast<float *>(pDst), _mm256_castps256_ps128(_simd16_extract_ps(src, 0)));
@@ -258,7 +258,7 @@ struct PackTraits<8, true>
         return result;
     }
 
-    static void storeSOA(uint8_t *pDst, simd16scalar src)
+    static void SIMDAPI storeSOA(uint8_t *pDst, simd16scalar src)
     {
         // store simd16 bytes
         _mm_store_ps(reinterpret_cast<float *>(pDst), _mm256_castps256_ps128(_simd16_extract_ps(src, 0)));
@@ -369,7 +369,7 @@ struct PackTraits<16, false>
         return result;
     }
 
-    static void storeSOA(uint8_t *pDst, simd16scalar src)
+    static void SIMDAPI storeSOA(uint8_t *pDst, simd16scalar src)
     {
         _simd_store_ps(reinterpret_cast<float *>(pDst), _simd16_extract_ps(src, 0));
     }
@@ -468,7 +468,7 @@ struct PackTraits<16, true>
         return result;
     }
 
-    static void storeSOA(uint8_t *pDst, simd16scalar src)
+    static void SIMDAPI storeSOA(uint8_t *pDst, simd16scalar src)
     {
         _simd_store_ps(reinterpret_cast<float *>(pDst), _simd16_extract_ps(src, 0));
     }
@@ -513,7 +513,7 @@ struct PackTraits<32, false>
         return _simd16_load_ps(reinterpret_cast<const float *>(pSrc));
     }
 
-    static void storeSOA(uint8_t *pDst, simd16scalar src)
+    static void SIMDAPI storeSOA(uint8_t *pDst, simd16scalar src)
     {
         _simd16_store_ps(reinterpret_cast<float *>(pDst), src);
     }
@@ -811,7 +811,7 @@ static inline __m128 ConvertFloatToSRGB2(__m128& Src)
 
 #if ENABLE_AVX512_SIMD16
 template< unsigned expnum, unsigned expden, unsigned coeffnum, unsigned coeffden >
-inline static simd16scalar fastpow(simd16scalar value)
+inline static simd16scalar SIMDAPI fastpow(simd16scalar value)
 {
     static const float factor1 = exp2(127.0f * expden / expnum - 127.0f)
         * powf(1.0f * coeffnum / coeffden, 1.0f * expden / expnum);
@@ -833,7 +833,7 @@ inline static simd16scalar fastpow(simd16scalar value)
     return result;
 }
 
-inline static simd16scalar pow512_4(simd16scalar arg)
+inline static simd16scalar SIMDAPI pow512_4(simd16scalar arg)
 {
     // 5/12 is too small, so compute the 4th root of 20/12 instead.
     // 20/12 = 5/3 = 1 + 2/3 = 2 - 1/3. 2/3 is a suitable argument for fastpow.
@@ -854,7 +854,7 @@ inline static simd16scalar pow512_4(simd16scalar arg)
     return xavg;
 }
 
-inline static simd16scalar powf_wrapper(const simd16scalar base, float exp)
+inline static simd16scalar SIMDAPI powf_wrapper(const simd16scalar base, float exp)
 {
     const float *f = reinterpret_cast<const float *>(&base);
 
@@ -1461,7 +1461,7 @@ struct ComponentTraits
         return TypeTraits<X, NumBitsX>::loadSOA_16(pSrc);
     }
 
-    INLINE static void storeSOA(uint32_t comp, uint8_t *pDst, simd16scalar src)
+    INLINE static void SIMDAPI storeSOA(uint32_t comp, uint8_t *pDst, simd16scalar src)
     {
         switch (comp)
         {
