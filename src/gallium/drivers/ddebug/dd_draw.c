@@ -220,6 +220,8 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
              count_from_stream_output);
    if (info->indirect)
       DUMP_M(resource, info, indirect);
+   if (info->indirect_params)
+      DUMP_M(resource, info, indirect_params);
    fprintf(f, "\n");
 
    /* TODO: dump active queries */
