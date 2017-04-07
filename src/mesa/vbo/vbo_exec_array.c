@@ -637,6 +637,38 @@ vbo_exec_DrawArraysInstancedBaseInstance(GLenum mode, GLint first,
 }
 
 
+/**
+ * Called from glMultiDrawArrays when in immediate mode.
+ */
+static void GLAPIENTRY
+vbo_exec_MultiDrawArrays(GLenum mode, const GLint *first,
+                         const GLsizei *count, GLsizei primcount)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   GLint i;
+
+   if (MESA_VERBOSE & VERBOSE_DRAW)
+      _mesa_debug(ctx,
+                  "glMultiDrawArrays(%s, %p, %p, %d)\n",
+                  _mesa_enum_to_string(mode), first, count, primcount);
+
+   if (!_mesa_validate_MultiDrawArrays(ctx, mode, count, primcount))
+      return;
+
+   for (i = 0; i < primcount; i++) {
+      if (count[i] > 0) {
+         if (0)
+            check_draw_arrays_data(ctx, first[i], count[i]);
+
+         vbo_draw_arrays(ctx, mode, first[i], count[i], 1, 0);
+
+         if (0)
+            print_draw_arrays(ctx, mode, first[i], count[i]);
+      }
+   }
+}
+
+
 
 /**
  * Map GL_ELEMENT_ARRAY_BUFFER and print contents.
@@ -1641,6 +1673,7 @@ vbo_initialize_exec_dispatch(const struct gl_context *ctx,
       SET_DrawRangeElements(exec, vbo_exec_DrawRangeElements);
    }
 
+   SET_MultiDrawArrays(exec, vbo_exec_MultiDrawArrays);
    SET_MultiDrawElementsEXT(exec, vbo_exec_MultiDrawElements);
 
    if (ctx->API == API_OPENGL_COMPAT) {

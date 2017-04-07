@@ -921,6 +921,60 @@ _mesa_validate_DrawArraysInstanced(struct gl_context *ctx, GLenum mode, GLint fi
 }
 
 
+/**
+ * Called to error check the function parameters.
+ *
+ * Note that glMultiDrawArrays is not part of GLES, so there's limited scope
+ * for sharing code with the validation of glDrawArrays.
+ */
+bool
+_mesa_validate_MultiDrawArrays(struct gl_context *ctx, GLenum mode,
+                               const GLsizei *count, GLsizei primcount)
+{
+   int i;
+
+   FLUSH_CURRENT(ctx, 0);
+
+   if (!_mesa_valid_prim_mode(ctx, mode, "glMultiDrawArrays"))
+      return false;
+
+   if (!check_valid_to_render(ctx, "glMultiDrawArrays"))
+      return false;
+
+   if (primcount < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glMultiDrawArrays(primcount=%d)",
+                  primcount);
+      return false;
+   }
+
+   for (i = 0; i < primcount; ++i) {
+      if (count[i] < 0) {
+         _mesa_error(ctx, GL_INVALID_VALUE, "glMultiDrawArrays(count[%d]=%d)",
+                     i, count[i]);
+         return false;
+      }
+   }
+
+   if (need_xfb_remaining_prims_check(ctx)) {
+      struct gl_transform_feedback_object *xfb_obj
+         = ctx->TransformFeedback.CurrentObject;
+      size_t xfb_prim_count = 0;
+
+      for (i = 0; i < primcount; ++i)
+         xfb_prim_count += vbo_count_tessellated_primitives(mode, count[i], 1);
+
+      if (xfb_obj->GlesRemainingPrims < xfb_prim_count) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glMultiDrawArrays(exceeds transform feedback size)");
+         return false;
+      }
+      xfb_obj->GlesRemainingPrims -= xfb_prim_count;
+   }
+
+   return true;
+}
+
+
 GLboolean
 _mesa_validate_DrawElementsInstanced(struct gl_context *ctx,
                                      GLenum mode, GLsizei count, GLenum type,
