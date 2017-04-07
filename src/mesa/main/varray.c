@@ -1539,24 +1539,6 @@ _mesa_UnlockArraysEXT( void )
 }
 
 
-/* GL_EXT_multi_draw_arrays */
-void GLAPIENTRY
-_mesa_MultiDrawArrays( GLenum mode, const GLint *first,
-                          const GLsizei *count, GLsizei primcount )
-{
-   GET_CURRENT_CONTEXT(ctx);
-   GLint i;
-
-   FLUSH_VERTICES(ctx, 0);
-
-   for (i = 0; i < primcount; i++) {
-      if (count[i] > 0) {
-         CALL_DrawArrays(ctx->CurrentClientDispatch, (mode, first[i], count[i]));
-      }
-   }
-}
-
-
 /* GL_IBM_multimode_draw_arrays */
 void GLAPIENTRY
 _mesa_MultiModeDrawArraysIBM( const GLenum * mode, const GLint * first,
