@@ -57,7 +57,7 @@ namespace ArchRast
         Event() {}
         virtual ~Event() {}
 
-        virtual void Accept(EventHandler* pHandler) = 0;
+        virtual void Accept(EventHandler* pHandler) const = 0;
     };
 % for name in protos['event_names']:
 
@@ -102,7 +102,7 @@ namespace ArchRast
         % endfor
         }
 
-        virtual void Accept(EventHandler* pHandler);
+        virtual void Accept(EventHandler* pHandler) const;
     };
 % endfor
 }

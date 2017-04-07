@@ -298,7 +298,7 @@ namespace ArchRast
     }
 
     // Dispatch event for this thread.
-    void Dispatch(HANDLE hThreadContext, Event& event)
+    void Dispatch(HANDLE hThreadContext, const Event& event)
     {
         EventManager* pManager = FromHandle(hThreadContext);
         SWR_ASSERT(pManager != nullptr);

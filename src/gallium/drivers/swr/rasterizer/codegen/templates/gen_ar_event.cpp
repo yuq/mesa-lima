@@ -37,7 +37,7 @@
 using namespace ArchRast;
 % for name in protos['event_names']:
 
-void ${name}::Accept(EventHandler* pHandler)
+void ${name}::Accept(EventHandler* pHandler) const
 {
     pHandler->Handle(*this);
 }

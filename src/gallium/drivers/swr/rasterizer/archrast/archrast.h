@@ -42,7 +42,7 @@ namespace ArchRast
     void DestroyThreadContext(HANDLE hThreadContext);
 
     // Dispatch event for this thread.
-    void Dispatch(HANDLE hThreadContext, Event& event);
+    void Dispatch(HANDLE hThreadContext, const Event& event);
     void FlushDraw(HANDLE hThreadContext, uint32_t drawId);
 };
 

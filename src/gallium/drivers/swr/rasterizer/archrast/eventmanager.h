@@ -60,7 +60,7 @@ namespace ArchRast
             mHandlers.push_back(pHandler);
         }
 
-        void Dispatch(Event& event)
+        void Dispatch(const Event& event)
         {
             ///@todo Add event filter check here.
 
