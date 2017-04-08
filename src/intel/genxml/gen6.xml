@@ -1401,7 +1401,7 @@
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="20"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="7"/>
-    <field name="Kernel Start Pointer[0]" start="38" end="63" type="offset"/>
+    <field name="Kernel Start Pointer 0" start="38" end="63" type="offset"/>
     <field name="Single Program Flow" start="95" end="95" type="bool"/>
     <field name="Vector Mask Enable" start="94" end="94" type="bool"/>
     <field name="Sampler Count" start="91" end="93" type="uint"/>
@@ -1484,8 +1484,8 @@
       <value name="MSDISPMODE_PERSAMPLE" value="0"/>
       <value name="MSDISPMODE_PERPIXEL" value="1"/>
     </field>
-    <field name="Kernel Start Pointer[1]" start="230" end="255" type="offset"/>
-    <field name="Kernel Start Pointer[2]" start="262" end="287" type="offset"/>
+    <field name="Kernel Start Pointer 1" start="230" end="255" type="offset"/>
+    <field name="Kernel Start Pointer 2" start="262" end="287" type="offset"/>
   </instruction>
 
   <instruction name="MEDIA_CURBE_LOAD" bias="2" length="4">
