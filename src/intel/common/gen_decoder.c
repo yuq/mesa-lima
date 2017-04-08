@@ -433,8 +433,8 @@ end_element(void *data, const char *name)
    struct gen_spec *spec = ctx->spec;
 
    if (strcmp(name, "instruction") == 0 ||
-      strcmp(name, "struct") == 0 ||
-      strcmp(name, "register") == 0) {
+       strcmp(name, "struct") == 0 ||
+       strcmp(name, "register") == 0) {
       size_t size = ctx->nfields * sizeof(ctx->fields[0]);
       struct gen_group *group = ctx->group;
 
@@ -446,8 +446,8 @@ end_element(void *data, const char *name)
 
       for (int i = 0; i < group->nfields; i++) {
          if (group->fields[i]->start >= 16 &&
-            group->fields[i]->end <= 31 &&
-            group->fields[i]->has_default) {
+             group->fields[i]->end <= 31 &&
+             group->fields[i]->has_default) {
             group->opcode_mask |=
                mask(group->fields[i]->start % 32, group->fields[i]->end % 32);
             group->opcode |=
