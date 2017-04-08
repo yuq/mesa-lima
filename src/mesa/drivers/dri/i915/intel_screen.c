@@ -875,11 +875,12 @@ intelCreateBuffer(__DRIscreen * driScrnPriv,
 
    /* setup the hardware-based renderbuffers */
    rb = intel_create_renderbuffer(rgbFormat);
-   _mesa_add_renderbuffer(fb, BUFFER_FRONT_LEFT, &rb->Base.Base);
+   _mesa_add_renderbuffer_without_ref(fb, BUFFER_FRONT_LEFT, &rb->Base.Base);
 
    if (mesaVis->doubleBufferMode) {
       rb = intel_create_renderbuffer(rgbFormat);
-      _mesa_add_renderbuffer(fb, BUFFER_BACK_LEFT, &rb->Base.Base);
+      _mesa_add_renderbuffer_without_ref(fb, BUFFER_BACK_LEFT,
+                                            &rb->Base.Base);
    }
 
    /*
@@ -895,13 +896,13 @@ intelCreateBuffer(__DRIscreen * driScrnPriv,
        * attached to two attachment points.
        */
       rb = intel_create_private_renderbuffer(MESA_FORMAT_Z24_UNORM_S8_UINT);
-      _mesa_add_renderbuffer(fb, BUFFER_DEPTH, &rb->Base.Base);
+      _mesa_add_renderbuffer_without_ref(fb, BUFFER_DEPTH, &rb->Base.Base);
       _mesa_add_renderbuffer(fb, BUFFER_STENCIL, &rb->Base.Base);
    }
    else if (mesaVis->depthBits == 16) {
       assert(mesaVis->stencilBits == 0);
       rb = intel_create_private_renderbuffer(MESA_FORMAT_Z_UNORM16);
-      _mesa_add_renderbuffer(fb, BUFFER_DEPTH, &rb->Base.Base);
+      _mesa_add_renderbuffer_without_ref(fb, BUFFER_DEPTH, &rb->Base.Base);
    }
    else {
       assert(mesaVis->depthBits == 0);
