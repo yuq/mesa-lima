@@ -1158,11 +1158,11 @@ intelCreateBuffer(__DRIscreen *dri_screen,
 
    /* setup the hardware-based renderbuffers */
    rb = intel_create_renderbuffer(rgbFormat, num_samples);
-   _mesa_add_renderbuffer(fb, BUFFER_FRONT_LEFT, &rb->Base.Base);
+   _mesa_add_renderbuffer_without_ref(fb, BUFFER_FRONT_LEFT, &rb->Base.Base);
 
    if (mesaVis->doubleBufferMode) {
       rb = intel_create_renderbuffer(rgbFormat, num_samples);
-      _mesa_add_renderbuffer(fb, BUFFER_BACK_LEFT, &rb->Base.Base);
+      _mesa_add_renderbuffer_without_ref(fb, BUFFER_BACK_LEFT, &rb->Base.Base);
    }
 
    /*
@@ -1176,10 +1176,11 @@ intelCreateBuffer(__DRIscreen *dri_screen,
       if (screen->devinfo.has_hiz_and_separate_stencil) {
          rb = intel_create_private_renderbuffer(MESA_FORMAT_Z24_UNORM_X8_UINT,
                                                 num_samples);
-         _mesa_add_renderbuffer(fb, BUFFER_DEPTH, &rb->Base.Base);
+         _mesa_add_renderbuffer_without_ref(fb, BUFFER_DEPTH, &rb->Base.Base);
          rb = intel_create_private_renderbuffer(MESA_FORMAT_S_UINT8,
                                                 num_samples);
-         _mesa_add_renderbuffer(fb, BUFFER_STENCIL, &rb->Base.Base);
+         _mesa_add_renderbuffer_without_ref(fb, BUFFER_STENCIL,
+                                            &rb->Base.Base);
       } else {
          /*
           * Use combined depth/stencil. Note that the renderbuffer is
@@ -1187,7 +1188,7 @@ intelCreateBuffer(__DRIscreen *dri_screen,
           */
          rb = intel_create_private_renderbuffer(MESA_FORMAT_Z24_UNORM_S8_UINT,
                                                 num_samples);
-         _mesa_add_renderbuffer(fb, BUFFER_DEPTH, &rb->Base.Base);
+         _mesa_add_renderbuffer_without_ref(fb, BUFFER_DEPTH, &rb->Base.Base);
          _mesa_add_renderbuffer(fb, BUFFER_STENCIL, &rb->Base.Base);
       }
    }
@@ -1195,7 +1196,7 @@ intelCreateBuffer(__DRIscreen *dri_screen,
       assert(mesaVis->stencilBits == 0);
       rb = intel_create_private_renderbuffer(MESA_FORMAT_Z_UNORM16,
                                              num_samples);
-      _mesa_add_renderbuffer(fb, BUFFER_DEPTH, &rb->Base.Base);
+      _mesa_add_renderbuffer_without_ref(fb, BUFFER_DEPTH, &rb->Base.Base);
    }
    else {
       assert(mesaVis->depthBits == 0);
