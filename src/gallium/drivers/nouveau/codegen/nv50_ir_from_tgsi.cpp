@@ -3015,8 +3015,8 @@ Converter::handleINTERP(Value *dst[4])
       // and then convert to s32.
       Value *offs[2];
       for (c = 0; c < 2; c++) {
-         offs[c] = fetchSrc(1, c);
-         mkOp2(OP_MIN, TYPE_F32, offs[c], offs[c], loadImm(NULL, 0.4375f));
+         offs[c] = getScratch();
+         mkOp2(OP_MIN, TYPE_F32, offs[c], fetchSrc(1, c), loadImm(NULL, 0.4375f));
          mkOp2(OP_MAX, TYPE_F32, offs[c], offs[c], loadImm(NULL, -0.5f));
          mkOp2(OP_MUL, TYPE_F32, offs[c], offs[c], loadImm(NULL, 4096.0f));
          mkCvt(OP_CVT, TYPE_S32, offs[c], TYPE_F32, offs[c]);
