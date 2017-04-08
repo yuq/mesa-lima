@@ -1046,9 +1046,11 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
             if (chipset >= NVISA_GM107_CHIPSET)
                s += dim;
             if (i->tex.target.isArray()) {
-               bld.mkOp3(OP_INSBF, TYPE_U32, i->getSrc(s),
+               Value *offset = bld.getScratch();
+               bld.mkOp3(OP_INSBF, TYPE_U32, offset,
                          bld.loadImm(NULL, imm), bld.mkImm(0xc10),
                          i->getSrc(s));
+               i->setSrc(s, offset);
             } else {
                i->moveSources(s, 1);
                i->setSrc(s, bld.loadImm(NULL, imm << 16));
@@ -2457,7 +2459,7 @@ NVC0LoweringPass::handleLDST(Instruction *i)
             // Clamp the UBO index when an indirect access is used to avoid
             // loading information from the wrong place in the driver cb.
             // TODO - synchronize the max with the driver.
-            ind = bld.mkOp2v(OP_MIN, TYPE_U32, ind,
+            ind = bld.mkOp2v(OP_MIN, TYPE_U32, bld.getSSA(),
                              bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(),
                                         ind, bld.loadImm(NULL, fileIndex)),
                              bld.loadImm(NULL, 13));
