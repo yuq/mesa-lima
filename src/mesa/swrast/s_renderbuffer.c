@@ -271,15 +271,10 @@ add_color_renderbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
          return GL_FALSE;
       }
 
-      /* Set refcount to 0 to avoid a leak since the _mesa_add_renderbuffer()
-       * call below will bump the initial refcount.
-       */
-      rb->RefCount = 0;
-
       rb->InternalFormat = GL_RGBA;
 
       rb->AllocStorage = soft_renderbuffer_storage;
-      _mesa_add_renderbuffer(fb, b, rb);
+      _mesa_add_renderbuffer_without_ref(fb, b, rb);
    }
 
    return GL_TRUE;
@@ -325,7 +320,7 @@ add_depth_renderbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
    }
 
    rb->AllocStorage = soft_renderbuffer_storage;
-   _mesa_add_renderbuffer(fb, BUFFER_DEPTH, rb);
+   _mesa_add_renderbuffer_without_ref(fb, BUFFER_DEPTH, rb);
 
    return GL_TRUE;
 }
@@ -363,7 +358,7 @@ add_stencil_renderbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
    rb->InternalFormat = GL_STENCIL_INDEX8;
 
    rb->AllocStorage = soft_renderbuffer_storage;
-   _mesa_add_renderbuffer(fb, BUFFER_STENCIL, rb);
+   _mesa_add_renderbuffer_without_ref(fb, BUFFER_STENCIL, rb);
 
    return GL_TRUE;
 }
@@ -387,7 +382,7 @@ add_depth_stencil_renderbuffer(struct gl_context *ctx,
    rb->InternalFormat = GL_DEPTH_STENCIL;
 
    rb->AllocStorage = soft_renderbuffer_storage;
-   _mesa_add_renderbuffer(fb, BUFFER_DEPTH, rb);
+   _mesa_add_renderbuffer_without_ref(fb, BUFFER_DEPTH, rb);
    _mesa_add_renderbuffer(fb, BUFFER_STENCIL, rb);
 
    return GL_TRUE;
@@ -425,7 +420,7 @@ add_accum_renderbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
 
    rb->InternalFormat = GL_RGBA16_SNORM;
    rb->AllocStorage = soft_renderbuffer_storage;
-   _mesa_add_renderbuffer(fb, BUFFER_ACCUM, rb);
+   _mesa_add_renderbuffer_without_ref(fb, BUFFER_ACCUM, rb);
 
    return GL_TRUE;
 }
@@ -470,7 +465,7 @@ add_aux_renderbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
       rb->InternalFormat = GL_RGBA;
 
       rb->AllocStorage = soft_renderbuffer_storage;
-      _mesa_add_renderbuffer(fb, BUFFER_AUX0 + i, rb);
+      _mesa_add_renderbuffer_without_ref(fb, BUFFER_AUX0 + i, rb);
    }
    return GL_TRUE;
 }
