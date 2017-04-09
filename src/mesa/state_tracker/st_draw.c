@@ -166,7 +166,11 @@ st_draw_vbo(struct gl_context *ctx,
       return;
    }
 
-   util_draw_init_info(&info);
+   /* Initialize pipe_draw_info. */
+   info.primitive_restart = false;
+   info.vertices_per_patch = ctx->TessCtrlProgram.patch_vertices;
+   info.indirect = NULL;
+   info.count_from_stream_output = NULL;
 
    if (ib) {
       struct gl_buffer_object *bufobj = ib->obj;
@@ -183,6 +187,7 @@ st_draw_vbo(struct gl_context *ctx,
 
       if (_mesa_is_bufferobj(bufobj)) {
          /* indices are in a real VBO */
+         info.has_user_indices = false;
          info.index.resource = st_buffer_object(bufobj)->buffer;
          start = pointer_to_offset(ib->ptr) / info.index_size;
       } else {
@@ -194,6 +199,8 @@ st_draw_vbo(struct gl_context *ctx,
       setup_primitive_restart(ctx, &info);
    }
    else {
+      info.index_size = 0;
+
       /* Transform feedback drawing is always non-indexed. */
       /* Set info.count_from_stream_output. */
       if (tfb_vertcount) {
@@ -211,7 +218,6 @@ st_draw_vbo(struct gl_context *ctx,
       info.count = prims[i].count;
       info.start_instance = prims[i].base_instance;
       info.instance_count = prims[i].num_instances;
-      info.vertices_per_patch = ctx->TessCtrlProgram.patch_vertices;
       info.index_bias = prims[i].basevertex;
       info.drawid = prims[i].draw_id;
       if (!ib) {
