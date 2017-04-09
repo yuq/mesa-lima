@@ -596,7 +596,6 @@ public:
 public:
    Modifier mod;
    int8_t indirect[2]; // >= 0 if relative to lvalue in insn->src(indirect[i])
-   uint8_t swizzle;
 
    bool usedAsPtr; // for printing
 
