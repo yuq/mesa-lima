@@ -182,7 +182,9 @@ st_draw_vbo(struct gl_context *ctx,
    /* Mesa core state should have been validated already */
    assert(ctx->NewState == 0x0);
 
-   st_flush_bitmap_cache(st);
+   if (unlikely(!st->bitmap.cache.empty))
+      st_flush_bitmap_cache(st);
+
    st_invalidate_readpix_cache(st);
 
    /* Validate state. */
