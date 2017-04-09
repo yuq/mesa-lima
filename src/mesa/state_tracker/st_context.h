@@ -40,7 +40,6 @@ extern "C" {
 #endif
 
 
-struct bitmap_cache;
 struct dd_function_table;
 struct draw_context;
 struct draw_stage;
@@ -59,6 +58,26 @@ struct st_util_vertex
    float s, t;
 };
 
+struct st_bitmap_cache
+{
+   /** Window pos to render the cached image */
+   GLint xpos, ypos;
+   /** Bounds of region used in window coords */
+   GLint xmin, ymin, xmax, ymax;
+
+   GLfloat color[4];
+
+   /** Bitmap's Z position */
+   GLfloat zpos;
+
+   struct pipe_resource *texture;
+   struct pipe_transfer *trans;
+
+   GLboolean empty;
+
+   /** An I8 texture image: */
+   ubyte *buffer;
+};
 
 struct st_context
 {
@@ -180,7 +199,7 @@ struct st_context
       struct pipe_sampler_state atlas_sampler;
       enum pipe_format tex_format;
       void *vs;
-      struct bitmap_cache *cache;
+      struct st_bitmap_cache cache;
    } bitmap;
 
    /** for glDraw/CopyPixels */
