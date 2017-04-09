@@ -39,6 +39,11 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 {
    struct swr_context *ctx = swr_context(pipe);
 
+   if (!info->count_from_stream_output && !info->indirect &&
+       !info->primitive_restart &&
+       !u_trim_pipe_prim(info->mode, (unsigned*)&info->count))
+      return;
+
    if (!swr_check_render_cond(pipe))
       return;
 

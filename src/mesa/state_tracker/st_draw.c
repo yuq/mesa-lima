@@ -251,16 +251,8 @@ st_draw_vbo(struct gl_context *ctx,
                       info.indexed);
       }
 
-      if (info.count_from_stream_output) {
-         cso_draw_vbo(st->cso_context, &info);
-      }
-      else if (info.primitive_restart) {
-         /* don't trim, restarts might be inside index list */
-         cso_draw_vbo(st->cso_context, &info);
-      }
-      else if (u_trim_pipe_prim(prims[i].mode, &info.count)) {
-         cso_draw_vbo(st->cso_context, &info);
-      }
+      /* Don't call u_trim_pipe_prim. Drivers should do it if they need it. */
+      cso_draw_vbo(st->cso_context, &info);
    }
 }
 

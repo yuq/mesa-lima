@@ -283,6 +283,11 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
 
+	if (!info->count_from_stream_output && !info->indirect &&
+	    !info->primitive_restart &&
+	    !u_trim_pipe_prim(info->mode, (unsigned*)&info->count))
+		return;
+
         if (info->mode >= PIPE_PRIM_QUADS) {
                 util_primconvert_save_index_buffer(vc4->primconvert, &vc4->indexbuf);
                 util_primconvert_save_rasterizer_state(vc4->primconvert, &vc4->rasterizer->base);

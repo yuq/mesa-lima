@@ -65,6 +65,11 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 	unsigned i, prims, buffers = 0;
 
+	if (!info->count_from_stream_output && !info->indirect &&
+	    !info->primitive_restart &&
+	    !u_trim_pipe_prim(info->mode, (unsigned*)&info->count))
+		return;
+
 	/* if we supported transform feedback, we'd have to disable this: */
 	if (((scissor->maxx - scissor->minx) *
 			(scissor->maxy - scissor->miny)) == 0) {

@@ -30,6 +30,7 @@
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
 #include "util/u_format.h"
+#include "util/u_prim.h"
 #include "util/u_transfer.h"
 #include "util/u_helpers.h"
 #include "util/slab.h"
@@ -591,6 +592,11 @@ static void virgl_draw_vbo(struct pipe_context *ctx,
    struct virgl_screen *rs = virgl_screen(ctx->screen);
    struct pipe_index_buffer ib = {};
    struct pipe_draw_info info = *dinfo;
+
+   if (!dinfo->count_from_stream_output && !dinfo->indirect &&
+       !dinfo->primitive_restart &&
+       !u_trim_pipe_prim(dinfo->mode, (unsigned*)&dinfo->count))
+      return;
 
    if (!(rs->caps.caps.v1.prim_mask & (1 << dinfo->mode))) {
       util_primconvert_save_index_buffer(vctx->primconvert, &vctx->index_buffer);

@@ -37,6 +37,7 @@
 #include "pipe/p_defines.h"
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
+#include "util/u_prim.h"
 #include "util/u_upload_mgr.h"
 #include "pipe/p_screen.h"
 
@@ -56,6 +57,9 @@ i915_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    struct draw_context *draw = i915->draw;
    const void *mapped_indices = NULL;
    unsigned i;
+
+   if (!u_trim_pipe_prim(info->mode, (unsigned*)&info->count))
+      return;
 
    /*
     * Ack vs contants here, helps ipers a lot.

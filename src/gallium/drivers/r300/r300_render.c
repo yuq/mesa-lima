@@ -847,6 +847,9 @@ static void r300_swtcl_draw_vbo(struct pipe_context* pipe,
         return;
     }
 
+    if (!u_trim_pipe_prim(info->mode, (unsigned*)&info->count))
+       return;
+
     r300_update_derived_state(r300);
 
     draw_vbo(r300->draw, info);

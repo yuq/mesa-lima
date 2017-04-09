@@ -25,6 +25,7 @@
 
 #include "util/u_format.h"
 #include "util/u_inlines.h"
+#include "util/u_prim.h"
 #include "translate/translate.h"
 
 #include "nouveau_fence.h"
@@ -549,6 +550,10 @@ nv30_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    struct nv30_context *nv30 = nv30_context(pipe);
    struct nouveau_pushbuf *push = nv30->base.pushbuf;
    int i;
+
+   if (!info->primitive_restart &&
+       !u_trim_pipe_prim(info->mode, (unsigned*)&info->count))
+      return;
 
    /* For picking only a few vertices from a large user buffer, push is better,
     * if index count is larger and we expect repeated vertices, suggest upload.
