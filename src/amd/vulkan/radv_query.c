@@ -486,9 +486,7 @@ VkResult radv_CreateQueryPool(
 
 	switch(pCreateInfo->queryType) {
 	case VK_QUERY_TYPE_OCCLUSION:
-		/* 16 bytes tmp. buffer as the compute packet writes 64 bits, but
-		 * the app. may have 32 bits of space. */
-		pool->stride = 16 * get_max_db(device) + 16;
+		pool->stride = 16 * get_max_db(device);
 		break;
 	case VK_QUERY_TYPE_PIPELINE_STATISTICS:
 		pool->stride = 16 * 11;
@@ -502,7 +500,9 @@ VkResult radv_CreateQueryPool(
 
 	pool->type = pCreateInfo->queryType;
 	pool->availability_offset = pool->stride * pCreateInfo->queryCount;
-	size = pool->availability_offset + 4 * pCreateInfo->queryCount;
+	size = pool->availability_offset;
+	if (pCreateInfo->queryType == VK_QUERY_TYPE_TIMESTAMP)
+		size += 4 * pCreateInfo->queryCount;
 
 	pool->bo = device->ws->buffer_create(device->ws, size,
 					     64, RADEON_DOMAIN_GTT, 0);
@@ -649,6 +649,7 @@ void radv_CmdCopyQueryPoolResults(
 	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
 	RADV_FROM_HANDLE(radv_buffer, dst_buffer, dstBuffer);
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	unsigned elem_size = (flags & VK_QUERY_RESULT_64_BIT) ? 8 : 4;
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(pool->bo);
 	uint64_t dest_va = cmd_buffer->device->ws->buffer_get_va(dst_buffer->bo);
 	dest_va += dst_buffer->offset + dstOffset;
@@ -656,33 +657,62 @@ void radv_CmdCopyQueryPoolResults(
 	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, pool->bo, 8);
 	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, dst_buffer->bo, 8);
 
-	for(unsigned i = 0; i < queryCount; ++i, dest_va += stride) {
-		unsigned query = firstQuery + i;
-		uint64_t local_src_va = va  + query * pool->stride;
-		unsigned elem_size = (flags & VK_QUERY_RESULT_64_BIT) ? 8 : 4;
-
-		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 26);
-
+	switch (pool->type) {
+	case VK_QUERY_TYPE_OCCLUSION:
 		if (flags & VK_QUERY_RESULT_WAIT_BIT) {
-			/* TODO, not sure if there is any case where we won't always be ready yet */
-			uint64_t avail_va = va + pool->availability_offset + 4 * query;
+			for(unsigned i = 0; i < queryCount; ++i, dest_va += stride) {
+				unsigned query = firstQuery + i;
+				uint64_t src_va = va + query * pool->stride + pool->stride - 4;
 
-
-			/* This waits on the ME. All copies below are done on the ME */
-			radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
-			radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
-			radeon_emit(cs, avail_va);
-			radeon_emit(cs, avail_va >> 32);
-			radeon_emit(cs, 1); /* reference value */
-			radeon_emit(cs, 0xffffffff); /* mask */
-			radeon_emit(cs, 4); /* poll interval */
+				/* Waits on the upper word of the last DB entry */
+				radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
+				radeon_emit(cs, 5 | WAIT_REG_MEM_MEM_SPACE(1));
+				radeon_emit(cs, src_va);
+				radeon_emit(cs, src_va >> 32);
+				radeon_emit(cs, 0x80000000); /* reference value */
+				radeon_emit(cs, 0xffffffff); /* mask */
+				radeon_emit(cs, 4); /* poll interval */
+			}
 		}
+		occlusion_query_shader(cmd_buffer, pool->bo, dst_buffer->bo,
+		                       firstQuery * pool->stride,
+		                       dst_buffer->offset + dstOffset, stride,
+		                       queryCount, flags);
+		break;
+	case VK_QUERY_TYPE_TIMESTAMP:
+		for(unsigned i = 0; i < queryCount; ++i, dest_va += stride) {
+			unsigned query = firstQuery + i;
+			uint64_t local_src_va = va  + query * pool->stride;
 
-		switch (pool->type) {
-		case VK_QUERY_TYPE_OCCLUSION:
-			local_src_va += pool->stride - 16;
+			MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 19);
 
-		case VK_QUERY_TYPE_TIMESTAMP:
+
+			if (flags & VK_QUERY_RESULT_WAIT_BIT) {
+				/* TODO, not sure if there is any case where we won't always be ready yet */
+				uint64_t avail_va = va + pool->availability_offset + 4 * query;
+
+				/* This waits on the ME. All copies below are done on the ME */
+				radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
+				radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
+				radeon_emit(cs, avail_va);
+				radeon_emit(cs, avail_va >> 32);
+				radeon_emit(cs, 1); /* reference value */
+				radeon_emit(cs, 0xffffffff); /* mask */
+				radeon_emit(cs, 4); /* poll interval */
+			}
+			if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
+				uint64_t avail_va = va + pool->availability_offset + 4 * query;
+				uint64_t avail_dest_va = dest_va + elem_size;
+
+				radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+				radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+						COPY_DATA_DST_SEL(COPY_DATA_MEM));
+				radeon_emit(cs, avail_va);
+				radeon_emit(cs, avail_va >> 32);
+				radeon_emit(cs, avail_dest_va);
+				radeon_emit(cs, avail_dest_va >> 32);
+			}
+
 			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
 			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
 					COPY_DATA_DST_SEL(COPY_DATA_MEM) |
@@ -691,34 +721,13 @@ void radv_CmdCopyQueryPoolResults(
 			radeon_emit(cs, local_src_va >> 32);
 			radeon_emit(cs, dest_va);
 			radeon_emit(cs, dest_va >> 32);
-			break;
-		default:
-			unreachable("trying to get results of unhandled query type");
+
+
+			assert(cs->cdw <= cdw_max);
 		}
-
-		/* The flag could be still changed while the data copy is busy and we
-		 * then might have invalid data, but a ready flag. However, the availability
-		 * writes happen on the ME too, so they should be synchronized. Might need to
-		 * revisit this with multiple queues.
-		 */
-		if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
-			uint64_t avail_va = va + pool->availability_offset + 4 * query;
-			uint64_t avail_dest_va = dest_va;
-			if (pool->type != VK_QUERY_TYPE_PIPELINE_STATISTICS)
-				avail_dest_va += elem_size;
-			else
-				abort();
-
-			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
-					COPY_DATA_DST_SEL(COPY_DATA_MEM));
-			radeon_emit(cs, avail_va);
-			radeon_emit(cs, avail_va >> 32);
-			radeon_emit(cs, avail_dest_va);
-			radeon_emit(cs, avail_dest_va >> 32);
-		}
-
-		assert(cs->cdw <= cdw_max);
+		break;
+	default:
+		unreachable("trying to get results of unhandled query type");
 	}
 
 }
@@ -737,8 +746,9 @@ void radv_CmdResetQueryPool(
 
 	si_cp_dma_clear_buffer(cmd_buffer, va + firstQuery * pool->stride,
 			       queryCount * pool->stride, 0);
-	si_cp_dma_clear_buffer(cmd_buffer, va + pool->availability_offset + firstQuery * 4,
-			       queryCount * 4, 0);
+	if (pool->type == VK_QUERY_TYPE_TIMESTAMP)
+		si_cp_dma_clear_buffer(cmd_buffer, va + pool->availability_offset + firstQuery * 4,
+		                       queryCount * 4, 0);
 }
 
 void radv_CmdBeginQuery(
@@ -783,7 +793,6 @@ void radv_CmdEndQuery(
 	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(pool->bo);
-	uint64_t avail_va = va + pool->availability_offset + 4 * query;
 	va += pool->stride * query;
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, pool->bo, 8);
@@ -801,29 +810,10 @@ void radv_CmdEndQuery(
 		radeon_emit(cs, va + 8);
 		radeon_emit(cs, (va + 8) >> 32);
 
-		/* hangs for VK_COMMAND_BUFFER_LEVEL_SECONDARY. */
-		if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-			radeon_emit(cs, PKT3(PKT3_OCCLUSION_QUERY, 3, 0));
-			radeon_emit(cs, va);
-			radeon_emit(cs, va >> 32);
-			radeon_emit(cs, va + pool->stride - 16);
-			radeon_emit(cs, (va + pool->stride - 16) >> 32);
-		}
-
 		break;
 	default:
 		unreachable("ending unhandled query type");
 	}
-
-	radeon_check_space(cmd_buffer->device->ws, cs, 5);
-
-	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
-	radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
-		    S_370_WR_CONFIRM(1) |
-		    S_370_ENGINE_SEL(V_370_ME));
-	radeon_emit(cs, avail_va);
-	radeon_emit(cs, avail_va >> 32);
-	radeon_emit(cs, 1);
 }
 
 void radv_CmdWriteTimestamp(
