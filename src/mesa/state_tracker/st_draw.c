@@ -274,6 +274,8 @@ st_indirect_draw_vbo(struct gl_context *ctx,
    assert(ctx->NewState == 0x0);
    assert(stride);
 
+   st_invalidate_readpix_cache(st);
+
    /* Validate state. */
    if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK ||
        st->gfx_shaders_may_be_dirty) {
