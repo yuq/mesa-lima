@@ -150,6 +150,8 @@ private:
 
    void emitPIXLD(const Instruction *);
 
+   void emitSHFL(const Instruction *);
+
    void emitVOTE(const Instruction *);
 
    inline void defId(const ValueDef&, const int pos);
@@ -2531,6 +2533,54 @@ CodeEmitterNVC0::emitPIXLD(const Instruction *i)
 }
 
 void
+CodeEmitterNVC0::emitSHFL(const Instruction *i)
+{
+   const ImmediateValue *imm;
+
+   assert(targ->getChipset() >= NVISA_GK104_CHIPSET);
+
+   code[0] = 0x00000005;
+   code[1] = 0x88000000 | (i->subOp << 23);
+
+   emitPredicate(i);
+
+   defId(i->def(0), 14);
+   srcId(i->src(0), 20);
+
+   switch (i->src(1).getFile()) {
+   case FILE_GPR:
+      srcId(i->src(1), 26);
+      break;
+   case FILE_IMMEDIATE:
+      imm = i->getSrc(1)->asImm();
+      assert(imm && imm->reg.data.u32 < 0x20);
+      code[0] |= imm->reg.data.u32 << 26;
+      code[0] |= 1 << 5;
+      break;
+   default:
+      assert(!"invalid src1 file");
+      break;
+   }
+
+   switch (i->src(2).getFile()) {
+   case FILE_GPR:
+      srcId(i->src(2), 49);
+      break;
+   case FILE_IMMEDIATE:
+      imm = i->getSrc(2)->asImm();
+      assert(imm && imm->reg.data.u32 < 0x2000);
+      code[1] |= imm->reg.data.u32 << 10;
+      code[0] |= 1 << 6;
+      break;
+   default:
+      assert(!"invalid src2 file");
+      break;
+   }
+
+   setPDSTL(i, i->defExists(1) ? 1 : -1);
+}
+
+void
 CodeEmitterNVC0::emitVOTE(const Instruction *i)
 {
    assert(i->src(0).getFile() == FILE_PREDICATE);
@@ -2838,6 +2888,9 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
       break;
    case OP_PIXLD:
       emitPIXLD(insn);
+      break;
+   case OP_SHFL:
+      emitSHFL(insn);
       break;
    case OP_VOTE:
       emitVOTE(insn);
