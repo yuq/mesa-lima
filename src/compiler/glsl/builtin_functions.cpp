@@ -832,7 +832,7 @@ private:
    B1(all);
    B1(not);
    BA2(textureSize);
-   B1(textureSamples);
+   BA1(textureSamples);
 
 /** Flags to _texture() */
 #define TEX_PROJECT 1
@@ -1792,13 +1792,13 @@ builtin_builder::create_builtins()
                 NULL);
 
    add_function("textureSamples",
-                _textureSamples(glsl_type::sampler2DMS_type),
-                _textureSamples(glsl_type::isampler2DMS_type),
-                _textureSamples(glsl_type::usampler2DMS_type),
+                _textureSamples(shader_samples, glsl_type::sampler2DMS_type),
+                _textureSamples(shader_samples, glsl_type::isampler2DMS_type),
+                _textureSamples(shader_samples, glsl_type::usampler2DMS_type),
 
-                _textureSamples(glsl_type::sampler2DMSArray_type),
-                _textureSamples(glsl_type::isampler2DMSArray_type),
-                _textureSamples(glsl_type::usampler2DMSArray_type),
+                _textureSamples(shader_samples, glsl_type::sampler2DMSArray_type),
+                _textureSamples(shader_samples, glsl_type::isampler2DMSArray_type),
+                _textureSamples(shader_samples, glsl_type::usampler2DMSArray_type),
                 NULL);
 
    add_function("texture",
@@ -4947,10 +4947,11 @@ builtin_builder::_textureSize(builtin_available_predicate avail,
 }
 
 ir_function_signature *
-builtin_builder::_textureSamples(const glsl_type *sampler_type)
+builtin_builder::_textureSamples(builtin_available_predicate avail,
+                                 const glsl_type *sampler_type)
 {
    ir_variable *s = in_var(sampler_type, "sampler");
-   MAKE_SIG(glsl_type::int_type, shader_samples, 1, s);
+   MAKE_SIG(glsl_type::int_type, avail, 1, s);
 
    ir_texture *tex = new(mem_ctx) ir_texture(ir_texture_samples);
    tex->set_sampler(new(mem_ctx) ir_dereference_variable(s), glsl_type::int_type);
