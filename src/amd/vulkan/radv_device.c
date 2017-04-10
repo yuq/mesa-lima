@@ -483,7 +483,7 @@ void radv_GetPhysicalDeviceFeatures(
 		.textureCompressionASTC_LDR               = false,
 		.textureCompressionBC                     = true,
 		.occlusionQueryPrecise                    = true,
-		.pipelineStatisticsQuery                  = false,
+		.pipelineStatisticsQuery                  = true,
 		.vertexPipelineStoresAndAtomics           = true,
 		.fragmentStoresAndAtomics                 = true,
 		.shaderTessellationAndGeometryPointSize   = true,

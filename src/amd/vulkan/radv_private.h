@@ -443,6 +443,7 @@ struct radv_meta_state {
 		VkDescriptorSetLayout ds_layout;
 		VkPipelineLayout p_layout;
 		VkPipeline occlusion_query_pipeline;
+		VkPipeline pipeline_statistics_query_pipeline;
 	} query;
 };
 
@@ -1379,6 +1380,7 @@ struct radv_query_pool {
 	uint32_t availability_offset;
 	char *ptr;
 	VkQueryType type;
+	uint32_t pipeline_stats_mask;
 };
 
 VkResult
