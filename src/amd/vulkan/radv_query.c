@@ -411,7 +411,7 @@ static void occlusion_query_shader(struct radv_cmd_buffer *cmd_buffer,
 						  .pBufferInfo = &(VkDescriptorBufferInfo) {
 							.buffer = radv_buffer_to_handle(&dst_buffer),
 							.offset = 0,
-							.range = dst_stride * count
+							.range = VK_WHOLE_SIZE
 						  }
 					  },
 					  {
@@ -424,7 +424,7 @@ static void occlusion_query_shader(struct radv_cmd_buffer *cmd_buffer,
 						  .pBufferInfo = &(VkDescriptorBufferInfo) {
 							.buffer = radv_buffer_to_handle(&src_buffer),
 							.offset = 0,
-							.range = stride * count
+							.range = VK_WHOLE_SIZE
 						  }
 					  }
 				  }, 0, NULL);
