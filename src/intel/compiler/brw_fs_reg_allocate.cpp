@@ -806,7 +806,7 @@ emit_spill(const fs_builder &bld, fs_reg src,
 int
 fs_visitor::choose_spill_reg(struct ra_graph *g)
 {
-   float loop_scale = 1.0;
+   float block_scale = 1.0;
    float spill_costs[this->alloc.count];
    bool no_spill[this->alloc.count];
 
@@ -822,22 +822,31 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       for (unsigned int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == VGRF)
-            spill_costs[inst->src[i].nr] += loop_scale;
+            spill_costs[inst->src[i].nr] += block_scale;
       }
 
       if (inst->dst.file == VGRF)
          spill_costs[inst->dst.nr] += DIV_ROUND_UP(inst->size_written, REG_SIZE)
-                                      * loop_scale;
+                                      * block_scale;
 
       switch (inst->opcode) {
 
       case BRW_OPCODE_DO:
-	 loop_scale *= 10;
+	 block_scale *= 10;
 	 break;
 
       case BRW_OPCODE_WHILE:
-	 loop_scale /= 10;
+	 block_scale /= 10;
 	 break;
+
+      case BRW_OPCODE_IF:
+      case BRW_OPCODE_IFF:
+         block_scale *= 0.5;
+         break;
+
+      case BRW_OPCODE_ENDIF:
+         block_scale /= 0.5;
+         break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
 	 if (inst->src[0].file == VGRF)
