@@ -863,7 +863,7 @@ private:
    B0(barrier)
 
    BA2(textureQueryLod);
-   B1(textureQueryLevels);
+   BA1(textureQueryLevels);
    BA2(textureSamplesIdentical);
    B1(dFdx);
    B1(dFdy);
@@ -2454,35 +2454,35 @@ builtin_builder::create_builtins()
                 NULL);
 
    add_function("textureQueryLevels",
-                _textureQueryLevels(glsl_type::sampler1D_type),
-                _textureQueryLevels(glsl_type::sampler2D_type),
-                _textureQueryLevels(glsl_type::sampler3D_type),
-                _textureQueryLevels(glsl_type::samplerCube_type),
-                _textureQueryLevels(glsl_type::sampler1DArray_type),
-                _textureQueryLevels(glsl_type::sampler2DArray_type),
-                _textureQueryLevels(glsl_type::samplerCubeArray_type),
-                _textureQueryLevels(glsl_type::sampler1DShadow_type),
-                _textureQueryLevels(glsl_type::sampler2DShadow_type),
-                _textureQueryLevels(glsl_type::samplerCubeShadow_type),
-                _textureQueryLevels(glsl_type::sampler1DArrayShadow_type),
-                _textureQueryLevels(glsl_type::sampler2DArrayShadow_type),
-                _textureQueryLevels(glsl_type::samplerCubeArrayShadow_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler1D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler2D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler3D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::samplerCube_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler1DArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler2DArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::samplerCubeArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler1DShadow_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler2DShadow_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::samplerCubeShadow_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler1DArrayShadow_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::sampler2DArrayShadow_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::samplerCubeArrayShadow_type),
 
-                _textureQueryLevels(glsl_type::isampler1D_type),
-                _textureQueryLevels(glsl_type::isampler2D_type),
-                _textureQueryLevels(glsl_type::isampler3D_type),
-                _textureQueryLevels(glsl_type::isamplerCube_type),
-                _textureQueryLevels(glsl_type::isampler1DArray_type),
-                _textureQueryLevels(glsl_type::isampler2DArray_type),
-                _textureQueryLevels(glsl_type::isamplerCubeArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::isampler1D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::isampler2D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::isampler3D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::isamplerCube_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::isampler1DArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::isampler2DArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::isamplerCubeArray_type),
 
-                _textureQueryLevels(glsl_type::usampler1D_type),
-                _textureQueryLevels(glsl_type::usampler2D_type),
-                _textureQueryLevels(glsl_type::usampler3D_type),
-                _textureQueryLevels(glsl_type::usamplerCube_type),
-                _textureQueryLevels(glsl_type::usampler1DArray_type),
-                _textureQueryLevels(glsl_type::usampler2DArray_type),
-                _textureQueryLevels(glsl_type::usamplerCubeArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::usampler1D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::usampler2D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::usampler3D_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::usamplerCube_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::usampler1DArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::usampler2DArray_type),
+                _textureQueryLevels(texture_query_levels, glsl_type::usamplerCubeArray_type),
 
                 NULL);
 
@@ -5216,11 +5216,12 @@ builtin_builder::_textureQueryLod(builtin_available_predicate avail,
 }
 
 ir_function_signature *
-builtin_builder::_textureQueryLevels(const glsl_type *sampler_type)
+builtin_builder::_textureQueryLevels(builtin_available_predicate avail,
+                                     const glsl_type *sampler_type)
 {
    ir_variable *s = in_var(sampler_type, "sampler");
    const glsl_type *return_type = glsl_type::int_type;
-   MAKE_SIG(return_type, texture_query_levels, 1, s);
+   MAKE_SIG(return_type, avail, 1, s);
 
    ir_texture *tex = new(mem_ctx) ir_texture(ir_query_levels);
    tex->set_sampler(var_ref(s), return_type);
