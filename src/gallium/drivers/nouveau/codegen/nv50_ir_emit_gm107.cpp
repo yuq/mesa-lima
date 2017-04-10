@@ -967,11 +967,26 @@ CodeEmitterGM107::emitSHFL()
       break;
    }
 
-   /*XXX: what is this arg? hardcode immediate for now */
-   emitField(0x22, 13, 0x1c03);
-   type |= 2;
+   switch (insn->src(2).getFile()) {
+   case FILE_GPR:
+      emitGPR(0x27, insn->src(2));
+      break;
+   case FILE_IMMEDIATE:
+      emitIMMD(0x22, 13, insn->src(2));
+      type |= 2;
+      break;
+   default:
+      assert(!"invalid src2 file");
+      break;
+   }
 
-   emitPRED (0x30);
+   if (!insn->defExists(1))
+      emitPRED(0x30);
+   else {
+      assert(insn->def(1).getFile() == FILE_PREDICATE);
+      emitPRED(0x30, insn->def(1));
+   }
+
    emitField(0x1e, 2, insn->subOp);
    emitField(0x1c, 2, type);
    emitGPR  (0x08, insn->src(0));
