@@ -1319,6 +1319,16 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
                           ctx->API, ctx->Const.GLSLVersion,
                           ctx->Const.ForceGLSLVersion);
 
+   /* We run the preprocessor on shaders after hashing them, so we need to
+    * add any extension override vars to the hash. If we don't do this the
+    * preprocessor could result in different output and we could load the
+    * wrong shader.
+    */
+   char *ext_override = getenv("MESA_EXTENSION_OVERRIDE");
+   if (ext_override) {
+      ralloc_asprintf_append(&buf, "ext:%s", ext_override);
+   }
+
    /* DRI config options may also change the output from the compiler so
     * include them as an input to sha1 creation.
     */

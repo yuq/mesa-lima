@@ -2005,17 +2005,8 @@ void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir, bool force_recompile)
 {
-   struct _mesa_glsl_parse_state *state =
-      new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
    const char *source = force_recompile && shader->FallbackSource ?
       shader->FallbackSource : shader->Source;
-
-   if (ctx->Const.GenerateTemporaryNames)
-      (void) p_atomic_cmpxchg(&ir_variable::temporaries_allocate_names,
-                              false, true);
-
-   state->error = glcpp_preprocess(state, &source, &state->info_log,
-                             add_builtin_defines, state, ctx);
 
    if (!force_recompile) {
       if (ctx->Cache) {
@@ -2049,6 +2040,16 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
          return;
       }
    }
+
+   struct _mesa_glsl_parse_state *state =
+      new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
+
+   if (ctx->Const.GenerateTemporaryNames)
+      (void) p_atomic_cmpxchg(&ir_variable::temporaries_allocate_names,
+                              false, true);
+
+   state->error = glcpp_preprocess(state, &source, &state->info_log,
+                                   add_builtin_defines, state, ctx);
 
    if (!state->error) {
      _mesa_glsl_lexer_ctor(state, source);
