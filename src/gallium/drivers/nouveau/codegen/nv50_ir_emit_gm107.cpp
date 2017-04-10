@@ -2931,7 +2931,8 @@ CodeEmitterGM107::emitMEMBAR()
 void
 CodeEmitterGM107::emitVOTE()
 {
-   assert(insn->src(0).getFile() == FILE_PREDICATE);
+   const ImmediateValue *imm;
+   uint32_t u32;
 
    int r = -1, p = -1;
    for (int i = 0; insn->defExists(i); i++) {
@@ -2951,8 +2952,24 @@ CodeEmitterGM107::emitVOTE()
       emitPRED (0x2d, insn->def(p));
    else
       emitPRED (0x2d);
-   emitField(0x2a, 1, insn->src(0).mod == Modifier(NV50_IR_MOD_NOT));
-   emitPRED (0x27, insn->src(0));
+
+   switch (insn->src(0).getFile()) {
+   case FILE_PREDICATE:
+      emitField(0x2a, 1, insn->src(0).mod == Modifier(NV50_IR_MOD_NOT));
+      emitPRED (0x27, insn->src(0));
+      break;
+   case FILE_IMMEDIATE:
+      imm = insn->getSrc(0)->asImm();
+      assert(imm);
+      u32 = imm->reg.data.u32;
+      assert(u32 == 0 || u32 == 1);
+      emitPRED(0x27);
+      emitField(0x2a, 1, u32 == 0);
+      break;
+   default:
+      assert(!"Unhandled src");
+      break;
+   }
 }
 
 void

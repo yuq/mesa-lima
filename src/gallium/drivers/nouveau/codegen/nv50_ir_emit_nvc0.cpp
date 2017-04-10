@@ -2583,7 +2583,8 @@ CodeEmitterNVC0::emitSHFL(const Instruction *i)
 void
 CodeEmitterNVC0::emitVOTE(const Instruction *i)
 {
-   assert(i->src(0).getFile() == FILE_PREDICATE);
+   const ImmediateValue *imm;
+   uint32_t u32;
 
    code[0] = 0x00000004 | (i->subOp << 5);
    code[1] = 0x48000000;
@@ -2608,9 +2609,24 @@ CodeEmitterNVC0::emitVOTE(const Instruction *i)
       code[0] |= 63 << 14;
    if (!(rp & 2))
       code[1] |= 7 << 22;
-   if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
-      code[0] |= 1 << 23;
-   srcId(i->src(0), 20);
+
+   switch (i->src(0).getFile()) {
+   case FILE_PREDICATE:
+      if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
+         code[0] |= 1 << 23;
+      srcId(i->src(0), 20);
+      break;
+   case FILE_IMMEDIATE:
+      imm = i->getSrc(0)->asImm();
+      assert(imm);
+      u32 = imm->reg.data.u32;
+      assert(u32 == 0 || u32 == 1);
+      code[0] |= (u32 == 1 ? 0x7 : 0xf) << 20;
+      break;
+   default:
+      assert(!"Unhandled src");
+      break;
+   }
 }
 
 bool

@@ -1621,7 +1621,8 @@ CodeEmitterGK110::emitSHFL(const Instruction *i)
 void
 CodeEmitterGK110::emitVOTE(const Instruction *i)
 {
-   assert(i->src(0).getFile() == FILE_PREDICATE);
+   const ImmediateValue *imm;
+   uint32_t u32;
 
    code[0] = 0x00000002;
    code[1] = 0x86c00000 | (i->subOp << 19);
@@ -1646,9 +1647,24 @@ CodeEmitterGK110::emitVOTE(const Instruction *i)
       code[0] |= 255 << 2;
    if (!(rp & 2))
       code[1] |= 7 << 16;
-   if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
-      code[1] |= 1 << 13;
-   srcId(i->src(0), 42);
+
+   switch (i->src(0).getFile()) {
+   case FILE_PREDICATE:
+      if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
+         code[0] |= 1 << 13;
+      srcId(i->src(0), 42);
+      break;
+   case FILE_IMMEDIATE:
+      imm = i->getSrc(0)->asImm();
+      assert(imm);
+      u32 = imm->reg.data.u32;
+      assert(u32 == 0 || u32 == 1);
+      code[1] |= (u32 == 1 ? 0x7 : 0xf) << 10;
+      break;
+   default:
+      assert(!"Unhandled src");
+      break;
+   }
 }
 
 void
