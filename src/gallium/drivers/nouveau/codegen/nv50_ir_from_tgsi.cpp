@@ -450,6 +450,12 @@ static nv50_ir::SVSemantic translateSysVal(uint sysval)
    case TGSI_SEMANTIC_BASEINSTANCE: return nv50_ir::SV_BASEINSTANCE;
    case TGSI_SEMANTIC_DRAWID:     return nv50_ir::SV_DRAWID;
    case TGSI_SEMANTIC_WORK_DIM:   return nv50_ir::SV_WORK_DIM;
+   case TGSI_SEMANTIC_SUBGROUP_INVOCATION: return nv50_ir::SV_LANEID;
+   case TGSI_SEMANTIC_SUBGROUP_EQ_MASK: return nv50_ir::SV_LANEMASK_EQ;
+   case TGSI_SEMANTIC_SUBGROUP_LT_MASK: return nv50_ir::SV_LANEMASK_LT;
+   case TGSI_SEMANTIC_SUBGROUP_LE_MASK: return nv50_ir::SV_LANEMASK_LE;
+   case TGSI_SEMANTIC_SUBGROUP_GT_MASK: return nv50_ir::SV_LANEMASK_GT;
+   case TGSI_SEMANTIC_SUBGROUP_GE_MASK: return nv50_ir::SV_LANEMASK_GE;
    default:
       assert(0);
       return nv50_ir::SV_CLOCK;
@@ -1667,6 +1673,8 @@ private:
    Symbol *srcToSym(tgsi::Instruction::SrcRegister, int c);
    Symbol *dstToSym(tgsi::Instruction::DstRegister, int c);
 
+   bool isSubGroupMask(uint8_t semantic);
+
    bool handleInstruction(const struct tgsi_full_instruction *);
    void exportOutputs();
    inline Subroutine *getSubroutine(unsigned ip);
@@ -1996,6 +2004,21 @@ Converter::adjustTempIndex(int arrayId, int &idx, int &idx2d) const
    idx += it->second;
 }
 
+bool
+Converter::isSubGroupMask(uint8_t semantic)
+{
+   switch (semantic) {
+      case TGSI_SEMANTIC_SUBGROUP_EQ_MASK:
+      case TGSI_SEMANTIC_SUBGROUP_LT_MASK:
+      case TGSI_SEMANTIC_SUBGROUP_LE_MASK:
+      case TGSI_SEMANTIC_SUBGROUP_GT_MASK:
+      case TGSI_SEMANTIC_SUBGROUP_GE_MASK:
+         return true;
+      default:
+         return false;
+   }
+}
+
 Value *
 Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
 {
@@ -2041,6 +2064,10 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
       if (info->sv[idx].sn == TGSI_SEMANTIC_THREAD_ID &&
           info->prop.cp.numThreads[swz] == 1)
          return loadImm(NULL, 0u);
+      if (isSubGroupMask(info->sv[idx].sn) && swz > 0)
+         return loadImm(NULL, 0u);
+      if (info->sv[idx].sn == TGSI_SEMANTIC_SUBGROUP_SIZE)
+         return loadImm(NULL, 32u);
       ld = mkOp1(OP_RDSV, TYPE_U32, getSSA(), srcToSym(src, c));
       ld->perPatch = info->sv[idx].patch;
       return ld->getDef(0);
