@@ -58,6 +58,7 @@ private:
    void setImmediateS8(const ValueRef&);
    void setSUConst16(const Instruction *, const int s);
    void setSUPred(const Instruction *, const int s);
+   void setPDSTL(const Instruction *, const int d);
 
    void emitCondCode(CondCode cc, int pos);
    void emitInterpMode(const Instruction *);
@@ -373,6 +374,16 @@ void CodeEmitterNVC0::setImmediateS8(const ValueRef &ref)
 
    code[0] |= (s8 & 0x3f) << 26;
    code[0] |= (s8 >> 6) << 8;
+}
+
+void CodeEmitterNVC0::setPDSTL(const Instruction *i, const int d)
+{
+   assert(d < 0 || (i->defExists(d) && i->def(d).getFile() == FILE_PREDICATE));
+
+   uint32_t pred = d >= 0 ? DDATA(i->def(d)).id : 7;
+
+   code[0] |= (pred & 3) << 8;
+   code[1] |= (pred & 4) << (26 - 2);
 }
 
 void
@@ -1873,7 +1884,7 @@ CodeEmitterNVC0::emitSTORE(const Instruction *i)
       if (i->src(0).getFile() == FILE_MEMORY_SHARED &&
           i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED) {
          assert(i->defExists(0));
-         defId(i->def(0), 8);
+         setPDSTL(i, 0);
       }
    }
 
@@ -1945,7 +1956,7 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
 
    if (p >= 0) {
       if (targ->getChipset() >= NVISA_GK104_CHIPSET)
-         defId(i->def(p), 8);
+         setPDSTL(i, p);
       else
          defId(i->def(p), 32 + 18);
    }
