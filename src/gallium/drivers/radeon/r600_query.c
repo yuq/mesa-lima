@@ -1799,6 +1799,10 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	XG(GPIN, "GPIN_003",		GPIN_NUM_SPI,		UINT, AVERAGE),
 	XG(GPIN, "GPIN_004",		GPIN_NUM_SE,		UINT, AVERAGE),
 
+	X("temperature",		GPU_TEMPERATURE,	UINT64, AVERAGE),
+	X("shader-clock",		CURRENT_GPU_SCLK,	HZ, AVERAGE),
+	X("memory-clock",		CURRENT_GPU_MCLK,	HZ, AVERAGE),
+
 	/* The following queries must be at the end of the list because their
 	 * availability is adjusted dynamically based on the DRM version. */
 	X("GPU-load",			GPU_LOAD,		UINT64, AVERAGE),
@@ -1823,10 +1827,6 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("GPU-dma-busy",		GPU_DMA_BUSY,		UINT64, AVERAGE),
 	X("GPU-scratch-ram-busy",	GPU_SCRATCH_RAM_BUSY,	UINT64, AVERAGE),
 	X("GPU-ce-busy",		GPU_CE_BUSY,		UINT64, AVERAGE),
-
-	X("temperature",		GPU_TEMPERATURE,	UINT64, AVERAGE),
-	X("shader-clock",		CURRENT_GPU_SCLK,	HZ, AVERAGE),
-	X("memory-clock",		CURRENT_GPU_MCLK,	HZ, AVERAGE),
 };
 
 #undef X
@@ -1839,9 +1839,9 @@ static unsigned r600_get_num_queries(struct r600_common_screen *rscreen)
 		return ARRAY_SIZE(r600_driver_query_list);
 	else if (rscreen->info.drm_major == 3) {
 		if (rscreen->chip_class >= VI)
-			return ARRAY_SIZE(r600_driver_query_list) - 3;
+			return ARRAY_SIZE(r600_driver_query_list);
 		else
-			return ARRAY_SIZE(r600_driver_query_list) - 10;
+			return ARRAY_SIZE(r600_driver_query_list) - 7;
 	}
 	else
 		return ARRAY_SIZE(r600_driver_query_list) - 25;

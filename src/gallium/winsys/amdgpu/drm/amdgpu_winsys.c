@@ -471,9 +471,14 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
       amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_GTT, 0, &heap);
       return heap.heap_usage;
    case RADEON_GPU_TEMPERATURE:
+      amdgpu_query_sensor_info(ws->dev, AMDGPU_INFO_SENSOR_GPU_TEMP, 4, &retval);
+      return retval;
    case RADEON_CURRENT_SCLK:
+      amdgpu_query_sensor_info(ws->dev, AMDGPU_INFO_SENSOR_GFX_SCLK, 4, &retval);
+      return retval;
    case RADEON_CURRENT_MCLK:
-      return 0;
+      amdgpu_query_sensor_info(ws->dev, AMDGPU_INFO_SENSOR_GFX_MCLK, 4, &retval);
+      return retval;
    case RADEON_GPU_RESET_COUNTER:
       assert(0);
       return 0;
