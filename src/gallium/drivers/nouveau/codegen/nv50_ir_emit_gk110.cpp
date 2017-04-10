@@ -135,6 +135,8 @@ private:
 
    void emitFlow(const Instruction *);
 
+   void emitSHFL(const Instruction *);
+
    void emitVOTE(const Instruction *);
 
    void emitSULDGB(const TexInstruction *);
@@ -1566,6 +1568,57 @@ CodeEmitterGK110::emitFlow(const Instruction *i)
 }
 
 void
+CodeEmitterGK110::emitSHFL(const Instruction *i)
+{
+   const ImmediateValue *imm;
+
+   code[0] = 0x00000002;
+   code[1] = 0x78800000 | (i->subOp << 1);
+
+   emitPredicate(i);
+
+   defId(i->def(0), 2);
+   srcId(i->src(0), 10);
+
+   switch (i->src(1).getFile()) {
+   case FILE_GPR:
+      srcId(i->src(1), 23);
+      break;
+   case FILE_IMMEDIATE:
+      imm = i->getSrc(1)->asImm();
+      assert(imm && imm->reg.data.u32 < 0x20);
+      code[0] |= imm->reg.data.u32 << 23;
+      code[0] |= 1 << 31;
+      break;
+   default:
+      assert(!"invalid src1 file");
+      break;
+   }
+
+   switch (i->src(2).getFile()) {
+   case FILE_GPR:
+      srcId(i->src(2), 42);
+      break;
+   case FILE_IMMEDIATE:
+      imm = i->getSrc(2)->asImm();
+      assert(imm && imm->reg.data.u32 < 0x2000);
+      code[1] |= imm->reg.data.u32 << 5;
+      code[1] |= 1;
+      break;
+   default:
+      assert(!"invalid src2 file");
+      break;
+   }
+
+   if (!i->defExists(1))
+      code[1] |= 7 << 19;
+   else {
+      assert(i->def(1).getFile() == FILE_PREDICATE);
+      defId(i->def(1), 51);
+   }
+}
+
+void
 CodeEmitterGK110::emitVOTE(const Instruction *i)
 {
    assert(i->src(0).getFile() == FILE_PREDICATE);
@@ -2641,6 +2694,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_CCTL:
       emitCCTL(insn);
+      break;
+   case OP_SHFL:
+      emitSHFL(insn);
       break;
    case OP_VOTE:
       emitVOTE(insn);
