@@ -217,14 +217,14 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
 
    new_bo = brw_bo_alloc(brw->bufmgr, "program cache", new_size, 64);
    if (brw->has_llc)
-      brw_bo_map_unsynchronized(new_bo);
+      brw_bo_map_unsynchronized(brw, new_bo);
 
    /* Copy any existing data that needs to be saved. */
    if (cache->next_offset != 0) {
       if (brw->has_llc) {
          memcpy(new_bo->virtual, cache->bo->virtual, cache->next_offset);
       } else {
-         brw_bo_map(cache->bo, false);
+         brw_bo_map(brw, cache->bo, false);
          brw_bo_subdata(new_bo, 0, cache->next_offset,
                               cache->bo->virtual);
          brw_bo_unmap(cache->bo);
@@ -252,7 +252,7 @@ brw_lookup_prog(const struct brw_cache *cache,
                 enum brw_cache_id cache_id,
                 const void *data, unsigned data_size)
 {
-   const struct brw_context *brw = cache->brw;
+   struct brw_context *brw = cache->brw;
    unsigned i;
    const struct brw_cache_item *item;
 
@@ -264,7 +264,7 @@ brw_lookup_prog(const struct brw_cache *cache,
             continue;
 
          if (!brw->has_llc)
-            brw_bo_map(cache->bo, false);
+            brw_bo_map(brw, cache->bo, false);
          ret = memcmp(cache->bo->virtual + item->offset, data, item->size);
          if (!brw->has_llc)
             brw_bo_unmap(cache->bo);
@@ -408,7 +408,7 @@ brw_init_caches(struct brw_context *brw)
 
    cache->bo = brw_bo_alloc(brw->bufmgr, "program cache",  4096, 64);
    if (brw->has_llc)
-      brw_bo_map_unsynchronized(cache->bo);
+      brw_bo_map_unsynchronized(brw, cache->bo);
 }
 
 static void
@@ -536,7 +536,7 @@ brw_print_program_cache(struct brw_context *brw)
    struct brw_cache_item *item;
 
    if (!brw->has_llc)
-      brw_bo_map(cache->bo, false);
+      brw_bo_map(brw, cache->bo, false);
 
    for (unsigned i = 0; i < cache->size; i++) {
       for (item = cache->items[i]; item; item = item->next) {

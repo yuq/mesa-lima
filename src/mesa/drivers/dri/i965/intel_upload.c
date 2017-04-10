@@ -98,9 +98,9 @@ intel_upload_space(struct brw_context *brw,
       brw->upload.bo = brw_bo_alloc(brw->bufmgr, "streamed data",
                                     MAX2(INTEL_UPLOAD_SIZE, size), 4096);
       if (brw->has_llc)
-         brw_bo_map(brw->upload.bo, true);
+         brw_bo_map(brw, brw->upload.bo, true);
       else
-         brw_bo_map_gtt(brw->upload.bo);
+         brw_bo_map_gtt(brw, brw->upload.bo);
    }
 
    brw->upload.next_offset = offset + size;

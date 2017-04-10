@@ -44,6 +44,7 @@ extern "C" {
 #endif
 
 struct gen_device_info;
+struct brw_context;
 
 struct brw_bo {
    /**
@@ -179,7 +180,7 @@ void brw_bo_unreference(struct brw_bo *bo);
  * buffer to complete, first.  The resulting mapping is available at
  * buf->virtual.
  */
-int brw_bo_map(struct brw_bo *bo, int write_enable);
+int brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable);
 
 /**
  * Reduces the refcount on the userspace mapping of the buffer
@@ -200,7 +201,7 @@ int brw_bo_get_subdata(struct brw_bo *bo, unsigned long offset,
  * bo_subdata, etc.  It is merely a way for the driver to implement
  * glFinish.
  */
-void brw_bo_wait_rendering(struct brw_bo *bo);
+void brw_bo_wait_rendering(struct brw_context *brw, struct brw_bo *bo);
 
 /**
  * Tears down the buffer manager instance.
@@ -252,8 +253,8 @@ struct brw_bo *brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
                                            const char *name,
                                            unsigned int handle);
 void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
-int brw_bo_map_unsynchronized(struct brw_bo *bo);
-int brw_bo_map_gtt(struct brw_bo *bo);
+int brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo);
+int brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo);
 
 void *brw_bo_map__cpu(struct brw_bo *bo);
 void *brw_bo_map__gtt(struct brw_bo *bo);

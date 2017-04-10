@@ -64,6 +64,7 @@
 #include "util/hash_table.h"
 #include "util/list.h"
 #include "brw_bufmgr.h"
+#include "brw_context.h"
 #include "string.h"
 
 #include "i915_drm.h"
@@ -640,7 +641,8 @@ brw_bo_unreference(struct brw_bo *bo)
 }
 
 static void
-set_domain(struct brw_bo *bo, uint32_t read_domains, uint32_t write_domain)
+set_domain(struct brw_context *brw, const char *action,
+           struct brw_bo *bo, uint32_t read_domains, uint32_t write_domain)
 {
    struct drm_i915_gem_set_domain sd = {
       .handle = bo->gem_handle,
@@ -648,15 +650,24 @@ set_domain(struct brw_bo *bo, uint32_t read_domains, uint32_t write_domain)
       .write_domain = write_domain,
    };
 
+   double elapsed = unlikely(brw && brw->perf_debug) ? -get_time() : 0.0;
+
    if (drmIoctl(bo->bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &sd) != 0) {
       DBG("%s:%d: Error setting memory domains %d (%08x %08x): %s.\n",
           __FILE__, __LINE__, bo->gem_handle, read_domains, write_domain,
           strerror(errno));
    }
+
+   if (unlikely(brw && brw->perf_debug)) {
+      elapsed += get_time();
+      if (elapsed > 1e-5) /* 0.01ms */
+         perf_debug("%s a busy \"%s\" BO stalled and took %.03f ms.\n",
+                    action, bo->name, elapsed * 1000);
+   }
 }
 
 int
-brw_bo_map(struct brw_bo *bo, int write_enable)
+brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
    int ret;
@@ -687,7 +698,7 @@ brw_bo_map(struct brw_bo *bo, int write_enable)
    DBG("bo_map: %d (%s) -> %p\n", bo->gem_handle, bo->name, bo->mem_virtual);
    bo->virtual = bo->mem_virtual;
 
-   set_domain(bo, I915_GEM_DOMAIN_CPU,
+   set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
               write_enable ? I915_GEM_DOMAIN_CPU : 0);
 
    bo_mark_mmaps_incoherent(bo);
@@ -744,7 +755,7 @@ map_gtt(struct brw_bo *bo)
 }
 
 int
-brw_bo_map_gtt(struct brw_bo *bo)
+brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
    int ret;
@@ -766,7 +777,8 @@ brw_bo_map_gtt(struct brw_bo *bo)
     * tell it when we're about to use things if we had done
     * rendering and it still happens to be bound to the GTT.
     */
-   set_domain(bo, I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
+   set_domain(brw, "GTT mapping", bo,
+              I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
 
    bo_mark_mmaps_incoherent(bo);
    VG(VALGRIND_MAKE_MEM_DEFINED(bo->gtt_virtual, bo->size));
@@ -790,7 +802,7 @@ brw_bo_map_gtt(struct brw_bo *bo)
  */
 
 int
-brw_bo_map_unsynchronized(struct brw_bo *bo)
+brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
    int ret;
@@ -803,7 +815,7 @@ brw_bo_map_unsynchronized(struct brw_bo *bo)
     * does reasonable things.
     */
    if (!bufmgr->has_llc)
-      return brw_bo_map_gtt(bo);
+      return brw_bo_map_gtt(brw, bo);
 
    pthread_mutex_lock(&bufmgr->lock);
 
@@ -897,9 +909,10 @@ brw_bo_get_subdata(struct brw_bo *bo, unsigned long offset,
 
 /** Waits for all GPU rendering with the object to have completed. */
 void
-brw_bo_wait_rendering(struct brw_bo *bo)
+brw_bo_wait_rendering(struct brw_context *brw, struct brw_bo *bo)
 {
-   set_domain(bo, I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
+   set_domain(brw, "waiting for",
+              bo, I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
 }
 
 /**

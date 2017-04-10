@@ -148,7 +148,7 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
       intel_batchbuffer_flush(brw);
    }
 
-   error = brw_bo_map(bo, true /* write enable */);
+   error = brw_bo_map(brw, bo, true /* write enable */);
    if (error || bo->virtual == NULL) {
       DBG("%s: failed to map bo\n", __func__);
       return false;

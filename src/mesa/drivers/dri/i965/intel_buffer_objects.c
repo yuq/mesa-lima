@@ -217,7 +217,7 @@ brw_buffer_subdata(struct gl_context *ctx,
    if (offset + size <= intel_obj->gpu_active_start ||
        intel_obj->gpu_active_end <= offset) {
       if (brw->has_llc) {
-         brw_bo_map_unsynchronized(intel_obj->buffer);
+         brw_bo_map_unsynchronized(brw, intel_obj->buffer);
          memcpy(intel_obj->buffer->virtual + offset, data, size);
          brw_bo_unmap(intel_obj->buffer);
 
@@ -389,10 +389,10 @@ brw_map_buffer_range(struct gl_context *ctx,
                                                           intel_obj->map_extra[index],
                                                           alignment);
       if (brw->has_llc) {
-         brw_bo_map(intel_obj->range_map_bo[index],
-                          (access & GL_MAP_WRITE_BIT) != 0);
+         brw_bo_map(brw, intel_obj->range_map_bo[index],
+                    (access & GL_MAP_WRITE_BIT) != 0);
       } else {
-         brw_bo_map_gtt(intel_obj->range_map_bo[index]);
+         brw_bo_map_gtt(brw, intel_obj->range_map_bo[index]);
       }
       obj->Mappings[index].Pointer =
          intel_obj->range_map_bo[index]->virtual + intel_obj->map_extra[index];
@@ -404,13 +404,13 @@ brw_map_buffer_range(struct gl_context *ctx,
           brw_bo_busy(intel_obj->buffer)) {
          perf_debug("MapBufferRange with GL_MAP_UNSYNCHRONIZED_BIT stalling (it's actually synchronized on non-LLC platforms)\n");
       }
-      brw_bo_map_unsynchronized(intel_obj->buffer);
+      brw_bo_map_unsynchronized(brw, intel_obj->buffer);
    } else if (!brw->has_llc && (!(access & GL_MAP_READ_BIT) ||
                               (access & GL_MAP_PERSISTENT_BIT))) {
-      brw_bo_map_gtt(intel_obj->buffer);
+      brw_bo_map_gtt(brw, intel_obj->buffer);
       mark_buffer_inactive(intel_obj);
    } else {
-      brw_bo_map(intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
+      brw_bo_map(brw, intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
       mark_buffer_inactive(intel_obj);
    }
 

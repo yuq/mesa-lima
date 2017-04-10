@@ -146,7 +146,7 @@ brw_queryobj_get_results(struct gl_context *ctx,
       }
    }
 
-   brw_bo_map(query->bo, false);
+   brw_bo_map(brw, query->bo, false);
    results = query->bo->virtual;
    switch (query->Base.Target) {
    case GL_TIME_ELAPSED_EXT:

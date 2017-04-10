@@ -100,7 +100,7 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
 
    batch->bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
    if (has_llc) {
-      brw_bo_map(batch->bo, true);
+      brw_bo_map(NULL, batch->bo, true);
       batch->map = batch->bo->virtual;
    }
    batch->map_next = batch->map;
@@ -240,7 +240,7 @@ do_batch_dump(struct brw_context *brw)
    if (batch->ring != RENDER_RING)
       return;
 
-   int ret = brw_bo_map(batch->bo, false);
+   int ret = brw_bo_map(brw, batch->bo, false);
    if (ret != 0) {
       fprintf(stderr,
 	      "WARNING: failed to map batchbuffer (%s), "
@@ -474,8 +474,12 @@ throttle(struct brw_context *brw)
     */
    if (brw->need_swap_throttle && brw->throttle_batch[0]) {
       if (brw->throttle_batch[1]) {
-         if (!brw->disable_throttling)
-            brw_bo_wait_rendering(brw->throttle_batch[1]);
+         if (!brw->disable_throttling) {
+            /* Pass NULL rather than brw so we avoid perf_debug warnings;
+             * stalling is common and expected here...
+             */
+            brw_bo_wait_rendering(NULL, brw->throttle_batch[1]);
+         }
          brw_bo_unreference(brw->throttle_batch[1]);
       }
       brw->throttle_batch[1] = brw->throttle_batch[0];
@@ -700,7 +704,7 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
 
    if (unlikely(INTEL_DEBUG & DEBUG_SYNC)) {
       fprintf(stderr, "waiting for idle\n");
-      brw_bo_wait_rendering(brw->batch.bo);
+      brw_bo_wait_rendering(brw, brw->batch.bo);
    }
 
    /* Start a new batch buffer. */

@@ -713,7 +713,7 @@ accumulate_oa_reports(struct brw_context *brw,
    if (!read_oa_samples(brw))
       goto error;
 
-   brw_bo_map(obj->oa.bo, false);
+   brw_bo_map(brw, obj->oa.bo, false);
    query_buffer = obj->oa.bo->virtual;
 
    start = last = query_buffer;
@@ -993,7 +993,7 @@ brw_begin_perf_query(struct gl_context *ctx,
                       MI_RPC_BO_SIZE, 64);
 #ifdef DEBUG
       /* Pre-filling the BO helps debug whether writes landed. */
-      brw_bo_map(obj->oa.bo, true);
+      brw_bo_map(brw, obj->oa.bo, true);
       memset((char *) obj->oa.bo->virtual, 0x80, MI_RPC_BO_SIZE);
       brw_bo_unmap(obj->oa.bo);
 #endif
@@ -1131,12 +1131,7 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
    if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
 
-   if (unlikely(brw->perf_debug)) {
-      if (brw_bo_busy(bo))
-         perf_debug("Stalling GPU waiting for a performance query object.\n");
-   }
-
-   brw_bo_wait_rendering(bo);
+   brw_bo_wait_rendering(brw, bo);
 }
 
 static bool
@@ -1220,7 +1215,7 @@ get_pipeline_stats_data(struct brw_context *brw,
    int n_counters = obj->query->n_counters;
    uint8_t *p = data;
 
-   brw_bo_map(obj->pipeline_stats.bo, false);
+   brw_bo_map(brw, obj->pipeline_stats.bo, false);
    uint64_t *start = obj->pipeline_stats.bo->virtual;
    uint64_t *end = start + (STATS_BO_END_OFFSET_BYTES / sizeof(uint64_t));
 
