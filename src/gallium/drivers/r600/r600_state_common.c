@@ -1712,7 +1712,12 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		return;
 	}
 
-	if (unlikely(!rctx->vs_shader || !rctx->ps_shader)) {
+	if (unlikely(!rctx->vs_shader)) {
+		assert(0);
+		return;
+	}
+	if (unlikely(!rctx->ps_shader &&
+		     (!rctx->rasterizer || !rctx->rasterizer->rasterizer_discard))) {
 		assert(0);
 		return;
 	}

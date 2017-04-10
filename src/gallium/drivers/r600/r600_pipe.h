@@ -279,6 +279,7 @@ struct r600_rasterizer_state {
 	bool				scissor_enable;
 	bool				multisample_enable;
 	bool				clip_halfz;
+	bool				rasterizer_discard;
 };
 
 struct r600_poly_offset_state {
