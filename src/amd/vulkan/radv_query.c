@@ -51,12 +51,12 @@ static unsigned get_max_db(struct radv_device *device)
 	return num_db;
 }
 
-static void radv_break_on_count(nir_builder *b, nir_variable *var, int count)
+static void radv_break_on_count(nir_builder *b, nir_variable *var, nir_ssa_def *count)
 {
 	nir_ssa_def *counter = nir_load_var(b, var);
 
 	nir_if *if_stmt = nir_if_create(b->shader);
-	if_stmt->condition = nir_src_for_ssa(nir_uge(b, counter, nir_imm_int(b, count)));
+	if_stmt->condition = nir_src_for_ssa(nir_uge(b, counter, count));
 	nir_cf_node_insert(b->cursor, &if_stmt->cf_node);
 
 	b->cursor = nir_after_cf_list(&if_stmt->then_list);
@@ -175,7 +175,7 @@ build_occlusion_query_shader(struct radv_device *device) {
 	b.cursor = nir_after_cf_list(&outer_loop->body);
 
 	nir_ssa_def *current_outer_count = nir_load_var(&b, outer_counter);
-	radv_break_on_count(&b, outer_counter, db_count);
+	radv_break_on_count(&b, outer_counter, nir_imm_int(&b, db_count));
 
 	nir_ssa_def *load_offset = nir_imul(&b, current_outer_count, nir_imm_int(&b, 16));
 	load_offset = nir_iadd(&b, input_base, load_offset);
