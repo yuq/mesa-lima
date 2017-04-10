@@ -639,11 +639,26 @@ brw_bo_unreference(struct brw_bo *bo)
    }
 }
 
+static void
+set_domain(struct brw_bo *bo, uint32_t read_domains, uint32_t write_domain)
+{
+   struct drm_i915_gem_set_domain sd = {
+      .handle = bo->gem_handle,
+      .read_domains = read_domains,
+      .write_domain = write_domain,
+   };
+
+   if (drmIoctl(bo->bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &sd) != 0) {
+      DBG("%s:%d: Error setting memory domains %d (%08x %08x): %s.\n",
+          __FILE__, __LINE__, bo->gem_handle, read_domains, write_domain,
+          strerror(errno));
+   }
+}
+
 int
 brw_bo_map(struct brw_bo *bo, int write_enable)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
-   struct drm_i915_gem_set_domain set_domain;
    int ret;
 
    pthread_mutex_lock(&bufmgr->lock);
@@ -672,18 +687,8 @@ brw_bo_map(struct brw_bo *bo, int write_enable)
    DBG("bo_map: %d (%s) -> %p\n", bo->gem_handle, bo->name, bo->mem_virtual);
    bo->virtual = bo->mem_virtual;
 
-   memclear(set_domain);
-   set_domain.handle = bo->gem_handle;
-   set_domain.read_domains = I915_GEM_DOMAIN_CPU;
-   if (write_enable)
-      set_domain.write_domain = I915_GEM_DOMAIN_CPU;
-   else
-      set_domain.write_domain = 0;
-   ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &set_domain);
-   if (ret != 0) {
-      DBG("%s:%d: Error setting to CPU domain %d: %s\n",
-          __FILE__, __LINE__, bo->gem_handle, strerror(errno));
-   }
+   set_domain(bo, I915_GEM_DOMAIN_CPU,
+              write_enable ? I915_GEM_DOMAIN_CPU : 0);
 
    bo_mark_mmaps_incoherent(bo);
    VG(VALGRIND_MAKE_MEM_DEFINED(bo->mem_virtual, bo->size));
@@ -742,7 +747,6 @@ int
 brw_bo_map_gtt(struct brw_bo *bo)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
-   struct drm_i915_gem_set_domain set_domain;
    int ret;
 
    pthread_mutex_lock(&bufmgr->lock);
@@ -762,15 +766,7 @@ brw_bo_map_gtt(struct brw_bo *bo)
     * tell it when we're about to use things if we had done
     * rendering and it still happens to be bound to the GTT.
     */
-   memclear(set_domain);
-   set_domain.handle = bo->gem_handle;
-   set_domain.read_domains = I915_GEM_DOMAIN_GTT;
-   set_domain.write_domain = I915_GEM_DOMAIN_GTT;
-   ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &set_domain);
-   if (ret != 0) {
-      DBG("%s:%d: Error setting domain %d: %s\n",
-          __FILE__, __LINE__, bo->gem_handle, strerror(errno));
-   }
+   set_domain(bo, I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
 
    bo_mark_mmaps_incoherent(bo);
    VG(VALGRIND_MAKE_MEM_DEFINED(bo->gtt_virtual, bo->size));
@@ -903,20 +899,7 @@ brw_bo_get_subdata(struct brw_bo *bo, unsigned long offset,
 void
 brw_bo_wait_rendering(struct brw_bo *bo)
 {
-   struct brw_bufmgr *bufmgr = bo->bufmgr;
-   struct drm_i915_gem_set_domain set_domain;
-   int ret;
-
-   memclear(set_domain);
-   set_domain.handle = bo->gem_handle;
-   set_domain.read_domains = I915_GEM_DOMAIN_GTT;
-   set_domain.write_domain = I915_GEM_DOMAIN_GTT;
-   ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &set_domain);
-   if (ret != 0) {
-      DBG("%s:%d: Error setting memory domains %d (%08x %08x): %s .\n",
-          __FILE__, __LINE__, bo->gem_handle,
-          set_domain.read_domains, set_domain.write_domain, strerror(errno));
-   }
+   set_domain(bo, I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
 }
 
 /**
