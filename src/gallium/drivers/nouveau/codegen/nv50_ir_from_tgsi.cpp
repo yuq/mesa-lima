@@ -978,6 +978,10 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(VOTE_ANY, VOTE);
    NV50_IR_OPCODE_CASE(VOTE_EQ, VOTE);
 
+   NV50_IR_OPCODE_CASE(BALLOT, VOTE);
+   NV50_IR_OPCODE_CASE(READ_INVOC, SHFL);
+   NV50_IR_OPCODE_CASE(READ_FIRST, SHFL);
+
    NV50_IR_OPCODE_CASE(END, EXIT);
 
    default:
@@ -3429,6 +3433,33 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          mkOp1(op, dstTy, val0, val0)
             ->subOp = tgsi::opcodeToSubOp(tgsi.getOpcode());
          mkCvt(OP_CVT, TYPE_U32, dst0[c], TYPE_U8, val0);
+      }
+      break;
+   case TGSI_OPCODE_BALLOT:
+      if (!tgsi.getDst(0).isMasked(0)) {
+         val0 = new_LValue(func, FILE_PREDICATE);
+         mkCmp(OP_SET, CC_NE, TYPE_U32, val0, TYPE_U32, fetchSrc(0, 0), zero);
+         mkOp1(op, TYPE_U32, dst0[0], val0)->subOp = NV50_IR_SUBOP_VOTE_ANY;
+      }
+      if (!tgsi.getDst(0).isMasked(1))
+         mkMov(dst0[1], zero, TYPE_U32);
+      break;
+   case TGSI_OPCODE_READ_FIRST:
+      // ReadFirstInvocationARB(src) is implemented as
+      // ReadInvocationARB(src, findLSB(ballot(true)))
+      val0 = getScratch();
+      mkOp1(OP_VOTE, TYPE_U32, val0, mkImm(1))->subOp = NV50_IR_SUBOP_VOTE_ANY;
+      mkOp2(OP_EXTBF, TYPE_U32, val0, val0, mkImm(0x2000))
+         ->subOp = NV50_IR_SUBOP_EXTBF_REV;
+      mkOp1(OP_BFIND, TYPE_U32, val0, val0)->subOp = NV50_IR_SUBOP_BFIND_SAMT;
+      src1 = val0;
+      /* fallthrough */
+   case TGSI_OPCODE_READ_INVOC:
+      if (tgsi.getOpcode() == TGSI_OPCODE_READ_INVOC)
+         src1 = fetchSrc(1, 0);
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         geni = mkOp3(op, dstTy, dst0[c], fetchSrc(0, c), src1, mkImm(0x1f));
+         geni->subOp = NV50_IR_SUBOP_SHFL_IDX;
       }
       break;
    case TGSI_OPCODE_CLOCK:
