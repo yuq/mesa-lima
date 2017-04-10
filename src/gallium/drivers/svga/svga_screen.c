@@ -65,6 +65,7 @@ static const struct debug_named_value svga_debug_flags[] = {
    { "cache",       DEBUG_CACHE, NULL },
    { "streamout",   DEBUG_STREAMOUT, NULL },
    { "query",       DEBUG_QUERY, NULL },
+   { "samplers",    DEBUG_SAMPLERS, NULL },
    DEBUG_NAMED_VALUE_END
 };
 #endif
