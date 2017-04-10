@@ -1991,6 +1991,11 @@ CodeEmitterNVC0::getSRegEncoding(const ValueRef& ref)
    case SV_NCTAID:        return 0x2d + SDATA(ref).sv.index;
    case SV_LBASE:         return 0x34;
    case SV_SBASE:         return 0x30;
+   case SV_LANEMASK_EQ:   return 0x38;
+   case SV_LANEMASK_LT:   return 0x39;
+   case SV_LANEMASK_LE:   return 0x3a;
+   case SV_LANEMASK_GT:   return 0x3b;
+   case SV_LANEMASK_GE:   return 0x3c;
    case SV_CLOCK:         return 0x50 + SDATA(ref).sv.index;
    default:
       assert(!"no sreg for system value");

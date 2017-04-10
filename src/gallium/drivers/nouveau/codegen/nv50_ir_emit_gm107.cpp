@@ -269,6 +269,11 @@ CodeEmitterGM107::emitSYS(int pos, const Value *val)
    case SV_INVOCATION_INFO: id = 0x1d; break;
    case SV_TID            : id = 0x21 + val->reg.data.sv.index; break;
    case SV_CTAID          : id = 0x25 + val->reg.data.sv.index; break;
+   case SV_LANEMASK_EQ    : id = 0x38; break;
+   case SV_LANEMASK_LT    : id = 0x39; break;
+   case SV_LANEMASK_LE    : id = 0x3a; break;
+   case SV_LANEMASK_GT    : id = 0x3b; break;
+   case SV_LANEMASK_GE    : id = 0x3c; break;
    case SV_CLOCK          : id = 0x50 + val->reg.data.sv.index; break;
    default:
       assert(!"invalid system value");

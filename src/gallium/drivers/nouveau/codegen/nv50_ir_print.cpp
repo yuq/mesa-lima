@@ -323,6 +323,11 @@ static const char *SemanticStr[SV_LAST + 1] =
    "BASEINSTANCE",
    "DRAWID",
    "WORK_DIM",
+   "LANEMASK_EQ",
+   "LANEMASK_LT",
+   "LANEMASK_LE",
+   "LANEMASK_GT",
+   "LANEMASK_GE",
    "?",
    "(INVALID)"
 };
