@@ -847,7 +847,7 @@ private:
                                    const glsl_type *sampler_type,
                                    const glsl_type *coord_type,
                                    int flags = 0);
-   B0(textureCubeArrayShadow);
+   BA1(textureCubeArrayShadow);
    ir_function_signature *_texelFetch(builtin_available_predicate avail,
                                       const glsl_type *return_type,
                                       const glsl_type *sampler_type,
@@ -1839,7 +1839,7 @@ builtin_builder::create_builtins()
                 /* samplerCubeArrayShadow is special; it has an extra parameter
                  * for the shadow comparator since there is no vec5 type.
                  */
-                _textureCubeArrayShadow(),
+                _textureCubeArrayShadow(texture_cube_map_array, glsl_type::samplerCubeArrayShadow_type),
 
                 _texture(ir_tex, v130, glsl_type::vec4_type,  glsl_type::sampler2DRect_type,  glsl_type::vec2_type),
                 _texture(ir_tex, v130, glsl_type::ivec4_type, glsl_type::isampler2DRect_type, glsl_type::vec2_type),
@@ -5064,12 +5064,13 @@ builtin_builder::_texture(ir_texture_opcode opcode,
 }
 
 ir_function_signature *
-builtin_builder::_textureCubeArrayShadow()
+builtin_builder::_textureCubeArrayShadow(builtin_available_predicate avail,
+                                         const glsl_type *sampler_type)
 {
-   ir_variable *s = in_var(glsl_type::samplerCubeArrayShadow_type, "sampler");
+   ir_variable *s = in_var(sampler_type, "sampler");
    ir_variable *P = in_var(glsl_type::vec4_type, "P");
    ir_variable *compare = in_var(glsl_type::float_type, "compare");
-   MAKE_SIG(glsl_type::float_type, texture_cube_map_array, 3, s, P, compare);
+   MAKE_SIG(glsl_type::float_type, avail, 3, s, P, compare);
 
    ir_texture *tex = new(mem_ctx) ir_texture(ir_tex);
    tex->set_sampler(var_ref(s), glsl_type::float_type);
