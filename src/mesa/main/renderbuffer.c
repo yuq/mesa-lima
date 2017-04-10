@@ -141,13 +141,15 @@ validate_and_init_renderbuffer_attachment(struct gl_framebuffer *fb,
  * \param bufferName  one of the BUFFER_x tokens
  *
  * This function avoids adding a reference and is therefore intended to be
- * used with a freashly created renderbuffer.
+ * used with a freshly created renderbuffer.
  */
 void
 _mesa_add_renderbuffer_without_ref(struct gl_framebuffer *fb,
                                    gl_buffer_index bufferName,
                                    struct gl_renderbuffer *rb)
 {
+   assert(rb->RefCount == 1);
+
    validate_and_init_renderbuffer_attachment(fb, bufferName, rb);
 
    _mesa_reference_renderbuffer(&fb->Attachment[bufferName].Renderbuffer,
