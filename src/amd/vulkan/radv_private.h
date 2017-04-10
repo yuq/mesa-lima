@@ -440,8 +440,8 @@ struct radv_meta_state {
 	} buffer;
 
 	struct {
-		VkDescriptorSetLayout occlusion_query_ds_layout;
-		VkPipelineLayout occlusion_query_p_layout;
+		VkDescriptorSetLayout ds_layout;
+		VkPipelineLayout p_layout;
 		VkPipeline occlusion_query_pipeline;
 	} query;
 };

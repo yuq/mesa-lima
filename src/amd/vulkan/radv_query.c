@@ -302,14 +302,14 @@ VkResult radv_device_init_meta_query_state(struct radv_device *device)
 	result = radv_CreateDescriptorSetLayout(radv_device_to_handle(device),
 						&occlusion_ds_create_info,
 						&device->meta_state.alloc,
-						&device->meta_state.query.occlusion_query_ds_layout);
+						&device->meta_state.query.ds_layout);
 	if (result != VK_SUCCESS)
 		goto fail;
 
 	VkPipelineLayoutCreateInfo occlusion_pl_create_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = 1,
-		.pSetLayouts = &device->meta_state.query.occlusion_query_ds_layout,
+		.pSetLayouts = &device->meta_state.query.ds_layout,
 		.pushConstantRangeCount = 1,
 		.pPushConstantRanges = &(VkPushConstantRange){VK_SHADER_STAGE_COMPUTE_BIT, 0, 8},
 	};
@@ -317,7 +317,7 @@ VkResult radv_device_init_meta_query_state(struct radv_device *device)
 	result = radv_CreatePipelineLayout(radv_device_to_handle(device),
 					  &occlusion_pl_create_info,
 					  &device->meta_state.alloc,
-					  &device->meta_state.query.occlusion_query_p_layout);
+					  &device->meta_state.query.p_layout);
 	if (result != VK_SUCCESS)
 		goto fail;
 
@@ -333,7 +333,7 @@ VkResult radv_device_init_meta_query_state(struct radv_device *device)
 		.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 		.stage = occlusion_pipeline_shader_stage,
 		.flags = 0,
-		.layout = device->meta_state.query.occlusion_query_p_layout,
+		.layout = device->meta_state.query.p_layout,
 	};
 
 	result = radv_CreateComputePipelines(radv_device_to_handle(device),
@@ -357,14 +357,14 @@ void radv_device_finish_meta_query_state(struct radv_device *device)
 				     device->meta_state.query.occlusion_query_pipeline,
 				     &device->meta_state.alloc);
 
-	if (device->meta_state.query.occlusion_query_p_layout)
+	if (device->meta_state.query.p_layout)
 		radv_DestroyPipelineLayout(radv_device_to_handle(device),
-					   device->meta_state.query.occlusion_query_p_layout,
+					   device->meta_state.query.p_layout,
 					   &device->meta_state.alloc);
 
-	if (device->meta_state.query.occlusion_query_ds_layout)
+	if (device->meta_state.query.ds_layout)
 		radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
-						device->meta_state.query.occlusion_query_ds_layout,
+						device->meta_state.query.ds_layout,
 						&device->meta_state.alloc);
 }
 
@@ -383,7 +383,7 @@ static void occlusion_query_shader(struct radv_cmd_buffer *cmd_buffer,
 	radv_meta_save_compute(&saved_state, cmd_buffer, 4);
 
 	radv_temp_descriptor_set_create(device, cmd_buffer,
-					device->meta_state.query.occlusion_query_ds_layout,
+					device->meta_state.query.ds_layout,
 					&ds);
 
 	struct radv_buffer dst_buffer = {
@@ -435,7 +435,7 @@ static void occlusion_query_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	radv_CmdBindDescriptorSets(radv_cmd_buffer_to_handle(cmd_buffer),
 				   VK_PIPELINE_BIND_POINT_COMPUTE,
-				   device->meta_state.query.occlusion_query_p_layout, 0, 1,
+				   device->meta_state.query.p_layout, 0, 1,
 				   &ds, 0, NULL);
 
 	struct {
@@ -447,7 +447,7 @@ static void occlusion_query_shader(struct radv_cmd_buffer *cmd_buffer,
 	};
 
 	radv_CmdPushConstants(radv_cmd_buffer_to_handle(cmd_buffer),
-				      device->meta_state.query.occlusion_query_p_layout,
+				      device->meta_state.query.p_layout,
 				      VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants),
 				      &push_constants);
 
