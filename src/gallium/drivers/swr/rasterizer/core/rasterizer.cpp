@@ -510,7 +510,7 @@ __declspec(thread) volatile uint64_t gToss;
 
 static const uint32_t vertsPerTri = 3, componentsPerAttrib = 4;
 // try to avoid _chkstk insertions; make this thread local
-static THREAD OSALIGNLINE(float) perspAttribsTLS[vertsPerTri * KNOB_NUM_ATTRIBUTES * componentsPerAttrib];
+static THREAD OSALIGNLINE(float) perspAttribsTLS[vertsPerTri * SWR_VTX_NUM_SLOTS * componentsPerAttrib];
 
 INLINE
 void ComputeEdgeData(int32_t a, int32_t b, EDGE& edge)
@@ -1312,7 +1312,7 @@ void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile,
     newWorkDesc.pTriBuffer = &newTriBuffer[0];
 
     // create a copy of the attrib buffer to write our adjusted attribs to
-    OSALIGNSIMD(float) newAttribBuffer[4 * 3 * KNOB_NUM_ATTRIBUTES];
+    OSALIGNSIMD(float) newAttribBuffer[4 * 3 * SWR_VTX_NUM_SLOTS];
     newWorkDesc.pAttribs = &newAttribBuffer[0];
 
     newWorkDesc.pUserClipBuffer = workDesc.pUserClipBuffer;
@@ -1597,7 +1597,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     newWorkDesc.pTriBuffer = &newTriBuffer[0];
 
     // create a copy of the attrib buffer to write our adjusted attribs to
-    OSALIGNSIMD(float) newAttribBuffer[4 * 3 * KNOB_NUM_ATTRIBUTES];
+    OSALIGNSIMD(float) newAttribBuffer[4 * 3 * SWR_VTX_NUM_SLOTS];
     newWorkDesc.pAttribs = &newAttribBuffer[0];
 
     const __m128 vBloat0 = _mm_set_ps(0.5f, -0.5f, -0.5f, 0.5f);

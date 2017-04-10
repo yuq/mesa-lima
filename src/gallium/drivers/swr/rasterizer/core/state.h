@@ -179,19 +179,25 @@ enum SWR_OUTER_TESSFACTOR_ID
 ///        space for up to 32 attributes, as well as any SGV values generated
 ///        by the pipeline
 /////////////////////////////////////////////////////////////////////////
-#define VERTEX_POSITION_SLOT 0
-#define VERTEX_ATTRIB_START_SLOT 1
-#define VERTEX_ATTRIB_END_SLOT 32
-#define VERTEX_RTAI_SLOT 33         // GS writes RenderTargetArrayIndex here
-#define VERTEX_PRIMID_SLOT 34       // GS writes PrimId here
-#define VERTEX_CLIPCULL_DIST_LO_SLOT 35 // VS writes lower 4 clip/cull dist
-#define VERTEX_CLIPCULL_DIST_HI_SLOT 36 // VS writes upper 4 clip/cull dist
-#define VERTEX_POINT_SIZE_SLOT 37       // VS writes point size here
-#define VERTEX_VIEWPORT_ARRAY_INDEX_SLOT 38
+enum SWR_VTX_SLOTS
+{
+    VERTEX_POSITION_SLOT             = 0,
+    VERTEX_POSITION_END_SLOT         = 0,
+    VERTEX_ATTRIB_START_SLOT         = ( 1 + VERTEX_POSITION_END_SLOT),
+    VERTEX_ATTRIB_END_SLOT           = (32 + VERTEX_POSITION_END_SLOT),
+    VERTEX_RTAI_SLOT                 = (33 + VERTEX_POSITION_END_SLOT), // GS writes RenderTargetArrayIndex here
+    VERTEX_PRIMID_SLOT               = (34 + VERTEX_POSITION_END_SLOT), // GS writes PrimId here
+    VERTEX_CLIPCULL_DIST_LO_SLOT     = (35 + VERTEX_POSITION_END_SLOT), // VS writes lower 4 clip/cull dist
+    VERTEX_CLIPCULL_DIST_HI_SLOT     = (36 + VERTEX_POSITION_END_SLOT), // VS writes upper 4 clip/cull dist
+    VERTEX_POINT_SIZE_SLOT           = (37 + VERTEX_POSITION_END_SLOT), // VS writes point size here
+    VERTEX_VIEWPORT_ARRAY_INDEX_SLOT = (38 + VERTEX_POSITION_END_SLOT),
+    SWR_VTX_NUM_SLOTS                 = VERTEX_VIEWPORT_ARRAY_INDEX_SLOT,
+};
+
 // SoAoSoA
 struct simdvertex
 {
-    simdvector    attrib[KNOB_NUM_ATTRIBUTES];
+    simdvector    attrib[SWR_VTX_NUM_SLOTS];
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -226,7 +232,7 @@ struct ScalarAttrib
 
 struct ScalarCPoint
 {
-    ScalarAttrib attrib[KNOB_NUM_ATTRIBUTES];
+    ScalarAttrib attrib[SWR_VTX_NUM_SLOTS];
 };
 
 //////////////////////////////////////////////////////////////////////////

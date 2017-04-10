@@ -34,7 +34,7 @@
 // TODO: this belongs in state.h alongside the simdvector definition, but there is a llvm codegen issue
 struct simd16vertex
 {
-    simd16vector    attrib[KNOB_NUM_ATTRIBUTES];
+    simd16vector    attrib[SWR_VTX_NUM_SLOTS];
 };
 
 #endif

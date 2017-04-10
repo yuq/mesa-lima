@@ -510,7 +510,7 @@ static void StreamOut(
     uint32_t soVertsPerPrim = NumVertsPerPrim(pa.binTopology, false);
 
     // The pPrimData buffer is sparse in that we allocate memory for all 32 attributes for each vertex.
-    uint32_t primDataDwordVertexStride = (KNOB_NUM_ATTRIBUTES * sizeof(float) * 4) / sizeof(uint32_t);
+    uint32_t primDataDwordVertexStride = (SWR_VTX_NUM_SLOTS * sizeof(float) * 4) / sizeof(uint32_t);
 
     SWR_STREAMOUT_CONTEXT soContext = { 0 };
 
@@ -618,13 +618,13 @@ INLINE static T RoundDownEven(T value)
 ///
 /// attribCount will limit the vector copies to those attribs specified
 ///
-/// note: the stride between vertexes is determinded by KNOB_NUM_ATTRIBUTES
+/// note: the stride between vertexes is determinded by SWR_VTX_NUM_SLOTS
 ///
 void PackPairsOfSimdVertexIntoSimd16Vertex(simd16vertex *vertex_simd16, const simdvertex *vertex, uint32_t vertexCount, uint32_t attribCount)
 {
     SWR_ASSERT(vertex);
     SWR_ASSERT(vertex_simd16);
-    SWR_ASSERT(attribCount <= KNOB_NUM_ATTRIBUTES);
+    SWR_ASSERT(attribCount <= SWR_VTX_NUM_SLOTS);
 
     simd16vertex temp;
 
@@ -709,7 +709,7 @@ void ProcessStreamIdBuffer(uint32_t stream, uint8_t* pStreamIdBase, uint32_t num
             }
             curInputByte >>= 2;
         }
-        
+
         *pCutBuffer++ = outByte;
     }
 }
@@ -810,7 +810,7 @@ static void GeometryShaderStage(
             tlsGsContext.vert[i].attrib[attribSlot] = attrib[i];
         }
     }
-    
+
     // assemble position
     pa.Assemble(VERTEX_POSITION_SLOT, attrib);
     for (uint32_t i = 0; i < numVertsPerPrim; ++i)
@@ -890,7 +890,7 @@ static void GeometryShaderStage(
 
             uint8_t* pBase = pInstanceBase + instance * bufferInfo.vertexInstanceStride;
             uint8_t* pCutBase = pCutBufferBase + instance * bufferInfo.cutInstanceStride;
-            
+
             uint32_t numAttribs = state.feNumAttributes;
 
             for (uint32_t stream = 0; stream < MAX_SO_STREAMS; ++stream)
@@ -930,7 +930,7 @@ static void GeometryShaderStage(
                     tempVertex_simd16,
                     reinterpret_cast<const simdvertex *>(pBase),
                     numEmittedVerts,
-                    KNOB_NUM_ATTRIBUTES);
+                    SWR_VTX_NUM_SLOTS);
 
 #endif
 #if USE_SIMD16_FRONTEND

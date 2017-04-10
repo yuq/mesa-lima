@@ -241,7 +241,7 @@ struct StreamOutJit : public Builder
 
             // increment stream and output buffer pointers
             // stream verts are always 32*4 dwords apart
-            pStreamData = GEP(pStreamData, C(KNOB_NUM_ATTRIBUTES * 4));
+            pStreamData = GEP(pStreamData, C(SWR_VTX_NUM_SLOTS * 4));
 
             // output buffers offset using pitch in buffer state
             for (uint32_t b : activeSOBuffers)
