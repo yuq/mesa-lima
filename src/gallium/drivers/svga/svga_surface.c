@@ -295,7 +295,8 @@ svga_create_surface_view(struct pipe_context *pipe,
    assert(format != SVGA3D_FORMAT_INVALID);
 
    if (view) {
-      SVGA_DBG(DEBUG_VIEWS, "svga: Surface view: yes %p, level %u layer %u z %u, %p\n",
+      SVGA_DBG(DEBUG_VIEWS,
+               "New backed surface view: resource %p, level %u layer %u z %u, %p\n",
                pt, surf_tmpl->u.tex.level, layer, zslice, s);
 
       if (svga_have_vgpu10(svga)) {
@@ -339,7 +340,7 @@ svga_create_surface_view(struct pipe_context *pipe,
       s->real_zslice = 0;
    } else {
       SVGA_DBG(DEBUG_VIEWS,
-               "svga: Surface view: no %p, level %u, layer %u, z %u, %p\n",
+               "New surface view: resource %p, level %u, layer %u, z %u, %p\n",
                pt, surf_tmpl->u.tex.level, layer, zslice, s);
 
       memset(&s->key, 0, sizeof s->key);
@@ -714,8 +715,8 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf,
       }
 
       SVGA_DBG(DEBUG_VIEWS,
-               "svga: Surface propagate: tex %p, level %u, from %p\n",
-               tex, surf->u.tex.level, surf);
+               "Propagate surface %p to resource %p, level %u\n",
+               surf, tex, surf->u.tex.level);
       for (i = 0; i < nlayers; i++) {
          svga_texture_copy_handle(svga,
                                   s->handle, 0, 0, 0, s->real_level,
