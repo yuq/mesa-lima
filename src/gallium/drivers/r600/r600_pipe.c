@@ -82,9 +82,6 @@ static void r600_destroy_context(struct pipe_context *context)
 	if (rctx->fixed_func_tcs_shader)
 		rctx->b.b.delete_tcs_state(&rctx->b.b, rctx->fixed_func_tcs_shader);
 
-	if (rctx->dummy_pixel_shader) {
-		rctx->b.b.delete_fs_state(&rctx->b.b, rctx->dummy_pixel_shader);
-	}
 	if (rctx->custom_dsa_flush) {
 		rctx->b.b.delete_depth_stencil_alpha_state(&rctx->b.b, rctx->custom_dsa_flush);
 	}
@@ -208,12 +205,6 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 	rctx->blitter->draw_rectangle = r600_draw_rectangle;
 
 	r600_begin_new_cs(rctx);
-
-	rctx->dummy_pixel_shader =
-		util_make_fragment_cloneinput_shader(&rctx->b.b, 0,
-						     TGSI_SEMANTIC_GENERIC,
-						     TGSI_INTERPOLATE_CONSTANT);
-	rctx->b.b.bind_fs_state(&rctx->b.b, rctx->dummy_pixel_shader);
 
 	return &rctx->b.b;
 
