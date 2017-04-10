@@ -3920,6 +3920,7 @@ struct gl_extensions
    GLboolean ARB_ES3_2_compatibility;
    GLboolean ARB_arrays_of_arrays;
    GLboolean ARB_base_instance;
+   GLboolean ARB_bindless_texture;
    GLboolean ARB_blend_func_extended;
    GLboolean ARB_buffer_storage;
    GLboolean ARB_clear_texture;

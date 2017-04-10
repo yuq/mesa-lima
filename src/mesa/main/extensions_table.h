@@ -33,6 +33,7 @@ EXT(ARB_ES3_2_compatibility                 , ARB_ES3_2_compatibility           
 EXT(ARB_ES3_compatibility                   , ARB_ES3_compatibility                  , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_arrays_of_arrays                    , ARB_arrays_of_arrays                   , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_base_instance                       , ARB_base_instance                      , GLL, GLC,  x ,  x , 2011)
+EXT(ARB_bindless_texture                    , ARB_bindless_texture                   , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_blend_func_extended                 , ARB_blend_func_extended                , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_buffer_storage                      , ARB_buffer_storage                     , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_clear_buffer_object                 , dummy_true                             , GLL, GLC,  x ,  x , 2012)
