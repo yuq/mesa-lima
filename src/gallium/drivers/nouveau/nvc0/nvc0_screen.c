@@ -259,6 +259,8 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return class_3d >= NVE4_3D_CLASS; /* needs testing on fermi */
    case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
       return class_3d >= GM200_3D_CLASS;
+   case PIPE_CAP_TGSI_BALLOT:
+      return class_3d >= NVE4_3D_CLASS;
 
    /* unsupported caps */
    case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
@@ -289,7 +291,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
    case PIPE_CAP_INT64_DIVMOD:
    case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
-   case PIPE_CAP_TGSI_BALLOT:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
