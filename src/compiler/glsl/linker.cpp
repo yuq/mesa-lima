@@ -4641,9 +4641,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    bool skip_cache = false;
    if (prog->TransformFeedback.NumVarying > 0) {
       for (unsigned i = 0; i < prog->NumShaders; i++) {
-         if (prog->Shaders[i]->ir) {
-            continue;
-         }
          _mesa_glsl_compile_shader(ctx, prog->Shaders[i], false, false, true);
       }
       skip_cache = true;

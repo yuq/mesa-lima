@@ -1922,6 +1922,85 @@ do_late_parsing_checks(struct _mesa_glsl_parse_state *state)
    }
 }
 
+static void
+opt_shader_and_create_symbol_table(struct gl_context *ctx,
+                                   struct gl_shader *shader)
+{
+   assert(shader->CompileStatus != compile_failure &&
+          !shader->ir->is_empty());
+
+   struct gl_shader_compiler_options *options =
+      &ctx->Const.ShaderCompilerOptions[shader->Stage];
+
+   /* Do some optimization at compile time to reduce shader IR size
+    * and reduce later work if the same shader is linked multiple times
+    */
+   if (ctx->Const.GLSLOptimizeConservatively) {
+      /* Run it just once. */
+      do_common_optimization(shader->ir, false, false, options,
+                             ctx->Const.NativeIntegers);
+   } else {
+      /* Repeat it until it stops making changes. */
+      while (do_common_optimization(shader->ir, false, false, options,
+                                    ctx->Const.NativeIntegers))
+         ;
+   }
+
+   validate_ir_tree(shader->ir);
+
+   enum ir_variable_mode other;
+   switch (shader->Stage) {
+   case MESA_SHADER_VERTEX:
+      other = ir_var_shader_in;
+      break;
+   case MESA_SHADER_FRAGMENT:
+      other = ir_var_shader_out;
+      break;
+   default:
+      /* Something invalid to ensure optimize_dead_builtin_uniforms
+       * doesn't remove anything other than uniforms or constants.
+       */
+      other = ir_var_mode_count;
+      break;
+   }
+
+   optimize_dead_builtin_variables(shader->ir, other);
+
+   validate_ir_tree(shader->ir);
+
+   /* Retain any live IR, but trash the rest. */
+   reparent_ir(shader->ir, shader->ir);
+
+   /* Destroy the symbol table.  Create a new symbol table that contains only
+    * the variables and functions that still exist in the IR.  The symbol
+    * table will be used later during linking.
+    *
+    * There must NOT be any freed objects still referenced by the symbol
+    * table.  That could cause the linker to dereference freed memory.
+    *
+    * We don't have to worry about types or interface-types here because those
+    * are fly-weights that are looked up by glsl_type.
+    */
+   foreach_in_list (ir_instruction, ir, shader->ir) {
+      switch (ir->ir_type) {
+      case ir_type_function:
+         shader->symbols->add_function((ir_function *) ir);
+         break;
+      case ir_type_variable: {
+         ir_variable *const var = (ir_variable *) ir;
+
+         if (var->data.mode != ir_var_temporary)
+            shader->symbols->add_variable(var);
+         break;
+      }
+      default:
+         break;
+      }
+   }
+
+   _mesa_glsl_initialize_derived_variables(ctx, shader);
+}
+
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir, bool force_recompile)
@@ -1963,6 +2042,12 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
        */
       if (shader->CompileStatus == compile_success)
          return;
+
+      if (shader->CompileStatus == compiled_no_opts) {
+         opt_shader_and_create_symbol_table(ctx, shader);
+         shader->CompileStatus = compile_success;
+         return;
+      }
    }
 
    if (!state->error) {
@@ -1993,51 +2078,6 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       }
    }
 
-
-   if (!state->error && !shader->ir->is_empty()) {
-      struct gl_shader_compiler_options *options =
-         &ctx->Const.ShaderCompilerOptions[shader->Stage];
-
-      assign_subroutine_indexes(shader, state);
-      lower_subroutine(shader->ir, state);
-
-      /* Do some optimization at compile time to reduce shader IR size
-       * and reduce later work if the same shader is linked multiple times
-       */
-      if (ctx->Const.GLSLOptimizeConservatively) {
-         /* Run it just once. */
-         do_common_optimization(shader->ir, false, false, options,
-                                ctx->Const.NativeIntegers);
-      } else {
-         /* Repeat it until it stops making changes. */
-         while (do_common_optimization(shader->ir, false, false, options,
-                                       ctx->Const.NativeIntegers))
-            ;
-      }
-
-      validate_ir_tree(shader->ir);
-
-      enum ir_variable_mode other;
-      switch (shader->Stage) {
-      case MESA_SHADER_VERTEX:
-         other = ir_var_shader_in;
-         break;
-      case MESA_SHADER_FRAGMENT:
-         other = ir_var_shader_out;
-         break;
-      default:
-         /* Something invalid to ensure optimize_dead_builtin_uniforms
-          * doesn't remove anything other than uniforms or constants.
-          */
-         other = ir_var_mode_count;
-         break;
-      }
-
-      optimize_dead_builtin_variables(shader->ir, other);
-
-      validate_ir_tree(shader->ir);
-   }
-
    if (shader->InfoLog)
       ralloc_free(shader->InfoLog);
 
@@ -2050,37 +2090,17 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    shader->Version = state->language_version;
    shader->IsES = state->es_shader;
 
-   /* Retain any live IR, but trash the rest. */
-   reparent_ir(shader->ir, shader->ir);
+   if (!state->error && !shader->ir->is_empty()) {
+      assign_subroutine_indexes(shader, state);
+      lower_subroutine(shader->ir, state);
 
-   /* Destroy the symbol table.  Create a new symbol table that contains only
-    * the variables and functions that still exist in the IR.  The symbol
-    * table will be used later during linking.
-    *
-    * There must NOT be any freed objects still referenced by the symbol
-    * table.  That could cause the linker to dereference freed memory.
-    *
-    * We don't have to worry about types or interface-types here because those
-    * are fly-weights that are looked up by glsl_type.
-    */
-   foreach_in_list (ir_instruction, ir, shader->ir) {
-      switch (ir->ir_type) {
-      case ir_type_function:
-         shader->symbols->add_function((ir_function *) ir);
-         break;
-      case ir_type_variable: {
-         ir_variable *const var = (ir_variable *) ir;
-
-         if (var->data.mode != ir_var_temporary)
-            shader->symbols->add_variable(var);
-         break;
-      }
-      default:
-         break;
+      if (!ctx->Cache || force_recompile)
+         opt_shader_and_create_symbol_table(ctx, shader);
+      else {
+         reparent_ir(shader->ir, shader->ir);
+         shader->CompileStatus = compiled_no_opts;
       }
    }
-
-   _mesa_glsl_initialize_derived_variables(ctx, shader);
 
    if (!force_recompile) {
       free((void *)shader->FallbackSource);

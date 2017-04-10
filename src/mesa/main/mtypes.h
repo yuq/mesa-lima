@@ -2504,7 +2504,8 @@ enum gl_compile_status
 {
    compile_failure = 0,
    compile_success,
-   compile_skipped
+   compile_skipped,
+   compiled_no_opts
 };
 
 /**
