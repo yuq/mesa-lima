@@ -931,7 +931,7 @@ static void r600_bind_vs_state(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
-	if (!state)
+	if (!state || rctx->vs_shader == state)
 		return;
 
 	rctx->vs_shader = (struct r600_pipe_shader_selector *)state;
@@ -942,6 +942,9 @@ static void r600_bind_vs_state(struct pipe_context *ctx, void *state)
 static void r600_bind_gs_state(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
+
+	if (state == rctx->gs_shader)
+		return;
 
 	rctx->gs_shader = (struct r600_pipe_shader_selector *)state;
 	r600_update_vs_writes_viewport_index(&rctx->b, r600_get_vs_info(rctx));
@@ -961,6 +964,9 @@ static void r600_bind_tcs_state(struct pipe_context *ctx, void *state)
 static void r600_bind_tes_state(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
+
+	if (state == rctx->tes_shader)
+		return;
 
 	rctx->tes_shader = (struct r600_pipe_shader_selector *)state;
 	r600_update_vs_writes_viewport_index(&rctx->b, r600_get_vs_info(rctx));
