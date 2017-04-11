@@ -910,6 +910,12 @@ VkResult radv_GetQueryPoolResults(
 			break;
 		}
 		case VK_QUERY_TYPE_PIPELINE_STATISTICS: {
+			if (!available && !(flags & VK_QUERY_RESULT_PARTIAL_BIT)) {
+				result = VK_NOT_READY;
+				break;
+
+			}
+
 			const uint64_t *start = (uint64_t*)src;
 			const uint64_t *stop = (uint64_t*)(src + pipelinestat_block_size);
 			if (flags & VK_QUERY_RESULT_64_BIT) {
