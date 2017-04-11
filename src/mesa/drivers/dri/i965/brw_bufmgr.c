@@ -152,8 +152,8 @@ bo_tile_size(struct brw_bufmgr *bufmgr, unsigned long size, uint32_t tiling)
  * given chip.  We use 512 as the minimum to allow for a later tiling
  * change.
  */
-static unsigned long
-bo_tile_pitch(struct brw_bufmgr *bufmgr, unsigned long pitch, uint32_t tiling)
+static uint32_t
+bo_tile_pitch(struct brw_bufmgr *bufmgr, uint32_t pitch, uint32_t tiling)
 {
    unsigned long tile_width;
 
@@ -247,7 +247,7 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
                   unsigned long size,
                   unsigned long flags,
                   uint32_t tiling_mode,
-                  unsigned long stride, unsigned int alignment)
+                  uint32_t stride, unsigned int alignment)
 {
    struct brw_bo *bo;
    unsigned int page_size = getpagesize();
@@ -377,9 +377,10 @@ brw_bo_alloc(struct brw_bufmgr *bufmgr,
 struct brw_bo *
 brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
                    int x, int y, int cpp, uint32_t tiling,
-                   unsigned long *pitch, unsigned long flags)
+                   uint32_t *pitch, unsigned long flags)
 {
-   unsigned long size, stride;
+   unsigned long size;
+   uint32_t stride;
    unsigned long aligned_y, height_alignment;
 
    /* If we're tiled, our allocations are in 8 or 32-row blocks,

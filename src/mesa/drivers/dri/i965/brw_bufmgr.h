@@ -109,7 +109,7 @@ struct brw_bo {
     */
    uint32_t tiling_mode;
    uint32_t swizzle_mode;
-   unsigned long stride;
+   uint32_t stride;
 
    time_t free_time;
 
@@ -161,7 +161,7 @@ struct brw_bo *brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr,
                                   const char *name,
                                   int x, int y, int cpp,
                                   uint32_t tiling_mode,
-                                  unsigned long *pitch,
+                                  uint32_t *pitch,
                                   unsigned long flags);
 
 /** Takes a reference on a buffer object */

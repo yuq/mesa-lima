@@ -611,7 +611,6 @@ miptree_create(struct brw_context *brw,
    if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
 
-   unsigned long pitch;
    mt->etc_format = etc_format;
 
    if (format == MESA_FORMAT_S_UINT8) {
@@ -619,16 +618,14 @@ miptree_create(struct brw_context *brw,
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
                                   ALIGN(mt->total_width, 64),
                                   ALIGN(mt->total_height, 64),
-                                  mt->cpp, mt->tiling, &pitch,
+                                  mt->cpp, mt->tiling, &mt->pitch,
                                   alloc_flags);
    } else {
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
                                   mt->total_width, mt->total_height,
-                                  mt->cpp, mt->tiling, &pitch,
+                                  mt->cpp, mt->tiling, &mt->pitch,
                                   alloc_flags);
    }
-
-   mt->pitch = pitch;
 
    return mt;
 }
@@ -657,7 +654,6 @@ intel_miptree_create(struct brw_context *brw,
     */
    if (brw->gen < 6 && mt->bo->size >= brw->max_gtt_map_object_size &&
        mt->tiling == I915_TILING_Y) {
-      unsigned long pitch = mt->pitch;
       const uint32_t alloc_flags =
          (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD) ?
          BO_ALLOC_FOR_RENDER : 0;
@@ -668,8 +664,7 @@ intel_miptree_create(struct brw_context *brw,
       brw_bo_unreference(mt->bo);
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
                                   mt->total_width, mt->total_height, mt->cpp,
-                                  mt->tiling, &pitch, alloc_flags);
-      mt->pitch = pitch;
+                                  mt->tiling, &mt->pitch, alloc_flags);
    }
 
    mt->offset = 0;
@@ -1544,7 +1539,6 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     */
    const uint32_t alloc_flags =
       is_lossless_compressed ? 0 : BO_ALLOC_FOR_RENDER;
-   unsigned long pitch;
 
    /* ISL has stricter set of alignment rules then the drm allocator.
     * Therefore one can pass the ISL dimensions in terms of bytes instead of
@@ -1552,10 +1546,8 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     */
    buf->bo = brw_bo_alloc_tiled(brw->bufmgr, "ccs-miptree",
                                 buf->pitch, buf->size / buf->pitch,
-                                1, I915_TILING_Y, &pitch, alloc_flags);
-   if (buf->bo) {
-      assert(pitch == buf->pitch);
-   } else {
+                                1, I915_TILING_Y, &buf->pitch, alloc_flags);
+   if (!buf->bo) {
       free(buf);
       return false;
    }
@@ -1684,10 +1676,9 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
       hz_height = DIV_ROUND_UP(hz_qpitch * Z0, 2 * 8) * 8;
    }
 
-   unsigned long pitch;
    buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz",
                                          hz_width, hz_height, 1,
-                                         I915_TILING_Y, &pitch,
+                                         I915_TILING_Y, &buf->aux_base.pitch,
                                          BO_ALLOC_FOR_RENDER);
    if (!buf->aux_base.bo) {
       free(buf);
@@ -1695,7 +1686,6 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
    }
 
    buf->aux_base.size = hz_width * hz_height;
-   buf->aux_base.pitch = pitch;
 
    return buf;
 }
@@ -1776,10 +1766,9 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
       hz_height = DIV_ROUND_UP(buf->aux_base.qpitch, 2 * 8) * 8 * Z0;
    }
 
-   unsigned long pitch;
    buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz",
                                          hz_width, hz_height, 1,
-                                         I915_TILING_Y, &pitch,
+                                         I915_TILING_Y, &buf->aux_base.pitch,
                                          BO_ALLOC_FOR_RENDER);
    if (!buf->aux_base.bo) {
       free(buf);
@@ -1787,7 +1776,6 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
    }
 
    buf->aux_base.size = hz_width * hz_height;
-   buf->aux_base.pitch = pitch;
 
    return buf;
 }

@@ -573,7 +573,6 @@ intel_create_image_common(__DRIscreen *dri_screen,
     */
    uint32_t tiling = I915_TILING_X;
    int cpp;
-   unsigned long pitch;
 
    /* Callers of this may specify a modifier, or a dri usage, but not both. The
     * newer modifier interface deprecates the older usage flags newer modifier
@@ -615,14 +614,13 @@ intel_create_image_common(__DRIscreen *dri_screen,
    cpp = _mesa_get_format_bytes(image->format);
    image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image",
                                   width, height, cpp, tiling,
-                                  &pitch, 0);
+                                  &image->pitch, 0);
    if (image->bo == NULL) {
       free(image);
       return NULL;
    }
    image->width = width;
    image->height = height;
-   image->pitch = pitch;
    image->modifier = modifier;
 
    return image;
@@ -1293,7 +1291,7 @@ intel_detect_swizzling(struct intel_screen *screen)
 {
    struct brw_bo *buffer;
    unsigned long flags = 0;
-   unsigned long aligned_pitch;
+   uint32_t aligned_pitch;
    uint32_t tiling = I915_TILING_X;
    uint32_t swizzle_mode = 0;
 
@@ -2097,7 +2095,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
    /* The front and back buffers are color buffers, which are X tiled. GEN9+
     * supports Y tiled and compressed buffers, but there is no way to plumb that
     * through to here. */
-   unsigned long pitch;
+   uint32_t pitch;
    int cpp = format / 8;
    intelBuffer->bo = brw_bo_alloc_tiled(screen->bufmgr,
                                         "intelAllocateBuffer",
