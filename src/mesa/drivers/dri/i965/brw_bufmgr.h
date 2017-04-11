@@ -189,11 +189,11 @@ int brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable);
 int brw_bo_unmap(struct brw_bo *bo);
 
 /** Write data into an object. */
-int brw_bo_subdata(struct brw_bo *bo, unsigned long offset,
-                   unsigned long size, const void *data);
+int brw_bo_subdata(struct brw_bo *bo, uint64_t offset,
+                   uint64_t size, const void *data);
 /** Read data from an object. */
-int brw_bo_get_subdata(struct brw_bo *bo, unsigned long offset,
-                       unsigned long size, void *data);
+int brw_bo_get_subdata(struct brw_bo *bo, uint64_t offset,
+                       uint64_t size, void *data);
 /**
  * Waits for rendering to an object by the GPU to have completed.
  *
