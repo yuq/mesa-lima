@@ -595,7 +595,7 @@ struct radv_descriptor_update_template_entry {
 	size_t src_stride;
 
 	/* For push descriptors */
-	uint32_t *immutable_samplers;
+	const uint32_t *immutable_samplers;
 };
 
 struct radv_descriptor_update_template {

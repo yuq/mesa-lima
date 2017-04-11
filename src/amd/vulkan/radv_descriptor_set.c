@@ -50,9 +50,9 @@ VkResult radv_CreateDescriptorSetLayout(
 			immutable_sampler_count += pCreateInfo->pBindings[j].descriptorCount;
 	}
 
-	size_t size = sizeof(struct radv_descriptor_set_layout) +
-		(max_binding + 1) * sizeof(set_layout->binding[0]) +
-		immutable_sampler_count * 4 * sizeof(uint32_t);
+	uint32_t samplers_offset = sizeof(struct radv_descriptor_set_layout) +
+		(max_binding + 1) * sizeof(set_layout->binding[0]);
+	size_t size = samplers_offset + immutable_sampler_count * 4 * sizeof(uint32_t);
 
 	set_layout = vk_alloc2(&device->alloc, pAllocator, size, 8,
 				 VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -128,15 +128,14 @@ VkResult radv_CreateDescriptorSetLayout(
 		set_layout->binding[b].dynamic_offset_offset = dynamic_offset_count;
 
 		if (binding->pImmutableSamplers) {
-			set_layout->binding[b].immutable_samplers = samplers;
+			set_layout->binding[b].immutable_samplers_offset = samplers_offset;
 			set_layout->binding[b].immutable_samplers_equal = true;
-			samplers += 4 * binding->descriptorCount;
+
 
 			for (uint32_t i = 0; i < binding->descriptorCount; i++)
-				memcpy(set_layout->binding[b].immutable_samplers + 4 * i, &radv_sampler_from_handle(binding->pImmutableSamplers[i])->state, 16);
+				memcpy(samplers + 4 * i, &radv_sampler_from_handle(binding->pImmutableSamplers[i])->state, 16);
 			for (uint32_t i = 1; i < binding->descriptorCount; i++)
-				if (memcmp(set_layout->binding[b].immutable_samplers + 4 * i,
-				           set_layout->binding[b].immutable_samplers, 16) != 0)
+				if (memcmp(samplers + 4 * i, samplers, 16) != 0)
 					set_layout->binding[b].immutable_samplers_equal = false;
 
 			/* Don't reserve space for the samplers if they're not accessed. */
@@ -146,6 +145,8 @@ VkResult radv_CreateDescriptorSetLayout(
 				else if (binding->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
 					set_layout->binding[b].size -= 16;
 			}
+			samplers += 4 * binding->descriptorCount;
+			samplers_offset += 4 * sizeof(uint32_t) * binding->descriptorCount;
 		}
 
 		set_layout->size += binding->descriptorCount * set_layout->binding[b].size;
@@ -333,7 +334,7 @@ radv_descriptor_set_create(struct radv_device *device,
 	}
 
 	for (unsigned i = 0; i < layout->binding_count; ++i) {
-		if (!layout->binding[i].immutable_samplers ||
+		if (!layout->binding[i].immutable_samplers_offset ||
 		    layout->binding[i].immutable_samplers_equal)
 			continue;
 
@@ -341,8 +342,9 @@ radv_descriptor_set_create(struct radv_device *device,
 		if (layout->binding[i].type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 			offset += 16;
 
+		const uint32_t *samplers = (const uint32_t*)((const char*)layout + layout->binding[i].immutable_samplers_offset);
 		for (unsigned j = 0; j < layout->binding[i].array_size; ++j) {
-			memcpy(set->mapped_ptr + offset, layout->binding[i].immutable_samplers + 4 * j, 16);
+			memcpy(set->mapped_ptr + offset, samplers + 4 * j, 16);
 			offset += layout->binding[i].size / 4;
 		}
 
@@ -666,7 +668,8 @@ void radv_update_descriptor_sets(
 		 * immutable samplers into them now.
 		 */
 		const bool copy_immutable_samplers = cmd_buffer &&
-			binding_layout->immutable_samplers && !binding_layout->immutable_samplers_equal;
+			binding_layout->immutable_samplers_offset && !binding_layout->immutable_samplers_equal;
+		const uint32_t *samplers = radv_immutable_samplers(set->layout, binding_layout);
 
 		ptr += binding_layout->offset / 4;
 		ptr += binding_layout->size * writeset->dstArrayElement / 4;
@@ -702,19 +705,19 @@ void radv_update_descriptor_sets(
 			case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 				write_combined_image_sampler_descriptor(device, cmd_buffer, ptr, buffer_list,
 									writeset->pImageInfo + j,
-									!binding_layout->immutable_samplers);
+									!binding_layout->immutable_samplers_offset);
 				if (copy_immutable_samplers) {
 					const unsigned idx = writeset->dstArrayElement + j;
-					memcpy(ptr + 16, binding_layout->immutable_samplers + 4 * idx, 16);
+					memcpy(ptr + 16, samplers + 4 * idx, 16);
 				}
 				break;
 			case VK_DESCRIPTOR_TYPE_SAMPLER:
-				if (!binding_layout->immutable_samplers) {
+				if (!binding_layout->immutable_samplers_offset) {
 					write_sampler_descriptor(device, ptr,
 					                         writeset->pImageInfo + j);
 				} else if (copy_immutable_samplers) {
 					unsigned idx = writeset->dstArrayElement + j;
-					memcpy(ptr, binding_layout->immutable_samplers + 4 * idx, 16);
+					memcpy(ptr, samplers + 4 * idx, 16);
 				}
 				break;
 			default:
@@ -768,7 +771,7 @@ VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
 			set_layout->binding + entry->dstBinding;
 		const uint32_t buffer_offset = binding_layout->buffer_offset +
 			binding_layout->buffer_count * entry->dstArrayElement;
-		uint32_t *immutable_samplers = NULL;
+		const uint32_t *immutable_samplers = NULL;
 		uint16_t dst_offset;
 		uint16_t dst_stride;
 
@@ -787,8 +790,9 @@ VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
 			case VK_DESCRIPTOR_TYPE_SAMPLER:
 				/* Immutable samplers are copied into push descriptors when they are pushed */
 				if (pCreateInfo->templateType == VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR &&
-				    binding_layout->immutable_samplers && !binding_layout->immutable_samplers_equal)
-					immutable_samplers = binding_layout->immutable_samplers + entry->dstArrayElement * 4;
+				    binding_layout->immutable_samplers_offset && !binding_layout->immutable_samplers_equal) {
+					immutable_samplers = radv_immutable_samplers(set_layout, binding_layout) + entry->dstArrayElement * 4;
+				}
 				break;
 			default:
 				break;
@@ -807,7 +811,7 @@ VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
 			.dst_stride = dst_stride,
 			.buffer_offset = buffer_offset,
 			.buffer_count = binding_layout->buffer_count,
-			.has_sampler = !binding_layout->immutable_samplers,
+			.has_sampler = !binding_layout->immutable_samplers_offset,
 			.immutable_samplers = immutable_samplers
 		};
 	}
