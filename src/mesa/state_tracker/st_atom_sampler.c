@@ -137,13 +137,9 @@ convert_sampler(struct st_context *st,
    GLenum texBaseFormat;
 
    texobj = ctx->Texture.Unit[texUnit]._Current;
-   if (!texobj) {
-      texobj = _mesa_get_fallback_texture(ctx, TEXTURE_2D_INDEX);
-      msamp = &texobj->Sampler;
-   } else {
-      msamp = _mesa_get_samplerobj(ctx, texUnit);
-   }
+   assert(texobj);
 
+   msamp = _mesa_get_samplerobj(ctx, texUnit);
    texBaseFormat = _mesa_texture_base_format(texobj);
 
    memset(sampler, 0, sizeof(*sampler));
