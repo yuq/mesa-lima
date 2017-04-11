@@ -245,7 +245,7 @@ static struct brw_bo *
 bo_alloc_internal(struct brw_bufmgr *bufmgr,
                   const char *name,
                   uint64_t size,
-                  unsigned long flags,
+                  unsigned flags,
                   uint32_t tiling_mode,
                   uint32_t stride, uint64_t alignment)
 {
@@ -377,7 +377,7 @@ brw_bo_alloc(struct brw_bufmgr *bufmgr,
 struct brw_bo *
 brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
                    int x, int y, int cpp, uint32_t tiling,
-                   uint32_t *pitch, unsigned long flags)
+                   uint32_t *pitch, unsigned flags)
 {
    uint64_t size;
    uint32_t stride;

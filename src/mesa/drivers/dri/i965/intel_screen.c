@@ -1290,7 +1290,7 @@ static bool
 intel_detect_swizzling(struct intel_screen *screen)
 {
    struct brw_bo *buffer;
-   unsigned long flags = 0;
+   unsigned flags = 0;
    uint32_t aligned_pitch;
    uint32_t tiling = I915_TILING_X;
    uint32_t swizzle_mode = 0;

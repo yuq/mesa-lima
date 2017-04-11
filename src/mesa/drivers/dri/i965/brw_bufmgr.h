@@ -162,7 +162,7 @@ struct brw_bo *brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr,
                                   int x, int y, int cpp,
                                   uint32_t tiling_mode,
                                   uint32_t *pitch,
-                                  unsigned long flags);
+                                  unsigned flags);
 
 /** Takes a reference on a buffer object */
 void brw_bo_reference(struct brw_bo *bo);
