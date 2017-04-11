@@ -739,6 +739,7 @@ st_ReadBuffer(struct gl_context *ctx, GLenum buffer)
    if ((fb->_ColorReadBufferIndex == BUFFER_FRONT_LEFT ||
         fb->_ColorReadBufferIndex == BUFFER_FRONT_RIGHT) &&
        fb->Attachment[fb->_ColorReadBufferIndex].Type == GL_NONE) {
+      assert(_mesa_is_winsys_fbo(fb));
       /* add the buffer */
       st_manager_add_color_renderbuffer(st, fb, fb->_ColorReadBufferIndex);
       _mesa_update_state(ctx);
