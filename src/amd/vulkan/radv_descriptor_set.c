@@ -214,6 +214,9 @@ VkResult radv_CreatePipelineLayout(
 		layout->set[set].dynamic_offset_start = dynamic_offset_count;
 		for (uint32_t b = 0; b < set_layout->binding_count; b++) {
 			dynamic_offset_count += set_layout->binding[b].array_size * set_layout->binding[b].dynamic_offset_count;
+			if (set_layout->binding[b].immutable_samplers_offset)
+				_mesa_sha1_update(&ctx, radv_immutable_samplers(set_layout, set_layout->binding + b),
+				                  set_layout->binding[b].array_size * 4 * sizeof(uint32_t));
 		}
 		_mesa_sha1_update(&ctx, set_layout->binding,
 				  sizeof(set_layout->binding[0]) * set_layout->binding_count);
