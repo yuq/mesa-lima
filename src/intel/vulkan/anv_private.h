@@ -653,6 +653,7 @@ struct anv_physical_device {
     int                                         cmd_parser_version;
     bool                                        has_exec_async;
     bool                                        has_exec_fence;
+    bool                                        has_syncobj;
 
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
@@ -1742,6 +1743,7 @@ enum anv_semaphore_type {
    ANV_SEMAPHORE_TYPE_DUMMY,
    ANV_SEMAPHORE_TYPE_BO,
    ANV_SEMAPHORE_TYPE_SYNC_FILE,
+   ANV_SEMAPHORE_TYPE_DRM_SYNCOBJ,
 };
 
 struct anv_semaphore_impl {
@@ -1760,6 +1762,12 @@ struct anv_semaphore_impl {
        * created or because it has been used for a wait, fd will be -1.
        */
       int fd;
+
+      /* Sync object handle when type == AKV_SEMAPHORE_TYPE_DRM_SYNCOBJ.
+       * Unlike GEM BOs, DRM sync objects aren't deduplicated by the kernel on
+       * import so we don't need to bother with a userspace cache.
+       */
+      uint32_t syncobj;
    };
 };
 
