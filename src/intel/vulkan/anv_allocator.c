@@ -758,7 +758,6 @@ anv_state_stream_finish(struct anv_state_stream *stream)
 
    struct anv_state_stream_block *next = stream->block;
    while (next != NULL) {
-      VG(VALGRIND_MAKE_MEM_DEFINED(next, sizeof(*next)));
       struct anv_state_stream_block sb = VG_NOACCESS_READ(next);
       VG(VALGRIND_MEMPOOL_FREE(stream, sb._vg_ptr));
       VG(VALGRIND_MAKE_MEM_UNDEFINED(next, block_size));
