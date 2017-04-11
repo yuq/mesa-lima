@@ -876,7 +876,7 @@ VkResult radv_GetQueryPoolResults(
 		}
 		case VK_QUERY_TYPE_OCCLUSION: {
 			volatile uint64_t const *src64 = (volatile uint64_t const *)src;
-			uint64_t result = 0;
+			uint64_t sample_count = 0;
 			int db_count = get_max_db(device);
 			available = 1;
 
@@ -890,7 +890,7 @@ VkResult radv_GetQueryPoolResults(
 				if (!(start & (1ull << 63)) || !(end & (1ull << 63)))
 					available = 0;
 				else {
-					result += end - start;
+					sample_count += end - start;
 				}
 			}
 
@@ -901,10 +901,10 @@ VkResult radv_GetQueryPoolResults(
 			}
 
 			if (flags & VK_QUERY_RESULT_64_BIT) {
-				*(uint64_t*)dest = result;
+				*(uint64_t*)dest = sample_count;
 				dest += 8;
 			} else {
-				*(uint32_t*)dest = result;
+				*(uint32_t*)dest = sample_count;
 				dest += 4;
 			}
 			break;
