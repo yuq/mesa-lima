@@ -248,6 +248,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
    case PIPE_CAP_CULL_DISTANCE:
    case PIPE_CAP_CUBE_MAP_ARRAY:
+   case PIPE_CAP_DOUBLES:
       return 1;
 
       /* unsupported features */
