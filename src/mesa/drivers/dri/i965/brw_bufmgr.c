@@ -109,8 +109,8 @@ struct brw_bufmgr {
    struct hash_table *name_table;
    struct hash_table *handle_table;
 
-   unsigned int has_llc:1;
-   unsigned int bo_reuse:1;
+   bool has_llc:1;
+   bool bo_reuse:1;
 };
 
 static int bo_set_tiling_internal(struct brw_bo *bo, uint32_t tiling_mode,
