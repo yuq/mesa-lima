@@ -812,6 +812,10 @@ int anv_gem_set_caching(struct anv_device *device, uint32_t gem_handle, uint32_t
 int anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
                        uint32_t read_domains, uint32_t write_domain);
 int anv_gem_sync_file_merge(struct anv_device *device, int fd1, int fd2);
+uint32_t anv_gem_syncobj_create(struct anv_device *device);
+void anv_gem_syncobj_destroy(struct anv_device *device, uint32_t handle);
+int anv_gem_syncobj_handle_to_fd(struct anv_device *device, uint32_t handle);
+uint32_t anv_gem_syncobj_fd_to_handle(struct anv_device *device, int fd);
 
 VkResult anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size);
 
