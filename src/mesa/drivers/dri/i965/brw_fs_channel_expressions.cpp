@@ -470,6 +470,9 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_unop_vote_eq:
    case ir_unop_unpack_int_2x32:
    case ir_unop_unpack_uint_2x32:
+   case ir_unop_ballot:
+   case ir_unop_read_first_invocation:
+   case ir_binop_read_invocation:
       unreachable("unsupported");
    }
 
