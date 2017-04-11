@@ -60,7 +60,7 @@ struct brw_bo {
     *
     * Used for GTT mapping & pinning the object.
     */
-   unsigned long align;
+   uint64_t align;
 
    /**
     * Virtual address for accessing the buffer data.  Only valid while
@@ -140,7 +140,7 @@ struct brw_bo {
  * using bo_map() or brw_bo_map_gtt() to be used by the CPU.
  */
 struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
-                            unsigned long size, unsigned int alignment);
+                            unsigned long size, uint64_t alignment);
 
 /**
  * Allocate a tiled buffer object.

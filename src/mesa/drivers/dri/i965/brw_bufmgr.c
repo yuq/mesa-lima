@@ -247,7 +247,7 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
                   unsigned long size,
                   unsigned long flags,
                   uint32_t tiling_mode,
-                  uint32_t stride, unsigned int alignment)
+                  uint32_t stride, uint64_t alignment)
 {
    struct brw_bo *bo;
    unsigned int page_size = getpagesize();
@@ -369,7 +369,7 @@ err:
 
 struct brw_bo *
 brw_bo_alloc(struct brw_bufmgr *bufmgr,
-             const char *name, unsigned long size, unsigned int alignment)
+             const char *name, unsigned long size, uint64_t alignment)
 {
    return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0, 0);
 }
