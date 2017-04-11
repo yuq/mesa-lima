@@ -1299,6 +1299,25 @@ brw_create_hw_context(struct brw_bufmgr *bufmgr)
    return create.ctx_id;
 }
 
+int
+brw_hw_context_set_priority(struct brw_bufmgr *bufmgr,
+                            uint32_t ctx_id,
+                            int priority)
+{
+   struct drm_i915_gem_context_param p = {
+      .ctx_id = ctx_id,
+      .param = I915_CONTEXT_PARAM_PRIORITY,
+      .value = priority,
+   };
+   int err;
+
+   err = 0;
+   if (drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_CONTEXT_SETPARAM, &p))
+      err = -errno;
+
+   return err;
+}
+
 void
 brw_destroy_hw_context(struct brw_bufmgr *bufmgr, uint32_t ctx_id)
 {
