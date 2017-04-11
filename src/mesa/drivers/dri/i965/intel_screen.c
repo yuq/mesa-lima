@@ -614,7 +614,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
 
    cpp = _mesa_get_format_bytes(image->format);
    image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image",
-                                  width, height, cpp, &tiling,
+                                  width, height, cpp, tiling,
                                   &pitch, 0);
    if (image->bo == NULL) {
       free(image);
@@ -1298,7 +1298,7 @@ intel_detect_swizzling(struct intel_screen *screen)
    uint32_t swizzle_mode = 0;
 
    buffer = brw_bo_alloc_tiled(screen->bufmgr, "swizzle test",
-                               64, 64, 4, &tiling, &aligned_pitch, flags);
+                               64, 64, 4, tiling, &aligned_pitch, flags);
    if (buffer == NULL)
       return false;
 
@@ -2097,7 +2097,6 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
    /* The front and back buffers are color buffers, which are X tiled. GEN9+
     * supports Y tiled and compressed buffers, but there is no way to plumb that
     * through to here. */
-   uint32_t tiling = I915_TILING_X;
    unsigned long pitch;
    int cpp = format / 8;
    intelBuffer->bo = brw_bo_alloc_tiled(screen->bufmgr,
@@ -2105,7 +2104,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
                                         width,
                                         height,
                                         cpp,
-                                        &tiling, &pitch,
+                                        I915_TILING_X, &pitch,
                                         BO_ALLOC_FOR_RENDER);
 
    if (intelBuffer->bo == NULL) {

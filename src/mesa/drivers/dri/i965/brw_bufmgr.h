@@ -160,7 +160,7 @@ struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
 struct brw_bo *brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr,
                                   const char *name,
                                   int x, int y, int cpp,
-                                  uint32_t *tiling_mode,
+                                  uint32_t tiling_mode,
                                   unsigned long *pitch,
                                   unsigned long flags);
 

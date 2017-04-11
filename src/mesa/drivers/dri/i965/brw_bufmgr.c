@@ -138,10 +138,9 @@ hash_find_bo(struct hash_table *ht, unsigned int key)
 }
 
 static unsigned long
-bo_tile_size(struct brw_bufmgr *bufmgr, unsigned long size,
-             uint32_t *tiling_mode)
+bo_tile_size(struct brw_bufmgr *bufmgr, unsigned long size, uint32_t tiling)
 {
-   if (*tiling_mode == I915_TILING_NONE)
+   if (tiling == I915_TILING_NONE)
       return size;
 
    /* 965+ just need multiples of page size for tiling */
@@ -154,18 +153,17 @@ bo_tile_size(struct brw_bufmgr *bufmgr, unsigned long size,
  * change.
  */
 static unsigned long
-bo_tile_pitch(struct brw_bufmgr *bufmgr,
-              unsigned long pitch, uint32_t *tiling_mode)
+bo_tile_pitch(struct brw_bufmgr *bufmgr, unsigned long pitch, uint32_t tiling)
 {
    unsigned long tile_width;
 
    /* If untiled, then just align it so that we can do rendering
     * to it with the 3D engine.
     */
-   if (*tiling_mode == I915_TILING_NONE)
+   if (tiling == I915_TILING_NONE)
       return ALIGN(pitch, 64);
 
-   if (*tiling_mode == I915_TILING_X)
+   if (tiling == I915_TILING_X)
       tile_width = 512;
    else
       tile_width = 128;
@@ -378,42 +376,36 @@ brw_bo_alloc(struct brw_bufmgr *bufmgr,
 
 struct brw_bo *
 brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
-                   int x, int y, int cpp, uint32_t *tiling_mode,
+                   int x, int y, int cpp, uint32_t tiling,
                    unsigned long *pitch, unsigned long flags)
 {
    unsigned long size, stride;
-   uint32_t tiling;
+   unsigned long aligned_y, height_alignment;
 
-   do {
-      unsigned long aligned_y, height_alignment;
+   /* If we're tiled, our allocations are in 8 or 32-row blocks,
+    * so failure to align our height means that we won't allocate
+    * enough pages.
+    *
+    * If we're untiled, we still have to align to 2 rows high
+    * because the data port accesses 2x2 blocks even if the
+    * bottom row isn't to be rendered, so failure to align means
+    * we could walk off the end of the GTT and fault.  This is
+    * documented on 965, and may be the case on older chipsets
+    * too so we try to be careful.
+    */
+   aligned_y = y;
+   height_alignment = 2;
 
-      tiling = *tiling_mode;
+   if (tiling == I915_TILING_X)
+      height_alignment = 8;
+   else if (tiling == I915_TILING_Y)
+      height_alignment = 32;
+   aligned_y = ALIGN(y, height_alignment);
 
-      /* If we're tiled, our allocations are in 8 or 32-row blocks,
-       * so failure to align our height means that we won't allocate
-       * enough pages.
-       *
-       * If we're untiled, we still have to align to 2 rows high
-       * because the data port accesses 2x2 blocks even if the
-       * bottom row isn't to be rendered, so failure to align means
-       * we could walk off the end of the GTT and fault.  This is
-       * documented on 965, and may be the case on older chipsets
-       * too so we try to be careful.
-       */
-      aligned_y = y;
-      height_alignment = 2;
-
-      if (tiling == I915_TILING_X)
-         height_alignment = 8;
-      else if (tiling == I915_TILING_Y)
-         height_alignment = 32;
-      aligned_y = ALIGN(y, height_alignment);
-
-      stride = x * cpp;
-      stride = bo_tile_pitch(bufmgr, stride, tiling_mode);
-      size = stride * aligned_y;
-      size = bo_tile_size(bufmgr, size, tiling_mode);
-   } while (*tiling_mode != tiling);
+   stride = x * cpp;
+   stride = bo_tile_pitch(bufmgr, stride, tiling);
+   size = stride * aligned_y;
+   size = bo_tile_size(bufmgr, size, tiling);
    *pitch = stride;
 
    if (tiling == I915_TILING_NONE)

@@ -619,12 +619,12 @@ miptree_create(struct brw_context *brw,
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
                                   ALIGN(mt->total_width, 64),
                                   ALIGN(mt->total_height, 64),
-                                  mt->cpp, &mt->tiling, &pitch,
+                                  mt->cpp, mt->tiling, &pitch,
                                   alloc_flags);
    } else {
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
                                   mt->total_width, mt->total_height,
-                                  mt->cpp, &mt->tiling, &pitch,
+                                  mt->cpp, mt->tiling, &pitch,
                                   alloc_flags);
    }
 
@@ -668,7 +668,7 @@ intel_miptree_create(struct brw_context *brw,
       brw_bo_unreference(mt->bo);
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "miptree",
                                   mt->total_width, mt->total_height, mt->cpp,
-                                  &mt->tiling, &pitch, alloc_flags);
+                                  mt->tiling, &pitch, alloc_flags);
       mt->pitch = pitch;
    }
 
@@ -1544,7 +1544,6 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     */
    const uint32_t alloc_flags =
       is_lossless_compressed ? 0 : BO_ALLOC_FOR_RENDER;
-   uint32_t tiling = I915_TILING_Y;
    unsigned long pitch;
 
    /* ISL has stricter set of alignment rules then the drm allocator.
@@ -1553,10 +1552,9 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     */
    buf->bo = brw_bo_alloc_tiled(brw->bufmgr, "ccs-miptree",
                                 buf->pitch, buf->size / buf->pitch,
-                                1, &tiling, &pitch, alloc_flags);
+                                1, I915_TILING_Y, &pitch, alloc_flags);
    if (buf->bo) {
       assert(pitch == buf->pitch);
-      assert(tiling == I915_TILING_Y);
    } else {
       free(buf);
       return false;
@@ -1687,16 +1685,11 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
    }
 
    unsigned long pitch;
-   uint32_t tiling = I915_TILING_Y;
    buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz",
                                          hz_width, hz_height, 1,
-                                         &tiling, &pitch,
+                                         I915_TILING_Y, &pitch,
                                          BO_ALLOC_FOR_RENDER);
    if (!buf->aux_base.bo) {
-      free(buf);
-      return NULL;
-   } else if (tiling != I915_TILING_Y) {
-      brw_bo_unreference(buf->aux_base.bo);
       free(buf);
       return NULL;
    }
@@ -1784,16 +1777,11 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
    }
 
    unsigned long pitch;
-   uint32_t tiling = I915_TILING_Y;
    buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz",
                                          hz_width, hz_height, 1,
-                                         &tiling, &pitch,
+                                         I915_TILING_Y, &pitch,
                                          BO_ALLOC_FOR_RENDER);
    if (!buf->aux_base.bo) {
-      free(buf);
-      return NULL;
-   } else if (tiling != I915_TILING_Y) {
-      brw_bo_unreference(buf->aux_base.bo);
       free(buf);
       return NULL;
    }
