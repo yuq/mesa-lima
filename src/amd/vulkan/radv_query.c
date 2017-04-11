@@ -850,9 +850,10 @@ VkResult radv_GetQueryPoolResults(
 		char *src = pool->ptr + query * pool->stride;
 		uint32_t available;
 
-		if ((flags & VK_QUERY_RESULT_WAIT_BIT) && pool->type != VK_QUERY_TYPE_OCCLUSION) {
-			while(!*(volatile uint32_t*)(pool->ptr + pool->availability_offset + 4 * query))
-				;
+		if (pool->type != VK_QUERY_TYPE_OCCLUSION) {
+			if (flags & VK_QUERY_RESULT_WAIT_BIT)
+				while(!*(volatile uint32_t*)(pool->ptr + pool->availability_offset + 4 * query))
+					;
 			available = *(uint32_t*)(pool->ptr + pool->availability_offset + 4 * query);
 		}
 
