@@ -53,7 +53,7 @@ struct brw_bo {
     * The size may be larger than the size originally requested for the
     * allocation, such as being aligned to page size.
     */
-   unsigned long size;
+   uint64_t size;
 
    /**
     * Alignment requirement for object
@@ -140,7 +140,7 @@ struct brw_bo {
  * using bo_map() or brw_bo_map_gtt() to be used by the CPU.
  */
 struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
-                            unsigned long size, uint64_t alignment);
+                            uint64_t size, uint64_t alignment);
 
 /**
  * Allocate a tiled buffer object.

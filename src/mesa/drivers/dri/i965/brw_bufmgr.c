@@ -93,7 +93,7 @@ atomic_add_unless(int *v, int add, int unless)
 
 struct bo_cache_bucket {
    struct list_head head;
-   unsigned long size;
+   uint64_t size;
 };
 
 struct brw_bufmgr {
@@ -137,8 +137,8 @@ hash_find_bo(struct hash_table *ht, unsigned int key)
    return entry ? (struct brw_bo *) entry->data : NULL;
 }
 
-static unsigned long
-bo_tile_size(struct brw_bufmgr *bufmgr, unsigned long size, uint32_t tiling)
+static uint64_t
+bo_tile_size(struct brw_bufmgr *bufmgr, uint64_t size, uint32_t tiling)
 {
    if (tiling == I915_TILING_NONE)
       return size;
@@ -173,7 +173,7 @@ bo_tile_pitch(struct brw_bufmgr *bufmgr, uint32_t pitch, uint32_t tiling)
 }
 
 static struct bo_cache_bucket *
-bucket_for_size(struct brw_bufmgr *bufmgr, unsigned long size)
+bucket_for_size(struct brw_bufmgr *bufmgr, uint64_t size)
 {
    int i;
 
@@ -244,7 +244,7 @@ brw_bo_cache_purge_bucket(struct brw_bufmgr *bufmgr,
 static struct brw_bo *
 bo_alloc_internal(struct brw_bufmgr *bufmgr,
                   const char *name,
-                  unsigned long size,
+                  uint64_t size,
                   unsigned long flags,
                   uint32_t tiling_mode,
                   uint32_t stride, uint64_t alignment)
@@ -254,7 +254,7 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
    int ret;
    struct bo_cache_bucket *bucket;
    bool alloc_from_cache;
-   unsigned long bo_size;
+   uint64_t bo_size;
    bool for_render = false;
 
    if (flags & BO_ALLOC_FOR_RENDER)
@@ -369,7 +369,7 @@ err:
 
 struct brw_bo *
 brw_bo_alloc(struct brw_bufmgr *bufmgr,
-             const char *name, unsigned long size, uint64_t alignment)
+             const char *name, uint64_t size, uint64_t alignment)
 {
    return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0, 0);
 }
@@ -379,7 +379,7 @@ brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
                    int x, int y, int cpp, uint32_t tiling,
                    uint32_t *pitch, unsigned long flags)
 {
-   unsigned long size;
+   uint64_t size;
    uint32_t stride;
    unsigned long aligned_y, height_alignment;
 
@@ -1158,7 +1158,7 @@ add_bucket(struct brw_bufmgr *bufmgr, int size)
 static void
 init_cache_buckets(struct brw_bufmgr *bufmgr)
 {
-   unsigned long size, cache_max_size = 64 * 1024 * 1024;
+   uint64_t size, cache_max_size = 64 * 1024 * 1024;
 
    /* OK, so power of two buckets was too wasteful of memory.
     * Give 3 other sizes between each power of two, to hopefully
