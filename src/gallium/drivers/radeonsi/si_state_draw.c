@@ -495,15 +495,13 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 }
 
 static void si_emit_draw_registers(struct si_context *sctx,
-				   const struct pipe_draw_info *info)
+				   const struct pipe_draw_info *info,
+				   unsigned num_patches)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
-	unsigned ia_multi_vgt_param, num_patches = 0;
-
-	if (sctx->tes_shader.cso)
-		si_emit_derived_tess_state(sctx, info, &num_patches);
+	unsigned ia_multi_vgt_param;
 
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info, num_patches);
 
@@ -1093,6 +1091,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	struct pipe_index_buffer ib_tmp; /* for index buffer uploads only */
 	unsigned mask, dirty_tex_counter;
 	enum pipe_prim_type rast_prim;
+	unsigned num_patches = 0;
 
 	if (likely(!info->indirect)) {
 		/* SI-CI treat instance_count==0 as instance_count==1. There is
@@ -1290,7 +1289,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	sctx->dirty_states = 0;
 
 	si_emit_rasterizer_prim_state(sctx);
-	si_emit_draw_registers(sctx, info);
+	if (sctx->tes_shader.cso)
+		si_emit_derived_tess_state(sctx, info, &num_patches);
+	si_emit_draw_registers(sctx, info, num_patches);
 
 	si_ce_pre_draw_synchronization(sctx);
 	si_emit_draw_packets(sctx, info, ib);
