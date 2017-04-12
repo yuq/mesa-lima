@@ -523,6 +523,9 @@ void radv_CmdUpdateBuffer(
 	assert(!(dataSize & 3));
 	assert(!(va & 3));
 
+	if (!dataSize)
+		return;
+
 	if (dataSize < 4096) {
 		si_emit_cache_flush(cmd_buffer);
 
