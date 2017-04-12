@@ -502,7 +502,7 @@ void radv_GetPhysicalDeviceFeatures(
 		.shaderInt64                              = false,
 		.shaderInt16                              = false,
 		.sparseBinding                            = true,
-		.variableMultisampleRate                  = false,
+		.variableMultisampleRate                  = true,
 		.inheritedQueries                         = false,
 	};
 }
