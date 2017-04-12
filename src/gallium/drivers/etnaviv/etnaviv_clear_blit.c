@@ -597,6 +597,9 @@ etna_flush_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
        etna_resource_older(etna_resource(rsc->scanout->prime), rsc)) {
       etna_copy_resource(pctx, rsc->scanout->prime, prsc, 0, 0);
       etna_resource(rsc->scanout->prime)->seqno = rsc->seqno;
+   } else if (etna_resource_needs_flush(rsc)) {
+      etna_copy_resource(pctx, prsc, prsc, 0, 0);
+      rsc->flush_seqno = rsc->seqno;
    }
 }
 
