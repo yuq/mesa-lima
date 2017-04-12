@@ -494,6 +494,19 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 	sctx->last_sc_line_stipple = rs->pa_sc_line_stipple;
 }
 
+static void si_emit_vs_state(struct si_context *sctx)
+{
+	if (sctx->current_vs_state != sctx->last_vs_state) {
+		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+
+		radeon_set_sh_reg(cs,
+			R_00B130_SPI_SHADER_USER_DATA_VS_0 + SI_SGPR_VS_STATE_BITS * 4,
+			sctx->current_vs_state);
+
+		sctx->last_vs_state = sctx->current_vs_state;
+	}
+}
+
 static void si_emit_draw_registers(struct si_context *sctx,
 				   const struct pipe_draw_info *info,
 				   unsigned num_patches)
@@ -1291,6 +1304,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	si_emit_rasterizer_prim_state(sctx);
 	if (sctx->tes_shader.cso)
 		si_emit_derived_tess_state(sctx, info, &num_patches);
+	si_emit_vs_state(sctx);
 	si_emit_draw_registers(sctx, info, num_patches);
 
 	si_ce_pre_draw_synchronization(sctx);

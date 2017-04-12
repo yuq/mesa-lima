@@ -226,6 +226,11 @@ enum {
 	SI_NUM_PARAMS = SI_PARAM_POS_FIXED_PT + 9, /* +8 for COLOR[0..1] */
 };
 
+/* Fields of driver-defined VS state SGPR. */
+/* Clamp vertex color output (only used in VS as VS). */
+#define S_VS_STATE_CLAMP_VERTEX_COLOR(x)	(((unsigned)(x) & 0x1) << 0)
+#define C_VS_STATE_CLAMP_VERTEX_COLOR		0xFFFFFFFE
+
 /* SI-specific system values. */
 enum {
 	TGSI_SEMANTIC_DEFAULT_TESSOUTER_SI = TGSI_SEMANTIC_COUNT,

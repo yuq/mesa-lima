@@ -74,6 +74,7 @@ struct si_state_rasterizer {
 	bool			poly_smooth;
 	bool			uses_poly_offset;
 	bool			clamp_fragment_color;
+	bool			clamp_vertex_color;
 	bool			rasterizer_discard;
 	bool			scissor_enable;
 	bool			clip_halfz;

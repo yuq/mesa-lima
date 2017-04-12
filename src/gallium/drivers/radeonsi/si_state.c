@@ -796,6 +796,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->uses_poly_offset = state->offset_point || state->offset_line ||
 			       state->offset_tri;
 	rs->clamp_fragment_color = state->clamp_fragment_color;
+	rs->clamp_vertex_color = state->clamp_vertex_color;
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;
 	rs->rasterizer_discard = state->rasterizer_discard;
@@ -862,8 +863,6 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 				   state->fill_back != PIPE_POLYGON_MODE_FILL) |
 		S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(state->fill_front)) |
 		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(state->fill_back)));
-	si_pm4_set_reg(pm4, R_00B130_SPI_SHADER_USER_DATA_VS_0 +
-		       SI_SGPR_VS_STATE_BITS * 4, state->clamp_vertex_color);
 
 	/* Precalculate polygon offset states for 16-bit, 24-bit, and 32-bit zbuffers. */
 	for (i = 0; i < 3; i++) {
@@ -925,6 +924,9 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 		    sctx->framebuffer.nr_samples > 1)
 			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
 	}
+
+	sctx->current_vs_state &= C_VS_STATE_CLAMP_VERTEX_COLOR;
+	sctx->current_vs_state |= S_VS_STATE_CLAMP_VERTEX_COLOR(rs->clamp_vertex_color);
 
 	r600_viewport_set_rast_deps(&sctx->b, rs->scissor_enable, rs->clip_halfz);
 
