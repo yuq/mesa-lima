@@ -583,8 +583,6 @@ static void si_shader_gs(struct si_shader *shader)
 	if (!pm4)
 		return;
 
-	si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(shader->selector));
-
 	offset = num_components[0] * sel->gs_max_out_vertices;
 	si_pm4_set_reg(pm4, R_028A60_VGT_GSVS_RING_OFFSET_1, offset);
 	if (max_stream >= 1)
