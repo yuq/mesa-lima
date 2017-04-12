@@ -1401,9 +1401,22 @@ static void declare_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_BASEVERTEX:
-		value = LLVMGetParam(ctx->main_fn,
-				     SI_PARAM_BASE_VERTEX);
+	{
+		/* For non-indexed draws, the base vertex set by the driver
+		 * (for direct draws) or the CP (for indirect draws) is the
+		 * first vertex ID, but GLSL expects 0 to be returned.
+		 */
+		LLVMValueRef vs_state = LLVMGetParam(ctx->main_fn, SI_PARAM_VS_STATE_BITS);
+		LLVMValueRef indexed;
+
+		indexed = LLVMBuildLShr(gallivm->builder, vs_state, ctx->i32_1, "");
+		indexed = LLVMBuildTrunc(gallivm->builder, indexed, ctx->i1, "");
+
+		value = LLVMBuildSelect(gallivm->builder, indexed,
+					LLVMGetParam(ctx->main_fn, SI_PARAM_BASE_VERTEX),
+					ctx->i32_0, "");
 		break;
+	}
 
 	case TGSI_SEMANTIC_BASEINSTANCE:
 		value = LLVMGetParam(ctx->main_fn,

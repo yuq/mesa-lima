@@ -220,6 +220,8 @@ enum {
 /* Clamp vertex color output (only used in VS as VS). */
 #define S_VS_STATE_CLAMP_VERTEX_COLOR(x)	(((unsigned)(x) & 0x1) << 0)
 #define C_VS_STATE_CLAMP_VERTEX_COLOR		0xFFFFFFFE
+#define S_VS_STATE_INDEXED(x)			(((unsigned)(x) & 0x1) << 1)
+#define C_VS_STATE_INDEXED			0xFFFFFFFD
 #define S_VS_STATE_LS_OUT_PATCH_SIZE(x)		(((unsigned)(x) & 0x1FFF) << 8)
 #define C_VS_STATE_LS_OUT_PATCH_SIZE		0xFFE000FF
 #define S_VS_STATE_LS_OUT_VERTEX_SIZE(x)	(((unsigned)(x) & 0xFF) << 24)
