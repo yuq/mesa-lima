@@ -827,9 +827,6 @@ brw_bo_unmap(struct brw_bo *bo)
    struct brw_bufmgr *bufmgr = bo->bufmgr;
    int ret = 0;
 
-   if (bo == NULL)
-      return 0;
-
    pthread_mutex_lock(&bufmgr->lock);
 
    if (bo->map_count <= 0) {
