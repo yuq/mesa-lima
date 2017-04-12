@@ -1853,6 +1853,7 @@ VkResult radv_BeginCommandBuffer(
 		radv_cmd_buffer_set_subpass(cmd_buffer, subpass, false);
 	}
 
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 	return VK_SUCCESS;
 }
 
