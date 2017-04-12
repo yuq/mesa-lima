@@ -2553,6 +2553,8 @@ after lookup.
 Resource Access Opcodes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+For these opcodes, the resource can be a BUFFER, IMAGE, or MEMORY.
+
 .. opcode:: LOAD - Fetch data from a shader buffer or image
 
                Syntax: ``LOAD dst, resource, address``
@@ -2704,8 +2706,8 @@ These opcodes provide atomic variants of some common arithmetic and
 logical operations.  In this context atomicity means that another
 concurrent memory access operation that affects the same memory
 location is guaranteed to be performed strictly before or after the
-entire execution of the atomic operation. The resource may be a buffer
-or an image. In the case of an image, the offset works the same as for
+entire execution of the atomic operation. The resource may be a BUFFER,
+IMAGE, or MEMORY.  In the case of an image, the offset works the same as for
 ``LOAD`` and ``STORE``, specified above. These atomic operations may
 only be used with 32-bit integer image formats.
 
