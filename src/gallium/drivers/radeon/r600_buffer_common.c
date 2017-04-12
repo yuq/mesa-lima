@@ -612,6 +612,7 @@ r600_buffer_from_user_memory(struct pipe_screen *screen,
 	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
 
 	rbuffer->domains = RADEON_DOMAIN_GTT;
+	rbuffer->flags = 0;
 	util_range_add(&rbuffer->valid_buffer_range, 0, templ->width0);
 
 	/* Convert a user pointer to a buffer. */
@@ -626,6 +627,9 @@ r600_buffer_from_user_memory(struct pipe_screen *screen,
 			ws->buffer_get_virtual_address(rbuffer->buf);
 	else
 		rbuffer->gpu_address = 0;
+
+	rbuffer->vram_usage = 0;
+	rbuffer->gart_usage = templ->width0;
 
 	return &rbuffer->b.b;
 }
