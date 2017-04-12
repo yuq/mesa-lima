@@ -275,9 +275,8 @@ static bool
 can_blit_via_svga_copy_region(struct svga_context *svga,
                               const struct pipe_blit_info *blit_info)
 {
-   /* check that the blit src/dst regions are same size, no flipping, etc. */
-   if (blit_info->src.box.width != blit_info->dst.box.width ||
-       blit_info->src.box.height != blit_info->dst.box.height)
+   if (!util_can_blit_via_copy_region(blit_info, FALSE) &&
+       !util_can_blit_via_copy_region(blit_info, TRUE))
       return false;
 
    /* For depth+stencil formats, copy with mask != PIPE_MASK_ZS is not
@@ -287,9 +286,7 @@ can_blit_via_svga_copy_region(struct svga_context *svga,
       blit_info->mask != (PIPE_MASK_ZS))
      return false;
 
-   if (blit_info->alpha_blend ||
-       (svga->render_condition && blit_info->render_condition_enable) ||
-       blit_info->scissor_enable)
+   if (svga->render_condition && blit_info->render_condition_enable)
       return false;
 
    return check_blending_and_srgb_cond(svga, blit_info);
