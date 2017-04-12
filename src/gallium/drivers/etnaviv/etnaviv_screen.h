@@ -74,6 +74,8 @@ struct etna_screen {
    uint32_t features[VIV_FEATURES_WORD_COUNT];
 
    struct etna_specs specs;
+
+   uint32_t drm_version;
 };
 
 static inline struct etna_screen *

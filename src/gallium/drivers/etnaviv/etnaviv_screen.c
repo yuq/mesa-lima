@@ -45,6 +45,9 @@
 
 #include "state_tracker/drm_driver.h"
 
+#define ETNA_DRM_VERSION(major, minor) ((major) << 16 | (minor))
+#define ETNA_DRM_VERSION_FENCE_FD      ETNA_DRM_VERSION(1, 1)
+
 static const struct debug_named_value debug_options[] = {
    {"dbg_msgs",       ETNA_DBG_MSGS, "Print debug messages"},
    {"frame_msgs",     ETNA_DBG_FRAME_MSGS, "Print frame messages"},
@@ -137,6 +140,8 @@ etna_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_TGSI_TEXCOORD:
    case PIPE_CAP_VERTEX_COLOR_UNCLAMPED:
       return 1;
+   case PIPE_CAP_NATIVE_FENCE_FD:
+      return screen->drm_version >= ETNA_DRM_VERSION_FENCE_FD;
 
    /* Memory */
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
@@ -237,7 +242,6 @@ etna_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
    case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
    case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
-   case PIPE_CAP_NATIVE_FENCE_FD:
    case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
    case PIPE_CAP_TGSI_FS_FBFETCH:
    case PIPE_CAP_TGSI_MUL_ZERO_WINS:
@@ -736,6 +740,7 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
 {
    struct etna_screen *screen = CALLOC_STRUCT(etna_screen);
    struct pipe_screen *pscreen;
+   drmVersionPtr version;
    uint64_t val;
 
    if (!screen)
@@ -750,6 +755,11 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
       DBG("could not create renderonly object");
       goto fail;
    }
+
+   version = drmGetVersion(screen->ro->gpu_fd);
+   screen->drm_version = ETNA_DRM_VERSION(version->version_major,
+                                          version->version_minor);
+   drmFreeVersion(version);
 
    etna_mesa_debug = debug_get_option_etna_mesa_debug();
 

@@ -178,6 +178,7 @@ struct etna_context {
    } stats;
 
    struct pipe_debug_callback debug;
+   int in_fence_fd;
 };
 
 static inline struct etna_context *

@@ -73,6 +73,9 @@ etna_context_destroy(struct pipe_context *pctx)
 
    slab_destroy_child(&ctx->transfer_pool);
 
+   if (ctx->in_fence_fd != -1)
+      close(ctx->in_fence_fd);
+
    FREE(pctx);
 }
 
@@ -275,11 +278,14 @@ etna_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
            enum pipe_flush_flags flags)
 {
    struct etna_context *ctx = etna_context(pctx);
+   int out_fence_fd = -1;
 
-   etna_cmd_stream_flush(ctx->stream);
+   etna_cmd_stream_flush2(ctx->stream, ctx->in_fence_fd,
+			  (flags & PIPE_FLUSH_FENCE_FD) ? &out_fence_fd :
+			  NULL);
 
    if (fence)
-      *fence = etna_fence_create(pctx);
+      *fence = etna_fence_create(pctx, out_fence_fd);
 }
 
 static void
@@ -356,10 +362,14 @@ etna_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    /*  Set sensible defaults for state */
    etna_cmd_stream_reset_notify(ctx->stream, ctx);
 
+   ctx->in_fence_fd = -1;
+
    pctx->destroy = etna_context_destroy;
    pctx->draw_vbo = etna_draw_vbo;
    pctx->flush = etna_flush;
    pctx->set_debug_callback = etna_set_debug_callback;
+   pctx->create_fence_fd = etna_create_fence_fd;
+   pctx->fence_server_sync = etna_fence_server_sync;
 
    /* creation of compile states */
    pctx->create_blend_state = etna_blend_state_create;
