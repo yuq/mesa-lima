@@ -675,6 +675,9 @@ struct pipe_context *
 svga_context_create(struct pipe_screen *screen,
                     void *priv, unsigned flags);
 
+void svga_toggle_render_condition(struct svga_context *svga,
+                                  boolean render_condition_enabled,
+                                  boolean on);
 
 /***********************************************************************
  * Inline conversion functions.  These are better-typed than the

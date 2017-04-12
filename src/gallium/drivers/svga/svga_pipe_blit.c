@@ -286,9 +286,6 @@ can_blit_via_svga_copy_region(struct svga_context *svga,
       blit_info->mask != (PIPE_MASK_ZS))
      return false;
 
-   if (svga->render_condition && blit_info->render_condition_enable)
-      return false;
-
    return check_blending_and_srgb_cond(svga, blit_info);
 }
 
@@ -334,6 +331,9 @@ can_blit_via_surface_copy(struct svga_context *svga,
 {
    struct svga_texture *dtex, *stex;
 
+   if (svga->render_condition && blit_info->render_condition_enable)
+      return false;
+
    /* can't copy between different resource types */
    if (svga_resource_type(blit_info->src.resource->target) !=
        svga_resource_type(blit_info->dst.resource->target))
@@ -372,6 +372,8 @@ try_copy_region(struct svga_context *svga,
                   &dst_face, &dst_z);
 
    if (can_blit_via_copy_region_vgpu10(svga, blit)) {
+      svga_toggle_render_condition(svga, blit->render_condition_enable, FALSE);
+
       copy_region_vgpu10(svga,
                          blit->src.resource,
                          blit->src.box.x, blit->src.box.y, src_z,
@@ -381,6 +383,9 @@ try_copy_region(struct svga_context *svga,
                          blit->dst.level, dst_face,
                          blit->src.box.width, blit->src.box.height,
                          blit->src.box.depth);
+
+      svga_toggle_render_condition(svga, blit->render_condition_enable, TRUE);
+
       return true;
    }
 
@@ -511,8 +516,6 @@ try_blit(struct svga_context *svga, const struct pipe_blit_info *blit_info)
    util_blitter_save_fragment_sampler_views(svga->blitter,
                      svga->curr.num_sampler_views[PIPE_SHADER_FRAGMENT],
                      svga->curr.sampler_views[PIPE_SHADER_FRAGMENT]);
-   /*util_blitter_save_render_condition(svga->blitter, svga->render_cond_query,
-                                      svga->render_cond_cond, svga->render_cond_mode);*/
 
    if (!can_create_src_view) {
       struct pipe_resource template;
@@ -574,7 +577,11 @@ try_blit(struct svga_context *svga, const struct pipe_blit_info *blit_info)
       blit.dst.resource = newDst;
    }
 
+   svga_toggle_render_condition(svga, blit.render_condition_enable, FALSE);
+
    util_blitter_blit(svga->blitter, &blit);
+
+   svga_toggle_render_condition(svga, blit.render_condition_enable, TRUE);
 
    if (blit.dst.resource != dst) {
       struct pipe_blit_info copy_region_blit;
@@ -619,6 +626,13 @@ try_cpu_copy_region(struct svga_context *svga,
 {
    if (util_can_blit_via_copy_region(blit, TRUE) ||
        util_can_blit_via_copy_region(blit, FALSE)) {
+
+      if (svga->render_condition && blit->render_condition_enable) {
+         debug_warning("CPU copy_region doesn't support "
+                       "conditional rendering.\n");
+         return false;
+      }
+
       copy_region_fallback(svga, blit->dst.resource,
                            blit->dst.level,
                            blit->dst.box.x, blit->dst.box.y,
