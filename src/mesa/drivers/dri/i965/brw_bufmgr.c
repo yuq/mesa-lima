@@ -196,12 +196,6 @@ bucket_for_size(struct brw_bufmgr *bufmgr, uint64_t size)
    return NULL;
 }
 
-inline void
-brw_bo_reference(struct brw_bo *bo)
-{
-   p_atomic_inc(&bo->refcount);
-}
-
 int
 brw_bo_busy(struct brw_bo *bo)
 {

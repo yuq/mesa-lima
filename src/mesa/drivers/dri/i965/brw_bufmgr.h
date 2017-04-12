@@ -37,6 +37,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "util/u_atomic.h"
 #include "util/list.h"
 
 #if defined(__cplusplus)
@@ -188,7 +189,11 @@ struct brw_bo *brw_bo_alloc_tiled_2d(struct brw_bufmgr *bufmgr,
                                      unsigned flags);
 
 /** Takes a reference on a buffer object */
-void brw_bo_reference(struct brw_bo *bo);
+static inline void
+brw_bo_reference(struct brw_bo *bo)
+{
+   p_atomic_inc(&bo->refcount);
+}
 
 /**
  * Releases a reference on a buffer object, freeing the data if
