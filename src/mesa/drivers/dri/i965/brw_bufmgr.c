@@ -207,10 +207,8 @@ brw_bo_busy(struct brw_bo *bo)
    if (ret == 0) {
       bo->idle = !busy.busy;
       return busy.busy;
-   } else {
-      return false;
    }
-   return (ret == 0 && busy.busy);
+   return false;
 }
 
 int
