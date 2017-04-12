@@ -98,15 +98,8 @@ enum {
 	SI_SGPR_BASE_VERTEX,
 	SI_SGPR_START_INSTANCE,
 	SI_SGPR_DRAWID,
-	SI_ES_NUM_USER_SGPR,
-
-	/* hw VS only */
-	SI_SGPR_VS_STATE_BITS	= SI_ES_NUM_USER_SGPR,
+	SI_SGPR_VS_STATE_BITS,
 	SI_VS_NUM_USER_SGPR,
-
-	/* hw LS only */
-	SI_SGPR_LS_OUT_LAYOUT	= SI_ES_NUM_USER_SGPR,
-	SI_LS_NUM_USER_SGPR,
 
 	/* both TCS and TES */
 	SI_SGPR_TCS_OFFCHIP_LAYOUT = SI_NUM_RESOURCE_SGPRS,
@@ -146,11 +139,7 @@ enum {
 	SI_PARAM_BASE_VERTEX,
 	SI_PARAM_START_INSTANCE,
 	SI_PARAM_DRAWID,
-	/* [0] = clamp vertex color, VS as VS only */
 	SI_PARAM_VS_STATE_BITS,
-	/* same value as TCS_IN_LAYOUT, VS as LS only */
-	SI_PARAM_LS_OUT_LAYOUT = SI_PARAM_DRAWID + 1,
-	/* the other VS parameters are assigned dynamically */
 
 	/* Layout of TCS outputs in the offchip buffer
 	 *   [0:8] = the number of patches per threadgroup.

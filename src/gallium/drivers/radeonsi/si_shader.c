@@ -227,7 +227,7 @@ static LLVMValueRef
 get_tcs_in_patch_stride(struct si_shader_context *ctx)
 {
 	if (ctx->type == PIPE_SHADER_VERTEX)
-		return unpack_param(ctx, SI_PARAM_LS_OUT_LAYOUT, 8, 13);
+		return unpack_param(ctx, SI_PARAM_VS_STATE_BITS, 8, 13);
 	else if (ctx->type == PIPE_SHADER_TESS_CTRL)
 		return unpack_param(ctx, SI_PARAM_TCS_IN_LAYOUT, 8, 13);
 	else {
@@ -2663,7 +2663,7 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 	LLVMValueRef vertex_id = LLVMGetParam(ctx->main_fn,
 					      ctx->param_rel_auto_id);
 	LLVMValueRef vertex_dw_stride =
-		unpack_param(ctx, SI_PARAM_LS_OUT_LAYOUT, 24, 8);
+		unpack_param(ctx, SI_PARAM_VS_STATE_BITS, 24, 8);
 	LLVMValueRef base_dw_addr = LLVMBuildMul(gallivm->builder, vertex_id,
 						 vertex_dw_stride, "");
 
@@ -5609,19 +5609,16 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_BASE_VERTEX] = ctx->i32;
 		params[SI_PARAM_START_INSTANCE] = ctx->i32;
 		params[SI_PARAM_DRAWID] = ctx->i32;
-		num_params = SI_PARAM_DRAWID+1;
+		params[SI_PARAM_VS_STATE_BITS] = ctx->i32;
+		num_params = SI_PARAM_VS_STATE_BITS+1;
 
 		if (shader->key.as_es) {
 			params[ctx->param_es2gs_offset = num_params++] = ctx->i32;
 		} else if (shader->key.as_ls) {
-			params[SI_PARAM_LS_OUT_LAYOUT] = ctx->i32;
-			num_params = SI_PARAM_LS_OUT_LAYOUT+1;
+			/* no extra parameters */
 		} else {
 			if (shader->is_gs_copy_shader) {
 				num_params = SI_PARAM_RW_BUFFERS+1;
-			} else {
-				params[SI_PARAM_VS_STATE_BITS] = ctx->i32;
-				num_params = SI_PARAM_VS_STATE_BITS+1;
 			}
 
 			/* The locations of the other parameters are assigned dynamically. */

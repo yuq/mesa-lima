@@ -1835,8 +1835,12 @@ static void si_set_user_data_base(struct si_context *sctx,
 	if (*base != new_base) {
 		*base = new_base;
 
-		if (new_base)
+		if (new_base) {
 			si_mark_shader_pointers_dirty(sctx, shader);
+
+			if (shader == PIPE_SHADER_VERTEX)
+				sctx->last_vs_state = ~0;
+		}
 	}
 }
 

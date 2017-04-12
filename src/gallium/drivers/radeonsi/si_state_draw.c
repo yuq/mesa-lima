@@ -222,9 +222,9 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 			 (num_tcs_output_cp << 9) | *num_patches;
 
 	/* Set them for LS. */
-	radeon_set_sh_reg(cs,
-		R_00B530_SPI_SHADER_USER_DATA_LS_0 + SI_SGPR_LS_OUT_LAYOUT * 4,
-		tcs_in_layout);
+	sctx->current_vs_state &= C_VS_STATE_LS_OUT_PATCH_SIZE &
+				  C_VS_STATE_LS_OUT_VERTEX_SIZE;
+	sctx->current_vs_state |= tcs_in_layout;
 
 	/* Set them for TCS. */
 	radeon_set_sh_reg_seq(cs,
@@ -500,7 +500,8 @@ static void si_emit_vs_state(struct si_context *sctx)
 		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 
 		radeon_set_sh_reg(cs,
-			R_00B130_SPI_SHADER_USER_DATA_VS_0 + SI_SGPR_VS_STATE_BITS * 4,
+			sctx->shader_userdata.sh_base[PIPE_SHADER_VERTEX] +
+			SI_SGPR_VS_STATE_BITS * 4,
 			sctx->current_vs_state);
 
 		sctx->last_vs_state = sctx->current_vs_state;
