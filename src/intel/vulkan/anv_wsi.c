@@ -26,9 +26,11 @@
 #include "vk_format_info.h"
 #include "util/vk_util.h"
 
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
 static const struct wsi_callbacks wsi_cbs = {
    .get_phys_device_format_properties = anv_GetPhysicalDeviceFormatProperties,
 };
+#endif
 
 VkResult
 anv_init_wsi(struct anv_physical_device *physical_device)
