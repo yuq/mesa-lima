@@ -849,7 +849,7 @@ is_header_field(struct gen_group *group, struct gen_field *field)
 {
    uint32_t bits;
 
-   if (field->start > 32)
+   if (field->start >= 32)
       return false;
 
    bits = (1U << (field->end - field->start + 1)) - 1;
