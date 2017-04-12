@@ -1395,8 +1395,9 @@ static void declare_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_VERTEXID_NOBASE:
-		value = LLVMGetParam(ctx->main_fn,
-				     ctx->param_vertex_id);
+		/* Unused. Clarify the meaning in indexed vs. non-indexed
+		 * draws if this is ever used again. */
+		assert(false);
 		break;
 
 	case TGSI_SEMANTIC_BASEVERTEX:
