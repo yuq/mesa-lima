@@ -212,8 +212,8 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	assert(num_tcs_input_cp <= 32);
 	assert(num_tcs_output_cp <= 32);
 
-	tcs_in_layout = (input_patch_size / 4) |
-			((input_vertex_size / 4) << 13);
+	tcs_in_layout = S_VS_STATE_LS_OUT_PATCH_SIZE(input_patch_size / 4) |
+			S_VS_STATE_LS_OUT_VERTEX_SIZE(input_vertex_size / 4);
 	tcs_out_layout = (output_patch_size / 4) |
 			 ((output_vertex_size / 4) << 13);
 	tcs_out_offsets = (output_patch0_offset / 16) |

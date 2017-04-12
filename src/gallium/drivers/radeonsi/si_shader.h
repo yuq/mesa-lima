@@ -175,8 +175,9 @@ enum {
 	SI_PARAM_TCS_OUT_LAYOUT,
 
 	/* Layout of LS outputs / TCS inputs
-	 *   [0:12] = stride between patches in dwords = num_inputs * num_vertices * 4, max = 32*32*4
-	 *   [13:20] = stride between vertices in dwords = num_inputs * 4, max = 32*4
+	 *   [8:20] = stride between patches in dwords = num_inputs * num_vertices * 4, max = 32*32*4
+	 *   [24:31] = stride between vertices in dwords = num_inputs * 4, max = 32*4
+	 * (same layout as SI_PARAM_VS_STATE_BITS)
 	 */
 	SI_PARAM_TCS_IN_LAYOUT,
 
@@ -230,6 +231,10 @@ enum {
 /* Clamp vertex color output (only used in VS as VS). */
 #define S_VS_STATE_CLAMP_VERTEX_COLOR(x)	(((unsigned)(x) & 0x1) << 0)
 #define C_VS_STATE_CLAMP_VERTEX_COLOR		0xFFFFFFFE
+#define S_VS_STATE_LS_OUT_PATCH_SIZE(x)		(((unsigned)(x) & 0x1FFF) << 8)
+#define C_VS_STATE_LS_OUT_PATCH_SIZE		0xFFE000FF
+#define S_VS_STATE_LS_OUT_VERTEX_SIZE(x)	(((unsigned)(x) & 0xFF) << 24)
+#define C_VS_STATE_LS_OUT_VERTEX_SIZE		0x00FFFFFF
 
 /* SI-specific system values. */
 enum {
