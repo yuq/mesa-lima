@@ -3303,74 +3303,73 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
 {
    const glsl_type *base_type = var->type->without_array();
 
-   if (base_type->is_image()) {
-      if (var->data.mode != ir_var_uniform &&
-          var->data.mode != ir_var_function_in) {
-         _mesa_glsl_error(loc, state, "image variables may only be declared as "
-                          "function parameters or uniform-qualified "
-                          "global variables");
+   if (!base_type->is_image()) {
+      if (qual->flags.q.read_only ||
+          qual->flags.q.write_only ||
+          qual->flags.q.coherent ||
+          qual->flags.q._volatile ||
+          qual->flags.q.restrict_flag ||
+          qual->flags.q.explicit_image_format) {
+         _mesa_glsl_error(loc, state, "memory qualifiers may only be applied "
+                          "to images");
+      }
+      return;
+   }
+
+   if (var->data.mode != ir_var_uniform &&
+       var->data.mode != ir_var_function_in) {
+      _mesa_glsl_error(loc, state, "image variables may only be declared as "
+                       "function parameters or uniform-qualified "
+                       "global variables");
+   }
+
+   var->data.image_read_only |= qual->flags.q.read_only;
+   var->data.image_write_only |= qual->flags.q.write_only;
+   var->data.image_coherent |= qual->flags.q.coherent;
+   var->data.image_volatile |= qual->flags.q._volatile;
+   var->data.image_restrict |= qual->flags.q.restrict_flag;
+   var->data.read_only = true;
+
+   if (qual->flags.q.explicit_image_format) {
+      if (var->data.mode == ir_var_function_in) {
+         _mesa_glsl_error(loc, state, "format qualifiers cannot be used on "
+                          "image function parameters");
       }
 
-      var->data.image_read_only |= qual->flags.q.read_only;
-      var->data.image_write_only |= qual->flags.q.write_only;
-      var->data.image_coherent |= qual->flags.q.coherent;
-      var->data.image_volatile |= qual->flags.q._volatile;
-      var->data.image_restrict |= qual->flags.q.restrict_flag;
-      var->data.read_only = true;
-
-      if (qual->flags.q.explicit_image_format) {
-         if (var->data.mode == ir_var_function_in) {
-            _mesa_glsl_error(loc, state, "format qualifiers cannot be "
-                             "used on image function parameters");
-         }
-
-         if (qual->image_base_type != base_type->sampled_type) {
-            _mesa_glsl_error(loc, state, "format qualifier doesn't match the "
-                             "base data type of the image");
-         }
-
-         var->data.image_format = qual->image_format;
-      } else {
-         if (var->data.mode == ir_var_uniform) {
-            if (state->es_shader) {
-               _mesa_glsl_error(loc, state, "all image uniforms "
-                                "must have a format layout qualifier");
-
-            } else if (!qual->flags.q.write_only) {
-               _mesa_glsl_error(loc, state, "image uniforms not qualified with "
-                                "`writeonly' must have a format layout "
-                                "qualifier");
-            }
-         }
-
-         var->data.image_format = GL_NONE;
+      if (qual->image_base_type != base_type->sampled_type) {
+         _mesa_glsl_error(loc, state, "format qualifier doesn't match the base "
+                          "data type of the image");
       }
 
-      /* From page 70 of the GLSL ES 3.1 specification:
-       *
-       * "Except for image variables qualified with the format qualifiers
-       *  r32f, r32i, and r32ui, image variables must specify either memory
-       *  qualifier readonly or the memory qualifier writeonly."
-       */
-      if (state->es_shader &&
-          var->data.image_format != GL_R32F &&
-          var->data.image_format != GL_R32I &&
-          var->data.image_format != GL_R32UI &&
-          !var->data.image_read_only &&
-          !var->data.image_write_only) {
-         _mesa_glsl_error(loc, state, "image variables of format other than "
-                          "r32f, r32i or r32ui must be qualified `readonly' or "
-                          "`writeonly'");
+      var->data.image_format = qual->image_format;
+   } else {
+      if (var->data.mode == ir_var_uniform) {
+         if (state->es_shader) {
+            _mesa_glsl_error(loc, state, "all image uniforms must have a "
+                             "format layout qualifier");
+         } else if (!qual->flags.q.write_only) {
+            _mesa_glsl_error(loc, state, "image uniforms not qualified with "
+                             "`writeonly' must have a format layout qualifier");
+         }
       }
+      var->data.image_format = GL_NONE;
+   }
 
-   } else if (qual->flags.q.read_only ||
-              qual->flags.q.write_only ||
-              qual->flags.q.coherent ||
-              qual->flags.q._volatile ||
-              qual->flags.q.restrict_flag ||
-              qual->flags.q.explicit_image_format) {
-      _mesa_glsl_error(loc, state, "memory qualifiers may only be applied to "
-                       "images");
+   /* From page 70 of the GLSL ES 3.1 specification:
+    *
+    * "Except for image variables qualified with the format qualifiers r32f,
+    *  r32i, and r32ui, image variables must specify either memory qualifier
+    *  readonly or the memory qualifier writeonly."
+    */
+   if (state->es_shader &&
+       var->data.image_format != GL_R32F &&
+       var->data.image_format != GL_R32I &&
+       var->data.image_format != GL_R32UI &&
+       !var->data.image_read_only &&
+       !var->data.image_write_only) {
+      _mesa_glsl_error(loc, state, "image variables of format other than r32f, "
+                       "r32i or r32ui must be qualified `readonly' or "
+                       "`writeonly'");
    }
 }
 
