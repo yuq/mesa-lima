@@ -1524,11 +1524,7 @@ generate_code(struct brw_codegen *p,
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
 
       assert(inst->group % inst->exec_size == 0);
-      assert(inst->group % 8 == 0 ||
-             inst->dst.type == BRW_REGISTER_TYPE_DF ||
-             inst->src[0].type == BRW_REGISTER_TYPE_DF ||
-             inst->src[1].type == BRW_REGISTER_TYPE_DF ||
-             inst->src[2].type == BRW_REGISTER_TYPE_DF);
+      assert(inst->group % 4 == 0);
 
       unsigned exec_size = inst->exec_size;
       if (devinfo->gen == 7 &&
