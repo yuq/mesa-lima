@@ -2930,6 +2930,76 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
    return;
 }
 
+static void
+validate_fragment_flat_interpolation_input(struct _mesa_glsl_parse_state *state,
+                                           YYLTYPE *loc,
+                                           const glsl_interp_mode interpolation,
+                                           const struct glsl_type *var_type,
+                                           ir_variable_mode mode)
+{
+   if (state->stage != MESA_SHADER_FRAGMENT ||
+       interpolation == INTERP_MODE_FLAT ||
+       mode != ir_var_shader_in)
+      return;
+
+   /* Integer fragment inputs must be qualified with 'flat'.  In GLSL ES,
+    * so must integer vertex outputs.
+    *
+    * From section 4.3.4 ("Inputs") of the GLSL 1.50 spec:
+    *    "Fragment shader inputs that are signed or unsigned integers or
+    *    integer vectors must be qualified with the interpolation qualifier
+    *    flat."
+    *
+    * From section 4.3.4 ("Input Variables") of the GLSL 3.00 ES spec:
+    *    "Fragment shader inputs that are, or contain, signed or unsigned
+    *    integers or integer vectors must be qualified with the
+    *    interpolation qualifier flat."
+    *
+    * From section 4.3.6 ("Output Variables") of the GLSL 3.00 ES spec:
+    *    "Vertex shader outputs that are, or contain, signed or unsigned
+    *    integers or integer vectors must be qualified with the
+    *    interpolation qualifier flat."
+    *
+    * Note that prior to GLSL 1.50, this requirement applied to vertex
+    * outputs rather than fragment inputs.  That creates problems in the
+    * presence of geometry shaders, so we adopt the GLSL 1.50 rule for all
+    * desktop GL shaders.  For GLSL ES shaders, we follow the spec and
+    * apply the restriction to both vertex outputs and fragment inputs.
+    *
+    * Note also that the desktop GLSL specs are missing the text "or
+    * contain"; this is presumably an oversight, since there is no
+    * reasonable way to interpolate a fragment shader input that contains
+    * an integer. See Khronos bug #15671.
+    */
+   if (state->is_version(130, 300)
+       && var_type->contains_integer()) {
+      _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
+                       "an integer, then it must be qualified with 'flat'");
+   }
+
+   /* Double fragment inputs must be qualified with 'flat'.
+    *
+    * From the "Overview" of the ARB_gpu_shader_fp64 extension spec:
+    *    "This extension does not support interpolation of double-precision
+    *    values; doubles used as fragment shader inputs must be qualified as
+    *    "flat"."
+    *
+    * From section 4.3.4 ("Inputs") of the GLSL 4.00 spec:
+    *    "Fragment shader inputs that are signed or unsigned integers, integer
+    *    vectors, or any double-precision floating-point type must be
+    *    qualified with the interpolation qualifier flat."
+    *
+    * Note that the GLSL specs are missing the text "or contain"; this is
+    * presumably an oversight. See Khronos bug #15671.
+    *
+    * The 'double' type does not exist in GLSL ES so far.
+    */
+   if (state->has_double()
+       && var_type->contains_double()) {
+      _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
+                       "a double, then it must be qualified with 'flat'");
+   }
+}
 
 static void
 validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
@@ -3016,69 +3086,8 @@ validate_interpolation_qualifier(struct _mesa_glsl_parse_state *state,
                        "deprecated storage qualifier '%s'", i, s);
    }
 
-   /* Integer fragment inputs must be qualified with 'flat'.  In GLSL ES,
-    * so must integer vertex outputs.
-    *
-    * From section 4.3.4 ("Inputs") of the GLSL 1.50 spec:
-    *    "Fragment shader inputs that are signed or unsigned integers or
-    *    integer vectors must be qualified with the interpolation qualifier
-    *    flat."
-    *
-    * From section 4.3.4 ("Input Variables") of the GLSL 3.00 ES spec:
-    *    "Fragment shader inputs that are, or contain, signed or unsigned
-    *    integers or integer vectors must be qualified with the
-    *    interpolation qualifier flat."
-    *
-    * From section 4.3.6 ("Output Variables") of the GLSL 3.00 ES spec:
-    *    "Vertex shader outputs that are, or contain, signed or unsigned
-    *    integers or integer vectors must be qualified with the
-    *    interpolation qualifier flat."
-    *
-    * Note that prior to GLSL 1.50, this requirement applied to vertex
-    * outputs rather than fragment inputs.  That creates problems in the
-    * presence of geometry shaders, so we adopt the GLSL 1.50 rule for all
-    * desktop GL shaders.  For GLSL ES shaders, we follow the spec and
-    * apply the restriction to both vertex outputs and fragment inputs.
-    *
-    * Note also that the desktop GLSL specs are missing the text "or
-    * contain"; this is presumably an oversight, since there is no
-    * reasonable way to interpolate a fragment shader input that contains
-    * an integer. See Khronos bug #15671.
-    */
-   if (state->is_version(130, 300)
-       && var_type->contains_integer()
-       && interpolation != INTERP_MODE_FLAT
-       && state->stage == MESA_SHADER_FRAGMENT
-       && mode == ir_var_shader_in) {
-      _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
-                       "an integer, then it must be qualified with 'flat'");
-   }
-
-   /* Double fragment inputs must be qualified with 'flat'.
-    *
-    * From the "Overview" of the ARB_gpu_shader_fp64 extension spec:
-    *    "This extension does not support interpolation of double-precision
-    *    values; doubles used as fragment shader inputs must be qualified as
-    *    "flat"."
-    *
-    * From section 4.3.4 ("Inputs") of the GLSL 4.00 spec:
-    *    "Fragment shader inputs that are signed or unsigned integers, integer
-    *    vectors, or any double-precision floating-point type must be
-    *    qualified with the interpolation qualifier flat."
-    *
-    * Note that the GLSL specs are missing the text "or contain"; this is
-    * presumably an oversight. See Khronos bug #15671.
-    *
-    * The 'double' type does not exist in GLSL ES so far.
-    */
-   if (state->has_double()
-       && var_type->contains_double()
-       && interpolation != INTERP_MODE_FLAT
-       && state->stage == MESA_SHADER_FRAGMENT
-       && mode == ir_var_shader_in) {
-      _mesa_glsl_error(loc, state, "if a fragment input is (or contains) "
-                       "a double, then it must be qualified with 'flat'");
-   }
+   validate_fragment_flat_interpolation_input(state, loc, interpolation,
+                                              var_type, mode);
 }
 
 static glsl_interp_mode
