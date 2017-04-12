@@ -855,9 +855,6 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer,
 	radv_emit_fragment_shader(cmd_buffer, pipeline);
 	polaris_set_vgt_vertex_reuse(cmd_buffer, pipeline);
 
-	radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
-			       pipeline->graphics.prim_restart_enable);
-
 	cmd_buffer->scratch_size_needed =
 	                          MAX2(cmd_buffer->scratch_size_needed,
 	                               pipeline->max_waves * pipeline->scratch_bytes_per_wave);
@@ -1394,9 +1391,32 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->push_constant_stages &= ~stages;
 }
 
+static void radv_emit_primitive_reset_state(struct radv_cmd_buffer *cmd_buffer,
+					    bool indexed_draw)
+{
+	int32_t primitive_reset_en = indexed_draw && cmd_buffer->state.pipeline->graphics.prim_restart_enable;
+
+	if (primitive_reset_en != cmd_buffer->state.last_primitive_reset_en) {
+		cmd_buffer->state.last_primitive_reset_en = primitive_reset_en;
+		radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
+				       primitive_reset_en);
+	}
+
+	if (primitive_reset_en) {
+		uint32_t primitive_reset_index = cmd_buffer->state.index_type ? 0xffffffffu : 0xffffu;
+
+		if (primitive_reset_index != cmd_buffer->state.last_primitive_reset_index) {
+			cmd_buffer->state.last_primitive_reset_index = primitive_reset_index;
+			radeon_set_context_reg(cmd_buffer->cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
+					       primitive_reset_index);
+		}
+	}
+}
+
 static void
 radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
-			    bool instanced_draw, bool indirect_draw,
+			    bool indexed_draw, bool instanced_draw,
+			    bool indirect_draw,
 			    uint32_t draw_vertex_count)
 {
 	struct radv_pipeline *pipeline = cmd_buffer->state.pipeline;
@@ -1481,6 +1501,8 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 	}
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
+
+	radv_emit_primitive_reset_state(cmd_buffer, indexed_draw);
 
 	radv_flush_descriptors(cmd_buffer, cmd_buffer->state.pipeline,
 			       VK_SHADER_STAGE_ALL_GRAPHICS);
@@ -1802,6 +1824,7 @@ VkResult radv_BeginCommandBuffer(
 	radv_reset_cmd_buffer(cmd_buffer);
 
 	memset(&cmd_buffer->state, 0, sizeof(cmd_buffer->state));
+	cmd_buffer->state.last_primitive_reset_en = -1;
 
 	/* setup initial configuration into command buffer */
 	if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
@@ -2309,6 +2332,8 @@ void radv_CmdExecuteCommands(
 		primary->state.emitted_compute_pipeline = NULL;
 		primary->state.dirty |= RADV_CMD_DIRTY_PIPELINE;
 		primary->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_ALL;
+		primary->state.last_primitive_reset_en = -1;
+		primary->state.last_primitive_reset_index = 0;
 	}
 }
 
@@ -2444,7 +2469,7 @@ void radv_CmdDraw(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 
-	radv_cmd_buffer_flush_state(cmd_buffer, (instanceCount > 1), false, vertexCount);
+	radv_cmd_buffer_flush_state(cmd_buffer, false, (instanceCount > 1), false, vertexCount);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 10);
 
@@ -2471,18 +2496,6 @@ void radv_CmdDraw(
 	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
-static void radv_emit_primitive_reset_index(struct radv_cmd_buffer *cmd_buffer)
-{
-	uint32_t primitive_reset_index = cmd_buffer->state.index_type ? 0xffffffffu : 0xffffu;
-
-	if (cmd_buffer->state.pipeline->graphics.prim_restart_enable &&
-	    primitive_reset_index != cmd_buffer->state.last_primitive_reset_index) {
-		cmd_buffer->state.last_primitive_reset_index = primitive_reset_index;
-		radeon_set_context_reg(cmd_buffer->cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
-				       primitive_reset_index);
-	}
-}
-
 void radv_CmdDrawIndexed(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    indexCount,
@@ -2496,8 +2509,7 @@ void radv_CmdDrawIndexed(
 	uint32_t index_max_size = (cmd_buffer->state.index_buffer->size - cmd_buffer->state.index_offset) / index_size;
 	uint64_t index_va;
 
-	radv_cmd_buffer_flush_state(cmd_buffer, (instanceCount > 1), false, indexCount);
-	radv_emit_primitive_reset_index(cmd_buffer);
+	radv_cmd_buffer_flush_state(cmd_buffer, true, (instanceCount > 1), false, indexCount);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 15);
 
@@ -2596,7 +2608,7 @@ radv_cmd_draw_indirect_count(VkCommandBuffer                             command
                              uint32_t                                    stride)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	radv_cmd_buffer_flush_state(cmd_buffer, false, true, 0);
+	radv_cmd_buffer_flush_state(cmd_buffer, false, false, true, 0);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 14);
@@ -2621,8 +2633,7 @@ radv_cmd_draw_indexed_indirect_count(
 	int index_size = cmd_buffer->state.index_type ? 4 : 2;
 	uint32_t index_max_size = (cmd_buffer->state.index_buffer->size - cmd_buffer->state.index_offset) / index_size;
 	uint64_t index_va;
-	radv_cmd_buffer_flush_state(cmd_buffer, false, true, 0);
-	radv_emit_primitive_reset_index(cmd_buffer);
+	radv_cmd_buffer_flush_state(cmd_buffer, true, false, true, 0);
 
 	index_va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->state.index_buffer->bo);
 	index_va += cmd_buffer->state.index_buffer->offset + cmd_buffer->state.index_offset;
