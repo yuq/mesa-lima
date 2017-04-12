@@ -725,8 +725,7 @@ static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 		if (!key->vs.as_ls)
 			key->vs.as_es = (rctx->gs_shader != NULL);
 
-		if (rctx->ps_shader && rctx->ps_shader->current->shader.gs_prim_id_input &&
-		    !rctx->gs_shader) {
+		if (rctx->ps_shader->current->shader.gs_prim_id_input && !rctx->gs_shader) {
 			key->vs.as_gs_a = true;
 			key->vs.prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
 		}
@@ -909,6 +908,9 @@ static void *r600_create_tes_state(struct pipe_context *ctx,
 static void r600_bind_ps_state(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
+
+	if (!state)
+		state = rctx->dummy_pixel_shader;
 
 	rctx->ps_shader = (struct r600_pipe_shader_selector *)state;
 }
@@ -1476,8 +1478,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
-	if (rctx->ps_shader)
-		SELECT_SHADER_OR_FAIL(ps);
+	SELECT_SHADER_OR_FAIL(ps);
 
 	r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 
@@ -1554,40 +1555,37 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		rctx->b.streamout.enabled_stream_buffers_mask = clip_so_current->enabled_stream_buffers_mask;
 	}
 
-	if (rctx->ps_shader) {
-		if (unlikely((ps_dirty || rctx->hw_shader_stages[R600_HW_STAGE_PS].shader != rctx->ps_shader->current ||
-			      rctx->rasterizer->sprite_coord_enable != rctx->ps_shader->current->sprite_coord_enable ||
-			      rctx->rasterizer->flatshade != rctx->ps_shader->current->flatshade))) {
+	if (unlikely(ps_dirty || rctx->hw_shader_stages[R600_HW_STAGE_PS].shader != rctx->ps_shader->current ||
+		rctx->rasterizer->sprite_coord_enable != rctx->ps_shader->current->sprite_coord_enable ||
+		rctx->rasterizer->flatshade != rctx->ps_shader->current->flatshade)) {
 
-			if (rctx->cb_misc_state.nr_ps_color_outputs != rctx->ps_shader->current->nr_ps_color_outputs) {
-				rctx->cb_misc_state.nr_ps_color_outputs = rctx->ps_shader->current->nr_ps_color_outputs;
-				r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
-			}
-
-			if (rctx->b.chip_class <= R700) {
-				bool multiwrite = rctx->ps_shader->current->shader.fs_write_all;
-
-				if (rctx->cb_misc_state.multiwrite != multiwrite) {
-					rctx->cb_misc_state.multiwrite = multiwrite;
-					r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
-				}
-			}
-
-			if (unlikely(!ps_dirty && rctx->rasterizer &&
-				     ((rctx->rasterizer->sprite_coord_enable != rctx->ps_shader->current->sprite_coord_enable) ||
-				      (rctx->rasterizer->flatshade != rctx->ps_shader->current->flatshade)))) {
-
-				if (rctx->b.chip_class >= EVERGREEN)
-					evergreen_update_ps_state(ctx, rctx->ps_shader->current);
-				else
-					r600_update_ps_state(ctx, rctx->ps_shader->current);
-			}
-
-			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
+		if (rctx->cb_misc_state.nr_ps_color_outputs != rctx->ps_shader->current->nr_ps_color_outputs) {
+			rctx->cb_misc_state.nr_ps_color_outputs = rctx->ps_shader->current->nr_ps_color_outputs;
+			r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 		}
 
-		UPDATE_SHADER(R600_HW_STAGE_PS, ps);
+		if (rctx->b.chip_class <= R700) {
+			bool multiwrite = rctx->ps_shader->current->shader.fs_write_all;
+
+			if (rctx->cb_misc_state.multiwrite != multiwrite) {
+				rctx->cb_misc_state.multiwrite = multiwrite;
+				r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
+			}
+		}
+
+		if (unlikely(!ps_dirty && rctx->ps_shader && rctx->rasterizer &&
+				((rctx->rasterizer->sprite_coord_enable != rctx->ps_shader->current->sprite_coord_enable) ||
+						(rctx->rasterizer->flatshade != rctx->ps_shader->current->flatshade)))) {
+
+			if (rctx->b.chip_class >= EVERGREEN)
+				evergreen_update_ps_state(ctx, rctx->ps_shader->current);
+			else
+				r600_update_ps_state(ctx, rctx->ps_shader->current);
+		}
+
+		r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 	}
+	UPDATE_SHADER(R600_HW_STAGE_PS, ps);
 
 	if (rctx->b.chip_class >= EVERGREEN) {
 		evergreen_update_db_shader_control(rctx);
@@ -1643,7 +1641,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
-	blend_disable = (rctx->dual_src_blend && rctx->ps_shader &&
+	blend_disable = (rctx->dual_src_blend &&
 			rctx->ps_shader->current->nr_ps_color_outputs < 2);
 
 	if (blend_disable != rctx->force_blend_disable) {

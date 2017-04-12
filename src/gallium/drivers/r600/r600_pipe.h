@@ -432,6 +432,9 @@ struct r600_context {
 	void				*custom_blend_resolve;
 	void				*custom_blend_decompress;
 	void                            *custom_blend_fastclear;
+	/* With rasterizer discard, there doesn't have to be a pixel shader.
+	 * In that case, we bind this one: */
+	void				*dummy_pixel_shader;
 	/* These dummy CMASK and FMASK buffers are used to get around the R6xx hardware
 	 * bug where valid CMASK and FMASK are required to be present to avoid
 	 * a hardlock in certain operations but aren't actually used
