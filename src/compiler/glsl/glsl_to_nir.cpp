@@ -930,7 +930,8 @@ nir_visitor::visit(ir_call *ir)
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       case nir_intrinsic_shader_clock:
-         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
+         nir_ssa_dest_init(&instr->instr, &instr->dest, 2, 32, NULL);
+         instr->num_components = 2;
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       case nir_intrinsic_store_ssbo: {
