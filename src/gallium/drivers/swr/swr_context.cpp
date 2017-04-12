@@ -386,7 +386,7 @@ swr_destroy(struct pipe_context *pipe)
    if (screen->pipe == pipe)
       screen->pipe = NULL;
 
-   FREE(ctx);
+   AlignedFree(ctx);
 }
 
 
@@ -452,7 +452,10 @@ swr_UpdateStatsFE(HANDLE hPrivateContext, const SWR_STATS_FE *pStats)
 struct pipe_context *
 swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
 {
-   struct swr_context *ctx = CALLOC_STRUCT(swr_context);
+   struct swr_context *ctx = (struct swr_context *)
+      AlignedMalloc(sizeof(struct swr_context), KNOB_SIMD_BYTES);
+   memset(ctx, 0, sizeof(struct swr_context));
+
    ctx->blendJIT =
       new std::unordered_map<BLEND_COMPILE_STATE, PFN_BLEND_JIT_FUNC>;
 
