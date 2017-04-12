@@ -129,7 +129,7 @@ namespace {
                   cast<::llvm::PointerType>(actual_type)->getAddressSpace();
 
                if (address_space == address_spaces[clang::LangAS::opencl_local
-                                                   - clang::LangAS::Offset]) {
+                                                   - compat::lang_as_offset]) {
                   args.emplace_back(module::argument::local, arg_api_size,
                                     target_size, target_align,
                                     module::argument::zero_ext);

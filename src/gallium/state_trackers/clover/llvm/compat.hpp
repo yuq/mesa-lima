@@ -67,6 +67,12 @@ namespace clover {
          typedef ::llvm::TargetLibraryInfo target_library_info;
 #endif
 
+#if HAVE_LLVM >= 0x0500
+         const auto lang_as_offset = 0;
+#else
+         const auto lang_as_offset = clang::LangAS::Offset;
+#endif
+
          inline void
          set_lang_defaults(clang::CompilerInvocation &inv,
                            clang::LangOptions &lopts, clang::InputKind ik,
