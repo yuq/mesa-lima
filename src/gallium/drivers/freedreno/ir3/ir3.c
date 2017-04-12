@@ -106,7 +106,7 @@ static uint32_t reg(struct ir3_register *reg, struct ir3_info *info,
 			info->max_const = MAX2(info->max_const, max);
 		} else if (val.num == 63) {
 			/* ignore writes to dummy register r63.x */
-		} else if ((max != REG_A0) && (max != REG_P0)) {
+		} else if (max < 48) {
 			if (reg->flags & IR3_REG_HALF) {
 				info->max_half_reg = MAX2(info->max_half_reg, max);
 			} else {
