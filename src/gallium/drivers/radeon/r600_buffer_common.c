@@ -327,10 +327,24 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)ctx->screen;
-        struct r600_resource *rbuffer = r600_resource(resource);
-        uint8_t *data;
+	struct r600_resource *rbuffer = r600_resource(resource);
+	uint8_t *data;
 
 	assert(box->x + box->width <= resource->width0);
+
+	/* From GL_AMD_pinned_memory issues:
+	 *
+	 *     4) Is glMapBuffer on a shared buffer guaranteed to return the
+	 *        same system address which was specified at creation time?
+	 *
+	 *        RESOLVED: NO. The GL implementation might return a different
+	 *        virtual mapping of that memory, although the same physical
+	 *        page will be used.
+	 *
+	 * So don't ever use staging buffers.
+	 */
+	if (rscreen->ws->buffer_is_user_ptr(rbuffer->buf))
+		usage |= PIPE_TRANSFER_PERSISTENT;
 
 	/* See if the buffer range being mapped has never been initialized,
 	 * in which case it can be mapped unsynchronized. */
