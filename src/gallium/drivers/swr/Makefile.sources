@@ -56,6 +56,7 @@ COMMON_CXX_SOURCES := \
 	rasterizer/common/formats.cpp \
 	rasterizer/common/formats.h \
 	rasterizer/common/isa.hpp \
+	rasterizer/common/os.cpp \
 	rasterizer/common/os.h \
 	rasterizer/common/rdtsc_buckets.cpp \
 	rasterizer/common/rdtsc_buckets.h \

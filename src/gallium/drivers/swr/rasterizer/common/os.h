@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2017 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -272,5 +272,8 @@ typedef MEGABYTE    GIGABYTE[1024];
 #else
 #define ATTR_UNUSED
 #endif
+
+// Defined in os.cpp
+void SWR_API SetCurrentThreadName(const char* pThreadName);
 
 #endif//__SWR_OS_H__
