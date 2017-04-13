@@ -1550,6 +1550,7 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 	r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
 
 	r600_set_sample_locations_constant_buffer(rctx);
+	rctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
 static void evergreen_set_min_samples(struct pipe_context *ctx, unsigned min_samples)

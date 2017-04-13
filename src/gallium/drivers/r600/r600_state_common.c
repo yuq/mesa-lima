@@ -99,6 +99,7 @@ static void r600_texture_barrier(struct pipe_context *ctx, unsigned flags)
 		       R600_CONTEXT_FLUSH_AND_INV_CB |
 		       R600_CONTEXT_FLUSH_AND_INV |
 		       R600_CONTEXT_WAIT_3D_IDLE;
+	rctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
 static unsigned r600_conv_pipe_prim(unsigned prim)
@@ -1732,6 +1733,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	if (unlikely(dirty_tex_counter != rctx->b.last_dirty_tex_counter)) {
 		rctx->b.last_dirty_tex_counter = dirty_tex_counter;
 		r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
+		rctx->framebuffer.do_update_surf_dirtiness = true;
 	}
 
 	if (!r600_update_derived_state(rctx)) {
@@ -2034,29 +2036,32 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SQ_NON_EVENT));
 	}
 
-	/* Set the depth buffer as dirty. */
-	if (rctx->framebuffer.state.zsbuf) {
-		struct pipe_surface *surf = rctx->framebuffer.state.zsbuf;
-		struct r600_texture *rtex = (struct r600_texture *)surf->texture;
-
-		rtex->dirty_level_mask |= 1 << surf->u.tex.level;
-
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
-			rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
-	}
-	if (rctx->framebuffer.compressed_cb_mask) {
-		struct pipe_surface *surf;
-		struct r600_texture *rtex;
-		unsigned mask = rctx->framebuffer.compressed_cb_mask;
-
-		do {
-			unsigned i = u_bit_scan(&mask);
-			surf = rctx->framebuffer.state.cbufs[i];
-			rtex = (struct r600_texture*)surf->texture;
+	if (rctx->framebuffer.do_update_surf_dirtiness) {
+		/* Set the depth buffer as dirty. */
+		if (rctx->framebuffer.state.zsbuf) {
+			struct pipe_surface *surf = rctx->framebuffer.state.zsbuf;
+			struct r600_texture *rtex = (struct r600_texture *)surf->texture;
 
 			rtex->dirty_level_mask |= 1 << surf->u.tex.level;
 
-		} while (mask);
+			if (rtex->surface.flags & RADEON_SURF_SBUFFER)
+				rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
+		}
+		if (rctx->framebuffer.compressed_cb_mask) {
+			struct pipe_surface *surf;
+			struct r600_texture *rtex;
+			unsigned mask = rctx->framebuffer.compressed_cb_mask;
+
+			do {
+				unsigned i = u_bit_scan(&mask);
+				surf = rctx->framebuffer.state.cbufs[i];
+				rtex = (struct r600_texture*)surf->texture;
+
+				rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+
+			} while (mask);
+		}
+		rctx->framebuffer.do_update_surf_dirtiness = false;
 	}
 
 	pipe_resource_reference(&ib.buffer, NULL);

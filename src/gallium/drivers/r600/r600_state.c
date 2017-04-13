@@ -1209,6 +1209,7 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 	r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
 
 	r600_set_sample_locations_constant_buffer(rctx);
+	rctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
 static uint32_t sample_locs_2x[] = {
