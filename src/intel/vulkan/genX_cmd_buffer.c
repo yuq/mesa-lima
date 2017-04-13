@@ -291,27 +291,21 @@ color_attachment_compute_aux_usage(struct anv_device *device,
       att_state->input_aux_usage = ISL_AUX_USAGE_CCS_E;
    } else if (att_state->fast_clear) {
       att_state->aux_usage = ISL_AUX_USAGE_CCS_D;
-      if (GEN_GEN >= 9 &&
-          !isl_format_supports_ccs_e(&device->info, iview->isl.format)) {
-         /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
-          *
-          *    "If Number of Multisamples is MULTISAMPLECOUNT_1, AUX_CCS_D
-          *    setting is only allowed if Surface Format supported for Fast
-          *    Clear. In addition, if the surface is bound to the sampling
-          *    engine, Surface Format must be supported for Render Target
-          *    Compression for surfaces bound to the sampling engine."
-          *
-          * In other words, we can't sample from a fast-cleared image if it
-          * doesn't also support color compression.
-          */
-         att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
-      } else if (GEN_GEN >= 8) {
-         /* Broadwell/Skylake can sample from fast-cleared images */
+      /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
+       *
+       *    "If Number of Multisamples is MULTISAMPLECOUNT_1, AUX_CCS_D
+       *    setting is only allowed if Surface Format supported for Fast
+       *    Clear. In addition, if the surface is bound to the sampling
+       *    engine, Surface Format must be supported for Render Target
+       *    Compression for surfaces bound to the sampling engine."
+       *
+       * In other words, we can only sample from a fast-cleared image if it
+       * also supports color compression.
+       */
+      if (isl_format_supports_ccs_e(&device->info, iview->isl.format))
          att_state->input_aux_usage = ISL_AUX_USAGE_CCS_D;
-      } else {
-         /* Ivy Bridge and Haswell cannot */
+      else
          att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
-      }
    } else {
       att_state->aux_usage = ISL_AUX_USAGE_NONE;
       att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
