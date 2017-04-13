@@ -1398,7 +1398,6 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
     * still hot in the cache.
     */
    bool found_draw = false;
-   bool self_dep = false;
    enum anv_subpass_usage usage = 0;
    for (uint32_t s = subpass_idx + 1; s < pass->subpass_count; s++) {
       usage |= pass->attachments[att].subpass_usage[s];
@@ -1408,8 +1407,6 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
           * wait to resolve until then.
           */
          found_draw = true;
-         if (pass->attachments[att].subpass_usage[s] & ANV_SUBPASS_USAGE_INPUT)
-            self_dep = true;
          break;
       }
    }
@@ -1468,14 +1465,6 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
           *    binding this surface to Sampler."
           */
          resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
-      } else if (cmd_buffer->device->info.gen == 8 && self_dep &&
-                 att_state->input_aux_usage == ISL_AUX_USAGE_CCS_D) {
-         /* On Broadwell we still need to do resolves when there is a
-          * self-dependency because HW could not see fast-clears and works
-          * on the render cache as if there was regular non-fast-clear surface.
-          * To avoid any inconsistency, we force the resolve.
-          */
-         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
       }
    }
 
