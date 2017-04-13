@@ -187,9 +187,7 @@ es1api_libGLESv1_CM_la_LDFLAGS = \
 	$(GC_SECTIONS) \
 	$(LD_NO_UNDEFINED)
 
-if HAVE_SHARED_GLAPI
 es1api_libGLESv1_CM_la_LIBADD += shared-glapi/libglapi.la
-endif
 endif
 
 es1api/glapi_mapi_tmp.h: glapi/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
@@ -234,9 +232,7 @@ es2api_libGLESv2_la_LDFLAGS = \
 	$(GC_SECTIONS) \
 	$(LD_NO_UNDEFINED)
 
-if HAVE_SHARED_GLAPI
 es2api_libGLESv2_la_LIBADD += shared-glapi/libglapi.la
-endif
 endif
 
 es2api/glapi_mapi_tmp.h: glapi/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
