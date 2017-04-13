@@ -17,11 +17,6 @@ if env['LLVM_VERSION'] < distutils.version.LooseVersion('3.9'):
     env['swr'] = False
     Return()
 
-if env['platform'] != 'windows':
-    print "warning: swr scons build only supports windows: not building swr"
-    env['swr'] = False
-    Return()
-
 env.MSVC2013Compat()
 
 env = env.Clone()
@@ -205,7 +200,7 @@ envavx2.Append(CPPDEFINES = ['KNOB_ARCH=KNOB_ARCH_AVX2'])
 if env['platform'] == 'windows':
     envavx2.Append(CCFLAGS = ['/arch:AVX2'])
 else:
-    envavx2.Append(CCFLAGS = ['-mavx2'])
+    envavx2.Append(CCFLAGS = ['-mavx2', '-mfma', '-mbmi2', '-mf16c'])
 
 swrAVX2 = envavx2.SharedLibrary(
     target = 'swrAVX2',
