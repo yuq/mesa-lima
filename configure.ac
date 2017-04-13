@@ -1074,12 +1074,13 @@ AC_ARG_ENABLE([libunwind],
         [LIBUNWIND="$enableval"],
         [LIBUNWIND="auto"])
 
-PKG_CHECK_MODULES(LIBUNWIND, libunwind, [HAVE_LIBUNWIND=yes], [HAVE_LIBUNWIND=no])
+PKG_CHECK_EXISTS(libunwind, [HAVE_LIBUNWIND=yes], [HAVE_LIBUNWIND=no])
 if test "x$LIBUNWIND" = "xauto"; then
     LIBUNWIND="$HAVE_LIBUNWIND"
 fi
 
 if test "x$LIBUNWIND" = "xyes"; then
+    PKG_CHECK_MODULES(LIBUNWIND, libunwind)
     if test "x$HAVE_LIBUNWIND" != "xyes"; then
         AC_MSG_ERROR([libunwind requested but not installed.])
     fi
