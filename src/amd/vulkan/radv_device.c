@@ -585,7 +585,7 @@ void radv_GetPhysicalDeviceProperties(
 		.maxTessellationControlTotalOutputComponents = 4096,
 		.maxTessellationEvaluationInputComponents = 128,
 		.maxTessellationEvaluationOutputComponents = 128,
-		.maxGeometryShaderInvocations             = 32,
+		.maxGeometryShaderInvocations             = 127,
 		.maxGeometryInputComponents               = 64,
 		.maxGeometryOutputComponents              = 128,
 		.maxGeometryOutputVertices                = 256,
