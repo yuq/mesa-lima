@@ -104,8 +104,6 @@ create_bview(struct radv_cmd_buffer *cmd_buffer,
 
 struct blit2d_src_temps {
 	struct radv_image_view iview;
-
-	VkDescriptorSet set;
 	struct radv_buffer_view bview;
 };
 
@@ -117,28 +115,24 @@ blit2d_bind_src(struct radv_cmd_buffer *cmd_buffer,
                 enum blit2d_src_type src_type, VkFormat depth_format)
 {
 	struct radv_device *device = cmd_buffer->device;
-	VkDevice vk_device = radv_device_to_handle(cmd_buffer->device);
 
 	if (src_type == BLIT2D_SRC_TYPE_BUFFER) {
 		create_bview(cmd_buffer, src_buf, &tmp->bview, depth_format);
 
-		radv_temp_descriptor_set_create(cmd_buffer->device, cmd_buffer,
-					        device->meta_state.blit2d.ds_layouts[src_type],
-					        &tmp->set);
-
-		radv_UpdateDescriptorSets(vk_device,
-					  1, /* writeCount */
-					  (VkWriteDescriptorSet[]) {
-						  {
-							  .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-							  .dstSet = tmp->set,
-							  .dstBinding = 0,
-							  .dstArrayElement = 0,
-							  .descriptorCount = 1,
-							  .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-							  .pTexelBufferView = (VkBufferView[])  { radv_buffer_view_to_handle(&tmp->bview) }
-						  }
-					  }, 0, NULL);
+		radv_meta_push_descriptor_set(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+					      device->meta_state.blit2d.p_layouts[src_type],
+					      0, /* set */
+					      1, /* descriptorWriteCount */
+					      (VkWriteDescriptorSet[]) {
+					              {
+					                      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					                      .dstBinding = 0,
+					                      .dstArrayElement = 0,
+					                      .descriptorCount = 1,
+					                      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+					                      .pTexelBufferView = (VkBufferView[])  { radv_buffer_view_to_handle(&tmp->bview) }
+					              }
+					      });
 
 		radv_CmdPushConstants(radv_cmd_buffer_to_handle(cmd_buffer),
 				      device->meta_state.blit2d.p_layouts[src_type],
@@ -148,44 +142,27 @@ blit2d_bind_src(struct radv_cmd_buffer *cmd_buffer,
 		create_iview(cmd_buffer, src_img, VK_IMAGE_USAGE_SAMPLED_BIT, &tmp->iview,
 			     depth_format);
 
-		radv_temp_descriptor_set_create(cmd_buffer->device, cmd_buffer,
-					        device->meta_state.blit2d.ds_layouts[src_type],
-					        &tmp->set);
-
-		radv_UpdateDescriptorSets(vk_device,
-					  1, /* writeCount */
-					  (VkWriteDescriptorSet[]) {
-						  {
-							  .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-								  .dstSet = tmp->set,
-								  .dstBinding = 0,
-								  .dstArrayElement = 0,
-								  .descriptorCount = 1,
-								  .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-								  .pImageInfo = (VkDescriptorImageInfo[]) {
-								  {
-									  .sampler = VK_NULL_HANDLE,
-									  .imageView = radv_image_view_to_handle(&tmp->iview),
-									  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-								  },
-							  }
-						  }
-					  }, 0, NULL);
-
+		radv_meta_push_descriptor_set(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+					      device->meta_state.blit2d.p_layouts[src_type],
+					      0, /* set */
+					      1, /* descriptorWriteCount */
+					      (VkWriteDescriptorSet[]) {
+					              {
+					                      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					                      .dstBinding = 0,
+					                      .dstArrayElement = 0,
+					                      .descriptorCount = 1,
+					                      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+					                      .pImageInfo = (VkDescriptorImageInfo[]) {
+					                              {
+					                                      .sampler = VK_NULL_HANDLE,
+					                                      .imageView = radv_image_view_to_handle(&tmp->iview),
+					                                      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+					                              },
+					                      }
+					              }
+					      });
 	}
-
-	radv_CmdBindDescriptorSets(radv_cmd_buffer_to_handle(cmd_buffer),
-				   VK_PIPELINE_BIND_POINT_GRAPHICS,
-				   device->meta_state.blit2d.p_layouts[src_type], 0, 1,
-				   &tmp->set, 0, NULL);
-}
-
-static void
-blit2d_unbind_src(struct radv_cmd_buffer *cmd_buffer,
-                  struct blit2d_src_temps *tmp,
-                  enum blit2d_src_type src_type)
-{
-	radv_temp_descriptor_set_destroy(cmd_buffer->device, tmp->set);
 }
 
 struct blit2d_dst_temps {
@@ -430,7 +407,6 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 		/* At the point where we emit the draw call, all data from the
 		 * descriptor sets, etc. has been used.  We are free to delete it.
 		 */
-		blit2d_unbind_src(cmd_buffer, &src_temps, src_type);
 		blit2d_unbind_dst(cmd_buffer, &dst_temps);
 	}
 }
@@ -1228,6 +1204,7 @@ radv_device_init_meta_blit2d_state(struct radv_device *device)
 	result = radv_CreateDescriptorSetLayout(radv_device_to_handle(device),
 						&(VkDescriptorSetLayoutCreateInfo) {
 							.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+							.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
 								.bindingCount = 1,
 								.pBindings = (VkDescriptorSetLayoutBinding[]) {
 								{
@@ -1255,6 +1232,7 @@ radv_device_init_meta_blit2d_state(struct radv_device *device)
 	result = radv_CreateDescriptorSetLayout(radv_device_to_handle(device),
 						&(VkDescriptorSetLayoutCreateInfo) {
 							.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+							.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
 								.bindingCount = 1,
 								.pBindings = (VkDescriptorSetLayoutBinding[]) {
 								{

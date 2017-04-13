@@ -307,31 +307,6 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 						 .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 						 }, &cmd_buffer->pool->alloc, &sampler);
 
-	VkDescriptorSet set;
-	radv_temp_descriptor_set_create(cmd_buffer->device, cmd_buffer,
-					        device->meta_state.blit.ds_layout,
-					        &set);
-
-	radv_UpdateDescriptorSets(radv_device_to_handle(device),
-				  1, /* writeCount */
-				  (VkWriteDescriptorSet[]) {
-					  {
-						  .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-							  .dstSet = set,
-							  .dstBinding = 0,
-							  .dstArrayElement = 0,
-							  .descriptorCount = 1,
-							  .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-							  .pImageInfo = (VkDescriptorImageInfo[]) {
-							  {
-								  .sampler = sampler,
-								  .imageView = radv_image_view_to_handle(src_iview),
-								  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-							  },
-						  }
-					  }
-				  }, 0, NULL);
-
 	VkFramebuffer fb;
 	radv_CreateFramebuffer(radv_device_to_handle(device),
 			       &(VkFramebufferCreateInfo) {
@@ -439,10 +414,26 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 				     VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	}
 
-	radv_CmdBindDescriptorSets(radv_cmd_buffer_to_handle(cmd_buffer),
-				   VK_PIPELINE_BIND_POINT_GRAPHICS,
-				   device->meta_state.blit.pipeline_layout, 0, 1,
-				   &set, 0, NULL);
+	radv_meta_push_descriptor_set(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+			              device->meta_state.blit.pipeline_layout,
+				      0, /* set */
+				      1, /* descriptorWriteCount */
+				      (VkWriteDescriptorSet[]) {
+				              {
+				                      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				                      .dstBinding = 0,
+				                      .dstArrayElement = 0,
+				                      .descriptorCount = 1,
+				                      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				                      .pImageInfo = (VkDescriptorImageInfo[]) {
+				                              {
+				                                      .sampler = sampler,
+				                                      .imageView = radv_image_view_to_handle(src_iview),
+				                                      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+				                              },
+				                      }
+				              }
+				      });
 
 	radv_CmdSetViewport(radv_cmd_buffer_to_handle(cmd_buffer), 0, 1, &(VkViewport) {
 		.x = dest_offset_0.x,
@@ -471,7 +462,6 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 	/* TODO: above comment is not valid for at least descriptor sets/pools,
 	 * as we may not free them till after execution finishes. Check others. */
 
-	radv_temp_descriptor_set_destroy(cmd_buffer->device, set);
 	radv_DestroySampler(radv_device_to_handle(device), sampler,
 			    &cmd_buffer->pool->alloc);
 	radv_DestroyFramebuffer(radv_device_to_handle(device), fb,
@@ -1299,6 +1289,7 @@ radv_device_init_meta_blit_state(struct radv_device *device)
 
 	VkDescriptorSetLayoutCreateInfo ds_layout_info = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
 		.bindingCount = 1,
 		.pBindings = (VkDescriptorSetLayoutBinding[]) {
 			{
