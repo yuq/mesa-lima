@@ -865,7 +865,7 @@ validate_draw_arrays(struct gl_context *ctx, const char *func,
    if (_mesa_is_gles3(ctx) && _mesa_is_xfb_active_and_unpaused(ctx) &&
        !_mesa_has_OES_geometry_shader(ctx) &&
        !_mesa_has_OES_tessellation_shader(ctx)) {
-      size_t prim_count = vbo_count_tessellated_primitives(mode, count, 1);
+      size_t prim_count = vbo_count_tessellated_primitives(mode, count, numInstances);
       if (xfb_obj->GlesRemainingPrims < prim_count) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "%s(exceeds transform feedback size)", func);
