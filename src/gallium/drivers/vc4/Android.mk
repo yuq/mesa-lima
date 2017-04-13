@@ -25,8 +25,6 @@ include $(LOCAL_PATH)/Makefile.sources
 
 include $(CLEAR_VARS)
 
-LOCAL_CFLAGS_arm := -DVC4_BUILD_NEON
-
 LOCAL_SRC_FILES := \
 	$(C_SOURCES)
 
