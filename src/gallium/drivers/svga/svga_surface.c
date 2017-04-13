@@ -656,13 +656,27 @@ void
 svga_mark_surfaces_dirty(struct svga_context *svga)
 {
    unsigned i;
+   struct svga_hw_clear_state *hw = &svga->state.hw_clear;
 
-   for (i = 0; i < svga->curr.framebuffer.nr_cbufs; i++) {
-      if (svga->curr.framebuffer.cbufs[i])
-         svga_mark_surface_dirty(svga->curr.framebuffer.cbufs[i]);
+   if (svga_have_vgpu10(svga)) {
+
+      /* For VGPU10, mark the dirty bit in the rendertarget/depth stencil view surface.
+       * This surface can be the backed surface.
+       */
+      for (i = 0; i < hw->num_rendertargets; i++) {
+         if (hw->rtv[i])
+            svga_mark_surface_dirty(hw->rtv[i]);
+      }
+      if (hw->dsv)
+         svga_mark_surface_dirty(hw->dsv);
+   } else {
+      for (i = 0; i < svga->curr.framebuffer.nr_cbufs; i++) {
+         if (svga->curr.framebuffer.cbufs[i])
+            svga_mark_surface_dirty(svga->curr.framebuffer.cbufs[i]);
+      }
+      if (svga->curr.framebuffer.zsbuf)
+         svga_mark_surface_dirty(svga->curr.framebuffer.zsbuf);
    }
-   if (svga->curr.framebuffer.zsbuf)
-      svga_mark_surface_dirty(svga->curr.framebuffer.zsbuf);
 }
 
 
