@@ -352,6 +352,7 @@ scan_instruction(struct tgsi_shader_info *info,
    unsigned i;
    bool is_mem_inst = false;
    bool is_interp_instruction = false;
+   unsigned sampler_src;
 
    assert(fullinst->Instruction.Opcode < TGSI_OPCODE_LAST);
    info->opcode_count[fullinst->Instruction.Opcode]++;
@@ -366,6 +367,44 @@ scan_instruction(struct tgsi_shader_info *info,
    case TGSI_OPCODE_ENDIF:
    case TGSI_OPCODE_ENDLOOP:
       (*current_depth)--;
+      break;
+   case TGSI_OPCODE_TEX:
+   case TGSI_OPCODE_TEX_LZ:
+   case TGSI_OPCODE_TXB:
+   case TGSI_OPCODE_TXD:
+   case TGSI_OPCODE_TXL:
+   case TGSI_OPCODE_TXP:
+   case TGSI_OPCODE_TXQ:
+   case TGSI_OPCODE_TXQS:
+   case TGSI_OPCODE_TXF:
+   case TGSI_OPCODE_TXF_LZ:
+   case TGSI_OPCODE_TEX2:
+   case TGSI_OPCODE_TXB2:
+   case TGSI_OPCODE_TXL2:
+   case TGSI_OPCODE_TG4:
+   case TGSI_OPCODE_LODQ:
+      sampler_src = fullinst->Instruction.NumSrcRegs - 1;
+      if (fullinst->Src[sampler_src].Register.File != TGSI_FILE_SAMPLER)
+         info->uses_bindless_samplers = true;
+      break;
+   case TGSI_OPCODE_RESQ:
+   case TGSI_OPCODE_LOAD:
+   case TGSI_OPCODE_ATOMUADD:
+   case TGSI_OPCODE_ATOMXCHG:
+   case TGSI_OPCODE_ATOMCAS:
+   case TGSI_OPCODE_ATOMAND:
+   case TGSI_OPCODE_ATOMOR:
+   case TGSI_OPCODE_ATOMXOR:
+   case TGSI_OPCODE_ATOMUMIN:
+   case TGSI_OPCODE_ATOMUMAX:
+   case TGSI_OPCODE_ATOMIMIN:
+   case TGSI_OPCODE_ATOMIMAX:
+      if (tgsi_is_bindless_image_file(fullinst->Src[0].Register.File))
+         info->uses_bindless_images = true;
+      break;
+   case TGSI_OPCODE_STORE:
+      if (tgsi_is_bindless_image_file(fullinst->Dst[0].Register.File))
+         info->uses_bindless_images = true;
       break;
    default:
       break;
