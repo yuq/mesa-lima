@@ -2686,6 +2686,26 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 		LLVMValueRef *out_ptr = ctx->outputs[i];
 		unsigned name = info->output_semantic_name[i];
 		unsigned index = info->output_semantic_index[i];
+
+		/* The ARB_shader_viewport_layer_array spec contains the
+		 * following issue:
+		 *
+		 *    2) What happens if gl_ViewportIndex or gl_Layer is
+		 *    written in the vertex shader and a geometry shader is
+		 *    present?
+		 *
+		 *    RESOLVED: The value written by the last vertex processing
+		 *    stage is used. If the last vertex processing stage
+		 *    (vertex, tessellation evaluation or geometry) does not
+		 *    statically assign to gl_ViewportIndex or gl_Layer, index
+		 *    or layer zero is assumed.
+		 *
+		 * So writes to those outputs in VS-as-LS are simply ignored.
+		 */
+		if (name == TGSI_SEMANTIC_LAYER ||
+		    name == TGSI_SEMANTIC_VIEWPORT_INDEX)
+			continue;
+
 		int param = si_shader_io_get_unique_index(name, index);
 		LLVMValueRef dw_addr = LLVMBuildAdd(gallivm->builder, base_dw_addr,
 					LLVMConstInt(ctx->i32, param * 4, 0), "");
