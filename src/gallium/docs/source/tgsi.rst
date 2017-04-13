@@ -3212,6 +3212,11 @@ For geometry shaders, this semantic label indicates that an output
 contains the index of the viewport (and scissor) to use.
 This is an integer value, and only the X component is used.
 
+If PIPE_CAP_TGSI_VS_LAYER_VIEWPORT or PIPE_CAP_TGSI_TES_LAYER_VIEWPORT is
+supported, then this semantic label can also be used in vertex or
+tessellation evaluation shaders, respectively. Only the value written in the
+last vertex processing stage is used.
+
 
 TGSI_SEMANTIC_LAYER
 """""""""""""""""""
@@ -3220,6 +3225,11 @@ For geometry shaders, this semantic label indicates that an output
 contains the layer value to use for the color and depth/stencil surfaces.
 This is an integer value, and only the X component is used.
 (Also known as rendertarget array index.)
+
+If PIPE_CAP_TGSI_VS_LAYER_VIEWPORT or PIPE_CAP_TGSI_TES_LAYER_VIEWPORT is
+supported, then this semantic label can also be used in vertex or
+tessellation evaluation shaders, respectively. Only the value written in the
+last vertex processing stage is used.
 
 
 TGSI_SEMANTIC_CULLDIST
