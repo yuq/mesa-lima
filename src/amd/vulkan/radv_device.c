@@ -2732,6 +2732,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 	unsigned format;
 	uint64_t va, s_offs, z_offs;
 	const struct radeon_surf_level *level_info = &iview->image->surface.level[level];
+	bool stencil_only = false;
 	memset(ds, 0, sizeof(*ds));
 	switch (iview->vk_format) {
 	case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -2749,6 +2750,10 @@ radv_initialise_ds_surface(struct radv_device *device,
 		ds->pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-23) |
 			S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1);
 		ds->offset_scale = 1.0f;
+		break;
+	case VK_FORMAT_S8_UINT:
+		stencil_only = true;
+		level_info = &iview->image->surface.stencil_level[level];
 		break;
 	default:
 		break;
@@ -2783,6 +2788,9 @@ radv_initialise_ds_surface(struct radv_device *device,
 		unsigned tile_mode = info->si_tile_mode_array[tiling_index];
 		unsigned stencil_tile_mode = info->si_tile_mode_array[stencil_index];
 		unsigned macro_mode = info->cik_macrotile_mode_array[macro_index];
+
+		if (stencil_only)
+			tile_mode = stencil_tile_mode;
 
 		ds->db_depth_info |=
 			S_02803C_ARRAY_MODE(G_009910_ARRAY_MODE(tile_mode)) |
