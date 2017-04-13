@@ -2228,7 +2228,6 @@ bool PaPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
 #if USE_SIMD16_FRONTEND
     simdvector a;
-    simdvector b;
 
     const simd16vector &a_16 = PaGetSimdVector_simd16(pa, pa.cur, slot);
 

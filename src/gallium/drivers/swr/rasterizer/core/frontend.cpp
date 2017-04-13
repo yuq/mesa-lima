@@ -1346,8 +1346,6 @@ static void TessellationStages(
             const uint32_t numPrims_hi = std::max<uint32_t>(numPrims, KNOB_SIMD_WIDTH) - KNOB_SIMD_WIDTH;
 
             const uint32_t primMask = GenMask(numPrims);
-            const uint32_t primMask_lo = primMask & 255;
-            const uint32_t primMask_hi = (primMask >> 8) & 255;
 
             const simd16scalari primID = _simd16_set1_epi32(dsContext.PrimitiveID);
             const simdscalari primID_lo = _simd16_extract_si(primID, 0);
@@ -1391,9 +1389,10 @@ static void TessellationStages(
 
                 if (HasRastT::value)
                 {
-                    simdvector      prim[3]; // Only deal with triangles, lines, or points
 #if USE_SIMD16_FRONTEND
                     simd16vector    prim_simd16[3];
+#else
+                    simdvector      prim[3]; // Only deal with triangles, lines, or points
 #endif
                     AR_BEGIN(FEPAAssemble, pDC->drawId);
                     bool assemble =
@@ -1691,8 +1690,6 @@ void ProcessDraw(
                             const uint32_t numPrims_hi = std::max<uint32_t>(numPrims, KNOB_SIMD_WIDTH) - KNOB_SIMD_WIDTH;
 
                             const uint32_t primMask = GenMask(numPrims);
-                            const uint32_t primMask_lo = primMask & 255;
-                            const uint32_t primMask_hi = (primMask >> 8) & 255;
 
                             const simd16scalari primID = pa.GetPrimID(work.startPrimID);
                             const simdscalari primID_lo = _simd16_extract_si(primID, 0);
