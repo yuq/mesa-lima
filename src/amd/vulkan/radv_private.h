@@ -787,6 +787,7 @@ struct radv_cmd_buffer {
 	uint32_t dynamic_buffers[4 * MAX_DYNAMIC_BUFFERS];
 	VkShaderStageFlags push_constant_stages;
 	struct radv_push_descriptor_set push_descriptors;
+	struct radv_descriptor_set meta_push_descriptors;
 
 	struct radv_cmd_buffer_upload upload;
 
@@ -1409,6 +1410,13 @@ radv_update_descriptor_set_with_template(struct radv_device *device,
                                          struct radv_descriptor_set *set,
                                          VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
                                          const void *pData);
+
+void radv_meta_push_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
+                                   VkPipelineBindPoint pipelineBindPoint,
+                                   VkPipelineLayout _layout,
+                                   uint32_t set,
+                                   uint32_t descriptorWriteCount,
+                                   const VkWriteDescriptorSet *pDescriptorWrites);
 
 void radv_initialise_cmask(struct radv_cmd_buffer *cmd_buffer,
 			   struct radv_image *image, uint32_t value);

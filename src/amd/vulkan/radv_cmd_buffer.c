@@ -1981,6 +1981,39 @@ static bool radv_init_push_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 	return true;
 }
 
+void radv_meta_push_descriptor_set(
+	struct radv_cmd_buffer*              cmd_buffer,
+	VkPipelineBindPoint                  pipelineBindPoint,
+	VkPipelineLayout                     _layout,
+	uint32_t                             set,
+	uint32_t                             descriptorWriteCount,
+	const VkWriteDescriptorSet*          pDescriptorWrites)
+{
+	RADV_FROM_HANDLE(radv_pipeline_layout, layout, _layout);
+	struct radv_descriptor_set *push_set = &cmd_buffer->meta_push_descriptors;
+	unsigned bo_offset;
+
+	assert(layout->set[set].layout->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR);
+
+	push_set->size = layout->set[set].layout->size;
+	push_set->layout = layout->set[set].layout;
+
+	if (!radv_cmd_buffer_upload_alloc(cmd_buffer, push_set->size, 32,
+	                                  &bo_offset,
+	                                  (void**) &push_set->mapped_ptr))
+		return;
+
+	push_set->va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
+	push_set->va += bo_offset;
+
+	radv_update_descriptor_sets(cmd_buffer->device, cmd_buffer,
+	                            radv_descriptor_set_to_handle(push_set),
+	                            descriptorWriteCount, pDescriptorWrites, 0, NULL);
+
+	cmd_buffer->state.descriptors[set] = push_set;
+	cmd_buffer->state.descriptors_dirty |= (1 << set);
+}
+
 void radv_CmdPushDescriptorSetKHR(
 	VkCommandBuffer                             commandBuffer,
 	VkPipelineBindPoint                         pipelineBindPoint,
