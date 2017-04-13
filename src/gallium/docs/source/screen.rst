@@ -386,6 +386,9 @@ The integer capabilities:
   most 64KB.
 * ``PIPE_CAP_TGSI_BALLOT``: Whether the BALLOT and READ_* opcodes as well as
   the SUBGROUP_* semantics are supported.
+* ``PIPE_CAP_TGSI_TES_LAYER_VIEWPORT``: Whether ``TGSI_SEMANTIC_LAYER`` and
+  ``TGSI_SEMANTIC_VIEWPORT_INDEX`` are supported as tessellation evaluation
+  shader outputs.
 
 
 .. _pipe_capf:

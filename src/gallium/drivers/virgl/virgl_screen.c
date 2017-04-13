@@ -261,6 +261,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
    case PIPE_CAP_TGSI_BALLOT:
    case PIPE_CAP_DOUBLES:
+   case PIPE_CAP_TGSI_TES_LAYER_VIEWPORT:
       return 0;
    case PIPE_CAP_VENDOR_ID:
       return 0x1af4;
