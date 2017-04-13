@@ -289,7 +289,7 @@ public:
 
    st_dst_reg dst[2];
    st_src_reg src[4];
-   st_src_reg resource; /**< sampler or buffer register */
+   st_src_reg resource; /**< sampler, image or buffer register */
    st_src_reg *tex_offsets;
 
    /** Pointer to the ir source this tree came from for debugging */
@@ -3764,6 +3764,59 @@ glsl_to_tgsi_visitor::visit_shared_intrinsic(ir_call *ir)
    }
 }
 
+static void
+get_image_qualifiers(ir_dereference *ir, const glsl_type **type,
+                     bool *memory_coherent, bool *memory_volatile,
+                     bool *memory_restrict, unsigned *image_format)
+{
+
+   switch (ir->ir_type) {
+   case ir_type_dereference_record: {
+      ir_dereference_record *deref_record = ir->as_dereference_record();
+      const glsl_type *struct_type = deref_record->record->type;
+
+      for (unsigned i = 0; i < struct_type->length; i++) {
+         if (!strcmp(struct_type->fields.structure[i].name,
+                     deref_record->field)) {
+            *type = struct_type->fields.structure[i].type;
+            *memory_coherent =
+               struct_type->fields.structure[i].memory_coherent;
+            *memory_volatile =
+               struct_type->fields.structure[i].memory_volatile;
+            *memory_restrict =
+               struct_type->fields.structure[i].memory_restrict;
+            *image_format =
+               struct_type->fields.structure[i].image_format;
+            break;
+         }
+      }
+      break;
+   }
+
+   case ir_type_dereference_array: {
+      ir_dereference_array *deref_arr = ir->as_dereference_array();
+      get_image_qualifiers((ir_dereference *)deref_arr->array, type,
+                           memory_coherent, memory_volatile, memory_restrict,
+                           image_format);
+      break;
+   }
+
+   case ir_type_dereference_variable: {
+      ir_variable *var = ir->variable_referenced();
+
+      *type = var->type->without_array();
+      *memory_coherent = var->data.memory_coherent;
+      *memory_volatile = var->data.memory_volatile;
+      *memory_restrict = var->data.memory_restrict;
+      *image_format = var->data.image_format;
+      break;
+   }
+
+   default:
+      break;
+   }
+}
+
 void
 glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 {
@@ -3771,14 +3824,19 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 
    ir_dereference *img = (ir_dereference *)param;
    const ir_variable *imgvar = img->variable_referenced();
-   const glsl_type *type = imgvar->type->without_array();
    unsigned sampler_array_size = 1, sampler_base = 0;
+   bool memory_coherent = false, memory_volatile = false, memory_restrict = false;
+   unsigned image_format = 0;
+   const glsl_type *type = NULL;
+
+   get_image_qualifiers(img, &type, &memory_coherent, &memory_volatile,
+                        &memory_restrict, &image_format);
 
    st_src_reg reladdr;
    st_src_reg image(PROGRAM_IMAGE, 0, GLSL_TYPE_UINT);
    uint16_t index = 0;
    get_deref_offsets(img, &sampler_array_size, &sampler_base,
-                     &index, &reladdr, true);
+                     &index, &reladdr, !imgvar->contains_bindless());
 
    image.index = index;
    if (reladdr.file != PROGRAM_UNDEFINED) {
@@ -3892,19 +3950,26 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
          inst->dst[0].writemask = WRITEMASK_XYZW;
    }
 
-   inst->resource = image;
-   inst->sampler_array_size = sampler_array_size;
-   inst->sampler_base = sampler_base;
+   if (imgvar->contains_bindless()) {
+      img->accept(this);
+      inst->resource = this->result;
+      inst->resource.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y,
+                                             SWIZZLE_X, SWIZZLE_Y);
+   } else {
+      inst->resource = image;
+      inst->sampler_array_size = sampler_array_size;
+      inst->sampler_base = sampler_base;
+   }
 
    inst->tex_target = type->sampler_index();
    inst->image_format = st_mesa_format_to_pipe_format(st_context(ctx),
-         _mesa_get_shader_image_format(imgvar->data.image_format));
+         _mesa_get_shader_image_format(image_format));
 
-   if (imgvar->data.memory_coherent)
+   if (memory_coherent)
       inst->buffer_access |= TGSI_MEMORY_COHERENT;
-   if (imgvar->data.memory_restrict)
+   if (memory_restrict)
       inst->buffer_access |= TGSI_MEMORY_RESTRICT;
-   if (imgvar->data.memory_volatile)
+   if (memory_volatile)
       inst->buffer_access |= TGSI_MEMORY_VOLATILE;
 }
 
@@ -5924,7 +5989,12 @@ compile_tgsi_instruction(struct st_translate *t,
       } else if (inst->resource.file == PROGRAM_BUFFER) {
          src[0] = t->buffers[inst->resource.index];
       } else {
-         src[0] = t->images[inst->resource.index];
+         if (inst->resource.file == PROGRAM_IMAGE) {
+            src[0] = t->images[inst->resource.index];
+         } else {
+            /* Bindless images. */
+            src[0] = translate_src(t, &inst->resource);
+         }
          tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
       }
       if (inst->resource.reladdr)
@@ -5941,7 +6011,12 @@ compile_tgsi_instruction(struct st_translate *t,
       } else if (inst->resource.file == PROGRAM_BUFFER) {
          dst[0] = ureg_dst(t->buffers[inst->resource.index]);
       } else {
-         dst[0] = ureg_dst(t->images[inst->resource.index]);
+         if (inst->resource.file == PROGRAM_IMAGE) {
+            dst[0] = ureg_dst(t->images[inst->resource.index]);
+         } else {
+            /* Bindless images. */
+            dst[0] = ureg_dst(translate_src(t, &inst->resource));
+         }
          tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
       }
       dst[0] = ureg_writemask(dst[0], inst->dst[0].writemask);
