@@ -196,4 +196,7 @@ void swr_clear_init(struct pipe_context *pipe);
 void swr_draw_init(struct pipe_context *pipe);
 
 void swr_finish(struct pipe_context *pipe);
+
+void swr_do_msaa_resolve(struct pipe_resource *src_resource,
+                         struct pipe_resource *dst_resource);
 #endif
