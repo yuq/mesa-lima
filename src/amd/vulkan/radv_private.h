@@ -576,16 +576,16 @@ struct radv_descriptor_update_template_entry {
 	VkDescriptorType descriptor_type;
 
 	/* The number of descriptors to update */
-	uint16_t descriptor_count;
+	uint32_t descriptor_count;
 
 	/* Into mapped_ptr or dynamic_descriptors, in units of the respective array */
-	uint16_t dst_offset;
+	uint32_t dst_offset;
 
 	/* In dwords. Not valid/used for dynamic descriptors */
-	uint16_t dst_stride;
+	uint32_t dst_stride;
 
-	uint16_t buffer_offset;
-	uint16_t buffer_count;
+	uint32_t buffer_offset;
+	uint32_t buffer_count;
 
 	/* Only valid for combined image samplers and samplers */
 	uint16_t has_sampler;

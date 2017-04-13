@@ -775,8 +775,8 @@ VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
 		const uint32_t buffer_offset = binding_layout->buffer_offset +
 			binding_layout->buffer_count * entry->dstArrayElement;
 		const uint32_t *immutable_samplers = NULL;
-		uint16_t dst_offset;
-		uint16_t dst_stride;
+		uint32_t dst_offset;
+		uint32_t dst_stride;
 
 		/* dst_offset is an offset into dynamic_descriptors when the descriptor
 		   is dynamic, and an offset into mapped_ptr otherwise */
