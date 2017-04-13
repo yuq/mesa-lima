@@ -504,6 +504,9 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
    anv_bo_init(&pool->bo, gem_handle, size);
    pool->bo.map = map;
 
+   if (pool->device->instance->physicalDevice.has_exec_async)
+      pool->bo.flags |= EXEC_OBJECT_ASYNC;
+
 done:
    pthread_mutex_unlock(&pool->device->mutex);
 

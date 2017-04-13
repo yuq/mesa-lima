@@ -202,6 +202,8 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (result != VK_SUCCESS)
       goto fail;
 
+   device->has_exec_async = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_ASYNC);
+
    if (!anv_device_get_cache_uuid(device->uuid, device->chipset_id)) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "cannot generate UUID");
@@ -1526,6 +1528,9 @@ anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
 
    if (device->instance->physicalDevice.supports_48bit_addresses)
       bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+
+   if (device->instance->physicalDevice.has_exec_async)
+      bo->flags |= EXEC_OBJECT_ASYNC;
 
    return VK_SUCCESS;
 }

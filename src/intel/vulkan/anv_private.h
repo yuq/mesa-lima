@@ -625,6 +625,7 @@ struct anv_physical_device {
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;
     int                                         cmd_parser_version;
+    bool                                        has_exec_async;
 
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
