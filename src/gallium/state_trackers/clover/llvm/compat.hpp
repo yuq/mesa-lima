@@ -55,6 +55,7 @@
 #include <llvm/Support/FormattedStream.h>
 #endif
 
+#include <clang/Basic/TargetInfo.h>
 #include <clang/Frontend/CodeGenOptions.h>
 #include <clang/Frontend/CompilerInstance.h>
 
