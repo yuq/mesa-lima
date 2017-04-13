@@ -48,6 +48,8 @@ endif
 LOCAL_MODULE := libmesa_gallium
 LOCAL_STATIC_LIBRARIES += libmesa_nir
 
+LOCAL_WHOLE_STATIC_LIBRARIES += cpufeatures
+
 # generate sources
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 intermediates := $(call local-generated-sources-dir)
