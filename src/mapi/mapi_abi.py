@@ -771,17 +771,13 @@ typedef int GLclampx;
 
 def parse_args():
     printers = ['glapi', 'es1api', 'es2api', 'shared-glapi']
-    modes = ['lib', 'app']
 
     parser = OptionParser(usage='usage: %prog [options] <filename>')
     parser.add_option('-p', '--printer', dest='printer',
             help='printer to use: %s' % (", ".join(printers)))
-    parser.add_option('-m', '--mode', dest='mode',
-            help='target user: %s' % (", ".join(modes)))
 
     options, args = parser.parse_args()
-    if not args or options.printer not in printers or \
-            options.mode not in modes:
+    if not args or options.printer not in printers:
         parser.print_help()
         sys.exit(1)
 
@@ -804,8 +800,7 @@ def main():
     abi_sanity_check(entries)
 
     printer = printers[options.printer](entries)
-    if options.mode == 'lib':
-        printer.output_for_lib()
+    printer.output_for_lib()
 
 if __name__ == '__main__':
     main()

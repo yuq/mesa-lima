@@ -93,7 +93,7 @@ endif
 
 shared-glapi/glapi_mapi_tmp.h : glapi/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/mapi_abi.py --mode lib --printer shared-glapi \
+	$(PYTHON_GEN) $(srcdir)/mapi_abi.py --printer shared-glapi \
 		$(srcdir)/glapi/gen/gl_and_es_API.xml > $@
 
 if HAVE_OPENGL
@@ -192,7 +192,7 @@ endif
 
 es1api/glapi_mapi_tmp.h: glapi/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/mapi_abi.py --mode lib --printer es1api \
+	$(PYTHON_GEN) $(srcdir)/mapi_abi.py --printer es1api \
 		$(srcdir)/glapi/gen/gl_and_es_API.xml > $@
 
 if HAVE_OPENGL_ES2
@@ -237,7 +237,7 @@ endif
 
 es2api/glapi_mapi_tmp.h: glapi/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/mapi_abi.py --mode lib --printer es2api \
+	$(PYTHON_GEN) $(srcdir)/mapi_abi.py --printer es2api \
 		$(srcdir)/glapi/gen/gl_and_es_API.xml > $@
 
 include $(top_srcdir)/install-lib-links.mk
