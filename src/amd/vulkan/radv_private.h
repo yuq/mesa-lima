@@ -1385,16 +1385,6 @@ struct radv_query_pool {
 	uint32_t pipeline_stats_mask;
 };
 
-VkResult
-radv_temp_descriptor_set_create(struct radv_device *device,
-				struct radv_cmd_buffer *cmd_buffer,
-				VkDescriptorSetLayout _layout,
-				VkDescriptorSet *_set);
-
-void
-radv_temp_descriptor_set_destroy(struct radv_device *device,
-				 VkDescriptorSet _set);
-
 void
 radv_update_descriptor_sets(struct radv_device *device,
                             struct radv_cmd_buffer *cmd_buffer,
