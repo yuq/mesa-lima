@@ -2499,6 +2499,8 @@ void BinPostSetupLines_simd16(
         primMask = primMask & ~maskOutsideScissor;
     }
 
+    const simdscalar unused = _simd_setzero_ps();
+
     if (!primMask)
     {
         goto endBinLines;
@@ -2523,8 +2525,6 @@ void BinPostSetupLines_simd16(
     __m128 vHorizY[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
     __m128 vHorizZ[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
     __m128 vHorizW[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
-
-    const simdscalar unused = _simd_setzero_ps();
 
     vTranspose3x8(vHorizX[0], _simd16_extract_ps(prim[0].x, 0), _simd16_extract_ps(prim[1].x, 0), unused);
     vTranspose3x8(vHorizY[0], _simd16_extract_ps(prim[0].y, 0), _simd16_extract_ps(prim[1].y, 0), unused);
