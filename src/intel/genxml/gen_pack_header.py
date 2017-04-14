@@ -347,7 +347,7 @@ class Group(object):
                 dwords[index + 1] = dwords[index]
                 index = index + 1
 
-    def emit_pack_function(self, start):
+    def emit_pack_function(self):
         dwords = {}
         self.collect_dwords(dwords, 0, "")
 
@@ -579,7 +579,7 @@ class Parser(object):
         # Cast dst to make header C++ friendly
         print("   uint32_t * restrict dw = (uint32_t * restrict) dst;")
 
-        group.emit_pack_function(0)
+        group.emit_pack_function()
 
         print("}\n")
 
