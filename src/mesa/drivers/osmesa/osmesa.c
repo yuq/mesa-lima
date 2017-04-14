@@ -1020,15 +1020,15 @@ OSMesaMakeCurrent( OSMesaContext osmesa, void *buffer, GLenum type,
     * There is no back color buffer.
     * If the user tries to use a 8, 16 or 32-bit/channel buffer that
     * doesn't match what Mesa was compiled for (CHAN_BITS) the
-    * _mesa_add_renderbuffer() function will create a "wrapper" renderbuffer
-    * that converts rendering from CHAN_BITS to the user-requested channel
-    * size.
+    * _mesa_attach_and_reference_rb() function will create a "wrapper"
+    * renderbuffer that converts rendering from CHAN_BITS to the
+    * user-requested channel size.
     */
    if (!osmesa->srb) {
       osmesa->srb = new_osmesa_renderbuffer(&osmesa->mesa, osmesa->format, type);
       _mesa_remove_renderbuffer(osmesa->gl_buffer, BUFFER_FRONT_LEFT);
-      _mesa_add_renderbuffer(osmesa->gl_buffer, BUFFER_FRONT_LEFT,
-                             &osmesa->srb->Base);
+      _mesa_attach_and_reference_rb(osmesa->gl_buffer, BUFFER_FRONT_LEFT,
+                                    &osmesa->srb->Base);
       assert(osmesa->srb->Base.RefCount == 2);
    }
 
@@ -1051,8 +1051,8 @@ OSMesaMakeCurrent( OSMesaContext osmesa, void *buffer, GLenum type,
     * renderbuffer adaptor/wrapper if needed (for bpp conversion).
     */
    _mesa_remove_renderbuffer(osmesa->gl_buffer, BUFFER_FRONT_LEFT);
-   _mesa_add_renderbuffer(osmesa->gl_buffer, BUFFER_FRONT_LEFT,
-                          &osmesa->srb->Base);
+   _mesa_attach_and_reference_rb(osmesa->gl_buffer, BUFFER_FRONT_LEFT,
+                                 &osmesa->srb->Base);
 
 
    /* this updates the visual's red/green/blue/alphaBits fields */
