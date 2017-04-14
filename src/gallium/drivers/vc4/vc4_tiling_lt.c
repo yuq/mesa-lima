@@ -61,7 +61,7 @@ static void
 vc4_load_utile(void *cpu, void *gpu, uint32_t cpu_stride, uint32_t cpp)
 {
         uint32_t gpu_stride = vc4_utile_stride(cpp);
-#if defined(VC4_BUILD_NEON) && defined(__ARM_ARCH)
+#if defined(VC4_BUILD_NEON) && defined(PIPE_ARCH_ARM)
         if (gpu_stride == 8) {
                 __asm__ volatile (
                         /* Load from the GPU in one shot, no interleave, to
@@ -118,7 +118,7 @@ vc4_store_utile(void *gpu, void *cpu, uint32_t cpu_stride, uint32_t cpp)
 {
         uint32_t gpu_stride = vc4_utile_stride(cpp);
 
-#if defined(VC4_BUILD_NEON) && defined(__ARM_ARCH)
+#if defined(VC4_BUILD_NEON) && defined(PIPE_ARCH_ARM)
         if (gpu_stride == 8) {
                 __asm__ volatile (
                         /* Load each 8-byte line from cpu-side source,
