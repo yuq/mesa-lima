@@ -653,7 +653,7 @@ void radv_GetPhysicalDeviceProperties(
 		.storageImageSampleCounts                 = VK_SAMPLE_COUNT_1_BIT,
 		.maxSampleMaskWords                       = 1,
 		.timestampComputeAndGraphics              = false,
-		.timestampPeriod                          = 100000.0 / pdevice->rad_info.clock_crystal_freq,
+		.timestampPeriod                          = 1000000.0 / pdevice->rad_info.clock_crystal_freq,
 		.maxClipDistances                         = 8,
 		.maxCullDistances                         = 8,
 		.maxCombinedClipAndCullDistances          = 8,
