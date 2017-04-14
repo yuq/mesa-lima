@@ -8,15 +8,15 @@ http://0x04.net/cgit/index.cgi/rules-ng-ng
 git clone git://0x04.net/rules-ng-ng
 
 The rules-ng-ng source files this header was generated from are:
-- state.xml     (  19930 bytes, from 2016-12-14 15:25:40)
-- common.xml    (  23473 bytes, from 2016-12-11 10:32:13)
-- state_hi.xml  (  26403 bytes, from 2016-12-14 06:43:27)
+- state.xml     (  19930 bytes, from 2017-01-07 14:27:54)
+- common.xml    (  23473 bytes, from 2017-01-07 14:27:54)
+- state_hi.xml  (  26403 bytes, from 2017-01-07 14:27:54)
 - copyright.xml (   1597 bytes, from 2016-10-29 07:29:22)
 - state_2d.xml  (  51552 bytes, from 2016-10-29 07:29:22)
-- state_3d.xml  (  66957 bytes, from 2016-12-15 11:31:03)
+- state_3d.xml  (  66964 bytes, from 2017-04-13 12:38:05)
 - state_vg.xml  (   5975 bytes, from 2016-10-29 07:29:22)
 
-Copyright (C) 2012-2016 by the following authors:
+Copyright (C) 2012-2017 by the following authors:
 - Wladimir J. van der Laan <laanwj@gmail.com>
 - Christian Gmeiner <christian.gmeiner@gmail.com>
 - Lucas Stach <l.stach@pengutronix.de>
@@ -989,8 +989,8 @@ DEALINGS IN THE SOFTWARE.
 
 #define VIVS_RS_UNK016B4					0x000016b4
 
-#define VIVS_RS_UNK016B8					0x000016b8
-#define VIVS_RS_UNK016B8_UNK0					0x00000001
+#define VIVS_RS_SINGLE_BUFFER					0x000016b8
+#define VIVS_RS_SINGLE_BUFFER_ENABLE				0x00000001
 
 #define VIVS_RS_UNK016BC					0x000016bc
 
