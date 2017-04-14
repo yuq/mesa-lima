@@ -527,17 +527,16 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
       }
 
       buffer = &cs->real_buffers[index];
-      buffer->u.real.priority_usage |= 1llu << priority;
-      buffer->usage |= usage;
    } else {
       index = amdgpu_lookup_or_add_sparse_buffer(acs, bo);
       if (index < 0)
          return 0;
 
       buffer = &cs->sparse_buffers[index];
-      buffer->usage |= usage;
-      buffer->u.real.priority_usage |= 1llu << priority;
    }
+
+   buffer->u.real.priority_usage |= 1llu << priority;
+   buffer->usage |= usage;
 
    cs->last_added_bo = bo;
    cs->last_added_bo_index = index;
