@@ -235,6 +235,8 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
                              formal->name);
             return false;
          }
+
+         val->variable_referenced()->data.must_be_shader_input = 1;
       }
 
       /* Verify that 'out' and 'inout' actual parameters are lvalues. */

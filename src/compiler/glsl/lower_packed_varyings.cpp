@@ -742,10 +742,11 @@ lower_packed_varyings_visitor::get_packed_varying_deref(
 bool
 lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
 {
-   /* Things composed of vec4's and varyings with explicitly assigned
-    * locations don't need lowering.  Everything else does.
+   /* Things composed of vec4's, varyings with explicitly assigned
+    * locations or varyings marked as must_be_shader_input (which might be used
+    * by interpolateAt* functions) shouldn't be lowered. Everything else can be.
     */
-   if (var->data.explicit_location)
+   if (var->data.explicit_location || var->data.must_be_shader_input)
       return false;
 
    /* Override disable_varying_packing if the var is only used by transform

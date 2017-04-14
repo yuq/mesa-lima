@@ -1461,17 +1461,24 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
       ? consumer_stage : producer_stage;
    const glsl_type *type = get_varying_type(var, stage);
 
+   if (producer_var && consumer_var &&
+       consumer_var->data.must_be_shader_input) {
+      producer_var->data.must_be_shader_input = 1;
+   }
+
    this->matches[this->num_matches].packing_class
       = this->compute_packing_class(var);
    this->matches[this->num_matches].packing_order
       = this->compute_packing_order(var);
-   if (this->disable_varying_packing && !is_varying_packing_safe(type, var)) {
+   if ((this->disable_varying_packing && !is_varying_packing_safe(type, var)) ||
+       var->data.must_be_shader_input) {
       unsigned slots = type->count_attribute_slots(false);
       this->matches[this->num_matches].num_components = slots * 4;
    } else {
       this->matches[this->num_matches].num_components
          = type->component_slots();
    }
+
    this->matches[this->num_matches].producer_var = producer_var;
    this->matches[this->num_matches].consumer_var = consumer_var;
    this->num_matches++;
@@ -1544,7 +1551,8 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
        * we can pack varyings together that are only used for transform
        * feedback.
        */
-      if ((this->disable_varying_packing &&
+      if (var->data.must_be_shader_input ||
+          (this->disable_varying_packing &&
            !(previous_var_xfb_only && var->data.is_xfb_only)) ||
           (i > 0 && this->matches[i - 1].packing_class
           != this->matches[i].packing_class )) {
@@ -1660,8 +1668,9 @@ varying_matches::compute_packing_class(const ir_variable *var)
     * Therefore, the packing class depends only on the interpolation type.
     */
    unsigned packing_class = var->data.centroid | (var->data.sample << 1) |
-                            (var->data.patch << 2);
-   packing_class *= 4;
+                            (var->data.patch << 2) |
+                            (var->data.must_be_shader_input << 3);
+   packing_class *= 8;
    packing_class += var->is_interpolation_flat()
       ? unsigned(INTERP_MODE_FLAT) : var->data.interpolation;
    return packing_class;
