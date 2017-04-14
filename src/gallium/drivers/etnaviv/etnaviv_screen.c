@@ -800,6 +800,18 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
    }
    screen->features[4] = val;
 
+   if (etna_gpu_get_param(screen->gpu, ETNA_GPU_FEATURES_5, &val)) {
+      DBG("could not get ETNA_GPU_FEATURES_5");
+      goto fail;
+   }
+   screen->features[5] = val;
+
+   if (etna_gpu_get_param(screen->gpu, ETNA_GPU_FEATURES_6, &val)) {
+      DBG("could not get ETNA_GPU_FEATURES_6");
+      goto fail;
+   }
+   screen->features[6] = val;
+
    if (!etna_get_specs(screen))
       goto fail;
 
