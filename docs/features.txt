@@ -136,17 +136,17 @@ GL 4.0, GLSL 4.00 --- all DONE: i965/gen7+, nvc0, r600, radeonsi
   GL_ARB_transform_feedback3                            DONE (i965/gen7+, llvmpipe, softpipe, swr)
 
 
-GL 4.1, GLSL 4.10 --- all DONE: i965/hsw+, nvc0, r600, radeonsi
+GL 4.1, GLSL 4.10 --- all DONE: i965/gen7+, nvc0, r600, radeonsi
 
   GL_ARB_ES2_compatibility                              DONE (i965, nv50, llvmpipe, softpipe, swr)
   GL_ARB_get_program_binary                             DONE (0 binary formats)
   GL_ARB_separate_shader_objects                        DONE (all drivers)
-  GL_ARB_shader_precision                               DONE (i965/hsw+, all drivers that support GLSL 4.10)
-  GL_ARB_vertex_attrib_64bit                            DONE (i965/hsw+, llvmpipe, softpipe)
+  GL_ARB_shader_precision                               DONE (i965/gen7+, all drivers that support GLSL 4.10)
+  GL_ARB_vertex_attrib_64bit                            DONE (i965/gen7+, llvmpipe, softpipe)
   GL_ARB_viewport_array                                 DONE (i965, nv50, llvmpipe, softpipe)
 
 
-GL 4.2, GLSL 4.20 -- all DONE: i965/hsw+, nvc0, radeonsi
+GL 4.2, GLSL 4.20 -- all DONE: i965/gen7+, nvc0, radeonsi
 
   GL_ARB_texture_compression_bptc                       DONE (i965, r600)
   GL_ARB_compressed_texture_pixel_storage               DONE (all drivers)
