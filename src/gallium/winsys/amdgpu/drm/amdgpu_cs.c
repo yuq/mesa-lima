@@ -695,8 +695,6 @@ static void amdgpu_ib_finalize(struct amdgpu_ib *ib)
 static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
                                    enum ring_type ring_type)
 {
-   int i;
-
    switch (ring_type) {
    case RING_DMA:
       cs->request.ip_type = AMDGPU_HW_IP_DMA;
@@ -720,9 +718,7 @@ static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
       break;
    }
 
-   for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
-      cs->buffer_indices_hashlist[i] = -1;
-   }
+   memset(cs->buffer_indices_hashlist, -1, sizeof(cs->buffer_indices_hashlist));
    cs->last_added_bo = NULL;
 
    cs->request.number_of_ibs = 1;
@@ -757,9 +753,7 @@ static void amdgpu_cs_context_cleanup(struct amdgpu_cs_context *cs)
    cs->num_sparse_buffers = 0;
    amdgpu_fence_reference(&cs->fence, NULL);
 
-   for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
-      cs->buffer_indices_hashlist[i] = -1;
-   }
+   memset(cs->buffer_indices_hashlist, -1, sizeof(cs->buffer_indices_hashlist));
    cs->last_added_bo = NULL;
 }
 
