@@ -603,10 +603,12 @@ etna_emit_state(struct etna_context *ctx)
    if (unlikely(dirty & (ETNA_DIRTY_STENCIL_REF))) {
       /*014A0*/ EMIT_STATE(PE_STENCIL_CONFIG_EXT, ctx->stencil_ref.PE_STENCIL_CONFIG_EXT);
    }
+   if (unlikely(dirty & (ETNA_DIRTY_BLEND | ETNA_DIRTY_FRAMEBUFFER))) {
+      struct etna_blend_state *blend = etna_blend_state(ctx->blend);
+      /*014A4*/ EMIT_STATE(PE_LOGIC_OP, blend->PE_LOGIC_OP | ctx->framebuffer.PE_LOGIC_OP);
+   }
    if (unlikely(dirty & (ETNA_DIRTY_BLEND))) {
       struct etna_blend_state *blend = etna_blend_state(ctx->blend);
-
-      /*014A4*/ EMIT_STATE(PE_LOGIC_OP, blend->PE_LOGIC_OP);
       for (int x = 0; x < 2; ++x) {
          /*014A8*/ EMIT_STATE(PE_DITHER(x), blend->PE_DITHER[x]);
       }

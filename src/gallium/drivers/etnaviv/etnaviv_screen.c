@@ -675,6 +675,10 @@ etna_get_specs(struct etna_screen *screen)
    screen->specs.max_rendertarget_size =
       VIV_FEATURE(screen, chipMinorFeatures0, RENDERTARGET_8K) ? 8192 : 2048;
 
+   screen->specs.single_buffer = VIV_FEATURE(screen, chipMinorFeatures4, SINGLE_BUFFER);
+   if (screen->specs.single_buffer)
+      DBG("etnaviv: Single buffer mode enabled with %d pixel pipes\n", screen->specs.pixel_pipes);
+
    return true;
 
 fail:

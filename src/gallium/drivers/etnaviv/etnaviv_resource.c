@@ -249,8 +249,14 @@ etna_resource_create(struct pipe_screen *pscreen,
       if (util_format_is_compressed(templat->format))
          layout = ETNA_LAYOUT_LINEAR;
    } else if (templat->target != PIPE_BUFFER) {
-      bool want_multitiled = screen->specs.pixel_pipes > 1;
+      bool want_multitiled = false;
       bool want_supertiled = screen->specs.can_supertile && !DBG_ENABLED(ETNA_DBG_NO_SUPERTILE);
+
+      /* When this GPU supports single-buffer rendering, don't ever enable
+       * multi-tiling. This replicates the blob behavior on GC3000.
+       */
+      if (!screen->specs.single_buffer)
+         want_multitiled = screen->specs.pixel_pipes > 1;
 
       /* Keep single byte blocksized resources as tiled, since we
        * are unable to use the RS blit to de-tile them. However,
