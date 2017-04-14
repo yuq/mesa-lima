@@ -676,7 +676,7 @@ void radv_GetPhysicalDeviceProperties(
 		.deviceID = pdevice->rad_info.pci_id,
 		.deviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
 		.limits = limits,
-		.sparseProperties = {0}, /* Broadwell doesn't do sparse. */
+		.sparseProperties = {0},
 	};
 
 	strcpy(pProperties->deviceName, pdevice->name);
