@@ -1663,7 +1663,8 @@ _mesa_BindTexture( GLenum target, GLuint texName )
 
    targetIndex = _mesa_tex_target_to_index(ctx, target);
    if (targetIndex < 0) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBindTexture(target)");
+      _mesa_error(ctx, GL_INVALID_ENUM, "glBindTexture(target = %s)",
+                  _mesa_enum_to_string(target));
       return;
    }
    assert(targetIndex < NUM_TEXTURE_TARGETS);
