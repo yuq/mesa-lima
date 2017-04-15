@@ -658,16 +658,16 @@ void
 ir3_emit_vs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_context *ctx, const struct pipe_draw_info *info)
 {
-	uint32_t dirty = ctx->dirty;
+	enum fd_dirty_shader_state dirty = ctx->dirty_shader[PIPE_SHADER_VERTEX];
 
 	debug_assert(v->type == SHADER_VERTEX);
 
-	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
+	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_CONST)) {
 		struct fd_constbuf_stateobj *constbuf;
 		bool shader_dirty;
 
 		constbuf = &ctx->constbuf[PIPE_SHADER_VERTEX];
-		shader_dirty = !!(dirty & FD_SHADER_DIRTY_VP);
+		shader_dirty = !!(dirty & FD_DIRTY_SHADER_PROG);
 
 		emit_user_consts(ctx, v, ring, constbuf);
 		emit_ubos(ctx, v, ring, constbuf);
@@ -718,16 +718,16 @@ void
 ir3_emit_fs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_context *ctx)
 {
-	uint32_t dirty = ctx->dirty;
+	enum fd_dirty_shader_state dirty = ctx->dirty_shader[PIPE_SHADER_FRAGMENT];
 
 	debug_assert(v->type == SHADER_FRAGMENT);
 
-	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
+	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_CONST)) {
 		struct fd_constbuf_stateobj *constbuf;
 		bool shader_dirty;
 
 		constbuf = &ctx->constbuf[PIPE_SHADER_FRAGMENT];
-		shader_dirty = !!(dirty & FD_SHADER_DIRTY_FP);
+		shader_dirty = !!(dirty & FD_DIRTY_SHADER_PROG);
 
 		emit_user_consts(ctx, v, ring, constbuf);
 		emit_ubos(ctx, v, ring, constbuf);

@@ -490,7 +490,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 {
 	const struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
 	const struct ir3_shader_variant *fp = fd3_emit_get_fp(emit);
-	const uint32_t dirty = emit->dirty;
+	const enum fd_dirty_3d_state dirty = emit->dirty;
 
 	emit_marker(ring, 5);
 
@@ -783,13 +783,13 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A3XX_RB_BLEND_ALPHA_FLOAT(bcolor->color[3]));
 	}
 
-	if (dirty & (FD_DIRTY_VERTTEX | FD_DIRTY_FRAGTEX))
+	if (dirty & FD_DIRTY_TEX)
 		fd_wfi(ctx->batch, ring);
 
-	if (dirty & FD_DIRTY_VERTTEX)
+	if (ctx->dirty_shader[PIPE_SHADER_VERTEX] & FD_DIRTY_SHADER_TEX)
 		emit_textures(ctx, ring, SB_VERT_TEX, &ctx->tex[PIPE_SHADER_VERTEX]);
 
-	if (dirty & FD_DIRTY_FRAGTEX)
+	if (ctx->dirty_shader[PIPE_SHADER_FRAGMENT] & FD_DIRTY_SHADER_TEX)
 		emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->tex[PIPE_SHADER_FRAGMENT]);
 }
 

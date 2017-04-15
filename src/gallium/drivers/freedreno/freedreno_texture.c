@@ -92,13 +92,8 @@ fd_sampler_states_bind(struct pipe_context *pctx,
 	struct fd_context *ctx = fd_context(pctx);
 
 	bind_sampler_states(&ctx->tex[shader], start, nr, hwcso);
-
-	if (shader == PIPE_SHADER_FRAGMENT) {
-		ctx->dirty |= FD_DIRTY_FRAGTEX;
-	}
-	else if (shader == PIPE_SHADER_VERTEX) {
-		ctx->dirty |= FD_DIRTY_VERTTEX;
-	}
+	ctx->dirty_shader[shader] |= FD_DIRTY_SHADER_TEX;
+	ctx->dirty |= FD_DIRTY_TEX;
 }
 
 void
@@ -109,17 +104,8 @@ fd_set_sampler_views(struct pipe_context *pctx, enum pipe_shader_type shader,
 	struct fd_context *ctx = fd_context(pctx);
 
 	set_sampler_views(&ctx->tex[shader], start, nr, views);
-
-	switch (shader) {
-	case PIPE_SHADER_FRAGMENT:
-		ctx->dirty |= FD_DIRTY_FRAGTEX;
-		break;
-	case PIPE_SHADER_VERTEX:
-		ctx->dirty |= FD_DIRTY_VERTTEX;
-		break;
-	default:
-		break;
-	}
+	ctx->dirty_shader[shader] |= FD_DIRTY_SHADER_TEX;
+	ctx->dirty |= FD_DIRTY_TEX;
 }
 
 void

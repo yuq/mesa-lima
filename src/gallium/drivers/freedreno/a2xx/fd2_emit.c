@@ -182,7 +182,7 @@ fd2_emit_vertex_bufs(struct fd_ringbuffer *ring, uint32_t val,
 }
 
 void
-fd2_emit_state(struct fd_context *ctx, const uint32_t dirty)
+fd2_emit_state(struct fd_context *ctx, const enum fd_dirty_3d_state dirty)
 {
 	struct fd2_blend_stateobj *blend = fd2_blend_stateobj(ctx->blend);
 	struct fd2_zsa_stateobj *zsa = fd2_zsa_stateobj(ctx->zsa);
@@ -284,7 +284,7 @@ fd2_emit_state(struct fd_context *ctx, const uint32_t dirty)
 		fd2_program_emit(ring, &ctx->prog);
 	}
 
-	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
+	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONST)) {
 		emit_constants(ring,  VS_CONST_BASE * 4,
 				&ctx->constbuf[PIPE_SHADER_VERTEX],
 				(dirty & FD_DIRTY_PROG) ? ctx->prog.vp : NULL);
@@ -309,7 +309,7 @@ fd2_emit_state(struct fd_context *ctx, const uint32_t dirty)
 		OUT_RING(ring, blend->rb_colormask);
 	}
 
-	if (dirty & (FD_DIRTY_VERTTEX | FD_DIRTY_FRAGTEX | FD_DIRTY_PROG))
+	if (dirty & (FD_DIRTY_TEX | FD_DIRTY_PROG))
 		emit_textures(ring, ctx);
 }
 

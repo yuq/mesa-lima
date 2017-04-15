@@ -78,11 +78,13 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 
 	if (!ir3_shader_key_equal(last_key, key)) {
 		if (ir3_shader_key_changes_fs(last_key, key)) {
-			ctx->dirty |= FD_SHADER_DIRTY_FP;
+			ctx->dirty_shader[PIPE_SHADER_FRAGMENT] |= FD_DIRTY_SHADER_PROG;
+			ctx->dirty |= FD_DIRTY_PROG;
 		}
 
 		if (ir3_shader_key_changes_vs(last_key, key)) {
-			ctx->dirty |= FD_SHADER_DIRTY_VP;
+			ctx->dirty_shader[PIPE_SHADER_VERTEX] |= FD_DIRTY_SHADER_PROG;
+			ctx->dirty |= FD_DIRTY_PROG;
 		}
 
 		fd5_ctx->last_key = *key;

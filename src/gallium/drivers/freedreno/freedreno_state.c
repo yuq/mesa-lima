@@ -109,7 +109,8 @@ fd_set_constant_buffer(struct pipe_context *pctx,
 
 	so->enabled_mask |= 1 << index;
 	so->dirty_mask |= 1 << index;
-	ctx->dirty |= FD_DIRTY_CONSTBUF;
+	ctx->dirty_shader[shader] |= FD_DIRTY_SHADER_CONST;
+	ctx->dirty |= FD_DIRTY_CONST;
 }
 
 static void

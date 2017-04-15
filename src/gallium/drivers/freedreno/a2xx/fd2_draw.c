@@ -284,9 +284,12 @@ fd2_clear(struct fd_context *ctx, unsigned buffers,
 			FD_DIRTY_RASTERIZER |
 			FD_DIRTY_SAMPLE_MASK |
 			FD_DIRTY_PROG |
-			FD_DIRTY_CONSTBUF |
+			FD_DIRTY_CONST |
 			FD_DIRTY_BLEND |
 			FD_DIRTY_FRAMEBUFFER;
+
+	ctx->dirty_shader[PIPE_SHADER_VERTEX]   |= FD_DIRTY_SHADER_PROG;
+	ctx->dirty_shader[PIPE_SHADER_FRAGMENT] |= FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_CONST;
 }
 
 void

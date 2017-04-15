@@ -107,6 +107,42 @@ struct fd_vertex_state {
 	struct fd_vertexbuf_stateobj vertexbuf;
 };
 
+/* global 3d pipeline dirty state: */
+enum fd_dirty_3d_state {
+	FD_DIRTY_BLEND       = BIT(0),
+	FD_DIRTY_RASTERIZER  = BIT(1),
+	FD_DIRTY_ZSA         = BIT(2),
+	FD_DIRTY_BLEND_COLOR = BIT(3),
+	FD_DIRTY_STENCIL_REF = BIT(4),
+	FD_DIRTY_SAMPLE_MASK = BIT(5),
+	FD_DIRTY_FRAMEBUFFER = BIT(6),
+	FD_DIRTY_STIPPLE     = BIT(7),
+	FD_DIRTY_VIEWPORT    = BIT(8),
+	FD_DIRTY_VTXSTATE    = BIT(9),
+	FD_DIRTY_VTXBUF      = BIT(10),
+	FD_DIRTY_INDEXBUF    = BIT(11),
+	FD_DIRTY_SCISSOR     = BIT(12),
+	FD_DIRTY_STREAMOUT   = BIT(13),
+	FD_DIRTY_UCP         = BIT(14),
+	FD_DIRTY_BLEND_DUAL  = BIT(15),
+
+	/* These are a bit redundent with fd_dirty_shader_state, and possibly
+	 * should be removed.  (But OTOH kinda convenient in some places)
+	 */
+	FD_DIRTY_PROG        = BIT(16),
+	FD_DIRTY_CONST       = BIT(17),
+	FD_DIRTY_TEX         = BIT(18),
+
+	/* only used by a2xx.. possibly can be removed.. */
+	FD_DIRTY_TEXSTATE    = BIT(19),
+};
+
+/* per shader-stage dirty state: */
+enum fd_dirty_shader_state {
+	FD_DIRTY_SHADER_PROG  = BIT(0),
+	FD_DIRTY_SHADER_CONST = BIT(1),
+	FD_DIRTY_SHADER_TEX   = BIT(2),
+};
 
 struct fd_context {
 	struct pipe_context base;
@@ -196,34 +232,10 @@ struct fd_context {
 	struct fd_tile          tile[512];
 
 	/* which state objects need to be re-emit'd: */
-	enum {
-		FD_DIRTY_BLEND       = (1 <<  0),
-		FD_DIRTY_RASTERIZER  = (1 <<  1),
-		FD_DIRTY_ZSA         = (1 <<  2),
-		FD_DIRTY_FRAGTEX     = (1 <<  3),
-		FD_DIRTY_VERTTEX     = (1 <<  4),
-		FD_DIRTY_TEXSTATE    = (1 <<  5),
+	enum fd_dirty_3d_state dirty;
 
-		FD_SHADER_DIRTY_VP   = (1 <<  6),
-		FD_SHADER_DIRTY_FP   = (1 <<  7),
-		/* skip geom/tcs/tes/compute */
-		FD_DIRTY_PROG        = FD_SHADER_DIRTY_FP | FD_SHADER_DIRTY_VP,
-
-		FD_DIRTY_BLEND_COLOR = (1 << 12),
-		FD_DIRTY_STENCIL_REF = (1 << 13),
-		FD_DIRTY_SAMPLE_MASK = (1 << 14),
-		FD_DIRTY_FRAMEBUFFER = (1 << 15),
-		FD_DIRTY_STIPPLE     = (1 << 16),
-		FD_DIRTY_VIEWPORT    = (1 << 17),
-		FD_DIRTY_CONSTBUF    = (1 << 18),
-		FD_DIRTY_VTXSTATE    = (1 << 19),
-		FD_DIRTY_VTXBUF      = (1 << 20),
-		FD_DIRTY_INDEXBUF    = (1 << 21),
-		FD_DIRTY_SCISSOR     = (1 << 22),
-		FD_DIRTY_STREAMOUT   = (1 << 23),
-		FD_DIRTY_UCP         = (1 << 24),
-		FD_DIRTY_BLEND_DUAL  = (1 << 25),
-	} dirty;
+	/* per shader-stage dirty status: */
+	enum fd_dirty_shader_state dirty_shader[PIPE_SHADER_TYPES];
 
 	struct pipe_blend_state *blend;
 	struct pipe_rasterizer_state *rasterizer;
@@ -330,12 +342,16 @@ static inline void
 fd_context_all_dirty(struct fd_context *ctx)
 {
 	ctx->dirty = ~0;
+	for (unsigned i = 0; i < PIPE_SHADER_TYPES; i++)
+		ctx->dirty_shader[i] = ~0;
 }
 
 static inline void
 fd_context_all_clean(struct fd_context *ctx)
 {
 	ctx->dirty = 0;
+	for (unsigned i = 0; i < PIPE_SHADER_TYPES; i++)
+		ctx->dirty_shader[i] = 0;
 }
 
 static inline struct pipe_scissor_state *
