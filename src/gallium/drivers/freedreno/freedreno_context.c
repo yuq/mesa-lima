@@ -112,7 +112,7 @@ fd_context_destroy(struct pipe_context *pctx)
 
 	DBG("");
 
-	if (ctx->screen->reorder)
+	if (ctx->screen->reorder && util_queue_is_initialized(&ctx->flush_queue))
 		util_queue_destroy(&ctx->flush_queue);
 
 	fd_batch_reference(&ctx->batch, NULL);  /* unref current batch */
