@@ -551,9 +551,9 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (emit->prog == &ctx->prog) { /* evil hack to deal sanely with clear path */
-		ir3_emit_consts(vp, ring, ctx, emit->info, dirty);
+		ir3_emit_vs_consts(vp, ring, ctx, emit->info);
 		if (!emit->key.binning_pass)
-			ir3_emit_consts(fp, ring, ctx, emit->info, dirty);
+			ir3_emit_fs_consts(fp, ring, ctx);
 
 		struct pipe_stream_output_info *info = &vp->shader->stream_output;
 		if (info->num_outputs) {

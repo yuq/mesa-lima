@@ -655,23 +655,19 @@ max_tf_vtx(struct fd_context *ctx, const struct ir3_shader_variant *v)
 }
 
 void
-ir3_emit_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
-		struct fd_context *ctx, const struct pipe_draw_info *info, uint32_t dirty)
+ir3_emit_vs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_context *ctx, const struct pipe_draw_info *info)
 {
+	uint32_t dirty = ctx->dirty;
+
+	debug_assert(v->type == SHADER_VERTEX);
+
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
 		struct fd_constbuf_stateobj *constbuf;
 		bool shader_dirty;
 
-		if (v->type == SHADER_VERTEX) {
-			constbuf = &ctx->constbuf[PIPE_SHADER_VERTEX];
-			shader_dirty = !!(dirty & FD_SHADER_DIRTY_VP);
-		} else if (v->type == SHADER_FRAGMENT) {
-			constbuf = &ctx->constbuf[PIPE_SHADER_FRAGMENT];
-			shader_dirty = !!(dirty & FD_SHADER_DIRTY_FP);
-		} else {
-			unreachable("bad shader type");
-			return;
-		}
+		constbuf = &ctx->constbuf[PIPE_SHADER_VERTEX];
+		shader_dirty = !!(dirty & FD_SHADER_DIRTY_VP);
 
 		emit_user_consts(ctx, v, ring, constbuf);
 		emit_ubos(ctx, v, ring, constbuf);
@@ -681,7 +677,7 @@ ir3_emit_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 
 	/* emit driver params every time: */
 	/* TODO skip emit if shader doesn't use driver params to avoid WFI.. */
-	if (info && (v->type == SHADER_VERTEX)) {
+	if (info) {
 		uint32_t offset = v->constbase.driver_param;
 		if (v->constlen > offset) {
 			uint32_t vertex_params[IR3_DP_COUNT] = {
@@ -715,5 +711,27 @@ ir3_emit_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 				emit_tfbos(ctx, v, ring);
 			}
 		}
+	}
+}
+
+void
+ir3_emit_fs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_context *ctx)
+{
+	uint32_t dirty = ctx->dirty;
+
+	debug_assert(v->type == SHADER_FRAGMENT);
+
+	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
+		struct fd_constbuf_stateobj *constbuf;
+		bool shader_dirty;
+
+		constbuf = &ctx->constbuf[PIPE_SHADER_FRAGMENT];
+		shader_dirty = !!(dirty & FD_SHADER_DIRTY_FP);
+
+		emit_user_consts(ctx, v, ring, constbuf);
+		emit_ubos(ctx, v, ring, constbuf);
+		if (shader_dirty)
+			emit_immediates(ctx, v, ring);
 	}
 }
