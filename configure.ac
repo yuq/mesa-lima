@@ -2466,7 +2466,9 @@ if test -n "$with_gallium_drivers"; then
         xvirgl)
             HAVE_GALLIUM_VIRGL=yes
             require_libdrm "virgl"
-            require_basic_egl "virgl"
+            if test "x$enable_egl" = xyes; then
+                require_basic_egl "virgl"
+            fi
             ;;
         *)
             AC_MSG_ERROR([Unknown Gallium driver: $driver])
