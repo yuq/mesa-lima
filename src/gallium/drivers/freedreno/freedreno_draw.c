@@ -367,15 +367,6 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 
 	ctx->clear(ctx, buffers, color, depth, stencil);
 
-	ctx->dirty |= FD_DIRTY_ZSA |
-			FD_DIRTY_VIEWPORT |
-			FD_DIRTY_RASTERIZER |
-			FD_DIRTY_SAMPLE_MASK |
-			FD_DIRTY_PROG |
-			FD_DIRTY_CONSTBUF |
-			FD_DIRTY_BLEND |
-			FD_DIRTY_FRAMEBUFFER;
-
 	if (fd_mesa_debug & FD_DBG_DCLEAR)
 		fd_context_all_dirty(ctx);
 }
