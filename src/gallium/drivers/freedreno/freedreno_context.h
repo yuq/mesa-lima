@@ -325,6 +325,13 @@ fd_context_unlock(struct fd_context *ctx)
 	mtx_unlock(&ctx->screen->lock);
 }
 
+/* mark all state dirty: */
+static inline void
+fd_context_all_dirty(struct fd_context *ctx)
+{
+	ctx->dirty = ~0;
+}
+
 static inline struct pipe_scissor_state *
 fd_context_get_scissor(struct fd_context *ctx)
 {

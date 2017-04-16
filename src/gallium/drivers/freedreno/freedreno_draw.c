@@ -95,7 +95,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	if (ctx->in_blit) {
 		fd_batch_reset(batch);
-		ctx->dirty = ~0;
+		fd_context_all_dirty(ctx);
 	}
 
 	batch->blit = ctx->in_blit;
@@ -207,7 +207,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		ctx->streamout.offsets[i] += info->count;
 
 	if (fd_mesa_debug & FD_DBG_DDRAW)
-		ctx->dirty = 0xffffffff;
+		fd_context_all_dirty(ctx);
 
 	fd_batch_check_size(batch);
 
@@ -307,7 +307,7 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 
 	if (ctx->in_blit) {
 		fd_batch_reset(batch);
-		ctx->dirty = ~0;
+		fd_context_all_dirty(ctx);
 	}
 
 	/* for bookkeeping about which buffers have been cleared (and thus
@@ -377,7 +377,7 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 			FD_DIRTY_FRAMEBUFFER;
 
 	if (fd_mesa_debug & FD_DBG_DCLEAR)
-		ctx->dirty = 0xffffffff;
+		fd_context_all_dirty(ctx);
 }
 
 static void

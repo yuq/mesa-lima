@@ -264,7 +264,7 @@ batch_flush(struct fd_batch *batch)
 	 */
 	fd_hw_query_set_stage(batch, batch->draw, FD_STAGE_NULL);
 
-	batch->ctx->dirty = ~0;
+	fd_context_all_dirty(batch->ctx);
 	batch_flush_reset_dependencies(batch, true);
 
 	if (batch->ctx->screen->reorder) {
