@@ -259,8 +259,8 @@ fd2_program_validate(struct fd_context *ctx)
 
 	/* if necessary, fix up texture fetch instructions: */
 	if (ctx->dirty & (FD_DIRTY_TEXSTATE | FD_DIRTY_PROG)) {
-		patch_tex_fetches(ctx, prog->vp, &ctx->verttex);
-		patch_tex_fetches(ctx, prog->fp, &ctx->fragtex);
+		patch_tex_fetches(ctx, prog->vp, &ctx->tex[PIPE_SHADER_VERTEX]);
+		patch_tex_fetches(ctx, prog->fp, &ctx->tex[PIPE_SHADER_FRAGMENT]);
 	}
 }
 

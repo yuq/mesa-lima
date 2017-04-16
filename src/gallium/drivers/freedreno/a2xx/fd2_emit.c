@@ -152,16 +152,18 @@ emit_texture(struct fd_ringbuffer *ring, struct fd_context *ctx,
 static void
 emit_textures(struct fd_ringbuffer *ring, struct fd_context *ctx)
 {
+	struct fd_texture_stateobj *fragtex = &ctx->tex[PIPE_SHADER_FRAGMENT];
+	struct fd_texture_stateobj *verttex = &ctx->tex[PIPE_SHADER_VERTEX];
 	texmask emitted = 0;
 	unsigned i;
 
-	for (i = 0; i < ctx->verttex.num_samplers; i++)
-		if (ctx->verttex.samplers[i])
-			emitted |= emit_texture(ring, ctx, &ctx->verttex, i, emitted);
+	for (i = 0; i < verttex->num_samplers; i++)
+		if (verttex->samplers[i])
+			emitted |= emit_texture(ring, ctx, verttex, i, emitted);
 
-	for (i = 0; i < ctx->fragtex.num_samplers; i++)
-		if (ctx->fragtex.samplers[i])
-			emitted |= emit_texture(ring, ctx, &ctx->fragtex, i, emitted);
+	for (i = 0; i < fragtex->num_samplers; i++)
+		if (fragtex->samplers[i])
+			emitted |= emit_texture(ring, ctx, fragtex, i, emitted);
 }
 
 void

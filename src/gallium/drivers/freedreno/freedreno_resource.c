@@ -77,12 +77,12 @@ fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 		ctx->dirty |= FD_DIRTY_INDEXBUF;
 
 	/* Textures */
-	for (i = 0; i < ctx->verttex.num_textures && !(ctx->dirty & FD_DIRTY_VERTTEX); i++) {
-		if (ctx->verttex.textures[i] && (ctx->verttex.textures[i]->texture == prsc))
+	for (i = 0; i < ctx->tex[PIPE_SHADER_VERTEX].num_textures && !(ctx->dirty & FD_DIRTY_VERTTEX); i++) {
+		if (ctx->tex[PIPE_SHADER_VERTEX].textures[i] && (ctx->tex[PIPE_SHADER_VERTEX].textures[i]->texture == prsc))
 			ctx->dirty |= FD_DIRTY_VERTTEX;
 	}
-	for (i = 0; i < ctx->fragtex.num_textures && !(ctx->dirty & FD_DIRTY_FRAGTEX); i++) {
-		if (ctx->fragtex.textures[i] && (ctx->fragtex.textures[i]->texture == prsc))
+	for (i = 0; i < ctx->tex[PIPE_SHADER_FRAGMENT].num_textures && !(ctx->dirty & FD_DIRTY_FRAGTEX); i++) {
+		if (ctx->tex[PIPE_SHADER_FRAGMENT].textures[i] && (ctx->tex[PIPE_SHADER_FRAGMENT].textures[i]->texture == prsc))
 			ctx->dirty |= FD_DIRTY_FRAGTEX;
 	}
 }
@@ -1079,10 +1079,11 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard,
 	util_blitter_save_framebuffer(ctx->blitter,
 			ctx->batch ? &ctx->batch->framebuffer : NULL);
 	util_blitter_save_fragment_sampler_states(ctx->blitter,
-			ctx->fragtex.num_samplers,
-			(void **)ctx->fragtex.samplers);
+			ctx->tex[PIPE_SHADER_FRAGMENT].num_samplers,
+			(void **)ctx->tex[PIPE_SHADER_FRAGMENT].samplers);
 	util_blitter_save_fragment_sampler_views(ctx->blitter,
-			ctx->fragtex.num_textures, ctx->fragtex.textures);
+			ctx->tex[PIPE_SHADER_FRAGMENT].num_textures,
+			ctx->tex[PIPE_SHADER_FRAGMENT].textures);
 	if (!render_cond)
 		util_blitter_save_render_condition(ctx->blitter,
 			ctx->cond_query, ctx->cond_cond, ctx->cond_mode);

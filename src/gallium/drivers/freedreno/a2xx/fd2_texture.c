@@ -116,7 +116,7 @@ fd2_sampler_states_bind(struct pipe_context *pctx,
 		 * a change in # of fragment textures/samplers will trigger patching and
 		 * re-emitting the vertex shader:
 		 */
-		if (nr != ctx->fragtex.num_samplers)
+		if (nr != ctx->tex[PIPE_SHADER_FRAGMENT].num_samplers)
 			ctx->dirty |= FD_DIRTY_TEXSTATE;
 	}
 
@@ -166,9 +166,9 @@ unsigned
 fd2_get_const_idx(struct fd_context *ctx, struct fd_texture_stateobj *tex,
 		unsigned samp_id)
 {
-	if (tex == &ctx->fragtex)
+	if (tex == &ctx->tex[PIPE_SHADER_FRAGMENT])
 		return samp_id;
-	return samp_id + ctx->fragtex.num_samplers;
+	return samp_id + ctx->tex[PIPE_SHADER_FRAGMENT].num_samplers;
 }
 
 void

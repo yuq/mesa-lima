@@ -229,7 +229,7 @@ struct fd_context {
 	struct pipe_rasterizer_state *rasterizer;
 	struct pipe_depth_stencil_alpha_state *zsa;
 
-	struct fd_texture_stateobj verttex, fragtex;
+	struct fd_texture_stateobj tex[PIPE_SHADER_TYPES];
 
 	struct fd_program_stateobj prog;
 

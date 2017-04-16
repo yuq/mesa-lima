@@ -742,14 +742,14 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_VERTTEX) {
 		if (vp->has_samp)
-			emit_textures(ctx, ring, SB4_VS_TEX, &ctx->verttex, vp);
+			emit_textures(ctx, ring, SB4_VS_TEX, &ctx->tex[PIPE_SHADER_VERTEX], vp);
 		else
 			dirty &= ~FD_DIRTY_VERTTEX;
 	}
 
 	if (dirty & FD_DIRTY_FRAGTEX) {
 		if (fp->has_samp)
-			emit_textures(ctx, ring, SB4_FS_TEX, &ctx->fragtex, fp);
+			emit_textures(ctx, ring, SB4_FS_TEX, &ctx->tex[PIPE_SHADER_FRAGMENT], fp);
 		else
 			dirty &= ~FD_DIRTY_FRAGTEX;
 	}

@@ -91,12 +91,12 @@ fd_sampler_states_bind(struct pipe_context *pctx,
 {
 	struct fd_context *ctx = fd_context(pctx);
 
+	bind_sampler_states(&ctx->tex[shader], start, nr, hwcso);
+
 	if (shader == PIPE_SHADER_FRAGMENT) {
-		bind_sampler_states(&ctx->fragtex, start, nr, hwcso);
 		ctx->dirty |= FD_DIRTY_FRAGTEX;
 	}
 	else if (shader == PIPE_SHADER_VERTEX) {
-		bind_sampler_states(&ctx->verttex, start, nr, hwcso);
 		ctx->dirty |= FD_DIRTY_VERTTEX;
 	}
 }
@@ -108,6 +108,8 @@ fd_set_sampler_views(struct pipe_context *pctx, enum pipe_shader_type shader,
 {
 	struct fd_context *ctx = fd_context(pctx);
 
+	set_sampler_views(&ctx->tex[shader], start, nr, views);
+
 	switch (shader) {
 	case PIPE_SHADER_FRAGMENT:
 		/* on a2xx, since there is a flat address space for textures/samplers,
@@ -116,14 +118,12 @@ fd_set_sampler_views(struct pipe_context *pctx, enum pipe_shader_type shader,
 		 *
 		 * (note: later gen's ignore FD_DIRTY_TEXSTATE so fine to set it)
 		 */
-		if (nr != ctx->fragtex.num_textures)
+		if (nr != ctx->tex[PIPE_SHADER_FRAGMENT].num_textures)
 			ctx->dirty |= FD_DIRTY_TEXSTATE;
 
-		set_sampler_views(&ctx->fragtex, start, nr, views);
 		ctx->dirty |= FD_DIRTY_FRAGTEX;
 		break;
 	case PIPE_SHADER_VERTEX:
-		set_sampler_views(&ctx->verttex, start, nr, views);
 		ctx->dirty |= FD_DIRTY_VERTTEX;
 		break;
 	default:

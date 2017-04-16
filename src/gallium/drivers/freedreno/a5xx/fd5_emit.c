@@ -260,8 +260,9 @@ emit_border_color(struct fd_context *ctx, struct fd_ringbuffer *ring)
 
 	entries = ptr;
 
-	setup_border_colors(&ctx->verttex, &entries[0]);
-	setup_border_colors(&ctx->fragtex, &entries[ctx->verttex.num_samplers]);
+	setup_border_colors(&ctx->tex[PIPE_SHADER_VERTEX], &entries[0]);
+	setup_border_colors(&ctx->tex[PIPE_SHADER_FRAGMENT],
+			&entries[ctx->tex[PIPE_SHADER_VERTEX].num_samplers]);
 
 	OUT_PKT4(ring, REG_A5XX_TPL1_TP_BORDER_COLOR_BASE_ADDR_LO, 2);
 	OUT_RELOC(ring, fd_resource(fd5_ctx->border_color_buf)->bo, off, 0, 0);
@@ -274,7 +275,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		enum a4xx_state_block sb, struct fd_texture_stateobj *tex)
 {
 	bool needs_border = false;
-	unsigned bcolor_offset = (sb == SB4_FS_TEX) ? ctx->verttex.num_samplers : 0;
+	unsigned bcolor_offset = (sb == SB4_FS_TEX) ? ctx->tex[PIPE_SHADER_VERTEX].num_samplers : 0;
 	unsigned i;
 
 	if (tex->num_samplers > 0) {
@@ -648,9 +649,10 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_VERTTEX) {
 		if (vp->has_samp) {
-			needs_border |= emit_textures(ctx, ring, SB4_VS_TEX, &ctx->verttex);
+			needs_border |= emit_textures(ctx, ring, SB4_VS_TEX,
+					&ctx->tex[PIPE_SHADER_VERTEX]);
 			OUT_PKT4(ring, REG_A5XX_TPL1_VS_TEX_COUNT, 1);
-			OUT_RING(ring, ctx->verttex.num_textures);
+			OUT_RING(ring, ctx->tex[PIPE_SHADER_VERTEX].num_textures);
 		} else {
 			dirty &= ~FD_DIRTY_VERTTEX;
 		}
@@ -658,9 +660,10 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_FRAGTEX) {
 		if (fp->has_samp) {
-			needs_border |= emit_textures(ctx, ring, SB4_FS_TEX, &ctx->fragtex);
+			needs_border |= emit_textures(ctx, ring, SB4_FS_TEX,
+					&ctx->tex[PIPE_SHADER_FRAGMENT]);
 			OUT_PKT4(ring, REG_A5XX_TPL1_FS_TEX_COUNT, 1);
-			OUT_RING(ring, ctx->fragtex.num_textures);
+			OUT_RING(ring, ctx->tex[PIPE_SHADER_FRAGMENT].num_textures);
 		} else {
 			dirty &= ~FD_DIRTY_FRAGTEX;
 		}

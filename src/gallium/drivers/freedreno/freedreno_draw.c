@@ -160,10 +160,10 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	resource_read(batch, ctx->indexbuf.buffer);
 
 	/* Mark textures as being read */
-	foreach_bit(i, ctx->verttex.valid_textures)
-		resource_read(batch, ctx->verttex.textures[i]->texture);
-	foreach_bit(i, ctx->fragtex.valid_textures)
-		resource_read(batch, ctx->fragtex.textures[i]->texture);
+	foreach_bit(i, ctx->tex[PIPE_SHADER_VERTEX].valid_textures)
+		resource_read(batch, ctx->tex[PIPE_SHADER_VERTEX].textures[i]->texture);
+	foreach_bit(i, ctx->tex[PIPE_SHADER_FRAGMENT].valid_textures)
+		resource_read(batch, ctx->tex[PIPE_SHADER_FRAGMENT].textures[i]->texture);
 
 	/* Mark streamout buffers as being written.. */
 	for (i = 0; i < ctx->streamout.num_targets; i++)
