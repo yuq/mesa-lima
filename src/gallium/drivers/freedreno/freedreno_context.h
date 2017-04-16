@@ -332,6 +332,12 @@ fd_context_all_dirty(struct fd_context *ctx)
 	ctx->dirty = ~0;
 }
 
+static inline void
+fd_context_all_clean(struct fd_context *ctx)
+{
+	ctx->dirty = 0;
+}
+
 static inline struct pipe_scissor_state *
 fd_context_get_scissor(struct fd_context *ctx)
 {

@@ -116,6 +116,8 @@ fd2_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 
 	emit_cacheflush(ring);
 
+	fd_context_all_clean(ctx);
+
 	return true;
 }
 

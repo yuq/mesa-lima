@@ -182,7 +182,7 @@ fd2_emit_vertex_bufs(struct fd_ringbuffer *ring, uint32_t val,
 }
 
 void
-fd2_emit_state(struct fd_context *ctx, uint32_t dirty)
+fd2_emit_state(struct fd_context *ctx, const uint32_t dirty)
 {
 	struct fd2_blend_stateobj *blend = fd2_blend_stateobj(ctx->blend);
 	struct fd2_zsa_stateobj *zsa = fd2_zsa_stateobj(ctx->zsa);
@@ -311,8 +311,6 @@ fd2_emit_state(struct fd_context *ctx, uint32_t dirty)
 
 	if (dirty & (FD_DIRTY_VERTTEX | FD_DIRTY_FRAGTEX | FD_DIRTY_PROG))
 		emit_textures(ring, ctx);
-
-	ctx->dirty &= ~dirty;
 }
 
 /* emit per-context initialization:

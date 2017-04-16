@@ -490,7 +490,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 {
 	const struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
 	const struct ir3_shader_variant *fp = fd3_emit_get_fp(emit);
-	uint32_t dirty = emit->dirty;
+	const uint32_t dirty = emit->dirty;
 
 	emit_marker(ring, 5);
 
@@ -786,21 +786,11 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (dirty & (FD_DIRTY_VERTTEX | FD_DIRTY_FRAGTEX))
 		fd_wfi(ctx->batch, ring);
 
-	if (dirty & FD_DIRTY_VERTTEX) {
-		if (vp->has_samp)
-			emit_textures(ctx, ring, SB_VERT_TEX, &ctx->tex[PIPE_SHADER_VERTEX]);
-		else
-			dirty &= ~FD_DIRTY_VERTTEX;
-	}
+	if (dirty & FD_DIRTY_VERTTEX)
+		emit_textures(ctx, ring, SB_VERT_TEX, &ctx->tex[PIPE_SHADER_VERTEX]);
 
-	if (dirty & FD_DIRTY_FRAGTEX) {
-		if (fp->has_samp)
-			emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->tex[PIPE_SHADER_FRAGMENT]);
-		else
-			dirty &= ~FD_DIRTY_FRAGTEX;
-	}
-
-	ctx->dirty &= ~dirty;
+	if (dirty & FD_DIRTY_FRAGTEX)
+		emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->tex[PIPE_SHADER_FRAGMENT]);
 }
 
 /* emit setup at begin of new cmdstream buffer (don't rely on previous

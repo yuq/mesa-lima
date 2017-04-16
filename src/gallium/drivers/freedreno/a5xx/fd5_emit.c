@@ -398,7 +398,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 {
 	const struct ir3_shader_variant *vp = fd5_emit_get_vp(emit);
 	const struct ir3_shader_variant *fp = fd5_emit_get_fp(emit);
-	uint32_t dirty = emit->dirty;
+	const uint32_t dirty = emit->dirty;
 	bool needs_border = false;
 
 	emit_marker5(ring, 5);
@@ -648,31 +648,21 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & FD_DIRTY_VERTTEX) {
-		if (vp->has_samp) {
-			needs_border |= emit_textures(ctx, ring, SB4_VS_TEX,
-					&ctx->tex[PIPE_SHADER_VERTEX]);
-			OUT_PKT4(ring, REG_A5XX_TPL1_VS_TEX_COUNT, 1);
-			OUT_RING(ring, ctx->tex[PIPE_SHADER_VERTEX].num_textures);
-		} else {
-			dirty &= ~FD_DIRTY_VERTTEX;
-		}
+		needs_border |= emit_textures(ctx, ring, SB4_VS_TEX,
+				&ctx->tex[PIPE_SHADER_VERTEX]);
+		OUT_PKT4(ring, REG_A5XX_TPL1_VS_TEX_COUNT, 1);
+		OUT_RING(ring, ctx->tex[PIPE_SHADER_VERTEX].num_textures);
 	}
 
 	if (dirty & FD_DIRTY_FRAGTEX) {
-		if (fp->has_samp) {
-			needs_border |= emit_textures(ctx, ring, SB4_FS_TEX,
-					&ctx->tex[PIPE_SHADER_FRAGMENT]);
-			OUT_PKT4(ring, REG_A5XX_TPL1_FS_TEX_COUNT, 1);
-			OUT_RING(ring, ctx->tex[PIPE_SHADER_FRAGMENT].num_textures);
-		} else {
-			dirty &= ~FD_DIRTY_FRAGTEX;
-		}
+		needs_border |= emit_textures(ctx, ring, SB4_FS_TEX,
+				&ctx->tex[PIPE_SHADER_FRAGMENT]);
+		OUT_PKT4(ring, REG_A5XX_TPL1_FS_TEX_COUNT, 1);
+		OUT_RING(ring, ctx->tex[PIPE_SHADER_FRAGMENT].num_textures);
 	}
 
 	if (needs_border)
 		emit_border_color(ctx, ring);
-
-	ctx->dirty &= ~dirty;
 }
 
 /* emit setup at begin of new cmdstream buffer (don't rely on previous

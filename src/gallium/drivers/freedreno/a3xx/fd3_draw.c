@@ -163,6 +163,8 @@ fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	emit.fp = NULL;
 	draw_impl(ctx, ctx->batch->binning, &emit);
 
+	fd_context_all_clean(ctx);
+
 	return true;
 }
 
