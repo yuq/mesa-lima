@@ -112,15 +112,6 @@ fd_set_sampler_views(struct pipe_context *pctx, enum pipe_shader_type shader,
 
 	switch (shader) {
 	case PIPE_SHADER_FRAGMENT:
-		/* on a2xx, since there is a flat address space for textures/samplers,
-		 * a change in # of fragment textures/samplers will trigger patching
-		 * and re-emitting the vertex shader:
-		 *
-		 * (note: later gen's ignore FD_DIRTY_TEXSTATE so fine to set it)
-		 */
-		if (nr != ctx->tex[PIPE_SHADER_FRAGMENT].num_textures)
-			ctx->dirty |= FD_DIRTY_TEXSTATE;
-
 		ctx->dirty |= FD_DIRTY_FRAGTEX;
 		break;
 	case PIPE_SHADER_VERTEX:

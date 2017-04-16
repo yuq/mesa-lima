@@ -151,6 +151,25 @@ fd2_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	return &so->base;
 }
 
+static void
+fd2_set_sampler_views(struct pipe_context *pctx, enum pipe_shader_type shader,
+		unsigned start, unsigned nr,
+		struct pipe_sampler_view **views)
+{
+	if (shader == PIPE_SHADER_FRAGMENT) {
+		struct fd_context *ctx = fd_context(pctx);
+
+		/* on a2xx, since there is a flat address space for textures/samplers,
+		 * a change in # of fragment textures/samplers will trigger patching and
+		 * re-emitting the vertex shader:
+		 */
+		if (nr != ctx->tex[PIPE_SHADER_FRAGMENT].num_textures)
+			ctx->dirty |= FD_DIRTY_TEXSTATE;
+	}
+
+	fd_set_sampler_views(pctx, shader, start, nr, views);
+}
+
 /* map gallium sampler-id to hw const-idx.. adreno uses a flat address
  * space of samplers (const-idx), so we need to map the gallium sampler-id
  * which is per-shader to a global const-idx space.
@@ -177,5 +196,5 @@ fd2_texture_init(struct pipe_context *pctx)
 	pctx->create_sampler_state = fd2_sampler_state_create;
 	pctx->bind_sampler_states = fd2_sampler_states_bind;
 	pctx->create_sampler_view = fd2_sampler_view_create;
-	pctx->set_sampler_views = fd_set_sampler_views;
+	pctx->set_sampler_views = fd2_set_sampler_views;
 }
