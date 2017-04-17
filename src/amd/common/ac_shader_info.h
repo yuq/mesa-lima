@@ -29,6 +29,7 @@ struct ac_nir_compiler_options;
 
 struct ac_shader_info {
 	bool needs_push_constants;
+	uint32_t desc_set_used_mask;
 	struct {
 		bool has_vertex_buffers; /* needs vertex buffers and base/start */
 		bool needs_draw_id;
