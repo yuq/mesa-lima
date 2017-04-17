@@ -261,8 +261,10 @@ radv_descriptor_set_create(struct radv_device *device,
 			   struct radv_descriptor_set **out_set)
 {
 	struct radv_descriptor_set *set;
-	unsigned mem_size = sizeof(struct radv_descriptor_set) +
+	unsigned range_offset = sizeof(struct radv_descriptor_set) +
 		sizeof(struct radeon_winsys_bo *) * layout->buffer_count;
+	unsigned mem_size = range_offset +
+		sizeof(struct radv_descriptor_range) * layout->dynamic_offset_count;
 	set = vk_alloc2(&device->alloc, NULL, mem_size, 8,
 			  VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
@@ -272,15 +274,7 @@ radv_descriptor_set_create(struct radv_device *device,
 	memset(set, 0, mem_size);
 
 	if (layout->dynamic_offset_count) {
-		unsigned size = sizeof(struct radv_descriptor_range) *
-		                layout->dynamic_offset_count;
-		set->dynamic_descriptors = vk_alloc2(&device->alloc, NULL, size, 8,
-			                               VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-
-		if (!set->dynamic_descriptors) {
-			vk_free2(&device->alloc, NULL, set);
-			return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-		}
+		set->dynamic_descriptors = (struct radv_descriptor_range*)((uint8_t*)set + range_offset);
 	}
 
 	set->layout = layout;
@@ -350,8 +344,6 @@ radv_descriptor_set_destroy(struct radv_device *device,
 {
 	if (free_bo && set->size)
 		list_del(&set->vram_list);
-	if (set->dynamic_descriptors)
-		vk_free2(&device->alloc, NULL, set->dynamic_descriptors);
 	vk_free2(&device->alloc, NULL, set);
 }
 
