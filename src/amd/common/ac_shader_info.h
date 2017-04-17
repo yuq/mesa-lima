@@ -35,6 +35,9 @@ struct ac_shader_info {
 	struct {
 		bool needs_sample_positions;
 	} ps;
+	struct {
+		uint8_t grid_components_used;
+	} cs;
 };
 
 void

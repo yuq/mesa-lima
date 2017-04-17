@@ -604,7 +604,8 @@ static void create_function(struct nir_to_llvm_context *ctx)
 
 	switch (ctx->stage) {
 	case MESA_SHADER_COMPUTE:
-		arg_types[arg_idx++] = LLVMVectorType(ctx->i32, 3); /* grid size */
+		if (ctx->shader_info->info.cs.grid_components_used)
+			arg_types[arg_idx++] = LLVMVectorType(ctx->i32, ctx->shader_info->info.cs.grid_components_used); /* grid size */
 		user_sgpr_count = arg_idx;
 		arg_types[arg_idx++] = LLVMVectorType(ctx->i32, 3);
 		arg_types[arg_idx++] = ctx->i32;
@@ -762,10 +763,12 @@ static void create_function(struct nir_to_llvm_context *ctx)
 
 	switch (ctx->stage) {
 	case MESA_SHADER_COMPUTE:
-		set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE, user_sgpr_idx, 3);
-		user_sgpr_idx += 3;
-		ctx->num_work_groups =
-		    LLVMGetParam(ctx->main_function, arg_idx++);
+		if (ctx->shader_info->info.cs.grid_components_used) {
+			set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE, user_sgpr_idx, ctx->shader_info->info.cs.grid_components_used);
+			user_sgpr_idx += ctx->shader_info->info.cs.grid_components_used;
+			ctx->num_work_groups =
+				LLVMGetParam(ctx->main_function, arg_idx++);
+		}
 		ctx->workgroup_ids =
 		    LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->tg_size =
