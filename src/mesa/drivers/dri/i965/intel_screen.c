@@ -1974,6 +1974,7 @@ parse_devid_override(const char *devid_override)
       { "bdw", 0x162e },
       { "skl", 0x1912 },
       { "kbl", 0x5912 },
+      { "cnl", 0x5a52 },
    };
 
    for (unsigned i = 0; i < ARRAY_SIZE(name_map); i++) {
