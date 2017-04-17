@@ -40,7 +40,6 @@ struct radv_descriptor_set_binding_layout {
 
    /* redundant with the type, each for a single array element */
    uint32_t size;
-   uint32_t buffer_count;
    uint16_t dynamic_offset_count;
 
    /* Offset in the radv_descriptor_set_layout of the immutable samplers, or 0

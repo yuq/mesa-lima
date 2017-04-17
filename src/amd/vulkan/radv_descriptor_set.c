@@ -77,6 +77,7 @@ VkResult radv_CreateDescriptorSetLayout(
 		const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[j];
 		uint32_t b = binding->binding;
 		uint32_t alignment;
+		unsigned binding_buffer_count = 0;
 
 		switch (binding->descriptorType) {
 		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -85,7 +86,7 @@ VkResult radv_CreateDescriptorSetLayout(
 			set_layout->binding[b].dynamic_offset_count = 1;
 			set_layout->dynamic_shader_stages |= binding->stageFlags;
 			set_layout->binding[b].size = 0;
-			set_layout->binding[b].buffer_count = 1;
+			binding_buffer_count = 1;
 			alignment = 1;
 			break;
 		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -93,7 +94,7 @@ VkResult radv_CreateDescriptorSetLayout(
 		case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
 		case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
 			set_layout->binding[b].size = 16;
-			set_layout->binding[b].buffer_count = 1;
+			binding_buffer_count = 1;
 			alignment = 16;
 			break;
 		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
@@ -101,13 +102,13 @@ VkResult radv_CreateDescriptorSetLayout(
 		case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
 			/* main descriptor + fmask descriptor */
 			set_layout->binding[b].size = 64;
-			set_layout->binding[b].buffer_count = 1;
+			binding_buffer_count = 1;
 			alignment = 32;
 			break;
 		case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 			/* main descriptor + fmask descriptor + sampler */
 			set_layout->binding[b].size = 96;
-			set_layout->binding[b].buffer_count = 1;
+			binding_buffer_count = 1;
 			alignment = 32;
 			break;
 		case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -150,7 +151,7 @@ VkResult radv_CreateDescriptorSetLayout(
 		}
 
 		set_layout->size += binding->descriptorCount * set_layout->binding[b].size;
-		buffer_count += binding->descriptorCount * set_layout->binding[b].buffer_count;
+		buffer_count += binding->descriptorCount * binding_buffer_count;
 		dynamic_offset_count += binding->descriptorCount *
 			set_layout->binding[b].dynamic_offset_count;
 		set_layout->shader_stages |= binding->stageFlags;
@@ -669,7 +670,7 @@ void radv_update_descriptor_sets(
 		ptr += binding_layout->offset / 4;
 		ptr += binding_layout->size * writeset->dstArrayElement / 4;
 		buffer_list += binding_layout->buffer_offset;
-		buffer_list += binding_layout->buffer_count * writeset->dstArrayElement;
+		buffer_list += writeset->dstArrayElement;
 		for (j = 0; j < writeset->descriptorCount; ++j) {
 			switch(writeset->descriptorType) {
 			case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -720,7 +721,7 @@ void radv_update_descriptor_sets(
 				break;
 			}
 			ptr += binding_layout->size / 4;
-			buffer_list += binding_layout->buffer_count;
+			++buffer_list;
 		}
 
 	}
@@ -764,8 +765,7 @@ VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
 		const VkDescriptorUpdateTemplateEntryKHR *entry = &pCreateInfo->pDescriptorUpdateEntries[i];
 		const struct radv_descriptor_set_binding_layout *binding_layout =
 			set_layout->binding + entry->dstBinding;
-		const uint32_t buffer_offset = binding_layout->buffer_offset +
-			binding_layout->buffer_count * entry->dstArrayElement;
+		const uint32_t buffer_offset = binding_layout->buffer_offset + entry->dstArrayElement;
 		const uint32_t *immutable_samplers = NULL;
 		uint32_t dst_offset;
 		uint32_t dst_stride;
@@ -805,7 +805,6 @@ VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
 			.dst_offset = dst_offset,
 			.dst_stride = dst_stride,
 			.buffer_offset = buffer_offset,
-			.buffer_count = binding_layout->buffer_count,
 			.has_sampler = !binding_layout->immutable_samplers_offset,
 			.immutable_samplers = immutable_samplers
 		};
@@ -889,7 +888,7 @@ void radv_update_descriptor_set_with_template(struct radv_device *device,
 			}
 		        pSrc += templ->entry[i].src_stride;
 			pDst += templ->entry[i].dst_stride;
-			buffer_list += templ->entry[i].buffer_count;
+			++buffer_list;
 		}
 	}
 }

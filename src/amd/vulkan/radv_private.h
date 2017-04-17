@@ -589,7 +589,6 @@ struct radv_descriptor_update_template_entry {
 	uint32_t dst_stride;
 
 	uint32_t buffer_offset;
-	uint32_t buffer_count;
 
 	/* Only valid for combined image samplers and samplers */
 	uint16_t has_sampler;
