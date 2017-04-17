@@ -2142,14 +2142,17 @@ dnl
 AM_CONDITIONAL(HAVE_GALLIUM, test -n "$with_gallium_drivers")
 
 dnl
-dnl EGL Platforms configuration
+dnl DEPRECATED: EGL Platforms configuration
 dnl
 AC_ARG_WITH([egl-platforms],
     [AS_HELP_STRING([--with-egl-platforms@<:@=DIRS...@:>@],
-        [comma delimited native platforms libEGL supports, e.g.
-        "x11,drm" @<:@default=auto@:>@])],
+        [DEPRECATED: use --with-plaforms instead@<:@default=auto@:>@])],
     [with_egl_platforms="$withval"],
-    [if test "x$enable_egl" = xyes; then
+    [with_egl_platforms=auto])
+
+if test "x$with_egl_platforms" = xauto; then
+    AC_MSG_WARN([--with-egl-platforms is deprecated. Use --with-plaforms instead.])
+    if test "x$enable_egl" = xyes; then
         if test "x$enable_gbm" = xyes; then
            with_egl_platforms="x11,drm"
         else
@@ -2157,7 +2160,23 @@ AC_ARG_WITH([egl-platforms],
         fi
     else
         with_egl_platforms=""
-    fi])
+    fi
+fi
+
+dnl
+dnl Platforms configuration
+dnl
+AC_ARG_WITH([platforms],
+    [AS_HELP_STRING([--with-platforms@<:@=DIRS...@:>@],
+        [comma delimited native platforms libEGL/Vulkan/other supports, e.g.
+        "x11,drm,wayland,surfaceless..." @<:@default=auto@:>@])],
+    [with_platforms="$withval"],
+    [with_platforms=auto])
+
+# For the time being, we still reuse the EGL named variables/defines.
+if test "x$with_platforms" != xauto; then
+    with_egl_platforms=$with_platforms
+fi
 
 PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
         WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`,
@@ -2302,8 +2321,8 @@ require_basic_egl() {
             ;;
         *)
             AC_MSG_ERROR([$1 requires one of these:
-                  1) --with-egl-platforms=drm (X, Wayland, offscreen rendering based on DRM)
-                  2) --with-egl-platforms=surfaceless (offscreen only)
+                  1) --with-platforms=drm (X, Wayland, offscreen rendering based on DRM)
+                  2) --with-platforms=surfaceless (offscreen only)
                   Recommended options: drm,x11])
             ;;
     esac
@@ -2833,7 +2852,6 @@ dnl EGL
 echo ""
 echo "        EGL:             $enable_egl"
 if test "$enable_egl" = yes; then
-    echo "        EGL platforms:   $egl_platforms"
 
     egl_drivers=""
     if test "x$enable_dri" != "xno"; then
@@ -2850,6 +2868,8 @@ if test "x$enable_gbm" = xyes; then
 else
     echo "        GBM:             no"
 fi
+
+    echo "        EGL/Vulkan/VL platforms:   $egl_platforms"
 
 # Vulkan
 echo ""

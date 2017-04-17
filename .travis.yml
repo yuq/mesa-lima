@@ -102,7 +102,7 @@ install:
 script:
   - if test "x$BUILD" = xmake; then
       ./autogen.sh --enable-debug
-        --with-egl-platforms=x11,drm
+        --with-platforms=x11,drm
         --with-dri-drivers=i915,i965,radeon,r200,swrast,nouveau
         --with-gallium-drivers=i915,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl,etnaviv,imx
         --with-vulkan-drivers=radeon
