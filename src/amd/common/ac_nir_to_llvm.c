@@ -565,7 +565,6 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	unsigned i;
 	unsigned num_sets = ctx->options->layout ? ctx->options->layout->num_sets : 0;
 	unsigned user_sgpr_idx;
-	bool need_push_constants;
 	bool need_ring_offsets = false;
 
 	/* until we sort out scratch/global buffers always assign ring offsets for gs/vs/es */
@@ -576,13 +575,6 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	    ctx->stage == MESA_SHADER_FRAGMENT ||
 	    ctx->is_gs_copy_shader)
 		need_ring_offsets = true;
-
-	need_push_constants = true;
-	if (!ctx->options->layout)
-		need_push_constants = false;
-	else if (!ctx->options->layout->push_constant_size &&
-		 !ctx->options->layout->dynamic_offset_count)
-		need_push_constants = false;
 
 	if (need_ring_offsets && !ctx->options->supports_spill) {
 		arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* address of rings */
@@ -596,7 +588,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		}
 	}
 
-	if (need_push_constants) {
+	if (ctx->shader_info->info.needs_push_constants) {
 		/* 1 for push constants and dynamic descriptors */
 		array_params_mask |= (1 << arg_idx);
 		arg_types[arg_idx++] = const_array(ctx->i8, 1024 * 1024);
@@ -755,7 +747,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 			ctx->descriptor_sets[i] = NULL;
 	}
 
-	if (need_push_constants) {
+	if (ctx->shader_info->info.needs_push_constants) {
 		ctx->push_constants = LLVMGetParam(ctx->main_function, arg_idx++);
 		set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx, 2);
 		user_sgpr_idx += 2;

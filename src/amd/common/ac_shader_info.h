@@ -28,6 +28,7 @@ struct ac_nir_compiler_options;
 /* a NIR pass to gather all the info needed to optimise the alloction patterns for the RADV user sgprs */
 
 struct ac_shader_info {
+	bool needs_push_constants;
 	struct {
 		bool has_vertex_buffers; /* needs vertex buffers and base/start */
 		bool needs_draw_id;
