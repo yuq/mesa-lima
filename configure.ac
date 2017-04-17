@@ -2151,7 +2151,6 @@ AC_ARG_WITH([egl-platforms],
     [with_egl_platforms=auto])
 
 if test "x$with_egl_platforms" = xauto; then
-    AC_MSG_WARN([--with-egl-platforms is deprecated. Use --with-plaforms instead.])
     if test "x$enable_egl" = xyes; then
         if test "x$enable_gbm" = xyes; then
            with_egl_platforms="x11,drm"
@@ -2161,6 +2160,8 @@ if test "x$with_egl_platforms" = xauto; then
     else
         with_egl_platforms=""
     fi
+else
+    AC_MSG_WARN([--with-egl-platforms is deprecated. Use --with-plaforms instead.])
 fi
 
 dnl
