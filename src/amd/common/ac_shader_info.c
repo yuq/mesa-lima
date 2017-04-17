@@ -30,6 +30,9 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, struct ac_shader_info *info)
 	case nir_intrinsic_interp_var_at_sample:
 		info->ps.needs_sample_positions = true;
 		break;
+	case nir_intrinsic_load_draw_id:
+		info->vs.needs_draw_id = true;
+		break;
 	default:
 		break;
 	}
@@ -49,12 +52,30 @@ gather_info_block(nir_block *block, struct ac_shader_info *info)
 	}
 }
 
+static void
+gather_info_input_decl(nir_shader *nir,
+		       const struct ac_nir_compiler_options *options,
+		       nir_variable *var,
+		       struct ac_shader_info *info)
+{
+	switch (nir->stage) {
+	case MESA_SHADER_VERTEX:
+		info->vs.has_vertex_buffers = true;
+		break;
+	default:
+		break;
+	}
+}
+
 void
 ac_nir_shader_info_pass(struct nir_shader *nir,
 			const struct ac_nir_compiler_options *options,
 			struct ac_shader_info *info)
 {
 	struct nir_function *func = (struct nir_function *)exec_list_get_head(&nir->functions);
+	nir_foreach_variable(variable, &nir->inputs)
+		gather_info_input_decl(nir, options, variable, info);
+
 	nir_foreach_block(block, func->impl) {
 		gather_info_block(block, info);
 	}

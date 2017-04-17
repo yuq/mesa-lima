@@ -614,10 +614,12 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		break;
 	case MESA_SHADER_VERTEX:
 		if (!ctx->is_gs_copy_shader) {
-			arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* vertex buffers */
+			if (ctx->shader_info->info.vs.has_vertex_buffers)
+				arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* vertex buffers */
 			arg_types[arg_idx++] = ctx->i32; // base vertex
 			arg_types[arg_idx++] = ctx->i32; // start instance
-			arg_types[arg_idx++] = ctx->i32; // draw index
+			if (ctx->shader_info->info.vs.needs_draw_id)
+					arg_types[arg_idx++] = ctx->i32; // draw index
 		}
 		user_sgpr_count = arg_idx;
 		if (ctx->options->key.vs.as_es)
@@ -773,14 +775,22 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		break;
 	case MESA_SHADER_VERTEX:
 		if (!ctx->is_gs_copy_shader) {
-			set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, user_sgpr_idx, 2);
-			user_sgpr_idx += 2;
-			ctx->vertex_buffers = LLVMGetParam(ctx->main_function, arg_idx++);
-			set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, 3);
-			user_sgpr_idx += 3;
+			if (ctx->shader_info->info.vs.has_vertex_buffers) {
+				set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, user_sgpr_idx, 2);
+				user_sgpr_idx += 2;
+				ctx->vertex_buffers = LLVMGetParam(ctx->main_function, arg_idx++);
+			}
+			unsigned vs_num = 2;
+			if (ctx->shader_info->info.vs.needs_draw_id)
+				vs_num++;
+
+			set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, vs_num);
+			user_sgpr_idx += vs_num;
+
 			ctx->base_vertex = LLVMGetParam(ctx->main_function, arg_idx++);
 			ctx->start_instance = LLVMGetParam(ctx->main_function, arg_idx++);
-			ctx->draw_index = LLVMGetParam(ctx->main_function, arg_idx++);
+			if (ctx->shader_info->info.vs.needs_draw_id)
+				ctx->draw_index = LLVMGetParam(ctx->main_function, arg_idx++);
 		}
 		if (ctx->options->key.vs.as_es)
 			ctx->es2gs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
