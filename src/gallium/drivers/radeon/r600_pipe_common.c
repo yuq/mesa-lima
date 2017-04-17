@@ -1351,7 +1351,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->b.resource_from_user_memory = r600_buffer_from_user_memory;
 	rscreen->b.query_memory_info = r600_query_memory_info;
 
-	if (rscreen->info.has_uvd) {
+	if (rscreen->info.has_hw_decode) {
 		rscreen->b.get_video_param = rvid_get_video_param;
 		rscreen->b.is_video_format_supported = rvid_is_format_supported;
 	} else {
@@ -1397,7 +1397,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("has_virtual_memory = %i\n", rscreen->info.has_virtual_memory);
 		printf("gfx_ib_pad_with_type2 = %i\n", rscreen->info.gfx_ib_pad_with_type2);
 		printf("num_sdma_rings = %i\n", rscreen->info.num_sdma_rings);
-		printf("has_uvd = %i\n", rscreen->info.has_uvd);
+		printf("has_hw_decode = %i\n", rscreen->info.has_hw_decode);
 		printf("me_fw_version = %i\n", rscreen->info.me_fw_version);
 		printf("pfp_fw_version = %i\n", rscreen->info.pfp_fw_version);
 		printf("ce_fw_version = %i\n", rscreen->info.ce_fw_version);

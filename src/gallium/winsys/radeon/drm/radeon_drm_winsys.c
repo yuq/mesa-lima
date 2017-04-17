@@ -312,13 +312,13 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     }
 
     /* Check for UVD and VCE */
-    ws->info.has_uvd = false;
+    ws->info.has_hw_decode = false;
     ws->info.vce_fw_version = 0x00000000;
     if (ws->info.drm_minor >= 32) {
 	uint32_t value = RADEON_CS_RING_UVD;
         if (radeon_get_drm_value(ws->fd, RADEON_INFO_RING_WORKING,
                                  "UVD Ring working", &value))
-            ws->info.has_uvd = value;
+            ws->info.has_hw_decode = value;
 
         value = RADEON_CS_RING_VCE;
         if (radeon_get_drm_value(ws->fd, RADEON_INFO_RING_WORKING,

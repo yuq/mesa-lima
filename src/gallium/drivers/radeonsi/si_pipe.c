@@ -175,7 +175,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	si_init_cp_dma_functions(sctx);
 	si_init_debug_functions(sctx);
 
-	if (sscreen->b.info.has_uvd) {
+	if (sscreen->b.info.has_hw_decode) {
 		sctx->b.b.create_video_codec = si_uvd_create_decoder;
 		sctx->b.b.create_video_buffer = si_video_buffer_create;
 	} else {
