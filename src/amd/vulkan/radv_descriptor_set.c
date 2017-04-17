@@ -265,11 +265,20 @@ radv_descriptor_set_create(struct radv_device *device,
 		sizeof(struct radeon_winsys_bo *) * layout->buffer_count;
 	unsigned mem_size = range_offset +
 		sizeof(struct radv_descriptor_range) * layout->dynamic_offset_count;
-	set = vk_alloc2(&device->alloc, NULL, mem_size, 8,
-			  VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
-	if (!set)
-		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+	if (pool->host_memory_base) {
+		if (pool->host_memory_end - pool->host_memory_ptr < mem_size)
+			return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
+
+		set = (struct radv_descriptor_set*)pool->host_memory_ptr;
+		pool->host_memory_ptr += mem_size;
+	} else {
+		set = vk_alloc2(&device->alloc, NULL, mem_size, 8,
+		                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+
+		if (!set)
+			return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+	}
 
 	memset(set, 0, mem_size);
 
@@ -295,6 +304,8 @@ radv_descriptor_set_create(struct radv_device *device,
 			uint64_t offset = 0;
 			struct list_head *prev = &pool->vram_list;
 			struct radv_descriptor_set *cur;
+
+			assert(!pool->host_memory_base);
 			LIST_FOR_EACH_ENTRY(cur, &pool->vram_list, vram_list) {
 				uint64_t start = (uint8_t*)cur->mapped_ptr - pool->mapped_ptr;
 				if (start - offset >= layout_size)
@@ -342,6 +353,8 @@ radv_descriptor_set_destroy(struct radv_device *device,
 			    struct radv_descriptor_set *set,
 			    bool free_bo)
 {
+	assert(!pool->host_memory_base);
+
 	if (free_bo && set->size)
 		list_del(&set->vram_list);
 	vk_free2(&device->alloc, NULL, set);
@@ -356,18 +369,17 @@ VkResult radv_CreateDescriptorPool(
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	struct radv_descriptor_pool *pool;
 	int size = sizeof(struct radv_descriptor_pool);
-	uint64_t bo_size = 0;
-	pool = vk_alloc2(&device->alloc, pAllocator, size, 8,
-			   VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-	if (!pool)
-		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+	uint64_t bo_size = 0, bo_count = 0, range_count = 0;
 
-	memset(pool, 0, sizeof(*pool));
 
 	for (unsigned i = 0; i < pCreateInfo->poolSizeCount; ++i) {
+		if (pCreateInfo->pPoolSizes[i].type != VK_DESCRIPTOR_TYPE_SAMPLER)
+			bo_count += pCreateInfo->pPoolSizes[i].descriptorCount;
+
 		switch(pCreateInfo->pPoolSizes[i].type) {
 		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
 		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+			range_count += pCreateInfo->pPoolSizes[i].descriptorCount;
 			break;
 		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
@@ -389,6 +401,26 @@ VkResult radv_CreateDescriptorPool(
 			unreachable("unknown descriptor type\n");
 			break;
 		}
+	}
+
+	if (!(pCreateInfo->flags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)) {
+		uint64_t host_size = pCreateInfo->maxSets * sizeof(struct radv_descriptor_set);
+		host_size += sizeof(struct radeon_winsys_bo*) * bo_count;
+		host_size += sizeof(struct radv_descriptor_range) * range_count;
+		size += host_size;
+	}
+
+	pool = vk_alloc2(&device->alloc, pAllocator, size, 8,
+	                 VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+	if (!pool)
+		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+	memset(pool, 0, sizeof(*pool));
+
+	if (!(pCreateInfo->flags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)) {
+		pool->host_memory_base = (uint8_t*)pool + sizeof(struct radv_descriptor_pool);
+		pool->host_memory_ptr = pool->host_memory_base;
+		pool->host_memory_end = (uint8_t*)pool + size;
 	}
 
 	if (bo_size) {
@@ -414,9 +446,11 @@ void radv_DestroyDescriptorPool(
 	if (!pool)
 		return;
 
-	list_for_each_entry_safe(struct radv_descriptor_set, set,
-				 &pool->vram_list, vram_list) {
-		radv_descriptor_set_destroy(device, pool, set, false);
+	if (!pool->host_memory_base) {
+		list_for_each_entry_safe(struct radv_descriptor_set, set,
+		                         &pool->vram_list, vram_list) {
+			radv_descriptor_set_destroy(device, pool, set, false);
+		}
 	}
 
 	if (pool->bo)
@@ -432,14 +466,17 @@ VkResult radv_ResetDescriptorPool(
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	RADV_FROM_HANDLE(radv_descriptor_pool, pool, descriptorPool);
 
-	list_for_each_entry_safe(struct radv_descriptor_set, set,
-				 &pool->vram_list, vram_list) {
-		radv_descriptor_set_destroy(device, pool, set, false);
+	if (!pool->host_memory_base) {
+		list_for_each_entry_safe(struct radv_descriptor_set, set,
+		                         &pool->vram_list, vram_list) {
+			radv_descriptor_set_destroy(device, pool, set, false);
+		}
 	}
 
 	list_inithead(&pool->vram_list);
 
 	pool->current_offset = 0;
+	pool->host_memory_ptr = pool->host_memory_base;
 
 	return VK_SUCCESS;
 }

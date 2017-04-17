@@ -570,6 +570,10 @@ struct radv_descriptor_pool {
 	uint64_t size;
 
 	struct list_head vram_list;
+
+	uint8_t *host_memory_base;
+	uint8_t *host_memory_ptr;
+	uint8_t *host_memory_end;
 };
 
 struct radv_descriptor_update_template_entry {
