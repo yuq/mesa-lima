@@ -86,6 +86,15 @@ fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 			if (ctx->tex[stage].textures[i] && (ctx->tex[stage].textures[i]->texture == prsc))
 				ctx->dirty_shader[stage] |= FD_DIRTY_SHADER_TEX;
 		}
+
+		/* SSBOs */
+		const unsigned num_ssbos = util_last_bit(ctx->shaderbuf[stage].enabled_mask);
+		for (unsigned i = 0; i < num_ssbos; i++) {
+			if (ctx->dirty_shader[stage] & FD_DIRTY_SHADER_SSBO)
+				break;
+			if (ctx->shaderbuf[stage].sb[i].buffer == prsc)
+				ctx->dirty_shader[stage] |= FD_DIRTY_SHADER_SSBO;
+		}
 	}
 }
 

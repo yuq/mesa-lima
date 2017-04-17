@@ -72,6 +72,12 @@ struct fd_constbuf_stateobj {
 	uint32_t dirty_mask;
 };
 
+struct fd_shaderbuf_stateobj {
+	struct pipe_shader_buffer sb[PIPE_MAX_SHADER_BUFFERS];
+	uint32_t enabled_mask;
+	uint32_t dirty_mask;
+};
+
 struct fd_vertexbuf_stateobj {
 	struct pipe_vertex_buffer vb[PIPE_MAX_ATTRIBS];
 	unsigned count;
@@ -142,6 +148,7 @@ enum fd_dirty_shader_state {
 	FD_DIRTY_SHADER_PROG  = BIT(0),
 	FD_DIRTY_SHADER_CONST = BIT(1),
 	FD_DIRTY_SHADER_TEX   = BIT(2),
+	FD_DIRTY_SHADER_SSBO  = BIT(3),
 };
 
 struct fd_context {
@@ -264,6 +271,7 @@ struct fd_context {
 	struct pipe_poly_stipple stipple;
 	struct pipe_viewport_state viewport;
 	struct fd_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
+	struct fd_shaderbuf_stateobj shaderbuf[PIPE_SHADER_TYPES];
 	struct pipe_index_buffer indexbuf;
 	struct fd_streamout_stateobj streamout;
 	struct pipe_clip_state ucp;

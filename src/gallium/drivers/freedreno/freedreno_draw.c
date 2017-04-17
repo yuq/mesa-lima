@@ -151,6 +151,12 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 			batch->gmem_reason |= FD_GMEM_BLEND_ENABLED;
 	}
 
+	/* Mark SSBOs as being written.. we don't actually know which ones are
+	 * read vs written, so just assume the worst
+	 */
+	foreach_bit(i, ctx->shaderbuf[PIPE_SHADER_FRAGMENT].enabled_mask)
+		resource_read(batch, ctx->shaderbuf[PIPE_SHADER_FRAGMENT].sb[i].buffer);
+
 	foreach_bit(i, ctx->constbuf[PIPE_SHADER_VERTEX].enabled_mask)
 		resource_read(batch, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer);
 	foreach_bit(i, ctx->constbuf[PIPE_SHADER_FRAGMENT].enabled_mask)

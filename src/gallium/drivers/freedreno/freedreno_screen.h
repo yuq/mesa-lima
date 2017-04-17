@@ -38,6 +38,7 @@
 #include "os/os_thread.h"
 
 #include "freedreno_batch_cache.h"
+#include "freedreno_util.h"
 
 struct fd_bo;
 

@@ -114,6 +114,54 @@ fd_set_constant_buffer(struct pipe_context *pctx,
 }
 
 static void
+fd_set_shader_buffers(struct pipe_context *pctx,
+		enum pipe_shader_type shader,
+		unsigned start, unsigned count,
+		const struct pipe_shader_buffer *buffers)
+{
+	struct fd_context *ctx = fd_context(pctx);
+	struct fd_shaderbuf_stateobj *so = &ctx->shaderbuf[shader];
+	unsigned mask = 0;
+
+	if (buffers) {
+		for (unsigned i = 0; i < count; i++) {
+			unsigned n = i + start;
+			struct pipe_shader_buffer *buf = &so->sb[n];
+
+			if ((buf->buffer == buffers[i].buffer) &&
+					(buf->buffer_offset == buffers[i].buffer_offset) &&
+					(buf->buffer_size == buffers[i].buffer_size))
+				continue;
+
+			mask |= BIT(n);
+
+			buf->buffer_offset = buffers[i].buffer_offset;
+			buf->buffer_size = buffers[i].buffer_size;
+			pipe_resource_reference(&buf->buffer, buffers[i].buffer);
+
+			if (buf->buffer)
+				so->enabled_mask |= BIT(n);
+			else
+				so->enabled_mask &= ~BIT(n);
+		}
+	} else {
+		mask = (BIT(count) - 1) << start;
+
+		for (unsigned i = 0; i < count; i++) {
+			unsigned n = i + start;
+			struct pipe_shader_buffer *buf = &so->sb[n];
+
+			pipe_resource_reference(&buf->buffer, NULL);
+		}
+
+		so->enabled_mask &= ~mask;
+	}
+
+	so->dirty_mask |= mask;
+	ctx->dirty_shader[shader] |= FD_DIRTY_SHADER_SSBO;
+}
+
+static void
 fd_set_framebuffer_state(struct pipe_context *pctx,
 		const struct pipe_framebuffer_state *framebuffer)
 {
@@ -411,6 +459,7 @@ fd_state_init(struct pipe_context *pctx)
 	pctx->set_clip_state = fd_set_clip_state;
 	pctx->set_sample_mask = fd_set_sample_mask;
 	pctx->set_constant_buffer = fd_set_constant_buffer;
+	pctx->set_shader_buffers = fd_set_shader_buffers;
 	pctx->set_framebuffer_state = fd_set_framebuffer_state;
 	pctx->set_polygon_stipple = fd_set_polygon_stipple;
 	pctx->set_scissor_states = fd_set_scissor_states;
