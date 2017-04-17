@@ -226,7 +226,7 @@ struct ir3_instruction {
 			type_t type;
 			int src_offset;
 			int dst_offset;
-			int iim_val;
+			int iim_val;          /* for ldgb/stgb, # of components */
 		} cat6;
 		/* for meta-instructions, just used to hold extra data
 		 * before instruction scheduling, etc
@@ -602,6 +602,7 @@ is_store(struct ir3_instruction *instr)
 	 */
 	switch (instr->opc) {
 	case OPC_STG:
+	case OPC_STGB:
 	case OPC_STP:
 	case OPC_STL:
 	case OPC_STLW:
@@ -617,6 +618,7 @@ static inline bool is_load(struct ir3_instruction *instr)
 {
 	switch (instr->opc) {
 	case OPC_LDG:
+	case OPC_LDGB:
 	case OPC_LDL:
 	case OPC_LDP:
 	case OPC_L2G:
@@ -931,7 +933,7 @@ int ir3_ra(struct ir3 *ir3, enum shader_t type,
 		bool frag_coord, bool frag_face);
 
 /* legalize: */
-void ir3_legalize(struct ir3 *ir, bool *has_samp, int *max_bary);
+void ir3_legalize(struct ir3 *ir, bool *has_samp, bool *has_ssbo, int *max_bary);
 
 /* ************************************************************************* */
 /* instruction helpers */
@@ -1022,6 +1024,24 @@ ir3_##name(struct ir3_block *block,                                      \
 	ir3_reg_create(instr, 0, IR3_REG_SSA | aflags)->instr = a;           \
 	ir3_reg_create(instr, 0, IR3_REG_SSA | bflags)->instr = b;           \
 	ir3_reg_create(instr, 0, IR3_REG_SSA | cflags)->instr = c;           \
+	return instr;                                                        \
+}
+
+#define INSTR4(name)                                                     \
+static inline struct ir3_instruction *                                   \
+ir3_##name(struct ir3_block *block,                                      \
+		struct ir3_instruction *a, unsigned aflags,                      \
+		struct ir3_instruction *b, unsigned bflags,                      \
+		struct ir3_instruction *c, unsigned cflags,                      \
+		struct ir3_instruction *d, unsigned dflags)                      \
+{                                                                        \
+	struct ir3_instruction *instr =                                      \
+		ir3_instr_create2(block, OPC_##name, 5);                         \
+	ir3_reg_create(instr, 0, 0);   /* dst */                             \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | aflags)->instr = a;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | bflags)->instr = b;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | cflags)->instr = c;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | dflags)->instr = d;           \
 	return instr;                                                        \
 }
 
@@ -1142,6 +1162,19 @@ ir3_SAM(struct ir3_block *block, opc_t opc, type_t type,
 INSTR2(LDLV)
 INSTR2(LDG)
 INSTR3(STG)
+INSTR3(LDGB);
+INSTR4(STGB);
+INSTR4(ATOMIC_ADD);
+INSTR4(ATOMIC_SUB);
+INSTR4(ATOMIC_XCHG);
+INSTR4(ATOMIC_INC);
+INSTR4(ATOMIC_DEC);
+INSTR4(ATOMIC_CMPXCHG);
+INSTR4(ATOMIC_MIN);
+INSTR4(ATOMIC_MAX);
+INSTR4(ATOMIC_AND);
+INSTR4(ATOMIC_OR);
+INSTR4(ATOMIC_XOR);
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */

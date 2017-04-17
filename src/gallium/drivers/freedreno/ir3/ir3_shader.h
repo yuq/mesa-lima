@@ -249,6 +249,9 @@ struct ir3_shader_variant {
 	/* do we have one or more texture sample instructions: */
 	bool has_samp;
 
+	/* do we have one or more SSBO instructions: */
+	bool has_ssbo;
+
 	/* do we have kill instructions: */
 	bool has_kill;
 

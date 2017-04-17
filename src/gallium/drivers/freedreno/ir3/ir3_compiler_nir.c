@@ -71,6 +71,20 @@ struct ir3_compile {
 	/* For vertex shaders, keep track of the system values sources */
 	struct ir3_instruction *vertex_id, *basevertex, *instance_id;
 
+	/* For SSBO's and atomics, we need to preserve order, such
+	 * that reads don't overtake writes, and the order of writes
+	 * is preserved.  Atomics are considered as a write.
+	 *
+	 * To do this, we track last write and last access, in a
+	 * similar way to ir3_array.  But since we don't know whether
+	 * the same SSBO is bound to multiple slots, so we simply
+	 * track this globally rather than per-SSBO.
+	 *
+	 * TODO should we track this per block instead?  I guess it
+	 * shouldn't matter much?
+	 */
+	struct ir3_instruction *last_write, *last_access;
+
 	/* mapping from nir_register to defining instruction: */
 	struct hash_table *def_ht;
 
@@ -430,7 +444,7 @@ create_uniform_indirect(struct ir3_compile *ctx, int n,
 }
 
 static struct ir3_instruction *
-create_collect(struct ir3_block *block, struct ir3_instruction **arr,
+create_collect(struct ir3_block *block, struct ir3_instruction *const *arr,
 		unsigned arrsz)
 {
 	struct ir3_instruction *collect;
@@ -1136,6 +1150,165 @@ emit_intrinsic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	}
 }
 
+static void
+mark_ssbo_read(struct ir3_compile *ctx, struct ir3_instruction *instr)
+{
+	instr->regs[0]->instr = ctx->last_write;
+	instr->regs[0]->flags |= IR3_REG_SSA;
+	ctx->last_access = instr;
+}
+
+static void
+mark_ssbo_write(struct ir3_compile *ctx, struct ir3_instruction *instr)
+{
+	instr->regs[0]->instr = ctx->last_access;
+	instr->regs[0]->flags |= IR3_REG_SSA;
+	ctx->last_write = ctx->last_access = instr;
+}
+
+static void
+emit_intrinsic_load_ssbo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
+		struct ir3_instruction **dst)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *ldgb, *src0, *src1, *offset;
+	nir_const_value *const_offset;
+
+	/* can this be non-const buffer_index?  how do we handle that? */
+	const_offset = nir_src_as_const_value(intr->src[0]);
+	compile_assert(ctx, const_offset);
+
+	offset = get_src(ctx, &intr->src[1])[0];
+
+	/* src0 is uvec2(offset*4, 0), src1 is offset.. nir already *= 4: */
+	src0 = create_collect(b, (struct ir3_instruction*[]){
+		offset,
+		create_immed(b, 0),
+	}, 2);
+	src1 = ir3_SHR_B(b, offset, 0, create_immed(b, 2), 0);
+
+	ldgb = ir3_LDGB(b, create_immed(b, const_offset->u32[0]), 0,
+			src0, 0, src1, 0);
+	ldgb->regs[0]->wrmask = (1 << intr->num_components) - 1;
+	ldgb->cat6.iim_val = intr->num_components;
+	ldgb->cat6.type = TYPE_U32;
+	mark_ssbo_read(ctx, ldgb);
+
+	split_dest(b, dst, ldgb, 0, intr->num_components);
+}
+
+/* src[] = { value, block_index, offset }. const_index[] = { write_mask } */
+static void
+emit_intrinsic_store_ssbo(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *stgb, *src0, *src1, *src2, *offset;
+	nir_const_value *const_offset;
+	unsigned ncomp = ffs(~intr->const_index[0]) - 1;
+
+	/* can this be non-const buffer_index?  how do we handle that? */
+	const_offset = nir_src_as_const_value(intr->src[1]);
+	compile_assert(ctx, const_offset);
+
+	offset = get_src(ctx, &intr->src[2])[0];
+
+	/* src0 is value, src1 is offset, src2 is uvec2(offset*4, 0)..
+	 * nir already *= 4:
+	 */
+	src0 = create_collect(b, get_src(ctx, &intr->src[0]), ncomp);
+	src1 = ir3_SHR_B(b, offset, 0, create_immed(b, 2), 0);
+	src2 = create_collect(b, (struct ir3_instruction*[]){
+		offset,
+		create_immed(b, 0),
+	}, 2);
+
+	stgb = ir3_STGB(b, create_immed(b, const_offset->u32[0]), 0,
+			src0, 0, src1, 0, src2, 0);
+	stgb->cat6.iim_val = ncomp;
+	stgb->cat6.type = TYPE_U32;
+	mark_ssbo_write(ctx, stgb);
+
+	array_insert(b, b->keeps, stgb);
+}
+
+static void
+emit_intrinsic_atomic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *atomic, *ssbo, *src0, *src1, *src2, *offset;
+	nir_const_value *const_offset;
+	type_t type = TYPE_U32;
+
+	/* can this be non-const buffer_index?  how do we handle that? */
+	const_offset = nir_src_as_const_value(intr->src[0]);
+	compile_assert(ctx, const_offset);
+	ssbo = create_immed(b, const_offset->u32[0]);
+
+	offset = get_src(ctx, &intr->src[1])[0];
+
+	/* src0 is data (or uvec2(data, compare)
+	 * src1 is offset
+	 * src2 is uvec2(offset*4, 0)
+	 *
+	 * Note that nir already multiplies the offset by four
+	 */
+	src0 = get_src(ctx, &intr->src[2])[0];
+	src1 = ir3_SHR_B(b, offset, 0, create_immed(b, 2), 0);
+	src2 = create_collect(b, (struct ir3_instruction*[]){
+		offset,
+		create_immed(b, 0),
+	}, 2);
+
+	switch (intr->intrinsic) {
+	case nir_intrinsic_ssbo_atomic_add:
+		atomic = ir3_ATOMIC_ADD(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_ssbo_atomic_imin:
+		atomic = ir3_ATOMIC_MIN(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		type = TYPE_S32;
+		break;
+	case nir_intrinsic_ssbo_atomic_umin:
+		atomic = ir3_ATOMIC_MIN(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_ssbo_atomic_imax:
+		atomic = ir3_ATOMIC_MAX(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		type = TYPE_S32;
+		break;
+	case nir_intrinsic_ssbo_atomic_umax:
+		atomic = ir3_ATOMIC_MAX(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_ssbo_atomic_and:
+		atomic = ir3_ATOMIC_AND(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_ssbo_atomic_or:
+		atomic = ir3_ATOMIC_OR(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_ssbo_atomic_xor:
+		atomic = ir3_ATOMIC_XOR(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_ssbo_atomic_exchange:
+		atomic = ir3_ATOMIC_XCHG(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_ssbo_atomic_comp_swap:
+		/* for cmpxchg, src0 is [ui]vec2(data, compare): */
+		src0 = create_collect(b, (struct ir3_instruction*[]){
+			src0,
+			get_src(ctx, &intr->src[3])[0],
+		}, 2);
+		atomic = ir3_ATOMIC_CMPXCHG(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	default:
+		unreachable("boo");
+	}
+
+	atomic->cat6.iim_val = 1;
+	atomic->cat6.type = type;
+	mark_ssbo_write(ctx, atomic);
+
+	/* even if nothing consume the result, we can't DCE the instruction: */
+	array_insert(b, b->keeps, atomic);
+}
+
 static void add_sysval_input(struct ir3_compile *ctx, gl_system_value slot,
 		struct ir3_instruction *instr)
 {
@@ -1224,6 +1397,24 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_store_var:
 		emit_intrinsic_store_var(ctx, intr);
+		break;
+	case nir_intrinsic_load_ssbo:
+		emit_intrinsic_load_ssbo(ctx, intr, dst);
+		break;
+	case nir_intrinsic_store_ssbo:
+		emit_intrinsic_store_ssbo(ctx, intr);
+		break;
+	case nir_intrinsic_ssbo_atomic_add:
+	case nir_intrinsic_ssbo_atomic_imin:
+	case nir_intrinsic_ssbo_atomic_umin:
+	case nir_intrinsic_ssbo_atomic_imax:
+	case nir_intrinsic_ssbo_atomic_umax:
+	case nir_intrinsic_ssbo_atomic_and:
+	case nir_intrinsic_ssbo_atomic_or:
+	case nir_intrinsic_ssbo_atomic_xor:
+	case nir_intrinsic_ssbo_atomic_exchange:
+	case nir_intrinsic_ssbo_atomic_comp_swap:
+		emit_intrinsic_atomic(ctx, intr);
 		break;
 	case nir_intrinsic_store_output:
 		idx = nir_intrinsic_base(intr);
@@ -2541,7 +2732,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	/* We need to do legalize after (for frag shader's) the "bary.f"
 	 * offsets (inloc) have been assigned.
 	 */
-	ir3_legalize(ir, &so->has_samp, &max_bary);
+	ir3_legalize(ir, &so->has_samp, &so->has_ssbo, &max_bary);
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("AFTER LEGALIZE:\n");
