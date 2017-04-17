@@ -701,9 +701,9 @@ void anv_CmdUpdateBuffer(
       struct anv_state tmp_data =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, copy_size, 64);
 
-      anv_state_flush(cmd_buffer->device, tmp_data);
-
       memcpy(tmp_data.map, pData, copy_size);
+
+      anv_state_flush(cmd_buffer->device, tmp_data);
 
       int bs = 16;
       bs = gcd_pow2_u64(bs, dstOffset);
