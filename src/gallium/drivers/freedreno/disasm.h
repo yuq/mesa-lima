@@ -31,6 +31,7 @@ enum shader_t {
 	SHADER_GEOM,
 	SHADER_FRAGMENT,
 	SHADER_COMPUTE,
+	SHADER_MAX,
 };
 
 /* bitmask of debug flags */

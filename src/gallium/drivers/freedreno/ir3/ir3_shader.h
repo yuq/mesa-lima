@@ -38,13 +38,20 @@
 
 /* driver param indices: */
 enum ir3_driver_param {
+	/* compute shader driver params: */
+	IR3_DP_NUM_WORK_GROUPS_X = 0,
+	IR3_DP_NUM_WORK_GROUPS_Y = 1,
+	IR3_DP_NUM_WORK_GROUPS_Z = 2,
+	IR3_DP_CS_COUNT   = 4,   /* must be aligned to vec4 */
+
+	/* vertex shader driver params: */
 	IR3_DP_VTXID_BASE = 0,
 	IR3_DP_VTXCNT_MAX = 1,
 	/* user-clip-plane components, up to 8x vec4's: */
 	IR3_DP_UCP0_X     = 4,
 	/* .... */
 	IR3_DP_UCP7_W     = 35,
-	IR3_DP_COUNT      = 36   /* must be aligned to vec4 */
+	IR3_DP_VS_COUNT   = 36   /* must be aligned to vec4 */
 };
 
 /* Configuration key used to identify a shader variant.. different
@@ -313,6 +320,10 @@ void * ir3_shader_assemble(struct ir3_shader_variant *v, uint32_t gpu_id);
 struct ir3_shader * ir3_shader_create(struct ir3_compiler *compiler,
 		const struct pipe_shader_state *cso, enum shader_t type,
 		struct pipe_debug_callback *debug);
+struct ir3_shader *
+ir3_shader_create_compute(struct ir3_compiler *compiler,
+		const struct pipe_compute_state *cso,
+		struct pipe_debug_callback *debug);
 void ir3_shader_destroy(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key, struct pipe_debug_callback *debug);
@@ -325,6 +336,8 @@ void ir3_emit_vs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer
 		struct fd_context *ctx, const struct pipe_draw_info *info);
 void ir3_emit_fs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_context *ctx);
+void ir3_emit_cs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_context *ctx, const struct pipe_grid_info *info);
 
 static inline const char *
 ir3_shader_stage(struct ir3_shader *shader)

@@ -71,6 +71,9 @@ struct ir3_compile {
 	/* For vertex shaders, keep track of the system values sources */
 	struct ir3_instruction *vertex_id, *basevertex, *instance_id;
 
+	/* Compute shader inputs: */
+	struct ir3_instruction *local_invocation_id, *work_group_id;
+
 	/* For SSBO's and atomics, we need to preserve order, such
 	 * that reads don't overtake writes, and the order of writes
 	 * is preserved.  Atomics are considered as a write.
@@ -228,15 +231,21 @@ compile_init(struct ir3_compiler *compiler,
 		constoff += align(ctx->s->info->num_ubos * ptrsz, 4) / 4;
 	}
 
+	unsigned num_driver_params = 0;
 	if (so->type == SHADER_VERTEX) {
-		so->constbase.driver_param = constoff;
-		constoff += align(IR3_DP_COUNT, 4) / 4;
+		num_driver_params = IR3_DP_VS_COUNT;
+	} else if (so->type == SHADER_COMPUTE) {
+		num_driver_params = IR3_DP_CS_COUNT;
+	}
 
-		if ((compiler->gpu_id < 500) &&
-				so->shader->stream_output.num_outputs > 0) {
-			so->constbase.tfbo = constoff;
-			constoff += align(PIPE_MAX_SO_BUFFERS * ptrsz, 4) / 4;
-		}
+	so->constbase.driver_param = constoff;
+	constoff += align(num_driver_params, 4) / 4;
+
+	if ((so->type == SHADER_VERTEX) &&
+			(compiler->gpu_id < 500) &&
+			so->shader->stream_output.num_outputs > 0) {
+		so->constbase.tfbo = constoff;
+		constoff += align(PIPE_MAX_SO_BUFFERS * ptrsz, 4) / 4;
 	}
 
 	so->constbase.immediate = constoff;
@@ -538,7 +547,7 @@ create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, int n,
 }
 
 static struct ir3_instruction *
-create_input(struct ir3_block *block, unsigned n)
+create_input_compmask(struct ir3_block *block, unsigned n, unsigned compmask)
 {
 	struct ir3_instruction *in;
 
@@ -546,7 +555,15 @@ create_input(struct ir3_block *block, unsigned n)
 	in->inout.block = block;
 	ir3_reg_create(in, n, 0);
 
+	in->regs[0]->wrmask = compmask;
+
 	return in;
+}
+
+static struct ir3_instruction *
+create_input(struct ir3_block *block, unsigned n)
+{
+	return create_input_compmask(block, n, 0x1);
 }
 
 static struct ir3_instruction *
@@ -1309,7 +1326,8 @@ emit_intrinsic_atomic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	array_insert(b, b->keeps, atomic);
 }
 
-static void add_sysval_input(struct ir3_compile *ctx, gl_system_value slot,
+static void add_sysval_input_compmask(struct ir3_compile *ctx,
+		gl_system_value slot, unsigned compmask,
 		struct ir3_instruction *instr)
 {
 	struct ir3_shader_variant *so = ctx->so;
@@ -1318,13 +1336,19 @@ static void add_sysval_input(struct ir3_compile *ctx, gl_system_value slot,
 
 	so->inputs[n].sysval = true;
 	so->inputs[n].slot = slot;
-	so->inputs[n].compmask = 1;
+	so->inputs[n].compmask = compmask;
 	so->inputs[n].regid = r;
 	so->inputs[n].interpolate = INTERP_MODE_FLAT;
 	so->total_in++;
 
 	ctx->ir->ninputs = MAX2(ctx->ir->ninputs, r + 1);
 	ctx->ir->inputs[r] = instr;
+}
+
+static void add_sysval_input(struct ir3_compile *ctx, gl_system_value slot,
+		struct ir3_instruction *instr)
+{
+	add_sysval_input_compmask(ctx, slot, 0x1, instr);
 }
 
 static void
@@ -1475,6 +1499,28 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		 */
 		dst[0] = ir3_COV(b, ctx->frag_face, TYPE_S16, TYPE_S32);
 		dst[0] = ir3_ADD_S(b, dst[0], 0, create_immed(b, 1), 0);
+		break;
+	case nir_intrinsic_load_local_invocation_id:
+		if (!ctx->local_invocation_id) {
+			ctx->local_invocation_id = create_input_compmask(b, 0, 0x7);
+			add_sysval_input_compmask(ctx, SYSTEM_VALUE_LOCAL_INVOCATION_ID,
+					0x7, ctx->local_invocation_id);
+		}
+		split_dest(b, dst, ctx->local_invocation_id, 0, 3);
+		break;
+	case nir_intrinsic_load_work_group_id:
+		if (!ctx->work_group_id) {
+			ctx->work_group_id = create_input_compmask(b, 0, 0x7);
+			add_sysval_input_compmask(ctx, SYSTEM_VALUE_WORK_GROUP_ID,
+					0x7, ctx->work_group_id);
+			ctx->work_group_id->regs[0]->flags |= IR3_REG_HIGH;
+		}
+		split_dest(b, dst, ctx->work_group_id, 0, 3);
+		break;
+	case nir_intrinsic_load_num_work_groups:
+		for (int i = 0; i < intr->num_components; i++) {
+			dst[i] = create_driver_param(ctx, IR3_DP_NUM_WORK_GROUPS_X + i);
+		}
 		break;
 	case nir_intrinsic_discard_if:
 	case nir_intrinsic_discard: {
@@ -2381,6 +2427,11 @@ max_drvloc(struct exec_list *vars)
 	return drvloc;
 }
 
+static const unsigned max_sysvals[SHADER_MAX] = {
+	[SHADER_VERTEX]  = 16,
+	[SHADER_COMPUTE] = 16, // TODO how many do we actually need?
+};
+
 static void
 emit_instructions(struct ir3_compile *ctx)
 {
@@ -2390,11 +2441,9 @@ emit_instructions(struct ir3_compile *ctx)
 	ninputs  = (max_drvloc(&ctx->s->inputs) + 1) * 4;
 	noutputs = (max_drvloc(&ctx->s->outputs) + 1) * 4;
 
-	/* or vtx shaders, we need to leave room for sysvals:
+	/* we need to leave room for sysvals:
 	 */
-	if (ctx->so->type == SHADER_VERTEX) {
-		ninputs += 16;
-	}
+	ninputs += max_sysvals[ctx->so->type];
 
 	ctx->ir = ir3_create(ctx->compiler, ninputs, noutputs);
 
@@ -2403,9 +2452,7 @@ emit_instructions(struct ir3_compile *ctx)
 	ctx->in_block = ctx->block;
 	list_addtail(&ctx->block->node, &ctx->ir->block_list);
 
-	if (ctx->so->type == SHADER_VERTEX) {
-		ctx->ir->ninputs -= 16;
-	}
+	ninputs -= max_sysvals[ctx->so->type];
 
 	/* for fragment shader, we have a single input register (usually
 	 * r0.xy) which is used as the base for bary.f varying fetch instrs:
