@@ -30,7 +30,7 @@
 #include "../vulkan/radv_descriptor_set.h"
 #include "util/bitscan.h"
 #include <llvm-c/Transforms/Scalar.h>
-
+#include "ac_shader_info.h"
 enum radeon_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_VS = 87,
 	RADEON_LLVM_AMDGPU_GS = 88,
@@ -680,7 +680,8 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		arg_types[arg_idx++] = ctx->i32; // GS instance id
 		break;
 	case MESA_SHADER_FRAGMENT:
-		arg_types[arg_idx++] = ctx->i32; /* sample position offset */
+		if (ctx->shader_info->info.ps.needs_sample_positions)
+			arg_types[arg_idx++] = ctx->i32; /* sample position offset */
 		user_sgpr_count = arg_idx;
 		arg_types[arg_idx++] = ctx->i32; /* prim mask */
 		sgpr_count = arg_idx;
@@ -845,9 +846,11 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		ctx->gs_invocation_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_FRAGMENT:
-		set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS_OFFSET, user_sgpr_idx, 1);
-		user_sgpr_idx += 1;
-		ctx->sample_pos_offset = LLVMGetParam(ctx->main_function, arg_idx++);
+		if (ctx->shader_info->info.ps.needs_sample_positions) {
+			set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS_OFFSET, user_sgpr_idx, 1);
+			user_sgpr_idx += 1;
+			ctx->sample_pos_offset = LLVMGetParam(ctx->main_function, arg_idx++);
+		}
 		ctx->prim_mask = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->persp_sample = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->persp_center = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -3528,7 +3531,6 @@ static LLVMValueRef load_sample_position(struct nir_to_llvm_context *ctx,
 	sample_id = LLVMBuildAdd(ctx->builder, sample_id, ctx->sample_pos_offset, "");
 	result = ac_build_indexed_load(&ctx->ac, ptr, sample_id, false);
 
-	ctx->shader_info->fs.uses_sample_positions = true;
 	return result;
 }
 
@@ -5703,6 +5705,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	memset(shader_info, 0, sizeof(*shader_info));
 
+	ac_nir_shader_info_pass(nir, options, &shader_info->info);
+		
 	LLVMSetTarget(ctx.module, options->supports_spill ? "amdgcn-mesa-mesa3d" : "amdgcn--");
 
 	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(tm);

@@ -29,7 +29,7 @@
 #include "llvm-c/TargetMachine.h"
 #include "amd_family.h"
 #include "../vulkan/radv_descriptor_set.h"
-
+#include "ac_shader_info.h"
 #include "shader_enums.h"
 struct ac_shader_binary;
 struct ac_shader_config;
@@ -138,6 +138,7 @@ struct ac_es_output_info {
 
 struct ac_shader_variant_info {
 	struct ac_userdata_locations user_sgprs_locs;
+	struct ac_shader_info info;
 	unsigned num_user_sgprs;
 	unsigned num_input_sgprs;
 	unsigned num_input_vgprs;
@@ -166,7 +167,6 @@ struct ac_shader_variant_info {
 			bool force_persample;
 			bool prim_id_input;
 			bool layer_input;
-			bool uses_sample_positions;
 		} fs;
 		struct {
 			unsigned block_size[3];
