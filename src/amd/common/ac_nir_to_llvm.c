@@ -572,8 +572,11 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	    ctx->stage == MESA_SHADER_VERTEX ||
 	    ctx->stage == MESA_SHADER_TESS_CTRL ||
 	    ctx->stage == MESA_SHADER_TESS_EVAL ||
-	    ctx->stage == MESA_SHADER_FRAGMENT ||
 	    ctx->is_gs_copy_shader)
+		need_ring_offsets = true;
+
+	if (ctx->stage == MESA_SHADER_FRAGMENT &&
+	    ctx->shader_info->info.ps.needs_sample_positions)
 		need_ring_offsets = true;
 
 	if (need_ring_offsets && !ctx->options->supports_spill) {
