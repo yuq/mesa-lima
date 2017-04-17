@@ -259,7 +259,8 @@ amdgpu_ctx_query_reset_status(struct radeon_winsys_ctx *rwctx)
 static bool amdgpu_cs_has_user_fence(struct amdgpu_cs_context *cs)
 {
    return cs->request.ip_type != AMDGPU_HW_IP_UVD &&
-          cs->request.ip_type != AMDGPU_HW_IP_VCE;
+          cs->request.ip_type != AMDGPU_HW_IP_VCE &&
+          cs->request.ip_type != AMDGPU_HW_IP_VCN_DEC;
 }
 
 static bool amdgpu_cs_has_chaining(struct amdgpu_cs *cs)
@@ -710,6 +711,10 @@ static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
 
    case RING_COMPUTE:
       cs->request.ip_type = AMDGPU_HW_IP_COMPUTE;
+      break;
+
+   case RING_VCN_DEC:
+      cs->request.ip_type = AMDGPU_HW_IP_VCN_DEC;
       break;
 
    default:
@@ -1304,6 +1309,10 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    case RING_UVD:
       while (rcs->current.cdw & 15)
          radeon_emit(rcs, 0x80000000); /* type2 nop packet */
+      break;
+   case RING_VCN_DEC:
+      while (rcs->current.cdw & 15)
+         radeon_emit(rcs, 0x81ff); /* nop packet */
       break;
    default:
       break;
