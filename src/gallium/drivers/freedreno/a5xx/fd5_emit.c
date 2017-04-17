@@ -345,6 +345,72 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	return needs_border;
 }
 
+static void
+emit_ssbos(struct fd_context *ctx, struct fd_ringbuffer *ring,
+		enum a4xx_state_block sb, struct fd_shaderbuf_stateobj *so)
+{
+	unsigned count = util_last_bit(so->enabled_mask);
+
+	if (count == 0)
+		return;
+
+	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (4 * count));
+	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(0) |
+			CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(sb) |
+			CP_LOAD_STATE4_0_NUM_UNIT(count));
+	OUT_RING(ring, CP_LOAD_STATE4_1_STATE_TYPE(0) |
+			CP_LOAD_STATE4_1_EXT_SRC_ADDR(0));
+	OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
+	for (unsigned i = 0; i < count; i++) {
+		struct pipe_shader_buffer *buf = &so->sb[i];
+		if (buf->buffer) {
+			struct fd_resource *rsc = fd_resource(buf->buffer);
+			OUT_RELOCW(ring, rsc->bo, 0, 0, 0);
+		} else {
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+		}
+		OUT_RING(ring, 0x00000000);
+		OUT_RING(ring, 0x00000000);
+	}
+
+	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (2 * count));
+	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(0) |
+			CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(sb) |
+			CP_LOAD_STATE4_0_NUM_UNIT(count));
+	OUT_RING(ring, CP_LOAD_STATE4_1_STATE_TYPE(1) |
+			CP_LOAD_STATE4_1_EXT_SRC_ADDR(0));
+	OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
+	for (unsigned i = 0; i < count; i++) {
+		struct pipe_shader_buffer *buf = &so->sb[i];
+
+		// TODO maybe offset encoded somewhere here??
+		OUT_RING(ring, (buf->buffer_size << 16));
+		OUT_RING(ring, 0x00000000);
+	}
+
+	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (2 * count));
+	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(0) |
+			CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
+			CP_LOAD_STATE4_0_STATE_BLOCK(sb) |
+			CP_LOAD_STATE4_0_NUM_UNIT(count));
+	OUT_RING(ring, CP_LOAD_STATE4_1_STATE_TYPE(2) |
+			CP_LOAD_STATE4_1_EXT_SRC_ADDR(0));
+	OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
+	for (unsigned i = 0; i < count; i++) {
+		struct pipe_shader_buffer *buf = &so->sb[i];
+		if (buf->buffer) {
+			struct fd_resource *rsc = fd_resource(buf->buffer);
+			OUT_RELOCW(ring, rsc->bo, 0, 0, 0);
+		} else {
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+		}
+	}
+}
+
 void
 fd5_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 {
@@ -663,6 +729,9 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (needs_border)
 		emit_border_color(ctx, ring);
+
+	if (ctx->dirty_shader[PIPE_SHADER_FRAGMENT] & FD_DIRTY_SHADER_SSBO)
+		emit_ssbos(ctx, ring, SB4_SSBO, &ctx->shaderbuf[PIPE_SHADER_FRAGMENT]);
 }
 
 /* emit setup at begin of new cmdstream buffer (don't rely on previous

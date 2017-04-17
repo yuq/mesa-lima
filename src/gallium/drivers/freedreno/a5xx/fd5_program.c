@@ -389,11 +389,16 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	OUT_RING(ring, 0x00000000);
 
 	OUT_PKT4(ring, REG_A5XX_HLSQ_VS_CNTL, 5);
-	OUT_RING(ring, A5XX_HLSQ_VS_CNTL_INSTRLEN(s[VS].instrlen));
-	OUT_RING(ring, A5XX_HLSQ_FS_CNTL_INSTRLEN(s[FS].instrlen));
-	OUT_RING(ring, A5XX_HLSQ_HS_CNTL_INSTRLEN(s[HS].instrlen));
-	OUT_RING(ring, A5XX_HLSQ_DS_CNTL_INSTRLEN(s[DS].instrlen));
-	OUT_RING(ring, A5XX_HLSQ_GS_CNTL_INSTRLEN(s[GS].instrlen));
+	OUT_RING(ring, A5XX_HLSQ_VS_CNTL_INSTRLEN(s[VS].instrlen) |
+			COND(s[VS].v && s[VS].v->has_ssbo, A5XX_HLSQ_VS_CNTL_SSBO_ENABLE));
+	OUT_RING(ring, A5XX_HLSQ_FS_CNTL_INSTRLEN(s[FS].instrlen) |
+			COND(s[FS].v && s[FS].v->has_ssbo, A5XX_HLSQ_FS_CNTL_SSBO_ENABLE));
+	OUT_RING(ring, A5XX_HLSQ_HS_CNTL_INSTRLEN(s[HS].instrlen) |
+			COND(s[HS].v && s[HS].v->has_ssbo, A5XX_HLSQ_HS_CNTL_SSBO_ENABLE));
+	OUT_RING(ring, A5XX_HLSQ_DS_CNTL_INSTRLEN(s[DS].instrlen) |
+			COND(s[DS].v && s[DS].v->has_ssbo, A5XX_HLSQ_DS_CNTL_SSBO_ENABLE));
+	OUT_RING(ring, A5XX_HLSQ_GS_CNTL_INSTRLEN(s[GS].instrlen) |
+			COND(s[GS].v && s[GS].v->has_ssbo, A5XX_HLSQ_GS_CNTL_SSBO_ENABLE));
 
 	OUT_PKT4(ring, REG_A5XX_SP_VS_CONFIG, 5);
 	OUT_RING(ring, A5XX_SP_VS_CONFIG_CONSTOBJECTOFFSET(s[VS].constoff) |

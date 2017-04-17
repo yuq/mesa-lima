@@ -250,6 +250,11 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 			return 120;
 		return is_ir3(screen) ? 140 : 120;
 
+	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
+		if (is_a5xx(screen))
+			return 4;
+		return 0;
+
 	/* Unsupported features. */
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
 	case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER:
@@ -282,7 +287,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
-	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_INVALIDATE_BUFFER:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
@@ -439,7 +443,7 @@ fd_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 
 static int
 fd_screen_get_shader_param(struct pipe_screen *pscreen,
-						   enum pipe_shader_type shader,
+		enum pipe_shader_type shader,
 		enum pipe_shader_cap param)
 {
 	struct fd_screen *screen = fd_screen(pscreen);
@@ -518,6 +522,35 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+		if (is_a5xx(screen)) {
+			/* a5xx (and a4xx for that matter) has one state-block
+			 * for compute-shader SSBO's and another that is shared
+			 * by VS/HS/DS/GS/FS..  so to simplify things for now
+			 * just advertise SSBOs for FS and CS.  We could possibly
+			 * do what blob does, and partition the space for
+			 * VS/HS/DS/GS/FS.  The blob advertises:
+			 *
+			 *   GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS: 4
+			 *   GL_MAX_GEOMETRY_SHADER_STORAGE_BLOCKS: 4
+			 *   GL_MAX_TESS_CONTROL_SHADER_STORAGE_BLOCKS: 4
+			 *   GL_MAX_TESS_EVALUATION_SHADER_STORAGE_BLOCKS: 4
+			 *   GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS: 4
+			 *   GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS: 24
+			 *   GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS: 24
+			 *
+			 * I think that way we could avoid having to patch shaders
+			 * for actual SSBO indexes by using a static partitioning.
+			 */
+			switch(shader)
+			{
+			case PIPE_SHADER_FRAGMENT:
+			case PIPE_SHADER_COMPUTE:
+				return 24;
+			default:
+				return 0;
+			}
+		}
+		return 0;
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 	case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
 	case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
