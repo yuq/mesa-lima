@@ -1246,7 +1246,7 @@ emit_stage_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 	struct ac_userdata_info *desc_set_loc = &pipeline->shaders[stage]->info.user_sgprs_locs.descriptor_sets[idx];
 	uint32_t base_reg = shader_stage_to_user_data_0(stage, radv_pipeline_has_gs(pipeline), radv_pipeline_has_tess(pipeline));
 
-	if (desc_set_loc->sgpr_idx == -1)
+	if (desc_set_loc->sgpr_idx == -1 || desc_set_loc->indirect)
 		return;
 
 	assert(!desc_set_loc->indirect);
@@ -1314,16 +1314,71 @@ radv_flush_push_descriptors(struct radv_cmd_buffer *cmd_buffer)
 }
 
 static void
+radv_flush_indirect_descriptor_sets(struct radv_cmd_buffer *cmd_buffer,
+				    struct radv_pipeline *pipeline)
+{
+	uint32_t size = MAX_SETS * 2 * 4;
+	uint32_t offset;
+	void *ptr;
+	
+	if (!radv_cmd_buffer_upload_alloc(cmd_buffer, size,
+					  256, &offset, &ptr))
+		return;
+
+	for (unsigned i = 0; i < MAX_SETS; i++) {
+		uint32_t *uptr = ((uint32_t *)ptr) + i * 2;
+		uint64_t set_va = 0;
+		struct radv_descriptor_set *set = cmd_buffer->state.descriptors[i];
+		if (set)
+			set_va = set->va;
+		uptr[0] = set_va & 0xffffffff;
+		uptr[1] = set_va >> 32;
+	}
+
+	uint64_t va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
+	va += offset;
+
+	if (pipeline->shaders[MESA_SHADER_VERTEX])
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_VERTEX,
+					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+
+	if (pipeline->shaders[MESA_SHADER_FRAGMENT])
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_FRAGMENT,
+					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+
+	if (radv_pipeline_has_gs(pipeline))
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_GEOMETRY,
+					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+
+	if (radv_pipeline_has_tess(pipeline))
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_TESS_CTRL,
+					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+
+	if (radv_pipeline_has_tess(pipeline))
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_TESS_EVAL,
+					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+
+	if (pipeline->shaders[MESA_SHADER_COMPUTE])
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_COMPUTE,
+					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+}
+
+static void
 radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 		       struct radv_pipeline *pipeline,
 		       VkShaderStageFlags stages)
 {
 	unsigned i;
+
 	if (!cmd_buffer->state.descriptors_dirty)
 		return;
 
 	if (cmd_buffer->state.push_descriptors_dirty)
 		radv_flush_push_descriptors(cmd_buffer);
+
+	if (pipeline->need_indirect_descriptor_sets) {
+		radv_flush_indirect_descriptor_sets(cmd_buffer, pipeline);
+	}
 
 	for (i = 0; i < MAX_SETS; i++) {
 		if (!(cmd_buffer->state.descriptors_dirty & (1 << i)))

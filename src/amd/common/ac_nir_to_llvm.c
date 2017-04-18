@@ -537,7 +537,7 @@ static void set_userdata_location_shader(struct nir_to_llvm_context *ctx,
 	set_userdata_location(&ctx->shader_info->user_sgprs_locs.shader_data[idx], sgpr_idx, num_sgprs);
 }
 
-#if 0
+
 static void set_userdata_location_indirect(struct ac_userdata_info *ud_info, uint8_t sgpr_idx, uint8_t num_sgprs,
 					   uint32_t indirect_offset)
 {
@@ -546,7 +546,6 @@ static void set_userdata_location_indirect(struct ac_userdata_info *ud_info, uin
 	ud_info->indirect = true;
 	ud_info->indirect_offset = indirect_offset;
 }
-#endif
 
 static void declare_tess_lds(struct nir_to_llvm_context *ctx)
 {
@@ -559,6 +558,7 @@ static void declare_tess_lds(struct nir_to_llvm_context *ctx)
 struct user_sgpr_info {
 	bool need_ring_offsets;
 	uint8_t sgpr_count;
+	bool indirect_all_descriptor_sets;
 };
 
 static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
@@ -623,6 +623,8 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 		fprintf(stderr, "radv: TODO: add support for indirect sgprs\n");
 		/* need to add support for indirect descriptor sets */
 		assert(0);
+		user_sgpr_info->sgpr_count += 2;
+		user_sgpr_info->indirect_all_descriptor_sets = true;
 	} else {
 		user_sgpr_info->sgpr_count += util_bitcount(ctx->shader_info->info.desc_set_used_mask) * 2;
 	}
@@ -645,11 +647,16 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	}
 
 	/* 1 for each descriptor set */
-	for (unsigned i = 0; i < num_sets; ++i) {
-		if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
-			array_params_mask |= (1 << arg_idx);
-			arg_types[arg_idx++] = const_array(ctx->i8, 1024 * 1024);
+	if (!user_sgpr_info.indirect_all_descriptor_sets) {
+		for (unsigned i = 0; i < num_sets; ++i) {
+			if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
+				array_params_mask |= (1 << arg_idx);
+				arg_types[arg_idx++] = const_array(ctx->i8, 1024 * 1024);
+			}
 		}
+	} else {
+		array_params_mask |= (1 << arg_idx);
+		arg_types[arg_idx++] = const_array(const_array(ctx->i8, 1024 * 1024), 32);
 	}
 
 	if (ctx->shader_info->info.needs_push_constants) {
@@ -801,14 +808,31 @@ static void create_function(struct nir_to_llvm_context *ctx)
 			ctx->ring_offsets = LLVMGetParam(ctx->main_function, arg_idx++);
 	}
 
-	for (unsigned i = 0; i < num_sets; ++i) {
-		if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
-			set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], user_sgpr_idx, 2);
-			user_sgpr_idx += 2;
-			ctx->descriptor_sets[i] =
-				LLVMGetParam(ctx->main_function, arg_idx++);
-		} else
-			ctx->descriptor_sets[i] = NULL;
+	if (!user_sgpr_info.indirect_all_descriptor_sets) {
+		for (unsigned i = 0; i < num_sets; ++i) {
+			if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
+				set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], user_sgpr_idx, 2);
+				user_sgpr_idx += 2;
+				ctx->descriptor_sets[i] =
+					LLVMGetParam(ctx->main_function, arg_idx++);
+			} else
+				ctx->descriptor_sets[i] = NULL;
+		}
+	} else {
+		uint32_t desc_sgpr_idx = user_sgpr_idx;
+		LLVMValueRef desc_sets = LLVMGetParam(ctx->main_function, arg_idx++);
+		set_userdata_location_shader(ctx, AC_UD_INDIRECT_DESCRIPTOR_SETS, user_sgpr_idx, 2);
+		user_sgpr_idx += 2;
+
+		for (unsigned i = 0; i < num_sets; ++i) {
+			if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
+				set_userdata_location_indirect(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], desc_sgpr_idx, 2, i * 8);
+				ctx->descriptor_sets[i] = ac_build_indexed_load_const(&ctx->ac, desc_sets, LLVMConstInt(ctx->i32, i, false));
+
+			} else
+				ctx->descriptor_sets[i] = NULL;
+		}
+		ctx->shader_info->need_indirect_descriptor_sets = true;
 	}
 
 	if (ctx->shader_info->info.needs_push_constants) {
