@@ -226,6 +226,9 @@ struct BuilderSWR : public Builder {
       gallivm_free_ir(gallivm);
    }
 
+   void WriteVS(Value *pVal, Value *pVsContext, Value *pVtxOutput,
+                unsigned slot, unsigned channel);
+
    struct gallivm_state *gallivm;
    PFN_VERTEX_FUNC CompileVS(struct swr_context *ctx, swr_jit_vs_key &key);
    PFN_PIXEL_KERNEL CompileFS(struct swr_context *ctx, swr_jit_fs_key &key);
@@ -657,6 +660,23 @@ swr_compile_gs(struct swr_context *ctx, swr_jit_gs_key &key)
    return func;
 }
 
+void
+BuilderSWR::WriteVS(Value *pVal, Value *pVsContext, Value *pVtxOutput, unsigned slot, unsigned channel)
+{
+#if USE_SIMD16_FRONTEND
+   // interleave the simdvertex components into the dest simd16vertex
+   //   slot16offset = slot8offset * 2
+   //   comp16offset = comp8offset * 2 + alternateOffset
+
+   Value *offset = LOAD(pVsContext, { 0, SWR_VS_CONTEXT_AlternateOffset });
+   Value *pOut = GEP(pVtxOutput, { C(0), C(0), C(slot * 2), offset } );
+   STORE(pVal, pOut, {channel * 2});
+#else
+   Value *pOut = GEP(pVtxOutput, {0, 0, slot});
+   STORE(pVal, pOut, {0, channel});
+#endif
+}
+
 PFN_VERTEX_FUNC
 BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
 {
@@ -752,7 +772,7 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
          uint32_t outSlot = attrib;
          if (swr_vs->info.base.output_semantic_name[attrib] == TGSI_SEMANTIC_PSIZE)
             outSlot = VERTEX_POINT_SIZE_SLOT;
-         STORE(val, vtxOutput, {0, 0, outSlot, channel});
+         WriteVS(val, pVsCtx, vtxOutput, outSlot, channel);
       }
    }
 
@@ -786,10 +806,10 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
                                              &swr_vs->info.base);
             if (val < 4) {
                LLVMValueRef dist = LLVMBuildLoad(gallivm->builder, outputs[cv][val], "");
-               STORE(unwrap(dist), vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_LO_SLOT, val});
+               WriteVS(unwrap(dist), pVsCtx, vtxOutput, VERTEX_CLIPCULL_DIST_LO_SLOT, val);
             } else {
                LLVMValueRef dist = LLVMBuildLoad(gallivm->builder, outputs[cv][val - 4], "");
-               STORE(unwrap(dist), vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_HI_SLOT, val - 4});
+               WriteVS(unwrap(dist), pVsCtx, vtxOutput, VERTEX_CLIPCULL_DIST_HI_SLOT, val - 4);
             }
             continue;
          }
@@ -807,9 +827,9 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
                                       FMUL(unwrap(cw), VBROADCAST(pw)))));
 
          if (val < 4)
-            STORE(dist, vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_LO_SLOT, val});
+            WriteVS(dist, pVsCtx, vtxOutput, VERTEX_CLIPCULL_DIST_LO_SLOT, val);
          else
-            STORE(dist, vtxOutput, {0, 0, VERTEX_CLIPCULL_DIST_HI_SLOT, val - 4});
+            WriteVS(dist, pVsCtx, vtxOutput, VERTEX_CLIPCULL_DIST_HI_SLOT, val - 4);
       }
    }
 
