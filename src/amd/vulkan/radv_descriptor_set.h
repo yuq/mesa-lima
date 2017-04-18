@@ -26,7 +26,7 @@
 
 #include <vulkan/vulkan.h>
 
-#define MAX_SETS         8
+#define MAX_SETS         32
 
 struct radv_descriptor_set_binding_layout {
    VkDescriptorType type;
