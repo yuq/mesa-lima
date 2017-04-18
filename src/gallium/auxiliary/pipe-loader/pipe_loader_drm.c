@@ -64,13 +64,13 @@ static const struct pipe_loader_ops pipe_loader_drm_ops;
 
 #ifdef GALLIUM_STATIC_TARGETS
 static const struct drm_conf_ret throttle_ret = {
-   DRM_CONF_INT,
-   {2},
+   .type = DRM_CONF_INT,
+   .val.val_int = 2,
 };
 
 static const struct drm_conf_ret share_fd_ret = {
-   DRM_CONF_BOOL,
-   {true},
+   .type = DRM_CONF_BOOL,
+   .val.val_bool = true,
 };
 
 static inline const struct drm_conf_ret *
