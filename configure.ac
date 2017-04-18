@@ -1367,7 +1367,7 @@ if test "x$enable_libglvnd" = xyes ; then
     esac
 
     PKG_CHECK_MODULES([GLVND], libglvnd >= 0.2.0)
-    PKG_CHECK_VAR(LIBGLVND_DATADIR, libglvnd, datadir)
+    LIBGLVND_DATADIR=`$PKG_CONFIG --variable=datadir libglvnd`
     AC_SUBST([LIBGLVND_DATADIR])
 
     DEFINES="${DEFINES} -DUSE_LIBGLVND=1"
