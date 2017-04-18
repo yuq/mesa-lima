@@ -454,3 +454,38 @@ nir_ssa_def *radv_meta_gen_rect_vertices(nir_builder *vs_b)
 {
 	return radv_meta_gen_rect_vertices_comp2(vs_b, nir_imm_float(vs_b, 0.0));
 }
+
+/* vertex shader that generates vertices */
+nir_shader *
+radv_meta_build_nir_vs_generate_vertices(void)
+{
+	const struct glsl_type *vec4 = glsl_vec4_type();
+
+	nir_builder b;
+	nir_variable *v_position;
+
+	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
+	b.shader->info->name = ralloc_strdup(b.shader, "meta_vs_gen_verts");
+
+	nir_ssa_def *outvec = radv_meta_gen_rect_vertices(&b);
+
+	v_position = nir_variable_create(b.shader, nir_var_shader_out, vec4,
+					 "gl_Position");
+	v_position->data.location = VARYING_SLOT_POS;
+
+	nir_store_var(&b, v_position, outvec, 0xf);
+
+	return b.shader;
+}
+
+nir_shader *
+radv_meta_build_nir_fs_noop(void)
+{
+	nir_builder b;
+
+	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
+	b.shader->info->name = ralloc_asprintf(b.shader,
+					       "meta_noop_fs");
+
+	return b.shader;
+}

@@ -26,44 +26,7 @@
 
 #include "radv_meta.h"
 #include "radv_private.h"
-#include "nir/nir_builder.h"
 #include "sid.h"
-
-/* vertex shader that generates vertices */
-static nir_shader *
-build_nir_vs(void)
-{
-	const struct glsl_type *vec4 = glsl_vec4_type();
-
-	nir_builder b;
-	nir_variable *v_position;
-
-	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
-	b.shader->info->name = ralloc_strdup(b.shader, "meta_depth_decomp_vs");
-
-	nir_ssa_def *outvec = radv_meta_gen_rect_vertices(&b);
-
-	v_position = nir_variable_create(b.shader, nir_var_shader_out, vec4,
-					 "gl_Position");
-	v_position->data.location = VARYING_SLOT_POS;
-
-	nir_store_var(&b, v_position, outvec, 0xf);
-
-	return b.shader;
-}
-
-/* simple passthrough shader */
-static nir_shader *
-build_nir_fs(void)
-{
-	nir_builder b;
-
-	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
-	b.shader->info->name = ralloc_asprintf(b.shader,
-					       "meta_depth_decomp_noop_fs");
-
-	return b.shader;
-}
 
 static VkResult
 create_pass(struct radv_device *device)
@@ -115,7 +78,7 @@ create_pipeline(struct radv_device *device,
 	VkDevice device_h = radv_device_to_handle(device);
 
 	struct radv_shader_module fs_module = {
-		.nir = build_nir_fs(),
+		.nir = radv_meta_build_nir_fs_noop(),
 	};
 
 	if (!fs_module.nir) {
@@ -260,7 +223,7 @@ radv_device_init_meta_depth_decomp_state(struct radv_device *device)
 
 	zero(device->meta_state.depth_decomp);
 
-	struct radv_shader_module vs_module = { .nir = build_nir_vs() };
+	struct radv_shader_module vs_module = { .nir = radv_meta_build_nir_vs_generate_vertices() };
 	if (!vs_module.nir) {
 		/* XXX: Need more accurate error */
 		res = VK_ERROR_OUT_OF_HOST_MEMORY;
