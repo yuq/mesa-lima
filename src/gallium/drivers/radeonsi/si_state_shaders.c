@@ -1436,6 +1436,36 @@ static void si_build_shader_variant(void *job, int thread_index)
 	si_shader_init_pm4_state(sscreen, shader);
 }
 
+static const struct si_shader_key zeroed;
+
+static bool si_check_missing_main_part(struct si_screen *sscreen,
+				       struct si_shader_selector *sel,
+				       struct si_compiler_ctx_state *compiler_state,
+				       struct si_shader_key *key)
+{
+	struct si_shader **mainp = si_get_main_shader_part(sel, key);
+
+	if (!*mainp) {
+		struct si_shader *main_part = CALLOC_STRUCT(si_shader);
+
+		if (!main_part)
+			return false;
+
+		main_part->selector = sel;
+		main_part->key.as_es = key->as_es;
+		main_part->key.as_ls = key->as_ls;
+
+		if (si_compile_tgsi_shader(sscreen, compiler_state->tm,
+					   main_part, false,
+					   &compiler_state->debug) != 0) {
+			FREE(main_part);
+			return false;
+		}
+		*mainp = main_part;
+	}
+	return true;
+}
+
 /* Select the hw shader variant depending on the current state. */
 static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_ctx_state *state,
@@ -1443,7 +1473,6 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_key *key,
 				     int thread_index)
 {
-	static const struct si_shader_key zeroed;
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
@@ -1514,33 +1543,46 @@ again:
 
 	/* Compile the main shader part if it doesn't exist. This can happen
 	 * if the initial guess was wrong. */
-	struct si_shader **mainp = si_get_main_shader_part(sel, key);
 	bool is_pure_monolithic =
 		sscreen->use_monolithic_shaders ||
 		memcmp(&key->mono, &zeroed.mono, sizeof(key->mono)) != 0;
 
-	if (!*mainp && !is_pure_monolithic) {
-		struct si_shader *main_part = CALLOC_STRUCT(si_shader);
+	if (!is_pure_monolithic) {
+		bool ok;
 
-		if (!main_part) {
+		/* Make sure the main shader part is present. This is needed
+		 * for shaders that can be compiled as VS, LS, or ES, and only
+		 * one of them is compiled at creation.
+		 *
+		 * For merged shaders, check that the starting shader's main
+		 * part is present.
+		 */
+		if (sscreen->b.chip_class >= GFX9 &&
+		    (sel->type == PIPE_SHADER_TESS_CTRL ||
+		     sel->type == PIPE_SHADER_GEOMETRY)) {
+			struct si_shader_selector *shader1 = NULL;
+			struct si_shader_key shader1_key = zeroed;
+
+			if (sel->type == PIPE_SHADER_TESS_CTRL) {
+				shader1 = key->part.tcs.ls;
+				shader1_key.as_ls = 1;
+			} else if (sel->type == PIPE_SHADER_GEOMETRY) {
+				shader1 = key->part.gs.es;
+				shader1_key.as_es = 1;
+			} else
+				assert(0);
+
+			ok = si_check_missing_main_part(sscreen, shader1,
+							compiler_state, &shader1_key);
+		} else {
+			ok = si_check_missing_main_part(sscreen, sel,
+							compiler_state, key);
+		}
+		if (!ok) {
 			FREE(shader);
 			mtx_unlock(&sel->mutex);
 			return -ENOMEM; /* skip the draw call */
 		}
-
-		main_part->selector = sel;
-		main_part->key.as_es = key->as_es;
-		main_part->key.as_ls = key->as_ls;
-
-		if (si_compile_tgsi_shader(sscreen, compiler_state->tm,
-					   main_part, false,
-					   &compiler_state->debug) != 0) {
-			FREE(main_part);
-			FREE(shader);
-			mtx_unlock(&sel->mutex);
-			return -ENOMEM; /* skip the draw call */
-		}
-		*mainp = main_part;
 	}
 
 	/* Monolithic-only shaders don't make a distinction between optimized
