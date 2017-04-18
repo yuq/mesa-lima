@@ -190,6 +190,8 @@ create_group(struct parser_context *ctx, const char *name, const char **atts)
    group->spec = ctx->spec;
    group->group_offset = 0;
    group->group_count = 0;
+   group->variable_offset = 0;
+   group->variable = false;
 
    return group;
 }
@@ -210,16 +212,22 @@ create_enum(struct parser_context *ctx, const char *name, const char **atts)
 
 static void
 get_group_offset_count(struct parser_context *ctx, const char *name,
-                       const char **atts, uint32_t *offset, uint32_t *count)
+                       const char **atts, uint32_t *offset, uint32_t *count,
+                       uint32_t *elem_size, bool *variable)
 {
    char *p;
    int i;
 
    for (i = 0; atts[i]; i += 2) {
-      if (strcmp(atts[i], "count") == 0)
+      if (strcmp(atts[i], "count") == 0) {
          *count = strtoul(atts[i + 1], &p, 0);
-      else if (strcmp(atts[i], "start") == 0)
+         if (*count == 0)
+            *variable = true;
+      } else if (strcmp(atts[i], "start") == 0) {
          *offset = strtoul(atts[i + 1], &p, 0);
+      } else if (strcmp(atts[i], "size") == 0) {
+         *elem_size = strtoul(atts[i + 1], &p, 0);
+      }
    }
    return;
 }
@@ -331,8 +339,11 @@ create_field(struct parser_context *ctx, const char **atts)
          field->start = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
       else if (strcmp(atts[i], "end") == 0) {
          field->end = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
-         if (ctx->group->group_offset)
+         if (ctx->group->group_offset) {
             ctx->group->group_offset = field->end+1;
+            if (ctx->group->variable)
+               ctx->group->variable_offset = ctx->group->group_offset;
+         }
       } else if (strcmp(atts[i], "type") == 0)
          field->type = string_to_type(ctx, atts[i + 1]);
       else if (strcmp(atts[i], "default") == 0 &&
@@ -400,7 +411,8 @@ start_element(void *data, const char *element_name, const char **atts)
       get_register_offset(atts, &ctx->group->register_offset);
    } else if (strcmp(element_name, "group") == 0) {
       get_group_offset_count(ctx, name, atts, &ctx->group->group_offset,
-                             &ctx->group->group_count);
+                             &ctx->group->group_count, &ctx->group->elem_size,
+                             &ctx->group->variable);
    } else if (strcmp(element_name, "field") == 0) {
       do {
          ctx->fields[ctx->nfields++] = create_field(ctx, atts);
@@ -734,6 +746,8 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    iter->p = p;
    iter->i = 0;
    iter->print_colors = print_colors;
+   iter->repeat = false;
+   iter->addr_inc = 0;
 }
 
 static const char *
@@ -755,8 +769,17 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
       float f;
    } v;
 
-   if (iter->i == iter->group->nfields)
+   if (iter->i == iter->group->nfields) {
+      if (iter->group->group_size > 0) {
+         int iter_length = iter->group->elem_size;
+
+         iter->group->group_size -= iter_length / 32;
+         iter->addr_inc += iter_length;
+         iter->dword = (iter->field->start + iter->addr_inc) / 32;
+         return true;
+      }
       return false;
+   }
 
    iter->field = iter->group->fields[iter->i++];
    iter->name = iter->field->name;

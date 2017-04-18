@@ -61,6 +61,8 @@ struct gen_field_iterator {
    int i;
    struct gen_field *field;
    bool print_colors;
+   bool repeat;
+   uint32_t addr_inc;
 };
 
 struct gen_group {
@@ -69,6 +71,10 @@ struct gen_group {
    int nfields;
    struct gen_field **fields;
    uint32_t group_offset, group_count;
+   uint32_t elem_size;
+   uint32_t variable_offset;
+   bool variable;
+   uint32_t group_size;
 
    uint32_t opcode_mask;
    uint32_t opcode;
