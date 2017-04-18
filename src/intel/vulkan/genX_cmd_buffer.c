@@ -407,19 +407,90 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
       anv_gen8_hiz_op_resolve(cmd_buffer, image, hiz_op);
 }
 
+enum fast_clear_state_field {
+   FAST_CLEAR_STATE_FIELD_CLEAR_COLOR,
+   FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE,
+};
+
 static inline uint32_t
-get_fast_clear_state_entry_offset(const struct anv_device *device,
-                                  const struct anv_image *image,
-                                  unsigned level)
+get_fast_clear_state_offset(const struct anv_device *device,
+                            const struct anv_image *image,
+                            unsigned level, enum fast_clear_state_field field)
 {
    assert(device && image);
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
    assert(level < anv_image_aux_levels(image));
-   const uint32_t offset = image->offset + image->aux_surface.offset +
-                           image->aux_surface.isl.size +
-                           anv_fast_clear_state_entry_size(device) * level;
+   uint32_t offset = image->offset + image->aux_surface.offset +
+                     image->aux_surface.isl.size +
+                     anv_fast_clear_state_entry_size(device) * level;
+
+   switch (field) {
+   case FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE:
+      offset += device->isl_dev.ss.clear_value_size;
+      /* Fall-through */
+   case FAST_CLEAR_STATE_FIELD_CLEAR_COLOR:
+      break;
+   }
+
    assert(offset < image->offset + image->size);
    return offset;
+}
+
+#define MI_PREDICATE_SRC0  0x2400
+#define MI_PREDICATE_SRC1  0x2408
+
+/* Manages the state of an color image subresource to ensure resolves are
+ * performed properly.
+ */
+static void
+genX(set_image_needs_resolve)(struct anv_cmd_buffer *cmd_buffer,
+                        const struct anv_image *image,
+                        unsigned level, bool needs_resolve)
+{
+   assert(cmd_buffer && image);
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(level < anv_image_aux_levels(image));
+
+   const uint32_t resolve_flag_offset =
+      get_fast_clear_state_offset(cmd_buffer->device, image, level,
+                                  FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
+
+   /* The HW docs say that there is no way to guarantee the completion of
+    * the following command. We use it nevertheless because it shows no
+    * issues in testing is currently being used in the GL driver.
+    */
+   anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+      sdi.Address = (struct anv_address) { image->bo, resolve_flag_offset };
+      sdi.ImmediateData = needs_resolve;
+   }
+}
+
+static void
+genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
+                                   const struct anv_image *image,
+                                   unsigned level)
+{
+   assert(cmd_buffer && image);
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(level < anv_image_aux_levels(image));
+
+   const uint32_t resolve_flag_offset =
+      get_fast_clear_state_offset(cmd_buffer->device, image, level,
+                                  FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
+
+   /* Make the pending predicated resolve a no-op if one is not needed.
+    * predicate = do_resolve = resolve_flag != 0;
+    */
+   emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC1    , 0);
+   emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC1 + 4, 0);
+   emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC0    , 0);
+   emit_lrm(&cmd_buffer->batch, MI_PREDICATE_SRC0 + 4,
+            image->bo, resolve_flag_offset);
+   anv_batch_emit(&cmd_buffer->batch, GENX(MI_PREDICATE), mip) {
+      mip.LoadOperation    = LOAD_LOADINV;
+      mip.CombineOperation = COMBINE_SET;
+      mip.CompareOperation = COMPARE_SRCS_EQUAL;
+   }
 }
 
 static void
@@ -430,6 +501,15 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
    assert(cmd_buffer && image);
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
    assert(level < anv_image_aux_levels(image));
+
+   /* The resolve flag should updated to signify that fast-clear/compression
+    * data needs to be removed when leaving the undefined layout. Such data
+    * may need to be removed if it would cause accesses to the color buffer
+    * to return incorrect data. The fast clear data in CCS_D buffers should
+    * be removed because CCS_D isn't enabled all the time.
+    */
+   genX(set_image_needs_resolve)(cmd_buffer, image, level,
+                                 image->aux_usage == ISL_AUX_USAGE_NONE);
 
    /* The fast clear value dword(s) will be copied into a surface state object.
     * Ensure that the restrictions of the fields in the dword(s) are followed.
@@ -446,7 +526,8 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
    for (; i < cmd_buffer->device->isl_dev.ss.clear_value_size; i += 4) {
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
          const uint32_t entry_offset =
-            get_fast_clear_state_entry_offset(cmd_buffer->device, image, level);
+            get_fast_clear_state_offset(cmd_buffer->device, image, level,
+                                        FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
          sdi.Address = (struct anv_address) { image->bo, entry_offset + i };
 
          if (GEN_GEN >= 9) {
@@ -493,7 +574,8 @@ genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
    uint32_t ss_clear_offset = surface_state.offset +
       cmd_buffer->device->isl_dev.ss.clear_value_offset;
    uint32_t entry_offset =
-      get_fast_clear_state_entry_offset(cmd_buffer->device, image, level);
+      get_fast_clear_state_offset(cmd_buffer->device, image, level,
+                                  FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
    unsigned copy_size = cmd_buffer->device->isl_dev.ss.clear_value_size;
 
    if (copy_from_surface_state) {
@@ -680,6 +762,8 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
          layer_count = MIN2(layer_count, anv_image_aux_layers(image, level));
       }
 
+      genX(load_needs_resolve_predicate)(cmd_buffer, image, level);
+
       /* Create a surface state with the right clear color and perform the
        * resolve.
        */
@@ -711,6 +795,8 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                       image->aux_usage == ISL_AUX_USAGE_CCS_E ?
                       BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL :
                       BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
+
+      genX(set_image_needs_resolve)(cmd_buffer, image, level, false);
    }
 
    cmd_buffer->state.pending_pipe_bits |=
@@ -2460,9 +2546,6 @@ void genX(CmdDispatch)(
 #define GPGPU_DISPATCHDIMY 0x2504
 #define GPGPU_DISPATCHDIMZ 0x2508
 
-#define MI_PREDICATE_SRC0  0x2400
-#define MI_PREDICATE_SRC1  0x2408
-
 void genX(CmdDispatchIndirect)(
     VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
@@ -2869,6 +2952,21 @@ cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
          genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color_rt_state,
                                       iview->image, iview->isl.base_level,
                                       true /* copy from ss */);
+
+         /* Fast-clears impact whether or not a resolve will be necessary. */
+         if (iview->image->aux_usage == ISL_AUX_USAGE_CCS_E &&
+             att_state->clear_color_is_zero) {
+            /* This image always has the auxiliary buffer enabled. We can mark
+             * the subresource as not needing a resolve because the clear color
+             * will match what's in every RENDER_SURFACE_STATE object when it's
+             * being used for sampling.
+             */
+            genX(set_image_needs_resolve)(cmd_buffer, iview->image,
+                                          iview->isl.base_level, false);
+         } else {
+            genX(set_image_needs_resolve)(cmd_buffer, iview->image,
+                                          iview->isl.base_level, true);
+         }
       } else if (rp_att->load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
          /* The attachment may have been fast-cleared in a previous render
           * pass and the value is needed now. Update the surface state(s).

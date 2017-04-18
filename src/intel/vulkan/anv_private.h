@@ -2090,11 +2090,16 @@ anv_fast_clear_state_entry_size(const struct anv_device *device)
 {
    assert(device);
    /* Entry contents:
-    *   +----------------------+
-    *   | clear value dword(s) |
-    *   +----------------------+
+    *   +--------------------------------------------+
+    *   | clear value dword(s) | needs resolve dword |
+    *   +--------------------------------------------+
     */
-   return device->isl_dev.ss.clear_value_size;
+
+   /* Ensure that the needs resolve dword is in fact dword-aligned to enable
+    * GPU memcpy operations.
+    */
+   assert(device->isl_dev.ss.clear_value_size % 4 == 0);
+   return device->isl_dev.ss.clear_value_size + 4;
 }
 
 /* Returns true if a HiZ-enabled depth buffer can be sampled from. */

@@ -1630,7 +1630,8 @@ anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
       return;
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer,
+                    BLORP_BATCH_PREDICATE_ENABLE);
 
    struct blorp_surf surf;
    get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
