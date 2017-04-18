@@ -274,17 +274,12 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 				rects[r].dst_y + rects[r].height, depth_format, &dst_temps);
 
 		struct blit_vb_data {
-			float pos[2];
 			float tex_coord[2];
 		} vb_data[3];
 
 		unsigned vb_size = 3 * sizeof(*vb_data);
 
 		vb_data[0] = (struct blit_vb_data) {
-			.pos = {
-				-1.0,
-				-1.0,
-			},
 			.tex_coord = {
 				rects[r].src_x,
 				rects[r].src_y,
@@ -292,10 +287,6 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 		};
 
 		vb_data[1] = (struct blit_vb_data) {
-			.pos = {
-				-1.0,
-				1.0,
-			},
 			.tex_coord = {
 				rects[r].src_x,
 				rects[r].src_y + rects[r].height,
@@ -303,10 +294,6 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 		};
 
 		vb_data[2] = (struct blit_vb_data) {
-			.pos = {
-				1.0,
-				-1.0,
-			},
 			.tex_coord = {
 				rects[r].src_x + rects[r].width,
 				rects[r].src_y,
@@ -435,23 +422,22 @@ build_nir_vertex_shader(void)
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
 	b.shader->info->name = ralloc_strdup(b.shader, "meta_blit_vs");
 
-	nir_variable *pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-						   vec4, "a_pos");
-	pos_in->data.location = VERT_ATTRIB_GENERIC0;
 	nir_variable *pos_out = nir_variable_create(b.shader, nir_var_shader_out,
 						    vec4, "gl_Position");
 	pos_out->data.location = VARYING_SLOT_POS;
-	nir_copy_var(&b, pos_out, pos_in);
 
 	nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
 						       vec2, "a_tex_pos");
-	tex_pos_in->data.location = VERT_ATTRIB_GENERIC1;
+	tex_pos_in->data.location = VERT_ATTRIB_GENERIC0;
 	nir_variable *tex_pos_out = nir_variable_create(b.shader, nir_var_shader_out,
 							vec2, "v_tex_pos");
 	tex_pos_out->data.location = VARYING_SLOT_VAR0;
 	tex_pos_out->data.interpolation = INTERP_MODE_SMOOTH;
 	nir_copy_var(&b, tex_pos_out, tex_pos_in);
 
+	nir_ssa_def *outvec = radv_meta_gen_rect_vertices(&b);
+
+	nir_store_var(&b, pos_out, outvec, 0xf);
 	return b.shader;
 }
 
@@ -536,25 +522,18 @@ static const VkPipelineVertexInputStateCreateInfo normal_vi_create_info = {
 	.pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
 		{
 			.binding = 0,
-			.stride = 4 * sizeof(float),
+			.stride = 2 * sizeof(float),
 			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 		},
 	},
-	.vertexAttributeDescriptionCount = 2,
+	.vertexAttributeDescriptionCount = 1,
 	.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
 		{
-			/* Position */
+			/* Texture Coordinate */
 			.location = 0,
 			.binding = 0,
 			.format = VK_FORMAT_R32G32_SFLOAT,
 			.offset = 0
-		},
-		{
-			/* Texture Coordinate */
-			.location = 1,
-			.binding = 0,
-			.format = VK_FORMAT_R32G32_SFLOAT,
-			.offset = 8
 		},
 	},
 };
