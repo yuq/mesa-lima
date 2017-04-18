@@ -445,12 +445,20 @@ struct si_shader_key {
 	} mono;
 
 	/* Optimization flags for asynchronous compilation only. */
-	union {
+	struct {
 		struct {
 			uint64_t	kill_outputs; /* "get_unique_index" bits */
 			uint32_t	kill_outputs2; /* "get_unique_index2" bits */
 			unsigned	clip_disable:1;
 		} hw_vs; /* HW VS (it can be VS, TES, GS) */
+
+		/* For shaders where monolithic variants have better code.
+		 *
+		 * This is a flag that has no effect on code generation,
+		 * but forces monolithic shaders to be used as soon as
+		 * possible, because it's in the "opt" group.
+		 */
+		unsigned	prefer_mono:1;
 	} opt;
 };
 

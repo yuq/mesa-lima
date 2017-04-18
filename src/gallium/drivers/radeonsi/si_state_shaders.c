@@ -1279,6 +1279,25 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 							  key, &key->part.gs.vs_prolog);
 				key->part.gs.es = sctx->vs_shader.cso;
 			}
+
+			/* Merged ES-GS can have unbalanced wave usage.
+			 *
+			 * ES threads are per-vertex, while GS threads are
+			 * per-primitive. So without any amplification, there
+			 * are fewer GS threads than ES threads, which can result
+			 * in empty (no-op) GS waves. With too much amplification,
+			 * there are more GS threads than ES threads, which
+			 * can result in empty (no-op) ES waves.
+			 *
+			 * Non-monolithic shaders are implemented by setting EXEC
+			 * at the beginning of shader parts, and don't jump to
+			 * the end if EXEC is 0.
+			 *
+			 * Monolithic shaders use conditional blocks, so they can
+			 * jump and skip empty waves of ES or GS. So set this to
+			 * always use optimized variants, which are monolithic.
+			 */
+			key->opt.prefer_mono = 1;
 		}
 		key->part.gs.prolog.tri_strip_adj_fix = sctx->gs_tri_strip_adj_fix;
 		break;
