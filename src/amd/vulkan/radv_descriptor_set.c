@@ -300,7 +300,7 @@ radv_descriptor_set_create(struct radv_device *device,
 			set->va = device->ws->buffer_get_va(set->bo) + pool->current_offset;
 			pool->current_offset += layout_size;
 			list_addtail(&set->vram_list, &pool->vram_list);
-		} else {
+		} else if (!pool->host_memory_base) {
 			uint64_t offset = 0;
 			struct list_head *prev = &pool->vram_list;
 			struct radv_descriptor_set *cur;
@@ -324,7 +324,8 @@ radv_descriptor_set_create(struct radv_device *device,
 			set->mapped_ptr = (uint32_t*)(pool->mapped_ptr + offset);
 			set->va = device->ws->buffer_get_va(set->bo) + offset;
 			list_add(&set->vram_list, prev);
-		}
+		} else
+			return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
 	}
 
 	for (unsigned i = 0; i < layout->binding_count; ++i) {
