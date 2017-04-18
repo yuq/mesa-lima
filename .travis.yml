@@ -22,6 +22,7 @@ env:
     - LIBTXC_DXTN_VERSION=libtxc_dxtn-1.0.1
     - LIBVDPAU_VERSION=libvdpau-1.1
     - LIBVA_VERSION=libva-1.6.2
+    - LIBWAYLAND_VERSION=wayland-1.11.1
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
     - LD_LIBRARY_PATH="$HOME/prefix/lib:$LD_LIBRARY_PATH"
 
@@ -32,8 +33,7 @@ matrix:
         - BUILD=make
         - MAKEFLAGS=-j2
         - MAKE_CHECK_COMMAND="make check"
-        # XXX: Add wayland platform
-        - DRI_LOADERS="--enable-glx --enable-gbm --enable-egl --with-platforms=x11,drm,surfaceless --enable-osmesa"
+        - DRI_LOADERS="--enable-glx --enable-gbm --enable-egl --with-platforms=x11,drm,surfaceless,wayland --enable-osmesa"
         - DRI_DRIVERS="i915,i965,radeon,r200,swrast,nouveau"
         - GALLIUM_ST="--enable-dri --disable-opencl --disable-xa --disable-nine --disable-xvmc --disable-vdpau --disable-va --disable-omx --disable-gallium-osmesa"
         - GALLIUM_DRIVERS=""
@@ -41,6 +41,7 @@ matrix:
       addons:
         apt:
           packages:
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -73,6 +74,7 @@ matrix:
             - g++-5
             - llvm-3.9-dev
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -99,6 +101,7 @@ matrix:
             # From sources above
             - llvm-3.9-dev
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -134,6 +137,7 @@ matrix:
             - clang-3.6
             - libclang-3.6-dev
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -163,6 +167,7 @@ matrix:
             # LLVM packaging is broken and misses these dependencies
             - libedit-dev
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -175,9 +180,8 @@ matrix:
         - LLVM_VERSION=3.9
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         # XXX: we want to test the WSI, but those are enabled via the EGL toggles
-        # XXX: Add wayland platform
         # XXX: Platform X11 dependencies are checked when --enable-glx is set
-        - DRI_LOADERS="--enable-glx --disable-gbm --enable-egl --with-platforms=x11"
+        - DRI_LOADERS="--enable-glx --disable-gbm --enable-egl --with-platforms=x11,wayland"
         - DRI_DRIVERS=""
         # XXX: enable DRI for EGL above
         - GALLIUM_ST="--enable-dri --disable-opencl --disable-xa --disable-nine --disable-xvmc --disable-vdpau --disable-va --disable-omx --disable-gallium-osmesa"
@@ -193,6 +197,7 @@ matrix:
             # From sources above
             - llvm-3.9-dev
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -210,6 +215,7 @@ matrix:
           packages:
             - scons
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -231,6 +237,7 @@ matrix:
             - libedit-dev
             - llvm-3.3-dev
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -259,6 +266,7 @@ matrix:
             - g++-5
             - llvm-3.9-dev
             # Common
+            - xz-utils
             - x11proto-xf86vidmode-dev
             - libexpat1-dev
             - libx11-xcb-dev
@@ -332,6 +340,10 @@ install:
   - wget http://www.freedesktop.org/software/vaapi/releases/libva/$LIBVA_VERSION.tar.bz2
   - tar -jxvf $LIBVA_VERSION.tar.bz2
   - (cd $LIBVA_VERSION && ./configure --prefix=$HOME/prefix --disable-wayland --disable-dummy-driver && make install)
+
+  - wget http://wayland.freedesktop.org/releases/$LIBWAYLAND_VERSION.tar.xz
+  - tar -axvf $LIBWAYLAND_VERSION.tar.xz
+  - (cd $LIBWAYLAND_VERSION && ./configure --prefix=$HOME/prefix --enable-libraries --without-host-scanner --disable-documentation --disable-dtd-validation && make install)
 
   # Generate the header since one is missing on the Travis instance
   - mkdir -p linux
