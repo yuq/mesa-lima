@@ -40,23 +40,22 @@ build_nir_vertex_shader(void)
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
 	b.shader->info->name = ralloc_strdup(b.shader, "meta_blit_vs");
 
-	nir_variable *pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-						   vec4, "a_pos");
-	pos_in->data.location = VERT_ATTRIB_GENERIC0;
 	nir_variable *pos_out = nir_variable_create(b.shader, nir_var_shader_out,
 						    vec4, "gl_Position");
 	pos_out->data.location = VARYING_SLOT_POS;
-	nir_copy_var(&b, pos_out, pos_in);
 
 	nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
 						       vec4, "a_tex_pos");
-	tex_pos_in->data.location = VERT_ATTRIB_GENERIC1;
+	tex_pos_in->data.location = VERT_ATTRIB_GENERIC0;
 	nir_variable *tex_pos_out = nir_variable_create(b.shader, nir_var_shader_out,
 							vec4, "v_tex_pos");
 	tex_pos_out->data.location = VARYING_SLOT_VAR0;
 	tex_pos_out->data.interpolation = INTERP_MODE_SMOOTH;
 	nir_copy_var(&b, tex_pos_out, tex_pos_in);
 
+	nir_ssa_def *outvec = radv_meta_gen_rect_vertices(&b);
+
+	nir_store_var(&b, pos_out, outvec, 0xf);
 	return b.shader;
 }
 
@@ -238,17 +237,12 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 	struct radv_device *device = cmd_buffer->device;
 	unsigned offset = 0;
 	struct blit_vb_data {
-		float pos[2];
 		float tex_coord[3];
 	} vb_data[3];
 
 	assert(src_image->samples == dest_image->samples);
 	unsigned vb_size = 3 * sizeof(*vb_data);
 	vb_data[0] = (struct blit_vb_data) {
-		.pos = {
-			-1.0,
-			-1.0,
-		},
 		.tex_coord = {
 			(float)src_offset_0.x / (float)src_iview->extent.width,
 			(float)src_offset_0.y / (float)src_iview->extent.height,
@@ -257,10 +251,6 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 	};
 
 	vb_data[1] = (struct blit_vb_data) {
-		.pos = {
-			-1.0,
-			1.0,
-		},
 		.tex_coord = {
 			(float)src_offset_0.x / (float)src_iview->extent.width,
 			(float)src_offset_1.y / (float)src_iview->extent.height,
@@ -269,10 +259,6 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 	};
 
 	vb_data[2] = (struct blit_vb_data) {
-		.pos = {
-			1.0,
-			-1.0,
-		},
 		.tex_coord = {
 			(float)src_offset_1.x / (float)src_iview->extent.width,
 			(float)src_offset_0.y / (float)src_iview->extent.height,
@@ -769,25 +755,18 @@ radv_device_init_meta_blit_color(struct radv_device *device,
 			.pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
 				{
 					.binding = 0,
-					.stride = 5 * sizeof(float),
+					.stride = 3 * sizeof(float),
 					.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 				},
 			},
-			.vertexAttributeDescriptionCount = 2,
+			.vertexAttributeDescriptionCount = 1,
 			.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
 				{
-					/* Position */
+					/* Texture Coordinate */
 					.location = 0,
 					.binding = 0,
-					.format = VK_FORMAT_R32G32_SFLOAT,
-					.offset = 0
-				},
-				{
-					/* Texture Coordinate */
-					.location = 1,
-					.binding = 0,
 					.format = VK_FORMAT_R32G32B32_SFLOAT,
-					.offset = 8
+					.offset = 0
 				}
 			}
 		};
@@ -948,25 +927,18 @@ radv_device_init_meta_blit_depth(struct radv_device *device,
 		.pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
 			{
 				.binding = 0,
-				.stride = 5 * sizeof(float),
+				.stride = 3 * sizeof(float),
 				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 			},
 		},
-		.vertexAttributeDescriptionCount = 2,
+		.vertexAttributeDescriptionCount = 1,
 		.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
 			{
-				/* Position */
+				/* Texture Coordinate */
 				.location = 0,
 				.binding = 0,
-				.format = VK_FORMAT_R32G32_SFLOAT,
-				.offset = 0
-			},
-			{
-				/* Texture Coordinate */
-				.location = 1,
-				.binding = 0,
 				.format = VK_FORMAT_R32G32B32_SFLOAT,
-				.offset = 8
+				.offset = 0,
 			}
 		}
 	};
@@ -1129,25 +1101,18 @@ radv_device_init_meta_blit_stencil(struct radv_device *device,
 		.pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
 			{
 				.binding = 0,
-				.stride = 5 * sizeof(float),
+				.stride = 3 * sizeof(float),
 				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 			},
 		},
-		.vertexAttributeDescriptionCount = 2,
+		.vertexAttributeDescriptionCount = 1,
 		.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
 			{
-				/* Position */
+				/* Texture Coordinate */
 				.location = 0,
 				.binding = 0,
-				.format = VK_FORMAT_R32G32_SFLOAT,
-				.offset = 0
-			},
-			{
-				/* Texture Coordinate */
-				.location = 1,
-				.binding = 0,
 				.format = VK_FORMAT_R32G32B32_SFLOAT,
-				.offset = 8
+				.offset = 0
 			}
 		}
 	};
