@@ -129,12 +129,18 @@ etna_resource_sampler_compatible(struct etna_resource *res)
    if (util_format_is_compressed(res->base.format))
       return true;
 
-   /* The sampler (as we currently know it) only accepts tiled layouts */
+   struct etna_screen *screen = etna_screen(res->base.screen);
+   /* This GPU supports texturing from supertiled textures? */
+   if (res->layout == ETNA_LAYOUT_SUPER_TILED && VIV_FEATURE(screen, chipMinorFeatures2, SUPERTILED_TEXTURE))
+      return true;
+
+   /* TODO: LINEAR_TEXTURE_SUPPORT */
+
+   /* Otherwise, only support tiled layouts */
    if (res->layout != ETNA_LAYOUT_TILED)
       return false;
 
    /* If we have HALIGN support, we can allow for the RS padding */
-   struct etna_screen *screen = etna_screen(res->base.screen);
    if (VIV_FEATURE(screen, chipMinorFeatures1, TEXTURE_HALIGN))
       return true;
 

@@ -231,12 +231,9 @@ etna_resource_create(struct pipe_screen *pscreen,
 {
    struct etna_screen *screen = etna_screen(pscreen);
 
-   /* Figure out what tiling to use -- for now, assume that textures cannot be
-    * supertiled, and cannot be linear.
-    * There is a feature flag SUPERTILED_TEXTURE (not supported on any known hw)
-    * that may allow this, as well
-    * as LINEAR_TEXTURE_SUPPORT (supported on gc880 and gc2000 at least), but
-    * not sure how it works.
+   /* Figure out what tiling to use -- for now, assume that texture cannot be linear.
+    * there is a capability LINEAR_TEXTURE_SUPPORT (supported on gc880 and
+    * gc2000 at least), but not sure how it works.
     * Buffers always have LINEAR layout.
     */
    unsigned layout = ETNA_LAYOUT_LINEAR;
