@@ -77,37 +77,13 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 	struct ir3_shader_key *last_key = &fd5_ctx->last_key;
 
 	if (!ir3_shader_key_equal(last_key, key)) {
-		if (last_key->has_per_samp || key->has_per_samp) {
-			if ((last_key->vsaturate_s != key->vsaturate_s) ||
-					(last_key->vsaturate_t != key->vsaturate_t) ||
-					(last_key->vsaturate_r != key->vsaturate_r) ||
-					(last_key->vastc_srgb != key->vastc_srgb))
-				ctx->dirty |= FD_SHADER_DIRTY_VP;
-
-			if ((last_key->fsaturate_s != key->fsaturate_s) ||
-					(last_key->fsaturate_t != key->fsaturate_t) ||
-					(last_key->fsaturate_r != key->fsaturate_r) ||
-					(last_key->fastc_srgb != key->fastc_srgb))
-				ctx->dirty |= FD_SHADER_DIRTY_FP;
+		if (ir3_shader_key_changes_fs(last_key, key)) {
+			ctx->dirty |= FD_SHADER_DIRTY_FP;
 		}
 
-		if (last_key->vclamp_color != key->vclamp_color)
+		if (ir3_shader_key_changes_vs(last_key, key)) {
 			ctx->dirty |= FD_SHADER_DIRTY_VP;
-
-		if (last_key->fclamp_color != key->fclamp_color)
-			ctx->dirty |= FD_SHADER_DIRTY_FP;
-
-		if (last_key->color_two_side != key->color_two_side)
-			ctx->dirty |= FD_SHADER_DIRTY_FP;
-
-		if (last_key->half_precision != key->half_precision)
-			ctx->dirty |= FD_SHADER_DIRTY_FP;
-
-		if (last_key->rasterflat != key->rasterflat)
-			ctx->dirty |= FD_SHADER_DIRTY_FP;
-
-		if (last_key->ucp_enables != key->ucp_enables)
-			ctx->dirty |= FD_SHADER_DIRTY_FP | FD_SHADER_DIRTY_VP;
+		}
 
 		fd5_ctx->last_key = *key;
 	}
