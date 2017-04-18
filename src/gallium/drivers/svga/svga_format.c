@@ -376,6 +376,29 @@ svga_translate_vertex_format_vgpu10(enum pipe_format format,
 }
 
 
+/**
+ * Translate a gallium scanout format to a svga format valid
+ * for screen target surface.
+ */
+static SVGA3dSurfaceFormat
+svga_translate_screen_target_format_vgpu10(enum pipe_format format)
+{
+   switch (format) {
+   case PIPE_FORMAT_B8G8R8A8_UNORM:
+      return SVGA3D_B8G8R8A8_UNORM;
+   case PIPE_FORMAT_B8G8R8X8_UNORM:
+      return SVGA3D_B8G8R8X8_UNORM;
+   case PIPE_FORMAT_B5G6R5_UNORM:
+      return SVGA3D_R5G6B5;
+   case PIPE_FORMAT_B5G5R5A1_UNORM:
+      return SVGA3D_A1R5G5B5;
+   default:
+      debug_printf("Invalid format %s specified for screen target\n",
+                   svga_format_name(format));
+      return SVGA3D_FORMAT_INVALID;
+   }
+}
+
 /*
  * Translate from gallium format to SVGA3D format.
  */
@@ -387,6 +410,9 @@ svga_translate_format(const struct svga_screen *ss,
    if (ss->sws->have_vgpu10) {
       if (bind & (PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_INDEX_BUFFER)) {
          return format_conversion_table[format].vertex_format;
+      }
+      else if (bind & PIPE_BIND_SCANOUT) {
+         return svga_translate_screen_target_format_vgpu10(format);
       }
       else {
          return format_conversion_table[format].pixel_format;
