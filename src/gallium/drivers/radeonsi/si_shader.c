@@ -7594,7 +7594,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 	 * with registers here. The main shader part will set the correct EXEC
 	 * mask.
 	 */
-	if (ctx->screen->b.chip_class >= GFX9)
+	if (ctx->screen->b.chip_class >= GFX9 && !key->gs_prolog.is_monolithic)
 		si_init_exec_full_mask(ctx);
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
@@ -8058,17 +8058,78 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 		si_build_wrapper_function(&ctx, parts, 2, 0, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_GEOMETRY) {
-		LLVMValueRef parts[2];
-		union si_shader_part_key prolog_key;
+		if (ctx.screen->b.chip_class >= GFX9) {
+			struct si_shader_selector *es = shader->key.part.gs.es;
+			LLVMValueRef es_prolog = NULL;
+			LLVMValueRef es_main = NULL;
+			LLVMValueRef gs_prolog = NULL;
+			LLVMValueRef gs_main = ctx.main_fn;
 
-		parts[1] = ctx.main_fn;
+			/* GS prolog */
+			union si_shader_part_key gs_prolog_key;
+			memset(&gs_prolog_key, 0, sizeof(gs_prolog_key));
+			gs_prolog_key.gs_prolog.states = shader->key.part.gs.prolog;
+			gs_prolog_key.gs_prolog.is_monolithic = true;
+			si_build_gs_prolog_function(&ctx, &gs_prolog_key);
+			gs_prolog = ctx.main_fn;
 
-		memset(&prolog_key, 0, sizeof(prolog_key));
-		prolog_key.gs_prolog.states = shader->key.part.gs.prolog;
-		si_build_gs_prolog_function(&ctx, &prolog_key);
-		parts[0] = ctx.main_fn;
+			/* ES prolog */
+			if (es->vs_needs_prolog) {
+				union si_shader_part_key vs_prolog_key;
+				si_get_vs_prolog_key(&es->info,
+						     shader->info.num_input_sgprs,
+						     &shader->key.part.tcs.ls_prolog,
+						     shader, &vs_prolog_key);
+				vs_prolog_key.vs_prolog.is_monolithic = true;
+				si_build_vs_prolog_function(&ctx, &vs_prolog_key);
+				es_prolog = ctx.main_fn;
+			}
 
-		si_build_wrapper_function(&ctx, parts, 2, 1, 0);
+			/* ES main part */
+			struct si_shader shader_es = {};
+			shader_es.selector = es;
+			shader_es.key.as_es = 1;
+			shader_es.key.mono = shader->key.mono;
+			shader_es.key.opt = shader->key.opt;
+			si_llvm_context_set_tgsi(&ctx, &shader_es);
+
+			if (!si_compile_tgsi_main(&ctx, true)) {
+				si_llvm_dispose(&ctx);
+				return -1;
+			}
+			shader->info.uses_instanceid |= es->info.uses_instanceid;
+			es_main = ctx.main_fn;
+
+			/* Reset the shader context. */
+			ctx.shader = shader;
+			ctx.type = PIPE_SHADER_GEOMETRY;
+
+			/* Prepare the array of shader parts. */
+			LLVMValueRef parts[4];
+			unsigned num_parts = 0, main_part, next_first_part;
+
+			if (es_prolog)
+				parts[num_parts++] = es_prolog;
+
+			parts[main_part = num_parts++] = es_main;
+			parts[next_first_part = num_parts++] = gs_prolog;
+			parts[num_parts++] = gs_main;
+
+			si_build_wrapper_function(&ctx, parts, num_parts,
+						  main_part, next_first_part);
+		} else {
+			LLVMValueRef parts[2];
+			union si_shader_part_key prolog_key;
+
+			parts[1] = ctx.main_fn;
+
+			memset(&prolog_key, 0, sizeof(prolog_key));
+			prolog_key.gs_prolog.states = shader->key.part.gs.prolog;
+			si_build_gs_prolog_function(&ctx, &prolog_key);
+			parts[0] = ctx.main_fn;
+
+			si_build_wrapper_function(&ctx, parts, 2, 1, 0);
+		}
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
 		LLVMValueRef parts[3];
 		union si_shader_part_key prolog_key;
