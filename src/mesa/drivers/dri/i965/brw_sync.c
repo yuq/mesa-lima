@@ -470,7 +470,7 @@ brw_dri_create_fence_fd(__DRIcontext *dri_ctx, int fd)
          goto fail;
    } else {
       /* Import the sync fd as an in-fence. */
-      fence->sync_fd = fd;
+      fence->sync_fd = dup(fd);
    }
 
    assert(fence->sync_fd != -1);
