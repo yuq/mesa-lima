@@ -620,9 +620,6 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 
 	uint32_t remaining_sgprs = 16 - user_sgpr_info->sgpr_count;
 	if (remaining_sgprs / 2 < util_bitcount(ctx->shader_info->info.desc_set_used_mask)) {
-		fprintf(stderr, "radv: TODO: add support for indirect sgprs\n");
-		/* need to add support for indirect descriptor sets */
-		assert(0);
 		user_sgpr_info->sgpr_count += 2;
 		user_sgpr_info->indirect_all_descriptor_sets = true;
 	} else {
