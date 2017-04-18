@@ -226,7 +226,7 @@ void radv_blit_to_prime_linear(struct radv_cmd_buffer *cmd_buffer,
 #include "nir_builder.h"
 
 nir_ssa_def *radv_meta_gen_rect_vertices(nir_builder *vs_b);
-
+nir_ssa_def *radv_meta_gen_rect_vertices_comp2(nir_builder *vs_b, nir_ssa_def *comp2);
 #ifdef __cplusplus
 }
 #endif

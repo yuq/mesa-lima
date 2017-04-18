@@ -417,7 +417,7 @@ radv_meta_save_graphics_reset_vport_scissor_novertex(struct radv_meta_saved_stat
 	cmd_buffer->state.dirty |= dirty_state;
 }
 
-nir_ssa_def *radv_meta_gen_rect_vertices(nir_builder *vs_b)
+nir_ssa_def *radv_meta_gen_rect_vertices_comp2(nir_builder *vs_b, nir_ssa_def *comp2)
 {
 
 	nir_intrinsic_instr *vertex_id = nir_intrinsic_instr_create(vs_b->shader, nir_intrinsic_load_vertex_id_zero_base);
@@ -443,9 +443,14 @@ nir_ssa_def *radv_meta_gen_rect_vertices(nir_builder *vs_b)
 	comp[1] = nir_bcsel(vs_b, c1cmp,
 			    nir_imm_float(vs_b, -1.0),
 			    nir_imm_float(vs_b, 1.0));
-	comp[2] = nir_imm_float(vs_b, 0.0);
+	comp[2] = comp2;
 	comp[3] = nir_imm_float(vs_b, 1.0);
 	nir_ssa_def *outvec = nir_vec(vs_b, comp, 4);
 
 	return outvec;
+}
+
+nir_ssa_def *radv_meta_gen_rect_vertices(nir_builder *vs_b)
+{
+	return radv_meta_gen_rect_vertices_comp2(vs_b, nir_imm_float(vs_b, 0.0));
 }
