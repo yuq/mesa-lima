@@ -416,3 +416,36 @@ radv_meta_save_graphics_reset_vport_scissor_novertex(struct radv_meta_saved_stat
 	cmd_buffer->state.dynamic.scissor.count = 0;
 	cmd_buffer->state.dirty |= dirty_state;
 }
+
+nir_ssa_def *radv_meta_gen_rect_vertices(nir_builder *vs_b)
+{
+
+	nir_intrinsic_instr *vertex_id = nir_intrinsic_instr_create(vs_b->shader, nir_intrinsic_load_vertex_id_zero_base);
+	nir_ssa_dest_init(&vertex_id->instr, &vertex_id->dest, 1, 32, "vertexid");
+	nir_builder_instr_insert(vs_b, &vertex_id->instr);
+
+	/* vertex 0 - -1.0, -1.0 */
+	/* vertex 1 - -1.0, 1.0 */
+	/* vertex 2 - 1.0, -1.0 */
+	/* so channel 0 is vertex_id != 2 ? -1.0 : 1.0
+	   channel 1 is vertex id != 1 ? -1.0 : 1.0 */
+
+	nir_ssa_def *c0cmp = nir_ine(vs_b, &vertex_id->dest.ssa,
+				     nir_imm_int(vs_b, 2));
+	nir_ssa_def *c1cmp = nir_ine(vs_b, &vertex_id->dest.ssa,
+				     nir_imm_int(vs_b, 1));
+
+	nir_ssa_def *comp[4];
+	comp[0] = nir_bcsel(vs_b, c0cmp,
+			    nir_imm_float(vs_b, -1.0),
+			    nir_imm_float(vs_b, 1.0));
+
+	comp[1] = nir_bcsel(vs_b, c1cmp,
+			    nir_imm_float(vs_b, -1.0),
+			    nir_imm_float(vs_b, 1.0));
+	comp[2] = nir_imm_float(vs_b, 0.0);
+	comp[3] = nir_imm_float(vs_b, 1.0);
+	nir_ssa_def *outvec = nir_vec(vs_b, comp, 4);
+
+	return outvec;
+}
