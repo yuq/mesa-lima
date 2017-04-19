@@ -3,6 +3,7 @@
 from __future__ import (
     absolute_import, division, print_function, unicode_literals
 )
+import ast
 import xml.parsers.expat
 import re
 import sys
@@ -476,7 +477,7 @@ class Group(object):
 class Value(object):
     def __init__(self, attrs):
         self.name = safe_name(attrs["name"])
-        self.value = int(attrs["value"])
+        self.value = ast.literal_eval(attrs["value"])
 
 class Parser(object):
     def __init__(self):
