@@ -6084,7 +6084,7 @@ static void create_function(struct si_shader_context *ctx)
 						    "ddxy_lds",
 						    LOCAL_ADDR_SPACE);
 
-	if ((ctx->type == PIPE_SHADER_VERTEX && shader->key.as_ls) ||
+	if (shader->key.as_ls ||
 	    ctx->type == PIPE_SHADER_TESS_CTRL)
 		declare_tess_lds(ctx);
 }
@@ -6101,11 +6101,7 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 	LLVMValueRef buf_ptr = LLVMGetParam(ctx->main_fn,
 					    ctx->param_rw_buffers);
 
-	if ((ctx->type == PIPE_SHADER_VERTEX &&
-	     ctx->shader->key.as_es) ||
-	    (ctx->type == PIPE_SHADER_TESS_EVAL &&
-	     ctx->shader->key.as_es) ||
-	    ctx->type == PIPE_SHADER_GEOMETRY) {
+	if (ctx->shader->key.as_es || ctx->type == PIPE_SHADER_GEOMETRY) {
 		unsigned ring =
 			ctx->type == PIPE_SHADER_GEOMETRY ? SI_GS_RING_ESGS
 							     : SI_ES_RING_ESGS;
