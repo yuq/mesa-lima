@@ -3293,6 +3293,52 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
 }
 
 static bool
+validate_storage_for_sampler_image_types(ir_variable *var,
+                                         struct _mesa_glsl_parse_state *state,
+                                         YYLTYPE *loc)
+{
+   /* From section 4.1.7 of the GLSL 4.40 spec:
+    *
+    *    "[Opaque types] can only be declared as function
+    *     parameters or uniform-qualified variables."
+    *
+    * From section 4.1.7 of the ARB_bindless_texture spec:
+    *
+    *    "Samplers may be declared as shader inputs and outputs, as uniform
+    *     variables, as temporary variables, and as function parameters."
+    *
+    * From section 4.1.X of the ARB_bindless_texture spec:
+    *
+    *    "Images may be declared as shader inputs and outputs, as uniform
+    *     variables, as temporary variables, and as function parameters."
+    */
+   if (state->has_bindless()) {
+      if (var->data.mode != ir_var_auto &&
+          var->data.mode != ir_var_uniform &&
+          var->data.mode != ir_var_shader_in &&
+          var->data.mode != ir_var_shader_out &&
+          var->data.mode != ir_var_function_in &&
+          var->data.mode != ir_var_function_out &&
+          var->data.mode != ir_var_function_inout) {
+         _mesa_glsl_error(loc, state, "bindless image/sampler variables may "
+                         "only be declared as shader inputs and outputs, as "
+                         "uniform variables, as temporary variables and as "
+                         "function parameters");
+         return false;
+      }
+   } else {
+      if (var->data.mode != ir_var_uniform &&
+          var->data.mode != ir_var_function_in) {
+         _mesa_glsl_error(loc, state, "image/sampler variables may only be "
+                          "declared as function parameters or "
+                          "uniform-qualified global variables");
+         return false;
+      }
+   }
+   return true;
+}
+
+static bool
 validate_memory_qualifier_for_type(struct _mesa_glsl_parse_state *state,
                                    YYLTYPE *loc,
                                    const struct ast_type_qualifier *qual,
@@ -3353,12 +3399,8 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
    if (!base_type->is_image())
       return;
 
-   if (var->data.mode != ir_var_uniform &&
-       var->data.mode != ir_var_function_in) {
-      _mesa_glsl_error(loc, state, "image variables may only be declared as "
-                       "function parameters or uniform-qualified "
-                       "global variables");
-   }
+   if (!validate_storage_for_sampler_image_types(var, state, loc))
+      return;
 
    var->data.memory_read_only |= qual->flags.q.read_only;
    var->data.memory_write_only |= qual->flags.q.write_only;
@@ -3696,14 +3738,9 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
       }
    }
 
-   if (var->type->contains_sampler()) {
-      if (var->data.mode != ir_var_uniform &&
-          var->data.mode != ir_var_function_in) {
-         _mesa_glsl_error(loc, state, "sampler variables may only be declared "
-                          "as function parameters or uniform-qualified "
-                          "global variables");
-      }
-   }
+   if (var->type->contains_sampler() &&
+       !validate_storage_for_sampler_image_types(var, state, loc))
+      return;
 
    /* Is the 'layout' keyword used with parameters that allow relaxed checking.
     * Many implementations of GL_ARB_fragment_coord_conventions_enable and some
@@ -5294,11 +5331,23 @@ ast_declarator_list::hir(exec_list *instructions,
        *
        *    "[Opaque types] can only be declared as function
        *     parameters or uniform-qualified variables."
+       *
+       * From section 4.1.7 of the ARB_bindless_texture spec:
+       *
+       *    "Samplers may be declared as shader inputs and outputs, as uniform
+       *     variables, as temporary variables, and as function parameters."
+       *
+       * From section 4.1.X of the ARB_bindless_texture spec:
+       *
+       *    "Images may be declared as shader inputs and outputs, as uniform
+       *     variables, as temporary variables, and as function parameters."
        */
-      if (var_type->contains_opaque() &&
-          !this->type->qualifier.flags.q.uniform) {
+      if (!this->type->qualifier.flags.q.uniform &&
+          (var_type->contains_atomic() ||
+           (!state->has_bindless() && var_type->contains_opaque()))) {
          _mesa_glsl_error(&loc, state,
-                          "opaque variables must be declared uniform");
+                          "%s variables must be declared uniform",
+                          state->has_bindless() ? "atomic" : "opaque");
       }
 
       /* Process the initializer and add its instructions to a temporary
