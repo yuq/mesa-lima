@@ -26,6 +26,73 @@
  *      Christian König <christian.koenig@amd.com>
  */
 
+/* The compiler middle-end architecture: Explaining (non-)monolithic shaders
+ * -------------------------------------------------------------------------
+ *
+ * Typically, there is one-to-one correspondence between API and HW shaders,
+ * that is, for every API shader, there is exactly one shader binary in
+ * the driver.
+ *
+ * The problem with that is that we also have to emulate some API states
+ * (e.g. alpha-test, and many others) in shaders too. The two obvious ways
+ * to deal with it are:
+ * - each shader has multiple variants for each combination of emulated states,
+ *   and the variants are compiled on demand, possibly relying on a shader
+ *   cache for good performance
+ * - patch shaders at the binary level
+ *
+ * This driver uses something completely different. The emulated states are
+ * usually implemented at the beginning or end of shaders. Therefore, we can
+ * split the shader into 3 parts:
+ * - prolog part (shader code dependent on states)
+ * - main part (the API shader)
+ * - epilog part (shader code dependent on states)
+ *
+ * Each part is compiled as a separate shader and the final binaries are
+ * concatenated. This type of shader is called non-monolithic, because it
+ * consists of multiple independent binaries. Creating a new shader variant
+ * is therefore only a concatenation of shader parts (binaries) and doesn't
+ * involve any compilation. The main shader parts are the only parts that are
+ * compiled when applications create shader objects. The prolog and epilog
+ * parts are compiled on the first use and saved, so that their binaries can
+ * be reused by many other shaders.
+ *
+ * One of the roles of the prolog part is to compute vertex buffer addresses
+ * for vertex shaders. A few of the roles of the epilog part are color buffer
+ * format conversions in pixel shaders that we have to do manually, and write
+ * tessellation factors in tessellation control shaders. The prolog and epilog
+ * have many other important responsibilities in various shader stages.
+ * They don't just "emulate legacy stuff".
+ *
+ * Monolithic shaders are shaders where the parts are combined before LLVM
+ * compilation, and the whole thing is compiled and optimized as one unit with
+ * one binary on the output. The result is the same as the non-monolithic
+ * shader, but the final code can be better, because LLVM can optimize across
+ * all shader parts. Monolithic shaders aren't usually used except for these
+ * special cases:
+ *
+ * 1) Some rarely-used states require modification of the main shader part
+ *    itself, and in such cases, only the monolithic shader variant is
+ *    compiled, and that's always done on the first use.
+ *
+ * 2) When we do cross-stage optimizations for separate shader objects and
+ *    e.g. eliminate unused shader varyings, the resulting optimized shader
+ *    variants are always compiled as monolithic shaders, and always
+ *    asynchronously (i.e. not stalling ongoing rendering). We call them
+ *    "optimized monolithic" shaders. The important property here is that
+ *    the non-monolithic unoptimized shader variant is always available for use
+ *    when the asynchronous compilation of the optimized shader is not done
+ *    yet.
+ *
+ * Starting with GFX9 chips, some shader stages are merged, and the number of
+ * shader parts per shader increased. The complete new list of shader parts is:
+ * - 1st shader: prolog part
+ * - 1st shader: main part
+ * - 2nd shader: prolog part
+ * - 2nd shader: main part
+ * - 2nd shader: epilog part
+ */
+
 /* How linking shader inputs and outputs between vertex, tessellation, and
  * geometry shaders works.
  *
