@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "common/gen_device_info.h"
+#include "common/gen_sample_positions.h"
 #include "genxml/gen_macros.h"
 
 #include "main/bufferobj.h"
@@ -36,6 +37,7 @@
 #include "brw_defines.h"
 #endif
 #include "brw_draw.h"
+#include "brw_multisample_state.h"
 #include "brw_state.h"
 #include "brw_wm.h"
 #include "brw_util.h"
@@ -2452,6 +2454,96 @@ static const struct brw_tracked_state genX(wm_push_constants) = {
    .emit = genX(upload_wm_push_constants),
 };
 
+/* ---------------------------------------------------------------------- */
+
+static unsigned
+genX(determine_sample_mask)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   float coverage = 1.0f;
+   float coverage_invert = false;
+   unsigned sample_mask = ~0u;
+
+   /* BRW_NEW_NUM_SAMPLES */
+   unsigned num_samples = brw->num_samples;
+
+   if (_mesa_is_multisample_enabled(ctx)) {
+      if (ctx->Multisample.SampleCoverage) {
+         coverage = ctx->Multisample.SampleCoverageValue;
+         coverage_invert = ctx->Multisample.SampleCoverageInvert;
+      }
+      if (ctx->Multisample.SampleMask) {
+         sample_mask = ctx->Multisample.SampleMaskValue;
+      }
+   }
+
+   if (num_samples > 1) {
+      int coverage_int = (int) (num_samples * coverage + 0.5f);
+      uint32_t coverage_bits = (1 << coverage_int) - 1;
+      if (coverage_invert)
+         coverage_bits ^= (1 << num_samples) - 1;
+      return coverage_bits & sample_mask;
+   } else {
+      return 1;
+   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(emit_3dstate_multisample2)(struct brw_context *brw,
+                                unsigned num_samples)
+{
+   assert(brw->num_samples <= 16);
+
+   unsigned log2_samples = ffs(MAX2(num_samples, 1)) - 1;
+
+   brw_batch_emit(brw, GENX(3DSTATE_MULTISAMPLE), multi) {
+      multi.PixelLocation = CENTER;
+      multi.NumberofMultisamples = log2_samples;
+#if GEN_GEN == 6
+      GEN_SAMPLE_POS_4X(multi.Sample);
+#elif GEN_GEN == 7
+      switch (num_samples) {
+      case 1:
+         GEN_SAMPLE_POS_1X(multi.Sample);
+         break;
+      case 2:
+         GEN_SAMPLE_POS_2X(multi.Sample);
+         break;
+      case 4:
+         GEN_SAMPLE_POS_4X(multi.Sample);
+         break;
+      case 8:
+         GEN_SAMPLE_POS_8X(multi.Sample);
+         break;
+      default:
+         break;
+      }
+#endif
+   }
+}
+
+static void
+genX(upload_multisample_state)(struct brw_context *brw)
+{
+   genX(emit_3dstate_multisample2)(brw, brw->num_samples);
+
+   brw_batch_emit(brw, GENX(3DSTATE_SAMPLE_MASK), sm) {
+      sm.SampleMask = genX(determine_sample_mask)(brw);
+   }
+}
+
+static const struct brw_tracked_state genX(multisample_state) = {
+   .dirty = {
+      .mesa = _NEW_MULTISAMPLE,
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_CONTEXT |
+             BRW_NEW_NUM_SAMPLES,
+   },
+   .emit = genX(upload_multisample_state)
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -2913,7 +3005,7 @@ genX(upload_ps)(struct brw_context *brw)
 
       /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
 #if GEN_IS_HASWELL
-      ps.SampleMask = gen6_determine_sample_mask(brw);
+      ps.SampleMask = genX(determine_sample_mask(brw));
 #endif
 
       /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
@@ -3596,7 +3688,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_vs_samplers,
       &brw_gs_samplers,
       &gen6_sampler_state,
-      &gen6_multisample_state,
+      &genX(multisample_state),
 
       &genX(vs_state),
       &genX(gs_state),
@@ -3680,7 +3772,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_tcs_samplers,
       &brw_tes_samplers,
       &brw_gs_samplers,
-      &gen6_multisample_state,
+      &genX(multisample_state),
 
       &genX(vs_state),
       &genX(hs_state),
@@ -3767,7 +3859,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_tcs_samplers,
       &brw_tes_samplers,
       &brw_gs_samplers,
-      &gen8_multisample_state,
+      &genX(multisample_state),
 
       &genX(vs_state),
       &genX(hs_state),
