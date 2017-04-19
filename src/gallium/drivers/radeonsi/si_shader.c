@@ -7397,7 +7397,7 @@ static void si_get_ps_epilog_key(struct si_shader *shader,
 static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key)
 {
-	const unsigned num_sgprs = SI_GS_NUM_USER_SGPR + 2;
+	const unsigned num_sgprs = GFX6_GS_NUM_USER_SGPR + 2;
 	const unsigned num_vgprs = 8;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;

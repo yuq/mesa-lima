@@ -1992,10 +1992,13 @@ void si_init_all_descriptors(struct si_context *sctx)
 	unsigned ce_offset = 0;
 
 	STATIC_ASSERT(GFX9_SGPR_TCS_CONST_BUFFERS % 2 == 0);
+	STATIC_ASSERT(GFX9_SGPR_GS_CONST_BUFFERS % 2 == 0);
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		bool gfx9_tcs = sctx->b.chip_class == GFX9 &&
 				i == PIPE_SHADER_TESS_CTRL;
+		bool gfx9_gs = sctx->b.chip_class == GFX9 &&
+			       i == PIPE_SHADER_GEOMETRY;
 		/* GFX9 has only 4KB of CE, while previous chips had 32KB.
 		 * Rarely used descriptors don't use CE RAM.
 		 */
@@ -2010,27 +2013,31 @@ void si_init_all_descriptors(struct si_context *sctx)
 					 si_const_buffer_descriptors(sctx, i),
 					 SI_NUM_CONST_BUFFERS,
 					 gfx9_tcs ? GFX9_SGPR_TCS_CONST_BUFFERS :
-						    SI_SGPR_CONST_BUFFERS,
+					 gfx9_gs ? GFX9_SGPR_GS_CONST_BUFFERS :
+						   SI_SGPR_CONST_BUFFERS,
 					 RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER,
 					 &ce_offset);
 		si_init_buffer_resources(&sctx->shader_buffers[i],
 					 si_shader_buffer_descriptors(sctx, i),
 					 SI_NUM_SHADER_BUFFERS,
 					 gfx9_tcs ? GFX9_SGPR_TCS_SHADER_BUFFERS :
-						    SI_SGPR_SHADER_BUFFERS,
+					 gfx9_gs ? GFX9_SGPR_GS_SHADER_BUFFERS :
+						   SI_SGPR_SHADER_BUFFERS,
 					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RW_BUFFER,
 					 shaderbufs_use_ce ? &ce_offset : NULL);
 
 		si_init_descriptors(si_sampler_descriptors(sctx, i),
 				    gfx9_tcs ? GFX9_SGPR_TCS_SAMPLERS :
-					       SI_SGPR_SAMPLERS,
+				    gfx9_gs ? GFX9_SGPR_GS_SAMPLERS :
+					      SI_SGPR_SAMPLERS,
 				    16, SI_NUM_SAMPLERS,
 				    null_texture_descriptor,
 				    samplers_use_ce ? &ce_offset : NULL);
 
 		si_init_descriptors(si_image_descriptors(sctx, i),
 				    gfx9_tcs ? GFX9_SGPR_TCS_IMAGES :
-					       SI_SGPR_IMAGES,
+				    gfx9_gs ? GFX9_SGPR_GS_IMAGES :
+					      SI_SGPR_IMAGES,
 				    8, SI_NUM_IMAGES,
 				    null_image_descriptor,
 				    images_use_ce ? &ce_offset : NULL);
