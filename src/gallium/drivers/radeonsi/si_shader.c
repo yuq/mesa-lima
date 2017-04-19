@@ -8636,20 +8636,31 @@ static bool si_shader_select_gs_parts(struct si_screen *sscreen,
 				      struct si_shader *shader,
 				      struct pipe_debug_callback *debug)
 {
-	union si_shader_part_key prolog_key;
+	if (sscreen->b.chip_class >= GFX9) {
+		struct si_shader *es_main_part =
+			shader->key.part.gs.es->main_shader_part_es;
+
+		if (shader->key.part.gs.es->type == PIPE_SHADER_VERTEX &&
+		    !si_get_vs_prolog(sscreen, tm, shader, debug, es_main_part,
+				      &shader->key.part.gs.vs_prolog))
+			return false;
+
+		shader->previous_stage = es_main_part;
+	}
 
 	if (!shader->key.part.gs.prolog.tri_strip_adj_fix)
 		return true;
 
+	union si_shader_part_key prolog_key;
 	memset(&prolog_key, 0, sizeof(prolog_key));
 	prolog_key.gs_prolog.states = shader->key.part.gs.prolog;
 
-	shader->prolog = si_get_shader_part(sscreen, &sscreen->gs_prologs,
+	shader->prolog2 = si_get_shader_part(sscreen, &sscreen->gs_prologs,
 					    PIPE_SHADER_GEOMETRY, true,
 					    &prolog_key, tm, debug,
 					    si_build_gs_prolog_function,
 					    "Geometry Shader Prolog");
-	return shader->prolog != NULL;
+	return shader->prolog2 != NULL;
 }
 
 /**
