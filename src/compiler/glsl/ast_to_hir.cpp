@@ -6989,7 +6989,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             _mesa_glsl_error(&loc, state, "atomic counter in structure");
          }
 
-         if (decl_type->contains_image()) {
+         if (!state->has_bindless() && decl_type->contains_image()) {
             /* FINISHME: Same problem as with atomic counters.
              * FINISHME: Request clarification from Khronos and add
              * FINISHME: spec quotation here.
