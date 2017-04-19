@@ -121,12 +121,12 @@ namespace {
          } else {
             // Other types.
             const auto actual_type =
-               isa<::llvm::PointerType>(arg_type) && arg.hasByValAttr() ?
-               cast<::llvm::PointerType>(arg_type)->getElementType() : arg_type;
+               isa< ::llvm::PointerType>(arg_type) && arg.hasByValAttr() ?
+               cast< ::llvm::PointerType>(arg_type)->getElementType() : arg_type;
 
             if (actual_type->isPointerTy()) {
                const unsigned address_space =
-                  cast<::llvm::PointerType>(actual_type)->getAddressSpace();
+                  cast< ::llvm::PointerType>(actual_type)->getAddressSpace();
 
                if (address_space == address_spaces[clang::LangAS::opencl_local
                                                    - compat::lang_as_offset]) {
