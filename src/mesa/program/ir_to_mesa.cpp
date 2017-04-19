@@ -2420,6 +2420,7 @@ public:
    void process(ir_variable *var)
    {
       this->idx = -1;
+      this->var = var;
       this->program_resource_visitor::process(var);
       var->data.param_index = this->idx;
    }
@@ -2433,6 +2434,7 @@ private:
    struct gl_shader_program *shader_program;
    struct gl_program_parameter_list *params;
    int idx;
+   ir_variable *var;
    gl_shader_stage shader_type;
 };
 
