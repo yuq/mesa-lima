@@ -20,7 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#include "nir.h"
+#include "nir/nir.h"
 #include "ac_shader_info.h"
 #include "ac_nir_to_llvm.h"
 
