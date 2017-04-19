@@ -339,11 +339,11 @@ private:
       const unsigned values = type->component_slots();
       if (type->contains_subroutine()) {
          this->num_shader_subroutines += values;
-      } else if (type->contains_sampler()) {
+      } else if (type->contains_sampler() && !current_var->data.bindless) {
          /* Samplers (bound or bindless) are counted as two components as
           * specified by ARB_bindless_texture. */
          this->num_shader_samplers += values / 2;
-      } else if (type->contains_image()) {
+      } else if (type->contains_image() && !current_var->data.bindless) {
          /* Images (bound or bindless) are counted as two components as
           * specified by ARB_bindless_texture. */
          this->num_shader_images += values / 2;
