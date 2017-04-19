@@ -3989,15 +3989,9 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
       visit_image_intrinsic(ir);
       return;
 
-   case ir_intrinsic_shader_clock: {
-      ir->return_deref->accept(this);
-
-      st_dst_reg dst = st_dst_reg(this->result);
-      dst.writemask = TGSI_WRITEMASK_XY;
-
-      emit_asm(ir, TGSI_OPCODE_CLOCK, dst);
+   case ir_intrinsic_shader_clock:
+      visit_generic_intrinsic(ir, TGSI_OPCODE_CLOCK);
       return;
-   }
 
    case ir_intrinsic_vote_all:
       visit_generic_intrinsic(ir, TGSI_OPCODE_VOTE_ALL);
