@@ -2839,12 +2839,20 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 	}
 }
 
+static LLVMValueRef si_get_gs_wave_id(struct si_shader_context *ctx)
+{
+	if (ctx->screen->b.chip_class >= GFX9)
+		return unpack_param(ctx, ctx->param_merged_wave_info, 16, 8);
+	else
+		return LLVMGetParam(ctx->main_fn, ctx->param_gs_wave_id);
+}
+
 static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE,
-			 LLVMGetParam(ctx->main_fn, ctx->param_gs_wave_id));
+			 si_get_gs_wave_id(ctx));
 }
 
 static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -5538,7 +5546,7 @@ static void si_llvm_emit_vertex(
 
 	/* Signal vertex emission */
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_EMIT | AC_SENDMSG_GS | (stream << 8),
-			 LLVMGetParam(ctx->main_fn, ctx->param_gs_wave_id));
+			 si_get_gs_wave_id(ctx));
 	if (!use_kill)
 		lp_build_endif(&if_state);
 }
@@ -5555,7 +5563,7 @@ static void si_llvm_emit_primitive(
 	/* Signal primitive cut */
 	stream = si_llvm_get_stream(bld_base, emit_data);
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8),
-			 LLVMGetParam(ctx->main_fn, ctx->param_gs_wave_id));
+			 si_get_gs_wave_id(ctx));
 }
 
 static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
