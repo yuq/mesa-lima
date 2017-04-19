@@ -1365,10 +1365,10 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
     */
    blorp_emit(batch, GENX(3DSTATE_CC_STATE_POINTERS), cc) {
       cc.BLEND_STATEChange = true;
-      cc.COLOR_CALC_STATEChange = true;
+      cc.ColorCalcStatePointerValid = true;
       cc.DEPTH_STENCIL_STATEChange = true;
       cc.PointertoBLEND_STATE = blend_state_offset;
-      cc.PointertoCOLOR_CALC_STATE = color_calc_state_offset;
+      cc.ColorCalcStatePointer = color_calc_state_offset;
       cc.PointertoDEPTH_STENCIL_STATE = depth_stencil_state_offset;
    }
 #else

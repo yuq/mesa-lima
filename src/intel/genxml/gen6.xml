@@ -773,8 +773,8 @@
     <field name="BLEND_STATE Change" start="32" end="32" type="bool"/>
     <field name="Pointer to DEPTH_STENCIL_STATE" start="70" end="95" type="offset"/>
     <field name="DEPTH_STENCIL_STATE Change" start="64" end="64" type="bool"/>
-    <field name="Pointer to COLOR_CALC_STATE" start="102" end="127" type="offset"/>
-    <field name="COLOR_CALC_STATE Change" start="96" end="96" type="bool"/>
+    <field name="Color Calc State Pointer" start="102" end="127" type="offset"/>
+    <field name="Color Calc State Pointer Valid" start="96" end="96" type="bool"/>
   </instruction>
 
   <instruction name="3DSTATE_CHROMA_KEY" bias="2" length="4">

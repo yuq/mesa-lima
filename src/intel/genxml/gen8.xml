@@ -568,7 +568,7 @@
 
   <struct name="COLOR_CALC_STATE" length="6">
     <field name="Stencil Reference Value" start="24" end="31" type="uint"/>
-    <field name="BackFace Stencil Reference Value" start="16" end="23" type="uint"/>
+    <field name="Backface Stencil Reference Value" start="16" end="23" type="uint"/>
     <field name="Round Disable Function Disable" start="15" end="15" type="bool"/>
     <field name="Alpha Test Format" start="0" end="0" type="uint">
       <value name="ALPHATEST_UNORM8" value="0"/>
