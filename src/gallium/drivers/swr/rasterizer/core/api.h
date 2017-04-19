@@ -260,7 +260,7 @@ void SWR_API SwrSync(
     PFN_CALLBACK_FUNC pfnFunc,
     uint64_t userData,
     uint64_t userData2,
-    uint64_t userData3 = 0);
+    uint64_t userData3);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Blocks until all rendering has been completed.
