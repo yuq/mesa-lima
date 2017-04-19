@@ -7870,6 +7870,32 @@ static void si_build_vs_epilog_function(struct si_shader_context *ctx,
 	LLVMBuildRetVoid(gallivm->builder);
 }
 
+static bool si_get_vs_prolog(struct si_screen *sscreen,
+			     LLVMTargetMachineRef tm,
+			     struct si_shader *shader,
+			     struct pipe_debug_callback *debug,
+			     struct si_shader *main_part,
+			     const struct si_vs_prolog_bits *key)
+{
+	struct si_shader_selector *vs = main_part->selector;
+
+	/* The prolog is a no-op if there are no inputs. */
+	if (!vs->vs_needs_prolog)
+		return true;
+
+	/* Get the prolog. */
+	union si_shader_part_key prolog_key;
+	si_get_vs_prolog_key(&vs->info, main_part->info.num_input_sgprs,
+			     key, shader, &prolog_key);
+
+	shader->prolog =
+		si_get_shader_part(sscreen, &sscreen->vs_prologs,
+				   PIPE_SHADER_VERTEX, true, &prolog_key, tm,
+				   debug, si_build_vs_prolog_function,
+				   "Vertex Shader Prolog");
+	return shader->prolog != NULL;
+}
+
 /**
  * Create & compile a vertex shader epilog. This a helper used by VS and TES.
  */
@@ -7899,23 +7925,9 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 				      struct si_shader *shader,
 				      struct pipe_debug_callback *debug)
 {
-	if (shader->selector->vs_needs_prolog) {
-		union si_shader_part_key prolog_key;
-
-		/* Get the prolog. */
-		si_get_vs_prolog_key(&shader->selector->info,
-				     shader->info.num_input_sgprs,
-				     &shader->key.part.vs.prolog,
-				     shader, &prolog_key);
-		shader->prolog =
-			si_get_shader_part(sscreen, &sscreen->vs_prologs,
-					   PIPE_SHADER_VERTEX, true,
-					   &prolog_key, tm, debug,
-					   si_build_vs_prolog_function,
-					   "Vertex Shader Prolog");
-		if (!shader->prolog)
-			return false;
-	}
+	if (!si_get_vs_prolog(sscreen, tm, shader, debug, shader,
+			      &shader->key.part.vs.prolog))
+		return false;
 
 	/* Get the epilog. */
 	if (!shader->key.as_es && !shader->key.as_ls &&
