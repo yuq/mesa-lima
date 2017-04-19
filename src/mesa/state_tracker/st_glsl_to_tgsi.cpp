@@ -3994,6 +3994,12 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
       return;
    }
 
+   case ir_intrinsic_vote_all:
+   case ir_intrinsic_vote_any:
+   case ir_intrinsic_vote_eq:
+   case ir_intrinsic_ballot:
+   case ir_intrinsic_read_first_invocation:
+   case ir_intrinsic_read_invocation:
    case ir_intrinsic_invalid:
    case ir_intrinsic_generic_load:
    case ir_intrinsic_generic_store:

@@ -1098,6 +1098,13 @@ enum ir_intrinsic_id {
    ir_intrinsic_memory_barrier_image,
    ir_intrinsic_memory_barrier_shared,
 
+   ir_intrinsic_vote_all,
+   ir_intrinsic_vote_any,
+   ir_intrinsic_vote_eq,
+   ir_intrinsic_ballot,
+   ir_intrinsic_read_invocation,
+   ir_intrinsic_read_first_invocation,
+
    ir_intrinsic_shared_load,
    ir_intrinsic_shared_store = MAKE_INTRINSIC_FOR_TYPE(store, shared),
    ir_intrinsic_shared_atomic_add = MAKE_INTRINSIC_FOR_TYPE(atomic_add, shared),
