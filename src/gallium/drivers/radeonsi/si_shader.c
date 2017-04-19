@@ -6914,6 +6914,14 @@ static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
+		if (shader->is_gs_copy_shader)
+			break;
+
+		if (shader->selector->screen->b.chip_class >= GFX9 &&
+		    key->part.gs.es->type == PIPE_SHADER_VERTEX) {
+			si_dump_shader_key_vs(key, &key->part.gs.vs_prolog,
+					      "part.gs.vs_prolog", f);
+		}
 		fprintf(f, "  part.gs.prolog.tri_strip_adj_fix = %u\n", key->part.gs.prolog.tri_strip_adj_fix);
 		break;
 

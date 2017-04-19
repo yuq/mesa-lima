@@ -479,7 +479,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 
 	if (sctx->gs_shader.cso) {
 		/* GS requirement. */
-		if (SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
+		if (sctx->b.chip_class <= VI &&
+		    SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
 			ia_multi_vgt_param |= S_028AA8_PARTIAL_ES_WAVE_ON(1);
 
 		/* GS hw bug with single-primitive instances and SWITCH_ON_EOI.

@@ -4331,8 +4331,10 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
 
 	/* FIXME calculate these values somehow ??? */
-	si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
-	si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
+	if (sctx->b.chip_class <= VI) {
+		si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
+		si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
+	}
 	si_pm4_set_reg(pm4, R_028A5C_VGT_GS_PER_VS, 0x2);
 
 	si_pm4_set_reg(pm4, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
@@ -4482,20 +4484,20 @@ static void si_init_config(struct si_context *sctx)
 	}
 
 	if (sctx->b.chip_class >= CIK) {
-		/* If this is 0, Bonaire can hang even if GS isn't being used.
-		 * Other chips are unaffected. These are suboptimal values,
-		 * but we don't use on-chip GS.
-		 */
-		si_pm4_set_reg(pm4, R_028A44_VGT_GS_ONCHIP_CNTL,
-			       S_028A44_ES_VERTS_PER_SUBGRP(64) |
-			       S_028A44_GS_PRIMS_PER_SUBGRP(4));
-
 		if (sctx->b.chip_class >= GFX9) {
 			si_pm4_set_reg(pm4, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, S_00B41C_CU_EN(0xffff));
 		} else {
 			si_pm4_set_reg(pm4, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xffff));
 			si_pm4_set_reg(pm4, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, 0);
 			si_pm4_set_reg(pm4, R_00B31C_SPI_SHADER_PGM_RSRC3_ES, S_00B31C_CU_EN(0xffff));
+
+			/* If this is 0, Bonaire can hang even if GS isn't being used.
+			 * Other chips are unaffected. These are suboptimal values,
+			 * but we don't use on-chip GS.
+			 */
+			si_pm4_set_reg(pm4, R_028A44_VGT_GS_ONCHIP_CNTL,
+				       S_028A44_ES_VERTS_PER_SUBGRP(64) |
+				       S_028A44_GS_PRIMS_PER_SUBGRP(4));
 		}
 		si_pm4_set_reg(pm4, R_00B21C_SPI_SHADER_PGM_RSRC3_GS, S_00B21C_CU_EN(0xffff));
 

@@ -419,6 +419,8 @@ struct si_shader_key {
 			struct si_vs_epilog_bits epilog; /* same as VS */
 		} tes; /* tessellation evaluation shader */
 		struct {
+			struct si_vs_prolog_bits vs_prolog; /* for merged ES-GS */
+			struct si_shader_selector *es;   /* for merged ES-GS */
 			struct si_gs_prolog_bits prolog;
 		} gs;
 		struct {

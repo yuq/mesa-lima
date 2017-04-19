@@ -573,6 +573,7 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
  */
 static uint32_t si_vgt_gs_mode(struct si_shader_selector *sel)
 {
+	enum chip_class chip_class = sel->screen->b.chip_class;
 	unsigned gs_max_vert_out = sel->gs_max_out_vertices;
 	unsigned cut_mode;
 
@@ -589,11 +590,118 @@ static uint32_t si_vgt_gs_mode(struct si_shader_selector *sel)
 
 	return S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
 	       S_028A40_CUT_MODE(cut_mode)|
-	       S_028A40_ES_WRITE_OPTIMIZE(1) |
-	       S_028A40_GS_WRITE_OPTIMIZE(1);
+	       S_028A40_ES_WRITE_OPTIMIZE(chip_class <= VI) |
+	       S_028A40_GS_WRITE_OPTIMIZE(1) |
+	       S_028A40_ONCHIP(chip_class >= GFX9 ? 1 : 0);
 }
 
-static void si_shader_gs(struct si_shader *shader)
+struct gfx9_gs_info {
+	unsigned es_verts_per_subgroup;
+	unsigned gs_prims_per_subgroup;
+	unsigned gs_inst_prims_in_subgroup;
+	unsigned max_prims_per_subgroup;
+	unsigned lds_size;
+};
+
+static void gfx9_get_gs_info(struct si_shader_selector *es,
+				   struct si_shader_selector *gs,
+				   struct gfx9_gs_info *out)
+{
+	unsigned gs_num_invocations = MAX2(gs->gs_num_invocations, 1);
+	unsigned input_prim = gs->info.properties[TGSI_PROPERTY_GS_INPUT_PRIM];
+	bool uses_adjacency = input_prim >= PIPE_PRIM_LINES_ADJACENCY &&
+			      input_prim <= PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY;
+
+	/* All these are in dwords: */
+	/* We can't allow using the whole LDS, because GS waves compete with
+	 * other shader stages for LDS space. */
+	const unsigned max_lds_size = 8 * 1024;
+	const unsigned esgs_itemsize = es->esgs_itemsize / 4;
+	unsigned esgs_lds_size;
+
+	/* All these are per subgroup: */
+	const unsigned max_out_prims = 32 * 1024;
+	const unsigned max_es_verts = 255;
+	const unsigned ideal_gs_prims = 64;
+	unsigned max_gs_prims, gs_prims;
+	unsigned min_es_verts, es_verts, worst_case_es_verts;
+
+	assert(gs_num_invocations <= 32); /* GL maximum */
+
+	if (uses_adjacency || gs_num_invocations > 1)
+		max_gs_prims = 127 / gs_num_invocations;
+	else
+		max_gs_prims = 255;
+
+	/* MAX_PRIMS_PER_SUBGROUP = gs_prims * max_vert_out * gs_invocations.
+	 * Make sure we don't go over the maximum value.
+	 */
+	max_gs_prims = MIN2(max_gs_prims,
+			    max_out_prims /
+			    (gs->gs_max_out_vertices * gs_num_invocations));
+	assert(max_gs_prims > 0);
+
+	/* If the primitive has adjacency, halve the number of vertices
+	 * that will be reused in multiple primitives.
+	 */
+	min_es_verts = gs->gs_input_verts_per_prim / (uses_adjacency ? 2 : 1);
+
+	gs_prims = MIN2(ideal_gs_prims, max_gs_prims);
+	worst_case_es_verts = MIN2(min_es_verts * gs_prims, max_es_verts);
+
+	/* Compute ESGS LDS size based on the worst case number of ES vertices
+	 * needed to create the target number of GS prims per subgroup.
+	 */
+	esgs_lds_size = esgs_itemsize * worst_case_es_verts;
+
+	/* If total LDS usage is too big, refactor partitions based on ratio
+	 * of ESGS item sizes.
+	 */
+	if (esgs_lds_size > max_lds_size) {
+		/* Our target GS Prims Per Subgroup was too large. Calculate
+		 * the maximum number of GS Prims Per Subgroup that will fit
+		 * into LDS, capped by the maximum that the hardware can support.
+		 */
+		gs_prims = MIN2((max_lds_size / (esgs_itemsize * min_es_verts)),
+				max_gs_prims);
+		assert(gs_prims > 0);
+		worst_case_es_verts = MIN2(min_es_verts * gs_prims,
+					   max_es_verts);
+
+		esgs_lds_size = esgs_itemsize * worst_case_es_verts;
+		assert(esgs_lds_size <= max_lds_size);
+	}
+
+	/* Now calculate remaining ESGS information. */
+	if (esgs_lds_size)
+		es_verts = MIN2(esgs_lds_size / esgs_itemsize, max_es_verts);
+	else
+		es_verts = max_es_verts;
+
+	/* Vertices for adjacency primitives are not always reused, so restore
+	 * it for ES_VERTS_PER_SUBGRP.
+	 */
+	min_es_verts = gs->gs_input_verts_per_prim;
+
+	/* For normal primitives, the VGT only checks if they are past the ES
+	 * verts per subgroup after allocating a full GS primitive and if they
+	 * are, kick off a new subgroup.  But if those additional ES verts are
+	 * unique (e.g. not reused) we need to make sure there is enough LDS
+	 * space to account for those ES verts beyond ES_VERTS_PER_SUBGRP.
+	 */
+	es_verts -= min_es_verts - 1;
+
+	out->es_verts_per_subgroup = es_verts;
+	out->gs_prims_per_subgroup = gs_prims;
+	out->gs_inst_prims_in_subgroup = gs_prims * gs_num_invocations;
+	out->max_prims_per_subgroup = out->gs_inst_prims_in_subgroup *
+				      gs->gs_max_out_vertices;
+	out->lds_size = align(esgs_lds_size, 128) / 128;
+
+	assert(out->max_prims_per_subgroup <= max_out_prims);
+}
+
+static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_shader_selector *sel = shader->selector;
 	const ubyte *num_components = sel->info.num_stream_output_components;
@@ -622,7 +730,7 @@ static void si_shader_gs(struct si_shader *shader)
 	/* The GSVS_RING_ITEMSIZE register takes 15 bits */
 	assert(offset < (1 << 15));
 
-	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, shader->selector->gs_max_out_vertices);
+	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, sel->gs_max_out_vertices);
 
 	si_pm4_set_reg(pm4, R_028B5C_VGT_GS_VERT_ITEMSIZE, num_components[0]);
 	si_pm4_set_reg(pm4, R_028B60_VGT_GS_VERT_ITEMSIZE_1, (max_stream >= 1) ? num_components[1] : 0);
@@ -635,17 +743,72 @@ static void si_shader_gs(struct si_shader *shader)
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
-	si_pm4_set_reg(pm4, R_00B220_SPI_SHADER_PGM_LO_GS, va >> 8);
-	si_pm4_set_reg(pm4, R_00B224_SPI_SHADER_PGM_HI_GS, va >> 40);
 
-	si_pm4_set_reg(pm4, R_00B228_SPI_SHADER_PGM_RSRC1_GS,
-		       S_00B228_VGPRS((shader->config.num_vgprs - 1) / 4) |
-		       S_00B228_SGPRS((shader->config.num_sgprs - 1) / 8) |
-		       S_00B228_DX10_CLAMP(1) |
-		       S_00B228_FLOAT_MODE(shader->config.float_mode));
-	si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
-		       S_00B22C_USER_SGPR(GFX6_GS_NUM_USER_SGPR) |
-		       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
+	if (sscreen->b.chip_class >= GFX9) {
+		unsigned input_prim = sel->info.properties[TGSI_PROPERTY_GS_INPUT_PRIM];
+		unsigned es_type = shader->key.part.gs.es->type;
+		unsigned es_vgpr_comp_cnt, gs_vgpr_comp_cnt;
+		struct gfx9_gs_info gs_info;
+
+		if (es_type == PIPE_SHADER_VERTEX)
+			es_vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 0;
+		else if (es_type == PIPE_SHADER_TESS_EVAL)
+			es_vgpr_comp_cnt = 3; /* all components are needed for TES */
+		else
+			unreachable("invalid shader selector type");
+
+		/* If offsets 4, 5 are used, GS_VGPR_COMP_CNT is ignored and
+		 * VGPR[0:4] are always loaded.
+		 */
+		if (sel->info.uses_invocationid)
+			gs_vgpr_comp_cnt = 3; /* VGPR3 contains InvocationID. */
+		else if (sel->info.uses_primid)
+			gs_vgpr_comp_cnt = 2; /* VGPR2 contains PrimitiveID. */
+		else if (input_prim >= PIPE_PRIM_TRIANGLES)
+			gs_vgpr_comp_cnt = 1; /* VGPR1 contains offsets 2, 3 */
+		else
+			gs_vgpr_comp_cnt = 0; /* VGPR0 contains offsets 0, 1 */
+
+		gfx9_get_gs_info(shader->key.part.gs.es, sel, &gs_info);
+
+		si_pm4_set_reg(pm4, R_00B210_SPI_SHADER_PGM_LO_ES, va >> 8);
+		si_pm4_set_reg(pm4, R_00B214_SPI_SHADER_PGM_HI_ES, va >> 40);
+
+		si_pm4_set_reg(pm4, R_00B228_SPI_SHADER_PGM_RSRC1_GS,
+			       S_00B228_VGPRS((shader->config.num_vgprs - 1) / 4) |
+			       S_00B228_SGPRS((shader->config.num_sgprs - 1) / 8) |
+			       S_00B228_DX10_CLAMP(1) |
+			       S_00B228_FLOAT_MODE(shader->config.float_mode) |
+			       S_00B228_GS_VGPR_COMP_CNT(gs_vgpr_comp_cnt));
+		si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
+			       S_00B22C_USER_SGPR(GFX9_GS_NUM_USER_SGPR) |
+			       S_00B22C_USER_SGPR_MSB(GFX9_GS_NUM_USER_SGPR >> 5) |
+			       S_00B22C_ES_VGPR_COMP_CNT(es_vgpr_comp_cnt) |
+			       S_00B22C_OC_LDS_EN(es_type == PIPE_SHADER_TESS_EVAL) |
+			       S_00B22C_LDS_SIZE(gs_info.lds_size) |
+			       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
+
+		si_pm4_set_reg(pm4, R_028A44_VGT_GS_ONCHIP_CNTL,
+			       S_028A44_ES_VERTS_PER_SUBGRP(gs_info.es_verts_per_subgroup) |
+			       S_028A44_GS_PRIMS_PER_SUBGRP(gs_info.gs_prims_per_subgroup) |
+			       S_028A44_GS_INST_PRIMS_IN_SUBGRP(gs_info.gs_inst_prims_in_subgroup));
+		si_pm4_set_reg(pm4, R_028A94_VGT_GS_MAX_PRIMS_PER_SUBGROUP,
+			       S_028A94_MAX_PRIMS_PER_SUBGROUP(gs_info.max_prims_per_subgroup));
+		si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
+			       shader->key.part.gs.es->esgs_itemsize / 4);
+	} else {
+		si_pm4_set_reg(pm4, R_00B220_SPI_SHADER_PGM_LO_GS, va >> 8);
+		si_pm4_set_reg(pm4, R_00B224_SPI_SHADER_PGM_HI_GS, va >> 40);
+
+		si_pm4_set_reg(pm4, R_00B228_SPI_SHADER_PGM_RSRC1_GS,
+			       S_00B228_VGPRS((shader->config.num_vgprs - 1) / 4) |
+			       S_00B228_SGPRS((shader->config.num_sgprs - 1) / 8) |
+			       S_00B228_DX10_CLAMP(1) |
+			       S_00B228_FLOAT_MODE(shader->config.float_mode));
+		si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
+			       S_00B22C_USER_SGPR(GFX6_GS_NUM_USER_SGPR) |
+			       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
+	}
 }
 
 /**
@@ -969,7 +1132,7 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 			si_shader_vs(sscreen, shader, NULL);
 		break;
 	case PIPE_SHADER_GEOMETRY:
-		si_shader_gs(shader);
+		si_shader_gs(sscreen, shader);
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		si_shader_ps(shader);
@@ -1108,6 +1271,15 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		}
 		break;
 	case PIPE_SHADER_GEOMETRY:
+		if (sctx->b.chip_class >= GFX9) {
+			if (sctx->tes_shader.cso) {
+				key->part.gs.es = sctx->tes_shader.cso;
+			} else {
+				si_shader_selector_key_vs(sctx, sctx->vs_shader.cso,
+							  key, &key->part.gs.vs_prolog);
+				key->part.gs.es = sctx->vs_shader.cso;
+			}
+		}
 		key->part.gs.prolog.tri_strip_adj_fix = sctx->gs_tri_strip_adj_fix;
 		break;
 	case PIPE_SHADER_FRAGMENT: {
@@ -1729,6 +1901,12 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			}
 		}
 		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;
+
+		/* For the ESGS ring in LDS, add 1 dword to reduce LDS bank
+		 * conflicts, i.e. each vertex will start at a different bank.
+		 */
+		if (sctx->b.chip_class >= GFX9)
+			sel->esgs_itemsize += 4;
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
