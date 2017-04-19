@@ -176,15 +176,18 @@ struct si_shader_context {
 	int param_es2gs_offset;
 	/* API GS */
 	int param_gs2vs_offset;
-	int param_gs_wave_id;
-	int param_gs_vtx0_offset;
-	int param_gs_vtx1_offset;
+	int param_gs_wave_id; /* GFX6 */
+	int param_gs_vtx0_offset; /* in dwords (GFX6) */
+	int param_gs_vtx1_offset; /* in dwords (GFX6) */
 	int param_gs_prim_id;
-	int param_gs_vtx2_offset;
-	int param_gs_vtx3_offset;
-	int param_gs_vtx4_offset;
-	int param_gs_vtx5_offset;
+	int param_gs_vtx2_offset; /* in dwords (GFX6) */
+	int param_gs_vtx3_offset; /* in dwords (GFX6) */
+	int param_gs_vtx4_offset; /* in dwords (GFX6) */
+	int param_gs_vtx5_offset; /* in dwords (GFX6) */
 	int param_gs_instance_id;
+	int param_gs_vtx01_offset; /* in dwords (GFX9) */
+	int param_gs_vtx23_offset; /* in dwords (GFX9) */
+	int param_gs_vtx45_offset; /* in dwords (GFX9) */
 
 	LLVMTargetMachineRef tm;
 

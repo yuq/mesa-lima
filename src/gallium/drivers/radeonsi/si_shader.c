@@ -5778,6 +5778,15 @@ static void declare_vs_input_vgprs(struct si_shader_context *ctx,
 	}
 }
 
+static void declare_tes_input_vgprs(struct si_shader_context *ctx,
+				    LLVMTypeRef *params, unsigned *num_params)
+{
+	params[ctx->param_tes_u = (*num_params)++] = ctx->f32;
+	params[ctx->param_tes_v = (*num_params)++] = ctx->f32;
+	params[ctx->param_tes_rel_patch_id = (*num_params)++] = ctx->i32;
+	params[ctx->param_tes_patch_id = (*num_params)++] = ctx->i32;
+}
+
 enum {
 	/* Convenient merged shader definitions. */
 	SI_SHADER_MERGED_VERTEX_TESSCTRL = PIPE_SHADER_TYPES,
@@ -5915,7 +5924,60 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY:
-		assert(!"unimplemented merged ES-GS shader");
+		/* Merged stages have 8 system SGPRs at the beginning. */
+		params[ctx->param_rw_buffers = num_params++] = /* SPI_SHADER_USER_DATA_ADDR_LO_GS */
+			const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+		params[ctx->param_gs2vs_offset = num_params++] = ctx->i32;
+		params[ctx->param_merged_wave_info = num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
+		params[ctx->param_merged_scratch_offset = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32; /* unused (SPI_SHADER_PGM_LO/HI_GS << 8) */
+		params[num_params++] = ctx->i32; /* unused (SPI_SHADER_PGM_LO/HI_GS >> 24) */
+
+		params[num_params++] = ctx->i32; /* unused */
+		params[num_params++] = ctx->i32; /* unused */
+		declare_per_stage_desc_pointers(ctx, params, &num_params,
+						(ctx->type == PIPE_SHADER_VERTEX ||
+						 ctx->type == PIPE_SHADER_TESS_EVAL));
+		if (ctx->type == PIPE_SHADER_VERTEX) {
+			declare_vs_specific_input_sgprs(ctx, params, &num_params);
+		} else {
+			/* TESS_EVAL (and also GEOMETRY):
+			 * Declare as many input SGPRs as the VS has. */
+			params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
+			params[num_params++] = ctx->i32; /* unused */
+			params[num_params++] = ctx->i32; /* unused */
+			params[num_params++] = ctx->i32; /* unused */
+			params[num_params++] = ctx->i32; /* unused */
+			params[ctx->param_vs_state_bits = num_params++] = ctx->i32; /* unused */
+		}
+
+		declare_per_stage_desc_pointers(ctx, params, &num_params,
+						ctx->type == PIPE_SHADER_GEOMETRY);
+		last_sgpr = num_params - 1;
+
+		/* VGPRs (first GS, then VS/TES) */
+		params[ctx->param_gs_vtx01_offset = num_params++] = ctx->i32;
+		params[ctx->param_gs_vtx23_offset = num_params++] = ctx->i32;
+		params[ctx->param_gs_prim_id = num_params++] = ctx->i32;
+		params[ctx->param_gs_instance_id = num_params++] = ctx->i32;
+		params[ctx->param_gs_vtx45_offset = num_params++] = ctx->i32;
+
+		if (ctx->type == PIPE_SHADER_VERTEX) {
+			declare_vs_input_vgprs(ctx, params, &num_params,
+					       &num_prolog_vgprs);
+		} else if (ctx->type == PIPE_SHADER_TESS_EVAL) {
+			declare_tes_input_vgprs(ctx, params, &num_params);
+		}
+
+		if (ctx->type == PIPE_SHADER_VERTEX ||
+		    ctx->type == PIPE_SHADER_TESS_EVAL) {
+			/* ES return values are inputs to GS. */
+			for (i = 0; i < 8 + GFX9_GS_NUM_USER_SGPR; i++)
+				returns[num_returns++] = ctx->i32; /* SGPRs */
+			for (i = 0; i < 5; i++)
+				returns[num_returns++] = ctx->f32; /* VGPRs */
+		}
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
@@ -5935,10 +5997,7 @@ static void create_function(struct si_shader_context *ctx)
 		last_sgpr = num_params - 1;
 
 		/* VGPRs */
-		params[ctx->param_tes_u = num_params++] = ctx->f32;
-		params[ctx->param_tes_v = num_params++] = ctx->f32;
-		params[ctx->param_tes_rel_patch_id = num_params++] = ctx->i32;
-		params[ctx->param_tes_patch_id = num_params++] = ctx->i32;
+		declare_tes_input_vgprs(ctx, params, &num_params);
 
 		/* PrimitiveID output. */
 		if (!shader->key.as_es)
