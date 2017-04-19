@@ -1188,9 +1188,7 @@ blorp_emit_3dstate_multisample(struct blorp_batch *batch,
        *    should not have any effect by setting or not setting this bit.
        */
       ms.PixelPositionOffsetEnable  = false;
-      ms.PixelLocation              = CENTER;
 #elif GEN_GEN >= 7
-      ms.PixelLocation              = PIXLOC_CENTER;
 
       switch (params->num_samples) {
       case 1:
@@ -1209,9 +1207,9 @@ blorp_emit_3dstate_multisample(struct blorp_batch *batch,
          break;
       }
 #else
-      ms.PixelLocation              = PIXLOC_CENTER;
       GEN_SAMPLE_POS_4X(ms.Sample);
 #endif
+      ms.PixelLocation              = CENTER;
    }
 }
 

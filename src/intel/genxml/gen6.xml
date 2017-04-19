@@ -1089,8 +1089,8 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="13"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="1"/>
     <field name="Pixel Location" start="36" end="36" type="uint">
-      <value name="PIXLOC_CENTER" value="0"/>
-      <value name="PIXLOC_UL_CORNER" value="1"/>
+      <value name="CENTER" value="0"/>
+      <value name="UL_CORNER" value="1"/>
     </field>
     <field name="Number of Multisamples" start="33" end="35" type="uint">
       <value name="NUMSAMPLES_1" value="0"/>
