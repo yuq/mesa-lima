@@ -484,6 +484,7 @@ public:
    void visit_membar_intrinsic(ir_call *);
    void visit_shared_intrinsic(ir_call *);
    void visit_image_intrinsic(ir_call *);
+   void visit_generic_intrinsic(ir_call *, unsigned op);
 
    st_src_reg result;
 
@@ -3914,6 +3915,28 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 }
 
 void
+glsl_to_tgsi_visitor::visit_generic_intrinsic(ir_call *ir, unsigned op)
+{
+   ir->return_deref->accept(this);
+   st_dst_reg dst = st_dst_reg(this->result);
+
+   st_src_reg src[4] = { undef_src, undef_src, undef_src, undef_src };
+   unsigned num_src = 0;
+   foreach_in_list(ir_rvalue, param, &ir->actual_parameters) {
+      assert(num_src < ARRAY_SIZE(src));
+
+      this->result.file = PROGRAM_UNDEFINED;
+      param->accept(this);
+      assert(this->result.file != PROGRAM_UNDEFINED);
+
+      src[num_src] = this->result;
+      num_src++;
+   }
+
+   emit_asm(ir, op, dst, src[0], src[1], src[2], src[3]);
+}
+
+void
 glsl_to_tgsi_visitor::visit(ir_call *ir)
 {
    ir_function_signature *sig = ir->callee;
@@ -3995,11 +4018,24 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
    }
 
    case ir_intrinsic_vote_all:
+      visit_generic_intrinsic(ir, TGSI_OPCODE_VOTE_ALL);
+      return;
    case ir_intrinsic_vote_any:
+      visit_generic_intrinsic(ir, TGSI_OPCODE_VOTE_ANY);
+      return;
    case ir_intrinsic_vote_eq:
+      visit_generic_intrinsic(ir, TGSI_OPCODE_VOTE_EQ);
+      return;
    case ir_intrinsic_ballot:
+      visit_generic_intrinsic(ir, TGSI_OPCODE_BALLOT);
+      return;
    case ir_intrinsic_read_first_invocation:
+      visit_generic_intrinsic(ir, TGSI_OPCODE_READ_FIRST);
+      return;
    case ir_intrinsic_read_invocation:
+      visit_generic_intrinsic(ir, TGSI_OPCODE_READ_INVOC);
+      return;
+
    case ir_intrinsic_invalid:
    case ir_intrinsic_generic_load:
    case ir_intrinsic_generic_store:
