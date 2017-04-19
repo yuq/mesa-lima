@@ -5577,11 +5577,23 @@ ast_parameter_declarator::hir(exec_list *instructions,
     *   "Opaque variables cannot be treated as l-values; hence cannot
     *    be used as out or inout function parameters, nor can they be
     *    assigned into."
+    *
+    * From section 4.1.7 of the ARB_bindless_texture spec:
+    *
+    *   "Samplers can be used as l-values, so can be assigned into and used
+    *    as "out" and "inout" function parameters."
+    *
+    * From section 4.1.X of the ARB_bindless_texture spec:
+    *
+    *   "Images can be used as l-values, so can be assigned into and used as
+    *    "out" and "inout" function parameters."
     */
    if ((var->data.mode == ir_var_function_inout || var->data.mode == ir_var_function_out)
-       && type->contains_opaque()) {
+       && (type->contains_atomic() ||
+           (!state->has_bindless() && type->contains_opaque()))) {
       _mesa_glsl_error(&loc, state, "out and inout parameters cannot "
-                       "contain opaque variables");
+                       "contain %s variables",
+                       state->has_bindless() ? "atomic" : "opaque");
       type = glsl_type::error_type;
    }
 
