@@ -1447,6 +1447,20 @@ ir_dereference::is_lvalue(const struct _mesa_glsl_parse_state *state) const
    if ((var == NULL) || var->data.read_only)
       return false;
 
+   /* From section 4.1.7 of the ARB_bindless_texture spec:
+    *
+    * "Samplers can be used as l-values, so can be assigned into and used as
+    *  "out" and "inout" function parameters."
+    *
+    * From section 4.1.X of the ARB_bindless_texture spec:
+    *
+    * "Images can be used as l-values, so can be assigned into and used as
+    *  "out" and "inout" function parameters."
+    */
+   if ((!state || state->has_bindless()) &&
+       (this->type->contains_sampler() || this->type->contains_image()))
+      return true;
+
    /* From section 4.1.7 of the GLSL 4.40 spec:
     *
     *   "Opaque variables cannot be treated as l-values; hence cannot
