@@ -2544,6 +2544,53 @@ static const struct brw_tracked_state genX(multisample_state) = {
    .emit = genX(upload_multisample_state)
 };
 
+/* ---------------------------------------------------------------------- */
+
+static void
+genX(upload_color_calc_state)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   brw_state_emit(brw, GENX(COLOR_CALC_STATE), 64, &brw->cc.state_offset, cc) {
+      /* _NEW_COLOR */
+      cc.AlphaTestFormat = ALPHATEST_UNORM8;
+      UNCLAMPED_FLOAT_TO_UBYTE(cc.AlphaReferenceValueAsUNORM8,
+                               ctx->Color.AlphaRef);
+
+#if GEN_GEN < 9
+      /* _NEW_STENCIL */
+      cc.StencilReferenceValue = _mesa_get_stencil_ref(ctx, 0);
+      cc.BackfaceStencilReferenceValue =
+         _mesa_get_stencil_ref(ctx, ctx->Stencil._BackFace);
+#endif
+
+      /* _NEW_COLOR */
+      cc.BlendConstantColorRed = ctx->Color.BlendColorUnclamped[0];
+      cc.BlendConstantColorGreen = ctx->Color.BlendColorUnclamped[1];
+      cc.BlendConstantColorBlue = ctx->Color.BlendColorUnclamped[2];
+      cc.BlendConstantColorAlpha = ctx->Color.BlendColorUnclamped[3];
+   }
+
+   brw_batch_emit(brw, GENX(3DSTATE_CC_STATE_POINTERS), ptr) {
+      ptr.ColorCalcStatePointer = brw->cc.state_offset;
+#if GEN_GEN != 7
+      ptr.ColorCalcStatePointerValid = true;
+#endif
+   }
+}
+
+static const struct brw_tracked_state genX(color_calc_state) = {
+   .dirty = {
+      .mesa = _NEW_COLOR |
+              _NEW_STENCIL,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_CC_STATE |
+             BRW_NEW_STATE_BASE_ADDRESS,
+   },
+   .emit = genX(upload_color_calc_state),
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -3660,7 +3707,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       &gen6_urb,
       &genX(blend_state),		/* must do before cc unit */
-      &gen6_color_calc_state,	/* must do before cc unit */
+      &genX(color_calc_state),	/* must do before cc unit */
       &gen6_depth_stencil_state,	/* must do before cc unit */
 
       &genX(vs_push_constants), /* Before vs_state */
@@ -3725,7 +3772,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_push_constant_space,
       &gen7_urb,
       &genX(blend_state),		/* must do before cc unit */
-      &gen6_color_calc_state,	/* must do before cc unit */
+      &genX(color_calc_state),	/* must do before cc unit */
       &genX(depth_stencil_state),	/* must do before cc unit */
 
       &brw_vs_image_surfaces, /* Before vs push/pull constants and binding table */
@@ -3813,7 +3860,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen7_push_constant_space,
       &gen7_urb,
       &genX(blend_state),
-      &gen6_color_calc_state,
+      &genX(color_calc_state),
 
       &brw_vs_image_surfaces, /* Before vs push/pull constants and binding table */
       &brw_tcs_image_surfaces, /* Before tcs push/pull constants and binding table */

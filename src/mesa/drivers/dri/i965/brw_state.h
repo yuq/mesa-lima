@@ -107,7 +107,6 @@ extern const struct brw_tracked_state brw_index_buffer;
 extern const struct brw_tracked_state brw_cs_state;
 extern const struct brw_tracked_state gen7_cs_push_constants;
 extern const struct brw_tracked_state gen6_binding_table_pointers;
-extern const struct brw_tracked_state gen6_color_calc_state;
 extern const struct brw_tracked_state gen6_gs_binding_table;
 extern const struct brw_tracked_state gen6_renderbuffer_surfaces;
 extern const struct brw_tracked_state gen6_sampler_state;
