@@ -24,6 +24,8 @@
 #include "main/core.h" /* for MAX2 */
 #include "ir.h"
 #include "compiler/glsl_types.h"
+#include "glsl_parser_extras.h"
+
 
 ir_rvalue::ir_rvalue(enum ir_node_type t)
    : ir_instruction(t)
@@ -1436,7 +1438,7 @@ ir_dereference_record::ir_dereference_record(ir_variable *var,
 }
 
 bool
-ir_dereference::is_lvalue() const
+ir_dereference::is_lvalue(const struct _mesa_glsl_parse_state *state) const
 {
    ir_variable *var = this->variable_referenced();
 

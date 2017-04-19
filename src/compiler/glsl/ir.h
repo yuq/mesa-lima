@@ -233,7 +233,7 @@ public:
 
    ir_rvalue *as_rvalue_to_saturate();
 
-   virtual bool is_lvalue() const
+   virtual bool is_lvalue(const struct _mesa_glsl_parse_state *state = NULL) const
    {
       return false;
    }
@@ -1941,9 +1941,9 @@ public:
    virtual bool equals(const ir_instruction *ir,
                        enum ir_node_type ignore = ir_type_unset) const;
 
-   bool is_lvalue() const
+   bool is_lvalue(const struct _mesa_glsl_parse_state *state) const
    {
-      return val->is_lvalue() && !mask.has_duplicates;
+      return val->is_lvalue(state) && !mask.has_duplicates;
    }
 
    /**
@@ -1968,7 +1968,7 @@ class ir_dereference : public ir_rvalue {
 public:
    virtual ir_dereference *clone(void *mem_ctx, struct hash_table *) const = 0;
 
-   bool is_lvalue() const;
+   bool is_lvalue(const struct _mesa_glsl_parse_state *state) const;
 
    /**
     * Get the variable that is ultimately referenced by an r-value

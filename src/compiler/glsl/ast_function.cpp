@@ -283,7 +283,7 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
                              mode, formal->name,
                              actual->variable_referenced()->name);
             return false;
-         } else if (!actual->is_lvalue()) {
+         } else if (!actual->is_lvalue(state)) {
             _mesa_glsl_error(&loc, state,
                              "function parameter '%s %s' is not an lvalue",
                              mode, formal->name);

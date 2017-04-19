@@ -971,7 +971,7 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
           * The restriction on arrays is lifted in GLSL 1.20 and GLSL ES 3.00.
           */
          error_emitted = true;
-      } else if (!lhs->is_lvalue()) {
+      } else if (!lhs->is_lvalue(state)) {
          _mesa_glsl_error(& lhs_loc, state, "non-lvalue in assignment");
          error_emitted = true;
       }
