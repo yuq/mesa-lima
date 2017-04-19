@@ -7238,6 +7238,14 @@ static void si_count_scratch_private_memory(struct si_shader_context *ctx)
 	}
 }
 
+static void si_init_exec_full_mask(struct si_shader_context *ctx)
+{
+	LLVMValueRef full_mask = LLVMConstInt(ctx->i64, ~0ull, 0);
+	lp_build_intrinsic(ctx->gallivm.builder,
+			   "llvm.amdgcn.init.exec", ctx->voidt,
+			   &full_mask, 1, LP_FUNC_ATTR_CONVERGENT);
+}
+
 static void si_init_exec_from_input(struct si_shader_context *ctx,
 				    unsigned param, unsigned bitoffset)
 {
@@ -7552,13 +7560,20 @@ static void si_get_ps_epilog_key(struct si_shader *shader,
 static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key)
 {
-	const unsigned num_sgprs = GFX6_GS_NUM_USER_SGPR + 2;
-	const unsigned num_vgprs = 8;
+	unsigned num_sgprs, num_vgprs;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
-	LLVMTypeRef params[32];
-	LLVMTypeRef returns[32];
+	LLVMTypeRef params[48]; /* 40 SGPRs (maximum) + some VGPRs */
+	LLVMTypeRef returns[48];
 	LLVMValueRef func, ret;
+
+	if (ctx->screen->b.chip_class >= GFX9) {
+		num_sgprs = 8 + GFX9_GS_NUM_USER_SGPR;
+		num_vgprs = 5; /* ES inputs are not needed by GS */
+	} else {
+		num_sgprs = GFX6_GS_NUM_USER_SGPR + 2;
+		num_vgprs = 8;
+	}
 
 	for (unsigned i = 0; i < num_sgprs; ++i) {
 		params[i] = ctx->i32;
@@ -7574,6 +7589,13 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 	si_create_function(ctx, "gs_prolog", returns, num_sgprs + num_vgprs,
 			   params, num_sgprs + num_vgprs, num_sgprs - 1);
 	func = ctx->main_fn;
+
+	/* Set the full EXEC mask for the prolog, because we are only fiddling
+	 * with registers here. The main shader part will set the correct EXEC
+	 * mask.
+	 */
+	if (ctx->screen->b.chip_class >= GFX9)
+		si_init_exec_full_mask(ctx);
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
 	 * but it will prevent the compiler from overwriting them unintentionally.
@@ -7591,7 +7613,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 
 	if (key->gs_prolog.states.tri_strip_adj_fix) {
 		/* Remap the input vertices for every other primitive. */
-		const unsigned vtx_params[6] = {
+		const unsigned gfx6_vtx_params[6] = {
 			num_sgprs,
 			num_sgprs + 1,
 			num_sgprs + 3,
@@ -7599,18 +7621,53 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 			num_sgprs + 5,
 			num_sgprs + 6
 		};
+		const unsigned gfx9_vtx_params[3] = {
+			num_sgprs,
+			num_sgprs + 1,
+			num_sgprs + 4,
+		};
+		LLVMValueRef vtx_in[6], vtx_out[6];
 		LLVMValueRef prim_id, rotate;
+
+		if (ctx->screen->b.chip_class >= GFX9) {
+			for (unsigned i = 0; i < 3; i++) {
+				vtx_in[i*2] = unpack_param(ctx, gfx9_vtx_params[i], 0, 16);
+				vtx_in[i*2+1] = unpack_param(ctx, gfx9_vtx_params[i], 16, 16);
+			}
+		} else {
+			for (unsigned i = 0; i < 6; i++)
+				vtx_in[i] = LLVMGetParam(func, gfx6_vtx_params[i]);
+		}
 
 		prim_id = LLVMGetParam(func, num_sgprs + 2);
 		rotate = LLVMBuildTrunc(builder, prim_id, ctx->i1, "");
 
 		for (unsigned i = 0; i < 6; ++i) {
-			LLVMValueRef base, rotated, actual;
-			base = LLVMGetParam(func, vtx_params[i]);
-			rotated = LLVMGetParam(func, vtx_params[(i + 4) % 6]);
-			actual = LLVMBuildSelect(builder, rotate, rotated, base, "");
-			actual = LLVMBuildBitCast(builder, actual, ctx->f32, "");
-			ret = LLVMBuildInsertValue(builder, ret, actual, vtx_params[i], "");
+			LLVMValueRef base, rotated;
+			base = vtx_in[i];
+			rotated = vtx_in[(i + 4) % 6];
+			vtx_out[i] = LLVMBuildSelect(builder, rotate, rotated, base, "");
+		}
+
+		if (ctx->screen->b.chip_class >= GFX9) {
+			for (unsigned i = 0; i < 3; i++) {
+				LLVMValueRef hi, out;
+
+				hi = LLVMBuildShl(builder, vtx_out[i*2+1],
+						  LLVMConstInt(ctx->i32, 16, 0), "");
+				out = LLVMBuildOr(builder, vtx_out[i*2], hi, "");
+				out = LLVMBuildBitCast(builder, out, ctx->f32, "");
+				ret = LLVMBuildInsertValue(builder, ret, out,
+							   gfx9_vtx_params[i], "");
+			}
+		} else {
+			for (unsigned i = 0; i < 6; i++) {
+				LLVMValueRef out;
+
+				out = LLVMBuildBitCast(builder, vtx_out[i], ctx->f32, "");
+				ret = LLVMBuildInsertValue(builder, ret, out,
+							   gfx6_vtx_params[i], "");
+			}
 		}
 	}
 
@@ -7692,12 +7749,8 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 	si_create_function(ctx, "wrapper", NULL, 0, param_types, num_params, last_sgpr_param);
 
-	if (is_merged_shader(ctx->shader)) {
-		LLVMValueRef full_mask = LLVMConstInt(ctx->i64, ~0ull, 0);
-		lp_build_intrinsic(ctx->gallivm.builder,
-				   "llvm.amdgcn.init.exec", ctx->voidt,
-				   &full_mask, 1, LP_FUNC_ATTR_CONVERGENT);
-	}
+	if (is_merged_shader(ctx->shader))
+		si_init_exec_full_mask(ctx);
 
 	/* Record the arguments of the function as if they were an output of
 	 * a previous part.
