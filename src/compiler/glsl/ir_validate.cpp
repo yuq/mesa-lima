@@ -582,29 +582,6 @@ ir_validate::visit_leave(ir_expression *ir)
       assert(ir->type->base_type == GLSL_TYPE_INT);
       break;
 
-   case ir_unop_ballot:
-      assert(ir->type == glsl_type::uint64_t_type);
-      assert(ir->operands[0]->type == glsl_type::bool_type);
-      break;
-
-   case ir_binop_read_invocation:
-      assert(ir->operands[1]->type == glsl_type::uint_type);
-      /* fall-through */
-   case ir_unop_read_first_invocation:
-      assert(ir->type == ir->operands[0]->type);
-      assert(ir->type->is_scalar() || ir->type->is_vector());
-      assert(ir->type->is_float() ||
-             ir->type->base_type == GLSL_TYPE_INT ||
-             ir->type->base_type == GLSL_TYPE_UINT);
-      break;
-
-   case ir_unop_vote_any:
-   case ir_unop_vote_all:
-   case ir_unop_vote_eq:
-      assert(ir->type == glsl_type::bool_type);
-      assert(ir->operands[0]->type == glsl_type::bool_type);
-      break;
-
    case ir_binop_add:
    case ir_binop_sub:
    case ir_binop_mul:

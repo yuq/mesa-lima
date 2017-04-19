@@ -381,20 +381,6 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
       this->type = glsl_type::int_type;
       break;
 
-   case ir_unop_ballot:
-      this->type = glsl_type::uint64_t_type;
-      break;
-
-   case ir_unop_read_first_invocation:
-      this->type = op0->type;
-      break;
-
-   case ir_unop_vote_any:
-   case ir_unop_vote_all:
-   case ir_unop_vote_eq:
-      this->type = glsl_type::bool_type;
-      break;
-
    case ir_unop_bitcast_i642d:
    case ir_unop_bitcast_u642d:
       this->type = glsl_type::get_instance(GLSL_TYPE_DOUBLE,
@@ -502,10 +488,6 @@ ir_expression::ir_expression(int op, ir_rvalue *op0, ir_rvalue *op1)
 
    case ir_binop_vector_extract:
       this->type = op0->type->get_scalar_type();
-      break;
-
-   case ir_binop_read_invocation:
-      this->type = op0->type;
       break;
 
    default:
