@@ -5764,12 +5764,17 @@ ast_function::hir(exec_list *instructions,
     *
     *    "[Opaque types] can only be declared as function parameters
     *     or uniform-qualified variables."
+    *
+    * The ARB_bindless_texture spec doesn't clearly state this, but as it says
+    * "Replace Section 4.1.7 (Samplers), p. 25" and, "Replace Section 4.1.X,
+    * (Images)", this should be allowed.
     */
-   if (return_type->contains_opaque()) {
+   if (return_type->contains_atomic() ||
+       (!state->has_bindless() && return_type->contains_opaque())) {
       YYLTYPE loc = this->get_location();
       _mesa_glsl_error(&loc, state,
-                       "function `%s' return type can't contain an opaque type",
-                       name);
+                       "function `%s' return type can't contain an %s type",
+                       name, state->has_bindless() ? "atomic" : "opaque");
    }
 
    /**/
