@@ -4161,6 +4161,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    const glsl_type *sampler_type = ir->sampler->type;
    unsigned sampler_array_size = 1, sampler_base = 0;
    bool is_cube_array = false, is_cube_shadow = false;
+   ir_variable *var = ir->sampler->variable_referenced();
    unsigned i;
 
    /* if we are a cube array sampler or a cube shadow */
@@ -4394,7 +4395,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
 
    uint16_t index = 0;
    get_deref_offsets(ir->sampler, &sampler_array_size, &sampler_base,
-                     &index, &reladdr, true);
+                     &index, &reladdr, !var->contains_bindless());
 
    sampler.index = index;
    if (reladdr.file != PROGRAM_UNDEFINED) {
@@ -4432,9 +4433,16 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    if (ir->shadow_comparator)
       inst->tex_shadow = GL_TRUE;
 
-   inst->resource = sampler;
-   inst->sampler_array_size = sampler_array_size;
-   inst->sampler_base = sampler_base;
+   if (var->contains_bindless()) {
+      ir->sampler->accept(this);
+      inst->resource = this->result;
+      inst->resource.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y,
+                                             SWIZZLE_X, SWIZZLE_Y);
+   } else {
+      inst->resource = sampler;
+      inst->sampler_array_size = sampler_array_size;
+      inst->sampler_base = sampler_base;
+   }
 
    if (ir->offset) {
       if (!inst->tex_offsets)
@@ -5871,7 +5879,12 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_TXL2:
    case TGSI_OPCODE_TG4:
    case TGSI_OPCODE_LODQ:
-      src[num_src] = t->samplers[inst->resource.index];
+      if (inst->resource.file == PROGRAM_SAMPLER) {
+         src[num_src] = t->samplers[inst->resource.index];
+      } else {
+         /* Bindless samplers. */
+         src[num_src] = translate_src(t, &inst->resource);
+      }
       assert(src[num_src].File != TGSI_FILE_NULL);
       if (inst->resource.reladdr)
          src[num_src] =
