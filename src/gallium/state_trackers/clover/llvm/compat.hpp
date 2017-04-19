@@ -132,18 +132,18 @@ namespace clover {
 #endif
          }
 
-         inline std::unique_ptr<::llvm::Linker>
+         inline std::unique_ptr< ::llvm::Linker>
          create_linker(::llvm::Module &mod) {
 #if HAVE_LLVM >= 0x0308
-            return std::unique_ptr<::llvm::Linker>(new ::llvm::Linker(mod));
+            return std::unique_ptr< ::llvm::Linker>(new ::llvm::Linker(mod));
 #else
-            return std::unique_ptr<::llvm::Linker>(new ::llvm::Linker(&mod));
+            return std::unique_ptr< ::llvm::Linker>(new ::llvm::Linker(&mod));
 #endif
          }
 
          inline bool
          link_in_module(::llvm::Linker &linker,
-                        std::unique_ptr<::llvm::Module> mod) {
+                        std::unique_ptr< ::llvm::Module> mod) {
 #if HAVE_LLVM >= 0x0308
             return linker.linkInModule(std::move(mod));
 #else
