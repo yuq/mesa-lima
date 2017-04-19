@@ -7363,6 +7363,8 @@ static void si_get_vs_prolog_key(const struct tgsi_shader_info *info,
 
 	if (shader_out->selector->type == PIPE_SHADER_TESS_CTRL)
 		key->vs_prolog.num_merged_next_stage_vgprs = 2;
+	else if (shader_out->selector->type == PIPE_SHADER_GEOMETRY)
+		key->vs_prolog.num_merged_next_stage_vgprs = 5;
 
 	/* Set the instanceID flag. */
 	for (unsigned i = 0; i < info->num_inputs; i++)
