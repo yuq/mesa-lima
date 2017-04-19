@@ -123,7 +123,7 @@ meta_copy_buffer_to_image(struct radv_cmd_buffer *cmd_buffer,
 	if (cs)
 		radv_meta_begin_bufimage(cmd_buffer, &saved_state.compute);
 	else
-		radv_meta_save_graphics_reset_vport_scissor(&saved_state.gfx, cmd_buffer);
+		radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state.gfx, cmd_buffer);
 
 	for (unsigned r = 0; r < regionCount; r++) {
 
@@ -341,7 +341,7 @@ meta_copy_image(struct radv_cmd_buffer *cmd_buffer,
 	if (cs)
 		radv_meta_begin_itoi(cmd_buffer, &saved_state.compute);
 	else
-		radv_meta_save_graphics_reset_vport_scissor(&saved_state.gfx, cmd_buffer);
+		radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state.gfx, cmd_buffer);
 
 	for (unsigned r = 0; r < regionCount; r++) {
 		assert(pRegions[r].srcSubresource.aspectMask ==
