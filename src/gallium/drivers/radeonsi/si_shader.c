@@ -5692,14 +5692,14 @@ static unsigned llvm_get_type_size(LLVMTypeRef type)
 	}
 }
 
-static void declare_tess_lds(struct si_shader_context *ctx)
+static void declare_lds_as_pointer(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 
 	unsigned lds_size = ctx->screen->b.chip_class >= CIK ? 65536 : 32768;
 	ctx->lds = LLVMBuildIntToPtr(gallivm->builder, ctx->i32_0,
 		LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), LOCAL_ADDR_SPACE),
-		"tess_lds");
+		"lds");
 }
 
 static unsigned si_get_max_workgroup_size(struct si_shader *shader)
@@ -6086,7 +6086,7 @@ static void create_function(struct si_shader_context *ctx)
 
 	if (shader->key.as_ls ||
 	    ctx->type == PIPE_SHADER_TESS_CTRL)
-		declare_tess_lds(ctx);
+		declare_lds_as_pointer(ctx);
 }
 
 /**
@@ -8377,7 +8377,7 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 
 	/* Create the function. */
 	si_create_function(ctx, "tcs_epilog", NULL, 0, params, num_params, last_sgpr);
-	declare_tess_lds(ctx);
+	declare_lds_as_pointer(ctx);
 	func = ctx->main_fn;
 
 	si_write_tess_factors(bld_base,
