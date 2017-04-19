@@ -905,14 +905,14 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
  * \param value		value to store
  */
 static void lds_store(struct lp_build_tgsi_context *bld_base,
-		      unsigned swizzle, LLVMValueRef dw_addr,
+		      unsigned dw_offset_imm, LLVMValueRef dw_addr,
 		      LLVMValueRef value)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
 
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
-			    LLVMConstInt(ctx->i32, swizzle, 0));
+			    LLVMConstInt(ctx->i32, dw_offset_imm, 0));
 
 	value = LLVMBuildBitCast(gallivm->builder, value, ctx->i32, "");
 	ac_build_indexed_store(&ctx->ac, ctx->lds,
