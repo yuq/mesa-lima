@@ -491,6 +491,11 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 		 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
 		ls_vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
 
+		if (shader->config.scratch_bytes_per_wave) {
+			fprintf(stderr, "HS: scratch buffer unsupported");
+			abort();
+		}
+
 		shader->config.rsrc2 =
 			S_00B42C_USER_SGPR(GFX9_TCS_NUM_USER_SGPR) |
 			S_00B42C_USER_SGPR_MSB(GFX9_TCS_NUM_USER_SGPR >> 5) |
@@ -796,6 +801,11 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 			       S_028A94_MAX_PRIMS_PER_SUBGROUP(gs_info.max_prims_per_subgroup));
 		si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 			       shader->key.part.gs.es->esgs_itemsize / 4);
+
+		if (shader->config.scratch_bytes_per_wave) {
+			fprintf(stderr, "GS: scratch buffer unsupported");
+			abort();
+		}
 	} else {
 		si_pm4_set_reg(pm4, R_00B220_SPI_SHADER_PGM_LO_GS, va >> 8);
 		si_pm4_set_reg(pm4, R_00B224_SPI_SHADER_PGM_HI_GS, va >> 40);
