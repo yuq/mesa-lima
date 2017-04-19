@@ -312,6 +312,7 @@ void nvc0_fragprog_validate(struct nvc0_context *);
 void nvc0_compprog_validate(struct nvc0_context *);
 
 void nvc0_tfb_validate(struct nvc0_context *);
+void nvc0_layer_validate(struct nvc0_context *);
 
 /* nvc0_state.c */
 extern void nvc0_init_state_functions(struct nvc0_context *);

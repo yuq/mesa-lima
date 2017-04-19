@@ -878,6 +878,9 @@ validate_list_3d[] = {
     { nvc0_validate_buffers,       NVC0_NEW_3D_BUFFERS },
     { nvc0_idxbuf_validate,        NVC0_NEW_3D_IDXBUF },
     { nvc0_tfb_validate,           NVC0_NEW_3D_TFB_TARGETS | NVC0_NEW_3D_GMTYPROG },
+    { nvc0_layer_validate,         NVC0_NEW_3D_VERTPROG |
+                                   NVC0_NEW_3D_TEVLPROG |
+                                   NVC0_NEW_3D_GMTYPROG },
     { nvc0_validate_driverconst,   NVC0_NEW_3D_DRIVERCONST },
 };
 
