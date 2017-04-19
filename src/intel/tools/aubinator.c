@@ -952,7 +952,8 @@ struct {
    { "bdw", MAKE_GEN(8, 0) },
    { "skl", MAKE_GEN(9, 0) },
    { "chv", MAKE_GEN(8, 0) },
-   { "bxt", MAKE_GEN(9, 0) }
+   { "bxt", MAKE_GEN(9, 0) },
+   { "cnl", MAKE_GEN(10, 0) },
 };
 
 enum {
@@ -1120,7 +1121,7 @@ print_help(const char *progname, FILE *file)
            "Decode aub file contents from either FILE or the standard input.\n\n"
            "A valid --gen option must be provided.\n\n"
            "      --help          display this help and exit\n"
-           "      --gen=platform  decode for given platform (ivb, byt, hsw, bdw, chv, skl, kbl or bxt)\n"
+           "      --gen=platform  decode for given platform (ivb, byt, hsw, bdw, chv, skl, kbl, bxt or cnl)\n"
            "      --headers       decode only command headers\n"
            "      --color[=WHEN]  colorize the output; WHEN can be 'auto' (default\n"
            "                        if omitted), 'always', or 'never'\n"
@@ -1148,7 +1149,8 @@ int main(int argc, char *argv[])
       { "chv", 0x22B3 }, /* Intel(R) HD Graphics (Cherryview) */
       { "skl", 0x1912 }, /* Intel(R) HD Graphics 530 (Skylake GT2) */
       { "kbl", 0x591D }, /* Intel(R) Kabylake GT2 */
-      { "bxt", 0x0A84 }  /* Intel(R) HD Graphics (Broxton) */
+      { "bxt", 0x0A84 },  /* Intel(R) HD Graphics (Broxton) */
+      { "cnl", 0x5A52 },  /* Intel(R) HD Graphics (Cannonlake) */
    };
    const struct option aubinator_opts[] = {
       { "help",       no_argument,       (int *) &help,                 true },
