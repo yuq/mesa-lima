@@ -521,6 +521,7 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 	unsigned export_count;
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
+	si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
 
 	export_count = MAX2(1, outinfo->param_exports);
 	radeon_set_context_reg(cmd_buffer->cs, R_0286C4_SPI_VS_OUT_CONFIG,
@@ -568,6 +569,7 @@ radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = ws->buffer_get_va(shader->bo);
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
+	si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 			       outinfo->esgs_itemsize / 4);
@@ -587,6 +589,7 @@ radv_emit_hw_ls(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t rsrc2 = shader->rsrc2;
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
+	si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B520_SPI_SHADER_PGM_LO_LS, 2);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -610,6 +613,7 @@ radv_emit_hw_hs(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = ws->buffer_get_va(shader->bo);
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
+	si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B420_SPI_SHADER_PGM_LO_HS, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -743,6 +747,7 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	va = ws->buffer_get_va(gs->bo);
 	ws->cs_add_buffer(cmd_buffer->cs, gs->bo, 8);
+	si_cp_dma_prefetch(cmd_buffer, va, gs->code_size);
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B220_SPI_SHADER_PGM_LO_GS, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
 	radeon_emit(cmd_buffer->cs, va >> 40);
@@ -783,6 +788,7 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	va = ws->buffer_get_va(ps->bo);
 	ws->cs_add_buffer(cmd_buffer->cs, ps->bo, 8);
+	si_cp_dma_prefetch(cmd_buffer, va, ps->code_size);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B020_SPI_SHADER_PGM_LO_PS, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
