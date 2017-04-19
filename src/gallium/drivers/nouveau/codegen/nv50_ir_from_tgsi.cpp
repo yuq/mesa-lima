@@ -2156,6 +2156,7 @@ Converter::storeDst(const tgsi::Instruction::DstRegister dst, int c,
          /* Save the viewport index into a scratch register so that it can be
             exported at EMIT time */
          if (info->out[idx].sn == TGSI_SEMANTIC_VIEWPORT_INDEX &&
+             prog->getType() == Program::TYPE_GEOMETRY &&
              viewport != NULL)
             mkOp1(OP_MOV, TYPE_U32, viewport, val);
          else
