@@ -175,6 +175,133 @@ vertex_bo(struct brw_bo *bo, uint32_t offset)
         _brw_cmd_pack(cmd)(brw, (void *)_dst, &name),              \
         _dst = NULL)
 
+/**
+ * Polygon stipple packet
+ */
+static void
+genX(upload_polygon_stipple)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_POLYGON */
+   if (!ctx->Polygon.StippleFlag)
+      return;
+
+   brw_batch_emit(brw, GENX(3DSTATE_POLY_STIPPLE_PATTERN), poly) {
+      /* Polygon stipple is provided in OpenGL order, i.e. bottom
+       * row first.  If we're rendering to a window (i.e. the
+       * default frame buffer object, 0), then we need to invert
+       * it to match our pixel layout.  But if we're rendering
+       * to a FBO (i.e. any named frame buffer object), we *don't*
+       * need to invert - we already match the layout.
+       */
+      if (_mesa_is_winsys_fbo(ctx->DrawBuffer)) {
+         for (unsigned i = 0; i < 32; i++)
+            poly.PatternRow[i] = ctx->PolygonStipple[31 - i]; /* invert */
+      } else {
+         for (unsigned i = 0; i < 32; i++)
+            poly.PatternRow[i] = ctx->PolygonStipple[i];
+      }
+   }
+}
+
+static const struct brw_tracked_state genX(polygon_stipple) = {
+   .dirty = {
+      .mesa = _NEW_POLYGON |
+              _NEW_POLYGONSTIPPLE,
+      .brw = BRW_NEW_CONTEXT,
+   },
+   .emit = genX(upload_polygon_stipple),
+};
+
+/**
+ * Polygon stipple offset packet
+ */
+static void
+genX(upload_polygon_stipple_offset)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_POLYGON */
+   if (!ctx->Polygon.StippleFlag)
+      return;
+
+   brw_batch_emit(brw, GENX(3DSTATE_POLY_STIPPLE_OFFSET), poly) {
+      /* _NEW_BUFFERS
+       *
+       * If we're drawing to a system window we have to invert the Y axis
+       * in order to match the OpenGL pixel coordinate system, and our
+       * offset must be matched to the window position.  If we're drawing
+       * to a user-created FBO then our native pixel coordinate system
+       * works just fine, and there's no window system to worry about.
+       */
+      if (_mesa_is_winsys_fbo(ctx->DrawBuffer)) {
+         poly.PolygonStippleYOffset =
+            (32 - (_mesa_geometric_height(ctx->DrawBuffer) & 31)) & 31;
+      }
+   }
+}
+
+static const struct brw_tracked_state genX(polygon_stipple_offset) = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS |
+              _NEW_POLYGON,
+      .brw = BRW_NEW_CONTEXT,
+   },
+   .emit = genX(upload_polygon_stipple_offset),
+};
+
+/**
+ * Line stipple packet
+ */
+static void
+genX(upload_line_stipple)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   if (!ctx->Line.StippleFlag)
+      return;
+
+   brw_batch_emit(brw, GENX(3DSTATE_LINE_STIPPLE), line) {
+      line.LineStipplePattern = ctx->Line.StipplePattern;
+
+      line.LineStippleInverseRepeatCount = 1.0f / ctx->Line.StippleFactor;
+      line.LineStippleRepeatCount = ctx->Line.StippleFactor;
+   }
+}
+
+static const struct brw_tracked_state genX(line_stipple) = {
+   .dirty = {
+      .mesa = _NEW_LINE,
+      .brw = BRW_NEW_CONTEXT,
+   },
+   .emit = genX(upload_line_stipple),
+};
+
+/* Constant single cliprect for framebuffer object or DRI2 drawing */
+static void
+genX(upload_drawing_rect)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   const struct gl_framebuffer *fb = ctx->DrawBuffer;
+   const unsigned int fb_width = _mesa_geometric_width(fb);
+   const unsigned int fb_height = _mesa_geometric_height(fb);
+
+   brw_batch_emit(brw, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
+      rect.ClippedDrawingRectangleXMax = fb_width - 1;
+      rect.ClippedDrawingRectangleYMax = fb_height - 1;
+   }
+}
+
+static const struct brw_tracked_state genX(drawing_rect) = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS,
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_CONTEXT,
+   },
+   .emit = genX(upload_drawing_rect),
+};
+
 static uint32_t *
 genX(emit_vertex_buffer_state)(struct brw_context *brw,
                                uint32_t *dw,
@@ -3634,6 +3761,36 @@ static const struct brw_tracked_state genX(ps_blend) = {
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN == 6
+static void
+genX(upload_viewport_state_pointers)(struct brw_context *brw)
+{
+   brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vp) {
+      vp.CCViewportStateChange = 1;
+      vp.SFViewportStateChange = 1;
+      vp.CLIPViewportStateChange = 1;
+      vp.PointertoCLIP_VIEWPORT = brw->clip.vp_offset;
+      vp.PointertoSF_VIEWPORT = brw->sf.vp_offset;
+      vp.PointertoCC_VIEWPORT = brw->cc.vp_offset;
+   }
+}
+
+static const struct brw_tracked_state genX(viewport_state) = {
+   .dirty = {
+      .mesa = 0,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_CC_VP |
+             BRW_NEW_CLIP_VP |
+             BRW_NEW_SF_VP |
+             BRW_NEW_STATE_BASE_ADDRESS,
+   },
+   .emit = genX(upload_viewport_state_pointers),
+};
+#endif
+
+/* ---------------------------------------------------------------------- */
+
 void
 genX(init_atoms)(struct brw_context *brw)
 {
@@ -3681,14 +3838,14 @@ genX(init_atoms)(struct brw_context *brw)
 
       &brw_depthbuffer,
 
-      &brw_polygon_stipple,
-      &brw_polygon_stipple_offset,
+      &genX(polygon_stipple),
+      &genX(polygon_stipple_offset),
 
-      &brw_line_stipple,
+      &genX(line_stipple),
 
       &brw_psp_urb_cbs,
 
-      &brw_drawing_rect,
+      &genX(drawing_rect),
       &brw_indices, /* must come before brw_vertices */
       &brw_index_buffer,
       &genX(vertices),
@@ -3703,7 +3860,7 @@ genX(init_atoms)(struct brw_context *brw)
       /* Command packets: */
 
       &brw_cc_vp,
-      &gen6_viewport_state,	/* must do after *_vp stages */
+      &genX(viewport_state),	/* must do after *_vp stages */
 
       &gen6_urb,
       &genX(blend_state),		/* must do before cc unit */
@@ -3749,12 +3906,12 @@ genX(init_atoms)(struct brw_context *brw)
 
       &brw_depthbuffer,
 
-      &brw_polygon_stipple,
-      &brw_polygon_stipple_offset,
+      &genX(polygon_stipple),
+      &genX(polygon_stipple_offset),
 
-      &brw_line_stipple,
+      &genX(line_stipple),
 
-      &brw_drawing_rect,
+      &genX(drawing_rect),
 
       &brw_indices, /* must come before brw_vertices */
       &brw_index_buffer,
@@ -3837,12 +3994,12 @@ genX(init_atoms)(struct brw_context *brw)
 
       &gen7_depthbuffer,
 
-      &brw_polygon_stipple,
-      &brw_polygon_stipple_offset,
+      &genX(polygon_stipple),
+      &genX(polygon_stipple_offset),
 
-      &brw_line_stipple,
+      &genX(line_stipple),
 
-      &brw_drawing_rect,
+      &genX(drawing_rect),
 
       &brw_indices, /* must come before brw_vertices */
       &brw_index_buffer,
@@ -3928,12 +4085,12 @@ genX(init_atoms)(struct brw_context *brw)
 
       &gen7_depthbuffer,
 
-      &brw_polygon_stipple,
-      &brw_polygon_stipple_offset,
+      &genX(polygon_stipple),
+      &genX(polygon_stipple_offset),
 
-      &brw_line_stipple,
+      &genX(line_stipple),
 
-      &brw_drawing_rect,
+      &genX(drawing_rect),
 
       &gen8_vf_topology,
 

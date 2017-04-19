@@ -56,11 +56,8 @@ extern const struct brw_tracked_state brw_curbe_offsets;
 extern const struct brw_tracked_state brw_invariant_state;
 extern const struct brw_tracked_state brw_fs_samplers;
 extern const struct brw_tracked_state brw_gs_unit;
-extern const struct brw_tracked_state brw_line_stipple;
 extern const struct brw_tracked_state brw_binding_table_pointers;
 extern const struct brw_tracked_state brw_depthbuffer;
-extern const struct brw_tracked_state brw_polygon_stipple_offset;
-extern const struct brw_tracked_state brw_polygon_stipple;
 extern const struct brw_tracked_state brw_recalculate_urb_fence;
 extern const struct brw_tracked_state brw_sf_unit;
 extern const struct brw_tracked_state brw_sf_vp;
@@ -101,7 +98,6 @@ extern const struct brw_tracked_state brw_wm_unit;
 
 extern const struct brw_tracked_state brw_psp_urb_cbs;
 
-extern const struct brw_tracked_state brw_drawing_rect;
 extern const struct brw_tracked_state brw_indices;
 extern const struct brw_tracked_state brw_index_buffer;
 extern const struct brw_tracked_state brw_cs_state;
@@ -113,7 +109,6 @@ extern const struct brw_tracked_state gen6_sampler_state;
 extern const struct brw_tracked_state gen6_sol_surface;
 extern const struct brw_tracked_state gen6_sf_vp;
 extern const struct brw_tracked_state gen6_urb;
-extern const struct brw_tracked_state gen6_viewport_state;
 extern const struct brw_tracked_state gen7_depthbuffer;
 extern const struct brw_tracked_state gen7_l3_state;
 extern const struct brw_tracked_state gen7_push_constant_space;
