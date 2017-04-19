@@ -1153,6 +1153,10 @@ swr_update_derived(struct pipe_context *pipe,
          rastState->slopeScaledDepthBias = 0;
          rastState->depthBiasClamp = 0;
       }
+
+      /* translate polygon mode, at least for the front==back case */
+      rastState->fillMode = swr_convert_fill_mode(rasterizer->fill_front);
+
       struct pipe_surface *zb = fb->zsbuf;
       if (zb && swr_resource(zb->texture)->has_depth)
          rastState->depthFormat = swr_resource(zb->texture)->swr.format;
@@ -1423,7 +1427,9 @@ swr_update_derived(struct pipe_context *pipe,
    /* and points, since we rasterize them as triangles, too */
    /* Has to be before fragment shader, since it sets SWR_NEW_FS */
    if (p_draw_info) {
-      bool new_prim_is_poly = (u_reduced_prim(p_draw_info->mode) == PIPE_PRIM_TRIANGLES);
+      bool new_prim_is_poly =
+         (u_reduced_prim(p_draw_info->mode) == PIPE_PRIM_TRIANGLES) &&
+         (ctx->derived.rastState.fillMode == SWR_FILLMODE_SOLID);
       if (new_prim_is_poly != ctx->poly_stipple.prim_is_poly) {
          ctx->dirty |= SWR_NEW_FS;
          ctx->poly_stipple.prim_is_poly = new_prim_is_poly;
