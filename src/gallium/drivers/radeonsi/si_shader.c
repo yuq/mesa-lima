@@ -1068,7 +1068,6 @@ static LLVMValueRef fetch_input_gs(
 	struct lp_build_context *uint =	&ctx->bld_base.uint_bld;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMValueRef vtx_offset, soffset;
-	unsigned vtx_offset_param;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
 	unsigned semantic_index = info->input_semantic_index[reg->Register.Index];
@@ -1081,6 +1080,36 @@ static LLVMValueRef fetch_input_gs(
 	if (!reg->Register.Dimension)
 		return NULL;
 
+	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
+
+	/* GFX9 has the ESGS ring in LDS. */
+	if (ctx->screen->b.chip_class >= GFX9) {
+		unsigned index = reg->Dimension.Index;
+
+		switch (index / 2) {
+		case 0:
+			vtx_offset = unpack_param(ctx, ctx->param_gs_vtx01_offset,
+						  index % 2 ? 16 : 0, 16);
+			break;
+		case 1:
+			vtx_offset = unpack_param(ctx, ctx->param_gs_vtx23_offset,
+						  index % 2 ? 16 : 0, 16);
+			break;
+		case 2:
+			vtx_offset = unpack_param(ctx, ctx->param_gs_vtx45_offset,
+						  index % 2 ? 16 : 0, 16);
+			break;
+		default:
+			assert(0);
+			return NULL;
+		}
+
+		vtx_offset = LLVMBuildAdd(gallivm->builder, vtx_offset,
+					  LLVMConstInt(ctx->i32, param * 4, 0), "");
+		return lds_load(bld_base, type, swizzle, vtx_offset);
+	}
+
+	/* GFX6: input load from the ESGS ring in memory. */
 	if (swizzle == ~0) {
 		LLVMValueRef values[TGSI_NUM_CHANNELS];
 		unsigned chan;
@@ -1091,8 +1120,8 @@ static LLVMValueRef fetch_input_gs(
 					      TGSI_NUM_CHANNELS);
 	}
 
-	/* Get the vertex offset parameter */
-	vtx_offset_param = reg->Dimension.Index;
+	/* Get the vertex offset parameter on GFX6. */
+	unsigned vtx_offset_param = reg->Dimension.Index;
 	if (vtx_offset_param < 2) {
 		vtx_offset_param += ctx->param_gs_vtx0_offset;
 	} else {
@@ -1104,7 +1133,6 @@ static LLVMValueRef fetch_input_gs(
 						   vtx_offset_param),
 				      4);
 
-	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
 	soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle) * 256, 0);
 
 	value = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1, ctx->i32_0,
@@ -6152,7 +6180,11 @@ static void create_function(struct si_shader_context *ctx)
 						    LOCAL_ADDR_SPACE);
 
 	if (shader->key.as_ls ||
-	    ctx->type == PIPE_SHADER_TESS_CTRL)
+	    ctx->type == PIPE_SHADER_TESS_CTRL ||
+	    /* GFX9 has the ESGS ring buffer in LDS. */
+	    (ctx->screen->b.chip_class >= GFX9 &&
+	     (shader->key.as_es ||
+	      ctx->type == PIPE_SHADER_GEOMETRY)))
 		declare_lds_as_pointer(ctx);
 }
 
@@ -6168,7 +6200,8 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 	LLVMValueRef buf_ptr = LLVMGetParam(ctx->main_fn,
 					    ctx->param_rw_buffers);
 
-	if (ctx->shader->key.as_es || ctx->type == PIPE_SHADER_GEOMETRY) {
+	if (ctx->screen->b.chip_class <= VI &&
+	    (ctx->shader->key.as_es || ctx->type == PIPE_SHADER_GEOMETRY)) {
 		unsigned ring =
 			ctx->type == PIPE_SHADER_GEOMETRY ? SI_GS_RING_ESGS
 							     : SI_ES_RING_ESGS;
