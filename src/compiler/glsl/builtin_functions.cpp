@@ -957,7 +957,9 @@ private:
    ir_function_signature *_shader_clock(builtin_available_predicate avail,
                                         const glsl_type *type);
 
-   ir_function_signature *_vote(enum ir_expression_operation opcode);
+   ir_function_signature *_vote_intrinsic(builtin_available_predicate avail,
+                                          enum ir_intrinsic_id id);
+   ir_function_signature *_vote(const char *intrinsic_name);
 
 #undef B0
 #undef B1
@@ -1189,6 +1191,16 @@ builtin_builder::create_intrinsics()
    add_function("__intrinsic_shader_clock",
                 _shader_clock_intrinsic(shader_clock,
                                         glsl_type::uvec2_type),
+                NULL);
+
+   add_function("__intrinsic_vote_all",
+                _vote_intrinsic(vote, ir_intrinsic_vote_all),
+                NULL);
+   add_function("__intrinsic_vote_any",
+                _vote_intrinsic(vote, ir_intrinsic_vote_any),
+                NULL);
+   add_function("__intrinsic_vote_eq",
+                _vote_intrinsic(vote, ir_intrinsic_vote_eq),
                 NULL);
 }
 
@@ -3168,9 +3180,9 @@ builtin_builder::create_builtins()
                               glsl_type::uint64_t_type),
                 NULL);
 
-   add_function("anyInvocationARB", _vote(ir_unop_vote_any), NULL);
-   add_function("allInvocationsARB", _vote(ir_unop_vote_all), NULL);
-   add_function("allInvocationsEqualARB", _vote(ir_unop_vote_eq), NULL);
+   add_function("anyInvocationARB", _vote("__intrinsic_vote_any"), NULL);
+   add_function("allInvocationsARB", _vote("__intrinsic_vote_all"), NULL);
+   add_function("allInvocationsEqualARB", _vote("__intrinsic_vote_eq"), NULL);
 
    add_function("__builtin_idiv64",
                 generate_ir::idiv64(mem_ctx, integer_functions_supported),
@@ -6062,12 +6074,26 @@ builtin_builder::_shader_clock(builtin_available_predicate avail,
 }
 
 ir_function_signature *
-builtin_builder::_vote(enum ir_expression_operation opcode)
+builtin_builder::_vote_intrinsic(builtin_available_predicate avail,
+                                 enum ir_intrinsic_id id)
+{
+   ir_variable *value = in_var(glsl_type::bool_type, "value");
+   MAKE_INTRINSIC(glsl_type::bool_type, id, avail, 1, value);
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_vote(const char *intrinsic_name)
 {
    ir_variable *value = in_var(glsl_type::bool_type, "value");
 
    MAKE_SIG(glsl_type::bool_type, vote, 1, value);
-   body.emit(ret(expr(opcode, value)));
+
+   ir_variable *retval = body.make_temp(glsl_type::bool_type, "retval");
+
+   body.emit(call(shader->symbols->get_function(intrinsic_name),
+                  retval, sig->parameters));
+   body.emit(ret(retval));
    return sig;
 }
 
