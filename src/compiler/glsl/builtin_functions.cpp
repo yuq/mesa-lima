@@ -948,8 +948,11 @@ private:
    ir_function_signature *_memory_barrier(const char *intrinsic_name,
                                           builtin_available_predicate avail);
 
+   ir_function_signature *_ballot_intrinsic();
    ir_function_signature *_ballot();
+   ir_function_signature *_read_first_invocation_intrinsic(const glsl_type *type);
    ir_function_signature *_read_first_invocation(const glsl_type *type);
+   ir_function_signature *_read_invocation_intrinsic(const glsl_type *type);
    ir_function_signature *_read_invocation(const glsl_type *type);
 
    ir_function_signature *_shader_clock_intrinsic(builtin_available_predicate avail,
@@ -1202,6 +1205,43 @@ builtin_builder::create_intrinsics()
    add_function("__intrinsic_vote_eq",
                 _vote_intrinsic(vote, ir_intrinsic_vote_eq),
                 NULL);
+
+   add_function("__intrinsic_ballot", _ballot_intrinsic(), NULL);
+
+   add_function("__intrinsic_read_invocation",
+                _read_invocation_intrinsic(glsl_type::float_type),
+                _read_invocation_intrinsic(glsl_type::vec2_type),
+                _read_invocation_intrinsic(glsl_type::vec3_type),
+                _read_invocation_intrinsic(glsl_type::vec4_type),
+
+                _read_invocation_intrinsic(glsl_type::int_type),
+                _read_invocation_intrinsic(glsl_type::ivec2_type),
+                _read_invocation_intrinsic(glsl_type::ivec3_type),
+                _read_invocation_intrinsic(glsl_type::ivec4_type),
+
+                _read_invocation_intrinsic(glsl_type::uint_type),
+                _read_invocation_intrinsic(glsl_type::uvec2_type),
+                _read_invocation_intrinsic(glsl_type::uvec3_type),
+                _read_invocation_intrinsic(glsl_type::uvec4_type),
+                NULL);
+
+   add_function("__intrinsic_read_first_invocation",
+                _read_first_invocation_intrinsic(glsl_type::float_type),
+                _read_first_invocation_intrinsic(glsl_type::vec2_type),
+                _read_first_invocation_intrinsic(glsl_type::vec3_type),
+                _read_first_invocation_intrinsic(glsl_type::vec4_type),
+
+                _read_first_invocation_intrinsic(glsl_type::int_type),
+                _read_first_invocation_intrinsic(glsl_type::ivec2_type),
+                _read_first_invocation_intrinsic(glsl_type::ivec3_type),
+                _read_first_invocation_intrinsic(glsl_type::ivec4_type),
+
+                _read_first_invocation_intrinsic(glsl_type::uint_type),
+                _read_first_invocation_intrinsic(glsl_type::uvec2_type),
+                _read_first_invocation_intrinsic(glsl_type::uvec3_type),
+                _read_first_invocation_intrinsic(glsl_type::uvec4_type),
+                NULL);
+
 }
 
 /**
@@ -6015,12 +6055,34 @@ builtin_builder::_memory_barrier(const char *intrinsic_name,
 }
 
 ir_function_signature *
+builtin_builder::_ballot_intrinsic()
+{
+   ir_variable *value = in_var(glsl_type::bool_type, "value");
+   MAKE_INTRINSIC(glsl_type::uint64_t_type, ir_intrinsic_ballot, shader_ballot,
+                  1, value);
+   return sig;
+}
+
+ir_function_signature *
 builtin_builder::_ballot()
 {
    ir_variable *value = in_var(glsl_type::bool_type, "value");
 
    MAKE_SIG(glsl_type::uint64_t_type, shader_ballot, 1, value);
-   body.emit(ret(expr(ir_unop_ballot, value)));
+   ir_variable *retval = body.make_temp(glsl_type::uint64_t_type, "retval");
+
+   body.emit(call(shader->symbols->get_function("__intrinsic_ballot"),
+                  retval, sig->parameters));
+   body.emit(ret(retval));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_read_first_invocation_intrinsic(const glsl_type *type)
+{
+   ir_variable *value = in_var(type, "value");
+   MAKE_INTRINSIC(type, ir_intrinsic_read_first_invocation, shader_ballot,
+                  1, value);
    return sig;
 }
 
@@ -6030,7 +6092,21 @@ builtin_builder::_read_first_invocation(const glsl_type *type)
    ir_variable *value = in_var(type, "value");
 
    MAKE_SIG(type, shader_ballot, 1, value);
-   body.emit(ret(expr(ir_unop_read_first_invocation, value)));
+   ir_variable *retval = body.make_temp(type, "retval");
+
+   body.emit(call(shader->symbols->get_function("__intrinsic_read_first_invocation"),
+                  retval, sig->parameters));
+   body.emit(ret(retval));
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_read_invocation_intrinsic(const glsl_type *type)
+{
+   ir_variable *value = in_var(type, "value");
+   ir_variable *invocation = in_var(glsl_type::uint_type, "invocation");
+   MAKE_INTRINSIC(type, ir_intrinsic_read_invocation, shader_ballot,
+                  2, value, invocation);
    return sig;
 }
 
@@ -6041,7 +6117,11 @@ builtin_builder::_read_invocation(const glsl_type *type)
    ir_variable *invocation = in_var(glsl_type::uint_type, "invocation");
 
    MAKE_SIG(type, shader_ballot, 2, value, invocation);
-   body.emit(ret(expr(ir_binop_read_invocation, value, invocation)));
+   ir_variable *retval = body.make_temp(type, "retval");
+
+   body.emit(call(shader->symbols->get_function("__intrinsic_read_invocation"),
+                  retval, sig->parameters));
+   body.emit(ret(retval));
    return sig;
 }
 
