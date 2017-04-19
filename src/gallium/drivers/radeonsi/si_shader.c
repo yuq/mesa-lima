@@ -2778,6 +2778,35 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 	ctx->return_value = ret;
 }
 
+/* Pass GS inputs from ES to GS on GFX9. */
+static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
+{
+	LLVMValueRef ret = ctx->return_value;
+
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers, 0);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_gs2vs_offset, 2);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
+
+	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
+
+	unsigned desc_param = ctx->param_vs_state_bits + 1;
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param,
+					   8 + GFX9_SGPR_GS_CONST_BUFFERS);
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 1,
+					   8 + GFX9_SGPR_GS_SAMPLERS);
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 2,
+					   8 + GFX9_SGPR_GS_IMAGES);
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 3,
+					   8 + GFX9_SGPR_GS_SHADER_BUFFERS);
+
+	unsigned vgpr = 8 + GFX9_GS_NUM_USER_SGPR;
+	for (unsigned i = 0; i < 5; i++) {
+		unsigned param = ctx->param_gs_vtx01_offset + i;
+		ret = si_insert_input_ret_float(ctx, ret, param, vgpr++);
+	}
+	ctx->return_value = ret;
+}
+
 static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
@@ -2878,6 +2907,9 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 						    1, 1, true, true);
 		}
 	}
+
+	if (ctx->screen->b.chip_class >= GFX9)
+		si_set_es_return_value_for_gs(ctx);
 }
 
 static LLVMValueRef si_get_gs_wave_id(struct si_shader_context *ctx)
