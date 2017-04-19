@@ -378,6 +378,11 @@ struct SWR_CS_CONTEXT
     uint8_t* pTGSM;  // Thread Group Shared Memory pointer.
 
     uint8_t* pSpillFillBuffer;  // Spill/fill buffer for barrier support
+
+    uint8_t* pScratchSpace;     // Pointer to scratch space buffer used by the shader, shader is responsible
+                                // for subdividing scratch space per instance/simd
+
+    uint32_t scratchSpacePerSimd; // Scratch space per work item x SIMD_WIDTH
 };
 
 // enums

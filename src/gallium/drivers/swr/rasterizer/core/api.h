@@ -366,11 +366,16 @@ void SWR_API SwrSetGsFunc(
 /// @param pfnCsFunc - Pointer to compute shader function
 /// @param totalThreadsInGroup - product of thread group dimensions.
 /// @param totalSpillFillSize - size in bytes needed for spill/fill.
+/// @param scratchSpaceSizePerInstance - size of the scratch space needed per simd instance
+/// @param numInstances - number of simd instances that are run per execution of the shader
 void SWR_API SwrSetCsFunc(
     HANDLE hContext,
     PFN_CS_FUNC pfnCsFunc,
     uint32_t totalThreadsInGroup,
-    uint32_t totalSpillFillSize);
+    uint32_t totalSpillFillSize,
+    uint32_t scratchSpaceSizePerInstance,
+    uint32_t numInstances
+    );
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set tessellation state.

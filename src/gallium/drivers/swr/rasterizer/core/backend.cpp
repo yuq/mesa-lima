@@ -45,7 +45,7 @@ static PFN_CLEAR_TILES sClearTilesTable[NUM_SWR_FORMATS];
 /// @param pDC - pointer to draw context (dispatch).
 /// @param workerId - The unique worker ID that is assigned to this thread.
 /// @param threadGroupId - the linear index for the thread group within the dispatch.
-void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId, void*& pSpillFillBuffer)
+void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId, void*& pSpillFillBuffer, void*& pScratchSpace)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -60,6 +60,12 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     {
         pSpillFillBuffer = pDC->pArena->AllocAlignedSync(spillFillSize, KNOB_SIMD_BYTES);
     }
+    
+    size_t scratchSpaceSize = pDC->pState->state.scratchSpaceSize * pDC->pState->state.scratchSpaceNumInstances;
+    if (scratchSpaceSize && pScratchSpace == nullptr)
+    {
+        pScratchSpace = pDC->pArena->AllocAlignedSync(scratchSpaceSize, KNOB_SIMD_BYTES);
+    }
 
     const API_STATE& state = GetApiState(pDC);
 
@@ -70,6 +76,8 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     csContext.dispatchDims[2] = pTaskData->threadGroupCountZ;
     csContext.pTGSM = pContext->ppScratch[workerId];
     csContext.pSpillFillBuffer = (uint8_t*)pSpillFillBuffer;
+    csContext.pScratchSpace = (uint8_t*)pScratchSpace;
+    csContext.scratchSpacePerSimd = pDC->pState->state.scratchSpaceSize;
 
     state.pfnCsFunc(GetPrivateState(pDC), &csContext);
 

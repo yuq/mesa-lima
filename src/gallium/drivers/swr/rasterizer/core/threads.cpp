@@ -726,10 +726,11 @@ void WorkOnCompute(
         if (queue.getNumQueued() > 0)
         {
             void* pSpillFillBuffer = nullptr;
+            void* pScratchSpace = nullptr;
             uint32_t threadGroupId = 0;
             while (queue.getWork(threadGroupId))
             {
-                queue.dispatch(pDC, workerId, threadGroupId, pSpillFillBuffer);
+                queue.dispatch(pDC, workerId, threadGroupId, pSpillFillBuffer, pScratchSpace);
                 queue.finishedWork();
             }
 
