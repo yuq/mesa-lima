@@ -343,6 +343,8 @@ struct radv_meta_state {
 		struct radv_pipeline *depthstencil_pipeline[NUM_DEPTH_CLEAR_PIPELINES];
 	} clear[1 + MAX_SAMPLES_LOG2];
 
+	VkPipelineLayout                          clear_color_p_layout;
+	VkPipelineLayout                          clear_depth_p_layout;
 	struct {
 		VkRenderPass render_pass[NUM_META_FS_KEYS];
 
