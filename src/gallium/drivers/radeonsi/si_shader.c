@@ -2840,28 +2840,41 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 	struct tgsi_shader_info *info = &es->selector->info;
 	LLVMValueRef soffset = LLVMGetParam(ctx->main_fn,
 					    ctx->param_es2gs_offset);
+	LLVMValueRef lds_base = NULL;
 	unsigned chan;
 	int i;
 
+	if (ctx->screen->b.chip_class >= GFX9 && info->num_outputs) {
+		unsigned itemsize_dw = es->selector->esgs_itemsize / 4;
+		lds_base = LLVMBuildMul(gallivm->builder, ac_get_thread_id(&ctx->ac),
+					LLVMConstInt(ctx->i32, itemsize_dw, 0), "");
+	}
+
 	for (i = 0; i < info->num_outputs; i++) {
 		LLVMValueRef *out_ptr = ctx->outputs[i];
-		int param_index;
+		int param;
 
 		if (info->output_semantic_name[i] == TGSI_SEMANTIC_VIEWPORT_INDEX ||
 		    info->output_semantic_name[i] == TGSI_SEMANTIC_LAYER)
 			continue;
 
-		param_index = si_shader_io_get_unique_index(info->output_semantic_name[i],
-							    info->output_semantic_index[i]);
+		param = si_shader_io_get_unique_index(info->output_semantic_name[i],
+						      info->output_semantic_index[i]);
 
 		for (chan = 0; chan < 4; chan++) {
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
 			out_val = LLVMBuildBitCast(gallivm->builder, out_val, ctx->i32, "");
 
+			/* GFX9 has the ESGS ring in LDS. */
+			if (ctx->screen->b.chip_class >= GFX9) {
+				lds_store(bld_base, param * 4 + chan, lds_base, out_val);
+				continue;
+			}
+
 			ac_build_buffer_store_dword(&ctx->ac,
 						    ctx->esgs_ring,
 						    out_val, 1, NULL, soffset,
-						    (4 * param_index + chan) * 4,
+						    (4 * param + chan) * 4,
 						    1, 1, true, true);
 		}
 	}
