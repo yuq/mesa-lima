@@ -2452,7 +2452,7 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
       return;
 
    gl_register_file file;
-   if (type->without_array()->is_sampler()) {
+   if (type->without_array()->is_sampler() && !var->data.bindless) {
       file = PROGRAM_SAMPLER;
    } else {
       file = PROGRAM_UNIFORM;
