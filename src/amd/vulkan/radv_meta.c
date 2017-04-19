@@ -30,7 +30,7 @@
 #include <pwd.h>
 #include <sys/stat.h>
 
-void
+static void
 radv_meta_save_novertex(struct radv_meta_saved_state *state,
 	       const struct radv_cmd_buffer *cmd_buffer,
 	       uint32_t dynamic_mask)
@@ -43,18 +43,6 @@ radv_meta_save_novertex(struct radv_meta_saved_state *state,
 
 	memcpy(state->push_constants, cmd_buffer->push_constants, MAX_PUSH_CONSTANTS_SIZE);
 	state->vertex_saved = false;
-}
-
-void
-radv_meta_save(struct radv_meta_saved_state *state,
-	       const struct radv_cmd_buffer *cmd_buffer,
-	       uint32_t dynamic_mask)
-{
-	radv_meta_save_novertex(state, cmd_buffer, dynamic_mask);
-	state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
-	memcpy(state->old_vertex_bindings, cmd_buffer->state.vertex_bindings,
-	       sizeof(state->old_vertex_bindings));
-	state->vertex_saved = true;
 }
 
 void
@@ -405,17 +393,6 @@ radv_device_finish_meta(struct radv_device *device)
  * reset and any scissors disabled. The rest of the dynamic state
  * should have no effect.
  */
-void
-radv_meta_save_graphics_reset_vport_scissor(struct radv_meta_saved_state *saved_state,
-					    struct radv_cmd_buffer *cmd_buffer)
-{
-	uint32_t dirty_state = (1 << VK_DYNAMIC_STATE_VIEWPORT) | (1 << VK_DYNAMIC_STATE_SCISSOR);
-	radv_meta_save(saved_state, cmd_buffer, dirty_state);
-	cmd_buffer->state.dynamic.viewport.count = 0;
-	cmd_buffer->state.dynamic.scissor.count = 0;
-	cmd_buffer->state.dirty |= dirty_state;
-}
-
 void
 radv_meta_save_graphics_reset_vport_scissor_novertex(struct radv_meta_saved_state *saved_state,
 						     struct radv_cmd_buffer *cmd_buffer)

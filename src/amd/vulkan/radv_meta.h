@@ -95,14 +95,6 @@ void radv_device_finish_meta_resolve_compute_state(struct radv_device *device);
 VkResult radv_device_init_meta_resolve_fragment_state(struct radv_device *device);
 void radv_device_finish_meta_resolve_fragment_state(struct radv_device *device);
 
-void radv_meta_save(struct radv_meta_saved_state *state,
-		    const struct radv_cmd_buffer *cmd_buffer,
-		    uint32_t dynamic_mask);
-
-void radv_meta_save_novertex(struct radv_meta_saved_state *state,
-			     const struct radv_cmd_buffer *cmd_buffer,
-			     uint32_t dynamic_mask);
-
 void radv_meta_restore(const struct radv_meta_saved_state *state,
 		       struct radv_cmd_buffer *cmd_buffer);
 
@@ -209,8 +201,6 @@ void radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 					 struct radv_image *image,
 					 const VkImageSubresourceRange *subresourceRange);
 
-void radv_meta_save_graphics_reset_vport_scissor(struct radv_meta_saved_state *saved_state,
-						 struct radv_cmd_buffer *cmd_buffer);
 void radv_meta_save_graphics_reset_vport_scissor_novertex(struct radv_meta_saved_state *saved_state,
 							  struct radv_cmd_buffer *cmd_buffer);
 
