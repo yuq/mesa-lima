@@ -6965,9 +6965,19 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
       assert(decl_type);
 
       if (is_interface) {
-         if (decl_type->contains_opaque()) {
+         /* From section 4.3.7 of the ARB_bindless_texture spec:
+          *
+          *    "(remove the following bullet from the last list on p. 39,
+          *     thereby permitting sampler types in interface blocks; image
+          *     types are also permitted in blocks by this extension)"
+          *
+          *     * sampler types are not allowed
+          */
+         if (decl_type->contains_atomic() ||
+             (!state->has_bindless() && decl_type->contains_opaque())) {
             _mesa_glsl_error(&loc, state, "uniform/buffer in non-default "
-                             "interface block contains opaque variable");
+                             "interface block contains %s variable",
+                             state->has_bindless() ? "atomic" : "opaque");
          }
       } else {
          if (decl_type->contains_atomic()) {
