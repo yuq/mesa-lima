@@ -574,7 +574,6 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
       }
    }
    
-done:
    SVGA_STATS_TIME_POP(svga_sws(svga));
 
    return s ? &s->base : NULL;
