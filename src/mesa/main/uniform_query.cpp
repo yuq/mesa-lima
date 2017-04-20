@@ -322,7 +322,11 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
 
    {
       unsigned elements = uni->type->components();
-      const int dmul = uni->type->is_64bit() ? 2 : 1;
+      /* XXX: Remove the sampler/image check workarounds when bindless is fully
+       * implemented.
+       */
+      const int dmul =
+         (uni->type->is_64bit() && !uni->type->is_sampler() && !uni->type->is_image()) ? 2 : 1;
       const int rmul = glsl_base_type_is_64bit(returnType) ? 2 : 1;
 
       /* Calculate the source base address *BEFORE* modifying elements to
