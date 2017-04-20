@@ -2049,6 +2049,7 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 
 static LLVMValueRef build_tex_intrinsic(struct nir_to_llvm_context *ctx,
 					nir_tex_instr *instr,
+					bool lod_is_zero,
 					struct ac_image_args *args)
 {
 	if (instr->sampler_dim == GLSL_SAMPLER_DIM_BUF) {
@@ -2074,7 +2075,10 @@ static LLVMValueRef build_tex_intrinsic(struct nir_to_llvm_context *ctx,
 		args->bias = true;
 		break;
 	case nir_texop_txl:
-		args->lod = true;
+		if (lod_is_zero)
+			args->level_zero = true;
+		else
+			args->lod = true;
 		break;
 	case nir_texop_txs:
 	case nir_texop_query_levels:
@@ -4203,7 +4207,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	LLVMValueRef derivs[6];
 	unsigned chan, count = 0;
 	unsigned const_src = 0, num_deriv_comp = 0;
-
+	bool lod_is_zero = false;
 	tex_fetch_ptrs(ctx, instr, &res_ptr, &samp_ptr, &fmask_ptr);
 
 	for (unsigned i = 0; i < instr->num_srcs; i++) {
@@ -4223,9 +4227,14 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		case nir_tex_src_bias:
 			bias = get_src(ctx, instr->src[i].src);
 			break;
-		case nir_tex_src_lod:
+		case nir_tex_src_lod: {
+			nir_const_value *val = nir_src_as_const_value(instr->src[i].src);
+
+			if (val && val->i32[0] == 0)
+				lod_is_zero = true;
 			lod = get_src(ctx, instr->src[i].src);
 			break;
+		}
 		case nir_tex_src_ms_index:
 			sample_index = get_src(ctx, instr->src[i].src);
 			break;
@@ -4370,7 +4379,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	}
 
 	/* Pack LOD */
-	if ((instr->op == nir_texop_txl || instr->op == nir_texop_txf) && lod) {
+	if (lod && ((instr->op == nir_texop_txl && !lod_is_zero) ||
+		    instr->op == nir_texop_txf)) {
 		address[count++] = lod;
 	} else if (instr->op == nir_texop_txf_ms && sample_index) {
 		address[count++] = sample_index;
@@ -4401,7 +4411,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 				   fmask_ptr, NULL,
 				   txf_address, txf_count, 0xf);
 
-		result = build_tex_intrinsic(ctx, instr, &txf_args);
+		result = build_tex_intrinsic(ctx, instr, false, &txf_args);
 
 		result = LLVMBuildExtractElement(ctx->builder, result, ctx->i32zero, "");
 		result = emit_int_cmp(ctx, LLVMIntEQ, result, ctx->i32zero);
@@ -4446,7 +4456,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	set_tex_fetch_args(ctx, &args, instr, instr->op,
 			   res_ptr, samp_ptr, address, count, dmask);
 
-	result = build_tex_intrinsic(ctx, instr, &args);
+	result = build_tex_intrinsic(ctx, instr, lod_is_zero, &args);
 
 	if (instr->op == nir_texop_query_levels)
 		result = LLVMBuildExtractElement(ctx->builder, result, LLVMConstInt(ctx->i32, 3, false), "");
