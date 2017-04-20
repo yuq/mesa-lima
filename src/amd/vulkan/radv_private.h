@@ -415,6 +415,7 @@ struct radv_meta_state {
 		struct {
 			VkPipeline                                pipeline;
 			VkPipeline                                i_pipeline;
+			VkPipeline                                srgb_pipeline;
 		} rc[MAX_SAMPLES_LOG2];
 	} resolve_compute;
 

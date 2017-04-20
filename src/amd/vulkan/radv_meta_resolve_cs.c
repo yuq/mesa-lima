@@ -32,7 +32,7 @@
 #include "vk_format.h"
 
 static nir_shader *
-build_resolve_compute_shader(struct radv_device *dev, bool is_integer, int samples)
+build_resolve_compute_shader(struct radv_device *dev, bool is_integer, bool is_srgb, int samples)
 {
 	nir_builder b;
 	char name[64];
@@ -45,7 +45,7 @@ build_resolve_compute_shader(struct radv_device *dev, bool is_integer, int sampl
 							     false,
 							     false,
 							     GLSL_TYPE_FLOAT);
-	snprintf(name, 64, "meta_resolve_cs-%d-%s", samples, is_integer ? "int" : "float");
+	snprintf(name, 64, "meta_resolve_cs-%d-%s", samples, is_integer ? "int" : (is_srgb ? "srgb" : "float"));
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_COMPUTE, NULL);
 	b.shader->info->name = ralloc_strdup(b.shader, name);
 	b.shader->info->cs.local_size[0] = 16;
@@ -158,6 +158,44 @@ build_resolve_compute_shader(struct radv_device *dev, bool is_integer, int sampl
 		b.cursor = nir_after_cf_node(&outer_if->cf_node);
 
 	nir_ssa_def *newv = nir_load_var(&b, color);
+
+	if (is_srgb) {
+		nir_const_value v;
+		unsigned i;
+		v.u32[0] = 0x3b4d2e1c; // 0.00313080009
+
+		nir_ssa_def *cmp[3];
+		for (i = 0; i < 3; i++)
+			cmp[i] = nir_flt(&b, nir_channel(&b, newv, i),
+					 nir_build_imm(&b, 1, 32, v));
+
+		nir_ssa_def *ltvals[3];
+		v.f32[0] = 12.92;
+		for (i = 0; i < 3; i++)
+			ltvals[i] = nir_fmul(&b, nir_channel(&b, newv, i),
+					     nir_build_imm(&b, 1, 32, v));
+
+		nir_ssa_def *gtvals[3];
+
+		for (i = 0; i < 3; i++) {
+			v.f32[0] = 1.0/2.4;
+			gtvals[i] = nir_fpow(&b, nir_channel(&b, newv, i),
+					     nir_build_imm(&b, 1, 32, v));
+			v.f32[0] = 1.055;
+			gtvals[i] = nir_fmul(&b, gtvals[i],
+					     nir_build_imm(&b, 1, 32, v));
+			v.f32[0] = 0.055;
+			gtvals[i] = nir_fsub(&b, gtvals[i],
+					     nir_build_imm(&b, 1, 32, v));
+		}
+
+		nir_ssa_def *comp[4];
+		for (i = 0; i < 3; i++)
+			comp[i] = nir_bcsel(&b, cmp[i], ltvals[i], gtvals[i]);
+		comp[3] = nir_channels(&b, newv, 3);
+		newv = nir_vec(&b, comp, 4);
+	}
+
 	nir_ssa_def *coord = nir_iadd(&b, global_id, &dst_offset->dest.ssa);
 	nir_intrinsic_instr *store = nir_intrinsic_instr_create(b.shader, nir_intrinsic_image_store);
 	store->src[0] = nir_src_for_ssa(coord);
@@ -230,12 +268,13 @@ static VkResult
 create_resolve_pipeline(struct radv_device *device,
 			int samples,
 			bool is_integer,
+			bool is_srgb,
 			VkPipeline *pipeline)
 {
 	VkResult result;
 	struct radv_shader_module cs = { .nir = NULL };
 
-	cs.nir = build_resolve_compute_shader(device, is_integer, samples);
+	cs.nir = build_resolve_compute_shader(device, is_integer, is_srgb, samples);
 
 	/* compute shader */
 
@@ -282,11 +321,14 @@ radv_device_init_meta_resolve_compute_state(struct radv_device *device)
 	for (uint32_t i = 0; i < MAX_SAMPLES_LOG2; ++i) {
 		uint32_t samples = 1 << i;
 
-		res = create_resolve_pipeline(device, samples, false,
+		res = create_resolve_pipeline(device, samples, false, false,
 					      &state->resolve_compute.rc[i].pipeline);
 
-		res = create_resolve_pipeline(device, samples, true,
+		res = create_resolve_pipeline(device, samples, true, false,
 					      &state->resolve_compute.rc[i].i_pipeline);
+
+		res = create_resolve_pipeline(device, samples, false, true,
+					      &state->resolve_compute.rc[i].srgb_pipeline);
 
 	}
 
@@ -304,6 +346,10 @@ radv_device_finish_meta_resolve_compute_state(struct radv_device *device)
 
 		radv_DestroyPipeline(radv_device_to_handle(device),
 				     state->resolve_compute.rc[i].i_pipeline,
+				     &state->alloc);
+
+		radv_DestroyPipeline(radv_device_to_handle(device),
+				     state->resolve_compute.rc[i].srgb_pipeline,
 				     &state->alloc);
 	}
 
@@ -443,6 +489,8 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 			VkPipeline pipeline;
 			if (vk_format_is_int(src_image->vk_format))
 				pipeline = device->meta_state.resolve_compute.rc[samples_log2].i_pipeline;
+			else if (vk_format_is_srgb(src_image->vk_format))
+				pipeline = device->meta_state.resolve_compute.rc[samples_log2].srgb_pipeline;
 			else
 				pipeline = device->meta_state.resolve_compute.rc[samples_log2].pipeline;
 			if (cmd_buffer->state.compute_pipeline != radv_pipeline_from_handle(pipeline)) {
