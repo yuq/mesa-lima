@@ -2169,6 +2169,7 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	va = ws->buffer_get_va(compute_shader->bo);
 
 	ws->cs_add_buffer(cmd_buffer->cs, compute_shader->bo, 8);
+	si_cp_dma_prefetch(cmd_buffer, va, compute_shader->code_size);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 16);
