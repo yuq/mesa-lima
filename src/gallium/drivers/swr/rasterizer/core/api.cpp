@@ -1641,3 +1641,51 @@ void SWR_API SwrEndFrame(
     pContext->frameCount++;
 }
 
+
+void SwrGetInterface(SWR_INTERFACE &out_funcs)
+{
+    out_funcs.pfnSwrCreateContext = SwrCreateContext;
+    out_funcs.pfnSwrDestroyContext = SwrDestroyContext;
+    out_funcs.pfnSwrSaveState = SwrSaveState;
+    out_funcs.pfnSwrRestoreState = SwrRestoreState;
+    out_funcs.pfnSwrSync = SwrSync;
+    out_funcs.pfnSwrWaitForIdle = SwrWaitForIdle;
+    out_funcs.pfnSwrWaitForIdleFE = SwrWaitForIdleFE;
+    out_funcs.pfnSwrSetVertexBuffers = SwrSetVertexBuffers;
+    out_funcs.pfnSwrSetIndexBuffer = SwrSetIndexBuffer;
+    out_funcs.pfnSwrSetFetchFunc = SwrSetFetchFunc;
+    out_funcs.pfnSwrSetSoFunc = SwrSetSoFunc;
+    out_funcs.pfnSwrSetSoState = SwrSetSoState;
+    out_funcs.pfnSwrSetSoBuffers = SwrSetSoBuffers;
+    out_funcs.pfnSwrSetVertexFunc = SwrSetVertexFunc;
+    out_funcs.pfnSwrSetFrontendState = SwrSetFrontendState;
+    out_funcs.pfnSwrSetGsState = SwrSetGsState;
+    out_funcs.pfnSwrSetGsFunc = SwrSetGsFunc;
+    out_funcs.pfnSwrSetCsFunc = SwrSetCsFunc;
+    out_funcs.pfnSwrSetTsState = SwrSetTsState;
+    out_funcs.pfnSwrSetHsFunc = SwrSetHsFunc;
+    out_funcs.pfnSwrSetDsFunc = SwrSetDsFunc;
+    out_funcs.pfnSwrSetDepthStencilState = SwrSetDepthStencilState;
+    out_funcs.pfnSwrSetBackendState = SwrSetBackendState;
+    out_funcs.pfnSwrSetDepthBoundsState = SwrSetDepthBoundsState;
+    out_funcs.pfnSwrSetPixelShaderState = SwrSetPixelShaderState;
+    out_funcs.pfnSwrSetBlendState = SwrSetBlendState;
+    out_funcs.pfnSwrSetBlendFunc = SwrSetBlendFunc;
+    out_funcs.pfnSwrDraw = SwrDraw;
+    out_funcs.pfnSwrDrawInstanced = SwrDrawInstanced;
+    out_funcs.pfnSwrDrawIndexed = SwrDrawIndexed;
+    out_funcs.pfnSwrDrawIndexedInstanced = SwrDrawIndexedInstanced;
+    out_funcs.pfnSwrInvalidateTiles = SwrInvalidateTiles;
+    out_funcs.pfnSwrDiscardRect = SwrDiscardRect;
+    out_funcs.pfnSwrDispatch = SwrDispatch;
+    out_funcs.pfnSwrStoreTiles = SwrStoreTiles;
+    out_funcs.pfnSwrClearRenderTarget = SwrClearRenderTarget;
+    out_funcs.pfnSwrSetRastState = SwrSetRastState;
+    out_funcs.pfnSwrSetViewports = SwrSetViewports;
+    out_funcs.pfnSwrSetScissorRects = SwrSetScissorRects;
+    out_funcs.pfnSwrGetPrivateContextState = SwrGetPrivateContextState;
+    out_funcs.pfnSwrAllocDrawContextMemory = SwrAllocDrawContextMemory;
+    out_funcs.pfnSwrEnableStatsFE = SwrEnableStatsFE;
+    out_funcs.pfnSwrEnableStatsBE = SwrEnableStatsBE;
+    out_funcs.pfnSwrEndFrame = SwrEndFrame;
+}

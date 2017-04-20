@@ -30,6 +30,7 @@
 #if (defined(FORCE_WINDOWS) || defined(_WIN32)) && !defined(FORCE_LINUX)
 
 #define SWR_API __cdecl
+#define SWR_VISIBLE
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -91,6 +92,7 @@ static inline void AlignedFree(void* p)
 #elif defined(__APPLE__) || defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
 
 #define SWR_API
+#define SWR_VISIBLE __attribute__((visibility("default")))
 
 #include <stdlib.h>
 #include <string.h>
@@ -272,6 +274,10 @@ typedef MEGABYTE    GIGABYTE[1024];
 #else
 #define ATTR_UNUSED
 #endif
+
+#define SWR_FUNC(_retType, _funcName, /* args */...)   \
+   typedef _retType (SWR_API * PFN##_funcName)(__VA_ARGS__); \
+  _retType SWR_API _funcName(__VA_ARGS__);
 
 // Defined in os.cpp
 void SWR_API SetCurrentThreadName(const char* pThreadName);
