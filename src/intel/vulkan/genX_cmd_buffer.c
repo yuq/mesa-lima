@@ -1880,25 +1880,30 @@ void genX(CmdDrawIndirect)(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
-   struct anv_bo *bo = buffer->bo;
-   uint32_t bo_offset = buffer->offset + offset;
 
    if (anv_batch_has_error(&cmd_buffer->batch))
       return;
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
-   if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
-      emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 8);
-   if (vs_prog_data->uses_drawid)
-      emit_draw_index(cmd_buffer, 0);
+   for (uint32_t i = 0; i < drawCount; i++) {
+      struct anv_bo *bo = buffer->bo;
+      uint32_t bo_offset = buffer->offset + offset;
 
-   load_indirect_parameters(cmd_buffer, buffer, offset, false);
+      if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
+         emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 8);
+      if (vs_prog_data->uses_drawid)
+         emit_draw_index(cmd_buffer, i);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
-      prim.IndirectParameterEnable  = true;
-      prim.VertexAccessType         = SEQUENTIAL;
-      prim.PrimitiveTopologyType    = pipeline->topology;
+      load_indirect_parameters(cmd_buffer, buffer, offset, false);
+
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+         prim.IndirectParameterEnable  = true;
+         prim.VertexAccessType         = SEQUENTIAL;
+         prim.PrimitiveTopologyType    = pipeline->topology;
+      }
+
+      offset += stride;
    }
 }
 
@@ -1913,26 +1918,31 @@ void genX(CmdDrawIndexedIndirect)(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
-   struct anv_bo *bo = buffer->bo;
-   uint32_t bo_offset = buffer->offset + offset;
 
    if (anv_batch_has_error(&cmd_buffer->batch))
       return;
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
-   /* TODO: We need to stomp base vertex to 0 somehow */
-   if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
-      emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 12);
-   if (vs_prog_data->uses_drawid)
-      emit_draw_index(cmd_buffer, 0);
+   for (uint32_t i = 0; i < drawCount; i++) {
+      struct anv_bo *bo = buffer->bo;
+      uint32_t bo_offset = buffer->offset + offset;
 
-   load_indirect_parameters(cmd_buffer, buffer, offset, true);
+      /* TODO: We need to stomp base vertex to 0 somehow */
+      if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
+         emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 12);
+      if (vs_prog_data->uses_drawid)
+         emit_draw_index(cmd_buffer, i);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
-      prim.IndirectParameterEnable  = true;
-      prim.VertexAccessType         = RANDOM;
-      prim.PrimitiveTopologyType    = pipeline->topology;
+      load_indirect_parameters(cmd_buffer, buffer, offset, true);
+
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
+         prim.IndirectParameterEnable  = true;
+         prim.VertexAccessType         = RANDOM;
+         prim.PrimitiveTopologyType    = pipeline->topology;
+      }
+
+      offset += stride;
    }
 }
 
