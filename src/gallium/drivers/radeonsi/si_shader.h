@@ -247,6 +247,7 @@ struct si_compiler_ctx_state {
  * binaries for one TGSI program. This can be shared by multiple contexts.
  */
 struct si_shader_selector {
+	struct pipe_reference	reference;
 	struct si_screen	*screen;
 	struct util_queue_fence ready;
 	struct si_compiler_ctx_state compiler_ctx_state;

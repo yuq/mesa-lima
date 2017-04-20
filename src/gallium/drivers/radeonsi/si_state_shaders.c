@@ -1504,6 +1504,19 @@ static bool si_check_missing_main_part(struct si_screen *sscreen,
 	return true;
 }
 
+static void si_destroy_shader_selector(struct si_context *sctx,
+				       struct si_shader_selector *sel);
+
+static void si_shader_selector_reference(struct si_context *sctx,
+					 struct si_shader_selector **dst,
+					 struct si_shader_selector *src)
+{
+	if (pipe_reference(&(*dst)->reference, &src->reference))
+		si_destroy_shader_selector(sctx, *dst);
+
+	*dst = src;
+}
+
 /* Select the hw shader variant depending on the current state. */
 static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_ctx_state *state,
@@ -1886,6 +1899,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	if (!sel)
 		return NULL;
 
+	pipe_reference_init(&sel->reference, 1);
 	sel->screen = sscreen;
 	sel->compiler_ctx_state.tm = sctx->tm;
 	sel->compiler_ctx_state.debug = sctx->b.debug;
@@ -2235,10 +2249,9 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 	free(shader);
 }
 
-static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
+static void si_destroy_shader_selector(struct si_context *sctx,
+				       struct si_shader_selector *sel)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_shader_selector *sel = (struct si_shader_selector *)state;
 	struct si_shader *p = sel->first_variant, *c;
 	struct si_shader_ctx_state *current_shader[SI_NUM_SHADERS] = {
 		[PIPE_SHADER_VERTEX] = &sctx->vs_shader,
@@ -2274,6 +2287,14 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 	mtx_destroy(&sel->mutex);
 	free(sel->tokens);
 	free(sel);
+}
+
+static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_shader_selector *sel = (struct si_shader_selector *)state;
+
+	si_shader_selector_reference(sctx, &sel, NULL);
 }
 
 static unsigned si_get_ps_input_cntl(struct si_context *sctx,
