@@ -493,6 +493,7 @@ struct si_shader {
 	struct si_compiler_ctx_state	compiler_ctx_state;
 
 	struct si_shader_selector	*selector;
+	struct si_shader_selector	*previous_stage_sel; /* for refcounting */
 	struct si_shader		*next_variant;
 
 	struct si_shader_part		*prolog;

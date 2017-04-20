@@ -1525,6 +1525,7 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 				     int thread_index)
 {
 	struct si_shader_selector *sel = state->cso;
+	struct si_shader_selector *previous_stage_sel = NULL;
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
 
@@ -1592,6 +1593,14 @@ again:
 	shader->key = *key;
 	shader->compiler_ctx_state = *compiler_state;
 
+	/* If this is a merged shader, get the first shader's selector. */
+	if (sscreen->b.chip_class >= GFX9) {
+		if (sel->type == PIPE_SHADER_TESS_CTRL)
+			previous_stage_sel = key->part.tcs.ls;
+		else if (sel->type == PIPE_SHADER_GEOMETRY)
+			previous_stage_sel = key->part.gs.es;
+	}
+
 	/* Compile the main shader part if it doesn't exist. This can happen
 	 * if the initial guess was wrong. */
 	bool is_pure_monolithic =
@@ -1608,22 +1617,18 @@ again:
 		 * For merged shaders, check that the starting shader's main
 		 * part is present.
 		 */
-		if (sscreen->b.chip_class >= GFX9 &&
-		    (sel->type == PIPE_SHADER_TESS_CTRL ||
-		     sel->type == PIPE_SHADER_GEOMETRY)) {
-			struct si_shader_selector *shader1 = NULL;
+		if (previous_stage_sel) {
 			struct si_shader_key shader1_key = zeroed;
 
-			if (sel->type == PIPE_SHADER_TESS_CTRL) {
-				shader1 = key->part.tcs.ls;
+			if (sel->type == PIPE_SHADER_TESS_CTRL)
 				shader1_key.as_ls = 1;
-			} else if (sel->type == PIPE_SHADER_GEOMETRY) {
-				shader1 = key->part.gs.es;
+			else if (sel->type == PIPE_SHADER_GEOMETRY)
 				shader1_key.as_es = 1;
-			} else
+			else
 				assert(0);
 
-			ok = si_check_missing_main_part(sscreen, shader1,
+			ok = si_check_missing_main_part(sscreen,
+							previous_stage_sel,
 							compiler_state, &shader1_key);
 		} else {
 			ok = si_check_missing_main_part(sscreen, sel,
@@ -1635,6 +1640,15 @@ again:
 			return -ENOMEM; /* skip the draw call */
 		}
 	}
+
+	/* Keep the reference to the 1st shader of merged shaders, so that
+	 * Gallium can't destroy it before we destroy the 2nd shader.
+	 *
+	 * Set sctx = NULL, because it's unused if we're not releasing
+	 * the shader, and we don't have any sctx here.
+	 */
+	si_shader_selector_reference(NULL, &shader->previous_stage_sel,
+				     previous_stage_sel);
 
 	/* Monolithic-only shaders don't make a distinction between optimized
 	 * and unoptimized. */
@@ -2245,6 +2259,7 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 		}
 	}
 
+	si_shader_selector_reference(sctx, &shader->previous_stage_sel, NULL);
 	si_shader_destroy(shader);
 	free(shader);
 }
