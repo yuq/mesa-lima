@@ -724,7 +724,7 @@ dnl Arch/platform-specific settings
 dnl
 AC_ARG_ENABLE([asm],
     [AS_HELP_STRING([--disable-asm],
-        [disable assembly usage @<:@default=enabled on supported plaforms@:>@])],
+        [disable assembly usage @<:@default=enabled on supported platforms@:>@])],
     [enable_asm="$enableval"],
     [enable_asm=yes]
 )
@@ -2146,7 +2146,7 @@ dnl DEPRECATED: EGL Platforms configuration
 dnl
 AC_ARG_WITH([egl-platforms],
     [AS_HELP_STRING([--with-egl-platforms@<:@=DIRS...@:>@],
-        [DEPRECATED: use --with-plaforms instead@<:@default=auto@:>@])],
+        [DEPRECATED: use --with-platforms instead@<:@default=auto@:>@])],
     [with_egl_platforms="$withval"],
     [with_egl_platforms=auto])
 
@@ -2161,7 +2161,7 @@ if test "x$with_egl_platforms" = xauto; then
         with_egl_platforms=""
     fi
 else
-    AC_MSG_WARN([--with-egl-platforms is deprecated. Use --with-plaforms instead.])
+    AC_MSG_WARN([--with-egl-platforms is deprecated. Use --with-platforms instead.])
 fi
 
 dnl
