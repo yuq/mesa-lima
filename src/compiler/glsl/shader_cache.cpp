@@ -599,7 +599,7 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
           !prog->data->UniformStorage[i].is_shader_storage &&
           prog->data->UniformStorage[i].block_index == -1) {
          unsigned vec_size =
-            values_for_type(prog->data->UniformStorage[i].type) *
+            prog->data->UniformStorage[i].type->component_slots() *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
          blob_write_bytes(metadata, prog->data->UniformStorage[i].storage,
                           sizeof(union gl_constant_value) * vec_size);
@@ -659,7 +659,7 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
           !prog->data->UniformStorage[i].is_shader_storage &&
           prog->data->UniformStorage[i].block_index == -1) {
          unsigned vec_size =
-            values_for_type(prog->data->UniformStorage[i].type) *
+            prog->data->UniformStorage[i].type->component_slots() *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
          blob_copy_bytes(metadata,
                          (uint8_t *) prog->data->UniformStorage[i].storage,
