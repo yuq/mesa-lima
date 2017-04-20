@@ -1293,6 +1293,8 @@ glsl_type::component_slots() const
 
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
+      return 2;
+
    case GLSL_TYPE_SUBROUTINE:
       return 1;
 

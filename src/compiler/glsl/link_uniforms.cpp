@@ -340,9 +340,13 @@ private:
       if (type->contains_subroutine()) {
          this->num_shader_subroutines += values;
       } else if (type->contains_sampler()) {
-         this->num_shader_samplers += values;
+         /* Samplers (bound or bindless) are counted as two components as
+          * specified by ARB_bindless_texture. */
+         this->num_shader_samplers += values / 2;
       } else if (type->contains_image()) {
-         this->num_shader_images += values;
+         /* Images (bound or bindless) are counted as two components as
+          * specified by ARB_bindless_texture. */
+         this->num_shader_images += values / 2;
 
          /* As drivers are likely to represent image uniforms as
           * scalar indices, count them against the limit of uniform
