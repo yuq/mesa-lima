@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-04-14 19:13:31)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-04-14 19:14:25)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  27744 bytes, from 2017-04-14 19:14:25)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  28504 bytes, from 2017-04-21 20:00:50)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-04-14 19:13:31)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 102364 bytes, from 2017-04-14 19:14:25)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 103235 bytes, from 2017-04-21 13:16:50)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-04-14 19:13:30)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -2744,6 +2744,9 @@ static inline uint32_t A5XX_RB_WINDOW_OFFSET_Y(uint32_t val)
 	return ((val) << A5XX_RB_WINDOW_OFFSET_Y__SHIFT) & A5XX_RB_WINDOW_OFFSET_Y__MASK;
 }
 
+#define REG_A5XX_RB_SAMPLE_COUNT_CONTROL			0x0000e1d1
+#define A5XX_RB_SAMPLE_COUNT_CONTROL_COPY			0x00000002
+
 #define REG_A5XX_RB_BLIT_CNTL					0x0000e210
 #define A5XX_RB_BLIT_CNTL_BUF__MASK				0x0000000f
 #define A5XX_RB_BLIT_CNTL_BUF__SHIFT				0
@@ -2874,6 +2877,10 @@ static inline uint32_t A5XX_RB_BLIT_FLAG_DST_ARRAY_PITCH(uint32_t val)
 	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_BLIT_FLAG_DST_ARRAY_PITCH__SHIFT) & A5XX_RB_BLIT_FLAG_DST_ARRAY_PITCH__MASK;
 }
+
+#define REG_A5XX_RB_SAMPLE_COUNT_ADDR_LO			0x0000e267
+
+#define REG_A5XX_RB_SAMPLE_COUNT_ADDR_HI			0x0000e268
 
 #define REG_A5XX_VPC_CNTL_0					0x0000e280
 #define A5XX_VPC_CNTL_0_STRIDE_IN_VPC__MASK			0x0000007f
