@@ -147,9 +147,16 @@ fd5_emit_render_cntl(struct fd_context *ctx, bool blit)
 	 * Other bits seem to depend on query state, like if samples-passed
 	 * query is active.
 	 */
+	bool samples_passed = (fd5_context(ctx)->samples_passed_queries > 0);
 	OUT_PKT4(ring, REG_A5XX_RB_RENDER_CNTL, 1);
 	OUT_RING(ring, 0x00000000 |   /* RB_RENDER_CNTL */
+			COND(samples_passed, A5XX_RB_RENDER_CNTL_SAMPLES_PASSED) |
 			COND(!blit, 0x8));
+
+	OUT_PKT4(ring, REG_A5XX_GRAS_SC_CNTL, 1);
+	OUT_RING(ring, 0x00000008 |   /* GRAS_SC_CNTL */
+			COND(samples_passed, A5XX_GRAS_SC_CNTL_SAMPLES_PASSED));
+
 }
 
 void fd5_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd5_emit *emit);

@@ -24,6 +24,7 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
+#include "freedreno_query_acc.h"
 
 #include "fd5_context.h"
 #include "fd5_blend.h"
