@@ -772,7 +772,7 @@ private:
 
          if (type->without_array()->is_matrix()) {
             const glsl_type *matrix = type->without_array();
-            const unsigned N = matrix->base_type == GLSL_TYPE_DOUBLE ? 8 : 4;
+            const unsigned N = matrix->is_double() ? 8 : 4;
             const unsigned items =
                row_major ? matrix->matrix_columns : matrix->vector_elements;
 

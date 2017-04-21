@@ -1505,7 +1505,7 @@ emit_inline_matrix_constructor(const glsl_type *type,
        */
       glsl_base_type param_base_type = first_param->type->base_type;
       assert(param_base_type == GLSL_TYPE_FLOAT ||
-             param_base_type == GLSL_TYPE_DOUBLE);
+             first_param->type->is_double());
       ir_variable *rhs_var =
          new(ctx) ir_variable(glsl_type::get_instance(param_base_type, 4, 1),
                               "mat_ctor_vec",

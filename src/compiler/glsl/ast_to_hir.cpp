@@ -445,9 +445,9 @@ arithmetic_result_type(ir_rvalue * &value_a, ir_rvalue * &value_b,
     */
    assert(type_a->is_matrix() || type_b->is_matrix());
    assert(type_a->base_type == GLSL_TYPE_FLOAT ||
-          type_a->base_type == GLSL_TYPE_DOUBLE);
+          type_a->is_double());
    assert(type_b->base_type == GLSL_TYPE_FLOAT ||
-          type_b->base_type == GLSL_TYPE_DOUBLE);
+          type_b->is_double());
 
    /*   "* The operator is add (+), subtract (-), or divide (/), and the
     *      operands are matrices with the same number of rows and the same
@@ -4950,7 +4950,7 @@ ast_declarator_list::hir(exec_list *instructions,
                if (state->is_version(120, 300))
                   break;
             case GLSL_TYPE_DOUBLE:
-               if (check_type->base_type == GLSL_TYPE_DOUBLE && (state->is_version(410, 0) || state->ARB_vertex_attrib_64bit_enable))
+               if (check_type->is_double() && (state->is_version(410, 0) || state->ARB_vertex_attrib_64bit_enable))
                   break;
             /* FALLTHROUGH */
             default:

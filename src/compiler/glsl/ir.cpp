@@ -784,7 +784,7 @@ ir_constant::ir_constant(const struct glsl_type *type, exec_list *value_list)
       if (type->is_matrix()) {
 	 /* Matrix - fill diagonal (rest is already set to 0) */
          assert(type->base_type == GLSL_TYPE_FLOAT ||
-                type->base_type == GLSL_TYPE_DOUBLE);
+                type->is_double());
          for (unsigned i = 0; i < type->matrix_columns; i++) {
             if (type->base_type == GLSL_TYPE_FLOAT)
                this->value.f[i * type->vector_elements + i] =

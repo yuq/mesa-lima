@@ -253,7 +253,7 @@ ir_validate::visit_leave(ir_expression *ir)
    case ir_unop_sign:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT ||
              ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE ||
+             ir->operands[0]->type->is_double() ||
              ir->operands[0]->type->base_type == GLSL_TYPE_INT64);
       assert(ir->type == ir->operands[0]->type);
       break;
@@ -262,7 +262,7 @@ ir_validate::visit_leave(ir_expression *ir)
    case ir_unop_rsq:
    case ir_unop_sqrt:
       assert(ir->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->type->is_double());
       assert(ir->type == ir->operands[0]->type);
       break;
 
@@ -334,18 +334,18 @@ ir_validate::visit_leave(ir_expression *ir)
 
    case ir_unop_bitcast_u642d:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_UINT64);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->type->is_double());
       break;
    case ir_unop_bitcast_i642d:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT64);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->type->is_double());
       break;
    case ir_unop_bitcast_d2u64:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_UINT64);
       break;
    case ir_unop_bitcast_d2i64:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_INT64);
       break;
    case ir_unop_i642i:
@@ -378,11 +378,11 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
    case ir_unop_i642d:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT64);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->type->is_double());
       break;
    case ir_unop_u642d:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_UINT64);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->type->is_double());
       break;
    case ir_unop_i2i64:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT);
@@ -401,7 +401,7 @@ ir_validate::visit_leave(ir_expression *ir)
       assert(ir->type->base_type == GLSL_TYPE_INT64);
       break;
    case ir_unop_d2i64:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_INT64);
       break;
    case ir_unop_i2u64:
@@ -417,7 +417,7 @@ ir_validate::visit_leave(ir_expression *ir)
       assert(ir->type->base_type == GLSL_TYPE_UINT64);
       break;
    case ir_unop_d2u64:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_UINT64);
       break;
    case ir_unop_u642i64:
@@ -434,7 +434,7 @@ ir_validate::visit_leave(ir_expression *ir)
    case ir_unop_floor:
    case ir_unop_fract:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->operands[0]->type->is_double());
       assert(ir->operands[0]->type == ir->type);
       break;
    case ir_unop_sin:
@@ -539,42 +539,42 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
 
    case ir_unop_d2f:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_FLOAT);
       break;
    case ir_unop_f2d:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->type->is_double());
       break;
    case ir_unop_d2i:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_INT);
       break;
    case ir_unop_i2d:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->type->is_double());
       break;
    case ir_unop_d2u:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_UINT);
       break;
    case ir_unop_u2d:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_UINT);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->type->is_double());
       break;
    case ir_unop_d2b:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+      assert(ir->operands[0]->type->is_double());
       assert(ir->type->is_boolean());
       break;
 
    case ir_unop_frexp_sig:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
-      assert(ir->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->operands[0]->type->is_double());
+      assert(ir->type->is_double());
       break;
    case ir_unop_frexp_exp:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->operands[0]->type->is_double());
       assert(ir->type->base_type == GLSL_TYPE_INT);
       break;
    case ir_unop_subroutine_to_int:
@@ -708,7 +708,7 @@ ir_validate::visit_leave(ir_expression *ir)
       assert(ir->type == glsl_type::float_type ||
              ir->type == glsl_type::double_type);
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->operands[0]->type->is_double());
       assert(ir->operands[0]->type->is_vector());
       assert(ir->operands[0]->type == ir->operands[1]->type);
       break;
@@ -749,7 +749,7 @@ ir_validate::visit_leave(ir_expression *ir)
 
    case ir_triop_fma:
       assert(ir->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->type->is_double());
       assert(ir->type == ir->operands[0]->type);
       assert(ir->type == ir->operands[1]->type);
       assert(ir->type == ir->operands[2]->type);
@@ -757,7 +757,7 @@ ir_validate::visit_leave(ir_expression *ir)
 
    case ir_triop_lrp:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->operands[0]->type->is_double());
       assert(ir->operands[0]->type == ir->operands[1]->type);
       assert(ir->operands[2]->type == ir->operands[0]->type ||
              ir->operands[2]->type == glsl_type::float_type ||

@@ -165,7 +165,7 @@ lower_buffer_access::emit_access(void *mem_ctx,
        * gather the vector from each stored row.
       */
       assert(deref->type->base_type == GLSL_TYPE_FLOAT ||
-             deref->type->base_type == GLSL_TYPE_DOUBLE);
+             deref->type->is_double());
       /* Matrices, row_major or not, are stored as if they were
        * arrays of vectors of the appropriate size in std140.
        * Arrays have their strides rounded up to a vec4, so the

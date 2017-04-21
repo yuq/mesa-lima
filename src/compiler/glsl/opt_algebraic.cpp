@@ -650,7 +650,7 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
    case ir_binop_div:
       if (is_vec_one(op_const[0]) && (
                 ir->type->base_type == GLSL_TYPE_FLOAT ||
-                ir->type->base_type == GLSL_TYPE_DOUBLE)) {
+                ir->type->is_double())) {
 	 return new(mem_ctx) ir_expression(ir_unop_rcp,
 					   ir->operands[1]->type,
 					   ir->operands[1],
