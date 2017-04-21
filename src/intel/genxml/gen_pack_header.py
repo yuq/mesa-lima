@@ -273,14 +273,14 @@ class Field(object):
             return
         else:
             print("#error unhandled type: %s" % self.type)
+            return
 
         print("   %-36s %s%s;" % (type, self.name, dim))
 
+        prefix = ""
         if len(self.values) > 0 and self.default == None:
             if self.prefix:
                 prefix = self.prefix + "_"
-            else:
-                prefix = ""
 
         for value in self.values:
             print("#define %-40s %d" % (prefix + value.name, value.value))
