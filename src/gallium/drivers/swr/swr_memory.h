@@ -87,15 +87,3 @@ swr_StoreHotTileClear(HANDLE hPrivateContext,
 
    StoreHotTileClear(pDstSurface, renderTargetIndex, x, y, renderTargetArrayIndex, pClearColor);
 }
-
-void InitSimLoadTilesTable();
-void InitSimStoreTilesTable();
-void InitSimClearTilesTable();
-
-/* Init Load/Store/ClearTiles Tables */
-INLINE void swr_InitMemoryModule()
-{
-   InitSimLoadTilesTable();
-   InitSimStoreTilesTable();
-   InitSimClearTilesTable();
-}

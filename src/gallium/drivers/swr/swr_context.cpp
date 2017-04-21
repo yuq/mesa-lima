@@ -553,10 +553,7 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    createInfo.pfnUpdateStatsFE = swr_UpdateStatsFE;
    ctx->swrContext = SwrCreateContext(&createInfo);
 
-   /* Init Load/Store/ClearTiles Tables */
-   swr_InitMemoryModule();
-
-   InitBackendFuncTables();
+   SwrInit();
 
    if (ctx->swrContext == NULL)
       goto fail;

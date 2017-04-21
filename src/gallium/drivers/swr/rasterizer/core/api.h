@@ -655,6 +655,10 @@ SWR_FUNC(void, SwrEnableStatsBE,
 SWR_FUNC(void, SwrEndFrame,
     HANDLE hContext);
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Initialize swr backend and memory internal tables
+SWR_FUNC(void, SwrInit);
+
 
 struct SWR_INTERFACE
 {
@@ -702,6 +706,7 @@ struct SWR_INTERFACE
     PFNSwrEnableStatsFE pfnSwrEnableStatsFE;
     PFNSwrEnableStatsBE pfnSwrEnableStatsBE;
     PFNSwrEndFrame pfnSwrEndFrame;
+    PFNSwrInit pfnSwrInit;
 };
 
 extern "C" {

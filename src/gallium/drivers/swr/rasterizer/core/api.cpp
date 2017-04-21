@@ -143,9 +143,6 @@ HANDLE SwrCreateContext(
     // initialize hot tile manager
     pContext->pHotTileMgr = new HotTileMgr();
 
-    // initialize function pointer tables
-    InitClearTilesTable();
-
     // initialize callback functions
     pContext->pfnLoadTile = pCreateInfo->pfnLoadTile;
     pContext->pfnStoreTile = pCreateInfo->pfnStoreTile;
@@ -1641,6 +1638,25 @@ void SWR_API SwrEndFrame(
     pContext->frameCount++;
 }
 
+void InitSimLoadTilesTable();
+void InitSimStoreTilesTable();
+void InitSimClearTilesTable();
+
+void InitClearTilesTable();
+void InitBackendFuncTables();
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Initialize swr backend and memory internal tables
+void SwrInit()
+{
+    InitSimLoadTilesTable();
+    InitSimStoreTilesTable();
+    InitSimClearTilesTable();
+
+    InitClearTilesTable();
+    InitBackendFuncTables();
+}
+
 
 void SwrGetInterface(SWR_INTERFACE &out_funcs)
 {
@@ -1688,4 +1704,5 @@ void SwrGetInterface(SWR_INTERFACE &out_funcs)
     out_funcs.pfnSwrEnableStatsFE = SwrEnableStatsFE;
     out_funcs.pfnSwrEnableStatsBE = SwrEnableStatsBE;
     out_funcs.pfnSwrEndFrame = SwrEndFrame;
+    out_funcs.pfnSwrInit = SwrInit;
 }
