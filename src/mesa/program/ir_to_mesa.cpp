@@ -1417,6 +1417,10 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
    case ir_unop_unpack_int_2x32:
    case ir_unop_pack_uint_2x32:
    case ir_unop_unpack_uint_2x32:
+   case ir_unop_pack_sampler_2x32:
+   case ir_unop_unpack_sampler_2x32:
+   case ir_unop_pack_image_2x32:
+   case ir_unop_unpack_image_2x32:
       assert(!"not supported");
       break;
 
