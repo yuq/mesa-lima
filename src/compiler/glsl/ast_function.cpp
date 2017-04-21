@@ -1968,9 +1968,21 @@ ast_function_expression::hir(exec_list *instructions,
 
 
       /* Constructors for opaque types are illegal.
+       *
+       * From section 4.1.7 of the ARB_bindless_texture spec:
+       *
+       * "Samplers are represented using 64-bit integer handles, and may be "
+       *  converted to and from 64-bit integers using constructors."
+       *
+       * From section 4.1.X of the ARB_bindless_texture spec:
+       *
+       * "Images are represented using 64-bit integer handles, and may be
+       *  converted to and from 64-bit integers using constructors."
        */
-      if (constructor_type->contains_opaque()) {
-         _mesa_glsl_error(& loc, state, "cannot construct opaque type `%s'",
+      if (constructor_type->contains_atomic() ||
+          (!state->has_bindless() && constructor_type->contains_opaque())) {
+         _mesa_glsl_error(& loc, state, "cannot construct %s type `%s'",
+                          state->has_bindless() ? "atomic" : "opaque",
                           constructor_type->name);
          return ir_rvalue::error_value(ctx);
       }
