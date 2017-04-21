@@ -491,8 +491,7 @@ struct glsl_type {
     */
    bool is_integer_32_64() const
    {
-      return (base_type == GLSL_TYPE_UINT) || (base_type == GLSL_TYPE_INT) ||
-             (base_type == GLSL_TYPE_UINT64) || (base_type == GLSL_TYPE_INT64);
+      return is_integer() || is_integer_64();
    }
 
    /**
