@@ -159,15 +159,26 @@ struct fd_context {
 	/* slab for pipe_transfer allocations: */
 	struct slab_child_pool transfer_pool;
 
+	/**
+	 * query related state:
+	 */
+	/*@{*/
 	/* slabs for fd_hw_sample and fd_hw_sample_period allocations: */
 	struct slab_mempool sample_pool;
 	struct slab_mempool sample_period_pool;
 
 	/* sample-providers for hw queries: */
-	const struct fd_hw_sample_provider *sample_providers[MAX_HW_SAMPLE_PROVIDERS];
+	const struct fd_hw_sample_provider *hw_sample_providers[MAX_HW_SAMPLE_PROVIDERS];
 
 	/* list of active queries: */
-	struct list_head active_queries;
+	struct list_head hw_active_queries;
+
+	/* sample-providers for accumulating hw queries: */
+	const struct fd_acc_sample_provider *acc_sample_providers[MAX_HW_SAMPLE_PROVIDERS];
+
+	/* list of active accumulating queries: */
+	struct list_head acc_active_queries;
+	/*@}*/
 
 	/* table with PIPE_PRIM_MAX entries mapping PIPE_PRIM_x to
 	 * DI_PT_x value to use for draw initiator.  There are some

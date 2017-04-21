@@ -18,6 +18,8 @@ C_SOURCES := \
 	freedreno_program.h \
 	freedreno_query.c \
 	freedreno_query.h \
+	freedreno_query_acc.c \
+	freedreno_query_acc.h \
 	freedreno_query_hw.c \
 	freedreno_query_hw.h \
 	freedreno_query_sw.c \

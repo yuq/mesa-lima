@@ -37,6 +37,7 @@
 #include "freedreno_context.h"
 #include "freedreno_state.h"
 #include "freedreno_resource.h"
+#include "freedreno_query_acc.h"
 #include "freedreno_query_hw.h"
 #include "freedreno_util.h"
 
@@ -176,6 +177,9 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 			resource_written(batch, ctx->streamout.targets[i]->buffer);
 
 	resource_written(batch, batch->query_buf);
+
+	list_for_each_entry(struct fd_acc_query, aq, &ctx->acc_active_queries, node)
+		resource_written(batch, aq->prsc);
 
 	mtx_unlock(&ctx->screen->lock);
 
@@ -352,6 +356,9 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	}
 
 	resource_written(batch, batch->query_buf);
+
+	list_for_each_entry(struct fd_acc_query, aq, &ctx->acc_active_queries, node)
+		resource_written(batch, aq->prsc);
 
 	mtx_unlock(&ctx->screen->lock);
 

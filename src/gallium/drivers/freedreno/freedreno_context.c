@@ -301,6 +301,9 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	if (!ctx->primconvert)
 		goto fail;
 
+	list_inithead(&ctx->hw_active_queries);
+	list_inithead(&ctx->acc_active_queries);
+
 	return pctx;
 
 fail:
