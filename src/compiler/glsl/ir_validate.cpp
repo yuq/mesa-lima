@@ -241,8 +241,8 @@ ir_validate::visit_leave(ir_expression *ir)
       assert(ir->operands[0]->type == ir->type);
       break;
    case ir_unop_logic_not:
-      assert(ir->type->base_type == GLSL_TYPE_BOOL);
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->type->is_boolean());
+      assert(ir->operands[0]->type->is_boolean());
       break;
 
    case ir_unop_neg:
@@ -289,18 +289,18 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
    case ir_unop_f2b:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT);
-      assert(ir->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->type->is_boolean());
       break;
    case ir_unop_b2f:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->operands[0]->type->is_boolean());
       assert(ir->type->base_type == GLSL_TYPE_FLOAT);
       break;
    case ir_unop_i2b:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT);
-      assert(ir->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->type->is_boolean());
       break;
    case ir_unop_b2i:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->operands[0]->type->is_boolean());
       assert(ir->type->base_type == GLSL_TYPE_INT);
       break;
    case ir_unop_u2f:
@@ -366,7 +366,7 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
    case ir_unop_i642b:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT64);
-      assert(ir->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->type->is_boolean());
       break;
    case ir_unop_i642f:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT64);
@@ -393,7 +393,7 @@ ir_validate::visit_leave(ir_expression *ir)
       assert(ir->type->base_type == GLSL_TYPE_INT64);
       break;
    case ir_unop_b2i64:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->operands[0]->type->is_boolean());
       assert(ir->type->base_type == GLSL_TYPE_INT64);
       break;
    case ir_unop_f2i64:
@@ -564,7 +564,7 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
    case ir_unop_d2b:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
-      assert(ir->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->type->is_boolean());
       break;
 
    case ir_unop_frexp_sig:
@@ -651,7 +651,7 @@ ir_validate::visit_leave(ir_expression *ir)
        * comparison on scalar or vector types and return a boolean scalar or
        * vector type of the same size.
        */
-      assert(ir->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->type->is_boolean());
       assert(ir->operands[0]->type == ir->operands[1]->type);
       assert(ir->operands[0]->type->is_vector()
 	     || ir->operands[0]->type->is_scalar());
@@ -699,9 +699,9 @@ ir_validate::visit_leave(ir_expression *ir)
    case ir_binop_logic_and:
    case ir_binop_logic_xor:
    case ir_binop_logic_or:
-      assert(ir->type->base_type == GLSL_TYPE_BOOL);
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_BOOL);
-      assert(ir->operands[1]->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->type->is_boolean());
+      assert(ir->operands[0]->type->is_boolean());
+      assert(ir->operands[1]->type->is_boolean());
       break;
 
    case ir_binop_dot:
@@ -765,7 +765,7 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
 
    case ir_triop_csel:
-      assert(ir->operands[0]->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->operands[0]->type->is_boolean());
       assert(ir->type->vector_elements == ir->operands[0]->type->vector_elements);
       assert(ir->type == ir->operands[1]->type);
       assert(ir->type == ir->operands[2]->type);

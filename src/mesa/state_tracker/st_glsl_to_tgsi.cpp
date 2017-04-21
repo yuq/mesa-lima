@@ -2225,7 +2225,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
                                        const_offset % 16 / 4,
                                        const_offset % 16 / 4);
 
-      if (ir->type->base_type == GLSL_TYPE_BOOL) {
+      if (ir->type->is_boolean()) {
          emit_asm(ir, TGSI_OPCODE_USNE, result_dst, cbuf, st_src_reg_for_int(0));
       } else {
          emit_asm(ir, TGSI_OPCODE_MOV, result_dst, cbuf);

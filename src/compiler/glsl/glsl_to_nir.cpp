@@ -985,7 +985,7 @@ nir_visitor::visit(ir_call *ir)
           * consider a true boolean to be ~0. Fix this up with a != 0
           * comparison.
           */
-         if (type->base_type == GLSL_TYPE_BOOL) {
+         if (type->is_boolean()) {
             nir_alu_instr *load_ssbo_compare =
                nir_alu_instr_create(shader, nir_op_ine);
             load_ssbo_compare->src[0].src.is_ssa = true;
@@ -1334,7 +1334,7 @@ nir_visitor::visit(ir_expression *ir)
        * a true boolean to be ~0. Fix this up with a != 0 comparison.
        */
 
-      if (ir->type->base_type == GLSL_TYPE_BOOL)
+      if (ir->type->is_boolean())
          this->result = nir_ine(&b, &load->dest.ssa, nir_imm_int(&b, 0));
 
       return;

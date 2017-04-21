@@ -1487,8 +1487,7 @@ ast_expression::do_hir(exec_list *instructions,
        * in a scalar boolean.  See page 57 of the GLSL 1.50 spec.
        */
       assert(type->is_error()
-             || ((type->base_type == GLSL_TYPE_BOOL)
-                 && type->is_scalar()));
+             || (type->is_boolean() && type->is_scalar()));
 
       result = new(ctx) ir_expression(operations[this->oper], type,
                                       op[0], op[1]);
