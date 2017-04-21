@@ -41,6 +41,7 @@
 #include "ac_nir_to_llvm.h"
 #include "vk_format.h"
 #include "util/debug.h"
+#include "ac_exp_param.h"
 
 void radv_shader_variant_destroy(struct radv_device *device,
                                  struct radv_shader_variant *variant);
@@ -1874,13 +1875,13 @@ static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
 static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
 {
 	uint32_t ps_input_cntl;
-	if (offset <= EXP_PARAM_OFFSET_31)
+	if (offset <= AC_EXP_PARAM_OFFSET_31)
 		ps_input_cntl = S_028644_OFFSET(offset);
 	else {
 		/* The input is a DEFAULT_VAL constant. */
-		assert(offset >= EXP_PARAM_DEFAULT_VAL_0000 &&
-		       offset <= EXP_PARAM_DEFAULT_VAL_1111);
-		offset -= EXP_PARAM_DEFAULT_VAL_0000;
+		assert(offset >= AC_EXP_PARAM_DEFAULT_VAL_0000 &&
+		       offset <= AC_EXP_PARAM_DEFAULT_VAL_1111);
+		offset -= AC_EXP_PARAM_DEFAULT_VAL_0000;
 		ps_input_cntl = S_028644_OFFSET(0x20) |
 			S_028644_DEFAULT_VAL(offset);
 	}
@@ -1903,7 +1904,7 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 
 	if (ps->info.fs.prim_id_input) {
 		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID];
-		if (vs_offset != EXP_PARAM_UNDEFINED) {
+		if (vs_offset != AC_EXP_PARAM_UNDEFINED) {
 			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
 			++ps_offset;
 		}
@@ -1911,7 +1912,7 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 
 	if (ps->info.fs.layer_input) {
 		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_LAYER];
-		if (vs_offset != EXP_PARAM_UNDEFINED) {
+		if (vs_offset != AC_EXP_PARAM_UNDEFINED) {
 			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
 			++ps_offset;
 		}
@@ -1931,7 +1932,7 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 			continue;
 
 		vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_VAR0 + i];
-		if (vs_offset == EXP_PARAM_UNDEFINED) {
+		if (vs_offset == AC_EXP_PARAM_UNDEFINED) {
 			pipeline->graphics.ps_input_cntl[ps_offset] = S_028644_OFFSET(0x20);
 			++ps_offset;
 			continue;

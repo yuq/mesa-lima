@@ -31,6 +31,8 @@
 #include "util/bitscan.h"
 #include <llvm-c/Transforms/Scalar.h>
 #include "ac_shader_info.h"
+#include "ac_exp_param.h"
+
 enum radeon_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_VS = 87,
 	RADEON_LLVM_AMDGPU_GS = 88,
@@ -5133,7 +5135,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 	LLVMValueRef psize_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	int i;
 
-	memset(outinfo->vs_output_param_offset, EXP_PARAM_UNDEFINED,
+	memset(outinfo->vs_output_param_offset, AC_EXP_PARAM_UNDEFINED,
 	       sizeof(outinfo->vs_output_param_offset));
 
 	if (ctx->output_mask & (1ull << VARYING_SLOT_CLIP_DIST0)) {
@@ -5758,6 +5760,37 @@ static void ac_llvm_finalize_module(struct nir_to_llvm_context * ctx)
 }
 
 static void
+ac_nir_eliminate_const_vs_outputs(struct nir_to_llvm_context *ctx)
+{
+	struct ac_vs_output_info *outinfo;
+
+	if (ctx->stage == MESA_SHADER_FRAGMENT ||
+	    ctx->stage == MESA_SHADER_COMPUTE ||
+	    ctx->stage == MESA_SHADER_TESS_CTRL ||
+	    ctx->stage == MESA_SHADER_GEOMETRY)
+		return;
+
+	if (ctx->stage == MESA_SHADER_VERTEX) {
+		if (ctx->options->key.vs.as_ls ||
+		    ctx->options->key.vs.as_es)
+			return;
+		outinfo = &ctx->shader_info->vs.outinfo;
+	}
+
+	if (ctx->stage == MESA_SHADER_TESS_EVAL) {
+		if (ctx->options->key.vs.as_es)
+			return;
+		outinfo = &ctx->shader_info->tes.outinfo;
+	}
+
+	ac_eliminate_const_vs_outputs(&ctx->ac,
+				      ctx->main_function,
+				      outinfo->vs_output_param_offset,
+				      VARYING_SLOT_MAX,
+				      &outinfo->param_exports);
+}
+
+static void
 ac_setup_rings(struct nir_to_llvm_context *ctx)
 {
 	if ((ctx->stage == MESA_SHADER_VERTEX && ctx->options->key.vs.as_es) ||
@@ -5894,6 +5927,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	LLVMBuildRetVoid(ctx.builder);
 
 	ac_llvm_finalize_module(&ctx);
+
+	ac_nir_eliminate_const_vs_outputs(&ctx);
 	free(ctx.locals);
 	ralloc_free(ctx.defs);
 	ralloc_free(ctx.phis);
