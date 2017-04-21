@@ -479,6 +479,14 @@ struct glsl_type {
    }
 
    /**
+    * Query whether or not a type is a 64-bit integer.
+    */
+   bool is_integer_64() const
+   {
+      return base_type == GLSL_TYPE_UINT64 || base_type == GLSL_TYPE_INT64;
+   }
+
+   /**
     * Query whether or not a type is a 32-bit or 64-bit integer
     */
    bool is_integer_32_64() const
