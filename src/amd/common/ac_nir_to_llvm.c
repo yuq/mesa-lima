@@ -5133,8 +5133,9 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 	LLVMValueRef psize_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	int i;
 
-	outinfo->prim_id_output = 0xffffffff;
-	outinfo->layer_output = 0xffffffff;
+	memset(outinfo->vs_output_param_offset, EXP_PARAM_UNDEFINED,
+	       sizeof(outinfo->vs_output_param_offset));
+
 	if (ctx->output_mask & (1ull << VARYING_SLOT_CLIP_DIST0)) {
 		LLVMValueRef slots[8];
 		unsigned j;
@@ -5184,20 +5185,21 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 		} else if (i == VARYING_SLOT_LAYER) {
 			outinfo->writes_layer = true;
 			layer_value = values[0];
-			outinfo->layer_output = param_count;
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
+			outinfo->vs_output_param_offset[VARYING_SLOT_LAYER] = param_count;
 			param_count++;
 		} else if (i == VARYING_SLOT_VIEWPORT) {
 			outinfo->writes_viewport_index = true;
 			viewport_index_value = values[0];
 			continue;
 		} else if (i == VARYING_SLOT_PRIMITIVE_ID) {
-			outinfo->prim_id_output = param_count;
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
+			outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count;
 			param_count++;
 		} else if (i >= VARYING_SLOT_VAR0) {
 			outinfo->export_mask |= 1u << (i - VARYING_SLOT_VAR0);
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
+			outinfo->vs_output_param_offset[i] = param_count;
 			param_count++;
 		}
 

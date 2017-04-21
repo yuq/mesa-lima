@@ -120,14 +120,25 @@ struct ac_userdata_locations {
 	struct ac_userdata_info shader_data[AC_UD_MAX_UD];
 };
 
+enum {
+	/* SPI_PS_INPUT_CNTL_i.OFFSET[0:4] */
+	EXP_PARAM_OFFSET_0 = 0,
+	EXP_PARAM_OFFSET_31 = 31,
+	/* SPI_PS_INPUT_CNTL_i.DEFAULT_VAL[0:1] */
+	EXP_PARAM_DEFAULT_VAL_0000 = 64,
+	EXP_PARAM_DEFAULT_VAL_0001,
+	EXP_PARAM_DEFAULT_VAL_1110,
+	EXP_PARAM_DEFAULT_VAL_1111,
+	EXP_PARAM_UNDEFINED = 255,
+};
+
 struct ac_vs_output_info {
+	uint8_t	vs_output_param_offset[VARYING_SLOT_MAX];
 	uint8_t clip_dist_mask;
 	uint8_t cull_dist_mask;
 	bool writes_pointsize;
 	bool writes_layer;
 	bool writes_viewport_index;
-	uint32_t prim_id_output;
-	uint32_t layer_output;
 	uint32_t export_mask;
 	unsigned param_exports;
 	unsigned pos_exports;

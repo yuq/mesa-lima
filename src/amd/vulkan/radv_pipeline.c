@@ -1870,6 +1870,25 @@ static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
 		clip_dist_mask;
 
 }
+
+static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
+{
+	uint32_t ps_input_cntl;
+	if (offset <= EXP_PARAM_OFFSET_31)
+		ps_input_cntl = S_028644_OFFSET(offset);
+	else {
+		/* The input is a DEFAULT_VAL constant. */
+		assert(offset >= EXP_PARAM_DEFAULT_VAL_0000 &&
+		       offset <= EXP_PARAM_DEFAULT_VAL_1111);
+		offset -= EXP_PARAM_DEFAULT_VAL_0000;
+		ps_input_cntl = S_028644_OFFSET(0x20) |
+			S_028644_DEFAULT_VAL(offset);
+	}
+	if (flat_shade)
+		ps_input_cntl |= S_028644_FLAT_SHADE(1);
+	return ps_input_cntl;
+}
+
 static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 {
 	struct radv_shader_variant *ps, *vs;
@@ -1882,24 +1901,20 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 
 	unsigned ps_offset = 0;
 
-	if (ps->info.fs.prim_id_input && (outinfo->prim_id_output != 0xffffffff)) {
-		unsigned vs_offset, flat_shade;
-		unsigned val;
-		vs_offset = outinfo->prim_id_output;
-		flat_shade = true;
-		val = S_028644_OFFSET(vs_offset) | S_028644_FLAT_SHADE(flat_shade);
-		pipeline->graphics.ps_input_cntl[ps_offset] = val;
-		++ps_offset;
+	if (ps->info.fs.prim_id_input) {
+		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID];
+		if (vs_offset != EXP_PARAM_UNDEFINED) {
+			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
+			++ps_offset;
+		}
 	}
 
-	if (ps->info.fs.layer_input && (outinfo->layer_output != 0xffffffff)) {
-		unsigned vs_offset, flat_shade;
-		unsigned val;
-		vs_offset = outinfo->layer_output;
-		flat_shade = true;
-		val = S_028644_OFFSET(vs_offset) | S_028644_FLAT_SHADE(flat_shade);
-		pipeline->graphics.ps_input_cntl[ps_offset] = val;
-		++ps_offset;
+	if (ps->info.fs.layer_input) {
+		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_LAYER];
+		if (vs_offset != EXP_PARAM_UNDEFINED) {
+			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
+			++ps_offset;
+		}
 	}
 
 	if (ps->info.fs.has_pcoord) {
@@ -1910,31 +1925,21 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 	}
 
 	for (unsigned i = 0; i < 32 && (1u << i) <= ps->info.fs.input_mask; ++i) {
-		unsigned vs_offset, flat_shade;
-		unsigned val;
-
+		unsigned vs_offset;
+		bool flat_shade;
 		if (!(ps->info.fs.input_mask & (1u << i)))
 			continue;
 
-		if (!(outinfo->export_mask & (1u << i))) {
+		vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_VAR0 + i];
+		if (vs_offset == EXP_PARAM_UNDEFINED) {
 			pipeline->graphics.ps_input_cntl[ps_offset] = S_028644_OFFSET(0x20);
 			++ps_offset;
 			continue;
 		}
 
-		vs_offset = util_bitcount(outinfo->export_mask & ((1u << i) - 1));
-		if (outinfo->prim_id_output != 0xffffffff) {
-			if (vs_offset >= outinfo->prim_id_output)
-				vs_offset++;
-		}
-		if (outinfo->layer_output != 0xffffffff) {
-			if (vs_offset >= outinfo->layer_output)
-			  vs_offset++;
-		}
 		flat_shade = !!(ps->info.fs.flat_shaded_mask & (1u << ps_offset));
 
-		val = S_028644_OFFSET(vs_offset) | S_028644_FLAT_SHADE(flat_shade);
-		pipeline->graphics.ps_input_cntl[ps_offset] = val;
+		pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, flat_shade);
 		++ps_offset;
 	}
 
