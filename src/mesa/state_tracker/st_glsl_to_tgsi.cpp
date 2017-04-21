@@ -4246,7 +4246,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       component = this->result;
       if (ir->offset) {
          ir->offset->accept(this);
-         if (ir->offset->type->base_type == GLSL_TYPE_ARRAY) {
+         if (ir->offset->type->is_array()) {
             const glsl_type *elt_type = ir->offset->type->fields.array;
             for (i = 0; i < ir->offset->type->length; i++) {
                offset[i] = this->result;

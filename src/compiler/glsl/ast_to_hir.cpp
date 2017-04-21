@@ -4712,7 +4712,7 @@ ast_declarator_list::hir(exec_list *instructions,
                           "invalid type `%s' in empty declaration",
                           type_name);
       } else {
-         if (decl_type->base_type == GLSL_TYPE_ARRAY) {
+         if (decl_type->is_array()) {
             /* From Section 13.22 (Array Declarations) of the GLSL ES 3.2
              * spec:
              *
