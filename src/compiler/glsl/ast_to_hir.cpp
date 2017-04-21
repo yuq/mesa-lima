@@ -444,10 +444,8 @@ arithmetic_result_type(ir_rvalue * &value_a, ir_rvalue * &value_b,
     * type of both operands must be float.
     */
    assert(type_a->is_matrix() || type_b->is_matrix());
-   assert(type_a->base_type == GLSL_TYPE_FLOAT ||
-          type_a->is_double());
-   assert(type_b->base_type == GLSL_TYPE_FLOAT ||
-          type_b->is_double());
+   assert(type_a->is_float() || type_a->is_double());
+   assert(type_b->is_float() || type_b->is_double());
 
    /*   "* The operator is add (+), subtract (-), or divide (/), and the
     *      operands are matrices with the same number of rows and the same

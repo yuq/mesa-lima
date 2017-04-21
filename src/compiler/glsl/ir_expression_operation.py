@@ -276,12 +276,9 @@ constant_template_vector = mako.template.Template("""\
 # This template is for ir_triop_lrp.
 constant_template_lrp = mako.template.Template("""\
    case ${op.get_enum_name()}: {
-      assert(op[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             op[0]->type->is_double());
-      assert(op[1]->type->base_type == GLSL_TYPE_FLOAT ||
-             op[1]->type->is_double());
-      assert(op[2]->type->base_type == GLSL_TYPE_FLOAT ||
-             op[2]->type->is_double());
+      assert(op[0]->type->is_float() || op[0]->type->is_double());
+      assert(op[1]->type->is_float() || op[1]->type->is_double());
+      assert(op[2]->type->is_float() || op[2]->type->is_double());
 
       unsigned c2_inc = op[2]->type->is_scalar() ? 0 : 1;
       for (unsigned c = 0, c2 = 0; c < components; c2 += c2_inc, c++) {

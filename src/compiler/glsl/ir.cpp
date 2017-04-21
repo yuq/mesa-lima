@@ -783,10 +783,9 @@ ir_constant::ir_constant(const struct glsl_type *type, exec_list *value_list)
    if (value->type->is_scalar() && value->next->is_tail_sentinel()) {
       if (type->is_matrix()) {
 	 /* Matrix - fill diagonal (rest is already set to 0) */
-         assert(type->base_type == GLSL_TYPE_FLOAT ||
-                type->is_double());
+         assert(type->is_float() || type->is_double());
          for (unsigned i = 0; i < type->matrix_columns; i++) {
-            if (type->base_type == GLSL_TYPE_FLOAT)
+            if (type->is_float())
                this->value.f[i * type->vector_elements + i] =
                   value->value.f[0];
             else
@@ -1510,7 +1509,7 @@ ir_texture::set_sampler(ir_dereference *sampler, const glsl_type *type)
       assert(type->base_type == GLSL_TYPE_INT);
    } else if (this->op == ir_lod) {
       assert(type->vector_elements == 2);
-      assert(type->base_type == GLSL_TYPE_FLOAT);
+      assert(type->is_float());
    } else if (this->op == ir_samples_identical) {
       assert(type == glsl_type::bool_type);
       assert(sampler->type->is_sampler());

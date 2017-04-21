@@ -1952,7 +1952,7 @@ ir_to_mesa_visitor::visit(ir_constant *ir)
       dst_reg mat_column = dst_reg(mat);
 
       for (i = 0; i < ir->type->matrix_columns; i++) {
-	 assert(ir->type->base_type == GLSL_TYPE_FLOAT);
+	 assert(ir->type->is_float());
 	 values = &ir->value.f[i * ir->type->vector_elements];
 
 	 src = src_reg(PROGRAM_CONSTANT, -1, NULL);
