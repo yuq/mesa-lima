@@ -4333,11 +4333,22 @@ process_initializer(ir_variable *var, ast_declaration *decl,
     *    "Opaque variables [...] are initialized only through the
     *     OpenGL API; they cannot be declared with an initializer in a
     *     shader."
+    *
+    * From section 4.1.7 of the ARB_bindless_texture spec:
+    *
+    *    "Samplers may be declared as shader inputs and outputs, as uniform
+    *     variables, as temporary variables, and as function parameters."
+    *
+    * From section 4.1.X of the ARB_bindless_texture spec:
+    *
+    *    "Images may be declared as shader inputs and outputs, as uniform
+    *     variables, as temporary variables, and as function parameters."
     */
-   if (var->type->contains_opaque()) {
+   if (var->type->contains_atomic() ||
+       (!state->has_bindless() && var->type->contains_opaque())) {
       _mesa_glsl_error(&initializer_loc, state,
-                       "cannot initialize opaque variable %s",
-                       var->name);
+                       "cannot initialize %s variable %s",
+                       var->name, state->has_bindless() ? "atomic" : "opaque");
    }
 
    if ((var->data.mode == ir_var_shader_in) && (state->current_function == NULL)) {
