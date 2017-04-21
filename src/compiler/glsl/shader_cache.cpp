@@ -129,7 +129,7 @@ encode_type_to_blob(struct blob *blob, const glsl_type *type)
          blob_write_string(blob, type->fields.structure[i].name);
       }
 
-      if (type->base_type == GLSL_TYPE_INTERFACE) {
+      if (type->is_interface()) {
          blob_write_uint32(blob, type->interface_packing);
          blob_write_uint32(blob, type->interface_row_major);
       }

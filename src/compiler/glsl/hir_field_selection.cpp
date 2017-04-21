@@ -47,7 +47,7 @@ _mesa_ast_field_selection_to_hir(const ast_expression *expr,
    if (op->type->is_error()) {
       /* silently propagate the error */
    } else if (op->type->base_type == GLSL_TYPE_STRUCT
-              || op->type->base_type == GLSL_TYPE_INTERFACE) {
+              || op->type->is_interface()) {
       result = new(ctx) ir_dereference_record(op,
 					      expr->primary_expression.identifier);
 
