@@ -1930,6 +1930,12 @@ ast_function_expression::handle_method(exec_list *instructions,
    return ir_rvalue::error_value(ctx);
 }
 
+static inline bool is_valid_constructor(const glsl_type *type,
+                                        struct _mesa_glsl_parse_state *state)
+{
+   return type->is_numeric() || type->is_boolean();
+}
+
 ir_rvalue *
 ast_function_expression::hir(exec_list *instructions,
                              struct _mesa_glsl_parse_state *state)
@@ -2007,7 +2013,7 @@ ast_function_expression::hir(exec_list *instructions,
                                            state);
       }
 
-      if (!constructor_type->is_numeric() && !constructor_type->is_boolean())
+      if (!is_valid_constructor(constructor_type, state))
          return ir_rvalue::error_value(ctx);
 
       /* Total number of components of the type being constructed. */
@@ -2037,7 +2043,7 @@ ast_function_expression::hir(exec_list *instructions,
             return ir_rvalue::error_value(ctx);
          }
 
-         if (!result->type->is_numeric() && !result->type->is_boolean()) {
+         if (!is_valid_constructor(result->type, state)) {
             _mesa_glsl_error(& loc, state, "cannot construct `%s' from a "
                              "non-numeric data type",
                              constructor_type->name);
