@@ -208,16 +208,10 @@ _mesa_reference_vao_(struct gl_context *ctx,
    if (vao) {
       /* reference new array object */
       mtx_lock(&vao->Mutex);
-      if (vao->RefCount == 0) {
-         /* this array's being deleted (look just above) */
-         /* Not sure this can every really happen.  Warn if it does. */
-         _mesa_problem(NULL, "referencing deleted array object");
-         *ptr = NULL;
-      }
-      else {
-         vao->RefCount++;
-         *ptr = vao;
-      }
+      assert(vao->RefCount > 0);
+
+      vao->RefCount++;
+      *ptr = vao;
       mtx_unlock(&vao->Mutex);
    }
 }

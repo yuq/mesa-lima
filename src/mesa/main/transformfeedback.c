@@ -110,16 +110,12 @@ reference_transform_feedback_object(struct gl_transform_feedback_object **ptr,
    assert(!*ptr);
 
    if (obj) {
+      assert(obj->RefCount > 0);
+
       /* reference new object */
-      if (obj->RefCount == 0) {
-         _mesa_problem(NULL, "referencing deleted transform feedback object");
-         *ptr = NULL;
-      }
-      else {
-         obj->RefCount++;
-         obj->EverBound = GL_TRUE;
-         *ptr = obj;
-      }
+      obj->RefCount++;
+      obj->EverBound = GL_TRUE;
+      *ptr = obj;
    }
 }
 

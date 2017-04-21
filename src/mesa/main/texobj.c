@@ -566,16 +566,10 @@ _mesa_reference_texobj_(struct gl_texture_object **ptr,
       /* reference new texture */
       assert(valid_texture_object(tex));
       mtx_lock(&tex->Mutex);
-      if (tex->RefCount == 0) {
-         /* this texture's being deleted (look just above) */
-         /* Not sure this can every really happen.  Warn if it does. */
-         _mesa_problem(NULL, "referencing deleted texture object");
-         *ptr = NULL;
-      }
-      else {
-         tex->RefCount++;
-         *ptr = tex;
-      }
+      assert(tex->RefCount > 0);
+
+      tex->RefCount++;
+      *ptr = tex;
       mtx_unlock(&tex->Mutex);
    }
 }

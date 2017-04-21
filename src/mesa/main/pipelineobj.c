@@ -206,16 +206,10 @@ _mesa_reference_pipeline_object_(struct gl_context *ctx,
    if (obj) {
       /* reference new pipeline object */
       mtx_lock(&obj->Mutex);
-      if (obj->RefCount == 0) {
-         /* this pipeline's being deleted (look just above) */
-         /* Not sure this can ever really happen.  Warn if it does. */
-         _mesa_problem(NULL, "referencing deleted pipeline object");
-         *ptr = NULL;
-      }
-      else {
-         obj->RefCount++;
-         *ptr = obj;
-      }
+      assert(obj->RefCount > 0);
+
+      obj->RefCount++;
+      *ptr = obj;
       mtx_unlock(&obj->Mutex);
    }
 }
