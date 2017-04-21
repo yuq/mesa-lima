@@ -2633,8 +2633,7 @@ select_gles_precision(unsigned qual_precision,
     *    declare an atomic type with a different precision or to specify the
     *    default precision for an atomic type to be lowp or mediump."
     */
-   if (type->base_type == GLSL_TYPE_ATOMIC_UINT &&
-       precision != ast_precision_high) {
+   if (type->is_atomic_uint() && precision != ast_precision_high) {
       _mesa_glsl_error(loc, state,
                        "atomic_uint can only have highp precision qualifier");
    }
@@ -4735,7 +4734,7 @@ ast_declarator_list::hir(exec_list *instructions,
             validate_array_dimensions(decl_type, state, &loc);
          }
 
-         if (decl_type->base_type == GLSL_TYPE_ATOMIC_UINT) {
+         if (decl_type->is_atomic_uint()) {
             /* Empty atomic counter declarations are allowed and useful
              * to set the default offset qualifier.
              */

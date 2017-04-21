@@ -681,7 +681,7 @@ struct glsl_type {
     */
    unsigned atomic_size() const
    {
-      if (base_type == GLSL_TYPE_ATOMIC_UINT)
+      if (is_atomic_uint())
          return ATOMIC_COUNTER_SIZE;
       else if (is_array())
          return length * fields.array->atomic_size();

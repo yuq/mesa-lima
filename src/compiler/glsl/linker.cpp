@@ -3702,8 +3702,7 @@ create_shader_variable(struct gl_shader_program *shProg,
     *        qualifier, except for vertex shader inputs and fragment shader
     *        outputs."
     */
-   if (in->type->base_type == GLSL_TYPE_ATOMIC_UINT ||
-       is_gl_identifier(in->name) ||
+   if (in->type->is_atomic_uint() || is_gl_identifier(in->name) ||
        !(in->data.explicit_location || use_implicit_location)) {
       out->location = -1;
    } else {
