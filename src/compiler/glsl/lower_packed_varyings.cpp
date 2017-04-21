@@ -383,6 +383,12 @@ lower_packed_varyings_visitor::bitwise_assign_pack(ir_rvalue *lhs,
             rhs = u2i(expr(ir_unop_unpack_uint_2x32, rhs));
          }
          break;
+      case GLSL_TYPE_SAMPLER:
+         rhs = u2i(expr(ir_unop_unpack_sampler_2x32, rhs));
+         break;
+      case GLSL_TYPE_IMAGE:
+         rhs = u2i(expr(ir_unop_unpack_image_2x32, rhs));
+         break;
       default:
          assert(!"Unexpected type conversion while lowering varyings");
          break;
@@ -461,6 +467,14 @@ lower_packed_varyings_visitor::bitwise_assign_unpack(ir_rvalue *lhs,
          } else {
             rhs = expr(ir_unop_pack_uint_2x32, i2u(rhs));
          }
+         break;
+      case GLSL_TYPE_SAMPLER:
+         rhs = new(mem_ctx)
+            ir_expression(ir_unop_pack_sampler_2x32, lhs->type, i2u(rhs));
+         break;
+      case GLSL_TYPE_IMAGE:
+         rhs = new(mem_ctx)
+            ir_expression(ir_unop_pack_image_2x32, lhs->type, i2u(rhs));
          break;
       default:
          assert(!"Unexpected type conversion while lowering varyings");
