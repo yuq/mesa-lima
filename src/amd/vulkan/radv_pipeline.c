@@ -1881,12 +1881,6 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 	outinfo = &vs->info.vs.outinfo;
 
 	unsigned ps_offset = 0;
-	if (ps->info.fs.has_pcoord) {
-		unsigned val;
-		val = S_028644_PT_SPRITE_TEX(1) | S_028644_OFFSET(0x20);
-		pipeline->graphics.ps_input_cntl[ps_offset] = val;
-		ps_offset++;
-	}
 
 	if (ps->info.fs.prim_id_input && (outinfo->prim_id_output != 0xffffffff)) {
 		unsigned vs_offset, flat_shade;
@@ -1906,6 +1900,13 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 		val = S_028644_OFFSET(vs_offset) | S_028644_FLAT_SHADE(flat_shade);
 		pipeline->graphics.ps_input_cntl[ps_offset] = val;
 		++ps_offset;
+	}
+
+	if (ps->info.fs.has_pcoord) {
+		unsigned val;
+		val = S_028644_PT_SPRITE_TEX(1) | S_028644_OFFSET(0x20);
+		pipeline->graphics.ps_input_cntl[ps_offset] = val;
+		ps_offset++;
 	}
 
 	for (unsigned i = 0; i < 32 && (1u << i) <= ps->info.fs.input_mask; ++i) {
