@@ -169,7 +169,6 @@ _mesa_delete_vao(struct gl_context *ctx, struct gl_vertex_array_object *obj)
 {
    unbind_array_object_vbos(ctx, obj);
    _mesa_reference_buffer_object(ctx, &obj->IndexBufferObj, NULL);
-   mtx_destroy(&obj->Mutex);
    free(obj->Label);
    free(obj);
 }
@@ -192,11 +191,9 @@ _mesa_reference_vao_(struct gl_context *ctx,
       GLboolean deleteFlag = GL_FALSE;
       struct gl_vertex_array_object *oldObj = *ptr;
 
-      mtx_lock(&oldObj->Mutex);
       assert(oldObj->RefCount > 0);
       oldObj->RefCount--;
       deleteFlag = (oldObj->RefCount == 0);
-      mtx_unlock(&oldObj->Mutex);
 
       if (deleteFlag)
          _mesa_delete_vao(ctx, oldObj);
@@ -207,12 +204,10 @@ _mesa_reference_vao_(struct gl_context *ctx,
 
    if (vao) {
       /* reference new array object */
-      mtx_lock(&vao->Mutex);
       assert(vao->RefCount > 0);
 
       vao->RefCount++;
       *ptr = vao;
-      mtx_unlock(&vao->Mutex);
    }
 }
 
@@ -268,7 +263,6 @@ _mesa_initialize_vao(struct gl_context *ctx,
 
    vao->Name = name;
 
-   mtx_init(&vao->Mutex, mtx_plain);
    vao->RefCount = 1;
 
    /* Init the individual arrays */

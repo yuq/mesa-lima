@@ -66,7 +66,6 @@ _mesa_delete_pipeline_object(struct gl_context *ctx,
    }
 
    _mesa_reference_shader_program(ctx, &obj->ActiveProgram, NULL);
-   mtx_destroy(&obj->Mutex);
    free(obj->Label);
    ralloc_free(obj);
 }
@@ -80,7 +79,6 @@ _mesa_new_pipeline_object(struct gl_context *ctx, GLuint name)
    struct gl_pipeline_object *obj = rzalloc(NULL, struct gl_pipeline_object);
    if (obj) {
       obj->Name = name;
-      mtx_init(&obj->Mutex, mtx_plain);
       obj->RefCount = 1;
       obj->Flags = _mesa_get_shader_flags();
       obj->InfoLog = NULL;
@@ -189,11 +187,9 @@ _mesa_reference_pipeline_object_(struct gl_context *ctx,
       GLboolean deleteFlag = GL_FALSE;
       struct gl_pipeline_object *oldObj = *ptr;
 
-      mtx_lock(&oldObj->Mutex);
       assert(oldObj->RefCount > 0);
       oldObj->RefCount--;
       deleteFlag = (oldObj->RefCount == 0);
-      mtx_unlock(&oldObj->Mutex);
 
       if (deleteFlag) {
          _mesa_delete_pipeline_object(ctx, oldObj);
@@ -205,12 +201,10 @@ _mesa_reference_pipeline_object_(struct gl_context *ctx,
 
    if (obj) {
       /* reference new pipeline object */
-      mtx_lock(&obj->Mutex);
       assert(obj->RefCount > 0);
 
       obj->RefCount++;
       *ptr = obj;
-      mtx_unlock(&obj->Mutex);
    }
 }
 
