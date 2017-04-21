@@ -1237,7 +1237,7 @@ ir_constant::has_value(const ir_constant *c) const
       return true;
    }
 
-   if (this->type->base_type == GLSL_TYPE_STRUCT) {
+   if (this->type->is_record()) {
       const exec_node *a_node = this->components.get_head_raw();
       const exec_node *b_node = c->components.get_head_raw();
 

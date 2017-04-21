@@ -1903,7 +1903,7 @@ ir_to_mesa_visitor::visit(ir_constant *ir)
     * get lucky, copy propagation will eliminate the extra moves.
     */
 
-   if (ir->type->base_type == GLSL_TYPE_STRUCT) {
+   if (ir->type->is_record()) {
       src_reg temp_base = get_temp(ir->type);
       dst_reg temp = dst_reg(temp_base);
 

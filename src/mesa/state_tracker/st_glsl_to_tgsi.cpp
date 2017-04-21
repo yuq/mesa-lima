@@ -3091,7 +3091,7 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
                                      st_dst_reg *l, st_src_reg *r,
                                      st_src_reg *cond, bool cond_swap)
 {
-   if (type->base_type == GLSL_TYPE_STRUCT) {
+   if (type->is_record()) {
       for (unsigned int i = 0; i < type->length; i++) {
          emit_block_mov(ir, type->fields.structure[i].type, l, r,
                         cond, cond_swap);
@@ -3264,7 +3264,7 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
     * aggregate constant and move each constant value into it.  If we
     * get lucky, copy propagation will eliminate the extra moves.
     */
-   if (ir->type->base_type == GLSL_TYPE_STRUCT) {
+   if (ir->type->is_record()) {
       st_src_reg temp_base = get_temp(ir->type);
       st_dst_reg temp = st_dst_reg(temp_base);
 
