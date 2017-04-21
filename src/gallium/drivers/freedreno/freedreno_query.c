@@ -46,8 +46,8 @@ fd_create_query(struct pipe_context *pctx, unsigned query_type, unsigned index)
 	struct fd_query *q;
 
 	q = fd_sw_create_query(ctx, query_type);
-	if (!q)
-		q = fd_hw_create_query(ctx, query_type);
+	if (!q && ctx->create_query)
+		q = ctx->create_query(ctx, query_type);
 
 	return (struct pipe_query *) q;
 }

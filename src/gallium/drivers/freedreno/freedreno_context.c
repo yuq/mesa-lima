@@ -121,7 +121,6 @@ fd_context_destroy(struct pipe_context *pctx)
 	fd_fence_ref(pctx->screen, &ctx->last_fence, NULL);
 
 	fd_prog_fini(pctx);
-	fd_hw_query_fini(pctx);
 
 	if (ctx->blitter)
 		util_blitter_destroy(ctx->blitter);
@@ -293,7 +292,6 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	fd_query_context_init(pctx);
 	fd_texture_init(pctx);
 	fd_state_init(pctx);
-	fd_hw_query_init(pctx);
 
 	ctx->blitter = util_blitter_create(pctx);
 	if (!ctx->blitter)

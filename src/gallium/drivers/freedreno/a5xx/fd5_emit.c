@@ -909,8 +909,6 @@ t7              opcode: CP_WAIT_FOR_IDLE (26) (1 dwords)
 	// TODO hacks.. these should not be hardcoded:
 	OUT_PKT4(ring, REG_A5XX_GRAS_SC_CNTL, 1);
 	OUT_RING(ring, 0x00000008);   /* GRAS_SC_CNTL */
-
-	fd_hw_query_enable(batch, ring);
 }
 
 static void

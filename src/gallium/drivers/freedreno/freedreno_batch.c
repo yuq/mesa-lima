@@ -262,7 +262,7 @@ batch_flush(struct fd_batch *batch)
 	/* close out the draw cmds by making sure any active queries are
 	 * paused:
 	 */
-	fd_hw_query_set_stage(batch, batch->draw, FD_STAGE_NULL);
+	fd_batch_set_stage(batch, batch->draw, FD_STAGE_NULL);
 
 	fd_context_all_dirty(batch->ctx);
 	batch_flush_reset_dependencies(batch, true);

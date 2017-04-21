@@ -332,7 +332,8 @@ render_tiles(struct fd_batch *batch)
 
 		ctx->emit_tile_renderprep(batch, tile);
 
-		fd_hw_query_prepare_tile(batch, i, batch->gmem);
+		if (ctx->query_prepare_tile)
+			ctx->query_prepare_tile(batch, i, batch->gmem);
 
 		/* emit IB to drawcmds: */
 		ctx->emit_ib(batch->gmem, batch->draw);
@@ -353,7 +354,8 @@ render_sysmem(struct fd_batch *batch)
 
 	ctx->emit_sysmem_prep(batch);
 
-	fd_hw_query_prepare_tile(batch, 0, batch->gmem);
+	if (ctx->query_prepare_tile)
+		ctx->query_prepare_tile(batch, 0, batch->gmem);
 
 	/* emit IB to drawcmds: */
 	ctx->emit_ib(batch->gmem, batch->draw);
@@ -402,7 +404,8 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 			batch, pfb->width, pfb->height,
 			util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 			util_format_short_name(pipe_surface_format(pfb->zsbuf)));
-		fd_hw_query_prepare(batch, 1);
+		if (ctx->query_prepare)
+			ctx->query_prepare(batch, 1);
 		render_sysmem(batch);
 		ctx->stats.batch_sysmem++;
 	} else {
@@ -412,7 +415,8 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 			batch, pfb->width, pfb->height, gmem->nbins_x, gmem->nbins_y,
 			util_format_short_name(pipe_surface_format(pfb->cbufs[0])),
 			util_format_short_name(pipe_surface_format(pfb->zsbuf)));
-		fd_hw_query_prepare(batch, gmem->nbins_x * gmem->nbins_y);
+		if (ctx->query_prepare)
+			ctx->query_prepare(batch, gmem->nbins_x * gmem->nbins_y);
 		render_tiles(batch);
 		ctx->stats.batch_gmem++;
 	}

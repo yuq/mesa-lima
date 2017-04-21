@@ -291,6 +291,14 @@ struct fd_context {
 	/* indirect-branch emit: */
 	void (*emit_ib)(struct fd_ringbuffer *ring, struct fd_ringbuffer *target);
 
+	/* query: */
+	struct fd_query * (*create_query)(struct fd_context *ctx, unsigned query_type);
+	void (*query_prepare)(struct fd_batch *batch, uint32_t num_tiles);
+	void (*query_prepare_tile)(struct fd_batch *batch, uint32_t n,
+			struct fd_ringbuffer *ring);
+	void (*query_set_stage)(struct fd_batch *batch,
+			struct fd_ringbuffer *ring, enum fd_render_stage stage);
+
 	/*
 	 * Common pre-cooked VBO state (used for a3xx and later):
 	 */
@@ -366,6 +374,15 @@ static inline bool
 fd_supported_prim(struct fd_context *ctx, unsigned prim)
 {
 	return (1 << prim) & ctx->primtype_mask;
+}
+
+static inline void
+fd_batch_set_stage(struct fd_batch *batch,
+		struct fd_ringbuffer *ring, enum fd_render_stage stage)
+{
+	struct fd_context *ctx = batch->ctx;
+	if (ctx->query_set_stage)
+		ctx->query_set_stage(batch, ring, stage);
 }
 
 void fd_context_setup_common_vbos(struct fd_context *ctx);
