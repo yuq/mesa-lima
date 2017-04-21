@@ -972,6 +972,8 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
     */
    if (uni->type->is_sampler()) {
       bool flushed = false;
+      shProg->SamplersValidated = GL_TRUE;
+
       for (int i = 0; i < MESA_SHADER_STAGES; i++) {
 	 struct gl_linked_shader *const sh = shProg->_LinkedShaders[i];
 
