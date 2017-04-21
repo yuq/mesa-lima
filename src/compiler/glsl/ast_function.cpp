@@ -740,8 +740,8 @@ convert_component(ir_rvalue *src, const glsl_type *desired_type)
    if (src->type->is_error())
       return src;
 
-   assert(a <= GLSL_TYPE_BOOL);
-   assert(b <= GLSL_TYPE_BOOL);
+   assert(a <= GLSL_TYPE_IMAGE);
+   assert(b <= GLSL_TYPE_IMAGE);
 
    if (a == b)
       return src;
@@ -768,6 +768,12 @@ convert_component(ir_rvalue *src, const glsl_type *desired_type)
          break;
       case GLSL_TYPE_INT64:
          result = new(ctx) ir_expression(ir_unop_i642u, src);
+         break;
+      case GLSL_TYPE_SAMPLER:
+         result = new(ctx) ir_expression(ir_unop_unpack_sampler_2x32, src);
+         break;
+      case GLSL_TYPE_IMAGE:
+         result = new(ctx) ir_expression(ir_unop_unpack_image_2x32, src);
          break;
       }
       break;
@@ -908,6 +914,22 @@ convert_component(ir_rvalue *src, const glsl_type *desired_type)
          break;
       case GLSL_TYPE_UINT64:
          result = new(ctx) ir_expression(ir_unop_u642i64, src);
+         break;
+      }
+      break;
+   case GLSL_TYPE_SAMPLER:
+      switch (b) {
+      case GLSL_TYPE_UINT:
+         result = new(ctx)
+            ir_expression(ir_unop_pack_sampler_2x32, desired_type, src);
+         break;
+      }
+      break;
+   case GLSL_TYPE_IMAGE:
+      switch (b) {
+      case GLSL_TYPE_UINT:
+         result = new(ctx)
+            ir_expression(ir_unop_pack_image_2x32, desired_type, src);
          break;
       }
       break;
@@ -1933,7 +1955,8 @@ ast_function_expression::handle_method(exec_list *instructions,
 static inline bool is_valid_constructor(const glsl_type *type,
                                         struct _mesa_glsl_parse_state *state)
 {
-   return type->is_numeric() || type->is_boolean();
+   return type->is_numeric() || type->is_boolean() ||
+          (state->has_bindless() && (type->is_sampler() || type->is_image()));
 }
 
 ir_rvalue *
@@ -2147,10 +2170,51 @@ ast_function_expression::hir(exec_list *instructions,
 
       /* Type cast each parameter and, if possible, fold constants.*/
       foreach_in_list_safe(ir_rvalue, ir, &actual_parameters) {
-         const glsl_type *desired_type =
-            glsl_type::get_instance(constructor_type->base_type,
-                                    ir->type->vector_elements,
-                                    ir->type->matrix_columns);
+         const glsl_type *desired_type;
+
+         /* From section 5.4.1 of the ARB_bindless_texture spec:
+          *
+          * "In the following four constructors, the low 32 bits of the sampler
+          *  type correspond to the .x component of the uvec2 and the high 32
+          *  bits correspond to the .y component."
+          *
+          *  uvec2(any sampler type)     // Converts a sampler type to a
+          *                              //   pair of 32-bit unsigned integers
+          *  any sampler type(uvec2)     // Converts a pair of 32-bit unsigned integers to
+          *                              //   a sampler type
+          *  uvec2(any image type)       // Converts an image type to a
+          *                              //   pair of 32-bit unsigned integers
+          *  any image type(uvec2)       // Converts a pair of 32-bit unsigned integers to
+          *                              //   an image type
+          */
+         if (ir->type->is_sampler() || ir->type->is_image()) {
+            /* Convert a sampler/image type to a pair of 32-bit unsigned
+             * integers as defined by ARB_bindless_texture.
+             */
+            if (constructor_type != glsl_type::uvec2_type) {
+               _mesa_glsl_error(&loc, state, "sampler and image types can only "
+                                "be converted to a pair of 32-bit unsigned "
+                                "integers");
+            }
+            desired_type = glsl_type::uvec2_type;
+         } else if (constructor_type->is_sampler() ||
+                    constructor_type->is_image()) {
+            /* Convert a pair of 32-bit unsigned integers to a sampler or image
+             * type as defined by ARB_bindless_texture.
+             */
+            if (ir->type != glsl_type::uvec2_type) {
+               _mesa_glsl_error(&loc, state, "sampler and image types can only "
+                                "be converted from a pair of 32-bit unsigned "
+                                "integers");
+            }
+            desired_type = constructor_type;
+         } else {
+            desired_type =
+               glsl_type::get_instance(constructor_type->base_type,
+                                       ir->type->vector_elements,
+                                       ir->type->matrix_columns);
+         }
+
          ir_rvalue *result = convert_component(ir, desired_type);
 
          /* Attempt to convert the parameter to a constant valued expression.

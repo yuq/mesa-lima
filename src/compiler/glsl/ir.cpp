@@ -370,6 +370,16 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
       this->type = glsl_type::vec4_type;
       break;
 
+   case ir_unop_unpack_sampler_2x32:
+   case ir_unop_unpack_image_2x32:
+      this->type = glsl_type::uvec2_type;
+      break;
+
+   case ir_unop_pack_sampler_2x32:
+   case ir_unop_pack_image_2x32:
+      this->type = op0->type;
+      break;
+
    case ir_unop_frexp_sig:
       this->type = op0->type;
       break;
@@ -606,7 +616,7 @@ ir_constant::ir_constant(const struct glsl_type *type,
    this->array_elements = NULL;
 
    assert((type->base_type >= GLSL_TYPE_UINT)
-	  && (type->base_type <= GLSL_TYPE_BOOL));
+	  && (type->base_type <= GLSL_TYPE_IMAGE));
 
    this->type = type;
    memcpy(& this->value, data, sizeof(this->value));
