@@ -162,16 +162,11 @@ fd_hw_begin_query(struct fd_context *ctx, struct fd_query *q)
 
 	DBG("%p: active=%d", q, q->active);
 
-	if (q->active)
-		return false;
-
 	/* begin_query() should clear previous results: */
 	destroy_periods(ctx, hq);
 
 	if (batch && is_active(hq, batch->stage))
 		resume_query(batch, hq, batch->draw);
-
-	q->active = true;
 
 	/* add to active list: */
 	assert(list_empty(&hq->list));
@@ -186,22 +181,11 @@ fd_hw_end_query(struct fd_context *ctx, struct fd_query *q)
 	struct fd_batch *batch = ctx->batch;
 	struct fd_hw_query *hq = fd_hw_query(q);
 
-	/* there are a couple special cases, which don't have
-	 * a matching ->begin_query():
-	 */
-	if (skip_begin_query(q->type) && !q->active) {
-		fd_hw_begin_query(ctx, q);
-	}
-
 	DBG("%p: active=%d", q, q->active);
-
-	if (!q->active)
-		return;
 
 	if (batch && is_active(hq, batch->stage))
 		pause_query(batch, hq, batch->draw);
 
-	q->active = false;
 	/* remove from active list: */
 	list_delinit(&hq->list);
 }
@@ -221,11 +205,6 @@ fd_hw_get_query_result(struct fd_context *ctx, struct fd_query *q,
 	struct fd_hw_sample_period *period;
 
 	DBG("%p: wait=%d, active=%d", q, wait, q->active);
-
-	if (q->active)
-		return false;
-
-	util_query_clear_result(result, q->type);
 
 	if (LIST_IS_EMPTY(&hq->periods))
 		return true;
@@ -424,16 +403,6 @@ void
 fd_hw_query_set_stage(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		enum fd_render_stage stage)
 {
-	/* special case: internal blits (like mipmap level generation)
-	 * go through normal draw path (via util_blitter_blit()).. but
-	 * we need to ignore the FD_STAGE_DRAW which will be set, so we
-	 * don't enable queries which should be paused during internal
-	 * blits:
-	 */
-	if ((batch->stage == FD_STAGE_BLIT) &&
-			(stage != FD_STAGE_NULL))
-		return;
-
 	if (stage != batch->stage) {
 		struct fd_hw_query *hq;
 		LIST_FOR_EACH_ENTRY(hq, &batch->ctx->active_queries, list) {
@@ -447,7 +416,6 @@ fd_hw_query_set_stage(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		}
 	}
 	clear_sample_cache(batch);
-	batch->stage = stage;
 }
 
 /* call the provider->enable() for all the hw queries that were active

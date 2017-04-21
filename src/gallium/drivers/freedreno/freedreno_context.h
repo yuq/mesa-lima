@@ -381,8 +381,21 @@ fd_batch_set_stage(struct fd_batch *batch,
 		struct fd_ringbuffer *ring, enum fd_render_stage stage)
 {
 	struct fd_context *ctx = batch->ctx;
+
+	/* special case: internal blits (like mipmap level generation)
+	 * go through normal draw path (via util_blitter_blit()).. but
+	 * we need to ignore the FD_STAGE_DRAW which will be set, so we
+	 * don't enable queries which should be paused during internal
+	 * blits:
+	 */
+	if ((batch->stage == FD_STAGE_BLIT) &&
+			(stage != FD_STAGE_NULL))
+		return;
+
 	if (ctx->query_set_stage)
 		ctx->query_set_stage(batch, ring, stage);
+
+	batch->stage = stage;
 }
 
 void fd_context_setup_common_vbos(struct fd_context *ctx);
