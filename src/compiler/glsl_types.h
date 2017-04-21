@@ -669,6 +669,14 @@ struct glsl_type {
    }
 
    /**
+    * Query whether or not a type is an atomic_uint.
+    */
+   bool is_atomic_uint() const
+   {
+      return base_type == GLSL_TYPE_ATOMIC_UINT;
+   }
+
+   /**
     * Return the amount of atomic counter storage required for a type.
     */
    unsigned atomic_size() const
