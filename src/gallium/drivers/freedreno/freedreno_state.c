@@ -126,7 +126,7 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 		fd_batch_reference(&old_batch, ctx->batch);
 
 		if (likely(old_batch))
-			fd_batch_set_stage(old_batch, old_batch->draw, FD_STAGE_NULL);
+			fd_batch_set_stage(old_batch, FD_STAGE_NULL);
 
 		batch = fd_batch_from_fb(&ctx->screen->batch_cache, ctx, framebuffer);
 		fd_batch_reference(&ctx->batch, NULL);

@@ -110,7 +110,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	/* NOTE: needs to be before resource_written(batch->query_buf), otherwise
 	 * query_buf may not be created yet.
 	 */
-	fd_batch_set_stage(batch, batch->draw, FD_STAGE_DRAW);
+	fd_batch_set_stage(batch, FD_STAGE_DRAW);
 
 	/*
 	 * Figure out the buffers/features we need:
@@ -375,7 +375,7 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 		return;
 	}
 
-	fd_batch_set_stage(batch, batch->draw, FD_STAGE_CLEAR);
+	fd_batch_set_stage(batch, FD_STAGE_CLEAR);
 
 	ctx->clear(ctx, buffers, color, depth, stencil);
 

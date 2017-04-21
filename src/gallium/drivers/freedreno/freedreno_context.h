@@ -307,8 +307,7 @@ struct fd_context {
 	void (*query_prepare)(struct fd_batch *batch, uint32_t num_tiles);
 	void (*query_prepare_tile)(struct fd_batch *batch, uint32_t n,
 			struct fd_ringbuffer *ring);
-	void (*query_set_stage)(struct fd_batch *batch,
-			struct fd_ringbuffer *ring, enum fd_render_stage stage);
+	void (*query_set_stage)(struct fd_batch *batch, enum fd_render_stage stage);
 
 	/*
 	 * Common pre-cooked VBO state (used for a3xx and later):
@@ -388,8 +387,7 @@ fd_supported_prim(struct fd_context *ctx, unsigned prim)
 }
 
 static inline void
-fd_batch_set_stage(struct fd_batch *batch,
-		struct fd_ringbuffer *ring, enum fd_render_stage stage)
+fd_batch_set_stage(struct fd_batch *batch, enum fd_render_stage stage)
 {
 	struct fd_context *ctx = batch->ctx;
 
@@ -404,7 +402,7 @@ fd_batch_set_stage(struct fd_batch *batch,
 		return;
 
 	if (ctx->query_set_stage)
-		ctx->query_set_stage(batch, ring, stage);
+		ctx->query_set_stage(batch, stage);
 
 	batch->stage = stage;
 }

@@ -380,8 +380,7 @@ fd_hw_query_prepare_tile(struct fd_batch *batch, uint32_t n,
 }
 
 void
-fd_hw_query_set_stage(struct fd_batch *batch, struct fd_ringbuffer *ring,
-		enum fd_render_stage stage)
+fd_hw_query_set_stage(struct fd_batch *batch, enum fd_render_stage stage)
 {
 	if (stage != batch->stage) {
 		struct fd_hw_query *hq;
@@ -390,9 +389,9 @@ fd_hw_query_set_stage(struct fd_batch *batch, struct fd_ringbuffer *ring,
 			bool now_active = is_active(hq, stage);
 
 			if (now_active && !was_active)
-				resume_query(batch, hq, ring);
+				resume_query(batch, hq, batch->draw);
 			else if (was_active && !now_active)
-				pause_query(batch, hq, ring);
+				pause_query(batch, hq, batch->draw);
 		}
 	}
 	clear_sample_cache(batch);

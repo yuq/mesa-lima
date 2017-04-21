@@ -1091,7 +1091,7 @@ fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond, bool discard,
 			ctx->cond_query, ctx->cond_cond, ctx->cond_mode);
 
 	if (ctx->batch)
-		fd_batch_set_stage(ctx->batch, ctx->batch->draw, stage);
+		fd_batch_set_stage(ctx->batch, stage);
 
 	ctx->in_blit = discard;
 }
@@ -1100,7 +1100,7 @@ void
 fd_blitter_pipe_end(struct fd_context *ctx)
 {
 	if (ctx->batch)
-		fd_batch_set_stage(ctx->batch, ctx->batch->draw, FD_STAGE_NULL);
+		fd_batch_set_stage(ctx->batch, FD_STAGE_NULL);
 	ctx->in_blit = false;
 }
 
