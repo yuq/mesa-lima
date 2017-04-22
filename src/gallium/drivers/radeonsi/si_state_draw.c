@@ -211,8 +211,9 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 			 ((output_vertex_size / 4) << 13);
 	tcs_out_offsets = (output_patch0_offset / 16) |
 			  ((perpatch_output_offset / 16) << 16);
-	offchip_layout = (pervertex_output_patch_size * *num_patches << 16) |
-			 (num_tcs_output_cp << 9) | *num_patches;
+	offchip_layout = *num_patches |
+			 (num_tcs_output_cp << 6) |
+			 (pervertex_output_patch_size * *num_patches << 12);
 
 	/* Compute the LDS size. */
 	lds_size = output_patch0_offset + output_patch_size * *num_patches;

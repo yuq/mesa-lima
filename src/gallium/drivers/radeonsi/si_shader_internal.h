@@ -130,7 +130,7 @@ struct si_shader_context {
 	 *   [0] = clamp vertex color
 	 *   [1] = indexed
 	 *   [8:20] = stride between patches in DW = num_inputs * num_vertices * 4
-	 *            max = 32*32*4
+	 *            max = 32*32*4 + 32*4
 	 *   [24:31] = stride between vertices in DW = num_inputs * 4
 	 *             max = 32*4
 	 */
@@ -142,21 +142,26 @@ struct si_shader_context {
 
 	/* API TCS & TES */
 	/* Layout of TCS outputs in the offchip buffer
-	 *   [0:8] = the number of patches per threadgroup.
-	 *   [9:15] = the number of output vertices per patch.
-	 *   [16:31] = the offset of per patch attributes in the buffer in bytes. */
+	 * # 6 bits
+	 *   [0:5] = the number of patches per threadgroup, max = NUM_PATCHES (40)
+	 * # 6 bits
+	 *   [6:11] = the number of output vertices per patch, max = 32
+	 * # 20 bits
+	 *   [12:31] = the offset of per patch attributes in the buffer in bytes.
+	 *             max = NUM_PATCHES*32*32*16
+	 */
 	int param_tcs_offchip_layout;
 
 	/* API TCS */
 	/* Offsets where TCS outputs and TCS patch outputs live in LDS:
 	 *   [0:15] = TCS output patch0 offset / 16, max = NUM_PATCHES * 32 * 32
 	 *   [16:31] = TCS output patch0 offset for per-patch / 16
-	 *             max = NUM_PATCHES*32*32* + 32*32
+	 *             max = (NUM_PATCHES + 1) * 32*32
 	 */
 	int param_tcs_out_lds_offsets;
 	/* Layout of TCS outputs / TES inputs:
 	 *   [0:12] = stride between output patches in DW, num_outputs * num_vertices * 4
-	 *            max = 32*32*4
+	 *            max = 32*32*4 + 32*4
 	 *   [13:20] = stride between output vertices in DW = num_inputs * 4
 	 *             max = 32*4
 	 *   [26:31] = gl_PatchVerticesIn, max = 32
