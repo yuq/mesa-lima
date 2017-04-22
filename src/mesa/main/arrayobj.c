@@ -417,19 +417,19 @@ _mesa_all_buffers_are_unmapped(const struct gl_vertex_array_object *vao)
 
 
 /**
- * Helper for _mesa_BindVertexArray().
- * \param genRequired  specifies behavour when id was not generated with
- *                     glGenVertexArrays().
+ * ARB version of glBindVertexArray()
  */
-static void
-bind_vertex_array(struct gl_context *ctx, GLuint id)
+void GLAPIENTRY
+_mesa_BindVertexArray( GLuint id )
 {
+   GET_CURRENT_CONTEXT(ctx);
+
    struct gl_vertex_array_object * const oldObj = ctx->Array.VAO;
    struct gl_vertex_array_object *newObj = NULL;
 
    assert(oldObj != NULL);
 
-   if ( oldObj->Name == id )
+   if (oldObj->Name == id)
       return;   /* rebinding the same array object- no change */
 
    /*
@@ -479,17 +479,6 @@ bind_vertex_array(struct gl_context *ctx, GLuint id)
 
    ctx->NewState |= _NEW_ARRAY;
    _mesa_reference_vao(ctx, &ctx->Array.VAO, newObj);
-}
-
-
-/**
- * ARB version of glBindVertexArray()
- */
-void GLAPIENTRY
-_mesa_BindVertexArray( GLuint id )
-{
-   GET_CURRENT_CONTEXT(ctx);
-   bind_vertex_array(ctx, id);
 }
 
 
