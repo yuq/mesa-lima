@@ -30,7 +30,7 @@
 #include "radeon/radeon_winsys.h"
 
 #define SI_PM4_MAX_DW		176
-#define SI_PM4_MAX_BO		1
+#define SI_PM4_MAX_BO		3
 
 // forward defines
 struct si_context;

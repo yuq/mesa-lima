@@ -2766,11 +2766,14 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	}
 
 	assert(!sctx->tf_ring);
+	/* Use 64K alignment for both rings, so that we can pass the address
+	 * to shaders as one SGPR containing bits [16:47].
+	 */
 	sctx->tf_ring = r600_aligned_buffer_create(sctx->b.b.screen,
 						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   32768 * sctx->screen->b.info.max_se,
-						   256);
+						   64 * 1024);
 	if (!sctx->tf_ring)
 		return;
 
@@ -2782,11 +2785,21 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 					   PIPE_USAGE_DEFAULT,
 					   max_offchip_buffers *
 					   sctx->screen->tess_offchip_block_dw_size * 4,
-					   256);
+					   64 * 1024);
 	if (!sctx->tess_offchip_ring)
 		return;
 
 	si_init_config_add_vgt_flush(sctx);
+
+	uint64_t offchip_va = r600_resource(sctx->tess_offchip_ring)->gpu_address;
+	uint64_t factor_va = r600_resource(sctx->tf_ring)->gpu_address;
+	assert((offchip_va & 0xffff) == 0);
+	assert((factor_va & 0xffff) == 0);
+
+	si_pm4_add_bo(sctx->init_config, r600_resource(sctx->tess_offchip_ring),
+		      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RINGS);
+	si_pm4_add_bo(sctx->init_config, r600_resource(sctx->tf_ring),
+		      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RINGS);
 
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
@@ -2796,10 +2809,10 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 		si_pm4_set_reg(sctx->init_config, R_030938_VGT_TF_RING_SIZE,
 			       S_030938_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_030940_VGT_TF_MEMORY_BASE,
-			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
+			       factor_va >> 8);
 		if (sctx->b.chip_class >= GFX9)
 			si_pm4_set_reg(sctx->init_config, R_030944_VGT_TF_MEMORY_BASE_HI,
-				       r600_resource(sctx->tf_ring)->gpu_address >> 40);
+				       factor_va >> 40);
 		si_pm4_set_reg(sctx->init_config, R_03093C_VGT_HS_OFFCHIP_PARAM,
 		             S_03093C_OFFCHIP_BUFFERING(max_offchip_buffers) |
 		             S_03093C_OFFCHIP_GRANULARITY(offchip_granularity));
@@ -2808,9 +2821,29 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 		si_pm4_set_reg(sctx->init_config, R_008988_VGT_TF_RING_SIZE,
 			       S_008988_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_0089B8_VGT_TF_MEMORY_BASE,
-			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
+			       factor_va >> 8);
 		si_pm4_set_reg(sctx->init_config, R_0089B0_VGT_HS_OFFCHIP_PARAM,
 		               S_0089B0_OFFCHIP_BUFFERING(max_offchip_buffers));
+	}
+
+	if (sctx->b.chip_class >= GFX9) {
+		si_pm4_set_reg(sctx->init_config,
+			       R_00B430_SPI_SHADER_USER_DATA_LS_0 +
+			       GFX9_SGPR_TCS_OFFCHIP_ADDR_BASE64K * 4,
+			       offchip_va >> 16);
+		si_pm4_set_reg(sctx->init_config,
+			       R_00B430_SPI_SHADER_USER_DATA_LS_0 +
+			       GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K * 4,
+			       factor_va >> 16);
+	} else {
+		si_pm4_set_reg(sctx->init_config,
+			       R_00B430_SPI_SHADER_USER_DATA_HS_0 +
+			       GFX6_SGPR_TCS_OFFCHIP_ADDR_BASE64K * 4,
+			       offchip_va >> 16);
+		si_pm4_set_reg(sctx->init_config,
+			       R_00B430_SPI_SHADER_USER_DATA_HS_0 +
+			       GFX6_SGPR_TCS_FACTOR_ADDR_BASE64K * 4,
+			       factor_va >> 16);
 	}
 
 	/* Flush the context to re-emit the init_config state.
@@ -2819,13 +2852,6 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	si_pm4_upload_indirect_buffer(sctx, sctx->init_config);
 	sctx->b.initial_gfx_cs_size = 0; /* force flush */
 	si_context_gfx_flush(sctx, RADEON_FLUSH_ASYNC, NULL);
-
-	si_set_ring_buffer(&sctx->b.b, SI_HS_RING_TESS_FACTOR, sctx->tf_ring,
-			   0, sctx->tf_ring->width0, false, false, 0, 0, 0);
-
-	si_set_ring_buffer(&sctx->b.b, SI_HS_RING_TESS_OFFCHIP,
-	                   sctx->tess_offchip_ring, 0,
-	                   sctx->tess_offchip_ring->width0, false, false, 0, 0, 0);
 }
 
 /**

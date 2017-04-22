@@ -164,9 +164,6 @@ struct si_shader_data {
 
 /* Private read-write buffer slots. */
 enum {
-	SI_HS_RING_TESS_FACTOR,
-	SI_HS_RING_TESS_OFFCHIP,
-
 	SI_ES_RING_ESGS,
 	SI_GS_RING_ESGS,
 

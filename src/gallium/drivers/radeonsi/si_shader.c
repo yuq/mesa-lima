@@ -912,6 +912,30 @@ static void lds_store(struct lp_build_tgsi_context *bld_base,
 			       dw_addr, value);
 }
 
+static LLVMValueRef desc_from_addr_base64k(struct si_shader_context *ctx,
+						  unsigned param)
+{
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+
+	LLVMValueRef addr = LLVMGetParam(ctx->main_fn, param);
+	addr = LLVMBuildZExt(builder, addr, ctx->i64, "");
+	addr = LLVMBuildShl(builder, addr, LLVMConstInt(ctx->i64, 16, 0), "");
+
+	uint64_t desc2 = 0xffffffff;
+	uint64_t desc3 = S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+			 S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+		         S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+		         S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+			 S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
+		         S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
+	LLVMValueRef hi = LLVMConstInt(ctx->i64, desc2 | (desc3 << 32), 0);
+
+	LLVMValueRef desc = LLVMGetUndef(LLVMVectorType(ctx->i64, 2));
+	desc = LLVMBuildInsertElement(builder, desc, addr, ctx->i32_0, "");
+	desc = LLVMBuildInsertElement(builder, desc, hi, ctx->i32_1, "");
+	return LLVMBuildBitCast(builder, desc, ctx->v4i32, "");
+}
+
 static LLVMValueRef fetch_input_tcs(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
@@ -953,12 +977,9 @@ static LLVMValueRef fetch_input_tes(
 	enum tgsi_opcode_type type, unsigned swizzle)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef rw_buffers, buffer, base, addr;
+	LLVMValueRef buffer, base, addr;
 
-	rw_buffers = LLVMGetParam(ctx->main_fn,
-				  ctx->param_rw_buffers);
-	buffer = ac_build_indexed_load_const(&ctx->ac, rw_buffers,
-			LLVMConstInt(ctx->i32, SI_HS_RING_TESS_OFFCHIP, 0));
+	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 	addr = get_tcs_tes_buffer_address_from_reg(ctx, NULL, reg);
@@ -977,7 +998,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_shader_info *sh_info = &ctx->shader->selector->info;
 	unsigned chan_index;
 	LLVMValueRef dw_addr, stride;
-	LLVMValueRef rw_buffers, buffer, base, buf_addr;
+	LLVMValueRef buffer, base, buf_addr;
 	LLVMValueRef values[4];
 	bool skip_lds_store;
 	bool is_tess_factor = false;
@@ -1013,10 +1034,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		}
 	}
 
-	rw_buffers = LLVMGetParam(ctx->main_fn,
-				  ctx->param_rw_buffers);
-	buffer = ac_build_indexed_load_const(&ctx->ac, rw_buffers,
-			LLVMConstInt(ctx->i32, SI_HS_RING_TESS_OFFCHIP, 0));
+	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 	buf_addr = get_tcs_tes_buffer_address_from_reg(ctx, reg, NULL);
@@ -1536,13 +1554,10 @@ static void declare_system_value(struct si_shader_context *ctx,
 	case TGSI_SEMANTIC_TESSINNER:
 	case TGSI_SEMANTIC_TESSOUTER:
 	{
-		LLVMValueRef rw_buffers, buffer, base, addr;
+		LLVMValueRef buffer, base, addr;
 		int param = si_shader_io_get_unique_index(decl->Semantic.Name, 0);
 
-		rw_buffers = LLVMGetParam(ctx->main_fn,
-					  ctx->param_rw_buffers);
-		buffer = ac_build_indexed_load_const(&ctx->ac, rw_buffers,
-		        LLVMConstInt(ctx->i32, SI_HS_RING_TESS_OFFCHIP, 0));
+		buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 
 		base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 		addr = get_tcs_tes_buffer_address(ctx, get_rel_patch_id(ctx), NULL,
@@ -2432,16 +2447,12 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMValueRef invocation_id, rw_buffers, buffer, buffer_offset;
+	LLVMValueRef invocation_id, buffer, buffer_offset;
 	LLVMValueRef lds_vertex_stride, lds_vertex_offset, lds_base;
 	uint64_t inputs;
 
 	invocation_id = unpack_param(ctx, ctx->param_tcs_rel_ids, 8, 5);
-
-	rw_buffers = LLVMGetParam(ctx->main_fn, ctx->param_rw_buffers);
-	buffer = ac_build_indexed_load_const(&ctx->ac, rw_buffers,
-	                LLVMConstInt(ctx->i32, SI_HS_RING_TESS_OFFCHIP, 0));
-
+	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 	buffer_offset = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 
 	lds_vertex_stride = unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
@@ -2481,7 +2492,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	struct si_shader *shader = ctx->shader;
 	unsigned tess_inner_index, tess_outer_index;
 	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
-	LLVMValueRef out[6], vec0, vec1, rw_buffers, tf_base, inner[4], outer[4];
+	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];
 	unsigned stride, outer_comps, inner_comps, i, offset;
 	struct lp_build_if_state if_ctx, inner_if_ctx;
 
@@ -2563,10 +2574,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 		vec1 = lp_build_gather_values(gallivm, out+4, stride - 4);
 
 	/* Get the buffer. */
-	rw_buffers = LLVMGetParam(ctx->main_fn,
-				  ctx->param_rw_buffers);
-	buffer = ac_build_indexed_load_const(&ctx->ac, rw_buffers,
-			LLVMConstInt(ctx->i32, SI_HS_RING_TESS_FACTOR, 0));
+	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_factor_addr_base64k);
 
 	/* Get the offset. */
 	tf_base = LLVMGetParam(ctx->main_fn,
@@ -2606,8 +2614,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef tf_inner_offset;
 		unsigned param_outer, param_inner;
 
-		buf = ac_build_indexed_load_const(&ctx->ac, rw_buffers,
-				LLVMConstInt(ctx->i32, SI_HS_RING_TESS_OFFCHIP, 0));
+		buf = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 		base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 
 		param_outer = si_shader_io_get_unique_index(
@@ -2692,19 +2699,24 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	LLVMValueRef ret = ctx->return_value;
 	unsigned vgpr;
 
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret,
-					   ctx->param_rw_buffers, 0);
-
 	if (ctx->screen->b.chip_class >= GFX9) {
 		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_layout,
 					  8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT);
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_addr_base64k,
+					  8 + GFX9_SGPR_TCS_OFFCHIP_ADDR_BASE64K);
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_addr_base64k,
+					  8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K);
 		/* Tess offchip and tess factor offsets are at the beginning. */
 		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset, 2);
 		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset, 4);
-		vgpr = 8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT + 1;
+		vgpr = 8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K + 1;
 	} else {
 		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_layout,
 					  GFX6_SGPR_TCS_OFFCHIP_LAYOUT);
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_addr_base64k,
+					  GFX6_SGPR_TCS_OFFCHIP_ADDR_BASE64K);
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_addr_base64k,
+					  GFX6_SGPR_TCS_FACTOR_ADDR_BASE64K);
 		/* Tess offchip and tess factor offsets are after user SGPRs. */
 		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset,
 					  GFX6_TCS_NUM_USER_SGPR);
@@ -2743,8 +2755,12 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 				  8 + GFX9_SGPR_TCS_OUT_OFFSETS);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_out_lds_layout,
 				  8 + GFX9_SGPR_TCS_OUT_LAYOUT);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_addr_base64k,
+				  8 + GFX9_SGPR_TCS_OFFCHIP_ADDR_BASE64K);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_addr_base64k,
+				  8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K);
 
-	unsigned desc_param = ctx->param_tcs_out_lds_layout + 2;
+	unsigned desc_param = ctx->param_tcs_factor_addr_base64k + 2;
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param,
 					   8 + GFX9_SGPR_TCS_CONST_BUFFERS);
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 1,
@@ -5922,6 +5938,8 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_tcs_out_lds_offsets = num_params++] = ctx->i32;
 		params[ctx->param_tcs_out_lds_layout = num_params++] = ctx->i32;
 		params[ctx->param_vs_state_bits = num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_addr_base64k = num_params++] = ctx->i32;
+		params[ctx->param_tcs_factor_addr_base64k = num_params++] = ctx->i32;
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
 		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
 		last_sgpr = num_params - 1;
@@ -5959,6 +5977,8 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
 		params[ctx->param_tcs_out_lds_offsets = num_params++] = ctx->i32;
 		params[ctx->param_tcs_out_lds_layout = num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_addr_base64k = num_params++] = ctx->i32;
+		params[ctx->param_tcs_factor_addr_base64k = num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32; /* unused */
 
 		declare_per_stage_desc_pointers(ctx, params, &num_params,
@@ -5985,7 +6005,7 @@ static void create_function(struct si_shader_context *ctx)
 			 * param_tcs_offchip_layout, and param_rw_buffers
 			 * should be passed to the epilog.
 			 */
-			for (i = 0; i <= 8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT; i++)
+			for (i = 0; i <= 8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K; i++)
 				returns[num_returns++] = ctx->i32; /* SGPRs */
 			for (i = 0; i < 3; i++)
 				returns[num_returns++] = ctx->f32; /* VGPRs */
@@ -6014,7 +6034,7 @@ static void create_function(struct si_shader_context *ctx)
 			/* TESS_EVAL (and also GEOMETRY):
 			 * Declare as many input SGPRs as the VS has. */
 			params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
-			params[num_params++] = ctx->i32; /* unused */
+			params[ctx->param_tcs_offchip_addr_base64k = num_params++] = ctx->i32;
 			params[num_params++] = ctx->i32; /* unused */
 			params[num_params++] = ctx->i32; /* unused */
 			params[num_params++] = ctx->i32; /* unused */
@@ -6052,6 +6072,7 @@ static void create_function(struct si_shader_context *ctx)
 	case PIPE_SHADER_TESS_EVAL:
 		declare_default_desc_pointers(ctx, params, &num_params);
 		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_addr_base64k = num_params++] = ctx->i32;
 
 		if (shader->key.as_es) {
 			params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
@@ -8449,11 +8470,8 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	LLVMValueRef func;
 	int last_sgpr, num_params = 0;
 
-	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
-	params[ctx->param_rw_buffers = num_params++] =
-		const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
-
 	if (ctx->screen->b.chip_class >= GFX9) {
+		params[num_params++] = ctx->i64;
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32; /* wave info */
 		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
@@ -8471,7 +8489,12 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		params[num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
 		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_addr_base64k = num_params++] = ctx->i32;
+		params[ctx->param_tcs_factor_addr_base64k = num_params++] = ctx->i32;
 	} else {
+		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
@@ -8480,6 +8503,8 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		params[num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_addr_base64k = num_params++] = ctx->i32;
+		params[ctx->param_tcs_factor_addr_base64k = num_params++] = ctx->i32;
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
 		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
 	}

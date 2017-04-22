@@ -162,6 +162,8 @@ struct si_shader_context {
 	 *   [26:31] = gl_PatchVerticesIn, max = 32
 	 */
 	int param_tcs_out_lds_layout;
+	int param_tcs_offchip_addr_base64k;
+	int param_tcs_factor_addr_base64k;
 	int param_tcs_offchip_offset;
 	int param_tcs_factor_offset;
 	int param_tcs_patch_id;
