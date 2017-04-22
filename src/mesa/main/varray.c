@@ -509,7 +509,7 @@ validate_array(struct gl_context *ctx, const char *func,
     *       to the ARRAY_BUFFER buffer object binding point (see section
     *       2.9.6), and the pointer argument is not NULL."
     */
-   if (ptr != NULL && vao->ARBsemantics &&
+   if (ptr != NULL && vao != ctx->Array.DefaultVAO &&
        !_mesa_is_bufferobj(ctx->Array.ArrayBufferObj)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-VBO array)", func);
       return;

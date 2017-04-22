@@ -450,16 +450,7 @@ _mesa_BindVertexArray( GLuint id )
          return;
       }
 
-      if (!newObj->EverBound) {
-         /* The "Interactions with APPLE_vertex_array_object" section of the
-          * GL_ARB_vertex_array_object spec says:
-          *
-          *     "The first bind call, either BindVertexArray or
-          *     BindVertexArrayAPPLE, determines the semantic of the object."
-          */
-         newObj->ARBsemantics = GL_TRUE;
-         newObj->EverBound = GL_TRUE;
-      }
+      newObj->EverBound = GL_TRUE;
    }
 
    if (ctx->Array.DrawMethod == DRAW_ARRAYS) {

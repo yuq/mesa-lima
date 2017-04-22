@@ -1509,22 +1509,6 @@ struct gl_vertex_array_object
    GLchar *Label;       /**< GL_KHR_debug */
 
    /**
-    * Does the VAO use ARB semantics or Apple semantics?
-    *
-    * There are several ways in which ARB_vertex_array_object and
-    * APPLE_vertex_array_object VAOs have differing semantics.  At the very
-    * least,
-    *
-    *     - ARB VAOs require that all array data be sourced from vertex buffer
-    *       objects, but Apple VAOs do not.
-    *
-    *     - ARB VAOs require that names come from GenVertexArrays.
-    *
-    * This flag notes which behavior governs this VAO.
-    */
-   GLboolean ARBsemantics;
-
-   /**
     * Has this array object been bound?
     */
    GLboolean EverBound;
