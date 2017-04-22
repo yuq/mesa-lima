@@ -437,6 +437,7 @@ union si_shader_part_key {
 		/* For merged stages such as LS-HS, HS input VGPRs are first. */
 		unsigned	num_merged_next_stage_vgprs:3;
 		unsigned	last_input:4;
+		unsigned	as_ls:1;
 		/* Prologs for monolithic shaders shouldn't set EXEC. */
 		unsigned	is_monolithic:1;
 	} vs_prolog;

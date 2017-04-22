@@ -5846,9 +5846,14 @@ static void declare_vs_input_vgprs(struct si_shader_context *ctx,
 	struct si_shader *shader = ctx->shader;
 
 	params[ctx->param_vertex_id = (*num_params)++] = ctx->i32;
-	params[ctx->param_rel_auto_id = (*num_params)++] = ctx->i32;
-	params[ctx->param_vs_prim_id = (*num_params)++] = ctx->i32;
-	params[ctx->param_instance_id = (*num_params)++] = ctx->i32;
+	if (shader->key.as_ls) {
+		params[ctx->param_rel_auto_id = (*num_params)++] = ctx->i32;
+		params[ctx->param_instance_id = (*num_params)++] = ctx->i32;
+	} else {
+		params[ctx->param_instance_id = (*num_params)++] = ctx->i32;
+		params[ctx->param_vs_prim_id = (*num_params)++] = ctx->i32;
+	}
+	params[(*num_params)++] = ctx->i32; /* unused */
 
 	if (!shader->is_gs_copy_shader) {
 		/* Vertex load indices. */
@@ -7368,11 +7373,14 @@ static void si_get_vs_prolog_key(const struct tgsi_shader_info *info,
 	key->vs_prolog.states = *prolog_key;
 	key->vs_prolog.num_input_sgprs = num_input_sgprs;
 	key->vs_prolog.last_input = MAX2(1, info->num_inputs) - 1;
+	key->vs_prolog.as_ls = shader_out->key.as_ls;
 
-	if (shader_out->selector->type == PIPE_SHADER_TESS_CTRL)
+	if (shader_out->selector->type == PIPE_SHADER_TESS_CTRL) {
+		key->vs_prolog.as_ls = 1;
 		key->vs_prolog.num_merged_next_stage_vgprs = 2;
-	else if (shader_out->selector->type == PIPE_SHADER_GEOMETRY)
+	} else if (shader_out->selector->type == PIPE_SHADER_GEOMETRY) {
 		key->vs_prolog.num_merged_next_stage_vgprs = 5;
+	}
 
 	/* Set the instanceID flag. */
 	for (unsigned i = 0; i < info->num_inputs; i++)
@@ -8379,7 +8387,7 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	unsigned user_sgpr_base = key->vs_prolog.num_merged_next_stage_vgprs ? 8 : 0;
 
 	ctx->param_vertex_id = first_vs_vgpr;
-	ctx->param_instance_id = first_vs_vgpr + 3;
+	ctx->param_instance_id = first_vs_vgpr + (key->vs_prolog.as_ls ? 2 : 1);
 
 	/* 4 preloaded VGPRs + vertex load indices as prolog outputs */
 	params = alloca(num_all_input_regs * sizeof(LLVMTypeRef));

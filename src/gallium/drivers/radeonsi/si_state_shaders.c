@@ -458,8 +458,10 @@ static void si_shader_ls(struct si_screen *sscreen, struct si_shader *shader)
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
 
 	/* We need at least 2 components for LS.
-	 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
-	vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
+	 * VGPR0-3: (VertexID, RelAutoindex, InstanceID / StepRate0, InstanceID).
+	 * StepRate0 is set to 1. so that VGPR3 doesn't have to be loaded.
+	 */
+	vgpr_comp_cnt = shader->info.uses_instanceid ? 2 : 1;
 
 	si_pm4_set_reg(pm4, R_00B520_SPI_SHADER_PGM_LO_LS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B524_SPI_SHADER_PGM_HI_LS, va >> 40);
@@ -491,8 +493,10 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 		si_pm4_set_reg(pm4, R_00B414_SPI_SHADER_PGM_HI_LS, va >> 40);
 
 		/* We need at least 2 components for LS.
-		 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
-		ls_vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
+		 * VGPR0-3: (VertexID, RelAutoindex, InstanceID / StepRate0, InstanceID).
+		 * StepRate0 is set to 1. so that VGPR3 doesn't have to be loaded.
+		 */
+		ls_vgpr_comp_cnt = shader->info.uses_instanceid ? 2 : 1;
 
 		if (shader->config.scratch_bytes_per_wave) {
 			fprintf(stderr, "HS: scratch buffer unsupported");
@@ -544,7 +548,8 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
 
 	if (shader->selector->type == PIPE_SHADER_VERTEX) {
-		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 0;
+		/* VGPR0-3: (VertexID, InstanceID / StepRate0, ...) */
+		vgpr_comp_cnt = shader->info.uses_instanceid ? 1 : 0;
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = shader->selector->info.uses_primid ? 3 : 2;
@@ -759,7 +764,8 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 		struct gfx9_gs_info gs_info;
 
 		if (es_type == PIPE_SHADER_VERTEX)
-			es_vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 0;
+			/* VGPR0-3: (VertexID, InstanceID / StepRate0, ...) */
+			es_vgpr_comp_cnt = shader->info.uses_instanceid ? 1 : 0;
 		else if (es_type == PIPE_SHADER_TESS_EVAL)
 			es_vgpr_comp_cnt = shader->key.part.gs.es->info.uses_primid ? 3 : 2;
 		else
@@ -876,7 +882,11 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
 		num_user_sgprs = SI_GSCOPY_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
-		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : (enable_prim_id ? 2 : 0);
+		/* VGPR0-3: (VertexID, InstanceID / StepRate0, PrimID, InstanceID)
+		 * If PrimID is disabled. InstanceID / StepRate1 is loaded instead.
+		 * StepRate0 is set to 1. so that VGPR3 doesn't have to be loaded.
+		 */
+		vgpr_comp_cnt = enable_prim_id ? 2 : (shader->info.uses_instanceid ? 1 : 0);
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = shader->selector->info.uses_primid ? 3 : 2;
