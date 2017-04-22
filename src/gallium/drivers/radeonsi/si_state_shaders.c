@@ -547,7 +547,7 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 0;
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
-		vgpr_comp_cnt = 3; /* all components are needed for TES */
+		vgpr_comp_cnt = shader->selector->info.uses_primid ? 3 : 2;
 		num_user_sgprs = SI_TES_NUM_USER_SGPR;
 	} else
 		unreachable("invalid shader selector type");
@@ -761,7 +761,7 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 		if (es_type == PIPE_SHADER_VERTEX)
 			es_vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 0;
 		else if (es_type == PIPE_SHADER_TESS_EVAL)
-			es_vgpr_comp_cnt = 3; /* all components are needed for TES */
+			es_vgpr_comp_cnt = shader->key.part.gs.es->info.uses_primid ? 3 : 2;
 		else
 			unreachable("invalid shader selector type");
 
@@ -879,7 +879,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : (enable_prim_id ? 2 : 0);
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
-		vgpr_comp_cnt = 3; /* all components are needed for TES */
+		vgpr_comp_cnt = shader->selector->info.uses_primid ? 3 : 2;
 		num_user_sgprs = SI_TES_NUM_USER_SGPR;
 	} else
 		unreachable("invalid shader selector type");
