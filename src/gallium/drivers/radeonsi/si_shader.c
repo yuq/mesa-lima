@@ -5683,7 +5683,7 @@ static void si_create_function(struct si_shader_context *ctx,
 			       const char *name,
 			       LLVMTypeRef *returns, unsigned num_returns,
 			       LLVMTypeRef *params, unsigned num_params,
-			       int last_sgpr)
+			       int last_sgpr, unsigned max_workgroup_size)
 {
 	int i;
 
@@ -5710,6 +5710,10 @@ static void si_create_function(struct si_shader_context *ctx,
 			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
 	}
 
+	if (max_workgroup_size) {
+		si_llvm_add_attribute(ctx->main_fn, "amdgpu-max-work-group-size",
+				      max_workgroup_size);
+	}
 	LLVMAddTargetDependentFunctionAttr(ctx->main_fn,
 					   "no-signed-zeros-fp-math",
 					   "true");
@@ -5791,6 +5795,22 @@ static void declare_lds_as_pointer(struct si_shader_context *ctx)
 
 static unsigned si_get_max_workgroup_size(struct si_shader *shader)
 {
+	switch (shader->selector->type) {
+	case PIPE_SHADER_TESS_CTRL:
+		/* Return this so that LLVM doesn't remove s_barrier
+		 * instructions on chips where we use s_barrier. */
+		return shader->selector->screen->b.chip_class >= CIK ? 128 : 64;
+
+	case PIPE_SHADER_GEOMETRY:
+		return shader->selector->screen->b.chip_class >= GFX9 ? 128 : 64;
+
+	case PIPE_SHADER_COMPUTE:
+		break; /* see below */
+
+	default:
+		return 0;
+	}
+
 	const unsigned *properties = shader->selector->info.properties;
 	unsigned max_work_group_size =
 	               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
@@ -6181,7 +6201,8 @@ static void create_function(struct si_shader_context *ctx)
 	assert(num_params <= ARRAY_SIZE(params));
 
 	si_create_function(ctx, "main", returns, num_returns, params,
-			   num_params, last_sgpr);
+			   num_params, last_sgpr,
+			   si_get_max_workgroup_size(shader));
 
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
 	if (ctx->type == PIPE_SHADER_FRAGMENT &&
@@ -6196,10 +6217,6 @@ static void create_function(struct si_shader_context *ctx)
 				      S_0286D0_LINEAR_CENTROID_ENA(1) |
 				      S_0286D0_FRONT_FACE_ENA(1) |
 				      S_0286D0_POS_FIXED_PT_ENA(1));
-	} else if (ctx->type == PIPE_SHADER_COMPUTE) {
-		si_llvm_add_attribute(ctx->main_fn,
-				      "amdgpu-max-work-group-size",
-				      si_get_max_workgroup_size(shader));
 	}
 
 	shader->info.num_input_sgprs = 0;
@@ -7573,7 +7590,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 
 	/* Create the function. */
 	si_create_function(ctx, "gs_prolog", returns, num_sgprs + num_vgprs,
-			   params, num_sgprs + num_vgprs, num_sgprs - 1);
+			   params, num_sgprs + num_vgprs, num_sgprs - 1, 0);
 	func = ctx->main_fn;
 
 	/* Set the full EXEC mask for the prolog, because we are only fiddling
@@ -7733,7 +7750,9 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 		gprs += size;
 	}
 
-	si_create_function(ctx, "wrapper", NULL, 0, param_types, num_params, last_sgpr_param);
+	si_create_function(ctx, "wrapper", NULL, 0, param_types, num_params,
+			   last_sgpr_param,
+			   si_get_max_workgroup_size(ctx->shader));
 
 	if (is_merged_shader(ctx->shader))
 		si_init_exec_full_mask(ctx);
@@ -8371,7 +8390,7 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 
 	/* Create the function. */
 	si_create_function(ctx, "vs_prolog", returns, num_returns, params,
-			   num_params, last_sgpr);
+			   num_params, last_sgpr, 0);
 	func = ctx->main_fn;
 
 	if (key->vs_prolog.num_merged_next_stage_vgprs &&
@@ -8515,7 +8534,8 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	params[num_params++] = ctx->i32; /* LDS offset where tess factors should be loaded from */
 
 	/* Create the function. */
-	si_create_function(ctx, "tcs_epilog", NULL, 0, params, num_params, last_sgpr);
+	si_create_function(ctx, "tcs_epilog", NULL, 0, params, num_params, last_sgpr,
+			   ctx->screen->b.chip_class >= CIK ? 128 : 64);
 	declare_lds_as_pointer(ctx);
 	func = ctx->main_fn;
 
@@ -8636,7 +8656,7 @@ static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 
 	/* Create the function. */
 	si_create_function(ctx, "ps_prolog", params, num_returns, params,
-			   num_params, last_sgpr);
+			   num_params, last_sgpr, 0);
 	func = ctx->main_fn;
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
@@ -8878,7 +8898,8 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 		params[i] = ctx->f32;
 
 	/* Create the function. */
-	si_create_function(ctx, "ps_epilog", NULL, 0, params, num_params, last_sgpr);
+	si_create_function(ctx, "ps_epilog", NULL, 0, params, num_params,
+			   last_sgpr, 0);
 	/* Disable elimination of unused inputs. */
 	si_llvm_add_attribute(ctx->main_fn,
 				  "InitialPSInputAddr", 0xffffff);
