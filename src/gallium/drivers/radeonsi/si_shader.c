@@ -2680,7 +2680,6 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef rel_patch_id, invocation_id, tf_lds_offset;
-	LLVMValueRef offchip_soffset, offchip_layout;
 
 	si_copy_tcs_inputs(bld_base);
 
@@ -2691,34 +2690,26 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	/* Return epilog parameters from this function. */
 	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef ret = ctx->return_value;
-	LLVMValueRef tf_soffset;
 	unsigned vgpr;
-
-	offchip_layout = LLVMGetParam(ctx->main_fn,
-				      ctx->param_tcs_offchip_layout);
-	offchip_soffset = LLVMGetParam(ctx->main_fn,
-				       ctx->param_tcs_offchip_offset);
-	tf_soffset = LLVMGetParam(ctx->main_fn,
-				  ctx->param_tcs_factor_offset);
 
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret,
 					   ctx->param_rw_buffers, 0);
 
 	if (ctx->screen->b.chip_class >= GFX9) {
-		ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
-					   8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT, "");
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_layout,
+					  8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT);
 		/* Tess offchip and tess factor offsets are at the beginning. */
-		ret = LLVMBuildInsertValue(builder, ret, offchip_soffset, 2, "");
-		ret = LLVMBuildInsertValue(builder, ret, tf_soffset, 4, "");
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset, 2);
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset, 4);
 		vgpr = 8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT + 1;
 	} else {
-		ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
-					   GFX6_SGPR_TCS_OFFCHIP_LAYOUT, "");
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_layout,
+					  GFX6_SGPR_TCS_OFFCHIP_LAYOUT);
 		/* Tess offchip and tess factor offsets are after user SGPRs. */
-		ret = LLVMBuildInsertValue(builder, ret, offchip_soffset,
-					   GFX6_TCS_NUM_USER_SGPR, "");
-		ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
-					   GFX6_TCS_NUM_USER_SGPR + 1, "");
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset,
+					  GFX6_TCS_NUM_USER_SGPR);
+		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset,
+					  GFX6_TCS_NUM_USER_SGPR + 1);
 		vgpr = GFX6_TCS_NUM_USER_SGPR + 2;
 	}
 
