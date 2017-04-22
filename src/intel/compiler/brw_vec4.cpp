@@ -1071,11 +1071,11 @@ vec4_instruction::can_reswizzle(const struct gen_device_info *devinfo,
    if (devinfo->gen == 6 && is_math() && swizzle != BRW_SWIZZLE_XYZW)
       return false;
 
-   /* Don't touch MACH - it uses the accumulator results from an earlier
-    * MUL - so we'd need to reswizzle both.  We don't do that, so just
-    * avoid it entirely.
+   /* We can't swizzle implicit accumulator access.  We'd have to
+    * reswizzle the producer of the accumulator value in addition
+    * to the consumer (i.e. both MUL and MACH).  Just skip this.
     */
-   if (opcode == BRW_OPCODE_MACH)
+   if (reads_accumulator_implicitly())
       return false;
 
    if (!can_do_writemask(devinfo) && dst_writemask != WRITEMASK_XYZW)
