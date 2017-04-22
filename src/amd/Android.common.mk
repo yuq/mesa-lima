@@ -49,6 +49,8 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/include \
 	$(MESA_TOP)/src \
 	$(MESA_TOP)/src/amd/common \
+	$(MESA_TOP)/src/compiler \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
 	$(MESA_TOP)/src/gallium/include \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(intermediates)/common \
