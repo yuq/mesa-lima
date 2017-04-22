@@ -2680,9 +2680,10 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	tf_soffset = LLVMGetParam(ctx->main_fn,
 				  ctx->param_tcs_factor_offset);
 
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret,
+					   ctx->param_rw_buffers, 0);
+
 	if (ctx->screen->b.chip_class >= GFX9) {
-		ret = si_insert_input_ptr_as_2xi32(ctx, ret,
-						   ctx->param_rw_buffers, 8);
 		ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
 					   8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT, "");
 		/* Tess offchip and tess factor offsets are at the beginning. */
@@ -2690,8 +2691,6 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 		ret = LLVMBuildInsertValue(builder, ret, tf_soffset, 4, "");
 		vgpr = 8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT + 1;
 	} else {
-		ret = si_insert_input_ptr_as_2xi32(ctx, ret,
-						   ctx->param_rw_buffers, 0);
 		ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
 					   GFX6_SGPR_TCS_OFFCHIP_LAYOUT, "");
 		/* Tess offchip and tess factor offsets are after user SGPRs. */
@@ -2718,13 +2717,11 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 {
 	LLVMValueRef ret = ctx->return_value;
 
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers, 0);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset, 2);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset, 4);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
-
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers,
-					   8 + SI_SGPR_RW_BUFFERS);
 
 	ret = si_insert_input_ret(ctx, ret, ctx->param_vs_state_bits,
 				  8 + SI_SGPR_VS_STATE_BITS);
@@ -5866,8 +5863,8 @@ static void create_function(struct si_shader_context *ctx)
 
 	case SI_SHADER_MERGED_VERTEX_TESSCTRL:
 		/* Merged stages have 8 system SGPRs at the beginning. */
-		params[num_params++] = ctx->i32; /* unused */
-		params[num_params++] = ctx->i32; /* unused */
+		params[ctx->param_rw_buffers = num_params++] = /* SPI_SHADER_USER_DATA_ADDR_LO_HS */
+			const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
 		params[ctx->param_merged_wave_info = num_params++] = ctx->i32;
 		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
@@ -5875,8 +5872,8 @@ static void create_function(struct si_shader_context *ctx)
 		params[num_params++] = ctx->i32; /* unused */
 		params[num_params++] = ctx->i32; /* unused */
 
-		params[ctx->param_rw_buffers = num_params++] =
-			const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+		params[num_params++] = ctx->i32; /* unused */
+		params[num_params++] = ctx->i32; /* unused */
 		declare_per_stage_desc_pointers(ctx, params, &num_params,
 						ctx->type == PIPE_SHADER_VERTEX);
 		declare_vs_specific_input_sgprs(ctx, params, &num_params);
@@ -8330,19 +8327,17 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	int last_sgpr, num_params = 0;
 
 	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
+	params[ctx->param_rw_buffers = num_params++] =
+		const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+
 	if (ctx->screen->b.chip_class >= GFX9) {
-		params[num_params++] = ctx->i32;
-		params[num_params++] = ctx->i32;
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32; /* wave info */
 		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
-	}
-	params[ctx->param_rw_buffers = num_params++] =
-		const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
-	if (ctx->screen->b.chip_class >= GFX9) {
+		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;

@@ -80,6 +80,9 @@ struct ac_shader_binary;
 
 /* SGPR user data indices */
 enum {
+	/* GFX9 merged shaders have RW_BUFFERS among the first 8 system SGPRs,
+	 * and these two are used for other purposes.
+	 */
 	SI_SGPR_RW_BUFFERS,  /* rings (& stream-out, VS only) */
 	SI_SGPR_RW_BUFFERS_HI,
 	SI_SGPR_CONST_BUFFERS,
