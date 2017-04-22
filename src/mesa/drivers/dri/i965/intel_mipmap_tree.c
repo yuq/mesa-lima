@@ -522,43 +522,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->physical_height0 = height0;
    mt->physical_depth0 = depth0;
 
-   if (needs_separate_stencil(brw, mt, format, layout_flags)) {
-      uint32_t stencil_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
-      if (brw->gen == 6) {
-         stencil_flags |= MIPTREE_LAYOUT_TILING_ANY;
-      }
-
-      mt->stencil_mt = intel_miptree_create(brw,
-                                            mt->target,
-                                            MESA_FORMAT_S_UINT8,
-                                            mt->first_level,
-                                            mt->last_level,
-                                            mt->logical_width0,
-                                            mt->logical_height0,
-                                            mt->logical_depth0,
-                                            num_samples,
-                                            stencil_flags);
-
-      if (!mt->stencil_mt) {
-	 intel_miptree_release(&mt);
-	 return NULL;
-      }
-      mt->stencil_mt->r8stencil_needs_update = true;
-
-      /* Fix up the Z miptree format for how we're splitting out separate
-       * stencil.  Gen7 expects there to be no stencil bits in its depth buffer.
-       */
-      mt->format = intel_depth_format_for_depthstencil_format(mt->format);
-      mt->cpp = 4;
-
-      if (format == mt->format) {
-         _mesa_problem(NULL, "Unknown format %s in separate stencil mt\n",
-                       _mesa_get_format_name(mt->format));
-      }
-   }
-
-   if (layout_flags & MIPTREE_LAYOUT_GEN6_HIZ_STENCIL)
-      mt->array_layout = GEN6_HIZ_STENCIL;
+   assert(!needs_separate_stencil(brw, mt, format, layout_flags));
 
    /*
     * Obey HALIGN_16 constraints for Gen8 and Gen9 buffers which are
@@ -831,6 +795,40 @@ fail:
    return NULL;
 }
 
+static bool
+make_separate_stencil_surface(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt)
+{
+   mt->stencil_mt = make_surface(brw, mt->target, MESA_FORMAT_S_UINT8,
+                                 0, mt->surf.levels - 1,
+                                 mt->surf.logical_level0_px.width,
+                                 mt->surf.logical_level0_px.height,
+                                 mt->surf.dim == ISL_SURF_DIM_3D ?
+                                    mt->surf.logical_level0_px.depth :
+                                    mt->surf.logical_level0_px.array_len,
+                                 mt->surf.samples, ISL_TILING_W_BIT,
+                                 ISL_SURF_USAGE_STENCIL_BIT |
+                                 ISL_SURF_USAGE_TEXTURE_BIT,
+                                 BO_ALLOC_FOR_RENDER, 0, NULL);
+
+   if (!mt->stencil_mt)
+      return false;
+   
+   mt->stencil_mt->r8stencil_needs_update = true;
+
+   return true;
+}
+
+static bool
+force_linear_tiling(uint32_t layout_flags)
+{
+   /* ANY includes NONE and Y bit. */
+   if (layout_flags & MIPTREE_LAYOUT_TILING_Y)
+      return false;
+
+   return layout_flags & MIPTREE_LAYOUT_TILING_NONE;
+}
+
 static struct intel_mipmap_tree *
 miptree_create(struct brw_context *brw,
                GLenum target,
@@ -849,7 +847,37 @@ miptree_create(struct brw_context *brw,
                           ISL_TILING_W_BIT,
                           ISL_SURF_USAGE_STENCIL_BIT |
                           ISL_SURF_USAGE_TEXTURE_BIT,
-                          BO_ALLOC_FOR_RENDER, 0, NULL);
+                          BO_ALLOC_FOR_RENDER,
+                          0,
+                          NULL);
+
+   const GLenum base_format = _mesa_get_format_base_format(format);
+   if ((base_format == GL_DEPTH_COMPONENT ||
+        base_format == GL_DEPTH_STENCIL) &&
+       !force_linear_tiling(layout_flags)) {
+      /* Fix up the Z miptree format for how we're splitting out separate
+       * stencil.  Gen7 expects there to be no stencil bits in its depth buffer.
+       */
+      const mesa_format depth_only_format =
+         intel_depth_format_for_depthstencil_format(format);
+      struct intel_mipmap_tree *mt = make_surface(
+         brw, target, brw->gen >= 6 ? depth_only_format : format,
+         first_level, last_level,
+         width0, height0, depth0, num_samples, ISL_TILING_Y0_BIT,
+         ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
+         BO_ALLOC_FOR_RENDER, 0, NULL);
+
+      if (needs_separate_stencil(brw, mt, format, layout_flags) &&
+          !make_separate_stencil_surface(brw, mt)) {
+         intel_miptree_release(&mt);
+         return NULL;
+      }
+
+      if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
+         intel_miptree_choose_aux_usage(brw, mt);
+
+      return mt;
+   }
 
    struct intel_mipmap_tree *mt;
    mesa_format tex_format = format;
@@ -986,8 +1014,25 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    struct intel_mipmap_tree *mt;
    uint32_t tiling, swizzle;
    const GLenum target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
+   const GLenum base_format = _mesa_get_format_base_format(format);
 
-   if (format == MESA_FORMAT_S_UINT8) {
+   if ((base_format == GL_DEPTH_COMPONENT ||
+        base_format == GL_DEPTH_STENCIL)) {
+      const mesa_format depth_only_format =
+         intel_depth_format_for_depthstencil_format(format);
+      mt = make_surface(brw, target,
+                        brw->gen >= 6 ? depth_only_format : format,
+                        0, 0, width, height, depth, 1, ISL_TILING_Y0_BIT,
+                        ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
+                        BO_ALLOC_FOR_RENDER, pitch, bo);
+
+      brw_bo_reference(bo);
+
+      if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
+         intel_miptree_choose_aux_usage(brw, mt);
+
+      return mt;
+   } else if (format == MESA_FORMAT_S_UINT8) {
       mt = make_surface(brw, target, MESA_FORMAT_S_UINT8,
                         0, 0, width, height, depth, 1,
                         ISL_TILING_W_BIT,
@@ -1975,10 +2020,11 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
                                uint32_t level)
 {
    assert(mt->hiz_buf);
+   assert(mt->surf.size > 0);
 
    if (brw->gen >= 8 || brw->is_haswell) {
-      uint32_t width = minify(mt->physical_width0, level);
-      uint32_t height = minify(mt->physical_height0, level);
+      uint32_t width = minify(mt->surf.phys_level0_sa.width, level);
+      uint32_t height = minify(mt->surf.phys_level0_sa.height, level);
 
       /* Disable HiZ for LOD > 0 unless the width is 8 aligned
        * and the height is 4 aligned. This allows our HiZ support
@@ -2009,12 +2055,10 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
    if (!aux_state)
       return false;
 
-   struct isl_surf temp_main_surf;
    struct isl_surf temp_hiz_surf;
 
-   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
    MAYBE_UNUSED bool ok =
-      isl_surf_get_hiz_surf(&brw->isl_dev, &temp_main_surf, &temp_hiz_surf);
+      isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &temp_hiz_surf);
    assert(ok);
 
    const uint32_t alloc_flags = BO_ALLOC_FOR_RENDER;
@@ -2103,7 +2147,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
     * mipmap levels aren't available in the HiZ buffer. So we need all levels
     * of the texture to be HiZ enabled.
     */
-   for (unsigned level = mt->first_level; level <= mt->last_level; ++level) {
+   for (unsigned level = 0; level < mt->surf.levels; ++level) {
       if (!intel_miptree_level_has_hiz(mt, level))
          return false;
    }

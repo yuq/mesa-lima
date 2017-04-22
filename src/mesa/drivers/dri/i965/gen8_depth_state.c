@@ -78,7 +78,8 @@ emit_depth_packets(struct brw_context *brw,
    OUT_BATCH(((width - 1) << 4) | ((height - 1) << 18) | lod);
    OUT_BATCH(((depth - 1) << 21) | (min_array_element << 10) | mocs_wb);
    OUT_BATCH(0);
-   OUT_BATCH(((depth - 1) << 21) | (depth_mt ? depth_mt->qpitch >> 2 : 0));
+   OUT_BATCH(((depth - 1) << 21) |
+              (depth_mt ? depth_mt->surf.array_pitch_el_rows >> 2 : 0));
    ADVANCE_BATCH();
 
    if (!hiz) {

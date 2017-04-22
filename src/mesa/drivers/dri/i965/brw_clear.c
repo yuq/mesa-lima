@@ -121,7 +121,8 @@ brw_fast_clear_depth(struct gl_context *ctx)
    if ((ctx->Scissor.EnableFlags & 1) && !noop_scissor(fb)) {
       perf_debug("Failed to fast clear %dx%d depth because of scissors.  "
                  "Possible 5%% performance win if avoided.\n",
-                 mt->logical_width0, mt->logical_height0);
+                 mt->surf.logical_level0_px.width,
+                 mt->surf.logical_level0_px.height);
       return false;
    }
 
@@ -149,7 +150,7 @@ brw_fast_clear_depth(struct gl_context *ctx)
        *        optimization must be disabled.
        */
       if (brw->gen == 6 &&
-          (minify(mt->physical_width0,
+          (minify(mt->surf.phys_level0_sa.width,
                   depth_irb->mt_level - mt->first_level) % 16) != 0)
 	 return false;
       break;
