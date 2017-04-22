@@ -390,11 +390,6 @@ struct si_vs_prolog_bits {
 	unsigned	instance_divisors[SI_MAX_ATTRIBS];
 };
 
-/* Common VS bits between the shader key and the epilog key. */
-struct si_vs_epilog_bits {
-	unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
-};
-
 /* Common TCS bits between the shader key and the epilog key. */
 struct si_tcs_epilog_bits {
 	unsigned	prim_mode:3;
@@ -442,10 +437,6 @@ union si_shader_part_key {
 		unsigned	is_monolithic:1;
 	} vs_prolog;
 	struct {
-		struct si_vs_epilog_bits states;
-		unsigned	prim_id_param_offset:5;
-	} vs_epilog;
-	struct {
 		struct si_tcs_epilog_bits states;
 	} tcs_epilog;
 	struct {
@@ -479,16 +470,12 @@ struct si_shader_key {
 	union {
 		struct {
 			struct si_vs_prolog_bits prolog;
-			struct si_vs_epilog_bits epilog;
 		} vs;
 		struct {
 			struct si_vs_prolog_bits ls_prolog; /* for merged LS-HS */
 			struct si_shader_selector *ls;   /* for merged LS-HS */
 			struct si_tcs_epilog_bits epilog;
 		} tcs; /* tessellation control shader */
-		struct {
-			struct si_vs_epilog_bits epilog; /* same as VS */
-		} tes; /* tessellation evaluation shader */
 		struct {
 			struct si_vs_prolog_bits vs_prolog; /* for merged ES-GS */
 			struct si_shader_selector *es;   /* for merged ES-GS */
@@ -511,6 +498,8 @@ struct si_shader_key {
 		/* One byte for every input: SI_FIX_FETCH_* enums. */
 		uint8_t		vs_fix_fetch[SI_MAX_ATTRIBS];
 		uint64_t	ff_tcs_inputs_to_copy; /* for fixed-func TCS */
+		/* When PS needs PrimID and GS is disabled. */
+		unsigned	vs_export_prim_id:1;
 	} mono;
 
 	/* Optimization flags for asynchronous compilation only. */

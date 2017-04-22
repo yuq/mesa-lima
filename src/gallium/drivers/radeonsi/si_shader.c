@@ -76,8 +76,6 @@ static unsigned llvm_get_type_size(LLVMTypeRef type);
 
 static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
-static void si_build_vs_epilog_function(struct si_shader_context *ctx,
-					union si_shader_part_key *key);
 static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 					 union si_shader_part_key *key);
 static void si_build_ps_prolog_function(struct si_shader_context *ctx,
@@ -89,11 +87,6 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
  * is its usual location, so that the shader doesn't have to add v_mov.
  */
 #define PS_EPILOG_SAMPLEMASK_MIN_LOC 13
-
-/* The VS location of the PrimitiveID input is the same in the epilog,
- * so that the main shader part doesn't have to move it.
- */
-#define VS_EPILOG_PRIMID_LOC 2
 
 enum {
 	CONST_ADDR_SPACE = 2,
@@ -2990,19 +2983,25 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 			outputs[i].vertex_stream[j] =
 				(info->output_streams[i] >> (2 * j)) & 3;
 		}
-
 	}
-
-	/* Return the primitive ID from the LLVM function. */
-	ctx->return_value =
-		LLVMBuildInsertValue(gallivm->builder,
-				     ctx->return_value,
-				     bitcast(bld_base, TGSI_TYPE_FLOAT,
-					     get_primitive_id(bld_base, 0)),
-				     VS_EPILOG_PRIMID_LOC, "");
 
 	if (ctx->shader->selector->so.num_outputs)
 		si_llvm_emit_streamout(ctx, outputs, i, 0);
+
+	/* Export PrimitiveID. */
+	if (ctx->shader->key.mono.vs_export_prim_id) {
+		outputs[i].semantic_name = TGSI_SEMANTIC_PRIMID;
+		outputs[i].semantic_index = 0;
+		outputs[i].values[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+					       get_primitive_id(bld_base, 0));
+		for (j = 1; j < 4; j++)
+			outputs[i].values[j] = LLVMConstReal(ctx->f32, 0);
+
+		memset(outputs[i].vertex_stream, 0,
+		       sizeof(outputs[i].vertex_stream));
+		i++;
+	}
+
 	si_llvm_export_vs(bld_base, outputs, i);
 	FREE(outputs);
 }
@@ -5924,13 +5923,6 @@ static void create_function(struct si_shader_context *ctx)
 		/* VGPRs */
 		declare_vs_input_vgprs(ctx, params, &num_params,
 				       &num_prolog_vgprs);
-
-		/* PrimitiveID output. */
-		if (!shader->is_gs_copy_shader &&
-		    !shader->key.as_es && !shader->key.as_ls) {
-			for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
-				returns[num_returns++] = ctx->f32;
-		}
 		break;
 
 	case PIPE_SHADER_TESS_CTRL: /* SI-CI-VI */
@@ -6084,11 +6076,6 @@ static void create_function(struct si_shader_context *ctx)
 
 		/* VGPRs */
 		declare_tes_input_vgprs(ctx, params, &num_params);
-
-		/* PrimitiveID output. */
-		if (!shader->key.as_es)
-			for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
-				returns[num_returns++] = ctx->f32;
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
@@ -7045,8 +7032,8 @@ static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
 				      "part.vs.prolog", f);
 		fprintf(f, "  as_es = %u\n", key->as_es);
 		fprintf(f, "  as_ls = %u\n", key->as_ls);
-		fprintf(f, "  part.vs.epilog.export_prim_id = %u\n",
-			key->part.vs.epilog.export_prim_id);
+		fprintf(f, "  mono.vs_export_prim_id = %u\n",
+			key->mono.vs_export_prim_id);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
@@ -7059,8 +7046,9 @@ static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
-		fprintf(f, "  part.tes.epilog.export_prim_id = %u\n", key->part.tes.epilog.export_prim_id);
 		fprintf(f, "  as_es = %u\n", key->as_es);
+		fprintf(f, "  mono.vs_export_prim_id = %u\n",
+			key->mono.vs_export_prim_id);
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
@@ -7386,28 +7374,6 @@ static void si_get_vs_prolog_key(const struct tgsi_shader_info *info,
 	for (unsigned i = 0; i < info->num_inputs; i++)
 		if (key->vs_prolog.states.instance_divisors[i])
 			shader_out->info.uses_instanceid = true;
-}
-
-/**
- * Compute the VS epilog key, which contains all the information needed to
- * build the VS epilog function, and set the PrimitiveID output offset.
- */
-static void si_get_vs_epilog_key(struct si_shader *shader,
-				 struct si_vs_epilog_bits *states,
-				 union si_shader_part_key *key)
-{
-	memset(key, 0, sizeof(*key));
-	key->vs_epilog.states = *states;
-
-	/* Set up the PrimitiveID output. */
-	if (shader->key.part.vs.epilog.export_prim_id) {
-		unsigned index = shader->selector->info.num_outputs;
-		unsigned offset = shader->info.nr_param_exports++;
-
-		key->vs_epilog.prim_id_param_offset = offset;
-		assert(index < ARRAY_SIZE(shader->info.vs_output_param_offset));
-		shader->info.vs_output_param_offset[index] = offset;
-	}
 }
 
 /**
@@ -7962,14 +7928,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	if (is_monolithic && ctx.type == PIPE_SHADER_VERTEX) {
-		LLVMValueRef parts[3];
-		bool need_prolog;
-		bool need_epilog;
+		LLVMValueRef parts[2];
+		bool need_prolog = sel->vs_needs_prolog;
 
-		need_prolog = sel->vs_needs_prolog;
-		need_epilog = !shader->key.as_es && !shader->key.as_ls;
-
-		parts[need_prolog ? 1 : 0] = ctx.main_fn;
+		parts[1] = ctx.main_fn;
 
 		if (need_prolog) {
 			union si_shader_part_key prolog_key;
@@ -7981,15 +7943,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			parts[0] = ctx.main_fn;
 		}
 
-		if (need_epilog) {
-			union si_shader_part_key epilog_key;
-			si_get_vs_epilog_key(shader, &shader->key.part.vs.epilog, &epilog_key);
-			si_build_vs_epilog_function(&ctx, &epilog_key);
-			parts[need_prolog ? 2 : 1] = ctx.main_fn;
-		}
-
-		si_build_wrapper_function(&ctx, parts, 1 + need_prolog + need_epilog,
-					  need_prolog ? 1 : 0, 0);
+		si_build_wrapper_function(&ctx, parts + !need_prolog,
+					  1 + need_prolog, need_prolog, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_CTRL) {
 		if (sscreen->b.chip_class >= GFX9) {
 			struct si_shader_selector *ls = shader->key.part.tcs.ls;
@@ -8053,18 +8008,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 			si_build_wrapper_function(&ctx, parts, 2, 0, 0);
 		}
-	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_EVAL &&
-		   !shader->key.as_es) {
-		LLVMValueRef parts[2];
-		union si_shader_part_key epilog_key;
-
-		parts[0] = ctx.main_fn;
-
-		si_get_vs_epilog_key(shader, &shader->key.part.tes.epilog, &epilog_key);
-		si_build_vs_epilog_function(&ctx, &epilog_key);
-		parts[1] = ctx.main_fn;
-
-		si_build_wrapper_function(&ctx, parts, 2, 0, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_GEOMETRY) {
 		if (ctx.screen->b.chip_class >= GFX9) {
 			struct si_shader_selector *es = shader->key.part.gs.es;
@@ -8464,57 +8407,6 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	si_llvm_build_ret(ctx, ret);
 }
 
-/**
- * Build the vertex shader epilog function. This is also used by the tessellation
- * evaluation shader compiled as VS.
- *
- * The input is PrimitiveID.
- *
- * If PrimitiveID is required by the pixel shader, export it.
- * Otherwise, do nothing.
- */
-static void si_build_vs_epilog_function(struct si_shader_context *ctx,
-					union si_shader_part_key *key)
-{
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
-	LLVMTypeRef params[5];
-	int num_params, i;
-
-	/* Declare input VGPRs. */
-	num_params = key->vs_epilog.states.export_prim_id ?
-			   (VS_EPILOG_PRIMID_LOC + 1) : 0;
-	assert(num_params <= ARRAY_SIZE(params));
-
-	for (i = 0; i < num_params; i++)
-		params[i] = ctx->f32;
-
-	/* Create the function. */
-	si_create_function(ctx, "vs_epilog", NULL, 0, params, num_params, -1);
-
-	/* Emit exports. */
-	if (key->vs_epilog.states.export_prim_id) {
-		struct lp_build_context *base = &bld_base->base;
-		struct ac_export_args args;
-
-		args.enabled_channels = 0x1; /* enabled channels */
-		args.valid_mask = 0; /* whether the EXEC mask is valid */
-		args.done = 0; /* DONE bit */
-		args.target = V_008DFC_SQ_EXP_PARAM +
-			      key->vs_epilog.prim_id_param_offset;
-		args.compr = 0; /* COMPR flag (0 = 32-bit export) */
-		args.out[0] = LLVMGetParam(ctx->main_fn,
-				       VS_EPILOG_PRIMID_LOC); /* X */
-		args.out[1] = base->undef; /* Y */
-		args.out[2] = base->undef; /* Z */
-		args.out[3] = base->undef; /* W */
-
-		ac_build_export(&ctx->ac, &args);
-	}
-
-	LLVMBuildRetVoid(gallivm->builder);
-}
-
 static bool si_get_vs_prolog(struct si_screen *sscreen,
 			     LLVMTargetMachineRef tm,
 			     struct si_shader *shader,
@@ -8542,27 +8434,6 @@ static bool si_get_vs_prolog(struct si_screen *sscreen,
 }
 
 /**
- * Create & compile a vertex shader epilog. This a helper used by VS and TES.
- */
-static bool si_get_vs_epilog(struct si_screen *sscreen,
-			     LLVMTargetMachineRef tm,
-		             struct si_shader *shader,
-		             struct pipe_debug_callback *debug,
-			     struct si_vs_epilog_bits *states)
-{
-	union si_shader_part_key epilog_key;
-
-	si_get_vs_epilog_key(shader, states, &epilog_key);
-
-	shader->epilog = si_get_shader_part(sscreen, &sscreen->vs_epilogs,
-					    PIPE_SHADER_VERTEX, true,
-					    &epilog_key, tm, debug,
-					    si_build_vs_epilog_function,
-					    "Vertex Shader Epilog");
-	return shader->epilog != NULL;
-}
-
-/**
  * Select and compile (or reuse) vertex shader parts (prolog & epilog).
  */
 static bool si_shader_select_vs_parts(struct si_screen *sscreen,
@@ -8570,33 +8441,8 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 				      struct si_shader *shader,
 				      struct pipe_debug_callback *debug)
 {
-	if (!si_get_vs_prolog(sscreen, tm, shader, debug, shader,
-			      &shader->key.part.vs.prolog))
-		return false;
-
-	/* Get the epilog. */
-	if (!shader->key.as_es && !shader->key.as_ls &&
-	    !si_get_vs_epilog(sscreen, tm, shader, debug,
-			      &shader->key.part.vs.epilog))
-		return false;
-
-	return true;
-}
-
-/**
- * Select and compile (or reuse) TES parts (epilog).
- */
-static bool si_shader_select_tes_parts(struct si_screen *sscreen,
-				       LLVMTargetMachineRef tm,
-				       struct si_shader *shader,
-				       struct pipe_debug_callback *debug)
-{
-	if (shader->key.as_es)
-		return true;
-
-	/* TES compiled as VS. */
-	return si_get_vs_epilog(sscreen, tm, shader, debug,
-				&shader->key.part.tes.epilog);
+	return si_get_vs_prolog(sscreen, tm, shader, debug, shader,
+				&shader->key.part.vs.prolog);
 }
 
 /**
@@ -9260,8 +9106,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 				return -1;
 			break;
 		case PIPE_SHADER_TESS_EVAL:
-			if (!si_shader_select_tes_parts(sscreen, tm, shader, debug))
-				return -1;
 			break;
 		case PIPE_SHADER_GEOMETRY:
 			if (!si_shader_select_gs_parts(sscreen, tm, shader, debug))

@@ -87,7 +87,6 @@ struct si_screen {
 
 	mtx_t			shader_parts_mutex;
 	struct si_shader_part		*vs_prologs;
-	struct si_shader_part		*vs_epilogs;
 	struct si_shader_part		*tcs_epilogs;
 	struct si_shader_part		*gs_prologs;
 	struct si_shader_part		*ps_prologs;
@@ -507,16 +506,6 @@ static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 		return sctx->tes_shader.current;
 	else
 		return sctx->vs_shader.current;
-}
-
-static inline bool si_vs_exports_prim_id(struct si_shader *shader)
-{
-	if (shader->selector->type == PIPE_SHADER_VERTEX)
-		return shader->key.part.vs.epilog.export_prim_id;
-	else if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
-		return shader->key.part.tes.epilog.export_prim_id;
-	else
-		return false;
 }
 
 static inline unsigned
