@@ -660,6 +660,48 @@ SWR_FUNC(void, SwrEndFrame,
 SWR_FUNC(void, SwrInit);
 
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Loads a full hottile from a render surface
+/// @param hPrivateContext - Handle to private DC
+/// @param dstFormat - Format for hot tile.
+/// @param renderTargetIndex - Index to src render target
+/// @param x, y - Coordinates to raster tile.
+/// @param pDstHotTile - Pointer to Hot Tile
+SWR_FUNC(void, SwrLoadHotTile,
+    const SWR_SURFACE_STATE *pSrcSurface,
+    SWR_FORMAT dstFormat,
+    SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
+    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex,
+    uint8_t *pDstHotTile);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Deswizzles and stores a full hottile to a render surface
+/// @param hPrivateContext - Handle to private DC
+/// @param srcFormat - Format for hot tile.
+/// @param renderTargetIndex - Index to destination render target
+/// @param x, y - Coordinates to raster tile.
+/// @param pSrcHotTile - Pointer to Hot Tile
+SWR_FUNC(void, SwrStoreHotTileToSurface,
+    SWR_SURFACE_STATE *pDstSurface,
+    SWR_FORMAT srcFormat,
+    SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
+    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex,
+    uint8_t *pSrcHotTile);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Writes clear color to every pixel of a render surface
+/// @param hPrivateContext - Handle to private DC
+/// @param renderTargetIndex - Index to destination render target
+/// @param x, y - Coordinates to raster tile.
+/// @param pClearColor - Pointer to clear color
+SWR_FUNC(void, SwrStoreHotTileClear,
+         SWR_SURFACE_STATE *pDstSurface,
+         SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
+         UINT x,
+         UINT y,
+         uint32_t renderTargetArrayIndex,
+         const float* pClearColor);
+
 struct SWR_INTERFACE
 {
     PFNSwrCreateContext pfnSwrCreateContext;
@@ -707,6 +749,9 @@ struct SWR_INTERFACE
     PFNSwrEnableStatsBE pfnSwrEnableStatsBE;
     PFNSwrEndFrame pfnSwrEndFrame;
     PFNSwrInit pfnSwrInit;
+    PFNSwrLoadHotTile pfnSwrLoadHotTile;
+    PFNSwrStoreHotTileToSurface pfnSwrStoreHotTileToSurface;
+    PFNSwrStoreHotTileClear pfnSwrStoreHotTileClear;
 };
 
 extern "C" {

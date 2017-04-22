@@ -1705,4 +1705,7 @@ void SwrGetInterface(SWR_INTERFACE &out_funcs)
     out_funcs.pfnSwrEnableStatsBE = SwrEnableStatsBE;
     out_funcs.pfnSwrEndFrame = SwrEndFrame;
     out_funcs.pfnSwrInit = SwrInit;
+    out_funcs.pfnSwrLoadHotTile = SwrLoadHotTile;
+    out_funcs.pfnSwrStoreHotTileToSurface = SwrStoreHotTileToSurface;
+    out_funcs.pfnSwrStoreHotTileClear = SwrStoreHotTileClear;
 }

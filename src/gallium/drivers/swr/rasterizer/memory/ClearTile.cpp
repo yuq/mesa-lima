@@ -152,7 +152,7 @@ struct StoreMacroTileClear
 /// @param renderTargetIndex - Index to destination render target
 /// @param x, y - Coordinates to raster tile.
 /// @param pClearColor - Pointer to clear color
-void StoreHotTileClear(
+void SwrStoreHotTileClear(
     SWR_SURFACE_STATE *pDstSurface,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
     UINT x,
