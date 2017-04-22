@@ -28,6 +28,7 @@
 #include "util/u_helpers.h"
 #include "util/u_inlines.h"
 #include "util/u_upload_mgr.h"
+#include <inttypes.h>
 
 /**
  * This function is used to copy an array of pipe_vertex_buffer structures,
@@ -138,4 +139,54 @@ util_save_and_upload_index_buffer(struct pipe_context *pipe,
    pipe->set_index_buffer(pipe, &new_ib);
    pipe_resource_reference(&new_ib.buffer, NULL);
    return true;
+}
+
+struct pipe_query *
+util_begin_pipestat_query(struct pipe_context *ctx)
+{
+   struct pipe_query *q =
+      ctx->create_query(ctx, PIPE_QUERY_PIPELINE_STATISTICS, 0);
+   if (!q)
+      return NULL;
+
+   ctx->begin_query(ctx, q);
+   return q;
+}
+
+void
+util_end_pipestat_query(struct pipe_context *ctx, struct pipe_query *q,
+                        FILE *f)
+{
+   static unsigned counter;
+   struct pipe_query_data_pipeline_statistics stats;
+
+   ctx->end_query(ctx, q);
+   ctx->get_query_result(ctx, q, true, (void*)&stats);
+   ctx->destroy_query(ctx, q);
+
+   fprintf(f,
+           "Draw call %u:\n"
+           "    ia_vertices    = %"PRIu64"\n"
+           "    ia_primitives  = %"PRIu64"\n"
+           "    vs_invocations = %"PRIu64"\n"
+           "    gs_invocations = %"PRIu64"\n"
+           "    gs_primitives  = %"PRIu64"\n"
+           "    c_invocations  = %"PRIu64"\n"
+           "    c_primitives   = %"PRIu64"\n"
+           "    ps_invocations = %"PRIu64"\n"
+           "    hs_invocations = %"PRIu64"\n"
+           "    ds_invocations = %"PRIu64"\n"
+           "    cs_invocations = %"PRIu64"\n",
+           p_atomic_inc_return(&counter),
+           stats.ia_vertices,
+           stats.ia_primitives,
+           stats.vs_invocations,
+           stats.gs_invocations,
+           stats.gs_primitives,
+           stats.c_invocations,
+           stats.c_primitives,
+           stats.ps_invocations,
+           stats.hs_invocations,
+           stats.ds_invocations,
+           stats.cs_invocations);
 }

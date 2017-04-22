@@ -29,6 +29,7 @@
 #define U_HELPERS_H
 
 #include "pipe/p_state.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +52,13 @@ bool util_save_and_upload_index_buffer(struct pipe_context *pipe,
                                        const struct pipe_draw_info *info,
                                        const struct pipe_index_buffer *ib,
                                        struct pipe_index_buffer *out_saved);
+
+struct pipe_query *
+util_begin_pipestat_query(struct pipe_context *ctx);
+
+void
+util_end_pipestat_query(struct pipe_context *ctx, struct pipe_query *q,
+                        FILE *f);
 
 #ifdef __cplusplus
 }
