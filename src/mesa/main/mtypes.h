@@ -1496,9 +1496,8 @@ struct gl_vertex_buffer_binding
 
 
 /**
- * A representation of "Vertex Array Objects" (VAOs) from OpenGL 3.1+,
- * GL_ARB_vertex_array_object, or the original GL_APPLE_vertex_array_object
- * extension.
+ * A representation of "Vertex Array Objects" (VAOs) from OpenGL 3.1+ /
+ * the GL_ARB_vertex_array_object extension.
  */
 struct gl_vertex_array_object
 {
@@ -1588,7 +1587,7 @@ typedef enum
  */
 struct gl_array_attrib
 {
-   /** Currently bound array object. See _mesa_BindVertexArrayAPPLE() */
+   /** Currently bound array object. */
    struct gl_vertex_array_object *VAO;
 
    /** The default vertex array object */
@@ -1597,7 +1596,7 @@ struct gl_array_attrib
    /** The last VAO accessed by a DSA function */
    struct gl_vertex_array_object *LastLookedUpVAO;
 
-   /** Array objects (GL_ARB/APPLE_vertex_array_object) */
+   /** Array objects (GL_ARB_vertex_array_object) */
    struct _mesa_HashTable *Objects;
 
    GLint ActiveTexture;		/**< Client Active Texture */

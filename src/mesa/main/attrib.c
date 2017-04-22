@@ -1575,7 +1575,7 @@ restore_array_attrib(struct gl_context *ctx,
    if (arb_vao && !_mesa_IsVertexArray(src->VAO->Name))
       return;
 
-   _mesa_BindVertexArrayAPPLE(src->VAO->Name);
+   _mesa_BindVertexArray(src->VAO->Name);
 
    /* Restore or recreate the buffer objects by the names ... */
    if (!arb_vao

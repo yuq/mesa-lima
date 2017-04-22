@@ -969,8 +969,6 @@ const struct function common_desktop_functions_possible[] = {
 };
 
 const struct function gl_compatibility_functions_possible[] = {
-   { "glBindVertexArrayAPPLE", 10, -1 },
-   { "glGenVertexArraysAPPLE", 10, -1 },
    { "glBindRenderbufferEXT", 10, -1 },
    { "glBindFramebufferEXT", 10, -1 },
    { "glNewList", 10, _gloffset_NewList },
