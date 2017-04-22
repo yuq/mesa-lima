@@ -993,6 +993,25 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
 
    anv_bo_init_new(&bo->bo, device, size);
 
+   /* Even though the Scratch base pointers in 3DSTATE_*S are 64 bits, they
+    * are still relative to the general state base address.  When we emit
+    * STATE_BASE_ADDRESS, we set general state base address to 0 and the size
+    * to the maximum (1 page under 4GB).  This allows us to just place the
+    * scratch buffers anywhere we wish in the bottom 32 bits of address space
+    * and just set the scratch base pointer in 3DSTATE_*S using a relocation.
+    * However, in order to do so, we need to ensure that the kernel does not
+    * place the scratch BO above the 32-bit boundary.
+    *
+    * NOTE: Technically, it can't go "anywhere" because the top page is off
+    * limits.  However, when EXEC_OBJECT_SUPPORTS_48B_ADDRESS is set, the
+    * kernel allocates space using
+    *
+    *    end = min_t(u64, end, (1ULL << 32) - I915_GTT_PAGE_SIZE);
+    *
+    * so nothing will ever touch the top page.
+    */
+   bo->bo.flags &= ~EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+
    /* Set the exists last because it may be read by other threads */
    __sync_synchronize();
    bo->exists = true;
