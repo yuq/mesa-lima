@@ -291,7 +291,8 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
 		if (sscreen->has_distributed_tess) {
 			if (key->u.uses_gs) {
-				partial_es_wave = true;
+				if (sscreen->b.chip_class <= VI)
+					partial_es_wave = true;
 
 				/* GPU hang workaround. */
 				if (sscreen->b.family == CHIP_TONGA ||
@@ -371,7 +372,7 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 	}
 
 	/* If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
-	if (ia_switch_on_eoi)
+	if (sscreen->b.chip_class <= VI && ia_switch_on_eoi)
 		partial_es_wave = true;
 
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
