@@ -401,26 +401,29 @@ static void si_set_tesseval_regs(struct si_screen *sscreen,
  *     VS as ES | ES -> GS -> VS             | 30
  *    TES as VS | LS -> HS -> VS             | 14 or 30
  *    TES as ES | LS -> HS -> ES -> GS -> VS | 14 or 30
+ *
+ * If "shader" is NULL, it's assumed it's not LS or GS copy shader.
  */
 static void polaris_set_vgt_vertex_reuse(struct si_screen *sscreen,
+					 struct si_shader_selector *sel,
 					 struct si_shader *shader,
 					 struct si_pm4_state *pm4)
 {
-	unsigned type = shader->selector->type;
+	unsigned type = sel->type;
 
 	if (sscreen->b.family < CHIP_POLARIS10)
 		return;
 
 	/* VS as VS, or VS as ES: */
 	if ((type == PIPE_SHADER_VERTEX &&
-	     !shader->key.as_ls &&
-	     !shader->is_gs_copy_shader) ||
+	     (!shader ||
+	      (!shader->key.as_ls && !shader->is_gs_copy_shader))) ||
 	    /* TES as VS, or TES as ES: */
 	    type == PIPE_SHADER_TESS_EVAL) {
 		unsigned vtx_reuse_depth = 30;
 
 		if (type == PIPE_SHADER_TESS_EVAL &&
-		    shader->selector->info.properties[TGSI_PROPERTY_TES_SPACING] ==
+		    sel->info.properties[TGSI_PROPERTY_TES_SPACING] ==
 		    PIPE_TESS_SPACING_FRACTIONAL_ODD)
 			vtx_reuse_depth = 14;
 
@@ -569,7 +572,7 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
 		si_set_tesseval_regs(sscreen, shader->selector, pm4);
 
-	polaris_set_vgt_vertex_reuse(sscreen, shader, pm4);
+	polaris_set_vgt_vertex_reuse(sscreen, shader->selector, shader, pm4);
 }
 
 /**
@@ -805,6 +808,9 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 		if (es_type == PIPE_SHADER_TESS_EVAL)
 			si_set_tesseval_regs(sscreen, shader->key.part.gs.es, pm4);
 
+		polaris_set_vgt_vertex_reuse(sscreen, shader->key.part.gs.es,
+					     NULL, pm4);
+
 		if (shader->config.scratch_bytes_per_wave) {
 			fprintf(stderr, "GS: scratch buffer unsupported");
 			abort();
@@ -927,7 +933,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
 		si_set_tesseval_regs(sscreen, shader->selector, pm4);
 
-	polaris_set_vgt_vertex_reuse(sscreen, shader, pm4);
+	polaris_set_vgt_vertex_reuse(sscreen, shader->selector, shader, pm4);
 }
 
 static unsigned si_get_ps_num_interp(struct si_shader *ps)
