@@ -73,10 +73,10 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
    struct brw_context *brw = batch->driver_batch;
    struct brw_bo *bo = address.buffer;
 
-   brw_emit_reloc(&brw->batch, ss_offset, bo, address.offset + delta,
-                  address.read_domains, address.write_domain);
+   uint64_t reloc_val =
+      brw_emit_reloc(&brw->batch, ss_offset, bo, address.offset + delta,
+                     address.read_domains, address.write_domain);
 
-   uint64_t reloc_val = bo->offset64 + address.offset + delta;
    void *reloc_ptr = (void *)brw->batch.map + ss_offset;
 #if GEN_GEN >= 8
    *(uint64_t *)reloc_ptr = reloc_val;
