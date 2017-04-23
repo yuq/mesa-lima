@@ -3425,6 +3425,7 @@ static LLVMValueRef image_fetch_coords(
 		} else if (target == TGSI_TEXTURE_1D_ARRAY) {
 			coords[2] = coords[1];
 			coords[1] = ctx->i32_0;
+			num_coords++;
 		}
 	}
 
