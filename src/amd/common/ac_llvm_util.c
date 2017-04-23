@@ -131,7 +131,7 @@ LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, bool su
 	                             target,
 	                             triple,
 	                             ac_get_llvm_processor_name(family),
-	                             "+DumpCode,+vgpr-spilling",
+	                             "+DumpCode,+vgpr-spilling,-fp32-denormals,-xnack",
 	                             LLVMCodeGenLevelDefault,
 	                             LLVMRelocDefault,
 	                             LLVMCodeModelDefault);
