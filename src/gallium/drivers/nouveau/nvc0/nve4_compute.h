@@ -18,8 +18,8 @@ struct nve4_cp_launch_desc
    u16 griddim_z;
    u32 unk14[3];
    u16 shared_size; /* must be aligned to 0x100 */
-   u16 unk15;
-   u16 unk16;
+   u16 unk17;
+   u16 unk18;
    u16 blockdim_x;
    u16 blockdim_y;
    u16 blockdim_z;
