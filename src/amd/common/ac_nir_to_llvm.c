@@ -5572,24 +5572,22 @@ handle_tcs_outputs_post(struct nir_to_llvm_context *ctx)
 	write_tess_factors(ctx);
 }
 
-static void
+static bool
 si_export_mrt_color(struct nir_to_llvm_context *ctx,
-		    LLVMValueRef *color, unsigned param, bool is_last)
+		    LLVMValueRef *color, unsigned param, bool is_last,
+		    struct ac_export_args *args)
 {
-
-	struct ac_export_args args;
-
 	/* Export */
 	si_llvm_init_export_args(ctx, color, param,
-				 &args);
+				 args);
 
 	if (is_last) {
-		args.valid_mask = 1; /* whether the EXEC mask is valid */
-		args.done = 1; /* DONE bit */
-	} else if (!args.enabled_channels)
-		return; /* unnecessary NULL export */
+		args->valid_mask = 1; /* whether the EXEC mask is valid */
+		args->done = 1; /* DONE bit */
+	} else if (!args->enabled_channels)
+		return false; /* unnecessary NULL export */
 
-	ac_build_export(&ctx->ac, &args);
+	return true;
 }
 
 static void
@@ -5639,6 +5637,7 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 {
 	unsigned index = 0;
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
+	struct ac_export_args color_args[8];
 
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef values[4];
@@ -5667,15 +5666,20 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 			if (!ctx->shader_info->fs.writes_z && !ctx->shader_info->fs.writes_stencil && !ctx->shader_info->fs.writes_sample_mask)
 				last = ctx->output_mask <= ((1ull << (i + 1)) - 1);
 
-			si_export_mrt_color(ctx, values, V_008DFC_SQ_EXP_MRT + index, last);
-			index++;
+			bool ret = si_export_mrt_color(ctx, values, V_008DFC_SQ_EXP_MRT + (i - FRAG_RESULT_DATA0), last, &color_args[index]);
+			if (ret)
+				index++;
 		}
 	}
 
+	for (unsigned i = 0; i < index; i++)
+		ac_build_export(&ctx->ac, &color_args[i]);
 	if (depth || stencil || samplemask)
 		si_export_mrt_z(ctx, depth, stencil, samplemask);
-	else if (!index)
-		si_export_mrt_color(ctx, NULL, V_008DFC_SQ_EXP_NULL, true);
+	else if (!index) {
+		si_export_mrt_color(ctx, NULL, V_008DFC_SQ_EXP_NULL, true, &color_args[0]);
+		ac_build_export(&ctx->ac, &color_args[0]);
+	}
 
 	ctx->shader_info->fs.output_mask = index ? ((1ull << index) - 1) : 0;
 }
