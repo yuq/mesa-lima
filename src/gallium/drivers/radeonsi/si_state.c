@@ -3189,7 +3189,8 @@ si_make_texture_descriptor(struct si_screen *screen,
 	if (!sampler &&
 	    (res->target == PIPE_TEXTURE_CUBE ||
 	     res->target == PIPE_TEXTURE_CUBE_ARRAY ||
-	     res->target == PIPE_TEXTURE_3D)) {
+	     (screen->b.chip_class <= VI &&
+	      res->target == PIPE_TEXTURE_3D))) {
 		/* For the purpose of shader images, treat cube maps and 3D
 		 * textures as 2D arrays. For 3D textures, the address
 		 * calculations for mipmaps are different, so we rely on the

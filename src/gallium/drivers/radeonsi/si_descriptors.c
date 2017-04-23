@@ -765,7 +765,7 @@ static void si_set_shader_image(struct si_context *ctx,
 		static const unsigned char swizzle[4] = { 0, 1, 2, 3 };
 		struct r600_texture *tex = (struct r600_texture *)res;
 		unsigned level = view->u.tex.level;
-		unsigned width, height, depth;
+		unsigned width, height, depth, hw_level;
 		bool uses_dcc = vi_dcc_enabled(tex, level);
 
 		assert(!tex->is_depth);
@@ -794,20 +794,31 @@ static void si_set_shader_image(struct si_context *ctx,
 		    p_atomic_read(&tex->framebuffers_bound))
 			ctx->need_check_render_feedback = true;
 
-		/* Always force the base level to the selected level.
-		 *
-		 * This is required for 3D textures, where otherwise
-		 * selecting a single slice for non-layered bindings
-		 * fails. It doesn't hurt the other targets.
-		 */
-		width = u_minify(res->b.b.width0, level);
-		height = u_minify(res->b.b.height0, level);
-		depth = u_minify(res->b.b.depth0, level);
+		if (ctx->b.chip_class >= GFX9) {
+			/* Always set the base address. The swizzle modes don't
+			 * allow setting mipmap level offsets as the base.
+			 */
+			width = res->b.b.width0;
+			height = res->b.b.height0;
+			depth = res->b.b.depth0;
+			hw_level = level;
+		} else {
+			/* Always force the base level to the selected level.
+			 *
+			 * This is required for 3D textures, where otherwise
+			 * selecting a single slice for non-layered bindings
+			 * fails. It doesn't hurt the other targets.
+			 */
+			width = u_minify(res->b.b.width0, level);
+			height = u_minify(res->b.b.height0, level);
+			depth = u_minify(res->b.b.depth0, level);
+			hw_level = 0;
+		}
 
 		si_make_texture_descriptor(screen, tex,
 					   false, res->b.b.target,
 					   view->format, swizzle,
-					   0, 0,
+					   hw_level, hw_level,
 					   view->u.tex.first_layer,
 					   view->u.tex.last_layer,
 					   width, height, depth,
