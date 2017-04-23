@@ -248,9 +248,8 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_INT64:
    case PIPE_CAP_TGSI_TEX_TXF_LZ:
    case PIPE_CAP_TGSI_CLOCK:
-      return 1;
    case PIPE_CAP_COMPUTE:
-      return (class_3d < GP100_3D_CLASS);
+      return 1;
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return (class_3d >= NVE4_3D_CLASS) ? 1 : 0;
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
@@ -688,9 +687,8 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    case 0x100:
    case 0x110:
    case 0x120:
-      return nve4_screen_compute_setup(screen, screen->base.pushbuf);
    case 0x130:
-      return 0;
+      return nve4_screen_compute_setup(screen, screen->base.pushbuf);
    default:
       return -1;
    }
