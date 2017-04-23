@@ -324,10 +324,10 @@ void si_destroy_shader_cache(struct si_screen *sscreen)
 /* SHADER STATES */
 
 static void si_set_tesseval_regs(struct si_screen *sscreen,
-				 struct si_shader *shader,
+				 struct si_shader_selector *tes,
 				 struct si_pm4_state *pm4)
 {
-	struct tgsi_shader_info *info = &shader->selector->info;
+	struct tgsi_shader_info *info = &tes->info;
 	unsigned tes_prim_mode = info->properties[TGSI_PROPERTY_TES_PRIM_MODE];
 	unsigned tes_spacing = info->properties[TGSI_PROPERTY_TES_SPACING];
 	bool tes_vertex_order_cw = info->properties[TGSI_PROPERTY_TES_VERTEX_ORDER_CW];
@@ -567,7 +567,7 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
-		si_set_tesseval_regs(sscreen, shader, pm4);
+		si_set_tesseval_regs(sscreen, shader->selector, pm4);
 
 	polaris_set_vgt_vertex_reuse(sscreen, shader, pm4);
 }
@@ -802,6 +802,9 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 		si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 			       shader->key.part.gs.es->esgs_itemsize / 4);
 
+		if (es_type == PIPE_SHADER_TESS_EVAL)
+			si_set_tesseval_regs(sscreen, shader->key.part.gs.es, pm4);
+
 		if (shader->config.scratch_bytes_per_wave) {
 			fprintf(stderr, "GS: scratch buffer unsupported");
 			abort();
@@ -922,7 +925,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 			       S_028818_VPORT_Z_SCALE_ENA(1) | S_028818_VPORT_Z_OFFSET_ENA(1));
 
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
-		si_set_tesseval_regs(sscreen, shader, pm4);
+		si_set_tesseval_regs(sscreen, shader->selector, pm4);
 
 	polaris_set_vgt_vertex_reuse(sscreen, shader, pm4);
 }
