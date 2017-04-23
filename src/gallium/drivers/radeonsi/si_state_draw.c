@@ -379,7 +379,8 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
 		S_028AA8_WD_SWITCH_ON_EOP(sscreen->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
-		S_028AA8_MAX_PRIMGRP_IN_WAVE(sscreen->b.chip_class >= VI ?
+		/* The following field was moved to VGT_SHADER_STAGES_EN in GFX9. */
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(sscreen->b.chip_class == VI ?
 					     max_primgroup_in_wave : 0) |
 		S_030960_EN_INST_OPT_BASIC(sscreen->b.chip_class >= GFX9) |
 		S_030960_EN_INST_OPT_ADV(sscreen->b.chip_class >= GFX9);

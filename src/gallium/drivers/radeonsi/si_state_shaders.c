@@ -2542,6 +2542,9 @@ static void si_update_vgt_shader_config(struct si_context *sctx)
 			          S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
 		}
 
+		if (sctx->b.chip_class >= GFX9)
+			stages |= S_028B54_MAX_PRIMGRP_IN_WAVE(2);
+
 		si_pm4_set_reg(*pm4, R_028B54_VGT_SHADER_STAGES_EN, stages);
 	}
 	si_pm4_bind_state(sctx, vgt_shader_config, *pm4);
