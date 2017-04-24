@@ -617,13 +617,9 @@ anv_block_pool_free(struct anv_block_pool *pool, int32_t offset)
 }
 
 static void
-anv_fixed_size_state_pool_init(struct anv_fixed_size_state_pool *pool,
-                               uint32_t state_size)
+anv_fixed_size_state_pool_init(struct anv_fixed_size_state_pool *pool)
 {
    /* At least a cache line and must divide the block size. */
-   assert(state_size >= 64 && util_is_power_of_two(state_size));
-
-   pool->state_size = state_size;
    pool->free_list = ANV_FREE_LIST_EMPTY;
    pool->block.next = 0;
    pool->block.end = 0;
@@ -631,8 +627,11 @@ anv_fixed_size_state_pool_init(struct anv_fixed_size_state_pool *pool,
 
 static uint32_t
 anv_fixed_size_state_pool_alloc(struct anv_fixed_size_state_pool *pool,
-                                struct anv_block_pool *block_pool)
+                                struct anv_block_pool *block_pool,
+                                uint32_t state_size)
 {
+   assert(state_size >= 64 && util_is_power_of_two(state_size));
+
    int32_t offset;
    struct anv_block_state block, old, new;
 
@@ -645,13 +644,13 @@ anv_fixed_size_state_pool_alloc(struct anv_fixed_size_state_pool *pool,
    /* If free list was empty (or somebody raced us and took the items) we
     * allocate a new item from the end of the block */
  restart:
-   block.u64 = __sync_fetch_and_add(&pool->block.u64, pool->state_size);
+   block.u64 = __sync_fetch_and_add(&pool->block.u64, state_size);
 
    if (block.next < block.end) {
       return block.next;
    } else if (block.next == block.end) {
       offset = anv_block_pool_alloc(block_pool);
-      new.next = offset + pool->state_size;
+      new.next = offset + state_size;
       new.end = offset + block_pool->block_size;
       old.u64 = __sync_lock_test_and_set(&pool->block.u64, new.u64);
       if (old.next != block.next)
@@ -677,8 +676,7 @@ anv_state_pool_init(struct anv_state_pool *pool,
 {
    pool->block_pool = block_pool;
    for (unsigned i = 0; i < ANV_STATE_BUCKETS; i++) {
-      uint32_t size = 1 << (ANV_MIN_STATE_SIZE_LOG2 + i);
-      anv_fixed_size_state_pool_init(&pool->buckets[i], size);
+      anv_fixed_size_state_pool_init(&pool->buckets[i]);
    }
    VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
 }
@@ -702,7 +700,8 @@ anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
    struct anv_state state;
    state.alloc_size = 1 << size_log2;
    state.offset = anv_fixed_size_state_pool_alloc(&pool->buckets[bucket],
-                                                  pool->block_pool);
+                                                  pool->block_pool,
+                                                  state.alloc_size);
    state.map = pool->block_pool->map + state.offset;
    return state;
 }

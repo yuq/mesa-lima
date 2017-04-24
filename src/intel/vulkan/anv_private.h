@@ -493,7 +493,6 @@ struct anv_state {
 #define ANV_STATE_NULL ((struct anv_state) { .alloc_size = 0 })
 
 struct anv_fixed_size_state_pool {
-   uint32_t state_size;
    union anv_free_list free_list;
    struct anv_block_state block;
 };
