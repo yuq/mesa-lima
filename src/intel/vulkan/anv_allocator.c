@@ -616,33 +616,33 @@ anv_block_pool_free(struct anv_block_pool *pool, int32_t offset)
    }
 }
 
-static void
-anv_fixed_size_state_pool_init(struct anv_fixed_size_state_pool *pool)
+void
+anv_state_pool_init(struct anv_state_pool *pool,
+                    struct anv_block_pool *block_pool)
 {
-   /* At least a cache line and must divide the block size. */
-   pool->free_list = ANV_FREE_LIST_EMPTY;
-   pool->block.next = 0;
-   pool->block.end = 0;
+   pool->block_pool = block_pool;
+   for (unsigned i = 0; i < ANV_STATE_BUCKETS; i++) {
+      pool->buckets[i].free_list = ANV_FREE_LIST_EMPTY;
+      pool->buckets[i].block.next = 0;
+      pool->buckets[i].block.end = 0;
+   }
+   VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
+}
+
+void
+anv_state_pool_finish(struct anv_state_pool *pool)
+{
+   VG(VALGRIND_DESTROY_MEMPOOL(pool));
 }
 
 static uint32_t
-anv_fixed_size_state_pool_alloc(struct anv_fixed_size_state_pool *pool,
-                                struct anv_block_pool *block_pool,
-                                uint32_t state_size)
+anv_fixed_size_state_pool_alloc_new(struct anv_fixed_size_state_pool *pool,
+                                    struct anv_block_pool *block_pool,
+                                    uint32_t state_size)
 {
-   assert(state_size >= 64 && util_is_power_of_two(state_size));
-
-   int32_t offset;
    struct anv_block_state block, old, new;
+   uint32_t offset;
 
-   /* Try free list first. */
-   if (anv_free_list_pop(&pool->free_list, &block_pool->map, &offset)) {
-      assert(offset >= 0);
-      return offset;
-   }
-
-   /* If free list was empty (or somebody raced us and took the items) we
-    * allocate a new item from the end of the block */
  restart:
    block.u64 = __sync_fetch_and_add(&pool->block.u64, state_size);
 
@@ -662,31 +662,6 @@ anv_fixed_size_state_pool_alloc(struct anv_fixed_size_state_pool *pool,
    }
 }
 
-static void
-anv_fixed_size_state_pool_free(struct anv_fixed_size_state_pool *pool,
-                               struct anv_block_pool *block_pool,
-                               uint32_t offset)
-{
-   anv_free_list_push(&pool->free_list, block_pool->map, offset);
-}
-
-void
-anv_state_pool_init(struct anv_state_pool *pool,
-                    struct anv_block_pool *block_pool)
-{
-   pool->block_pool = block_pool;
-   for (unsigned i = 0; i < ANV_STATE_BUCKETS; i++) {
-      anv_fixed_size_state_pool_init(&pool->buckets[i]);
-   }
-   VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
-}
-
-void
-anv_state_pool_finish(struct anv_state_pool *pool)
-{
-   VG(VALGRIND_DESTROY_MEMPOOL(pool));
-}
-
 static struct anv_state
 anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
                            uint32_t size, uint32_t align)
@@ -699,9 +674,19 @@ anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
 
    struct anv_state state;
    state.alloc_size = 1 << size_log2;
-   state.offset = anv_fixed_size_state_pool_alloc(&pool->buckets[bucket],
-                                                  pool->block_pool,
-                                                  state.alloc_size);
+
+   /* Try free list first. */
+   if (anv_free_list_pop(&pool->buckets[bucket].free_list,
+                         &pool->block_pool->map, &state.offset)) {
+      assert(state.offset >= 0);
+      goto done;
+   }
+
+   state.offset = anv_fixed_size_state_pool_alloc_new(&pool->buckets[bucket],
+                                                      pool->block_pool,
+                                                      state.alloc_size);
+
+done:
    state.map = pool->block_pool->map + state.offset;
    return state;
 }
@@ -726,8 +711,8 @@ anv_state_pool_free_no_vg(struct anv_state_pool *pool, struct anv_state state)
           size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
    unsigned bucket = size_log2 - ANV_MIN_STATE_SIZE_LOG2;
 
-   anv_fixed_size_state_pool_free(&pool->buckets[bucket],
-                                  pool->block_pool, state.offset);
+   anv_free_list_push(&pool->buckets[bucket].free_list,
+                      pool->block_pool->map, state.offset);
 }
 
 void
