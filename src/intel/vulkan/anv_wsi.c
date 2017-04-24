@@ -142,16 +142,16 @@ VkResult anv_GetPhysicalDeviceSurfacePresentModesKHR(
 
 
 static VkResult
-x11_anv_wsi_image_create(VkDevice device_h,
-                         const VkSwapchainCreateInfoKHR *pCreateInfo,
-                         const VkAllocationCallbacks* pAllocator,
-                         bool different_gpu,
-                         bool linear,
-                         VkImage *image_p,
-                         VkDeviceMemory *memory_p,
-                         uint32_t *size,
-                         uint32_t *offset,
-                         uint32_t *row_pitch, int *fd_p)
+anv_wsi_image_create(VkDevice device_h,
+                     const VkSwapchainCreateInfoKHR *pCreateInfo,
+                     const VkAllocationCallbacks* pAllocator,
+                     bool different_gpu,
+                     bool linear,
+                     VkImage *image_p,
+                     VkDeviceMemory *memory_p,
+                     uint32_t *size,
+                     uint32_t *offset,
+                     uint32_t *row_pitch, int *fd_p)
 {
    struct anv_device *device = anv_device_from_handle(device_h);
    VkImage image_h;
@@ -249,10 +249,10 @@ fail_create_image:
 }
 
 static void
-x11_anv_wsi_image_free(VkDevice device,
-                       const VkAllocationCallbacks* pAllocator,
-                       VkImage image_h,
-                       VkDeviceMemory memory_h)
+anv_wsi_image_free(VkDevice device,
+                   const VkAllocationCallbacks* pAllocator,
+                   VkImage image_h,
+                   VkDeviceMemory memory_h)
 {
    anv_DestroyImage(device, image_h, pAllocator);
 
@@ -260,8 +260,8 @@ x11_anv_wsi_image_free(VkDevice device,
 }
 
 static const struct wsi_image_fns anv_wsi_image_fns = {
-   .create_wsi_image = x11_anv_wsi_image_create,
-   .free_wsi_image = x11_anv_wsi_image_free,
+   .create_wsi_image = anv_wsi_image_create,
+   .free_wsi_image = anv_wsi_image_free,
 };
 
 VkResult anv_CreateSwapchainKHR(
