@@ -344,7 +344,7 @@ anv_block_pool_finish(struct anv_block_pool *pool)
 static uint32_t
 anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 {
-   size_t size;
+   uint32_t size;
    void *map;
    uint32_t gem_handle;
    struct anv_mmap_cleanup *cleanup;
@@ -369,7 +369,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 
    assert(state == &pool->state || back_used > 0);
 
-   size_t old_size = pool->bo.size;
+   uint32_t old_size = pool->bo.size;
 
    if (old_size != 0 &&
        back_used * 2 <= pool->center_bo_offset &&
@@ -618,7 +618,7 @@ anv_block_pool_free(struct anv_block_pool *pool, int32_t offset)
 
 static void
 anv_fixed_size_state_pool_init(struct anv_fixed_size_state_pool *pool,
-                               size_t state_size)
+                               uint32_t state_size)
 {
    /* At least a cache line and must divide the block size. */
    assert(state_size >= 64 && util_is_power_of_two(state_size));
@@ -677,7 +677,7 @@ anv_state_pool_init(struct anv_state_pool *pool,
 {
    pool->block_pool = block_pool;
    for (unsigned i = 0; i < ANV_STATE_BUCKETS; i++) {
-      size_t size = 1 << (ANV_MIN_STATE_SIZE_LOG2 + i);
+      uint32_t size = 1 << (ANV_MIN_STATE_SIZE_LOG2 + i);
       anv_fixed_size_state_pool_init(&pool->buckets[i], size);
    }
    VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
@@ -691,7 +691,7 @@ anv_state_pool_finish(struct anv_state_pool *pool)
 
 static struct anv_state
 anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
-                           size_t size, size_t align)
+                           uint32_t size, uint32_t align)
 {
    unsigned size_log2 = ilog2_round_up(size < align ? align : size);
    assert(size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
@@ -708,7 +708,7 @@ anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
 }
 
 struct anv_state
-anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
+anv_state_pool_alloc(struct anv_state_pool *pool, uint32_t size, uint32_t align)
 {
    if (size == 0)
       return ANV_STATE_NULL;

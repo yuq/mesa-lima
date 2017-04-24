@@ -48,7 +48,7 @@ anv_ioctl(int fd, unsigned long request, void *arg)
  * Return gem handle, or 0 on failure. Gem handles are never 0.
  */
 uint32_t
-anv_gem_create(struct anv_device *device, size_t size)
+anv_gem_create(struct anv_device *device, uint64_t size)
 {
    struct drm_i915_gem_create gem_create = {
       .size = size,

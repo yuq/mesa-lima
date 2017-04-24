@@ -493,7 +493,7 @@ struct anv_state {
 #define ANV_STATE_NULL ((struct anv_state) { .alloc_size = 0 })
 
 struct anv_fixed_size_state_pool {
-   size_t state_size;
+   uint32_t state_size;
    union anv_free_list free_list;
    struct anv_block_state block;
 };
@@ -565,7 +565,7 @@ void anv_state_pool_init(struct anv_state_pool *pool,
                          struct anv_block_pool *block_pool);
 void anv_state_pool_finish(struct anv_state_pool *pool);
 struct anv_state anv_state_pool_alloc(struct anv_state_pool *pool,
-                                      size_t state_size, size_t alignment);
+                                      uint32_t state_size, uint32_t alignment);
 void anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state);
 void anv_state_stream_init(struct anv_state_stream *stream,
                            struct anv_state_pool *state_pool,
@@ -778,7 +778,7 @@ VkResult anv_device_wait(struct anv_device *device, struct anv_bo *bo,
 void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size, uint32_t flags);
 void anv_gem_munmap(void *p, uint64_t size);
-uint32_t anv_gem_create(struct anv_device *device, size_t size);
+uint32_t anv_gem_create(struct anv_device *device, uint64_t size);
 void anv_gem_close(struct anv_device *device, uint32_t gem_handle);
 uint32_t anv_gem_userptr(struct anv_device *device, void *mem, size_t size);
 int anv_gem_busy(struct anv_device *device, uint32_t gem_handle);
@@ -806,8 +806,8 @@ int anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
 VkResult anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size);
 
 struct anv_reloc_list {
-   size_t                                       num_relocs;
-   size_t                                       array_length;
+   uint32_t                                     num_relocs;
+   uint32_t                                     array_length;
    struct drm_i915_gem_relocation_entry *       relocs;
    struct anv_bo **                             reloc_bos;
 };
@@ -829,7 +829,7 @@ struct anv_batch_bo {
    struct anv_bo                                bo;
 
    /* Bytes actually consumed in this batch BO */
-   size_t                                       length;
+   uint32_t                                     length;
 
    struct anv_reloc_list                        relocs;
 };
