@@ -258,8 +258,6 @@ anv_block_pool_init(struct anv_block_pool *pool,
 
    pool->device = device;
    anv_bo_init(&pool->bo, 0, 0);
-   pool->free_list = ANV_FREE_LIST_EMPTY;
-   pool->back_free_list = ANV_FREE_LIST_EMPTY;
 
    pool->fd = memfd_create("block pool", MFD_CLOEXEC);
    if (pool->fd == -1)
@@ -581,15 +579,6 @@ int32_t
 anv_block_pool_alloc(struct anv_block_pool *pool,
                      uint32_t block_size)
 {
-   int32_t offset;
-
-   /* Try free list first. */
-   if (anv_free_list_pop(&pool->free_list, &pool->map, &offset)) {
-      assert(offset >= 0);
-      assert(pool->map);
-      return offset;
-   }
-
    return anv_block_pool_alloc_new(pool, &pool->state, block_size);
 }
 
@@ -606,16 +595,8 @@ int32_t
 anv_block_pool_alloc_back(struct anv_block_pool *pool,
                           uint32_t block_size)
 {
-   int32_t offset;
-
-   /* Try free list first. */
-   if (anv_free_list_pop(&pool->back_free_list, &pool->map, &offset)) {
-      assert(offset < 0);
-      assert(pool->map);
-      return offset;
-   }
-
-   offset = anv_block_pool_alloc_new(pool, &pool->back_state, block_size);
+   int32_t offset = anv_block_pool_alloc_new(pool, &pool->back_state,
+                                             block_size);
 
    /* The offset we get out of anv_block_pool_alloc_new() is actually the
     * number of bytes downwards from the middle to the end of the block.
@@ -624,16 +605,6 @@ anv_block_pool_alloc_back(struct anv_block_pool *pool,
     */
    assert(offset >= 0);
    return -(offset + block_size);
-}
-
-void
-anv_block_pool_free(struct anv_block_pool *pool, int32_t offset)
-{
-   if (offset < 0) {
-      anv_free_list_push(&pool->back_free_list, pool->map, offset);
-   } else {
-      anv_free_list_push(&pool->free_list, pool->map, offset);
-   }
 }
 
 void

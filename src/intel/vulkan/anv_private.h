@@ -461,10 +461,8 @@ struct anv_block_pool {
     */
    struct u_vector mmap_cleanups;
 
-   union anv_free_list free_list;
    struct anv_block_state state;
 
-   union anv_free_list back_free_list;
    struct anv_block_state back_state;
 };
 
@@ -567,7 +565,6 @@ int32_t anv_block_pool_alloc(struct anv_block_pool *pool,
                              uint32_t block_size);
 int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool,
                                   uint32_t block_size);
-void anv_block_pool_free(struct anv_block_pool *pool, int32_t offset);
 void anv_state_pool_init(struct anv_state_pool *pool,
                          struct anv_block_pool *block_pool,
                          uint32_t block_size);
