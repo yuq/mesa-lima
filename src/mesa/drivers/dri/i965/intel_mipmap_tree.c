@@ -2792,27 +2792,57 @@ intel_miptree_updownsample(struct brw_context *brw,
                            struct intel_mipmap_tree *src,
                            struct intel_mipmap_tree *dst)
 {
+   unsigned src_w, src_h, dst_w, dst_h;
+
+   if (src->surf.size > 0) {
+      src_w = src->surf.logical_level0_px.width;
+      src_h = src->surf.logical_level0_px.height;
+   } else {
+      src_w = src->logical_width0;
+      src_h = src->logical_height0;
+   }
+
+   if (dst->surf.size > 0) {
+      dst_w = dst->surf.logical_level0_px.width;
+      dst_h = dst->surf.logical_level0_px.height;
+   } else {
+      dst_w = dst->logical_width0;
+      dst_h = dst->logical_height0;
+   }
+
    brw_blorp_blit_miptrees(brw,
                            src, 0 /* level */, 0 /* layer */,
                            src->format, SWIZZLE_XYZW,
                            dst, 0 /* level */, 0 /* layer */, dst->format,
-                           0, 0,
-                           src->logical_width0, src->logical_height0,
-                           0, 0,
-                           dst->logical_width0, dst->logical_height0,
+                           0, 0, src_w, src_h,
+                           0, 0, dst_w, dst_h,
                            GL_NEAREST, false, false /*mirror x, y*/,
                            false, false);
 
    if (src->stencil_mt) {
+      if (src->stencil_mt->surf.size > 0) {
+         src_w = src->stencil_mt->surf.logical_level0_px.width;
+         src_h = src->stencil_mt->surf.logical_level0_px.height;
+      } else {
+         src_w = src->stencil_mt->logical_width0;
+         src_h = src->stencil_mt->logical_height0;
+      }
+
+      if (dst->stencil_mt->surf.size > 0) {
+         dst_w = dst->stencil_mt->surf.logical_level0_px.width;
+         dst_h = dst->stencil_mt->surf.logical_level0_px.height;
+      } else {
+         dst_w = dst->stencil_mt->logical_width0;
+         dst_h = dst->stencil_mt->logical_height0;
+      }
+
       brw_blorp_blit_miptrees(brw,
                               src->stencil_mt, 0 /* level */, 0 /* layer */,
                               src->stencil_mt->format, SWIZZLE_XYZW,
                               dst->stencil_mt, 0 /* level */, 0 /* layer */,
                               dst->stencil_mt->format,
-                              0, 0,
-                              src->logical_width0, src->logical_height0,
-                              0, 0,
-                              dst->logical_width0, dst->logical_height0,
+                              0, 0, src_w, src_h,
+                              0, 0, dst_w, dst_h,
                               GL_NEAREST, false, false /*mirror x, y*/,
                               false, false /* decode/encode srgb */);
    }
