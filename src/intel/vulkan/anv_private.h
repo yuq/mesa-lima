@@ -506,6 +506,9 @@ struct anv_state_pool {
    /* The size of blocks which will be allocated from the block pool */
    uint32_t block_size;
 
+   /** Free list for "back" allocations */
+   union anv_free_list back_alloc_free_list;
+
    struct anv_fixed_size_state_pool buckets[ANV_STATE_BUCKETS];
 };
 
@@ -571,6 +574,7 @@ void anv_state_pool_init(struct anv_state_pool *pool,
 void anv_state_pool_finish(struct anv_state_pool *pool);
 struct anv_state anv_state_pool_alloc(struct anv_state_pool *pool,
                                       uint32_t state_size, uint32_t alignment);
+struct anv_state anv_state_pool_alloc_back(struct anv_state_pool *pool);
 void anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state);
 void anv_state_stream_init(struct anv_state_stream *stream,
                            struct anv_state_pool *state_pool,
