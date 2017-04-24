@@ -1062,7 +1062,8 @@ emit_3dstate_clip(struct anv_pipeline *pipeline,
       }
 #else
       clip.NonPerspectiveBarycentricEnable = wm_prog_data ?
-         (wm_prog_data->barycentric_interp_modes & 0x38) != 0 : 0;
+         (wm_prog_data->barycentric_interp_modes &
+          BRW_BARYCENTRIC_NONPERSPECTIVE_BITS) != 0 : 0;
 #endif
    }
 }
