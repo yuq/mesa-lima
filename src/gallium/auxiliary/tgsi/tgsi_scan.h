@@ -121,6 +121,10 @@ struct tgsi_shader_info
    boolean uses_primid;
    boolean uses_frontface;
    boolean uses_invocationid;
+   boolean uses_thread_id[3];
+   boolean uses_block_id[3];
+   boolean uses_block_size;
+   boolean uses_grid_size;
    boolean writes_position;
    boolean writes_psize;
    boolean writes_clipvertex;

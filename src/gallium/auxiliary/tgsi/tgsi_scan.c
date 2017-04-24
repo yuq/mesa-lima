@@ -115,6 +115,39 @@ scan_src_operand(struct tgsi_shader_info *info,
 {
    int ind = src->Register.Index;
 
+   if (info->processor == PIPE_SHADER_COMPUTE &&
+       src->Register.File == TGSI_FILE_SYSTEM_VALUE) {
+      unsigned swizzle[4], i, name;
+
+      name = info->system_value_semantic_name[src->Register.Index];
+      swizzle[0] = src->Register.SwizzleX;
+      swizzle[1] = src->Register.SwizzleY;
+      swizzle[2] = src->Register.SwizzleZ;
+      swizzle[3] = src->Register.SwizzleW;
+
+      switch (name) {
+      case TGSI_SEMANTIC_THREAD_ID:
+      case TGSI_SEMANTIC_BLOCK_ID:
+         for (i = 0; i < 4; i++) {
+            if (swizzle[i] <= TGSI_SWIZZLE_Z) {
+               if (name == TGSI_SEMANTIC_THREAD_ID)
+                  info->uses_thread_id[swizzle[i]] = true;
+               else
+                  info->uses_block_id[swizzle[i]] = true;
+            }
+         }
+         break;
+      case TGSI_SEMANTIC_BLOCK_SIZE:
+         /* The block size is translated to IMM with a fixed block size. */
+         if (info->properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0)
+            info->uses_block_size = true;
+         break;
+      case TGSI_SEMANTIC_GRID_SIZE:
+         info->uses_grid_size = true;
+         break;
+      }
+   }
+
    /* Mark which inputs are effectively used */
    if (src->Register.File == TGSI_FILE_INPUT) {
       if (src->Register.Indirect) {
