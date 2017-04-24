@@ -222,7 +222,6 @@ struct si_shader_context {
 	LLVMTypeRef i64;
 	LLVMTypeRef i128;
 	LLVMTypeRef f32;
-	LLVMTypeRef v16i8;
 	LLVMTypeRef v2i32;
 	LLVMTypeRef v4i32;
 	LLVMTypeRef v4f32;

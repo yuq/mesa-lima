@@ -759,7 +759,7 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 	}
 
 	LLVMValueRef args[] = {
-		rsrc,
+		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v16i8, ""),
 		voffset,
 		vindex,
 	};

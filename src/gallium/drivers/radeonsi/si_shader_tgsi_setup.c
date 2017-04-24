@@ -1341,7 +1341,6 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->i64 = LLVMInt64TypeInContext(ctx->gallivm.context);
 	ctx->i128 = LLVMIntTypeInContext(ctx->gallivm.context, 128);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->gallivm.context);
-	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
 	ctx->v2i32 = LLVMVectorType(ctx->i32, 2);
 	ctx->v4i32 = LLVMVectorType(ctx->i32, 4);
 	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);

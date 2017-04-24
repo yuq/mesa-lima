@@ -1385,7 +1385,7 @@ static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
 	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef args[2] = {resource, offset};
 
-	return lp_build_intrinsic(builder, "llvm.SI.load.const", ctx->f32, args, 2,
+	return lp_build_intrinsic(builder, "llvm.SI.load.const.v4i32", ctx->f32, args, 2,
 				  LP_FUNC_ATTR_READNONE |
 				  LP_FUNC_ATTR_LEGACY);
 }
@@ -4696,8 +4696,7 @@ static void tex_fetch_args(
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		emit_data->dst_type = ctx->v4f32;
-		emit_data->args[0] = LLVMBuildBitCast(gallivm->builder, res_ptr,
-						      ctx->v16i8, "");
+		emit_data->args[0] = res_ptr;
 		emit_data->args[1] = ctx->i32_0;
 		emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
 		emit_data->arg_count = 3;
@@ -5865,7 +5864,7 @@ static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
 					    unsigned *num_params,
 					    bool assign_params)
 {
-	params[(*num_params)++] = const_array(ctx->v16i8, SI_NUM_CONST_BUFFERS);
+	params[(*num_params)++] = const_array(ctx->v4i32, SI_NUM_CONST_BUFFERS);
 	params[(*num_params)++] = const_array(ctx->v8i32, SI_NUM_SAMPLERS);
 	params[(*num_params)++] = const_array(ctx->v8i32, SI_NUM_IMAGES);
 	params[(*num_params)++] = const_array(ctx->v4i32, SI_NUM_SHADER_BUFFERS);
@@ -5883,7 +5882,7 @@ static void declare_default_desc_pointers(struct si_shader_context *ctx,
 				          unsigned *num_params)
 {
 	params[ctx->param_rw_buffers = (*num_params)++] =
-		const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+		const_array(ctx->v4i32, SI_NUM_RW_BUFFERS);
 	declare_per_stage_desc_pointers(ctx, params, num_params, true);
 }
 
@@ -5892,7 +5891,7 @@ static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
 					    unsigned *num_params)
 {
 	params[ctx->param_vertex_buffers = (*num_params)++] =
-		const_array(ctx->v16i8, SI_NUM_VERTEX_BUFFERS);
+		const_array(ctx->v4i32, SI_NUM_VERTEX_BUFFERS);
 	params[ctx->param_base_vertex = (*num_params)++] = ctx->i32;
 	params[ctx->param_start_instance = (*num_params)++] = ctx->i32;
 	params[ctx->param_draw_id = (*num_params)++] = ctx->i32;
@@ -6014,7 +6013,7 @@ static void create_function(struct si_shader_context *ctx)
 	case SI_SHADER_MERGED_VERTEX_TESSCTRL:
 		/* Merged stages have 8 system SGPRs at the beginning. */
 		params[ctx->param_rw_buffers = num_params++] = /* SPI_SHADER_USER_DATA_ADDR_LO_HS */
-			const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+			const_array(ctx->v4i32, SI_NUM_RW_BUFFERS);
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
 		params[ctx->param_merged_wave_info = num_params++] = ctx->i32;
 		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
@@ -6069,7 +6068,7 @@ static void create_function(struct si_shader_context *ctx)
 	case SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY:
 		/* Merged stages have 8 system SGPRs at the beginning. */
 		params[ctx->param_rw_buffers = num_params++] = /* SPI_SHADER_USER_DATA_ADDR_LO_GS */
-			const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+			const_array(ctx->v4i32, SI_NUM_RW_BUFFERS);
 		params[ctx->param_gs2vs_offset = num_params++] = ctx->i32;
 		params[ctx->param_merged_wave_info = num_params++] = ctx->i32;
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
@@ -6388,7 +6387,6 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 					     S_008F0C_ADD_TID_ENABLE(1),
 					     0),
 				LLVMConstInt(ctx->i32, 3, 0), "");
-			ring = LLVMBuildBitCast(builder, ring, ctx->v16i8, "");
 
 			ctx->gsvs_ring[stream] = ring;
 		}
@@ -8721,7 +8719,7 @@ static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 		list = lp_build_gather_values(gallivm, ptr, 2);
 		list = LLVMBuildBitCast(gallivm->builder, list, ctx->i64, "");
 		list = LLVMBuildIntToPtr(gallivm->builder, list,
-					  const_array(ctx->v16i8, SI_NUM_RW_BUFFERS), "");
+					  const_array(ctx->v4i32, SI_NUM_RW_BUFFERS), "");
 
 		si_llvm_emit_polygon_stipple(ctx, list, pos);
 	}
