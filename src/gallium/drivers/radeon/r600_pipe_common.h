@@ -580,6 +580,7 @@ struct r600_common_context {
 	unsigned			num_cs_dw_queries_suspend;
 	/* Misc stats. */
 	unsigned			num_draw_calls;
+	unsigned			num_prim_restart_calls;
 	unsigned			num_spill_draw_calls;
 	unsigned			num_compute_calls;
 	unsigned			num_spill_compute_calls;

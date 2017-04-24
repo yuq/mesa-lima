@@ -97,6 +97,9 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_DRAW_CALLS:
 		query->begin_result = rctx->num_draw_calls;
 		break;
+	case R600_QUERY_PRIM_RESTART_CALLS:
+		query->begin_result = rctx->num_prim_restart_calls;
+		break;
 	case R600_QUERY_SPILL_DRAW_CALLS:
 		query->begin_result = rctx->num_spill_draw_calls;
 		break;
@@ -220,6 +223,9 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_DRAW_CALLS:
 		query->end_result = rctx->num_draw_calls;
+		break;
+	case R600_QUERY_PRIM_RESTART_CALLS:
+		query->end_result = rctx->num_prim_restart_calls;
 		break;
 	case R600_QUERY_SPILL_DRAW_CALLS:
 		query->end_result = rctx->num_spill_draw_calls;
@@ -1761,6 +1767,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-shaders-created",	NUM_SHADERS_CREATED,	UINT64, CUMULATIVE),
 	X("num-shader-cache-hits",	NUM_SHADER_CACHE_HITS,	UINT64, CUMULATIVE),
 	X("draw-calls",			DRAW_CALLS,		UINT64, AVERAGE),
+	X("prim-restart-calls",		PRIM_RESTART_CALLS,	UINT64, AVERAGE),
 	X("spill-draw-calls",		SPILL_DRAW_CALLS,	UINT64, AVERAGE),
 	X("compute-calls",		COMPUTE_CALLS,		UINT64, AVERAGE),
 	X("spill-compute-calls",	SPILL_COMPUTE_CALLS,	UINT64, AVERAGE),
