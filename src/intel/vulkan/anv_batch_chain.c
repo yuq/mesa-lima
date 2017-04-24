@@ -453,9 +453,10 @@ anv_cmd_buffer_current_batch_bo(struct anv_cmd_buffer *cmd_buffer)
 struct anv_address
 anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_state *bt_block = u_vector_head(&cmd_buffer->bt_block_states);
    return (struct anv_address) {
       .bo = &cmd_buffer->device->surface_state_block_pool.bo,
-      .offset = *(int32_t *)u_vector_head(&cmd_buffer->bt_blocks),
+      .offset = bt_block->offset,
    };
 }
 
@@ -621,10 +622,8 @@ struct anv_state
 anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t entries, uint32_t *state_offset)
 {
-   struct anv_block_pool *block_pool =
-       &cmd_buffer->device->surface_state_block_pool;
    struct anv_state_pool *state_pool = &cmd_buffer->device->surface_state_pool;
-   int32_t *bt_block = u_vector_head(&cmd_buffer->bt_blocks);
+   struct anv_state *bt_block = u_vector_head(&cmd_buffer->bt_block_states);
    struct anv_state state;
 
    state.alloc_size = align_u32(entries * 4, 32);
@@ -633,12 +632,12 @@ anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return (struct anv_state) { 0 };
 
    state.offset = cmd_buffer->bt_next;
-   state.map = block_pool->map + *bt_block + state.offset;
+   state.map = state_pool->block_pool->map + bt_block->offset + state.offset;
 
    cmd_buffer->bt_next += state.alloc_size;
 
-   assert(*bt_block < 0);
-   *state_offset = -(*bt_block);
+   assert(bt_block->offset < 0);
+   *state_offset = -bt_block->offset;
 
    return state;
 }
@@ -662,17 +661,15 @@ anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
 VkResult
 anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_block_pool *block_pool =
-       &cmd_buffer->device->surface_state_block_pool;
    struct anv_state_pool *state_pool = &cmd_buffer->device->surface_state_pool;
 
-   int32_t *offset = u_vector_add(&cmd_buffer->bt_blocks);
-   if (offset == NULL) {
+   struct anv_state *bt_block = u_vector_add(&cmd_buffer->bt_block_states);
+   if (bt_block == NULL) {
       anv_batch_set_error(&cmd_buffer->batch, VK_ERROR_OUT_OF_HOST_MEMORY);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
-   *offset = anv_block_pool_alloc_back(block_pool, state_pool->block_size);
+   *bt_block = anv_state_pool_alloc_back(state_pool);
    cmd_buffer->bt_next = 0;
 
    return VK_SUCCESS;
@@ -712,8 +709,9 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 
    *(struct anv_batch_bo **)u_vector_add(&cmd_buffer->seen_bbos) = batch_bo;
 
-   success = u_vector_init(&cmd_buffer->bt_blocks, sizeof(int32_t),
-                             8 * sizeof(int32_t));
+   success = u_vector_init(&cmd_buffer->bt_block_states,
+                           sizeof(struct anv_state),
+                           8 * sizeof(struct anv_state));
    if (!success)
       goto fail_seen_bbos;
 
@@ -730,7 +728,7 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    return VK_SUCCESS;
 
  fail_bt_blocks:
-   u_vector_finish(&cmd_buffer->bt_blocks);
+   u_vector_finish(&cmd_buffer->bt_block_states);
  fail_seen_bbos:
    u_vector_finish(&cmd_buffer->seen_bbos);
  fail_batch_bo:
@@ -742,12 +740,10 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 void
 anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
-   int32_t *bt_block;
-   u_vector_foreach(bt_block, &cmd_buffer->bt_blocks) {
-      anv_block_pool_free(&cmd_buffer->device->surface_state_block_pool,
-                          *bt_block);
-   }
-   u_vector_finish(&cmd_buffer->bt_blocks);
+   struct anv_state *bt_block;
+   u_vector_foreach(bt_block, &cmd_buffer->bt_block_states)
+      anv_state_pool_free(&cmd_buffer->device->surface_state_pool, *bt_block);
+   u_vector_finish(&cmd_buffer->bt_block_states);
 
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc);
 
@@ -776,12 +772,11 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
                       &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
 
-   while (u_vector_length(&cmd_buffer->bt_blocks) > 1) {
-      int32_t *bt_block = u_vector_remove(&cmd_buffer->bt_blocks);
-      anv_block_pool_free(&cmd_buffer->device->surface_state_block_pool,
-                          *bt_block);
+   while (u_vector_length(&cmd_buffer->bt_block_states) > 1) {
+      struct anv_state *bt_block = u_vector_remove(&cmd_buffer->bt_block_states);
+      anv_state_pool_free(&cmd_buffer->device->surface_state_pool, *bt_block);
    }
-   assert(u_vector_length(&cmd_buffer->bt_blocks) == 1);
+   assert(u_vector_length(&cmd_buffer->bt_block_states) == 1);
    cmd_buffer->bt_next = 0;
 
    cmd_buffer->surface_relocs.num_relocs = 0;

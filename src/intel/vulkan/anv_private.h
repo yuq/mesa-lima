@@ -1604,7 +1604,7 @@ struct anv_cmd_buffer {
     *
     * initialized by anv_cmd_buffer_init_batch_bo_chain()
     */
-   struct u_vector                            bt_blocks;
+   struct u_vector                              bt_block_states;
    uint32_t                                     bt_next;
 
    struct anv_reloc_list                        surface_relocs;
