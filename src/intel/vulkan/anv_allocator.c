@@ -663,6 +663,12 @@ anv_fixed_size_state_pool_alloc_new(struct anv_fixed_size_state_pool *pool,
    struct anv_block_state block, old, new;
    uint32_t offset;
 
+   /* If our state is large, we don't need any sub-allocation from a block.
+    * Instead, we just grab whole (potentially large) blocks.
+    */
+   if (state_size >= block_size)
+      return anv_block_pool_alloc(block_pool, state_size);
+
  restart:
    block.u64 = __sync_fetch_and_add(&pool->block.u64, state_size);
 
@@ -713,6 +719,69 @@ anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
                          &pool->block_pool.map, &state.offset)) {
       assert(state.offset >= 0);
       goto done;
+   }
+
+   /* Try to grab a chunk from some larger bucket and split it up */
+   for (unsigned b = bucket + 1; b < ANV_STATE_BUCKETS; b++) {
+      int32_t chunk_offset;
+      if (anv_free_list_pop(&pool->buckets[b].free_list,
+                            &pool->block_pool.map, &chunk_offset)) {
+         unsigned chunk_size = anv_state_pool_get_bucket_size(b);
+
+         /* We've found a chunk that's larger than the requested state size.
+          * There are a couple of options as to what we do with it:
+          *
+          *    1) We could fully split the chunk into state.alloc_size sized
+          *       pieces.  However, this would mean that allocating a 16B
+          *       state could potentially split a 2MB chunk into 512K smaller
+          *       chunks.  This would lead to unnecessary fragmentation.
+          *
+          *    2) The classic "buddy allocator" method would have us split the
+          *       chunk in half and return one half.  Then we would split the
+          *       remaining half in half and return one half, and repeat as
+          *       needed until we get down to the size we want.  However, if
+          *       you are allocating a bunch of the same size state (which is
+          *       the common case), this means that every other allocation has
+          *       to go up a level and every fourth goes up two levels, etc.
+          *       This is not nearly as efficient as it could be if we did a
+          *       little more work up-front.
+          *
+          *    3) Split the difference between (1) and (2) by doing a
+          *       two-level split.  If it's bigger than some fixed block_size,
+          *       we split it into block_size sized chunks and return all but
+          *       one of them.  Then we split what remains into
+          *       state.alloc_size sized chunks and return all but one.
+          *
+          * We choose option (3).
+          */
+         if (chunk_size > pool->block_size &&
+             state.alloc_size < pool->block_size) {
+            assert(chunk_size % pool->block_size == 0);
+            /* We don't want to split giant chunks into tiny chunks.  Instead,
+             * break anything bigger than a block into block-sized chunks and
+             * then break it down into bucket-sized chunks from there.  Return
+             * all but the first block of the chunk to the block bucket.
+             */
+            const uint32_t block_bucket =
+               anv_state_pool_get_bucket(pool->block_size);
+            anv_free_list_push(&pool->buckets[block_bucket].free_list,
+                               pool->block_pool.map,
+                               chunk_offset + pool->block_size,
+                               pool->block_size,
+                               (chunk_size / pool->block_size) - 1);
+            chunk_size = pool->block_size;
+         }
+
+         assert(chunk_size % state.alloc_size == 0);
+         anv_free_list_push(&pool->buckets[bucket].free_list,
+                            pool->block_pool.map,
+                            chunk_offset + state.alloc_size,
+                            state.alloc_size,
+                            (chunk_size / state.alloc_size) - 1);
+
+         state.offset = chunk_offset;
+         goto done;
+      }
    }
 
    state.offset = anv_fixed_size_state_pool_alloc_new(&pool->buckets[bucket],
