@@ -179,10 +179,21 @@ anv_free_list_pop(union anv_free_list *list, void **map, int32_t *offset)
 }
 
 static void
-anv_free_list_push(union anv_free_list *list, void *map, int32_t offset)
+anv_free_list_push(union anv_free_list *list, void *map, int32_t offset,
+                   uint32_t size, uint32_t count)
 {
    union anv_free_list current, old, new;
    int32_t *next_ptr = map + offset;
+
+   /* If we're returning more than one chunk, we need to build a chain to add
+    * to the list.  Fortunately, we can do this without any atomics since we
+    * own everything in the chain right now.  `offset` is left pointing to the
+    * head of our chain list while `next_ptr` points to the tail.
+    */
+   for (uint32_t i = 1; i < count; i++) {
+      VG_NOACCESS_WRITE(next_ptr, offset + i * size);
+      next_ptr = map + offset + i * size;
+   }
 
    old = *list;
    do {
@@ -755,10 +766,12 @@ anv_state_pool_free_no_vg(struct anv_state_pool *pool, struct anv_state state)
    if (state.offset < 0) {
       assert(state.alloc_size == pool->block_size);
       anv_free_list_push(&pool->back_alloc_free_list,
-                         pool->block_pool.map, state.offset);
+                         pool->block_pool.map, state.offset,
+                         state.alloc_size, 1);
    } else {
       anv_free_list_push(&pool->buckets[bucket].free_list,
-                         pool->block_pool.map, state.offset);
+                         pool->block_pool.map, state.offset,
+                         state.alloc_size, 1);
    }
 }
 
