@@ -710,7 +710,7 @@ void anv_CmdUpdateBuffer(
       bs = gcd_pow2_u64(bs, copy_size);
 
       do_buffer_copy(&batch,
-                     &cmd_buffer->device->dynamic_state_block_pool.bo,
+                     &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
                      tmp_data.offset,
                      dst_buffer->bo, dst_buffer->offset + dstOffset,
                      copy_size / bs, 1, bs);

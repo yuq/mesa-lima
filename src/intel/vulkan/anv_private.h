@@ -499,7 +499,7 @@ struct anv_fixed_size_state_pool {
 #define ANV_STATE_BUCKETS (ANV_MAX_STATE_SIZE_LOG2 - ANV_MIN_STATE_SIZE_LOG2 + 1)
 
 struct anv_state_pool {
-   struct anv_block_pool *block_pool;
+   struct anv_block_pool block_pool;
 
    /* The size of blocks which will be allocated from the block pool */
    uint32_t block_size;
@@ -557,6 +557,9 @@ anv_invalidate_range(void *start, size_t size)
    __builtin_ia32_mfence();
 }
 
+/* The block_pool functions exported for testing only.  The block pool should
+ * only be used via a state pool (see below).
+ */
 VkResult anv_block_pool_init(struct anv_block_pool *pool,
                              struct anv_device *device,
                              uint32_t initial_size);
@@ -565,9 +568,10 @@ int32_t anv_block_pool_alloc(struct anv_block_pool *pool,
                              uint32_t block_size);
 int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool,
                                   uint32_t block_size);
-void anv_state_pool_init(struct anv_state_pool *pool,
-                         struct anv_block_pool *block_pool,
-                         uint32_t block_size);
+
+VkResult anv_state_pool_init(struct anv_state_pool *pool,
+                             struct anv_device *device,
+                             uint32_t block_size);
 void anv_state_pool_finish(struct anv_state_pool *pool);
 struct anv_state anv_state_pool_alloc(struct anv_state_pool *pool,
                                       uint32_t state_size, uint32_t alignment);
@@ -734,13 +738,8 @@ struct anv_device {
 
     struct anv_bo_cache                         bo_cache;
 
-    struct anv_block_pool                       dynamic_state_block_pool;
     struct anv_state_pool                       dynamic_state_pool;
-
-    struct anv_block_pool                       instruction_block_pool;
     struct anv_state_pool                       instruction_state_pool;
-
-    struct anv_block_pool                       surface_state_block_pool;
     struct anv_state_pool                       surface_state_pool;
 
     struct anv_bo                               workaround_bo;

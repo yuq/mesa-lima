@@ -91,7 +91,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
       sba.SurfaceStateBaseAddressModifyEnable = true;
 
       sba.DynamicStateBaseAddress =
-         (struct anv_address) { &device->dynamic_state_block_pool.bo, 0 };
+         (struct anv_address) { &device->dynamic_state_pool.block_pool.bo, 0 };
       sba.DynamicStateMemoryObjectControlState = GENX(MOCS);
       sba.DynamicStateBaseAddressModifyEnable = true;
 
@@ -100,7 +100,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
       sba.IndirectObjectBaseAddressModifyEnable = true;
 
       sba.InstructionBaseAddress =
-         (struct anv_address) { &device->instruction_block_pool.bo, 0 };
+         (struct anv_address) { &device->instruction_state_pool.block_pool.bo, 0 };
       sba.InstructionMemoryObjectControlState = GENX(MOCS);
       sba.InstructionBaseAddressModifyEnable = true;
 
@@ -677,7 +677,8 @@ genX(CmdExecuteCommands)(
           * copy the surface states for the current subpass into the storage
           * we allocated for them in BeginCommandBuffer.
           */
-         struct anv_bo *ss_bo = &primary->device->surface_state_block_pool.bo;
+         struct anv_bo *ss_bo =
+            &primary->device->surface_state_pool.block_pool.bo;
          struct anv_state src_state = primary->state.render_pass_states;
          struct anv_state dst_state = secondary->state.render_pass_states;
          assert(src_state.alloc_size == dst_state.alloc_size);
@@ -1456,7 +1457,7 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
             c._3DCommandSubOpcode = push_constant_opcodes[stage],
             c.ConstantBody = (struct GENX(3DSTATE_CONSTANT_BODY)) {
 #if GEN_GEN >= 9
-               .PointerToConstantBuffer2 = { &cmd_buffer->device->dynamic_state_block_pool.bo, state.offset },
+               .PointerToConstantBuffer2 = { &cmd_buffer->device->dynamic_state_pool.block_pool.bo, state.offset },
                .ConstantBuffer2ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
 #else
                .PointerToConstantBuffer0 = { .offset = state.offset },
@@ -1662,7 +1663,7 @@ emit_base_vertex_instance(struct anv_cmd_buffer *cmd_buffer,
    anv_state_flush(cmd_buffer->device, id_state);
 
    emit_base_vertex_instance_bo(cmd_buffer,
-      &cmd_buffer->device->dynamic_state_block_pool.bo, id_state.offset);
+      &cmd_buffer->device->dynamic_state_pool.block_pool.bo, id_state.offset);
 }
 
 static void
@@ -1676,7 +1677,7 @@ emit_draw_index(struct anv_cmd_buffer *cmd_buffer, uint32_t draw_index)
    anv_state_flush(cmd_buffer->device, state);
 
    emit_vertex_bo(cmd_buffer,
-                  &cmd_buffer->device->dynamic_state_block_pool.bo,
+                  &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
                   state.offset, 4, ANV_DRAWID_VB_INDEX);
 }
 
@@ -2097,7 +2098,7 @@ void genX(CmdDispatch)(
       anv_state_flush(cmd_buffer->device, state);
       cmd_buffer->state.num_workgroups_offset = state.offset;
       cmd_buffer->state.num_workgroups_bo =
-         &cmd_buffer->device->dynamic_state_block_pool.bo;
+         &cmd_buffer->device->dynamic_state_pool.block_pool.bo;
    }
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);

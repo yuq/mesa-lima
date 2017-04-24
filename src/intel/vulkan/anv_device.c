@@ -983,7 +983,7 @@ anv_state_pool_emit_data(struct anv_state_pool *pool, size_t size, size_t align,
    state = anv_state_pool_alloc(pool, size, align);
    memcpy(state.map, p, size);
 
-   anv_state_flush(pool->block_pool->device, state);
+   anv_state_flush(pool->block_pool.device, state);
 
    return state;
 }
@@ -1109,32 +1109,18 @@ VkResult anv_CreateDevice(
    if (result != VK_SUCCESS)
       goto fail_batch_bo_pool;
 
-   result = anv_block_pool_init(&device->dynamic_state_block_pool, device,
-                                16384 * 16);
+   result = anv_state_pool_init(&device->dynamic_state_pool, device, 16384);
    if (result != VK_SUCCESS)
       goto fail_bo_cache;
 
-   anv_state_pool_init(&device->dynamic_state_pool,
-                       &device->dynamic_state_block_pool,
-                       16384);
-
-   result = anv_block_pool_init(&device->instruction_block_pool, device,
-                                1024 * 1024 * 16);
+   result = anv_state_pool_init(&device->instruction_state_pool, device,
+                                1024 * 1024);
    if (result != VK_SUCCESS)
       goto fail_dynamic_state_pool;
 
-   anv_state_pool_init(&device->instruction_state_pool,
-                       &device->instruction_block_pool,
-                       1024 * 1024);
-
-   result = anv_block_pool_init(&device->surface_state_block_pool, device,
-                                4096 * 16);
+   result = anv_state_pool_init(&device->surface_state_pool, device, 4096);
    if (result != VK_SUCCESS)
       goto fail_instruction_state_pool;
-
-   anv_state_pool_init(&device->surface_state_pool,
-                       &device->surface_state_block_pool,
-                       4096);
 
    result = anv_bo_init_new(&device->workaround_bo, device, 1024);
    if (result != VK_SUCCESS)
@@ -1180,13 +1166,10 @@ VkResult anv_CreateDevice(
    anv_gem_close(device, device->workaround_bo.gem_handle);
  fail_surface_state_pool:
    anv_state_pool_finish(&device->surface_state_pool);
-   anv_block_pool_finish(&device->surface_state_block_pool);
  fail_instruction_state_pool:
    anv_state_pool_finish(&device->instruction_state_pool);
-   anv_block_pool_finish(&device->instruction_block_pool);
  fail_dynamic_state_pool:
    anv_state_pool_finish(&device->dynamic_state_pool);
-   anv_block_pool_finish(&device->dynamic_state_block_pool);
  fail_bo_cache:
    anv_bo_cache_finish(&device->bo_cache);
  fail_batch_bo_pool:
@@ -1230,11 +1213,8 @@ void anv_DestroyDevice(
    anv_gem_close(device, device->workaround_bo.gem_handle);
 
    anv_state_pool_finish(&device->surface_state_pool);
-   anv_block_pool_finish(&device->surface_state_block_pool);
    anv_state_pool_finish(&device->instruction_state_pool);
-   anv_block_pool_finish(&device->instruction_block_pool);
    anv_state_pool_finish(&device->dynamic_state_pool);
-   anv_block_pool_finish(&device->dynamic_state_block_pool);
 
    anv_bo_cache_finish(&device->bo_cache);
 

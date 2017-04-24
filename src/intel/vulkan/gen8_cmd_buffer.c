@@ -609,7 +609,7 @@ void genX(CmdSetEvent)(
       pc.DestinationAddressType  = DAT_PPGTT,
       pc.PostSyncOperation       = WriteImmediateData,
       pc.Address = (struct anv_address) {
-         &cmd_buffer->device->dynamic_state_block_pool.bo,
+         &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
          event->state.offset
       };
       pc.ImmediateData           = VK_EVENT_SET;
@@ -633,7 +633,7 @@ void genX(CmdResetEvent)(
       pc.DestinationAddressType  = DAT_PPGTT;
       pc.PostSyncOperation       = WriteImmediateData;
       pc.Address = (struct anv_address) {
-         &cmd_buffer->device->dynamic_state_block_pool.bo,
+         &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
          event->state.offset
       };
       pc.ImmediateData           = VK_EVENT_RESET;
@@ -662,7 +662,7 @@ void genX(CmdWaitEvents)(
          sem.CompareOperation    = COMPARE_SAD_EQUAL_SDD,
          sem.SemaphoreDataDword  = VK_EVENT_SET,
          sem.SemaphoreAddress = (struct anv_address) {
-            &cmd_buffer->device->dynamic_state_block_pool.bo,
+            &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
             event->state.offset
          };
       }

@@ -607,12 +607,16 @@ anv_block_pool_alloc_back(struct anv_block_pool *pool,
    return -(offset + block_size);
 }
 
-void
+VkResult
 anv_state_pool_init(struct anv_state_pool *pool,
-                    struct anv_block_pool *block_pool,
+                    struct anv_device *device,
                     uint32_t block_size)
 {
-   pool->block_pool = block_pool;
+   VkResult result = anv_block_pool_init(&pool->block_pool, device,
+                                         block_size * 16);
+   if (result != VK_SUCCESS)
+      return result;
+
    assert(util_is_power_of_two(block_size));
    pool->block_size = block_size;
    pool->back_alloc_free_list = ANV_FREE_LIST_EMPTY;
@@ -622,12 +626,15 @@ anv_state_pool_init(struct anv_state_pool *pool,
       pool->buckets[i].block.end = 0;
    }
    VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
+
+   return VK_SUCCESS;
 }
 
 void
 anv_state_pool_finish(struct anv_state_pool *pool)
 {
    VG(VALGRIND_DESTROY_MEMPOOL(pool));
+   anv_block_pool_finish(&pool->block_pool);
 }
 
 static uint32_t
@@ -673,18 +680,18 @@ anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
 
    /* Try free list first. */
    if (anv_free_list_pop(&pool->buckets[bucket].free_list,
-                         &pool->block_pool->map, &state.offset)) {
+                         &pool->block_pool.map, &state.offset)) {
       assert(state.offset >= 0);
       goto done;
    }
 
    state.offset = anv_fixed_size_state_pool_alloc_new(&pool->buckets[bucket],
-                                                      pool->block_pool,
+                                                      &pool->block_pool,
                                                       state.alloc_size,
                                                       pool->block_size);
 
 done:
-   state.map = pool->block_pool->map + state.offset;
+   state.map = pool->block_pool.map + state.offset;
    return state;
 }
 
@@ -706,15 +713,16 @@ anv_state_pool_alloc_back(struct anv_state_pool *pool)
    state.alloc_size = pool->block_size;
 
    if (anv_free_list_pop(&pool->back_alloc_free_list,
-                         &pool->block_pool->map, &state.offset)) {
+                         &pool->block_pool.map, &state.offset)) {
       assert(state.offset < 0);
       goto done;
    }
 
-   state.offset = anv_block_pool_alloc_back(pool->block_pool, pool->block_size);
+   state.offset = anv_block_pool_alloc_back(&pool->block_pool,
+                                            pool->block_size);
 
 done:
-   state.map = pool->block_pool->map + state.offset;
+   state.map = pool->block_pool.map + state.offset;
    VG(VALGRIND_MEMPOOL_ALLOC(pool, state.map, state.alloc_size));
    return state;
 }
@@ -731,10 +739,10 @@ anv_state_pool_free_no_vg(struct anv_state_pool *pool, struct anv_state state)
    if (state.offset < 0) {
       assert(state.alloc_size == pool->block_size);
       anv_free_list_push(&pool->back_alloc_free_list,
-                         pool->block_pool->map, state.offset);
+                         pool->block_pool.map, state.offset);
    } else {
       anv_free_list_push(&pool->buckets[bucket].free_list,
-                         pool->block_pool->map, state.offset);
+                         pool->block_pool.map, state.offset);
    }
 }
 
