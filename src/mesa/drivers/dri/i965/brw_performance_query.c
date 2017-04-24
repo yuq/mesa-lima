@@ -1374,6 +1374,7 @@ add_basic_stat_reg(struct brw_perf_query_info *query,
 static void
 init_pipeline_statistic_query_registers(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct brw_perf_query_info *query = append_query_info(brw);
 
    query->kind = PIPELINE_STATS;
@@ -1389,7 +1390,7 @@ init_pipeline_statistic_query_registers(struct brw_context *brw)
    add_basic_stat_reg(query, VS_INVOCATION_COUNT,
                       "N vertex shader invocations");
 
-   if (brw->gen == 6) {
+   if (devinfo->gen == 6) {
       add_stat_reg(query, GEN6_SO_PRIM_STORAGE_NEEDED, 1, 1,
                    "SO_PRIM_STORAGE_NEEDED",
                    "N geometry shader stream-out primitives (total)");
@@ -1438,7 +1439,7 @@ init_pipeline_statistic_query_registers(struct brw_context *brw)
    add_basic_stat_reg(query, CL_PRIMITIVES_COUNT,
                       "N primitives leaving clipping");
 
-   if (brw->is_haswell || brw->gen == 8)
+   if (devinfo->is_haswell || devinfo->gen == 8)
       add_stat_reg(query, PS_INVOCATION_COUNT, 1, 4,
                    "N fragment shader invocations",
                    "N fragment shader invocations");
@@ -1448,7 +1449,7 @@ init_pipeline_statistic_query_registers(struct brw_context *brw)
 
    add_basic_stat_reg(query, PS_DEPTH_COUNT, "N z-pass fragments");
 
-   if (brw->gen >= 7)
+   if (devinfo->gen >= 7)
       add_basic_stat_reg(query, CS_INVOCATION_COUNT,
                          "N compute shader invocations");
 
