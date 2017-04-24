@@ -581,6 +581,7 @@ static int r600_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 	case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
+	case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
 		return 0;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		/* due to a bug in the shader compiler, some loops hang

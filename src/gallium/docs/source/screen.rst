@@ -489,6 +489,9 @@ to be 0.
   cost than this value should be lowered by the state tracker for better
   performance. This is a tunable for the GLSL compiler and the behavior is
   specific to the compiler.
+* ``PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS``: Whether the merge registers
+  TGSI pass is skipped. This might reduce code size and register pressure if
+  the underlying driver has a real backend compiler.
 
 
 .. _pipe_compute_cap:

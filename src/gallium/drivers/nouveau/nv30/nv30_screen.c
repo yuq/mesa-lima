@@ -313,6 +313,7 @@ nv30_screen_get_shader_param(struct pipe_screen *pscreen,
       case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
       case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
+      case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
          return 0;
       default:
          debug_printf("unknown vertex shader param %d\n", param);
@@ -360,6 +361,7 @@ nv30_screen_get_shader_param(struct pipe_screen *pscreen,
       case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
       case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
+      case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
          return 0;
       default:
          debug_printf("unknown fragment shader param %d\n", param);
