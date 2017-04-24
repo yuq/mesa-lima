@@ -78,6 +78,8 @@
 #include "brw_oa_sklgt3.h"
 #include "brw_oa_sklgt4.h"
 #include "brw_oa_bxt.h"
+#include "brw_oa_kblgt2.h"
+#include "brw_oa_kblgt3.h"
 #include "intel_batchbuffer.h"
 
 #define FILE_DEBUG_FLAG DEBUG_PERFMON
@@ -2008,6 +2010,12 @@ get_register_queries_function(const struct gen_device_info *devinfo)
          return brw_oa_register_queries_sklgt3;
       if (devinfo->gt == 4)
          return brw_oa_register_queries_sklgt4;
+   }
+   if (devinfo->is_kabylake) {
+      if (devinfo->gt == 2)
+         return brw_oa_register_queries_kblgt2;
+      if (devinfo->gt == 3)
+         return brw_oa_register_queries_kblgt3;
    }
    return NULL;
 }
