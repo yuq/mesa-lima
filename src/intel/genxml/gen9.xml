@@ -2173,7 +2173,12 @@
     <field name="Point Sprite Texture Coordinate Enable" start="64" end="95" type="uint"/>
     <field name="Constant Interpolation Enable" start="96" end="127" type="uint"/>
     <group count="32" start="128" size="2">
-      <field name="Attribute Active Component Format" start="0" end="1" type="uint"/>
+      <field name="Attribute Active Component Format" start="0" end="1" type="uint" prefix="ACTIVE_COMPONENT">
+         <value name="DISABLED" value="0"/>
+         <value name="XY" value="1"/>
+         <value name="XYZ" value="2"/>
+         <value name="XYZW" value="3"/>
+      </field>
     </group>
   </instruction>
 
