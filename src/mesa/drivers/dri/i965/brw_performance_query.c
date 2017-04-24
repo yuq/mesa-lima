@@ -825,6 +825,7 @@ static void
 accumulate_oa_reports(struct brw_context *brw,
                       struct brw_perf_query_object *obj)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_perf_query_object *o = &obj->base;
    uint32_t *start;
    uint32_t *last;
@@ -903,8 +904,7 @@ accumulate_oa_reports(struct brw_context *brw,
              * For Haswell we can rely on the HW to stop the progress
              * of OA counters while any other context is acctive.
              */
-            if (brw->gen >= 8) {
-
+            if (devinfo->gen >= 8) {
                if (in_ctx && report[2] != ctx_id) {
                   DBG("i915 perf: Switch AWAY (observed by ID change)\n");
                   in_ctx = false;
