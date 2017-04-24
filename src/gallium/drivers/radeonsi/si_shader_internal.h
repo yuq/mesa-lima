@@ -195,6 +195,11 @@ struct si_shader_context {
 	int param_gs_vtx01_offset; /* in dwords (GFX9) */
 	int param_gs_vtx23_offset; /* in dwords (GFX9) */
 	int param_gs_vtx45_offset; /* in dwords (GFX9) */
+	/* CS */
+	int param_grid_size;
+	int param_block_size;
+	int param_block_id[3];
+	int param_thread_id;
 
 	LLVMTargetMachineRef tm;
 

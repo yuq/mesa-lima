@@ -48,6 +48,8 @@ struct si_compute {
 	struct pipe_resource *global_buffers[MAX_GLOBAL_BUFFERS];
 	unsigned use_code_object_v2 : 1;
 	unsigned variable_group_size : 1;
+	unsigned uses_grid_size:1;
+	unsigned uses_block_size:1;
 };
 
 struct dispatch_packet {
@@ -121,11 +123,16 @@ static void si_create_compute_state_async(void *job, int thread_index)
 
 	program->shader.selector = &sel;
 	program->shader.is_monolithic = true;
+	program->uses_grid_size = sel.info.uses_grid_size;
+	program->uses_block_size = sel.info.uses_block_size;
 
 	if (si_shader_create(program->screen, tm, &program->shader, debug)) {
 		program->shader.compilation_failed = true;
 	} else {
 		bool scratch_enabled = shader->config.scratch_bytes_per_wave > 0;
+		unsigned user_sgprs = SI_NUM_RESOURCE_SGPRS +
+				      (sel.info.uses_grid_size ? 3 : 0) +
+				      (sel.info.uses_block_size ? 3 : 0);
 
 		shader->config.rsrc1 =
 			S_00B848_VGPRS((shader->config.num_vgprs - 1) / 4) |
@@ -134,10 +141,13 @@ static void si_create_compute_state_async(void *job, int thread_index)
 			S_00B848_FLOAT_MODE(shader->config.float_mode);
 
 		shader->config.rsrc2 =
-			S_00B84C_USER_SGPR(SI_CS_NUM_USER_SGPR) |
+			S_00B84C_USER_SGPR(user_sgprs) |
 			S_00B84C_SCRATCH_EN(scratch_enabled) |
-			S_00B84C_TGID_X_EN(1) | S_00B84C_TGID_Y_EN(1) |
-			S_00B84C_TGID_Z_EN(1) | S_00B84C_TIDIG_COMP_CNT(2) |
+			S_00B84C_TGID_X_EN(sel.info.uses_block_id[0]) |
+			S_00B84C_TGID_Y_EN(sel.info.uses_block_id[1]) |
+			S_00B84C_TGID_Z_EN(sel.info.uses_block_id[2]) |
+			S_00B84C_TIDIG_COMP_CNT(sel.info.uses_thread_id[2] ? 2 :
+						sel.info.uses_thread_id[1] ? 1 : 0) |
 			S_00B84C_LDS_SIZE(shader->config.lds_size);
 
 		program->variable_group_size =
@@ -651,36 +661,43 @@ static bool si_upload_compute_input(struct si_context *sctx,
 static void si_setup_tgsi_grid(struct si_context *sctx,
                                 const struct pipe_grid_info *info)
 {
+	struct si_compute *program = sctx->cs_shader_state.program;
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned grid_size_reg = R_00B900_COMPUTE_USER_DATA_0 +
-	                          4 * SI_SGPR_GRID_SIZE;
+				 4 * SI_NUM_RESOURCE_SGPRS;
+	unsigned block_size_reg = grid_size_reg +
+				  /* 12 bytes = 3 dwords. */
+				  12 * program->uses_grid_size;
 
 	if (info->indirect) {
-		uint64_t base_va = r600_resource(info->indirect)->gpu_address;
-		uint64_t va = base_va + info->indirect_offset;
-		int i;
+		if (program->uses_grid_size) {
+			uint64_t base_va = r600_resource(info->indirect)->gpu_address;
+			uint64_t va = base_va + info->indirect_offset;
+			int i;
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-		                 (struct r600_resource *)info->indirect,
-		                 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+					 (struct r600_resource *)info->indirect,
+					 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
-		for (i = 0; i < 3; ++i) {
-			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
-					COPY_DATA_DST_SEL(COPY_DATA_REG));
-			radeon_emit(cs, (va +  4 * i));
-			radeon_emit(cs, (va + 4 * i) >> 32);
-			radeon_emit(cs, (grid_size_reg >> 2) + i);
-			radeon_emit(cs, 0);
+			for (i = 0; i < 3; ++i) {
+				radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+				radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+						COPY_DATA_DST_SEL(COPY_DATA_REG));
+				radeon_emit(cs, (va + 4 * i));
+				radeon_emit(cs, (va + 4 * i) >> 32);
+				radeon_emit(cs, (grid_size_reg >> 2) + i);
+				radeon_emit(cs, 0);
+			}
 		}
 	} else {
-		struct si_compute *program = sctx->cs_shader_state.program;
-
-		radeon_set_sh_reg_seq(cs, grid_size_reg, program->variable_group_size ? 6 : 3);
-		radeon_emit(cs, info->grid[0]);
-		radeon_emit(cs, info->grid[1]);
-		radeon_emit(cs, info->grid[2]);
-		if (program->variable_group_size) {
+		if (program->uses_grid_size) {
+			radeon_set_sh_reg_seq(cs, grid_size_reg, 3);
+			radeon_emit(cs, info->grid[0]);
+			radeon_emit(cs, info->grid[1]);
+			radeon_emit(cs, info->grid[2]);
+		}
+		if (program->variable_group_size && program->uses_block_size) {
+			radeon_set_sh_reg_seq(cs, block_size_reg, 3);
 			radeon_emit(cs, info->block[0]);
 			radeon_emit(cs, info->block[1]);
 			radeon_emit(cs, info->block[2]);

@@ -1592,7 +1592,7 @@ static void declare_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_GRID_SIZE:
-		value = LLVMGetParam(ctx->main_fn, SI_PARAM_GRID_SIZE);
+		value = LLVMGetParam(ctx->main_fn, ctx->param_grid_size);
 		break;
 
 	case TGSI_SEMANTIC_BLOCK_SIZE:
@@ -1613,17 +1613,28 @@ static void declare_system_value(struct si_shader_context *ctx,
 
 			value = lp_build_gather_values(gallivm, values, 3);
 		} else {
-			value = LLVMGetParam(ctx->main_fn, SI_PARAM_BLOCK_SIZE);
+			value = LLVMGetParam(ctx->main_fn, ctx->param_block_size);
 		}
 		break;
 	}
 
 	case TGSI_SEMANTIC_BLOCK_ID:
-		value = LLVMGetParam(ctx->main_fn, SI_PARAM_BLOCK_ID);
+	{
+		LLVMValueRef values[3];
+
+		for (int i = 0; i < 3; i++) {
+			values[i] = ctx->i32_0;
+			if (ctx->param_block_id[i] >= 0) {
+				values[i] = LLVMGetParam(ctx->main_fn,
+							 ctx->param_block_id[i]);
+			}
+		}
+		value = lp_build_gather_values(gallivm, values, 3);
 		break;
+	}
 
 	case TGSI_SEMANTIC_THREAD_ID:
-		value = LLVMGetParam(ctx->main_fn, SI_PARAM_THREAD_ID);
+		value = LLVMGetParam(ctx->main_fn, ctx->param_thread_id);
 		break;
 
 	case TGSI_SEMANTIC_HELPER_INVOCATION:
@@ -6185,13 +6196,19 @@ static void create_function(struct si_shader_context *ctx)
 
 	case PIPE_SHADER_COMPUTE:
 		declare_default_desc_pointers(ctx, params, &num_params);
-		params[SI_PARAM_GRID_SIZE] = v3i32;
-		params[SI_PARAM_BLOCK_SIZE] = v3i32;
-		params[SI_PARAM_BLOCK_ID] = v3i32;
-		last_sgpr = SI_PARAM_BLOCK_ID;
+		if (shader->selector->info.uses_grid_size)
+			params[ctx->param_grid_size = num_params++] = v3i32;
+		if (shader->selector->info.uses_block_size)
+			params[ctx->param_block_size = num_params++] = v3i32;
 
-		params[SI_PARAM_THREAD_ID] = v3i32;
-		num_params = SI_PARAM_THREAD_ID + 1;
+		for (i = 0; i < 3; i++) {
+			ctx->param_block_id[i] = -1;
+			if (shader->selector->info.uses_block_id[i])
+				params[ctx->param_block_id[i] = num_params++] = ctx->i32;
+		}
+		last_sgpr = num_params - 1;
+
+		params[ctx->param_thread_id = num_params++] = v3i32;
 		break;
 	default:
 		assert(0 && "unimplemented shader");
