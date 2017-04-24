@@ -511,17 +511,19 @@ struct anv_state_pool {
 struct anv_state_stream_block;
 
 struct anv_state_stream {
-   struct anv_block_pool *block_pool;
+   struct anv_state_pool *state_pool;
 
-   /* The current working block */
-   struct anv_state_stream_block *block;
+   /* The size of blocks to allocate from the state pool */
+   uint32_t block_size;
 
-   /* Offset at which the current block starts */
-   uint32_t start;
-   /* Offset at which to allocate the next state */
+   /* Current block we're allocating from */
+   struct anv_state block;
+
+   /* Offset into the current block at which to allocate the next state */
    uint32_t next;
-   /* Offset at which the current block ends */
-   uint32_t end;
+
+   /* List of all blocks allocated from this pool */
+   struct anv_state_stream_block *block_list;
 };
 
 #define CACHELINE_SIZE 64
@@ -566,7 +568,8 @@ struct anv_state anv_state_pool_alloc(struct anv_state_pool *pool,
                                       size_t state_size, size_t alignment);
 void anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state);
 void anv_state_stream_init(struct anv_state_stream *stream,
-                           struct anv_block_pool *block_pool);
+                           struct anv_state_pool *state_pool,
+                           uint32_t block_size);
 void anv_state_stream_finish(struct anv_state_stream *stream);
 struct anv_state anv_state_stream_alloc(struct anv_state_stream *stream,
                                         uint32_t size, uint32_t alignment);
