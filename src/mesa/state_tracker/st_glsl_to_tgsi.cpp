@@ -6639,6 +6639,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
          &ctx->Const.ShaderCompilerOptions[shader->Stage];
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
    enum pipe_shader_type ptarget = st_shader_stage_to_ptarget(shader->Stage);
+   unsigned skip_merge_registers;
 
    validate_ir_tree(shader->ir);
 
@@ -6660,6 +6661,9 @@ get_mesa_program_tgsi(struct gl_context *ctx,
                                            PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED);
    v->has_tex_txf_lz = pscreen->get_param(pscreen,
                                           PIPE_CAP_TGSI_TEX_TXF_LZ);
+   skip_merge_registers =
+      pscreen->get_shader_param(pscreen, ptarget,
+                                PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS);
 
    _mesa_generate_parameters_list_for_uniforms(shader_program, shader,
                                                prog->Parameters);
@@ -6712,7 +6716,8 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    while (v->eliminate_dead_code());
 
    v->merge_two_dsts();
-   v->merge_registers();
+   if (!skip_merge_registers)
+      v->merge_registers();
    v->renumber_registers();
 
    /* Write the END instruction. */
