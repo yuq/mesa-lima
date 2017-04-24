@@ -341,6 +341,8 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen,
       return 0; /* please inline, or provide function declarations */
    case PIPE_SHADER_CAP_INTEGERS:
       return 1;
+   case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
+      return 1;
    case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
       /* The chip could handle more sampler views than samplers */
    case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
@@ -357,7 +359,6 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen,
    case PIPE_SHADER_CAP_SUPPORTED_IRS:
    case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
    case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
-   case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
       return 0;
    default:
       NOUVEAU_ERR("unknown PIPE_SHADER_CAP %d\n", param);

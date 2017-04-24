@@ -387,10 +387,11 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen,
       return 1;
    case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
       return 1;
+   case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
+      return 1;
    case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
    case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
    case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
-   case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
       return 0;
    case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
       return NVC0_MAX_BUFFERS;
