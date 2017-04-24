@@ -671,18 +671,31 @@ anv_fixed_size_state_pool_alloc_new(struct anv_fixed_size_state_pool *pool,
    }
 }
 
+static uint32_t
+anv_state_pool_get_bucket(uint32_t size)
+{
+   unsigned size_log2 = ilog2_round_up(size);
+   assert(size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
+   if (size_log2 < ANV_MIN_STATE_SIZE_LOG2)
+      size_log2 = ANV_MIN_STATE_SIZE_LOG2;
+   return size_log2 - ANV_MIN_STATE_SIZE_LOG2;
+}
+
+static uint32_t
+anv_state_pool_get_bucket_size(uint32_t bucket)
+{
+   uint32_t size_log2 = bucket + ANV_MIN_STATE_SIZE_LOG2;
+   return 1 << size_log2;
+}
+
 static struct anv_state
 anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
                            uint32_t size, uint32_t align)
 {
-   unsigned size_log2 = ilog2_round_up(size < align ? align : size);
-   assert(size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
-   if (size_log2 < ANV_MIN_STATE_SIZE_LOG2)
-      size_log2 = ANV_MIN_STATE_SIZE_LOG2;
-   unsigned bucket = size_log2 - ANV_MIN_STATE_SIZE_LOG2;
+   uint32_t bucket = anv_state_pool_get_bucket(MAX2(size, align));
 
    struct anv_state state;
-   state.alloc_size = 1 << size_log2;
+   state.alloc_size = anv_state_pool_get_bucket_size(bucket);
 
    /* Try free list first. */
    if (anv_free_list_pop(&pool->buckets[bucket].free_list,
@@ -737,10 +750,7 @@ static void
 anv_state_pool_free_no_vg(struct anv_state_pool *pool, struct anv_state state)
 {
    assert(util_is_power_of_two(state.alloc_size));
-   unsigned size_log2 = ilog2_round_up(state.alloc_size);
-   assert(size_log2 >= ANV_MIN_STATE_SIZE_LOG2 &&
-          size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
-   unsigned bucket = size_log2 - ANV_MIN_STATE_SIZE_LOG2;
+   unsigned bucket = anv_state_pool_get_bucket(state.alloc_size);
 
    if (state.offset < 0) {
       assert(state.alloc_size == pool->block_size);
