@@ -52,23 +52,25 @@ gallium_DRIVERS +=  libmesa_winsys_nouveau libmesa_pipe_nouveau
 LOCAL_CFLAGS += -DGALLIUM_NOUVEAU
 LOCAL_SHARED_LIBRARIES += libdrm_nouveau
 endif
+
 ifneq ($(filter r%,$(MESA_GPU_DRIVERS)),)
 ifneq ($(filter r300g,$(MESA_GPU_DRIVERS)),)
 gallium_DRIVERS += libmesa_pipe_r300
 LOCAL_CFLAGS += -DGALLIUM_R300
 endif
 ifneq ($(filter r600g,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_pipe_r600
+gallium_DRIVERS += libmesa_pipe_r600 libmesa_pipe_radeon
 LOCAL_CFLAGS += -DGALLIUM_R600
 endif
 ifneq ($(filter radeonsi,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_pipe_radeonsi libmesa_winsys_amdgpu libmesa_amd_common
+gallium_DRIVERS += libmesa_pipe_radeonsi libmesa_winsys_amdgpu libmesa_amd_common libmesa_pipe_radeon
 LOCAL_SHARED_LIBRARIES += libLLVM libdrm_amdgpu
 LOCAL_CFLAGS += -DGALLIUM_RADEONSI
 endif
-gallium_DRIVERS += libmesa_winsys_radeon libmesa_pipe_radeon libmesa_amdgpu_addrlib
+gallium_DRIVERS += libmesa_winsys_radeon libmesa_amdgpu_addrlib
 LOCAL_SHARED_LIBRARIES += libdrm_radeon
 endif
+
 ifneq ($(filter swrast,$(MESA_GPU_DRIVERS)),)
 gallium_DRIVERS += libmesa_pipe_softpipe libmesa_winsys_sw_dri
 LOCAL_CFLAGS += -DGALLIUM_SOFTPIPE
