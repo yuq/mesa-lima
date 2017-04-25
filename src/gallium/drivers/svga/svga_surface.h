@@ -102,6 +102,7 @@ svga_texture_view_surface(struct svga_context *svga,
                           int layer_pick,
                           unsigned num_layers,
                           int zslice_pick,
+                          boolean cacheable,
                           struct svga_host_surface_cache_key *key); /* OUT */
 
 

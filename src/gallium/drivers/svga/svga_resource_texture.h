@@ -104,6 +104,16 @@ struct svga_texture
     *  Set if the level is marked as dirty.
     */ 
    ushort *dirty;
+
+   /**
+    * A cached backing host side surface to be used if this texture is being
+    * used for rendering and sampling at the same time.
+    * Currently we only cache one handle. If needed, we can extend this to
+    * support multiple handles.
+    */
+   struct svga_host_surface_cache_key backed_key;
+   struct svga_winsys_surface *backed_handle;
+   unsigned backed_age;
 };
 
 

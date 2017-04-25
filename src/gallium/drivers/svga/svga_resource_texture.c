@@ -238,6 +238,10 @@ svga_texture_destroy(struct pipe_screen *screen,
    SVGA_DBG(DEBUG_DMA, "unref sid %p (texture)\n", tex->handle);
    svga_screen_surface_destroy(ss, &tex->key, &tex->handle);
 
+   /* Destroy the backed surface handle if exists */
+   if (tex->backed_handle)
+      svga_screen_surface_destroy(ss, &tex->backed_key, &tex->backed_handle);
+      
    ss->hud.total_resource_bytes -= tex->size;
 
    FREE(tex->defined);
@@ -1118,6 +1122,9 @@ svga_texture_create(struct pipe_screen *screen,
    /* Determine if texture upload buffer can be used to upload this texture */
    tex->can_use_upload = svga_texture_transfer_map_can_upload(svgascreen,
                                                               &tex->b.b);
+
+   /* Initialize the backing resource cache */
+   tex->backed_handle = NULL;
 
    svgascreen->hud.total_resource_bytes += tex->size;
    svgascreen->hud.num_resources++;
