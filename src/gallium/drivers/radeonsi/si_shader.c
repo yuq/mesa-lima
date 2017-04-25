@@ -6185,7 +6185,8 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 
 	/* Upload. */
 	ptr = sscreen->b.ws->buffer_map(shader->bo->buf, NULL,
-					PIPE_TRANSFER_READ_WRITE);
+					PIPE_TRANSFER_READ_WRITE |
+					PIPE_TRANSFER_UNSYNCHRONIZED);
 
 	if (prolog) {
 		util_memcpy_cpu_to_le32(ptr, prolog->code, prolog->code_size);
