@@ -88,8 +88,6 @@ process_glsl_ir(struct brw_context *brw,
                 struct gl_linked_shader *shader)
 {
    struct gl_context *ctx = &brw->ctx;
-   const struct gl_shader_compiler_options *options =
-      &ctx->Const.ShaderCompilerOptions[shader->Stage];
 
    /* Temporary memory context for any new IR. */
    void *mem_ctx = ralloc_context(NULL);
