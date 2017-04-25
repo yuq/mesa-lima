@@ -1975,9 +1975,7 @@ vec4_visitor::convert_to_hw_regs()
          struct brw_reg reg;
          switch (src.file) {
          case VGRF: {
-            const unsigned type_size = type_sz(src.type);
-            const unsigned width = REG_SIZE / 2 / MAX2(4, type_size);
-            reg = byte_offset(brw_vecn_grf(width, src.nr, 0), src.offset);
+            reg = byte_offset(brw_vecn_grf(4, src.nr, 0), src.offset);
             reg.type = src.type;
             reg.abs = src.abs;
             reg.negate = src.negate;
@@ -1985,12 +1983,11 @@ vec4_visitor::convert_to_hw_regs()
          }
 
          case UNIFORM: {
-            const unsigned width = REG_SIZE / 2 / MAX2(4, type_sz(src.type));
             reg = stride(byte_offset(brw_vec4_grf(
                                         prog_data->base.dispatch_grf_start_reg +
                                         src.nr / 2, src.nr % 2 * 4),
                                      src.offset),
-                         0, width, 1);
+                         0, 4, 1);
             reg.type = src.type;
             reg.abs = src.abs;
             reg.negate = src.negate;
@@ -2526,6 +2523,11 @@ vec4_visitor::apply_logical_swizzle(struct brw_reg *hw_reg,
    /* Take the 64-bit logical swizzle channel and translate it to 32-bit */
    assert(brw_is_single_value_swizzle(reg.swizzle) ||
           is_supported_64bit_region(inst, arg));
+
+   /* Apply the region <2, 2, 1> for GRF or <0, 2, 1> for uniforms, as align16
+    * HW can only do 32-bit swizzle channels.
+    */
+   hw_reg->width = BRW_WIDTH_2;
 
    if (is_supported_64bit_region(inst, arg) &&
        !is_gen7_supported_64bit_swizzle(inst, arg)) {
