@@ -599,6 +599,7 @@ bo_unreference_final(struct brw_bo *bo, time_t time)
       bo->free_time = time;
 
       bo->name = NULL;
+      bo->kflags = 0;
 
       list_addtail(&bo->head, &bucket->head);
    } else {

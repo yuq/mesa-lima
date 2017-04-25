@@ -2029,6 +2029,14 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       screen->cmd_parser_version = 0;
    }
 
+   /* Kernel 4.13 retuired for exec object capture */
+#ifndef I915_PARAM_HAS_EXEC_CAPTURE
+#define I915_PARAM_HAS_EXEC_CAPTURE 45
+#endif
+   if (intel_get_boolean(screen, I915_PARAM_HAS_EXEC_CAPTURE)) {
+      screen->kernel_features |= KERNEL_ALLOWS_EXEC_CAPTURE;
+   }
+
    if (!intel_detect_pipelined_so(screen)) {
       /* We can't do anything, so the effective version is 0. */
       screen->cmd_parser_version = 0;

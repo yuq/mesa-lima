@@ -97,6 +97,11 @@ struct brw_bo {
    int refcount;
    const char *name;
 
+#ifndef EXEC_OBJECT_CAPTURE
+#define EXEC_OBJECT_CAPTURE            (1<<7)
+#endif
+   uint64_t kflags;
+
    /**
     * Kenel-assigned global name for this object
     *

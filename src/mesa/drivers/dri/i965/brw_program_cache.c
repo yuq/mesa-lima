@@ -216,6 +216,8 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
    struct brw_bo *new_bo;
 
    new_bo = brw_bo_alloc(brw->bufmgr, "program cache", new_size, 64);
+   if (can_do_exec_capture(brw->screen))
+      new_bo->kflags = EXEC_OBJECT_CAPTURE;
    if (brw->has_llc)
       brw_bo_map_unsynchronized(brw, new_bo);
 
@@ -407,6 +409,8 @@ brw_init_caches(struct brw_context *brw)
       calloc(cache->size, sizeof(struct brw_cache_item *));
 
    cache->bo = brw_bo_alloc(brw->bufmgr, "program cache",  4096, 64);
+   if (can_do_exec_capture(brw->screen))
+      cache->bo->kflags = EXEC_OBJECT_CAPTURE;
    if (brw->has_llc)
       brw_bo_map_unsynchronized(brw, cache->bo);
 }

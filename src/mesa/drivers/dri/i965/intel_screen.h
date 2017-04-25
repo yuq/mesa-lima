@@ -74,6 +74,7 @@ struct intel_screen
 #define KERNEL_ALLOWS_MI_MATH_AND_LRR               (1<<2)
 #define KERNEL_ALLOWS_HSW_SCRATCH1_AND_ROW_CHICKEN3 (1<<3)
 #define KERNEL_ALLOWS_COMPUTE_DISPATCH              (1<<4)
+#define KERNEL_ALLOWS_EXEC_CAPTURE                  (1<<5)
 
    struct brw_bufmgr *bufmgr;
 
@@ -153,6 +154,12 @@ static inline bool
 can_do_predicate_writes(const struct intel_screen *screen)
 {
    return screen->kernel_features & KERNEL_ALLOWS_PREDICATE_WRITES;
+}
+
+static inline bool
+can_do_exec_capture(const struct intel_screen *screen)
+{
+   return screen->kernel_features & KERNEL_ALLOWS_EXEC_CAPTURE;
 }
 
 #ifdef __cplusplus

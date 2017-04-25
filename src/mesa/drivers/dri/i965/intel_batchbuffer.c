@@ -550,7 +550,7 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
    }
    validation_entry->alignment = bo->align;
    validation_entry->offset = bo->offset64;
-   validation_entry->flags = 0;
+   validation_entry->flags = bo->kflags;
    validation_entry->rsvd1 = 0;
    validation_entry->rsvd2 = 0;
 
