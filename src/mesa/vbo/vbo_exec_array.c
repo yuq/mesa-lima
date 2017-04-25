@@ -1322,7 +1322,7 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
       }
 
       vbo->draw_prims(ctx, prim, primcount, &ib,
-                      false, ~0, ~0, NULL, 0, NULL);
+                      false, 0, ~0, NULL, 0, NULL);
    }
    else {
       /* render one prim at a time */
@@ -1351,7 +1351,7 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
          else
             prim[0].basevertex = 0;
 
-         vbo->draw_prims(ctx, prim, 1, &ib, false, ~0, ~0, NULL, 0, NULL);
+         vbo->draw_prims(ctx, prim, 1, &ib, false, 0, ~0, NULL, 0, NULL);
       }
    }
 
@@ -1443,7 +1443,7 @@ vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
     * (like in DrawArrays), but we have no way to know how many vertices
     * will be rendered. */
 
-   vbo->draw_prims(ctx, prim, 1, NULL, GL_FALSE, ~0, ~0, obj, stream, NULL);
+   vbo->draw_prims(ctx, prim, 1, NULL, GL_FALSE, 0, ~0, obj, stream, NULL);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH) {
       _mesa_flush(ctx);
