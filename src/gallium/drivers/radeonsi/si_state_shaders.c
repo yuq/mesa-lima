@@ -39,6 +39,7 @@
 
 #include "util/disk_cache.h"
 #include "util/mesa-sha1.h"
+#include "ac_exp_param.h"
 
 /* SHADER_CACHE */
 
@@ -1506,7 +1507,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 			for (i = 0; i < sel->info.num_outputs; i++) {
 				unsigned offset = shader->info.vs_output_param_offset[i];
 
-				if (offset <= EXP_PARAM_OFFSET_31)
+				if (offset <= AC_EXP_PARAM_OFFSET_31)
 					continue;
 
 				unsigned name = sel->info.output_semantic_name[i];
@@ -2001,18 +2002,18 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 		    index == vsinfo->output_semantic_index[j]) {
 			offset = vs->info.vs_output_param_offset[j];
 
-			if (offset <= EXP_PARAM_OFFSET_31) {
+			if (offset <= AC_EXP_PARAM_OFFSET_31) {
 				/* The input is loaded from parameter memory. */
 				ps_input_cntl |= S_028644_OFFSET(offset);
 			} else if (!G_028644_PT_SPRITE_TEX(ps_input_cntl)) {
-				if (offset == EXP_PARAM_UNDEFINED) {
+				if (offset == AC_EXP_PARAM_UNDEFINED) {
 					/* This can happen with depth-only rendering. */
 					offset = 0;
 				} else {
 					/* The input is a DEFAULT_VAL constant. */
-					assert(offset >= EXP_PARAM_DEFAULT_VAL_0000 &&
-					       offset <= EXP_PARAM_DEFAULT_VAL_1111);
-					offset -= EXP_PARAM_DEFAULT_VAL_0000;
+					assert(offset >= AC_EXP_PARAM_DEFAULT_VAL_0000 &&
+					       offset <= AC_EXP_PARAM_DEFAULT_VAL_1111);
+					offset -= AC_EXP_PARAM_DEFAULT_VAL_0000;
 				}
 
 				ps_input_cntl = S_028644_OFFSET(0x20) |

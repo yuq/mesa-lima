@@ -33,10 +33,12 @@
 #include <stdio.h>
 
 #include "ac_llvm_util.h"
-
+#include "ac_exp_param.h"
 #include "util/bitscan.h"
 #include "util/macros.h"
 #include "sid.h"
+
+#include "shader_enums.h"
 
 /* Initialize module-independent parts of the context.
  *
@@ -1243,4 +1245,156 @@ void ac_get_image_intr_name(const char *base_name,
                 snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
                          data_type_name, coords_type_name, rsrc_type_name);
         }
+}
+
+#define AC_EXP_TARGET (HAVE_LLVM >= 0x0500 ? 0 : 3)
+#define AC_EXP_OUT0 (HAVE_LLVM >= 0x0500 ? 2 : 5)
+
+/* Return true if the PARAM export has been eliminated. */
+static bool ac_eliminate_const_output(uint8_t *vs_output_param_offset,
+				      uint32_t num_outputs,
+				      LLVMValueRef inst, unsigned offset)
+{
+	unsigned i, default_val; /* SPI_PS_INPUT_CNTL_i.DEFAULT_VAL */
+	bool is_zero[4] = {}, is_one[4] = {};
+
+	for (i = 0; i < 4; i++) {
+		LLVMBool loses_info;
+		LLVMValueRef p = LLVMGetOperand(inst, AC_EXP_OUT0 + i);
+
+		/* It's a constant expression. Undef outputs are eliminated too. */
+		if (LLVMIsUndef(p)) {
+			is_zero[i] = true;
+			is_one[i] = true;
+		} else if (LLVMIsAConstantFP(p)) {
+			double a = LLVMConstRealGetDouble(p, &loses_info);
+
+			if (a == 0)
+				is_zero[i] = true;
+			else if (a == 1)
+				is_one[i] = true;
+			else
+				return false; /* other constant */
+		} else
+			return false;
+	}
+
+	/* Only certain combinations of 0 and 1 can be eliminated. */
+	if (is_zero[0] && is_zero[1] && is_zero[2])
+		default_val = is_zero[3] ? 0 : 1;
+	else if (is_one[0] && is_one[1] && is_one[2])
+		default_val = is_zero[3] ? 2 : 3;
+	else
+		return false;
+
+	/* The PARAM export can be represented as DEFAULT_VAL. Kill it. */
+	LLVMInstructionEraseFromParent(inst);
+
+	/* Change OFFSET to DEFAULT_VAL. */
+	for (i = 0; i < num_outputs; i++) {
+		if (vs_output_param_offset[i] == offset) {
+			vs_output_param_offset[i] =
+				AC_EXP_PARAM_DEFAULT_VAL_0000 + default_val;
+			break;
+		}
+	}
+	return true;
+}
+
+struct ac_vs_exports {
+	unsigned num;
+	unsigned offset[VARYING_SLOT_MAX];
+	LLVMValueRef inst[VARYING_SLOT_MAX];
+};
+
+void ac_eliminate_const_vs_outputs(struct ac_llvm_context *ctx,
+				   LLVMValueRef main_fn,
+				   uint8_t *vs_output_param_offset,
+				   uint32_t num_outputs,
+				   uint8_t *num_param_exports)
+{
+	LLVMBasicBlockRef bb;
+	bool removed_any = false;
+	struct ac_vs_exports exports;
+
+	assert(num_outputs <= VARYING_SLOT_MAX);
+	exports.num = 0;
+
+	/* Process all LLVM instructions. */
+	bb = LLVMGetFirstBasicBlock(main_fn);
+	while (bb) {
+		LLVMValueRef inst = LLVMGetFirstInstruction(bb);
+
+		while (inst) {
+			LLVMValueRef cur = inst;
+			inst = LLVMGetNextInstruction(inst);
+
+			if (LLVMGetInstructionOpcode(cur) != LLVMCall)
+				continue;
+
+			LLVMValueRef callee = ac_llvm_get_called_value(cur);
+
+			if (!ac_llvm_is_function(callee))
+				continue;
+
+			const char *name = LLVMGetValueName(callee);
+			unsigned num_args = LLVMCountParams(callee);
+
+			/* Check if this is an export instruction. */
+			if ((num_args != 9 && num_args != 8) ||
+			    (strcmp(name, "llvm.SI.export") &&
+			     strcmp(name, "llvm.amdgcn.exp.f32")))
+				continue;
+
+			LLVMValueRef arg = LLVMGetOperand(cur, AC_EXP_TARGET);
+			unsigned target = LLVMConstIntGetZExtValue(arg);
+
+			if (target < V_008DFC_SQ_EXP_PARAM)
+				continue;
+
+			target -= V_008DFC_SQ_EXP_PARAM;
+
+			/* Eliminate constant value PARAM exports. */
+			if (ac_eliminate_const_output(vs_output_param_offset,
+						      num_outputs, cur, target)) {
+				removed_any = true;
+			} else {
+				exports.offset[exports.num] = target;
+				exports.inst[exports.num] = cur;
+				exports.num++;
+			}
+		}
+		bb = LLVMGetNextBasicBlock(bb);
+	}
+
+	/* Remove holes in export memory due to removed PARAM exports.
+	 * This is done by renumbering all PARAM exports.
+	 */
+	if (removed_any) {
+		uint8_t current_offset[VARYING_SLOT_MAX];
+		unsigned new_count = 0;
+		unsigned out, i;
+
+		/* Make a copy of the offsets. We need the old version while
+		 * we are modifying some of them. */
+		memcpy(current_offset, vs_output_param_offset,
+		       sizeof(current_offset));
+
+		for (i = 0; i < exports.num; i++) {
+			unsigned offset = exports.offset[i];
+
+			for (out = 0; out < num_outputs; out++) {
+				if (current_offset[out] != offset)
+					continue;
+
+				LLVMSetOperand(exports.inst[i], AC_EXP_TARGET,
+					       LLVMConstInt(ctx->i32,
+							    V_008DFC_SQ_EXP_PARAM + new_count, 0));
+				vs_output_param_offset[out] = new_count;
+				new_count++;
+				break;
+			}
+		}
+		*num_param_exports = new_count;
+	}
 }

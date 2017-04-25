@@ -41,6 +41,7 @@
 
 #include "ac_binary.h"
 #include "ac_llvm_util.h"
+#include "ac_exp_param.h"
 #include "si_shader_internal.h"
 #include "si_pipe.h"
 #include "sid.h"
@@ -6809,76 +6810,10 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_BARRIER].emit = si_llvm_emit_barrier;
 }
 
-#define EXP_TARGET (HAVE_LLVM >= 0x0500 ? 0 : 3)
-#define EXP_OUT0 (HAVE_LLVM >= 0x0500 ? 2 : 5)
-
-/* Return true if the PARAM export has been eliminated. */
-static bool si_eliminate_const_output(struct si_shader_context *ctx,
-				      LLVMValueRef inst, unsigned offset)
-{
-	struct si_shader *shader = ctx->shader;
-	unsigned num_outputs = shader->selector->info.num_outputs;
-	unsigned i, default_val; /* SPI_PS_INPUT_CNTL_i.DEFAULT_VAL */
-	bool is_zero[4] = {}, is_one[4] = {};
-
-	for (i = 0; i < 4; i++) {
-		LLVMBool loses_info;
-		LLVMValueRef p = LLVMGetOperand(inst, EXP_OUT0 + i);
-
-		/* It's a constant expression. Undef outputs are eliminated too. */
-		if (LLVMIsUndef(p)) {
-			is_zero[i] = true;
-			is_one[i] = true;
-		} else if (LLVMIsAConstantFP(p)) {
-			double a = LLVMConstRealGetDouble(p, &loses_info);
-
-			if (a == 0)
-				is_zero[i] = true;
-			else if (a == 1)
-				is_one[i] = true;
-			else
-				return false; /* other constant */
-		} else
-			return false;
-	}
-
-	/* Only certain combinations of 0 and 1 can be eliminated. */
-	if (is_zero[0] && is_zero[1] && is_zero[2])
-		default_val = is_zero[3] ? 0 : 1;
-	else if (is_one[0] && is_one[1] && is_one[2])
-		default_val = is_zero[3] ? 2 : 3;
-	else
-		return false;
-
-	/* The PARAM export can be represented as DEFAULT_VAL. Kill it. */
-	LLVMInstructionEraseFromParent(inst);
-
-	/* Change OFFSET to DEFAULT_VAL. */
-	for (i = 0; i < num_outputs; i++) {
-		if (shader->info.vs_output_param_offset[i] == offset) {
-			shader->info.vs_output_param_offset[i] =
-				EXP_PARAM_DEFAULT_VAL_0000 + default_val;
-			break;
-		}
-	}
-	return true;
-}
-
-struct si_vs_exports {
-	unsigned num;
-	unsigned offset[SI_MAX_VS_OUTPUTS];
-	LLVMValueRef inst[SI_MAX_VS_OUTPUTS];
-};
-
 static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 {
 	struct si_shader *shader = ctx->shader;
 	struct tgsi_shader_info *info = &shader->selector->info;
-	LLVMBasicBlockRef bb;
-	struct si_vs_exports exports;
-	bool removed_any = false;
-
-	exports.num = 0;
 
 	if (ctx->type == PIPE_SHADER_FRAGMENT ||
 	    ctx->type == PIPE_SHADER_COMPUTE ||
@@ -6886,84 +6821,11 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 	    shader->key.as_ls)
 		return;
 
-	/* Process all LLVM instructions. */
-	bb = LLVMGetFirstBasicBlock(ctx->main_fn);
-	while (bb) {
-		LLVMValueRef inst = LLVMGetFirstInstruction(bb);
-
-		while (inst) {
-			LLVMValueRef cur = inst;
-			inst = LLVMGetNextInstruction(inst);
-
-			if (LLVMGetInstructionOpcode(cur) != LLVMCall)
-				continue;
-
-			LLVMValueRef callee = lp_get_called_value(cur);
-
-			if (!lp_is_function(callee))
-				continue;
-
-			const char *name = LLVMGetValueName(callee);
-			unsigned num_args = LLVMCountParams(callee);
-
-			/* Check if this is an export instruction. */
-			if ((num_args != 9 && num_args != 8) ||
-			    (strcmp(name, "llvm.SI.export") &&
-			     strcmp(name, "llvm.amdgcn.exp.f32")))
-				continue;
-
-			LLVMValueRef arg = LLVMGetOperand(cur, EXP_TARGET);
-			unsigned target = LLVMConstIntGetZExtValue(arg);
-
-			if (target < V_008DFC_SQ_EXP_PARAM)
-				continue;
-
-			target -= V_008DFC_SQ_EXP_PARAM;
-
-			/* Eliminate constant value PARAM exports. */
-			if (si_eliminate_const_output(ctx, cur, target)) {
-				removed_any = true;
-			} else {
-				exports.offset[exports.num] = target;
-				exports.inst[exports.num] = cur;
-				exports.num++;
-			}
-		}
-		bb = LLVMGetNextBasicBlock(bb);
-	}
-
-	/* Remove holes in export memory due to removed PARAM exports.
-	 * This is done by renumbering all PARAM exports.
-	 */
-	if (removed_any) {
-		ubyte current_offset[SI_MAX_VS_OUTPUTS];
-		unsigned new_count = 0;
-		unsigned out, i;
-
-		/* Make a copy of the offsets. We need the old version while
-		 * we are modifying some of them. */
-		assert(sizeof(current_offset) ==
-		       sizeof(shader->info.vs_output_param_offset));
-		memcpy(current_offset, shader->info.vs_output_param_offset,
-		       sizeof(current_offset));
-
-		for (i = 0; i < exports.num; i++) {
-			unsigned offset = exports.offset[i];
-
-			for (out = 0; out < info->num_outputs; out++) {
-				if (current_offset[out] != offset)
-					continue;
-
-				LLVMSetOperand(exports.inst[i], EXP_TARGET,
-					       LLVMConstInt(ctx->i32,
-							    V_008DFC_SQ_EXP_PARAM + new_count, 0));
-				shader->info.vs_output_param_offset[out] = new_count;
-				new_count++;
-				break;
-			}
-		}
-		shader->info.nr_param_exports = new_count;
-	}
+	ac_eliminate_const_vs_outputs(&ctx->ac,
+				      ctx->main_fn,
+				      shader->info.vs_output_param_offset,
+				      info->num_outputs,
+				      &shader->info.nr_param_exports);
 }
 
 static void si_count_scratch_private_memory(struct si_shader_context *ctx)
@@ -7537,7 +7399,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
 	ctx.separate_prolog = !is_monolithic;
 
-	memset(shader->info.vs_output_param_offset, EXP_PARAM_UNDEFINED,
+	memset(shader->info.vs_output_param_offset, AC_EXP_PARAM_UNDEFINED,
 	       sizeof(shader->info.vs_output_param_offset));
 
 	shader->info.uses_instanceid = sel->info.uses_instanceid;
