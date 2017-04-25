@@ -592,13 +592,6 @@ static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
 {
 	LLVMValueRef result = get_indirect_index(ctx, ind, rel_index);
 
-	/* LLVM 3.8: If indirect resource indexing is used:
-	 * - SI & CIK hang
-	 * - VI crashes
-	 */
-	if (HAVE_LLVM == 0x0308)
-		return LLVMGetUndef(ctx->i32);
-
 	return si_llvm_bound_index(ctx, result, num);
 }
 
@@ -1638,17 +1631,12 @@ static void declare_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_HELPER_INVOCATION:
-		if (HAVE_LLVM >= 0x0309) {
-			value = lp_build_intrinsic(gallivm->builder,
-						   "llvm.amdgcn.ps.live",
-						   ctx->i1, NULL, 0,
-						   LP_FUNC_ATTR_READNONE);
-			value = LLVMBuildNot(gallivm->builder, value, "");
-			value = LLVMBuildSExt(gallivm->builder, value, ctx->i32, "");
-		} else {
-			assert(!"TGSI_SEMANTIC_HELPER_INVOCATION unsupported");
-			return;
-		}
+		value = lp_build_intrinsic(gallivm->builder,
+					   "llvm.amdgcn.ps.live",
+					   ctx->i1, NULL, 0,
+					   LP_FUNC_ATTR_READNONE);
+		value = LLVMBuildNot(gallivm->builder, value, "");
+		value = LLVMBuildSExt(gallivm->builder, value, ctx->i32, "");
 		break;
 
 	case TGSI_SEMANTIC_SUBGROUP_SIZE:
@@ -4283,12 +4271,10 @@ static void atomic_emit_memory(struct si_shader_context *ctx,
 
 		new_data = LLVMBuildBitCast(builder, new_data, ctx->i32, "");
 
-#if HAVE_LLVM >= 0x309
 		result = LLVMBuildAtomicCmpXchg(builder, ptr, arg, new_data,
 		                       LLVMAtomicOrderingSequentiallyConsistent,
 		                       LLVMAtomicOrderingSequentiallyConsistent,
 		                       false);
-#endif
 
 		result = LLVMBuildExtractValue(builder, result, 0, "");
 	} else {
@@ -5689,16 +5675,14 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	 * The real barrier instruction isn’t needed, because an entire patch
 	 * always fits into a single wave.
 	 */
-	if (HAVE_LLVM >= 0x0309 &&
-	    ctx->screen->b.chip_class == SI &&
+	if (ctx->screen->b.chip_class == SI &&
 	    ctx->type == PIPE_SHADER_TESS_CTRL) {
 		emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
 		return;
 	}
 
 	lp_build_intrinsic(gallivm->builder,
-			   HAVE_LLVM >= 0x0309 ? "llvm.amdgcn.s.barrier"
-					       : "llvm.AMDGPU.barrier.local",
+			   "llvm.amdgcn.s.barrier",
 			   ctx->voidt, NULL, 0, LP_FUNC_ATTR_CONVERGENT);
 }
 
@@ -6519,14 +6503,8 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 	uint32_t scratch_rsrc_dword1 =
 		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32);
 
-	/* Enable scratch coalescing if LLVM sets ELEMENT_SIZE & INDEX_STRIDE
-	 * correctly.
-	 */
-	if (HAVE_LLVM >= 0x0309)
-		scratch_rsrc_dword1 |= S_008F04_SWIZZLE_ENABLE(1);
-	else
-		scratch_rsrc_dword1 |=
-			S_008F04_STRIDE(config->scratch_bytes_per_wave / 64);
+	/* Enable scratch coalescing. */
+	scratch_rsrc_dword1 |= S_008F04_SWIZZLE_ENABLE(1);
 
 	for (i = 0 ; i < shader->binary.reloc_count; i++) {
 		const struct ac_shader_reloc *reloc =

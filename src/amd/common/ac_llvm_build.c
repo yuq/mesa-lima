@@ -233,42 +233,16 @@ build_cube_intrinsic(struct ac_llvm_context *ctx,
 		     LLVMValueRef in[3],
 		     struct cube_selection_coords *out)
 {
-	LLVMBuilderRef builder = ctx->builder;
+	LLVMTypeRef f32 = ctx->f32;
 
-	if (HAVE_LLVM >= 0x0309) {
-		LLVMTypeRef f32 = ctx->f32;
-
-		out->stc[1] = ac_build_intrinsic(ctx, "llvm.amdgcn.cubetc",
-					f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out->stc[0] = ac_build_intrinsic(ctx, "llvm.amdgcn.cubesc",
-					f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out->ma = ac_build_intrinsic(ctx, "llvm.amdgcn.cubema",
-					f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out->id = ac_build_intrinsic(ctx, "llvm.amdgcn.cubeid",
-					f32, in, 3, AC_FUNC_ATTR_READNONE);
-	} else {
-		LLVMValueRef c[4] = {
-			in[0],
-			in[1],
-			in[2],
-			LLVMGetUndef(LLVMTypeOf(in[0]))
-		};
-		LLVMValueRef vec = ac_build_gather_values(ctx, c, 4);
-
-		LLVMValueRef tmp =
-			ac_build_intrinsic(ctx, "llvm.AMDGPU.cube",
-					   LLVMTypeOf(vec), &vec, 1,
-					   AC_FUNC_ATTR_READNONE);
-
-		out->stc[1] = LLVMBuildExtractElement(builder, tmp,
-				LLVMConstInt(ctx->i32, 0, 0), "");
-		out->stc[0] = LLVMBuildExtractElement(builder, tmp,
-				LLVMConstInt(ctx->i32, 1, 0), "");
-		out->ma = LLVMBuildExtractElement(builder, tmp,
-				LLVMConstInt(ctx->i32, 2, 0), "");
-		out->id = LLVMBuildExtractElement(builder, tmp,
-				LLVMConstInt(ctx->i32, 3, 0), "");
-	}
+	out->stc[1] = ac_build_intrinsic(ctx, "llvm.amdgcn.cubetc",
+					 f32, in, 3, AC_FUNC_ATTR_READNONE);
+	out->stc[0] = ac_build_intrinsic(ctx, "llvm.amdgcn.cubesc",
+					 f32, in, 3, AC_FUNC_ATTR_READNONE);
+	out->ma = ac_build_intrinsic(ctx, "llvm.amdgcn.cubema",
+				     f32, in, 3, AC_FUNC_ATTR_READNONE);
+	out->id = ac_build_intrinsic(ctx, "llvm.amdgcn.cubeid",
+				     f32, in, 3, AC_FUNC_ATTR_READNONE);
 }
 
 /**
@@ -558,7 +532,7 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 			    bool has_add_tid)
 {
 	/* TODO: Fix stores with ADD_TID and remove the "has_add_tid" flag. */
-	if (HAVE_LLVM >= 0x0309 && !has_add_tid) {
+	if (!has_add_tid) {
 		/* Split 3 channel stores, becase LLVM doesn't support 3-channel
 		 * intrinsics. */
 		if (num_channels == 3) {
@@ -663,73 +637,39 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 {
 	unsigned func = CLAMP(num_channels, 1, 3) - 1;
 
-	if (HAVE_LLVM >= 0x309) {
-		LLVMValueRef args[] = {
-			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
-			vindex ? vindex : LLVMConstInt(ctx->i32, 0, 0),
-			LLVMConstInt(ctx->i32, inst_offset, 0),
-			LLVMConstInt(ctx->i1, glc, 0),
-			LLVMConstInt(ctx->i1, slc, 0)
-		};
+	LLVMValueRef args[] = {
+		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
+		vindex ? vindex : LLVMConstInt(ctx->i32, 0, 0),
+		LLVMConstInt(ctx->i32, inst_offset, 0),
+		LLVMConstInt(ctx->i1, glc, 0),
+		LLVMConstInt(ctx->i1, slc, 0)
+	};
 
-		LLVMTypeRef types[] = {ctx->f32, LLVMVectorType(ctx->f32, 2),
-		                       ctx->v4f32};
-		const char *type_names[] = {"f32", "v2f32", "v4f32"};
-		char name[256];
+	LLVMTypeRef types[] = {ctx->f32, LLVMVectorType(ctx->f32, 2),
+			       ctx->v4f32};
+	const char *type_names[] = {"f32", "v2f32", "v4f32"};
+	char name[256];
 
-		if (voffset) {
-			args[2] = LLVMBuildAdd(ctx->builder, args[2], voffset,
-			                       "");
-		}
-
-		if (soffset) {
-			args[2] = LLVMBuildAdd(ctx->builder, args[2], soffset,
-			                       "");
-		}
-
-		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.load.%s",
-		         type_names[func]);
-
-		return ac_build_intrinsic(ctx, name, types[func], args,
-					  ARRAY_SIZE(args),
-					  /* READNONE means writes can't
-					   * affect it, while READONLY means
-					   * that writes can affect it. */
-					  readonly_memory && HAVE_LLVM >= 0x0400 ?
-						  AC_FUNC_ATTR_READNONE :
-						  AC_FUNC_ATTR_READONLY);
-	} else {
-		LLVMValueRef args[] = {
-			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v16i8, ""),
-			voffset ? voffset : vindex,
-			soffset,
-			LLVMConstInt(ctx->i32, inst_offset, 0),
-			LLVMConstInt(ctx->i32, voffset ? 1 : 0, 0), // offen
-			LLVMConstInt(ctx->i32, vindex ? 1 : 0, 0), //idxen
-			LLVMConstInt(ctx->i32, glc, 0),
-			LLVMConstInt(ctx->i32, slc, 0),
-			LLVMConstInt(ctx->i32, 0, 0), // TFE
-		};
-
-		LLVMTypeRef types[] = {ctx->i32, LLVMVectorType(ctx->i32, 2),
-		                       ctx->v4i32};
-		const char *type_names[] = {"i32", "v2i32", "v4i32"};
-		const char *arg_type = "i32";
-		char name[256];
-
-		if (voffset && vindex) {
-			LLVMValueRef vaddr[] = {vindex, voffset};
-
-			arg_type = "v2i32";
-			args[1] = ac_build_gather_values(ctx, vaddr, 2);
-		}
-
-		snprintf(name, sizeof(name), "llvm.SI.buffer.load.dword.%s.%s",
-		         type_names[func], arg_type);
-
-		return ac_build_intrinsic(ctx, name, types[func], args,
-					  ARRAY_SIZE(args), AC_FUNC_ATTR_READONLY);
+	if (voffset) {
+		args[2] = LLVMBuildAdd(ctx->builder, args[2], voffset,
+				"");
 	}
+
+	if (soffset) {
+		args[2] = LLVMBuildAdd(ctx->builder, args[2], soffset,
+				"");
+	}
+
+	snprintf(name, sizeof(name), "llvm.amdgcn.buffer.load.%s",
+		 type_names[func]);
+
+	return ac_build_intrinsic(ctx, name, types[func], args,
+				  ARRAY_SIZE(args),
+				  /* READNONE means writes can't affect it, while
+				   * READONLY means that writes can affect it. */
+				  readonly_memory && HAVE_LLVM >= 0x0400 ?
+					  AC_FUNC_ATTR_READNONE :
+					  AC_FUNC_ATTR_READONLY);
 }
 
 LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
@@ -738,35 +678,22 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					 LLVMValueRef voffset,
 					 bool readonly_memory)
 {
-	if (HAVE_LLVM >= 0x0309) {
-		LLVMValueRef args [] = {
-			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
-			vindex,
-			voffset,
-			LLVMConstInt(ctx->i1, 0, 0), /* glc */
-			LLVMConstInt(ctx->i1, 0, 0), /* slc */
-		};
-
-		return ac_build_intrinsic(ctx,
-					  "llvm.amdgcn.buffer.load.format.v4f32",
-					  ctx->v4f32, args, ARRAY_SIZE(args),
-					  /* READNONE means writes can't
-					   * affect it, while READONLY means
-					   * that writes can affect it. */
-					  readonly_memory && HAVE_LLVM >= 0x0400 ?
-						  AC_FUNC_ATTR_READNONE :
-						  AC_FUNC_ATTR_READONLY);
-	}
-
-	LLVMValueRef args[] = {
-		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v16i8, ""),
-		voffset,
+	LLVMValueRef args [] = {
+		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
 		vindex,
+		voffset,
+		LLVMConstInt(ctx->i1, 0, 0), /* glc */
+		LLVMConstInt(ctx->i1, 0, 0), /* slc */
 	};
-	return ac_build_intrinsic(ctx, "llvm.SI.vs.load.input",
-				  ctx->v4f32, args, 3,
-				  AC_FUNC_ATTR_READNONE |
-				  AC_FUNC_ATTR_LEGACY);
+
+	return ac_build_intrinsic(ctx,
+				  "llvm.amdgcn.buffer.load.format.v4f32",
+				  ctx->v4f32, args, ARRAY_SIZE(args),
+				  /* READNONE means writes can't affect it, while
+				   * READONLY means that writes can affect it. */
+				  readonly_memory && HAVE_LLVM >= 0x0400 ?
+					  AC_FUNC_ATTR_READNONE :
+					  AC_FUNC_ATTR_READONLY);
 }
 
 /**

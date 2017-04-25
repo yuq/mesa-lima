@@ -50,20 +50,6 @@ struct si_llvm_flow {
 	LLVMBasicBlockRef loop_entry_block;
 };
 
-#define CPU_STRING_LEN 30
-#define FS_STRING_LEN 30
-#define TRIPLE_STRING_LEN 7
-
-/**
- * Shader types for the LLVM backend.
- */
-enum si_llvm_shader_type {
-	RADEON_LLVM_SHADER_PS = 0,
-	RADEON_LLVM_SHADER_VS = 1,
-	RADEON_LLVM_SHADER_GS = 2,
-	RADEON_LLVM_SHADER_CS = 3,
-};
-
 enum si_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_VS = 87,
 	RADEON_LLVM_AMDGPU_GS = 88,
@@ -86,36 +72,28 @@ void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value)
  */
 void si_llvm_shader_type(LLVMValueRef F, unsigned type)
 {
-	enum si_llvm_shader_type llvm_type;
 	enum si_llvm_calling_convention calling_conv;
 
 	switch (type) {
 	case PIPE_SHADER_VERTEX:
 	case PIPE_SHADER_TESS_CTRL:
 	case PIPE_SHADER_TESS_EVAL:
-		llvm_type = RADEON_LLVM_SHADER_VS;
 		calling_conv = RADEON_LLVM_AMDGPU_VS;
 		break;
 	case PIPE_SHADER_GEOMETRY:
-		llvm_type = RADEON_LLVM_SHADER_GS;
 		calling_conv = RADEON_LLVM_AMDGPU_GS;
 		break;
 	case PIPE_SHADER_FRAGMENT:
-		llvm_type = RADEON_LLVM_SHADER_PS;
 		calling_conv = RADEON_LLVM_AMDGPU_PS;
 		break;
 	case PIPE_SHADER_COMPUTE:
-		llvm_type = RADEON_LLVM_SHADER_CS;
 		calling_conv = RADEON_LLVM_AMDGPU_CS;
 		break;
 	default:
 		unreachable("Unhandle shader type");
 	}
 
-	if (HAVE_LLVM >= 0x309)
-		LLVMSetFunctionCallConv(F, calling_conv);
-	else
-		si_llvm_add_attribute(F, "ShaderType", llvm_type);
+	LLVMSetFunctionCallConv(F, calling_conv);
 }
 
 static void init_amdgpu_target()
@@ -848,10 +826,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 * FIXME: We shouldn't need to have the non-alloca
 			 * code path for arrays. LLVM should be smart enough to
 			 * promote allocas into registers when profitable.
-			 *
-			 * LLVM 3.8 crashes with this.
 			 */
-			if ((HAVE_LLVM >= 0x0309 && array_size > 16) ||
+			if (array_size > 16 ||
 			    /* TODO: VGPR indexing is buggy on GFX9. */
 			    ctx->screen->b.chip_class == GFX9) {
 				array_alloca = LLVMBuildAlloca(builder,
@@ -1274,13 +1250,11 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 						ctx->gallivm.context);
 	LLVMSetTarget(ctx->gallivm.module, "amdgcn--");
 
-#if HAVE_LLVM >= 0x0309
 	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(tm);
 	char *data_layout_str = LLVMCopyStringRepOfTargetData(data_layout);
 	LLVMSetDataLayout(ctx->gallivm.module, data_layout_str);
 	LLVMDisposeTargetData(data_layout);
 	LLVMDisposeMessage(data_layout_str);
-#endif
 
 	bool unsafe_fpmath = (sscreen->b.debug_flags & DBG_UNSAFE_MATH) != 0;
 	enum lp_float_mode float_mode =

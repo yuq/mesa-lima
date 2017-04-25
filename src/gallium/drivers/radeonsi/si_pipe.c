@@ -327,8 +327,7 @@ static bool si_have_tgsi_compute(struct si_screen *sscreen)
 {
 	/* Old kernels disallowed some register writes for SI
 	 * that are used for indirect dispatches. */
-	return HAVE_LLVM >= 0x309 &&
-	       (sscreen->b.chip_class >= CIK ||
+	return (sscreen->b.chip_class >= CIK ||
 		sscreen->b.info.drm_major == 3 ||
 		(sscreen->b.info.drm_major == 2 &&
 		 sscreen->b.info.drm_minor >= 45));
@@ -422,12 +421,10 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_DOUBLES:
 	case PIPE_CAP_TGSI_TEX_TXF_LZ:
 	case PIPE_CAP_TGSI_TES_LAYER_VIEWPORT:
-		return 1;
-
 	case PIPE_CAP_INT64:
 	case PIPE_CAP_INT64_DIVMOD:
 	case PIPE_CAP_TGSI_CLOCK:
-		return HAVE_LLVM >= 0x0309;
+		return 1;
 
 	case PIPE_CAP_TGSI_VOTE:
 		return HAVE_LLVM >= 0x0400;
@@ -458,15 +455,13 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 	case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
 	case PIPE_CAP_MAX_VERTEX_STREAMS:
-		return 4;
-
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
-		return HAVE_LLVM >= 0x0309 ? 4 : 0;
+		return 4;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
 		if (si_have_tgsi_compute(sscreen))
 			return 450;
-		return HAVE_LLVM >= 0x0309 ? 420 : 410;
+		return 420;
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		return MIN2(sscreen->b.info.max_alloc_size, INT_MAX);
@@ -656,9 +651,9 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return SI_NUM_SAMPLERS;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
-		return HAVE_LLVM >= 0x0309 ? SI_NUM_SHADER_BUFFERS : 0;
+		return SI_NUM_SHADER_BUFFERS;
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
-		return HAVE_LLVM >= 0x0309 ? SI_NUM_IMAGES : 0;
+		return SI_NUM_IMAGES;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
@@ -887,9 +882,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		 sscreen->b.info.pfp_fw_version >= 121 &&
 		 sscreen->b.info.me_fw_version >= 87);
 
-	sscreen->has_ds_bpermute = HAVE_LLVM >= 0x0309 &&
-				   sscreen->b.chip_class >= VI;
-
+	sscreen->has_ds_bpermute = sscreen->b.chip_class >= VI;
 	sscreen->has_msaa_sample_loc_bug = (sscreen->b.family >= CHIP_POLARIS10 &&
 					    sscreen->b.family <= CHIP_POLARIS12) ||
 					   sscreen->b.family == CHIP_VEGA10;

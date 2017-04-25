@@ -1001,10 +1001,10 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_STONEY:
 		return "stoney";
 	case CHIP_POLARIS10:
-		return HAVE_LLVM >= 0x0309 ? "polaris10" : "carrizo";
+		return "polaris10";
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12: /* same as polaris11 */
-		return HAVE_LLVM >= 0x0309 ? "polaris11" : "carrizo";
+		return "polaris11";
 	case CHIP_VEGA10:
 		return "gfx900";
 	default:
@@ -1066,7 +1066,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
 		if (ret) {
 			uint64_t *block_size = ret;
-			if (rscreen->chip_class >= SI && HAVE_LLVM >= 0x309 &&
+			if (rscreen->chip_class >= SI &&
 			    ir_type == PIPE_SHADER_IR_TGSI) {
 				block_size[0] = 2048;
 				block_size[1] = 2048;
@@ -1082,7 +1082,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
 		if (ret) {
 			uint64_t *max_threads_per_block = ret;
-			if (rscreen->chip_class >= SI && HAVE_LLVM >= 0x309 &&
+			if (rscreen->chip_class >= SI &&
 			    ir_type == PIPE_SHADER_IR_TGSI)
 				*max_threads_per_block = 2048;
 			else
@@ -1174,7 +1174,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
 		if (ret) {
 			uint64_t *max_variable_threads_per_block = ret;
-			if (rscreen->chip_class >= SI && HAVE_LLVM >= 0x309 &&
+			if (rscreen->chip_class >= SI &&
 			    ir_type == PIPE_SHADER_IR_TGSI)
 				*max_variable_threads_per_block = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
 			else
