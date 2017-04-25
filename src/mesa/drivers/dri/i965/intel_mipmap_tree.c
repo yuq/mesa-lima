@@ -605,6 +605,27 @@ intel_lower_compressed_format(struct brw_context *brw, mesa_format format)
    }
 }
 
+/** \brief Assert that the level and layer are valid for the miptree. */
+void
+intel_miptree_check_level_layer(const struct intel_mipmap_tree *mt,
+                                uint32_t level,
+                                uint32_t layer)
+{
+   (void) mt;
+   (void) level;
+   (void) layer;
+
+   assert(level >= mt->first_level);
+   assert(level <= mt->last_level);
+
+   if (mt->surf.size > 0)
+      assert(layer < (mt->surf.dim == ISL_SURF_DIM_3D ?
+                         minify(mt->surf.phys_level0_sa.depth, level) :
+                         mt->surf.phys_level0_sa.array_len));
+   else
+      assert(layer < mt->level[level].depth);
+}
+
 static enum isl_aux_state **
 create_aux_state_map(struct intel_mipmap_tree *mt,
                      enum isl_aux_state initial)
