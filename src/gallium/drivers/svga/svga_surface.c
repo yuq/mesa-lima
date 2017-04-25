@@ -751,15 +751,15 @@ svga_propagate_rendertargets(struct svga_context *svga)
     * not the svga->curr.framebuffer surfaces, because it's the former
     * surfaces which may be backing surface views (the actual render targets).
     */
-   for (i = 0; i < svga->state.hw_draw.num_rendertargets; i++) {
-      struct pipe_surface *s = svga->state.hw_draw.rtv[i];
+   for (i = 0; i < svga->state.hw_clear.num_rendertargets; i++) {
+      struct pipe_surface *s = svga->state.hw_clear.rtv[i];
       if (s) {
          svga_propagate_surface(svga, s, FALSE);
       }
    }
 
-   if (svga->state.hw_draw.dsv) {
-      svga_propagate_surface(svga, svga->state.hw_draw.dsv, FALSE);
+   if (svga->state.hw_clear.dsv) {
+      svga_propagate_surface(svga, svga->state.hw_clear.dsv, FALSE);
    }
 }
 

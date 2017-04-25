@@ -247,9 +247,9 @@ emit_fb_vgpu10(struct svga_context *svga)
    }
 
    /* avoid emitting redundant SetRenderTargets command */
-   if ((num_color != svga->state.hw_draw.num_rendertargets) ||
-       (dsv != svga->state.hw_draw.dsv) ||
-       memcmp(rtv, svga->state.hw_draw.rtv, num_color * sizeof(rtv[0]))) {
+   if ((num_color != svga->state.hw_clear.num_rendertargets) ||
+       (dsv != svga->state.hw_clear.dsv) ||
+       memcmp(rtv, svga->state.hw_clear.rtv, num_color * sizeof(rtv[0]))) {
 
       ret = SVGA3D_vgpu10_SetRenderTargets(svga->swc, num_color, rtv, dsv);
       if (ret != PIPE_OK)
@@ -258,9 +258,9 @@ emit_fb_vgpu10(struct svga_context *svga)
       /* number of render targets sent to the device, not including trailing
        * unbound render targets.
        */
-      svga->state.hw_draw.num_rendertargets = last_rtv + 1;
-      svga->state.hw_draw.dsv = dsv;
-      memcpy(svga->state.hw_draw.rtv, rtv, num_color * sizeof(rtv[0]));
+      svga->state.hw_clear.num_rendertargets = last_rtv + 1;
+      svga->state.hw_clear.dsv = dsv;
+      memcpy(svga->state.hw_clear.rtv, rtv, num_color * sizeof(rtv[0]));
     
       for (i = 0; i < ss->max_color_buffers; i++) {
          if (hw->cbufs[i] != curr->cbufs[i]) {
@@ -335,7 +335,7 @@ svga_reemit_framebuffer_bindings(struct svga_context *svga)
 enum pipe_error
 svga_rebind_framebuffer_bindings(struct svga_context *svga)
 {
-   struct svga_hw_draw_state *hw = &svga->state.hw_draw;
+   struct svga_hw_clear_state *hw = &svga->state.hw_clear;
    unsigned i;
    enum pipe_error ret;
 

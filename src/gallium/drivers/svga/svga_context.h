@@ -324,6 +324,11 @@ struct svga_hw_clear_state
 
    struct pipe_framebuffer_state framebuffer;
    struct svga_prescale prescale;
+
+   /* VGPU10 state */
+   unsigned num_rendertargets;
+   struct pipe_surface *rtv[SVGA3D_MAX_RENDER_TARGETS];
+   struct pipe_surface *dsv;
 };
 
 struct svga_hw_view_state
@@ -392,10 +397,6 @@ struct svga_hw_draw_state
    unsigned num_sampler_views[PIPE_SHADER_TYPES];
    struct pipe_sampler_view
       *sampler_views[PIPE_SHADER_TYPES][PIPE_MAX_SAMPLERS];
-
-   unsigned num_rendertargets;
-   struct pipe_surface *rtv[SVGA3D_MAX_RENDER_TARGETS];
-   struct pipe_surface *dsv;
 
    /* used for rebinding */
    unsigned default_constbuf_size[PIPE_SHADER_TYPES];
