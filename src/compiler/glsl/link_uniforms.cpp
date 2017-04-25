@@ -258,7 +258,7 @@ public:
         num_shader_samplers(0), num_shader_images(0),
         num_shader_uniform_components(0), num_shader_subroutines(0),
         is_buffer_block(false), is_shader_storage(false), map(map),
-        hidden_map(hidden_map)
+        hidden_map(hidden_map), current_var(NULL)
    {
       /* empty */
    }
