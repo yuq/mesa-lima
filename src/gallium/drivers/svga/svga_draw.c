@@ -134,8 +134,25 @@ void
 svga_hwtnl_vertex_buffers(struct svga_hwtnl *hwtnl,
                           unsigned count, struct pipe_vertex_buffer *buffers)
 {
-   util_set_vertex_buffers_count(hwtnl->cmd.vbufs,
-                                 &hwtnl->cmd.vbuf_count, buffers, 0, count);
+   struct pipe_vertex_buffer *dst = hwtnl->cmd.vbufs;
+   const struct pipe_vertex_buffer *src = buffers;
+   unsigned i;
+
+   for (i = 0; i < count; i++) {
+      pipe_resource_reference(&dst[i].buffer, src[i].buffer);
+      dst[i].user_buffer = src[i].user_buffer;
+      dst[i].stride = src[i].stride;
+      dst[i].buffer_offset = src[i].buffer_offset;
+   }
+
+   /* release old buffer references */
+   for ( ; i < hwtnl->cmd.vbuf_count; i++) {
+      pipe_resource_reference(&dst[i].buffer, NULL);
+      dst[i].user_buffer = NULL;  /* just to be safe */
+      /* don't bother zeroing stride/offset fields */
+   }
+
+   hwtnl->cmd.vbuf_count = count;
 }
 
 
@@ -582,6 +599,16 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
           * the unused vertex buffers.
           */
          num_vbuffers = MAX2(vbuf_count, svga->state.hw_draw.num_vbuffers);
+
+         /* Zero-out the old buffers we want to unbind (the number of loop
+          * iterations here is typically very small, and often zero.)
+          */
+         for (i = vbuf_count; i < num_vbuffers; i++) {
+            vbuffer_attrs[i].sid = 0;
+            vbuffer_attrs[i].stride = 0;
+            vbuffer_attrs[i].offset = 0;
+            vbuffer_handles[i] = NULL;
+         }
 
          if (num_vbuffers > 0) {
 
