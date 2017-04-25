@@ -416,10 +416,11 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
 
       s->backed = svga_surface(backed_view);
    }
-   else {
+   else if (s->backed->age < tex->age) {
       /*
        * There is already an existing backing surface, but we still need to
-       * sync the handles.
+       * sync the backing resource if the original resource has been modified
+       * since the last copy.
        */
       struct svga_surface *bs = s->backed;
       unsigned int layer, zslice;
@@ -445,6 +446,7 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
    }
 
    svga_mark_surface_dirty(&s->backed->base);
+   s->backed->age = tex->age;
 
    SVGA_STATS_TIME_POP(svga_sws(svga));
 
@@ -647,8 +649,11 @@ svga_mark_surface_dirty(struct pipe_surface *surf)
 
    /* Increment the view_age and texture age for this surface's mipmap
     * level so that any sampler views into the texture are re-validated too.
+    * Note: we age the texture for backed surface view only when the
+    *       backed surface is propagated to the original surface.
     */
-   svga_age_texture_view(tex, surf->u.tex.level);
+   if (s->handle == tex->handle)
+      svga_age_texture_view(tex, surf->u.tex.level);
 }
 
 
@@ -742,6 +747,9 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf,
                                   1);
          svga_define_texture_level(tex, layer + i, surf->u.tex.level);
       }
+
+      /* Sync the surface view age with the texture age */
+      s->age = tex->age;
    }
 
    SVGA_STATS_TIME_POP(ss->sws);

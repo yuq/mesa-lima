@@ -72,6 +72,9 @@ struct svga_surface
     * original surface is the shader resource.
     */
    struct svga_surface *backed;
+   unsigned age;                   /* timestamp when the backed resource is
+                                    * synced with the original resource.
+                                    */
 };
 
 
