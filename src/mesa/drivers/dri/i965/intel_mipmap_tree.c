@@ -1090,6 +1090,21 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
    if (mt->target == GL_TEXTURE_CUBE_MAP)
       depth = 6;
 
+   if (mt->surf.size > 0) {
+      if (level >= mt->surf.levels)
+         return false;
+
+      const unsigned level_depth =
+         mt->surf.dim == ISL_SURF_DIM_3D ?
+            minify(mt->surf.logical_level0_px.depth, level) :
+            mt->surf.logical_level0_px.array_len;
+
+      return width == minify(mt->surf.logical_level0_px.width, level) &&
+             height == minify(mt->surf.logical_level0_px.height, level) &&
+             depth == level_depth &&
+             MAX2(image->NumSamples, 1) == mt->surf.samples;
+   }
+
    int level_depth = mt->level[level].depth;
    if (mt->num_samples > 1) {
       switch (mt->msaa_layout) {
