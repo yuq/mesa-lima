@@ -117,16 +117,24 @@ static bool radv_amdgpu_fence_wait(struct radeon_winsys *_ws,
 			      bool absolute,
 			      uint64_t timeout)
 {
+	struct radv_amdgpu_winsys *ws = (struct radv_amdgpu_winsys*)_ws;
 	struct amdgpu_cs_fence *fence = (struct amdgpu_cs_fence *)_fence;
 	unsigned flags = absolute ? AMDGPU_QUERY_FENCE_TIMEOUT_IS_ABSOLUTE : 0;
 	int r;
 	uint32_t expired = 0;
 
+	if (ws->fence_map) {
+		if (ws->fence_map[fence->ip_type * MAX_RINGS_PER_TYPE + fence->ring] >= fence->fence)
+			return true;
+		if (!absolute && !timeout)
+			return false;
+	}
+
 	/* Now use the libdrm query. */
 	r = amdgpu_cs_query_fence_status(fence,
-					 timeout,
-					 flags,
-					 &expired);
+	                                 timeout,
+	                                 flags,
+	                                 &expired);
 
 	if (r) {
 		fprintf(stderr, "amdgpu: radv_amdgpu_cs_query_fence_status failed.\n");
@@ -619,6 +627,16 @@ static int radv_amdgpu_create_bo_list(struct radv_amdgpu_winsys *ws,
 	return r;
 }
 
+static struct amdgpu_cs_fence_info radv_set_cs_fence(struct radv_amdgpu_winsys *ws, int ip_type, int ring)
+{
+	struct amdgpu_cs_fence_info ret = {0};
+	if (ws->fence_map) {
+		ret.handle = radv_amdgpu_winsys_bo(ws->fence_bo)->bo;
+		ret.offset = (ip_type * MAX_RINGS_PER_TYPE + ring) * sizeof(uint64_t);
+	}
+	return ret;
+}
+
 static void radv_assign_last_submit(struct radv_amdgpu_ctx *ctx,
 				    struct amdgpu_cs_request *request)
 {
@@ -676,6 +694,7 @@ static int radv_amdgpu_winsys_cs_submit_chained(struct radeon_winsys_ctx *_ctx,
 	request.number_of_ibs = 1;
 	request.ibs = &cs0->ib;
 	request.resources = bo_list;
+	request.fence_info = radv_set_cs_fence(cs0->ws, cs0->hw_ip, queue_idx);
 
 	if (initial_preamble_cs) {
 		request.ibs = ibs;
@@ -740,6 +759,7 @@ static int radv_amdgpu_winsys_cs_submit_fallback(struct radeon_winsys_ctx *_ctx,
 		request.resources = bo_list;
 		request.number_of_ibs = cnt + !!preamble_cs;
 		request.ibs = ibs;
+		request.fence_info = radv_set_cs_fence(cs0->ws, cs0->hw_ip, queue_idx);
 
 		if (preamble_cs) {
 			ibs[0] = radv_amdgpu_cs(preamble_cs)->ib;
@@ -858,6 +878,7 @@ static int radv_amdgpu_winsys_cs_submit_sysmem(struct radeon_winsys_ctx *_ctx,
 		request.resources = bo_list;
 		request.number_of_ibs = 1;
 		request.ibs = &ib;
+		request.fence_info = radv_set_cs_fence(cs0->ws, cs0->hw_ip, queue_idx);
 
 		r = amdgpu_cs_submit(ctx->ctx, 0, &request, 1);
 		if (r) {
