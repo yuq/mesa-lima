@@ -667,6 +667,78 @@ free_aux_state_map(enum isl_aux_state **state)
 }
 
 static struct intel_mipmap_tree *
+make_surface(struct brw_context *brw, GLenum target, mesa_format format,
+             unsigned first_level, unsigned last_level,
+             unsigned width0, unsigned height0, unsigned depth0,
+             unsigned num_samples, enum isl_tiling isl_tiling,
+             isl_surf_usage_flags_t isl_usage_flags, uint32_t alloc_flags,
+             struct brw_bo *bo)
+{
+   struct intel_mipmap_tree *mt = calloc(sizeof(*mt), 1);
+   if (!mt)
+      return NULL;
+
+   if (!create_mapping_table(target, first_level, last_level, depth0,
+                             mt->level)) {
+      free(mt);
+      return NULL;
+   }
+
+   if (target == GL_TEXTURE_CUBE_MAP ||
+       target == GL_TEXTURE_CUBE_MAP_ARRAY)
+      isl_usage_flags |= ISL_SURF_USAGE_CUBE_BIT;
+
+   DBG("%s: %s %s %ux %u:%u:%u %d..%d <-- %p\n",
+        __func__,
+       _mesa_enum_to_string(target),
+       _mesa_get_format_name(format),
+       num_samples, width0, height0, depth0,
+       first_level, last_level, mt);
+
+   struct isl_surf_init_info init_info = {
+      .dim = get_isl_surf_dim(target),
+      .format = translate_tex_format(brw, format, false),
+      .width = width0,
+      .height = height0,
+      .depth = target == GL_TEXTURE_3D ? depth0 : 1,
+      .levels = last_level - first_level + 1,
+      .array_len = target == GL_TEXTURE_3D ? 1 : depth0,
+      .samples = MAX2(num_samples, 1),
+      .usage = isl_usage_flags, 
+      .tiling_flags = 1u << isl_tiling
+   };
+
+   if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
+      goto fail;
+
+   assert(mt->surf.size % mt->surf.row_pitch == 0);
+
+   if (!bo) {
+      mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "isl-miptree",
+                                  mt->surf.size,
+                                  isl_tiling_to_bufmgr_tiling(isl_tiling),
+                                  mt->surf.row_pitch, alloc_flags);
+      if (!mt->bo)
+         goto fail;
+   } else {
+      mt->bo = bo;
+   }
+
+   mt->first_level = first_level;
+   mt->last_level = last_level;
+   mt->target = target;
+   mt->format = format;
+   mt->refcount = 1;
+   mt->aux_state = NULL;
+
+   return mt;
+
+fail:
+   intel_miptree_release(&mt);
+   return NULL;
+}
+
+static struct intel_mipmap_tree *
 miptree_create(struct brw_context *brw,
                GLenum target,
                mesa_format format,
