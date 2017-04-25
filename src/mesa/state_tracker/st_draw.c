@@ -207,14 +207,9 @@ st_draw_vbo(struct gl_context *ctx,
       setup_index_buffer(st, ib);
 
       info.indexed = TRUE;
-      if (min_index != ~0U && max_index != ~0U) {
-         info.min_index = min_index;
-         info.max_index = max_index;
-      }
+      info.min_index = min_index;
+      info.max_index = max_index;
 
-      /* The VBO module handles restart for the non-indexed GLDrawArrays
-       * so we only set these fields for indexed drawing:
-       */
       setup_primitive_restart(ctx, &info, ib->index_size);
    }
    else {
