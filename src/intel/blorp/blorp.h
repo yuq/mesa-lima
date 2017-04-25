@@ -75,6 +75,9 @@ enum blorp_batch_flags {
     * hardware.
     */
    BLORP_BATCH_NO_EMIT_DEPTH_STENCIL = (1 << 0),
+
+   /* This flag indicates that the blorp call should be predicated. */
+   BLORP_BATCH_PREDICATE_ENABLE      = (1 << 1),
 };
 
 struct blorp_batch {

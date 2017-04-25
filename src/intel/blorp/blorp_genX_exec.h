@@ -1543,6 +1543,9 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    blorp_emit(batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType = SEQUENTIAL;
       prim.PrimitiveTopologyType = _3DPRIM_RECTLIST;
+#if GEN_GEN >= 7
+      prim.PredicateEnable = batch->flags & BLORP_BATCH_PREDICATE_ENABLE;
+#endif
       prim.VertexCountPerInstance = 3;
       prim.InstanceCount = params->num_layers;
    }
