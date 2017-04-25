@@ -2920,15 +2920,17 @@ echo "        Static libs:     $enable_static"
 echo "        Shared-glapi:    $enable_shared_glapi"
 
 dnl Compiler options
-# cleanup the CFLAGS/CXXFLAGS/DEFINES vars
+# cleanup the CFLAGS/CXXFLAGS/LDFLAGS/DEFINES vars
 cflags=`echo $CFLAGS | \
     $SED 's/^ *//;s/  */ /;s/ *$//'`
 cxxflags=`echo $CXXFLAGS | \
     $SED 's/^ *//;s/  */ /;s/ *$//'`
+ldflags=`echo $LDFLAGS | $SED 's/^ *//;s/  */ /;s/ *$//'`
 defines=`echo $DEFINES | $SED 's/^ *//;s/  */ /;s/ *$//'`
 echo ""
 echo "        CFLAGS:          $cflags"
 echo "        CXXFLAGS:        $cxxflags"
+echo "        LDFLAGS:         $ldflags"
 echo "        Macros:          $defines"
 echo ""
 if test "x$enable_llvm" = xyes; then
