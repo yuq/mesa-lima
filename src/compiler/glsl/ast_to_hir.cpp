@@ -3858,7 +3858,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
        * 3.00 spec allows structs as well.  Varying structs are also allowed
        * in GLSL 1.50.
        */
-      switch (var->type->get_scalar_type()->base_type) {
+      switch (var->type->without_array()->base_type) {
       case GLSL_TYPE_FLOAT:
          /* Ok in all GLSL versions */
          break;
