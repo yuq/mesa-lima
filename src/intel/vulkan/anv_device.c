@@ -1113,8 +1113,7 @@ VkResult anv_CreateDevice(
    if (result != VK_SUCCESS)
       goto fail_bo_cache;
 
-   result = anv_state_pool_init(&device->instruction_state_pool, device,
-                                1024 * 1024);
+   result = anv_state_pool_init(&device->instruction_state_pool, device, 16384);
    if (result != VK_SUCCESS)
       goto fail_dynamic_state_pool;
 
