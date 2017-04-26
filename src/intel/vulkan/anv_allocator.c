@@ -710,6 +710,9 @@ anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
 struct anv_state
 anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
 {
+   if (size == 0)
+      return ANV_STATE_NULL;
+
    struct anv_state state = anv_state_pool_alloc_no_vg(pool, size, align);
    VG(VALGRIND_MEMPOOL_ALLOC(pool, state.map, size));
    return state;
@@ -731,6 +734,9 @@ anv_state_pool_free_no_vg(struct anv_state_pool *pool, struct anv_state state)
 void
 anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
 {
+   if (state.alloc_size == 0)
+      return;
+
    VG(VALGRIND_MEMPOOL_FREE(pool, state.map));
    anv_state_pool_free_no_vg(pool, state);
 }
@@ -791,6 +797,9 @@ struct anv_state
 anv_state_stream_alloc(struct anv_state_stream *stream,
                        uint32_t size, uint32_t alignment)
 {
+   if (size == 0)
+      return ANV_STATE_NULL;
+
    struct anv_state_stream_block *sb = stream->block;
 
    struct anv_state state;

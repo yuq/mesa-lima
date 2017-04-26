@@ -490,6 +490,8 @@ struct anv_state {
    void *map;
 };
 
+#define ANV_STATE_NULL ((struct anv_state) { .alloc_size = 0 })
+
 struct anv_fixed_size_state_pool {
    size_t state_size;
    union anv_free_list free_list;
