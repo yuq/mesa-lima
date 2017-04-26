@@ -317,6 +317,96 @@ anv_block_pool_finish(struct anv_block_pool *pool)
 
 #define PAGE_SIZE 4096
 
+static VkResult
+anv_block_pool_expand_range(struct anv_block_pool *pool,
+                            uint32_t center_bo_offset, uint32_t size)
+{
+   void *map;
+   uint32_t gem_handle;
+   struct anv_mmap_cleanup *cleanup;
+
+   /* Assert that we only ever grow the pool */
+   assert(center_bo_offset >= pool->back_state.end);
+   assert(size - center_bo_offset >= pool->state.end);
+
+   cleanup = u_vector_add(&pool->mmap_cleanups);
+   if (!cleanup)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   *cleanup = ANV_MMAP_CLEANUP_INIT;
+
+   /* Just leak the old map until we destroy the pool.  We can't munmap it
+    * without races or imposing locking on the block allocate fast path. On
+    * the whole the leaked maps adds up to less than the size of the
+    * current map.  MAP_POPULATE seems like the right thing to do, but we
+    * should try to get some numbers.
+    */
+   map = mmap(NULL, size, PROT_READ | PROT_WRITE,
+              MAP_SHARED | MAP_POPULATE, pool->fd,
+              BLOCK_POOL_MEMFD_CENTER - center_bo_offset);
+   if (map == MAP_FAILED)
+      return vk_errorf(VK_ERROR_MEMORY_MAP_FAILED, "mmap failed: %m");
+
+   gem_handle = anv_gem_userptr(pool->device, map, size);
+   if (gem_handle == 0) {
+      munmap(map, size);
+      return vk_errorf(VK_ERROR_TOO_MANY_OBJECTS, "userptr failed: %m");
+   }
+
+   cleanup->map = map;
+   cleanup->size = size;
+   cleanup->gem_handle = gem_handle;
+
+#if 0
+   /* Regular objects are created I915_CACHING_CACHED on LLC platforms and
+    * I915_CACHING_NONE on non-LLC platforms. However, userptr objects are
+    * always created as I915_CACHING_CACHED, which on non-LLC means
+    * snooped. That can be useful but comes with a bit of overheard.  Since
+    * we're eplicitly clflushing and don't want the overhead we need to turn
+    * it off. */
+   if (!pool->device->info.has_llc) {
+      anv_gem_set_caching(pool->device, gem_handle, I915_CACHING_NONE);
+      anv_gem_set_domain(pool->device, gem_handle,
+                         I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
+   }
+#endif
+
+   /* Now that we successfull allocated everything, we can write the new
+    * values back into pool. */
+   pool->map = map + center_bo_offset;
+   pool->center_bo_offset = center_bo_offset;
+
+   /* For block pool BOs we have to be a bit careful about where we place them
+    * in the GTT.  There are two documented workarounds for state base address
+    * placement : Wa32bitGeneralStateOffset and Wa32bitInstructionBaseOffset
+    * which state that those two base addresses do not support 48-bit
+    * addresses and need to be placed in the bottom 32-bit range.
+    * Unfortunately, this is not quite accurate.
+    *
+    * The real problem is that we always set the size of our state pools in
+    * STATE_BASE_ADDRESS to 0xfffff (the maximum) even though the BO is most
+    * likely significantly smaller.  We do this because we do not no at the
+    * time we emit STATE_BASE_ADDRESS whether or not we will need to expand
+    * the pool during command buffer building so we don't actually have a
+    * valid final size.  If the address + size, as seen by STATE_BASE_ADDRESS
+    * overflows 48 bits, the GPU appears to treat all accesses to the buffer
+    * as being out of bounds and returns zero.  For dynamic state, this
+    * usually just leads to rendering corruptions, but shaders that are all
+    * zero hang the GPU immediately.
+    *
+    * The easiest solution to do is exactly what the bogus workarounds say to
+    * do: restrict these buffers to 32-bit addresses.  We could also pin the
+    * BO to some particular location of our choosing, but that's significantly
+    * more work than just not setting a flag.  So, we explicitly DO NOT set
+    * the EXEC_OBJECT_SUPPORTS_48B_ADDRESS flag and the kernel does all of the
+    * hard work for us.
+    */
+   anv_bo_init(&pool->bo, gem_handle, size);
+   pool->bo.map = map;
+
+   return VK_SUCCESS;
+}
+
 /** Grows and re-centers the block pool.
  *
  * We grow the block pool in one or both directions in such a way that the
@@ -345,9 +435,7 @@ static uint32_t
 anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 {
    uint32_t size;
-   void *map;
-   uint32_t gem_handle;
-   struct anv_mmap_cleanup *cleanup;
+   VkResult result = VK_SUCCESS;
 
    pthread_mutex_lock(&pool->device->mutex);
 
@@ -430,81 +518,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
    assert(center_bo_offset % pool->block_size == 0);
    assert(center_bo_offset % PAGE_SIZE == 0);
 
-   /* Assert that we only ever grow the pool */
-   assert(center_bo_offset >= pool->back_state.end);
-   assert(size - center_bo_offset >= pool->state.end);
-
-   cleanup = u_vector_add(&pool->mmap_cleanups);
-   if (!cleanup)
-      goto fail;
-   *cleanup = ANV_MMAP_CLEANUP_INIT;
-
-   /* Just leak the old map until we destroy the pool.  We can't munmap it
-    * without races or imposing locking on the block allocate fast path. On
-    * the whole the leaked maps adds up to less than the size of the
-    * current map.  MAP_POPULATE seems like the right thing to do, but we
-    * should try to get some numbers.
-    */
-   map = mmap(NULL, size, PROT_READ | PROT_WRITE,
-              MAP_SHARED | MAP_POPULATE, pool->fd,
-              BLOCK_POOL_MEMFD_CENTER - center_bo_offset);
-   cleanup->map = map;
-   cleanup->size = size;
-
-   if (map == MAP_FAILED)
-      goto fail;
-
-   gem_handle = anv_gem_userptr(pool->device, map, size);
-   if (gem_handle == 0)
-      goto fail;
-   cleanup->gem_handle = gem_handle;
-
-#if 0
-   /* Regular objects are created I915_CACHING_CACHED on LLC platforms and
-    * I915_CACHING_NONE on non-LLC platforms. However, userptr objects are
-    * always created as I915_CACHING_CACHED, which on non-LLC means
-    * snooped. That can be useful but comes with a bit of overheard.  Since
-    * we're eplicitly clflushing and don't want the overhead we need to turn
-    * it off. */
-   if (!pool->device->info.has_llc) {
-      anv_gem_set_caching(pool->device, gem_handle, I915_CACHING_NONE);
-      anv_gem_set_domain(pool->device, gem_handle,
-                         I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
-   }
-#endif
-
-   /* Now that we successfull allocated everything, we can write the new
-    * values back into pool. */
-   pool->map = map + center_bo_offset;
-   pool->center_bo_offset = center_bo_offset;
-
-   /* For block pool BOs we have to be a bit careful about where we place them
-    * in the GTT.  There are two documented workarounds for state base address
-    * placement : Wa32bitGeneralStateOffset and Wa32bitInstructionBaseOffset
-    * which state that those two base addresses do not support 48-bit
-    * addresses and need to be placed in the bottom 32-bit range.
-    * Unfortunately, this is not quite accurate.
-    *
-    * The real problem is that we always set the size of our state pools in
-    * STATE_BASE_ADDRESS to 0xfffff (the maximum) even though the BO is most
-    * likely significantly smaller.  We do this because we do not no at the
-    * time we emit STATE_BASE_ADDRESS whether or not we will need to expand
-    * the pool during command buffer building so we don't actually have a
-    * valid final size.  If the address + size, as seen by STATE_BASE_ADDRESS
-    * overflows 48 bits, the GPU appears to treat all accesses to the buffer
-    * as being out of bounds and returns zero.  For dynamic state, this
-    * usually just leads to rendering corruptions, but shaders that are all
-    * zero hang the GPU immediately.
-    *
-    * The easiest solution to do is exactly what the bogus workarounds say to
-    * do: restrict these buffers to 32-bit addresses.  We could also pin the
-    * BO to some particular location of our choosing, but that's significantly
-    * more work than just not setting a flag.  So, we explicitly DO NOT set
-    * the EXEC_OBJECT_SUPPORTS_48B_ADDRESS flag and the kernel does all of the
-    * hard work for us.
-    */
-   anv_bo_init(&pool->bo, gem_handle, size);
-   pool->bo.map = map;
+   result = anv_block_pool_expand_range(pool, center_bo_offset, size);
 
    if (pool->device->instance->physicalDevice.has_exec_async)
       pool->bo.flags |= EXEC_OBJECT_ASYNC;
@@ -512,21 +526,20 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 done:
    pthread_mutex_unlock(&pool->device->mutex);
 
-   /* Return the appropreate new size.  This function never actually
-    * updates state->next.  Instead, we let the caller do that because it
-    * needs to do so in order to maintain its concurrency model.
-    */
-   if (state == &pool->state) {
-      return pool->bo.size - pool->center_bo_offset;
+   if (result == VK_SUCCESS) {
+      /* Return the appropriate new size.  This function never actually
+       * updates state->next.  Instead, we let the caller do that because it
+       * needs to do so in order to maintain its concurrency model.
+       */
+      if (state == &pool->state) {
+         return pool->bo.size - pool->center_bo_offset;
+      } else {
+         assert(pool->center_bo_offset > 0);
+         return pool->center_bo_offset;
+      }
    } else {
-      assert(pool->center_bo_offset > 0);
-      return pool->center_bo_offset;
+      return 0;
    }
-
-fail:
-   pthread_mutex_unlock(&pool->device->mutex);
-
-   return 0;
 }
 
 static uint32_t
