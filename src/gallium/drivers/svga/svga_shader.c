@@ -25,10 +25,13 @@
 
 #include "util/u_bitmask.h"
 #include "util/u_memory.h"
+#include "util/u_format.h"
 #include "svga_context.h"
 #include "svga_cmd.h"
 #include "svga_format.h"
 #include "svga_shader.h"
+#include "svga_resource_texture.h"
+#include "svga3d_surfacedefs.h"
 
 
 /**
@@ -213,6 +216,21 @@ svga_init_shader_key_common(const struct svga_context *svga,
          key->tex[i].swizzle_g = view->swizzle_g;
          key->tex[i].swizzle_b = view->swizzle_b;
          key->tex[i].swizzle_a = view->swizzle_a;
+
+         /* If we have a non-alpha view into an svga3d surface with an
+          * alpha channel, then explicitly set the alpha channel to 1
+          * when sampling. Note that we need to check the svga3d format
+          * in the svga texture key, since the imported format is
+          * stored here and it may differ from the gallium format.
+          */
+         if (!util_format_has_alpha(view->format)) {
+            enum svga3d_block_desc block_desc =
+               svga3dsurface_get_desc(svga_texture(view->texture)->key.format)->
+               block_desc;
+
+            if (block_desc & SVGA3DBLOCKDESC_ALPHA)
+               key->tex[i].swizzle_a = PIPE_SWIZZLE_1;
+         }
       }
    }
 }
