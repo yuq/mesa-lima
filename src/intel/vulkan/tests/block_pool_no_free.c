@@ -25,6 +25,7 @@
 
 #include "anv_private.h"
 
+#define BLOCK_SIZE 16
 #define NUM_THREADS 16
 #define BLOCKS_PER_THREAD 1024
 #define NUM_RUNS 64
@@ -44,13 +45,13 @@ static void *alloc_blocks(void *_job)
    int32_t block, *data;
 
    for (unsigned i = 0; i < BLOCKS_PER_THREAD; i++) {
-      block = anv_block_pool_alloc(job->pool);
+      block = anv_block_pool_alloc(job->pool, BLOCK_SIZE);
       data = job->pool->map + block;
       *data = block;
       assert(block >= 0);
       job->blocks[i] = block;
 
-      block = anv_block_pool_alloc_back(job->pool);
+      block = anv_block_pool_alloc_back(job->pool, BLOCK_SIZE);
       data = job->pool->map + block;
       *data = block;
       assert(block < 0);
@@ -114,7 +115,7 @@ static void run_test()
    struct anv_block_pool pool;
 
    pthread_mutex_init(&device.mutex, NULL);
-   anv_block_pool_init(&pool, &device, 16);
+   anv_block_pool_init(&pool, &device, 4096);
 
    for (unsigned i = 0; i < NUM_THREADS; i++) {
       jobs[i].pool = &pool;

@@ -245,20 +245,19 @@ anv_ptr_free_list_push(void **list, void *elem)
    } while (old != current);
 }
 
-static uint32_t
-anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state);
+static VkResult
+anv_block_pool_expand_range(struct anv_block_pool *pool,
+                            uint32_t center_bo_offset, uint32_t size);
 
 VkResult
 anv_block_pool_init(struct anv_block_pool *pool,
-                    struct anv_device *device, uint32_t block_size)
+                    struct anv_device *device,
+                    uint32_t initial_size)
 {
    VkResult result;
 
-   assert(util_is_power_of_two(block_size));
-
    pool->device = device;
    anv_bo_init(&pool->bo, 0, 0);
-   pool->block_size = block_size;
    pool->free_list = ANV_FREE_LIST_EMPTY;
    pool->back_free_list = ANV_FREE_LIST_EMPTY;
 
@@ -287,11 +286,14 @@ anv_block_pool_init(struct anv_block_pool *pool,
    pool->back_state.next = 0;
    pool->back_state.end = 0;
 
-   /* Immediately grow the pool so we'll have a backing bo. */
-   pool->state.end = anv_block_pool_grow(pool, &pool->state);
+   result = anv_block_pool_expand_range(pool, 0, initial_size);
+   if (result != VK_SUCCESS)
+      goto fail_mmap_cleanups;
 
    return VK_SUCCESS;
 
+ fail_mmap_cleanups:
+   u_vector_finish(&pool->mmap_cleanups);
  fail_fd:
    close(pool->fd);
 
@@ -432,7 +434,8 @@ anv_block_pool_expand_range(struct anv_block_pool *pool,
  *     the pool and a 4K CPU page.
  */
 static uint32_t
-anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
+anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state,
+                    uint32_t block_size)
 {
    uint32_t size;
    VkResult result = VK_SUCCESS;
@@ -471,7 +474,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 
    if (old_size == 0) {
       /* This is the first allocation */
-      size = MAX2(32 * pool->block_size, PAGE_SIZE);
+      size = MAX2(32 * block_size, PAGE_SIZE);
    } else {
       size = old_size * 2;
    }
@@ -500,7 +503,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
       center_bo_offset = ((uint64_t)size * back_used) / total_used;
 
       /* Align down to a multiple of both the block size and page size */
-      uint32_t granularity = MAX2(pool->block_size, PAGE_SIZE);
+      uint32_t granularity = MAX2(block_size, PAGE_SIZE);
       assert(util_is_power_of_two(granularity));
       center_bo_offset &= ~(granularity - 1);
 
@@ -515,7 +518,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
          center_bo_offset = size - pool->state.end;
    }
 
-   assert(center_bo_offset % pool->block_size == 0);
+   assert(center_bo_offset % block_size == 0);
    assert(center_bo_offset % PAGE_SIZE == 0);
 
    result = anv_block_pool_expand_range(pool, center_bo_offset, size);
@@ -544,12 +547,15 @@ done:
 
 static uint32_t
 anv_block_pool_alloc_new(struct anv_block_pool *pool,
-                         struct anv_block_state *pool_state)
+                         struct anv_block_state *pool_state,
+                         uint32_t block_size)
 {
    struct anv_block_state state, old, new;
 
+   assert(util_is_power_of_two(block_size));
+
    while (1) {
-      state.u64 = __sync_fetch_and_add(&pool_state->u64, pool->block_size);
+      state.u64 = __sync_fetch_and_add(&pool_state->u64, block_size);
       if (state.next < state.end) {
          assert(pool->map);
          return state.next;
@@ -558,9 +564,8 @@ anv_block_pool_alloc_new(struct anv_block_pool *pool,
           * pool_state->next acts a mutex: threads who try to allocate now will
           * get block indexes above the current limit and hit futex_wait
           * below. */
-         new.next = state.next + pool->block_size;
-         new.end = anv_block_pool_grow(pool, pool_state);
-         assert(new.end >= new.next && new.end % pool->block_size == 0);
+         new.next = state.next + block_size;
+         new.end = anv_block_pool_grow(pool, pool_state, block_size);
          old.u64 = __sync_lock_test_and_set(&pool_state->u64, new.u64);
          if (old.next != state.next)
             futex_wake(&pool_state->end, INT_MAX);
@@ -573,7 +578,8 @@ anv_block_pool_alloc_new(struct anv_block_pool *pool,
 }
 
 int32_t
-anv_block_pool_alloc(struct anv_block_pool *pool)
+anv_block_pool_alloc(struct anv_block_pool *pool,
+                     uint32_t block_size)
 {
    int32_t offset;
 
@@ -584,7 +590,7 @@ anv_block_pool_alloc(struct anv_block_pool *pool)
       return offset;
    }
 
-   return anv_block_pool_alloc_new(pool, &pool->state);
+   return anv_block_pool_alloc_new(pool, &pool->state, block_size);
 }
 
 /* Allocates a block out of the back of the block pool.
@@ -597,7 +603,8 @@ anv_block_pool_alloc(struct anv_block_pool *pool)
  * gymnastics with the block pool's BO when doing relocations.
  */
 int32_t
-anv_block_pool_alloc_back(struct anv_block_pool *pool)
+anv_block_pool_alloc_back(struct anv_block_pool *pool,
+                          uint32_t block_size)
 {
    int32_t offset;
 
@@ -608,7 +615,7 @@ anv_block_pool_alloc_back(struct anv_block_pool *pool)
       return offset;
    }
 
-   offset = anv_block_pool_alloc_new(pool, &pool->back_state);
+   offset = anv_block_pool_alloc_new(pool, &pool->back_state, block_size);
 
    /* The offset we get out of anv_block_pool_alloc_new() is actually the
     * number of bytes downwards from the middle to the end of the block.
@@ -616,7 +623,7 @@ anv_block_pool_alloc_back(struct anv_block_pool *pool)
     * start of the block.
     */
    assert(offset >= 0);
-   return -(offset + pool->block_size);
+   return -(offset + block_size);
 }
 
 void
@@ -631,9 +638,12 @@ anv_block_pool_free(struct anv_block_pool *pool, int32_t offset)
 
 void
 anv_state_pool_init(struct anv_state_pool *pool,
-                    struct anv_block_pool *block_pool)
+                    struct anv_block_pool *block_pool,
+                    uint32_t block_size)
 {
    pool->block_pool = block_pool;
+   assert(util_is_power_of_two(block_size));
+   pool->block_size = block_size;
    for (unsigned i = 0; i < ANV_STATE_BUCKETS; i++) {
       pool->buckets[i].free_list = ANV_FREE_LIST_EMPTY;
       pool->buckets[i].block.next = 0;
@@ -651,7 +661,8 @@ anv_state_pool_finish(struct anv_state_pool *pool)
 static uint32_t
 anv_fixed_size_state_pool_alloc_new(struct anv_fixed_size_state_pool *pool,
                                     struct anv_block_pool *block_pool,
-                                    uint32_t state_size)
+                                    uint32_t state_size,
+                                    uint32_t block_size)
 {
    struct anv_block_state block, old, new;
    uint32_t offset;
@@ -662,9 +673,9 @@ anv_fixed_size_state_pool_alloc_new(struct anv_fixed_size_state_pool *pool,
    if (block.next < block.end) {
       return block.next;
    } else if (block.next == block.end) {
-      offset = anv_block_pool_alloc(block_pool);
+      offset = anv_block_pool_alloc(block_pool, block_size);
       new.next = offset + state_size;
-      new.end = offset + block_pool->block_size;
+      new.end = offset + block_size;
       old.u64 = __sync_lock_test_and_set(&pool->block.u64, new.u64);
       if (old.next != block.next)
          futex_wake(&pool->block.end, INT_MAX);
@@ -697,7 +708,8 @@ anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
 
    state.offset = anv_fixed_size_state_pool_alloc_new(&pool->buckets[bucket],
                                                       pool->block_pool,
-                                                      state.alloc_size);
+                                                      state.alloc_size,
+                                                      pool->block_size);
 
 done:
    state.map = pool->block_pool->map + state.offset;

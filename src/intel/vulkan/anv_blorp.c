@@ -686,7 +686,7 @@ void anv_CmdUpdateBuffer(
     * little data at the top to build its linked list.
     */
    const uint32_t max_update_size =
-      cmd_buffer->device->dynamic_state_block_pool.block_size - 64;
+      cmd_buffer->device->dynamic_state_pool.block_size - 64;
 
    assert(max_update_size < MAX_SURFACE_DIM * 4);
 

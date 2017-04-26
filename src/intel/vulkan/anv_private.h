@@ -461,8 +461,6 @@ struct anv_block_pool {
     */
    struct u_vector mmap_cleanups;
 
-   uint32_t block_size;
-
    union anv_free_list free_list;
    struct anv_block_state state;
 
@@ -504,6 +502,10 @@ struct anv_fixed_size_state_pool {
 
 struct anv_state_pool {
    struct anv_block_pool *block_pool;
+
+   /* The size of blocks which will be allocated from the block pool */
+   uint32_t block_size;
+
    struct anv_fixed_size_state_pool buckets[ANV_STATE_BUCKETS];
 };
 
@@ -555,13 +557,17 @@ anv_invalidate_range(void *start, size_t size)
 }
 
 VkResult anv_block_pool_init(struct anv_block_pool *pool,
-                             struct anv_device *device, uint32_t block_size);
+                             struct anv_device *device,
+                             uint32_t initial_size);
 void anv_block_pool_finish(struct anv_block_pool *pool);
-int32_t anv_block_pool_alloc(struct anv_block_pool *pool);
-int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool);
+int32_t anv_block_pool_alloc(struct anv_block_pool *pool,
+                             uint32_t block_size);
+int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool,
+                                  uint32_t block_size);
 void anv_block_pool_free(struct anv_block_pool *pool, int32_t offset);
 void anv_state_pool_init(struct anv_state_pool *pool,
-                         struct anv_block_pool *block_pool);
+                         struct anv_block_pool *block_pool,
+                         uint32_t block_size);
 void anv_state_pool_finish(struct anv_state_pool *pool);
 struct anv_state anv_state_pool_alloc(struct anv_state_pool *pool,
                                       uint32_t state_size, uint32_t alignment);

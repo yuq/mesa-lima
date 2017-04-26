@@ -623,12 +623,13 @@ anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_block_pool *block_pool =
        &cmd_buffer->device->surface_state_block_pool;
+   struct anv_state_pool *state_pool = &cmd_buffer->device->surface_state_pool;
    int32_t *bt_block = u_vector_head(&cmd_buffer->bt_blocks);
    struct anv_state state;
 
    state.alloc_size = align_u32(entries * 4, 32);
 
-   if (cmd_buffer->bt_next + state.alloc_size > block_pool->block_size)
+   if (cmd_buffer->bt_next + state.alloc_size > state_pool->block_size)
       return (struct anv_state) { 0 };
 
    state.offset = cmd_buffer->bt_next;
@@ -663,6 +664,7 @@ anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_block_pool *block_pool =
        &cmd_buffer->device->surface_state_block_pool;
+   struct anv_state_pool *state_pool = &cmd_buffer->device->surface_state_pool;
 
    int32_t *offset = u_vector_add(&cmd_buffer->bt_blocks);
    if (offset == NULL) {
@@ -670,7 +672,7 @@ anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
-   *offset = anv_block_pool_alloc_back(block_pool);
+   *offset = anv_block_pool_alloc_back(block_pool, state_pool->block_size);
    cmd_buffer->bt_next = 0;
 
    return VK_SUCCESS;

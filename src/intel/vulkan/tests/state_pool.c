@@ -44,8 +44,8 @@ int main(int argc, char **argv)
    pthread_mutex_init(&device.mutex, NULL);
 
    for (unsigned i = 0; i < NUM_RUNS; i++) {
-      anv_block_pool_init(&block_pool, &device, 256);
-      anv_state_pool_init(&state_pool, &block_pool);
+      anv_block_pool_init(&block_pool, &device, 4096);
+      anv_state_pool_init(&state_pool, &block_pool, 256);
 
       /* Grab one so a zero offset is impossible */
       anv_state_pool_alloc(&state_pool, 16, 16);
