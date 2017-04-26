@@ -3304,10 +3304,14 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
           qual->flags.q.write_only ||
           qual->flags.q.coherent ||
           qual->flags.q._volatile ||
-          qual->flags.q.restrict_flag ||
-          qual->flags.q.explicit_image_format) {
+          qual->flags.q.restrict_flag) {
          _mesa_glsl_error(loc, state, "memory qualifiers may only be applied "
                           "to images");
+      }
+
+      if (qual->flags.q.explicit_image_format) {
+         _mesa_glsl_error(loc, state, "format layout qualifiers may only be "
+                          "applied to images");
       }
       return;
    }
