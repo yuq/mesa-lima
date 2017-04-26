@@ -234,8 +234,6 @@ void AlignedFree(void* p)
 pid_t gettid(void);
 #define GetCurrentThreadId gettid
 
-#define CreateDirectory(name, pSecurity) mkdir(name, 0777)
-
 #define InterlockedCompareExchange(Dest, Exchange, Comparand) __sync_val_compare_and_swap(Dest, Comparand, Exchange)
 #define InterlockedExchangeAdd(Addend, Value) __sync_fetch_and_add(Addend, Value)
 #define InterlockedDecrement(Append) __sync_sub_and_fetch(Append, 1)
@@ -281,5 +279,6 @@ typedef MEGABYTE    GIGABYTE[1024];
 
 // Defined in os.cpp
 void SWR_API SetCurrentThreadName(const char* pThreadName);
+void SWR_API CreateDirectoryPath(const std::string& path);
 
 #endif//__SWR_OS_H__

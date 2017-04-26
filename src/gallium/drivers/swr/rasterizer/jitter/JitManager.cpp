@@ -159,9 +159,9 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 #if defined(_WIN32)
     if (KNOB_DUMP_SHADER_IR)
     {
-        CreateDirectory(INTEL_OUTPUT_DIR, NULL);
-        CreateDirectory(SWR_OUTPUT_DIR, NULL);
-        CreateDirectory(JITTER_OUTPUT_DIR, NULL);
+        CreateDirectoryPath(INTEL_OUTPUT_DIR);
+        CreateDirectoryPath(SWR_OUTPUT_DIR);
+        CreateDirectoryPath(JITTER_OUTPUT_DIR);
     }
 #endif
 }
@@ -204,7 +204,7 @@ void JitManager::DumpAsm(Function* pFunction, const char* fileName)
         const char* pBaseName = strrchr(procname, '\\');
         std::stringstream outDir;
         outDir << JITTER_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
-        CreateDirectory(outDir.str().c_str(), NULL);
+        CreateDirectoryPath(outDir.str().c_str());
 #endif
 
         std::error_code EC;
@@ -242,7 +242,7 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
         const char* pBaseName = strrchr(procname, '\\');
         std::stringstream outDir;
         outDir << JITTER_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
-        CreateDirectory(outDir.str().c_str(), NULL);
+        CreateDirectoryPath(outDir.str().c_str());
 #endif
 
         std::error_code EC;

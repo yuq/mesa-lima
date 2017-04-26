@@ -22,8 +22,14 @@
 ****************************************************************************/
 
 #include "common/os.h"
+#include <vector>
+#include <sstream>
 
-#if defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
+#if defined(_WIN32)
+#include <shlobj.h>
+#endif // Windows
+
+#if defined(__APPLE__) || defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
 #include <pthread.h>
 #endif // Linux
 
@@ -104,4 +110,44 @@ void SWR_API SetCurrentThreadName(const char* pThreadName)
 #if defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
     pthread_setname_np(pthread_self(), pThreadName);
 #endif // Linux
+}
+
+static void SplitString(std::vector<std::string>& out_segments, const std::string& input, char splitToken)
+{
+    out_segments.clear();
+
+    std::istringstream f(input);
+    std::string s;
+    while (std::getline(f, s, splitToken))
+    {
+        if (s.size())
+        {
+            out_segments.push_back(s);
+        }
+    }
+}
+
+void SWR_API CreateDirectoryPath(const std::string& path)
+{
+#if defined(_WIN32)
+    SHCreateDirectoryExA(nullptr, path.c_str(), nullptr);
+#endif // Windows
+
+#if defined(__APPLE__) || defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
+    std::vector<std::string> pathSegments;
+    SplitString(pathSegments, path, '/');
+
+    std::string tmpPath;
+    for (auto const& segment : pathSegments)
+    {
+        tmpPath.push_back('/');
+        tmpPath += segment;
+
+        int result = mkdir(tmpPath.c_str(), 0777);
+        if (result == -1 && errno != EEXIST)
+        {
+            break;
+        }
+    }
+#endif // Unix
 }
