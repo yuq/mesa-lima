@@ -1008,7 +1008,7 @@ endBinTriangles:
 
 #if USE_SIMD16_FRONTEND
 template <typename CT>
-void BinTriangles_simd16(
+void SIMDAPI BinTriangles_simd16(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
     uint32_t workerId,
@@ -1838,7 +1838,7 @@ void BinPoints(
 }
 
 #if USE_SIMD16_FRONTEND
-void BinPoints_simd16(
+void SIMDAPI BinPoints_simd16(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
     uint32_t workerId,
@@ -2691,7 +2691,7 @@ void BinLines(
 }
 
 #if USE_SIMD16_FRONTEND
-void BinLines_simd16(
+void SIMDAPI BinLines_simd16(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
     uint32_t workerId,
