@@ -432,8 +432,7 @@ anv_block_pool_expand_range(struct anv_block_pool *pool,
  *     the pool and a 4K CPU page.
  */
 static uint32_t
-anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state,
-                    uint32_t block_size)
+anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 {
    VkResult result = VK_SUCCESS;
 
@@ -508,10 +507,8 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state,
        */
       center_bo_offset = ((uint64_t)size * back_used) / total_used;
 
-      /* Align down to a multiple of both the block size and page size */
-      uint32_t granularity = MAX2(block_size, PAGE_SIZE);
-      assert(util_is_power_of_two(granularity));
-      center_bo_offset &= ~(granularity - 1);
+      /* Align down to a multiple of the page size */
+      center_bo_offset &= ~(PAGE_SIZE - 1);
 
       assert(center_bo_offset >= back_used);
 
@@ -524,7 +521,6 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state,
          center_bo_offset = size - pool->state.end;
    }
 
-   assert(center_bo_offset % block_size == 0);
    assert(center_bo_offset % PAGE_SIZE == 0);
 
    result = anv_block_pool_expand_range(pool, center_bo_offset, size);
@@ -558,21 +554,22 @@ anv_block_pool_alloc_new(struct anv_block_pool *pool,
 {
    struct anv_block_state state, old, new;
 
-   assert(util_is_power_of_two(block_size));
-
    while (1) {
       state.u64 = __sync_fetch_and_add(&pool_state->u64, block_size);
-      if (state.next < state.end) {
+      if (state.next + block_size <= state.end) {
          assert(pool->map);
          return state.next;
-      } else if (state.next == state.end) {
+      } else if (state.next <= state.end) {
          /* We allocated the first block outside the pool so we have to grow
           * the pool.  pool_state->next acts a mutex: threads who try to
           * allocate now will get block indexes above the current limit and
           * hit futex_wait below.
           */
          new.next = state.next + block_size;
-         new.end = anv_block_pool_grow(pool, pool_state, block_size);
+         do {
+            new.end = anv_block_pool_grow(pool, pool_state);
+         } while (new.end < new.next);
+
          old.u64 = __sync_lock_test_and_set(&pool_state->u64, new.u64);
          if (old.next != state.next)
             futex_wake(&pool_state->end, INT_MAX);

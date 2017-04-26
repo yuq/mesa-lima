@@ -25,7 +25,6 @@
 
 #include "anv_private.h"
 
-#define BLOCK_SIZE 16
 #define NUM_THREADS 16
 #define BLOCKS_PER_THREAD 1024
 #define NUM_RUNS 64
@@ -42,16 +41,18 @@ struct job {
 static void *alloc_blocks(void *_job)
 {
    struct job *job = _job;
+   uint32_t job_id = job - jobs;
+   uint32_t block_size = 16 * ((job_id % 4) + 1);
    int32_t block, *data;
 
    for (unsigned i = 0; i < BLOCKS_PER_THREAD; i++) {
-      block = anv_block_pool_alloc(job->pool, BLOCK_SIZE);
+      block = anv_block_pool_alloc(job->pool, block_size);
       data = job->pool->map + block;
       *data = block;
       assert(block >= 0);
       job->blocks[i] = block;
 
-      block = anv_block_pool_alloc_back(job->pool, BLOCK_SIZE);
+      block = anv_block_pool_alloc_back(job->pool, block_size);
       data = job->pool->map + block;
       *data = block;
       assert(block < 0);
