@@ -1948,6 +1948,24 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
    inst->mlen = 2;
 }
 
+static bool
+is_align1_df(vec4_instruction *inst)
+{
+   switch (inst->opcode) {
+   case VEC4_OPCODE_DOUBLE_TO_F32:
+   case VEC4_OPCODE_DOUBLE_TO_D32:
+   case VEC4_OPCODE_DOUBLE_TO_U32:
+   case VEC4_OPCODE_TO_DOUBLE:
+   case VEC4_OPCODE_PICK_LOW_32BIT:
+   case VEC4_OPCODE_PICK_HIGH_32BIT:
+   case VEC4_OPCODE_SET_LOW_32BIT:
+   case VEC4_OPCODE_SET_HIGH_32BIT:
+      return true;
+   default:
+      return false;
+   }
+}
+
 void
 vec4_visitor::convert_to_hw_regs()
 {
@@ -2005,6 +2023,20 @@ vec4_visitor::convert_to_hw_regs()
 
          apply_logical_swizzle(&reg, inst, i);
          src = reg;
+
+         /* From IVB PRM, vol4, part3, "General Restrictions on Regioning
+          * Parameters":
+          *
+          *   "If ExecSize = Width and HorzStride ≠ 0, VertStride must be set
+          *    to Width * HorzStride."
+          *
+          * We can break this rule with DF sources on DF align1
+          * instructions, because the exec_size would be 4 and width is 4.
+          * As we know we are not accessing to next GRF, it is safe to
+          * set vstride to the formula given by the rule itself.
+          */
+         if (is_align1_df(inst) && (cvt(inst->exec_size) - 1) == src.width)
+            src.vstride = src.width + src.hstride;
       }
 
       if (inst->is_3src(devinfo)) {
@@ -2260,24 +2292,6 @@ vec4_visitor::lower_simd_width()
       invalidate_live_intervals();
 
    return progress;
-}
-
-static bool
-is_align1_df(vec4_instruction *inst)
-{
-   switch (inst->opcode) {
-   case VEC4_OPCODE_DOUBLE_TO_F32:
-   case VEC4_OPCODE_DOUBLE_TO_D32:
-   case VEC4_OPCODE_DOUBLE_TO_U32:
-   case VEC4_OPCODE_TO_DOUBLE:
-   case VEC4_OPCODE_PICK_LOW_32BIT:
-   case VEC4_OPCODE_PICK_HIGH_32BIT:
-   case VEC4_OPCODE_SET_LOW_32BIT:
-   case VEC4_OPCODE_SET_HIGH_32BIT:
-      return true;
-   default:
-      return false;
-   }
 }
 
 static brw_predicate
