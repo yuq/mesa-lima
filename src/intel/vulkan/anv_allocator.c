@@ -916,10 +916,13 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
    assert(alignment <= PAGE_SIZE);
 
    uint32_t offset = align_u32(stream->next, alignment);
-   if (offset + size > stream->block_size) {
+   if (offset + size > stream->block.alloc_size) {
+      uint32_t block_size = stream->block_size;
+      if (block_size < size)
+         block_size = round_to_power_of_two(size);
+
       stream->block = anv_state_pool_alloc_no_vg(stream->state_pool,
-                                                 stream->block_size,
-                                                 PAGE_SIZE);
+                                                 block_size, PAGE_SIZE);
 
       struct anv_state_stream_block *sb = stream->block.map;
       VG_NOACCESS_WRITE(&sb->block, stream->block);
@@ -933,7 +936,7 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       stream->next = sizeof(*sb);
 
       offset = align_u32(stream->next, alignment);
-      assert(offset + size <= stream->block_size);
+      assert(offset + size <= stream->block.alloc_size);
    }
 
    struct anv_state state = stream->block;
