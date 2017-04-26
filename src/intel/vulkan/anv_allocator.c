@@ -435,7 +435,6 @@ static uint32_t
 anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state,
                     uint32_t block_size)
 {
-   uint32_t size;
    VkResult result = VK_SUCCESS;
 
    pthread_mutex_lock(&pool->device->mutex);
@@ -460,9 +459,19 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state,
 
    uint32_t old_size = pool->bo.size;
 
-   if (old_size != 0 &&
-       back_used * 2 <= pool->center_bo_offset &&
-       front_used * 2 <= (old_size - pool->center_bo_offset)) {
+   /* The block pool is always initialized to a nonzero size and this function
+    * is always called after initialization.
+    */
+   assert(old_size > 0);
+
+   /* The back_used and front_used may actually be smaller than the actual
+    * requirement because they are based on the next pointers which are
+    * updated prior to calling this function.
+    */
+   uint32_t back_required = MAX2(back_used, pool->center_bo_offset);
+   uint32_t front_required = MAX2(front_used, old_size - pool->center_bo_offset);
+
+   if (back_used * 2 <= back_required && front_used * 2 <= front_required) {
       /* If we're in this case then this isn't the firsta allocation and we
        * already have enough space on both sides to hold double what we
        * have allocated.  There's nothing for us to do.
@@ -470,12 +479,11 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state,
       goto done;
    }
 
-   if (old_size == 0) {
-      /* This is the first allocation */
-      size = MAX2(32 * block_size, PAGE_SIZE);
-   } else {
-      size = old_size * 2;
-   }
+   uint32_t size = old_size * 2;
+   while (size < back_required + front_required)
+      size *= 2;
+
+   assert(size > pool->bo.size);
 
    /* We can't have a block pool bigger than 1GB because we use signed
     * 32-bit offsets in the free list and we don't want overflow.  We
