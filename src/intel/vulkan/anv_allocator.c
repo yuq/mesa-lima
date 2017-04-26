@@ -689,8 +689,9 @@ anv_state_pool_finish(struct anv_state_pool *pool)
    VG(VALGRIND_DESTROY_MEMPOOL(pool));
 }
 
-struct anv_state
-anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
+static struct anv_state
+anv_state_pool_alloc_no_vg(struct anv_state_pool *pool,
+                           size_t size, size_t align)
 {
    unsigned size_log2 = ilog2_round_up(size < align ? align : size);
    assert(size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
@@ -703,12 +704,19 @@ anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
    state.offset = anv_fixed_size_state_pool_alloc(&pool->buckets[bucket],
                                                   pool->block_pool);
    state.map = pool->block_pool->map + state.offset;
+   return state;
+}
+
+struct anv_state
+anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
+{
+   struct anv_state state = anv_state_pool_alloc_no_vg(pool, size, align);
    VG(VALGRIND_MEMPOOL_ALLOC(pool, state.map, size));
    return state;
 }
 
-void
-anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
+static void
+anv_state_pool_free_no_vg(struct anv_state_pool *pool, struct anv_state state)
 {
    assert(util_is_power_of_two(state.alloc_size));
    unsigned size_log2 = ilog2_round_up(state.alloc_size);
@@ -716,9 +724,15 @@ anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
           size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
    unsigned bucket = size_log2 - ANV_MIN_STATE_SIZE_LOG2;
 
-   VG(VALGRIND_MEMPOOL_FREE(pool, state.map));
    anv_fixed_size_state_pool_free(&pool->buckets[bucket],
                                   pool->block_pool, state.offset);
+}
+
+void
+anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
+{
+   VG(VALGRIND_MEMPOOL_FREE(pool, state.map));
+   anv_state_pool_free_no_vg(pool, state);
 }
 
 #define NULL_BLOCK 1
