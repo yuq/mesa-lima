@@ -5035,21 +5035,6 @@ ast_declarator_list::hir(exec_list *instructions,
 
          /* From section 4.3.6 (Output variables) of the GLSL 4.40 spec:
           *
-          *     It is a compile-time error to declare a vertex, tessellation
-          *     evaluation, tessellation control, or geometry shader output
-          *     that contains any of the following:
-          *
-          *     * A Boolean type (bool, bvec2 ...)
-          *     * An opaque type
-          */
-         if (check_type->is_boolean() || check_type->contains_opaque())
-            _mesa_glsl_error(&loc, state,
-                             "%s shader output cannot have type %s",
-                             _mesa_shader_stage_to_string(state->stage),
-                             check_type->name);
-
-         /* From section 4.3.6 (Output variables) of the GLSL 4.40 spec:
-          *
           *     It is a compile-time error to declare a fragment shader output
           *     that contains any of the following:
           *
