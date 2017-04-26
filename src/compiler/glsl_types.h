@@ -441,7 +441,7 @@ struct glsl_type {
    {
       return (vector_elements == 1)
 	 && (base_type >= GLSL_TYPE_UINT)
-	 && (base_type <= GLSL_TYPE_BOOL);
+	 && (base_type <= GLSL_TYPE_IMAGE);
    }
 
    /**
