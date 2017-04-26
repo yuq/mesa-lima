@@ -610,7 +610,7 @@ public:
             uint8_t* pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_POSITION_SLOT]) + sizeof(float) * inputPrim;
 
 #if USE_SIMD16_FRONTEND
-            // TEMPORARY WORKAROUND for bizarre VS2015 code-gen bug - use dx11_clipping_03-09 failures to check for existence of bug
+            // TEMPORARY WORKAROUND for bizarre VS2015 code-gen bug
             static const float *dummy = reinterpret_cast<const float *>(pBase);
 #endif
 
@@ -867,7 +867,7 @@ public:
             uint8_t* pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_POSITION_SLOT]) + sizeof(float) * inputPrim;
 
 #if 0
-            // TEMPORARY WORKAROUND for bizarre VS2015 code-gen bug - use dx11_clipping_03-09 failures to check for existence of bug
+            // TEMPORARY WORKAROUND for bizarre VS2015 code-gen bug
             static const float *dummy = reinterpret_cast<const float *>(pBase);
 #endif
 
