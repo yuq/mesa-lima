@@ -3291,15 +3291,13 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
    }
 }
 
-static void
-apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
-                                  ir_variable *var,
-                                  struct _mesa_glsl_parse_state *state,
-                                  YYLTYPE *loc)
+static bool
+validate_image_qualifier_for_type(struct _mesa_glsl_parse_state *state,
+                                  YYLTYPE *loc,
+                                  const struct ast_type_qualifier *qual,
+                                  const glsl_type *type)
 {
-   const glsl_type *base_type = var->type->without_array();
-
-   if (!base_type->is_image()) {
+   if (!type->is_image()) {
       if (qual->flags.q.read_only ||
           qual->flags.q.write_only ||
           qual->flags.q.coherent ||
@@ -3313,8 +3311,21 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
          _mesa_glsl_error(loc, state, "format layout qualifiers may only be "
                           "applied to images");
       }
-      return;
+      return false;
    }
+   return true;
+}
+
+static void
+apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
+                                  ir_variable *var,
+                                  struct _mesa_glsl_parse_state *state,
+                                  YYLTYPE *loc)
+{
+   const glsl_type *base_type = var->type->without_array();
+
+   if (!validate_image_qualifier_for_type(state, loc, qual, base_type))
+      return;
 
    if (var->data.mode != ir_var_uniform &&
        var->data.mode != ir_var_function_in) {
