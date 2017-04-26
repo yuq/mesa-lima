@@ -62,6 +62,7 @@ static const struct nir_shader_compiler_options nir_options = {
 	.lower_unpack_unorm_4x8 = true,
 	.lower_extract_byte = true,
 	.lower_extract_word = true,
+	.max_unroll_iterations = 32
 };
 
 VkResult radv_CreateShaderModule(
@@ -153,6 +154,12 @@ radv_optimize_nir(struct nir_shader *shader)
                 NIR_PASS(progress, shader, nir_copy_prop);
                 NIR_PASS(progress, shader, nir_opt_remove_phis);
                 NIR_PASS(progress, shader, nir_opt_dce);
+                if (nir_opt_trivial_continues(shader)) {
+                        progress = true;
+                        NIR_PASS(progress, shader, nir_copy_prop);
+                        NIR_PASS(progress, shader, nir_opt_dce);
+                }
+                NIR_PASS(progress, shader, nir_opt_if);
                 NIR_PASS(progress, shader, nir_opt_dead_cf);
                 NIR_PASS(progress, shader, nir_opt_cse);
                 NIR_PASS(progress, shader, nir_opt_peephole_select, 8);
@@ -160,6 +167,9 @@ radv_optimize_nir(struct nir_shader *shader)
                 NIR_PASS(progress, shader, nir_opt_constant_folding);
                 NIR_PASS(progress, shader, nir_opt_undef);
                 NIR_PASS(progress, shader, nir_opt_conditional_discard);
+                if (shader->options->max_unroll_iterations) {
+                        NIR_PASS(progress, shader, nir_opt_loop_unroll, 0);
+                }
         } while (progress);
 }
 
