@@ -566,6 +566,11 @@ keep_gpr0_lower_n_bits(struct anv_batch *batch, uint32_t n)
    emit_load_alu_reg_imm64(batch, CS_GPR(1), (1ull << n) - 1);
 
    uint32_t *dw = anv_batch_emitn(batch, 5, GENX(MI_MATH));
+   if (!dw) {
+      anv_batch_set_error(batch, VK_ERROR_OUT_OF_HOST_MEMORY);
+      return;
+   }
+
    dw[1] = mi_alu(MI_ALU_LOAD, MI_ALU_SRCA, MI_ALU_REG0);
    dw[2] = mi_alu(MI_ALU_LOAD, MI_ALU_SRCB, MI_ALU_REG1);
    dw[3] = mi_alu(MI_ALU_AND, 0, 0);
@@ -592,6 +597,11 @@ shl_gpr0_by_30_bits(struct anv_batch *batch)
    for (int o = 0; o < outer_count; o++) {
       /* Submit one MI_MATH to shift left by 6 bits */
       uint32_t *dw = anv_batch_emitn(batch, cmd_len, GENX(MI_MATH));
+      if (!dw) {
+         anv_batch_set_error(batch, VK_ERROR_OUT_OF_HOST_MEMORY);
+         return;
+      }
+
       dw++;
       for (int i = 0; i < inner_count; i++, dw += 4) {
          dw[0] = mi_alu(MI_ALU_LOAD, MI_ALU_SRCA, MI_ALU_REG0);
