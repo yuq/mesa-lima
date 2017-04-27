@@ -305,10 +305,17 @@ svga_create_surface_view(struct pipe_context *pipe,
       bind = PIPE_BIND_RENDER_TARGET;
    }
 
-   if (tex->imported)
+   if (tex->imported) {
+      /* imported resource (a window) */
       format = tex->key.format;
-   else
+      if (util_format_is_srgb(surf_tmpl->format)) {
+         /* sRGB rendering to window */
+         format = svga_linear_to_srgb(format);
+      }
+   }
+   else {
       format = svga_translate_format(ss, surf_tmpl->format, bind);
+   }
 
    assert(format != SVGA3D_FORMAT_INVALID);
 
