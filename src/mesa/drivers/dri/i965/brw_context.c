@@ -205,9 +205,10 @@ intel_texture_view_requires_resolve(struct brw_context *brw,
        !intel_miptree_is_lossless_compressed(brw, intel_tex->mt))
      return false;
 
-   const uint32_t brw_format = brw_isl_format_for_mesa_format(intel_tex->_Format);
+   const enum isl_format isl_format =
+      brw_isl_format_for_mesa_format(intel_tex->_Format);
 
-   if (isl_format_supports_ccs_e(&brw->screen->devinfo, brw_format))
+   if (isl_format_supports_ccs_e(&brw->screen->devinfo, isl_format))
       return false;
 
    perf_debug("Incompatible sampling format (%s) for rbc (%s)\n",
