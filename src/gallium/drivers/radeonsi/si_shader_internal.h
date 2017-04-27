@@ -240,7 +240,6 @@ si_shader_context(struct lp_build_tgsi_context *bld_base)
 }
 
 void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
-void si_llvm_shader_type(LLVMValueRef F, unsigned type);
 
 LLVMTargetRef si_llvm_get_amdgpu_target(const char *triple);
 

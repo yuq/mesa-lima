@@ -65,37 +65,6 @@ void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value)
 	LLVMAddTargetDependentFunctionAttr(F, name, str);
 }
 
-/**
- * Set the shader type we want to compile
- *
- * @param type shader type to set
- */
-void si_llvm_shader_type(LLVMValueRef F, unsigned type)
-{
-	enum si_llvm_calling_convention calling_conv;
-
-	switch (type) {
-	case PIPE_SHADER_VERTEX:
-	case PIPE_SHADER_TESS_CTRL:
-	case PIPE_SHADER_TESS_EVAL:
-		calling_conv = RADEON_LLVM_AMDGPU_VS;
-		break;
-	case PIPE_SHADER_GEOMETRY:
-		calling_conv = RADEON_LLVM_AMDGPU_GS;
-		break;
-	case PIPE_SHADER_FRAGMENT:
-		calling_conv = RADEON_LLVM_AMDGPU_PS;
-		break;
-	case PIPE_SHADER_COMPUTE:
-		calling_conv = RADEON_LLVM_AMDGPU_CS;
-		break;
-	default:
-		unreachable("Unhandle shader type");
-	}
-
-	LLVMSetFunctionCallConv(F, calling_conv);
-}
-
 static void init_amdgpu_target()
 {
 	gallivm_init_llvm_targets();
@@ -1392,6 +1361,7 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 {
 	LLVMTypeRef main_fn_type, ret_type;
 	LLVMBasicBlockRef main_fn_body;
+	enum si_llvm_calling_convention call_conv;
 
 	if (num_return_elems)
 		ret_type = LLVMStructTypeInContext(ctx->gallivm.context,
@@ -1407,6 +1377,27 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 	main_fn_body = LLVMAppendBasicBlockInContext(ctx->gallivm.context,
 			ctx->main_fn, "main_body");
 	LLVMPositionBuilderAtEnd(ctx->gallivm.builder, main_fn_body);
+
+	switch (ctx->type) {
+	case PIPE_SHADER_VERTEX:
+	case PIPE_SHADER_TESS_CTRL:
+	case PIPE_SHADER_TESS_EVAL:
+		call_conv = RADEON_LLVM_AMDGPU_VS;
+		break;
+	case PIPE_SHADER_GEOMETRY:
+		call_conv = RADEON_LLVM_AMDGPU_GS;
+		break;
+	case PIPE_SHADER_FRAGMENT:
+		call_conv = RADEON_LLVM_AMDGPU_PS;
+		break;
+	case PIPE_SHADER_COMPUTE:
+		call_conv = RADEON_LLVM_AMDGPU_CS;
+		break;
+	default:
+		unreachable("Unhandle shader type");
+	}
+
+	LLVMSetFunctionCallConv(ctx->main_fn, call_conv);
 }
 
 void si_llvm_optimize_module(struct si_shader_context *ctx)

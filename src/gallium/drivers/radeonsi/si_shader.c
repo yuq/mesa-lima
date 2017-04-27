@@ -5706,7 +5706,6 @@ static void si_create_function(struct si_shader_context *ctx,
 
 	si_llvm_create_func(ctx, name, returns, num_returns,
 			    params, num_params);
-	si_llvm_shader_type(ctx->main_fn, ctx->type);
 	ctx->return_value = LLVMGetUndef(ctx->return_type);
 
 	for (i = 0; i <= last_sgpr; ++i) {
