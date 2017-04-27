@@ -115,7 +115,7 @@ gen7_upload_ds_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen7_ds_state = {
    .dirty = {
-      .mesa  = _NEW_TRANSFORM,
+      .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
