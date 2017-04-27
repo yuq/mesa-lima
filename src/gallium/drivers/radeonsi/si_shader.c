@@ -6575,27 +6575,28 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 					PIPE_TRANSFER_READ_WRITE |
 					PIPE_TRANSFER_UNSYNCHRONIZED);
 
+	/* Don't use util_memcpy_cpu_to_le32. LLVM binaries are
+	 * endian-independent. */
 	if (prolog) {
-		util_memcpy_cpu_to_le32(ptr, prolog->code, prolog->code_size);
+		memcpy(ptr, prolog->code, prolog->code_size);
 		ptr += prolog->code_size;
 	}
 	if (previous_stage) {
-		util_memcpy_cpu_to_le32(ptr, previous_stage->code,
-					previous_stage->code_size);
+		memcpy(ptr, previous_stage->code, previous_stage->code_size);
 		ptr += previous_stage->code_size;
 	}
 	if (prolog2) {
-		util_memcpy_cpu_to_le32(ptr, prolog2->code, prolog2->code_size);
+		memcpy(ptr, prolog2->code, prolog2->code_size);
 		ptr += prolog2->code_size;
 	}
 
-	util_memcpy_cpu_to_le32(ptr, mainb->code, mainb->code_size);
+	memcpy(ptr, mainb->code, mainb->code_size);
 	ptr += mainb->code_size;
 
 	if (epilog)
-		util_memcpy_cpu_to_le32(ptr, epilog->code, epilog->code_size);
+		memcpy(ptr, epilog->code, epilog->code_size);
 	else if (mainb->rodata_size > 0)
-		util_memcpy_cpu_to_le32(ptr, mainb->rodata, mainb->rodata_size);
+		memcpy(ptr, mainb->rodata, mainb->rodata_size);
 
 	sscreen->b.ws->buffer_unmap(shader->bo->buf);
 	return 0;
