@@ -116,6 +116,8 @@ renderonly_create_kms_dumb_buffer_for_resource(struct pipe_resource *rsc,
    scanout->prime = screen->resource_from_handle(screen, rsc,
          &handle, PIPE_HANDLE_USAGE_READ_WRITE);
 
+   close(prime_fd);
+
    if (!scanout->prime) {
       fprintf(stderr, "failed to create resource_from_handle: %s\n", strerror(errno));
       goto free_dumb;
