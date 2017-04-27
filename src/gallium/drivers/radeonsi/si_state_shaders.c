@@ -498,11 +498,6 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 		 */
 		ls_vgpr_comp_cnt = shader->info.uses_instanceid ? 2 : 1;
 
-		if (shader->config.scratch_bytes_per_wave) {
-			fprintf(stderr, "HS: scratch buffer unsupported");
-			abort();
-		}
-
 		shader->config.rsrc2 =
 			S_00B42C_USER_SGPR(GFX9_TCS_NUM_USER_SGPR) |
 			S_00B42C_USER_SGPR_MSB(GFX9_TCS_NUM_USER_SGPR >> 5) |
@@ -816,11 +811,6 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 
 		polaris_set_vgt_vertex_reuse(sscreen, shader->key.part.gs.es,
 					     NULL, pm4);
-
-		if (shader->config.scratch_bytes_per_wave) {
-			fprintf(stderr, "GS: scratch buffer unsupported");
-			abort();
-		}
 	} else {
 		si_pm4_set_reg(pm4, R_00B220_SPI_SHADER_PGM_LO_GS, va >> 8);
 		si_pm4_set_reg(pm4, R_00B224_SPI_SHADER_PGM_HI_GS, va >> 40);
