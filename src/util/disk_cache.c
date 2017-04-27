@@ -532,7 +532,7 @@ unlink_lru_file_from_directory(const char *path)
    unlink(filename);
    free (filename);
 
-   return sb.st_size;
+   return sb.st_blocks * 512;
 }
 
 /* Is entry a directory with a two-character name, (and not the
@@ -637,8 +637,8 @@ disk_cache_remove(struct disk_cache *cache, const cache_key key)
    unlink(filename);
    free(filename);
 
-   if (sb.st_size)
-      p_atomic_add(cache->size, - (uint64_t)sb.st_size);
+   if (sb.st_blocks)
+      p_atomic_add(cache->size, - (uint64_t)sb.st_blocks * 512);
 }
 
 static ssize_t
@@ -880,8 +880,14 @@ cache_put(void *job, int thread_index)
       goto done;
    }
 
-   file_size += cf_data_size + dc_job->cache->driver_keys_blob_size;
-   p_atomic_add(dc_job->cache->size, file_size);
+   struct stat sb;
+   if (stat(filename, &sb) == -1) {
+      /* Something went wrong remove the file */
+      unlink(filename);
+      goto done;
+   }
+
+   p_atomic_add(dc_job->cache->size, sb.st_blocks * 512);
 
  done:
    if (fd_final != -1)
