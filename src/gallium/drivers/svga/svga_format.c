@@ -2337,3 +2337,29 @@ svga_format_is_shareable(const struct svga_screen *ss,
 
    return false;
 }
+
+
+/**
+  * Return the sRGB format which corresponds to the given (linear) format.
+  * If there's no such sRGB format, return the format as-is.
+  */
+SVGA3dSurfaceFormat
+svga_linear_to_srgb(SVGA3dSurfaceFormat format)
+{
+   switch (format) {
+   case SVGA3D_R8G8B8A8_UNORM:
+      return SVGA3D_R8G8B8A8_UNORM_SRGB;
+   case SVGA3D_BC1_UNORM:
+      return SVGA3D_BC1_UNORM_SRGB;
+   case SVGA3D_BC2_UNORM:
+      return SVGA3D_BC2_UNORM_SRGB;
+   case SVGA3D_BC3_UNORM:
+      return SVGA3D_BC3_UNORM_SRGB;
+   case SVGA3D_B8G8R8A8_UNORM:
+      return SVGA3D_B8G8R8A8_UNORM_SRGB;
+   case SVGA3D_B8G8R8X8_UNORM:
+      return SVGA3D_B8G8R8X8_UNORM_SRGB;
+   default:
+      return format;
+   }
+}
