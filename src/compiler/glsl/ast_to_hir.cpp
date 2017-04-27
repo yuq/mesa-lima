@@ -3365,7 +3365,6 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
    var->data.memory_coherent |= qual->flags.q.coherent;
    var->data.memory_volatile |= qual->flags.q._volatile;
    var->data.memory_restrict |= qual->flags.q.restrict_flag;
-   var->data.read_only = true;
 
    if (qual->flags.q.explicit_image_format) {
       if (var->data.mode == ir_var_function_in) {

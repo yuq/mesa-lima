@@ -1731,9 +1731,6 @@ ir_variable::ir_variable(const struct glsl_type *type, const char *name,
    this->data.fb_fetch_output = false;
 
    if (type != NULL) {
-      if (type->is_sampler())
-         this->data.read_only = true;
-
       if (type->is_interface())
          this->init_interface_type(type);
       else if (type->without_array()->is_interface())
