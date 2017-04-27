@@ -1500,14 +1500,6 @@ blorp_emit_gen8_hiz_op(struct blorp_batch *batch,
    }
 
    blorp_emit(batch, GENX(3DSTATE_WM_HZ_OP), hzp);
-
-   /* Perform depth clear specific flushing */
-   if (params->hiz_op == BLORP_HIZ_OP_DEPTH_CLEAR && params->depth.enabled) {
-      blorp_emit(batch, GENX(PIPE_CONTROL), pc) {
-         pc.DepthStallEnable = true;
-         pc.DepthCacheFlushEnable = true;
-      }
-   }
 }
 #endif
 

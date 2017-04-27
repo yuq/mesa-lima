@@ -1323,6 +1323,22 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
                                              clear_depth, clear_stencil,
                                              clear_att.clearValue.
                                                 depthStencil.stencil);
+
+            /* From the SKL PRM, Depth Buffer Clear:
+             *
+             * Depth Buffer Clear Workaround
+             * Depth buffer clear pass using any of the methods (WM_STATE,
+             * 3DSTATE_WM or 3DSTATE_WM_HZ_OP) must be followed by a
+             * PIPE_CONTROL command with DEPTH_STALL bit and Depth FLUSH bits
+             * “set” before starting to render. DepthStall and DepthFlush are
+             * not needed between consecutive depth clear passes nor is it
+             * required if the depth-clear pass was done with “full_surf_clear”
+             * bit set in the 3DSTATE_WM_HZ_OP.
+             */
+            if (clear_depth) {
+               cmd_buffer->state.pending_pipe_bits |=
+                  ANV_PIPE_DEPTH_CACHE_FLUSH_BIT | ANV_PIPE_DEPTH_STALL_BIT;
+            }
          }
       }
 
