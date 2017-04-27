@@ -669,14 +669,12 @@ svga_blit(struct pipe_context *pipe,
    if (try_copy_region(svga, blit))
       goto done;
 
-   /* FIXME: Ideally, we should call try_blit() before try_cpu_copy_region(),
-    * however that breaks piglit test gl-1.0-scissor-copypixels.
-    */
-   if (try_cpu_copy_region(svga, blit))
+   if (try_blit(svga, blit))
       goto done;
 
-   if (try_blit(svga, blit))
+   if (!try_cpu_copy_region(svga, blit))
       debug_printf("svga: Blit failed.\n");
+   
 done:
    SVGA_STATS_TIME_POP(sws);  /* SVGA_STATS_TIME_BLIT */
    (void) sws;
