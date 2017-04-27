@@ -1712,12 +1712,6 @@ struct anv_shader_module {
    char                                         data[0];
 };
 
-void anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
-                     struct anv_shader_module *module,
-                     const char *entrypoint,
-                     const struct anv_pipeline_layout *pipeline_layout,
-                     const VkSpecializationInfo *spec_info);
-
 static inline gl_shader_stage
 vk_to_mesa_shader_stage(VkShaderStageFlagBits vk_stage)
 {

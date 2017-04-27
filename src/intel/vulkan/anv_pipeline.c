@@ -331,6 +331,34 @@ populate_cs_prog_key(const struct gen_device_info *devinfo,
    populate_sampler_prog_key(devinfo, &key->tex);
 }
 
+static void
+anv_pipeline_hash_shader(struct anv_pipeline *pipeline,
+                         struct anv_shader_module *module,
+                         const char *entrypoint,
+                         gl_shader_stage stage,
+                         const VkSpecializationInfo *spec_info,
+                         const void *key, size_t key_size,
+                         unsigned char *sha1_out)
+{
+   struct mesa_sha1 ctx;
+
+   _mesa_sha1_init(&ctx);
+   if (pipeline->layout) {
+      _mesa_sha1_update(&ctx, pipeline->layout->sha1,
+                        sizeof(pipeline->layout->sha1));
+   }
+   _mesa_sha1_update(&ctx, module->sha1, sizeof(module->sha1));
+   _mesa_sha1_update(&ctx, entrypoint, strlen(entrypoint));
+   _mesa_sha1_update(&ctx, &stage, sizeof(stage));
+   if (spec_info) {
+      _mesa_sha1_update(&ctx, spec_info->pMapEntries,
+                        spec_info->mapEntryCount * sizeof(*spec_info->pMapEntries));
+      _mesa_sha1_update(&ctx, spec_info->pData, spec_info->dataSize);
+   }
+   _mesa_sha1_update(&ctx, key, key_size);
+   _mesa_sha1_final(&ctx, sha1_out);
+}
+
 static nir_shader *
 anv_pipeline_compile(struct anv_pipeline *pipeline,
                      struct anv_shader_module *module,
@@ -463,8 +491,9 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    populate_vs_prog_key(&pipeline->device->info, &key);
 
    if (cache) {
-      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint,
-                      pipeline->layout, spec_info);
+      anv_pipeline_hash_shader(pipeline, module, entrypoint,
+                               MESA_SHADER_VERTEX, spec_info,
+                               &key, sizeof(key), sha1);
       bin = anv_pipeline_cache_search(cache, sha1, 20);
    }
 
@@ -587,10 +616,12 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
    tcs_key.input_vertices = info->pTessellationState->patchControlPoints;
 
    if (cache) {
-      anv_hash_shader(tcs_sha1, &tcs_key, sizeof(tcs_key), tcs_module,
-                      tcs_entrypoint, pipeline->layout, tcs_spec_info);
-      anv_hash_shader(tes_sha1, &tes_key, sizeof(tes_key), tes_module,
-                      tes_entrypoint, pipeline->layout, tes_spec_info);
+      anv_pipeline_hash_shader(pipeline, tcs_module, tcs_entrypoint,
+                               MESA_SHADER_TESS_CTRL, tcs_spec_info,
+                               &tcs_key, sizeof(tcs_key), tcs_sha1);
+      anv_pipeline_hash_shader(pipeline, tes_module, tes_entrypoint,
+                               MESA_SHADER_TESS_EVAL, tes_spec_info,
+                               &tes_key, sizeof(tes_key), tes_sha1);
       memcpy(&tcs_sha1[20], tes_sha1, 20);
       memcpy(&tes_sha1[20], tcs_sha1, 20);
       tcs_bin = anv_pipeline_cache_search(cache, tcs_sha1, sizeof(tcs_sha1));
@@ -724,8 +755,9 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    populate_gs_prog_key(&pipeline->device->info, &key);
 
    if (cache) {
-      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint,
-                      pipeline->layout, spec_info);
+      anv_pipeline_hash_shader(pipeline, module, entrypoint,
+                               MESA_SHADER_GEOMETRY, spec_info,
+                               &key, sizeof(key), sha1);
       bin = anv_pipeline_cache_search(cache, sha1, 20);
    }
 
@@ -801,8 +833,9 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    populate_wm_prog_key(pipeline, info, &key);
 
    if (cache) {
-      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint,
-                      pipeline->layout, spec_info);
+      anv_pipeline_hash_shader(pipeline, module, entrypoint,
+                               MESA_SHADER_FRAGMENT, spec_info,
+                               &key, sizeof(key), sha1);
       bin = anv_pipeline_cache_search(cache, sha1, 20);
    }
 
@@ -923,8 +956,9 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    populate_cs_prog_key(&pipeline->device->info, &key);
 
    if (cache) {
-      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint,
-                      pipeline->layout, spec_info);
+      anv_pipeline_hash_shader(pipeline, module, entrypoint,
+                               MESA_SHADER_COMPUTE, spec_info,
+                               &key, sizeof(key), sha1);
       bin = anv_pipeline_cache_search(cache, sha1, 20);
    }
 
