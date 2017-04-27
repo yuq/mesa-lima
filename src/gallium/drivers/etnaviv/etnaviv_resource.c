@@ -308,7 +308,7 @@ etna_resource_destroy(struct pipe_screen *pscreen, struct pipe_resource *prsc)
       etna_bo_del(rsc->ts_bo);
 
    if (rsc->scanout)
-      renderonly_scanout_destroy(rsc->scanout);
+      renderonly_scanout_destroy(rsc->scanout, etna_screen(pscreen)->ro);
 
    list_delinit(&rsc->list);
 
