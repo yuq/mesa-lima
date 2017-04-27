@@ -34,6 +34,7 @@
 
 #include "state_tracker/drm_driver.h"
 #include "pipe/p_screen.h"
+#include "util/u_inlines.h"
 #include "util/u_memory.h"
 
 struct renderonly *
@@ -65,8 +66,16 @@ renderonly_scanout_for_prime(struct pipe_resource *rsc, struct renderonly *ro)
 }
 
 void
-renderonly_scanout_destroy(struct renderonly_scanout *scanout)
+renderonly_scanout_destroy(struct renderonly_scanout *scanout,
+			   struct renderonly *ro)
 {
+   struct drm_mode_destroy_dumb destroy_dumb = { };
+
+   pipe_resource_reference(&scanout->prime, NULL);
+   if (ro->kms_fd != -1) {
+      destroy_dumb.handle = scanout->handle;
+      ioctl(ro->kms_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
+   }
    FREE(scanout);
 }
 
