@@ -2582,7 +2582,7 @@ intel_miptree_prepare_render(struct brw_context *brw,
     * enabled because otherwise the surface state will be programmed with
     * the linear equivalent format anyway.
     */
-   if (brw->gen >= 9 && srgb_enabled && mt->num_samples <= 1 &&
+   if (brw->gen == 9 && srgb_enabled && mt->num_samples <= 1 &&
        _mesa_get_srgb_format_linear(mt->format) != mt->format) {
 
       /* Lossless compression is not supported for SRGB formats, it
