@@ -1317,7 +1317,6 @@ void ac_eliminate_const_vs_outputs(struct ac_llvm_context *ctx,
 	bool removed_any = false;
 	struct ac_vs_exports exports;
 
-	assert(num_outputs <= VARYING_SLOT_MAX);
 	exports.num = 0;
 
 	/* Process all LLVM instructions. */
