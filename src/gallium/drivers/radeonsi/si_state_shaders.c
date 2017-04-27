@@ -2586,6 +2586,22 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 	return true;
 }
 
+static void si_shader_lock(struct si_shader *shader)
+{
+	mtx_lock(&shader->selector->mutex);
+	if (shader->previous_stage_sel) {
+		assert(shader->previous_stage_sel != shader->selector);
+		mtx_lock(&shader->previous_stage_sel->mutex);
+	}
+}
+
+static void si_shader_unlock(struct si_shader *shader)
+{
+	if (shader->previous_stage_sel)
+		mtx_unlock(&shader->previous_stage_sel->mutex);
+	mtx_unlock(&shader->selector->mutex);
+}
+
 /**
  * @returns 1 if \p sel has been updated to use a new scratch buffer
  *          0 if not
@@ -2604,10 +2620,19 @@ static int si_update_scratch_buffer(struct si_context *sctx,
 	if (shader->config.scratch_bytes_per_wave == 0)
 		return 0;
 
+	/* Prevent race conditions when updating:
+	 * - si_shader::scratch_bo
+	 * - si_shader::binary::code
+	 * - si_shader::previous_stage::binary::code.
+	 */
+	si_shader_lock(shader);
+
 	/* This shader is already configured to use the current
 	 * scratch buffer. */
-	if (shader->scratch_bo == sctx->scratch_buffer)
+	if (shader->scratch_bo == sctx->scratch_buffer) {
+		si_shader_unlock(shader);
 		return 0;
+	}
 
 	assert(sctx->scratch_buffer);
 
@@ -2618,14 +2643,17 @@ static int si_update_scratch_buffer(struct si_context *sctx,
 
 	/* Replace the shader bo with a new bo that has the relocs applied. */
 	r = si_shader_binary_upload(sctx->screen, shader);
-	if (r)
+	if (r) {
+		si_shader_unlock(shader);
 		return r;
+	}
 
 	/* Update the shader state to use the new shader bo. */
 	si_shader_init_pm4_state(sctx->screen, shader);
 
 	r600_resource_reference(&shader->scratch_bo, sctx->scratch_buffer);
 
+	si_shader_unlock(shader);
 	return 1;
 }
 
