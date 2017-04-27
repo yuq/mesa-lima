@@ -319,7 +319,7 @@ void radv_CmdResolveImage(
 	struct radv_meta_saved_state saved_state;
 	VkDevice device_h = radv_device_to_handle(device);
 	bool use_compute_resolve = false;
-
+	bool use_fragment_resolve = false;
 	/* we can use the hw resolve only for single full resolves */
 	if (region_count == 1) {
 		if (regions[0].srcOffset.x ||
@@ -338,8 +338,17 @@ void radv_CmdResolveImage(
 	} else
 		use_compute_resolve = true;
 
-	if (use_compute_resolve) {
+	if (use_fragment_resolve) {
+		radv_meta_resolve_fragment_image(cmd_buffer,
+						 src_image,
+						 src_image_layout,
+						 dest_image,
+						 dest_image_layout,
+						 region_count, regions);
+		return;
+	}
 
+	if (use_compute_resolve) {
 		radv_meta_resolve_compute_image(cmd_buffer,
 						src_image,
 						src_image_layout,
