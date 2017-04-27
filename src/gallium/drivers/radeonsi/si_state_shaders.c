@@ -2611,6 +2611,9 @@ static int si_update_scratch_buffer(struct si_context *sctx,
 
 	assert(sctx->scratch_buffer);
 
+	if (shader->previous_stage)
+		si_shader_apply_scratch_relocs(shader->previous_stage, scratch_va);
+
 	si_shader_apply_scratch_relocs(shader, scratch_va);
 
 	/* Replace the shader bo with a new bo that has the relocs applied. */
