@@ -55,6 +55,7 @@ enum si_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_GS = 88,
 	RADEON_LLVM_AMDGPU_PS = 89,
 	RADEON_LLVM_AMDGPU_CS = 90,
+	RADEON_LLVM_AMDGPU_HS = 93,
 };
 
 void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value)
@@ -1362,6 +1363,7 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 	LLVMTypeRef main_fn_type, ret_type;
 	LLVMBasicBlockRef main_fn_body;
 	enum si_llvm_calling_convention call_conv;
+	unsigned real_shader_type;
 
 	if (num_return_elems)
 		ret_type = LLVMStructTypeInContext(ctx->gallivm.context,
@@ -1378,11 +1380,24 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 			ctx->main_fn, "main_body");
 	LLVMPositionBuilderAtEnd(ctx->gallivm.builder, main_fn_body);
 
-	switch (ctx->type) {
+	real_shader_type = ctx->type;
+
+	/* LS is merged into HS (TCS), and ES is merged into GS. */
+	if (ctx->screen->b.chip_class >= GFX9) {
+		if (ctx->shader->key.as_ls)
+			real_shader_type = PIPE_SHADER_TESS_CTRL;
+		else if (ctx->shader->key.as_es)
+			real_shader_type = PIPE_SHADER_GEOMETRY;
+	}
+
+	switch (real_shader_type) {
 	case PIPE_SHADER_VERTEX:
-	case PIPE_SHADER_TESS_CTRL:
 	case PIPE_SHADER_TESS_EVAL:
 		call_conv = RADEON_LLVM_AMDGPU_VS;
+		break;
+	case PIPE_SHADER_TESS_CTRL:
+		call_conv = HAVE_LLVM >= 0x0500 ? RADEON_LLVM_AMDGPU_HS :
+						  RADEON_LLVM_AMDGPU_VS;
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		call_conv = RADEON_LLVM_AMDGPU_GS;
