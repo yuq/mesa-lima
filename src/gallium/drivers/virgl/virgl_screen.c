@@ -27,7 +27,6 @@
 #include "os/os_time.h"
 #include "pipe/p_defines.h"
 #include "pipe/p_screen.h"
-#include "draw/draw_context.h"
 
 #include "tgsi/tgsi_exec.h"
 
