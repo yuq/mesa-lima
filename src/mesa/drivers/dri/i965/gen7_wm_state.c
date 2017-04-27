@@ -51,6 +51,7 @@ upload_wm_state(struct brw_context *brw)
    dw1 |= GEN7_WM_STATISTICS_ENABLE;
    dw1 |= GEN7_WM_LINE_AA_WIDTH_1_0;
    dw1 |= GEN7_WM_LINE_END_CAP_AA_WIDTH_0_5;
+   dw1 |= GEN7_WM_POINT_RASTRULE_UPPER_RIGHT;
 
    /* _NEW_LINE */
    if (ctx->Line.StippleFlag)
