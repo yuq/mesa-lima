@@ -331,10 +331,10 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
       }
    }
 
-   /* Default to 1GB or 10% of filesystem for maximum cache size. */
+   /* Default to 1GB or 5% of filesystem for maximum cache size. */
    if (max_size == 0) {
       statvfs(path, &vfs);
-      max_size = MAX2(1024*1024*1024, vfs.f_blocks * vfs.f_bsize / 10);
+      max_size = MAX2(1024*1024*1024, vfs.f_blocks * vfs.f_bsize / 20);
    }
 
    cache->max_size = max_size;
