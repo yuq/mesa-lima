@@ -6492,10 +6492,8 @@ void si_shader_binary_read_config(struct ac_shader_binary *binary,
 		conf->spi_ps_input_addr = conf->spi_ps_input_ena;
 }
 
-void si_shader_apply_scratch_relocs(struct si_context *sctx,
-			struct si_shader *shader,
-			struct si_shader_config *config,
-			uint64_t scratch_va)
+void si_shader_apply_scratch_relocs(struct si_shader *shader,
+				    uint64_t scratch_va)
 {
 	unsigned i;
 	uint32_t scratch_rsrc_dword0 = scratch_va;

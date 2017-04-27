@@ -605,10 +605,8 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    FILE *f, bool check_debug_option);
 void si_multiwave_lds_size_workaround(struct si_screen *sscreen,
 				      unsigned *lds_size);
-void si_shader_apply_scratch_relocs(struct si_context *sctx,
-			struct si_shader *shader,
-			struct si_shader_config *config,
-			uint64_t scratch_va);
+void si_shader_apply_scratch_relocs(struct si_shader *shader,
+				    uint64_t scratch_va);
 void si_shader_binary_read_config(struct ac_shader_binary *binary,
 				  struct si_shader_config *conf,
 				  unsigned symbol_offset);
