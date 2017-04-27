@@ -2953,11 +2953,8 @@ intel_update_r8stencil(struct brw_context *brw,
    assert(src->surf.size > 0);
 
    if (!mt->r8stencil_mt) {
-      const uint32_t r8stencil_flags =
-         MIPTREE_LAYOUT_ACCELERATED_UPLOAD | MIPTREE_LAYOUT_TILING_Y |
-         MIPTREE_LAYOUT_DISABLE_AUX;
       assert(brw->gen > 6); /* Handle MIPTREE_LAYOUT_GEN6_HIZ_STENCIL */
-      mt->r8stencil_mt = intel_miptree_create(
+      mt->r8stencil_mt = make_surface(
                             brw,
                             src->target,
                             MESA_FORMAT_R_UINT8,
@@ -2968,7 +2965,9 @@ intel_update_r8stencil(struct brw_context *brw,
                                src->surf.logical_level0_px.depth :
                                src->surf.logical_level0_px.array_len,
                             src->surf.samples,
-                            r8stencil_flags);
+                            ISL_TILING_Y0_BIT,
+                            ISL_SURF_USAGE_TEXTURE_BIT,
+                            BO_ALLOC_FOR_RENDER, 0, NULL);
       assert(mt->r8stencil_mt);
    }
 
