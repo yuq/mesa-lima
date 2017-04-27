@@ -118,7 +118,6 @@ const struct brw_tracked_state gen7_ds_state = {
       .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_CONTEXT |
                BRW_NEW_TESS_PROGRAMS |
                BRW_NEW_TES_PROG_DATA,
    },
