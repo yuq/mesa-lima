@@ -34,6 +34,7 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/Attributes.h>
+#include <llvm/IR/CallSite.h>
 
 #if HAVE_LLVM < 0x0500
 namespace llvm {
