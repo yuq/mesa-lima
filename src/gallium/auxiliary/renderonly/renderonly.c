@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/ioctl.h>
 #include <xf86drm.h>
 
 #include "state_tracker/drm_driver.h"
@@ -74,7 +73,7 @@ renderonly_scanout_destroy(struct renderonly_scanout *scanout,
    pipe_resource_reference(&scanout->prime, NULL);
    if (ro->kms_fd != -1) {
       destroy_dumb.handle = scanout->handle;
-      ioctl(ro->kms_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
+      drmIoctl(ro->kms_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
    }
    FREE(scanout);
 }
@@ -99,7 +98,7 @@ renderonly_create_kms_dumb_buffer_for_resource(struct pipe_resource *rsc,
       return NULL;
 
    /* create dumb buffer at scanout GPU */
-   err = ioctl(ro->kms_fd, DRM_IOCTL_MODE_CREATE_DUMB, &create_dumb);
+   err = drmIoctl(ro->kms_fd, DRM_IOCTL_MODE_CREATE_DUMB, &create_dumb);
    if (err < 0) {
       fprintf(stderr, "DRM_IOCTL_MODE_CREATE_DUMB failed: %s\n",
             strerror(errno));
@@ -136,7 +135,7 @@ renderonly_create_kms_dumb_buffer_for_resource(struct pipe_resource *rsc,
 
 free_dumb:
    destroy_dumb.handle = scanout->handle;
-   ioctl(ro->kms_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
+   drmIoctl(ro->kms_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
 
 free_scanout:
    FREE(scanout);
