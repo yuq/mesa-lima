@@ -639,6 +639,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
       assert(!color_aspect);
       /* Fall-through */
    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+   case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
       if (anv_can_sample_with_hiz(devinfo, aspects, image->samples))
          return ISL_AUX_USAGE_HIZ;
       else
@@ -671,6 +672,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
       unreachable("Color images are not yet supported.");
 
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+   case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR:
       assert(!color_aspect);
       return ISL_AUX_USAGE_HIZ;
 
