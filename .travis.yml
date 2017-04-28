@@ -132,6 +132,8 @@ matrix:
         - SCONSFLAGS="-j4"
         # Explicitly disable.
         - SCONS_TARGET="llvm=0"
+        # Keep it symmetrical to the make build.
+        - SCONS_CHECK_COMMAND="scons llvm=0 check"
       addons:
         apt:
           packages:
@@ -146,6 +148,8 @@ matrix:
         - BUILD=scons
         - SCONSFLAGS="-j4"
         - SCONS_TARGET="llvm=1"
+        # Keep it symmetrical to the make build.
+        - SCONS_CHECK_COMMAND="scons llvm=1 check"
         - LLVM_VERSION=3.3
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
       addons:
@@ -167,6 +171,8 @@ matrix:
         - SCONS_TARGET="swr=1"
         - LLVM_VERSION=3.9
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+        # Keep it symmetrical to the make build. There's no actual SWR, yet.
+        - SCONS_CHECK_COMMAND="true"
         - OVERRIDE_CC="gcc-5"
         - OVERRIDE_CXX="g++-5"
       addons:
@@ -281,5 +287,5 @@ script:
   - if test "x$BUILD" = xscons; then
       test -n "$OVERRIDE_CC" && export CC="$OVERRIDE_CC";
       test -n "$OVERRIDE_CXX" && export CXX="$OVERRIDE_CXX";
-      scons $SCONS_TARGET && scons $SCONS_TARGET check;
+      scons $SCONS_TARGET && eval $SCONS_CHECK_COMMAND;
     fi
