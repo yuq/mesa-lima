@@ -4561,15 +4561,30 @@ static void si_init_config(struct si_context *sctx)
 		      RADEON_PRIO_BORDER_COLORS);
 
 	if (sctx->b.chip_class >= GFX9) {
-		si_pm4_set_reg(pm4, R_028060_DB_DFSM_CONTROL, 0);
+		unsigned num_se = sscreen->b.info.max_se;
+		unsigned pc_lines = 0;
+
+		switch (sctx->b.family) {
+		case CHIP_VEGA10:
+			pc_lines = 4096;
+			break;
+		default:
+			assert(0);
+		}
+
+		si_pm4_set_reg(pm4, R_028060_DB_DFSM_CONTROL,
+			       S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
 		si_pm4_set_reg(pm4, R_028064_DB_RENDER_FILTER, 0);
 		/* TODO: We can use this to disable RBs for rendering to GART: */
 		si_pm4_set_reg(pm4, R_02835C_PA_SC_TILE_STEERING_OVERRIDE, 0);
 		si_pm4_set_reg(pm4, R_02883C_PA_SU_OVER_RASTERIZATION_CNTL, 0);
 		/* TODO: Enable the binner: */
 		si_pm4_set_reg(pm4, R_028C44_PA_SC_BINNER_CNTL_0,
-			       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC));
-		si_pm4_set_reg(pm4, R_028C48_PA_SC_BINNER_CNTL_1, 0);
+			       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
+			       S_028C44_DISABLE_START_OF_PRIM(1));
+		si_pm4_set_reg(pm4, R_028C48_PA_SC_BINNER_CNTL_1,
+			       S_028C48_MAX_ALLOC_COUNT(MIN2(128, pc_lines / (4 * num_se))) |
+			       S_028C48_MAX_PRIM_PER_BATCH(1023));
 		si_pm4_set_reg(pm4, R_028C4C_PA_SC_CONSERVATIVE_RASTERIZATION_CNTL,
 			       S_028C4C_NULL_SQUAD_AA_MASK_ENABLE(1));
 		si_pm4_set_reg(pm4, R_030968_VGT_INSTANCE_BASE_ID, 0);
