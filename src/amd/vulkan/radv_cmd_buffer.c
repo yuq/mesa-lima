@@ -952,36 +952,6 @@ radv_emit_fb_ds_state(struct radv_cmd_buffer *cmd_buffer,
 			       ds->pa_su_poly_offset_db_fmt_cntl);
 }
 
-/*
- * To hw resolve multisample images both src and dst need to have the same
- * micro tiling mode. However we don't always know in advance when creating
- * the images. This function gets called if we have a resolve attachment,
- * and tests if the attachment image has the same tiling mode, then it
- * checks if the generated framebuffer data has the same tiling mode, and
- * updates it if not.
- */
-static void radv_set_optimal_micro_tile_mode(struct radv_device *device,
-					     struct radv_attachment_info *att,
-					     uint32_t micro_tile_mode)
-{
-	struct radv_image *image = att->attachment->image;
-	uint32_t tile_mode_index;
-	if (image->info.samples <= 1)
-		return;
-
-	if (image->surface.micro_tile_mode != micro_tile_mode) {
-		radv_image_set_optimal_micro_tile_mode(device, image, micro_tile_mode);
-	}
-
-	if (att->cb.micro_tile_mode != micro_tile_mode) {
-		tile_mode_index = image->surface.tiling_index[0];
-
-		att->cb.cb_color_attrib &= C_028C74_TILE_MODE_INDEX;
-		att->cb.cb_color_attrib |= S_028C74_TILE_MODE_INDEX(tile_mode_index);
-		att->cb.micro_tile_mode = micro_tile_mode;
-	}
-}
-
 void
 radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_image *image,
@@ -1110,21 +1080,11 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 	int i;
 	struct radv_framebuffer *framebuffer = cmd_buffer->state.framebuffer;
 	const struct radv_subpass *subpass = cmd_buffer->state.subpass;
-	int dst_resolve_micro_tile_mode = -1;
 
-	if (subpass->has_resolve) {
-		uint32_t a = subpass->resolve_attachments[0].attachment;
-		const struct radv_image *image = framebuffer->attachments[a].attachment->image;
-		dst_resolve_micro_tile_mode = image->surface.micro_tile_mode;
-	}
 	for (i = 0; i < subpass->color_count; ++i) {
 		int idx = subpass->color_attachments[i].attachment;
 		struct radv_attachment_info *att = &framebuffer->attachments[idx];
 
-		if (dst_resolve_micro_tile_mode != -1) {
-			radv_set_optimal_micro_tile_mode(cmd_buffer->device,
-							 att, dst_resolve_micro_tile_mode);
-		}
 		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, att->attachment->bo, 8);
 
 		assert(att->attachment->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT);

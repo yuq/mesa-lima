@@ -770,68 +770,6 @@ radv_image_view_init(struct radv_image_view *iview,
 				       blk_w, is_stencil, iview->descriptor);
 }
 
-void radv_image_set_optimal_micro_tile_mode(struct radv_device *device,
-					    struct radv_image *image, uint32_t micro_tile_mode)
-{
-	/* These magic numbers were copied from addrlib. It doesn't use any
-	 * definitions for them either. They are all 2D_TILED_THIN1 modes with
-	 * different bpp and micro tile mode.
-	 */
-	if (device->physical_device->rad_info.chip_class >= CIK) {
-		switch (micro_tile_mode) {
-		case 0: /* displayable */
-			image->surface.tiling_index[0] = 10;
-			break;
-		case 1: /* thin */
-			image->surface.tiling_index[0] = 14;
-			break;
-		case 3: /* rotated */
-			image->surface.tiling_index[0] = 28;
-			break;
-		default: /* depth, thick */
-			assert(!"unexpected micro mode");
-			return;
-		}
-	} else { /* SI */
-		switch (micro_tile_mode) {
-		case 0: /* displayable */
-			switch (image->surface.bpe) {
-			case 1:
-                            image->surface.tiling_index[0] = 10;
-                            break;
-			case 2:
-                            image->surface.tiling_index[0] = 11;
-                            break;
-			default: /* 4, 8 */
-                            image->surface.tiling_index[0] = 12;
-                            break;
-			}
-			break;
-		case 1: /* thin */
-			switch (image->surface.bpe) {
-			case 1:
-                                image->surface.tiling_index[0] = 14;
-                                break;
-			case 2:
-                                image->surface.tiling_index[0] = 15;
-                                break;
-			case 4:
-                                image->surface.tiling_index[0] = 16;
-                                break;
-			default: /* 8, 16 */
-                                image->surface.tiling_index[0] = 17;
-                                break;
-			}
-			break;
-		default: /* depth, thick */
-			assert(!"unexpected micro mode");
-			return;
-		}
-	}
-
-	image->surface.micro_tile_mode = micro_tile_mode;
-}
-
 bool radv_layout_has_htile(const struct radv_image *image,
                            VkImageLayout layout)
 {

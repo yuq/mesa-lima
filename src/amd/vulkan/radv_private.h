@@ -1249,8 +1249,7 @@ void radv_image_view_init(struct radv_image_view *view,
 			  const VkImageViewCreateInfo* pCreateInfo,
 			  struct radv_cmd_buffer *cmd_buffer,
 			  VkImageUsageFlags usage_mask);
-void radv_image_set_optimal_micro_tile_mode(struct radv_device *device,
-					    struct radv_image *image, uint32_t micro_tile_mode);
+
 struct radv_buffer_view {
 	struct radeon_winsys_bo *bo;
 	VkFormat vk_format;
