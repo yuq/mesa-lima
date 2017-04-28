@@ -273,7 +273,7 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 
    struct wl_registry *registry = wl_display_get_registry(wl_display);
    if (!registry)
-      return NULL;
+      goto fail;
 
    wl_registry_add_listener(registry, &registry_listener, display);
 
@@ -281,24 +281,25 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
    wl_display_roundtrip(wl_display);
 
    if (!display->drm)
-      goto fail;
+      goto fail_registry;
 
    /* Round-rip to get wl_drm formats and capabilities */
    wl_display_roundtrip(wl_display);
 
    /* We need prime support */
    if (!(display->capabilities & WL_DRM_CAPABILITY_PRIME))
-      goto fail;
+      goto fail_registry;
 
    /* We don't need this anymore */
    wl_registry_destroy(registry);
 
    return display;
 
-fail:
+fail_registry:
    if (registry)
       wl_registry_destroy(registry);
 
+fail:
    wsi_wl_display_destroy(wsi, display);
    return NULL;
 }
