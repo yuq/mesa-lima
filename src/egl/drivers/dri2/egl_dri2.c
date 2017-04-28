@@ -102,56 +102,24 @@ const __DRIuseInvalidateExtension use_invalidate = {
    .base = { __DRI_USE_INVALIDATE, 1 }
 };
 
-EGLint dri2_to_egl_attribute_map[] = {
-   0,
-   EGL_BUFFER_SIZE,                /* __DRI_ATTRIB_BUFFER_SIZE */
-   EGL_LEVEL,                        /* __DRI_ATTRIB_LEVEL */
-   EGL_RED_SIZE,                /* __DRI_ATTRIB_RED_SIZE */
-   EGL_GREEN_SIZE,                /* __DRI_ATTRIB_GREEN_SIZE */
-   EGL_BLUE_SIZE,                /* __DRI_ATTRIB_BLUE_SIZE */
-   EGL_LUMINANCE_SIZE,                /* __DRI_ATTRIB_LUMINANCE_SIZE */
-   EGL_ALPHA_SIZE,                /* __DRI_ATTRIB_ALPHA_SIZE */
-   0,                                /* __DRI_ATTRIB_ALPHA_MASK_SIZE */
-   EGL_DEPTH_SIZE,                /* __DRI_ATTRIB_DEPTH_SIZE */
-   EGL_STENCIL_SIZE,                /* __DRI_ATTRIB_STENCIL_SIZE */
-   0,                                /* __DRI_ATTRIB_ACCUM_RED_SIZE */
-   0,                                /* __DRI_ATTRIB_ACCUM_GREEN_SIZE */
-   0,                                /* __DRI_ATTRIB_ACCUM_BLUE_SIZE */
-   0,                                /* __DRI_ATTRIB_ACCUM_ALPHA_SIZE */
-   EGL_SAMPLE_BUFFERS,                /* __DRI_ATTRIB_SAMPLE_BUFFERS */
-   EGL_SAMPLES,                        /* __DRI_ATTRIB_SAMPLES */
-   0,                                /* __DRI_ATTRIB_RENDER_TYPE, */
-   0,                                /* __DRI_ATTRIB_CONFIG_CAVEAT */
-   0,                                /* __DRI_ATTRIB_CONFORMANT */
-   0,                                /* __DRI_ATTRIB_DOUBLE_BUFFER */
-   0,                                /* __DRI_ATTRIB_STEREO */
-   0,                                /* __DRI_ATTRIB_AUX_BUFFERS */
-   0,                                /* __DRI_ATTRIB_TRANSPARENT_TYPE */
-   0,                                /* __DRI_ATTRIB_TRANSPARENT_INDEX_VALUE */
-   0,                                /* __DRI_ATTRIB_TRANSPARENT_RED_VALUE */
-   0,                                /* __DRI_ATTRIB_TRANSPARENT_GREEN_VALUE */
-   0,                                /* __DRI_ATTRIB_TRANSPARENT_BLUE_VALUE */
-   0,                                /* __DRI_ATTRIB_TRANSPARENT_ALPHA_VALUE */
-   0,                                /* __DRI_ATTRIB_FLOAT_MODE (deprecated) */
-   0,                                /* __DRI_ATTRIB_RED_MASK */
-   0,                                /* __DRI_ATTRIB_GREEN_MASK */
-   0,                                /* __DRI_ATTRIB_BLUE_MASK */
-   0,                                /* __DRI_ATTRIB_ALPHA_MASK */
-   EGL_MAX_PBUFFER_WIDTH,        /* __DRI_ATTRIB_MAX_PBUFFER_WIDTH */
-   EGL_MAX_PBUFFER_HEIGHT,        /* __DRI_ATTRIB_MAX_PBUFFER_HEIGHT */
-   EGL_MAX_PBUFFER_PIXELS,        /* __DRI_ATTRIB_MAX_PBUFFER_PIXELS */
-   0,                                /* __DRI_ATTRIB_OPTIMAL_PBUFFER_WIDTH */
-   0,                                /* __DRI_ATTRIB_OPTIMAL_PBUFFER_HEIGHT */
-   0,                                /* __DRI_ATTRIB_VISUAL_SELECT_GROUP */
-   0,                                /* __DRI_ATTRIB_SWAP_METHOD */
-   EGL_MAX_SWAP_INTERVAL,        /* __DRI_ATTRIB_MAX_SWAP_INTERVAL */
-   EGL_MIN_SWAP_INTERVAL,        /* __DRI_ATTRIB_MIN_SWAP_INTERVAL */
-   0,                                /* __DRI_ATTRIB_BIND_TO_TEXTURE_RGB */
-   0,                                /* __DRI_ATTRIB_BIND_TO_TEXTURE_RGBA */
-   0,                                /* __DRI_ATTRIB_BIND_TO_MIPMAP_TEXTURE */
-   0,                                /* __DRI_ATTRIB_BIND_TO_TEXTURE_TARGETS */
-   EGL_Y_INVERTED_NOK,                /* __DRI_ATTRIB_YINVERTED */
-   0,                                /* __DRI_ATTRIB_FRAMEBUFFER_SRGB_CAPABLE */
+static const EGLint dri2_to_egl_attribute_map[] = {
+   [__DRI_ATTRIB_BUFFER_SIZE ]          = EGL_BUFFER_SIZE,
+   [__DRI_ATTRIB_LEVEL]                 = EGL_LEVEL,
+   [__DRI_ATTRIB_RED_SIZE]              = EGL_RED_SIZE,
+   [__DRI_ATTRIB_GREEN_SIZE]            = EGL_GREEN_SIZE,
+   [__DRI_ATTRIB_BLUE_SIZE]             = EGL_BLUE_SIZE,
+   [__DRI_ATTRIB_LUMINANCE_SIZE]        = EGL_LUMINANCE_SIZE,
+   [__DRI_ATTRIB_ALPHA_SIZE]            = EGL_ALPHA_SIZE,
+   [__DRI_ATTRIB_DEPTH_SIZE]            = EGL_DEPTH_SIZE,
+   [__DRI_ATTRIB_STENCIL_SIZE]          = EGL_STENCIL_SIZE,
+   [__DRI_ATTRIB_SAMPLE_BUFFERS]        = EGL_SAMPLE_BUFFERS,
+   [__DRI_ATTRIB_SAMPLES]               = EGL_SAMPLES,
+   [__DRI_ATTRIB_MAX_PBUFFER_WIDTH]     = EGL_MAX_PBUFFER_WIDTH,
+   [__DRI_ATTRIB_MAX_PBUFFER_HEIGHT]    = EGL_MAX_PBUFFER_HEIGHT,
+   [__DRI_ATTRIB_MAX_PBUFFER_PIXELS]    = EGL_MAX_PBUFFER_PIXELS,
+   [__DRI_ATTRIB_MAX_SWAP_INTERVAL]     = EGL_MAX_SWAP_INTERVAL,
+   [__DRI_ATTRIB_MIN_SWAP_INTERVAL]     = EGL_MIN_SWAP_INTERVAL,
+   [__DRI_ATTRIB_YINVERTED]             = EGL_Y_INVERTED_NOK,
 };
 
 const __DRIconfig *
