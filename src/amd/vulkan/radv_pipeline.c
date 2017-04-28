@@ -262,6 +262,7 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 	if (tcs_nir == NULL)
 		return;
 
+	tes_nir->info.tess.ccw = !tes_nir->info.tess.ccw;
 	nir_lower_tes_patch_vertices(tes_nir,
 				     tcs_nir->info.tess.tcs_vertices_out);
 

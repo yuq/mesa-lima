@@ -1217,7 +1217,18 @@ emit_3dstate_hs_te_ds(struct anv_pipeline *pipeline)
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_TE), te) {
       te.Partitioning = tes_prog_data->partitioning;
-      te.OutputTopology = tes_prog_data->output_topology;
+
+      /* Vulkan has its winding order backwards from GL so TRI_CCW becomes
+       * TRI_CW and vice versa.
+       */
+      if (tes_prog_data->output_topology == OUTPUT_TRI_CCW) {
+         te.OutputTopology = OUTPUT_TRI_CW;
+      } else if (tes_prog_data->output_topology == OUTPUT_TRI_CW) {
+         te.OutputTopology = OUTPUT_TRI_CCW;
+      } else {
+         te.OutputTopology = tes_prog_data->output_topology;
+      }
+
       te.TEDomain = tes_prog_data->domain;
       te.TEEnable = true;
       te.MaximumTessellationFactorOdd = 63.0;
