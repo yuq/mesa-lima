@@ -596,14 +596,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug);
-int si_compile_llvm(struct si_screen *sscreen,
-		    struct ac_shader_binary *binary,
-		    struct si_shader_config *conf,
-		    LLVMTargetMachineRef tm,
-		    LLVMModuleRef mod,
-		    struct pipe_debug_callback *debug,
-		    unsigned processor,
-		    const char *name);
 void si_shader_destroy(struct si_shader *shader);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 unsigned si_shader_io_get_unique_index2(unsigned name, unsigned index);

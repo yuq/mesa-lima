@@ -6814,14 +6814,14 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 			     check_debug_option);
 }
 
-int si_compile_llvm(struct si_screen *sscreen,
-		    struct ac_shader_binary *binary,
-		    struct si_shader_config *conf,
-		    LLVMTargetMachineRef tm,
-		    LLVMModuleRef mod,
-		    struct pipe_debug_callback *debug,
-		    unsigned processor,
-		    const char *name)
+static int si_compile_llvm(struct si_screen *sscreen,
+			   struct ac_shader_binary *binary,
+			   struct si_shader_config *conf,
+			   LLVMTargetMachineRef tm,
+			   LLVMModuleRef mod,
+			   struct pipe_debug_callback *debug,
+			   unsigned processor,
+			   const char *name)
 {
 	int r = 0;
 	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
