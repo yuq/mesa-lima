@@ -42,6 +42,7 @@ ADDRLIB_FILES = \
 AMD_COMPILER_FILES = \
 	common/ac_binary.c \
 	common/ac_binary.h \
+	common/ac_exp_param.h \
 	common/ac_llvm_build.c \
 	common/ac_llvm_build.h \
 	common/ac_llvm_helper.cpp \
