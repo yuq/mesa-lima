@@ -1409,12 +1409,16 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 	LLVMPositionBuilderAtEnd(ctx->gallivm.builder, main_fn_body);
 }
 
-void si_llvm_finalize_module(struct si_shader_context *ctx,
-			     bool run_verifier)
+void si_llvm_optimize_module(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	const char *triple = LLVMGetTarget(gallivm->module);
 	LLVMTargetLibraryInfoRef target_library_info;
+
+	/* Dump LLVM IR before any optimization passes */
+	if (ctx->screen->b.debug_flags & DBG_PREOPT_IR &&
+	    r600_can_dump_shader(&ctx->screen->b, ctx->type))
+		LLVMDumpModule(ctx->gallivm.module);
 
 	/* Create the pass manager */
 	gallivm->passmgr = LLVMCreatePassManager();
@@ -1422,7 +1426,7 @@ void si_llvm_finalize_module(struct si_shader_context *ctx,
 	target_library_info = gallivm_create_target_library_info(triple);
 	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
 
-	if (run_verifier)
+	if (r600_extra_shader_checks(&ctx->screen->b, ctx->type))
 		LLVMAddVerifierPass(gallivm->passmgr);
 
 	LLVMAddAlwaysInlinerPass(gallivm->passmgr);

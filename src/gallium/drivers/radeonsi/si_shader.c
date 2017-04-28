@@ -7015,13 +7015,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	LLVMBuildRetVoid(gallivm->builder);
 
-	/* Dump LLVM IR before any optimization passes */
-	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
-	    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
-		ac_dump_module(ctx.gallivm.module);
-
-	si_llvm_finalize_module(&ctx,
-		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_GEOMETRY));
+	ctx.type = PIPE_SHADER_GEOMETRY; /* override for shader dumping */
+	si_llvm_optimize_module(&ctx);
 
 	r = si_compile_llvm(sscreen, &ctx.shader->binary,
 			    &ctx.shader->config, ctx.tm,
@@ -8152,13 +8147,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 					  need_prolog ? 1 : 0, 0);
 	}
 
-	/* Dump LLVM IR before any optimization passes */
-	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
-	    r600_can_dump_shader(&sscreen->b, ctx.type))
-		LLVMDumpModule(ctx.gallivm.module);
-
-	si_llvm_finalize_module(&ctx,
-				    r600_extra_shader_checks(&sscreen->b, ctx.type));
+	si_llvm_optimize_module(&ctx);
 
 	/* Post-optimization transformations and analysis. */
 	si_eliminate_const_vs_outputs(&ctx);
@@ -8327,8 +8316,7 @@ si_get_shader_part(struct si_screen *sscreen,
 	build(&ctx, key);
 
 	/* Compile. */
-	si_llvm_finalize_module(&ctx,
-		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
+	si_llvm_optimize_module(&ctx);
 
 	if (si_compile_llvm(sscreen, &result->binary, &result->config, tm,
 			    gallivm->module, debug, ctx.type, name)) {

@@ -271,8 +271,7 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 
 void si_llvm_dispose(struct si_shader_context *ctx);
 
-void si_llvm_finalize_module(struct si_shader_context *ctx,
-			     bool run_verifier);
+void si_llvm_optimize_module(struct si_shader_context *ctx);
 
 LLVMValueRef si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 				      enum tgsi_opcode_type type,
