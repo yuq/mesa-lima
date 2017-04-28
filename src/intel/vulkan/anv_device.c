@@ -1042,6 +1042,30 @@ void anv_GetPhysicalDeviceProperties2(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES: {
+         VkPhysicalDeviceSubgroupProperties *properties = (void *)ext;
+
+         properties->subgroupSize = BRW_SUBGROUP_SIZE;
+
+         VkShaderStageFlags scalar_stages = 0;
+         for (unsigned stage = 0; stage < MESA_SHADER_STAGES; stage++) {
+            if (pdevice->compiler->scalar_stage[stage])
+               scalar_stages |= mesa_to_vk_shader_stage(stage);
+         }
+         properties->supportedStages = scalar_stages;
+
+         properties->supportedOperations = VK_SUBGROUP_FEATURE_BASIC_BIT |
+                                           VK_SUBGROUP_FEATURE_VOTE_BIT |
+                                           VK_SUBGROUP_FEATURE_ARITHMETIC_BIT |
+                                           VK_SUBGROUP_FEATURE_BALLOT_BIT |
+                                           VK_SUBGROUP_FEATURE_SHUFFLE_BIT |
+                                           VK_SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT |
+                                           VK_SUBGROUP_FEATURE_CLUSTERED_BIT |
+                                           VK_SUBGROUP_FEATURE_QUAD_BIT;
+         properties->quadOperationsInAllStages = VK_TRUE;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
