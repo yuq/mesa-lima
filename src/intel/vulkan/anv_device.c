@@ -445,6 +445,10 @@ static const VkExtensionProperties device_extensions[] = {
       .specVersion = 1,
    },
    {
+      .extensionName = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+      .specVersion = 1,
+   },
+   {
       .extensionName = VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME,
       .specVersion = 1,
    },
@@ -1734,6 +1738,23 @@ void anv_GetBufferMemoryRequirements(
    pMemoryRequirements->memoryTypeBits = memory_types;
 }
 
+void anv_GetBufferMemoryRequirements2KHR(
+    VkDevice                                    _device,
+    const VkBufferMemoryRequirementsInfo2KHR*   pInfo,
+    VkMemoryRequirements2KHR*                   pMemoryRequirements)
+{
+   anv_GetBufferMemoryRequirements(_device, pInfo->buffer,
+                                   &pMemoryRequirements->memoryRequirements);
+
+   vk_foreach_struct(ext, pMemoryRequirements->pNext) {
+      switch (ext->sType) {
+      default:
+         anv_debug_ignored_stype(ext->sType);
+         break;
+      }
+   }
+}
+
 void anv_GetImageMemoryRequirements(
     VkDevice                                    _device,
     VkImage                                     _image,
@@ -1759,11 +1780,37 @@ void anv_GetImageMemoryRequirements(
    pMemoryRequirements->memoryTypeBits = memory_types;
 }
 
+void anv_GetImageMemoryRequirements2KHR(
+    VkDevice                                    _device,
+    const VkImageMemoryRequirementsInfo2KHR*    pInfo,
+    VkMemoryRequirements2KHR*                   pMemoryRequirements)
+{
+   anv_GetImageMemoryRequirements(_device, pInfo->image,
+                                  &pMemoryRequirements->memoryRequirements);
+
+   vk_foreach_struct(ext, pMemoryRequirements->pNext) {
+      switch (ext->sType) {
+      default:
+         anv_debug_ignored_stype(ext->sType);
+         break;
+      }
+   }
+}
+
 void anv_GetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     uint32_t*                                   pSparseMemoryRequirementCount,
     VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
+{
+   *pSparseMemoryRequirementCount = 0;
+}
+
+void anv_GetImageSparseMemoryRequirements2KHR(
+    VkDevice                                    device,
+    const VkImageSparseMemoryRequirementsInfo2KHR* pInfo,
+    uint32_t*                                   pSparseMemoryRequirementCount,
+    VkSparseImageMemoryRequirements2KHR*        pSparseMemoryRequirements)
 {
    *pSparseMemoryRequirementCount = 0;
 }
