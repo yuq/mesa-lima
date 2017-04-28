@@ -7237,10 +7237,10 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 	struct si_shader *shader = ctx->shader;
 	struct tgsi_shader_info *info = &shader->selector->info;
 
-	if (ctx->type == PIPE_SHADER_FRAGMENT ||
-	    ctx->type == PIPE_SHADER_COMPUTE ||
-	    shader->key.as_es ||
-	    shader->key.as_ls)
+	if ((ctx->type != PIPE_SHADER_VERTEX &&
+	     ctx->type != PIPE_SHADER_TESS_EVAL) ||
+	    shader->key.as_ls ||
+	    shader->key.as_es)
 		return;
 
 	ac_optimize_vs_outputs(&ctx->ac,
