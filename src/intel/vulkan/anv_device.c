@@ -441,6 +441,10 @@ static const VkExtensionProperties global_extensions[] = {
 
 static const VkExtensionProperties device_extensions[] = {
    {
+      .extensionName = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+      .specVersion = 1,
+   },
+   {
       .extensionName = VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
       .specVersion = 1,
    },
@@ -1748,6 +1752,13 @@ void anv_GetBufferMemoryRequirements2KHR(
 
    vk_foreach_struct(ext, pMemoryRequirements->pNext) {
       switch (ext->sType) {
+      case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
+         VkMemoryDedicatedRequirementsKHR *requirements = (void *)ext;
+         requirements->prefersDedicatedAllocation = VK_FALSE;
+         requirements->requiresDedicatedAllocation = VK_FALSE;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
@@ -1790,6 +1801,13 @@ void anv_GetImageMemoryRequirements2KHR(
 
    vk_foreach_struct(ext, pMemoryRequirements->pNext) {
       switch (ext->sType) {
+      case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
+         VkMemoryDedicatedRequirementsKHR *requirements = (void *)ext;
+         requirements->prefersDedicatedAllocation = VK_FALSE;
+         requirements->requiresDedicatedAllocation = VK_FALSE;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;

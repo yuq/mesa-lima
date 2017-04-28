@@ -33,6 +33,7 @@ from mako.template import Template
 MAX_API_VERSION = 1.0
 
 SUPPORTED_EXTENSIONS = [
+    'VK_KHR_dedicated_allocation',
     'VK_KHR_descriptor_update_template',
     'VK_KHR_get_memory_requirements2',
     'VK_KHR_get_physical_device_properties2',
