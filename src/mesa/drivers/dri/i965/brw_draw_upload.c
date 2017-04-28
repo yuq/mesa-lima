@@ -1096,7 +1096,8 @@ brw_emit_vertices(struct brw_context *brw)
          dw0 |= BRW_VE0_VALID |
                 brw->vb.nr_buffers << BRW_VE0_INDEX_SHIFT |
                 ISL_FORMAT_R32G32_UINT << BRW_VE0_FORMAT_SHIFT;
-	 dw1 |= (i * 4) << BRW_VE1_DST_OFFSET_SHIFT;
+         if (brw->gen == 4)
+            dw1 |= (i * 4) << BRW_VE1_DST_OFFSET_SHIFT;
       }
 
       /* Note that for gl_VertexID, gl_InstanceID, and gl_PrimitiveID values,
@@ -1124,7 +1125,8 @@ brw_emit_vertices(struct brw_context *brw)
                 ((brw->vb.nr_buffers + 1) << BRW_VE0_INDEX_SHIFT) |
                 (ISL_FORMAT_R32_UINT << BRW_VE0_FORMAT_SHIFT);
 
-	 dw1 |= (i * 4) << BRW_VE1_DST_OFFSET_SHIFT;
+         if (brw->gen == 4)
+            dw1 |= (i * 4) << BRW_VE1_DST_OFFSET_SHIFT;
       }
 
       OUT_BATCH(dw0);
