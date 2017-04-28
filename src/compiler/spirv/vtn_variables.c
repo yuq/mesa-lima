@@ -1293,6 +1293,22 @@ vtn_get_builtin_location(struct vtn_builder *b,
       *location = SYSTEM_VALUE_DRAW_ID;
       set_mode_system_value(b, mode);
       break;
+   case SpvBuiltInSubgroupSize:
+      *location = SYSTEM_VALUE_SUBGROUP_SIZE;
+      set_mode_system_value(b, mode);
+      break;
+   case SpvBuiltInSubgroupId:
+      *location = SYSTEM_VALUE_SUBGROUP_ID;
+      set_mode_system_value(b, mode);
+      break;
+   case SpvBuiltInSubgroupLocalInvocationId:
+      *location = SYSTEM_VALUE_SUBGROUP_INVOCATION;
+      set_mode_system_value(b, mode);
+      break;
+   case SpvBuiltInNumSubgroups:
+      *location = SYSTEM_VALUE_NUM_SUBGROUPS;
+      set_mode_system_value(b, mode);
+      break;
    case SpvBuiltInDeviceIndex:
       *location = SYSTEM_VALUE_DEVICE_INDEX;
       set_mode_system_value(b, mode);

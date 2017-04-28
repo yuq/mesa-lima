@@ -45,6 +45,7 @@ struct spirv_supported_capabilities {
    bool variable_pointers;
    bool storage_16bit;
    bool shader_viewport_index_layer;
+   bool subgroup_basic;
 };
 
 typedef struct shader_info {

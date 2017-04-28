@@ -3292,6 +3292,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          spv_check_supported(multiview, cap);
          break;
 
+      case SpvCapabilityGroupNonUniform:
+         spv_check_supported(subgroup_basic, cap);
+         break;
+
       case SpvCapabilityVariablePointersStorageBuffer:
       case SpvCapabilityVariablePointers:
          spv_check_supported(variable_pointers, cap);
@@ -3871,6 +3875,43 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpControlBarrier:
    case SpvOpMemoryBarrier:
       vtn_handle_barrier(b, opcode, w, count);
+      break;
+
+   case SpvOpGroupNonUniformElect:
+   case SpvOpGroupNonUniformAll:
+   case SpvOpGroupNonUniformAny:
+   case SpvOpGroupNonUniformAllEqual:
+   case SpvOpGroupNonUniformBroadcast:
+   case SpvOpGroupNonUniformBroadcastFirst:
+   case SpvOpGroupNonUniformBallot:
+   case SpvOpGroupNonUniformInverseBallot:
+   case SpvOpGroupNonUniformBallotBitExtract:
+   case SpvOpGroupNonUniformBallotBitCount:
+   case SpvOpGroupNonUniformBallotFindLSB:
+   case SpvOpGroupNonUniformBallotFindMSB:
+   case SpvOpGroupNonUniformShuffle:
+   case SpvOpGroupNonUniformShuffleXor:
+   case SpvOpGroupNonUniformShuffleUp:
+   case SpvOpGroupNonUniformShuffleDown:
+   case SpvOpGroupNonUniformIAdd:
+   case SpvOpGroupNonUniformFAdd:
+   case SpvOpGroupNonUniformIMul:
+   case SpvOpGroupNonUniformFMul:
+   case SpvOpGroupNonUniformSMin:
+   case SpvOpGroupNonUniformUMin:
+   case SpvOpGroupNonUniformFMin:
+   case SpvOpGroupNonUniformSMax:
+   case SpvOpGroupNonUniformUMax:
+   case SpvOpGroupNonUniformFMax:
+   case SpvOpGroupNonUniformBitwiseAnd:
+   case SpvOpGroupNonUniformBitwiseOr:
+   case SpvOpGroupNonUniformBitwiseXor:
+   case SpvOpGroupNonUniformLogicalAnd:
+   case SpvOpGroupNonUniformLogicalOr:
+   case SpvOpGroupNonUniformLogicalXor:
+   case SpvOpGroupNonUniformQuadBroadcast:
+   case SpvOpGroupNonUniformQuadSwap:
+      vtn_handle_subgroup(b, opcode, w, count);
       break;
 
    default:
