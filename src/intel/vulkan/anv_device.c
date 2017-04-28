@@ -302,9 +302,19 @@ anv_physical_device_finish(struct anv_physical_device *device)
 
 static const VkExtensionProperties global_extensions[] = {
    {
+      .extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+      .specVersion = 1,
+   },
+   {
       .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
       .specVersion = 25,
    },
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+   {
+      .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+      .specVersion = 5,
+   },
+#endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
    {
       .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
@@ -317,16 +327,6 @@ static const VkExtensionProperties global_extensions[] = {
       .specVersion = 6,
    },
 #endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-   {
-      .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-      .specVersion = 5,
-   },
-#endif
-   {
-      .extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
-      .specVersion = 1,
-   },
    {
       .extensionName = VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
       .specVersion = 1,
@@ -335,11 +335,11 @@ static const VkExtensionProperties global_extensions[] = {
 
 static const VkExtensionProperties device_extensions[] = {
    {
-      .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-      .specVersion = 68,
+      .extensionName = VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
+      .specVersion = 1,
    },
    {
-      .extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
+      .extensionName = VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME,
       .specVersion = 1,
    },
    {
@@ -347,20 +347,20 @@ static const VkExtensionProperties device_extensions[] = {
       .specVersion = 1,
    },
    {
-      .extensionName = VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
       .extensionName = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
       .specVersion = 1,
    },
    {
-      .extensionName = VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
+      .extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
       .specVersion = 1,
    },
    {
-      .extensionName = VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME,
+      .extensionName = VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
       .specVersion = 1,
+   },
+   {
+      .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+      .specVersion = 68,
    },
    {
       .extensionName = VK_KHX_EXTERNAL_MEMORY_EXTENSION_NAME,
