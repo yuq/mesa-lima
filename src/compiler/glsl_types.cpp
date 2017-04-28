@@ -95,7 +95,12 @@ glsl_type::glsl_type(GLenum gl_type, glsl_base_type base_type,
 
    memset(& fields, 0, sizeof(fields));
 
-   matrix_columns = vector_elements = 1;
+   if (is_sampler()) {
+      /* Samplers take no storage whatsoever. */
+      matrix_columns = vector_elements = 0;
+   } else {
+      matrix_columns = vector_elements = 1;
+   }
 }
 
 glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
