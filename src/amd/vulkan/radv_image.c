@@ -300,7 +300,8 @@ si_make_texture_descriptor(struct radv_device *device,
 	state[1] = (S_008F14_DATA_FORMAT_GFX6(data_format) |
 		    S_008F14_NUM_FORMAT_GFX6(num_format));
 	state[2] = (S_008F18_WIDTH(width - 1) |
-		    S_008F18_HEIGHT(height - 1));
+		    S_008F18_HEIGHT(height - 1) |
+		    S_008F18_PERF_MOD(4));
 	state[3] = (S_008F1C_DST_SEL_X(radv_map_swizzle(swizzle[0])) |
 		    S_008F1C_DST_SEL_Y(radv_map_swizzle(swizzle[1])) |
 		    S_008F1C_DST_SEL_Z(radv_map_swizzle(swizzle[2])) |
