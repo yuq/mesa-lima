@@ -7244,11 +7244,11 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 	    shader->key.as_ls)
 		return;
 
-	ac_eliminate_const_vs_outputs(&ctx->ac,
-				      ctx->main_fn,
-				      shader->info.vs_output_param_offset,
-				      info->num_outputs,
-				      &shader->info.nr_param_exports);
+	ac_optimize_vs_outputs(&ctx->ac,
+			       ctx->main_fn,
+			       shader->info.vs_output_param_offset,
+			       info->num_outputs,
+			       &shader->info.nr_param_exports);
 }
 
 static void si_count_scratch_private_memory(struct si_shader_context *ctx)

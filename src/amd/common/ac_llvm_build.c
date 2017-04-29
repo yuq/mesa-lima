@@ -1320,11 +1320,11 @@ static bool ac_eliminate_const_output(uint8_t *vs_output_param_offset,
 	return true;
 }
 
-void ac_eliminate_const_vs_outputs(struct ac_llvm_context *ctx,
-				   LLVMValueRef main_fn,
-				   uint8_t *vs_output_param_offset,
-				   uint32_t num_outputs,
-				   uint8_t *num_param_exports)
+void ac_optimize_vs_outputs(struct ac_llvm_context *ctx,
+			    LLVMValueRef main_fn,
+			    uint8_t *vs_output_param_offset,
+			    uint32_t num_outputs,
+			    uint8_t *num_param_exports)
 {
 	LLVMBasicBlockRef bb;
 	bool removed_any = false;

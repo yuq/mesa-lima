@@ -5815,11 +5815,11 @@ ac_nir_eliminate_const_vs_outputs(struct nir_to_llvm_context *ctx)
 		outinfo = &ctx->shader_info->tes.outinfo;
 	}
 
-	ac_eliminate_const_vs_outputs(&ctx->ac,
-				      ctx->main_function,
-				      outinfo->vs_output_param_offset,
-				      VARYING_SLOT_MAX,
-				      &outinfo->param_exports);
+	ac_optimize_vs_outputs(&ctx->ac,
+			       ctx->main_function,
+			       outinfo->vs_output_param_offset,
+			       VARYING_SLOT_MAX,
+			       &outinfo->param_exports);
 }
 
 static void
