@@ -342,7 +342,7 @@ score_pixelformats(struct stw_pixelformat_score *scores,
 
    /* Find out if a given attribute should be considered for score calculation.
     */
-   for (i = 0; i < sizeof(attrib_match) / sizeof(attrib_match[0]); i++) {
+   for (i = 0; i < ARRAY_SIZE(attrib_match); i++) {
       if (attrib_match[i].attribute == attribute) {
          ami = &attrib_match[i];
          break;
