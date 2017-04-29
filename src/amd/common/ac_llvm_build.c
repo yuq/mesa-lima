@@ -1250,28 +1250,47 @@ void ac_get_image_intr_name(const char *base_name,
 #define AC_EXP_TARGET (HAVE_LLVM >= 0x0500 ? 0 : 3)
 #define AC_EXP_OUT0 (HAVE_LLVM >= 0x0500 ? 2 : 5)
 
+enum ac_ir_type {
+	AC_IR_UNDEF,
+	AC_IR_CONST,
+	AC_IR_VALUE,
+};
+
+struct ac_vs_exp_chan
+{
+	LLVMValueRef value;
+	float const_float;
+	enum ac_ir_type type;
+};
+
+struct ac_vs_exp_inst {
+	unsigned offset;
+	LLVMValueRef inst;
+	struct ac_vs_exp_chan chan[4];
+};
+
+struct ac_vs_exports {
+	unsigned num;
+	struct ac_vs_exp_inst exp[VARYING_SLOT_MAX];
+};
+
 /* Return true if the PARAM export has been eliminated. */
 static bool ac_eliminate_const_output(uint8_t *vs_output_param_offset,
 				      uint32_t num_outputs,
-				      LLVMValueRef inst, unsigned offset)
+				      struct ac_vs_exp_inst *exp)
 {
 	unsigned i, default_val; /* SPI_PS_INPUT_CNTL_i.DEFAULT_VAL */
 	bool is_zero[4] = {}, is_one[4] = {};
 
 	for (i = 0; i < 4; i++) {
-		LLVMBool loses_info;
-		LLVMValueRef p = LLVMGetOperand(inst, AC_EXP_OUT0 + i);
-
 		/* It's a constant expression. Undef outputs are eliminated too. */
-		if (LLVMIsUndef(p)) {
+		if (exp->chan[i].type == AC_IR_UNDEF) {
 			is_zero[i] = true;
 			is_one[i] = true;
-		} else if (LLVMIsAConstantFP(p)) {
-			double a = LLVMConstRealGetDouble(p, &loses_info);
-
-			if (a == 0)
+		} else if (exp->chan[i].type == AC_IR_CONST) {
+			if (exp->chan[i].const_float == 0)
 				is_zero[i] = true;
-			else if (a == 1)
+			else if (exp->chan[i].const_float == 1)
 				is_one[i] = true;
 			else
 				return false; /* other constant */
@@ -1288,11 +1307,11 @@ static bool ac_eliminate_const_output(uint8_t *vs_output_param_offset,
 		return false;
 
 	/* The PARAM export can be represented as DEFAULT_VAL. Kill it. */
-	LLVMInstructionEraseFromParent(inst);
+	LLVMInstructionEraseFromParent(exp->inst);
 
 	/* Change OFFSET to DEFAULT_VAL. */
 	for (i = 0; i < num_outputs; i++) {
-		if (vs_output_param_offset[i] == offset) {
+		if (vs_output_param_offset[i] == exp->offset) {
 			vs_output_param_offset[i] =
 				AC_EXP_PARAM_DEFAULT_VAL_0000 + default_val;
 			break;
@@ -1300,12 +1319,6 @@ static bool ac_eliminate_const_output(uint8_t *vs_output_param_offset,
 	}
 	return true;
 }
-
-struct ac_vs_exports {
-	unsigned num;
-	unsigned offset[VARYING_SLOT_MAX];
-	LLVMValueRef inst[VARYING_SLOT_MAX];
-};
 
 void ac_eliminate_const_vs_outputs(struct ac_llvm_context *ctx,
 				   LLVMValueRef main_fn,
@@ -1327,6 +1340,7 @@ void ac_eliminate_const_vs_outputs(struct ac_llvm_context *ctx,
 		while (inst) {
 			LLVMValueRef cur = inst;
 			inst = LLVMGetNextInstruction(inst);
+			struct ac_vs_exp_inst exp;
 
 			if (LLVMGetInstructionOpcode(cur) != LLVMCall)
 				continue;
@@ -1353,14 +1367,34 @@ void ac_eliminate_const_vs_outputs(struct ac_llvm_context *ctx,
 
 			target -= V_008DFC_SQ_EXP_PARAM;
 
+			/* Parse the instruction. */
+			memset(&exp, 0, sizeof(exp));
+			exp.offset = target;
+			exp.inst = cur;
+
+			for (unsigned i = 0; i < 4; i++) {
+				LLVMValueRef v = LLVMGetOperand(cur, AC_EXP_OUT0 + i);
+
+				exp.chan[i].value = v;
+
+				if (LLVMIsUndef(v)) {
+					exp.chan[i].type = AC_IR_UNDEF;
+				} else if (LLVMIsAConstantFP(v)) {
+					LLVMBool loses_info;
+					exp.chan[i].type = AC_IR_CONST;
+					exp.chan[i].const_float =
+						LLVMConstRealGetDouble(v, &loses_info);
+				} else {
+					exp.chan[i].type = AC_IR_VALUE;
+				}
+			}
+
 			/* Eliminate constant value PARAM exports. */
 			if (ac_eliminate_const_output(vs_output_param_offset,
-						      num_outputs, cur, target)) {
+						      num_outputs, &exp)) {
 				removed_any = true;
 			} else {
-				exports.offset[exports.num] = target;
-				exports.inst[exports.num] = cur;
-				exports.num++;
+				exports.exp[exports.num++] = exp;
 			}
 		}
 		bb = LLVMGetNextBasicBlock(bb);
@@ -1380,13 +1414,13 @@ void ac_eliminate_const_vs_outputs(struct ac_llvm_context *ctx,
 		       sizeof(current_offset));
 
 		for (i = 0; i < exports.num; i++) {
-			unsigned offset = exports.offset[i];
+			unsigned offset = exports.exp[i].offset;
 
 			for (out = 0; out < num_outputs; out++) {
 				if (current_offset[out] != offset)
 					continue;
 
-				LLVMSetOperand(exports.inst[i], AC_EXP_TARGET,
+				LLVMSetOperand(exports.exp[i].inst, AC_EXP_TARGET,
 					       LLVMConstInt(ctx->i32,
 							    V_008DFC_SQ_EXP_PARAM + new_count, 0));
 				vs_output_param_offset[out] = new_count;
