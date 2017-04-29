@@ -1036,10 +1036,17 @@ brw_validate_instructions(const struct gen_device_info *devinfo,
 {
    bool valid = true;
 
-   for (int src_offset = start_offset; src_offset < end_offset;
-        src_offset += sizeof(brw_inst)) {
+   for (int src_offset = start_offset; src_offset < end_offset;) {
       struct string error_msg = { .str = NULL, .len = 0 };
       const brw_inst *inst = assembly + src_offset;
+      bool is_compact = brw_inst_cmpt_control(devinfo, inst);
+      brw_inst uncompacted;
+
+      if (is_compact) {
+         brw_compact_inst *compacted = (void *)inst;
+         brw_uncompact_instruction(devinfo, &uncompacted, compacted);
+         inst = &uncompacted;
+      }
 
       if (is_unsupported_inst(devinfo, inst)) {
          ERROR("Instruction not supported on this Gen");
@@ -1056,6 +1063,12 @@ brw_validate_instructions(const struct gen_device_info *devinfo,
       }
       valid = valid && error_msg.len == 0;
       free(error_msg.str);
+
+      if (is_compact) {
+         src_offset += sizeof(brw_compact_inst);
+      } else {
+         src_offset += sizeof(brw_inst);
+      }
    }
 
    return valid;
