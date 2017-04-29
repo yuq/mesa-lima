@@ -3844,32 +3844,14 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 		for (i = 0; i < count; i++) {
 			const struct pipe_vertex_buffer *src = buffers + i;
 			struct pipe_vertex_buffer *dsti = dst + i;
+			struct pipe_resource *buf = src->buffer.resource;
 
-			if (unlikely(src->is_user_buffer)) {
-				/* Zero-stride attribs only. */
-				assert(src->stride == 0);
-
-				/* Assume that the user_buffer comes from
-				 * gl_current_attrib, which implies it has
-				 * 4 * 8 bytes (for dvec4 attributes).
-				 *
-				 * Use const_uploader to upload into VRAM directly.
-				 */
-				u_upload_data(sctx->b.b.const_uploader, 0, 32, 32,
-					      src->buffer.user,
-					      &dsti->buffer_offset,
-					      &dsti->buffer.resource);
-				dsti->stride = 0;
-			} else {
-				struct pipe_resource *buf = src->buffer.resource;
-
-				pipe_resource_reference(&dsti->buffer.resource, buf);
-				dsti->buffer_offset = src->buffer_offset;
-				dsti->stride = src->stride;
-				r600_context_add_resource_size(ctx, buf);
-				if (buf)
-					r600_resource(buf)->bind_history |= PIPE_BIND_VERTEX_BUFFER;
-			}
+			pipe_resource_reference(&dsti->buffer.resource, buf);
+			dsti->buffer_offset = src->buffer_offset;
+			dsti->stride = src->stride;
+			r600_context_add_resource_size(ctx, buf);
+			if (buf)
+				r600_resource(buf)->bind_history |= PIPE_BIND_VERTEX_BUFFER;
 		}
 	} else {
 		for (i = 0; i < count; i++) {
