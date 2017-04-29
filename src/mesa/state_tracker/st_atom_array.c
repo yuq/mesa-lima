@@ -44,6 +44,7 @@
 
 #include "cso_cache/cso_context.h"
 #include "util/u_math.h"
+#include "util/u_upload_mgr.h"
 #include "main/bufferobj.h"
 #include "main/glformats.h"
 
@@ -334,6 +335,11 @@ is_interleaved_arrays(const struct st_vertex_program *vp,
 	 continue;
 
       stride = array->StrideB; /* in bytes */
+
+      /* To keep things simple, don't allow interleaved zero-stride attribs. */
+      if (stride == 0)
+         return false;
+
       bufObj = array->BufferObj;
       if (attr == 0) {
          /* save info about the first array */
@@ -571,6 +577,7 @@ setup_non_interleaved_attribs(struct st_context *st,
    struct pipe_vertex_buffer vbuffer[PIPE_MAX_ATTRIBS];
    struct pipe_vertex_element velements[PIPE_MAX_ATTRIBS] = {{0}};
    unsigned num_vbuffers = 0;
+   unsigned unref_buffers = 0;
    GLuint attr;
 
    for (attr = 0; attr < num_inputs;) {
@@ -608,23 +615,39 @@ setup_non_interleaved_attribs(struct st_context *st,
          vbuffer[bufidx].buffer_offset = pointer_to_offset(array->Ptr);
       }
       else {
-         /* wrap user data */
-         void *ptr;
+         if (stride == 0) {
+            unsigned size = array->_ElementSize;
+            /* This is optimal for GPU cache line usage if the upload size
+             * is <= cache line size.
+             */
+            unsigned alignment = util_next_power_of_two(size);
+            void *ptr = array->Ptr ? (void*)array->Ptr :
+                                     (void*)ctx->Current.Attrib[mesaAttr];
 
-         if (array->Ptr) {
-            ptr = (void *) array->Ptr;
+            vbuffer[bufidx].is_user_buffer = false;
+            vbuffer[bufidx].buffer.resource = NULL;
+
+            /* Use const_uploader for zero-stride vertex attributes, because
+             * it may use a better memory placement than stream_uploader.
+             * The reason is that zero-stride attributes can be fetched many
+             * times (thousands of times), so a better placement is going to
+             * perform better.
+             *
+             * Upload the maximum possible size, which is 4x GLdouble = 32.
+             */
+            u_upload_data(st->can_bind_const_buffer_as_vertex ?
+                             st->pipe->const_uploader :
+                             st->pipe->stream_uploader,
+                          0, size, alignment, ptr,
+                          &vbuffer[bufidx].buffer_offset,
+                          &vbuffer[bufidx].buffer.resource);
+            unref_buffers |= 1u << bufidx;
+         } else {
+            assert(array->Ptr);
+            vbuffer[bufidx].buffer.user = array->Ptr;
+            vbuffer[bufidx].is_user_buffer = true;
+            vbuffer[bufidx].buffer_offset = 0;
          }
-         else {
-            /* no array, use ctx->Current.Attrib[] value */
-            ptr = (void *) ctx->Current.Attrib[mesaAttr];
-            stride = 0;
-         }
-
-         assert(ptr);
-
-         vbuffer[bufidx].buffer.user = ptr;
-         vbuffer[bufidx].is_user_buffer = !!ptr; /* if NULL, then unbind */
-         vbuffer[bufidx].buffer_offset = 0;
       }
 
       /* common-case setup */
@@ -642,6 +665,12 @@ setup_non_interleaved_attribs(struct st_context *st,
    }
 
    set_vertex_attribs(st, vbuffer, num_vbuffers, velements, num_inputs);
+
+   /* Unreference uploaded zero-stride vertex buffers. */
+   while (unref_buffers) {
+      unsigned i = u_bit_scan(&unref_buffers);
+      pipe_resource_reference(&vbuffer[i].buffer.resource, NULL);
+   }
 }
 
 void st_update_array(struct st_context *st)

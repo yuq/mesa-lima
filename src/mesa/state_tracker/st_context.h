@@ -104,6 +104,7 @@ struct st_context
    boolean has_half_float_packing;
    boolean has_multi_draw_indirect;
    boolean has_user_constbuf;
+   boolean can_bind_const_buffer_as_vertex;
 
    /**
     * If a shader can be created when we get its source.

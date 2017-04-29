@@ -338,6 +338,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    st->has_user_constbuf =
       screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS);
+   st->can_bind_const_buffer_as_vertex =
+      screen->get_param(screen, PIPE_CAP_CAN_BIND_CONST_BUFFER_AS_VERTEX);
 
    /* Drivers still have to upload zero-stride vertex attribs manually
     * with the GL core profile, but they don't have to deal with any complex
