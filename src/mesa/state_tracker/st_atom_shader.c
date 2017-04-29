@@ -93,8 +93,8 @@ get_texture_target(struct gl_context *ctx, const unsigned unit)
  * Update fragment program state/atom.  This involves translating the
  * Mesa fragment program into a gallium fragment program and binding it.
  */
-static void
-update_fp( struct st_context *st )
+void
+st_update_fp( struct st_context *st )
 {
    struct st_fragment_program *stfp;
    struct st_fp_variant_key key;
@@ -137,18 +137,12 @@ update_fp( struct st_context *st )
 }
 
 
-const struct st_tracked_state st_update_fp = {
-   update_fp  					/* update */
-};
-
-
-
 /**
  * Update vertex program state/atom.  This involves translating the
  * Mesa vertex program into a gallium fragment program and binding it.
  */
-static void
-update_vp( struct st_context *st )
+void
+st_update_vp( struct st_context *st )
 {
    struct st_vertex_program *stvp;
    struct st_vp_variant_key key;
@@ -190,14 +184,8 @@ update_vp( struct st_context *st )
 }
 
 
-const struct st_tracked_state st_update_vp = {
-   update_vp						/* update */
-};
-
-
-
-static void
-update_gp( struct st_context *st )
+void
+st_update_gp( struct st_context *st )
 {
    struct st_geometry_program *stgp;
 
@@ -219,14 +207,9 @@ update_gp( struct st_context *st )
                                   st->gp_variant->driver_shader);
 }
 
-const struct st_tracked_state st_update_gp = {
-   update_gp  				/* update */
-};
 
-
-
-static void
-update_tcp( struct st_context *st )
+void
+st_update_tcp( struct st_context *st )
 {
    struct st_tessctrl_program *sttcp;
 
@@ -248,14 +231,9 @@ update_tcp( struct st_context *st )
                                   st->tcp_variant->driver_shader);
 }
 
-const struct st_tracked_state st_update_tcp = {
-   update_tcp  				/* update */
-};
 
-
-
-static void
-update_tep( struct st_context *st )
+void
+st_update_tep( struct st_context *st )
 {
    struct st_tesseval_program *sttep;
 
@@ -277,14 +255,9 @@ update_tep( struct st_context *st )
                                   st->tep_variant->driver_shader);
 }
 
-const struct st_tracked_state st_update_tep = {
-   update_tep  				/* update */
-};
 
-
-
-static void
-update_cp( struct st_context *st )
+void
+st_update_cp( struct st_context *st )
 {
    struct st_compute_program *stcp;
 
@@ -304,7 +277,3 @@ update_cp( struct st_context *st )
    cso_set_compute_shader_handle(st->cso_context,
                                  st->cp_variant->driver_shader);
 }
-
-const struct st_tracked_state st_update_cp = {
-   update_cp  				/* update */
-};

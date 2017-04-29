@@ -626,7 +626,7 @@ setup_non_interleaved_attribs(struct st_context *st,
    return TRUE;
 }
 
-static void update_array(struct st_context *st)
+void st_update_array(struct st_context *st)
 {
    struct gl_context *ctx = st->ctx;
    const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
@@ -678,8 +678,3 @@ static void update_array(struct st_context *st)
    st->last_num_vbuffers = num_vbuffers;
    cso_set_vertex_elements(st->cso_context, vpv->num_inputs, velements);
 }
-
-
-const struct st_tracked_state st_update_array = {
-   update_array						/* update */
-};
