@@ -1320,6 +1320,80 @@ static bool ac_eliminate_const_output(uint8_t *vs_output_param_offset,
 	return true;
 }
 
+static bool ac_eliminate_duplicated_output(uint8_t *vs_output_param_offset,
+					   uint32_t num_outputs,
+					   struct ac_vs_exports *processed,
+				           struct ac_vs_exp_inst *exp)
+{
+	unsigned p, copy_back_channels = 0;
+
+	/* See if the output is already in the list of processed outputs.
+	 * The LLVMValueRef comparison relies on SSA.
+	 */
+	for (p = 0; p < processed->num; p++) {
+		bool different = false;
+
+		for (unsigned j = 0; j < 4; j++) {
+			struct ac_vs_exp_chan *c1 = &processed->exp[p].chan[j];
+			struct ac_vs_exp_chan *c2 = &exp->chan[j];
+
+			/* Treat undef as a match. */
+			if (c2->type == AC_IR_UNDEF)
+				continue;
+
+			/* If c1 is undef but c2 isn't, we can copy c2 to c1
+			 * and consider the instruction duplicated.
+			 */
+			if (c1->type == AC_IR_UNDEF) {
+				copy_back_channels |= 1 << j;
+				continue;
+			}
+
+			/* Test whether the channels are not equal. */
+			if (c1->type != c2->type ||
+			    (c1->type == AC_IR_CONST &&
+			     c1->const_float != c2->const_float) ||
+			    (c1->type == AC_IR_VALUE &&
+			     c1->value != c2->value)) {
+				different = true;
+				break;
+			}
+		}
+		if (!different)
+			break;
+
+		copy_back_channels = 0;
+	}
+	if (p == processed->num)
+		return false;
+
+	/* If a match was found, but the matching export has undef where the new
+	 * one has a normal value, copy the normal value to the undef channel.
+	 */
+	struct ac_vs_exp_inst *match = &processed->exp[p];
+
+	while (copy_back_channels) {
+		unsigned chan = u_bit_scan(&copy_back_channels);
+
+		assert(match->chan[chan].type == AC_IR_UNDEF);
+		LLVMSetOperand(match->inst, AC_EXP_OUT0 + chan,
+			       exp->chan[chan].value);
+		match->chan[chan] = exp->chan[chan];
+	}
+
+	/* The PARAM export is duplicated. Kill it. */
+	LLVMInstructionEraseFromParent(exp->inst);
+
+	/* Change OFFSET to the matching export. */
+	for (unsigned i = 0; i < num_outputs; i++) {
+		if (vs_output_param_offset[i] == exp->offset) {
+			vs_output_param_offset[i] = match->offset;
+			break;
+		}
+	}
+	return true;
+}
+
 void ac_optimize_vs_outputs(struct ac_llvm_context *ctx,
 			    LLVMValueRef main_fn,
 			    uint8_t *vs_output_param_offset,
@@ -1389,9 +1463,12 @@ void ac_optimize_vs_outputs(struct ac_llvm_context *ctx,
 				}
 			}
 
-			/* Eliminate constant value PARAM exports. */
+			/* Eliminate constant and duplicated PARAM exports. */
 			if (ac_eliminate_const_output(vs_output_param_offset,
-						      num_outputs, &exp)) {
+						      num_outputs, &exp) ||
+			    ac_eliminate_duplicated_output(vs_output_param_offset,
+							   num_outputs, &exports,
+							   &exp)) {
 				removed_any = true;
 			} else {
 				exports.exp[exports.num++] = exp;
