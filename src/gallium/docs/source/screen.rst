@@ -389,6 +389,8 @@ The integer capabilities:
 * ``PIPE_CAP_TGSI_TES_LAYER_VIEWPORT``: Whether ``TGSI_SEMANTIC_LAYER`` and
   ``TGSI_SEMANTIC_VIEWPORT_INDEX`` are supported as tessellation evaluation
   shader outputs.
+* ``PIPE_CAP_CAN_BIND_CONST_BUFFER_AS_VERTEX``: Whether a buffer with just
+  PIPE_BIND_CONSTANT_BUFFER can be legally passed to set_vertex_buffers.
 
 
 .. _pipe_capf:

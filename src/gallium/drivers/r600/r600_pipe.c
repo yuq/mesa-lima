@@ -286,6 +286,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
 	case PIPE_CAP_CLEAR_TEXTURE:
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
+	case PIPE_CAP_CAN_BIND_CONST_BUFFER_AS_VERTEX:
 		return 1;
 
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
