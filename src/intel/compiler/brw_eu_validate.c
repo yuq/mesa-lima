@@ -1030,17 +1030,16 @@ region_alignment_rules(const struct gen_device_info *devinfo,
 }
 
 bool
-brw_validate_instructions(const struct brw_codegen *p, int start_offset,
+brw_validate_instructions(const struct gen_device_info *devinfo,
+                          void *assembly, int start_offset, int end_offset,
                           struct annotation_info *annotation)
 {
-   const struct gen_device_info *devinfo = p->devinfo;
-   const void *store = p->store;
    bool valid = true;
 
-   for (int src_offset = start_offset; src_offset < p->next_insn_offset;
+   for (int src_offset = start_offset; src_offset < end_offset;
         src_offset += sizeof(brw_inst)) {
       struct string error_msg = { .str = NULL, .len = 0 };
-      const brw_inst *inst = store + src_offset;
+      const brw_inst *inst = assembly + src_offset;
 
       if (is_unsupported_inst(devinfo, inst)) {
          ERROR("Instruction not supported on this Gen");

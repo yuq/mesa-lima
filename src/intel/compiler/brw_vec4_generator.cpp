@@ -2180,10 +2180,14 @@ generate_code(struct brw_codegen *p,
    annotation_finalize(&annotation, p->next_insn_offset);
 
 #ifndef NDEBUG
-   bool validated = brw_validate_instructions(p, 0, &annotation);
+   bool validated = brw_validate_instructions(devinfo, p->store,
+                                              0, p->next_insn_offset,
+                                              &annotation);
 #else
    if (unlikely(debug_flag))
-      brw_validate_instructions(p, 0, &annotation);
+      brw_validate_instructions(devinfo, p->store,
+                                0, p->next_insn_offset,
+                                &annotation);
 #endif
 
    int before_size = p->next_insn_offset;
