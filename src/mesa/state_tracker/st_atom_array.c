@@ -447,7 +447,7 @@ set_vertex_attribs(struct st_context *st,
  * \param vbuffer  returns vertex buffer info
  * \param velements  returns vertex element info
  */
-static boolean
+static void
 setup_interleaved_attribs(struct st_context *st,
                           const struct st_vertex_program *vp,
                           const struct st_vp_variant *vpv,
@@ -536,7 +536,8 @@ setup_interleaved_attribs(struct st_context *st,
       struct st_buffer_object *stobj = st_buffer_object(bufobj);
 
       if (!stobj || !stobj->buffer) {
-         return FALSE; /* out-of-memory error probably */
+         st->vertex_array_out_of_memory = true;
+         return; /* out-of-memory error probably */
       }
 
       vbuffer.buffer.resource = stobj->buffer;
@@ -554,7 +555,6 @@ setup_interleaved_attribs(struct st_context *st,
 
    set_vertex_attribs(st, &vbuffer, vpv->num_inputs ? 1 : 0,
                       velements, vpv->num_inputs);
-   return TRUE;
 }
 
 /**
@@ -563,7 +563,7 @@ setup_interleaved_attribs(struct st_context *st,
  * \param vbuffer  returns vertex buffer info
  * \param velements  returns vertex element info
  */
-static boolean
+static void
 setup_non_interleaved_attribs(struct st_context *st,
                               const struct st_vertex_program *vp,
                               const struct st_vp_variant *vpv,
@@ -601,7 +601,8 @@ setup_non_interleaved_attribs(struct st_context *st,
          struct st_buffer_object *stobj = st_buffer_object(bufobj);
 
          if (!stobj || !stobj->buffer) {
-            return FALSE; /* out-of-memory error probably */
+            st->vertex_array_out_of_memory = true;
+            return; /* out-of-memory error probably */
          }
 
          vbuffer[bufidx].buffer.resource = stobj->buffer;
@@ -643,7 +644,6 @@ setup_non_interleaved_attribs(struct st_context *st,
    }
 
    set_vertex_attribs(st, vbuffer, num_vbuffers, velements, vpv->num_inputs);
-   return TRUE;
 }
 
 void st_update_array(struct st_context *st)
@@ -663,16 +663,8 @@ void st_update_array(struct st_context *st)
    vp = st->vp;
    vpv = st->vp_variant;
 
-   if (is_interleaved_arrays(vp, vpv, arrays)) {
-      if (!setup_interleaved_attribs(st, vp, vpv, arrays)) {
-         st->vertex_array_out_of_memory = TRUE;
-         return;
-      }
-   }
-   else {
-      if (!setup_non_interleaved_attribs(st, vp, vpv, arrays)) {
-         st->vertex_array_out_of_memory = TRUE;
-         return;
-      }
-   }
+   if (is_interleaved_arrays(vp, vpv, arrays))
+      setup_interleaved_attribs(st, vp, vpv, arrays);
+   else
+      setup_non_interleaved_attribs(st, vp, vpv, arrays);
 }
