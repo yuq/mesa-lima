@@ -170,9 +170,6 @@ struct st_context
    GLboolean vertdata_edgeflags;
    GLboolean edgeflag_culls_prims;
 
-   /** Mapping from VARYING_SLOT_x to post-transformed vertex slot */
-   const ubyte *vertex_result_to_slot;
-
    struct st_vertex_program *vp;    /**< Currently bound vertex program */
    struct st_fragment_program *fp;  /**< Currently bound fragment program */
    struct st_geometry_program *gp;  /**< Currently bound geometry program */

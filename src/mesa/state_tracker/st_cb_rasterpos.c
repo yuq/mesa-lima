@@ -44,6 +44,7 @@
 #include "st_context.h"
 #include "st_atom.h"
 #include "st_draw.h"
+#include "st_program.h"
 #include "st_cb_rasterpos.h"
 #include "draw/draw_context.h"
 #include "draw/draw_pipe.h"
@@ -134,7 +135,7 @@ rastpos_point(struct draw_stage *stage, struct prim_header *prim)
    struct gl_context *ctx = rs->ctx;
    struct st_context *st = st_context(ctx);
    const GLfloat height = (GLfloat) ctx->DrawBuffer->Height;
-   const ubyte *outputMapping = st->vertex_result_to_slot;
+   const ubyte *outputMapping = st->vp->result_to_output;
    const GLfloat *pos;
    GLuint i;
 

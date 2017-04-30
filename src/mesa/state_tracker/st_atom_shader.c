@@ -179,8 +179,6 @@ st_update_vp( struct st_context *st )
 
    cso_set_vertex_shader_handle(st->cso_context, 
                                 st->vp_variant->driver_shader);
-
-   st->vertex_result_to_slot = stvp->result_to_output;
 }
 
 
