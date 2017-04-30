@@ -1196,21 +1196,35 @@ void radv_CmdWriteTimestamp(
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 12);
 
-	if (mec) {
-		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 5, 0));
-		radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
-		radeon_emit(cs, 3 << 29);
+	switch(pipelineStage) {
+	case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
+		radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+		radeon_emit(cs, COPY_DATA_COUNT_SEL | COPY_DATA_WR_CONFIRM |
+		                COPY_DATA_SRC_SEL(COPY_DATA_TIMESTAMP) |
+		                COPY_DATA_DST_SEL(V_370_MEM_ASYNC));
+		radeon_emit(cs, 0);
+		radeon_emit(cs, 0);
 		radeon_emit(cs, query_va);
 		radeon_emit(cs, query_va >> 32);
-		radeon_emit(cs, 0);
-		radeon_emit(cs, 0);
-	} else {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-		radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
-		radeon_emit(cs, query_va);
-		radeon_emit(cs, (3 << 29) | ((query_va >> 32) & 0xFFFF));
-		radeon_emit(cs, 0);
-		radeon_emit(cs, 0);
+		break;
+	default:
+		if (mec) {
+			radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 5, 0));
+			radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
+			radeon_emit(cs, 3 << 29);
+			radeon_emit(cs, query_va);
+			radeon_emit(cs, query_va >> 32);
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+		} else {
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+			radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
+			radeon_emit(cs, query_va);
+			radeon_emit(cs, (3 << 29) | ((query_va >> 32) & 0xFFFF));
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+		}
+		break;
 	}
 
 	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));

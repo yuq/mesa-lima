@@ -154,6 +154,7 @@
 #define			COPY_DATA_MEM		1
 #define                 COPY_DATA_PERF          4
 #define                 COPY_DATA_IMM           5
+#define                 COPY_DATA_TIMESTAMP     9
 #define		COPY_DATA_DST_SEL(x)		(((unsigned)(x) & 0xf) << 8)
 #define		COPY_DATA_COUNT_SEL		(1 << 16)
 #define		COPY_DATA_WR_CONFIRM		(1 << 20)
