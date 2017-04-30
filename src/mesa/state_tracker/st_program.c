@@ -120,7 +120,7 @@ st_set_prog_affected_state_flags(struct gl_program *prog)
       break;
 
    case MESA_SHADER_TESS_CTRL:
-      states = &((struct st_common_program*)prog)->affected_states;
+      states = &(st_common_program(prog))->affected_states;
 
       *states = ST_NEW_TCS_STATE;
 
@@ -135,7 +135,7 @@ st_set_prog_affected_state_flags(struct gl_program *prog)
       break;
 
    case MESA_SHADER_TESS_EVAL:
-      states = &((struct st_common_program*)prog)->affected_states;
+      states = &(st_common_program(prog))->affected_states;
 
       *states = ST_NEW_TES_STATE |
                 ST_NEW_RASTERIZER;
@@ -151,7 +151,7 @@ st_set_prog_affected_state_flags(struct gl_program *prog)
       break;
 
    case MESA_SHADER_GEOMETRY:
-      states = &((struct st_common_program*)prog)->affected_states;
+      states = &(st_common_program(prog))->affected_states;
 
       *states = ST_NEW_GS_STATE |
                 ST_NEW_RASTERIZER;
@@ -1918,16 +1918,11 @@ destroy_program_variants(struct st_context *st, struct gl_program *target)
    case GL_TESS_EVALUATION_PROGRAM_NV:
    case GL_COMPUTE_PROGRAM_NV:
       {
-         struct st_common_program *gp = (struct st_common_program*)target;
-         struct st_common_program *tcp = (struct st_common_program*)target;
-         struct st_common_program *tep = (struct st_common_program*)target;
+         struct st_common_program *p = st_common_program(target);
          struct st_compute_program *cp = (struct st_compute_program*)target;
          struct st_basic_variant **variants =
-            target->Target == GL_GEOMETRY_PROGRAM_NV ? &gp->variants :
-            target->Target == GL_TESS_CONTROL_PROGRAM_NV ? &tcp->variants :
-            target->Target == GL_TESS_EVALUATION_PROGRAM_NV ? &tep->variants :
             target->Target == GL_COMPUTE_PROGRAM_NV ? &cp->variants :
-            NULL;
+                                                      &p->variants;
          struct st_basic_variant *v, **prevPtr = variants;
 
          for (v = *variants; v; ) {
@@ -2066,19 +2061,19 @@ st_precompile_shader_variant(struct st_context *st,
    }
 
    case GL_TESS_CONTROL_PROGRAM_NV: {
-      struct st_common_program *p = (struct st_common_program *)prog;
+      struct st_common_program *p = st_common_program(prog);
       st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL, &p->tgsi, &p->variants);
       break;
    }
 
    case GL_TESS_EVALUATION_PROGRAM_NV: {
-      struct st_common_program *p = (struct st_common_program *)prog;
+      struct st_common_program *p = st_common_program(prog);
       st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL, &p->tgsi, &p->variants);
       break;
    }
 
    case GL_GEOMETRY_PROGRAM_NV: {
-      struct st_common_program *p = (struct st_common_program *)prog;
+      struct st_common_program *p = st_common_program(prog);
       st_get_basic_variant(st, PIPE_SHADER_GEOMETRY, &p->tgsi, &p->variants);
       break;
    }

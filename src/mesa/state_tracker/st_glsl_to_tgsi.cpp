@@ -6830,9 +6830,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 
    struct st_vertex_program *stvp;
    struct st_fragment_program *stfp;
-   struct st_common_program *stgp;
-   struct st_common_program *sttcp;
-   struct st_common_program *sttep;
+   struct st_common_program *stp;
    struct st_compute_program *stcp;
 
    switch (shader->Stage) {
@@ -6844,17 +6842,11 @@ get_mesa_program_tgsi(struct gl_context *ctx,
       stfp = (struct st_fragment_program *)prog;
       stfp->glsl_to_tgsi = v;
       break;
-   case MESA_SHADER_GEOMETRY:
-      stgp = (struct st_common_program *)prog;
-      stgp->glsl_to_tgsi = v;
-      break;
    case MESA_SHADER_TESS_CTRL:
-      sttcp = (struct st_common_program *)prog;
-      sttcp->glsl_to_tgsi = v;
-      break;
    case MESA_SHADER_TESS_EVAL:
-      sttep = (struct st_common_program *)prog;
-      sttep->glsl_to_tgsi = v;
+   case MESA_SHADER_GEOMETRY:
+      stp = st_common_program(prog);
+      stp->glsl_to_tgsi = v;
       break;
    case MESA_SHADER_COMPUTE:
       stcp = (struct st_compute_program *)prog;
