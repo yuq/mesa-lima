@@ -56,10 +56,23 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
 {
    GLuint lastLevel;
    int width, height, depth;
+   unsigned old_width = 0, old_height = 0, old_depth = 0;
    const struct intel_mipmap_tree *old_mt = intelObj->mt;
    const unsigned level = intelImage->base.Base.Level;
 
    intel_get_image_dims(&intelImage->base.Base, &width, &height, &depth);
+
+   if (old_mt && old_mt->surf.size > 0) {
+      old_width = old_mt->surf.logical_level0_px.width;
+      old_height = old_mt->surf.logical_level0_px.height;
+      old_depth = old_mt->surf.dim == ISL_SURF_DIM_3D ?
+                     old_mt->surf.logical_level0_px.depth :
+                     old_mt->surf.logical_level0_px.array_len;
+   } else if (old_mt) {
+      old_width = old_mt->logical_width0;
+      old_height = old_mt->logical_height0;
+      old_depth = old_mt->logical_depth0;
+   }
 
    DBG("%s\n", __func__);
 
@@ -72,19 +85,19 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
       assert(level == 0);
       break;
    case GL_TEXTURE_3D:
-      depth = old_mt ? get_base_dim(old_mt->logical_depth0, depth, level) :
+      depth = old_mt ? get_base_dim(old_depth, depth, level) :
                        depth << level;
       /* Fall through */
    case GL_TEXTURE_2D:
    case GL_TEXTURE_2D_ARRAY:
    case GL_TEXTURE_CUBE_MAP:
    case GL_TEXTURE_CUBE_MAP_ARRAY:
-      height = old_mt ? get_base_dim(old_mt->logical_height0, height, level) :
+      height = old_mt ? get_base_dim(old_height, height, level) :
                         height << level;
       /* Fall through */
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
-      width = old_mt ? get_base_dim(old_mt->logical_width0, width, level) :
+      width = old_mt ? get_base_dim(old_width, width, level) :
                        width << level;
       break;
    default:
