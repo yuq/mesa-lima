@@ -715,8 +715,8 @@ st_translate_fragment_program(struct st_context *st,
 {
    ubyte outputMapping[2 * FRAG_RESULT_MAX];
    ubyte inputMapping[VARYING_SLOT_MAX];
-   GLuint inputSlotToAttr[VARYING_SLOT_MAX];
-   GLuint interpMode[PIPE_MAX_SHADER_INPUTS];  /* XXX size? */
+   ubyte inputSlotToAttr[VARYING_SLOT_MAX];
+   ubyte interpMode[PIPE_MAX_SHADER_INPUTS];  /* XXX size? */
    GLuint attr;
    GLbitfield64 inputsRead;
    struct ureg_program *ureg;
@@ -1344,7 +1344,7 @@ st_translate_program_common(struct st_context *st,
                             unsigned tgsi_processor,
                             struct pipe_shader_state *out_state)
 {
-   GLuint inputSlotToAttr[VARYING_SLOT_TESS_MAX];
+   ubyte inputSlotToAttr[VARYING_SLOT_TESS_MAX];
    ubyte inputMapping[VARYING_SLOT_TESS_MAX];
    ubyte outputMapping[VARYING_SLOT_TESS_MAX];
    GLuint attr;

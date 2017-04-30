@@ -802,7 +802,7 @@ st_translate_mesa_program(
    const ubyte inputMapping[],
    const ubyte inputSemanticName[],
    const ubyte inputSemanticIndex[],
-   const GLuint interpMode[],
+   const ubyte interpMode[],
    GLuint numOutputs,
    const ubyte outputMapping[],
    const ubyte outputSemanticName[],
