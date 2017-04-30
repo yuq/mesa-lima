@@ -374,8 +374,7 @@ static void init_velement(struct pipe_vertex_element *velement,
    assert(velement->src_format);
 }
 
-static void init_velement_lowered(struct st_context *st,
-                                  const struct st_vertex_program *vp,
+static void init_velement_lowered(const struct st_vertex_program *vp,
                                   struct pipe_vertex_element *velements,
                                   int src_offset, int format,
                                   int instance_divisor, int vbo_index,
@@ -498,7 +497,7 @@ setup_interleaved_attribs(struct st_context *st,
                                          array->Normalized,
                                          array->Integer);
 
-      init_velement_lowered(st, vp, velements, src_offset, src_format,
+      init_velement_lowered(vp, velements, src_offset, src_format,
                             array->InstanceDivisor, 0,
                             array->Size, array->Doubles, &attr);
    }
@@ -618,7 +617,7 @@ setup_non_interleaved_attribs(struct st_context *st,
                                          array->Normalized,
                                          array->Integer);
 
-      init_velement_lowered(st, vp, velements, 0, src_format,
+      init_velement_lowered(vp, velements, 0, src_format,
                             array->InstanceDivisor, bufidx,
                             array->Size, array->Doubles, &attr);
    }
