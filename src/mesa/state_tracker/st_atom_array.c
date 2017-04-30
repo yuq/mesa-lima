@@ -632,7 +632,7 @@ void st_update_array(struct st_context *st)
    const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
    const struct st_vertex_program *vp;
    const struct st_vp_variant *vpv;
-   struct pipe_vertex_buffer vbuffer[PIPE_MAX_SHADER_INPUTS];
+   struct pipe_vertex_buffer vbuffer[PIPE_MAX_ATTRIBS];
    struct pipe_vertex_element velements[PIPE_MAX_ATTRIBS];
    unsigned num_vbuffers;
 
