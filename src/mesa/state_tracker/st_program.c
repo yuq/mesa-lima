@@ -377,7 +377,6 @@ st_translate_vertex_program(struct st_context *st,
    unsigned num_outputs = 0;
    unsigned attr;
    ubyte input_to_index[VERT_ATTRIB_MAX] = {0};
-   unsigned output_slot_to_attr[VARYING_SLOT_MAX] = {0};
    ubyte output_semantic_name[VARYING_SLOT_MAX] = {0};
    ubyte output_semantic_index[VARYING_SLOT_MAX] = {0};
 
@@ -417,7 +416,6 @@ st_translate_vertex_program(struct st_context *st,
          unsigned slot = num_outputs++;
 
          stvp->result_to_output[attr] = slot;
-         output_slot_to_attr[slot] = attr;
 
          switch (attr) {
          case VARYING_SLOT_POS:
@@ -574,7 +572,6 @@ st_translate_vertex_program(struct st_context *st,
                                    /* outputs */
                                    num_outputs,
                                    stvp->result_to_output,
-                                   output_slot_to_attr,
                                    output_semantic_name,
                                    output_semantic_index);
 
@@ -1032,7 +1029,6 @@ st_translate_fragment_program(struct st_context *st,
                            /* outputs */
                            fs_num_outputs,
                            outputMapping,
-                           NULL,
                            fs_output_semantic_name,
                            fs_output_semantic_index);
 
@@ -1350,7 +1346,6 @@ st_translate_program_common(struct st_context *st,
 {
    GLuint inputSlotToAttr[VARYING_SLOT_TESS_MAX];
    ubyte inputMapping[VARYING_SLOT_TESS_MAX];
-   GLuint outputSlotToAttr[VARYING_SLOT_TESS_MAX];
    ubyte outputMapping[VARYING_SLOT_TESS_MAX];
    GLuint attr;
 
@@ -1366,7 +1361,6 @@ st_translate_program_common(struct st_context *st,
 
    memset(inputSlotToAttr, 0, sizeof(inputSlotToAttr));
    memset(inputMapping, 0, sizeof(inputMapping));
-   memset(outputSlotToAttr, 0, sizeof(outputSlotToAttr));
    memset(outputMapping, 0, sizeof(outputMapping));
    memset(out_state, 0, sizeof(*out_state));
 
@@ -1484,7 +1478,6 @@ st_translate_program_common(struct st_context *st,
          GLuint slot = num_outputs++;
 
          outputMapping[attr] = slot;
-         outputSlotToAttr[slot] = attr;
 
          switch (attr) {
          case VARYING_SLOT_POS:
@@ -1587,7 +1580,6 @@ st_translate_program_common(struct st_context *st,
          GLuint patch_attr = VARYING_SLOT_PATCH0 + attr;
 
          outputMapping[patch_attr] = slot;
-         outputSlotToAttr[slot] = patch_attr;
          output_semantic_name[slot] = TGSI_SEMANTIC_PATCH;
          output_semantic_index[slot] = attr;
       }
@@ -1608,7 +1600,6 @@ st_translate_program_common(struct st_context *st,
                         /* outputs */
                         num_outputs,
                         outputMapping,
-                        outputSlotToAttr,
                         output_semantic_name,
                         output_semantic_index);
 
