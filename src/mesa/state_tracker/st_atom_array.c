@@ -422,6 +422,25 @@ static void init_velement_lowered(const struct st_vertex_program *vp,
    *attr_idx = idx;
 }
 
+static void
+set_vertex_attribs(struct st_context *st,
+                   struct pipe_vertex_buffer *vbuffers,
+                   unsigned num_vbuffers,
+                   struct pipe_vertex_element *velements,
+                   unsigned num_velements)
+{
+   struct cso_context *cso = st->cso_context;
+
+   cso_set_vertex_buffers(cso, 0, num_vbuffers, vbuffers);
+   if (st->last_num_vbuffers > num_vbuffers) {
+      /* Unbind remaining buffers, if any. */
+      cso_set_vertex_buffers(cso, num_vbuffers,
+                             st->last_num_vbuffers - num_vbuffers, NULL);
+   }
+   st->last_num_vbuffers = num_vbuffers;
+   cso_set_vertex_elements(cso, num_velements, velements);
+}
+
 /**
  * Set up for drawing interleaved arrays that all live in one VBO
  * or all live in user space.
@@ -432,10 +451,10 @@ static boolean
 setup_interleaved_attribs(struct st_context *st,
                           const struct st_vertex_program *vp,
                           const struct st_vp_variant *vpv,
-                          const struct gl_vertex_array **arrays,
-                          struct pipe_vertex_buffer *vbuffer,
-                          struct pipe_vertex_element velements[])
+                          const struct gl_vertex_array **arrays)
 {
+   struct pipe_vertex_buffer vbuffer;
+   struct pipe_vertex_element velements[PIPE_MAX_ATTRIBS] = {{0}};
    GLuint attr;
    const GLubyte *low_addr = NULL;
    GLboolean usingVBO;      /* all arrays in a VBO? */
@@ -507,10 +526,10 @@ setup_interleaved_attribs(struct st_context *st,
     */
    if (vpv->num_inputs == 0) {
       /* just defensive coding here */
-      vbuffer->buffer.resource = NULL;
-      vbuffer->is_user_buffer = false;
-      vbuffer->buffer_offset = 0;
-      vbuffer->stride = 0;
+      vbuffer.buffer.resource = NULL;
+      vbuffer.is_user_buffer = false;
+      vbuffer.buffer_offset = 0;
+      vbuffer.stride = 0;
    }
    else if (usingVBO) {
       /* all interleaved arrays in a VBO */
@@ -520,18 +539,21 @@ setup_interleaved_attribs(struct st_context *st,
          return FALSE; /* out-of-memory error probably */
       }
 
-      vbuffer->buffer.resource = stobj->buffer;
-      vbuffer->is_user_buffer = false;
-      vbuffer->buffer_offset = pointer_to_offset(low_addr);
-      vbuffer->stride = stride;
+      vbuffer.buffer.resource = stobj->buffer;
+      vbuffer.is_user_buffer = false;
+      vbuffer.buffer_offset = pointer_to_offset(low_addr);
+      vbuffer.stride = stride;
    }
    else {
       /* all interleaved arrays in user memory */
-      vbuffer->buffer.user = low_addr;
-      vbuffer->is_user_buffer = !!low_addr; /* if NULL, then unbind */
-      vbuffer->buffer_offset = 0;
-      vbuffer->stride = stride;
+      vbuffer.buffer.user = low_addr;
+      vbuffer.is_user_buffer = !!low_addr; /* if NULL, then unbind */
+      vbuffer.buffer_offset = 0;
+      vbuffer.stride = stride;
    }
+
+   set_vertex_attribs(st, &vbuffer, vpv->num_inputs ? 1 : 0,
+                      velements, vpv->num_inputs);
    return TRUE;
 }
 
@@ -545,15 +567,13 @@ static boolean
 setup_non_interleaved_attribs(struct st_context *st,
                               const struct st_vertex_program *vp,
                               const struct st_vp_variant *vpv,
-                              const struct gl_vertex_array **arrays,
-                              struct pipe_vertex_buffer vbuffer[],
-                              struct pipe_vertex_element velements[],
-                              unsigned *num_vbuffers)
+                              const struct gl_vertex_array **arrays)
 {
    struct gl_context *ctx = st->ctx;
+   struct pipe_vertex_buffer vbuffer[PIPE_MAX_ATTRIBS];
+   struct pipe_vertex_element velements[PIPE_MAX_ATTRIBS] = {{0}};
+   unsigned num_vbuffers = 0;
    GLuint attr;
-
-   *num_vbuffers = 0;
 
    for (attr = 0; attr < vpv->num_inputs;) {
       const GLuint mesaAttr = vp->index_to_input[attr];
@@ -566,7 +586,7 @@ setup_non_interleaved_attribs(struct st_context *st,
       array = get_client_array(vp, arrays, attr);
       assert(array);
 
-      bufidx = (*num_vbuffers)++;
+      bufidx = num_vbuffers++;
 
       stride = array->StrideB;
       bufobj = array->BufferObj;
@@ -622,6 +642,7 @@ setup_non_interleaved_attribs(struct st_context *st,
                             array->Size, array->Doubles, &attr);
    }
 
+   set_vertex_attribs(st, vbuffer, num_vbuffers, velements, vpv->num_inputs);
    return TRUE;
 }
 
@@ -631,9 +652,6 @@ void st_update_array(struct st_context *st)
    const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
    const struct st_vertex_program *vp;
    const struct st_vp_variant *vpv;
-   struct pipe_vertex_buffer vbuffer[PIPE_MAX_ATTRIBS];
-   struct pipe_vertex_element velements[PIPE_MAX_ATTRIBS];
-   unsigned num_vbuffers;
 
    st->vertex_array_out_of_memory = FALSE;
 
@@ -645,35 +663,16 @@ void st_update_array(struct st_context *st)
    vp = st->vp;
    vpv = st->vp_variant;
 
-   memset(velements, 0, sizeof(struct pipe_vertex_element) * vpv->num_inputs);
-
-   /*
-    * Setup the vbuffer[] and velements[] arrays.
-    */
    if (is_interleaved_arrays(vp, vpv, arrays)) {
-      if (!setup_interleaved_attribs(st, vp, vpv, arrays, vbuffer, velements)) {
+      if (!setup_interleaved_attribs(st, vp, vpv, arrays)) {
          st->vertex_array_out_of_memory = TRUE;
          return;
       }
-
-      num_vbuffers = 1;
-      if (vpv->num_inputs == 0)
-         num_vbuffers = 0;
    }
    else {
-      if (!setup_non_interleaved_attribs(st, vp, vpv, arrays, vbuffer,
-                                         velements, &num_vbuffers)) {
+      if (!setup_non_interleaved_attribs(st, vp, vpv, arrays)) {
          st->vertex_array_out_of_memory = TRUE;
          return;
       }
    }
-
-   cso_set_vertex_buffers(st->cso_context, 0, num_vbuffers, vbuffer);
-   if (st->last_num_vbuffers > num_vbuffers) {
-      /* Unbind remaining buffers, if any. */
-      cso_set_vertex_buffers(st->cso_context, num_vbuffers,
-                             st->last_num_vbuffers - num_vbuffers, NULL);
-   }
-   st->last_num_vbuffers = num_vbuffers;
-   cso_set_vertex_elements(st->cso_context, vpv->num_inputs, velements);
 }
