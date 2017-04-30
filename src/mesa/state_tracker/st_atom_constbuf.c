@@ -51,12 +51,11 @@
 /**
  * Pass the given program parameters to the graphics pipe as a
  * constant buffer.
- * \param shader_type  either PIPE_SHADER_VERTEX or PIPE_SHADER_FRAGMENT
  */
-void st_upload_constants( struct st_context *st,
-                          struct gl_program_parameter_list *params,
-                          gl_shader_stage stage)
+void st_upload_constants(struct st_context *st, struct gl_program *prog)
 {
+   gl_shader_stage stage = prog->info.stage;
+   struct gl_program_parameter_list *params = prog->Parameters;
    enum pipe_shader_type shader_type = st_shader_stage_to_ptarget(stage);
 
    assert(shader_type == PIPE_SHADER_VERTEX ||
@@ -141,10 +140,7 @@ void st_upload_constants( struct st_context *st,
  */
 void st_update_vs_constants(struct st_context *st )
 {
-   struct st_vertex_program *vp = st->vp;
-   struct gl_program_parameter_list *params = vp->Base.Parameters;
-
-   st_upload_constants( st, params, MESA_SHADER_VERTEX );
+   st_upload_constants(st, &st->vp->Base);
 }
 
 /**
@@ -152,10 +148,7 @@ void st_update_vs_constants(struct st_context *st )
  */
 void st_update_fs_constants(struct st_context *st )
 {
-   struct st_fragment_program *fp = st->fp;
-   struct gl_program_parameter_list *params = fp->Base.Parameters;
-
-   st_upload_constants( st, params, MESA_SHADER_FRAGMENT );
+   st_upload_constants(st, &st->fp->Base);
 }
 
 
@@ -164,12 +157,9 @@ void st_update_fs_constants(struct st_context *st )
 void st_update_gs_constants(struct st_context *st )
 {
    struct st_common_program *gp = st->gp;
-   struct gl_program_parameter_list *params;
 
-   if (gp) {
-      params = gp->Base.Parameters;
-      st_upload_constants( st, params, MESA_SHADER_GEOMETRY );
-   }
+   if (gp)
+      st_upload_constants(st, &gp->Base);
 }
 
 /* Tessellation control shader:
@@ -177,12 +167,9 @@ void st_update_gs_constants(struct st_context *st )
 void st_update_tcs_constants(struct st_context *st )
 {
    struct st_common_program *tcp = st->tcp;
-   struct gl_program_parameter_list *params;
 
-   if (tcp) {
-      params = tcp->Base.Parameters;
-      st_upload_constants( st, params, MESA_SHADER_TESS_CTRL );
-   }
+   if (tcp)
+      st_upload_constants(st, &tcp->Base);
 }
 
 /* Tessellation evaluation shader:
@@ -190,12 +177,9 @@ void st_update_tcs_constants(struct st_context *st )
 void st_update_tes_constants(struct st_context *st )
 {
    struct st_common_program *tep = st->tep;
-   struct gl_program_parameter_list *params;
 
-   if (tep) {
-      params = tep->Base.Parameters;
-      st_upload_constants( st, params, MESA_SHADER_TESS_EVAL );
-   }
+   if (tep)
+      st_upload_constants(st, &tep->Base);
 }
 
 /* Compute shader:
@@ -203,12 +187,9 @@ void st_update_tes_constants(struct st_context *st )
 void st_update_cs_constants(struct st_context *st )
 {
    struct st_compute_program *cp = st->cp;
-   struct gl_program_parameter_list *params;
 
-   if (cp) {
-      params = cp->Base.Parameters;
-      st_upload_constants( st, params, MESA_SHADER_COMPUTE );
-   }
+   if (cp)
+      st_upload_constants(st, &cp->Base);
 }
 
 static void st_bind_ubos(struct st_context *st, struct gl_program *prog,
