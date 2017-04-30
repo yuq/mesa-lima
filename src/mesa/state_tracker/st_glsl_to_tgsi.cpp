@@ -5436,8 +5436,8 @@ struct st_translate {
    struct inout_decl *output_decls;
    unsigned num_output_decls;
 
-   const GLuint *inputMapping;
-   const GLuint *outputMapping;
+   const ubyte *inputMapping;
+   const ubyte *outputMapping;
 
    unsigned procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
 };
@@ -6172,7 +6172,7 @@ struct sort_inout_decls {
       return mapping[a.mesa_index] < mapping[b.mesa_index];
    }
 
-   const GLuint *mapping;
+   const ubyte *mapping;
 };
 
 /* Sort the given array of decls by the corresponding slot (TGSI file index).
@@ -6183,7 +6183,7 @@ struct sort_inout_decls {
 static void
 sort_inout_decls_by_slot(struct inout_decl *decls,
                          unsigned count,
-                         const GLuint mapping[])
+                         const ubyte mapping[])
 {
    sort_inout_decls sorter;
    sorter.mapping = mapping;
@@ -6237,13 +6237,13 @@ st_translate_program(
    glsl_to_tgsi_visitor *program,
    const struct gl_program *proginfo,
    GLuint numInputs,
-   const GLuint inputMapping[],
+   const ubyte inputMapping[],
    const GLuint inputSlotToAttr[],
    const ubyte inputSemanticName[],
    const ubyte inputSemanticIndex[],
    const GLuint interpMode[],
    GLuint numOutputs,
-   const GLuint outputMapping[],
+   const ubyte outputMapping[],
    const GLuint outputSlotToAttr[],
    const ubyte outputSemanticName[],
    const ubyte outputSemanticIndex[])
@@ -7100,7 +7100,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
 void
 st_translate_stream_output_info(glsl_to_tgsi_visitor *glsl_to_tgsi,
-                                const GLuint outputMapping[],
+                                const ubyte outputMapping[],
                                 struct pipe_stream_output_info *so)
 {
    if (!glsl_to_tgsi->shader_program->last_vert_prog)
@@ -7113,7 +7113,7 @@ st_translate_stream_output_info(glsl_to_tgsi_visitor *glsl_to_tgsi,
 
 void
 st_translate_stream_output_info2(struct gl_transform_feedback_info *info,
-                                const GLuint outputMapping[],
+                                const ubyte outputMapping[],
                                 struct pipe_stream_output_info *so)
 {
    unsigned i;

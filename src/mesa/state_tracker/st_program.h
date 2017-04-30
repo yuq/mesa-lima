@@ -47,7 +47,7 @@
 extern "C" {
 #endif
 
-#define ST_DOUBLE_ATTRIB_PLACEHOLDER 0xffffffff
+#define ST_DOUBLE_ATTRIB_PLACEHOLDER 0xff
 
 struct st_external_sampler_key
 {
@@ -214,11 +214,11 @@ struct st_vertex_program
 
    /** maps a Mesa VERT_ATTRIB_x to a packed TGSI input index */
    /** maps a TGSI input index back to a Mesa VERT_ATTRIB_x */
-   GLuint index_to_input[PIPE_MAX_SHADER_INPUTS];
-   GLuint num_inputs;
+   ubyte index_to_input[PIPE_MAX_ATTRIBS];
+   ubyte num_inputs;
 
    /** Maps VARYING_SLOT_x to slot */
-   GLuint result_to_output[VARYING_SLOT_MAX];
+   ubyte result_to_output[VARYING_SLOT_MAX];
 
    /** List of translated variants of this vertex program.
     */

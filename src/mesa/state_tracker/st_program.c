@@ -376,7 +376,7 @@ st_translate_vertex_program(struct st_context *st,
    enum pipe_error error;
    unsigned num_outputs = 0;
    unsigned attr;
-   unsigned input_to_index[VERT_ATTRIB_MAX] = {0};
+   ubyte input_to_index[VERT_ATTRIB_MAX] = {0};
    unsigned output_slot_to_attr[VARYING_SLOT_MAX] = {0};
    ubyte output_semantic_name[VARYING_SLOT_MAX] = {0};
    ubyte output_semantic_index[VARYING_SLOT_MAX] = {0};
@@ -716,8 +716,8 @@ bool
 st_translate_fragment_program(struct st_context *st,
                               struct st_fragment_program *stfp)
 {
-   GLuint outputMapping[2 * FRAG_RESULT_MAX];
-   GLuint inputMapping[VARYING_SLOT_MAX];
+   ubyte outputMapping[2 * FRAG_RESULT_MAX];
+   ubyte inputMapping[VARYING_SLOT_MAX];
    GLuint inputSlotToAttr[VARYING_SLOT_MAX];
    GLuint interpMode[PIPE_MAX_SHADER_INPUTS];  /* XXX size? */
    GLuint attr;
@@ -1349,9 +1349,9 @@ st_translate_program_common(struct st_context *st,
                             struct pipe_shader_state *out_state)
 {
    GLuint inputSlotToAttr[VARYING_SLOT_TESS_MAX];
-   GLuint inputMapping[VARYING_SLOT_TESS_MAX];
+   ubyte inputMapping[VARYING_SLOT_TESS_MAX];
    GLuint outputSlotToAttr[VARYING_SLOT_TESS_MAX];
-   GLuint outputMapping[VARYING_SLOT_TESS_MAX];
+   ubyte outputMapping[VARYING_SLOT_TESS_MAX];
    GLuint attr;
 
    ubyte input_semantic_name[PIPE_MAX_SHADER_INPUTS];
