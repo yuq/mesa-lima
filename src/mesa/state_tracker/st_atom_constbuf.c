@@ -163,7 +163,7 @@ void st_update_fs_constants(struct st_context *st )
  */
 void st_update_gs_constants(struct st_context *st )
 {
-   struct st_geometry_program *gp = st->gp;
+   struct st_common_program *gp = st->gp;
    struct gl_program_parameter_list *params;
 
    if (gp) {
@@ -176,7 +176,7 @@ void st_update_gs_constants(struct st_context *st )
  */
 void st_update_tcs_constants(struct st_context *st )
 {
-   struct st_tessctrl_program *tcp = st->tcp;
+   struct st_common_program *tcp = st->tcp;
    struct gl_program_parameter_list *params;
 
    if (tcp) {
@@ -189,7 +189,7 @@ void st_update_tcs_constants(struct st_context *st )
  */
 void st_update_tes_constants(struct st_context *st )
 {
-   struct st_tesseval_program *tep = st->tep;
+   struct st_common_program *tep = st->tep;
    struct gl_program_parameter_list *params;
 
    if (tep) {

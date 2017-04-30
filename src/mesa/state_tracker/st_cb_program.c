@@ -69,18 +69,18 @@ st_new_program(struct gl_context *ctx, GLenum target, GLuint id,
       return _mesa_init_gl_program(&prog->Base, target, id, is_arb_asm);
    }
    case GL_GEOMETRY_PROGRAM_NV: {
-      struct st_geometry_program *prog = rzalloc(NULL,
-                                                 struct st_geometry_program);
+      struct st_common_program *prog = rzalloc(NULL,
+                                                 struct st_common_program);
       return _mesa_init_gl_program(&prog->Base, target, id, is_arb_asm);
    }
    case GL_TESS_CONTROL_PROGRAM_NV: {
-      struct st_tessctrl_program *prog = rzalloc(NULL,
-                                                 struct st_tessctrl_program);
+      struct st_common_program *prog = rzalloc(NULL,
+                                                 struct st_common_program);
       return _mesa_init_gl_program(&prog->Base, target, id, is_arb_asm);
    }
    case GL_TESS_EVALUATION_PROGRAM_NV: {
-      struct st_tesseval_program *prog = rzalloc(NULL,
-                                                 struct st_tesseval_program);
+      struct st_common_program *prog = rzalloc(NULL,
+                                                 struct st_common_program);
       return _mesa_init_gl_program(&prog->Base, target, id, is_arb_asm);
    }
    case GL_COMPUTE_PROGRAM_NV: {
@@ -115,8 +115,8 @@ st_delete_program(struct gl_context *ctx, struct gl_program *prog)
       break;
    case GL_GEOMETRY_PROGRAM_NV:
       {
-         struct st_geometry_program *stgp =
-            (struct st_geometry_program *) prog;
+         struct st_common_program *stgp =
+            (struct st_common_program *) prog;
 
          st_release_basic_variants(st, stgp->Base.Target, &stgp->variants,
                                    &stgp->tgsi);
@@ -138,8 +138,8 @@ st_delete_program(struct gl_context *ctx, struct gl_program *prog)
       break;
    case GL_TESS_CONTROL_PROGRAM_NV:
       {
-         struct st_tessctrl_program *sttcp =
-            (struct st_tessctrl_program *) prog;
+         struct st_common_program *sttcp =
+            (struct st_common_program *) prog;
 
          st_release_basic_variants(st, sttcp->Base.Target, &sttcp->variants,
                                    &sttcp->tgsi);
@@ -150,8 +150,8 @@ st_delete_program(struct gl_context *ctx, struct gl_program *prog)
       break;
    case GL_TESS_EVALUATION_PROGRAM_NV:
       {
-         struct st_tesseval_program *sttep =
-            (struct st_tesseval_program *) prog;
+         struct st_common_program *sttep =
+            (struct st_common_program *) prog;
 
          st_release_basic_variants(st, sttep->Base.Target,
                                    &sttep->variants, &sttep->tgsi);
@@ -204,7 +204,7 @@ st_program_string_notify( struct gl_context *ctx,
 	 st->dirty |= stfp->affected_states;
    }
    else if (target == GL_GEOMETRY_PROGRAM_NV) {
-      struct st_geometry_program *stgp = (struct st_geometry_program *) prog;
+      struct st_common_program *stgp = (struct st_common_program *) prog;
 
       st_release_basic_variants(st, stgp->Base.Target, &stgp->variants,
                                 &stgp->tgsi);
@@ -225,8 +225,8 @@ st_program_string_notify( struct gl_context *ctx,
 	 st->dirty |= ST_NEW_VERTEX_PROGRAM(st, stvp);
    }
    else if (target == GL_TESS_CONTROL_PROGRAM_NV) {
-      struct st_tessctrl_program *sttcp =
-         (struct st_tessctrl_program *) prog;
+      struct st_common_program *sttcp =
+         (struct st_common_program *) prog;
 
       st_release_basic_variants(st, sttcp->Base.Target, &sttcp->variants,
                                 &sttcp->tgsi);
@@ -237,8 +237,8 @@ st_program_string_notify( struct gl_context *ctx,
          st->dirty |= sttcp->affected_states;
    }
    else if (target == GL_TESS_EVALUATION_PROGRAM_NV) {
-      struct st_tesseval_program *sttep =
-         (struct st_tesseval_program *) prog;
+      struct st_common_program *sttep =
+         (struct st_common_program *) prog;
 
       st_release_basic_variants(st, sttep->Base.Target, &sttep->variants,
                                 &sttep->tgsi);

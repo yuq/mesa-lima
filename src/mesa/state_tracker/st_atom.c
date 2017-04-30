@@ -65,9 +65,9 @@ static void check_program_state( struct st_context *st )
 {
    struct gl_context *ctx = st->ctx;
    struct st_vertex_program *old_vp = st->vp;
-   struct st_tessctrl_program *old_tcp = st->tcp;
-   struct st_tesseval_program *old_tep = st->tep;
-   struct st_geometry_program *old_gp = st->gp;
+   struct st_common_program *old_tcp = st->tcp;
+   struct st_common_program *old_tep = st->tep;
+   struct st_common_program *old_gp = st->gp;
    struct st_fragment_program *old_fp = st->fp;
 
    struct gl_program *new_vp = ctx->VertexProgram._Current;
@@ -91,21 +91,21 @@ static void check_program_state( struct st_context *st )
       if (old_tcp)
          dirty |= old_tcp->affected_states;
       if (new_tcp)
-         dirty |= st_tessctrl_program(new_tcp)->affected_states;
+         dirty |= st_common_program(new_tcp)->affected_states;
    }
 
    if (unlikely(new_tep != &old_tep->Base)) {
       if (old_tep)
          dirty |= old_tep->affected_states;
       if (new_tep)
-         dirty |= st_tesseval_program(new_tep)->affected_states;
+         dirty |= st_common_program(new_tep)->affected_states;
    }
 
    if (unlikely(new_gp != &old_gp->Base)) {
       if (old_gp)
          dirty |= old_gp->affected_states;
       if (new_gp)
-         dirty |= st_geometry_program(new_gp)->affected_states;
+         dirty |= st_common_program(new_gp)->affected_states;
    }
 
    if (unlikely(new_fp != &old_fp->Base)) {

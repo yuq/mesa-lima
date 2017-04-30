@@ -254,43 +254,9 @@ struct st_basic_variant
 /**
  * Derived from Mesa gl_program:
  */
-struct st_geometry_program
+struct st_common_program
 {
-   struct gl_program Base;  /**< The Mesa geometry program */
-   struct pipe_shader_state tgsi;
-   struct glsl_to_tgsi_visitor* glsl_to_tgsi;
-   uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
-
-   struct st_basic_variant *variants;
-
-   /** SHA1 hash of linked tgsi shader program, used for on-disk cache */
-   unsigned char sha1[20];
-};
-
-
-/**
- * Derived from Mesa gl_program:
- */
-struct st_tessctrl_program
-{
-   struct gl_program Base;  /**< The Mesa tess ctrl program */
-   struct pipe_shader_state tgsi;
-   struct glsl_to_tgsi_visitor* glsl_to_tgsi;
-   uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
-
-   struct st_basic_variant *variants;
-
-   /** SHA1 hash of linked tgsi shader program, used for on-disk cache */
-   unsigned char sha1[20];
-};
-
-
-/**
- * Derived from Mesa gl_program:
- */
-struct st_tesseval_program
-{
-   struct gl_program Base;  /**< The Mesa tess eval program */
+   struct gl_program Base;
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
@@ -335,22 +301,10 @@ st_vertex_program( struct gl_program *vp )
    return (struct st_vertex_program *)vp;
 }
 
-static inline struct st_geometry_program *
-st_geometry_program( struct gl_program *gp )
+static inline struct st_common_program *
+st_common_program( struct gl_program *gp )
 {
-   return (struct st_geometry_program *)gp;
-}
-
-static inline struct st_tessctrl_program *
-st_tessctrl_program( struct gl_program *tcp )
-{
-   return (struct st_tessctrl_program *)tcp;
-}
-
-static inline struct st_tesseval_program *
-st_tesseval_program( struct gl_program *tep )
-{
-   return (struct st_tesseval_program *)tep;
+   return (struct st_common_program *)gp;
 }
 
 static inline struct st_compute_program *
@@ -370,16 +324,6 @@ st_reference_vertprog(struct st_context *st,
 }
 
 static inline void
-st_reference_geomprog(struct st_context *st,
-                      struct st_geometry_program **ptr,
-                      struct st_geometry_program *prog)
-{
-   _mesa_reference_program(st->ctx,
-                           (struct gl_program **) ptr,
-                           (struct gl_program *) prog);
-}
-
-static inline void
 st_reference_fragprog(struct st_context *st,
                       struct st_fragment_program **ptr,
                       struct st_fragment_program *prog)
@@ -390,19 +334,9 @@ st_reference_fragprog(struct st_context *st,
 }
 
 static inline void
-st_reference_tesscprog(struct st_context *st,
-                       struct st_tessctrl_program **ptr,
-                       struct st_tessctrl_program *prog)
-{
-   _mesa_reference_program(st->ctx,
-                           (struct gl_program **) ptr,
-                           (struct gl_program *) prog);
-}
-
-static inline void
-st_reference_tesseprog(struct st_context *st,
-                       struct st_tesseval_program **ptr,
-                       struct st_tesseval_program *prog)
+st_reference_prog(struct st_context *st,
+                  struct st_common_program **ptr,
+                  struct st_common_program *prog)
 {
    _mesa_reference_program(st->ctx,
                            (struct gl_program **) ptr,
@@ -499,15 +433,15 @@ st_translate_fragment_program(struct st_context *st,
 
 extern bool
 st_translate_geometry_program(struct st_context *st,
-                              struct st_geometry_program *stgp);
+                              struct st_common_program *stgp);
 
 extern bool
 st_translate_tessctrl_program(struct st_context *st,
-                              struct st_tessctrl_program *sttcp);
+                              struct st_common_program *sttcp);
 
 extern bool
 st_translate_tesseval_program(struct st_context *st,
-                              struct st_tesseval_program *sttep);
+                              struct st_common_program *sttep);
 
 extern bool
 st_translate_compute_program(struct st_context *st,

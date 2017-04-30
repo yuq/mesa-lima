@@ -172,9 +172,9 @@ struct st_context
 
    struct st_vertex_program *vp;    /**< Currently bound vertex program */
    struct st_fragment_program *fp;  /**< Currently bound fragment program */
-   struct st_geometry_program *gp;  /**< Currently bound geometry program */
-   struct st_tessctrl_program *tcp; /**< Currently bound tess control program */
-   struct st_tesseval_program *tep; /**< Currently bound tess eval program */
+   struct st_common_program *gp;  /**< Currently bound geometry program */
+   struct st_common_program *tcp; /**< Currently bound tess control program */
+   struct st_common_program *tep; /**< Currently bound tess eval program */
    struct st_compute_program *cp;   /**< Currently bound compute program */
 
    struct st_vp_variant *vp_variant;
