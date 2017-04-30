@@ -300,11 +300,9 @@ st_pipe_vertex_format(GLenum type, GLuint size, GLenum format,
 }
 
 static const struct gl_vertex_array *
-get_client_array(const struct st_vertex_program *vp,
-                 const struct gl_vertex_array **arrays,
-                 int attr)
+get_client_array(const struct gl_vertex_array **arrays,
+                 unsigned mesaAttr)
 {
-   const GLuint mesaAttr = vp->index_to_input[attr];
    /* st_program uses 0xffffffff to denote a double placeholder attribute */
    if (mesaAttr == ST_DOUBLE_ATTRIB_PLACEHOLDER)
       return NULL;
@@ -331,7 +329,7 @@ is_interleaved_arrays(const struct st_vertex_program *vp,
       const struct gl_buffer_object *bufObj;
       GLsizei stride;
 
-      array = get_client_array(vp, arrays, attr);
+      array = get_client_array(arrays, vp->index_to_input[attr]);
       if (!array)
 	 continue;
 
@@ -467,7 +465,7 @@ setup_interleaved_attribs(struct st_context *st,
    if (num_inputs) {
       const struct gl_vertex_array *array;
 
-      array = get_client_array(vp, arrays, 0);
+      array = get_client_array(arrays, vp->index_to_input[0]);
       assert(array);
 
       /* Since we're doing interleaved arrays, we know there'll be at most
@@ -481,7 +479,7 @@ setup_interleaved_attribs(struct st_context *st,
 
       for (attr = 1; attr < num_inputs; attr++) {
          const GLubyte *start;
-         array = get_client_array(vp, arrays, attr);
+         array = get_client_array(arrays, vp->index_to_input[attr]);
          if (!array)
             continue;
          start = array->Ptr;
@@ -503,7 +501,7 @@ setup_interleaved_attribs(struct st_context *st,
       unsigned src_offset;
       unsigned src_format;
 
-      array = get_client_array(vp, arrays, attr);
+      array = get_client_array(arrays, vp->index_to_input[attr]);
       assert(array);
 
       src_offset = (unsigned) (array->Ptr - low_addr);
@@ -576,14 +574,14 @@ setup_non_interleaved_attribs(struct st_context *st,
    GLuint attr;
 
    for (attr = 0; attr < num_inputs;) {
-      const GLuint mesaAttr = vp->index_to_input[attr];
+      const unsigned mesaAttr = vp->index_to_input[attr];
       const struct gl_vertex_array *array;
       struct gl_buffer_object *bufobj;
       GLsizei stride;
       unsigned src_format;
       unsigned bufidx;
 
-      array = get_client_array(vp, arrays, attr);
+      array = get_client_array(arrays, mesaAttr);
       assert(array);
 
       bufidx = num_vbuffers++;
