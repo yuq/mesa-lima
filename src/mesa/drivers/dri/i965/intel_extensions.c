@@ -113,6 +113,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.EXT_texture_sRGB = true;
    ctx->Extensions.EXT_texture_sRGB_decode = true;
    ctx->Extensions.EXT_texture_swizzle = true;
+   ctx->Extensions.EXT_texture_type_2_10_10_10_REV = true;
    ctx->Extensions.EXT_vertex_array_bgra = true;
    ctx->Extensions.KHR_robustness = true;
    ctx->Extensions.AMD_seamless_cubemap_per_texture = true;

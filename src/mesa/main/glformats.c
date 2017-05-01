@@ -2234,7 +2234,8 @@ _mesa_es_error_check_format_and_type(const struct gl_context *ctx,
                     || type == GL_UNSIGNED_SHORT_5_5_5_1
                     || type == GL_FLOAT
                     || type == GL_HALF_FLOAT_OES
-                    || type == GL_UNSIGNED_INT_2_10_10_10_REV);
+                    || (ctx->Extensions.EXT_texture_type_2_10_10_10_REV &&
+                        type == GL_UNSIGNED_INT_2_10_10_10_REV));
       break;
 
    case GL_DEPTH_COMPONENT:

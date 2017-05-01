@@ -4151,6 +4151,7 @@ struct gl_extensions
    GLboolean EXT_texture_sRGB;
    GLboolean EXT_texture_sRGB_decode;
    GLboolean EXT_texture_swizzle;
+   GLboolean EXT_texture_type_2_10_10_10_REV;
    GLboolean EXT_transform_feedback;
    GLboolean EXT_timer_query;
    GLboolean EXT_vertex_array_bgra;

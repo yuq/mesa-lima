@@ -284,7 +284,7 @@ EXT(EXT_texture_sRGB_decode                 , EXT_texture_sRGB_decode           
 EXT(EXT_texture_shared_exponent             , EXT_texture_shared_exponent            , GLL, GLC,  x ,  x , 2004)
 EXT(EXT_texture_snorm                       , EXT_texture_snorm                      , GLL, GLC,  x ,  x , 2009)
 EXT(EXT_texture_swizzle                     , EXT_texture_swizzle                    , GLL, GLC,  x ,  x , 2008)
-EXT(EXT_texture_type_2_10_10_10_REV         , dummy_true                             ,  x ,  x ,  x , ES2, 2008)
+EXT(EXT_texture_type_2_10_10_10_REV         , EXT_texture_type_2_10_10_10_REV        ,  x ,  x ,  x , ES2, 2008)
 EXT(EXT_timer_query                         , EXT_timer_query                        , GLL, GLC,  x ,  x , 2006)
 EXT(EXT_transform_feedback                  , EXT_transform_feedback                 , GLL, GLC,  x ,  x , 2011)
 EXT(EXT_unpack_subimage                     , dummy_true                             ,  x ,  x ,  x , ES2, 2011)
