@@ -6894,6 +6894,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                           "to struct or interface block members");
       }
 
+      validate_image_format_qualifier_for_type(state, &loc, qual, decl_type);
+
       /* From Section 4.4.2.3 (Geometry Outputs) of the GLSL 4.50 spec:
        *
        *   "A block member may be declared with a stream identifier, but
