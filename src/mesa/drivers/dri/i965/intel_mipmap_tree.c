@@ -1318,7 +1318,8 @@ intel_miptree_copy_slice_sw(struct brw_context *brw,
 {
    void *src, *dst;
    ptrdiff_t src_stride, dst_stride;
-   int cpp = dst_mt->cpp;
+   const unsigned cpp = dst_mt->surf.size > 0 ?
+      (isl_format_get_layout(dst_mt->surf.format)->bpb / 8) : dst_mt->cpp;
 
    intel_miptree_map(brw, src_mt,
                      src_level, src_layer,
@@ -1379,13 +1380,28 @@ intel_miptree_copy_slice(struct brw_context *brw,
                          unsigned dst_level, unsigned dst_layer)
 
 {
-   uint32_t width = minify(src_mt->physical_width0,
-                           src_level - src_mt->first_level);
-   uint32_t height = minify(src_mt->physical_height0,
-                            src_level - src_mt->first_level);
    mesa_format format = src_mt->format;
+   uint32_t width, height;
 
-   assert(src_layer < src_mt->level[src_level].depth);
+   if (src_mt->surf.size > 0) {
+      width = minify(src_mt->surf.phys_level0_sa.width,
+                     src_level - src_mt->first_level);
+      height = minify(src_mt->surf.phys_level0_sa.height,
+                      src_level - src_mt->first_level);
+
+      if (src_mt->surf.dim == ISL_SURF_DIM_3D)
+         assert(src_layer < minify(src_mt->surf.phys_level0_sa.depth,
+                                   src_level - src_mt->first_level));
+      else
+         assert(src_layer < src_mt->surf.phys_level0_sa.array_len);
+   } else {
+      width = minify(src_mt->physical_width0,
+                     src_level - src_mt->first_level);
+      height = minify(src_mt->physical_height0,
+                      src_level - src_mt->first_level);
+      assert(src_layer < src_mt->level[src_level].depth);
+   }
+
    assert(src_mt->format == dst_mt->format);
 
    if (dst_mt->compressed) {
