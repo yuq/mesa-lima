@@ -118,7 +118,7 @@ meta_copy_buffer_to_image(struct radv_cmd_buffer *cmd_buffer,
 	/* The Vulkan 1.0 spec says "dstImage must have a sample count equal to
 	 * VK_SAMPLE_COUNT_1_BIT."
 	 */
-	assert(image->samples == 1);
+	assert(image->info.samples == 1);
 
 	if (cs)
 		radv_meta_begin_bufimage(cmd_buffer, &saved_state.compute);
@@ -337,7 +337,7 @@ meta_copy_image(struct radv_cmd_buffer *cmd_buffer,
 	 *    vkCmdCopyImage can be used to copy image data between multisample
 	 *    images, but both images must have the same number of samples.
 	 */
-	assert(src_image->samples == dest_image->samples);
+	assert(src_image->info.samples == dest_image->info.samples);
 	if (cs)
 		radv_meta_begin_itoi(cmd_buffer, &saved_state.compute);
 	else
@@ -447,8 +447,8 @@ void radv_blit_to_prime_linear(struct radv_cmd_buffer *cmd_buffer,
 	image_copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	image_copy.dstSubresource.layerCount = 1;
 
-	image_copy.extent.width = image->extent.width;
-	image_copy.extent.height = image->extent.height;
+	image_copy.extent.width = image->info.width;
+	image_copy.extent.height = image->info.height;
 	image_copy.extent.depth = 1;
 
 	meta_copy_image(cmd_buffer, image, linear_image,

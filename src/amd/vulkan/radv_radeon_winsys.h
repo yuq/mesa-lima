@@ -155,6 +155,15 @@ struct radeon_info {
 #define RADEON_SURF_SET(v, field)   (((v) & RADEON_SURF_ ## field ## _MASK) << RADEON_SURF_ ## field ## _SHIFT)
 #define RADEON_SURF_CLR(v, field)   ((v) & ~(RADEON_SURF_ ## field ## _MASK << RADEON_SURF_ ## field ## _SHIFT))
 
+struct radeon_surf_info {
+	uint32_t width;
+	uint32_t height;
+	uint32_t depth;
+	uint32_t samples;
+	uint32_t array_size;
+	uint32_t levels;
+};
+
 struct radeon_surf_level {
 	uint64_t                    offset;
 	uint64_t                    slice_size;

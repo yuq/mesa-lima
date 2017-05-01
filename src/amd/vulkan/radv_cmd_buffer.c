@@ -3030,8 +3030,8 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 	if (dst_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
 	    (pending_clears & vk_format_aspects(image->vk_format)) == vk_format_aspects(image->vk_format) &&
 	    cmd_buffer->state.render_area.offset.x == 0 && cmd_buffer->state.render_area.offset.y == 0 &&
-	    cmd_buffer->state.render_area.extent.width == image->extent.width &&
-	    cmd_buffer->state.render_area.extent.height == image->extent.height) {
+	    cmd_buffer->state.render_area.extent.width == image->info.width &&
+	    cmd_buffer->state.render_area.extent.height == image->info.height) {
 		/* The clear will initialize htile. */
 		return;
 	} else if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED &&

@@ -371,7 +371,7 @@ emit_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	const uint32_t subpass_att = clear_att->colorAttachment;
 	const uint32_t pass_att = subpass->color_attachments[subpass_att].attachment;
 	const struct radv_image_view *iview = fb->attachments[pass_att].attachment;
-	const uint32_t samples = iview->image->samples;
+	const uint32_t samples = iview->image->info.samples;
 	const uint32_t samples_log2 = ffs(samples) - 1;
 	unsigned fs_key = radv_format_meta_fs_key(iview->vk_format);
 	struct radv_pipeline *pipeline;
@@ -661,7 +661,7 @@ emit_depthstencil_clear(struct radv_cmd_buffer *cmd_buffer,
 	VkClearDepthStencilValue clear_value = clear_att->clearValue.depthStencil;
 	VkImageAspectFlags aspects = clear_att->aspectMask;
 	const struct radv_image_view *iview = fb->attachments[pass_att].attachment;
-	const uint32_t samples = iview->image->samples;
+	const uint32_t samples = iview->image->info.samples;
 	const uint32_t samples_log2 = ffs(samples) - 1;
 	VkCommandBuffer cmd_buffer_h = radv_cmd_buffer_to_handle(cmd_buffer);
 	uint32_t offset;
@@ -849,26 +849,25 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	/* all layers are bound */
 	if (iview->base_layer > 0)
 		goto fail;
-	if (iview->image->array_size != iview->layer_count)
+	if (iview->image->info.array_size != iview->layer_count)
 		goto fail;
 
-	if (iview->image->levels > 1)
+	if (iview->image->info.levels > 1)
 		goto fail;
 
 	if (iview->image->surface.level[0].mode < RADEON_SURF_MODE_1D)
 		goto fail;
-
 	if (!radv_image_extent_compare(iview->image, &iview->extent))
 		goto fail;
 
 	if (clear_rect->rect.offset.x || clear_rect->rect.offset.y ||
-	    clear_rect->rect.extent.width != iview->image->extent.width ||
-	    clear_rect->rect.extent.height != iview->image->extent.height)
+	    clear_rect->rect.extent.width != iview->image->info.width ||
+	    clear_rect->rect.extent.height != iview->image->info.height)
 		goto fail;
 
 	if (clear_rect->baseArrayLayer != 0)
 		goto fail;
-	if (clear_rect->layerCount != iview->image->array_size)
+	if (clear_rect->layerCount != iview->image->info.array_size)
 		goto fail;
 
 	/* DCC */
@@ -1178,7 +1177,7 @@ radv_cmd_clear_image(struct radv_cmd_buffer *cmd_buffer,
 		const VkImageSubresourceRange *range = &ranges[r];
 		for (uint32_t l = 0; l < radv_get_levelCount(image, range); ++l) {
 			const uint32_t layer_count = image->type == VK_IMAGE_TYPE_3D ?
-				radv_minify(image->extent.depth, range->baseMipLevel + l) :
+				radv_minify(image->info.depth, range->baseMipLevel + l) :
 				radv_get_layerCount(image, range);
 			for (uint32_t s = 0; s < layer_count; ++s) {
 

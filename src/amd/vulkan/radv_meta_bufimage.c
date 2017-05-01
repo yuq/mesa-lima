@@ -1213,5 +1213,5 @@ radv_meta_clear_image_cs(struct radv_cmd_buffer *cmd_buffer,
 			      VK_SHADER_STAGE_COMPUTE_BIT, 0, 16,
 			      push_constants);
 
-	radv_unaligned_dispatch(cmd_buffer, dst->image->extent.width, dst->image->extent.height, 1);
+	radv_unaligned_dispatch(cmd_buffer, dst->image->info.width, dst->image->info.height, 1);
 }

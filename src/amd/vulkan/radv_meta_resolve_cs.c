@@ -325,7 +325,7 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 {
 	struct radv_device *device = cmd_buffer->device;
 	struct radv_meta_saved_compute_state saved_state;
-	const uint32_t samples = src_image->samples;
+	const uint32_t samples = src_image->info.samples;
 	const uint32_t samples_log2 = ffs(samples) - 1;
 
 	for (uint32_t r = 0; r < region_count; ++r) {

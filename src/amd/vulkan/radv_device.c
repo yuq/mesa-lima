@@ -2640,8 +2640,8 @@ radv_initialise_color_surface(struct radv_device *device,
 	cb->cb_color_attrib = S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == VK_SWIZZLE_1) |
 		S_028C74_TILE_MODE_INDEX(tile_mode_index);
 
-	if (iview->image->samples > 1) {
-		unsigned log_samples = util_logbase2(iview->image->samples);
+	if (iview->image->info.samples > 1) {
+		unsigned log_samples = util_logbase2(iview->image->info.samples);
 
 		cb->cb_color_attrib |= S_028C74_NUM_SAMPLES(log_samples) |
 			S_028C74_NUM_FRAGMENTS(log_samples);
@@ -2705,7 +2705,7 @@ radv_initialise_color_surface(struct radv_device *device,
 				    format != V_028C70_COLOR_24_8) |
 		S_028C70_NUMBER_TYPE(ntype) |
 		S_028C70_ENDIAN(endian);
-	if (iview->image->samples > 1)
+	if (iview->image->info.samples > 1)
 		if (iview->image->fmask.size)
 			cb->cb_color_info |= S_028C70_COMPRESSION(1);
 
@@ -2718,7 +2718,7 @@ radv_initialise_color_surface(struct radv_device *device,
 
 	if (device->physical_device->rad_info.chip_class >= VI) {
 		unsigned max_uncompressed_block_size = 2;
-		if (iview->image->samples > 1) {
+		if (iview->image->info.samples > 1) {
 			if (iview->image->surface.bpe == 1)
 				max_uncompressed_block_size = 0;
 			else if (iview->image->surface.bpe == 2)
@@ -2786,8 +2786,8 @@ radv_initialise_ds_surface(struct radv_device *device,
 	ds->db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(1);
 	ds->db_z_info = S_028040_FORMAT(format) | S_028040_ZRANGE_PRECISION(1);
 
-	if (iview->image->samples > 1)
-		ds->db_z_info |= S_028040_NUM_SAMPLES(util_logbase2(iview->image->samples));
+	if (iview->image->info.samples > 1)
+		ds->db_z_info |= S_028040_NUM_SAMPLES(util_logbase2(iview->image->info.samples));
 
 	if (iview->image->surface.flags & RADEON_SURF_SBUFFER)
 		ds->db_stencil_info = S_028044_FORMAT(V_028044_STENCIL_8);
@@ -2838,7 +2838,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 			 * Check piglit's arb_texture_multisample-stencil-clear
 			 * test if you want to try changing this.
 			 */
-			if (iview->image->samples <= 1)
+			if (iview->image->info.samples <= 1)
 				ds->db_stencil_info |= S_028044_ALLOW_EXPCLEAR(1);
 		} else
 			/* Use all of the htile_buffer for depth if there's no stencil. */

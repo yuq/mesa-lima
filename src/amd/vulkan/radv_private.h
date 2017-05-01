@@ -1146,10 +1146,7 @@ struct radv_image {
 	 */
 	VkFormat vk_format;
 	VkImageAspectFlags aspects;
-	VkExtent3D extent;
-	uint32_t levels;
-	uint32_t array_size;
-	uint32_t samples; /**< VkImageCreateInfo::samples */
+	struct radeon_surf_info info;
 	VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
 	VkImageTiling tiling; /** VkImageCreateInfo::tiling */
 	VkImageCreateFlags flags; /** VkImageCreateInfo::flags */
@@ -1190,7 +1187,7 @@ radv_get_layerCount(const struct radv_image *image,
 		    const VkImageSubresourceRange *range)
 {
 	return range->layerCount == VK_REMAINING_ARRAY_LAYERS ?
-		image->array_size - range->baseArrayLayer : range->layerCount;
+		image->info.array_size - range->baseArrayLayer : range->layerCount;
 }
 
 static inline uint32_t
@@ -1198,7 +1195,7 @@ radv_get_levelCount(const struct radv_image *image,
 		    const VkImageSubresourceRange *range)
 {
 	return range->levelCount == VK_REMAINING_MIP_LEVELS ?
-		image->levels - range->baseMipLevel : range->levelCount;
+		image->info.levels - range->baseMipLevel : range->levelCount;
 }
 
 struct radeon_bo_metadata;
@@ -1288,7 +1285,9 @@ static inline bool
 radv_image_extent_compare(const struct radv_image *image,
 			  const VkExtent3D *extent)
 {
-	if (memcmp(extent, &image->extent, sizeof(*extent)))
+	if (extent->width != image->info.width ||
+	    extent->height != image->info.height ||
+	    extent->depth != image->info.depth)
 		return false;
 	return true;
 }

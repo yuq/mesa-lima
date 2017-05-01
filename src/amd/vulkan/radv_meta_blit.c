@@ -240,7 +240,7 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 		float tex_coord[3];
 	} vb_data[3];
 
-	assert(src_image->samples == dest_image->samples);
+	assert(src_image->info.samples == dest_image->info.samples);
 	unsigned vb_size = 3 * sizeof(*vb_data);
 	vb_data[0] = (struct blit_vb_data) {
 		.tex_coord = {
@@ -495,8 +495,8 @@ void radv_CmdBlitImage(
 	 *    vkCmdBlitImage must not be used for multisampled source or
 	 *    destination images. Use vkCmdResolveImage for this purpose.
 	 */
-	assert(src_image->samples == 1);
-	assert(dest_image->samples == 1);
+	assert(src_image->info.samples == 1);
+	assert(dest_image->info.samples == 1);
 
 	radv_meta_save_graphics_reset_vport_scissor(&saved_state, cmd_buffer);
 

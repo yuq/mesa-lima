@@ -331,9 +331,9 @@ void radv_CmdResolveImage(
 		    regions[0].dstOffset.z)
 			use_compute_resolve = true;
 
-		if (regions[0].extent.width != src_image->extent.width ||
-		    regions[0].extent.height != src_image->extent.height ||
-		    regions[0].extent.depth != src_image->extent.depth)
+		if (regions[0].extent.width != src_image->info.width ||
+		    regions[0].extent.height != src_image->info.height ||
+		    regions[0].extent.depth != src_image->info.depth)
 			use_compute_resolve = true;
 	} else
 		use_compute_resolve = true;
@@ -351,10 +351,10 @@ void radv_CmdResolveImage(
 
 	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer);
 
-	assert(src_image->samples > 1);
-	assert(dest_image->samples == 1);
+	assert(src_image->info.samples > 1);
+	assert(dest_image->info.samples == 1);
 
-	if (src_image->samples >= 16) {
+	if (src_image->info.samples >= 16) {
 		/* See commit aa3f9aaf31e9056a255f9e0472ebdfdaa60abe54 for the
 		 * glBlitFramebuffer workaround for samples >= 16.
 		 */
@@ -362,7 +362,7 @@ void radv_CmdResolveImage(
 			      "samples >= 16");
 	}
 
-	if (src_image->array_size > 1)
+	if (src_image->info.array_size > 1)
 		radv_finishme("vkCmdResolveImage: multisample array images");
 
 	if (dest_image->surface.dcc_size) {
@@ -457,9 +457,9 @@ void radv_CmdResolveImage(
 							       radv_image_view_to_handle(&src_iview),
 							       radv_image_view_to_handle(&dest_iview),
 						       },
-						       .width = radv_minify(dest_image->extent.width,
+						       .width = radv_minify(dest_image->info.width,
 									    region->dstSubresource.mipLevel),
-						       .height = radv_minify(dest_image->extent.height,
+						       .height = radv_minify(dest_image->info.height,
 									      region->dstSubresource.mipLevel),
 						       .layers = 1
 					       },
