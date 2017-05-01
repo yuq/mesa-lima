@@ -2344,8 +2344,8 @@ handle_semantic:
 	    shader->selector->info.writes_layer) {
 		pos_args[1].enabled_channels = shader->selector->info.writes_psize |
 					       (shader->selector->info.writes_edgeflag << 1) |
-					       (shader->selector->info.writes_layer << 2) |
-					       (shader->selector->info.writes_viewport_index << 3);
+					       (shader->selector->info.writes_layer << 2);
+
 		pos_args[1].valid_mask = 0; /* EXEC mask */
 		pos_args[1].done = 0; /* last export? */
 		pos_args[1].target = V_008DFC_SQ_EXP_POS + 1;
@@ -2374,11 +2374,34 @@ handle_semantic:
 							  ctx->f32, "");
 		}
 
-		if (shader->selector->info.writes_layer)
-			pos_args[1].out[2] = layer_value;
+		if (ctx->screen->b.chip_class >= GFX9) {
+			/* GFX9 has the layer in out.z[10:0] and the viewport
+			 * index in out.z[19:16].
+			 */
+			if (shader->selector->info.writes_layer)
+				pos_args[1].out[2] = layer_value;
 
-		if (shader->selector->info.writes_viewport_index)
-			pos_args[1].out[3] = viewport_index_value;
+			if (shader->selector->info.writes_viewport_index) {
+				LLVMValueRef v = viewport_index_value;
+
+				v = bitcast(bld_base, TGSI_TYPE_UNSIGNED, v);
+				v = LLVMBuildShl(ctx->gallivm.builder, v,
+						 LLVMConstInt(ctx->i32, 16, 0), "");
+				v = LLVMBuildOr(ctx->gallivm.builder, v,
+						bitcast(bld_base, TGSI_TYPE_UNSIGNED,
+						        pos_args[1].out[2]), "");
+				pos_args[1].out[2] = bitcast(bld_base, TGSI_TYPE_FLOAT, v);
+				pos_args[1].enabled_channels |= 1 << 2;
+			}
+		} else {
+			if (shader->selector->info.writes_layer)
+				pos_args[1].out[2] = layer_value;
+
+			if (shader->selector->info.writes_viewport_index) {
+				pos_args[1].out[3] = viewport_index_value;
+				pos_args[1].enabled_channels |= 1 << 3;
+			}
+		}
 	}
 
 	for (i = 0; i < 4; i++)
