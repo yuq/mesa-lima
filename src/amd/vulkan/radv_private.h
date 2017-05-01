@@ -1284,6 +1284,15 @@ radv_sanitize_image_offset(const VkImageType imageType,
 	}
 }
 
+static inline bool
+radv_image_extent_compare(const struct radv_image *image,
+			  const VkExtent3D *extent)
+{
+	if (memcmp(extent, &image->extent, sizeof(*extent)))
+		return false;
+	return true;
+}
+
 struct radv_sampler {
 	uint32_t state[4];
 };

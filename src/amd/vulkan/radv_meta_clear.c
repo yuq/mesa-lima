@@ -614,7 +614,7 @@ static bool depth_view_can_fast_clear(const struct radv_image_view *iview,
 	    iview->base_mip == 0 &&
 	    iview->base_layer == 0 &&
 	    radv_layout_can_expclear(iview->image, layout) &&
-	    memcmp(&iview->extent, &iview->image->extent, sizeof(iview->extent)) == 0)
+	    !radv_image_extent_compare(iview->image, &iview->extent))
 		return true;
 	return false;
 }
@@ -858,7 +858,7 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	if (iview->image->surface.level[0].mode < RADEON_SURF_MODE_1D)
 		goto fail;
 
-	if (memcmp(&iview->extent, &iview->image->extent, sizeof(iview->extent)))
+	if (!radv_image_extent_compare(iview->image, &iview->extent))
 		goto fail;
 
 	if (clear_rect->rect.offset.x || clear_rect->rect.offset.y ||
