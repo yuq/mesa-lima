@@ -3293,10 +3293,10 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
 }
 
 static bool
-validate_image_qualifier_for_type(struct _mesa_glsl_parse_state *state,
-                                  YYLTYPE *loc,
-                                  const struct ast_type_qualifier *qual,
-                                  const glsl_type *type)
+validate_memory_qualifier_for_type(struct _mesa_glsl_parse_state *state,
+                                   YYLTYPE *loc,
+                                   const struct ast_type_qualifier *qual,
+                                   const glsl_type *type)
 {
    if (!type->is_image()) {
       if (qual->flags.q.read_only ||
@@ -3306,12 +3306,26 @@ validate_image_qualifier_for_type(struct _mesa_glsl_parse_state *state,
           qual->flags.q.restrict_flag) {
          _mesa_glsl_error(loc, state, "memory qualifiers may only be applied "
                           "to images");
+         return false;
       }
+   }
+   return true;
+}
 
-      if (qual->flags.q.explicit_image_format) {
-         _mesa_glsl_error(loc, state, "format layout qualifiers may only be "
-                          "applied to images");
-      }
+static bool
+validate_image_format_qualifier_for_type(struct _mesa_glsl_parse_state *state,
+                                         YYLTYPE *loc,
+                                         const struct ast_type_qualifier *qual,
+                                         const glsl_type *type)
+{
+   /* From section 4.4.6.2 (Format Layout Qualifiers) of the GLSL 4.50 spec:
+    *
+    * "Format layout qualifiers can be used on image variable declarations
+    *  (those declared with a basic type  having “image ” in its keyword)."
+    */
+   if (!type->is_image() && qual->flags.q.explicit_image_format) {
+      _mesa_glsl_error(loc, state, "format layout qualifiers may only be "
+                       "applied to images");
       return false;
    }
    return true;
@@ -3325,7 +3339,11 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
 {
    const glsl_type *base_type = var->type->without_array();
 
-   if (!validate_image_qualifier_for_type(state, loc, qual, base_type))
+   if (!validate_image_format_qualifier_for_type(state, loc, qual, base_type) ||
+       !validate_memory_qualifier_for_type(state, loc, qual, base_type))
+      return;
+
+   if (!base_type->is_image())
       return;
 
    if (var->data.mode != ir_var_uniform &&
