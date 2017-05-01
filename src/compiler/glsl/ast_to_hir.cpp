@@ -5888,15 +5888,26 @@ ast_function::hir(exec_list *instructions,
     * "User code can overload the built-in functions but cannot redefine
     * them."
     */
-   if (state->es_shader && state->language_version >= 300) {
+   if (state->es_shader) {
       /* Local shader has no exact candidates; check the built-ins. */
       _mesa_glsl_initialize_builtin_functions();
-      if (_mesa_glsl_has_builtin_function(name)) {
+      if (state->language_version >= 300 &&
+          _mesa_glsl_has_builtin_function(name)) {
          YYLTYPE loc = this->get_location();
          _mesa_glsl_error(& loc, state,
                           "A shader cannot redefine or overload built-in "
                           "function `%s' in GLSL ES 3.00", name);
          return NULL;
+      }
+
+      if (state->language_version == 100) {
+         ir_function_signature *sig =
+            _mesa_glsl_find_builtin_function(state, name, &hir_parameters);
+         if (sig && sig->is_builtin()) {
+            _mesa_glsl_error(& loc, state,
+                             "A shader cannot redefine built-in "
+                             "function `%s' in GLSL ES 1.00", name);
+         }
       }
    }
 
