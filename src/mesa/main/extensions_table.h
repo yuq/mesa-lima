@@ -376,6 +376,7 @@ EXT(OES_point_sprite                        , ARB_point_sprite                  
 EXT(OES_primitive_bounding_box              , OES_primitive_bounding_box             ,  x ,  x ,  x ,  31, 2014)
 EXT(OES_query_matrix                        , dummy_true                             ,  x ,  x , ES1,  x , 2003)
 EXT(OES_read_format                         , dummy_true                             , GLL,  x , ES1,  x , 2003)
+EXT(OES_required_internalformat             , dummy_true                             ,  x ,  x , ES1, ES2, 2012)
 EXT(OES_rgb8_rgba8                          , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_sample_shading                      , OES_sample_variables                   ,  x ,  x ,  x ,  30, 2014)
 EXT(OES_sample_variables                    , OES_sample_variables                   ,  x ,  x ,  x ,  30, 2014)
