@@ -36,9 +36,11 @@
 
 // Function Prototype
 void BinPostSetupLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], simdscalar vRecipW[2], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
+void BinPostSetupPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
 
 #if USE_SIMD16_FRONTEND
 void BinPostSetupLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], simd16scalar vRecipW[2], uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
+void BinPostSetupPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
 #endif
 
 //////////////////////////////////////////////////////////////////////////
@@ -744,6 +746,14 @@ void BinTriangles(
         BinPostSetupLines(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
 
         AR_END(FEBinTriangles, 1);
+        return;
+    } else if (rastState.fillMode == SWR_FILLMODE_POINT)
+    {
+        // bin 3 points
+
+        BinPostSetupPoints(pDC, pa, workerId, &tri[0], triMask, primID, viewportIdx);
+        BinPostSetupPoints(pDC, pa, workerId, &tri[1], triMask, primID, viewportIdx);
+        BinPostSetupPoints(pDC, pa, workerId, &tri[2], triMask, primID, viewportIdx);
         return;
     }
 
@@ -1494,14 +1504,7 @@ PFN_PROCESS_PRIMS_SIMD16 GetBinTrianglesFunc_simd16(bool IsConservative)
 
 #endif
 
-//////////////////////////////////////////////////////////////////////////
-/// @brief Bin SIMD points to the backend.  Only supports point size of 1
-/// @param pDC - pointer to draw context.
-/// @param pa - The primitive assembly object.
-/// @param workerId - thread's worker id. Even thread has a unique id.
-/// @param tri - Contains point position data for SIMDs worth of points.
-/// @param primID - Primitive ID for each point.
-void BinPoints(
+void BinPostSetupPoints(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
     uint32_t workerId,
@@ -1517,7 +1520,6 @@ void BinPoints(
     simdvector& primVerts = prim[0];
 
     const API_STATE& state = GetApiState(pDC);
-    const SWR_FRONTEND_STATE& feState = state.frontendState;
     const SWR_GS_STATE& gsState = state.gsState;
     const SWR_RASTSTATE& rastState = state.rastState;
     const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
@@ -1525,25 +1527,6 @@ void BinPoints(
     // Select attribute processor
     PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(1,
         state.backendState.swizzleEnable, state.backendState.constantInterpolationMask);
-
-    if (!feState.vpTransformDisable)
-    {
-        // perspective divide
-        simdscalar vRecipW0 = _simd_div_ps(_simd_set1_ps(1.0f), primVerts.w);
-        primVerts.x = _simd_mul_ps(primVerts.x, vRecipW0);
-        primVerts.y = _simd_mul_ps(primVerts.y, vRecipW0);
-        primVerts.z = _simd_mul_ps(primVerts.z, vRecipW0);
-
-        // viewport transform to screen coords
-        if (state.gsState.emitsViewportArrayIndex)
-        {
-            viewportTransform<1>(&primVerts, state.vpMatrices, viewportIdx);
-        }
-        else
-        {
-            viewportTransform<1>(&primVerts, state.vpMatrices);
-        }
-    }
 
     // adjust for pixel center location
     simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
@@ -1837,8 +1820,64 @@ void BinPoints(
     AR_END(FEBinPoints, 1);
 }
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Bin SIMD points to the backend.  Only supports point size of 1
+/// @param pDC - pointer to draw context.
+/// @param pa - The primitive assembly object.
+/// @param workerId - thread's worker id. Even thread has a unique id.
+/// @param tri - Contains point position data for SIMDs worth of points.
+/// @param primID - Primitive ID for each point.
+void BinPoints(
+    DRAW_CONTEXT *pDC,
+    PA_STATE& pa,
+    uint32_t workerId,
+    simdvector prim[3],
+    uint32_t primMask,
+    simdscalari primID,
+    simdscalari viewportIdx)
+{
+    simdvector& primVerts = prim[0];
+
+    const API_STATE& state = GetApiState(pDC);
+    const SWR_FRONTEND_STATE& feState = state.frontendState;
+    const SWR_RASTSTATE& rastState = state.rastState;
+
+    if (!feState.vpTransformDisable)
+    {
+        // perspective divide
+        simdscalar vRecipW0 = _simd_div_ps(_simd_set1_ps(1.0f), primVerts.w);
+        primVerts.x = _simd_mul_ps(primVerts.x, vRecipW0);
+        primVerts.y = _simd_mul_ps(primVerts.y, vRecipW0);
+        primVerts.z = _simd_mul_ps(primVerts.z, vRecipW0);
+
+        // viewport transform to screen coords
+        if (state.gsState.emitsViewportArrayIndex)
+        {
+            viewportTransform<1>(&primVerts, state.vpMatrices, viewportIdx);
+        }
+        else
+        {
+            viewportTransform<1>(&primVerts, state.vpMatrices);
+        }
+    }
+
+    // adjust for pixel center location
+    simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
+    primVerts.x = _simd_add_ps(primVerts.x, offset);
+    primVerts.y = _simd_add_ps(primVerts.y, offset);
+
+    BinPostSetupPoints(
+        pDC,
+        pa,
+        workerId,
+        prim,
+        primMask,
+        primID,
+        viewportIdx);
+}
+
 #if USE_SIMD16_FRONTEND
-void SIMDAPI BinPoints_simd16(
+void BinPostSetupPoints_simd16(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
     uint32_t workerId,
@@ -1854,7 +1893,6 @@ void SIMDAPI BinPoints_simd16(
     simd16vector& primVerts = prim[0];
 
     const API_STATE& state = GetApiState(pDC);
-    const SWR_FRONTEND_STATE& feState = state.frontendState;
     const SWR_GS_STATE& gsState = state.gsState;
     const SWR_RASTSTATE& rastState = state.rastState;
     const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
@@ -1862,31 +1900,6 @@ void SIMDAPI BinPoints_simd16(
     // Select attribute processor
     PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(1,
         state.backendState.swizzleEnable, state.backendState.constantInterpolationMask);
-
-    if (!feState.vpTransformDisable)
-    {
-        // perspective divide
-        simd16scalar vRecipW0 = _simd16_div_ps(_simd16_set1_ps(1.0f), primVerts.w);
-
-        primVerts.x = _simd16_mul_ps(primVerts.x, vRecipW0);
-        primVerts.y = _simd16_mul_ps(primVerts.y, vRecipW0);
-        primVerts.z = _simd16_mul_ps(primVerts.z, vRecipW0);
-
-        // viewport transform to screen coords
-        if (state.gsState.emitsViewportArrayIndex)
-        {
-            viewportTransform<1>(&primVerts, state.vpMatrices, viewportIdx);
-        }
-        else
-        {
-            viewportTransform<1>(&primVerts, state.vpMatrices);
-        }
-    }
-
-    const simd16scalar offset = g_pixelOffsets_simd16[rastState.pixelLocation];
-
-    primVerts.x = _simd16_add_ps(primVerts.x, offset);
-    primVerts.y = _simd16_add_ps(primVerts.y, offset);
 
     // convert to fixed point
     simd16scalari vXi, vYi;
@@ -2182,6 +2195,57 @@ void SIMDAPI BinPoints_simd16(
     }
 
     AR_END(FEBinPoints, 1);
+}
+
+
+void SIMDAPI BinPoints_simd16(
+    DRAW_CONTEXT *pDC,
+    PA_STATE& pa,
+    uint32_t workerId,
+    simd16vector prim[3],
+    uint32_t primMask,
+    simd16scalari primID,
+    simd16scalari viewportIdx)
+{
+    simd16vector& primVerts = prim[0];
+
+    const API_STATE& state = GetApiState(pDC);
+    const SWR_FRONTEND_STATE& feState = state.frontendState;
+    const SWR_RASTSTATE& rastState = state.rastState;
+
+    if (!feState.vpTransformDisable)
+    {
+        // perspective divide
+        simd16scalar vRecipW0 = _simd16_div_ps(_simd16_set1_ps(1.0f), primVerts.w);
+
+        primVerts.x = _simd16_mul_ps(primVerts.x, vRecipW0);
+        primVerts.y = _simd16_mul_ps(primVerts.y, vRecipW0);
+        primVerts.z = _simd16_mul_ps(primVerts.z, vRecipW0);
+
+        // viewport transform to screen coords
+        if (state.gsState.emitsViewportArrayIndex)
+        {
+            viewportTransform<1>(&primVerts, state.vpMatrices, viewportIdx);
+        }
+        else
+        {
+            viewportTransform<1>(&primVerts, state.vpMatrices);
+        }
+    }
+
+    const simd16scalar offset = g_pixelOffsets_simd16[rastState.pixelLocation];
+
+    primVerts.x = _simd16_add_ps(primVerts.x, offset);
+    primVerts.y = _simd16_add_ps(primVerts.y, offset);
+
+    BinPostSetupPoints_simd16(
+        pDC,
+        pa,
+        workerId,
+        prim,
+        primMask,
+        primID,
+        viewportIdx);
 }
 
 #endif
