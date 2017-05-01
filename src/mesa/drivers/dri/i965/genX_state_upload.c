@@ -1088,9 +1088,11 @@ genX(calculate_attr_overrides)(const struct brw_context *brw,
     */
    *urb_entry_read_length = DIV_ROUND_UP(max_source_attr + 1, 2);
 }
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static void
 genX(upload_depth_stencil_state)(struct brw_context *brw)
 {
@@ -1181,9 +1183,11 @@ static const struct brw_tracked_state genX(depth_stencil_state) = {
    },
    .emit = genX(upload_depth_stencil_state),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static void
 genX(upload_clip_state)(struct brw_context *brw)
 {
@@ -1311,9 +1315,11 @@ static const struct brw_tracked_state genX(clip_state) = {
    },
    .emit = genX(upload_clip_state),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static void
 genX(upload_sf)(struct brw_context *brw)
 {
@@ -1502,9 +1508,11 @@ static const struct brw_tracked_state genX(sf_state) = {
    },
    .emit = genX(upload_sf),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static void
 genX(upload_wm)(struct brw_context *brw)
 {
@@ -1683,6 +1691,7 @@ static const struct brw_tracked_state genX(wm_state) = {
    },
    .emit = genX(upload_wm),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -1709,7 +1718,7 @@ static const struct brw_tracked_state genX(wm_state) = {
    pkt.StatisticsEnable = true;                                           \
    pkt.Enable           = true;
 
-
+#if GEN_GEN >= 6
 static void
 genX(upload_vs_state)(struct brw_context *brw)
 {
@@ -1801,9 +1810,11 @@ static const struct brw_tracked_state genX(vs_state) = {
    },
    .emit = genX(upload_vs_state),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static void
 brw_calculate_guardband_size(const struct gen_device_info *devinfo,
                              uint32_t fb_width, uint32_t fb_height,
@@ -2002,7 +2013,11 @@ static const struct brw_tracked_state genX(sf_clip_viewport) = {
    },
    .emit = genX(upload_sf_clip_viewport),
 };
+#endif
 
+/* ---------------------------------------------------------------------- */
+
+#if GEN_GEN >= 6
 static void
 genX(upload_gs_state)(struct brw_context *brw)
 {
@@ -2174,12 +2189,14 @@ static const struct brw_tracked_state genX(gs_state) = {
    },
    .emit = genX(upload_gs_state),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
 #define blend_factor(x) brw_translate_blend_factor(x)
 #define blend_eqn(x) brw_translate_blend_equation(x)
 
+#if GEN_GEN >= 6
 static void
 genX(upload_blend_state)(struct brw_context *brw)
 {
@@ -2389,9 +2406,11 @@ static const struct brw_tracked_state genX(blend_state) = {
    },
    .emit = genX(upload_blend_state),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static void
 genX(upload_scissor_state)(struct brw_context *brw)
 {
@@ -2473,6 +2492,9 @@ static const struct brw_tracked_state genX(scissor_state) = {
    },
    .emit = genX(upload_scissor_state),
 };
+#endif
+
+/* ---------------------------------------------------------------------- */
 
 #if GEN_GEN >= 7
 UNUSED static const uint32_t push_constant_opcodes[] = {
@@ -2513,6 +2535,7 @@ upload_constant_state(struct brw_context *brw,
 }
 #endif
 
+#if GEN_GEN >= 6
 static void
 genX(upload_vs_push_constants)(struct brw_context *brw)
 {
@@ -2611,9 +2634,11 @@ static const struct brw_tracked_state genX(wm_push_constants) = {
    },
    .emit = genX(upload_wm_push_constants),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static unsigned
 genX(determine_sample_mask)(struct brw_context *brw)
 {
@@ -2645,8 +2670,6 @@ genX(determine_sample_mask)(struct brw_context *brw)
       return 1;
    }
 }
-
-/* ---------------------------------------------------------------------- */
 
 static void
 genX(emit_3dstate_multisample2)(struct brw_context *brw,
@@ -2701,9 +2724,11 @@ static const struct brw_tracked_state genX(multisample_state) = {
    },
    .emit = genX(upload_multisample_state)
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 6
 static void
 genX(upload_color_calc_state)(struct brw_context *brw)
 {
@@ -2862,9 +2887,11 @@ static const struct brw_tracked_state genX(sbe_state) = {
    },
    .emit = genX(upload_sbe),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 7
 /**
  * Outputs the 3DSTATE_SO_DECL_LIST command.
  *
@@ -3171,9 +3198,11 @@ static const struct brw_tracked_state genX(sol_state) = {
    },
    .emit = genX(upload_sol),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 7
 static void
 genX(upload_ps)(struct brw_context *brw)
 {
@@ -3303,9 +3332,11 @@ static const struct brw_tracked_state genX(ps_state) = {
    },
    .emit = genX(upload_ps),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 7
 static void
 genX(upload_hs_state)(struct brw_context *brw)
 {
@@ -3609,9 +3640,11 @@ static const struct brw_tracked_state genX(raster_state) = {
    },
    .emit = genX(upload_raster),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 8
 static void
 genX(upload_ps_extra)(struct brw_context *brw)
 {
@@ -3696,9 +3729,11 @@ const struct brw_tracked_state genX(ps_extra) = {
    },
    .emit = genX(upload_ps_extra),
 };
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 8
 static void
 genX(upload_ps_blend)(struct brw_context *brw)
 {
