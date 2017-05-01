@@ -67,22 +67,16 @@ radv_init_surface(struct radv_device *device,
 
 	is_depth = vk_format_has_depth(desc);
 	is_stencil = vk_format_has_stencil(desc);
-	surface->npix_x = pCreateInfo->extent.width;
-	surface->npix_y = pCreateInfo->extent.height;
-	surface->npix_z = pCreateInfo->extent.depth;
 
 	surface->blk_w = vk_format_get_blockwidth(pCreateInfo->format);
 	surface->blk_h = vk_format_get_blockheight(pCreateInfo->format);
 	surface->blk_d = 1;
-	surface->array_size = pCreateInfo->arrayLayers;
-	surface->last_level = pCreateInfo->mipLevels - 1;
 
 	surface->bpe = vk_format_get_blocksize(pCreateInfo->format);
 	/* align byte per element on dword */
 	if (surface->bpe == 3) {
 		surface->bpe = 4;
 	}
-	surface->nsamples = pCreateInfo->samples ? pCreateInfo->samples : 1;
 	surface->flags = RADEON_SURF_SET(array_mode, MODE);
 
 	switch (pCreateInfo->imageType){
@@ -467,14 +461,13 @@ radv_image_get_fmask_info(struct radv_device *device,
 {
 	/* FMASK is allocated like an ordinary texture. */
 	struct radeon_surf fmask = image->surface;
-
+	struct radeon_surf_info info = image->info;
 	memset(out, 0, sizeof(*out));
 
 	fmask.bo_alignment = 0;
 	fmask.bo_size = 0;
-	fmask.nsamples = 1;
 	fmask.flags |= RADEON_SURF_FMASK;
-
+	info.samples = 1;
 	/* Force 2D tiling if it wasn't set. This may occur when creating
 	 * FMASK for MSAA resolve on R6xx. On R6xx, the single-sample
 	 * destination buffer must have an FMASK too. */
@@ -495,7 +488,7 @@ radv_image_get_fmask_info(struct radv_device *device,
 		return;
 	}
 
-	device->ws->surface_init(device->ws, &fmask);
+	device->ws->surface_init(device->ws, &info, &fmask);
 	assert(fmask.level[0].mode == RADEON_SURF_MODE_2D);
 
 	out->slice_tile_max = (fmask.level[0].nblk_x * fmask.level[0].nblk_y) / 64;
@@ -553,8 +546,8 @@ radv_image_get_cmask_info(struct radv_device *device,
 
 	unsigned base_align = num_pipes * pipe_interleave_bytes;
 
-	unsigned width = align(image->surface.npix_x, cl_width*8);
-	unsigned height = align(image->surface.npix_y, cl_height*8);
+	unsigned width = align(image->info.width, cl_width*8);
+	unsigned height = align(image->info.height, cl_height*8);
 	unsigned slice_elements = (width * height) / (8*8);
 
 	/* Each element of CMASK is a nibble. */
@@ -656,7 +649,7 @@ radv_image_create(VkDevice _device,
 
 	radv_init_surface(device, &image->surface, create_info);
 
-	device->ws->surface_init(device->ws, &image->surface);
+	device->ws->surface_init(device->ws, &image->info, &image->surface);
 
 	image->size = image->surface.bo_size;
 	image->alignment = image->surface.bo_alignment;

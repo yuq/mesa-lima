@@ -966,7 +966,7 @@ static void radv_set_optimal_micro_tile_mode(struct radv_device *device,
 {
 	struct radv_image *image = att->attachment->image;
 	uint32_t tile_mode_index;
-	if (image->surface.nsamples <= 1)
+	if (image->info.samples <= 1)
 		return;
 
 	if (image->surface.micro_tile_mode != micro_tile_mode) {

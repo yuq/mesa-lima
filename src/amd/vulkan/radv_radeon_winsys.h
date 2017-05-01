@@ -184,16 +184,10 @@ struct radeon_surf_level {
 /* surface defintions from the winsys */
 struct radeon_surf {
 	/* These are inputs to the calculator. */
-	uint32_t                    npix_x;
-	uint32_t                    npix_y;
-	uint32_t                    npix_z;
 	uint32_t                    blk_w;
 	uint32_t                    blk_h;
 	uint32_t                    blk_d;
-	uint32_t                    array_size;
-	uint32_t                    last_level;
 	uint32_t                    bpe;
-	uint32_t                    nsamples;
 	uint32_t                    flags;
 
 	/* These are return values. Some of them can be set by the caller, but
@@ -343,6 +337,7 @@ struct radeon_winsys {
 	void (*cs_dump)(struct radeon_winsys_cs *cs, FILE* file, uint32_t trace_id);
 
 	int (*surface_init)(struct radeon_winsys *ws,
+			    const struct radeon_surf_info *surf_info,
 			    struct radeon_surf *surf);
 
 	int (*surface_best)(struct radeon_winsys *ws,
