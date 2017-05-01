@@ -1963,6 +1963,8 @@ glsl_type::count_attribute_slots(bool is_vertex_input) const
    case GLSL_TYPE_INT:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_SAMPLER:
+   case GLSL_TYPE_IMAGE:
       return this->matrix_columns;
    case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_UINT64:
@@ -1985,8 +1987,6 @@ glsl_type::count_attribute_slots(bool is_vertex_input) const
       return this->length * this->fields.array->count_attribute_slots(is_vertex_input);
 
    case GLSL_TYPE_FUNCTION:
-   case GLSL_TYPE_SAMPLER:
-   case GLSL_TYPE_IMAGE:
    case GLSL_TYPE_ATOMIC_UINT:
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_SUBROUTINE:
