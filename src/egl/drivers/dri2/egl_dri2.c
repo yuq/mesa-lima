@@ -102,7 +102,7 @@ const __DRIuseInvalidateExtension use_invalidate = {
    .base = { __DRI_USE_INVALIDATE, 1 }
 };
 
-static const EGLint dri2_to_egl_attribute_map[] = {
+static const EGLint dri2_to_egl_attribute_map[__DRI_ATTRIB_MAX] = {
    [__DRI_ATTRIB_BUFFER_SIZE ]          = EGL_BUFFER_SIZE,
    [__DRI_ATTRIB_LEVEL]                 = EGL_LEVEL,
    [__DRI_ATTRIB_RED_SIZE]              = EGL_RED_SIZE,
