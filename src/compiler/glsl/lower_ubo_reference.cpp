@@ -104,6 +104,7 @@ public:
    ir_call *lower_ssbo_atomic_intrinsic(ir_call *ir);
    ir_call *check_for_ssbo_atomic_intrinsic(ir_call *ir);
    ir_visitor_status visit_enter(ir_call *ir);
+   ir_visitor_status visit_enter(ir_texture *ir);
 
    struct gl_linked_shader *shader;
    bool clamp_block_indices;
@@ -1083,6 +1084,20 @@ lower_ubo_reference_visitor::visit_enter(ir_call *ir)
    if (new_ir != ir) {
       progress = true;
       base_ir->replace_with(new_ir);
+      return visit_continue_with_parent;
+   }
+
+   return rvalue_visit(ir);
+}
+
+
+ir_visitor_status
+lower_ubo_reference_visitor::visit_enter(ir_texture *ir)
+{
+   ir_dereference *sampler = ir->sampler;
+
+   if (sampler->ir_type == ir_type_dereference_record) {
+      handle_rvalue((ir_rvalue **)&ir->sampler);
       return visit_continue_with_parent;
    }
 
