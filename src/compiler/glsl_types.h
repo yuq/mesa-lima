@@ -563,6 +563,12 @@ struct glsl_type {
    bool contains_sampler() const;
 
    /**
+    * Query whether or not type is an array or for struct, interface and
+    * array types, contains an array.
+    */
+   bool contains_array() const;
+
+   /**
     * Get the Mesa texture target index for a sampler type.
     */
    gl_texture_index sampler_index() const;

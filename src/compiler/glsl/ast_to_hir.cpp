@@ -5825,6 +5825,18 @@ ast_function::hir(exec_list *instructions,
                        "sized", name);
    }
 
+   /* From Section 6.1 (Function Definitions) of the GLSL 1.00 spec:
+    *
+    *     "Arrays are allowed as arguments, but not as the return type. [...]
+    *      The return type can also be a structure if the structure does not
+    *      contain an array."
+    */
+   if (state->language_version == 100 && return_type->contains_array()) {
+      YYLTYPE loc = this->get_location();
+      _mesa_glsl_error(& loc, state,
+                       "function `%s' return type contains an array", name);
+   }
+
    /* From section 4.1.7 of the GLSL 4.40 spec:
     *
     *    "[Opaque types] can only be declared as function parameters

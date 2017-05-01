@@ -220,6 +220,19 @@ glsl_type::contains_sampler() const
    }
 }
 
+bool
+glsl_type::contains_array() const
+{
+   if (this->is_record() || this->is_interface()) {
+      for (unsigned int i = 0; i < this->length; i++) {
+         if (this->fields.structure[i].type->contains_array())
+            return true;
+      }
+      return false;
+   } else {
+      return this->is_array();
+   }
+}
 
 bool
 glsl_type::contains_integer() const
