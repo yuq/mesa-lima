@@ -5933,6 +5933,16 @@ ast_function::hir(exec_list *instructions,
                 */
                return NULL;
             }
+         } else if (state->language_version == 100 && !is_definition) {
+            /* From the GLSL 1.00 spec, section 4.2.7:
+             *
+             *     "A particular variable, structure or function declaration
+             *      may occur at most once within a scope with the exception
+             *      that a single function prototype plus the corresponding
+             *      function definition are allowed."
+             */
+            YYLTYPE loc = this->get_location();
+            _mesa_glsl_error(&loc, state, "function `%s' redeclared", name);
          }
       }
    }
