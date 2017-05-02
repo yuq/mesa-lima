@@ -1965,6 +1965,8 @@ void radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 
+	assert(!(set->layout->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR));
+
 	cmd_buffer->state.descriptors[idx] = set;
 	cmd_buffer->state.descriptors_dirty |= (1u << idx);
 	if (!set)
