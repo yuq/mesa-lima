@@ -80,6 +80,101 @@ struct radeon_decoder {
 	unsigned			cur_buffer;
 };
 
+static rvcn_dec_message_avc_t get_h264_msg(struct radeon_decoder *dec,
+		struct pipe_h264_picture_desc *pic)
+{
+	rvcn_dec_message_avc_t result;
+
+	memset(&result, 0, sizeof(result));
+	switch (pic->base.profile) {
+	case PIPE_VIDEO_PROFILE_MPEG4_AVC_BASELINE:
+		result.profile = RDECODE_H264_PROFILE_BASELINE;
+		break;
+
+	case PIPE_VIDEO_PROFILE_MPEG4_AVC_MAIN:
+		result.profile = RDECODE_H264_PROFILE_MAIN;
+		break;
+
+	case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH:
+		result.profile = RDECODE_H264_PROFILE_HIGH;
+		break;
+
+	default:
+		assert(0);
+		break;
+	}
+
+	result.level = dec->base.level;
+
+	result.sps_info_flags = 0;
+	result.sps_info_flags |= pic->pps->sps->direct_8x8_inference_flag << 0;
+	result.sps_info_flags |= pic->pps->sps->mb_adaptive_frame_field_flag << 1;
+	result.sps_info_flags |= pic->pps->sps->frame_mbs_only_flag << 2;
+	result.sps_info_flags |= pic->pps->sps->delta_pic_order_always_zero_flag << 3;
+
+	result.bit_depth_luma_minus8 = pic->pps->sps->bit_depth_luma_minus8;
+	result.bit_depth_chroma_minus8 = pic->pps->sps->bit_depth_chroma_minus8;
+	result.log2_max_frame_num_minus4 = pic->pps->sps->log2_max_frame_num_minus4;
+	result.pic_order_cnt_type = pic->pps->sps->pic_order_cnt_type;
+	result.log2_max_pic_order_cnt_lsb_minus4 =
+		pic->pps->sps->log2_max_pic_order_cnt_lsb_minus4;
+
+	switch (dec->base.chroma_format) {
+	case PIPE_VIDEO_CHROMA_FORMAT_NONE:
+		break;
+	case PIPE_VIDEO_CHROMA_FORMAT_400:
+		result.chroma_format = 0;
+		break;
+	case PIPE_VIDEO_CHROMA_FORMAT_420:
+		result.chroma_format = 1;
+		break;
+	case PIPE_VIDEO_CHROMA_FORMAT_422:
+		result.chroma_format = 2;
+		break;
+	case PIPE_VIDEO_CHROMA_FORMAT_444:
+		result.chroma_format = 3;
+		break;
+	}
+
+	result.pps_info_flags = 0;
+	result.pps_info_flags |= pic->pps->transform_8x8_mode_flag << 0;
+	result.pps_info_flags |= pic->pps->redundant_pic_cnt_present_flag << 1;
+	result.pps_info_flags |= pic->pps->constrained_intra_pred_flag << 2;
+	result.pps_info_flags |= pic->pps->deblocking_filter_control_present_flag << 3;
+	result.pps_info_flags |= pic->pps->weighted_bipred_idc << 4;
+	result.pps_info_flags |= pic->pps->weighted_pred_flag << 6;
+	result.pps_info_flags |= pic->pps->bottom_field_pic_order_in_frame_present_flag << 7;
+	result.pps_info_flags |= pic->pps->entropy_coding_mode_flag << 8;
+
+	result.num_slice_groups_minus1 = pic->pps->num_slice_groups_minus1;
+	result.slice_group_map_type = pic->pps->slice_group_map_type;
+	result.slice_group_change_rate_minus1 = pic->pps->slice_group_change_rate_minus1;
+	result.pic_init_qp_minus26 = pic->pps->pic_init_qp_minus26;
+	result.chroma_qp_index_offset = pic->pps->chroma_qp_index_offset;
+	result.second_chroma_qp_index_offset = pic->pps->second_chroma_qp_index_offset;
+
+	memcpy(result.scaling_list_4x4, pic->pps->ScalingList4x4, 6*16);
+	memcpy(result.scaling_list_8x8, pic->pps->ScalingList8x8, 2*64);
+
+	memcpy(dec->it, result.scaling_list_4x4, 6*16);
+	memcpy((dec->it + 96), result.scaling_list_8x8, 2*64);
+
+	result.num_ref_frames = pic->num_ref_frames;
+
+	result.num_ref_idx_l0_active_minus1 = pic->num_ref_idx_l0_active_minus1;
+	result.num_ref_idx_l1_active_minus1 = pic->num_ref_idx_l1_active_minus1;
+
+	result.frame_num = pic->frame_num;
+	memcpy(result.frame_num_list, pic->frame_num_list, 4*16);
+	result.curr_field_order_cnt_list[0] = pic->field_order_cnt[0];
+	result.curr_field_order_cnt_list[1] = pic->field_order_cnt[1];
+	memcpy(result.field_order_cnt_list, pic->field_order_cnt_list, 4*16*2);
+
+	result.decoded_pic_idx = pic->frame_num;
+
+	return result;
+}
+
 static void radeon_dec_destroy_associated_data(void *data)
 {
 	/* NOOP, since we only use an intptr */
@@ -110,10 +205,104 @@ static void rvcn_dec_message_create(struct radeon_decoder *dec)
 	create->height_in_samples = dec->base.height;
 }
 
-static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec)
+static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
+					struct pipe_video_buffer *target,
+					struct pipe_picture_desc *picture)
 {
-	/* TODO */
-	return NULL;
+	struct r600_texture *luma = (struct r600_texture *)
+				((struct vl_video_buffer *)target)->resources[0];
+	struct r600_texture *chroma = (struct r600_texture *)
+				((struct vl_video_buffer *)target)->resources[1];
+	rvcn_dec_message_header_t *header;
+	rvcn_dec_message_index_t *index;
+	rvcn_dec_message_decode_t *decode;
+	unsigned sizes = 0, offset_decode, offset_codec;
+	void *codec;
+
+	header = dec->msg;
+	sizes += sizeof(rvcn_dec_message_header_t);
+	index = (void*)header + sizeof(rvcn_dec_message_header_t);
+	sizes += sizeof(rvcn_dec_message_index_t);
+	offset_decode = sizes;
+	decode = (void*)index + sizeof(rvcn_dec_message_index_t);
+	sizes += sizeof(rvcn_dec_message_decode_t);
+	offset_codec = sizes;
+	codec = (void*)decode + sizeof(rvcn_dec_message_decode_t);
+
+	memset(dec->msg, 0, sizes);
+	header->header_size = sizeof(rvcn_dec_message_header_t);
+	header->total_size = sizes;
+	header->num_buffers = 2;
+	header->msg_type = RDECODE_MSG_DECODE;
+	header->stream_handle = dec->stream_handle;
+	header->status_report_feedback_number = dec->frame_number;
+
+	header->index[0].message_id = RDECODE_MESSAGE_DECODE;
+	header->index[0].offset = offset_decode;
+	header->index[0].size = sizeof(rvcn_dec_message_decode_t);
+	header->index[0].filled = 0;
+
+	index->offset = offset_codec;
+	index->size = sizeof(rvcn_dec_message_avc_t);
+	index->filled = 0;
+
+	decode->stream_type = dec->stream_type;;
+	decode->decode_flags = 0x1;
+	decode->width_in_samples = dec->base.width;;
+	decode->height_in_samples = dec->base.height;;
+
+	decode->bsd_size = align(dec->bs_size, 128);
+	decode->dpb_size = dec->dpb.res->buf->size;
+	decode->dt_size =
+		((struct r600_resource *)((struct vl_video_buffer *)target)->resources[0])->buf->size +
+		((struct r600_resource *)((struct vl_video_buffer *)target)->resources[1])->buf->size;
+
+	decode->sct_size = 0;
+	decode->sc_coeff_size = 0;
+
+	decode->sw_ctxt_size = RDECODE_SESSION_CONTEXT_SIZE;
+	decode->db_pitch = align(dec->base.width, 32);
+	decode->db_surf_tile_config = 0;
+
+	decode->dt_pitch = luma->surface.u.gfx9.surf_pitch * luma->surface.bpe;;
+	decode->dt_uv_pitch = decode->dt_pitch / 2;
+
+	decode->dt_tiling_mode = 0;
+	decode->dt_swizzle_mode = RDECODE_SW_MODE_LINEAR;
+	decode->dt_array_mode = RDECODE_ARRAY_MODE_LINEAR;
+	decode->dt_field_mode = ((struct vl_video_buffer *)target)->base.interlaced;
+	decode->dt_surf_tile_config = 0;
+	decode->dt_uv_surf_tile_config = 0;
+
+	decode->dt_luma_top_offset = luma->surface.u.gfx9.surf_offset;
+	decode->dt_chroma_top_offset = chroma->surface.u.gfx9.surf_offset;
+	if (decode->dt_field_mode) {
+		decode->dt_luma_bottom_offset = luma->surface.u.gfx9.surf_offset +
+				luma->surface.u.gfx9.surf_slice_size;
+		decode->dt_chroma_bottom_offset = chroma->surface.u.gfx9.surf_offset +
+				chroma->surface.u.gfx9.surf_slice_size;
+	} else {
+		decode->dt_luma_bottom_offset = decode->dt_luma_top_offset;
+		decode->dt_chroma_bottom_offset = decode->dt_chroma_top_offset;
+	}
+
+	switch (u_reduce_video_profile(picture->profile)) {
+	case PIPE_VIDEO_FORMAT_MPEG4_AVC: {
+		rvcn_dec_message_avc_t avc =
+			get_h264_msg(dec, (struct pipe_h264_picture_desc*)picture);
+		memcpy(codec, (void*)&avc, sizeof(rvcn_dec_message_avc_t));
+		index->message_id = RDECODE_MESSAGE_AVC;
+		break;
+	}
+	default:
+		assert(0);
+		return NULL;
+	}
+
+	if (dec->ctx.res)
+		decode->hw_ctxt_size = dec->ctx.res->buf->size;
+
+	return luma->resource.buf;
 }
 
 static void rvcn_dec_message_destroy(struct radeon_decoder *dec)
@@ -530,7 +719,7 @@ static void radeon_dec_end_frame(struct pipe_video_codec *decoder,
 	dec->ws->buffer_unmap(bs_buf->res->buf);
 
 	map_msg_fb_it_buf(dec);
-	dt = rvcn_dec_message_decode(dec);
+	dt = rvcn_dec_message_decode(dec, target, picture);
 	rvcn_dec_message_feedback(dec);
 	send_msg_buf(dec);
 
