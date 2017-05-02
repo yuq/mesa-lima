@@ -159,9 +159,9 @@ struct radeon_surf_info {
 	uint32_t width;
 	uint32_t height;
 	uint32_t depth;
-	uint32_t samples;
-	uint32_t array_size;
-	uint32_t levels;
+	uint8_t samples;
+	uint8_t levels;
+	uint16_t array_size;
 };
 
 struct radeon_surf_level {
