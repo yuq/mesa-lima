@@ -1213,10 +1213,6 @@ void PaTriStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m1
 
 bool PaTriFan0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    // store off leading vertex for attributes
-    PA_STATE_OPT::SIMDVERTEX* pVertex = (PA_STATE_OPT::SIMDVERTEX*)pa.pStreamBase;
-    pa.leadingVertex = pVertex[pa.cur];
-
     SetNextPaState(pa, PaTriFan1, PaTriFanSingle0);
     return false;    // Not enough vertices to assemble 8 triangles.
 }
@@ -1228,11 +1224,7 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     simdvector a;
     simdvector b;
 
-#if 1
     const simd16vector &leadvert_16 = PaGetSimdVector_simd16(pa, pa.first, slot);
-#else
-    const simd16vector &leadvert_16 = pa.leadingVertex.attrib[slot];
-#endif
 
     if (!pa.useAlternateOffset)
     {
@@ -1260,10 +1252,9 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     }
 
 #else
-    simdvector &leadVert = pa.leadingVertex.attrib[slot];
-
-    simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
+    const simdvector &leadVert = PaGetSimdVector(pa, pa.first, slot);
+    const simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
+    const simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
 
 #endif
     simdscalar s;
@@ -1301,23 +1292,7 @@ bool PaTriFan0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 
 bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-#if USE_SIMD16_FRONTEND
-#if 1
     const simd16vector &a = PaGetSimdVector_simd16(pa, pa.first, slot);
-#else
-    const simd16vector &a = pa.leadingVertex.attrib[slot];
-#endif
-#else
-    simd16vector a;
-
-    {
-        for (uint32_t i = 0; i < 4; i += 1)
-        {
-            a[i] = _simd16_insert_ps(_simd16_setzero_ps(), pa.leadingVertex.attrib[slot][i], 0);
-        }
-    }
-
-#endif
     const simd16vector &b = PaGetSimdVector_simd16(pa, pa.prev, slot);
     const simd16vector &c = PaGetSimdVector_simd16(pa, pa.cur, slot);
 
@@ -1353,11 +1328,7 @@ bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 void PaTriFanSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
 #if USE_SIMD16_FRONTEND
-#if 1
     const simd16vector &a = PaGetSimdVector_simd16(pa, pa.first, slot);
-#else
-    const simd16vector &a = pa.leadingVertex.attrib[slot];
-#endif
     const simd16vector &b = PaGetSimdVector_simd16(pa, pa.prev, slot);
     const simd16vector &c = PaGetSimdVector_simd16(pa, pa.cur, slot);
 
@@ -1393,7 +1364,7 @@ void PaTriFanSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128
         verts[2] = swizzleLaneN(c, primIndex - 14);
     }
 #else
-    const simdvector &a = pa.leadingVertex.attrib[slot];
+    const simdvector &a = PaGetSimdVector(pa, pa.first, slot);
     const simdvector &b = PaGetSimdVector(pa, pa.prev, slot);
     const simdvector &c = PaGetSimdVector(pa, pa.cur, slot);
 
@@ -1887,8 +1858,8 @@ bool PaLineList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 void PaLineListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
 #if USE_SIMD16_FRONTEND
-    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
-    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
+    const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
 
     if (pa.useAlternateOffset)
     {
@@ -1963,8 +1934,8 @@ void PaLineListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m1
         break;
     }
 #else
-    const simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
-    const simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
+    const simdvector &a = PaGetSimdVector(pa, 0, slot);
+    const simdvector &b = PaGetSimdVector(pa, 1, slot);
 
     switch (primIndex)
     {
@@ -2229,7 +2200,7 @@ bool PaPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 #if USE_SIMD16_FRONTEND
     simdvector a;
 
-    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, pa.cur, slot);
+    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
 
     if (!pa.useAlternateOffset)
     {
@@ -2247,7 +2218,7 @@ bool PaPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     }
 
 #else
-    simdvector &a = PaGetSimdVector(pa, pa.cur, slot);
+    simdvector &a = PaGetSimdVector(pa, 0, slot);
 
 #endif
     verts[0] = a;  // points only have 1 vertex.
@@ -2271,7 +2242,7 @@ bool PaPoints0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 void PaPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
 #if USE_SIMD16_FRONTEND
-    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.cur, slot);
+    const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
 
     if (pa.useAlternateOffset)
     {
@@ -2280,7 +2251,7 @@ void PaPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128
 
     verts[0] = swizzleLaneN(a, primIndex);
 #else
-    const simdvector &a = PaGetSimdVector(pa, pa.cur, slot);
+    const simdvector &a = PaGetSimdVector(pa, 0, slot);
 
     verts[0] = swizzleLaneN(a, primIndex);
 #endif

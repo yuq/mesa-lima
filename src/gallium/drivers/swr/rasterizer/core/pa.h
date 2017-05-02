@@ -119,8 +119,6 @@ struct PA_STATE
 // cuts
 struct PA_STATE_OPT : public PA_STATE
 {
-    SIMDVERTEX leadingVertex;            // For tri-fan
-
     uint32_t numPrims{ 0 };              // Total number of primitives for draw.
     uint32_t numPrimsComplete{ 0 };      // Total number of complete primitives.
 
@@ -128,7 +126,7 @@ struct PA_STATE_OPT : public PA_STATE
 
     uint32_t cur{ 0 };                   // index to current VS output.
     uint32_t prev{ 0 };                  // index to prev VS output. Not really needed in the state.
-    uint32_t first{ 0 };                 // index to first VS output. Used for trifan.
+    const uint32_t first{ 0 };           // index to first VS output. Used for tri fan and line loop.
 
     uint32_t counter{ 0 };               // state counter
     bool reset{ false };                 // reset state
@@ -245,13 +243,27 @@ struct PA_STATE_OPT : public PA_STATE
 
     SIMDVERTEX& GetNextVsOutput()
     {
-        // increment cur and prev indices
-        const uint32_t numSimdVerts = this->streamSizeInVerts / SIMD_WIDTH;
-        this->prev = this->cur;  // prev is undefined for first state.
-        this->cur = this->counter % numSimdVerts;
+        const uint32_t numSimdVerts = streamSizeInVerts / SIMD_WIDTH;
 
-        SIMDVERTEX* pVertex = (SIMDVERTEX*)pStreamBase;
-        return pVertex[this->cur];
+        // increment cur and prev indices
+        if (counter < numSimdVerts)
+        {
+            // prev undefined for first state
+            prev = cur;
+            cur = counter;
+        }
+        else
+        {
+            // swap/recycle last two simd verts for prev and cur, leave other simd verts intact in the buffer
+            uint32_t temp = prev;
+
+            prev = cur;
+            cur = temp;
+        }
+
+        SWR_ASSERT(cur < numSimdVerts);
+
+        return reinterpret_cast<SIMDVERTEX *>(pStreamBase)[cur];
     }
 
     SIMDMASK& GetNextVsIndices()
@@ -317,7 +329,6 @@ struct PA_STATE_OPT : public PA_STATE
         this->numSimdPrims = 0;
         this->cur = 0;
         this->prev = 0;
-        this->first = 0;
         this->counter = 0;
         this->reset = false;
     }
