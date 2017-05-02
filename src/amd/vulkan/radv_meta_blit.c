@@ -1259,12 +1259,10 @@ radv_device_init_meta_blit_state(struct radv_device *device)
 		goto fail;
 
 	result = radv_device_init_meta_blit_stencil(device, &vs);
-	if (result != VK_SUCCESS)
-		goto fail;
-	return VK_SUCCESS;
 
 fail:
 	ralloc_free(vs.nir);
-	radv_device_finish_meta_blit_state(device);
+	if (result != VK_SUCCESS)
+		radv_device_finish_meta_blit_state(device);
 	return result;
 }

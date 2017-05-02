@@ -614,12 +614,10 @@ VkResult radv_device_init_meta_query_state(struct radv_device *device)
 					     radv_pipeline_cache_to_handle(&device->meta_state.cache),
 					     1, &pipeline_statistics_vk_pipeline_info, NULL,
 					     &device->meta_state.query.pipeline_statistics_query_pipeline);
-	if (result != VK_SUCCESS)
-		goto fail;
 
-	return VK_SUCCESS;
 fail:
-	radv_device_finish_meta_query_state(device);
+	if (result != VK_SUCCESS)
+		radv_device_finish_meta_query_state(device);
 	ralloc_free(occlusion_cs.nir);
 	ralloc_free(pipeline_statistics_cs.nir);
 	return result;
