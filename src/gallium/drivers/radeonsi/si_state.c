@@ -717,9 +717,11 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 		ucp_mask |
 		S_028810_CLIP_DISABLE(window_space));
 
-	/* reuse needs to be set off if we write oViewport */
-	radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF,
-			       S_028AB4_REUSE_OFF(info->writes_viewport_index));
+	if (sctx->b.chip_class <= VI) {
+		/* reuse needs to be set off if we write oViewport */
+		radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF,
+				       S_028AB4_REUSE_OFF(info->writes_viewport_index));
+	}
 }
 
 /*
@@ -4342,6 +4344,8 @@ static void si_init_config(struct si_context *sctx)
 
 	si_pm4_set_reg(pm4, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
 	si_pm4_set_reg(pm4, R_028AA0_VGT_INSTANCE_STEP_RATE_0, 1);
+	if (sctx->b.chip_class >= GFX9)
+		si_pm4_set_reg(pm4, R_028AB4_VGT_REUSE_OFF, 0);
 	si_pm4_set_reg(pm4, R_028AB8_VGT_VTX_CNT_EN, 0x0);
 	if (sctx->b.chip_class < CIK)
 		si_pm4_set_reg(pm4, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
