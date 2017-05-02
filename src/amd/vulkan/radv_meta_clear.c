@@ -672,6 +672,9 @@ emit_depthstencil_clear(struct radv_cmd_buffer *cmd_buffer,
 			   VK_IMAGE_ASPECT_STENCIL_BIT));
 	assert(pass_att != VK_ATTACHMENT_UNUSED);
 
+	if (!(aspects & VK_IMAGE_ASPECT_DEPTH_BIT))
+		clear_value.depth = 1.0f;
+
 	const struct depthstencil_clear_vattrs vertex_data[3] = {
 		{
 			.depth_clear = clear_value.depth,
