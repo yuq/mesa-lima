@@ -698,7 +698,6 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
                                               offset,
                                               row_pitch,
                                               0, 0, 0, 0 /* unused */);
-   wl_display_roundtrip(chain->display->display);
    close(fd);
 
    if (!image->buffer)
