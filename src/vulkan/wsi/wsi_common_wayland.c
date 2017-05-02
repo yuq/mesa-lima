@@ -46,7 +46,11 @@
 struct wsi_wayland;
 
 struct wsi_wl_display {
-   struct wl_display *                          display;
+   /* The real wl_display */
+   struct wl_display *                          wl_display;
+   /* Actually a proxy wrapper around the event queue */
+   struct wl_display *                          wl_display_wrapper;
+   struct wl_event_queue *                      queue;
    struct wl_drm *                              drm;
 
    struct wsi_wayland *wsi_wl;
@@ -251,6 +255,10 @@ wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
    u_vector_finish(&display->formats);
    if (display->drm)
       wl_drm_destroy(display->drm);
+   if (display->wl_display_wrapper)
+      wl_proxy_wrapper_destroy(display->wl_display_wrapper);
+   if (display->queue)
+      wl_event_queue_destroy(display->queue);
    vk_free(wsi->alloc, display);
 }
 
@@ -265,26 +273,38 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 
    memset(display, 0, sizeof(*display));
 
-   display->display = wl_display;
    display->wsi_wl = wsi;
+   display->wl_display = wl_display;
 
    if (!u_vector_init(&display->formats, sizeof(VkFormat), 8))
       goto fail;
 
-   struct wl_registry *registry = wl_display_get_registry(wl_display);
+   display->queue = wl_display_create_queue(wl_display);
+   if (!display->queue)
+      goto fail;
+
+   display->wl_display_wrapper = wl_proxy_create_wrapper(wl_display);
+   if (!display->wl_display_wrapper)
+      goto fail;
+
+   wl_proxy_set_queue((struct wl_proxy *) display->wl_display_wrapper,
+                      display->queue);
+
+   struct wl_registry *registry =
+      wl_display_get_registry(display->wl_display_wrapper);
    if (!registry)
       goto fail;
 
    wl_registry_add_listener(registry, &registry_listener, display);
 
-   /* Round-rip to get the wl_drm global */
-   wl_display_roundtrip(wl_display);
+   /* Round-trip to get the wl_drm global */
+   wl_display_roundtrip_queue(display->wl_display, display->queue);
 
    if (!display->drm)
       goto fail_registry;
 
-   /* Round-rip to get wl_drm formats and capabilities */
-   wl_display_roundtrip(wl_display);
+   /* Round-trip to get wl_drm formats and capabilities */
+   wl_display_roundtrip_queue(display->wl_display, display->queue);
 
    /* We need prime support */
    if (!(display->capabilities & WL_DRM_CAPABILITY_PRIME))
@@ -561,7 +581,7 @@ wsi_wl_swapchain_acquire_next_image(struct wsi_swapchain *wsi_chain,
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)wsi_chain;
 
-   int ret = wl_display_dispatch_queue_pending(chain->display->display,
+   int ret = wl_display_dispatch_queue_pending(chain->display->wl_display,
                                                chain->queue);
    /* XXX: I'm not sure if out-of-date is the right error here.  If
     * wl_display_dispatch_queue_pending fails it most likely means we got
@@ -583,7 +603,7 @@ wsi_wl_swapchain_acquire_next_image(struct wsi_swapchain *wsi_chain,
       /* This time we do a blocking dispatch because we can't go
        * anywhere until we get an event.
        */
-      int ret = wl_display_roundtrip_queue(chain->display->display,
+      int ret = wl_display_roundtrip_queue(chain->display->wl_display,
                                            chain->queue);
       if (ret < 0)
          return VK_ERROR_OUT_OF_DATE_KHR;
@@ -613,7 +633,7 @@ wsi_wl_swapchain_queue_present(struct wsi_swapchain *wsi_chain,
 
    if (chain->base.present_mode == VK_PRESENT_MODE_FIFO_KHR) {
       while (!chain->fifo_ready) {
-         int ret = wl_display_dispatch_queue(chain->display->display,
+         int ret = wl_display_dispatch_queue(chain->display->wl_display,
                                              chain->queue);
          if (ret < 0)
             return VK_ERROR_OUT_OF_DATE_KHR;
@@ -645,7 +665,7 @@ wsi_wl_swapchain_queue_present(struct wsi_swapchain *wsi_chain,
 
    chain->images[image_index].busy = true;
    wl_surface_commit(chain->surface);
-   wl_display_flush(chain->display->display);
+   wl_display_flush(chain->display->wl_display);
 
    return VK_SUCCESS;
 }
@@ -791,7 +811,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       goto fail;
    }
 
-   chain->queue = wl_display_create_queue(chain->display->display);
+   chain->queue = wl_display_create_queue(chain->display->wl_display);
    if (!chain->queue) {
       result = VK_ERROR_INITIALIZATION_FAILED;
       goto fail;
