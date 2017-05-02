@@ -87,7 +87,27 @@ static void radeon_dec_destroy_associated_data(void *data)
 
 static void rvcn_dec_message_create(struct radeon_decoder *dec)
 {
-	/* TODO */
+	rvcn_dec_message_header_t *header = dec->msg;
+	rvcn_dec_message_create_t *create = dec->msg + sizeof(rvcn_dec_message_header_t);
+	unsigned sizes = sizeof(rvcn_dec_message_header_t) + sizeof(rvcn_dec_message_create_t);
+
+	memset(dec->msg, 0, sizes);
+	header->header_size = sizeof(rvcn_dec_message_header_t);
+	header->total_size = sizes;
+	header->num_buffers = 1;
+	header->msg_type = RDECODE_MSG_CREATE;
+	header->stream_handle = dec->stream_handle;
+	header->status_report_feedback_number = 0;
+
+	header->index[0].message_id = RDECODE_MESSAGE_CREATE;
+	header->index[0].offset = sizeof(rvcn_dec_message_header_t);
+	header->index[0].size = sizeof(rvcn_dec_message_create_t);
+	header->index[0].filled = 0;
+
+	create->stream_type = dec->stream_type;
+	create->session_flags = 0;
+	create->width_in_samples = dec->base.width;
+	create->height_in_samples = dec->base.height;
 }
 
 static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec)
