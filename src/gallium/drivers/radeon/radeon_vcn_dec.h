@@ -498,4 +498,7 @@ typedef struct rvcn_dec_feedback_profiling_s {
 	unsigned int	dmaHwCrc32Value2;
 } rvcn_dec_feedback_profiling_t;
 
+struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
+		const struct pipe_video_codec *templat);
+
 #endif
