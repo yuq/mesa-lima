@@ -482,8 +482,10 @@ static void r600_buffer_flush_region(struct pipe_context *ctx,
 				     struct pipe_transfer *transfer,
 				     const struct pipe_box *rel_box)
 {
-	if (transfer->usage & (PIPE_TRANSFER_WRITE |
-			       PIPE_TRANSFER_FLUSH_EXPLICIT)) {
+	unsigned required_usage = PIPE_TRANSFER_WRITE |
+				  PIPE_TRANSFER_FLUSH_EXPLICIT;
+
+	if ((transfer->usage & required_usage) == required_usage) {
 		struct pipe_box box;
 
 		u_box_1d(transfer->box.x + rel_box->x, rel_box->width, &box);
