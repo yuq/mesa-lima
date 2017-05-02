@@ -1049,6 +1049,22 @@ VkResult radv_CreateDevice(
 			break;
 		}
 		device->ws->cs_finalize(device->flush_cs[family]);
+
+		device->flush_shader_cs[family] = device->ws->cs_create(device->ws, family);
+		switch (family) {
+		case RADV_QUEUE_GENERAL:
+		case RADV_QUEUE_COMPUTE:
+			si_cs_emit_cache_flush(device->flush_shader_cs[family],
+			                       device->physical_device->rad_info.chip_class,
+			                       family == RADV_QUEUE_COMPUTE && device->physical_device->rad_info.chip_class >= CIK,
+					       family == RADV_QUEUE_COMPUTE ? RADV_CMD_FLAG_CS_PARTIAL_FLUSH : (RADV_CMD_FLAG_CS_PARTIAL_FLUSH | RADV_CMD_FLAG_PS_PARTIAL_FLUSH) |
+			                       RADV_CMD_FLAG_INV_ICACHE |
+			                       RADV_CMD_FLAG_INV_SMEM_L1 |
+			                       RADV_CMD_FLAG_INV_VMEM_L1 |
+			                       RADV_CMD_FLAG_INV_GLOBAL_L2);
+			break;
+		}
+		device->ws->cs_finalize(device->flush_shader_cs[family]);
 	}
 
 	if (getenv("RADV_TRACE_FILE")) {
@@ -1124,6 +1140,8 @@ void radv_DestroyDevice(
 			device->ws->cs_destroy(device->empty_cs[i]);
 		if (device->flush_cs[i])
 			device->ws->cs_destroy(device->flush_cs[i]);
+		if (device->flush_shader_cs[i])
+			device->ws->cs_destroy(device->flush_shader_cs[i]);
 	}
 	radv_device_finish_meta(device);
 
@@ -1825,7 +1843,7 @@ VkResult radv_QueueSubmit(
 
 	for (uint32_t i = 0; i < submitCount; i++) {
 		struct radeon_winsys_cs **cs_array;
-		bool do_flush = !i;
+		bool do_flush = !i || pSubmits[i].pWaitDstStageMask;
 		bool can_patch = !do_flush;
 		uint32_t advance;
 
@@ -1852,7 +1870,9 @@ VkResult radv_QueueSubmit(
 					        (pSubmits[i].commandBufferCount + do_flush));
 
 		if(do_flush)
-			cs_array[0] = queue->device->flush_cs[queue->queue_family_index];
+			cs_array[0] = pSubmits[i].waitSemaphoreCount ?
+				queue->device->flush_shader_cs[queue->queue_family_index] :
+				queue->device->flush_cs[queue->queue_family_index];
 
 		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
 			RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer,
