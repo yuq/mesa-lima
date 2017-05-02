@@ -118,7 +118,16 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec)
 
 static void rvcn_dec_message_destroy(struct radeon_decoder *dec)
 {
-	/* TODO */
+	rvcn_dec_message_header_t *header = dec->msg;
+
+	memset(dec->msg, 0, sizeof(rvcn_dec_message_header_t));
+	header->header_size = sizeof(rvcn_dec_message_header_t);
+	header->total_size = sizeof(rvcn_dec_message_header_t) -
+			sizeof(rvcn_dec_message_index_t);
+	header->num_buffers = 0;
+	header->msg_type = RDECODE_MSG_DESTROY;
+	header->stream_handle = dec->stream_handle;
+	header->status_report_feedback_number = 0;
 }
 
 static void rvcn_dec_message_feedback(struct radeon_decoder *dec)
