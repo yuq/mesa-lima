@@ -417,9 +417,11 @@ radv_enumerate_devices(struct radv_instance *instance)
 			if (result == VK_SUCCESS)
 				++instance->physicalDeviceCount;
 			else if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
-				return result;
+				break;
 		}
 	}
+	drmFreeDevices(devices, max_devices);
+
 	return result;
 }
 
