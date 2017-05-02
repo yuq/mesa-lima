@@ -151,6 +151,7 @@ struct _egl_display
    struct {
       EGLBoolean TestOnly;    /**< Driver should not set fields when true */
       EGLBoolean UseFallback; /**< Use fallback driver (sw or less features) */
+      void *Platform;         /**< Platform-specific options */
    } Options;
 
    /* these fields are set by the driver during init */
