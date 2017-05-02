@@ -167,9 +167,6 @@ struct radeon_surf_info {
 struct radeon_surf_level {
 	uint64_t                    offset;
 	uint64_t                    slice_size;
-	uint32_t                    npix_x;
-	uint32_t                    npix_y;
-	uint32_t                    npix_z;
 	uint32_t                    nblk_x;
 	uint32_t                    nblk_y;
 	uint32_t                    nblk_z;
