@@ -1186,6 +1186,15 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_dynamic_state *d = &cmd_buffer->state.dynamic;
 
+	if (G_028810_DX_RASTERIZATION_KILL(cmd_buffer->state.pipeline->graphics.raster.pa_cl_clip_cntl))
+		return;
+
+	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
+		radv_emit_viewport(cmd_buffer);
+
+	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_DYNAMIC_SCISSOR | RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
+		radv_emit_scissor(cmd_buffer);
+
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_DYNAMIC_LINE_WIDTH) {
 		unsigned width = cmd_buffer->state.dynamic.line_width * 8;
 		radeon_set_context_reg(cmd_buffer->cs, R_028A08_PA_SU_LINE_CNTL,
@@ -1473,12 +1482,6 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_RENDER_TARGETS)
 		radv_emit_framebuffer_state(cmd_buffer);
-
-	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
-		radv_emit_viewport(cmd_buffer);
-
-	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_DYNAMIC_SCISSOR | RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
-		radv_emit_scissor(cmd_buffer);
 
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(cmd_buffer, instanced_draw, indirect_draw, draw_vertex_count);
 	if (cmd_buffer->state.last_ia_multi_vgt_param != ia_multi_vgt_param) {
