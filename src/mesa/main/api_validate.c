@@ -324,7 +324,7 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
  * Note: This may be called during display list compilation.
  */
 bool
-_mesa_is_valid_prim_mode(struct gl_context *ctx, GLenum mode)
+_mesa_is_valid_prim_mode(const struct gl_context *ctx, GLenum mode)
 {
    /* The overwhelmingly common case is (mode <= GL_TRIANGLE_FAN).  Test that
     * first and exit.  You would think that a switch-statement would be the
