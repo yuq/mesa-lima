@@ -132,7 +132,11 @@ static void rvcn_dec_message_destroy(struct radeon_decoder *dec)
 
 static void rvcn_dec_message_feedback(struct radeon_decoder *dec)
 {
-	/* TODO */
+	rvcn_dec_feedback_header_t *header = (void*)dec->fb;
+
+	header->header_size = sizeof(rvcn_dec_feedback_header_t);
+	header->total_size = sizeof(rvcn_dec_feedback_header_t);
+	header->num_buffers = 0;
 }
 
 /* flush IB to the hardware */
