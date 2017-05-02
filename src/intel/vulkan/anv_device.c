@@ -526,6 +526,7 @@ anv_enumerate_devices(struct anv_instance *instance)
             break;
       }
    }
+   drmFreeDevices(devices, max_devices);
 
    if (result == VK_SUCCESS)
       instance->physicalDeviceCount = 1;
