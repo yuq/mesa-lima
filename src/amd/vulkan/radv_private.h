@@ -495,7 +495,7 @@ struct radv_device {
 	int queue_count[RADV_MAX_QUEUE_FAMILIES];
 	struct radeon_winsys_cs *empty_cs[RADV_MAX_QUEUE_FAMILIES];
 	struct radeon_winsys_cs *flush_cs[RADV_MAX_QUEUE_FAMILIES];
-
+	struct radeon_winsys_cs *flush_shader_cs[RADV_MAX_QUEUE_FAMILIES];
 	uint64_t debug_flags;
 
 	bool llvm_supports_spill;
