@@ -412,6 +412,16 @@ _mesa_glsl_release_types(void)
       glsl_type::interface_types = NULL;
    }
 
+   if (glsl_type::function_types != NULL) {
+      _mesa_hash_table_destroy(glsl_type::function_types, NULL);
+      glsl_type::function_types = NULL;
+   }
+
+   if (glsl_type::subroutine_types != NULL) {
+      _mesa_hash_table_destroy(glsl_type::subroutine_types, NULL);
+      glsl_type::subroutine_types = NULL;
+   }
+
    ralloc_free(glsl_type::mem_ctx);
    glsl_type::mem_ctx = NULL;
 }
