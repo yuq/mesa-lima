@@ -300,16 +300,17 @@ static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 	else
 		transfer = slab_alloc(&rctx->pool_transfers);
 
-	transfer->transfer.resource = NULL;
-	pipe_resource_reference(&transfer->transfer.resource, resource);
-	transfer->transfer.level = 0;
-	transfer->transfer.usage = usage;
-	transfer->transfer.box = *box;
-	transfer->transfer.stride = 0;
-	transfer->transfer.layer_stride = 0;
+	transfer->b.b.resource = NULL;
+	pipe_resource_reference(&transfer->b.b.resource, resource);
+	transfer->b.b.level = 0;
+	transfer->b.b.usage = usage;
+	transfer->b.b.box = *box;
+	transfer->b.b.stride = 0;
+	transfer->b.b.layer_stride = 0;
+	transfer->b.staging = NULL;
 	transfer->offset = offset;
 	transfer->staging = staging;
-	*ptransfer = &transfer->transfer;
+	*ptransfer = &transfer->b.b;
 	return data;
 }
 
@@ -512,9 +513,8 @@ static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
 	    !(transfer->usage & PIPE_TRANSFER_FLUSH_EXPLICIT))
 		r600_buffer_do_flush_region(ctx, transfer, &transfer->box);
 
-	if (rtransfer->staging)
-		r600_resource_reference(&rtransfer->staging, NULL);
-
+	r600_resource_reference(&rtransfer->staging, NULL);
+	assert(rtransfer->b.staging == NULL); /* for threaded context only */
 	pipe_resource_reference(&transfer->resource, NULL);
 
 	/* Don't use pool_transfers_unsync. We are always in the driver

@@ -1648,10 +1648,10 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	trans = CALLOC_STRUCT(r600_transfer);
 	if (!trans)
 		return NULL;
-	pipe_resource_reference(&trans->transfer.resource, texture);
-	trans->transfer.level = level;
-	trans->transfer.usage = usage;
-	trans->transfer.box = *box;
+	pipe_resource_reference(&trans->b.b.resource, texture);
+	trans->b.b.level = level;
+	trans->b.b.usage = usage;
+	trans->b.b.box = *box;
 
 	if (rtex->is_depth) {
 		struct r600_texture *staging_depth;
@@ -1693,8 +1693,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 
 			/* Just get the strides. */
 			r600_texture_get_offset(rctx->screen, staging_depth, level, NULL,
-						&trans->transfer.stride,
-						&trans->transfer.layer_stride);
+						&trans->b.b.stride,
+						&trans->b.b.layer_stride);
 		} else {
 			/* XXX: only readback the rectangle which is being mapped? */
 			/* XXX: when discard is true, no need to read back from depth texture */
@@ -1711,8 +1711,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 
 			offset = r600_texture_get_offset(rctx->screen, staging_depth,
 							 level, box,
-							 &trans->transfer.stride,
-							 &trans->transfer.layer_stride);
+							 &trans->b.b.stride,
+							 &trans->b.b.layer_stride);
 		}
 
 		trans->staging = (struct r600_resource*)staging_depth;
@@ -1737,8 +1737,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 
 		/* Just get the strides. */
 		r600_texture_get_offset(rctx->screen, staging, 0, NULL,
-					&trans->transfer.stride,
-					&trans->transfer.layer_stride);
+					&trans->b.b.stride,
+					&trans->b.b.layer_stride);
 
 		if (usage & PIPE_TRANSFER_READ)
 			r600_copy_to_staging_texture(ctx, trans);
@@ -1749,8 +1749,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	} else {
 		/* the resource is mapped directly */
 		offset = r600_texture_get_offset(rctx->screen, rtex, level, box,
-						 &trans->transfer.stride,
-						 &trans->transfer.layer_stride);
+						 &trans->b.b.stride,
+						 &trans->b.b.layer_stride);
 		buf = &rtex->resource;
 	}
 
@@ -1760,7 +1760,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		return NULL;
 	}
 
-	*ptransfer = &trans->transfer;
+	*ptransfer = &trans->b.b;
 	return map + offset;
 }
 

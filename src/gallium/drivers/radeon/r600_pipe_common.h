@@ -184,7 +184,7 @@ struct r600_resource {
 };
 
 struct r600_transfer {
-	struct pipe_transfer		transfer;
+	struct threaded_transfer	b;
 	struct r600_resource		*staging;
 	unsigned			offset;
 };
