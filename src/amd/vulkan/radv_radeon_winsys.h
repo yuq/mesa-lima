@@ -186,7 +186,6 @@ struct radeon_surf {
 	/* These are inputs to the calculator. */
 	uint32_t                    blk_w;
 	uint32_t                    blk_h;
-	uint32_t                    blk_d;
 	uint32_t                    bpe;
 	uint32_t                    flags;
 

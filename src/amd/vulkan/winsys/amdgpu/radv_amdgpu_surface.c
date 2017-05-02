@@ -60,7 +60,7 @@ static int radv_amdgpu_surface_sanity(const struct radeon_surf_info *surf_info,
 	    !surf_info->array_size)
 		return -EINVAL;
 
-	if (!surf->blk_w || !surf->blk_h || !surf->blk_d)
+	if (!surf->blk_w || !surf->blk_h)
 		return -EINVAL;
 
 	switch (surf_info->samples) {
