@@ -458,6 +458,27 @@ brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
       MAX2(prog_data->binding_table.size_bytes, (surf_index + 1) * 4);
 }
 
+enum brw_barycentric_mode {
+   BRW_BARYCENTRIC_PERSPECTIVE_PIXEL       = 0,
+   BRW_BARYCENTRIC_PERSPECTIVE_CENTROID    = 1,
+   BRW_BARYCENTRIC_PERSPECTIVE_SAMPLE      = 2,
+   BRW_BARYCENTRIC_NONPERSPECTIVE_PIXEL    = 3,
+   BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID = 4,
+   BRW_BARYCENTRIC_NONPERSPECTIVE_SAMPLE   = 5,
+   BRW_BARYCENTRIC_MODE_COUNT              = 6
+};
+#define BRW_BARYCENTRIC_NONPERSPECTIVE_BITS \
+   ((1 << BRW_BARYCENTRIC_NONPERSPECTIVE_PIXEL) | \
+    (1 << BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID) | \
+    (1 << BRW_BARYCENTRIC_NONPERSPECTIVE_SAMPLE))
+
+enum brw_pixel_shader_computed_depth_mode {
+   BRW_PSCDEPTH_OFF   = 0, /* PS does not compute depth */
+   BRW_PSCDEPTH_ON    = 1, /* PS computes depth; no guarantee about value */
+   BRW_PSCDEPTH_ON_GE = 2, /* PS guarantees output depth >= source depth */
+   BRW_PSCDEPTH_ON_LE = 3, /* PS guarantees output depth <= source depth */
+};
+
 /* Data about a particular attempt to compile a program.  Note that
  * there can be many of these, each in a different GL state
  * corresponding to a different brw_wm_prog_key struct, with different
