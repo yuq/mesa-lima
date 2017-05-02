@@ -361,11 +361,9 @@ struct si_shader_selector {
 	unsigned local_size;
 
 	uint64_t	outputs_written;	/* "get_unique_index" bits */
-	uint32_t	patch_outputs_written;	/* "get_unique_index" bits */
-	uint32_t	outputs_written2;	/* "get_unique_index2" bits */
+	uint32_t	patch_outputs_written;	/* "get_unique_index_patch" bits */
 
 	uint64_t	inputs_read;		/* "get_unique_index" bits */
-	uint32_t	inputs_read2;		/* "get_unique_index2" bits */
 };
 
 /* Valid shader configurations:
@@ -505,7 +503,6 @@ struct si_shader_key {
 	struct {
 		struct {
 			uint64_t	kill_outputs; /* "get_unique_index" bits */
-			uint32_t	kill_outputs2; /* "get_unique_index2" bits */
 			unsigned	clip_disable:1;
 		} hw_vs; /* HW VS (it can be VS, TES, GS) */
 
@@ -604,7 +601,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 void si_shader_destroy(struct si_shader *shader);
 unsigned si_shader_io_get_unique_index_patch(unsigned semantic_name, unsigned index);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
-unsigned si_shader_io_get_unique_index2(unsigned name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
 void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,

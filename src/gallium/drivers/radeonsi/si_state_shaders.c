@@ -1231,22 +1231,17 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 
 	/* Find out which VS outputs aren't used by the PS. */
 	uint64_t outputs_written = vs->outputs_written;
-	uint32_t outputs_written2 = vs->outputs_written2;
 	uint64_t inputs_read = 0;
-	uint32_t inputs_read2 = 0;
 
 	outputs_written &= ~0x3; /* ignore POSITION, PSIZE */
 
 	if (!ps_disabled) {
 		inputs_read = ps->inputs_read;
-		inputs_read2 = ps->inputs_read2;
 	}
 
 	uint64_t linked = outputs_written & inputs_read;
-	uint32_t linked2 = outputs_written2 & inputs_read2;
 
 	key->opt.hw_vs.kill_outputs = ~linked & outputs_written;
-	key->opt.hw_vs.kill_outputs2 = ~linked2 & outputs_written2;
 }
 
 /* Compute the key for the hw shader variant */
@@ -1846,7 +1841,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 					if (index >= SI_MAX_IO_GENERIC)
 						break;
 					/* fall through */
-				case TGSI_SEMANTIC_CLIPDIST:
+				default:
 					id = si_shader_io_get_unique_index(name, index);
 					sel->outputs_written &= ~(1ull << id);
 					break;
@@ -1855,9 +1850,6 @@ void si_init_shader_selector_async(void *job, int thread_index)
 				case TGSI_SEMANTIC_CLIPVERTEX:
 				case TGSI_SEMANTIC_EDGEFLAG:
 					break;
-				default:
-					id = si_shader_io_get_unique_index2(name, index);
-					sel->outputs_written2 &= ~(1u << id);
 				}
 			}
 		}
@@ -2003,18 +1995,13 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				if (index >= SI_MAX_IO_GENERIC)
 					break;
 				/* fall through */
-			case TGSI_SEMANTIC_POSITION:
-			case TGSI_SEMANTIC_PSIZE:
-			case TGSI_SEMANTIC_CLIPDIST:
+			default:
 				sel->outputs_written |=
 					1llu << si_shader_io_get_unique_index(name, index);
 				break;
 			case TGSI_SEMANTIC_CLIPVERTEX: /* ignore these */
 			case TGSI_SEMANTIC_EDGEFLAG:
 				break;
-			default:
-				sel->outputs_written2 |=
-					1u << si_shader_io_get_unique_index2(name, index);
 			}
 		}
 		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;
@@ -2037,15 +2024,12 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				if (index >= SI_MAX_IO_GENERIC)
 					break;
 				/* fall through */
-			case TGSI_SEMANTIC_CLIPDIST:
+			default:
 				sel->inputs_read |=
 					1llu << si_shader_io_get_unique_index(name, index);
 				break;
 			case TGSI_SEMANTIC_PCOORD: /* ignore this */
 				break;
-			default:
-				sel->inputs_read2 |=
-					1u << si_shader_io_get_unique_index2(name, index);
 			}
 		}
 

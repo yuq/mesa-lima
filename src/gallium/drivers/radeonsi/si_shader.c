@@ -148,29 +148,22 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 		assert(!"invalid generic index");
 		return 0;
 
-	default:
-		assert(!"invalid semantic name");
-		return 0;
-	}
-}
-
-unsigned si_shader_io_get_unique_index2(unsigned name, unsigned index)
-{
-	switch (name) {
 	case TGSI_SEMANTIC_FOG:
-		return 0;
+		return SI_MAX_IO_GENERIC + 4;
 	case TGSI_SEMANTIC_LAYER:
-		return 1;
+		return SI_MAX_IO_GENERIC + 5;
 	case TGSI_SEMANTIC_VIEWPORT_INDEX:
-		return 2;
+		return SI_MAX_IO_GENERIC + 6;
 	case TGSI_SEMANTIC_PRIMID:
-		return 3;
+		return SI_MAX_IO_GENERIC + 7;
 	case TGSI_SEMANTIC_COLOR: /* these alias */
 	case TGSI_SEMANTIC_BCOLOR:
-		return 4 + index;
+		assert(index < 2);
+		return SI_MAX_IO_GENERIC + 8 + index;
 	case TGSI_SEMANTIC_TEXCOORD:
 		assert(index < 8);
-		return 6 + index;
+		assert(SI_MAX_IO_GENERIC + 10 + index < 64);
+		return SI_MAX_IO_GENERIC + 10 + index;
 	default:
 		assert(!"invalid semantic name");
 		return 0;
@@ -2298,16 +2291,10 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 			if (semantic_index >= SI_MAX_IO_GENERIC)
 				break;
 			/* fall through */
-		case TGSI_SEMANTIC_CLIPDIST:
+		default:
 			if (shader->key.opt.hw_vs.kill_outputs &
 			    (1ull << si_shader_io_get_unique_index(semantic_name, semantic_index)))
 				export_param = false;
-			break;
-		default:
-			if (shader->key.opt.hw_vs.kill_outputs2 &
-			    (1u << si_shader_io_get_unique_index2(semantic_name, semantic_index)))
-				export_param = false;
-			break;
 		}
 
 		if (outputs[i].vertex_stream[0] != 0 &&
@@ -7159,7 +7146,6 @@ static void si_dump_shader_key(unsigned processor, const struct si_shader *shade
 	     processor == PIPE_SHADER_VERTEX) &&
 	    !key->as_es && !key->as_ls) {
 		fprintf(f, "  opt.hw_vs.kill_outputs = 0x%"PRIx64"\n", key->opt.hw_vs.kill_outputs);
-		fprintf(f, "  opt.hw_vs.kill_outputs2 = 0x%x\n", key->opt.hw_vs.kill_outputs2);
 		fprintf(f, "  opt.hw_vs.clip_disable = %u\n", key->opt.hw_vs.clip_disable);
 	}
 }
