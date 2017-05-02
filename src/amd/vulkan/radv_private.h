@@ -794,14 +794,14 @@ struct radv_cmd_buffer {
 
 	struct radv_cmd_buffer_upload upload;
 
-	bool record_fail;
-
 	uint32_t scratch_size_needed;
 	uint32_t compute_scratch_size_needed;
 	uint32_t esgs_ring_size_needed;
 	uint32_t gsvs_ring_size_needed;
 	bool tess_rings_needed;
 	bool sample_positions_needed;
+
+	bool record_fail;
 
 	int ring_offsets_idx; /* just used for verification */
 };
@@ -1356,8 +1356,8 @@ struct radv_subpass_barrier {
 
 struct radv_subpass {
 	uint32_t                                     input_count;
-	VkAttachmentReference *                      input_attachments;
 	uint32_t                                     color_count;
+	VkAttachmentReference *                      input_attachments;
 	VkAttachmentReference *                      color_attachments;
 	VkAttachmentReference *                      resolve_attachments;
 	VkAttachmentReference                        depth_stencil_attachment;
