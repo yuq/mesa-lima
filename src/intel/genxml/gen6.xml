@@ -1068,7 +1068,7 @@
     <field name="Current Repeat Counter" start="53" end="61" type="uint"/>
     <field name="Current Stipple Index" start="48" end="51" type="uint"/>
     <field name="Line Stipple Pattern" start="32" end="47" type="uint"/>
-    <field name="Line Stipple Inverse Repeat Count" start="79" end="95" type="u1.16"/>
+    <field name="Line Stipple Inverse Repeat Count" start="80" end="95" type="u1.13"/>
     <field name="Line Stipple Repeat Count" start="64" end="72" type="uint"/>
   </instruction>
 
