@@ -1981,8 +1981,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	case PIPE_SHADER_TESS_CTRL:
 		/* Always reserve space for these. */
 		sel->patch_outputs_written |=
-			(1llu << si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSINNER, 0)) |
-			(1llu << si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSOUTER, 0));
+			(1llu << si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSINNER, 0)) |
+			(1llu << si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSOUTER, 0));
 		/* fall through */
 	case PIPE_SHADER_VERTEX:
 	case PIPE_SHADER_TESS_EVAL:
@@ -1995,7 +1995,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			case TGSI_SEMANTIC_TESSOUTER:
 			case TGSI_SEMANTIC_PATCH:
 				sel->patch_outputs_written |=
-					1llu << si_shader_io_get_unique_index(name, index);
+					1llu << si_shader_io_get_unique_index_patch(name, index);
 				break;
 
 			case TGSI_SEMANTIC_GENERIC:

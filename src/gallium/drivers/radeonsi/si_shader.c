@@ -105,6 +105,28 @@ static bool is_merged_shader(struct si_shader *shader)
 }
 
 /**
+ * Returns a unique index for a per-patch semantic name and index. The index
+ * must be less than 32, so that a 32-bit bitmask of used inputs or outputs
+ * can be calculated.
+ */
+unsigned si_shader_io_get_unique_index_patch(unsigned semantic_name, unsigned index)
+{
+	switch (semantic_name) {
+	case TGSI_SEMANTIC_TESSOUTER:
+		return 0;
+	case TGSI_SEMANTIC_TESSINNER:
+		return 1;
+	case TGSI_SEMANTIC_PATCH:
+		assert(index < 30);
+		return 2 + index;
+
+	default:
+		assert(!"invalid semantic name");
+		return 0;
+	}
+}
+
+/**
  * Returns a unique index for a semantic name and index. The index must be
  * less than 64, so that a 64-bit bitmask of used inputs or outputs can be
  * calculated.
@@ -125,14 +147,6 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 
 		assert(!"invalid generic index");
 		return 0;
-
-	/* patch indices are completely separate and thus start from 0 */
-	case TGSI_SEMANTIC_TESSOUTER:
-		return 0;
-	case TGSI_SEMANTIC_TESSINNER:
-		return 1;
-	case TGSI_SEMANTIC_PATCH:
-		return 2 + index;
 
 	default:
 		assert(!"invalid semantic name");
@@ -670,10 +684,15 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 				    LLVMBuildMul(gallivm->builder, ind_index,
 						 LLVMConstInt(ctx->i32, 4, 0), ""), "");
 
-		param = si_shader_io_get_unique_index(name[first], index[first]);
+		param = reg.Register.Dimension ?
+			si_shader_io_get_unique_index(name[first], index[first]) :
+			si_shader_io_get_unique_index_patch(name[first], index[first]);
 	} else {
-		param = si_shader_io_get_unique_index(name[reg.Register.Index],
-						      index[reg.Register.Index]);
+		param = reg.Register.Dimension ?
+			si_shader_io_get_unique_index(name[reg.Register.Index],
+						      index[reg.Register.Index]) :
+			si_shader_io_get_unique_index_patch(name[reg.Register.Index],
+							    index[reg.Register.Index]);
 	}
 
 	/* Add the base address of the element. */
@@ -795,8 +814,9 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 		param_index = ctx->i32_0;
 	}
 
-	param_index_base = si_shader_io_get_unique_index(name[param_base],
-	                                                 index[param_base]);
+	param_index_base = reg.Register.Dimension ?
+		si_shader_io_get_unique_index(name[param_base], index[param_base]) :
+		si_shader_io_get_unique_index_patch(name[param_base], index[param_base]);
 
 	param_index = LLVMBuildAdd(gallivm->builder, param_index,
 	                           LLVMConstInt(ctx->i32, param_index_base, 0),
@@ -1548,7 +1568,7 @@ static void declare_system_value(struct si_shader_context *ctx,
 	case TGSI_SEMANTIC_TESSOUTER:
 	{
 		LLVMValueRef buffer, base, addr;
-		int param = si_shader_io_get_unique_index(decl->Semantic.Name, 0);
+		int param = si_shader_io_get_unique_index_patch(decl->Semantic.Name, 0);
 
 		buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 
@@ -2555,8 +2575,8 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	/* Load tess_inner and tess_outer from LDS.
 	 * Any invocation can write them, so we can't get them from a temporary.
 	 */
-	tess_inner_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSINNER, 0);
-	tess_outer_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSOUTER, 0);
+	tess_inner_index = si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSINNER, 0);
+	tess_outer_index = si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSOUTER, 0);
 
 	lds_base = tcs_out_current_patch_data_offset;
 	lds_inner = LLVMBuildAdd(gallivm->builder, lds_base,
@@ -2639,7 +2659,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 		buf = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 		base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 
-		param_outer = si_shader_io_get_unique_index(
+		param_outer = si_shader_io_get_unique_index_patch(
 				      TGSI_SEMANTIC_TESSOUTER, 0);
 		tf_outer_offset = get_tcs_tes_buffer_address(ctx, rel_patch_id, NULL,
 					LLVMConstInt(ctx->i32, param_outer, 0));
@@ -2651,7 +2671,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 					    outer_comps, tf_outer_offset,
 					    base, 0, 1, 0, true, false);
 		if (inner_comps) {
-			param_inner = si_shader_io_get_unique_index(
+			param_inner = si_shader_io_get_unique_index_patch(
 					      TGSI_SEMANTIC_TESSINNER, 0);
 			tf_inner_offset = get_tcs_tes_buffer_address(ctx, rel_patch_id, NULL,
 					LLVMConstInt(ctx->i32, param_inner, 0));
