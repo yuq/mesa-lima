@@ -52,6 +52,7 @@ static const struct nir_shader_compiler_options nir_options = {
 	.lower_flrp32 = true,
 	.lower_fsat = true,
 	.lower_fdiv = true,
+	.lower_sub = true,
 	.lower_pack_snorm_2x16 = true,
 	.lower_pack_snorm_4x8 = true,
 	.lower_pack_unorm_2x16 = true,
