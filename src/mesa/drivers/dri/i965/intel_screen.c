@@ -290,6 +290,29 @@ static struct intel_image_format intel_image_formats[] = {
        { 0, 1, 0, __DRI_IMAGE_FORMAT_ARGB8888, 4 } } }
 };
 
+static const struct {
+   uint32_t tiling;
+   uint64_t modifier;
+} tiling_modifier_map[] = {
+   { .tiling = I915_TILING_NONE, .modifier = DRM_FORMAT_MOD_LINEAR },
+   { .tiling = I915_TILING_X, .modifier = I915_FORMAT_MOD_X_TILED },
+   { .tiling = I915_TILING_Y, .modifier = I915_FORMAT_MOD_Y_TILED },
+};
+
+static uint32_t
+modifier_to_tiling(uint64_t modifier)
+{
+   int i;
+
+   for (i = 0; i < ARRAY_SIZE(tiling_modifier_map); i++) {
+      if (tiling_modifier_map[i].modifier == modifier)
+         return tiling_modifier_map[i].tiling;
+   }
+
+   assert(0 && "modifier_to_tiling should only receive known modifiers");
+   unreachable();
+}
+
 static void
 intel_image_warn_if_unaligned(__DRIimage *image, const char *func)
 {
@@ -568,10 +591,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
 {
    __DRIimage *image;
    struct intel_screen *screen = dri_screen->driverPrivate;
-   /* Historically, X-tiled was the default, and so lack of modifier means
-    * X-tiled.
-    */
-   uint32_t tiling = I915_TILING_X;
+   uint32_t tiling;
    int cpp;
 
    /* Callers of this may specify a modifier, or a dri usage, but not both. The
@@ -581,21 +601,18 @@ intel_create_image_common(__DRIscreen *dri_screen,
    assert(!(use && count));
 
    uint64_t modifier = select_best_modifier(&screen->devinfo, modifiers, count);
-   switch (modifier) {
-   case I915_FORMAT_MOD_X_TILED:
-      assert(tiling == I915_TILING_X);
-      break;
-   case DRM_FORMAT_MOD_LINEAR:
-      tiling = I915_TILING_NONE;
-      break;
-   case I915_FORMAT_MOD_Y_TILED:
-      tiling = I915_TILING_Y;
-      break;
-   case DRM_FORMAT_MOD_INVALID:
+   if (modifier == DRM_FORMAT_MOD_INVALID) {
+      /* User requested specific modifiers, none of which work */
       if (modifiers)
          return NULL;
-   default:
-         break;
+
+      /* Historically, X-tiled was the default, and so lack of modifier means
+       * X-tiled.
+       */
+      tiling = I915_TILING_X;
+   } else {
+      /* select_best_modifier has found a modifier we support */
+      tiling = modifier_to_tiling(modifier);
    }
 
    if (use & __DRI_IMAGE_USE_CURSOR) {
