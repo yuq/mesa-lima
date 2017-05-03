@@ -889,7 +889,7 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo, uint32_t size)
    assert(new_bo.size == pow2_size);
 
    new_bo.map = anv_gem_mmap(pool->device, new_bo.gem_handle, 0, pow2_size, 0);
-   if (new_bo.map == NULL) {
+   if (new_bo.map == MAP_FAILED) {
       anv_gem_close(pool->device, new_bo.gem_handle);
       return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
    }
