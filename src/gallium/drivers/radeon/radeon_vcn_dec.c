@@ -386,6 +386,65 @@ static unsigned calc_ctx_size_h265_main10(struct radeon_decoder *dec, struct pip
 	return cm_buffer_size + db_left_tile_ctx_size + db_left_tile_pxl_size;
 }
 
+static rvcn_dec_message_vc1_t get_vc1_msg(struct pipe_vc1_picture_desc *pic)
+{
+	rvcn_dec_message_vc1_t result;
+
+	memset(&result, 0, sizeof(result));
+	switch(pic->base.profile) {
+	case PIPE_VIDEO_PROFILE_VC1_SIMPLE:
+		result.profile = RDECODE_VC1_PROFILE_SIMPLE;
+		result.level = 1;
+		break;
+
+	case PIPE_VIDEO_PROFILE_VC1_MAIN:
+		result.profile = RDECODE_VC1_PROFILE_MAIN;
+		result.level = 2;
+		break;
+
+	case PIPE_VIDEO_PROFILE_VC1_ADVANCED:
+		result.profile = RDECODE_VC1_PROFILE_ADVANCED;
+		result.level = 4;
+		break;
+
+	default:
+		assert(0);
+	}
+
+	result.sps_info_flags |= pic->postprocflag << 7;
+	result.sps_info_flags |= pic->pulldown << 6;
+	result.sps_info_flags |= pic->interlace << 5;
+	result.sps_info_flags |= pic->tfcntrflag << 4;
+	result.sps_info_flags |= pic->finterpflag << 3;
+	result.sps_info_flags |= pic->psf << 1;
+
+	result.pps_info_flags |= pic->range_mapy_flag << 31;
+	result.pps_info_flags |= pic->range_mapy << 28;
+	result.pps_info_flags |= pic->range_mapuv_flag << 27;
+	result.pps_info_flags |= pic->range_mapuv << 24;
+	result.pps_info_flags |= pic->multires << 21;
+	result.pps_info_flags |= pic->maxbframes << 16;
+	result.pps_info_flags |= pic->overlap << 11;
+	result.pps_info_flags |= pic->quantizer << 9;
+	result.pps_info_flags |= pic->panscan_flag << 7;
+	result.pps_info_flags |= pic->refdist_flag << 6;
+	result.pps_info_flags |= pic->vstransform << 0;
+
+	if (pic->base.profile != PIPE_VIDEO_PROFILE_VC1_SIMPLE) {
+		result.pps_info_flags |= pic->syncmarker << 20;
+		result.pps_info_flags |= pic->rangered << 19;
+		result.pps_info_flags |= pic->loopfilter << 5;
+		result.pps_info_flags |= pic->fastuvmc << 4;
+		result.pps_info_flags |= pic->extended_mv << 3;
+		result.pps_info_flags |= pic->extended_dmv << 8;
+		result.pps_info_flags |= pic->dquant << 1;
+	}
+
+	result.chroma_format = 1;
+
+	return result;
+}
+
 static void rvcn_dec_message_create(struct radeon_decoder *dec)
 {
 	rvcn_dec_message_header_t *header = dec->msg;
@@ -518,6 +577,19 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 			rvid_clear_buffer(dec->base.context, &dec->ctx);
 		}
 		break;
+	}
+	case PIPE_VIDEO_FORMAT_VC1: {
+		rvcn_dec_message_vc1_t vc1 = get_vc1_msg((struct pipe_vc1_picture_desc*)picture);
+
+		memcpy(codec, (void*)&vc1, sizeof(rvcn_dec_message_vc1_t));
+		if ((picture->profile == PIPE_VIDEO_PROFILE_VC1_SIMPLE) ||
+		    (picture->profile == PIPE_VIDEO_PROFILE_VC1_MAIN)) {
+			decode->width_in_samples = align(decode->width_in_samples, 16) / 16;
+			decode->height_in_samples = align(decode->height_in_samples, 16) / 16;
+		}
+		index->message_id = RDECODE_MESSAGE_VC1;
+		break;
+
 	}
 	default:
 		assert(0);
