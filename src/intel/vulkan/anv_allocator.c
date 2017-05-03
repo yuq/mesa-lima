@@ -340,6 +340,11 @@ anv_block_pool_expand_range(struct anv_block_pool *pool,
    assert(center_bo_offset >= pool->back_state.end);
    assert(size - center_bo_offset >= pool->state.end);
 
+   /* Assert that we don't go outside the bounds of the memfd */
+   assert(center_bo_offset <= BLOCK_POOL_MEMFD_CENTER);
+   assert(size - center_bo_offset <=
+          BLOCK_POOL_MEMFD_SIZE - BLOCK_POOL_MEMFD_CENTER);
+
    cleanup = u_vector_add(&pool->mmap_cleanups);
    if (!cleanup)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -494,12 +499,6 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
       size *= 2;
 
    assert(size > pool->bo.size);
-
-   /* We can't have a block pool bigger than 1GB because we use signed
-    * 32-bit offsets in the free list and we don't want overflow.  We
-    * should never need a block pool bigger than 1GB anyway.
-    */
-   assert(size <= (1u << 31));
 
    /* We compute a new center_bo_offset such that, when we double the size
     * of the pool, we maintain the ratio of how much is used by each side.
