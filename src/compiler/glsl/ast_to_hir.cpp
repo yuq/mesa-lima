@@ -2896,7 +2896,7 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
       assert(ctx->Const.MaxAtomicBufferBindings <= MAX_COMBINED_ATOMIC_BUFFERS);
       if (qual_binding >= ctx->Const.MaxAtomicBufferBindings) {
          _mesa_glsl_error(loc, state, "layout(binding = %d) exceeds the "
-                          " maximum number of atomic counter buffer bindings"
+                          "maximum number of atomic counter buffer bindings "
                           "(%u)", qual_binding,
                           ctx->Const.MaxAtomicBufferBindings);
 
@@ -2908,7 +2908,7 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
       assert(ctx->Const.MaxImageUnits <= MAX_IMAGE_UNITS);
       if (max_index >= ctx->Const.MaxImageUnits) {
          _mesa_glsl_error(loc, state, "Image binding %d exceeds the "
-                          " maximum number of image units (%d)", max_index,
+                          "maximum number of image units (%d)", max_index,
                           ctx->Const.MaxImageUnits);
          return;
       }
@@ -2916,7 +2916,8 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
    } else {
       _mesa_glsl_error(loc, state,
                        "the \"binding\" qualifier only applies to uniform "
-                       "blocks, opaque variables, or arrays thereof");
+                       "blocks, storage blocks, opaque variables, or arrays "
+                       "thereof");
       return;
    }
 
@@ -7470,7 +7471,7 @@ ast_interface_block::hir(exec_list *instructions,
          return NULL;
       } else {
          if (expl_align == 0 || expl_align & (expl_align - 1)) {
-            _mesa_glsl_error(&loc, state, "align layout qualifier in not a "
+            _mesa_glsl_error(&loc, state, "align layout qualifier is not a "
                              "power of 2.");
             return NULL;
          }
