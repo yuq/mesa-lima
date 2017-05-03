@@ -57,9 +57,5 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 # sort GALLIUM_SHARED_LIBS to remove any duplicates
 LOCAL_SHARED_LIBRARIES += $(sort $(GALLIUM_SHARED_LIBS))
 
-ifeq ($(MESA_ENABLE_LLVM),true)
-LOCAL_LDLIBS += -lgcc
-endif
-
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_SHARED_LIBRARY)
