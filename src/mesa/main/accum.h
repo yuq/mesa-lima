@@ -39,9 +39,7 @@
 
 #include "main/glheader.h"
 
-struct _glapi_table;
 struct gl_context;
-struct gl_renderbuffer;
 
 extern void GLAPIENTRY
 _mesa_ClearAccum( GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha );
