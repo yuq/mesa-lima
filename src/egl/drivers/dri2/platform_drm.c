@@ -689,12 +689,12 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
          fd = loader_open_device(buf);
       if (fd < 0)
          fd = loader_open_device("/dev/dri/card0");
-      dri2_dpy->own_device = 1;
       gbm = gbm_create_device(fd);
       if (gbm == NULL) {
          err = "DRI2: failed to create gbm device";
          goto cleanup;
       }
+      dri2_dpy->own_device = 1;
    } else {
       fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
       if (fd < 0) {
