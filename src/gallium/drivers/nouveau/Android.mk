@@ -39,6 +39,5 @@ LOCAL_SRC_FILES := \
 LOCAL_SHARED_LIBRARIES := libdrm_nouveau
 LOCAL_MODULE := libmesa_pipe_nouveau
 
-LOCAL_C_INCLUDES := external/libcxx/include
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)

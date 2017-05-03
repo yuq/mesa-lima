@@ -33,7 +33,6 @@ ifeq ($(MESA_ENABLE_LLVM),true)
 LOCAL_C_INCLUDES += \
 	external/llvm/include \
 	external/llvm/device/include \
-	external/libcxx/include \
 	$(ELF_INCLUDES)
 endif
 

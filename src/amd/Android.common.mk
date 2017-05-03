@@ -56,7 +56,6 @@ LOCAL_C_INCLUDES := \
 	$(intermediates)/common \
 	external/llvm/include \
 	external/llvm/device/include \
-	external/libcxx/include \
 	$(ELF_INCLUDES)
 
 LOCAL_STATIC_LIBRARIES := libLLVMCore
