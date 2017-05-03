@@ -58,6 +58,9 @@ LOCAL_C_INCLUDES := \
 	external/llvm/device/include \
 	$(ELF_INCLUDES)
 
+LOCAL_EXPORT_C_INCLUDE_DIRS := \
+	$(LOCAL_PATH)/common
+
 LOCAL_STATIC_LIBRARIES := libLLVMCore
 
 include $(MESA_COMMON_MK)
