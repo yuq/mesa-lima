@@ -503,6 +503,49 @@ static rvcn_dec_message_mpeg2_vld_t get_mpeg2_msg(struct radeon_decoder *dec,
 	return result;
 }
 
+static rvcn_dec_message_mpeg4_asp_vld_t get_mpeg4_msg(struct radeon_decoder *dec,
+				       struct pipe_mpeg4_picture_desc *pic)
+{
+	rvcn_dec_message_mpeg4_asp_vld_t result;
+	unsigned i;
+
+	memset(&result, 0, sizeof(result));
+	result.decoded_pic_idx = dec->frame_number;
+
+	result.forward_ref_pic_idx = get_ref_pic_idx(dec, pic->ref[0]);
+	result.backward_ref_pic_idx = get_ref_pic_idx(dec, pic->ref[1]);
+
+	result.variant_type = 0;
+	result.profile_and_level_indication = 0xF0;
+
+	result.video_object_layer_verid = 0x5;
+	result.video_object_layer_shape = 0x0;
+
+	result.video_object_layer_width = dec->base.width;
+	result.video_object_layer_height = dec->base.height;
+
+	result.vop_time_increment_resolution = pic->vop_time_increment_resolution;
+
+	result.short_video_header |= pic->short_video_header << 0;
+	result.interlaced |= pic->interlaced << 2;
+        result.load_intra_quant_mat |= 1 << 3;
+	result.load_nonintra_quant_mat |= 1 << 4;
+	result.quarter_sample |= pic->quarter_sample << 5;
+	result.complexity_estimation_disable |= 1 << 6;
+	result.resync_marker_disable |= pic->resync_marker_disable << 7;
+	result.newpred_enable |= 0 << 10; //
+	result.reduced_resolution_vop_enable |= 0 << 11;
+
+	result.quant_type = pic->quant_type;
+
+	for (i = 0; i < 64; ++i) {
+		result.intra_quant_mat[i] = pic->intra_matrix[vl_zscan_normal[i]];
+		result.nonintra_quant_mat[i] = pic->non_intra_matrix[vl_zscan_normal[i]];
+	}
+
+	return result;
+}
+
 static void rvcn_dec_message_create(struct radeon_decoder *dec)
 {
 	rvcn_dec_message_header_t *header = dec->msg;
@@ -655,6 +698,14 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 
 		memcpy(codec, (void*)&mpeg2, sizeof(rvcn_dec_message_mpeg2_vld_t));
 		index->message_id = RDECODE_MESSAGE_MPEG2_VLD;
+		break;
+	}
+	case PIPE_VIDEO_FORMAT_MPEG4: {
+		rvcn_dec_message_mpeg4_asp_vld_t mpeg4 =
+			get_mpeg4_msg(dec, (struct pipe_mpeg4_picture_desc*)picture);
+
+		memcpy(codec, (void*)&mpeg4, sizeof(rvcn_dec_message_mpeg4_asp_vld_t));
+		index->message_id = RDECODE_MESSAGE_MPEG4_ASP_VLD;
 		break;
 	}
 	default:
