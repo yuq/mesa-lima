@@ -261,10 +261,6 @@ void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
 int brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo);
 int brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo);
 
-void *brw_bo_map__cpu(struct brw_bo *bo);
-void *brw_bo_map__gtt(struct brw_bo *bo);
-void *brw_bo_map__wc(struct brw_bo *bo);
-
 int brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns);
 
 uint32_t brw_create_hw_context(struct brw_bufmgr *bufmgr);
