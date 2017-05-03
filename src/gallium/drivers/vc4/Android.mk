@@ -36,3 +36,7 @@ LOCAL_MODULE := libmesa_pipe_vc4
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+ifneq ($(HAVE_GALLIUM_VC4),)
+$(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_vc4)
+endif

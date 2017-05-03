@@ -37,62 +37,11 @@ LOCAL_SHARED_LIBRARIES := \
 	libglapi \
 	libexpat
 
-ifneq ($(filter freedreno,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS += -DGALLIUM_FREEDRENO
-gallium_DRIVERS += libmesa_winsys_freedreno libmesa_pipe_freedreno
-LOCAL_SHARED_LIBRARIES += libdrm_freedreno
-endif
-ifneq ($(filter i915g,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_winsys_i915 libmesa_pipe_i915
-LOCAL_SHARED_LIBRARIES += libdrm_intel
-LOCAL_CFLAGS += -DGALLIUM_I915
-endif
-ifneq ($(filter nouveau,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS +=  libmesa_winsys_nouveau libmesa_pipe_nouveau
-LOCAL_CFLAGS += -DGALLIUM_NOUVEAU
-LOCAL_SHARED_LIBRARIES += libdrm_nouveau
-endif
+$(foreach d, $(MESA_BUILD_GALLIUM), $(eval LOCAL_CFLAGS += $(patsubst HAVE_%,-D%,$(d))))
 
-ifneq ($(filter r%,$(MESA_GPU_DRIVERS)),)
-ifneq ($(filter r300g,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_pipe_r300
-LOCAL_CFLAGS += -DGALLIUM_R300
-endif
-ifneq ($(filter r600g,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_pipe_r600 libmesa_pipe_radeon
-LOCAL_CFLAGS += -DGALLIUM_R600
-endif
-ifneq ($(filter radeonsi,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_pipe_radeonsi libmesa_winsys_amdgpu libmesa_amd_common libmesa_pipe_radeon
-LOCAL_SHARED_LIBRARIES += libLLVM libdrm_amdgpu
-LOCAL_CFLAGS += -DGALLIUM_RADEONSI
-endif
-gallium_DRIVERS += libmesa_winsys_radeon libmesa_amdgpu_addrlib
-LOCAL_SHARED_LIBRARIES += libdrm_radeon
-endif
-
-ifneq ($(filter swrast,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_pipe_softpipe libmesa_winsys_sw_dri
-LOCAL_CFLAGS += -DGALLIUM_SOFTPIPE
-endif
-ifneq ($(filter vc4,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS += -DGALLIUM_VC4
-gallium_DRIVERS += libmesa_winsys_vc4 libmesa_pipe_vc4
-endif
-ifneq ($(filter virgl,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS += -DGALLIUM_VIRGL
-gallium_DRIVERS += libmesa_winsys_virgl libmesa_winsys_virgl_vtest libmesa_pipe_virgl
-endif
-ifneq ($(filter vmwgfx,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_winsys_svga libmesa_pipe_svga
-LOCAL_CFLAGS += -DGALLIUM_VMWGFX
-endif
-ifneq ($(filter nouveau r600g,$(MESA_GPU_DRIVERS)),)
-LOCAL_SHARED_LIBRARIES += libc++
-endif
-
+# sort GALLIUM_LIBS to remove any duplicates
 LOCAL_WHOLE_STATIC_LIBRARIES := \
-	$(gallium_DRIVERS) \
+	$(sort $(GALLIUM_LIBS)) \
 	libmesa_st_dri \
 	libmesa_st_mesa \
 	libmesa_glsl \
@@ -104,6 +53,9 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_pipe_loader \
 	libmesa_util \
 	libmesa_loader
+
+# sort GALLIUM_SHARED_LIBS to remove any duplicates
+LOCAL_SHARED_LIBRARIES += $(sort $(GALLIUM_SHARED_LIBS))
 
 LOCAL_STATIC_LIBRARIES :=
 

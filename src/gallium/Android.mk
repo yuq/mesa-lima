@@ -37,12 +37,17 @@ SUBDIRS += winsys/sw/dri drivers/softpipe
 SUBDIRS += winsys/freedreno/drm drivers/freedreno
 SUBDIRS += winsys/i915/drm drivers/i915
 SUBDIRS += winsys/nouveau/drm drivers/nouveau
-SUBDIRS += drivers/r300 drivers/r600 drivers/radeon drivers/radeonsi
-SUBDIRS += winsys/amdgpu/drm winsys/radeon/drm
+SUBDIRS += winsys/radeon/drm drivers/r300
+SUBDIRS += winsys/radeon/drm drivers/r600 drivers/radeon
+SUBDIRS += winsys/radeon/drm winsys/amdgpu/drm drivers/radeonsi drivers/radeon
 SUBDIRS += winsys/vc4/drm drivers/vc4
 SUBDIRS += winsys/virgl/drm winsys/virgl/vtest drivers/virgl
 SUBDIRS += winsys/svga/drm drivers/svga
+SUBDIRS += state_trackers/dri
 
-SUBDIRS += state_trackers/dri targets/dri
+# sort to eliminate any duplicates
+INC_DIRS := $(call all-named-subdir-makefiles,$(sort $(SUBDIRS)))
+# targets/dri must be included last
+INC_DIRS += $(call all-named-subdir-makefiles,targets/dri)
 
-include $(call all-named-subdir-makefiles,$(SUBDIRS))
+include $(INC_DIRS)

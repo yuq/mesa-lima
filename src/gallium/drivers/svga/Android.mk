@@ -36,3 +36,7 @@ LOCAL_MODULE := libmesa_pipe_svga
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+ifneq ($(HAVE_GALLIUM_VMWGFX),)
+$(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_svga)
+endif

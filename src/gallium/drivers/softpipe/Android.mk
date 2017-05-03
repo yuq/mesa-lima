@@ -35,3 +35,7 @@ LOCAL_MODULE := libmesa_pipe_softpipe
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+ifneq ($(HAVE_GALLIUM_SOFTPIPE),)
+$(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_sw_dri)
+endif

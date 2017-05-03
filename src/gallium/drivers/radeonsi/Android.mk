@@ -38,8 +38,19 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/amd/common \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_amd_common,,)/common
 
-LOCAL_SHARED_LIBRARIES := libdrm_radeon
+LOCAL_STATIC_LIBRARIES := libmesa_amd_common
+
+LOCAL_SHARED_LIBRARIES := libdrm_radeon libLLVM
 LOCAL_MODULE := libmesa_pipe_radeonsi
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+ifneq ($(HAVE_GALLIUM_RADEONSI),)
+$(eval GALLIUM_LIBS += \
+	$(LOCAL_MODULE) \
+	$(LOCAL_STATIC_LIBRARIES) \
+	libmesa_winsys_radeon \
+	libmesa_winsys_amdgpu)
+$(eval GALLIUM_SHARED_LIBS += $(LOCAL_SHARED_LIBRARIES))
+endif

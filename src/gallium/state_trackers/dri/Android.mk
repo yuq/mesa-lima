@@ -42,7 +42,7 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := \
 LOCAL_STATIC_LIBRARIES := \
 	libmesa_dri_common
 
-ifneq ($(filter swrast,$(MESA_GPU_DRIVERS)),)
+ifneq ($(HAVE_GALLIUM_SOFTPIPE),)
 LOCAL_SRC_FILES += $(drisw_SOURCES)
 endif
 

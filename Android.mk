@@ -40,19 +40,31 @@ MESA_DRI_MODULE_UNSTRIPPED_PATH := $(TARGET_OUT_SHARED_LIBRARIES_UNSTRIPPED)/$(M
 MESA_COMMON_MK := $(MESA_TOP)/Android.common.mk
 MESA_PYTHON2 := python
 
-classic_drivers := i915 i965
-gallium_drivers := swrast freedreno i915g nouveau r300g r600g radeonsi vmwgfx vc4 virgl
+# Lists to convert driver names to boolean variables
+# in form of <driver name>.<boolean make variable>
+classic_drivers := i915.HAVE_I915_DRI i965.HAVE_I965_DRI
+gallium_drivers := \
+	swrast.HAVE_GALLIUM_SOFTPIPE \
+	freedreno.HAVE_GALLIUM_FREEDRENO \
+	i915g.HAVE_GALLIUM_I915 \
+	nouveau.HAVE_GALLIUM_NOUVEAU \
+	r300g.HAVE_GALLIUM_R300 \
+	r600g.HAVE_GALLIUM_R600 \
+	radeonsi.HAVE_GALLIUM_RADEONSI \
+	vmwgfx.HAVE_GALLIUM_VMWGFX \
+	vc4.HAVE_GALLIUM_VC4 \
+	virgl.HAVE_GALLIUM_VIRGL
 
-MESA_GPU_DRIVERS := $(strip $(BOARD_GPU_DRIVERS))
-
-# warn about invalid drivers
-invalid_drivers := $(filter-out \
-	$(classic_drivers) $(gallium_drivers), $(MESA_GPU_DRIVERS))
-ifneq ($(invalid_drivers),)
-$(warning invalid GPU drivers: $(invalid_drivers))
-# tidy up
-MESA_GPU_DRIVERS := $(filter-out $(invalid_drivers), $(MESA_GPU_DRIVERS))
-endif
+# Warn if we have any invalid driver names
+$(foreach d, $(BOARD_GPU_DRIVERS), \
+	$(if $(findstring $(d).,$(classic_drivers) $(gallium_drivers)), \
+		, \
+		$(warning invalid GPU driver: $(d)) \
+	) \
+)
+MESA_BUILD_CLASSIC := $(strip $(foreach d, $(BOARD_GPU_DRIVERS), $(patsubst $(d).%,%, $(filter $(d).%, $(classic_drivers)))))
+MESA_BUILD_GALLIUM := $(strip $(foreach d, $(BOARD_GPU_DRIVERS), $(patsubst $(d).%,%, $(filter $(d).%, $(gallium_drivers)))))
+$(foreach d, $(MESA_BUILD_CLASSIC) $(MESA_BUILD_GALLIUM), $(eval $(d) := true))
 
 # host and target must be the same arch to generate matypes.h
 ifeq ($(TARGET_ARCH),$(HOST_ARCH))
@@ -61,19 +73,9 @@ else
 MESA_ENABLE_ASM := false
 endif
 
-ifneq ($(filter $(classic_drivers), $(MESA_GPU_DRIVERS)),)
-MESA_BUILD_CLASSIC := true
-else
-MESA_BUILD_CLASSIC := false
+ifneq ($(filter true, $(HAVE_GALLIUM_RADEONSI)),)
+MESA_ENABLE_LLVM := true
 endif
-
-ifneq ($(filter $(gallium_drivers), $(MESA_GPU_DRIVERS)),)
-MESA_BUILD_GALLIUM := true
-else
-MESA_BUILD_GALLIUM := false
-endif
-
-MESA_ENABLE_LLVM := $(if $(filter radeonsi,$(MESA_GPU_DRIVERS)),true,false)
 
 # add subdirectories
 SUBDIRS := \

@@ -34,3 +34,7 @@ LOCAL_MODULE := libmesa_pipe_i915
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+ifneq ($(HAVE_GALLIUM_I915),)
+$(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_i915)
+endif

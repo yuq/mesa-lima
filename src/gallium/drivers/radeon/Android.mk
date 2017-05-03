@@ -34,8 +34,13 @@ ifeq ($(MESA_ENABLE_LLVM),true)
 LOCAL_CFLAGS += -DFORCE_BUILD_AMDGPU   # instructs LLVM to declare LLVMInitializeAMDGPU* functions
 endif
 
-LOCAL_SHARED_LIBRARIES := libdrm_radeon
+LOCAL_SHARED_LIBRARIES := libdrm_radeon libLLVM
 LOCAL_MODULE := libmesa_pipe_radeon
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+ifneq ($(HAVE_GALLIUM_R600)$(HAVE_GALLIUM_RADEONSI),)
+$(eval GALLIUM_LIBS += $(LOCAL_MODULE))
+$(eval GALLIUM_SHARED_LIBS += $(LOCAL_SHARED_LIBRARIES))
+endif

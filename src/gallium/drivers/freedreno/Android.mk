@@ -48,3 +48,8 @@ LOCAL_MODULE := libmesa_pipe_freedreno
 include $(LOCAL_PATH)/Android.gen.mk
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+ifneq ($(HAVE_GALLIUM_FREEDRENO),)
+$(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_freedreno)
+$(eval GALLIUM_SHARED_LIBS += $(LOCAL_SHARED_LIBRARIES))
+endif
