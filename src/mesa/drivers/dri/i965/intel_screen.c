@@ -313,6 +313,20 @@ modifier_to_tiling(uint64_t modifier)
    unreachable();
 }
 
+static uint64_t
+tiling_to_modifier(uint32_t tiling)
+{
+   int i;
+
+   for (i = 0; i < ARRAY_SIZE(tiling_modifier_map); i++) {
+      if (tiling_modifier_map[i].tiling == tiling)
+         return tiling_modifier_map[i].modifier;
+   }
+
+   assert(0 && "tiling_to_modifier received unknown tiling mode");
+   unreachable();
+}
+
 static void
 intel_image_warn_if_unaligned(__DRIimage *image, const char *func)
 {
@@ -430,6 +444,7 @@ intel_create_image_from_name(__DRIscreen *dri_screen,
        free(image);
        return NULL;
     }
+    image->modifier = tiling_to_modifier(image->bo->tiling_mode);
 
     return image;
 }
@@ -458,6 +473,7 @@ intel_create_image_from_renderbuffer(__DRIcontext *context,
 
    image->internal_format = rb->InternalFormat;
    image->format = rb->Format;
+   image->modifier = tiling_to_modifier(irb->mt->tiling);
    image->offset = 0;
    image->data = loaderPrivate;
    brw_bo_unreference(image->bo);
@@ -519,6 +535,7 @@ intel_create_image_from_texture(__DRIcontext *context, int target,
 
    image->internal_format = obj->Image[face][level]->InternalFormat;
    image->format = obj->Image[face][level]->TexFormat;
+   image->modifier = tiling_to_modifier(iobj->mt->tiling);
    image->data = loaderPrivate;
    intel_setup_image_from_mipmap_tree(brw, image, iobj->mt, level, zoffset);
    image->dri_format = driGLFormatToImageFormat(image->format);
@@ -727,6 +744,7 @@ intel_dup_image(__DRIimage *orig_image, void *loaderPrivate)
    image->planar_format   = orig_image->planar_format;
    image->dri_format      = orig_image->dri_format;
    image->format          = orig_image->format;
+   image->modifier        = orig_image->modifier;
    image->offset          = orig_image->offset;
    image->width           = orig_image->width;
    image->height          = orig_image->height;
@@ -845,6 +863,7 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
       free(image);
       return NULL;
    }
+   image->modifier = tiling_to_modifier(image->bo->tiling_mode);
 
    if (f->nplanes == 1) {
       image->offset = image->offsets[0];
@@ -932,6 +951,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
 
     image->bo = parent->bo;
     brw_bo_reference(parent->bo);
+    image->modifier = parent->modifier;
 
     image->width = width;
     image->height = height;
