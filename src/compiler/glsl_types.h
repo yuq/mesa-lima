@@ -966,14 +966,14 @@ struct glsl_struct_field {
    unsigned precision:2;
 
    /**
-    * Image qualifiers, applicable to buffer variables defined in shader
+    * Memory qualifiers, applicable to buffer variables defined in shader
     * storage buffer objects (SSBOs)
     */
-   unsigned image_read_only:1;
-   unsigned image_write_only:1;
-   unsigned image_coherent:1;
-   unsigned image_volatile:1;
-   unsigned image_restrict:1;
+   unsigned memory_read_only:1;
+   unsigned memory_write_only:1;
+   unsigned memory_coherent:1;
+   unsigned memory_volatile:1;
+   unsigned memory_restrict:1;
 
    /**
     * Any of the xfb_* qualifiers trigger the shader to be in transform
@@ -988,9 +988,9 @@ struct glsl_struct_field {
       : type(_type), name(_name), location(-1), offset(0), xfb_buffer(0),
         xfb_stride(0), interpolation(0), centroid(0),
         sample(0), matrix_layout(GLSL_MATRIX_LAYOUT_INHERITED), patch(0),
-        precision(GLSL_PRECISION_NONE), image_read_only(0), image_write_only(0),
-        image_coherent(0), image_volatile(0), image_restrict(0),
-        explicit_xfb_buffer(0), implicit_sized_array(0)
+        precision(GLSL_PRECISION_NONE), memory_read_only(0),
+        memory_write_only(0), memory_coherent(0), memory_volatile(0),
+        memory_restrict(0), explicit_xfb_buffer(0), implicit_sized_array(0)
    {
       /* empty */
    }

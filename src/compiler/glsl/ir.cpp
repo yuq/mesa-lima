@@ -1722,11 +1722,11 @@ ir_variable::ir_variable(const struct glsl_type *type, const char *name,
    this->data.max_array_access = -1;
    this->data.offset = 0;
    this->data.precision = GLSL_PRECISION_NONE;
-   this->data.image_read_only = false;
-   this->data.image_write_only = false;
-   this->data.image_coherent = false;
-   this->data.image_volatile = false;
-   this->data.image_restrict = false;
+   this->data.memory_read_only = false;
+   this->data.memory_write_only = false;
+   this->data.memory_coherent = false;
+   this->data.memory_volatile = false;
+   this->data.memory_restrict = false;
    this->data.from_ssbo_unsized_array = false;
    this->data.fb_fetch_output = false;
 
@@ -1846,11 +1846,11 @@ ir_function_signature::qualifiers_match(exec_list *params)
 	  a->data.centroid != b->data.centroid ||
           a->data.sample != b->data.sample ||
           a->data.patch != b->data.patch ||
-          a->data.image_read_only != b->data.image_read_only ||
-          a->data.image_write_only != b->data.image_write_only ||
-          a->data.image_coherent != b->data.image_coherent ||
-          a->data.image_volatile != b->data.image_volatile ||
-          a->data.image_restrict != b->data.image_restrict) {
+          a->data.memory_read_only != b->data.memory_read_only ||
+          a->data.memory_write_only != b->data.memory_write_only ||
+          a->data.memory_coherent != b->data.memory_coherent ||
+          a->data.memory_volatile != b->data.memory_volatile ||
+          a->data.memory_restrict != b->data.memory_restrict) {
 
 	 /* parameter a's qualifiers don't match */
 	 return a->name;

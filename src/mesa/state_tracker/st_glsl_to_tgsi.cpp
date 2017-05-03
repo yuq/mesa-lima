@@ -3888,11 +3888,11 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
    inst->image_format = st_mesa_format_to_pipe_format(st_context(ctx),
          _mesa_get_shader_image_format(imgvar->data.image_format));
 
-   if (imgvar->data.image_coherent)
+   if (imgvar->data.memory_coherent)
       inst->buffer_access |= TGSI_MEMORY_COHERENT;
-   if (imgvar->data.image_restrict)
+   if (imgvar->data.memory_restrict)
       inst->buffer_access |= TGSI_MEMORY_RESTRICT;
-   if (imgvar->data.image_volatile)
+   if (imgvar->data.memory_volatile)
       inst->buffer_access |= TGSI_MEMORY_VOLATILE;
 }
 

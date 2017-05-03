@@ -940,20 +940,20 @@ glsl_type::record_compare(const glsl_type *b, bool match_locations) const
       if (this->fields.structure[i].patch
           != b->fields.structure[i].patch)
          return false;
-      if (this->fields.structure[i].image_read_only
-          != b->fields.structure[i].image_read_only)
+      if (this->fields.structure[i].memory_read_only
+          != b->fields.structure[i].memory_read_only)
          return false;
-      if (this->fields.structure[i].image_write_only
-          != b->fields.structure[i].image_write_only)
+      if (this->fields.structure[i].memory_write_only
+          != b->fields.structure[i].memory_write_only)
          return false;
-      if (this->fields.structure[i].image_coherent
-          != b->fields.structure[i].image_coherent)
+      if (this->fields.structure[i].memory_coherent
+          != b->fields.structure[i].memory_coherent)
          return false;
-      if (this->fields.structure[i].image_volatile
-          != b->fields.structure[i].image_volatile)
+      if (this->fields.structure[i].memory_volatile
+          != b->fields.structure[i].memory_volatile)
          return false;
-      if (this->fields.structure[i].image_restrict
-          != b->fields.structure[i].image_restrict)
+      if (this->fields.structure[i].memory_restrict
+          != b->fields.structure[i].memory_restrict)
          return false;
       if (this->fields.structure[i].precision
           != b->fields.structure[i].precision)

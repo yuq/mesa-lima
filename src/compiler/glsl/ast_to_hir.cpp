@@ -86,17 +86,17 @@ public:
          return visit_continue;
 
       ir_variable *var = ir->variable_referenced();
-      /* We can have image_write_only set on both images and buffer variables,
+      /* We can have memory_write_only set on both images and buffer variables,
        * but in the former there is a distinction between reads from
        * the variable itself (write_only) and from the memory they point to
-       * (image_write_only), while in the case of buffer variables there is
+       * (memory_write_only), while in the case of buffer variables there is
        * no such distinction, that is why this check here is limited to
        * buffer variables alone.
        */
       if (!var || var->data.mode != ir_var_shader_storage)
          return visit_continue;
 
-      if (var->data.image_write_only) {
+      if (var->data.memory_write_only) {
          found = var;
          return visit_stop;
       }
@@ -947,11 +947,11 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
          error_emitted = true;
       } else if (lhs_var != NULL && (lhs_var->data.read_only ||
                  (lhs_var->data.mode == ir_var_shader_storage &&
-                  lhs_var->data.image_read_only))) {
-         /* We can have image_read_only set on both images and buffer variables,
+                  lhs_var->data.memory_read_only))) {
+         /* We can have memory_read_only set on both images and buffer variables,
           * but in the former there is a distinction between assignments to
           * the variable itself (read_only) and to the memory they point to
-          * (image_read_only), while in the case of buffer variables there is
+          * (memory_read_only), while in the case of buffer variables there is
           * no such distinction, that is why this check here is limited to
           * buffer variables alone.
           */
@@ -3335,11 +3335,11 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
                        "global variables");
    }
 
-   var->data.image_read_only |= qual->flags.q.read_only;
-   var->data.image_write_only |= qual->flags.q.write_only;
-   var->data.image_coherent |= qual->flags.q.coherent;
-   var->data.image_volatile |= qual->flags.q._volatile;
-   var->data.image_restrict |= qual->flags.q.restrict_flag;
+   var->data.memory_read_only |= qual->flags.q.read_only;
+   var->data.memory_write_only |= qual->flags.q.write_only;
+   var->data.memory_coherent |= qual->flags.q.coherent;
+   var->data.memory_volatile |= qual->flags.q._volatile;
+   var->data.memory_restrict |= qual->flags.q.restrict_flag;
    var->data.read_only = true;
 
    if (qual->flags.q.explicit_image_format) {
@@ -3377,8 +3377,8 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
        var->data.image_format != GL_R32F &&
        var->data.image_format != GL_R32I &&
        var->data.image_format != GL_R32UI &&
-       !var->data.image_read_only &&
-       !var->data.image_write_only) {
+       !var->data.memory_read_only &&
+       !var->data.memory_write_only) {
       _mesa_glsl_error(loc, state, "image variables of format other than r32f, "
                        "r32i or r32ui must be qualified `readonly' or "
                        "`writeonly'");
@@ -7126,24 +7126,24 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
              * if set, overwrites the layout qualifier.
              */
             if (qual->flags.q.read_only) {
-               fields[i].image_read_only = true;
-               fields[i].image_write_only = false;
+               fields[i].memory_read_only = true;
+               fields[i].memory_write_only = false;
             } else if (qual->flags.q.write_only) {
-               fields[i].image_read_only = false;
-               fields[i].image_write_only = true;
+               fields[i].memory_read_only = false;
+               fields[i].memory_write_only = true;
             } else {
-               fields[i].image_read_only = layout->flags.q.read_only;
-               fields[i].image_write_only = layout->flags.q.write_only;
+               fields[i].memory_read_only = layout->flags.q.read_only;
+               fields[i].memory_write_only = layout->flags.q.write_only;
             }
 
             /* For other qualifiers, we set the flag if either the layout
              * qualifier or the field qualifier are set
              */
-            fields[i].image_coherent = qual->flags.q.coherent ||
+            fields[i].memory_coherent = qual->flags.q.coherent ||
                                         layout->flags.q.coherent;
-            fields[i].image_volatile = qual->flags.q._volatile ||
+            fields[i].memory_volatile = qual->flags.q._volatile ||
                                         layout->flags.q._volatile;
-            fields[i].image_restrict = qual->flags.q.restrict_flag ||
+            fields[i].memory_restrict = qual->flags.q.restrict_flag ||
                                         layout->flags.q.restrict_flag;
          }
 
@@ -7268,11 +7268,11 @@ is_unsized_array_last_element(ir_variable *v)
 static void
 apply_memory_qualifiers(ir_variable *var, glsl_struct_field field)
 {
-   var->data.image_read_only = field.image_read_only;
-   var->data.image_write_only = field.image_write_only;
-   var->data.image_coherent = field.image_coherent;
-   var->data.image_volatile = field.image_volatile;
-   var->data.image_restrict = field.image_restrict;
+   var->data.memory_read_only = field.memory_read_only;
+   var->data.memory_write_only = field.memory_write_only;
+   var->data.memory_coherent = field.memory_coherent;
+   var->data.memory_volatile = field.memory_volatile;
+   var->data.memory_restrict = field.memory_restrict;
 }
 
 ir_rvalue *

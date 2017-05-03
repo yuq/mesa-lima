@@ -827,13 +827,13 @@ public:
       ir_depth_layout depth_layout:3;
 
       /**
-       * ARB_shader_image_load_store qualifiers.
+       * Memory qualifiers.
        */
-      unsigned image_read_only:1; /**< "readonly" qualifier. */
-      unsigned image_write_only:1; /**< "writeonly" qualifier. */
-      unsigned image_coherent:1;
-      unsigned image_volatile:1;
-      unsigned image_restrict:1;
+      unsigned memory_read_only:1; /**< "readonly" qualifier. */
+      unsigned memory_write_only:1; /**< "writeonly" qualifier. */
+      unsigned memory_coherent:1;
+      unsigned memory_volatile:1;
+      unsigned memory_restrict:1;
 
       /**
        * ARB_shader_storage_buffer_object

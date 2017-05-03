@@ -586,8 +586,8 @@ private:
 
          /* Set image access qualifiers */
          const GLenum access =
-            (current_var->data.image_read_only ? GL_READ_ONLY :
-             current_var->data.image_write_only ? GL_WRITE_ONLY :
+            (current_var->data.memory_read_only ? GL_READ_ONLY :
+             current_var->data.memory_write_only ? GL_WRITE_ONLY :
                 GL_READ_WRITE);
 
          const unsigned first = this->next_image;

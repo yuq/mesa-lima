@@ -426,11 +426,11 @@ nir_visitor::visit(ir_variable *ir)
    var->data.index = ir->data.index;
    var->data.binding = ir->data.binding;
    var->data.offset = ir->data.offset;
-   var->data.image.read_only = ir->data.image_read_only;
-   var->data.image.write_only = ir->data.image_write_only;
-   var->data.image.coherent = ir->data.image_coherent;
-   var->data.image._volatile = ir->data.image_volatile;
-   var->data.image.restrict_flag = ir->data.image_restrict;
+   var->data.image.read_only = ir->data.memory_read_only;
+   var->data.image.write_only = ir->data.memory_write_only;
+   var->data.image.coherent = ir->data.memory_coherent;
+   var->data.image._volatile = ir->data.memory_volatile;
+   var->data.image.restrict_flag = ir->data.memory_restrict;
    var->data.image.format = ir->data.image_format;
    var->data.fb_fetch_output = ir->data.fb_fetch_output;
 

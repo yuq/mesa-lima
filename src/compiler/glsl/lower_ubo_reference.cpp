@@ -411,13 +411,13 @@ lower_ubo_reference_visitor::ssbo_access_params()
    if (variable->is_interface_instance()) {
       assert(struct_field);
 
-      return ((struct_field->image_coherent ? ACCESS_COHERENT : 0) |
-              (struct_field->image_restrict ? ACCESS_RESTRICT : 0) |
-              (struct_field->image_volatile ? ACCESS_VOLATILE : 0));
+      return ((struct_field->memory_coherent ? ACCESS_COHERENT : 0) |
+              (struct_field->memory_restrict ? ACCESS_RESTRICT : 0) |
+              (struct_field->memory_volatile ? ACCESS_VOLATILE : 0));
    } else {
-      return ((variable->data.image_coherent ? ACCESS_COHERENT : 0) |
-              (variable->data.image_restrict ? ACCESS_RESTRICT : 0) |
-              (variable->data.image_volatile ? ACCESS_VOLATILE : 0));
+      return ((variable->data.memory_coherent ? ACCESS_COHERENT : 0) |
+              (variable->data.memory_restrict ? ACCESS_RESTRICT : 0) |
+              (variable->data.memory_volatile ? ACCESS_VOLATILE : 0));
    }
 }
 
