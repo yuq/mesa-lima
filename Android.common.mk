@@ -87,10 +87,6 @@ endif
 endif
 
 ifeq ($(MESA_ENABLE_LLVM),true)
-  ifeq ($(MESA_ANDROID_MAJOR_VERSION),5)
-    LOCAL_CFLAGS += -DHAVE_LLVM=0x0305 -DMESA_LLVM_VERSION_PATCH=2
-    ELF_INCLUDES := external/elfutils/0.153/libelf
-  endif
   ifeq ($(MESA_ANDROID_MAJOR_VERSION),6)
     LOCAL_CFLAGS += -DHAVE_LLVM=0x0307 -DMESA_LLVM_VERSION_PATCH=0
     ELF_INCLUDES := external/elfutils/src/libelf
