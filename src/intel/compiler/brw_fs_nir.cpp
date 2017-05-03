@@ -2251,7 +2251,7 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
    }
 
    case nir_intrinsic_load_input: {
-      fs_reg src = fs_reg(ATTR, instr->const_index[0], dest.type);
+      fs_reg src = fs_reg(ATTR, nir_intrinsic_base(instr) * 4, dest.type);
       unsigned first_component = nir_intrinsic_component(instr);
       unsigned num_components = instr->num_components;
       enum brw_reg_type type = dest.type;

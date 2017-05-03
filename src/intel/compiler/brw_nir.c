@@ -279,7 +279,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
                int attr = nir_intrinsic_base(intrin);
                int slot = _mesa_bitcount_64(nir->info.inputs_read &
                                             BITFIELD64_MASK(attr));
-               nir_intrinsic_set_base(intrin, 4 * slot);
+               nir_intrinsic_set_base(intrin, slot);
             }
          }
       }
