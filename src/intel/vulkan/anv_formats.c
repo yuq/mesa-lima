@@ -715,7 +715,8 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
    if (external_info && external_info->handleType != 0) {
       switch (external_info->handleType) {
       case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX:
-         external_props->externalMemoryProperties = prime_fd_props;
+         if (external_props)
+            external_props->externalMemoryProperties = prime_fd_props;
          break;
       default:
          /* From the Vulkan 1.0.42 spec:
