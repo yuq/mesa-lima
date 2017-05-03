@@ -736,9 +736,12 @@ svga_resource_copy_region(struct pipe_context *pipe,
 
       /* Blits are format-converting which is not what we want, so perform a
        * strict format-check.
-       * FIXME: Also blits appear broken with 3D source textures.
+       * FIXME: Need to figure out why srgb blits (tf2) and
+       * 3D blits (piglit) are broken here. Perhaps we set up the
+       * struct pipe_blit_info incorrectly.
        */
       if (src_tex->format == dst_tex->format &&
+          !util_format_is_srgb(src_tex->format) &&
           svga_resource_type(src_tex->target) != SVGA3D_RESOURCE_TEXTURE3D &&
           try_blit(svga, &blit))
          goto done;
