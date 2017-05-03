@@ -102,11 +102,8 @@ ifeq ($(MESA_ENABLE_LLVM),true)
 endif
 
 ifneq ($(LOCAL_IS_HOST_MODULE),true)
-# add libdrm if there are hardware drivers
-ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
 LOCAL_CFLAGS += -DHAVE_LIBDRM
 LOCAL_SHARED_LIBRARIES += libdrm
-endif
 endif
 
 LOCAL_CFLAGS_32 += -DDEFAULT_DRIVER_DIR=\"/system/lib/$(MESA_DRI_MODULE_REL_PATH)\"
