@@ -1886,9 +1886,11 @@ static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
 static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
 {
 	uint32_t ps_input_cntl;
-	if (offset <= AC_EXP_PARAM_OFFSET_31)
+	if (offset <= AC_EXP_PARAM_OFFSET_31) {
 		ps_input_cntl = S_028644_OFFSET(offset);
-	else {
+		if (flat_shade)
+			ps_input_cntl |= S_028644_FLAT_SHADE(1);
+	} else {
 		/* The input is a DEFAULT_VAL constant. */
 		assert(offset >= AC_EXP_PARAM_DEFAULT_VAL_0000 &&
 		       offset <= AC_EXP_PARAM_DEFAULT_VAL_1111);
@@ -1896,8 +1898,6 @@ static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
 		ps_input_cntl = S_028644_OFFSET(0x20) |
 			S_028644_DEFAULT_VAL(offset);
 	}
-	if (flat_shade)
-		ps_input_cntl |= S_028644_FLAT_SHADE(1);
 	return ps_input_cntl;
 }
 
