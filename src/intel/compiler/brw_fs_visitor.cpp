@@ -32,44 +32,6 @@
 
 using namespace brw;
 
-fs_reg *
-fs_visitor::emit_vs_system_value(int location)
-{
-   fs_reg *reg = new(this->mem_ctx)
-      fs_reg(ATTR, 4 * _mesa_bitcount_64(nir->info.inputs_read),
-             BRW_REGISTER_TYPE_D);
-
-   switch (location) {
-   case SYSTEM_VALUE_BASE_VERTEX:
-      reg->offset = 0;
-      break;
-   case SYSTEM_VALUE_BASE_INSTANCE:
-      reg->offset = REG_SIZE;
-      break;
-   case SYSTEM_VALUE_VERTEX_ID:
-      unreachable("should have been lowered");
-   case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
-      reg->offset = 2 * REG_SIZE;
-      break;
-   case SYSTEM_VALUE_INSTANCE_ID:
-      reg->offset = 3 * REG_SIZE;
-      break;
-   case SYSTEM_VALUE_DRAW_ID:
-      if (nir->info.system_values_read &
-          (BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX) |
-           BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE) |
-           BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
-           BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID)))
-         reg->nr += 4;
-      reg->offset = 0;
-      break;
-   default:
-      unreachable("not reached");
-   }
-
-   return reg;
-}
-
 /* Sample from the MCS surface attached to this multisample texture. */
 fs_reg
 fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,

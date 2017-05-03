@@ -89,39 +89,11 @@ emit_system_values_block(nir_block *block, fs_visitor *v)
          unreachable("should be lowered by lower_vertex_id().");
 
       case nir_intrinsic_load_vertex_id_zero_base:
-         assert(v->stage == MESA_SHADER_VERTEX);
-         reg = &v->nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
-         if (reg->file == BAD_FILE)
-            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE);
-         break;
-
       case nir_intrinsic_load_base_vertex:
-         assert(v->stage == MESA_SHADER_VERTEX);
-         reg = &v->nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
-         if (reg->file == BAD_FILE)
-            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_BASE_VERTEX);
-         break;
-
       case nir_intrinsic_load_instance_id:
-         assert(v->stage == MESA_SHADER_VERTEX);
-         reg = &v->nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
-         if (reg->file == BAD_FILE)
-            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_INSTANCE_ID);
-         break;
-
       case nir_intrinsic_load_base_instance:
-         assert(v->stage == MESA_SHADER_VERTEX);
-         reg = &v->nir_system_values[SYSTEM_VALUE_BASE_INSTANCE];
-         if (reg->file == BAD_FILE)
-            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_BASE_INSTANCE);
-         break;
-
       case nir_intrinsic_load_draw_id:
-         assert(v->stage == MESA_SHADER_VERTEX);
-         reg = &v->nir_system_values[SYSTEM_VALUE_DRAW_ID];
-         if (reg->file == BAD_FILE)
-            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_DRAW_ID);
-         break;
+         unreachable("should be lowered by brw_nir_lower_vs_inputs().");
 
       case nir_intrinsic_load_invocation_id:
          if (v->stage == MESA_SHADER_TESS_CTRL)

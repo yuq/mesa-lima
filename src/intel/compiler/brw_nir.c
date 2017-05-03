@@ -259,18 +259,84 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
    if (!is_scalar)
       return;
 
+   /* Whether or not we have any system generated values.  gl_DrawID is not
+    * included here as it lives in its own vec4.
+    */
+   const bool has_sgvs =
+      nir->info.system_values_read &
+      (BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX) |
+       BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE) |
+       BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
+       BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID));
+
+   const unsigned num_inputs = _mesa_bitcount_64(nir->info.inputs_read);
+
    nir_foreach_function(function, nir) {
       if (!function->impl)
          continue;
 
+      nir_builder b;
+      nir_builder_init(&b, function->impl);
+
       nir_foreach_block(block, function->impl) {
-         nir_foreach_instr(instr, block) {
+         nir_foreach_instr_safe(instr, block) {
             if (instr->type != nir_instr_type_intrinsic)
                continue;
 
             nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
-            if (intrin->intrinsic == nir_intrinsic_load_input) {
+            switch (intrin->intrinsic) {
+            case nir_intrinsic_load_base_vertex:
+            case nir_intrinsic_load_base_instance:
+            case nir_intrinsic_load_vertex_id_zero_base:
+            case nir_intrinsic_load_instance_id:
+            case nir_intrinsic_load_draw_id: {
+               b.cursor = nir_after_instr(&intrin->instr);
+
+               /* gl_VertexID and friends are stored by the VF as the last
+                * vertex element.  We convert them to load_input intrinsics at
+                * the right location.
+                */
+               nir_intrinsic_instr *load =
+                  nir_intrinsic_instr_create(nir, nir_intrinsic_load_input);
+               load->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
+
+               nir_intrinsic_set_base(load, num_inputs);
+               switch (intrin->intrinsic) {
+               case nir_intrinsic_load_base_vertex:
+                  nir_intrinsic_set_component(load, 0);
+                  break;
+               case nir_intrinsic_load_base_instance:
+                  nir_intrinsic_set_component(load, 1);
+                  break;
+               case nir_intrinsic_load_vertex_id_zero_base:
+                  nir_intrinsic_set_component(load, 2);
+                  break;
+               case nir_intrinsic_load_instance_id:
+                  nir_intrinsic_set_component(load, 3);
+                  break;
+               case nir_intrinsic_load_draw_id:
+                  /* gl_DrawID is stored right after gl_VertexID and friends
+                   * if any of them exist.
+                   */
+                  nir_intrinsic_set_base(load, num_inputs + has_sgvs);
+                  nir_intrinsic_set_component(load, 0);
+                  break;
+               default:
+                  unreachable("Invalid system value intrinsic");
+               }
+
+               load->num_components = 1;
+               nir_ssa_dest_init(&load->instr, &load->dest, 1, 32, NULL);
+               nir_builder_instr_insert(&b, &load->instr);
+
+               nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                        nir_src_for_ssa(&load->dest.ssa));
+               nir_instr_remove(&intrin->instr);
+               break;
+            }
+
+            case nir_intrinsic_load_input: {
                /* Attributes come in a contiguous block, ordered by their
                 * gl_vert_attrib value.  That means we can compute the slot
                 * number for an attribute by masking out the enabled attributes
@@ -280,6 +346,11 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
                int slot = _mesa_bitcount_64(nir->info.inputs_read &
                                             BITFIELD64_MASK(attr));
                nir_intrinsic_set_base(intrin, slot);
+               break;
+            }
+
+            default:
+               break; /* Nothing to do */
             }
          }
       }
