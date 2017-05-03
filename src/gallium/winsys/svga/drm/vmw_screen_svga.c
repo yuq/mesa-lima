@@ -123,11 +123,12 @@ vmw_svga_winsys_fence_signalled(struct svga_winsys_screen *sws,
 static int
 vmw_svga_winsys_fence_finish(struct svga_winsys_screen *sws,
                              struct pipe_fence_handle *fence,
+                             uint64_t timeout,
                              unsigned flag)
 {
    struct vmw_winsys_screen *vws = vmw_winsys_screen(sws);
 
-   return vmw_fence_finish(vws, fence, flag);
+   return vmw_fence_finish(vws, fence, timeout, flag);
 }
 
 

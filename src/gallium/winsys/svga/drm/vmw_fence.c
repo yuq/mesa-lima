@@ -300,6 +300,7 @@ vmw_fence_signalled(struct vmw_winsys_screen *vws,
  *
  * @vws: Pointer to the winsys screen.
  * @fence: Handle to the fence object.
+ * @timeout: How long to wait before timing out.
  * @flag: Fence flags to wait for. If the fence object can't signal
  * a flag, it is assumed to be already signaled.
  *
@@ -308,6 +309,7 @@ vmw_fence_signalled(struct vmw_winsys_screen *vws,
 int
 vmw_fence_finish(struct vmw_winsys_screen *vws,
 		 struct pipe_fence_handle *fence,
+		 uint64_t timeout,
 		 unsigned flag)
 {
    struct vmw_fence *vfence;
@@ -383,7 +385,7 @@ vmw_fence_ops_fence_finish(struct pb_fence_ops *ops,
 {
    struct vmw_winsys_screen *vws = vmw_fence_ops(ops)->vws;
 
-   return vmw_fence_finish(vws, fence, flag);
+   return vmw_fence_finish(vws, fence, PIPE_TIMEOUT_INFINITE, flag);
 }
 
 

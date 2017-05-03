@@ -625,11 +625,14 @@ struct svga_winsys_screen
 
    /**
     * Wait for the fence to finish.
+    * \param timeout in nanoseconds (may be PIPE_TIMEOUT_INFINITE).
+    *                0 to return immediately, if the API suports it.
     * \param flags  driver-specific meaning
     * \return zero on success.
     */
    int (*fence_finish)( struct svga_winsys_screen *sws,
                         struct pipe_fence_handle *fence,
+                        uint64_t timeout,
                         unsigned flag );
 
 

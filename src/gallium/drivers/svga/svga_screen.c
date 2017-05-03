@@ -854,7 +854,7 @@ svga_fence_finish(struct pipe_screen *screen,
       SVGA_DBG(DEBUG_DMA|DEBUG_PERF, "%s fence_ptr %p\n",
                __FUNCTION__, fence);
 
-      retVal = sws->fence_finish(sws, fence, 0) == 0;
+      retVal = sws->fence_finish(sws, fence, timeout, 0) == 0;
    }
 
    SVGA_STATS_TIME_POP(sws);

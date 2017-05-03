@@ -43,6 +43,7 @@ vmw_fence_create(struct pb_fence_ops *fence_ops,
 int
 vmw_fence_finish(struct vmw_winsys_screen *vws,
 		 struct pipe_fence_handle *fence,
+		 uint64_t timeout,
 		 unsigned flag);
 int
 vmw_fence_signalled(struct vmw_winsys_screen *vws,

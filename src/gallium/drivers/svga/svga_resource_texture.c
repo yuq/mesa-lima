@@ -128,7 +128,7 @@ svga_transfer_dma(struct svga_context *svga,
 
       if (transfer == SVGA3D_READ_HOST_VRAM) {
          svga_context_flush(svga, &fence);
-         sws->fence_finish(sws, fence, 0);
+         sws->fence_finish(sws, fence, PIPE_TIMEOUT_INFINITE, 0);
          sws->fence_reference(sws, &fence, NULL);
       }
    }
@@ -187,7 +187,7 @@ svga_transfer_dma(struct svga_context *svga,
 
          if (transfer == SVGA3D_READ_HOST_VRAM) {
             svga_context_flush(svga, &fence);
-            sws->fence_finish(sws, fence, 0);
+            sws->fence_finish(sws, fence, PIPE_TIMEOUT_INFINITE, 0);
 
             hw = sws->buffer_map(sws, st->hwbuf, PIPE_TRANSFER_READ);
             assert(hw);
