@@ -55,6 +55,10 @@ gallium_drivers := \
 	vc4.HAVE_GALLIUM_VC4 \
 	virgl.HAVE_GALLIUM_VIRGL
 
+ifeq ($(BOARD_GPU_DRIVERS),all)
+MESA_BUILD_CLASSIC := $(filter HAVE_%, $(subst ., , $(classic_drivers)))
+MESA_BUILD_GALLIUM := $(filter HAVE_%, $(subst ., , $(gallium_drivers)))
+else
 # Warn if we have any invalid driver names
 $(foreach d, $(BOARD_GPU_DRIVERS), \
 	$(if $(findstring $(d).,$(classic_drivers) $(gallium_drivers)), \
@@ -64,6 +68,7 @@ $(foreach d, $(BOARD_GPU_DRIVERS), \
 )
 MESA_BUILD_CLASSIC := $(strip $(foreach d, $(BOARD_GPU_DRIVERS), $(patsubst $(d).%,%, $(filter $(d).%, $(classic_drivers)))))
 MESA_BUILD_GALLIUM := $(strip $(foreach d, $(BOARD_GPU_DRIVERS), $(patsubst $(d).%,%, $(filter $(d).%, $(gallium_drivers)))))
+endif
 $(foreach d, $(MESA_BUILD_CLASSIC) $(MESA_BUILD_GALLIUM), $(eval $(d) := true))
 
 # host and target must be the same arch to generate matypes.h
