@@ -1803,8 +1803,8 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
 }
 
 
-void GLAPIENTRY
-_mesa_UseProgram(GLuint program)
+static ALWAYS_INLINE void
+use_program(GLuint program, bool no_error)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg = NULL;
@@ -1812,26 +1812,33 @@ _mesa_UseProgram(GLuint program)
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glUseProgram %u\n", program);
 
-   if (_mesa_is_xfb_active_and_unpaused(ctx)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glUseProgram(transform feedback active)");
-      return;
-   }
-
-   if (program) {
-      shProg = _mesa_lookup_shader_program_err(ctx, program, "glUseProgram");
-      if (!shProg) {
-         return;
+   if (no_error) {
+      if (program) {
+         shProg = _mesa_lookup_shader_program(ctx, program);
       }
-      if (!shProg->data->LinkStatus) {
+   } else {
+      if (_mesa_is_xfb_active_and_unpaused(ctx)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glUseProgram(program %u not linked)", program);
+                     "glUseProgram(transform feedback active)");
          return;
       }
 
-      /* debug code */
-      if (ctx->_Shader->Flags & GLSL_USE_PROG) {
-         print_shader_info(shProg);
+      if (program) {
+         shProg =
+            _mesa_lookup_shader_program_err(ctx, program, "glUseProgram");
+         if (!shProg)
+            return;
+
+         if (!shProg->data->LinkStatus) {
+            _mesa_error(ctx, GL_INVALID_OPERATION,
+                        "glUseProgram(program %u not linked)", program);
+            return;
+         }
+
+         /* debug code */
+         if (ctx->_Shader->Flags & GLSL_USE_PROG) {
+            print_shader_info(shProg);
+         }
       }
    }
 
@@ -1844,7 +1851,7 @@ _mesa_UseProgram(GLuint program)
     *     object (section 2.14.PPO), the program bound to the appropriate
     *     stage of the pipeline object is considered current."
     */
-   if (program) {
+   if (shProg) {
       /* Attach shader state to the binding point */
       _mesa_reference_pipeline_object(ctx, &ctx->_Shader, &ctx->Shader);
       /* Update the program */
@@ -1853,12 +1860,30 @@ _mesa_UseProgram(GLuint program)
       /* Must be done first: detach the progam */
       _mesa_use_shader_program(ctx, shProg);
       /* Unattach shader_state binding point */
-      _mesa_reference_pipeline_object(ctx, &ctx->_Shader, ctx->Pipeline.Default);
+      _mesa_reference_pipeline_object(ctx, &ctx->_Shader,
+                                      ctx->Pipeline.Default);
       /* If a pipeline was bound, rebind it */
       if (ctx->Pipeline.Current) {
-         _mesa_BindProgramPipeline(ctx->Pipeline.Current->Name);
+         if (no_error)
+            _mesa_BindProgramPipeline_no_error(ctx->Pipeline.Current->Name);
+         else
+            _mesa_BindProgramPipeline(ctx->Pipeline.Current->Name);
       }
    }
+}
+
+
+void GLAPIENTRY
+_mesa_UseProgram_no_error(GLuint program)
+{
+   use_program(program, true);
+}
+
+
+void GLAPIENTRY
+_mesa_UseProgram(GLuint program)
+{
+   use_program(program, false);
 }
 
 
