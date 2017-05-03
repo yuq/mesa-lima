@@ -342,7 +342,6 @@ static void radv_amdgpu_winsys_destroy(struct radeon_winsys *rws)
 {
 	struct radv_amdgpu_winsys *ws = (struct radv_amdgpu_winsys*)rws;
 
-	ws->base.buffer_destroy(ws->fence_bo);
 	AddrDestroy(ws->addrlib);
 	amdgpu_device_deinitialize(ws->dev);
 	FREE(rws);
@@ -381,14 +380,6 @@ radv_amdgpu_winsys_create(int fd, uint32_t debug_flags)
 	radv_amdgpu_cs_init_functions(ws);
 	radv_amdgpu_surface_init_functions(ws);
 
-	assert(AMDGPU_HW_IP_NUM * MAX_RINGS_PER_TYPE * sizeof(uint64_t) <= 4096);
-	ws->fence_bo = ws->base.buffer_create(&ws->base, 4096, 8,
-	                                      RADEON_DOMAIN_GTT,
-	                                      RADEON_FLAG_CPU_ACCESS);
-	if (ws->fence_bo)
-		ws->fence_map = (uint64_t*)ws->base.buffer_map(ws->fence_bo);
-	if (ws->fence_map)
-		memset(ws->fence_map, 0, 4096);
 	return &ws->base;
 
 winsys_fail:

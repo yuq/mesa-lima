@@ -50,9 +50,6 @@ struct radv_amdgpu_winsys {
 	unsigned num_buffers;
 
 	bool use_ib_bos;
-
-	struct radeon_winsys_bo *fence_bo;
-	uint64_t *fence_map;
 };
 
 static inline struct radv_amdgpu_winsys *
