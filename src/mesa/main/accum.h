@@ -47,9 +47,6 @@ void GLAPIENTRY
 _mesa_Accum( GLenum op, GLfloat value );
 
 extern void
-_mesa_accum(struct gl_context *ctx, GLenum op, GLfloat value);
-
-extern void
 _mesa_clear_accum_buffer(struct gl_context *ctx);
 
 extern void
