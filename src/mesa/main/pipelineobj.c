@@ -373,6 +373,24 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
    use_program_stages(ctx, shProg, stages, pipe);
 }
 
+void GLAPIENTRY
+_mesa_ActiveShaderProgram_no_error(GLuint pipeline, GLuint program)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg = NULL;
+   struct gl_pipeline_object *pipe = _mesa_lookup_pipeline_object(ctx, pipeline);
+
+   if (program)
+      shProg = _mesa_lookup_shader_program(ctx, program);
+
+   /* Object is created by any Pipeline call but glGenProgramPipelines,
+    * glIsProgramPipeline and GetProgramPipelineInfoLog
+    */
+   pipe->EverBound = GL_TRUE;
+
+   _mesa_reference_shader_program(ctx, &pipe->ActiveProgram, shProg);
+}
+
 /**
  * Use the named shader program for subsequent glUniform calls (if pipeline
  * bound)

@@ -77,6 +77,8 @@ _mesa_UseProgramStages_no_error(GLuint pipeline, GLbitfield stages,
 extern void GLAPIENTRY
 _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program);
 
+void GLAPIENTRY
+_mesa_ActiveShaderProgram_no_error(GLuint pipeline, GLuint program);
 extern void GLAPIENTRY
 _mesa_ActiveShaderProgram(GLuint pipeline, GLuint program);
 

@@ -20,7 +20,7 @@
          <param name="stages" type="GLbitfield" />
          <param name="program" type="GLuint" />
       </function>
-      <function name="ActiveShaderProgram" es2="3.1">
+      <function name="ActiveShaderProgram" es2="3.1" no_error="true">
          <param name="pipeline" type="GLuint" />
          <param name="program" type="GLuint" />
       </function>
