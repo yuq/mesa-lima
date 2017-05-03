@@ -71,6 +71,9 @@ _mesa_validate_program_pipeline(struct gl_context * ctx,
                                 struct gl_pipeline_object *pipe);
 
 
+void GLAPIENTRY
+_mesa_UseProgramStages_no_error(GLuint pipeline, GLbitfield stages,
+                                GLuint prog);
 extern void GLAPIENTRY
 _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program);
 

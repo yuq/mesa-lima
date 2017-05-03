@@ -256,6 +256,27 @@ use_program_stages(struct gl_context *ctx, struct gl_shader_program *shProg,
    pipe->Validated = false;
 }
 
+void GLAPIENTRY
+_mesa_UseProgramStages_no_error(GLuint pipeline, GLbitfield stages,
+                                GLuint prog)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_pipeline_object *pipe =
+      _mesa_lookup_pipeline_object(ctx, pipeline);
+   struct gl_shader_program *shProg = NULL;
+
+   if (prog)
+      _mesa_lookup_shader_program(ctx, prog);
+
+   /* Object is created by any Pipeline call but glGenProgramPipelines,
+    * glIsProgramPipeline and GetProgramPipelineInfoLog
+    */
+   pipe->EverBound = GL_TRUE;
+
+   use_program_stages(ctx, shProg, stages, pipe);
+}
+
 /**
  * Bound program to severals stages of the pipeline
  */
