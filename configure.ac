@@ -1719,6 +1719,12 @@ for plat in $platforms; do
 	esac
 done
 
+if test "x$enable_glx" != xno; then
+    if ! echo "$platforms" | grep -q 'x11'; then
+        AC_MSG_ERROR([Building without the x11 platform as GLX is enabled, is not supported])
+    fi
+fi
+
 AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$platforms" | grep -q 'x11')
 AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$platforms" | grep -q 'wayland')
 AM_CONDITIONAL(HAVE_PLATFORM_DRM, echo "$platforms" | grep -q 'drm')
