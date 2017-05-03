@@ -3298,14 +3298,21 @@ validate_memory_qualifier_for_type(struct _mesa_glsl_parse_state *state,
                                    const struct ast_type_qualifier *qual,
                                    const glsl_type *type)
 {
-   if (!type->is_image()) {
+   /* From Section 4.10 (Memory Qualifiers) of the GLSL 4.50 spec:
+    *
+    * "Memory qualifiers are only supported in the declarations of image
+    *  variables, buffer variables, and shader storage blocks; it is an error
+    *  to use such qualifiers in any other declarations.
+    */
+   if (!type->is_image() && !qual->flags.q.buffer) {
       if (qual->flags.q.read_only ||
           qual->flags.q.write_only ||
           qual->flags.q.coherent ||
           qual->flags.q._volatile ||
           qual->flags.q.restrict_flag) {
          _mesa_glsl_error(loc, state, "memory qualifiers may only be applied "
-                          "to images");
+                          "in the declarations of image variables, buffer "
+                          "variables, and shader storage blocks");
          return false;
       }
    }
@@ -6894,6 +6901,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                           "to struct or interface block members");
       }
 
+      validate_memory_qualifier_for_type(state, &loc, qual, decl_type);
       validate_image_format_qualifier_for_type(state, &loc, qual, decl_type);
 
       /* From Section 4.4.2.3 (Geometry Outputs) of the GLSL 4.50 spec:
