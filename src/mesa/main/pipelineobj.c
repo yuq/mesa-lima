@@ -218,6 +218,44 @@ use_program_stage(struct gl_context *ctx, GLenum type,
    _mesa_use_program(ctx, stage, shProg, prog, pipe);
 }
 
+static void
+use_program_stages(struct gl_context *ctx, struct gl_shader_program *shProg,
+                   GLbitfield stages, struct gl_pipeline_object *pipe) {
+
+   /* Enable individual stages from the program as requested by the
+    * application.  If there is no shader for a requested stage in the
+    * program, _mesa_use_shader_program will enable fixed-function processing
+    * as dictated by the spec.
+    *
+    * Section 2.11.4 (Program Pipeline Objects) of the OpenGL 4.1 spec
+    * says:
+    *
+    *     "If UseProgramStages is called with program set to zero or with a
+    *     program object that contains no executable code for the given
+    *     stages, it is as if the pipeline object has no programmable stage
+    *     configured for the indicated shader stages."
+    */
+   if ((stages & GL_VERTEX_SHADER_BIT) != 0)
+      use_program_stage(ctx, GL_VERTEX_SHADER, shProg, pipe);
+
+   if ((stages & GL_FRAGMENT_SHADER_BIT) != 0)
+      use_program_stage(ctx, GL_FRAGMENT_SHADER, shProg, pipe);
+
+   if ((stages & GL_GEOMETRY_SHADER_BIT) != 0)
+      use_program_stage(ctx, GL_GEOMETRY_SHADER, shProg, pipe);
+
+   if ((stages & GL_TESS_CONTROL_SHADER_BIT) != 0)
+      use_program_stage(ctx, GL_TESS_CONTROL_SHADER, shProg, pipe);
+
+   if ((stages & GL_TESS_EVALUATION_SHADER_BIT) != 0)
+      use_program_stage(ctx, GL_TESS_EVALUATION_SHADER, shProg, pipe);
+
+   if ((stages & GL_COMPUTE_SHADER_BIT) != 0)
+      use_program_stage(ctx, GL_COMPUTE_SHADER, shProg, pipe);
+
+   pipe->Validated = false;
+}
+
 /**
  * Bound program to severals stages of the pipeline
  */
@@ -311,38 +349,7 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
       }
    }
 
-   /* Enable individual stages from the program as requested by the
-    * application.  If there is no shader for a requested stage in the
-    * program, _mesa_use_shader_program will enable fixed-function processing
-    * as dictated by the spec.
-    *
-    * Section 2.11.4 (Program Pipeline Objects) of the OpenGL 4.1 spec
-    * says:
-    *
-    *     "If UseProgramStages is called with program set to zero or with a
-    *     program object that contains no executable code for the given
-    *     stages, it is as if the pipeline object has no programmable stage
-    *     configured for the indicated shader stages."
-    */
-   if ((stages & GL_VERTEX_SHADER_BIT) != 0)
-      use_program_stage(ctx, GL_VERTEX_SHADER, shProg, pipe);
-
-   if ((stages & GL_FRAGMENT_SHADER_BIT) != 0)
-      use_program_stage(ctx, GL_FRAGMENT_SHADER, shProg, pipe);
-
-   if ((stages & GL_GEOMETRY_SHADER_BIT) != 0)
-      use_program_stage(ctx, GL_GEOMETRY_SHADER, shProg, pipe);
-
-   if ((stages & GL_TESS_CONTROL_SHADER_BIT) != 0)
-      use_program_stage(ctx, GL_TESS_CONTROL_SHADER, shProg, pipe);
-
-   if ((stages & GL_TESS_EVALUATION_SHADER_BIT) != 0)
-      use_program_stage(ctx, GL_TESS_EVALUATION_SHADER, shProg, pipe);
-
-   if ((stages & GL_COMPUTE_SHADER_BIT) != 0)
-      use_program_stage(ctx, GL_COMPUTE_SHADER, shProg, pipe);
-
-   pipe->Validated = false;
+   use_program_stages(ctx, shProg, stages, pipe);
 }
 
 /**
