@@ -1856,7 +1856,7 @@ void GLAPIENTRY
 _mesa_UseProgram(GLuint program)
 {
    GET_CURRENT_CONTEXT(ctx);
-   struct gl_shader_program *shProg;
+   struct gl_shader_program *shProg = NULL;
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glUseProgram %u\n", program);
@@ -1882,9 +1882,6 @@ _mesa_UseProgram(GLuint program)
       if (ctx->_Shader->Flags & GLSL_USE_PROG) {
          print_shader_info(shProg);
       }
-   }
-   else {
-      shProg = NULL;
    }
 
    /* The ARB_separate_shader_object spec says:
