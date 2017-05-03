@@ -4681,7 +4681,7 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
       /* Give up if we encounter relative addressing or flow control. */
       if (inst->dst[0].reladdr || inst->dst[0].reladdr2 ||
           inst->dst[1].reladdr || inst->dst[1].reladdr2 ||
-          tgsi_get_opcode_info(inst->op)->is_branch ||
+          inst->info->is_branch ||
           inst->op == TGSI_OPCODE_CONT ||
           inst->op == TGSI_OPCODE_END ||
           inst->op == TGSI_OPCODE_RET) {
