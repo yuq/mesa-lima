@@ -40,8 +40,13 @@ LOCAL_CFLAGS += \
 	-DPACKAGE_VERSION=\"$(MESA_VERSION)\" \
 	-DPACKAGE_BUGREPORT=\"https://bugs.freedesktop.org/enter_bug.cgi?product=Mesa\"
 
+# XXX: The following __STDC_*_MACROS defines should not be needed.
+# It's likely due to a bug elsewhere, but let's temporarily add them
+# here to fix the radeonsi build.
 LOCAL_CFLAGS += \
 	-DENABLE_SHADER_CACHE \
+	-D__STDC_CONSTANT_MACROS \
+	-D__STDC_LIMIT_MACROS \
 	-DHAVE___BUILTIN_EXPECT \
 	-DHAVE___BUILTIN_FFS \
 	-DHAVE___BUILTIN_FFSLL \
