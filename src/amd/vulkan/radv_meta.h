@@ -229,6 +229,14 @@ nir_ssa_def *radv_meta_gen_rect_vertices(nir_builder *vs_b);
 nir_ssa_def *radv_meta_gen_rect_vertices_comp2(nir_builder *vs_b, nir_ssa_def *comp2);
 nir_shader *radv_meta_build_nir_vs_generate_vertices(void);
 nir_shader *radv_meta_build_nir_fs_noop(void);
+
+void radv_meta_build_resolve_shader_core(nir_builder *b,
+					 bool is_integer,
+					 bool is_srgb,
+					 int samples,
+					 nir_variable *input_img,
+					 nir_variable *color,
+					 nir_ssa_def *img_coord);
 #ifdef __cplusplus
 }
 #endif

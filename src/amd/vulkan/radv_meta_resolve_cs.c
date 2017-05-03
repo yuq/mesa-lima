@@ -36,7 +36,6 @@ build_resolve_compute_shader(struct radv_device *dev, bool is_integer, bool is_s
 {
 	nir_builder b;
 	char name[64];
-	nir_if *outer_if = NULL;
 	const struct glsl_type *sampler_type = glsl_sampler_type(GLSL_SAMPLER_DIM_MS,
 								 false,
 								 false,
@@ -83,124 +82,17 @@ build_resolve_compute_shader(struct radv_device *dev, bool is_integer, bool is_s
 	nir_builder_instr_insert(&b, &dst_offset->instr);
 
 	nir_ssa_def *img_coord = nir_channels(&b, nir_iadd(&b, global_id, &src_offset->dest.ssa), 0x3);
-	/* do a txf_ms on each sample */
-	nir_ssa_def *tmp;
+	nir_variable *color = nir_local_variable_create(b.impl, glsl_vec4_type(), "color");
 
-	nir_tex_instr *tex = nir_tex_instr_create(b.shader, 2);
-	tex->sampler_dim = GLSL_SAMPLER_DIM_MS;
-	tex->op = nir_texop_txf_ms;
-	tex->src[0].src_type = nir_tex_src_coord;
-	tex->src[0].src = nir_src_for_ssa(img_coord);
-	tex->src[1].src_type = nir_tex_src_ms_index;
-	tex->src[1].src = nir_src_for_ssa(nir_imm_int(&b, 0));
-	tex->dest_type = nir_type_float;
-	tex->is_array = false;
-	tex->coord_components = 2;
-	tex->texture = nir_deref_var_create(tex, input_img);
-	tex->sampler = NULL;
+	radv_meta_build_resolve_shader_core(&b, is_integer, is_srgb, samples,
+					    input_img, color, img_coord);
 
-	nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
-	nir_builder_instr_insert(&b, &tex->instr);
-
-	tmp = &tex->dest.ssa;
-	nir_variable *color =
-		nir_local_variable_create(b.impl, glsl_vec4_type(), "color");
-
-	if (!is_integer && samples > 1) {
-		nir_tex_instr *tex_all_same = nir_tex_instr_create(b.shader, 1);
-		tex_all_same->sampler_dim = GLSL_SAMPLER_DIM_MS;
-		tex_all_same->op = nir_texop_samples_identical;
-		tex_all_same->src[0].src_type = nir_tex_src_coord;
-		tex_all_same->src[0].src = nir_src_for_ssa(img_coord);
-		tex_all_same->dest_type = nir_type_float;
-		tex_all_same->is_array = false;
-		tex_all_same->coord_components = 2;
-		tex_all_same->texture = nir_deref_var_create(tex_all_same, input_img);
-		tex_all_same->sampler = NULL;
-
-		nir_ssa_dest_init(&tex_all_same->instr, &tex_all_same->dest, 1, 32, "tex");
-		nir_builder_instr_insert(&b, &tex_all_same->instr);
-
-		nir_ssa_def *all_same = nir_ine(&b, &tex_all_same->dest.ssa, nir_imm_int(&b, 0));
-		nir_if *if_stmt = nir_if_create(b.shader);
-		if_stmt->condition = nir_src_for_ssa(all_same);
-		nir_cf_node_insert(b.cursor, &if_stmt->cf_node);
-
-		b.cursor = nir_after_cf_list(&if_stmt->then_list);
-		for (int i = 1; i < samples; i++) {
-			nir_tex_instr *tex_add = nir_tex_instr_create(b.shader, 2);
-			tex_add->sampler_dim = GLSL_SAMPLER_DIM_MS;
-			tex_add->op = nir_texop_txf_ms;
-			tex_add->src[0].src_type = nir_tex_src_coord;
-			tex_add->src[0].src = nir_src_for_ssa(img_coord);
-			tex_add->src[1].src_type = nir_tex_src_ms_index;
-			tex_add->src[1].src = nir_src_for_ssa(nir_imm_int(&b, i));
-			tex_add->dest_type = nir_type_float;
-			tex_add->is_array = false;
-			tex_add->coord_components = 2;
-			tex_add->texture = nir_deref_var_create(tex_add, input_img);
-			tex_add->sampler = NULL;
-
-			nir_ssa_dest_init(&tex_add->instr, &tex_add->dest, 4, 32, "tex");
-			nir_builder_instr_insert(&b, &tex_add->instr);
-
-			tmp = nir_fadd(&b, tmp, &tex_add->dest.ssa);
-		}
-
-		tmp = nir_fdiv(&b, tmp, nir_imm_float(&b, samples));
-		nir_store_var(&b, color, tmp, 0xf);
-		b.cursor = nir_after_cf_list(&if_stmt->else_list);
-		outer_if = if_stmt;
-	}
-	nir_store_var(&b, color, &tex->dest.ssa, 0xf);
-
-	if (outer_if)
-		b.cursor = nir_after_cf_node(&outer_if->cf_node);
-
-	nir_ssa_def *newv = nir_load_var(&b, color);
-
-	if (is_srgb) {
-		nir_const_value v;
-		unsigned i;
-		v.u32[0] = 0x3b4d2e1c; // 0.00313080009
-
-		nir_ssa_def *cmp[3];
-		for (i = 0; i < 3; i++)
-			cmp[i] = nir_flt(&b, nir_channel(&b, newv, i),
-					 nir_build_imm(&b, 1, 32, v));
-
-		nir_ssa_def *ltvals[3];
-		v.f32[0] = 12.92;
-		for (i = 0; i < 3; i++)
-			ltvals[i] = nir_fmul(&b, nir_channel(&b, newv, i),
-					     nir_build_imm(&b, 1, 32, v));
-
-		nir_ssa_def *gtvals[3];
-
-		for (i = 0; i < 3; i++) {
-			v.f32[0] = 1.0/2.4;
-			gtvals[i] = nir_fpow(&b, nir_channel(&b, newv, i),
-					     nir_build_imm(&b, 1, 32, v));
-			v.f32[0] = 1.055;
-			gtvals[i] = nir_fmul(&b, gtvals[i],
-					     nir_build_imm(&b, 1, 32, v));
-			v.f32[0] = 0.055;
-			gtvals[i] = nir_fsub(&b, gtvals[i],
-					     nir_build_imm(&b, 1, 32, v));
-		}
-
-		nir_ssa_def *comp[4];
-		for (i = 0; i < 3; i++)
-			comp[i] = nir_bcsel(&b, cmp[i], ltvals[i], gtvals[i]);
-		comp[3] = nir_channels(&b, newv, 3);
-		newv = nir_vec(&b, comp, 4);
-	}
-
+	nir_ssa_def *outval = nir_load_var(&b, color);
 	nir_ssa_def *coord = nir_iadd(&b, global_id, &dst_offset->dest.ssa);
 	nir_intrinsic_instr *store = nir_intrinsic_instr_create(b.shader, nir_intrinsic_image_store);
 	store->src[0] = nir_src_for_ssa(coord);
 	store->src[1] = nir_src_for_ssa(nir_ssa_undef(&b, 1, 32));
-	store->src[2] = nir_src_for_ssa(newv);
+	store->src[2] = nir_src_for_ssa(outval);
 	store->variables[0] = nir_deref_var_create(store, output_img);
 	nir_builder_instr_insert(&b, &store->instr);
 	return b.shader;
