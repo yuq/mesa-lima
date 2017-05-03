@@ -82,6 +82,8 @@ _mesa_ActiveShaderProgram_no_error(GLuint pipeline, GLuint program);
 extern void GLAPIENTRY
 _mesa_ActiveShaderProgram(GLuint pipeline, GLuint program);
 
+void GLAPIENTRY
+_mesa_BindProgramPipeline_no_error(GLuint pipeline);
 extern void GLAPIENTRY
 _mesa_BindProgramPipeline(GLuint pipeline);
 

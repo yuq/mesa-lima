@@ -30,7 +30,7 @@
          <param name="strings" type="const GLchar * const *" />
          <return type="GLuint"/>
       </function>
-      <function name="BindProgramPipeline" es2="3.1">
+      <function name="BindProgramPipeline" es2="3.1" no_error="true">
          <param name="pipeline" type="GLuint" />
       </function>
       <function name="DeleteProgramPipelines" es2="3.1">

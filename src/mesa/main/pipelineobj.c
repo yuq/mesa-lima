@@ -431,6 +431,32 @@ _mesa_ActiveShaderProgram(GLuint pipeline, GLuint program)
    _mesa_reference_shader_program(ctx, &pipe->ActiveProgram, shProg);
 }
 
+void GLAPIENTRY
+_mesa_BindProgramPipeline_no_error(GLuint pipeline)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_pipeline_object *newObj = NULL;
+
+   /* Rebinding the same pipeline object: no change.
+    */
+   if (ctx->_Shader->Name == pipeline)
+      return;
+
+   /* Get pointer to new pipeline object (newObj)
+    */
+   if (pipeline) {
+      /* non-default pipeline object */
+      newObj = _mesa_lookup_pipeline_object(ctx, pipeline);
+
+      /* Object is created by any Pipeline call but glGenProgramPipelines,
+       * glIsProgramPipeline and GetProgramPipelineInfoLog
+       */
+      newObj->EverBound = GL_TRUE;
+   }
+
+   _mesa_bind_pipeline(ctx, newObj);
+}
+
 /**
  * Make program of the pipeline current
  */
