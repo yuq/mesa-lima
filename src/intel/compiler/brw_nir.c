@@ -97,30 +97,6 @@ add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
 }
 
 static bool
-remap_vs_attrs(nir_block *block, shader_info *nir_info)
-{
-   nir_foreach_instr(instr, block) {
-      if (instr->type != nir_instr_type_intrinsic)
-         continue;
-
-      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-
-      if (intrin->intrinsic == nir_intrinsic_load_input) {
-         /* Attributes come in a contiguous block, ordered by their
-          * gl_vert_attrib value.  That means we can compute the slot
-          * number for an attribute by masking out the enabled attributes
-          * before it and counting the bits.
-          */
-         int attr = intrin->const_index[0];
-         int slot = _mesa_bitcount_64(nir_info->inputs_read &
-                                      BITFIELD64_MASK(attr));
-         intrin->const_index[0] = 4 * slot;
-      }
-   }
-   return true;
-}
-
-static bool
 remap_inputs_with_vue_map(nir_block *block, const struct brw_vue_map *vue_map)
 {
    nir_foreach_instr(instr, block) {
@@ -277,13 +253,33 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
    brw_nir_apply_attribute_workarounds(nir, use_legacy_snorm_formula,
                                        vs_attrib_wa_flags);
 
-   if (is_scalar) {
-      /* Finally, translate VERT_ATTRIB_* values into the actual registers. */
+   /* The last step is to remap VERT_ATTRIB_* to actual registers and we only
+    * do that for scalar shaders at the moment.
+    */
+   if (!is_scalar)
+      return;
 
-      nir_foreach_function(function, nir) {
-         if (function->impl) {
-            nir_foreach_block(block, function->impl) {
-               remap_vs_attrs(block, &nir->info);
+   nir_foreach_function(function, nir) {
+      if (!function->impl)
+         continue;
+
+      nir_foreach_block(block, function->impl) {
+         nir_foreach_instr(instr, block) {
+            if (instr->type != nir_instr_type_intrinsic)
+               continue;
+
+            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+            if (intrin->intrinsic == nir_intrinsic_load_input) {
+               /* Attributes come in a contiguous block, ordered by their
+                * gl_vert_attrib value.  That means we can compute the slot
+                * number for an attribute by masking out the enabled attributes
+                * before it and counting the bits.
+                */
+               int attr = nir_intrinsic_base(intrin);
+               int slot = _mesa_bitcount_64(nir->info.inputs_read &
+                                            BITFIELD64_MASK(attr));
+               nir_intrinsic_set_base(intrin, 4 * slot);
             }
          }
       }
