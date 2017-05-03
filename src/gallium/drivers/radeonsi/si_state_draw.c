@@ -184,8 +184,10 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	 */
 	*num_patches = MIN2(*num_patches, 40);
 
-	/* SI bug workaround - limit LS-HS threadgroups to only one wave. */
 	if (sctx->b.chip_class == SI) {
+		/* SI bug workaround, related to power management. Limit LS-HS
+		 * threadgroups to only one wave.
+		 */
 		unsigned one_wave = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp);
 		*num_patches = MIN2(*num_patches, one_wave);
 
