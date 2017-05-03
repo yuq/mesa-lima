@@ -1634,6 +1634,98 @@ if test "x$enable_glx_read_only_text" = xyes; then
 fi
 
 dnl
+dnl DEPRECATED: EGL Platforms configuration
+dnl
+AC_ARG_WITH([egl-platforms],
+    [AS_HELP_STRING([--with-egl-platforms@<:@=DIRS...@:>@],
+        [DEPRECATED: use --with-platforms instead@<:@default=auto@:>@])],
+    [with_egl_platforms="$withval"],
+    [with_egl_platforms=auto])
+
+if test "x$with_egl_platforms" = xauto; then
+    if test "x$enable_egl" = xyes; then
+        if test "x$enable_gbm" = xyes; then
+           with_egl_platforms="x11,drm"
+        else
+           with_egl_platforms="x11"
+        fi
+    else
+        with_egl_platforms=""
+    fi
+else
+    AC_MSG_WARN([--with-egl-platforms is deprecated. Use --with-platforms instead.])
+fi
+
+dnl
+dnl Platforms configuration
+dnl
+AC_ARG_WITH([platforms],
+    [AS_HELP_STRING([--with-platforms@<:@=DIRS...@:>@],
+        [comma delimited native platforms libEGL/Vulkan/other supports, e.g.
+        "x11,drm,wayland,surfaceless..." @<:@default=auto@:>@])],
+    [with_platforms="$withval"],
+    [with_platforms=auto])
+
+# For the time being, we still reuse the EGL named variables/defines.
+if test "x$with_platforms" != xauto; then
+    with_egl_platforms=$with_platforms
+fi
+
+PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
+        WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`,
+        WAYLAND_SCANNER='')
+if test "x$WAYLAND_SCANNER" = x; then
+    AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [:])
+fi
+
+# Do per-EGL platform setups and checks
+egl_platforms=`IFS=', '; echo $with_egl_platforms`
+for plat in $egl_platforms; do
+	case "$plat" in
+	wayland)
+
+		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
+
+		if test "x$WAYLAND_SCANNER" = "x:"; then
+			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland egl platform])
+		fi
+		;;
+
+	x11)
+		PKG_CHECK_MODULES([XCB_DRI2], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED xcb-xfixes])
+		;;
+
+	drm)
+		test "x$enable_gbm" = "xno" &&
+			AC_MSG_ERROR([EGL platform drm needs gbm])
+		;;
+
+	surfaceless)
+		;;
+
+	android)
+		PKG_CHECK_MODULES([ANDROID], [cutils hardware sync])
+		;;
+
+	*)
+		AC_MSG_ERROR([EGL platform '$plat' does not exist])
+		;;
+	esac
+
+	case "$plat" in
+	wayland|drm|surfaceless)
+		require_libdrm "Platform $plat"
+		;;
+	esac
+done
+
+AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$egl_platforms" | grep -q 'x11')
+AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$egl_platforms" | grep -q 'wayland')
+AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep -q 'drm')
+AM_CONDITIONAL(HAVE_EGL_PLATFORM_SURFACELESS, echo "$egl_platforms" | grep -q 'surfaceless')
+AM_CONDITIONAL(HAVE_EGL_PLATFORM_ANDROID, echo "$egl_platforms" | grep -q 'android')
+
+dnl
 dnl More DRI setup
 dnl
 dnl Directory for DRI drivers
@@ -2136,92 +2228,6 @@ dnl Gallium configuration
 dnl
 AM_CONDITIONAL(HAVE_GALLIUM, test -n "$with_gallium_drivers")
 
-dnl
-dnl DEPRECATED: EGL Platforms configuration
-dnl
-AC_ARG_WITH([egl-platforms],
-    [AS_HELP_STRING([--with-egl-platforms@<:@=DIRS...@:>@],
-        [DEPRECATED: use --with-platforms instead@<:@default=auto@:>@])],
-    [with_egl_platforms="$withval"],
-    [with_egl_platforms=auto])
-
-if test "x$with_egl_platforms" = xauto; then
-    if test "x$enable_egl" = xyes; then
-        if test "x$enable_gbm" = xyes; then
-           with_egl_platforms="x11,drm"
-        else
-           with_egl_platforms="x11"
-        fi
-    else
-        with_egl_platforms=""
-    fi
-else
-    AC_MSG_WARN([--with-egl-platforms is deprecated. Use --with-platforms instead.])
-fi
-
-dnl
-dnl Platforms configuration
-dnl
-AC_ARG_WITH([platforms],
-    [AS_HELP_STRING([--with-platforms@<:@=DIRS...@:>@],
-        [comma delimited native platforms libEGL/Vulkan/other supports, e.g.
-        "x11,drm,wayland,surfaceless..." @<:@default=auto@:>@])],
-    [with_platforms="$withval"],
-    [with_platforms=auto])
-
-# For the time being, we still reuse the EGL named variables/defines.
-if test "x$with_platforms" != xauto; then
-    with_egl_platforms=$with_platforms
-fi
-
-PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
-        WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`,
-        WAYLAND_SCANNER='')
-if test "x$WAYLAND_SCANNER" = x; then
-    AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [:])
-fi
-
-# Do per-EGL platform setups and checks
-egl_platforms=`IFS=', '; echo $with_egl_platforms`
-for plat in $egl_platforms; do
-	case "$plat" in
-	wayland)
-
-		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
-
-		if test "x$WAYLAND_SCANNER" = "x:"; then
-			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland egl platform])
-		fi
-		;;
-
-	x11)
-		PKG_CHECK_MODULES([XCB_DRI2], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED xcb-xfixes])
-		;;
-
-	drm)
-		test "x$enable_gbm" = "xno" &&
-			AC_MSG_ERROR([EGL platform drm needs gbm])
-		;;
-
-	surfaceless)
-		;;
-
-	android)
-		PKG_CHECK_MODULES([ANDROID], [cutils hardware sync])
-		;;
-
-	*)
-		AC_MSG_ERROR([EGL platform '$plat' does not exist])
-		;;
-	esac
-
-	case "$plat" in
-	wayland|drm|surfaceless)
-		require_libdrm "Platform $plat"
-		;;
-	esac
-done
-
 # libEGL wants to default to the first platform specified in
 # ./configure.  parse that here.
 if test "x$egl_platforms" != "x"; then
@@ -2230,12 +2236,6 @@ if test "x$egl_platforms" != "x"; then
 else
     EGL_NATIVE_PLATFORM="_EGL_INVALID_PLATFORM"
 fi
-
-AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$egl_platforms" | grep -q 'x11')
-AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$egl_platforms" | grep -q 'wayland')
-AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep -q 'drm')
-AM_CONDITIONAL(HAVE_EGL_PLATFORM_SURFACELESS, echo "$egl_platforms" | grep -q 'surfaceless')
-AM_CONDITIONAL(HAVE_EGL_PLATFORM_ANDROID, echo "$egl_platforms" | grep -q 'android')
 
 AC_SUBST([EGL_NATIVE_PLATFORM])
 AC_SUBST([EGL_CFLAGS])
