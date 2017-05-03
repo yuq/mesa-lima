@@ -445,6 +445,64 @@ static rvcn_dec_message_vc1_t get_vc1_msg(struct pipe_vc1_picture_desc *pic)
 	return result;
 }
 
+static uint32_t get_ref_pic_idx(struct radeon_decoder *dec, struct pipe_video_buffer *ref)
+{
+	uint32_t min = MAX2(dec->frame_number, NUM_MPEG2_REFS) - NUM_MPEG2_REFS;
+	uint32_t max = MAX2(dec->frame_number, 1) - 1;
+	uintptr_t frame;
+
+	/* seems to be the most sane fallback */
+	if (!ref)
+		return max;
+
+	/* get the frame number from the associated data */
+	frame = (uintptr_t)vl_video_buffer_get_associated_data(ref, &dec->base);
+
+	/* limit the frame number to a valid range */
+	return MAX2(MIN2(frame, max), min);
+}
+
+static rvcn_dec_message_mpeg2_vld_t get_mpeg2_msg(struct radeon_decoder *dec,
+				       struct pipe_mpeg12_picture_desc *pic)
+{
+	const int *zscan = pic->alternate_scan ? vl_zscan_alternate : vl_zscan_normal;
+	rvcn_dec_message_mpeg2_vld_t	result;
+	unsigned i;
+
+	memset(&result, 0, sizeof(result));
+	result.decoded_pic_idx = dec->frame_number;
+
+	result.forward_ref_pic_idx = get_ref_pic_idx(dec, pic->ref[0]);
+	result.backward_ref_pic_idx = get_ref_pic_idx(dec, pic->ref[1]);
+
+	result.load_intra_quantiser_matrix = 1;
+	result.load_nonintra_quantiser_matrix = 1;
+
+	for (i = 0; i < 64; ++i) {
+		result.intra_quantiser_matrix[i] = pic->intra_matrix[zscan[i]];
+		result.nonintra_quantiser_matrix[i] = pic->non_intra_matrix[zscan[i]];
+	}
+
+	result.profile_and_level_indication = 0;
+	result.chroma_format = 0x1;
+
+	result.picture_coding_type = pic->picture_coding_type;
+	result.f_code[0][0] = pic->f_code[0][0] + 1;
+	result.f_code[0][1] = pic->f_code[0][1] + 1;
+	result.f_code[1][0] = pic->f_code[1][0] + 1;
+	result.f_code[1][1] = pic->f_code[1][1] + 1;
+	result.intra_dc_precision = pic->intra_dc_precision;
+	result.pic_structure = pic->picture_structure;
+	result.top_field_first = pic->top_field_first;
+	result.frame_pred_frame_dct = pic->frame_pred_frame_dct;
+	result.concealment_motion_vectors = pic->concealment_motion_vectors;
+	result.q_scale_type = pic->q_scale_type;
+	result.intra_vlc_format = pic->intra_vlc_format;
+	result.alternate_scan = pic->alternate_scan;
+
+	return result;
+}
+
 static void rvcn_dec_message_create(struct radeon_decoder *dec)
 {
 	rvcn_dec_message_header_t *header = dec->msg;
@@ -590,6 +648,14 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 		index->message_id = RDECODE_MESSAGE_VC1;
 		break;
 
+	}
+	case PIPE_VIDEO_FORMAT_MPEG12: {
+		rvcn_dec_message_mpeg2_vld_t mpeg2 =
+			get_mpeg2_msg(dec, (struct pipe_mpeg12_picture_desc*)picture);
+
+		memcpy(codec, (void*)&mpeg2, sizeof(rvcn_dec_message_mpeg2_vld_t));
+		index->message_id = RDECODE_MESSAGE_MPEG2_VLD;
+		break;
 	}
 	default:
 		assert(0);
