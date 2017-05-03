@@ -843,7 +843,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 	unsigned oc_lds_en;
 	unsigned window_space =
 	   shader->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
-	bool enable_prim_id = shader->key.mono.vs_export_prim_id;
+	bool enable_prim_id = shader->key.mono.vs_export_prim_id || shader->selector->info.uses_primid;
 
 	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
@@ -888,7 +888,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 		vgpr_comp_cnt = enable_prim_id ? 2 : (shader->info.uses_instanceid ? 1 : 0);
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
-		vgpr_comp_cnt = shader->selector->info.uses_primid ? 3 : 2;
+		vgpr_comp_cnt = enable_prim_id ? 3 : 2;
 		num_user_sgprs = SI_TES_NUM_USER_SGPR;
 	} else
 		unreachable("invalid shader selector type");
