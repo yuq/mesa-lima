@@ -82,6 +82,19 @@ ifneq ($(filter true, $(HAVE_GALLIUM_RADEONSI)),)
 MESA_ENABLE_LLVM := true
 endif
 
+define mesa-build-with-llvm
+  $(if $(filter $(MESA_ANDROID_MAJOR_VERSION), 4 5), \
+    $(warning Unsupported LLVM version in Android $(MESA_ANDROID_MAJOR_VERSION)),) \
+  $(if $(filter 6,$(MESA_ANDROID_MAJOR_VERSION)), \
+    $(eval LOCAL_CFLAGS += -DHAVE_LLVM=0x0307 -DMESA_LLVM_VERSION_PATCH=0) \
+    $(eval LOCAL_STATIC_LIBRARIES += libLLVMCore) \
+    $(eval LOCAL_C_INCLUDES += external/llvm/include external/llvm/device/include),) \
+  $(if $(filter 7,$(MESA_ANDROID_MAJOR_VERSION)), \
+    $(eval LOCAL_CFLAGS += -DHAVE_LLVM=0x0308 -DMESA_LLVM_VERSION_PATCH=0) \
+    $(eval LOCAL_STATIC_LIBRARIES += libLLVMCore) \
+    $(eval LOCAL_C_INCLUDES += external/llvm/include external/llvm/device/include),)
+endef
+
 # add subdirectories
 SUBDIRS := \
 	src/gbm \

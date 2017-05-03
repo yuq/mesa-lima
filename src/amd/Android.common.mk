@@ -61,11 +61,12 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := \
 	$(LOCAL_PATH)/common
 
 LOCAL_STATIC_LIBRARIES := \
-	libLLVMCore \
 	libmesa_nir
 
 LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libelf
+
+$(call mesa-build-with-llvm)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)

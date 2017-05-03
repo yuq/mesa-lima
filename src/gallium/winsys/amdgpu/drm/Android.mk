@@ -39,6 +39,8 @@ LOCAL_STATIC_LIBRARIES := libmesa_amdgpu_addrlib
 LOCAL_SHARED_LIBRARIES := libdrm_amdgpu
 LOCAL_MODULE := libmesa_winsys_amdgpu
 
+$(call mesa-build-with-llvm)
+
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
