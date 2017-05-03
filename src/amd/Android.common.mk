@@ -55,8 +55,7 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(intermediates)/common \
 	external/llvm/include \
-	external/llvm/device/include \
-	$(ELF_INCLUDES)
+	external/llvm/device/include
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
 	$(LOCAL_PATH)/common
@@ -64,6 +63,9 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := \
 LOCAL_STATIC_LIBRARIES := \
 	libLLVMCore \
 	libmesa_nir
+
+LOCAL_WHOLE_STATIC_LIBRARIES := \
+	libelf
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
