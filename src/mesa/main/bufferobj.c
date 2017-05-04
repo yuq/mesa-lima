@@ -2378,27 +2378,26 @@ _mesa_CopyNamedBufferSubData(GLuint readBuffer, GLuint writeBuffer,
                               "glCopyNamedBufferSubData");
 }
 
-
-static void *
-map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-                 GLintptr offset, GLsizeiptr length, GLbitfield access,
-                 const char *func)
+static bool
+validate_map_buffer_range(struct gl_context *ctx,
+                          struct gl_buffer_object *bufObj, GLintptr offset,
+                          GLsizeiptr length, GLbitfield access,
+                          const char *func)
 {
-   void *map;
    GLbitfield allowed_access;
 
-   ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, NULL);
+   ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, false);
 
    if (offset < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(offset %ld < 0)", func, (long) offset);
-      return NULL;
+      return false;
    }
 
    if (length < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(length %ld < 0)", func, (long) length);
-      return NULL;
+      return false;
    }
 
    /* Page 38 of the PDF of the OpenGL ES 3.0 spec says:
@@ -2414,7 +2413,7 @@ map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
     */
    if (length == 0) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(length = 0)", func);
-      return NULL;
+      return false;
    }
 
    allowed_access = GL_MAP_READ_BIT |
@@ -2433,13 +2432,13 @@ map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
       /* generate an error if any bits other than those allowed are set */
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(access has undefined bits set)", func);
-      return NULL;
+      return false;
    }
 
    if ((access & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT)) == 0) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(access indicates neither read or write)", func);
-      return NULL;
+      return false;
    }
 
    if ((access & GL_MAP_READ_BIT) &&
@@ -2448,42 +2447,42 @@ map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
                   GL_MAP_UNSYNCHRONIZED_BIT))) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(read access with disallowed bits)", func);
-      return NULL;
+      return false;
    }
 
    if ((access & GL_MAP_FLUSH_EXPLICIT_BIT) &&
        ((access & GL_MAP_WRITE_BIT) == 0)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(access has flush explicit without write)", func);
-      return NULL;
+      return false;
    }
 
    if (access & GL_MAP_READ_BIT &&
        !(bufObj->StorageFlags & GL_MAP_READ_BIT)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(buffer does not allow read access)", func);
-      return NULL;
+      return false;
    }
 
    if (access & GL_MAP_WRITE_BIT &&
        !(bufObj->StorageFlags & GL_MAP_WRITE_BIT)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(buffer does not allow write access)", func);
-      return NULL;
+      return false;
    }
 
    if (access & GL_MAP_COHERENT_BIT &&
        !(bufObj->StorageFlags & GL_MAP_COHERENT_BIT)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(buffer does not allow coherent access)", func);
-      return NULL;
+      return false;
    }
 
    if (access & GL_MAP_PERSISTENT_BIT &&
        !(bufObj->StorageFlags & GL_MAP_PERSISTENT_BIT)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(buffer does not allow persistent access)", func);
-      return NULL;
+      return false;
    }
 
    if (offset + length > bufObj->Size) {
@@ -2491,18 +2490,13 @@ map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
                   "%s(offset %lu + length %lu > buffer_size %lu)", func,
                   (unsigned long) offset, (unsigned long) length,
                   (unsigned long) bufObj->Size);
-      return NULL;
+      return false;
    }
 
    if (_mesa_bufferobj_mapped(bufObj, MAP_USER)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(buffer already mapped)", func);
-      return NULL;
-   }
-
-   if (!bufObj->Size) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s(buffer size = 0)", func);
-      return NULL;
+      return false;
    }
 
    if (access & GL_MAP_WRITE_BIT) {
@@ -2518,9 +2512,22 @@ map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
       }
    }
 
+   return true;
+}
+
+static void *
+map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                 GLintptr offset, GLsizeiptr length, GLbitfield access,
+                 const char *func)
+{
+   if (!bufObj->Size) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s(buffer size = 0)", func);
+      return NULL;
+   }
+
    assert(ctx->Driver.MapBufferRange);
-   map = ctx->Driver.MapBufferRange(ctx, offset, length, access, bufObj,
-                                    MAP_USER);
+   void *map = ctx->Driver.MapBufferRange(ctx, offset, length, access, bufObj,
+                                          MAP_USER);
    if (!map) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s(map failed)", func);
    }
@@ -2585,6 +2592,10 @@ _mesa_MapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,
    if (!bufObj)
       return NULL;
 
+   if (!validate_map_buffer_range(ctx, bufObj, offset, length, access,
+                                  "glMapBufferRange"))
+      return NULL;
+
    return map_buffer_range(ctx, bufObj, offset, length, access,
                            "glMapBufferRange");
 }
@@ -2605,6 +2616,10 @@ _mesa_MapNamedBufferRange(GLuint buffer, GLintptr offset, GLsizeiptr length,
 
    bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glMapNamedBufferRange");
    if (!bufObj)
+      return NULL;
+
+   if (!validate_map_buffer_range(ctx, bufObj, offset, length, access,
+                                  "glMapNamedBufferRange"))
       return NULL;
 
    return map_buffer_range(ctx, bufObj, offset, length, access,
@@ -2652,6 +2667,10 @@ _mesa_MapBuffer(GLenum target, GLenum access)
    if (!bufObj)
       return NULL;
 
+   if (!validate_map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
+                                  "glMapBuffer"))
+      return NULL;
+
    return map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
                            "glMapBuffer");
 }
@@ -2670,6 +2689,10 @@ _mesa_MapNamedBuffer(GLuint buffer, GLenum access)
 
    bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glMapNamedBuffer");
    if (!bufObj)
+      return NULL;
+
+   if (!validate_map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
+                                  "glMapNamedBuffer"))
       return NULL;
 
    return map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
