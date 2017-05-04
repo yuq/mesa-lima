@@ -365,7 +365,7 @@ VkResult anv_BindImageMemory(
                                device->info.has_llc ? 0 : I915_MMAP_WC);
 
       if (map == MAP_FAILED)
-         return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
       memset(map, 0, image->aux_surface.isl.size);
 
