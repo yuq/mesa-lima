@@ -136,9 +136,6 @@ _eglInitLogger(void)
          }
       }
    }
-   else {
-      level = FALLBACK_LOG_LEVEL;
-   }
 
    logging.level = (level >= 0) ? level : FALLBACK_LOG_LEVEL;
    logging.initialized = EGL_TRUE;
