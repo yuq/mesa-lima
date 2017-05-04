@@ -2777,11 +2777,11 @@ _mesa_MapNamedBuffer(GLuint buffer, GLenum access)
 }
 
 
-void
-_mesa_flush_mapped_buffer_range(struct gl_context *ctx,
-                                struct gl_buffer_object *bufObj,
-                                GLintptr offset, GLsizeiptr length,
-                                const char *func)
+static void
+flush_mapped_buffer_range(struct gl_context *ctx,
+                          struct gl_buffer_object *bufObj,
+                          GLintptr offset, GLsizeiptr length,
+                          const char *func)
 {
    if (!ctx->Extensions.ARB_map_buffer_range) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2842,8 +2842,8 @@ _mesa_FlushMappedBufferRange(GLenum target, GLintptr offset,
    if (!bufObj)
       return;
 
-   _mesa_flush_mapped_buffer_range(ctx, bufObj, offset, length,
-                                   "glFlushMappedBufferRange");
+   flush_mapped_buffer_range(ctx, bufObj, offset, length,
+                             "glFlushMappedBufferRange");
 }
 
 void GLAPIENTRY
@@ -2858,8 +2858,8 @@ _mesa_FlushMappedNamedBufferRange(GLuint buffer, GLintptr offset,
    if (!bufObj)
       return;
 
-   _mesa_flush_mapped_buffer_range(ctx, bufObj, offset, length,
-                                   "glFlushMappedNamedBufferRange");
+   flush_mapped_buffer_range(ctx, bufObj, offset, length,
+                             "glFlushMappedNamedBufferRange");
 }
 
 
