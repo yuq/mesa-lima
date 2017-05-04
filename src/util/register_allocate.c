@@ -392,11 +392,11 @@ ra_add_node_adjacency(struct ra_graph *g, unsigned int n1, unsigned int n2)
 {
    BITSET_SET(g->nodes[n1].adjacency, n2);
 
-   if (n1 != n2) {
-      int n1_class = g->nodes[n1].class;
-      int n2_class = g->nodes[n2].class;
-      g->nodes[n1].q_total += g->regs->classes[n1_class]->q[n2_class];
-   }
+   assert(n1 != n2);
+
+   int n1_class = g->nodes[n1].class;
+   int n2_class = g->nodes[n2].class;
+   g->nodes[n1].q_total += g->regs->classes[n1_class]->q[n2_class];
 
    if (g->nodes[n1].adjacency_count >=
        g->nodes[n1].adjacency_list_size) {
@@ -433,7 +433,6 @@ ra_alloc_interference_graph(struct ra_regs *regs, unsigned int count)
       g->nodes[i].adjacency_count = 0;
       g->nodes[i].q_total = 0;
 
-      ra_add_node_adjacency(g, i, i);
       g->nodes[i].reg = NO_REG;
    }
 
@@ -451,7 +450,7 @@ void
 ra_add_node_interference(struct ra_graph *g,
                          unsigned int n1, unsigned int n2)
 {
-   if (!BITSET_TEST(g->nodes[n1].adjacency, n2)) {
+   if (n1 != n2 && !BITSET_TEST(g->nodes[n1].adjacency, n2)) {
       ra_add_node_adjacency(g, n1, n2);
       ra_add_node_adjacency(g, n2, n1);
    }
@@ -475,7 +474,7 @@ decrement_q(struct ra_graph *g, unsigned int n)
       unsigned int n2 = g->nodes[n].adjacency_list[i];
       unsigned int n2_class = g->nodes[n2].class;
 
-      if (n != n2 && !g->nodes[n2].in_stack) {
+      if (!g->nodes[n2].in_stack) {
          assert(g->nodes[n2].q_total >= g->regs->classes[n2_class]->q[n_class]);
          g->nodes[n2].q_total -= g->regs->classes[n2_class]->q[n_class];
       }
@@ -661,11 +660,9 @@ ra_get_spill_benefit(struct ra_graph *g, unsigned int n)
     */
    for (j = 0; j < g->nodes[n].adjacency_count; j++) {
       unsigned int n2 = g->nodes[n].adjacency_list[j];
-      if (n != n2) {
-	 unsigned int n2_class = g->nodes[n2].class;
-	 benefit += ((float)g->regs->classes[n_class]->q[n2_class] /
-		     g->regs->classes[n_class]->p);
-      }
+      unsigned int n2_class = g->nodes[n2].class;
+      benefit += ((float)g->regs->classes[n_class]->q[n2_class] /
+                  g->regs->classes[n_class]->p);
    }
 
    return benefit;
