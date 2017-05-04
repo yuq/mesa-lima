@@ -2789,6 +2789,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       prog_data->inputs_read |= VERT_BIT_EDGEFLAG;
    }
 
+   prog_data->inputs_read = shader->info.inputs_read;
+   prog_data->double_inputs_read = shader->info.double_inputs_read;
+
    prog_data->base.clip_distance_mask =
       ((1 << shader->info.clip_distance_array_size) - 1);
    prog_data->base.cull_distance_mask =
