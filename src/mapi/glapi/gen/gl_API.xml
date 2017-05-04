@@ -5097,7 +5097,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="MapBuffer">
+    <function name="MapBuffer" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="access" type="GLenum"/>
         <return type="GLvoid *"/>

@@ -101,13 +101,13 @@
       <param name="data" type="const GLvoid *" />
    </function>
 
-   <function name="MapNamedBuffer">
+   <function name="MapNamedBuffer" no_error="true">
       <return type="GLvoid *" />
       <param name="buffer" type="GLuint" />
       <param name="access" type="GLenum" />
    </function>
 
-   <function name="MapNamedBufferRange">
+   <function name="MapNamedBufferRange" no_error="true">
       <return type="GLvoid *" />
       <param name="buffer" type="GLuint" />
       <param name="offset" type="GLintptr" />

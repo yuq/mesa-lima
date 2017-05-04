@@ -2576,6 +2576,19 @@ map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 }
 
 void * GLAPIENTRY
+_mesa_MapBufferRange_no_error(GLenum target, GLintptr offset,
+                              GLsizeiptr length, GLbitfield access)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_buffer_object **bufObjPtr = get_buffer_target(ctx, target);
+   struct gl_buffer_object *bufObj = *bufObjPtr;
+
+   return map_buffer_range(ctx, bufObj, offset, length, access,
+                           "glMapBufferRange");
+}
+
+void * GLAPIENTRY
 _mesa_MapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,
                      GLbitfield access)
 {
@@ -2598,6 +2611,17 @@ _mesa_MapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,
 
    return map_buffer_range(ctx, bufObj, offset, length, access,
                            "glMapBufferRange");
+}
+
+void * GLAPIENTRY
+_mesa_MapNamedBufferRange_no_error(GLuint buffer, GLintptr offset,
+                                   GLsizeiptr length, GLbitfield access)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+
+   return map_buffer_range(ctx, bufObj, offset, length, access,
+                           "glMapNamedBufferRange");
 }
 
 void * GLAPIENTRY
@@ -2652,6 +2676,21 @@ get_map_buffer_access_flags(struct gl_context *ctx, GLenum access,
 }
 
 void * GLAPIENTRY
+_mesa_MapBuffer_no_error(GLenum target, GLenum access)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   GLbitfield accessFlags;
+   get_map_buffer_access_flags(ctx, access, &accessFlags);
+
+   struct gl_buffer_object **bufObjPtr = get_buffer_target(ctx, target);
+   struct gl_buffer_object *bufObj = *bufObjPtr;
+
+   return map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
+                           "glMapBuffer");
+}
+
+void * GLAPIENTRY
 _mesa_MapBuffer(GLenum target, GLenum access)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -2673,6 +2712,20 @@ _mesa_MapBuffer(GLenum target, GLenum access)
 
    return map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
                            "glMapBuffer");
+}
+
+void * GLAPIENTRY
+_mesa_MapNamedBuffer_no_error(GLuint buffer, GLenum access)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   GLbitfield accessFlags;
+   get_map_buffer_access_flags(ctx, access, &accessFlags);
+
+   struct gl_buffer_object *bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+
+   return map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
+                           "glMapNamedBuffer");
 }
 
 void * GLAPIENTRY
