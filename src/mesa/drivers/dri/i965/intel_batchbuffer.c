@@ -275,7 +275,27 @@ do_batch_dump(struct brw_context *brw)
 
       switch (gen_group_get_opcode(inst) >> 16) {
       case _3DSTATE_PIPELINED_POINTERS:
-         /* TODO: Decode Gen4-5 pipelined pointers */
+         /* Note: these Gen4-5 pointers are full relocations rather than
+          * offsets from the start of the batch.  So we need to subtract
+          * gtt_offset (the start of the batch) to obtain an offset we
+          * can add to the map and get at the data.
+          */
+         decode_struct(brw, spec, "VS_STATE", data, gtt_offset,
+                       (p[1] & ~0x1fu) - gtt_offset, color);
+         if (p[2] & 1) {
+            decode_struct(brw, spec, "GS_STATE", data, gtt_offset,
+                          (p[2] & ~0x1fu) - gtt_offset, color);
+         }
+         if (p[3] & 1) {
+            decode_struct(brw, spec, "CLIP_STATE", data, gtt_offset,
+                          (p[3] & ~0x1fu) - gtt_offset, color);
+         }
+         decode_struct(brw, spec, "SF_STATE", data, gtt_offset,
+                       (p[4] & ~0x1fu) - gtt_offset, color);
+         decode_struct(brw, spec, "WM_STATE", data, gtt_offset,
+                       (p[5] & ~0x1fu) - gtt_offset, color);
+         decode_struct(brw, spec, "COLOR_CALC_STATE", data, gtt_offset,
+                       (p[6] & ~0x3fu) - gtt_offset, color);
          break;
       case _3DSTATE_BINDING_TABLE_POINTERS_VS:
       case _3DSTATE_BINDING_TABLE_POINTERS_HS:
