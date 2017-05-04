@@ -104,54 +104,6 @@ gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer,
 }
 #endif
 
-static void
-__emit_genx_sf_state(struct anv_cmd_buffer *cmd_buffer)
-{
-      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
-      struct GENX(3DSTATE_SF) sf = {
-         GENX(3DSTATE_SF_header),
-         .LineWidth = cmd_buffer->state.dynamic.line_width,
-      };
-      GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
-      /* FIXME: gen9.fs */
-      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
-                           cmd_buffer->state.pipeline->gen8.sf);
-}
-
-void
-gen9_emit_sf_state(struct anv_cmd_buffer *cmd_buffer);
-
-#if GEN_GEN == 9
-
-void
-gen9_emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
-{
-   __emit_genx_sf_state(cmd_buffer);
-}
-
-#endif
-
-#if GEN_GEN == 8
-
-static void
-__emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
-{
-   if (cmd_buffer->device->info.is_cherryview)
-      gen9_emit_sf_state(cmd_buffer);
-   else
-      __emit_genx_sf_state(cmd_buffer);
-}
-
-#else
-
-static void
-__emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
-{
-   __emit_genx_sf_state(cmd_buffer);
-}
-
-#endif
-
 void
 genX(cmd_buffer_enable_pma_fix)(struct anv_cmd_buffer *cmd_buffer, bool enable)
 {
@@ -431,7 +383,22 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
-      __emit_sf_state(cmd_buffer);
+      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
+      struct GENX(3DSTATE_SF) sf = {
+         GENX(3DSTATE_SF_header),
+      };
+#if GEN_GEN == 8
+      if (cmd_buffer->device->info.is_cherryview) {
+         sf.CHVLineWidth = cmd_buffer->state.dynamic.line_width;
+      } else {
+         sf.LineWidth = cmd_buffer->state.dynamic.line_width;
+      }
+#else
+      sf.LineWidth = cmd_buffer->state.dynamic.line_width,
+#endif
+      GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
+      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
+                           cmd_buffer->state.pipeline->gen8.sf);
    }
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
