@@ -230,7 +230,6 @@ remap_patch_urb_offsets(nir_block *block, nir_builder *b,
 
 void
 brw_nir_lower_vs_inputs(nir_shader *nir,
-                        bool is_scalar,
                         bool use_legacy_snorm_formula,
                         const uint8_t *vs_attrib_wa_flags)
 {
@@ -253,11 +252,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
    brw_nir_apply_attribute_workarounds(nir, use_legacy_snorm_formula,
                                        vs_attrib_wa_flags);
 
-   /* The last step is to remap VERT_ATTRIB_* to actual registers and we only
-    * do that for scalar shaders at the moment.
-    */
-   if (!is_scalar)
-      return;
+   /* The last step is to remap VERT_ATTRIB_* to actual registers */
 
    /* Whether or not we have any system generated values.  gl_DrawID is not
     * included here as it lives in its own vec4.

@@ -36,35 +36,8 @@ vec4_vs_visitor::emit_prolog()
 dst_reg *
 vec4_vs_visitor::make_reg_for_system_value(int location)
 {
-   /* VertexID is stored by the VF as the last vertex element, but
-    * we don't represent it with a flag in inputs_read, so we call
-    * it VERT_ATTRIB_MAX, which setup_attributes() picks up on.
-    */
-   dst_reg *reg = new(mem_ctx) dst_reg(ATTR, VERT_ATTRIB_MAX);
-
-   switch (location) {
-   case SYSTEM_VALUE_BASE_VERTEX:
-      reg->writemask = WRITEMASK_X;
-      break;
-   case SYSTEM_VALUE_BASE_INSTANCE:
-      reg->writemask = WRITEMASK_Y;
-      break;
-   case SYSTEM_VALUE_VERTEX_ID:
-   case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
-      reg->writemask = WRITEMASK_Z;
-      break;
-   case SYSTEM_VALUE_INSTANCE_ID:
-      reg->writemask = WRITEMASK_W;
-      break;
-   case SYSTEM_VALUE_DRAW_ID:
-      reg = new(mem_ctx) dst_reg(ATTR, VERT_ATTRIB_MAX + 1);
-      reg->writemask = WRITEMASK_X;
-      break;
-   default:
-      unreachable("not reached");
-   }
-
-   return reg;
+   unreachable("not reached");
+   return NULL;
 }
 
 

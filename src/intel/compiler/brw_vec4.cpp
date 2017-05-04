@@ -1740,39 +1740,22 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
 int
 vec4_vs_visitor::setup_attributes(int payload_reg)
 {
-   int nr_attributes;
-   int attribute_map[VERT_ATTRIB_MAX + 2];
-   memset(attribute_map, 0, sizeof(attribute_map));
+   foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
+      for (int i = 0; i < 3; i++) {
+         if (inst->src[i].file == ATTR) {
+            assert(inst->src[i].offset % REG_SIZE == 0);
+            int grf = payload_reg + inst->src[i].nr +
+                      inst->src[i].offset / REG_SIZE;
 
-   nr_attributes = 0;
-   GLbitfield64 vs_inputs = vs_prog_data->inputs_read;
-   while (vs_inputs) {
-      GLuint first = ffsll(vs_inputs) - 1;
-      int needed_slots =
-         (vs_prog_data->double_inputs_read & BITFIELD64_BIT(first)) ? 2 : 1;
-      for (int c = 0; c < needed_slots; c++) {
-         attribute_map[first + c] = payload_reg + nr_attributes;
-         nr_attributes++;
-         vs_inputs &= ~BITFIELD64_BIT(first + c);
+            struct brw_reg reg = brw_vec8_grf(grf, 0);
+            reg.swizzle = inst->src[i].swizzle;
+            reg.type = inst->src[i].type;
+            reg.abs = inst->src[i].abs;
+            reg.negate = inst->src[i].negate;
+            inst->src[i] = reg;
+         }
       }
    }
-
-   /* VertexID is stored by the VF as the last vertex element, but we
-    * don't represent it with a flag in inputs_read, so we call it
-    * VERT_ATTRIB_MAX.
-    */
-   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
-       vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance) {
-      attribute_map[VERT_ATTRIB_MAX] = payload_reg + nr_attributes;
-      nr_attributes++;
-   }
-
-   if (vs_prog_data->uses_drawid) {
-      attribute_map[VERT_ATTRIB_MAX + 1] = payload_reg + nr_attributes;
-      nr_attributes++;
-   }
-
-   lower_attributes_to_hw_regs(attribute_map, false /* interleaved */);
 
    return payload_reg + vs_prog_data->nr_attribute_slots;
 }
@@ -2771,10 +2754,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_VERTEX];
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, is_scalar);
-   brw_nir_lower_vs_inputs(shader, is_scalar,
-                           use_legacy_snorm_formula, key->gl_attrib_wa_flags);
-   brw_nir_lower_vue_outputs(shader, is_scalar);
-   shader = brw_postprocess_nir(shader, compiler, is_scalar);
 
    const unsigned *assembly = NULL;
 
@@ -2783,14 +2762,23 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
        * the edge flag from VERT_ATTRIB_EDGEFLAG.  This will be done
        * automatically by brw_vec4_visitor::emit_urb_slot but we need to
        * ensure that prog_data->inputs_read is accurate.
+       *
+       * In order to make late NIR passes aware of the change, we actually
+       * whack shader->info.inputs_read instead.  This is safe because we just
+       * made a copy of the shader.
        */
       assert(!is_scalar);
       assert(key->copy_edgeflag);
-      prog_data->inputs_read |= VERT_BIT_EDGEFLAG;
+      shader->info.inputs_read |= VERT_BIT_EDGEFLAG;
    }
 
    prog_data->inputs_read = shader->info.inputs_read;
    prog_data->double_inputs_read = shader->info.double_inputs_read;
+
+   brw_nir_lower_vs_inputs(shader, use_legacy_snorm_formula,
+                           key->gl_attrib_wa_flags);
+   brw_nir_lower_vue_outputs(shader, is_scalar);
+   shader = brw_postprocess_nir(shader, compiler, is_scalar);
 
    prog_data->base.clip_distance_mask =
       ((1 << shader->info.clip_distance_array_size) - 1);
