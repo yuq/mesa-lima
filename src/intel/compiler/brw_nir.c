@@ -365,9 +365,24 @@ brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
 
             if (intrin->intrinsic == nir_intrinsic_load_input ||
                 intrin->intrinsic == nir_intrinsic_load_per_vertex_input) {
-               int vue_slot = vue_map->varying_to_slot[intrin->const_index[0]];
-               assert(vue_slot != -1);
-               intrin->const_index[0] = vue_slot;
+               /* Offset 0 is the VUE header, which contains
+                * VARYING_SLOT_LAYER [.y], VARYING_SLOT_VIEWPORT [.z], and
+                * VARYING_SLOT_PSIZ [.w].
+                */
+               int varying = nir_intrinsic_base(intrin);
+               int vue_slot;
+               switch (varying) {
+               case VARYING_SLOT_PSIZ:
+                  nir_intrinsic_set_base(intrin, 0);
+                  nir_intrinsic_set_component(intrin, 3);
+                  break;
+
+               default:
+                  vue_slot = vue_map->varying_to_slot[varying];
+                  assert(vue_slot != -1);
+                  nir_intrinsic_set_base(intrin, vue_slot);
+                  break;
+               }
             }
          }
       }

@@ -1914,27 +1914,15 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
    nir_const_value *offset_const = nir_src_as_const_value(offset_src);
    const unsigned push_reg_count = gs_prog_data->base.urb_read_length * 8;
 
-   /* Offset 0 is the VUE header, which contains VARYING_SLOT_LAYER [.y],
-    * VARYING_SLOT_VIEWPORT [.z], and VARYING_SLOT_PSIZ [.w].  Only
-    * gl_PointSize is available as a GS input, however, so it must be that.
-    */
-   const bool is_point_size = (base_offset == 0);
-
    /* TODO: figure out push input layout for invocations == 1 */
    if (gs_prog_data->invocations == 1 &&
        offset_const != NULL && vertex_const != NULL &&
        4 * (base_offset + offset_const->u32[0]) < push_reg_count) {
       int imm_offset = (base_offset + offset_const->u32[0]) * 4 +
                        vertex_const->u32[0] * push_reg_count;
-      /* This input was pushed into registers. */
-      if (is_point_size) {
-         /* gl_PointSize comes in .w */
-         bld.MOV(dst, fs_reg(ATTR, imm_offset + 3, dst.type));
-      } else {
-         for (unsigned i = 0; i < num_components; i++) {
-            bld.MOV(offset(dst, bld, i),
-                    fs_reg(ATTR, imm_offset + i + first_component, dst.type));
-         }
+      for (unsigned i = 0; i < num_components; i++) {
+         bld.MOV(offset(dst, bld, i),
+                 fs_reg(ATTR, imm_offset + i + first_component, dst.type));
       }
       return;
    }
@@ -2103,14 +2091,6 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
             indirect_offset = new_indirect;
          }
       }
-   }
-
-   if (is_point_size) {
-      /* Read the whole VUE header (because of alignment) and read .w. */
-      fs_reg tmp = bld.vgrf(dst.type, 4);
-      inst->dst = tmp;
-      inst->size_written = 4 * REG_SIZE;
-      bld.MOV(dst, offset(tmp, bld, 3));
    }
 }
 
