@@ -165,15 +165,6 @@ _mesa_ClearBufferSubData_sw(struct gl_context *ctx,
                             GLsizeiptr clearValueSize,
                             struct gl_buffer_object *bufObj);
 
-extern void
-_mesa_clear_buffer_sub_data(struct gl_context *ctx,
-                            struct gl_buffer_object *bufObj,
-                            GLenum internalformat,
-                            GLintptr offset, GLsizeiptr size,
-                            GLenum format, GLenum type,
-                            const GLvoid *data,
-                            const char *func, bool subdata);
-
 /*
  * API functions
  */

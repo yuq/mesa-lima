@@ -1876,14 +1876,11 @@ _mesa_GetNamedBufferSubData(GLuint buffer, GLintptr offset,
 /**
  * \param subdata   true if caller is *SubData, false if *Data
  */
-void
-_mesa_clear_buffer_sub_data(struct gl_context *ctx,
-                            struct gl_buffer_object *bufObj,
-                            GLenum internalformat,
-                            GLintptr offset, GLsizeiptr size,
-                            GLenum format, GLenum type,
-                            const GLvoid *data,
-                            const char *func, bool subdata)
+static void
+clear_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                      GLenum internalformat, GLintptr offset, GLsizeiptr size,
+                      GLenum format, GLenum type, const GLvoid *data,
+                      const char *func, bool subdata)
 {
    mesa_format mesaFormat;
    GLubyte clearValue[MAX_PIXEL_BYTES];
@@ -1943,9 +1940,8 @@ _mesa_ClearBufferData(GLenum target, GLenum internalformat, GLenum format,
    if (!bufObj)
       return;
 
-   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, 0, bufObj->Size,
-                               format, type, data,
-                               "glClearBufferData", false);
+   clear_buffer_sub_data(ctx, bufObj, internalformat, 0, bufObj->Size,
+                         format, type, data, "glClearBufferData", false);
 }
 
 void GLAPIENTRY
@@ -1959,9 +1955,8 @@ _mesa_ClearNamedBufferData(GLuint buffer, GLenum internalformat,
    if (!bufObj)
       return;
 
-   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, 0, bufObj->Size,
-                               format, type, data,
-                               "glClearNamedBufferData", false);
+   clear_buffer_sub_data(ctx, bufObj, internalformat, 0, bufObj->Size,
+                         format, type, data, "glClearNamedBufferData", false);
 }
 
 
@@ -1978,9 +1973,8 @@ _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
    if (!bufObj)
       return;
 
-   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, offset, size,
-                               format, type, data,
-                               "glClearBufferSubData", true);
+   clear_buffer_sub_data(ctx, bufObj, internalformat, offset, size,
+                         format, type, data, "glClearBufferSubData", true);
 }
 
 void GLAPIENTRY
@@ -1997,9 +1991,8 @@ _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
    if (!bufObj)
       return;
 
-   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, offset, size,
-                               format, type, data,
-                               "glClearNamedBufferSubData", true);
+   clear_buffer_sub_data(ctx, bufObj, internalformat, offset, size, format,
+                         type, data, "glClearNamedBufferSubData", true);
 }
 
 static GLboolean
