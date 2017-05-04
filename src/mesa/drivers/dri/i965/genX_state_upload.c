@@ -53,6 +53,7 @@
 #include "main/shaderapi.h"
 #include "main/stencil.h"
 #include "main/transformfeedback.h"
+#include "main/varray.h"
 #include "main/viewport.h"
 
 UNUSED static void *
@@ -836,6 +837,30 @@ static const struct brw_tracked_state genX(vertices) = {
    },
    .emit = genX(emit_vertices),
 };
+
+#if GEN_IS_HASWELL || GEN_GEN >= 8
+static void
+genX(upload_cut_index)(struct brw_context *brw)
+{
+   const struct gl_context *ctx = &brw->ctx;
+
+   brw_batch_emit(brw, GENX(3DSTATE_VF), vf) {
+      if (ctx->Array._PrimitiveRestart && brw->ib.ib) {
+         vf.IndexedDrawCutIndexEnable = true;
+         vf.CutIndex = _mesa_primitive_restart_index(ctx, brw->ib.index_size);
+      }
+   }
+}
+
+const struct brw_tracked_state genX(cut_index) = {
+   .dirty = {
+      .mesa  = _NEW_TRANSFORM,
+      .brw   = BRW_NEW_BLORP |
+               BRW_NEW_INDEX_BUFFER,
+   },
+   .emit = genX(upload_cut_index),
+};
+#endif
 
 #if GEN_GEN >= 6
 /**
@@ -4012,7 +4037,9 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_index_buffer,
       &genX(vertices),
 
-      &haswell_cut_index,
+#if GEN_IS_HASWELL
+      &genX(cut_index),
+#endif
    };
 #elif GEN_GEN >= 8
    static const struct brw_tracked_state *render_atoms[] =
@@ -4105,7 +4132,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen8_index_buffer,
       &genX(vertices),
 
-      &haswell_cut_index,
+      &genX(cut_index),
       &gen8_pma_fix,
    };
 #endif
