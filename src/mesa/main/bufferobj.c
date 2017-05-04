@@ -2280,12 +2280,10 @@ _mesa_GetNamedBufferPointerv(GLuint buffer, GLenum pname, GLvoid **params)
 }
 
 
-void
-_mesa_copy_buffer_sub_data(struct gl_context *ctx,
-                           struct gl_buffer_object *src,
-                           struct gl_buffer_object *dst,
-                           GLintptr readOffset, GLintptr writeOffset,
-                           GLsizeiptr size, const char *func)
+static void
+copy_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *src,
+                     struct gl_buffer_object *dst, GLintptr readOffset,
+                     GLintptr writeOffset, GLsizeiptr size, const char *func)
 {
    if (_mesa_check_disallowed_mapping(src)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2369,8 +2367,8 @@ _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
    if (!dst)
       return;
 
-   _mesa_copy_buffer_sub_data(ctx, src, dst, readOffset, writeOffset, size,
-                              "glCopyBufferSubData");
+   copy_buffer_sub_data(ctx, src, dst, readOffset, writeOffset, size,
+                        "glCopyBufferSubData");
 }
 
 void GLAPIENTRY
@@ -2391,8 +2389,8 @@ _mesa_CopyNamedBufferSubData(GLuint readBuffer, GLuint writeBuffer,
    if (!dst)
       return;
 
-   _mesa_copy_buffer_sub_data(ctx, src, dst, readOffset, writeOffset, size,
-                              "glCopyNamedBufferSubData");
+   copy_buffer_sub_data(ctx, src, dst, readOffset, writeOffset, size,
+                        "glCopyNamedBufferSubData");
 }
 
 static bool
