@@ -348,7 +348,7 @@ VkResult anv_BindImageMemory(
    if (image->aux_surface.isl.size > 0) {
 
       /* The offset and size must be a multiple of 4K or else the
-       * anv_gem_mmap call below will return NULL.
+       * anv_gem_mmap call below will fail.
        */
       assert((image->offset + image->aux_surface.offset) % 4096 == 0);
       assert(image->aux_surface.isl.size % 4096 == 0);
