@@ -310,11 +310,16 @@ _mesa_MapNamedBuffer_no_error(GLuint buffer, GLenum access);
 void * GLAPIENTRY
 _mesa_MapNamedBuffer(GLuint buffer, GLenum access);
 
-
+void GLAPIENTRY
+_mesa_FlushMappedBufferRange_no_error(GLenum target, GLintptr offset,
+                                      GLsizeiptr length);
 void GLAPIENTRY
 _mesa_FlushMappedBufferRange(GLenum target,
                              GLintptr offset, GLsizeiptr length);
 
+void GLAPIENTRY
+_mesa_FlushMappedNamedBufferRange_no_error(GLuint buffer, GLintptr offset,
+                                           GLsizeiptr length);
 void GLAPIENTRY
 _mesa_FlushMappedNamedBufferRange(GLuint buffer, GLintptr offset,
                                   GLsizeiptr length);

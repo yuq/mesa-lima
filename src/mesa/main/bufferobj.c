@@ -2831,6 +2831,19 @@ flush_mapped_buffer_range(struct gl_context *ctx,
 }
 
 void GLAPIENTRY
+_mesa_FlushMappedBufferRange_no_error(GLenum target, GLintptr offset,
+                                      GLsizeiptr length)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object **bufObjPtr = get_buffer_target(ctx, target);
+   struct gl_buffer_object *bufObj = *bufObjPtr;
+
+   if (ctx->Driver.FlushMappedBufferRange)
+      ctx->Driver.FlushMappedBufferRange(ctx, offset, length, bufObj,
+                                         MAP_USER);
+}
+
+void GLAPIENTRY
 _mesa_FlushMappedBufferRange(GLenum target, GLintptr offset,
                              GLsizeiptr length)
 {
@@ -2844,6 +2857,18 @@ _mesa_FlushMappedBufferRange(GLenum target, GLintptr offset,
 
    flush_mapped_buffer_range(ctx, bufObj, offset, length,
                              "glFlushMappedBufferRange");
+}
+
+void GLAPIENTRY
+_mesa_FlushMappedNamedBufferRange_no_error(GLuint buffer, GLintptr offset,
+                                           GLsizeiptr length)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+
+   if (ctx->Driver.FlushMappedBufferRange)
+      ctx->Driver.FlushMappedBufferRange(ctx, offset, length, bufObj,
+                                         MAP_USER);
 }
 
 void GLAPIENTRY

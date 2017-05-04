@@ -23,7 +23,7 @@
         <return type="GLvoid *"/>
     </function>
 
-    <function name="FlushMappedBufferRange" es2="3.0">
+    <function name="FlushMappedBufferRange" es2="3.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="offset" type="GLintptr"/>
         <param name="length" type="GLsizeiptr"/>

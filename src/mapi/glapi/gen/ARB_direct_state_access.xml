@@ -120,7 +120,7 @@
       <param name="buffer" type="GLuint" />
    </function>
 
-   <function name="FlushMappedNamedBufferRange">
+   <function name="FlushMappedNamedBufferRange" no_error="true">
       <param name="buffer" type="GLuint" />
       <param name="offset" type="GLintptr" />
       <param name="length" type="GLsizeiptr" />
