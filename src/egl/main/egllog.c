@@ -70,14 +70,10 @@ static struct {
 
    EGLBoolean initialized;
    EGLint level;
-   _EGLLogProc logger;
-   EGLint num_messages;
 } logging = {
    _MTX_INITIALIZER_NP,
    EGL_FALSE,
    FALLBACK_LOG_LEVEL,
-   NULL,
-   0
 };
 
 static const char *level_strings[] = {
@@ -88,34 +84,6 @@ static const char *level_strings[] = {
    "debug",
    NULL
 };
-
-
-/**
- * Set the function to be called when there is a message to log.
- * Note that the function will be called with an internal lock held.
- * Recursive logging is not allowed.
- */
-void
-_eglSetLogProc(_EGLLogProc logger)
-{
-   EGLint num_messages = 0;
-
-   mtx_lock(&logging.mutex);
-
-   if (logging.logger != logger) {
-      logging.logger = logger;
-
-      num_messages = logging.num_messages;
-      logging.num_messages = 0;
-   }
-
-   mtx_unlock(&logging.mutex);
-
-   if (num_messages)
-      _eglLog(_EGL_DEBUG,
-              "New logger installed. "
-              "Messages before the new logger might not be available.");
-}
 
 
 /**
@@ -172,7 +140,6 @@ _eglInitLogger(void)
       level = FALLBACK_LOG_LEVEL;
    }
 
-   logging.logger = _eglDefaultLogger;
    logging.level = (level >= 0) ? level : FALLBACK_LOG_LEVEL;
    logging.initialized = EGL_TRUE;
 
@@ -206,16 +173,13 @@ _eglLog(EGLint level, const char *fmtStr, ...)
 
    mtx_lock(&logging.mutex);
 
-   if (logging.logger) {
-      va_start(args, fmtStr);
-      ret = vsnprintf(msg, MAXSTRING, fmtStr, args);
-      if (ret < 0 || ret >= MAXSTRING)
-         strcpy(msg, "<message truncated>");
-      va_end(args);
+   va_start(args, fmtStr);
+   ret = vsnprintf(msg, MAXSTRING, fmtStr, args);
+   if (ret < 0 || ret >= MAXSTRING)
+      strcpy(msg, "<message truncated>");
+   va_end(args);
 
-      logging.logger(level, msg);
-      logging.num_messages++;
-   }
+   _eglDefaultLogger(level, msg);
 
    mtx_unlock(&logging.mutex);
 
