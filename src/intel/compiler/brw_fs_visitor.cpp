@@ -38,26 +38,21 @@ fs_visitor::emit_vs_system_value(int location)
    fs_reg *reg = new(this->mem_ctx)
       fs_reg(ATTR, 4 * _mesa_bitcount_64(nir->info.inputs_read),
              BRW_REGISTER_TYPE_D);
-   struct brw_vs_prog_data *vs_prog_data = brw_vs_prog_data(prog_data);
 
    switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
       reg->offset = 0;
-      vs_prog_data->uses_basevertex = true;
       break;
    case SYSTEM_VALUE_BASE_INSTANCE:
       reg->offset = REG_SIZE;
-      vs_prog_data->uses_baseinstance = true;
       break;
    case SYSTEM_VALUE_VERTEX_ID:
       unreachable("should have been lowered");
    case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
       reg->offset = 2 * REG_SIZE;
-      vs_prog_data->uses_vertexid = true;
       break;
    case SYSTEM_VALUE_INSTANCE_ID:
       reg->offset = 3 * REG_SIZE;
-      vs_prog_data->uses_instanceid = true;
       break;
    case SYSTEM_VALUE_DRAW_ID:
       if (nir->info.system_values_read &
@@ -67,7 +62,6 @@ fs_visitor::emit_vs_system_value(int location)
            BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID)))
          reg->nr += 4;
       reg->offset = 0;
-      vs_prog_data->uses_drawid = true;
       break;
    default:
       unreachable("not reached");

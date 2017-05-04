@@ -2797,9 +2797,26 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       nr_attribute_slots++;
    }
 
+   if (shader->info.system_values_read &
+       BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX))
+      prog_data->uses_basevertex = true;
+
+   if (shader->info.system_values_read &
+       BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE))
+      prog_data->uses_baseinstance = true;
+
+   if (shader->info.system_values_read &
+       BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE))
+      prog_data->uses_vertexid = true;
+
+   if (shader->info.system_values_read &
+       BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID))
+      prog_data->uses_instanceid = true;
+
    /* gl_DrawID has its very own vec4 */
    if (shader->info.system_values_read &
        BITFIELD64_BIT(SYSTEM_VALUE_DRAW_ID)) {
+      prog_data->uses_drawid = true;
       nr_attribute_slots++;
    }
 
