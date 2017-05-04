@@ -2032,6 +2032,7 @@
     <field name="Legacy Global Depth Bias Enable" start="43" end="43" type="bool"/>
     <field name="Statistics Enable" start="42" end="42" type="bool"/>
     <field name="Viewport Transform Enable" start="33" end="33" type="bool"/>
+    <field name="CHV Line Width" start="44" end="61" type="u11.7"/>
     <field name="Line Width" start="82" end="91" type="u3.7"/>
     <field name="Line End Cap Antialiasing Region Width" start="80" end="81" type="uint">
       <value name="0.5 pixels" value="0"/>

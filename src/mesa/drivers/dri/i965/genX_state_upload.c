@@ -1379,7 +1379,14 @@ genX(upload_sf)(struct brw_context *brw)
 #endif
 
       /* _NEW_LINE */
+#if GEN_GEN == 8
+      if (brw->is_cherryview)
+         sf.CHVLineWidth = brw_get_line_width_float(brw);
+      else
+         sf.LineWidth = brw_get_line_width_float(brw);
+#else
       sf.LineWidth = brw_get_line_width_float(brw);
+#endif
 
       if (ctx->Line.SmoothFlag) {
          sf.LineEndCapAntialiasingRegionWidth = _10pixels;
