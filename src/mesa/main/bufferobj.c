@@ -2067,6 +2067,16 @@ validate_and_unmap_buffer(struct gl_context *ctx,
 }
 
 GLboolean GLAPIENTRY
+_mesa_UnmapBuffer_no_error(GLenum target)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object **bufObjPtr = get_buffer_target(ctx, target);
+   struct gl_buffer_object *bufObj = *bufObjPtr;
+
+   return unmap_buffer(ctx, bufObj);
+}
+
+GLboolean GLAPIENTRY
 _mesa_UnmapBuffer(GLenum target)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -2077,6 +2087,15 @@ _mesa_UnmapBuffer(GLenum target)
       return GL_FALSE;
 
    return validate_and_unmap_buffer(ctx, bufObj, "glUnmapBuffer");
+}
+
+GLboolean GLAPIENTRY
+_mesa_UnmapNamedBuffer_no_error(GLuint buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+
+   return unmap_buffer(ctx, bufObj);
 }
 
 GLboolean GLAPIENTRY

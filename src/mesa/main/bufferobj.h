@@ -253,8 +253,12 @@ _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
                               const GLvoid *data);
 
 GLboolean GLAPIENTRY
+_mesa_UnmapBuffer_no_error(GLenum target);
+GLboolean GLAPIENTRY
 _mesa_UnmapBuffer(GLenum target);
 
+GLboolean GLAPIENTRY
+_mesa_UnmapNamedBuffer_no_error(GLuint buffer);
 GLboolean GLAPIENTRY
 _mesa_UnmapNamedBuffer(GLuint buffer);
 
