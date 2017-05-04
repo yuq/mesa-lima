@@ -485,10 +485,13 @@ brw_destroy_cache(struct brw_context *brw, struct brw_cache *cache)
 
    DBG("%s\n", __func__);
 
-   if (brw->has_llc)
-      brw_bo_unmap(cache->bo);
-   brw_bo_unreference(cache->bo);
-   cache->bo = NULL;
+   /* This can be NULL if context creation failed early on */
+   if (cache->bo) {
+      if (brw->has_llc)
+         brw_bo_unmap(cache->bo);
+      brw_bo_unreference(cache->bo);
+      cache->bo = NULL;
+   }
    brw_clear_cache(brw, cache);
    free(cache->items);
    cache->items = NULL;
