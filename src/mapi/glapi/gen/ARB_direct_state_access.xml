@@ -75,7 +75,7 @@
       <param name="data" type="const GLvoid *" />
    </function>
 
-   <function name="CopyNamedBufferSubData">
+   <function name="CopyNamedBufferSubData" no_error="true">
       <param name="readBuffer" type="GLuint" />
       <param name="writeBuffer" type="GLuint" />
       <param name="readOffset" type="GLintptr" />

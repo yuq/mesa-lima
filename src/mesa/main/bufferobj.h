@@ -254,12 +254,19 @@ _mesa_GetBufferPointerv(GLenum target, GLenum pname, GLvoid **params);
 void GLAPIENTRY
 _mesa_GetNamedBufferPointerv(GLuint buffer, GLenum pname, GLvoid **params);
 
-
+void GLAPIENTRY
+_mesa_CopyBufferSubData_no_error(GLenum readTarget, GLenum writeTarget,
+                                 GLintptr readOffset, GLintptr writeOffset,
+                                 GLsizeiptr size);
 void GLAPIENTRY
 _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
                         GLintptr readOffset, GLintptr writeOffset,
                         GLsizeiptr size);
 
+void GLAPIENTRY
+_mesa_CopyNamedBufferSubData_no_error(GLuint readBuffer, GLuint writeBuffer,
+                                      GLintptr readOffset,
+                                      GLintptr writeOffset, GLsizeiptr size);
 void GLAPIENTRY
 _mesa_CopyNamedBufferSubData(GLuint readBuffer, GLuint writeBuffer,
                              GLintptr readOffset, GLintptr writeOffset,

@@ -2349,6 +2349,24 @@ copy_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *src,
 }
 
 void GLAPIENTRY
+_mesa_CopyBufferSubData_no_error(GLenum readTarget, GLenum writeTarget,
+                                 GLintptr readOffset, GLintptr writeOffset,
+                                 GLsizeiptr size)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_buffer_object **src_ptr = get_buffer_target(ctx, readTarget);
+   struct gl_buffer_object *src = *src_ptr;
+
+   struct gl_buffer_object **dst_ptr = get_buffer_target(ctx, writeTarget);
+   struct gl_buffer_object *dst = *dst_ptr;
+
+   dst->MinMaxCacheDirty = true;
+   ctx->Driver.CopyBufferSubData(ctx, src, dst, readOffset, writeOffset,
+                                 size);
+}
+
+void GLAPIENTRY
 _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
                         GLintptr readOffset, GLintptr writeOffset,
                         GLsizeiptr size)
@@ -2368,6 +2386,21 @@ _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
 
    copy_buffer_sub_data(ctx, src, dst, readOffset, writeOffset, size,
                         "glCopyBufferSubData");
+}
+
+void GLAPIENTRY
+_mesa_CopyNamedBufferSubData_no_error(GLuint readBuffer, GLuint writeBuffer,
+                                      GLintptr readOffset,
+                                      GLintptr writeOffset, GLsizeiptr size)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_buffer_object *src = _mesa_lookup_bufferobj(ctx, readBuffer);
+   struct gl_buffer_object *dst = _mesa_lookup_bufferobj(ctx, writeBuffer);
+
+   dst->MinMaxCacheDirty = true;
+   ctx->Driver.CopyBufferSubData(ctx, src, dst, readOffset, writeOffset,
+                                 size);
 }
 
 void GLAPIENTRY
