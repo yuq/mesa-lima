@@ -855,8 +855,7 @@ genX(upload_cut_index)(struct brw_context *brw)
 const struct brw_tracked_state genX(cut_index) = {
    .dirty = {
       .mesa  = _NEW_TRANSFORM,
-      .brw   = BRW_NEW_BLORP |
-               BRW_NEW_INDEX_BUFFER,
+      .brw   = BRW_NEW_INDEX_BUFFER,
    },
    .emit = genX(upload_cut_index),
 };
