@@ -687,9 +687,9 @@ buffer_sub_data_fallback(struct gl_context *ctx, GLintptr offset,
  * \sa glBufferGetSubDataARB, dd_function_table::GetBufferSubData.
  */
 static void
-_mesa_buffer_get_subdata( struct gl_context *ctx, GLintptrARB offset,
-			  GLsizeiptrARB size, GLvoid * data,
-			  struct gl_buffer_object * bufObj )
+buffer_get_subdata(struct gl_context *ctx, GLintptrARB offset,
+                   GLsizeiptrARB size, GLvoid *data,
+                   struct gl_buffer_object *bufObj )
 {
    (void) ctx;
 
@@ -1195,7 +1195,7 @@ _mesa_init_buffer_object_functions(struct dd_function_table *driver)
    driver->DeleteBuffer = _mesa_delete_buffer_object;
    driver->BufferData = buffer_data_fallback;
    driver->BufferSubData = buffer_sub_data_fallback;
-   driver->GetBufferSubData = _mesa_buffer_get_subdata;
+   driver->GetBufferSubData = buffer_get_subdata;
    driver->UnmapBuffer = unmap_buffer_fallback;
 
    /* GL_ARB_clear_buffer_object */
