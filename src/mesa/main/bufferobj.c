@@ -2379,11 +2379,10 @@ _mesa_CopyNamedBufferSubData(GLuint readBuffer, GLuint writeBuffer,
 }
 
 
-void *
-_mesa_map_buffer_range(struct gl_context *ctx,
-                       struct gl_buffer_object *bufObj,
-                       GLintptr offset, GLsizeiptr length,
-                       GLbitfield access, const char *func)
+static void *
+map_buffer_range(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                 GLintptr offset, GLsizeiptr length, GLbitfield access,
+                 const char *func)
 {
    void *map;
    GLbitfield allowed_access;
@@ -2586,8 +2585,8 @@ _mesa_MapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,
    if (!bufObj)
       return NULL;
 
-   return _mesa_map_buffer_range(ctx, bufObj, offset, length, access,
-                                 "glMapBufferRange");
+   return map_buffer_range(ctx, bufObj, offset, length, access,
+                           "glMapBufferRange");
 }
 
 void * GLAPIENTRY
@@ -2608,13 +2607,13 @@ _mesa_MapNamedBufferRange(GLuint buffer, GLintptr offset, GLsizeiptr length,
    if (!bufObj)
       return NULL;
 
-   return _mesa_map_buffer_range(ctx, bufObj, offset, length, access,
-                                 "glMapNamedBufferRange");
+   return map_buffer_range(ctx, bufObj, offset, length, access,
+                           "glMapNamedBufferRange");
 }
 
 /**
  * Converts GLenum access from MapBuffer and MapNamedBuffer into
- * flags for input to _mesa_map_buffer_range.
+ * flags for input to map_buffer_range.
  *
  * \return true if the type of requested access is permissible.
  */
@@ -2653,8 +2652,8 @@ _mesa_MapBuffer(GLenum target, GLenum access)
    if (!bufObj)
       return NULL;
 
-   return _mesa_map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
-                                 "glMapBuffer");
+   return map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
+                           "glMapBuffer");
 }
 
 void * GLAPIENTRY
@@ -2673,8 +2672,8 @@ _mesa_MapNamedBuffer(GLuint buffer, GLenum access)
    if (!bufObj)
       return NULL;
 
-   return _mesa_map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
-                                 "glMapNamedBuffer");
+   return map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
+                           "glMapNamedBuffer");
 }
 
 
