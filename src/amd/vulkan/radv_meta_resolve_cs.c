@@ -253,6 +253,78 @@ radv_device_finish_meta_resolve_compute_state(struct radv_device *device)
 				   &state->alloc);
 }
 
+static void
+emit_resolve(struct radv_cmd_buffer *cmd_buffer,
+	     struct radv_image_view *src_iview,
+	     struct radv_image_view *dest_iview,
+	     const VkOffset2D *src_offset,
+             const VkOffset2D *dest_offset,
+             const VkExtent2D *resolve_extent)
+{
+	struct radv_device *device = cmd_buffer->device;
+	const uint32_t samples = src_iview->image->info.samples;
+	const uint32_t samples_log2 = ffs(samples) - 1;
+	radv_meta_push_descriptor_set(cmd_buffer,
+				      VK_PIPELINE_BIND_POINT_COMPUTE,
+				      device->meta_state.resolve_compute.p_layout,
+				      0, /* set */
+				      2, /* descriptorWriteCount */
+				      (VkWriteDescriptorSet[]) {
+					{
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.dstBinding = 0,
+						.dstArrayElement = 0,
+						.descriptorCount = 1,
+						.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			                      .pImageInfo = (VkDescriptorImageInfo[]) {
+		                              {
+	                                      .sampler = VK_NULL_HANDLE,
+					      .imageView = radv_image_view_to_handle(src_iview),
+	                                      .imageLayout = VK_IMAGE_LAYOUT_GENERAL	                              },
+	                      }
+		              },
+		              {
+		                      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		                      .dstBinding = 1,
+		                      .dstArrayElement = 0,
+				      .descriptorCount = 1,
+				      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+	                      .pImageInfo = (VkDescriptorImageInfo[]) {
+                              {
+                                      .sampler = VK_NULL_HANDLE,
+                                     .imageView = radv_image_view_to_handle(dest_iview),
+                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+                              },
+                      }
+			      }
+				      });
+
+	VkPipeline pipeline;
+	if (vk_format_is_int(src_iview->image->vk_format))
+		pipeline = device->meta_state.resolve_compute.rc[samples_log2].i_pipeline;
+	else if (vk_format_is_srgb(src_iview->image->vk_format))
+		pipeline = device->meta_state.resolve_compute.rc[samples_log2].srgb_pipeline;
+	else
+		pipeline = device->meta_state.resolve_compute.rc[samples_log2].pipeline;
+	if (cmd_buffer->state.compute_pipeline != radv_pipeline_from_handle(pipeline)) {
+		radv_CmdBindPipeline(radv_cmd_buffer_to_handle(cmd_buffer),
+				     VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+	}
+
+	unsigned push_constants[4] = {
+		src_offset->x,
+		src_offset->y,
+		dest_offset->x,
+		dest_offset->y,
+	};
+	radv_CmdPushConstants(radv_cmd_buffer_to_handle(cmd_buffer),
+			      device->meta_state.resolve_compute.p_layout,
+			      VK_SHADER_STAGE_COMPUTE_BIT, 0, 16,
+			      push_constants);
+	radv_unaligned_dispatch(cmd_buffer, resolve_extent->width, resolve_extent->height, 1);
+
+}
+
 void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 				     struct radv_image *src_image,
 				     VkImageLayout src_image_layout,
@@ -261,10 +333,7 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 				     uint32_t region_count,
 				     const VkImageResolve *regions)
 {
-	struct radv_device *device = cmd_buffer->device;
 	struct radv_meta_saved_compute_state saved_state;
-	const uint32_t samples = src_image->info.samples;
-	const uint32_t samples_log2 = ffs(samples) - 1;
 
 	for (uint32_t r = 0; r < region_count; ++r) {
 		const VkImageResolve *region = &regions[r];
@@ -341,66 +410,12 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 							     },
 					     cmd_buffer, VK_IMAGE_USAGE_STORAGE_BIT);
 
-
-			radv_meta_push_descriptor_set(cmd_buffer,
-						      VK_PIPELINE_BIND_POINT_COMPUTE,
-						      device->meta_state.resolve_compute.p_layout,
-						      0, /* set */
-						      2, /* descriptorWriteCount */
-						      (VkWriteDescriptorSet[]) {
-						              {
-						                      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-						                      .dstBinding = 0,
-						                      .dstArrayElement = 0,
-						                      .descriptorCount = 1,
-						                      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-						                      .pImageInfo = (VkDescriptorImageInfo[]) {
-						                              {
-						                                      .sampler = VK_NULL_HANDLE,
-						                                      .imageView = radv_image_view_to_handle(&src_iview),
-						                                      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-						                              },
-						                      }
-						              },
-						              {
-						                      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-						                      .dstBinding = 1,
-						                      .dstArrayElement = 0,
-						                      .descriptorCount = 1,
-						                      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-						                      .pImageInfo = (VkDescriptorImageInfo[]) {
-						                              {
-						                                      .sampler = VK_NULL_HANDLE,
-						                                      .imageView = radv_image_view_to_handle(&dest_iview),
-						                                      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-						                              },
-						                      }
-					                      }
-				                      });
-
-			VkPipeline pipeline;
-			if (vk_format_is_int(src_image->vk_format))
-				pipeline = device->meta_state.resolve_compute.rc[samples_log2].i_pipeline;
-			else if (vk_format_is_srgb(src_image->vk_format))
-				pipeline = device->meta_state.resolve_compute.rc[samples_log2].srgb_pipeline;
-			else
-				pipeline = device->meta_state.resolve_compute.rc[samples_log2].pipeline;
-			if (cmd_buffer->state.compute_pipeline != radv_pipeline_from_handle(pipeline)) {
-				radv_CmdBindPipeline(radv_cmd_buffer_to_handle(cmd_buffer),
-						     VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-			}
-
-			unsigned push_constants[4] = {
-				srcOffset.x,
-				srcOffset.y,
-				dstOffset.x,
-				dstOffset.y,
-			};
-			radv_CmdPushConstants(radv_cmd_buffer_to_handle(cmd_buffer),
-					      device->meta_state.resolve_compute.p_layout,
-					      VK_SHADER_STAGE_COMPUTE_BIT, 0, 16,
-					      push_constants);
-			radv_unaligned_dispatch(cmd_buffer, extent.width, extent.height, 1);
+			emit_resolve(cmd_buffer,
+				     &src_iview,
+				     &dest_iview,
+				     &(VkOffset2D) {srcOffset.x, srcOffset.y },
+				     &(VkOffset2D) {dstOffset.x, dstOffset.y },
+				     &(VkExtent2D) {extent.width, extent.height });
 		}
 	}
 	radv_meta_restore_compute(&saved_state, cmd_buffer, 16);
