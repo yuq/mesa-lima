@@ -559,6 +559,7 @@ public:
 
    void rename_temp_registers(int num_renames, struct rename_reg_pair *renames);
    void get_first_temp_read(int *first_reads);
+   void get_first_temp_write(int *first_writes);
    void get_last_temp_read_first_temp_write(int *last_reads, int *first_writes);
    void get_last_temp_write(int *last_writes);
 
@@ -4759,6 +4760,33 @@ glsl_to_tgsi_visitor::rename_temp_registers(int num_renames, struct rename_reg_p
 }
 
 void
+glsl_to_tgsi_visitor::get_first_temp_write(int *first_writes)
+{
+   int depth = 0; /* loop depth */
+   int loop_start = -1; /* index of the first active BGNLOOP (if any) */
+   unsigned i = 0, j;
+
+   foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
+      for (j = 0; j < num_inst_dst_regs(inst); j++) {
+         if (inst->dst[j].file == PROGRAM_TEMPORARY) {
+            if (first_writes[inst->dst[j].index] == -1)
+                first_writes[inst->dst[j].index] = (depth == 0) ? i : loop_start;
+         }
+      }
+
+      if (inst->op == TGSI_OPCODE_BGNLOOP) {
+         if(depth++ == 0)
+            loop_start = i;
+      } else if (inst->op == TGSI_OPCODE_ENDLOOP) {
+         if (--depth == 0)
+            loop_start = -1;
+      }
+      assert(depth >= 0);
+      i++;
+   }
+}
+
+void
 glsl_to_tgsi_visitor::get_first_temp_read(int *first_reads)
 {
    int depth = 0; /* loop depth */
@@ -5347,16 +5375,17 @@ glsl_to_tgsi_visitor::renumber_registers(void)
 {
    int i = 0;
    int new_index = 0;
-   int *first_reads = rzalloc_array(mem_ctx, int, this->next_temp);
+   int *first_writes = ralloc_array(mem_ctx, int, this->next_temp);
    struct rename_reg_pair *renames = rzalloc_array(mem_ctx, struct rename_reg_pair, this->next_temp);
    int num_renames = 0;
-   for (i = 0; i < this->next_temp; i++) {
-      first_reads[i] = -1;
-   }
-   get_first_temp_read(first_reads);
 
    for (i = 0; i < this->next_temp; i++) {
-      if (first_reads[i] < 0) continue;
+      first_writes[i] = -1;
+   }
+   get_first_temp_write(first_writes);
+
+   for (i = 0; i < this->next_temp; i++) {
+      if (first_writes[i] < 0) continue;
       if (i != new_index) {
          renames[num_renames].old_reg = i;
          renames[num_renames].new_reg = new_index;
@@ -5368,7 +5397,7 @@ glsl_to_tgsi_visitor::renumber_registers(void)
    rename_temp_registers(num_renames, renames);
    this->next_temp = new_index;
    ralloc_free(renames);
-   ralloc_free(first_reads);
+   ralloc_free(first_writes);
 }
 
 /* ------------------------- TGSI conversion stuff -------------------------- */
