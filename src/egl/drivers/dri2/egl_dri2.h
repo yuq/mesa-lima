@@ -59,7 +59,6 @@
 #include <system/window.h>
 #include <hardware/gralloc.h>
 #include <gralloc_drm_handle.h>
-#include <cutils/log.h>
 
 #endif /* HAVE_ANDROID_PLATFORM */
 

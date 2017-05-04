@@ -44,6 +44,23 @@
 
 #include "egllog.h"
 
+#ifdef HAVE_ANDROID_PLATFORM
+#define LOG_TAG "EGL-MAIN"
+#include <cutils/log.h>
+
+/* support versions < JellyBean */
+#ifndef ALOGW
+#define ALOGW LOGW
+#endif
+#ifndef ALOGD
+#define ALOGD LOGD
+#endif
+#ifndef ALOGI
+#define ALOGI LOGI
+#endif
+
+#endif /* HAVE_ANDROID_PLATFORM */
+
 #define MAXSTRING 1000
 #define FALLBACK_LOG_LEVEL _EGL_WARNING
 
@@ -107,7 +124,26 @@ _eglSetLogProc(_EGLLogProc logger)
 static void
 _eglDefaultLogger(EGLint level, const char *msg)
 {
+#ifdef HAVE_ANDROID_PLATFORM
+   switch (level) {
+   case _EGL_DEBUG:
+      ALOGD("%s", msg);
+      break;
+   case _EGL_INFO:
+      ALOGI("%s", msg);
+      break;
+   case _EGL_WARNING:
+      ALOGW("%s", msg);
+      break;
+   case _EGL_FATAL:
+      LOG_FATAL("%s", msg);
+      break;
+   default:
+      break;
+   }
+#else
    fprintf(stderr, "libEGL %s: %s\n", level_strings[level], msg);
+#endif /* HAVE_ANDROID_PLATFORM */
 }
 
 

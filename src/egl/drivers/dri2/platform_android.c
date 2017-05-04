@@ -1045,38 +1045,6 @@ droid_open_device(struct dri2_egl_display *dri2_dpy)
    return (fd >= 0) ? fcntl(fd, F_DUPFD_CLOEXEC, 3) : -1;
 }
 
-/* support versions < JellyBean */
-#ifndef ALOGW
-#define ALOGW LOGW
-#endif
-#ifndef ALOGD
-#define ALOGD LOGD
-#endif
-#ifndef ALOGI
-#define ALOGI LOGI
-#endif
-
-static void
-droid_log(EGLint level, const char *msg)
-{
-   switch (level) {
-   case _EGL_DEBUG:
-      ALOGD("%s", msg);
-      break;
-   case _EGL_INFO:
-      ALOGI("%s", msg);
-      break;
-   case _EGL_WARNING:
-      ALOGW("%s", msg);
-      break;
-   case _EGL_FATAL:
-      LOG_FATAL("%s", msg);
-      break;
-   default:
-      break;
-   }
-}
-
 static struct dri2_egl_display_vtbl droid_display_vtbl = {
    .authenticate = NULL,
    .create_window_surface = droid_create_window_surface,
@@ -1132,8 +1100,6 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
    struct dri2_egl_display *dri2_dpy;
    const char *err;
    int ret;
-
-   _eglSetLogProc(droid_log);
 
    loader_set_logger(_eglLog);
 
