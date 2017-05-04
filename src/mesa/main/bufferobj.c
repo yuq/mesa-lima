@@ -2003,9 +2003,9 @@ _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
 }
 
 
-GLboolean
-_mesa_unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-                   const char *func)
+static GLboolean
+unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+             const char *func)
 {
    GLboolean status = GL_TRUE;
    ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, GL_FALSE);
@@ -2071,7 +2071,7 @@ _mesa_UnmapBuffer(GLenum target)
    if (!bufObj)
       return GL_FALSE;
 
-   return _mesa_unmap_buffer(ctx, bufObj, "glUnmapBuffer");
+   return unmap_buffer(ctx, bufObj, "glUnmapBuffer");
 }
 
 GLboolean GLAPIENTRY
@@ -2084,7 +2084,7 @@ _mesa_UnmapNamedBuffer(GLuint buffer)
    if (!bufObj)
       return GL_FALSE;
 
-   return _mesa_unmap_buffer(ctx, bufObj, "glUnmapNamedBuffer");
+   return unmap_buffer(ctx, bufObj, "glUnmapNamedBuffer");
 }
 
 

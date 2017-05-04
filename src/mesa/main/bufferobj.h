@@ -180,10 +180,6 @@ _mesa_clear_buffer_sub_data(struct gl_context *ctx,
                             const GLvoid *data,
                             const char *func, bool subdata);
 
-extern GLboolean
-_mesa_unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-                   const char *func);
-
 /*
  * API functions
  */
