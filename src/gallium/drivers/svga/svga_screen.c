@@ -762,8 +762,10 @@ svga_is_format_supported( struct pipe_screen *screen,
       return FALSE;
    }
 
-   /* we don't support sRGB rendering into display targets */
-   if (util_format_is_srgb(format) && (bindings & PIPE_BIND_DISPLAY_TARGET)) {
+   if (!ss->sws->have_vgpu10 &&
+       util_format_is_srgb(format) &&
+       (bindings & PIPE_BIND_DISPLAY_TARGET)) {
+       /* We only support sRGB rendering with vgpu10 */
       return FALSE;
    }
 
@@ -794,6 +796,9 @@ svga_is_format_supported( struct pipe_screen *screen,
       case SVGA3D_B8G8R8A8_UNORM:
       case SVGA3D_B8G8R8X8_UNORM:
       case SVGA3D_B5G6R5_UNORM:
+      case SVGA3D_B8G8R8X8_UNORM_SRGB:
+      case SVGA3D_B8G8R8A8_UNORM_SRGB:
+      case SVGA3D_R8G8B8A8_UNORM_SRGB:
          break;
 
       /* Often unsupported/problematic. This means we end up with the same
