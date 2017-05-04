@@ -539,8 +539,6 @@ INLINE int SIMDAPI _simd16_testz_ps(simd16scalar a, simd16scalar b)
     return lo & hi;
 }
 
-#define _simd16_cmplt_epi32(a, b) _simd16_cmpgt_epi32(b, a)
-
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_unpacklo_ps, _simd_unpacklo_ps)
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_unpackhi_ps, _simd_unpackhi_ps)
 SIMD16_EMU_AVX512_2(simd16scalard, _simd16_unpacklo_pd, _simd_unpacklo_pd)
@@ -898,12 +896,14 @@ INLINE simd16scalari SIMDAPI _simd16_blendv_epi32(simd16scalari a, simd16scalari
 
 INLINE simd16mask SIMDAPI _simd16_movemask_ps(simd16scalar a)
 {
-    return  _simd16_scalari2mask(_mm512_castps_si512(a));
+    // movemask_ps only checks the top bit of the float single elements
+    return  _simd16_scalari2mask(_mm512_and_si512(_mm512_castps_si512(a), _mm512_set1_epi32(0x80000000)));
 }
 
 INLINE simd16mask SIMDAPI _simd16_movemask_pd(simd16scalard a)
 {
-    return  _simd16_scalard2mask(a);
+    // movemask_pd only checks the top bit of the float double elements
+    return  _simd16_scalard2mask(_mm512_castsi512_pd(_mm512_and_si512(_mm512_castpd_si512(a), _mm512_set1_epi64(0x8000000000000000))));
 }
 
 #if 0
