@@ -74,7 +74,7 @@ anv_gem_close(struct anv_device *device, uint32_t gem_handle)
 }
 
 /**
- * Wrapper around DRM_IOCTL_I915_GEM_MMAP.
+ * Wrapper around DRM_IOCTL_I915_GEM_MMAP. Returns MAP_FAILED on error.
  */
 void*
 anv_gem_mmap(struct anv_device *device, uint32_t gem_handle,
