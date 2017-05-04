@@ -1214,9 +1214,7 @@ void
 _mesa_buffer_unmap_all_mappings(struct gl_context *ctx,
                                 struct gl_buffer_object *bufObj)
 {
-   int i;
-
-   for (i = 0; i < MAP_COUNT; i++) {
+   for (int i = 0; i < MAP_COUNT; i++) {
       if (_mesa_bufferobj_mapped(bufObj, i)) {
          ctx->Driver.UnmapBuffer(ctx, bufObj, i);
          assert(bufObj->Mappings[i].Pointer == NULL);
@@ -1412,7 +1410,6 @@ create_buffers(GLsizei n, GLuint *buffers, bool dsa)
 {
    GET_CURRENT_CONTEXT(ctx);
    GLuint first;
-   GLint i;
    struct gl_buffer_object *buf;
 
    const char *func = dsa ? "glCreateBuffers" : "glGenBuffers";
@@ -1440,7 +1437,7 @@ create_buffers(GLsizei n, GLuint *buffers, bool dsa)
     * DummyBufferObject.  Otherwise, create a new buffer object and insert
     * it.
     */
-   for (i = 0; i < n; i++) {
+   for (int i = 0; i < n; i++) {
       buffers[i] = first + i;
       if (dsa) {
          assert(ctx->Driver.NewBufferObject);
@@ -3310,9 +3307,8 @@ static void
 unbind_uniform_buffers(struct gl_context *ctx, GLuint first, GLsizei count)
 {
    struct gl_buffer_object *bufObj = ctx->Shared->NullBufferObj;
-   GLint i;
 
-   for (i = 0; i < count; i++)
+   for (int i = 0; i < count; i++)
       set_ubo_binding(ctx, &ctx->UniformBufferBindings[first + i],
                       bufObj, -1, -1, GL_TRUE);
 }
@@ -3326,9 +3322,8 @@ unbind_shader_storage_buffers(struct gl_context *ctx, GLuint first,
                               GLsizei count)
 {
    struct gl_buffer_object *bufObj = ctx->Shared->NullBufferObj;
-   GLint i;
 
-   for (i = 0; i < count; i++)
+   for (int i = 0; i < count; i++)
       set_ssbo_binding(ctx, &ctx->ShaderStorageBufferBindings[first + i],
                        bufObj, -1, -1, GL_TRUE);
 }
@@ -3340,8 +3335,6 @@ bind_uniform_buffers(struct gl_context *ctx, GLuint first, GLsizei count,
                      const GLintptr *offsets, const GLsizeiptr *sizes,
                      const char *caller)
 {
-   GLint i;
-
    if (!error_check_bind_uniform_buffers(ctx, first, count, caller))
       return;
 
@@ -3383,7 +3376,7 @@ bind_uniform_buffers(struct gl_context *ctx, GLuint first, GLsizei count,
 
    _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
-   for (i = 0; i < count; i++) {
+   for (int i = 0; i < count; i++) {
       struct gl_uniform_buffer_binding *binding =
          &ctx->UniformBufferBindings[first + i];
       struct gl_buffer_object *bufObj;
@@ -3452,8 +3445,6 @@ bind_shader_storage_buffers(struct gl_context *ctx, GLuint first,
                             const GLsizeiptr *sizes,
                             const char *caller)
 {
-   GLint i;
-
    if (!error_check_bind_shader_storage_buffers(ctx, first, count, caller))
       return;
 
@@ -3495,7 +3486,7 @@ bind_shader_storage_buffers(struct gl_context *ctx, GLuint first,
 
    _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
-   for (i = 0; i < count; i++) {
+   for (int i = 0; i < count; i++) {
       struct gl_shader_storage_buffer_binding *binding =
          &ctx->ShaderStorageBufferBindings[first + i];
       struct gl_buffer_object *bufObj;
@@ -3613,9 +3604,8 @@ unbind_xfb_buffers(struct gl_context *ctx,
                    GLuint first, GLsizei count)
 {
    struct gl_buffer_object * const bufObj = ctx->Shared->NullBufferObj;
-   GLint i;
 
-   for (i = 0; i < count; i++)
+   for (int i = 0; i < count; i++)
       _mesa_set_transform_feedback_binding(ctx, tfObj, first + i,
                                            bufObj, 0, 0);
 }
@@ -3631,7 +3621,6 @@ bind_xfb_buffers(struct gl_context *ctx,
 {
    struct gl_transform_feedback_object *tfObj =
        ctx->TransformFeedback.CurrentObject;
-   GLint i;
 
    if (!error_check_bind_xfb_buffers(ctx, tfObj, first, count, caller))
       return;
@@ -3674,7 +3663,7 @@ bind_xfb_buffers(struct gl_context *ctx,
 
    _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
-   for (i = 0; i < count; i++) {
+   for (int i = 0; i < count; i++) {
       const GLuint index = first + i;
       struct gl_buffer_object * const boundBufObj = tfObj->Buffers[index];
       struct gl_buffer_object *bufObj;
@@ -3777,9 +3766,8 @@ static void
 unbind_atomic_buffers(struct gl_context *ctx, GLuint first, GLsizei count)
 {
    struct gl_buffer_object * const bufObj = ctx->Shared->NullBufferObj;
-   GLint i;
 
-   for (i = 0; i < count; i++)
+   for (int i = 0; i < count; i++)
       set_atomic_buffer_binding(ctx, &ctx->AtomicBufferBindings[first + i],
                                 bufObj, -1, -1);
 }
@@ -3794,8 +3782,6 @@ bind_atomic_buffers(struct gl_context *ctx,
                     const GLsizeiptr *sizes,
                     const char *caller)
 {
-   GLint i;
-
    if (!error_check_bind_atomic_buffers(ctx, first, count, caller))
      return;
 
@@ -3837,7 +3823,7 @@ bind_atomic_buffers(struct gl_context *ctx,
 
    _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
-   for (i = 0; i < count; i++) {
+   for (int i = 0; i < count; i++) {
       struct gl_atomic_buffer_binding *binding =
          &ctx->AtomicBufferBindings[first + i];
       struct gl_buffer_object *bufObj;
