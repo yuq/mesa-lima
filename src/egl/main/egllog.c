@@ -41,6 +41,7 @@
 #include <string.h>
 #include <strings.h>
 #include "c11/threads.h"
+#include "util/macros.h"
 
 #include "egllog.h"
 
@@ -82,7 +83,6 @@ static const char *level_strings[] = {
    "warning",
    "info",
    "debug",
-   NULL
 };
 
 
@@ -129,7 +129,7 @@ _eglInitLogger(void)
 
    log_env = getenv("EGL_LOG_LEVEL");
    if (log_env) {
-      for (i = 0; level_strings[i]; i++) {
+      for (i = 0; i < ARRAY_SIZE(level_strings); i++) {
          if (strcasecmp(log_env, level_strings[i]) == 0) {
             level = i;
             break;
