@@ -1505,10 +1505,10 @@ _mesa_IsBuffer(GLuint id)
 }
 
 
-void
-_mesa_buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-                     GLenum target, GLsizeiptr size, const GLvoid *data,
-                     GLbitfield flags, const char *func)
+static void
+buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+               GLenum target, GLsizeiptr size, const GLvoid *data,
+               GLbitfield flags, const char *func)
 {
    if (size <= 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(size <= 0)", func);
@@ -1596,8 +1596,7 @@ _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
    if (!bufObj)
       return;
 
-   _mesa_buffer_storage(ctx, bufObj, target, size, data, flags,
-                        "glBufferStorage");
+   buffer_storage(ctx, bufObj, target, size, data, flags, "glBufferStorage");
 }
 
 void GLAPIENTRY
@@ -1615,8 +1614,8 @@ _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
     * In direct state access, buffer objects have an unspecified target since
     * they are not required to be bound.
     */
-   _mesa_buffer_storage(ctx, bufObj, GL_NONE, size, data, flags,
-                        "glNamedBufferStorage");
+   buffer_storage(ctx, bufObj, GL_NONE, size, data, flags,
+                  "glNamedBufferStorage");
 }
 
 
