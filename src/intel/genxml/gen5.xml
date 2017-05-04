@@ -649,14 +649,14 @@
     <field name="Y Offset" start="180" end="183" type="uint"/>
   </struct>
 
-  <instruction name="3DSTATE_DEPTH_BUFFER" bias="2" length="5">
-    <!-- The hardware docs incorrectly say length is 6. The actual length is 5. -->
+  <instruction name="3DSTATE_DEPTH_BUFFER" bias="2" length="6">
+    <!-- The hardware docs incorrectly say length is 7. The actual length is 6. -->
     <!-- DWord 0 -->
     <field name="Command Type" start="29" end="31" type="uint" default="3"/>
     <field name="Command SubType" start="27" end="28" type="uint" default="3"/>
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="1"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="5"/>
-    <field name="DWord Length" start="0" end="7" type="uint" default="3"/>
+    <field name="DWord Length" start="0" end="7" type="uint" default="4"/>
     <!-- DWord 1 -->
     <field name="Surface Type" start="61" end="63" type="uint">
       <value name="SURFTYPE_1D" value="0"/>
