@@ -343,6 +343,21 @@ static inline int ir3_neighbor_count(struct ir3_instruction *instr)
 	return num;
 }
 
+/*
+ * Stupid/simple growable array implementation:
+ */
+#define DECLARE_ARRAY(type, name) \
+	unsigned name ## _count, name ## _sz; \
+	type * name;
+
+#define array_insert(ctx, arr, val) do { \
+		if (arr ## _count == arr ## _sz) { \
+			arr ## _sz = MAX2(2 * arr ## _sz, 16); \
+			arr = reralloc_size(ctx, arr, arr ## _sz * sizeof(arr[0])); \
+		} \
+		arr[arr ##_count++] = val; \
+	} while (0)
+
 struct ir3 {
 	struct ir3_compiler *compiler;
 
@@ -356,8 +371,7 @@ struct ir3 {
 	 * threads in a group are killed before the last bary.f gets
 	 * a chance to signal end of input (ei).
 	 */
-	unsigned baryfs_count, baryfs_sz;
-	struct ir3_instruction **baryfs;
+	DECLARE_ARRAY(struct ir3_instruction *, baryfs);
 
 	/* Track all indirect instructions (read and write).  To avoid
 	 * deadlock scenario where an address register gets scheduled,
@@ -369,17 +383,15 @@ struct ir3 {
 	 * convenient list of instructions that reference some address
 	 * register simplifies this.
 	 */
-	unsigned indirects_count, indirects_sz;
-	struct ir3_instruction **indirects;
+	DECLARE_ARRAY(struct ir3_instruction *, indirects);
+
 	/* and same for instructions that consume predicate register: */
-	unsigned predicates_count, predicates_sz;
-	struct ir3_instruction **predicates;
+	DECLARE_ARRAY(struct ir3_instruction *, predicates);
 
 	/* Track texture sample instructions which need texture state
 	 * patched in (for astc-srgb workaround):
 	 */
-	unsigned astc_srgb_count, astc_srgb_sz;
-	struct ir3_instruction **astc_srgb;
+	DECLARE_ARRAY(struct ir3_instruction *, astc_srgb);
 
 	/* List of blocks: */
 	struct list_head block_list;
@@ -438,8 +450,7 @@ struct ir3_block {
 	/* Track instructions which do not write a register but other-
 	 * wise must not be discarded (such as kill, stg, etc)
 	 */
-	unsigned keeps_count, keeps_sz;
-	struct ir3_instruction **keeps;
+	DECLARE_ARRAY(struct ir3_instruction *, keeps);
 
 	/* used for per-pass extra block data.  Mainly used right
 	 * now in RA step to track livein/liveout.
@@ -861,14 +872,6 @@ static inline unsigned ir3_cat3_absneg(opc_t opc)
 		return 0;
 	}
 }
-
-#define array_insert(ctx, arr, val) do { \
-		if (arr ## _count == arr ## _sz) { \
-			arr ## _sz = MAX2(2 * arr ## _sz, 16); \
-			arr = reralloc_size(ctx, arr, arr ## _sz * sizeof(arr[0])); \
-		} \
-		arr[arr ##_count++] = val; \
-	} while (0)
 
 /* iterator for an instructions's sources (reg), also returns src #: */
 #define foreach_src_n(__srcreg, __n, __instr) \
