@@ -40,6 +40,7 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "util/macros.h"
 
 #include "egl_dri2.h"
 #include "egl_dri2_fallbacks.h"

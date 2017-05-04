@@ -89,7 +89,7 @@
 #include "c99_compat.h"
 #include "c11/threads.h"
 #include "GL/mesa_glinterop.h"
-#include "eglcompiler.h"
+#include "util/macros.h"
 
 #include "eglglobals.h"
 #include "eglcontext.h"

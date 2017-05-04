@@ -30,6 +30,7 @@
 #include <xcb/present.h>
 
 #include <xf86drm.h>
+#include "util/macros.h"
 
 #include "egl_dri2.h"
 #include "egl_dri2_fallbacks.h"
