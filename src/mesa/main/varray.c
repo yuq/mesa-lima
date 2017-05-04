@@ -1959,16 +1959,8 @@ _mesa_primitive_restart_index(const struct gl_context *ctx,
     *  is used."
     */
    if (ctx->Array.PrimitiveRestartFixedIndex) {
-      switch (index_size) {
-      case 1:
-         return 0xff;
-      case 2:
-         return 0xffff;
-      case 4:
-         return 0xffffffff;
-      default:
-         assert(!"_mesa_primitive_restart_index: Invalid index size.");
-      }
+      /* 1 -> 0xff, 2 -> 0xffff, 4 -> 0xffffffff */
+      return 0xffffffffu >> 8 * (4 - index_size);
    }
 
    return ctx->Array.RestartIndex;
