@@ -2002,12 +2002,23 @@ _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
                                "glClearNamedBufferSubData", true);
 }
 
+static GLboolean
+unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj)
+{
+   GLboolean status = ctx->Driver.UnmapBuffer(ctx, bufObj, MAP_USER);
+   bufObj->Mappings[MAP_USER].AccessFlags = 0;
+   assert(bufObj->Mappings[MAP_USER].Pointer == NULL);
+   assert(bufObj->Mappings[MAP_USER].Offset == 0);
+   assert(bufObj->Mappings[MAP_USER].Length == 0);
+
+   return status;
+}
 
 static GLboolean
-unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-             const char *func)
+validate_and_unmap_buffer(struct gl_context *ctx,
+                          struct gl_buffer_object *bufObj,
+                          const char *func)
 {
-   GLboolean status = GL_TRUE;
    ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, GL_FALSE);
 
    if (!_mesa_bufferobj_mapped(bufObj, MAP_USER)) {
@@ -2052,13 +2063,7 @@ unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    }
 #endif
 
-   status = ctx->Driver.UnmapBuffer(ctx, bufObj, MAP_USER);
-   bufObj->Mappings[MAP_USER].AccessFlags = 0;
-   assert(bufObj->Mappings[MAP_USER].Pointer == NULL);
-   assert(bufObj->Mappings[MAP_USER].Offset == 0);
-   assert(bufObj->Mappings[MAP_USER].Length == 0);
-
-   return status;
+   return unmap_buffer(ctx, bufObj);
 }
 
 GLboolean GLAPIENTRY
@@ -2071,7 +2076,7 @@ _mesa_UnmapBuffer(GLenum target)
    if (!bufObj)
       return GL_FALSE;
 
-   return unmap_buffer(ctx, bufObj, "glUnmapBuffer");
+   return validate_and_unmap_buffer(ctx, bufObj, "glUnmapBuffer");
 }
 
 GLboolean GLAPIENTRY
@@ -2084,7 +2089,7 @@ _mesa_UnmapNamedBuffer(GLuint buffer)
    if (!bufObj)
       return GL_FALSE;
 
-   return unmap_buffer(ctx, bufObj, "glUnmapNamedBuffer");
+   return validate_and_unmap_buffer(ctx, bufObj, "glUnmapNamedBuffer");
 }
 
 
