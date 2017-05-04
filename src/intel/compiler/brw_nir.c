@@ -97,25 +97,6 @@ add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
 }
 
 static bool
-remap_inputs_with_vue_map(nir_block *block, const struct brw_vue_map *vue_map)
-{
-   nir_foreach_instr(instr, block) {
-      if (instr->type != nir_instr_type_intrinsic)
-         continue;
-
-      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-
-      if (intrin->intrinsic == nir_intrinsic_load_input ||
-          intrin->intrinsic == nir_intrinsic_load_per_vertex_input) {
-         int vue_slot = vue_map->varying_to_slot[intrin->const_index[0]];
-         assert(vue_slot != -1);
-         intrin->const_index[0] = vue_slot;
-      }
-   }
-   return true;
-}
-
-static bool
 remap_tess_levels(nir_builder *b, nir_intrinsic_instr *intr,
                   GLenum primitive_mode)
 {
@@ -363,16 +344,30 @@ brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
    /* Inputs are stored in vec4 slots, so use type_size_vec4(). */
    nir_lower_io(nir, nir_var_shader_in, type_size_vec4, 0);
 
-   if (is_scalar || nir->stage != MESA_SHADER_GEOMETRY) {
-      /* This pass needs actual constants */
-      nir_opt_constant_folding(nir);
+   if (nir->stage == MESA_SHADER_GEOMETRY && !is_scalar)
+      return;
 
-      add_const_offset_to_base(nir, nir_var_shader_in);
+   /* This pass needs actual constants */
+   nir_opt_constant_folding(nir);
 
-      nir_foreach_function(function, nir) {
-         if (function->impl) {
-            nir_foreach_block(block, function->impl) {
-               remap_inputs_with_vue_map(block, vue_map);
+   add_const_offset_to_base(nir, nir_var_shader_in);
+
+   nir_foreach_function(function, nir) {
+      if (!function->impl)
+         continue;
+
+      nir_foreach_block(block, function->impl) {
+         nir_foreach_instr(instr, block) {
+            if (instr->type != nir_instr_type_intrinsic)
+               continue;
+
+            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+            if (intrin->intrinsic == nir_intrinsic_load_input ||
+                intrin->intrinsic == nir_intrinsic_load_per_vertex_input) {
+               int vue_slot = vue_map->varying_to_slot[intrin->const_index[0]];
+               assert(vue_slot != -1);
+               intrin->const_index[0] = vue_slot;
             }
          }
       }
