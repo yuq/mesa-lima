@@ -516,9 +516,7 @@ gen6_gs_visitor::setup_payload()
 
    reg = setup_uniforms(reg);
 
-   reg = setup_varying_inputs(reg, attribute_map, attributes_per_reg);
-
-   lower_attributes_to_hw_regs(attribute_map, true);
+   reg = setup_varying_inputs(reg, attributes_per_reg);
 
    this->first_non_payload_grf = reg;
 }

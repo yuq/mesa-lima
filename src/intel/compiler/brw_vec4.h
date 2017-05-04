@@ -367,8 +367,6 @@ public:
 
 protected:
    void emit_vertex();
-   void lower_attributes_to_hw_regs(const int *attribute_map,
-                                    bool interleaved);
    void setup_payload_interference(struct ra_graph *g, int first_payload_node,
                                    int reg_node_count);
    virtual void setup_payload() = 0;

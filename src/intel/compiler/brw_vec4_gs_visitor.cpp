@@ -29,6 +29,7 @@
 
 #include "brw_vec4_gs_visitor.h"
 #include "gen6_gs_visitor.h"
+#include "brw_cfg.h"
 #include "brw_fs.h"
 #include "brw_nir.h"
 #include "common/gen_debug.h"
@@ -72,9 +73,36 @@ vec4_gs_visitor::make_reg_for_system_value(int location)
    return reg;
 }
 
+static inline struct brw_reg
+attribute_to_hw_reg(int attr, brw_reg_type type, bool interleaved)
+{
+   struct brw_reg reg;
 
+   unsigned width = REG_SIZE / 2 / MAX2(4, type_sz(type));
+   if (interleaved) {
+      reg = stride(brw_vecn_grf(width, attr / 2, (attr % 2) * 4), 0, width, 1);
+   } else {
+      reg = brw_vecn_grf(width, attr, 0);
+   }
+
+   reg.type = type;
+   return reg;
+}
+
+/**
+ * Replace each register of type ATTR in this->instructions with a reference
+ * to a fixed HW register.
+ *
+ * If interleaved is true, then each attribute takes up half a register, with
+ * register N containing attribute 2*N in its first half and attribute 2*N+1
+ * in its second half (this corresponds to the payload setup used by geometry
+ * shaders in "single" or "dual instanced" dispatch mode).  If interleaved is
+ * false, then each attribute takes up a whole register, with register N
+ * containing attribute N (this corresponds to the payload setup used by
+ * vertex shaders, and by geometry shaders in "dual object" dispatch mode).
+ */
 int
-vec4_gs_visitor::setup_varying_inputs(int payload_reg, int *attribute_map,
+vec4_gs_visitor::setup_varying_inputs(int payload_reg,
                                       int attributes_per_reg)
 {
    /* For geometry shaders there are N copies of the input attributes, where N
@@ -89,12 +117,24 @@ vec4_gs_visitor::setup_varying_inputs(int payload_reg, int *attribute_map,
    assert(num_input_vertices <= MAX_GS_INPUT_VERTICES);
    unsigned input_array_stride = prog_data->urb_read_length * 2;
 
-   for (int slot = 0; slot < c->input_vue_map.num_slots; slot++) {
-      int varying = c->input_vue_map.slot_to_varying[slot];
-      for (unsigned vertex = 0; vertex < num_input_vertices; vertex++) {
-         attribute_map[BRW_VARYING_SLOT_COUNT * vertex + varying] =
-            attributes_per_reg * payload_reg + input_array_stride * vertex +
-            slot;
+   foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
+      for (int i = 0; i < 3; i++) {
+         if (inst->src[i].file != ATTR)
+            continue;
+
+         assert(inst->src[i].offset % REG_SIZE == 0);
+         int grf = payload_reg * attributes_per_reg +
+                   inst->src[i].nr + inst->src[i].offset / REG_SIZE;
+
+         struct brw_reg reg =
+            attribute_to_hw_reg(grf, inst->src[i].type, attributes_per_reg > 1);
+         reg.swizzle = inst->src[i].swizzle;
+         if (inst->src[i].abs)
+            reg = brw_abs(reg);
+         if (inst->src[i].negate)
+            reg = negate(reg);
+
+         inst->src[i] = reg;
       }
    }
 
@@ -103,24 +143,14 @@ vec4_gs_visitor::setup_varying_inputs(int payload_reg, int *attribute_map,
    return payload_reg + regs_used;
 }
 
-
 void
 vec4_gs_visitor::setup_payload()
 {
-   int attribute_map[BRW_VARYING_SLOT_COUNT * MAX_GS_INPUT_VERTICES];
-
    /* If we are in dual instanced or single mode, then attributes are going
     * to be interleaved, so one register contains two attribute slots.
     */
    int attributes_per_reg =
       prog_data->dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT ? 1 : 2;
-
-   /* If a geometry shader tries to read from an input that wasn't written by
-    * the vertex shader, that produces undefined results, but it shouldn't
-    * crash anything.  So initialize attribute_map to zeros--that ensures that
-    * these undefined results are read from r0.
-    */
-   memset(attribute_map, 0, sizeof(attribute_map));
 
    int reg = 0;
 
@@ -132,13 +162,11 @@ vec4_gs_visitor::setup_payload()
 
    /* If the shader uses gl_PrimitiveIDIn, that goes in r1. */
    if (gs_prog_data->include_primitive_id)
-      attribute_map[VARYING_SLOT_PRIMITIVE_ID] = attributes_per_reg * reg++;
+      reg++;
 
    reg = setup_uniforms(reg);
 
-   reg = setup_varying_inputs(reg, attribute_map, attributes_per_reg);
-
-   lower_attributes_to_hw_regs(attribute_map, attributes_per_reg > 1);
+   reg = setup_varying_inputs(reg, attributes_per_reg);
 
    this->first_non_payload_grf = reg;
 }
@@ -634,7 +662,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                        shader->info.separate_shader);
 
    shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, is_scalar);
-   brw_nir_lower_vue_inputs(shader, is_scalar, &c.input_vue_map);
+   brw_nir_lower_vue_inputs(shader, &c.input_vue_map);
    brw_nir_lower_vue_outputs(shader, is_scalar);
    shader = brw_postprocess_nir(shader, compiler, is_scalar);
 

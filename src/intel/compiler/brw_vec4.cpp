@@ -1677,66 +1677,6 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
 }
 
 
-static inline struct brw_reg
-attribute_to_hw_reg(int attr, brw_reg_type type, bool interleaved)
-{
-   struct brw_reg reg;
-
-   unsigned width = REG_SIZE / 2 / MAX2(4, type_sz(type));
-   if (interleaved) {
-      reg = stride(brw_vecn_grf(width, attr / 2, (attr % 2) * 4), 0, width, 1);
-   } else {
-      reg = brw_vecn_grf(width, attr, 0);
-   }
-
-   reg.type = type;
-   return reg;
-}
-
-
-/**
- * Replace each register of type ATTR in this->instructions with a reference
- * to a fixed HW register.
- *
- * If interleaved is true, then each attribute takes up half a register, with
- * register N containing attribute 2*N in its first half and attribute 2*N+1
- * in its second half (this corresponds to the payload setup used by geometry
- * shaders in "single" or "dual instanced" dispatch mode).  If interleaved is
- * false, then each attribute takes up a whole register, with register N
- * containing attribute N (this corresponds to the payload setup used by
- * vertex shaders, and by geometry shaders in "dual object" dispatch mode).
- */
-void
-vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
-                                          bool interleaved)
-{
-   foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      for (int i = 0; i < 3; i++) {
-         if (inst->src[i].file != ATTR)
-            continue;
-
-         int grf = attribute_map[inst->src[i].nr +
-                                 inst->src[i].offset / REG_SIZE];
-         assert(inst->src[i].offset % REG_SIZE == 0);
-
-         /* All attributes used in the shader need to have been assigned a
-          * hardware register by the caller
-          */
-         assert(grf != 0);
-
-         struct brw_reg reg =
-            attribute_to_hw_reg(grf, inst->src[i].type, interleaved);
-         reg.swizzle = inst->src[i].swizzle;
-         if (inst->src[i].abs)
-            reg = brw_abs(reg);
-         if (inst->src[i].negate)
-            reg = negate(reg);
-
-         inst->src[i] = reg;
-      }
-   }
-}
-
 int
 vec4_vs_visitor::setup_attributes(int payload_reg)
 {

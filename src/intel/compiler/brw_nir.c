@@ -334,7 +334,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
 }
 
 void
-brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
+brw_nir_lower_vue_inputs(nir_shader *nir,
                          const struct brw_vue_map *vue_map)
 {
    foreach_list_typed(nir_variable, var, node, &nir->inputs) {
@@ -343,9 +343,6 @@ brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
 
    /* Inputs are stored in vec4 slots, so use type_size_vec4(). */
    nir_lower_io(nir, nir_var_shader_in, type_size_vec4, 0);
-
-   if (nir->stage == MESA_SHADER_GEOMETRY && !is_scalar)
-      return;
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);

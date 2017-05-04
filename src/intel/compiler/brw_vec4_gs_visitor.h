@@ -64,8 +64,7 @@ protected:
    virtual void nir_emit_intrinsic(nir_intrinsic_instr *instr);
 
 protected:
-   int setup_varying_inputs(int payload_reg, int *attribute_map,
-                            int attributes_per_reg);
+   int setup_varying_inputs(int payload_reg, int attributes_per_reg);
    void emit_control_data_bits();
    void set_stream_control_data_bits(unsigned stream_id);
 
