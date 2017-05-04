@@ -439,6 +439,13 @@ fd_gmem_render_noop(struct fd_batch *batch)
 	flush_ring(batch);
 }
 
+void
+fd_gmem_flush_compute(struct fd_batch *batch)
+{
+	render_sysmem(batch);
+	flush_ring(batch);
+}
+
 /* tile needs restore if it isn't completely contained within the
  * cleared scissor:
  */

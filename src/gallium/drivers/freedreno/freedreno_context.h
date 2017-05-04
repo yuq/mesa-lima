@@ -255,6 +255,7 @@ struct fd_context {
 	/* per shader-stage dirty status: */
 	enum fd_dirty_shader_state dirty_shader[PIPE_SHADER_TYPES];
 
+	void *compute;
 	struct pipe_blend_state *blend;
 	struct pipe_rasterizer_state *rasterizer;
 	struct pipe_depth_stencil_alpha_state *zsa;
@@ -298,6 +299,9 @@ struct fd_context {
 	bool (*draw_vbo)(struct fd_context *ctx, const struct pipe_draw_info *info);
 	void (*clear)(struct fd_context *ctx, unsigned buffers,
 			const union pipe_color_union *color, double depth, unsigned stencil);
+
+	/* compute: */
+	void (*launch_grid)(struct fd_context *ctx, const struct pipe_grid_info *info);
 
 	/* constant emit:  (note currently not used/needed for a2xx) */
 	void (*emit_const)(struct fd_ringbuffer *ring, enum shader_t type,
@@ -376,8 +380,16 @@ static inline void
 fd_context_all_clean(struct fd_context *ctx)
 {
 	ctx->dirty = 0;
-	for (unsigned i = 0; i < PIPE_SHADER_TYPES; i++)
+	for (unsigned i = 0; i < PIPE_SHADER_TYPES; i++) {
+		/* don't mark compute state as clean, since it is not emitted
+		 * during normal draw call.  The places that call _all_dirty(),
+		 * it is safe to mark compute state dirty as well, but the
+		 * inverse is not true.
+		 */
+		if (i == PIPE_SHADER_COMPUTE)
+			continue;
 		ctx->dirty_shader[i] = 0;
+	}
 }
 
 static inline struct pipe_scissor_state *

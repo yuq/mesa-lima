@@ -451,6 +451,32 @@ fd_set_stream_output_targets(struct pipe_context *pctx,
 	ctx->dirty |= FD_DIRTY_STREAMOUT;
 }
 
+static void
+fd_bind_compute_state(struct pipe_context *pctx, void *state)
+{
+	struct fd_context *ctx = fd_context(pctx);
+	ctx->compute = state;
+	ctx->dirty_shader[PIPE_SHADER_COMPUTE] |= FD_DIRTY_SHADER_PROG;
+}
+
+static void
+fd_set_compute_resources(struct pipe_context *pctx,
+		unsigned start, unsigned count, struct pipe_surface **prscs)
+{
+	// TODO
+}
+
+static void
+fd_set_global_binding(struct pipe_context *pctx,
+		unsigned first, unsigned count, struct pipe_resource **prscs,
+		uint32_t **handles)
+{
+	/* TODO only used by clover.. seems to need us to return the actual
+	 * gpuaddr of the buffer.. which isn't really exposed to mesa atm.
+	 * How is this used?
+	 */
+}
+
 void
 fd_state_init(struct pipe_context *pctx)
 {
@@ -484,4 +510,10 @@ fd_state_init(struct pipe_context *pctx)
 	pctx->create_stream_output_target = fd_create_stream_output_target;
 	pctx->stream_output_target_destroy = fd_stream_output_target_destroy;
 	pctx->set_stream_output_targets = fd_set_stream_output_targets;
+
+	if (has_compute(fd_screen(pctx->screen))) {
+		pctx->bind_compute_state = fd_bind_compute_state;
+		pctx->set_compute_resources = fd_set_compute_resources;
+		pctx->set_global_binding = fd_set_global_binding;
+	}
 }

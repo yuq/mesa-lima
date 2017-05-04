@@ -189,13 +189,15 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_USER_CONSTANT_BUFFERS:
 		return is_a4xx(screen) ? 0 : 1;
 
+	case PIPE_CAP_COMPUTE:
+		return has_compute(screen);
+
 	case PIPE_CAP_SHADER_STENCIL_EXPORT:
 	case PIPE_CAP_TGSI_TEXCOORD:
 	case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 	case PIPE_CAP_TEXTURE_BARRIER:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
-	case PIPE_CAP_COMPUTE:
 	case PIPE_CAP_QUERY_MEMORY_INFO:
 	case PIPE_CAP_PCI_GROUP:
 	case PIPE_CAP_PCI_BUS:
@@ -454,6 +456,9 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 	case PIPE_SHADER_VERTEX:
 		break;
 	case PIPE_SHADER_COMPUTE:
+		if (has_compute(screen))
+			break;
+		return 0;
 	case PIPE_SHADER_GEOMETRY:
 		/* maye we could emulate.. */
 		return 0;
@@ -514,13 +519,30 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return 16;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
-		if ((fd_mesa_debug & FD_DBG_NIR) && is_ir3(screen))
+		switch (shader) {
+		case PIPE_SHADER_FRAGMENT:
+		case PIPE_SHADER_VERTEX:
+			if ((fd_mesa_debug & FD_DBG_NIR) && is_ir3(screen))
+				return PIPE_SHADER_IR_NIR;
+			return PIPE_SHADER_IR_TGSI;
+		default:
+			/* tgsi_to_nir doesn't really support much beyond FS/VS: */
+			debug_assert(is_ir3(screen));
 			return PIPE_SHADER_IR_NIR;
-		return PIPE_SHADER_IR_TGSI;
+		}
+		break;
 	case PIPE_SHADER_CAP_SUPPORTED_IRS:
+		if (is_ir3(screen)) {
+			return (1 << PIPE_SHADER_IR_NIR) | (1 << PIPE_SHADER_IR_TGSI);
+		} else {
+			return (1 << PIPE_SHADER_IR_TGSI);
+		}
 		return 0;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
+	case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
+	case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
+		return 0;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
 		if (is_a5xx(screen)) {
 			/* a5xx (and a4xx for that matter) has one state-block
@@ -552,11 +574,93 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 		}
 		return 0;
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
-	case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
-	case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
+		/* probably should be same as MAX_SHADRER_BUFFERS but not implemented yet */
 		return 0;
 	}
 	debug_printf("unknown shader param %d\n", param);
+	return 0;
+}
+
+/* TODO depending on how much the limits differ for a3xx/a4xx, maybe move this
+ * into per-generation backend?
+ */
+static int
+fd_get_compute_param(struct pipe_screen *pscreen, enum pipe_shader_ir ir_type,
+		enum pipe_compute_cap param, void *ret)
+{
+	struct fd_screen *screen = fd_screen(pscreen);
+	const char *ir = "ir3";
+
+	if (!has_compute(screen))
+		return 0;
+
+	switch (param) {
+	case PIPE_COMPUTE_CAP_ADDRESS_BITS:
+		if (ret) {
+			uint32_t *address_bits = ret;
+			address_bits[0] = 32;
+
+			if (is_a5xx(screen))
+				address_bits[0] = 64;
+		}
+		return 1 * sizeof(uint32_t);
+
+	case PIPE_COMPUTE_CAP_IR_TARGET:
+		if (ret)
+			sprintf(ret, ir);
+		return strlen(ir) * sizeof(char);
+
+	case PIPE_COMPUTE_CAP_GRID_DIMENSION:
+		if (ret) {
+			uint64_t *grid_dimension = ret;
+			grid_dimension[0] = 3;
+		}
+		return 1 * sizeof(uint64_t);
+
+	case PIPE_COMPUTE_CAP_MAX_GRID_SIZE:
+		if (ret) {
+			uint64_t *grid_size = ret;
+			grid_size[0] = 65535;
+			grid_size[1] = 65535;
+			grid_size[2] = 65535;
+		}
+		return 3 * sizeof(uint64_t) ;
+
+	case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
+		if (ret) {
+			uint64_t *grid_size = ret;
+			grid_size[0] = 1024;
+			grid_size[1] = 1024;
+			grid_size[2] = 64;
+		}
+		return 3 * sizeof(uint64_t) ;
+
+	case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
+		if (ret) {
+			uint64_t *max_threads_per_block = ret;
+			*max_threads_per_block = 1024;
+		}
+		return sizeof(uint64_t);
+
+	case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE:
+	case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE:
+	case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE:
+	case PIPE_COMPUTE_CAP_MAX_INPUT_SIZE:
+		break;
+	case PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE:
+		if (ret) {
+			uint64_t *max = ret;
+			*max = 32768;
+		}
+		return sizeof(uint64_t);
+	case PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY:
+	case PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS:
+	case PIPE_COMPUTE_CAP_IMAGES_SUPPORTED:
+	case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
+	case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
+		break;
+	}
+
 	return 0;
 }
 
@@ -752,6 +856,7 @@ fd_screen_create(struct fd_device *dev)
 	pscreen->get_param = fd_screen_get_param;
 	pscreen->get_paramf = fd_screen_get_paramf;
 	pscreen->get_shader_param = fd_screen_get_shader_param;
+	pscreen->get_compute_param = fd_get_compute_param;
 	pscreen->get_compiler_options = fd_get_compiler_options;
 
 	fd_resource_screen_init(pscreen);

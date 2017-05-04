@@ -408,6 +408,49 @@ fd_clear_depth_stencil(struct pipe_context *pctx, struct pipe_surface *ps,
 			buffers, depth, stencil, x, y, w, h);
 }
 
+static void
+fd_launch_grid(struct pipe_context *pctx, const struct pipe_grid_info *info)
+{
+	struct fd_context *ctx = fd_context(pctx);
+	struct fd_batch *batch, *save_batch = NULL;
+	unsigned i;
+
+	/* TODO maybe we don't want to allocate and flush a batch each time?
+	 * We could use a special bogus (ie. won't match any fb state) key
+	 * in the batch-case for compute shaders, and rely on the rest of
+	 * the dependency tracking mechanism to tell us when the compute
+	 * batch needs to be flushed?
+	 */
+	batch = fd_bc_alloc_batch(&ctx->screen->batch_cache, ctx);
+	fd_batch_reference(&save_batch, ctx->batch);
+	fd_batch_reference(&ctx->batch, batch);
+
+	mtx_lock(&ctx->screen->lock);
+
+	/* Mark SSBOs as being written.. we don't actually know which ones are
+	 * read vs written, so just assume the worst
+	 */
+	foreach_bit(i, ctx->shaderbuf[PIPE_SHADER_COMPUTE].enabled_mask)
+		resource_read(batch, ctx->shaderbuf[PIPE_SHADER_COMPUTE].sb[i].buffer);
+
+	/* UBO's are read */
+	foreach_bit(i, ctx->constbuf[PIPE_SHADER_COMPUTE].enabled_mask)
+		resource_read(batch, ctx->constbuf[PIPE_SHADER_COMPUTE].cb[i].buffer);
+
+	/* Mark textures as being read */
+	foreach_bit(i, ctx->tex[PIPE_SHADER_COMPUTE].valid_textures)
+		resource_read(batch, ctx->tex[PIPE_SHADER_COMPUTE].textures[i]->texture);
+
+	mtx_unlock(&ctx->screen->lock);
+
+	ctx->launch_grid(ctx, info);
+
+	fd_gmem_flush_compute(batch);
+
+	fd_batch_reference(&ctx->batch, save_batch);
+	fd_batch_reference(&save_batch, NULL);
+}
+
 void
 fd_draw_init(struct pipe_context *pctx)
 {
@@ -415,4 +458,8 @@ fd_draw_init(struct pipe_context *pctx)
 	pctx->clear = fd_clear;
 	pctx->clear_render_target = fd_clear_render_target;
 	pctx->clear_depth_stencil = fd_clear_depth_stencil;
+
+	if (has_compute(fd_screen(pctx->screen))) {
+		pctx->launch_grid = fd_launch_grid;
+	}
 }
