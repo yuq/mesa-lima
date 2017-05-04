@@ -420,3 +420,96 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 	}
 	radv_meta_restore_compute(&saved_state, cmd_buffer, 16);
 }
+
+/**
+ * Emit any needed resolves for the current subpass.
+ */
+void
+radv_cmd_buffer_resolve_subpass_cs(struct radv_cmd_buffer *cmd_buffer)
+{
+	struct radv_framebuffer *fb = cmd_buffer->state.framebuffer;
+	const struct radv_subpass *subpass = cmd_buffer->state.subpass;
+	struct radv_meta_saved_compute_state saved_state;
+	/* FINISHME(perf): Skip clears for resolve attachments.
+	 *
+	 * From the Vulkan 1.0 spec:
+	 *
+	 *    If the first use of an attachment in a render pass is as a resolve
+	 *    attachment, then the loadOp is effectively ignored as the resolve is
+	 *    guaranteed to overwrite all pixels in the render area.
+	 */
+
+	if (!subpass->has_resolve)
+		return;
+
+	for (uint32_t i = 0; i < subpass->color_count; ++i) {
+		VkAttachmentReference src_att = subpass->color_attachments[i];
+		VkAttachmentReference dest_att = subpass->resolve_attachments[i];
+		struct radv_image *dst_img = cmd_buffer->state.framebuffer->attachments[dest_att.attachment].attachment->image;
+		struct radv_image_view *src_iview = cmd_buffer->state.framebuffer->attachments[src_att.attachment].attachment;
+
+		if (dest_att.attachment == VK_ATTACHMENT_UNUSED)
+			continue;
+		if (dst_img->surface.dcc_size) {
+			radv_initialize_dcc(cmd_buffer, dst_img, 0xffffffff);
+			cmd_buffer->state.attachments[dest_att.attachment].current_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
+
+		VkImageSubresourceRange range;
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = 0;
+		range.levelCount = 1;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
+		radv_fast_clear_flush_image_inplace(cmd_buffer, src_iview->image, &range);
+	}
+
+	radv_meta_save_compute(&saved_state, cmd_buffer, 16);
+
+	for (uint32_t i = 0; i < subpass->color_count; ++i) {
+		VkAttachmentReference src_att = subpass->color_attachments[i];
+		VkAttachmentReference dest_att = subpass->resolve_attachments[i];
+		struct radv_image_view *src_iview = cmd_buffer->state.framebuffer->attachments[src_att.attachment].attachment;
+		struct radv_image_view *dst_iview = cmd_buffer->state.framebuffer->attachments[dest_att.attachment].attachment;
+		if (dest_att.attachment == VK_ATTACHMENT_UNUSED)
+			continue;
+
+		struct radv_subpass resolve_subpass = {
+			.color_count = 1,
+			.color_attachments = (VkAttachmentReference[]) { dest_att },
+			.depth_stencil_attachment = { .attachment = VK_ATTACHMENT_UNUSED },
+		};
+
+		radv_cmd_buffer_set_subpass(cmd_buffer, &resolve_subpass, false);
+
+		/* Subpass resolves must respect the render area. We can ignore the
+		 * render area here because vkCmdBeginRenderPass set the render area
+		 * with 3DSTATE_DRAWING_RECTANGLE.
+		 *
+		 * XXX(chadv): Does the hardware really respect
+		 * 3DSTATE_DRAWING_RECTANGLE when draing a 3DPRIM_RECTLIST?
+		 */
+		emit_resolve(cmd_buffer,
+			     src_iview,
+			     dst_iview,
+			     &(VkOffset2D) { 0, 0 },
+			     &(VkOffset2D) { 0, 0 },
+			     &(VkExtent2D) { fb->width, fb->height });
+	}
+
+	radv_meta_restore_compute(&saved_state, cmd_buffer, 16);
+
+	for (uint32_t i = 0; i < subpass->color_count; ++i) {
+		VkAttachmentReference dest_att = subpass->resolve_attachments[i];
+		struct radv_image *dst_img = cmd_buffer->state.framebuffer->attachments[dest_att.attachment].attachment->image;
+		if (dest_att.attachment == VK_ATTACHMENT_UNUSED)
+			continue;
+		VkImageSubresourceRange range;
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = 0;
+		range.levelCount = 1;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
+		radv_fast_clear_flush_image_inplace(cmd_buffer, dst_img, &range);
+	}
+}
