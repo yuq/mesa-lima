@@ -164,6 +164,9 @@ void fd5_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd5_emit *emit);
 void fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd5_emit *emit);
 
+void fd5_emit_cs_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
+		struct ir3_shader_variant *cp);
+
 void fd5_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring);
 
 void fd5_emit_init(struct pipe_context *pctx);

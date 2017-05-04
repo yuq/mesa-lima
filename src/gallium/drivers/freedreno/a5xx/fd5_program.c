@@ -84,8 +84,8 @@ fd5_vp_state_delete(struct pipe_context *pctx, void *hwcso)
 	delete_shader_stateobj(so);
 }
 
-static void
-emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so)
+void
+fd5_emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so)
 {
 	const struct ir3_info *si = &so->info;
 	enum a4xx_state_block sb = fd4_stage2shadersb(so->type);
@@ -524,7 +524,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	OUT_RELOC(ring, s[VS].v->bo, 0, 0, 0);  /* SP_VS_OBJ_START_LO/HI */
 
 	if (s[VS].instrlen)
-		emit_shader(ring, s[VS].v);
+		fd5_emit_shader(ring, s[VS].v);
 
 	// TODO depending on other bits in this reg (if any) set somewhere else?
 	OUT_PKT4(ring, REG_A5XX_PC_PRIM_VTX_CNTL, 1);
@@ -557,6 +557,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 
 	OUT_PKT4(ring, REG_A5XX_HLSQ_CONTROL_0_REG, 5);
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(fssz) |
+			A5XX_HLSQ_CONTROL_0_REG_CSTHREADSIZE(TWO_QUADS) |
 			0x00000880);               /* XXX HLSQ_CONTROL_0 */
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_1_REG_PRIMALLOCTHRESHOLD(63));
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_2_REG_FACEREGID(face_regid) |
@@ -712,7 +713,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 
 	if (!emit->key.binning_pass)
 		if (s[FS].instrlen)
-			emit_shader(ring, s[FS].v);
+			fd5_emit_shader(ring, s[FS].v);
 
 	OUT_PKT4(ring, REG_A5XX_VFD_CONTROL_1, 5);
 	OUT_RING(ring, A5XX_VFD_CONTROL_1_REGID4VTX(vertex_regid) |

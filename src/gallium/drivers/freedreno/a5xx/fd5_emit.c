@@ -727,11 +727,51 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, ctx->tex[PIPE_SHADER_FRAGMENT].num_textures);
 	}
 
+	OUT_PKT4(ring, REG_A5XX_TPL1_CS_TEX_COUNT, 1);
+	OUT_RING(ring, 0);
+
 	if (needs_border)
 		emit_border_color(ctx, ring);
 
 	if (ctx->dirty_shader[PIPE_SHADER_FRAGMENT] & FD_DIRTY_SHADER_SSBO)
 		emit_ssbos(ctx, ring, SB4_SSBO, &ctx->shaderbuf[PIPE_SHADER_FRAGMENT]);
+}
+
+void
+fd5_emit_cs_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
+		struct ir3_shader_variant *cp)
+{
+	enum fd_dirty_shader_state dirty = ctx->dirty_shader[PIPE_SHADER_COMPUTE];
+
+	if (dirty & FD_DIRTY_SHADER_TEX) {
+		bool needs_border = false;
+		needs_border |= emit_textures(ctx, ring, SB4_CS_TEX,
+				&ctx->tex[PIPE_SHADER_COMPUTE]);
+
+		if (needs_border)
+			emit_border_color(ctx, ring);
+
+		OUT_PKT4(ring, REG_A5XX_TPL1_VS_TEX_COUNT, 1);
+		OUT_RING(ring, 0);
+
+		OUT_PKT4(ring, REG_A5XX_TPL1_HS_TEX_COUNT, 1);
+		OUT_RING(ring, 0);
+
+		OUT_PKT4(ring, REG_A5XX_TPL1_DS_TEX_COUNT, 1);
+		OUT_RING(ring, 0);
+
+		OUT_PKT4(ring, REG_A5XX_TPL1_GS_TEX_COUNT, 1);
+		OUT_RING(ring, 0);
+
+		OUT_PKT4(ring, REG_A5XX_TPL1_FS_TEX_COUNT, 1);
+		OUT_RING(ring, 0);
+
+		OUT_PKT4(ring, REG_A5XX_TPL1_CS_TEX_COUNT, 1);
+		OUT_RING(ring, ctx->tex[PIPE_SHADER_COMPUTE].num_textures);
+	}
+
+	if (dirty & FD_DIRTY_SHADER_SSBO)
+		emit_ssbos(ctx, ring, SB4_CS_SSBO, &ctx->shaderbuf[PIPE_SHADER_COMPUTE]);
 }
 
 /* emit setup at begin of new cmdstream buffer (don't rely on previous
