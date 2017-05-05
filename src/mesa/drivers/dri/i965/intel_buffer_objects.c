@@ -217,8 +217,8 @@ brw_buffer_subdata(struct gl_context *ctx,
    if (offset + size <= intel_obj->gpu_active_start ||
        intel_obj->gpu_active_end <= offset) {
       if (brw->has_llc) {
-         brw_bo_map_unsynchronized(brw, intel_obj->buffer);
-         memcpy(intel_obj->buffer->virtual + offset, data, size);
+         void *map = brw_bo_map_unsynchronized(brw, intel_obj->buffer);
+         memcpy(map + offset, data, size);
          brw_bo_unmap(intel_obj->buffer);
 
          if (intel_obj->gpu_active_end > intel_obj->gpu_active_start)
@@ -388,33 +388,34 @@ brw_map_buffer_range(struct gl_context *ctx,
                                                           length +
                                                           intel_obj->map_extra[index],
                                                           alignment);
+      void *map;
       if (brw->has_llc) {
-         brw_bo_map(brw, intel_obj->range_map_bo[index],
-                    (access & GL_MAP_WRITE_BIT) != 0);
+         map = brw_bo_map(brw, intel_obj->range_map_bo[index],
+                          (access & GL_MAP_WRITE_BIT) != 0);
       } else {
-         brw_bo_map_gtt(brw, intel_obj->range_map_bo[index]);
+         map = brw_bo_map_gtt(brw, intel_obj->range_map_bo[index]);
       }
-      obj->Mappings[index].Pointer =
-         intel_obj->range_map_bo[index]->virtual + intel_obj->map_extra[index];
+      obj->Mappings[index].Pointer = map + intel_obj->map_extra[index];
       return obj->Mappings[index].Pointer;
    }
 
+   void *map;
    if (access & GL_MAP_UNSYNCHRONIZED_BIT) {
       if (!brw->has_llc && brw->perf_debug &&
           brw_bo_busy(intel_obj->buffer)) {
          perf_debug("MapBufferRange with GL_MAP_UNSYNCHRONIZED_BIT stalling (it's actually synchronized on non-LLC platforms)\n");
       }
-      brw_bo_map_unsynchronized(brw, intel_obj->buffer);
+      map = brw_bo_map_unsynchronized(brw, intel_obj->buffer);
    } else if (!brw->has_llc && (!(access & GL_MAP_READ_BIT) ||
                               (access & GL_MAP_PERSISTENT_BIT))) {
-      brw_bo_map_gtt(brw, intel_obj->buffer);
+      map = brw_bo_map_gtt(brw, intel_obj->buffer);
       mark_buffer_inactive(intel_obj);
    } else {
-      brw_bo_map(brw, intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
+      map = brw_bo_map(brw, intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
       mark_buffer_inactive(intel_obj);
    }
 
-   obj->Mappings[index].Pointer = intel_obj->buffer->virtual + offset;
+   obj->Mappings[index].Pointer = map + offset;
    return obj->Mappings[index].Pointer;
 }
 

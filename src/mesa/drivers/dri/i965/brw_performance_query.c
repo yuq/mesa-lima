@@ -713,8 +713,7 @@ accumulate_oa_reports(struct brw_context *brw,
    if (!read_oa_samples(brw))
       goto error;
 
-   brw_bo_map(brw, obj->oa.bo, false);
-   query_buffer = obj->oa.bo->virtual;
+   query_buffer = brw_bo_map(brw, obj->oa.bo, false);
 
    start = last = query_buffer;
    end = query_buffer + (MI_RPC_BO_END_OFFSET_BYTES / sizeof(uint32_t));
@@ -993,8 +992,8 @@ brw_begin_perf_query(struct gl_context *ctx,
                       MI_RPC_BO_SIZE, 64);
 #ifdef DEBUG
       /* Pre-filling the BO helps debug whether writes landed. */
-      brw_bo_map(brw, obj->oa.bo, true);
-      memset((char *) obj->oa.bo->virtual, 0x80, MI_RPC_BO_SIZE);
+      void *map = brw_bo_map(brw, obj->oa.bo, true);
+      memset(map, 0x80, MI_RPC_BO_SIZE);
       brw_bo_unmap(obj->oa.bo);
 #endif
 
@@ -1215,8 +1214,7 @@ get_pipeline_stats_data(struct brw_context *brw,
    int n_counters = obj->query->n_counters;
    uint8_t *p = data;
 
-   brw_bo_map(brw, obj->pipeline_stats.bo, false);
-   uint64_t *start = obj->pipeline_stats.bo->virtual;
+   uint64_t *start = brw_bo_map(brw, obj->pipeline_stats.bo, false);
    uint64_t *end = start + (STATS_BO_END_OFFSET_BYTES / sizeof(uint64_t));
 
    for (int i = 0; i < n_counters; i++) {

@@ -100,8 +100,7 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
 
    batch->bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
    if (has_llc) {
-      brw_bo_map(NULL, batch->bo, true);
-      batch->map = batch->bo->virtual;
+      batch->map = brw_bo_map(NULL, batch->bo, true);
    }
    batch->map_next = batch->map;
 
@@ -240,16 +239,16 @@ do_batch_dump(struct brw_context *brw)
    if (batch->ring != RENDER_RING)
       return;
 
-   int ret = brw_bo_map(brw, batch->bo, false);
-   if (ret != 0) {
+   void *map = brw_bo_map(brw, batch->bo, false);
+   if (map == NULL) {
       fprintf(stderr,
-	      "WARNING: failed to map batchbuffer (%s), "
-	      "dumping uploaded data instead.\n", strerror(ret));
+	      "WARNING: failed to map batchbuffer, "
+	      "dumping uploaded data instead.\n");
    }
 
-   uint32_t *data = batch->bo->virtual ? batch->bo->virtual : batch->map;
+   uint32_t *data = map ? map : batch->map;
    uint32_t *end = data + USED_BATCH(*batch);
-   uint32_t gtt_offset = batch->bo->virtual ? batch->bo->offset64 : 0;
+   uint32_t gtt_offset = map ? batch->bo->offset64 : 0;
    int length;
 
    bool color = INTEL_DEBUG & DEBUG_COLOR;
@@ -370,7 +369,7 @@ do_batch_dump(struct brw_context *brw)
       }
    }
 
-   if (ret == 0) {
+   if (map != NULL) {
       brw_bo_unmap(batch->bo);
    }
 }

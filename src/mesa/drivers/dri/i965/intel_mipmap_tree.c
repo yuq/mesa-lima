@@ -1382,14 +1382,14 @@ intel_miptree_init_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   const int ret = brw_bo_map_gtt(brw, mt->mcs_buf->bo);
-   if (unlikely(ret)) {
+   void *map = brw_bo_map_gtt(brw, mt->mcs_buf->bo);
+   if (unlikely(map == NULL)) {
       fprintf(stderr, "Failed to map mcs buffer into GTT\n");
       brw_bo_unreference(mt->mcs_buf->bo);
       free(mt->mcs_buf);
       return;
    }
-   void *data = mt->mcs_buf->bo->virtual;
+   void *data = map;
    memset(data, init_value, mt->mcs_buf->size);
    brw_bo_unmap(mt->mcs_buf->bo);
 }
@@ -2433,11 +2433,9 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
     * long as cache consistency is maintained).
     */
    if (mt->tiling != I915_TILING_NONE || mt->is_scanout)
-      brw_bo_map_gtt(brw, bo);
+      return brw_bo_map_gtt(brw, bo);
    else
-      brw_bo_map(brw, bo, true);
-
-   return bo->virtual;
+      return brw_bo_map(brw, bo, true);
 }
 
 static void

@@ -84,8 +84,6 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
    /* The miptree's buffer. */
    struct brw_bo *bo;
 
-   int error = 0;
-
    uint32_t cpp;
    mem_copy_fn mem_copy = NULL;
 
@@ -147,8 +145,8 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       intel_batchbuffer_flush(brw);
    }
 
-   error = brw_bo_map(brw, bo, false /* write enable */);
-   if (error) {
+   void *map = brw_bo_map(brw, bo, false /* write enable */);
+   if (map == NULL) {
       DBG("%s: failed to map bo\n", __func__);
       return false;
    }
@@ -188,7 +186,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       xoffset * cpp, (xoffset + width) * cpp,
       yoffset, yoffset + height,
       pixels - (ptrdiff_t) yoffset * dst_pitch - (ptrdiff_t) xoffset * cpp,
-      bo->virtual + irb->mt->offset,
+      map + irb->mt->offset,
       dst_pitch, irb->mt->pitch,
       brw->has_swizzling,
       irb->mt->tiling,

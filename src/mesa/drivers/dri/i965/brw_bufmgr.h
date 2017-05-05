@@ -62,16 +62,6 @@ struct brw_bo {
     */
    uint64_t align;
 
-   /**
-    * Virtual address for accessing the buffer data.  Only valid while
-    * mapped.
-    */
-#ifdef __cplusplus
-   void *virt;
-#else
-   void *virtual;
-#endif
-
    /** Buffer manager context associated with this buffer object */
    struct brw_bufmgr *bufmgr;
 
@@ -182,10 +172,9 @@ void brw_bo_unreference(struct brw_bo *bo);
  * Maps the buffer into userspace.
  *
  * This function will block waiting for any existing execution on the
- * buffer to complete, first.  The resulting mapping is available at
- * buf->virtual.
+ * buffer to complete, first.  The resulting mapping is returned.
  */
-int brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable);
+MUST_CHECK void *brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable);
 
 /**
  * Reduces the refcount on the userspace mapping of the buffer
@@ -258,8 +247,8 @@ struct brw_bo *brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
                                            const char *name,
                                            unsigned int handle);
 void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
-int brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo);
-int brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo);
+MUST_CHECK void *brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo);
+MUST_CHECK void *brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo);
 
 int brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns);
 

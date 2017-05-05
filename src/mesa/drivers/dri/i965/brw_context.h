@@ -368,6 +368,7 @@ struct brw_cache {
 
    struct brw_cache_item **items;
    struct brw_bo *bo;
+   void *map;
    GLuint size, n_items;
 
    uint32_t next_offset;
@@ -672,6 +673,7 @@ struct brw_context
 
    struct {
       struct brw_bo *bo;
+      void *map;
       uint32_t next_offset;
    } upload;
 

@@ -214,21 +214,21 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
 {
    struct brw_context *brw = cache->brw;
    struct brw_bo *new_bo;
+   void *llc_map;
 
    new_bo = brw_bo_alloc(brw->bufmgr, "program cache", new_size, 64);
    if (can_do_exec_capture(brw->screen))
       new_bo->kflags = EXEC_OBJECT_CAPTURE;
    if (brw->has_llc)
-      brw_bo_map_unsynchronized(brw, new_bo);
+      llc_map = brw_bo_map_unsynchronized(brw, new_bo);
 
    /* Copy any existing data that needs to be saved. */
    if (cache->next_offset != 0) {
       if (brw->has_llc) {
-         memcpy(new_bo->virtual, cache->bo->virtual, cache->next_offset);
+         memcpy(llc_map, cache->map, cache->next_offset);
       } else {
-         brw_bo_map(brw, cache->bo, false);
-         brw_bo_subdata(new_bo, 0, cache->next_offset,
-                              cache->bo->virtual);
+         void *map = brw_bo_map(brw, cache->bo, false);
+         brw_bo_subdata(new_bo, 0, cache->next_offset, map);
          brw_bo_unmap(cache->bo);
       }
    }
@@ -237,6 +237,7 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
       brw_bo_unmap(cache->bo);
    brw_bo_unreference(cache->bo);
    cache->bo = new_bo;
+   cache->map = brw->has_llc ? llc_map : NULL;
    cache->bo_used_by_gpu = false;
 
    /* Since we have a new BO in place, we need to signal the units
@@ -265,9 +266,13 @@ brw_lookup_prog(const struct brw_cache *cache,
          if (item->cache_id != cache_id || item->size != data_size)
             continue;
 
+         void *map;
          if (!brw->has_llc)
-            brw_bo_map(brw, cache->bo, false);
-         ret = memcmp(cache->bo->virtual + item->offset, data, item->size);
+            map = brw_bo_map(brw, cache->bo, false);
+         else
+            map = cache->map;
+
+         ret = memcmp(map + item->offset, data, item->size);
          if (!brw->has_llc)
             brw_bo_unmap(cache->bo);
          if (ret)
@@ -369,7 +374,7 @@ brw_upload_cache(struct brw_cache *cache,
 
       /* Copy data to the buffer */
       if (brw->has_llc) {
-         memcpy((char *)cache->bo->virtual + item->offset, data, data_size);
+         memcpy(cache->map + item->offset, data, data_size);
       } else {
          brw_bo_subdata(cache->bo, item->offset, data_size, data);
       }
@@ -412,7 +417,7 @@ brw_init_caches(struct brw_context *brw)
    if (can_do_exec_capture(brw->screen))
       cache->bo->kflags = EXEC_OBJECT_CAPTURE;
    if (brw->has_llc)
-      brw_bo_map_unsynchronized(brw, cache->bo);
+      cache->map = brw_bo_map_unsynchronized(brw, cache->bo);
 }
 
 static void
@@ -495,6 +500,7 @@ brw_destroy_cache(struct brw_context *brw, struct brw_cache *cache)
          brw_bo_unmap(cache->bo);
       brw_bo_unreference(cache->bo);
       cache->bo = NULL;
+      cache->map = NULL;
    }
    brw_clear_cache(brw, cache);
    free(cache->items);
@@ -541,14 +547,17 @@ brw_print_program_cache(struct brw_context *brw)
 {
    const struct brw_cache *cache = &brw->cache;
    struct brw_cache_item *item;
+   void *map;
 
    if (!brw->has_llc)
-      brw_bo_map(brw, cache->bo, false);
+      map = brw_bo_map(brw, cache->bo, false);
+   else
+      map = cache->map;
 
    for (unsigned i = 0; i < cache->size; i++) {
       for (item = cache->items[i]; item; item = item->next) {
          fprintf(stderr, "%s:\n", cache_name(i));
-         brw_disassemble(&brw->screen->devinfo, cache->bo->virtual,
+         brw_disassemble(&brw->screen->devinfo, map,
                          item->offset, item->size, stderr);
       }
    }

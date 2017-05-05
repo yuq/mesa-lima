@@ -146,8 +146,7 @@ brw_queryobj_get_results(struct gl_context *ctx,
       }
    }
 
-   brw_bo_map(brw, query->bo, false);
-   results = query->bo->virtual;
+   results = brw_bo_map(brw, query->bo, false);
    switch (query->Base.Target) {
    case GL_TIME_ELAPSED_EXT:
       /* The query BO contains the starting and ending timestamps.
