@@ -426,7 +426,7 @@ accum(struct gl_context *ctx, GLenum op, GLfloat value)
       accum_return(ctx, value, xpos, ypos, width, height);
       break;
    default:
-      _mesa_problem(ctx, "invalid mode in _mesa_Accum()");
+      unreachable("invalid mode in _mesa_Accum()");
       break;
    }
 }

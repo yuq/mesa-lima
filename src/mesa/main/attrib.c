@@ -1428,8 +1428,7 @@ _mesa_PopAttrib(void)
             break;
 
          default:
-            _mesa_problem( ctx, "Bad attrib flag in PopAttrib");
-            break;
+            unreachable("Bad attrib flag in PopAttrib");
       }
 
       next = attr->next;
@@ -1753,8 +1752,7 @@ _mesa_PopClientAttrib(void)
             break;
 	 }
          default:
-            _mesa_problem( ctx, "Bad attrib flag in PopClientAttrib");
-            break;
+            unreachable("Bad attrib flag in PopClientAttrib");
       }
 
       next = node->next;

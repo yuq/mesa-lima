@@ -3966,10 +3966,6 @@ get_framebuffer_attachment_parameter(struct gl_context *ctx,
           && !_mesa_is_gles3(ctx)) {
          goto invalid_pname_enum;
       }
-      else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_enum_to_string(pname));
-      }
       else if (att->Texture) {
          const struct gl_texture_image *texImage =
             _mesa_select_tex_image(att->Texture, att->Texture->Target,
@@ -3987,7 +3983,9 @@ get_framebuffer_attachment_parameter(struct gl_context *ctx,
                                       att->Renderbuffer->Format);
       }
       else {
-         _mesa_problem(ctx, "%s: invalid FBO attachment structure", caller);
+         assert(att->Type == GL_NONE);
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_enum_to_string(pname));
       }
       return;
    case GL_FRAMEBUFFER_ATTACHMENT_LAYERED:
