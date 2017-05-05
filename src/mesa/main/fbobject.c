@@ -3675,11 +3675,11 @@ _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
 }
 
 
-void
-_mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
-                                           struct gl_framebuffer *buffer,
-                                           GLenum attachment, GLenum pname,
-                                           GLint *params, const char *caller)
+static void
+get_framebuffer_attachment_parameter(struct gl_context *ctx,
+                                     struct gl_framebuffer *buffer,
+                                     GLenum attachment, GLenum pname,
+                                     GLint *params, const char *caller)
 {
    const struct gl_renderbuffer_attachment *att;
    bool is_color_attachment = false;
@@ -4030,8 +4030,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
       return;
    }
 
-   _mesa_get_framebuffer_attachment_parameter(ctx, buffer, attachment, pname,
-                                              params,
+   get_framebuffer_attachment_parameter(ctx, buffer, attachment, pname,
+                                        params,
                                     "glGetFramebufferAttachmentParameteriv");
 }
 
@@ -4060,8 +4060,8 @@ _mesa_GetNamedFramebufferAttachmentParameteriv(GLuint framebuffer,
       buffer = ctx->WinSysDrawBuffer;
    }
 
-   _mesa_get_framebuffer_attachment_parameter(ctx, buffer, attachment, pname,
-                                              params,
+   get_framebuffer_attachment_parameter(ctx, buffer, attachment, pname,
+                                        params,
                               "glGetNamedFramebufferAttachmentParameteriv");
 }
 

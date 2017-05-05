@@ -131,13 +131,6 @@ _mesa_check_framebuffer_status(struct gl_context *ctx,
                                struct gl_framebuffer *fb);
 
 extern void
-_mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
-                                           struct gl_framebuffer *buffer,
-                                           GLenum attachment, GLenum pname,
-                                           GLint *params, const char *caller);
-
-
-extern void
 _mesa_bind_framebuffers(struct gl_context *ctx,
                         struct gl_framebuffer *newDrawFb,
                         struct gl_framebuffer *newReadFb);
