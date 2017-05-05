@@ -3815,11 +3815,12 @@ genX(upload_ps)(struct brw_context *brw)
       ps.SampleMask = genX(determine_sample_mask(brw));
 #endif
 
-      /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
-       * it implicitly scales for different GT levels (which have some # of
-       * PSDs).
+      /* 3DSTATE_PS expects the number of threads per PSD, which is always 64
+       * for pre Gen11 and 128 for gen11+; On gen11+ If a programmed value is
+       * k, it implies 2(k+1) threads. It implicitly scales for different GT
+       * levels (which have some # of PSDs).
        *
-       * In Gen8 the format is U8-2 whereas in Gen9 it is U8-1.
+       * In Gen8 the format is U8-2 whereas in Gen9+ it is U9-1.
        */
 #if GEN_GEN >= 9
       ps.MaximumNumberofThreadsPerPSD = 64 - 1;
