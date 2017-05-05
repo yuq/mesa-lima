@@ -3224,15 +3224,10 @@ _mesa_get_and_validate_attachment(struct gl_context *ctx,
 void
 _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                           GLenum attachment,
+                          struct gl_renderbuffer_attachment *att,
                           struct gl_texture_object *texObj, GLenum textarget,
-                          GLint level, GLuint layer, GLboolean layered,
-                          const char *caller)
+                          GLint level, GLuint layer, GLboolean layered)
 {
-   struct gl_renderbuffer_attachment *att =
-      _mesa_get_and_validate_attachment(ctx, fb, attachment, caller);
-   if (!att)
-      return;
-
    FLUSH_VERTICES(ctx, _NEW_BUFFERS);
 
    mtx_lock(&fb->Mutex);
@@ -3331,8 +3326,13 @@ framebuffer_texture_with_dims(int dims, GLenum target,
          return;
    }
 
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
-                             layer, GL_FALSE, caller);
+   struct gl_renderbuffer_attachment *att =
+      _mesa_get_and_validate_attachment(ctx, fb, attachment, caller);
+   if (!att)
+      return;
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, textarget,
+                             level, layer, GL_FALSE);
 }
 
 
@@ -3405,8 +3405,13 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
       }
    }
 
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
-                             layer, GL_FALSE, func);
+   struct gl_renderbuffer_attachment *att =
+      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
+   if (!att)
+      return;
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, textarget,
+                             level, layer, GL_FALSE);
 }
 
 
@@ -3447,8 +3452,13 @@ _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
       }
    }
 
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
-                             layer, GL_FALSE, func);
+   struct gl_renderbuffer_attachment *att =
+      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
+   if (!att)
+      return;
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, textarget,
+                             level, layer, GL_FALSE);
 }
 
 
@@ -3490,8 +3500,13 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
          return;
    }
 
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
-                             0, layered, func);
+   struct gl_renderbuffer_attachment *att =
+      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
+   if (!att)
+      return;
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, 0, level,
+                             0, layered);
 }
 
 
@@ -3530,8 +3545,13 @@ _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
          return;
    }
 
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
-                             0, layered, func);
+   struct gl_renderbuffer_attachment *att =
+      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
+   if (!att)
+      return;
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, 0, level,
+                             0, layered);
 }
 
 

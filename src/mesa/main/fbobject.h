@@ -127,9 +127,9 @@ _mesa_get_and_validate_attachment(struct gl_context *ctx,
 extern void
 _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                           GLenum attachment,
+                          struct gl_renderbuffer_attachment *att,
                           struct gl_texture_object *texObj, GLenum textarget,
-                          GLint level, GLuint layer, GLboolean layered,
-                          const char *caller);
+                          GLint level, GLuint layer, GLboolean layered);
 
 extern GLenum
 _mesa_check_framebuffer_status(struct gl_context *ctx,
