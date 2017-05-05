@@ -1311,12 +1311,17 @@ dri2CreateScreen(int screen, struct glx_display * priv)
    psp->getBufferAge = NULL;
 
    if (pdp->driMinor >= 2) {
+      unsigned char disable;
+
       psp->getDrawableMSC = dri2DrawableGetMSC;
       psp->waitForMSC = dri2WaitForMSC;
       psp->waitForSBC = dri2WaitForSBC;
       psp->setSwapInterval = dri2SetSwapInterval;
       psp->getSwapInterval = dri2GetSwapInterval;
-      __glXEnableDirectExtension(&psc->base, "GLX_OML_sync_control");
+      if (psc->config->configQueryb(psc->driScreen,
+                                    "glx_disable_oml_sync_control",
+                                    &disable) || !disable)
+         __glXEnableDirectExtension(&psc->base, "GLX_OML_sync_control");
    }
 
    /* DRI2 supports SubBuffer through DRI2CopyRegion, so it's always
