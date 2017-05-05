@@ -3896,7 +3896,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen6_urb,
       &genX(blend_state),		/* must do before cc unit */
       &genX(color_calc_state),	/* must do before cc unit */
-      &gen6_depth_stencil_state,	/* must do before cc unit */
+      &genX(depth_stencil_state),	/* must do before cc unit */
 
       &genX(vs_push_constants), /* Before vs_state */
       &genX(gs_push_constants), /* Before gs_state */
