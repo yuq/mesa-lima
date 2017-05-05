@@ -303,7 +303,7 @@ get_fb0_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
             return &fb->Attachment[BUFFER_BACK_LEFT];
          return &fb->Attachment[BUFFER_FRONT_LEFT];
       case GL_DEPTH:
-      return &fb->Attachment[BUFFER_DEPTH];
+         return &fb->Attachment[BUFFER_DEPTH];
       case GL_STENCIL:
          return &fb->Attachment[BUFFER_STENCIL];
       }
