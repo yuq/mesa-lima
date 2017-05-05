@@ -4840,6 +4840,12 @@ glsl_to_tgsi_visitor::rename_temp_registers(struct rename_reg_pair *renames)
          }
       }
 
+      if (inst->resource.file == PROGRAM_TEMPORARY) {
+         int old_idx = inst->resource.index;
+         if (renames[old_idx].valid)
+            inst->resource.index = renames[old_idx].new_reg;
+      }
+
       for (j = 0; j < num_inst_dst_regs(inst); j++) {
          if (inst->dst[j].file == PROGRAM_TEMPORARY) {
             int old_idx = inst->dst[j].index;
