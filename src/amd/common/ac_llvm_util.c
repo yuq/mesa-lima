@@ -114,6 +114,7 @@ static const char *ac_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_POLARIS10:
 		return "polaris10";
 	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
 		return "polaris11";
 #endif
 	default:

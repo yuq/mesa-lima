@@ -915,6 +915,7 @@ radv_device_init_gs_info(struct radv_device *device)
 	case CHIP_FIJI:
 	case CHIP_POLARIS10:
 	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
 		device->gs_table_depth = 32;
 		return;
 	default:
