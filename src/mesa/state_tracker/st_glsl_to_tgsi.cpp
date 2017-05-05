@@ -5321,8 +5321,8 @@ glsl_to_tgsi_visitor::merge_two_dsts(void)
 void
 glsl_to_tgsi_visitor::merge_registers(void)
 {
-   int *last_reads = rzalloc_array(mem_ctx, int, this->next_temp);
-   int *first_writes = rzalloc_array(mem_ctx, int, this->next_temp);
+   int *last_reads = ralloc_array(mem_ctx, int, this->next_temp);
+   int *first_writes = ralloc_array(mem_ctx, int, this->next_temp);
    struct rename_reg_pair *renames = rzalloc_array(mem_ctx, struct rename_reg_pair, this->next_temp);
    int i, j;
    int num_renames = 0;
@@ -6732,10 +6732,10 @@ get_mesa_program_tgsi(struct gl_context *ctx,
     * optimization passes. */
    {
       int i;
-      int *first_writes = rzalloc_array(v->mem_ctx, int, v->next_temp);
-      int *first_reads = rzalloc_array(v->mem_ctx, int, v->next_temp);
-      int *last_writes = rzalloc_array(v->mem_ctx, int, v->next_temp);
-      int *last_reads = rzalloc_array(v->mem_ctx, int, v->next_temp);
+      int *first_writes = ralloc_array(v->mem_ctx, int, v->next_temp);
+      int *first_reads = ralloc_array(v->mem_ctx, int, v->next_temp);
+      int *last_writes = ralloc_array(v->mem_ctx, int, v->next_temp);
+      int *last_reads = ralloc_array(v->mem_ctx, int, v->next_temp);
 
       for (i = 0; i < v->next_temp; i++) {
          first_writes[i] = -1;
