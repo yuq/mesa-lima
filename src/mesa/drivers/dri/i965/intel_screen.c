@@ -309,8 +309,7 @@ modifier_to_tiling(uint64_t modifier)
          return tiling_modifier_map[i].tiling;
    }
 
-   assert(0 && "modifier_to_tiling should only receive known modifiers");
-   unreachable();
+   unreachable("modifier_to_tiling should only receive known modifiers");
 }
 
 static uint64_t
@@ -323,8 +322,7 @@ tiling_to_modifier(uint32_t tiling)
          return tiling_modifier_map[i].modifier;
    }
 
-   assert(0 && "tiling_to_modifier received unknown tiling mode");
-   unreachable();
+   unreachable("tiling_to_modifier received unknown tiling mode");
 }
 
 static void
