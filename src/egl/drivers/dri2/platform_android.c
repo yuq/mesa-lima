@@ -264,10 +264,15 @@ droid_window_enqueue_buffer(_EGLDisplay *disp, struct dri2_egl_surface *dri2_sur
 }
 
 static void
-droid_window_cancel_buffer(_EGLDisplay *disp, struct dri2_egl_surface *dri2_surf)
+droid_window_cancel_buffer(struct dri2_egl_surface *dri2_surf)
 {
-   /* no cancel buffer? */
-   droid_window_enqueue_buffer(disp, dri2_surf);
+   int ret;
+
+   ret = dri2_surf->window->cancelBuffer(dri2_surf->window, dri2_surf->buffer, -1);
+   if (ret < 0) {
+      _eglLog(_EGL_WARNING, "ANativeWindow::cancelBuffer failed");
+      dri2_surf->base.Lost = true;
+   }
 }
 
 static __DRIbuffer *
@@ -399,7 +404,7 @@ droid_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 
    if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
       if (dri2_surf->buffer)
-         droid_window_cancel_buffer(disp, dri2_surf);
+         droid_window_cancel_buffer(dri2_surf);
 
       dri2_surf->window->common.decRef(&dri2_surf->window->common);
    }
