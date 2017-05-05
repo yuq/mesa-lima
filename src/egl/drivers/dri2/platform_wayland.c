@@ -55,34 +55,10 @@ static EGLBoolean
 dri2_wl_swap_interval(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf,
                       EGLint interval);
 
-static void
-sync_callback(void *data, struct wl_callback *callback, uint32_t serial)
-{
-   int *done = data;
-
-   *done = 1;
-   wl_callback_destroy(callback);
-}
-
-static const struct wl_callback_listener sync_listener = {
-   .done = sync_callback
-};
-
 static int
 roundtrip(struct dri2_egl_display *dri2_dpy)
 {
-   struct wl_callback *callback;
-   int done = 0, ret = 0;
-
-   callback = wl_display_sync(dri2_dpy->wl_dpy_wrapper);
-   wl_callback_add_listener(callback, &sync_listener, &done);
-   while (ret != -1 && !done)
-      ret = wl_display_dispatch_queue(dri2_dpy->wl_dpy, dri2_dpy->wl_queue);
-
-   if (!done)
-      wl_callback_destroy(callback);
-
-   return ret;
+   return wl_display_roundtrip_queue(dri2_dpy->wl_dpy, dri2_dpy->wl_queue);
 }
 
 static void
