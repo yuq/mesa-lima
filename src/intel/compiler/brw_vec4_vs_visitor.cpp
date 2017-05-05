@@ -33,14 +33,6 @@ vec4_vs_visitor::emit_prolog()
 }
 
 
-dst_reg *
-vec4_vs_visitor::make_reg_for_system_value(int location)
-{
-   unreachable("not reached");
-   return NULL;
-}
-
-
 void
 vec4_vs_visitor::emit_urb_write_header(int mrf)
 {

@@ -37,49 +37,11 @@ vec4_visitor::emit_nir_code()
    if (nir->num_uniforms > 0)
       nir_setup_uniforms();
 
-   nir_setup_system_values();
-
    /* get the main function and emit it */
    nir_foreach_function(function, nir) {
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
       nir_emit_impl(function->impl);
-   }
-}
-
-void
-vec4_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
-{
-}
-
-static bool
-setup_system_values_block(nir_block *block, vec4_visitor *v)
-{
-   nir_foreach_instr(instr, block) {
-      if (instr->type != nir_instr_type_intrinsic)
-         continue;
-
-      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-      v->nir_setup_system_value_intrinsic(intrin);
-   }
-
-   return true;
-}
-
-void
-vec4_visitor::nir_setup_system_values()
-{
-   nir_system_values = ralloc_array(mem_ctx, dst_reg, SYSTEM_VALUE_MAX);
-   for (unsigned i = 0; i < SYSTEM_VALUE_MAX; i++) {
-      nir_system_values[i] = dst_reg();
-   }
-
-   nir_foreach_function(function, nir) {
-      assert(strcmp(function->name, "main") == 0);
-      assert(function->impl);
-      nir_foreach_block(block, function->impl) {
-         setup_system_values_block(block, this);
-      }
    }
 }
 

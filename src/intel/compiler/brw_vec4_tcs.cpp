@@ -50,18 +50,6 @@ vec4_tcs_visitor::vec4_tcs_visitor(const struct brw_compiler *compiler,
 
 
 void
-vec4_tcs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
-{
-}
-
-dst_reg *
-vec4_tcs_visitor::make_reg_for_system_value(int location)
-{
-   return NULL;
-}
-
-
-void
 vec4_tcs_visitor::setup_payload()
 {
    int reg = 0;

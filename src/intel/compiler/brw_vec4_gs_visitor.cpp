@@ -53,26 +53,6 @@ vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
 }
 
 
-dst_reg *
-vec4_gs_visitor::make_reg_for_system_value(int location)
-{
-   dst_reg *reg = new(mem_ctx) dst_reg(this, glsl_type::int_type);
-
-   switch (location) {
-   case SYSTEM_VALUE_INVOCATION_ID:
-      this->current_annotation = "initialize gl_InvocationID";
-      if (gs_prog_data->invocations > 1)
-         emit(GS_OPCODE_GET_INSTANCE_ID, *reg);
-      else
-         emit(MOV(*reg, brw_imm_ud(0)));
-      break;
-   default:
-      unreachable("not reached");
-   }
-
-   return reg;
-}
-
 static inline struct brw_reg
 attribute_to_hw_reg(int attr, brw_reg_type type, bool interleaved)
 {

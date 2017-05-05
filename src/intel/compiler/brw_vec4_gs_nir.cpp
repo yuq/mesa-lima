@@ -31,28 +31,6 @@ vec4_gs_visitor::nir_setup_inputs()
 }
 
 void
-vec4_gs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
-{
-   dst_reg *reg;
-
-   switch (instr->intrinsic) {
-   case nir_intrinsic_load_primitive_id:
-      /* We'll just read g1 directly; don't create a temporary. */
-      break;
-
-   case nir_intrinsic_load_invocation_id:
-      reg = &this->nir_system_values[SYSTEM_VALUE_INVOCATION_ID];
-      if (reg->file == BAD_FILE)
-         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_INVOCATION_ID);
-      break;
-
-   default:
-      vec4_visitor::nir_setup_system_value_intrinsic(instr);
-   }
-
-}
-
-void
 vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 {
    dst_reg dest;
@@ -128,11 +106,11 @@ vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
 
    case nir_intrinsic_load_invocation_id: {
-      src_reg invocation_id =
-         src_reg(nir_system_values[SYSTEM_VALUE_INVOCATION_ID]);
-      assert(invocation_id.file != BAD_FILE);
-      dest = get_nir_dest(instr->dest, invocation_id.type);
-      emit(MOV(dest, invocation_id));
+      dest = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
+      if (gs_prog_data->invocations > 1)
+         emit(GS_OPCODE_GET_INSTANCE_ID, dest);
+      else
+         emit(MOV(dest, brw_imm_ud(0)));
       break;
    }
 
