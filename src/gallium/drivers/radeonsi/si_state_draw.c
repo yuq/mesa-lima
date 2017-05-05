@@ -332,7 +332,8 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 				if (sscreen->b.family == CHIP_TONGA ||
 				    sscreen->b.family == CHIP_FIJI ||
 				    sscreen->b.family == CHIP_POLARIS10 ||
-				    sscreen->b.family == CHIP_POLARIS11)
+				    sscreen->b.family == CHIP_POLARIS11 ||
+				    sscreen->b.family == CHIP_POLARIS12)
 					partial_vs_wave = true;
 			} else {
 				partial_vs_wave = true;
