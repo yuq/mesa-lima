@@ -80,6 +80,8 @@ build_resolve_fragment_shader(struct radv_device *dev, bool is_integer, bool is_
 
 	nir_ssa_def *pos_in = nir_load_var(&b, fs_pos_in);
 	nir_intrinsic_instr *src_offset = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(src_offset, 0);
+	nir_intrinsic_set_range(src_offset, 8);
 	src_offset->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
 	src_offset->num_components = 2;
 	nir_ssa_dest_init(&src_offset->instr, &src_offset->dest, 2, 32, "src_offset");

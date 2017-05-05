@@ -68,12 +68,16 @@ build_nir_itob_compute_shader(struct radv_device *dev)
 
 
 	nir_intrinsic_instr *offset = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(offset, 0);
+	nir_intrinsic_set_range(offset, 12);
 	offset->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
 	offset->num_components = 2;
 	nir_ssa_dest_init(&offset->instr, &offset->dest, 2, 32, "offset");
 	nir_builder_instr_insert(&b, &offset->instr);
 
 	nir_intrinsic_instr *stride = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(stride, 0);
+	nir_intrinsic_set_range(stride, 12);
 	stride->src[0] = nir_src_for_ssa(nir_imm_int(&b, 8));
 	stride->num_components = 1;
 	nir_ssa_dest_init(&stride->instr, &stride->dest, 1, 32, "stride");
@@ -264,12 +268,16 @@ build_nir_btoi_compute_shader(struct radv_device *dev)
 	nir_ssa_def *global_id = nir_iadd(&b, nir_imul(&b, wg_id, block_size), invoc_id);
 
 	nir_intrinsic_instr *offset = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(offset, 0);
+	nir_intrinsic_set_range(offset, 12);
 	offset->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
 	offset->num_components = 2;
 	nir_ssa_dest_init(&offset->instr, &offset->dest, 2, 32, "offset");
 	nir_builder_instr_insert(&b, &offset->instr);
 
 	nir_intrinsic_instr *stride = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(stride, 0);
+	nir_intrinsic_set_range(stride, 12);
 	stride->src[0] = nir_src_for_ssa(nir_imm_int(&b, 8));
 	stride->num_components = 1;
 	nir_ssa_dest_init(&stride->instr, &stride->dest, 1, 32, "stride");
@@ -460,12 +468,16 @@ build_nir_itoi_compute_shader(struct radv_device *dev)
 	nir_ssa_def *global_id = nir_iadd(&b, nir_imul(&b, wg_id, block_size), invoc_id);
 
 	nir_intrinsic_instr *src_offset = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(src_offset, 0);
+	nir_intrinsic_set_range(src_offset, 16);
 	src_offset->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
 	src_offset->num_components = 2;
 	nir_ssa_dest_init(&src_offset->instr, &src_offset->dest, 2, 32, "src_offset");
 	nir_builder_instr_insert(&b, &src_offset->instr);
 
 	nir_intrinsic_instr *dst_offset = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(dst_offset, 0);
+	nir_intrinsic_set_range(dst_offset, 16);
 	dst_offset->src[0] = nir_src_for_ssa(nir_imm_int(&b, 8));
 	dst_offset->num_components = 2;
 	nir_ssa_dest_init(&dst_offset->instr, &dst_offset->dest, 2, 32, "dst_offset");
@@ -642,6 +654,8 @@ build_nir_cleari_compute_shader(struct radv_device *dev)
 	nir_ssa_def *global_id = nir_iadd(&b, nir_imul(&b, wg_id, block_size), invoc_id);
 
 	nir_intrinsic_instr *clear_val = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(clear_val, 0);
+	nir_intrinsic_set_range(clear_val, 16);
 	clear_val->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
 	clear_val->num_components = 4;
 	nir_ssa_dest_init(&clear_val->instr, &clear_val->dest, 4, 32, "clear_value");

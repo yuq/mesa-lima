@@ -77,6 +77,8 @@ static struct nir_ssa_def *
 radv_load_push_int(nir_builder *b, unsigned offset, const char *name)
 {
 	nir_intrinsic_instr *flags = nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(flags, 0);
+	nir_intrinsic_set_range(flags, 16);
 	flags->src[0] = nir_src_for_ssa(nir_imm_int(b, offset));
 	flags->num_components = 1;
 	nir_ssa_dest_init(&flags->instr, &flags->dest, 1, 32, name);

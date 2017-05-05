@@ -36,6 +36,8 @@ build_buffer_fill_shader(struct radv_device *dev)
 	nir_builder_instr_insert(&b, &dst_buf->instr);
 
 	nir_intrinsic_instr *load = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(load, 0);
+	nir_intrinsic_set_range(load, 4);
 	load->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
 	load->num_components = 1;
 	nir_ssa_dest_init(&load->instr, &load->dest, 1, 32, "fill_value");

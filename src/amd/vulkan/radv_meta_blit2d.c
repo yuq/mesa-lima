@@ -488,6 +488,8 @@ build_nir_buffer_fetch(struct nir_builder *b, struct radv_device *device,
 	sampler->data.binding = 0;
 
 	nir_intrinsic_instr *width = nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_push_constant);
+	nir_intrinsic_set_base(width, 0);
+	nir_intrinsic_set_range(width, 4);
 	width->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
 	width->num_components = 1;
 	nir_ssa_dest_init(&width->instr, &width->dest, 1, 32, "width");
