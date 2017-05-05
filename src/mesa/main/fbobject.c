@@ -3188,25 +3188,22 @@ check_level(struct gl_context *ctx, GLenum target, GLint level,
 }
 
 
-void
-_mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
-                          GLenum attachment,
-                          struct gl_texture_object *texObj, GLenum textarget,
-                          GLint level, GLuint layer, GLboolean layered,
-                          const char *caller)
+struct gl_renderbuffer_attachment *
+_mesa_get_and_validate_attachment(struct gl_context *ctx,
+                                  struct gl_framebuffer *fb,
+                                  GLenum attachment, const char *caller)
 {
-   struct gl_renderbuffer_attachment *att;
-   bool is_color_attachment;
-
    /* The window-system framebuffer object is immutable */
    if (_mesa_is_winsys_fbo(fb)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(window-system framebuffer)",
                   caller);
-      return;
+      return NULL;
    }
 
    /* Not a hash lookup, so we can afford to get the attachment here. */
-   att = get_attachment(ctx, fb, attachment, &is_color_attachment);
+   bool is_color_attachment;
+   struct gl_renderbuffer_attachment *att =
+      get_attachment(ctx, fb, attachment, &is_color_attachment);
    if (att == NULL) {
       if (is_color_attachment) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -3217,8 +3214,24 @@ _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                      "%s(invalid attachment %s)", caller,
                      _mesa_enum_to_string(attachment));
       }
-      return;
+      return NULL;
    }
+
+   return att;
+}
+
+
+void
+_mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
+                          GLenum attachment,
+                          struct gl_texture_object *texObj, GLenum textarget,
+                          GLint level, GLuint layer, GLboolean layered,
+                          const char *caller)
+{
+   struct gl_renderbuffer_attachment *att =
+      _mesa_get_and_validate_attachment(ctx, fb, attachment, caller);
+   if (!att)
+      return;
 
    FLUSH_VERTICES(ctx, _NEW_BUFFERS);
 

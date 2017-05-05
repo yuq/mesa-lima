@@ -119,6 +119,11 @@ _mesa_detach_renderbuffer(struct gl_context *ctx,
                           struct gl_framebuffer *fb,
                           const void *att);
 
+extern struct gl_renderbuffer_attachment *
+_mesa_get_and_validate_attachment(struct gl_context *ctx,
+                                  struct gl_framebuffer *fb,
+                                  GLenum attachment, const char *caller);
+
 extern void
 _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                           GLenum attachment,
