@@ -269,7 +269,7 @@ DEFINES="-D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
 AC_SUBST([DEFINES])
 android=no
 case "$host_os" in
-*-android)
+*-android*)
     android=yes
     ;;
 linux*|*-gnu*|gnu*|cygwin*)
