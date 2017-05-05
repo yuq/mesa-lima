@@ -2910,6 +2910,16 @@ reuse_framebuffer_texture_attachment(struct gl_framebuffer *fb,
 }
 
 
+static struct gl_texture_object *
+get_texture_for_framebuffer(struct gl_context *ctx, GLuint texture)
+{
+   if (!texture)
+      return NULL;
+
+   return _mesa_lookup_texture(ctx, texture);
+}
+
+
 /**
  * Common code called by gl*FramebufferTexture*() to retrieve the correct
  * texture object pointer.
@@ -2920,9 +2930,9 @@ reuse_framebuffer_texture_attachment(struct gl_framebuffer *fb,
  * \return true if no errors, false if errors
  */
 static bool
-get_texture_for_framebuffer(struct gl_context *ctx, GLuint texture,
-                            bool layered, const char *caller,
-                            struct gl_texture_object **texObj)
+get_texture_for_framebuffer_err(struct gl_context *ctx, GLuint texture,
+                                bool layered, const char *caller,
+                                struct gl_texture_object **texObj)
 {
    *texObj = NULL; /* This will get returned if texture = 0. */
 
@@ -3312,7 +3322,7 @@ framebuffer_texture_with_dims(int dims, GLenum target,
    }
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, false, caller, &texObj))
+   if (!get_texture_for_framebuffer_err(ctx, texture, false, caller, &texObj))
       return;
 
    if (texObj) {
@@ -3385,7 +3395,7 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
    }
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, false, func, &texObj))
+   if (!get_texture_for_framebuffer_err(ctx, texture, false, func, &texObj))
       return;
 
    if (texObj) {
@@ -3432,7 +3442,7 @@ _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
       return;
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, false, func, &texObj))
+   if (!get_texture_for_framebuffer_err(ctx, texture, false, func, &texObj))
       return;
 
    if (texObj) {
@@ -3489,7 +3499,7 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
    }
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, true, func, &texObj))
+   if (!get_texture_for_framebuffer_err(ctx, texture, true, func, &texObj))
       return;
 
    if (texObj) {
@@ -3533,7 +3543,7 @@ _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
       return;
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, true, func, &texObj))
+   if (!get_texture_for_framebuffer_err(ctx, texture, true, func, &texObj))
       return;
 
    if (texObj) {
