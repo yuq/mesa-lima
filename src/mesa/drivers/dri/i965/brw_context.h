@@ -1170,8 +1170,10 @@ struct brw_context
       struct intel_mipmap_tree *stencil_mt;
 
       /* Inter-tile (page-aligned) byte offsets. */
-      uint32_t depth_offset, hiz_offset, stencil_offset;
-      /* Intra-tile x,y offsets for drawing to depth/stencil/hiz */
+      uint32_t depth_offset;
+      /* Intra-tile x,y offsets for drawing to combined depth-stencil. Only
+       * used for Gen < 6.
+       */
       uint32_t tile_x, tile_y;
    } depthstencil;
 

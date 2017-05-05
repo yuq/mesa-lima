@@ -217,8 +217,6 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
    brw->depthstencil.tile_x = 0;
    brw->depthstencil.tile_y = 0;
    brw->depthstencil.depth_offset = 0;
-   brw->depthstencil.stencil_offset = 0;
-   brw->depthstencil.hiz_offset = 0;
    brw->depthstencil.depth_mt = NULL;
    brw->depthstencil.stencil_mt = NULL;
    if (depth_irb)
@@ -413,26 +411,15 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
          intel_miptree_get_aligned_offset(depth_mt,
                                           depth_irb->draw_x & ~tile_mask_x,
                                           depth_irb->draw_y & ~tile_mask_y);
-      if (intel_renderbuffer_has_hiz(depth_irb)) {
-         brw->depthstencil.hiz_offset =
-            intel_miptree_get_aligned_offset(depth_mt,
-                                             depth_irb->draw_x & ~tile_mask_x,
-                                             (depth_irb->draw_y & ~tile_mask_y) / 2);
-      }
+      assert(!intel_renderbuffer_has_hiz(depth_irb));
    }
    if (stencil_irb) {
       stencil_mt = get_stencil_miptree(stencil_irb);
 
       brw->depthstencil.stencil_mt = stencil_mt;
-      if (stencil_mt->format == MESA_FORMAT_S_UINT8) {
-         /* Note: we can't compute the stencil offset using
-          * intel_region_get_aligned_offset(), because stencil_region claims
-          * that the region is untiled even though it's W tiled.
-          */
-         brw->depthstencil.stencil_offset =
-            (stencil_draw_y & ~tile_mask_y) * stencil_mt->pitch +
-            (stencil_draw_x & ~tile_mask_x) * 64;
-      } else if (!depth_irb) {
+      assert(stencil_mt->format != MESA_FORMAT_S_UINT8);
+
+      if (!depth_irb) {
          brw->depthstencil.depth_offset =
             intel_miptree_get_aligned_offset(
                stencil_mt,
@@ -555,39 +542,19 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
                            uint32_t width, uint32_t height,
                            uint32_t tile_x, uint32_t tile_y)
 {
-   /* Enable the hiz bit if we're doing separate stencil, because it and the
-    * separate stencil bit must have the same value. From Section 2.11.5.6.1.1
-    * 3DSTATE_DEPTH_BUFFER, Bit 1.21 "Separate Stencil Enable":
-    *     [DevIL]: If this field is enabled, Hierarchical Depth Buffer
-    *     Enable must also be enabled.
-    *
-    *     [DevGT]: This field must be set to the same value (enabled or
-    *     disabled) as Hierarchical Depth Buffer Enable
-    */
-   bool enable_hiz_ss = hiz || separate_stencil;
+   (void)hiz;
+   (void)separate_stencil;
+   (void)stencil_mt;
 
+   assert(!hiz);
+   assert(!separate_stencil);
 
-   /* 3DSTATE_DEPTH_BUFFER, 3DSTATE_STENCIL_BUFFER are both
-    * non-pipelined state that will need the PIPE_CONTROL workaround.
-    */
-   if (brw->gen == 6) {
-      brw_emit_depth_stall_flushes(brw);
-   }
-
-   unsigned int len;
-   if (brw->gen >= 6)
-      len = 7;
-   else if (brw->is_g4x || brw->gen == 5)
-      len = 6;
-   else
-      len = 5;
+   const unsigned len = (brw->is_g4x || brw->gen == 5) ? 6 : 5;
 
    BEGIN_BATCH(len);
    OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (len - 2));
    OUT_BATCH((depth_mt ? depth_mt->pitch - 1 : 0) |
              (depthbuffer_format << 18) |
-             ((enable_hiz_ss ? 1 : 0) << 21) | /* separate stencil enable */
-             ((enable_hiz_ss ? 1 : 0) << 22) | /* hiz enable */
              (BRW_TILEWALK_YMAJOR << 26) |
              ((depth_mt ? depth_mt->tiling != I915_TILING_NONE : 1)
               << 27) |
@@ -614,78 +581,6 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
       OUT_BATCH(0);
 
    ADVANCE_BATCH();
-
-   if (hiz || separate_stencil) {
-      /*
-       * In the 3DSTATE_DEPTH_BUFFER batch emitted above, the 'separate
-       * stencil enable' and 'hiz enable' bits were set. Therefore we must
-       * emit 3DSTATE_HIER_DEPTH_BUFFER and 3DSTATE_STENCIL_BUFFER. Even if
-       * there is no stencil buffer, 3DSTATE_STENCIL_BUFFER must be emitted;
-       * failure to do so causes hangs on gen5 and a stall on gen6.
-       */
-
-      /* Emit hiz buffer. */
-      if (hiz) {
-         assert(depth_mt);
-	 BEGIN_BATCH(3);
-	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-	 OUT_BATCH(depth_mt->hiz_buf->aux_base.pitch - 1);
-	 OUT_RELOC(depth_mt->hiz_buf->aux_base.bo,
-		   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-		   brw->depthstencil.hiz_offset);
-	 ADVANCE_BATCH();
-      } else {
-	 BEGIN_BATCH(3);
-	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-	 OUT_BATCH(0);
-	 OUT_BATCH(0);
-	 ADVANCE_BATCH();
-      }
-
-      /* Emit stencil buffer. */
-      if (separate_stencil) {
-	 BEGIN_BATCH(3);
-	 OUT_BATCH((_3DSTATE_STENCIL_BUFFER << 16) | (3 - 2));
-         /* The stencil buffer has quirky pitch requirements.  From Vol 2a,
-          * 11.5.6.2.1 3DSTATE_STENCIL_BUFFER, field "Surface Pitch":
-          *    The pitch must be set to 2x the value computed based on width, as
-          *    the stencil buffer is stored with two rows interleaved.
-          */
-	 OUT_BATCH(2 * stencil_mt->pitch - 1);
-	 OUT_RELOC(stencil_mt->bo,
-		   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-		   brw->depthstencil.stencil_offset);
-	 ADVANCE_BATCH();
-      } else {
-	 BEGIN_BATCH(3);
-	 OUT_BATCH((_3DSTATE_STENCIL_BUFFER << 16) | (3 - 2));
-	 OUT_BATCH(0);
-	 OUT_BATCH(0);
-	 ADVANCE_BATCH();
-      }
-   }
-
-   /*
-    * On Gen >= 6, emit clear params for safety. If using hiz, then clear
-    * params must be emitted.
-    *
-    * From Section 2.11.5.6.4.1 3DSTATE_CLEAR_PARAMS:
-    *     3DSTATE_CLEAR_PARAMS packet must follow the DEPTH_BUFFER_STATE packet
-    *     when HiZ is enabled and the DEPTH_BUFFER_STATE changes.
-    */
-   if (brw->gen >= 6 || hiz) {
-      BEGIN_BATCH(2);
-      OUT_BATCH(_3DSTATE_CLEAR_PARAMS << 16 |
-		GEN5_DEPTH_CLEAR_VALID |
-		(2 - 2));
-      if (depth_mt) {
-         OUT_BATCH(brw_convert_depth_value(depth_mt->format,
-                                           depth_mt->fast_clear_color.f32[0]));
-      } else {
-         OUT_BATCH(0);
-      }
-      ADVANCE_BATCH();
-   }
 }
 
 const struct brw_tracked_state brw_depthbuffer = {
