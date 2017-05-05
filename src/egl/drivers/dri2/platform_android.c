@@ -271,7 +271,7 @@ droid_window_cancel_buffer(struct dri2_egl_surface *dri2_surf)
    ret = dri2_surf->window->cancelBuffer(dri2_surf->window, dri2_surf->buffer, -1);
    if (ret < 0) {
       _eglLog(_EGL_WARNING, "ANativeWindow::cancelBuffer failed");
-      dri2_surf->base.Lost = true;
+      dri2_surf->base.Lost = EGL_TRUE;
    }
 }
 
@@ -440,7 +440,7 @@ update_buffers(struct dri2_egl_surface *dri2_surf)
    /* try to dequeue the next back buffer */
    if (!dri2_surf->buffer && !droid_window_dequeue_buffer(dri2_surf)) {
       _eglLog(_EGL_WARNING, "Could not dequeue buffer from native window");
-      dri2_surf->base.Lost = true;
+      dri2_surf->base.Lost = EGL_TRUE;
       return -1;
    }
 
