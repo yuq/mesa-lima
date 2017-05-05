@@ -1678,6 +1678,69 @@ static const __DRI2interopExtension dri2InteropExtension = {
    .export_object = dri2_interop_export_object
 };
 
+/**
+ * \brief the DRI2ConfigQueryExtension configQueryb method
+ */
+static int
+dri2GalliumConfigQueryb(__DRIscreen *sPriv, const char *var,
+                        unsigned char *val)
+{
+   struct dri_screen *screen = dri_screen(sPriv);
+
+   if (!driCheckOption(&screen->optionCache, var, DRI_BOOL))
+      return dri2ConfigQueryExtension.configQueryb(sPriv, var, val);
+
+   *val = driQueryOptionb(&screen->optionCache, var);
+
+   return 0;
+}
+
+/**
+ * \brief the DRI2ConfigQueryExtension configQueryi method
+ */
+static int
+dri2GalliumConfigQueryi(__DRIscreen *sPriv, const char *var, int *val)
+{
+   struct dri_screen *screen = dri_screen(sPriv);
+
+   if (!driCheckOption(&screen->optionCache, var, DRI_INT) &&
+       !driCheckOption(&screen->optionCache, var, DRI_ENUM))
+      return dri2ConfigQueryExtension.configQueryi(sPriv, var, val);
+
+    *val = driQueryOptioni(&screen->optionCache, var);
+
+    return 0;
+}
+
+/**
+ * \brief the DRI2ConfigQueryExtension configQueryf method
+ */
+static int
+dri2GalliumConfigQueryf(__DRIscreen *sPriv, const char *var, float *val)
+{
+   struct dri_screen *screen = dri_screen(sPriv);
+
+   if (!driCheckOption(&screen->optionCache, var, DRI_FLOAT))
+      return dri2ConfigQueryExtension.configQueryf(sPriv, var, val);
+
+    *val = driQueryOptionf(&screen->optionCache, var);
+
+    return 0;
+}
+
+/**
+ * \brief the DRI2ConfigQueryExtension struct.
+ *
+ * We first query the driver option cache. Then the dri2 option cache.
+ */
+static const __DRI2configQueryExtension dri2GalliumConfigQueryExtension = {
+   .base = { __DRI2_CONFIG_QUERY, 1 },
+
+   .configQueryb        = dri2GalliumConfigQueryb,
+   .configQueryi        = dri2GalliumConfigQueryi,
+   .configQueryf        = dri2GalliumConfigQueryf,
+};
+
 /*
  * Backend function init_screen.
  */
@@ -1687,7 +1750,7 @@ static const __DRIextension *dri_screen_extensions[] = {
    &dri2FlushExtension.base,
    &dri2ImageExtension.base,
    &dri2RendererQueryExtension.base,
-   &dri2ConfigQueryExtension.base,
+   &dri2GalliumConfigQueryExtension.base,
    &dri2ThrottleExtension.base,
    &dri2FenceExtension.base,
    &dri2InteropExtension.base,
