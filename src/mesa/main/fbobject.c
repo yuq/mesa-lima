@@ -285,8 +285,8 @@ get_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
  * window-system framebuffer (not user-created framebuffer objects).
  */
 static struct gl_renderbuffer_attachment *
-_mesa_get_fb0_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
-                         GLenum attachment)
+get_fb0_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
+                   GLenum attachment)
 {
    assert(_mesa_is_winsys_fbo(fb));
 
@@ -3746,7 +3746,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
       }
 
       /* the default / window-system FBO */
-      att = _mesa_get_fb0_attachment(ctx, buffer, attachment);
+      att = get_fb0_attachment(ctx, buffer, attachment);
    }
    else {
       /* user-created framebuffer FBO */
