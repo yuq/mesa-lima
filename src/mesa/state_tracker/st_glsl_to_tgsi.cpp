@@ -4154,7 +4154,6 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    unsigned opcode = TGSI_OPCODE_NOP;
    const glsl_type *sampler_type = ir->sampler->type;
    unsigned sampler_array_size = 1, sampler_base = 0;
-   uint16_t sampler_index = 0;
    bool is_cube_array = false, is_cube_shadow = false;
    unsigned i;
 
@@ -4385,10 +4384,16 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       coord_dst.writemask = WRITEMASK_XYZW;
    }
 
+   st_src_reg sampler(PROGRAM_SAMPLER, 0, GLSL_TYPE_UINT);
+
    get_deref_offsets(ir->sampler, &sampler_array_size, &sampler_base,
-                     &sampler_index, &reladdr, true);
-   if (reladdr.file != PROGRAM_UNDEFINED)
+                     (uint16_t *)&sampler.index, &reladdr, true);
+
+   if (reladdr.file != PROGRAM_UNDEFINED) {
+      sampler.reladdr = ralloc(mem_ctx, st_src_reg);
+      *sampler.reladdr = reladdr;
       emit_arl(ir, sampler_reladdr, reladdr);
+   }
 
    if (opcode == TGSI_OPCODE_TXD)
       inst = emit_asm(ir, opcode, result_dst, coord, dx, dy);
@@ -4419,14 +4424,9 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    if (ir->shadow_comparator)
       inst->tex_shadow = GL_TRUE;
 
-   inst->resource.index = sampler_index;
+   inst->resource = sampler;
    inst->sampler_array_size = sampler_array_size;
    inst->sampler_base = sampler_base;
-
-   if (reladdr.file != PROGRAM_UNDEFINED) {
-      inst->resource.reladdr = ralloc(mem_ctx, st_src_reg);
-      memcpy(inst->resource.reladdr, &reladdr, sizeof(reladdr));
-   }
 
    if (ir->offset) {
       if (!inst->tex_offsets)
