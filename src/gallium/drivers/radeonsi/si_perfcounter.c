@@ -302,7 +302,7 @@ static const struct si_pc_block_base cik_TCP = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_VGT = (const struct si_pc_block_base) {
+static const struct si_pc_block_base cik_VGT = {
 	.name = "VGT",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_SE,
