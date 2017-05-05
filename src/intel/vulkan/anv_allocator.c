@@ -927,7 +927,7 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       VG_NOACCESS_WRITE(&sb->block, stream->block);
       VG_NOACCESS_WRITE(&sb->next, stream->block_list);
       stream->block_list = sb;
-      VG_NOACCESS_WRITE(&sb->_vg_ptr, NULL);
+      VG(VG_NOACCESS_WRITE(&sb->_vg_ptr, NULL));
 
       VG(VALGRIND_MAKE_MEM_NOACCESS(stream->block.map, stream->block_size));
 
