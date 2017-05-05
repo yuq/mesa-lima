@@ -146,6 +146,37 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    }
 
    dri2_surf->wl_win = window;
+   dri2_surf->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
+   if (!window) {
+      _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
+      goto cleanup_surf;
+   }
+
+   if (dri2_dpy->wl_drm) {
+      dri2_surf->wl_drm_wrapper = wl_proxy_create_wrapper(dri2_dpy->wl_drm);
+      if (!dri2_surf->wl_drm_wrapper) {
+         _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
+         goto cleanup_queue;
+      }
+      wl_proxy_set_queue((struct wl_proxy *)dri2_surf->wl_drm_wrapper,
+                         dri2_surf->wl_queue);
+   }
+
+   dri2_surf->wl_dpy_wrapper = wl_proxy_create_wrapper(dri2_dpy->wl_dpy);
+   if (!dri2_surf->wl_dpy_wrapper) {
+      _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
+      goto cleanup_drm;
+   }
+   wl_proxy_set_queue((struct wl_proxy *)dri2_surf->wl_dpy_wrapper,
+                      dri2_surf->wl_queue);
+
+   dri2_surf->wl_surface_wrapper = wl_proxy_create_wrapper(window->surface);
+   if (!dri2_surf->wl_surface_wrapper) {
+      _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
+      goto cleanup_drm;
+   }
+   wl_proxy_set_queue((struct wl_proxy *)dri2_surf->wl_surface_wrapper,
+                      dri2_surf->wl_queue);
 
    dri2_surf->wl_win->private = dri2_surf;
    dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
@@ -176,6 +207,11 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 
    return &dri2_surf->base;
 
+ cleanup_drm:
+   if (dri2_surf->wl_drm_wrapper)
+      wl_proxy_wrapper_destroy(dri2_surf->wl_drm_wrapper);
+ cleanup_queue:
+   wl_event_queue_destroy(dri2_surf->wl_queue);
  cleanup_surf:
    free(dri2_surf);
 
@@ -240,6 +276,12 @@ dri2_wl_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
       dri2_surf->wl_win->resize_callback = NULL;
       dri2_surf->wl_win->destroy_window_callback = NULL;
    }
+
+   if (dri2_surf->wl_drm_wrapper)
+      wl_proxy_wrapper_destroy(dri2_surf->wl_drm_wrapper);
+   wl_proxy_wrapper_destroy(dri2_surf->wl_surface_wrapper);
+   wl_proxy_wrapper_destroy(dri2_surf->wl_dpy_wrapper);
+   wl_event_queue_destroy(dri2_surf->wl_queue);
 
    free(surf);
 
@@ -309,7 +351,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    }
 
    /* There might be a buffer release already queued that wasn't processed */
-   wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_dpy->wl_queue);
+   wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_surf->wl_queue);
 
    if (dri2_surf->back == NULL) {
       for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
@@ -610,7 +652,7 @@ create_wl_buffer(struct dri2_egl_surface *dri2_surf)
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
 
       dri2_surf->current->wl_buffer =
-         wl_drm_create_prime_buffer(dri2_dpy->wl_drm,
+         wl_drm_create_prime_buffer(dri2_surf->wl_drm_wrapper,
                                     fd,
                                     dri2_surf->base.Width,
                                     dri2_surf->base.Height,
@@ -624,7 +666,7 @@ create_wl_buffer(struct dri2_egl_surface *dri2_surf)
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
 
       dri2_surf->current->wl_buffer =
-         wl_drm_create_buffer(dri2_dpy->wl_drm,
+         wl_drm_create_buffer(dri2_surf->wl_drm_wrapper,
                               name,
                               dri2_surf->base.Width,
                               dri2_surf->base.Height,
@@ -632,8 +674,6 @@ create_wl_buffer(struct dri2_egl_surface *dri2_surf)
                               dri2_surf->format);
    }
 
-   wl_proxy_set_queue((struct wl_proxy *) dri2_surf->current->wl_buffer,
-                      dri2_dpy->wl_queue);
    wl_buffer_add_listener(dri2_surf->current->wl_buffer,
                           &wl_buffer_listener, dri2_surf);
 }
@@ -645,14 +685,14 @@ try_damage_buffer(struct dri2_egl_surface *dri2_surf,
 {
    int i;
 
-   if (wl_proxy_get_version((struct wl_proxy *) dri2_surf->wl_win->surface)
+   if (wl_proxy_get_version((struct wl_proxy *) dri2_surf->wl_surface_wrapper)
        < WL_SURFACE_DAMAGE_BUFFER_SINCE_VERSION)
       return EGL_FALSE;
 
    for (i = 0; i < n_rects; i++) {
       const int *rect = &rects[i * 4];
 
-      wl_surface_damage_buffer(dri2_surf->wl_win->surface,
+      wl_surface_damage_buffer(dri2_surf->wl_surface_wrapper,
                                rect[0],
                                dri2_surf->base.Height - rect[1] - rect[3],
                                rect[2], rect[3]);
@@ -675,7 +715,7 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
 
    while (dri2_surf->throttle_callback != NULL)
       if (wl_display_dispatch_queue(dri2_dpy->wl_dpy,
-                                    dri2_dpy->wl_queue) == -1)
+                                    dri2_surf->wl_queue) == -1)
          return -1;
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
@@ -691,11 +731,9 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
 
    if (draw->SwapInterval > 0) {
       dri2_surf->throttle_callback =
-         wl_surface_frame(dri2_surf->wl_win->surface);
+         wl_surface_frame(dri2_surf->wl_surface_wrapper);
       wl_callback_add_listener(dri2_surf->throttle_callback,
                                &throttle_listener, dri2_surf);
-      wl_proxy_set_queue((struct wl_proxy *) dri2_surf->throttle_callback,
-                         dri2_dpy->wl_queue);
    }
 
    dri2_surf->back->age = 1;
@@ -704,7 +742,7 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
 
    create_wl_buffer(dri2_surf);
 
-   wl_surface_attach(dri2_surf->wl_win->surface,
+   wl_surface_attach(dri2_surf->wl_surface_wrapper,
                      dri2_surf->current->wl_buffer,
                      dri2_surf->dx, dri2_surf->dy);
 
@@ -718,7 +756,7 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
     * ignore the damage region and post maximum damage, due to
     * https://bugs.freedesktop.org/78190 */
    if (!n_rects || !try_damage_buffer(dri2_surf, rects, n_rects))
-      wl_surface_damage(dri2_surf->wl_win->surface,
+      wl_surface_damage(dri2_surf->wl_surface_wrapper,
                         0, 0, INT32_MAX, INT32_MAX);
 
    if (dri2_dpy->is_different_gpu) {
@@ -736,14 +774,14 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
    dri2_flush_drawable_for_swapbuffers(disp, draw);
    dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
 
-   wl_surface_commit(dri2_surf->wl_win->surface);
+   wl_surface_commit(dri2_surf->wl_surface_wrapper);
 
    /* If we're not waiting for a frame callback then we'll at least throttle
     * to a sync callback so that we always give a chance for the compositor to
     * handle the commit and send a release event before checking for a free
     * buffer */
    if (dri2_surf->throttle_callback == NULL) {
-      dri2_surf->throttle_callback = wl_display_sync(dri2_dpy->wl_dpy_wrapper);
+      dri2_surf->throttle_callback = wl_display_sync(dri2_surf->wl_dpy_wrapper);
       wl_callback_add_listener(dri2_surf->throttle_callback,
                                &throttle_listener, dri2_surf);
    }
@@ -1386,11 +1424,13 @@ os_create_anonymous_file(off_t size)
 
 
 static EGLBoolean
-dri2_wl_swrast_allocate_buffer(struct dri2_egl_display *dri2_dpy,
+dri2_wl_swrast_allocate_buffer(struct dri2_egl_surface *dri2_surf,
                                int format, int w, int h,
                                void **data, int *size,
                                struct wl_buffer **buffer)
 {
+   struct dri2_egl_display *dri2_dpy =
+      dri2_egl_display(dri2_surf->base.Resource.Display);
    struct wl_shm_pool *pool;
    int fd, stride, size_map;
    void *data_map;
@@ -1411,6 +1451,7 @@ dri2_wl_swrast_allocate_buffer(struct dri2_egl_display *dri2_dpy,
 
    /* Share it in a wl_buffer */
    pool = wl_shm_create_pool(dri2_dpy->wl_shm, fd, size_map);
+   wl_proxy_set_queue((struct wl_proxy *)pool, dri2_surf->wl_queue);
    *buffer = wl_shm_pool_create_buffer(pool, 0, w, h, stride, format);
    wl_shm_pool_destroy(pool);
    close(fd);
@@ -1446,7 +1487,7 @@ swrast_update_buffers(struct dri2_egl_surface *dri2_surf)
    /* find back buffer */
 
    /* There might be a buffer release already queued that wasn't processed */
-   wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_dpy->wl_queue);
+   wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_surf->wl_queue);
 
    /* try get free buffer already created */
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
@@ -1462,7 +1503,7 @@ swrast_update_buffers(struct dri2_egl_surface *dri2_surf)
       for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
          if (!dri2_surf->color_buffers[i].locked) {
              dri2_surf->back = &dri2_surf->color_buffers[i];
-             if (!dri2_wl_swrast_allocate_buffer(dri2_dpy,
+             if (!dri2_wl_swrast_allocate_buffer(dri2_surf,
                                                  dri2_surf->format,
                                                  dri2_surf->base.Width,
                                                  dri2_surf->base.Height,
@@ -1472,8 +1513,6 @@ swrast_update_buffers(struct dri2_egl_surface *dri2_surf)
                 _eglError(EGL_BAD_ALLOC, "failed to allocate color buffer");
                  return -1;
              }
-             wl_proxy_set_queue((struct wl_proxy *) dri2_surf->back->wl_buffer,
-                                dri2_dpy->wl_queue);
              wl_buffer_add_listener(dri2_surf->back->wl_buffer,
                                     &wl_buffer_listener, dri2_surf);
              break;
@@ -1529,22 +1568,20 @@ dri2_wl_swrast_commit_backbuffer(struct dri2_egl_surface *dri2_surf)
 
    while (dri2_surf->throttle_callback != NULL)
       if (wl_display_dispatch_queue(dri2_dpy->wl_dpy,
-                                    dri2_dpy->wl_queue) == -1)
+                                    dri2_surf->wl_queue) == -1)
          return;
 
    if (dri2_surf->base.SwapInterval > 0) {
       dri2_surf->throttle_callback =
-         wl_surface_frame(dri2_surf->wl_win->surface);
+         wl_surface_frame(dri2_surf->wl_surface_wrapper);
       wl_callback_add_listener(dri2_surf->throttle_callback,
                                &throttle_listener, dri2_surf);
-      wl_proxy_set_queue((struct wl_proxy *) dri2_surf->throttle_callback,
-                         dri2_dpy->wl_queue);
    }
 
    dri2_surf->current = dri2_surf->back;
    dri2_surf->back = NULL;
 
-   wl_surface_attach(dri2_surf->wl_win->surface,
+   wl_surface_attach(dri2_surf->wl_surface_wrapper,
                      dri2_surf->current->wl_buffer,
                      dri2_surf->dx, dri2_surf->dy);
 
@@ -1554,9 +1591,9 @@ dri2_wl_swrast_commit_backbuffer(struct dri2_egl_surface *dri2_surf)
    dri2_surf->dx = 0;
    dri2_surf->dy = 0;
 
-   wl_surface_damage(dri2_surf->wl_win->surface,
+   wl_surface_damage(dri2_surf->wl_surface_wrapper,
                      0, 0, INT32_MAX, INT32_MAX);
-   wl_surface_commit(dri2_surf->wl_win->surface);
+   wl_surface_commit(dri2_surf->wl_surface_wrapper);
 
    /* If we're not waiting for a frame callback then we'll at least throttle
     * to a sync callback so that we always give a chance for the compositor to
