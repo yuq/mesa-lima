@@ -7352,10 +7352,10 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                    || fields[i].matrix_layout == GLSL_MATRIX_LAYOUT_COLUMN_MAJOR);
          }
 
-         /* Image qualifiers are allowed on buffer variables, which can only
-          * be defined inside shader storage buffer objects
+         /* Memory qualifiers are allowed on buffer and image variables, while
+          * the format qualifier is only accept for images.
           */
-         if (layout && var_mode == ir_var_shader_storage) {
+         if (var_mode == ir_var_shader_storage || field_type->is_image()) {
             /* For readonly and writeonly qualifiers the field definition,
              * if set, overwrites the layout qualifier.
              */
@@ -7366,19 +7366,40 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                fields[i].memory_read_only = false;
                fields[i].memory_write_only = true;
             } else {
-               fields[i].memory_read_only = layout->flags.q.read_only;
-               fields[i].memory_write_only = layout->flags.q.write_only;
+               fields[i].memory_read_only =
+                  layout ? layout->flags.q.read_only : 0;
+               fields[i].memory_write_only =
+                  layout ? layout->flags.q.write_only : 0;
             }
 
             /* For other qualifiers, we set the flag if either the layout
              * qualifier or the field qualifier are set
              */
             fields[i].memory_coherent = qual->flags.q.coherent ||
-                                        layout->flags.q.coherent;
+                                        (layout && layout->flags.q.coherent);
             fields[i].memory_volatile = qual->flags.q._volatile ||
-                                        layout->flags.q._volatile;
+                                        (layout && layout->flags.q._volatile);
             fields[i].memory_restrict = qual->flags.q.restrict_flag ||
-                                        layout->flags.q.restrict_flag;
+                                        (layout && layout->flags.q.restrict_flag);
+
+            if (field_type->is_image()) {
+               if (qual->flags.q.explicit_image_format) {
+                  if (qual->image_base_type != field_type->sampled_type) {
+                     _mesa_glsl_error(&loc, state, "format qualifier doesn't "
+                                      "match the base data type of the image");
+                  }
+
+                  fields[i].image_format = qual->image_format;
+               } else {
+                  if (!qual->flags.q.write_only) {
+                     _mesa_glsl_error(&loc, state, "image not qualified with "
+                                      "`writeonly' must have a format layout "
+                                      "qualifier");
+                  }
+
+                  fields[i].image_format = GL_NONE;
+               }
+            }
          }
 
          i++;
