@@ -1233,17 +1233,11 @@ nv50_ir_generate_code(struct nv50_ir_prog_info *info)
    prog->optLevel = info->optLevel;
 
    switch (info->bin.sourceRep) {
-#if 0
-   case PIPE_IR_LLVM:
-   case PIPE_IR_GLSL:
-      return -1;
-   case PIPE_IR_SM4:
-      ret = prog->makeFromSM4(info) ? 0 : -2;
-      break;
-   case PIPE_IR_TGSI:
-#endif
-   default:
+   case NV50_PROGRAM_IR_TGSI:
       ret = prog->makeFromTGSI(info) ? 0 : -2;
+      break;
+   default:
+      ret = -1;
       break;
    }
    if (ret < 0)
