@@ -672,7 +672,8 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 				if (family == CHIP_TONGA ||
 				    family == CHIP_FIJI ||
 				    family == CHIP_POLARIS10 ||
-				    family == CHIP_POLARIS11)
+				    family == CHIP_POLARIS11 ||
+				    family == CHIP_POLARIS12)
 					partial_vs_wave = true;
 			} else {
 				partial_vs_wave = true;
