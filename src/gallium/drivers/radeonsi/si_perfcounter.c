@@ -60,22 +60,22 @@ enum si_pc_reg_layout {
 };
 
 struct si_pc_block_base {
-	char name[8];
+	const char *name;
 	unsigned num_counters;
 	unsigned flags;
 
 	unsigned select_or;
 	unsigned select0;
 	unsigned counter0_lo;
-	unsigned select[4];
-	unsigned counters[4];
+	unsigned *select;
+	unsigned *counters;
 	unsigned num_multi;
 	unsigned num_prelude;
 	unsigned layout;
 };
 
 struct si_pc_block {
-	const struct si_pc_block_base *b;
+	struct si_pc_block_base *b;
 	unsigned selectors;
 	unsigned instances;
 };
@@ -98,7 +98,7 @@ static const unsigned si_pc_shader_type_bits[] = {
 	S_036780_CS_EN(1),
 };
 
-static const struct si_pc_block_base cik_CB = {
+static struct si_pc_block_base cik_CB = {
 	.name = "CB",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS,
@@ -110,19 +110,22 @@ static const struct si_pc_block_base cik_CB = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_CPC = {
+static unsigned cik_CPC_select[] = {
+	R_036024_CPC_PERFCOUNTER0_SELECT,
+	R_036010_CPC_PERFCOUNTER0_SELECT1,
+	R_03600C_CPC_PERFCOUNTER1_SELECT,
+};
+static struct si_pc_block_base cik_CPC = {
 	.name = "CPC",
 	.num_counters = 2,
 
-	.select = { R_036024_CPC_PERFCOUNTER0_SELECT,
-		    R_036010_CPC_PERFCOUNTER0_SELECT1,
-		    R_03600C_CPC_PERFCOUNTER1_SELECT },
+	.select = cik_CPC_select,
 	.counter0_lo = R_034018_CPC_PERFCOUNTER0_LO,
 	.num_multi = 1,
 	.layout = SI_PC_MULTI_CUSTOM | SI_PC_REG_REVERSE,
 };
 
-static const struct si_pc_block_base cik_CPF = {
+static struct si_pc_block_base cik_CPF = {
 	.name = "CPF",
 	.num_counters = 2,
 
@@ -132,7 +135,7 @@ static const struct si_pc_block_base cik_CPF = {
 	.layout = SI_PC_MULTI_ALTERNATE | SI_PC_REG_REVERSE,
 };
 
-static const struct si_pc_block_base cik_CPG = {
+static struct si_pc_block_base cik_CPG = {
 	.name = "CPG",
 	.num_counters = 2,
 
@@ -142,7 +145,7 @@ static const struct si_pc_block_base cik_CPG = {
 	.layout = SI_PC_MULTI_ALTERNATE | SI_PC_REG_REVERSE,
 };
 
-static const struct si_pc_block_base cik_DB = {
+static struct si_pc_block_base cik_DB = {
 	.name = "DB",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS,
@@ -153,7 +156,7 @@ static const struct si_pc_block_base cik_DB = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_GDS = {
+static struct si_pc_block_base cik_GDS = {
 	.name = "GDS",
 	.num_counters = 4,
 
@@ -163,16 +166,19 @@ static const struct si_pc_block_base cik_GDS = {
 	.layout = SI_PC_MULTI_TAIL,
 };
 
-static const struct si_pc_block_base cik_GRBM = {
+static unsigned cik_GRBM_counters[] = {
+	R_034100_GRBM_PERFCOUNTER0_LO,
+	R_03410C_GRBM_PERFCOUNTER1_LO,
+};
+static struct si_pc_block_base cik_GRBM = {
 	.name = "GRBM",
 	.num_counters = 2,
 
 	.select0 = R_036100_GRBM_PERFCOUNTER0_SELECT,
-	.counters = { R_034100_GRBM_PERFCOUNTER0_LO,
-		      R_03410C_GRBM_PERFCOUNTER1_LO },
+	.counters = cik_GRBM_counters,
 };
 
-static const struct si_pc_block_base cik_GRBMSE = {
+static struct si_pc_block_base cik_GRBMSE = {
 	.name = "GRBMSE",
 	.num_counters = 4,
 
@@ -180,7 +186,7 @@ static const struct si_pc_block_base cik_GRBMSE = {
 	.counter0_lo = R_034114_GRBM_SE0_PERFCOUNTER_LO,
 };
 
-static const struct si_pc_block_base cik_IA = {
+static struct si_pc_block_base cik_IA = {
 	.name = "IA",
 	.num_counters = 4,
 
@@ -190,7 +196,7 @@ static const struct si_pc_block_base cik_IA = {
 	.layout = SI_PC_MULTI_TAIL,
 };
 
-static const struct si_pc_block_base cik_PA_SC = {
+static struct si_pc_block_base cik_PA_SC = {
 	.name = "PA_SC",
 	.num_counters = 8,
 	.flags = R600_PC_BLOCK_SE,
@@ -202,7 +208,7 @@ static const struct si_pc_block_base cik_PA_SC = {
 };
 
 /* According to docs, PA_SU counters are only 48 bits wide. */
-static const struct si_pc_block_base cik_PA_SU = {
+static struct si_pc_block_base cik_PA_SU = {
 	.name = "PA_SU",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_SE,
@@ -213,7 +219,7 @@ static const struct si_pc_block_base cik_PA_SU = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_SPI = {
+static struct si_pc_block_base cik_SPI = {
 	.name = "SPI",
 	.num_counters = 6,
 	.flags = R600_PC_BLOCK_SE,
@@ -224,7 +230,7 @@ static const struct si_pc_block_base cik_SPI = {
 	.layout = SI_PC_MULTI_BLOCK,
 };
 
-static const struct si_pc_block_base cik_SQ = {
+static struct si_pc_block_base cik_SQ = {
 	.name = "SQ",
 	.num_counters = 16,
 	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_SHADER,
@@ -236,7 +242,7 @@ static const struct si_pc_block_base cik_SQ = {
 	.counter0_lo = R_034700_SQ_PERFCOUNTER0_LO,
 };
 
-static const struct si_pc_block_base cik_SX = {
+static struct si_pc_block_base cik_SX = {
 	.name = "SX",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_SE,
@@ -247,7 +253,7 @@ static const struct si_pc_block_base cik_SX = {
 	.layout = SI_PC_MULTI_TAIL,
 };
 
-static const struct si_pc_block_base cik_TA = {
+static struct si_pc_block_base cik_TA = {
 	.name = "TA",
 	.num_counters = 2,
 	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS | R600_PC_BLOCK_SHADER_WINDOWED,
@@ -258,7 +264,7 @@ static const struct si_pc_block_base cik_TA = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_TD = {
+static struct si_pc_block_base cik_TD = {
 	.name = "TD",
 	.num_counters = 2,
 	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS | R600_PC_BLOCK_SHADER_WINDOWED,
@@ -269,7 +275,7 @@ static const struct si_pc_block_base cik_TD = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_TCA = {
+static struct si_pc_block_base cik_TCA = {
 	.name = "TCA",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_INSTANCE_GROUPS,
@@ -280,7 +286,7 @@ static const struct si_pc_block_base cik_TCA = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_TCC = {
+static struct si_pc_block_base cik_TCC = {
 	.name = "TCC",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_INSTANCE_GROUPS,
@@ -291,7 +297,7 @@ static const struct si_pc_block_base cik_TCC = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_TCP = {
+static struct si_pc_block_base cik_TCP = {
 	.name = "TCP",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS | R600_PC_BLOCK_SHADER_WINDOWED,
@@ -302,7 +308,7 @@ static const struct si_pc_block_base cik_TCP = {
 	.layout = SI_PC_MULTI_ALTERNATE,
 };
 
-static const struct si_pc_block_base cik_VGT = (const struct si_pc_block_base) {
+static struct si_pc_block_base cik_VGT = {
 	.name = "VGT",
 	.num_counters = 4,
 	.flags = R600_PC_BLOCK_SE,
@@ -313,7 +319,7 @@ static const struct si_pc_block_base cik_VGT = (const struct si_pc_block_base) {
 	.layout = SI_PC_MULTI_TAIL,
 };
 
-static const struct si_pc_block_base cik_WD = {
+static struct si_pc_block_base cik_WD = {
 	.name = "WD",
 	.num_counters = 4,
 
@@ -321,14 +327,14 @@ static const struct si_pc_block_base cik_WD = {
 	.counter0_lo = R_034200_WD_PERFCOUNTER0_LO,
 };
 
-static const struct si_pc_block_base cik_MC = {
+static struct si_pc_block_base cik_MC = {
 	.name = "MC",
 	.num_counters = 4,
 
 	.layout = SI_PC_FAKE,
 };
 
-static const struct si_pc_block_base cik_SRBM = {
+static struct si_pc_block_base cik_SRBM = {
 	.name = "SRBM",
 	.num_counters = 2,
 
@@ -343,7 +349,7 @@ static const struct si_pc_block_base cik_SRBM = {
  * blindly once it believes it has identified the hardware, so the order of
  * blocks here matters.
  */
-static const struct si_pc_block groups_CIK[] = {
+static struct si_pc_block groups_CIK[] = {
 	{ &cik_CB, 226, 4 },
 	{ &cik_CPF, 17 },
 	{ &cik_DB, 257, 4 },
@@ -370,7 +376,7 @@ static const struct si_pc_block groups_CIK[] = {
 
 };
 
-static const struct si_pc_block groups_VI[] = {
+static struct si_pc_block groups_VI[] = {
 	{ &cik_CB, 396, 4 },
 	{ &cik_CPF, 19 },
 	{ &cik_DB, 257, 4 },
@@ -401,8 +407,8 @@ static void si_pc_get_size(struct r600_perfcounter_block *group,
 			unsigned count, unsigned *selectors,
 			unsigned *num_select_dw, unsigned *num_read_dw)
 {
-	const struct si_pc_block *sigroup = (const struct si_pc_block *)group->data;
-	const struct si_pc_block_base *regs = sigroup->b;
+	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
+	struct si_pc_block_base *regs = sigroup->b;
 	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
 
 	if (regs->layout & SI_PC_FAKE) {
@@ -461,8 +467,8 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 		        struct r600_perfcounter_block *group,
 		        unsigned count, unsigned *selectors)
 {
-	const struct si_pc_block *sigroup = (const struct si_pc_block *)group->data;
-	const struct si_pc_block_base *regs = sigroup->b;
+	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
+	struct si_pc_block_base *regs = sigroup->b;
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	unsigned idx;
 	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
@@ -515,7 +521,7 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 		for (idx = 0; idx < select1_count; ++idx)
 			radeon_emit(cs, 0);
 	} else if (layout_multi == SI_PC_MULTI_CUSTOM) {
-		const unsigned *reg = regs->select;
+		unsigned *reg = regs->select;
 		for (idx = 0; idx < count; ++idx) {
 			radeon_set_uconfig_reg(cs, *reg++, selectors[idx] | regs->select_or);
 			if (idx < regs->num_multi)
@@ -602,8 +608,8 @@ static void si_pc_emit_read(struct r600_common_context *ctx,
 			    unsigned count, unsigned *selectors,
 			    struct r600_resource *buffer, uint64_t va)
 {
-	const struct si_pc_block *sigroup = (const struct si_pc_block *)group->data;
-	const struct si_pc_block_base *regs = sigroup->b;
+	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
+	struct si_pc_block_base *regs = sigroup->b;
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	unsigned idx;
 	unsigned reg = regs->counter0_lo;
@@ -652,7 +658,7 @@ static void si_pc_cleanup(struct r600_common_screen *rscreen)
 void si_init_perfcounters(struct si_screen *screen)
 {
 	struct r600_perfcounters *pc;
-	const struct si_pc_block *blocks;
+	struct si_pc_block *blocks;
 	unsigned num_blocks;
 	unsigned i;
 
@@ -704,7 +710,7 @@ void si_init_perfcounters(struct si_screen *screen)
 		goto error;
 
 	for (i = 0; i < num_blocks; ++i) {
-		const struct si_pc_block *block = &blocks[i];
+		struct si_pc_block *block = &blocks[i];
 		unsigned instances = block->instances;
 
 		if (!strcmp(block->b->name, "IA")) {

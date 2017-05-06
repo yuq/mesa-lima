@@ -603,7 +603,7 @@ void r600_perfcounters_add_block(struct r600_common_screen *rscreen,
 				 struct r600_perfcounters *pc,
 				 const char *name, unsigned flags,
 				 unsigned counters, unsigned selectors,
-				 unsigned instances, const void *data)
+				 unsigned instances, void *data)
 {
 	struct r600_perfcounter_block *block = &pc->blocks[pc->num_blocks];
 

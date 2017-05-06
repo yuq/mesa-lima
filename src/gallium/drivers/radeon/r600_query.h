@@ -243,7 +243,7 @@ struct r600_perfcounter_block {
 	char *selector_names;
 	unsigned selector_name_stride;
 
-	const void *data;
+	void *data;
 };
 
 struct r600_perfcounters {
@@ -301,7 +301,7 @@ void r600_perfcounters_add_block(struct r600_common_screen *,
 				 struct r600_perfcounters *,
 				 const char *name, unsigned flags,
 				 unsigned counters, unsigned selectors,
-				 unsigned instances, const void *data);
+				 unsigned instances, void *data);
 void r600_perfcounters_do_destroy(struct r600_perfcounters *);
 void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 				 struct r600_query_hw *query);
