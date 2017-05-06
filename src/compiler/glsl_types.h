@@ -978,6 +978,11 @@ struct glsl_struct_field {
    unsigned memory_restrict:1;
 
    /**
+    * Layout format, applicable to image variables only.
+    */
+   unsigned image_format:16;
+
+   /**
     * Any of the xfb_* qualifiers trigger the shader to be in transform
     * feedback mode so we need to keep track of whether the buffer was
     * explicitly set or if its just been assigned the default global value.
@@ -992,7 +997,8 @@ struct glsl_struct_field {
         sample(0), matrix_layout(GLSL_MATRIX_LAYOUT_INHERITED), patch(0),
         precision(GLSL_PRECISION_NONE), memory_read_only(0),
         memory_write_only(0), memory_coherent(0), memory_volatile(0),
-        memory_restrict(0), explicit_xfb_buffer(0), implicit_sized_array(0)
+        memory_restrict(0), image_format(0), explicit_xfb_buffer(0),
+        implicit_sized_array(0)
    {
       /* empty */
    }
