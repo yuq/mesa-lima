@@ -1224,8 +1224,10 @@ nv50_ir_generate_code(struct nv50_ir_prog_info *info)
       return -1;
 
    nv50_ir::Program *prog = new nv50_ir::Program(type, targ);
-   if (!prog)
+   if (!prog) {
+      nv50_ir::Target::destroy(targ);
       return -1;
+   }
    prog->driver = info;
    prog->dbgFlags = info->dbgFlags;
    prog->optLevel = info->optLevel;
