@@ -1949,24 +1949,6 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
 }
 
 
-unsigned
-_mesa_primitive_restart_index(const struct gl_context *ctx,
-                              unsigned index_size)
-{
-   /* From the OpenGL 4.3 core specification, page 302:
-    * "If both PRIMITIVE_RESTART and PRIMITIVE_RESTART_FIXED_INDEX are
-    *  enabled, the index value determined by PRIMITIVE_RESTART_FIXED_INDEX
-    *  is used."
-    */
-   if (ctx->Array.PrimitiveRestartFixedIndex) {
-      /* 1 -> 0xff, 2 -> 0xffff, 4 -> 0xffffffff */
-      return 0xffffffffu >> 8 * (4 - index_size);
-   }
-
-   return ctx->Array.RestartIndex;
-}
-
-
 /**
  * GL_ARB_vertex_attrib_binding
  */

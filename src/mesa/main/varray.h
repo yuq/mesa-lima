@@ -343,9 +343,22 @@ _mesa_VertexAttribDivisor_no_error(GLuint index, GLuint divisor);
 extern void GLAPIENTRY
 _mesa_VertexAttribDivisor(GLuint index, GLuint divisor);
 
-extern unsigned
+static inline unsigned
 _mesa_primitive_restart_index(const struct gl_context *ctx,
-                              unsigned index_size);
+                              unsigned index_size)
+{
+   /* From the OpenGL 4.3 core specification, page 302:
+    * "If both PRIMITIVE_RESTART and PRIMITIVE_RESTART_FIXED_INDEX are
+    *  enabled, the index value determined by PRIMITIVE_RESTART_FIXED_INDEX
+    *  is used."
+    */
+   if (ctx->Array.PrimitiveRestartFixedIndex) {
+      /* 1 -> 0xff, 2 -> 0xffff, 4 -> 0xffffffff */
+      return 0xffffffffu >> 8 * (4 - index_size);
+   }
+
+   return ctx->Array.RestartIndex;
+}
 
 extern void GLAPIENTRY
 _mesa_BindVertexBuffer(GLuint bindingIndex, GLuint buffer, GLintptr offset,
