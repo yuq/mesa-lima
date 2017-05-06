@@ -567,7 +567,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
 
    info->type = prog->type;
    info->target = chipset;
-   info->bin.sourceRep = NV50_PROGRAM_IR_TGSI;
+   info->bin.sourceRep = PIPE_SHADER_IR_TGSI;
    info->bin.source = (void *)prog->pipe.tokens;
 
 #ifdef DEBUG

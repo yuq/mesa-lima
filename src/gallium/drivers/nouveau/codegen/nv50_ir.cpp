@@ -1233,7 +1233,7 @@ nv50_ir_generate_code(struct nv50_ir_prog_info *info)
    prog->optLevel = info->optLevel;
 
    switch (info->bin.sourceRep) {
-   case NV50_PROGRAM_IR_TGSI:
+   case PIPE_SHADER_IR_TGSI:
       ret = prog->makeFromTGSI(info) ? 0 : -2;
       break;
    default:
