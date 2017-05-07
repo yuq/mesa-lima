@@ -272,7 +272,7 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 		blit2d_bind_dst(cmd_buffer, dst, rects[r].dst_x + rects[r].width,
 				rects[r].dst_y + rects[r].height, depth_format, &dst_temps);
 
-		unsigned vertex_push_constants[4] = {
+		float vertex_push_constants[4] = {
 			rects[r].src_x,
 			rects[r].src_y,
 			rects[r].src_x + rects[r].width,
