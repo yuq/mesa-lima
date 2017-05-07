@@ -505,8 +505,10 @@ _eglGetX11Display(Display *native_display,
    _EGLDisplay *display = _eglFindDisplay(_EGL_PLATFORM_X11,
                                           native_display);
 
-   if (!display)
+   if (!display) {
       _eglError(EGL_BAD_ALLOC, "eglGetPlatformDisplay");
+      return NULL;
+   }
 
    if (!_eglParseX11DisplayAttribList(display, attrib_list)) {
       return NULL;
