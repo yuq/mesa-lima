@@ -27,6 +27,10 @@
 #include "nir.h"
 #include "nir_builder.h"
 
+#if defined(_WIN32) && !defined(snprintf)
+#define snprintf _snprintf
+#endif
+
 /*
  * Remap atomic counters to SSBOs.  Atomic counters get remapped to
  * SSBO binding points [0..ssbo_offset) and the original SSBOs are
