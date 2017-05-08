@@ -2846,24 +2846,9 @@ radv_initialise_ds_surface(struct radv_device *device,
 	}
 
 	if (iview->image->surface.htile_size && !level) {
-		ds->db_z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
-			S_028040_ALLOW_EXPCLEAR(1);
+		ds->db_z_info |= S_028040_TILE_SURFACE_ENABLE(1);
 
-		if (iview->image->surface.flags & RADEON_SURF_SBUFFER) {
-			/* Workaround: For a not yet understood reason, the
-			 * combination of MSAA, fast stencil clear and stencil
-			 * decompress messes with subsequent stencil buffer
-			 * uses. Problem was reproduced on Verde, Bonaire,
-			 * Tonga, and Carrizo.
-			 *
-			 * Disabling EXPCLEAR works around the problem.
-			 *
-			 * Check piglit's arb_texture_multisample-stencil-clear
-			 * test if you want to try changing this.
-			 */
-			if (iview->image->info.samples <= 1)
-				ds->db_stencil_info |= S_028044_ALLOW_EXPCLEAR(1);
-		} else
+		if (!(iview->image->surface.flags & RADEON_SURF_SBUFFER))
 			/* Use all of the htile_buffer for depth if there's no stencil. */
 			ds->db_stencil_info |= S_028044_TILE_STENCIL_DISABLE(1);
 

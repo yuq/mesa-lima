@@ -926,12 +926,12 @@ radv_emit_fb_ds_state(struct radv_cmd_buffer *cmd_buffer,
 		      VkImageLayout layout)
 {
 	uint32_t db_z_info = ds->db_z_info;
+	uint32_t db_stencil_info = ds->db_stencil_info;
 
-	if (!radv_layout_has_htile(image, layout))
+	if (!radv_layout_has_htile(image, layout)) {
 		db_z_info &= C_028040_TILE_SURFACE_ENABLE;
-
-	if (!radv_layout_can_expclear(image, layout))
-		db_z_info &= C_028040_ALLOW_EXPCLEAR & C_028044_ALLOW_EXPCLEAR;
+		db_stencil_info |= S_028044_TILE_STENCIL_DISABLE(1);
+	}
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028008_DB_DEPTH_VIEW, ds->db_depth_view);
 	radeon_set_context_reg(cmd_buffer->cs, R_028014_DB_HTILE_DATA_BASE, ds->db_htile_data_base);
@@ -939,7 +939,7 @@ radv_emit_fb_ds_state(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg_seq(cmd_buffer->cs, R_02803C_DB_DEPTH_INFO, 9);
 	radeon_emit(cmd_buffer->cs, ds->db_depth_info);	/* R_02803C_DB_DEPTH_INFO */
 	radeon_emit(cmd_buffer->cs, db_z_info);			/* R_028040_DB_Z_INFO */
-	radeon_emit(cmd_buffer->cs, ds->db_stencil_info);	/* R_028044_DB_STENCIL_INFO */
+	radeon_emit(cmd_buffer->cs, db_stencil_info);	        /* R_028044_DB_STENCIL_INFO */
 	radeon_emit(cmd_buffer->cs, ds->db_z_read_base);	/* R_028048_DB_Z_READ_BASE */
 	radeon_emit(cmd_buffer->cs, ds->db_stencil_read_base);	/* R_02804C_DB_STENCIL_READ_BASE */
 	radeon_emit(cmd_buffer->cs, ds->db_z_write_base);	/* R_028050_DB_Z_WRITE_BASE */
@@ -3003,13 +3003,8 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 	           radv_layout_has_htile(image, dst_layout)) {
 		/* TODO: merge with the clear if applicable */
 		radv_initialize_htile(cmd_buffer, image, range);
-	} else if (!radv_layout_has_htile(image, src_layout) &&
-	           radv_layout_has_htile(image, dst_layout)) {
-		radv_initialize_htile(cmd_buffer, image, range);
-	} else if ((radv_layout_has_htile(image, src_layout) &&
-	            !radv_layout_has_htile(image, dst_layout)) ||
-	           (radv_layout_is_htile_compressed(image, src_layout) &&
-	            !radv_layout_is_htile_compressed(image, dst_layout))) {
+	} else if (radv_layout_is_htile_compressed(image, src_layout) &&
+	           !radv_layout_is_htile_compressed(image, dst_layout)) {
 		VkImageSubresourceRange local_range = *range;
 		local_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 		local_range.baseMipLevel = 0;
