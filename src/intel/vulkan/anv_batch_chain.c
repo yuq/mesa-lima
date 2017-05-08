@@ -1048,10 +1048,15 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
       obj->relocs_ptr = (uintptr_t) relocs->relocs;
 
       for (size_t i = 0; i < relocs->num_relocs; i++) {
+         VkResult result;
+
          /* A quick sanity check on relocations */
          assert(relocs->relocs[i].offset < bo->size);
-         anv_execbuf_add_bo(exec, relocs->reloc_bos[i], NULL,
-                            extra_flags, alloc);
+         result = anv_execbuf_add_bo(exec, relocs->reloc_bos[i], NULL,
+                                     extra_flags, alloc);
+
+         if (result != VK_SUCCESS)
+            return result;
       }
    }
 
