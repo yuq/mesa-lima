@@ -216,13 +216,25 @@ extern GLenum GLAPIENTRY
 _mesa_CheckNamedFramebufferStatus(GLuint framebuffer, GLenum target);
 
 extern void GLAPIENTRY
+_mesa_FramebufferTexture1D_no_error(GLenum target, GLenum attachment,
+                                    GLenum textarget, GLuint texture,
+                                    GLint level);
+extern void GLAPIENTRY
 _mesa_FramebufferTexture1D(GLenum target, GLenum attachment,
                               GLenum textarget, GLuint texture, GLint level);
 
 extern void GLAPIENTRY
+_mesa_FramebufferTexture2D_no_error(GLenum target, GLenum attachment,
+                                    GLenum textarget, GLuint texture,
+                                    GLint level);
+extern void GLAPIENTRY
 _mesa_FramebufferTexture2D(GLenum target, GLenum attachment,
                               GLenum textarget, GLuint texture, GLint level);
 
+extern void GLAPIENTRY
+_mesa_FramebufferTexture3D_no_error(GLenum target, GLenum attachment,
+                                    GLenum textarget, GLuint texture,
+                                    GLint level, GLint layer);
 extern void GLAPIENTRY
 _mesa_FramebufferTexture3D(GLenum target, GLenum attachment,
                               GLenum textarget, GLuint texture,

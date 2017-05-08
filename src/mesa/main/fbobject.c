@@ -3369,6 +3369,16 @@ framebuffer_texture_with_dims(int dims, GLenum target,
 
 
 void GLAPIENTRY
+_mesa_FramebufferTexture1D_no_error(GLenum target, GLenum attachment,
+                                    GLenum textarget, GLuint texture,
+                                    GLint level)
+{
+   framebuffer_texture_with_dims_no_error(target, attachment, textarget,
+                                          texture, level, 0);
+}
+
+
+void GLAPIENTRY
 _mesa_FramebufferTexture1D(GLenum target, GLenum attachment,
                            GLenum textarget, GLuint texture, GLint level)
 {
@@ -3378,11 +3388,31 @@ _mesa_FramebufferTexture1D(GLenum target, GLenum attachment,
 
 
 void GLAPIENTRY
+_mesa_FramebufferTexture2D_no_error(GLenum target, GLenum attachment,
+                                    GLenum textarget, GLuint texture,
+                                    GLint level)
+{
+   framebuffer_texture_with_dims_no_error(target, attachment, textarget,
+                                          texture, level, 0);
+}
+
+
+void GLAPIENTRY
 _mesa_FramebufferTexture2D(GLenum target, GLenum attachment,
                            GLenum textarget, GLuint texture, GLint level)
 {
    framebuffer_texture_with_dims(2, target, attachment, textarget, texture,
                                  level, 0, "glFramebufferTexture2D");
+}
+
+
+void GLAPIENTRY
+_mesa_FramebufferTexture3D_no_error(GLenum target, GLenum attachment,
+                                    GLenum textarget, GLuint texture,
+                                    GLint level, GLint layer)
+{
+   framebuffer_texture_with_dims_no_error(target, attachment, textarget,
+                                          texture, level, layer);
 }
 
 
