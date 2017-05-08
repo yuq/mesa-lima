@@ -497,6 +497,15 @@ static void si_dump_gfx_descriptors(struct si_context *sctx,
 	si_dump_descriptors(sctx, state->cso->type, &state->cso->info, f);
 }
 
+static void si_dump_compute_descriptors(struct si_context *sctx, FILE *f)
+{
+	if (!sctx->cs_shader_state.program ||
+	    sctx->cs_shader_state.program != sctx->cs_shader_state.emitted_program)
+		return;
+
+	si_dump_descriptors(sctx, PIPE_SHADER_COMPUTE, NULL, f);
+}
+
 struct si_shader_inst {
 	char text[160];  /* one disasm line */
 	unsigned offset; /* instruction offset */
@@ -800,6 +809,7 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_gfx_descriptors(sctx, &sctx->tes_shader, f);
 		si_dump_gfx_descriptors(sctx, &sctx->gs_shader, f);
 		si_dump_gfx_descriptors(sctx, &sctx->ps_shader, f);
+		si_dump_compute_descriptors(sctx, f);
 	}
 
 	if (flags & PIPE_DUMP_LAST_COMMAND_BUFFER) {
