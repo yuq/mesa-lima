@@ -1079,13 +1079,8 @@ fi
 
 if test "x$LIBUNWIND" = "xyes"; then
     PKG_CHECK_MODULES(LIBUNWIND, libunwind)
-    if test "x$HAVE_LIBUNWIND" != "xyes"; then
-        AC_MSG_ERROR([libunwind requested but not installed.])
-    fi
     AC_DEFINE(HAVE_LIBUNWIND, 1, [Have libunwind support])
 fi
-
-AM_CONDITIONAL(HAVE_LIBUNWIND, [test "x$LIBUNWIND" = xyes])
 
 
 dnl Options for APIs
