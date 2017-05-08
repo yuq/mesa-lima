@@ -133,13 +133,13 @@ static void
 nir_remap_attributes(nir_shader *shader)
 {
    nir_foreach_variable(var, &shader->inputs) {
-      var->data.location += _mesa_bitcount_64(shader->info->double_inputs_read &
+      var->data.location += _mesa_bitcount_64(shader->info.double_inputs_read &
                                               BITFIELD64_MASK(var->data.location));
    }
 
    /* Once the remap is done, reset double_inputs_read, so later it will have
     * which location/slots are doubles */
-   shader->info->double_inputs_read = 0;
+   shader->info.double_inputs_read = 0;
 }
 
 nir_shader *
@@ -166,10 +166,10 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    if (shader->stage == MESA_SHADER_VERTEX)
       nir_remap_attributes(shader);
 
-   shader->info->name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
+   shader->info.name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
-      shader->info->label = ralloc_strdup(shader, shader_prog->Label);
-   shader->info->has_transform_feedback_varyings =
+      shader->info.label = ralloc_strdup(shader, shader_prog->Label);
+   shader->info.has_transform_feedback_varyings =
       shader_prog->TransformFeedback.NumVarying > 0;
 
    return shader;
@@ -368,7 +368,7 @@ nir_visitor::visit(ir_variable *ir)
       if (glsl_type_is_dual_slot(glsl_without_array(var->type))) {
          for (uint i = 0; i < glsl_count_attribute_slots(var->type, true); i++) {
             uint64_t bitfield = BITFIELD64_BIT(var->data.location + i);
-            shader->info->double_inputs_read |= bitfield;
+            shader->info.double_inputs_read |= bitfield;
          }
       }
       break;

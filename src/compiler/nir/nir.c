@@ -44,7 +44,8 @@ nir_shader_create(void *mem_ctx,
 
    shader->options = options;
 
-   shader->info = si ? si : rzalloc(shader, shader_info);
+   if (si)
+      shader->info = *si;
 
    exec_list_make_empty(&shader->functions);
    exec_list_make_empty(&shader->registers);

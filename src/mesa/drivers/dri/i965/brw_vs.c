@@ -219,7 +219,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
 
    brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
-                       vp->program.nir->info->separate_shader);
+                       vp->program.nir->info.separate_shader);
 
    if (0) {
       _mesa_fprint_program_opt(stderr, &vp->program, PROG_PRINT_DEBUG, true);

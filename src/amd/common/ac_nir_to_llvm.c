@@ -5924,9 +5924,9 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	} else if (nir->stage == MESA_SHADER_GEOMETRY) {
 		ctx.gs_next_vertex = ac_build_alloca(&ctx, ctx.i32, "gs_next_vertex");
 
-		ctx.gs_max_out_vertices = nir->info->gs.vertices_out;
+		ctx.gs_max_out_vertices = nir->info.gs.vertices_out;
 	} else if (nir->stage == MESA_SHADER_TESS_EVAL) {
-		ctx.tes_primitive_mode = nir->info->tess.primitive_mode;
+		ctx.tes_primitive_mode = nir->info.tess.primitive_mode;
 	}
 
 	ac_setup_rings(&ctx);
@@ -5937,8 +5937,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	if (nir->stage == MESA_SHADER_FRAGMENT)
 		handle_fs_inputs_pre(&ctx, nir);
 
-	ctx.num_output_clips = nir->info->clip_distance_array_size;
-	ctx.num_output_culls = nir->info->cull_distance_array_size;
+	ctx.num_output_clips = nir->info.clip_distance_array_size;
+	ctx.num_output_culls = nir->info.cull_distance_array_size;
 
 	nir_foreach_variable(variable, &nir->outputs)
 		handle_shader_output_decl(&ctx, variable);
@@ -5969,7 +5969,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		unsigned addclip = ctx.num_output_clips + ctx.num_output_culls > 4;
 		shader_info->gs.gsvs_vertex_size = (util_bitcount64(ctx.output_mask) + addclip) * 16;
 		shader_info->gs.max_gsvs_emit_size = shader_info->gs.gsvs_vertex_size *
-			nir->info->gs.vertices_out;
+			nir->info.gs.vertices_out;
 	} else if (nir->stage == MESA_SHADER_TESS_CTRL) {
 		shader_info->tcs.outputs_written = ctx.tess_outputs_written;
 		shader_info->tcs.patch_outputs_written = ctx.tess_patch_outputs_written;
@@ -6122,26 +6122,26 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	switch (nir->stage) {
 	case MESA_SHADER_COMPUTE:
 		for (int i = 0; i < 3; ++i)
-			shader_info->cs.block_size[i] = nir->info->cs.local_size[i];
+			shader_info->cs.block_size[i] = nir->info.cs.local_size[i];
 		break;
 	case MESA_SHADER_FRAGMENT:
-		shader_info->fs.early_fragment_test = nir->info->fs.early_fragment_tests;
+		shader_info->fs.early_fragment_test = nir->info.fs.early_fragment_tests;
 		break;
 	case MESA_SHADER_GEOMETRY:
-		shader_info->gs.vertices_in = nir->info->gs.vertices_in;
-		shader_info->gs.vertices_out = nir->info->gs.vertices_out;
-		shader_info->gs.output_prim = nir->info->gs.output_primitive;
-		shader_info->gs.invocations = nir->info->gs.invocations;
+		shader_info->gs.vertices_in = nir->info.gs.vertices_in;
+		shader_info->gs.vertices_out = nir->info.gs.vertices_out;
+		shader_info->gs.output_prim = nir->info.gs.output_primitive;
+		shader_info->gs.invocations = nir->info.gs.invocations;
 		break;
 	case MESA_SHADER_TESS_EVAL:
-		shader_info->tes.primitive_mode = nir->info->tess.primitive_mode;
-		shader_info->tes.spacing = nir->info->tess.spacing;
-		shader_info->tes.ccw = nir->info->tess.ccw;
-		shader_info->tes.point_mode = nir->info->tess.point_mode;
+		shader_info->tes.primitive_mode = nir->info.tess.primitive_mode;
+		shader_info->tes.spacing = nir->info.tess.spacing;
+		shader_info->tes.ccw = nir->info.tess.ccw;
+		shader_info->tes.point_mode = nir->info.tess.point_mode;
 		shader_info->tes.as_es = options->key.tes.as_es;
 		break;
 	case MESA_SHADER_TESS_CTRL:
-		shader_info->tcs.tcs_vertices_out = nir->info->tess.tcs_vertices_out;
+		shader_info->tcs.tcs_vertices_out = nir->info.tess.tcs_vertices_out;
 		break;
 	case MESA_SHADER_VERTEX:
 		shader_info->vs.as_es = options->key.vs.as_es;
@@ -6231,11 +6231,11 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	create_function(&ctx);
 
-	ctx.gs_max_out_vertices = geom_shader->info->gs.vertices_out;
+	ctx.gs_max_out_vertices = geom_shader->info.gs.vertices_out;
 	ac_setup_rings(&ctx);
 
-	ctx.num_output_clips = geom_shader->info->clip_distance_array_size;
-	ctx.num_output_culls = geom_shader->info->cull_distance_array_size;
+	ctx.num_output_clips = geom_shader->info.clip_distance_array_size;
+	ctx.num_output_culls = geom_shader->info.cull_distance_array_size;
 
 	nir_foreach_variable(variable, &geom_shader->outputs)
 		handle_shader_output_decl(&ctx, variable);

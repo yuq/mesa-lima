@@ -38,7 +38,7 @@ build_nir_vertex_shader(void)
 	nir_builder b;
 
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
-	b.shader->info->name = ralloc_strdup(b.shader, "meta_resolve_vs");
+	b.shader->info.name = ralloc_strdup(b.shader, "meta_resolve_vs");
 
 	nir_variable *pos_out = nir_variable_create(b.shader, nir_var_shader_out,
 						    vec4, "gl_Position");
@@ -64,7 +64,7 @@ build_resolve_fragment_shader(struct radv_device *dev, bool is_integer, bool is_
 
 	snprintf(name, 64, "meta_resolve_fs-%d-%s", samples, is_integer ? "int" : (is_srgb ? "srgb" : "float"));
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
-	b.shader->info->name = ralloc_strdup(b.shader, name);
+	b.shader->info.name = ralloc_strdup(b.shader, name);
 
 	nir_variable *input_img = nir_variable_create(b.shader, nir_var_uniform,
 						      sampler_type, "s_tex");

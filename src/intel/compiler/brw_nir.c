@@ -199,8 +199,8 @@ remap_patch_urb_offsets(nir_block *block, nir_builder *b,
                         const struct brw_vue_map *vue_map,
                         GLenum tes_primitive_mode)
 {
-   const bool is_passthrough_tcs = b->shader->info->name &&
-      strcmp(b->shader->info->name, "passthrough") == 0;
+   const bool is_passthrough_tcs = b->shader->info.name &&
+      strcmp(b->shader->info.name, "passthrough") == 0;
 
    nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
@@ -283,7 +283,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
       nir_foreach_function(function, nir) {
          if (function->impl) {
             nir_foreach_block(block, function->impl) {
-               remap_vs_attrs(block, nir->info);
+               remap_vs_attrs(block, &nir->info);
             }
          }
       }
@@ -337,7 +337,7 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
          nir_builder_init(&b, function->impl);
          nir_foreach_block(block, function->impl) {
             remap_patch_urb_offsets(block, &b, vue_map,
-                                    nir->info->tess.primitive_mode);
+                                    nir->info.tess.primitive_mode);
          }
       }
    }

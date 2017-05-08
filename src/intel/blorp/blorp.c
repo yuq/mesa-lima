@@ -204,12 +204,12 @@ blorp_compile_vs(struct blorp_context *blorp, void *mem_ctx,
    nir = brw_preprocess_nir(compiler, nir);
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 
-   vs_prog_data->inputs_read = nir->info->inputs_read;
+   vs_prog_data->inputs_read = nir->info.inputs_read;
 
    brw_compute_vue_map(compiler->devinfo,
                        &vs_prog_data->base.vue_map,
-                       nir->info->outputs_written,
-                       nir->info->separate_shader);
+                       nir->info.outputs_written,
+                       nir->info.separate_shader);
 
    struct brw_vs_prog_key vs_key = { 0, };
 

@@ -50,11 +50,11 @@ create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
    nir_ssa_def *invoc_id =
       nir_load_system_value(&b, nir_intrinsic_load_invocation_id, 0);
 
-   nir->info->inputs_read = key->outputs_written &
+   nir->info.inputs_read = key->outputs_written &
       ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
-   nir->info->outputs_written = key->outputs_written;
-   nir->info->tess.tcs_vertices_out = key->input_vertices;
-   nir->info->name = ralloc_strdup(nir, "passthrough");
+   nir->info.outputs_written = key->outputs_written;
+   nir->info.tess.tcs_vertices_out = key->input_vertices;
+   nir->info.name = ralloc_strdup(nir, "passthrough");
    nir->num_uniforms = 8 * sizeof(uint32_t);
 
    var = nir_variable_create(nir, nir_var_uniform, glsl_vec4_type(), "hdr_0");
@@ -81,7 +81,7 @@ create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
    }
 
    /* Copy inputs to outputs. */
-   uint64_t varyings = nir->info->inputs_read;
+   uint64_t varyings = nir->info.inputs_read;
 
    while (varyings != 0) {
       const int varying = ffsll(varyings) - 1;
@@ -394,8 +394,8 @@ brw_tcs_precompile(struct gl_context *ctx,
       key.tes_primitive_mode = GL_TRIANGLES;
    }
 
-   key.outputs_written = prog->nir->info->outputs_written;
-   key.patch_outputs_written = prog->nir->info->patch_outputs_written;
+   key.outputs_written = prog->nir->info.outputs_written;
+   key.patch_outputs_written = prog->nir->info.patch_outputs_written;
 
    success = brw_codegen_tcs_prog(brw, btcp, btep, &key);
 

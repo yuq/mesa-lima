@@ -58,7 +58,7 @@ assign_fs_binding_table_offsets(const struct gen_device_info *devinfo,
       brw_assign_common_binding_table_offsets(devinfo, prog, &prog_data->base,
                                               next_binding_table_offset);
 
-   if (prog->nir->info->outputs_read && !key->coherent_fb_fetch) {
+   if (prog->nir->info.outputs_read && !key->coherent_fb_fetch) {
       prog_data->binding_table.render_target_read_start =
          next_binding_table_offset;
       next_binding_table_offset += key->nr_color_regions;
@@ -335,7 +335,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          }
 
          /* gather4 for RG32* is broken in multiple ways on Gen7. */
-         if (brw->gen == 7 && prog->nir->info->uses_texture_gather) {
+         if (brw->gen == 7 && prog->nir->info.uses_texture_gather) {
             switch (img->InternalFormat) {
             case GL_RG32I:
             case GL_RG32UI: {
@@ -373,7 +373,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* Gen6's gather4 is broken for UINT/SINT; we treat them as
           * UNORM/FLOAT instead and fix it in the shader.
           */
-         if (brw->gen == 6 && prog->nir->info->uses_texture_gather) {
+         if (brw->gen == 6 && prog->nir->info.uses_texture_gather) {
             key->gen6_gather_wa[s] = gen6_gather_workaround(img->InternalFormat);
          }
 

@@ -264,7 +264,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	}
 
 	/* Vulkan uses the separate-shader linking model */
-	nir->info->separate_shader = true;
+	nir->info.separate_shader = true;
 
 	nir_shader_gather_info(nir, entry_point->impl);
 
@@ -539,8 +539,8 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	bool dump = (pipeline->device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
 
 	if (module->nir)
-		_mesa_sha1_compute(module->nir->info->name,
-				   strlen(module->nir->info->name),
+		_mesa_sha1_compute(module->nir->info.name,
+				   strlen(module->nir->info.name),
 				   module->sha1);
 
 	radv_hash_shader(sha1, module, entrypoint, spec_info, layout, key, 0);
@@ -644,8 +644,8 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 	bool dump = (pipeline->device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
 
 	if (tes_module->nir)
-		_mesa_sha1_compute(tes_module->nir->info->name,
-				   strlen(tes_module->nir->info->name),
+		_mesa_sha1_compute(tes_module->nir->info.name,
+				   strlen(tes_module->nir->info.name),
 				   tes_module->sha1);
 	radv_hash_shader(tes_sha1, tes_module, tes_entrypoint, tes_spec_info, layout, &tes_key, 0);
 
@@ -657,8 +657,8 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 		tcs_key = radv_compute_tcs_key(tes_variant->info.tes.primitive_mode, input_vertices);
 
 		if (tcs_module->nir)
-			_mesa_sha1_compute(tcs_module->nir->info->name,
-					   strlen(tcs_module->nir->info->name),
+			_mesa_sha1_compute(tcs_module->nir->info.name,
+					   strlen(tcs_module->nir->info.name),
 					   tcs_module->sha1);
 
 		radv_hash_shader(tcs_sha1, tcs_module, tcs_entrypoint, tcs_spec_info, layout, &tcs_key, 0);
@@ -687,16 +687,16 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 		return;
 
 	nir_lower_tes_patch_vertices(tes_nir,
-				     tcs_nir->info->tess.tcs_vertices_out);
+				     tcs_nir->info.tess.tcs_vertices_out);
 
 	tes_variant = radv_shader_variant_create(pipeline->device, tes_nir,
 						 layout, &tes_key, &tes_code,
 						 &tes_code_size, dump);
 
-	tcs_key = radv_compute_tcs_key(tes_nir->info->tess.primitive_mode, input_vertices);
+	tcs_key = radv_compute_tcs_key(tes_nir->info.tess.primitive_mode, input_vertices);
 	if (tcs_module->nir)
-		_mesa_sha1_compute(tcs_module->nir->info->name,
-				   strlen(tcs_module->nir->info->name),
+		_mesa_sha1_compute(tcs_module->nir->info.name,
+				   strlen(tcs_module->nir->info.name),
 				   tcs_module->sha1);
 
 	radv_hash_shader(tcs_sha1, tcs_module, tcs_entrypoint, tcs_spec_info, layout, &tcs_key, 0);
@@ -2041,7 +2041,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	if (!modules[MESA_SHADER_FRAGMENT]) {
 		nir_builder fs_b;
 		nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
-		fs_b.shader->info->name = ralloc_strdup(fs_b.shader, "noop_fs");
+		fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "noop_fs");
 		fs_m.nir = fs_b.shader;
 		modules[MESA_SHADER_FRAGMENT] = &fs_m;
 	}

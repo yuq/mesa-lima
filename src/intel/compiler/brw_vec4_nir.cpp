@@ -570,7 +570,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ssbo_start +
-                               nir->info->num_ssbos - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       /* Offset */
@@ -736,7 +736,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           */
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ssbo_start +
-                               nir->info->num_ssbos - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       src_reg offset_reg;
@@ -948,7 +948,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           */
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ubo_start +
-                               nir->info->num_ubos - 1);
+                               nir->info.num_ubos - 1);
       }
 
       src_reg offset_reg;
@@ -1046,7 +1046,7 @@ vec4_visitor::nir_emit_ssbo_atomic(int op, nir_intrinsic_instr *instr)
        */
       brw_mark_surface_used(&prog_data->base,
                             prog_data->base.binding_table.ssbo_start +
-                            nir->info->num_ssbos - 1);
+                            nir->info.num_ssbos - 1);
    }
 
    src_reg offset = get_nir_src(instr->src[1], 1);

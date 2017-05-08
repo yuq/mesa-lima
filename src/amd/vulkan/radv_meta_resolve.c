@@ -38,7 +38,7 @@ build_nir_fs(void)
 	nir_variable *f_color; /* vec4, fragment output color */
 
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
-	b.shader->info->name = ralloc_asprintf(b.shader,
+	b.shader->info.name = ralloc_asprintf(b.shader,
 					       "meta_resolve_fs");
 
 	f_color = nir_variable_create(b.shader, nir_var_shader_out, vec4,

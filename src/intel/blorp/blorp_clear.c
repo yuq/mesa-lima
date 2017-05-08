@@ -58,7 +58,7 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
 
    nir_builder b;
    nir_builder_init_simple_shader(&b, mem_ctx, MESA_SHADER_FRAGMENT, NULL);
-   b.shader->info->name = ralloc_strdup(b.shader, "BLORP-clear");
+   b.shader->info.name = ralloc_strdup(b.shader, "BLORP-clear");
 
    nir_variable *v_color =
       BLORP_CREATE_NIR_INPUT(b.shader, clear_color, glsl_vec4_type());
@@ -120,7 +120,7 @@ blorp_params_get_layer_offset_vs(struct blorp_context *blorp,
 
    nir_builder b;
    nir_builder_init_simple_shader(&b, mem_ctx, MESA_SHADER_VERTEX, NULL);
-   b.shader->info->name = ralloc_strdup(b.shader, "BLORP-layer-offset-vs");
+   b.shader->info.name = ralloc_strdup(b.shader, "BLORP-layer-offset-vs");
 
    const struct glsl_type *uvec4_type = glsl_vector_type(GLSL_TYPE_UINT, 4);
 

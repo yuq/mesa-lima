@@ -452,7 +452,7 @@ radv_meta_build_nir_vs_generate_vertices(void)
 	nir_variable *v_position;
 
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
-	b.shader->info->name = ralloc_strdup(b.shader, "meta_vs_gen_verts");
+	b.shader->info.name = ralloc_strdup(b.shader, "meta_vs_gen_verts");
 
 	nir_ssa_def *outvec = radv_meta_gen_rect_vertices(&b);
 
@@ -471,7 +471,7 @@ radv_meta_build_nir_fs_noop(void)
 	nir_builder b;
 
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
-	b.shader->info->name = ralloc_asprintf(b.shader,
+	b.shader->info.name = ralloc_asprintf(b.shader,
 					       "meta_noop_fs");
 
 	return b.shader;

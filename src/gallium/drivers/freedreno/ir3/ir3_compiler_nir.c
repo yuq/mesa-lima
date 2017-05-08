@@ -204,7 +204,7 @@ compile_init(struct ir3_compiler *compiler,
 	}
 
 	so->num_uniforms = ctx->s->num_uniforms;
-	so->num_ubos = ctx->s->info->num_ubos;
+	so->num_ubos = ctx->s->info.num_ubos;
 
 	/* Layout of constant registers, each section aligned to vec4.  Note
 	 * that pointer size (ubo, etc) changes depending on generation.
@@ -228,7 +228,7 @@ compile_init(struct ir3_compiler *compiler,
 
 	if (so->num_ubos > 0) {
 		so->constbase.ubo = constoff;
-		constoff += align(ctx->s->info->num_ubos * ptrsz, 4) / 4;
+		constoff += align(ctx->s->info.num_ubos * ptrsz, 4) / 4;
 	}
 
 	unsigned num_driver_params = 0;

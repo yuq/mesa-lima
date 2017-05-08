@@ -173,7 +173,7 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    NIR_PASS_V(nir, nir_lower_system_values);
 
    /* Vulkan uses the separate-shader linking model */
-   nir->info->separate_shader = true;
+   nir->info.separate_shader = true;
 
    nir = brw_preprocess_nir(compiler, nir);
 
@@ -393,8 +393,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       prog_data->nr_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
    }
 
-   if (nir->info->num_images > 0) {
-      prog_data->nr_params += nir->info->num_images * BRW_IMAGE_PARAM_SIZE;
+   if (nir->info.num_images > 0) {
+      prog_data->nr_params += nir->info.num_images * BRW_IMAGE_PARAM_SIZE;
       pipeline->needs_data_cache = true;
    }
 
@@ -402,7 +402,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       ((struct brw_cs_prog_data *)prog_data)->thread_local_id_index =
          prog_data->nr_params++; /* The CS Thread ID uniform */
 
-   if (nir->info->num_ssbos > 0)
+   if (nir->info.num_ssbos > 0)
       pipeline->needs_data_cache = true;
 
    if (prog_data->nr_params > 0) {
@@ -525,13 +525,13 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
       ralloc_steal(mem_ctx, nir);
 
-      prog_data.inputs_read = nir->info->inputs_read;
-      prog_data.double_inputs_read = nir->info->double_inputs_read;
+      prog_data.inputs_read = nir->info.inputs_read;
+      prog_data.double_inputs_read = nir->info.double_inputs_read;
 
       brw_compute_vue_map(&pipeline->device->info,
                           &prog_data.base.vue_map,
-                          nir->info->outputs_written,
-                          nir->info->separate_shader);
+                          nir->info.outputs_written,
+                          nir->info.separate_shader);
 
       unsigned code_size;
       const unsigned *shader_code =
@@ -663,10 +663,10 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
       nir_lower_tes_patch_vertices(tes_nir,
-                                   tcs_nir->info->tess.tcs_vertices_out);
+                                   tcs_nir->info.tess.tcs_vertices_out);
 
       /* Copy TCS info into the TES info */
-      merge_tess_info(tes_nir->info, tcs_nir->info);
+      merge_tess_info(&tes_nir->info, &tcs_nir->info);
 
       anv_fill_binding_table(&tcs_prog_data.base.base, 0);
       anv_fill_binding_table(&tes_prog_data.base.base, 0);
@@ -680,13 +680,13 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
        * this comes from the SPIR-V, which is part of the hash used for the
        * pipeline cache.  So it should be safe.
        */
-      tcs_key.tes_primitive_mode = tes_nir->info->tess.primitive_mode;
-      tcs_key.outputs_written = tcs_nir->info->outputs_written;
-      tcs_key.patch_outputs_written = tcs_nir->info->patch_outputs_written;
+      tcs_key.tes_primitive_mode = tes_nir->info.tess.primitive_mode;
+      tcs_key.outputs_written = tcs_nir->info.outputs_written;
+      tcs_key.patch_outputs_written = tcs_nir->info.patch_outputs_written;
       tcs_key.quads_workaround =
          devinfo->gen < 9 &&
-         tes_nir->info->tess.primitive_mode == 7 /* GL_QUADS */ &&
-         tes_nir->info->tess.spacing == TESS_SPACING_EQUAL;
+         tes_nir->info.tess.primitive_mode == 7 /* GL_QUADS */ &&
+         tes_nir->info.tess.spacing == TESS_SPACING_EQUAL;
 
       tes_key.inputs_read = tcs_key.outputs_written;
       tes_key.patch_inputs_read = tcs_key.patch_outputs_written;
@@ -791,8 +791,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
       brw_compute_vue_map(&pipeline->device->info,
                           &prog_data.base.vue_map,
-                          nir->info->outputs_written,
-                          nir->info->separate_shader);
+                          nir->info.outputs_written,
+                          nir->info.separate_shader);
 
       unsigned code_size;
       const unsigned *shader_code =
