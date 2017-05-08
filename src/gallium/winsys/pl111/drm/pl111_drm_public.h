@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Broadcom
+ * Copyright (C) 2016 Christian Gmeiner <christian.gmeiner@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -16,18 +16,19 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ * Authors:
+ *    Christian Gmeiner <christian.gmeiner@gmail.com>
  */
 
-#ifndef __VC4_DRM_PUBLIC_H__
-#define __VC4_DRM_PUBLIC_H__
+#ifndef __PL111_DRM_PUBLIC_H__
+#define __PL111_DRM_PUBLIC_H__
 
 struct pipe_screen;
-struct renderonly;
 
-struct pipe_screen *vc4_drm_screen_create(int drmFD);
-struct pipe_screen *vc4_drm_screen_create_renderonly(struct renderonly *ro);
+struct pipe_screen *pl111_drm_screen_create(int fd);
 
-#endif /* __VC4_DRM_PUBLIC_H__ */
+#endif /* __PL111_DRM_PUBLIC_H__ */

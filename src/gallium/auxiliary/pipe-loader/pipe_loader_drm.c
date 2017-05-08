@@ -129,6 +129,11 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
         .configuration = configuration_query,
     },
     {
+       .driver_name = "pl111",
+        .create_screen = pipe_pl111_create_screen,
+        .configuration = configuration_query,
+    },
+    {
         .driver_name = "virtio_gpu",
         .create_screen = pipe_virgl_create_screen,
         .configuration = configuration_query,

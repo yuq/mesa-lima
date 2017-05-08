@@ -25,6 +25,7 @@
 #define VC4_SCREEN_H
 
 #include "pipe/p_screen.h"
+#include "renderonly/renderonly.h"
 #include "os/os_thread.h"
 #include "state_tracker/drm_driver.h"
 #include "util/list.h"
@@ -55,6 +56,8 @@ struct vc4_simulator_file;
 
 struct vc4_screen {
         struct pipe_screen base;
+        struct renderonly *ro;
+
         int fd;
 
         int v3d_ver;
@@ -101,7 +104,7 @@ vc4_screen(struct pipe_screen *screen)
         return (struct vc4_screen *)screen;
 }
 
-struct pipe_screen *vc4_screen_create(int fd);
+struct pipe_screen *vc4_screen_create(int fd, struct renderonly *ro);
 
 const void *
 vc4_screen_get_compiler_options(struct pipe_screen *pscreen,

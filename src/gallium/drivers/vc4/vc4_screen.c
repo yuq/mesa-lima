@@ -100,6 +100,7 @@ vc4_screen_destroy(struct pipe_screen *pscreen)
         util_hash_table_destroy(screen->bo_handles);
         vc4_bufmgr_destroy(pscreen);
         slab_destroy_parent(&screen->transfer_pool);
+        free(screen->ro);
 
 #if USE_VC4_SIMULATOR
         vc4_simulator_destroy(screen);
@@ -605,7 +606,7 @@ vc4_get_chip_info(struct vc4_screen *screen)
 }
 
 struct pipe_screen *
-vc4_screen_create(int fd)
+vc4_screen_create(int fd, struct renderonly *ro)
 {
         struct vc4_screen *screen = rzalloc(NULL, struct vc4_screen);
         struct pipe_screen *pscreen;
@@ -620,6 +621,15 @@ vc4_screen_create(int fd)
         pscreen->is_format_supported = vc4_screen_is_format_supported;
 
         screen->fd = fd;
+        if (ro) {
+                screen->ro = renderonly_dup(ro);
+                if (!screen->ro) {
+                        fprintf(stderr, "Failed to dup renderonly object\n");
+                        ralloc_free(screen);
+                        return NULL;
+                }
+        }
+
         list_inithead(&screen->bo_cache.time_list);
         (void) mtx_init(&screen->bo_handles_mutex, mtx_plain);
         screen->bo_handles = util_hash_table_create(handle_hash, handle_compare);

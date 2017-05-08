@@ -371,9 +371,14 @@ static void
 vc4_resource_destroy(struct pipe_screen *pscreen,
                      struct pipe_resource *prsc)
 {
+        struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_resource *rsc = vc4_resource(prsc);
         pipe_resource_reference(&rsc->shadow_parent, NULL);
         vc4_bo_unreference(&rsc->bo);
+
+        if (rsc->scanout)
+                renderonly_scanout_destroy(rsc->scanout, screen->ro);
+
         free(rsc);
 }
 
@@ -384,6 +389,7 @@ vc4_resource_get_handle(struct pipe_screen *pscreen,
                         struct winsys_handle *whandle,
                         unsigned usage)
 {
+        struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_resource *rsc = vc4_resource(prsc);
 
         whandle->stride = rsc->slices[0].stride;
@@ -396,11 +402,23 @@ vc4_resource_get_handle(struct pipe_screen *pscreen,
 
         switch (whandle->type) {
         case DRM_API_HANDLE_TYPE_SHARED:
+                if (screen->ro) {
+                        /* This could probably be supported, assuming that a
+                         * control node was used for pl111.
+                         */
+                        fprintf(stderr, "flink unsupported with pl111\n");
+                        return FALSE;
+                }
+
                 return vc4_bo_flink(rsc->bo, &whandle->handle);
         case DRM_API_HANDLE_TYPE_KMS:
+                if (screen->ro && renderonly_get_handle(rsc->scanout, whandle))
+                        return TRUE;
                 whandle->handle = rsc->bo->handle;
                 return TRUE;
         case DRM_API_HANDLE_TYPE_FD:
+                /* FDs are cross-device, so we can export directly from vc4.
+                 */
                 whandle->handle = vc4_bo_get_dmabuf(rsc->bo);
                 return whandle->handle != -1;
         }
@@ -553,6 +571,7 @@ struct pipe_resource *
 vc4_resource_create(struct pipe_screen *pscreen,
                     const struct pipe_resource *tmpl)
 {
+        struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_resource *rsc = vc4_resource_setup(pscreen, tmpl);
         struct pipe_resource *prsc = &rsc->base;
 
@@ -576,6 +595,13 @@ vc4_resource_create(struct pipe_screen *pscreen,
         vc4_setup_slices(rsc);
         if (!vc4_resource_bo_alloc(rsc))
                 goto fail;
+
+        if (screen->ro && tmpl->bind & PIPE_BIND_SCANOUT) {
+                rsc->scanout =
+                        renderonly_scanout_for_resource(prsc, screen->ro);
+                if (!rsc->scanout)
+                        goto fail;
+        }
 
         return prsc;
 fail:
@@ -645,6 +671,18 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
         slice->tiling = VC4_TILING_FORMAT_LINEAR;
 
         rsc->vc4_format = get_resource_texture_format(prsc);
+
+        if (screen->ro) {
+                /* Make sure that renderonly has a handle to our buffer in the
+                 * display's fd, so that a later renderonly_get_handle()
+                 * returns correct handles or GEM names.
+                 */
+                rsc->scanout =
+                        renderonly_create_gpu_import_for_resource(prsc,
+                                                                  screen->ro);
+                if (!rsc->scanout)
+                        goto fail;
+        }
 
         if (miptree_debug) {
                 fprintf(stderr,
