@@ -52,7 +52,7 @@ struct vc4_surface {
 };
 
 struct vc4_resource {
-        struct u_resource base;
+        struct pipe_resource base;
         struct vc4_bo *bo;
         struct vc4_resource_slice slices[VC4_MAX_MIP_LEVELS];
         uint32_t cube_map_stride;

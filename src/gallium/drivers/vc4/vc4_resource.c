@@ -39,7 +39,7 @@ static bool miptree_debug = false;
 static bool
 vc4_resource_bo_alloc(struct vc4_resource *rsc)
 {
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
         struct pipe_screen *pscreen = prsc->screen;
         struct vc4_bo *bo;
 
@@ -378,8 +378,10 @@ vc4_resource_destroy(struct pipe_screen *pscreen,
 
 static boolean
 vc4_resource_get_handle(struct pipe_screen *pscreen,
+                        struct pipe_context *pctx,
                         struct pipe_resource *prsc,
-                        struct winsys_handle *handle)
+                        struct winsys_handle *handle,
+                        unsigned usage)
 {
         struct vc4_resource *rsc = vc4_resource(prsc);
 
@@ -387,18 +389,10 @@ vc4_resource_get_handle(struct pipe_screen *pscreen,
                                         handle);
 }
 
-static const struct u_resource_vtbl vc4_resource_vtbl = {
-        .resource_get_handle      = vc4_resource_get_handle,
-        .resource_destroy         = vc4_resource_destroy,
-        .transfer_map             = vc4_resource_transfer_map,
-        .transfer_flush_region    = u_default_transfer_flush_region,
-        .transfer_unmap           = vc4_resource_transfer_unmap,
-};
-
 static void
 vc4_setup_slices(struct vc4_resource *rsc)
 {
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
         uint32_t width = prsc->width0;
         uint32_t height = prsc->height0;
         if (prsc->format == PIPE_FORMAT_ETC1_RGB8) {
@@ -501,14 +495,13 @@ vc4_resource_setup(struct pipe_screen *pscreen,
         struct vc4_resource *rsc = CALLOC_STRUCT(vc4_resource);
         if (!rsc)
                 return NULL;
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
 
         *prsc = *tmpl;
 
         pipe_reference_init(&prsc->reference, 1);
         prsc->screen = pscreen;
 
-        rsc->base.vtbl = &vc4_resource_vtbl;
         if (prsc->nr_samples <= 1)
                 rsc->cpp = util_format_get_blocksize(tmpl->format);
         else
@@ -542,7 +535,7 @@ vc4_resource_create(struct pipe_screen *pscreen,
                     const struct pipe_resource *tmpl)
 {
         struct vc4_resource *rsc = vc4_resource_setup(pscreen, tmpl);
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
 
         /* We have to make shared be untiled, since we don't have any way to
          * communicate metadata about tiling currently.
@@ -578,7 +571,7 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
                          unsigned usage)
 {
         struct vc4_resource *rsc = vc4_resource_setup(pscreen, tmpl);
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
         struct vc4_resource_slice *slice = &rsc->slices[0];
         uint32_t expected_stride =
             align(prsc->width0, vc4_utile_width(rsc->cpp)) * rsc->cpp;
@@ -924,16 +917,16 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
                 return;
 
         perf_debug("Updating %dx%d@%d shadow texture due to %s\n",
-                   orig->base.b.width0, orig->base.b.height0,
+                   orig->base.width0, orig->base.height0,
                    view->u.tex.first_level,
                    view->u.tex.first_level ? "base level" : "raster layout");
 
-        for (int i = 0; i <= shadow->base.b.last_level; i++) {
-                unsigned width = u_minify(shadow->base.b.width0, i);
-                unsigned height = u_minify(shadow->base.b.height0, i);
+        for (int i = 0; i <= shadow->base.last_level; i++) {
+                unsigned width = u_minify(shadow->base.width0, i);
+                unsigned height = u_minify(shadow->base.height0, i);
                 struct pipe_blit_info info = {
                         .dst = {
-                                .resource = &shadow->base.b,
+                                .resource = &shadow->base,
                                 .level = i,
                                 .box = {
                                         .x = 0,
@@ -943,10 +936,10 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
                                         .height = height,
                                         .depth = 1,
                                 },
-                                .format = shadow->base.b.format,
+                                .format = shadow->base.format,
                         },
                         .src = {
-                                .resource = &orig->base.b,
+                                .resource = &orig->base,
                                 .level = view->u.tex.first_level + i,
                                 .box = {
                                         .x = 0,
@@ -956,7 +949,7 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
                                         .height = height,
                                         .depth = 1,
                                 },
-                                .format = orig->base.b.format,
+                                .format = orig->base.format,
                         },
                         .mask = ~0,
                 };
@@ -999,7 +992,7 @@ vc4_get_shadow_index_buffer(struct pipe_context *pctx,
         if (info->has_user_indices) {
                 src = info->index.user;
         } else {
-                src = pipe_buffer_map_range(pctx, &orig->base.b,
+                src = pipe_buffer_map_range(pctx, &orig->base,
                                             offset,
                                             count * 4,
                                             PIPE_TRANSFER_READ, &src_transfer);
@@ -1022,16 +1015,17 @@ vc4_resource_screen_init(struct pipe_screen *pscreen)
 {
         pscreen->resource_create = vc4_resource_create;
         pscreen->resource_from_handle = vc4_resource_from_handle;
-        pscreen->resource_get_handle = u_resource_get_handle_vtbl;
         pscreen->resource_destroy = u_resource_destroy_vtbl;
+        pscreen->resource_get_handle = vc4_resource_get_handle;
+        pscreen->resource_destroy = vc4_resource_destroy;
 }
 
 void
 vc4_resource_context_init(struct pipe_context *pctx)
 {
-        pctx->transfer_map = u_transfer_map_vtbl;
-        pctx->transfer_flush_region = u_transfer_flush_region_vtbl;
-        pctx->transfer_unmap = u_transfer_unmap_vtbl;
+        pctx->transfer_map = vc4_resource_transfer_map;
+        pctx->transfer_flush_region = u_default_transfer_flush_region;
+        pctx->transfer_unmap = vc4_resource_transfer_unmap;
         pctx->buffer_subdata = u_default_buffer_subdata;
         pctx->texture_subdata = u_default_texture_subdata;
         pctx->create_surface = vc4_create_surface;

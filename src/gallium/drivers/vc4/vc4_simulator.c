@@ -387,7 +387,7 @@ vc4_simulator_flush(struct vc4_context *vc4,
                         ctex->bo->size);
 #endif
 
-                for (int y = 0; y < ctex->base.b.height0; y++) {
+                for (int y = 0; y < ctex->base.height0; y++) {
                         memcpy(ctex->bo->map + y * sim_stride,
                                csim_bo->winsys_map + y * winsys_stride,
                                row_len);
@@ -448,7 +448,7 @@ vc4_simulator_flush(struct vc4_context *vc4,
         }
 
         if (ctex && csim_bo->winsys_map) {
-                for (int y = 0; y < ctex->base.b.height0; y++) {
+                for (int y = 0; y < ctex->base.height0; y++) {
                         memcpy(csim_bo->winsys_map + y * winsys_stride,
                                ctex->bo->map + y * sim_stride,
                                row_len);
