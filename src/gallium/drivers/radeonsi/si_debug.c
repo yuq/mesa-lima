@@ -440,17 +440,12 @@ static void si_dump_descriptor_list(struct si_descriptors *desc,
 }
 
 static void si_dump_descriptors(struct si_context *sctx,
-				struct si_shader_ctx_state *state,
-				FILE *f)
+				enum pipe_shader_type processor,
+				const struct tgsi_shader_info *info, FILE *f)
 {
-	if (!state->cso || !state->current)
-		return;
-
-	unsigned type = state->cso->type;
-	const struct tgsi_shader_info *info = &state->cso->info;
 	struct si_descriptors *descs =
 		&sctx->descriptors[SI_DESCS_FIRST_SHADER +
-				   type * SI_NUM_SHADER_DESCS];
+				   processor * SI_NUM_SHADER_DESCS];
 	static const char *shader_name[] = {"VS", "PS", "GS", "TCS", "TES", "CS"};
 
 	static const char *elem_name[] = {
@@ -466,14 +461,24 @@ static void si_dump_descriptors(struct si_context *sctx,
 		util_last_bit(info->images_declared),
 	};
 
-	if (type == PIPE_SHADER_VERTEX) {
-		si_dump_descriptor_list(&sctx->vertex_buffers, shader_name[type],
+	if (processor == PIPE_SHADER_VERTEX) {
+		si_dump_descriptor_list(&sctx->vertex_buffers, shader_name[processor],
 					" - Vertex buffer", info->num_inputs, f);
 	}
 
 	for (unsigned i = 0; i < SI_NUM_SHADER_DESCS; ++i, ++descs)
-		si_dump_descriptor_list(descs, shader_name[type], elem_name[i],
+		si_dump_descriptor_list(descs, shader_name[processor], elem_name[i],
 					num_elements[i], f);
+}
+
+static void si_dump_gfx_descriptors(struct si_context *sctx,
+				    const struct si_shader_ctx_state *state,
+				    FILE *f)
+{
+	if (!state->cso || !state->current)
+		return;
+
+	si_dump_descriptors(sctx, state->cso->type, &state->cso->info, f);
 }
 
 struct si_shader_inst {
@@ -773,11 +778,11 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 
 		si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
 					"", "RW buffers", SI_NUM_RW_BUFFERS, f);
-		si_dump_descriptors(sctx, &sctx->vs_shader, f);
-		si_dump_descriptors(sctx, &sctx->tcs_shader, f);
-		si_dump_descriptors(sctx, &sctx->tes_shader, f);
-		si_dump_descriptors(sctx, &sctx->gs_shader, f);
-		si_dump_descriptors(sctx, &sctx->ps_shader, f);
+		si_dump_gfx_descriptors(sctx, &sctx->vs_shader, f);
+		si_dump_gfx_descriptors(sctx, &sctx->tcs_shader, f);
+		si_dump_gfx_descriptors(sctx, &sctx->tes_shader, f);
+		si_dump_gfx_descriptors(sctx, &sctx->gs_shader, f);
+		si_dump_gfx_descriptors(sctx, &sctx->ps_shader, f);
 	}
 
 	if (flags & PIPE_DUMP_LAST_COMMAND_BUFFER) {
