@@ -3304,6 +3304,28 @@ _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
 
 
 static void
+framebuffer_texture_with_dims_no_error(GLenum target, GLenum attachment,
+                                       GLenum textarget, GLuint texture,
+                                       GLint level, GLint layer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* Get the framebuffer object */
+   struct gl_framebuffer *fb = get_framebuffer_target(ctx, target);
+
+   /* Get the texture object */
+   struct gl_texture_object *texObj =
+      get_texture_for_framebuffer(ctx, texture);
+
+   struct gl_renderbuffer_attachment *att =
+      get_attachment(ctx, fb, attachment, NULL);
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, textarget,
+                             level, layer, GL_FALSE);
+}
+
+
+static void
 framebuffer_texture_with_dims(int dims, GLenum target,
                               GLenum attachment, GLenum textarget,
                               GLuint texture, GLint level, GLint layer,
