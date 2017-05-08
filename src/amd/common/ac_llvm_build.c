@@ -1408,30 +1408,30 @@ void ac_optimize_vs_outputs(struct ac_llvm_context *ctx,
 	 * This is done by renumbering all PARAM exports.
 	 */
 	if (removed_any) {
-		uint8_t current_offset[VARYING_SLOT_MAX];
-		unsigned new_count = 0;
+		uint8_t old_offset[VARYING_SLOT_MAX];
 		unsigned out, i;
 
 		/* Make a copy of the offsets. We need the old version while
 		 * we are modifying some of them. */
-		memcpy(current_offset, vs_output_param_offset,
-		       sizeof(current_offset));
+		memcpy(old_offset, vs_output_param_offset,
+		       sizeof(old_offset));
 
 		for (i = 0; i < exports.num; i++) {
 			unsigned offset = exports.exp[i].offset;
 
+			/* Update vs_output_param_offset. Multiple outputs can
+			 * have the same offset.
+			 */
 			for (out = 0; out < num_outputs; out++) {
-				if (current_offset[out] != offset)
-					continue;
-
-				LLVMSetOperand(exports.exp[i].inst, AC_EXP_TARGET,
-					       LLVMConstInt(ctx->i32,
-							    V_008DFC_SQ_EXP_PARAM + new_count, 0));
-				vs_output_param_offset[out] = new_count;
-				new_count++;
-				break;
+				if (old_offset[out] == offset)
+					vs_output_param_offset[out] = i;
 			}
+
+			/* Change the PARAM offset in the instruction. */
+			LLVMSetOperand(exports.exp[i].inst, AC_EXP_TARGET,
+				       LLVMConstInt(ctx->i32,
+						    V_008DFC_SQ_EXP_PARAM + i, 0));
 		}
-		*num_param_exports = new_count;
+		*num_param_exports = exports.num;
 	}
 }
