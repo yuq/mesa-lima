@@ -7246,7 +7246,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_BARRIER].emit = si_llvm_emit_barrier;
 }
 
-static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
+static void si_optimize_vs_outputs(struct si_shader_context *ctx)
 {
 	struct si_shader *shader = ctx->shader;
 	struct tgsi_shader_info *info = &shader->selector->info;
@@ -8169,7 +8169,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	si_llvm_optimize_module(&ctx);
 
 	/* Post-optimization transformations and analysis. */
-	si_eliminate_const_vs_outputs(&ctx);
+	si_optimize_vs_outputs(&ctx);
 
 	if ((debug && debug->debug_message) ||
 	    r600_can_dump_shader(&sscreen->b, ctx.type))
