@@ -464,11 +464,17 @@ static void si_dump_descriptors(struct si_context *sctx,
 		" - Sampler",
 		" - Image",
 	};
-	unsigned num_elements[] = {
-		util_last_bit(info->const_buffers_declared),
-		util_last_bit(info->shader_buffers_declared),
-		util_last_bit(info->samplers_declared),
-		util_last_bit(info->images_declared),
+	unsigned enabled_slots[] = {
+		sctx->const_buffers[processor].enabled_mask,
+		sctx->shader_buffers[processor].enabled_mask,
+		sctx->samplers[processor].views.enabled_mask,
+		sctx->images[processor].enabled_mask,
+	};
+	unsigned required_slots[] = {
+		info ? info->const_buffers_declared : 0,
+		info ? info->shader_buffers_declared : 0,
+		info ? info->samplers_declared : 0,
+		info ? info->images_declared : 0,
 	};
 
 	if (processor == PIPE_SHADER_VERTEX) {
@@ -478,7 +484,7 @@ static void si_dump_descriptors(struct si_context *sctx,
 
 	for (unsigned i = 0; i < SI_NUM_SHADER_DESCS; ++i, ++descs)
 		si_dump_descriptor_list(descs, shader_name[processor], elem_name[i],
-					num_elements[i], f);
+					util_last_bit(enabled_slots[i] | required_slots[i]), f);
 }
 
 static void si_dump_gfx_descriptors(struct si_context *sctx,
