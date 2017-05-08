@@ -648,7 +648,7 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
    do {
       buf = XML_GetBuffer(ctx.parser, XML_BUFFER_SIZE);
       len = fread(buf, 1, XML_BUFFER_SIZE, input);
-      if (len < 0) {
+      if (len == 0) {
          fprintf(stderr, "fread: %m\n");
          fclose(input);
          free(filename);
