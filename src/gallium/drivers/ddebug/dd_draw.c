@@ -373,7 +373,11 @@ static void
 dd_dump_launch_grid(struct dd_draw_state *dstate, struct pipe_grid_info *info, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
-   /* TODO */
+   DUMP(grid_info, info);
+   fprintf(f, "\n");
+
+   dd_dump_shader(dstate, PIPE_SHADER_COMPUTE, f);
+   fprintf(f, "\n");
 }
 
 static void

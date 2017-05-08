@@ -353,6 +353,8 @@ dd_context_create_compute_state(struct pipe_context *_pipe,
       return NULL;
    hstate->cso = pipe->create_compute_state(pipe, state);
 
+   hstate->state.shader.type = state->ir_type;
+
    if (state->ir_type == PIPE_SHADER_IR_TGSI)
       hstate->state.shader.tokens = tgsi_dup_tokens(state->prog);
 
