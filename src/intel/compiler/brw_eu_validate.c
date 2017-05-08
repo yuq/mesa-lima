@@ -621,7 +621,7 @@ general_restrictions_on_region_parameters(const struct gen_device_info *devinfo,
       /* VertStride must be used to cross GRF register boundaries. This rule
        * implies that elements within a 'Width' cannot cross GRF boundaries.
        */
-      const uint64_t mask = (1 << element_size) - 1;
+      const uint64_t mask = (1ULL << element_size) - 1;
       unsigned rowbase = subreg;
 
       for (int y = 0; y < exec_size / width; y++) {
@@ -674,7 +674,7 @@ align1_access_mask(uint64_t access_mask[static 32],
                    unsigned exec_size, unsigned element_size, unsigned subreg,
                    unsigned vstride, unsigned width, unsigned hstride)
 {
-   const uint64_t mask = (1 << element_size) - 1;
+   const uint64_t mask = (1ULL << element_size) - 1;
    unsigned rowbase = subreg;
    unsigned element = 0;
 
