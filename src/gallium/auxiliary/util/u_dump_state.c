@@ -948,6 +948,33 @@ util_dump_draw_info(FILE *stream, const struct pipe_draw_info *state)
    util_dump_struct_end(stream);
 }
 
+void util_dump_grid_info(FILE *stream, const struct pipe_grid_info *state)
+{
+   if (!state) {
+      util_dump_null(stream);
+      return;
+   }
+
+   util_dump_struct_begin(stream, "pipe_grid_info");
+
+   util_dump_member(stream, uint, state, pc);
+   util_dump_member(stream, ptr, state, input);
+   util_dump_member(stream, uint, state, work_dim);
+
+   util_dump_member_begin(stream, "block");
+   util_dump_array(stream, uint, state->block, ARRAY_SIZE(state->block));
+   util_dump_member_end(stream);
+
+   util_dump_member_begin(stream, "grid");
+   util_dump_array(stream, uint, state->grid, ARRAY_SIZE(state->grid));
+   util_dump_member_end(stream);
+
+   util_dump_member(stream, ptr, state, indirect);
+   util_dump_member(stream, uint, state, indirect_offset);
+
+   util_dump_struct_end(stream);
+}
+
 void util_dump_box(FILE *stream, const struct pipe_box *box)
 {
    if (!box) {
