@@ -49,17 +49,6 @@
 #define LOG_TAG "EGL-MAIN"
 #include <cutils/log.h>
 
-/* support versions < JellyBean */
-#ifndef ALOGW
-#define ALOGW LOGW
-#endif
-#ifndef ALOGD
-#define ALOGD LOGD
-#endif
-#ifndef ALOGI
-#define ALOGI LOGI
-#endif
-
 #endif /* HAVE_ANDROID_PLATFORM */
 
 #define MAXSTRING 1000
@@ -92,22 +81,13 @@ static void
 _eglDefaultLogger(EGLint level, const char *msg)
 {
 #ifdef HAVE_ANDROID_PLATFORM
-   switch (level) {
-   case _EGL_DEBUG:
-      ALOGD("%s", msg);
-      break;
-   case _EGL_INFO:
-      ALOGI("%s", msg);
-      break;
-   case _EGL_WARNING:
-      ALOGW("%s", msg);
-      break;
-   case _EGL_FATAL:
-      LOG_FATAL("%s", msg);
-      break;
-   default:
-      break;
-   }
+   static const int egl2alog[] = {
+      [_EGL_FATAL] = LOG_ERROR,
+      [_EGL_WARNING]  = LOG_WARN,
+      [_EGL_INFO] = LOG_INFO,
+      [_EGL_DEBUG] = LOG_DEBUG,
+   };
+   ALOG(egl2alog[level], LOG_TAG, "%s", msg);
 #else
    fprintf(stderr, "libEGL %s: %s\n", level_strings[level], msg);
 #endif /* HAVE_ANDROID_PLATFORM */
