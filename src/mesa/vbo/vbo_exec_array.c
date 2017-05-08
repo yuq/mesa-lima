@@ -855,6 +855,11 @@ vbo_validated_drawrangeelements(struct gl_context *ctx, GLenum mode,
    struct _mesa_index_buffer ib;
    struct _mesa_prim prim;
 
+   if (!index_bounds_valid) {
+      assert(start == 0u);
+      assert(end == ~0u);
+   }
+
    if (skip_draw_elements(ctx, count, indices))
       return;
 
@@ -999,6 +1004,11 @@ vbo_exec_DrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end,
    (void) check_draw_elements_data;
 #endif
 
+   if (!index_bounds_valid) {
+      start = 0;
+      end = ~0;
+   }
+
    vbo_validated_drawrangeelements(ctx, mode, index_bounds_valid, start, end,
                                    count, type, indices, basevertex, 1, 0);
 }
@@ -1048,7 +1058,7 @@ vbo_exec_DrawElements(GLenum mode, GLsizei count, GLenum type,
          return;
    }
 
-   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
+   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, 0, ~0,
                                    count, type, indices, 0, 1, 0);
 }
 
@@ -1077,7 +1087,7 @@ vbo_exec_DrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type,
          return;
    }
 
-   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
+   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, 0, ~0,
                                    count, type, indices, basevertex, 1, 0);
 }
 
@@ -1107,7 +1117,7 @@ vbo_exec_DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type,
          return;
    }
 
-   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
+   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, 0, ~0,
                                    count, type, indices, 0, numInstances, 0);
 }
 
@@ -1142,7 +1152,7 @@ vbo_exec_DrawElementsInstancedBaseVertex(GLenum mode, GLsizei count,
          return;
    }
 
-   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
+   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, 0, ~0,
                                    count, type, indices,
                                    basevertex, numInstances, 0);
 }
@@ -1179,7 +1189,7 @@ vbo_exec_DrawElementsInstancedBaseInstance(GLenum mode, GLsizei count,
          return;
    }
 
-   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
+   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, 0, ~0,
                                    count, type, indices, 0, numInstances,
                                    baseInstance);
 }
@@ -1218,7 +1228,7 @@ vbo_exec_DrawElementsInstancedBaseVertexBaseInstance(GLenum mode,
          return;
    }
 
-   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, ~0, ~0,
+   vbo_validated_drawrangeelements(ctx, mode, GL_FALSE, 0, ~0,
                                    count, type, indices, basevertex,
                                    numInstances, baseInstance);
 }
