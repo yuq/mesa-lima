@@ -178,7 +178,7 @@
       <param name="level" type="GLint" />
    </function>
 
-   <function name="NamedFramebufferTextureLayer">
+   <function name="NamedFramebufferTextureLayer" no_error="true">
       <param name="framebuffer" type="GLuint" />
       <param name="attachment" type="GLenum" />
       <param name="texture" type="GLuint" />

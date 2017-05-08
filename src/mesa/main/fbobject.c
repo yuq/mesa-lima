@@ -3517,6 +3517,18 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
 
 
 void GLAPIENTRY
+_mesa_NamedFramebufferTextureLayer_no_error(GLuint framebuffer,
+                                            GLenum attachment,
+                                            GLuint texture, GLint level,
+                                            GLint layer)
+{
+   frame_buffer_texture_layer(framebuffer, 0, attachment, texture, level,
+                              layer, "glNamedFramebufferTextureLayer", true,
+                              true);
+}
+
+
+void GLAPIENTRY
 _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
                                    GLuint texture, GLint level, GLint layer)
 {
