@@ -130,7 +130,7 @@ translate_prim(const struct gl_context *ctx, unsigned prim)
  * we have something to render.
  * Basically, translate the information into the format expected by gallium.
  */
-void
+static void
 st_draw_vbo(struct gl_context *ctx,
             const struct _mesa_prim *prims,
             GLuint nr_prims,

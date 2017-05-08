@@ -282,7 +282,7 @@ st_RenderMode(struct gl_context *ctx, GLenum newMode )
 
    if (newMode == GL_RENDER) {
       /* restore normal VBO draw function */
-      vbo_set_draw_func(ctx, st_draw_vbo);
+      st_init_draw(st);
    }
    else if (newMode == GL_SELECT) {
       if (!st->selection_stage)
