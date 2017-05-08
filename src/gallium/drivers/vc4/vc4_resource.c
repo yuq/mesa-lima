@@ -380,13 +380,31 @@ static boolean
 vc4_resource_get_handle(struct pipe_screen *pscreen,
                         struct pipe_context *pctx,
                         struct pipe_resource *prsc,
-                        struct winsys_handle *handle,
+                        struct winsys_handle *whandle,
                         unsigned usage)
 {
         struct vc4_resource *rsc = vc4_resource(prsc);
 
-        return vc4_screen_bo_get_handle(pscreen, rsc->bo, rsc->slices[0].stride,
-                                        handle);
+        whandle->stride = rsc->slices[0].stride;
+
+        /* If we're passing some reference to our BO out to some other part of
+         * the system, then we can't do any optimizations about only us being
+         * the ones seeing it (like BO caching or shadow update avoidance).
+         */
+        rsc->bo->private = false;
+
+        switch (whandle->type) {
+        case DRM_API_HANDLE_TYPE_SHARED:
+                return vc4_bo_flink(rsc->bo, &whandle->handle);
+        case DRM_API_HANDLE_TYPE_KMS:
+                whandle->handle = rsc->bo->handle;
+                return TRUE;
+        case DRM_API_HANDLE_TYPE_FD:
+                whandle->handle = vc4_bo_get_dmabuf(rsc->bo);
+                return whandle->handle != -1;
+        }
+
+        return FALSE;
 }
 
 static void
@@ -567,9 +585,10 @@ fail:
 static struct pipe_resource *
 vc4_resource_from_handle(struct pipe_screen *pscreen,
                          const struct pipe_resource *tmpl,
-                         struct winsys_handle *handle,
+                         struct winsys_handle *whandle,
                          unsigned usage)
 {
+        struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_resource *rsc = vc4_resource_setup(pscreen, tmpl);
         struct pipe_resource *prsc = &rsc->base;
         struct vc4_resource_slice *slice = &rsc->slices[0];
@@ -579,7 +598,7 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
         if (!rsc)
                 return NULL;
 
-        if (handle->stride != expected_stride) {
+        if (whandle->stride != expected_stride) {
                 static bool warned = false;
                 if (!warned) {
                         warned = true;
@@ -588,18 +607,40 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
                                 "unsupported stride %d instead of %d\n",
                                 prsc->width0, prsc->height0,
                                 util_format_short_name(prsc->format),
-                                handle->stride,
+                                whandle->stride,
                                 expected_stride);
                 }
                 goto fail;
         }
 
         rsc->tiled = false;
-        rsc->bo = vc4_screen_bo_from_handle(pscreen, handle);
+
+        if (whandle->offset != 0) {
+                fprintf(stderr,
+                        "Attempt to import unsupported winsys offset %u\n",
+                        whandle->offset);
+                return NULL;
+        }
+
+        switch (whandle->type) {
+        case DRM_API_HANDLE_TYPE_SHARED:
+                rsc->bo = vc4_bo_open_name(screen,
+                                           whandle->handle, whandle->stride);
+                break;
+        case DRM_API_HANDLE_TYPE_FD:
+                rsc->bo = vc4_bo_open_dmabuf(screen,
+                                             whandle->handle, whandle->stride);
+                break;
+        default:
+                fprintf(stderr,
+                        "Attempt to import unsupported handle type %d\n",
+                        whandle->type);
+        }
+
         if (!rsc->bo)
                 goto fail;
 
-        slice->stride = handle->stride;
+        slice->stride = whandle->stride;
         slice->tiling = VC4_TILING_FORMAT_LINEAR;
 
         rsc->vc4_format = get_resource_texture_format(prsc);

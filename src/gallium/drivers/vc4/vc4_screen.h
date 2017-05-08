@@ -102,13 +102,6 @@ vc4_screen(struct pipe_screen *screen)
 }
 
 struct pipe_screen *vc4_screen_create(int fd);
-boolean vc4_screen_bo_get_handle(struct pipe_screen *pscreen,
-                                 struct vc4_bo *bo,
-                                 unsigned stride,
-                                 struct winsys_handle *whandle);
-struct vc4_bo *
-vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
-                          struct winsys_handle *whandle);
 
 const void *
 vc4_screen_get_compiler_options(struct pipe_screen *pscreen,
