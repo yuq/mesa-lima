@@ -2,6 +2,7 @@ C_SOURCES := \
 	cik_sdma.c \
 	si_blit.c \
 	si_compute.c \
+	si_compute.h \
 	si_cp_dma.c \
 	si_debug.c \
 	si_descriptors.c \

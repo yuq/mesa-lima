@@ -29,28 +29,8 @@
 #include "amd_kernel_code_t.h"
 #include "radeon/r600_cs.h"
 #include "si_pipe.h"
+#include "si_compute.h"
 #include "sid.h"
-
-#define MAX_GLOBAL_BUFFERS 22
-
-struct si_compute {
-	struct si_screen *screen;
-	struct tgsi_token *tokens;
-	struct util_queue_fence ready;
-	struct si_compiler_ctx_state compiler_ctx_state;
-
-	unsigned ir_type;
-	unsigned local_size;
-	unsigned private_size;
-	unsigned input_size;
-	struct si_shader shader;
-
-	struct pipe_resource *global_buffers[MAX_GLOBAL_BUFFERS];
-	unsigned use_code_object_v2 : 1;
-	unsigned variable_group_size : 1;
-	unsigned uses_grid_size:1;
-	unsigned uses_block_size:1;
-};
 
 struct dispatch_packet {
 	uint16_t header;
