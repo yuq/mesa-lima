@@ -1685,9 +1685,7 @@ static const struct brw_tracked_state genX(wm_state) = {
                (GEN_GEN < 7 ? _NEW_PROGRAM_CONSTANTS : 0),
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_FS_PROG_DATA |
-               (GEN_GEN < 7 ? BRW_NEW_PUSH_CONSTANT_ALLOCATION |
-                              BRW_NEW_BATCH
-                            : BRW_NEW_CONTEXT),
+               (GEN_GEN < 7 ? BRW_NEW_BATCH : BRW_NEW_CONTEXT),
    },
    .emit = genX(upload_wm),
 };
@@ -1804,9 +1802,7 @@ static const struct brw_tracked_state genX(vs_state) = {
                BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_VS_PROG_DATA |
-               (GEN_GEN < 7 ? BRW_NEW_PUSH_CONSTANT_ALLOCATION |
-                              BRW_NEW_VERTEX_PROGRAM
-                            : 0),
+               (GEN_GEN < 7 ? BRW_NEW_VERTEX_PROGRAM : 0),
    },
    .emit = genX(upload_vs_state),
 };
@@ -2183,9 +2179,7 @@ static const struct brw_tracked_state genX(gs_state) = {
                BRW_NEW_CONTEXT |
                BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_GS_PROG_DATA |
-               (GEN_GEN < 7 ? BRW_NEW_FF_GS_PROG_DATA |
-                              BRW_NEW_PUSH_CONSTANT_ALLOCATION
-                            : 0),
+               (GEN_GEN < 7 ? BRW_NEW_FF_GS_PROG_DATA : 0),
    },
    .emit = genX(upload_gs_state),
 };
