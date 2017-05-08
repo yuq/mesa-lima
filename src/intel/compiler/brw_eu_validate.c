@@ -434,18 +434,6 @@ general_restrictions_based_on_operand_types(const struct gen_device_info *devinf
     * In fact, checking it would weaken testing of the other rules.
     */
 
-   if (num_sources == 3)
-      return (struct string){};
-
-   if (exec_size == 1)
-      return (struct string){};
-
-   if (inst_is_send(devinfo, inst))
-      return (struct string){};
-
-   if (desc->ndst == 0)
-      return (struct string){};
-
    unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
    bool dst_type_is_byte =
       brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_B ||
