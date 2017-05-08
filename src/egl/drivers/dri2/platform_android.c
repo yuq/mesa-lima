@@ -315,6 +315,7 @@ droid_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
 		    _EGLConfig *conf, void *native_window,
 		    const EGLint *attrib_list)
 {
+   __DRIcreateNewDrawableFunc createNewDrawable;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
    struct dri2_egl_surface *dri2_surf;
@@ -356,11 +357,15 @@ droid_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    if (!config)
       goto cleanup_surface;
 
-   dri2_surf->dri_drawable =
-      dri2_dpy->dri2->createNewDrawable(dri2_dpy->dri_screen, config,
-                                        dri2_surf);
+   if (dri2_dpy->image_driver)
+      createNewDrawable = dri2_dpy->image_driver->createNewDrawable;
+   else
+      createNewDrawable = dri2_dpy->dri2->createNewDrawable;
+
+   dri2_surf->dri_drawable = (*createNewDrawable)(dri2_dpy->dri_screen, config,
+                                                  dri2_surf);
    if (dri2_surf->dri_drawable == NULL) {
-      _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
+      _eglError(EGL_BAD_ALLOC, "createNewDrawable");
       goto cleanup_surface;
    }
 
@@ -1134,19 +1139,23 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
       goto cleanup;
    }
 
-   if (!dri2_load_driver(dpy)) {
-      err = "DRI2: failed to load driver";
-      goto cleanup;
-   }
-
    dri2_dpy->is_render_node = drmGetNodeTypeFromFd(dri2_dpy->fd) == DRM_NODE_RENDER;
 
    /* render nodes cannot use Gem names, and thus do not support
     * the __DRI_DRI2_LOADER extension */
-   if (!dri2_dpy->is_render_node)
+   if (!dri2_dpy->is_render_node) {
       dri2_dpy->loader_extensions = droid_dri2_loader_extensions;
-   else
+      if (!dri2_load_driver(dpy)) {
+         err = "DRI2: failed to load driver";
+         goto cleanup;
+      }
+   } else {
       dri2_dpy->loader_extensions = droid_image_loader_extensions;
+      if (!dri2_load_driver_dri3(dpy)) {
+         err = "DRI3: failed to load driver";
+         goto cleanup;
+      }
+   }
 
    if (!dri2_create_screen(dpy)) {
       err = "DRI2: failed to create screen";
