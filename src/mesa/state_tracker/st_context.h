@@ -120,7 +120,7 @@ struct st_context
     * on glViewpport calls, this is set via a option.
     */
    boolean invalidate_on_gl_viewport;
-
+   boolean draw_needs_minmax_index;
    boolean vertex_array_out_of_memory;
 
    /* Some state is contained in constant objects.

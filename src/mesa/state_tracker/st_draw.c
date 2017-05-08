@@ -67,25 +67,6 @@
 
 
 /**
- * This is very similar to vbo_all_varyings_in_vbos() but we are
- * only interested in per-vertex data.  See bug 38626.
- */
-static GLboolean
-all_varyings_in_vbos(const struct gl_vertex_array *arrays[])
-{
-   GLuint i;
-
-   for (i = 0; i < VERT_ATTRIB_MAX; i++)
-      if (arrays[i]->StrideB &&
-          !arrays[i]->InstanceDivisor &&
-          !_mesa_is_bufferobj(arrays[i]->BufferObj))
-	 return GL_FALSE;
-
-   return GL_TRUE;
-}
-
-
-/**
  * Set the restart index.
  */
 static void
@@ -161,7 +142,6 @@ st_draw_vbo(struct gl_context *ctx,
 {
    struct st_context *st = st_context(ctx);
    struct pipe_draw_info info;
-   const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
    unsigned i;
    unsigned start = 0;
 
@@ -180,10 +160,10 @@ st_draw_vbo(struct gl_context *ctx,
       struct gl_buffer_object *bufobj = ib->obj;
 
       /* Get index bounds for user buffers. */
-      if (!index_bounds_valid)
-         if (!all_varyings_in_vbos(arrays))
-            vbo_get_minmax_indices(ctx, prims, ib, &min_index, &max_index,
-                                   nr_prims);
+      if (!index_bounds_valid && st->draw_needs_minmax_index) {
+         vbo_get_minmax_indices(ctx, prims, ib, &min_index, &max_index,
+                                nr_prims);
+      }
 
       info.index_size = ib->index_size;
       info.min_index = min_index;

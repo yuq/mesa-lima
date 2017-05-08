@@ -555,6 +555,9 @@ setup_interleaved_attribs(struct st_context *st,
       vbuffer.is_user_buffer = !!low_addr; /* if NULL, then unbind */
       vbuffer.buffer_offset = 0;
       vbuffer.stride = stride;
+
+      if (low_addr)
+         st->draw_needs_minmax_index = true;
    }
 
    set_vertex_attribs(st, &vbuffer, num_inputs ? 1 : 0,
@@ -647,6 +650,9 @@ setup_non_interleaved_attribs(struct st_context *st,
             vbuffer[bufidx].buffer.user = array->Ptr;
             vbuffer[bufidx].is_user_buffer = true;
             vbuffer[bufidx].buffer_offset = 0;
+
+            if (!array->InstanceDivisor)
+               st->draw_needs_minmax_index = true;
          }
       }
 
@@ -681,6 +687,7 @@ void st_update_array(struct st_context *st)
    unsigned num_inputs;
 
    st->vertex_array_out_of_memory = FALSE;
+   st->draw_needs_minmax_index = false;
 
    /* No drawing has been done yet, so do nothing. */
    if (!arrays)
