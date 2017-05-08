@@ -97,7 +97,7 @@ brw_upload_vs_unit(struct brw_context *brw)
    vs->thread3.dispatch_grf_start_reg = prog_data->dispatch_grf_start_reg;
    vs->thread3.urb_entry_read_offset = 0;
 
-   /* BRW_NEW_CURBE_OFFSETS */
+   /* BRW_NEW_PUSH_CONSTANT_ALLOCATION */
    vs->thread3.const_urb_entry_read_offset = brw->curbe.vs_start * 2;
 
    /* BRW_NEW_URB_FENCE */
@@ -182,8 +182,8 @@ const struct brw_tracked_state brw_vs_unit = {
       .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_CURBE_OFFSETS |
                BRW_NEW_PROGRAM_CACHE |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_SAMPLER_STATE_TABLE |
                BRW_NEW_URB_FENCE |
                BRW_NEW_VS_PROG_DATA,

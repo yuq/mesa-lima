@@ -173,7 +173,6 @@ enum brw_state_id {
    BRW_STATE_GEOMETRY_PROGRAM,
    BRW_STATE_TESS_PROGRAMS,
    BRW_STATE_VERTEX_PROGRAM,
-   BRW_STATE_CURBE_OFFSETS,
    BRW_STATE_REDUCED_PRIMITIVE,
    BRW_STATE_PATCH_PRIMITIVE,
    BRW_STATE_PRIMITIVE,
@@ -259,7 +258,6 @@ enum brw_state_id {
 #define BRW_NEW_GEOMETRY_PROGRAM        (1ull << BRW_STATE_GEOMETRY_PROGRAM)
 #define BRW_NEW_TESS_PROGRAMS           (1ull << BRW_STATE_TESS_PROGRAMS)
 #define BRW_NEW_VERTEX_PROGRAM          (1ull << BRW_STATE_VERTEX_PROGRAM)
-#define BRW_NEW_CURBE_OFFSETS           (1ull << BRW_STATE_CURBE_OFFSETS)
 #define BRW_NEW_REDUCED_PRIMITIVE       (1ull << BRW_STATE_REDUCED_PRIMITIVE)
 #define BRW_NEW_PATCH_PRIMITIVE         (1ull << BRW_STATE_PATCH_PRIMITIVE)
 #define BRW_NEW_PRIMITIVE               (1ull << BRW_STATE_PRIMITIVE)
@@ -955,8 +953,7 @@ struct brw_context
    } urb;
 
 
-   /* BRW_NEW_CURBE_OFFSETS:
-    */
+   /* BRW_NEW_PUSH_CONSTANT_ALLOCATION */
    struct {
       GLuint wm_start;  /**< pos of first wm const in CURBE buffer */
       GLuint wm_size;   /**< number of float[4] consts, multiple of 16 */

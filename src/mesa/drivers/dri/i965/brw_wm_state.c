@@ -148,7 +148,7 @@ brw_upload_wm_unit(struct brw_context *brw)
    wm->thread3.urb_entry_read_offset = 0;
    wm->thread3.const_urb_entry_read_length =
       prog_data->base.curb_read_length;
-   /* BRW_NEW_CURBE_OFFSETS */
+   /* BRW_NEW_PUSH_CONSTANT_ALLOCATION */
    wm->thread3.const_urb_entry_read_offset = brw->curbe.wm_start * 2;
 
    if (brw->gen == 5)
@@ -263,7 +263,7 @@ const struct brw_tracked_state brw_wm_unit = {
               _NEW_POLYGONSTIPPLE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
-             BRW_NEW_CURBE_OFFSETS |
+             BRW_NEW_PUSH_CONSTANT_ALLOCATION |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA |
              BRW_NEW_PROGRAM_CACHE |

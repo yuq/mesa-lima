@@ -86,7 +86,7 @@ brw_upload_clip_unit(struct brw_context *brw)
    clip->thread3.const_urb_entry_read_length =
       brw->clip.prog_data->curb_read_length;
 
-   /* BRW_NEW_CURBE_OFFSETS */
+   /* BRW_NEW_PUSH_CONSTANT_ALLOCATION */
    clip->thread3.const_urb_entry_read_offset = brw->curbe.clip_start * 2;
    clip->thread3.dispatch_grf_start_reg = 1;
    clip->thread3.urb_entry_read_offset = 0;
@@ -171,7 +171,7 @@ const struct brw_tracked_state brw_clip_unit = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_CLIP_PROG_DATA |
-               BRW_NEW_CURBE_OFFSETS |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_URB_FENCE,
    },
