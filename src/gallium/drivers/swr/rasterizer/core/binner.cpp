@@ -204,6 +204,38 @@ INLINE void calcBoundingBoxIntVertical<FEConservativeRastT>(const simdvector * c
     bbox.ymax = _simd_add_epi32(vMaxY, _simd_set1_epi32(CT::BoundingBoxOffsetT::value));
 }
 
+#if USE_SIMD16_FRONTEND
+template <>
+INLINE void calcBoundingBoxIntVertical<FEConservativeRastT>(const simd16vector * const tri, simd16scalari(&vX)[3], simd16scalari(&vY)[3], simd16BBox &bbox)
+{
+    // FE conservative rast traits
+    typedef FEConservativeRastT CT;
+
+    simd16scalari vMinX = vX[0];
+    vMinX = _simd16_min_epi32(vMinX, vX[1]);
+    vMinX = _simd16_min_epi32(vMinX, vX[2]);
+
+    simd16scalari vMaxX = vX[0];
+    vMaxX = _simd16_max_epi32(vMaxX, vX[1]);
+    vMaxX = _simd16_max_epi32(vMaxX, vX[2]);
+
+    simd16scalari vMinY = vY[0];
+    vMinY = _simd16_min_epi32(vMinY, vY[1]);
+    vMinY = _simd16_min_epi32(vMinY, vY[2]);
+
+    simd16scalari vMaxY = vY[0];
+    vMaxY = _simd16_max_epi32(vMaxY, vY[1]);
+    vMaxY = _simd16_max_epi32(vMaxY, vY[2]);
+
+    /// Bounding box needs to be expanded by 1/512 before snapping to 16.8 for conservative rasterization
+    /// expand bbox by 1/256; coverage will be correctly handled in the rasterizer.
+    bbox.xmin = _simd16_sub_epi32(vMinX, _simd16_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.xmax = _simd16_add_epi32(vMaxX, _simd16_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.ymin = _simd16_sub_epi32(vMinY, _simd16_set1_epi32(CT::BoundingBoxOffsetT::value));
+    bbox.ymax = _simd16_add_epi32(vMaxY, _simd16_set1_epi32(CT::BoundingBoxOffsetT::value));
+}
+
+#endif
 //////////////////////////////////////////////////////////////////////////
 /// @brief Processes attributes for the backend based on linkage mask and
 ///        linkage map.  Essentially just doing an SOA->AOS conversion and pack.
