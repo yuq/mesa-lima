@@ -25,6 +25,7 @@
  */
 
 #include "si_pipe.h"
+#include "si_compute.h"
 #include "sid.h"
 #include "gfx9d.h"
 #include "sid_tables.h"
@@ -53,6 +54,15 @@ static void si_dump_gfx_shader(struct si_screen *sscreen,
 		return;
 
 	si_dump_shader(sscreen, state->cso->info.processor, current, f);
+}
+
+static void si_dump_compute_shader(struct si_screen *sscreen,
+				   const struct si_cs_shader_state *state, FILE *f)
+{
+	if (!state->program || state->program != state->emitted_program)
+		return;
+
+	si_dump_shader(sscreen, PIPE_SHADER_COMPUTE, &state->program->shader, f);
 }
 
 /**
@@ -769,6 +779,7 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_gfx_shader(sctx->screen, &sctx->tes_shader, f);
 		si_dump_gfx_shader(sctx->screen, &sctx->gs_shader, f);
 		si_dump_gfx_shader(sctx->screen, &sctx->ps_shader, f);
+		si_dump_compute_shader(sctx->screen, &sctx->cs_shader_state, f);
 
 		if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
 			si_dump_annotated_shaders(sctx, f);
