@@ -124,6 +124,23 @@ translate_prim(const struct gl_context *ctx, unsigned prim)
    return prim;
 }
 
+static inline void
+prepare_draw(struct st_context *st, struct gl_context *ctx)
+{
+   /* Mesa core state should have been validated already */
+   assert(ctx->NewState == 0x0);
+
+   if (unlikely(!st->bitmap.cache.empty))
+      st_flush_bitmap_cache(st);
+
+   st_invalidate_readpix_cache(st);
+
+   /* Validate state. */
+   if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK ||
+       st->gfx_shaders_may_be_dirty) {
+      st_validate_state(st, ST_PIPELINE_RENDER);
+   }
+}
 
 /**
  * This function gets plugged into the VBO module and is called when
@@ -148,23 +165,10 @@ st_draw_vbo(struct gl_context *ctx,
    unsigned i;
    unsigned start = 0;
 
-   /* Mesa core state should have been validated already */
-   assert(ctx->NewState == 0x0);
+   prepare_draw(st, ctx);
 
-   if (unlikely(!st->bitmap.cache.empty))
-      st_flush_bitmap_cache(st);
-
-   st_invalidate_readpix_cache(st);
-
-   /* Validate state. */
-   if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK ||
-       st->gfx_shaders_may_be_dirty) {
-      st_validate_state(st, ST_PIPELINE_RENDER);
-   }
-
-   if (st->vertex_array_out_of_memory) {
+   if (st->vertex_array_out_of_memory)
       return;
-   }
 
    /* Initialize pipe_draw_info. */
    info.primitive_restart = false;
@@ -253,21 +257,11 @@ st_indirect_draw_vbo(struct gl_context *ctx,
    struct pipe_draw_info info;
    struct pipe_draw_indirect_info indirect;
 
-   /* Mesa core state should have been validated already */
-   assert(ctx->NewState == 0x0);
    assert(stride);
+   prepare_draw(st, ctx);
 
-   st_invalidate_readpix_cache(st);
-
-   /* Validate state. */
-   if ((st->dirty | ctx->NewDriverState) & ST_PIPELINE_RENDER_STATE_MASK ||
-       st->gfx_shaders_may_be_dirty) {
-      st_validate_state(st, ST_PIPELINE_RENDER);
-   }
-
-   if (st->vertex_array_out_of_memory) {
+   if (st->vertex_array_out_of_memory)
       return;
-   }
 
    memset(&indirect, 0, sizeof(indirect));
    util_draw_init_info(&info);
