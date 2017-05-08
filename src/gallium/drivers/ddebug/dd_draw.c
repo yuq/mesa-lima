@@ -197,9 +197,9 @@ dd_dump_render_condition(struct dd_draw_state *dstate, FILE *f)
 }
 
 static void
-dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE *f)
+dd_dump_shader(struct dd_draw_state *dstate, enum pipe_shader_type sh, FILE *f)
 {
-   int sh, i;
+   int i;
    const char *shader_str[PIPE_SHADER_TYPES];
 
    shader_str[PIPE_SHADER_VERTEX] = "VERTEX";
@@ -208,6 +208,85 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
    shader_str[PIPE_SHADER_GEOMETRY] = "GEOMETRY";
    shader_str[PIPE_SHADER_FRAGMENT] = "FRAGMENT";
    shader_str[PIPE_SHADER_COMPUTE] = "COMPUTE";
+
+   if (sh == PIPE_SHADER_TESS_CTRL &&
+       !dstate->shaders[PIPE_SHADER_TESS_CTRL] &&
+       dstate->shaders[PIPE_SHADER_TESS_EVAL])
+      fprintf(f, "tess_state: {default_outer_level = {%f, %f, %f, %f}, "
+              "default_inner_level = {%f, %f}}\n",
+              dstate->tess_default_levels[0],
+              dstate->tess_default_levels[1],
+              dstate->tess_default_levels[2],
+              dstate->tess_default_levels[3],
+              dstate->tess_default_levels[4],
+              dstate->tess_default_levels[5]);
+
+   if (sh == PIPE_SHADER_FRAGMENT)
+      if (dstate->rs) {
+         unsigned num_viewports = dd_num_active_viewports(dstate);
+
+         if (dstate->rs->state.rs.clip_plane_enable)
+            DUMP(clip_state, &dstate->clip_state);
+
+         for (i = 0; i < num_viewports; i++)
+            DUMP_I(viewport_state, &dstate->viewports[i], i);
+
+         if (dstate->rs->state.rs.scissor)
+            for (i = 0; i < num_viewports; i++)
+               DUMP_I(scissor_state, &dstate->scissors[i], i);
+
+         DUMP(rasterizer_state, &dstate->rs->state.rs);
+
+         if (dstate->rs->state.rs.poly_stipple_enable)
+            DUMP(poly_stipple, &dstate->polygon_stipple);
+         fprintf(f, "\n");
+      }
+
+   if (!dstate->shaders[sh])
+      return;
+
+   fprintf(f, COLOR_SHADER "begin shader: %s" COLOR_RESET "\n", shader_str[sh]);
+   DUMP(shader_state, &dstate->shaders[sh]->state.shader);
+
+   for (i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++)
+      if (dstate->constant_buffers[sh][i].buffer ||
+            dstate->constant_buffers[sh][i].user_buffer) {
+         DUMP_I(constant_buffer, &dstate->constant_buffers[sh][i], i);
+         if (dstate->constant_buffers[sh][i].buffer)
+            DUMP_M(resource, &dstate->constant_buffers[sh][i], buffer);
+      }
+
+   for (i = 0; i < PIPE_MAX_SAMPLERS; i++)
+      if (dstate->sampler_states[sh][i])
+         DUMP_I(sampler_state, &dstate->sampler_states[sh][i]->state.sampler, i);
+
+   for (i = 0; i < PIPE_MAX_SAMPLERS; i++)
+      if (dstate->sampler_views[sh][i]) {
+         DUMP_I(sampler_view, dstate->sampler_views[sh][i], i);
+         DUMP_M(resource, dstate->sampler_views[sh][i], texture);
+      }
+
+   for (i = 0; i < PIPE_MAX_SHADER_IMAGES; i++)
+      if (dstate->shader_images[sh][i].resource) {
+         DUMP_I(image_view, &dstate->shader_images[sh][i], i);
+         if (dstate->shader_images[sh][i].resource)
+            DUMP_M(resource, &dstate->shader_images[sh][i], resource);
+      }
+
+   for (i = 0; i < PIPE_MAX_SHADER_BUFFERS; i++)
+      if (dstate->shader_buffers[sh][i].buffer) {
+         DUMP_I(shader_buffer, &dstate->shader_buffers[sh][i], i);
+         if (dstate->shader_buffers[sh][i].buffer)
+            DUMP_M(resource, &dstate->shader_buffers[sh][i], buffer);
+      }
+
+   fprintf(f, COLOR_SHADER "end shader: %s" COLOR_RESET "\n\n", shader_str[sh]);
+}
+
+static void
+dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE *f)
+{
+   int sh, i;
 
    DUMP(draw_info, info);
    if (info->indexed) {
@@ -258,78 +337,7 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
       if (sh == PIPE_SHADER_COMPUTE)
          continue;
 
-      if (sh == PIPE_SHADER_TESS_CTRL &&
-          !dstate->shaders[PIPE_SHADER_TESS_CTRL] &&
-          dstate->shaders[PIPE_SHADER_TESS_EVAL])
-         fprintf(f, "tess_state: {default_outer_level = {%f, %f, %f, %f}, "
-                 "default_inner_level = {%f, %f}}\n",
-                 dstate->tess_default_levels[0],
-                 dstate->tess_default_levels[1],
-                 dstate->tess_default_levels[2],
-                 dstate->tess_default_levels[3],
-                 dstate->tess_default_levels[4],
-                 dstate->tess_default_levels[5]);
-
-      if (sh == PIPE_SHADER_FRAGMENT)
-         if (dstate->rs) {
-            unsigned num_viewports = dd_num_active_viewports(dstate);
-
-            if (dstate->rs->state.rs.clip_plane_enable)
-               DUMP(clip_state, &dstate->clip_state);
-
-            for (i = 0; i < num_viewports; i++)
-               DUMP_I(viewport_state, &dstate->viewports[i], i);
-
-            if (dstate->rs->state.rs.scissor)
-               for (i = 0; i < num_viewports; i++)
-                  DUMP_I(scissor_state, &dstate->scissors[i], i);
-
-            DUMP(rasterizer_state, &dstate->rs->state.rs);
-
-            if (dstate->rs->state.rs.poly_stipple_enable)
-               DUMP(poly_stipple, &dstate->polygon_stipple);
-            fprintf(f, "\n");
-         }
-
-      if (!dstate->shaders[sh])
-         continue;
-
-      fprintf(f, COLOR_SHADER "begin shader: %s" COLOR_RESET "\n", shader_str[sh]);
-      DUMP(shader_state, &dstate->shaders[sh]->state.shader);
-
-      for (i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++)
-         if (dstate->constant_buffers[sh][i].buffer ||
-             dstate->constant_buffers[sh][i].user_buffer) {
-            DUMP_I(constant_buffer, &dstate->constant_buffers[sh][i], i);
-            if (dstate->constant_buffers[sh][i].buffer)
-               DUMP_M(resource, &dstate->constant_buffers[sh][i], buffer);
-         }
-
-      for (i = 0; i < PIPE_MAX_SAMPLERS; i++)
-         if (dstate->sampler_states[sh][i])
-            DUMP_I(sampler_state, &dstate->sampler_states[sh][i]->state.sampler, i);
-
-      for (i = 0; i < PIPE_MAX_SAMPLERS; i++)
-         if (dstate->sampler_views[sh][i]) {
-            DUMP_I(sampler_view, dstate->sampler_views[sh][i], i);
-            DUMP_M(resource, dstate->sampler_views[sh][i], texture);
-         }
-
-      for (i = 0; i < PIPE_MAX_SHADER_IMAGES; i++)
-         if (dstate->shader_images[sh][i].resource) {
-            DUMP_I(image_view, &dstate->shader_images[sh][i], i);
-            if (dstate->shader_images[sh][i].resource)
-               DUMP_M(resource, &dstate->shader_images[sh][i], resource);
-         }
-
-      for (i = 0; i < PIPE_MAX_SHADER_BUFFERS; i++)
-         if (dstate->shader_buffers[sh][i].buffer) {
-            DUMP_I(shader_buffer, &dstate->shader_buffers[sh][i], i);
-            if (dstate->shader_buffers[sh][i].buffer)
-               DUMP_M(resource, &dstate->shader_buffers[sh][i], buffer);
-         }
-
-      fprintf(f, COLOR_SHADER "end shader: %s" COLOR_RESET "\n\n", shader_str[sh]);
+      dd_dump_shader(dstate, sh, f);
    }
 
    if (dstate->dsa)
