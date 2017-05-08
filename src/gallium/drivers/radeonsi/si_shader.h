@@ -601,7 +601,7 @@ unsigned si_shader_io_get_unique_index_patch(unsigned semantic_name, unsigned in
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 unsigned si_shader_io_get_unique_index2(unsigned name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
-void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
+void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,
 		    FILE *f, bool check_debug_option);
 void si_multiwave_lds_size_workaround(struct si_screen *sscreen,
@@ -613,7 +613,7 @@ void si_shader_binary_read_config(struct ac_shader_binary *binary,
 				  unsigned symbol_offset);
 unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
 				    bool writes_samplemask);
-const char *si_get_shader_name(struct si_shader *shader, unsigned processor);
+const char *si_get_shader_name(const struct si_shader *shader, unsigned processor);
 
 /* Inline helpers. */
 

@@ -69,7 +69,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 				 struct lp_build_tgsi_context *bld_base,
 				 struct lp_build_emit_data *emit_data);
 
-static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
+static void si_dump_shader_key(unsigned processor, const struct si_shader *shader,
 			       FILE *f);
 
 static unsigned llvm_get_type_size(LLVMTypeRef type);
@@ -6537,7 +6537,7 @@ void si_shader_apply_scratch_relocs(struct si_shader *shader,
 	}
 }
 
-static unsigned si_get_shader_binary_size(struct si_shader *shader)
+static unsigned si_get_shader_binary_size(const struct si_shader *shader)
 {
 	unsigned size = shader->binary.code_size;
 
@@ -6669,13 +6669,13 @@ static void si_shader_dump_disassembly(const struct ac_shader_binary *binary,
 }
 
 static void si_shader_dump_stats(struct si_screen *sscreen,
-				 struct si_shader *shader,
+				 const struct si_shader *shader,
 			         struct pipe_debug_callback *debug,
 			         unsigned processor,
 				 FILE *file,
 				 bool check_debug_option)
 {
-	struct si_shader_config *conf = &shader->config;
+	const struct si_shader_config *conf = &shader->config;
 	unsigned num_inputs = shader->selector ? shader->selector->info.num_inputs : 0;
 	unsigned code_size = si_get_shader_binary_size(shader);
 	unsigned lds_increment = sscreen->b.chip_class >= CIK ? 512 : 256;
@@ -6761,7 +6761,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			   conf->spilled_vgprs, conf->private_mem_vgprs);
 }
 
-const char *si_get_shader_name(struct si_shader *shader, unsigned processor)
+const char *si_get_shader_name(const struct si_shader *shader, unsigned processor)
 {
 	switch (processor) {
 	case PIPE_SHADER_VERTEX:
@@ -6792,7 +6792,7 @@ const char *si_get_shader_name(struct si_shader *shader, unsigned processor)
 	}
 }
 
-void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
+void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,
 		    FILE *file, bool check_debug_option)
 {
@@ -7061,8 +7061,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	return shader;
 }
 
-static void si_dump_shader_key_vs(struct si_shader_key *key,
-				  struct si_vs_prolog_bits *prolog,
+static void si_dump_shader_key_vs(const struct si_shader_key *key,
+				  const struct si_vs_prolog_bits *prolog,
 				  const char *prefix, FILE *f)
 {
 	fprintf(f, "  %s.instance_divisors = {", prefix);
@@ -7078,10 +7078,10 @@ static void si_dump_shader_key_vs(struct si_shader_key *key,
 	fprintf(f, "}\n");
 }
 
-static void si_dump_shader_key(unsigned processor, struct si_shader *shader,
+static void si_dump_shader_key(unsigned processor, const struct si_shader *shader,
 			       FILE *f)
 {
-	struct si_shader_key *key = &shader->key;
+	const struct si_shader_key *key = &shader->key;
 
 	fprintf(f, "SHADER KEY\n");
 
