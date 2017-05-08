@@ -717,10 +717,6 @@ void ProcessStreamIdBuffer(uint32_t stream, uint8_t* pStreamIdBase, uint32_t num
 
 THREAD SWR_GS_CONTEXT tlsGsContext;
 
-#if USE_SIMD16_FRONTEND
-THREAD simd16vertex tempVertex_simd16[128];
-
-#endif
 template<typename SIMDVERTEX, uint32_t SIMD_WIDTH>
 struct GsBufferInfo
 {
@@ -819,7 +815,11 @@ static void GeometryShaderStage(
         tlsGsContext.vert[i].attrib[VERTEX_POSITION_SLOT] = attrib[i];
     }
 
+#if USE_SIMD16_FRONTEND
+    const GsBufferInfo<simd16vertex, KNOB_SIMD16_WIDTH> bufferInfo(state.gsState);
+#else
     const GsBufferInfo<simdvertex, KNOB_SIMD_WIDTH> bufferInfo(state.gsState);
+#endif
 
     // record valid prims from the frontend to avoid over binning the newly generated
     // prims from the GS
@@ -923,19 +923,7 @@ static void GeometryShaderStage(
                 }
 
 #if USE_SIMD16_FRONTEND
-                // TEMPORARY: GS outputs simdvertex, PA inputs simd16vertex, so convert simdvertex to simd16vertex
-
-                SWR_ASSERT(numEmittedVerts <= 256);
-
-                PackPairsOfSimdVertexIntoSimd16Vertex(
-                    tempVertex_simd16,
-                    reinterpret_cast<const simdvertex *>(pBase),
-                    numEmittedVerts,
-                    SWR_VTX_NUM_SLOTS);
-
-#endif
-#if USE_SIMD16_FRONTEND
-                PA_STATE_CUT gsPa(pDC, reinterpret_cast<uint8_t *>(tempVertex_simd16), numEmittedVerts, reinterpret_cast<simd16mask *>(pCutBuffer), numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
+                PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, reinterpret_cast<simd16mask *>(pCutBuffer), numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
 
 #else
                 PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, pCutBuffer, numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
