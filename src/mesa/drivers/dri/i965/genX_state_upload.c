@@ -1156,9 +1156,16 @@ genX(calculate_attr_overrides)(const struct brw_context *brw,
 
 /* ---------------------------------------------------------------------- */
 
-#if GEN_GEN >= 6
-static void
-genX(upload_depth_stencil_state)(struct brw_context *brw)
+#if GEN_GEN >= 8
+typedef struct GENX(3DSTATE_WM_DEPTH_STENCIL) DEPTH_STENCIL_GENXML;
+#elif GEN_GEN >= 6
+typedef struct GENX(DEPTH_STENCIL_STATE)      DEPTH_STENCIL_GENXML;
+#else
+typedef struct GENX(COLOR_CALC_STATE)         DEPTH_STENCIL_GENXML;
+#endif
+
+static inline void
+set_depth_stencil_bits(struct brw_context *brw, DEPTH_STENCIL_GENXML *ds)
 {
    struct gl_context *ctx = &brw->ctx;
 
@@ -1173,65 +1180,75 @@ genX(upload_depth_stencil_state)(struct brw_context *brw)
    struct gl_stencil_attrib *stencil = &ctx->Stencil;
    const int b = stencil->_BackFace;
 
-#if GEN_GEN >= 8
-   brw_batch_emit(brw, GENX(3DSTATE_WM_DEPTH_STENCIL), wmds) {
-#else
-   uint32_t ds_offset;
-   brw_state_emit(brw, GENX(DEPTH_STENCIL_STATE), 64, &ds_offset, wmds) {
-#endif
-      if (depth->Test && depth_irb) {
-         wmds.DepthTestEnable = true;
-         wmds.DepthBufferWriteEnable = brw_depth_writes_enabled(brw);
-         wmds.DepthTestFunction = intel_translate_compare_func(depth->Func);
-      }
-
-      if (brw->stencil_enabled) {
-         wmds.StencilTestEnable = true;
-         wmds.StencilWriteMask = stencil->WriteMask[0] & 0xff;
-         wmds.StencilTestMask = stencil->ValueMask[0] & 0xff;
-
-         wmds.StencilTestFunction =
-            intel_translate_compare_func(stencil->Function[0]);
-         wmds.StencilFailOp =
-            intel_translate_stencil_op(stencil->FailFunc[0]);
-         wmds.StencilPassDepthPassOp =
-            intel_translate_stencil_op(stencil->ZPassFunc[0]);
-         wmds.StencilPassDepthFailOp =
-            intel_translate_stencil_op(stencil->ZFailFunc[0]);
-
-         wmds.StencilBufferWriteEnable = brw->stencil_write_enabled;
-
-         if (brw->stencil_two_sided) {
-            wmds.DoubleSidedStencilEnable = true;
-            wmds.BackfaceStencilWriteMask = stencil->WriteMask[b] & 0xff;
-            wmds.BackfaceStencilTestMask = stencil->ValueMask[b] & 0xff;
-
-            wmds.BackfaceStencilTestFunction =
-               intel_translate_compare_func(stencil->Function[b]);
-            wmds.BackfaceStencilFailOp =
-               intel_translate_stencil_op(stencil->FailFunc[b]);
-            wmds.BackfaceStencilPassDepthPassOp =
-               intel_translate_stencil_op(stencil->ZPassFunc[b]);
-            wmds.BackfaceStencilPassDepthFailOp =
-               intel_translate_stencil_op(stencil->ZFailFunc[b]);
-         }
-
-#if GEN_GEN >= 9
-         wmds.StencilReferenceValue = _mesa_get_stencil_ref(ctx, 0);
-         wmds.BackfaceStencilReferenceValue = _mesa_get_stencil_ref(ctx, b);
-#endif
-      }
+   if (depth->Test && depth_irb) {
+      ds->DepthTestEnable = true;
+      ds->DepthBufferWriteEnable = brw_depth_writes_enabled(brw);
+      ds->DepthTestFunction = intel_translate_compare_func(depth->Func);
    }
 
+   if (brw->stencil_enabled) {
+      ds->StencilTestEnable = true;
+      ds->StencilWriteMask = stencil->WriteMask[0] & 0xff;
+      ds->StencilTestMask = stencil->ValueMask[0] & 0xff;
+
+      ds->StencilTestFunction =
+         intel_translate_compare_func(stencil->Function[0]);
+      ds->StencilFailOp =
+         intel_translate_stencil_op(stencil->FailFunc[0]);
+      ds->StencilPassDepthPassOp =
+         intel_translate_stencil_op(stencil->ZPassFunc[0]);
+      ds->StencilPassDepthFailOp =
+         intel_translate_stencil_op(stencil->ZFailFunc[0]);
+
+      ds->StencilBufferWriteEnable = brw->stencil_write_enabled;
+
+      if (brw->stencil_two_sided) {
+         ds->DoubleSidedStencilEnable = true;
+         ds->BackfaceStencilWriteMask = stencil->WriteMask[b] & 0xff;
+         ds->BackfaceStencilTestMask = stencil->ValueMask[b] & 0xff;
+
+         ds->BackfaceStencilTestFunction =
+            intel_translate_compare_func(stencil->Function[b]);
+         ds->BackfaceStencilFailOp =
+            intel_translate_stencil_op(stencil->FailFunc[b]);
+         ds->BackfaceStencilPassDepthPassOp =
+            intel_translate_stencil_op(stencil->ZPassFunc[b]);
+         ds->BackfaceStencilPassDepthFailOp =
+            intel_translate_stencil_op(stencil->ZFailFunc[b]);
+      }
+
+#if GEN_GEN >= 9
+      ds->StencilReferenceValue = _mesa_get_stencil_ref(ctx, 0);
+      ds->BackfaceStencilReferenceValue = _mesa_get_stencil_ref(ctx, b);
+#endif
+   }
+}
+
+#if GEN_GEN >= 6
+static void
+genX(upload_depth_stencil_state)(struct brw_context *brw)
+{
+#if GEN_GEN >= 8
+   brw_batch_emit(brw, GENX(3DSTATE_WM_DEPTH_STENCIL), wmds) {
+      set_depth_stencil_bits(brw, &wmds);
+   }
+#else
+   uint32_t ds_offset;
+   brw_state_emit(brw, GENX(DEPTH_STENCIL_STATE), 64, &ds_offset, ds) {
+      set_depth_stencil_bits(brw, &ds);
+   }
+
+   /* Now upload a pointer to the indirect state */
 #if GEN_GEN == 6
    brw_batch_emit(brw, GENX(3DSTATE_CC_STATE_POINTERS), ptr) {
       ptr.PointertoDEPTH_STENCIL_STATE = ds_offset;
       ptr.DEPTH_STENCIL_STATEChange = true;
    }
-#elif GEN_GEN == 7
+#else
    brw_batch_emit(brw, GENX(3DSTATE_DEPTH_STENCIL_STATE_POINTERS), ptr) {
       ptr.PointertoDEPTH_STENCIL_STATE = ds_offset;
    }
+#endif
 #endif
 }
 
