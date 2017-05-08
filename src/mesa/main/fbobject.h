@@ -265,6 +265,9 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
                          GLuint texture, GLint level);
 
 extern void GLAPIENTRY
+_mesa_NamedFramebufferTexture_no_error(GLuint framebuffer, GLenum attachment,
+                                       GLuint texture, GLint level);
+extern void GLAPIENTRY
 _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
                               GLuint texture, GLint level);
 

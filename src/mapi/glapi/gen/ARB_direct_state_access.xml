@@ -171,7 +171,7 @@
       <param name="param" type="GLint" />
    </function>
 
-   <function name="NamedFramebufferTexture">
+   <function name="NamedFramebufferTexture" no_error="true">
       <param name="framebuffer" type="GLuint" />
       <param name="attachment" type="GLenum" />
       <param name="texture" type="GLuint" />
