@@ -3043,7 +3043,6 @@ struct gl_shader_compiler_options
 {
    /** Driver-selectable options: */
    GLboolean EmitNoLoops;
-   GLboolean EmitNoFunctions;
    GLboolean EmitNoCont;                  /**< Emit CONT opcode? */
    GLboolean EmitNoMainReturn;            /**< Emit CONT/RET opcodes? */
    GLboolean EmitNoPow;                   /**< Emit POW opcodes? */
