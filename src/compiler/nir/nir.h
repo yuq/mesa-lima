@@ -47,6 +47,10 @@
 
 #include "nir_opcodes.h"
 
+#if defined(_WIN32) && !defined(snprintf)
+#define snprintf _snprintf
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
