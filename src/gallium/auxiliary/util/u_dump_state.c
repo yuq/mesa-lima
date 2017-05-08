@@ -463,11 +463,13 @@ util_dump_shader_state(FILE *stream, const struct pipe_shader_state *state)
 
    util_dump_struct_begin(stream, "pipe_shader_state");
 
-   util_dump_member_begin(stream, "tokens");
-   fprintf(stream, "\"\n");
-   tgsi_dump_to_file(state->tokens, 0, stream);
-   fprintf(stream, "\"");
-   util_dump_member_end(stream);
+   if (state->type == PIPE_SHADER_IR_TGSI) {
+      util_dump_member_begin(stream, "tokens");
+      fprintf(stream, "\"\n");
+      tgsi_dump_to_file(state->tokens, 0, stream);
+      fprintf(stream, "\"");
+      util_dump_member_end(stream);
+   }
 
    if (state->stream_output.num_outputs) {
       util_dump_member_begin(stream, "stream_output");
