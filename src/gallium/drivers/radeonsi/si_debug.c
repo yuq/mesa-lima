@@ -35,18 +35,24 @@
 DEBUG_GET_ONCE_OPTION(replace_shaders, "RADEON_REPLACE_SHADERS", NULL)
 
 static void si_dump_shader(struct si_screen *sscreen,
-			   struct si_shader_ctx_state *state, FILE *f)
+			   enum pipe_shader_type processor,
+			   const struct si_shader *shader, FILE *f)
 {
-	struct si_shader *current = state->current;
+	if (shader->shader_log)
+		fwrite(shader->shader_log, shader->shader_log_size, 1, f);
+	else
+		si_shader_dump(sscreen, shader, NULL, processor, f, false);
+}
+
+static void si_dump_gfx_shader(struct si_screen *sscreen,
+			       const struct si_shader_ctx_state *state, FILE *f)
+{
+	const struct si_shader *current = state->current;
 
 	if (!state->cso || !current)
 		return;
 
-	if (current->shader_log)
-		fwrite(current->shader_log, current->shader_log_size, 1, f);
-	else
-		si_shader_dump(sscreen, state->current, NULL,
-			       state->cso->info.processor, f, false);
+	si_dump_shader(sscreen, state->cso->info.processor, current, f);
 }
 
 /**
@@ -753,11 +759,11 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_framebuffer(sctx, f);
 
 	if (flags & PIPE_DUMP_CURRENT_SHADERS) {
-		si_dump_shader(sctx->screen, &sctx->vs_shader, f);
-		si_dump_shader(sctx->screen, &sctx->tcs_shader, f);
-		si_dump_shader(sctx->screen, &sctx->tes_shader, f);
-		si_dump_shader(sctx->screen, &sctx->gs_shader, f);
-		si_dump_shader(sctx->screen, &sctx->ps_shader, f);
+		si_dump_gfx_shader(sctx->screen, &sctx->vs_shader, f);
+		si_dump_gfx_shader(sctx->screen, &sctx->tcs_shader, f);
+		si_dump_gfx_shader(sctx->screen, &sctx->tes_shader, f);
+		si_dump_gfx_shader(sctx->screen, &sctx->gs_shader, f);
+		si_dump_gfx_shader(sctx->screen, &sctx->ps_shader, f);
 
 		if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
 			si_dump_annotated_shaders(sctx, f);
