@@ -273,6 +273,11 @@ st_convert_sampler(const struct st_context *st,
                    const struct gl_sampler_object *msamp,
                    struct pipe_sampler_state *sampler);
 
+void
+st_convert_sampler_from_unit(const struct st_context *st,
+                             struct pipe_sampler_state *sampler,
+                             GLuint texUnit);
+
 GLboolean
 st_update_single_texture(struct st_context *st,
                          struct pipe_sampler_view **sampler_view,

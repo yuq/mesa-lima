@@ -230,11 +230,13 @@ st_convert_sampler(const struct st_context *st,
       ctx->Texture.CubeMapSeamless || msamp->CubeMapSeamless;
 }
 
-
-static void
-convert_sampler_from_unit(const struct st_context *st,
-                          struct pipe_sampler_state *sampler,
-                          GLuint texUnit)
+/**
+ * Get a pipe_sampler_state object from a texture unit.
+ */
+void
+st_convert_sampler_from_unit(const struct st_context *st,
+                             struct pipe_sampler_state *sampler,
+                             GLuint texUnit)
 {
    const struct gl_texture_object *texobj;
    struct gl_context *ctx = st->ctx;
@@ -282,7 +284,7 @@ update_shader_samplers(struct st_context *st,
       if (samplers_used & 1) {
          const GLuint texUnit = prog->SamplerUnits[unit];
 
-         convert_sampler_from_unit(st, sampler, texUnit);
+         st_convert_sampler_from_unit(st, sampler, texUnit);
          states[unit] = sampler;
          *num_samplers = unit + 1;
       }
