@@ -288,6 +288,7 @@ struct radv_instance {
 	struct radv_physical_device                 physicalDevices[RADV_MAX_DRM_DEVICES];
 
 	uint64_t debug_flags;
+	uint64_t perftest_flags;
 };
 
 VkResult radv_init_wsi(struct radv_physical_device *physical_device);

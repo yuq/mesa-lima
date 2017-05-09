@@ -270,7 +270,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 	assert(strlen(path) < ARRAY_SIZE(device->path));
 	strncpy(device->path, path, ARRAY_SIZE(device->path));
 
-	device->ws = radv_amdgpu_winsys_create(fd, instance->debug_flags);
+	device->ws = radv_amdgpu_winsys_create(fd, instance->debug_flags,
+					       instance->perftest_flags);
 	if (!device->ws) {
 		result = VK_ERROR_INCOMPATIBLE_DRIVER;
 		goto fail;
@@ -367,6 +368,11 @@ static const struct debug_control radv_debug_options[] = {
 	{NULL, 0}
 };
 
+static const struct debug_control radv_perftest_options[] = {
+	{"batchchain", RADV_PERFTEST_BATCHCHAIN},
+	{NULL, 0}
+};
+
 VkResult radv_CreateInstance(
 	const VkInstanceCreateInfo*                 pCreateInfo,
 	const VkAllocationCallbacks*                pAllocator,
@@ -423,6 +429,9 @@ VkResult radv_CreateInstance(
 
 	instance->debug_flags = parse_debug_string(getenv("RADV_DEBUG"),
 						   radv_debug_options);
+
+	instance->perftest_flags = parse_debug_string(getenv("RADV_PERFTEST"),
+						   radv_perftest_options);
 
 	*pInstance = radv_instance_to_handle(instance);
 
