@@ -57,7 +57,6 @@ static const struct debug_control debug_control[] = {
    { "vert",        DEBUG_VERTS },
    { "dri",         DEBUG_DRI },
    { "sf",          DEBUG_SF },
-   { "stats",       DEBUG_STATS },
    { "wm",          DEBUG_WM },
    { "urb",         DEBUG_URB },
    { "vs",          DEBUG_VS },

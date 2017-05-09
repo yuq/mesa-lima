@@ -146,10 +146,6 @@ brw_upload_vs_unit(struct brw_context *brw)
       vs->vs5.sampler_count = (stage_state->sampler_count + 3) / 4;
    }
 
-
-   if (unlikely(INTEL_DEBUG & DEBUG_STATS))
-      vs->thread4.stats_enable = 1;
-
    /* Vertex program always enabled:
     */
    vs->vs6.vs_enable = 1;

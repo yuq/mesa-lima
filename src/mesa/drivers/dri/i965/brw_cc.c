@@ -226,7 +226,7 @@ static void upload_cc_unit(struct brw_context *brw)
       cc->cc2.depth_write_enable = brw_depth_writes_enabled(brw);
    }
 
-   if (brw->stats_wm || unlikely(INTEL_DEBUG & DEBUG_STATS))
+   if (brw->stats_wm)
       cc->cc5.statistics_enable = 1;
 
    /* BRW_NEW_CC_VP */

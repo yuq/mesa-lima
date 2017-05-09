@@ -80,9 +80,6 @@ brw_upload_gs_unit(struct brw_context *brw)
    if (brw->gen == 5)
       gs->thread4.rendering_enable = 1;
 
-   if (unlikely(INTEL_DEBUG & DEBUG_STATS))
-      gs->thread4.stats_enable = 1;
-
    /* BRW_NEW_VIEWPORT_COUNT */
    gs->gs6.max_vp_index = brw->clip.viewport_count - 1;
 

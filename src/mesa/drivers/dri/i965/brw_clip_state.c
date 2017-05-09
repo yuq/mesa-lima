@@ -114,9 +114,6 @@ brw_upload_clip_unit(struct brw_context *brw)
       clip->thread4.max_threads = 1 - 1;
    }
 
-   if (unlikely(INTEL_DEBUG & DEBUG_STATS))
-      clip->thread4.stats_enable = 1;
-
    /* _NEW_TRANSFORM */
    if (brw->gen == 5 || brw->is_g4x)
       clip->clip5.userclip_enable_flags = ctx->Transform.ClipPlanesEnabled;
