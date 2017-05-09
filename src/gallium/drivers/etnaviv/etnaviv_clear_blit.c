@@ -465,15 +465,19 @@ etna_try_rs_blit(struct pipe_context *pctx,
       ts_mem_config |= VIVS_TS_MEM_CONFIG_MSAA | msaa_format;
    }
 
-   uint32_t to_flush = 0;
-
-   if (src->base.bind & PIPE_BIND_RENDER_TARGET)
-      to_flush |= VIVS_GL_FLUSH_CACHE_COLOR;
-   if (src->base.bind & PIPE_BIND_DEPTH_STENCIL)
-      to_flush |= VIVS_GL_FLUSH_CACHE_DEPTH;
-
-   if (to_flush) {
-      etna_set_state(ctx->stream, VIVS_GL_FLUSH_CACHE, to_flush);
+   /* Always flush color and depth cache together before resolving. This works
+    * around artifacts that appear in some cases when scanning out a texture
+    * directly after it has been rendered to, such as rendering an animated web
+    * page in a QtWebEngine based WebView on GC2000. The artifacts look like
+    * the texture sampler samples zeroes instead of texture data in a small,
+    * irregular triangle in the lower right of each browser tile quad. Other
+    * attempts to avoid these artifacts, including a pipeline stall before the
+    * color flush or a TS cache flush afterwards, or flushing multiple times,
+    * with stalls before and after each flush, have shown no effect. */
+   if (src->base.bind & PIPE_BIND_RENDER_TARGET ||
+       src->base.bind & PIPE_BIND_DEPTH_STENCIL) {
+      etna_set_state(ctx->stream, VIVS_GL_FLUSH_CACHE,
+		     VIVS_GL_FLUSH_CACHE_COLOR | VIVS_GL_FLUSH_CACHE_DEPTH);
       etna_stall(ctx->stream, SYNC_RECIPIENT_RA, SYNC_RECIPIENT_PE);
    }
 
