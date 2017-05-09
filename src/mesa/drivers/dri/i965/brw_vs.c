@@ -213,10 +213,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    prog_data.inputs_read = vp->program.info.inputs_read;
    prog_data.double_inputs_read = vp->program.info.double_inputs_read;
 
-   if (key->copy_edgeflag) {
-      prog_data.inputs_read |= VERT_BIT_EDGEFLAG;
-   }
-
    brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        vp->program.nir->info.separate_shader);

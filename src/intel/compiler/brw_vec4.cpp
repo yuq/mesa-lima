@@ -2778,6 +2778,17 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 
    const unsigned *assembly = NULL;
 
+   if (prog_data->base.vue_map.varying_to_slot[VARYING_SLOT_EDGE] != -1) {
+      /* If the output VUE map contains VARYING_SLOT_EDGE then we need to copy
+       * the edge flag from VERT_ATTRIB_EDGEFLAG.  This will be done
+       * automatically by brw_vec4_visitor::emit_urb_slot but we need to
+       * ensure that prog_data->inputs_read is accurate.
+       */
+      assert(!is_scalar);
+      assert(key->copy_edgeflag);
+      prog_data->inputs_read |= VERT_BIT_EDGEFLAG;
+   }
+
    prog_data->base.clip_distance_mask =
       ((1 << shader->info.clip_distance_array_size) - 1);
    prog_data->base.cull_distance_mask =
