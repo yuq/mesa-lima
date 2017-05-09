@@ -339,12 +339,10 @@ _mesa_HashRemove_unlocked(struct _mesa_HashTable *table, GLuint key)
    assert(table);
    assert(key);
 
-   /* have to check this outside of mutex lock */
-   if (table->InDeleteAll) {
-      _mesa_problem(NULL, "_mesa_HashRemove illegally called from "
-                    "_mesa_HashDeleteAll callback function");
-      return;
-   }
+   /* assert if _mesa_HashRemove illegally called from _mesa_HashDeleteAll
+    * callback function. Have to check this outside of mutex lock.
+    */
+   assert(!table->InDeleteAll);
 
    if (key == DELETED_KEY_VALUE) {
       table->deleted_key_data = NULL;
