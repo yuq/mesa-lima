@@ -547,7 +547,7 @@ swrast_put_image2(__DRIdrawable *driDrawable,
    if (gbm_dri_bo_map_dumb(bo) == NULL)
       return;
 
-   internal_stride = bo->base.base.stride;
+   internal_stride = bo->base.stride;
 
    for (i = 0; i < height; i++) {
       memcpy(bo->map + (x + i) * internal_stride + y,
@@ -577,7 +577,7 @@ swrast_get_image(__DRIdrawable *driDrawable,
    if (gbm_dri_bo_map_dumb(bo) == NULL)
       return;
 
-   internal_stride = bo->base.base.stride;
+   internal_stride = bo->base.stride;
    stride = width * 4;
 
    for (i = 0; i < height; i++) {

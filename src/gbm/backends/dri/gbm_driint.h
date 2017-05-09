@@ -102,7 +102,7 @@ struct gbm_dri_device {
 };
 
 struct gbm_dri_bo {
-   struct gbm_drm_bo base;
+   struct gbm_bo base;
 
    __DRIimage *image;
 
@@ -150,12 +150,12 @@ gbm_dri_bo_map_dumb(struct gbm_dri_bo *bo)
    memset(&map_arg, 0, sizeof(map_arg));
    map_arg.handle = bo->handle;
 
-   ret = drmIoctl(bo->base.base.gbm->fd, DRM_IOCTL_MODE_MAP_DUMB, &map_arg);
+   ret = drmIoctl(bo->base.gbm->fd, DRM_IOCTL_MODE_MAP_DUMB, &map_arg);
    if (ret)
       return NULL;
 
    bo->map = mmap(0, bo->size, PROT_WRITE,
-                  MAP_SHARED, bo->base.base.gbm->fd, map_arg.offset);
+                  MAP_SHARED, bo->base.gbm->fd, map_arg.offset);
    if (bo->map == MAP_FAILED) {
       bo->map = NULL;
       return NULL;

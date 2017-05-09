@@ -959,19 +959,19 @@ gbm_dri_bo_import(struct gbm_device *gbm,
       return NULL;
    }
 
-   bo->base.base.gbm = gbm;
-   bo->base.base.format = gbm_format;
+   bo->base.gbm = gbm;
+   bo->base.format = gbm_format;
 
    dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_WIDTH,
-                          (int*)&bo->base.base.width);
+                          (int*)&bo->base.width);
    dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_HEIGHT,
-                          (int*)&bo->base.base.height);
+                          (int*)&bo->base.height);
    dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_STRIDE,
-                          (int*)&bo->base.base.stride);
+                          (int*)&bo->base.stride);
    dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_HANDLE,
-                          &bo->base.base.handle.s32);
+                          &bo->base.handle.s32);
 
-   return &bo->base.base;
+   return &bo->base;
 }
 
 static bool
@@ -1038,19 +1038,19 @@ create_dumb(struct gbm_device *gbm,
    if (ret)
       goto free_bo;
 
-   bo->base.base.gbm = gbm;
-   bo->base.base.width = width;
-   bo->base.base.height = height;
-   bo->base.base.stride = create_arg.pitch;
-   bo->base.base.format = format;
-   bo->base.base.handle.u32 = create_arg.handle;
+   bo->base.gbm = gbm;
+   bo->base.width = width;
+   bo->base.height = height;
+   bo->base.stride = create_arg.pitch;
+   bo->base.format = format;
+   bo->base.handle.u32 = create_arg.handle;
    bo->handle = create_arg.handle;
    bo->size = create_arg.size;
 
    if (gbm_dri_bo_map_dumb(bo) == NULL)
       goto destroy_dumb;
 
-   return &bo->base.base;
+   return &bo->base;
 
 destroy_dumb:
    memset(&destroy_arg, 0, sizeof destroy_arg);
@@ -1086,10 +1086,10 @@ gbm_dri_bo_create(struct gbm_device *gbm,
    if (bo == NULL)
       return NULL;
 
-   bo->base.base.gbm = gbm;
-   bo->base.base.width = width;
-   bo->base.base.height = height;
-   bo->base.base.format = format;
+   bo->base.gbm = gbm;
+   bo->base.width = width;
+   bo->base.height = height;
+   bo->base.format = format;
 
    switch (format) {
    case GBM_FORMAT_R8:
@@ -1165,7 +1165,7 @@ gbm_dri_bo_create(struct gbm_device *gbm,
 
       if (bo->image) {
          /* The client passed in a list of invalid modifiers */
-         assert(gbm_dri_bo_get_modifier(&bo->base.base) != DRM_FORMAT_MOD_INVALID);
+         assert(gbm_dri_bo_get_modifier(&bo->base) != DRM_FORMAT_MOD_INVALID);
       }
    } else {
       bo->image = dri->image->createImage(dri->screen, width, height,
@@ -1176,11 +1176,11 @@ gbm_dri_bo_create(struct gbm_device *gbm,
       goto failed;
 
    dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_HANDLE,
-                          &bo->base.base.handle.s32);
+                          &bo->base.handle.s32);
    dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_STRIDE,
-                          (int *) &bo->base.base.stride);
+                          (int *) &bo->base.stride);
 
-   return &bo->base.base;
+   return &bo->base;
 
 failed:
    free(bo);
@@ -1198,8 +1198,8 @@ gbm_dri_bo_map(struct gbm_bo *_bo,
 
    /* If it's a dumb buffer, we already have a mapping */
    if (bo->map) {
-      *map_data = (char *)bo->map + (bo->base.base.stride * y) + (x * 4);
-      *stride = bo->base.base.stride;
+      *map_data = (char *)bo->map + (bo->base.stride * y) + (x * 4);
+      *stride = bo->base.stride;
       return *map_data;
    }
 
