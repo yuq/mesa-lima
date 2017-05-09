@@ -442,6 +442,9 @@ static void evergreen_emit_dispatch(struct r600_context *rctx,
 	radeon_emit(cs, info->grid[2]);
 	/* VGT_DISPATCH_INITIATOR = COMPUTE_SHADER_EN */
 	radeon_emit(cs, 1);
+
+	if (rctx->is_debug)
+		eg_trace_emit(rctx);
 }
 
 static void compute_emit_cs(struct r600_context *rctx,
@@ -867,10 +870,9 @@ void evergreen_init_atom_start_compute_cs(struct r600_context *rctx)
 	r600_store_context_reg(cb, R_028B54_VGT_SHADER_STAGES_EN, 2/*CS_ON*/);
 
 	r600_store_context_reg(cb, R_0286E8_SPI_COMPUTE_INPUT_CNTL,
-						S_0286E8_TID_IN_GROUP_ENA
-						| S_0286E8_TGID_ENA
-						| S_0286E8_DISABLE_INDEX_PACK)
-						;
+			       S_0286E8_TID_IN_GROUP_ENA(1) |
+			       S_0286E8_TGID_ENA(1) |
+			       S_0286E8_DISABLE_INDEX_PACK(1));
 
 	/* The LOOP_CONST registers are an optimizations for loops that allows
 	 * you to store the initial counter, increment value, and maximum

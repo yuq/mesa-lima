@@ -87,6 +87,8 @@
 #define PKT3_WAIT_REG_MEM                      0x3C
 #define		WAIT_REG_MEM_EQUAL		3
 #define PKT3_MEM_WRITE                         0x3D
+#define		MEM_WRITE_CONFIRM		(1 << 17)
+#define		MEM_WRITE_32_BITS		(1 << 18)
 #define PKT3_INDIRECT_BUFFER                   0x32
 #define PKT3_PFP_SYNC_ME		       0x42
 #define PKT3_SURFACE_SYNC                      0x43
@@ -1078,6 +1080,11 @@
 #define   G_028208_BR_Y(x)                             (((x) >> 16) & 0x7FFF)
 #define   C_028208_BR_Y                                0x8000FFFF
 
+#define R_028A78_VGT_DMA_MAX_SIZE                    0x028A78
+#define R_028A7C_VGT_DMA_INDEX_TYPE                  0x028A7C
+#define R_028A88_VGT_NUM_INSTANCES                   0x028A88
+#define R_0287E4_VGT_DMA_BASE_HI                     0x0287E4
+#define R_0287E8_VGT_DMA_BASE                        0x0287E8
 #define R_0287F0_VGT_DRAW_INITIATOR                  0x0287F0
 #define   S_0287F0_SOURCE_SELECT(x)                    (((unsigned)(x) & 0x3) << 0)
 #define   G_0287F0_SOURCE_SELECT(x)                    (((x) >> 0) & 0x3)
@@ -1951,9 +1958,9 @@
 #define R_0286DC_SPI_FOG_CNTL                        0x000286DC
 #define R_0286E4_SPI_PS_IN_CONTROL_2                 0x000286E4
 #define R_0286E8_SPI_COMPUTE_INPUT_CNTL              0x000286E8
-#define   S_0286E8_TID_IN_GROUP_ENA                  1
-#define   S_0286E8_TGID_ENA                          2
-#define   S_0286E8_DISABLE_INDEX_PACK                4
+#define   S_0286E8_TID_IN_GROUP_ENA(x)                  (((unsigned)(x) & 0x1) << 0)
+#define   S_0286E8_TGID_ENA(x)                          (((unsigned)(x) & 0x1) << 1)
+#define   S_0286E8_DISABLE_INDEX_PACK(x)                (((unsigned)(x) & 0x1) << 2)
 #define R_028720_GDS_ADDR_BASE                       0x00028720
 #define R_028724_GDS_ADDR_SIZE                       0x00028724
 #define R_028728_GDS_ORDERED_WAVE_PER_SE             0x00028728
@@ -2501,6 +2508,8 @@
 #define   S_0085F0_CR2_ACTION_ENA(x)                   (((unsigned)(x) & 0x1) << 31)
 #define   G_0085F0_CR2_ACTION_ENA(x)                   (((x) >> 31) & 0x1)
 #define   C_0085F0_CR2_ACTION_ENA                      0x7FFFFFFF
+#define R_0085F4_CP_COHER_SIZE                       0x0085F4
+#define R_0085F8_CP_COHER_BASE                       0x0085F8
 #define R_008970_VGT_NUM_INDICES                     0x008970
 
 #define R_03CFF0_SQ_VTX_BASE_VTX_LOC                    0x03CFF0

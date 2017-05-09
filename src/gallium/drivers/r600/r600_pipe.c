@@ -111,6 +111,11 @@ static void r600_destroy_context(struct pipe_context *context)
 	FREE(rctx->start_compute_cs_cmd.buf);
 
 	r600_common_context_cleanup(&rctx->b);
+
+	r600_resource_reference(&rctx->trace_buf, NULL);
+	r600_resource_reference(&rctx->last_trace_buf, NULL);
+	radeon_clear_saved_cs(&rctx->last_gfx);
+
 	FREE(rctx);
 }
 
@@ -145,6 +150,8 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 		rctx->b.b.create_video_buffer = vl_video_buffer_create;
 	}
 
+	if (getenv("R600_TRACE"))
+		rctx->is_debug = true;
 	r600_init_common_state_functions(rctx);
 
 	switch (rctx->b.chip_class) {

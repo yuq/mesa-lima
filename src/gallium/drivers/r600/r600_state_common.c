@@ -2015,6 +2015,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SQ_NON_EVENT));
 	}
 
+	if (rctx->trace_buf)
+		eg_trace_emit(rctx);
+
 	if (rctx->framebuffer.do_update_surf_dirtiness) {
 		/* Set the depth buffer as dirty. */
 		if (rctx->framebuffer.state.zsbuf) {

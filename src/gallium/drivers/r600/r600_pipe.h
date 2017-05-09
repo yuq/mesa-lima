@@ -524,6 +524,13 @@ struct r600_context {
 	struct r600_pipe_shader_selector *last_tcs;
 	unsigned last_num_tcs_input_cp;
 	unsigned lds_alloc;
+
+	/* Debug state. */
+	bool			is_debug;
+	struct radeon_saved_cs	last_gfx;
+	struct r600_resource	*last_trace_buf;
+	struct r600_resource	*trace_buf;
+	unsigned		trace_id;
 };
 
 static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
@@ -952,4 +959,8 @@ static inline unsigned r600_get_flush_flags(enum r600_coherency coher)
 #define     V_028A6C_OUTPRIM_TYPE_TRISTRIP             2
 
 unsigned r600_conv_prim_to_gs_out(unsigned mode);
+
+void eg_trace_emit(struct r600_context *rctx);
+void eg_dump_debug_state(struct pipe_context *ctx, FILE *f,
+			 unsigned flags);
 #endif

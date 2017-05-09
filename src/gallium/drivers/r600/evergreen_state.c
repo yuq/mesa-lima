@@ -4073,3 +4073,32 @@ bool evergreen_adjust_gprs(struct r600_context *rctx)
 	}
 	return true;
 }
+
+#define AC_ENCODE_TRACE_POINT(id)       (0xcafe0000 | ((id) & 0xffff))
+
+void eg_trace_emit(struct r600_context *rctx)
+{
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	unsigned reloc;
+
+	if (rctx->b.chip_class < EVERGREEN)
+		return;
+
+	/* This must be done after r600_need_cs_space. */
+	reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
+					  (struct r600_resource*)rctx->trace_buf, RADEON_USAGE_WRITE,
+					  RADEON_PRIO_CP_DMA);
+
+	rctx->trace_id++;
+	radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rctx->trace_buf,
+			      RADEON_USAGE_READWRITE, RADEON_PRIO_TRACE);
+	radeon_emit(cs, PKT3(PKT3_MEM_WRITE, 3, 0));
+	radeon_emit(cs, rctx->trace_buf->gpu_address);
+	radeon_emit(cs, rctx->trace_buf->gpu_address >> 32 | MEM_WRITE_32_BITS | MEM_WRITE_CONFIRM);
+	radeon_emit(cs, rctx->trace_id);
+	radeon_emit(cs, 0);
+	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+	radeon_emit(cs, reloc);
+	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+	radeon_emit(cs, AC_ENCODE_TRACE_POINT(rctx->trace_id));
+}
