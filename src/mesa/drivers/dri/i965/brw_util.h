@@ -41,7 +41,7 @@ extern GLuint brw_translate_blend_equation( GLenum mode );
 extern GLenum brw_fix_xRGB_alpha(GLenum function);
 
 static inline float
-brw_get_line_width_float(struct brw_context *brw)
+brw_get_line_width(struct brw_context *brw)
 {
    /* From the OpenGL 4.4 spec:
     *
@@ -70,14 +70,6 @@ brw_get_line_width_float(struct brw_context *brw)
    }
 
    return line_width;
-}
-
-static inline uint32_t
-brw_get_line_width(struct brw_context *brw)
-{
-   float line_width = brw_get_line_width_float(brw);
-
-   return U_FIXED(line_width, 7);
 }
 
 #endif

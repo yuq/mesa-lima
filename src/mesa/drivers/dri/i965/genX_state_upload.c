@@ -1405,11 +1405,11 @@ genX(upload_sf)(struct brw_context *brw)
       /* _NEW_LINE */
 #if GEN_GEN == 8
       if (brw->is_cherryview)
-         sf.CHVLineWidth = brw_get_line_width_float(brw);
+         sf.CHVLineWidth = brw_get_line_width(brw);
       else
-         sf.LineWidth = brw_get_line_width_float(brw);
+         sf.LineWidth = brw_get_line_width(brw);
 #else
-      sf.LineWidth = brw_get_line_width_float(brw);
+      sf.LineWidth = brw_get_line_width(brw);
 #endif
 
       if (ctx->Line.SmoothFlag) {
