@@ -244,6 +244,16 @@ lower_subgroups_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
       return nir_bit_count(b, nir_iand(b, int_val, mask));
    }
 
+   case nir_intrinsic_elect: {
+      nir_intrinsic_instr *first =
+         nir_intrinsic_instr_create(b->shader,
+                                    nir_intrinsic_first_invocation);
+      nir_ssa_dest_init(&first->instr, &first->dest, 1, 32, NULL);
+      nir_builder_instr_insert(b, &first->instr);
+
+      return nir_ieq(b, nir_load_subgroup_invocation(b), &first->dest.ssa);
+   }
+
    default:
       break;
    }

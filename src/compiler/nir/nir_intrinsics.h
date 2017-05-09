@@ -106,6 +106,18 @@ INTRINSIC(ballot, 1, ARR(1), true, 0, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMIN
 INTRINSIC(read_invocation, 2, ARR(0, 1), true, 0, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 INTRINSIC(read_first_invocation, 1, ARR(0), true, 0, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
+/** Additional SPIR-V ballot intrinsics
+ *
+ * These correspond to the SPIR-V opcodes
+ *
+ *    OpGroupUniformElect
+ *    OpSubgroupFirstInvocationKHR
+ */
+INTRINSIC(elect, 0, ARR(0), true, 1, 0, 0, xx, xx, xx,
+          NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(first_invocation, 0, ARR(0), true, 1, 0, 0, xx, xx, xx,
+          NIR_INTRINSIC_CAN_ELIMINATE)
+
 /*
  * Memory barrier with semantics analogous to the compute shader
  * groupMemoryBarrier(), memoryBarrierAtomicCounter(), memoryBarrierBuffer(),
