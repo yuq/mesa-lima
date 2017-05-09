@@ -495,9 +495,6 @@ static void StreamOut(
     PA_STATE& pa,
     uint32_t workerId,
     uint32_t* pPrimData,
-#if USE_SIMD16_FRONTEND
-    uint32_t numPrims_simd8,
-#endif
     uint32_t streamIndex)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
@@ -520,11 +517,7 @@ static void StreamOut(
         soContext.pBuffer[i] = &state.soBuffer[i];
     }
 
-#if USE_SIMD16_FRONTEND
-    uint32_t numPrims = numPrims_simd8;
-#else
     uint32_t numPrims = pa.NumPrims();
-#endif
 
     for (uint32_t primIndex = 0; primIndex < numPrims; ++primIndex)
     {
@@ -948,22 +941,8 @@ static void GeometryShaderStage(
 
                             if (HasStreamOutT::value)
                             {
-#if USE_SIMD16_FRONTEND
-                                const uint32_t numPrims = gsPa.NumPrims();
-                                const uint32_t numPrims_lo = std::min<uint32_t>(numPrims, KNOB_SIMD_WIDTH);
-                                const uint32_t numPrims_hi = std::max<uint32_t>(numPrims, KNOB_SIMD_WIDTH) - KNOB_SIMD_WIDTH;
-
                                 gsPa.useAlternateOffset = false;
-                                StreamOut(pDC, gsPa, workerId, pSoPrimData, numPrims_lo, stream);
-
-                                if (numPrims_hi)
-                                {
-                                    gsPa.useAlternateOffset = true;
-                                    StreamOut(pDC, gsPa, workerId, pSoPrimData, numPrims_hi, stream);
-                                }
-#else
                                 StreamOut(pDC, gsPa, workerId, pSoPrimData, stream);
-#endif
                             }
 
                             if (HasRastT::value && state.soState.streamToRasterizer == stream)
@@ -1360,18 +1339,8 @@ static void TessellationStages(
             {
                 if (HasStreamOutT::value)
                 {
-#if USE_SIMD16_FRONTEND
                     tessPa.useAlternateOffset = false;
-                    StreamOut(pDC, tessPa, workerId, pSoPrimData, numPrims_lo, 0);
-
-                    if (numPrims_hi)
-                    {
-                        tessPa.useAlternateOffset = true;
-                        StreamOut(pDC, tessPa, workerId, pSoPrimData, numPrims_hi, 0);
-                    }
-#else
                     StreamOut(pDC, tessPa, workerId, pSoPrimData, 0);
-#endif
                 }
 
                 if (HasRastT::value)
@@ -1747,19 +1716,8 @@ void ProcessDraw(
                                 // If streamout is enabled then stream vertices out to memory.
                                 if (HasStreamOutT::value)
                                 {
-#if 1
-                                    pa.useAlternateOffset = false;
-                                    StreamOut(pDC, pa, workerId, pSoPrimData, numPrims_lo, 0);
-
-                                    if (numPrims_hi)
-                                    {
-                                        pa.useAlternateOffset = true;
-                                        StreamOut(pDC, pa, workerId, pSoPrimData, numPrims_hi, 0);
-                                    }
-#else
                                     pa.useAlternateOffset = false;
                                     StreamOut(pDC, pa, workerId, pSoPrimData, 0);
-#endif
                                 }
 
                                 if (HasRastT::value)
