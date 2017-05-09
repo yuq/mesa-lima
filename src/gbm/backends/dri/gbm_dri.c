@@ -456,12 +456,12 @@ dri_screen_create_dri2(struct gbm_dri_device *dri, char *driver_name)
       return -1;
 
    if (dri->dri2->base.version >= 4) {
-      dri->screen = dri->dri2->createNewScreen2(0, dri->base.base.fd,
+      dri->screen = dri->dri2->createNewScreen2(0, dri->base.fd,
                                                 dri->loader_extensions,
                                                 dri->driver_extensions,
                                                 &dri->driver_configs, dri);
    } else {
-      dri->screen = dri->dri2->createNewScreen(0, dri->base.base.fd,
+      dri->screen = dri->dri2->createNewScreen(0, dri->base.fd,
                                                dri->loader_extensions,
                                                &dri->driver_configs, dri);
    }
@@ -527,7 +527,7 @@ dri_screen_create(struct gbm_dri_device *dri)
 {
    char *driver_name;
 
-   driver_name = loader_get_driver_for_fd(dri->base.base.fd);
+   driver_name = loader_get_driver_for_fd(dri->base.fd);
    if (!driver_name)
       return -1;
 
@@ -790,7 +790,7 @@ gbm_dri_bo_destroy(struct gbm_bo *_bo)
       gbm_dri_bo_unmap_dumb(bo);
       memset(&arg, 0, sizeof(arg));
       arg.handle = bo->handle;
-      drmIoctl(dri->base.base.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &arg);
+      drmIoctl(dri->base.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &arg);
    }
 
    free(bo);
@@ -1034,7 +1034,7 @@ create_dumb(struct gbm_device *gbm,
    create_arg.width = width;
    create_arg.height = height;
 
-   ret = drmIoctl(dri->base.base.fd, DRM_IOCTL_MODE_CREATE_DUMB, &create_arg);
+   ret = drmIoctl(dri->base.fd, DRM_IOCTL_MODE_CREATE_DUMB, &create_arg);
    if (ret)
       goto free_bo;
 
@@ -1055,7 +1055,7 @@ create_dumb(struct gbm_device *gbm,
 destroy_dumb:
    memset(&destroy_arg, 0, sizeof destroy_arg);
    destroy_arg.handle = create_arg.handle;
-   drmIoctl(dri->base.base.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_arg);
+   drmIoctl(dri->base.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_arg);
 free_bo:
    free(bo);
 
@@ -1351,26 +1351,25 @@ dri_device_create(int fd)
    if (!dri)
       return NULL;
 
-   dri->base.base.fd = fd;
-   dri->base.base.bo_create = gbm_dri_bo_create;
-   dri->base.base.bo_import = gbm_dri_bo_import;
-   dri->base.base.bo_map = gbm_dri_bo_map;
-   dri->base.base.bo_unmap = gbm_dri_bo_unmap;
-   dri->base.base.is_format_supported = gbm_dri_is_format_supported;
-   dri->base.base.bo_write = gbm_dri_bo_write;
-   dri->base.base.bo_get_fd = gbm_dri_bo_get_fd;
-   dri->base.base.bo_get_planes = gbm_dri_bo_get_planes;
-   dri->base.base.bo_get_handle = gbm_dri_bo_get_handle_for_plane;
-   dri->base.base.bo_get_stride = gbm_dri_bo_get_stride;
-   dri->base.base.bo_get_offset = gbm_dri_bo_get_offset;
-   dri->base.base.bo_get_modifier = gbm_dri_bo_get_modifier;
-   dri->base.base.bo_destroy = gbm_dri_bo_destroy;
-   dri->base.base.destroy = dri_destroy;
-   dri->base.base.surface_create = gbm_dri_surface_create;
-   dri->base.base.surface_destroy = gbm_dri_surface_destroy;
+   dri->base.fd = fd;
+   dri->base.bo_create = gbm_dri_bo_create;
+   dri->base.bo_import = gbm_dri_bo_import;
+   dri->base.bo_map = gbm_dri_bo_map;
+   dri->base.bo_unmap = gbm_dri_bo_unmap;
+   dri->base.is_format_supported = gbm_dri_is_format_supported;
+   dri->base.bo_write = gbm_dri_bo_write;
+   dri->base.bo_get_fd = gbm_dri_bo_get_fd;
+   dri->base.bo_get_planes = gbm_dri_bo_get_planes;
+   dri->base.bo_get_handle = gbm_dri_bo_get_handle_for_plane;
+   dri->base.bo_get_stride = gbm_dri_bo_get_stride;
+   dri->base.bo_get_offset = gbm_dri_bo_get_offset;
+   dri->base.bo_get_modifier = gbm_dri_bo_get_modifier;
+   dri->base.bo_destroy = gbm_dri_bo_destroy;
+   dri->base.destroy = dri_destroy;
+   dri->base.surface_create = gbm_dri_surface_create;
+   dri->base.surface_destroy = gbm_dri_surface_destroy;
 
-   dri->base.type = GBM_DRM_DRIVER_TYPE_DRI;
-   dri->base.base.name = "drm";
+   dri->base.name = "drm";
 
    mtx_init(&dri->mutex, mtx_plain);
 
@@ -1386,7 +1385,7 @@ dri_device_create(int fd)
    if (ret)
       goto err_dri;
 
-   return &dri->base.base;
+   return &dri->base;
 
 err_dri:
    free(dri);

@@ -893,7 +893,7 @@ dri2_display_release(_EGLDisplay *disp)
 #ifdef HAVE_DRM_PLATFORM
    case _EGL_PLATFORM_DRM:
       if (dri2_dpy->own_device) {
-         gbm_device_destroy(&dri2_dpy->gbm_dri->base.base);
+         gbm_device_destroy(&dri2_dpy->gbm_dri->base);
       }
       break;
 #endif

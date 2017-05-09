@@ -232,13 +232,13 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       return -1;
    if (dri2_surf->back->bo == NULL) {
       if (surf->base.modifiers)
-         dri2_surf->back->bo = gbm_bo_create_with_modifiers(&dri2_dpy->gbm_dri->base.base,
+         dri2_surf->back->bo = gbm_bo_create_with_modifiers(&dri2_dpy->gbm_dri->base,
                                                             surf->base.width, surf->base.height,
                                                             surf->base.format,
                                                             surf->base.modifiers,
                                                             surf->base.count);
       else
-         dri2_surf->back->bo = gbm_bo_create(&dri2_dpy->gbm_dri->base.base,
+         dri2_surf->back->bo = gbm_bo_create(&dri2_dpy->gbm_dri->base,
                                              surf->base.width,
                                              surf->base.height,
                                              surf->base.format,
@@ -264,7 +264,7 @@ get_swrast_front_bo(struct dri2_egl_surface *dri2_surf)
    }
 
    if (dri2_surf->current->bo == NULL)
-      dri2_surf->current->bo = gbm_bo_create(&dri2_dpy->gbm_dri->base.base,
+      dri2_surf->current->bo = gbm_bo_create(&dri2_dpy->gbm_dri->base,
                                              surf->base.width, surf->base.height,
                                              surf->base.format, surf->base.flags);
    if (dri2_surf->current->bo == NULL)
@@ -709,11 +709,6 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    }
 
    dri2_dpy->gbm_dri = gbm_dri_device(gbm);
-   if (dri2_dpy->gbm_dri->base.type != GBM_DRM_DRIVER_TYPE_DRI) {
-      err = "DRI2: gbm device using incorrect/incompatible type";
-      goto cleanup;
-   }
-
    dri2_dpy->fd = fd;
    dri2_dpy->driver_name = strdup(dri2_dpy->gbm_dri->driver_name);
 
@@ -737,9 +732,9 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->gbm_dri->swrast_put_image2 = swrast_put_image2;
    dri2_dpy->gbm_dri->swrast_get_image = swrast_get_image;
 
-   dri2_dpy->gbm_dri->base.base.surface_lock_front_buffer = lock_front_buffer;
-   dri2_dpy->gbm_dri->base.base.surface_release_buffer = release_buffer;
-   dri2_dpy->gbm_dri->base.base.surface_has_free_buffers = has_free_buffers;
+   dri2_dpy->gbm_dri->base.surface_lock_front_buffer = lock_front_buffer;
+   dri2_dpy->gbm_dri->base.surface_release_buffer = release_buffer;
+   dri2_dpy->gbm_dri->base.surface_has_free_buffers = has_free_buffers;
 
    dri2_setup_screen(disp);
 

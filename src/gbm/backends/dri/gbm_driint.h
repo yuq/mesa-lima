@@ -34,8 +34,6 @@
 #include "gbmint.h"
 #include "c11/threads.h"
 
-#include "common_drm.h"
-
 #include <GL/gl.h> /* dri_interface needs GL types */
 #include "GL/internal/dri_interface.h"
 
@@ -43,7 +41,7 @@ struct gbm_dri_surface;
 struct gbm_dri_bo;
 
 struct gbm_dri_device {
-   struct gbm_drm_device base;
+   struct gbm_device base;
 
    void *driver;
    char *driver_name; /* Name of the DRI module, without the _dri suffix */
