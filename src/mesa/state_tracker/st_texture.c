@@ -420,3 +420,44 @@ st_create_color_map_texture(struct gl_context *ctx)
                           texSize, texSize, 1, 1, 0, PIPE_BIND_SAMPLER_VIEW);
    return pt;
 }
+
+
+/**
+ * Create a texture handle from a texture unit.
+ */
+static GLuint64
+st_create_texture_handle_from_unit(struct st_context *st,
+                                   struct gl_program *prog, GLuint texUnit)
+{
+   struct gl_context *ctx = st->ctx;
+   struct gl_texture_object *texObj;
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_sampler_view *view;
+   struct pipe_sampler_state sampler;
+
+   if (!st_update_single_texture(st, &view, texUnit, prog->sh.data->Version))
+      return 0;
+
+   st_convert_sampler_from_unit(st, &sampler, texUnit);
+
+   texObj = ctx->Texture.Unit[texUnit]._Current;
+   assert(texObj);
+
+   return pipe->create_texture_handle(pipe, view, &sampler);
+}
+
+
+/**
+ * Create an image handle from an image unit.
+ */
+static GLuint64
+st_create_image_handle_from_unit(struct st_context *st,
+                                 struct gl_program *prog, GLuint imgUnit)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_image_view img;
+
+   st_convert_image_from_unit(st, &img, imgUnit);
+
+   return pipe->create_image_handle(pipe, &img);
+}
