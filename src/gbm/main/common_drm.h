@@ -38,7 +38,6 @@ enum gbm_drm_driver_type {
 struct gbm_drm_device {
    struct gbm_device base;
    enum gbm_drm_driver_type type;
-   char *driver_name;
 };
 
 #endif

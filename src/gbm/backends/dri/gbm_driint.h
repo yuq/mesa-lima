@@ -46,6 +46,7 @@ struct gbm_dri_device {
    struct gbm_drm_device base;
 
    void *driver;
+   char *driver_name; /* Name of the DRI module, without the _dri suffix */
 
    __DRIscreen *screen;
    __DRIcontext *context;

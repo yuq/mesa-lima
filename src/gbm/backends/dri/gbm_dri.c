@@ -344,12 +344,12 @@ dri_open_driver(struct gbm_dri_device *dri)
       len = next - p;
 #if GLX_USE_TLS
       snprintf(path, sizeof path,
-               "%.*s/tls/%s_dri.so", len, p, dri->base.driver_name);
+               "%.*s/tls/%s_dri.so", len, p, dri->driver_name);
       dri->driver = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
 #endif
       if (dri->driver == NULL) {
          snprintf(path, sizeof path,
-                  "%.*s/%s_dri.so", len, p, dri->base.driver_name);
+                  "%.*s/%s_dri.so", len, p, dri->driver_name);
          dri->driver = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
       }
       /* not need continue to loop all paths once the driver is found */
@@ -373,7 +373,7 @@ dri_open_driver(struct gbm_dri_device *dri)
       return NULL;
    }
 
-   get_extensions_name = loader_get_extensions_name(dri->base.driver_name);
+   get_extensions_name = loader_get_extensions_name(dri->driver_name);
    if (get_extensions_name) {
       const __DRIextension **(*get_extensions)(void);
 
@@ -440,13 +440,13 @@ dri_screen_create_dri2(struct gbm_dri_device *dri, char *driver_name)
    const __DRIextension **extensions;
    int ret = 0;
 
-   dri->base.driver_name = driver_name;
-   if (dri->base.driver_name == NULL)
+   dri->driver_name = driver_name;
+   if (dri->driver_name == NULL)
       return -1;
 
    ret = dri_load_driver(dri);
    if (ret) {
-      fprintf(stderr, "failed to load driver: %s\n", dri->base.driver_name);
+      fprintf(stderr, "failed to load driver: %s\n", dri->driver_name);
       return ret;
    };
 
@@ -490,8 +490,8 @@ dri_screen_create_swrast(struct gbm_dri_device *dri)
 {
    int ret;
 
-   dri->base.driver_name = strdup("swrast");
-   if (dri->base.driver_name == NULL)
+   dri->driver_name = strdup("swrast");
+   if (dri->driver_name == NULL)
       return -1;
 
    ret = dri_load_driver_swrast(dri);
@@ -1336,7 +1336,7 @@ dri_destroy(struct gbm_device *gbm)
       free((__DRIconfig *) dri->driver_configs[i]);
    free(dri->driver_configs);
    dlclose(dri->driver);
-   free(dri->base.driver_name);
+   free(dri->driver_name);
 
    free(dri);
 }
