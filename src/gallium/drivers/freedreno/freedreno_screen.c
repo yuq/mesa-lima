@@ -589,7 +589,7 @@ fd_get_compute_param(struct pipe_screen *pscreen, enum pipe_shader_ir ir_type,
 		enum pipe_compute_cap param, void *ret)
 {
 	struct fd_screen *screen = fd_screen(pscreen);
-	const char *ir = "ir3";
+	const char * const ir = "ir3";
 
 	if (!has_compute(screen))
 		return 0;
