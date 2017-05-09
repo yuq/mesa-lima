@@ -109,6 +109,15 @@ radv_init_surface(struct radv_device *device,
 
 	if (is_depth) {
 		surface->flags |= RADEON_SURF_ZBUFFER;
+		if (!(pCreateInfo->usage & VK_IMAGE_USAGE_STORAGE_BIT) &&
+		    !(pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) &&
+		    pCreateInfo->tiling != VK_IMAGE_TILING_LINEAR &&
+		    pCreateInfo->mipLevels <= 1 &&
+		    device->physical_device->rad_info.chip_class >= VI &&
+		    (pCreateInfo->format == VK_FORMAT_D32_SFLOAT ||
+		     (device->physical_device->rad_info.chip_class >= GFX9 &&
+		      pCreateInfo->format == VK_FORMAT_D16_UNORM)))
+			surface->flags |= RADEON_SURF_TC_COMPATIBLE_HTILE;
 	}
 
 	if (is_stencil)
@@ -255,6 +264,11 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 			meta_va = gpu_address + image->dcc_offset;
 			if (chip_class <= VI)
 				meta_va += base_level_info->dcc_offset;
+		} else if(image->tc_compatible_htile && image->surface.htile_size) {
+			meta_va = gpu_address + image->htile_offset;
+		}
+
+		if (meta_va) {
 			state[6] |= S_008F28_COMPRESSION_EN(1);
 			state[7] = meta_va >> 8;
 			state[7] |= image->surface.tile_swizzle;
@@ -898,6 +912,7 @@ radv_image_create(VkDevice _device,
 		if (radv_image_can_enable_htile(image) &&
 		    !(device->debug_flags & RADV_DEBUG_NO_HIZ)) {
 			radv_image_alloc_htile(image);
+			image->tc_compatible_htile = image->surface.flags & RADEON_SURF_TC_COMPATIBLE_HTILE;
 		} else {
 			image->surface.htile_size = 0;
 		}
@@ -1040,6 +1055,9 @@ bool radv_layout_has_htile(const struct radv_image *image,
                            VkImageLayout layout,
                            unsigned queue_mask)
 {
+	if (image->surface.htile_size && image->tc_compatible_htile)
+		return layout != VK_IMAGE_LAYOUT_GENERAL;
+
 	return image->surface.htile_size &&
 	       (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
 	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&
@@ -1050,6 +1068,9 @@ bool radv_layout_is_htile_compressed(const struct radv_image *image,
                                      VkImageLayout layout,
                                      unsigned queue_mask)
 {
+	if (image->surface.htile_size && image->tc_compatible_htile)
+		return layout != VK_IMAGE_LAYOUT_GENERAL;
+
 	return image->surface.htile_size &&
 	       (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
 	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&

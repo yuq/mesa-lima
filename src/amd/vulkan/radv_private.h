@@ -1218,6 +1218,7 @@ struct radv_image {
 	VkDeviceSize offset;
 	uint32_t dcc_offset;
 	uint32_t htile_offset;
+	bool tc_compatible_htile;
 	struct radeon_surf surface;
 
 	struct radv_fmask_info fmask;

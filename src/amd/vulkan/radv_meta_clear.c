@@ -543,8 +543,10 @@ create_depthstencil_pipeline(struct radv_device *device,
 
 static bool depth_view_can_fast_clear(struct radv_cmd_buffer *cmd_buffer,
 				      const struct radv_image_view *iview,
+				      VkImageAspectFlags aspects,
 				      VkImageLayout layout,
-				      const VkClearRect *clear_rect)
+				      const VkClearRect *clear_rect,
+				      VkClearDepthStencilValue clear_value)
 {
 	uint32_t queue_mask = radv_image_queue_family_mask(iview->image,
 	                                                   cmd_buffer->queue_family_index,
@@ -553,7 +555,13 @@ static bool depth_view_can_fast_clear(struct radv_cmd_buffer *cmd_buffer,
 	    clear_rect->rect.extent.width != iview->extent.width ||
 	    clear_rect->rect.extent.height != iview->extent.height)
 		return false;
-	if (iview->base_mip == 0 &&
+	if (iview->image->tc_compatible_htile &&
+	    (((aspects & VK_IMAGE_ASPECT_DEPTH_BIT) && clear_value.depth != 0.0 &&
+	      clear_value.depth != 1.0) ||
+	     ((aspects & VK_IMAGE_ASPECT_STENCIL_BIT) && clear_value.stencil != 0)))
+		return false;
+	if (iview->image->surface.htile_size &&
+	    iview->base_mip == 0 &&
 	    iview->base_layer == 0 &&
 	    radv_layout_is_htile_compressed(iview->image, layout, queue_mask) &&
 	    !radv_image_extent_compare(iview->image, &iview->extent))
@@ -571,7 +579,7 @@ pick_depthstencil_pipeline(struct radv_cmd_buffer *cmd_buffer,
 			   const VkClearRect *clear_rect,
 			   VkClearDepthStencilValue clear_value)
 {
-	bool fast = depth_view_can_fast_clear(cmd_buffer, iview, layout, clear_rect);
+	bool fast = depth_view_can_fast_clear(cmd_buffer, iview, aspects, layout, clear_rect, clear_value);
 	int index = DEPTH_CLEAR_SLOW;
 
 	if (fast) {
@@ -641,7 +649,9 @@ emit_depthstencil_clear(struct radv_cmd_buffer *cmd_buffer,
 				     pipeline);
 	}
 
-	if (depth_view_can_fast_clear(cmd_buffer, iview, subpass->depth_stencil_attachment.layout, clear_rect))
+	if (depth_view_can_fast_clear(cmd_buffer, iview, aspects,
+	                              subpass->depth_stencil_attachment.layout,
+	                              clear_rect, clear_value))
 		radv_set_depth_clear_regs(cmd_buffer, iview->image, clear_value, aspects);
 
 	radv_CmdSetViewport(radv_cmd_buffer_to_handle(cmd_buffer), 0, 1, &(VkViewport) {
