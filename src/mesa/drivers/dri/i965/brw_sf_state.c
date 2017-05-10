@@ -126,9 +126,10 @@ static void upload_sf_unit( struct brw_context *brw )
    /* _NEW_LINE */
    sf->sf6.line_width = U_FIXED(brw_get_line_width(brw), 1);
 
-   sf->sf6.line_endcap_aa_region_width = 1;
-   if (ctx->Line.SmoothFlag)
+   if (ctx->Line.SmoothFlag) {
       sf->sf6.aa_enable = 1;
+      sf->sf6.line_endcap_aa_region_width = 1;
+   }
 
    sf->sf6.point_rast_rule = BRW_RASTRULE_UPPER_RIGHT;
 
