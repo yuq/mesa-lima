@@ -1061,7 +1061,6 @@ struct brw_context
       uint32_t prog_offset;
       uint32_t state_offset;
       uint32_t vp_offset;
-      bool viewport_transform_enable;
    } sf;
 
    struct {

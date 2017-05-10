@@ -1126,7 +1126,6 @@ brwCreateContext(gl_api api,
    brw->prim_restart.in_progress = false;
    brw->prim_restart.enable_cut_index = false;
    brw->gs.enabled = false;
-   brw->sf.viewport_transform_enable = true;
    brw->clip.viewport_count = 1;
 
    brw->predicate.state = BRW_PREDICATE_STATE_RENDER;

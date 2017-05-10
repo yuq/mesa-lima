@@ -1345,7 +1345,7 @@ genX(upload_sf)(struct brw_context *brw)
 
    brw_batch_emit(brw, GENX(3DSTATE_SF), sf) {
       sf.StatisticsEnable = true;
-      sf.ViewportTransformEnable = brw->sf.viewport_transform_enable;
+      sf.ViewportTransformEnable = true;
 
 #if GEN_GEN == 7
       /* _NEW_BUFFERS */
