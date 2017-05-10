@@ -652,6 +652,7 @@ struct anv_physical_device {
     struct isl_device                           isl_dev;
     int                                         cmd_parser_version;
     bool                                        has_exec_async;
+    bool                                        has_exec_fence;
 
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
@@ -810,6 +811,7 @@ uint32_t anv_gem_fd_to_handle(struct anv_device *device, int fd);
 int anv_gem_set_caching(struct anv_device *device, uint32_t gem_handle, uint32_t caching);
 int anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
                        uint32_t read_domains, uint32_t write_domain);
+int anv_gem_sync_file_merge(struct anv_device *device, int fd1, int fd2);
 
 VkResult anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size);
 
@@ -1735,17 +1737,26 @@ enum anv_semaphore_type {
    ANV_SEMAPHORE_TYPE_NONE = 0,
    ANV_SEMAPHORE_TYPE_DUMMY,
    ANV_SEMAPHORE_TYPE_BO,
+   ANV_SEMAPHORE_TYPE_SYNC_FILE,
 };
 
 struct anv_semaphore_impl {
    enum anv_semaphore_type type;
 
-   /* A BO representing this semaphore when type == ANV_SEMAPHORE_TYPE_BO.
-    * This BO will be added to the object list on any execbuf2 calls for
-    * which this semaphore is used as a wait or signal fence.  When used as
-    * a signal fence, the EXEC_OBJECT_WRITE flag will be set.
-    */
-   struct anv_bo *bo;
+   union {
+      /* A BO representing this semaphore when type == ANV_SEMAPHORE_TYPE_BO.
+       * This BO will be added to the object list on any execbuf2 calls for
+       * which this semaphore is used as a wait or signal fence.  When used as
+       * a signal fence, the EXEC_OBJECT_WRITE flag will be set.
+       */
+      struct anv_bo *bo;
+
+      /* The sync file descriptor when type == AKV_SEMAPHORE_TYPE_SYNC_FILE.
+       * If the semaphore is in the unsignaled state due to either just being
+       * created or because it has been used for a wait, fd will be -1.
+       */
+      int fd;
+   };
 };
 
 struct anv_semaphore {

@@ -571,6 +571,11 @@ VkResult anv_CreateSemaphore(
        * EXEC_OBJECT_ASYNC bit set.
        */
       assert(!(semaphore->permanent.bo->flags & EXEC_OBJECT_ASYNC));
+   } else if (handleTypes & VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR) {
+      assert(handleTypes == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR);
+
+      semaphore->permanent.type = ANV_SEMAPHORE_TYPE_SYNC_FILE;
+      semaphore->permanent.fd = -1;
    } else {
       assert(!"Unknown handle type");
       vk_free2(&device->alloc, pAllocator, semaphore);
@@ -596,6 +601,10 @@ anv_semaphore_impl_cleanup(struct anv_device *device,
 
    case ANV_SEMAPHORE_TYPE_BO:
       anv_bo_cache_release(device, &device->bo_cache, impl->bo);
+      return;
+
+   case ANV_SEMAPHORE_TYPE_SYNC_FILE:
+      close(impl->fd);
       return;
    }
 
@@ -635,6 +644,8 @@ void anv_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
     const VkPhysicalDeviceExternalSemaphoreInfoKHR* pExternalSemaphoreInfo,
     VkExternalSemaphorePropertiesKHR*           pExternalSemaphoreProperties)
 {
+   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+
    switch (pExternalSemaphoreInfo->handleType) {
    case VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
       pExternalSemaphoreProperties->exportFromImportedHandleTypes =
@@ -644,13 +655,27 @@ void anv_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
       pExternalSemaphoreProperties->externalSemaphoreFeatures =
          VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR |
          VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR;
+      return;
+
+   case VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR:
+      if (device->has_exec_fence) {
+         pExternalSemaphoreProperties->exportFromImportedHandleTypes = 0;
+         pExternalSemaphoreProperties->compatibleHandleTypes =
+            VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR;
+         pExternalSemaphoreProperties->externalSemaphoreFeatures =
+            VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR |
+            VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR;
+         return;
+      }
       break;
 
    default:
-      pExternalSemaphoreProperties->exportFromImportedHandleTypes = 0;
-      pExternalSemaphoreProperties->compatibleHandleTypes = 0;
-      pExternalSemaphoreProperties->externalSemaphoreFeatures = 0;
+      break;
    }
+
+   pExternalSemaphoreProperties->exportFromImportedHandleTypes = 0;
+   pExternalSemaphoreProperties->compatibleHandleTypes = 0;
+   pExternalSemaphoreProperties->externalSemaphoreFeatures = 0;
 }
 
 VkResult anv_ImportSemaphoreFdKHR(
@@ -682,6 +707,13 @@ VkResult anv_ImportSemaphoreFdKHR(
       break;
    }
 
+   case VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR:
+      new_impl = (struct anv_semaphore_impl) {
+         .type = ANV_SEMAPHORE_TYPE_SYNC_FILE,
+         .fd = fd,
+      };
+      break;
+
    default:
       return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
    }
@@ -690,6 +722,9 @@ VkResult anv_ImportSemaphoreFdKHR(
       anv_semaphore_impl_cleanup(device, &semaphore->temporary);
       semaphore->temporary = new_impl;
    } else {
+      /* SYNC_FILE must be a temporary import */
+      assert(new_impl.type != ANV_SEMAPHORE_TYPE_SYNC_FILE);
+
       anv_semaphore_impl_cleanup(device, &semaphore->permanent);
       semaphore->permanent = new_impl;
    }
@@ -718,6 +753,34 @@ VkResult anv_GetSemaphoreFdKHR(
       if (result != VK_SUCCESS)
          return result;
       break;
+
+   case ANV_SEMAPHORE_TYPE_SYNC_FILE:
+      /* There are two reasons why this could happen:
+       *
+       *  1) The user is trying to export without submitting something that
+       *     signals the semaphore.  If this is the case, it's their bug so
+       *     what we return here doesn't matter.
+       *
+       *  2) The kernel didn't give us a file descriptor.  The most likely
+       *     reason for this is running out of file descriptors.
+       */
+      if (impl->fd < 0)
+         return vk_error(VK_ERROR_TOO_MANY_OBJECTS);
+
+      *pFd = impl->fd;
+
+      /* From the Vulkan 1.0.53 spec:
+       *
+       *    "...exporting a semaphore payload to a handle with copy
+       *    transference has the same side effects on the source
+       *    semaphore’s payload as executing a semaphore wait operation."
+       *
+       * In other words, it may still be a SYNC_FD semaphore, but it's now
+       * considered to have been waited on and no longer has a sync file
+       * attached.
+       */
+      impl->fd = -1;
+      return VK_SUCCESS;
 
    default:
       return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
