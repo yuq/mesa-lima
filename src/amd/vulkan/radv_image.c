@@ -853,14 +853,15 @@ void radv_GetImageSubresourceLayout(
 	RADV_FROM_HANDLE(radv_image, image, _image);
 	int level = pSubresource->mipLevel;
 	int layer = pSubresource->arrayLayer;
+	struct radeon_surf *surface = &image->surface;
 
-	pLayout->offset = image->surface.level[level].offset + image->surface.level[level].slice_size * layer;
-	pLayout->rowPitch = image->surface.level[level].pitch_bytes;
-	pLayout->arrayPitch = image->surface.level[level].slice_size;
-	pLayout->depthPitch = image->surface.level[level].slice_size;
-	pLayout->size = image->surface.level[level].slice_size;
+	pLayout->offset = surface->level[level].offset + surface->level[level].slice_size * layer;
+	pLayout->rowPitch = surface->level[level].pitch_bytes;
+	pLayout->arrayPitch = surface->level[level].slice_size;
+	pLayout->depthPitch = surface->level[level].slice_size;
+	pLayout->size = surface->level[level].slice_size;
 	if (image->type == VK_IMAGE_TYPE_3D)
-		pLayout->size *= image->surface.level[level].nblk_z;
+		pLayout->size *= surface->level[level].nblk_z;
 }
 
 
