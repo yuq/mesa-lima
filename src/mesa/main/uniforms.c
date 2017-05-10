@@ -63,6 +63,40 @@
  * TEXTURE_2D_INDEX, TEXTURE_3D_INDEX, etc.
  * We'll use that info for state validation before rendering.
  */
+static inline void
+update_single_shader_texture_used(struct gl_shader_program *shProg,
+                                  struct gl_program *prog,
+                                  GLuint unit, GLuint target)
+{
+   gl_shader_stage prog_stage =
+      _mesa_program_enum_to_shader_stage(prog->Target);
+
+   assert(unit < ARRAY_SIZE(prog->TexturesUsed));
+   assert(target < NUM_TEXTURE_TARGETS);
+
+   /* From section 7.10 (Samplers) of the OpenGL 4.5 spec:
+    *
+    * "It is not allowed to have variables of different sampler types pointing
+    *  to the same texture image unit within a program object."
+    */
+   unsigned stages_mask = shProg->data->linked_stages;
+   while (stages_mask) {
+      const int stage = u_bit_scan(&stages_mask);
+
+      /* Skip validation if we are yet to update textures used in this
+       * stage.
+       */
+      if (prog_stage < stage)
+         break;
+
+      struct gl_program *glprog = shProg->_LinkedShaders[stage]->Program;
+      if (glprog->TexturesUsed[unit] & ~(1 << target))
+         shProg->SamplersValidated = GL_FALSE;
+   }
+
+   prog->TexturesUsed[unit] |= (1 << target);
+}
+
 void
 _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
                                   struct gl_program *prog)
@@ -78,35 +112,10 @@ _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
 
    while (mask) {
       const int s = u_bit_scan(&mask);
-      GLuint unit = prog->SamplerUnits[s];
-      GLuint tgt = prog->sh.SamplerTargets[s];
-      assert(unit < ARRAY_SIZE(prog->TexturesUsed));
-      assert(tgt < NUM_TEXTURE_TARGETS);
 
-      /* The types of the samplers associated with a particular texture
-       * unit must be an exact match.  Page 74 (page 89 of the PDF) of the
-       * OpenGL 3.3 core spec says:
-       *
-       *     "It is not allowed to have variables of different sampler
-       *     types pointing to the same texture image unit within a program
-       *     object."
-       */
-      unsigned stages_mask = shProg->data->linked_stages;
-      while (stages_mask) {
-         const int stage = u_bit_scan(&stages_mask);
-
-         /* Skip validation if we are yet to update textures used in this
-          * stage.
-          */
-         if (prog_stage < stage)
-            break;
-
-         struct gl_program *glprog = shProg->_LinkedShaders[stage]->Program;
-         if (glprog->TexturesUsed[unit] & ~(1 << tgt))
-            shProg->SamplersValidated = GL_FALSE;
-      }
-
-      prog->TexturesUsed[unit] |= (1 << tgt);
+      update_single_shader_texture_used(shProg, prog,
+                                        prog->SamplerUnits[s],
+                                        prog->sh.SamplerTargets[s]);
    }
 }
 
