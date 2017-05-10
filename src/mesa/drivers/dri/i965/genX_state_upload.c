@@ -1731,6 +1731,7 @@ genX(upload_vs_state)(struct brw_context *brw)
    assert(vue_prog_data->dispatch_mode == DISPATCH_MODE_SIMD8 ||
           vue_prog_data->dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT);
 
+#if GEN_GEN == 6
    /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
     * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
     *
@@ -1742,8 +1743,6 @@ genX(upload_vs_state)(struct brw_context *brw)
     * We've already done such a flush at the start of state upload, so we
     * don't need to do another one here.
     */
-
-#if GEN_GEN < 7
    brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_VS), cvs) {
       if (stage_state->push_const_size != 0) {
          cvs.Buffer0Valid = true;
@@ -1770,7 +1769,7 @@ genX(upload_vs_state)(struct brw_context *brw)
 #endif
    }
 
-#if GEN_GEN < 7
+#if GEN_GEN == 6
    /* Based on my reading of the simulator, the VS constants don't get
     * pulled into the VS FF unit until an appropriate pipeline flush
     * happens, and instead the 3DSTATE_CONSTANT_VS packet just adds
@@ -1797,12 +1796,12 @@ genX(upload_vs_state)(struct brw_context *brw)
 
 static const struct brw_tracked_state genX(vs_state) = {
    .dirty = {
-      .mesa  = (GEN_GEN < 7 ? (_NEW_PROGRAM_CONSTANTS | _NEW_TRANSFORM) : 0),
+      .mesa  = (GEN_GEN == 6 ? (_NEW_PROGRAM_CONSTANTS | _NEW_TRANSFORM) : 0),
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_VS_PROG_DATA |
-               (GEN_GEN < 7 ? BRW_NEW_VERTEX_PROGRAM : 0),
+               (GEN_GEN == 6 ? BRW_NEW_VERTEX_PROGRAM : 0),
    },
    .emit = genX(upload_vs_state),
 };
