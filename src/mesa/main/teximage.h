@@ -227,18 +227,6 @@ _mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
                         bool dsa);
 
 extern void
-_mesa_compressed_texture_sub_image(struct gl_context *ctx, GLuint dims, 
-                                   struct gl_texture_object *texObj, 
-                                   struct gl_texture_image *texImage,
-                                   GLenum target, GLint level,
-                                   GLint xoffset, GLint yoffset,
-                                   GLint zoffset,
-                                   GLsizei width, GLsizei height,
-                                   GLsizei depth,
-                                   GLenum format, GLsizei imageSize,
-                                   const GLvoid *data);
-
-extern void
 _mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
                              struct gl_texture_object *texObj,
                              GLenum target, GLint level,
