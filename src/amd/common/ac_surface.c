@@ -350,6 +350,7 @@ static int gfx6_compute_level(ADDR_HANDLE addrlib,
 
 		if (ret == ADDR_OK) {
 			surf->htile_size = AddrHtileOut->htileBytes;
+			surf->htile_slice_size = AddrHtileOut->sliceSize;
 			surf->htile_alignment = AddrHtileOut->baseAlign;
 		}
 	}
@@ -580,6 +581,7 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 	surf->dcc_size = 0;
 	surf->dcc_alignment = 1;
 	surf->htile_size = 0;
+	surf->htile_slice_size = 0;
 	surf->htile_alignment = 1;
 
 	/* Calculate texture layout information. */
@@ -775,6 +777,7 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 		surf->u.gfx9.htile.rb_aligned = hin.hTileFlags.rbAligned;
 		surf->u.gfx9.htile.pipe_aligned = hin.hTileFlags.pipeAligned;
 		surf->htile_size = hout.htileBytes;
+		surf->htile_slice_size = hout.sliceSize;
 		surf->htile_alignment = hout.baseAlign;
 	} else {
 		/* DCC */
@@ -961,6 +964,7 @@ static int gfx9_compute_surface(ADDR_HANDLE addrlib,
 	surf->surf_size = 0;
 	surf->dcc_size = 0;
 	surf->htile_size = 0;
+	surf->htile_slice_size = 0;
 	surf->u.gfx9.surf_offset = 0;
 	surf->u.gfx9.stencil_offset = 0;
 	surf->u.gfx9.fmask_size = 0;

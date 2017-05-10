@@ -166,6 +166,8 @@ struct radeon_surf {
     uint64_t                    dcc_size;
     uint64_t                    htile_size;
 
+    uint32_t                    htile_slice_size;
+
     uint32_t                    surf_alignment;
     uint32_t                    dcc_alignment;
     uint32_t                    htile_alignment;
