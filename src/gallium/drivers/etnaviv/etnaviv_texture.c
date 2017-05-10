@@ -182,9 +182,9 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    }
 
    sv->base = *so;
-   pipe_reference(NULL, &prsc->reference);
-   sv->base.texture = prsc;
-   sv->base.reference.count = 1;
+   pipe_reference_init(&sv->base.reference, 1);
+   sv->base.texture = NULL;
+   pipe_resource_reference(&sv->base.texture, prsc);
    sv->base.context = pctx;
 
    /* merged with sampler state */
