@@ -446,7 +446,7 @@ radv_init_metadata(struct radv_device *device,
 	metadata->tile_split = surface->tile_split;
 	metadata->mtilea = surface->mtilea;
 	metadata->num_banks = surface->num_banks;
-	metadata->stride = surface->level[0].pitch_bytes;
+	metadata->stride = surface->level[0].nblk_x * surface->bpe;
 	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 
 	radv_query_opaque_metadata(device, image, metadata);
@@ -677,13 +677,6 @@ radv_image_create(VkDevice _device,
 		radv_image_alloc_htile(device, image);
 	}
 
-
-	if (create_info->stride && create_info->stride != image->surface.level[0].pitch_bytes) {
-		image->surface.level[0].nblk_x = create_info->stride / image->surface.bpe;
-		image->surface.level[0].pitch_bytes = create_info->stride;
-		image->surface.level[0].slice_size = create_info->stride * image->surface.level[0].nblk_y;
-	}
-
 	if (pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) {
 		image->alignment = MAX2(image->alignment, 4096);
 		image->size = align64(image->size, image->alignment);
@@ -856,7 +849,7 @@ void radv_GetImageSubresourceLayout(
 	struct radeon_surf *surface = &image->surface;
 
 	pLayout->offset = surface->level[level].offset + surface->level[level].slice_size * layer;
-	pLayout->rowPitch = surface->level[level].pitch_bytes;
+	pLayout->rowPitch = surface->level[level].nblk_x * surface->bpe;
 	pLayout->arrayPitch = surface->level[level].slice_size;
 	pLayout->depthPitch = surface->level[level].slice_size;
 	pLayout->size = surface->level[level].slice_size;

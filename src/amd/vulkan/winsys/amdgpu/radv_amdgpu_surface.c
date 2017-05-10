@@ -203,7 +203,6 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 	surf_level = is_stencil ? &surf->stencil_level[level] : &surf->level[level];
 	surf_level->offset = align64(surf->bo_size, AddrSurfInfoOut->baseAlign);
 	surf_level->slice_size = AddrSurfInfoOut->sliceSize;
-	surf_level->pitch_bytes = AddrSurfInfoOut->pitch * (is_stencil ? 1 : surf->bpe);
 	surf_level->nblk_x = AddrSurfInfoOut->pitch;
 	surf_level->nblk_y = AddrSurfInfoOut->height;
 	if (type == RADEON_SURF_TYPE_3D)

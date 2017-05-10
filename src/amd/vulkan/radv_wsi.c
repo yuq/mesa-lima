@@ -224,7 +224,7 @@ radv_wsi_image_create(VkDevice device_h,
 	*memory_p = memory_h;
 	*size = image->size;
 	*offset = image->offset;
-	*row_pitch = surface->level[0].pitch_bytes;
+	*row_pitch = surface->level[0].nblk_x * surface->bpe;
 	return VK_SUCCESS;
  fail_alloc_memory:
 	radv_FreeMemory(device_h, memory_h, pAllocator);

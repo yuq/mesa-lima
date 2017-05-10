@@ -170,7 +170,6 @@ struct radeon_surf_level {
 	uint32_t                    nblk_x;
 	uint32_t                    nblk_y;
 	uint32_t                    nblk_z;
-	uint32_t                    pitch_bytes;
 	uint32_t                    mode;
 	bool                        dcc_enabled;
 	uint64_t                    dcc_offset;
