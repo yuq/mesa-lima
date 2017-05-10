@@ -169,7 +169,6 @@ struct radeon_surf_level {
 	uint64_t                    slice_size;
 	uint32_t                    nblk_x;
 	uint32_t                    nblk_y;
-	uint32_t                    nblk_z;
 	uint32_t                    mode;
 	uint64_t                    dcc_offset;
 	uint64_t                    dcc_fast_clear_size;

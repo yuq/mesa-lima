@@ -205,10 +205,6 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 	surf_level->slice_size = AddrSurfInfoOut->sliceSize;
 	surf_level->nblk_x = AddrSurfInfoOut->pitch;
 	surf_level->nblk_y = AddrSurfInfoOut->height;
-	if (type == RADEON_SURF_TYPE_3D)
-		surf_level->nblk_z = AddrSurfInfoOut->depth;
-	else
-		surf_level->nblk_z = 1;
 
 	switch (AddrSurfInfoOut->tileMode) {
 	case ADDR_TM_LINEAR_ALIGNED:
