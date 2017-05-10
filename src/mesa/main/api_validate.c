@@ -99,7 +99,7 @@ check_blend_func_error(struct gl_context *ctx)
        *     the blend equation or "blend_support_all_equations", the error
        *     INVALID_OPERATION is generated [...]"
        */
-      const struct gl_program *prog = ctx->_Shader->_CurrentFragmentProgram;
+      const struct gl_program *prog = ctx->FragmentProgram._Current;
       const GLbitfield blend_support = !prog ? 0 : prog->sh.fs.BlendSupport;
 
       if ((blend_support & ctx->Color._AdvancedBlendMode) == 0) {

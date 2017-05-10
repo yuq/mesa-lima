@@ -1443,7 +1443,7 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_program *prog = ctx->_Shader->_CurrentFragmentProgram;
+   struct gl_program *prog = ctx->FragmentProgram._Current;
 
    /* BRW_NEW_FS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog, &brw->wm.base, brw->wm.base.prog_data);
