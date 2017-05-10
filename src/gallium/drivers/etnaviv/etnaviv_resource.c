@@ -401,7 +401,8 @@ etna_resource_get_handle(struct pipe_screen *pscreen,
 {
    struct etna_resource *rsc = etna_resource(prsc);
 
-   if (renderonly_get_handle(rsc->scanout, handle))
+   if (handle->type == DRM_API_HANDLE_TYPE_KMS &&
+       renderonly_get_handle(rsc->scanout, handle))
       return TRUE;
 
    return etna_screen_bo_get_handle(pscreen, rsc->bo, rsc->levels[0].stride,
