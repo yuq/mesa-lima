@@ -626,15 +626,13 @@ update_texgen(struct gl_context *ctx)
 
 static struct gl_texture_object *
 update_single_program_texture(struct gl_context *ctx, struct gl_program *prog,
-                              int s)
+                              int unit)
 {
    gl_texture_index target_index;
    struct gl_texture_unit *texUnit;
    struct gl_texture_object *texObj;
    struct gl_sampler_object *sampler;
-   int unit;
 
-   unit = prog->SamplerUnits[s];
    texUnit = &ctx->Texture.Unit[unit];
 
    /* Note: If more than one bit was set in TexturesUsed[unit], then we should
@@ -680,6 +678,24 @@ update_single_program_texture(struct gl_context *ctx, struct gl_program *prog,
    return texObj;
 }
 
+static inline void
+update_single_program_texture_state(struct gl_context *ctx,
+                                    struct gl_program *prog,
+                                    int unit,
+                                    BITSET_WORD *enabled_texture_units)
+{
+   struct gl_texture_object *texObj;
+
+   texObj = update_single_program_texture(ctx, prog, unit);
+   if (!texObj)
+      return;
+
+   _mesa_reference_texobj(&ctx->Texture.Unit[unit]._Current, texObj);
+   BITSET_SET(enabled_texture_units, unit);
+   ctx->Texture._MaxEnabledTexImageUnit =
+      MAX2(ctx->Texture._MaxEnabledTexImageUnit, (int)unit);
+}
+
 static void
 update_program_texture_state(struct gl_context *ctx, struct gl_program **prog,
                              BITSET_WORD *enabled_texture_units)
@@ -696,16 +712,10 @@ update_program_texture_state(struct gl_context *ctx, struct gl_program **prog,
 
       while (mask) {
          const int s = u_bit_scan(&mask);
-         struct gl_texture_object *texObj;
 
-         texObj = update_single_program_texture(ctx, prog[i], s);
-         if (texObj) {
-            int unit = prog[i]->SamplerUnits[s];
-            _mesa_reference_texobj(&ctx->Texture.Unit[unit]._Current, texObj);
-            BITSET_SET(enabled_texture_units, unit);
-            ctx->Texture._MaxEnabledTexImageUnit =
-               MAX2(ctx->Texture._MaxEnabledTexImageUnit, (int)unit);
-         }
+         update_single_program_texture_state(ctx, prog[i],
+                                             prog[i]->SamplerUnits[s],
+                                             enabled_texture_units);
       }
    }
 
