@@ -145,7 +145,6 @@ struct radeon_info {
 #define RADEON_SURF_ZBUFFER                     (1 << 17)
 #define RADEON_SURF_SBUFFER                     (1 << 18)
 #define RADEON_SURF_Z_OR_SBUFFER                (RADEON_SURF_ZBUFFER | RADEON_SURF_SBUFFER)
-#define RADEON_SURF_HAS_SBUFFER_MIPTREE         (1 << 19)
 #define RADEON_SURF_HAS_TILE_MODE_INDEX         (1 << 20)
 #define RADEON_SURF_FMASK                       (1 << 21)
 #define RADEON_SURF_DISABLE_DCC                 (1 << 22)

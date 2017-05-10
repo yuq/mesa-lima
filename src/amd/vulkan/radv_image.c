@@ -103,8 +103,7 @@ radv_init_surface(struct radv_device *device,
 	}
 
 	if (is_stencil)
-		surface->flags |= RADEON_SURF_SBUFFER |
-			RADEON_SURF_HAS_SBUFFER_MIPTREE;
+		surface->flags |= RADEON_SURF_SBUFFER;
 
 	surface->flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
 
