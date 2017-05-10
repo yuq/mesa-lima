@@ -3426,30 +3426,36 @@ _mesa_FramebufferTexture3D(GLenum target, GLenum attachment,
 }
 
 
-void GLAPIENTRY
-_mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
-                              GLuint texture, GLint level, GLint layer)
+static ALWAYS_INLINE void
+frame_buffer_texture_layer(GLuint framebuffer, GLenum target,
+                           GLenum attachment, GLuint texture,
+                           GLint level, GLint layer, const char *func,
+                           bool dsa)
 {
    GET_CURRENT_CONTEXT(ctx);
-   struct gl_framebuffer *fb;
-   struct gl_texture_object *texObj;
-   GLenum textarget = 0;
-
-   const char *func = "glFramebufferTextureLayer";
 
    /* Get the framebuffer object */
-   fb = get_framebuffer_target(ctx, target);
-   if (!fb) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferTextureLayer(invalid target %s)",
-                  _mesa_enum_to_string(target));
-      return;
+   struct gl_framebuffer *fb;
+   if (dsa) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
+      if (!fb)
+         return;
+
+   } else {
+      fb = get_framebuffer_target(ctx, target);
+      if (!fb) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)",
+                     func, _mesa_enum_to_string(target));
+         return;
+      }
    }
 
    /* Get the texture object */
+   struct gl_texture_object *texObj;
    if (!get_texture_for_framebuffer_err(ctx, texture, false, func, &texObj))
       return;
 
+   GLenum textarget = 0;
    if (texObj) {
       if (!check_texture_target(ctx, texObj->Target, func))
          return;
@@ -3478,49 +3484,20 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
 
 
 void GLAPIENTRY
+_mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
+                              GLuint texture, GLint level, GLint layer)
+{
+   frame_buffer_texture_layer(0, target, attachment, texture, level, layer,
+                              "glFramebufferTextureLayer", false);
+}
+
+
+void GLAPIENTRY
 _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
                                    GLuint texture, GLint level, GLint layer)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_framebuffer *fb;
-   struct gl_texture_object *texObj;
-   GLenum textarget = 0;
-
-   const char *func = "glNamedFramebufferTextureLayer";
-
-   /* Get the framebuffer object */
-   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
-   if (!fb)
-      return;
-
-   /* Get the texture object */
-   if (!get_texture_for_framebuffer_err(ctx, texture, false, func, &texObj))
-      return;
-
-   if (texObj) {
-      if (!check_texture_target(ctx, texObj->Target, func))
-         return;
-
-      if (!check_layer(ctx, texObj->Target, layer, func))
-         return;
-
-      if (!check_level(ctx, texObj->Target, level, func))
-         return;
-
-      if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
-         assert(layer >= 0 && layer < 6);
-         textarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer;
-         layer = 0;
-      }
-   }
-
-   struct gl_renderbuffer_attachment *att =
-      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
-   if (!att)
-      return;
-
-   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, textarget,
-                             level, layer, GL_FALSE);
+   frame_buffer_texture_layer(framebuffer, 0, attachment, texture, level,
+                              layer, "glNamedFramebufferTextureLayer", true);
 }
 
 
