@@ -169,6 +169,7 @@ unsigned si_shader_io_get_unique_index2(unsigned name, unsigned index)
 	case TGSI_SEMANTIC_BCOLOR:
 		return 4 + index;
 	case TGSI_SEMANTIC_TEXCOORD:
+		assert(index < 8);
 		return 6 + index;
 	default:
 		assert(!"invalid semantic name");
