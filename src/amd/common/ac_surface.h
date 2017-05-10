@@ -204,13 +204,9 @@ struct ac_surf_config {
 ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
 			       const struct amdgpu_gpu_info *info);
 
-int gfx6_compute_surface(ADDR_HANDLE addrlib,
-			 const struct ac_surf_config *config,
-			 enum radeon_surf_mode mode,
-			 struct radeon_surf *surf);
-int gfx9_compute_surface(ADDR_HANDLE addrlib,
-			 const struct ac_surf_config *config,
-			 enum radeon_surf_mode mode,
-			 struct radeon_surf *surf);
+int ac_compute_surface(ADDR_HANDLE addrlib,
+		       const struct ac_surf_config * config,
+		       enum radeon_surf_mode mode,
+		       struct radeon_surf *surf);
 
 #endif /* AC_SURFACE_H */

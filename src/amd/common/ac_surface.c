@@ -362,10 +362,10 @@ static unsigned cik_get_macro_tile_index(struct radeon_surf *surf)
  * The following fields of \p surf must be initialized by the caller:
  * blk_w, blk_h, bpe, flags.
  */
-int gfx6_compute_surface(ADDR_HANDLE addrlib,
-			 const struct ac_surf_config *config,
-			 enum radeon_surf_mode mode,
-			 struct radeon_surf *surf)
+static int gfx6_compute_surface(ADDR_HANDLE addrlib,
+				const struct ac_surf_config *config,
+				enum radeon_surf_mode mode,
+				struct radeon_surf *surf)
 {
 	unsigned level;
 	bool compressed;
@@ -847,10 +847,10 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 	return 0;
 }
 
-int gfx9_compute_surface(ADDR_HANDLE addrlib,
-			 const struct ac_surf_config *config,
-			 enum radeon_surf_mode mode,
-			 struct radeon_surf *surf)
+static int gfx9_compute_surface(ADDR_HANDLE addrlib,
+				const struct ac_surf_config *config,
+				enum radeon_surf_mode mode,
+				struct radeon_surf *surf)
 {
 	bool compressed;
 	ADDR2_COMPUTE_SURFACE_INFO_INPUT AddrSurfInfoIn = {0};
@@ -1009,4 +1009,15 @@ int gfx9_compute_surface(ADDR_HANDLE addrlib,
 	}
 
 	return 0;
+}
+
+int ac_compute_surface(ADDR_HANDLE addrlib,
+		       const struct ac_surf_config *config,
+		       enum radeon_surf_mode mode,
+		       struct radeon_surf *surf)
+{
+	if (config->chip_class >= GFX9)
+		return gfx9_compute_surface(addrlib, config, mode, surf);
+	else
+		return gfx6_compute_surface(addrlib, config, mode, surf);
 }

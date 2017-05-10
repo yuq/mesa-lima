@@ -113,10 +113,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    config.pipe_interleave_bytes = ws->info.pipe_interleave_bytes;
    config.amdinfo = &ws->amdinfo;
 
-   if (ws->info.chip_class >= GFX9)
-      return gfx9_compute_surface(ws->addrlib, &config, mode, surf);
-   else
-      return gfx6_compute_surface(ws->addrlib, &config, mode, surf);
+   return ac_compute_surface(ws->addrlib, &config, mode, surf);
 }
 
 void amdgpu_surface_init_functions(struct amdgpu_winsys *ws)
