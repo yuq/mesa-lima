@@ -34,22 +34,6 @@
 
 static int amdgpu_surface_sanity(const struct pipe_resource *tex)
 {
-   /* all dimension must be at least 1 ! */
-   if (!tex->width0 || !tex->height0 || !tex->depth0 ||
-       !tex->array_size)
-      return -EINVAL;
-
-   switch (tex->nr_samples) {
-   case 0:
-   case 1:
-   case 2:
-   case 4:
-   case 8:
-      break;
-   default:
-      return -EINVAL;
-   }
-
    switch (tex->target) {
    case PIPE_TEXTURE_1D:
       if (tex->height0 > 1)

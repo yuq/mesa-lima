@@ -30,6 +30,7 @@
 #include "util/macros.h"
 #include "util/u_math.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <amdgpu.h>
@@ -200,6 +201,32 @@ ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
 		return NULL;
 
 	return addrCreateOutput.hLib;
+}
+
+static int surf_config_sanity(const struct ac_surf_config *config)
+{
+	/* all dimension must be at least 1 ! */
+	if (!config->info.width || !config->info.height || !config->info.depth ||
+	    !config->info.array_size || !config->info.levels)
+		return -EINVAL;
+
+	switch (config->info.samples) {
+	case 0:
+	case 1:
+	case 2:
+	case 4:
+	case 8:
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (config->is_3d && config->info.array_size > 1)
+		return -EINVAL;
+	if (config->is_cube && config->info.depth > 1)
+		return -EINVAL;
+
+	return 0;
 }
 
 static int gfx6_compute_level(ADDR_HANDLE addrlib,
@@ -1016,6 +1043,12 @@ int ac_compute_surface(ADDR_HANDLE addrlib,
 		       enum radeon_surf_mode mode,
 		       struct radeon_surf *surf)
 {
+	int r;
+
+	r = surf_config_sanity(config);
+	if (r)
+		return r;
+
 	if (config->chip_class >= GFX9)
 		return gfx9_compute_surface(addrlib, config, mode, surf);
 	else
