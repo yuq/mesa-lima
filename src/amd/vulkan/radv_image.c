@@ -129,9 +129,9 @@ static inline unsigned
 si_tile_mode_index(const struct radv_image *image, unsigned level, bool stencil)
 {
 	if (stencil)
-		return image->surface.stencil_tiling_index[level];
+		return image->surface.u.legacy.stencil_tiling_index[level];
 	else
-		return image->surface.tiling_index[level];
+		return image->surface.u.legacy.tiling_index[level];
 }
 
 static unsigned radv_map_swizzle(unsigned swizzle)
@@ -189,7 +189,7 @@ radv_make_buffer_descriptor(struct radv_device *device,
 static void
 si_set_mutable_tex_desc_fields(struct radv_device *device,
 			       struct radv_image *image,
-			       const struct radeon_surf_level *base_level_info,
+			       const struct legacy_surf_level *base_level_info,
 			       unsigned base_level, unsigned first_level,
 			       unsigned block_width, bool is_stencil,
 			       uint32_t *state)
@@ -409,7 +409,7 @@ radv_query_opaque_metadata(struct radv_device *device,
 				   image->info.depth,
 				   desc, NULL);
 
-	si_set_mutable_tex_desc_fields(device, image, &image->surface.level[0], 0, 0,
+	si_set_mutable_tex_desc_fields(device, image, &image->surface.u.legacy.level[0], 0, 0,
 				       image->surface.blk_w, false, desc);
 
 	/* Clear the base address and set the relative DCC offset. */
@@ -422,7 +422,7 @@ radv_query_opaque_metadata(struct radv_device *device,
 
 	/* Dwords [10:..] contain the mipmap level offsets. */
 	for (i = 0; i <= image->info.levels - 1; i++)
-		md->metadata[10+i] = image->surface.level[i].offset >> 8;
+		md->metadata[10+i] = image->surface.u.legacy.level[i].offset >> 8;
 
 	md->size_metadata = (11 + image->info.levels - 1) * 4;
 }
@@ -435,17 +435,17 @@ radv_init_metadata(struct radv_device *device,
 	struct radeon_surf *surface = &image->surface;
 
 	memset(metadata, 0, sizeof(*metadata));
-	metadata->microtile = surface->level[0].mode >= RADEON_SURF_MODE_1D ?
+	metadata->microtile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_1D ?
 		RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata->macrotile = surface->level[0].mode >= RADEON_SURF_MODE_2D ?
+	metadata->macrotile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_2D ?
 		RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata->pipe_config = surface->pipe_config;
-	metadata->bankw = surface->bankw;
-	metadata->bankh = surface->bankh;
-	metadata->tile_split = surface->tile_split;
-	metadata->mtilea = surface->mtilea;
-	metadata->num_banks = surface->num_banks;
-	metadata->stride = surface->level[0].nblk_x * surface->bpe;
+	metadata->pipe_config = surface->u.legacy.pipe_config;
+	metadata->bankw = surface->u.legacy.bankw;
+	metadata->bankh = surface->u.legacy.bankh;
+	metadata->tile_split = surface->u.legacy.tile_split;
+	metadata->mtilea = surface->u.legacy.mtilea;
+	metadata->num_banks = surface->u.legacy.num_banks;
+	metadata->stride = surface->u.legacy.level[0].nblk_x * surface->bpe;
 	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 
 	radv_query_opaque_metadata(device, image, metadata);
@@ -460,7 +460,7 @@ radv_image_get_fmask_info(struct radv_device *device,
 {
 	/* FMASK is allocated like an ordinary texture. */
 	struct radeon_surf fmask = image->surface;
-	struct radeon_surf_info info = image->info;
+	struct ac_surf_info info = image->info;
 	memset(out, 0, sizeof(*out));
 
 	fmask.surf_alignment = 0;
@@ -488,15 +488,15 @@ radv_image_get_fmask_info(struct radv_device *device,
 	}
 
 	device->ws->surface_init(device->ws, &info, &fmask);
-	assert(fmask.level[0].mode == RADEON_SURF_MODE_2D);
+	assert(fmask.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
 
-	out->slice_tile_max = (fmask.level[0].nblk_x * fmask.level[0].nblk_y) / 64;
+	out->slice_tile_max = (fmask.u.legacy.level[0].nblk_x * fmask.u.legacy.level[0].nblk_y) / 64;
 	if (out->slice_tile_max)
 		out->slice_tile_max -= 1;
 
-	out->tile_mode_index = fmask.tiling_index[0];
-	out->pitch_in_pixels = fmask.level[0].nblk_x;
-	out->bank_height = fmask.bankh;
+	out->tile_mode_index = fmask.u.legacy.tiling_index[0];
+	out->pitch_in_pixels = fmask.u.legacy.level[0].nblk_x;
+	out->bank_height = fmask.u.legacy.bankh;
 	out->alignment = MAX2(256, fmask.surf_alignment);
 	out->size = fmask.surf_size;
 }
@@ -760,7 +760,9 @@ radv_image_view_init(struct radv_image_view *iview,
 				   iview->descriptor,
 				   iview->fmask_descriptor);
 	si_set_mutable_tex_desc_fields(device, image,
-				       is_stencil ? &image->surface.stencil_level[range->baseMipLevel] : &image->surface.level[range->baseMipLevel], range->baseMipLevel,
+				       is_stencil ? &image->surface.u.legacy.stencil_level[range->baseMipLevel]
+				                  : &image->surface.u.legacy.level[range->baseMipLevel],
+				       range->baseMipLevel,
 				       range->baseMipLevel,
 				       blk_w, is_stencil, iview->descriptor);
 }
@@ -847,11 +849,11 @@ void radv_GetImageSubresourceLayout(
 	int layer = pSubresource->arrayLayer;
 	struct radeon_surf *surface = &image->surface;
 
-	pLayout->offset = surface->level[level].offset + surface->level[level].slice_size * layer;
-	pLayout->rowPitch = surface->level[level].nblk_x * surface->bpe;
-	pLayout->arrayPitch = surface->level[level].slice_size;
-	pLayout->depthPitch = surface->level[level].slice_size;
-	pLayout->size = surface->level[level].slice_size;
+	pLayout->offset = surface->u.legacy.level[level].offset + surface->u.legacy.level[level].slice_size * layer;
+	pLayout->rowPitch = surface->u.legacy.level[level].nblk_x * surface->bpe;
+	pLayout->arrayPitch = surface->u.legacy.level[level].slice_size;
+	pLayout->depthPitch = surface->u.legacy.level[level].slice_size;
+	pLayout->size = surface->u.legacy.level[level].slice_size;
 	if (image->type == VK_IMAGE_TYPE_3D)
 		pLayout->size *= u_minify(image->info.depth, level);
 }

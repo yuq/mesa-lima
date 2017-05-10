@@ -35,6 +35,9 @@
 #include "main/macros.h"
 #include "amd_family.h"
 
+struct ac_surf_info;
+struct radeon_surf;
+
 #define FREE(x) free(x)
 
 enum radeon_bo_domain { /* bitfield */
@@ -126,8 +129,6 @@ struct radeon_info {
 	uint32_t                    cik_macrotile_mode_array[16];
 };
 
-#define RADEON_SURF_MAX_LEVEL                   32
-
 #define RADEON_SURF_TYPE_MASK                   0xFF
 #define RADEON_SURF_TYPE_SHIFT                  0
 #define     RADEON_SURF_TYPE_1D                     0
@@ -138,90 +139,10 @@ struct radeon_info {
 #define     RADEON_SURF_TYPE_2D_ARRAY               5
 #define RADEON_SURF_MODE_MASK                   0xFF
 #define RADEON_SURF_MODE_SHIFT                  8
-#define     RADEON_SURF_MODE_LINEAR_ALIGNED         1
-#define     RADEON_SURF_MODE_1D                     2
-#define     RADEON_SURF_MODE_2D                     3
-#define RADEON_SURF_SCANOUT                     (1 << 16)
-#define RADEON_SURF_ZBUFFER                     (1 << 17)
-#define RADEON_SURF_SBUFFER                     (1 << 18)
-#define RADEON_SURF_Z_OR_SBUFFER                (RADEON_SURF_ZBUFFER | RADEON_SURF_SBUFFER)
-#define RADEON_SURF_HAS_TILE_MODE_INDEX         (1 << 20)
-#define RADEON_SURF_FMASK                       (1 << 21)
-#define RADEON_SURF_DISABLE_DCC                 (1 << 22)
-#define RADEON_SURF_TC_COMPATIBLE_HTILE         (1 << 23)
 
 #define RADEON_SURF_GET(v, field)   (((v) >> RADEON_SURF_ ## field ## _SHIFT) & RADEON_SURF_ ## field ## _MASK)
 #define RADEON_SURF_SET(v, field)   (((v) & RADEON_SURF_ ## field ## _MASK) << RADEON_SURF_ ## field ## _SHIFT)
 #define RADEON_SURF_CLR(v, field)   ((v) & ~(RADEON_SURF_ ## field ## _MASK << RADEON_SURF_ ## field ## _SHIFT))
-
-struct radeon_surf_info {
-	uint32_t width;
-	uint32_t height;
-	uint32_t depth;
-	uint8_t samples;
-	uint8_t levels;
-	uint16_t array_size;
-};
-
-struct radeon_surf_level {
-	uint64_t                    offset;
-	uint64_t                    slice_size;
-	uint32_t                    nblk_x;
-	uint32_t                    nblk_y;
-	uint32_t                    mode;
-	uint64_t                    dcc_offset;
-	uint64_t                    dcc_fast_clear_size;
-};
-
-
-/* surface defintions from the winsys */
-struct radeon_surf {
-	/* These are inputs to the calculator. */
-	uint32_t                    blk_w;
-	uint32_t                    blk_h;
-	uint32_t                    bpe;
-	uint32_t                    flags;
-
-	unsigned                    num_dcc_levels:4;
-
-	/* These are return values. Some of them can be set by the caller, but
-	 * they will be treated as hints (e.g. bankw, bankh) and might be
-	 * changed by the calculator.
-	 */
-	/* This applies to EG and later. */
-	uint32_t                    bankw;
-	uint32_t                    bankh;
-	uint32_t                    mtilea;
-	uint32_t                    tile_split;
-	uint32_t                    stencil_tile_split;
-	uint64_t                    stencil_offset;
-	struct radeon_surf_level    level[RADEON_SURF_MAX_LEVEL];
-	struct radeon_surf_level    stencil_level[RADEON_SURF_MAX_LEVEL];
-	uint32_t                    tiling_index[RADEON_SURF_MAX_LEVEL];
-	uint32_t                    stencil_tiling_index[RADEON_SURF_MAX_LEVEL];
-	uint32_t                    pipe_config;
-	uint32_t                    num_banks;
-	uint32_t                    macro_tile_index;
-	uint32_t                    micro_tile_mode; /* displayable, thin, depth, rotated */
-
-	/* Whether the depth miptree or stencil miptree as used by the DB are
-	 * adjusted from their TC compatible form to ensure depth/stencil
-	 * compatibility. If either is true, the corresponding plane cannot be
-	 * sampled from.
-	 */
-	bool                        depth_adjusted;
-	bool                        stencil_adjusted;
-
-	uint64_t                    surf_size;
-	uint64_t                    surf_alignment;
-
-	uint64_t                    dcc_size;
-	uint64_t                    dcc_alignment;
-
-	uint64_t                    htile_size;
-	uint64_t                    htile_slice_size;
-	uint64_t                    htile_alignment;
-};
 
 enum radeon_bo_layout {
 	RADEON_LAYOUT_LINEAR = 0,
@@ -332,7 +253,7 @@ struct radeon_winsys {
 	void (*cs_dump)(struct radeon_winsys_cs *cs, FILE* file, uint32_t trace_id);
 
 	int (*surface_init)(struct radeon_winsys *ws,
-			    const struct radeon_surf_info *surf_info,
+			    const struct ac_surf_info *surf_info,
 			    struct radeon_surf *surf);
 
 	int (*surface_best)(struct radeon_winsys *ws,

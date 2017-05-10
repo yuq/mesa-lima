@@ -2643,9 +2643,9 @@ static inline unsigned
 si_tile_mode_index(const struct radv_image *image, unsigned level, bool stencil)
 {
 	if (stencil)
-		return image->surface.stencil_tiling_index[level];
+		return image->surface.u.legacy.stencil_tiling_index[level];
 	else
-		return image->surface.tiling_index[level];
+		return image->surface.u.legacy.tiling_index[level];
 }
 
 static uint32_t radv_surface_layer_count(struct radv_image_view *iview)
@@ -2664,7 +2664,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
 	uint64_t va;
 	const struct radeon_surf *surf = &iview->image->surface;
-	const struct radeon_surf_level *level_info = &surf->level[iview->base_mip];
+	const struct legacy_surf_level *level_info = &surf->u.legacy.level[iview->base_mip];
 
 	desc = vk_format_description(iview->vk_format);
 
@@ -2792,7 +2792,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	/* This must be set for fast clear to work without FMASK. */
 	if (!iview->image->fmask.size &&
 	    device->physical_device->rad_info.chip_class == SI) {
-		unsigned bankh = util_logbase2(iview->image->surface.bankh);
+		unsigned bankh = util_logbase2(iview->image->surface.u.legacy.bankh);
 		cb->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
 	}
 }
@@ -2805,7 +2805,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 	unsigned level = iview->base_mip;
 	unsigned format;
 	uint64_t va, s_offs, z_offs;
-	const struct radeon_surf_level *level_info = &iview->image->surface.level[level];
+	const struct legacy_surf_level *level_info = &iview->image->surface.u.legacy.level[level];
 	bool stencil_only = false;
 	memset(ds, 0, sizeof(*ds));
 	switch (iview->vk_format) {
@@ -2827,7 +2827,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		break;
 	case VK_FORMAT_S8_UINT:
 		stencil_only = true;
-		level_info = &iview->image->surface.stencil_level[level];
+		level_info = &iview->image->surface.u.legacy.stencil_level[level];
 		break;
 	default:
 		break;
@@ -2837,8 +2837,8 @@ radv_initialise_ds_surface(struct radv_device *device,
 
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	s_offs = z_offs = va;
-	z_offs += iview->image->surface.level[level].offset;
-	s_offs += iview->image->surface.stencil_level[level].offset;
+	z_offs += iview->image->surface.u.legacy.level[level].offset;
+	s_offs += iview->image->surface.u.legacy.stencil_level[level].offset;
 
 	uint32_t max_slice = radv_surface_layer_count(iview);
 	ds->db_depth_view = S_028008_SLICE_START(iview->base_layer) |
@@ -2856,9 +2856,9 @@ radv_initialise_ds_surface(struct radv_device *device,
 
 	if (device->physical_device->rad_info.chip_class >= CIK) {
 		struct radeon_info *info = &device->physical_device->rad_info;
-		unsigned tiling_index = iview->image->surface.tiling_index[level];
-		unsigned stencil_index = iview->image->surface.stencil_tiling_index[level];
-		unsigned macro_index = iview->image->surface.macro_tile_index;
+		unsigned tiling_index = iview->image->surface.u.legacy.tiling_index[level];
+		unsigned stencil_index = iview->image->surface.u.legacy.stencil_tiling_index[level];
+		unsigned macro_index = iview->image->surface.u.legacy.macro_tile_index;
 		unsigned tile_mode = info->si_tile_mode_array[tiling_index];
 		unsigned stencil_tile_mode = info->si_tile_mode_array[stencil_index];
 		unsigned macro_mode = info->cik_macrotile_mode_array[macro_index];
