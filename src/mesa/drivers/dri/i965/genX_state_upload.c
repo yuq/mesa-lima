@@ -3565,6 +3565,150 @@ static const struct brw_tracked_state genX(tcs_push_constants) = {
    },
    .emit = genX(upload_tcs_push_constants),
 };
+
+#endif
+
+/* ---------------------------------------------------------------------- */
+
+#if GEN_GEN >= 7
+static void
+genX(upload_cs_state)(struct brw_context *brw)
+{
+   if (!brw->cs.base.prog_data)
+      return;
+
+   uint32_t offset;
+   uint32_t *desc = (uint32_t*) brw_state_batch(
+      brw, GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t), 64,
+      &offset);
+
+   struct brw_stage_state *stage_state = &brw->cs.base;
+   struct brw_stage_prog_data *prog_data = stage_state->prog_data;
+   struct brw_cs_prog_data *cs_prog_data = brw_cs_prog_data(prog_data);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
+      brw_emit_buffer_surface_state(
+         brw, &stage_state->surf_offset[
+                 prog_data->binding_table.shader_time_start],
+         brw->shader_time.bo, 0, ISL_FORMAT_RAW,
+         brw->shader_time.bo->size, 1, true);
+   }
+
+   uint32_t *bind = brw_state_batch(brw, prog_data->binding_table.size_bytes,
+                                    32, &stage_state->bind_bo_offset);
+
+   brw_batch_emit(brw, GENX(MEDIA_VFE_STATE), vfe) {
+      if (prog_data->total_scratch) {
+         uint32_t bo_offset;
+
+         if (GEN_GEN >= 8) {
+            /* Broadwell's Per Thread Scratch Space is in the range [0, 11]
+             * where 0 = 1k, 1 = 2k, 2 = 4k, ..., 11 = 2M.
+             */
+            bo_offset = ffs(stage_state->per_thread_scratch) - 11;
+         } else if (GEN_IS_HASWELL) {
+            /* Haswell's Per Thread Scratch Space is in the range [0, 10]
+             * where 0 = 2k, 1 = 4k, 2 = 8k, ..., 10 = 2M.
+             */
+            bo_offset = ffs(stage_state->per_thread_scratch) - 12;
+         } else {
+            /* Earlier platforms use the range [0, 11] to mean [1kB, 12kB]
+             * where 0 = 1kB, 1 = 2kB, 2 = 3kB, ..., 11 = 12kB.
+             */
+            bo_offset = stage_state->per_thread_scratch / 1024 - 1;
+         }
+         vfe.ScratchSpaceBasePointer =
+            render_bo(stage_state->scratch_bo, bo_offset);
+      }
+
+      const uint32_t subslices = MAX2(brw->screen->subslice_total, 1);
+      vfe.MaximumNumberofThreads = devinfo->max_cs_threads * subslices - 1;
+      vfe.NumberofURBEntries = GEN_GEN >= 8 ? 2 : 0;;
+      vfe.ResetGatewayTimer =
+         Resettingrelativetimerandlatchingtheglobaltimestamp;
+#if GEN_GEN < 9
+      vfe.BypassGatewayControl = BypassingOpenGatewayCloseGatewayprotocol;
+#endif
+#if GEN_GEN == 7
+      vfe.GPGPUMode = 1;
+#endif
+
+      /* We are uploading duplicated copies of push constant uniforms for each
+       * thread. Although the local id data needs to vary per thread, it won't
+       * change for other uniform data. Unfortunately this duplication is
+       * required for gen7. As of Haswell, this duplication can be avoided,
+       * but this older mechanism with duplicated data continues to work.
+       *
+       * FINISHME: As of Haswell, we could make use of the
+       * INTERFACE_DESCRIPTOR_DATA "Cross-Thread Constant Data Read Length"
+       * field to only store one copy of uniform data.
+       *
+       * FINISHME: Broadwell adds a new alternative "Indirect Payload Storage"
+       * which is described in the GPGPU_WALKER command and in the Broadwell
+       * PRM Volume 7: 3D Media GPGPU, under Media GPGPU Pipeline => Mode of
+       * Operations => GPGPU Mode => Indirect Payload Storage.
+       *
+       * Note: The constant data is built in brw_upload_cs_push_constants
+       * below.
+       */
+      vfe.URBEntryAllocationSize = GEN_GEN >= 8 ? 2 : 0;
+
+      const uint32_t vfe_curbe_allocation =
+         ALIGN(cs_prog_data->push.per_thread.regs * cs_prog_data->threads +
+               cs_prog_data->push.cross_thread.regs, 2);
+      vfe.CURBEAllocationSize = vfe_curbe_allocation;
+   }
+
+   if (cs_prog_data->push.total.size > 0) {
+      brw_batch_emit(brw, GENX(MEDIA_CURBE_LOAD), curbe) {
+         curbe.CURBETotalDataLength =
+            ALIGN(cs_prog_data->push.total.size, 64);
+         curbe.CURBEDataStartAddress = stage_state->push_const_offset;
+      }
+   }
+
+   /* BRW_NEW_SURFACES and BRW_NEW_*_CONSTBUF */
+   memcpy(bind, stage_state->surf_offset,
+          prog_data->binding_table.size_bytes);
+   const struct GENX(INTERFACE_DESCRIPTOR_DATA) idd = {
+      .KernelStartPointer = brw->cs.base.prog_offset,
+      .SamplerStatePointer = stage_state->sampler_offset,
+      .SamplerCount = DIV_ROUND_UP(stage_state->sampler_count, 4) >> 2,
+      .BindingTablePointer = stage_state->bind_bo_offset,
+      .ConstantURBEntryReadLength = cs_prog_data->push.per_thread.regs,
+      .NumberofThreadsinGPGPUThreadGroup = cs_prog_data->threads,
+      .SharedLocalMemorySize = encode_slm_size(devinfo->gen,
+                                               prog_data->total_shared),
+      .BarrierEnable = cs_prog_data->uses_barrier,
+#if GEN_GEN >= 8 || GEN_IS_HASWELL
+      .CrossThreadConstantDataReadLength =
+         cs_prog_data->push.cross_thread.regs,
+#endif
+   };
+
+   GENX(INTERFACE_DESCRIPTOR_DATA_pack)(brw, desc, &idd);
+
+   brw_batch_emit(brw, GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD), load) {
+      load.InterfaceDescriptorTotalLength =
+         GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
+      load.InterfaceDescriptorDataStartAddress = offset;
+   }
+}
+
+static const struct brw_tracked_state genX(cs_state) = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_CS_PROG_DATA |
+             BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+             BRW_NEW_SAMPLER_STATE_TABLE |
+             BRW_NEW_SURFACES,
+   },
+   .emit = genX(upload_cs_state)
+};
+
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -4234,7 +4378,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_cs_texture_surfaces,
       &brw_cs_work_groups_surface,
       &brw_cs_samplers,
-      &brw_cs_state,
+      &genX(cs_state),
    };
 
    STATIC_ASSERT(ARRAY_SIZE(compute_atoms) <= ARRAY_SIZE(brw->compute_atoms));
