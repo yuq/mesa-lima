@@ -410,7 +410,7 @@
       <param name="pixels" type="const GLvoid *" />
    </function>
 
-   <function name="CompressedTextureSubImage1D">
+   <function name="CompressedTextureSubImage1D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />

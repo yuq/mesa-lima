@@ -4533,7 +4533,7 @@ static ALWAYS_INLINE void
 compressed_tex_sub_image(unsigned dim, GLenum target, GLuint texture,
                          GLint level, GLint xoffset, GLsizei width,
                          GLenum format, GLsizei imageSize, const GLvoid *data,
-                         bool dsa, const char *caller)
+                         bool dsa, bool no_error, const char *caller)
 {
    struct gl_texture_object *texObj;
    struct gl_texture_image *texImage;
@@ -4541,25 +4541,31 @@ compressed_tex_sub_image(unsigned dim, GLenum target, GLuint texture,
    GET_CURRENT_CONTEXT(ctx);
 
    if (dsa) {
-      texObj = _mesa_lookup_texture_err(ctx, texture, caller);
-      if (!texObj)
-         return;
+      if (no_error) {
+         texObj = _mesa_lookup_texture(ctx, texture);
+      } else {
+         texObj = _mesa_lookup_texture_err(ctx, texture, caller);
+         if (!texObj)
+            return;
+      }
 
       target = texObj->Target;
    }
 
-   if (compressed_subtexture_target_check(ctx, target, dim, format, dsa,
+   if (!no_error &&
+       compressed_subtexture_target_check(ctx, target, dim, format, dsa,
                                           caller)) {
       return;
    }
 
    if (!dsa) {
       texObj = _mesa_get_current_tex_object(ctx, target);
-         if (!texObj)
+         if (!no_error && !texObj)
             return;
    }
 
-   if (compressed_subtexture_error_check(ctx, dim, texObj, target, level,
+   if (!no_error &&
+       compressed_subtexture_error_check(ctx, dim, texObj, target, level,
                                          xoffset, 0, 0, width, 1, 1, format,
                                          imageSize, data, caller)) {
       return;
@@ -4575,14 +4581,39 @@ compressed_tex_sub_image(unsigned dim, GLenum target, GLuint texture,
 
 
 void GLAPIENTRY
+_mesa_CompressedTexSubImage1D_no_error(GLenum target, GLint level,
+                                       GLint xoffset, GLsizei width,
+                                       GLenum format, GLsizei imageSize,
+                                       const GLvoid *data)
+{
+   compressed_tex_sub_image(1, target, 0, level, xoffset, width, format,
+                            imageSize, data, false, true,
+                            "glCompressedTexSubImage1D");
+}
+
+
+void GLAPIENTRY
 _mesa_CompressedTexSubImage1D(GLenum target, GLint level, GLint xoffset,
                               GLsizei width, GLenum format,
                               GLsizei imageSize, const GLvoid *data)
 {
    compressed_tex_sub_image(1, target, 0, level, xoffset, width, format,
-                            imageSize, data, false,
+                            imageSize, data, false, false,
                             "glCompressedTexSubImage1D");
 }
+
+
+void GLAPIENTRY
+_mesa_CompressedTextureSubImage1D_no_error(GLuint texture, GLint level,
+                                           GLint xoffset, GLsizei width,
+                                           GLenum format, GLsizei imageSize,
+                                           const GLvoid *data)
+{
+   compressed_tex_sub_image(1, 0, texture, level, xoffset, width,
+                            format, imageSize, data, true, true,
+                            "glCompressedTextureSubImage1D");
+}
+
 
 void GLAPIENTRY
 _mesa_CompressedTextureSubImage1D(GLuint texture, GLint level, GLint xoffset,
@@ -4590,7 +4621,7 @@ _mesa_CompressedTextureSubImage1D(GLuint texture, GLint level, GLint xoffset,
                                   GLsizei imageSize, const GLvoid *data)
 {
    compressed_tex_sub_image(1, 0, texture, level, xoffset, width,
-                            format, imageSize, data, true,
+                            format, imageSize, data, true, false,
                             "glCompressedTextureSubImage1D");
 }
 
