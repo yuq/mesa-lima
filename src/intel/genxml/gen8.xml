@@ -1583,6 +1583,7 @@
       <value name="DWORD" value="2"/>
     </field>
     <field name="Memory Object Control State" start="32" end="38" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="IndexBufferMOCS" start="32" end="38" type="uint"/>
     <field name="Buffer Starting Address" start="64" end="127" type="address"/>
     <field name="Buffer Size" start="128" end="159" type="uint"/>
   </instruction>
