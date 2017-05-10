@@ -4046,7 +4046,27 @@ static const struct brw_tracked_state genX(ps_blend) = {
    },
    .emit = genX(upload_ps_blend)
 };
+#endif
 
+/* ---------------------------------------------------------------------- */
+
+#if GEN_GEN >= 8
+static void
+genX(emit_vf_topology)(struct brw_context *brw)
+{
+   brw_batch_emit(brw, GENX(3DSTATE_VF_TOPOLOGY), vftopo) {
+      vftopo.PrimitiveTopologyType = brw->primitive;
+   }
+}
+
+static const struct brw_tracked_state genX(vf_topology) = {
+   .dirty = {
+      .mesa = 0,
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_PRIMITIVE,
+   },
+   .emit = genX(emit_vf_topology),
+};
 #endif
 
 /* ---------------------------------------------------------------------- */
@@ -4384,7 +4404,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       &genX(drawing_rect),
 
-      &gen8_vf_topology,
+      &genX(vf_topology),
 
       &brw_indices,
       &genX(index_buffer),

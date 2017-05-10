@@ -112,7 +112,6 @@ extern const struct brw_tracked_state gen7_l3_state;
 extern const struct brw_tracked_state gen7_push_constant_space;
 extern const struct brw_tracked_state gen7_urb;
 extern const struct brw_tracked_state gen8_pma_fix;
-extern const struct brw_tracked_state gen8_vf_topology;
 extern const struct brw_tracked_state brw_cs_work_groups_surface;
 
 static inline bool
