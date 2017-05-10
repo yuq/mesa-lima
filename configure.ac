@@ -455,7 +455,7 @@ int main () {
 CFLAGS=$save_CFLAGS
 
 AC_ARG_ENABLE(pwr8,
-   [AS_HELP_STRING([--disable-pwr8-inst],
+   [AS_HELP_STRING([--disable-pwr8],
                    [disable POWER8-specific instructions])],
    [enable_pwr8=$enableval], [enable_pwr8=auto])
 
