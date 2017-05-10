@@ -188,8 +188,6 @@ struct radeon_surf {
 	 * they will be treated as hints (e.g. bankw, bankh) and might be
 	 * changed by the calculator.
 	 */
-	uint64_t                    bo_size;
-	uint64_t                    bo_alignment;
 	/* This applies to EG and later. */
 	uint32_t                    bankw;
 	uint32_t                    bankh;
@@ -213,6 +211,9 @@ struct radeon_surf {
 	 */
 	bool                        depth_adjusted;
 	bool                        stencil_adjusted;
+
+	uint64_t                    surf_size;
+	uint64_t                    surf_alignment;
 
 	uint64_t                    dcc_size;
 	uint64_t                    dcc_alignment;

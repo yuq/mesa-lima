@@ -201,7 +201,7 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 		return ret;
 
 	surf_level = is_stencil ? &surf->stencil_level[level] : &surf->level[level];
-	surf_level->offset = align64(surf->bo_size, AddrSurfInfoOut->baseAlign);
+	surf_level->offset = align64(surf->surf_size, AddrSurfInfoOut->baseAlign);
 	surf_level->slice_size = AddrSurfInfoOut->sliceSize;
 	surf_level->nblk_x = AddrSurfInfoOut->pitch;
 	surf_level->nblk_y = AddrSurfInfoOut->height;
@@ -225,7 +225,7 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 	else
 		surf->tiling_index[level] = AddrSurfInfoOut->tileIndex;
 
-	surf->bo_size = surf_level->offset + AddrSurfInfoOut->surfSize;
+	surf->surf_size = surf_level->offset + AddrSurfInfoOut->surfSize;
 
 	/* Clear DCC fields at the beginning. */
 	surf_level->dcc_offset = 0;
@@ -470,7 +470,7 @@ static int radv_amdgpu_winsys_surface_init(struct radeon_winsys *_ws,
 		}
 	}
 
-	surf->bo_size = 0;
+	surf->surf_size = 0;
 	surf->num_dcc_levels = 0;
 	surf->dcc_size = 0;
 	surf->dcc_alignment = 1;
@@ -485,7 +485,7 @@ static int radv_amdgpu_winsys_surface_init(struct radeon_winsys *_ws,
 			break;
 
 		if (level == 0) {
-			surf->bo_alignment = AddrSurfInfoOut.baseAlign;
+			surf->surf_alignment = AddrSurfInfoOut.baseAlign;
 			surf->pipe_config = AddrSurfInfoOut.pTileInfo->pipeConfig - 1;
 			radv_set_micro_tile_mode(surf, &ws->info);
 

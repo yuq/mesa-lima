@@ -463,8 +463,8 @@ radv_image_get_fmask_info(struct radv_device *device,
 	struct radeon_surf_info info = image->info;
 	memset(out, 0, sizeof(*out));
 
-	fmask.bo_alignment = 0;
-	fmask.bo_size = 0;
+	fmask.surf_alignment = 0;
+	fmask.surf_size = 0;
 	fmask.flags |= RADEON_SURF_FMASK;
 	info.samples = 1;
 	/* Force 2D tiling if it wasn't set. This may occur when creating
@@ -497,8 +497,8 @@ radv_image_get_fmask_info(struct radv_device *device,
 	out->tile_mode_index = fmask.tiling_index[0];
 	out->pitch_in_pixels = fmask.level[0].nblk_x;
 	out->bank_height = fmask.bankh;
-	out->alignment = MAX2(256, fmask.bo_alignment);
-	out->size = fmask.bo_size;
+	out->alignment = MAX2(256, fmask.surf_alignment);
+	out->size = fmask.surf_size;
 }
 
 static void
@@ -653,8 +653,8 @@ radv_image_create(VkDevice _device,
 
 	device->ws->surface_init(device->ws, &image->info, &image->surface);
 
-	image->size = image->surface.bo_size;
-	image->alignment = image->surface.bo_alignment;
+	image->size = image->surface.surf_size;
+	image->alignment = image->surface.surf_alignment;
 
 	if (image->exclusive || image->queue_family_mask == 1)
 		can_cmask_dcc = true;
