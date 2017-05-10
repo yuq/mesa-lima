@@ -5829,7 +5829,7 @@ static void declare_lds_as_pointer(struct si_shader_context *ctx)
 		"lds");
 }
 
-static unsigned si_get_max_workgroup_size(struct si_shader *shader)
+static unsigned si_get_max_workgroup_size(const struct si_shader *shader)
 {
 	switch (shader->selector->type) {
 	case PIPE_SHADER_TESS_CTRL:
