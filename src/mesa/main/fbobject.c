@@ -3427,12 +3427,21 @@ _mesa_FramebufferTexture3D(GLenum target, GLenum attachment,
 
 
 static ALWAYS_INLINE void
-frame_buffer_texture_layer(GLuint framebuffer, GLenum target,
-                           GLenum attachment, GLuint texture,
-                           GLint level, GLint layer, const char *func,
-                           bool dsa, bool no_error)
+frame_buffer_texture(GLuint framebuffer, GLenum target,
+                     GLenum attachment, GLuint texture,
+                     GLint level, GLint layer, const char *func,
+                     bool dsa, bool no_error, bool check_layered)
 {
    GET_CURRENT_CONTEXT(ctx);
+   GLboolean layered = GL_FALSE;
+
+   if (!no_error && check_layered) {
+      if (!_mesa_has_geometry_shaders(ctx)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "unsupported function (%s) called", func);
+         return;
+      }
+   }
 
    /* Get the framebuffer object */
    struct gl_framebuffer *fb;
@@ -3464,7 +3473,7 @@ frame_buffer_texture_layer(GLuint framebuffer, GLenum target,
       texObj = get_texture_for_framebuffer(ctx, texture);
       att = get_attachment(ctx, fb, attachment, NULL);
    } else {
-      if (!get_texture_for_framebuffer_err(ctx, texture, false, func,
+      if (!get_texture_for_framebuffer_err(ctx, texture, check_layered, func,
                                            &texObj))
          return;
 
@@ -3475,18 +3484,27 @@ frame_buffer_texture_layer(GLuint framebuffer, GLenum target,
 
    GLenum textarget = 0;
    if (texObj) {
-      if (!no_error) {
-         if (!check_texture_target(ctx, texObj->Target, func))
+      if (check_layered) {
+         /* We do this regardless of no_error because this sets layered */
+         if (!check_layered_texture_target(ctx, texObj->Target, func,
+                                           &layered))
             return;
+      }
 
-         if (!check_layer(ctx, texObj->Target, layer, func))
-            return;
+      if (!no_error) {
+         if (!check_layered) {
+            if (!check_texture_target(ctx, texObj->Target, func))
+               return;
+
+            if (!check_layer(ctx, texObj->Target, layer, func))
+               return;
+         }
 
          if (!check_level(ctx, texObj->Target, level, func))
             return;
       }
 
-      if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
+      if (!check_layered && texObj->Target == GL_TEXTURE_CUBE_MAP) {
          assert(layer >= 0 && layer < 6);
          textarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer;
          layer = 0;
@@ -3494,7 +3512,7 @@ frame_buffer_texture_layer(GLuint framebuffer, GLenum target,
    }
 
    _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, textarget,
-                             level, layer, GL_FALSE);
+                             level, layer, layered);
 }
 
 void GLAPIENTRY
@@ -3502,8 +3520,8 @@ _mesa_FramebufferTextureLayer_no_error(GLenum target, GLenum attachment,
                                        GLuint texture, GLint level,
                                        GLint layer)
 {
-   frame_buffer_texture_layer(0, target, attachment, texture, level, layer,
-                              "glFramebufferTextureLayer", false, true);
+   frame_buffer_texture(0, target, attachment, texture, level, layer,
+                        "glFramebufferTextureLayer", false, true, false);
 }
 
 
@@ -3511,8 +3529,8 @@ void GLAPIENTRY
 _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
                               GLuint texture, GLint level, GLint layer)
 {
-   frame_buffer_texture_layer(0, target, attachment, texture, level, layer,
-                              "glFramebufferTextureLayer", false, false);
+   frame_buffer_texture(0, target, attachment, texture, level, layer,
+                        "glFramebufferTextureLayer", false, false, false);
 }
 
 
@@ -3522,9 +3540,8 @@ _mesa_NamedFramebufferTextureLayer_no_error(GLuint framebuffer,
                                             GLuint texture, GLint level,
                                             GLint layer)
 {
-   frame_buffer_texture_layer(framebuffer, 0, attachment, texture, level,
-                              layer, "glNamedFramebufferTextureLayer", true,
-                              true);
+   frame_buffer_texture(framebuffer, 0, attachment, texture, level, layer,
+                        "glNamedFramebufferTextureLayer", true, true, false);
 }
 
 
@@ -3532,9 +3549,8 @@ void GLAPIENTRY
 _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
                                    GLuint texture, GLint level, GLint layer)
 {
-   frame_buffer_texture_layer(framebuffer, 0, attachment, texture, level,
-                              layer, "glNamedFramebufferTextureLayer", true,
-                              false);
+   frame_buffer_texture(framebuffer, 0, attachment, texture, level, layer,
+                        "glNamedFramebufferTextureLayer", true, false, false);
 }
 
 
@@ -3542,47 +3558,8 @@ void GLAPIENTRY
 _mesa_FramebufferTexture(GLenum target, GLenum attachment,
                          GLuint texture, GLint level)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_framebuffer *fb;
-   struct gl_texture_object *texObj;
-   GLboolean layered = GL_FALSE;
-
-   const char *func = "FramebufferTexture";
-
-   if (!_mesa_has_geometry_shaders(ctx)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "unsupported function (glFramebufferTexture) called");
-      return;
-   }
-
-   /* Get the framebuffer object */
-   fb = get_framebuffer_target(ctx, target);
-   if (!fb) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferTexture(invalid target %s)",
-                  _mesa_enum_to_string(target));
-      return;
-   }
-
-   /* Get the texture object */
-   if (!get_texture_for_framebuffer_err(ctx, texture, true, func, &texObj))
-      return;
-
-   if (texObj) {
-      if (!check_layered_texture_target(ctx, texObj->Target, func, &layered))
-         return;
-
-      if (!check_level(ctx, texObj->Target, level, func))
-         return;
-   }
-
-   struct gl_renderbuffer_attachment *att =
-      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
-   if (!att)
-      return;
-
-   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, 0, level,
-                             0, layered);
+   frame_buffer_texture(0, target, attachment, texture, level, 0,
+                        "glFramebufferTexture", false, false, true);
 }
 
 
@@ -3590,44 +3567,8 @@ void GLAPIENTRY
 _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
                               GLuint texture, GLint level)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_framebuffer *fb;
-   struct gl_texture_object *texObj;
-   GLboolean layered = GL_FALSE;
-
-   const char *func = "glNamedFramebufferTexture";
-
-   if (!_mesa_has_geometry_shaders(ctx)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "unsupported function (glNamedFramebufferTexture) called");
-      return;
-   }
-
-   /* Get the framebuffer object */
-   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
-   if (!fb)
-      return;
-
-   /* Get the texture object */
-   if (!get_texture_for_framebuffer_err(ctx, texture, true, func, &texObj))
-      return;
-
-   if (texObj) {
-      if (!check_layered_texture_target(ctx, texObj->Target, func,
-                                        &layered))
-         return;
-
-      if (!check_level(ctx, texObj->Target, level, func))
-         return;
-   }
-
-   struct gl_renderbuffer_attachment *att =
-      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
-   if (!att)
-      return;
-
-   _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, 0, level,
-                             0, layered);
+   frame_buffer_texture(framebuffer, 0, attachment, texture, level, 0,
+                        "glNamedFramebufferTexture", true, false, true);
 }
 
 
