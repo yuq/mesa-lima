@@ -650,7 +650,7 @@
       <value name="BACK" value="3"/>
     </field>
     <field name="Fast Scissor Clip Disable" start="220" end="220" type="bool"/>
-    <field name="Line Width" start="216" end="219" type="u3.7"/>
+    <field name="Line Width" start="216" end="219" type="u3.1"/>
     <field name="Line End Cap Antialiasing Region Width" start="214" end="215" type="uint">
       <value name="0.5 pixels" value="0"/>
       <value name="1.0 pixels" value="1"/>
