@@ -148,7 +148,7 @@ struct ac_shader_binary;
 /* Shader IO unique indices are supported for TGSI_SEMANTIC_GENERIC with an
  * index smaller than this.
  */
-#define SI_MAX_IO_GENERIC       60
+#define SI_MAX_IO_GENERIC       46
 
 /* SGPR user data indices */
 enum {
