@@ -132,7 +132,8 @@ GENXML_XML_FILES = \
 	genxml/gen75.xml \
 	genxml/gen8.xml \
 	genxml/gen9.xml \
-	genxml/gen10.xml
+	genxml/gen10.xml \
+	genxml/gen11.xml
 
 GENXML_GENERATED_PACK_FILES = \
 	genxml/gen4_pack.h \
@@ -143,7 +144,8 @@ GENXML_GENERATED_PACK_FILES = \
 	genxml/gen75_pack.h \
 	genxml/gen8_pack.h \
 	genxml/gen9_pack.h \
-	genxml/gen10_pack.h
+	genxml/gen10_pack.h \
+	genxml/gen11_pack.h
 
 GENXML_GENERATED_FILES = \
 	$(GENXML_GENERATED_PACK_FILES) \
