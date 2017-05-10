@@ -753,7 +753,7 @@
     <field name="Sampler State Offset" start="165" end="191" type="address"/>
     <field name="Sampler Count" start="160" end="162" type="uint"/>
     <field name="Vertex Cache Disable" start="193" end="193" type="bool"/>
-    <field name="Function Enable" start="192" end="192" type="bool"/>
+    <field name="Enable" start="192" end="192" type="bool"/>
   </struct>
 
   <struct name="WM_STATE" length="8">

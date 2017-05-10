@@ -133,6 +133,17 @@ instruction_bo(struct brw_bo *bo, uint32_t offset)
 }
 
 static inline struct brw_address
+instruction_ro_bo(struct brw_bo *bo, uint32_t offset)
+{
+   return (struct brw_address) {
+            .bo = bo,
+            .offset = offset,
+            .read_domains = I915_GEM_DOMAIN_INSTRUCTION,
+            .write_domain = 0,
+   };
+}
+
+static inline struct brw_address
 vertex_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
@@ -1693,8 +1704,22 @@ static const struct brw_tracked_state genX(wm_state) = {
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN == 4
+static inline struct brw_address
+KSP(struct brw_context *brw, uint32_t offset)
+{
+   return instruction_bo(brw->cache.bo, offset);
+}
+#else
+static inline uint32_t
+KSP(struct brw_context *brw, uint32_t offset)
+{
+   return offset;
+}
+#endif
+
 #define INIT_THREAD_DISPATCH_FIELDS(pkt, prefix) \
-   pkt.KernelStartPointer = stage_state->prog_offset;                     \
+   pkt.KernelStartPointer = KSP(brw, stage_state->prog_offset);           \
    pkt.SamplerCount       =                                               \
       DIV_ROUND_UP(CLAMP(stage_state->sampler_count, 0, 16), 4);          \
    pkt.BindingTableEntryCount =                                           \
@@ -1716,12 +1741,12 @@ static const struct brw_tracked_state genX(wm_state) = {
    pkt.StatisticsEnable = true;                                           \
    pkt.Enable           = true;
 
-#if GEN_GEN >= 6
 static void
 genX(upload_vs_state)(struct brw_context *brw)
 {
+   UNUSED struct gl_context *ctx = &brw->ctx;
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   const struct brw_stage_state *stage_state = &brw->vs.base;
+   struct brw_stage_state *stage_state = &brw->vs.base;
 
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_vue_prog_data *vue_prog_data =
@@ -1755,10 +1780,43 @@ genX(upload_vs_state)(struct brw_context *brw)
    if (GEN_GEN == 7 && devinfo->is_ivybridge)
       gen7_emit_vs_workaround_flush(brw);
 
+#if GEN_GEN >= 6
    brw_batch_emit(brw, GENX(3DSTATE_VS), vs) {
+#else
+   ctx->NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
+   brw_state_emit(brw, GENX(VS_STATE), 32, &stage_state->state_offset, vs) {
+#endif
       INIT_THREAD_DISPATCH_FIELDS(vs, Vertex);
 
       vs.MaximumNumberofThreads = devinfo->max_vs_threads - 1;
+
+#if GEN_GEN < 6
+      vs.GRFRegisterCount = DIV_ROUND_UP(vue_prog_data->total_grf, 16) - 1;
+      vs.ConstantURBEntryReadLength = stage_prog_data->curb_read_length;
+      vs.ConstantURBEntryReadOffset = brw->curbe.vs_start * 2;
+
+      vs.NumberofURBEntries = brw->urb.nr_vs_entries >> (GEN_GEN == 5 ? 2 : 0);
+      vs.URBEntryAllocationSize = brw->urb.vsize - 1;
+
+      vs.MaximumNumberofThreads =
+         CLAMP(brw->urb.nr_vs_entries / 2, 1, devinfo->max_vs_threads) - 1;
+
+      vs.StatisticsEnable = false;
+      vs.SamplerStateOffset =
+         instruction_ro_bo(brw->batch.bo, stage_state->sampler_offset);
+#endif
+
+#if GEN_GEN == 5
+      /* Force single program flow on Ironlake.  We cannot reliably get
+       * all applications working without it.  See:
+       * https://bugs.freedesktop.org/show_bug.cgi?id=29172
+       *
+       * The most notable and reliably failing application is the Humus
+       * demo "CelShading"
+       */
+      vs.SingleProgramFlow = true;
+      vs.SamplerCount = 0; /* hardware requirement */
+#endif
 
 #if GEN_GEN >= 8
       vs.SIMD8DispatchEnable =
@@ -1801,11 +1859,15 @@ static const struct brw_tracked_state genX(vs_state) = {
                BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_VS_PROG_DATA |
-               (GEN_GEN == 6 ? BRW_NEW_VERTEX_PROGRAM : 0),
+               (GEN_GEN == 6 ? BRW_NEW_VERTEX_PROGRAM : 0) |
+               (GEN_GEN <= 5 ? BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+                               BRW_NEW_PROGRAM_CACHE |
+                               BRW_NEW_SAMPLER_STATE_TABLE |
+                               BRW_NEW_URB_FENCE
+                             : 0),
    },
    .emit = genX(upload_vs_state),
 };
-#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -3884,7 +3946,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_wm_unit,
       &brw_sf_vp,
       &brw_sf_unit,
-      &brw_vs_unit,		/* always required, enabled or not */
+      &genX(vs_state), /* always required, enabled or not */
       &brw_clip_unit,
       &brw_gs_unit,
 

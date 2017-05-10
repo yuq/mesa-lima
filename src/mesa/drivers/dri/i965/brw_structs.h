@@ -483,41 +483,6 @@ struct brw_gs_unit_state
 };
 
 
-struct brw_vs_unit_state
-{
-   struct thread0 thread0;
-   struct thread1 thread1;
-   struct thread2 thread2;
-   struct thread3 thread3;
-
-   struct
-   {
-      unsigned pad0:10;
-      unsigned stats_enable:1;
-      unsigned nr_urb_entries:7;
-      unsigned pad1:1;
-      unsigned urb_entry_allocation_size:5;
-      unsigned pad2:1;
-      unsigned max_threads:6;
-      unsigned pad3:1;
-   } thread4;
-
-   struct
-   {
-      unsigned sampler_count:3;
-      unsigned pad0:2;
-      unsigned sampler_state_pointer:27;
-   } vs5;
-
-   struct
-   {
-      unsigned vs_enable:1;
-      unsigned vert_cache_disable:1;
-      unsigned pad0:30;
-   } vs6;
-};
-
-
 struct brw_wm_unit_state
 {
    struct thread0 thread0;
