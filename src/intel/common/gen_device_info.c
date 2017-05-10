@@ -56,6 +56,7 @@ gen_device_name_to_pci_device_id(const char *name)
       { "kbl", 0x5912 },
       { "glk", 0x3185 },
       { "cnl", 0x5a52 },
+      { "icl", 0x8a52 },
    };
 
    for (unsigned i = 0; i < ARRAY_SIZE(name_map); i++) {
