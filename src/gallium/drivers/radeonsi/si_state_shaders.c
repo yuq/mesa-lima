@@ -2032,8 +2032,12 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			unsigned index = sel->info.input_semantic_index[i];
 
 			switch (name) {
-			case TGSI_SEMANTIC_CLIPDIST:
 			case TGSI_SEMANTIC_GENERIC:
+				/* don't process indices the function can't handle */
+				if (index >= SI_MAX_IO_GENERIC)
+					break;
+				/* fall through */
+			case TGSI_SEMANTIC_CLIPDIST:
 				sel->inputs_read |=
 					1llu << si_shader_io_get_unique_index(name, index);
 				break;

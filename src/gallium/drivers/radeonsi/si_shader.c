@@ -2293,6 +2293,10 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 		case TGSI_SEMANTIC_EDGEFLAG:
 			break;
 		case TGSI_SEMANTIC_GENERIC:
+			/* don't process indices the function can't handle */
+			if (semantic_index >= SI_MAX_IO_GENERIC)
+				break;
+			/* fall through */
 		case TGSI_SEMANTIC_CLIPDIST:
 			if (shader->key.opt.hw_vs.kill_outputs &
 			    (1ull << si_shader_io_get_unique_index(semantic_name, semantic_index)))
