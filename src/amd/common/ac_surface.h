@@ -182,7 +182,31 @@ struct radeon_surf {
     } u;
 };
 
+struct ac_surf_info {
+	uint32_t width;
+	uint32_t height;
+	uint32_t depth;
+	uint8_t samples;
+	uint8_t levels;
+	uint16_t array_size;
+};
+
+struct ac_surf_config {
+	struct ac_surf_info info;
+	unsigned is_3d : 1;
+	unsigned is_cube : 1;
+	enum chip_class chip_class : 4;
+	unsigned num_tile_pipes;
+	unsigned pipe_interleave_bytes;
+	const struct amdgpu_gpu_info *amdinfo;
+};
+
 ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
 			       const struct amdgpu_gpu_info *info);
+
+int gfx6_compute_surface(ADDR_HANDLE addrlib,
+			 const struct ac_surf_config *config,
+			 enum radeon_surf_mode mode,
+			 struct radeon_surf *surf);
 
 #endif /* AC_SURFACE_H */
