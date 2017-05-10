@@ -159,14 +159,15 @@ static void upload_sf_unit( struct brw_context *brw )
        */
       sf->sf6.point_rast_rule = BRW_RASTRULE_LOWER_RIGHT;
    }
-   /* XXX clamp max depends on AA vs. non-AA */
 
    /* _NEW_POINT */
    sf->sf7.sprite_point = ctx->Point.PointSprite;
-   sf->sf7.point_size = CLAMP(rintf(CLAMP(ctx->Point.Size,
-                                          ctx->Point.MinSize,
-                                          ctx->Point.MaxSize)), 1.0f, 255.0f) *
-                        (1<<3);
+
+   float point_sz;
+   point_sz = CLAMP(ctx->Point.Size, ctx->Point.MinSize, ctx->Point.MaxSize);
+   point_sz = CLAMP(point_sz, 0.125f, 255.875f);
+   sf->sf7.point_size = U_FIXED(point_sz, 3);
+
    /* _NEW_PROGRAM | _NEW_POINT */
    sf->sf7.use_point_size_state = !(ctx->VertexProgram.PointSizeEnabled ||
 				    ctx->Point._Attenuated);
