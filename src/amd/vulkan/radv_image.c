@@ -212,7 +212,7 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 							     is_stencil));
 	state[4] |= S_008F20_PITCH_GFX6(pitch - 1);
 
-	if (image->surface.dcc_size && image->surface.level[first_level].dcc_enabled) {
+	if (image->surface.dcc_size && first_level < image->surface.num_dcc_levels) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);
 		state[7] = (gpu_address +
 			    image->dcc_offset +

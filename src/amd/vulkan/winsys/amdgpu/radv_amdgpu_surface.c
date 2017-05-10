@@ -233,7 +233,6 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 
 	/* Clear DCC fields at the beginning. */
 	surf_level->dcc_offset = 0;
-	surf_level->dcc_enabled = false;
 
 	/* The previous level's flag tells us if we can use DCC for this level. */
 	if (AddrSurfInfoIn->flags.dccCompatible &&
@@ -251,7 +250,7 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 		if (ret == ADDR_OK) {
 			surf_level->dcc_offset = surf->dcc_size;
 			surf_level->dcc_fast_clear_size = AddrDccOut->dccFastClearSize;
-			surf_level->dcc_enabled = true;
+			surf->num_dcc_levels = level + 1;
 			surf->dcc_size = surf_level->dcc_offset + AddrDccOut->dccRamSize;
 			surf->dcc_alignment = MAX2(surf->dcc_alignment, AddrDccOut->dccRamBaseAlign);
 		}
@@ -476,6 +475,7 @@ static int radv_amdgpu_winsys_surface_init(struct radeon_winsys *_ws,
 	}
 
 	surf->bo_size = 0;
+	surf->num_dcc_levels = 0;
 	surf->dcc_size = 0;
 	surf->dcc_alignment = 1;
 	surf->htile_size = surf->htile_slice_size = 0;

@@ -171,7 +171,6 @@ struct radeon_surf_level {
 	uint32_t                    nblk_y;
 	uint32_t                    nblk_z;
 	uint32_t                    mode;
-	bool                        dcc_enabled;
 	uint64_t                    dcc_offset;
 	uint64_t                    dcc_fast_clear_size;
 };
@@ -184,6 +183,8 @@ struct radeon_surf {
 	uint32_t                    blk_h;
 	uint32_t                    bpe;
 	uint32_t                    flags;
+
+	unsigned                    num_dcc_levels:4;
 
 	/* These are return values. Some of them can be set by the caller, but
 	 * they will be treated as hints (e.g. bankw, bankh) and might be
