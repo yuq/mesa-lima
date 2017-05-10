@@ -286,11 +286,7 @@ etna_resource_changed(struct pipe_screen *pscreen, struct pipe_resource *prsc)
 {
    struct etna_resource *res = etna_resource(prsc);
 
-   /* Make sure texture is older than the imported renderable buffer,
-    * so etna_update_sampler_source will copy the pixel data again.
-    */
-   if (res->texture)
-      etna_resource(res->texture)->seqno = res->seqno - 1;
+   res->seqno++;
 }
 
 static void
