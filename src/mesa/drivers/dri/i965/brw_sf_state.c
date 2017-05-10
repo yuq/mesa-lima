@@ -39,6 +39,7 @@
 #include "brw_context.h"
 #include "brw_state.h"
 #include "brw_defines.h"
+#include "brw_util.h"
 
 static void upload_sf_unit( struct brw_context *brw )
 {
@@ -123,14 +124,11 @@ static void upload_sf_unit( struct brw_context *brw )
    }
 
    /* _NEW_LINE */
-   sf->sf6.line_width =
-      CLAMP(ctx->Line.Width, 1.0f, ctx->Const.MaxLineWidth) * (1<<1);
+   sf->sf6.line_width = U_FIXED(brw_get_line_width(brw), 1);
 
    sf->sf6.line_endcap_aa_region_width = 1;
    if (ctx->Line.SmoothFlag)
       sf->sf6.aa_enable = 1;
-   else if (sf->sf6.line_width <= 0x2)
-       sf->sf6.line_width = 0;
 
    sf->sf6.point_rast_rule = BRW_RASTRULE_UPPER_RIGHT;
 
