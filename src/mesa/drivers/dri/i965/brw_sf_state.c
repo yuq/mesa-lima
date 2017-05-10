@@ -168,9 +168,8 @@ static void upload_sf_unit( struct brw_context *brw )
    point_sz = CLAMP(point_sz, 0.125f, 255.875f);
    sf->sf7.point_size = U_FIXED(point_sz, 3);
 
-   /* _NEW_PROGRAM | _NEW_POINT */
-   sf->sf7.use_point_size_state = !(ctx->VertexProgram.PointSizeEnabled ||
-				    ctx->Point._Attenuated);
+   /* _NEW_PROGRAM | _NEW_POINT, BRW_NEW_VUE_MAP_GEOM_OUT */
+   sf->sf7.use_point_size_state = use_state_point_size(brw);
    sf->sf7.aa_line_distance_mode = brw->is_g4x || brw->gen == 5;
 
    /* might be BRW_NEW_PRIMITIVE if we have to adjust pv for polygons:
@@ -221,6 +220,7 @@ const struct brw_tracked_state brw_sf_unit = {
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_SF_PROG_DATA |
                BRW_NEW_SF_VP |
+               BRW_NEW_VUE_MAP_GEOM_OUT |
                BRW_NEW_URB_FENCE,
    },
    .emit = upload_sf_unit,
