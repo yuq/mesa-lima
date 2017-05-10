@@ -841,6 +841,39 @@ static const struct brw_tracked_state genX(vertices) = {
    .emit = genX(emit_vertices),
 };
 
+static void
+genX(emit_index_buffer)(struct brw_context *brw)
+{
+   const struct _mesa_index_buffer *index_buffer = brw->ib.ib;
+
+   if (index_buffer == NULL)
+      return;
+
+   brw_batch_emit(brw, GENX(3DSTATE_INDEX_BUFFER), ib) {
+#if GEN_GEN < 8 && !GEN_IS_HASWELL
+      ib.CutIndexEnable = brw->prim_restart.enable_cut_index;
+#endif
+      ib.IndexFormat = brw_get_index_type(index_buffer->index_size);
+      ib.BufferStartingAddress = vertex_bo(brw->ib.bo, 0);
+#if GEN_GEN >= 8
+      ib.IndexBufferMOCS = GEN_GEN >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+      ib.BufferSize = brw->ib.size;
+#else
+      ib.BufferEndingAddress = vertex_bo(brw->ib.bo, brw->ib.size - 1);
+#endif
+   }
+}
+
+static const struct brw_tracked_state genX(index_buffer) = {
+   .dirty = {
+      .mesa = 0,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_INDEX_BUFFER,
+   },
+   .emit = genX(emit_index_buffer),
+};
+
 #if GEN_IS_HASWELL || GEN_GEN >= 8
 static void
 genX(upload_cut_index)(struct brw_context *brw)
@@ -4104,7 +4137,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       &genX(drawing_rect),
       &brw_indices, /* must come before brw_vertices */
-      &brw_index_buffer,
+      &genX(index_buffer),
       &genX(vertices),
 
       &brw_constant_buffer
@@ -4171,7 +4204,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(drawing_rect),
 
       &brw_indices, /* must come before brw_vertices */
-      &brw_index_buffer,
+      &genX(index_buffer),
       &genX(vertices),
    };
 #elif GEN_GEN == 7
@@ -4259,7 +4292,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(drawing_rect),
 
       &brw_indices, /* must come before brw_vertices */
-      &brw_index_buffer,
+      &genX(index_buffer),
       &genX(vertices),
 
 #if GEN_IS_HASWELL
@@ -4354,7 +4387,7 @@ genX(init_atoms)(struct brw_context *brw)
       &gen8_vf_topology,
 
       &brw_indices,
-      &gen8_index_buffer,
+      &genX(index_buffer),
       &genX(vertices),
 
       &genX(cut_index),

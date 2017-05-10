@@ -1398,10 +1398,10 @@ unsigned brw_get_vertex_surface_type(struct brw_context *brw,
 static inline unsigned
 brw_get_index_type(unsigned index_size)
 {
-   /* The hw needs 0x00000000, 0x00000100, and 0x00000200 for ubyte, ushort,
-    * and uint, respectively.
+   /* The hw needs 0x00, 0x01, and 0x02 for ubyte, ushort, and uint,
+    * respectively.
     */
-   return (index_size >> 1) << 8;
+   return index_size >> 1;
 }
 
 void brw_prepare_vertices(struct brw_context *brw);

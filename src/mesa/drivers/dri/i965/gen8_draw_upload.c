@@ -35,33 +35,6 @@
 #include "intel_buffer_objects.h"
 
 static void
-gen8_emit_index_buffer(struct brw_context *brw)
-{
-   const struct _mesa_index_buffer *index_buffer = brw->ib.ib;
-   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
-
-   if (index_buffer == NULL)
-      return;
-
-   BEGIN_BATCH(5);
-   OUT_BATCH(CMD_INDEX_BUFFER << 16 | (5 - 2));
-   OUT_BATCH(brw_get_index_type(index_buffer->index_size) | mocs_wb);
-   OUT_RELOC64(brw->ib.bo, I915_GEM_DOMAIN_VERTEX, 0, 0);
-   OUT_BATCH(brw->ib.size);
-   ADVANCE_BATCH();
-}
-
-const struct brw_tracked_state gen8_index_buffer = {
-   .dirty = {
-      .mesa = 0,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
-             BRW_NEW_INDEX_BUFFER,
-   },
-   .emit = gen8_emit_index_buffer,
-};
-
-static void
 gen8_emit_vf_topology(struct brw_context *brw)
 {
    BEGIN_BATCH(2);
