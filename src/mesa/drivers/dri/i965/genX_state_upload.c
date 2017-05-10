@@ -372,7 +372,7 @@ is_passthru_format(uint32_t format)
 }
 
 UNUSED static int
-genX(uploads_needed)(uint32_t format)
+uploads_needed(uint32_t format)
 {
    if (!is_passthru_format(format))
       return 1;
@@ -454,8 +454,8 @@ genX(emit_vertices)(struct brw_context *brw)
 
 #if GEN_GEN >= 8
    struct gl_context *ctx = &brw->ctx;
-   bool uses_edge_flag = (ctx->Polygon.FrontMode != GL_FILL ||
-                          ctx->Polygon.BackMode != GL_FILL);
+   const bool uses_edge_flag = (ctx->Polygon.FrontMode != GL_FILL ||
+                                ctx->Polygon.BackMode != GL_FILL);
 
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid) {
       unsigned vue = brw->vb.nr_enabled;
@@ -524,7 +524,7 @@ genX(emit_vertices)(struct brw_context *brw)
       struct brw_vertex_element *input = brw->vb.enabled[i];
       uint32_t format = brw_get_vertex_surface_type(brw, input->glarray);
 
-      if (genX(uploads_needed(format)) > 1)
+      if (uploads_needed(format) > 1)
          nr_elements++;
    }
 #endif
@@ -537,7 +537,8 @@ genX(emit_vertices)(struct brw_context *brw)
     * a VE loads from them.
     */
    if (nr_elements == 0) {
-      dw = brw_batch_emitn(brw, GENX(3DSTATE_VERTEX_ELEMENTS), 1 + GENX(VERTEX_ELEMENT_STATE_length));
+      dw = brw_batch_emitn(brw, GENX(3DSTATE_VERTEX_ELEMENTS),
+                           1 + GENX(VERTEX_ELEMENT_STATE_length));
       struct GENX(VERTEX_ELEMENT_STATE) elem = {
          .Valid = true,
          .SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT,
@@ -558,11 +559,6 @@ genX(emit_vertices)(struct brw_context *brw)
       uses_draw_params + vs_prog_data->uses_drawid;
 
    if (nr_buffers) {
-#if GEN_GEN >= 6
-      assert(nr_buffers <= 33);
-#else
-      assert(nr_buffers <= 17);
-#endif
       assert(nr_buffers <= (GEN_GEN >= 6 ? 33 : 17));
 
       dw = brw_batch_emitn(brw, GENX(3DSTATE_VERTEX_BUFFERS),
@@ -575,11 +571,12 @@ genX(emit_vertices)(struct brw_context *brw)
           * half-float and 8 and 16-bit integer formats.  This means that the
           * vertex element may poke over the end of the buffer by 2 bytes.
           */
-         unsigned padding =
+         const unsigned padding =
             (GEN_GEN <= 7 && !brw->is_baytrail && !brw->is_haswell) * 2;
+         const unsigned end = buffer->offset + buffer->size + padding;
          dw = genX(emit_vertex_buffer_state)(brw, dw, i, buffer->bo,
                                              buffer->offset,
-                                             buffer->offset + buffer->size + padding,
+                                             end,
                                              buffer->stride,
                                              buffer->step_rate);
       }
@@ -608,7 +605,7 @@ genX(emit_vertices)(struct brw_context *brw)
     */
 #if GEN_GEN >= 6
    assert(nr_elements <= 34);
-   struct brw_vertex_element *gen6_edgeflag_input = NULL;
+   const struct brw_vertex_element *gen6_edgeflag_input = NULL;
 #else
    assert(nr_elements <= 18);
 #endif
@@ -617,13 +614,13 @@ genX(emit_vertices)(struct brw_context *brw)
                         1 + GENX(VERTEX_ELEMENT_STATE_length) * nr_elements);
    unsigned i;
    for (i = 0; i < brw->vb.nr_enabled; i++) {
-      struct brw_vertex_element *input = brw->vb.enabled[i];
+      const struct brw_vertex_element *input = brw->vb.enabled[i];
       uint32_t format = brw_get_vertex_surface_type(brw, input->glarray);
       uint32_t comp0 = VFCOMP_STORE_SRC;
       uint32_t comp1 = VFCOMP_STORE_SRC;
       uint32_t comp2 = VFCOMP_STORE_SRC;
       uint32_t comp3 = VFCOMP_STORE_SRC;
-      unsigned num_uploads = 1;
+      const unsigned num_uploads = GEN_GEN < 8 ? uploads_needed(format) : 1;
 
 #if GEN_GEN >= 8
       /* From the BDW PRM, Volume 2d, page 588 (VERTEX_ELEMENT_STATE):
@@ -650,21 +647,16 @@ genX(emit_vertices)(struct brw_context *brw)
       }
 #endif
 
-#if GEN_GEN < 8
-      num_uploads = genX(uploads_needed(format));
-#endif
-
       for (unsigned c = 0; c < num_uploads; c++) {
-         uint32_t upload_format = GEN_GEN >= 8 ? format :
+         const uint32_t upload_format = GEN_GEN >= 8 ? format :
             downsize_format_if_needed(format, c);
          /* If we need more that one upload, the offset stride would be 128
           * bits (16 bytes), as for previous uploads we are using the full
           * entry. */
-         unsigned int offset = input->offset + c * 16;
-         int size = input->glarray->Size;
+         const unsigned offset = input->offset + c * 16;
 
-         if (GEN_GEN < 8 && is_passthru_format(format))
-            size = upload_format_size(upload_format);
+         const int size = (GEN_GEN < 8 && is_passthru_format(format)) ?
+            upload_format_size(upload_format) : input->glarray->Size;
 
          switch (size) {
             case 0: comp0 = VFCOMP_STORE_0;
@@ -786,7 +778,7 @@ genX(emit_vertices)(struct brw_context *brw)
 
 #if GEN_GEN >= 6
    if (gen6_edgeflag_input) {
-      uint32_t format =
+      const uint32_t format =
          brw_get_vertex_surface_type(brw, gen6_edgeflag_input->glarray);
 
       struct GENX(VERTEX_ELEMENT_STATE) elem_state = {
