@@ -32,14 +32,6 @@
 #include "amdgpu_winsys.h"
 #include "util/u_format.h"
 
-#ifndef CIASICIDGFXENGINE_SOUTHERNISLAND
-#define CIASICIDGFXENGINE_SOUTHERNISLAND 0x0000000A
-#endif
-
-#ifndef CIASICIDGFXENGINE_ARCTICISLAND
-#define CIASICIDGFXENGINE_ARCTICISLAND 0x0000000D
-#endif
-
 static int amdgpu_surface_sanity(const struct pipe_resource *tex)
 {
    /* all dimension must be at least 1 ! */
@@ -86,72 +78,6 @@ static int amdgpu_surface_sanity(const struct pipe_resource *tex)
       return -EINVAL;
    }
    return 0;
-}
-
-static void *ADDR_API allocSysMem(const ADDR_ALLOCSYSMEM_INPUT * pInput)
-{
-   return malloc(pInput->sizeInBytes);
-}
-
-static ADDR_E_RETURNCODE ADDR_API freeSysMem(const ADDR_FREESYSMEM_INPUT * pInput)
-{
-   free(pInput->pVirtAddr);
-   return ADDR_OK;
-}
-
-ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws)
-{
-   ADDR_CREATE_INPUT addrCreateInput = {0};
-   ADDR_CREATE_OUTPUT addrCreateOutput = {0};
-   ADDR_REGISTER_VALUE regValue = {0};
-   ADDR_CREATE_FLAGS createFlags = {{0}};
-   ADDR_E_RETURNCODE addrRet;
-
-   addrCreateInput.size = sizeof(ADDR_CREATE_INPUT);
-   addrCreateOutput.size = sizeof(ADDR_CREATE_OUTPUT);
-
-   regValue.gbAddrConfig = ws->amdinfo.gb_addr_cfg;
-   createFlags.value = 0;
-
-   if (ws->info.chip_class >= GFX9) {
-      addrCreateInput.chipEngine = CIASICIDGFXENGINE_ARCTICISLAND;
-      regValue.blockVarSizeLog2 = 0;
-   } else {
-      regValue.noOfBanks = ws->amdinfo.mc_arb_ramcfg & 0x3;
-      regValue.noOfRanks = (ws->amdinfo.mc_arb_ramcfg & 0x4) >> 2;
-
-      regValue.backendDisables = ws->amdinfo.enabled_rb_pipes_mask;
-      regValue.pTileConfig = ws->amdinfo.gb_tile_mode;
-      regValue.noOfEntries = ARRAY_SIZE(ws->amdinfo.gb_tile_mode);
-      if (ws->info.chip_class == SI) {
-         regValue.pMacroTileConfig = NULL;
-         regValue.noOfMacroEntries = 0;
-      } else {
-         regValue.pMacroTileConfig = ws->amdinfo.gb_macro_tile_mode;
-         regValue.noOfMacroEntries = ARRAY_SIZE(ws->amdinfo.gb_macro_tile_mode);
-      }
-
-      createFlags.useTileIndex = 1;
-      createFlags.useHtileSliceAlign = 1;
-
-      addrCreateInput.chipEngine = CIASICIDGFXENGINE_SOUTHERNISLAND;
-      addrCreateInput.chipFamily = ws->family;
-      addrCreateInput.chipRevision = ws->rev_id;
-   }
-
-   addrCreateInput.chipFamily = ws->family;
-   addrCreateInput.chipRevision = ws->rev_id;
-   addrCreateInput.callbacks.allocSysMem = allocSysMem;
-   addrCreateInput.callbacks.freeSysMem = freeSysMem;
-   addrCreateInput.callbacks.debugPrint = 0;
-   addrCreateInput.createFlags = createFlags;
-   addrCreateInput.regValue = regValue;
-
-   addrRet = AddrCreate(&addrCreateInput, &addrCreateOutput);
-   if (addrRet != ADDR_OK)
-      return NULL;
-
-   return addrCreateOutput.hLib;
 }
 
 static int gfx6_compute_level(struct amdgpu_winsys *ws,

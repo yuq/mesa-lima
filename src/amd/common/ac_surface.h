@@ -28,6 +28,13 @@
 
 #include <stdint.h>
 
+#include "amd_family.h"
+
+/* Forward declarations. */
+typedef void* ADDR_HANDLE;
+
+struct amdgpu_gpu_info;
+
 #define RADEON_SURF_MAX_LEVELS                  15
 
 enum radeon_surf_mode {
@@ -174,5 +181,8 @@ struct radeon_surf {
         struct gfx9_surf_layout gfx9;
     } u;
 };
+
+ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
+			       const struct amdgpu_gpu_info *info);
 
 #endif /* AC_SURFACE_H */

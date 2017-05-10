@@ -73,8 +73,6 @@ struct amdgpu_winsys {
 
    struct amdgpu_gpu_info amdinfo;
    ADDR_HANDLE addrlib;
-   uint32_t rev_id;
-   unsigned family;
 
    bool check_vm;
 
@@ -91,6 +89,5 @@ amdgpu_winsys(struct radeon_winsys *base)
 }
 
 void amdgpu_surface_init_functions(struct amdgpu_winsys *ws);
-ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws);
 
 #endif
