@@ -145,6 +145,11 @@ struct ac_shader_binary;
 
 #define SI_MAX_VS_OUTPUTS	40
 
+/* Shader IO unique indices are supported for TGSI_SEMANTIC_GENERIC with an
+ * index smaller than this.
+ */
+#define SI_MAX_IO_GENERIC       60
+
 /* SGPR user data indices */
 enum {
 	/* GFX9 merged shaders have RW_BUFFERS among the first 8 system SGPRs,

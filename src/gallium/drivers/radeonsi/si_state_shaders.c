@@ -1843,7 +1843,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 				switch (name) {
 				case TGSI_SEMANTIC_GENERIC:
 					/* don't process indices the function can't handle */
-					if (index >= 60)
+					if (index >= SI_MAX_IO_GENERIC)
 						break;
 					/* fall through */
 				case TGSI_SEMANTIC_CLIPDIST:
@@ -2000,7 +2000,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 			case TGSI_SEMANTIC_GENERIC:
 				/* don't process indices the function can't handle */
-				if (index >= 60)
+				if (index >= SI_MAX_IO_GENERIC)
 					break;
 				/* fall through */
 			case TGSI_SEMANTIC_POSITION:

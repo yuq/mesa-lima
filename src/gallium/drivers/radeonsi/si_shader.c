@@ -142,7 +142,7 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 		assert(index <= 1);
 		return 2 + index;
 	case TGSI_SEMANTIC_GENERIC:
-		if (index <= 63-4)
+		if (index < SI_MAX_IO_GENERIC)
 			return 4 + index;
 
 		assert(!"invalid generic index");
