@@ -831,6 +831,16 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
    if (!etna_get_specs(screen))
       goto fail;
 
+   /* apply debug options that disable individual features */
+   if (DBG_ENABLED(ETNA_DBG_NO_EARLY_Z))
+      screen->features[viv_chipFeatures] |= chipFeatures_NO_EARLY_Z;
+   if (DBG_ENABLED(ETNA_DBG_NO_TS))
+         screen->features[viv_chipFeatures] &= ~chipFeatures_FAST_CLEAR;
+   if (DBG_ENABLED(ETNA_DBG_NO_AUTODISABLE))
+      screen->features[viv_chipMinorFeatures1] &= ~chipMinorFeatures1_AUTO_DISABLE;
+   if (DBG_ENABLED(ETNA_DBG_NO_SUPERTILE))
+      screen->specs.can_supertile = 0;
+
    pscreen->destroy = etna_screen_destroy;
    pscreen->get_param = etna_screen_get_param;
    pscreen->get_paramf = etna_screen_get_paramf;

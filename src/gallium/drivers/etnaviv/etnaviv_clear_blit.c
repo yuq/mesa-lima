@@ -111,8 +111,7 @@ etna_blit_clear_color(struct pipe_context *pctx, struct pipe_surface *dst,
    if (surf->surf.ts_size) { /* TS: use precompiled clear command */
       ctx->framebuffer.TS_COLOR_CLEAR_VALUE = new_clear_value;
 
-      if (!DBG_ENABLED(ETNA_DBG_NO_AUTODISABLE) &&
-          VIV_FEATURE(ctx->screen, chipMinorFeatures1, AUTO_DISABLE)) {
+      if (VIV_FEATURE(ctx->screen, chipMinorFeatures1, AUTO_DISABLE)) {
          /* Set number of color tiles to be filled */
          etna_set_state(ctx->stream, VIVS_TS_COLOR_AUTO_DISABLE_COUNT,
                         surf->surf.padded_width * surf->surf.padded_height / 16);
@@ -171,8 +170,7 @@ etna_blit_clear_zs(struct pipe_context *pctx, struct pipe_surface *dst,
    if (surf->surf.ts_size) { /* TS: use precompiled clear command */
       /* Set new clear depth value */
       ctx->framebuffer.TS_DEPTH_CLEAR_VALUE = new_clear_value;
-      if (!DBG_ENABLED(ETNA_DBG_NO_AUTODISABLE) &&
-          VIV_FEATURE(ctx->screen, chipMinorFeatures1, AUTO_DISABLE)) {
+      if (VIV_FEATURE(ctx->screen, chipMinorFeatures1, AUTO_DISABLE)) {
          /* Set number of depth tiles to be filled */
          etna_set_state(ctx->stream, VIVS_TS_DEPTH_AUTO_DISABLE_COUNT,
                         surf->surf.padded_width * surf->surf.padded_height / 16);

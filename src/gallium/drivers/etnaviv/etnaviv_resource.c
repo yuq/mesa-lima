@@ -247,7 +247,7 @@ etna_resource_create(struct pipe_screen *pscreen,
          layout = ETNA_LAYOUT_LINEAR;
    } else if (templat->target != PIPE_BUFFER) {
       bool want_multitiled = false;
-      bool want_supertiled = screen->specs.can_supertile && !DBG_ENABLED(ETNA_DBG_NO_SUPERTILE);
+      bool want_supertiled = screen->specs.can_supertile;
 
       /* When this GPU supports single-buffer rendering, don't ever enable
        * multi-tiling. This replicates the blob behavior on GC3000.
