@@ -478,6 +478,8 @@ static void si_dump_descriptors(struct si_context *sctx,
 	};
 
 	if (processor == PIPE_SHADER_VERTEX) {
+		assert(info); /* only CS may not have an info struct */
+
 		si_dump_descriptor_list(&sctx->vertex_buffers, shader_name[processor],
 					" - Vertex buffer", info->num_inputs, f);
 	}
