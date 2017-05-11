@@ -401,6 +401,13 @@
     <field name="YMax Clip Guardband" start="96" end="127" type="float"/>
   </struct>
 
+  <struct name="SCISSOR_RECT" length="2">
+    <field name="Scissor Rectangle Y Min" start="16" end="31" type="uint"/>
+    <field name="Scissor Rectangle X Min" start="0" end="15" type="uint"/>
+    <field name="Scissor Rectangle Y Max" start="48" end="63" type="uint"/>
+    <field name="Scissor Rectangle X Max" start="32" end="47" type="uint"/>
+  </struct>
+
   <struct name="COLOR_CALC_STATE" length="8">
     <field name="Stencil Test Enable" start="31" end="31" type="bool"/>
     <field name="Stencil Test Function" start="28" end="30" type="3D_Compare_Function"/>
@@ -693,10 +700,7 @@
     <field name="Viewport Matrix Element m30" start="96" end="127" type="float"/>
     <field name="Viewport Matrix Element m31" start="128" end="159" type="float"/>
     <field name="Viewport Matrix Element m32" start="160" end="191" type="float"/>
-    <field name="Scissor Rectangle Y Min" start="208" end="223" type="uint"/>
-    <field name="Scissor Rectangle X Min" start="192" end="207" type="uint"/>
-    <field name="Scissor Rectangle Y Max" start="240" end="255" type="uint"/>
-    <field name="Scissor Rectangle X Max" start="224" end="239" type="uint"/>
+    <field name="Scissor Rectangle" start="192" end="255" type="SCISSOR_RECT"/>
   </struct>
 
   <struct name="VERTEX_BUFFER_STATE" length="4">
