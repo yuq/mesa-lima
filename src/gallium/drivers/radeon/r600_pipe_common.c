@@ -672,7 +672,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->ctx)
 		return false;
 
-	if (rscreen->info.has_sdma && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
+	if (rscreen->info.num_sdma_rings && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
 		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 						   r600_flush_dma_ring,
 						   rctx);
@@ -1395,7 +1395,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		       (int)DIV_ROUND_UP(rscreen->info.max_alloc_size, 1024*1024));
 		printf("has_virtual_memory = %i\n", rscreen->info.has_virtual_memory);
 		printf("gfx_ib_pad_with_type2 = %i\n", rscreen->info.gfx_ib_pad_with_type2);
-		printf("has_sdma = %i\n", rscreen->info.has_sdma);
+		printf("num_sdma_rings = %i\n", rscreen->info.num_sdma_rings);
 		printf("has_uvd = %i\n", rscreen->info.has_uvd);
 		printf("me_fw_version = %i\n", rscreen->info.me_fw_version);
 		printf("pfp_fw_version = %i\n", rscreen->info.pfp_fw_version);

@@ -88,7 +88,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 {
 	struct amdgpu_buffer_size_alignments alignment_info = {};
 	struct amdgpu_heap_info vram, vram_vis, gtt;
-	struct drm_amdgpu_info_hw_ip dma = {}, uvd = {}, vce = {};
+	struct drm_amdgpu_info_hw_ip dma = {}, compute = {}, uvd = {}, vce = {};
 	uint32_t vce_version = 0, vce_feature = 0, uvd_version = 0, uvd_feature = 0;
 	uint32_t unused_feature;
 	int r, i, j;
@@ -142,6 +142,12 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	r = amdgpu_query_hw_ip_info(dev, AMDGPU_HW_IP_DMA, 0, &dma);
 	if (r) {
 		fprintf(stderr, "amdgpu: amdgpu_query_hw_ip_info(dma) failed.\n");
+		return false;
+	}
+
+	r = amdgpu_query_hw_ip_info(dev, AMDGPU_HW_IP_COMPUTE, 0, &compute);
+	if (r) {
+		fprintf(stderr, "amdgpu: amdgpu_query_hw_ip_info(compute) failed.\n");
 		return false;
 	}
 
@@ -254,7 +260,12 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 			256 << G_0098F8_PIPE_INTERLEAVE_SIZE_GFX6(amdinfo->gb_addr_cfg);
 	}
 	info->has_virtual_memory = true;
-	info->has_sdma = dma.available_rings != 0;
+
+	assert(util_is_power_of_two(dma.available_rings + 1));
+	assert(util_is_power_of_two(compute.available_rings + 1));
+
+	info->num_sdma_rings = util_bitcount(dma.available_rings);
+	info->num_compute_rings = util_bitcount(compute.available_rings);
 
 	/* Get the number of good compute units. */
 	info->num_good_compute_units = 0;
