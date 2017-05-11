@@ -308,6 +308,11 @@ blorp_fast_clear(struct blorp_batch *batch,
                  uint32_t level, uint32_t start_layer, uint32_t num_layers,
                  uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
 {
+   /* Ensure that all layers undergoing the clear have an auxiliary buffer. */
+   assert(start_layer + num_layers <=
+          MAX2(surf->aux_surf->logical_level0_px.depth >> level,
+               surf->aux_surf->logical_level0_px.array_len));
+
    struct blorp_params params;
    blorp_params_init(&params);
    params.num_layers = num_layers;
