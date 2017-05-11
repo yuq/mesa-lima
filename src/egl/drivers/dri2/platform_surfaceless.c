@@ -134,10 +134,10 @@ dri2_surfaceless_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       goto cleanup_surface;
 
    dri2_surf->dri_drawable =
-      dri2_dpy->dri2->createNewDrawable(dri2_dpy->dri_screen, config,
-                                        dri2_surf);
+      dri2_dpy->image_driver->createNewDrawable(dri2_dpy->dri_screen, config,
+                                                dri2_surf);
    if (dri2_surf->dri_drawable == NULL) {
-      _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
+      _eglError(EGL_BAD_ALLOC, "image->createNewDrawable");
       goto cleanup_surface;
     }
 
@@ -297,7 +297,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
 
       dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd);
       if (dri2_dpy->driver_name) {
-         if (dri2_load_driver(disp)) {
+         if (dri2_load_driver_dri3(disp)) {
             driver_loaded = 1;
             break;
          }
