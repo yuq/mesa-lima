@@ -1235,25 +1235,25 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
+   dri2_dpy->fd = -1;
    if (!dri2_get_xcb_connection(drv, disp, dri2_dpy))
-      goto cleanup_dpy;
+      goto cleanup;
 
    /*
     * Every hardware driver_name is set using strdup. Doing the same in
     * here will allow is to simply free the memory at dri2_terminate().
     */
-   dri2_dpy->fd = -1;
    dri2_dpy->driver_name = strdup("swrast");
    if (!dri2_load_driver_swrast(disp))
-      goto cleanup_conn;
+      goto cleanup;
 
    dri2_dpy->loader_extensions = swrast_loader_extensions;
 
    if (!dri2_create_screen(disp))
-      goto cleanup_driver;
+      goto cleanup;
 
    if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, true))
-      goto cleanup_configs;
+      goto cleanup;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
@@ -1262,19 +1262,8 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 
    return EGL_TRUE;
 
- cleanup_configs:
-   _eglCleanupDisplay(disp);
-   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
- cleanup_driver:
-   dlclose(dri2_dpy->driver);
- cleanup_conn:
-   free(dri2_dpy->driver_name);
-   if (disp->PlatformDisplay == NULL)
-      xcb_disconnect(dri2_dpy->conn);
- cleanup_dpy:
-   free(dri2_dpy);
-   disp->DriverData = NULL;
-
+ cleanup:
+   dri2_display_destroy(disp);
    return EGL_FALSE;
 }
 
@@ -1342,14 +1331,15 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
+   dri2_dpy->fd = -1;
    if (!dri2_get_xcb_connection(drv, disp, dri2_dpy))
-      goto cleanup_dpy;
+      goto cleanup;
 
    if (!dri3_x11_connect(dri2_dpy))
-      goto cleanup_conn;
+      goto cleanup;
 
    if (!dri2_load_driver_dri3(disp))
-      goto cleanup_conn;
+      goto cleanup;
 
    dri2_dpy->loader_extensions = dri3_image_loader_extensions;
 
@@ -1357,7 +1347,7 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->invalidate_available = true;
 
    if (!dri2_create_screen(disp))
-      goto cleanup_fd;
+      goto cleanup;
 
    dri2_x11_setup_swap_interval(dri2_dpy);
 
@@ -1370,7 +1360,7 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_set_WL_bind_wayland_display(drv, disp);
 
    if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, false))
-      goto cleanup_configs;
+      goto cleanup;
 
    dri2_dpy->loader_dri3_ext.core = dri2_dpy->core;
    dri2_dpy->loader_dri3_ext.image_driver = dri2_dpy->image_driver;
@@ -1388,19 +1378,8 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
 
    return EGL_TRUE;
 
- cleanup_configs:
-   _eglCleanupDisplay(disp);
-   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
-   dlclose(dri2_dpy->driver);
- cleanup_fd:
-   close(dri2_dpy->fd);
- cleanup_conn:
-   if (disp->PlatformDisplay == NULL)
-      xcb_disconnect(dri2_dpy->conn);
- cleanup_dpy:
-   free(dri2_dpy);
-   disp->DriverData = NULL;
-
+ cleanup:
+   dri2_display_destroy(disp);
    return EGL_FALSE;
 }
 #endif
@@ -1444,14 +1423,15 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
+   dri2_dpy->fd = -1;
    if (!dri2_get_xcb_connection(drv, disp, dri2_dpy))
-      goto cleanup_dpy;
+      goto cleanup;
 
    if (!dri2_x11_connect(dri2_dpy))
-      goto cleanup_conn;
+      goto cleanup;
 
    if (!dri2_load_driver(disp))
-      goto cleanup_fd;
+      goto cleanup;
 
    if (dri2_dpy->dri2_minor >= 1)
       dri2_dpy->loader_extensions = dri2_loader_extensions;
@@ -1462,7 +1442,7 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->invalidate_available = (dri2_dpy->dri2_minor >= 3);
 
    if (!dri2_create_screen(disp))
-      goto cleanup_driver;
+      goto cleanup;
 
    dri2_x11_setup_swap_interval(dri2_dpy);
 
@@ -1475,7 +1455,7 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_set_WL_bind_wayland_display(drv, disp);
 
    if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, true))
-      goto cleanup_configs;
+      goto cleanup;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
@@ -1486,20 +1466,8 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
 
    return EGL_TRUE;
 
- cleanup_configs:
-   _eglCleanupDisplay(disp);
-   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
- cleanup_driver:
-   dlclose(dri2_dpy->driver);
- cleanup_fd:
-   close(dri2_dpy->fd);
- cleanup_conn:
-   if (disp->PlatformDisplay == NULL)
-      xcb_disconnect(dri2_dpy->conn);
- cleanup_dpy:
-   free(dri2_dpy);
-   disp->DriverData = NULL;
-
+ cleanup:
+   dri2_display_destroy(disp);
    return EGL_FALSE;
 }
 
