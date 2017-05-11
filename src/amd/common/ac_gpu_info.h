@@ -90,4 +90,8 @@ struct radeon_info {
 	uint32_t                    cik_macrotile_mode_array[16];
 };
 
+bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
+		       struct radeon_info *info,
+		       struct amdgpu_gpu_info *amdinfo);
+
 #endif /* AC_GPU_INFO_H */

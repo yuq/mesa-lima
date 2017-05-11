@@ -55,8 +55,8 @@ common_libamd_common_la_CXXFLAGS = \
 noinst_LTLIBRARIES += $(COMMON_LIBS)
 
 common_libamd_common_la_SOURCES = \
+	$(AMD_COMMON_FILES) \
 	$(AMD_COMPILER_FILES) \
-	$(AMD_SURFACE_FILES) \
 	$(AMD_DEBUG_FILES) \
 	$(AMD_GENERATED_FILES)
 
