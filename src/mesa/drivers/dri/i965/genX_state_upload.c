@@ -2045,7 +2045,6 @@ static const struct brw_tracked_state genX(scissor_state) = {
 
 /* ---------------------------------------------------------------------- */
 
-#if GEN_GEN >= 6
 static void
 brw_calculate_guardband_size(uint32_t fb_width, uint32_t fb_height,
                              float m00, float m11, float m30, float m31,
@@ -2192,7 +2191,10 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
       clv.YMinClipGuardband = gb_ymin;
       clv.YMaxClipGuardband = gb_ymax;
 
-#if GEN_GEN >= 8
+#if GEN_GEN < 6
+      set_scissor_bits(ctx, i, render_to_fbo, fb_width, fb_height,
+                       &sfv.ScissorRectangle);
+#elif GEN_GEN >= 8
       /* _NEW_VIEWPORT | _NEW_BUFFERS: Screen Space Viewport
        * The hardware will take the intersection of the drawing rectangle,
        * scissor rectangle, and the viewport extents. We don't need to be
@@ -2239,6 +2241,8 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
       vp.PointertoSF_VIEWPORT = sf_vp_offset;
    }
 #else
+   brw->sf.vp_offset = sf_vp_offset;
+   brw->clip.vp_offset = clip_vp_offset;
    brw->ctx.NewDriverState |= BRW_NEW_SF_VP | BRW_NEW_CLIP_VP;
 #endif
 }
@@ -2246,14 +2250,14 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 static const struct brw_tracked_state genX(sf_clip_viewport) = {
    .dirty = {
       .mesa = _NEW_BUFFERS |
-              _NEW_VIEWPORT,
+              _NEW_VIEWPORT |
+              (GEN_GEN <= 5 ? _NEW_SCISSOR : 0),
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
              BRW_NEW_VIEWPORT_COUNT,
    },
    .emit = genX(upload_sf_clip_viewport),
 };
-#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -4174,7 +4178,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       /* These set up state for brw_psp_urb_cbs */
       &brw_wm_unit,
-      &brw_sf_vp,
+      &genX(sf_clip_viewport),
       &brw_sf_unit,
       &genX(vs_state), /* always required, enabled or not */
       &brw_clip_unit,

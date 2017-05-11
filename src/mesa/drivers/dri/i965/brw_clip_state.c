@@ -36,24 +36,6 @@
 #include "main/framebuffer.h"
 
 static void
-upload_clip_vp(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct brw_clipper_viewport *vp;
-
-   vp = brw_state_batch(brw, sizeof(*vp), 32, &brw->clip.vp_offset);
-
-   const float maximum_post_clamp_delta = 4096;
-   float gbx = maximum_post_clamp_delta / ctx->ViewportArray[0].Width;
-   float gby = maximum_post_clamp_delta / ctx->ViewportArray[0].Height;
-
-   vp->xmin = -gbx;
-   vp->xmax = gbx;
-   vp->ymin = -gby;
-   vp->ymax = gby;
-}
-
-static void
 brw_upload_clip_unit(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -63,8 +45,6 @@ brw_upload_clip_unit(struct brw_context *brw)
    const struct gl_framebuffer *fb = ctx->DrawBuffer;
    const float fb_width = (float)_mesa_geometric_width(fb);
    const float fb_height = (float)_mesa_geometric_height(fb);
-
-   upload_clip_vp(brw);
 
    clip = brw_state_batch(brw, sizeof(*clip), 32, &brw->clip.state_offset);
    memset(clip, 0, sizeof(*clip));
