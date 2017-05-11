@@ -41,11 +41,6 @@ brw_upload_clip_unit(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    struct brw_clip_unit_state *clip;
 
-   /* _NEW_BUFFERS */
-   const struct gl_framebuffer *fb = ctx->DrawBuffer;
-   const float fb_width = (float)_mesa_geometric_width(fb);
-   const float fb_height = (float)_mesa_geometric_height(fb);
-
    clip = brw_state_batch(brw, sizeof(*clip), 32, &brw->clip.state_offset);
    memset(clip, 0, sizeof(*clip));
 
@@ -104,22 +99,16 @@ brw_upload_clip_unit(struct brw_context *brw)
    clip->clip5.userclip_must_clip = 1;
 
    /* enable guardband clipping if we can */
-   if (ctx->ViewportArray[0].X == 0 &&
-       ctx->ViewportArray[0].Y == 0 &&
-       ctx->ViewportArray[0].Width == fb_width &&
-       ctx->ViewportArray[0].Height == fb_height)
-   {
-      clip->clip5.guard_band_enable = 1;
-      clip->clip6.clipper_viewport_state_ptr =
-         (brw->batch.bo->offset64 + brw->clip.vp_offset) >> 5;
+   clip->clip5.guard_band_enable = 1;
+   clip->clip6.clipper_viewport_state_ptr =
+      (brw->batch.bo->offset64 + brw->clip.vp_offset) >> 5;
 
-      /* emit clip viewport relocation */
-      brw_emit_reloc(&brw->batch,
-                     (brw->clip.state_offset +
-                      offsetof(struct brw_clip_unit_state, clip6)),
-                     brw->batch.bo, brw->clip.vp_offset,
-                     I915_GEM_DOMAIN_INSTRUCTION, 0);
-   }
+   /* emit clip viewport relocation */
+   brw_emit_reloc(&brw->batch,
+                  (brw->clip.state_offset +
+                   offsetof(struct brw_clip_unit_state, clip6)),
+                  brw->batch.bo, brw->clip.vp_offset,
+                  I915_GEM_DOMAIN_INSTRUCTION, 0);
 
    /* _NEW_TRANSFORM */
    if (!ctx->Transform.DepthClamp)
@@ -145,8 +134,7 @@ brw_upload_clip_unit(struct brw_context *brw)
 
 const struct brw_tracked_state brw_clip_unit = {
    .dirty = {
-      .mesa  = _NEW_BUFFERS |
-               _NEW_TRANSFORM |
+      .mesa  = _NEW_TRANSFORM |
                _NEW_VIEWPORT,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |

@@ -90,9 +90,7 @@ static void upload_sf_unit( struct brw_context *brw )
 
    sf->sf5.viewport_transform = 1;
 
-   /* _NEW_SCISSOR */
-   if (ctx->Scissor.EnableFlags)
-      sf->sf6.scissor = 1;
+   sf->sf6.scissor = 1;
 
    /* _NEW_POLYGON */
    if (ctx->Polygon._FrontBit)
@@ -216,8 +214,7 @@ const struct brw_tracked_state brw_sf_unit = {
                _NEW_LINE |
                _NEW_POINT |
                _NEW_POLYGON |
-               _NEW_PROGRAM |
-               _NEW_SCISSOR,
+               _NEW_PROGRAM,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_PROGRAM_CACHE |
