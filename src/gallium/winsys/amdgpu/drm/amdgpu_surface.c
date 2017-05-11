@@ -92,12 +92,8 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    config.info.levels = tex->last_level + 1;
    config.is_3d = !!(tex->target == PIPE_TEXTURE_3D);
    config.is_cube = !!(tex->target == PIPE_TEXTURE_CUBE);
-   config.chip_class = ws->info.chip_class;
-   config.num_tile_pipes = ws->info.num_tile_pipes;
-   config.pipe_interleave_bytes = ws->info.pipe_interleave_bytes;
-   config.amdinfo = &ws->amdinfo;
 
-   return ac_compute_surface(ws->addrlib, &config, mode, surf);
+   return ac_compute_surface(ws->addrlib, &ws->info, &config, mode, surf);
 }
 
 void amdgpu_surface_init_functions(struct amdgpu_winsys *ws)

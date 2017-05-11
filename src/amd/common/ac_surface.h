@@ -34,6 +34,7 @@
 typedef void* ADDR_HANDLE;
 
 struct amdgpu_gpu_info;
+struct radeon_info;
 
 #define RADEON_SURF_MAX_LEVELS                  15
 
@@ -195,16 +196,12 @@ struct ac_surf_config {
 	struct ac_surf_info info;
 	unsigned is_3d : 1;
 	unsigned is_cube : 1;
-	enum chip_class chip_class : 4;
-	unsigned num_tile_pipes;
-	unsigned pipe_interleave_bytes;
-	const struct amdgpu_gpu_info *amdinfo;
 };
 
-ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
-			       const struct amdgpu_gpu_info *info);
+ADDR_HANDLE amdgpu_addr_create(const struct radeon_info *info,
+			       const struct amdgpu_gpu_info *amdinfo);
 
-int ac_compute_surface(ADDR_HANDLE addrlib,
+int ac_compute_surface(ADDR_HANDLE addrlib, const struct radeon_info *info,
 		       const struct ac_surf_config * config,
 		       enum radeon_surf_mode mode,
 		       struct radeon_surf *surf);

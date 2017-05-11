@@ -26,7 +26,9 @@
  */
 
 #include "ac_surface.h"
+#include "amd_family.h"
 #include "amdgpu_id.h"
+#include "ac_gpu_info.h"
 #include "util/macros.h"
 #include "util/u_math.h"
 
@@ -147,8 +149,8 @@ static ADDR_E_RETURNCODE ADDR_API freeSysMem(const ADDR_FREESYSMEM_INPUT * pInpu
 	return ADDR_OK;
 }
 
-ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
-			       const struct amdgpu_gpu_info *info)
+ADDR_HANDLE amdgpu_addr_create(const struct radeon_info *info,
+			       const struct amdgpu_gpu_info *amdinfo)
 {
 	ADDR_CREATE_INPUT addrCreateInput = {0};
 	ADDR_CREATE_OUTPUT addrCreateOutput = {0};
@@ -159,10 +161,10 @@ ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
 	addrCreateInput.size = sizeof(ADDR_CREATE_INPUT);
 	addrCreateOutput.size = sizeof(ADDR_CREATE_OUTPUT);
 
-	regValue.gbAddrConfig = info->gb_addr_cfg;
+	regValue.gbAddrConfig = amdinfo->gb_addr_cfg;
 	createFlags.value = 0;
 
-	addrlib_family_rev_id(family, &addrCreateInput.chipFamily, &addrCreateInput.chipRevision);
+	addrlib_family_rev_id(info->family, &addrCreateInput.chipFamily, &addrCreateInput.chipRevision);
 	if (addrCreateInput.chipFamily == FAMILY_UNKNOWN)
 		return NULL;
 
@@ -170,18 +172,18 @@ ADDR_HANDLE amdgpu_addr_create(enum radeon_family family,
 		addrCreateInput.chipEngine = CIASICIDGFXENGINE_ARCTICISLAND;
 		regValue.blockVarSizeLog2 = 0;
 	} else {
-		regValue.noOfBanks = info->mc_arb_ramcfg & 0x3;
-		regValue.noOfRanks = (info->mc_arb_ramcfg & 0x4) >> 2;
+		regValue.noOfBanks = amdinfo->mc_arb_ramcfg & 0x3;
+		regValue.noOfRanks = (amdinfo->mc_arb_ramcfg & 0x4) >> 2;
 
-		regValue.backendDisables = info->enabled_rb_pipes_mask;
-		regValue.pTileConfig = info->gb_tile_mode;
-		regValue.noOfEntries = ARRAY_SIZE(info->gb_tile_mode);
+		regValue.backendDisables = amdinfo->enabled_rb_pipes_mask;
+		regValue.pTileConfig = amdinfo->gb_tile_mode;
+		regValue.noOfEntries = ARRAY_SIZE(amdinfo->gb_tile_mode);
 		if (addrCreateInput.chipFamily == FAMILY_SI) {
 			regValue.pMacroTileConfig = NULL;
 			regValue.noOfMacroEntries = 0;
 		} else {
-			regValue.pMacroTileConfig = info->gb_macro_tile_mode;
-			regValue.noOfMacroEntries = ARRAY_SIZE(info->gb_macro_tile_mode);
+			regValue.pMacroTileConfig = amdinfo->gb_macro_tile_mode;
+			regValue.noOfMacroEntries = ARRAY_SIZE(amdinfo->gb_macro_tile_mode);
 		}
 
 		createFlags.useTileIndex = 1;
@@ -359,11 +361,11 @@ static int gfx6_compute_level(ADDR_HANDLE addrlib,
 #define   G_009910_MICRO_TILE_MODE_NEW(x)      (((x) >> 22) & 0x07)
 
 static void gfx6_set_micro_tile_mode(struct radeon_surf *surf,
-				     const struct amdgpu_gpu_info *amdinfo)
+				     const struct radeon_info *info)
 {
-	uint32_t tile_mode = amdinfo->gb_tile_mode[surf->u.legacy.tiling_index[0]];
+	uint32_t tile_mode = info->si_tile_mode_array[surf->u.legacy.tiling_index[0]];
 
-	if (amdinfo->family_id >= AMDGPU_FAMILY_CI)
+	if (info->chip_class >= CIK)
 		surf->micro_tile_mode = G_009910_MICRO_TILE_MODE_NEW(tile_mode);
 	else
 		surf->micro_tile_mode = G_009910_MICRO_TILE_MODE(tile_mode);
@@ -390,6 +392,7 @@ static unsigned cik_get_macro_tile_index(struct radeon_surf *surf)
  * blk_w, blk_h, bpe, flags.
  */
 static int gfx6_compute_surface(ADDR_HANDLE addrlib,
+				const struct radeon_info *info,
 				const struct ac_surf_config *config,
 				enum radeon_surf_mode mode,
 				struct radeon_surf *surf)
@@ -495,7 +498,7 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 	 *   driver team).
 	 */
 	AddrSurfInfoIn.flags.dccCompatible =
-		config->chip_class >= VI &&
+		info->chip_class >= VI &&
 		!(surf->flags & RADEON_SURF_Z_OR_SBUFFER) &&
 		!(surf->flags & RADEON_SURF_DISABLE_DCC) &&
 		!compressed && AddrDccIn.numSamples <= 1 &&
@@ -544,7 +547,7 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		assert(!(surf->flags & RADEON_SURF_Z_OR_SBUFFER));
 		assert(AddrSurfInfoIn.tileMode == ADDR_TM_2D_TILED_THIN1);
 
-		if (config->chip_class == SI) {
+		if (info->chip_class == SI) {
 			if (AddrSurfInfoIn.tileType == ADDR_DISPLAYABLE) {
 				if (surf->bpe == 2)
 					AddrSurfInfoIn.tileIndex = 11; /* 16bpp */
@@ -590,7 +593,7 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		if (level == 0) {
 			surf->surf_alignment = AddrSurfInfoOut.baseAlign;
 			surf->u.legacy.pipe_config = AddrSurfInfoOut.pTileInfo->pipeConfig - 1;
-			gfx6_set_micro_tile_mode(surf, config->amdinfo);
+			gfx6_set_micro_tile_mode(surf, info);
 
 			/* For 2D modes only. */
 			if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
@@ -644,8 +647,8 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 	 */
 	if (surf->dcc_size && config->info.levels > 1) {
 		surf->dcc_size = align64(surf->surf_size >> 8,
-					 config->pipe_interleave_bytes *
-					 config->num_tile_pipes);
+					 info->pipe_interleave_bytes *
+					 info->num_tile_pipes);
 	}
 
 	/* Make sure HTILE covers the whole miptree, because the shader reads
@@ -1038,7 +1041,7 @@ static int gfx9_compute_surface(ADDR_HANDLE addrlib,
 	return 0;
 }
 
-int ac_compute_surface(ADDR_HANDLE addrlib,
+int ac_compute_surface(ADDR_HANDLE addrlib, const struct radeon_info *info,
 		       const struct ac_surf_config *config,
 		       enum radeon_surf_mode mode,
 		       struct radeon_surf *surf)
@@ -1049,8 +1052,8 @@ int ac_compute_surface(ADDR_HANDLE addrlib,
 	if (r)
 		return r;
 
-	if (config->chip_class >= GFX9)
+	if (info->chip_class >= GFX9)
 		return gfx9_compute_surface(addrlib, config, mode, surf);
 	else
-		return gfx6_compute_surface(addrlib, config, mode, surf);
+		return gfx6_compute_surface(addrlib, info, config, mode, surf);
 }
