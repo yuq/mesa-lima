@@ -1928,6 +1928,11 @@ genX(upload_cc_viewport)(struct brw_context *brw)
    brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), ptr) {
       ptr.CCViewportPointer = cc_vp_offset;
    }
+#elif GEN_GEN == 6
+   brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vp) {
+      vp.CCViewportStateChange = 1;
+      vp.PointertoCC_VIEWPORT = cc_vp_offset;
+   }
 #else
    brw->cc.vp_offset = cc_vp_offset;
    ctx->NewDriverState |= BRW_NEW_CC_VP;
@@ -2053,10 +2058,11 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 #else
    struct GENX(SF_VIEWPORT) sfv;
    struct GENX(CLIP_VIEWPORT) clv;
+   uint32_t sf_vp_offset, clip_vp_offset;
    uint32_t *sf_map = brw_state_batch(brw, 8 * 4 * viewport_count,
-                                      32, &brw->sf.vp_offset);
+                                      32, &sf_vp_offset);
    uint32_t *clip_map = brw_state_batch(brw, 4 * 4 * viewport_count,
-                                        32, &brw->clip.vp_offset);
+                                        32, &clip_vp_offset);
 #endif
 
    /* _NEW_BUFFERS */
@@ -2130,6 +2136,13 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 #if GEN_GEN >= 7
    brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP), ptr) {
       ptr.SFClipViewportPointer = sf_clip_vp_offset;
+   }
+#elif GEN_GEN == 6
+   brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vp) {
+      vp.SFViewportStateChange = 1;
+      vp.CLIPViewportStateChange = 1;
+      vp.PointertoCLIP_VIEWPORT = clip_vp_offset;
+      vp.PointertoSF_VIEWPORT = sf_vp_offset;
    }
 #else
    brw->ctx.NewDriverState |= BRW_NEW_SF_VP | BRW_NEW_CLIP_VP;
@@ -4121,36 +4134,6 @@ static const struct brw_tracked_state genX(vf_topology) = {
 
 /* ---------------------------------------------------------------------- */
 
-#if GEN_GEN == 6
-static void
-genX(upload_viewport_state_pointers)(struct brw_context *brw)
-{
-   brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vp) {
-      vp.CCViewportStateChange = 1;
-      vp.SFViewportStateChange = 1;
-      vp.CLIPViewportStateChange = 1;
-      vp.PointertoCLIP_VIEWPORT = brw->clip.vp_offset;
-      vp.PointertoSF_VIEWPORT = brw->sf.vp_offset;
-      vp.PointertoCC_VIEWPORT = brw->cc.vp_offset;
-   }
-}
-
-static const struct brw_tracked_state genX(viewport_state) = {
-   .dirty = {
-      .mesa = 0,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
-             BRW_NEW_CC_VP |
-             BRW_NEW_CLIP_VP |
-             BRW_NEW_SF_VP |
-             BRW_NEW_STATE_BASE_ADDRESS,
-   },
-   .emit = genX(upload_viewport_state_pointers),
-};
-#endif
-
-/* ---------------------------------------------------------------------- */
-
 void
 genX(init_atoms)(struct brw_context *brw)
 {
@@ -4220,7 +4203,6 @@ genX(init_atoms)(struct brw_context *brw)
       /* Command packets: */
 
       &genX(cc_vp),
-      &genX(viewport_state),	/* must do after *_vp stages */
 
       &gen6_urb,
       &genX(blend_state),		/* must do before cc unit */
