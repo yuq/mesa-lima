@@ -361,6 +361,7 @@ void gen7_init_atoms(struct brw_context *brw);
 void gen75_init_atoms(struct brw_context *brw);
 void gen8_init_atoms(struct brw_context *brw);
 void gen9_init_atoms(struct brw_context *brw);
+void gen10_init_atoms(struct brw_context *brw);
 
 void upload_gs_state_for_tf(struct brw_context *brw);
 
