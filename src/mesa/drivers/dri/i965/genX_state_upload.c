@@ -1954,8 +1954,7 @@ const struct brw_tracked_state genX(cc_vp) = {
 
 #if GEN_GEN >= 6
 static void
-brw_calculate_guardband_size(const struct gen_device_info *devinfo,
-                             uint32_t fb_width, uint32_t fb_height,
+brw_calculate_guardband_size(uint32_t fb_width, uint32_t fb_height,
                              float m00, float m11, float m30, float m31,
                              float *xmin, float *xmax,
                              float *ymin, float *ymax)
@@ -1996,7 +1995,7 @@ brw_calculate_guardband_size(const struct gen_device_info *devinfo,
     *
     * So, limit the guardband to 16K on Gen7+ and 8K on Sandybridge.
     */
-   const float gb_size = devinfo->gen >= 7 ? 16384.0f : 8192.0f;
+   const float gb_size = GEN_GEN >= 7 ? 16384.0f : 8192.0f;
 
    if (m00 != 0 && m11 != 0) {
       /* First, we compute the screen-space render area */
@@ -2039,7 +2038,6 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    float y_scale, y_bias;
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    /* BRW_NEW_VIEWPORT_COUNT */
    const unsigned viewport_count = brw->clip.viewport_count;
@@ -2085,7 +2083,7 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
       sfv.ViewportMatrixElementm30 = translate[0],
       sfv.ViewportMatrixElementm31 = translate[1] * y_scale + y_bias,
       sfv.ViewportMatrixElementm32 = translate[2],
-      brw_calculate_guardband_size(devinfo, fb_width, fb_height,
+      brw_calculate_guardband_size(fb_width, fb_height,
                                    sfv.ViewportMatrixElementm00,
                                    sfv.ViewportMatrixElementm11,
                                    sfv.ViewportMatrixElementm30,
@@ -3179,7 +3177,7 @@ genX(upload_3dstate_so_buffers)(struct brw_context *brw)
 #else
    struct brw_transform_feedback_object *brw_obj =
       (struct brw_transform_feedback_object *) xfb_obj;
-   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+   uint32_t mocs_wb = GEN_GEN >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
 #endif
 
    /* Set up the up to 4 output buffers.  These are the ranges defined in the
