@@ -191,7 +191,9 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    if (dri2_dpy->flush)
       dri2_surf->wl_win->resize_callback = resize_callback;
 
-   if (dri2_dpy->dri2)
+   if (dri2_dpy->image_driver)
+      createNewDrawable = dri2_dpy->image_driver->createNewDrawable;
+   else if (dri2_dpy->dri2)
       createNewDrawable = dri2_dpy->dri2->createNewDrawable;
    else
       createNewDrawable = dri2_dpy->swrast->createNewDrawable;
@@ -1214,15 +1216,21 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup;
    }
 
-   if (!dri2_load_driver(disp))
-      goto cleanup;
-
    /* render nodes cannot use Gem names, and thus do not support
     * the __DRI_DRI2_LOADER extension */
-   if (!dri2_dpy->is_render_node)
+   if (!dri2_dpy->is_render_node) {
       dri2_dpy->loader_extensions = dri2_loader_extensions;
-   else
+      if (!dri2_load_driver(disp)) {
+         _eglError(EGL_BAD_ALLOC, "DRI2: failed to load driver");
+         goto cleanup;
+      }
+   } else {
       dri2_dpy->loader_extensions = image_loader_extensions;
+      if (!dri2_load_driver_dri3(disp)) {
+         _eglError(EGL_BAD_ALLOC, "DRI3: failed to load driver");
+         goto cleanup;
+      }
+   }
 
    if (!dri2_create_screen(disp))
       goto cleanup;
