@@ -159,6 +159,26 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 #
+# libanv for gen10
+#
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libmesa_anv_gen10
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+
+LOCAL_SRC_FILES := $(VULKAN_GEN10_FILES)
+LOCAL_CFLAGS := -DGEN_VERSIONx10=100
+
+LOCAL_C_INCLUDES := $(ANV_INCLUDES)
+
+LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
+
+LOCAL_SHARED_LIBRARIES := libdrm
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
+
+#
 # libmesa_vulkan_common
 #
 
@@ -231,6 +251,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_anv_gen75 \
 	libmesa_anv_gen8 \
 	libmesa_anv_gen9 \
+	libmesa_anv_gen10 \
 	libmesa_intel_compiler \
 	libmesa_anv_entrypoints
 
