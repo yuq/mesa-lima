@@ -1094,9 +1094,25 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
          bool changed = false;
          for (int j = 0; j < count; j++) {
             unsigned unit = uni->opaque[i].index + offset + j;
-            if (sh->Program->SamplerUnits[unit] != ((unsigned *) values)[j]) {
-               sh->Program->SamplerUnits[unit] = ((unsigned *) values)[j];
-               changed = true;
+            unsigned value = ((unsigned *)values)[j];
+
+            if (uni->is_bindless) {
+               struct gl_bindless_sampler *sampler =
+                  &sh->Program->sh.BindlessSamplers[unit];
+
+               /* Mark this bindless sampler as bound to a texture unit.
+                */
+               if (sampler->unit != value || !sampler->bound) {
+                  sampler->unit = value;
+                  changed = true;
+               }
+               sampler->bound = true;
+               sh->Program->sh.HasBoundBindlessSampler = true;
+            } else {
+               if (sh->Program->SamplerUnits[unit] != value) {
+                  sh->Program->SamplerUnits[unit] = value;
+                  changed = true;
+               }
             }
          }
 
@@ -1125,9 +1141,23 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
          if (!uni->opaque[i].active)
             continue;
 
-         for (int j = 0; j < count; j++)
-            sh->Program->sh.ImageUnits[uni->opaque[i].index + offset + j] =
-               ((GLint *) values)[j];
+         for (int j = 0; j < count; j++) {
+            unsigned unit = uni->opaque[i].index + offset + j;
+            unsigned value = ((unsigned *)values)[j];
+
+            if (uni->is_bindless) {
+               struct gl_bindless_image *image =
+                  &sh->Program->sh.BindlessImages[unit];
+
+               /* Mark this bindless image as bound to an image unit.
+                */
+               image->unit = value;
+               image->bound = true;
+               sh->Program->sh.HasBoundBindlessImage = true;
+            } else {
+               sh->Program->sh.ImageUnits[unit] = value;
+            }
+         }
       }
 
       ctx->NewDriverState |= ctx->DriverFlags.NewImageUnits;
@@ -1274,6 +1304,40 @@ _mesa_uniform_matrix(GLint location, GLsizei count,
    _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
 }
 
+static void
+update_bound_bindless_sampler_flag(struct gl_program *prog)
+{
+   unsigned i;
+
+   if (likely(!prog->sh.HasBoundBindlessSampler))
+      return;
+
+   for (i = 0; i < prog->sh.NumBindlessSamplers; i++) {
+      struct gl_bindless_sampler *sampler = &prog->sh.BindlessSamplers[i];
+
+      if (sampler->bound)
+         return;
+   }
+   prog->sh.HasBoundBindlessSampler = false;
+}
+
+static void
+update_bound_bindless_image_flag(struct gl_program *prog)
+{
+   unsigned i;
+
+   if (likely(!prog->sh.HasBoundBindlessImage))
+      return;
+
+   for (i = 0; i < prog->sh.NumBindlessImages; i++) {
+      struct gl_bindless_image *image = &prog->sh.BindlessImages[i];
+
+      if (image->bound)
+         return;
+   }
+   prog->sh.HasBoundBindlessImage = false;
+}
+
 /**
  * Called via glUniformHandleui64*ARB() functions.
  */
@@ -1337,6 +1401,52 @@ _mesa_uniform_handle(GLint location, GLsizei count, const GLvoid *values,
           sizeof(uni->storage[0]) * components * count * size_mul);
 
    _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
+
+   if (uni->type->is_sampler()) {
+      /* Mark this bindless sampler as not bound to a texture unit because
+       * it refers to a texture handle.
+       */
+      for (int i = 0; i < MESA_SHADER_STAGES; i++) {
+         struct gl_linked_shader *const sh = shProg->_LinkedShaders[i];
+
+         /* If the shader stage doesn't use the sampler uniform, skip this. */
+         if (!uni->opaque[i].active)
+            continue;
+
+         for (int j = 0; j < count; j++) {
+            unsigned unit = uni->opaque[i].index + offset + j;
+            struct gl_bindless_sampler *sampler =
+               &sh->Program->sh.BindlessSamplers[unit];
+
+            sampler->bound = false;
+         }
+
+         update_bound_bindless_sampler_flag(sh->Program);
+      }
+   }
+
+   if (uni->type->is_image()) {
+      /* Mark this bindless image as not bound to an image unit because it
+       * refers to a texture handle.
+       */
+      for (int i = 0; i < MESA_SHADER_STAGES; i++) {
+         struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
+
+         /* If the shader stage doesn't use the sampler uniform, skip this. */
+         if (!uni->opaque[i].active)
+            continue;
+
+         for (int j = 0; j < count; j++) {
+            unsigned unit = uni->opaque[i].index + offset + j;
+            struct gl_bindless_image *image =
+               &sh->Program->sh.BindlessImages[unit];
+
+            image->bound = false;
+         }
+
+         update_bound_bindless_image_flag(sh->Program);
+      }
+   }
 }
 
 extern "C" bool
