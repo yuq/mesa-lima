@@ -66,6 +66,10 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
                             unsigned int level, unsigned int layer,
                             enum isl_format format, bool is_render_target)
 {
+   assert(level < surf->surf->levels);
+   assert(layer < MAX2(surf->surf->logical_level0_px.depth >> level,
+                       surf->surf->logical_level0_px.array_len));
+
    info->enabled = true;
 
    if (format == ISL_FORMAT_UNSUPPORTED)
@@ -90,6 +94,9 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
    if (info->aux_usage != ISL_AUX_USAGE_NONE) {
       info->aux_surf = *surf->aux_surf;
       info->aux_addr = surf->aux_addr;
+      assert(level < info->aux_surf.levels);
+      assert(layer < MAX2(info->aux_surf.logical_level0_px.depth >> level,
+                          info->aux_surf.logical_level0_px.array_len));
    }
 
    info->clear_color = surf->clear_color;

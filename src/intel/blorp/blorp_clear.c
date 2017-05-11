@@ -707,10 +707,6 @@ blorp_ccs_resolve(struct blorp_batch *batch,
    struct blorp_params params;
    blorp_params_init(&params);
 
-   /* Layered and mipmapped fast clear is only available from Gen8 onwards. */
-   assert(ISL_DEV_GEN(batch->blorp->isl_dev) >= 8 ||
-          (level == 0 && layer == 0));
-
    brw_blorp_surface_info_init(batch->blorp, &params.dst, surf,
                                level, layer, format, true);
 
