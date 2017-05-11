@@ -37,18 +37,6 @@
 
 #include "ac_surface.h"
 
-#ifndef NO_ENTRIES
-#define NO_ENTRIES 32
-#endif
-
-#ifndef NO_MACRO_ENTRIES
-#define NO_MACRO_ENTRIES 16
-#endif
-
-#ifndef CIASICIDGFXENGINE_SOUTHERNISLAND
-#define CIASICIDGFXENGINE_SOUTHERNISLAND 0x0000000A
-#endif
-
 static int radv_amdgpu_surface_sanity(const struct ac_surf_info *surf_info,
 				      const struct radeon_surf *surf)
 {
@@ -101,63 +89,6 @@ static int radv_amdgpu_surface_sanity(const struct ac_surf_info *surf_info,
 		return -EINVAL;
 	}
 	return 0;
-}
-
-static void *ADDR_API radv_allocSysMem(const ADDR_ALLOCSYSMEM_INPUT * pInput)
-{
-	return malloc(pInput->sizeInBytes);
-}
-
-static ADDR_E_RETURNCODE ADDR_API radv_freeSysMem(const ADDR_FREESYSMEM_INPUT * pInput)
-{
-	free(pInput->pVirtAddr);
-	return ADDR_OK;
-}
-
-ADDR_HANDLE radv_amdgpu_addr_create(struct amdgpu_gpu_info *amdinfo, int family, int rev_id,
-				    enum chip_class chip_class)
-{
-	ADDR_CREATE_INPUT addrCreateInput = {0};
-	ADDR_CREATE_OUTPUT addrCreateOutput = {0};
-	ADDR_REGISTER_VALUE regValue = {0};
-	ADDR_CREATE_FLAGS createFlags = {{0}};
-	ADDR_E_RETURNCODE addrRet;
-
-	addrCreateInput.size = sizeof(ADDR_CREATE_INPUT);
-	addrCreateOutput.size = sizeof(ADDR_CREATE_OUTPUT);
-
-	regValue.noOfBanks = amdinfo->mc_arb_ramcfg & 0x3;
-	regValue.gbAddrConfig = amdinfo->gb_addr_cfg;
-	regValue.noOfRanks = (amdinfo->mc_arb_ramcfg & 0x4) >> 2;
-
-	regValue.backendDisables = amdinfo->backend_disable[0];
-	regValue.pTileConfig = amdinfo->gb_tile_mode;
-	regValue.noOfEntries = ARRAY_SIZE(amdinfo->gb_tile_mode);
-	if (chip_class == SI) {
-		regValue.pMacroTileConfig = NULL;
-		regValue.noOfMacroEntries = 0;
-	} else {
-		regValue.pMacroTileConfig = amdinfo->gb_macro_tile_mode;
-		regValue.noOfMacroEntries = ARRAY_SIZE(amdinfo->gb_macro_tile_mode);
-	}
-
-	createFlags.value = 0;
-	createFlags.useTileIndex = 1;
-
-	addrCreateInput.chipEngine = CIASICIDGFXENGINE_SOUTHERNISLAND;
-	addrCreateInput.chipFamily = family;
-	addrCreateInput.chipRevision = rev_id;
-	addrCreateInput.createFlags = createFlags;
-	addrCreateInput.callbacks.allocSysMem = radv_allocSysMem;
-	addrCreateInput.callbacks.freeSysMem = radv_freeSysMem;
-	addrCreateInput.callbacks.debugPrint = 0;
-	addrCreateInput.regValue = regValue;
-
-	addrRet = AddrCreate(&addrCreateInput, &addrCreateOutput);
-	if (addrRet != ADDR_OK)
-		return NULL;
-
-	return addrCreateOutput.hLib;
 }
 
 static int radv_compute_level(ADDR_HANDLE addrlib,

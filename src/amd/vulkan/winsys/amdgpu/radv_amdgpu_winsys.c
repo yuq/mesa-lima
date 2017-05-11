@@ -29,6 +29,7 @@
 #include "radv_amdgpu_surface.h"
 #include "radv_debug.h"
 #include "amdgpu_id.h"
+#include "ac_surface.h"
 #include "xf86drm.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,96 +44,17 @@ static bool
 do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 {
 	if (!ac_query_gpu_info(fd, ws->dev, &ws->info, &ws->amdinfo))
-		goto fail;
+		return false;
 
 	if (ws->info.chip_class >= GFX9) {
 		fprintf(stderr, "radv: GFX9 is not supported.\n");
-		goto fail;
+		return false;
 	}
 
-	/* family and rev_id are for addrlib */
-	switch (ws->info.family) {
-	case CHIP_TAHITI:
-		ws->family = FAMILY_SI;
-		ws->rev_id = SI_TAHITI_P_A0;
-		break;
-	case CHIP_PITCAIRN:
-		ws->family = FAMILY_SI;
-		ws->rev_id = SI_PITCAIRN_PM_A0;
-	  break;
-	case CHIP_VERDE:
-		ws->family = FAMILY_SI;
-		ws->rev_id = SI_CAPEVERDE_M_A0;
-		break;
-	case CHIP_OLAND:
-		ws->family = FAMILY_SI;
-		ws->rev_id = SI_OLAND_M_A0;
-		break;
-	case CHIP_HAINAN:
-		ws->family = FAMILY_SI;
-		ws->rev_id = SI_HAINAN_V_A0;
-		break;
-	case CHIP_BONAIRE:
-		ws->family = FAMILY_CI;
-		ws->rev_id = CI_BONAIRE_M_A0;
-		break;
-	case CHIP_KAVERI:
-		ws->family = FAMILY_KV;
-		ws->rev_id = KV_SPECTRE_A0;
-		break;
-	case CHIP_KABINI:
-		ws->family = FAMILY_KV;
-		ws->rev_id = KB_KALINDI_A0;
-		break;
-	case CHIP_HAWAII:
-		ws->family = FAMILY_CI;
-		ws->rev_id = CI_HAWAII_P_A0;
-		break;
-	case CHIP_MULLINS:
-		ws->family = FAMILY_KV;
-		ws->rev_id = ML_GODAVARI_A0;
-		break;
-	case CHIP_TONGA:
-		ws->family = FAMILY_VI;
-		ws->rev_id = VI_TONGA_P_A0;
-		break;
-	case CHIP_ICELAND:
-		ws->family = FAMILY_VI;
-		ws->rev_id = VI_ICELAND_M_A0;
-		break;
-	case CHIP_CARRIZO:
-		ws->family = FAMILY_CZ;
-		ws->rev_id = CARRIZO_A0;
-		break;
-	case CHIP_STONEY:
-		ws->family = FAMILY_CZ;
-		ws->rev_id = STONEY_A0;
-		break;
-	case CHIP_FIJI:
-		ws->family = FAMILY_VI;
-		ws->rev_id = VI_FIJI_P_A0;
-		break;
-	case CHIP_POLARIS10:
-		ws->family = FAMILY_VI;
-		ws->rev_id = VI_POLARIS10_P_A0;
-		break;
-	case CHIP_POLARIS11:
-		ws->family = FAMILY_VI;
-		ws->rev_id = VI_POLARIS11_M_A0;
-		break;
-	case CHIP_POLARIS12:
-		ws->family = FAMILY_VI;
-		ws->rev_id = VI_POLARIS12_V_A0;
-		break;
-	default:
-		fprintf(stderr, "amdgpu: Unknown family.\n");
-		goto fail;
-	}
-
-	ws->addrlib = radv_amdgpu_addr_create(&ws->amdinfo, ws->family, ws->rev_id, ws->info.chip_class);
+	ws->addrlib = amdgpu_addr_create(&ws->info, &ws->amdinfo);
 	if (!ws->addrlib) {
 		fprintf(stderr, "amdgpu: Cannot create addrlib.\n");
-		goto fail;
+		return false;
 	}
 
 	ws->info.num_sdma_rings = MIN2(ws->info.num_sdma_rings, MAX_RINGS_PER_TYPE);
@@ -140,8 +62,6 @@ do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 
 	ws->use_ib_bos = ws->info.chip_class >= CIK;
 	return true;
-fail:
-	return false;
 }
 
 static void radv_amdgpu_winsys_query_info(struct radeon_winsys *rws,
