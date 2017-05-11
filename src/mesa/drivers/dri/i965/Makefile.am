@@ -53,7 +53,8 @@ I965_PERGEN_LIBS = \
 	libi965_gen7.la \
 	libi965_gen75.la \
 	libi965_gen8.la \
-	libi965_gen9.la
+	libi965_gen9.la \
+	libi965_gen10.la
 
 libi965_gen4_la_SOURCES = $(i965_gen4_FILES)
 libi965_gen4_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=40
@@ -78,6 +79,9 @@ libi965_gen8_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=80
 
 libi965_gen9_la_SOURCES = $(i965_gen9_FILES)
 libi965_gen9_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=90
+
+libi965_gen10_la_SOURCES = $(i965_gen10_FILES)
+libi965_gen10_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=100
 
 noinst_LTLIBRARIES = \
 	libi965_dri.la \
