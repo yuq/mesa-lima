@@ -2137,16 +2137,19 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 #define clv sfv
    struct GENX(SF_CLIP_VIEWPORT) sfv;
    uint32_t sf_clip_vp_offset;
-   uint32_t *sf_clip_map = brw_state_batch(brw, 16 * 4 * viewport_count,
-                                           64, &sf_clip_vp_offset);
+   uint32_t *sf_clip_map =
+      brw_state_batch(brw, GENX(SF_CLIP_VIEWPORT_length) * 4 * viewport_count,
+                      64, &sf_clip_vp_offset);
 #else
    struct GENX(SF_VIEWPORT) sfv;
    struct GENX(CLIP_VIEWPORT) clv;
    uint32_t sf_vp_offset, clip_vp_offset;
-   uint32_t *sf_map = brw_state_batch(brw, 8 * 4 * viewport_count,
-                                      32, &sf_vp_offset);
-   uint32_t *clip_map = brw_state_batch(brw, 4 * 4 * viewport_count,
-                                        32, &clip_vp_offset);
+   uint32_t *sf_map =
+      brw_state_batch(brw, GENX(SF_VIEWPORT_length) * 4 * viewport_count,
+                      32, &sf_vp_offset);
+   uint32_t *clip_map =
+      brw_state_batch(brw, GENX(CLIP_VIEWPORT_length) * 4 * viewport_count,
+                      32, &clip_vp_offset);
 #endif
 
    /* _NEW_BUFFERS */
@@ -2208,12 +2211,12 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 
 #if GEN_GEN >= 7
       GENX(SF_CLIP_VIEWPORT_pack)(NULL, sf_clip_map, &sfv);
-      sf_clip_map += 16;
+      sf_clip_map += GENX(SF_CLIP_VIEWPORT_length);
 #else
       GENX(SF_VIEWPORT_pack)(NULL, sf_map, &sfv);
       GENX(CLIP_VIEWPORT_pack)(NULL, clip_map, &clv);
-      sf_map += 8;
-      clip_map += 4;
+      sf_map += GENX(SF_VIEWPORT_length);
+      clip_map += GENX(CLIP_VIEWPORT_length);
 #endif
    }
 
