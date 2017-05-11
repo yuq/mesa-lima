@@ -679,6 +679,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
+   dri2_dpy->fd = -1;
    disp->DriverData = (void *) dri2_dpy;
 
    gbm = disp->PlatformDisplay;
@@ -760,10 +761,6 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    return EGL_TRUE;
 
 cleanup:
-   if (fd >= 0)
-      close(fd);
-
-   free(dri2_dpy);
-   disp->DriverData = NULL;
+   dri2_display_destroy(disp);
    return _eglError(EGL_NOT_INITIALIZED, err);
 }
