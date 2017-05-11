@@ -1952,6 +1952,45 @@ const struct brw_tracked_state genX(cc_vp) = {
 
 /* ---------------------------------------------------------------------- */
 
+static inline void
+set_scissor_bits(const struct gl_context *ctx, int i,
+                 bool render_to_fbo, unsigned fb_width, unsigned fb_height,
+                 struct GENX(SCISSOR_RECT) *sc)
+{
+   int bbox[4];
+
+   bbox[0] = MAX2(ctx->ViewportArray[i].X, 0);
+   bbox[1] = MIN2(bbox[0] + ctx->ViewportArray[i].Width, fb_width);
+   bbox[2] = MAX2(ctx->ViewportArray[i].Y, 0);
+   bbox[3] = MIN2(bbox[2] + ctx->ViewportArray[i].Height, fb_height);
+   _mesa_intersect_scissor_bounding_box(ctx, i, bbox);
+
+   if (bbox[0] == bbox[1] || bbox[2] == bbox[3]) {
+      /* If the scissor was out of bounds and got clamped to 0 width/height
+       * at the bounds, the subtraction of 1 from maximums could produce a
+       * negative number and thus not clip anything.  Instead, just provide
+       * a min > max scissor inside the bounds, which produces the expected
+       * no rendering.
+       */
+      sc->ScissorRectangleXMin = 1;
+      sc->ScissorRectangleXMax = 0;
+      sc->ScissorRectangleYMin = 1;
+      sc->ScissorRectangleYMax = 0;
+   } else if (render_to_fbo) {
+      /* texmemory: Y=0=bottom */
+      sc->ScissorRectangleXMin = bbox[0];
+      sc->ScissorRectangleXMax = bbox[1] - 1;
+      sc->ScissorRectangleYMin = bbox[2];
+      sc->ScissorRectangleYMax = bbox[3] - 1;
+   } else {
+      /* memory: Y=0=top */
+      sc->ScissorRectangleXMin = bbox[0];
+      sc->ScissorRectangleXMax = bbox[1] - 1;
+      sc->ScissorRectangleYMin = fb_height - bbox[3];
+      sc->ScissorRectangleYMax = fb_height - bbox[2] - 1;
+   }
+}
+
 #if GEN_GEN >= 6
 static void
 genX(upload_scissor_state)(struct brw_context *brw)
@@ -1981,39 +2020,7 @@ genX(upload_scissor_state)(struct brw_context *brw)
     * inclusive but max is exclusive.
     */
    for (unsigned i = 0; i < viewport_count; i++) {
-      int bbox[4];
-
-      bbox[0] = MAX2(ctx->ViewportArray[i].X, 0);
-      bbox[1] = MIN2(bbox[0] + ctx->ViewportArray[i].Width, fb_width);
-      bbox[2] = MAX2(ctx->ViewportArray[i].Y, 0);
-      bbox[3] = MIN2(bbox[2] + ctx->ViewportArray[i].Height, fb_height);
-      _mesa_intersect_scissor_bounding_box(ctx, i, bbox);
-
-      if (bbox[0] == bbox[1] || bbox[2] == bbox[3]) {
-         /* If the scissor was out of bounds and got clamped to 0 width/height
-          * at the bounds, the subtraction of 1 from maximums could produce a
-          * negative number and thus not clip anything.  Instead, just provide
-          * a min > max scissor inside the bounds, which produces the expected
-          * no rendering.
-          */
-         scissor.ScissorRectangleXMin = 1;
-         scissor.ScissorRectangleXMax = 0;
-         scissor.ScissorRectangleYMin = 1;
-         scissor.ScissorRectangleYMax = 0;
-      } else if (render_to_fbo) {
-         /* texmemory: Y=0=bottom */
-         scissor.ScissorRectangleXMin = bbox[0];
-         scissor.ScissorRectangleXMax = bbox[1] - 1;
-         scissor.ScissorRectangleYMin = bbox[2];
-         scissor.ScissorRectangleYMax = bbox[3] - 1;
-      } else {
-         /* memory: Y=0=top */
-         scissor.ScissorRectangleXMin = bbox[0];
-         scissor.ScissorRectangleXMax = bbox[1] - 1;
-         scissor.ScissorRectangleYMin = fb_height - bbox[3];
-         scissor.ScissorRectangleYMax = fb_height - bbox[2] - 1;
-      }
-
+      set_scissor_bits(ctx, i, render_to_fbo, fb_width, fb_height, &scissor);
       GENX(SCISSOR_RECT_pack)(
          NULL, scissor_map + i * GENX(SCISSOR_RECT_length), &scissor);
    }
