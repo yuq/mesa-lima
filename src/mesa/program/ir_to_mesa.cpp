@@ -2529,9 +2529,11 @@ _mesa_generate_parameters_list_for_uniforms(struct gl_shader_program
 void
 _mesa_associate_uniform_storage(struct gl_context *ctx,
                                 struct gl_shader_program *shader_program,
-                                struct gl_program_parameter_list *params,
+                                struct gl_program *prog,
                                 bool propagate_to_storage)
 {
+   struct gl_program_parameter_list *params = prog->Parameters;
+
    /* After adding each uniform to the parameter list, connect the storage for
     * the parameter with the tracking structure used by the API for the
     * uniform.
@@ -2979,8 +2981,7 @@ get_mesa_program(struct gl_context *ctx,
     * prog->ParameterValues to get reallocated (e.g., anything that adds a
     * program constant) has to happen before creating this linkage.
     */
-   _mesa_associate_uniform_storage(ctx, shader_program, prog->Parameters,
-                                   true);
+   _mesa_associate_uniform_storage(ctx, shader_program, prog, true);
    if (!shader_program->data->LinkStatus) {
       goto fail_exit;
    }
