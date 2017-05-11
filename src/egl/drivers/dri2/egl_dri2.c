@@ -855,7 +855,6 @@ static void
 dri2_display_release(_EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy;
-   unsigned i;
 
    if (!disp)
       return;
@@ -869,6 +868,14 @@ dri2_display_release(_EGLDisplay *disp)
       return;
 
    _eglCleanupDisplay(disp);
+   dri2_display_destroy(disp);
+}
+
+void
+dri2_display_destroy(_EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   unsigned i;
 
    if (dri2_dpy->own_dri_screen)
       dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);

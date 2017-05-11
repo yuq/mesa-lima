@@ -431,4 +431,7 @@ dri2_set_WL_bind_wayland_display(_EGLDriver *drv, _EGLDisplay *disp)
 #endif
 }
 
+void
+dri2_display_destroy(_EGLDisplay *disp);
+
 #endif /* EGL_DRI2_INCLUDED */
