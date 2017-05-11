@@ -369,6 +369,8 @@ struct intel_miptree_hiz_buffer
 
 struct intel_mipmap_tree
 {
+   struct isl_surf surf;
+
    /**
     * Buffer object containing the surface.
     *
