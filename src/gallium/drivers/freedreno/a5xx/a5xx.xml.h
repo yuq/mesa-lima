@@ -11,11 +11,11 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-04-14 19:13:31)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-04-14 19:13:31)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-04-14 19:14:25)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  28504 bytes, from 2017-04-21 20:00:50)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-01 19:45:59)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31541 bytes, from 2017-05-11 17:06:35)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-04-14 19:13:31)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 103235 bytes, from 2017-04-21 13:16:50)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 104446 bytes, from 2017-05-12 18:23:03)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-04-14 19:13:30)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -1341,25 +1341,85 @@ static inline uint32_t A5XX_CP_PROTECT_REG_MASK_LEN(uint32_t val)
 
 #define REG_A5XX_RBBM_SECVID_TSB_ADDR_MODE_CNTL			0x0000f810
 
-#define REG_A5XX_VSC_PIPE_DATA_LENGTH_0				0x00000c00
+#define REG_A5XX_VSC_BIN_SIZE					0x00000bc2
+#define A5XX_VSC_BIN_SIZE_WIDTH__MASK				0x000000ff
+#define A5XX_VSC_BIN_SIZE_WIDTH__SHIFT				0
+static inline uint32_t A5XX_VSC_BIN_SIZE_WIDTH(uint32_t val)
+{
+	assert(!(val & 0x1f));
+	return ((val >> 5) << A5XX_VSC_BIN_SIZE_WIDTH__SHIFT) & A5XX_VSC_BIN_SIZE_WIDTH__MASK;
+}
+#define A5XX_VSC_BIN_SIZE_HEIGHT__MASK				0x0001fe00
+#define A5XX_VSC_BIN_SIZE_HEIGHT__SHIFT				9
+static inline uint32_t A5XX_VSC_BIN_SIZE_HEIGHT(uint32_t val)
+{
+	assert(!(val & 0x1f));
+	return ((val >> 5) << A5XX_VSC_BIN_SIZE_HEIGHT__SHIFT) & A5XX_VSC_BIN_SIZE_HEIGHT__MASK;
+}
+
+#define REG_A5XX_VSC_SIZE_ADDRESS_LO				0x00000bc3
+
+#define REG_A5XX_VSC_SIZE_ADDRESS_HI				0x00000bc4
+
+#define REG_A5XX_UNKNOWN_0BC5					0x00000bc5
+
+#define REG_A5XX_UNKNOWN_0BC6					0x00000bc6
+
+static inline uint32_t REG_A5XX_VSC_PIPE_CONFIG(uint32_t i0) { return 0x00000bd0 + 0x1*i0; }
+
+static inline uint32_t REG_A5XX_VSC_PIPE_CONFIG_REG(uint32_t i0) { return 0x00000bd0 + 0x1*i0; }
+#define A5XX_VSC_PIPE_CONFIG_REG_X__MASK			0x000003ff
+#define A5XX_VSC_PIPE_CONFIG_REG_X__SHIFT			0
+static inline uint32_t A5XX_VSC_PIPE_CONFIG_REG_X(uint32_t val)
+{
+	return ((val) << A5XX_VSC_PIPE_CONFIG_REG_X__SHIFT) & A5XX_VSC_PIPE_CONFIG_REG_X__MASK;
+}
+#define A5XX_VSC_PIPE_CONFIG_REG_Y__MASK			0x000ffc00
+#define A5XX_VSC_PIPE_CONFIG_REG_Y__SHIFT			10
+static inline uint32_t A5XX_VSC_PIPE_CONFIG_REG_Y(uint32_t val)
+{
+	return ((val) << A5XX_VSC_PIPE_CONFIG_REG_Y__SHIFT) & A5XX_VSC_PIPE_CONFIG_REG_Y__MASK;
+}
+#define A5XX_VSC_PIPE_CONFIG_REG_W__MASK			0x00f00000
+#define A5XX_VSC_PIPE_CONFIG_REG_W__SHIFT			20
+static inline uint32_t A5XX_VSC_PIPE_CONFIG_REG_W(uint32_t val)
+{
+	return ((val) << A5XX_VSC_PIPE_CONFIG_REG_W__SHIFT) & A5XX_VSC_PIPE_CONFIG_REG_W__MASK;
+}
+#define A5XX_VSC_PIPE_CONFIG_REG_H__MASK			0x0f000000
+#define A5XX_VSC_PIPE_CONFIG_REG_H__SHIFT			24
+static inline uint32_t A5XX_VSC_PIPE_CONFIG_REG_H(uint32_t val)
+{
+	return ((val) << A5XX_VSC_PIPE_CONFIG_REG_H__SHIFT) & A5XX_VSC_PIPE_CONFIG_REG_H__MASK;
+}
+
+static inline uint32_t REG_A5XX_VSC_PIPE_DATA_ADDRESS(uint32_t i0) { return 0x00000be0 + 0x2*i0; }
+
+static inline uint32_t REG_A5XX_VSC_PIPE_DATA_ADDRESS_LO(uint32_t i0) { return 0x00000be0 + 0x2*i0; }
+
+static inline uint32_t REG_A5XX_VSC_PIPE_DATA_ADDRESS_HI(uint32_t i0) { return 0x00000be1 + 0x2*i0; }
+
+static inline uint32_t REG_A5XX_VSC_PIPE_DATA_LENGTH(uint32_t i0) { return 0x00000c00 + 0x1*i0; }
+
+static inline uint32_t REG_A5XX_VSC_PIPE_DATA_LENGTH_REG(uint32_t i0) { return 0x00000c00 + 0x1*i0; }
 
 #define REG_A5XX_VSC_PERFCTR_VSC_SEL_0				0x00000c60
 
 #define REG_A5XX_VSC_PERFCTR_VSC_SEL_1				0x00000c61
 
-#define REG_A5XX_VSC_BIN_SIZE					0x00000cdd
-#define A5XX_VSC_BIN_SIZE_WINDOW_OFFSET_DISABLE			0x80000000
-#define A5XX_VSC_BIN_SIZE_X__MASK				0x00007fff
-#define A5XX_VSC_BIN_SIZE_X__SHIFT				0
-static inline uint32_t A5XX_VSC_BIN_SIZE_X(uint32_t val)
+#define REG_A5XX_VSC_RESOLVE_CNTL				0x00000cdd
+#define A5XX_VSC_RESOLVE_CNTL_WINDOW_OFFSET_DISABLE		0x80000000
+#define A5XX_VSC_RESOLVE_CNTL_X__MASK				0x00007fff
+#define A5XX_VSC_RESOLVE_CNTL_X__SHIFT				0
+static inline uint32_t A5XX_VSC_RESOLVE_CNTL_X(uint32_t val)
 {
-	return ((val) << A5XX_VSC_BIN_SIZE_X__SHIFT) & A5XX_VSC_BIN_SIZE_X__MASK;
+	return ((val) << A5XX_VSC_RESOLVE_CNTL_X__SHIFT) & A5XX_VSC_RESOLVE_CNTL_X__MASK;
 }
-#define A5XX_VSC_BIN_SIZE_Y__MASK				0x7fff0000
-#define A5XX_VSC_BIN_SIZE_Y__SHIFT				16
-static inline uint32_t A5XX_VSC_BIN_SIZE_Y(uint32_t val)
+#define A5XX_VSC_RESOLVE_CNTL_Y__MASK				0x7fff0000
+#define A5XX_VSC_RESOLVE_CNTL_Y__SHIFT				16
+static inline uint32_t A5XX_VSC_RESOLVE_CNTL_Y(uint32_t val)
 {
-	return ((val) << A5XX_VSC_BIN_SIZE_Y__SHIFT) & A5XX_VSC_BIN_SIZE_Y__MASK;
+	return ((val) << A5XX_VSC_RESOLVE_CNTL_Y__SHIFT) & A5XX_VSC_RESOLVE_CNTL_Y__MASK;
 }
 
 #define REG_A5XX_GRAS_ADDR_MODE_CNTL				0x00000c81
@@ -1522,6 +1582,7 @@ static inline uint32_t A5XX_VSC_BIN_SIZE_Y(uint32_t val)
 #define REG_A5XX_VPC_ADDR_MODE_CNTL				0x00000e61
 
 #define REG_A5XX_VPC_MODE_CNTL					0x00000e62
+#define A5XX_VPC_MODE_CNTL_BINNING_PASS				0x00000001
 
 #define REG_A5XX_VPC_PERFCTR_VPC_SEL_0				0x00000e64
 
@@ -2107,6 +2168,7 @@ static inline uint32_t A5XX_GRAS_SU_DEPTH_BUFFER_INFO_DEPTH_FORMAT(enum a5xx_dep
 #define REG_A5XX_GRAS_SU_CONSERVATIVE_RAS_CNTL			0x0000e099
 
 #define REG_A5XX_GRAS_SC_CNTL					0x0000e0a0
+#define A5XX_GRAS_SC_CNTL_BINNING_PASS				0x00000001
 #define A5XX_GRAS_SC_CNTL_SAMPLES_PASSED			0x00008000
 
 #define REG_A5XX_GRAS_SC_BIN_CNTL				0x0000e0a1
@@ -2250,7 +2312,9 @@ static inline uint32_t A5XX_RB_CNTL_HEIGHT(uint32_t val)
 #define A5XX_RB_CNTL_BYPASS					0x00020000
 
 #define REG_A5XX_RB_RENDER_CNTL					0x0000e141
+#define A5XX_RB_RENDER_CNTL_BINNING_PASS			0x00000001
 #define A5XX_RB_RENDER_CNTL_SAMPLES_PASSED			0x00000040
+#define A5XX_RB_RENDER_CNTL_DISABLE_COLOR_PIPE			0x00000080
 #define A5XX_RB_RENDER_CNTL_FLAG_DEPTH				0x00004000
 #define A5XX_RB_RENDER_CNTL_FLAG_DEPTH2				0x00008000
 #define A5XX_RB_RENDER_CNTL_FLAG_MRTS__MASK			0x00ff0000
