@@ -87,33 +87,6 @@ static unsigned radv_cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
 	}
 }
 
-static const char *
-get_chip_name(enum radeon_family family)
-{
-	switch (family) {
-	case CHIP_TAHITI: return "AMD RADV TAHITI";
-	case CHIP_PITCAIRN: return "AMD RADV PITCAIRN";
-	case CHIP_VERDE: return "AMD RADV CAPE VERDE";
-	case CHIP_OLAND: return "AMD RADV OLAND";
-	case CHIP_HAINAN: return "AMD RADV HAINAN";
-	case CHIP_BONAIRE: return "AMD RADV BONAIRE";
-	case CHIP_KAVERI: return "AMD RADV KAVERI";
-	case CHIP_KABINI: return "AMD RADV KABINI";
-	case CHIP_HAWAII: return "AMD RADV HAWAII";
-	case CHIP_MULLINS: return "AMD RADV MULLINS";
-	case CHIP_TONGA: return "AMD RADV TONGA";
-	case CHIP_ICELAND: return "AMD RADV ICELAND";
-	case CHIP_CARRIZO: return "AMD RADV CARRIZO";
-	case CHIP_FIJI: return "AMD RADV FIJI";
-	case CHIP_POLARIS10: return "AMD RADV POLARIS10";
-	case CHIP_POLARIS11: return "AMD RADV POLARIS11";
-	case CHIP_POLARIS12: return "AMD RADV POLARIS12";
-	case CHIP_STONEY: return "AMD RADV STONEY";
-	default: return "AMD RADV unknown";
-	}
-}
-
-
 static bool
 do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 {
@@ -291,7 +264,6 @@ do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 	assert(util_is_power_of_two(compute.available_rings + 1));
 
 	/* Set hardware information. */
-	ws->info.name = get_chip_name(ws->info.family);
 	ws->info.gart_size = gtt.heap_size;
 	ws->info.vram_size = vram.heap_size;
 	ws->info.visible_vram_size = visible_vram.heap_size;

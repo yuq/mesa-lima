@@ -208,6 +208,32 @@ is_extension_enabled(const VkExtensionProperties *extensions,
 	return false;
 }
 
+static const char *
+get_chip_name(enum radeon_family family)
+{
+	switch (family) {
+	case CHIP_TAHITI: return "AMD RADV TAHITI";
+	case CHIP_PITCAIRN: return "AMD RADV PITCAIRN";
+	case CHIP_VERDE: return "AMD RADV CAPE VERDE";
+	case CHIP_OLAND: return "AMD RADV OLAND";
+	case CHIP_HAINAN: return "AMD RADV HAINAN";
+	case CHIP_BONAIRE: return "AMD RADV BONAIRE";
+	case CHIP_KAVERI: return "AMD RADV KAVERI";
+	case CHIP_KABINI: return "AMD RADV KABINI";
+	case CHIP_HAWAII: return "AMD RADV HAWAII";
+	case CHIP_MULLINS: return "AMD RADV MULLINS";
+	case CHIP_TONGA: return "AMD RADV TONGA";
+	case CHIP_ICELAND: return "AMD RADV ICELAND";
+	case CHIP_CARRIZO: return "AMD RADV CARRIZO";
+	case CHIP_FIJI: return "AMD RADV FIJI";
+	case CHIP_POLARIS10: return "AMD RADV POLARIS10";
+	case CHIP_POLARIS11: return "AMD RADV POLARIS11";
+	case CHIP_POLARIS12: return "AMD RADV POLARIS12";
+	case CHIP_STONEY: return "AMD RADV STONEY";
+	default: return "AMD RADV unknown";
+	}
+}
+
 static VkResult
 radv_physical_device_init(struct radv_physical_device *device,
 			  struct radv_instance *instance,
@@ -271,7 +297,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
-	device->name = device->rad_info.name;
+	device->name = get_chip_name(device->rad_info.family);
 
 	radv_get_device_uuid(drm_device, device->device_uuid);
 
