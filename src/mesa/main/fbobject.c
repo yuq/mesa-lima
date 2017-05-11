@@ -3430,41 +3430,61 @@ static ALWAYS_INLINE void
 frame_buffer_texture_layer(GLuint framebuffer, GLenum target,
                            GLenum attachment, GLuint texture,
                            GLint level, GLint layer, const char *func,
-                           bool dsa)
+                           bool dsa, bool no_error)
 {
    GET_CURRENT_CONTEXT(ctx);
 
    /* Get the framebuffer object */
    struct gl_framebuffer *fb;
-   if (dsa) {
-      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
-      if (!fb)
-         return;
-
+   if (no_error) {
+      if (dsa) {
+         fb = _mesa_lookup_framebuffer(ctx, framebuffer);
+      } else {
+         fb = get_framebuffer_target(ctx, target);
+      }
    } else {
-      fb = get_framebuffer_target(ctx, target);
-      if (!fb) {
-         _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)",
-                     func, _mesa_enum_to_string(target));
-         return;
+      if (dsa) {
+         fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
+         if (!fb)
+            return;
+      } else {
+         fb = get_framebuffer_target(ctx, target);
+         if (!fb) {
+            _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)",
+                        func, _mesa_enum_to_string(target));
+            return;
+         }
       }
    }
 
-   /* Get the texture object */
+   /* Get the texture object and framebuffer attachment*/
+   struct gl_renderbuffer_attachment *att;
    struct gl_texture_object *texObj;
-   if (!get_texture_for_framebuffer_err(ctx, texture, false, func, &texObj))
-      return;
+   if (no_error) {
+      texObj = get_texture_for_framebuffer(ctx, texture);
+      att = get_attachment(ctx, fb, attachment, NULL);
+   } else {
+      if (!get_texture_for_framebuffer_err(ctx, texture, false, func,
+                                           &texObj))
+         return;
+
+      att = _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
+      if (!att)
+         return;
+   }
 
    GLenum textarget = 0;
    if (texObj) {
-      if (!check_texture_target(ctx, texObj->Target, func))
-         return;
+      if (!no_error) {
+         if (!check_texture_target(ctx, texObj->Target, func))
+            return;
 
-      if (!check_layer(ctx, texObj->Target, layer, func))
-         return;
+         if (!check_layer(ctx, texObj->Target, layer, func))
+            return;
 
-      if (!check_level(ctx, texObj->Target, level, func))
-         return;
+         if (!check_level(ctx, texObj->Target, level, func))
+            return;
+      }
 
       if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
          assert(layer >= 0 && layer < 6);
@@ -3472,11 +3492,6 @@ frame_buffer_texture_layer(GLuint framebuffer, GLenum target,
          layer = 0;
       }
    }
-
-   struct gl_renderbuffer_attachment *att =
-      _mesa_get_and_validate_attachment(ctx, fb, attachment, func);
-   if (!att)
-      return;
 
    _mesa_framebuffer_texture(ctx, fb, attachment, att, texObj, textarget,
                              level, layer, GL_FALSE);
@@ -3488,7 +3503,7 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
                               GLuint texture, GLint level, GLint layer)
 {
    frame_buffer_texture_layer(0, target, attachment, texture, level, layer,
-                              "glFramebufferTextureLayer", false);
+                              "glFramebufferTextureLayer", false, false);
 }
 
 
@@ -3497,7 +3512,8 @@ _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
                                    GLuint texture, GLint level, GLint layer)
 {
    frame_buffer_texture_layer(framebuffer, 0, attachment, texture, level,
-                              layer, "glNamedFramebufferTextureLayer", true);
+                              layer, "glNamedFramebufferTextureLayer", true,
+                              false);
 }
 
 
