@@ -1252,6 +1252,11 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_create_screen(disp))
       goto cleanup;
 
+   if (!dri2_setup_extensions(disp))
+      goto cleanup;
+
+   dri2_setup_screen(disp);
+
    if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, true))
       goto cleanup;
 
@@ -1349,6 +1354,11 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_create_screen(disp))
       goto cleanup;
 
+   if (!dri2_setup_extensions(disp))
+      goto cleanup;
+
+   dri2_setup_screen(disp);
+
    dri2_x11_setup_swap_interval(dri2_dpy);
 
    if (!dri2_dpy->is_different_gpu)
@@ -1443,6 +1453,11 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
 
    if (!dri2_create_screen(disp))
       goto cleanup;
+
+   if (!dri2_setup_extensions(disp))
+      goto cleanup;
+
+   dri2_setup_screen(disp);
 
    dri2_x11_setup_swap_interval(dri2_dpy);
 

@@ -365,6 +365,9 @@ dri2_load_driver_dri3(_EGLDisplay *disp);
 EGLBoolean
 dri2_create_screen(_EGLDisplay *disp);
 
+EGLBoolean
+dri2_setup_extensions(_EGLDisplay *disp);
+
 __DRIdrawable *
 dri2_surface_get_dri_drawable(_EGLSurface *surf);
 

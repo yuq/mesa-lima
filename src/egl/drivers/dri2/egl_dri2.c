@@ -694,14 +694,12 @@ dri2_setup_screen(_EGLDisplay *disp)
    }
 }
 
-/* All platforms but DRM call this function to create the screen, query the
- * dri extensions, setup the vtables and populate the driver_configs.
- * DRM inherits all that information from its display - GBM.
+/* All platforms but DRM call this function to create the screen and populate
+ * the driver_configs. DRM inherits that information from its display - GBM.
  */
 EGLBoolean
 dri2_create_screen(_EGLDisplay *disp)
 {
-   const __DRIextension **extensions;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
 
    if (dri2_dpy->image_driver) {
@@ -744,27 +742,28 @@ dri2_create_screen(_EGLDisplay *disp)
    }
 
    dri2_dpy->own_dri_screen = 1;
+   return EGL_TRUE;
+}
+
+EGLBoolean
+dri2_setup_extensions(_EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   const struct dri2_extension_match *mandatory_core_extensions;
+   const __DRIextension **extensions;
 
    extensions = dri2_dpy->core->getExtensions(dri2_dpy->dri_screen);
 
-   if (dri2_dpy->image_driver || dri2_dpy->dri2) {
-      if (!dri2_bind_extensions(dri2_dpy, dri2_core_extensions, extensions, false))
-         goto cleanup_dri_screen;
-   } else {
-      assert(dri2_dpy->swrast);
-      if (!dri2_bind_extensions(dri2_dpy, swrast_core_extensions, extensions, false))
-         goto cleanup_dri_screen;
-   }
+   if (dri2_dpy->image_driver || dri2_dpy->dri2)
+      mandatory_core_extensions = dri2_core_extensions;
+   else
+      mandatory_core_extensions = swrast_core_extensions;
+
+   if (!dri2_bind_extensions(dri2_dpy, mandatory_core_extensions, extensions, false))
+      return EGL_FALSE;
 
    dri2_bind_extensions(dri2_dpy, optional_core_extensions, extensions, true);
-   dri2_setup_screen(disp);
-
    return EGL_TRUE;
-
- cleanup_dri_screen:
-   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
-
-   return EGL_FALSE;
 }
 
 /**

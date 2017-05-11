@@ -1153,6 +1153,11 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
       goto cleanup;
    }
 
+   if (!dri2_setup_extensions(dpy))
+      goto cleanup;
+
+   dri2_setup_screen(dpy);
+
    if (!droid_add_configs_for_visuals(drv, dpy)) {
       err = "DRI2: failed to add configs";
       goto cleanup;

@@ -1226,6 +1226,11 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_create_screen(disp))
       goto cleanup;
 
+   if (!dri2_setup_extensions(disp))
+      goto cleanup;
+
+   dri2_setup_screen(disp);
+
    dri2_wl_setup_swap_interval(dri2_dpy);
 
    /* To use Prime, we must have _DRI_IMAGE v7 at least.
@@ -1837,6 +1842,11 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 
    if (!dri2_create_screen(disp))
       goto cleanup;
+
+   if (!dri2_setup_extensions(disp))
+      goto cleanup;
+
+   dri2_setup_screen(disp);
 
    dri2_wl_setup_swap_interval(dri2_dpy);
 

@@ -320,6 +320,13 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup;
    }
 
+   if (!dri2_setup_extensions(disp)) {
+      err = "DRI2: failed to find required DRI extensions";
+      goto cleanup;
+   }
+
+   dri2_setup_screen(disp);
+
    if (!surfaceless_add_configs_for_visuals(drv, disp)) {
       err = "DRI2: failed to add configs";
       goto cleanup;
