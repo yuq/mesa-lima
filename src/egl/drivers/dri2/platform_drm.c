@@ -716,12 +716,8 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->dri_screen = dri2_dpy->gbm_dri->screen;
    dri2_dpy->core = dri2_dpy->gbm_dri->core;
    dri2_dpy->dri2 = dri2_dpy->gbm_dri->dri2;
-   dri2_dpy->fence = dri2_dpy->gbm_dri->fence;
-   dri2_dpy->image = dri2_dpy->gbm_dri->image;
-   dri2_dpy->flush = dri2_dpy->gbm_dri->flush;
    dri2_dpy->swrast = dri2_dpy->gbm_dri->swrast;
    dri2_dpy->driver_configs = dri2_dpy->gbm_dri->driver_configs;
-   dri2_dpy->interop = dri2_dpy->gbm_dri->interop;
 
    dri2_dpy->gbm_dri->lookup_image = dri2_lookup_egl_image;
    dri2_dpy->gbm_dri->lookup_user_data = disp;
@@ -736,6 +732,11 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->gbm_dri->base.surface_lock_front_buffer = lock_front_buffer;
    dri2_dpy->gbm_dri->base.surface_release_buffer = release_buffer;
    dri2_dpy->gbm_dri->base.surface_has_free_buffers = has_free_buffers;
+
+   if (!dri2_setup_extensions(disp)) {
+      err = "DRI2: failed to find required DRI extensions";
+      goto cleanup;
+   }
 
    dri2_setup_screen(disp);
 
