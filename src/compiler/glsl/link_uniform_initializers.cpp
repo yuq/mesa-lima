@@ -135,6 +135,8 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
             if (storage->type->is_sampler() && storage->opaque[sh].active) {
                for (unsigned i = 0; i < elements; i++) {
                   const unsigned index = storage->opaque[sh].index + i;
+                  if (index >= ARRAY_SIZE(shader->Program->SamplerUnits))
+                     break;
                   shader->Program->SamplerUnits[index] =
                      storage->storage[i].i;
                }
