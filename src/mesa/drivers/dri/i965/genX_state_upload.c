@@ -1896,6 +1896,57 @@ static const struct brw_tracked_state genX(vs_state) = {
 
 /* ---------------------------------------------------------------------- */
 
+static void
+genX(upload_cc_viewport)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* BRW_NEW_VIEWPORT_COUNT */
+   const unsigned viewport_count = brw->clip.viewport_count;
+
+   struct GENX(CC_VIEWPORT) ccv;
+   uint32_t cc_vp_offset;
+   uint32_t *cc_map =
+      brw_state_batch(brw, 4 * GENX(CC_VIEWPORT_length) * viewport_count,
+                      32, &cc_vp_offset);
+
+   for (unsigned i = 0; i < viewport_count; i++) {
+      /* _NEW_VIEWPORT | _NEW_TRANSFORM */
+      const struct gl_viewport_attrib *vp = &ctx->ViewportArray[i];
+      if (ctx->Transform.DepthClamp) {
+         ccv.MinimumDepth = MIN2(vp->Near, vp->Far);
+         ccv.MaximumDepth = MAX2(vp->Near, vp->Far);
+      } else {
+         ccv.MinimumDepth = 0.0;
+         ccv.MaximumDepth = 1.0;
+      }
+      GENX(CC_VIEWPORT_pack)(NULL, cc_map, &ccv);
+      cc_map += GENX(CC_VIEWPORT_length);
+   }
+
+#if GEN_GEN >= 7
+   brw_batch_emit(brw, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), ptr) {
+      ptr.CCViewportPointer = cc_vp_offset;
+   }
+#else
+   brw->cc.vp_offset = cc_vp_offset;
+   ctx->NewDriverState |= BRW_NEW_CC_VP;
+#endif
+}
+
+const struct brw_tracked_state genX(cc_vp) = {
+   .dirty = {
+      .mesa = _NEW_TRANSFORM |
+              _NEW_VIEWPORT,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_VIEWPORT_COUNT,
+   },
+   .emit = genX(upload_cc_viewport)
+};
+
+/* ---------------------------------------------------------------------- */
+
 #if GEN_GEN >= 6
 static void
 brw_calculate_guardband_size(const struct gen_device_info *devinfo,
@@ -4113,7 +4164,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_curbe_offsets,
       &brw_recalculate_urb_fence,
 
-      &brw_cc_vp,
+      &genX(cc_vp),
       &brw_cc_unit,
 
       /* Surface state setup.  Must come before the VS/WM unit.  The binding
@@ -4168,7 +4219,7 @@ genX(init_atoms)(struct brw_context *brw)
 
       /* Command packets: */
 
-      &brw_cc_vp,
+      &genX(cc_vp),
       &genX(viewport_state),	/* must do after *_vp stages */
 
       &gen6_urb,
@@ -4231,7 +4282,7 @@ genX(init_atoms)(struct brw_context *brw)
    {
       /* Command packets: */
 
-      &brw_cc_vp,
+      &genX(cc_vp),
       &genX(sf_clip_viewport),
 
       &gen7_l3_state,
@@ -4321,7 +4372,7 @@ genX(init_atoms)(struct brw_context *brw)
 #elif GEN_GEN >= 8
    static const struct brw_tracked_state *render_atoms[] =
    {
-      &brw_cc_vp,
+      &genX(cc_vp),
       &genX(sf_clip_viewport),
 
       &gen7_l3_state,

@@ -38,53 +38,6 @@
 #include "main/stencil.h"
 #include "intel_batchbuffer.h"
 
-static void
-brw_upload_cc_vp(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct brw_cc_viewport *ccv;
-
-   /* BRW_NEW_VIEWPORT_COUNT */
-   const unsigned viewport_count = brw->clip.viewport_count;
-
-   ccv = brw_state_batch(brw, sizeof(*ccv) * viewport_count, 32,
-                         &brw->cc.vp_offset);
-
-   /* _NEW_TRANSFORM */
-   for (unsigned i = 0; i < viewport_count; i++) {
-      if (ctx->Transform.DepthClamp) {
-         /* _NEW_VIEWPORT */
-         ccv[i].min_depth = MIN2(ctx->ViewportArray[i].Near,
-                                 ctx->ViewportArray[i].Far);
-         ccv[i].max_depth = MAX2(ctx->ViewportArray[i].Near,
-                                 ctx->ViewportArray[i].Far);
-      } else {
-         ccv[i].min_depth = 0.0;
-         ccv[i].max_depth = 1.0;
-      }
-   }
-
-   if (brw->gen >= 7) {
-      BEGIN_BATCH(2);
-      OUT_BATCH(_3DSTATE_VIEWPORT_STATE_POINTERS_CC << 16 | (2 - 2));
-      OUT_BATCH(brw->cc.vp_offset);
-      ADVANCE_BATCH();
-   } else {
-      brw->ctx.NewDriverState |= BRW_NEW_CC_VP;
-   }
-}
-
-const struct brw_tracked_state brw_cc_vp = {
-   .dirty = {
-      .mesa = _NEW_TRANSFORM |
-              _NEW_VIEWPORT,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
-             BRW_NEW_VIEWPORT_COUNT,
-   },
-   .emit = brw_upload_cc_vp
-};
-
 /**
  * Modify blend function to force destination alpha to 1.0
  *
