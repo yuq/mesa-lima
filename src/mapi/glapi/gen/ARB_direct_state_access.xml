@@ -420,7 +420,7 @@
       <param name="data" type="const GLvoid *" />
    </function>
 
-   <function name="CompressedTextureSubImage2D">
+   <function name="CompressedTextureSubImage2D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />

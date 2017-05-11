@@ -4558,7 +4558,8 @@
         <glx rop="219" handcode="client"/>
     </function>
 
-    <function name="CompressedTexSubImage2D" es1="1.0" es2="2.0" marshal="sync">
+    <function name="CompressedTexSubImage2D" es1="1.0" es2="2.0" marshal="sync"
+              no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
