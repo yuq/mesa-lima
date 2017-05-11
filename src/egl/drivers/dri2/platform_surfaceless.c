@@ -279,6 +279,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
+   dri2_dpy->fd = -1;
    disp->DriverData = (void *) dri2_dpy;
 
    const int limit = 64;
@@ -301,25 +302,27 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
             break;
          }
          free(dri2_dpy->driver_name);
+         dri2_dpy->driver_name = NULL;
       }
       close(dri2_dpy->fd);
+      dri2_dpy->fd = -1;
    }
 
    if (!driver_loaded) {
       err = "DRI2: failed to load driver";
-      goto cleanup_display;
+      goto cleanup;
    }
 
    dri2_dpy->loader_extensions = image_loader_extensions;
 
    if (!dri2_create_screen(disp)) {
       err = "DRI2: failed to create screen";
-      goto cleanup_driver;
+      goto cleanup;
    }
 
    if (!surfaceless_add_configs_for_visuals(drv, disp)) {
       err = "DRI2: failed to add configs";
-      goto cleanup_screen;
+      goto cleanup;
    }
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
@@ -329,16 +332,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
 
    return EGL_TRUE;
 
-cleanup_screen:
-   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
-
-cleanup_driver:
-   dlclose(dri2_dpy->driver);
-   free(dri2_dpy->driver_name);
-   close(dri2_dpy->fd);
-cleanup_display:
-   free(dri2_dpy);
-   disp->DriverData = NULL;
-
+cleanup:
+   dri2_display_destroy(disp);
    return _eglError(EGL_NOT_INITIALIZED, err);
 }
