@@ -2533,6 +2533,7 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
                                 bool propagate_to_storage)
 {
    struct gl_program_parameter_list *params = prog->Parameters;
+   gl_shader_stage shader_type = prog->info.stage;
 
    /* After adding each uniform to the parameter list, connect the storage for
     * the parameter with the tracking structure used by the API for the
@@ -2614,6 +2615,30 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
          _mesa_uniform_attach_driver_storage(storage, dmul * columns, dmul,
                                              format,
                                              &params->ParameterValues[i]);
+
+         /* When a bindless sampler/image is bound to a texture/image unit, we
+          * have to overwrite the constant value by the resident handle
+          * directly in the constant buffer before the next draw. One solution
+          * is to keep track a pointer to the base of the data.
+          */
+         if (storage->is_bindless && (prog->sh.NumBindlessSamplers ||
+                                      prog->sh.NumBindlessImages)) {
+            unsigned array_elements = MAX2(1, storage->array_elements);
+
+            for (unsigned j = 0; j < array_elements; ++j) {
+               unsigned unit = storage->opaque[shader_type].index + j;
+
+               if (storage->type->without_array()->is_sampler()) {
+                  assert(unit >= 0 && unit < prog->sh.NumBindlessSamplers);
+                  prog->sh.BindlessSamplers[unit].data =
+                     &params->ParameterValues[i] + j;
+               } else if (storage->type->without_array()->is_image()) {
+                  assert(unit >= 0 && unit < prog->sh.NumBindlessImages);
+                  prog->sh.BindlessImages[unit].data =
+                     &params->ParameterValues[i] + j;
+               }
+            }
+         }
 
          /* After attaching the driver's storage to the uniform, propagate any
           * data from the linker's backing store.  This will cause values from
