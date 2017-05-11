@@ -140,16 +140,39 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
          if (storage->type->is_sampler()) {
             for (unsigned i = 0; i < elements; i++) {
                const unsigned index = storage->opaque[sh].index + i;
-               if (index >= ARRAY_SIZE(shader->Program->SamplerUnits))
-                  break;
-               shader->Program->SamplerUnits[index] = storage->storage[i].i;
+
+               if (var->data.bindless) {
+                  if (index >= shader->Program->sh.NumBindlessSamplers)
+                     break;
+                  shader->Program->sh.BindlessSamplers[index].unit =
+                     storage->storage[i].i;
+                  shader->Program->sh.BindlessSamplers[index].bound = true;
+                  shader->Program->sh.HasBoundBindlessSampler = true;
+               } else {
+                  if (index >= ARRAY_SIZE(shader->Program->SamplerUnits))
+                     break;
+                  shader->Program->SamplerUnits[index] =
+                     storage->storage[i].i;
+               }
             }
          } else if (storage->type->is_image()) {
             for (unsigned i = 0; i < elements; i++) {
                const unsigned index = storage->opaque[sh].index + i;
-               if (index >= ARRAY_SIZE(shader->Program->sh.ImageUnits))
-                  break;
-               shader->Program->sh.ImageUnits[index] = storage->storage[i].i;
+
+
+               if (var->data.bindless) {
+                  if (index >= shader->Program->sh.NumBindlessImages)
+                     break;
+                  shader->Program->sh.BindlessImages[index].unit =
+                     storage->storage[i].i;
+                  shader->Program->sh.BindlessImages[index].bound = true;
+                  shader->Program->sh.HasBoundBindlessImage = true;
+               } else {
+                  if (index >= ARRAY_SIZE(shader->Program->sh.ImageUnits))
+                     break;
+                  shader->Program->sh.ImageUnits[index] =
+                     storage->storage[i].i;
+               }
             }
          }
       }
