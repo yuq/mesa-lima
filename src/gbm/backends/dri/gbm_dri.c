@@ -256,7 +256,6 @@ static struct dri_extension_match dri_core_extensions[] = {
    { __DRI2_FLUSH, 1, offsetof(struct gbm_dri_device, flush) },
    { __DRI_IMAGE, 1, offsetof(struct gbm_dri_device, image) },
    { __DRI2_FENCE, 1, offsetof(struct gbm_dri_device, fence), 1 },
-   { __DRI2_INTEROP, 1, offsetof(struct gbm_dri_device, interop), 1 },
    { NULL, 0, 0 }
 };
 
