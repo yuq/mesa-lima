@@ -55,9 +55,7 @@
  *    - generate_mipmap uses is_format_supported to determine success;
  *      the return value from the driver is ignored.
  *    - resource_commit always returns true; failures are ignored.
- *    - If a non-async debug callback is set, the threaded context keeps using
- *      asynchronous execution. This is OK for shader-db, but the driver
- *      shouldn't use the debug callback in any other way.
+ *    - set_debug_callback is skipped if the callback is synchronous.
  *
  *
  * Thread-safety requirements on context functions

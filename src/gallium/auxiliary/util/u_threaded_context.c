@@ -1592,6 +1592,13 @@ tc_set_debug_callback(struct pipe_context *_pipe,
    struct threaded_context *tc = threaded_context(_pipe);
    struct pipe_context *pipe = tc->pipe;
 
+   /* Drop all synchronous debug callbacks. Drivers are expected to be OK
+    * with this. shader-db will use an environment variable to disable
+    * the threaded context.
+    */
+   if (cb && cb->debug_message && !cb->async)
+      return;
+
    tc_sync(tc);
    pipe->set_debug_callback(pipe, cb);
 }
