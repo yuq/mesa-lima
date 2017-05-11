@@ -751,7 +751,6 @@ struct brw_context
    bool has_pln;
    bool no_simd8;
    bool use_rep_send;
-   bool use_resource_streamer;
 
    /**
     * Some versions of Gen hardware don't do centroid interpolation correctly
