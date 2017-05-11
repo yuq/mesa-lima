@@ -578,6 +578,52 @@ static const struct gen_device_info gen_device_info_glk_2x6 = {
    GEN9_LP_FEATURES_2X6
 };
 
+#define GEN10_HW_INFO                               \
+   .gen = 10,                                       \
+   .max_vs_threads = 728,                           \
+   .max_gs_threads = 432,                           \
+   .max_tcs_threads = 432,                          \
+   .max_tes_threads = 624,                          \
+   .max_cs_threads = 56,                            \
+   .urb = {                                         \
+      .size = 256,                                  \
+      .min_entries = {                              \
+         [MESA_SHADER_VERTEX]    = 64,              \
+         [MESA_SHADER_TESS_EVAL] = 34,              \
+      },                                            \
+      .max_entries = {                              \
+      [MESA_SHADER_VERTEX]       = 3936,            \
+      [MESA_SHADER_TESS_CTRL]    = 896,             \
+      [MESA_SHADER_TESS_EVAL]    = 2064,            \
+      [MESA_SHADER_GEOMETRY]     = 832,             \
+      },                                            \
+   }
+
+#define GEN10_FEATURES(_gt, _slices, _l3)           \
+   GEN8_FEATURES,                                   \
+   GEN10_HW_INFO,                                   \
+   .gt = _gt, .num_slices = _slices, .l3_banks = _l3
+
+static const struct gen_device_info gen_device_info_cnl_2x8 = {
+   /* GT0.5 */
+   GEN10_FEATURES(1, 1, 2)
+};
+
+static const struct gen_device_info gen_device_info_cnl_3x8 = {
+   /* GT1 */
+   GEN10_FEATURES(1, 1, 3)
+};
+
+static const struct gen_device_info gen_device_info_cnl_4x8 = {
+   /* GT 1.5 */
+   GEN10_FEATURES(1, 2, 6)
+};
+
+static const struct gen_device_info gen_device_info_cnl_5x8 = {
+   /* GT2 */
+   GEN10_FEATURES(2, 2, 6)
+};
+
 bool
 gen_get_device_info(int devid, struct gen_device_info *devinfo)
 {
