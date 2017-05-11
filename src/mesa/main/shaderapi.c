@@ -1242,33 +1242,6 @@ _mesa_active_program(struct gl_context *ctx, struct gl_shader_program *shProg,
 }
 
 
-static void
-use_program(struct gl_context *ctx, gl_shader_stage stage,
-            struct gl_shader_program *shProg, struct gl_program *new_prog,
-            struct gl_pipeline_object *shTarget)
-{
-   struct gl_program **target;
-
-   target = &shTarget->CurrentProgram[stage];
-   if (new_prog) {
-      _mesa_program_init_subroutine_defaults(ctx, new_prog);
-   }
-
-   if (*target != new_prog) {
-      /* Program is current, flush it */
-      if (shTarget == ctx->_Shader) {
-         FLUSH_VERTICES(ctx, _NEW_PROGRAM | _NEW_PROGRAM_CONSTANTS);
-      }
-
-      _mesa_reference_shader_program(ctx,
-                                     &shTarget->ReferencedPrograms[stage],
-                                     shProg);
-      _mesa_reference_program(ctx, target, new_prog);
-      return;
-   }
-}
-
-
 /**
  * Use the named shader program for subsequent rendering.
  */
@@ -1280,7 +1253,7 @@ _mesa_use_shader_program(struct gl_context *ctx,
       struct gl_program *new_prog = NULL;
       if (shProg && shProg->_LinkedShaders[i])
          new_prog = shProg->_LinkedShaders[i]->Program;
-      use_program(ctx, i, shProg, new_prog, &ctx->Shader);
+      _mesa_use_program(ctx, i, shProg, new_prog, &ctx->Shader);
    }
    _mesa_active_program(ctx, shProg, "glUseProgram");
 }
@@ -2164,7 +2137,26 @@ _mesa_use_program(struct gl_context *ctx, gl_shader_stage stage,
                   struct gl_shader_program *shProg, struct gl_program *prog,
                   struct gl_pipeline_object *shTarget)
 {
-   use_program(ctx, stage, shProg, prog, shTarget);
+   struct gl_program **target;
+
+   target = &shTarget->CurrentProgram[stage];
+   if (prog) {
+      _mesa_program_init_subroutine_defaults(ctx, prog);
+   }
+
+   if (*target != prog) {
+      /* Program is current, flush it */
+      if (shTarget == ctx->_Shader) {
+         FLUSH_VERTICES(ctx, _NEW_PROGRAM | _NEW_PROGRAM_CONSTANTS);
+      }
+
+      _mesa_reference_shader_program(ctx,
+                                     &shTarget->ReferencedPrograms[stage],
+                                     shProg);
+      _mesa_reference_program(ctx, target, prog);
+      return;
+   }
+
 }
 
 
