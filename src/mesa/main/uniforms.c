@@ -105,17 +105,32 @@ _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
    gl_shader_stage prog_stage =
       _mesa_program_enum_to_shader_stage(prog->Target);
    struct gl_linked_shader *shader = shProg->_LinkedShaders[prog_stage];
+   GLuint s;
 
    assert(shader);
 
    memset(prog->TexturesUsed, 0, sizeof(prog->TexturesUsed));
 
    while (mask) {
-      const int s = u_bit_scan(&mask);
+      s = u_bit_scan(&mask);
 
       update_single_shader_texture_used(shProg, prog,
                                         prog->SamplerUnits[s],
                                         prog->sh.SamplerTargets[s]);
+   }
+
+   if (unlikely(prog->sh.HasBoundBindlessSampler)) {
+      /* Loop over bindless samplers bound to texture units.
+       */
+      for (s = 0; s < prog->sh.NumBindlessSamplers; s++) {
+         struct gl_bindless_sampler *sampler = &prog->sh.BindlessSamplers[s];
+
+         if (!sampler->bound)
+            continue;
+
+         update_single_shader_texture_used(shProg, prog, sampler->unit,
+                                           sampler->target);
+      }
    }
 }
 

@@ -704,6 +704,7 @@ update_program_texture_state(struct gl_context *ctx, struct gl_program **prog,
 
    for (i = 0; i < MESA_SHADER_STAGES; i++) {
       GLbitfield mask;
+      GLuint s;
 
       if (!prog[i])
          continue;
@@ -711,11 +712,26 @@ update_program_texture_state(struct gl_context *ctx, struct gl_program **prog,
       mask = prog[i]->SamplersUsed;
 
       while (mask) {
-         const int s = u_bit_scan(&mask);
+         s = u_bit_scan(&mask);
 
          update_single_program_texture_state(ctx, prog[i],
                                              prog[i]->SamplerUnits[s],
                                              enabled_texture_units);
+      }
+
+      if (unlikely(prog[i]->sh.HasBoundBindlessSampler)) {
+         /* Loop over bindless samplers bound to texture units.
+          */
+         for (s = 0; s < prog[i]->sh.NumBindlessSamplers; s++) {
+            struct gl_bindless_sampler *sampler =
+               &prog[i]->sh.BindlessSamplers[s];
+
+            if (!sampler->bound)
+               continue;
+
+            update_single_program_texture_state(ctx, prog[i], sampler->unit,
+                                                enabled_texture_units);
+         }
       }
    }
 
