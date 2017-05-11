@@ -441,6 +441,7 @@ public:
       current_var = var;
       field_counter = 0;
       this->record_next_sampler = new string_to_uint_map;
+      this->record_next_image = new string_to_uint_map;
 
       buffer_block_index = -1;
       if (var->is_in_buffer_block()) {
@@ -501,6 +502,7 @@ public:
          process(var);
       }
       delete this->record_next_sampler;
+      delete this->record_next_image;
    }
 
    int buffer_block_index;
@@ -593,11 +595,14 @@ private:
    }
 
    void handle_images(const glsl_type *base_type,
-                      struct gl_uniform_storage *uniform)
+                      struct gl_uniform_storage *uniform, const char *name)
    {
       if (base_type->is_image()) {
-         uniform->opaque[shader_type].index = this->next_image;
          uniform->opaque[shader_type].active = true;
+
+         if (!set_opaque_indices(base_type, uniform, name, this->next_image,
+                                 this->record_next_image))
+            return;
 
          /* Set image access qualifiers */
          const GLenum access =
@@ -605,15 +610,11 @@ private:
              current_var->data.memory_write_only ? GL_WRITE_ONLY :
                 GL_READ_WRITE);
 
-         const unsigned first = this->next_image;
-
-         /* Increment the image index by 1 for non-arrays and by the
-          * number of array elements for arrays.
-          */
-         this->next_image += MAX2(1, uniform->array_elements);
-
-         for (unsigned i = first; i < MIN2(next_image, MAX_IMAGE_UNIFORMS); i++)
+         for (unsigned i = uniform->opaque[shader_type].index;
+              i < MIN2(this->next_image, MAX_IMAGE_UNIFORMS);
+              i++) {
             prog->_LinkedShaders[shader_type]->Program->sh.ImageAccess[i] = access;
+         }
       }
    }
 
@@ -705,7 +706,7 @@ private:
 
       /* This assigns uniform indices to sampler and image uniforms. */
       handle_samplers(base_type, &this->uniforms[id], name);
-      handle_images(base_type, &this->uniforms[id]);
+      handle_images(base_type, &this->uniforms[id], name);
       handle_subroutines(base_type, &this->uniforms[id]);
 
       /* For array of arrays or struct arrays the base location may have
@@ -851,6 +852,11 @@ private:
     * struct arrays.
     */
    struct string_to_uint_map *record_next_sampler;
+
+   /* Map for temporarily storing next imager index when handling images in
+    * struct arrays.
+    */
+   struct string_to_uint_map *record_next_image;
 
 public:
    union gl_constant_value *values;
