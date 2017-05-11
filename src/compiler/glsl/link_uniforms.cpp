@@ -418,8 +418,14 @@ public:
                               struct string_to_uint_map *map,
                               struct gl_uniform_storage *uniforms,
                               union gl_constant_value *values)
-      : prog(prog), map(map), uniforms(uniforms), values(values)
+      : prog(prog), map(map), uniforms(uniforms), values(values),
+        bindless_targets(NULL)
    {
+   }
+
+   virtual ~parcel_out_uniform_storage()
+   {
+      free(this->bindless_targets);
    }
 
    void start_shader(gl_shader_stage shader_type)
@@ -434,6 +440,11 @@ public:
       this->next_subroutine = 0;
       this->record_array_count = 1;
       memset(this->targets, 0, sizeof(this->targets));
+
+      this->num_bindless_samplers = 0;
+      this->next_bindless_sampler = 0;
+      free(this->bindless_targets);
+      this->bindless_targets = NULL;
    }
 
    void set_and_process(ir_variable *var)
@@ -441,6 +452,7 @@ public:
       current_var = var;
       field_counter = 0;
       this->record_next_sampler = new string_to_uint_map;
+      this->record_next_bindless_sampler = new string_to_uint_map;
       this->record_next_image = new string_to_uint_map;
 
       buffer_block_index = -1;
@@ -502,6 +514,7 @@ public:
          process(var);
       }
       delete this->record_next_sampler;
+      delete this->record_next_bindless_sampler;
       delete this->record_next_image;
    }
 
@@ -578,18 +591,39 @@ private:
       if (base_type->is_sampler()) {
          uniform->opaque[shader_type].active = true;
 
-         if (!set_opaque_indices(base_type, uniform, name, this->next_sampler,
-                                 this->record_next_sampler))
-            return;
-
          const gl_texture_index target = base_type->sampler_index();
          const unsigned shadow = base_type->sampler_shadow;
-         for (unsigned i = uniform->opaque[shader_type].index;
-              i < MIN2(this->next_sampler, MAX_SAMPLERS);
-              i++) {
-            this->targets[i] = target;
-            this->shader_samplers_used |= 1U << i;
-            this->shader_shadow_samplers |= shadow << i;
+
+         if (current_var->data.bindless) {
+            if (!set_opaque_indices(base_type, uniform, name,
+                                    this->next_bindless_sampler,
+                                    this->record_next_bindless_sampler))
+               return;
+
+            this->num_bindless_samplers = this->next_bindless_sampler;
+
+            this->bindless_targets = (gl_texture_index *)
+               realloc(this->bindless_targets,
+                       this->num_bindless_samplers * sizeof(gl_texture_index));
+
+            for (unsigned i = uniform->opaque[shader_type].index;
+                 i < this->num_bindless_samplers;
+                 i++) {
+               this->bindless_targets[i] = target;
+            }
+         } else {
+            if (!set_opaque_indices(base_type, uniform, name,
+                                    this->next_sampler,
+                                    this->record_next_sampler))
+               return;
+
+            for (unsigned i = uniform->opaque[shader_type].index;
+                 i < MIN2(this->next_sampler, MAX_SAMPLERS);
+                 i++) {
+               this->targets[i] = target;
+               this->shader_samplers_used |= 1U << i;
+               this->shader_shadow_samplers |= shadow << i;
+            }
          }
       }
    }
@@ -827,6 +861,7 @@ private:
 
    struct gl_uniform_storage *uniforms;
    unsigned next_sampler;
+   unsigned next_bindless_sampler;
    unsigned next_image;
    unsigned next_subroutine;
 
@@ -859,6 +894,11 @@ private:
     */
    struct string_to_uint_map *record_next_image;
 
+   /* Map for temporarily storing next bindless sampler index when handling
+    * bindless samplers in struct arrays.
+    */
+   struct string_to_uint_map *record_next_bindless_sampler;
+
 public:
    union gl_constant_value *values;
 
@@ -873,6 +913,16 @@ public:
     * Mask of samplers used by the current shader stage for shadows.
     */
    unsigned shader_shadow_samplers;
+
+   /**
+    * Number of bindless samplers used by the current shader stage.
+    */
+   unsigned num_bindless_samplers;
+
+   /**
+    * Texture targets for bindless samplers used by the current stage.
+    */
+   gl_texture_index *bindless_targets;
 };
 
 static bool
@@ -1258,6 +1308,17 @@ link_assign_uniform_storage(struct gl_context *ctx,
 
       shader->Program->SamplersUsed = parcel.shader_samplers_used;
       shader->shadow_samplers = parcel.shader_shadow_samplers;
+
+      if (parcel.num_bindless_samplers > 0) {
+         shader->Program->sh.NumBindlessSamplers = parcel.num_bindless_samplers;
+         shader->Program->sh.BindlessSamplers =
+            rzalloc_array(shader->Program, gl_bindless_sampler,
+                          parcel.num_bindless_samplers);
+         for (unsigned j = 0; j < parcel.num_bindless_samplers; j++) {
+            shader->Program->sh.BindlessSamplers[j].target =
+               parcel.bindless_targets[j];
+         }
+      }
 
       STATIC_ASSERT(sizeof(shader->Program->sh.SamplerTargets) ==
                     sizeof(parcel.targets));
