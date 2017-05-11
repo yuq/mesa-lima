@@ -710,9 +710,9 @@ genX(CmdExecuteCommands)(
          struct anv_state dst_state = secondary->state.render_pass_states;
          assert(src_state.alloc_size == dst_state.alloc_size);
 
-         genX(cmd_buffer_gpu_memcpy)(primary, ss_bo, dst_state.offset,
-                                     ss_bo, src_state.offset,
-                                     src_state.alloc_size);
+         genX(cmd_buffer_so_memcpy)(primary, ss_bo, dst_state.offset,
+                                    ss_bo, src_state.offset,
+                                    src_state.alloc_size);
       }
 
       anv_cmd_buffer_add_secondary(primary, secondary);

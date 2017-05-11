@@ -52,10 +52,10 @@ gcd_pow2_u64(uint64_t a, uint64_t b)
 }
 
 void
-genX(cmd_buffer_gpu_memcpy)(struct anv_cmd_buffer *cmd_buffer,
-                            struct anv_bo *dst, uint32_t dst_offset,
-                            struct anv_bo *src, uint32_t src_offset,
-                            uint32_t size)
+genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
+                           struct anv_bo *dst, uint32_t dst_offset,
+                           struct anv_bo *src, uint32_t src_offset,
+                           uint32_t size)
 {
    if (size == 0)
       return;
