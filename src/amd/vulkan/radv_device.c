@@ -769,7 +769,7 @@ static void radv_get_physical_device_queue_family_properties(
 {
 	int num_queue_families = 1;
 	int idx;
-	if (pdevice->rad_info.compute_rings > 0 &&
+	if (pdevice->rad_info.num_compute_rings > 0 &&
 	    pdevice->rad_info.chip_class >= CIK &&
 	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE))
 		num_queue_families++;
@@ -796,7 +796,7 @@ static void radv_get_physical_device_queue_family_properties(
 		idx++;
 	}
 
-	if (pdevice->rad_info.compute_rings > 0 &&
+	if (pdevice->rad_info.num_compute_rings > 0 &&
 	    pdevice->rad_info.chip_class >= CIK &&
 	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE)) {
 		if (*pCount > idx) {
@@ -804,7 +804,7 @@ static void radv_get_physical_device_queue_family_properties(
 				.queueFlags = VK_QUEUE_COMPUTE_BIT |
 				              VK_QUEUE_TRANSFER_BIT |
 				              VK_QUEUE_SPARSE_BINDING_BIT,
-				.queueCount = pdevice->rad_info.compute_rings,
+				.queueCount = pdevice->rad_info.num_compute_rings,
 				.timestampValidBits = 64,
 				.minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
 			};
@@ -888,11 +888,11 @@ void radv_GetPhysicalDeviceMemoryProperties(
 	pMemoryProperties->memoryHeapCount = RADV_MEM_HEAP_COUNT;
 	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_VRAM] = (VkMemoryHeap) {
 		.size = physical_device->rad_info.vram_size -
-				physical_device->rad_info.visible_vram_size,
+				physical_device->rad_info.vram_vis_size,
 		.flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
 	};
 	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_VRAM_CPU_ACCESS] = (VkMemoryHeap) {
-		.size = physical_device->rad_info.visible_vram_size,
+		.size = physical_device->rad_info.vram_vis_size,
 		.flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
 	};
 	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_GTT] = (VkMemoryHeap) {

@@ -39,139 +39,14 @@
 #include "radv_amdgpu_bo.h"
 #include "radv_amdgpu_surface.h"
 
-#define CIK_TILE_MODE_COLOR_2D			14
-
-#define CIK__GB_TILE_MODE__PIPE_CONFIG(x)        (((x) >> 6) & 0x1f)
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P2               0
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P4_8x16          4
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P4_16x16         5
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P4_16x32         6
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P4_32x32         7
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P8_16x16_8x16    8
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P8_16x32_8x16    9
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P8_32x32_8x16    10
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P8_16x32_16x16   11
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P8_32x32_16x16   12
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P8_32x32_16x32   13
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P8_32x64_32x32   14
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_8X16   16
-#define     CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_16X16  17
-
-static unsigned radv_cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
-{
-	unsigned mode2d = info->gb_tile_mode[CIK_TILE_MODE_COLOR_2D];
-
-	switch (CIK__GB_TILE_MODE__PIPE_CONFIG(mode2d)) {
-	case CIK__PIPE_CONFIG__ADDR_SURF_P2:
-		return 2;
-	case CIK__PIPE_CONFIG__ADDR_SURF_P4_8x16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P4_16x16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P4_16x32:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P4_32x32:
-		return 4;
-	case CIK__PIPE_CONFIG__ADDR_SURF_P8_16x16_8x16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P8_16x32_8x16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P8_32x32_8x16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P8_16x32_16x16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P8_32x32_16x16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P8_32x32_16x32:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P8_32x64_32x32:
-		return 8;
-	case CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_8X16:
-	case CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_16X16:
-		return 16;
-	default:
-		fprintf(stderr, "Invalid CIK pipe configuration, assuming P2\n");
-		assert(!"this should never occur");
-		return 2;
-	}
-}
-
 static bool
 do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 {
-	struct amdgpu_buffer_size_alignments alignment_info = {};
-	struct amdgpu_heap_info vram, visible_vram, gtt;
-	struct drm_amdgpu_info_hw_ip dma = {};
-	struct drm_amdgpu_info_hw_ip compute = {};
-	drmDevicePtr devinfo;
-	int r;
-	int i, j;
-	/* Get PCI info. */
-	r = drmGetDevice2(fd, 0, &devinfo);
-	if (r) {
-		fprintf(stderr, "amdgpu: drmGetDevice2 failed.\n");
+	if (!ac_query_gpu_info(fd, ws->dev, &ws->info, &ws->amdinfo))
 		goto fail;
-	}
-	ws->info.pci_domain = devinfo->businfo.pci->domain;
-	ws->info.pci_bus = devinfo->businfo.pci->bus;
-	ws->info.pci_dev = devinfo->businfo.pci->dev;
-	ws->info.pci_func = devinfo->businfo.pci->func;
-	drmFreeDevice(&devinfo);
 
-	/* Query hardware and driver information. */
-	r = amdgpu_query_gpu_info(ws->dev, &ws->amdinfo);
-	if (r) {
-		fprintf(stderr, "amdgpu: amdgpu_query_gpu_info failed.\n");
-		goto fail;
-	}
-
-	r = amdgpu_query_buffer_size_alignment(ws->dev, &alignment_info);
-	if (r) {
-		fprintf(stderr, "amdgpu: amdgpu_query_buffer_size_alignment failed.\n");
-		goto fail;
-	}
-
-	r = amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM, 0, &vram);
-	if (r) {
-		fprintf(stderr, "amdgpu: amdgpu_query_heap_info(vram) failed.\n");
-		goto fail;
-	}
-
-	r = amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM,
-	                           AMDGPU_GEM_CREATE_CPU_ACCESS_REQUIRED, &visible_vram);
-	if (r) {
-		fprintf(stderr, "amdgpu: amdgpu_query_heap_info(visible_vram) failed.\n");
-		goto fail;
-	}
-
-	r = amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_GTT, 0, &gtt);
-	if (r) {
-		fprintf(stderr, "amdgpu: amdgpu_query_heap_info(gtt) failed.\n");
-		goto fail;
-	}
-
-	r = amdgpu_query_hw_ip_info(ws->dev, AMDGPU_HW_IP_DMA, 0, &dma);
-	if (r) {
-		fprintf(stderr, "amdgpu: amdgpu_query_hw_ip_info(dma) failed.\n");
-		goto fail;
-	}
-
-	r = amdgpu_query_hw_ip_info(ws->dev, AMDGPU_HW_IP_COMPUTE, 0, &compute);
-	if (r) {
-		fprintf(stderr, "amdgpu: amdgpu_query_hw_ip_info(compute) failed.\n");
-		goto fail;
-	}
-	ws->info.pci_id = ws->amdinfo.asic_id; /* TODO: is this correct? */
-	ws->info.vce_harvest_config = ws->amdinfo.vce_harvest_config;
-
-	switch (ws->info.pci_id) {
-#define CHIPSET(pci_id, name, cfamily) case pci_id: ws->info.family = CHIP_##cfamily; break;
-#include "pci_ids/radeonsi_pci_ids.h"
-#undef CHIPSET
-	default:
-		fprintf(stderr, "amdgpu: Invalid PCI ID.\n");
-		goto fail;
-	}
-
-	if (ws->info.family >= CHIP_TONGA)
-		ws->info.chip_class = VI;
-	else if (ws->info.family >= CHIP_BONAIRE)
-		ws->info.chip_class = CIK;
-	else if (ws->info.family >= CHIP_TAHITI)
-		ws->info.chip_class = SI;
-	else {
-		fprintf(stderr, "amdgpu: Unknown family.\n");
+	if (ws->info.chip_class >= GFX9) {
+		fprintf(stderr, "radv: GFX9 is not supported.\n");
 		goto fail;
 	}
 
@@ -260,48 +135,8 @@ do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 		goto fail;
 	}
 
-	assert(util_is_power_of_two(dma.available_rings + 1));
-	assert(util_is_power_of_two(compute.available_rings + 1));
-
-	/* Set hardware information. */
-	ws->info.gart_size = gtt.heap_size;
-	ws->info.vram_size = vram.heap_size;
-	ws->info.visible_vram_size = visible_vram.heap_size;
-	/* convert the shader clock from KHz to MHz */
-	ws->info.max_shader_clock = ws->amdinfo.max_engine_clk / 1000;
-	ws->info.max_se = ws->amdinfo.num_shader_engines;
-	ws->info.max_sh_per_se = ws->amdinfo.num_shader_arrays_per_engine;
-	ws->info.has_uvd = 0;
-	ws->info.vce_fw_version = 0;
-	ws->info.has_userptr = TRUE;
-	ws->info.num_render_backends = ws->amdinfo.rb_pipes;
-	ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
-	ws->info.num_tile_pipes = radv_cik_get_num_tile_pipes(&ws->amdinfo);
-	ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
-	ws->info.has_virtual_memory = TRUE;
-	ws->info.sdma_rings = MIN2(util_bitcount(dma.available_rings),
-	                           MAX_RINGS_PER_TYPE);
-	ws->info.compute_rings = MIN2(util_bitcount(compute.available_rings),
-	                              MAX_RINGS_PER_TYPE);
-
-	/* Get the number of good compute units. */
-	ws->info.num_good_compute_units = 0;
-	for (i = 0; i < ws->info.max_se; i++)
-		for (j = 0; j < ws->info.max_sh_per_se; j++)
-			ws->info.num_good_compute_units +=
-				util_bitcount(ws->amdinfo.cu_bitmap[i][j]);
-
-	memcpy(ws->info.si_tile_mode_array, ws->amdinfo.gb_tile_mode,
-	       sizeof(ws->amdinfo.gb_tile_mode));
-	ws->info.enabled_rb_mask = ws->amdinfo.enabled_rb_pipes_mask;
-
-	memcpy(ws->info.cik_macrotile_mode_array, ws->amdinfo.gb_macro_tile_mode,
-	       sizeof(ws->amdinfo.gb_macro_tile_mode));
-
-	ws->info.gart_page_size = alignment_info.size_remote;
-
-	if (ws->info.chip_class == SI)
-		ws->info.gfx_ib_pad_with_type2 = TRUE;
+	ws->info.num_sdma_rings = MIN2(ws->info.num_sdma_rings, MAX_RINGS_PER_TYPE);
+	ws->info.num_compute_rings = MIN2(ws->info.num_compute_rings, MAX_RINGS_PER_TYPE);
 
 	ws->use_ib_bos = ws->family >= FAMILY_CI;
 	return true;

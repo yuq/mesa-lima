@@ -53,6 +53,7 @@
 #include "radv_radeon_winsys.h"
 #include "ac_binary.h"
 #include "ac_nir_to_llvm.h"
+#include "ac_gpu_info.h"
 #include "ac_surface.h"
 #include "radv_debug.h"
 #include "radv_descriptor_set.h"
