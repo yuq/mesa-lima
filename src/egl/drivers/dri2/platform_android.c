@@ -1112,11 +1112,12 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
+   dri2_dpy->fd = -1;
    ret = hw_get_module(GRALLOC_HARDWARE_MODULE_ID,
                        (const hw_module_t **)&dri2_dpy->gralloc);
    if (ret) {
       err = "DRI2: failed to get gralloc module";
-      goto cleanup_display;
+      goto cleanup;
    }
 
    dpy->DriverData = (void *) dri2_dpy;
@@ -1124,18 +1125,18 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
    dri2_dpy->fd = droid_open_device(dri2_dpy);
    if (dri2_dpy->fd < 0) {
       err = "DRI2: failed to open device";
-      goto cleanup_display;
+      goto cleanup;
    }
 
    dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd);
    if (dri2_dpy->driver_name == NULL) {
       err = "DRI2: failed to get driver name";
-      goto cleanup_device;
+      goto cleanup;
    }
 
    if (!dri2_load_driver(dpy)) {
       err = "DRI2: failed to load driver";
-      goto cleanup_driver_name;
+      goto cleanup;
    }
 
    dri2_dpy->is_render_node = drmGetNodeTypeFromFd(dri2_dpy->fd) == DRM_NODE_RENDER;
@@ -1149,12 +1150,12 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
 
    if (!dri2_create_screen(dpy)) {
       err = "DRI2: failed to create screen";
-      goto cleanup_driver;
+      goto cleanup;
    }
 
    if (!droid_add_configs_for_visuals(drv, dpy)) {
       err = "DRI2: failed to add configs";
-      goto cleanup_screen;
+      goto cleanup;
    }
 
    dpy->Extensions.ANDROID_framebuffer_target = EGL_TRUE;
@@ -1169,17 +1170,7 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
 
    return EGL_TRUE;
 
-cleanup_screen:
-   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
-cleanup_driver:
-   dlclose(dri2_dpy->driver);
-cleanup_driver_name:
-   free(dri2_dpy->driver_name);
-cleanup_device:
-   close(dri2_dpy->fd);
-cleanup_display:
-   free(dri2_dpy);
-   dpy->DriverData = NULL;
-
+cleanup:
+   dri2_display_destroy(dpy);
    return _eglError(EGL_NOT_INITIALIZED, err);
 }
