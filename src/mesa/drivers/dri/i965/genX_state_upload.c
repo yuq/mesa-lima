@@ -1954,6 +1954,92 @@ const struct brw_tracked_state genX(cc_vp) = {
 
 #if GEN_GEN >= 6
 static void
+genX(upload_scissor_state)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+   struct GENX(SCISSOR_RECT) scissor;
+   uint32_t scissor_state_offset;
+   const unsigned int fb_width = _mesa_geometric_width(ctx->DrawBuffer);
+   const unsigned int fb_height = _mesa_geometric_height(ctx->DrawBuffer);
+   uint32_t *scissor_map;
+
+   /* BRW_NEW_VIEWPORT_COUNT */
+   const unsigned viewport_count = brw->clip.viewport_count;
+
+   scissor_map = brw_state_batch(
+      brw, GENX(SCISSOR_RECT_length) * sizeof(uint32_t) * viewport_count,
+      32, &scissor_state_offset);
+
+   /* _NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT */
+
+   /* The scissor only needs to handle the intersection of drawable and
+    * scissor rect.  Clipping to the boundaries of static shared buffers
+    * for front/back/depth is covered by looping over cliprects in brw_draw.c.
+    *
+    * Note that the hardware's coordinates are inclusive, while Mesa's min is
+    * inclusive but max is exclusive.
+    */
+   for (unsigned i = 0; i < viewport_count; i++) {
+      int bbox[4];
+
+      bbox[0] = MAX2(ctx->ViewportArray[i].X, 0);
+      bbox[1] = MIN2(bbox[0] + ctx->ViewportArray[i].Width, fb_width);
+      bbox[2] = MAX2(ctx->ViewportArray[i].Y, 0);
+      bbox[3] = MIN2(bbox[2] + ctx->ViewportArray[i].Height, fb_height);
+      _mesa_intersect_scissor_bounding_box(ctx, i, bbox);
+
+      if (bbox[0] == bbox[1] || bbox[2] == bbox[3]) {
+         /* If the scissor was out of bounds and got clamped to 0 width/height
+          * at the bounds, the subtraction of 1 from maximums could produce a
+          * negative number and thus not clip anything.  Instead, just provide
+          * a min > max scissor inside the bounds, which produces the expected
+          * no rendering.
+          */
+         scissor.ScissorRectangleXMin = 1;
+         scissor.ScissorRectangleXMax = 0;
+         scissor.ScissorRectangleYMin = 1;
+         scissor.ScissorRectangleYMax = 0;
+      } else if (render_to_fbo) {
+         /* texmemory: Y=0=bottom */
+         scissor.ScissorRectangleXMin = bbox[0];
+         scissor.ScissorRectangleXMax = bbox[1] - 1;
+         scissor.ScissorRectangleYMin = bbox[2];
+         scissor.ScissorRectangleYMax = bbox[3] - 1;
+      } else {
+         /* memory: Y=0=top */
+         scissor.ScissorRectangleXMin = bbox[0];
+         scissor.ScissorRectangleXMax = bbox[1] - 1;
+         scissor.ScissorRectangleYMin = fb_height - bbox[3];
+         scissor.ScissorRectangleYMax = fb_height - bbox[2] - 1;
+      }
+
+      GENX(SCISSOR_RECT_pack)(
+         NULL, scissor_map + i * GENX(SCISSOR_RECT_length), &scissor);
+   }
+
+   brw_batch_emit(brw, GENX(3DSTATE_SCISSOR_STATE_POINTERS), ptr) {
+      ptr.ScissorRectPointer = scissor_state_offset;
+   }
+}
+
+static const struct brw_tracked_state genX(scissor_state) = {
+   .dirty = {
+      .mesa = _NEW_BUFFERS |
+              _NEW_SCISSOR |
+              _NEW_VIEWPORT,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_VIEWPORT_COUNT,
+   },
+   .emit = genX(upload_scissor_state),
+};
+#endif
+
+/* ---------------------------------------------------------------------- */
+
+#if GEN_GEN >= 6
+static void
 brw_calculate_guardband_size(uint32_t fb_width, uint32_t fb_height,
                              float m00, float m11, float m30, float m31,
                              float *xmin, float *xmax,
@@ -2547,92 +2633,6 @@ static const struct brw_tracked_state genX(blend_state) = {
              BRW_NEW_STATE_BASE_ADDRESS,
    },
    .emit = genX(upload_blend_state),
-};
-#endif
-
-/* ---------------------------------------------------------------------- */
-
-#if GEN_GEN >= 6
-static void
-genX(upload_scissor_state)(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-   const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
-   struct GENX(SCISSOR_RECT) scissor;
-   uint32_t scissor_state_offset;
-   const unsigned int fb_width = _mesa_geometric_width(ctx->DrawBuffer);
-   const unsigned int fb_height = _mesa_geometric_height(ctx->DrawBuffer);
-   uint32_t *scissor_map;
-
-   /* BRW_NEW_VIEWPORT_COUNT */
-   const unsigned viewport_count = brw->clip.viewport_count;
-
-   scissor_map = brw_state_batch(
-      brw, GENX(SCISSOR_RECT_length) * sizeof(uint32_t) * viewport_count,
-      32, &scissor_state_offset);
-
-   /* _NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT */
-
-   /* The scissor only needs to handle the intersection of drawable and
-    * scissor rect.  Clipping to the boundaries of static shared buffers
-    * for front/back/depth is covered by looping over cliprects in brw_draw.c.
-    *
-    * Note that the hardware's coordinates are inclusive, while Mesa's min is
-    * inclusive but max is exclusive.
-    */
-   for (unsigned i = 0; i < viewport_count; i++) {
-      int bbox[4];
-
-      bbox[0] = MAX2(ctx->ViewportArray[i].X, 0);
-      bbox[1] = MIN2(bbox[0] + ctx->ViewportArray[i].Width, fb_width);
-      bbox[2] = MAX2(ctx->ViewportArray[i].Y, 0);
-      bbox[3] = MIN2(bbox[2] + ctx->ViewportArray[i].Height, fb_height);
-      _mesa_intersect_scissor_bounding_box(ctx, i, bbox);
-
-      if (bbox[0] == bbox[1] || bbox[2] == bbox[3]) {
-         /* If the scissor was out of bounds and got clamped to 0 width/height
-          * at the bounds, the subtraction of 1 from maximums could produce a
-          * negative number and thus not clip anything.  Instead, just provide
-          * a min > max scissor inside the bounds, which produces the expected
-          * no rendering.
-          */
-         scissor.ScissorRectangleXMin = 1;
-         scissor.ScissorRectangleXMax = 0;
-         scissor.ScissorRectangleYMin = 1;
-         scissor.ScissorRectangleYMax = 0;
-      } else if (render_to_fbo) {
-         /* texmemory: Y=0=bottom */
-         scissor.ScissorRectangleXMin = bbox[0];
-         scissor.ScissorRectangleXMax = bbox[1] - 1;
-         scissor.ScissorRectangleYMin = bbox[2];
-         scissor.ScissorRectangleYMax = bbox[3] - 1;
-      } else {
-         /* memory: Y=0=top */
-         scissor.ScissorRectangleXMin = bbox[0];
-         scissor.ScissorRectangleXMax = bbox[1] - 1;
-         scissor.ScissorRectangleYMin = fb_height - bbox[3];
-         scissor.ScissorRectangleYMax = fb_height - bbox[2] - 1;
-      }
-
-      GENX(SCISSOR_RECT_pack)(
-         NULL, scissor_map + i * GENX(SCISSOR_RECT_length), &scissor);
-   }
-
-   brw_batch_emit(brw, GENX(3DSTATE_SCISSOR_STATE_POINTERS), ptr) {
-      ptr.ScissorRectPointer = scissor_state_offset;
-   }
-}
-
-static const struct brw_tracked_state genX(scissor_state) = {
-   .dirty = {
-      .mesa = _NEW_BUFFERS |
-              _NEW_SCISSOR |
-              _NEW_VIEWPORT,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
-             BRW_NEW_VIEWPORT_COUNT,
-   },
-   .emit = genX(upload_scissor_state),
 };
 #endif
 
