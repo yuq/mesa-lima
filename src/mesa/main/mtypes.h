@@ -1991,6 +1991,42 @@ struct gl_perf_query_state
 
 
 /**
+ * A bindless sampler object.
+ */
+struct gl_bindless_sampler
+{
+   /** Texture unit (set by glUniform1()). */
+   GLubyte unit;
+
+   /** Texture Target (TEXTURE_1D/2D/3D/etc_INDEX). */
+   gl_texture_index target;
+
+   /** Whether this bindless sampler is bound to a unit. */
+   GLboolean bound;
+
+   /** Pointer to the base of the data. */
+   GLvoid *data;
+};
+
+/**
+ * A bindless image object.
+ */
+struct gl_bindless_image
+{
+   /** Image unit (set by glUniform1()). */
+   GLubyte unit;
+
+   /** Access qualifier (GL_READ_WRITE, GL_READ_ONLY, GL_WRITE_ONLY) */
+   GLenum access;
+
+   /** Whether this bindless image is bound to a unit. */
+   GLboolean bound;
+
+   /** Pointer to the base of the data. */
+   GLvoid *data;
+};
+
+/**
  * Names of the various vertex/fragment program register files, etc.
  *
  * NOTE: first four tokens must fit into 2 bits (see t_vb_arbprogram.c)
@@ -2123,6 +2159,22 @@ struct gl_program
           * (TEXTURE_1D/2D/3D/etc_INDEX)
           */
          gl_texture_index SamplerTargets[MAX_SAMPLERS];
+
+         /**
+          * Number of samplers declared with the bindless_sampler layout
+          * qualifier as specified by ARB_bindless_texture.
+          */
+         GLuint NumBindlessSamplers;
+         GLboolean HasBoundBindlessSampler;
+         struct gl_bindless_sampler *BindlessSamplers;
+
+         /**
+          * Number of images declared with the bindless_image layout qualifier
+          * as specified by ARB_bindless_texture.
+          */
+         GLuint NumBindlessImages;
+         GLboolean HasBoundBindlessImage;
+         struct gl_bindless_image *BindlessImages;
 
          union {
             struct {
