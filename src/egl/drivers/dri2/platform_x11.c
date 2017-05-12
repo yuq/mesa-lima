@@ -817,8 +817,7 @@ dri2_copy_region(_EGLDriver *drv, _EGLDisplay *disp,
    if (draw->Type == EGL_PIXMAP_BIT || draw->Type == EGL_PBUFFER_BIT)
       return EGL_TRUE;
 
-   if (dri2_dpy->flush)
-      dri2_dpy->flush->flush(dri2_surf->dri_drawable);
+   dri2_dpy->flush->flush(dri2_surf->dri_drawable);
 
    if (dri2_surf->have_fake_front)
       render_attachment = XCB_DRI2_ATTACHMENT_BUFFER_FAKE_FRONT_LEFT;
@@ -880,8 +879,7 @@ dri2_x11_swap_buffers_msc(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw,
     * happened.  The driver should still be using the viewport hack to catch
     * window resizes.
     */
-   if (dri2_dpy->flush &&
-       dri2_dpy->flush->base.version >= 3 && dri2_dpy->flush->invalidate)
+   if (dri2_dpy->flush->base.version >= 3 && dri2_dpy->flush->invalidate)
       dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
 
    return swap_count;
@@ -893,7 +891,7 @@ dri2_x11_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
 
-   if (dri2_dpy->dri2) {
+   if (dri2_dpy->flush) {
       if (dri2_x11_swap_buffers_msc(drv, disp, draw, 0, 0, 0) != -1) {
           return EGL_TRUE;
       }
