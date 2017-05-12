@@ -1502,14 +1502,14 @@ _mesa_IsBuffer(GLuint id)
 }
 
 
-static void
-buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-               GLenum target, GLsizeiptr size, const GLvoid *data,
-               GLbitfield flags, const char *func)
+static bool
+validate_buffer_storage(struct gl_context *ctx,
+                        struct gl_buffer_object *bufObj, GLsizeiptr size,
+                        GLbitfield flags, const char *func)
 {
    if (size <= 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(size <= 0)", func);
-      return;
+      return false;
    }
 
    GLbitfield valid_flags = GL_MAP_READ_BIT |
@@ -1524,7 +1524,7 @@ buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 
    if (flags & ~valid_flags) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(invalid flag bits set)", func);
-      return;
+      return false;
    }
 
    /* The Errors section of the GL_ARB_sparse_buffer spec says:
@@ -1536,27 +1536,36 @@ buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    if (flags & GL_SPARSE_STORAGE_BIT_ARB &&
        flags & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT)) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(SPARSE_STORAGE and READ/WRITE)", func);
-      return;
+      return false;
    }
 
    if (flags & GL_MAP_PERSISTENT_BIT &&
        !(flags & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT))) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(PERSISTENT and flags!=READ/WRITE)", func);
-      return;
+      return false;
    }
 
    if (flags & GL_MAP_COHERENT_BIT && !(flags & GL_MAP_PERSISTENT_BIT)) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(COHERENT and flags!=PERSISTENT)", func);
-      return;
+      return false;
    }
 
    if (bufObj->Immutable) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(immutable)", func);
-      return;
+      return false;
    }
 
+   return true;
+}
+
+
+static void
+buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+               GLenum target, GLsizeiptr size, const GLvoid *data,
+               GLbitfield flags, const char *func)
+{
    /* Unmap the existing buffer.  We'll replace it now.  Not an error. */
    _mesa_buffer_unmap_all_mappings(ctx, bufObj);
 
@@ -1588,12 +1597,14 @@ _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
+   const char *func = "glBufferStorage";
 
-   bufObj = get_buffer(ctx, "glBufferStorage", target, GL_INVALID_OPERATION);
+   bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
    if (!bufObj)
       return;
 
-   buffer_storage(ctx, bufObj, target, size, data, flags, "glBufferStorage");
+   if (validate_buffer_storage(ctx, bufObj, size, flags, func))
+      buffer_storage(ctx, bufObj, target, size, data, flags, func);
 }
 
 void GLAPIENTRY
@@ -1602,8 +1613,9 @@ _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
+   const char *func = "glNamedBufferStorage";
 
-   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glNamedBufferStorage");
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
    if (!bufObj)
       return;
 
@@ -1611,8 +1623,8 @@ _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
     * In direct state access, buffer objects have an unspecified target since
     * they are not required to be bound.
     */
-   buffer_storage(ctx, bufObj, GL_NONE, size, data, flags,
-                  "glNamedBufferStorage");
+   if (validate_buffer_storage(ctx, bufObj, size, flags, func))
+      buffer_storage(ctx, bufObj, GL_NONE, size, data, flags, func);
 }
 
 
