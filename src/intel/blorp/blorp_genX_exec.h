@@ -781,25 +781,6 @@ blorp_emit_ps_config(struct blorp_batch *batch,
 #endif /* GEN_GEN */
 }
 
-static const uint32_t isl_to_gen_ds_surftype [] = {
-#if GEN_GEN >= 9
-   /* From the SKL PRM, "3DSTATE_DEPTH_STENCIL::SurfaceType":
-    *
-    *    "If depth/stencil is enabled with 1D render target, depth/stencil
-    *    surface type needs to be set to 2D surface type and height set to 1.
-    *    Depth will use (legacy) TileY and stencil will use TileW. For this
-    *    case only, the Surface Type of the depth buffer can be 2D while the
-    *    Surface Type of the render target(s) are 1D, representing an
-    *    exception to a programming note above.
-    */
-   [ISL_SURF_DIM_1D] = SURFTYPE_2D,
-#else
-   [ISL_SURF_DIM_1D] = SURFTYPE_1D,
-#endif
-   [ISL_SURF_DIM_2D] = SURFTYPE_2D,
-   [ISL_SURF_DIM_3D] = SURFTYPE_3D,
-};
-
 static void
 blorp_emit_depth_stencil_config(struct blorp_batch *batch,
                                 const struct blorp_params *params)
