@@ -419,13 +419,14 @@ public:
                               struct gl_uniform_storage *uniforms,
                               union gl_constant_value *values)
       : prog(prog), map(map), uniforms(uniforms), values(values),
-        bindless_targets(NULL)
+        bindless_targets(NULL), bindless_access(NULL)
    {
    }
 
    virtual ~parcel_out_uniform_storage()
    {
       free(this->bindless_targets);
+      free(this->bindless_access);
    }
 
    void start_shader(gl_shader_stage shader_type)
@@ -445,6 +446,11 @@ public:
       this->next_bindless_sampler = 0;
       free(this->bindless_targets);
       this->bindless_targets = NULL;
+
+      this->num_bindless_images = 0;
+      this->next_bindless_image = 0;
+      free(this->bindless_access);
+      this->bindless_access = NULL;
    }
 
    void set_and_process(ir_variable *var)
@@ -454,6 +460,7 @@ public:
       this->record_next_sampler = new string_to_uint_map;
       this->record_next_bindless_sampler = new string_to_uint_map;
       this->record_next_image = new string_to_uint_map;
+      this->record_next_bindless_image = new string_to_uint_map;
 
       buffer_block_index = -1;
       if (var->is_in_buffer_block()) {
@@ -516,6 +523,7 @@ public:
       delete this->record_next_sampler;
       delete this->record_next_bindless_sampler;
       delete this->record_next_image;
+      delete this->record_next_bindless_image;
    }
 
    int buffer_block_index;
@@ -634,20 +642,40 @@ private:
       if (base_type->is_image()) {
          uniform->opaque[shader_type].active = true;
 
-         if (!set_opaque_indices(base_type, uniform, name, this->next_image,
-                                 this->record_next_image))
-            return;
-
          /* Set image access qualifiers */
          const GLenum access =
             (current_var->data.memory_read_only ? GL_READ_ONLY :
              current_var->data.memory_write_only ? GL_WRITE_ONLY :
                 GL_READ_WRITE);
 
-         for (unsigned i = uniform->opaque[shader_type].index;
-              i < MIN2(this->next_image, MAX_IMAGE_UNIFORMS);
-              i++) {
-            prog->_LinkedShaders[shader_type]->Program->sh.ImageAccess[i] = access;
+         if (current_var->data.bindless) {
+            if (!set_opaque_indices(base_type, uniform, name,
+                                    this->next_bindless_image,
+                                    this->record_next_bindless_image))
+               return;
+
+            this->num_bindless_images = this->next_bindless_image;
+
+            this->bindless_access = (GLenum *)
+               realloc(this->bindless_access,
+                       this->num_bindless_images * sizeof(GLenum));
+
+            for (unsigned i = uniform->opaque[shader_type].index;
+                 i < this->num_bindless_images;
+                 i++) {
+               this->bindless_access[i] = access;
+            }
+         } else {
+            if (!set_opaque_indices(base_type, uniform, name,
+                                    this->next_image,
+                                    this->record_next_image))
+               return;
+
+            for (unsigned i = uniform->opaque[shader_type].index;
+                 i < MIN2(this->next_image, MAX_IMAGE_UNIFORMS);
+                 i++) {
+               prog->_LinkedShaders[shader_type]->Program->sh.ImageAccess[i] = access;
+            }
          }
       }
    }
@@ -863,6 +891,7 @@ private:
    unsigned next_sampler;
    unsigned next_bindless_sampler;
    unsigned next_image;
+   unsigned next_bindless_image;
    unsigned next_subroutine;
 
    /**
@@ -899,6 +928,11 @@ private:
     */
    struct string_to_uint_map *record_next_bindless_sampler;
 
+   /* Map for temporarily storing next bindless image index when handling
+    * bindless images in struct arrays.
+    */
+   struct string_to_uint_map *record_next_bindless_image;
+
 public:
    union gl_constant_value *values;
 
@@ -923,6 +957,17 @@ public:
     * Texture targets for bindless samplers used by the current stage.
     */
    gl_texture_index *bindless_targets;
+
+   /**
+    * Number of bindless images used by the current shader stage.
+    */
+   unsigned num_bindless_images;
+
+   /**
+    * Access types for bindless images used by the current stage.
+    */
+   GLenum *bindless_access;
+
 };
 
 static bool
@@ -1317,6 +1362,17 @@ link_assign_uniform_storage(struct gl_context *ctx,
          for (unsigned j = 0; j < parcel.num_bindless_samplers; j++) {
             shader->Program->sh.BindlessSamplers[j].target =
                parcel.bindless_targets[j];
+         }
+      }
+
+      if (parcel.num_bindless_images > 0) {
+         shader->Program->sh.NumBindlessImages = parcel.num_bindless_images;
+         shader->Program->sh.BindlessImages =
+            rzalloc_array(shader->Program, gl_bindless_image,
+                          parcel.num_bindless_images);
+         for (unsigned j = 0; j < parcel.num_bindless_images; j++) {
+            shader->Program->sh.BindlessImages[j].access =
+               parcel.bindless_access[j];
          }
       }
 

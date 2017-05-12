@@ -1153,6 +1153,13 @@ write_shader_metadata(struct blob *metadata, gl_linked_shader *shader)
                        sizeof(struct gl_bindless_sampler));
    }
 
+   blob_write_uint32(metadata, glprog->sh.NumBindlessImages);
+   blob_write_uint32(metadata, glprog->sh.HasBoundBindlessImage);
+   for (i = 0; i < glprog->sh.NumBindlessImages; i++) {
+      blob_write_bytes(metadata, &glprog->sh.BindlessImages[i],
+                       sizeof(struct gl_bindless_image));
+   }
+
    write_shader_parameters(metadata, glprog->Parameters);
 }
 
@@ -1188,6 +1195,19 @@ read_shader_metadata(struct blob_reader *metadata,
       for (i = 0; i < glprog->sh.NumBindlessSamplers; i++) {
          blob_copy_bytes(metadata, (uint8_t *) &glprog->sh.BindlessSamplers[i],
                          sizeof(struct gl_bindless_sampler));
+      }
+   }
+
+   glprog->sh.NumBindlessImages = blob_read_uint32(metadata);
+   glprog->sh.HasBoundBindlessImage = blob_read_uint32(metadata);
+   if (glprog->sh.NumBindlessImages > 0) {
+      glprog->sh.BindlessImages =
+         rzalloc_array(glprog, gl_bindless_image,
+                       glprog->sh.NumBindlessImages);
+
+      for (i = 0; i < glprog->sh.NumBindlessImages; i++) {
+         blob_copy_bytes(metadata, (uint8_t *) &glprog->sh.BindlessImages[i],
+                        sizeof(struct gl_bindless_image));
       }
    }
 
