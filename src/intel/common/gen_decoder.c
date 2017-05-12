@@ -650,9 +650,9 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
       len = fread(buf, 1, XML_BUFFER_SIZE, input);
       if (len == 0) {
          fprintf(stderr, "fread: %m\n");
-         fclose(input);
-         free(filename);
-         return NULL;
+         free(ctx.spec);
+         ctx.spec = NULL;
+         goto end;
       }
       if (XML_ParseBuffer(ctx.parser, len, len == 0) == 0) {
          fprintf(stderr,
@@ -660,12 +660,13 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
                  XML_GetCurrentLineNumber(ctx.parser),
                  XML_GetCurrentColumnNumber(ctx.parser),
                  XML_ErrorString(XML_GetErrorCode(ctx.parser)));
-         fclose(input);
-         free(filename);
-         return NULL;
+         free(ctx.spec);
+         ctx.spec = NULL;
+         goto end;
       }
    } while (len > 0);
 
+ end:
    XML_ParserFree(ctx.parser);
 
    fclose(input);
