@@ -356,44 +356,55 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
     *
     * See the vertex element setup below.
     */
-   ve[0].VertexBufferIndex = 1;
-   ve[0].Valid = true;
-   ve[0].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
-   ve[0].SourceElementOffset = 0;
-   ve[0].Component0Control = VFCOMP_STORE_SRC;
+   unsigned slot = 0;
 
-   /* From Gen8 onwards hardware is no more instructed to overwrite components
-    * using an element specifier. Instead one has separate 3DSTATE_VF_SGVS
-    * (System Generated Value Setup) state packet for it.
-    */
+   ve[slot] = (struct GENX(VERTEX_ELEMENT_STATE)) {
+      .VertexBufferIndex = 1,
+      .Valid = true,
+      .SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT,
+      .SourceElementOffset = 0,
+      .Component0Control = VFCOMP_STORE_SRC,
+
+      /* From Gen8 onwards hardware is no more instructed to overwrite
+       * components using an element specifier. Instead one has separate
+       * 3DSTATE_VF_SGVS (System Generated Value Setup) state packet for it.
+       */
 #if GEN_GEN >= 8
-   ve[0].Component1Control = VFCOMP_STORE_0;
+      .Component1Control = VFCOMP_STORE_0,
 #elif GEN_GEN >= 5
-   ve[0].Component1Control = VFCOMP_STORE_IID;
+      .Component1Control = VFCOMP_STORE_IID,
 #else
-   ve[0].Component1Control = VFCOMP_STORE_0;
+      .Component1Control = VFCOMP_STORE_0,
 #endif
-   ve[0].Component2Control = VFCOMP_STORE_SRC;
-   ve[0].Component3Control = VFCOMP_STORE_SRC;
+      .Component2Control = VFCOMP_STORE_SRC,
+      .Component3Control = VFCOMP_STORE_SRC,
+   };
+   slot++;
 
-   ve[1].VertexBufferIndex = 0;
-   ve[1].Valid = true;
-   ve[1].SourceElementFormat = ISL_FORMAT_R32G32B32_FLOAT;
-   ve[1].SourceElementOffset = 0;
-   ve[1].Component0Control = VFCOMP_STORE_SRC;
-   ve[1].Component1Control = VFCOMP_STORE_SRC;
-   ve[1].Component2Control = VFCOMP_STORE_SRC;
-   ve[1].Component3Control = VFCOMP_STORE_1_FP;
+   ve[slot] = (struct GENX(VERTEX_ELEMENT_STATE)) {
+      .VertexBufferIndex = 0,
+      .Valid = true,
+      .SourceElementFormat = ISL_FORMAT_R32G32B32_FLOAT,
+      .SourceElementOffset = 0,
+      .Component0Control = VFCOMP_STORE_SRC,
+      .Component1Control = VFCOMP_STORE_SRC,
+      .Component2Control = VFCOMP_STORE_SRC,
+      .Component3Control = VFCOMP_STORE_1_FP,
+   };
+   slot++;
 
    for (unsigned i = 0; i < num_varyings; ++i) {
-      ve[i + 2].VertexBufferIndex = 1;
-      ve[i + 2].Valid = true;
-      ve[i + 2].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
-      ve[i + 2].SourceElementOffset = 16 + i * 4 * sizeof(float);
-      ve[i + 2].Component0Control = VFCOMP_STORE_SRC;
-      ve[i + 2].Component1Control = VFCOMP_STORE_SRC;
-      ve[i + 2].Component2Control = VFCOMP_STORE_SRC;
-      ve[i + 2].Component3Control = VFCOMP_STORE_SRC;
+      ve[slot] = (struct GENX(VERTEX_ELEMENT_STATE)) {
+         .VertexBufferIndex = 1,
+         .Valid = true,
+         .SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT,
+         .SourceElementOffset = 16 + i * 4 * sizeof(float),
+         .Component0Control = VFCOMP_STORE_SRC,
+         .Component1Control = VFCOMP_STORE_SRC,
+         .Component2Control = VFCOMP_STORE_SRC,
+         .Component3Control = VFCOMP_STORE_SRC,
+      };
+      slot++;
    }
 
    const unsigned num_dwords =
