@@ -153,7 +153,7 @@ brw_blorp_init_wm_prog_key(struct brw_wm_prog_key *wm_key)
 const unsigned *
 blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
                  struct nir_shader *nir,
-                 const struct brw_wm_prog_key *wm_key,
+                 struct brw_wm_prog_key *wm_key,
                  bool use_repclear,
                  struct brw_wm_prog_data *wm_prog_data,
                  unsigned *program_size)
@@ -176,6 +176,13 @@ blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
    nir = brw_preprocess_nir(compiler, nir);
    nir_remove_dead_variables(nir, nir_var_shader_in);
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
+
+   if (blorp->compiler->devinfo->gen < 6) {
+      if (nir->info.fs.uses_discard)
+         wm_key->iz_lookup |= BRW_WM_IZ_PS_KILL_ALPHATEST_BIT;
+
+      wm_key->input_slots_valid = nir->info.inputs_read | VARYING_BIT_POS;
+   }
 
    const unsigned *program =
       brw_compile_fs(compiler, blorp->driver_ctx, mem_ctx, wm_key,

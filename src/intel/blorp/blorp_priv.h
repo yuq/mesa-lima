@@ -333,7 +333,7 @@ void brw_blorp_init_wm_prog_key(struct brw_wm_prog_key *wm_key);
 const unsigned *
 blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
                  struct nir_shader *nir,
-                 const struct brw_wm_prog_key *wm_key,
+                 struct brw_wm_prog_key *wm_key,
                  bool use_repclear,
                  struct brw_wm_prog_data *wm_prog_data,
                  unsigned *program_size);
