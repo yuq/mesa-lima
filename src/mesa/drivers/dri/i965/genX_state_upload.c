@@ -1827,7 +1827,7 @@ genX(upload_vs_state)(struct brw_context *brw)
          CLAMP(brw->urb.nr_vs_entries / 2, 1, devinfo->max_vs_threads) - 1;
 
       vs.StatisticsEnable = false;
-      vs.SamplerStateOffset =
+      vs.SamplerStatePointer =
          instruction_ro_bo(brw->batch.bo, stage_state->sampler_offset);
 #endif
 

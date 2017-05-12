@@ -480,7 +480,7 @@
     <field name="Number of URB Entries" start="139" end="146" type="uint"/>
     <field name="GS Statistics Enable" start="138" end="138" type="bool"/>
     <field name="Rendering Enable" start="136" end="136" type="bool"/>
-    <field name="Sampler State Offset" start="165" end="191" type="address"/>
+    <field name="Sampler State Pointer" start="165" end="191" type="address"/>
     <field name="Sampler Count" start="160" end="162" type="uint"/>
     <field name="Reorder Enable" start="222" end="222" type="bool"/>
     <field name="Discard Adjacency" start="221" end="221" type="bool"/>
@@ -701,7 +701,7 @@
     <field name="URB Entry Allocation Size" start="147" end="151" type="uint"/>
     <field name="Number of URB Entries" start="139" end="146" type="uint"/>
     <field name="Statistics Enable" start="138" end="138" type="bool"/>
-    <field name="Sampler State Offset" start="165" end="191" type="address"/>
+    <field name="Sampler State Pointer" start="165" end="191" type="address"/>
     <field name="Sampler Count" start="160" end="162" type="uint"/>
     <field name="Vertex Cache Disable" start="193" end="193" type="bool"/>
     <field name="Enable" start="192" end="192" type="bool"/>
@@ -731,7 +731,7 @@
     <field name="Setup URB Entry Read Length" start="107" end="112" type="uint"/>
     <field name="Setup URB Entry Read Offset" start="100" end="105" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="96" end="99" type="uint"/>
-    <field name="Sampler State Offset" start="133" end="159" type="address"/>
+    <field name="Sampler State Pointer" start="133" end="159" type="address"/>
     <field name="Sampler Count" start="130" end="132" type="uint"/>
     <field name="Statistics Enable" start="128" end="128" type="bool"/>
     <field name="Maximum Number of Threads" start="185" end="191" type="uint"/>
