@@ -82,12 +82,12 @@ _eglDefaultLogger(EGLint level, const char *msg)
 {
 #ifdef HAVE_ANDROID_PLATFORM
    static const int egl2alog[] = {
-      [_EGL_FATAL] = LOG_ERROR,
-      [_EGL_WARNING]  = LOG_WARN,
-      [_EGL_INFO] = LOG_INFO,
-      [_EGL_DEBUG] = LOG_DEBUG,
+      [_EGL_FATAL] = ANDROID_LOG_ERROR,
+      [_EGL_WARNING]  = ANDROID_LOG_WARN,
+      [_EGL_INFO] = ANDROID_LOG_INFO,
+      [_EGL_DEBUG] = ANDROID_LOG_DEBUG,
    };
-   ALOG(egl2alog[level], LOG_TAG, "%s", msg);
+   LOG_PRI(egl2alog[level], LOG_TAG, "%s", msg);
 #else
    fprintf(stderr, "libEGL %s: %s\n", level_strings[level], msg);
 #endif /* HAVE_ANDROID_PLATFORM */
