@@ -30,7 +30,11 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := $(C_SOURCES) $(CXX_SOURCES)
 
+ifeq ($(MESA_ENABLE_LLVM),true)
 LOCAL_STATIC_LIBRARIES := libmesa_amd_common
+else
+LOCAL_C_INCLUDES += $(MESA_TOP)/src/amd/common
+endif
 
 LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_r600
