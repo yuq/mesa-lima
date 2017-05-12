@@ -8262,7 +8262,7 @@
     <enum name="BUFFER_STORAGE_FLAGS" value="0x8220" />
     <enum name="CLIENT_MAPPED_BUFFER_BARRIER_BIT" value="0x4000" />
 
-    <function name="BufferStorage">
+    <function name="BufferStorage" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="size" type="GLsizeiptr"/>
         <param name="data" type="const GLvoid *"/>

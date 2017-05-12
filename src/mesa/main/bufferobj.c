@@ -1609,13 +1609,27 @@ inlined_buffer_storage(GLenum target, GLuint buffer, GLsizeiptr size,
             return;
       }
    } else {
-      bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
-      if (!bufObj)
-         return;
+      if (no_error) {
+         struct gl_buffer_object **bufObjPtr = get_buffer_target(ctx, target);
+         bufObj = *bufObjPtr;
+      } else {
+         bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
+         if (!bufObj)
+            return;
+      }
    }
 
    if (no_error || validate_buffer_storage(ctx, bufObj, size, flags, func))
       buffer_storage(ctx, bufObj, target, size, data, flags, func);
+}
+
+
+void GLAPIENTRY
+_mesa_BufferStorage_no_error(GLenum target, GLsizeiptr size,
+                             const GLvoid *data, GLbitfield flags)
+{
+   inlined_buffer_storage(target, 0, size, data, flags, false, true,
+                          "glBufferStorage");
 }
 
 
