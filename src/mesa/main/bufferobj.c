@@ -1595,22 +1595,26 @@ buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 static ALWAYS_INLINE void
 inlined_buffer_storage(GLenum target, GLuint buffer, GLsizeiptr size,
                        const GLvoid *data, GLbitfield flags, bool dsa,
-                       const char *func)
+                       bool no_error, const char *func)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
 
    if (dsa) {
-      bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
-      if (!bufObj)
-         return;
+      if (no_error) {
+         bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+      } else {
+         bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
+         if (!bufObj)
+            return;
+      }
    } else {
       bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
       if (!bufObj)
          return;
    }
 
-   if (validate_buffer_storage(ctx, bufObj, size, flags, func))
+   if (no_error || validate_buffer_storage(ctx, bufObj, size, flags, func))
       buffer_storage(ctx, bufObj, target, size, data, flags, func);
 }
 
@@ -1619,9 +1623,22 @@ void GLAPIENTRY
 _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
                     GLbitfield flags)
 {
-   inlined_buffer_storage(target, 0, size, data, flags, false,
+   inlined_buffer_storage(target, 0, size, data, flags, false, false,
                           "glBufferStorage");
 }
+
+
+void GLAPIENTRY
+_mesa_NamedBufferStorage_no_error(GLuint buffer, GLsizeiptr size,
+                                  const GLvoid *data, GLbitfield flags)
+{
+   /* In direct state access, buffer objects have an unspecified target
+    * since they are not required to be bound.
+    */
+   inlined_buffer_storage(GL_NONE, buffer, size, data, flags, true, true,
+                          "glNamedBufferStorage");
+}
+
 
 void GLAPIENTRY
 _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
@@ -1630,7 +1647,7 @@ _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
    /* In direct state access, buffer objects have an unspecified target
     * since they are not required to be bound.
     */
-   inlined_buffer_storage(GL_NONE, buffer, size, data, flags, true,
+   inlined_buffer_storage(GL_NONE, buffer, size, data, flags, true, false,
                           "glNamedBufferStorage");
 }
 

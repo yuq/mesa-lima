@@ -54,7 +54,7 @@
       <param name="buffers" type="GLuint *" />
    </function>
 
-   <function name="NamedBufferStorage">
+   <function name="NamedBufferStorage" no_error="true">
       <param name="buffer" type="GLuint" />
       <param name="size" type="GLsizeiptr" />
       <param name="data" type="const GLvoid *" />
