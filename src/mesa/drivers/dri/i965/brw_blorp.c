@@ -584,12 +584,25 @@ try_blorp_blit(struct brw_context *brw,
           (dst_mt->format == MESA_FORMAT_Z24_UNORM_X8_UINT))
          return false;
 
+      /* We also can't handle any combined depth-stencil formats because we
+       * have to reinterpret as a color format.
+       */
+      if (_mesa_get_format_base_format(src_mt->format) == GL_DEPTH_STENCIL ||
+          _mesa_get_format_base_format(dst_mt->format) == GL_DEPTH_STENCIL)
+         return false;
+
       do_blorp_blit(brw, buffer_bit, src_irb, MESA_FORMAT_NONE,
                     dst_irb, MESA_FORMAT_NONE, srcX0, srcY0,
                     srcX1, srcY1, dstX0, dstY0, dstX1, dstY1,
                     filter, mirror_x, mirror_y);
       break;
    case GL_STENCIL_BUFFER_BIT:
+      /* Blorp doesn't support combined depth stencil which is all we have
+       * prior to gen6.
+       */
+      if (brw->gen < 6)
+         return false;
+
       src_irb =
          intel_renderbuffer(read_fb->Attachment[BUFFER_STENCIL].Renderbuffer);
       dst_irb =
@@ -737,10 +750,6 @@ brw_blorp_framebuffer(struct brw_context *brw,
                       GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
                       GLbitfield mask, GLenum filter)
 {
-   /* BLORP is not supported before Gen6. */
-   if (brw->gen < 6)
-      return mask;
-
    static GLbitfield buffer_bits[] = {
       GL_COLOR_BUFFER_BIT,
       GL_DEPTH_BUFFER_BIT,
