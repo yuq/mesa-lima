@@ -1214,7 +1214,7 @@ nv50_ir_generate_code(struct nv50_ir_prog_info *info)
    PROG_TYPE_CASE(FRAGMENT, FRAGMENT);
    PROG_TYPE_CASE(COMPUTE, COMPUTE);
    default:
-      INFO_DBG(info->dbgFlags, VERBOSE, "unsupported program type %u\n", type);
+      INFO_DBG(info->dbgFlags, VERBOSE, "unsupported program type %u\n", info->type);
       return -1;
    }
    INFO_DBG(info->dbgFlags, VERBOSE, "translating program of type %u\n", type);
