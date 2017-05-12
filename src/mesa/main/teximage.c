@@ -4583,7 +4583,7 @@ compressed_tex_sub_image(unsigned dim, GLenum target, GLuint texture,
        * (See texturesubimage in teximage.c for details on why this check is
        * performed.)
        */
-      if (!_mesa_cube_level_complete(texObj, level)) {
+      if (!no_error && !_mesa_cube_level_complete(texObj, level)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glCompressedTextureSubImage3D(cube map incomplete)");
          return;
@@ -4714,6 +4714,19 @@ _mesa_CompressedTextureSubImage2D(GLuint texture, GLint level, GLint xoffset,
 }
 
 void GLAPIENTRY
+_mesa_CompressedTexSubImage3D_no_error(GLenum target, GLint level,
+                                       GLint xoffset, GLint yoffset,
+                                       GLint zoffset, GLsizei width,
+                                       GLsizei height, GLsizei depth,
+                                       GLenum format, GLsizei imageSize,
+                                       const GLvoid *data)
+{
+   compressed_tex_sub_image(3, target, 0, level, xoffset, yoffset, zoffset,
+                            width, height, depth, format, imageSize, data,
+                            false, true, "glCompressedTexSubImage3D");
+}
+
+void GLAPIENTRY
 _mesa_CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset,
                               GLint yoffset, GLint zoffset, GLsizei width,
                               GLsizei height, GLsizei depth, GLenum format,
@@ -4722,6 +4735,19 @@ _mesa_CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset,
    compressed_tex_sub_image(3, target, 0, level, xoffset, yoffset, zoffset,
                             width, height, depth, format, imageSize, data,
                             false, false, "glCompressedTexSubImage3D");
+}
+
+void GLAPIENTRY
+_mesa_CompressedTextureSubImage3D_no_error(GLuint texture, GLint level,
+                                           GLint xoffset, GLint yoffset,
+                                           GLint zoffset, GLsizei width,
+                                           GLsizei height, GLsizei depth,
+                                           GLenum format, GLsizei imageSize,
+                                           const GLvoid *data)
+{
+   compressed_tex_sub_image(3, 0, texture, level, xoffset, yoffset, zoffset,
+                            width, height, depth, format, imageSize, data,
+                            true, true, "glCompressedTextureSubImage3D");
 }
 
 void GLAPIENTRY
