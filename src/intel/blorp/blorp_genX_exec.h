@@ -424,6 +424,67 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 #endif
 }
 
+/* 3DSTATE_VIEWPORT_STATE_POINTERS */
+static void
+blorp_emit_viewport_state(struct blorp_batch *batch,
+                          const struct blorp_params *params)
+{
+   uint32_t cc_vp_offset;
+   blorp_emit_dynamic(batch, GENX(CC_VIEWPORT), vp, 32, &cc_vp_offset) {
+      vp.MinimumDepth = 0.0;
+      vp.MaximumDepth = 1.0;
+   }
+
+#if GEN_GEN >= 7
+   blorp_emit(batch, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), vsp) {
+      vsp.CCViewportPointer = cc_vp_offset;
+   }
+#else
+   blorp_emit(batch, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vsp) {
+      vsp.CCViewportStateChange = true;
+      vsp.PointertoCC_VIEWPORT = cc_vp_offset;
+   }
+#endif
+}
+
+static void
+blorp_emit_sampler_state(struct blorp_batch *batch,
+                         const struct blorp_params *params)
+{
+   uint32_t offset;
+   blorp_emit_dynamic(batch, GENX(SAMPLER_STATE), sampler, 32, &offset) {
+      sampler.MipModeFilter = MIPFILTER_NONE;
+      sampler.MagModeFilter = MAPFILTER_LINEAR;
+      sampler.MinModeFilter = MAPFILTER_LINEAR;
+      sampler.MinLOD = 0;
+      sampler.MaxLOD = 0;
+      sampler.TCXAddressControlMode = TCM_CLAMP;
+      sampler.TCYAddressControlMode = TCM_CLAMP;
+      sampler.TCZAddressControlMode = TCM_CLAMP;
+      sampler.MaximumAnisotropy = RATIO21;
+      sampler.RAddressMinFilterRoundingEnable = true;
+      sampler.RAddressMagFilterRoundingEnable = true;
+      sampler.VAddressMinFilterRoundingEnable = true;
+      sampler.VAddressMagFilterRoundingEnable = true;
+      sampler.UAddressMinFilterRoundingEnable = true;
+      sampler.UAddressMagFilterRoundingEnable = true;
+      sampler.NonnormalizedCoordinateEnable = true;
+   }
+
+#if GEN_GEN >= 7
+   blorp_emit(batch, GENX(3DSTATE_SAMPLER_STATE_POINTERS_PS), ssp) {
+      ssp.PointertoPSSamplerState = offset;
+   }
+#else
+   blorp_emit(batch, GENX(3DSTATE_SAMPLER_STATE_POINTERS), ssp) {
+      ssp.VSSamplerStateChange = true;
+      ssp.GSSamplerStateChange = true;
+      ssp.PSSamplerStateChange = true;
+      ssp.PointertoPSSamplerState = offset;
+   }
+#endif
+}
+
 static void
 blorp_emit_vs_config(struct blorp_batch *batch,
                      const struct blorp_params *params)
@@ -781,60 +842,6 @@ blorp_emit_ps_config(struct blorp_batch *batch,
 #endif /* GEN_GEN */
 }
 
-static void
-blorp_emit_depth_stencil_config(struct blorp_batch *batch,
-                                const struct blorp_params *params)
-{
-   const struct isl_device *isl_dev = batch->blorp->isl_dev;
-
-   uint32_t *dw = blorp_emit_dwords(batch, isl_dev->ds.size / 4);
-   if (dw == NULL)
-      return;
-
-   struct isl_depth_stencil_hiz_emit_info info = {
-#if GEN_GEN >= 7
-      .mocs = 1, /* GEN7_MOCS_L3 */
-#else
-      .mocs = 0,
-#endif
-   };
-
-   if (params->depth.enabled) {
-      info.view = &params->depth.view;
-   } else if (params->stencil.enabled) {
-      info.view = &params->stencil.view;
-   }
-
-   if (params->depth.enabled) {
-      info.depth_surf = &params->depth.surf;
-
-      info.depth_address =
-         blorp_emit_reloc(batch, dw + isl_dev->ds.depth_offset / 4,
-                          params->depth.addr, 0);
-
-      info.hiz_usage = params->depth.aux_usage;
-      if (info.hiz_usage == ISL_AUX_USAGE_HIZ) {
-         info.hiz_surf = &params->depth.aux_surf;
-
-         info.hiz_address =
-            blorp_emit_reloc(batch, dw + isl_dev->ds.hiz_offset / 4,
-                             params->depth.aux_addr, 0);
-
-         info.depth_clear_value = params->depth.clear_color.u32[0];
-      }
-   }
-
-   if (params->stencil.enabled) {
-      info.stencil_surf = &params->stencil.surf;
-
-      info.stencil_address =
-         blorp_emit_reloc(batch, dw + isl_dev->ds.stencil_offset / 4,
-                          params->stencil.addr, 0);
-   }
-
-   isl_emit_depth_stencil_hiz_s(isl_dev, dw, &info);
-}
-
 static uint32_t
 blorp_emit_blend_state(struct blorp_batch *batch,
                        const struct blorp_params *params)
@@ -988,6 +995,133 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
 }
 
 static void
+blorp_emit_3dstate_multisample(struct blorp_batch *batch,
+                               const struct blorp_params *params)
+{
+   blorp_emit(batch, GENX(3DSTATE_MULTISAMPLE), ms) {
+      ms.NumberofMultisamples       = __builtin_ffs(params->num_samples) - 1;
+
+#if GEN_GEN >= 8
+      /* The PRM says that this bit is valid only for DX9:
+       *
+       *    SW can choose to set this bit only for DX9 API. DX10/OGL API's
+       *    should not have any effect by setting or not setting this bit.
+       */
+      ms.PixelPositionOffsetEnable  = false;
+#elif GEN_GEN >= 7
+
+      switch (params->num_samples) {
+      case 1:
+         GEN_SAMPLE_POS_1X(ms.Sample);
+         break;
+      case 2:
+         GEN_SAMPLE_POS_2X(ms.Sample);
+         break;
+      case 4:
+         GEN_SAMPLE_POS_4X(ms.Sample);
+         break;
+      case 8:
+         GEN_SAMPLE_POS_8X(ms.Sample);
+         break;
+      default:
+         break;
+      }
+#else
+      GEN_SAMPLE_POS_4X(ms.Sample);
+#endif
+      ms.PixelLocation              = CENTER;
+   }
+}
+
+static void
+blorp_emit_pipeline(struct blorp_batch *batch,
+                    const struct blorp_params *params)
+{
+   uint32_t blend_state_offset = 0;
+   uint32_t color_calc_state_offset;
+   uint32_t depth_stencil_state_offset;
+
+   emit_urb_config(batch, params);
+
+   if (params->wm_prog_data) {
+      blend_state_offset = blorp_emit_blend_state(batch, params);
+   }
+   color_calc_state_offset = blorp_emit_color_calc_state(batch, params);
+   depth_stencil_state_offset = blorp_emit_depth_stencil_state(batch, params);
+
+#if GEN_GEN == 6
+   /* 3DSTATE_CC_STATE_POINTERS
+    *
+    * The pointer offsets are relative to
+    * CMD_STATE_BASE_ADDRESS.DynamicStateBaseAddress.
+    *
+    * The HiZ op doesn't use BLEND_STATE or COLOR_CALC_STATE.
+    *
+    * The dynamic state emit helpers emit their own STATE_POINTERS packets on
+    * gen7+.  However, on gen6 and earlier, they're all lumpped together in
+    * one CC_STATE_POINTERS packet so we have to emit that here.
+    */
+   blorp_emit(batch, GENX(3DSTATE_CC_STATE_POINTERS), cc) {
+      cc.BLEND_STATEChange = true;
+      cc.ColorCalcStatePointerValid = true;
+      cc.DEPTH_STENCIL_STATEChange = true;
+      cc.PointertoBLEND_STATE = blend_state_offset;
+      cc.ColorCalcStatePointer = color_calc_state_offset;
+      cc.PointertoDEPTH_STENCIL_STATE = depth_stencil_state_offset;
+   }
+#else
+   (void)blend_state_offset;
+   (void)color_calc_state_offset;
+   (void)depth_stencil_state_offset;
+#endif
+
+   blorp_emit(batch, GENX(3DSTATE_CONSTANT_VS), vs);
+#if GEN_GEN >= 7
+   blorp_emit(batch, GENX(3DSTATE_CONSTANT_HS), hs);
+   blorp_emit(batch, GENX(3DSTATE_CONSTANT_DS), DS);
+#endif
+   blorp_emit(batch, GENX(3DSTATE_CONSTANT_GS), gs);
+   blorp_emit(batch, GENX(3DSTATE_CONSTANT_PS), ps);
+
+   if (params->src.enabled)
+      blorp_emit_sampler_state(batch, params);
+
+   blorp_emit_3dstate_multisample(batch, params);
+
+   blorp_emit(batch, GENX(3DSTATE_SAMPLE_MASK), mask) {
+      mask.SampleMask = (1 << params->num_samples) - 1;
+   }
+
+   /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
+    * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
+    *
+    *   [DevSNB] A pipeline flush must be programmed prior to a
+    *   3DSTATE_VS command that causes the VS Function Enable to
+    *   toggle. Pipeline flush can be executed by sending a PIPE_CONTROL
+    *   command with CS stall bit set and a post sync operation.
+    *
+    * We've already done one at the start of the BLORP operation.
+    */
+   blorp_emit_vs_config(batch, params);
+#if GEN_GEN >= 7
+   blorp_emit(batch, GENX(3DSTATE_HS), hs);
+   blorp_emit(batch, GENX(3DSTATE_TE), te);
+   blorp_emit(batch, GENX(3DSTATE_DS), DS);
+   blorp_emit(batch, GENX(3DSTATE_STREAMOUT), so);
+#endif
+   blorp_emit(batch, GENX(3DSTATE_GS), gs);
+
+   blorp_emit(batch, GENX(3DSTATE_CLIP), clip) {
+      clip.PerspectiveDivideDisable = true;
+   }
+
+   blorp_emit_sf_config(batch, params);
+   blorp_emit_ps_config(batch, params);
+
+   blorp_emit_viewport_state(batch, params);
+}
+
+static void
 blorp_emit_surface_state(struct blorp_batch *batch,
                          const struct brw_blorp_surface_info *surface,
                          void *state, uint32_t state_offset,
@@ -1118,80 +1252,57 @@ blorp_emit_surface_states(struct blorp_batch *batch,
 }
 
 static void
-blorp_emit_sampler_state(struct blorp_batch *batch,
-                         const struct blorp_params *params)
+blorp_emit_depth_stencil_config(struct blorp_batch *batch,
+                                const struct blorp_params *params)
 {
-   uint32_t offset;
-   blorp_emit_dynamic(batch, GENX(SAMPLER_STATE), sampler, 32, &offset) {
-      sampler.MipModeFilter = MIPFILTER_NONE;
-      sampler.MagModeFilter = MAPFILTER_LINEAR;
-      sampler.MinModeFilter = MAPFILTER_LINEAR;
-      sampler.MinLOD = 0;
-      sampler.MaxLOD = 0;
-      sampler.TCXAddressControlMode = TCM_CLAMP;
-      sampler.TCYAddressControlMode = TCM_CLAMP;
-      sampler.TCZAddressControlMode = TCM_CLAMP;
-      sampler.MaximumAnisotropy = RATIO21;
-      sampler.RAddressMinFilterRoundingEnable = true;
-      sampler.RAddressMagFilterRoundingEnable = true;
-      sampler.VAddressMinFilterRoundingEnable = true;
-      sampler.VAddressMagFilterRoundingEnable = true;
-      sampler.UAddressMinFilterRoundingEnable = true;
-      sampler.UAddressMagFilterRoundingEnable = true;
-      sampler.NonnormalizedCoordinateEnable = true;
-   }
+   const struct isl_device *isl_dev = batch->blorp->isl_dev;
 
+   uint32_t *dw = blorp_emit_dwords(batch, isl_dev->ds.size / 4);
+   if (dw == NULL)
+      return;
+
+   struct isl_depth_stencil_hiz_emit_info info = {
 #if GEN_GEN >= 7
-   blorp_emit(batch, GENX(3DSTATE_SAMPLER_STATE_POINTERS_PS), ssp) {
-      ssp.PointertoPSSamplerState = offset;
-   }
+      .mocs = 1, /* GEN7_MOCS_L3 */
 #else
-   blorp_emit(batch, GENX(3DSTATE_SAMPLER_STATE_POINTERS), ssp) {
-      ssp.VSSamplerStateChange = true;
-      ssp.GSSamplerStateChange = true;
-      ssp.PSSamplerStateChange = true;
-      ssp.PointertoPSSamplerState = offset;
-   }
+      .mocs = 0,
 #endif
-}
+   };
 
-static void
-blorp_emit_3dstate_multisample(struct blorp_batch *batch,
-                               const struct blorp_params *params)
-{
-   blorp_emit(batch, GENX(3DSTATE_MULTISAMPLE), ms) {
-      ms.NumberofMultisamples       = __builtin_ffs(params->num_samples) - 1;
+   if (params->depth.enabled) {
+      info.view = &params->depth.view;
+   } else if (params->stencil.enabled) {
+      info.view = &params->stencil.view;
+   }
 
-#if GEN_GEN >= 8
-      /* The PRM says that this bit is valid only for DX9:
-       *
-       *    SW can choose to set this bit only for DX9 API. DX10/OGL API's
-       *    should not have any effect by setting or not setting this bit.
-       */
-      ms.PixelPositionOffsetEnable  = false;
-#elif GEN_GEN >= 7
+   if (params->depth.enabled) {
+      info.depth_surf = &params->depth.surf;
 
-      switch (params->num_samples) {
-      case 1:
-         GEN_SAMPLE_POS_1X(ms.Sample);
-         break;
-      case 2:
-         GEN_SAMPLE_POS_2X(ms.Sample);
-         break;
-      case 4:
-         GEN_SAMPLE_POS_4X(ms.Sample);
-         break;
-      case 8:
-         GEN_SAMPLE_POS_8X(ms.Sample);
-         break;
-      default:
-         break;
+      info.depth_address =
+         blorp_emit_reloc(batch, dw + isl_dev->ds.depth_offset / 4,
+                          params->depth.addr, 0);
+
+      info.hiz_usage = params->depth.aux_usage;
+      if (info.hiz_usage == ISL_AUX_USAGE_HIZ) {
+         info.hiz_surf = &params->depth.aux_surf;
+
+         info.hiz_address =
+            blorp_emit_reloc(batch, dw + isl_dev->ds.hiz_offset / 4,
+                             params->depth.aux_addr, 0);
+
+         info.depth_clear_value = params->depth.clear_color.u32[0];
       }
-#else
-      GEN_SAMPLE_POS_4X(ms.Sample);
-#endif
-      ms.PixelLocation              = CENTER;
    }
+
+   if (params->stencil.enabled) {
+      info.stencil_surf = &params->stencil.surf;
+
+      info.stencil_address =
+         blorp_emit_reloc(batch, dw + isl_dev->ds.stencil_offset / 4,
+                          params->stencil.addr, 0);
+   }
+
+   isl_emit_depth_stencil_hiz_s(isl_dev, dw, &info);
 }
 
 #if GEN_GEN >= 8
@@ -1273,117 +1384,6 @@ blorp_emit_gen8_hiz_op(struct blorp_batch *batch,
    }
 }
 #endif
-
-/* 3DSTATE_VIEWPORT_STATE_POINTERS */
-static void
-blorp_emit_viewport_state(struct blorp_batch *batch,
-                          const struct blorp_params *params)
-{
-   uint32_t cc_vp_offset;
-   blorp_emit_dynamic(batch, GENX(CC_VIEWPORT), vp, 32, &cc_vp_offset) {
-      vp.MinimumDepth = 0.0;
-      vp.MaximumDepth = 1.0;
-   }
-
-#if GEN_GEN >= 7
-   blorp_emit(batch, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), vsp) {
-      vsp.CCViewportPointer = cc_vp_offset;
-   }
-#else
-   blorp_emit(batch, GENX(3DSTATE_VIEWPORT_STATE_POINTERS), vsp) {
-      vsp.CCViewportStateChange = true;
-      vsp.PointertoCC_VIEWPORT = cc_vp_offset;
-   }
-#endif
-}
-
-static void
-blorp_emit_pipeline(struct blorp_batch *batch,
-                    const struct blorp_params *params)
-{
-   uint32_t blend_state_offset = 0;
-   uint32_t color_calc_state_offset;
-   uint32_t depth_stencil_state_offset;
-
-   emit_urb_config(batch, params);
-
-   if (params->wm_prog_data) {
-      blend_state_offset = blorp_emit_blend_state(batch, params);
-   }
-   color_calc_state_offset = blorp_emit_color_calc_state(batch, params);
-   depth_stencil_state_offset = blorp_emit_depth_stencil_state(batch, params);
-
-#if GEN_GEN == 6
-   /* 3DSTATE_CC_STATE_POINTERS
-    *
-    * The pointer offsets are relative to
-    * CMD_STATE_BASE_ADDRESS.DynamicStateBaseAddress.
-    *
-    * The HiZ op doesn't use BLEND_STATE or COLOR_CALC_STATE.
-    *
-    * The dynamic state emit helpers emit their own STATE_POINTERS packets on
-    * gen7+.  However, on gen6 and earlier, they're all lumpped together in
-    * one CC_STATE_POINTERS packet so we have to emit that here.
-    */
-   blorp_emit(batch, GENX(3DSTATE_CC_STATE_POINTERS), cc) {
-      cc.BLEND_STATEChange = true;
-      cc.ColorCalcStatePointerValid = true;
-      cc.DEPTH_STENCIL_STATEChange = true;
-      cc.PointertoBLEND_STATE = blend_state_offset;
-      cc.ColorCalcStatePointer = color_calc_state_offset;
-      cc.PointertoDEPTH_STENCIL_STATE = depth_stencil_state_offset;
-   }
-#else
-   (void)blend_state_offset;
-   (void)color_calc_state_offset;
-   (void)depth_stencil_state_offset;
-#endif
-
-   blorp_emit(batch, GENX(3DSTATE_CONSTANT_VS), vs);
-#if GEN_GEN >= 7
-   blorp_emit(batch, GENX(3DSTATE_CONSTANT_HS), hs);
-   blorp_emit(batch, GENX(3DSTATE_CONSTANT_DS), DS);
-#endif
-   blorp_emit(batch, GENX(3DSTATE_CONSTANT_GS), gs);
-   blorp_emit(batch, GENX(3DSTATE_CONSTANT_PS), ps);
-
-   if (params->src.enabled)
-      blorp_emit_sampler_state(batch, params);
-
-   blorp_emit_3dstate_multisample(batch, params);
-
-   blorp_emit(batch, GENX(3DSTATE_SAMPLE_MASK), mask) {
-      mask.SampleMask = (1 << params->num_samples) - 1;
-   }
-
-   /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
-    * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
-    *
-    *   [DevSNB] A pipeline flush must be programmed prior to a
-    *   3DSTATE_VS command that causes the VS Function Enable to
-    *   toggle. Pipeline flush can be executed by sending a PIPE_CONTROL
-    *   command with CS stall bit set and a post sync operation.
-    *
-    * We've already done one at the start of the BLORP operation.
-    */
-   blorp_emit_vs_config(batch, params);
-#if GEN_GEN >= 7
-   blorp_emit(batch, GENX(3DSTATE_HS), hs);
-   blorp_emit(batch, GENX(3DSTATE_TE), te);
-   blorp_emit(batch, GENX(3DSTATE_DS), DS);
-   blorp_emit(batch, GENX(3DSTATE_STREAMOUT), so);
-#endif
-   blorp_emit(batch, GENX(3DSTATE_GS), gs);
-
-   blorp_emit(batch, GENX(3DSTATE_CLIP), clip) {
-      clip.PerspectiveDivideDisable = true;
-   }
-
-   blorp_emit_sf_config(batch, params);
-   blorp_emit_ps_config(batch, params);
-
-   blorp_emit_viewport_state(batch, params);
-}
 
 /**
  * \brief Execute a blit or render pass operation.
