@@ -824,6 +824,7 @@ tc_set_shader_images(struct pipe_context *_pipe,
 
 struct tc_shader_buffers {
    ubyte shader, start, count;
+   bool unbind;
    struct pipe_shader_buffer slot[0]; /* more will be allocated if needed */
 };
 
@@ -832,6 +833,11 @@ tc_call_set_shader_buffers(struct pipe_context *pipe, union tc_payload *payload)
 {
    struct tc_shader_buffers *p = (struct tc_shader_buffers *)payload;
    unsigned count = p->count;
+
+   if (p->unbind) {
+      pipe->set_shader_buffers(pipe, p->shader, p->start, p->count, NULL);
+      return;
+   }
 
    pipe->set_shader_buffers(pipe, p->shader, p->start, p->count, p->slot);
 
@@ -849,11 +855,13 @@ tc_set_shader_buffers(struct pipe_context *_pipe, unsigned shader,
 
    struct threaded_context *tc = threaded_context(_pipe);
    struct tc_shader_buffers *p =
-      tc_add_slot_based_call(tc, TC_CALL_set_shader_buffers, tc_shader_buffers, count);
+      tc_add_slot_based_call(tc, TC_CALL_set_shader_buffers, tc_shader_buffers,
+                             buffers ? count : 0);
 
    p->shader = shader;
    p->start = start;
    p->count = count;
+   p->unbind = buffers == NULL;
 
    if (buffers) {
       for (unsigned i = 0; i < count; i++) {
@@ -871,8 +879,6 @@ tc_set_shader_buffers(struct pipe_context *_pipe, unsigned shader,
                            src->buffer_offset + src->buffer_size);
          }
       }
-   } else {
-      memset(p->slot, 0, count * sizeof(buffers[0]));
    }
 }
 
