@@ -431,7 +431,7 @@
     <field name="Color Buffer Blend Enable" start="108" end="108" type="bool"/>
     <field name="Alpha Test Enable" start="107" end="107" type="bool"/>
     <field name="Alpha Test Function" start="104" end="106" type="3D_Compare_Function"/>
-    <field name="Color Calc State Pointer" start="133" end="159" type="address"/>
+    <field name="CC Viewport State Pointer" start="133" end="159" type="address"/>
     <field name="Color Dither Enable" start="191" end="191" type="bool"/>
     <field name="Round Disable Function Disable" start="190" end="190" type="bool"/>
     <field name="Logic Op Function" start="176" end="179" type="3D_Logic_Op_Function"/>
