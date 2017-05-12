@@ -285,6 +285,27 @@ intel_depth_format_for_depthstencil_format(mesa_format format) {
    }
 }
 
+static bool
+create_mapping_table(GLenum target, unsigned first_level, unsigned last_level,
+                     unsigned depth0, struct intel_mipmap_level *table)
+{
+   for (unsigned level = first_level; level <= last_level; level++) {
+      const unsigned d =
+         target == GL_TEXTURE_3D ? minify(depth0, level) : depth0;
+
+      table[level].slice = calloc(d, sizeof(*table[0].slice));
+      if (!table[level].slice)
+         goto unwind;
+   }
+
+   return true;
+
+unwind:
+   for (unsigned level = first_level; level <= last_level; level++)
+      free(table[level].slice);
+
+   return false;
+}
 
 /**
  * @param for_bo Indicates that the caller is
@@ -425,6 +446,12 @@ intel_miptree_create_layout(struct brw_context *brw,
          depth_multiply = num_samples;
          depth0 *= depth_multiply;
       }
+   }
+
+   if (!create_mapping_table(target, first_level, last_level, depth0,
+                             mt->level)) {
+      free(mt);
+      return NULL;
    }
 
    /* Set array_layout to ALL_SLICES_AT_EACH_LOD when array_spacing_lod0 can
@@ -1105,9 +1132,8 @@ intel_miptree_set_level_info(struct intel_mipmap_tree *mt,
    DBG("%s level %d, depth %d, offset %d,%d\n", __func__,
        level, d, x, y);
 
-   assert(mt->level[level].slice == NULL);
+   assert(mt->level[level].slice);
 
-   mt->level[level].slice = calloc(d, sizeof(*mt->level[0].slice));
    mt->level[level].slice[0].x_offset = mt->level[level].level_x;
    mt->level[level].slice[0].y_offset = mt->level[level].level_y;
 }
