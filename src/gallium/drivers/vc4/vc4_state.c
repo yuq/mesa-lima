@@ -587,6 +587,9 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         return NULL;
                 }
                 rsc = vc4_resource(prsc);
+                vc4_bo_label(vc4_screen(pctx->screen), rsc->bo,
+                            "tiling shadow %dx%d",
+                             tmpl.width0, tmpl.height0);
 
                 /* Flag it as needing update of the contents from the parent. */
                 rsc->writes = shadow_parent->writes - 1;
