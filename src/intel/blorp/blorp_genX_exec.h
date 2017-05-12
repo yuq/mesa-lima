@@ -432,8 +432,8 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static uint32_t
-blorp_emit_viewport_state(struct blorp_batch *batch,
-                          const struct blorp_params *params)
+blorp_emit_cc_viewport(struct blorp_batch *batch,
+                       const struct blorp_params *params)
 {
    uint32_t cc_vp_offset;
    blorp_emit_dynamic(batch, GENX(CC_VIEWPORT), vp, 32, &cc_vp_offset) {
@@ -1136,7 +1136,7 @@ blorp_emit_pipeline(struct blorp_batch *batch,
    blorp_emit_sf_config(batch, params);
    blorp_emit_ps_config(batch, params);
 
-   blorp_emit_viewport_state(batch, params);
+   blorp_emit_cc_viewport(batch, params);
 }
 
 /******** This is the end of the pipeline setup code ********/
