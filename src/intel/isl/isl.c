@@ -84,17 +84,16 @@ isl_device_init(struct isl_device *dev,
    dev->ss.aux_addr_offset =
       (RENDER_SURFACE_STATE_AuxiliarySurfaceBaseAddress_start(info) & ~31) / 8;
 
-   dev->ds.size =
-      _3DSTATE_DEPTH_BUFFER_length(info) * 4 +
-      _3DSTATE_STENCIL_BUFFER_length(info) * 4 +
-      _3DSTATE_HIER_DEPTH_BUFFER_length(info) * 4 +
-      _3DSTATE_CLEAR_PARAMS_length(info) * 4;
-
+   dev->ds.size = _3DSTATE_DEPTH_BUFFER_length(info) * 4;
    assert(_3DSTATE_DEPTH_BUFFER_SurfaceBaseAddress_start(info) % 8 == 0);
    dev->ds.depth_offset =
       _3DSTATE_DEPTH_BUFFER_SurfaceBaseAddress_start(info) / 8;
 
-   if (info->has_hiz_and_separate_stencil) {
+   if (dev->use_separate_stencil) {
+      dev->ds.size += _3DSTATE_STENCIL_BUFFER_length(info) * 4 +
+                      _3DSTATE_HIER_DEPTH_BUFFER_length(info) * 4 +
+                      _3DSTATE_CLEAR_PARAMS_length(info) * 4;
+
       assert(_3DSTATE_STENCIL_BUFFER_SurfaceBaseAddress_start(info) % 8 == 0);
       dev->ds.stencil_offset =
          _3DSTATE_DEPTH_BUFFER_length(info) * 4 +
