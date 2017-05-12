@@ -919,7 +919,7 @@ dri2_display_release(_EGLDisplay *disp)
     * the ones from the gbm device. As such the gbm itself is responsible
     * for the cleanup.
     */
-   if (disp->Platform != _EGL_PLATFORM_DRM) {
+   if (disp->Platform != _EGL_PLATFORM_DRM && dri2_dpy->driver_configs) {
       for (i = 0; dri2_dpy->driver_configs[i]; i++)
          free((__DRIconfig *) dri2_dpy->driver_configs[i]);
       free(dri2_dpy->driver_configs);
