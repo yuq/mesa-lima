@@ -549,6 +549,69 @@
     <field name="Border Color Alpha" start="96" end="127" type="float"/>
   </struct>
 
+  <struct name="SAMPLER_STATE" length="4">
+    <field name="Sampler Disable" start="31" end="31" type="bool"/>
+    <field name="LOD PreClamp Enable" start="28" end="28" type="bool"/>
+    <field name="Base Mip Level" start="22" end="26" type="u4.1"/>
+    <field name="Mip Mode Filter" start="20" end="21" type="uint" prefix="MIPFILTER">
+      <value name="NONE" value="0"/>
+      <value name="NEAREST" value="1"/>
+      <value name="LINEAR" value="3"/>
+    </field>
+    <field name="Mag Mode Filter" start="17" end="19" type="uint" prefix="MAPFILTER">
+      <value name="NEAREST" value="0"/>
+      <value name="LINEAR" value="1"/>
+      <value name="ANISOTROPIC" value="2"/>
+      <value name="MONO" value="6"/>
+    </field>
+    <field name="Min Mode Filter" start="14" end="16" type="uint" prefix="MAPFILTER"/>
+    <field name="Texture LOD Bias" start="3" end="13" type="s4.6"/>
+    <field name="Shadow Function" start="0" end="2" type="uint">
+      <value name="PREFILTEROP_ALWAYS" value="0"/>
+      <value name="PREFILTEROP_NEVER" value="1"/>
+      <value name="PREFILTEROP_LESS" value="2"/>
+      <value name="PREFILTEROP_EQUAL" value="3"/>
+      <value name="PREFILTEROP_LEQUAL" value="4"/>
+      <value name="PREFILTEROP_GREATER" value="5"/>
+      <value name="PREFILTEROP_NOTEQUAL" value="6"/>
+      <value name="PREFILTEROP_GEQUAL" value="7"/>
+    </field>
+    <field name="Min LOD" start="54" end="63" type="u4.6"/>
+    <field name="Max LOD" start="44" end="53" type="u4.6"/>
+    <field name="Cube Surface Control Mode" start="41" end="41" type="uint">
+      <value name="CUBECTRLMODE_PROGRAMMED" value="0"/>
+      <value name="CUBECTRLMODE_OVERRIDE" value="1"/>
+    </field>
+    <field name="TCX Address Control Mode" start="38" end="40" type="Texture_Coordinate_Mode"/>
+    <field name="TCY Address Control Mode" start="35" end="37" type="Texture_Coordinate_Mode"/>
+    <field name="TCZ Address Control Mode" start="32" end="34" type="Texture_Coordinate_Mode"/>
+    <field name="Border Color Pointer" start="69" end="95" type="offset"/>
+    <field name="Monochrome Filter Height" start="125" end="127" type="uint"/>
+    <field name="Monochrome Filter Width" start="122" end="124" type="uint"/>
+    <field name="ChromaKey Enable" start="121" end="121" type="bool"/>
+    <field name="ChromaKey Index" start="119" end="120" type="uint"/>
+    <field name="ChromaKey Mode" start="118" end="118" type="uint" prefix="KEYFILTER">
+      <value name="KILL_ON_ANY_MATCH" value="0"/>
+      <value name="REPLACE_BLACK" value="1"/>
+    </field>
+    <field name="Maximum Anisotropy" start="115" end="117" type="uint">
+      <value name="RATIO 2:1" value="0"/>
+      <value name="RATIO 4:1" value="1"/>
+      <value name="RATIO 6:1" value="2"/>
+      <value name="RATIO 8:1" value="3"/>
+      <value name="RATIO 10:1" value="4"/>
+      <value name="RATIO 12:1" value="5"/>
+      <value name="RATIO 14:1" value="6"/>
+      <value name="RATIO 16:1" value="7"/>
+    </field>
+    <field name="R Address Min Filter Rounding Enable" start="109" end="109" type="bool"/>
+    <field name="R Address Mag Filter Rounding Enable" start="110" end="110" type="bool"/>
+    <field name="V Address Min Filter Rounding Enable" start="111" end="111" type="bool"/>
+    <field name="V Address Mag Filter Rounding Enable" start="112" end="112" type="bool"/>
+    <field name="U Address Min Filter Rounding Enable" start="113" end="113" type="bool"/>
+    <field name="U Address Mag Filter Rounding Enable" start="114" end="114" type="bool"/>
+  </struct>
+
   <struct name="SF_STATE" length="8">
     <field name="Kernel Start Pointer" start="6" end="31" type="address"/>
     <field name="GRF Register Count" start="1" end="3" type="uint"/>
