@@ -584,7 +584,6 @@
     <field name="V Address Mag Filter Rounding Enable" start="112" end="112" type="bool"/>
     <field name="U Address Min Filter Rounding Enable" start="113" end="113" type="bool"/>
     <field name="U Address Mag Filter Rounding Enable" start="114" end="114" type="bool"/>
-    <field name="Non-normalized Coordinate Enable" start="96" end="96" type="bool"/>
   </struct>
 
   <struct name="RENDER_SURFACE_STATE" length="6">
