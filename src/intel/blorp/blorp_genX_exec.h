@@ -1316,32 +1316,13 @@ blorp_emit_viewport_state(struct blorp_batch *batch,
 #endif
 }
 
-
-/**
- * \brief Execute a blit or render pass operation.
- *
- * To execute the operation, this function manually constructs and emits a
- * batch to draw a rectangle primitive. The batchbuffer is flushed before
- * constructing and after emitting the batch.
- *
- * This function alters no GL state.
- */
 static void
-blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
+blorp_emit_pipeline(struct blorp_batch *batch,
+                    const struct blorp_params *params)
 {
    uint32_t blend_state_offset = 0;
-   uint32_t color_calc_state_offset = 0;
+   uint32_t color_calc_state_offset;
    uint32_t depth_stencil_state_offset;
-
-#if GEN_GEN >= 8
-   if (params->hiz_op != BLORP_HIZ_OP_NONE) {
-      blorp_emit_gen8_hiz_op(batch, params);
-      return;
-   }
-#endif
-
-   blorp_emit_vertex_buffers(batch, params);
-   blorp_emit_vertex_elements(batch, params);
 
    emit_urb_config(batch, params);
 
@@ -1351,7 +1332,7 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    color_calc_state_offset = blorp_emit_color_calc_state(batch, params);
    depth_stencil_state_offset = blorp_emit_depth_stencil_state(batch, params);
 
-#if GEN_GEN <= 6
+#if GEN_GEN == 6
    /* 3DSTATE_CC_STATE_POINTERS
     *
     * The pointer offsets are relative to
@@ -1384,8 +1365,6 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
 #endif
    blorp_emit(batch, GENX(3DSTATE_CONSTANT_GS), gs);
    blorp_emit(batch, GENX(3DSTATE_CONSTANT_PS), ps);
-
-   blorp_emit_surface_states(batch, params);
 
    if (params->src.enabled)
       blorp_emit_sampler_state(batch, params);
@@ -1423,6 +1402,33 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    blorp_emit_ps_config(batch, params);
 
    blorp_emit_viewport_state(batch, params);
+}
+
+/**
+ * \brief Execute a blit or render pass operation.
+ *
+ * To execute the operation, this function manually constructs and emits a
+ * batch to draw a rectangle primitive. The batchbuffer is flushed before
+ * constructing and after emitting the batch.
+ *
+ * This function alters no GL state.
+ */
+static void
+blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
+{
+#if GEN_GEN >= 8
+   if (params->hiz_op != BLORP_HIZ_OP_NONE) {
+      blorp_emit_gen8_hiz_op(batch, params);
+      return;
+   }
+#endif
+
+   blorp_emit_vertex_buffers(batch, params);
+   blorp_emit_vertex_elements(batch, params);
+
+   blorp_emit_pipeline(batch, params);
+
+   blorp_emit_surface_states(batch, params);
 
    if (!(batch->flags & BLORP_BATCH_NO_EMIT_DEPTH_STENCIL))
       blorp_emit_depth_stencil_config(batch, params);
