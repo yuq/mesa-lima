@@ -1199,6 +1199,25 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
 			       GLuint level, GLuint slice,
 			       GLuint *x, GLuint *y)
 {
+   if (mt->surf.size > 0) {
+      uint32_t x_offset_sa, y_offset_sa;
+
+      /* Given level is relative to level zero while the miptree may be
+       * represent just a subset of all levels starting from 'first_level'.
+       */
+      assert(level >= mt->first_level);
+      level -= mt->first_level;
+
+      const unsigned z = mt->surf.dim == ISL_SURF_DIM_3D ? slice : 0;
+      slice = mt->surf.dim == ISL_SURF_DIM_3D ? 0 : slice;
+      isl_surf_get_image_offset_sa(&mt->surf, level, slice, z,
+                                   &x_offset_sa, &y_offset_sa);
+
+      *x = x_offset_sa;
+      *y = y_offset_sa;
+      return;
+   }
+
    assert(slice < mt->level[level].depth);
 
    *x = mt->level[level].slice[slice].x_offset;
