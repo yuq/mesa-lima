@@ -265,7 +265,7 @@ _mesa_UseProgramStages_no_error(GLuint pipeline, GLbitfield stages,
    struct gl_shader_program *shProg = NULL;
 
    if (prog)
-      _mesa_lookup_shader_program(ctx, prog);
+      shProg = _mesa_lookup_shader_program(ctx, prog);
 
    /* Object is created by any Pipeline call but glGenProgramPipelines,
     * glIsProgramPipeline and GetProgramPipelineInfoLog
