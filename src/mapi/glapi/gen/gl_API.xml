@@ -5051,7 +5051,8 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="BufferSubData" es1="1.1" es2="2.0" marshal="custom">
+    <function name="BufferSubData" es1="1.1" es2="2.0" marshal="custom"
+              no_error="true">
         <param name="target" type="GLenum"/>
         <param name="offset" type="GLintptr"/>
         <param name="size" type="GLsizeiptr" counter="true"/>

@@ -1872,13 +1872,27 @@ buffer_sub_data(GLenum target, GLuint buffer, GLintptr offset,
             return;
       }
    } else {
-      bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
-      if (!bufObj)
-         return;
+      if (no_error) {
+         struct gl_buffer_object **bufObjPtr = get_buffer_target(ctx, target);
+         bufObj = *bufObjPtr;
+      } else {
+         bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
+         if (!bufObj)
+            return;
+      }
    }
 
    if (no_error || validate_buffer_sub_data(ctx, bufObj, offset, size, func))
       _mesa_buffer_sub_data(ctx, bufObj, offset, size, data);
+}
+
+
+void GLAPIENTRY
+_mesa_BufferSubData_no_error(GLenum target, GLintptr offset,
+                             GLsizeiptr size, const GLvoid *data)
+{
+   buffer_sub_data(target, 0, offset, size, data, false, true,
+                   "glBufferSubData");
 }
 
 
