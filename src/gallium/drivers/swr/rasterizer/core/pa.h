@@ -325,6 +325,9 @@ struct PA_STATE_OPT : public PA_STATE
 
 #endif
         this->pfnPaFunc = this->pfnPaFuncReset;
+#if ENABLE_AVX512_SIMD16
+        this->pfnPaFunc_simd16 = this->pfnPaFuncReset_simd16;
+#endif
         this->numPrimsComplete = 0;
         this->numSimdPrims = 0;
         this->cur = 0;
