@@ -530,27 +530,24 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	OUT_PKT4(ring, REG_A5XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, COND(s[VS].v->writes_psize, A5XX_PC_PRIM_VTX_CNTL_PSIZE));
 
+	OUT_PKT4(ring, REG_A5XX_SP_PRIMITIVE_CNTL, 1);
+	OUT_RING(ring, A5XX_SP_PRIMITIVE_CNTL_VSOUT(l.cnt));
+
+	OUT_PKT4(ring, REG_A5XX_VPC_CNTL_0, 1);
+	OUT_RING(ring, A5XX_VPC_CNTL_0_STRIDE_IN_VPC(l.max_loc) |
+			COND(s[FS].v->total_in > 0, A5XX_VPC_CNTL_0_VARYING) |
+			COND(s[FS].v->frag_coord, A5XX_VPC_CNTL_0_VARYING) |
+			0x10000);    // XXX
+
+	OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
+	OUT_RING(ring, A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(l.max_loc) |
+			0x400);      // XXX
+
 	if (emit->key.binning_pass) {
 		OUT_PKT4(ring, REG_A5XX_SP_FS_OBJ_START_LO, 2);
 		OUT_RING(ring, 0x00000000);    /* SP_FS_OBJ_START_LO */
 		OUT_RING(ring, 0x00000000);    /* SP_FS_OBJ_START_HI */
 	} else {
-		// TODO if some of these other bits depend on something other than
-		// program state we should probably move these next three regs:
-
-		OUT_PKT4(ring, REG_A5XX_SP_PRIMITIVE_CNTL, 1);
-		OUT_RING(ring, A5XX_SP_PRIMITIVE_CNTL_VSOUT(l.cnt));
-
-		OUT_PKT4(ring, REG_A5XX_VPC_CNTL_0, 1);
-		OUT_RING(ring, A5XX_VPC_CNTL_0_STRIDE_IN_VPC(l.max_loc) |
-				COND(s[FS].v->total_in > 0, A5XX_VPC_CNTL_0_VARYING) |
-				COND(s[FS].v->frag_coord, A5XX_VPC_CNTL_0_VARYING) |
-				0x10000);    // XXX
-
-		OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
-		OUT_RING(ring, A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(l.max_loc) |
-				0x400);      // XXX
-
 		OUT_PKT4(ring, REG_A5XX_SP_FS_OBJ_START_LO, 2);
 		OUT_RELOC(ring, s[FS].v->bo, 0, 0, 0);  /* SP_FS_OBJ_START_LO/HI */
 	}
@@ -613,10 +610,12 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 					A5XX_SP_FS_OUTPUT_REG_HALF_PRECISION));
 	}
 
-	if (emit->key.binning_pass) {
-		OUT_PKT4(ring, REG_A5XX_VPC_PACK, 1);
-		OUT_RING(ring, A5XX_VPC_PACK_NUMNONPOSVAR(0));
-	} else {
+
+	OUT_PKT4(ring, REG_A5XX_VPC_PACK, 1);
+	OUT_RING(ring, A5XX_VPC_PACK_NUMNONPOSVAR(s[FS].v->total_in) |
+			A5XX_VPC_PACK_PSIZELOC(psize_loc));
+
+	if (!emit->key.binning_pass) {
 		uint32_t vinterp[8], vpsrepl[8];
 
 		memset(vinterp, 0, sizeof(vinterp));
@@ -697,10 +696,6 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 				}
 			}
 		}
-
-		OUT_PKT4(ring, REG_A5XX_VPC_PACK, 1);
-		OUT_RING(ring, A5XX_VPC_PACK_NUMNONPOSVAR(s[FS].v->total_in) |
-				A5XX_VPC_PACK_PSIZELOC(psize_loc));
 
 		OUT_PKT4(ring, REG_A5XX_VPC_VARYING_INTERP_MODE(0), 8);
 		for (i = 0; i < 8; i++)

@@ -60,7 +60,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, info->primitive_restart ? /* PC_RESTART_INDEX */
 			info->restart_index : 0xffffffff);
 
-	fd5_emit_render_cntl(ctx, false);
+	fd5_emit_render_cntl(ctx, false, emit->key.binning_pass);
 	fd5_draw_emit(ctx->batch, ring, primtype,
 			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
 			info, index_offset);
@@ -139,12 +139,12 @@ fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 
 	draw_impl(ctx, ctx->batch->draw, &emit, index_offset);
 
-//	/* and now binning pass: */
-//	emit.key.binning_pass = true;
-//	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
-//	emit.vp = NULL;   /* we changed key so need to refetch vp */
-//	emit.fp = NULL;
-//	draw_impl(ctx, ctx->batch->binning, &emit);
+	/* and now binning pass: */
+	emit.key.binning_pass = true;
+	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
+	emit.vp = NULL;   /* we changed key so need to refetch vp */
+	emit.fp = NULL;
+	draw_impl(ctx, ctx->batch->binning, &emit, index_offset);
 
 	if (emit.streamout_mask) {
 		struct fd_ringbuffer *ring = ctx->batch->draw;
@@ -177,7 +177,7 @@ fd5_clear(struct fd_context *ctx, unsigned buffers,
 	ctx->batch->max_scissor.maxx = MAX2(ctx->batch->max_scissor.maxx, scissor->maxx);
 	ctx->batch->max_scissor.maxy = MAX2(ctx->batch->max_scissor.maxy, scissor->maxy);
 
-	fd5_emit_render_cntl(ctx, true);
+	fd5_emit_render_cntl(ctx, true, false);
 
 	if (buffers & PIPE_CLEAR_COLOR) {
 		for (int i = 0; i < pfb->nr_cbufs; i++) {

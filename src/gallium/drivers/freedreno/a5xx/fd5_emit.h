@@ -114,7 +114,8 @@ fd5_set_render_mode(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, CP_SET_RENDER_MODE_0_MODE(mode));
 	OUT_RING(ring, 0x00000000);   /* ADDR_LO */
 	OUT_RING(ring, 0x00000000);   /* ADDR_HI */
-	OUT_RING(ring, COND(mode == GMEM, CP_SET_RENDER_MODE_3_GMEM_ENABLE));
+	OUT_RING(ring, COND(mode == GMEM, CP_SET_RENDER_MODE_3_GMEM_ENABLE) |
+			COND(mode == BINNING, CP_SET_RENDER_MODE_3_VSC_ENABLE));
 	OUT_RING(ring, 0x00000000);
 	emit_marker5(ring, 7);
 }
@@ -135,9 +136,9 @@ fd5_emit_blit(struct fd_context *ctx, struct fd_ringbuffer *ring)
 }
 
 static inline void
-fd5_emit_render_cntl(struct fd_context *ctx, bool blit)
+fd5_emit_render_cntl(struct fd_context *ctx, bool blit, bool binning)
 {
-	struct fd_ringbuffer *ring = ctx->batch->draw;
+	struct fd_ringbuffer *ring = binning ? ctx->batch->binning : ctx->batch->draw;
 
 	/* TODO eventually this partially depends on the pfb state, ie.
 	 * which of the cbuf(s)/zsbuf has an UBWC flag buffer.. that part
@@ -150,11 +151,14 @@ fd5_emit_render_cntl(struct fd_context *ctx, bool blit)
 	bool samples_passed = (fd5_context(ctx)->samples_passed_queries > 0);
 	OUT_PKT4(ring, REG_A5XX_RB_RENDER_CNTL, 1);
 	OUT_RING(ring, 0x00000000 |   /* RB_RENDER_CNTL */
+			COND(binning, A5XX_RB_RENDER_CNTL_BINNING_PASS) |
+			COND(binning, A5XX_RB_RENDER_CNTL_DISABLE_COLOR_PIPE) |
 			COND(samples_passed, A5XX_RB_RENDER_CNTL_SAMPLES_PASSED) |
 			COND(!blit, 0x8));
 
 	OUT_PKT4(ring, REG_A5XX_GRAS_SC_CNTL, 1);
 	OUT_RING(ring, 0x00000008 |   /* GRAS_SC_CNTL */
+			COND(binning, A5XX_GRAS_SC_CNTL_BINNING_PASS) |
 			COND(samples_passed, A5XX_GRAS_SC_CNTL_SAMPLES_PASSED));
 
 }

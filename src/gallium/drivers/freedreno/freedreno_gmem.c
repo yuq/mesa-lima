@@ -112,6 +112,7 @@ calculate_tiles(struct fd_batch *batch)
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	const uint32_t gmem_alignw = ctx->screen->gmem_alignw;
 	const uint32_t gmem_alignh = ctx->screen->gmem_alignh;
+	const unsigned npipes = ctx->screen->num_vsc_pipes;
 	const uint32_t gmem_size = ctx->screen->gmemsize_bytes;
 	uint32_t minx, miny, width, height;
 	uint32_t nbins_x = 1, nbins_y = 1;
@@ -121,7 +122,7 @@ calculate_tiles(struct fd_batch *batch)
 	uint32_t i, j, t, xoff, yoff;
 	uint32_t tpp_x, tpp_y;
 	bool has_zs = !!(batch->resolve & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL));
-	int tile_n[ARRAY_SIZE(ctx->pipe)];
+	int tile_n[npipes];
 
 	if (has_zs) {
 		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
@@ -224,7 +225,7 @@ calculate_tiles(struct fd_batch *batch)
 
 	/* configure pipes: */
 	xoff = yoff = 0;
-	for (i = 0; i < ARRAY_SIZE(ctx->pipe); i++) {
+	for (i = 0; i < npipes; i++) {
 		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
 
 		if (xoff >= nbins_x) {
@@ -244,7 +245,7 @@ calculate_tiles(struct fd_batch *batch)
 		xoff += tpp_x;
 	}
 
-	for (; i < ARRAY_SIZE(ctx->pipe); i++) {
+	for (; i < npipes; i++) {
 		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
 		pipe->x = pipe->y = pipe->w = pipe->h = 0;
 	}
