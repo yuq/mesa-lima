@@ -79,6 +79,12 @@ struct st_bitmap_cache
    ubyte *buffer;
 };
 
+struct st_bound_handles
+{
+   unsigned num_handles;
+   uint64_t *handles;
+};
+
 struct st_context
 {
    struct st_context_iface iface;
@@ -274,6 +280,11 @@ struct st_context
    struct st_perf_monitor_group *perfmon;
 
    enum pipe_reset_status reset_status;
+
+   /* Array of bound texture/image handles which are resident in the context.
+    */
+   struct st_bound_handles bound_texture_handles[PIPE_SHADER_TYPES];
+   struct st_bound_handles bound_image_handles[PIPE_SHADER_TYPES];
 };
 
 

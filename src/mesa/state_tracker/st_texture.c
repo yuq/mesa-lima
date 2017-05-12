@@ -421,6 +421,85 @@ st_create_color_map_texture(struct gl_context *ctx)
    return pt;
 }
 
+/**
+ * Destroy bound texture handles for the given stage.
+ */
+static void
+st_destroy_bound_texture_handles_per_stage(struct st_context *st,
+                                           enum pipe_shader_type shader)
+{
+   struct st_bound_handles *bound_handles = &st->bound_texture_handles[shader];
+   struct pipe_context *pipe = st->pipe;
+   unsigned i;
+
+   if (likely(!bound_handles->num_handles))
+      return;
+
+   for (i = 0; i < bound_handles->num_handles; i++) {
+      uint64_t handle = bound_handles->handles[i];
+
+      pipe->make_texture_handle_resident(pipe, handle, false);
+      pipe->delete_texture_handle(pipe, handle);
+   }
+   free(bound_handles->handles);
+   bound_handles->handles = NULL;
+   bound_handles->num_handles = 0;
+}
+
+
+/**
+ * Destroy all bound texture handles in the context.
+ */
+void
+st_destroy_bound_texture_handles(struct st_context *st)
+{
+   unsigned i;
+
+   for (i = 0; i < PIPE_SHADER_TYPES; i++) {
+      st_destroy_bound_texture_handles_per_stage(st, i);
+   }
+}
+
+
+/**
+ * Destroy bound image handles for the given stage.
+ */
+static void
+st_destroy_bound_image_handles_per_stage(struct st_context *st,
+                                         enum pipe_shader_type shader)
+{
+   struct st_bound_handles *bound_handles = &st->bound_image_handles[shader];
+   struct pipe_context *pipe = st->pipe;
+   unsigned i;
+
+   if (likely(!bound_handles->num_handles))
+      return;
+
+   for (i = 0; i < bound_handles->num_handles; i++) {
+      uint64_t handle = bound_handles->handles[i];
+
+      pipe->make_image_handle_resident(pipe, handle, GL_READ_WRITE, false);
+      pipe->delete_image_handle(pipe, handle);
+   }
+   free(bound_handles->handles);
+   bound_handles->handles = NULL;
+   bound_handles->num_handles = 0;
+}
+
+
+/**
+ * Destroy all bound image handles in the context.
+ */
+void
+st_destroy_bound_image_handles(struct st_context *st)
+{
+   unsigned i;
+
+   for (i = 0; i < PIPE_SHADER_TYPES; i++) {
+      st_destroy_bound_image_handles_per_stage(st, i);
+   }
+}
+
 
 /**
  * Create a texture handle from a texture unit.

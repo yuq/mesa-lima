@@ -259,6 +259,11 @@ st_texture_image_copy(struct pipe_context *pipe,
 extern struct pipe_resource *
 st_create_color_map_texture(struct gl_context *ctx);
 
+void
+st_destroy_bound_texture_handles(struct st_context *st);
+
+void
+st_destroy_bound_image_handles(struct st_context *st);
 
 bool
 st_etc_fallback(struct st_context *st, struct gl_texture_image *texImage);
