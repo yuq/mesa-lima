@@ -864,8 +864,8 @@
   </struct>
 
   <struct name="WM_STATE" length="11">
-    <field name="Kernel Start Pointer" start="6" end="31" type="offset"/>
-    <field name="GRF Register Count" start="1" end="3" type="uint"/>
+    <field name="Kernel Start Pointer 0" start="6" end="31" type="offset"/>
+    <field name="GRF Register Count 0" start="1" end="3" type="uint"/>
     <field name="Single Program Flow" start="63" end="63" type="bool"/>
     <field name="Binding Table Entry Count" start="50" end="57" type="uint"/>
     <field name="Thread Priority" start="49" end="49" type="uint">
@@ -924,11 +924,11 @@
     <field name="Global Depth Offset Constant" start="192" end="223" type="float"/>
     <field name="Global Depth Offset Scale" start="224" end="255" type="float"/>
     <field name="Kernel Start Pointer 1" start="262" end="287" type="offset"/>
-    <field name="GRF Register Count[1]" start="257" end="259" type="uint"/>
+    <field name="GRF Register Count 1" start="257" end="259" type="uint"/>
     <field name="Kernel Start Pointer 2" start="294" end="319" type="offset"/>
-    <field name="GRF Register Count[2]" start="289" end="291" type="uint"/>
+    <field name="GRF Register Count 2" start="289" end="291" type="uint"/>
     <field name="Kernel Start Pointer 3" start="326" end="351" type="offset"/>
-    <field name="GRF Register Count[3]" start="321" end="323" type="uint"/>
+    <field name="GRF Register Count 3" start="321" end="323" type="uint"/>
   </struct>
 
   <instruction name="3DPRIMITIVE" bias="2" length="6">
