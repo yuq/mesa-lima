@@ -2722,10 +2722,6 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			uint32_t reset_value;
 			bool clear_words_needed;
 
-			/* TODO: fix DCC clear */
-			if (rctx->chip_class >= GFX9)
-				continue;
-
 			if (rctx->screen->debug_flags & DBG_NO_DCC_CLEAR)
 				continue;
 
