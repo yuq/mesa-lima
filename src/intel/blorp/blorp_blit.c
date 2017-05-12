@@ -135,7 +135,7 @@ blorp_blit_apply_transform(nir_builder *b, nir_ssa_def *src_pos,
    nir_ssa_def *mul = nir_vec2(b, nir_channel(b, coord_transform, 0),
                                   nir_channel(b, coord_transform, 2));
 
-   return nir_ffma(b, src_pos, mul, offset);
+   return nir_fadd(b, nir_fmul(b, src_pos, mul), offset);
 }
 
 static inline void
