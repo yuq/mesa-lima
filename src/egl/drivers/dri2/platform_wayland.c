@@ -124,7 +124,7 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    if (!_eglInitSurface(&dri2_surf->base, disp, EGL_WINDOW_BIT, conf, attrib_list))
       goto cleanup_surf;
 
-   if (dri2_dpy->dri2) {
+   if (dri2_dpy->wl_drm) {
       if (conf->RedSize == 5)
          dri2_surf->format = WL_DRM_FORMAT_RGB565;
       else if (conf->AlphaSize == 0)
@@ -132,6 +132,7 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
       else
          dri2_surf->format = WL_DRM_FORMAT_ARGB8888;
    } else {
+      assert(dri2_dpy->wl_shm);
       if (conf->RedSize == 5)
          dri2_surf->format = WL_SHM_FORMAT_RGB565;
       else if (conf->AlphaSize == 0)
