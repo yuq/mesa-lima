@@ -170,6 +170,11 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 		query->begin_result = rctx->ws->query_value(rctx->ws, ws_id);
 		query->begin_time = os_time_get_nano();
 		break;
+	case R600_QUERY_GALLIUM_THREAD_BUSY:
+		query->begin_result =
+			rctx->tc ? util_queue_get_thread_time_nano(&rctx->tc->queue, 0) : 0;
+		query->begin_time = os_time_get_nano();
+		break;
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_GPU_SHADERS_BUSY:
 	case R600_QUERY_GPU_TA_BUSY:
@@ -303,6 +308,11 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		query->end_result = rctx->ws->query_value(rctx->ws, ws_id);
 		query->end_time = os_time_get_nano();
 		break;
+	case R600_QUERY_GALLIUM_THREAD_BUSY:
+		query->end_result =
+			rctx->tc ? util_queue_get_thread_time_nano(&rctx->tc->queue, 0) : 0;
+		query->end_time = os_time_get_nano();
+		break;
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_GPU_SHADERS_BUSY:
 	case R600_QUERY_GPU_TA_BUSY:
@@ -380,6 +390,7 @@ static bool r600_query_sw_get_result(struct r600_common_context *rctx,
 	}
 
 	case R600_QUERY_CS_THREAD_BUSY:
+	case R600_QUERY_GALLIUM_THREAD_BUSY:
 		result->u64 = (query->end_result - query->begin_result) * 100 /
 			      (query->end_time - query->begin_time);
 		return true;
@@ -1824,6 +1835,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("tc-direct-slots",		TC_DIRECT_SLOTS,	UINT64, AVERAGE),
 	X("tc-num-syncs",		TC_NUM_SYNCS,		UINT64, AVERAGE),
 	X("CS-thread-busy",		CS_THREAD_BUSY,		UINT64, AVERAGE),
+	X("gallium-thread-busy",	GALLIUM_THREAD_BUSY,	UINT64, AVERAGE),
 	X("requested-VRAM",		REQUESTED_VRAM,		BYTES, AVERAGE),
 	X("requested-GTT",		REQUESTED_GTT,		BYTES, AVERAGE),
 	X("mapped-VRAM",		MAPPED_VRAM,		BYTES, AVERAGE),
