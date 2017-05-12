@@ -268,6 +268,11 @@ st_convert_image(const struct st_context *st, const struct gl_image_unit *u,
                  struct pipe_image_view *img);
 
 void
+st_convert_image_from_unit(const struct st_context *st,
+                           struct pipe_image_view *img,
+                           GLuint imgUnit);
+
+void
 st_convert_sampler(const struct st_context *st,
                    const struct gl_texture_object *texobj,
                    const struct gl_sampler_object *msamp,
