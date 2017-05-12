@@ -1361,6 +1361,8 @@ void brw_destroy_shader_time(struct brw_context *brw);
 
 /* brw_urb.c
  */
+void brw_calculate_urb_fence(struct brw_context *brw, unsigned csize,
+                             unsigned vsize, unsigned sfsize);
 void brw_upload_urb_fence(struct brw_context *brw);
 
 /* brw_curbe.c
