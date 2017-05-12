@@ -833,7 +833,7 @@ open_i915_perf_oa_stream(struct brw_context *brw,
                I915_PERF_FLAG_FD_NONBLOCK |
                I915_PERF_FLAG_DISABLED,
       .num_properties = ARRAY_SIZE(properties) / 2,
-      .properties_ptr = (uint64_t)properties
+      .properties_ptr = (uintptr_t) properties,
    };
    int fd = drmIoctl(drm_fd, DRM_IOCTL_I915_PERF_OPEN, &param);
    if (fd == -1) {
