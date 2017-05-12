@@ -1858,22 +1858,26 @@ _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 static ALWAYS_INLINE void
 buffer_sub_data(GLenum target, GLuint buffer, GLintptr offset,
                 GLsizeiptr size, const GLvoid *data,
-                bool dsa, const char *func)
+                bool dsa, bool no_error, const char *func)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
 
    if (dsa) {
-      bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
-      if (!bufObj)
-         return;
+      if (no_error) {
+         bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+      } else {
+         bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
+         if (!bufObj)
+            return;
+      }
    } else {
       bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
       if (!bufObj)
          return;
    }
 
-   if (validate_buffer_sub_data(ctx, bufObj, offset, size, func))
+   if (no_error || validate_buffer_sub_data(ctx, bufObj, offset, size, func))
       _mesa_buffer_sub_data(ctx, bufObj, offset, size, data);
 }
 
@@ -1882,14 +1886,23 @@ void GLAPIENTRY
 _mesa_BufferSubData(GLenum target, GLintptr offset,
                     GLsizeiptr size, const GLvoid *data)
 {
-   buffer_sub_data(target, 0, offset, size, data, false, "glBufferSubData");
+   buffer_sub_data(target, 0, offset, size, data, false, false,
+                   "glBufferSubData");
+}
+
+void GLAPIENTRY
+_mesa_NamedBufferSubData_no_error(GLuint buffer, GLintptr offset,
+                                  GLsizeiptr size, const GLvoid *data)
+{
+   buffer_sub_data(0, buffer, offset, size, data, true, true,
+                   "glNamedBufferSubData");
 }
 
 void GLAPIENTRY
 _mesa_NamedBufferSubData(GLuint buffer, GLintptr offset,
                          GLsizeiptr size, const GLvoid *data)
 {
-   buffer_sub_data(0, buffer, offset, size, data, true,
+   buffer_sub_data(0, buffer, offset, size, data, true, false,
                    "glNamedBufferSubData");
 }
 

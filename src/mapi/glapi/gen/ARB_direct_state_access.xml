@@ -68,7 +68,7 @@
       <param name="usage" type="GLenum" />
    </function>
 
-   <function name="NamedBufferSubData">
+   <function name="NamedBufferSubData" no_error="true">
       <param name="buffer" type="GLuint" />
       <param name="offset" type="GLintptr" />
       <param name="size" type="GLsizeiptr" />
