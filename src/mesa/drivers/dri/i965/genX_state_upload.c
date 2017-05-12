@@ -2597,7 +2597,7 @@ upload_constant_state(struct brw_context *brw,
    brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_VS), pkt) {
       pkt._3DCommandSubOpcode = push_constant_opcodes[stage];
       if (active) {
-#if GEN_GEN >= 9
+#if GEN_GEN >= 8 || GEN_IS_HASWELL
          pkt.ConstantBody.ConstantBuffer2ReadLength =
             stage_state->push_const_size;
          pkt.ConstantBody.PointerToConstantBuffer2 =
