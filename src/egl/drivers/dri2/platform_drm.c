@@ -426,7 +426,7 @@ dri2_drm_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
    unsigned i;
 
-   if (dri2_dpy->swrast) {
+   if (!dri2_dpy->flush) {
       dri2_dpy->core->swapBuffers(dri2_surf->dri_drawable);
    } else {
       if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
