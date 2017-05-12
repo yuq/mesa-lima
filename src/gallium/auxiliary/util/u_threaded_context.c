@@ -155,7 +155,7 @@ tc_add_sized_call(struct threaded_context *tc, enum tc_call_id id,
    ((struct type*)tc_add_sized_call(tc, execute, \
                                     sizeof(struct type) + \
                                     sizeof(((struct type*)NULL)->slot[0]) * \
-                                    num_slots))
+                                    (num_slots)))
 
 static union tc_payload *
 tc_add_small_call(struct threaded_context *tc, enum tc_call_id id)
@@ -764,6 +764,7 @@ tc_set_sampler_views(struct pipe_context *_pipe,
 
 struct tc_shader_images {
    ubyte shader, start, count;
+   bool unbind;
    struct pipe_image_view slot[0]; /* more will be allocated if needed */
 };
 
@@ -772,6 +773,11 @@ tc_call_set_shader_images(struct pipe_context *pipe, union tc_payload *payload)
 {
    struct tc_shader_images *p = (struct tc_shader_images *)payload;
    unsigned count = p->count;
+
+   if (p->unbind) {
+      pipe->set_shader_images(pipe, p->shader, p->start, p->count, NULL);
+      return;
+   }
 
    pipe->set_shader_images(pipe, p->shader, p->start, p->count, p->slot);
 
@@ -790,11 +796,13 @@ tc_set_shader_images(struct pipe_context *_pipe,
 
    struct threaded_context *tc = threaded_context(_pipe);
    struct tc_shader_images *p =
-      tc_add_slot_based_call(tc, TC_CALL_set_shader_images, tc_shader_images, count);
+      tc_add_slot_based_call(tc, TC_CALL_set_shader_images, tc_shader_images,
+                             images ? count : 0);
 
    p->shader = shader;
    p->start = start;
    p->count = count;
+   p->unbind = images == NULL;
 
    if (images) {
       for (unsigned i = 0; i < count; i++) {
@@ -811,8 +819,6 @@ tc_set_shader_images(struct pipe_context *_pipe,
          }
       }
       memcpy(p->slot, images, count * sizeof(images[0]));
-   } else {
-      memset(p->slot, 0, count * sizeof(images[0]));
    }
 }
 
