@@ -838,11 +838,11 @@
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="1"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="4"/>
-    <field name="Pointer to VS Binding Table" start="37" end="63" type="address"/>
-    <field name="Pointer to GS Binding Table" start="69" end="95" type="address"/>
-    <field name="Pointer to CLIP Binding Table" start="101" end="127" type="address"/>
-    <field name="Pointer to SF Binding Table" start="133" end="159" type="address"/>
-    <field name="Pointer to PS Binding Table" start="165" end="191" type="address"/>
+    <field name="Pointer to VS Binding Table" start="37" end="63" type="offset"/>
+    <field name="Pointer to GS Binding Table" start="69" end="95" type="offset"/>
+    <field name="Pointer to CLIP Binding Table" start="101" end="127" type="offset"/>
+    <field name="Pointer to SF Binding Table" start="133" end="159" type="offset"/>
+    <field name="Pointer to PS Binding Table" start="165" end="191" type="offset"/>
   </instruction>
 
   <instruction name="3DSTATE_CONSTANT_COLOR" bias="2" length="5">
