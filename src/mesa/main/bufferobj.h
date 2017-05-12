@@ -139,8 +139,7 @@ _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 
 extern void
 _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-                      GLintptr offset, GLsizeiptr size, const GLvoid *data,
-                      const char *func);
+                      GLintptr offset, GLsizeiptr size, const GLvoid *data);
 
 extern void
 _mesa_buffer_unmap_all_mappings(struct gl_context *ctx,

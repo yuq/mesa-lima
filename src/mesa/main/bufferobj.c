@@ -1793,6 +1793,41 @@ _mesa_NamedBufferData(GLuint buffer, GLsizeiptr size, const GLvoid *data,
 }
 
 
+static bool
+validate_buffer_sub_data(struct gl_context *ctx,
+                         struct gl_buffer_object *bufObj,
+                         GLintptr offset, GLsizeiptr size,
+                         const char *func)
+{
+   if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size,
+                                         true, func)) {
+      /* error already recorded */
+      return false;
+   }
+
+   if (bufObj->Immutable &&
+       !(bufObj->StorageFlags & GL_DYNAMIC_STORAGE_BIT)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s", func);
+      return false;
+   }
+
+   if ((bufObj->Usage == GL_STATIC_DRAW ||
+        bufObj->Usage == GL_STATIC_COPY) &&
+       bufObj->NumSubDataCalls >= BUFFER_WARNING_CALL_COUNT - 1) {
+      /* If the application declared the buffer as static draw/copy or stream
+       * draw, it should not be frequently modified with glBufferSubData.
+       */
+      BUFFER_USAGE_WARNING(ctx,
+                           "using %s(buffer %u, offset %u, size %u) to "
+                           "update a %s buffer",
+                           func, bufObj->Name, offset, size,
+                           _mesa_enum_to_string(bufObj->Usage));
+   }
+
+   return true;
+}
+
+
 /**
  * Implementation for glBufferSubData and glNamedBufferSubData.
  *
@@ -1806,39 +1841,12 @@ _mesa_NamedBufferData(GLuint buffer, GLsizeiptr size, const GLvoid *data,
  */
 void
 _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-                      GLintptr offset, GLsizeiptr size, const GLvoid *data,
-                      const char *func)
+                      GLintptr offset, GLsizeiptr size, const GLvoid *data)
 {
-   if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size,
-                                         true, func)) {
-      /* error already recorded */
-      return;
-   }
-
-   if (bufObj->Immutable &&
-       !(bufObj->StorageFlags & GL_DYNAMIC_STORAGE_BIT)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s", func);
-      return;
-   }
-
    if (size == 0)
       return;
 
    bufObj->NumSubDataCalls++;
-
-   if ((bufObj->Usage == GL_STATIC_DRAW ||
-        bufObj->Usage == GL_STATIC_COPY) &&
-       bufObj->NumSubDataCalls >= BUFFER_WARNING_CALL_COUNT) {
-      /* If the application declared the buffer as static draw/copy or stream
-       * draw, it should not be frequently modified with glBufferSubData.
-       */
-      BUFFER_USAGE_WARNING(ctx,
-                           "using %s(buffer %u, offset %u, size %u) to "
-                           "update a %s buffer",
-                           func, bufObj->Name, offset, size,
-                           _mesa_enum_to_string(bufObj->Usage));
-   }
-
    bufObj->Written = GL_TRUE;
    bufObj->MinMaxCacheDirty = true;
 
@@ -1852,12 +1860,14 @@ _mesa_BufferSubData(GLenum target, GLintptr offset,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
+   const char *func = "glBufferSubData";
 
-   bufObj = get_buffer(ctx, "glBufferSubData", target, GL_INVALID_OPERATION);
+   bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
    if (!bufObj)
       return;
 
-   _mesa_buffer_sub_data(ctx, bufObj, offset, size, data, "glBufferSubData");
+   if (validate_buffer_sub_data(ctx, bufObj, offset, size, func))
+      _mesa_buffer_sub_data(ctx, bufObj, offset, size, data);
 }
 
 void GLAPIENTRY
@@ -1866,13 +1876,14 @@ _mesa_NamedBufferSubData(GLuint buffer, GLintptr offset,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
+   const char *func = "glNamedBufferSubData";
 
-   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glNamedBufferSubData");
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
    if (!bufObj)
       return;
 
-   _mesa_buffer_sub_data(ctx, bufObj, offset, size, data,
-                         "glNamedBufferSubData");
+   if (validate_buffer_sub_data(ctx, bufObj, offset, size, func))
+      _mesa_buffer_sub_data(ctx, bufObj, offset, size, data);
 }
 
 
