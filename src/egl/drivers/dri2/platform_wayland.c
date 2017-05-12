@@ -188,13 +188,13 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
                                 dri2_surf->base.GLColorspace);
 
-   if (dri2_dpy->dri2) {
+   if (dri2_dpy->flush)
       dri2_surf->wl_win->resize_callback = resize_callback;
 
+   if (dri2_dpy->dri2)
       createNewDrawable = dri2_dpy->dri2->createNewDrawable;
-   } else {
+   else
       createNewDrawable = dri2_dpy->swrast->createNewDrawable;
-   }
 
    dri2_surf->dri_drawable = (*createNewDrawable)(dri2_dpy->dri_screen, config,
                                                   dri2_surf);
