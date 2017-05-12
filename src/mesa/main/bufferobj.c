@@ -1591,40 +1591,47 @@ buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    }
 }
 
+
+static ALWAYS_INLINE void
+inlined_buffer_storage(GLenum target, GLuint buffer, GLsizeiptr size,
+                       const GLvoid *data, GLbitfield flags, bool dsa,
+                       const char *func)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   if (dsa) {
+      bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
+      if (!bufObj)
+         return;
+   } else {
+      bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
+      if (!bufObj)
+         return;
+   }
+
+   if (validate_buffer_storage(ctx, bufObj, size, flags, func))
+      buffer_storage(ctx, bufObj, target, size, data, flags, func);
+}
+
+
 void GLAPIENTRY
 _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
                     GLbitfield flags)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object *bufObj;
-   const char *func = "glBufferStorage";
-
-   bufObj = get_buffer(ctx, func, target, GL_INVALID_OPERATION);
-   if (!bufObj)
-      return;
-
-   if (validate_buffer_storage(ctx, bufObj, size, flags, func))
-      buffer_storage(ctx, bufObj, target, size, data, flags, func);
+   inlined_buffer_storage(target, 0, size, data, flags, false,
+                          "glBufferStorage");
 }
 
 void GLAPIENTRY
 _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
                          GLbitfield flags)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object *bufObj;
-   const char *func = "glNamedBufferStorage";
-
-   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, func);
-   if (!bufObj)
-      return;
-
-   /*
-    * In direct state access, buffer objects have an unspecified target since
-    * they are not required to be bound.
+   /* In direct state access, buffer objects have an unspecified target
+    * since they are not required to be bound.
     */
-   if (validate_buffer_storage(ctx, bufObj, size, flags, func))
-      buffer_storage(ctx, bufObj, GL_NONE, size, data, flags, func);
+   inlined_buffer_storage(GL_NONE, buffer, size, data, flags, true,
+                          "glNamedBufferStorage");
 }
 
 
