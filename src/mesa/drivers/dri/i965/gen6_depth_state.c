@@ -91,7 +91,8 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
       break;
    case GL_TEXTURE_3D:
       assert(mt);
-      depth = MAX2(mt->logical_depth0, 1);
+      depth = mt->surf.size > 0 ? mt->surf.logical_level0_px.depth :
+                                  MAX2(mt->logical_depth0, 1);
       /* fallthrough */
    default:
       surftype = translate_tex_target(gl_target);
@@ -102,7 +103,10 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
 
    lod = irb ? irb->mt_level - irb->mt->first_level : 0;
 
-   if (mt) {
+   if (mt && mt->surf.size > 0) {
+      width = mt->surf.logical_level0_px.width;
+      height = mt->surf.logical_level0_px.height;
+   } else if (mt) {
       width = mt->logical_width0;
       height = mt->logical_height0;
    }
@@ -187,27 +191,16 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
 
       /* Emit stencil buffer. */
       if (separate_stencil) {
-         uint32_t offset = 0;
+         assert(stencil_mt->format == MESA_FORMAT_S_UINT8);
+         assert(stencil_mt->surf.size > 0);
 
-         if (stencil_mt->array_layout == GEN6_HIZ_STENCIL) {
-            assert(stencil_mt->format == MESA_FORMAT_S_UINT8);
-
-            /* Note: we can't compute the stencil offset using
-             * intel_region_get_aligned_offset(), because stencil_region
-             * claims that the region is untiled even though it's W tiled.
-             */
-            offset = stencil_mt->level[lod].level_y * stencil_mt->pitch +
-                     stencil_mt->level[lod].level_x * 64;
-         }
+         uint32_t offset;
+         isl_surf_get_image_offset_B_tile_sa(&stencil_mt->surf,
+                                             lod, 0, 0, &offset, NULL, NULL);
 
 	 BEGIN_BATCH(3);
 	 OUT_BATCH((_3DSTATE_STENCIL_BUFFER << 16) | (3 - 2));
-         /* The stencil buffer has quirky pitch requirements.  From Vol 2a,
-          * 11.5.6.2.1 3DSTATE_STENCIL_BUFFER, field "Surface Pitch":
-          *    The pitch must be set to 2x the value computed based on width, as
-          *    the stencil buffer is stored with two rows interleaved.
-          */
-	 OUT_BATCH(2 * stencil_mt->pitch - 1);
+	 OUT_BATCH(stencil_mt->surf.row_pitch - 1);
 	 OUT_RELOC(stencil_mt->bo,
 		   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
 		   offset);

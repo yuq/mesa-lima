@@ -750,6 +750,13 @@ miptree_create(struct brw_context *brw,
                GLuint num_samples,
                uint32_t layout_flags)
 {
+   if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8)
+      return make_surface(brw, target, format, first_level, last_level,
+                          width0, height0, depth0, num_samples, ISL_TILING_W,
+                          ISL_SURF_USAGE_STENCIL_BIT |
+                          ISL_SURF_USAGE_TEXTURE_BIT,
+                          BO_ALLOC_FOR_RENDER, NULL);
+
    struct intel_mipmap_tree *mt;
    mesa_format tex_format = format;
    mesa_format etc_format = MESA_FORMAT_NONE;
