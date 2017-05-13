@@ -37,10 +37,10 @@ do
 	fi
 
 	# For each one try to extract the tag
-	fixes_count=`git show $sha | grep -i "fixes:" | wc -l`
+	fixes_count=`git show -s $sha | grep -i "fixes:" | wc -l`
 	warn=`(test $fixes_count -gt 1 && echo $fixes_count) || echo 0`
 	while [ $fixes_count -gt 0 ] ; do
-		fixes=`git show $sha | grep -i "fixes:" | tail -n $fixes_count`
+		fixes=`git show -s $sha | grep -i "fixes:" | tail -n $fixes_count`
 		fixes_count=$(($fixes_count-1))
 		# The following sed/cut combination is borrowed from GregKH
 		id=`echo ${fixes} | sed -e 's/^[ \t]*//' | cut -f 2 -d ':' | sed -e 's/^[ \t]*//' | cut -f 1 -d ' '`
