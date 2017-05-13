@@ -196,8 +196,7 @@ enum {
  */
 enum {
 	SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS,
-	SI_SHADER_DESCS_SAMPLERS,
-	SI_SHADER_DESCS_IMAGES,
+	SI_SHADER_DESCS_SAMPLERS_AND_IMAGES,
 	SI_NUM_SHADER_DESCS,
 };
 
@@ -229,7 +228,7 @@ struct si_descriptors {
 	unsigned ce_offset;
 
 	/* elements of the list that are changed and need to be uploaded */
-	unsigned dirty_mask;
+	uint64_t dirty_mask;
 
 	/* Whether CE is used to upload this descriptor array. */
 	bool uses_ce;
@@ -385,6 +384,18 @@ static inline unsigned si_get_shaderbuf_slot(unsigned slot)
 {
 	/* shader buffers are in slots [15..0], descending */
 	return SI_NUM_SHADER_BUFFERS - 1 - slot;
+}
+
+static inline unsigned si_get_sampler_slot(unsigned slot)
+{
+	/* samplers are in slots [8..39], ascending */
+	return SI_NUM_IMAGES / 2 + slot;
+}
+
+static inline unsigned si_get_image_slot(unsigned slot)
+{
+	/* images are in slots [15..0] (sampler slots [7..0]), descending */
+	return SI_NUM_IMAGES - 1 - slot;
 }
 
 #endif

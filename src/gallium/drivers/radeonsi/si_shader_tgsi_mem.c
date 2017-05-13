@@ -180,7 +180,7 @@ image_fetch_rsrc(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->main_fn,
-					     ctx->param_images);
+					     ctx->param_samplers_and_images);
 	LLVMValueRef index;
 	bool dcc_off = is_store;
 
@@ -191,7 +191,8 @@ image_fetch_rsrc(
 		unsigned images_writemask = info->images_store |
 					    info->images_atomic;
 
-		index = LLVMConstInt(ctx->i32, image->Register.Index, 0);
+		index = LLVMConstInt(ctx->i32,
+				     si_get_image_slot(image->Register.Index), 0);
 
 		if (images_writemask & (1 << image->Register.Index))
 			dcc_off = true;
@@ -208,6 +209,9 @@ image_fetch_rsrc(
 		index = si_get_bounded_indirect_index(ctx, &image->Indirect,
 						      image->Register.Index,
 						      SI_NUM_IMAGES);
+		index = LLVMBuildSub(ctx->gallivm.builder,
+				     LLVMConstInt(ctx->i32, SI_NUM_IMAGES - 1, 0),
+				     index, "");
 	}
 
 	*rsrc = load_image_desc(ctx, rsrc_ptr, index, target);
@@ -1181,7 +1185,7 @@ static void tex_fetch_ptrs(
 	LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr, LLVMValueRef *fmask_ptr)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef list = LLVMGetParam(ctx->main_fn, ctx->param_samplers);
+	LLVMValueRef list = LLVMGetParam(ctx->main_fn, ctx->param_samplers_and_images);
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	const struct tgsi_full_src_register *reg;
 	unsigned target = inst->Texture.Texture;
@@ -1196,8 +1200,11 @@ static void tex_fetch_ptrs(
 						      &reg->Indirect,
 						      reg->Register.Index,
 						      SI_NUM_SAMPLERS);
+		index = LLVMBuildAdd(ctx->gallivm.builder, index,
+				     LLVMConstInt(ctx->i32, SI_NUM_IMAGES / 2, 0), "");
 	} else {
-		index = LLVMConstInt(ctx->i32, reg->Register.Index, 0);
+		index = LLVMConstInt(ctx->i32,
+				     si_get_sampler_slot(reg->Register.Index), 0);
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER)
