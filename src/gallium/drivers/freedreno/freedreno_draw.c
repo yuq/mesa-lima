@@ -91,11 +91,20 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	}
 
 	/* Upload a user index buffer. */
-	struct pipe_resource *indexbuf = info->has_user_indices ? NULL : info->index.resource;
-        unsigned index_offset = 0;
-	if (info->index_size && info->has_user_indices &&
-	    !util_upload_index_buffer(pctx, info, &indexbuf, &index_offset)) {
-		return;
+	struct pipe_resource *indexbuf = NULL;
+	unsigned index_offset = 0;
+	struct pipe_draw_info new_info;
+	if (info->index_size) {
+		if (info->has_user_indices) {
+			if (!util_upload_index_buffer(pctx, info, &indexbuf, &index_offset))
+				return;
+			new_info = *info;
+			new_info.index.resource = indexbuf;
+			new_info.has_user_indices = false;
+			info = &new_info;
+		} else {
+			indexbuf = info->index.resource;
+		}
 	}
 
 	if (ctx->in_blit) {
@@ -224,7 +233,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		fd_context_all_dirty(ctx);
 
 	fd_batch_check_size(batch);
-	if (info->index_size && indexbuf != info->index.resource)
+
+	if (info == &new_info)
 		pipe_resource_reference(&indexbuf, NULL);
 }
 

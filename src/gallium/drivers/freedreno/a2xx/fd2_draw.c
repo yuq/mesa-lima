@@ -109,7 +109,7 @@ fd2_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 	OUT_RING(ring, info->min_index);        /* VGT_MIN_VTX_INDX */
 
 	fd_draw_emit(ctx->batch, ring, ctx->primtypes[info->mode],
-				 IGNORE_VISIBILITY, info);
+				 IGNORE_VISIBILITY, info, index_offset);
 
 	OUT_PKT3(ring, CP_SET_CONSTANT, 2);
 	OUT_RING(ring, CP_REG(REG_A2XX_UNKNOWN_2010));

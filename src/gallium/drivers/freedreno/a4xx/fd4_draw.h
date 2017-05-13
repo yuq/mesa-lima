@@ -105,7 +105,7 @@ fd4_draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		enum pc_di_primtype primtype,
 		enum pc_di_vis_cull_mode vismode,
 		const struct pipe_draw_info *info,
-                unsigned index_offset)
+		unsigned index_offset)
 {
 	struct pipe_resource *idx_buffer = NULL;
 	enum a4xx_index_size idx_type;

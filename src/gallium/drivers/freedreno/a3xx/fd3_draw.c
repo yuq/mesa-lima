@@ -55,7 +55,7 @@ add_sat(uint32_t a, int32_t b)
 
 static void
 draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
-		struct fd3_emit *emit)
+		struct fd3_emit *emit, unsigned index_offset)
 {
 	const struct pipe_draw_info *info = emit->info;
 	enum pc_di_primtype primtype = ctx->primtypes[info->mode];
@@ -86,7 +86,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	fd_draw_emit(ctx->batch, ring, primtype,
 			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
-			info);
+			info, index_offset);
 }
 
 /* fixup dirty shader state in case some "unrelated" (from the state-
@@ -157,14 +157,14 @@ fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;
-	draw_impl(ctx, ctx->batch->draw, &emit);
+	draw_impl(ctx, ctx->batch->draw, &emit, index_offset);
 
 	/* and now binning pass: */
 	emit.key.binning_pass = true;
 	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
 	emit.vp = NULL;   /* we changed key so need to refetch vp */
 	emit.fp = NULL;
-	draw_impl(ctx, ctx->batch->binning, &emit);
+	draw_impl(ctx, ctx->batch->binning, &emit, index_offset);
 
 	fd_context_all_clean(ctx);
 
