@@ -55,6 +55,7 @@ struct brw_blorp_blit_vars {
    nir_variable *v_src_z;
    nir_variable *v_src_offset;
    nir_variable *v_dst_offset;
+   nir_variable *v_src_inv_size;
 
    /* gl_FragCoord */
    nir_variable *frag_coord;
@@ -79,6 +80,7 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
    LOAD_INPUT(src_z, glsl_uint_type())
    LOAD_INPUT(src_offset, glsl_vector_type(GLSL_TYPE_UINT, 2))
    LOAD_INPUT(dst_offset, glsl_vector_type(GLSL_TYPE_UINT, 2))
+   LOAD_INPUT(src_inv_size, glsl_vector_type(GLSL_TYPE_FLOAT, 2))
 
 #undef LOAD_INPUT
 
@@ -198,10 +200,15 @@ blorp_create_nir_tex_instr(nir_builder *b, struct brw_blorp_blit_vars *v,
 
 static nir_ssa_def *
 blorp_nir_tex(nir_builder *b, struct brw_blorp_blit_vars *v,
-              nir_ssa_def *pos, nir_alu_type dst_type)
+              const struct brw_blorp_blit_prog_key *key, nir_ssa_def *pos)
 {
+   /* If the sampler requires normalized coordinates, we need to compensate. */
+   if (key->src_coords_normalized)
+      pos = nir_fmul(b, pos, nir_load_var(b, v->v_src_inv_size));
+
    nir_tex_instr *tex =
-      blorp_create_nir_tex_instr(b, v, nir_texop_tex, pos, 2, dst_type);
+      blorp_create_nir_tex_instr(b, v, nir_texop_tex, pos, 2,
+                                 key->texture_data_type);
 
    assert(pos->num_components == 2);
    tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
@@ -1188,7 +1195,7 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
          src_pos = nir_ishl(&b, src_pos, nir_imm_int(&b, 1));
          src_pos = nir_iadd(&b, src_pos, nir_imm_int(&b, 1));
          src_pos = nir_i2f32(&b, src_pos);
-         color = blorp_nir_tex(&b, &v, src_pos, key->texture_data_type);
+         color = blorp_nir_tex(&b, &v, key, src_pos);
       } else {
          /* Gen7+ hardware doesn't automaticaly blend. */
          color = blorp_nir_manual_blend_average(&b, &v, src_pos, key->src_samples,
@@ -1200,7 +1207,7 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
       color = blorp_nir_manual_blend_bilinear(&b, src_pos, key->src_samples, key, &v);
    } else {
       if (key->bilinear_filter) {
-         color = blorp_nir_tex(&b, &v, src_pos, key->texture_data_type);
+         color = blorp_nir_tex(&b, &v, key, src_pos);
       } else {
          /* We're going to use texelFetch, so we need integers */
          if (src_pos->num_components == 2) {
@@ -2056,8 +2063,18 @@ blorp_blit(struct blorp_batch *batch,
    wm_prog_key.y_scale = params.src.surf.samples / wm_prog_key.x_scale;
 
    if (filter == GL_LINEAR &&
-       params.src.surf.samples <= 1 && params.dst.surf.samples <= 1)
+       params.src.surf.samples <= 1 && params.dst.surf.samples <= 1) {
       wm_prog_key.bilinear_filter = true;
+
+      if (batch->blorp->isl_dev->info->gen < 6) {
+         /* Gen4-5 don't support non-normalized texture coordinates */
+         wm_prog_key.src_coords_normalized = true;
+         params.wm_inputs.src_inv_size[0] =
+            1.0f / minify(params.src.surf.logical_level0_px.width, src_level);
+         params.wm_inputs.src_inv_size[1] =
+            1.0f / minify(params.src.surf.logical_level0_px.height, src_level);
+      }
+   }
 
    if ((params.src.surf.usage & ISL_SURF_USAGE_DEPTH_BIT) == 0 &&
        (params.src.surf.usage & ISL_SURF_USAGE_STENCIL_BIT) == 0 &&

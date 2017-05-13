@@ -124,6 +124,9 @@ struct brw_blorp_wm_inputs
    struct blorp_surf_offset src_offset;
    struct blorp_surf_offset dst_offset;
 
+   /* (1/width, 1/height) for the source surface */
+   float src_inv_size[2];
+
    /* Minimum layer setting works for all the textures types but texture_3d
     * for which the setting has no effect. Use the z-coordinate instead.
     */
@@ -227,6 +230,9 @@ struct brw_blorp_blit_prog_key
 
    /* Number of bits per channel in the source image. */
    uint8_t src_bpc;
+
+   /* True if the source requires normalized coordinates */
+   bool src_coords_normalized;
 
    /* Number of samples per pixel that have been configured in the render
     * target.
