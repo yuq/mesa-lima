@@ -2042,6 +2042,12 @@ blorp_blit(struct blorp_batch *batch,
    struct blorp_params params;
    blorp_params_init(&params);
 
+   /* We cannot handle combined depth and stencil. */
+   if (src_surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT)
+      assert(src_surf->surf->format == ISL_FORMAT_R8_UINT);
+   if (dst_surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT)
+      assert(dst_surf->surf->format == ISL_FORMAT_R8_UINT);
+
    if (dst_surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT) {
       assert(src_surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT);
       /* Prior to Broadwell, we can't render to R8_UINT */
