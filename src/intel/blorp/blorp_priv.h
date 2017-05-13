@@ -194,6 +194,8 @@ struct blorp_params
    unsigned num_layers;
    uint32_t vs_prog_kernel;
    struct brw_vs_prog_data *vs_prog_data;
+   uint32_t sf_prog_kernel;
+   struct brw_sf_prog_data *sf_prog_data;
    uint32_t wm_prog_kernel;
    struct brw_wm_prog_data *wm_prog_data;
 
@@ -207,6 +209,7 @@ enum blorp_shader_type {
    BLORP_SHADER_TYPE_BLIT,
    BLORP_SHADER_TYPE_CLEAR,
    BLORP_SHADER_TYPE_LAYER_OFFSET_VS,
+   BLORP_SHADER_TYPE_GEN4_SF,
 };
 
 struct brw_blorp_blit_prog_key
@@ -340,6 +343,10 @@ blorp_compile_vs(struct blorp_context *blorp, void *mem_ctx,
                  struct nir_shader *nir,
                  struct brw_vs_prog_data *vs_prog_data,
                  unsigned *program_size);
+
+bool
+blorp_ensure_sf_program(struct blorp_context *blorp,
+                        struct blorp_params *params);
 
 /** \} */
 

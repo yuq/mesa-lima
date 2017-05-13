@@ -419,6 +419,9 @@ blorp_clear(struct blorp_batch *batch,
                                       use_simd16_replicated_data))
       return;
 
+   if (!blorp_ensure_sf_program(batch->blorp, &params))
+      return;
+
    while (num_layers > 0) {
       brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level,
                                   start_layer, format, true);

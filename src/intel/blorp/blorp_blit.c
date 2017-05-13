@@ -1835,6 +1835,9 @@ try_blorp_blit(struct blorp_batch *batch,
    if (!brw_blorp_get_blit_kernel(batch->blorp, params, wm_prog_key))
       return 0;
 
+   if (!blorp_ensure_sf_program(batch->blorp, params))
+      return 0;
+
    unsigned result = 0;
    unsigned max_surface_size = get_max_surface_size(devinfo, params);
    if (params->src.surf.logical_level0_px.width > max_surface_size ||

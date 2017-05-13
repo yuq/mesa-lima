@@ -73,7 +73,8 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
                     struct blorp_address address, uint32_t delta);
 
 static void
-blorp_emit_urb_config(struct blorp_batch *batch, unsigned vs_entry_size);
+blorp_emit_urb_config(struct blorp_batch *batch,
+                      unsigned vs_entry_size, unsigned sf_entry_size);
 
 /***** BEGIN blorp_exec implementation ******/
 
@@ -180,7 +181,10 @@ emit_urb_config(struct blorp_batch *batch,
    /* The URB size is expressed in units of 64 bytes (512 bits) */
    const unsigned vs_entry_size = DIV_ROUND_UP(total_needed, 64);
 
-   blorp_emit_urb_config(batch, vs_entry_size);
+   const unsigned sf_entry_size =
+      params->sf_prog_data ? params->sf_prog_data->urb_entry_size : 0;
+
+   blorp_emit_urb_config(batch, vs_entry_size, sf_entry_size);
 }
 
 static void

@@ -155,7 +155,8 @@ blorp_flush_range(struct blorp_batch *batch, void *start, size_t size)
 }
 
 static void
-blorp_emit_urb_config(struct blorp_batch *batch, unsigned vs_entry_size)
+blorp_emit_urb_config(struct blorp_batch *batch,
+                      unsigned vs_entry_size, unsigned sf_entry_size)
 {
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;

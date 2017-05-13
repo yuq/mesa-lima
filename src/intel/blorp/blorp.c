@@ -216,6 +216,68 @@ blorp_compile_vs(struct blorp_context *blorp, void *mem_ctx,
    return program;
 }
 
+struct blorp_sf_key {
+   enum blorp_shader_type shader_type; /* Must be BLORP_SHADER_TYPE_GEN4_SF */
+
+   struct brw_sf_prog_key key;
+};
+
+bool
+blorp_ensure_sf_program(struct blorp_context *blorp,
+                        struct blorp_params *params)
+{
+   const struct brw_wm_prog_data *wm_prog_data = params->wm_prog_data;
+   assert(params->wm_prog_data);
+
+   /* Gen6+ doesn't need a strips and fans program */
+   if (blorp->compiler->devinfo->gen >= 6)
+      return true;
+
+   struct blorp_sf_key key = {
+      .shader_type = BLORP_SHADER_TYPE_GEN4_SF,
+   };
+
+   /* Everything gets compacted in vertex setup, so we just need a
+    * pass-through for the correct number of input varyings.
+    */
+   const uint64_t slots_valid = VARYING_BIT_POS |
+      ((1ull << wm_prog_data->num_varying_inputs) - 1) << VARYING_SLOT_VAR0;
+
+   key.key.attrs = slots_valid;
+   key.key.primitive = BRW_SF_PRIM_TRIANGLES;
+   key.key.contains_flat_varying = wm_prog_data->contains_flat_varying;
+
+   STATIC_ASSERT(sizeof(key.key.interp_mode) ==
+                 sizeof(wm_prog_data->interp_mode));
+   memcpy(key.key.interp_mode, wm_prog_data->interp_mode,
+          sizeof(key.key.interp_mode));
+
+   if (blorp->lookup_shader(blorp, &key, sizeof(key),
+                            &params->sf_prog_kernel, &params->sf_prog_data))
+      return true;
+
+   void *mem_ctx = ralloc_context(NULL);
+
+   const unsigned *program;
+   unsigned program_size;
+
+   struct brw_vue_map vue_map;
+   brw_compute_vue_map(blorp->compiler->devinfo, &vue_map, slots_valid, false);
+
+   struct brw_sf_prog_data prog_data_tmp;
+   program = brw_compile_sf(blorp->compiler, mem_ctx, &key.key,
+                            &prog_data_tmp, &vue_map, &program_size);
+
+   bool result =
+      blorp->upload_shader(blorp, &key, sizeof(key), program, program_size,
+                           (void *)&prog_data_tmp, sizeof(prog_data_tmp),
+                           &params->sf_prog_kernel, &params->sf_prog_data);
+
+   ralloc_free(mem_ctx);
+
+   return result;
+}
+
 void
 blorp_gen6_hiz_op(struct blorp_batch *batch,
                   struct blorp_surf *surf, unsigned level, unsigned layer,
