@@ -30,6 +30,10 @@
 
 #include <amdgpu.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct radeon_info {
 	/* PCI info: domain:bus:dev:func */
 	uint32_t                    pci_domain;
@@ -94,5 +98,9 @@ struct radeon_info {
 bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 		       struct radeon_info *info,
 		       struct amdgpu_gpu_info *amdinfo);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AC_GPU_INFO_H */

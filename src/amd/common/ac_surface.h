@@ -30,6 +30,10 @@
 
 #include "amd_family.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Forward declarations. */
 typedef void* ADDR_HANDLE;
 
@@ -207,5 +211,9 @@ int ac_compute_surface(ADDR_HANDLE addrlib, const struct radeon_info *info,
 		       const struct ac_surf_config * config,
 		       enum radeon_surf_mode mode,
 		       struct radeon_surf *surf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AC_SURFACE_H */
