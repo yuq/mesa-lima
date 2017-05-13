@@ -590,6 +590,21 @@ typedef uint64_t isl_surf_usage_flags_t;
 /** @} */
 
 /**
+ * @defgroup Channel Mask
+ *
+ * These #define values are chosen to match the values of
+ * RENDER_SURFACE_STATE::Color Buffer Component Write Disables
+ *
+ * @{
+ */
+typedef uint8_t isl_channel_mask_t;
+#define ISL_CHANNEL_BLUE_BIT  (1 << 0)
+#define ISL_CHANNEL_GREEN_BIT (1 << 1)
+#define ISL_CHANNEL_RED_BIT   (1 << 2)
+#define ISL_CHANNEL_ALPHA_BIT (1 << 3)
+/** @} */
+
+/**
  * @brief A channel select (also known as texture swizzle) value
  */
 enum isl_channel_select {
@@ -1008,6 +1023,11 @@ struct isl_surf_fill_state_info {
     * Valid values depend on hardware generation.
     */
    union isl_color_value clear_color;
+
+   /**
+    * Surface write disables for gen4-5
+    */
+   isl_channel_mask_t write_disables;
 
    /* Intra-tile offset */
    uint16_t x_offset_sa, y_offset_sa;

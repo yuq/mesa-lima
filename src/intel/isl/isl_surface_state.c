@@ -256,6 +256,12 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 
    s.SurfaceFormat = info->view->format;
 
+#if GEN_GEN <= 5
+   s.ColorBufferComponentWriteDisables = info->write_disables;
+#else
+   assert(info->write_disables == 0);
+#endif
+
 #if GEN_IS_HASWELL
    s.IntegerSurfaceFormat = isl_format_has_int_channel(s.SurfaceFormat);
 #endif
