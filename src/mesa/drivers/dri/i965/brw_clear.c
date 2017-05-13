@@ -285,8 +285,7 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
          mt->stencil_mt->r8stencil_needs_update = true;
    }
 
-   /* BLORP is currently only supported on Gen6+. */
-   if (brw->gen >= 6 && (mask & BUFFER_BITS_COLOR)) {
+   if (mask & BUFFER_BITS_COLOR) {
       const bool encode_srgb = ctx->Color.sRGBEnabled;
       if (brw_blorp_clear_color(brw, fb, mask, partial_clear, encode_srgb)) {
          debug_mask("blorp color", mask & BUFFER_BITS_COLOR);

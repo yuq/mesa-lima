@@ -399,6 +399,10 @@ blorp_clear(struct blorp_batch *batch,
    if (surf->surf->tiling == ISL_TILING_LINEAR)
       use_simd16_replicated_data = false;
 
+   /* Replicated clears don't work yet before gen6 */
+   if (batch->blorp->isl_dev->info->gen < 6)
+      use_simd16_replicated_data = false;
+
    /* Constant color writes ignore everyting in blend and color calculator
     * state.  This is not documented.
     */
