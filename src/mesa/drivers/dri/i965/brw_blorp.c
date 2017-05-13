@@ -648,10 +648,6 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    if (src_mt->num_samples > 8 || dst_mt->num_samples > 8)
       return false;
 
-   /* BLORP is only supported from Gen6 onwards. */
-   if (brw->gen < 6)
-      return false;
-
    if (_mesa_get_format_base_format(src_rb->Format) !=
        _mesa_get_format_base_format(dst_image->TexFormat)) {
       return false;
@@ -665,6 +661,13 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
        (dst_mt->format == MESA_FORMAT_Z24_UNORM_X8_UINT)) {
       return false;
    }
+
+   /* We also can't handle any combined depth-stencil formats because we
+    * have to reinterpret as a color format.
+    */
+   if (_mesa_get_format_base_format(src_mt->format) == GL_DEPTH_STENCIL ||
+       _mesa_get_format_base_format(dst_mt->format) == GL_DEPTH_STENCIL)
+      return false;
 
    if (!brw->format_supported_as_render_target[dst_image->TexFormat])
       return false;
