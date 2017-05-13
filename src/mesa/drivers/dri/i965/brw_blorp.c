@@ -876,6 +876,22 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       DBG("%s (fast) to mt %p level %d layers %d+%d\n", __FUNCTION__,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);
 
+      /* Ivybrigde PRM Vol 2, Part 1, "11.7 MCS Buffer for Render Target(s)":
+       *
+       *    "Any transition from any value in {Clear, Render, Resolve} to a
+       *    different value in {Clear, Render, Resolve} requires end of pipe
+       *    synchronization."
+       *
+       * In other words, fast clear ops are not properly synchronized with
+       * other drawing.  We need to use a PIPE_CONTROL to ensure that the
+       * contents of the previous draw hit the render target before we resolve
+       * and again afterwards to ensure that the resolve is complete before we
+       * do any more regular drawing.
+       */
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                  PIPE_CONTROL_CS_STALL);
+
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_fast_clear(&batch, &surf,
@@ -883,6 +899,10 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                        level, logical_layer, num_layers,
                        x0, y0, x1, y1);
       blorp_batch_finish(&batch);
+
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                  PIPE_CONTROL_CS_STALL);
 
       /* Now that the fast clear has occurred, put the buffer in
        * INTEL_FAST_CLEAR_STATE_CLEAR so that we won't waste time doing
@@ -908,17 +928,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                   clear_color, color_write_disable);
       blorp_batch_finish(&batch);
    }
-
-   /*
-    * Ivybrigde PRM Vol 2, Part 1, "11.7 MCS Buffer for Render Target(s)":
-    *
-    *  Any transition from any value in {Clear, Render, Resolve} to a
-    *  different value in {Clear, Render, Resolve} requires end of pipe
-    *  synchronization.
-    */
-   brw_emit_pipe_control_flush(brw,
-                               PIPE_CONTROL_RENDER_TARGET_FLUSH |
-                               PIPE_CONTROL_CS_STALL);
 
    return true;
 }
@@ -981,6 +990,23 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
       resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
    }
 
+   /* Ivybrigde PRM Vol 2, Part 1, "11.7 MCS Buffer for Render Target(s)":
+    *
+    *    "Any transition from any value in {Clear, Render, Resolve} to a
+    *    different value in {Clear, Render, Resolve} requires end of pipe
+    *    synchronization."
+    *
+    * In other words, fast clear ops are not properly synchronized with
+    * other drawing.  We need to use a PIPE_CONTROL to ensure that the
+    * contents of the previous draw hit the render target before we resolve
+    * and again afterwards to ensure that the resolve is complete before we
+    * do any more regular drawing.
+    */
+   brw_emit_pipe_control_flush(brw,
+                               PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                               PIPE_CONTROL_CS_STALL);
+
+
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
    blorp_ccs_resolve(&batch, &surf, level, layer,
@@ -988,13 +1014,7 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
                      resolve_op);
    blorp_batch_finish(&batch);
 
-   /*
-    * Ivybrigde PRM Vol 2, Part 1, "11.7 MCS Buffer for Render Target(s)":
-    *
-    *  Any transition from any value in {Clear, Render, Resolve} to a
-    *  different value in {Clear, Render, Resolve} requires end of pipe
-    *  synchronization.
-    */
+   /* See comment above */
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_RENDER_TARGET_FLUSH |
                                PIPE_CONTROL_CS_STALL);
