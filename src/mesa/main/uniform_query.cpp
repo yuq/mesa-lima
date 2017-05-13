@@ -911,6 +911,15 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
 
    struct gl_uniform_storage *uni;
    if (_mesa_is_no_error_enabled(ctx)) {
+      /* From Seciton 7.6 (UNIFORM VARIABLES) of the OpenGL 4.5 spec:
+       *
+       *   "If the value of location is -1, the Uniform* commands will
+       *   silently ignore the data passed in, and the current uniform values
+       *   will not be changed.
+       */
+      if (location == -1)
+         return;
+
       uni = shProg->UniformRemapTable[location];
 
       /* The array index specified by the uniform location is just the
