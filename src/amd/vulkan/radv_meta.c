@@ -36,6 +36,7 @@ radv_meta_save_novertex(struct radv_meta_saved_state *state,
 	       uint32_t dynamic_mask)
 {
 	state->old_pipeline = cmd_buffer->state.pipeline;
+	state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
 
 	state->dynamic_mask = dynamic_mask;
 	radv_dynamic_state_copy(&state->dynamic, &cmd_buffer->state.dynamic,
@@ -50,9 +51,9 @@ radv_meta_restore(const struct radv_meta_saved_state *state,
 		  struct radv_cmd_buffer *cmd_buffer)
 {
 	cmd_buffer->state.pipeline = state->old_pipeline;
+	cmd_buffer->state.descriptors[0] = state->old_descriptor_set0;
+	cmd_buffer->state.descriptors_dirty |= (1u << 0);
 	if (state->vertex_saved) {
-		cmd_buffer->state.descriptors[0] = state->old_descriptor_set0;
-	        cmd_buffer->state.descriptors_dirty |= (1u << 0);
 		memcpy(cmd_buffer->state.vertex_bindings, state->old_vertex_bindings,
 		       sizeof(state->old_vertex_bindings));
 		cmd_buffer->state.vb_dirty |= (1 << RADV_META_VERTEX_BINDING_COUNT) - 1;
