@@ -194,11 +194,12 @@ enum {
  *  21 - compute const buffers
  *   ...
  */
-#define SI_SHADER_DESCS_CONST_BUFFERS  0
-#define SI_SHADER_DESCS_SHADER_BUFFERS 1
-#define SI_SHADER_DESCS_SAMPLERS       2
-#define SI_SHADER_DESCS_IMAGES         3
-#define SI_NUM_SHADER_DESCS            4
+enum {
+	SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS,
+	SI_SHADER_DESCS_SAMPLERS,
+	SI_SHADER_DESCS_IMAGES,
+	SI_NUM_SHADER_DESCS,
+};
 
 #define SI_DESCS_RW_BUFFERS            0
 #define SI_DESCS_FIRST_SHADER          1
@@ -251,7 +252,9 @@ struct si_sampler_views {
 
 struct si_buffer_resources {
 	enum radeon_bo_usage		shader_usage; /* READ, WRITE, or READWRITE */
+	enum radeon_bo_usage		shader_usage_constbuf;
 	enum radeon_bo_priority		priority;
+	enum radeon_bo_priority		priority_constbuf;
 	struct pipe_resource		**buffers; /* this has num_buffers elements */
 
 	/* The i-th bit is set if that element is enabled (non-NULL resource). */
@@ -370,6 +373,18 @@ si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil)
 		return rtex->surface.u.legacy.stencil_tiling_index[level];
 	else
 		return rtex->surface.u.legacy.tiling_index[level];
+}
+
+static inline unsigned si_get_constbuf_slot(unsigned slot)
+{
+	/* Constant buffers are in slots [16..31], ascending */
+	return SI_NUM_SHADER_BUFFERS + slot;
+}
+
+static inline unsigned si_get_shaderbuf_slot(unsigned slot)
+{
+	/* shader buffers are in slots [15..0], descending */
+	return SI_NUM_SHADER_BUFFERS - 1 - slot;
 }
 
 #endif

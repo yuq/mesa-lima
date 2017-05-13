@@ -295,8 +295,7 @@ struct si_context {
 	unsigned			shader_pointers_dirty;
 	unsigned			compressed_tex_shader_mask;
 	struct si_buffer_resources	rw_buffers;
-	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
-	struct si_buffer_resources	shader_buffers[SI_NUM_SHADERS];
+	struct si_buffer_resources	const_and_shader_buffers[SI_NUM_SHADERS];
 	struct si_textures_info		samplers[SI_NUM_SHADERS];
 	struct si_images_info		images[SI_NUM_SHADERS];
 

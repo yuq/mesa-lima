@@ -84,14 +84,19 @@ shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 {
 	LLVMValueRef index;
 	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->main_fn,
-					     ctx->param_shader_buffers);
+					     ctx->param_const_and_shader_buffers);
 
-	if (!reg->Register.Indirect)
-		index = LLVMConstInt(ctx->i32, reg->Register.Index, 0);
-	else
+	if (!reg->Register.Indirect) {
+		index = LLVMConstInt(ctx->i32,
+				     si_get_shaderbuf_slot(reg->Register.Index), 0);
+	} else {
 		index = si_get_bounded_indirect_index(ctx, &reg->Indirect,
 						      reg->Register.Index,
 						      SI_NUM_SHADER_BUFFERS);
+		index = LLVMBuildSub(ctx->gallivm.builder,
+				     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS - 1, 0),
+				     index, "");
+	}
 
 	return ac_build_indexed_load_const(&ctx->ac, rsrc_ptr, index);
 }

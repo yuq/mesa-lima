@@ -936,11 +936,15 @@ static void si_init_buffer_resources(struct si_buffer_resources *buffers,
 				     unsigned num_buffers,
 				     unsigned shader_userdata_index,
 				     enum radeon_bo_usage shader_usage,
+				     enum radeon_bo_usage shader_usage_constbuf,
 				     enum radeon_bo_priority priority,
+				     enum radeon_bo_priority priority_constbuf,
 				     unsigned *ce_offset)
 {
 	buffers->shader_usage = shader_usage;
+	buffers->shader_usage_constbuf = shader_usage_constbuf;
 	buffers->priority = priority;
+	buffers->priority_constbuf = priority_constbuf;
 	buffers->buffers = CALLOC(num_buffers, sizeof(struct pipe_resource*));
 
 	si_init_descriptors(descs, shader_userdata_index, 4,
@@ -969,8 +973,11 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 		int i = u_bit_scan(&mask);
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				      (struct r600_resource*)buffers->buffers[i],
-				      buffers->shader_usage, buffers->priority);
+			r600_resource(buffers->buffers[i]),
+			i < SI_NUM_SHADER_BUFFERS ? buffers->shader_usage :
+						    buffers->shader_usage_constbuf,
+			i < SI_NUM_SHADER_BUFFERS ? buffers->priority :
+						    buffers->priority_constbuf);
 	}
 }
 
@@ -1119,16 +1126,16 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 /* CONSTANT BUFFERS */
 
 static unsigned
-si_const_buffer_descriptors_idx(unsigned shader)
+si_const_and_shader_buffer_descriptors_idx(unsigned shader)
 {
 	return SI_DESCS_FIRST_SHADER + shader * SI_NUM_SHADER_DESCS +
-	       SI_SHADER_DESCS_CONST_BUFFERS;
+	       SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS;
 }
 
 static struct si_descriptors *
-si_const_buffer_descriptors(struct si_context *sctx, unsigned shader)
+si_const_and_shader_buffer_descriptors(struct si_context *sctx, unsigned shader)
 {
-	return &sctx->descriptors[si_const_buffer_descriptors_idx(shader)];
+	return &sctx->descriptors[si_const_and_shader_buffer_descriptors_idx(shader)];
 }
 
 void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuffer,
@@ -1199,8 +1206,8 @@ static void si_set_constant_buffer(struct si_context *sctx,
 		buffers->buffers[slot] = buffer;
 		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
 						    (struct r600_resource*)buffer,
-						    buffers->shader_usage,
-						    buffers->priority, true);
+						    buffers->shader_usage_constbuf,
+						    buffers->priority_constbuf, true);
 		buffers->enabled_mask |= 1u << slot;
 	} else {
 		/* Clear the descriptor. */
@@ -1228,8 +1235,9 @@ static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
 	if (shader >= SI_NUM_SHADERS)
 		return;
 
-	si_set_constant_buffer(sctx, &sctx->const_buffers[shader],
-			       si_const_buffer_descriptors_idx(shader),
+	slot = si_get_constbuf_slot(slot);
+	si_set_constant_buffer(sctx, &sctx->const_and_shader_buffers[shader],
+			       si_const_and_shader_buffer_descriptors_idx(shader),
 			       slot, input);
 }
 
@@ -1238,26 +1246,13 @@ void si_get_pipe_constant_buffer(struct si_context *sctx, uint shader,
 {
 	cbuf->user_buffer = NULL;
 	si_get_buffer_from_descriptors(
-		&sctx->const_buffers[shader],
-		si_const_buffer_descriptors(sctx, shader),
-		slot, &cbuf->buffer, &cbuf->buffer_offset, &cbuf->buffer_size);
+		&sctx->const_and_shader_buffers[shader],
+		si_const_and_shader_buffer_descriptors(sctx, shader),
+		si_get_constbuf_slot(slot),
+		&cbuf->buffer, &cbuf->buffer_offset, &cbuf->buffer_size);
 }
 
 /* SHADER BUFFERS */
-
-static unsigned
-si_shader_buffer_descriptors_idx(enum pipe_shader_type shader)
-{
-	return SI_DESCS_FIRST_SHADER + shader * SI_NUM_SHADER_DESCS +
-	       SI_SHADER_DESCS_SHADER_BUFFERS;
-}
-
-static struct si_descriptors *
-si_shader_buffer_descriptors(struct si_context *sctx,
-				  enum pipe_shader_type shader)
-{
-	return &sctx->descriptors[si_shader_buffer_descriptors_idx(shader)];
-}
 
 static void si_set_shader_buffers(struct pipe_context *ctx,
 				  enum pipe_shader_type shader,
@@ -1265,8 +1260,8 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 				  const struct pipe_shader_buffer *sbuffers)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_buffer_resources *buffers = &sctx->shader_buffers[shader];
-	struct si_descriptors *descs = si_shader_buffer_descriptors(sctx, shader);
+	struct si_buffer_resources *buffers = &sctx->const_and_shader_buffers[shader];
+	struct si_descriptors *descs = si_const_and_shader_buffer_descriptors(sctx, shader);
 	unsigned i;
 
 	assert(start_slot + count <= SI_NUM_SHADER_BUFFERS);
@@ -1274,7 +1269,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 	for (i = 0; i < count; ++i) {
 		const struct pipe_shader_buffer *sbuffer = sbuffers ? &sbuffers[i] : NULL;
 		struct r600_resource *buf;
-		unsigned slot = start_slot + i;
+		unsigned slot = si_get_shaderbuf_slot(start_slot + i);
 		uint32_t *desc = descs->list + slot * 4;
 		uint64_t va;
 
@@ -1284,7 +1279,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 			buffers->enabled_mask &= ~(1u << slot);
 			descs->dirty_mask |= 1u << slot;
 			sctx->descriptors_dirty |=
-				1u << si_shader_buffer_descriptors_idx(shader);
+				1u << si_const_and_shader_buffer_descriptors_idx(shader);
 			continue;
 		}
 
@@ -1311,7 +1306,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 		buffers->enabled_mask |= 1u << slot;
 		descs->dirty_mask |= 1u << slot;
 		sctx->descriptors_dirty |=
-			1u << si_shader_buffer_descriptors_idx(shader);
+			1u << si_const_and_shader_buffer_descriptors_idx(shader);
 
 		util_range_add(&buf->valid_buffer_range, sbuffer->buffer_offset,
 			       sbuffer->buffer_offset + sbuffer->buffer_size);
@@ -1323,12 +1318,13 @@ void si_get_shader_buffers(struct si_context *sctx,
 			   uint start_slot, uint count,
 			   struct pipe_shader_buffer *sbuf)
 {
-	struct si_buffer_resources *buffers = &sctx->shader_buffers[shader];
-	struct si_descriptors *descs = si_shader_buffer_descriptors(sctx, shader);
+	struct si_buffer_resources *buffers = &sctx->const_and_shader_buffers[shader];
+	struct si_descriptors *descs = si_const_and_shader_buffer_descriptors(sctx, shader);
 
 	for (unsigned i = 0; i < count; ++i) {
 		si_get_buffer_from_descriptors(
-			buffers, descs, start_slot + i,
+			buffers, descs,
+			si_get_shaderbuf_slot(start_slot + i),
 			&sbuf[i].buffer, &sbuf[i].buffer_offset,
 			&sbuf[i].buffer_size);
 	}
@@ -1603,11 +1599,14 @@ void si_update_compressed_colortex_masks(struct si_context *sctx)
 static void si_reset_buffer_resources(struct si_context *sctx,
 				      struct si_buffer_resources *buffers,
 				      unsigned descriptors_idx,
+				      unsigned slot_mask,
 				      struct pipe_resource *buf,
-				      uint64_t old_va)
+				      uint64_t old_va,
+				      enum radeon_bo_usage usage,
+				      enum radeon_bo_priority priority)
 {
 	struct si_descriptors *descs = &sctx->descriptors[descriptors_idx];
-	unsigned mask = buffers->enabled_mask;
+	unsigned mask = buffers->enabled_mask & slot_mask;
 
 	while (mask) {
 		unsigned i = u_bit_scan(&mask);
@@ -1620,8 +1619,7 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 
 			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
 							    (struct r600_resource *)buf,
-							    buffers->shader_usage,
-							    buffers->priority, true);
+							    usage, priority, true);
 		}
 	}
 }
@@ -1690,16 +1688,22 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 	/* Constant and shader buffers. */
 	if (rbuffer->bind_history & PIPE_BIND_CONSTANT_BUFFER) {
 		for (shader = 0; shader < SI_NUM_SHADERS; shader++)
-			si_reset_buffer_resources(sctx, &sctx->const_buffers[shader],
-						  si_const_buffer_descriptors_idx(shader),
-						  buf, old_va);
+			si_reset_buffer_resources(sctx, &sctx->const_and_shader_buffers[shader],
+						  si_const_and_shader_buffer_descriptors_idx(shader),
+						  u_bit_consecutive(SI_NUM_SHADER_BUFFERS, SI_NUM_CONST_BUFFERS),
+						  buf, old_va,
+						  sctx->const_and_shader_buffers[shader].shader_usage_constbuf,
+						  sctx->const_and_shader_buffers[shader].priority_constbuf);
 	}
 
 	if (rbuffer->bind_history & PIPE_BIND_SHADER_BUFFER) {
 		for (shader = 0; shader < SI_NUM_SHADERS; shader++)
-			si_reset_buffer_resources(sctx, &sctx->shader_buffers[shader],
-						  si_shader_buffer_descriptors_idx(shader),
-						  buf, old_va);
+			si_reset_buffer_resources(sctx, &sctx->const_and_shader_buffers[shader],
+						  si_const_and_shader_buffer_descriptors_idx(shader),
+						  u_bit_consecutive(0, SI_NUM_SHADER_BUFFERS),
+						  buf, old_va,
+						  sctx->const_and_shader_buffers[shader].shader_usage,
+						  sctx->const_and_shader_buffers[shader].priority);
 	}
 
 	if (rbuffer->bind_history & PIPE_BIND_SAMPLER_VIEW) {
@@ -2000,8 +2004,8 @@ void si_init_all_descriptors(struct si_context *sctx)
 	int i;
 	unsigned ce_offset = 0;
 
-	STATIC_ASSERT(GFX9_SGPR_TCS_CONST_BUFFERS % 2 == 0);
-	STATIC_ASSERT(GFX9_SGPR_GS_CONST_BUFFERS % 2 == 0);
+	STATIC_ASSERT(GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS % 2 == 0);
+	STATIC_ASSERT(GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS % 2 == 0);
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		bool gfx9_tcs = sctx->b.chip_class == GFX9 &&
@@ -2013,27 +2017,23 @@ void si_init_all_descriptors(struct si_context *sctx)
 		 */
 		bool big_ce = sctx->b.chip_class <= VI;
 		bool images_use_ce = big_ce;
-		bool shaderbufs_use_ce = big_ce ||
-					 i == PIPE_SHADER_COMPUTE;
+		bool const_and_shaderbufs_use_ce = big_ce ||
+						   i == PIPE_SHADER_VERTEX ||
+						   i == PIPE_SHADER_FRAGMENT;
 		bool samplers_use_ce = big_ce ||
 				       i == PIPE_SHADER_FRAGMENT;
 
-		si_init_buffer_resources(&sctx->const_buffers[i],
-					 si_const_buffer_descriptors(sctx, i),
-					 SI_NUM_CONST_BUFFERS,
-					 gfx9_tcs ? GFX9_SGPR_TCS_CONST_BUFFERS :
-					 gfx9_gs ? GFX9_SGPR_GS_CONST_BUFFERS :
-						   SI_SGPR_CONST_BUFFERS,
-					 RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER,
-					 &ce_offset);
-		si_init_buffer_resources(&sctx->shader_buffers[i],
-					 si_shader_buffer_descriptors(sctx, i),
-					 SI_NUM_SHADER_BUFFERS,
-					 gfx9_tcs ? GFX9_SGPR_TCS_SHADER_BUFFERS :
-					 gfx9_gs ? GFX9_SGPR_GS_SHADER_BUFFERS :
-						   SI_SGPR_SHADER_BUFFERS,
-					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RW_BUFFER,
-					 shaderbufs_use_ce ? &ce_offset : NULL);
+		si_init_buffer_resources(&sctx->const_and_shader_buffers[i],
+					 si_const_and_shader_buffer_descriptors(sctx, i),
+					 SI_NUM_SHADER_BUFFERS + SI_NUM_CONST_BUFFERS,
+					 gfx9_tcs ? GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS :
+					 gfx9_gs ? GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS :
+						   SI_SGPR_CONST_AND_SHADER_BUFFERS,
+					 RADEON_USAGE_READWRITE,
+					 RADEON_USAGE_READ,
+					 RADEON_PRIO_SHADER_RW_BUFFER,
+					 RADEON_PRIO_CONST_BUFFER,
+					 const_and_shaderbufs_use_ce ? &ce_offset : NULL);
 
 		si_init_descriptors(si_sampler_descriptors(sctx, i),
 				    gfx9_tcs ? GFX9_SGPR_TCS_SAMPLERS :
@@ -2055,7 +2055,10 @@ void si_init_all_descriptors(struct si_context *sctx)
 	si_init_buffer_resources(&sctx->rw_buffers,
 				 &sctx->descriptors[SI_DESCS_RW_BUFFERS],
 				 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
-				 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RINGS,
+				 /* The second set of usage/priority is used by
+				  * const buffers in RW buffer slots. */
+				 RADEON_USAGE_READWRITE, RADEON_USAGE_READ,
+				 RADEON_PRIO_SHADER_RINGS, RADEON_PRIO_CONST_BUFFER,
 				 &ce_offset);
 	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
 			    4, SI_NUM_VERTEX_BUFFERS, NULL, NULL);
@@ -2148,10 +2151,8 @@ void si_release_all_descriptors(struct si_context *sctx)
 	int i;
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
-		si_release_buffer_resources(&sctx->const_buffers[i],
-					    si_const_buffer_descriptors(sctx, i));
-		si_release_buffer_resources(&sctx->shader_buffers[i],
-					    si_shader_buffer_descriptors(sctx, i));
+		si_release_buffer_resources(&sctx->const_and_shader_buffers[i],
+					    si_const_and_shader_buffer_descriptors(sctx, i));
 		si_release_sampler_views(&sctx->samplers[i].views);
 		si_release_image_views(&sctx->images[i]);
 	}
@@ -2168,8 +2169,7 @@ void si_all_descriptors_begin_new_cs(struct si_context *sctx)
 	int i;
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
-		si_buffer_resources_begin_new_cs(sctx, &sctx->const_buffers[i]);
-		si_buffer_resources_begin_new_cs(sctx, &sctx->shader_buffers[i]);
+		si_buffer_resources_begin_new_cs(sctx, &sctx->const_and_shader_buffers[i]);
 		si_sampler_views_begin_new_cs(sctx, &sctx->samplers[i].views);
 		si_image_views_begin_new_cs(sctx, &sctx->images[i]);
 	}

@@ -1726,10 +1726,10 @@ static void declare_compute_memory(struct si_shader_context *ctx,
 static LLVMValueRef load_const_buffer_desc(struct si_shader_context *ctx, int i)
 {
 	LLVMValueRef list_ptr = LLVMGetParam(ctx->main_fn,
-					     ctx->param_const_buffers);
+					     ctx->param_const_and_shader_buffers);
 
 	return ac_build_indexed_load_const(&ctx->ac, list_ptr,
-					LLVMConstInt(ctx->i32, i, 0));
+			LLVMConstInt(ctx->i32, si_get_constbuf_slot(i), 0));
 }
 
 static LLVMValueRef fetch_constant(
@@ -1759,11 +1759,13 @@ static LLVMValueRef fetch_constant(
 	idx = reg->Register.Index * 4 + swizzle;
 
 	if (reg->Register.Dimension && reg->Dimension.Indirect) {
-		LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_const_buffers);
+		LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_const_and_shader_buffers);
 		LLVMValueRef index;
 		index = si_get_bounded_indirect_index(ctx, &reg->DimIndirect,
 						      reg->Dimension.Index,
 						      SI_NUM_CONST_BUFFERS);
+		index = LLVMBuildAdd(ctx->gallivm.builder, index,
+				     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS, 0), "");
 		bufp = ac_build_indexed_load_const(&ctx->ac, ptr, index);
 	} else
 		bufp = load_const_buffer_desc(ctx, buf);
@@ -2796,13 +2798,11 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 
 	unsigned desc_param = ctx->param_tcs_factor_addr_base64k + 2;
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param,
-					   8 + GFX9_SGPR_TCS_CONST_BUFFERS);
+					   8 + GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS);
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 1,
 					   8 + GFX9_SGPR_TCS_SAMPLERS);
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 2,
 					   8 + GFX9_SGPR_TCS_IMAGES);
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 3,
-					   8 + GFX9_SGPR_TCS_SHADER_BUFFERS);
 
 	unsigned vgpr = 8 + GFX9_TCS_NUM_USER_SGPR;
 	ret = si_insert_input_ret_float(ctx, ret,
@@ -2825,13 +2825,11 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 
 	unsigned desc_param = ctx->param_vs_state_bits + 1;
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param,
-					   8 + GFX9_SGPR_GS_CONST_BUFFERS);
+					   8 + GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS);
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 1,
 					   8 + GFX9_SGPR_GS_SAMPLERS);
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 2,
 					   8 + GFX9_SGPR_GS_IMAGES);
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 3,
-					   8 + GFX9_SGPR_GS_SHADER_BUFFERS);
 
 	unsigned vgpr = 8 + GFX9_GS_NUM_USER_SGPR;
 	for (unsigned i = 0; i < 5; i++) {
@@ -4061,16 +4059,15 @@ static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
 					    unsigned *num_params,
 					    bool assign_params)
 {
-	params[(*num_params)++] = si_const_array(ctx->v4i32, SI_NUM_CONST_BUFFERS);
+	params[(*num_params)++] = si_const_array(ctx->v4i32,
+						 SI_NUM_SHADER_BUFFERS + SI_NUM_CONST_BUFFERS);
 	params[(*num_params)++] = si_const_array(ctx->v8i32, SI_NUM_SAMPLERS);
 	params[(*num_params)++] = si_const_array(ctx->v8i32, SI_NUM_IMAGES);
-	params[(*num_params)++] = si_const_array(ctx->v4i32, SI_NUM_SHADER_BUFFERS);
 
 	if (assign_params) {
-		ctx->param_const_buffers  = *num_params - 4;
-		ctx->param_samplers	  = *num_params - 3;
-		ctx->param_images	  = *num_params - 2;
-		ctx->param_shader_buffers = *num_params - 1;
+		ctx->param_const_and_shader_buffers = *num_params - 3;
+		ctx->param_samplers	  = *num_params - 2;
+		ctx->param_images	  = *num_params - 1;
 	}
 }
 
@@ -6670,7 +6667,6 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
-		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32;
@@ -6681,7 +6677,6 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		params[ctx->param_tcs_offchip_addr_base64k = num_params++] = ctx->i32;
 		params[ctx->param_tcs_factor_addr_base64k = num_params++] = ctx->i32;
 	} else {
-		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
 		params[num_params++] = ctx->i64;
@@ -7042,10 +7037,9 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 
 	/* Declare input SGPRs. */
 	params[ctx->param_rw_buffers = num_params++] = ctx->i64;
-	params[ctx->param_const_buffers = num_params++] = ctx->i64;
+	params[ctx->param_const_and_shader_buffers = num_params++] = ctx->i64;
 	params[ctx->param_samplers = num_params++] = ctx->i64;
 	params[ctx->param_images = num_params++] = ctx->i64;
-	params[ctx->param_shader_buffers = num_params++] = ctx->i64;
 	assert(num_params == SI_PARAM_ALPHA_REF);
 	params[SI_PARAM_ALPHA_REF] = ctx->f32;
 	last_sgpr = SI_PARAM_ALPHA_REF;

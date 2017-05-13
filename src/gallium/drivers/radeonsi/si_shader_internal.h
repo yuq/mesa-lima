@@ -109,10 +109,9 @@ struct si_shader_context {
 
 	/* Parameter indices for LLVMGetParam. */
 	int param_rw_buffers;
-	int param_const_buffers;
+	int param_const_and_shader_buffers;
 	int param_samplers;
 	int param_images;
-	int param_shader_buffers;
 	/* Common inputs for merged shaders. */
 	int param_merged_wave_info;
 	int param_merged_scratch_offset;
