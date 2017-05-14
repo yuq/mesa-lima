@@ -391,10 +391,7 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 	bool sysmem = false;
 
 	if (ctx->emit_sysmem_prep) {
-		if (batch->num_draws == 0) {
-			sysmem = true;
-		} else if (batch->cleared || batch->gmem_reason || (batch->num_draws > 5)) {
-			// TODO maybe consider # of draws w/ blend enabled, etc?
+		if (batch->cleared || batch->gmem_reason || (batch->num_draws > 5)) {
 			DBG("GMEM: cleared=%x, gmem_reason=%x, num_draws=%u",
 				batch->cleared, batch->gmem_reason, batch->num_draws);
 		} else if (!(fd_mesa_debug & FD_DBG_NOBYPASS)) {
