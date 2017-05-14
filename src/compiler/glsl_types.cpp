@@ -927,13 +927,9 @@ glsl_type::record_compare(const glsl_type *b, bool match_locations) const
     *     type definitions, and field names to be considered the same type."
     *
     * GLSL ES behaves the same (Ver 1.00 Sec 4.2.4, Ver 3.00 Sec 4.2.5).
-    *
-    * Note that we cannot force type name check when comparing unnamed
-    * structure types, these have a unique name assigned during parsing.
     */
-   if (!this->is_anonymous() && !b->is_anonymous())
-      if (strcmp(this->name, b->name) != 0)
-         return false;
+   if (strcmp(this->name, b->name) != 0)
+      return false;
 
    for (unsigned i = 0; i < this->length; i++) {
       if (this->fields.structure[i].type != b->fields.structure[i].type)
