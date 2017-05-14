@@ -447,7 +447,6 @@ isl_choose_array_pitch_span(const struct isl_device *dev,
           *    the storage for LODs other than LOD 0 is not needed.
           */
          assert(info->levels == 1);
-         assert(phys_level0_sa->array_len == 1);
          return ISL_ARRAY_PITCH_SPAN_COMPACT;
       } else {
          if ((ISL_DEV_GEN(dev) == 5 || ISL_DEV_GEN(dev) == 6) &&
