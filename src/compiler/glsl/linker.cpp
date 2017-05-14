@@ -907,28 +907,23 @@ cross_validate_globals(struct gl_shader_program *prog,
          /* Check if types match. */
          if (var->type != existing->type) {
             if (!validate_intrastage_arrays(prog, var, existing)) {
-               if (var->type->is_record() && existing->type->is_record()
-                   && existing->type->record_compare(var->type)) {
-                   existing->type = var->type;
-               } else {
-                  /* If it is an unsized array in a Shader Storage Block,
-                   * two different shaders can access to different elements.
-                   * Because of that, they might be converted to different
-                   * sized arrays, then check that they are compatible but
-                   * ignore the array size.
-                   */
-                  if (!(var->data.mode == ir_var_shader_storage &&
-                        var->data.from_ssbo_unsized_array &&
-                        existing->data.mode == ir_var_shader_storage &&
-                        existing->data.from_ssbo_unsized_array &&
-                        var->type->gl_type == existing->type->gl_type)) {
-                     linker_error(prog, "%s `%s' declared as type "
-                                  "`%s' and type `%s'\n",
-                                  mode_string(var),
-                                  var->name, var->type->name,
-                                  existing->type->name);
-                     return;
-                  }
+               /* If it is an unsized array in a Shader Storage Block,
+                * two different shaders can access to different elements.
+                * Because of that, they might be converted to different
+                * sized arrays, then check that they are compatible but
+                * ignore the array size.
+                */
+               if (!(var->data.mode == ir_var_shader_storage &&
+                     var->data.from_ssbo_unsized_array &&
+                     existing->data.mode == ir_var_shader_storage &&
+                     existing->data.from_ssbo_unsized_array &&
+                     var->type->gl_type == existing->type->gl_type)) {
+                  linker_error(prog, "%s `%s' declared as type "
+                                 "`%s' and type `%s'\n",
+                                 mode_string(var),
+                                 var->name, var->type->name,
+                                 existing->type->name);
+                  return;
                }
             }
          }
