@@ -7509,7 +7509,7 @@ ast_struct_specifier::hir(exec_list *instructions,
 
    type = glsl_type::get_record_instance(fields, decl_count, this->name);
 
-   if (!state->symbols->add_type(name, type)) {
+   if (!type->is_anonymous() && !state->symbols->add_type(name, type)) {
       const glsl_type *match = state->symbols->get_type(name);
       /* allow struct matching for desktop GL - older UE4 does this */
       if (match != NULL && state->is_version(130, 0) && match->record_compare(type, false))
