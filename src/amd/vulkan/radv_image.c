@@ -459,21 +459,20 @@ radv_image_get_fmask_info(struct radv_device *device,
 			  struct radv_fmask_info *out)
 {
 	/* FMASK is allocated like an ordinary texture. */
-	struct radeon_surf fmask = image->surface;
+	struct radeon_surf fmask = {};
 	struct ac_surf_info info = image->info;
 	memset(out, 0, sizeof(*out));
 
-	fmask.surf_alignment = 0;
-	fmask.surf_size = 0;
-	fmask.flags |= RADEON_SURF_FMASK;
+	fmask.blk_w = image->surface.blk_w;
+	fmask.blk_h = image->surface.blk_h;
 	info.samples = 1;
+	fmask.flags = image->surface.flags | RADEON_SURF_FMASK;
+
 	/* Force 2D tiling if it wasn't set. This may occur when creating
 	 * FMASK for MSAA resolve on R6xx. On R6xx, the single-sample
 	 * destination buffer must have an FMASK too. */
 	fmask.flags = RADEON_SURF_CLR(fmask.flags, MODE);
 	fmask.flags |= RADEON_SURF_SET(RADEON_SURF_MODE_2D, MODE);
-
-	fmask.flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
 
 	switch (nr_samples) {
 	case 2:

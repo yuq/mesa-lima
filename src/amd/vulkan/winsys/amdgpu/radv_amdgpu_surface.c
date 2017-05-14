@@ -322,10 +322,11 @@ static int radv_amdgpu_winsys_surface_init(struct radeon_winsys *_ws,
 
 	AddrSurfInfoIn.flags.color = !(surf->flags & RADEON_SURF_Z_OR_SBUFFER);
 	AddrSurfInfoIn.flags.depth = (surf->flags & RADEON_SURF_ZBUFFER) != 0;
+	AddrSurfInfoIn.flags.fmask = (surf->flags & RADEON_SURF_FMASK) != 0;
 	AddrSurfInfoIn.flags.cube = type == RADEON_SURF_TYPE_CUBEMAP;
 	AddrSurfInfoIn.flags.display = (surf->flags & RADEON_SURF_SCANOUT) != 0;
 	AddrSurfInfoIn.flags.pow2Pad = last_level > 0;
-	AddrSurfInfoIn.flags.opt4Space = 1;
+	AddrSurfInfoIn.flags.opt4Space = !AddrSurfInfoIn.flags.fmask;
 
 	/* DCC notes:
 	 * - If we add MSAA support, keep in mind that CB can't decompress 8bpp
