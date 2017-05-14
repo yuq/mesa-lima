@@ -45,6 +45,12 @@ fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 {
 	struct fd_context *ctx = fd_context(pctx);
 
+	if (!ctx->batch) {
+		if (fence)
+			*fence = NULL;
+		return;
+	}
+
 	if (flags & PIPE_FLUSH_FENCE_FD)
 		ctx->batch->needs_out_fence_fd = true;
 
