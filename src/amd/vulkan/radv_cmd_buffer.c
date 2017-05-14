@@ -1104,6 +1104,10 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 		struct radv_image *image = att->attachment->image;
 		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, att->attachment->bo, 8);
 
+		/* We currently don't support writing decompressed HTILE */
+		assert(radv_layout_has_htile(image, layout) ==
+		       radv_layout_is_htile_compressed(image, layout));
+
 		radv_emit_fb_ds_state(cmd_buffer, &att->ds, image, layout);
 
 		if (att->ds.offset_scale != cmd_buffer->state.offset_scale) {
