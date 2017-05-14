@@ -3272,6 +3272,12 @@ intel_miptree_map_s8(struct brw_context *brw,
     * temporary buffer back out.
     */
    if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
+      /* ISL uses a stencil pitch value that is expected by hardware whereas
+       * traditional miptree uses half of that. Below the value gets supplied
+       * to intel_offset_S8() which expects the legacy interpretation.
+       */
+      const unsigned pitch = mt->surf.size > 0 ?
+                             mt->surf.row_pitch / 2 : mt->pitch;
       uint8_t *untiled_s8_map = map->ptr;
       uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_READ_BIT);
       unsigned int image_x, image_y;
@@ -3280,7 +3286,7 @@ intel_miptree_map_s8(struct brw_context *brw,
 
       for (uint32_t y = 0; y < map->h; y++) {
 	 for (uint32_t x = 0; x < map->w; x++) {
-	    ptrdiff_t offset = intel_offset_S8(mt->pitch,
+	    ptrdiff_t offset = intel_offset_S8(pitch,
 	                                       x + image_x + map->x,
 	                                       y + image_y + map->y,
 					       brw->has_swizzling);
@@ -3308,6 +3314,12 @@ intel_miptree_unmap_s8(struct brw_context *brw,
 		       unsigned int slice)
 {
    if (map->mode & GL_MAP_WRITE_BIT) {
+      /* ISL uses a stencil pitch value that is expected by hardware whereas
+       * traditional miptree uses half of that. Below the value gets supplied
+       * to intel_offset_S8() which expects the legacy interpretation.
+       */
+      const unsigned pitch = mt->surf.size > 0 ?
+                             mt->surf.row_pitch / 2: mt->pitch;
       unsigned int image_x, image_y;
       uint8_t *untiled_s8_map = map->ptr;
       uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_WRITE_BIT);
@@ -3316,7 +3328,7 @@ intel_miptree_unmap_s8(struct brw_context *brw,
 
       for (uint32_t y = 0; y < map->h; y++) {
 	 for (uint32_t x = 0; x < map->w; x++) {
-	    ptrdiff_t offset = intel_offset_S8(mt->pitch,
+	    ptrdiff_t offset = intel_offset_S8(pitch,
 	                                       image_x + x + map->x,
 	                                       image_y + y + map->y,
 					       brw->has_swizzling);
@@ -3415,6 +3427,12 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
     * temporary buffer back out.
     */
    if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
+      /* ISL uses a stencil pitch value that is expected by hardware whereas
+       * traditional miptree uses half of that. Below the value gets supplied
+       * to intel_offset_S8() which expects the legacy interpretation.
+       */
+      const unsigned s_pitch = s_mt->surf.size > 0 ?
+                               s_mt->surf.row_pitch / 2 : s_mt->pitch;
       uint32_t *packed_map = map->ptr;
       uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_READ_BIT);
       uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_READ_BIT);
@@ -3429,7 +3447,7 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
       for (uint32_t y = 0; y < map->h; y++) {
 	 for (uint32_t x = 0; x < map->w; x++) {
 	    int map_x = map->x + x, map_y = map->y + y;
-	    ptrdiff_t s_offset = intel_offset_S8(s_mt->pitch,
+	    ptrdiff_t s_offset = intel_offset_S8(s_pitch,
 						 map_x + s_image_x,
 						 map_y + s_image_y,
 						 brw->has_swizzling);
@@ -3476,6 +3494,12 @@ intel_miptree_unmap_depthstencil(struct brw_context *brw,
    bool map_z32f_x24s8 = mt->format == MESA_FORMAT_Z_FLOAT32;
 
    if (map->mode & GL_MAP_WRITE_BIT) {
+      /* ISL uses a stencil pitch value that is expected by hardware whereas
+       * traditional miptree uses half of that. Below the value gets supplied
+       * to intel_offset_S8() which expects the legacy interpretation.
+       */
+      const unsigned s_pitch = s_mt->surf.size > 0 ?
+                               s_mt->surf.row_pitch / 2 : s_mt->pitch;
       uint32_t *packed_map = map->ptr;
       uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_WRITE_BIT);
       uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_WRITE_BIT);
@@ -3489,7 +3513,7 @@ intel_miptree_unmap_depthstencil(struct brw_context *brw,
 
       for (uint32_t y = 0; y < map->h; y++) {
 	 for (uint32_t x = 0; x < map->w; x++) {
-	    ptrdiff_t s_offset = intel_offset_S8(s_mt->pitch,
+	    ptrdiff_t s_offset = intel_offset_S8(s_pitch,
 						 x + s_image_x + map->x,
 						 y + s_image_y + map->y,
 						 brw->has_swizzling);
