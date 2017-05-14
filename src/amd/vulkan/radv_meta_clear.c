@@ -657,6 +657,96 @@ emit_depthstencil_clear(struct radv_cmd_buffer *cmd_buffer,
 	radv_CmdDraw(cmd_buffer_h, 3, clear_rect->layerCount, 0, 0);
 }
 
+static bool
+emit_fast_htile_clear(struct radv_cmd_buffer *cmd_buffer,
+		      const VkClearAttachment *clear_att,
+		      const VkClearRect *clear_rect,
+		      enum radv_cmd_flush_bits *pre_flush,
+		      enum radv_cmd_flush_bits *post_flush)
+{
+	const struct radv_subpass *subpass = cmd_buffer->state.subpass;
+	const uint32_t pass_att = subpass->depth_stencil_attachment.attachment;
+	VkImageLayout image_layout = subpass->depth_stencil_attachment.layout;
+	const struct radv_framebuffer *fb = cmd_buffer->state.framebuffer;
+	const struct radv_image_view *iview = fb->attachments[pass_att].attachment;
+	VkClearDepthStencilValue clear_value = clear_att->clearValue.depthStencil;
+	VkImageAspectFlags aspects = clear_att->aspectMask;
+	uint32_t clear_word;
+	bool ret;
+
+	if (!iview->image->surface.htile_size)
+		return false;
+
+	if (cmd_buffer->device->debug_flags & RADV_DEBUG_NO_FAST_CLEARS)
+		return false;
+
+	if (!radv_layout_is_htile_compressed(iview->image, image_layout, radv_image_queue_family_mask(iview->image, cmd_buffer->queue_family_index, cmd_buffer->queue_family_index)))
+		goto fail;
+
+	/* don't fast clear 3D */
+	if (iview->image->type == VK_IMAGE_TYPE_3D)
+		goto fail;
+
+	/* all layers are bound */
+	if (iview->base_layer > 0)
+		goto fail;
+	if (iview->image->info.array_size != iview->layer_count)
+		goto fail;
+
+	if (iview->image->info.levels > 1)
+		goto fail;
+
+	if (!radv_image_extent_compare(iview->image, &iview->extent))
+		goto fail;
+
+	if (clear_rect->rect.offset.x || clear_rect->rect.offset.y ||
+	    clear_rect->rect.extent.width != iview->image->info.width ||
+	    clear_rect->rect.extent.height != iview->image->info.height)
+		goto fail;
+
+	if (clear_rect->baseArrayLayer != 0)
+		goto fail;
+	if (clear_rect->layerCount != iview->image->info.array_size)
+		goto fail;
+
+	/* Don't do stencil clears till we have figured out if the clear words are
+	 * correct. */
+	if (vk_format_aspects(iview->image->vk_format) & VK_IMAGE_ASPECT_STENCIL_BIT)
+		goto fail;
+
+	if (clear_value.depth == 1.0)
+		clear_word = 0xfffffff0;
+	else if (clear_value.depth == 0.0)
+		clear_word = 0;
+	else
+		goto fail;
+
+	if (pre_flush) {
+		cmd_buffer->state.flush_bits |= (RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+						 RADV_CMD_FLAG_FLUSH_AND_INV_DB_META) & ~ *pre_flush;
+		*pre_flush |= cmd_buffer->state.flush_bits;
+	} else
+		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+		                                RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
+
+	radv_fill_buffer(cmd_buffer, iview->image->bo,
+	                 iview->image->offset + iview->image->htile_offset,
+	                 iview->image->surface.htile_size, clear_word);
+
+
+	radv_set_depth_clear_regs(cmd_buffer, iview->image, clear_value, aspects);
+	if (post_flush)
+		*post_flush |= RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
+	                       RADV_CMD_FLAG_INV_VMEM_L1 |
+	                       RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
+	else
+		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
+	                                        RADV_CMD_FLAG_INV_VMEM_L1 |
+	                                        RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
+	return true;
+fail:
+	return false;
+}
 
 static VkFormat pipeline_formats[] = {
 	VK_FORMAT_R8G8B8A8_UNORM,
@@ -883,7 +973,9 @@ emit_clear(struct radv_cmd_buffer *cmd_buffer,
 	} else {
 		assert(clear_att->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT |
 						VK_IMAGE_ASPECT_STENCIL_BIT));
-		emit_depthstencil_clear(cmd_buffer, clear_att, clear_rect);
+		if (!emit_fast_htile_clear(cmd_buffer, clear_att, clear_rect,
+		                           pre_flush, post_flush))
+			emit_depthstencil_clear(cmd_buffer, clear_att, clear_rect);
 	}
 }
 
