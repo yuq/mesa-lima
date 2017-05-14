@@ -1690,6 +1690,7 @@ ast_struct_specifier::ast_struct_specifier(void *lin_ctx, const char *identifier
    this->declarations.push_degenerate_list_at_head(&declarator_list->link);
    is_declaration = true;
    layout = NULL;
+   type = NULL;
 }
 
 void ast_subroutine_list::print(void) const

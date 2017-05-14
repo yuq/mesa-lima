@@ -2359,7 +2359,10 @@ ast_type_specifier::glsl_type(const char **name,
 {
    const struct glsl_type *type;
 
-   type = state->symbols->get_type(this->type_name);
+   if (structure)
+      type = structure->type;
+   else
+      type = state->symbols->get_type(this->type_name);
    *name = this->type_name;
 
    YYLTYPE loc = this->get_location();
@@ -7504,13 +7507,12 @@ ast_struct_specifier::hir(exec_list *instructions,
 
    validate_identifier(this->name, loc, state);
 
-   const glsl_type *t =
-      glsl_type::get_record_instance(fields, decl_count, this->name);
+   type = glsl_type::get_record_instance(fields, decl_count, this->name);
 
-   if (!state->symbols->add_type(name, t)) {
+   if (!state->symbols->add_type(name, type)) {
       const glsl_type *match = state->symbols->get_type(name);
       /* allow struct matching for desktop GL - older UE4 does this */
-      if (match != NULL && state->is_version(130, 0) && match->record_compare(t, false))
+      if (match != NULL && state->is_version(130, 0) && match->record_compare(type, false))
          _mesa_glsl_warning(& loc, state, "struct `%s' previously defined", name);
       else
          _mesa_glsl_error(& loc, state, "struct `%s' previously defined", name);
@@ -7519,7 +7521,7 @@ ast_struct_specifier::hir(exec_list *instructions,
                                      const glsl_type *,
                                      state->num_user_structures + 1);
       if (s != NULL) {
-         s[state->num_user_structures] = t;
+         s[state->num_user_structures] = type;
          state->user_structures = s;
          state->num_user_structures++;
       }
