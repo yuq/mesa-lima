@@ -81,11 +81,6 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
        * map it as 8-bit BGRA.
        */
       format = ISL_FORMAT_B8G8R8A8_UNORM;
-   } else if (surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT) {
-      assert(surf->surf->format == ISL_FORMAT_R8_UINT);
-      /* Prior to Broadwell, we can't render to R8_UINT */
-      if (blorp->isl_dev->info->gen < 8)
-         format = ISL_FORMAT_R8_UNORM;
    }
 
    info->surf = *surf->surf;

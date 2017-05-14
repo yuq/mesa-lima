@@ -2020,6 +2020,15 @@ blorp_blit(struct blorp_batch *batch,
    struct blorp_params params;
    blorp_params_init(&params);
 
+   if (dst_surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT) {
+      assert(src_surf->surf->usage & ISL_SURF_USAGE_STENCIL_BIT);
+      /* Prior to Broadwell, we can't render to R8_UINT */
+      if (batch->blorp->isl_dev->info->gen < 8) {
+         src_format = ISL_FORMAT_R8_UNORM;
+         dst_format = ISL_FORMAT_R8_UNORM;
+      }
+   }
+
    brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
                                src_layer, src_format, false);
    brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
