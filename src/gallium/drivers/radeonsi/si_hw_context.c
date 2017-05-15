@@ -235,6 +235,7 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
 	si_mark_atom_dirty(ctx, &ctx->b.render_cond_atom);
 	si_all_descriptors_begin_new_cs(ctx);
+	si_all_resident_buffers_begin_new_cs(ctx);
 
 	ctx->b.scissors.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
 	ctx->b.viewports.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;

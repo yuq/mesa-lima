@@ -2364,6 +2364,56 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 }
 
 
+void si_all_resident_buffers_begin_new_cs(struct si_context *sctx)
+{
+	unsigned num_resident_tex_handles, num_resident_img_handles;
+	unsigned num_bindless_descriptors;
+	unsigned i;
+
+	num_resident_tex_handles = sctx->resident_tex_handles.size /
+				   sizeof(struct si_texture_handle *);
+	num_resident_img_handles = sctx->resident_img_handles.size /
+				   sizeof(struct si_image_handle *);
+	num_bindless_descriptors = sctx->bindless_descriptors.size /
+				   sizeof(struct r600_resource *);
+
+	/* Add all bindless descriptors. */
+	for (i = 0; i < num_bindless_descriptors; i++) {
+		struct r600_resource *desc =
+			*util_dynarray_element(&sctx->bindless_descriptors,
+					       struct r600_resource *, i);
+
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc,
+					  RADEON_USAGE_READWRITE,
+					  RADEON_PRIO_DESCRIPTORS);
+	}
+
+	/* Add all resident texture handles. */
+	for (i = 0; i < num_resident_tex_handles; i++) {
+		struct si_texture_handle *tex_handle =
+			*util_dynarray_element(&sctx->resident_tex_handles,
+					       struct si_texture_handle *, i);
+		struct si_sampler_view *sview =
+			(struct si_sampler_view *)tex_handle->view;
+
+		si_sampler_view_add_buffer(sctx, sview->base.texture,
+					   RADEON_USAGE_READ,
+					   sview->is_stencil_sampler, false);
+	}
+
+	/* Add all resident image handles. */
+	for (i = 0; i < num_resident_img_handles; i++) {
+		struct si_image_handle *img_handle =
+			*util_dynarray_element(&sctx->resident_img_handles,
+					       struct si_image_handle *, i);
+		struct pipe_image_view *view = &img_handle->view;
+
+		si_sampler_view_add_buffer(sctx, view->resource,
+					   RADEON_USAGE_READWRITE,
+					   false, false);
+	}
+}
+
 /* INIT/DEINIT/UPLOAD */
 
 /* GFX9 has only 4KB of CE, while previous chips had 32KB. In order
