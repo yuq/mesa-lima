@@ -4276,6 +4276,22 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
        */
       earlier->data.precision = var->data.precision;
 
+   } else if (earlier->data.how_declared == ir_var_declared_implicitly &&
+              state->allow_builtin_variable_redeclaration) {
+      /* Allow verbatim redeclarations of built-in variables. Not explicitly
+       * valid, but some applications do it.
+       */
+      if (earlier->data.mode != var->data.mode &&
+          !(earlier->data.mode == ir_var_system_value &&
+            var->data.mode == ir_var_shader_in)) {
+         _mesa_glsl_error(&loc, state,
+                          "redeclaration of `%s' with incorrect qualifiers",
+                          var->name);
+      } else if (earlier->type != var->type) {
+         _mesa_glsl_error(&loc, state,
+                          "redeclaration of `%s' has incorrect type",
+                          var->name);
+      }
    } else if (allow_all_redeclarations) {
       if (earlier->data.mode != var->data.mode) {
          _mesa_glsl_error(&loc, state,
