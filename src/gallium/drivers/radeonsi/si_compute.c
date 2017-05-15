@@ -100,6 +100,9 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	sel.tokens = program->tokens;
 	sel.type = PIPE_SHADER_COMPUTE;
 	sel.local_size = program->local_size;
+	si_get_active_slot_masks(&sel.info,
+				 &program->active_const_and_shader_buffers,
+				 &program->active_samplers_and_images);
 
 	program->shader.selector = &sel;
 	program->shader.is_monolithic = true;

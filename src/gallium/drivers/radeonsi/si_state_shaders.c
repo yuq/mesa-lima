@@ -1903,6 +1903,30 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	}
 }
 
+/* Return descriptor slot usage masks from the given shader info. */
+void si_get_active_slot_masks(const struct tgsi_shader_info *info,
+			      uint32_t *const_and_shader_buffers,
+			      uint64_t *samplers_and_images)
+{
+	unsigned start, num_shaderbufs, num_constbufs, num_images, num_samplers;
+
+	num_shaderbufs = util_last_bit(info->shader_buffers_declared);
+	num_constbufs = util_last_bit(info->const_buffers_declared);
+	/* two 8-byte images share one 16-byte slot */
+	num_images = align(util_last_bit(info->images_declared), 2);
+	num_samplers = util_last_bit(info->samplers_declared);
+
+	/* The layout is: sb[last] ... sb[0], cb[0] ... cb[last] */
+	start = si_get_shaderbuf_slot(num_shaderbufs - 1);
+	*const_and_shader_buffers =
+		u_bit_consecutive(start, num_shaderbufs + num_constbufs);
+
+	/* The layout is: image[last] ... image[0], sampler[0] ... sampler[last] */
+	start = si_get_image_slot(num_images - 1) / 2;
+	*samplers_and_images =
+		u_bit_consecutive64(start, num_images / 2 + num_samplers);
+}
+
 static void *si_create_shader_selector(struct pipe_context *ctx,
 				       const struct pipe_shader_state *state)
 {
@@ -1929,6 +1953,9 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	tgsi_scan_shader(state->tokens, &sel->info);
 	sel->type = sel->info.processor;
 	p_atomic_inc(&sscreen->b.num_shaders_created);
+	si_get_active_slot_masks(&sel->info,
+				 &sel->active_const_and_shader_buffers,
+				 &sel->active_samplers_and_images);
 
 	/* The prolog is a no-op if there are no inputs. */
 	sel->vs_needs_prolog = sel->type == PIPE_SHADER_VERTEX &&

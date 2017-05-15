@@ -352,6 +352,10 @@ struct si_shader_selector {
 	uint32_t	patch_outputs_written;	/* "get_unique_index_patch" bits */
 
 	uint64_t	inputs_read;		/* "get_unique_index" bits */
+
+	/* bitmasks of used descriptor slots */
+	uint32_t	active_const_and_shader_buffers;
+	uint64_t	active_samplers_and_images;
 };
 
 /* Valid shader configurations:

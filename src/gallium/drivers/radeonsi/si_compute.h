@@ -34,6 +34,10 @@ struct si_compute {
 	struct util_queue_fence ready;
 	struct si_compiler_ctx_state compiler_ctx_state;
 
+	/* bitmasks of used descriptor slots */
+	uint32_t active_const_and_shader_buffers;
+	uint64_t active_samplers_and_images;
+
 	unsigned ir_type;
 	unsigned local_size;
 	unsigned private_size;
