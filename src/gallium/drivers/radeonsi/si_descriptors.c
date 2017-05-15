@@ -480,6 +480,54 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 	}
 }
 
+static void si_set_sampler_view_desc(struct si_context *sctx,
+				     struct si_sampler_view *sview,
+				     struct si_sampler_state *sstate,
+				     uint32_t *desc)
+{
+	struct pipe_sampler_view *view = &sview->base;
+	struct r600_texture *rtex = (struct r600_texture *)view->texture;
+	bool is_buffer = rtex->resource.b.b.target == PIPE_BUFFER;
+
+	if (unlikely(!is_buffer && sview->dcc_incompatible)) {
+		if (vi_dcc_enabled(rtex, view->u.tex.first_level))
+			if (!r600_texture_disable_dcc(&sctx->b, rtex))
+				sctx->b.decompress_dcc(&sctx->b.b, rtex);
+
+		sview->dcc_incompatible = false;
+	}
+
+	assert(rtex); /* views with texture == NULL aren't supported */
+	memcpy(desc, sview->state, 8*4);
+
+	if (is_buffer) {
+		si_set_buf_desc_address(&rtex->resource,
+					sview->base.u.buf.offset,
+					desc + 4);
+	} else {
+		bool is_separate_stencil = rtex->db_compatible &&
+					   sview->is_stencil_sampler;
+
+		si_set_mutable_tex_desc_fields(sctx->screen, rtex,
+					       sview->base_level_info,
+					       sview->base_level,
+					       sview->base.u.tex.first_level,
+					       sview->block_width,
+					       is_separate_stencil,
+					       desc);
+	}
+
+	if (!is_buffer && rtex->fmask.size) {
+		memcpy(desc + 8, sview->fmask_state, 8*4);
+	} else {
+		/* Disable FMASK and bind sampler state in [12:15]. */
+		memcpy(desc + 8, null_texture_descriptor, 4*4);
+
+		if (sstate)
+			memcpy(desc + 12, sstate->val, 4*4);
+	}
+}
+
 static void si_set_sampler_view(struct si_context *sctx,
 				unsigned shader,
 				unsigned slot, struct pipe_sampler_view *view,
@@ -496,53 +544,14 @@ static void si_set_sampler_view(struct si_context *sctx,
 
 	if (view) {
 		struct r600_texture *rtex = (struct r600_texture *)view->texture;
-		bool is_buffer = rtex->resource.b.b.target == PIPE_BUFFER;
 
-		if (unlikely(!is_buffer && rview->dcc_incompatible)) {
-			if (vi_dcc_enabled(rtex, view->u.tex.first_level))
-				if (!r600_texture_disable_dcc(&sctx->b, rtex))
-					sctx->b.decompress_dcc(&sctx->b.b, rtex);
+		si_set_sampler_view_desc(sctx, rview,
+					 views->sampler_states[slot], desc);
 
-			rview->dcc_incompatible = false;
-		}
-
-		assert(rtex); /* views with texture == NULL aren't supported */
-		pipe_sampler_view_reference(&views->views[slot], view);
-		memcpy(desc, rview->state, 8*4);
-
-		if (is_buffer) {
+		if (rtex->resource.b.b.target == PIPE_BUFFER)
 			rtex->resource.bind_history |= PIPE_BIND_SAMPLER_VIEW;
 
-			si_set_buf_desc_address(&rtex->resource,
-						view->u.buf.offset,
-						desc + 4);
-		} else {
-			bool is_separate_stencil =
-				rtex->db_compatible &&
-				rview->is_stencil_sampler;
-
-			si_set_mutable_tex_desc_fields(sctx->screen, rtex,
-						       rview->base_level_info,
-						       rview->base_level,
-						       rview->base.u.tex.first_level,
-						       rview->block_width,
-						       is_separate_stencil,
-						       desc);
-		}
-
-		if (!is_buffer && rtex->fmask.size) {
-			memcpy(desc + 8,
-			       rview->fmask_state, 8*4);
-		} else {
-			/* Disable FMASK and bind sampler state in [12:15]. */
-			memcpy(desc + 8,
-			       null_texture_descriptor, 4*4);
-
-			if (views->sampler_states[slot])
-				memcpy(desc + 12,
-				       views->sampler_states[slot]->val, 4*4);
-		}
-
+		pipe_sampler_view_reference(&views->views[slot], view);
 		views->enabled_mask |= 1u << slot;
 
 		/* Since this can flush, it must be done after enabled_mask is
