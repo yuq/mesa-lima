@@ -42,6 +42,7 @@
 
 struct si_screen;
 struct si_shader;
+struct si_shader_selector;
 
 struct si_state_blend {
 	struct si_pm4_state	pm4;
@@ -222,12 +223,20 @@ struct si_descriptors {
 
 	/* The buffer where the descriptors have been uploaded. */
 	struct r600_resource *buffer;
-	unsigned buffer_offset;
+	int buffer_offset; /* can be negative if not using lower slots */
 
 	/* Offset in CE RAM */
 	unsigned ce_offset;
 
-	/* elements of the list that are changed and need to be uploaded */
+	/* Slots that are used by currently-bound shaders.
+	 * With CE: It determines which slots are dumped to L2.
+	 *          It doesn't skip uploads to CE RAM.
+	 * Without CE: It determines which slots are uploaded.
+	 */
+	unsigned first_active_slot;
+	unsigned num_active_slots;
+
+	/* Slots that have been changed and need to be uploaded. */
 	uint64_t dirty_mask;
 
 	/* Whether CE is used to upload this descriptor array. */
@@ -315,6 +324,11 @@ void si_emit_graphics_shader_userdata(struct si_context *sctx,
 void si_emit_compute_shader_userdata(struct si_context *sctx);
 void si_set_rw_buffer(struct si_context *sctx,
 		      uint slot, const struct pipe_constant_buffer *input);
+void si_set_active_descriptors(struct si_context *sctx, unsigned desc_idx,
+			       uint64_t new_active_mask);
+void si_set_active_descriptors_for_shader(struct si_context *sctx,
+					  struct si_shader_selector *sel);
+
 /* si_state.c */
 struct si_shader_selector;
 

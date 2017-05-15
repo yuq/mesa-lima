@@ -208,7 +208,24 @@ static void *si_create_compute_state(
 static void si_bind_compute_state(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	sctx->cs_shader_state.program = (struct si_compute*)state;
+	struct si_compute *program = (struct si_compute*)state;
+
+	sctx->cs_shader_state.program = program;
+	if (!program)
+		return;
+
+	/* Wait because we need active slot usage masks. */
+	if (program->ir_type == PIPE_SHADER_IR_TGSI)
+		util_queue_fence_wait(&program->ready);
+
+	si_set_active_descriptors(sctx,
+				  SI_DESCS_FIRST_COMPUTE +
+				  SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS,
+				  program->active_const_and_shader_buffers);
+	si_set_active_descriptors(sctx,
+				  SI_DESCS_FIRST_COMPUTE +
+				  SI_SHADER_DESCS_SAMPLERS_AND_IMAGES,
+				  program->active_samplers_and_images);
 }
 
 static void si_set_global_binding(
@@ -756,12 +773,9 @@ static void si_launch_grid(
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 				 SI_CONTEXT_CS_PARTIAL_FLUSH;
 
-	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
-		util_queue_fence_wait(&program->ready);
-
-		if (program->shader.compilation_failed)
-			return;
-	}
+	if (program->ir_type == PIPE_SHADER_IR_TGSI &&
+	    program->shader.compilation_failed)
+		return;
 
 	si_decompress_compute_textures(sctx);
 

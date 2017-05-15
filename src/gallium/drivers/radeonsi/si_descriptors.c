@@ -125,12 +125,14 @@ static void si_release_descriptors(struct si_descriptors *desc)
 }
 
 static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned size,
-			 unsigned *out_offset, struct r600_resource **out_buf) {
+			 unsigned *out_offset, struct r600_resource **out_buf)
+{
 	uint64_t va;
 
 	u_suballocator_alloc(sctx->ce_suballocator, size,
-			     sctx->screen->b.info.tcc_cache_line_size,
-			     out_offset, (struct pipe_resource**)out_buf);
+			     si_optimal_tcc_alignment(sctx, size),
+			     out_offset,
+			     (struct pipe_resource**)out_buf);
 	if (!out_buf)
 			return false;
 
@@ -193,7 +195,16 @@ static bool si_upload_descriptors(struct si_context *sctx,
 				  struct si_descriptors *desc,
 				  struct r600_atom * atom)
 {
-	unsigned list_size = desc->num_elements * desc->element_dw_size * 4;
+	unsigned slot_size = desc->element_dw_size * 4;
+	unsigned first_slot_offset = desc->first_active_slot * slot_size;
+	unsigned upload_size = desc->num_active_slots * slot_size;
+
+	/* Skip the upload if no shader is using the descriptors. dirty_mask
+	 * will stay dirty and the descriptors will be uploaded when there is
+	 * a shader using them.
+	 */
+	if (!upload_size)
+		return true;
 
 	if (sctx->ce_ib && desc->uses_ce) {
 		uint32_t const* list = (uint32_t const*)desc->list;
@@ -212,25 +223,32 @@ static bool si_upload_descriptors(struct si_context *sctx,
 			radeon_emit_array(sctx->ce_ib, list + begin, count);
 		}
 
-		if (!si_ce_upload(sctx, desc->ce_offset, list_size,
-		                           &desc->buffer_offset, &desc->buffer))
+		if (!si_ce_upload(sctx, desc->ce_offset + first_slot_offset,
+				  upload_size, (unsigned*)&desc->buffer_offset,
+				  &desc->buffer))
 			return false;
 	} else {
-		void *ptr;
+		uint32_t *ptr;
 
-		u_upload_alloc(sctx->b.b.const_uploader, 0, list_size,
-			       sctx->screen->b.info.tcc_cache_line_size,
-			       &desc->buffer_offset,
-			       (struct pipe_resource**)&desc->buffer, &ptr);
+		u_upload_alloc(sctx->b.b.const_uploader, 0, upload_size,
+			       si_optimal_tcc_alignment(sctx, upload_size),
+			       (unsigned*)&desc->buffer_offset,
+			       (struct pipe_resource**)&desc->buffer,
+			       (void**)&ptr);
 		if (!desc->buffer)
 			return false; /* skip the draw call */
 
-		util_memcpy_cpu_to_le32(ptr, desc->list, list_size);
-		desc->gpu_list = ptr;
+		util_memcpy_cpu_to_le32(ptr, (char*)desc->list + first_slot_offset,
+					upload_size);
+		desc->gpu_list = ptr - first_slot_offset / 4;
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
 	                            RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 	}
+
+	/* The shader pointer should point to slot 0. */
+	desc->buffer_offset -= first_slot_offset;
+
 	desc->dirty_mask = 0;
 
 	if (atom)
@@ -1030,7 +1048,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	u_upload_alloc(sctx->b.b.const_uploader, 0,
 		       desc_list_byte_size,
 		       si_optimal_tcc_alignment(sctx, desc_list_byte_size),
-		       &desc->buffer_offset,
+		       (unsigned*)&desc->buffer_offset,
 		       (struct pipe_resource**)&desc->buffer, (void**)&ptr);
 	if (!desc->buffer)
 		return false;
@@ -1891,7 +1909,8 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	uint64_t va;
 
-	assert(desc->buffer);
+	if (!desc->buffer)
+		return; /* the pointer is not used by current shaders */
 
 	va = desc->buffer->gpu_address +
 	     desc->buffer_offset;
@@ -2034,6 +2053,8 @@ void si_init_all_descriptors(struct si_context *sctx)
 				 RADEON_USAGE_READWRITE, RADEON_USAGE_READ,
 				 RADEON_PRIO_SHADER_RINGS, RADEON_PRIO_CONST_BUFFER,
 				 &ce_offset);
+	sctx->descriptors[SI_DESCS_RW_BUFFERS].num_active_slots = SI_NUM_RW_BUFFERS;
+
 	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
 			    4, SI_NUM_VERTEX_BUFFERS, NULL);
 
@@ -2155,4 +2176,42 @@ void si_all_descriptors_begin_new_cs(struct si_context *sctx)
 		si_descriptors_begin_new_cs(sctx, &sctx->descriptors[i]);
 
 	si_shader_userdata_begin_new_cs(sctx);
+}
+
+void si_set_active_descriptors(struct si_context *sctx, unsigned desc_idx,
+			       uint64_t new_active_mask)
+{
+	struct si_descriptors *desc = &sctx->descriptors[desc_idx];
+
+	/* Ignore no-op updates and updates that disable all slots. */
+	if (!new_active_mask ||
+	    new_active_mask == u_bit_consecutive64(desc->first_active_slot,
+						   desc->num_active_slots))
+		return;
+
+	int first, count;
+	u_bit_scan_consecutive_range64(&new_active_mask, &first, &count);
+	assert(new_active_mask == 0);
+
+	/* Upload/dump descriptors if slots are being enabled. */
+	if (first < desc->first_active_slot ||
+	    first + count > desc->first_active_slot + desc->num_active_slots)
+		sctx->descriptors_dirty |= 1u << desc_idx;
+
+	desc->first_active_slot = first;
+	desc->num_active_slots = count;
+}
+
+void si_set_active_descriptors_for_shader(struct si_context *sctx,
+					  struct si_shader_selector *sel)
+{
+	if (!sel)
+		return;
+
+	si_set_active_descriptors(sctx,
+		si_const_and_shader_buffer_descriptors_idx(sel->type),
+		sel->active_const_and_shader_buffers);
+	si_set_active_descriptors(sctx,
+		si_sampler_and_image_descriptors_idx(sel->type),
+		sel->active_samplers_and_images);
 }
