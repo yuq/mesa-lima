@@ -75,6 +75,7 @@ const __DRIconfigOptionsExtension gallium_config_options = {
          DRI_CONF_DISABLE_SHADER_BIT_ENCODING("false")
          DRI_CONF_FORCE_GLSL_VERSION(0)
          DRI_CONF_ALLOW_GLSL_EXTENSION_DIRECTIVE_MIDSHADER("false")
+         DRI_CONF_ALLOW_GLSL_BUILTIN_VARIABLE_REDECLARATION("false")
          DRI_CONF_ALLOW_HIGHER_COMPAT_VERSION("false")
          DRI_CONF_FORCE_GLSL_ABS_SQRT("false")
       DRI_CONF_SECTION_END
@@ -108,6 +109,8 @@ dri_fill_st_options(struct dri_screen *screen)
       driQueryOptionb(optionCache, "force_s3tc_enable");
    options->allow_glsl_extension_directive_midshader =
       driQueryOptionb(optionCache, "allow_glsl_extension_directive_midshader");
+   options->allow_glsl_builtin_variable_redeclaration =
+      driQueryOptionb(optionCache, "allow_glsl_builtin_variable_redeclaration");
    options->allow_higher_compat_version =
       driQueryOptionb(optionCache, "allow_higher_compat_version");
    options->glsl_zero_init = driQueryOptionb(optionCache, "glsl_zero_init");

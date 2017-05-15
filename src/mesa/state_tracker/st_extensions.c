@@ -892,6 +892,8 @@ void st_init_extensions(struct pipe_screen *screen,
 
    consts->ForceGLSLAbsSqrt = options->force_glsl_abs_sqrt;
 
+   consts->AllowGLSLBuiltinVariableRedeclaration = options->allow_glsl_builtin_variable_redeclaration;
+
    consts->dri_config_options_sha1 = options->config_options_sha1;
 
    if (consts->GLSLVersion >= 400)

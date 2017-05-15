@@ -934,6 +934,9 @@ brw_process_driconf_options(struct brw_context *brw)
    ctx->Const.AllowGLSLExtensionDirectiveMidShader =
       driQueryOptionb(options, "allow_glsl_extension_directive_midshader");
 
+   ctx->Const.AllowGLSLBuiltinVariableRedeclaration =
+      driQueryOptionb(options, "allow_glsl_builtin_variable_redeclaration");
+
    ctx->Const.AllowHigherCompatVersion =
       driQueryOptionb(options, "allow_higher_compat_version");
 
