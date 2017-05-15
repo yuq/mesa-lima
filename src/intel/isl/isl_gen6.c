@@ -117,16 +117,16 @@ isl_gen6_choose_image_alignment_el(const struct isl_device *dev,
       return;
    }
 
-   if (isl_surf_usage_is_depth(info->usage)) {
-      /* depth buffer (possibly interleaved with stencil) */
-      *image_align_el = isl_extent3d(4, 4, 1);
+   /* Separate stencil requires 4x2 alignment */
+   if (isl_surf_usage_is_stencil(info->usage) &&
+       info->format == ISL_FORMAT_R8_UINT) {
+      *image_align_el = isl_extent3d(4, 2, 1);
       return;
    }
 
-   if (isl_surf_usage_is_stencil(info->usage)) {
-      /* separate stencil buffer */
-      assert(!isl_surf_usage_is_depth(info->usage));
-      *image_align_el = isl_extent3d(4, 2, 1);
+   /* Depth or combined depth stencil surfaces require 4x4 alignment */
+   if (isl_surf_usage_is_depth_or_stencil(info->usage)) {
+      *image_align_el = isl_extent3d(4, 4, 1);
       return;
    }
 
