@@ -64,12 +64,14 @@ uint32_t tex_mocs[] = {
    [7] = GEN7_MOCS_L3,
    [8] = BDW_MOCS_WB,
    [9] = SKL_MOCS_WB,
+   [10] = CNL_MOCS_WB,
 };
 
 uint32_t rb_mocs[] = {
    [7] = GEN7_MOCS_L3,
    [8] = BDW_MOCS_PTE,
    [9] = SKL_MOCS_PTE,
+   [10] = CNL_MOCS_PTE,
 };
 
 static void
