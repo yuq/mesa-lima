@@ -163,6 +163,14 @@ lower_instr(nir_intrinsic_instr *instr, unsigned ssbo_offset, nir_builder *b)
    return true;
 }
 
+static bool
+is_atomic_uint(const struct glsl_type *type)
+{
+   if (glsl_get_base_type(type) == GLSL_TYPE_ARRAY)
+      return is_atomic_uint(glsl_get_array_element(type));
+   return glsl_get_base_type(type) == GLSL_TYPE_ATOMIC_UINT;
+}
+
 bool
 nir_lower_atomics_to_ssbo(nir_shader *shader, unsigned ssbo_offset)
 {
@@ -189,7 +197,7 @@ nir_lower_atomics_to_ssbo(nir_shader *shader, unsigned ssbo_offset)
       /* replace atomic_uint uniforms with ssbo's: */
       unsigned replaced = 0;
       nir_foreach_variable_safe(var, &shader->uniforms) {
-         if (glsl_get_base_type(var->type) == GLSL_TYPE_ATOMIC_UINT) {
+         if (is_atomic_uint(var->type)) {
             exec_node_remove(&var->node);
 
             if (replaced & (1 << var->data.binding))
