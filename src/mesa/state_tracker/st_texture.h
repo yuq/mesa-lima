@@ -293,4 +293,12 @@ st_update_single_texture(struct st_context *st,
                          struct pipe_sampler_view **sampler_view,
                          GLuint texUnit, unsigned glsl_version);
 
+void
+st_make_bound_samplers_resident(struct st_context *st,
+                                struct gl_program *prog);
+
+void
+st_make_bound_images_resident(struct st_context *st,
+                              struct gl_program *prog);
+
 #endif
