@@ -1614,6 +1614,48 @@ static void si_set_polygon_stipple(struct pipe_context *ctx,
 
 /* TEXTURE METADATA ENABLE/DISABLE */
 
+static void
+si_resident_handles_update_needs_color_decompress(struct si_context *sctx)
+{
+	unsigned num_resident_tex_handles, num_resident_img_handles;
+	unsigned i;
+
+	num_resident_tex_handles = sctx->resident_tex_handles.size /
+				   sizeof(struct si_texture_handle *);
+
+	for (i = 0; i < num_resident_tex_handles; i++) {
+		struct si_texture_handle *tex_handle =
+			*util_dynarray_element(&sctx->resident_tex_handles,
+					       struct si_texture_handle *, i);
+		struct pipe_resource *res = tex_handle->view->texture;
+
+		if (res && res->target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+
+			tex_handle->needs_color_decompress =
+				color_needs_decompression(rtex);
+		}
+	}
+
+	num_resident_img_handles = sctx->resident_img_handles.size /
+				   sizeof(struct si_image_handle *);
+
+	for (i = 0; i < num_resident_img_handles; i++) {
+		struct si_image_handle *img_handle =
+			*util_dynarray_element(&sctx->resident_img_handles,
+					       struct si_image_handle *, i);
+		struct pipe_image_view *view = &img_handle->view;
+		struct pipe_resource *res = view->resource;
+
+		if (res && res->target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+
+			img_handle->needs_color_decompress =
+				color_needs_decompression(rtex);
+		}
+	}
+}
+
 /* CMASK can be enabled (for fast clear) and disabled (for texture export)
  * while the texture is bound, possibly by a different context. In that case,
  * call this function to update needs_*_decompress_masks.
@@ -1625,6 +1667,8 @@ void si_update_needs_color_decompress_masks(struct si_context *sctx)
 		si_images_update_needs_color_decompress_mask(&sctx->images[i]);
 		si_update_shader_needs_decompress_mask(sctx, i);
 	}
+
+	si_resident_handles_update_needs_color_decompress(sctx);
 }
 
 /* BUFFER DISCARD/INVALIDATION */
@@ -2241,6 +2285,11 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 			struct r600_texture *rtex =
 				(struct r600_texture *)sview->base.texture;
 
+			tex_handle->needs_depth_decompress =
+				depth_needs_decompression(rtex, sview);
+			tex_handle->needs_color_decompress =
+				color_needs_decompression(rtex);
+
 			if (rtex->dcc_offset &&
 			    p_atomic_read(&rtex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
@@ -2354,6 +2403,9 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 		if (res->b.b.target != PIPE_BUFFER) {
 			struct r600_texture *rtex = (struct r600_texture *)res;
 			unsigned level = view->u.tex.level;
+
+			img_handle->needs_color_decompress =
+				color_needs_decompression(rtex);
 
 			if (vi_dcc_enabled(rtex, level) &&
 			    p_atomic_read(&rtex->framebuffers_bound))

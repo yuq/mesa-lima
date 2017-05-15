@@ -241,12 +241,15 @@ struct si_texture_handle
 {
 	struct si_bindless_descriptor	*desc;
 	struct pipe_sampler_view	*view;
+	bool				needs_color_decompress;
+	bool				needs_depth_decompress;
 };
 
 struct si_image_handle
 {
 	struct si_bindless_descriptor	*desc;
 	struct pipe_image_view		view;
+	bool				needs_color_decompress;
 };
 
 struct si_context {
