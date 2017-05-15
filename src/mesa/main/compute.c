@@ -243,10 +243,9 @@ valid_dispatch_indirect(struct gl_context *ctx,  GLintptr indirect)
    return GL_TRUE;
 }
 
-void GLAPIENTRY
-_mesa_DispatchCompute(GLuint num_groups_x,
-                      GLuint num_groups_y,
-                      GLuint num_groups_z)
+static ALWAYS_INLINE void
+dispatch_compute(GLuint num_groups_x, GLuint num_groups_y,
+                 GLuint num_groups_z, bool no_error)
 {
    GET_CURRENT_CONTEXT(ctx);
    const GLuint num_groups[3] = { num_groups_x, num_groups_y, num_groups_z };
@@ -257,7 +256,7 @@ _mesa_DispatchCompute(GLuint num_groups_x,
       _mesa_debug(ctx, "glDispatchCompute(%d, %d, %d)\n",
                   num_groups_x, num_groups_y, num_groups_z);
 
-   if (!validate_DispatchCompute(ctx, num_groups))
+   if (!no_error && !validate_DispatchCompute(ctx, num_groups))
       return;
 
    if (num_groups_x == 0u || num_groups_y == 0u || num_groups_z == 0u)
@@ -266,8 +265,16 @@ _mesa_DispatchCompute(GLuint num_groups_x,
    ctx->Driver.DispatchCompute(ctx, num_groups);
 }
 
-extern void GLAPIENTRY
-_mesa_DispatchComputeIndirect(GLintptr indirect)
+void GLAPIENTRY
+_mesa_DispatchCompute(GLuint num_groups_x,
+                      GLuint num_groups_y,
+                      GLuint num_groups_z)
+{
+   dispatch_compute(num_groups_x, num_groups_y, num_groups_z, false);
+}
+
+static ALWAYS_INLINE void
+dispatch_compute_indirect(GLintptr indirect, bool no_error)
 {
    GET_CURRENT_CONTEXT(ctx);
 
@@ -276,16 +283,23 @@ _mesa_DispatchComputeIndirect(GLintptr indirect)
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glDispatchComputeIndirect(%ld)\n", (long) indirect);
 
-   if (!valid_dispatch_indirect(ctx, indirect))
+   if (!no_error && !valid_dispatch_indirect(ctx, indirect))
       return;
 
    ctx->Driver.DispatchComputeIndirect(ctx, indirect);
 }
 
-void GLAPIENTRY
-_mesa_DispatchComputeGroupSizeARB(GLuint num_groups_x, GLuint num_groups_y,
-                                  GLuint num_groups_z, GLuint group_size_x,
-                                  GLuint group_size_y, GLuint group_size_z)
+extern void GLAPIENTRY
+_mesa_DispatchComputeIndirect(GLintptr indirect)
+{
+   dispatch_compute_indirect(indirect, false);
+}
+
+static ALWAYS_INLINE void
+dispatch_compute_group_size(GLuint num_groups_x, GLuint num_groups_y,
+                            GLuint num_groups_z, GLuint group_size_x,
+                            GLuint group_size_y, GLuint group_size_z,
+                            bool no_error)
 {
    GET_CURRENT_CONTEXT(ctx);
    const GLuint num_groups[3] = { num_groups_x, num_groups_y, num_groups_z };
@@ -299,11 +313,22 @@ _mesa_DispatchComputeGroupSizeARB(GLuint num_groups_x, GLuint num_groups_y,
                   num_groups_x, num_groups_y, num_groups_z,
                   group_size_x, group_size_y, group_size_z);
 
-   if (!validate_DispatchComputeGroupSizeARB(ctx, num_groups, group_size))
+   if (!no_error &&
+       !validate_DispatchComputeGroupSizeARB(ctx, num_groups, group_size))
       return;
 
    if (num_groups_x == 0u || num_groups_y == 0u || num_groups_z == 0u)
        return;
 
    ctx->Driver.DispatchComputeGroupSize(ctx, num_groups, group_size);
+}
+
+void GLAPIENTRY
+_mesa_DispatchComputeGroupSizeARB(GLuint num_groups_x, GLuint num_groups_y,
+                                  GLuint num_groups_z, GLuint group_size_x,
+                                  GLuint group_size_y, GLuint group_size_z)
+{
+   dispatch_compute_group_size(num_groups_x, num_groups_y, num_groups_z,
+                               group_size_x, group_size_y, group_size_z,
+                               false);
 }
