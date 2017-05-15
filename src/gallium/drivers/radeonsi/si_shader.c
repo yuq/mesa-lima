@@ -67,6 +67,7 @@ struct si_shader_output_values
  */
 struct si_function_info {
 	LLVMTypeRef types[100];
+	LLVMValueRef *assign[100];
 	unsigned num_sgpr_params;
 	unsigned num_params;
 };
@@ -125,8 +126,9 @@ static void si_init_function_info(struct si_function_info *fninfo)
 	fninfo->num_sgpr_params = 0;
 }
 
-static unsigned add_arg(struct si_function_info *fninfo,
-			enum si_arg_regfile regfile, LLVMTypeRef type)
+static unsigned add_arg_assign(struct si_function_info *fninfo,
+			enum si_arg_regfile regfile, LLVMTypeRef type,
+			LLVMValueRef *assign)
 {
 	assert(regfile != ARG_SGPR || fninfo->num_sgpr_params == fninfo->num_params);
 
@@ -137,7 +139,14 @@ static unsigned add_arg(struct si_function_info *fninfo,
 		fninfo->num_sgpr_params = fninfo->num_params;
 
 	fninfo->types[idx] = type;
+	fninfo->assign[idx] = assign;
 	return idx;
+}
+
+static unsigned add_arg(struct si_function_info *fninfo,
+			enum si_arg_regfile regfile, LLVMTypeRef type)
+{
+	return add_arg_assign(fninfo, regfile, type, NULL);
 }
 
 static void add_arg_checked(struct si_function_info *fninfo,
@@ -374,8 +383,7 @@ static LLVMValueRef get_instance_index_for_fetch(
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 
-	LLVMValueRef result = LLVMGetParam(ctx->main_fn,
-					   ctx->param_instance_id);
+	LLVMValueRef result = ctx->abi.instance_id;
 
 	/* The division must be done before START_INSTANCE is added. */
 	if (divisor != ctx->i32_1)
@@ -1472,16 +1480,13 @@ static void declare_system_value(struct si_shader_context *ctx,
 
 	switch (decl->Semantic.Name) {
 	case TGSI_SEMANTIC_INSTANCEID:
-		value = LLVMGetParam(ctx->main_fn,
-				     ctx->param_instance_id);
+		value = ctx->abi.instance_id;
 		break;
 
 	case TGSI_SEMANTIC_VERTEXID:
 		value = LLVMBuildAdd(gallivm->builder,
-				     LLVMGetParam(ctx->main_fn,
-						  ctx->param_vertex_id),
-				     LLVMGetParam(ctx->main_fn,
-						  ctx->param_base_vertex), "");
+				     ctx->abi.vertex_id,
+				     ctx->abi.base_vertex, "");
 		break;
 
 	case TGSI_SEMANTIC_VERTEXID_NOBASE:
@@ -1503,17 +1508,16 @@ static void declare_system_value(struct si_shader_context *ctx,
 		indexed = LLVMBuildTrunc(gallivm->builder, indexed, ctx->i1, "");
 
 		value = LLVMBuildSelect(gallivm->builder, indexed,
-					LLVMGetParam(ctx->main_fn, ctx->param_base_vertex),
-					ctx->i32_0, "");
+					ctx->abi.base_vertex, ctx->i32_0, "");
 		break;
 	}
 
 	case TGSI_SEMANTIC_BASEINSTANCE:
-		value = LLVMGetParam(ctx->main_fn, ctx->param_start_instance);
+		value = ctx->abi.start_instance;
 		break;
 
 	case TGSI_SEMANTIC_DRAWID:
-		value = LLVMGetParam(ctx->main_fn, ctx->param_draw_id);
+		value = ctx->abi.draw_id;
 		break;
 
 	case TGSI_SEMANTIC_INVOCATIONID:
@@ -4035,6 +4039,11 @@ static void si_create_function(struct si_shader_context *ctx,
 			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
 	}
 
+	for (i = 0; i < fninfo->num_params; ++i) {
+		if (fninfo->assign[i])
+			*fninfo->assign[i] = LLVMGetParam(ctx->main_fn, i);
+	}
+
 	if (max_workgroup_size) {
 		si_llvm_add_attribute(ctx->main_fn, "amdgpu-max-work-group-size",
 				      max_workgroup_size);
@@ -4182,9 +4191,9 @@ static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
 {
 	ctx->param_vertex_buffers = add_arg(fninfo, ARG_SGPR,
 		si_const_array(ctx->v4i32, SI_NUM_VERTEX_BUFFERS));
-	ctx->param_base_vertex = add_arg(fninfo, ARG_SGPR, ctx->i32);
-	ctx->param_start_instance = add_arg(fninfo, ARG_SGPR, ctx->i32);
-	ctx->param_draw_id = add_arg(fninfo, ARG_SGPR, ctx->i32);
+	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.base_vertex);
+	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.start_instance);
+	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.draw_id);
 	ctx->param_vs_state_bits = add_arg(fninfo, ARG_SGPR, ctx->i32);
 }
 
@@ -4194,12 +4203,12 @@ static void declare_vs_input_vgprs(struct si_shader_context *ctx,
 {
 	struct si_shader *shader = ctx->shader;
 
-	ctx->param_vertex_id = add_arg(fninfo, ARG_VGPR, ctx->i32);
+	add_arg_assign(fninfo, ARG_VGPR, ctx->i32, &ctx->abi.vertex_id);
 	if (shader->key.as_ls) {
 		ctx->param_rel_auto_id = add_arg(fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_instance_id = add_arg(fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(fninfo, ARG_VGPR, ctx->i32, &ctx->abi.instance_id);
 	} else {
-		ctx->param_instance_id = add_arg(fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(fninfo, ARG_VGPR, ctx->i32, &ctx->abi.instance_id);
 		ctx->param_vs_prim_id = add_arg(fninfo, ARG_VGPR, ctx->i32);
 	}
 	add_arg(fninfo, ARG_VGPR, ctx->i32); /* unused */
@@ -5232,8 +5241,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	preload_ring_buffers(&ctx);
 
 	LLVMValueRef voffset =
-		lp_build_mul_imm(uint, LLVMGetParam(ctx.main_fn,
-						    ctx.param_vertex_id), 4);
+		lp_build_mul_imm(uint, ctx.abi.vertex_id, 4);
 
 	/* Fetch the vertex stream ID.*/
 	LLVMValueRef stream_id;
@@ -6637,9 +6645,6 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 				      num_input_vgprs;
 	unsigned user_sgpr_base = key->vs_prolog.num_merged_next_stage_vgprs ? 8 : 0;
 
-	ctx->param_vertex_id = first_vs_vgpr;
-	ctx->param_instance_id = first_vs_vgpr + (key->vs_prolog.as_ls ? 2 : 1);
-
 	si_init_function_info(&fninfo);
 
 	/* 4 preloaded VGPRs + vertex load indices as prolog outputs */
@@ -6658,6 +6663,9 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 		add_arg(&fninfo, ARG_VGPR, ctx->i32);
 		returns[num_returns++] = ctx->f32;
 	}
+
+	fninfo.assign[first_vs_vgpr] = &ctx->abi.vertex_id;
+	fninfo.assign[first_vs_vgpr + (key->vs_prolog.as_ls ? 2 : 1)] = &ctx->abi.instance_id;
 
 	/* Vertex load indices. */
 	for (i = 0; i <= key->vs_prolog.last_input; i++)
@@ -6721,7 +6729,7 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 		} else {
 			/* VertexID + BaseVertex */
 			index = LLVMBuildAdd(gallivm->builder,
-					     LLVMGetParam(func, ctx->param_vertex_id),
+					     ctx->abi.vertex_id,
 					     LLVMGetParam(func, user_sgpr_base +
 								SI_SGPR_BASE_VERTEX), "");
 		}

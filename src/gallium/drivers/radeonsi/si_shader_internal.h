@@ -29,6 +29,7 @@
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_tgsi.h"
 #include "tgsi/tgsi_parse.h"
+#include "ac_shader_abi.h"
 #include "ac_llvm_util.h"
 #include "ac_llvm_build.h"
 
@@ -66,6 +67,8 @@ struct si_shader_context {
 
 	/* Whether the prolog will be compiled separately. */
 	bool separate_prolog;
+
+	struct ac_shader_abi abi;
 
 	/** This function is responsible for initilizing the inputs array and will be
 	  * called once for each input declared in the TGSI shader.
@@ -125,13 +128,8 @@ struct si_shader_context {
 	int param_merged_scratch_offset;
 	/* API VS */
 	int param_vertex_buffers;
-	int param_base_vertex;
-	int param_start_instance;
-	int param_draw_id;
-	int param_vertex_id;
 	int param_rel_auto_id;
 	int param_vs_prim_id;
-	int param_instance_id;
 	int param_vertex_index0;
 	/* VS states and layout of LS outputs / TCS inputs at the end
 	 *   [0] = clamp vertex color
