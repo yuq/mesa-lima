@@ -594,9 +594,9 @@ static LLVMValueRef get_indirect_index(struct si_shader_context *ctx,
  * Like get_indirect_index, but restricts the return value to a (possibly
  * undefined) value inside [0..num).
  */
-static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
-					       const struct tgsi_ind_register *ind,
-					       int rel_index, unsigned num)
+LLVMValueRef si_get_bounded_indirect_index(struct si_shader_context *ctx,
+					   const struct tgsi_ind_register *ind,
+					   int rel_index, unsigned num)
 {
 	LLVMValueRef result = get_indirect_index(ctx, ind, rel_index);
 
@@ -1761,9 +1761,9 @@ static LLVMValueRef fetch_constant(
 	if (reg->Register.Dimension && reg->Dimension.Indirect) {
 		LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_const_buffers);
 		LLVMValueRef index;
-		index = get_bounded_indirect_index(ctx, &reg->DimIndirect,
-						   reg->Dimension.Index,
-						   SI_NUM_CONST_BUFFERS);
+		index = si_get_bounded_indirect_index(ctx, &reg->DimIndirect,
+						      reg->Dimension.Index,
+						      SI_NUM_CONST_BUFFERS);
 		bufp = ac_build_indexed_load_const(&ctx->ac, ptr, index);
 	} else
 		bufp = load_const_buffer_desc(ctx, buf);
@@ -3473,9 +3473,9 @@ shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 	if (!reg->Register.Indirect)
 		index = LLVMConstInt(ctx->i32, reg->Register.Index, 0);
 	else
-		index = get_bounded_indirect_index(ctx, &reg->Indirect,
-						   reg->Register.Index,
-						   SI_NUM_SHADER_BUFFERS);
+		index = si_get_bounded_indirect_index(ctx, &reg->Indirect,
+						      reg->Register.Index,
+						      SI_NUM_SHADER_BUFFERS);
 
 	return ac_build_indexed_load_const(&ctx->ac, rsrc_ptr, index);
 }
@@ -3590,9 +3590,9 @@ image_fetch_rsrc(
 		 *    array, the results of the operation are undefined but may
 		 *    not lead to termination.
 		 */
-		index = get_bounded_indirect_index(ctx, &image->Indirect,
-						   image->Register.Index,
-						   SI_NUM_IMAGES);
+		index = si_get_bounded_indirect_index(ctx, &image->Indirect,
+						      image->Register.Index,
+						      SI_NUM_IMAGES);
 	}
 
 	*rsrc = load_image_desc(ctx, rsrc_ptr, index, target);
@@ -4586,10 +4586,10 @@ static void tex_fetch_ptrs(
 	reg = &emit_data->inst->Src[sampler_src];
 
 	if (reg->Register.Indirect) {
-		index = get_bounded_indirect_index(ctx,
-						   &reg->Indirect,
-						   reg->Register.Index,
-						   SI_NUM_SAMPLERS);
+		index = si_get_bounded_indirect_index(ctx,
+						      &reg->Indirect,
+						      reg->Register.Index,
+						      SI_NUM_SAMPLERS);
 	} else {
 		index = LLVMConstInt(ctx->i32, reg->Register.Index, 0);
 	}
