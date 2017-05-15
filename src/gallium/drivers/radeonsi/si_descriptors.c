@@ -197,9 +197,6 @@ static bool si_upload_descriptors(struct si_context *sctx,
 {
 	unsigned list_size = desc->num_elements * desc->element_dw_size * 4;
 
-	if (!desc->dirty_mask)
-		return true;
-
 	if (sctx->ce_ib && desc->uses_ce) {
 		uint32_t const* list = (uint32_t const*)desc->list;
 
