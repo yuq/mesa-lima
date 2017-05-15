@@ -282,6 +282,14 @@ _mesa_BlendFuncSeparate( GLenum sfactorRGB, GLenum dfactorRGB,
 }
 
 
+void GLAPIENTRY
+_mesa_BlendFunciARB_no_error(GLuint buf, GLenum sfactor, GLenum dfactor)
+{
+   _mesa_BlendFuncSeparateiARB_no_error(buf, sfactor, dfactor, sfactor,
+                                        dfactor);
+}
+
+
 /**
  * Set blend source/dest factors for one color buffer/target.
  */
@@ -331,6 +339,16 @@ blend_func_separatei(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
    ctx->Color.Blend[buf].DstA = dfactorA;
    update_uses_dual_src(ctx, buf);
    ctx->Color._BlendFuncPerBuffer = GL_TRUE;
+}
+
+
+void GLAPIENTRY
+_mesa_BlendFuncSeparateiARB_no_error(GLuint buf, GLenum sfactorRGB,
+                                     GLenum dfactorRGB, GLenum sfactorA,
+                                     GLenum dfactorA)
+{
+   blend_func_separatei(buf, sfactorRGB, dfactorRGB, sfactorA, dfactorA,
+                        true);
 }
 
 
