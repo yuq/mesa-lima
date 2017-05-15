@@ -32,21 +32,21 @@ static unsigned si_descriptor_list_cs_space(unsigned count, unsigned element_siz
 	/* Ensure we have enough space to start a new range in a hole */
 	assert(element_size >= 3);
 
-	/* 5 dwords for possible load to reinitialize when we have no preamble
-	 * IB + 5 dwords for write to L2 + 3 bytes for every range written to
-	 * CE RAM.
+	/* 5 dwords for write to L2 + 3 bytes for the packet header of
+	 * every disjoint range written to CE RAM.
 	 */
-	return 5 + 5 + 3 + count * element_size;
+	return 5 + (3 * count / 2) + count * element_size;
 }
 
 static unsigned si_ce_needed_cs_space(void)
 {
 	unsigned space = 0;
 
-	space += si_descriptor_list_cs_space(SI_NUM_CONST_BUFFERS, 4);
-	space += si_descriptor_list_cs_space(SI_NUM_SHADER_BUFFERS, 4);
-	space += si_descriptor_list_cs_space(SI_NUM_SAMPLERS, 16);
-	space += si_descriptor_list_cs_space(SI_NUM_IMAGES, 8);
+	space += si_descriptor_list_cs_space(SI_NUM_SHADER_BUFFERS +
+					     SI_NUM_CONST_BUFFERS, 4);
+	/* two 8-byte images share one 16-byte slot */
+	space += si_descriptor_list_cs_space(SI_NUM_IMAGES / 2 +
+					     SI_NUM_SAMPLERS, 16);
 	space *= SI_NUM_SHADERS;
 
 	space += si_descriptor_list_cs_space(SI_NUM_RW_BUFFERS, 4);
