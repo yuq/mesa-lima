@@ -30,6 +30,7 @@
 #include "../vulkan/radv_descriptor_set.h"
 #include "util/bitscan.h"
 #include <llvm-c/Transforms/Scalar.h>
+#include "ac_shader_abi.h"
 #include "ac_shader_info.h"
 #include "ac_exp_param.h"
 
@@ -57,6 +58,8 @@ struct nir_to_llvm_context {
 	struct ac_llvm_context ac;
 	const struct ac_nir_compiler_options *options;
 	struct ac_shader_variant_info *shader_info;
+	struct ac_shader_abi abi;
+
 	unsigned max_workgroup_size;
 	LLVMContextRef context;
 	LLVMModuleRef module;
@@ -76,13 +79,8 @@ struct nir_to_llvm_context {
 	LLVMValueRef tg_size;
 
 	LLVMValueRef vertex_buffers;
-	LLVMValueRef base_vertex;
-	LLVMValueRef start_instance;
-	LLVMValueRef draw_index;
-	LLVMValueRef vertex_id;
 	LLVMValueRef rel_auto_id;
 	LLVMValueRef vs_prim_id;
-	LLVMValueRef instance_id;
 	LLVMValueRef ls_out_layout;
 	LLVMValueRef es2gs_offset;
 
@@ -727,20 +725,20 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		if (!ctx->is_gs_copy_shader) {
 			if (ctx->shader_info->info.vs.has_vertex_buffers)
 				add_user_sgpr_argument(&args, const_array(ctx->v4i32, 16), &ctx->vertex_buffers); /* vertex buffers */
-			add_user_sgpr_argument(&args, ctx->i32, &ctx->base_vertex); // base vertex
-			add_user_sgpr_argument(&args, ctx->i32, &ctx->start_instance);// start instance
+			add_user_sgpr_argument(&args, ctx->i32, &ctx->abi.base_vertex); // base vertex
+			add_user_sgpr_argument(&args, ctx->i32, &ctx->abi.start_instance);// start instance
 			if (ctx->shader_info->info.vs.needs_draw_id)
-				add_user_sgpr_argument(&args, ctx->i32, &ctx->draw_index); // draw id
+				add_user_sgpr_argument(&args, ctx->i32, &ctx->abi.draw_id); // draw id
 		}
 		if (ctx->options->key.vs.as_es)
 			add_sgpr_argument(&args, ctx->i32, &ctx->es2gs_offset); // es2gs offset
 		else if (ctx->options->key.vs.as_ls)
 			add_user_sgpr_argument(&args, ctx->i32, &ctx->ls_out_layout); // ls out layout
-		add_vgpr_argument(&args, ctx->i32, &ctx->vertex_id); // vertex id
+		add_vgpr_argument(&args, ctx->i32, &ctx->abi.vertex_id); // vertex id
 		if (!ctx->is_gs_copy_shader) {
 			add_vgpr_argument(&args, ctx->i32, &ctx->rel_auto_id); // rel auto id
 			add_vgpr_argument(&args, ctx->i32, &ctx->vs_prim_id); // vs prim id
-			add_vgpr_argument(&args, ctx->i32, &ctx->instance_id); // instance id
+			add_vgpr_argument(&args, ctx->i32, &ctx->abi.instance_id); // instance id
 		}
 		break;
 	case MESA_SHADER_TESS_CTRL:
@@ -3944,11 +3942,11 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		break;
 	}
 	case nir_intrinsic_load_base_vertex: {
-		result = ctx->base_vertex;
+		result = ctx->abi.base_vertex;
 		break;
 	}
 	case nir_intrinsic_load_vertex_id_zero_base: {
-		result = ctx->vertex_id;
+		result = ctx->abi.vertex_id;
 		break;
 	}
 	case nir_intrinsic_load_local_invocation_id: {
@@ -3956,10 +3954,10 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		break;
 	}
 	case nir_intrinsic_load_base_instance:
-		result = ctx->start_instance;
+		result = ctx->abi.start_instance;
 		break;
 	case nir_intrinsic_load_draw_id:
-		result = ctx->draw_index;
+		result = ctx->abi.draw_id;
 		break;
 	case nir_intrinsic_load_invocation_id:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
@@ -3995,7 +3993,7 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		result = ctx->front_face;
 		break;
 	case nir_intrinsic_load_instance_id:
-		result = ctx->instance_id;
+		result = ctx->abi.instance_id;
 		ctx->shader_info->vs.vgpr_comp_cnt = MAX2(3,
 		                            ctx->shader_info->vs.vgpr_comp_cnt);
 		break;
@@ -4783,13 +4781,13 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 	variable->data.driver_location = idx * 4;
 
 	if (ctx->options->key.vs.instance_rate_inputs & (1u << index)) {
-		buffer_index = LLVMBuildAdd(ctx->builder, ctx->instance_id,
-					    ctx->start_instance, "");
+		buffer_index = LLVMBuildAdd(ctx->builder, ctx->abi.instance_id,
+					    ctx->abi.start_instance, "");
 		ctx->shader_info->vs.vgpr_comp_cnt = MAX2(3,
 		                            ctx->shader_info->vs.vgpr_comp_cnt);
 	} else
-		buffer_index = LLVMBuildAdd(ctx->builder, ctx->vertex_id,
-					    ctx->base_vertex, "");
+		buffer_index = LLVMBuildAdd(ctx->builder, ctx->abi.vertex_id,
+					    ctx->abi.base_vertex, "");
 
 	for (unsigned i = 0; i < attrib_count; ++i, ++idx) {
 		t_offset = LLVMConstInt(ctx->i32, index + i, false);
@@ -6320,7 +6318,7 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 {
 	LLVMValueRef args[9];
 	args[0] = ctx->gsvs_ring;
-	args[1] = LLVMBuildMul(ctx->builder, ctx->vertex_id, LLVMConstInt(ctx->i32, 4, false), "");
+	args[1] = LLVMBuildMul(ctx->builder, ctx->abi.vertex_id, LLVMConstInt(ctx->i32, 4, false), "");
 	args[3] = ctx->i32zero;
 	args[4] = ctx->i32one;  /* OFFEN */
 	args[5] = ctx->i32zero; /* IDXEN */
