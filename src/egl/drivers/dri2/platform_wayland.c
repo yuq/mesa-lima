@@ -353,7 +353,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    /* There might be a buffer release already queued that wasn't processed */
    wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_surf->wl_queue);
 
-   if (dri2_surf->back == NULL) {
+   while (dri2_surf->back == NULL) {
       for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
          /* Get an unlocked buffer, preferrably one with a dri_buffer
           * already allocated. */
@@ -364,6 +364,14 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
          else if (dri2_surf->back->dri_image == NULL)
             dri2_surf->back = &dri2_surf->color_buffers[i];
       }
+
+      if (dri2_surf->back)
+         break;
+
+      /* If we don't have a buffer, then block on the server to release one for
+       * us, and try again. */
+      if (wl_display_dispatch_queue(dri2_dpy->wl_dpy, dri2_surf->wl_queue) < 0)
+          return -1;
    }
 
    if (dri2_surf->back == NULL)
