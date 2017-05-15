@@ -3908,6 +3908,9 @@ struct gl_constants
 
    /** Used as an input for sha1 generation in the on-disk shader cache */
    unsigned char *dri_config_options_sha1;
+
+   /** When drivers are OK with mapped buffers during draw and other calls. */
+   bool AllowMappedBuffersDuringExecution;
 };
 
 

@@ -463,6 +463,9 @@ void st_init_limits(struct pipe_screen *screen,
 
    c->SparseBufferPageSize =
       screen->get_param(screen, PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE);
+
+   c->AllowMappedBuffersDuringExecution =
+      screen->get_param(screen, PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION);
 }
 
 
