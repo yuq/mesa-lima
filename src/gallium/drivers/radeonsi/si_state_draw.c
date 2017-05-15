@@ -328,7 +328,7 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 
 	if (key->u.uses_tess) {
 		/* SWITCH_ON_EOI must be set if PrimID is used. */
-		if (key->u.tcs_tes_uses_prim_id)
+		if (key->u.tess_uses_prim_id)
 			ia_switch_on_eoi = true;
 
 		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
@@ -459,7 +459,7 @@ void si_init_ia_multi_vgt_param_table(struct si_context *sctx)
 		key.u.count_from_stream_output = count_from_so;
 		key.u.line_stipple_enabled = line_stipple;
 		key.u.uses_tess = uses_tess;
-		key.u.tcs_tes_uses_prim_id = tess_uses_primid;
+		key.u.tess_uses_prim_id = tess_uses_primid;
 		key.u.uses_gs = uses_gs;
 
 		sctx->ia_multi_vgt_param[key.index] =

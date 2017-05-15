@@ -217,7 +217,7 @@ union si_vgt_param_key {
 		unsigned count_from_stream_output:1;
 		unsigned line_stipple_enabled:1;
 		unsigned uses_tess:1;
-		unsigned tcs_tes_uses_prim_id:1;
+		unsigned tess_uses_prim_id:1;
 		unsigned uses_gs:1;
 		unsigned _pad:32 - SI_NUM_VGT_PARAM_KEY_BITS;
 	} u;
