@@ -292,24 +292,23 @@ _mesa_BlendFunciARB(GLuint buf, GLenum sfactor, GLenum dfactor)
 }
 
 
-/**
- * Set separate blend source/dest factors for one color buffer/target.
- */
-void GLAPIENTRY
-_mesa_BlendFuncSeparateiARB(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
-                         GLenum sfactorA, GLenum dfactorA)
+static ALWAYS_INLINE void
+blend_func_separatei(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
+                     GLenum sfactorA, GLenum dfactorA, bool no_error)
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   if (!ctx->Extensions.ARB_draw_buffers_blend) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBlendFunc[Separate]i()");
-      return;
-   }
+   if (!no_error) {
+      if (!ctx->Extensions.ARB_draw_buffers_blend) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "glBlendFunc[Separate]i()");
+         return;
+      }
 
-   if (buf >= ctx->Const.MaxDrawBuffers) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBlendFuncSeparatei(buffer=%u)",
-                  buf);
-      return;
+      if (buf >= ctx->Const.MaxDrawBuffers) {
+         _mesa_error(ctx, GL_INVALID_VALUE, "glBlendFuncSeparatei(buffer=%u)",
+                     buf);
+         return;
+      }
    }
 
    if (ctx->Color.Blend[buf].SrcRGB == sfactorRGB &&
@@ -318,9 +317,9 @@ _mesa_BlendFuncSeparateiARB(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
        ctx->Color.Blend[buf].DstA == dfactorA)
       return; /* no change */
 
-   if (!validate_blend_factors(ctx, "glBlendFuncSeparatei",
-                               sfactorRGB, dfactorRGB,
-                               sfactorA, dfactorA)) {
+   if (!no_error && !validate_blend_factors(ctx, "glBlendFuncSeparatei",
+                                            sfactorRGB, dfactorRGB,
+                                            sfactorA, dfactorA)) {
       return;
    }
 
@@ -332,6 +331,18 @@ _mesa_BlendFuncSeparateiARB(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
    ctx->Color.Blend[buf].DstA = dfactorA;
    update_uses_dual_src(ctx, buf);
    ctx->Color._BlendFuncPerBuffer = GL_TRUE;
+}
+
+
+/**
+ * Set separate blend source/dest factors for one color buffer/target.
+ */
+void GLAPIENTRY
+_mesa_BlendFuncSeparateiARB(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
+                            GLenum sfactorA, GLenum dfactorA)
+{
+   blend_func_separatei(buf, sfactorRGB, dfactorRGB, sfactorA, dfactorA,
+                        false);
 }
 
 
