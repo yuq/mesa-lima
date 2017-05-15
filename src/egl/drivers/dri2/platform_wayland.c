@@ -1270,12 +1270,9 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
     * because the buffer of the EGLImage has likely a tiling mode the server
     * gpu won't support. These is no way to check for now. Thus do not support the
     * extension */
-   if (!dri2_dpy->is_different_gpu) {
+   if (!dri2_dpy->is_different_gpu)
       disp->Extensions.WL_create_wayland_buffer_from_image = EGL_TRUE;
-   } else {
-      dri2_wl_display_vtbl.create_wayland_buffer_from_image =
-         dri2_fallback_create_wayland_buffer_from_image;
-   }
+
    disp->Extensions.EXT_buffer_age = EGL_TRUE;
 
    disp->Extensions.EXT_swap_buffers_with_damage = EGL_TRUE;
