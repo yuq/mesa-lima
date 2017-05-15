@@ -243,7 +243,20 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
       return false;
    }
 
-   if (!_mesa_all_buffers_are_unmapped(ctx->Array.VAO)) {
+   /* Section 6.3.2 from the GL 4.5:
+    * "Any GL command which attempts to read from, write to, or change
+    *  the state of a buffer object may generate an INVALID_OPERATION error if
+    *  all or part of the buffer object is mapped ... However, only commands
+    *  which explicitly describe this error are required to do so. If an error
+    *  is not generated, such commands will have undefined results and may
+    *  result in GL interruption or termination."
+    *
+    * Only some buffer API functions require INVALID_OPERATION with mapped
+    * buffers. No other functions list such an error, thus it's not required
+    * to report INVALID_OPERATION for draw calls with mapped buffers.
+    */
+   if (!ctx->Const.AllowMappedBuffersDuringExecution &&
+       !_mesa_all_buffers_are_unmapped(ctx->Array.VAO)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(vertex buffers are mapped)", function);
       return false;
