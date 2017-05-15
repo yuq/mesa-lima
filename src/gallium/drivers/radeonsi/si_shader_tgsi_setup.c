@@ -1277,6 +1277,7 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_ENDLOOP].emit = endloop_emit;
 
 	si_shader_context_init_alu(&ctx->bld_base);
+	si_shader_context_init_mem(ctx);
 
 	ctx->voidt = LLVMVoidTypeInContext(ctx->gallivm.context);
 	ctx->i1 = LLVMInt1TypeInContext(ctx->gallivm.context);
