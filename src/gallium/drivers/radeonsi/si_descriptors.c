@@ -149,38 +149,36 @@ static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned s
 	return true;
 }
 
-static void si_ce_reinitialize_descriptors(struct si_context *sctx,
-                                           struct si_descriptors *desc)
+void si_ce_save_all_descriptors_at_ib_end(struct si_context* sctx)
 {
-	if (desc->buffer) {
-		struct r600_resource *buffer = (struct r600_resource*)desc->buffer;
-		unsigned list_size = desc->num_elements * desc->element_dw_size * 4;
-		uint64_t va = buffer->gpu_address + desc->buffer_offset;
-		struct radeon_winsys_cs *ib = sctx->ce_preamble_ib;
-
-		if (!ib)
-			ib = sctx->ce_ib;
-
-		list_size = align(list_size, 32);
-
-		radeon_emit(ib, PKT3(PKT3_LOAD_CONST_RAM, 3, 0));
-		radeon_emit(ib, va);
-		radeon_emit(ib, va >> 32);
-		radeon_emit(ib, list_size / 4);
-		radeon_emit(ib, desc->ce_offset);
-
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
-		                    RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
-	}
-	desc->ce_ram_dirty = false;
+	bool success = si_ce_upload(sctx, 0, sctx->total_ce_ram_allocated,
+				    &sctx->ce_ram_saved_offset,
+				    &sctx->ce_ram_saved_buffer);
+	(void)success;
+	assert(success);
 }
 
-void si_ce_reinitialize_all_descriptors(struct si_context *sctx)
+void si_ce_restore_all_descriptors_at_ib_start(struct si_context *sctx)
 {
-	int i;
+	if (!sctx->ce_ram_saved_buffer)
+		return;
 
-	for (i = 0; i < SI_NUM_DESCS; ++i)
-		si_ce_reinitialize_descriptors(sctx, &sctx->descriptors[i]);
+	struct radeon_winsys_cs *ib = sctx->ce_preamble_ib;
+	if (!ib)
+		ib = sctx->ce_ib;
+
+	uint64_t va = sctx->ce_ram_saved_buffer->gpu_address +
+		      sctx->ce_ram_saved_offset;
+
+	radeon_emit(ib, PKT3(PKT3_LOAD_CONST_RAM, 3, 0));
+	radeon_emit(ib, va);
+	radeon_emit(ib, va >> 32);
+	radeon_emit(ib, sctx->total_ce_ram_allocated / 4);
+	radeon_emit(ib, 0);
+
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+				  sctx->ce_ram_saved_buffer,
+				  RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 }
 
 void si_ce_enable_loads(struct radeon_winsys_cs *ib)
@@ -199,9 +197,6 @@ static bool si_upload_descriptors(struct si_context *sctx,
 
 	if (sctx->ce_ib && desc->uses_ce) {
 		uint32_t const* list = (uint32_t const*)desc->list;
-
-		if (desc->ce_ram_dirty)
-			si_ce_reinitialize_descriptors(sctx, desc);
 
 		while(desc->dirty_mask) {
 			int begin, count;
@@ -247,8 +242,6 @@ static bool si_upload_descriptors(struct si_context *sctx,
 static void
 si_descriptors_begin_new_cs(struct si_context *sctx, struct si_descriptors *desc)
 {
-	desc->ce_ram_dirty = true;
-
 	if (!desc->buffer)
 		return;
 
@@ -2045,6 +2038,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 			    4, SI_NUM_VERTEX_BUFFERS, NULL);
 
 	sctx->descriptors_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
+	sctx->total_ce_ram_allocated = ce_offset;
 
 	if (sctx->b.chip_class >= GFX9)
 		assert(ce_offset <= 4096);

@@ -55,6 +55,7 @@ static void si_destroy_context(struct pipe_context *context)
 	if (sctx->ce_suballocator)
 		u_suballocator_destroy(sctx->ce_suballocator);
 
+	r600_resource_reference(&sctx->ce_ram_saved_buffer, NULL);
 	pipe_resource_reference(&sctx->esgs_ring, NULL);
 	pipe_resource_reference(&sctx->gsvs_ring, NULL);
 	pipe_resource_reference(&sctx->tf_ring, NULL);

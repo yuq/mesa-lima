@@ -123,6 +123,10 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	ctx->gfx_flush_in_progress = true;
 
+	/* This CE dump should be done in parallel with the last draw. */
+	if (ctx->ce_ib)
+		si_ce_save_all_descriptors_at_ib_end(ctx);
+
 	r600_preflush_suspend_features(&ctx->b);
 
 	ctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
@@ -207,8 +211,8 @@ void si_begin_new_cs(struct si_context *ctx)
 	else if (ctx->ce_ib)
 		si_ce_enable_loads(ctx->ce_ib);
 
-	if (ctx->ce_preamble_ib)
-		si_ce_reinitialize_all_descriptors(ctx);
+	if (ctx->ce_ib)
+		si_ce_restore_all_descriptors_at_ib_start(ctx);
 
 	if (ctx->b.chip_class >= CIK)
 		si_mark_atom_dirty(ctx, &ctx->prefetch_L2);

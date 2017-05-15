@@ -232,9 +232,6 @@ struct si_descriptors {
 
 	/* Whether CE is used to upload this descriptor array. */
 	bool uses_ce;
-	/* Whether the CE ram is dirty and needs to be reinitialized entirely
-	 * before we can do partial updates. */
-	bool ce_ram_dirty;
 
 	/* The shader userdata offset within a shader where the 64-bit pointer to the descriptor
 	 * array will be stored. */
@@ -282,7 +279,8 @@ struct si_buffer_resources {
 	} while(0)
 
 /* si_descriptors.c */
-void si_ce_reinitialize_all_descriptors(struct si_context *sctx);
+void si_ce_save_all_descriptors_at_ib_end(struct si_context* sctx);
+void si_ce_restore_all_descriptors_at_ib_start(struct si_context *sctx);
 void si_ce_enable_loads(struct radeon_winsys_cs *ib);
 void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 				    struct r600_texture *tex,

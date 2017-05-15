@@ -236,6 +236,9 @@ struct si_context {
 
 	struct radeon_winsys_cs		*ce_ib;
 	struct radeon_winsys_cs		*ce_preamble_ib;
+	struct r600_resource		*ce_ram_saved_buffer;
+	unsigned			ce_ram_saved_offset;
+	unsigned			total_ce_ram_allocated;
 	bool				ce_need_synchronization;
 	struct u_suballocator		*ce_suballocator;
 
