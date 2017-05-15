@@ -54,8 +54,6 @@ check_valid_to_compute(struct gl_context *ctx, const char *function)
 static bool
 validate_DispatchCompute(struct gl_context *ctx, const GLuint *num_groups)
 {
-   FLUSH_CURRENT(ctx, 0);
-
    if (!check_valid_to_compute(ctx, "glDispatchCompute"))
       return GL_FALSE;
 
@@ -106,8 +104,6 @@ validate_DispatchComputeGroupSizeARB(struct gl_context *ctx,
                                      const GLuint *group_size)
 {
    GLuint total_invocations = 1;
-
-   FLUSH_CURRENT(ctx, 0);
 
    if (!check_valid_to_compute(ctx, "glDispatchComputeGroupSizeARB"))
       return GL_FALSE;
@@ -184,8 +180,6 @@ validate_DispatchComputeGroupSizeARB(struct gl_context *ctx,
 static bool
 valid_dispatch_indirect(struct gl_context *ctx,  GLintptr indirect)
 {
-   FLUSH_CURRENT(ctx, 0);
-
    GLsizei size = 3 * sizeof(GLuint);
    const uint64_t end = (uint64_t) indirect + size;
    const char *name = "glDispatchComputeIndirect";
@@ -257,6 +251,8 @@ _mesa_DispatchCompute(GLuint num_groups_x,
    GET_CURRENT_CONTEXT(ctx);
    const GLuint num_groups[3] = { num_groups_x, num_groups_y, num_groups_z };
 
+   FLUSH_CURRENT(ctx, 0);
+
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glDispatchCompute(%d, %d, %d)\n",
                   num_groups_x, num_groups_y, num_groups_z);
@@ -275,6 +271,8 @@ _mesa_DispatchComputeIndirect(GLintptr indirect)
 {
    GET_CURRENT_CONTEXT(ctx);
 
+   FLUSH_CURRENT(ctx, 0);
+
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glDispatchComputeIndirect(%ld)\n", (long) indirect);
 
@@ -292,6 +290,8 @@ _mesa_DispatchComputeGroupSizeARB(GLuint num_groups_x, GLuint num_groups_y,
    GET_CURRENT_CONTEXT(ctx);
    const GLuint num_groups[3] = { num_groups_x, num_groups_y, num_groups_z };
    const GLuint group_size[3] = { group_size_x, group_size_y, group_size_z };
+
+   FLUSH_CURRENT(ctx, 0);
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx,
