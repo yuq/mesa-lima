@@ -730,6 +730,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 static const struct debug_named_value common_debug_options[] = {
 	/* logging */
 	{ "tex", DBG_TEX, "Print texture info" },
+	{ "nir", DBG_NIR, "Enable experimental NIR shaders" },
 	{ "compute", DBG_COMPUTE, "Print compute info" },
 	{ "vm", DBG_VM, "Print virtual addresses when creating resources" },
 	{ "info", DBG_INFO, "Print driver information" },

@@ -67,7 +67,7 @@
 /* Debug flags. */
 /* logging */
 #define DBG_TEX			(1 << 0)
-/* gap - reuse */
+#define DBG_NIR			(1 << 1)
 #define DBG_COMPUTE		(1 << 2)
 #define DBG_VM			(1 << 3)
 /* gap - reuse */

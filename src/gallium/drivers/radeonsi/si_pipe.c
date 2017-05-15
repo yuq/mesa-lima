@@ -556,6 +556,8 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 4;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
+		if (sscreen->b.debug_flags & DBG_NIR)
+			return 140; /* no geometry and tessellation shaders yet */
 		if (si_have_tgsi_compute(sscreen))
 			return 450;
 		return 420;
@@ -753,6 +755,10 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
+		if (sscreen->b.debug_flags & DBG_NIR &&
+		    (shader == PIPE_SHADER_VERTEX ||
+		     shader == PIPE_SHADER_FRAGMENT))
+			return PIPE_SHADER_IR_NIR;
 		return PIPE_SHADER_IR_TGSI;
 	case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
 		return 3;
