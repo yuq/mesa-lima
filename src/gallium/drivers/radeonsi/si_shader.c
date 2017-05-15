@@ -3407,12 +3407,7 @@ static void emit_optimization_barrier(struct si_shader_context *ctx,
 	}
 }
 
-/* Combine these with & instead of |. */
-#define NOOP_WAITCNT 0xf7f
-#define LGKM_CNT 0x07f
-#define VM_CNT 0xf70
-
-static void emit_waitcnt(struct si_shader_context *ctx, unsigned simm16)
+void si_emit_waitcnt(struct si_shader_context *ctx, unsigned simm16)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
@@ -3445,7 +3440,7 @@ static void membar_emit(
 		waitcnt &= LGKM_CNT;
 
 	if (waitcnt != NOOP_WAITCNT)
-		emit_waitcnt(ctx, waitcnt);
+		si_emit_waitcnt(ctx, waitcnt);
 }
 
 static void clock_emit(
@@ -3955,7 +3950,7 @@ static void load_emit(
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
-		emit_waitcnt(ctx, VM_CNT);
+		si_emit_waitcnt(ctx, VM_CNT);
 
 	readonly_memory = !(inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE) &&
 			  is_oneway_access_only(inst, info,
@@ -4172,7 +4167,7 @@ static void store_emit(
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
-		emit_waitcnt(ctx, VM_CNT);
+		si_emit_waitcnt(ctx, VM_CNT);
 
 	writeonly_memory = is_oneway_access_only(inst, info,
 						 info->shader_buffers_load |
@@ -5689,7 +5684,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	 */
 	if (ctx->screen->b.chip_class == SI &&
 	    ctx->type == PIPE_SHADER_TESS_CTRL) {
-		emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
+		si_emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
 		return;
 	}
 

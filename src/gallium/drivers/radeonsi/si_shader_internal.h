@@ -287,6 +287,13 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			const struct tgsi_opcode_info *info,
 			LLVMValueRef dst[4]);
 
+/* Combine these with & instead of |. */
+#define NOOP_WAITCNT 0xf7f
+#define LGKM_CNT 0x07f
+#define VM_CNT 0xf70
+
+void si_emit_waitcnt(struct si_shader_context *ctx, unsigned simm16);
+
 void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base);
 
 #endif
