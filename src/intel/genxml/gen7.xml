@@ -378,15 +378,13 @@
   </struct>
 
   <struct name="3DSTATE_CONSTANT_BODY" length="6">
-    <field name="Constant Buffer 1 Read Length" start="16" end="31" type="uint"/>
-    <field name="Constant Buffer 0 Read Length" start="0" end="15" type="uint"/>
-    <field name="Constant Buffer 3 Read Length" start="48" end="63" type="uint"/>
-    <field name="Constant Buffer 2 Read Length" start="32" end="47" type="uint"/>
-    <field name="Pointer To Constant Buffer 0" start="69" end="95" type="address"/>
+    <group count="4" start="0" size="16">
+      <field name="Read Length" start="0" end="15" type="uint"/>
+    </group>
     <field name="Constant Buffer Object Control State" start="64" end="68" type="MEMORY_OBJECT_CONTROL_STATE"/>
-    <field name="Pointer To Constant Buffer 1" start="101" end="127" type="address"/>
-    <field name="Pointer To Constant Buffer 2" start="133" end="159" type="address"/>
-    <field name="Pointer To Constant Buffer 3" start="165" end="191" type="address"/>
+    <group count="4" start="64" size="32">
+      <field name="Buffer" start="5" end="31" type="address"/>
+    </group>
   </struct>
 
   <struct name="VERTEX_BUFFER_STATE" length="4">

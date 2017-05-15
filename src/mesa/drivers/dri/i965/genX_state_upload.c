@@ -2674,14 +2674,12 @@ upload_constant_state(struct brw_context *brw,
       pkt._3DCommandSubOpcode = push_constant_opcodes[stage];
       if (active) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
-         pkt.ConstantBody.ConstantBuffer2ReadLength =
-            stage_state->push_const_size;
-         pkt.ConstantBody.PointerToConstantBuffer2 =
+         pkt.ConstantBody.ReadLength[2] = stage_state->push_const_size;
+         pkt.ConstantBody.Buffer[2] =
             render_ro_bo(brw->curbe.curbe_bo, stage_state->push_const_offset);
 #else
-         pkt.ConstantBody.ConstantBuffer0ReadLength =
-            stage_state->push_const_size;
-         pkt.ConstantBody.PointerToConstantBuffer0.offset =
+         pkt.ConstantBody.ReadLength[0] = stage_state->push_const_size;
+         pkt.ConstantBody.Buffer[0].offset =
             stage_state->push_const_offset | mocs;
 #endif
       }

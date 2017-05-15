@@ -1482,11 +1482,11 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
             c._3DCommandSubOpcode = push_constant_opcodes[stage],
             c.ConstantBody = (struct GENX(3DSTATE_CONSTANT_BODY)) {
 #if GEN_GEN >= 9
-               .PointerToConstantBuffer2 = { &cmd_buffer->device->dynamic_state_pool.block_pool.bo, state.offset },
-               .ConstantBuffer2ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
+               .Buffer[2] = { &cmd_buffer->device->dynamic_state_pool.block_pool.bo, state.offset },
+               .ReadLength[2] = DIV_ROUND_UP(state.alloc_size, 32),
 #else
-               .PointerToConstantBuffer0 = { .offset = state.offset },
-               .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
+               .Buffer[0] = { .offset = state.offset },
+               .ReadLength[0] = DIV_ROUND_UP(state.alloc_size, 32),
 #endif
             };
          }
