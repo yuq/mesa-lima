@@ -467,13 +467,13 @@ class Group(object):
 
             if dw.size == 32:
                 if dw.address:
-                    print("   dw[%d] = __gen_combine_address(data, &dw[%d], values->%s, %s);" % (index, index, dw.address.name, v))
+                    print("   dw[%d] = __gen_combine_address(data, &dw[%d], values->%s, %s);" % (index, index, dw.address.name + field.dim, v))
                 continue
 
             if dw.address:
                 v_address = "v%d_address" % index
                 print("   const uint64_t %s =\n      __gen_combine_address(data, &dw[%d], values->%s, %s);" %
-                      (v_address, index, dw.address.name, v))
+                      (v_address, index, dw.address.name + field.dim, v))
                 v = v_address
 
             print("   dw[%d] = %s;" % (index, v))
