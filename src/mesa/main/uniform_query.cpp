@@ -957,19 +957,19 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
     */
    if (!uni->type->is_boolean()) {
       memcpy(&uni->storage[size_mul * components * offset], values,
-	     sizeof(uni->storage[0]) * components * count * size_mul);
+             sizeof(uni->storage[0]) * components * count * size_mul);
    } else {
       const union gl_constant_value *src =
-	 (const union gl_constant_value *) values;
+         (const union gl_constant_value *) values;
       union gl_constant_value *dst = &uni->storage[components * offset];
       const unsigned elems = components * count;
 
       for (unsigned i = 0; i < elems; i++) {
-	 if (basicType == GLSL_TYPE_FLOAT) {
+         if (basicType == GLSL_TYPE_FLOAT) {
             dst[i].i = src[i].f != 0.0f ? ctx->Const.UniformBooleanTrue : 0;
-	 } else {
+         } else {
             dst[i].i = src[i].i != 0    ? ctx->Const.UniformBooleanTrue : 0;
-	 }
+         }
       }
    }
 
@@ -980,14 +980,15 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
     */
    if (uni->type->is_sampler()) {
       bool flushed = false;
+
       shProg->SamplersValidated = GL_TRUE;
 
       for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-	 struct gl_linked_shader *const sh = shProg->_LinkedShaders[i];
+         struct gl_linked_shader *const sh = shProg->_LinkedShaders[i];
 
-	 /* If the shader stage doesn't use the sampler uniform, skip this. */
-	 if (!uni->opaque[i].active)
-	    continue;
+         /* If the shader stage doesn't use the sampler uniform, skip this. */
+         if (!uni->opaque[i].active)
+            continue;
 
          bool changed = false;
          for (int j = 0; j < count; j++) {
@@ -998,17 +999,17 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
             }
          }
 
-	 if (changed) {
-	    if (!flushed) {
-	       FLUSH_VERTICES(ctx, _NEW_TEXTURE_OBJECT | _NEW_PROGRAM);
-	       flushed = true;
-	    }
+         if (changed) {
+            if (!flushed) {
+               FLUSH_VERTICES(ctx, _NEW_TEXTURE_OBJECT | _NEW_PROGRAM);
+               flushed = true;
+            }
 
             struct gl_program *const prog = sh->Program;
-	    _mesa_update_shader_textures_used(shProg, prog);
+            _mesa_update_shader_textures_used(shProg, prog);
             if (ctx->Driver.SamplerUniformChange)
-	       ctx->Driver.SamplerUniformChange(ctx, prog->Target, prog);
-	 }
+               ctx->Driver.SamplerUniformChange(ctx, prog->Target, prog);
+         }
       }
    }
 
@@ -1017,7 +1018,7 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
     */
    if (uni->type->is_image()) {
       for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-	 if (uni->opaque[i].active) {
+         if (uni->opaque[i].active) {
             struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
 
             for (int j = 0; j < count; j++)
