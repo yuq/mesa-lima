@@ -741,27 +741,15 @@ si_mark_image_range_valid(const struct pipe_image_view *view)
 		       view->u.buf.offset + view->u.buf.size);
 }
 
-static void si_set_shader_image(struct si_context *ctx,
-				unsigned shader,
-				unsigned slot, const struct pipe_image_view *view,
-				bool skip_decompress)
+static void si_set_shader_image_desc(struct si_context *ctx,
+				     const struct pipe_image_view *view,
+				     bool skip_decompress,
+				     uint32_t *desc)
 {
 	struct si_screen *screen = ctx->screen;
-	struct si_images_info *images = &ctx->images[shader];
-	struct si_descriptors *descs = si_sampler_and_image_descriptors(ctx, shader);
 	struct r600_resource *res;
-	unsigned desc_slot = si_get_image_slot(slot);
-	uint32_t *desc = descs->list + desc_slot * 8;
-
-	if (!view || !view->resource) {
-		si_disable_shader_image(ctx, shader, slot);
-		return;
-	}
 
 	res = (struct r600_resource *)view->resource;
-
-	if (&images->views[slot] != view)
-		util_copy_image_view(&images->views[slot], view);
 
 	if (res->b.b.target == PIPE_BUFFER) {
 		if (view->access & PIPE_IMAGE_ACCESS_WRITE)
@@ -772,9 +760,6 @@ static void si_set_shader_image(struct si_context *ctx,
 					  view->u.buf.offset,
 					  view->u.buf.size, desc);
 		si_set_buf_desc_address(res, view->u.buf.offset, desc + 4);
-
-		images->needs_color_decompress_mask &= ~(1 << slot);
-		res->bind_history |= PIPE_BIND_SHADER_IMAGE;
 	} else {
 		static const unsigned char swizzle[4] = { 0, 1, 2, 3 };
 		struct r600_texture *tex = (struct r600_texture *)res;
@@ -792,21 +777,9 @@ static void si_set_shader_image(struct si_context *ctx,
 			 * The decompression is relatively cheap if the surface
 			 * has been decompressed already.
 			 */
-			if (r600_texture_disable_dcc(&ctx->b, tex))
-				uses_dcc = false;
-			else
+			if (!r600_texture_disable_dcc(&ctx->b, tex))
 				ctx->b.decompress_dcc(&ctx->b.b, tex);
 		}
-
-		if (color_needs_decompression(tex)) {
-			images->needs_color_decompress_mask |= 1 << slot;
-		} else {
-			images->needs_color_decompress_mask &= ~(1 << slot);
-		}
-
-		if (uses_dcc &&
-		    p_atomic_read(&tex->framebuffers_bound))
-			ctx->need_check_render_feedback = true;
 
 		if (ctx->b.chip_class >= GFX9) {
 			/* Always set the base address. The swizzle modes don't
@@ -842,6 +815,48 @@ static void si_set_shader_image(struct si_context *ctx,
 					       level, level,
 					       util_format_get_blockwidth(view->format),
 					       false, desc);
+	}
+}
+
+static void si_set_shader_image(struct si_context *ctx,
+				unsigned shader,
+				unsigned slot, const struct pipe_image_view *view,
+				bool skip_decompress)
+{
+	struct si_images_info *images = &ctx->images[shader];
+	struct si_descriptors *descs = si_sampler_and_image_descriptors(ctx, shader);
+	struct r600_resource *res;
+	unsigned desc_slot = si_get_image_slot(slot);
+	uint32_t *desc = descs->list + desc_slot * 8;
+
+	if (!view || !view->resource) {
+		si_disable_shader_image(ctx, shader, slot);
+		return;
+	}
+
+	res = (struct r600_resource *)view->resource;
+
+	if (&images->views[slot] != view)
+		util_copy_image_view(&images->views[slot], view);
+
+	si_set_shader_image_desc(ctx, view, skip_decompress, desc);
+
+	if (res->b.b.target == PIPE_BUFFER) {
+		images->needs_color_decompress_mask &= ~(1 << slot);
+		res->bind_history |= PIPE_BIND_SHADER_IMAGE;
+	} else {
+		struct r600_texture *tex = (struct r600_texture *)res;
+		unsigned level = view->u.tex.level;
+
+		if (color_needs_decompression(tex)) {
+			images->needs_color_decompress_mask |= 1 << slot;
+		} else {
+			images->needs_color_decompress_mask &= ~(1 << slot);
+		}
+
+		if (vi_dcc_enabled(tex, level) &&
+		    p_atomic_read(&tex->framebuffers_bound))
+			ctx->need_check_render_feedback = true;
 	}
 
 	images->enabled_mask |= 1u << slot;
