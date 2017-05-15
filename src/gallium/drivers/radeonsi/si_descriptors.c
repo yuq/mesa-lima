@@ -2237,6 +2237,15 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 	sview = (struct si_sampler_view *)tex_handle->view;
 
 	if (resident) {
+		if (sview->base.texture->target != PIPE_BUFFER) {
+			struct r600_texture *rtex =
+				(struct r600_texture *)sview->base.texture;
+
+			if (rtex->dcc_offset &&
+			    p_atomic_read(&rtex->framebuffers_bound))
+				sctx->need_check_render_feedback = true;
+		}
+
 		/* Add the texture handle to the per-context list. */
 		util_dynarray_append(&sctx->resident_tex_handles,
 				     struct si_texture_handle *, tex_handle);
@@ -2339,6 +2348,18 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 	view = &img_handle->view;
 
 	if (resident) {
+		struct r600_resource *res =
+			(struct r600_resource *)view->resource;
+
+		if (res->b.b.target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+			unsigned level = view->u.tex.level;
+
+			if (vi_dcc_enabled(rtex, level) &&
+			    p_atomic_read(&rtex->framebuffers_bound))
+				sctx->need_check_render_feedback = true;
+		}
+
 		/* Add the image handle to the per-context list. */
 		util_dynarray_append(&sctx->resident_img_handles,
 				     struct si_image_handle *, img_handle);
