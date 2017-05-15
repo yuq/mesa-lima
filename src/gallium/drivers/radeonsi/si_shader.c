@@ -4333,8 +4333,10 @@ static void create_function(struct si_shader_context *ctx)
 		declare_vs_specific_input_sgprs(ctx, &fninfo);
 
 		if (shader->key.as_es) {
+			assert(!shader->selector->nir);
 			ctx->param_es2gs_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		} else if (shader->key.as_ls) {
+			assert(!shader->selector->nir);
 			/* no extra parameters */
 		} else {
 			if (shader->is_gs_copy_shader) {
