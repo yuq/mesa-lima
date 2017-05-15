@@ -120,6 +120,9 @@ etna_update_sampler_source(struct pipe_sampler_view *view)
       etna_copy_resource(view->context, res->texture, view->texture, 0,
                          view->texture->last_level);
       etna_resource(res->texture)->seqno = res->seqno;
+   } else if (etna_resource_needs_flush(res)) {
+      etna_copy_resource(view->context, view->texture, view->texture, 0, 0);
+      res->flush_seqno = res->seqno;
    }
 }
 
