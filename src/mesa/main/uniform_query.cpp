@@ -1018,13 +1018,15 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
     */
    if (uni->type->is_image()) {
       for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-         if (uni->opaque[i].active) {
-            struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
+         struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
 
-            for (int j = 0; j < count; j++)
-               sh->Program->sh.ImageUnits[uni->opaque[i].index + offset + j] =
-                  ((GLint *) values)[j];
-         }
+         /* If the shader stage doesn't use the image uniform, skip this. */
+         if (!uni->opaque[i].active)
+            continue;
+
+         for (int j = 0; j < count; j++)
+            sh->Program->sh.ImageUnits[uni->opaque[i].index + offset + j] =
+               ((GLint *) values)[j];
       }
 
       ctx->NewDriverState |= ctx->DriverFlags.NewImageUnits;
