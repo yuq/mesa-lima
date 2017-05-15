@@ -2133,6 +2133,8 @@ static void si_update_tcs_tes_uses_prim_id(struct si_context *sctx)
 		 sctx->tes_shader.cso->info.uses_primid) ||
 		(sctx->tcs_shader.cso &&
 		 sctx->tcs_shader.cso->info.uses_primid) ||
+		(sctx->gs_shader.cso &&
+		 sctx->gs_shader.cso->info.uses_primid) ||
 		(sctx->ps_shader.cso && !sctx->gs_shader.cso &&
 		 sctx->ps_shader.cso->info.uses_primid);
 }
