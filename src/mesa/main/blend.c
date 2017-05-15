@@ -599,6 +599,22 @@ _mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA )
 }
 
 
+static void
+blend_equation_separatei(struct gl_context *ctx, GLuint buf, GLenum modeRGB,
+                         GLenum modeA)
+{
+   if (ctx->Color.Blend[buf].EquationRGB == modeRGB &&
+       ctx->Color.Blend[buf].EquationA == modeA)
+      return;  /* no change */
+
+   FLUSH_VERTICES(ctx, _NEW_COLOR);
+   ctx->Color.Blend[buf].EquationRGB = modeRGB;
+   ctx->Color.Blend[buf].EquationA = modeA;
+   ctx->Color._BlendEquationPerBuffer = GL_TRUE;
+   ctx->Color._AdvancedBlendMode = BLEND_NONE;
+}
+
+
 /**
  * Set separate blend equations for one color buffer/target.
  */
@@ -634,15 +650,7 @@ _mesa_BlendEquationSeparateiARB(GLuint buf, GLenum modeRGB, GLenum modeA)
       return;
    }
 
-   if (ctx->Color.Blend[buf].EquationRGB == modeRGB &&
-       ctx->Color.Blend[buf].EquationA == modeA)
-      return;  /* no change */
-
-   FLUSH_VERTICES(ctx, _NEW_COLOR);
-   ctx->Color.Blend[buf].EquationRGB = modeRGB;
-   ctx->Color.Blend[buf].EquationA = modeA;
-   ctx->Color._BlendEquationPerBuffer = GL_TRUE;
-   ctx->Color._AdvancedBlendMode = BLEND_NONE;
+   blend_equation_separatei(ctx, buf, modeRGB, modeA);
 }
 
 
