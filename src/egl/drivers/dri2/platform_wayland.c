@@ -1066,7 +1066,7 @@ dri2_wl_setup_swap_interval(struct dri2_egl_display *dri2_dpy)
    }
 }
 
-static struct dri2_egl_display_vtbl dri2_wl_display_vtbl = {
+static const struct dri2_egl_display_vtbl dri2_wl_display_vtbl = {
    .authenticate = dri2_wl_authenticate,
    .create_window_surface = dri2_wl_create_window_surface,
    .create_pixmap_surface = dri2_wl_create_pixmap_surface,
@@ -1754,7 +1754,7 @@ static const struct wl_registry_listener registry_listener_swrast = {
    .global_remove = registry_handle_global_remove
 };
 
-static struct dri2_egl_display_vtbl dri2_wl_swrast_display_vtbl = {
+static const struct dri2_egl_display_vtbl dri2_wl_swrast_display_vtbl = {
    .authenticate = NULL,
    .create_window_surface = dri2_wl_create_window_surface,
    .create_pixmap_surface = dri2_wl_create_pixmap_surface,

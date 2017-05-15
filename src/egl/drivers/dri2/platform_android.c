@@ -1050,7 +1050,7 @@ droid_open_device(struct dri2_egl_display *dri2_dpy)
    return (fd >= 0) ? fcntl(fd, F_DUPFD_CLOEXEC, 3) : -1;
 }
 
-static struct dri2_egl_display_vtbl droid_display_vtbl = {
+static const struct dri2_egl_display_vtbl droid_display_vtbl = {
    .authenticate = NULL,
    .create_window_surface = droid_create_window_surface,
    .create_pixmap_surface = dri2_fallback_create_pixmap_surface,

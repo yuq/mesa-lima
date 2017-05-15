@@ -228,7 +228,7 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
    return (count != 0);
 }
 
-static struct dri2_egl_display_vtbl dri2_surfaceless_display_vtbl = {
+static const struct dri2_egl_display_vtbl dri2_surfaceless_display_vtbl = {
    .create_pixmap_surface = dri2_fallback_create_pixmap_surface,
    .create_pbuffer_surface = dri2_surfaceless_create_pbuffer_surface,
    .destroy_surface = surfaceless_destroy_surface,

@@ -646,7 +646,7 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
    return (count != 0);
 }
 
-static struct dri2_egl_display_vtbl dri2_drm_display_vtbl = {
+static const struct dri2_egl_display_vtbl dri2_drm_display_vtbl = {
    .authenticate = dri2_drm_authenticate,
    .create_window_surface = dri2_drm_create_window_surface,
    .create_pixmap_surface = dri2_drm_create_pixmap_surface,

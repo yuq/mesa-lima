@@ -1135,7 +1135,7 @@ dri2_x11_get_sync_values(_EGLDisplay *display, _EGLSurface *surface,
    return EGL_TRUE;
 }
 
-static struct dri2_egl_display_vtbl dri2_x11_swrast_display_vtbl = {
+static const struct dri2_egl_display_vtbl dri2_x11_swrast_display_vtbl = {
    .authenticate = NULL,
    .create_window_surface = dri2_x11_create_window_surface,
    .create_pixmap_surface = dri2_x11_create_pixmap_surface,
@@ -1154,7 +1154,7 @@ static struct dri2_egl_display_vtbl dri2_x11_swrast_display_vtbl = {
    .get_dri_drawable = dri2_surface_get_dri_drawable,
 };
 
-static struct dri2_egl_display_vtbl dri2_x11_display_vtbl = {
+static const struct dri2_egl_display_vtbl dri2_x11_display_vtbl = {
    .authenticate = dri2_x11_authenticate,
    .create_window_surface = dri2_x11_create_window_surface,
    .create_pixmap_surface = dri2_x11_create_pixmap_surface,
