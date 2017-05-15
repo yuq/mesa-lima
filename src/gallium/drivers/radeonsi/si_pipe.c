@@ -456,6 +456,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_INT64_DIVMOD:
 	case PIPE_CAP_TGSI_CLOCK:
 	case PIPE_CAP_CAN_BIND_CONST_BUFFER_AS_VERTEX:
+	case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
 		return 1;
 
 	case PIPE_CAP_TGSI_VOTE:

@@ -113,6 +113,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
         case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
         case PIPE_CAP_CLIP_HALFZ:
+        case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
             return 1;
 
         case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:

@@ -391,6 +391,7 @@ The integer capabilities:
   shader outputs.
 * ``PIPE_CAP_CAN_BIND_CONST_BUFFER_AS_VERTEX``: Whether a buffer with just
   PIPE_BIND_CONSTANT_BUFFER can be legally passed to set_vertex_buffers.
+* ``PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION``: As the name says.
 
 
 .. _pipe_capf:
