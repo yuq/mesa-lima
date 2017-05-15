@@ -1411,15 +1411,17 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    }
 
    if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXD) {
+      instr->src[src_number].src_type = nir_tex_src_ddx;
       instr->src[src_number].src =
          nir_src_for_ssa(nir_swizzle(b, src[1], SWIZ(X, Y, Z, W),
-              instr->coord_components, false));
-      instr->src[src_number].src_type = nir_tex_src_ddx;
+				     nir_tex_instr_src_size(instr, src_number),
+				     false));
       src_number++;
+      instr->src[src_number].src_type = nir_tex_src_ddy;
       instr->src[src_number].src =
          nir_src_for_ssa(nir_swizzle(b, src[2], SWIZ(X, Y, Z, W),
-              instr->coord_components, false));
-      instr->src[src_number].src_type = nir_tex_src_ddy;
+				     nir_tex_instr_src_size(instr, src_number),
+				     false));
       src_number++;
    }
 
