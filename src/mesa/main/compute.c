@@ -266,6 +266,13 @@ dispatch_compute(GLuint num_groups_x, GLuint num_groups_y,
 }
 
 void GLAPIENTRY
+_mesa_DispatchCompute_no_error(GLuint num_groups_x, GLuint num_groups_y,
+                               GLuint num_groups_z)
+{
+   dispatch_compute(num_groups_x, num_groups_y, num_groups_z, true);
+}
+
+void GLAPIENTRY
 _mesa_DispatchCompute(GLuint num_groups_x,
                       GLuint num_groups_y,
                       GLuint num_groups_z)
@@ -287,6 +294,12 @@ dispatch_compute_indirect(GLintptr indirect, bool no_error)
       return;
 
    ctx->Driver.DispatchComputeIndirect(ctx, indirect);
+}
+
+extern void GLAPIENTRY
+_mesa_DispatchComputeIndirect_no_error(GLintptr indirect)
+{
+   dispatch_compute_indirect(indirect, true);
 }
 
 extern void GLAPIENTRY
@@ -321,6 +334,19 @@ dispatch_compute_group_size(GLuint num_groups_x, GLuint num_groups_y,
        return;
 
    ctx->Driver.DispatchComputeGroupSize(ctx, num_groups, group_size);
+}
+
+void GLAPIENTRY
+_mesa_DispatchComputeGroupSizeARB_no_error(GLuint num_groups_x,
+                                           GLuint num_groups_y,
+                                           GLuint num_groups_z,
+                                           GLuint group_size_x,
+                                           GLuint group_size_y,
+                                           GLuint group_size_z)
+{
+   dispatch_compute_group_size(num_groups_x, num_groups_y, num_groups_z,
+                               group_size_x, group_size_y, group_size_z,
+                               true);
 }
 
 void GLAPIENTRY
