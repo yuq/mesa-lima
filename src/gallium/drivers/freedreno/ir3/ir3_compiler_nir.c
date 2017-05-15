@@ -1248,7 +1248,7 @@ emit_intrinsic_store_ssbo(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	array_insert(b, b->keeps, stgb);
 }
 
-static void
+static struct ir3_instruction *
 emit_intrinsic_atomic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 {
 	struct ir3_block *b = ctx->block;
@@ -1324,6 +1324,8 @@ emit_intrinsic_atomic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 
 	/* even if nothing consume the result, we can't DCE the instruction: */
 	array_insert(b, b->keeps, atomic);
+
+	return atomic;
 }
 
 static void add_sysval_input_compmask(struct ir3_compile *ctx,
@@ -1438,7 +1440,12 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_ssbo_atomic_xor:
 	case nir_intrinsic_ssbo_atomic_exchange:
 	case nir_intrinsic_ssbo_atomic_comp_swap:
-		emit_intrinsic_atomic(ctx, intr);
+		if (info->has_dest) {
+			compile_assert(ctx, intr->num_components == 1);
+			dst[0] = emit_intrinsic_atomic(ctx, intr);
+		} else {
+			emit_intrinsic_atomic(ctx, intr);
+		}
 		break;
 	case nir_intrinsic_store_output:
 		idx = nir_intrinsic_base(intr);
