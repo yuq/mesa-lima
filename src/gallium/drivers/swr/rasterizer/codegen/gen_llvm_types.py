@@ -71,7 +71,9 @@ def gen_llvm_type(type, name, is_pointer, is_pointer_pointer, is_array, is_array
         elif type == 'SIMD16::vectori_t':
             llvm_type = 'VectorType::get(Type::getInt32Ty(ctx), 16)'
         elif type == 'simdvector':
-            llvm_type = 'ArrayType::get(VectorType::get(Type::getFloatTy(ctx), pJitMgr->mVWidth), 4)'
+            llvm_type = 'ArrayType::get(VectorType::get(Type::getFloatTy(ctx), 8), 4)'
+        elif type == 'simd16vector':
+            llvm_type = 'ArrayType::get(VectorType::get(Type::getFloatTy(ctx), 16), 4)'
         elif type == 'SIMD8::attrib_t':
             llvm_type = 'ArrayType::get(VectorType::get(Type::getFloatTy(ctx), 8), 4)'
         elif type == 'SIMD16::attrib_t':

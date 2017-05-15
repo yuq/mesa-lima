@@ -197,9 +197,16 @@ enum SWR_VTX_SLOTS
 // SoAoSoA
 struct simdvertex
 {
-    simdvector    attrib[SWR_VTX_NUM_SLOTS];
+    simdvector      attrib[SWR_VTX_NUM_SLOTS];
 };
 
+#if ENABLE_AVX512_SIMD16
+struct simd16vertex
+{
+    simd16vector    attrib[SWR_VTX_NUM_SLOTS];
+};
+
+#endif
 //////////////////////////////////////////////////////////////////////////
 /// SWR_VS_CONTEXT
 /// @brief Input to vertex shader
