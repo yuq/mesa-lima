@@ -850,14 +850,6 @@ validate_intrastage_arrays(struct gl_shader_program *prog,
             }
             return true;
          }
-      } else {
-         /* The arrays of structs could have different glsl_type pointers but
-          * they are actually the same type. Use record_compare() to check that.
-          */
-         if (existing->type->fields.array->is_record() &&
-             var->type->fields.array->is_record() &&
-             existing->type->fields.array->record_compare(var->type->fields.array))
-            return true;
       }
    }
    return false;
