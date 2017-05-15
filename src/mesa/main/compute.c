@@ -54,13 +54,12 @@ check_valid_to_compute(struct gl_context *ctx, const char *function)
 static bool
 validate_DispatchCompute(struct gl_context *ctx, const GLuint *num_groups)
 {
-   int i;
    FLUSH_CURRENT(ctx, 0);
 
    if (!check_valid_to_compute(ctx, "glDispatchCompute"))
       return GL_FALSE;
 
-   for (i = 0; i < 3; i++) {
+   for (int i = 0; i < 3; i++) {
       /* From the OpenGL 4.3 Core Specification, Chapter 19, Compute Shaders:
        *
        * "An INVALID_VALUE error is generated if any of num_groups_x,
@@ -107,7 +106,6 @@ validate_DispatchComputeGroupSizeARB(struct gl_context *ctx,
                                      const GLuint *group_size)
 {
    GLuint total_invocations = 1;
-   int i;
 
    FLUSH_CURRENT(ctx, 0);
 
@@ -128,7 +126,7 @@ validate_DispatchComputeGroupSizeARB(struct gl_context *ctx,
       return GL_FALSE;
    }
 
-   for (i = 0; i < 3; i++) {
+   for (int i = 0; i < 3; i++) {
       /* The ARB_compute_variable_group_size spec says:
        *
        * "An INVALID_VALUE error is generated if any of num_groups_x,
