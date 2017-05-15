@@ -162,13 +162,29 @@ fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 	return true;
 }
 
-static void
+static bool is_z32(enum pipe_format format)
+{
+	switch (format) {
+	case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+	case PIPE_FORMAT_Z32_UNORM:
+	case PIPE_FORMAT_Z32_FLOAT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool
 fd5_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
 	struct fd_ringbuffer *ring = ctx->batch->draw;
 	struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
+
+	if ((buffers & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
+			is_z32(pfb->zsbuf->format))
+		return false;
 
 	/* TODO handle scissor.. or fallback to slow-clear? */
 
@@ -272,6 +288,8 @@ fd5_clear(struct fd_context *ctx, unsigned buffers,
 	/* disable fast clear to not interfere w/ gmem->mem, etc.. */
 	OUT_PKT4(ring, REG_A5XX_RB_CLEAR_CNTL, 1);
 	OUT_RING(ring, 0x00000000);   /* RB_CLEAR_CNTL */
+
+	return true;
 }
 
 void

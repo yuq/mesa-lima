@@ -123,7 +123,7 @@ fd2_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 }
 
 
-static void
+static bool
 fd2_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
@@ -291,6 +291,8 @@ fd2_clear(struct fd_context *ctx, unsigned buffers,
 
 	ctx->dirty_shader[PIPE_SHADER_VERTEX]   |= FD_DIRTY_SHADER_PROG;
 	ctx->dirty_shader[PIPE_SHADER_FRAGMENT] |= FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_CONST;
+
+	return true;
 }
 
 void

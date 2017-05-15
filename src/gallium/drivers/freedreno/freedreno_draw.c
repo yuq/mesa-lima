@@ -384,17 +384,22 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	/* if per-gen backend doesn't implement ctx->clear() generic
 	 * blitter clear:
 	 */
-	if (!ctx->clear) {
-		fd_blitter_clear(pctx, buffers, color, depth, stencil);
-		return;
+	bool fallback = true;
+
+	if (ctx->clear) {
+		fd_batch_set_stage(batch, FD_STAGE_CLEAR);
+
+		if (ctx->clear(ctx, buffers, color, depth, stencil)) {
+			if (fd_mesa_debug & FD_DBG_DCLEAR)
+				fd_context_all_dirty(ctx);
+
+			fallback = false;
+		}
 	}
 
-	fd_batch_set_stage(batch, FD_STAGE_CLEAR);
-
-	ctx->clear(ctx, buffers, color, depth, stencil);
-
-	if (fd_mesa_debug & FD_DBG_DCLEAR)
-		fd_context_all_dirty(ctx);
+	if (fallback) {
+		fd_blitter_clear(pctx, buffers, color, depth, stencil);
+	}
 }
 
 static void
