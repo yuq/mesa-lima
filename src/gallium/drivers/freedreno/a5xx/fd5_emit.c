@@ -174,14 +174,11 @@ struct PACKED bcolor_entry {
 
 #define FD5_BORDER_COLOR_SIZE        0x60
 #define FD5_BORDER_COLOR_UPLOAD_SIZE (2 * PIPE_MAX_SAMPLERS * FD5_BORDER_COLOR_SIZE)
-#define FD5_BORDER_COLOR_OFFSET      8   /* TODO probably should be dynamic */
 
 static void
 setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entries)
 {
 	unsigned i, j;
-
-	debug_assert(tex->num_samplers < FD5_BORDER_COLOR_OFFSET);  // TODO
 
 	for (i = 0; i < tex->num_samplers; i++) {
 		struct bcolor_entry *e = &entries[i];
