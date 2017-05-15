@@ -928,7 +928,10 @@ radv_emit_fb_ds_state(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t db_z_info = ds->db_z_info;
 	uint32_t db_stencil_info = ds->db_stencil_info;
 
-	if (!radv_layout_has_htile(image, layout)) {
+	if (!radv_layout_has_htile(image, layout,
+	                           radv_image_queue_family_mask(image,
+	                                                        cmd_buffer->queue_family_index,
+	                                                        cmd_buffer->queue_family_index))) {
 		db_z_info &= C_028040_TILE_SURFACE_ENABLE;
 		db_stencil_info |= S_028044_TILE_STENCIL_DISABLE(1);
 	}
@@ -1103,10 +1106,12 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 		struct radv_attachment_info *att = &framebuffer->attachments[idx];
 		struct radv_image *image = att->attachment->image;
 		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, att->attachment->bo, 8);
-
+		uint32_t queue_mask = radv_image_queue_family_mask(image,
+		                                                   cmd_buffer->queue_family_index,
+		                                                   cmd_buffer->queue_family_index);
 		/* We currently don't support writing decompressed HTILE */
-		assert(radv_layout_has_htile(image, layout) ==
-		       radv_layout_is_htile_compressed(image, layout));
+		assert(radv_layout_has_htile(image, layout, queue_mask) ==
+		       radv_layout_is_htile_compressed(image, layout, queue_mask));
 
 		radv_emit_fb_ds_state(cmd_buffer, &att->ds, image, layout);
 
@@ -2993,6 +2998,8 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 					       struct radv_image *image,
 					       VkImageLayout src_layout,
 					       VkImageLayout dst_layout,
+					       unsigned src_queue_mask,
+					       unsigned dst_queue_mask,
 					       const VkImageSubresourceRange *range,
 					       VkImageAspectFlags pending_clears)
 {
@@ -3004,11 +3011,11 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 		/* The clear will initialize htile. */
 		return;
 	} else if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
-	           radv_layout_has_htile(image, dst_layout)) {
+	           radv_layout_has_htile(image, dst_layout, dst_queue_mask)) {
 		/* TODO: merge with the clear if applicable */
 		radv_initialize_htile(cmd_buffer, image, range);
-	} else if (radv_layout_is_htile_compressed(image, src_layout) &&
-	           !radv_layout_is_htile_compressed(image, dst_layout)) {
+	} else if (radv_layout_is_htile_compressed(image, src_layout, src_queue_mask) &&
+	           !radv_layout_is_htile_compressed(image, dst_layout, dst_queue_mask)) {
 		VkImageSubresourceRange local_range = *range;
 		local_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 		local_range.baseMipLevel = 0;
@@ -3124,7 +3131,9 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 
 	if (image->surface.htile_size)
 		radv_handle_depth_image_transition(cmd_buffer, image, src_layout,
-						   dst_layout, range, pending_clears);
+						   dst_layout, src_queue_mask,
+						   dst_queue_mask, range,
+						   pending_clears);
 
 	if (image->cmask.size)
 		radv_handle_cmask_image_transition(cmd_buffer, image, src_layout,

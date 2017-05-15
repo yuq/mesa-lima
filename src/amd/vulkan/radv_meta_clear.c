@@ -540,10 +540,14 @@ create_depthstencil_pipeline(struct radv_device *device,
 	return result;
 }
 
-static bool depth_view_can_fast_clear(const struct radv_image_view *iview,
+static bool depth_view_can_fast_clear(struct radv_cmd_buffer *cmd_buffer,
+				      const struct radv_image_view *iview,
 				      VkImageLayout layout,
 				      const VkClearRect *clear_rect)
 {
+	uint32_t queue_mask = radv_image_queue_family_mask(iview->image,
+	                                                   cmd_buffer->queue_family_index,
+	                                                   cmd_buffer->queue_family_index);
 	if (clear_rect->rect.offset.x || clear_rect->rect.offset.y ||
 	    clear_rect->rect.extent.width != iview->extent.width ||
 	    clear_rect->rect.extent.height != iview->extent.height)
@@ -551,14 +555,15 @@ static bool depth_view_can_fast_clear(const struct radv_image_view *iview,
 	if (iview->image->surface.htile_size &&
 	    iview->base_mip == 0 &&
 	    iview->base_layer == 0 &&
-	    radv_layout_is_htile_compressed(iview->image, layout) &&
+	    radv_layout_is_htile_compressed(iview->image, layout, queue_mask) &&
 	    !radv_image_extent_compare(iview->image, &iview->extent))
 		return true;
 	return false;
 }
 
 static struct radv_pipeline *
-pick_depthstencil_pipeline(struct radv_meta_state *meta_state,
+pick_depthstencil_pipeline(struct radv_cmd_buffer *cmd_buffer,
+			   struct radv_meta_state *meta_state,
 			   const struct radv_image_view *iview,
 			   int samples_log2,
 			   VkImageAspectFlags aspects,
@@ -566,7 +571,7 @@ pick_depthstencil_pipeline(struct radv_meta_state *meta_state,
 			   const VkClearRect *clear_rect,
 			   VkClearDepthStencilValue clear_value)
 {
-	bool fast = depth_view_can_fast_clear(iview, layout, clear_rect);
+	bool fast = depth_view_can_fast_clear(cmd_buffer, iview, layout, clear_rect);
 	int index = DEPTH_CLEAR_SLOW;
 
 	if (fast) {
@@ -622,7 +627,8 @@ emit_depthstencil_clear(struct radv_cmd_buffer *cmd_buffer,
 						  clear_value.stencil);
 	}
 
-	struct radv_pipeline *pipeline = pick_depthstencil_pipeline(meta_state,
+	struct radv_pipeline *pipeline = pick_depthstencil_pipeline(cmd_buffer,
+								    meta_state,
 								    iview,
 								    samples_log2,
 								    aspects,
@@ -634,7 +640,7 @@ emit_depthstencil_clear(struct radv_cmd_buffer *cmd_buffer,
 					   radv_pipeline_to_handle(pipeline));
 	}
 
-	if (depth_view_can_fast_clear(iview, subpass->depth_stencil_attachment.layout, clear_rect))
+	if (depth_view_can_fast_clear(cmd_buffer, iview, subpass->depth_stencil_attachment.layout, clear_rect))
 		radv_set_depth_clear_regs(cmd_buffer, iview->image, clear_value, aspects);
 
 	radv_CmdSetViewport(radv_cmd_buffer_to_handle(cmd_buffer), 0, 1, &(VkViewport) {

@@ -1189,7 +1189,8 @@ struct radv_image {
 /* Whether the image has a htile that is known consistent with the contents of
  * the image. */
 bool radv_layout_has_htile(const struct radv_image *image,
-                           VkImageLayout layout);
+                           VkImageLayout layout,
+                           unsigned queue_mask);
 
 /* Whether the image has a htile  that is known consistent with the contents of
  * the image and is allowed to be in compressed form.
@@ -1198,7 +1199,8 @@ bool radv_layout_has_htile(const struct radv_image *image,
  * correct results.
  */
 bool radv_layout_is_htile_compressed(const struct radv_image *image,
-                                     VkImageLayout layout);
+                                     VkImageLayout layout,
+                                     unsigned queue_mask);
 
 bool radv_layout_can_fast_clear(const struct radv_image *image,
 			        VkImageLayout layout,

@@ -771,19 +771,23 @@ radv_image_view_init(struct radv_image_view *iview,
 }
 
 bool radv_layout_has_htile(const struct radv_image *image,
-                           VkImageLayout layout)
+                           VkImageLayout layout,
+                           unsigned queue_mask)
 {
 	return image->surface.htile_size &&
 	       (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&
+	       queue_mask == (1u << RADV_QUEUE_GENERAL);
 }
 
 bool radv_layout_is_htile_compressed(const struct radv_image *image,
-                                     VkImageLayout layout)
+                                     VkImageLayout layout,
+                                     unsigned queue_mask)
 {
 	return image->surface.htile_size &&
 	       (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&
+	       queue_mask == (1u << RADV_QUEUE_GENERAL);
 }
 
 bool radv_layout_can_fast_clear(const struct radv_image *image,
