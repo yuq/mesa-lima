@@ -77,6 +77,9 @@ _mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA );
 
 
 extern void GLAPIENTRY
+_mesa_BlendEquationSeparateiARB_no_error(GLuint buf, GLenum modeRGB,
+                                         GLenum modeA);
+extern void GLAPIENTRY
 _mesa_BlendEquationSeparateiARB(GLuint buf, GLenum modeRGB, GLenum modeA);
 
 

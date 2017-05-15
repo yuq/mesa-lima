@@ -13,7 +13,7 @@
         <param name="mode" type="GLenum"/>
     </function>
 
-    <function name="BlendEquationSeparateiARB">
+    <function name="BlendEquationSeparateiARB" no_error="true">
         <param name="buf" type="GLuint"/>
         <param name="modeRGB" type="GLenum"/>
         <param name="modeA" type="GLenum"/>
