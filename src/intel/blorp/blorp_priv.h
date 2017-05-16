@@ -71,6 +71,9 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
                             const struct blorp_surf *surf,
                             unsigned int level, unsigned int layer,
                             enum isl_format format, bool is_render_target);
+void
+blorp_surf_convert_to_single_slice(const struct isl_device *isl_dev,
+                                   struct brw_blorp_surface_info *info);
 
 
 struct brw_blorp_coord_transform

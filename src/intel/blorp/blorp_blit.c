@@ -1378,9 +1378,9 @@ surf_get_intratile_offset_px(struct brw_blorp_surface_info *info,
    }
 }
 
-static void
-surf_convert_to_single_slice(const struct isl_device *isl_dev,
-                             struct brw_blorp_surface_info *info)
+void
+blorp_surf_convert_to_single_slice(const struct isl_device *isl_dev,
+                                   struct brw_blorp_surface_info *info)
 {
    bool ok UNUSED;
 
@@ -1453,7 +1453,7 @@ surf_fake_interleaved_msaa(const struct isl_device *isl_dev,
    assert(info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
 
    /* First, we need to convert it to a simple 1-level 1-layer 2-D surface */
-   surf_convert_to_single_slice(isl_dev, info);
+   blorp_surf_convert_to_single_slice(isl_dev, info);
 
    info->surf.logical_level0_px = info->surf.phys_level0_sa;
    info->surf.samples = 1;
@@ -1467,7 +1467,7 @@ surf_retile_w_to_y(const struct isl_device *isl_dev,
    assert(info->surf.tiling == ISL_TILING_W);
 
    /* First, we need to convert it to a simple 1-level 1-layer 2-D surface */
-   surf_convert_to_single_slice(isl_dev, info);
+   blorp_surf_convert_to_single_slice(isl_dev, info);
 
    /* On gen7+, we don't have interleaved multisampling for color render
     * targets so we have to fake it.
@@ -1558,7 +1558,7 @@ surf_fake_rgb_with_red(const struct isl_device *isl_dev,
                        struct brw_blorp_surface_info *info,
                        uint32_t *x, uint32_t *width)
 {
-   surf_convert_to_single_slice(isl_dev, info);
+   blorp_surf_convert_to_single_slice(isl_dev, info);
 
    info->surf.logical_level0_px.width *= 3;
    info->surf.phys_level0_sa.width *= 3;
@@ -1890,7 +1890,7 @@ shrink_surface_params(const struct isl_device *dev,
    struct isl_extent2d px_size_sa;
    int adjust;
 
-   surf_convert_to_single_slice(dev, info);
+   blorp_surf_convert_to_single_slice(dev, info);
 
    px_size_sa = get_px_size_sa(&info->surf);
 
@@ -2324,7 +2324,7 @@ surf_convert_to_uncompressed(const struct isl_device *isl_dev,
     * ones with the same bpb) and divide x, y, width, and height by the
     * block size.
     */
-   surf_convert_to_single_slice(isl_dev, info);
+   blorp_surf_convert_to_single_slice(isl_dev, info);
 
    if (width || height) {
 #ifndef NDEBUG
