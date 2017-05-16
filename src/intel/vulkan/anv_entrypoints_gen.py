@@ -49,6 +49,7 @@ SUPPORTED_EXTENSIONS = [
     'VK_KHR_storage_buffer_storage_class',
     'VK_KHR_surface',
     'VK_KHR_swapchain',
+    'VK_KHR_variable_pointers',
     'VK_KHR_wayland_surface',
     'VK_KHR_xcb_surface',
     'VK_KHR_xlib_surface',

@@ -493,6 +493,10 @@ static const VkExtensionProperties device_extensions[] = {
       .specVersion = 68,
    },
    {
+      .extensionName = VK_KHR_VARIABLE_POINTERS_EXTENSION_NAME,
+      .specVersion = 1,
+   },
+   {
       .extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
       .specVersion = 1,
    },
@@ -745,6 +749,13 @@ void anv_GetPhysicalDeviceFeatures2KHR(
          features->multiview = true;
          features->multiviewGeometryShader = true;
          features->multiviewTessellationShader = true;
+         break;
+      }
+
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES_KHR: {
+         VkPhysicalDeviceVariablePointerFeaturesKHR *features = (void *)ext;
+         features->variablePointersStorageBuffer = true;
+         features->variablePointers = false;
          break;
       }
 
