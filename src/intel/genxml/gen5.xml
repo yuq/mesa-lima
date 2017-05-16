@@ -949,7 +949,7 @@
     <field name="Base Vertex Location" start="160" end="191" type="int"/>
   </instruction>
 
-  <instruction name="3DSTATE_AA_LINE_PARAMS" bias="2" length="3">
+  <instruction name="3DSTATE_AA_LINE_PARAMETERS" bias="2" length="3">
     <field name="Command Type" start="29" end="31" type="uint" default="3"/>
     <field name="Command SubType" start="27" end="28" type="uint" default="3"/>
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="1"/>
