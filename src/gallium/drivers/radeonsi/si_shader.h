@@ -143,6 +143,8 @@
 #include "ac_binary.h"
 #include "si_state.h"
 
+struct nir_shader;
+
 #define SI_MAX_VS_OUTPUTS	40
 
 /* Shader IO unique indices are supported for TGSI_SEMANTIC_GENERIC with an
@@ -320,6 +322,7 @@ struct si_shader_selector {
 	struct si_shader	*gs_copy_shader;
 
 	struct tgsi_token       *tokens;
+	struct nir_shader       *nir;
 	struct pipe_stream_output_info  so;
 	struct tgsi_shader_info		info;
 
