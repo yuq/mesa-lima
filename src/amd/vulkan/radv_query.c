@@ -46,8 +46,6 @@ static unsigned get_max_db(struct radv_device *device)
 
 	if (device->physical_device->rad_info.chip_class == SI)
 		num_db = 8;
-	else
-		num_db = MAX2(8, num_db);
 
 	/* Otherwise we need to change the query reset procedure */
 	assert(rb_mask == ((1ull << num_db) - 1));
