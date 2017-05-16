@@ -118,7 +118,7 @@ validate(struct brw_codegen *p)
       annotation.ann[annotation.ann_count].offset = p->next_insn_offset;
    }
 
-   bool ret = brw_validate_instructions(devinfo, p->store, 0,
+   bool ret = brw_validate_instructions(p->devinfo, p->store, 0,
                                         p->next_insn_offset, &annotation);
 
    if (print) {
