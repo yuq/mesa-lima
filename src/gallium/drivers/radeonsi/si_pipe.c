@@ -27,6 +27,7 @@
 #include "sid.h"
 
 #include "radeon/radeon_uvd.h"
+#include "util/hash_table.h"
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"
 #include "util/u_tests.h"
@@ -97,6 +98,11 @@ static void si_destroy_context(struct pipe_context *context)
 	pb_slabs_deinit(&sctx->bindless_descriptor_slabs);
 	util_dynarray_fini(&sctx->bindless_descriptors);
 
+	_mesa_hash_table_destroy(sctx->tex_handles, NULL);
+	_mesa_hash_table_destroy(sctx->img_handles, NULL);
+
+	util_dynarray_fini(&sctx->resident_tex_handles);
+	util_dynarray_fini(&sctx->resident_img_handles);
 	FREE(sctx);
 }
 
@@ -327,6 +333,15 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		goto fail;
 
 	util_dynarray_init(&sctx->bindless_descriptors, NULL);
+
+	/* Bindless handles. */
+	sctx->tex_handles = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+						    _mesa_key_pointer_equal);
+	sctx->img_handles = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+						    _mesa_key_pointer_equal);
+
+	util_dynarray_init(&sctx->resident_tex_handles, NULL);
+	util_dynarray_init(&sctx->resident_img_handles, NULL);
 
 	return &sctx->b.b;
 fail:

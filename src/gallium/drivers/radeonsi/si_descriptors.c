@@ -60,6 +60,7 @@
 #include "sid.h"
 #include "gfx9d.h"
 
+#include "util/hash_table.h"
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
@@ -2120,6 +2121,249 @@ void si_bindless_descriptor_slab_free(void *priv, struct pb_slab *pslab)
 	FREE(slab);
 }
 
+static struct si_bindless_descriptor *
+si_create_bindless_descriptor(struct si_context *sctx, uint32_t *desc_list,
+			      unsigned size)
+{
+	struct si_screen *sscreen = sctx->screen;
+	struct si_bindless_descriptor *desc;
+	struct pb_slab_entry *entry;
+	void *ptr;
+
+	/* Sub-allocate the bindless descriptor from a slab to avoid dealing
+	 * with a ton of buffers and for reducing the winsys overhead.
+	 */
+	entry = pb_slab_alloc(&sctx->bindless_descriptor_slabs, 64, 0);
+	if (!entry)
+		return NULL;
+
+	desc = NULL;
+	desc = container_of(entry, desc, entry);
+
+	/* Upload the descriptor directly in VRAM. Because the slabs are
+	 * currently never reclaimed, we don't need to synchronize the
+	 * operation.
+	 */
+	ptr = sscreen->b.ws->buffer_map(desc->buffer->buf, NULL,
+					PIPE_TRANSFER_WRITE |
+					PIPE_TRANSFER_UNSYNCHRONIZED);
+	util_memcpy_cpu_to_le32(ptr + desc->offset, desc_list, size);
+
+	return desc;
+}
+
+static uint64_t si_create_texture_handle(struct pipe_context *ctx,
+					 struct pipe_sampler_view *view,
+					 const struct pipe_sampler_state *state)
+{
+	struct si_sampler_view *sview = (struct si_sampler_view *)view;
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_texture_handle *tex_handle;
+	struct si_sampler_state *sstate;
+	uint32_t desc_list[16];
+	uint64_t handle;
+
+	tex_handle = CALLOC_STRUCT(si_texture_handle);
+	if (!tex_handle)
+		return 0;
+
+	memset(desc_list, 0, sizeof(desc_list));
+	si_init_descriptor_list(&desc_list[0], 16, 1, null_texture_descriptor);
+
+	sstate = ctx->create_sampler_state(ctx, state);
+	if (!sstate) {
+		FREE(tex_handle);
+		return 0;
+	}
+
+	si_set_sampler_view_desc(sctx, sview, sstate, &desc_list[0]);
+	ctx->delete_sampler_state(ctx, sstate);
+
+	tex_handle->desc = si_create_bindless_descriptor(sctx, desc_list,
+							 sizeof(desc_list));
+	if (!tex_handle->desc) {
+		FREE(tex_handle);
+		return 0;
+	}
+
+	handle = tex_handle->desc->buffer->gpu_address +
+		 tex_handle->desc->offset;
+
+	if (!_mesa_hash_table_insert(sctx->tex_handles, (void *)handle,
+				     tex_handle)) {
+		pb_slab_free(&sctx->bindless_descriptor_slabs,
+			     &tex_handle->desc->entry);
+		FREE(tex_handle);
+		return 0;
+	}
+
+	pipe_sampler_view_reference(&tex_handle->view, view);
+
+	return handle;
+}
+
+static void si_delete_texture_handle(struct pipe_context *ctx, uint64_t handle)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_texture_handle *tex_handle;
+	struct hash_entry *entry;
+
+	entry = _mesa_hash_table_search(sctx->tex_handles, (void *)handle);
+	if (!entry)
+		return;
+
+	tex_handle = (struct si_texture_handle *)entry->data;
+
+	pipe_sampler_view_reference(&tex_handle->view, NULL);
+	_mesa_hash_table_remove(sctx->tex_handles, entry);
+	pb_slab_free(&sctx->bindless_descriptor_slabs,
+		     &tex_handle->desc->entry);
+	FREE(tex_handle);
+}
+
+static void si_make_texture_handle_resident(struct pipe_context *ctx,
+					    uint64_t handle, bool resident)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_texture_handle *tex_handle;
+	struct si_sampler_view *sview;
+	struct hash_entry *entry;
+
+	entry = _mesa_hash_table_search(sctx->tex_handles, (void *)handle);
+	if (!entry)
+		return;
+
+	tex_handle = (struct si_texture_handle *)entry->data;
+	sview = (struct si_sampler_view *)tex_handle->view;
+
+	if (resident) {
+		/* Add the texture handle to the per-context list. */
+		util_dynarray_append(&sctx->resident_tex_handles,
+				     struct si_texture_handle *, tex_handle);
+
+		/* Add the buffers to the current CS in case si_begin_new_cs()
+		 * is not going to be called.
+		 */
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+					  tex_handle->desc->buffer,
+					  RADEON_USAGE_READWRITE,
+					  RADEON_PRIO_DESCRIPTORS);
+
+		si_sampler_view_add_buffer(sctx, sview->base.texture,
+					   RADEON_USAGE_READ,
+					   sview->is_stencil_sampler, false);
+	} else {
+		/* Remove the texture handle from the per-context list. */
+		util_dynarray_delete_unordered(&sctx->resident_tex_handles,
+					       struct si_texture_handle *,
+					       tex_handle);
+	}
+}
+
+static uint64_t si_create_image_handle(struct pipe_context *ctx,
+				       const struct pipe_image_view *view)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_image_handle *img_handle;
+	uint32_t desc_list[16];
+	uint64_t handle;
+
+	if (!view || !view->resource)
+		return 0;
+
+	img_handle = CALLOC_STRUCT(si_image_handle);
+	if (!img_handle)
+		return 0;
+
+	memset(desc_list, 0, sizeof(desc_list));
+	si_init_descriptor_list(&desc_list[0], 8, 1, null_image_descriptor);
+
+	si_set_shader_image_desc(sctx, view, false, &desc_list[0]);
+
+	img_handle->desc = si_create_bindless_descriptor(sctx, desc_list,
+							 sizeof(desc_list));
+	if (!img_handle->desc) {
+		FREE(img_handle);
+		return 0;
+	}
+
+	handle = img_handle->desc->buffer->gpu_address +
+		 img_handle->desc->offset;
+
+	if (!_mesa_hash_table_insert(sctx->img_handles, (void *)handle,
+				     img_handle)) {
+		pb_slab_free(&sctx->bindless_descriptor_slabs,
+			     &img_handle->desc->entry);
+		FREE(img_handle);
+		return 0;
+	}
+
+	util_copy_image_view(&img_handle->view, view);
+
+	return handle;
+}
+
+static void si_delete_image_handle(struct pipe_context *ctx, uint64_t handle)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_image_handle *img_handle;
+	struct hash_entry *entry;
+
+	entry = _mesa_hash_table_search(sctx->img_handles, (void *)handle);
+	if (!entry)
+		return;
+
+	img_handle = (struct si_image_handle *)entry->data;
+
+	util_copy_image_view(&img_handle->view, NULL);
+	_mesa_hash_table_remove(sctx->img_handles, entry);
+	pb_slab_free(&sctx->bindless_descriptor_slabs,
+		     &img_handle->desc->entry);
+	FREE(img_handle);
+}
+
+static void si_make_image_handle_resident(struct pipe_context *ctx,
+					  uint64_t handle, unsigned access,
+					  bool resident)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_image_handle *img_handle;
+	struct pipe_image_view *view;
+	struct hash_entry *entry;
+
+	entry = _mesa_hash_table_search(sctx->img_handles, (void *)handle);
+	if (!entry)
+		return;
+
+	img_handle = (struct si_image_handle *)entry->data;
+	view = &img_handle->view;
+
+	if (resident) {
+		/* Add the image handle to the per-context list. */
+		util_dynarray_append(&sctx->resident_img_handles,
+				     struct si_image_handle *, img_handle);
+
+		/* Add the buffers to the current CS in case si_begin_new_cs()
+		 * is not going to be called.
+		 */
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+					  img_handle->desc->buffer,
+					  RADEON_USAGE_READWRITE,
+					  RADEON_PRIO_DESCRIPTORS);
+
+		si_sampler_view_add_buffer(sctx, view->resource,
+					   (access & PIPE_IMAGE_ACCESS_WRITE) ?
+					   RADEON_USAGE_READWRITE :
+					   RADEON_USAGE_READ, false, false);
+	} else {
+		/* Remove the image handle from the per-context list. */
+		util_dynarray_delete_unordered(&sctx->resident_img_handles,
+					       struct si_image_handle *,
+					       img_handle);
+	}
+}
+
+
 /* INIT/DEINIT/UPLOAD */
 
 /* GFX9 has only 4KB of CE, while previous chips had 32KB. In order
@@ -2259,6 +2503,12 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.b.set_shader_buffers = si_set_shader_buffers;
 	sctx->b.b.set_sampler_views = si_set_sampler_views;
 	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;
+	sctx->b.b.create_texture_handle = si_create_texture_handle;
+	sctx->b.b.delete_texture_handle = si_delete_texture_handle;
+	sctx->b.b.make_texture_handle_resident = si_make_texture_handle_resident;
+	sctx->b.b.create_image_handle = si_create_image_handle;
+	sctx->b.b.delete_image_handle = si_delete_image_handle;
+	sctx->b.b.make_image_handle_resident = si_make_image_handle_resident;
 	sctx->b.invalidate_buffer = si_invalidate_buffer;
 	sctx->b.rebind_buffer = si_rebind_buffer;
 

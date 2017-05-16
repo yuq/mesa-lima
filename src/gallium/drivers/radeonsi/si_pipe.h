@@ -237,6 +237,18 @@ struct si_bindless_descriptor
 	unsigned			offset;
 };
 
+struct si_texture_handle
+{
+	struct si_bindless_descriptor	*desc;
+	struct pipe_sampler_view	*view;
+};
+
+struct si_image_handle
+{
+	struct si_bindless_descriptor	*desc;
+	struct pipe_image_view		view;
+};
+
 struct si_context {
 	struct r600_common_context	b;
 	struct blitter_context		*blitter;
@@ -405,6 +417,14 @@ struct si_context {
 
 	/* Bindless descriptors. */
 	struct util_dynarray	bindless_descriptors;
+
+	/* Allocated bindless handles */
+	struct hash_table	*tex_handles;
+	struct hash_table	*img_handles;
+
+	/* Resident bindless handles */
+	struct util_dynarray	resident_tex_handles;
+	struct util_dynarray	resident_img_handles;
 };
 
 /* cik_sdma.c */
