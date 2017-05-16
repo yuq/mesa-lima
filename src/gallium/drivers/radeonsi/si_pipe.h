@@ -28,6 +28,8 @@
 
 #include "si_shader.h"
 
+#include "util/u_dynarray.h"
+
 #ifdef PIPE_ARCH_BIG_ENDIAN
 #define SI_BIG_ENDIAN 1
 #else
@@ -228,6 +230,13 @@ union si_vgt_param_key {
 	uint32_t index;
 };
 
+struct si_bindless_descriptor
+{
+	struct pb_slab_entry		entry;
+	struct r600_resource		*buffer;
+	unsigned			offset;
+};
+
 struct si_context {
 	struct r600_common_context	b;
 	struct blitter_context		*blitter;
@@ -390,6 +399,12 @@ struct si_context {
 	/* Precomputed IA_MULTI_VGT_PARAM */
 	union si_vgt_param_key  ia_multi_vgt_param_key;
 	unsigned		ia_multi_vgt_param[SI_NUM_VGT_PARAM_STATES];
+
+	/* Slab allocator for bindless descriptors. */
+	struct pb_slabs		bindless_descriptor_slabs;
+
+	/* Bindless descriptors. */
+	struct util_dynarray	bindless_descriptors;
 };
 
 /* cik_sdma.c */

@@ -94,6 +94,9 @@ static void si_destroy_context(struct pipe_context *context)
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
 	radeon_clear_saved_cs(&sctx->last_gfx);
 
+	pb_slabs_deinit(&sctx->bindless_descriptor_slabs);
+	util_dynarray_fini(&sctx->bindless_descriptors);
+
 	FREE(sctx);
 }
 
@@ -315,6 +318,15 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 				   max_threads_per_block / 64);
 
 	sctx->tm = si_create_llvm_target_machine(sscreen);
+
+	/* Create a slab allocator for all bindless descriptors. */
+	if (!pb_slabs_init(&sctx->bindless_descriptor_slabs, 6, 6, 1, sctx,
+			   si_bindless_descriptor_can_reclaim_slab,
+			   si_bindless_descriptor_slab_alloc,
+			   si_bindless_descriptor_slab_free))
+		goto fail;
+
+	util_dynarray_init(&sctx->bindless_descriptors, NULL);
 
 	return &sctx->b.b;
 fail:

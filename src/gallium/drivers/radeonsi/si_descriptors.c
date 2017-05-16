@@ -2036,6 +2036,90 @@ void si_emit_compute_shader_userdata(struct si_context *sctx)
 	sctx->shader_pointers_dirty &= ~compute_mask;
 }
 
+/* BINDLESS */
+
+struct si_bindless_descriptor_slab
+{
+	struct pb_slab base;
+	struct r600_resource *buffer;
+	struct si_bindless_descriptor *entries;
+};
+
+bool si_bindless_descriptor_can_reclaim_slab(void *priv,
+					     struct pb_slab_entry *entry)
+{
+	/* Do not allow to reclaim any bindless descriptors for now because the
+	 * GPU might be using them. This should be improved later on.
+	 */
+	return false;
+}
+
+struct pb_slab *si_bindless_descriptor_slab_alloc(void *priv, unsigned heap,
+						  unsigned entry_size,
+						  unsigned group_index)
+{
+	struct si_context *sctx = priv;
+	struct si_screen *sscreen = sctx->screen;
+	struct si_bindless_descriptor_slab *slab;
+
+	slab = CALLOC_STRUCT(si_bindless_descriptor_slab);
+	if (!slab)
+		return NULL;
+
+	/* Create a buffer in VRAM for 1024 bindless descriptors. */
+	slab->buffer = (struct r600_resource *)
+		pipe_buffer_create(&sscreen->b.b, 0,
+				   PIPE_USAGE_DEFAULT, 64 * 1024);
+	if (!slab->buffer)
+		goto fail;
+
+	slab->base.num_entries = slab->buffer->bo_size / entry_size;
+	slab->base.num_free = slab->base.num_entries;
+	slab->entries = CALLOC(slab->base.num_entries, sizeof(*slab->entries));
+	if (!slab->entries)
+		goto fail_buffer;
+
+	LIST_INITHEAD(&slab->base.free);
+
+	for (unsigned i = 0; i < slab->base.num_entries; ++i) {
+		struct si_bindless_descriptor *desc = &slab->entries[i];
+
+		desc->entry.slab = &slab->base;
+		desc->entry.group_index = group_index;
+		desc->buffer = slab->buffer;
+		desc->offset = i * entry_size;
+
+		LIST_ADDTAIL(&desc->entry.head, &slab->base.free);
+	}
+
+	/* Add the descriptor to the per-context list. */
+	util_dynarray_append(&sctx->bindless_descriptors,
+			    struct r600_resource *, slab->buffer);
+
+	return &slab->base;
+
+fail_buffer:
+	r600_resource_reference(&slab->buffer, NULL);
+fail:
+	FREE(slab);
+	return NULL;
+}
+
+void si_bindless_descriptor_slab_free(void *priv, struct pb_slab *pslab)
+{
+	struct si_context *sctx = priv;
+	struct si_bindless_descriptor_slab *slab =
+		(struct si_bindless_descriptor_slab *)pslab;
+
+	/* Remove the descriptor from the per-context list. */
+	util_dynarray_delete_unordered(&sctx->bindless_descriptors,
+				       struct r600_resource *, slab->buffer);
+
+	r600_resource_reference(&slab->buffer, NULL);
+	FREE(slab->entries);
+	FREE(slab);
+}
+
 /* INIT/DEINIT/UPLOAD */
 
 /* GFX9 has only 4KB of CE, while previous chips had 32KB. In order
