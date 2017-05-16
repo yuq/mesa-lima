@@ -703,6 +703,10 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
       break;
    }
 
+   case 2: /* BLT */ {
+      return field(h, 0, 7) + 2;
+   }
+
    case 3: /* Render */ {
       uint32_t subtype = field(h, 27, 28);
       uint32_t opcode = field(h, 24, 26);
