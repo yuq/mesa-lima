@@ -34,6 +34,8 @@
 #include "vl/vl_decoder.h"
 #include "../ddebug/dd_util.h"
 
+#include "compiler/nir/nir.h"
+
 /*
  * pipe_context
  */
@@ -790,6 +792,36 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	return 0;
 }
 
+static const struct nir_shader_compiler_options nir_options = {
+	.vertex_id_zero_based = true,
+	.lower_scmp = true,
+	.lower_flrp32 = true,
+	.lower_fsat = true,
+	.lower_fdiv = true,
+	.lower_sub = true,
+	.lower_pack_snorm_2x16 = true,
+	.lower_pack_snorm_4x8 = true,
+	.lower_pack_unorm_2x16 = true,
+	.lower_pack_unorm_4x8 = true,
+	.lower_unpack_snorm_2x16 = true,
+	.lower_unpack_snorm_4x8 = true,
+	.lower_unpack_unorm_2x16 = true,
+	.lower_unpack_unorm_4x8 = true,
+	.lower_extract_byte = true,
+	.lower_extract_word = true,
+	.max_unroll_iterations = 32,
+	.native_integers = true,
+};
+
+static const void *
+si_get_compiler_options(struct pipe_screen *screen,
+			enum pipe_shader_ir ir,
+			enum pipe_shader_type shader)
+{
+	assert(ir == PIPE_SHADER_IR_NIR);
+	return &nir_options;
+}
+
 static void si_destroy_screen(struct pipe_screen* pscreen)
 {
 	struct si_screen *sscreen = (struct si_screen *)pscreen;
@@ -941,6 +973,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	sscreen->b.b.destroy = si_destroy_screen;
 	sscreen->b.b.get_param = si_get_param;
 	sscreen->b.b.get_shader_param = si_get_shader_param;
+	sscreen->b.b.get_compiler_options = si_get_compiler_options;
 	sscreen->b.b.resource_create = r600_resource_create_common;
 
 	si_init_screen_state_functions(sscreen);
