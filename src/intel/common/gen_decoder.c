@@ -706,9 +706,12 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
    case 3: /* Render */ {
       uint32_t subtype = field(h, 27, 28);
       uint32_t opcode = field(h, 24, 26);
+      uint16_t whole_opcode = field(h, 16, 31);
       switch (subtype) {
       case 0:
-         if (opcode < 2)
+         if (whole_opcode == 0x6104 /* PIPELINE_SELECT_965 */)
+            return 1;
+         else if (opcode < 2)
             return field(h, 0, 7) + 2;
          else
             return -1;
@@ -726,7 +729,9 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
             return -1;
       }
       case 3:
-         if (opcode < 4)
+         if (whole_opcode == 0x780b)
+            return 1;
+         else if (opcode < 4)
             return field(h, 0, 7) + 2;
          else
             return -1;
