@@ -3258,7 +3258,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
       surf->phys_level0_sa.array_len = mt->physical_depth0;
    }
 
-   surf->levels = mt->last_level + 1;
+   surf->levels = mt->last_level - mt->first_level + 1;
    surf->samples = MAX2(mt->num_samples, 1);
 
    surf->size = 0; /* TODO */
