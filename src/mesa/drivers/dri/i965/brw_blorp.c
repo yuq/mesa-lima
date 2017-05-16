@@ -271,6 +271,9 @@ blorp_surf_for_miptree(struct brw_context *brw,
    }
    assert((surf->aux_usage == ISL_AUX_USAGE_NONE) ==
           (surf->aux_addr.buffer == NULL));
+
+   /* ISL wants real levels, not offset ones. */
+   *level -= mt->first_level;
 }
 
 static enum isl_format
