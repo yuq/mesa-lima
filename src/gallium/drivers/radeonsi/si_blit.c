@@ -792,8 +792,17 @@ static void si_decompress_textures(struct si_context *sctx, unsigned shader_mask
 		}
 	}
 
-	si_decompress_resident_textures(sctx);
-	si_decompress_resident_images(sctx);
+	if (shader_mask & u_bit_consecutive(0, SI_NUM_GRAPHICS_SHADERS)) {
+		if (sctx->uses_bindless_samplers)
+			si_decompress_resident_textures(sctx);
+		if (sctx->uses_bindless_images)
+			si_decompress_resident_images(sctx);
+	} else if (shader_mask & (1 << PIPE_SHADER_COMPUTE)) {
+		if (sctx->cs_shader_state.program->uses_bindless_samplers)
+			si_decompress_resident_textures(sctx);
+		if (sctx->cs_shader_state.program->uses_bindless_images)
+			si_decompress_resident_images(sctx);
+	}
 
 	si_check_render_feedback(sctx);
 }
