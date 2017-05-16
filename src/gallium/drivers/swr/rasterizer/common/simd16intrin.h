@@ -941,10 +941,16 @@ INLINE simd16scalar SIMDAPI _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
 #define _simd16_castpd_ps           _mm512_castpd_ps
 #define _simd16_castps_pd           _mm512_castps_pd
 
-#define _simd16_and_ps              _mm512_and_ps
-#define _simd16_andnot_ps           _mm512_andnot_ps
-#define _simd16_or_ps               _mm512_or_ps
-#define _simd16_xor_ps              _mm512_xor_ps
+// _mm512_and_ps (and other bitwise operations) exist in AVX512DQ,
+// while the functionally equivalent _mm512_and_epi32 is in AVX512F.
+// Define the _simd16_*_ps versions in terms of AVX512F for broader
+// support.
+#define _simd16_logicop_ps(a, b, op) _simd16_castsi_ps(op##_epi32(_simd16_castps_si(a), _simd16_castps_si(b)))
+
+#define _simd16_and_ps(a, b)        _simd16_logicop_ps(a, b, _mm512_and)
+#define _simd16_andnot_ps(a, b)     _simd16_logicop_ps(a, b, _mm512_andnot)
+#define _simd16_or_ps(a, b)         _simd16_logicop_ps(a, b, _mm512_or)
+#define _simd16_xor_ps(a, b)        _simd16_logicop_ps(a, b, _mm512_xor)
 
 template <int mode>
 INLINE simd16scalar SIMDAPI _simd16_round_ps_temp(simd16scalar a)
