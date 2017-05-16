@@ -353,6 +353,20 @@ enum isl_format {
    ISL_FORMAT_ASTC_LDR_2D_10X10_FLT16 =                        630,
    ISL_FORMAT_ASTC_LDR_2D_12X10_FLT16 =                        638,
    ISL_FORMAT_ASTC_LDR_2D_12X12_FLT16 =                        639,
+   ISL_FORMAT_ASTC_HDR_2D_4X4_FLT16 =                          832,
+   ISL_FORMAT_ASTC_HDR_2D_5X4_FLT16 =                          840,
+   ISL_FORMAT_ASTC_HDR_2D_5X5_FLT16 =                          841,
+   ISL_FORMAT_ASTC_HDR_2D_6X5_FLT16 =                          849,
+   ISL_FORMAT_ASTC_HDR_2D_6X6_FLT16 =                          850,
+   ISL_FORMAT_ASTC_HDR_2D_8X5_FLT16 =                          865,
+   ISL_FORMAT_ASTC_HDR_2D_8X6_FLT16 =                          866,
+   ISL_FORMAT_ASTC_HDR_2D_8X8_FLT16 =                          868,
+   ISL_FORMAT_ASTC_HDR_2D_10X5_FLT16 =                         881,
+   ISL_FORMAT_ASTC_HDR_2D_10X6_FLT16 =                         882,
+   ISL_FORMAT_ASTC_HDR_2D_10X8_FLT16 =                         884,
+   ISL_FORMAT_ASTC_HDR_2D_10X10_FLT16 =                        886,
+   ISL_FORMAT_ASTC_HDR_2D_12X10_FLT16 =                        894,
+   ISL_FORMAT_ASTC_HDR_2D_12X12_FLT16 =                        895,
 
    /* The formats that follow are internal to ISL and as such don't have an
     * explicit number.  We'll just let the C compiler assign it for us.  Any
