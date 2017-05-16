@@ -1405,6 +1405,10 @@ vtn_storage_class_to_mode(SpvStorageClass class,
          assert(!"Invalid uniform variable type");
       }
       break;
+   case SpvStorageClassStorageBuffer:
+      mode = vtn_variable_mode_ssbo;
+      nir_mode = 0;
+      break;
    case SpvStorageClassUniformConstant:
       if (glsl_type_is_image(interface_type->type)) {
          mode = vtn_variable_mode_image;
