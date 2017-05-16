@@ -499,6 +499,7 @@ void SetupPixelShaderContext(SWR_PS_CONTEXT *psContext, const SWR_MULTISAMPLE_PO
     psContext->pPerspAttribs = work.pPerspAttribs;
     psContext->frontFace = work.triFlags.frontFacing;
     psContext->primID = work.triFlags.primID;
+    psContext->renderTargetArrayIndex = work.triFlags.renderTargetArrayIndex;
 
     // save Ia/Ib/Ic and Ja/Jb/Jc if we need to reevaluate i/j/k in the shader because of pull attribs
     psContext->I = work.I;
