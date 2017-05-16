@@ -475,7 +475,7 @@ vmw_ioctl_command(struct vmw_winsys_screen *vws, int32_t cid,
                            TRUE);
 
 	 *pfence = vmw_fence_create(vws->fence_ops, rep.handle,
-				    rep.seqno, rep.mask);
+				    rep.seqno, rep.mask, -1);
 	 if (*pfence == NULL) {
 	    /*
 	     * Fence creation failed. Need to sync.

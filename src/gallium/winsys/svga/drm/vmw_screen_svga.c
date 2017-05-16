@@ -32,6 +32,7 @@
  * @author Jose Fonseca
  */
 
+#include <libsync.h>
 
 #include "svga_cmd.h"
 #include "svga3d_caps.h"
@@ -131,6 +132,35 @@ vmw_svga_winsys_fence_finish(struct svga_winsys_screen *sws,
    return vmw_fence_finish(vws, fence, timeout, flag);
 }
 
+
+static int
+vmw_svga_winsys_fence_get_fd(struct svga_winsys_screen *sws,
+                             struct pipe_fence_handle *fence,
+                             boolean duplicate)
+{
+   if (duplicate)
+      return dup(vmw_fence_get_fd(fence));
+   else
+      return vmw_fence_get_fd(fence);
+}
+
+
+static void
+vmw_svga_winsys_fence_create_fd(struct svga_winsys_screen *sws,
+                                struct pipe_fence_handle **fence,
+                                int32_t fd)
+{
+   *fence = vmw_fence_create(NULL, 0, 0, 0, dup(fd));
+}
+
+static int
+vmw_svga_winsys_fence_server_sync(struct svga_winsys_screen *sws,
+                                  int32_t *context_fd,
+                                  struct pipe_fence_handle *fence)
+{
+   return sync_accumulate("vmwgfx", context_fd,
+                          sws->fence_get_fd(sws, fence, FALSE));
+}
 
 
 static struct svga_winsys_surface *
@@ -435,6 +465,9 @@ vmw_winsys_screen_init_svga(struct vmw_winsys_screen *vws)
    vws->base.shader_create = vmw_svga_winsys_shader_create;
    vws->base.shader_destroy = vmw_svga_winsys_shader_destroy;
    vws->base.fence_finish = vmw_svga_winsys_fence_finish;
+   vws->base.fence_get_fd = vmw_svga_winsys_fence_get_fd;
+   vws->base.fence_create_fd = vmw_svga_winsys_fence_create_fd;
+   vws->base.fence_server_sync = vmw_svga_winsys_fence_server_sync;
 
    vws->base.query_create = vmw_svga_winsys_query_create;
    vws->base.query_init = vmw_svga_winsys_query_init;
