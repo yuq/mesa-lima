@@ -158,5 +158,9 @@ TODO: document the other workarounds.
             <option name="glx_disable_ext_buffer_age" value="true" />
             <option name="glx_disable_oml_sync_control" value="true" />
         </application>
+	<application name="Compiz" executable="Compiz">
+            <option name="glx_disable_ext_buffer_age" value="true" />
+	    <option name="glx_disable_oml_sync_control" value="true" />
+        </application>
     </device>
 </driconf>
