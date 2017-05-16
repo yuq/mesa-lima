@@ -1852,6 +1852,7 @@ set_max_gl_versions(struct intel_screen *screen)
    const bool has_astc = screen->devinfo.gen >= 9;
 
    switch (screen->devinfo.gen) {
+   case 10:
    case 9:
    case 8:
       dri_screen->max_gl_core_version = 45;

@@ -412,6 +412,7 @@ enum gen {
    GEN75 = (1 << 5),
    GEN8  = (1 << 6),
    GEN9  = (1 << 7),
+   GEN10  = (1 << 8),
    GEN_ALL = ~0
 };
 
@@ -688,6 +689,7 @@ gen_from_devinfo(const struct gen_device_info *devinfo)
    case 7: return devinfo->is_haswell ? GEN75 : GEN7;
    case 8: return GEN8;
    case 9: return GEN9;
+   case 10: return GEN10;
    default:
       unreachable("not reached");
    }

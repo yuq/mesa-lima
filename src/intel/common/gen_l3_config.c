@@ -116,6 +116,7 @@ get_l3_configs(const struct gen_device_info *devinfo)
       return (devinfo->is_cherryview ? chv_l3_configs : bdw_l3_configs);
 
    case 9:
+   case 10:
       return chv_l3_configs;
 
    default:

@@ -136,7 +136,9 @@ void brw_init_state( struct brw_context *brw )
 
    brw_init_caches(brw);
 
-   if (brw->gen >= 9)
+   if (brw->gen >= 10)
+      gen10_init_atoms(brw);
+   else if (brw->gen >= 9)
       gen9_init_atoms(brw);
    else if (brw->gen >= 8)
       gen8_init_atoms(brw);
