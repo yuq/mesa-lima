@@ -108,6 +108,8 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	program->shader.is_monolithic = true;
 	program->uses_grid_size = sel.info.uses_grid_size;
 	program->uses_block_size = sel.info.uses_block_size;
+	program->uses_bindless_samplers = sel.info.uses_bindless_samplers;
+	program->uses_bindless_images = sel.info.uses_bindless_images;
 
 	if (si_shader_create(program->screen, tm, &program->shader, debug)) {
 		program->shader.compilation_failed = true;

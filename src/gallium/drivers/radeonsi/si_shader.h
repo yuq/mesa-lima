@@ -630,4 +630,16 @@ si_get_main_shader_part(struct si_shader_selector *sel,
 	return &sel->main_shader_part;
 }
 
+static inline bool
+si_shader_uses_bindless_samplers(struct si_shader_selector *selector)
+{
+	return selector ? selector->info.uses_bindless_samplers : false;
+}
+
+static inline bool
+si_shader_uses_bindless_images(struct si_shader_selector *selector)
+{
+	return selector ? selector->info.uses_bindless_images : false;
+}
+
 #endif

@@ -428,6 +428,10 @@ struct si_context {
 	/* Resident bindless handles */
 	struct util_dynarray	resident_tex_handles;
 	struct util_dynarray	resident_img_handles;
+
+	/* Bindless state */
+	bool			uses_bindless_samplers;
+	bool			uses_bindless_images;
 };
 
 /* cik_sdma.c */

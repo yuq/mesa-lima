@@ -49,6 +49,8 @@ struct si_compute {
 	unsigned variable_group_size : 1;
 	unsigned uses_grid_size:1;
 	unsigned uses_block_size:1;
+	unsigned uses_bindless_samplers:1;
+	unsigned uses_bindless_images:1;
 };
 
 #endif /* SI_COMPUTE_H */
