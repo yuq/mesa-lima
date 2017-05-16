@@ -1829,8 +1829,15 @@ get_image_offset_sa_gen4_3d(const struct isl_surf *surf,
                             uint32_t *y_offset_sa)
 {
    assert(level < surf->levels);
-   assert(logical_z_offset_px < isl_minify(surf->phys_level0_sa.depth, level));
-   assert(surf->phys_level0_sa.array_len == 1);
+   if (surf->dim == ISL_SURF_DIM_3D) {
+      assert(surf->phys_level0_sa.array_len == 1);
+      assert(logical_z_offset_px < isl_minify(surf->phys_level0_sa.depth, level));
+   } else {
+      assert(surf->dim == ISL_SURF_DIM_2D);
+      assert(surf->usage & ISL_SURF_USAGE_CUBE_BIT);
+      assert(surf->phys_level0_sa.array_len == 6);
+      assert(logical_z_offset_px < surf->phys_level0_sa.array_len);
+   }
 
    const struct isl_extent3d image_align_sa =
       isl_surf_get_image_alignment_sa(surf);
@@ -1838,13 +1845,16 @@ get_image_offset_sa_gen4_3d(const struct isl_surf *surf,
    const uint32_t W0 = surf->phys_level0_sa.width;
    const uint32_t H0 = surf->phys_level0_sa.height;
    const uint32_t D0 = surf->phys_level0_sa.depth;
+   const uint32_t AL = surf->phys_level0_sa.array_len;
 
    uint32_t x = 0;
    uint32_t y = 0;
 
    for (uint32_t l = 0; l < level; ++l) {
       const uint32_t level_h = isl_align_npot(isl_minify(H0, l), image_align_sa.h);
-      const uint32_t level_d = isl_align_npot(isl_minify(D0, l), image_align_sa.d);
+      const uint32_t level_d =
+         isl_align_npot(surf->dim == ISL_SURF_DIM_3D ? isl_minify(D0, l) : AL,
+                        image_align_sa.d);
       const uint32_t max_layers_vert = isl_align(level_d, 1u << l) / (1u << l);
 
       y += level_h * max_layers_vert;
@@ -1852,7 +1862,9 @@ get_image_offset_sa_gen4_3d(const struct isl_surf *surf,
 
    const uint32_t level_w = isl_align_npot(isl_minify(W0, level), image_align_sa.w);
    const uint32_t level_h = isl_align_npot(isl_minify(H0, level), image_align_sa.h);
-   const uint32_t level_d = isl_align_npot(isl_minify(D0, level), image_align_sa.d);
+   const uint32_t level_d =
+      isl_align_npot(surf->dim == ISL_SURF_DIM_3D ? isl_minify(D0, level) : AL,
+                     image_align_sa.d);
 
    const uint32_t max_layers_horiz = MIN(level_d, 1u << level);
 
@@ -1928,7 +1940,8 @@ isl_surf_get_image_offset_sa(const struct isl_surf *surf,
                                   x_offset_sa, y_offset_sa);
       break;
    case ISL_DIM_LAYOUT_GEN4_3D:
-      get_image_offset_sa_gen4_3d(surf, level, logical_z_offset_px,
+      get_image_offset_sa_gen4_3d(surf, level, logical_array_layer +
+                                  logical_z_offset_px,
                                   x_offset_sa, y_offset_sa);
       break;
 
