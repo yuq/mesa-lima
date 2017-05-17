@@ -1758,6 +1758,7 @@ void anv_GetImageMemoryRequirements(
 {
    ANV_FROM_HANDLE(anv_image, image, _image);
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_physical_device *pdevice = &device->instance->physicalDevice;
 
    /* The Vulkan spec (git aaed022) says:
     *
@@ -1766,12 +1767,13 @@ void anv_GetImageMemoryRequirements(
     *    only if the memory type `i` in the VkPhysicalDeviceMemoryProperties
     *    structure for the physical device is supported.
     *
-    * We support exactly one memory type on LLC, two on non-LLC.
+    * All types are currently supported for images.
     */
-   pMemoryRequirements->memoryTypeBits = device->info.has_llc ? 1 : 3;
+   uint32_t memory_types = (1ull << pdevice->memory.type_count) - 1;
 
    pMemoryRequirements->size = image->size;
    pMemoryRequirements->alignment = image->alignment;
+   pMemoryRequirements->memoryTypeBits = memory_types;
 }
 
 void anv_GetImageSparseMemoryRequirements(
