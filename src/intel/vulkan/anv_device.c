@@ -112,48 +112,52 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
    if (result != VK_SUCCESS)
       return result;
 
-   if (device->info.has_llc) {
-      /* Big core GPUs share LLC with the CPU and thus one memory type can be
-       * both cached and coherent at the same time.
-       */
-      device->memory.type_count = 1;
-      device->memory.types[0] = (struct anv_memory_type) {
-         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-         .heapIndex = 0,
-         .valid_buffer_usage = ~0,
-      };
-   } else {
-      /* The spec requires that we expose a host-visible, coherent memory
-       * type, but Atom GPUs don't share LLC. Thus we offer two memory types
-       * to give the application a choice between cached, but not coherent and
-       * coherent but uncached (WC though).
-       */
-      device->memory.type_count = 2;
-      device->memory.types[0] = (struct anv_memory_type) {
-         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-         .heapIndex = 0,
-         .valid_buffer_usage = ~0,
-      };
-      device->memory.types[1] = (struct anv_memory_type) {
-         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-         .heapIndex = 0,
-         .valid_buffer_usage = ~0,
-      };
-   }
-
    device->memory.heap_count = 1;
    device->memory.heaps[0] = (struct anv_memory_heap) {
       .size = heap_size,
       .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
       .supports_48bit_addresses = device->supports_48bit_addresses,
    };
+
+   uint32_t type_count = 0;
+   for (uint32_t heap = 0; heap < device->memory.heap_count; heap++) {
+      uint32_t valid_buffer_usage = ~0;
+
+      if (device->info.has_llc) {
+         /* Big core GPUs share LLC with the CPU and thus one memory type can be
+          * both cached and coherent at the same time.
+          */
+         device->memory.types[type_count++] = (struct anv_memory_type) {
+            .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                             VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+            .heapIndex = heap,
+            .valid_buffer_usage = valid_buffer_usage,
+         };
+      } else {
+         /* The spec requires that we expose a host-visible, coherent memory
+          * type, but Atom GPUs don't share LLC. Thus we offer two memory types
+          * to give the application a choice between cached, but not coherent and
+          * coherent but uncached (WC though).
+          */
+         device->memory.types[type_count++] = (struct anv_memory_type) {
+            .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            .heapIndex = heap,
+            .valid_buffer_usage = valid_buffer_usage,
+         };
+         device->memory.types[type_count++] = (struct anv_memory_type) {
+            .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                             VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+            .heapIndex = heap,
+            .valid_buffer_usage = valid_buffer_usage,
+         };
+      }
+   }
+   device->memory.type_count = type_count;
 
    return VK_SUCCESS;
 }
