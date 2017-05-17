@@ -35,7 +35,8 @@ LOCAL_CFLAGS :=
 LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libglapi \
-	libexpat
+	libexpat \
+	libz
 
 $(foreach d, $(MESA_BUILD_GALLIUM), $(eval LOCAL_CFLAGS += $(patsubst HAVE_%,-D%,$(d))))
 

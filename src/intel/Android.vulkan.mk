@@ -231,7 +231,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_intel_compiler \
 	libmesa_anv_entrypoints
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := libdrm libz
 
 include $(MESA_COMMON_MK)
 include $(BUILD_SHARED_LIBRARY)
