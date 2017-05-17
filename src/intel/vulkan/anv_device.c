@@ -892,6 +892,14 @@ void anv_GetPhysicalDeviceProperties2KHR(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_POINT_CLIPPING_PROPERTIES_KHR: {
+         VkPhysicalDevicePointClippingPropertiesKHR *properties =
+            (VkPhysicalDevicePointClippingPropertiesKHR *) ext;
+         properties->pointClippingBehavior = VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES_KHR;
+         anv_finishme("Implement pop-free point clipping");
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
