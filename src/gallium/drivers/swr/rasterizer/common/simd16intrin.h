@@ -770,6 +770,26 @@ INLINE simd16scalari SIMDAPI _simd16_cvtepu16_epi32(simdscalari a)
     return result;
 }
 
+INLINE simd16scalari SIMDAPI _simd16_cvtepu16_epi64(simdscalari a)
+{
+    simd16scalari result;
+
+    result.lo = _simd_cvtepu16_epi64(_mm256_extractf128_si256(a, 0));
+    result.hi = _simd_cvtepu16_epi64(_mm256_extractf128_si256(a, 1));
+
+    return result;
+}
+
+INLINE simd16scalari SIMDAPI _simd16_cvtepu32_epi64(simdscalari a)
+{
+    simd16scalari result;
+
+    result.lo = _simd_cvtepu32_epi64(_mm256_extractf128_si256(a, 0));
+    result.hi = _simd_cvtepu32_epi64(_mm256_extractf128_si256(a, 1));
+
+    return result;
+}
+
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_packus_epi16, _simd_packus_epi16)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_packs_epi16, _simd_packs_epi16)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_packus_epi32, _simd_packus_epi32)
@@ -1097,6 +1117,8 @@ INLINE simd16scalari SIMDAPI _simd16_cmpgt_epi8(simd16scalari a, simd16scalari b
 #define _simd16_cvtepu8_epi16           _mm512_cvtepu8_epi16
 #define _simd16_cvtepu8_epi32           _mm512_cvtepu8_epi32
 #define _simd16_cvtepu16_epi32          _mm512_cvtepu16_epi32
+#define _simd16_cvtepu16_epi64          _mm512_cvtepu16_epi64
+#define _simd16_cvtepu32_epi64          _mm512_cvtepu32_epi64
 #define _simd16_packus_epi16            _mm512_packus_epi16
 #define _simd16_packs_epi16             _mm512_packs_epi16
 #define _simd16_packus_epi32            _mm512_packus_epi32

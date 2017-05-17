@@ -162,6 +162,7 @@ INLINE
 void calcDeterminantIntVertical(const simdscalari vA[3], const simdscalari vB[3], simdscalari *pvDet)
 {
     // refer to calcDeterminantInt comment for calculation explanation
+
     // A1*B2
     simdscalari vA1Lo = _simd_unpacklo_epi32(vA[1], vA[1]);     // 0 0 1 1 4 4 5 5
     simdscalari vA1Hi = _simd_unpackhi_epi32(vA[1], vA[1]);     // 2 2 3 3 6 6 7 7
@@ -186,8 +187,10 @@ void calcDeterminantIntVertical(const simdscalari vA[3], const simdscalari vB[3]
     simdscalari detLo = _simd_sub_epi64(vA1B2Lo, vA2B1Lo);
     simdscalari detHi = _simd_sub_epi64(vA1B2Hi, vA2B1Hi);
 
-    // shuffle 0 1 4 5 -> 0 1 2 3
+    // shuffle 0 1 4 5 2 3 6 7 -> 0 1 2 3
     simdscalari vResultLo = _simd_permute2f128_si(detLo, detHi, 0x20);
+
+    // shuffle 0 1 4 5 2 3 6 7 -> 4 5 6 7
     simdscalari vResultHi = _simd_permute2f128_si(detLo, detHi, 0x31);
 
     pvDet[0] = vResultLo;
@@ -199,57 +202,30 @@ INLINE
 void calcDeterminantIntVertical(const simd16scalari vA[3], const simd16scalari vB[3], simd16scalari *pvDet)
 {
     // refer to calcDeterminantInt comment for calculation explanation
+
     // A1*B2
+    simd16scalari vA1_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[1], 0));// 0 1 2 3 4 5 6 7 (64b), upper 32b zero, lower 32b used
+    simd16scalari vA1_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[1], 1));// 8 9 A B C D E F (64b), upper 32b zero, lower 32b used
 
-#if 1
-    // TODO: get the native SIMD16 version working..
+    simd16scalari vB2_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[2], 0));// 0 1 2 3 4 5 6 7 (64b), upper 32b zero, lower 32b used
+    simd16scalari vB2_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[2], 1));// 8 9 A B C D E F (64b), upper 32b zero, lower 32b used
 
-    simdscalari vA_lo[3];
-    simdscalari vA_hi[3];
-    simdscalari vB_lo[3];
-    simdscalari vB_hi[3];
-
-    for (uint32_t i = 0; i < 3; i += 1)
-    {
-        vA_lo[i] = _simd16_extract_si(vA[i], 0);
-        vA_hi[i] = _simd16_extract_si(vA[i], 1);
-        vB_lo[i] = _simd16_extract_si(vB[i], 0);
-        vB_hi[i] = _simd16_extract_si(vB[i], 1);
-    }
-
-    calcDeterminantIntVertical(vA_lo, vB_lo, reinterpret_cast<simdscalari *>(&pvDet[0]));
-    calcDeterminantIntVertical(vA_hi, vB_hi, reinterpret_cast<simdscalari *>(&pvDet[1]));
-#else
-    simd16scalari vA1Lo = _simd16_unpacklo_epi32(vA[1], vA[1]); // 0 0 1 1 4 4 5 5 8 8 9 9 C C D D
-    simd16scalari vA1Hi = _simd16_unpackhi_epi32(vA[1], vA[1]); // 2 2 3 3 6 6 7 7 A A B B E E F F
-
-    simd16scalari vB2Lo = _simd16_unpacklo_epi32(vB[2], vB[2]);
-    simd16scalari vB2Hi = _simd16_unpackhi_epi32(vB[2], vB[2]);
-
-    simd16scalari vA1B2Lo = _simd16_mul_epi32(vA1Lo, vB2Lo);    // 0 1 4 5 8 9 C D
-    simd16scalari vA1B2Hi = _simd16_mul_epi32(vA1Hi, vB2Hi);    // 2 3 6 7 A B E F
+    simd16scalari vA1B2_lo = _simd16_mul_epi32(vA1_lo, vB2_lo);                 // 0 1 2 3 4 5 6 7 (64b)
+    simd16scalari vA1B2_hi = _simd16_mul_epi32(vA1_hi, vB2_hi);                 // 8 9 A B C D E F (64b)
 
     // B1*A2
-    simd16scalari vA2Lo = _simd16_unpacklo_epi32(vA[2], vA[2]);
-    simd16scalari vA2Hi = _simd16_unpackhi_epi32(vA[2], vA[2]);
+    simd16scalari vA2_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[2], 0));
+    simd16scalari vA2_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[2], 1));
 
-    simd16scalari vB1Lo = _simd16_unpacklo_epi32(vB[1], vB[1]);
-    simd16scalari vB1Hi = _simd16_unpackhi_epi32(vB[1], vB[1]);
+    simd16scalari vB1_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[1], 0));
+    simd16scalari vB1_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[1], 1));
 
-    simd16scalari vA2B1Lo = _simd16_mul_epi32(vA2Lo, vB1Lo);
-    simd16scalari vA2B1Hi = _simd16_mul_epi32(vA2Hi, vB1Hi);
+    simd16scalari vA2B1_lo = _simd16_mul_epi32(vA2_lo, vB1_lo);
+    simd16scalari vA2B1_hi = _simd16_mul_epi32(vA2_hi, vB1_hi);
 
     // A1*B2 - A2*B1
-    simd16scalari detLo = _simd16_sub_epi64(vA1B2Lo, vA2B1Lo);
-    simd16scalari detHi = _simd16_sub_epi64(vA1B2Hi, vA2B1Hi);
-
-    // shuffle 0 1 4 5 -> 0 1 2 3
-    simd16scalari vResultLo = _simd16_permute2f128_si(detLo, detHi, 0x20);
-    simd16scalari vResultHi = _simd16_permute2f128_si(detLo, detHi, 0x31);
-
-    pvDet[0] = vResultLo;
-    pvDet[1] = vResultHi;
-#endif
+    pvDet[0] = _simd16_sub_epi64(vA1B2_lo, vA2B1_lo);                           // 0 1 2 3 4 5 6 7 (64b)
+    pvDet[1] = _simd16_sub_epi64(vA1B2_hi, vA2B1_hi);                           // 8 9 A B C D E F (64b)
 }
 
 #endif

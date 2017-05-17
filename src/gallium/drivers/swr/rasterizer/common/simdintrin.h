@@ -456,6 +456,28 @@ __m256i _simd_cvtepu16_epi32(__m128i a)
 }
 
 INLINE
+__m256i _simd_cvtepu16_epi64(__m128i a)
+{
+    __m128i resultlo = _mm_cvtepu16_epi64(a);
+    __m128i resulthi = _mm_cvtepu16_epi64(_mm_srli_si128(a, 4));
+
+    __m256i result = _mm256_castsi128_si256(resultlo);
+
+    return _mm256_insertf128_si256(result, resulthi, 1);
+}
+
+INLINE
+__m256i _simd_cvtepu32_epi64(__m128i a)
+{
+    __m128i resultlo = _mm_cvtepu32_epi64(a);
+    __m128i resulthi = _mm_cvtepu32_epi64(_mm_srli_si128(a, 8));
+
+    __m256i result = _mm256_castsi128_si256(resultlo);
+
+    return _mm256_insertf128_si256(result, resulthi, 1);
+}
+
+INLINE
 __m256i _simd_packus_epi16(__m256i a, __m256i b)
 {
     __m128i alo = _mm256_extractf128_si256(a, 0);
@@ -582,6 +604,8 @@ __m256i _simd_packs_epi32(__m256i a, __m256i b)
 #define _simd_cvtepu8_epi16 _mm256_cvtepu8_epi16
 #define _simd_cvtepu8_epi32 _mm256_cvtepu8_epi32
 #define _simd_cvtepu16_epi32 _mm256_cvtepu16_epi32
+#define _simd_cvtepu16_epi64 _mm256_cvtepu16_epi64
+#define _simd_cvtepu32_epi64 _mm256_cvtepu32_epi64
 #define _simd_packus_epi16 _mm256_packus_epi16
 #define _simd_packs_epi16 _mm256_packs_epi16
 #define _simd_packus_epi32 _mm256_packus_epi32
