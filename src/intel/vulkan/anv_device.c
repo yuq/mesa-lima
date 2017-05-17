@@ -149,9 +149,10 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
    }
 
    device->memory.heap_count = 1;
-   device->memory.heaps[0] = (VkMemoryHeap) {
+   device->memory.heaps[0] = (struct anv_memory_heap) {
       .size = heap_size,
       .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
+      .supports_48bit_addresses = device->supports_48bit_addresses,
    };
 
    return VK_SUCCESS;
@@ -1530,7 +1531,8 @@ VkResult anv_AllocateMemory(
          goto fail;
    }
 
-   if (pdevice->supports_48bit_addresses)
+   assert(mem->type->heapIndex < pdevice->memory.heap_count);
+   if (pdevice->memory.heaps[mem->type->heapIndex].supports_48bit_addresses)
       mem->bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
 
    if (pdevice->has_exec_async)

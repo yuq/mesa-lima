@@ -649,6 +649,15 @@ struct anv_memory_type {
    VkBufferUsageFlags      valid_buffer_usage;
 };
 
+struct anv_memory_heap {
+   /* Standard bits passed on to the client */
+   VkDeviceSize      size;
+   VkMemoryHeapFlags flags;
+
+   /* Driver-internal book-keeping */
+   bool              supports_48bit_addresses;
+};
+
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
 
@@ -678,7 +687,7 @@ struct anv_physical_device {
       uint32_t                                  type_count;
       struct anv_memory_type                    types[VK_MAX_MEMORY_TYPES];
       uint32_t                                  heap_count;
-      VkMemoryHeap                              heaps[VK_MAX_MEMORY_HEAPS];
+      struct anv_memory_heap                    heaps[VK_MAX_MEMORY_HEAPS];
     } memory;
 
     uint8_t                                     pipeline_cache_uuid[VK_UUID_SIZE];
