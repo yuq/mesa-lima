@@ -1453,12 +1453,6 @@ anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
 
    anv_bo_init(bo, gem_handle, size);
 
-   if (device->instance->physicalDevice.supports_48bit_addresses)
-      bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
-
-   if (device->instance->physicalDevice.has_exec_async)
-      bo->flags |= EXEC_OBJECT_ASYNC;
-
    return VK_SUCCESS;
 }
 
@@ -1535,6 +1529,12 @@ VkResult anv_AllocateMemory(
       if (result != VK_SUCCESS)
          goto fail;
    }
+
+   if (pdevice->supports_48bit_addresses)
+      mem->bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+
+   if (pdevice->has_exec_async)
+      mem->bo->flags |= EXEC_OBJECT_ASYNC;
 
    *pMem = anv_device_memory_to_handle(mem);
 

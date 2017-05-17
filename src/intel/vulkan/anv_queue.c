@@ -553,7 +553,7 @@ VkResult anv_CreateSemaphore(
       /* If we're going to use this as a fence, we need to *not* have the
        * EXEC_OBJECT_ASYNC bit set.
        */
-      semaphore->permanent.bo->flags &= ~EXEC_OBJECT_ASYNC;
+      assert(!(semaphore->permanent.bo->flags & EXEC_OBJECT_ASYNC));
    } else {
       assert(!"Unknown handle type");
       vk_free2(&device->alloc, pAllocator, semaphore);
@@ -644,7 +644,7 @@ VkResult anv_ImportSemaphoreFdKHX(
       /* If we're going to use this as a fence, we need to *not* have the
        * EXEC_OBJECT_ASYNC bit set.
        */
-      bo->flags &= ~EXEC_OBJECT_ASYNC;
+      assert(!(bo->flags & EXEC_OBJECT_ASYNC));
 
       anv_semaphore_impl_cleanup(device, &semaphore->permanent);
 
