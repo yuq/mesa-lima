@@ -1772,17 +1772,13 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	/* The hardware needs special lowering for Gather4 with integer formats. */
 	if (ctx->screen->b.chip_class <= VI &&
 	    opcode == TGSI_OPCODE_TG4) {
-		struct tgsi_shader_info *info = &ctx->shader->selector->info;
-		/* This will also work with non-constant indexing because of how
-		 * glsl_to_tgsi works and we intent to preserve that behavior.
-		 */
 		const unsigned src_idx = 2;
-		unsigned sampler = inst->Src[src_idx].Register.Index;
 
 		assert(inst->Src[src_idx].Register.File == TGSI_FILE_SAMPLER);
+		assert(inst->Texture.ReturnType != TGSI_RETURN_TYPE_UNKNOWN);
 
-		if (info->sampler_type[sampler] == TGSI_RETURN_TYPE_SINT ||
-		    info->sampler_type[sampler] == TGSI_RETURN_TYPE_UINT)
+		if (inst->Texture.ReturnType == TGSI_RETURN_TYPE_SINT ||
+		    inst->Texture.ReturnType == TGSI_RETURN_TYPE_UINT)
 			si_lower_gather4_integer(ctx, &args, target);
 	}
 
