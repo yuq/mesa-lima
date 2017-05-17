@@ -113,8 +113,7 @@ static void si_init_descriptors(struct si_descriptors *desc,
 		desc->uses_ce = true;
 		desc->ce_offset = *ce_offset;
 
-		/* make sure that ce_offset stays 32 byte aligned */
-		*ce_offset += align(element_dw_size * num_elements * 4, 32);
+		*ce_offset += element_dw_size * num_elements * 4;
 	}
 }
 
