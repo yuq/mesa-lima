@@ -1002,7 +1002,7 @@ _anv_combine_address(struct anv_batch *batch, void *location,
 
 struct anv_device_memory {
    struct anv_bo *                              bo;
-   uint32_t                                     type_index;
+   VkMemoryType *                               type;
    VkDeviceSize                                 map_size;
    void *                                       map;
 };

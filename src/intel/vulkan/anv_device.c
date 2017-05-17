@@ -1466,6 +1466,7 @@ VkResult anv_AllocateMemory(
     VkDeviceMemory*                             pMem)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_physical_device *pdevice = &device->instance->physicalDevice;
    struct anv_device_memory *mem;
    VkResult result = VK_SUCCESS;
 
@@ -1473,10 +1474,6 @@ VkResult anv_AllocateMemory(
 
    /* The Vulkan 1.0.33 spec says "allocationSize must be greater than 0". */
    assert(pAllocateInfo->allocationSize > 0);
-
-   /* We support exactly one memory heap. */
-   assert(pAllocateInfo->memoryTypeIndex == 0 ||
-          (!device->info.has_llc && pAllocateInfo->memoryTypeIndex < 2));
 
    /* The kernel relocation API has a limitation of a 32-bit delta value
     * applied to the address before it is written which, in spite of it being
@@ -1505,7 +1502,8 @@ VkResult anv_AllocateMemory(
    if (mem == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   mem->type_index = pAllocateInfo->memoryTypeIndex;
+   assert(pAllocateInfo->memoryTypeIndex < pdevice->memory.type_count);
+   mem->type = &pdevice->memory.types[pAllocateInfo->memoryTypeIndex];
    mem->map = NULL;
    mem->map_size = 0;
 
@@ -1630,7 +1628,9 @@ VkResult anv_MapMemory(
     * userspace. */
 
    uint32_t gem_flags = 0;
-   if (!device->info.has_llc && mem->type_index == 0)
+
+   if (!device->info.has_llc &&
+       (mem->type->propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
       gem_flags |= I915_MMAP_WC;
 
    /* GEM will fail to map if the offset isn't 4k-aligned.  Round down. */
