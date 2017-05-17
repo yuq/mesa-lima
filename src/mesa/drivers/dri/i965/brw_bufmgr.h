@@ -137,7 +137,7 @@ struct brw_bo {
  *
  * Buffer objects are not necessarily initially mapped into CPU virtual
  * address space or graphics device aperture.  They must be mapped
- * using bo_map() or brw_bo_map_gtt() to be used by the CPU.
+ * using brw_bo_map_cpu() or brw_bo_map_gtt() to be used by the CPU.
  */
 struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
                             uint64_t size, uint64_t alignment);
@@ -179,7 +179,7 @@ void brw_bo_unreference(struct brw_bo *bo);
  * This function will block waiting for any existing execution on the
  * buffer to complete, first.  The resulting mapping is returned.
  */
-MUST_CHECK void *brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable);
+MUST_CHECK void *brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, int write_enable);
 
 /**
  * Reduces the refcount on the userspace mapping of the buffer

@@ -2426,7 +2426,7 @@ intel_miptree_map_raw(struct brw_context *brw,
    if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
 
-   /* brw_bo_map() uses a WB mmaping of the buffer's backing storage. It
+   /* brw_bo_map_cpu() uses a WB mmaping of the buffer's backing storage. It
     * will utilize the CPU cache even if the buffer is incoherent with the
     * GPU (i.e. any writes will be stored in the cache and not flushed to
     * memory and so will be invisible to the GPU or display engine). This
@@ -2441,7 +2441,7 @@ intel_miptree_map_raw(struct brw_context *brw,
    if (mt->tiling != I915_TILING_NONE || mt->is_scanout)
       return brw_bo_map_gtt(brw, bo);
    else
-      return brw_bo_map(brw, bo, mode & GL_MAP_WRITE_BIT);
+      return brw_bo_map_cpu(brw, bo, mode & GL_MAP_WRITE_BIT);
 }
 
 static void

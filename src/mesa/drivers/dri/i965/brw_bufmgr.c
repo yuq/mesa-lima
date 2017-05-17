@@ -659,7 +659,7 @@ set_domain(struct brw_context *brw, const char *action,
 }
 
 void *
-brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable)
+brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, int write_enable)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
 
@@ -668,7 +668,7 @@ brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable)
    if (!bo->map_cpu) {
       struct drm_i915_gem_mmap mmap_arg;
 
-      DBG("bo_map: %d (%s), map_count=%d\n",
+      DBG("brw_bo_map_cpu: %d (%s), map_count=%d\n",
           bo->gem_handle, bo->name, bo->map_count);
 
       memclear(mmap_arg);
@@ -686,7 +686,8 @@ brw_bo_map(struct brw_context *brw, struct brw_bo *bo, int write_enable)
       VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
       bo->map_cpu = (void *) (uintptr_t) mmap_arg.addr_ptr;
    }
-   DBG("bo_map: %d (%s) -> %p\n", bo->gem_handle, bo->name, bo->map_cpu);
+   DBG("brw_bo_map_cpu: %d (%s) -> %p\n", bo->gem_handle, bo->name,
+       bo->map_cpu);
 
    set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
               write_enable ? I915_GEM_DOMAIN_CPU : 0);
@@ -793,7 +794,7 @@ brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo)
    /* If the CPU cache isn't coherent with the GTT, then use a
     * regular synchronized mapping.  The problem is that we don't
     * track where the buffer was last used on the CPU side in
-    * terms of brw_bo_map vs brw_bo_map_gtt, so
+    * terms of brw_bo_map_cpu vs brw_bo_map_gtt, so
     * we would potentially corrupt the buffer even when the user
     * does reasonable things.
     */
