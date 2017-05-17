@@ -98,6 +98,63 @@ anv_compute_heap_size(int fd, uint64_t *heap_size)
 }
 
 static VkResult
+anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
+{
+   /* The kernel query only tells us whether or not the kernel supports the
+    * EXEC_OBJECT_SUPPORTS_48B_ADDRESS flag and not whether or not the
+    * hardware has actual 48bit address support.
+    */
+   device->supports_48bit_addresses =
+      (device->info.gen >= 8) && anv_gem_supports_48b_addresses(fd);
+
+   uint64_t heap_size;
+   VkResult result = anv_compute_heap_size(fd, &heap_size);
+   if (result != VK_SUCCESS)
+      return result;
+
+   if (device->info.has_llc) {
+      /* Big core GPUs share LLC with the CPU and thus one memory type can be
+       * both cached and coherent at the same time.
+       */
+      device->memory.type_count = 1;
+      device->memory.types[0] = (VkMemoryType) {
+         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+         .heapIndex = 0,
+      };
+   } else {
+      /* The spec requires that we expose a host-visible, coherent memory
+       * type, but Atom GPUs don't share LLC. Thus we offer two memory types
+       * to give the application a choice between cached, but not coherent and
+       * coherent but uncached (WC though).
+       */
+      device->memory.type_count = 2;
+      device->memory.types[0] = (VkMemoryType) {
+         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+         .heapIndex = 0,
+      };
+      device->memory.types[1] = (VkMemoryType) {
+         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+         .heapIndex = 0,
+      };
+   }
+
+   device->memory.heap_count = 1;
+   device->memory.heaps[0] = (VkMemoryHeap) {
+      .size = heap_size,
+      .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
+   };
+
+   return VK_SUCCESS;
+}
+
+static VkResult
 anv_physical_device_init_uuids(struct anv_physical_device *device)
 {
    const struct build_id_note *note = build_id_find_nhdr("libvulkan_intel.so");
@@ -225,14 +282,7 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
-   /* The kernel query only tells us whether or not the kernel supports the
-    * EXEC_OBJECT_SUPPORTS_48B_ADDRESS flag and not whether or not the
-    * hardware has actual 48bit address support.
-    */
-   device->supports_48bit_addresses =
-      (device->info.gen >= 8) && anv_gem_supports_48b_addresses(fd);
-
-   result = anv_compute_heap_size(fd, &device->heap_size);
+   result = anv_physical_device_init_heaps(device, fd);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -885,44 +935,21 @@ void anv_GetPhysicalDeviceMemoryProperties(
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
 
-   if (physical_device->info.has_llc) {
-      /* Big core GPUs share LLC with the CPU and thus one memory type can be
-       * both cached and coherent at the same time.
-       */
-      pMemoryProperties->memoryTypeCount = 1;
-      pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
-         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-         .heapIndex = 0,
-      };
-   } else {
-      /* The spec requires that we expose a host-visible, coherent memory
-       * type, but Atom GPUs don't share LLC. Thus we offer two memory types
-       * to give the application a choice between cached, but not coherent and
-       * coherent but uncached (WC though).
-       */
-      pMemoryProperties->memoryTypeCount = 2;
-      pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
-         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-         .heapIndex = 0,
-      };
-      pMemoryProperties->memoryTypes[1] = (VkMemoryType) {
-         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-         .heapIndex = 0,
+   pMemoryProperties->memoryTypeCount = physical_device->memory.type_count;
+   for (uint32_t i = 0; i < physical_device->memory.type_count; i++) {
+      pMemoryProperties->memoryTypes[i] = (VkMemoryType) {
+         .propertyFlags = physical_device->memory.types[i].propertyFlags,
+         .heapIndex     = physical_device->memory.types[i].heapIndex,
       };
    }
 
-   pMemoryProperties->memoryHeapCount = 1;
-   pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
-      .size = physical_device->heap_size,
-      .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
-   };
+   pMemoryProperties->memoryHeapCount = physical_device->memory.heap_count;
+   for (uint32_t i = 0; i < physical_device->memory.heap_count; i++) {
+      pMemoryProperties->memoryHeaps[i] = (VkMemoryHeap) {
+         .size    = physical_device->memory.heaps[i].size,
+         .flags   = physical_device->memory.heaps[i].flags,
+      };
+   }
 }
 
 void anv_GetPhysicalDeviceMemoryProperties2KHR(

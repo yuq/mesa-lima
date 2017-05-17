@@ -656,7 +656,6 @@ struct anv_physical_device {
      * practically unlimited.  However, we will never report more than 3/4 of
      * the total system ram to try and avoid running out of RAM.
      */
-    uint64_t                                    heap_size;
     bool                                        supports_48bit_addresses;
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;
@@ -665,6 +664,13 @@ struct anv_physical_device {
 
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
+
+    struct {
+      uint32_t                                  type_count;
+      VkMemoryType                              types[VK_MAX_MEMORY_TYPES];
+      uint32_t                                  heap_count;
+      VkMemoryHeap                              heaps[VK_MAX_MEMORY_HEAPS];
+    } memory;
 
     uint8_t                                     pipeline_cache_uuid[VK_UUID_SIZE];
     uint8_t                                     driver_uuid[VK_UUID_SIZE];
