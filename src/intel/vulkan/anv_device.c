@@ -153,6 +153,18 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
    for (uint32_t heap = 0; heap < device->memory.heap_count; heap++) {
       uint32_t valid_buffer_usage = ~0;
 
+      /* There appears to be a hardware issue in the VF cache where it only
+       * considers the bottom 32 bits of memory addresses.  If you happen to
+       * have two vertex buffers which get placed exactly 4 GiB apart and use
+       * them in back-to-back draw calls, you can get collisions.  In order to
+       * solve this problem, we require vertex and index buffers be bound to
+       * memory allocated out of the 32-bit heap.
+       */
+      if (device->memory.heaps[heap].supports_48bit_addresses) {
+         valid_buffer_usage &= ~(VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                 VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+      }
+
       if (device->info.has_llc) {
          /* Big core GPUs share LLC with the CPU and thus one memory type can be
           * both cached and coherent at the same time.
