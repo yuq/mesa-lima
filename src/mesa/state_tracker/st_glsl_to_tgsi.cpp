@@ -5877,6 +5877,7 @@ compile_tgsi_instruction(struct st_translate *t,
                     inst->op,
                     dst, num_dst,
                     tex_target,
+                    st_translate_texture_type(inst->tex_type),
                     texoffsets, inst->tex_offset_num_offset,
                     src, num_src);
       return;
@@ -6570,23 +6571,9 @@ st_translate_program(
    /* texture samplers */
    for (i = 0; i < frag_const->MaxTextureImageUnits; i++) {
       if (program->samplers_used & (1u << i)) {
-         unsigned type;
+         unsigned type = st_translate_texture_type(program->sampler_types[i]);
 
          t->samplers[i] = ureg_DECL_sampler(ureg, i);
-
-         switch (program->sampler_types[i]) {
-         case GLSL_TYPE_INT:
-            type = TGSI_RETURN_TYPE_SINT;
-            break;
-         case GLSL_TYPE_UINT:
-            type = TGSI_RETURN_TYPE_UINT;
-            break;
-         case GLSL_TYPE_FLOAT:
-            type = TGSI_RETURN_TYPE_FLOAT;
-            break;
-         default:
-            unreachable("not reached");
-         }
 
          ureg_DECL_sampler_view( ureg, i, program->sampler_targets[i],
                                  type, type, type, type );

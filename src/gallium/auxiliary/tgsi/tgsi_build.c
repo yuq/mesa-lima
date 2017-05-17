@@ -720,6 +720,7 @@ tgsi_default_instruction_texture( void )
 
    instruction_texture.Texture = TGSI_TEXTURE_UNKNOWN;
    instruction_texture.NumOffsets = 0;
+   instruction_texture.ReturnType = TGSI_RETURN_TYPE_UNKNOWN;
    instruction_texture.Padding = 0;
 
    return instruction_texture;
@@ -729,6 +730,7 @@ static struct tgsi_instruction_texture
 tgsi_build_instruction_texture(
    unsigned texture,
    unsigned num_offsets,
+   unsigned return_type,
    struct tgsi_token *prev_token,
    struct tgsi_instruction *instruction,
    struct tgsi_header *header )
@@ -737,6 +739,7 @@ tgsi_build_instruction_texture(
 
    instruction_texture.Texture = texture;
    instruction_texture.NumOffsets = num_offsets;
+   instruction_texture.ReturnType = return_type;
    instruction_texture.Padding = 0;
    instruction->Texture = 1;
 
@@ -1090,7 +1093,8 @@ tgsi_build_full_instruction(
 
       *instruction_texture = tgsi_build_instruction_texture(
          full_inst->Texture.Texture,
-	 full_inst->Texture.NumOffsets,
+         full_inst->Texture.NumOffsets,
+         full_inst->Texture.ReturnType,
          prev_token,
          instruction,
          header   );

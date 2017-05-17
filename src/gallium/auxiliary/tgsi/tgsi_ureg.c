@@ -1289,7 +1289,7 @@ ureg_fixup_label(struct ureg_program *ureg,
 void
 ureg_emit_texture(struct ureg_program *ureg,
                   unsigned extended_token,
-                  unsigned target, unsigned num_offsets)
+                  unsigned target, unsigned return_type, unsigned num_offsets)
 {
    union tgsi_any_token *out, *insn;
 
@@ -1301,6 +1301,7 @@ ureg_emit_texture(struct ureg_program *ureg,
    out[0].value = 0;
    out[0].insn_texture.Texture = target;
    out[0].insn_texture.NumOffsets = num_offsets;
+   out[0].insn_texture.ReturnType = return_type;
 }
 
 void
@@ -1386,6 +1387,7 @@ ureg_tex_insn(struct ureg_program *ureg,
               const struct ureg_dst *dst,
               unsigned nr_dst,
               unsigned target,
+              unsigned return_type,
               const struct tgsi_texture_offset *texoffsets,
               unsigned nr_offset,
               const struct ureg_src *src,
@@ -1407,7 +1409,8 @@ ureg_tex_insn(struct ureg_program *ureg,
                          nr_dst,
                          nr_src);
 
-   ureg_emit_texture( ureg, insn.extended_token, target, nr_offset );
+   ureg_emit_texture( ureg, insn.extended_token, target, return_type,
+                      nr_offset );
 
    for (i = 0; i < nr_offset; i++)
       ureg_emit_texture_offset( ureg, &texoffsets[i]);

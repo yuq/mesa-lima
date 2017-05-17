@@ -555,6 +555,7 @@ ureg_tex_insn(struct ureg_program *ureg,
               const struct ureg_dst *dst,
               unsigned nr_dst,
               unsigned target,
+              unsigned return_type,
               const struct tgsi_texture_offset *texoffsets,
               unsigned nr_offset,
               const struct ureg_src *src,
@@ -596,7 +597,7 @@ ureg_emit_label(struct ureg_program *ureg,
 void
 ureg_emit_texture(struct ureg_program *ureg,
                   unsigned insn_token,
-                  unsigned target, unsigned num_offsets);
+                  unsigned target, unsigned return_type, unsigned num_offsets);
 
 void
 ureg_emit_texture_offset(struct ureg_program *ureg,
@@ -748,6 +749,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_src src1 )                    \
 {                                                                       \
    unsigned opcode = TGSI_OPCODE_##op;                                  \
+   unsigned return_type = TGSI_RETURN_TYPE_UNKNOWN;                     \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
@@ -756,7 +758,8 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                          dst.Saturate,                                  \
                          1,                                             \
                          2);                                            \
-   ureg_emit_texture( ureg, insn.extended_token, target, 0 );		\
+   ureg_emit_texture( ureg, insn.extended_token, target,                \
+                      return_type, 0 );                                 \
    ureg_emit_dst( ureg, dst );                                          \
    ureg_emit_src( ureg, src0 );                                         \
    ureg_emit_src( ureg, src1 );                                         \
@@ -796,6 +799,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_src src3 )                    \
 {                                                                       \
    unsigned opcode = TGSI_OPCODE_##op;                                  \
+   unsigned return_type = TGSI_RETURN_TYPE_UNKNOWN;                     \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
@@ -804,7 +808,8 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                          dst.Saturate,                                  \
                          1,                                             \
                          4);                                            \
-   ureg_emit_texture( ureg, insn.extended_token, target, 0 );		\
+   ureg_emit_texture( ureg, insn.extended_token, target,                \
+                      return_type, 0 );                                 \
    ureg_emit_dst( ureg, dst );                                          \
    ureg_emit_src( ureg, src0 );                                         \
    ureg_emit_src( ureg, src1 );                                         \

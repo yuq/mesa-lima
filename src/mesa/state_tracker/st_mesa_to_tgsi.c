@@ -223,6 +223,26 @@ st_translate_texture_target(GLuint textarget, GLboolean shadow)
 
 
 /**
+ * Map GLSL base type to TGSI return type.
+ */
+unsigned
+st_translate_texture_type(enum glsl_base_type type)
+{
+	switch (type) {
+	case GLSL_TYPE_INT:
+		return TGSI_RETURN_TYPE_SINT;
+	case GLSL_TYPE_UINT:
+		return TGSI_RETURN_TYPE_UINT;
+	case GLSL_TYPE_FLOAT:
+		return TGSI_RETURN_TYPE_FLOAT;
+	default:
+		assert(!"unexpected texture type");
+		return TGSI_RETURN_TYPE_UNKNOWN;
+	}
+}
+
+
+/**
  * Translate a (1 << TEXTURE_x_INDEX) bit into a TGSI_TEXTURE_x enum.
  */
 static unsigned
@@ -536,6 +556,7 @@ compile_instruction(
                      dst, num_dst, 
                      st_translate_texture_target( inst->TexSrcTarget,
                                                inst->TexShadow ),
+                     TGSI_RETURN_TYPE_FLOAT,
                      NULL, 0,
                      src, num_src );
       return;
