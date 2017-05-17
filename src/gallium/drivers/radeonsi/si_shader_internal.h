@@ -57,6 +57,12 @@ struct si_shader_context {
 
 	unsigned type; /* PIPE_SHADER_* specifies the type of shader. */
 
+	/* For clamping the non-constant index in resource indexing: */
+	unsigned num_const_buffers;
+	unsigned num_shader_buffers;
+	unsigned num_images;
+	unsigned num_samplers;
+
 	/* Whether the prolog will be compiled separately. */
 	bool separate_prolog;
 

@@ -1354,6 +1354,11 @@ void si_llvm_context_set_tgsi(struct si_shader_context *ctx,
 	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_TEMPORARY] = si_llvm_emit_fetch;
 	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_OUTPUT] = si_llvm_emit_fetch;
 	ctx->bld_base.emit_fetch_funcs[TGSI_FILE_SYSTEM_VALUE] = fetch_system_value;
+
+	ctx->num_const_buffers = util_last_bit(info->const_buffers_declared);
+	ctx->num_shader_buffers = util_last_bit(info->shader_buffers_declared);
+	ctx->num_samplers = util_last_bit(info->samplers_declared);
+	ctx->num_images = util_last_bit(info->images_declared);
 }
 
 void si_llvm_create_func(struct si_shader_context *ctx,

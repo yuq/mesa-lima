@@ -1763,7 +1763,7 @@ static LLVMValueRef fetch_constant(
 		LLVMValueRef index;
 		index = si_get_bounded_indirect_index(ctx, &reg->DimIndirect,
 						      reg->Dimension.Index,
-						      SI_NUM_CONST_BUFFERS);
+						      ctx->num_const_buffers);
 		index = LLVMBuildAdd(ctx->gallivm.builder, index,
 				     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS, 0), "");
 		bufp = ac_build_indexed_load_const(&ctx->ac, ptr, index);

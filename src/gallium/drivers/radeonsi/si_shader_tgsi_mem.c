@@ -92,7 +92,7 @@ shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 	} else {
 		index = si_get_bounded_indirect_index(ctx, &reg->Indirect,
 						      reg->Register.Index,
-						      SI_NUM_SHADER_BUFFERS);
+						      ctx->num_shader_buffers);
 		index = LLVMBuildSub(ctx->gallivm.builder,
 				     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS - 1, 0),
 				     index, "");
@@ -208,7 +208,7 @@ image_fetch_rsrc(
 		 */
 		index = si_get_bounded_indirect_index(ctx, &image->Indirect,
 						      image->Register.Index,
-						      SI_NUM_IMAGES);
+						      ctx->num_images);
 		index = LLVMBuildSub(ctx->gallivm.builder,
 				     LLVMConstInt(ctx->i32, SI_NUM_IMAGES - 1, 0),
 				     index, "");
@@ -1199,7 +1199,7 @@ static void tex_fetch_ptrs(
 		index = si_get_bounded_indirect_index(ctx,
 						      &reg->Indirect,
 						      reg->Register.Index,
-						      SI_NUM_SAMPLERS);
+						      ctx->num_samplers);
 		index = LLVMBuildAdd(ctx->gallivm.builder, index,
 				     LLVMConstInt(ctx->i32, SI_NUM_IMAGES / 2, 0), "");
 	} else {
