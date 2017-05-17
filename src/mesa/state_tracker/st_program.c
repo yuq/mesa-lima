@@ -417,87 +417,11 @@ st_translate_vertex_program(struct st_context *st,
 
          stvp->result_to_output[attr] = slot;
 
-         switch (attr) {
-         case VARYING_SLOT_POS:
-            output_semantic_name[slot] = TGSI_SEMANTIC_POSITION;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_COL0:
-            output_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_COL1:
-            output_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
-            output_semantic_index[slot] = 1;
-            break;
-         case VARYING_SLOT_BFC0:
-            output_semantic_name[slot] = TGSI_SEMANTIC_BCOLOR;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_BFC1:
-            output_semantic_name[slot] = TGSI_SEMANTIC_BCOLOR;
-            output_semantic_index[slot] = 1;
-            break;
-         case VARYING_SLOT_FOGC:
-            output_semantic_name[slot] = TGSI_SEMANTIC_FOG;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_PSIZ:
-            output_semantic_name[slot] = TGSI_SEMANTIC_PSIZE;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_CLIP_DIST0:
-            output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_CLIP_DIST1:
-            output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
-            output_semantic_index[slot] = 1;
-            break;
-         case VARYING_SLOT_CULL_DIST0:
-         case VARYING_SLOT_CULL_DIST1:
-            /* these should have been lowered by GLSL */
-            assert(0);
-            break;
-         case VARYING_SLOT_EDGE:
-            assert(0);
-            break;
-         case VARYING_SLOT_CLIP_VERTEX:
-            output_semantic_name[slot] = TGSI_SEMANTIC_CLIPVERTEX;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_LAYER:
-            output_semantic_name[slot] = TGSI_SEMANTIC_LAYER;
-            output_semantic_index[slot] = 0;
-            break;
-         case VARYING_SLOT_VIEWPORT:
-            output_semantic_name[slot] = TGSI_SEMANTIC_VIEWPORT_INDEX;
-            output_semantic_index[slot] = 0;
-            break;
-
-         case VARYING_SLOT_TEX0:
-         case VARYING_SLOT_TEX1:
-         case VARYING_SLOT_TEX2:
-         case VARYING_SLOT_TEX3:
-         case VARYING_SLOT_TEX4:
-         case VARYING_SLOT_TEX5:
-         case VARYING_SLOT_TEX6:
-         case VARYING_SLOT_TEX7:
-            if (st->needs_texcoord_semantic) {
-               output_semantic_name[slot] = TGSI_SEMANTIC_TEXCOORD;
-               output_semantic_index[slot] = attr - VARYING_SLOT_TEX0;
-               break;
-            }
-            /* fall through */
-         case VARYING_SLOT_VAR0:
-         default:
-            assert(attr >= VARYING_SLOT_VAR0 ||
-                   (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7));
-            output_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
-            output_semantic_index[slot] =
-               st_get_generic_varying_index(st, attr);
-            break;
-         }
+         unsigned semantic_name, semantic_index;
+         tgsi_get_gl_varying_semantic(attr, st->needs_texcoord_semantic,
+                                      &semantic_name, &semantic_index);
+         output_semantic_name[slot] = semantic_name;
+         output_semantic_index[slot] = semantic_index;
       }
    }
    /* similar hack to above, presetup potentially unused edgeflag output */
