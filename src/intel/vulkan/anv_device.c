@@ -117,12 +117,13 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
        * both cached and coherent at the same time.
        */
       device->memory.type_count = 1;
-      device->memory.types[0] = (VkMemoryType) {
+      device->memory.types[0] = (struct anv_memory_type) {
          .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
                           VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
          .heapIndex = 0,
+         .valid_buffer_usage = ~0,
       };
    } else {
       /* The spec requires that we expose a host-visible, coherent memory
@@ -131,17 +132,19 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
        * coherent but uncached (WC though).
        */
       device->memory.type_count = 2;
-      device->memory.types[0] = (VkMemoryType) {
+      device->memory.types[0] = (struct anv_memory_type) {
          .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
          .heapIndex = 0,
+         .valid_buffer_usage = ~0,
       };
-      device->memory.types[1] = (VkMemoryType) {
+      device->memory.types[1] = (struct anv_memory_type) {
          .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                           VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
          .heapIndex = 0,
+         .valid_buffer_usage = ~0,
       };
    }
 
@@ -1727,6 +1730,7 @@ void anv_GetBufferMemoryRequirements(
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_physical_device *pdevice = &device->instance->physicalDevice;
 
    /* The Vulkan spec (git aaed022) says:
     *
@@ -1734,13 +1738,17 @@ void anv_GetBufferMemoryRequirements(
     *    supported memory type for the resource. The bit `1<<i` is set if and
     *    only if the memory type `i` in the VkPhysicalDeviceMemoryProperties
     *    structure for the physical device is supported.
-    *
-    * We support exactly one memory type on LLC, two on non-LLC.
     */
-   pMemoryRequirements->memoryTypeBits = device->info.has_llc ? 1 : 3;
+   uint32_t memory_types = 0;
+   for (uint32_t i = 0; i < pdevice->memory.type_count; i++) {
+      uint32_t valid_usage = pdevice->memory.types[i].valid_buffer_usage;
+      if ((valid_usage & buffer->usage) == buffer->usage)
+         memory_types |= (1u << i);
+   }
 
    pMemoryRequirements->size = buffer->size;
    pMemoryRequirements->alignment = 16;
+   pMemoryRequirements->memoryTypeBits = memory_types;
 }
 
 void anv_GetImageMemoryRequirements(
@@ -1793,6 +1801,7 @@ VkResult anv_BindBufferMemory(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    if (mem) {
+      assert((buffer->usage & mem->type->valid_buffer_usage) == buffer->usage);
       buffer->bo = mem->bo;
       buffer->offset = memoryOffset;
    } else {

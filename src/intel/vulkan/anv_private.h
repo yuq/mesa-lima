@@ -640,6 +640,15 @@ void anv_bo_cache_release(struct anv_device *device,
                           struct anv_bo_cache *cache,
                           struct anv_bo *bo);
 
+struct anv_memory_type {
+   /* Standard bits passed on to the client */
+   VkMemoryPropertyFlags   propertyFlags;
+   uint32_t                heapIndex;
+
+   /* Driver-internal book-keeping */
+   VkBufferUsageFlags      valid_buffer_usage;
+};
+
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
 
@@ -667,7 +676,7 @@ struct anv_physical_device {
 
     struct {
       uint32_t                                  type_count;
-      VkMemoryType                              types[VK_MAX_MEMORY_TYPES];
+      struct anv_memory_type                    types[VK_MAX_MEMORY_TYPES];
       uint32_t                                  heap_count;
       VkMemoryHeap                              heaps[VK_MAX_MEMORY_HEAPS];
     } memory;
@@ -1002,7 +1011,7 @@ _anv_combine_address(struct anv_batch *batch, void *location,
 
 struct anv_device_memory {
    struct anv_bo *                              bo;
-   VkMemoryType *                               type;
+   struct anv_memory_type *                     type;
    VkDeviceSize                                 map_size;
    void *                                       map;
 };
