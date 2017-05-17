@@ -112,12 +112,42 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
    if (result != VK_SUCCESS)
       return result;
 
-   device->memory.heap_count = 1;
-   device->memory.heaps[0] = (struct anv_memory_heap) {
-      .size = heap_size,
-      .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
-      .supports_48bit_addresses = device->supports_48bit_addresses,
-   };
+   if (heap_size <= 3ull * (1ull << 30)) {
+      /* In this case, everything fits nicely into the 32-bit address space,
+       * so there's no need for supporting 48bit addresses on client-allocated
+       * memory objects.
+       */
+      device->memory.heap_count = 1;
+      device->memory.heaps[0] = (struct anv_memory_heap) {
+         .size = heap_size,
+         .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
+         .supports_48bit_addresses = false,
+      };
+   } else {
+      /* Not everything will fit nicely into a 32-bit address space.  In this
+       * case we need a 64-bit heap.  Advertise a small 32-bit heap and a
+       * larger 48-bit heap.  If we're in this case, then we have a total heap
+       * size larger than 3GiB which most likely means they have 8 GiB of
+       * video memory and so carving off 1 GiB for the 32-bit heap should be
+       * reasonable.
+       */
+      const uint64_t heap_size_32bit = 1ull << 30;
+      const uint64_t heap_size_48bit = heap_size - heap_size_32bit;
+
+      assert(device->supports_48bit_addresses);
+
+      device->memory.heap_count = 2;
+      device->memory.heaps[0] = (struct anv_memory_heap) {
+         .size = heap_size_48bit,
+         .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
+         .supports_48bit_addresses = true,
+      };
+      device->memory.heaps[1] = (struct anv_memory_heap) {
+         .size = heap_size_32bit,
+         .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
+         .supports_48bit_addresses = false,
+      };
+   }
 
    uint32_t type_count = 0;
    for (uint32_t heap = 0; heap < device->memory.heap_count; heap++) {
