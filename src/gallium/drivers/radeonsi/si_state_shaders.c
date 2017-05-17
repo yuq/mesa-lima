@@ -1971,14 +1971,25 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	sel->compiler_ctx_state.tm = sctx->tm;
 	sel->compiler_ctx_state.debug = sctx->b.debug;
 	sel->compiler_ctx_state.is_debug_context = sctx->is_debug;
-	sel->tokens = tgsi_dup_tokens(state->tokens);
-	if (!sel->tokens) {
-		FREE(sel);
-		return NULL;
-	}
 
 	sel->so = state->stream_output;
-	tgsi_scan_shader(state->tokens, &sel->info);
+
+	if (state->type == PIPE_SHADER_IR_TGSI) {
+		sel->tokens = tgsi_dup_tokens(state->tokens);
+		if (!sel->tokens) {
+			FREE(sel);
+			return NULL;
+		}
+
+		tgsi_scan_shader(state->tokens, &sel->info);
+	} else {
+		assert(state->type == PIPE_SHADER_IR_NIR);
+
+		sel->nir = state->ir.nir;
+
+		si_nir_scan_shader(sel->nir, &sel->info);
+	}
+
 	sel->type = sel->info.processor;
 	p_atomic_inc(&sscreen->b.num_shaders_created);
 	si_get_active_slot_masks(&sel->info,

@@ -5554,6 +5554,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	struct si_shader_selector *sel = shader->selector;
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 
+	// TODO clean all this up!
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
 		ctx->load_input = declare_input_vs;

@@ -632,6 +632,10 @@ unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
 				    bool writes_samplemask);
 const char *si_get_shader_name(const struct si_shader *shader, unsigned processor);
 
+/* si_shader_nir.c */
+void si_nir_scan_shader(const struct nir_shader *nir,
+			struct tgsi_shader_info *info);
+
 /* Inline helpers. */
 
 /* Return the pointer to the main shader part's pointer. */
