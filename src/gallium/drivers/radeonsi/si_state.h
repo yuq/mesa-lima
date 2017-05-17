@@ -228,6 +228,13 @@ struct si_descriptors {
 	/* Offset in CE RAM */
 	unsigned ce_offset;
 
+	/* Slots allocated in CE RAM. If we get active slots outside of this
+	 * range, direct uploads to memory will be used instead. This basically
+	 * governs switching between onchip (CE) and offchip (upload) modes.
+	 */
+	unsigned first_ce_slot;
+	unsigned num_ce_slots;
+
 	/* Slots that are used by currently-bound shaders.
 	 * With CE: It determines which slots are dumped to L2.
 	 *          It doesn't skip uploads to CE RAM.
