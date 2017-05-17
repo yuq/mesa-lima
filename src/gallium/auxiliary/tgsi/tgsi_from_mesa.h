@@ -26,6 +26,8 @@
 
 #include <stdbool.h>
 
+#include "pipe/p_compiler.h"
+#include "pipe/p_defines.h"
 #include "pipe/p_shader_tokens.h"
 
 #include "compiler/shader_enums.h"
@@ -39,5 +41,26 @@ tgsi_get_gl_varying_semantic(gl_varying_slot attr,
 unsigned
 tgsi_get_generic_gl_varying_index(gl_varying_slot attr,
                                   bool needs_texcoord_semantic);
+
+static inline enum pipe_shader_type
+pipe_shader_type_from_mesa(gl_shader_stage stage)
+{
+   switch (stage) {
+   case MESA_SHADER_VERTEX:
+      return PIPE_SHADER_VERTEX;
+   case MESA_SHADER_TESS_CTRL:
+      return PIPE_SHADER_TESS_CTRL;
+   case MESA_SHADER_TESS_EVAL:
+      return PIPE_SHADER_TESS_EVAL;
+   case MESA_SHADER_GEOMETRY:
+      return PIPE_SHADER_GEOMETRY;
+   case MESA_SHADER_FRAGMENT:
+      return PIPE_SHADER_FRAGMENT;
+   case MESA_SHADER_COMPUTE:
+      return PIPE_SHADER_COMPUTE;
+   default:
+      unreachable("bad shader stage");
+   }
+}
 
 #endif /* TGSI_FROM_MESA_H */
