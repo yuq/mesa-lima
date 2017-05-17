@@ -8,15 +8,15 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-04-14 19:14:25)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-01 19:45:59)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31541 bytes, from 2017-05-11 17:06:35)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2017-04-14 19:13:31)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 104446 bytes, from 2017-05-12 18:23:03)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-04-14 19:13:30)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31541 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 105446 bytes, from 2017-05-17 20:33:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -45,7 +45,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 enum a5xx_color_fmt {
+	RB5_A8_UNORM = 2,
 	RB5_R8_UNORM = 3,
+	RB5_R8_SNORM = 4,
 	RB5_R8_UINT = 5,
 	RB5_R8_SINT = 6,
 	RB5_R4G4B4A4_UNORM = 8,
@@ -62,6 +64,7 @@ enum a5xx_color_fmt {
 	RB5_R16_SINT = 25,
 	RB5_R8G8B8A8_UNORM = 48,
 	RB5_R8G8B8_UNORM = 49,
+	RB5_R8G8B8A8_SNORM = 50,
 	RB5_R8G8B8A8_UINT = 51,
 	RB5_R8G8B8A8_SINT = 52,
 	RB5_R10G10B10A2_UNORM = 55,
@@ -75,6 +78,8 @@ enum a5xx_color_fmt {
 	RB5_R32_FLOAT = 74,
 	RB5_R32_UINT = 75,
 	RB5_R32_SINT = 76,
+	RB5_R16G16B16A16_UNORM = 96,
+	RB5_R16G16B16A16_SNORM = 97,
 	RB5_R16G16B16A16_FLOAT = 98,
 	RB5_R16G16B16A16_UINT = 99,
 	RB5_R16G16B16A16_SINT = 100,
@@ -158,6 +163,7 @@ enum a5xx_vtx_fmt {
 enum a5xx_tex_fmt {
 	TFMT5_A8_UNORM = 2,
 	TFMT5_8_UNORM = 3,
+	TFMT5_8_SNORM = 4,
 	TFMT5_8_UINT = 5,
 	TFMT5_8_SINT = 6,
 	TFMT5_4_4_4_4_UNORM = 8,
@@ -175,7 +181,7 @@ enum a5xx_tex_fmt {
 	TFMT5_16_SINT = 25,
 	TFMT5_8_8_8_8_UNORM = 48,
 	TFMT5_8_8_8_UNORM = 49,
-	TFMT5_8_8_8_SNORM = 50,
+	TFMT5_8_8_8_8_SNORM = 50,
 	TFMT5_8_8_8_8_UINT = 51,
 	TFMT5_8_8_8_8_SINT = 52,
 	TFMT5_9_9_9_E5_FLOAT = 53,
@@ -190,6 +196,8 @@ enum a5xx_tex_fmt {
 	TFMT5_32_FLOAT = 74,
 	TFMT5_32_UINT = 75,
 	TFMT5_32_SINT = 76,
+	TFMT5_16_16_16_16_UNORM = 96,
+	TFMT5_16_16_16_16_SNORM = 97,
 	TFMT5_16_16_16_16_FLOAT = 98,
 	TFMT5_16_16_16_16_UINT = 99,
 	TFMT5_16_16_16_16_SINT = 100,
@@ -3061,6 +3069,7 @@ static inline uint32_t A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(uint32_t val)
 {
 	return ((val) << A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC__SHIFT) & A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC__MASK;
 }
+#define A5XX_PC_PRIMITIVE_CNTL_PROVOKING_VTX_LAST		0x00000400
 
 #define REG_A5XX_PC_PRIM_VTX_CNTL				0x0000e385
 #define A5XX_PC_PRIM_VTX_CNTL_PSIZE				0x00000800
