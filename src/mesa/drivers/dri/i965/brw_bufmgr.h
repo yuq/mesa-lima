@@ -109,11 +109,11 @@ struct brw_bo {
    time_t free_time;
 
    /** Mapped address for the buffer, saved across map/unmap cycles */
-   void *mem_virtual;
+   void *map_cpu;
    /** GTT virtual address for the buffer, saved across map/unmap cycles */
-   void *gtt_virtual;
+   void *map_gtt;
    /** WC CPU address for the buffer, saved across map/unmap cycles */
-   void *wc_virtual;
+   void *map_wc;
    int map_count;
 
    /** BO cache list */
