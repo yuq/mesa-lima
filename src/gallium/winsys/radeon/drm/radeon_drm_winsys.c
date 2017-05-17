@@ -627,6 +627,7 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
                              "num-bytes-moved", (uint32_t*)&retval);
         return retval;
     case RADEON_NUM_EVICTIONS:
+    case RADEON_NUM_VRAM_CPU_PAGE_FAULTS:
     case RADEON_VRAM_VIS_USAGE:
         return 0; /* unimplemented */
     case RADEON_VRAM_USAGE:

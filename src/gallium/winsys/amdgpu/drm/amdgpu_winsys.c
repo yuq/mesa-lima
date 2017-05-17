@@ -43,6 +43,10 @@
 #include "amd/common/sid.h"
 #include "amd/common/gfx9d.h"
 
+#ifndef AMDGPU_INFO_NUM_VRAM_CPU_PAGE_FAULTS
+#define AMDGPU_INFO_NUM_VRAM_CPU_PAGE_FAULTS	0x1E
+#endif
+
 static struct util_hash_table *dev_tab = NULL;
 static mtx_t dev_tab_mutex = _MTX_INITIALIZER_NP;
 
@@ -141,6 +145,9 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
       return retval;
    case RADEON_NUM_EVICTIONS:
       amdgpu_query_info(ws->dev, AMDGPU_INFO_NUM_EVICTIONS, 8, &retval);
+      return retval;
+   case RADEON_NUM_VRAM_CPU_PAGE_FAULTS:
+      amdgpu_query_info(ws->dev, AMDGPU_INFO_NUM_VRAM_CPU_PAGE_FAULTS, 8, &retval);
       return retval;
    case RADEON_VRAM_USAGE:
       amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM, 0, &heap);

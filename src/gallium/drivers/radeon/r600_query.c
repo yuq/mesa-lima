@@ -73,6 +73,7 @@ static enum radeon_value_id winsys_id_from_type(unsigned type)
 	case R600_QUERY_NUM_SDMA_IBS: return RADEON_NUM_SDMA_IBS;
 	case R600_QUERY_NUM_BYTES_MOVED: return RADEON_NUM_BYTES_MOVED;
 	case R600_QUERY_NUM_EVICTIONS: return RADEON_NUM_EVICTIONS;
+	case R600_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: return RADEON_NUM_VRAM_CPU_PAGE_FAULTS;
 	case R600_QUERY_VRAM_USAGE: return RADEON_VRAM_USAGE;
 	case R600_QUERY_VRAM_VIS_USAGE: return RADEON_VRAM_VIS_USAGE;
 	case R600_QUERY_GTT_USAGE: return RADEON_GTT_USAGE;
@@ -160,7 +161,8 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_NUM_GFX_IBS:
 	case R600_QUERY_NUM_SDMA_IBS:
 	case R600_QUERY_NUM_BYTES_MOVED:
-	case R600_QUERY_NUM_EVICTIONS: {
+	case R600_QUERY_NUM_EVICTIONS:
+	case R600_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: {
 		enum radeon_value_id ws_id = winsys_id_from_type(query->b.type);
 		query->begin_result = rctx->ws->query_value(rctx->ws, ws_id);
 		break;
@@ -298,7 +300,8 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	case R600_QUERY_NUM_GFX_IBS:
 	case R600_QUERY_NUM_SDMA_IBS:
 	case R600_QUERY_NUM_BYTES_MOVED:
-	case R600_QUERY_NUM_EVICTIONS: {
+	case R600_QUERY_NUM_EVICTIONS:
+	case R600_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: {
 		enum radeon_value_id ws_id = winsys_id_from_type(query->b.type);
 		query->end_result = rctx->ws->query_value(rctx->ws, ws_id);
 		break;
@@ -1846,6 +1849,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-SDMA-IBs",		NUM_SDMA_IBS,		UINT64, AVERAGE),
 	X("num-bytes-moved",		NUM_BYTES_MOVED,	BYTES, CUMULATIVE),
 	X("num-evictions",		NUM_EVICTIONS,		UINT64, CUMULATIVE),
+	X("VRAM-CPU-page-faults",	NUM_VRAM_CPU_PAGE_FAULTS, UINT64, CUMULATIVE),
 	X("VRAM-usage",			VRAM_USAGE,		BYTES, AVERAGE),
 	X("VRAM-vis-usage",		VRAM_VIS_USAGE,		BYTES, AVERAGE),
 	X("GTT-usage",			GTT_USAGE,		BYTES, AVERAGE),
