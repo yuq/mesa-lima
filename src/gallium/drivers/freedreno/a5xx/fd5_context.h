@@ -83,6 +83,9 @@ struct fd5_context {
 
 	/* number of active samples-passed queries: */
 	int samples_passed_queries;
+
+	/* cached state about current emitted shader program (3d): */
+	unsigned max_loc;
 };
 
 static inline struct fd5_context *

@@ -324,7 +324,8 @@ setup_stages(struct fd5_emit *emit, struct stage *s)
 }
 
 void
-fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
+fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
+				 struct fd5_emit *emit)
 {
 	struct stage s[MAX_STAGES];
 	uint32_t pos_regid, psize_regid, color_regid[8];
@@ -539,9 +540,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 			COND(s[FS].v->frag_coord, A5XX_VPC_CNTL_0_VARYING) |
 			0x10000);    // XXX
 
-	OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
-	OUT_RING(ring, A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(l.max_loc) |
-			0x400);      // XXX
+	fd5_context(ctx)->max_loc = l.max_loc;
 
 	if (emit->key.binning_pass) {
 		OUT_PKT4(ring, REG_A5XX_SP_FS_OBJ_START_LO, 2);

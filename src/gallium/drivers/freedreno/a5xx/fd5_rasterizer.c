@@ -83,11 +83,11 @@ fd5_rasterizer_state_create(struct pipe_context *pctx,
 		so->gras_su_cntl |= A5XX_GRAS_SU_CNTL_CULL_BACK;
 	if (!cso->front_ccw)
 		so->gras_su_cntl |= A5XX_GRAS_SU_CNTL_FRONT_CW;
-//	if (!cso->flatshade_first)
-//		so->pc_prim_vtx_cntl |= A5XX_PC_PRIM_VTX_CNTL_PROVOKING_VTX_LAST;
-
 	if (cso->offset_tri)
 		so->gras_su_cntl |= A5XX_GRAS_SU_CNTL_POLY_OFFSET;
+
+	if (!cso->flatshade_first)
+		so->pc_primitive_cntl |= A5XX_PC_PRIMITIVE_CNTL_PROVOKING_VTX_LAST;
 
 //	if (!cso->depth_clip)
 //		so->gras_cl_clip_cntl |= A5XX_GRAS_CL_CLIP_CNTL_ZNEAR_CLIP_DISABLE |

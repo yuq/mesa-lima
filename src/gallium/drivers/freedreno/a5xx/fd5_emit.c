@@ -525,39 +525,6 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				COND(fragz && fp->frag_coord, A5XX_GRAS_SU_DEPTH_PLANE_CNTL_UNK1));
 	}
 
-	if (dirty & FD_DIRTY_RASTERIZER) {
-		struct fd5_rasterizer_stateobj *rasterizer =
-				fd5_rasterizer_stateobj(ctx->rasterizer);
-
-		OUT_PKT4(ring, REG_A5XX_GRAS_SU_CNTL, 1);
-		OUT_RING(ring, rasterizer->gras_su_cntl);
-
-		OUT_PKT4(ring, REG_A5XX_GRAS_SU_POINT_MINMAX, 2);
-		OUT_RING(ring, rasterizer->gras_su_point_minmax);
-		OUT_RING(ring, rasterizer->gras_su_point_size);
-
-		OUT_PKT4(ring, REG_A5XX_GRAS_SU_POLY_OFFSET_SCALE, 3);
-		OUT_RING(ring, rasterizer->gras_su_poly_offset_scale);
-		OUT_RING(ring, rasterizer->gras_su_poly_offset_offset);
-		OUT_RING(ring, rasterizer->gras_su_poly_offset_clamp);
-	}
-
-	/* NOTE: since primitive_restart is not actually part of any
-	 * state object, we need to make sure that we always emit
-	 * PRIM_VTX_CNTL.. either that or be more clever and detect
-	 * when it changes.
-	 */
-	if (emit->info) {
-		struct fd5_rasterizer_stateobj *rast =
-			fd5_rasterizer_stateobj(ctx->rasterizer);
-		uint32_t val = rast->pc_prim_vtx_cntl;
-
-		val |= COND(vp->writes_psize, A5XX_PC_PRIM_VTX_CNTL_PSIZE);
-
-		OUT_PKT4(ring, REG_A5XX_PC_PRIM_VTX_CNTL, 1);
-		OUT_RING(ring, val);
-	}
-
 	if (dirty & FD_DIRTY_SCISSOR) {
 		struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 
@@ -591,7 +558,34 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & FD_DIRTY_PROG)
-		fd5_program_emit(ring, emit);
+		fd5_program_emit(ctx, ring, emit);
+
+	/* note: must come after program emit.. because there is some overlap
+	 * in registers, ex. PC_PRIMITIVE_CNTL and we rely on some cached
+	 * values from fd5_program_emit() to avoid having to re-emit the prog
+	 * every time rast state changes.
+	 */
+	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_RASTERIZER)) {
+		struct fd5_rasterizer_stateobj *rasterizer =
+				fd5_rasterizer_stateobj(ctx->rasterizer);
+		unsigned max_loc = fd5_context(ctx)->max_loc;
+
+		OUT_PKT4(ring, REG_A5XX_GRAS_SU_CNTL, 1);
+		OUT_RING(ring, rasterizer->gras_su_cntl);
+
+		OUT_PKT4(ring, REG_A5XX_GRAS_SU_POINT_MINMAX, 2);
+		OUT_RING(ring, rasterizer->gras_su_point_minmax);
+		OUT_RING(ring, rasterizer->gras_su_point_size);
+
+		OUT_PKT4(ring, REG_A5XX_GRAS_SU_POLY_OFFSET_SCALE, 3);
+		OUT_RING(ring, rasterizer->gras_su_poly_offset_scale);
+		OUT_RING(ring, rasterizer->gras_su_poly_offset_offset);
+		OUT_RING(ring, rasterizer->gras_su_poly_offset_clamp);
+
+		OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
+		OUT_RING(ring, rasterizer->pc_primitive_cntl |
+				 A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(max_loc));
+	}
 
 	if (dirty & (FD_DIRTY_FRAMEBUFFER | FD_DIRTY_RASTERIZER)) {
 		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
