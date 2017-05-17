@@ -844,8 +844,6 @@ st_manager_flush_frontbuffer(struct st_context *st)
    struct st_framebuffer *stfb = st_ws_framebuffer(st->ctx->DrawBuffer);
    struct st_renderbuffer *strb = NULL;
 
-   assert(st->ctx->DrawBuffer != _mesa_get_incomplete_framebuffer());
-
    if (stfb)
       strb = st_renderbuffer(stfb->Base.Attachment[BUFFER_FRONT_LEFT].Renderbuffer);
    if (!strb)
