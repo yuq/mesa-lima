@@ -999,6 +999,25 @@ clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
    union isl_color_value clear_color =
       vk_to_isl_color(attachment->clearValue.color);
 
+   /* If multiview is enabled we ignore baseArrayLayer and layerCount */
+   if (subpass->view_mask) {
+      uint32_t view_idx;
+      for_each_bit(view_idx, subpass->view_mask) {
+         for (uint32_t r = 0; r < rectCount; ++r) {
+            const VkOffset2D offset = pRects[r].rect.offset;
+            const VkExtent2D extent = pRects[r].rect.extent;
+            blorp_clear_attachments(batch, binding_table,
+                                    ISL_FORMAT_UNSUPPORTED, pass_att->samples,
+                                    view_idx, 1,
+                                    offset.x, offset.y,
+                                    offset.x + extent.width,
+                                    offset.y + extent.height,
+                                    true, clear_color, false, 0.0f, 0, 0);
+         }
+      }
+      return;
+   }
+
    for (uint32_t r = 0; r < rectCount; ++r) {
       const VkOffset2D offset = pRects[r].rect.offset;
       const VkExtent2D extent = pRects[r].rect.extent;
@@ -1046,6 +1065,28 @@ clear_depth_stencil_attachment(struct anv_cmd_buffer *cmd_buffer,
                                       &binding_table);
    if (result != VK_SUCCESS)
       return;
+
+   /* If multiview is enabled we ignore baseArrayLayer and layerCount */
+   if (subpass->view_mask) {
+      uint32_t view_idx;
+      for_each_bit(view_idx, subpass->view_mask) {
+         for (uint32_t r = 0; r < rectCount; ++r) {
+            const VkOffset2D offset = pRects[r].rect.offset;
+            const VkExtent2D extent = pRects[r].rect.extent;
+            VkClearDepthStencilValue value = attachment->clearValue.depthStencil;
+            blorp_clear_attachments(batch, binding_table,
+                                    depth_format, pass_att->samples,
+                                    view_idx, 1,
+                                    offset.x, offset.y,
+                                    offset.x + extent.width,
+                                    offset.y + extent.height,
+                                    false, color_value,
+                                    clear_depth, value.depth,
+                                    clear_stencil ? 0xff : 0, value.stencil);
+         }
+      }
+      return;
+   }
 
    for (uint32_t r = 0; r < rectCount; ++r) {
       const VkOffset2D offset = pRects[r].rect.offset;
