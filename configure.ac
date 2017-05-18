@@ -2472,6 +2472,10 @@ if test -n "$with_gallium_drivers"; then
     done
 fi
 
+# XXX: Keep in sync with LLVM_REQUIRED_SWR
+AM_CONDITIONAL(SWR_INVALID_LLVM_VERSION, test "x$LLVM_VERSION" != x3.9.0 -a \
+                                              "x$LLVM_VERSION" != x3.9.1)
+
 if test "x$enable_llvm" = "xyes" -a "$with_gallium_drivers"; then
     llvm_require_version $LLVM_REQUIRED_GALLIUM "gallium"
     llvm_add_default_components "gallium"
