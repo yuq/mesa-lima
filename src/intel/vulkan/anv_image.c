@@ -423,12 +423,10 @@ void anv_GetImageSubresourceLayout(
 }
 
 /**
- * This function determines the optimal buffer to use for device
- * accesses given a VkImageLayout and other pieces of information needed to
- * make that determination. This does not determine the optimal buffer to
- * use during a resolve operation.
- *
- * NOTE: Some layouts do not support device access.
+ * This function determines the optimal buffer to use for a given
+ * VkImageLayout and other pieces of information needed to make that
+ * determination. This does not determine the optimal buffer to use
+ * during a resolve operation.
  *
  * @param devinfo The device information of the Intel GPU.
  * @param image The image that may contain a collection of buffers.
@@ -484,15 +482,19 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    switch (layout) {
 
    /* Invalid Layouts */
+   case VK_IMAGE_LAYOUT_RANGE_SIZE:
+   case VK_IMAGE_LAYOUT_MAX_ENUM:
+      unreachable("Invalid image layout.");
 
-   /* According to the Vulkan Spec, the following layouts are valid only as
-    * initial layouts in a layout transition and don't support device access.
+   /* Undefined layouts
+    *
+    * The pre-initialized layout is equivalent to the undefined layout for
+    * optimally-tiled images.  We can only do color compression (CCS or HiZ)
+    * on tiled images.
     */
    case VK_IMAGE_LAYOUT_UNDEFINED:
    case VK_IMAGE_LAYOUT_PREINITIALIZED:
-   case VK_IMAGE_LAYOUT_RANGE_SIZE:
-   case VK_IMAGE_LAYOUT_MAX_ENUM:
-      unreachable("Invalid image layout for device access.");
+      return ISL_AUX_USAGE_NONE;
 
 
    /* Transfer Layouts

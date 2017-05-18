@@ -355,15 +355,8 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
     * The undefined layout indicates that the user doesn't care about the data
     * that's currently in the buffer. Therefore, a data-preserving resolve
     * operation is not needed.
-    *
-    * The pre-initialized layout is equivalent to the undefined layout for
-    * optimally-tiled images. Anv only exposes support for optimally-tiled
-    * depth buffers.
     */
-   if (image->aux_usage != ISL_AUX_USAGE_HIZ ||
-       initial_layout == final_layout ||
-       initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-       initial_layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
+   if (image->aux_usage != ISL_AUX_USAGE_HIZ || initial_layout == final_layout)
       return;
 
    const bool hiz_enabled = ISL_AUX_USAGE_HIZ ==
@@ -404,6 +397,11 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       return;
 
 #if GEN_GEN >= 9
+   /* We're transitioning from an undefined layout so it doesn't really matter
+    * what data ends up in the color buffer.  We do, however, need to ensure
+    * that the CCS has valid data in it.  One easy way to do that is to
+    * fast-clear the specified range.
+    */
    anv_image_ccs_clear(cmd_buffer, image, view, subresourceRange);
 #endif
 }
