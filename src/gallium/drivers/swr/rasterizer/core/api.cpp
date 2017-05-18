@@ -804,7 +804,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         const uint32_t forcedSampleCount = (rastState.forcedSampleCount) ? 1 : 0;
         const bool bMultisampleEnable = ((rastState.sampleCount > SWR_MULTISAMPLE_1X) || forcedSampleCount) ? 1 : 0;
         const uint32_t centroid = ((psState.barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0) ? 1 : 0;
-        const uint32_t canEarlyZ = (psState.forceEarlyZ || (!psState.writesODepth && !psState.usesSourceDepth && !psState.usesUAV)) ? 1 : 0;
+        const uint32_t canEarlyZ = (psState.forceEarlyZ || (!psState.writesODepth && !psState.usesUAV)) ? 1 : 0;
         SWR_BARYCENTRICS_MASK barycentricsMask = (SWR_BARYCENTRICS_MASK)psState.barycentricsMask;
         
         // select backend function
