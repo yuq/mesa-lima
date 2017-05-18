@@ -992,7 +992,7 @@ brw_begin_perf_query(struct gl_context *ctx,
                       MI_RPC_BO_SIZE, 64);
 #ifdef DEBUG
       /* Pre-filling the BO helps debug whether writes landed. */
-      void *map = brw_bo_map_cpu(brw, obj->oa.bo, MAP_READ | MAP_WRITE);
+      void *map = brw_bo_map_cpu(brw, obj->oa.bo, MAP_WRITE);
       memset(map, 0x80, MI_RPC_BO_SIZE);
       brw_bo_unmap(obj->oa.bo);
 #endif

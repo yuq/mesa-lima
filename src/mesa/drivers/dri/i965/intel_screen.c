@@ -1420,7 +1420,7 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    if (bo == NULL)
       goto err_results;
 
-   map = brw_bo_map_cpu(NULL, bo, MAP_READ | MAP_WRITE);
+   map = brw_bo_map_cpu(NULL, bo, MAP_WRITE);
    if (!map)
       goto err_batch;
 
