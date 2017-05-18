@@ -70,6 +70,10 @@ etna_transfer_unmap(struct pipe_context *pctx, struct pipe_transfer *ptrans)
    if (rsc->texture && !etna_resource_newer(rsc, etna_resource(rsc->texture)))
       rsc = etna_resource(rsc->texture); /* switch to using the texture resource */
 
+   /*
+    * Temporary resources are always pulled into the CPU domain, must push them
+    * back into GPU domain before the RS execs the blit to the base resource.
+    */
    if (trans->rsc)
       etna_bo_cpu_fini(etna_resource(trans->rsc)->bo);
 
@@ -114,7 +118,12 @@ etna_transfer_unmap(struct pipe_context *pctx, struct pipe_transfer *ptrans)
       }
    }
 
-   if (!trans->rsc)
+   /*
+    * Transfers without a temporary are only pulled into the CPU domain if they
+    * are not mapped unsynchronized. If they are, must push them back into GPU
+    * domain after CPU access is finished.
+    */
+   if (!trans->rsc && !(ptrans->usage & PIPE_TRANSFER_UNSYNCHRONIZED))
       etna_bo_cpu_fini(rsc->bo);
 
    pipe_resource_reference(&trans->rsc, NULL);
@@ -260,19 +269,21 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
                    (rsc->layout == ETNA_LAYOUT_TILED &&
                     util_format_is_compressed(prsc->format));
 
-   /* Ignore PIPE_TRANSFER_UNSYNCHRONIZED and PIPE_TRANSFER_DONTBLOCK here.
-    * It appears that Gallium operates the index/vertex buffers in a
-    * circular fashion, and the CPU can catch up with the GPU and starts
-    * overwriting yet-to-be-processed entries, causing rendering corruption. */
-   uint32_t prep_flags = 0;
+   /*
+    * Pull resources into the CPU domain. Only skipped for unsynchronized
+    * transfers without a temporary resource.
+    */
+   if (trans->rsc || !(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+      uint32_t prep_flags = 0;
 
-   if (usage & PIPE_TRANSFER_READ)
-      prep_flags |= DRM_ETNA_PREP_READ;
-   if (usage & PIPE_TRANSFER_WRITE)
-      prep_flags |= DRM_ETNA_PREP_WRITE;
+      if (usage & PIPE_TRANSFER_READ)
+         prep_flags |= DRM_ETNA_PREP_READ;
+      if (usage & PIPE_TRANSFER_WRITE)
+         prep_flags |= DRM_ETNA_PREP_WRITE;
 
-   if (etna_bo_cpu_prep(rsc->bo, prep_flags))
-      goto fail_prep;
+      if (etna_bo_cpu_prep(rsc->bo, prep_flags))
+         goto fail_prep;
+   }
 
    /* map buffer object */
    void *mapped = etna_bo_map(rsc->bo);
