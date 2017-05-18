@@ -550,7 +550,6 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                break;
 
             case GLSL_TYPE_INT64:
-            case GLSL_TYPE_UINT64:
                switch (uni->type->base_type) {
                case GLSL_TYPE_UINT: {
                   uint64_t tmp = src[sidx].u;
@@ -569,8 +568,53 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   memcpy(&dst[didx].u, &tmp, sizeof(tmp));
                   break;
                }
+               case GLSL_TYPE_UINT64: {
+                  uint64_t u64;
+                  memcpy(&u64, &src[sidx].u, sizeof(u64));
+                  int64_t tmp = MIN2(u64, INT_MAX);
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
                case GLSL_TYPE_FLOAT: {
                   int64_t tmp = src[sidx].f;
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
+               default:
+                  assert(!"Should not get here.");
+                  break;
+               }
+               break;
+
+            case GLSL_TYPE_UINT64:
+               switch (uni->type->base_type) {
+               case GLSL_TYPE_UINT: {
+                  uint64_t tmp = src[sidx].u;
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
+               case GLSL_TYPE_INT:
+               case GLSL_TYPE_SAMPLER:
+               case GLSL_TYPE_IMAGE: {
+                  int64_t tmp = MAX2(src[sidx].i, 0);
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
+               case GLSL_TYPE_BOOL: {
+                  int64_t tmp = src[sidx].i ? 1.0f : 0.0f;
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
+               case GLSL_TYPE_INT64: {
+                  uint64_t i64;
+                  memcpy(&i64, &src[sidx].i, sizeof(i64));
+                  uint64_t tmp = MAX2(i64, 0);
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
+               case GLSL_TYPE_FLOAT: {
+                  uint64_t tmp = src[sidx].f < 0.0f ?
+                     0ull : (uint64_t) roundf(src[sidx].f);
                   memcpy(&dst[didx].u, &tmp, sizeof(tmp));
                   break;
                }
