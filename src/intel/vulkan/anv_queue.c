@@ -213,7 +213,7 @@ out:
        * VK_ERROR_DEVICE_LOST to ensure that clients do not attempt to
        * submit the same job again to this device.
        */
-      result = VK_ERROR_DEVICE_LOST;
+      result = vk_errorf(VK_ERROR_DEVICE_LOST, "vkQueueSubmit() failed");
       device->lost = true;
 
       /* If we return VK_ERROR_DEVICE LOST here, we need to ensure that
