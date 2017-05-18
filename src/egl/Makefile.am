@@ -138,7 +138,8 @@ libEGL_mesa_la_SOURCES = \
 	main/eglglvnd.c \
 	main/egldispatchstubs.h \
 	main/egldispatchstubs.c \
-	g_egldispatchstubs.c
+	g_egldispatchstubs.c \
+	g_egldispatchstubs.h
 libEGL_mesa_la_LIBADD = libEGL_common.la
 libEGL_mesa_la_LDFLAGS = \
 	-no-undefined \
