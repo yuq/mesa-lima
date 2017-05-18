@@ -580,6 +580,13 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   memcpy(&dst[didx].u, &tmp, sizeof(tmp));
                   break;
                }
+               case GLSL_TYPE_DOUBLE: {
+                  double d;
+                  memcpy(&d, &src[sidx].f, sizeof(d));
+                  int64_t tmp = (int64_t) round(d);
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
                default:
                   assert(!"Should not get here.");
                   break;
@@ -615,6 +622,13 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                case GLSL_TYPE_FLOAT: {
                   uint64_t tmp = src[sidx].f < 0.0f ?
                      0ull : (uint64_t) roundf(src[sidx].f);
+                  memcpy(&dst[didx].u, &tmp, sizeof(tmp));
+                  break;
+               }
+               case GLSL_TYPE_DOUBLE: {
+                  double d;
+                  memcpy(&d, &src[sidx].f, sizeof(d));
+                  uint64_t tmp = (d < 0.0) ? 0ull : (uint64_t) round(d);
                   memcpy(&dst[didx].u, &tmp, sizeof(tmp));
                   break;
                }
