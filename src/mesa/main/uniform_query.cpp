@@ -576,7 +576,7 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   break;
                }
                case GLSL_TYPE_FLOAT: {
-                  int64_t tmp = src[sidx].f;
+                  int64_t tmp = (int64_t) roundf(src[sidx].f);
                   memcpy(&dst[didx].u, &tmp, sizeof(tmp));
                   break;
                }
