@@ -368,8 +368,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
          /* Failed to find a matching cached shader so fallback to recompile.
           */
          if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
-            fprintf(stderr, "TGSI cache item not found falling back to "
-                    "compile.\n");
+            fprintf(stderr, "TGSI cache item not found.\n");
          }
 
          goto fallback_recompile;
@@ -380,6 +379,9 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
 
 fallback_recompile:
    free(buffer);
+
+   if (ctx->_Shader->Flags & GLSL_CACHE_INFO)
+      fprintf(stderr, "TGSI cache falling back to recompile.\n");
 
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       _mesa_glsl_compile_shader(ctx, prog->Shaders[i], false, false, true);
