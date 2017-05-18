@@ -63,21 +63,6 @@ void triangleSetupAB(const __m128 vX, const __m128 vY, __m128 & vA, __m128 & vB)
 }
 
 INLINE
-void triangleSetupABVertical(const simdscalar vX[3], const simdscalar vY[3], simdscalar (&vA)[3], simdscalar (&vB)[3])
-{
-    // generate edge equations
-    // A = y0 - y1
-    // B = x1 - x0
-    vA[0] = _simd_sub_ps(vY[0], vY[1]);
-    vA[1] = _simd_sub_ps(vY[1], vY[2]);
-    vA[2] = _simd_sub_ps(vY[2], vY[0]);
-
-    vB[0] = _simd_sub_ps(vX[1], vX[0]);
-    vB[1] = _simd_sub_ps(vX[2], vX[1]);
-    vB[2] = _simd_sub_ps(vX[0], vX[2]);
-}
-
-INLINE
 void triangleSetupABInt(const __m128i vX, const __m128i vY, __m128i & vA, __m128i & vB)
 {
     // generate edge equations
@@ -237,19 +222,6 @@ void triangleSetupC(const __m128 vX, const __m128 vY, const __m128 vA, const __m
     __m128 vCy = _mm_mul_ps(vB, vY);    
     vC  = _mm_mul_ps(vC, _mm_set1_ps(-1.0f));
     vC  = _mm_sub_ps(vC, vCy);
-}
-
-INLINE
-void viewportTransform(__m128 &vX, __m128 &vY, __m128 &vZ, const SWR_VIEWPORT_MATRIX &vpMatrix)
-{
-    vX = _mm_mul_ps(vX, _mm_set1_ps(vpMatrix.m00));
-    vX = _mm_add_ps(vX, _mm_set1_ps(vpMatrix.m30));
-
-    vY = _mm_mul_ps(vY, _mm_set1_ps(vpMatrix.m11));
-    vY = _mm_add_ps(vY, _mm_set1_ps(vpMatrix.m31));
-
-    vZ = _mm_mul_ps(vZ, _mm_set1_ps(vpMatrix.m22));
-    vZ = _mm_add_ps(vZ, _mm_set1_ps(vpMatrix.m32));
 }
 
 template<uint32_t NumVerts>
