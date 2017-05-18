@@ -353,16 +353,8 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
        * slower convert-and-copy process.
        */
       if (returnType == uni->type->base_type ||
-          ((returnType == GLSL_TYPE_INT ||
-            returnType == GLSL_TYPE_UINT) &&
-           (uni->type->base_type == GLSL_TYPE_INT ||
-            uni->type->base_type == GLSL_TYPE_UINT ||
-            uni->type->is_sampler() ||
-            uni->type->is_image())) ||
-          ((returnType == GLSL_TYPE_UINT64 ||
-            returnType == GLSL_TYPE_INT64) &&
-           (uni->type->base_type == GLSL_TYPE_UINT64 ||
-            uni->type->base_type == GLSL_TYPE_INT64))) {
+          ((returnType == GLSL_TYPE_INT || returnType == GLSL_TYPE_UINT) &&
+           (uni->type->is_sampler() || uni->type->is_image()))) {
          memcpy(paramsOut, src, bytes);
       } else {
          union gl_constant_value *const dst =
@@ -460,7 +452,6 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                break;
 
             case GLSL_TYPE_INT:
-            case GLSL_TYPE_UINT:
                switch (uni->type->base_type) {
                case GLSL_TYPE_FLOAT:
                   /* While the GL 3.2 core spec doesn't explicitly
@@ -485,6 +476,9 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                case GLSL_TYPE_BOOL:
                   dst[didx].i = src[sidx].i ? 1 : 0;
                   break;
+               case GLSL_TYPE_UINT:
+                  dst[didx].i = MIN2(src[sidx].i, INT_MAX);
+                  break;
                case GLSL_TYPE_DOUBLE: {
                   double tmp;
                   memcpy(&tmp, &src[sidx].f, sizeof(tmp));
@@ -506,6 +500,52 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                default:
                   assert(!"Should not get here.");
                   break;
+               }
+               break;
+
+            case GLSL_TYPE_UINT:
+               switch (uni->type->base_type) {
+               case GLSL_TYPE_FLOAT:
+                  /* The spec isn't terribly clear how to handle negative
+                   * values with an unsigned return type.
+                   *
+                   * GL 4.5 section 2.2.2 ("Data Conversions for State
+                   * Query Commands") says:
+                   *
+                   * "If a value is so large in magnitude that it cannot be
+                   *  represented by the returned data type, then the nearest
+                   *  value representable using the requested type is
+                   *  returned."
+                   */
+                  dst[didx].u = src[sidx].f < 0.0f ?
+                     0u : (uint32_t) roundf(src[sidx].f);
+                  break;
+               case GLSL_TYPE_BOOL:
+                  dst[didx].i = src[sidx].i ? 1 : 0;
+                  break;
+               case GLSL_TYPE_INT:
+                  dst[didx].i = MAX2(src[sidx].i, 0);
+                  break;
+               case GLSL_TYPE_DOUBLE: {
+                  double tmp;
+                  memcpy(&tmp, &src[sidx].f, sizeof(tmp));
+                  dst[didx].u = tmp < 0.0 ? 0u : (uint32_t) round(tmp);
+                  break;
+               }
+               case GLSL_TYPE_UINT64: {
+                  uint64_t tmp;
+                  memcpy(&tmp, &src[sidx].u, sizeof(tmp));
+                  dst[didx].i = MIN2(tmp, INT_MAX);
+                  break;
+               }
+               case GLSL_TYPE_INT64: {
+                  int64_t tmp;
+                  memcpy(&tmp, &src[sidx].i, sizeof(tmp));
+                  dst[didx].i = MAX2(tmp, 0);
+                  break;
+               }
+               default:
+                  unreachable("invalid uniform type");
                }
                break;
 
