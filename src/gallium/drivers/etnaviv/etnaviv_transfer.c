@@ -157,6 +157,20 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
 
    assert(level <= prsc->last_level);
 
+   /* Upgrade DISCARD_RANGE to WHOLE_RESOURCE if the whole resource is
+    * being mapped. If we add buffer reallocation to avoid CPU/GPU sync this
+    * check needs to be extended to coherent mappings and shared resources.
+    */
+   if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
+       !(usage & PIPE_TRANSFER_UNSYNCHRONIZED) &&
+       prsc->last_level == 0 &&
+       prsc->width0 == box->width &&
+       prsc->height0 == box->height &&
+       prsc->depth0 == box->depth &&
+       prsc->array_size == 1) {
+      usage |= PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
+   }
+
    if (rsc->texture && !etna_resource_newer(rsc, etna_resource(rsc->texture))) {
       /* We have a texture resource which is the same age or newer than the
        * render resource. Use the texture resource, which avoids bouncing
