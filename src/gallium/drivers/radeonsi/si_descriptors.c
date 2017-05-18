@@ -2262,6 +2262,32 @@ si_create_bindless_descriptor(struct si_context *sctx, uint32_t *desc_list,
 	return desc;
 }
 
+static void si_invalidate_bindless_buf_desc(struct si_context *sctx,
+					    struct si_bindless_descriptor *desc,
+					    struct pipe_resource *resource,
+					    uint64_t offset)
+{
+	struct r600_resource *buf = r600_resource(resource);
+	uint32_t *desc_list = desc->desc_list;
+	uint64_t old_desc_va;
+
+	assert(resource->target == PIPE_BUFFER);
+
+	/* Retrieve the old buffer addr from the descriptor. */
+	old_desc_va  = desc_list[0];
+	old_desc_va |= ((uint64_t)G_008F04_BASE_ADDRESS_HI(desc_list[1]) << 32);
+
+	if (old_desc_va != buf->gpu_address + offset) {
+		/* The buffer has been invalidated when the handle wasn't
+		 * resident, update the descriptor and the dirty flag.
+		 */
+		si_set_buf_desc_address(buf, offset, &desc_list[4]);
+
+		desc->dirty = true;
+		sctx->bindless_descriptors_dirty = true;
+	}
+}
+
 static uint64_t si_create_texture_handle(struct pipe_context *ctx,
 					 struct pipe_sampler_view *view,
 					 const struct pipe_sampler_state *state)
@@ -2361,6 +2387,10 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 			if (rtex->dcc_offset &&
 			    p_atomic_read(&rtex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
+		} else {
+			si_invalidate_bindless_buf_desc(sctx, tex_handle->desc,
+							sview->base.texture,
+							sview->base.u.buf.offset);
 		}
 
 		/* Add the texture handle to the per-context list. */
@@ -2480,6 +2510,10 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 			if (vi_dcc_enabled(rtex, level) &&
 			    p_atomic_read(&rtex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
+		} else {
+			si_invalidate_bindless_buf_desc(sctx, img_handle->desc,
+							view->resource,
+							view->u.buf.offset);
 		}
 
 		/* Add the image handle to the per-context list. */
