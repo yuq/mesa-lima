@@ -391,7 +391,7 @@ fallback_recompile:
       _mesa_glsl_compile_shader(ctx, prog->Shaders[i], false, false, true);
    }
 
-   prog->data->cache_fallback = true;
+   prog->data->skip_cache = true;
    _mesa_glsl_link_shader(ctx, prog);
 
    return true;
