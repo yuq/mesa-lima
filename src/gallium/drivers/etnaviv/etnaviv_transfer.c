@@ -89,21 +89,19 @@ etna_transfer_unmap(struct pipe_context *pctx, struct pipe_transfer *ptrans)
          struct etna_resource_level *res_level = &rsc->levels[ptrans->level];
          void *mapped = etna_bo_map(rsc->bo) + res_level->offset;
 
-         if (rsc->layout == ETNA_LAYOUT_LINEAR || rsc->layout == ETNA_LAYOUT_TILED) {
-            if (rsc->layout == ETNA_LAYOUT_TILED && !util_format_is_compressed(rsc->base.format)) {
-               etna_texture_tile(
-                  mapped + ptrans->box.z * res_level->layer_stride,
-                  trans->staging, ptrans->box.x, ptrans->box.y,
-                  res_level->stride, ptrans->box.width, ptrans->box.height,
-                  ptrans->stride, util_format_get_blocksize(rsc->base.format));
-            } else { /* non-tiled or compressed format */
-               util_copy_box(mapped, rsc->base.format, res_level->stride,
-                             res_level->layer_stride, ptrans->box.x,
-                             ptrans->box.y, ptrans->box.z, ptrans->box.width,
-                             ptrans->box.height, ptrans->box.depth,
-                             trans->staging, ptrans->stride,
-                             ptrans->layer_stride, 0, 0, 0 /* src x,y,z */);
-            }
+         if (rsc->layout == ETNA_LAYOUT_TILED) {
+            etna_texture_tile(
+               mapped + ptrans->box.z * res_level->layer_stride,
+               trans->staging, ptrans->box.x, ptrans->box.y,
+               res_level->stride, ptrans->box.width, ptrans->box.height,
+               ptrans->stride, util_format_get_blocksize(rsc->base.format));
+         } else if (rsc->layout == ETNA_LAYOUT_LINEAR) {
+            util_copy_box(mapped, rsc->base.format, res_level->stride,
+                          res_level->layer_stride, ptrans->box.x,
+                          ptrans->box.y, ptrans->box.z, ptrans->box.width,
+                          ptrans->box.height, ptrans->box.depth,
+                          trans->staging, ptrans->stride,
+                          ptrans->layer_stride, 0, 0, 0 /* src x,y,z */);
          } else {
             BUG("unsupported tiling %i", rsc->layout);
          }
@@ -264,13 +262,6 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
       PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE is set.
     */
 
-   /* No need to allocate a buffer for copying if the resource is not in use,
-    * and no tiling is needed, can just return a direct pointer.
-    */
-   bool in_place = rsc->layout == ETNA_LAYOUT_LINEAR ||
-                   (rsc->layout == ETNA_LAYOUT_TILED &&
-                    util_format_is_compressed(prsc->format));
-
    /*
     * Pull resources into the CPU domain. Only skipped for unsynchronized
     * transfers without a temporary resource.
@@ -294,7 +285,7 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
 
    *out_transfer = ptrans;
 
-   if (in_place) {
+   if (rsc->layout == ETNA_LAYOUT_LINEAR) {
       ptrans->stride = res_level->stride;
       ptrans->layer_stride = res_level->layer_stride;
 
@@ -321,24 +312,21 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
          goto fail;
 
       if (usage & PIPE_TRANSFER_READ) {
-         /* untile or copy resource for reading */
-         if (rsc->layout == ETNA_LAYOUT_LINEAR || rsc->layout == ETNA_LAYOUT_TILED) {
-            if (rsc->layout == ETNA_LAYOUT_TILED && !util_format_is_compressed(rsc->base.format)) {
-               etna_texture_untile(trans->staging,
-                                   mapped + ptrans->box.z * res_level->layer_stride,
-                                   ptrans->box.x, ptrans->box.y, res_level->stride,
-                                   ptrans->box.width, ptrans->box.height, ptrans->stride,
-                                   util_format_get_blocksize(rsc->base.format));
-            } else { /* non-tiled or compressed format */
-               util_copy_box(trans->staging, rsc->base.format, ptrans->stride,
-                             ptrans->layer_stride, 0, 0, 0, /* dst x,y,z */
-                             ptrans->box.width, ptrans->box.height,
-                             ptrans->box.depth, mapped, res_level->stride,
-                             res_level->layer_stride, ptrans->box.x,
-                             ptrans->box.y, ptrans->box.z);
-            }
-         } else /* TODO supertiling */
-         {
+         if (rsc->layout == ETNA_LAYOUT_TILED) {
+            etna_texture_untile(trans->staging,
+                                mapped + ptrans->box.z * res_level->layer_stride,
+                                ptrans->box.x, ptrans->box.y, res_level->stride,
+                                ptrans->box.width, ptrans->box.height, ptrans->stride,
+                                util_format_get_blocksize(rsc->base.format));
+         } else if (rsc->layout == ETNA_LAYOUT_LINEAR) {
+            util_copy_box(trans->staging, rsc->base.format, ptrans->stride,
+                          ptrans->layer_stride, 0, 0, 0, /* dst x,y,z */
+                          ptrans->box.width, ptrans->box.height,
+                          ptrans->box.depth, mapped, res_level->stride,
+                          res_level->layer_stride, ptrans->box.x,
+                          ptrans->box.y, ptrans->box.z);
+         } else {
+            /* TODO supertiling */
             BUG("unsupported tiling %i for reading", rsc->layout);
          }
       }
