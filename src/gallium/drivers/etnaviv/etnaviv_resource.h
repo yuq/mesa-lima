@@ -124,9 +124,6 @@ void
 etna_resource_used(struct etna_context *ctx, struct pipe_resource *prsc,
                    enum etna_resource_status status);
 
-void
-etna_resource_wait(struct pipe_context *ctx, struct etna_resource *rsc);
-
 static inline void
 resource_read(struct etna_context *ctx, struct pipe_resource *prsc)
 {

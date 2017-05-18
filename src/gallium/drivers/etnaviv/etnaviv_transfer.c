@@ -199,8 +199,9 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
    /* Always sync if we have the temporary resource.  The PIPE_TRANSFER_READ
     * case could be optimised if we knew whether the resource has outstanding
     * rendering. */
-   if (usage & PIPE_TRANSFER_READ || trans->rsc)
-      etna_resource_wait(pctx, rsc);
+   if ((usage & PIPE_TRANSFER_READ || trans->rsc) &&
+       rsc->status & ETNA_PENDING_WRITE)
+      pctx->flush(pctx, NULL, 0);
 
    /* XXX we don't handle PIPE_TRANSFER_FLUSH_EXPLICIT; this flag can be ignored
     * when mapping in-place,
