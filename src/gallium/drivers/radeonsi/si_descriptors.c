@@ -2374,6 +2374,12 @@ void si_all_resident_buffers_begin_new_cs(struct si_context *sctx)
 				   sizeof(struct si_texture_handle *);
 	num_resident_img_handles = sctx->resident_img_handles.size /
 				   sizeof(struct si_image_handle *);
+
+	/* Skip adding the bindless descriptors when no handles are resident.
+	 */
+	if (!num_resident_tex_handles && !num_resident_img_handles)
+		return;
+
 	num_bindless_descriptors = sctx->bindless_descriptors.size /
 				   sizeof(struct r600_resource *);
 
