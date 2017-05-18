@@ -205,10 +205,9 @@ void *
 _mesa_HashLookup(struct _mesa_HashTable *table, GLuint key)
 {
    void *res;
-   assert(table);
-   mtx_lock(&table->Mutex);
+   _mesa_HashLockMutex(table);
    res = _mesa_HashLookup_unlocked(table, key);
-   mtx_unlock(&table->Mutex);
+   _mesa_HashUnlockMutex(table);
    return res;
 }
 
@@ -315,10 +314,9 @@ _mesa_HashInsertLocked(struct _mesa_HashTable *table, GLuint key, void *data)
 void
 _mesa_HashInsert(struct _mesa_HashTable *table, GLuint key, void *data)
 {
-   assert(table);
-   mtx_lock(&table->Mutex);
+   _mesa_HashLockMutex(table);
    _mesa_HashInsert_unlocked(table, key, data);
-   mtx_unlock(&table->Mutex);
+   _mesa_HashUnlockMutex(table);
 }
 
 
@@ -364,9 +362,9 @@ _mesa_HashRemoveLocked(struct _mesa_HashTable *table, GLuint key)
 void
 _mesa_HashRemove(struct _mesa_HashTable *table, GLuint key)
 {
-   mtx_lock(&table->Mutex);
+   _mesa_HashLockMutex(table);
    _mesa_HashRemove_unlocked(table, key);
-   mtx_unlock(&table->Mutex);
+   _mesa_HashUnlockMutex(table);
 }
 
 /**
@@ -385,9 +383,8 @@ _mesa_HashDeleteAll(struct _mesa_HashTable *table,
 {
    struct hash_entry *entry;
 
-   assert(table);
    assert(callback);
-   mtx_lock(&table->Mutex);
+   _mesa_HashLockMutex(table);
    table->InDeleteAll = GL_TRUE;
    hash_table_foreach(table->ht, entry) {
       callback((uintptr_t)entry->key, entry->data, userData);
@@ -398,7 +395,7 @@ _mesa_HashDeleteAll(struct _mesa_HashTable *table,
       table->deleted_key_data = NULL;
    }
    table->InDeleteAll = GL_FALSE;
-   mtx_unlock(&table->Mutex);
+   _mesa_HashUnlockMutex(table);
 }
 
 
@@ -434,9 +431,9 @@ _mesa_HashWalk(const struct _mesa_HashTable *table,
    /* cast-away const */
    struct _mesa_HashTable *table2 = (struct _mesa_HashTable *) table;
 
-   mtx_lock(&table2->Mutex);
+   _mesa_HashLockMutex(table2);
    hash_walk_unlocked(table, callback, userData);
-   mtx_unlock(&table2->Mutex);
+   _mesa_HashUnlockMutex(table2);
 }
 
 void
