@@ -197,7 +197,9 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
          return NULL;
       }
 
-      etna_copy_resource(pctx, trans->rsc, prsc, level, trans->rsc->last_level);
+      if (!(usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE))
+         etna_copy_resource(pctx, trans->rsc, prsc, level,
+                            trans->rsc->last_level);
 
       /* Switch to using the temporary resource instead */
       rsc = etna_resource(trans->rsc);
