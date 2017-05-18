@@ -333,7 +333,7 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
        * account for the size of the user's buffer.
        */
       const union gl_constant_value *const src =
-	 &uni->storage[offset * elements * dmul];
+         &uni->storage[offset * elements * dmul];
 
       assert(returnType == GLSL_TYPE_FLOAT || returnType == GLSL_TYPE_INT ||
              returnType == GLSL_TYPE_UINT || returnType == GLSL_TYPE_DOUBLE ||
@@ -342,100 +342,100 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
       /* doubles have a different size than the other 3 types */
       unsigned bytes = sizeof(src[0]) * elements * rmul;
       if (bufSize < 0 || bytes > (unsigned) bufSize) {
-	 _mesa_error( ctx, GL_INVALID_OPERATION,
-	             "glGetnUniform*vARB(out of bounds: bufSize is %d,"
-	             " but %u bytes are required)", bufSize, bytes );
-	 return;
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glGetnUniform*vARB(out of bounds: bufSize is %d,"
+                     " but %u bytes are required)", bufSize, bytes);
+         return;
       }
 
       /* If the return type and the uniform's native type are "compatible,"
        * just memcpy the data.  If the types are not compatible, perform a
        * slower convert-and-copy process.
        */
-      if (returnType == uni->type->base_type
-	  || ((returnType == GLSL_TYPE_INT
-	       || returnType == GLSL_TYPE_UINT)
-	      &&
-	      (uni->type->base_type == GLSL_TYPE_INT
-	       || uni->type->base_type == GLSL_TYPE_UINT
-               || uni->type->is_sampler()
-               || uni->type->is_image()))
-          || ((returnType == GLSL_TYPE_UINT64 ||
-               returnType == GLSL_TYPE_INT64 ) &&
-              (uni->type->base_type == GLSL_TYPE_UINT64 ||
-               uni->type->base_type == GLSL_TYPE_INT64))) {
-	 memcpy(paramsOut, src, bytes);
+      if (returnType == uni->type->base_type ||
+          ((returnType == GLSL_TYPE_INT ||
+            returnType == GLSL_TYPE_UINT) &&
+           (uni->type->base_type == GLSL_TYPE_INT ||
+            uni->type->base_type == GLSL_TYPE_UINT ||
+            uni->type->is_sampler() ||
+            uni->type->is_image())) ||
+          ((returnType == GLSL_TYPE_UINT64 ||
+            returnType == GLSL_TYPE_INT64) &&
+           (uni->type->base_type == GLSL_TYPE_UINT64 ||
+            uni->type->base_type == GLSL_TYPE_INT64))) {
+         memcpy(paramsOut, src, bytes);
       } else {
-	 union gl_constant_value *const dst =
-	    (union gl_constant_value *) paramsOut;
-	 /* This code could be optimized by putting the loop inside the switch
-	  * statements.  However, this is not expected to be
-	  * performance-critical code.
-	  */
-	 for (unsigned i = 0; i < elements; i++) {
-	   int sidx = i * dmul;
-	   int didx = i * rmul;
+         union gl_constant_value *const dst =
+            (union gl_constant_value *) paramsOut;
+         /* This code could be optimized by putting the loop inside the switch
+          * statements.  However, this is not expected to be
+          * performance-critical code.
+          */
+         for (unsigned i = 0; i < elements; i++) {
+            int sidx = i * dmul;
+            int didx = i * rmul;
 
-	    switch (returnType) {
-	    case GLSL_TYPE_FLOAT:
-	       switch (uni->type->base_type) {
-	       case GLSL_TYPE_UINT:
-		  dst[didx].f = (float) src[sidx].u;
-		  break;
-	       case GLSL_TYPE_INT:
-	       case GLSL_TYPE_SAMPLER:
+            switch (returnType) {
+            case GLSL_TYPE_FLOAT:
+               switch (uni->type->base_type) {
+               case GLSL_TYPE_UINT:
+                  dst[didx].f = (float) src[sidx].u;
+                  break;
+               case GLSL_TYPE_INT:
+               case GLSL_TYPE_SAMPLER:
                case GLSL_TYPE_IMAGE:
-		  dst[didx].f = (float) src[sidx].i;
-		  break;
-	       case GLSL_TYPE_BOOL:
-		  dst[didx].f = src[sidx].i ? 1.0f : 0.0f;
-		  break;
+                  dst[didx].f = (float) src[sidx].i;
+                  break;
+               case GLSL_TYPE_BOOL:
+                  dst[didx].f = src[sidx].i ? 1.0f : 0.0f;
+                  break;
                case GLSL_TYPE_DOUBLE: {
                   double tmp;
                   memcpy(&tmp, &src[sidx].f, sizeof(tmp));
                   dst[didx].f = tmp;
-		  break;
+                  break;
                }
                case GLSL_TYPE_UINT64: {
                   uint64_t tmp;
                   memcpy(&tmp, &src[sidx].u, sizeof(tmp));
                   dst[didx].f = tmp;
                   break;
-               }
+                }
                case GLSL_TYPE_INT64: {
                   uint64_t tmp;
                   memcpy(&tmp, &src[sidx].i, sizeof(tmp));
                   dst[didx].f = tmp;
                   break;
                }
-	       default:
-		  assert(!"Should not get here.");
-		  break;
-	       }
-	       break;
-	    case GLSL_TYPE_DOUBLE:
-	       switch (uni->type->base_type) {
+               default:
+                  assert(!"Should not get here.");
+                  break;
+               }
+               break;
+
+            case GLSL_TYPE_DOUBLE:
+               switch (uni->type->base_type) {
                case GLSL_TYPE_UINT: {
                   double tmp = src[sidx].u;
                   memcpy(&dst[didx].f, &tmp, sizeof(tmp));
-		  break;
+                  break;
                }
-	       case GLSL_TYPE_INT:
-	       case GLSL_TYPE_SAMPLER:
+               case GLSL_TYPE_INT:
+               case GLSL_TYPE_SAMPLER:
                case GLSL_TYPE_IMAGE: {
                   double tmp = src[sidx].i;
                   memcpy(&dst[didx].f, &tmp, sizeof(tmp));
-		  break;
+                  break;
                }
                case GLSL_TYPE_BOOL: {
                   double tmp = src[sidx].i ? 1.0 : 0.0;
                   memcpy(&dst[didx].f, &tmp, sizeof(tmp));
-		  break;
+                  break;
                }
                case GLSL_TYPE_FLOAT: {
                   double tmp = src[sidx].f;
                   memcpy(&dst[didx].f, &tmp, sizeof(tmp));
-		  break;
+                  break;
                }
                case GLSL_TYPE_UINT64: {
                   uint64_t tmpu;
@@ -453,42 +453,43 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   memcpy(&dst[didx].f, &tmp, sizeof(tmp));
                   break;
                }
-	       default:
-		  assert(!"Should not get here.");
-		  break;
-	       }
-	       break;
-	    case GLSL_TYPE_INT:
-	    case GLSL_TYPE_UINT:
-	       switch (uni->type->base_type) {
-	       case GLSL_TYPE_FLOAT:
-		  /* While the GL 3.2 core spec doesn't explicitly
-		   * state how conversion of float uniforms to integer
-		   * values works, in section 6.2 "State Tables" on
-		   * page 267 it says:
-		   *
-		   *     "Unless otherwise specified, when floating
-		   *      point state is returned as integer values or
-		   *      integer state is returned as floating-point
-		   *      values it is converted in the fashion
-		   *      described in section 6.1.2"
-		   *
-		   * That section, on page 248, says:
-		   *
-		   *     "If GetIntegerv or GetInteger64v are called,
-		   *      a floating-point value is rounded to the
-		   *      nearest integer..."
-		   */
-		  dst[didx].i = IROUND(src[sidx].f);
-		  break;
-	       case GLSL_TYPE_BOOL:
-		  dst[didx].i = src[sidx].i ? 1 : 0;
-		  break;
+               default:
+                  assert(!"Should not get here.");
+                  break;
+               }
+               break;
+
+            case GLSL_TYPE_INT:
+            case GLSL_TYPE_UINT:
+               switch (uni->type->base_type) {
+               case GLSL_TYPE_FLOAT:
+                  /* While the GL 3.2 core spec doesn't explicitly
+                   * state how conversion of float uniforms to integer
+                   * values works, in section 6.2 "State Tables" on
+                   * page 267 it says:
+                   *
+                   *     "Unless otherwise specified, when floating
+                   *      point state is returned as integer values or
+                   *      integer state is returned as floating-point
+                   *      values it is converted in the fashion
+                   *      described in section 6.1.2"
+                   *
+                   * That section, on page 248, says:
+                   *
+                   *     "If GetIntegerv or GetInteger64v are called,
+                   *      a floating-point value is rounded to the
+                   *      nearest integer..."
+                   */
+                  dst[didx].i = IROUND(src[sidx].f);
+                  break;
+               case GLSL_TYPE_BOOL:
+                  dst[didx].i = src[sidx].i ? 1 : 0;
+                  break;
                case GLSL_TYPE_DOUBLE: {
                   double tmp;
                   memcpy(&tmp, &src[sidx].f, sizeof(tmp));
                   dst[didx].i = IROUNDD(tmp);
-		  break;
+                  break;
                }
                case GLSL_TYPE_UINT64: {
                   uint64_t tmp;
@@ -502,11 +503,12 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   dst[didx].i = tmp;
                   break;
                }
-	       default:
-		  assert(!"Should not get here.");
-		  break;
-	       }
-	       break;
+               default:
+                  assert(!"Should not get here.");
+                  break;
+               }
+               break;
+
             case GLSL_TYPE_INT64:
             case GLSL_TYPE_UINT64:
                switch (uni->type->base_type) {
@@ -537,11 +539,12 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                   break;
                }
                break;
-	    default:
-	       assert(!"Should not get here.");
-	       break;
-	    }
-	 }
+
+            default:
+               assert(!"Should not get here.");
+               break;
+            }
+         }
       }
    }
 }
