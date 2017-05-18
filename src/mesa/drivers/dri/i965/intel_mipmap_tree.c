@@ -628,6 +628,9 @@ miptree_create(struct brw_context *brw,
                                   alloc_flags);
    }
 
+   if (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT)
+      mt->bo->cache_coherent = false;
+
    return mt;
 }
 

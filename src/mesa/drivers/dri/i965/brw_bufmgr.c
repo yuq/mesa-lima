@@ -351,6 +351,7 @@ retry:
    bo->name = name;
    p_atomic_set(&bo->refcount, 1);
    bo->reusable = true;
+   bo->cache_coherent = bufmgr->has_llc;
 
    pthread_mutex_unlock(&bufmgr->lock);
 
