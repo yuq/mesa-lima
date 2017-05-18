@@ -172,7 +172,7 @@ get_blit_intratile_offset_el(const struct brw_context *brw,
                              uint32_t *y_offset_el)
 {
    enum isl_tiling tiling = intel_miptree_get_isl_tiling(mt);
-   isl_tiling_get_intratile_offset_el(tiling, mt->cpp, mt->pitch,
+   isl_tiling_get_intratile_offset_el(tiling, mt->cpp * 8, mt->pitch,
                                       total_x_offset_el, total_y_offset_el,
                                       base_address_offset,
                                       x_offset_el, y_offset_el);

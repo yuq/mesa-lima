@@ -1601,7 +1601,7 @@ isl_surf_get_image_offset_el(const struct isl_surf *surf,
  */
 void
 isl_tiling_get_intratile_offset_el(enum isl_tiling tiling,
-                                   uint8_t bs,
+                                   uint32_t bpb,
                                    uint32_t row_pitch,
                                    uint32_t total_x_offset_el,
                                    uint32_t total_y_offset_el,
@@ -1621,8 +1621,6 @@ isl_tiling_get_intratile_offset_sa(enum isl_tiling tiling,
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(format);
 
-   assert(fmtl->bpb % 8 == 0);
-
    /* For computing the intratile offsets, we actually want a strange unit
     * which is samples for multisampled surfaces but elements for compressed
     * surfaces.
@@ -1632,7 +1630,7 @@ isl_tiling_get_intratile_offset_sa(enum isl_tiling tiling,
    const uint32_t total_x_offset = total_x_offset_sa / fmtl->bw;
    const uint32_t total_y_offset = total_y_offset_sa / fmtl->bh;
 
-   isl_tiling_get_intratile_offset_el(tiling, fmtl->bpb / 8, row_pitch,
+   isl_tiling_get_intratile_offset_el(tiling, fmtl->bpb, row_pitch,
                                       total_x_offset, total_y_offset,
                                       base_address_offset,
                                       x_offset_sa, y_offset_sa);

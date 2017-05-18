@@ -2147,7 +2147,7 @@ isl_surf_get_image_offset_el(const struct isl_surf *surf,
 
 void
 isl_tiling_get_intratile_offset_el(enum isl_tiling tiling,
-                                   uint8_t bs,
+                                   uint32_t bpb,
                                    uint32_t row_pitch,
                                    uint32_t total_x_offset_el,
                                    uint32_t total_y_offset_el,
@@ -2156,14 +2156,13 @@ isl_tiling_get_intratile_offset_el(enum isl_tiling tiling,
                                    uint32_t *y_offset_el)
 {
    if (tiling == ISL_TILING_LINEAR) {
+      assert(bpb % 8 == 0);
       *base_address_offset = total_y_offset_el * row_pitch +
-                             total_x_offset_el * bs;
+                             total_x_offset_el * (bpb / 8);
       *x_offset_el = 0;
       *y_offset_el = 0;
       return;
    }
-
-   const uint32_t bpb = bs * 8;
 
    struct isl_tile_info tile_info;
    isl_tiling_get_info(tiling, bpb, &tile_info);
