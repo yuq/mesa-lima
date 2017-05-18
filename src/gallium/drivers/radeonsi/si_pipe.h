@@ -235,6 +235,8 @@ struct si_bindless_descriptor
 	struct pb_slab_entry		entry;
 	struct r600_resource		*buffer;
 	unsigned			offset;
+	uint32_t			desc_list[16];
+	bool				dirty;
 };
 
 struct si_texture_handle
@@ -420,6 +422,7 @@ struct si_context {
 
 	/* Bindless descriptors. */
 	struct util_dynarray	bindless_descriptors;
+	bool			bindless_descriptors_dirty;
 
 	/* Allocated bindless handles */
 	struct hash_table	*tex_handles;

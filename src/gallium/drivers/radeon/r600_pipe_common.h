@@ -181,6 +181,10 @@ struct r600_resource {
 
 	/* Whether the resource has been exported via resource_get_handle. */
 	unsigned			external_usage; /* PIPE_HANDLE_USAGE_* */
+
+	/* Whether this resource is referenced by bindless handles. */
+	bool				texture_handle_allocated;
+	bool				image_handle_allocated;
 };
 
 struct r600_transfer {
