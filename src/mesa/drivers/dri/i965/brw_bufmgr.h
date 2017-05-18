@@ -173,13 +173,23 @@ void brw_bo_reference(struct brw_bo *bo);
  */
 void brw_bo_unreference(struct brw_bo *bo);
 
+/* Must match MapBufferRange interface (for convenience) */
+#define MAP_READ        GL_MAP_READ_BIT
+#define MAP_WRITE       GL_MAP_WRITE_BIT
+#define MAP_ASYNC       GL_MAP_UNSYNCHRONIZED_BIT
+#define MAP_PERSISTENT  GL_MAP_PERSISTENT_BIT
+#define MAP_COHERENT    GL_MAP_COHERENT_BIT
+/* internal */
+#define MAP_INTERNAL_MASK       (0xff << 24)
+#define MAP_RAW                 (0x01 << 24)
+
 /**
  * Maps the buffer into userspace.
  *
  * This function will block waiting for any existing execution on the
  * buffer to complete, first.  The resulting mapping is returned.
  */
-MUST_CHECK void *brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, int write_enable);
+MUST_CHECK void *brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags);
 
 /**
  * Reduces the refcount on the userspace mapping of the buffer
@@ -253,7 +263,7 @@ struct brw_bo *brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
                                            unsigned int handle);
 void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
 MUST_CHECK void *brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo);
-MUST_CHECK void *brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo);
+MUST_CHECK void *brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags);
 
 int brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns);
 

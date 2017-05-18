@@ -659,7 +659,7 @@ set_domain(struct brw_context *brw, const char *action,
 }
 
 void *
-brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, int write_enable)
+brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
 
@@ -690,7 +690,7 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, int write_enable)
        bo->map_cpu);
 
    set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
-              write_enable ? I915_GEM_DOMAIN_CPU : 0);
+              flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
 
    bo_mark_mmaps_incoherent(bo);
    VG(VALGRIND_MAKE_MEM_DEFINED(bo->map_cpu, bo->size));
@@ -741,7 +741,7 @@ map_gtt(struct brw_bo *bo)
 }
 
 void *
-brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo)
+brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
 
@@ -799,7 +799,7 @@ brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo)
     * does reasonable things.
     */
    if (!bufmgr->has_llc)
-      return brw_bo_map_gtt(brw, bo);
+      return brw_bo_map_gtt(brw, bo, MAP_READ | MAP_WRITE);
 
    pthread_mutex_lock(&bufmgr->lock);
 

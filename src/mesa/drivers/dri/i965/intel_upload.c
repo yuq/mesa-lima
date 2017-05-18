@@ -101,9 +101,9 @@ intel_upload_space(struct brw_context *brw,
       brw->upload.bo = brw_bo_alloc(brw->bufmgr, "streamed data",
                                     MAX2(INTEL_UPLOAD_SIZE, size), 4096);
       if (brw->has_llc)
-         brw->upload.map = brw_bo_map_cpu(brw, brw->upload.bo, true);
+         brw->upload.map = brw_bo_map_cpu(brw, brw->upload.bo, MAP_READ | MAP_WRITE);
       else
-         brw->upload.map = brw_bo_map_gtt(brw, brw->upload.bo);
+         brw->upload.map = brw_bo_map_gtt(brw, brw->upload.bo, MAP_READ | MAP_WRITE);
    }
 
    brw->upload.next_offset = offset + size;

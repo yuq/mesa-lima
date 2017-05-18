@@ -328,6 +328,13 @@ brw_map_buffer_range(struct gl_context *ctx,
 
    assert(intel_obj);
 
+   STATIC_ASSERT(GL_MAP_UNSYNCHRONIZED_BIT == MAP_ASYNC);
+   STATIC_ASSERT(GL_MAP_WRITE_BIT == MAP_WRITE);
+   STATIC_ASSERT(GL_MAP_READ_BIT == MAP_READ);
+   STATIC_ASSERT(GL_MAP_PERSISTENT_BIT == MAP_PERSISTENT);
+   STATIC_ASSERT(GL_MAP_COHERENT_BIT == MAP_COHERENT);
+   assert((access & MAP_INTERNAL_MASK) == 0);
+
    /* _mesa_MapBufferRange (GL entrypoint) sets these, but the vbo module also
     * internally uses our functions directly.
     */
@@ -390,10 +397,9 @@ brw_map_buffer_range(struct gl_context *ctx,
                                                           alignment);
       void *map;
       if (brw->has_llc) {
-         map = brw_bo_map_cpu(brw, intel_obj->range_map_bo[index],
-                              (access & GL_MAP_WRITE_BIT) != 0);
+         map = brw_bo_map_cpu(brw, intel_obj->range_map_bo[index], access);
       } else {
-         map = brw_bo_map_gtt(brw, intel_obj->range_map_bo[index]);
+         map = brw_bo_map_gtt(brw, intel_obj->range_map_bo[index], access);
       }
       obj->Mappings[index].Pointer = map + intel_obj->map_extra[index];
       return obj->Mappings[index].Pointer;
@@ -408,10 +414,10 @@ brw_map_buffer_range(struct gl_context *ctx,
       map = brw_bo_map_unsynchronized(brw, intel_obj->buffer);
    } else if (!brw->has_llc && (!(access & GL_MAP_READ_BIT) ||
                               (access & GL_MAP_PERSISTENT_BIT))) {
-      map = brw_bo_map_gtt(brw, intel_obj->buffer);
+      map = brw_bo_map_gtt(brw, intel_obj->buffer, access);
       mark_buffer_inactive(intel_obj);
    } else {
-      map = brw_bo_map_cpu(brw, intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
+      map = brw_bo_map_cpu(brw, intel_obj->buffer, access);
       mark_buffer_inactive(intel_obj);
    }
 
