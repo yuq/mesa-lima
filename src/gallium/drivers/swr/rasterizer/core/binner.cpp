@@ -561,45 +561,6 @@ void BinTriangles(
         RDTSC_EVENT(FECullZeroAreaAndBackface, _mm_popcnt_u32(origTriMask ^ triMask), 0);
     }
 
-    {
-        // Simple non-conformant wireframe mode, useful for debugging
-        if (rastState.fillMode == SWR_FILLMODE_WIREFRAME)
-        {
-            // construct 3 SIMD lines out of the triangle and call the line binner for each SIMD
-            simdvector line[2];
-            simdscalar recipW[2];
-            line[0] = tri[0];
-            line[1] = tri[1];
-            recipW[0] = vRecipW0;
-            recipW[1] = vRecipW1;
-            BinPostSetupLines(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
-
-            line[0] = tri[1];
-            line[1] = tri[2];
-            recipW[0] = vRecipW1;
-            recipW[1] = vRecipW2;
-            BinPostSetupLines(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
-
-            line[0] = tri[2];
-            line[1] = tri[0];
-            recipW[0] = vRecipW2;
-            recipW[1] = vRecipW0;
-            BinPostSetupLines(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
-
-            AR_END(FEBinTriangles, 1);
-            return;
-        }
-        else if (rastState.fillMode == SWR_FILLMODE_POINT)
-        {
-            // bin 3 points
-
-            BinPostSetupPoints(pDC, pa, workerId, &tri[0], triMask, primID, viewportIdx);
-            BinPostSetupPoints(pDC, pa, workerId, &tri[1], triMask, primID, viewportIdx);
-            BinPostSetupPoints(pDC, pa, workerId, &tri[2], triMask, primID, viewportIdx);
-            return;
-        }
-    }
-
     /// Note: these variable initializations must stay above any 'goto endBenTriangles'
     // compute per tri backface
     uint32_t frontFaceMask = frontWindingTris;
@@ -737,9 +698,43 @@ void BinTriangles(
         triMask = triMask & ~maskOutsideScissor;
     }
 
-    if (!triMask)
+endBinTriangles:
+
+    // Send surviving triangles to the line or point binner based on fill mode
+    if (rastState.fillMode == SWR_FILLMODE_WIREFRAME)
     {
-        goto endBinTriangles;
+        // Simple non-conformant wireframe mode, useful for debugging.
+        // Construct 3 SIMD lines out of the triangle and call the line binner for each SIMD
+        simdvector line[2];
+        simdscalar recipW[2];
+        line[0] = tri[0];
+        line[1] = tri[1];
+        recipW[0] = vRecipW0;
+        recipW[1] = vRecipW1;
+        BinPostSetupLines(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+
+        line[0] = tri[1];
+        line[1] = tri[2];
+        recipW[0] = vRecipW1;
+        recipW[1] = vRecipW2;
+        BinPostSetupLines(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+
+        line[0] = tri[2];
+        line[1] = tri[0];
+        recipW[0] = vRecipW2;
+        recipW[1] = vRecipW0;
+        BinPostSetupLines(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+
+        AR_END(FEBinTriangles, 1);
+        return;
+    }
+    else if (rastState.fillMode == SWR_FILLMODE_POINT)
+    {
+        // Bin 3 points
+        BinPostSetupPoints(pDC, pa, workerId, &tri[0], triMask, primID, viewportIdx);
+        BinPostSetupPoints(pDC, pa, workerId, &tri[1], triMask, primID, viewportIdx);
+        BinPostSetupPoints(pDC, pa, workerId, &tri[2], triMask, primID, viewportIdx);
+        return;
     }
 
     // Convert triangle bbox to macrotile units.
@@ -776,8 +771,6 @@ void BinTriangles(
     {
         _simd_store_si((simdscalari*)aRTAI, _simd_setzero_si());
     }
-
-endBinTriangles:
 
     // scan remaining valid triangles and bin each separately
     while (_BitScanForward(&triIndex, triMask))
@@ -997,36 +990,6 @@ void SIMDAPI BinTriangles_simd16(
         RDTSC_EVENT(FECullZeroAreaAndBackface, _mm_popcnt_u32(origTriMask ^ triMask), 0);
     }
 
-    {
-        // Simple non-conformant wireframe mode, useful for debugging
-        if (rastState.fillMode == SWR_FILLMODE_WIREFRAME)
-        {
-            // construct 3 SIMD lines out of the triangle and call the line binner for each SIMD
-            simd16vector line[2];
-            simd16scalar recipW[2];
-            line[0] = tri[0];
-            line[1] = tri[1];
-            recipW[0] = vRecipW0;
-            recipW[1] = vRecipW1;
-            BinPostSetupLines_simd16(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
-
-            line[0] = tri[1];
-            line[1] = tri[2];
-            recipW[0] = vRecipW1;
-            recipW[1] = vRecipW2;
-            BinPostSetupLines_simd16(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
-
-            line[0] = tri[2];
-            line[1] = tri[0];
-            recipW[0] = vRecipW2;
-            recipW[1] = vRecipW0;
-            BinPostSetupLines_simd16(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
-
-            AR_END(FEBinTriangles, 1);
-            return;
-        }
-    }
-
     /// Note: these variable initializations must stay above any 'goto endBenTriangles'
     // compute per tri backface
     uint32_t frontFaceMask = frontWindingTris;
@@ -1172,9 +1135,43 @@ void SIMDAPI BinTriangles_simd16(
         triMask = triMask & ~maskOutsideScissor;
     }
 
-    if (!triMask)
+endBinTriangles:
+
+    // Send surviving triangles to the line or point binner based on fill mode
+    if (rastState.fillMode == SWR_FILLMODE_WIREFRAME)
     {
-        goto endBinTriangles;
+        // Simple non-conformant wireframe mode, useful for debugging
+        // construct 3 SIMD lines out of the triangle and call the line binner for each SIMD
+        simd16vector line[2];
+        simd16scalar recipW[2];
+        line[0] = tri[0];
+        line[1] = tri[1];
+        recipW[0] = vRecipW0;
+        recipW[1] = vRecipW1;
+        BinPostSetupLines_simd16(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+
+        line[0] = tri[1];
+        line[1] = tri[2];
+        recipW[0] = vRecipW1;
+        recipW[1] = vRecipW2;
+        BinPostSetupLines_simd16(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+
+        line[0] = tri[2];
+        line[1] = tri[0];
+        recipW[0] = vRecipW2;
+        recipW[1] = vRecipW0;
+        BinPostSetupLines_simd16(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+
+        AR_END(FEBinTriangles, 1);
+        return;
+    }
+    else if (rastState.fillMode == SWR_FILLMODE_POINT)
+    {
+        // Bin 3 points
+        BinPostSetupPoints_simd16(pDC, pa, workerId, &tri[0], triMask, primID, viewportIdx);
+        BinPostSetupPoints_simd16(pDC, pa, workerId, &tri[1], triMask, primID, viewportIdx);
+        BinPostSetupPoints_simd16(pDC, pa, workerId, &tri[2], triMask, primID, viewportIdx);
+        return;
     }
 
     // Convert triangle bbox to macrotile units.
@@ -1185,10 +1182,10 @@ void SIMDAPI BinTriangles_simd16(
 
     OSALIGNSIMD16(uint32_t) aMTLeft[KNOB_SIMD16_WIDTH], aMTRight[KNOB_SIMD16_WIDTH], aMTTop[KNOB_SIMD16_WIDTH], aMTBottom[KNOB_SIMD16_WIDTH];
 
-    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTLeft),    bbox.xmin);
-    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTRight),   bbox.xmax);
-    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTTop),     bbox.ymin);
-    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTBottom),  bbox.ymax);
+    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTLeft), bbox.xmin);
+    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTRight), bbox.xmax);
+    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTTop), bbox.ymin);
+    _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTBottom), bbox.ymax);
 
     // transpose verts needed for backend
     /// @todo modify BE to take non-transformed verts
@@ -1222,7 +1219,6 @@ void SIMDAPI BinTriangles_simd16(
         _simd16_store_si(reinterpret_cast<simd16scalari *>(aRTAI), _simd16_setzero_si());
     }
 
-endBinTriangles:
 
     // scan remaining valid triangles and bin each separately
     while (_BitScanForward(&triIndex, triMask))
