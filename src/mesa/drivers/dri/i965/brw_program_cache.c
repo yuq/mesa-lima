@@ -227,7 +227,7 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
       if (brw->has_llc) {
          memcpy(llc_map, cache->map, cache->next_offset);
       } else {
-         void *map = brw_bo_map_cpu(brw, cache->bo, MAP_READ);
+         void *map = brw_bo_map(brw, cache->bo, MAP_READ);
          brw_bo_subdata(new_bo, 0, cache->next_offset, map);
          brw_bo_unmap(cache->bo);
       }
@@ -268,7 +268,7 @@ brw_lookup_prog(const struct brw_cache *cache,
 
          void *map;
          if (!brw->has_llc)
-            map = brw_bo_map_cpu(brw, cache->bo, MAP_READ);
+            map = brw_bo_map(brw, cache->bo, MAP_READ);
          else
             map = cache->map;
 
@@ -550,7 +550,7 @@ brw_print_program_cache(struct brw_context *brw)
    void *map;
 
    if (!brw->has_llc)
-      map = brw_bo_map_cpu(brw, cache->bo, MAP_READ);
+      map = brw_bo_map(brw, cache->bo, MAP_READ);
    else
       map = cache->map;
 

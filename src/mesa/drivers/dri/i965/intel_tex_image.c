@@ -534,7 +534,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
       intel_batchbuffer_flush(brw);
    }
 
-   void *map = brw_bo_map_cpu(brw, bo, MAP_READ);
+   void *map = brw_bo_map(brw, bo, MAP_READ | MAP_RAW);
    if (map == NULL) {
       DBG("%s: failed to map bo\n", __func__);
       return false;

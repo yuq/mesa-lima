@@ -100,7 +100,7 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
 
    batch->bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
    if (has_llc) {
-      batch->map = brw_bo_map_cpu(NULL, batch->bo, MAP_READ | MAP_WRITE);
+      batch->map = brw_bo_map(NULL, batch->bo, MAP_READ | MAP_WRITE);
    }
    batch->map_next = batch->map;
 
@@ -239,7 +239,7 @@ do_batch_dump(struct brw_context *brw)
    if (batch->ring != RENDER_RING)
       return;
 
-   void *map = brw_bo_map_cpu(brw, batch->bo, MAP_READ);
+   void *map = brw_bo_map(brw, batch->bo, MAP_READ);
    if (map == NULL) {
       fprintf(stderr,
 	      "WARNING: failed to map batchbuffer, "

@@ -578,7 +578,7 @@ brw_collect_shader_time(struct brw_context *brw)
     * delaying reading the reports, but it doesn't look like it's a big
     * overhead compared to the cost of tracking the time in the first place.
     */
-   void *bo_map = brw_bo_map_cpu(brw, brw->shader_time.bo, MAP_READ | MAP_WRITE);
+   void *bo_map = brw_bo_map(brw, brw->shader_time.bo, MAP_READ | MAP_WRITE);
 
    for (int i = 0; i < brw->shader_time.num_entries; i++) {
       uint32_t *times = bo_map + i * 3 * BRW_SHADER_TIME_STRIDE;

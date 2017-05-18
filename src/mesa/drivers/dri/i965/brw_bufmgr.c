@@ -658,7 +658,7 @@ set_domain(struct brw_context *brw, const char *action,
    }
 }
 
-void *
+static void *
 brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
@@ -740,7 +740,7 @@ map_gtt(struct brw_bo *bo)
    return bo->map_gtt;
 }
 
-void *
+static void *
 brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
@@ -812,6 +812,32 @@ brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo)
    pthread_mutex_unlock(&bufmgr->lock);
 
    return map;
+}
+
+static bool
+can_map_cpu(struct brw_bo *bo, unsigned flags)
+{
+   if (bo->cache_coherent)
+      return true;
+
+   if (flags & MAP_PERSISTENT)
+      return false;
+
+   if (flags & MAP_COHERENT)
+      return false;
+
+   return !(flags & MAP_WRITE);
+}
+
+void *
+brw_bo_map(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
+{
+   if (bo->tiling_mode != I915_TILING_NONE && !(flags & MAP_RAW))
+      return brw_bo_map_gtt(brw, bo, flags);
+   else if (can_map_cpu(bo, flags))
+      return brw_bo_map_cpu(brw, bo, flags);
+   else
+      return brw_bo_map_gtt(brw, bo, flags);
 }
 
 int

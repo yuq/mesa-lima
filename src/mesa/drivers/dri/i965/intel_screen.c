@@ -1420,7 +1420,7 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    if (bo == NULL)
       goto err_results;
 
-   map = brw_bo_map_cpu(NULL, bo, MAP_WRITE);
+   map = brw_bo_map(NULL, bo, MAP_WRITE);
    if (!map)
       goto err_batch;
 
@@ -1477,7 +1477,7 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    drmIoctl(dri_screen->fd, DRM_IOCTL_I915_GEM_EXECBUFFER2, &execbuf);
 
    /* Check whether the value got written. */
-   void *results_map = brw_bo_map_cpu(NULL, results, MAP_READ);
+   void *results_map = brw_bo_map(NULL, results, MAP_READ);
    if (results_map) {
       success = *((uint32_t *)results_map + offset) == expected_value;
       brw_bo_unmap(results);

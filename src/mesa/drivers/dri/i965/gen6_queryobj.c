@@ -221,7 +221,7 @@ gen6_queryobj_get_results(struct gl_context *ctx,
    if (query->bo == NULL)
       return;
 
-   uint64_t *results = brw_bo_map_cpu(brw, query->bo, MAP_READ);
+   uint64_t *results = brw_bo_map(brw, query->bo, MAP_READ);
    switch (query->Base.Target) {
    case GL_TIME_ELAPSED:
       /* The query BO contains the starting and ending timestamps.

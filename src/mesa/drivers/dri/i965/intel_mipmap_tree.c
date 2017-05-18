@@ -1386,7 +1386,7 @@ intel_miptree_init_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   void *map = brw_bo_map_gtt(brw, mt->mcs_buf->bo, MAP_WRITE);
+   void *map = brw_bo_map(brw, mt->mcs_buf->bo, MAP_WRITE);
    if (unlikely(map == NULL)) {
       fprintf(stderr, "Failed to map mcs buffer into GTT\n");
       brw_bo_unreference(mt->mcs_buf->bo);
@@ -2426,22 +2426,7 @@ intel_miptree_map_raw(struct brw_context *brw,
    if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
 
-   /* brw_bo_map_cpu() uses a WB mmaping of the buffer's backing storage. It
-    * will utilize the CPU cache even if the buffer is incoherent with the
-    * GPU (i.e. any writes will be stored in the cache and not flushed to
-    * memory and so will be invisible to the GPU or display engine). This
-    * is the majority of buffers on a !llc machine, but even on a llc
-    * almost all scanouts are incoherent with the CPU. A WB write into the
-    * backing storage of the current scanout will not be immediately
-    * visible on the screen. The transfer from cache to screen is slow and
-    * indeterministic causing visible glitching on the screen. Never use
-    * this WB mapping for writes to an active scanout (reads are fine, so
-    * long as cache consistency is maintained).
-    */
-   if (mt->tiling != I915_TILING_NONE || mt->is_scanout)
-      return brw_bo_map_gtt(brw, bo, mode);
-   else
-      return brw_bo_map_cpu(brw, bo, mode);
+   return brw_bo_map(brw, bo, mode);
 }
 
 static void

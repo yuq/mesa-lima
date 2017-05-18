@@ -395,12 +395,7 @@ brw_map_buffer_range(struct gl_context *ctx,
                                                           length +
                                                           intel_obj->map_extra[index],
                                                           alignment);
-      void *map;
-      if (brw->has_llc) {
-         map = brw_bo_map_cpu(brw, intel_obj->range_map_bo[index], access);
-      } else {
-         map = brw_bo_map_gtt(brw, intel_obj->range_map_bo[index], access);
-      }
+      void *map = brw_bo_map(brw, intel_obj->range_map_bo[index], access);
       obj->Mappings[index].Pointer = map + intel_obj->map_extra[index];
       return obj->Mappings[index].Pointer;
    }
@@ -412,12 +407,8 @@ brw_map_buffer_range(struct gl_context *ctx,
          perf_debug("MapBufferRange with GL_MAP_UNSYNCHRONIZED_BIT stalling (it's actually synchronized on non-LLC platforms)\n");
       }
       map = brw_bo_map_unsynchronized(brw, intel_obj->buffer);
-   } else if (!brw->has_llc && (!(access & GL_MAP_READ_BIT) ||
-                              (access & GL_MAP_PERSISTENT_BIT))) {
-      map = brw_bo_map_gtt(brw, intel_obj->buffer, access);
-      mark_buffer_inactive(intel_obj);
    } else {
-      map = brw_bo_map_cpu(brw, intel_obj->buffer, access);
+      map = brw_bo_map(brw, intel_obj->buffer, access);
       mark_buffer_inactive(intel_obj);
    }
 
