@@ -471,7 +471,7 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                    *      a floating-point value is rounded to the
                    *      nearest integer..."
                    */
-                  dst[didx].i = IROUND(src[sidx].f);
+                  dst[didx].i = (int64_t) roundf(src[sidx].f);
                   break;
                case GLSL_TYPE_BOOL:
                   dst[didx].i = src[sidx].i ? 1 : 0;
@@ -482,7 +482,7 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
                case GLSL_TYPE_DOUBLE: {
                   double tmp;
                   memcpy(&tmp, &src[sidx].f, sizeof(tmp));
-                  dst[didx].i = IROUNDD(tmp);
+                  dst[didx].i = (int64_t) round(tmp);
                   break;
                }
                case GLSL_TYPE_UINT64: {
