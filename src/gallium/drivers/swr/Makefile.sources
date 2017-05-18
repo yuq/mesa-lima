@@ -74,6 +74,7 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/backend.cpp \
 	rasterizer/core/backend.h \
 	rasterizer/core/binner.cpp \
+	rasterizer/core/binner.h \
 	rasterizer/core/blend.h \
 	rasterizer/core/clip.cpp \
 	rasterizer/core/clip.h \
