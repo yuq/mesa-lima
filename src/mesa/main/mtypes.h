@@ -2977,6 +2977,7 @@ struct gl_shader_program
 #define GLSL_REPORT_ERRORS 0x40  /**< Print compilation errors */
 #define GLSL_DUMP_ON_ERROR 0x80 /**< Dump shaders to stderr on compile error */
 #define GLSL_CACHE_INFO 0x100 /**< Print debug information about shader cache */
+#define GLSL_CACHE_FALLBACK 0x200 /**< Force shader cache fallback paths */
 
 
 /**
