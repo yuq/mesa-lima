@@ -204,6 +204,11 @@ blorp_ccs_resolve(struct blorp_batch *batch,
                   enum blorp_fast_clear_op resolve_op);
 
 void
+blorp_ccs_ambiguate(struct blorp_batch *batch,
+                    struct blorp_surf *surf,
+                    uint32_t level, uint32_t layer);
+
+void
 blorp_mcs_partial_resolve(struct blorp_batch *batch,
                           struct blorp_surf *surf,
                           enum isl_format format,
