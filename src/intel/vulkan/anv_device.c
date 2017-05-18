@@ -225,7 +225,12 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
-   device->supports_48bit_addresses = anv_gem_supports_48b_addresses(fd);
+   /* The kernel query only tells us whether or not the kernel supports the
+    * EXEC_OBJECT_SUPPORTS_48B_ADDRESS flag and not whether or not the
+    * hardware has actual 48bit address support.
+    */
+   device->supports_48bit_addresses =
+      (device->info.gen >= 8) && anv_gem_supports_48b_addresses(fd);
 
    result = anv_compute_heap_size(fd, &device->heap_size);
    if (result != VK_SUCCESS)
