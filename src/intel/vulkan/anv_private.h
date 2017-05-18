@@ -2064,6 +2064,12 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
                         enum blorp_hiz_op op);
 
+void
+anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
+                    const struct anv_image *image,
+                    const struct isl_view *view,
+                    const VkImageSubresourceRange *subresourceRange);
+
 enum isl_aux_usage
 anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
                         const struct anv_image *image,
