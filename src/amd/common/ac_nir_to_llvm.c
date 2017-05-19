@@ -66,6 +66,7 @@ struct ac_nir_context {
 	struct hash_table *phis;
 	struct hash_table *vars;
 
+	LLVMValueRef main_function;
 	LLVMBasicBlockRef continue_block;
 	LLVMBasicBlockRef break_block;
 
@@ -6101,6 +6102,8 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 		nctx->nir = &ctx;
 
 	ctx.stage = nir->stage;
+
+	ctx.main_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx.ac.builder));
 
 	nir_foreach_variable(variable, &nir->outputs)
 		handle_shader_output_decl(&ctx, nir, variable);
