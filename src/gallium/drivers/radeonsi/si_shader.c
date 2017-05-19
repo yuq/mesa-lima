@@ -3030,15 +3030,18 @@ static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 		lp_build_endif(&ctx->merged_wrap_if_state);
 }
 
-static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
+static void si_llvm_emit_vs_epilogue(struct ac_shader_abi *abi,
+				     unsigned max_outputs,
+				     LLVMValueRef *addrs)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	struct si_shader_output_values *outputs = NULL;
 	int i,j;
 
 	assert(!ctx->shader->is_gs_copy_shader);
+	assert(info->num_outputs <= max_outputs);
 
 	outputs = MALLOC((info->num_outputs + 1) * sizeof(outputs[0]));
 
@@ -3069,7 +3072,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 			}
 
 			for (j = 0; j < 4; j++) {
-				addr = ctx->outputs[i][j];
+				addr = addrs[4 * i + j];
 				val = LLVMBuildLoad(gallivm->builder, addr, "");
 				val = ac_build_clamp(&ctx->ac, val);
 				LLVMBuildStore(gallivm->builder, val, addr);
@@ -3087,7 +3090,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 		for (j = 0; j < 4; j++) {
 			outputs[i].values[j] =
 				LLVMBuildLoad(gallivm->builder,
-					      ctx->outputs[i][j],
+					      addrs[4 * i + j],
 					      "");
 			outputs[i].vertex_stream[j] =
 				(info->output_streams[i] >> (2 * j)) & 3;
@@ -3101,8 +3104,8 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 	if (ctx->shader->key.mono.u.vs_export_prim_id) {
 		outputs[i].semantic_name = TGSI_SEMANTIC_PRIMID;
 		outputs[i].semantic_index = 0;
-		outputs[i].values[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
-					       get_primitive_id(ctx, 0));
+		outputs[i].values[0] = LLVMBuildBitCast(gallivm->builder,
+				get_primitive_id(ctx, 0), ctx->f32, "");
 		for (j = 1; j < 4; j++)
 			outputs[i].values[j] = LLVMConstReal(ctx->f32, 0);
 
@@ -3111,8 +3114,16 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 		i++;
 	}
 
-	si_llvm_export_vs(bld_base, outputs, i);
+	si_llvm_export_vs(&ctx->bld_base, outputs, i);
 	FREE(outputs);
+}
+
+static void si_tgsi_emit_epilogue(struct lp_build_tgsi_context *bld_base)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+
+	ctx->abi.emit_outputs(&ctx->abi, RADEON_LLVM_MAX_OUTPUTS,
+			      &ctx->outputs[0][0]);
 }
 
 struct si_ps_exports {
@@ -5562,8 +5573,10 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 			bld_base->emit_epilogue = si_llvm_emit_ls_epilogue;
 		else if (shader->key.as_es)
 			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
-		else
-			bld_base->emit_epilogue = si_llvm_emit_vs_epilogue;
+		else {
+			ctx->abi.emit_outputs = si_llvm_emit_vs_epilogue;
+			bld_base->emit_epilogue = si_tgsi_emit_epilogue;
+		}
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tcs;
@@ -5575,8 +5588,10 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tes;
 		if (shader->key.as_es)
 			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
-		else
-			bld_base->emit_epilogue = si_llvm_emit_vs_epilogue;
+		else {
+			ctx->abi.emit_outputs = si_llvm_emit_vs_epilogue;
+			bld_base->emit_epilogue = si_tgsi_emit_epilogue;
+		}
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_gs;

@@ -245,6 +245,13 @@ si_shader_context(struct lp_build_tgsi_context *bld_base)
 	return (struct si_shader_context*)bld_base;
 }
 
+static inline struct si_shader_context *
+si_shader_context_from_abi(struct ac_shader_abi *abi)
+{
+	struct si_shader_context *ctx = NULL;
+	return container_of(abi, ctx, abi);
+}
+
 void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
 
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,

@@ -42,6 +42,10 @@ struct ac_shader_abi {
 	 * driver_location.
 	 */
 	LLVMValueRef *inputs;
+
+	void (*emit_outputs)(struct ac_shader_abi *abi,
+			     unsigned max_outputs,
+			     LLVMValueRef *addrs);
 };
 
 #endif /* AC_SHADER_ABI_H */
