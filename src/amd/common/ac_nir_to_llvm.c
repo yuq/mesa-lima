@@ -2823,7 +2823,7 @@ load_tes_input(struct nir_to_llvm_context *ctx,
 						     is_compact, vertex_index, indir_index);
 
 	result = ac_build_buffer_load(&ctx->ac, ctx->hs_ring_tess_offchip, instr->num_components, NULL,
-				      buf_addr, ctx->oc_lds, is_compact ? (4 * const_index) : 0, 1, 0, true);
+				      buf_addr, ctx->oc_lds, is_compact ? (4 * const_index) : 0, 1, 0, true, false);
 	result = trim_vector(ctx, result, instr->num_components);
 	result = LLVMBuildBitCast(ctx->builder, result, get_def_type(ctx, &instr->dest.ssa), "");
 	return result;

@@ -833,14 +833,14 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 
 	if (swizzle == ~0) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
-					     0, 1, 0, can_speculate);
+					     0, 1, 0, can_speculate, false);
 
 		return LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 	}
 
 	if (!tgsi_type_is_64bit(type)) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
-					     0, 1, 0, can_speculate);
+					     0, 1, 0, can_speculate, false);
 
 		value = LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 		return LLVMBuildExtractElement(gallivm->builder, value,
@@ -848,10 +848,10 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	}
 
 	value = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
-	                          swizzle * 4, 1, 0, can_speculate);
+	                          swizzle * 4, 1, 0, can_speculate, false);
 
 	value2 = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
-	                           swizzle * 4 + 4, 1, 0, can_speculate);
+	                           swizzle * 4 + 4, 1, 0, can_speculate, false);
 
 	return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 }
@@ -1154,14 +1154,14 @@ static LLVMValueRef fetch_input_gs(
 	soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle) * 256, 0);
 
 	value = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1, ctx->i32_0,
-				     vtx_offset, soffset, 0, 1, 0, true);
+				     vtx_offset, soffset, 0, 1, 0, true, false);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle + 1) * 256, 0);
 
 		value2 = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1,
 					      ctx->i32_0, vtx_offset, soffset,
-					      0, 1, 0, true);
+					      0, 1, 0, true, false);
 		return si_llvm_emit_fetch_64bit(bld_base, type,
 						value, value2);
 	}
@@ -1389,12 +1389,8 @@ static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
 				      LLVMValueRef resource,
 				      LLVMValueRef offset)
 {
-	LLVMBuilderRef builder = ctx->gallivm.builder;
-	LLVMValueRef args[2] = {resource, offset};
-
-	return lp_build_intrinsic(builder, "llvm.SI.load.const.v4i32", ctx->f32, args, 2,
-				  LP_FUNC_ATTR_READNONE |
-				  LP_FUNC_ATTR_LEGACY);
+	return ac_build_buffer_load(&ctx->ac, resource, 1, NULL, offset, NULL,
+				    0, 0, 0, true, true);
 }
 
 static LLVMValueRef load_sample_position(struct si_shader_context *ctx, LLVMValueRef sample_id)
@@ -5199,7 +5195,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 					ac_build_buffer_load(&ctx.ac,
 							     ctx.gsvs_ring[0], 1,
 							     ctx.i32_0, voffset,
-							     soffset, 0, 1, 1, true);
+							     soffset, 0, 1, 1,
+							     true, false);
 			}
 		}
 

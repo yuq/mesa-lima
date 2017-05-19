@@ -143,7 +143,8 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		     unsigned inst_offset,
 		     unsigned glc,
 		     unsigned slc,
-		     bool can_speculate);
+		     bool can_speculate,
+		     bool allow_smem);
 
 LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					 LLVMValueRef rsrc,
