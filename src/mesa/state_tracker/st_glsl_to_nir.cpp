@@ -317,6 +317,8 @@ sort_varyings(struct exec_list *var_list)
 void
 st_finalize_nir(struct st_context *st, struct gl_program *prog, nir_shader *nir)
 {
+   struct pipe_screen *screen = st->pipe->screen;
+
    NIR_PASS_V(nir, nir_split_var_copies);
    NIR_PASS_V(nir, nir_lower_var_copies);
    NIR_PASS_V(nir, nir_lower_io_types);
@@ -372,7 +374,10 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog, nir_shader *nir)
    NIR_PASS_V(nir, nir_lower_system_values);
    NIR_PASS_V(nir, nir_lower_io, nir_var_all, st_glsl_type_size,
               (nir_lower_io_options)0);
-   NIR_PASS_V(nir, nir_lower_samplers, shader_program);
+   if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
+      NIR_PASS_V(nir, nir_lower_samplers_as_deref, shader_program);
+   else
+      NIR_PASS_V(nir, nir_lower_samplers, shader_program);
 }
 
 struct gl_program *
