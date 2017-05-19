@@ -2942,6 +2942,7 @@ AC_CONFIG_FILES([Makefile
                  src/mesa/state_tracker/tests/Makefile
                  src/util/Makefile
                  src/util/tests/hash_table/Makefile
+                 src/util/tests/string_buffer/Makefile
                  src/util/xmlpool/Makefile
                  src/vulkan/Makefile])
 
