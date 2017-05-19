@@ -537,6 +537,7 @@ struct wsi_wl_swapchain {
    struct wl_surface *                          surface;
    uint32_t                                     surface_version;
    struct wl_drm *                              drm_wrapper;
+   struct wl_callback *                         frame;
 
    VkExtent2D                                   extent;
    VkFormat                                     vk_format;
@@ -616,6 +617,7 @@ frame_handle_done(void *data, struct wl_callback *callback, uint32_t serial)
 {
    struct wsi_wl_swapchain *chain = data;
 
+   chain->frame = NULL;
    chain->fifo_ready = true;
 
    wl_callback_destroy(callback);
@@ -658,8 +660,8 @@ wsi_wl_swapchain_queue_present(struct wsi_swapchain *wsi_chain,
    }
 
    if (chain->base.present_mode == VK_PRESENT_MODE_FIFO_KHR) {
-      struct wl_callback *frame = wl_surface_frame(chain->surface);
-      wl_callback_add_listener(frame, &frame_listener, chain);
+      chain->frame = wl_surface_frame(chain->surface);
+      wl_callback_add_listener(chain->frame, &frame_listener, chain);
       chain->fifo_ready = false;
    }
 
@@ -741,12 +743,16 @@ wsi_wl_swapchain_destroy(struct wsi_swapchain *wsi_chain,
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)wsi_chain;
 
    for (uint32_t i = 0; i < chain->base.image_count; i++) {
-      if (chain->images[i].buffer)
+      if (chain->images[i].buffer) {
+         wl_buffer_destroy(chain->images[i].buffer);
          chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
                                                chain->images[i].image,
                                                chain->images[i].memory);
+      }
    }
 
+   if (chain->frame)
+      wl_callback_destroy(chain->frame);
    if (chain->surface)
       wl_proxy_wrapper_destroy(chain->surface);
    if (chain->drm_wrapper)
@@ -791,6 +797,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->queue = NULL;
    chain->surface = NULL;
    chain->drm_wrapper = NULL;
+   chain->frame = NULL;
 
    bool alpha = pCreateInfo->compositeAlpha ==
                       VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
