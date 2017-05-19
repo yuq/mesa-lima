@@ -231,21 +231,11 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
       return;
 
    /* Check if depth buffer is in depth/stencil format.  If so, then it's only
-    * safe to invalidate it if we're also clearing stencil, and both depth_irb
-    * and stencil_irb point to the same miptree.
-    *
-    * Note: it's not sufficient to check for the case where
-    * _mesa_get_format_base_format(depth_mt->format) == GL_DEPTH_STENCIL,
-    * because this fails to catch depth/stencil buffers on hardware that uses
-    * separate stencil.  To catch that case, we check whether
-    * depth_mt->stencil_mt is non-NULL.
+    * safe to invalidate it if we're also clearing stencil.
     */
    if (depth_irb && invalidate_depth &&
-       (_mesa_get_format_base_format(depth_mt->format) == GL_DEPTH_STENCIL ||
-        depth_mt->stencil_mt)) {
-      invalidate_depth = invalidate_stencil && depth_irb && stencil_irb
-         && depth_irb->mt == stencil_irb->mt;
-   }
+      _mesa_get_format_base_format(depth_mt->format) == GL_DEPTH_STENCIL)
+      invalidate_depth = invalidate_stencil && stencil_irb;
 
    uint32_t tile_mask_x, tile_mask_y;
    brw_get_depthstencil_tile_masks(depth_mt,
