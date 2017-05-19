@@ -206,6 +206,8 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libvulkan_intel
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 
+LOCAL_LDFLAGS += -Wl,--build-id=sha1
+
 LOCAL_SRC_FILES := \
 	$(VULKAN_GEM_FILES)
 
