@@ -178,24 +178,26 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    /* Upload a user index buffer. */
    unsigned index_offset = 0;
-   struct pipe_resource *indexbuf = info->has_user_indices ? NULL : info->index.resource;
-   if (info->index_size && info->has_user_indices &&
-       !util_upload_index_buffer(pctx, info, &indexbuf, &index_offset)) {
-      BUG("Index buffer upload failed.");
-      return;
-   }
+   struct pipe_resource *indexbuf = NULL;
 
-   if (info->index_size && indexbuf) {
+   if (info->index_size) {
+      indexbuf = info->has_user_indices ? NULL : info->index.resource;
+      if (info->has_user_indices &&
+          !util_upload_index_buffer(pctx, info, &indexbuf, &index_offset)) {
+         BUG("Index buffer upload failed.");
+         return;
+      }
+
       ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo = etna_resource(indexbuf)->bo;
       ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.offset = index_offset;
       ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.flags = ETNA_RELOC_READ;
       ctx->index_buffer.FE_INDEX_STREAM_CONTROL = translate_index_size(info->index_size);
       ctx->dirty |= ETNA_DIRTY_INDEX_BUFFER;
-   }
 
-   if (info->index_size && !ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo) {
-      BUG("Unsupported or no index buffer");
-      return;
+      if (!ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo) {
+         BUG("Unsupported or no index buffer");
+         return;
+      }
    }
 
    struct etna_shader_key key = {};
