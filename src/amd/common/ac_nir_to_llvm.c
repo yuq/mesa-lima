@@ -3956,89 +3956,89 @@ visit_load_tess_coord(struct nir_to_llvm_context *ctx,
 				get_def_type(ctx->nir, &instr->dest.ssa), "");
 }
 
-static void visit_intrinsic(struct nir_to_llvm_context *ctx,
+static void visit_intrinsic(struct ac_nir_context *ctx,
                             nir_intrinsic_instr *instr)
 {
 	LLVMValueRef result = NULL;
 
 	switch (instr->intrinsic) {
 	case nir_intrinsic_load_work_group_id: {
-		result = ctx->workgroup_ids;
+		result = ctx->nctx->workgroup_ids;
 		break;
 	}
 	case nir_intrinsic_load_base_vertex: {
-		result = ctx->abi.base_vertex;
+		result = ctx->abi->base_vertex;
 		break;
 	}
 	case nir_intrinsic_load_vertex_id_zero_base: {
-		result = ctx->abi.vertex_id;
+		result = ctx->abi->vertex_id;
 		break;
 	}
 	case nir_intrinsic_load_local_invocation_id: {
-		result = ctx->local_invocation_ids;
+		result = ctx->nctx->local_invocation_ids;
 		break;
 	}
 	case nir_intrinsic_load_base_instance:
-		result = ctx->abi.start_instance;
+		result = ctx->abi->start_instance;
 		break;
 	case nir_intrinsic_load_draw_id:
-		result = ctx->abi.draw_id;
+		result = ctx->abi->draw_id;
 		break;
 	case nir_intrinsic_load_invocation_id:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
-			result = unpack_param(ctx, ctx->tcs_rel_ids, 8, 5);
+			result = unpack_param(ctx->nctx, ctx->nctx->tcs_rel_ids, 8, 5);
 		else
-			result = ctx->gs_invocation_id;
+			result = ctx->nctx->gs_invocation_id;
 		break;
 	case nir_intrinsic_load_primitive_id:
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
-			ctx->shader_info->gs.uses_prim_id = true;
-			result = ctx->gs_prim_id;
+			ctx->nctx->shader_info->gs.uses_prim_id = true;
+			result = ctx->nctx->gs_prim_id;
 		} else if (ctx->stage == MESA_SHADER_TESS_CTRL) {
-			ctx->shader_info->tcs.uses_prim_id = true;
-			result = ctx->tcs_patch_id;
+			ctx->nctx->shader_info->tcs.uses_prim_id = true;
+			result = ctx->nctx->tcs_patch_id;
 		} else if (ctx->stage == MESA_SHADER_TESS_EVAL) {
-			ctx->shader_info->tcs.uses_prim_id = true;
-			result = ctx->tes_patch_id;
+			ctx->nctx->shader_info->tcs.uses_prim_id = true;
+			result = ctx->nctx->tes_patch_id;
 		} else
 			fprintf(stderr, "Unknown primitive id intrinsic: %d", ctx->stage);
 		break;
 	case nir_intrinsic_load_sample_id:
-		ctx->shader_info->fs.force_persample = true;
-		result = unpack_param(ctx, ctx->ancillary, 8, 4);
+		ctx->nctx->shader_info->fs.force_persample = true;
+		result = unpack_param(ctx->nctx, ctx->nctx->ancillary, 8, 4);
 		break;
 	case nir_intrinsic_load_sample_pos:
-		ctx->shader_info->fs.force_persample = true;
-		result = load_sample_pos(ctx);
+		ctx->nctx->shader_info->fs.force_persample = true;
+		result = load_sample_pos(ctx->nctx);
 		break;
 	case nir_intrinsic_load_sample_mask_in:
-		result = ctx->sample_coverage;
+		result = ctx->nctx->sample_coverage;
 		break;
 	case nir_intrinsic_load_front_face:
-		result = ctx->front_face;
+		result = ctx->nctx->front_face;
 		break;
 	case nir_intrinsic_load_instance_id:
-		result = ctx->abi.instance_id;
-		ctx->shader_info->vs.vgpr_comp_cnt = MAX2(3,
-		                            ctx->shader_info->vs.vgpr_comp_cnt);
+		result = ctx->abi->instance_id;
+		ctx->nctx->shader_info->vs.vgpr_comp_cnt = MAX2(3,
+		                            ctx->nctx->shader_info->vs.vgpr_comp_cnt);
 		break;
 	case nir_intrinsic_load_num_work_groups:
-		result = ctx->num_work_groups;
+		result = ctx->nctx->num_work_groups;
 		break;
 	case nir_intrinsic_load_local_invocation_index:
-		result = visit_load_local_invocation_index(ctx);
+		result = visit_load_local_invocation_index(ctx->nctx);
 		break;
 	case nir_intrinsic_load_push_constant:
-		result = visit_load_push_constant(ctx, instr);
+		result = visit_load_push_constant(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_vulkan_resource_index:
-		result = visit_vulkan_resource_index(ctx, instr);
+		result = visit_vulkan_resource_index(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_store_ssbo:
-		visit_store_ssbo(ctx, instr);
+		visit_store_ssbo(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_load_ssbo:
-		result = visit_load_buffer(ctx, instr);
+		result = visit_load_buffer(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_ssbo_atomic_add:
 	case nir_intrinsic_ssbo_atomic_imin:
@@ -4050,25 +4050,25 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 	case nir_intrinsic_ssbo_atomic_xor:
 	case nir_intrinsic_ssbo_atomic_exchange:
 	case nir_intrinsic_ssbo_atomic_comp_swap:
-		result = visit_atomic_ssbo(ctx, instr);
+		result = visit_atomic_ssbo(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_load_ubo:
-		result = visit_load_ubo_buffer(ctx, instr);
+		result = visit_load_ubo_buffer(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_get_buffer_size:
-		result = visit_get_buffer_size(ctx, instr);
+		result = visit_get_buffer_size(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_load_var:
-		result = visit_load_var(ctx, instr);
+		result = visit_load_var(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_store_var:
-		visit_store_var(ctx, instr);
+		visit_store_var(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_image_load:
-		result = visit_image_load(ctx, instr);
+		result = visit_image_load(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_image_store:
-		visit_image_store(ctx, instr);
+		visit_image_store(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_image_atomic_add:
 	case nir_intrinsic_image_atomic_min:
@@ -4078,25 +4078,25 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 	case nir_intrinsic_image_atomic_xor:
 	case nir_intrinsic_image_atomic_exchange:
 	case nir_intrinsic_image_atomic_comp_swap:
-		result = visit_image_atomic(ctx, instr);
+		result = visit_image_atomic(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_image_size:
-		result = visit_image_size(ctx, instr);
+		result = visit_image_size(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_discard:
-		ctx->shader_info->fs.can_discard = true;
+		ctx->nctx->shader_info->fs.can_discard = true;
 		ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kilp",
-				   ctx->voidt,
+				   LLVMVoidTypeInContext(ctx->ac.context),
 				   NULL, 0, AC_FUNC_ATTR_LEGACY);
 		break;
 	case nir_intrinsic_discard_if:
-		emit_discard_if(ctx, instr);
+		emit_discard_if(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_memory_barrier:
-		emit_waitcnt(ctx, VM_CNT);
+		emit_waitcnt(ctx->nctx, VM_CNT);
 		break;
 	case nir_intrinsic_barrier:
-		emit_barrier(ctx);
+		emit_barrier(ctx->nctx);
 		break;
 	case nir_intrinsic_var_atomic_add:
 	case nir_intrinsic_var_atomic_imin:
@@ -4108,24 +4108,24 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 	case nir_intrinsic_var_atomic_xor:
 	case nir_intrinsic_var_atomic_exchange:
 	case nir_intrinsic_var_atomic_comp_swap:
-		result = visit_var_atomic(ctx, instr);
+		result = visit_var_atomic(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_interp_var_at_centroid:
 	case nir_intrinsic_interp_var_at_sample:
 	case nir_intrinsic_interp_var_at_offset:
-		result = visit_interp(ctx, instr);
+		result = visit_interp(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_emit_vertex:
-		visit_emit_vertex(ctx, instr);
+		visit_emit_vertex(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_end_primitive:
-		visit_end_primitive(ctx, instr);
+		visit_end_primitive(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_load_tess_coord:
-		result = visit_load_tess_coord(ctx, instr);
+		result = visit_load_tess_coord(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_load_patch_vertices_in:
-		result = LLVMConstInt(ctx->i32, ctx->options->key.tcs.input_vertices, false);
+		result = LLVMConstInt(ctx->ac.i32, ctx->nctx->options->key.tcs.input_vertices, false);
 		break;
 	default:
 		fprintf(stderr, "Unknown intrinsic: ");
@@ -4134,7 +4134,7 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		break;
 	}
 	if (result) {
-		_mesa_hash_table_insert(ctx->nir->defs, &instr->dest.ssa, result);
+		_mesa_hash_table_insert(ctx->defs, &instr->dest.ssa, result);
 	}
 }
 
@@ -4687,7 +4687,7 @@ static void visit_block(struct ac_nir_context *ctx, nir_block *block)
 			visit_load_const(ctx, nir_instr_as_load_const(instr));
 			break;
 		case nir_instr_type_intrinsic:
-			visit_intrinsic(ctx->nctx, nir_instr_as_intrinsic(instr));
+			visit_intrinsic(ctx, nir_instr_as_intrinsic(instr));
 			break;
 		case nir_instr_type_tex:
 			visit_tex(ctx->nctx, nir_instr_as_tex(instr));
