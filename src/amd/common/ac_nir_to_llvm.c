@@ -980,7 +980,7 @@ static int get_llvm_num_components(LLVMValueRef value)
 	return num_components;
 }
 
-static LLVMValueRef llvm_extract_elem(struct nir_to_llvm_context *ctx,
+static LLVMValueRef llvm_extract_elem(struct ac_llvm_context *ac,
 				      LLVMValueRef value,
 				      int index)
 {
@@ -990,8 +990,8 @@ static LLVMValueRef llvm_extract_elem(struct nir_to_llvm_context *ctx,
 	if (count == 1)
 		return value;
 
-	return LLVMBuildExtractElement(ctx->builder, value,
-				       LLVMConstInt(ctx->i32, index, false), "");
+	return LLVMBuildExtractElement(ac->builder, value,
+				       LLVMConstInt(ac->i32, index, false), "");
 }
 
 static LLVMValueRef trim_vector(struct nir_to_llvm_context *ctx,
@@ -1014,13 +1014,13 @@ static LLVMValueRef trim_vector(struct nir_to_llvm_context *ctx,
 }
 
 static void
-build_store_values_extended(struct nir_to_llvm_context *ctx,
+build_store_values_extended(struct ac_llvm_context *ac,
 			     LLVMValueRef *values,
 			     unsigned value_count,
 			     unsigned value_stride,
 			     LLVMValueRef vec)
 {
-	LLVMBuilderRef builder = ctx->builder;
+	LLVMBuilderRef builder = ac->builder;
 	unsigned i;
 
 	if (value_count == 1) {
@@ -1030,7 +1030,7 @@ build_store_values_extended(struct nir_to_llvm_context *ctx,
 
 	for (i = 0; i < value_count; i++) {
 		LLVMValueRef ptr = values[i * value_stride];
-		LLVMValueRef index = LLVMConstInt(ctx->i32, i, false);
+		LLVMValueRef index = LLVMConstInt(ac->i32, i, false);
 		LLVMValueRef value = LLVMBuildExtractElement(builder, vec, index, "");
 		LLVMBuildStore(builder, value, ptr);
 	}
@@ -2340,9 +2340,9 @@ static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
 		ctx->shader_info->fs.writes_memory = true;
 
 	if (instr->intrinsic == nir_intrinsic_ssbo_atomic_comp_swap) {
-		params[arg_count++] = llvm_extract_elem(ctx, get_src(ctx->nir, instr->src[3]), 0);
+		params[arg_count++] = llvm_extract_elem(&ctx->ac, get_src(ctx->nir, instr->src[3]), 0);
 	}
-	params[arg_count++] = llvm_extract_elem(ctx, get_src(ctx->nir, instr->src[2]), 0);
+	params[arg_count++] = llvm_extract_elem(&ctx->ac, get_src(ctx->nir, instr->src[2]), 0);
 	params[arg_count++] = get_src(ctx->nir, instr->src[0]);
 	params[arg_count++] = LLVMConstInt(ctx->i32, 0, false); /* vindex */
 	params[arg_count++] = get_src(ctx->nir, instr->src[1]);      /* voffset */
@@ -2814,7 +2814,7 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 		bool is_tess_factor = false;
 		if (!(writemask & (1 << chan)))
 			continue;
-		LLVMValueRef value = llvm_extract_elem(ctx, src, chan);
+		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan);
 
 		lds_store(ctx, dw_addr, value);
 
@@ -3088,7 +3088,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 			if (!(writemask & (1 << chan)))
 				continue;
 
-			value = llvm_extract_elem(ctx, src, chan);
+			value = llvm_extract_elem(&ctx->ac, src, chan);
 
 			if (instr->variables[0]->var->data.compact)
 				stride = 1;
@@ -3105,7 +3105,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 									 value, indir_index, "");
 				} else
 					tmp_vec = value;
-				build_store_values_extended(ctx, ctx->nir->outputs + idx + chan,
+				build_store_values_extended(&ctx->ac, ctx->nir->outputs + idx + chan,
 							    count, stride, tmp_vec);
 
 			} else {
@@ -3120,7 +3120,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 			if (!(writemask & (1 << chan)))
 				continue;
 
-			value = llvm_extract_elem(ctx, src, chan);
+			value = llvm_extract_elem(&ctx->ac, src, chan);
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 					instr->variables[0]->var->type, false);
@@ -3131,7 +3131,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 
 				tmp_vec = LLVMBuildInsertElement(ctx->builder, tmp_vec,
 								 value, indir_index, "");
-				build_store_values_extended(ctx, ctx->nir->locals + idx + chan,
+				build_store_values_extended(&ctx->ac, ctx->nir->locals + idx + chan,
 							    count, 4, tmp_vec);
 			} else {
 				temp_ptr = ctx->nir->locals[idx + chan + const_index * 4];
@@ -3160,7 +3160,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 				LLVMValueRef ptr =
 					LLVMBuildStructGEP(ctx->builder,
 							   address, chan, "");
-				LLVMValueRef src = llvm_extract_elem(ctx, val,
+				LLVMValueRef src = llvm_extract_elem(&ctx->ac, val,
 								     chan);
 				src = LLVMBuildBitCast(
 				   ctx->builder, src,
@@ -3293,7 +3293,7 @@ static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
 		LLVMConstInt(ctx->i32, 2, false), LLVMConstInt(ctx->i32, 3, false),
 	};
 	LLVMValueRef res;
-	LLVMValueRef sample_index = llvm_extract_elem(ctx, get_src(ctx->nir, instr->src[1]), 0);
+	LLVMValueRef sample_index = llvm_extract_elem(&ctx->ac, get_src(ctx->nir, instr->src[1]), 0);
 
 	int count;
 	enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
@@ -4410,7 +4410,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 
 	if (coord)
 		for (chan = 0; chan < instr->coord_components; chan++)
-			coords[chan] = llvm_extract_elem(ctx, coord, chan);
+			coords[chan] = llvm_extract_elem(&ctx->ac, coord, chan);
 
 	if (offsets && instr->op != nir_texop_txf) {
 		LLVMValueRef offset[3], pack;
@@ -4419,7 +4419,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 
 		args.offset = true;
 		for (chan = 0; chan < get_llvm_num_components(offsets); chan++) {
-			offset[chan] = llvm_extract_elem(ctx, offsets, chan);
+			offset[chan] = llvm_extract_elem(&ctx->ac, offsets, chan);
 			offset[chan] = LLVMBuildAnd(ctx->builder, offset[chan],
 						    LLVMConstInt(ctx->i32, 0x3f, false), "");
 			if (chan)
@@ -4438,7 +4438,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 
 	/* Pack depth comparison value */
 	if (instr->is_shadow && comparator) {
-		address[count++] = llvm_extract_elem(ctx, comparator, 0);
+		address[count++] = llvm_extract_elem(&ctx->ac, comparator, 0);
 	}
 
 	/* pack derivatives */
@@ -4458,8 +4458,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		}
 
 		for (unsigned i = 0; i < num_deriv_comp; i++) {
-			derivs[i] = to_float(&ctx->ac, llvm_extract_elem(ctx, ddx, i));
-			derivs[num_deriv_comp + i] = to_float(&ctx->ac, llvm_extract_elem(ctx, ddy, i));
+			derivs[i] = to_float(&ctx->ac, llvm_extract_elem(&ctx->ac, ddx, i));
+			derivs[num_deriv_comp + i] = to_float(&ctx->ac, llvm_extract_elem(&ctx->ac, ddy, i));
 		}
 	}
 
