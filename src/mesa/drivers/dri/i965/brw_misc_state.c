@@ -217,12 +217,6 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
    brw->depthstencil.tile_x = 0;
    brw->depthstencil.tile_y = 0;
    brw->depthstencil.depth_offset = 0;
-   brw->depthstencil.depth_mt = NULL;
-   brw->depthstencil.stencil_mt = NULL;
-   if (depth_irb)
-      brw->depthstencil.depth_mt = depth_mt;
-   if (stencil_irb)
-      brw->depthstencil.stencil_mt = get_stencil_miptree(stencil_irb);
 
    /* Gen6+ doesn't require the workarounds, since we always program the
     * surface state at the start of the whole surface.
@@ -356,10 +350,8 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
    brw->depthstencil.tile_x = tile_x;
    brw->depthstencil.tile_y = tile_y;
    if (depth_irb) {
-      depth_mt = depth_irb->mt;
-      brw->depthstencil.depth_mt = depth_mt;
       brw->depthstencil.depth_offset =
-         intel_miptree_get_aligned_offset(depth_mt,
+         intel_miptree_get_aligned_offset(depth_irb->mt,
                                           depth_irb->draw_x & ~tile_mask_x,
                                           depth_irb->draw_y & ~tile_mask_y);
       assert(!intel_renderbuffer_has_hiz(depth_irb));
@@ -367,7 +359,6 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
    if (stencil_irb) {
       stencil_mt = get_stencil_miptree(stencil_irb);
 
-      brw->depthstencil.stencil_mt = stencil_mt;
       assert(stencil_mt->format != MESA_FORMAT_S_UINT8);
 
       if (!depth_irb) {
@@ -388,8 +379,8 @@ brw_emit_depthbuffer(struct brw_context *brw)
    /* _NEW_BUFFERS */
    struct intel_renderbuffer *depth_irb = intel_get_renderbuffer(fb, BUFFER_DEPTH);
    struct intel_renderbuffer *stencil_irb = intel_get_renderbuffer(fb, BUFFER_STENCIL);
-   struct intel_mipmap_tree *depth_mt = brw->depthstencil.depth_mt;
-   struct intel_mipmap_tree *stencil_mt = brw->depthstencil.stencil_mt;
+   struct intel_mipmap_tree *depth_mt = depth_irb ? depth_irb->mt : NULL;
+   struct intel_mipmap_tree *stencil_mt = get_stencil_miptree(stencil_irb);
    uint32_t tile_x = brw->depthstencil.tile_x;
    uint32_t tile_y = brw->depthstencil.tile_y;
    bool hiz = depth_irb && intel_renderbuffer_has_hiz(depth_irb);
