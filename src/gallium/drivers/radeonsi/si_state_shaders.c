@@ -1800,7 +1800,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	 */
 	if (!sscreen->use_monolithic_shaders) {
 		struct si_shader *shader = CALLOC_STRUCT(si_shader);
-		void *tgsi_binary;
+		void *tgsi_binary = NULL;
 
 		if (!shader) {
 			fprintf(stderr, "radeonsi: can't allocate a main shader part\n");
@@ -1810,7 +1810,8 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		shader->selector = sel;
 		si_parse_next_shader_property(&sel->info, &shader->key);
 
-		tgsi_binary = si_get_tgsi_binary(sel);
+		if (sel->tokens)
+			tgsi_binary = si_get_tgsi_binary(sel);
 
 		/* Try to load the shader from the shader cache. */
 		mtx_lock(&sscreen->shader_cache_mutex);
