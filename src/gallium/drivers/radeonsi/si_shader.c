@@ -46,6 +46,7 @@
 #include "si_pipe.h"
 #include "sid.h"
 
+#include "compiler/nir/nir.h"
 
 static const char *scratch_rsrc_dword0_symbol =
 	"SCRATCH_RSRC_DWORD0";
@@ -6215,7 +6216,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	 * conversion fails. */
 	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
 	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
-		tgsi_dump(sel->tokens, 0);
+		if (sel->tokens)
+			tgsi_dump(sel->tokens, 0);
+		else
+			nir_print_shader(sel->nir, stderr);
 		si_dump_streamout(&sel->so);
 	}
 
