@@ -31,6 +31,7 @@
 #include <zlib.h>
 
 #include <util/macros.h>
+#include <util/ralloc.h>
 
 #include "gen_decoder.h"
 
@@ -324,7 +325,7 @@ string_to_type(struct parser_context *ctx, const char *s)
 }
 
 static struct gen_field *
-create_field(struct parser_context *ctx, const char **atts)
+create_field(struct parser_context *ctx, const char **atts, int group_idx)
 {
    struct gen_field *field;
    char *p;
@@ -334,7 +335,12 @@ create_field(struct parser_context *ctx, const char **atts)
 
    for (i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "name") == 0)
-         field->name = xstrdup(atts[i + 1]);
+         if (ctx->group->elem_size == 0) {
+            field->name = xstrdup(atts[i + 1]);
+         } else {
+            field->name =
+               ralloc_asprintf(NULL, "%s[%d]", atts[i + 1], group_idx);
+         }
       else if (strcmp(atts[i], "start") == 0)
          field->start = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
       else if (strcmp(atts[i], "end") == 0) {
@@ -415,7 +421,7 @@ start_element(void *data, const char *element_name, const char **atts)
                              &ctx->group->variable);
    } else if (strcmp(element_name, "field") == 0) {
       for (int g = 0; g < MAX2(ctx->group->group_count, 1); g++) {
-         ctx->fields[ctx->nfields++] = create_field(ctx, atts);
+         ctx->fields[ctx->nfields++] = create_field(ctx, atts, g);
       }
    } else if (strcmp(element_name, "enum") == 0) {
       ctx->enoom = create_enum(ctx, name, atts);
