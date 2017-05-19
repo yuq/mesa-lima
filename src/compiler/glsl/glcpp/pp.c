@@ -32,20 +32,16 @@ glcpp_error (YYLTYPE *locp, glcpp_parser_t *parser, const char *fmt, ...)
 	va_list ap;
 
 	parser->error = 1;
-	ralloc_asprintf_rewrite_tail(&parser->info_log,
-				     &parser->info_log_length,
-				     "%u:%u(%u): "
-				     "preprocessor error: ",
-				     locp->source,
-				     locp->first_line,
-				     locp->first_column);
+	_mesa_string_buffer_printf(parser->info_log,
+				   "%u:%u(%u): "
+				   "preprocessor error: ",
+				   locp->source,
+				   locp->first_line,
+				   locp->first_column);
 	va_start(ap, fmt);
-	ralloc_vasprintf_rewrite_tail(&parser->info_log,
-				      &parser->info_log_length,
-				      fmt, ap);
+	_mesa_string_buffer_vprintf(parser->info_log, fmt, ap);
 	va_end(ap);
-	ralloc_asprintf_rewrite_tail(&parser->info_log,
-				     &parser->info_log_length, "\n");
+	_mesa_string_buffer_append_char(parser->info_log, '\n');
 }
 
 void
@@ -53,20 +49,16 @@ glcpp_warning (YYLTYPE *locp, glcpp_parser_t *parser, const char *fmt, ...)
 {
 	va_list ap;
 
-	ralloc_asprintf_rewrite_tail(&parser->info_log,
-				     &parser->info_log_length,
+	_mesa_string_buffer_printf(parser->info_log,
 				     "%u:%u(%u): "
 				     "preprocessor warning: ",
 				     locp->source,
 				     locp->first_line,
 				     locp->first_column);
 	va_start(ap, fmt);
-	ralloc_vasprintf_rewrite_tail(&parser->info_log,
-				      &parser->info_log_length,
-				      fmt, ap);
+	_mesa_string_buffer_vprintf(parser->info_log, fmt, ap);
 	va_end(ap);
-	ralloc_asprintf_rewrite_tail(&parser->info_log,
-				     &parser->info_log_length, "\n");
+	_mesa_string_buffer_append_char(parser->info_log, '\n');
 }
 
 /* Given str, (that's expected to start with a newline terminator of some
@@ -238,10 +230,13 @@ glcpp_preprocess(void *ralloc_ctx, const char **shader, char **info_log,
 
 	glcpp_parser_resolve_implicit_version(parser);
 
-	ralloc_strcat(info_log, parser->info_log);
+	ralloc_strcat(info_log, parser->info_log->buf);
 
-	ralloc_steal(ralloc_ctx, parser->output);
-	*shader = parser->output;
+	/* Crimp the buffer first, to conserve memory */
+	_mesa_string_buffer_crimp_to_fit(parser->output);
+
+	ralloc_steal(ralloc_ctx, parser->output->buf);
+	*shader = parser->output->buf;
 
 	errors = parser->error;
 	glcpp_parser_destroy (parser);
