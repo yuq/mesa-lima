@@ -296,28 +296,14 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
       }
 
       if (stencil_irb) {
-         stencil_mt = get_stencil_miptree(stencil_irb);
-         intel_miptree_get_image_offset(stencil_mt,
-                                        stencil_irb->mt_level,
-                                        stencil_irb->mt_layer,
-                                        &stencil_draw_x, &stencil_draw_y);
-         int stencil_tile_x = stencil_draw_x & tile_mask_x;
-         int stencil_tile_y = stencil_draw_y & tile_mask_y;
-
-         /* If stencil doesn't match depth, then we'll need to rebase stencil
-          * as well.  (if we hadn't decided to rebase stencil before, the
-          * post-stencil depth test will also rebase depth to try to match it
-          * up).
-          */
-         if (tile_x != stencil_tile_x ||
-             tile_y != stencil_tile_y) {
-            rebase_stencil = true;
-         }
+         assert(stencil_irb->mt == depth_irb->mt);
+         assert(stencil_irb->mt_level == depth_irb->mt_level);
+         assert(stencil_irb->mt_layer == depth_irb->mt_layer);
       }
    }
 
    /* If we have (just) stencil, check it for ignored low bits as well */
-   if (stencil_irb) {
+   if (!depth_irb && stencil_irb) {
       intel_miptree_get_image_offset(stencil_mt,
                                      stencil_irb->mt_level,
                                      stencil_irb->mt_layer,
@@ -335,6 +321,14 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
    }
 
    if (rebase_stencil) {
+      /* If stencil needs rebase, there isn't a depth attachment and the
+       * combined depth-stencil is used for stencil only. Otherwise in case
+       * depth attachment is present both stencil and depth point to the same
+       * miptree. Rebase of depth is considered first updating stencil
+       * attachment accordingly - hence stencil is rebased only if there is no
+       * depth attachment.
+       */
+      assert(!depth_irb);
       perf_debug("HW workaround: blitting stencil level %d to a temporary "
                  "to fix alignment (stencil tile offset %d,%d)\n",
                  stencil_irb->mt_level, stencil_tile_x, stencil_tile_y);
@@ -348,39 +342,6 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
                                      &stencil_draw_x, &stencil_draw_y);
       stencil_tile_x = stencil_draw_x & tile_mask_x;
       stencil_tile_y = stencil_draw_y & tile_mask_y;
-
-      if (depth_irb && depth_irb->mt == stencil_irb->mt) {
-         intel_miptree_reference(&depth_irb->mt, stencil_irb->mt);
-         intel_renderbuffer_set_draw_offset(depth_irb);
-      } else if (depth_irb && !rebase_depth) {
-         if (tile_x != stencil_tile_x ||
-             tile_y != stencil_tile_y) {
-            perf_debug("HW workaround: blitting depth level %d to a temporary "
-                       "to match stencil level %d alignment (depth tile offset "
-                       "%d,%d, stencil offset %d,%d)\n",
-                       depth_irb->mt_level,
-                       stencil_irb->mt_level,
-                       tile_x, tile_y,
-                       stencil_tile_x, stencil_tile_y);
-
-            intel_renderbuffer_move_to_temp(brw, depth_irb, invalidate_depth);
-
-            tile_x = depth_irb->draw_x & tile_mask_x;
-            tile_y = depth_irb->draw_y & tile_mask_y;
-
-            if (stencil_irb && stencil_irb->mt == depth_mt) {
-               intel_miptree_reference(&stencil_irb->mt, depth_irb->mt);
-               intel_renderbuffer_set_draw_offset(stencil_irb);
-            }
-
-            WARN_ONCE(stencil_tile_x != tile_x ||
-                      stencil_tile_y != tile_y,
-                      "Rebased stencil tile offset (%d,%d) doesn't match depth "
-                      "tile offset (%d,%d).\n",
-                      stencil_tile_x, stencil_tile_y,
-                      tile_x, tile_y);
-         }
-      }
    }
 
    if (!depth_irb) {
