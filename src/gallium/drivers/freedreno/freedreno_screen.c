@@ -568,6 +568,9 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 			switch(shader)
 			{
 			case PIPE_SHADER_FRAGMENT:
+				if (!(fd_mesa_debug & FD_DBG_NIR))
+					return 0;
+				/* fallthrough */
 			case PIPE_SHADER_COMPUTE:
 				return 24;
 			default:
