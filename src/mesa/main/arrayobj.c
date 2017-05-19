@@ -473,6 +473,14 @@ _mesa_BindVertexArray( GLuint id )
 }
 
 
+void GLAPIENTRY
+_mesa_BindVertexArrayAPPLE(GLuint id)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_problem(ctx, "APPLE_vertex_array_object is not supported!");
+}
+
+
 /**
  * Delete a set of array objects.
  *
@@ -576,6 +584,14 @@ _mesa_GenVertexArrays(GLsizei n, GLuint *arrays)
 {
    GET_CURRENT_CONTEXT(ctx);
    gen_vertex_arrays(ctx, n, arrays, false, "glGenVertexArrays");
+}
+
+
+void GLAPIENTRY
+_mesa_GenVertexArraysAPPLE(GLsizei n, GLuint *arrays)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_problem(ctx, "APPLE_vertex_array_object is not supported!");
 }
 
 

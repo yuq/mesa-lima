@@ -12531,7 +12531,7 @@
 </category>
 
 <xi:include href="APPLE_object_purgeable.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-<!-- Extension number 273 obsolete APPLE_vertex_array_object. -->
+<xi:include href="APPLE_vertex_array_object.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 <category name="GL_APPLE_ycbcr_422" number="275">
     <enum name="YCBCR_422_APPLE"                          value="0x85B9"/>
