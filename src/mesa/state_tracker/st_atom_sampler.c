@@ -135,7 +135,6 @@ st_convert_sampler(const struct st_context *st,
                    const struct gl_sampler_object *msamp,
                    struct pipe_sampler_state *sampler)
 {
-   struct gl_context *ctx = st->ctx;
    GLenum texBaseFormat;
 
    texBaseFormat = _mesa_texture_base_format(texobj);
@@ -226,8 +225,11 @@ st_convert_sampler(const struct st_context *st,
       sampler->compare_func = st_compare_func_to_pipe(msamp->CompareFunc);
    }
 
-   sampler->seamless_cube_map =
-      ctx->Texture.CubeMapSeamless || msamp->CubeMapSeamless;
+   /* Only set the seamless cube map texture parameter because the per-context
+    * enable should be ignored and treated as disabled when using texture
+    * handles, as specified by ARB_bindless_texture.
+    */
+   sampler->seamless_cube_map = msamp->CubeMapSeamless;
 }
 
 /**
@@ -250,6 +252,7 @@ st_convert_sampler_from_unit(const struct st_context *st,
    st_convert_sampler(st, texobj, msamp, sampler);
 
    sampler->lod_bias += ctx->Texture.Unit[texUnit].LodBias;
+   sampler->seamless_cube_map |= ctx->Texture.CubeMapSeamless;
 }
 
 
