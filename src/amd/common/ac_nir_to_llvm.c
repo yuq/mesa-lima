@@ -4971,16 +4971,16 @@ handle_fs_inputs_pre(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef
-ac_build_alloca(struct nir_to_llvm_context *ctx,
+ac_build_alloca(struct ac_llvm_context *ac,
                 LLVMTypeRef type,
                 const char *name)
 {
-	LLVMBuilderRef builder = ctx->builder;
+	LLVMBuilderRef builder = ac->builder;
 	LLVMBasicBlockRef current_block = LLVMGetInsertBlock(builder);
 	LLVMValueRef function = LLVMGetBasicBlockParent(current_block);
 	LLVMBasicBlockRef first_block = LLVMGetEntryBasicBlock(function);
 	LLVMValueRef first_instr = LLVMGetFirstInstruction(first_block);
-	LLVMBuilderRef first_builder = LLVMCreateBuilderInContext(ctx->context);
+	LLVMBuilderRef first_builder = LLVMCreateBuilderInContext(ac->context);
 	LLVMValueRef res;
 
 	if (first_instr) {
@@ -4997,12 +4997,12 @@ ac_build_alloca(struct nir_to_llvm_context *ctx,
 	return res;
 }
 
-static LLVMValueRef si_build_alloca_undef(struct nir_to_llvm_context *ctx,
+static LLVMValueRef si_build_alloca_undef(struct ac_llvm_context *ac,
 					  LLVMTypeRef type,
 					  const char *name)
 {
-	LLVMValueRef ptr = ac_build_alloca(ctx, type, name);
-	LLVMBuildStore(ctx->builder, LLVMGetUndef(type), ptr);
+	LLVMValueRef ptr = ac_build_alloca(ac, type, name);
+	LLVMBuildStore(ac->builder, LLVMGetUndef(type), ptr);
 	return ptr;
 }
 
@@ -5045,7 +5045,7 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
 			ctx->nir->outputs[radeon_llvm_reg_index_soa(idx + i, chan)] =
-		                       si_build_alloca_undef(ctx, ctx->f32, "");
+		                       si_build_alloca_undef(&ctx->ac, ctx->f32, "");
 		}
 	}
 	ctx->output_mask |= mask_attribs;
@@ -5131,7 +5131,7 @@ setup_locals(struct ac_nir_context *ctx,
 	for (i = 0; i < ctx->num_locals; i++) {
 		for (j = 0; j < 4; j++) {
 			ctx->locals[i * 4 + j] =
-				si_build_alloca_undef(ctx->nctx, ctx->ac.f32, "temp");
+				si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "temp");
 		}
 	}
 }
@@ -6149,7 +6149,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	create_function(&ctx);
 
 	if (nir->stage == MESA_SHADER_GEOMETRY) {
-		ctx.gs_next_vertex = ac_build_alloca(&ctx, ctx.i32, "gs_next_vertex");
+		ctx.gs_next_vertex = ac_build_alloca(&ctx.ac, ctx.i32, "gs_next_vertex");
 
 		ctx.gs_max_out_vertices = nir->info.gs.vertices_out;
 	} else if (nir->stage == MESA_SHADER_TESS_EVAL) {
