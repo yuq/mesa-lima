@@ -414,11 +414,9 @@ start_element(void *data, const char *element_name, const char **atts)
                              &ctx->group->group_count, &ctx->group->elem_size,
                              &ctx->group->variable);
    } else if (strcmp(element_name, "field") == 0) {
-      do {
+      for (int g = 0; g < MAX2(ctx->group->group_count, 1); g++) {
          ctx->fields[ctx->nfields++] = create_field(ctx, atts);
-         if (ctx->group->group_count)
-            ctx->group->group_count--;
-      } while (ctx->group->group_count > 0);
+      }
    } else if (strcmp(element_name, "enum") == 0) {
       ctx->enoom = create_enum(ctx, name, atts);
    } else if (strcmp(element_name, "value") == 0) {
