@@ -339,7 +339,7 @@ create_field(struct parser_context *ctx, const char **atts)
          field->start = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
       else if (strcmp(atts[i], "end") == 0) {
          field->end = ctx->group->group_offset+strtoul(atts[i + 1], &p, 0);
-         if (ctx->group->group_offset) {
+         if (ctx->group->elem_size > 0) {
             ctx->group->group_offset = field->end+1;
             if (ctx->group->variable)
                ctx->group->variable_offset = ctx->group->group_offset;
