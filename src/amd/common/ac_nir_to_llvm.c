@@ -5007,12 +5007,13 @@ static LLVMValueRef si_build_alloca_undef(struct ac_llvm_context *ac,
 }
 
 static void
-handle_shader_output_decl(struct nir_to_llvm_context *ctx,
-			  struct nir_variable *variable)
+scan_shader_output_decl(struct nir_to_llvm_context *ctx,
+			struct nir_variable *variable)
 {
 	int idx = variable->data.location + variable->data.index;
 	unsigned attrib_count = glsl_count_attribute_slots(variable->type, false);
 	uint64_t mask_attribs;
+
 	variable->data.driver_location = idx * 4;
 
 	/* tess ctrl has it's own load/store paths for outputs */
@@ -5042,13 +5043,42 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 		}
 	}
 
-	for (unsigned i = 0; i < attrib_count; ++i) {
-		for (unsigned chan = 0; chan < 4; chan++) {
-			ctx->nir->outputs[radeon_llvm_reg_index_soa(idx + i, chan)] =
-		                       si_build_alloca_undef(&ctx->ac, ctx->f32, "");
+	ctx->output_mask |= mask_attribs;
+}
+
+static void
+handle_shader_output_decl(struct ac_nir_context *ctx,
+			  struct nir_shader *nir,
+			  struct nir_variable *variable)
+{
+	unsigned output_loc = variable->data.driver_location / 4;
+	unsigned attrib_count = glsl_count_attribute_slots(variable->type, false);
+
+	/* tess ctrl has it's own load/store paths for outputs */
+	if (ctx->stage == MESA_SHADER_TESS_CTRL)
+		return;
+
+	if (ctx->stage == MESA_SHADER_VERTEX ||
+	    ctx->stage == MESA_SHADER_TESS_EVAL ||
+	    ctx->stage == MESA_SHADER_GEOMETRY) {
+		int idx = variable->data.location + variable->data.index;
+		if (idx == VARYING_SLOT_CLIP_DIST0) {
+			int length = nir->info.clip_distance_array_size +
+				     nir->info.cull_distance_array_size;
+
+			if (length > 4)
+				attrib_count = 2;
+			else
+				attrib_count = 1;
 		}
 	}
-	ctx->output_mask |= mask_attribs;
+
+	for (unsigned i = 0; i < attrib_count; ++i) {
+		for (unsigned chan = 0; chan < 4; chan++) {
+			ctx->outputs[radeon_llvm_reg_index_soa(output_loc + i, chan)] =
+		                       si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
+		}
+	}
 }
 
 static LLVMTypeRef
@@ -6073,7 +6103,7 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	ctx.stage = nir->stage;
 
 	nir_foreach_variable(variable, &nir->outputs)
-		handle_shader_output_decl(nctx, variable);
+		handle_shader_output_decl(&ctx, nir, variable);
 
 	ctx.defs = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
 	                                   _mesa_key_pointer_equal);
@@ -6169,6 +6199,9 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	ctx.abi.inputs = &ctx.inputs[0];
 	ctx.abi.emit_outputs = handle_shader_outputs_post;
+
+	nir_foreach_variable(variable, &nir->outputs)
+		scan_shader_output_decl(&ctx, variable);
 
 	ac_nir_translate(&ctx.ac, &ctx.abi, nir, &ctx);
 
@@ -6457,8 +6490,10 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 	nir_ctx.nctx = &ctx;
 	ctx.nir = &nir_ctx;
 
-	nir_foreach_variable(variable, &geom_shader->outputs)
-		handle_shader_output_decl(&ctx, variable);
+	nir_foreach_variable(variable, &geom_shader->outputs) {
+		scan_shader_output_decl(&ctx, variable);
+		handle_shader_output_decl(&nir_ctx, geom_shader, variable);
+	}
 
 	ac_gs_copy_shader_emit(&ctx);
 
