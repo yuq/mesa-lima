@@ -1483,7 +1483,7 @@ isl_surf_init_s(const struct isl_device *dev,
        */
       if (size > (uint64_t) 1 << 31)
          return false;
-   } else {
+   } else if (ISL_DEV_GEN(dev) < 11) {
       /* From the Skylake PRM Vol 5, Maximum Surface Size in Bytes:
        *    "In addition to restrictions on maximum height, width, and depth,
        *     surfaces are also restricted to a maximum size of 2^38 bytes.
@@ -1491,6 +1491,10 @@ isl_surf_init_s(const struct isl_device *dev,
        *     of the base address."
        */
       if (size > (uint64_t) 1 << 38)
+         return false;
+   } else {
+      /* gen11+ platforms raised this limit to 2^44 bytes. */
+      if (size > (uint64_t) 1 << 44)
          return false;
    }
 
