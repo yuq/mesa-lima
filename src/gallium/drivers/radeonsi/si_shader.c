@@ -5652,9 +5652,16 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		ctx->postponed_kill = lp_build_alloca(&ctx->gallivm, ctx->f32, "");
 	}
 
-	if (!lp_build_tgsi_llvm(bld_base, sel->tokens)) {
-		fprintf(stderr, "Failed to translate shader from TGSI to LLVM\n");
-		return false;
+	if (sel->tokens) {
+		if (!lp_build_tgsi_llvm(bld_base, sel->tokens)) {
+			fprintf(stderr, "Failed to translate shader from TGSI to LLVM\n");
+			return false;
+		}
+	} else {
+		if (!si_nir_build_llvm(ctx, sel->nir)) {
+			fprintf(stderr, "Failed to translate shader from NIR to LLVM\n");
+			return false;
+		}
 	}
 
 	si_llvm_build_ret(ctx, ctx->return_value);

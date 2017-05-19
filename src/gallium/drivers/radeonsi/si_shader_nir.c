@@ -22,6 +22,9 @@
  */
 
 #include "si_shader.h"
+#include "si_shader_internal.h"
+
+#include "ac_nir_to_llvm.h"
 
 #include "tgsi/tgsi_from_mesa.h"
 
@@ -310,3 +313,9 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	}
 }
 
+bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
+{
+	ac_nir_translate(&ctx->ac, &ctx->abi, nir, NULL);
+
+	return true;
+}

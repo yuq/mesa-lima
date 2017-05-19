@@ -30,7 +30,7 @@
 #include "amd_family.h"
 #include "../vulkan/radv_descriptor_set.h"
 #include "ac_shader_info.h"
-#include "shader_enums.h"
+#include "compiler/shader_enums.h"
 struct ac_shader_binary;
 struct ac_shader_config;
 struct nir_shader;
