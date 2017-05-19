@@ -188,6 +188,13 @@ struct nir_to_llvm_context {
 	uint64_t tess_patch_outputs_written;
 };
 
+static inline struct nir_to_llvm_context *
+nir_to_llvm_context_from_abi(struct ac_shader_abi *abi)
+{
+	struct nir_to_llvm_context *ctx = NULL;
+	return container_of(abi, ctx, abi);
+}
+
 static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 				     const nir_deref_var *deref,
 				     enum desc_type desc_type);
@@ -5903,8 +5910,11 @@ emit_gs_epilogue(struct nir_to_llvm_context *ctx)
 }
 
 static void
-handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
+handle_shader_outputs_post(struct ac_shader_abi *abi, unsigned max_outputs,
+			   LLVMValueRef *addrs)
 {
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+
 	switch (ctx->stage) {
 	case MESA_SHADER_VERTEX:
 		if (ctx->options->key.vs.as_ls)
@@ -6082,7 +6092,8 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	visit_cf_list(&ctx, &func->impl->body);
 	phi_post_pass(&ctx);
 
-	handle_shader_outputs_post(nctx);
+	ctx.abi->emit_outputs(ctx.abi, RADEON_LLVM_MAX_OUTPUTS,
+			      ctx.outputs);
 
 	free(ctx.locals);
 	ralloc_free(ctx.defs);
@@ -6157,6 +6168,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		handle_fs_inputs_pre(&ctx, nir);
 
 	ctx.abi.inputs = &ctx.inputs[0];
+	ctx.abi.emit_outputs = handle_shader_outputs_post;
 
 	ac_nir_translate(&ctx.ac, &ctx.abi, nir, &ctx);
 
