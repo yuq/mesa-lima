@@ -414,32 +414,31 @@ static void load_emit_buffer(struct si_shader_context *ctx,
 			     bool can_speculate)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	uint writemask = inst->Dst[0].Register.WriteMask;
 	uint count = util_last_bit(writemask);
-	const char *intrinsic_name;
-	LLVMTypeRef dst_type;
+	LLVMValueRef *args = emit_data->args;
 
-	switch (count) {
-	case 1:
-		intrinsic_name = "llvm.amdgcn.buffer.load.f32";
-		dst_type = ctx->f32;
-		break;
-	case 2:
-		intrinsic_name = "llvm.amdgcn.buffer.load.v2f32";
-		dst_type = LLVMVectorType(ctx->f32, 2);
-		break;
-	default: // 3 & 4
-		intrinsic_name = "llvm.amdgcn.buffer.load.v4f32";
-		dst_type = ctx->v4f32;
-		count = 4;
-	}
+	/* Don't use SMEM for shader buffer loads, because LLVM doesn't
+	 * select SMEM for SI.load.const with a non-constant offset, and
+	 * constant offsets practically don't exist with shader buffers.
+	 *
+	 * Also, SI.load.const doesn't use inst_offset when it's lowered
+	 * to VMEM, so we just end up with more VALU instructions in the end
+	 * and no benefit.
+	 *
+	 * TODO: Remove this line once LLVM can select SMEM with a non-constant
+	 *       offset, and can derive inst_offset when VMEM is selected.
+	 *       After that, si_memory_barrier should invalidate sL1 for shader
+	 *       buffers.
+	 */
 
-	emit_data->output[emit_data->chan] = lp_build_intrinsic(
-			builder, intrinsic_name, dst_type,
-			emit_data->args, emit_data->arg_count,
-			get_load_intr_attribs(can_speculate));
+	assert(LLVMConstIntGetZExtValue(args[1]) == 0); /* vindex */
+	emit_data->output[emit_data->chan] =
+		ac_build_buffer_load(&ctx->ac, args[0], count, NULL,
+				     args[2], NULL, 0,
+				     LLVMConstIntGetZExtValue(args[3]),
+				     LLVMConstIntGetZExtValue(args[4]),
+				     can_speculate, false);
 }
 
 static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
