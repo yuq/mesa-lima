@@ -140,7 +140,7 @@ nv50_context_unreference_resources(struct nv50_context *nv50)
 
    assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
    for (i = 0; i < nv50->num_vtxbufs; ++i)
-      pipe_resource_reference(&nv50->vtxbuf[i].buffer.resource, NULL);
+      pipe_vertex_buffer_unreference(&nv50->vtxbuf[i]);
 
    for (s = 0; s < 3; ++s) {
       assert(nv50->num_textures[s] <= PIPE_MAX_SAMPLERS);
