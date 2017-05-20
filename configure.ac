@@ -1723,7 +1723,7 @@ fi
 if test x"$enable_dri3" = xyes; then
     DEFINES="$DEFINES -DHAVE_DRI3"
 
-    dri3_modules="x11-xcb xcb >= $XCB_REQUIRED xcb-dri3 xcb-fixes xcb-present xcb-sync xshmfence >= $XSHMFENCE_REQUIRED"
+    dri3_modules="x11-xcb xcb >= $XCB_REQUIRED xcb-dri3 xcb-xfixes xcb-present xcb-sync xshmfence >= $XSHMFENCE_REQUIRED"
     PKG_CHECK_MODULES([XCB_DRI3], [$dri3_modules])
 fi
 
