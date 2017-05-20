@@ -46,6 +46,8 @@ struct ac_shader_abi {
 	void (*emit_outputs)(struct ac_shader_abi *abi,
 			     unsigned max_outputs,
 			     LLVMValueRef *addrs);
+
+	LLVMValueRef (*load_ubo)(struct ac_shader_abi *abi, LLVMValueRef index);
 };
 
 #endif /* AC_SHADER_ABI_H */

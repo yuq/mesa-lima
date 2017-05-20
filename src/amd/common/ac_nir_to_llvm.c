@@ -2454,6 +2454,9 @@ static LLVMValueRef visit_load_ubo_buffer(struct ac_nir_context *ctx,
 	LLVMValueRef offset = get_src(ctx, instr->src[1]);
 	int num_components = instr->num_components;
 
+	if (ctx->abi->load_ubo)
+		rsrc = ctx->abi->load_ubo(ctx->abi, rsrc);
+
 	if (instr->dest.ssa.bit_size == 64)
 		num_components *= 2;
 

@@ -1776,6 +1776,18 @@ static LLVMValueRef load_const_buffer_desc(struct si_shader_context *ctx, int i)
 			LLVMConstInt(ctx->i32, si_get_constbuf_slot(i), 0));
 }
 
+static LLVMValueRef load_ubo(struct ac_shader_abi *abi, LLVMValueRef index)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_const_and_shader_buffers);
+
+	index = si_llvm_bound_index(ctx, index, ctx->num_const_buffers);
+	index = LLVMBuildAdd(ctx->gallivm.builder, index,
+			     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS, 0), "");
+
+	return ac_build_indexed_load_const(&ctx->ac, ptr, index);
+}
+
 static LLVMValueRef fetch_constant(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
@@ -5608,6 +5620,8 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		assert(!"Unsupported shader type");
 		return false;
 	}
+
+	ctx->abi.load_ubo = load_ubo;
 
 	create_function(ctx);
 	preload_ring_buffers(ctx);
