@@ -2446,12 +2446,12 @@ static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
 	                        get_def_type(ctx->nir, &instr->dest.ssa), "");
 }
 
-static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
+static LLVMValueRef visit_load_ubo_buffer(struct ac_nir_context *ctx,
                                           const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef results[8], ret;
-	LLVMValueRef rsrc = get_src(ctx->nir, instr->src[0]);
-	LLVMValueRef offset = get_src(ctx->nir, instr->src[1]);
+	LLVMValueRef rsrc = get_src(ctx, instr->src[0]);
+	LLVMValueRef offset = get_src(ctx, instr->src[1]);
 	int num_components = instr->num_components;
 
 	if (instr->dest.ssa.bit_size == 64)
@@ -2460,10 +2460,10 @@ static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
 	for (unsigned i = 0; i < num_components; ++i) {
 		LLVMValueRef params[] = {
 			rsrc,
-			LLVMBuildAdd(ctx->builder, LLVMConstInt(ctx->i32, 4 * i, 0),
+			LLVMBuildAdd(ctx->ac.builder, LLVMConstInt(ctx->ac.i32, 4 * i, 0),
 				     offset, "")
 		};
-		results[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.load.const.v4i32", ctx->f32,
+		results[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.load.const.v4i32", ctx->ac.f32,
 						params, 2,
 						AC_FUNC_ATTR_READNONE |
 						AC_FUNC_ATTR_LEGACY);
@@ -2471,8 +2471,8 @@ static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
 
 
 	ret = ac_build_gather_values(&ctx->ac, results, instr->num_components);
-	return LLVMBuildBitCast(ctx->builder, ret,
-	                        get_def_type(ctx->nir, &instr->dest.ssa), "");
+	return LLVMBuildBitCast(ctx->ac.builder, ret,
+	                        get_def_type(ctx, &instr->dest.ssa), "");
 }
 
 static void
@@ -4053,7 +4053,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = visit_atomic_ssbo(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_load_ubo:
-		result = visit_load_ubo_buffer(ctx->nctx, instr);
+		result = visit_load_ubo_buffer(ctx, instr);
 		break;
 	case nir_intrinsic_get_buffer_size:
 		result = visit_get_buffer_size(ctx->nctx, instr);
