@@ -2971,10 +2971,16 @@ void radv_CmdEndRenderPass(
 	cmd_buffer->state.framebuffer = NULL;
 }
 
-
+/*
+ * For HTILE we have the following interesting clear words:
+ *   0x0000030f: Uncompressed.
+ *   0xfffffff0: Clear depth to 1.0
+ *   0x00000000: Clear depth to 0.0
+ */
 static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
                                   struct radv_image *image,
-                                  const VkImageSubresourceRange *range)
+                                  const VkImageSubresourceRange *range,
+                                  uint32_t clear_word)
 {
 	assert(range->baseMipLevel == 0);
 	assert(range->levelCount == 1 || range->levelCount == VK_REMAINING_ARRAY_LAYERS);
@@ -2986,7 +2992,7 @@ static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
 	                                RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 
-	radv_fill_buffer(cmd_buffer, image->bo, offset, size, 0xffffffff);
+	radv_fill_buffer(cmd_buffer, image->bo, offset, size, clear_word);
 
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
@@ -3013,7 +3019,10 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 	} else if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
 	           radv_layout_has_htile(image, dst_layout, dst_queue_mask)) {
 		/* TODO: merge with the clear if applicable */
-		radv_initialize_htile(cmd_buffer, image, range);
+		radv_initialize_htile(cmd_buffer, image, range, 0);
+	} else if (!radv_layout_is_htile_compressed(image, src_layout, src_queue_mask) &&
+	           radv_layout_is_htile_compressed(image, dst_layout, dst_queue_mask)) {
+		radv_initialize_htile(cmd_buffer, image, range, 0x0000030f);
 	} else if (radv_layout_is_htile_compressed(image, src_layout, src_queue_mask) &&
 	           !radv_layout_is_htile_compressed(image, dst_layout, dst_queue_mask)) {
 		VkImageSubresourceRange local_range = *range;
