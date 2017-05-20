@@ -113,8 +113,6 @@ load_glsl(unsigned num_files, char* const* files, gl_shader_stage stage)
 
 	nir_shader *nir = glsl_to_nir(prog, stage, ir3_get_compiler_options(compiler));
 
-	standalone_compiler_cleanup(prog);
-
 	/* required NIR passes: */
 	/* TODO cmdline args for some of the conditional lowering passes? */
 
