@@ -868,7 +868,8 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 		if (res != -1) {
 			rscreen->disk_shader_cache =
 				disk_cache_create(r600_get_chip_name(rscreen),
-						  timestamp_str, 0);
+						  timestamp_str,
+						  rscreen->debug_flags);
 			free(timestamp_str);
 		}
 	}
