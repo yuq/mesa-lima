@@ -921,8 +921,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    struct nvc0_screen *screen = nvc0->screen;
    int s;
 
-   if (info->index_size)
-      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_IDX);
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_IDX);
 
    /* NOTE: caller must ensure that (min_index + index_bias) is >= 0 */
    nvc0->vb_elt_first = info->min_index + info->index_bias;

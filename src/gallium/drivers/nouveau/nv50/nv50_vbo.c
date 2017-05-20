@@ -770,10 +770,9 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    bool tex_dirty = false;
    int s;
 
-   if (info->index_size && !info->has_user_indices) {
-      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_INDEX);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_INDEX);
+   if (info->index_size && !info->has_user_indices)
       BCTX_REFN(nv50->bufctx_3d, 3D_INDEX, nv04_resource(info->index.resource), RD);
-   }
 
    /* NOTE: caller must ensure that (min_index + index_bias) is >= 0 */
    nv50->vb_elt_first = info->min_index + info->index_bias;
