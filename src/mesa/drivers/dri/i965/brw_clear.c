@@ -125,7 +125,6 @@ brw_fast_clear_depth(struct gl_context *ctx)
       return false;
    }
 
-   uint32_t depth_clear_value;
    switch (mt->format) {
    case MESA_FORMAT_Z32_FLOAT_S8X24_UINT:
    case MESA_FORMAT_Z24_UNORM_S8_UINT:
@@ -138,10 +137,6 @@ brw_fast_clear_depth(struct gl_context *ctx)
        *        D24_UNORM_S8_UINT.
        */
       return false;
-
-   case MESA_FORMAT_Z_FLOAT32:
-      depth_clear_value = float_as_int(ctx->Depth.Clear);
-      break;
 
    case MESA_FORMAT_Z_UNORM16:
       /* From the Sandy Bridge PRM, volume 2 part 1, page 314:
@@ -157,22 +152,18 @@ brw_fast_clear_depth(struct gl_context *ctx)
           (minify(mt->physical_width0,
                   depth_irb->mt_level - mt->first_level) % 16) != 0)
 	 return false;
-      /* FALLTHROUGH */
+      break;
 
    default:
-      if (brw->gen >= 8)
-         depth_clear_value = float_as_int(ctx->Depth.Clear);
-      else
-         depth_clear_value = fb->_DepthMax * ctx->Depth.Clear;
       break;
    }
 
    /* If we're clearing to a new clear value, then we need to resolve any clear
     * flags out of the HiZ buffer into the real depth buffer.
     */
-   if (mt->depth_clear_value != depth_clear_value) {
+   if (mt->fast_clear_color.f32[0] != ctx->Depth.Clear) {
       intel_miptree_all_slices_resolve_depth(brw, mt);
-      mt->depth_clear_value = depth_clear_value;
+      mt->fast_clear_color.f32[0] = ctx->Depth.Clear;
    }
 
    if (brw->gen == 6) {

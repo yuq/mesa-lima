@@ -551,15 +551,6 @@ struct intel_mipmap_tree
    GLuint total_width;
    GLuint total_height;
 
-   /**
-    * The depth value used during the most recent fast depth clear performed
-    * on the surface. This field is invalid only if surface has never
-    * underwent a fast depth clear.
-    *
-    * @see 3DSTATE_CLEAR_PARAMS.DepthClearValue
-    */
-   uint32_t depth_clear_value;
-
    /* Includes image offset tables: */
    struct intel_mipmap_level level[MAX_TEXTURE_LEVELS];
 
@@ -645,25 +636,10 @@ struct intel_mipmap_tree
    struct intel_mipmap_tree *plane[2];
 
    /**
-    * The SURFACE_STATE bits associated with the last fast color clear to this
-    * color mipmap tree, if any.
-    *
-    * Prior to GEN9 there is a single bit for RGBA clear values which gives you
-    * the option of 2^4 clear colors. Each bit determines if the color channel
-    * is fully saturated or unsaturated (Cherryview does add a 32b value per
-    * channel, but it is globally applied instead of being part of the render
-    * surface state). Starting with GEN9, the surface state accepts a 32b value
-    * for each color channel.
-    *
-    * @see RENDER_SURFACE_STATE.RedClearColor
-    * @see RENDER_SURFACE_STATE.GreenClearColor
-    * @see RENDER_SURFACE_STATE.BlueClearColor
-    * @see RENDER_SURFACE_STATE.AlphaClearColor
+    * Fast clear color for this surface.  For depth surfaces, the clear value
+    * is stored as a float32 in the red component.
     */
-   union {
-      uint32_t fast_clear_color_value;
-      union gl_color_union gen9_fast_clear_color;
-   };
+   union isl_color_value fast_clear_color;
 
    /**
     * Disable allocation of auxiliary buffers, such as the HiZ buffer and MCS
@@ -818,10 +794,6 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
                                const struct intel_mipmap_tree *mt,
                                struct isl_surf *surf,
                                enum isl_aux_usage *usage);
-
-union isl_color_value
-intel_miptree_get_isl_clear_color(struct brw_context *brw,
-                                  const struct intel_mipmap_tree *mt);
 
 void
 intel_get_image_dims(struct gl_texture_image *image,

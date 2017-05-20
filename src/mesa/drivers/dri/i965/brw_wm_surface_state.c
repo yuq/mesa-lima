@@ -154,7 +154,7 @@ brw_emit_surface_state(struct brw_context *brw,
       /* We only really need a clear color if we also have an auxiliary
        * surface.  Without one, it does nothing.
        */
-      clear_color = intel_miptree_get_isl_clear_color(brw, mt);
+      clear_color = mt->fast_clear_color;
    }
 
    void *state = brw_state_batch(brw,

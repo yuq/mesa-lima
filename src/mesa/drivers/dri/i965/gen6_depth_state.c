@@ -234,6 +234,11 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
    OUT_BATCH(_3DSTATE_CLEAR_PARAMS << 16 |
              GEN5_DEPTH_CLEAR_VALID |
              (2 - 2));
-   OUT_BATCH(depth_mt ? depth_mt->depth_clear_value : 0);
+   if (depth_mt) {
+      OUT_BATCH(brw_convert_depth_value(depth_mt->format,
+                                        depth_mt->fast_clear_color.f32[0]));
+   } else {
+      OUT_BATCH(0);
+   }
    ADVANCE_BATCH();
 }

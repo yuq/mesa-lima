@@ -1402,7 +1402,7 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
             blorp_emit_reloc(batch, dw + isl_dev->ds.hiz_offset / 4,
                              hiz_address, 0);
 
-         info.depth_clear_value = params->depth.clear_color.u32[0];
+         info.depth_clear_value = params->depth.clear_color.f32[0];
       }
    }
 

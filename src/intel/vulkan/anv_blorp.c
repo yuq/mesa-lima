@@ -1721,7 +1721,7 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
    };
    surf.aux_usage = ISL_AUX_USAGE_HIZ;
 
-   surf.clear_color.u32[0] = (uint32_t) ANV_HZ_FC_VAL;
+   surf.clear_color.f32[0] = ANV_HZ_FC_VAL;
 
    blorp_gen6_hiz_op(&batch, &surf, 0, 0, op);
    blorp_batch_finish(&batch);
