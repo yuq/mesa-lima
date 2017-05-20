@@ -212,8 +212,7 @@ tex_type(unsigned target)
 static bool
 use_astc_srgb_workaround(struct pipe_context *pctx, enum pipe_format format)
 {
-	return (fd_screen(pctx->screen)->gpu_id == 420) &&
-		(util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_ASTC);
+	return false;  // TODO check if this is still needed on a5xx
 }
 
 static struct pipe_sampler_view *
