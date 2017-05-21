@@ -331,10 +331,9 @@ static int gfx6_compute_level(ADDR_HANDLE addrlib,
 	/* TC-compatible HTILE. */
 	if (!is_stencil &&
 	    AddrSurfInfoIn->flags.depth &&
-	    AddrSurfInfoIn->flags.tcCompatible &&
 	    surf_level->mode == RADEON_SURF_MODE_2D &&
 	    level == 0) {
-		AddrHtileIn->flags.tcCompatible = 1;
+		AddrHtileIn->flags.tcCompatible = AddrSurfInfoIn->flags.tcCompatible;
 		AddrHtileIn->pitch = AddrSurfInfoOut->pitch;
 		AddrHtileIn->height = AddrSurfInfoOut->height;
 		AddrHtileIn->numSlices = AddrSurfInfoOut->depth;
