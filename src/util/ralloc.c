@@ -405,12 +405,7 @@ ralloc_strcat(char **dest, const char *str)
 bool
 ralloc_strncat(char **dest, const char *str, size_t n)
 {
-   /* Clamp n to the string length */
-   size_t str_length = strlen(str);
-   if (str_length < n)
-      n = str_length;
-
-   return cat(dest, str, n);
+   return cat(dest, str, strnlen(str, n));
 }
 
 char *
