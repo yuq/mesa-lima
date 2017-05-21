@@ -400,14 +400,14 @@ struct ir3 {
 	struct list_head array_list;
 };
 
-typedef struct nir_variable nir_variable;
+typedef struct nir_register nir_register;
 
 struct ir3_array {
 	struct list_head node;
 	unsigned length;
 	unsigned id;
 
-	nir_variable *var;
+	nir_register *r;
 
 	/* We track the last write and last access (read or write) to
 	 * setup dependencies on instructions that read or write the
