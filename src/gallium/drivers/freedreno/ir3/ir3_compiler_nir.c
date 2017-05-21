@@ -101,6 +101,10 @@ struct ir3_compile {
 	 */
 	struct hash_table *addr_ht;
 
+	/* last dst array, for indirect we need to insert a var-store.
+	 */
+	struct ir3_instruction **last_dst;
+
 	/* maps nir_block to ir3_block, mostly for the purposes of
 	 * figuring out the blocks successors
 	 */
@@ -361,6 +365,8 @@ __get_dst(struct ir3_compile *ctx, void *key, unsigned n)
 	struct ir3_instruction **value =
 		ralloc_array(ctx->def_ht, struct ir3_instruction *, n);
 	_mesa_hash_table_insert(ctx->def_ht, key, value);
+	compile_assert(ctx, !ctx->last_dst);
+	ctx->last_dst = value;
 	return value;
 }
 
@@ -373,6 +379,12 @@ get_dst(struct ir3_compile *ctx, nir_dest *dst, unsigned n)
 	} else {
 		return __get_dst(ctx, dst->reg.reg, n);
 	}
+}
+
+static void
+put_dst(struct ir3_compile *ctx, nir_dest *dst)
+{
+	ctx->last_dst = NULL;
 }
 
 static struct ir3_instruction **
@@ -736,6 +748,7 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 			dst[i] = ir3_MOV(b, src[i], TYPE_U32);
 		}
 
+		put_dst(ctx, &alu->dest.dest);
 		return;
 	}
 
@@ -1016,6 +1029,8 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 				nir_op_infos[alu->op].name);
 		break;
 	}
+
+	put_dst(ctx, &alu->dest.dest);
 }
 
 /* handles direct/indirect UBO reads: */
@@ -1562,6 +1577,9 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 				nir_intrinsic_infos[intr->intrinsic].name);
 		break;
 	}
+
+	if (info->has_dest)
+		put_dst(ctx, &intr->dest);
 }
 
 static void
@@ -1846,6 +1864,8 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 							   factor, 0);
 		}
 	}
+
+	put_dst(ctx, &tex->dest);
 }
 
 static void
@@ -1869,6 +1889,8 @@ emit_tex_query_levels(struct ir3_compile *ctx, nir_tex_instr *tex)
 	 */
 	if (ctx->levels_add_one)
 		dst[0] = ir3_ADD_U(b, dst[0], 0, create_immed(b, 1), 0);
+
+	put_dst(ctx, &tex->dest);
 }
 
 static void
@@ -1929,6 +1951,8 @@ emit_phi(struct ir3_compile *ctx, nir_phi_instr *nphi)
 	phi->phi.nphi = nphi;
 
 	dst[0] = phi;
+
+	put_dst(ctx, &nphi->dest);
 }
 
 /* phi instructions are left partially constructed.  We don't resolve
