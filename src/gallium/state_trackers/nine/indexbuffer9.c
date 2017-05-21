@@ -49,9 +49,6 @@ NineIndexBuffer9_ctor( struct NineIndexBuffer9 *This,
     if (FAILED(hr))
         return hr;
 
-    This->buffer = NULL;
-    This->offset = 0;
-
     switch (pDesc->Format) {
     case D3DFMT_INDEX16: This->index_size = 2; break;
     case D3DFMT_INDEX32: This->index_size = 4; break;
@@ -73,11 +70,10 @@ NineIndexBuffer9_dtor( struct NineIndexBuffer9 *This )
 }
 
 struct pipe_resource *
-NineIndexBuffer9_GetBuffer( struct NineIndexBuffer9 *This )
+NineIndexBuffer9_GetBuffer( struct NineIndexBuffer9 *This, unsigned *offset )
 {
     /* The resource may change */
-    This->buffer = NineBuffer9_GetResource(&This->base, &This->offset);
-    return This->buffer;
+    return NineBuffer9_GetResource(&This->base, offset);
 }
 
 HRESULT NINE_WINAPI

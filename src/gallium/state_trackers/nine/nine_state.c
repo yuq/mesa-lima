@@ -1575,12 +1575,11 @@ nine_context_set_indices(struct NineDevice9 *device,
 {
     struct pipe_resource *res = NULL;
     UINT IndexSize = 0;
-    UINT OffsetInBytes = 0;
+    unsigned OffsetInBytes = 0;
 
     if (idxbuf) {
-        res = NineIndexBuffer9_GetBuffer(idxbuf);
+        res = NineIndexBuffer9_GetBuffer(idxbuf, &OffsetInBytes);
         IndexSize = idxbuf->index_size;
-        OffsetInBytes = idxbuf->offset;
     }
 
     nine_context_set_indices_apply(device, res, IndexSize, OffsetInBytes);
@@ -2540,6 +2539,7 @@ init_draw_info(struct pipe_draw_info *info,
     if (dev->context.stream_instancedata_mask & dev->context.stream_usage_mask)
         info->instance_count = MAX2(dev->context.stream_freq[0] & 0x7FFFFF, 1);
     info->primitive_restart = FALSE;
+    info->has_user_indices = FALSE;
     info->restart_index = 0;
     info->count_from_stream_output = NULL;
     info->indirect = NULL;
@@ -2561,17 +2561,18 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_primitive,
     info.index_bias = 0;
     info.min_index = info.start;
     info.max_index = info.count - 1;
+    info.index.resource = NULL;
 
     context->pipe->draw_vbo(context->pipe, &info);
 }
 
 CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive,
                   ARG_VAL(D3DPRIMITIVETYPE, PrimitiveType),
-                   ARG_VAL(INT, BaseVertexIndex),
-                   ARG_VAL(UINT, MinVertexIndex),
-                   ARG_VAL(UINT, NumVertices),
-                   ARG_VAL(UINT, StartIndex),
-                   ARG_VAL(UINT, PrimitiveCount))
+                  ARG_VAL(INT, BaseVertexIndex),
+                  ARG_VAL(UINT, MinVertexIndex),
+                  ARG_VAL(UINT, NumVertices),
+                  ARG_VAL(UINT, StartIndex),
+                  ARG_VAL(UINT, PrimitiveCount))
 {
     struct nine_context *context = &device->context;
     struct pipe_draw_info info;
@@ -2606,6 +2607,7 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_primitive_from_vtxbuf,
     info.index_bias = 0;
     info.min_index = 0;
     info.max_index = info.count - 1;
+    info.index.resource = NULL;
 
     context->pipe->set_vertex_buffers(context->pipe, 0, 1, vtxbuf);
 
@@ -2621,7 +2623,7 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf,
                   ARG_BIND_RES(struct pipe_resource, ibuf),
                   ARG_VAL(void *, user_ibuf),
                   ARG_VAL(UINT, index_offset),
-		  ARG_VAL(UINT, index_size))
+                  ARG_VAL(UINT, index_size))
 {
     struct nine_context *context = &device->context;
     struct pipe_draw_info info;

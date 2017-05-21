@@ -37,8 +37,6 @@ struct NineIndexBuffer9
     struct NineBuffer9 base;
 
     /* g3d stuff */
-    struct pipe_resource *buffer;
-    unsigned offset;
     unsigned index_size;
 
     D3DINDEXBUFFER_DESC desc;
@@ -65,7 +63,8 @@ NineIndexBuffer9_dtor( struct NineIndexBuffer9 *This );
 /*** Nine private ***/
 
 struct pipe_resource *
-NineIndexBuffer9_GetBuffer( struct NineIndexBuffer9 *This );
+NineIndexBuffer9_GetBuffer( struct NineIndexBuffer9 *This,
+                            unsigned *offset );
 
 /*** Direct3D public ***/
 

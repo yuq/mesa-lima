@@ -2915,7 +2915,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
                                                            ibuf,
                                                            ibuf ? NULL : (void*)pIndexData,
                                                            index_offset,
-							   index_size);
+                                                           index_size);
     NineAfterDraw(This);
 
     pipe_vertex_buffer_unreference(&vbuf);
