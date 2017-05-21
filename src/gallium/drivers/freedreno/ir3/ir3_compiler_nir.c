@@ -297,6 +297,61 @@ get_var(struct ir3_compile *ctx, nir_variable *var)
 	return NULL;
 }
 
+/* relative (indirect) if address!=NULL */
+static struct ir3_instruction *
+create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, int n,
+		struct ir3_instruction *address)
+{
+	struct ir3_block *block = ctx->block;
+	struct ir3_instruction *mov;
+	struct ir3_register *src;
+
+	mov = ir3_instr_create(block, OPC_MOV);
+	mov->cat1.src_type = TYPE_U32;
+	mov->cat1.dst_type = TYPE_U32;
+	ir3_reg_create(mov, 0, 0);
+	src = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
+			COND(address, IR3_REG_RELATIV));
+	src->instr = arr->last_write;
+	src->size  = arr->length;
+	src->array.id = arr->id;
+	src->array.offset = n;
+
+	if (address)
+		ir3_instr_set_address(mov, address);
+
+	arr->last_access = mov;
+
+	return mov;
+}
+
+/* relative (indirect) if address!=NULL */
+static struct ir3_instruction *
+create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, int n,
+		struct ir3_instruction *src, struct ir3_instruction *address)
+{
+	struct ir3_block *block = ctx->block;
+	struct ir3_instruction *mov;
+	struct ir3_register *dst;
+
+	mov = ir3_instr_create(block, OPC_MOV);
+	mov->cat1.src_type = TYPE_U32;
+	mov->cat1.dst_type = TYPE_U32;
+	dst = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
+			COND(address, IR3_REG_RELATIV));
+	dst->instr = arr->last_access;
+	dst->size  = arr->length;
+	dst->array.id = arr->id;
+	dst->array.offset = n;
+	ir3_reg_create(mov, 0, IR3_REG_SSA)->instr = src;
+
+	ir3_instr_set_address(mov, address);
+
+	arr->last_write = arr->last_access = mov;
+
+	return mov;
+}
+
 /* allocate a n element value array (to be populated by caller) and
  * insert in def_ht
  */
@@ -487,61 +542,6 @@ create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, int n,
 	src->array.offset = n;
 
 	ir3_instr_set_address(mov, address);
-
-	return mov;
-}
-
-/* relative (indirect) if address!=NULL */
-static struct ir3_instruction *
-create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, int n,
-		struct ir3_instruction *address)
-{
-	struct ir3_block *block = ctx->block;
-	struct ir3_instruction *mov;
-	struct ir3_register *src;
-
-	mov = ir3_instr_create(block, OPC_MOV);
-	mov->cat1.src_type = TYPE_U32;
-	mov->cat1.dst_type = TYPE_U32;
-	ir3_reg_create(mov, 0, 0);
-	src = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
-			COND(address, IR3_REG_RELATIV));
-	src->instr = arr->last_write;
-	src->size  = arr->length;
-	src->array.id = arr->id;
-	src->array.offset = n;
-
-	if (address)
-		ir3_instr_set_address(mov, address);
-
-	arr->last_access = mov;
-
-	return mov;
-}
-
-/* relative (indirect) if address!=NULL */
-static struct ir3_instruction *
-create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, int n,
-		struct ir3_instruction *src, struct ir3_instruction *address)
-{
-	struct ir3_block *block = ctx->block;
-	struct ir3_instruction *mov;
-	struct ir3_register *dst;
-
-	mov = ir3_instr_create(block, OPC_MOV);
-	mov->cat1.src_type = TYPE_U32;
-	mov->cat1.dst_type = TYPE_U32;
-	dst = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
-			COND(address, IR3_REG_RELATIV));
-	dst->instr = arr->last_access;
-	dst->size  = arr->length;
-	dst->array.id = arr->id;
-	dst->array.offset = n;
-	ir3_reg_create(mov, 0, IR3_REG_SSA)->instr = src;
-
-	ir3_instr_set_address(mov, address);
-
-	arr->last_write = arr->last_access = mov;
 
 	return mov;
 }
