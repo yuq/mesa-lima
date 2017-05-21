@@ -35,7 +35,6 @@
  */
 
 #include "glheader.h"
-#include "imports.h"
 #include "hash.h"
 #include "util/hash_table.h"
 
@@ -51,18 +50,6 @@
  * value, so that we test the deleted-key-in-the-table path as best we can.
  */
 #define DELETED_KEY_VALUE 1
-
-/**
- * The hash table data structure.  
- */
-struct _mesa_HashTable {
-   struct hash_table *ht;
-   GLuint MaxKey;                        /**< highest key inserted so far */
-   mtx_t Mutex;                /**< mutual exclusion lock */
-   GLboolean InDeleteAll;                /**< Debug check */
-   /** Value that would be in the table for DELETED_KEY_VALUE. */
-   void *deleted_key_data;
-};
 
 /** @{
  * Mapping from our use of GLuint as both the key and the hash value to the
@@ -227,36 +214,6 @@ void *
 _mesa_HashLookupLocked(struct _mesa_HashTable *table, GLuint key)
 {
    return _mesa_HashLookup_unlocked(table, key);
-}
-
-
-/**
- * Lock the hash table mutex.
- *
- * This function should be used when multiple objects need
- * to be looked up in the hash table, to avoid having to lock
- * and unlock the mutex each time.
- *
- * \param table the hash table.
- */
-void
-_mesa_HashLockMutex(struct _mesa_HashTable *table)
-{
-   assert(table);
-   mtx_lock(&table->Mutex);
-}
-
-
-/**
- * Unlock the hash table mutex.
- *
- * \param table the hash table.
- */
-void
-_mesa_HashUnlockMutex(struct _mesa_HashTable *table)
-{
-   assert(table);
-   mtx_unlock(&table->Mutex);
 }
 
 
