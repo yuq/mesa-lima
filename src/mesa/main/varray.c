@@ -1949,17 +1949,59 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
 }
 
 
-/**
- * GL_ARB_vertex_attrib_binding
- */
-static void
+static ALWAYS_INLINE void
 vertex_array_vertex_buffer(struct gl_context *ctx,
                            struct gl_vertex_array_object *vao,
                            GLuint bindingIndex, GLuint buffer, GLintptr offset,
                            GLsizei stride, const char *func)
 {
    struct gl_buffer_object *vbo;
+   if (buffer ==
+       vao->BufferBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj->Name) {
+      vbo = vao->BufferBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj;
+   } else if (buffer != 0) {
+      vbo = _mesa_lookup_bufferobj(ctx, buffer);
 
+      if (!vbo && _mesa_is_gles31(ctx)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-gen name)", func);
+         return;
+      }
+      /* From the GL_ARB_vertex_attrib_array spec:
+       *
+       *   "[Core profile only:]
+       *    An INVALID_OPERATION error is generated if buffer is not zero or a
+       *    name returned from a previous call to GenBuffers, or if such a name
+       *    has since been deleted with DeleteBuffers.
+       *
+       * Otherwise, we fall back to the same compat profile behavior as other
+       * object references (automatically gen it).
+       */
+      if (!_mesa_handle_bind_buffer_gen(ctx, buffer, &vbo, func))
+         return;
+   } else {
+      /* The ARB_vertex_attrib_binding spec says:
+       *
+       *    "If <buffer> is zero, any buffer object attached to this
+       *     bindpoint is detached."
+       */
+      vbo = ctx->Shared->NullBufferObj;
+   }
+
+   _mesa_bind_vertex_buffer(ctx, vao, VERT_ATTRIB_GENERIC(bindingIndex),
+                            vbo, offset, stride);
+}
+
+
+/**
+ * GL_ARB_vertex_attrib_binding
+ */
+static void
+vertex_array_vertex_buffer_err(struct gl_context *ctx,
+                               struct gl_vertex_array_object *vao,
+                               GLuint bindingIndex, GLuint buffer,
+                               GLintptr offset, GLsizei stride,
+                               const char *func)
+{
    ASSERT_OUTSIDE_BEGIN_END(ctx);
 
    /* The ARB_vertex_attrib_binding spec says:
@@ -2000,39 +2042,8 @@ vertex_array_vertex_buffer(struct gl_context *ctx,
       return;
    }
 
-   if (buffer ==
-       vao->BufferBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj->Name) {
-      vbo = vao->BufferBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj;
-   } else if (buffer != 0) {
-      vbo = _mesa_lookup_bufferobj(ctx, buffer);
-
-      if (!vbo && _mesa_is_gles31(ctx)) {
-         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-gen name)", func);
-         return;
-      }
-      /* From the GL_ARB_vertex_attrib_array spec:
-       *
-       *   "[Core profile only:]
-       *    An INVALID_OPERATION error is generated if buffer is not zero or a
-       *    name returned from a previous call to GenBuffers, or if such a name
-       *    has since been deleted with DeleteBuffers.
-       *
-       * Otherwise, we fall back to the same compat profile behavior as other
-       * object references (automatically gen it).
-       */
-      if (!_mesa_handle_bind_buffer_gen(ctx, buffer, &vbo, func))
-         return;
-   } else {
-      /* The ARB_vertex_attrib_binding spec says:
-       *
-       *    "If <buffer> is zero, any buffer object attached to this
-       *     bindpoint is detached."
-       */
-      vbo = ctx->Shared->NullBufferObj;
-   }
-
-   _mesa_bind_vertex_buffer(ctx, vao, VERT_ATTRIB_GENERIC(bindingIndex),
-                            vbo, offset, stride);
+   vertex_array_vertex_buffer(ctx, vao, bindingIndex, buffer, offset,
+                              stride, func);
 }
 
 
@@ -2054,8 +2065,9 @@ _mesa_BindVertexBuffer(GLuint bindingIndex, GLuint buffer, GLintptr offset,
       return;
    }
 
-   vertex_array_vertex_buffer(ctx, ctx->Array.VAO, bindingIndex,
-                              buffer, offset, stride, "glBindVertexBuffer");
+   vertex_array_vertex_buffer_err(ctx, ctx->Array.VAO, bindingIndex,
+                                  buffer, offset, stride,
+                                  "glBindVertexBuffer");
 }
 
 
@@ -2076,9 +2088,8 @@ _mesa_VertexArrayVertexBuffer(GLuint vaobj, GLuint bindingIndex, GLuint buffer,
    if (!vao)
       return;
 
-   vertex_array_vertex_buffer(ctx, vao, bindingIndex,
-                              buffer, offset, stride,
-                              "glVertexArrayVertexBuffer");
+   vertex_array_vertex_buffer_err(ctx, vao, bindingIndex, buffer, offset,
+                                  stride, "glVertexArrayVertexBuffer");
 }
 
 
