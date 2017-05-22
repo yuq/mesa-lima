@@ -881,8 +881,6 @@ vc4_dump_surface_msaa(struct pipe_surface *psurf)
         uint32_t char_w = 140, char_h = 60;
         uint32_t char_w_per_tile = char_w / tiles_w - 1;
         uint32_t char_h_per_tile = char_h / tiles_h - 1;
-        uint32_t found_colors[10];
-        uint32_t num_found_colors = 0;
 
         fprintf(stderr, "Surface: %dx%d (%dx MSAA)\n",
                 psurf->width, psurf->height, psurf->texture->nr_samples);
@@ -919,10 +917,6 @@ vc4_dump_surface_msaa(struct pipe_surface *psurf)
                 for (int x = 0; x < (char_w_per_tile + 1) * tiles_w; x++)
                         fprintf(stderr, "-");
                 fprintf(stderr, "\n");
-        }
-
-        for (int i = 0; i < num_found_colors; i++) {
-                fprintf(stderr, "color %d: 0x%08x\n", i, found_colors[i]);
         }
 }
 
