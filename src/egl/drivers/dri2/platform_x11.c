@@ -891,19 +891,17 @@ dri2_x11_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
 
-   if (dri2_dpy->flush) {
-      if (dri2_x11_swap_buffers_msc(drv, disp, draw, 0, 0, 0) != -1) {
-          return EGL_TRUE;
-      }
-      /* Swap failed with a window drawable. */
-      _eglError(EGL_BAD_NATIVE_WINDOW, __func__);
-      return EGL_FALSE;
-   } else {
-      assert(dri2_dpy->swrast);
-
+   if (!dri2_dpy->flush) {
       dri2_dpy->core->swapBuffers(dri2_surf->dri_drawable);
       return EGL_TRUE;
    }
+
+   if (dri2_x11_swap_buffers_msc(drv, disp, draw, 0, 0, 0) == -1) {
+      /* Swap failed with a window drawable. */
+      _eglError(EGL_BAD_NATIVE_WINDOW, __func__);
+      return EGL_FALSE;
+   }
+   return EGL_TRUE;
 }
 
 static EGLBoolean
