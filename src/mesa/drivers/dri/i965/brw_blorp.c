@@ -177,7 +177,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
             flags |= INTEL_MIPTREE_IGNORE_CCS_E;
 
          intel_miptree_resolve_color(brw, mt,
-                                     *level, start_layer, num_layers, flags);
+                                     *level, 1,
+                                     start_layer, num_layers, flags);
 
          assert(!intel_miptree_has_color_unresolved(mt, *level, 1,
                                                     start_layer, num_layers));

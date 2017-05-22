@@ -422,7 +422,7 @@ brw_predraw_set_aux_buffers(struct brw_context *brw)
           !intel_miptree_is_lossless_compressed(brw, irb->mt)) {
          assert(brw->gen >= 8);
 
-         intel_miptree_resolve_color(brw, irb->mt, irb->mt_level,
+         intel_miptree_resolve_color(brw, irb->mt, irb->mt_level, 1,
                                      irb->mt_layer, irb->layer_count, 0);
       }
    }

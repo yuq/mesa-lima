@@ -2164,33 +2164,35 @@ intel_miptree_needs_color_resolve(const struct brw_context *brw,
 
 bool
 intel_miptree_resolve_color(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt, unsigned level,
-                            unsigned start_layer, unsigned num_layers,
+                            struct intel_mipmap_tree *mt,
+                            uint32_t start_level, uint32_t num_levels,
+                            uint32_t start_layer, uint32_t num_layers,
                             int flags)
 {
-   intel_miptree_check_color_resolve(brw, mt, level, start_layer);
+   intel_miptree_check_color_resolve(brw, mt, start_level, start_layer);
 
    if (!intel_miptree_needs_color_resolve(brw, mt, flags))
       return false;
 
-   /* Arrayed fast clear is only supported for gen8+. */
-   assert(brw->gen >= 8 || num_layers == 1);
-
    bool resolved = false;
-   for (unsigned i = 0; i < num_layers; ++i) {
-      intel_miptree_check_level_layer(mt, level, start_layer + i);
+   foreach_list_typed_safe(struct intel_resolve_map, map, link,
+                           &mt->color_resolve_map) {
+      if (map->level < start_level ||
+          map->level >= (start_level + num_levels) ||
+          map->layer < start_layer ||
+          map->layer >= (start_layer + num_layers))
+         continue;
 
-      struct intel_resolve_map *item =
-         intel_resolve_map_get(&mt->color_resolve_map, level,
-                               start_layer + i);
+      /* Arrayed and mip-mapped fast clear is only supported for gen8+. */
+      assert(brw->gen >= 8 || (map->level == 0 && map->layer == 0));
 
-      if (item) {
-         assert(item->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
+      intel_miptree_check_level_layer(mt, map->level, map->layer);
 
-         brw_blorp_resolve_color(brw, mt, level, start_layer);
-         intel_resolve_map_remove(item);
-         resolved = true;
-      }
+      assert(map->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
+
+      brw_blorp_resolve_color(brw, mt, map->level, map->layer);
+      intel_resolve_map_remove(map);
+      resolved = true;
    }
 
    return resolved;
@@ -2201,16 +2203,8 @@ intel_miptree_all_slices_resolve_color(struct brw_context *brw,
                                        struct intel_mipmap_tree *mt,
                                        int flags)
 {
-   if (!intel_miptree_needs_color_resolve(brw, mt, flags))
-      return;
-      
-   foreach_list_typed_safe(struct intel_resolve_map, map, link,
-                           &mt->color_resolve_map) {
-      assert(map->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
 
-      brw_blorp_resolve_color(brw, mt, map->level, map->layer);
-      intel_resolve_map_remove(map);
-   }
+   intel_miptree_resolve_color(brw, mt, 0, UINT32_MAX, 0, UINT32_MAX, flags);
 }
 
 /**
