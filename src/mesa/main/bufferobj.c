@@ -4029,10 +4029,14 @@ _mesa_BindBufferRange(GLenum target, GLuint index,
 
    switch (target) {
    case GL_TRANSFORM_FEEDBACK_BUFFER:
-      _mesa_bind_buffer_range_transform_feedback(ctx,
-                                                 ctx->TransformFeedback.CurrentObject,
-                                                 index, bufObj, offset, size,
-                                                 false);
+      if (!_mesa_validate_buffer_range_xfb(ctx,
+                                           ctx->TransformFeedback.CurrentObject,
+                                           index, bufObj, offset, size,
+                                           false))
+         return;
+
+      _mesa_bind_buffer_range_xfb(ctx, ctx->TransformFeedback.CurrentObject,
+                                  index, bufObj, offset, size);
       return;
    case GL_UNIFORM_BUFFER:
       bind_buffer_range_uniform_buffer_err(ctx, index, bufObj, offset, size);
