@@ -1977,55 +1977,23 @@ intel_miptree_set_all_slices_need_depth_resolve(struct intel_mipmap_tree *mt,
 }
 
 static bool
-intel_miptree_slice_resolve(struct brw_context *brw,
-			    struct intel_mipmap_tree *mt,
-			    uint32_t level,
-			    uint32_t layer,
-			    enum blorp_hiz_op need)
-{
-   intel_miptree_check_level_layer(mt, level, layer);
-
-   struct intel_resolve_map *item =
-	 intel_resolve_map_get(&mt->hiz_map, level, layer);
-
-   if (!item || item->need != need)
-      return false;
-
-   intel_hiz_exec(brw, mt, level, layer, 1, need);
-   intel_resolve_map_remove(item);
-   return true;
-}
-
-bool
-intel_miptree_slice_resolve_hiz(struct brw_context *brw,
-				struct intel_mipmap_tree *mt,
-				uint32_t level,
-				uint32_t layer)
-{
-   return intel_miptree_slice_resolve(brw, mt, level, layer,
-				      BLORP_HIZ_OP_HIZ_RESOLVE);
-}
-
-bool
-intel_miptree_slice_resolve_depth(struct brw_context *brw,
-				  struct intel_mipmap_tree *mt,
-				  uint32_t level,
-				  uint32_t layer)
-{
-   return intel_miptree_slice_resolve(brw, mt, level, layer,
-				      BLORP_HIZ_OP_DEPTH_RESOLVE);
-}
-
-static bool
-intel_miptree_all_slices_resolve(struct brw_context *brw,
-				 struct intel_mipmap_tree *mt,
-				 enum blorp_hiz_op need)
+intel_miptree_depth_hiz_resolve(struct brw_context *brw,
+                                struct intel_mipmap_tree *mt,
+                                uint32_t start_level, uint32_t num_levels,
+                                uint32_t start_layer, uint32_t num_layers,
+                                enum blorp_hiz_op need)
 {
    bool did_resolve = false;
 
    foreach_list_typed_safe(struct intel_resolve_map, map, link, &mt->hiz_map) {
+      if (map->level < start_level ||
+          map->level >= (start_level + num_levels) ||
+          map->layer < start_layer ||
+          map->layer >= (start_layer + num_layers))
+         continue;
+
       if (map->need != need)
-	 continue;
+         continue;
 
       intel_hiz_exec(brw, mt, map->level, map->layer, 1, need);
       intel_resolve_map_remove(map);
@@ -2036,19 +2004,41 @@ intel_miptree_all_slices_resolve(struct brw_context *brw,
 }
 
 bool
+intel_miptree_slice_resolve_hiz(struct brw_context *brw,
+				struct intel_mipmap_tree *mt,
+				uint32_t level,
+				uint32_t layer)
+{
+   return intel_miptree_depth_hiz_resolve(brw, mt, level, 1, layer, 1,
+                                          BLORP_HIZ_OP_HIZ_RESOLVE);
+}
+
+bool
+intel_miptree_slice_resolve_depth(struct brw_context *brw,
+				  struct intel_mipmap_tree *mt,
+				  uint32_t level,
+				  uint32_t layer)
+{
+   return intel_miptree_depth_hiz_resolve(brw, mt, level, 1, layer, 1,
+                                          BLORP_HIZ_OP_DEPTH_RESOLVE);
+}
+
+bool
 intel_miptree_all_slices_resolve_hiz(struct brw_context *brw,
 				     struct intel_mipmap_tree *mt)
 {
-   return intel_miptree_all_slices_resolve(brw, mt,
-					   BLORP_HIZ_OP_HIZ_RESOLVE);
+   return intel_miptree_depth_hiz_resolve(brw, mt,
+                                          0, UINT32_MAX, 0, UINT32_MAX,
+                                          BLORP_HIZ_OP_HIZ_RESOLVE);
 }
 
 bool
 intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 				       struct intel_mipmap_tree *mt)
 {
-   return intel_miptree_all_slices_resolve(brw, mt,
-					   BLORP_HIZ_OP_DEPTH_RESOLVE);
+   return intel_miptree_depth_hiz_resolve(brw, mt,
+                                          0, UINT32_MAX, 0, UINT32_MAX,
+                                          BLORP_HIZ_OP_DEPTH_RESOLVE);
 }
 
 enum intel_fast_clear_state
