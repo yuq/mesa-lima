@@ -674,10 +674,14 @@ void BinTriangles(
         scisYmax = _simd_set1_epi32(state.scissorsInFixedPoint[0].ymax);
     }
 
+    // Make triangle bbox inclusive
+    bbox.xmax = _simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1));
+    bbox.ymax = _simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1));
+
     bbox.xmin = _simd_max_epi32(bbox.xmin, scisXmin);
     bbox.ymin = _simd_max_epi32(bbox.ymin, scisYmin);
-    bbox.xmax = _simd_min_epi32(_simd_sub_epi32(bbox.xmax, _simd_set1_epi32(1)), scisXmax);
-    bbox.ymax = _simd_min_epi32(_simd_sub_epi32(bbox.ymax, _simd_set1_epi32(1)), scisYmax);
+    bbox.xmax = _simd_min_epi32(bbox.xmax, scisXmax);
+    bbox.ymax = _simd_min_epi32(bbox.ymax, scisYmax);
 
     if (CT::IsConservativeT::value)
     {
