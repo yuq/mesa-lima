@@ -428,29 +428,30 @@ dri2_drm_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 
    if (!dri2_dpy->flush) {
       dri2_dpy->core->swapBuffers(dri2_surf->dri_drawable);
-   } else {
-      if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
-         if (dri2_surf->current)
-            _eglError(EGL_BAD_SURFACE, "dri2_swap_buffers");
-         for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
-            if (dri2_surf->color_buffers[i].age > 0)
-               dri2_surf->color_buffers[i].age++;
+      return EGL_TRUE;
+   }
 
-         /* Make sure we have a back buffer in case we're swapping without
-          * ever rendering. */
-         if (get_back_bo(dri2_surf) < 0) {
-            _eglError(EGL_BAD_ALLOC, "dri2_swap_buffers");
-            return EGL_FALSE;
-         }
+   if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
+      if (dri2_surf->current)
+         _eglError(EGL_BAD_SURFACE, "dri2_swap_buffers");
+      for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
+         if (dri2_surf->color_buffers[i].age > 0)
+            dri2_surf->color_buffers[i].age++;
 
-         dri2_surf->current = dri2_surf->back;
-         dri2_surf->current->age = 1;
-         dri2_surf->back = NULL;
+      /* Make sure we have a back buffer in case we're swapping without
+       * ever rendering. */
+      if (get_back_bo(dri2_surf) < 0) {
+         _eglError(EGL_BAD_ALLOC, "dri2_swap_buffers");
+         return EGL_FALSE;
       }
 
-      dri2_flush_drawable_for_swapbuffers(disp, draw);
-      dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
+      dri2_surf->current = dri2_surf->back;
+      dri2_surf->current->age = 1;
+      dri2_surf->back = NULL;
    }
+
+   dri2_flush_drawable_for_swapbuffers(disp, draw);
+   dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
 
    return EGL_TRUE;
 }
