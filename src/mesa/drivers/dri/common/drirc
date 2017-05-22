@@ -92,6 +92,10 @@ TODO: document the other workarounds.
             <option name="allow_glsl_builtin_variable_redeclaration" value="true" />
         </application>
 
+        <application name="Dead Island Riptide Definitive Edition" executable="DeadIslandRiptideGame">
+            <option name="allow_glsl_builtin_variable_redeclaration" value="true" />
+        </application>
+
         <application name="Dying Light" executable="DyingLightGame">
             <option name="allow_glsl_builtin_variable_redeclaration" value="true" />
         </application>
