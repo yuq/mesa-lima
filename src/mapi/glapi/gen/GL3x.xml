@@ -213,7 +213,7 @@
   <function name="EndTransformFeedback" es2="3.0">
   </function>
 
-  <function name="BindBufferRange" es2="3.0">
+  <function name="BindBufferRange" es2="3.0" no_error="true">
     <param name="target" type="GLenum"/>
     <param name="index" type="GLuint"/>
     <param name="buffer" type="GLuint"/>

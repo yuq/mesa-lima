@@ -322,6 +322,9 @@ _mesa_FlushMappedNamedBufferRange(GLuint buffer, GLintptr offset,
                                   GLsizeiptr length);
 
 void GLAPIENTRY
+_mesa_BindBufferRange_no_error(GLenum target, GLuint index, GLuint buffer,
+                               GLintptr offset, GLsizeiptr size);
+void GLAPIENTRY
 _mesa_BindBufferRange(GLenum target, GLuint index,
                       GLuint buffer, GLintptr offset, GLsizeiptr size);
 
