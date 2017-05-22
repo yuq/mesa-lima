@@ -2083,6 +2083,19 @@ _mesa_BindVertexBuffer(GLuint bindingIndex, GLuint buffer, GLintptr offset,
 
 
 void GLAPIENTRY
+_mesa_VertexArrayVertexBuffer_no_error(GLuint vaobj, GLuint bindingIndex,
+                                       GLuint buffer, GLintptr offset,
+                                       GLsizei stride)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_vertex_array_object *vao = _mesa_lookup_vao(ctx, vaobj);
+   vertex_array_vertex_buffer(ctx, vao, bindingIndex, buffer, offset,
+                              stride, true, "glVertexArrayVertexBuffer");
+}
+
+
+void GLAPIENTRY
 _mesa_VertexArrayVertexBuffer(GLuint vaobj, GLuint bindingIndex, GLuint buffer,
                               GLintptr offset, GLsizei stride)
 {

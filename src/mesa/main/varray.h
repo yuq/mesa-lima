@@ -367,6 +367,10 @@ extern void GLAPIENTRY
 _mesa_BindVertexBuffer(GLuint bindingIndex, GLuint buffer, GLintptr offset,
                        GLsizei stride);
 
+void GLAPIENTRY
+_mesa_VertexArrayVertexBuffer_no_error(GLuint vaobj, GLuint bindingIndex,
+                                       GLuint buffer, GLintptr offset,
+                                       GLsizei stride);
 extern void GLAPIENTRY
 _mesa_VertexArrayVertexBuffer(GLuint vaobj, GLuint bindingIndex, GLuint buffer,
                               GLintptr offset, GLsizei stride);
