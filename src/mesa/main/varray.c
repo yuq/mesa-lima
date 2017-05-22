@@ -1953,7 +1953,7 @@ static ALWAYS_INLINE void
 vertex_array_vertex_buffer(struct gl_context *ctx,
                            struct gl_vertex_array_object *vao,
                            GLuint bindingIndex, GLuint buffer, GLintptr offset,
-                           GLsizei stride, const char *func)
+                           GLsizei stride, bool no_error, const char *func)
 {
    struct gl_buffer_object *vbo;
    if (buffer ==
@@ -1962,7 +1962,7 @@ vertex_array_vertex_buffer(struct gl_context *ctx,
    } else if (buffer != 0) {
       vbo = _mesa_lookup_bufferobj(ctx, buffer);
 
-      if (!vbo && _mesa_is_gles31(ctx)) {
+      if (!no_error && !vbo && _mesa_is_gles31(ctx)) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-gen name)", func);
          return;
       }
@@ -2043,7 +2043,18 @@ vertex_array_vertex_buffer_err(struct gl_context *ctx,
    }
 
    vertex_array_vertex_buffer(ctx, vao, bindingIndex, buffer, offset,
-                              stride, func);
+                              stride, false, func);
+}
+
+
+void GLAPIENTRY
+_mesa_BindVertexBuffer_no_error(GLuint bindingIndex, GLuint buffer,
+                                GLintptr offset, GLsizei stride)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   vertex_array_vertex_buffer(ctx, ctx->Array.VAO, bindingIndex,
+                              buffer, offset, stride, true,
+                              "glBindVertexBuffer");
 }
 
 

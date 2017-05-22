@@ -361,6 +361,9 @@ _mesa_primitive_restart_index(const struct gl_context *ctx,
 }
 
 extern void GLAPIENTRY
+_mesa_BindVertexBuffer_no_error(GLuint bindingIndex, GLuint buffer,
+                                GLintptr offset, GLsizei stride);
+extern void GLAPIENTRY
 _mesa_BindVertexBuffer(GLuint bindingIndex, GLuint buffer, GLintptr offset,
                        GLsizei stride);
 
