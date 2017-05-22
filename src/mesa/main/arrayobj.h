@@ -96,13 +96,9 @@ _mesa_all_buffers_are_unmapped(const struct gl_vertex_array_object *vao);
 
 void GLAPIENTRY _mesa_BindVertexArray( GLuint id );
 
-void GLAPIENTRY _mesa_BindVertexArrayAPPLE(GLuint id);
-
 void GLAPIENTRY _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids);
 
 void GLAPIENTRY _mesa_GenVertexArrays(GLsizei n, GLuint *arrays);
-
-void GLAPIENTRY _mesa_GenVertexArraysAPPLE(GLsizei n, GLuint *buffer);
 
 void GLAPIENTRY _mesa_CreateVertexArrays(GLsizei n, GLuint *arrays);
 
