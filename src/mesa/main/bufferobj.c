@@ -3991,9 +3991,9 @@ bind_atomic_buffers(struct gl_context *ctx,
    _mesa_HashUnlockMutex(ctx->Shared->BufferObjects);
 }
 
-void GLAPIENTRY
-_mesa_BindBufferRange(GLenum target, GLuint index,
-                      GLuint buffer, GLintptr offset, GLsizeiptr size)
+static ALWAYS_INLINE void
+bind_buffer_range(GLenum target, GLuint index, GLuint buffer, GLintptr offset,
+                  GLsizeiptr size)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
@@ -4053,6 +4053,13 @@ _mesa_BindBufferRange(GLenum target, GLuint index,
       _mesa_error(ctx, GL_INVALID_ENUM, "glBindBufferRange(target)");
       return;
    }
+}
+
+void GLAPIENTRY
+_mesa_BindBufferRange(GLenum target, GLuint index,
+                      GLuint buffer, GLintptr offset, GLsizeiptr size)
+{
+   bind_buffer_range(target, index, buffer, offset, size);
 }
 
 void GLAPIENTRY
