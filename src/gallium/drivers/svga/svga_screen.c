@@ -1157,7 +1157,7 @@ svga_screen_create(struct svga_winsys_screen *sws)
    }
 
    (void) mtx_init(&svgascreen->tex_mutex, mtx_plain);
-   (void) mtx_init(&svgascreen->swc_mutex, mtx_plain);
+   (void) mtx_init(&svgascreen->swc_mutex, mtx_recursive);
 
    svga_screen_cache_init(svgascreen);
 

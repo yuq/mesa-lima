@@ -320,6 +320,9 @@ svga_buffer_transfer_unmap( struct pipe_context *pipe,
    }
 
    if (svga_buffer_has_hw_storage(sbuf)) {
+      /* Note: we may wind up flushing here and unmapping other buffers
+       * which leads to recursively locking ss->swc_mutex.
+       */
       svga_buffer_hw_storage_unmap(svga, sbuf);
    }
 
