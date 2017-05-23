@@ -1169,12 +1169,11 @@ intelCreateBuffer(__DRIscreen *dri_screen,
    mesa_format rgbFormat;
    unsigned num_samples =
       intel_quantize_num_samples(screen, mesaVis->samples);
-   struct gl_framebuffer *fb;
 
    if (isPixmap)
       return false;
 
-   fb = CALLOC_STRUCT(gl_framebuffer);
+   struct gl_framebuffer *fb = CALLOC_STRUCT(gl_framebuffer);
    if (!fb)
       return false;
 
