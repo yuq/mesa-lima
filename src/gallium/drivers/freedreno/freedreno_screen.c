@@ -676,7 +676,7 @@ fd_get_compiler_options(struct pipe_screen *pscreen,
 	struct fd_screen *screen = fd_screen(pscreen);
 
 	if (is_ir3(screen))
-		return ir3_get_compiler_options();
+		return ir3_get_compiler_options(screen->compiler);
 
 	return NULL;
 }

@@ -96,6 +96,8 @@ fixup_varying_slots(struct exec_list *var_list)
 	}
 }
 
+static struct ir3_compiler *compiler;
+
 static nir_shader *
 load_glsl(unsigned num_files, char* const* files, gl_shader_stage stage)
 {
@@ -109,7 +111,7 @@ load_glsl(unsigned num_files, char* const* files, gl_shader_stage stage)
 	if (!prog)
 		errx(1, "couldn't parse `%s'", files[0]);
 
-	nir_shader *nir = glsl_to_nir(prog, stage, ir3_get_compiler_options());
+	nir_shader *nir = glsl_to_nir(prog, stage, ir3_get_compiler_options(compiler));
 
 	standalone_compiler_cleanup(prog);
 
@@ -366,6 +368,8 @@ int main(int argc, char **argv)
 
 	nir_shader *nir;
 
+	compiler = ir3_compiler_create(NULL, gpu_id);
+
 	if (s.from_tgsi) {
 		struct tgsi_token toks[65536];
 
@@ -392,7 +396,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	s.compiler = ir3_compiler_create(NULL, gpu_id);
+	s.compiler = compiler;
 	s.nir = ir3_optimize_nir(&s, nir, NULL);
 
 	v.key = key;
