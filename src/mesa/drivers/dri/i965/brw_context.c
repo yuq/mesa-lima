@@ -1779,6 +1779,7 @@ intel_update_image_buffers(struct brw_context *brw, __DRIdrawable *drawable)
                                 images.front,
                                 __DRI_IMAGE_BUFFER_FRONT);
    }
+
    if (images.image_mask & __DRI_IMAGE_BUFFER_BACK) {
       drawable->w = images.back->width;
       drawable->h = images.back->height;
