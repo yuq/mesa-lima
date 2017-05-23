@@ -30,6 +30,8 @@
 #include "util/u_string.h"
 #include "util/u_math.h"
 
+#include "os/os_process.h"
+
 #include "svga_winsys.h"
 #include "svga_public.h"
 #include "svga_context.h"
@@ -42,6 +44,7 @@
 
 #include "svga3d_shaderdefs.h"
 #include "VGPU10ShaderTokens.h"
+#include "svga_msg.h"
 
 /* NOTE: this constant may get moved into a svga3d*.h header file */
 #define SVGA3D_DX_MAX_RESOURCE_SIZE (128 * 1024 * 1024)
@@ -949,6 +952,7 @@ svga_screen_create(struct svga_winsys_screen *sws)
 {
    struct svga_screen *svgascreen;
    struct pipe_screen *screen;
+   char host_log[200];
 
 #ifdef DEBUG
    SVGA_DEBUG = debug_get_flags_option("SVGA_DEBUG", svga_debug_flags, 0 );
@@ -1137,6 +1141,18 @@ svga_screen_create(struct svga_winsys_screen *sws)
    util_snprintf(host_log, sizeof(host_log) - strlen(HOST_LOG_PREFIX),
                  "%s%s (%s)", HOST_LOG_PREFIX, PACKAGE_VERSION, MESA_GIT_SHA1);
    svga_host_log(host_log);
+
+   /* If the SVGA_EXTRA_LOGGING env var is set, log the process's command
+    * line (program name and arguments).
+    */
+   if (debug_get_bool_option("SVGA_EXTRA_LOGGING", FALSE)) {
+      char cmdline[1000];
+      if (os_get_command_line(cmdline, sizeof(cmdline))) {
+         util_snprintf(host_log, sizeof(host_log) - strlen(HOST_LOG_PREFIX),
+                       "%s%s", HOST_LOG_PREFIX, cmdline);
+         svga_host_log(host_log);
+      }
+   }
 
    return screen;
 error2:
