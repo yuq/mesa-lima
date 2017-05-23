@@ -1152,7 +1152,11 @@ intelDestroyScreen(__DRIscreen * sPriv)
 
 
 /**
- * This is called when we need to set up GL rendering to a new X window.
+ * Create a gl_framebuffer and attach it to __DRIdrawable::driverPrivate.
+ *
+ *_This implements driDriverAPI::createNewDrawable, which the DRI layer calls
+ * when creating a EGLSurface, GLXDrawable, or GLXPixmap. Despite the name,
+ * this does not allocate GPU memory.
  */
 static GLboolean
 intelCreateBuffer(__DRIscreen *dri_screen,
