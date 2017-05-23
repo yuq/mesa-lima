@@ -293,7 +293,7 @@ struct rpc_channel {
 static enum pipe_error
 svga_open_channel(struct rpc_channel *channel, unsigned protocol)
 {
-   VMW_REG ax, bx, cx, dx, si = 0, di = 0;
+   VMW_REG ax = 0, bx = 0, cx = 0, dx = 0, si = 0, di = 0;
 
    VMW_PORT(VMW_PORT_CMD_OPEN_CHANNEL,
       (protocol | GUESTMSG_FLAG_COOKIE), si, di,
@@ -323,7 +323,7 @@ svga_open_channel(struct rpc_channel *channel, unsigned protocol)
 static enum pipe_error
 svga_close_channel(struct rpc_channel *channel)
 {
-   VMW_REG ax, bx, cx, dx, si, di;
+   VMW_REG ax = 0, bx = 0, cx = 0, dx = 0, si, di;
 
    /* Set up additional parameters */
    si = channel->cookie_high;
@@ -354,7 +354,7 @@ svga_close_channel(struct rpc_channel *channel)
 static enum pipe_error
 svga_send_msg(struct rpc_channel *channel, const char *msg)
 {
-   VMW_REG ax, bx, cx, dx, si, di, bp;
+   VMW_REG ax = 0, bx = 0, cx = 0, dx = 0, si, di, bp;
    size_t msg_len = strlen(msg);
    int retries = 0;
 
