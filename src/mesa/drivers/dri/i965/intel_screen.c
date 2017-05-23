@@ -1200,11 +1200,11 @@ intelCreateBuffer(__DRIscreen *dri_screen,
    }
 
    /* setup the hardware-based renderbuffers */
-   rb = intel_create_renderbuffer(rgbFormat, num_samples);
+   rb = intel_create_winsys_renderbuffer(rgbFormat, num_samples);
    _mesa_attach_and_own_rb(fb, BUFFER_FRONT_LEFT, &rb->Base.Base);
 
    if (mesaVis->doubleBufferMode) {
-      rb = intel_create_renderbuffer(rgbFormat, num_samples);
+      rb = intel_create_winsys_renderbuffer(rgbFormat, num_samples);
       _mesa_attach_and_own_rb(fb, BUFFER_BACK_LEFT, &rb->Base.Base);
    }
 

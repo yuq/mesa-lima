@@ -167,7 +167,7 @@ intel_rb_format(const struct intel_renderbuffer *rb)
 }
 
 extern struct intel_renderbuffer *
-intel_create_renderbuffer(mesa_format format, unsigned num_samples);
+intel_create_winsys_renderbuffer(mesa_format format, unsigned num_samples);
 
 struct intel_renderbuffer *
 intel_create_private_renderbuffer(mesa_format format, unsigned num_samples);

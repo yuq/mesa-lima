@@ -431,13 +431,14 @@ intel_nop_alloc_storage(struct gl_context * ctx, struct gl_renderbuffer *rb,
 }
 
 /**
- * Create a new intel_renderbuffer which corresponds to an on-screen window,
- * not a user-created renderbuffer.
+ * Create an intel_renderbuffer for a __DRIdrawable. This function is
+ * unrelated to GL renderbuffers (that is, those created by
+ * glGenRenderbuffers).
  *
  * \param num_samples must be quantized.
  */
 struct intel_renderbuffer *
-intel_create_renderbuffer(mesa_format format, unsigned num_samples)
+intel_create_winsys_renderbuffer(mesa_format format, unsigned num_samples)
 {
    struct intel_renderbuffer *irb;
    struct gl_renderbuffer *rb;
@@ -469,7 +470,7 @@ intel_create_renderbuffer(mesa_format format, unsigned num_samples)
 
 /**
  * Private window-system buffers (as opposed to ones shared with the display
- * server created with intel_create_renderbuffer()) are most similar in their
+ * server created with intel_create_winsys_renderbuffer()) are most similar in their
  * handling to user-created renderbuffers, but they have a resize handler that
  * may be called at intel_update_renderbuffers() time.
  *
@@ -480,7 +481,7 @@ intel_create_private_renderbuffer(mesa_format format, unsigned num_samples)
 {
    struct intel_renderbuffer *irb;
 
-   irb = intel_create_renderbuffer(format, num_samples);
+   irb = intel_create_winsys_renderbuffer(format, num_samples);
    irb->Base.Base.AllocStorage = intel_alloc_private_renderbuffer_storage;
 
    return irb;
