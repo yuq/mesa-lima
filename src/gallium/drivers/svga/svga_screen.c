@@ -23,6 +23,7 @@
  *
  **********************************************************/
 
+#include "git_sha1.h" /* For MESA_GIT_SHA1 */
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
@@ -44,6 +45,10 @@
 
 /* NOTE: this constant may get moved into a svga3d*.h header file */
 #define SVGA3D_DX_MAX_RESOURCE_SIZE (128 * 1024 * 1024)
+
+#ifndef MESA_GIT_SHA1
+#define MESA_GIT_SHA1 "(unknown git revision)"
+#endif
 
 #ifdef DEBUG
 int SVGA_DEBUG = 0;
@@ -1123,6 +1128,15 @@ svga_screen_create(struct svga_winsys_screen *sws)
    (void) mtx_init(&svgascreen->swc_mutex, mtx_plain);
 
    svga_screen_cache_init(svgascreen);
+
+   /* Log Version to Host */
+   util_snprintf(host_log, sizeof(host_log) - strlen(HOST_LOG_PREFIX),
+                 "%s%s", HOST_LOG_PREFIX, svga_get_name(screen));
+   svga_host_log(host_log);
+
+   util_snprintf(host_log, sizeof(host_log) - strlen(HOST_LOG_PREFIX),
+                 "%s%s (%s)", HOST_LOG_PREFIX, PACKAGE_VERSION, MESA_GIT_SHA1);
+   svga_host_log(host_log);
 
    return screen;
 error2:
