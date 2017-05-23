@@ -37,5 +37,6 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_SOFTPIPE),)
+GALLIUM_TARGET_DRIVERS += swrast
 $(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_sw_dri)
 endif

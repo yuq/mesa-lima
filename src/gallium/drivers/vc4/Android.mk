@@ -38,5 +38,6 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_VC4),)
+GALLIUM_TARGET_DRIVERS += vc4
 $(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_vc4)
 endif

@@ -34,5 +34,6 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_VIRGL),)
+GALLIUM_TARGET_DRIVERS += virtio_gpu
 $(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_virgl libmesa_winsys_virgl_vtest)
 endif

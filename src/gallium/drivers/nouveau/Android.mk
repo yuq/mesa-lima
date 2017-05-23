@@ -43,6 +43,7 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_NOUVEAU),)
+GALLIUM_TARGET_DRIVERS += nouveau
 $(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_nouveau)
 $(eval GALLIUM_SHARED_LIBS += $(LOCAL_SHARED_LIBRARIES))
 endif

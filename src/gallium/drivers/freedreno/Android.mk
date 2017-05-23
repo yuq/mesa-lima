@@ -50,6 +50,7 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_FREEDRENO),)
+GALLIUM_TARGET_DRIVERS += msm
 $(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_freedreno)
 $(eval GALLIUM_SHARED_LIBS += $(LOCAL_SHARED_LIBRARIES))
 endif

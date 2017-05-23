@@ -49,6 +49,7 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_R600),)
+GALLIUM_TARGET_DRIVERS += r600
 $(eval GALLIUM_LIBS += \
 	$(LOCAL_MODULE) \
 	libmesa_winsys_radeon)

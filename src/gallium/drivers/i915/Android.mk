@@ -36,5 +36,6 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_I915),)
+GALLIUM_TARGET_DRIVERS += i915
 $(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_i915)
 endif
