@@ -169,8 +169,12 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 
 	/* Make sure that the data fits in LDS. This assumes the shaders only
 	 * use LDS for the inputs and outputs.
+	 *
+	 * While CIK can use 64K per threadgroup, there is a hang on Stoney
+	 * with 2 CUs if we use more than 32K. The closed Vulkan driver also
+	 * uses 32K at most on all GCN chips.
 	 */
-	hardware_lds_size = sctx->b.chip_class >= CIK ? 65536 : 32768;
+	hardware_lds_size = 32768;
 	*num_patches = MIN2(*num_patches, hardware_lds_size / (input_patch_size +
 	                                                       output_patch_size));
 
