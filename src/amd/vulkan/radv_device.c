@@ -61,6 +61,15 @@ radv_device_get_cache_uuid(enum radeon_family family, void *uuid)
 	return 0;
 }
 
+static void
+radv_get_device_uuid(drmDevicePtr device, void *uuid) {
+	memset(uuid, 0, VK_UUID_SIZE);
+	memcpy((char*)uuid + 0, &device->businfo.pci->domain, 2);
+	memcpy((char*)uuid + 2, &device->businfo.pci->bus, 1);
+	memcpy((char*)uuid + 3, &device->businfo.pci->dev, 1);
+	memcpy((char*)uuid + 4, &device->businfo.pci->func, 1);
+}
+
 static const VkExtensionProperties instance_extensions[] = {
 	{
 		.extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
@@ -190,8 +199,9 @@ is_extension_enabled(const VkExtensionProperties *extensions,
 static VkResult
 radv_physical_device_init(struct radv_physical_device *device,
 			  struct radv_instance *instance,
-			  const char *path)
+			  drmDevicePtr drm_device)
 {
+	const char *path = drm_device->nodes[DRM_NODE_RENDER];
 	VkResult result;
 	drmVersionPtr version;
 	int fd;
@@ -250,6 +260,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = device->rad_info.name;
+
+	radv_get_device_uuid(drm_device, device->device_uuid);
 
 	return VK_SUCCESS;
 
@@ -413,7 +425,7 @@ radv_enumerate_devices(struct radv_instance *instance)
 			result = radv_physical_device_init(instance->physicalDevices +
 			                                   instance->physicalDeviceCount,
 			                                   instance,
-			                                   devices[i]->nodes[DRM_NODE_RENDER]);
+			                                   devices[i]);
 			if (result == VK_SUCCESS)
 				++instance->physicalDeviceCount;
 			else if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
@@ -689,6 +701,7 @@ void radv_GetPhysicalDeviceProperties2KHR(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceProperties2KHR             *pProperties)
 {
+	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
 	radv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
 
 	vk_foreach_struct(ext, pProperties->pNext) {
@@ -697,6 +710,13 @@ void radv_GetPhysicalDeviceProperties2KHR(
 			VkPhysicalDevicePushDescriptorPropertiesKHR *properties =
 				(VkPhysicalDevicePushDescriptorPropertiesKHR *) ext;
 			properties->maxPushDescriptors = MAX_PUSH_DESCRIPTORS;
+			break;
+		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHX: {
+			VkPhysicalDeviceIDPropertiesKHX *properties = (VkPhysicalDeviceIDPropertiesKHX*)ext;
+			radv_device_get_cache_uuid(0, properties->driverUUID);
+			memcpy(properties->deviceUUID, pdevice->device_uuid, VK_UUID_SIZE);
+			properties->deviceLUIDValid = false;
 			break;
 		}
 		default:

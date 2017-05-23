@@ -266,6 +266,7 @@ struct radv_physical_device {
 	char                                        path[20];
 	const char *                                name;
 	uint8_t                                     uuid[VK_UUID_SIZE];
+	uint8_t                                     device_uuid[VK_UUID_SIZE];
 
 	int local_fd;
 	struct wsi_device                       wsi_device;
