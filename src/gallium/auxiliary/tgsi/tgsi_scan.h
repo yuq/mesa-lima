@@ -196,9 +196,6 @@ tgsi_scan_arrays(const struct tgsi_token *tokens,
                  unsigned max_array_id,
                  struct tgsi_array_info *arrays);
 
-extern boolean
-tgsi_is_passthrough_shader(const struct tgsi_token *tokens);
-
 #ifdef __cplusplus
 } // extern "C"
 #endif
