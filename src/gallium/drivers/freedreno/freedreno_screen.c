@@ -75,7 +75,6 @@ static const struct debug_named_value debug_options[] = {
 		{"shaderdb",  FD_DBG_SHADERDB, "Enable shaderdb output"},
 		{"flush",     FD_DBG_FLUSH,  "Force flush after every draw"},
 		{"deqp",      FD_DBG_DEQP,   "Enable dEQP hacks"},
-		{"nir",       FD_DBG_NIR,    "Prefer NIR as native IR"},
 		{"inorder",   FD_DBG_INORDER,"Disable reordering for draws/blits"},
 		{"bstat",     FD_DBG_BSTAT,  "Print batch stats at context destroy"},
 		{"nogrow",    FD_DBG_NOGROW, "Disable \"growable\" cmdstream buffers, even if kernel supports it"},
@@ -521,18 +520,9 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return 16;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
-		switch (shader) {
-		case PIPE_SHADER_FRAGMENT:
-		case PIPE_SHADER_VERTEX:
-			if ((fd_mesa_debug & FD_DBG_NIR) && is_ir3(screen))
-				return PIPE_SHADER_IR_NIR;
-			return PIPE_SHADER_IR_TGSI;
-		default:
-			/* tgsi_to_nir doesn't really support much beyond FS/VS: */
-			debug_assert(is_ir3(screen));
+		if (is_ir3(screen))
 			return PIPE_SHADER_IR_NIR;
-		}
-		break;
+		return PIPE_SHADER_IR_TGSI;
 	case PIPE_SHADER_CAP_SUPPORTED_IRS:
 		if (is_ir3(screen)) {
 			return (1 << PIPE_SHADER_IR_NIR) | (1 << PIPE_SHADER_IR_TGSI);
@@ -568,9 +558,6 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 			switch(shader)
 			{
 			case PIPE_SHADER_FRAGMENT:
-				if (!(fd_mesa_debug & FD_DBG_NIR))
-					return 0;
-				/* fallthrough */
 			case PIPE_SHADER_COMPUTE:
 				return 24;
 			default:
