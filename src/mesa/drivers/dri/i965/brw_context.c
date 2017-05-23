@@ -1410,7 +1410,7 @@ intel_update_dri2_buffers(struct brw_context *brw, __DRIdrawable *drawable)
    struct gl_framebuffer *fb = drawable->driverPrivate;
    struct intel_renderbuffer *rb;
    __DRIbuffer *buffers = NULL;
-   int i, count;
+   int count;
    const char *region_name;
 
    /* Set this up front, so that in case our buffers get invalidated
@@ -1426,7 +1426,7 @@ intel_update_dri2_buffers(struct brw_context *brw, __DRIdrawable *drawable)
    if (buffers == NULL)
       return;
 
-   for (i = 0; i < count; i++) {
+   for (int i = 0; i < count; i++) {
        switch (buffers[i].attachment) {
        case __DRI_BUFFER_FRONT_LEFT:
            rb = intel_get_renderbuffer(fb, BUFFER_FRONT_LEFT);
