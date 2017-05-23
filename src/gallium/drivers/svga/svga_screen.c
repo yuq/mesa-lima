@@ -36,6 +36,7 @@
 #include "svga_public.h"
 #include "svga_context.h"
 #include "svga_format.h"
+#include "svga_msg.h"
 #include "svga_screen.h"
 #include "svga_tgsi.h"
 #include "svga_resource_texture.h"
@@ -44,7 +45,6 @@
 
 #include "svga3d_shaderdefs.h"
 #include "VGPU10ShaderTokens.h"
-#include "svga_msg.h"
 
 /* NOTE: this constant may get moved into a svga3d*.h header file */
 #define SVGA3D_DX_MAX_RESOURCE_SIZE (128 * 1024 * 1024)
@@ -929,6 +929,35 @@ svga_get_driver_query_info(struct pipe_screen *screen,
 
 
 static void
+init_logging(struct pipe_screen *screen)
+{
+   static const char *log_prefix = "Mesa: ";
+   char host_log[1000];
+
+   /* Log Version to Host */
+   util_snprintf(host_log, sizeof(host_log) - strlen(log_prefix),
+                 "%s%s", log_prefix, svga_get_name(screen));
+   svga_host_log(host_log);
+
+   util_snprintf(host_log, sizeof(host_log) - strlen(log_prefix),
+                 "%s%s (%s)", log_prefix, PACKAGE_VERSION, MESA_GIT_SHA1);
+   svga_host_log(host_log);
+
+   /* If the SVGA_EXTRA_LOGGING env var is set, log the process's command
+    * line (program name and arguments).
+    */
+   if (debug_get_bool_option("SVGA_EXTRA_LOGGING", FALSE)) {
+      char cmdline[1000];
+      if (os_get_command_line(cmdline, sizeof(cmdline))) {
+         util_snprintf(host_log, sizeof(host_log) - strlen(log_prefix),
+                       "%s%s", log_prefix, cmdline);
+         svga_host_log(host_log);
+      }
+   }
+}
+
+
+static void
 svga_destroy_screen( struct pipe_screen *screen )
 {
    struct svga_screen *svgascreen = svga_screen(screen);
@@ -952,7 +981,6 @@ svga_screen_create(struct svga_winsys_screen *sws)
 {
    struct svga_screen *svgascreen;
    struct pipe_screen *screen;
-   char host_log[200];
 
 #ifdef DEBUG
    SVGA_DEBUG = debug_get_flags_option("SVGA_DEBUG", svga_debug_flags, 0 );
@@ -1133,26 +1161,7 @@ svga_screen_create(struct svga_winsys_screen *sws)
 
    svga_screen_cache_init(svgascreen);
 
-   /* Log Version to Host */
-   util_snprintf(host_log, sizeof(host_log) - strlen(HOST_LOG_PREFIX),
-                 "%s%s", HOST_LOG_PREFIX, svga_get_name(screen));
-   svga_host_log(host_log);
-
-   util_snprintf(host_log, sizeof(host_log) - strlen(HOST_LOG_PREFIX),
-                 "%s%s (%s)", HOST_LOG_PREFIX, PACKAGE_VERSION, MESA_GIT_SHA1);
-   svga_host_log(host_log);
-
-   /* If the SVGA_EXTRA_LOGGING env var is set, log the process's command
-    * line (program name and arguments).
-    */
-   if (debug_get_bool_option("SVGA_EXTRA_LOGGING", FALSE)) {
-      char cmdline[1000];
-      if (os_get_command_line(cmdline, sizeof(cmdline))) {
-         util_snprintf(host_log, sizeof(host_log) - strlen(HOST_LOG_PREFIX),
-                       "%s%s", HOST_LOG_PREFIX, cmdline);
-         svga_host_log(host_log);
-      }
-   }
+   init_logging(screen);
 
    return screen;
 error2:

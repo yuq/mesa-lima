@@ -33,8 +33,6 @@
 #include "svga_screen_cache.h"
 
 
-#define HOST_LOG_PREFIX  "Mesa: "
-
 struct svga_winsys_screen;
 struct svga_winsys_context;
 struct SVGACmdMemory;
