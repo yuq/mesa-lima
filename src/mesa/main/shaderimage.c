@@ -564,13 +564,37 @@ validate_bind_image_texture(struct gl_context *ctx, GLuint unit,
    return GL_TRUE;
 }
 
+static void
+set_image_binding(struct gl_image_unit *u, struct gl_texture_object *texObj,
+                  GLint level, GLboolean layered, GLint layer, GLenum access,
+                  GLenum format)
+{
+   u->Level = level;
+   u->Access = access;
+   u->Format = format;
+   u->_ActualFormat = _mesa_get_shader_image_format(format);
+
+   if (texObj && _mesa_tex_target_is_layered(texObj->Target)) {
+      u->Layered = layered;
+      u->Layer = layer;
+      u->_Layer = (u->Layered ? 0 : u->Layer);
+   } else {
+      u->Layered = GL_FALSE;
+      u->Layer = 0;
+   }
+
+   _mesa_reference_texobj(&u->TexObj, texObj);
+}
+
 void GLAPIENTRY
 _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
                        GLboolean layered, GLint layer, GLenum access,
                        GLenum format)
 {
-   GET_CURRENT_CONTEXT(ctx);
+   struct gl_texture_object *texObj = NULL;
    struct gl_image_unit *u;
+
+   GET_CURRENT_CONTEXT(ctx);
 
    if (!validate_bind_image_texture(ctx, unit, texture, level, layer, access,
                                     format))
@@ -582,9 +606,9 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
    ctx->NewDriverState |= ctx->DriverFlags.NewImageUnits;
 
    if (texture) {
-      struct gl_texture_object *t = _mesa_lookup_texture(ctx, texture);
+      texObj = _mesa_lookup_texture(ctx, texture);
 
-      if (!t) {
+      if (!texObj) {
          _mesa_error(ctx, GL_INVALID_VALUE, "glBindImageTexture(texture)");
          return;
       }
@@ -599,31 +623,15 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
        * recognizes that there is no way to create immutable buffer textures,
        * so those are excluded from this requirement.
        */
-      if (_mesa_is_gles(ctx) && !t->Immutable &&
-          t->Target != GL_TEXTURE_BUFFER) {
+      if (_mesa_is_gles(ctx) && !texObj->Immutable &&
+          texObj->Target != GL_TEXTURE_BUFFER) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glBindImageTexture(!immutable)");
          return;
       }
-
-      _mesa_reference_texobj(&u->TexObj, t);
-   } else {
-      _mesa_reference_texobj(&u->TexObj, NULL);
    }
 
-   u->Level = level;
-   u->Access = access;
-   u->Format = format;
-   u->_ActualFormat = _mesa_get_shader_image_format(format);
-
-   if (u->TexObj && _mesa_tex_target_is_layered(u->TexObj->Target)) {
-      u->Layered = layered;
-      u->Layer = layer;
-      u->_Layer = (u->Layered ? 0 : u->Layer);
-   } else {
-      u->Layered = GL_FALSE;
-      u->Layer = 0;
-   }
+   set_image_binding(u, texObj, level, layered, layer, access, format);
 }
 
 void GLAPIENTRY
@@ -743,22 +751,12 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
          }
 
          /* Update the texture binding */
-         _mesa_reference_texobj(&u->TexObj, texObj);
-         u->Level = 0;
-         u->Layered = _mesa_tex_target_is_layered(texObj->Target);
-         u->_Layer = u->Layer = 0;
-         u->Access = GL_READ_WRITE;
-         u->Format = tex_format;
-         u->_ActualFormat = _mesa_get_shader_image_format(tex_format);
+         set_image_binding(u, texObj, 0,
+                           _mesa_tex_target_is_layered(texObj->Target),
+                           0, GL_READ_WRITE, tex_format);
       } else {
          /* Unbind the texture from the unit */
-         _mesa_reference_texobj(&u->TexObj, NULL);
-         u->Level = 0;
-         u->Layered = GL_FALSE;
-         u->_Layer = u->Layer = 0;
-         u->Access = GL_READ_ONLY;
-         u->Format = GL_R8;
-         u->_ActualFormat = MESA_FORMAT_R_UNORM8;
+         set_image_binding(u, NULL, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
       }
    }
 
