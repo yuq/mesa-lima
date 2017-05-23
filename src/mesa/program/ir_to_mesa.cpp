@@ -2445,19 +2445,9 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
                                    const enum glsl_interface_packing,
                                    bool /* last_field */)
 {
-   unsigned int size;
-
    /* atomics don't get real storage */
    if (type->contains_atomic())
       return;
-
-   if (type->is_vector() || type->is_scalar()) {
-      size = type->vector_elements;
-      if (type->is_64bit())
-         size *= 2;
-   } else {
-      size = type_size(type) * 4;
-   }
 
    gl_register_file file;
    if (type->without_array()->is_sampler()) {
@@ -2468,6 +2458,8 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
 
    int index = _mesa_lookup_parameter_index(params, name);
    if (index < 0) {
+      unsigned size = type_size(type) * 4;
+
       index = _mesa_add_parameter(params, file, name, size, type->gl_type,
 				  NULL, NULL);
 
