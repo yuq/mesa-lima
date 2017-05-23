@@ -281,6 +281,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	memcpy(info->cik_macrotile_mode_array, amdinfo->gb_macro_tile_mode,
 		sizeof(amdinfo->gb_macro_tile_mode));
 
+	info->pte_fragment_size = alignment_info.size_local;
 	info->gart_page_size = alignment_info.size_remote;
 
 	if (info->chip_class == SI)

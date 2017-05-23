@@ -415,6 +415,8 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    }
 
    va_gap_size = ws->check_vm ? MAX2(4 * alignment, 64 * 1024) : 0;
+   if (size > ws->info.pte_fragment_size)
+	   alignment = MAX2(alignment, ws->info.pte_fragment_size);
    r = amdgpu_va_range_alloc(ws->dev, amdgpu_gpu_va_range_general,
                              size + va_gap_size, alignment, 0, &va, &va_handle, 0);
    if (r)
