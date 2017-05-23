@@ -1739,7 +1739,7 @@ intel_update_image_buffers(struct brw_context *brw, __DRIdrawable *drawable)
    struct intel_renderbuffer *front_rb;
    struct intel_renderbuffer *back_rb;
    struct __DRIimageList images;
-   unsigned int format;
+   mesa_format format;
    uint32_t buffer_mask = 0;
    int ret;
 
