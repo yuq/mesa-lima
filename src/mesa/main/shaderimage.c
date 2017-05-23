@@ -529,8 +529,8 @@ _mesa_is_image_unit_valid(struct gl_context *ctx, struct gl_image_unit *u)
 
 static GLboolean
 validate_bind_image_texture(struct gl_context *ctx, GLuint unit,
-                            GLuint texture, GLint level, GLboolean layered,
-                            GLint layer, GLenum access, GLenum format)
+                            GLuint texture, GLint level, GLint layer,
+                            GLenum access, GLenum format)
 {
    assert(ctx->Const.MaxImageUnits <= MAX_IMAGE_UNITS);
 
@@ -572,8 +572,8 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_image_unit *u;
 
-   if (!validate_bind_image_texture(ctx, unit, texture, level,
-                                    layered, layer, access, format))
+   if (!validate_bind_image_texture(ctx, unit, texture, level, layer, access,
+                                    format))
       return;
 
    u = &ctx->ImageUnits[unit];
