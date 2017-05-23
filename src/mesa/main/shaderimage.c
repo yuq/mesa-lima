@@ -602,6 +602,21 @@ bind_image_texture(struct gl_context *ctx, struct gl_texture_object *texObj,
 }
 
 void GLAPIENTRY
+_mesa_BindImageTexture_no_error(GLuint unit, GLuint texture, GLint level,
+                                GLboolean layered, GLint layer, GLenum access,
+                                GLenum format)
+{
+   struct gl_texture_object *texObj = NULL;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (texture)
+      texObj = _mesa_lookup_texture(ctx, texture);
+
+   bind_image_texture(ctx, texObj, unit, level, layered, layer, access, format);
+}
+
+void GLAPIENTRY
 _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
                        GLboolean layered, GLint layer, GLenum access,
                        GLenum format)
