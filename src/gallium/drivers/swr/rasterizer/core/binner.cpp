@@ -2192,7 +2192,6 @@ void BinPostSetupPoints_simd16(
     AR_END(FEBinPoints, 1);
 }
 
-
 void SIMDAPI BinPoints_simd16(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
