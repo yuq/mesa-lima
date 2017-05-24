@@ -418,8 +418,6 @@ struct DRAW_CONTEXT
     volatile int32_t    threadsDone;
 
     SYNC_DESC       retireCallback; // Call this func when this DC is retired.
-
-
 };
 
 static_assert((sizeof(DRAW_CONTEXT) & 63) == 0, "Invalid size for DRAW_CONTEXT");

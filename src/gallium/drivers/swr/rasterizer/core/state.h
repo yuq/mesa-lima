@@ -1046,6 +1046,7 @@ struct SWR_RASTSTATE
     uint8_t clipDistanceMask;
 };
 
+
 enum SWR_CONSTANT_SOURCE
 {
     SWR_CONSTANT_SOURCE_CONST_0000,
