@@ -536,6 +536,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
 	case PIPE_CAP_UMA:
 	case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
+	case PIPE_CAP_POST_DEPTH_COVERAGE:
 		return 0;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
