@@ -28,6 +28,7 @@
 
 #include "common/gen_l3_config.h"
 #include "common/gen_sample_positions.h"
+#include "vk_util.h"
 #include "vk_format_info.h"
 
 static uint32_t
@@ -1176,7 +1177,8 @@ emit_3dstate_vs(struct anv_pipeline *pipeline)
 }
 
 static void
-emit_3dstate_hs_te_ds(struct anv_pipeline *pipeline)
+emit_3dstate_hs_te_ds(struct anv_pipeline *pipeline,
+                      const VkPipelineTessellationStateCreateInfo *tess_info)
 {
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_TESS_EVAL)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_HS), hs);
@@ -1215,18 +1217,27 @@ emit_3dstate_hs_te_ds(struct anv_pipeline *pipeline)
          get_scratch_address(pipeline, MESA_SHADER_TESS_CTRL, tcs_bin);
    }
 
+   const VkPipelineTessellationDomainOriginStateCreateInfoKHR *domain_origin_state =
+      tess_info ? vk_find_struct_const(tess_info, PIPELINE_TESSELLATION_DOMAIN_ORIGIN_STATE_CREATE_INFO_KHR) : NULL;
+
+   VkTessellationDomainOriginKHR uv_origin =
+      domain_origin_state ? domain_origin_state->domainOrigin :
+                            VK_TESSELLATION_DOMAIN_ORIGIN_UPPER_LEFT_KHR;
+
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_TE), te) {
       te.Partitioning = tes_prog_data->partitioning;
 
-      /* Vulkan has its winding order backwards from GL so TRI_CCW becomes
-       * TRI_CW and vice versa.
-       */
-      if (tes_prog_data->output_topology == OUTPUT_TRI_CCW) {
-         te.OutputTopology = OUTPUT_TRI_CW;
-      } else if (tes_prog_data->output_topology == OUTPUT_TRI_CW) {
-         te.OutputTopology = OUTPUT_TRI_CCW;
-      } else {
+      if (uv_origin == VK_TESSELLATION_DOMAIN_ORIGIN_LOWER_LEFT_KHR) {
          te.OutputTopology = tes_prog_data->output_topology;
+      } else {
+         /* When the origin is upper-left, we have to flip the winding order */
+         if (tes_prog_data->output_topology == OUTPUT_TRI_CCW) {
+            te.OutputTopology = OUTPUT_TRI_CW;
+         } else if (tes_prog_data->output_topology == OUTPUT_TRI_CW) {
+            te.OutputTopology = OUTPUT_TRI_CCW;
+         } else {
+            te.OutputTopology = tes_prog_data->output_topology;
+         }
       }
 
       te.TEDomain = tes_prog_data->domain;
@@ -1716,7 +1727,7 @@ genX(graphics_pipeline_create)(
 #endif
 
    emit_3dstate_vs(pipeline);
-   emit_3dstate_hs_te_ds(pipeline);
+   emit_3dstate_hs_te_ds(pipeline, pCreateInfo->pTessellationState);
    emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
    emit_3dstate_wm(pipeline, subpass, pCreateInfo->pMultisampleState);
