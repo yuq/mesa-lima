@@ -487,6 +487,7 @@ nvc0_fp_gen_header(struct nvc0_program *fp, struct nv50_ir_prog_info *info)
    fp->fp.early_z = info->prop.fp.earlyFragTests;
    fp->fp.sample_mask_in = info->prop.fp.usesSampleMaskIn;
    fp->fp.reads_framebuffer = info->prop.fp.readsFramebuffer;
+   fp->fp.post_depth_coverage = info->prop.fp.postDepthCoverage;
 
    /* Mark position xy and layer as read */
    if (fp->fp.reads_framebuffer)

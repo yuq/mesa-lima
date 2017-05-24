@@ -267,6 +267,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
    case PIPE_CAP_TGSI_VS_LAYER_VIEWPORT:
    case PIPE_CAP_TGSI_TES_LAYER_VIEWPORT:
+   case PIPE_CAP_POST_DEPTH_COVERAGE:
       return class_3d >= GM200_3D_CLASS;
    case PIPE_CAP_TGSI_BALLOT:
       return class_3d >= NVE4_3D_CLASS;
@@ -299,7 +300,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
    case PIPE_CAP_INT64_DIVMOD:
    case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
-   case PIPE_CAP_POST_DEPTH_COVERAGE:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:

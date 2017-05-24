@@ -137,6 +137,7 @@ struct nv50_ir_prog_info
          unsigned numColourResults;
          bool writesDepth;
          bool earlyFragTests;
+         bool postDepthCoverage;
          bool separateFragData;
          bool usesDiscard;
          bool persampleInvocation;
