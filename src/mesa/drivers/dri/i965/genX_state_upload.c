@@ -3699,7 +3699,7 @@ genX(upload_cs_state)(struct brw_context *brw)
 
       const uint32_t subslices = MAX2(brw->screen->subslice_total, 1);
       vfe.MaximumNumberofThreads = devinfo->max_cs_threads * subslices - 1;
-      vfe.NumberofURBEntries = GEN_GEN >= 8 ? 2 : 0;;
+      vfe.NumberofURBEntries = GEN_GEN >= 8 ? 2 : 0;
       vfe.ResetGatewayTimer =
          Resettingrelativetimerandlatchingtheglobaltimestamp;
 #if GEN_GEN < 9
