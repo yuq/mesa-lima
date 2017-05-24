@@ -635,7 +635,7 @@ read_data_file(FILE *file)
          if (matched == 1) {
             if (!gen_get_device_info(reg, &devinfo)) {
                printf("Unable to identify devid=%x\n", reg);
-               return;
+               exit(EXIT_FAILURE);
             }
 
             disasm = gen_disasm_create(reg);
