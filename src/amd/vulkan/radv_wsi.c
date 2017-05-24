@@ -438,7 +438,7 @@ VkResult radv_AcquireNextImageKHR(
 	VkResult result = swapchain->acquire_next_image(swapchain, timeout, semaphore,
 	                                                pImageIndex);
 
-	if (fence && result == VK_SUCCESS) {
+	if (fence && (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)) {
 		fence->submitted = true;
 		fence->signalled = true;
 	}
