@@ -103,16 +103,25 @@ struct radeon_bo_metadata {
 	/* Tiling flags describing the texture layout for display code
 	 * and DRI sharing.
 	 */
-	enum radeon_bo_layout   microtile;
-	enum radeon_bo_layout   macrotile;
-	unsigned                pipe_config;
-	unsigned                bankw;
-	unsigned                bankh;
-	unsigned                tile_split;
-	unsigned                mtilea;
-	unsigned                num_banks;
-	unsigned                stride;
-	bool                    scanout;
+	union {
+		struct {
+			enum radeon_bo_layout   microtile;
+			enum radeon_bo_layout   macrotile;
+			unsigned                pipe_config;
+			unsigned                bankw;
+			unsigned                bankh;
+			unsigned                tile_split;
+			unsigned                mtilea;
+			unsigned                num_banks;
+			unsigned                stride;
+			bool                    scanout;
+		} legacy;
+
+		struct {
+			/* surface flags */
+			unsigned swizzle_mode:5;
+		} gfx9;
+	} u;
 
 	/* Additional metadata associated with the buffer, in bytes.
 	 * The maximum size is 64 * 4. This is opaque for the winsys & kernel.

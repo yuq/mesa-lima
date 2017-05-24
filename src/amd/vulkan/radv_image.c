@@ -443,19 +443,23 @@ radv_init_metadata(struct radv_device *device,
 	struct radeon_surf *surface = &image->surface;
 
 	memset(metadata, 0, sizeof(*metadata));
-	metadata->microtile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_1D ?
-		RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata->macrotile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_2D ?
-		RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata->pipe_config = surface->u.legacy.pipe_config;
-	metadata->bankw = surface->u.legacy.bankw;
-	metadata->bankh = surface->u.legacy.bankh;
-	metadata->tile_split = surface->u.legacy.tile_split;
-	metadata->mtilea = surface->u.legacy.mtilea;
-	metadata->num_banks = surface->u.legacy.num_banks;
-	metadata->stride = surface->u.legacy.level[0].nblk_x * surface->bpe;
-	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 
+	if (device->physical_device->rad_info.chip_class >= GFX9) {
+		metadata->u.gfx9.swizzle_mode = surface->u.gfx9.surf.swizzle_mode;
+	} else {
+		metadata->u.legacy.microtile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_1D ?
+			RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+		metadata->u.legacy.macrotile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_2D ?
+			RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+		metadata->u.legacy.pipe_config = surface->u.legacy.pipe_config;
+		metadata->u.legacy.bankw = surface->u.legacy.bankw;
+		metadata->u.legacy.bankh = surface->u.legacy.bankh;
+		metadata->u.legacy.tile_split = surface->u.legacy.tile_split;
+		metadata->u.legacy.mtilea = surface->u.legacy.mtilea;
+		metadata->u.legacy.num_banks = surface->u.legacy.num_banks;
+		metadata->u.legacy.stride = surface->u.legacy.level[0].nblk_x * surface->bpe;
+		metadata->u.legacy.scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
+	}
 	radv_query_opaque_metadata(device, image, metadata);
 }
 
