@@ -1609,6 +1609,7 @@ enum brw_pixel_shader_coverage_mask_mode {
 #define GEN7_GPGPU_DISPATCHDIMZ         0x2508
 
 #define GEN7_CACHE_MODE_1               0x7004
+# define GEN9_FLOAT_BLEND_OPTIMIZATION_ENABLE (1 << 4)
 # define GEN8_HIZ_NP_PMA_FIX_ENABLE        (1 << 11)
 # define GEN8_HIZ_NP_EARLY_Z_FAILS_DISABLE (1 << 13)
 # define GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC (1 << 1)
