@@ -1388,7 +1388,6 @@ brw_get_index_type(unsigned index_size)
 void brw_prepare_vertices(struct brw_context *brw);
 
 /* brw_wm_surface_state.c */
-void brw_init_surface_formats(struct brw_context *brw);
 void brw_create_constant_surface(struct brw_context *brw,
                                  struct brw_bo *bo,
                                  uint32_t offset,
@@ -1420,6 +1419,7 @@ void brw_upload_image_surfaces(struct brw_context *brw,
                                struct brw_stage_prog_data *prog_data);
 
 /* brw_surface_formats.c */
+void brw_init_surface_formats(struct brw_context *brw);
 bool brw_render_target_supported(struct brw_context *brw,
                                  struct gl_renderbuffer *rb);
 uint32_t brw_depth_format(struct brw_context *brw, mesa_format format);
