@@ -45,7 +45,8 @@ static void si_destroy_context(struct pipe_context *context)
 	 * properly.
 	 */
 	struct pipe_framebuffer_state fb = {};
-	context->set_framebuffer_state(context, &fb);
+	if (context->set_framebuffer_state)
+		context->set_framebuffer_state(context, &fb);
 
 	si_release_all_descriptors(sctx);
 
