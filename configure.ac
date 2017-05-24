@@ -1716,7 +1716,7 @@ done
 
 if test "x$enable_glx" != xno; then
     if ! echo "$platforms" | grep -q 'x11'; then
-        AC_MSG_ERROR([Building without the x11 platform as GLX is enabled, is not supported])
+        AC_MSG_ERROR([Building GLX without the x11 platform is not supported])
     fi
 fi
 
