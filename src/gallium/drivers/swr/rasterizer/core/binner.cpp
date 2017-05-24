@@ -40,7 +40,7 @@ void BinPostSetupPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd
 
 #if USE_SIMD16_FRONTEND
 void BinPostSetupLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], simd16scalar vRecipW[2], uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
-void BinPostSetupPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
+void BinPostSetupPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
 #endif
 
 //////////////////////////////////////////////////////////////////////////
@@ -1508,7 +1508,7 @@ void BinPostSetupPoints(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
     uint32_t workerId,
-    simdvector prim[3],
+    simdvector prim[],
     uint32_t primMask,
     simdscalari primID,
     simdscalari viewportIdx)
@@ -1876,7 +1876,7 @@ void BinPostSetupPoints_simd16(
     DRAW_CONTEXT *pDC,
     PA_STATE& pa,
     uint32_t workerId,
-    simd16vector prim[3],
+    simd16vector prim[],
     uint32_t primMask,
     simd16scalari primID,
     simd16scalari viewportIdx)
