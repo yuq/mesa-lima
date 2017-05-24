@@ -1528,11 +1528,6 @@ void BinPostSetupPoints(
     PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(1,
         state.backendState.swizzleEnable, state.backendState.constantInterpolationMask);
 
-    // adjust for pixel center location
-    simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
-    primVerts.x = _simd_add_ps(primVerts.x, offset);
-    primVerts.y = _simd_add_ps(primVerts.y, offset);
-
     // convert to fixed point
     simdscalari vXi, vYi;
     vXi = fpToFixedPointVertical(primVerts.x);
