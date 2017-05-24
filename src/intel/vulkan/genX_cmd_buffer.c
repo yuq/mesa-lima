@@ -2773,13 +2773,11 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
           * this is not the last use of the buffer. The layout should not have
           * changed from the first call and no transition is necessary.
           */
-         assert(att_ref->layout == att_state->current_layout);
+         assert(att_state->current_layout == att_ref->layout ||
+                att_state->current_layout ==
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
          continue;
       }
-
-      /* Get the appropriate target layout for this attachment. */
-      const VkImageLayout target_layout = subpass_end ?
-         att_desc->final_layout : att_ref->layout;
 
       /* The attachment index must be less than the number of attachments
        * within the framebuffer.
@@ -2789,6 +2787,29 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
       const struct anv_image_view * const iview =
          cmd_state->framebuffer->attachments[att_ref->attachment];
       const struct anv_image * const image = iview->image;
+
+      /* Get the appropriate target layout for this attachment. */
+      VkImageLayout target_layout;
+
+      /* A resolve is necessary before use as an input attachment if the clear
+       * color or auxiliary buffer usage isn't supported by the sampler.
+       */
+      const bool input_needs_resolve =
+            (att_state->fast_clear && !att_state->clear_color_is_zero_one) ||
+            att_state->input_aux_usage != att_state->aux_usage;
+      if (subpass_end) {
+         target_layout = att_desc->final_layout;
+      } else if (iview->aspect_mask == VK_IMAGE_ASPECT_COLOR_BIT &&
+                 !input_needs_resolve) {
+         /* Layout transitions before the final only help to enable sampling as
+          * an input attachment. If the input attachment supports sampling
+          * using the auxiliary surface, we can skip such transitions by making
+          * the target layout one that is CCS-aware.
+          */
+         target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      } else {
+         target_layout = att_ref->layout;
+      }
 
       /* Perform the layout transition. */
       if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
