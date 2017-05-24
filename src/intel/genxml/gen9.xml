@@ -3682,6 +3682,36 @@
     <field name="Sampler L2 Disable Mask" start="31" end="31" type="bool"/>
   </register>
 
+  <register name="CACHE_MODE_1" length="1" num="0x7004">
+    <field name="Partial Resolve Disable In VC" start="1" end="1" type="bool"/>
+    <field name="RCZ Read after expansion control fix 2" start="2" end="2" type="bool"/>
+    <field name="Depth Read Hit Write-Only Optimization Disable" start="3" end="3" type="bool"/>
+    <field name="Float Blend Optimization Enable" start="4" end="4" type="bool"/>
+    <field name="MCS Cache Disable" start="5" end="5" type="bool"/>
+    <field name="4X4 RCPFE-STC Optimization Disable" start="6" end="6" type="bool"/>
+    <field name="Sampler Cache Set XOR selection" start="7" end="8" type="uint"/>
+    <field name="MSC RAW Hazard Avoidance Bit" start="9" end="9" type="bool"/>
+    <field name="NP PMA Fix Enable" start="11" end="11" type="uint"/>
+    <field name="HIZ Eviction Policy" start="12" end="12" type="uint"/>
+    <field name="NP Early Z Fails Disable" start="13" end="13" type="uint"/>
+    <field name="Blend Optimization Fix Disable" start="14" end="14" type="bool"/>
+    <field name="Color Compression Disable" start="15" end="15" type="bool"/>
+
+    <field name="Partial Resolve Disable In VC Mask" start="17" end="17" type="bool"/>
+    <field name="RCZ Read after expansion control fix 2 Mask" start="18" end="18" type="bool"/>
+    <field name="Depth Read Hit Write-Only Optimization Disable Mask" start="19" end="19" type="bool"/>
+    <field name="Float Blend Optimization Enable Mask" start="20" end="20" type="bool"/>
+    <field name="MCS Cache Disable Mask" start="21" end="21" type="bool"/>
+    <field name="4X4 RCPFE-STC Optimization Disable Mask" start="22" end="22" type="bool"/>
+    <field name="Sampler Cache Set XOR selection Mask" start="23" end="24" type="uint"/>
+    <field name="MSC RAW Hazard Avoidance Bit Mask" start="25" end="25" type="bool"/>
+    <field name="NP PMA Fix Enable Mask" start="27" end="27" type="bool"/>
+    <field name="HIZ Eviction Policy Mask" start="28" end="28" type="bool"/>
+    <field name="NP Early Z Fails Disable Mask" start="29" end="29" type="bool"/>
+    <field name="Blend Optimization Fix Disable Mask" start="30" end="30" type="bool"/>
+    <field name="Color Compression Disable Mask" start="31" end="31" type="bool"/>
+  </register>
+
   <register name="GFX_ARB_ERROR_RPT" length="1" num="0x40a0">
     <field name="TLB Page Fault Error" start="0" end="0" type="bool"/>
     <field name="RSTRM PAVP Read Invalid" start="1" end="1" type="bool"/>
