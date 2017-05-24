@@ -947,8 +947,9 @@ public:
     // execute the clipper stage
     void ExecuteStage(PA_STATE& pa, simdvector prim[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
     {
-        SWR_ASSERT(pa.pDC != nullptr);
-        SWR_CONTEXT* pContext = pa.pDC->pContext;
+        SWR_ASSERT(this->pDC != nullptr);
+        SWR_CONTEXT* pContext = this->pDC->pContext;
+        const API_STATE& apiState = this->pDC->pState->state;
 
         // set up binner based on PA state
         PFN_PROCESS_PRIMS pfnBinner;
@@ -965,7 +966,7 @@ public:
             pfnBinner = BinLines;
             break;
         default:
-            pfnBinner = GetBinTrianglesFunc((pa.pDC->pState->state.rastState.conservativeRast > 0));
+            pfnBinner = GetBinTrianglesFunc((apiState.rastState.conservativeRast > 0));
             break;
         };
 
