@@ -587,7 +587,7 @@ read_data_file(FILE *file)
          count = ascii85_decode(line+1, &data, line[0] == ':');
          if (count == 0) {
             fprintf(stderr, "ASCII85 decode failed.\n");
-            exit(1);
+            exit(EXIT_FAILURE);
          }
 
          if (strcmp(buffer_name, "user") == 0) {
@@ -718,7 +718,7 @@ read_data_file(FILE *file)
          data = realloc(data, data_size * sizeof (uint32_t));
          if (data == NULL) {
             fprintf(stderr, "Out of memory.\n");
-            exit(1);
+            exit(EXIT_FAILURE);
          }
       }
 
@@ -824,7 +824,7 @@ main(int argc, char *argv[])
 
    if (help || argc == 1) {
       print_help(argv[0], stderr);
-      exit(0);
+      exit(EXIT_SUCCESS);
    }
 
    if (optind >= argc) {
@@ -847,7 +847,7 @@ main(int argc, char *argv[])
          }
       } else {
          read_data_file(stdin);
-         exit(0);
+         exit(EXIT_SUCCESS);
       }
    } else {
       path = argv[optind];
@@ -855,7 +855,7 @@ main(int argc, char *argv[])
       if (error != 0) {
          fprintf(stderr, "Error opening %s: %s\n",
                  path, strerror(errno));
-         exit(1);
+         exit(EXIT_FAILURE);
       }
    }
 
