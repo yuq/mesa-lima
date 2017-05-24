@@ -874,8 +874,8 @@ main(int argc, char *argv[])
       file = fopen(filename, "r");
       if (!file) {
          int minor;
+         free(filename);
          for (minor = 0; minor < 64; minor++) {
-            free(filename);
             ret = asprintf(&filename, "%s/%d/i915_error_state", path, minor);
             assert(ret > 0);
 
