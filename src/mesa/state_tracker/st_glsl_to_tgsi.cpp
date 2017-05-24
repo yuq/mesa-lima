@@ -6376,8 +6376,13 @@ st_translate_program(
    }
 
    if (procType == PIPE_SHADER_FRAGMENT) {
-      if (program->shader->Program->info.fs.early_fragment_tests)
+      if (program->shader->Program->info.fs.early_fragment_tests ||
+          program->shader->Program->info.fs.post_depth_coverage) {
          ureg_property(ureg, TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL, 1);
+
+         if (program->shader->Program->info.fs.post_depth_coverage)
+            ureg_property(ureg, TGSI_PROPERTY_FS_POST_DEPTH_COVERAGE, 1);
+      }
 
       if (proginfo->info.inputs_read & VARYING_BIT_POS) {
           /* Must do this after setting up t->inputs. */
