@@ -3720,6 +3720,13 @@ DP3, DP4, DPH, DST, LOG, LRP, XPD, and possibly others. If there is a
 mismatch between shaders, then it is unspecified whether this behavior
 will be enabled.
 
+FS_POST_DEPTH_COVERAGE
+""""""""""""""""""""""
+
+When enabled, the input for TGSI_SEMANTIC_SAMPLEMASK will exclude samples
+that have failed the depth/stencil tests. This is only valid when
+FS_EARLY_DEPTH_STENCIL is also specified.
+
 
 Texture Sampling and Texture Formats
 ------------------------------------
