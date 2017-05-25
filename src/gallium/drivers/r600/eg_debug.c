@@ -191,6 +191,7 @@ static uint32_t *ac_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 		eg_dump_reg(f, R_028A90_VGT_EVENT_INITIATOR, ib[1],
 			    S_028A90_EVENT_TYPE(~0));
 #endif
+		print_named_value(f, "EVENT_TYPE", ib[1] & 0xff, 8);
 		print_named_value(f, "EVENT_INDEX", (ib[1] >> 8) & 0xf, 4);
 		print_named_value(f, "INV_L2", (ib[1] >> 20) & 0x1, 1);
 		if (count > 0) {
