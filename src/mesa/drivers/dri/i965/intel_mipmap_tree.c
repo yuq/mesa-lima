@@ -1939,43 +1939,6 @@ intel_miptree_level_has_hiz(struct intel_mipmap_tree *mt, uint32_t level)
    return mt->level[level].has_hiz;
 }
 
-void
-intel_miptree_slice_set_needs_hiz_resolve(struct intel_mipmap_tree *mt,
-					  uint32_t level,
-					  uint32_t layer)
-{
-   if (!intel_miptree_level_has_hiz(mt, level))
-      return;
-
-   intel_resolve_map_set(&mt->hiz_map,
-			 level, layer, BLORP_HIZ_OP_HIZ_RESOLVE);
-}
-
-
-void
-intel_miptree_slice_set_needs_depth_resolve(struct intel_mipmap_tree *mt,
-                                            uint32_t level,
-                                            uint32_t layer)
-{
-   if (!intel_miptree_level_has_hiz(mt, level))
-      return;
-
-   intel_resolve_map_set(&mt->hiz_map,
-			 level, layer, BLORP_HIZ_OP_DEPTH_RESOLVE);
-}
-
-void
-intel_miptree_set_all_slices_need_depth_resolve(struct intel_mipmap_tree *mt,
-                                                uint32_t level)
-{
-   uint32_t layer;
-   uint32_t end_layer = mt->level[level].depth;
-
-   for (layer = 0; layer < end_layer; layer++) {
-      intel_miptree_slice_set_needs_depth_resolve(mt, level, layer);
-   }
-}
-
 static bool
 intel_miptree_depth_hiz_resolve(struct brw_context *brw,
                                 struct intel_mipmap_tree *mt,
@@ -2001,35 +1964,6 @@ intel_miptree_depth_hiz_resolve(struct brw_context *brw,
    }
 
    return did_resolve;
-}
-
-bool
-intel_miptree_slice_resolve_hiz(struct brw_context *brw,
-				struct intel_mipmap_tree *mt,
-				uint32_t level,
-				uint32_t layer)
-{
-   return intel_miptree_depth_hiz_resolve(brw, mt, level, 1, layer, 1,
-                                          BLORP_HIZ_OP_HIZ_RESOLVE);
-}
-
-bool
-intel_miptree_slice_resolve_depth(struct brw_context *brw,
-				  struct intel_mipmap_tree *mt,
-				  uint32_t level,
-				  uint32_t layer)
-{
-   return intel_miptree_depth_hiz_resolve(brw, mt, level, 1, layer, 1,
-                                          BLORP_HIZ_OP_DEPTH_RESOLVE);
-}
-
-bool
-intel_miptree_all_slices_resolve_hiz(struct brw_context *brw,
-				     struct intel_mipmap_tree *mt)
-{
-   return intel_miptree_depth_hiz_resolve(brw, mt,
-                                          0, UINT32_MAX, 0, UINT32_MAX,
-                                          BLORP_HIZ_OP_HIZ_RESOLVE);
 }
 
 bool
@@ -2162,7 +2096,7 @@ intel_miptree_needs_color_resolve(const struct brw_context *brw,
    return true;
 }
 
-bool
+static bool
 intel_miptree_resolve_color(struct brw_context *brw,
                             struct intel_mipmap_tree *mt,
                             uint32_t start_level, uint32_t num_levels,
@@ -2209,15 +2143,6 @@ intel_miptree_resolve_color(struct brw_context *brw,
    }
 
    return resolved;
-}
-
-void
-intel_miptree_all_slices_resolve_color(struct brw_context *brw,
-                                       struct intel_mipmap_tree *mt,
-                                       int flags)
-{
-
-   intel_miptree_resolve_color(brw, mt, 0, UINT32_MAX, 0, UINT32_MAX, flags);
 }
 
 static inline uint32_t
@@ -2315,17 +2240,20 @@ intel_miptree_finish_write(struct brw_context *brw,
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       /* Nothing to do for stencil */
    } else {
+      if (!intel_miptree_level_has_hiz(mt, level))
+         return;
+
       if (written_with_aux) {
          for (unsigned a = 0; a < num_layers; a++) {
             intel_miptree_check_level_layer(mt, level, start_layer);
-            intel_miptree_slice_set_needs_depth_resolve(mt, level,
-                                                        start_layer + a);
+            intel_resolve_map_set(&mt->hiz_map, level, start_layer + a,
+                                  BLORP_HIZ_OP_DEPTH_RESOLVE);
          }
       } else {
          for (unsigned a = 0; a < num_layers; a++) {
             intel_miptree_check_level_layer(mt, level, start_layer);
-            intel_miptree_slice_set_needs_hiz_resolve(mt, level,
-                                                      start_layer + a);
+            intel_resolve_map_set(&mt->hiz_map, level, start_layer + a,
+                                  BLORP_HIZ_OP_HIZ_RESOLVE);
          }
       }
    }
@@ -2393,8 +2321,8 @@ intel_miptree_set_aux_state(struct brw_context *brw,
    } else {
       for (unsigned a = 0; a < num_layers; a++) {
          intel_miptree_check_level_layer(mt, level, start_layer);
-         intel_miptree_slice_set_needs_depth_resolve(mt, level,
-                                                     start_layer + a);
+         intel_resolve_map_set(&mt->hiz_map, level, start_layer + a,
+                               BLORP_HIZ_OP_DEPTH_RESOLVE);
       }
    }
 }

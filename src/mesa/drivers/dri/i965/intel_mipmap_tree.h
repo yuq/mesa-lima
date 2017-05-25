@@ -853,44 +853,6 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 bool
 intel_miptree_level_has_hiz(struct intel_mipmap_tree *mt, uint32_t level);
 
-void
-intel_miptree_slice_set_needs_hiz_resolve(struct intel_mipmap_tree *mt,
-                                          uint32_t level,
-					  uint32_t depth);
-void
-intel_miptree_slice_set_needs_depth_resolve(struct intel_mipmap_tree *mt,
-                                            uint32_t level,
-					    uint32_t depth);
-
-void
-intel_miptree_set_all_slices_need_depth_resolve(struct intel_mipmap_tree *mt,
-                                                uint32_t level);
-
-/**
- * \return false if no resolve was needed
- */
-bool
-intel_miptree_slice_resolve_hiz(struct brw_context *brw,
-				struct intel_mipmap_tree *mt,
-				unsigned int level,
-				unsigned int depth);
-
-/**
- * \return false if no resolve was needed
- */
-bool
-intel_miptree_slice_resolve_depth(struct brw_context *brw,
-				  struct intel_mipmap_tree *mt,
-				  unsigned int level,
-				  unsigned int depth);
-
-/**
- * \return false if no resolve was needed
- */
-bool
-intel_miptree_all_slices_resolve_hiz(struct brw_context *brw,
-				     struct intel_mipmap_tree *mt);
-
 /**
  * \return false if no resolve was needed
  */
@@ -935,17 +897,6 @@ intel_miptree_used_for_rendering(const struct brw_context *brw,
  */
 #define INTEL_MIPTREE_IGNORE_CCS_E (1 << 0)
 
-bool
-intel_miptree_resolve_color(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt,
-                            uint32_t start_level, uint32_t num_levels,
-                            uint32_t start_layer, uint32_t num_layers,
-                            int flags);
-
-void
-intel_miptree_all_slices_resolve_color(struct brw_context *brw,
-                                       struct intel_mipmap_tree *mt,
-                                       int flags);
 
 #define INTEL_REMAINING_LAYERS UINT32_MAX
 #define INTEL_REMAINING_LEVELS UINT32_MAX
