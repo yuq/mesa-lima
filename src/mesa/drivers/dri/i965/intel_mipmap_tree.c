@@ -2220,6 +2220,185 @@ intel_miptree_all_slices_resolve_color(struct brw_context *brw,
    intel_miptree_resolve_color(brw, mt, 0, UINT32_MAX, 0, UINT32_MAX, flags);
 }
 
+static inline uint32_t
+miptree_level_range_length(const struct intel_mipmap_tree *mt,
+                           uint32_t start_level, uint32_t num_levels)
+{
+   assert(start_level >= mt->first_level);
+   assert(start_level <= mt->last_level);
+
+   if (num_levels == INTEL_REMAINING_LAYERS)
+      num_levels = mt->last_level - start_level + 1;
+   /* Check for overflow */
+   assert(start_level + num_levels >= start_level);
+   assert(start_level + num_levels <= mt->last_level + 1);
+
+   return num_levels;
+}
+
+static inline uint32_t
+miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
+                           uint32_t start_layer, uint32_t num_layers)
+{
+   assert(level <= mt->last_level);
+   uint32_t total_num_layers = mt->level[level].depth;
+
+   assert(start_layer < total_num_layers);
+   if (num_layers == INTEL_REMAINING_LAYERS)
+      num_layers = total_num_layers - start_layer;
+   /* Check for overflow */
+   assert(start_layer + num_layers >= start_layer);
+   assert(start_layer + num_layers <= total_num_layers);
+
+   return num_layers;
+}
+
+void
+intel_miptree_prepare_access(struct brw_context *brw,
+                             struct intel_mipmap_tree *mt,
+                             uint32_t start_level, uint32_t num_levels,
+                             uint32_t start_layer, uint32_t num_layers,
+                             bool aux_supported, bool fast_clear_supported)
+{
+   num_levels = miptree_level_range_length(mt, start_level, num_levels);
+
+   if (_mesa_is_format_color_format(mt->format)) {
+      if (!mt->mcs_buf)
+         return;
+
+      if (mt->num_samples > 1) {
+         /* Nothing to do for MSAA */
+      } else {
+         /* TODO: This is fairly terrible.  We can do better. */
+         if (!aux_supported || !fast_clear_supported) {
+            intel_miptree_resolve_color(brw, mt, start_level, num_levels,
+                                        start_layer, num_layers, 0);
+         }
+      }
+   } else if (mt->format == MESA_FORMAT_S_UINT8) {
+      /* Nothing to do for stencil */
+   } else {
+      if (!mt->hiz_buf)
+         return;
+
+      if (aux_supported) {
+         assert(fast_clear_supported);
+         intel_miptree_depth_hiz_resolve(brw, mt, start_level, num_levels,
+                                         start_layer, num_layers,
+                                         BLORP_HIZ_OP_HIZ_RESOLVE);
+      } else {
+         assert(!fast_clear_supported);
+         intel_miptree_depth_hiz_resolve(brw, mt, start_level, num_levels,
+                                         start_layer, num_layers,
+                                         BLORP_HIZ_OP_DEPTH_RESOLVE);
+      }
+   }
+}
+
+void
+intel_miptree_finish_write(struct brw_context *brw,
+                           struct intel_mipmap_tree *mt, uint32_t level,
+                           uint32_t start_layer, uint32_t num_layers,
+                           bool written_with_aux)
+{
+   num_layers = miptree_layer_range_length(mt, level, start_layer, num_layers);
+
+   if (_mesa_is_format_color_format(mt->format)) {
+      if (mt->num_samples > 1) {
+         /* Nothing to do for MSAA */
+      } else {
+         if (written_with_aux) {
+            intel_miptree_used_for_rendering(brw, mt, level,
+                                             start_layer, num_layers);
+         }
+      }
+   } else if (mt->format == MESA_FORMAT_S_UINT8) {
+      /* Nothing to do for stencil */
+   } else {
+      if (written_with_aux) {
+         for (unsigned a = 0; a < num_layers; a++) {
+            intel_miptree_check_level_layer(mt, level, start_layer);
+            intel_miptree_slice_set_needs_depth_resolve(mt, level,
+                                                        start_layer + a);
+         }
+      } else {
+         for (unsigned a = 0; a < num_layers; a++) {
+            intel_miptree_check_level_layer(mt, level, start_layer);
+            intel_miptree_slice_set_needs_hiz_resolve(mt, level,
+                                                      start_layer + a);
+         }
+      }
+   }
+}
+
+enum isl_aux_state
+intel_miptree_get_aux_state(const struct intel_mipmap_tree *mt,
+                            uint32_t level, uint32_t layer)
+{
+   if (_mesa_is_format_color_format(mt->format)) {
+      assert(mt->mcs_buf != NULL);
+      if (mt->num_samples > 1) {
+         return ISL_AUX_STATE_COMPRESSED_CLEAR;
+      } else {
+         switch (intel_miptree_get_fast_clear_state(mt, level, layer)) {
+         case INTEL_FAST_CLEAR_STATE_RESOLVED:
+            return ISL_AUX_STATE_RESOLVED;
+         case INTEL_FAST_CLEAR_STATE_UNRESOLVED:
+            return ISL_AUX_STATE_COMPRESSED_CLEAR;
+         case INTEL_FAST_CLEAR_STATE_CLEAR:
+            return ISL_AUX_STATE_CLEAR;
+         default:
+            unreachable("Invalid fast clear state");
+         }
+      }
+   } else if (mt->format == MESA_FORMAT_S_UINT8) {
+      unreachable("Cannot get aux state for stencil");
+   } else {
+      assert(mt->hiz_buf != NULL);
+      const struct intel_resolve_map *map =
+         intel_resolve_map_const_get(&mt->hiz_map, level, layer);
+      if (!map)
+         return ISL_AUX_STATE_RESOLVED;
+      switch (map->need) {
+      case BLORP_HIZ_OP_DEPTH_RESOLVE:
+         return ISL_AUX_STATE_COMPRESSED_CLEAR;
+      case BLORP_HIZ_OP_HIZ_RESOLVE:
+         return ISL_AUX_STATE_AUX_INVALID;
+      default:
+         unreachable("Invalid hiz op");
+      }
+   }
+}
+
+void
+intel_miptree_set_aux_state(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt, uint32_t level,
+                            uint32_t start_layer, uint32_t num_layers,
+                            enum isl_aux_state aux_state)
+{
+   num_layers = miptree_layer_range_length(mt, level, start_layer, num_layers);
+
+   /* Right now, this only applies to clears. */
+   assert(aux_state == ISL_AUX_STATE_CLEAR);
+
+   if (_mesa_is_format_color_format(mt->format)) {
+      if (mt->num_samples > 1)
+         assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
+
+      assert(level == 0 && start_layer == 0 && num_layers == 1);
+      intel_miptree_set_fast_clear_state(brw, mt, 0, 0, 1,
+                                         INTEL_FAST_CLEAR_STATE_CLEAR);
+   } else if (mt->format == MESA_FORMAT_S_UINT8) {
+      assert(!"Cannot set aux state for stencil");
+   } else {
+      for (unsigned a = 0; a < num_layers; a++) {
+         intel_miptree_check_level_layer(mt, level, start_layer);
+         intel_miptree_slice_set_needs_depth_resolve(mt, level,
+                                                     start_layer + a);
+      }
+   }
+}
+
 /**
  * Make it possible to share the BO backing the given miptree with another
  * process or another miptree.

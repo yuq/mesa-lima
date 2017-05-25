@@ -947,6 +947,86 @@ intel_miptree_all_slices_resolve_color(struct brw_context *brw,
                                        struct intel_mipmap_tree *mt,
                                        int flags);
 
+#define INTEL_REMAINING_LAYERS UINT32_MAX
+#define INTEL_REMAINING_LEVELS UINT32_MAX
+
+/** Prepare a miptree for access
+ *
+ * This function should be called prior to any access to miptree in order to
+ * perform any needed resolves.
+ *
+ * \param[in]  start_level    The first mip level to be accessed
+ *
+ * \param[in]  num_levels     The number of miplevels to be accessed or
+ *                            INTEL_REMAINING_LEVELS to indicate every level
+ *                            above start_level will be accessed
+ *
+ * \param[in]  start_layer    The first array slice or 3D layer to be accessed
+ *
+ * \param[in]  num_layers     The number of array slices or 3D layers be
+ *                            accessed or INTEL_REMAINING_LAYERS to indicate
+ *                            every layer above start_layer will be accessed
+ *
+ * \param[in]  aux_supported  Whether or not the access will support the
+ *                            miptree's auxiliary compression format;  this
+ *                            must be false for uncompressed miptrees
+ *
+ * \param[in]  fast_clear_supported Whether or not the access will support
+ *                                  fast clears in the miptree's auxiliary
+ *                                  compression format
+ */
+void
+intel_miptree_prepare_access(struct brw_context *brw,
+                             struct intel_mipmap_tree *mt,
+                             uint32_t start_level, uint32_t num_levels,
+                             uint32_t start_layer, uint32_t num_layers,
+                             bool aux_supported, bool fast_clear_supported);
+
+/** Complete a write operation
+ *
+ * This function should be called after any operation writes to a miptree.
+ * This will update the miptree's compression state so that future resolves
+ * happen correctly.  Technically, this function can be called before the
+ * write occurs but the caller must ensure that they don't interlace
+ * intel_miptree_prepare_access and intel_miptree_finish_write calls to
+ * overlapping layer/level ranges.
+ *
+ * \param[in]  level             The mip level that was written
+ *
+ * \param[in]  start_layer       The first array slice or 3D layer written
+ *
+ * \param[in]  num_layers        The number of array slices or 3D layers
+ *                               written or INTEL_REMAINING_LAYERS to indicate
+ *                               every layer above start_layer was written
+ *
+ * \param[in]  written_with_aux  Whether or not the write was done with
+ *                               auxiliary compression enabled
+ */
+void
+intel_miptree_finish_write(struct brw_context *brw,
+                           struct intel_mipmap_tree *mt, uint32_t level,
+                           uint32_t start_layer, uint32_t num_layers,
+                           bool written_with_aux);
+
+/** Get the auxiliary compression state of a miptree slice */
+enum isl_aux_state
+intel_miptree_get_aux_state(const struct intel_mipmap_tree *mt,
+                            uint32_t level, uint32_t layer);
+
+/** Set the auxiliary compression state of a miptree slice range
+ *
+ * This function directly sets the auxiliary compression state of a slice
+ * range of a miptree.  It only modifies data structures and does not do any
+ * resolves.  This should only be called by code which directly performs
+ * compression operations such as fast clears and resolves.  Most code should
+ * use intel_miptree_prepare_access or intel_miptree_finish_write.
+ */
+void
+intel_miptree_set_aux_state(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt, uint32_t level,
+                            uint32_t start_layer, uint32_t num_layers,
+                            enum isl_aux_state aux_state);
+
 void
 intel_miptree_make_shareable(struct brw_context *brw,
                              struct intel_mipmap_tree *mt);
