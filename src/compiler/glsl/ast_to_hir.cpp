@@ -7402,9 +7402,10 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          }
 
          /* Memory qualifiers are allowed on buffer and image variables, while
-          * the format qualifier is only accept for images.
+          * the format qualifier is only accepted for images.
           */
-         if (var_mode == ir_var_shader_storage || field_type->is_image()) {
+         if (var_mode == ir_var_shader_storage ||
+             field_type->without_array()->is_image()) {
             /* For readonly and writeonly qualifiers the field definition,
              * if set, overwrites the layout qualifier.
              */
@@ -7431,7 +7432,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             fields[i].memory_restrict = qual->flags.q.restrict_flag ||
                                         (layout && layout->flags.q.restrict_flag);
 
-            if (field_type->is_image()) {
+            if (field_type->without_array()->is_image()) {
                if (qual->flags.q.explicit_image_format) {
                   if (qual->image_base_type != field_type->sampled_type) {
                      _mesa_glsl_error(&loc, state, "format qualifier doesn't "
