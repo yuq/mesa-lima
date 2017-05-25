@@ -344,11 +344,30 @@ do_structure_splitting(exec_list *instructions)
       for (unsigned int i = 0; i < entry->var->type->length; i++) {
          const char *name = ralloc_asprintf(mem_ctx, "%s_%s", entry->var->name,
                                             type->fields.structure[i].name);
-
-         entry->components[i] =
+         ir_variable *new_var =
             new(entry->mem_ctx) ir_variable(type->fields.structure[i].type,
                                             name,
                                             (ir_variable_mode) entry->var->data.mode);
+
+         if (type->fields.structure[i].type->without_array()->is_image()) {
+            /* Do not lose memory/format qualifiers for images declared inside
+             * structures as allowed by ARB_bindless_texture.
+             */
+            new_var->data.memory_read_only =
+               type->fields.structure[i].memory_read_only;
+            new_var->data.memory_write_only =
+               type->fields.structure[i].memory_write_only;
+            new_var->data.memory_coherent =
+               type->fields.structure[i].memory_coherent;
+            new_var->data.memory_volatile =
+               type->fields.structure[i].memory_volatile;
+            new_var->data.memory_restrict =
+               type->fields.structure[i].memory_restrict;
+            new_var->data.image_format =
+               type->fields.structure[i].image_format;
+         }
+
+         entry->components[i] = new_var;
          entry->var->insert_before(entry->components[i]);
       }
 
