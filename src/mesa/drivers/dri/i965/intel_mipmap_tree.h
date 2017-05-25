@@ -1051,6 +1051,9 @@ intel_miptree_prepare_texture(struct brw_context *brw,
                               mesa_format view_format,
                               bool *aux_supported_out);
 void
+intel_miptree_prepare_image(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt);
+void
 intel_miptree_prepare_fb_fetch(struct brw_context *brw,
                                struct intel_mipmap_tree *mt, uint32_t level,
                                uint32_t start_layer, uint32_t num_layers);
