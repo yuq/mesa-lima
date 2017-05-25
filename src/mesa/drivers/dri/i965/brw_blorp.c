@@ -784,9 +784,8 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
          }
       }
 
-      const enum intel_fast_clear_state fast_clear_state =
-         intel_miptree_get_fast_clear_state(irb->mt, irb->mt_level,
-                                            logical_layer);
+      const enum isl_aux_state aux_state =
+         intel_miptree_get_aux_state(irb->mt, irb->mt_level, logical_layer);
       union isl_color_value clear_color =
          brw_meta_convert_fast_clear_color(brw, irb->mt,
                                            &ctx->Color.ClearColor);
@@ -794,7 +793,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the clear
        * is redundant and can be skipped.
        */
-      if (fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR &&
+      if (aux_state == ISL_AUX_STATE_CLEAR &&
           memcmp(&irb->mt->fast_clear_color,
                  &clear_color, sizeof(clear_color)) == 0)
          return true;
@@ -842,9 +841,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * INTEL_FAST_CLEAR_STATE_CLEAR so that we won't waste time doing
        * redundant clears.
        */
-      intel_miptree_set_fast_clear_state(brw, irb->mt, irb->mt_level,
-                                         logical_layer, num_layers,
-                                         INTEL_FAST_CLEAR_STATE_CLEAR);
+      intel_miptree_set_aux_state(brw, irb->mt, irb->mt_level,
+                                  logical_layer, num_layers,
+                                  ISL_AUX_STATE_CLEAR);
    } else {
       DBG("%s (slow) to mt %p level %d layer %d+%d\n", __FUNCTION__,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);
