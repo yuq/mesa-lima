@@ -316,13 +316,13 @@ do_structure_splitting(exec_list *instructions)
    /* Trim out variables we can't split. */
    foreach_in_list_safe(variable_entry, entry, &refs.variable_list) {
       if (debug) {
-	 printf("structure %s@%p: decl %d, whole_access %d\n",
-		entry->var->name, (void *) entry->var, entry->declaration,
-		entry->whole_structure_access);
+         printf("structure %s@%p: decl %d, whole_access %d\n",
+                entry->var->name, (void *) entry->var, entry->declaration,
+                entry->whole_structure_access);
       }
 
       if (!entry->declaration || entry->whole_structure_access) {
-	 entry->remove();
+         entry->remove();
       }
    }
 
@@ -339,20 +339,17 @@ do_structure_splitting(exec_list *instructions)
 
       entry->mem_ctx = ralloc_parent(entry->var);
 
-      entry->components = ralloc_array(mem_ctx,
-				       ir_variable *,
-				       type->length);
+      entry->components = ralloc_array(mem_ctx, ir_variable *, type->length);
 
       for (unsigned int i = 0; i < entry->var->type->length; i++) {
-	 const char *name = ralloc_asprintf(mem_ctx, "%s_%s",
-					    entry->var->name,
-					    type->fields.structure[i].name);
+         const char *name = ralloc_asprintf(mem_ctx, "%s_%s", entry->var->name,
+                                            type->fields.structure[i].name);
 
-	 entry->components[i] =
-	    new(entry->mem_ctx) ir_variable(type->fields.structure[i].type,
-					    name,
-					    (ir_variable_mode) entry->var->data.mode);
-	 entry->var->insert_before(entry->components[i]);
+         entry->components[i] =
+            new(entry->mem_ctx) ir_variable(type->fields.structure[i].type,
+                                            name,
+                                            (ir_variable_mode) entry->var->data.mode);
+         entry->var->insert_before(entry->components[i]);
       }
 
       entry->var->remove();
