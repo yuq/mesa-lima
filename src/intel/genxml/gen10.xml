@@ -2570,7 +2570,7 @@
       <value name="COMP_3" value="3"/>
     </field>
     <field name="XP1 Source Select" start="60" end="60" type="uint">
-      <value name="Start Instance Location" value="1"/>
+      <value name="Starting Instance Location" value="1"/>
       <value name="XP1_PARAMETER" value="0"/>
     </field>
     <field name="XP1 Element Offset" start="48" end="53" type="uint"/>
