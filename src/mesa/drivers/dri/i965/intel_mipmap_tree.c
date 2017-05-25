@@ -2399,6 +2399,61 @@ intel_miptree_set_aux_state(struct brw_context *brw,
    }
 }
 
+/* On Gen9 color buffers may be compressed by the hardware (lossless
+ * compression). There are, however, format restrictions and care needs to be
+ * taken that the sampler engine is capable for re-interpreting a buffer with
+ * format different the buffer was originally written with.
+ *
+ * For example, SRGB formats are not compressible and the sampler engine isn't
+ * capable of treating RGBA_UNORM as SRGB_ALPHA. In such a case the underlying
+ * color buffer needs to be resolved so that the sampling surface can be
+ * sampled as non-compressed (i.e., without the auxiliary MCS buffer being
+ * set).
+ */
+static bool
+intel_texture_view_requires_resolve(struct brw_context *brw,
+                                    struct intel_mipmap_tree *mt,
+                                    mesa_format format)
+{
+   if (brw->gen < 9 ||
+       !intel_miptree_is_lossless_compressed(brw, mt))
+     return false;
+
+   const enum isl_format isl_format = brw_isl_format_for_mesa_format(format);
+
+   if (isl_format_supports_ccs_e(&brw->screen->devinfo, isl_format))
+      return false;
+
+   perf_debug("Incompatible sampling format (%s) for rbc (%s)\n",
+              _mesa_get_format_name(format),
+              _mesa_get_format_name(mt->format));
+
+   return true;
+}
+
+void
+intel_miptree_prepare_texture(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt,
+                              mesa_format view_format,
+                              bool *aux_supported_out)
+{
+   bool aux_supported;
+   if (_mesa_is_format_color_format(mt->format)) {
+      aux_supported = intel_miptree_is_lossless_compressed(brw, mt) &&
+                      !intel_texture_view_requires_resolve(brw, mt, view_format);
+   } else if (mt->format == MESA_FORMAT_S_UINT8) {
+      aux_supported = false;
+   } else {
+      aux_supported = intel_miptree_sample_with_hiz(brw, mt);
+   }
+
+   intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
+                                0, INTEL_REMAINING_LAYERS,
+                                aux_supported, aux_supported);
+   if (aux_supported_out)
+      *aux_supported_out = aux_supported;
+}
+
 /**
  * Make it possible to share the BO backing the given miptree with another
  * process or another miptree.

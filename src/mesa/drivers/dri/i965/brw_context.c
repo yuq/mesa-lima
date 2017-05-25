@@ -186,42 +186,6 @@ intel_disable_rb_aux_buffer(struct brw_context *brw, const struct brw_bo *bo)
    return found;
 }
 
-/* On Gen9 color buffers may be compressed by the hardware (lossless
- * compression). There are, however, format restrictions and care needs to be
- * taken that the sampler engine is capable for re-interpreting a buffer with
- * format different the buffer was originally written with.
- *
- * For example, SRGB formats are not compressible and the sampler engine isn't
- * capable of treating RGBA_UNORM as SRGB_ALPHA. In such a case the underlying
- * color buffer needs to be resolved so that the sampling surface can be
- * sampled as non-compressed (i.e., without the auxiliary MCS buffer being
- * set).
- */
-static bool
-intel_texture_view_requires_resolve(struct brw_context *brw,
-                                    struct intel_texture_object *intel_tex)
-{
-   if (brw->gen < 9 ||
-       !intel_miptree_is_lossless_compressed(brw, intel_tex->mt))
-     return false;
-
-   const enum isl_format isl_format =
-      brw_isl_format_for_mesa_format(intel_tex->_Format);
-
-   if (isl_format_supports_ccs_e(&brw->screen->devinfo, isl_format))
-      return false;
-
-   perf_debug("Incompatible sampling format (%s) for rbc (%s)\n",
-              _mesa_get_format_name(intel_tex->_Format),
-              _mesa_get_format_name(intel_tex->mt->format));
-
-   if (intel_disable_rb_aux_buffer(brw, intel_tex->mt->bo))
-      perf_debug("Sampling renderbuffer with non-compressible format - "
-                 "turning off compression");
-
-   return true;
-}
-
 static void
 intel_update_state(struct gl_context * ctx, GLuint new_state)
 {
@@ -260,16 +224,16 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       /* We need inte_texture_object::_Format to be valid */
       intel_finalize_mipmap_tree(brw, i);
 
-      if (intel_miptree_sample_with_hiz(brw, tex_obj->mt))
-         intel_miptree_all_slices_resolve_hiz(brw, tex_obj->mt);
-      else
-         intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
-      /* Sampling engine understands lossless compression and resolving
-       * those surfaces should be skipped for performance reasons.
-       */
-      const int flags = intel_texture_view_requires_resolve(brw, tex_obj) ?
-                           0 : INTEL_MIPTREE_IGNORE_CCS_E;
-      intel_miptree_all_slices_resolve_color(brw, tex_obj->mt, flags);
+      bool aux_supported;
+      intel_miptree_prepare_texture(brw, tex_obj->mt, tex_obj->_Format,
+                                    &aux_supported);
+
+      if (!aux_supported && brw->gen >= 9 &&
+          intel_disable_rb_aux_buffer(brw, tex_obj->mt->bo)) {
+         perf_debug("Sampling renderbuffer with non-compressible format - "
+                    "turning off compression");
+      }
+
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
 
       if (tex_obj->base.StencilSampling ||

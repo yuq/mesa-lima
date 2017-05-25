@@ -1046,6 +1046,12 @@ intel_miptree_access_raw(struct brw_context *brw,
 }
 
 void
+intel_miptree_prepare_texture(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt,
+                              mesa_format view_format,
+                              bool *aux_supported_out);
+
+void
 intel_miptree_make_shareable(struct brw_context *brw,
                              struct intel_mipmap_tree *mt);
 
