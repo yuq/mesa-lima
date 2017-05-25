@@ -324,11 +324,8 @@ intel_miptree_blit(struct brw_context *brw,
    /* The blitter has no idea about HiZ or fast color clears, so we need to
     * resolve the miptrees before we do anything.
     */
-   intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_slice);
-   intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_slice);
-   intel_miptree_resolve_color(brw, src_mt, src_level, 1, src_slice, 1, 0);
-   intel_miptree_resolve_color(brw, dst_mt, dst_level, 1, dst_slice, 1, 0);
-   intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_slice);
+   intel_miptree_access_raw(brw, src_mt, src_level, src_slice, false);
+   intel_miptree_access_raw(brw, dst_mt, dst_level, dst_slice, true);
 
    if (src_flip)
       src_y = minify(src_mt->physical_height0, src_level - src_mt->first_level) - src_y - height;
@@ -383,11 +380,8 @@ intel_miptree_copy(struct brw_context *brw,
    /* The blitter has no idea about HiZ or fast color clears, so we need to
     * resolve the miptrees before we do anything.
     */
-   intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_slice);
-   intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_slice);
-   intel_miptree_resolve_color(brw, src_mt, src_level, 1, src_slice, 1, 0);
-   intel_miptree_resolve_color(brw, dst_mt, dst_level, 1, dst_slice, 1, 0);
-   intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_slice);
+   intel_miptree_access_raw(brw, src_mt, src_level, src_slice, false);
+   intel_miptree_access_raw(brw, dst_mt, dst_level, dst_slice, true);
 
    uint32_t src_image_x, src_image_y;
    intel_miptree_get_image_offset(src_mt, src_level, src_slice,

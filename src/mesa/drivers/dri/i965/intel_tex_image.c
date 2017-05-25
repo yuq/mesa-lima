@@ -539,7 +539,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
     * any pending fast color clears before we start.
     */
    assert(image->mt->logical_depth0 == 1);
-   intel_miptree_resolve_color(brw, image->mt, level, 1, 0, 1, 0);
+   intel_miptree_access_raw(brw, image->mt, level, 0, true);
 
    bo = image->mt->bo;
 

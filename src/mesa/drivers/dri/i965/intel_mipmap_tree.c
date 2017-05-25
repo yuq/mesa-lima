@@ -2420,8 +2420,10 @@ intel_miptree_make_shareable(struct brw_context *brw,
     */
    assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE || mt->num_samples <= 1);
 
+   intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
+                                0, INTEL_REMAINING_LAYERS, false, false);
+
    if (mt->mcs_buf) {
-      intel_miptree_all_slices_resolve_color(brw, mt, 0);
       mt->aux_disable |= (INTEL_AUX_DISABLE_CCS | INTEL_AUX_DISABLE_MCS);
       brw_bo_unreference(mt->mcs_buf->bo);
       free(mt->mcs_buf);
@@ -2436,7 +2438,6 @@ intel_miptree_make_shareable(struct brw_context *brw,
 
    if (mt->hiz_buf) {
       mt->aux_disable |= INTEL_AUX_DISABLE_HIZ;
-      intel_miptree_all_slices_resolve_depth(brw, mt);
       intel_miptree_hiz_buffer_free(mt->hiz_buf);
       mt->hiz_buf = NULL;
 
@@ -3194,11 +3195,8 @@ intel_miptree_map(struct brw_context *brw,
       return;
    }
 
-   intel_miptree_resolve_color(brw, mt, level, 1, slice, 1, 0);
-   intel_miptree_slice_resolve_depth(brw, mt, level, slice);
-   if (map->mode & GL_MAP_WRITE_BIT) {
-      intel_miptree_slice_set_needs_hiz_resolve(mt, level, slice);
-   }
+   intel_miptree_access_raw(brw, mt, level, slice,
+                            map->mode & GL_MAP_WRITE_BIT);
 
    if (mt->format == MESA_FORMAT_S_UINT8) {
       intel_miptree_map_s8(brw, mt, map, level, slice);

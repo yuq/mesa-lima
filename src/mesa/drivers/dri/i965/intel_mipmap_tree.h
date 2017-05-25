@@ -1027,6 +1027,24 @@ intel_miptree_set_aux_state(struct brw_context *brw,
                             uint32_t start_layer, uint32_t num_layers,
                             enum isl_aux_state aux_state);
 
+/**
+ * Prepare a miptree for raw access
+ *
+ * This helper prepares the miptree for access that knows nothing about any
+ * sort of compression whatsoever.  This is useful when mapping the surface or
+ * using it with the blitter.
+ */
+static inline void
+intel_miptree_access_raw(struct brw_context *brw,
+                         struct intel_mipmap_tree *mt,
+                         uint32_t level, uint32_t layer,
+                         bool write)
+{
+   intel_miptree_prepare_access(brw, mt, level, 1, layer, 1, false, false);
+   if (write)
+      intel_miptree_finish_write(brw, mt, level, layer, 1, false);
+}
+
 void
 intel_miptree_make_shareable(struct brw_context *brw,
                              struct intel_mipmap_tree *mt);
