@@ -619,9 +619,6 @@ static void si_set_blend_color(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	if (memcmp(&sctx->blend_color.state, state, sizeof(*state)) == 0)
-		return;
-
 	sctx->blend_color.state = *state;
 	si_mark_atom_dirty(sctx, &sctx->blend_color.atom);
 }
