@@ -2531,7 +2531,28 @@ intel_miptree_finish_render(struct brw_context *brw,
 {
    assert(_mesa_is_format_color_format(mt->format));
    intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
-                              mt->mcs_buf);
+                              mt->mcs_buf != NULL);
+}
+
+void
+intel_miptree_prepare_depth(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt, uint32_t level,
+                            uint32_t start_layer, uint32_t layer_count)
+{
+   intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
+                                mt->hiz_buf != NULL, mt->hiz_buf != NULL);
+}
+
+void
+intel_miptree_finish_depth(struct brw_context *brw,
+                           struct intel_mipmap_tree *mt, uint32_t level,
+                           uint32_t start_layer, uint32_t layer_count,
+                           bool depth_written)
+{
+   if (depth_written) {
+      intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
+                                 mt->hiz_buf != NULL);
+   }
 }
 
 /**

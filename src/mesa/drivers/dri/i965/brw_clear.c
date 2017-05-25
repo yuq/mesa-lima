@@ -179,13 +179,13 @@ brw_fast_clear_depth(struct gl_context *ctx)
     * buffer.
     */
    if (depth_att->Layered) {
-      for (unsigned layer = 0; layer < depth_irb->layer_count; layer++) {
-         intel_miptree_slice_set_needs_depth_resolve(mt, depth_irb->mt_level,
-                                                     depth_irb->mt_layer + layer);
-      }
+      intel_miptree_set_aux_state(brw, mt, depth_irb->mt_level,
+                                  depth_irb->mt_layer, depth_irb->layer_count,
+                                  ISL_AUX_STATE_CLEAR);
    } else {
-      intel_miptree_slice_set_needs_depth_resolve(mt, depth_irb->mt_level,
-                                                  depth_irb->mt_layer);
+      intel_miptree_set_aux_state(brw, mt, depth_irb->mt_level,
+                                  depth_irb->mt_layer, 1,
+                                  ISL_AUX_STATE_CLEAR);
    }
 
    return true;
