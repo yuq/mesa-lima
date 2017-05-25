@@ -373,7 +373,17 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
    if (back_irb)
       back_irb->need_downsample = true;
    if (depth_irb && brw_depth_writes_enabled(brw)) {
-      intel_renderbuffer_att_set_needs_depth_resolve(depth_att);
+      if (depth_att->Layered) {
+         for (unsigned layer = 0; layer < depth_irb->layer_count; layer++) {
+            intel_miptree_slice_set_needs_depth_resolve(depth_irb->mt,
+                                                        depth_irb->mt_level,
+                                                        depth_irb->mt_layer + layer);
+         }
+      } else {
+         intel_miptree_slice_set_needs_depth_resolve(depth_irb->mt,
+                                                     depth_irb->mt_level,
+                                                     depth_irb->mt_layer);
+      }
       brw_render_cache_set_add_bo(brw, depth_irb->mt->bo);
    }
 

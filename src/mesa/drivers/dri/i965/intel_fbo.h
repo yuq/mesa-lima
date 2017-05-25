@@ -195,9 +195,6 @@ intel_renderbuffer_get_tile_offsets(struct intel_renderbuffer *irb,
 bool
 intel_renderbuffer_has_hiz(struct intel_renderbuffer *irb);
 
-void
-intel_renderbuffer_att_set_needs_depth_resolve(struct gl_renderbuffer_attachment *att);
-
 
 void intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                      struct intel_renderbuffer *irb,

@@ -938,21 +938,6 @@ intel_renderbuffer_has_hiz(struct intel_renderbuffer *irb)
 }
 
 void
-intel_renderbuffer_att_set_needs_depth_resolve(struct gl_renderbuffer_attachment *att)
-{
-   struct intel_renderbuffer *irb = intel_renderbuffer(att->Renderbuffer);
-   if (irb->mt) {
-      if (att->Layered) {
-         intel_miptree_set_all_slices_need_depth_resolve(irb->mt, irb->mt_level);
-      } else {
-         intel_miptree_slice_set_needs_depth_resolve(irb->mt,
-                                                     irb->mt_level,
-                                                     irb->mt_layer);
-      }
-   }
-}
-
-void
 intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                 struct intel_renderbuffer *irb,
                                 bool invalidate)
