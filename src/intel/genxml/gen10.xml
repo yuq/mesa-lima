@@ -968,6 +968,69 @@
     <field name="Table 1Y Filter Coefficient[n,4]" start="224" end="231" type="s1.6"/>
   </struct>
 
+  <struct name="MI_MATH_ALU_INSTRUCTION" length="1">
+    <field name="ALU Opcode" start="20" end="31" type="uint" prefix="MI_ALU">
+      <value name="NOOP" value="0x000"/>
+      <value name="LOAD" value="0x080"/>
+      <value name="LOADINV" value="0x480"/>
+      <value name="LOAD0" value="0x081"/>
+      <value name="LOAD1" value="0x481"/>
+      <value name="ADD" value="0x100"/>
+      <value name="SUB" value="0x101"/>
+      <value name="AND" value="0x102"/>
+      <value name="OR" value="0x103"/>
+      <value name="XOR" value="0x104"/>
+      <value name="STORE" value="0x180"/>
+      <value name="STOREINV" value="0x580"/>
+    </field>
+    <field name="Operand 1" start="10" end="19" type="uint" prefix="MI_ALU">
+      <value name="REG0" value="0x00"/>
+      <value name="REG1" value="0x01"/>
+      <value name="REG2" value="0x02"/>
+      <value name="REG3" value="0x03"/>
+      <value name="REG4" value="0x04"/>
+      <value name="REG5" value="0x05"/>
+      <value name="REG6" value="0x06"/>
+      <value name="REG7" value="0x07"/>
+      <value name="REG8" value="0x08"/>
+      <value name="REG9" value="0x09"/>
+      <value name="REG10" value="0x0a"/>
+      <value name="REG11" value="0x0b"/>
+      <value name="REG12" value="0x0c"/>
+      <value name="REG13" value="0x0d"/>
+      <value name="REG14" value="0x0e"/>
+      <value name="REG15" value="0x0f"/>
+      <value name="SRCA" value="0x20"/>
+      <value name="SRCB" value="0x21"/>
+      <value name="ACCU" value="0x31"/>
+      <value name="ZF" value="0x32"/>
+      <value name="CF" value="0x33"/>
+    </field>
+    <field name="Operand 2" start="0" end="9" type="uint" prefix="MI_ALU">
+      <value name="REG0" value="0x00"/>
+      <value name="REG1" value="0x01"/>
+      <value name="REG2" value="0x02"/>
+      <value name="REG3" value="0x03"/>
+      <value name="REG4" value="0x04"/>
+      <value name="REG5" value="0x05"/>
+      <value name="REG6" value="0x06"/>
+      <value name="REG7" value="0x07"/>
+      <value name="REG8" value="0x08"/>
+      <value name="REG9" value="0x09"/>
+      <value name="REG10" value="0x0a"/>
+      <value name="REG11" value="0x0b"/>
+      <value name="REG12" value="0x0c"/>
+      <value name="REG13" value="0x0d"/>
+      <value name="REG14" value="0x0e"/>
+      <value name="REG15" value="0x0f"/>
+      <value name="SRCA" value="0x20"/>
+      <value name="SRCB" value="0x21"/>
+      <value name="ACCU" value="0x31"/>
+      <value name="ZF" value="0x32"/>
+      <value name="CF" value="0x33"/>
+    </field>
+  </struct>
+
   <instruction name="3DPRIMITIVE" bias="2" length="7">
     <field name="Command Type" start="29" end="31" type="uint" default="3"/>
     <field name="Command SubType" start="27" end="28" type="uint" default="3"/>
@@ -3175,10 +3238,8 @@
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="26"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
-    <field name="ALU INSTRUCTION 1" start="32" end="63" type="uint"/>
-    <field name="ALU INSTRUCTION 2" start="64" end="95" type="uint"/>
-    <group count="0" start="96" size="32">
-      <field name="ALU INSTRUCTION n" start="0" end="31" type="uint"/>
+    <group count="0" start="32" size="32">
+      <field name="Instruction" start="0" end="31" type="MI_MATH_ALU_INSTRUCTION"/>
     </group>
   </instruction>
 
