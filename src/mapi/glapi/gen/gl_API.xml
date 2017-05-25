@@ -4268,7 +4268,7 @@
     <enum name="DOT3_RGB"                                 value="0x86AE"/>
     <enum name="DOT3_RGBA"                                value="0x86AF"/>
 
-    <function name="ActiveTexture" es1="1.0" es2="2.0">
+    <function name="ActiveTexture" es1="1.0" es2="2.0" no_error="true">
         <param name="texture" type="GLenum"/>
         <glx rop="197"/>
     </function>
