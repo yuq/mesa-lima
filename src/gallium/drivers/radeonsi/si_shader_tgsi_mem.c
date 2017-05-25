@@ -393,11 +393,11 @@ static void load_fetch_args(
 	}
 }
 
-static unsigned get_load_intr_attribs(bool readonly_memory)
+static unsigned get_load_intr_attribs(bool can_speculate)
 {
 	/* READNONE means writes can't affect it, while READONLY means that
 	 * writes can affect it. */
-	return readonly_memory && HAVE_LLVM >= 0x0400 ?
+	return can_speculate && HAVE_LLVM >= 0x0400 ?
 				 LP_FUNC_ATTR_READNONE :
 				 LP_FUNC_ATTR_READONLY;
 }
@@ -411,7 +411,7 @@ static unsigned get_store_intr_attribs(bool writeonly_memory)
 
 static void load_emit_buffer(struct si_shader_context *ctx,
 			     struct lp_build_emit_data *emit_data,
-			     bool readonly_memory)
+			     bool can_speculate)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -439,7 +439,7 @@ static void load_emit_buffer(struct si_shader_context *ctx,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			builder, intrinsic_name, dst_type,
 			emit_data->args, emit_data->arg_count,
-			get_load_intr_attribs(readonly_memory));
+			get_load_intr_attribs(can_speculate));
 }
 
 static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
@@ -561,7 +561,7 @@ static void load_emit(
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	char intrinsic_name[64];
-	bool readonly_memory = false;
+	bool can_speculate = false;
 
 	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
 		load_emit_memory(ctx, emit_data);
@@ -571,7 +571,7 @@ static void load_emit(
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
 		si_emit_waitcnt(ctx, VM_CNT);
 
-	readonly_memory = !(inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE) &&
+	can_speculate = !(inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE) &&
 			  is_oneway_access_only(inst, info,
 						info->shader_buffers_store |
 						info->shader_buffers_atomic,
@@ -579,7 +579,7 @@ static void load_emit(
 						info->images_atomic);
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
-		load_emit_buffer(ctx, emit_data, readonly_memory);
+		load_emit_buffer(ctx, emit_data, can_speculate);
 		return;
 	}
 
@@ -588,7 +588,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				get_load_intr_attribs(readonly_memory));
+				get_load_intr_attribs(can_speculate));
 	} else {
 		ac_get_image_intr_name("llvm.amdgcn.image.load",
 				       emit_data->dst_type,		/* vdata */
@@ -600,7 +600,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				get_load_intr_attribs(readonly_memory));
+				get_load_intr_attribs(can_speculate));
 	}
 }
 

@@ -633,7 +633,7 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		     unsigned inst_offset,
 		     unsigned glc,
 		     unsigned slc,
-		     bool readonly_memory)
+		     bool can_speculate)
 {
 	unsigned func = CLAMP(num_channels, 1, 3) - 1;
 
@@ -667,7 +667,7 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 				  ARRAY_SIZE(args),
 				  /* READNONE means writes can't affect it, while
 				   * READONLY means that writes can affect it. */
-				  readonly_memory && HAVE_LLVM >= 0x0400 ?
+				  can_speculate && HAVE_LLVM >= 0x0400 ?
 					  AC_FUNC_ATTR_READNONE :
 					  AC_FUNC_ATTR_READONLY);
 }
@@ -676,7 +676,7 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					 LLVMValueRef rsrc,
 					 LLVMValueRef vindex,
 					 LLVMValueRef voffset,
-					 bool readonly_memory)
+					 bool can_speculate)
 {
 	LLVMValueRef args [] = {
 		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
@@ -691,7 +691,7 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 				  ctx->v4f32, args, ARRAY_SIZE(args),
 				  /* READNONE means writes can't affect it, while
 				   * READONLY means that writes can affect it. */
-				  readonly_memory && HAVE_LLVM >= 0x0400 ?
+				  can_speculate && HAVE_LLVM >= 0x0400 ?
 					  AC_FUNC_ATTR_READNONE :
 					  AC_FUNC_ATTR_READONLY);
 }

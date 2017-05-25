@@ -823,7 +823,7 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
                                 enum tgsi_opcode_type type, unsigned swizzle,
                                 LLVMValueRef buffer, LLVMValueRef offset,
-                                LLVMValueRef base, bool readonly_memory)
+                                LLVMValueRef base, bool can_speculate)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -833,14 +833,14 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 
 	if (swizzle == ~0) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
-					     0, 1, 0, readonly_memory);
+					     0, 1, 0, can_speculate);
 
 		return LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 	}
 
 	if (!tgsi_type_is_64bit(type)) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
-					     0, 1, 0, readonly_memory);
+					     0, 1, 0, can_speculate);
 
 		value = LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 		return LLVMBuildExtractElement(gallivm->builder, value,
@@ -848,10 +848,10 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	}
 
 	value = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
-	                          swizzle * 4, 1, 0, readonly_memory);
+	                          swizzle * 4, 1, 0, can_speculate);
 
 	value2 = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
-	                           swizzle * 4 + 4, 1, 0, readonly_memory);
+	                           swizzle * 4 + 4, 1, 0, can_speculate);
 
 	return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 }
