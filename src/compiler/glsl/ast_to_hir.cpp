@@ -7434,7 +7434,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
 
             if (field_type->without_array()->is_image()) {
                if (qual->flags.q.explicit_image_format) {
-                  if (qual->image_base_type != field_type->sampled_type) {
+                  if (qual->image_base_type !=
+                      field_type->without_array()->sampled_type) {
                      _mesa_glsl_error(&loc, state, "format qualifier doesn't "
                                       "match the base data type of the image");
                   }
