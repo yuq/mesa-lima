@@ -2400,11 +2400,6 @@ intel_miptree_map_raw(struct brw_context *brw,
                       struct intel_mipmap_tree *mt,
                       GLbitfield mode)
 {
-   /* CPU accesses to color buffers don't understand fast color clears, so
-    * resolve any pending fast color clears before we map.
-    */
-   intel_miptree_all_slices_resolve_color(brw, mt, 0);
-
    struct brw_bo *bo = mt->bo;
 
    if (brw_batch_references(&brw->batch, bo))
@@ -3007,6 +3002,7 @@ intel_miptree_map(struct brw_context *brw,
       return;
    }
 
+   intel_miptree_resolve_color(brw, mt, level, 1, slice, 1, 0);
    intel_miptree_slice_resolve_depth(brw, mt, level, slice);
    if (map->mode & GL_MAP_WRITE_BIT) {
       intel_miptree_slice_set_needs_hiz_resolve(mt, level, slice);
