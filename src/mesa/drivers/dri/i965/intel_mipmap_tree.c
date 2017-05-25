@@ -2431,11 +2431,13 @@ intel_texture_view_requires_resolve(struct brw_context *brw,
    return true;
 }
 
-void
-intel_miptree_prepare_texture(struct brw_context *brw,
-                              struct intel_mipmap_tree *mt,
-                              mesa_format view_format,
-                              bool *aux_supported_out)
+static void
+intel_miptree_prepare_texture_slices(struct brw_context *brw,
+                                     struct intel_mipmap_tree *mt,
+                                     mesa_format view_format,
+                                     uint32_t start_level, uint32_t num_levels,
+                                     uint32_t start_layer, uint32_t num_layers,
+                                     bool *aux_supported_out)
 {
    bool aux_supported;
    if (_mesa_is_format_color_format(mt->format)) {
@@ -2447,11 +2449,32 @@ intel_miptree_prepare_texture(struct brw_context *brw,
       aux_supported = intel_miptree_sample_with_hiz(brw, mt);
    }
 
-   intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
-                                0, INTEL_REMAINING_LAYERS,
+   intel_miptree_prepare_access(brw, mt, start_level, num_levels,
+                                start_layer, num_layers,
                                 aux_supported, aux_supported);
    if (aux_supported_out)
       *aux_supported_out = aux_supported;
+}
+
+void
+intel_miptree_prepare_texture(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt,
+                              mesa_format view_format,
+                              bool *aux_supported_out)
+{
+   intel_miptree_prepare_texture_slices(brw, mt, view_format,
+                                        0, INTEL_REMAINING_LEVELS,
+                                        0, INTEL_REMAINING_LAYERS,
+                                        aux_supported_out);
+}
+
+void
+intel_miptree_prepare_fb_fetch(struct brw_context *brw,
+                               struct intel_mipmap_tree *mt, uint32_t level,
+                               uint32_t start_layer, uint32_t num_layers)
+{
+   intel_miptree_prepare_texture_slices(brw, mt, mt->format, level, 1,
+                                        start_layer, num_layers, NULL);
 }
 
 void

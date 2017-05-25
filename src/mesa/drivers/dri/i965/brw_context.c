@@ -285,10 +285,8 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
             intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
          if (irb) {
-             intel_miptree_resolve_color(brw, irb->mt,
-                                         irb->mt_level, 1,
-                                         irb->mt_layer, irb->layer_count,
-                                         INTEL_MIPTREE_IGNORE_CCS_E);
+            intel_miptree_prepare_fb_fetch(brw, irb->mt, irb->mt_level,
+                                           irb->mt_layer, irb->layer_count);
          }
       }
    }
