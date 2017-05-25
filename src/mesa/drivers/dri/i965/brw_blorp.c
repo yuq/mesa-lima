@@ -924,7 +924,8 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
 
 void
 brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
-                        unsigned level, unsigned layer)
+                        unsigned level, unsigned layer,
+                        enum blorp_fast_clear_op resolve_op)
 {
    DBG("%s to mt %p level %u layer %u\n", __FUNCTION__, mt, level, layer);
 
@@ -937,18 +938,6 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
                           (1 << ISL_AUX_USAGE_CCS_D),
                           &level, layer, 1 /* num_layers */,
                           isl_tmp);
-
-   enum blorp_fast_clear_op resolve_op;
-   if (brw->gen >= 9) {
-      if (surf.aux_usage == ISL_AUX_USAGE_CCS_E)
-         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
-      else
-         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
-   } else {
-      assert(surf.aux_usage == ISL_AUX_USAGE_CCS_D);
-      /* Broadwell and earlier do not have a partial resolve */
-      resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
-   }
 
    /* Ivybrigde PRM Vol 2, Part 1, "11.7 MCS Buffer for Render Target(s)":
     *

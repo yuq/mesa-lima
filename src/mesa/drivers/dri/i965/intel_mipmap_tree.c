@@ -2174,6 +2174,19 @@ intel_miptree_resolve_color(struct brw_context *brw,
    if (!intel_miptree_needs_color_resolve(brw, mt, flags))
       return false;
 
+   enum blorp_fast_clear_op resolve_op;
+   if (brw->gen >= 9) {
+      if (intel_miptree_is_lossless_compressed(brw, mt)) {
+         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+      } else {
+         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+      }
+   } else {
+      /* Broadwell and earlier do not have a partial resolve */
+      assert(!intel_miptree_is_lossless_compressed(brw, mt));
+      resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+   }
+
    bool resolved = false;
    foreach_list_typed_safe(struct intel_resolve_map, map, link,
                            &mt->color_resolve_map) {
@@ -2190,7 +2203,7 @@ intel_miptree_resolve_color(struct brw_context *brw,
 
       assert(map->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED);
 
-      brw_blorp_resolve_color(brw, mt, map->level, map->layer);
+      brw_blorp_resolve_color(brw, mt, map->level, map->layer, resolve_op);
       intel_resolve_map_remove(map);
       resolved = true;
    }

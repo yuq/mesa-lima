@@ -66,7 +66,8 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
 void
 brw_blorp_resolve_color(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
-                        unsigned level, unsigned layer);
+                        unsigned level, unsigned layer,
+                        enum blorp_fast_clear_op resolve_op);
 
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
