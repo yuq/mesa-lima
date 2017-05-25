@@ -18,6 +18,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+import sys
 
 # Python source
 KNOBS = [
@@ -156,8 +157,22 @@ KNOBS = [
 
     ['DEBUG_OUTPUT_DIR', {
         'type'      : 'std::string',
-        'default'   : '/tmp/Rast/DebugOutput',
+        'default'   : r'%TEMP%\Rast\DebugOutput' if sys.platform == 'win32' else '/tmp/Rast/DebugOutput',
         'desc'      : ['Output directory for debug data.'],
+        'category'  : 'debug',
+    }],
+
+    ['JIT_ENABLE_CACHE', {
+        'type'      : 'bool',
+        'default'   : 'false',
+        'desc'      : ['Enables caching of compiled shaders'],
+        'category'  : 'debug',
+    }],
+
+    ['JIT_CACHE_DIR', {
+        'type'      : 'std::string',
+        'default'   : r'%TEMP%\SWR\JitCache' if sys.platform == 'win32' else '${HOME}/.swr/jitcache',
+        'desc'      : ['Cache directory for compiled shaders.'],
         'category'  : 'debug',
     }],
 

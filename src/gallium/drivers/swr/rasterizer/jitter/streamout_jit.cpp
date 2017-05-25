@@ -265,8 +265,8 @@ struct StreamOutJit : public Builder
     {
         static std::size_t soNum = 0;
 
-        std::stringstream fnName("SOShader", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
-        fnName << soNum++;
+        std::stringstream fnName("SO_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
+        fnName << ComputeCRC(0, &state, sizeof(state));
 
         // SO function signature
         // typedef void(__cdecl *PFN_SO_FUNC)(SWR_STREAMOUT_CONTEXT*)
@@ -277,6 +277,8 @@ struct StreamOutJit : public Builder
 
         FunctionType* fTy = FunctionType::get(IRB()->getVoidTy(), args, false);
         Function* soFunc = Function::Create(fTy, GlobalValue::ExternalLinkage, fnName.str(), JM()->mpCurrentModule);
+
+        soFunc->getParent()->setModuleIdentifier(soFunc->getName());
 
         // create return basic block
         BasicBlock* entry = BasicBlock::Create(JM()->mContext, "entry", soFunc);

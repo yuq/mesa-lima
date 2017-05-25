@@ -91,11 +91,13 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 {
     static std::size_t fetchNum = 0;
 
-    std::stringstream fnName("FetchShader", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
-    fnName << fetchNum++;
+    std::stringstream fnName("FetchShader_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
+    fnName << ComputeCRC(0, &fetchState, sizeof(fetchState));
 
     Function*    fetch = Function::Create(JM()->mFetchShaderTy, GlobalValue::ExternalLinkage, fnName.str(), JM()->mpCurrentModule);
     BasicBlock*    entry = BasicBlock::Create(JM()->mContext, "entry", fetch);
+
+    fetch->getParent()->setModuleIdentifier(fetch->getName());
 
     IRB()->SetInsertPoint(entry);
 

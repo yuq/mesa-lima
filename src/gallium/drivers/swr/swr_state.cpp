@@ -495,6 +495,7 @@ swr_create_vertex_elements_state(struct pipe_context *pipe,
    assert(num_elements <= PIPE_MAX_ATTRIBS);
    velems = new swr_vertex_element_state;
    if (velems) {
+      memset(&velems->fsState, 0, sizeof(velems->fsState));
       velems->fsState.bVertexIDOffsetEnable = true;
       velems->fsState.numAttribs = num_elements;
       for (unsigned i = 0; i < num_elements; i++) {

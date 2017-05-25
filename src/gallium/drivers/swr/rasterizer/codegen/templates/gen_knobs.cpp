@@ -34,14 +34,44 @@
 #pragma once
 #include <string>
 
-template <typename T>
-struct Knob
+struct KnobBase
 {
-    const   T&  Value() const               { return m_Value; }
-    const   T&  Value(const T& newValue)    { m_Value = newValue; return Value(); }
+private:
+    // Update the input string.
+    static void autoExpandEnvironmentVariables(std::string &text);
 
 protected:
-    Knob(const T& defaultValue) : m_Value(defaultValue) {}
+    // Leave input alone and return new string.
+    static std::string expandEnvironmentVariables(std::string const &input)
+    {
+        std::string text = input;
+        autoExpandEnvironmentVariables(text);
+        return text;
+    }
+
+    template <typename T>
+    static T expandEnvironmentVariables(T const &input)
+    {
+        return input;
+    }
+};
+
+template <typename T>
+struct Knob : KnobBase
+{
+public:
+    const   T&  Value() const               { return m_Value; }
+    const   T&  Value(T const &newValue)
+    {
+        m_Value = expandEnvironmentVariables(newValue);
+        return Value();
+    }
+
+protected:
+    Knob(T const &defaultValue) :
+        m_Value(expandEnvironmentVariables(defaultValue))
+    {
+    }
 
 private:
     T m_Value;
@@ -102,6 +132,34 @@ extern GlobalKnobs g_GlobalKnobs;
 % for inc in includes:
 #include <${inc}>
 % endfor
+#include <regex>
+#include <core/utils.h>
+
+//========================================================
+// Implementation
+//========================================================
+void KnobBase::autoExpandEnvironmentVariables(std::string &text)
+{
+    {
+        static std::regex env("\\$\\{([^}]+)\\}");
+        std::smatch match;
+        while (std::regex_search(text, match, env))
+        {
+            const std::string var = GetEnv(match[1].str());
+            text.replace(match[0].first, match[0].second, var);
+        }
+    }
+    {
+        static std::regex env("\\%([^}]+)\\%");
+        std::smatch match;
+        while (std::regex_search(text, match, env))
+        {
+            const std::string var = GetEnv(match[1].str());
+            text.replace(match[0].first, match[0].second, var);
+        }
+    }
+}
+
 
 //========================================================
 // Static Data Members
