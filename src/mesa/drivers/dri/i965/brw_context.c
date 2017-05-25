@@ -239,8 +239,11 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
 
    /* Resolve the depth buffer's HiZ buffer. */
    depth_irb = intel_get_renderbuffer(ctx->DrawBuffer, BUFFER_DEPTH);
-   if (depth_irb)
-      intel_renderbuffer_resolve_hiz(brw, depth_irb);
+   if (depth_irb && depth_irb->mt) {
+      intel_miptree_slice_resolve_hiz(brw, depth_irb->mt,
+                                      depth_irb->mt_level,
+                                      depth_irb->mt_layer);
+   }
 
    memset(brw->draw_aux_buffer_disabled, 0,
           sizeof(brw->draw_aux_buffer_disabled));

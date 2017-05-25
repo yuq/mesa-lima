@@ -199,30 +199,6 @@ void
 intel_renderbuffer_att_set_needs_depth_resolve(struct gl_renderbuffer_attachment *att);
 
 
-/**
- * \brief Perform a HiZ resolve on the renderbuffer.
- *
- * It is safe to call this function on a renderbuffer without HiZ. In that
- * case, the function is a no-op.
- *
- * \return false if no resolve was needed
- */
-bool
-intel_renderbuffer_resolve_hiz(struct brw_context *brw,
-			       struct intel_renderbuffer *irb);
-
-/**
- * \brief Perform a depth resolve on the renderbuffer.
- *
- * It is safe to call this function on a renderbuffer without HiZ. In that
- * case, the function is a no-op.
- *
- * \return false if no resolve was needed
- */
-bool
-intel_renderbuffer_resolve_depth(struct brw_context *brw,
-				 struct intel_renderbuffer *irb);
-
 void intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                      struct intel_renderbuffer *irb,
                                      bool invalidate);
