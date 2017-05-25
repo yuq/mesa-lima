@@ -405,39 +405,6 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
    }
 }
 
-static void
-brw_predraw_set_aux_buffers(struct brw_context *brw)
-{
-   if (brw->gen < 9)
-      return;
-
-   struct gl_context *ctx = &brw->ctx;
-   struct gl_framebuffer *fb = ctx->DrawBuffer;
-
-   for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
-      struct intel_renderbuffer *irb =
-         intel_renderbuffer(fb->_ColorDrawBuffers[i]);
-
-      if (!irb) {
-         continue;
-      }
-
-      /* For layered rendering non-compressed fast cleared buffers need to be
-       * resolved. Surface state can carry only one fast color clear value
-       * while each layer may have its own fast clear color value. For
-       * compressed buffers color value is available in the color buffer.
-       */
-      if (irb->layer_count > 1 &&
-          !(irb->mt->aux_disable & INTEL_AUX_DISABLE_CCS) &&
-          !intel_miptree_is_lossless_compressed(brw, irb->mt)) {
-         assert(brw->gen >= 8);
-
-         intel_miptree_resolve_color(brw, irb->mt, irb->mt_level, 1,
-                                     irb->mt_layer, irb->layer_count, 0);
-      }
-   }
-}
-
 /* May fail if out of video memory for texture or vbo upload, or on
  * fallback conditions.
  */
@@ -486,7 +453,6 @@ brw_try_draw_prims(struct gl_context *ctx,
       util_last_bit(ctx->VertexProgram._Current->SamplersUsed);
 
    intel_prepare_render(brw);
-   brw_predraw_set_aux_buffers(brw);
 
    /* This workaround has to happen outside of brw_upload_render_state()
     * because it may flush the batchbuffer for a blit, affecting the state
