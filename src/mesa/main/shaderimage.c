@@ -658,30 +658,11 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
    bind_image_texture(ctx, texObj, unit, level, layered, layer, access, format);
 }
 
-void GLAPIENTRY
-_mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
+static ALWAYS_INLINE void
+bind_image_textures(struct gl_context *ctx, GLuint first, GLuint count,
+                    const GLuint *textures, bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
    int i;
-
-   if (!ctx->Extensions.ARB_shader_image_load_store) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBindImageTextures()");
-      return;
-   }
-
-   if (first + count > ctx->Const.MaxImageUnits) {
-      /* The ARB_multi_bind spec says:
-       *
-       *    "An INVALID_OPERATION error is generated if <first> + <count>
-       *     is greater than the number of image units supported by
-       *     the implementation."
-       */
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindImageTextures(first=%u + count=%d > the value of "
-                  "GL_MAX_IMAGE_UNITS=%u)",
-                  first, count, ctx->Const.MaxImageUnits);
-      return;
-   }
 
    /* Assume that at least one binding will be changed */
    FLUSH_VERTICES(ctx, 0);
@@ -712,13 +693,13 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
       struct gl_image_unit *u = &ctx->ImageUnits[first + i];
       const GLuint texture = textures ? textures[i] : 0;
 
-      if (texture != 0) {
-         struct gl_texture_object *texObj;
+      if (texture) {
+         struct gl_texture_object *texObj = u->TexObj;
          GLenum tex_format;
 
-         if (!u->TexObj || u->TexObj->Name != texture) {
+         if (!texObj || texObj->Name != texture) {
             texObj = _mesa_lookup_texture_locked(ctx, texture);
-            if (!texObj) {
+            if (!no_error && !texObj) {
                /* The ARB_multi_bind spec says:
                 *
                 *    "An INVALID_OPERATION error is generated if any value
@@ -731,8 +712,6 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
                            "object)", i, texture);
                continue;
             }
-         } else {
-            texObj = u->TexObj;
          }
 
          if (texObj->Target == GL_TEXTURE_BUFFER) {
@@ -740,8 +719,8 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
          } else {
             struct gl_texture_image *image = texObj->Image[0][0];
 
-            if (!image || image->Width == 0 || image->Height == 0 ||
-                image->Depth == 0) {
+            if (!no_error && (!image || image->Width == 0 ||
+                              image->Height == 0 || image->Depth == 0)) {
                /* The ARB_multi_bind spec says:
                 *
                 *    "An INVALID_OPERATION error is generated if the width,
@@ -758,7 +737,8 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
             tex_format = image->InternalFormat;
          }
 
-         if (!_mesa_is_shader_image_format_supported(ctx, tex_format)) {
+         if (!no_error &&
+             !_mesa_is_shader_image_format_supported(ctx, tex_format)) {
             /* The ARB_multi_bind spec says:
              *
              *   "An INVALID_OPERATION error is generated if the internal
@@ -785,4 +765,40 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
    }
 
    _mesa_HashUnlockMutex(ctx->Shared->TexObjects);
+}
+
+void GLAPIENTRY
+_mesa_BindImageTextures_no_error(GLuint first, GLsizei count,
+                                 const GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   bind_image_textures(ctx, first, count, textures, true);
+}
+
+void GLAPIENTRY
+_mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!ctx->Extensions.ARB_shader_image_load_store) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glBindImageTextures()");
+      return;
+   }
+
+   if (first + count > ctx->Const.MaxImageUnits) {
+      /* The ARB_multi_bind spec says:
+       *
+       *    "An INVALID_OPERATION error is generated if <first> + <count>
+       *     is greater than the number of image units supported by
+       *     the implementation."
+       */
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glBindImageTextures(first=%u + count=%d > the value of "
+                  "GL_MAX_IMAGE_UNITS=%u)",
+                  first, count, ctx->Const.MaxImageUnits);
+      return;
+   }
+
+   bind_image_textures(ctx, first, count, textures, false);
 }
