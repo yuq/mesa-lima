@@ -2454,6 +2454,54 @@ intel_miptree_prepare_texture(struct brw_context *brw,
       *aux_supported_out = aux_supported;
 }
 
+void
+intel_miptree_prepare_render(struct brw_context *brw,
+                             struct intel_mipmap_tree *mt, uint32_t level,
+                             uint32_t start_layer, uint32_t layer_count,
+                             bool srgb_enabled)
+{
+   /* If FRAMEBUFFER_SRGB is used on Gen9+ then we need to resolve any of
+    * the single-sampled color renderbuffers because the CCS buffer isn't
+    * supported for SRGB formats. This only matters if FRAMEBUFFER_SRGB is
+    * enabled because otherwise the surface state will be programmed with
+    * the linear equivalent format anyway.
+    */
+   if (brw->gen >= 9 && srgb_enabled && mt->num_samples <= 1 &&
+       _mesa_get_srgb_format_linear(mt->format) != mt->format) {
+
+      /* Lossless compression is not supported for SRGB formats, it
+       * should be impossible to get here with such surfaces.
+       */
+      assert(!intel_miptree_is_lossless_compressed(brw, mt));
+      intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
+                                   false, false);
+   }
+
+   /* For layered rendering non-compressed fast cleared buffers need to be
+    * resolved. Surface state can carry only one fast color clear value
+    * while each layer may have its own fast clear color value. For
+    * compressed buffers color value is available in the color buffer.
+    */
+   if (layer_count > 1 &&
+       !(mt->aux_disable & INTEL_AUX_DISABLE_CCS) &&
+       !intel_miptree_is_lossless_compressed(brw, mt)) {
+      assert(brw->gen >= 8);
+
+      intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
+                                   false, false);
+   }
+}
+
+void
+intel_miptree_finish_render(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt, uint32_t level,
+                            uint32_t start_layer, uint32_t layer_count)
+{
+   assert(_mesa_is_format_color_format(mt->format));
+   intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
+                              mt->mcs_buf);
+}
+
 /**
  * Make it possible to share the BO backing the given miptree with another
  * process or another miptree.

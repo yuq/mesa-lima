@@ -1050,6 +1050,15 @@ intel_miptree_prepare_texture(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
                               mesa_format view_format,
                               bool *aux_supported_out);
+void
+intel_miptree_prepare_render(struct brw_context *brw,
+                             struct intel_mipmap_tree *mt, uint32_t level,
+                             uint32_t start_layer, uint32_t layer_count,
+                             bool srgb_enabled);
+void
+intel_miptree_finish_render(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt, uint32_t level,
+                            uint32_t start_layer, uint32_t layer_count);
 
 void
 intel_miptree_make_shareable(struct brw_context *brw,

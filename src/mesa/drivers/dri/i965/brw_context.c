@@ -301,38 +301,9 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       if (irb == NULL || irb->mt == NULL)
          continue;
 
-      struct intel_mipmap_tree *mt = irb->mt;
-
-      /* If FRAMEBUFFER_SRGB is used on Gen9+ then we need to resolve any of
-       * the single-sampled color renderbuffers because the CCS buffer isn't
-       * supported for SRGB formats. This only matters if FRAMEBUFFER_SRGB is
-       * enabled because otherwise the surface state will be programmed with
-       * the linear equivalent format anyway.
-       */
-      if (brw->gen >= 9 && ctx->Color.sRGBEnabled && mt->num_samples <= 1 &&
-          _mesa_get_srgb_format_linear(mt->format) != mt->format) {
-
-         /* Lossless compression is not supported for SRGB formats, it
-          * should be impossible to get here with such surfaces.
-          */
-         assert(!intel_miptree_is_lossless_compressed(brw, mt));
-         intel_miptree_all_slices_resolve_color(brw, mt, 0);
-         brw_render_cache_set_check_flush(brw, mt->bo);
-      }
-
-      /* For layered rendering non-compressed fast cleared buffers need to be
-       * resolved. Surface state can carry only one fast color clear value
-       * while each layer may have its own fast clear color value. For
-       * compressed buffers color value is available in the color buffer.
-       */
-      if (irb->layer_count > 1 &&
-          !(irb->mt->aux_disable & INTEL_AUX_DISABLE_CCS) &&
-          !intel_miptree_is_lossless_compressed(brw, mt)) {
-         assert(brw->gen >= 8);
-
-         intel_miptree_resolve_color(brw, mt, irb->mt_level, 1,
-                                     irb->mt_layer, irb->layer_count, 0);
-      }
+      intel_miptree_prepare_render(brw, irb->mt, irb->mt_level,
+                                   irb->mt_layer, irb->layer_count,
+                                   ctx->Color.sRGBEnabled);
    }
 
    _mesa_lock_context_textures(ctx);
