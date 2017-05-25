@@ -1030,6 +1030,9 @@ emit_src_register(struct svga_shader_emitter_v10 *emit,
    operand0.value = operand1.value = 0;
 
    if (is_prim_id) {
+      /* NOTE: we should be using VGPU10_OPERAND_1_COMPONENT here, but
+       * our virtual GPU accepts this as-is.
+       */
       operand0.numComponents = VGPU10_OPERAND_0_COMPONENT;
       operand0.operandType = VGPU10_OPERAND_TYPE_INPUT_PRIMITIVEID;
    }
@@ -5096,6 +5099,9 @@ emit_sample(struct svga_shader_emitter_v10 *emit,
    /* SAMPLE dst, coord(s0), resource, sampler */
    begin_emit_instruction(emit);
 
+   /* NOTE: for non-fragment shaders, we should use VGPU10_OPCODE_SAMPLE_L
+    * with LOD=0.  But our virtual GPU accepts this as-is.
+    */
    emit_sample_opcode(emit, VGPU10_OPCODE_SAMPLE,
                       inst->Instruction.Saturate, offsets);
    emit_dst_register(emit, get_tex_swizzle_dst(&swz_info));
@@ -5236,6 +5242,9 @@ emit_txp(struct svga_shader_emitter_v10 *emit,
    begin_emit_instruction(emit);
 
    if (tgsi_is_shadow_target(target))
+      /* NOTE: for non-fragment shaders, we should use
+       * VGPU10_OPCODE_SAMPLE_C_LZ, but our virtual GPU accepts this as-is.
+       */
       opcode = VGPU10_OPCODE_SAMPLE_C;
    else
       opcode = VGPU10_OPCODE_SAMPLE;
