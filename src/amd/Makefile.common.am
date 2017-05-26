@@ -46,6 +46,7 @@ common_libamd_common_la_CFLAGS = \
 	$(VISIBILITY_CFLAGS) \
 	$(PTHREAD_CFLAGS) \
 	$(LLVM_CFLAGS) \
+	$(LIBDRM_CFLAGS) \
 	$(LIBELF_CFLAGS)
 
 common_libamd_common_la_CXXFLAGS = \
