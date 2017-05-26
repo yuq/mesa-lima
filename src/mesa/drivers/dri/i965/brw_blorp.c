@@ -791,6 +791,20 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
    if (can_fast_clear) {
+      /* If the MCS buffer hasn't been allocated yet, we need to allocate
+       * it now.
+       */
+      if (!irb->mt->mcs_buf) {
+         assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
+         if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
+            /* MCS allocation failed--probably this will only happen in
+             * out-of-memory conditions.  But in any case, try to recover
+             * by falling back to a non-blorp clear technique.
+             */
+            return false;
+         }
+      }
+
       const enum intel_fast_clear_state fast_clear_state =
          intel_miptree_get_fast_clear_state(irb->mt, irb->mt_level,
                                             logical_layer);
@@ -807,20 +821,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
          return true;
 
       irb->mt->fast_clear_color = clear_color;
-
-      /* If the MCS buffer hasn't been allocated yet, we need to allocate
-       * it now.
-       */
-      if (!irb->mt->mcs_buf) {
-         assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
-         if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
-            /* MCS allocation failed--probably this will only happen in
-             * out-of-memory conditions.  But in any case, try to recover
-             * by falling back to a non-blorp clear technique.
-             */
-            return false;
-         }
-      }
 
       DBG("%s (fast) to mt %p level %d layers %d+%d\n", __FUNCTION__,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);
