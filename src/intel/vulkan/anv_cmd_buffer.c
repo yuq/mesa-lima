@@ -335,6 +335,8 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
       return gen8_cmd_buffer_emit_state_base_address(cmd_buffer);
    case 9:
       return gen9_cmd_buffer_emit_state_base_address(cmd_buffer);
+   case 10:
+      return gen10_cmd_buffer_emit_state_base_address(cmd_buffer);
    default:
       unreachable("unsupported gen\n");
    }

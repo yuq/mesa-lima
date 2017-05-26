@@ -91,6 +91,7 @@ TEMPLATE_H = Template(textwrap.dedent("""\
       ${type_} gen75_${name}(${args});
       ${type_} gen8_${name}(${args});
       ${type_} gen9_${name}(${args});
+      ${type_} gen10_${name}(${args});
       % if guard is not None:
     #endif // ${guard}
       % endif
@@ -152,7 +153,7 @@ TEMPLATE_C = Template(textwrap.dedent(u"""\
      * either pick the correct entry point.
      */
 
-    % for layer in ['anv', 'gen7', 'gen75', 'gen8', 'gen9']:
+    % for layer in ['anv', 'gen7', 'gen75', 'gen8', 'gen9', 'gen10']:
       % for type_, name, args, _, _, guard in entrypoints:
         % if guard is not None:
     #ifdef ${guard}
@@ -184,6 +185,10 @@ TEMPLATE_C = Template(textwrap.dedent(u"""\
        }
 
        switch (devinfo->gen) {
+       case 10:
+          if (gen10_layer.entrypoints[index])
+             return gen10_layer.entrypoints[index];
+          /* fall through */
        case 9:
           if (gen9_layer.entrypoints[index])
              return gen9_layer.entrypoints[index];
