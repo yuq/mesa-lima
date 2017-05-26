@@ -1753,12 +1753,12 @@ update_image_surface(struct brw_context *brw,
             };
 
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
-            const bool unresolved = intel_miptree_has_color_unresolved(
-                                       mt, view.base_level, view.levels,
-                                       view.base_array_layer, view.array_len);
-            const int flags = unresolved ? 0 : INTEL_AUX_BUFFER_DISABLED;
-            brw_emit_surface_state(brw, mt, flags, mt->target, view,
-                                   tex_mocs[brw->gen],
+            assert(!intel_miptree_has_color_unresolved(mt,
+                                                       view.base_level, 1,
+                                                       view.base_array_layer,
+                                                       view.array_len));
+            brw_emit_surface_state(brw, mt, INTEL_AUX_BUFFER_DISABLED,
+                                   mt->target, view, tex_mocs[brw->gen],
                                    surf_offset, surf_index,
                                    I915_GEM_DOMAIN_SAMPLER,
                                    access == GL_READ_ONLY ? 0 :
