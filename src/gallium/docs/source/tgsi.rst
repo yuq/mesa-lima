@@ -982,7 +982,9 @@ XXX doesn't look like most of the opcodes really belong here.
 .. opcode:: TXQS - Texture Samples Query
 
   This retrieves the number of samples in the texture, and stores it
-  into the x component. The other components are undefined.
+  into the x component as an unsigned integer. The other components are
+  undefined.  If the texture is not multisampled, this function returns
+  (1, undef, undef, undef).
 
 .. math::
 
@@ -2538,15 +2540,46 @@ after lookup.
 
 .. opcode:: SAMPLE_POS
 
-  Query the position of a given sample.  dst receives float4 (x, y, 0, 0)
-  indicated where the sample is located. If the resource is not a multi-sample
-  resource and not a render target, the result is 0.
+  Query the position of a sample in the given resource or render target
+  when per-sample fragment shading is in effect.
+
+  Syntax: ``SAMPLE_POS dst, source, sample_index``
+
+  dst receives float4 (x, y, undef, undef) indicated where the sample is
+  located. Sample locations are in the range [0, 1] where 0.5 is the center
+  of the fragment.
+
+  source is either a sampler view (to indicate a shader resource) or temp
+  register (to indicate the render target).  The source register may have
+  an optional swizzle to apply to the returned result
+
+  sample_index is an integer scalar indicating which sample position is to
+  be queried.
+
+  If per-sample shading is not in effect or the source resource or render
+  target is not multisampled, the result is (0.5, 0.5, undef, undef).
+
+  NOTE: no driver has implemented this opcode yet (and no state tracker
+  emits it).  This information is subject to change.
 
 .. opcode:: SAMPLE_INFO
 
-  dst receives number of samples in x.  If the resource is not a multi-sample
-  resource and not a render target, the result is 0.
+  Query the number of samples in a multisampled resource or render target.
 
+  Syntax: ``SAMPLE_INFO dst, source``
+
+  dst receives int4 (n, 0, 0, 0) where n is the number of samples in a
+  resource or the render target.
+
+  source is either a sampler view (to indicate a shader resource) or temp
+  register (to indicate the render target).  The source register may have
+  an optional swizzle to apply to the returned result
+
+  If per-sample shading is not in effect or the source resource or render
+  target is not multisampled, the result is (1, 0, 0, 0).
+
+  NOTE: no driver has implemented this opcode yet (and no state tracker
+  emits it).  This information is subject to change.
 
 .. _resourceopcodes:
 
@@ -3284,15 +3317,18 @@ TGSI_SEMANTIC_SAMPLEID
 """"""""""""""""""""""
 
 For fragment shaders, this semantic label indicates that a system value
-contains the current sample id (i.e. gl_SampleID).
-This is an integer value, and only the X component is used.
+contains the current sample id (i.e. gl_SampleID) as an unsigned int.
+Only the X component is used.  If per-sample shading is not enabled,
+the result is (0, undef, undef, undef).
 
 TGSI_SEMANTIC_SAMPLEPOS
 """""""""""""""""""""""
 
-For fragment shaders, this semantic label indicates that a system value
-contains the current sample's position (i.e. gl_SamplePosition). Only the X
-and Y values are used.
+For fragment shaders, this semantic label indicates that a system
+value contains the current sample's position as float4(x, y, undef, undef)
+in the render target (i.e.  gl_SamplePosition) when per-fragment shading
+is in effect.  Position values are in the range [0, 1] where 0.5 is
+the center of the fragment.
 
 TGSI_SEMANTIC_SAMPLEMASK
 """"""""""""""""""""""""
