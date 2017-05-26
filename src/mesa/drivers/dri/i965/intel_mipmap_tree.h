@@ -592,7 +592,14 @@ struct intel_mipmap_tree
     * indicates state other than RESOLVED.
     */
    struct exec_list hiz_map; /* List of intel_resolve_map. */
-   struct exec_list color_resolve_map; /* List of intel_resolve_map. */
+
+   /**
+    * \brief Maps miptree slices to their current aux state
+    *
+    * This two-dimensional array is indexed as [level][layer] and stores an
+    * aux state for each slice.
+    */
+   enum isl_aux_state **aux_state;
 
    /**
     * \brief Stencil miptree for depthstencil textures.
@@ -862,40 +869,10 @@ intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 
 /**\}*/
 
-enum intel_fast_clear_state
-intel_miptree_get_fast_clear_state(const struct intel_mipmap_tree *mt,
-                                   unsigned level, unsigned layer);
-
-void
-intel_miptree_set_fast_clear_state(const struct brw_context *brw,
-                                   struct intel_mipmap_tree *mt,
-                                   unsigned level,
-                                   unsigned first_layer,
-                                   unsigned num_layers,
-                                   enum intel_fast_clear_state new_state);
-
 bool
 intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
                                    unsigned start_level, unsigned num_levels,
                                    unsigned start_layer, unsigned num_layers);
-
-/**
- * Update the fast clear state for a miptree to indicate that it has been used
- * for rendering.
- */
-void
-intel_miptree_used_for_rendering(const struct brw_context *brw,
-                                 struct intel_mipmap_tree *mt, unsigned level,
-                                 unsigned start_layer, unsigned num_layers);
-
-/**
- * Flag values telling color resolve pass which special types of buffers
- * can be ignored.
- *
- * INTEL_MIPTREE_IGNORE_CCS_E:   Lossless compressed (single-sample
- *                               compression scheme since gen9)
- */
-#define INTEL_MIPTREE_IGNORE_CCS_E (1 << 0)
 
 
 #define INTEL_REMAINING_LAYERS UINT32_MAX
