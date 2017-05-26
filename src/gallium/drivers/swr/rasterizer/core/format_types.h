@@ -1110,53 +1110,53 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 32> : PackTraits<32>
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatIntType - Calculate base integer type for pixel components based
+///                 on total number of bits.  Components can be smaller
+///                 that this type, but the entire pixel must not be
+///                 any smaller than this type.
+//////////////////////////////////////////////////////////////////////////
+template <uint32_t bits, bool bits8 = bits <= 8, bool bits16 = bits <= 16>
+struct FormatIntType
+{
+    typedef uint32_t TYPE;
+};
+
+template <uint32_t bits>
+struct FormatIntType<bits, true, true>
+{
+    typedef uint8_t TYPE;
+};
+
+template <uint32_t bits>
+struct FormatIntType<bits, false, true>
+{
+    typedef uint16_t TYPE;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// Format1 - Bitfield for single component formats.
 //////////////////////////////////////////////////////////////////////////
 template<uint32_t x>
-struct Format1
+union Format1
 {
-    union
+    typedef typename FormatIntType<x>::TYPE TYPE;
+    struct
     {
-        uint32_t r : x;
-
-        ///@ The following are here to provide full template needed in Formats.
-        uint32_t g : x;
-        uint32_t b : x;
-        uint32_t a : x;
+        TYPE r : x;
     };
-};
 
-//////////////////////////////////////////////////////////////////////////
-/// Format1 - Bitfield for single component formats - 8 bit specialization
-//////////////////////////////////////////////////////////////////////////
-template<>
-struct Format1<8>
-{
-    union
+    ///@ The following are here to provide full template needed in Formats.
+    struct
     {
-        uint8_t r;
-
-        ///@ The following are here to provide full template needed in Formats.
-        uint8_t g;
-        uint8_t b;
-        uint8_t a;
+        TYPE g : x;
     };
-};
-
-//////////////////////////////////////////////////////////////////////////
-/// Format1 - Bitfield for single component formats - 16 bit specialization
-//////////////////////////////////////////////////////////////////////////
-template<>
-struct Format1<16>
-{
-    union
+    struct 
     {
-        uint16_t r;
-
-        ///@ The following are here to provide full template needed in Formats.
-        uint16_t g;
-        uint16_t b;
-        uint16_t a;
+        TYPE b : x;
+    };
+    struct  
+    {
+        TYPE a : x;
     };
 };
 
@@ -1166,35 +1166,18 @@ struct Format1<16>
 template<uint32_t x, uint32_t y>
 union Format2
 {
-    struct
-    {
-        uint32_t r : x;
-        uint32_t g : y;
-    };
-    struct
-    {
-        ///@ The following are here to provide full template needed in Formats.
-        uint32_t b : x;
-        uint32_t a : y;
-    };
-};
+    typedef typename FormatIntType<x + y>::TYPE TYPE;
 
-//////////////////////////////////////////////////////////////////////////
-/// Format2 - Bitfield for 2 component formats - 16 bit specialization
-//////////////////////////////////////////////////////////////////////////
-template<>
-union Format2<8,8>
-{
     struct
     {
-        uint16_t r : 8;
-        uint16_t g : 8;
+        TYPE r : x;
+        TYPE g : y;
     };
     struct
     {
         ///@ The following are here to provide full template needed in Formats.
-        uint16_t b : 8;
-        uint16_t a : 8;
+        TYPE b : x;
+        TYPE a : y;
     };
 };
 
@@ -1204,28 +1187,15 @@ union Format2<8,8>
 template<uint32_t x, uint32_t y, uint32_t z>
 union Format3
 {
-    struct
-    {
-        uint32_t r : x;
-        uint32_t g : y;
-        uint32_t b : z;
-    };
-    uint32_t a;  ///@note This is here to provide full template needed in Formats.
-};
+    typedef typename FormatIntType<x + y + z>::TYPE TYPE;
 
-//////////////////////////////////////////////////////////////////////////
-/// Format3 - Bitfield for 3 component formats - 16 bit specialization
-//////////////////////////////////////////////////////////////////////////
-template<>
-union Format3<5,6,5>
-{
     struct
     {
-        uint16_t r : 5;
-        uint16_t g : 6;
-        uint16_t b : 5;
+        TYPE r : x;
+        TYPE g : y;
+        TYPE b : z;
     };
-    uint16_t a;  ///@note This is here to provide full template needed in Formats.
+    TYPE a;  ///@note This is here to provide full template needed in Formats.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1234,34 +1204,12 @@ union Format3<5,6,5>
 template<uint32_t x, uint32_t y, uint32_t z, uint32_t w>
 struct Format4
 {
-    uint32_t r : x;
-    uint32_t g : y;
-    uint32_t b : z;
-    uint32_t a : w;
-};
+    typedef typename FormatIntType<x + y + z + w>::TYPE TYPE;
 
-//////////////////////////////////////////////////////////////////////////
-/// Format4 - Bitfield for 4 component formats - 16 bit specialization
-//////////////////////////////////////////////////////////////////////////
-template<>
-struct Format4<5,5,5,1>
-{
-    uint16_t r : 5;
-    uint16_t g : 5;
-    uint16_t b : 5;
-    uint16_t a : 1;
-};
-
-//////////////////////////////////////////////////////////////////////////
-/// Format4 - Bitfield for 4 component formats - 16 bit specialization
-//////////////////////////////////////////////////////////////////////////
-template<>
-struct Format4<4,4,4,4>
-{
-    uint16_t r : 4;
-    uint16_t g : 4;
-    uint16_t b : 4;
-    uint16_t a : 4;
+    TYPE r : x;
+    TYPE g : y;
+    TYPE b : z;
+    TYPE a : w;
 };
 
 //////////////////////////////////////////////////////////////////////////
