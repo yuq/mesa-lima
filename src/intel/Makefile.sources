@@ -285,3 +285,7 @@ VULKAN_GEN9_FILES := \
 VULKAN_GEN10_FILES := \
 	vulkan/gen8_cmd_buffer.c \
 	$(VULKAN_GENX_FILES)
+
+VULKAN_GEN11_FILES := \
+	vulkan/gen8_cmd_buffer.c \
+	$(VULKAN_GENX_FILES)

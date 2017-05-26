@@ -98,7 +98,8 @@ VULKAN_PER_GEN_LIBS = \
 	vulkan/libanv-gen75.la \
 	vulkan/libanv-gen8.la \
 	vulkan/libanv-gen9.la \
-	vulkan/libanv-gen10.la
+	vulkan/libanv-gen10.la \
+	vulkan/libanv-gen11.la
 
 noinst_LTLIBRARIES += $(VULKAN_PER_GEN_LIBS)
 
@@ -137,6 +138,10 @@ vulkan_libanv_gen9_la_SOURCES = $(VULKAN_GEN9_FILES)
 vulkan_libanv_gen10_la_CFLAGS = $(VULKAN_CFLAGS)
 vulkan_libanv_gen10_la_CPPFLAGS = $(VULKAN_CPPFLAGS) -DGEN_VERSIONx10=100
 vulkan_libanv_gen10_la_SOURCES = $(VULKAN_GEN10_FILES)
+
+vulkan_libanv_gen11_la_CFLAGS = $(VULKAN_CFLAGS)
+vulkan_libanv_gen11_la_CPPFLAGS = $(VULKAN_CPPFLAGS) -DGEN_VERSIONx10=110
+vulkan_libanv_gen11_la_SOURCES = $(VULKAN_GEN11_FILES)
 
 VULKAN_SOURCES = \
 	$(VULKAN_GENERATED_FILES) \
