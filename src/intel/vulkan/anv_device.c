@@ -1482,6 +1482,9 @@ VkResult anv_CreateDevice(
    case 10:
       result = gen10_init_device_state(device);
       break;
+   case 11:
+      result = gen11_init_device_state(device);
+      break;
    default:
       /* Shouldn't get here as we don't create physical devices for any other
        * gens. */
