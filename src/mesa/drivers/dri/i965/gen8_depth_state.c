@@ -115,7 +115,7 @@ emit_depth_packets(struct brw_context *brw,
                 (stencil_mt->surf.row_pitch - 1));
       OUT_RELOC64(stencil_mt->bo,
                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
-      OUT_BATCH(stencil_mt ? stencil_mt->qpitch >> 2 : 0);
+      OUT_BATCH(stencil_mt->surf.array_pitch_el_rows >> 2);
       ADVANCE_BATCH();
    }
 
@@ -175,7 +175,8 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
       break;
    case GL_TEXTURE_3D:
       assert(mt);
-      depth = MAX2(mt->logical_depth0, 1);
+      depth = mt->surf.size > 0 ? mt->surf.logical_level0_px.depth :
+                                  MAX2(mt->logical_depth0, 1);
       surftype = translate_tex_target(gl_target);
       break;
    case GL_TEXTURE_1D_ARRAY:
@@ -198,7 +199,10 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
 
    lod = irb ? irb->mt_level - irb->mt->first_level : 0;
 
-   if (mt) {
+   if (mt && mt->surf.size > 0) {
+      width = mt->surf.logical_level0_px.width;
+      height = mt->surf.logical_level0_px.height;
+   } else if (mt) {
       width = mt->logical_width0;
       height = mt->logical_height0;
    }

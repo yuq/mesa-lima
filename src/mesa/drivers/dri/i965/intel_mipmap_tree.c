@@ -819,7 +819,7 @@ miptree_create(struct brw_context *brw,
                GLuint num_samples,
                uint32_t layout_flags)
 {
-   if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8)
+   if (format == MESA_FORMAT_S_UINT8)
       return make_surface(brw, target, format, first_level, last_level,
                           width0, height0, depth0, num_samples,
                           ISL_TILING_W_BIT,
@@ -963,7 +963,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    uint32_t tiling, swizzle;
    const GLenum target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
 
-   if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8) {
+   if (format == MESA_FORMAT_S_UINT8) {
       mt = make_surface(brw, target, MESA_FORMAT_S_UINT8,
                         0, 0, width, height, depth, 1,
                         ISL_TILING_W_BIT,
@@ -2950,36 +2950,44 @@ intel_update_r8stencil(struct brw_context *brw,
    if (!src || brw->gen >= 8 || !src->r8stencil_needs_update)
       return;
 
+   assert(src->surf.size > 0);
+
    if (!mt->r8stencil_mt) {
       const uint32_t r8stencil_flags =
          MIPTREE_LAYOUT_ACCELERATED_UPLOAD | MIPTREE_LAYOUT_TILING_Y |
          MIPTREE_LAYOUT_DISABLE_AUX;
       assert(brw->gen > 6); /* Handle MIPTREE_LAYOUT_GEN6_HIZ_STENCIL */
-      mt->r8stencil_mt = intel_miptree_create(brw,
-                                              src->target,
-                                              MESA_FORMAT_R_UINT8,
-                                              src->first_level,
-                                              src->last_level,
-                                              src->logical_width0,
-                                              src->logical_height0,
-                                              src->logical_depth0,
-                                              src->surf.samples,
-                                              r8stencil_flags);
+      mt->r8stencil_mt = intel_miptree_create(
+                            brw,
+                            src->target,
+                            MESA_FORMAT_R_UINT8,
+                            src->first_level, src->last_level,
+                            src->surf.logical_level0_px.width,
+                            src->surf.logical_level0_px.height,
+                            src->surf.dim == ISL_SURF_DIM_3D ?
+                               src->surf.logical_level0_px.depth :
+                               src->surf.logical_level0_px.array_len,
+                            src->surf.samples,
+                            r8stencil_flags);
       assert(mt->r8stencil_mt);
    }
 
    struct intel_mipmap_tree *dst = mt->r8stencil_mt;
 
    for (int level = src->first_level; level <= src->last_level; level++) {
-      const unsigned depth = src->level[level].depth;
+      const unsigned depth = src->surf.dim == ISL_SURF_DIM_3D ?
+         minify(src->surf.phys_level0_sa.depth, level) :
+         src->surf.phys_level0_sa.array_len;
 
       for (unsigned layer = 0; layer < depth; layer++) {
          brw_blorp_copy_miptrees(brw,
                                  src, level, layer,
                                  dst, level, layer,
                                  0, 0, 0, 0,
-                                 minify(src->logical_width0, level),
-                                 minify(src->logical_height0, level));
+                                 minify(src->surf.logical_level0_px.width,
+                                        level),
+                                 minify(src->surf.logical_level0_px.height,
+                                        level));
       }
    }
 
