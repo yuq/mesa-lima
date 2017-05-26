@@ -168,6 +168,11 @@ i915_get_shader_param(struct pipe_screen *screen,
       case PIPE_SHADER_CAP_TGSI_LDEXP_SUPPORTED:
       case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
       case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
+      case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+      case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
+      case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
+      case PIPE_SHADER_CAP_PREFERRED_IR:
+      case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
          return 0;
       case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
          return 32;
@@ -399,6 +404,9 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
    case PIPE_CAP_UMA:
       return 1;
 
+   case PIPE_CAP_COMPUTE:
+   case PIPE_CAP_QUERY_BUFFER_OBJECT:
+      return 0;
    default:
       debug_printf("%s: Unknown cap %u.\n", __FUNCTION__, cap);
       return 0;
