@@ -577,23 +577,6 @@ struct intel_mipmap_tree
    struct intel_miptree_hiz_buffer *hiz_buf;
 
    /**
-    * \brief Maps of miptree slices to needed resolves.
-    *
-    * hiz_map is used only when the miptree has a child HiZ miptree.
-    *
-    * Let \c mt be a depth miptree with HiZ enabled. Then the resolve map is
-    * \c mt->hiz_map. The resolve map of the child HiZ miptree, \c
-    * mt->hiz_mt->hiz_map, is unused.
-    *
-    *
-    * color_resolve_map is used only when the miptree uses fast clear (Gen7+)
-    * lossless compression (Gen9+). It should be noted that absence in the
-    * map means implicitly RESOLVED state. If item is found it always
-    * indicates state other than RESOLVED.
-    */
-   struct exec_list hiz_map; /* List of intel_resolve_map. */
-
-   /**
     * \brief Maps miptree slices to their current aux state
     *
     * This two-dimensional array is indexed as [level][layer] and stores an
@@ -859,13 +842,6 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 
 bool
 intel_miptree_level_has_hiz(const struct intel_mipmap_tree *mt, uint32_t level);
-
-/**
- * \return false if no resolve was needed
- */
-bool
-intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
-				       struct intel_mipmap_tree *mt);
 
 /**\}*/
 

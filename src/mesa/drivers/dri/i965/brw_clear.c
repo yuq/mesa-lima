@@ -162,7 +162,8 @@ brw_fast_clear_depth(struct gl_context *ctx)
     * flags out of the HiZ buffer into the real depth buffer.
     */
    if (mt->fast_clear_color.f32[0] != ctx->Depth.Clear) {
-      intel_miptree_all_slices_resolve_depth(brw, mt);
+      intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
+                                   0, INTEL_REMAINING_LAYERS, true, false);
       mt->fast_clear_color.f32[0] = ctx->Depth.Clear;
    }
 
