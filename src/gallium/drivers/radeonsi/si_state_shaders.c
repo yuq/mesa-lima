@@ -1438,6 +1438,9 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 	default:
 		assert(0);
 	}
+
+	if (unlikely(sctx->screen->b.debug_flags & DBG_NO_OPT_VARIANT))
+		memset(&key->opt, 0, sizeof(key->opt));
 }
 
 static void si_build_shader_variant(void *job, int thread_index)
@@ -1532,10 +1535,6 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 	struct si_shader_selector *previous_stage_sel = NULL;
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
-
-	if (unlikely(sscreen->b.debug_flags & DBG_NO_OPT_VARIANT)) {
-		memset(&key->opt, 0, sizeof(key->opt));
-	}
 
 again:
 	/* Check if we don't need to change anything.
