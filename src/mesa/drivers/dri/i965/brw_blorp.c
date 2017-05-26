@@ -920,7 +920,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_fast_clear(&batch, &surf,
-                       (enum isl_format)brw->render_target_format[format],
+                       brw->render_target_format[format],
                        level, logical_layer, num_layers,
                        x0, y0, x1, y1);
       blorp_batch_finish(&batch);
@@ -946,7 +946,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_clear(&batch, &surf,
-                  (enum isl_format)brw->render_target_format[format],
+                  brw->render_target_format[format],
                   ISL_SWIZZLE_IDENTITY,
                   level, irb_logical_mt_layer(irb), num_layers,
                   x0, y0, x1, y1,

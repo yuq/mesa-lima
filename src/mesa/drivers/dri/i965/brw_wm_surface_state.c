@@ -986,7 +986,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    struct intel_mipmap_tree *mt = irb->mt;
    uint32_t *surf;
    uint32_t tile_x, tile_y;
-   uint32_t format = 0;
+   enum isl_format format;
    uint32_t offset;
    /* _NEW_BUFFERS */
    mesa_format rb_format = _mesa_get_render_format(ctx, intel_rb_format(irb));
@@ -1172,7 +1172,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
          uint32_t *surf_offset = &brw->wm.base.surf_offset[surf_index];
 
          if (irb) {
-            const unsigned format = brw->render_target_format[
+            const enum isl_format format = brw->render_target_format[
                _mesa_get_render_format(ctx, intel_rb_format(irb))];
             assert(isl_format_supports_sampling(&brw->screen->devinfo,
                                                 format));
