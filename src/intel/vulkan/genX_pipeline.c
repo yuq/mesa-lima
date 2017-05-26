@@ -1135,7 +1135,9 @@ emit_3dstate_vs(struct anv_pipeline *pipeline)
 #endif
 
       assert(!vs_prog_data->base.base.use_alt_mode);
+#if GEN_GEN < 11
       vs.SingleVertexDispatch       = false;
+#endif
       vs.VectorMaskEnable           = false;
       vs.SamplerCount               = get_sampler_count(vs_bin);
       vs.BindingTableEntryCount     = get_binding_table_entry_count(vs_bin);
