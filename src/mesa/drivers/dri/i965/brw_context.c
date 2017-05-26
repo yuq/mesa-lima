@@ -253,6 +253,10 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       tex_obj = intel_texture_object(ctx->Texture.Unit[i]._Current);
       if (!tex_obj || !tex_obj->mt)
 	 continue;
+
+      /* We need inte_texture_object::_Format to be valid */
+      intel_finalize_mipmap_tree(brw, i);
+
       if (intel_miptree_sample_with_hiz(brw, tex_obj->mt))
          intel_miptree_all_slices_resolve_hiz(brw, tex_obj->mt);
       else
