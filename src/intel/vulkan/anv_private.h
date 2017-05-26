@@ -1018,6 +1018,17 @@ _anv_combine_address(struct anv_batch *batch, void *location,
       .IndextoMOCSTables                           = 1  \
    }
 
+/* Cannonlake MOCS defines are duplicates of Skylake MOCS defines. */
+#define GEN10_MOCS (struct GEN10_MEMORY_OBJECT_CONTROL_STATE) {  \
+      /* TC=LLC/eLLC, LeCC=WB, LRUM=3, L3CC=WB */              \
+      .IndextoMOCSTables                           = 2         \
+   }
+
+#define GEN10_MOCS_PTE {                                 \
+      /* TC=LLC/eLLC, LeCC=WB, LRUM=3, L3CC=WB */       \
+      .IndextoMOCSTables                           = 1  \
+   }
+
 struct anv_device_memory {
    struct anv_bo *                              bo;
    struct anv_memory_type *                     type;
@@ -2412,6 +2423,9 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
 #  include "anv_genX.h"
 #  undef genX
 #  define genX(x) gen9_##x
+#  include "anv_genX.h"
+#  undef genX
+#  define genX(x) gen10_##x
 #  include "anv_genX.h"
 #  undef genX
 #endif
