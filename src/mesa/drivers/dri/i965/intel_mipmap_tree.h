@@ -48,8 +48,8 @@
 
 #include "main/mtypes.h"
 #include "isl/isl.h"
+#include "blorp/blorp.h"
 #include "brw_bufmgr.h"
-#include "intel_resolve_map.h"
 #include <GL/internal/dri_interface.h>
 
 #ifdef __cplusplus
@@ -59,7 +59,6 @@ extern "C" {
 struct brw_context;
 struct intel_renderbuffer;
 
-struct intel_resolve_map;
 struct intel_texture_image;
 
 /**

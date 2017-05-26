@@ -28,7 +28,6 @@
 
 #include "intel_batchbuffer.h"
 #include "intel_mipmap_tree.h"
-#include "intel_resolve_map.h"
 #include "intel_tex.h"
 #include "intel_blit.h"
 #include "intel_fbo.h"
@@ -2266,7 +2265,7 @@ intel_miptree_prepare_hiz_access(struct brw_context *brw,
       case BLORP_HIZ_OP_HIZ_RESOLVE:
          /* The HiZ resolve operation is actually an ambiguate */
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
-                                     ISL_AUX_STATE_RESOLVED);
+                                     ISL_AUX_STATE_PASS_THROUGH);
          break;
 
       default:

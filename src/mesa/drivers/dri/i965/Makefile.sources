@@ -108,8 +108,6 @@ i965_FILES = \
 	intel_pixel_draw.c \
 	intel_pixel.h \
 	intel_pixel_read.c \
-	intel_resolve_map.c \
-	intel_resolve_map.h \
 	intel_screen.c \
 	intel_screen.h \
 	intel_state.c \

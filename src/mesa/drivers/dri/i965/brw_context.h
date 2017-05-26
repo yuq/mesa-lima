@@ -47,7 +47,6 @@
 #include "common/gen_debug.h"
 #include "intel_screen.h"
 #include "intel_tex_obj.h"
-#include "intel_resolve_map.h"
 
 #ifdef __cplusplus
 extern "C" {
