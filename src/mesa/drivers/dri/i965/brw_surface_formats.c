@@ -28,7 +28,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 
-uint32_t
+enum isl_format
 brw_isl_format_for_mesa_format(mesa_format mesa_format)
 {
    /* This table is ordered according to the enum ordering in formats.h.  We do
@@ -300,7 +300,7 @@ brw_init_surface_formats(struct brw_context *brw)
       gen += 5;
 
    for (format = MESA_FORMAT_NONE + 1; format < MESA_FORMAT_COUNT; format++) {
-      uint32_t texture, render;
+      enum isl_format texture, render;
       bool is_integer = _mesa_is_format_integer_color(format);
 
       render = texture = brw_isl_format_for_mesa_format(format);
@@ -375,6 +375,8 @@ brw_init_surface_formats(struct brw_context *brw)
          break;
       case ISL_FORMAT_R8G8B8X8_UNORM_SRGB:
          render = ISL_FORMAT_R8G8B8A8_UNORM_SRGB;
+         break;
+      default:
          break;
       }
 
@@ -555,7 +557,8 @@ translate_tex_format(struct brw_context *brw,
    case MESA_FORMAT_RGBA_ASTC_10x10:
    case MESA_FORMAT_RGBA_ASTC_12x10:
    case MESA_FORMAT_RGBA_ASTC_12x12: {
-      GLuint brw_fmt = brw_isl_format_for_mesa_format(mesa_format);
+      enum isl_format isl_fmt =
+         brw_isl_format_for_mesa_format(mesa_format);
 
       /**
        * It is possible to process these formats using the LDR Profile
@@ -566,9 +569,9 @@ translate_tex_format(struct brw_context *brw,
        * processing sRGBs, which are incompatible with this mode.
        */
       if (ctx->Extensions.KHR_texture_compression_astc_hdr)
-         brw_fmt |= GEN9_SURFACE_ASTC_HDR_FORMAT_BIT;
+         isl_fmt |= GEN9_SURFACE_ASTC_HDR_FORMAT_BIT;
 
-      return brw_fmt;
+      return isl_fmt;
    }
 
    default:

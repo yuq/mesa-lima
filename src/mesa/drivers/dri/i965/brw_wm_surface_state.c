@@ -1587,7 +1587,7 @@ static uint32_t
 get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   uint32_t hw_format = brw_isl_format_for_mesa_format(format);
+   enum isl_format hw_format = brw_isl_format_for_mesa_format(format);
    if (access == GL_WRITE_ONLY) {
       return hw_format;
    } else if (isl_has_matching_typed_storage_image_format(devinfo, hw_format)) {
