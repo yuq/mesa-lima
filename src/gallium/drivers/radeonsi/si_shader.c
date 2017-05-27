@@ -2242,6 +2242,62 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	lp_build_endif(&if_ctx);
 }
 
+static void si_export_param(struct si_shader_context *ctx, unsigned index,
+			    LLVMValueRef *values)
+{
+	struct ac_export_args args;
+
+	si_llvm_init_export_args(&ctx->bld_base, values,
+				 V_008DFC_SQ_EXP_PARAM + index, &args);
+	ac_build_export(&ctx->ac, &args);
+}
+
+static void si_build_param_exports(struct si_shader_context *ctx,
+				   struct si_shader_output_values *outputs,
+			           unsigned noutput)
+{
+	struct si_shader *shader = ctx->shader;
+	unsigned param_count = 0;
+
+	for (unsigned i = 0; i < noutput; i++) {
+		unsigned semantic_name = outputs[i].semantic_name;
+		unsigned semantic_index = outputs[i].semantic_index;
+
+		if (outputs[i].vertex_stream[0] != 0 &&
+		    outputs[i].vertex_stream[1] != 0 &&
+		    outputs[i].vertex_stream[2] != 0 &&
+		    outputs[i].vertex_stream[3] != 0)
+			continue;
+
+		switch (semantic_name) {
+		case TGSI_SEMANTIC_LAYER:
+		case TGSI_SEMANTIC_VIEWPORT_INDEX:
+		case TGSI_SEMANTIC_CLIPDIST:
+		case TGSI_SEMANTIC_COLOR:
+		case TGSI_SEMANTIC_BCOLOR:
+		case TGSI_SEMANTIC_PRIMID:
+		case TGSI_SEMANTIC_FOG:
+		case TGSI_SEMANTIC_TEXCOORD:
+		case TGSI_SEMANTIC_GENERIC:
+			break;
+		default:
+			continue;
+		}
+
+		if ((semantic_name != TGSI_SEMANTIC_GENERIC ||
+		     semantic_index < SI_MAX_IO_GENERIC) &&
+		    shader->key.opt.kill_outputs &
+		    (1ull << si_shader_io_get_unique_index(semantic_name, semantic_index)))
+			continue;
+
+		si_export_param(ctx, param_count, outputs[i].values);
+
+		assert(i < ARRAY_SIZE(shader->info.vs_output_param_offset));
+		shader->info.vs_output_param_offset[i] = param_count++;
+	}
+
+	shader->info.nr_param_exports = param_count;
+}
 
 /* Generate export instructions for hardware VS shader stage */
 static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
@@ -2251,111 +2307,49 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader *shader = ctx->shader;
 	struct lp_build_context *base = &bld_base->base;
-	struct ac_export_args args, pos_args[4] = {};
+	struct ac_export_args pos_args[4] = {};
 	LLVMValueRef psize_value = NULL, edgeflag_value = NULL, layer_value = NULL, viewport_index_value = NULL;
-	unsigned semantic_name, semantic_index;
-	unsigned target;
-	unsigned param_count = 0;
 	unsigned pos_idx;
 	int i;
 
+	/* Build position exports. */
 	for (i = 0; i < noutput; i++) {
-		semantic_name = outputs[i].semantic_name;
-		semantic_index = outputs[i].semantic_index;
-		bool export_param = true;
-
-		switch (semantic_name) {
-		case TGSI_SEMANTIC_POSITION: /* ignore these */
-		case TGSI_SEMANTIC_PSIZE:
-		case TGSI_SEMANTIC_CLIPVERTEX:
-		case TGSI_SEMANTIC_EDGEFLAG:
+		switch (outputs[i].semantic_name) {
+		case TGSI_SEMANTIC_POSITION:
+			si_llvm_init_export_args(bld_base, outputs[i].values,
+						 V_008DFC_SQ_EXP_POS, &pos_args[0]);
 			break;
-		case TGSI_SEMANTIC_GENERIC:
-			/* don't process indices the function can't handle */
-			if (semantic_index >= SI_MAX_IO_GENERIC)
-				break;
-			/* fall through */
-		default:
-			if (shader->key.opt.kill_outputs &
-			    (1ull << si_shader_io_get_unique_index(semantic_name, semantic_index)))
-				export_param = false;
-		}
-
-		if (outputs[i].vertex_stream[0] != 0 &&
-		    outputs[i].vertex_stream[1] != 0 &&
-		    outputs[i].vertex_stream[2] != 0 &&
-		    outputs[i].vertex_stream[3] != 0)
-			export_param = false;
-
-handle_semantic:
-		/* Select the correct target */
-		switch(semantic_name) {
 		case TGSI_SEMANTIC_PSIZE:
 			psize_value = outputs[i].values[0];
-			continue;
-		case TGSI_SEMANTIC_EDGEFLAG:
-			edgeflag_value = outputs[i].values[0];
-			continue;
+			break;
 		case TGSI_SEMANTIC_LAYER:
 			layer_value = outputs[i].values[0];
-			semantic_name = TGSI_SEMANTIC_GENERIC;
-			goto handle_semantic;
+			break;
 		case TGSI_SEMANTIC_VIEWPORT_INDEX:
 			viewport_index_value = outputs[i].values[0];
-			semantic_name = TGSI_SEMANTIC_GENERIC;
-			goto handle_semantic;
-		case TGSI_SEMANTIC_POSITION:
-			target = V_008DFC_SQ_EXP_POS;
+			break;
+		case TGSI_SEMANTIC_EDGEFLAG:
+			edgeflag_value = outputs[i].values[0];
 			break;
 		case TGSI_SEMANTIC_CLIPDIST:
-			if (shader->key.opt.clip_disable) {
-				semantic_name = TGSI_SEMANTIC_GENERIC;
-				goto handle_semantic;
+			if (!shader->key.opt.clip_disable) {
+				unsigned index = 2 + outputs[i].semantic_index;
+				si_llvm_init_export_args(bld_base, outputs[i].values,
+							 V_008DFC_SQ_EXP_POS + index,
+							 &pos_args[index]);
 			}
-			target = V_008DFC_SQ_EXP_POS + 2 + semantic_index;
 			break;
 		case TGSI_SEMANTIC_CLIPVERTEX:
-			if (shader->key.opt.clip_disable)
-				continue;
-			si_llvm_emit_clipvertex(bld_base, pos_args, outputs[i].values);
-			continue;
-		case TGSI_SEMANTIC_COLOR:
-		case TGSI_SEMANTIC_BCOLOR:
-		case TGSI_SEMANTIC_PRIMID:
-		case TGSI_SEMANTIC_FOG:
-		case TGSI_SEMANTIC_TEXCOORD:
-		case TGSI_SEMANTIC_GENERIC:
-			if (!export_param)
-				continue;
-			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			assert(i < ARRAY_SIZE(shader->info.vs_output_param_offset));
-			shader->info.vs_output_param_offset[i] = param_count;
-			param_count++;
+			if (!shader->key.opt.clip_disable) {
+				si_llvm_emit_clipvertex(bld_base, pos_args,
+							outputs[i].values);
+			}
 			break;
-		default:
-			target = 0;
-			fprintf(stderr,
-				"Warning: SI unhandled vs output type:%d\n",
-				semantic_name);
-		}
-
-		si_llvm_init_export_args(bld_base, outputs[i].values, target, &args);
-
-		if (target >= V_008DFC_SQ_EXP_POS &&
-		    target <= (V_008DFC_SQ_EXP_POS + 3)) {
-			memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
-			       &args, sizeof(args));
-		} else {
-			ac_build_export(&ctx->ac, &args);
-		}
-
-		if (semantic_name == TGSI_SEMANTIC_CLIPDIST) {
-			semantic_name = TGSI_SEMANTIC_GENERIC;
-			goto handle_semantic;
 		}
 	}
 
-	shader->info.nr_param_exports = param_count;
+	/* Build parameter exports. */
+	si_build_param_exports(ctx, outputs, noutput);
 
 	/* We need to add the position output manually if it's missing. */
 	if (!pos_args[0].out[0]) {
