@@ -2711,6 +2711,15 @@ static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_shader *shader)
 	return shader ? shader->config.scratch_bytes_per_wave : 0;
 }
 
+static struct si_shader *si_get_tcs_current(struct si_context *sctx)
+{
+	if (!sctx->tes_shader.cso)
+		return NULL; /* tessellation disabled */
+
+	return sctx->tcs_shader.cso ? sctx->tcs_shader.current :
+				      sctx->fixed_func_tcs_shader.current;
+}
+
 static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)
 {
 	unsigned bytes = 0;
@@ -2718,13 +2727,19 @@ static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)
 	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->ps_shader.current));
 	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->gs_shader.current));
 	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->vs_shader.current));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tcs_shader.current));
 	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tes_shader.current));
+
+	if (sctx->tes_shader.cso) {
+		struct si_shader *tcs = si_get_tcs_current(sctx);
+
+		bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(tcs));
+	}
 	return bytes;
 }
 
 static bool si_update_scratch_relocs(struct si_context *sctx)
 {
+	struct si_shader *tcs = si_get_tcs_current(sctx);
 	int r;
 
 	/* Update the shaders, so that they are using the latest scratch.
@@ -2744,11 +2759,11 @@ static bool si_update_scratch_relocs(struct si_context *sctx)
 	if (r == 1)
 		si_pm4_bind_state(sctx, gs, sctx->gs_shader.current->pm4);
 
-	r = si_update_scratch_buffer(sctx, sctx->tcs_shader.current);
+	r = si_update_scratch_buffer(sctx, tcs);
 	if (r < 0)
 		return false;
 	if (r == 1)
-		si_pm4_bind_state(sctx, hs, sctx->tcs_shader.current->pm4);
+		si_pm4_bind_state(sctx, hs, tcs->pm4);
 
 	/* VS can be bound as LS, ES, or VS. */
 	r = si_update_scratch_buffer(sctx, sctx->vs_shader.current);
