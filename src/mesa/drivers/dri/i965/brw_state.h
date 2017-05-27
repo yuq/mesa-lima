@@ -209,9 +209,9 @@ enum isl_format brw_isl_format_for_mesa_format(mesa_format mesa_format);
 
 GLuint translate_tex_target(GLenum target);
 
-GLuint translate_tex_format(struct brw_context *brw,
-                            mesa_format mesa_format,
-                            GLenum srgb_decode);
+enum isl_format translate_tex_format(struct brw_context *brw,
+                                     mesa_format mesa_format,
+                                     GLenum srgb_decode);
 
 int brw_get_texture_swizzle(const struct gl_context *ctx,
                             const struct gl_texture_object *t);

@@ -557,8 +557,8 @@ brw_update_texture_surface(struct gl_context *ctx,
                                 brw_get_texture_swizzle(&brw->ctx, obj));
 
       mesa_format mesa_fmt = plane == 0 ? intel_obj->_Format : mt->format;
-      unsigned format = translate_tex_format(brw, mesa_fmt,
-                                             sampler->sRGBDecode);
+      enum isl_format format = translate_tex_format(brw, mesa_fmt,
+                                                    sampler->sRGBDecode);
 
       /* Implement gen6 and gen7 gather work-around */
       bool need_green_to_blue = false;

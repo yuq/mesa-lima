@@ -513,7 +513,7 @@ brw_render_target_supported(struct brw_context *brw,
    return brw->format_supported_as_render_target[format];
 }
 
-GLuint
+enum isl_format
 translate_tex_format(struct brw_context *brw,
                      mesa_format mesa_format,
 		     GLenum srgb_decode)
