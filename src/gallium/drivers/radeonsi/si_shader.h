@@ -336,6 +336,7 @@ struct si_shader_selector {
 	unsigned	max_gs_stream; /* count - 1 */
 	unsigned	gsvs_vertex_size;
 	unsigned	max_gsvs_emit_size;
+	unsigned	enabled_streamout_buffer_mask;
 
 	/* PS parameters. */
 	unsigned	color_attr_index[2];
