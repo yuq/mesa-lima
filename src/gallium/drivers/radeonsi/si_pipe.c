@@ -882,8 +882,11 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		return NULL;
 	}
 
-	/* Only enable as many threads as we have target machines and CPUs. */
+	/* Only enable as many threads as we have target machines, but at most
+	 * the number of CPUs - 1 if there is more than one.
+	 */
 	num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	num_cpus = MAX2(1, num_cpus - 1);
 	num_compiler_threads = MIN2(num_cpus, ARRAY_SIZE(sscreen->tm));
 
 	if (!util_queue_init(&sscreen->shader_compiler_queue, "si_shader",
