@@ -440,13 +440,9 @@ intel_nop_alloc_storage(struct gl_context * ctx, struct gl_renderbuffer *rb,
 struct intel_renderbuffer *
 intel_create_winsys_renderbuffer(mesa_format format, unsigned num_samples)
 {
-   GET_CURRENT_CONTEXT(ctx);
-
    struct intel_renderbuffer *irb = CALLOC_STRUCT(intel_renderbuffer);
-   if (!irb) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "creating renderbuffer");
+   if (!irb)
       return NULL;
-   }
 
    struct gl_renderbuffer *rb = &irb->Base.Base;
    irb->layer_count = 1;
