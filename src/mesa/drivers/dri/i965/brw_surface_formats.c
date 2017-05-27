@@ -575,7 +575,6 @@ translate_tex_format(struct brw_context *brw,
    }
 
    default:
-      assert(brw_isl_format_for_mesa_format(mesa_format) != 0);
       return brw_isl_format_for_mesa_format(mesa_format);
    }
 }
