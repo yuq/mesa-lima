@@ -123,7 +123,7 @@ apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
                               uint32_t lod,
                               uint32_t *offset)
 {
-   assert(mt->array_layout == ALL_SLICES_AT_EACH_LOD);
+   assert(mt->array_layout == GEN6_HIZ_STENCIL);
 
    if (mt->format == MESA_FORMAT_S_UINT8) {
       /* Note: we can't compute the stencil offset using
@@ -182,12 +182,12 @@ blorp_surf_for_miptree(struct brw_context *brw,
    };
 
    if (brw->gen == 6 && mt->format == MESA_FORMAT_S_UINT8 &&
-       mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
-      /* Sandy bridge stencil and HiZ use this ALL_SLICES_AT_EACH_LOD hack in
+       mt->array_layout == GEN6_HIZ_STENCIL) {
+      /* Sandy bridge stencil and HiZ use this GEN6_HIZ_STENCIL hack in
        * order to allow for layered rendering.  The hack makes each LOD of the
        * stencil or HiZ buffer a single tightly packed array surface at some
        * offset into the surface.  Since ISL doesn't know how to deal with the
-       * crazy ALL_SLICES_AT_EACH_LOD layout and since we have to do a manual
+       * crazy GEN6_HIZ_STENCIL layout and since we have to do a manual
        * offset of it anyway, we might as well do the offset here and keep the
        * hacks inside the i965 driver.
        *
@@ -261,8 +261,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
          struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
          if (hiz_mt) {
-            assert(brw->gen == 6 &&
-                   hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD);
+            assert(brw->gen == 6 && hiz_mt->array_layout == GEN6_HIZ_STENCIL);
 
             /* gen6 requires the HiZ buffer to be manually offset to the
              * right location.  We could fixup the surf but it doesn't
