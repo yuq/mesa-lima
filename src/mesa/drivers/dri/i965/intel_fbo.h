@@ -185,10 +185,12 @@ intel_rb_format(const struct intel_renderbuffer *rb)
 }
 
 extern struct intel_renderbuffer *
-intel_create_winsys_renderbuffer(mesa_format format, unsigned num_samples);
+intel_create_winsys_renderbuffer(struct intel_screen *screen,
+                                 mesa_format format, unsigned num_samples);
 
 struct intel_renderbuffer *
-intel_create_private_renderbuffer(mesa_format format, unsigned num_samples);
+intel_create_private_renderbuffer(struct intel_screen *screen,
+                                  mesa_format format, unsigned num_samples);
 
 struct gl_renderbuffer*
 intel_create_wrapped_renderbuffer(struct gl_context * ctx,

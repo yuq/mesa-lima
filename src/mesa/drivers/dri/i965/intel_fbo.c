@@ -438,7 +438,8 @@ intel_nop_alloc_storage(struct gl_context * ctx, struct gl_renderbuffer *rb,
  * \param num_samples must be quantized.
  */
 struct intel_renderbuffer *
-intel_create_winsys_renderbuffer(mesa_format format, unsigned num_samples)
+intel_create_winsys_renderbuffer(struct intel_screen *screen,
+                                 mesa_format format, unsigned num_samples)
 {
    struct intel_renderbuffer *irb = CALLOC_STRUCT(intel_renderbuffer);
    if (!irb)
@@ -470,11 +471,12 @@ intel_create_winsys_renderbuffer(mesa_format format, unsigned num_samples)
  * \param num_samples must be quantized.
  */
 struct intel_renderbuffer *
-intel_create_private_renderbuffer(mesa_format format, unsigned num_samples)
+intel_create_private_renderbuffer(struct intel_screen *screen,
+                                  mesa_format format, unsigned num_samples)
 {
    struct intel_renderbuffer *irb;
 
-   irb = intel_create_winsys_renderbuffer(format, num_samples);
+   irb = intel_create_winsys_renderbuffer(screen, format, num_samples);
    irb->Base.Base.AllocStorage = intel_alloc_private_renderbuffer_storage;
 
    return irb;
