@@ -713,7 +713,7 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
     */
    size = MIN2(size, ctx->Const.MaxTextureBufferSize * (unsigned) texel_size);
 
-   if (isl_format == 0 && format != MESA_FORMAT_RGBA_FLOAT32) {
+   if (isl_format == ISL_FORMAT_UNSUPPORTED) {
       _mesa_problem(NULL, "bad format %s for texture buffer\n",
 		    _mesa_get_format_name(format));
    }
