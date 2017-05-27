@@ -491,26 +491,30 @@ si_mark_atom_dirty(struct si_context *sctx,
 	si_set_atom_dirty(sctx, atom, true);
 }
 
-static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
+static inline struct si_shader_ctx_state *si_get_vs(struct si_context *sctx)
 {
 	if (sctx->gs_shader.cso)
-		return &sctx->gs_shader.cso->info;
-	else if (sctx->tes_shader.cso)
-		return &sctx->tes_shader.cso->info;
-	else if (sctx->vs_shader.cso)
-		return &sctx->vs_shader.cso->info;
-	else
-		return NULL;
+		return &sctx->gs_shader;
+	if (sctx->tes_shader.cso)
+		return &sctx->tes_shader;
+
+	return &sctx->vs_shader;
+}
+
+static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
+{
+	struct si_shader_ctx_state *vs = si_get_vs(sctx);
+
+	return vs->cso ? &vs->cso->info : NULL;
 }
 
 static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 {
-	if (sctx->gs_shader.current)
+	if (sctx->gs_shader.cso)
 		return sctx->gs_shader.cso->gs_copy_shader;
-	else if (sctx->tes_shader.current)
-		return sctx->tes_shader.current;
-	else
-		return sctx->vs_shader.current;
+
+	struct si_shader_ctx_state *vs = si_get_vs(sctx);
+	return vs->current ? vs->current : NULL;
 }
 
 static inline unsigned

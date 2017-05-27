@@ -2154,10 +2154,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 static void si_update_streamout_state(struct si_context *sctx)
 {
-	struct si_shader_selector *shader_with_so =
-		sctx->gs_shader.cso ? sctx->gs_shader.cso :
-		sctx->tes_shader.cso ? sctx->tes_shader.cso :
-				       sctx->vs_shader.cso;
+	struct si_shader_selector *shader_with_so = si_get_vs(sctx)->cso;
+
 	if (!shader_with_so)
 		return;
 
