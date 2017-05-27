@@ -450,10 +450,29 @@ intel_create_winsys_renderbuffer(struct intel_screen *screen,
 
    _mesa_init_renderbuffer(rb, 0);
    rb->ClassID = INTEL_RB_CLASS;
-   rb->_BaseFormat = _mesa_get_format_base_format(format);
-   rb->Format = format;
-   rb->InternalFormat = rb->_BaseFormat;
    rb->NumSamples = num_samples;
+
+   /* The base format and internal format must be derived from the user-visible
+    * format (that is, the gl_config's format), even if we internally use
+    * choose a different format for the renderbuffer. Otherwise, rendering may
+    * use incorrect channel write masks.
+    */
+   rb->_BaseFormat = _mesa_get_format_base_format(format);
+   rb->InternalFormat = rb->_BaseFormat;
+
+   rb->Format = format;
+   if (!screen->mesa_format_supports_render[rb->Format]) {
+      /* The glRenderbufferStorage paths in core Mesa detect if the driver
+       * does not support the user-requested format, and then searches for
+       * a falback format. The DRI code bypasses core Mesa, though. So we do
+       * the fallbacks here.
+       *
+       * We must support MESA_FORMAT_R8G8B8X8 on Android because the Android
+       * framework requires HAL_PIXEL_FORMAT_RGBX8888 winsys surfaces.
+       */
+      rb->Format = _mesa_format_fallback_rgbx_to_rgba(rb->Format);
+      assert(screen->mesa_format_supports_render[rb->Format]);
+   }
 
    /* intel-specific methods */
    rb->Delete = intel_delete_renderbuffer;
