@@ -136,18 +136,22 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 	switch (semantic_name) {
 	case TGSI_SEMANTIC_POSITION:
 		return 0;
-	case TGSI_SEMANTIC_PSIZE:
-		return 1;
-	case TGSI_SEMANTIC_CLIPDIST:
-		assert(index <= 1);
-		return 2 + index;
 	case TGSI_SEMANTIC_GENERIC:
+		/* Since some shader stages use the the highest used IO index
+		 * to determine the size to allocate for inputs/outputs
+		 * (in LDS, tess and GS rings). GENERIC should be placed right
+		 * after POSITION to make that size as small as possible.
+		 */
 		if (index < SI_MAX_IO_GENERIC)
-			return 4 + index;
+			return 1 + index;
 
 		assert(!"invalid generic index");
 		return 0;
-
+	case TGSI_SEMANTIC_PSIZE:
+		return SI_MAX_IO_GENERIC + 1;
+	case TGSI_SEMANTIC_CLIPDIST:
+		assert(index <= 1);
+		return SI_MAX_IO_GENERIC + 2 + index;
 	case TGSI_SEMANTIC_FOG:
 		return SI_MAX_IO_GENERIC + 4;
 	case TGSI_SEMANTIC_LAYER:
