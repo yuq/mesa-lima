@@ -342,6 +342,25 @@ unwind:
    return false;
 }
 
+static bool
+needs_separate_stencil(const struct brw_context *brw,
+                       struct intel_mipmap_tree *mt,
+                       mesa_format format, uint32_t layout_flags)
+{
+
+   if (layout_flags & MIPTREE_LAYOUT_FOR_BO)
+      return false;
+
+   if (_mesa_get_format_base_format(format) != GL_DEPTH_STENCIL)
+      return false;
+
+   if (brw->must_use_separate_stencil)
+      return true;
+
+   return brw->has_separate_stencil &&
+          intel_miptree_supports_hiz(brw, mt);
+}
+
 /**
  * @param for_bo Indicates that the caller is
  *        intel_miptree_create_for_bo(). If true, then do not create
@@ -520,10 +539,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->physical_height0 = height0;
    mt->physical_depth0 = depth0;
 
-   if (!(layout_flags & MIPTREE_LAYOUT_FOR_BO) &&
-       _mesa_get_format_base_format(format) == GL_DEPTH_STENCIL &&
-       (brw->must_use_separate_stencil ||
-	(brw->has_separate_stencil && intel_miptree_supports_hiz(brw, mt)))) {
+   if (needs_separate_stencil(brw, mt, format, layout_flags)) {
       uint32_t stencil_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
       if (brw->gen == 6) {
          stencil_flags |= MIPTREE_LAYOUT_TILING_ANY;
