@@ -153,7 +153,7 @@ get_texobj_by_target(struct gl_context *ctx, GLenum target, GLboolean get)
  * Only the glGetTexLevelParameter() functions accept proxy targets.
  */
 static struct gl_texture_object *
-get_texobj_by_name(struct gl_context *ctx, GLuint texture, GLboolean get)
+get_texobj_by_name(struct gl_context *ctx, GLuint texture, const char *name)
 {
    struct gl_texture_object *texObj;
 
@@ -179,8 +179,7 @@ get_texobj_by_name(struct gl_context *ctx, GLuint texture, GLboolean get)
    case GL_TEXTURE_RECTANGLE:
       return texObj;
    default:
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "gl%sTextureParameter(target)", get ? "Get" : "");
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(target)", name);
       return NULL;
    }
 
@@ -1111,7 +1110,7 @@ _mesa_TextureParameterfv(GLuint texture, GLenum pname, const GLfloat *params)
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   texObj = get_texobj_by_name(ctx, texture, "glTextureParameterfv");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureParameterfv(texture)");
@@ -1127,7 +1126,7 @@ _mesa_TextureParameterf(GLuint texture, GLenum pname, GLfloat param)
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   texObj = get_texobj_by_name(ctx, texture, "glTextureParameterf");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureParameterf(texture)");
@@ -1143,7 +1142,7 @@ _mesa_TextureParameteri(GLuint texture, GLenum pname, GLint param)
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   texObj = get_texobj_by_name(ctx, texture, "glTextureParameteri");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureParameteri(texture)");
@@ -1160,7 +1159,7 @@ _mesa_TextureParameteriv(GLuint texture, GLenum pname,
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   texObj = get_texobj_by_name(ctx, texture, "glTextureParameteriv");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureParameteriv(texture)");
@@ -1177,7 +1176,7 @@ _mesa_TextureParameterIiv(GLuint texture, GLenum pname, const GLint *params)
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   texObj = get_texobj_by_name(ctx, texture, "glTextureParameterIiv");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -1194,7 +1193,7 @@ _mesa_TextureParameterIuiv(GLuint texture, GLenum pname, const GLuint *params)
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   texObj = get_texobj_by_name(ctx, texture, "glTextureParameterIuiv");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2337,7 +2336,7 @@ _mesa_GetTextureParameterfv(GLuint texture, GLenum pname, GLfloat *params)
    struct gl_texture_object *obj;
    GET_CURRENT_CONTEXT(ctx);
 
-   obj = get_texobj_by_name(ctx, texture, GL_TRUE);
+   obj = get_texobj_by_name(ctx, texture, "glGetTextureParameterfv");
    if (!obj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2354,7 +2353,7 @@ _mesa_GetTextureParameteriv(GLuint texture, GLenum pname, GLint *params)
    struct gl_texture_object *obj;
    GET_CURRENT_CONTEXT(ctx);
 
-   obj = get_texobj_by_name(ctx, texture, GL_TRUE);
+   obj = get_texobj_by_name(ctx, texture, "glGetTextureParameteriv");
    if (!obj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2371,7 +2370,7 @@ _mesa_GetTextureParameterIiv(GLuint texture, GLenum pname, GLint *params)
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_TRUE);
+   texObj = get_texobj_by_name(ctx, texture, "glGetTextureParameterIiv");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2389,7 +2388,7 @@ _mesa_GetTextureParameterIuiv(GLuint texture, GLenum pname, GLuint *params)
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   texObj = get_texobj_by_name(ctx, texture, GL_TRUE);
+   texObj = get_texobj_by_name(ctx, texture, "glGetTextureParameterIuiv");
    if (!texObj) {
       /* User passed a non-generated name. */
       _mesa_error(ctx, GL_INVALID_OPERATION,
