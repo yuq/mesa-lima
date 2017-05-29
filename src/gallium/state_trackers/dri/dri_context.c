@@ -58,6 +58,8 @@ dri_create_context(gl_api api, const struct gl_config * visual,
    enum st_context_error ctx_err = 0;
    unsigned allowed_flags = __DRI_CTX_FLAG_DEBUG |
                             __DRI_CTX_FLAG_FORWARD_COMPATIBLE;
+   const __DRIbackgroundCallableExtension *backgroundCallable =
+      screen->sPriv->dri2.backgroundCallable;
 
    if (screen->has_reset_status_query)
       allowed_flags |= __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS;
@@ -158,10 +160,21 @@ dri_create_context(gl_api api, const struct gl_config * visual,
 
    /* Do this last. */
    if (ctx->st->start_thread &&
-       /* the driver loader must implement this */
-       screen->sPriv->dri2.backgroundCallable &&
-       driQueryOptionb(&screen->optionCache, "mesa_glthread"))
-      ctx->st->start_thread(ctx->st);
+         driQueryOptionb(&screen->optionCache, "mesa_glthread")) {
+
+      if (backgroundCallable && backgroundCallable->base.version >= 2 &&
+            backgroundCallable->isThreadSafe) {
+
+         if (backgroundCallable->isThreadSafe(cPriv->loaderPrivate))
+            ctx->st->start_thread(ctx->st);
+         else
+            fprintf(stderr, "dri_create_context: glthread isn't thread safe "
+                  "- missing call XInitThreads\n");
+      } else {
+         fprintf(stderr, "dri_create_context: requested glthread but driver "
+               "is missing backgroundCallable V2 extension\n");
+      }
+   }
 
    *error = __DRI_CTX_ERROR_SUCCESS;
    return GL_TRUE;
