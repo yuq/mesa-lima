@@ -55,6 +55,10 @@
 #include "wayland-drm-client-protocol.h"
 #endif
 
+#ifdef HAVE_X11_PLATFORM
+#include "X11/Xlibint.h"
+#endif
+
 #include "egl_dri2.h"
 #include "loader/loader.h"
 #include "util/u_atomic.h"
@@ -92,10 +96,38 @@ dri_set_background_context(void *loaderPrivate)
    _eglBindContextToThread(ctx, t);
 }
 
+static GLboolean
+dri_is_thread_safe(void *loaderPrivate)
+{
+   struct dri2_egl_surface *dri2_surf = loaderPrivate;
+   _EGLDisplay *display =  dri2_surf->base.Resource.Display;
+
+#ifdef HAVE_X11_PLATFORM
+   Display *xdpy = (Display*)display->PlatformDisplay;
+
+   /* Check Xlib is running in thread safe mode when running on EGL/X11-xlib
+    * platform
+    *
+    * 'lock_fns' is the XLockDisplay function pointer of the X11 display 'dpy'.
+    * It wll be NULL if XInitThreads wasn't called.
+    */
+   if (display->Platform == _EGL_PLATFORM_X11 && xdpy && !xdpy->lock_fns)
+      return false;
+#endif
+
+#ifdef HAVE_WAYLAND_PLATFORM
+   if (display->Platform == _EGL_PLATFORM_WAYLAND)
+      return true;
+#endif
+
+   return true;
+}
+
 const __DRIbackgroundCallableExtension background_callable_extension = {
-   .base = { __DRI_BACKGROUND_CALLABLE, 1 },
+   .base = { __DRI_BACKGROUND_CALLABLE, 2 },
 
    .setBackgroundContext = dri_set_background_context,
+   .isThreadSafe         = dri_is_thread_safe,
 };
 
 const __DRIuseInvalidateExtension use_invalidate = {
