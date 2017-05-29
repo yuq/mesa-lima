@@ -138,6 +138,20 @@ util_dynarray_trim(struct util_dynarray *buf)
    for (type *elem = (type *)(buf)->data; \
         elem < (type *)((char *)(buf)->data + (buf)->size); elem++)
 
+#define util_dynarray_delete_unordered(buf, type, v)                    \
+   do {                                                                 \
+      unsigned num_elements = (buf)->size / sizeof(type);               \
+      unsigned i;                                                       \
+      for (i = 0; i < num_elements; i++) {                              \
+         type __v = *util_dynarray_element((buf), type, (i));           \
+         if (v == __v) {                                                \
+            memcpy(util_dynarray_element((buf), type, (i)),             \
+                   util_dynarray_pop_ptr((buf), type), sizeof(type));   \
+            break;                                                      \
+         }                                                              \
+      }                                                                 \
+   } while (0)
+
 #ifdef __cplusplus
 }
 #endif
