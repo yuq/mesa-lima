@@ -1721,6 +1721,19 @@ struct __DRIbackgroundCallableExtensionRec {
     * operations (e.g. it should just set a thread-local variable).
     */
    void (*setBackgroundContext)(void *loaderPrivate);
+
+   /**
+    * Indicate that it is multithread safe to use glthread.  For GLX/EGL
+    * platforms using Xlib, that involves calling XInitThreads, before
+    * opening an X display.
+    *
+    * Note: only supported if extension version is at least 2.
+    *
+    * \param loaderPrivate is the value that was passed to to the driver when
+    * the context was created.  This can be used by the loader to identify
+    * which context any callbacks are associated with.
+    */
+   GLboolean (*isThreadSafe)(void *loaderPrivate);
 };
 
 #endif
