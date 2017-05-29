@@ -322,12 +322,16 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
 
    {
       unsigned elements = uni->type->components();
-      /* XXX: Remove the sampler/image check workarounds when bindless is fully
-       * implemented.
-       */
-      const int dmul =
-         (uni->type->is_64bit() && !uni->type->is_sampler() && !uni->type->is_image()) ? 2 : 1;
       const int rmul = glsl_base_type_is_64bit(returnType) ? 2 : 1;
+      int dmul = (uni->type->is_64bit()) ? 2 : 1;
+
+      if ((uni->type->is_sampler() || uni->type->is_image()) &&
+          !uni->is_bindless) {
+         /* Non-bindless samplers/images are represented using unsigned integer
+          * 32-bit, while bindless handles are 64-bit.
+          */
+         dmul = 1;
+      }
 
       /* Calculate the source base address *BEFORE* modifying elements to
        * account for the size of the user's buffer.
@@ -1056,9 +1060,18 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
-   if (!uni->type->is_boolean()) {
+   if (!uni->type->is_boolean() && !uni->is_bindless) {
       memcpy(&uni->storage[size_mul * components * offset], values,
              sizeof(uni->storage[0]) * components * count * size_mul);
+   } else if (uni->is_bindless) {
+      const union gl_constant_value *src =
+         (const union gl_constant_value *) values;
+      GLuint64 *dst = (GLuint64 *)&uni->storage[components * offset].i;
+      const unsigned elems = components * count;
+
+      for (unsigned i = 0; i < elems; i++) {
+         dst[i] = src[i].i;
+      }
    } else {
       const union gl_constant_value *src =
          (const union gl_constant_value *) values;
