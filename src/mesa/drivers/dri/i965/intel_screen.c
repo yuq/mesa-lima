@@ -294,10 +294,14 @@ static struct intel_image_format intel_image_formats[] = {
 static const struct {
    uint32_t tiling;
    uint64_t modifier;
+   unsigned height_align;
 } tiling_modifier_map[] = {
-   { .tiling = I915_TILING_NONE, .modifier = DRM_FORMAT_MOD_LINEAR },
-   { .tiling = I915_TILING_X, .modifier = I915_FORMAT_MOD_X_TILED },
-   { .tiling = I915_TILING_Y, .modifier = I915_FORMAT_MOD_Y_TILED },
+   { .tiling = I915_TILING_NONE, .modifier = DRM_FORMAT_MOD_LINEAR,
+     .height_align = 1 },
+   { .tiling = I915_TILING_X, .modifier = I915_FORMAT_MOD_X_TILED,
+     .height_align = 8 },
+   { .tiling = I915_TILING_Y, .modifier = I915_FORMAT_MOD_Y_TILED,
+     .height_align = 32 },
 };
 
 static uint32_t
@@ -324,6 +328,19 @@ tiling_to_modifier(uint32_t tiling)
    }
 
    unreachable("tiling_to_modifier received unknown tiling mode");
+}
+
+static unsigned
+get_tiled_height(uint64_t modifier, unsigned height)
+{
+   int i;
+
+   for (i = 0; i < ARRAY_SIZE(tiling_modifier_map); i++) {
+      if (tiling_modifier_map[i].modifier == modifier)
+         return ALIGN(height, tiling_modifier_map[i].height_align);
+   }
+
+   unreachable("get_tiled_height received unknown tiling mode");
 }
 
 static void
@@ -609,6 +626,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
    struct intel_screen *screen = dri_screen->driverPrivate;
    uint32_t tiling;
    uint64_t modifier = DRM_FORMAT_MOD_INVALID;
+   unsigned tiled_height;
    int cpp;
 
    /* Callers of this may specify a modifier, or a dri usage, but not both. The
@@ -640,6 +658,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
       }
    }
    tiling = modifier_to_tiling(modifier);
+   tiled_height = get_tiled_height(modifier, height);
 
    image = intel_allocate_image(screen, format, loaderPrivate);
    if (image == NULL)
@@ -647,7 +666,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
 
    cpp = _mesa_get_format_bytes(image->format);
    image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image",
-                                  width, height, cpp, tiling,
+                                  width, tiled_height, cpp, tiling,
                                   &image->pitch, 0);
    if (image->bo == NULL) {
       free(image);
@@ -816,6 +835,7 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
    struct intel_screen *screen = dri_screen->driverPrivate;
    struct intel_image_format *f;
    __DRIimage *image;
+   unsigned tiled_height;
    int i, index;
 
    if (fds == NULL || num_fds < 1)
@@ -853,6 +873,7 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
    }
 
    image->modifier = tiling_to_modifier(image->bo->tiling_mode);
+   tiled_height = get_tiled_height(image->modifier, height);
 
    int size = 0;
    for (i = 0; i < f->nplanes; i++) {
@@ -860,7 +881,7 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
       image->offsets[index] = offsets[index];
       image->strides[index] = strides[index];
 
-      const int plane_height = height >> f->planes[i].height_shift;
+      const int plane_height = tiled_height >> f->planes[i].height_shift;
       const int end = offsets[index] + plane_height * strides[index];
       if (size < end)
          size = end;
