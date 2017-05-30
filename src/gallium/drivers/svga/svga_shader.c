@@ -31,7 +31,6 @@
 #include "svga_format.h"
 #include "svga_shader.h"
 #include "svga_resource_texture.h"
-#include "svga3d_surfacedefs.h"
 
 
 /**
@@ -163,6 +162,25 @@ svga_remap_generic_index(int8_t remap_table[MAX_GENERIC_VARYING],
    return remap_table[generic_index];
 }
 
+static const enum pipe_swizzle copy_alpha[PIPE_SWIZZLE_MAX] = {
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_Y,
+   PIPE_SWIZZLE_Z,
+   PIPE_SWIZZLE_W,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_NONE
+};
+
+static const enum pipe_swizzle set_alpha[PIPE_SWIZZLE_MAX] = {
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_Y,
+   PIPE_SWIZZLE_Z,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_NONE
+};
 
 /**
  * Initialize the shader-neutral fields of svga_compile_key from context
@@ -174,6 +192,7 @@ svga_init_shader_key_common(const struct svga_context *svga,
                             struct svga_compile_key *key)
 {
    unsigned i, idx = 0;
+   const enum pipe_swizzle *swizzle_tab;
 
    assert(shader < ARRAY_SIZE(svga->curr.num_sampler_views));
 
@@ -212,22 +231,20 @@ svga_init_shader_key_common(const struct svga_context *svga,
             ++key->num_unnormalized_coords;
          }
 
-         key->tex[i].swizzle_r = view->swizzle_r;
-         key->tex[i].swizzle_g = view->swizzle_g;
-         key->tex[i].swizzle_b = view->swizzle_b;
+         swizzle_tab = (!util_format_has_alpha(view->format) &&
+                        svga_texture_device_format_has_alpha(view->texture)) ?
+            set_alpha : copy_alpha;
 
          /* If we have a non-alpha view into an svga3d surface with an
           * alpha channel, then explicitly set the alpha channel to 1
-          * when sampling. Note that we need to check the svga3d format
-          * in the svga texture key, since the imported format is
-          * stored here and it may differ from the gallium format.
+          * when sampling. Note that we need to check the
+          * actual device format to cover also imported surface cases.
           */
-         if (!util_format_has_alpha(view->format) &&
-             svga_texture_device_format_has_alpha(view->texture)) {
-            key->tex[i].swizzle_a = PIPE_SWIZZLE_1;
-         } else {
-            key->tex[i].swizzle_a = view->swizzle_a;
-         }
+
+         key->tex[i].swizzle_r = swizzle_tab[view->swizzle_r];
+         key->tex[i].swizzle_g = swizzle_tab[view->swizzle_g];
+         key->tex[i].swizzle_b = swizzle_tab[view->swizzle_b];
+         key->tex[i].swizzle_a = swizzle_tab[view->swizzle_a];
       }
    }
 }
