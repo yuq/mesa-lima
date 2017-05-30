@@ -1488,3 +1488,25 @@ svga_texture_transfer_unmap_upload(struct svga_context *svga,
 
    pipe_resource_reference(&st->upload.buf, NULL);
 }
+
+/**
+ * Does the device format backing this surface have an
+ * alpha channel?
+ *
+ * \param texture[in]  The texture whose format we're querying
+ * \return TRUE if the format has an alpha channel, FALSE otherwise
+ *
+ * For locally created textures, the device (svga) format is typically
+ * identical to svga_format(texture->format), and we can use the gallium
+ * format tests to determine whether the device format has an alpha channel
+ * or not. However, for textures backed by imported svga surfaces that is
+ * not always true, and we have to look at the SVGA3D utilities.
+ */
+boolean
+svga_texture_device_format_has_alpha(struct pipe_resource *texture)
+{
+   enum svga3d_block_desc block_desc =
+      svga3dsurface_get_desc(svga_texture(texture)->key.format)->block_desc;
+
+   return !!(block_desc & SVGA3DBLOCKDESC_ALPHA);
+}

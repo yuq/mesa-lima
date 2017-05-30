@@ -313,4 +313,7 @@ void
 svga_texture_transfer_unmap_upload(struct svga_context *svga,
                                    struct svga_transfer *st);
 
+boolean
+svga_texture_device_format_has_alpha(struct pipe_resource *texture);
+
 #endif /* SVGA_TEXTURE_H */
