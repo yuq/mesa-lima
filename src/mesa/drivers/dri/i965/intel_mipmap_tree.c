@@ -879,6 +879,57 @@ miptree_create_for_planar_image(struct brw_context *brw,
    return planar_mt;
 }
 
+static bool
+create_ccs_buf_for_image(struct brw_context *brw,
+                         __DRIimage *image,
+                         struct intel_mipmap_tree *mt,
+                         enum isl_aux_state initial_state)
+{
+   struct isl_surf temp_ccs_surf;
+
+   /* CCS is only supported for very simple miptrees */
+   assert(image->aux_offset != 0 && image->aux_pitch != 0);
+   assert(image->tile_x == 0 && image->tile_y == 0);
+   assert(mt->surf.samples == 1);
+   assert(mt->surf.levels == 1);
+   assert(mt->surf.logical_level0_px.depth == 1);
+   assert(mt->surf.logical_level0_px.array_len == 1);
+   assert(mt->first_level == 0);
+   assert(mt->last_level == 0);
+
+   /* We shouldn't already have a CCS */
+   assert(!mt->mcs_buf);
+
+   if (!isl_surf_get_ccs_surf(&brw->isl_dev, &mt->surf, &temp_ccs_surf,
+                              image->aux_pitch))
+      return false;
+
+   assert(image->aux_offset < image->bo->size);
+   assert(temp_ccs_surf.size <= image->bo->size - image->aux_offset);
+
+   mt->mcs_buf = calloc(sizeof(*mt->mcs_buf), 1);
+   if (mt->mcs_buf == NULL)
+      return false;
+
+   mt->aux_state = create_aux_state_map(mt, initial_state);
+   if (!mt->aux_state) {
+      free(mt->mcs_buf);
+      mt->mcs_buf = NULL;
+      return false;
+   }
+
+   mt->mcs_buf->bo = image->bo;
+   brw_bo_reference(image->bo);
+
+   mt->mcs_buf->offset = image->aux_offset;
+   mt->mcs_buf->size = image->bo->size - image->aux_offset;
+   mt->mcs_buf->pitch = image->aux_pitch;
+   mt->mcs_buf->qpitch = 0;
+   mt->mcs_buf->surf = temp_ccs_surf;
+
+   return true;
+}
+
 struct intel_mipmap_tree *
 intel_miptree_create_for_dri_image(struct brw_context *brw,
                                    __DRIimage *image, GLenum target,
@@ -928,15 +979,25 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    if (!brw->ctx.TextureFormatSupported[format])
       return NULL;
 
+   const struct isl_drm_modifier_info *mod_info =
+      isl_drm_modifier_get_info(image->modifier);
+
+   enum intel_miptree_create_flags mt_create_flags = 0;
+
    /* If this image comes in from a window system, we have different
     * requirements than if it comes in via an EGL import operation.  Window
     * system images can use any form of auxiliary compression we wish because
     * they get "flushed" before being handed off to the window system and we
-    * have the opportunity to do resolves.  Window system buffers also may be
-    * used for scanout so we need to flag that appropriately.
+    * have the opportunity to do resolves.  Non window-system images, on the
+    * other hand, have no resolve point so we can't have aux without a
+    * modifier.
     */
-   const enum intel_miptree_create_flags mt_create_flags =
-      is_winsys_image ? 0 : MIPTREE_CREATE_NO_AUX;
+   if (!is_winsys_image)
+      mt_create_flags |= MIPTREE_CREATE_NO_AUX;
+
+   /* If we have a modifier which specifies aux, don't create one yet */
+   if (mod_info && mod_info->aux_usage != ISL_AUX_USAGE_NONE)
+      mt_create_flags |= MIPTREE_CREATE_NO_AUX;
 
    /* Disable creation of the texture's aux buffers because the driver exposes
     * no EGL API to manage them. That is, there is no API for resolving the aux
@@ -964,6 +1025,32 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
 
       if (draw_x != 0 || draw_y != 0) {
          _mesa_error(&brw->ctx, GL_INVALID_OPERATION, __func__);
+         intel_miptree_release(&mt);
+         return NULL;
+      }
+   }
+
+   if (mod_info && mod_info->aux_usage != ISL_AUX_USAGE_NONE) {
+      assert(mod_info->aux_usage == ISL_AUX_USAGE_CCS_E);
+
+      mt->aux_usage = mod_info->aux_usage;
+      /* If we are a window system buffer, then we can support fast-clears
+       * even if the modifier doesn't support them by doing a partial resolve
+       * as part of the flush operation.
+       */
+      mt->supports_fast_clear =
+         is_winsys_image || mod_info->supports_clear_color;
+
+      /* We don't know the actual state of the surface when we get it but we
+       * can make a pretty good guess based on the modifier.  What we do know
+       * for sure is that it isn't in the AUX_INVALID state, so we just assume
+       * a worst case of compression.
+       */
+      enum isl_aux_state initial_state =
+         mod_info->supports_clear_color ? ISL_AUX_STATE_COMPRESSED_CLEAR :
+                                          ISL_AUX_STATE_COMPRESSED_NO_CLEAR;
+
+      if (!create_ccs_buf_for_image(brw, image, mt, initial_state)) {
          intel_miptree_release(&mt);
          return NULL;
       }
