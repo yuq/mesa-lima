@@ -294,14 +294,15 @@ static struct intel_image_format intel_image_formats[] = {
 static const struct {
    uint32_t tiling;
    uint64_t modifier;
+   unsigned since_gen;
    unsigned height_align;
 } tiling_modifier_map[] = {
    { .tiling = I915_TILING_NONE, .modifier = DRM_FORMAT_MOD_LINEAR,
-     .height_align = 1 },
+     .since_gen = 1, .height_align = 1 },
    { .tiling = I915_TILING_X, .modifier = I915_FORMAT_MOD_X_TILED,
-     .height_align = 8 },
+     .since_gen = 1, .height_align = 8 },
    { .tiling = I915_TILING_Y, .modifier = I915_FORMAT_MOD_Y_TILED,
-     .height_align = 32 },
+     .since_gen = 6, .height_align = 32 },
 };
 
 static bool
@@ -1014,6 +1015,71 @@ intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
                                             loaderPrivate);
 }
 
+static GLboolean
+intel_query_dma_buf_formats(__DRIscreen *screen, int max,
+                            int *formats, int *count)
+{
+   int i, j = 0;
+
+   if (max == 0) {
+      *count = ARRAY_SIZE(intel_image_formats) - 1; /* not SARGB */
+      return true;
+   }
+
+   for (i = 0; i < (ARRAY_SIZE(intel_image_formats)) && j < max; i++) {
+     if (intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SARGB8888)
+       continue;
+     formats[j++] = intel_image_formats[i].fourcc;
+   }
+
+   *count = j;
+   return true;
+}
+
+static GLboolean
+intel_query_dma_buf_modifiers(__DRIscreen *_screen, int fourcc, int max,
+                              uint64_t *modifiers,
+                              unsigned int *external_only,
+                              int *count)
+{
+   struct intel_screen *screen = _screen->driverPrivate;
+   struct intel_image_format *f;
+   int num_mods = 0, i;
+
+   f = intel_image_format_lookup(fourcc);
+   if (f == NULL)
+      return false;
+
+   for (i = 0; i < ARRAY_SIZE(tiling_modifier_map); i++) {
+      if (screen->devinfo.gen < tiling_modifier_map[i].since_gen)
+         continue;
+
+      num_mods++;
+      if (max == 0)
+         continue;
+
+      modifiers[num_mods - 1] = tiling_modifier_map[i].modifier;
+      if (num_mods >= max)
+        break;
+   }
+
+   if (external_only != NULL) {
+      for (i = 0; i < num_mods && i < max; i++) {
+         if (f->components == __DRI_IMAGE_COMPONENTS_Y_U_V ||
+             f->components == __DRI_IMAGE_COMPONENTS_Y_UV ||
+             f->components == __DRI_IMAGE_COMPONENTS_Y_XUXV) {
+            external_only[i] = GL_TRUE;
+         }
+         else {
+            external_only[i] = GL_FALSE;
+         }
+      }
+   }
+
+   *count = num_mods;
+   return true;
+}
+
 static __DRIimage *
 intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
 {
@@ -1061,7 +1127,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
 }
 
 static const __DRIimageExtension intelImageExtension = {
-    .base = { __DRI_IMAGE, 14 },
+    .base = { __DRI_IMAGE, 15 },
 
     .createImageFromName                = intel_create_image_from_name,
     .createImageFromRenderbuffer        = intel_create_image_from_renderbuffer,
@@ -1081,6 +1147,8 @@ static const __DRIimageExtension intelImageExtension = {
     .unmapImage                         = NULL,
     .createImageWithModifiers           = intel_create_image_with_modifiers,
     .createImageFromDmaBufs2            = intel_create_image_from_dma_bufs2,
+    .queryDmaBufFormats                 = intel_query_dma_buf_formats,
+    .queryDmaBufModifiers               = intel_query_dma_buf_modifiers,
 };
 
 static uint64_t
