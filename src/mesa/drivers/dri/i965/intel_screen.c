@@ -304,6 +304,19 @@ static const struct {
      .height_align = 32 },
 };
 
+static bool
+modifier_is_supported(uint64_t modifier)
+{
+   int i;
+
+   for (i = 0; i < ARRAY_SIZE(tiling_modifier_map); i++) {
+      if (tiling_modifier_map[i].modifier == modifier)
+         return true;
+   }
+
+   return false;
+}
+
 static uint32_t
 modifier_to_tiling(uint64_t modifier)
 {
@@ -827,10 +840,11 @@ intel_create_image_from_names(__DRIscreen *dri_screen,
 }
 
 static __DRIimage *
-intel_create_image_from_fds(__DRIscreen *dri_screen,
-                            int width, int height, int fourcc,
-                            int *fds, int num_fds, int *strides, int *offsets,
-                            void *loaderPrivate)
+intel_create_image_from_fds_common(__DRIscreen *dri_screen,
+                                   int width, int height, int fourcc,
+                                   uint64_t modifier, int *fds, int num_fds,
+                                   int *strides, int *offsets,
+                                   void *loaderPrivate)
 {
    struct intel_screen *screen = dri_screen->driverPrivate;
    struct intel_image_format *f;
@@ -844,6 +858,9 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
    f = intel_image_format_lookup(fourcc);
    if (f == NULL)
       return NULL;
+
+   if (modifier != DRM_FORMAT_MOD_INVALID && !modifier_is_supported(modifier))
+         return NULL;
 
    if (f->nplanes == 1)
       image = intel_allocate_image(screen, f->planes[0].dri_format,
@@ -880,7 +897,10 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
       }
    }
 
-   image->modifier = tiling_to_modifier(image->bo->tiling_mode);
+   if (modifier != DRM_FORMAT_MOD_INVALID)
+      image->modifier = modifier;
+   else
+      image->modifier = tiling_to_modifier(image->bo->tiling_mode);
    tiled_height = get_tiled_height(image->modifier, height);
 
    int size = 0;
@@ -914,16 +934,29 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
 }
 
 static __DRIimage *
-intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
-                                 int width, int height, int fourcc,
-                                 int *fds, int num_fds,
-                                 int *strides, int *offsets,
-                                 enum __DRIYUVColorSpace yuv_color_space,
-                                 enum __DRISampleRange sample_range,
-                                 enum __DRIChromaSiting horizontal_siting,
-                                 enum __DRIChromaSiting vertical_siting,
-                                 unsigned *error,
-                                 void *loaderPrivate)
+intel_create_image_from_fds(__DRIscreen *dri_screen,
+                            int width, int height, int fourcc,
+                            int *fds, int num_fds, int *strides, int *offsets,
+                            void *loaderPrivate)
+{
+   return intel_create_image_from_fds_common(dri_screen, width, height, fourcc,
+                                             DRM_FORMAT_MOD_INVALID,
+                                             fds, num_fds, strides, offsets,
+                                             loaderPrivate);
+}
+
+static __DRIimage *
+intel_create_image_from_dma_bufs2(__DRIscreen *dri_screen,
+                                  int width, int height,
+                                  int fourcc, uint64_t modifier,
+                                  int *fds, int num_fds,
+                                  int *strides, int *offsets,
+                                  enum __DRIYUVColorSpace yuv_color_space,
+                                  enum __DRISampleRange sample_range,
+                                  enum __DRIChromaSiting horizontal_siting,
+                                  enum __DRIChromaSiting vertical_siting,
+                                  unsigned *error,
+                                  void *loaderPrivate)
 {
    __DRIimage *image;
    struct intel_image_format *f = intel_image_format_lookup(fourcc);
@@ -933,9 +966,10 @@ intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
       return NULL;
    }
 
-   image = intel_create_image_from_fds(dri_screen, width, height, fourcc, fds,
-                                       num_fds, strides, offsets,
-                                       loaderPrivate);
+   image = intel_create_image_from_fds_common(dri_screen, width, height,
+                                              fourcc, modifier,
+                                              fds, num_fds, strides, offsets,
+                                              loaderPrivate);
 
    /*
     * Invalid parameters and any inconsistencies between are assumed to be
@@ -955,6 +989,29 @@ intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
 
    *error = __DRI_IMAGE_ERROR_SUCCESS;
    return image;
+}
+
+static __DRIimage *
+intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
+                                 int width, int height, int fourcc,
+                                 int *fds, int num_fds,
+                                 int *strides, int *offsets,
+                                 enum __DRIYUVColorSpace yuv_color_space,
+                                 enum __DRISampleRange sample_range,
+                                 enum __DRIChromaSiting horizontal_siting,
+                                 enum __DRIChromaSiting vertical_siting,
+                                 unsigned *error,
+                                 void *loaderPrivate)
+{
+   return intel_create_image_from_dma_bufs2(dri_screen, width, height,
+                                            fourcc, DRM_FORMAT_MOD_INVALID,
+                                            fds, num_fds, strides, offsets,
+                                            yuv_color_space,
+                                            sample_range,
+                                            horizontal_siting,
+                                            vertical_siting,
+                                            error,
+                                            loaderPrivate);
 }
 
 static __DRIimage *
@@ -1023,6 +1080,7 @@ static const __DRIimageExtension intelImageExtension = {
     .mapImage                           = NULL,
     .unmapImage                         = NULL,
     .createImageWithModifiers           = intel_create_image_with_modifiers,
+    .createImageFromDmaBufs2            = intel_create_image_from_dma_bufs2,
 };
 
 static uint64_t
