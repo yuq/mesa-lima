@@ -2157,6 +2157,27 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
    return plane_n;
 }
 
+static EGLBoolean
+dri2_query_dma_buf_formats(_EGLDriver *drv, _EGLDisplay *disp,
+                            EGLint max, EGLint *formats, EGLint *count)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   if (max < 0 || (max > 0 && formats == NULL)) {
+      _eglError(EGL_BAD_PARAMETER, "invalid value for max count of formats");
+      return EGL_FALSE;
+   }
+
+   if (dri2_dpy->image->base.version < 15 ||
+       dri2_dpy->image->queryDmaBufFormats == NULL)
+      return EGL_FALSE;
+
+   if (!dri2_dpy->image->queryDmaBufFormats(dri2_dpy->dri_screen, max,
+                                            formats, count))
+      return EGL_FALSE;
+
+   return EGL_TRUE;
+}
+
 /**
  * The spec says:
  *
@@ -3094,6 +3115,7 @@ _eglBuiltInDriverDRI2(const char *args)
    dri2_drv->base.API.ExportDRMImageMESA = dri2_export_drm_image_mesa;
    dri2_drv->base.API.ExportDMABUFImageQueryMESA = dri2_export_dma_buf_image_query_mesa;
    dri2_drv->base.API.ExportDMABUFImageMESA = dri2_export_dma_buf_image_mesa;
+   dri2_drv->base.API.QueryDmaBufFormatsEXT = dri2_query_dma_buf_formats;
 #endif
 #ifdef HAVE_WAYLAND_PLATFORM
    dri2_drv->base.API.BindWaylandDisplayWL = dri2_bind_wayland_display_wl;
