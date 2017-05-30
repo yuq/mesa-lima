@@ -251,8 +251,12 @@ static struct intel_mipmap_tree *
 create_mt_for_dri_image(struct brw_context *brw,
                         GLenum target, __DRIimage *image)
 {
+   struct gl_context *ctx = &brw->ctx;
    struct intel_mipmap_tree *mt;
    uint32_t draw_x, draw_y;
+
+   if (!ctx->TextureFormatSupported[image->format])
+      return NULL;
 
    /* Disable creation of the texture's aux buffers because the driver exposes
     * no EGL API to manage them. That is, there is no API for resolving the aux
