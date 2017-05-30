@@ -56,6 +56,33 @@
 #define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
 #endif
 
+static const int fourcc_formats[] = {
+   __DRI_IMAGE_FOURCC_ARGB8888,
+   __DRI_IMAGE_FOURCC_ABGR8888,
+   __DRI_IMAGE_FOURCC_SARGB8888,
+   __DRI_IMAGE_FOURCC_XRGB8888,
+   __DRI_IMAGE_FOURCC_XBGR8888,
+   __DRI_IMAGE_FOURCC_ARGB1555,
+   __DRI_IMAGE_FOURCC_RGB565,
+   __DRI_IMAGE_FOURCC_R8,
+   __DRI_IMAGE_FOURCC_R16,
+   __DRI_IMAGE_FOURCC_GR88,
+   __DRI_IMAGE_FOURCC_GR1616,
+   __DRI_IMAGE_FOURCC_YUV410,
+   __DRI_IMAGE_FOURCC_YUV411,
+   __DRI_IMAGE_FOURCC_YUV420,
+   __DRI_IMAGE_FOURCC_YUV422,
+   __DRI_IMAGE_FOURCC_YUV444,
+   __DRI_IMAGE_FOURCC_YVU410,
+   __DRI_IMAGE_FOURCC_YVU411,
+   __DRI_IMAGE_FOURCC_YVU420,
+   __DRI_IMAGE_FOURCC_YVU422,
+   __DRI_IMAGE_FOURCC_YVU444,
+   __DRI_IMAGE_FOURCC_NV12,
+   __DRI_IMAGE_FOURCC_NV16,
+   __DRI_IMAGE_FOURCC_YUYV
+};
+
 static int convert_fourcc(int format, int *dri_components_p)
 {
    int dri_components;
@@ -171,6 +198,70 @@ static enum pipe_format dri2_format_to_pipe_format (int format)
    default:
       pf = PIPE_FORMAT_NONE;
       break;
+   }
+
+   return pf;
+}
+
+static enum pipe_format fourcc_to_pipe_format(int fourcc)
+{
+   enum pipe_format pf;
+
+   switch (fourcc) {
+   case __DRI_IMAGE_FOURCC_R8:
+      pf = PIPE_FORMAT_R8_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_GR88:
+      pf = PIPE_FORMAT_RG88_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_ARGB1555:
+      pf = PIPE_FORMAT_B5G5R5A1_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_R16:
+      pf = PIPE_FORMAT_R16_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_GR1616:
+      pf = PIPE_FORMAT_RG1616_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_RGB565:
+      pf = PIPE_FORMAT_B5G6R5_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_ARGB8888:
+      pf = PIPE_FORMAT_BGRA8888_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_XRGB8888:
+      pf = PIPE_FORMAT_BGRX8888_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_ABGR8888:
+      pf = PIPE_FORMAT_RGBA8888_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_XBGR8888:
+      pf = PIPE_FORMAT_RGBX8888_UNORM;
+      break;
+
+   case __DRI_IMAGE_FOURCC_NV12:
+      pf = PIPE_FORMAT_NV12;
+      break;
+   case __DRI_IMAGE_FOURCC_YUYV:
+      pf = PIPE_FORMAT_YUYV;
+      break;
+   case __DRI_IMAGE_FOURCC_YUV420:
+   case __DRI_IMAGE_FOURCC_YVU420:
+      pf = PIPE_FORMAT_YV12;
+      break;
+
+   case __DRI_IMAGE_FOURCC_SARGB8888:
+   case __DRI_IMAGE_FOURCC_YUV410:
+   case __DRI_IMAGE_FOURCC_YUV411:
+   case __DRI_IMAGE_FOURCC_YUV422:
+   case __DRI_IMAGE_FOURCC_YUV444:
+   case __DRI_IMAGE_FOURCC_NV16:
+   case __DRI_IMAGE_FOURCC_YVU410:
+   case __DRI_IMAGE_FOURCC_YVU411:
+   case __DRI_IMAGE_FOURCC_YVU422:
+   case __DRI_IMAGE_FOURCC_YVU444:
+   default:
+      pf = PIPE_FORMAT_NONE;
    }
 
    return pf;
@@ -1321,6 +1412,31 @@ dri2_from_fds(__DRIscreen *screen, int width, int height, int fourcc,
    return img;
 }
 
+static boolean
+dri2_query_dma_buf_formats(__DRIscreen *_screen, int max, int *formats,
+                           int *count)
+{
+   struct dri_screen *screen = dri_screen(_screen);
+   struct pipe_screen *pscreen = screen->base.screen;
+   const unsigned bind = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW;
+   int i, j;
+
+   for (i = 0, j = 0; (i < ARRAY_SIZE(fourcc_formats)) &&
+         (j < max || max == 0); i++) {
+      if (pscreen->is_format_supported(pscreen,
+                                       fourcc_to_pipe_format(
+                                          fourcc_formats[i]),
+                                       screen->target,
+                                       0, bind)) {
+         if (j < max)
+            formats[j] = fourcc_formats[i];
+         j++;
+      }
+   }
+   *count = j;
+   return true;
+}
+
 static __DRIimage *
 dri2_from_dma_bufs(__DRIscreen *screen,
                    int width, int height, int fourcc,
@@ -1916,6 +2032,7 @@ dri2_init_screen(__DRIscreen * sPriv)
          dri2ImageExtension.createImageFromFds = dri2_from_fds;
          dri2ImageExtension.createImageFromDmaBufs = dri2_from_dma_bufs;
          dri2ImageExtension.createImageFromDmaBufs2 = dri2_from_dma_bufs2;
+         dri2ImageExtension.queryDmaBufFormats = dri2_query_dma_buf_formats;
       }
    }
 
@@ -1993,6 +2110,7 @@ dri_kms_init_screen(__DRIscreen * sPriv)
       dri2ImageExtension.createImageFromFds = dri2_from_fds;
       dri2ImageExtension.createImageFromDmaBufs = dri2_from_dma_bufs;
       dri2ImageExtension.createImageFromDmaBufs2 = dri2_from_dma_bufs2;
+      dri2ImageExtension.queryDmaBufFormats = dri2_query_dma_buf_formats;
    }
 
    sPriv->extensions = dri_screen_extensions;
