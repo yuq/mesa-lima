@@ -1406,7 +1406,7 @@ blorp_surf_convert_to_single_slice(const struct isl_device *isl_dev,
                                 layer, z, &x_offset_sa, &y_offset_sa);
 
    uint32_t byte_offset;
-   isl_tiling_get_intratile_offset_sa(isl_dev, info->surf.tiling,
+   isl_tiling_get_intratile_offset_sa(info->surf.tiling,
                                       info->surf.format, info->surf.row_pitch,
                                       x_offset_sa, y_offset_sa,
                                       &byte_offset,
@@ -1915,7 +1915,7 @@ shrink_surface_params(const struct isl_device *dev,
     */
    x_offset_sa = (uint32_t)*x0 * px_size_sa.w + info->tile_x_sa;
    y_offset_sa = (uint32_t)*y0 * px_size_sa.h + info->tile_y_sa;
-   isl_tiling_get_intratile_offset_sa(dev, info->surf.tiling,
+   isl_tiling_get_intratile_offset_sa(info->surf.tiling,
                                       info->surf.format, info->surf.row_pitch,
                                       x_offset_sa, y_offset_sa,
                                       &byte_offset,

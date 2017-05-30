@@ -145,9 +145,8 @@ isl_device_get_sample_counts(struct isl_device *dev)
 /**
  * @param[out] info is written only on success
  */
-static bool
-isl_tiling_get_info(const struct isl_device *dev,
-                    enum isl_tiling tiling,
+static void
+isl_tiling_get_info(enum isl_tiling tiling,
                     uint32_t format_bpb,
                     struct isl_tile_info *tile_info)
 {
@@ -162,7 +161,8 @@ isl_tiling_get_info(const struct isl_device *dev,
        */
       assert(tiling == ISL_TILING_X || tiling == ISL_TILING_Y0);
       assert(bs % 3 == 0 && isl_is_pow2(format_bpb / 3));
-      return isl_tiling_get_info(dev, tiling, format_bpb / 3, tile_info);
+      isl_tiling_get_info(tiling, format_bpb / 3, tile_info);
+      return;
    }
 
    switch (tiling) {
@@ -203,12 +203,6 @@ isl_tiling_get_info(const struct isl_device *dev,
 
    case ISL_TILING_Yf:
    case ISL_TILING_Ys: {
-      if (ISL_DEV_GEN(dev) < 9)
-         return false;
-
-      if (!isl_is_pow2(bs))
-         return false;
-
       bool is_Ys = tiling == ISL_TILING_Ys;
 
       assert(bs > 0);
@@ -263,8 +257,6 @@ isl_tiling_get_info(const struct isl_device *dev,
       .logical_extent_el = logical_el,
       .phys_extent_B = phys_B,
    };
-
-   return true;
 }
 
 /**
@@ -1312,8 +1304,7 @@ isl_surf_init_s(const struct isl_device *dev,
       return false;
 
    struct isl_tile_info tile_info;
-   if (!isl_tiling_get_info(dev, tiling, fmtl->bpb, &tile_info))
-      return false;
+   isl_tiling_get_info(tiling, fmtl->bpb, &tile_info);
 
    const enum isl_dim_layout dim_layout =
       isl_surf_choose_dim_layout(dev, info->dim, tiling);
@@ -1422,12 +1413,11 @@ isl_surf_init_s(const struct isl_device *dev,
 }
 
 void
-isl_surf_get_tile_info(const struct isl_device *dev,
-                       const struct isl_surf *surf,
+isl_surf_get_tile_info(const struct isl_surf *surf,
                        struct isl_tile_info *tile_info)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
-   isl_tiling_get_info(dev, surf->tiling, fmtl->bpb, tile_info);
+   isl_tiling_get_info(surf->tiling, fmtl->bpb, tile_info);
 }
 
 bool
@@ -1976,8 +1966,7 @@ isl_surf_get_image_offset_el(const struct isl_surf *surf,
 }
 
 void
-isl_tiling_get_intratile_offset_el(const struct isl_device *dev,
-                                   enum isl_tiling tiling,
+isl_tiling_get_intratile_offset_el(enum isl_tiling tiling,
                                    uint8_t bs,
                                    uint32_t row_pitch,
                                    uint32_t total_x_offset_el,
@@ -1997,7 +1986,7 @@ isl_tiling_get_intratile_offset_el(const struct isl_device *dev,
    const uint32_t bpb = bs * 8;
 
    struct isl_tile_info tile_info;
-   isl_tiling_get_info(dev, tiling, bpb, &tile_info);
+   isl_tiling_get_info(tiling, bpb, &tile_info);
 
    assert(row_pitch % tile_info.phys_extent_B.width == 0);
 

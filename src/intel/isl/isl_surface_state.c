@@ -550,7 +550,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       assert(!(info->view->usage & ISL_SURF_USAGE_STORAGE_BIT));
 
       struct isl_tile_info tile_info;
-      isl_surf_get_tile_info(dev, info->aux_surf, &tile_info);
+      isl_surf_get_tile_info(info->aux_surf, &tile_info);
       uint32_t pitch_in_tiles =
          info->aux_surf->row_pitch / tile_info.phys_extent_B.width;
 

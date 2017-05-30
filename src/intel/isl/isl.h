@@ -1380,8 +1380,7 @@ isl_surf_init_s(const struct isl_device *dev,
                 const struct isl_surf_init_info *restrict info);
 
 void
-isl_surf_get_tile_info(const struct isl_device *dev,
-                       const struct isl_surf *surf,
+isl_surf_get_tile_info(const struct isl_surf *surf,
                        struct isl_tile_info *tile_info);
 
 bool
@@ -1561,8 +1560,7 @@ isl_surf_get_image_offset_el(const struct isl_surf *surf,
  * surface's tiling format.
  */
 void
-isl_tiling_get_intratile_offset_el(const struct isl_device *dev,
-                                   enum isl_tiling tiling,
+isl_tiling_get_intratile_offset_el(enum isl_tiling tiling,
                                    uint8_t bs,
                                    uint32_t row_pitch,
                                    uint32_t total_x_offset_el,
@@ -1572,8 +1570,7 @@ isl_tiling_get_intratile_offset_el(const struct isl_device *dev,
                                    uint32_t *y_offset_el);
 
 static inline void
-isl_tiling_get_intratile_offset_sa(const struct isl_device *dev,
-                                   enum isl_tiling tiling,
+isl_tiling_get_intratile_offset_sa(enum isl_tiling tiling,
                                    enum isl_format format,
                                    uint32_t row_pitch,
                                    uint32_t total_x_offset_sa,
@@ -1595,7 +1592,7 @@ isl_tiling_get_intratile_offset_sa(const struct isl_device *dev,
    const uint32_t total_x_offset = total_x_offset_sa / fmtl->bw;
    const uint32_t total_y_offset = total_y_offset_sa / fmtl->bh;
 
-   isl_tiling_get_intratile_offset_el(dev, tiling, fmtl->bpb / 8, row_pitch,
+   isl_tiling_get_intratile_offset_el(tiling, fmtl->bpb / 8, row_pitch,
                                       total_x_offset, total_y_offset,
                                       base_address_offset,
                                       x_offset_sa, y_offset_sa);
