@@ -557,13 +557,16 @@ scan_declaration(struct tgsi_shader_info *info,
          /* Vertex shaders can have inputs with holes between them. */
          info->num_inputs = MAX2(info->num_inputs, reg + 1);
 
-         if (semName == TGSI_SEMANTIC_PRIMID)
-            info->uses_primid = TRUE;
-         else if (procType == PIPE_SHADER_FRAGMENT) {
-            if (semName == TGSI_SEMANTIC_POSITION)
-               info->reads_position = TRUE;
-            else if (semName == TGSI_SEMANTIC_FACE)
-               info->uses_frontface = TRUE;
+         switch (semName) {
+         case TGSI_SEMANTIC_PRIMID:
+            info->uses_primid = true;
+            break;
+         case TGSI_SEMANTIC_POSITION:
+            info->reads_position = true;
+            break;
+         case TGSI_SEMANTIC_FACE:
+            info->uses_frontface = true;
+            break;
          }
          break;
 
