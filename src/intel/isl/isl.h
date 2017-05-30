@@ -528,6 +528,46 @@ enum isl_dim_layout {
    ISL_DIM_LAYOUT_GEN4_3D,
 
    /**
+    * Special layout used for HiZ and stencil on Sandy Bridge to work around
+    * the hardware's lack of mipmap support.  On gen6, HiZ and stencil buffers
+    * work the same as on gen7+ except that they don't technically support
+    * mipmapping.  That does not, however, stop us from doing it.  As far as
+    * Sandy Bridge hardware is concerned, HiZ and stencil always operates on a
+    * single miplevel 2D (possibly array) image.  The dimensions of that image
+    * are NOT minified.
+    *
+    * In order to implement HiZ and stencil on Sandy Bridge, we create one
+    * full-sized 2D (possibly array) image for every LOD with every image
+    * aligned to a page boundary.  When the surface is used with the stencil
+    * or HiZ hardware, we manually offset to the image for the given LOD.
+    *
+    * As a memory saving measure,  we pretend that the width of each miplevel
+    * is minified and we place LOD1 and above below LOD0 but horizontally
+    * adjacent to each other.  When considered as full-sized images, LOD1 and
+    * above technically overlap.  However, since we only write to part of that
+    * image, the hardware will never notice the overlap.
+    *
+    * This layout looks something like this:
+    *
+    *   +---------+
+    *   |         |
+    *   |         |
+    *   +---------+
+    *   |         |
+    *   |         |
+    *   +---------+
+    *
+    *   +----+ +-+ .
+    *   |    | +-+
+    *   +----+
+    *
+    *   +----+ +-+ .
+    *   |    | +-+
+    *   +----+
+    */
+   ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ,
+
+   /**
     * For details, see the Skylake BSpec >> Memory Views >> Common Surface
     * Formats >> Surface Layout and Tiling >> » 1D Surfaces.
     */

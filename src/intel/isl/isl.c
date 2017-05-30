@@ -479,6 +479,12 @@ isl_choose_array_pitch_span(const struct isl_device *dev,
        * compact QPitch possible in order to conserve memory.
        */
       return ISL_ARRAY_PITCH_SPAN_COMPACT;
+
+   case ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ:
+      /* Each array image in the gen6 stencil of HiZ surface is compact in the
+       * sense that every LOD is a compact array of the same size as LOD0.
+       */
+      return ISL_ARRAY_PITCH_SPAN_COMPACT;
    }
 
    unreachable("bad isl_dim_layout");
@@ -510,10 +516,15 @@ isl_choose_image_alignment_el(const struct isl_device *dev,
       return;
    } else if (info->format == ISL_FORMAT_HIZ) {
       assert(ISL_DEV_GEN(dev) >= 6);
-      /* HiZ surfaces are always aligned to 16x8 pixels in the primary surface
-       * which works out to 2x2 HiZ elments.
-       */
-      *image_align_el = isl_extent3d(2, 2, 1);
+      if (ISL_DEV_GEN(dev) == 6) {
+         /* HiZ surfaces on Sandy Bridge are packed tightly. */
+         *image_align_el = isl_extent3d(1, 1, 1);
+      } else {
+         /* On gen7+, HiZ surfaces are always aligned to 16x8 pixels in the
+          * primary surface which works out to 2x2 HiZ elments.
+          */
+         *image_align_el = isl_extent3d(2, 2, 1);
+      }
       return;
    }
 
@@ -540,6 +551,11 @@ isl_surf_choose_dim_layout(const struct isl_device *dev,
                            enum isl_surf_dim logical_dim,
                            enum isl_tiling tiling)
 {
+   /* Sandy bridge needs a special layout for HiZ and stencil. */
+   if (ISL_DEV_GEN(dev) == 6 &&
+       (tiling == ISL_TILING_W || tiling == ISL_TILING_HIZ))
+      return ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ;
+
    if (ISL_DEV_GEN(dev) >= 9) {
       switch (logical_dim) {
       case ISL_SURF_DIM_1D:
@@ -608,6 +624,7 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
 
       case ISL_DIM_LAYOUT_GEN9_1D:
       case ISL_DIM_LAYOUT_GEN4_2D:
+      case ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ:
          *phys_level0_sa = (struct isl_extent4d) {
             .w = isl_align_npot(info->width, fmtl->bw),
             .h = fmtl->bh,
@@ -619,7 +636,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       break;
 
    case ISL_SURF_DIM_2D:
-      assert(dim_layout == ISL_DIM_LAYOUT_GEN4_2D);
+      assert(dim_layout == ISL_DIM_LAYOUT_GEN4_2D ||
+             dim_layout == ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ);
 
       if (tiling == ISL_TILING_Ys && info->samples > 1)
          isl_finishme("%s:%s: multisample TileYs layout", __FILE__, __func__);
@@ -684,6 +702,7 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
 
       switch (dim_layout) {
       case ISL_DIM_LAYOUT_GEN9_1D:
+      case ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ:
          unreachable("bad isl_dim_layout");
 
       case ISL_DIM_LAYOUT_GEN4_2D:
@@ -969,6 +988,67 @@ isl_calc_phys_total_extent_el_gen4_3d(
 
 /**
  * A variant of isl_calc_phys_slice0_extent_sa() specific to
+ * ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ.
+ */
+static void
+isl_calc_phys_total_extent_el_gen6_stencil_hiz(
+      const struct isl_device *dev,
+      const struct isl_surf_init_info *restrict info,
+      const struct isl_tile_info *tile_info,
+      const struct isl_extent3d *image_align_sa,
+      const struct isl_extent4d *phys_level0_sa,
+      uint32_t *array_pitch_el_rows,
+      struct isl_extent2d *phys_total_el)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+
+   const struct isl_extent2d tile_extent_sa = {
+      .w = tile_info->logical_extent_el.w * fmtl->bw,
+      .h = tile_info->logical_extent_el.h * fmtl->bh,
+   };
+   /* Tile size is a multiple of image alignment */
+   assert(tile_extent_sa.w % image_align_sa->w == 0);
+   assert(tile_extent_sa.h % image_align_sa->h == 0);
+
+   const uint32_t W0 = phys_level0_sa->w;
+   const uint32_t H0 = phys_level0_sa->h;
+
+   /* Each image has the same height as LOD0 because the hardware thinks
+    * everything is LOD0
+    */
+   const uint32_t H = isl_align(H0, image_align_sa->h) * phys_level0_sa->a;
+
+   uint32_t total_top_w = 0;
+   uint32_t total_bottom_w = 0;
+   uint32_t total_h = 0;
+
+   for (uint32_t l = 0; l < info->levels; ++l) {
+      const uint32_t W = isl_minify(W0, l);
+
+      const uint32_t w = isl_align(W, tile_extent_sa.w);
+      const uint32_t h = isl_align(H, tile_extent_sa.h);
+
+      if (l == 0) {
+         total_top_w = w;
+         total_h = h;
+      } else if (l == 1) {
+         total_bottom_w = w;
+         total_h += h;
+      } else {
+         total_bottom_w += w;
+      }
+   }
+
+   *array_pitch_el_rows =
+      isl_assert_div(isl_align(H0, image_align_sa->h), fmtl->bh);
+   *phys_total_el = (struct isl_extent2d) {
+      .w = isl_assert_div(MAX(total_top_w, total_bottom_w), fmtl->bw),
+      .h = isl_assert_div(total_h, fmtl->bh),
+   };
+}
+
+/**
+ * A variant of isl_calc_phys_slice0_extent_sa() specific to
  * ISL_DIM_LAYOUT_GEN9_1D.
  */
 static void
@@ -1034,6 +1114,14 @@ isl_calc_phys_total_extent_el(const struct isl_device *dev,
                                             array_pitch_span,
                                             array_pitch_el_rows,
                                             total_extent_el);
+      return;
+   case ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ:
+      assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
+      isl_calc_phys_total_extent_el_gen6_stencil_hiz(dev, info, tile_info,
+                                                     image_align_sa,
+                                                     phys_level0_sa,
+                                                     array_pitch_el_rows,
+                                                     total_extent_el);
       return;
    case ISL_DIM_LAYOUT_GEN4_3D:
       assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
@@ -1892,6 +1980,65 @@ get_image_offset_sa_gen4_3d(const struct isl_surf *surf,
    *y_offset_sa = y;
 }
 
+static void
+get_image_offset_sa_gen6_stencil_hiz(const struct isl_surf *surf,
+                                     uint32_t level,
+                                     uint32_t logical_array_layer,
+                                     uint32_t *x_offset_sa,
+                                     uint32_t *y_offset_sa)
+{
+   assert(level < surf->levels);
+   assert(surf->logical_level0_px.depth == 1);
+   assert(logical_array_layer < surf->logical_level0_px.array_len);
+
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(surf);
+
+   struct isl_tile_info tile_info;
+   isl_tiling_get_info(surf->tiling, fmtl->bpb, &tile_info);
+   const struct isl_extent2d tile_extent_sa = {
+      .w = tile_info.logical_extent_el.w * fmtl->bw,
+      .h = tile_info.logical_extent_el.h * fmtl->bh,
+   };
+   /* Tile size is a multiple of image alignment */
+   assert(tile_extent_sa.w % image_align_sa.w == 0);
+   assert(tile_extent_sa.h % image_align_sa.h == 0);
+
+   const uint32_t W0 = surf->phys_level0_sa.w;
+   const uint32_t H0 = surf->phys_level0_sa.h;
+
+   /* Each image has the same height as LOD0 because the hardware thinks
+    * everything is LOD0
+    */
+   const uint32_t H = isl_align(H0, image_align_sa.h);
+
+   /* Quick sanity check for consistency */
+   if (surf->phys_level0_sa.array_len > 1)
+      assert(surf->array_pitch_el_rows == isl_assert_div(H, fmtl->bh));
+
+   uint32_t x = 0, y = 0;
+   for (uint32_t l = 0; l < level; ++l) {
+      const uint32_t W = isl_minify(W0, l);
+
+      const uint32_t w = isl_align(W, tile_extent_sa.w);
+      const uint32_t h = isl_align(H * surf->phys_level0_sa.a,
+                                   tile_extent_sa.h);
+
+      if (l == 0) {
+         y += h;
+      } else {
+         x += w;
+      }
+   }
+
+   y += H * logical_array_layer;
+
+   *x_offset_sa = x;
+   *y_offset_sa = y;
+}
+
 /**
  * A variant of isl_surf_get_image_offset_sa() specific to
  * ISL_DIM_LAYOUT_GEN9_1D.
@@ -1960,6 +2107,11 @@ isl_surf_get_image_offset_sa(const struct isl_surf *surf,
       get_image_offset_sa_gen4_3d(surf, level, logical_array_layer +
                                   logical_z_offset_px,
                                   x_offset_sa, y_offset_sa);
+      break;
+   case ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ:
+      get_image_offset_sa_gen6_stencil_hiz(surf, level, logical_array_layer +
+                                           logical_z_offset_px,
+                                           x_offset_sa, y_offset_sa);
       break;
 
    default:
