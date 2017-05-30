@@ -121,6 +121,10 @@ static int convert_fourcc(int format, int *dri_components_p)
       format = __DRI_IMAGE_FORMAT_GR1616;
       dri_components = __DRI_IMAGE_COMPONENTS_RG;
       break;
+   case __DRI_IMAGE_FOURCC_YUYV:
+      format = __DRI_IMAGE_FORMAT_YUYV;
+      dri_components = __DRI_IMAGE_COMPONENTS_Y_XUXV;
+      break;
    /*
     * For multi-planar YUV formats, we return the format of the first
     * plane only.  Since there is only one caller which supports multi-
@@ -209,6 +213,9 @@ static enum pipe_format dri2_format_to_pipe_format (int format)
       break;
    case __DRI_IMAGE_FORMAT_GR1616:
       pf = PIPE_FORMAT_R16G16_UNORM;
+      break;
+   case __DRI_IMAGE_FORMAT_YUYV:
+      pf = PIPE_FORMAT_YUYV;
       break;
    default:
       pf = PIPE_FORMAT_NONE;
