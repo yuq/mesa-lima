@@ -118,36 +118,6 @@ brw_blorp_init(struct brw_context *brw)
 }
 
 static void
-apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
-                              struct intel_mipmap_tree *mt,
-                              uint32_t lod,
-                              uint32_t *offset)
-{
-   assert(mt->array_layout == GEN6_HIZ_STENCIL);
-
-   if (mt->format == MESA_FORMAT_S_UINT8) {
-      /* Note: we can't compute the stencil offset using
-       * intel_miptree_get_aligned_offset(), because the miptree
-       * claims that the region is untiled even though it's W tiled.
-       */
-      *offset = mt->level[lod].level_y * mt->pitch +
-                mt->level[lod].level_x * 64;
-   } else {
-      *offset = intel_miptree_get_aligned_offset(mt,
-                                                 mt->level[lod].level_x,
-                                                 mt->level[lod].level_y);
-   }
-
-   surf->logical_level0_px.width = minify(surf->logical_level0_px.width, lod);
-   surf->logical_level0_px.height = minify(surf->logical_level0_px.height, lod);
-   surf->phys_level0_sa.width = minify(surf->phys_level0_sa.width, lod);
-   surf->phys_level0_sa.height = minify(surf->phys_level0_sa.height, lod);
-   surf->levels = 1;
-   surf->array_pitch_el_rows =
-      ALIGN(surf->phys_level0_sa.height, surf->image_alignment_el.height);
-}
-
-static void
 blorp_surf_for_miptree(struct brw_context *brw,
                        struct blorp_surf *surf,
                        struct intel_mipmap_tree *mt,
@@ -180,24 +150,6 @@ blorp_surf_for_miptree(struct brw_context *brw,
                                          I915_GEM_DOMAIN_SAMPLER,
       .write_domain = is_render_target ? I915_GEM_DOMAIN_RENDER : 0,
    };
-
-   if (brw->gen == 6 && mt->format == MESA_FORMAT_S_UINT8 &&
-       mt->array_layout == GEN6_HIZ_STENCIL) {
-      /* Sandy bridge stencil and HiZ use this GEN6_HIZ_STENCIL hack in
-       * order to allow for layered rendering.  The hack makes each LOD of the
-       * stencil or HiZ buffer a single tightly packed array surface at some
-       * offset into the surface.  Since ISL doesn't know how to deal with the
-       * crazy GEN6_HIZ_STENCIL layout and since we have to do a manual
-       * offset of it anyway, we might as well do the offset here and keep the
-       * hacks inside the i965 driver.
-       *
-       * See also gen6_depth_stencil_state.c
-       */
-      uint32_t offset;
-      apply_gen6_stencil_hiz_offset(&tmp_surfs[0], mt, *level, &offset);
-      surf->addr.offset += offset;
-      *level = 0;
-   }
 
    struct isl_surf *aux_surf = &tmp_surfs[1];
    intel_miptree_get_aux_isl_surf(brw, mt, aux_surf, &surf->aux_usage);
@@ -258,19 +210,6 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
          surf->aux_addr.buffer = mt->hiz_buf->aux_base.bo;
          surf->aux_addr.offset = mt->hiz_buf->aux_base.offset;
-
-         struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
-         if (hiz_mt) {
-            assert(brw->gen == 6 && hiz_mt->array_layout == GEN6_HIZ_STENCIL);
-
-            /* gen6 requires the HiZ buffer to be manually offset to the
-             * right location.  We could fixup the surf but it doesn't
-             * matter since most of those fields don't matter.
-             */
-            apply_gen6_stencil_hiz_offset(aux_surf, hiz_mt, *level,
-                                          &surf->aux_addr.offset);
-            assert(hiz_mt->pitch == aux_surf->row_pitch);
-         }
       }
    } else {
       surf->aux_addr = (struct blorp_address) {

@@ -89,7 +89,8 @@ brw_emit_surface_state(struct brw_context *brw,
    surf.dim = get_isl_surf_dim(target);
 
    const enum isl_dim_layout dim_layout =
-      get_isl_dim_layout(&brw->screen->devinfo, mt->tiling, target);
+      get_isl_dim_layout(&brw->screen->devinfo, mt->tiling, target,
+                         mt->array_layout);
 
    if (surf.dim_layout != dim_layout) {
       /* The layout of the specified texture target is not compatible with the

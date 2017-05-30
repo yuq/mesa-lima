@@ -1814,13 +1814,7 @@ intel_hiz_miptree_buf_create(struct brw_context *brw,
    buf->aux_base.bo = buf->mt->bo;
    buf->aux_base.size = buf->mt->total_height * buf->mt->pitch;
    buf->aux_base.pitch = buf->mt->pitch;
-
-   /* On gen6 hiz is unconditionally laid out packing all slices
-    * at each level-of-detail (LOD). This means there is no valid qpitch
-    * setting. In fact, this is ignored when hardware is setup - there is no
-    * hardware qpitch setting of hiz on gen6.
-    */
-   buf->aux_base.qpitch = 0;
+   buf->aux_base.qpitch = buf->mt->qpitch * 2;
 
    return buf;
 }
@@ -3134,8 +3128,11 @@ get_isl_surf_dim(GLenum target)
 
 enum isl_dim_layout
 get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
-                   GLenum target)
+                   GLenum target, enum miptree_array_layout array_layout)
 {
+   if (array_layout == GEN6_HIZ_STENCIL)
+      return ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ;
+
    switch (target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
@@ -3189,7 +3186,8 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
 {
    surf->dim = get_isl_surf_dim(mt->target);
    surf->dim_layout = get_isl_dim_layout(&brw->screen->devinfo,
-                                         mt->tiling, mt->target);
+                                         mt->tiling, mt->target,
+                                         mt->array_layout);
 
    if (mt->num_samples > 1) {
       switch (mt->msaa_layout) {
@@ -3268,6 +3266,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
    switch (surf->dim_layout) {
    case ISL_DIM_LAYOUT_GEN4_2D:
    case ISL_DIM_LAYOUT_GEN4_3D:
+   case ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ:
       if (brw->gen >= 9) {
          surf->array_pitch_el_rows = mt->qpitch;
       } else {

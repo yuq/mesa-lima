@@ -1384,9 +1384,23 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
       if (info.hiz_usage == ISL_AUX_USAGE_HIZ) {
          info.hiz_surf = &params->depth.aux_surf;
 
+         struct blorp_address hiz_address = params->depth.aux_addr;
+#if GEN_GEN == 6
+         /* Sandy bridge hardware does not technically support mipmapped HiZ.
+          * However, we have a special layout that allows us to make it work
+          * anyway by manually offsetting to the specified miplevel.
+          */
+         assert(info.hiz_surf->dim_layout == ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ);
+         uint32_t offset_B;
+         isl_surf_get_image_offset_B_tile_sa(info.hiz_surf,
+                                             info.view->base_level, 0, 0,
+                                             &offset_B, NULL, NULL);
+         hiz_address.offset += offset_B;
+#endif
+
          info.hiz_address =
             blorp_emit_reloc(batch, dw + isl_dev->ds.hiz_offset / 4,
-                             params->depth.aux_addr, 0);
+                             hiz_address, 0);
 
          info.depth_clear_value = params->depth.clear_color.u32[0];
       }
@@ -1395,9 +1409,23 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
    if (params->stencil.enabled) {
       info.stencil_surf = &params->stencil.surf;
 
+      struct blorp_address stencil_address = params->stencil.addr;
+#if GEN_GEN == 6
+      /* Sandy bridge hardware does not technically support mipmapped stencil.
+       * However, we have a special layout that allows us to make it work
+       * anyway by manually offsetting to the specified miplevel.
+       */
+      assert(info.stencil_surf->dim_layout == ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ);
+      uint32_t offset_B;
+      isl_surf_get_image_offset_B_tile_sa(info.stencil_surf,
+                                          info.view->base_level, 0, 0,
+                                          &offset_B, NULL, NULL);
+      stencil_address.offset += offset_B;
+#endif
+
       info.stencil_address =
          blorp_emit_reloc(batch, dw + isl_dev->ds.stencil_offset / 4,
-                          params->stencil.addr, 0);
+                          stencil_address, 0);
    }
 
    isl_emit_depth_stencil_hiz_s(isl_dev, dw, &info);
