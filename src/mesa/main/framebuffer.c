@@ -251,7 +251,7 @@ _mesa_reference_framebuffer_(struct gl_framebuffer **ptr,
       oldFb->RefCount--;
       deleteFlag = (oldFb->RefCount == 0);
       mtx_unlock(&oldFb->Mutex);
-      
+
       if (deleteFlag)
          oldFb->Delete(oldFb);
 
@@ -624,7 +624,7 @@ static void
 update_color_read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 {
    (void) ctx;
-   if (fb->_ColorReadBufferIndex == -1 ||
+   if (fb->_ColorReadBufferIndex == BUFFER_NONE ||
        fb->DeletePending ||
        fb->Width == 0 ||
        fb->Height == 0) {

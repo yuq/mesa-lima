@@ -144,7 +144,8 @@ typedef enum
    BUFFER_COLOR5,
    BUFFER_COLOR6,
    BUFFER_COLOR7,
-   BUFFER_COUNT
+   BUFFER_COUNT,
+   BUFFER_NONE = -1,
 } gl_buffer_index;
 
 /**
