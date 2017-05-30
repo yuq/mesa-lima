@@ -952,7 +952,8 @@ static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
          assert(!ctx->cached_all_shaders);
          *shader = util_make_fragment_tex_shader(pipe, tgsi_tex,
                                                  TGSI_INTERPOLATE_LINEAR,
-                                                 stype, dtype);
+                                                 stype, dtype,
+                                                 false, false);
       }
 
       return *shader;
@@ -990,7 +991,8 @@ void *blitter_get_fs_texfetch_depth(struct blitter_context_priv *ctx,
          tgsi_tex = util_pipe_tex_to_tgsi_tex(target, 0);
          *shader =
             util_make_fragment_tex_shader_writedepth(pipe, tgsi_tex,
-                                                     TGSI_INTERPOLATE_LINEAR);
+                                                     TGSI_INTERPOLATE_LINEAR,
+                                                     false, false);
       }
 
       return *shader;
@@ -1028,7 +1030,9 @@ void *blitter_get_fs_texfetch_depthstencil(struct blitter_context_priv *ctx,
          tgsi_tex = util_pipe_tex_to_tgsi_tex(target, 0);
          *shader =
             util_make_fragment_tex_shader_writedepthstencil(pipe, tgsi_tex,
-                                                     TGSI_INTERPOLATE_LINEAR);
+                                                            TGSI_INTERPOLATE_LINEAR,
+                                                            false,
+                                                            false);
       }
 
       return *shader;
@@ -1066,7 +1070,8 @@ void *blitter_get_fs_texfetch_stencil(struct blitter_context_priv *ctx,
          tgsi_tex = util_pipe_tex_to_tgsi_tex(target, 0);
          *shader =
             util_make_fragment_tex_shader_writestencil(pipe, tgsi_tex,
-                                                       TGSI_INTERPOLATE_LINEAR);
+                                                       TGSI_INTERPOLATE_LINEAR,
+                                                       false, false);
       }
 
       return *shader;
