@@ -1862,12 +1862,16 @@ static const SVGA3dSurfaceFormat compat_r8[] = {
 static const SVGA3dSurfaceFormat compat_g8r8[] = {
    SVGA3D_R8G8_UNORM, SVGA3D_NV12, 0
 };
+static const SVGA3dSurfaceFormat compat_r5g6b5[] = {
+   SVGA3D_R5G6B5, SVGA3D_B5G6R5_UNORM, 0
+};
 
 static const struct format_compat_entry format_compats[] = {
    {PIPE_FORMAT_B8G8R8X8_UNORM, compat_x8r8g8b8},
    {PIPE_FORMAT_B8G8R8A8_UNORM, compat_x8r8g8b8},
    {PIPE_FORMAT_R8_UNORM, compat_r8},
-   {PIPE_FORMAT_R8G8_UNORM, compat_g8r8}
+   {PIPE_FORMAT_R8G8_UNORM, compat_g8r8},
+   {PIPE_FORMAT_B5G6R5_UNORM, compat_r5g6b5}
 };
 
 /**
