@@ -1088,6 +1088,18 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
    case __DRI_IMAGE_ATTRIB_NUM_PLANES:
       *value = 1;
       return GL_TRUE;
+   case __DRI_IMAGE_ATTRIB_MODIFIER_UPPER:
+      whandle.type = DRM_API_HANDLE_TYPE_KMS;
+      image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage);
+      *value = (whandle.modifier >> 32) & 0xffffffff;
+      return GL_TRUE;
+   case __DRI_IMAGE_ATTRIB_MODIFIER_LOWER:
+      whandle.type = DRM_API_HANDLE_TYPE_KMS;
+      image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage);
+      *value = whandle.modifier & 0xffffffff;
+      return GL_TRUE;
    default:
       return GL_FALSE;
    }
