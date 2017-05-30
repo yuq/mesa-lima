@@ -180,106 +180,6 @@ struct brw_clip_unit_state
    float viewport_ymax;
 };
 
-struct gen6_blend_state
-{
-   struct {
-      unsigned dest_blend_factor:5;
-      unsigned source_blend_factor:5;
-      unsigned pad3:1;
-      unsigned blend_func:3;
-      unsigned pad2:1;
-      unsigned ia_dest_blend_factor:5;
-      unsigned ia_source_blend_factor:5;
-      unsigned pad1:1;
-      unsigned ia_blend_func:3;
-      unsigned pad0:1;
-      unsigned ia_blend_enable:1;
-      unsigned blend_enable:1;
-   } blend0;
-
-   struct {
-      unsigned post_blend_clamp_enable:1;
-      unsigned pre_blend_clamp_enable:1;
-      unsigned clamp_range:2;
-      unsigned pad0:4;
-      unsigned x_dither_offset:2;
-      unsigned y_dither_offset:2;
-      unsigned dither_enable:1;
-      unsigned alpha_test_func:3;
-      unsigned alpha_test_enable:1;
-      unsigned pad1:1;
-      unsigned logic_op_func:4;
-      unsigned logic_op_enable:1;
-      unsigned pad2:1;
-      unsigned write_disable_b:1;
-      unsigned write_disable_g:1;
-      unsigned write_disable_r:1;
-      unsigned write_disable_a:1;
-      unsigned pad3:1;
-      unsigned alpha_to_coverage_dither:1;
-      unsigned alpha_to_one:1;
-      unsigned alpha_to_coverage:1;
-   } blend1;
-};
-
-struct gen6_color_calc_state
-{
-   struct {
-      unsigned alpha_test_format:1;
-      unsigned pad0:14;
-      unsigned round_disable:1;
-      unsigned bf_stencil_ref:8;
-      unsigned stencil_ref:8;
-   } cc0;
-
-   union {
-      float alpha_ref_f;
-      struct {
-	 unsigned ui:8;
-	 unsigned pad0:24;
-      } alpha_ref_fi;
-   } cc1;
-
-   float constant_r;
-   float constant_g;
-   float constant_b;
-   float constant_a;
-};
-
-struct gen6_depth_stencil_state
-{
-   struct {
-      unsigned pad0:3;
-      unsigned bf_stencil_pass_depth_pass_op:3;
-      unsigned bf_stencil_pass_depth_fail_op:3;
-      unsigned bf_stencil_fail_op:3;
-      unsigned bf_stencil_func:3;
-      unsigned bf_stencil_enable:1;
-      unsigned pad1:2;
-      unsigned stencil_write_enable:1;
-      unsigned stencil_pass_depth_pass_op:3;
-      unsigned stencil_pass_depth_fail_op:3;
-      unsigned stencil_fail_op:3;
-      unsigned stencil_func:3;
-      unsigned stencil_enable:1;
-   } ds0;
-
-   struct {
-      unsigned bf_stencil_write_mask:8;
-      unsigned bf_stencil_test_mask:8;
-      unsigned stencil_write_mask:8;
-      unsigned stencil_test_mask:8;
-   } ds1;
-
-   struct {
-      unsigned pad0:26;
-      unsigned depth_write_enable:1;
-      unsigned depth_test_func:3;
-      unsigned pad1:1;
-      unsigned depth_test_enable:1;
-   } ds2;
-};
-
 struct brw_cc_unit_state
 {
    struct
@@ -431,14 +331,6 @@ struct brw_sf_unit_state
 
 };
 
-struct gen6_scissor_rect
-{
-   unsigned xmin:16;
-   unsigned ymin:16;
-   unsigned xmax:16;
-   unsigned ymax:16;
-};
-
 struct brw_gs_unit_state
 {
    struct thread0 thread0;
@@ -561,73 +453,6 @@ struct gen5_sampler_default_color {
    uint16_t us[4];
    int16_t s[4];
    uint8_t b[4];
-};
-
-struct brw_clipper_viewport
-{
-   float xmin;
-   float xmax;
-   float ymin;
-   float ymax;
-};
-
-struct brw_cc_viewport
-{
-   float min_depth;
-   float max_depth;
-};
-
-struct brw_sf_viewport
-{
-   struct {
-      float m00;
-      float m11;
-      float m22;
-      float m30;
-      float m31;
-      float m32;
-   } viewport;
-
-   /* scissor coordinates are inclusive */
-   struct {
-      int16_t xmin;
-      int16_t ymin;
-      int16_t xmax;
-      int16_t ymax;
-   } scissor;
-};
-
-struct gen6_sf_viewport {
-   float m00;
-   float m11;
-   float m22;
-   float m30;
-   float m31;
-   float m32;
-
-   unsigned pad0[2];
-};
-
-struct gen7_sf_clip_viewport {
-   struct {
-      float m00;
-      float m11;
-      float m22;
-      float m30;
-      float m31;
-      float m32;
-   } viewport;
-
-   unsigned pad0[2];
-
-   struct {
-      float xmin;
-      float xmax;
-      float ymin;
-      float ymax;
-   } guardband;
-
-   float pad1[4];
 };
 
 #endif
