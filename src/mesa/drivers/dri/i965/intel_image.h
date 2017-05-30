@@ -92,6 +92,12 @@ struct __DRIimageRec {
    /** The image was created with EGL_EXT_image_dma_buf_import. */
    bool dma_buf_imported;
 
+   /** Offset of the auxiliary compression surface in the bo. */
+   uint32_t aux_offset;
+
+   /** Pitch of the auxiliary compression surface. */
+   uint32_t aux_pitch;
+
    /**
     * Provided by EGL_EXT_image_dma_buf_import.
     * \{
