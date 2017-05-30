@@ -410,13 +410,8 @@ emit_marker5(struct fd_ringbuffer *ring, int scratch_idx)
 	extern unsigned marker_cnt;
 //XXX	unsigned reg = REG_A5XX_CP_SCRATCH_REG(scratch_idx);
 	unsigned reg = 0x00000b78 + scratch_idx;
-	assert(reg != HW_QUERY_BASE_REG);
-	if (reg == HW_QUERY_BASE_REG)
-		return;
-	OUT_WFI5(ring);
 	OUT_PKT4(ring, reg, 1);
 	OUT_RING(ring, ++marker_cnt);
-	OUT_WFI5(ring);
 }
 
 /* helper to get numeric value from environment variable..  mostly
