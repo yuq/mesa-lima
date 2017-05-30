@@ -716,31 +716,17 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
  * surface elements.
  */
 static uint32_t
-isl_calc_array_pitch_el_rows(const struct isl_device *dev,
-                             const struct isl_surf_init_info *restrict info,
-                             const struct isl_tile_info *tile_info,
-                             enum isl_dim_layout dim_layout,
-                             enum isl_array_pitch_span array_pitch_span,
-                             const struct isl_extent3d *image_align_sa,
-                             const struct isl_extent4d *phys_level0_sa,
-                             const struct isl_extent2d *phys_slice0_sa)
+isl_calc_array_pitch_el_rows_gen4_2d(
+      const struct isl_device *dev,
+      const struct isl_surf_init_info *restrict info,
+      const struct isl_tile_info *tile_info,
+      const struct isl_extent3d *image_align_sa,
+      const struct isl_extent4d *phys_level0_sa,
+      enum isl_array_pitch_span array_pitch_span,
+      const struct isl_extent2d *phys_slice0_sa)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
    uint32_t pitch_sa_rows = 0;
-
-   switch (dim_layout) {
-   case ISL_DIM_LAYOUT_GEN4_2D:
-      break; /* Handled below */
-   case ISL_DIM_LAYOUT_GEN9_1D:
-      /* Each row is an array slice */
-      return 1;
-   case ISL_DIM_LAYOUT_GEN4_3D:
-      assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
-      return isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
-   default:
-      unreachable("bad isl_dim_layout");
-      break;
-   }
 
    switch (array_pitch_span) {
    case ISL_ARRAY_PITCH_SPAN_COMPACT:
@@ -903,23 +889,55 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
    };
 }
 
+static void
+isl_calc_phys_total_extent_el_gen4_2d(
+      const struct isl_device *dev,
+      const struct isl_surf_init_info *restrict info,
+      const struct isl_tile_info *tile_info,
+      enum isl_msaa_layout msaa_layout,
+      const struct isl_extent3d *image_align_sa,
+      const struct isl_extent4d *phys_level0_sa,
+      enum isl_array_pitch_span array_pitch_span,
+      uint32_t *array_pitch_el_rows,
+      struct isl_extent2d *total_extent_el)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+
+   struct isl_extent2d phys_slice0_sa;
+   isl_calc_phys_slice0_extent_sa_gen4_2d(dev, info, msaa_layout,
+                                          image_align_sa, phys_level0_sa,
+                                          &phys_slice0_sa);
+   *array_pitch_el_rows =
+      isl_calc_array_pitch_el_rows_gen4_2d(dev, info, tile_info,
+                                           image_align_sa, phys_level0_sa,
+                                           array_pitch_span,
+                                           &phys_slice0_sa);
+   *total_extent_el = (struct isl_extent2d) {
+      .w = isl_assert_div(phys_slice0_sa.w, fmtl->bw),
+      .h = *array_pitch_el_rows * phys_level0_sa->array_len,
+   };
+}
+
 /**
  * A variant of isl_calc_phys_slice0_extent_sa() specific to
  * ISL_DIM_LAYOUT_GEN4_3D.
  */
 static void
-isl_calc_phys_slice0_extent_sa_gen4_3d(
+isl_calc_phys_total_extent_el_gen4_3d(
       const struct isl_device *dev,
       const struct isl_surf_init_info *restrict info,
       const struct isl_extent3d *image_align_sa,
       const struct isl_extent4d *phys_level0_sa,
-      struct isl_extent2d *phys_slice0_sa)
+      uint32_t *array_pitch_el_rows,
+      struct isl_extent2d *phys_total_el)
 {
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+
    assert(info->samples == 1);
    assert(phys_level0_sa->array_len == 1);
 
-   uint32_t slice_w = 0;
-   uint32_t slice_h = 0;
+   uint32_t total_w = 0;
+   uint32_t total_h = 0;
 
    uint32_t W0 = phys_level0_sa->w;
    uint32_t H0 = phys_level0_sa->h;
@@ -933,13 +951,19 @@ isl_calc_phys_slice0_extent_sa_gen4_3d(
       uint32_t max_layers_horiz = MIN(level_d, 1u << l);
       uint32_t max_layers_vert = isl_align(level_d, 1u << l) / (1u << l);
 
-      slice_w = MAX(slice_w, level_w * max_layers_horiz);
-      slice_h += level_h * max_layers_vert;
+      total_w = MAX(total_w, level_w * max_layers_horiz);
+      total_h += level_h * max_layers_vert;
    }
 
-   *phys_slice0_sa = (struct isl_extent2d) {
-      .w = slice_w,
-      .h = slice_h,
+   /* GEN4_3D layouts don't really have an array pitch since each LOD has a
+    * different number of horizontal and vertical layers.  We have to set it
+    * to something, so at least make it true for LOD0.
+    */
+   *array_pitch_el_rows =
+      isl_align_npot(phys_level0_sa->h, image_align_sa->h) / fmtl->bw;
+   *phys_total_el = (struct isl_extent2d) {
+      .w = isl_assert_div(total_w, fmtl->bw),
+      .h = isl_assert_div(total_h, fmtl->bh),
    };
 }
 
@@ -948,12 +972,13 @@ isl_calc_phys_slice0_extent_sa_gen4_3d(
  * ISL_DIM_LAYOUT_GEN9_1D.
  */
 static void
-isl_calc_phys_slice0_extent_sa_gen9_1d(
+isl_calc_phys_total_extent_el_gen9_1d(
       const struct isl_device *dev,
       const struct isl_surf_init_info *restrict info,
       const struct isl_extent3d *image_align_sa,
       const struct isl_extent4d *phys_level0_sa,
-      struct isl_extent2d *phys_slice0_sa)
+      uint32_t *array_pitch_el_rows,
+      struct isl_extent2d *phys_total_el)
 {
    MAYBE_UNUSED const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
 
@@ -972,37 +997,50 @@ isl_calc_phys_slice0_extent_sa_gen9_1d(
       slice_w += w;
    }
 
-   *phys_slice0_sa = isl_extent2d(slice_w, 1);
+   *array_pitch_el_rows = 1;
+   *phys_total_el = (struct isl_extent2d) {
+      .w = isl_assert_div(slice_w, fmtl->bw),
+      .h = phys_level0_sa->array_len,
+   };
 }
 
 /**
- * Calculate the physical extent of the surface's first array slice, in units
- * of surface samples. If the surface is multi-leveled, then the result will
- * be aligned to \a image_align_sa.
+ * Calculate the two-dimensional total physical extent of the surface, in
+ * units of surface elements.
  */
 static void
-isl_calc_phys_slice0_extent_sa(const struct isl_device *dev,
-                               const struct isl_surf_init_info *restrict info,
-                               enum isl_dim_layout dim_layout,
-                               enum isl_msaa_layout msaa_layout,
-                               const struct isl_extent3d *image_align_sa,
-                               const struct isl_extent4d *phys_level0_sa,
-                               struct isl_extent2d *phys_slice0_sa)
+isl_calc_phys_total_extent_el(const struct isl_device *dev,
+                              const struct isl_surf_init_info *restrict info,
+                              const struct isl_tile_info *tile_info,
+                              enum isl_dim_layout dim_layout,
+                              enum isl_msaa_layout msaa_layout,
+                              const struct isl_extent3d *image_align_sa,
+                              const struct isl_extent4d *phys_level0_sa,
+                              enum isl_array_pitch_span array_pitch_span,
+                              uint32_t *array_pitch_el_rows,
+                              struct isl_extent2d *total_extent_el)
 {
    switch (dim_layout) {
    case ISL_DIM_LAYOUT_GEN9_1D:
-      isl_calc_phys_slice0_extent_sa_gen9_1d(dev, info,
-                                             image_align_sa, phys_level0_sa,
-                                             phys_slice0_sa);
+      assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
+      isl_calc_phys_total_extent_el_gen9_1d(dev, info,
+                                            image_align_sa, phys_level0_sa,
+                                            array_pitch_el_rows,
+                                            total_extent_el);
       return;
    case ISL_DIM_LAYOUT_GEN4_2D:
-      isl_calc_phys_slice0_extent_sa_gen4_2d(dev, info, msaa_layout,
-                                             image_align_sa, phys_level0_sa,
-                                             phys_slice0_sa);
+      isl_calc_phys_total_extent_el_gen4_2d(dev, info, tile_info, msaa_layout,
+                                            image_align_sa, phys_level0_sa,
+                                            array_pitch_span,
+                                            array_pitch_el_rows,
+                                            total_extent_el);
       return;
    case ISL_DIM_LAYOUT_GEN4_3D:
-      isl_calc_phys_slice0_extent_sa_gen4_3d(dev, info, image_align_sa,
-                                             phys_level0_sa, phys_slice0_sa);
+      assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
+      isl_calc_phys_total_extent_el_gen4_3d(dev, info,
+                                            image_align_sa, phys_level0_sa,
+                                            array_pitch_el_rows,
+                                            total_extent_el);
       return;
    }
 }
@@ -1324,22 +1362,13 @@ isl_surf_init_s(const struct isl_device *dev,
    enum isl_array_pitch_span array_pitch_span =
       isl_choose_array_pitch_span(dev, info, dim_layout, &phys_level0_sa);
 
-   struct isl_extent2d phys_slice0_sa;
-   isl_calc_phys_slice0_extent_sa(dev, info, dim_layout, msaa_layout,
-                                  &image_align_sa, &phys_level0_sa,
-                                  &phys_slice0_sa);
-   assert(phys_slice0_sa.w % fmtl->bw == 0);
-   assert(phys_slice0_sa.h % fmtl->bh == 0);
-
-   const uint32_t array_pitch_el_rows =
-      isl_calc_array_pitch_el_rows(dev, info, &tile_info, dim_layout,
-                                   array_pitch_span, &image_align_sa,
-                                   &phys_level0_sa, &phys_slice0_sa);
-
-   struct isl_extent2d phys_total_el = {
-      .w = isl_assert_div(phys_slice0_sa.w, fmtl->bw),
-      .h = phys_level0_sa.array_len * array_pitch_el_rows,
-   };
+   uint32_t array_pitch_el_rows;
+   struct isl_extent2d phys_total_el;
+   isl_calc_phys_total_extent_el(dev, info, &tile_info,
+                                 dim_layout, msaa_layout,
+                                 &image_align_sa, &phys_level0_sa,
+                                 array_pitch_span, &array_pitch_el_rows,
+                                 &phys_total_el);
 
    uint32_t padded_h_el = phys_total_el.h;
    uint32_t pad_bytes;
