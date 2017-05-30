@@ -4249,7 +4249,7 @@ genX(emit_sampler_state_pointers_xs)(struct brw_context *brw,
 #endif
 }
 
-static bool
+UNUSED static bool
 has_component(mesa_format format, int i)
 {
    if (_mesa_is_format_color_format(format))
@@ -4263,11 +4263,11 @@ has_component(mesa_format format, int i)
  * Upload SAMPLER_BORDER_COLOR_STATE.
  */
 static void
-upload_default_color(struct brw_context *brw,
-                     const struct gl_sampler_object *sampler,
-                     mesa_format format, GLenum base_format,
-                     bool is_integer_format, bool is_stencil_sampling,
-                     uint32_t *sdc_offset)
+genX(upload_default_color)(struct brw_context *brw,
+                           const struct gl_sampler_object *sampler,
+                           mesa_format format, GLenum base_format,
+                           bool is_integer_format, bool is_stencil_sampling,
+                           uint32_t *sdc_offset)
 {
    union gl_color_union color;
 
@@ -4321,27 +4321,49 @@ upload_default_color(struct brw_context *brw,
    if (base_format == GL_RGB)
       color.ui[3] = float_as_int(1.0);
 
+   int alignment = 32;
    if (brw->gen >= 8) {
-      /* On Broadwell, the border color is represented as four 32-bit floats,
-       * integers, or unsigned values, interpreted according to the surface
-       * format.  This matches the sampler->BorderColor union exactly; just
-       * memcpy the values.
-       */
-      uint32_t *sdc = brw_state_batch(brw, 4 * 4, 64, sdc_offset);
-      memcpy(sdc, color.ui, 4 * 4);
+      alignment = 64;
    } else if (brw->is_haswell && (is_integer_format || is_stencil_sampling)) {
-      /* Haswell's integer border color support is completely insane:
-       * SAMPLER_BORDER_COLOR_STATE is 20 DWords.  The first four are
-       * for float colors.  The next 12 DWords are MBZ and only exist to
-       * pad it out to a 64 byte cacheline boundary.  DWords 16-19 then
-       * contain integer colors; these are only used if SURFACE_STATE
-       * has the "Integer Surface Format" bit set.  Even then, the
-       * arrangement of the RGBA data devolves into madness.
-       */
-      uint32_t *sdc = brw_state_batch(brw, 20 * 4, 512, sdc_offset);
-      memset(sdc, 0, 20 * 4);
-      sdc = &sdc[16];
+      alignment = 512;
+   }
 
+   uint32_t *sdc = brw_state_batch(
+      brw, GENX(SAMPLER_BORDER_COLOR_STATE_length) * sizeof(uint32_t),
+      alignment, sdc_offset);
+
+   struct GENX(SAMPLER_BORDER_COLOR_STATE) state = { 0 };
+
+#define ASSIGN(dst, src) \
+   do {                  \
+      dst = src;         \
+   } while (0)
+
+#define ASSIGNu16(dst, src) \
+   do {                     \
+      dst = (uint16_t)src;  \
+   } while (0)
+
+#define ASSIGNu8(dst, src) \
+   do {                    \
+      dst = (uint8_t)src;  \
+   } while (0)
+
+#define BORDER_COLOR_ATTR(macro, _color_type, src)              \
+   macro(state.BorderColor ## _color_type ## Red, src[0]);   \
+   macro(state.BorderColor ## _color_type ## Green, src[1]);   \
+   macro(state.BorderColor ## _color_type ## Blue, src[2]);   \
+   macro(state.BorderColor ## _color_type ## Alpha, src[3]);
+
+#if GEN_GEN >= 8
+   /* On Broadwell, the border color is represented as four 32-bit floats,
+    * integers, or unsigned values, interpreted according to the surface
+    * format.  This matches the sampler->BorderColor union exactly; just
+    * memcpy the values.
+    */
+   BORDER_COLOR_ATTR(ASSIGN, 32bit, color.ui);
+#elif GEN_IS_HASWELL
+   if (is_integer_format || is_stencil_sampling) {
       bool stencil = format == MESA_FORMAT_S_UINT8 || is_stencil_sampling;
       const int bits_per_channel =
          _mesa_get_format_bits(format, stencil ? GL_STENCIL_BITS : GL_RED_BITS);
@@ -4361,76 +4383,61 @@ upload_default_color(struct brw_context *brw,
       switch (bits_per_channel) {
       case 8:
          /* Copy RGBA in order. */
-         for (int i = 0; i < 4; i++)
-            ((uint8_t *) sdc)[i] = c[i];
+         BORDER_COLOR_ATTR(ASSIGNu8, 8bit, c);
          break;
       case 10:
          /* R10G10B10A2_UINT is treated like a 16-bit format. */
       case 16:
-         ((uint16_t *) sdc)[0] = c[0]; /* R -> DWord 0, bits 15:0  */
-         ((uint16_t *) sdc)[1] = c[1]; /* G -> DWord 0, bits 31:16 */
-         /* DWord 1 is Reserved/MBZ! */
-         ((uint16_t *) sdc)[4] = c[2]; /* B -> DWord 2, bits 15:0  */
-         ((uint16_t *) sdc)[5] = c[3]; /* A -> DWord 3, bits 31:16 */
+         BORDER_COLOR_ATTR(ASSIGNu16, 16bit, c);
          break;
       case 32:
          if (base_format == GL_RG) {
             /* Careful inspection of the tables reveals that for RG32 formats,
              * the green channel needs to go where blue normally belongs.
              */
-            sdc[0] = c[0];
-            sdc[2] = c[1];
-            sdc[3] = 1;
+            state.BorderColor32bitRed = c[0];
+            state.BorderColor32bitBlue = c[1];
+            state.BorderColor32bitAlpha = 1;
          } else {
             /* Copy RGBA in order. */
-            for (int i = 0; i < 4; i++)
-               sdc[i] = c[i];
+            BORDER_COLOR_ATTR(ASSIGN, 32bit, c);
          }
          break;
       default:
          assert(!"Invalid number of bits per channel in integer format.");
          break;
       }
-   } else if (brw->gen == 5 || brw->gen == 6) {
-      struct gen5_sampler_default_color *sdc;
-
-      sdc = brw_state_batch(brw, sizeof(*sdc), 32, sdc_offset);
-
-      memset(sdc, 0, sizeof(*sdc));
-
-      UNCLAMPED_FLOAT_TO_UBYTE(sdc->ub[0], color.f[0]);
-      UNCLAMPED_FLOAT_TO_UBYTE(sdc->ub[1], color.f[1]);
-      UNCLAMPED_FLOAT_TO_UBYTE(sdc->ub[2], color.f[2]);
-      UNCLAMPED_FLOAT_TO_UBYTE(sdc->ub[3], color.f[3]);
-
-      UNCLAMPED_FLOAT_TO_USHORT(sdc->us[0], color.f[0]);
-      UNCLAMPED_FLOAT_TO_USHORT(sdc->us[1], color.f[1]);
-      UNCLAMPED_FLOAT_TO_USHORT(sdc->us[2], color.f[2]);
-      UNCLAMPED_FLOAT_TO_USHORT(sdc->us[3], color.f[3]);
-
-      UNCLAMPED_FLOAT_TO_SHORT(sdc->s[0], color.f[0]);
-      UNCLAMPED_FLOAT_TO_SHORT(sdc->s[1], color.f[1]);
-      UNCLAMPED_FLOAT_TO_SHORT(sdc->s[2], color.f[2]);
-      UNCLAMPED_FLOAT_TO_SHORT(sdc->s[3], color.f[3]);
-
-      sdc->hf[0] = _mesa_float_to_half(color.f[0]);
-      sdc->hf[1] = _mesa_float_to_half(color.f[1]);
-      sdc->hf[2] = _mesa_float_to_half(color.f[2]);
-      sdc->hf[3] = _mesa_float_to_half(color.f[3]);
-
-      sdc->b[0] = sdc->s[0] >> 8;
-      sdc->b[1] = sdc->s[1] >> 8;
-      sdc->b[2] = sdc->s[2] >> 8;
-      sdc->b[3] = sdc->s[3] >> 8;
-
-      sdc->f[0] = color.f[0];
-      sdc->f[1] = color.f[1];
-      sdc->f[2] = color.f[2];
-      sdc->f[3] = color.f[3];
    } else {
-      float *sdc = brw_state_batch(brw, 4 * 4, 32, sdc_offset);
-      memcpy(sdc, color.f, 4 * 4);
+      BORDER_COLOR_ATTR(ASSIGN, Float, color.f);
    }
+#elif GEN_GEN == 5 || GEN_GEN == 6
+   BORDER_COLOR_ATTR(UNCLAMPED_FLOAT_TO_UBYTE, Unorm, color.f);
+   BORDER_COLOR_ATTR(UNCLAMPED_FLOAT_TO_USHORT, Unorm16, color.f);
+   BORDER_COLOR_ATTR(UNCLAMPED_FLOAT_TO_SHORT, Snorm16, color.f);
+
+#define MESA_FLOAT_TO_HALF(dst, src) \
+   dst = _mesa_float_to_half(src);
+
+   BORDER_COLOR_ATTR(MESA_FLOAT_TO_HALF, Float16, color.f);
+
+#undef MESA_FLOAT_TO_HALF
+
+   state.BorderColorSnorm8Red   = state.BorderColorSnorm16Red >> 8;
+   state.BorderColorSnorm8Green = state.BorderColorSnorm16Green >> 8;
+   state.BorderColorSnorm8Blue  = state.BorderColorSnorm16Blue >> 8;
+   state.BorderColorSnorm8Alpha = state.BorderColorSnorm16Alpha >> 8;
+
+   BORDER_COLOR_ATTR(ASSIGN, Float, color.f);
+#elif GEN_GEN == 4
+   BORDER_COLOR_ATTR(ASSIGN, , color.f);
+#else
+   BORDER_COLOR_ATTR(ASSIGN, Float, color.f);
+#endif
+
+#undef ASSIGN
+#undef BORDER_COLOR_ATTR
+
+   GENX(SAMPLER_BORDER_COLOR_STATE_pack)(brw, sdc, &state);
 }
 
 static uint32_t
@@ -4639,9 +4646,10 @@ genX(update_sampler_state)(struct brw_context *brw,
    if (wrap_mode_needs_border_color(wrap_s) ||
        wrap_mode_needs_border_color(wrap_t) ||
        wrap_mode_needs_border_color(wrap_r)) {
-      upload_default_color(brw, sampler, format, base_format,
-                           texObj->_IsIntegerFormat, texObj->StencilSampling,
-                           &border_color_offset);
+      genX(upload_default_color)(brw, sampler, format, base_format,
+                                 texObj->_IsIntegerFormat,
+                                 texObj->StencilSampling,
+                                 &border_color_offset);
    }
 
    samp_st.BorderColorPointer = border_color_offset;
