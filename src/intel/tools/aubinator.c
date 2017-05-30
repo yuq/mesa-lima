@@ -95,23 +95,6 @@ valid_offset(uint32_t offset)
    return offset < gtt_end;
 }
 
-/**
- * Set group variable size for groups with count="0".
- *
- * By default the group size is fixed and not needed because the struct
- * describing a group knows the number of elements. However, for groups with
- * count="0" we have a variable number of elements, and the struct describing
- * the group only includes one of them. So we calculate the remaining size of
- * the group based on the size we get here, and the offset after the last
- * element added to the group.
- */
-static void
-group_set_size(struct gen_group *strct, uint32_t size)
-{
-   if (strct->variable && strct->elem_size)
-      strct->group_size = size - (strct->variable_offset / 32);
-}
-
 static void
 decode_group(struct gen_group *strct, const uint32_t *p, int starting_dword)
 {
@@ -740,7 +723,6 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
               gen_group_get_name(inst), reset_color);
 
       if (option_full_decode) {
-         group_set_size(inst, length);
          decode_group(inst, p, 0);
 
          for (i = 0; i < ARRAY_LENGTH(custom_handlers); i++) {
