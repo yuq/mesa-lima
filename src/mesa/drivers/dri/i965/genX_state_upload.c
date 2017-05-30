@@ -2435,6 +2435,20 @@ static const struct brw_tracked_state genX(gs_state) = {
 
 /* ---------------------------------------------------------------------- */
 
+UNUSED static GLenum
+fix_dual_blend_alpha_to_one(GLenum function)
+{
+   switch (function) {
+   case GL_SRC1_ALPHA:
+      return GL_ONE;
+
+   case GL_ONE_MINUS_SRC1_ALPHA:
+      return GL_ZERO;
+   }
+
+   return function;
+}
+
 #define blend_factor(x) brw_translate_blend_factor(x)
 #define blend_eqn(x) brw_translate_blend_equation(x)
 
@@ -2562,6 +2576,19 @@ genX(upload_blend_state)(struct brw_context *brw)
                dstA = brw_fix_xRGB_alpha(dstA);
             }
 
+            /* From the BLEND_STATE docs, DWord 0, Bit 29 (AlphaToOne Enable):
+             * "If Dual Source Blending is enabled, this bit must be disabled."
+             *
+             * We override SRC1_ALPHA to ONE and ONE_MINUS_SRC1_ALPHA to ZERO,
+             * and leave it enabled anyway.
+             */
+            if (ctx->Color.Blend[i]._UsesDualSrc && blend.AlphaToOneEnable) {
+               srcRGB = fix_dual_blend_alpha_to_one(srcRGB);
+               srcA = fix_dual_blend_alpha_to_one(srcA);
+               dstRGB = fix_dual_blend_alpha_to_one(dstRGB);
+               dstA = fix_dual_blend_alpha_to_one(dstA);
+            }
+
             entry.ColorBufferBlendEnable = true;
             entry.DestinationBlendFactor = blend_factor(dstRGB);
             entry.SourceBlendFactor = blend_factor(srcRGB);
@@ -2600,16 +2627,6 @@ genX(upload_blend_state)(struct brw_context *brw)
          entry.WriteDisableBlue  = !ctx->Color.ColorMask[i][2];
          entry.WriteDisableAlpha = !ctx->Color.ColorMask[i][3];
 
-         /* From the BLEND_STATE docs, DWord 0, Bit 29 (AlphaToOne Enable):
-          * "If Dual Source Blending is enabled, this bit must be disabled."
-          */
-         WARN_ONCE(ctx->Color.Blend[i]._UsesDualSrc &&
-                   _mesa_is_multisample_enabled(ctx) &&
-                   ctx->Multisample.SampleAlphaToOne,
-                   "HW workaround: disabling alpha to one with dual src "
-                   "blending\n");
-         if (ctx->Color.Blend[i]._UsesDualSrc)
-            blend.AlphaToOneEnable = false;
 #if GEN_GEN >= 8
          GENX(BLEND_STATE_ENTRY_pack)(NULL, &blend_map[1 + i * 2], &entry);
 #else
@@ -4015,11 +4032,15 @@ genX(upload_ps_blend)(struct brw_context *brw)
       /* BRW_NEW_FRAGMENT_PROGRAM | _NEW_BUFFERS | _NEW_COLOR */
       pb.HasWriteableRT = brw_color_buffer_write_enabled(brw);
 
+      bool alpha_to_one = false;
+
       if (!buffer0_is_integer) {
          /* _NEW_MULTISAMPLE */
-         pb.AlphaToCoverageEnable =
-            _mesa_is_multisample_enabled(ctx) &&
-            ctx->Multisample.SampleAlphaToCoverage;
+
+         if (_mesa_is_multisample_enabled(ctx)) {
+            pb.AlphaToCoverageEnable = ctx->Multisample.SampleAlphaToCoverage;
+            alpha_to_one = ctx->Multisample.SampleAlphaToOne;
+         }
 
          pb.AlphaTestEnable = color->AlphaEnabled;
       }
@@ -4062,6 +4083,16 @@ genX(upload_ps_blend)(struct brw_context *brw)
             srcA = brw_fix_xRGB_alpha(srcA);
             dstRGB = brw_fix_xRGB_alpha(dstRGB);
             dstA = brw_fix_xRGB_alpha(dstA);
+         }
+
+         /* Alpha to One doesn't work with Dual Color Blending.  Override
+          * SRC1_ALPHA to ONE and ONE_MINUS_SRC1_ALPHA to ZERO.
+          */
+         if (alpha_to_one && color->Blend[0]._UsesDualSrc) {
+            srcRGB = fix_dual_blend_alpha_to_one(srcRGB);
+            srcA = fix_dual_blend_alpha_to_one(srcA);
+            dstRGB = fix_dual_blend_alpha_to_one(dstRGB);
+            dstA = fix_dual_blend_alpha_to_one(dstA);
          }
 
          pb.ColorBufferBlendEnable = true;
