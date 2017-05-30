@@ -694,7 +694,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
 bool
 intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
                                          struct intel_renderbuffer *irb,
-                                         struct brw_bo *bo,
+                                         struct intel_mipmap_tree *singlesample_mt,
                                          uint32_t width, uint32_t height,
                                          uint32_t pitch);
 
