@@ -1112,7 +1112,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
  * that will contain the actual rendering (which is lazily resolved to
  * irb->singlesample_mt).
  */
-void
+bool
 intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
                                          struct intel_renderbuffer *irb,
                                          struct brw_bo *bo,
@@ -1168,12 +1168,12 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
          irb->mt = multisample_mt;
       }
    }
-   return;
+   return true;
 
 fail:
    intel_miptree_release(&irb->singlesample_mt);
    intel_miptree_release(&irb->mt);
-   return;
+   return false;
 }
 
 struct intel_mipmap_tree*
