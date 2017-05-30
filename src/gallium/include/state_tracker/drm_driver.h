@@ -45,6 +45,12 @@ struct winsys_handle
     * Output for texture_get_handle.
     */
    unsigned offset;
+
+   /**
+    * Input to resource_from_handle.
+    * Output from resource_get_handle.
+    */
+   uint64_t modifier;
 };
 
 

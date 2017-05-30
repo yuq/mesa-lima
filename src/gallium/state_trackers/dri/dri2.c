@@ -52,6 +52,10 @@
 #include "dri_query_renderer.h"
 #include "dri2_buffer.h"
 
+#ifndef DRM_FORMAT_MOD_INVALID
+#define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
+#endif
+
 static int convert_fourcc(int format, int *dri_components_p)
 {
    int dri_components;
@@ -869,6 +873,7 @@ dri2_create_image_from_name(__DRIscreen *_screen,
    memset(&whandle, 0, sizeof(whandle));
    whandle.type = DRM_API_HANDLE_TYPE_SHARED;
    whandle.handle = name;
+   whandle.modifier = DRM_FORMAT_MOD_INVALID;
 
    pf = dri2_format_to_pipe_format (format);
    if (pf == PIPE_FORMAT_NONE)
@@ -929,6 +934,7 @@ dri2_create_image_from_fd(__DRIscreen *_screen,
       whandles[i].handle = (unsigned)fds[i];
       whandles[i].stride = (unsigned)strides[i];
       whandles[i].offset = (unsigned)offsets[i];
+      whandles[i].modifier = DRM_FORMAT_MOD_INVALID;
    }
 
    if (fourcc == __DRI_IMAGE_FOURCC_YVU420) {
@@ -1143,6 +1149,7 @@ dri2_from_names(__DRIscreen *screen, int width, int height, int format,
    whandle.handle = names[0];
    whandle.stride = strides[0];
    whandle.offset = offsets[0];
+   whandle.modifier = DRM_FORMAT_MOD_INVALID;
 
    img = dri2_create_image_from_winsys(screen, width, height, format,
                                        1, &whandle, loaderPrivate);
