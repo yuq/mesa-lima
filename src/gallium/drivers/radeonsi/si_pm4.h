@@ -54,8 +54,6 @@ struct si_pm4_state
 	struct r600_resource	*bo[SI_PM4_MAX_BO];
 	enum radeon_bo_usage	bo_usage[SI_PM4_MAX_BO];
 	enum radeon_bo_priority	bo_priority[SI_PM4_MAX_BO];
-
-	bool compute_pkt;
 };
 
 void si_pm4_cmd_begin(struct si_pm4_state *state, unsigned opcode);
