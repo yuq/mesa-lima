@@ -243,8 +243,8 @@ brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
       return ISL_FORMAT_R16_UNORM;
    default: {
       if (is_render_target) {
-         assert(brw->format_supported_as_render_target[format]);
-         return brw->render_target_format[format];
+         assert(brw->mesa_format_supports_render[format]);
+         return brw->mesa_to_isl_render_format[format];
       } else {
          return brw_isl_format_for_mesa_format(format);
       }
@@ -607,7 +607,7 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
        _mesa_get_format_base_format(dst_mt->format) == GL_DEPTH_STENCIL)
       return false;
 
-   if (!brw->format_supported_as_render_target[dst_image->TexFormat])
+   if (!brw->mesa_format_supports_render[dst_image->TexFormat])
       return false;
 
    /* Source clipping shouldn't be necessary, since copytexsubimage (in
@@ -845,7 +845,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_fast_clear(&batch, &surf,
-                       brw->render_target_format[format],
+                       brw->mesa_to_isl_render_format[format],
                        level, logical_layer, num_layers,
                        x0, y0, x1, y1);
       blorp_batch_finish(&batch);
@@ -877,7 +877,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_clear(&batch, &surf,
-                  brw->render_target_format[format],
+                  brw->mesa_to_isl_render_format[format],
                   ISL_SWIZZLE_IDENTITY,
                   level, irb_logical_mt_layer(irb), num_layers,
                   x0, y0, x1, y1,

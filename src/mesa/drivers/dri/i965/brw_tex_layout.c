@@ -587,7 +587,7 @@ brw_miptree_choose_tiling(struct brw_context *brw,
     * alignment of 4 as often as we can, this shouldn't happen very often.
     */
    if (brw->gen == 7 && mt->valign == 2 &&
-       brw->format_supported_as_render_target[mt->format]) {
+       brw->mesa_format_supports_render[mt->format]) {
       return I915_TILING_X;
    }
 

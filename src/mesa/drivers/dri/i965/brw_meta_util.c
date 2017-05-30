@@ -289,7 +289,7 @@ brw_is_color_fast_clear_compatible(struct brw_context *brw,
     */
    if (brw->gen >= 9 &&
        brw_isl_format_for_mesa_format(mt->format) !=
-       brw->render_target_format[mt->format])
+       brw->mesa_to_isl_render_format[mt->format])
       return false;
 
    /* Gen9 doesn't support fast clear on single-sampled SRGB buffers. When

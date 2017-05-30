@@ -1170,8 +1170,8 @@ struct brw_context
    const struct brw_tracked_state render_atoms[76];
    const struct brw_tracked_state compute_atoms[11];
 
-   enum isl_format render_target_format[MESA_FORMAT_COUNT];
-   bool format_supported_as_render_target[MESA_FORMAT_COUNT];
+   enum isl_format mesa_to_isl_render_format[MESA_FORMAT_COUNT];
+   bool mesa_format_supports_render[MESA_FORMAT_COUNT];
 
    /* PrimitiveRestart */
    struct {

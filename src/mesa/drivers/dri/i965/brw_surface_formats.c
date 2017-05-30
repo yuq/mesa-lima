@@ -301,21 +301,21 @@ brw_init_surface_formats(struct brw_context *brw)
        */
       if (isl_format_supports_rendering(devinfo, render) &&
           (isl_format_supports_alpha_blending(devinfo, render) || is_integer)) {
-	 brw->render_target_format[format] = render;
-	 brw->format_supported_as_render_target[format] = true;
+	 brw->mesa_to_isl_render_format[format] = render;
+	 brw->mesa_format_supports_render[format] = true;
       }
    }
 
    /* We will check this table for FBO completeness, but the surface format
     * table above only covered color rendering.
     */
-   brw->format_supported_as_render_target[MESA_FORMAT_Z24_UNORM_S8_UINT] = true;
-   brw->format_supported_as_render_target[MESA_FORMAT_Z24_UNORM_X8_UINT] = true;
-   brw->format_supported_as_render_target[MESA_FORMAT_S_UINT8] = true;
-   brw->format_supported_as_render_target[MESA_FORMAT_Z_FLOAT32] = true;
-   brw->format_supported_as_render_target[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
+   brw->mesa_format_supports_render[MESA_FORMAT_Z24_UNORM_S8_UINT] = true;
+   brw->mesa_format_supports_render[MESA_FORMAT_Z24_UNORM_X8_UINT] = true;
+   brw->mesa_format_supports_render[MESA_FORMAT_S_UINT8] = true;
+   brw->mesa_format_supports_render[MESA_FORMAT_Z_FLOAT32] = true;
+   brw->mesa_format_supports_render[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
    if (brw->gen >= 8)
-      brw->format_supported_as_render_target[MESA_FORMAT_Z_UNORM16] = true;
+      brw->mesa_format_supports_render[MESA_FORMAT_Z_UNORM16] = true;
 
    /* We remap depth formats to a supported texturing format in
     * translate_tex_format().
@@ -367,7 +367,7 @@ brw_init_surface_formats(struct brw_context *brw)
 
       for (int i = 0; i < ARRAY_SIZE(rgbx_formats); i++) {
          ctx->TextureFormatSupported[rgbx_formats[i]] = false;
-         brw->format_supported_as_render_target[rgbx_formats[i]] = false;
+         brw->mesa_format_supports_render[rgbx_formats[i]] = false;
       }
    }
 
@@ -424,7 +424,7 @@ brw_render_target_supported(struct brw_context *brw,
          return false;
    }
 
-   return brw->format_supported_as_render_target[format];
+   return brw->mesa_format_supports_render[format];
 }
 
 enum isl_format

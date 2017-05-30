@@ -325,7 +325,7 @@ intel_set_texture_storage_for_buffer_object(struct gl_context *ctx,
          return false;
       }
 
-      if (!brw->format_supported_as_render_target[image->TexFormat]) {
+      if (!brw->mesa_format_supports_render[image->TexFormat]) {
          perf_debug("Non-renderable PBO format; fallback to CPU mapping\n");
          return false;
       }

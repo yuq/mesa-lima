@@ -204,7 +204,7 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
    /* There's no point in using an MCS buffer if the surface isn't in a
     * renderable format.
     */
-   if (!brw->format_supported_as_render_target[mt->format])
+   if (!brw->mesa_format_supports_render[mt->format])
       return false;
 
    if (brw->gen >= 9) {
@@ -3709,7 +3709,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
       break;
    default:
       surf->usage = ISL_SURF_USAGE_TEXTURE_BIT;
-      if (brw->format_supported_as_render_target[mt->format])
+      if (brw->mesa_format_supports_render[mt->format])
          surf->usage = ISL_SURF_USAGE_RENDER_TARGET_BIT;
       break;
    }
