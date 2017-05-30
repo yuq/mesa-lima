@@ -2125,7 +2125,7 @@ tc_destroy(struct pipe_context *_pipe)
 
    slab_destroy_child(&tc->pool_transfers);
    pipe->destroy(pipe);
-   FREE(tc);
+   os_free_aligned(tc);
 }
 
 static const tc_execute execute_func[TC_NUM_CALLS] = {
@@ -2165,11 +2165,18 @@ threaded_context_create(struct pipe_context *pipe,
    if (!debug_get_bool_option("GALLIUM_THREAD", util_cpu_caps.nr_cpus > 1))
       return pipe;
 
-   tc = CALLOC_STRUCT(threaded_context);
+   tc = os_malloc_aligned(sizeof(struct threaded_context), 16);
    if (!tc) {
       pipe->destroy(pipe);
       return NULL;
    }
+   memset(tc, 0, sizeof(*tc));
+
+   assert((uintptr_t)tc % 16 == 0);
+   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[0]) % 16 == 0);
+   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[0].call[0]) % 16 == 0);
+   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[0].call[1]) % 16 == 0);
+   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[1].call[0]) % 16 == 0);
 
    /* The driver context isn't wrapped, so set its "priv" to NULL. */
    pipe->priv = NULL;
