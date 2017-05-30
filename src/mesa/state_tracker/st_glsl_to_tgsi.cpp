@@ -56,6 +56,7 @@
 #include "st_nir.h"
 #include "st_shader_cache.h"
 
+#include "util/hash_table.h"
 #include <algorithm>
 
 #define PROGRAM_ANY_CONST ((1 << PROGRAM_STATE_VAR) |    \
@@ -310,7 +311,9 @@ public:
    const struct tgsi_opcode_info *info;
 };
 
-class variable_storage : public exec_node {
+class variable_storage {
+   DECLARE_RZALLOC_CXX_OPERATORS(variable_storage)
+
 public:
    variable_storage(ir_variable *var, gl_register_file file, int index,
                     unsigned array_id = 0)
@@ -488,7 +491,7 @@ public:
    st_src_reg result;
 
    /** List of variable_storage */
-   exec_list variables;
+   struct hash_table *variables;
 
    /** List of immediate_storage */
    exec_list immediates;
@@ -1307,13 +1310,15 @@ glsl_to_tgsi_visitor::get_temp(const glsl_type *type)
 variable_storage *
 glsl_to_tgsi_visitor::find_variable_storage(ir_variable *var)
 {
+   struct hash_entry *entry = _mesa_hash_table_search(this->variables,
+                                                      var);
+   variable_storage *storage;
+   if (!entry)
+      return NULL;
 
-   foreach_in_list(variable_storage, entry, &this->variables) {
-      if (entry->var == var)
-         return entry;
-   }
+   storage = (variable_storage *)entry->data;
 
-   return NULL;
+   return storage;
 }
 
 void
@@ -1346,7 +1351,8 @@ glsl_to_tgsi_visitor::visit(ir_variable *ir)
       if (i == ir->get_num_state_slots()) {
          /* We'll set the index later. */
          storage = new(mem_ctx) variable_storage(ir, PROGRAM_STATE_VAR, -1);
-         this->variables.push_tail(storage);
+
+         _mesa_hash_table_insert(this->variables, ir, storage);
 
          dst = undef_dst;
       } else {
@@ -1361,7 +1367,7 @@ glsl_to_tgsi_visitor::visit(ir_variable *ir)
          storage = new(mem_ctx) variable_storage(ir, dst.file, dst.index,
                                                  dst.array_id);
 
-         this->variables.push_tail(storage);
+         _mesa_hash_table_insert(this->variables, ir, storage);
       }
 
 
@@ -2604,7 +2610,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
       case ir_var_uniform:
          entry = new(mem_ctx) variable_storage(var, PROGRAM_UNIFORM,
                                                var->data.param_index);
-         this->variables.push_tail(entry);
+         _mesa_hash_table_insert(this->variables, var, entry);
          break;
       case ir_var_shader_in: {
          /* The linker assigns locations for varyings and attributes,
@@ -2651,7 +2657,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
                                                decl->array_id);
          entry->component = component;
 
-         this->variables.push_tail(entry);
+         _mesa_hash_table_insert(this->variables, var, entry);
+
          break;
       }
       case ir_var_shader_out: {
@@ -2709,7 +2716,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
          }
          entry->component = component;
 
-         this->variables.push_tail(entry);
+         _mesa_hash_table_insert(this->variables, var, entry);
+
          break;
       }
       case ir_var_system_value:
@@ -2723,7 +2731,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
          entry = new(mem_ctx) variable_storage(var, src.file, src.index,
                                                src.array_id);
-         this->variables.push_tail(entry);
+         _mesa_hash_table_insert(this->variables, var, entry);
 
          break;
       }
@@ -4557,10 +4565,19 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    have_fma = false;
    use_shared_memory = false;
    has_tex_txf_lz = false;
+   variables = NULL;
+}
+
+static void var_destroy(struct hash_entry *entry)
+{
+   variable_storage *storage = (variable_storage *)entry->data;
+
+   delete storage;
 }
 
 glsl_to_tgsi_visitor::~glsl_to_tgsi_visitor()
 {
+   _mesa_hash_table_destroy(variables, var_destroy);
    free(array_sizes);
    ralloc_free(mem_ctx);
 }
@@ -6699,6 +6716,9 @@ get_mesa_program_tgsi(struct gl_context *ctx,
                                            PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED);
    v->has_tex_txf_lz = pscreen->get_param(pscreen,
                                           PIPE_CAP_TGSI_TEX_TXF_LZ);
+
+   v->variables = _mesa_hash_table_create(v->mem_ctx, _mesa_hash_pointer,
+                                          _mesa_key_pointer_equal);
    skip_merge_registers =
       pscreen->get_shader_param(pscreen, ptarget,
                                 PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS);
