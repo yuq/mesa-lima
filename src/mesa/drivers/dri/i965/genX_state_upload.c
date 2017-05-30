@@ -4752,6 +4752,117 @@ static const struct brw_tracked_state genX(fs_samplers) = {
    .emit = genX(upload_fs_samplers),
 };
 
+static void
+genX(upload_vs_samplers)(struct brw_context *brw)
+{
+   /* BRW_NEW_VERTEX_PROGRAM */
+   struct gl_program *vs = (struct gl_program *) brw->vertex_program;
+   genX(upload_sampler_state_table)(brw, vs, &brw->vs.base);
+}
+
+static const struct brw_tracked_state genX(vs_samplers) = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_VERTEX_PROGRAM,
+   },
+   .emit = genX(upload_vs_samplers),
+};
+
+#if GEN_GEN >= 6
+static void
+genX(upload_gs_samplers)(struct brw_context *brw)
+{
+   /* BRW_NEW_GEOMETRY_PROGRAM */
+   struct gl_program *gs = (struct gl_program *) brw->geometry_program;
+   if (!gs)
+      return;
+
+   genX(upload_sampler_state_table)(brw, gs, &brw->gs.base);
+}
+
+
+static const struct brw_tracked_state genX(gs_samplers) = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_GEOMETRY_PROGRAM,
+   },
+   .emit = genX(upload_gs_samplers),
+};
+#endif
+
+#if GEN_GEN >= 7
+static void
+genX(upload_tcs_samplers)(struct brw_context *brw)
+{
+   /* BRW_NEW_TESS_PROGRAMS */
+   struct gl_program *tcs = (struct gl_program *) brw->tess_ctrl_program;
+   if (!tcs)
+      return;
+
+   genX(upload_sampler_state_table)(brw, tcs, &brw->tcs.base);
+}
+
+static const struct brw_tracked_state genX(tcs_samplers) = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_TESS_PROGRAMS,
+   },
+   .emit = genX(upload_tcs_samplers),
+};
+#endif
+
+#if GEN_GEN >= 7
+static void
+genX(upload_tes_samplers)(struct brw_context *brw)
+{
+   /* BRW_NEW_TESS_PROGRAMS */
+   struct gl_program *tes = (struct gl_program *) brw->tess_eval_program;
+   if (!tes)
+      return;
+
+   genX(upload_sampler_state_table)(brw, tes, &brw->tes.base);
+}
+
+static const struct brw_tracked_state genX(tes_samplers) = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_TESS_PROGRAMS,
+   },
+   .emit = genX(upload_tes_samplers),
+};
+#endif
+
+#if GEN_GEN >= 7
+static void
+genX(upload_cs_samplers)(struct brw_context *brw)
+{
+   /* BRW_NEW_COMPUTE_PROGRAM */
+   struct gl_program *cs = (struct gl_program *) brw->compute_program;
+   if (!cs)
+      return;
+
+   genX(upload_sampler_state_table)(brw, cs, &brw->cs.base);
+}
+
+const struct brw_tracked_state genX(cs_samplers) = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_COMPUTE_PROGRAM,
+   },
+   .emit = genX(upload_cs_samplers),
+};
+#endif
+
 /* ---------------------------------------------------------------------- */
 
 void
@@ -4782,7 +4893,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_wm_binding_table,
 
       &genX(fs_samplers),
-      &brw_vs_samplers,
+      &genX(vs_samplers),
 
       /* These set up state for brw_psp_urb_cbs */
       &brw_wm_unit,
@@ -4851,8 +4962,8 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_wm_binding_table,
 
       &genX(fs_samplers),
-      &brw_vs_samplers,
-      &brw_gs_samplers,
+      &genX(vs_samplers),
+      &genX(gs_samplers),
       &gen6_sampler_state,
       &genX(multisample_state),
 
@@ -4934,10 +5045,10 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_wm_binding_table,
 
       &genX(fs_samplers),
-      &brw_vs_samplers,
-      &brw_tcs_samplers,
-      &brw_tes_samplers,
-      &brw_gs_samplers,
+      &genX(vs_samplers),
+      &genX(tcs_samplers),
+      &genX(tes_samplers),
+      &genX(gs_samplers),
       &genX(multisample_state),
 
       &genX(vs_state),
@@ -5023,10 +5134,10 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_wm_binding_table,
 
       &genX(fs_samplers),
-      &brw_vs_samplers,
-      &brw_tcs_samplers,
-      &brw_tes_samplers,
-      &brw_gs_samplers,
+      &genX(vs_samplers),
+      &genX(tcs_samplers),
+      &genX(tes_samplers),
+      &genX(gs_samplers),
       &genX(multisample_state),
 
       &genX(vs_state),
@@ -5082,7 +5193,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_cs_abo_surfaces,
       &brw_cs_texture_surfaces,
       &brw_cs_work_groups_surface,
-      &brw_cs_samplers,
+      &genX(cs_samplers),
       &genX(cs_state),
    };
 
