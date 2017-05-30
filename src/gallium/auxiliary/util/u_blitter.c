@@ -132,6 +132,7 @@ struct blitter_context_priv
    boolean has_stream_out;
    boolean has_stencil_export;
    boolean has_texture_multisample;
+   boolean has_tex_lz;
    boolean cached_all_shaders;
 
    /* The Draw module overrides these functions.
@@ -196,6 +197,9 @@ struct blitter_context *util_blitter_create(struct pipe_context *pipe)
 
    ctx->has_texture_multisample =
       pipe->screen->get_param(pipe->screen, PIPE_CAP_TEXTURE_MULTISAMPLE);
+
+   ctx->has_tex_lz = pipe->screen->get_param(pipe->screen,
+                                             PIPE_CAP_TGSI_TEX_TXF_LZ);
 
    /* blend state objects */
    memset(&blend, 0, sizeof(blend));
@@ -953,7 +957,7 @@ static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
          *shader = util_make_fragment_tex_shader(pipe, tgsi_tex,
                                                  TGSI_INTERPOLATE_LINEAR,
                                                  stype, dtype,
-                                                 false, false);
+                                                 ctx->has_tex_lz, false);
       }
 
       return *shader;
@@ -992,7 +996,7 @@ void *blitter_get_fs_texfetch_depth(struct blitter_context_priv *ctx,
          *shader =
             util_make_fragment_tex_shader_writedepth(pipe, tgsi_tex,
                                                      TGSI_INTERPOLATE_LINEAR,
-                                                     false, false);
+                                                     ctx->has_tex_lz, false);
       }
 
       return *shader;
@@ -1031,7 +1035,7 @@ void *blitter_get_fs_texfetch_depthstencil(struct blitter_context_priv *ctx,
          *shader =
             util_make_fragment_tex_shader_writedepthstencil(pipe, tgsi_tex,
                                                             TGSI_INTERPOLATE_LINEAR,
-                                                            false,
+                                                            ctx->has_tex_lz,
                                                             false);
       }
 
@@ -1071,7 +1075,7 @@ void *blitter_get_fs_texfetch_stencil(struct blitter_context_priv *ctx,
          *shader =
             util_make_fragment_tex_shader_writestencil(pipe, tgsi_tex,
                                                        TGSI_INTERPOLATE_LINEAR,
-                                                       false, false);
+                                                       ctx->has_tex_lz, false);
       }
 
       return *shader;
