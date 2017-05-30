@@ -34,7 +34,6 @@
 
 // forward defines
 struct si_context;
-enum chip_class;
 
 struct si_pm4_state
 {
