@@ -763,7 +763,7 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
    case __DRI_IMAGE_ATTRIB_FOURCC:
       return intel_lookup_fourcc(image->dri_format, value);
    case __DRI_IMAGE_ATTRIB_NUM_PLANES:
-      *value = 1;
+      *value = isl_drm_modifier_has_aux(image->modifier) ? 2 : 1;
       return true;
    case __DRI_IMAGE_ATTRIB_OFFSET:
       *value = image->offset;
@@ -1171,30 +1171,43 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
     const struct intel_image_format *f;
     __DRIimage *image;
 
-    if (parent == NULL || parent->planar_format == NULL)
-        return NULL;
+    if (parent == NULL) {
+       return NULL;
+    } else if (parent->planar_format == NULL) {
+       const bool is_aux =
+          isl_drm_modifier_has_aux(parent->modifier) && plane == 1;
+       if (!is_aux)
+          return NULL;
 
-    f = parent->planar_format;
+       width = parent->width;
+       height = parent->height;
+       dri_format = parent->dri_format;
+       offset = parent->aux_offset;
+       stride = parent->aux_pitch;
+    } else {
+       /* Planar formats don't support aux buffers/images */
+       assert(!isl_drm_modifier_has_aux(parent->modifier));
+       f = parent->planar_format;
 
-    if (plane >= f->nplanes)
-        return NULL;
+       if (plane >= f->nplanes)
+          return NULL;
 
-    width = parent->width >> f->planes[plane].width_shift;
-    height = parent->height >> f->planes[plane].height_shift;
-    dri_format = f->planes[plane].dri_format;
-    index = f->planes[plane].buffer_index;
-    offset = parent->offsets[index];
-    stride = parent->strides[index];
+       width = parent->width >> f->planes[plane].width_shift;
+       height = parent->height >> f->planes[plane].height_shift;
+       dri_format = f->planes[plane].dri_format;
+       index = f->planes[plane].buffer_index;
+       offset = parent->offsets[index];
+       stride = parent->strides[index];
+
+       if (offset + height * stride > parent->bo->size) {
+          _mesa_warning(NULL, "intel_create_sub_image: subimage out of bounds");
+          return NULL;
+       }
+    }
 
     image = intel_allocate_image(parent->screen, dri_format, loaderPrivate);
     if (image == NULL)
        return NULL;
-
-    if (offset + height * stride > parent->bo->size) {
-       _mesa_warning(NULL, "intel_create_sub_image: subimage out of bounds");
-       free(image);
-       return NULL;
-    }
 
     image->bo = parent->bo;
     brw_bo_reference(parent->bo);
