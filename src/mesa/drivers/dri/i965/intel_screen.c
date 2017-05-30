@@ -294,13 +294,42 @@ static const struct {
    { .modifier = DRM_FORMAT_MOD_LINEAR       , .since_gen = 1 },
    { .modifier = I915_FORMAT_MOD_X_TILED     , .since_gen = 1 },
    { .modifier = I915_FORMAT_MOD_Y_TILED     , .since_gen = 6 },
+   { .modifier = I915_FORMAT_MOD_Y_TILED_CCS , .since_gen = 9 },
 };
 
 static bool
 modifier_is_supported(const struct gen_device_info *devinfo,
+                      struct intel_image_format *fmt, int dri_format,
                       uint64_t modifier)
 {
+   const struct isl_drm_modifier_info *modinfo =
+      isl_drm_modifier_get_info(modifier);
    int i;
+
+   /* ISL had better know about the modifier */
+   if (!modinfo)
+      return false;
+
+   if (modinfo->aux_usage == ISL_AUX_USAGE_CCS_E) {
+      /* If INTEL_DEBUG=norbc is set, don't support any CCS_E modifiers */
+      if (unlikely(INTEL_DEBUG & DEBUG_NO_RBC))
+         return false;
+
+      /* CCS_E is not supported for planar images */
+      if (fmt && fmt->nplanes > 1)
+         return false;
+
+      if (fmt) {
+         assert(dri_format == 0);
+         dri_format = fmt->planes[0].dri_format;
+      }
+
+      mesa_format format = driImageFormatToGLFormat(dri_format);
+      format = _mesa_get_srgb_format_linear(format);
+      if (!isl_format_supports_ccs_e(devinfo,
+                                     brw_isl_format_for_mesa_format(format)))
+         return false;
+   }
 
    for (i = 0; i < ARRAY_SIZE(supported_modifiers); i++) {
       if (supported_modifiers[i].modifier != modifier)
@@ -561,6 +590,7 @@ enum modifier_priority {
    MODIFIER_PRIORITY_LINEAR,
    MODIFIER_PRIORITY_X,
    MODIFIER_PRIORITY_Y,
+   MODIFIER_PRIORITY_Y_CCS,
 };
 
 const uint64_t priority_to_modifier[] = {
@@ -568,20 +598,25 @@ const uint64_t priority_to_modifier[] = {
    [MODIFIER_PRIORITY_LINEAR] = DRM_FORMAT_MOD_LINEAR,
    [MODIFIER_PRIORITY_X] = I915_FORMAT_MOD_X_TILED,
    [MODIFIER_PRIORITY_Y] = I915_FORMAT_MOD_Y_TILED,
+   [MODIFIER_PRIORITY_Y_CCS] = I915_FORMAT_MOD_Y_TILED_CCS,
 };
 
 static uint64_t
 select_best_modifier(struct gen_device_info *devinfo,
+                     int dri_format,
                      const uint64_t *modifiers,
                      const unsigned count)
 {
    enum modifier_priority prio = MODIFIER_PRIORITY_INVALID;
 
    for (int i = 0; i < count; i++) {
-      if (!modifier_is_supported(devinfo, modifiers[i]))
+      if (!modifier_is_supported(devinfo, NULL, dri_format, modifiers[i]))
          continue;
 
       switch (modifiers[i]) {
+      case I915_FORMAT_MOD_Y_TILED_CCS:
+         prio = MAX2(prio, MODIFIER_PRIORITY_Y_CCS);
+         break;
       case I915_FORMAT_MOD_Y_TILED:
          prio = MAX2(prio, MODIFIER_PRIORITY_Y);
          break;
@@ -631,7 +666,8 @@ intel_create_image_common(__DRIscreen *dri_screen,
    if (modifier == DRM_FORMAT_MOD_INVALID) {
       if (modifiers) {
          /* User requested specific modifiers */
-         modifier = select_best_modifier(&screen->devinfo, modifiers, count);
+         modifier = select_best_modifier(&screen->devinfo, format,
+                                         modifiers, count);
          if (modifier == DRM_FORMAT_MOD_INVALID)
             return NULL;
       } else {
@@ -879,7 +915,7 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
       return NULL;
 
    if (modifier != DRM_FORMAT_MOD_INVALID &&
-       !modifier_is_supported(&screen->devinfo, modifier))
+       !modifier_is_supported(&screen->devinfo, f, 0, modifier))
       return NULL;
 
    if (f->nplanes == 1)
@@ -1135,7 +1171,7 @@ intel_query_dma_buf_modifiers(__DRIscreen *_screen, int fourcc, int max,
 
    for (i = 0; i < ARRAY_SIZE(supported_modifiers); i++) {
       uint64_t modifier = supported_modifiers[i].modifier;
-      if (!modifier_is_supported(&screen->devinfo, modifier))
+      if (!modifier_is_supported(&screen->devinfo, f, 0, modifier))
          continue;
 
       num_mods++;
