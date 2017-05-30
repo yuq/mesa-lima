@@ -80,6 +80,13 @@ isl_align_npot(uintmax_t n, uintmax_t a)
    return ((n + a - 1) / a) * a;
 }
 
+static inline uintmax_t
+isl_assert_div(uintmax_t n, uintmax_t a)
+{
+   assert(n % a == 0);
+   return n / a;
+}
+
 /**
  * Alignment must be a power of 2.
  */
