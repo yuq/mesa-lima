@@ -267,8 +267,22 @@ create_mt_for_dri_image(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    struct intel_mipmap_tree *mt;
    uint32_t draw_x, draw_y;
+   mesa_format format = image->format;
 
-   if (!ctx->TextureFormatSupported[image->format])
+   if (!ctx->TextureFormatSupported[format]) {
+      /* The texture storage paths in core Mesa detect if the driver does not
+       * support the user-requested format, and then searches for a
+       * fallback format. The DRIimage code bypasses core Mesa, though. So we
+       * do the fallbacks here for important formats.
+       *
+       * We must support DRM_FOURCC_XBGR8888 textures because the Android
+       * framework produces HAL_PIXEL_FORMAT_RGBX8888 winsys surfaces, which
+       * the Chrome OS compositor consumes as dma_buf EGLImages.
+       */
+      format = _mesa_format_fallback_rgbx_to_rgba(format);
+   }
+
+   if (!ctx->TextureFormatSupported[format])
       return NULL;
 
    /* Disable creation of the texture's aux buffers because the driver exposes
@@ -276,7 +290,7 @@ create_mt_for_dri_image(struct brw_context *brw,
     * buffer's content to the main buffer nor for invalidating the aux buffer's
     * content.
     */
-   mt = intel_miptree_create_for_bo(brw, image->bo, image->format,
+   mt = intel_miptree_create_for_bo(brw, image->bo, format,
                                     0, image->width, image->height, 1,
                                     image->pitch,
                                     MIPTREE_LAYOUT_DISABLE_AUX);
