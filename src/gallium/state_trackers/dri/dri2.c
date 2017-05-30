@@ -971,9 +971,12 @@ dri2_create_image_from_renderbuffer(__DRIcontext *context,
 }
 
 static __DRIimage *
-dri2_create_image(__DRIscreen *_screen,
-                   int width, int height, int format,
-                   unsigned int use, void *loaderPrivate)
+dri2_create_image_common(__DRIscreen *_screen,
+                         int width, int height,
+                         int format, unsigned int use,
+                         const uint64_t *modifiers,
+                         const unsigned count,
+                         void *loaderPrivate)
 {
    struct dri_screen *screen = dri_screen(_screen);
    __DRIimage *img;
@@ -981,7 +984,13 @@ dri2_create_image(__DRIscreen *_screen,
    unsigned tex_usage;
    enum pipe_format pf;
 
+   /* createImageWithModifiers doesn't supply usage, and we should not get
+    * here with both modifiers and a usage flag.
+    */
+   assert(!(use && (modifiers != NULL)));
+
    tex_usage = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW;
+
    if (use & __DRI_IMAGE_USE_SCANOUT)
       tex_usage |= PIPE_BIND_SCANOUT;
    if (use & __DRI_IMAGE_USE_SHARE)
@@ -1012,7 +1021,16 @@ dri2_create_image(__DRIscreen *_screen,
    templ.depth0 = 1;
    templ.array_size = 1;
 
-   img->texture = screen->base.screen->resource_create(screen->base.screen, &templ);
+   if (modifiers)
+      img->texture =
+         screen->base.screen
+            ->resource_create_with_modifiers(screen->base.screen,
+                                             &templ,
+                                             modifiers,
+                                             count);
+   else
+      img->texture =
+         screen->base.screen->resource_create(screen->base.screen, &templ);
    if (!img->texture) {
       FREE(img);
       return NULL;
@@ -1026,6 +1044,28 @@ dri2_create_image(__DRIscreen *_screen,
 
    img->loader_private = loaderPrivate;
    return img;
+}
+
+static __DRIimage *
+dri2_create_image(__DRIscreen *_screen,
+                   int width, int height, int format,
+                   unsigned int use, void *loaderPrivate)
+{
+   return dri2_create_image_common(_screen, width, height, format, use,
+                                   NULL /* modifiers */, 0 /* count */,
+                                   loaderPrivate);
+}
+
+static __DRIimage *
+dri2_create_image_with_modifiers(__DRIscreen *dri_screen,
+                                 int width, int height, int format,
+                                 const uint64_t *modifiers,
+                                 const unsigned count,
+                                 void *loaderPrivate)
+{
+   return dri2_create_image_common(dri_screen, width, height, format,
+                                   0 /* use */, modifiers, count,
+                                   loaderPrivate);
 }
 
 static GLboolean
@@ -1414,7 +1454,7 @@ dri2_get_capabilities(__DRIscreen *_screen)
 
 /* The extension is modified during runtime if DRI_PRIME is detected */
 static __DRIimageExtension dri2ImageExtension = {
-    .base = { __DRI_IMAGE, 12 },
+    .base = { __DRI_IMAGE, 14 },
 
     .createImageFromName          = dri2_create_image_from_name,
     .createImageFromRenderbuffer  = dri2_create_image_from_renderbuffer,
@@ -1831,6 +1871,10 @@ dri2_init_screen(__DRIscreen * sPriv)
       screen->default_throttle_frames = throttle_ret->val.val_int;
    }
 
+   if (pscreen->resource_create_with_modifiers)
+      dri2ImageExtension.createImageWithModifiers =
+         dri2_create_image_with_modifiers;
+
    if (dmabuf_ret && dmabuf_ret->val.val_bool) {
       uint64_t cap;
 
@@ -1905,6 +1949,10 @@ dri_kms_init_screen(__DRIscreen * sPriv)
 
    if (!pscreen)
        goto release_pipe;
+
+   if (pscreen->resource_create_with_modifiers)
+      dri2ImageExtension.createImageWithModifiers =
+         dri2_create_image_with_modifiers;
 
    if (drmGetCap(sPriv->fd, DRM_CAP_PRIME, &cap) == 0 &&
           (cap & DRM_PRIME_CAP_IMPORT)) {
