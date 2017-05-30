@@ -120,6 +120,10 @@ si_blit_dbcb_copy(struct si_context *sctx,
 
 	assert(sctx->dbcb_depth_copy_enabled || sctx->dbcb_stencil_copy_enabled);
 
+	bool old_update_dirtiness = sctx->framebuffer.do_update_surf_dirtiness;
+	sctx->decompression_enabled = true;
+	sctx->framebuffer.do_update_surf_dirtiness = false;
+
 	while (level_mask) {
 		unsigned level = u_bit_scan(&level_mask);
 
@@ -163,6 +167,8 @@ si_blit_dbcb_copy(struct si_context *sctx,
 			fully_copied_levels |= 1u << level;
 	}
 
+	sctx->decompression_enabled = false;
+	sctx->framebuffer.do_update_surf_dirtiness = old_update_dirtiness;
 	sctx->dbcb_depth_copy_enabled = false;
 	sctx->dbcb_stencil_copy_enabled = false;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
@@ -218,6 +224,10 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 
 	surf_tmpl.format = texture->resource.b.b.format;
 
+	bool old_update_dirtiness = sctx->framebuffer.do_update_surf_dirtiness;
+	sctx->decompression_enabled = true;
+	sctx->framebuffer.do_update_surf_dirtiness = false;
+
 	while (level_mask) {
 		unsigned level = u_bit_scan(&level_mask);
 
@@ -255,6 +265,8 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 	if (planes & PIPE_MASK_S)
 		texture->stencil_dirty_level_mask &= ~fully_decompressed_mask;
 
+	sctx->decompression_enabled = false;
+	sctx->framebuffer.do_update_surf_dirtiness = old_update_dirtiness;
 	sctx->db_flush_depth_inplace = false;
 	sctx->db_flush_stencil_inplace = false;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
@@ -438,6 +450,10 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 		custom_blend = sctx->custom_blend_eliminate_fastclear;
 	}
 
+	bool old_update_dirtiness = sctx->framebuffer.do_update_surf_dirtiness;
+	sctx->decompression_enabled = true;
+	sctx->framebuffer.do_update_surf_dirtiness = false;
+
 	while (level_mask) {
 		unsigned level = u_bit_scan(&level_mask);
 
@@ -468,6 +484,9 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 			rtex->dirty_level_mask &= ~(1 << level);
 		}
 	}
+
+	sctx->decompression_enabled = false;
+	sctx->framebuffer.do_update_surf_dirtiness = old_update_dirtiness;
 }
 
 static void

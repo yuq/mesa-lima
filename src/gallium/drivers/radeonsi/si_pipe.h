@@ -383,6 +383,7 @@ struct si_context {
 
 	/* Other state */
 	bool need_check_render_feedback;
+	bool			decompression_enabled;
 
 	/* Precomputed IA_MULTI_VGT_PARAM */
 	union si_vgt_param_key  ia_multi_vgt_param_key;

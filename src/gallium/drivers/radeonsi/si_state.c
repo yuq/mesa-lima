@@ -2608,9 +2608,15 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
 	}
 
-	sctx->need_check_render_feedback = true;
 	sctx->do_update_shaders = true;
-	sctx->framebuffer.do_update_surf_dirtiness = true;
+
+	if (!sctx->decompression_enabled) {
+		/* Prevent textures decompression when the framebuffer state
+		 * changes come from the decompression passes themselves.
+		 */
+		sctx->need_check_render_feedback = true;
+		sctx->framebuffer.do_update_surf_dirtiness = true;
+	}
 }
 
 static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom *atom)
