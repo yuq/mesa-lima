@@ -343,6 +343,20 @@ struct pipe_screen {
                            struct pipe_screen *,
                            const struct pipe_resource *templat,
                            const uint64_t *modifiers, int count);
+
+   /**
+    * Get supported modifiers for a format.
+    * If \p max is 0, the total number of supported modifiers for the supplied
+    * format is returned in \p count, with no modification to \p modifiers.
+    * Otherwise, \p modifiers is filled with upto \p max supported modifier
+    * codes, and \p count with the number of modifiers copied.
+    * The \p external_only array is used to return whether the format and
+    * modifier combination can only be used with an external texture target.
+    */
+   void (*query_dmabuf_modifiers)(struct pipe_screen *screen,
+                                  enum pipe_format format, int max,
+                                  uint64_t *modifiers,
+                                  unsigned int *external_only, int *count);
 };
 
 
