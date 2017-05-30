@@ -841,11 +841,6 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
    if (fds == NULL || num_fds < 1)
       return NULL;
 
-   /* We only support all planes from the same bo */
-   for (i = 0; i < num_fds; i++)
-      if (fds[0] != fds[i])
-         return NULL;
-
    f = intel_image_format_lookup(fourcc);
    if (f == NULL)
       return NULL;
@@ -870,6 +865,19 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
    if (image->bo == NULL) {
       free(image);
       return NULL;
+   }
+
+   /* We only support all planes from the same bo.
+    * brw_bo_gem_create_from_prime() should return the same pointer for all
+    * fds received here */
+   for (i = 1; i < num_fds; i++) {
+      struct brw_bo *aux = brw_bo_gem_create_from_prime(screen->bufmgr, fds[i]);
+      brw_bo_unreference(aux);
+      if (aux != image->bo) {
+         brw_bo_unreference(image->bo);
+         free(image);
+         return NULL;
+      }
    }
 
    image->modifier = tiling_to_modifier(image->bo->tiling_mode);
