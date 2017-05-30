@@ -608,6 +608,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
    __DRIimage *image;
    struct intel_screen *screen = dri_screen->driverPrivate;
    uint32_t tiling;
+   uint64_t modifier = DRM_FORMAT_MOD_INVALID;
    int cpp;
 
    /* Callers of this may specify a modifier, or a dri usage, but not both. The
@@ -616,29 +617,29 @@ intel_create_image_common(__DRIscreen *dri_screen,
     */
    assert(!(use && count));
 
-   uint64_t modifier = select_best_modifier(&screen->devinfo, modifiers, count);
-   if (modifier == DRM_FORMAT_MOD_INVALID) {
-      /* User requested specific modifiers, none of which work */
-      if (modifiers)
-         return NULL;
-
-      /* Historically, X-tiled was the default, and so lack of modifier means
-       * X-tiled.
-       */
-      tiling = I915_TILING_X;
-   } else {
-      /* select_best_modifier has found a modifier we support */
-      tiling = modifier_to_tiling(modifier);
-   }
-
    if (use & __DRI_IMAGE_USE_CURSOR) {
       if (width != 64 || height != 64)
 	 return NULL;
-      tiling = I915_TILING_NONE;
+      modifier = DRM_FORMAT_MOD_LINEAR;
    }
 
    if (use & __DRI_IMAGE_USE_LINEAR)
-      tiling = I915_TILING_NONE;
+      modifier = DRM_FORMAT_MOD_LINEAR;
+
+   if (modifier == DRM_FORMAT_MOD_INVALID) {
+      if (modifiers) {
+         /* User requested specific modifiers */
+         modifier = select_best_modifier(&screen->devinfo, modifiers, count);
+         if (modifier == DRM_FORMAT_MOD_INVALID)
+            return NULL;
+      } else {
+         /* Historically, X-tiled was the default, and so lack of modifier means
+          * X-tiled.
+          */
+         modifier = I915_FORMAT_MOD_X_TILED;
+      }
+   }
+   tiling = modifier_to_tiling(modifier);
 
    image = intel_allocate_image(screen, format, loaderPrivate);
    if (image == NULL)
