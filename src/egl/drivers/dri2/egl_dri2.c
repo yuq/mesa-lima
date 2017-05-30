@@ -2090,7 +2090,7 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
     * "If <target> is EGL_LINUX_DMA_BUF_EXT, and the EGL_LINUX_DRM_FOURCC_EXT
     *  attribute indicates a single-plane format, EGL_BAD_ATTRIBUTE is
     *  generated if any of the EGL_DMA_BUF_PLANE1_* or EGL_DMA_BUF_PLANE2_*
-    *  attributes are specified."
+    *  or EGL_DMA_BUF_PLANE3_* attributes are specified."
     */
    for (i = plane_n; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneFds[i].IsPresent ||

@@ -130,6 +130,24 @@ _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
          attrs->DMABufPlanePitches[2].Value = val;
          attrs->DMABufPlanePitches[2].IsPresent = EGL_TRUE;
          break;
+      case EGL_DMA_BUF_PLANE3_FD_EXT:
+         if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
+            err = EGL_BAD_PARAMETER;
+         attrs->DMABufPlaneFds[3].Value = val;
+         attrs->DMABufPlaneFds[3].IsPresent = EGL_TRUE;
+         break;
+      case EGL_DMA_BUF_PLANE3_OFFSET_EXT:
+         if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
+            err = EGL_BAD_PARAMETER;
+         attrs->DMABufPlaneOffsets[3].Value = val;
+         attrs->DMABufPlaneOffsets[3].IsPresent = EGL_TRUE;
+         break;
+      case EGL_DMA_BUF_PLANE3_PITCH_EXT:
+         if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
+            err = EGL_BAD_PARAMETER;
+         attrs->DMABufPlanePitches[3].Value = val;
+         attrs->DMABufPlanePitches[3].IsPresent = EGL_TRUE;
+         break;
       case EGL_YUV_COLOR_SPACE_HINT_EXT:
          if (val != EGL_ITU_REC601_EXT && val != EGL_ITU_REC709_EXT &&
              val != EGL_ITU_REC2020_EXT) {

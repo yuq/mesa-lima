@@ -46,7 +46,7 @@ struct _egl_image_attrib_int
    EGLBoolean IsPresent;
 };
 
-#define DMA_BUF_MAX_PLANES 3
+#define DMA_BUF_MAX_PLANES 4
 
 struct _egl_image_attribs
 {
@@ -67,7 +67,8 @@ struct _egl_image_attribs
    /* EGL_WL_bind_wayland_display */
    EGLint PlaneWL;
 
-   /* EGL_EXT_image_dma_buf_import */
+   /* EGL_EXT_image_dma_buf_import and
+    * EGL_EXT_image_dma_buf_import_modifiers */
    struct _egl_image_attrib_int DMABufFourCC;
    struct _egl_image_attrib_int DMABufPlaneFds[DMA_BUF_MAX_PLANES];
    struct _egl_image_attrib_int DMABufPlaneOffsets[DMA_BUF_MAX_PLANES];

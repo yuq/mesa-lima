@@ -102,6 +102,7 @@ struct _egl_extensions
    EGLBoolean EXT_buffer_age;
    EGLBoolean EXT_create_context_robustness;
    EGLBoolean EXT_image_dma_buf_import;
+   EGLBoolean EXT_image_dma_buf_import_modifiers;
    EGLBoolean EXT_swap_buffers_with_damage;
 
    EGLBoolean KHR_cl_event2;
