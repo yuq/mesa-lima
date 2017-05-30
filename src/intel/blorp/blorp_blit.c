@@ -1401,16 +1401,11 @@ blorp_surf_convert_to_single_slice(const struct isl_device *isl_dev,
    else
       layer = info->view.base_array_layer;
 
-   uint32_t x_offset_sa, y_offset_sa;
-   isl_surf_get_image_offset_sa(&info->surf, info->view.base_level,
-                                layer, z, &x_offset_sa, &y_offset_sa);
-
    uint32_t byte_offset;
-   isl_tiling_get_intratile_offset_sa(info->surf.tiling,
-                                      info->surf.format, info->surf.row_pitch,
-                                      x_offset_sa, y_offset_sa,
-                                      &byte_offset,
-                                      &info->tile_x_sa, &info->tile_y_sa);
+   isl_surf_get_image_offset_B_tile_sa(&info->surf,
+                                       info->view.base_level, layer, z,
+                                       &byte_offset,
+                                       &info->tile_x_sa, &info->tile_y_sa);
    info->addr.offset += byte_offset;
 
    const uint32_t slice_width_px =
