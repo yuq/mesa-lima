@@ -625,24 +625,6 @@ brw_upload_sampler_state_table(struct brw_context *brw,
 }
 
 static void
-brw_upload_fs_samplers(struct brw_context *brw)
-{
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   struct gl_program *fs = (struct gl_program *) brw->fragment_program;
-   brw_upload_sampler_state_table(brw, fs, &brw->wm.base);
-}
-
-const struct brw_tracked_state brw_fs_samplers = {
-   .dirty = {
-      .mesa = _NEW_TEXTURE,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
-             BRW_NEW_FRAGMENT_PROGRAM,
-   },
-   .emit = brw_upload_fs_samplers,
-};
-
-static void
 brw_upload_vs_samplers(struct brw_context *brw)
 {
    /* BRW_NEW_VERTEX_PROGRAM */
