@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31541 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31668 bytes, from 2017-05-30 16:52:40)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 105446 bytes, from 2017-05-17 20:33:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-05-30 19:25:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 136835 bytes, from 2017-05-30 20:06:17)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -1003,6 +1003,7 @@ static inline uint32_t CP_EVENT_WRITE_0_EVENT(enum vgt_event_type val)
 {
 	return ((val) << CP_EVENT_WRITE_0_EVENT__SHIFT) & CP_EVENT_WRITE_0_EVENT__MASK;
 }
+#define CP_EVENT_WRITE_0_TIMESTAMP				0x40000000
 
 #define REG_CP_EVENT_WRITE_1					0x00000001
 #define CP_EVENT_WRITE_1_ADDR_0_LO__MASK			0xffffffff

@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31541 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31668 bytes, from 2017-05-30 16:52:40)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 105446 bytes, from 2017-05-17 20:33:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-05-30 19:25:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 136835 bytes, from 2017-05-30 20:06:17)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -3842,6 +3842,44 @@ static inline uint32_t A4XX_PC_HS_PARAM_SPACING(enum a4xx_tess_spacing val)
 #define REG_A4XX_VBIF_IN_WR_LIM_CONF1				0x00003031
 
 #define REG_A4XX_VBIF_ROUND_ROBIN_QOS_ARB			0x00003049
+
+#define REG_A4XX_VBIF_PERF_CNT_EN0				0x000030c0
+
+#define REG_A4XX_VBIF_PERF_CNT_EN1				0x000030c1
+
+#define REG_A4XX_VBIF_PERF_CNT_EN2				0x000030c2
+
+#define REG_A4XX_VBIF_PERF_CNT_EN3				0x000030c3
+
+#define REG_A4XX_VBIF_PERF_CNT_SEL0				0x000030d0
+
+#define REG_A4XX_VBIF_PERF_CNT_SEL1				0x000030d1
+
+#define REG_A4XX_VBIF_PERF_CNT_SEL2				0x000030d2
+
+#define REG_A4XX_VBIF_PERF_CNT_SEL3				0x000030d3
+
+#define REG_A4XX_VBIF_PERF_CNT_LOW0				0x000030d8
+
+#define REG_A4XX_VBIF_PERF_CNT_LOW1				0x000030d9
+
+#define REG_A4XX_VBIF_PERF_CNT_LOW2				0x000030da
+
+#define REG_A4XX_VBIF_PERF_CNT_LOW3				0x000030db
+
+#define REG_A4XX_VBIF_PERF_CNT_HIGH0				0x000030e0
+
+#define REG_A4XX_VBIF_PERF_CNT_HIGH1				0x000030e1
+
+#define REG_A4XX_VBIF_PERF_CNT_HIGH2				0x000030e2
+
+#define REG_A4XX_VBIF_PERF_CNT_HIGH3				0x000030e3
+
+#define REG_A4XX_VBIF_PERF_PWR_CNT_EN0				0x00003100
+
+#define REG_A4XX_VBIF_PERF_PWR_CNT_EN1				0x00003101
+
+#define REG_A4XX_VBIF_PERF_PWR_CNT_EN2				0x00003102
 
 #define REG_A4XX_UNKNOWN_0CC5					0x00000cc5
 
