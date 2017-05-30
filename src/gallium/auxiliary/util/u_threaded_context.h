@@ -293,7 +293,6 @@ struct tc_batch {
    unsigned num_total_call_slots;
    struct util_queue_fence fence;
    struct tc_call call[TC_CALLS_PER_BATCH];
-   unsigned sentinel2;
 };
 
 struct threaded_context {

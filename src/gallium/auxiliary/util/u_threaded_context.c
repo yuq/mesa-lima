@@ -67,7 +67,6 @@ static void
 tc_batch_check(struct tc_batch *batch)
 {
    tc_assert(batch->sentinel == TC_SENTINEL);
-   tc_assert(batch->sentinel2 == TC_SENTINEL);
    tc_assert(batch->num_total_call_slots <= TC_CALLS_PER_BATCH);
 }
 
@@ -2207,7 +2206,6 @@ threaded_context_create(struct pipe_context *pipe,
 
    for (unsigned i = 0; i < TC_MAX_BATCHES; i++) {
       tc->batch_slots[i].sentinel = TC_SENTINEL;
-      tc->batch_slots[i].sentinel2 = TC_SENTINEL;
       tc->batch_slots[i].pipe = pipe;
       util_queue_fence_init(&tc->batch_slots[i].fence);
    }
