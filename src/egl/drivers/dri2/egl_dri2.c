@@ -87,6 +87,10 @@
 #define DRM_FORMAT_GR1616        fourcc_code('G', 'R', '3', '2') /* [31:0] R:G 16:16 little endian */
 #endif
 
+#ifndef DRM_FORMAT_MOD_INVALID
+#define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
+#endif
+
 static void
 dri_set_background_context(void *loaderPrivate)
 {
@@ -1987,6 +1991,37 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
       }
    }
 
+   /**
+    * If <target> is EGL_LINUX_DMA_BUF_EXT, both or neither of the following
+    * attribute values may be given.
+    *
+    * This is referring to EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT and
+    * EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, and the same for other planes.
+    */
+   for (i = 0; i < DMA_BUF_MAX_PLANES; ++i) {
+      if (attrs->DMABufPlaneModifiersLo[i].IsPresent !=
+          attrs->DMABufPlaneModifiersHi[i].IsPresent) {
+         _eglError(EGL_BAD_PARAMETER, "modifier attribute lo or hi missing");
+         return EGL_FALSE;
+      }
+   }
+
+   /* Although the EGL_EXT_image_dma_buf_import_modifiers spec doesn't
+    * mandate it, we only accept the same modifier across all planes. */
+   for (i = 1; i < DMA_BUF_MAX_PLANES; ++i) {
+      if (attrs->DMABufPlaneFds[i].IsPresent) {
+         if ((attrs->DMABufPlaneModifiersLo[0].IsPresent !=
+               attrs->DMABufPlaneModifiersLo[i].IsPresent) ||
+             (attrs->DMABufPlaneModifiersLo[0].Value !=
+               attrs->DMABufPlaneModifiersLo[i].Value) ||
+             (attrs->DMABufPlaneModifiersHi[0].Value !=
+               attrs->DMABufPlaneModifiersHi[i].Value)) {
+            _eglError(EGL_BAD_PARAMETER, "modifier attributes not equal");
+            return EGL_FALSE;
+         }
+      }
+   }
+
    return EGL_TRUE;
 }
 
@@ -2095,7 +2130,25 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
    for (i = plane_n; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneFds[i].IsPresent ||
           attrs->DMABufPlaneOffsets[i].IsPresent ||
-          attrs->DMABufPlanePitches[i].IsPresent) {
+          attrs->DMABufPlanePitches[i].IsPresent ||
+          attrs->DMABufPlaneModifiersLo[i].IsPresent ||
+          attrs->DMABufPlaneModifiersHi[i].IsPresent) {
+
+         /**
+          * The modifiers extension spec says:
+          *
+          * "Modifiers may modify any attribute of a buffer import, including
+          *  but not limited to adding extra planes to a format which
+          *  otherwise does not have those planes. As an example, a modifier
+          *  may add a plane for an external compression buffer to a
+          *  single-plane format. The exact meaning and effect of any
+          *  modifier is canonically defined by drm_fourcc.h, not as part of
+          *  this extension."
+          */
+         if (attrs->DMABufPlaneModifiersLo[i].IsPresent &&
+             attrs->DMABufPlaneModifiersHi[i].IsPresent)
+            continue;
+
          _eglError(EGL_BAD_ATTRIBUTE, "too many plane attributes");
          return 0;
       }
@@ -2128,6 +2181,8 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
    int fds[DMA_BUF_MAX_PLANES];
    int pitches[DMA_BUF_MAX_PLANES];
    int offsets[DMA_BUF_MAX_PLANES];
+   uint64_t modifier;
+   bool has_modifier = false;
    unsigned error;
 
    /**
@@ -2160,16 +2215,47 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
       offsets[i] = attrs.DMABufPlaneOffsets[i].Value;
    }
 
-   dri_image =
-      dri2_dpy->image->createImageFromDmaBufs(dri2_dpy->dri_screen,
-         attrs.Width, attrs.Height, attrs.DMABufFourCC.Value,
-         fds, num_fds, pitches, offsets,
-         attrs.DMABufYuvColorSpaceHint.Value,
-         attrs.DMABufSampleRangeHint.Value,
-         attrs.DMABufChromaHorizontalSiting.Value,
-         attrs.DMABufChromaVerticalSiting.Value,
-         &error,
-         NULL);
+   /* dri2_check_dma_buf_attribs ensures that the modifier, if available,
+    * will be present in attrs.DMABufPlaneModifiersLo[0] and
+    * attrs.DMABufPlaneModifiersHi[0] */
+   if (attrs.DMABufPlaneModifiersLo[0].IsPresent) {
+      modifier =
+         ((uint64_t) attrs.DMABufPlaneModifiersHi[0].Value << 32) |
+         attrs.DMABufPlaneModifiersLo[0].Value;
+      has_modifier = true;
+   } else {
+      modifier = DRM_FORMAT_MOD_INVALID;
+   }
+
+   if (has_modifier) {
+      if (dri2_dpy->image->base.version < 15 ||
+          dri2_dpy->image->createImageFromDmaBufs2 == NULL) {
+         _eglError(EGL_BAD_MATCH, "unsupported dma_buf format modifier");
+         return EGL_NO_IMAGE_KHR;
+      }
+      dri_image =
+         dri2_dpy->image->createImageFromDmaBufs2(dri2_dpy->dri_screen,
+            attrs.Width, attrs.Height, attrs.DMABufFourCC.Value,
+            modifier, fds, num_fds, pitches, offsets,
+            attrs.DMABufYuvColorSpaceHint.Value,
+            attrs.DMABufSampleRangeHint.Value,
+            attrs.DMABufChromaHorizontalSiting.Value,
+            attrs.DMABufChromaVerticalSiting.Value,
+            &error,
+            NULL);
+   }
+   else {
+      dri_image =
+         dri2_dpy->image->createImageFromDmaBufs(dri2_dpy->dri_screen,
+            attrs.Width, attrs.Height, attrs.DMABufFourCC.Value,
+            fds, num_fds, pitches, offsets,
+            attrs.DMABufYuvColorSpaceHint.Value,
+            attrs.DMABufSampleRangeHint.Value,
+            attrs.DMABufChromaHorizontalSiting.Value,
+            attrs.DMABufChromaVerticalSiting.Value,
+            &error,
+            NULL);
+   }
    dri2_create_image_khr_texture_error(error);
 
    if (!dri_image)

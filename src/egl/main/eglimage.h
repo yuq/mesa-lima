@@ -73,6 +73,8 @@ struct _egl_image_attribs
    struct _egl_image_attrib_int DMABufPlaneFds[DMA_BUF_MAX_PLANES];
    struct _egl_image_attrib_int DMABufPlaneOffsets[DMA_BUF_MAX_PLANES];
    struct _egl_image_attrib_int DMABufPlanePitches[DMA_BUF_MAX_PLANES];
+   struct _egl_image_attrib_int DMABufPlaneModifiersLo[DMA_BUF_MAX_PLANES];
+   struct _egl_image_attrib_int DMABufPlaneModifiersHi[DMA_BUF_MAX_PLANES];
    struct _egl_image_attrib_int DMABufYuvColorSpaceHint;
    struct _egl_image_attrib_int DMABufSampleRangeHint;
    struct _egl_image_attrib_int DMABufChromaHorizontalSiting;
