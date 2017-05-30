@@ -2404,6 +2404,26 @@ eglQueryDmaBufFormatsEXT(EGLDisplay dpy, EGLint max_formats,
    RETURN_EGL_EVAL(disp, ret);
 }
 
+static EGLBoolean EGLAPIENTRY
+eglQueryDmaBufModifiersEXT(EGLDisplay dpy, EGLint format, EGLint max_modifiers,
+                           EGLuint64KHR *modifiers, EGLBoolean *external_only,
+                           EGLint *num_modifiers)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLDriver *drv;
+   EGLBoolean ret;
+
+   _EGL_FUNC_START(NULL, EGL_NONE, NULL, EGL_FALSE);
+
+   _EGL_CHECK_DISPLAY(disp, EGL_FALSE, drv);
+
+   ret = drv->API.QueryDmaBufModifiersEXT(drv, disp, format, max_modifiers,
+                                          modifiers, external_only,
+                                          num_modifiers);
+
+   RETURN_EGL_EVAL(disp, ret);
+}
+
 __eglMustCastToProperFunctionPointerType EGLAPIENTRY
 eglGetProcAddress(const char *procname)
 {

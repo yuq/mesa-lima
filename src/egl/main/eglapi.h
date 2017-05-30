@@ -202,6 +202,11 @@ struct _egl_api
    EGLBoolean (*QueryDmaBufFormatsEXT)(_EGLDriver *drv, _EGLDisplay *dpy,
                                        EGLint max_formats, EGLint *formats,
                                        EGLint *num_formats);
+   EGLBoolean (*QueryDmaBufModifiersEXT) (_EGLDriver *drv, _EGLDisplay *dpy,
+                                          EGLint format, EGLint max_modifiers,
+                                          EGLuint64KHR *modifiers,
+                                          EGLBoolean *external_only,
+                                          EGLint *num_modifiers);
 };
 
 #ifdef __cplusplus
