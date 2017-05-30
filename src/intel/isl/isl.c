@@ -729,62 +729,61 @@ isl_calc_array_pitch_el_rows(const struct isl_device *dev,
    uint32_t pitch_sa_rows = 0;
 
    switch (dim_layout) {
+   case ISL_DIM_LAYOUT_GEN4_2D:
+      break; /* Handled below */
    case ISL_DIM_LAYOUT_GEN9_1D:
       /* Each row is an array slice */
-      pitch_sa_rows = 1;
-      break;
-   case ISL_DIM_LAYOUT_GEN4_2D:
-      switch (array_pitch_span) {
-      case ISL_ARRAY_PITCH_SPAN_COMPACT:
-         pitch_sa_rows = isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
-         break;
-      case ISL_ARRAY_PITCH_SPAN_FULL: {
-         /* The QPitch equation is found in the Broadwell PRM >> Volume 5:
-          * Memory Views >> Common Surface Formats >> Surface Layout >> 2D
-          * Surfaces >> Surface Arrays.
-          */
-         uint32_t H0_sa = phys_level0_sa->h;
-         uint32_t H1_sa = isl_minify(H0_sa, 1);
-
-         uint32_t h0_sa = isl_align_npot(H0_sa, image_align_sa->h);
-         uint32_t h1_sa = isl_align_npot(H1_sa, image_align_sa->h);
-
-         uint32_t m;
-         if (ISL_DEV_GEN(dev) >= 7) {
-            /* The QPitch equation changed slightly in Ivybridge. */
-            m = 12;
-         } else {
-            m = 11;
-         }
-
-         pitch_sa_rows = h0_sa + h1_sa + (m * image_align_sa->h);
-
-         if (ISL_DEV_GEN(dev) == 6 && info->samples > 1 &&
-             (info->height % 4 == 1)) {
-            /* [SNB] Errata from the Sandy Bridge PRM >> Volume 4 Part 1:
-             * Graphics Core >> Section 7.18.3.7: Surface Arrays:
-             *
-             *    [SNB] Errata: Sampler MSAA Qpitch will be 4 greater than
-             *    the value calculated in the equation above , for every
-             *    other odd Surface Height starting from 1 i.e. 1,5,9,13.
-             *
-             * XXX(chadv): Is the errata natural corollary of the physical
-             * layout of interleaved samples?
-             */
-            pitch_sa_rows += 4;
-         }
-
-         pitch_sa_rows = isl_align_npot(pitch_sa_rows, fmtl->bh);
-         } /* end case */
-         break;
-      }
-      break;
+      return 1;
    case ISL_DIM_LAYOUT_GEN4_3D:
       assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
-      pitch_sa_rows = isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
-      break;
+      return isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
    default:
       unreachable("bad isl_dim_layout");
+      break;
+   }
+
+   switch (array_pitch_span) {
+   case ISL_ARRAY_PITCH_SPAN_COMPACT:
+      pitch_sa_rows = isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
+      break;
+   case ISL_ARRAY_PITCH_SPAN_FULL: {
+      /* The QPitch equation is found in the Broadwell PRM >> Volume 5:
+       * Memory Views >> Common Surface Formats >> Surface Layout >> 2D
+       * Surfaces >> Surface Arrays.
+       */
+      uint32_t H0_sa = phys_level0_sa->h;
+      uint32_t H1_sa = isl_minify(H0_sa, 1);
+
+      uint32_t h0_sa = isl_align_npot(H0_sa, image_align_sa->h);
+      uint32_t h1_sa = isl_align_npot(H1_sa, image_align_sa->h);
+
+      uint32_t m;
+      if (ISL_DEV_GEN(dev) >= 7) {
+         /* The QPitch equation changed slightly in Ivybridge. */
+         m = 12;
+      } else {
+         m = 11;
+      }
+
+      pitch_sa_rows = h0_sa + h1_sa + (m * image_align_sa->h);
+
+      if (ISL_DEV_GEN(dev) == 6 && info->samples > 1 &&
+          (info->height % 4 == 1)) {
+         /* [SNB] Errata from the Sandy Bridge PRM >> Volume 4 Part 1:
+          * Graphics Core >> Section 7.18.3.7: Surface Arrays:
+          *
+          *    [SNB] Errata: Sampler MSAA Qpitch will be 4 greater than
+          *    the value calculated in the equation above , for every
+          *    other odd Surface Height starting from 1 i.e. 1,5,9,13.
+          *
+          * XXX(chadv): Is the errata natural corollary of the physical
+          * layout of interleaved samples?
+          */
+         pitch_sa_rows += 4;
+      }
+
+      pitch_sa_rows = isl_align_npot(pitch_sa_rows, fmtl->bh);
+      } /* end case */
       break;
    }
 
