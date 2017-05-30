@@ -165,7 +165,7 @@ public:
 
    explicit st_src_reg(st_dst_reg reg);
 
-   int16_t index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
+   int32_t index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
    int16_t index2D;
    uint16_t swizzle; /**< SWIZZLE_XYZWONEZERO swizzles from Mesa. */
    int negate:4; /**< NEGATE_XYZW mask from mesa */
@@ -239,7 +239,7 @@ public:
 
    explicit st_dst_reg(st_src_reg reg);
 
-   int16_t index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
+   int32_t index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
    int16_t index2D;
    gl_register_file file:5; /**< PROGRAM_* from Mesa */
    unsigned writemask:4; /**< Bitfield of WRITEMASK_[XYZW] */
