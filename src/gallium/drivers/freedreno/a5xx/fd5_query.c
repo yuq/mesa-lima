@@ -144,6 +144,99 @@ static const struct fd_acc_sample_provider occlusion_predicate = {
 		.result = occlusion_predicate_result,
 };
 
+/*
+ * Timestamp Queries:
+ */
+
+static void
+timestamp_resume(struct fd_acc_query *aq, struct fd_batch *batch)
+{
+	struct fd_ringbuffer *ring = batch->draw;
+
+	OUT_PKT7(ring, CP_EVENT_WRITE, 4);
+	OUT_RING(ring, CP_EVENT_WRITE_0_EVENT(CACHE_FLUSH_AND_INV_EVENT) |
+			CP_EVENT_WRITE_0_TIMESTAMP);
+	OUT_RELOCW(ring, query_sample(aq, start));
+	OUT_RING(ring, 0x00000000);
+
+	fd_reset_wfi(batch);
+}
+
+static void
+timestamp_pause(struct fd_acc_query *aq, struct fd_batch *batch)
+{
+	struct fd_ringbuffer *ring = batch->draw;
+
+	OUT_PKT7(ring, CP_EVENT_WRITE, 4);
+	OUT_RING(ring, CP_EVENT_WRITE_0_EVENT(CACHE_FLUSH_AND_INV_EVENT) |
+			CP_EVENT_WRITE_0_TIMESTAMP);
+	OUT_RELOCW(ring, query_sample(aq, stop));
+	OUT_RING(ring, 0x00000000);
+
+	fd_reset_wfi(batch);
+	fd_wfi(batch, ring);
+
+	/* result += stop - start: */
+	OUT_PKT7(ring, CP_MEM_TO_MEM, 9);
+	OUT_RING(ring, CP_MEM_TO_MEM_0_DOUBLE |
+			CP_MEM_TO_MEM_0_NEG_C);
+	OUT_RELOCW(ring, query_sample(aq, result));     /* dst */
+	OUT_RELOC(ring, query_sample(aq, result));      /* srcA */
+	OUT_RELOC(ring, query_sample(aq, stop));        /* srcB */
+	OUT_RELOC(ring, query_sample(aq, start));       /* srcC */
+}
+
+static uint64_t
+ticks_to_ns(struct fd_context *ctx, uint32_t ts)
+{
+	/* This is based on the 19.2MHz always-on rbbm timer.
+	 *
+	 * TODO we should probably query this value from kernel..
+	 */
+	return ts * (1000000000 / 19200000);
+}
+
+static void
+time_elapsed_accumulate_result(struct fd_context *ctx, void *buf,
+		union pipe_query_result *result)
+{
+	struct fd5_query_sample *sp = buf;
+	result->u64 = ticks_to_ns(ctx, sp->result);
+}
+
+static void
+timestamp_accumulate_result(struct fd_context *ctx, void *buf,
+		union pipe_query_result *result)
+{
+	struct fd5_query_sample *sp = buf;
+	result->u64 = ticks_to_ns(ctx, sp->result);
+}
+
+static const struct fd_acc_sample_provider time_elapsed = {
+		.query_type = PIPE_QUERY_TIME_ELAPSED,
+		.active = FD_STAGE_DRAW | FD_STAGE_CLEAR,
+		.size = sizeof(struct fd5_query_sample),
+		.resume = timestamp_resume,
+		.pause = timestamp_pause,
+		.result = time_elapsed_accumulate_result,
+};
+
+/* NOTE: timestamp query isn't going to give terribly sensible results
+ * on a tiler.  But it is needed by qapitrace profile heatmap.  If you
+ * add in a binning pass, the results get even more non-sensical.  So
+ * we just return the timestamp on the first tile and hope that is
+ * kind of good enough.
+ */
+
+static const struct fd_acc_sample_provider timestamp = {
+		.query_type = PIPE_QUERY_TIMESTAMP,
+		.active = FD_STAGE_ALL,
+		.size = sizeof(struct fd5_query_sample),
+		.resume = timestamp_resume,
+		.pause = timestamp_pause,
+		.result = timestamp_accumulate_result,
+};
+
 void
 fd5_query_context_init(struct pipe_context *pctx)
 {
@@ -154,4 +247,7 @@ fd5_query_context_init(struct pipe_context *pctx)
 
 	fd_acc_query_register_provider(pctx, &occlusion_counter);
 	fd_acc_query_register_provider(pctx, &occlusion_predicate);
+
+	fd_acc_query_register_provider(pctx, &time_elapsed);
+	fd_acc_query_register_provider(pctx, &timestamp);
 }
