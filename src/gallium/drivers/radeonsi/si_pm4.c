@@ -110,12 +110,6 @@ void si_pm4_clear_state(struct si_pm4_state *state)
 	state->ndw = 0;
 }
 
-void si_pm4_free_state_simple(struct si_pm4_state *state)
-{
-	si_pm4_clear_state(state);
-	FREE(state);
-}
-
 void si_pm4_free_state(struct si_context *sctx,
 		       struct si_pm4_state *state,
 		       unsigned idx)
@@ -127,7 +121,8 @@ void si_pm4_free_state(struct si_context *sctx,
 		sctx->emitted.array[idx] = NULL;
 	}
 
-	si_pm4_free_state_simple(state);
+	si_pm4_clear_state(state);
+	FREE(state);
 }
 
 void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)

@@ -72,7 +72,6 @@ void si_pm4_upload_indirect_buffer(struct si_context *sctx,
 				   struct si_pm4_state *state);
 
 void si_pm4_clear_state(struct si_pm4_state *state);
-void si_pm4_free_state_simple(struct si_pm4_state *state);
 void si_pm4_free_state(struct si_context *sctx,
 		       struct si_pm4_state *state,
 		       unsigned idx);
