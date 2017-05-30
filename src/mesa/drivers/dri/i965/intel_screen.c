@@ -2286,6 +2286,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->has_exec_fence =
      intel_get_boolean(screen, I915_PARAM_HAS_EXEC_FENCE);
 
+   intel_screen_init_surface_formats(screen);
+
    return (const __DRIconfig**) intel_screen_make_configs(dri_screen);
 }
 

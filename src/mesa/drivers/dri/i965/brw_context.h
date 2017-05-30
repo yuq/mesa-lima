@@ -1170,8 +1170,8 @@ struct brw_context
    const struct brw_tracked_state render_atoms[76];
    const struct brw_tracked_state compute_atoms[11];
 
-   enum isl_format mesa_to_isl_render_format[MESA_FORMAT_COUNT];
-   bool mesa_format_supports_render[MESA_FORMAT_COUNT];
+   const enum isl_format *mesa_to_isl_render_format;
+   const bool *mesa_format_supports_render;
 
    /* PrimitiveRestart */
    struct {
@@ -1427,6 +1427,7 @@ void brw_upload_image_surfaces(struct brw_context *brw,
                                struct brw_stage_prog_data *prog_data);
 
 /* brw_surface_formats.c */
+void intel_screen_init_surface_formats(struct intel_screen *screen);
 void brw_init_surface_formats(struct brw_context *brw);
 bool brw_render_target_supported(struct brw_context *brw,
                                  struct gl_renderbuffer *rb);

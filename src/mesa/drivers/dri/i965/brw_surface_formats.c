@@ -203,17 +203,16 @@ brw_isl_format_for_mesa_format(mesa_format mesa_format)
 }
 
 void
-brw_init_surface_formats(struct brw_context *brw)
+intel_screen_init_surface_formats(struct intel_screen *screen)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   struct gl_context *ctx = &brw->ctx;
-   int gen;
+   const struct gen_device_info *devinfo = &screen->devinfo;
    mesa_format format;
 
-   memset(&ctx->TextureFormatSupported, 0, sizeof(ctx->TextureFormatSupported));
+   memset(&screen->mesa_format_supports_texture, 0,
+          sizeof(screen->mesa_format_supports_texture));
 
-   gen = brw->gen * 10;
-   if (brw->is_g4x || brw->is_haswell)
+   int gen = devinfo->gen * 10;
+   if (devinfo->is_g4x || devinfo->is_haswell)
       gen += 5;
 
    for (format = MESA_FORMAT_NONE + 1; format < MESA_FORMAT_COUNT; format++) {
@@ -237,7 +236,7 @@ brw_init_surface_formats(struct brw_context *brw)
 
       if (isl_format_supports_sampling(devinfo, texture) &&
           (isl_format_supports_filtering(devinfo, texture) || is_integer))
-	 ctx->TextureFormatSupported[format] = true;
+	 screen->mesa_format_supports_texture[format] = true;
 
       /* Re-map some render target formats to make them supported when they
        * wouldn't be using their format for texturing.
@@ -301,30 +300,30 @@ brw_init_surface_formats(struct brw_context *brw)
        */
       if (isl_format_supports_rendering(devinfo, render) &&
           (isl_format_supports_alpha_blending(devinfo, render) || is_integer)) {
-	 brw->mesa_to_isl_render_format[format] = render;
-	 brw->mesa_format_supports_render[format] = true;
+	 screen->mesa_to_isl_render_format[format] = render;
+	 screen->mesa_format_supports_render[format] = true;
       }
    }
 
    /* We will check this table for FBO completeness, but the surface format
     * table above only covered color rendering.
     */
-   brw->mesa_format_supports_render[MESA_FORMAT_Z24_UNORM_S8_UINT] = true;
-   brw->mesa_format_supports_render[MESA_FORMAT_Z24_UNORM_X8_UINT] = true;
-   brw->mesa_format_supports_render[MESA_FORMAT_S_UINT8] = true;
-   brw->mesa_format_supports_render[MESA_FORMAT_Z_FLOAT32] = true;
-   brw->mesa_format_supports_render[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
-   if (brw->gen >= 8)
-      brw->mesa_format_supports_render[MESA_FORMAT_Z_UNORM16] = true;
+   screen->mesa_format_supports_render[MESA_FORMAT_Z24_UNORM_S8_UINT] = true;
+   screen->mesa_format_supports_render[MESA_FORMAT_Z24_UNORM_X8_UINT] = true;
+   screen->mesa_format_supports_render[MESA_FORMAT_S_UINT8] = true;
+   screen->mesa_format_supports_render[MESA_FORMAT_Z_FLOAT32] = true;
+   screen->mesa_format_supports_render[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
+   if (gen >= 80)
+      screen->mesa_format_supports_render[MESA_FORMAT_Z_UNORM16] = true;
 
    /* We remap depth formats to a supported texturing format in
     * translate_tex_format().
     */
-   ctx->TextureFormatSupported[MESA_FORMAT_Z24_UNORM_S8_UINT] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_Z24_UNORM_X8_UINT] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_Z_FLOAT32] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_S_UINT8] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_Z24_UNORM_S8_UINT] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_Z24_UNORM_X8_UINT] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_Z_FLOAT32] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_S_UINT8] = true;
 
    /* Benchmarking shows that Z16 is slower than Z24, so there's no reason to
     * use it unless you're under memory (not memory bandwidth) pressure.
@@ -340,8 +339,8 @@ brw_init_surface_formats(struct brw_context *brw)
     * With the PMA stall workaround in place, Z16 is faster than Z24, as it
     * should be.
     */
-   if (brw->gen >= 8)
-      ctx->TextureFormatSupported[MESA_FORMAT_Z_UNORM16] = true;
+   if (gen >= 80)
+      screen->mesa_format_supports_texture[MESA_FORMAT_Z_UNORM16] = true;
 
    /* The RGBX formats are not renderable. Normally these get mapped
     * internally to RGBA formats when rendering. However on Gen9+ when this
@@ -356,7 +355,7 @@ brw_init_surface_formats(struct brw_context *brw)
     * doesn't implement this swizzle override. We don't need to do this for
     * BGRX because that actually is supported natively on Gen8+.
     */
-   if (brw->gen >= 9) {
+   if (gen >= 90) {
       static const mesa_format rgbx_formats[] = {
          MESA_FORMAT_R8G8B8X8_UNORM,
          MESA_FORMAT_R8G8B8X8_SRGB,
@@ -366,30 +365,47 @@ brw_init_surface_formats(struct brw_context *brw)
       };
 
       for (int i = 0; i < ARRAY_SIZE(rgbx_formats); i++) {
-         ctx->TextureFormatSupported[rgbx_formats[i]] = false;
-         brw->mesa_format_supports_render[rgbx_formats[i]] = false;
+         screen->mesa_format_supports_texture[rgbx_formats[i]] = false;
+         screen->mesa_format_supports_render[rgbx_formats[i]] = false;
       }
    }
 
    /* On hardware that lacks support for ETC1, we map ETC1 to RGBX
     * during glCompressedTexImage2D(). See intel_mipmap_tree::wraps_etc1.
     */
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC1_RGB8] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC1_RGB8] = true;
 
    /* On hardware that lacks support for ETC2, we map ETC2 to a suitable
     * MESA_FORMAT during glCompressedTexImage2D().
     * See intel_mipmap_tree::wraps_etc2.
     */
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_RGB8] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_SRGB8] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_RGBA8_EAC] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_SRGB8_ALPHA8_EAC] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_R11_EAC] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_RG11_EAC] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_SIGNED_R11_EAC] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_SIGNED_RG11_EAC] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_RGB8_PUNCHTHROUGH_ALPHA1] = true;
-   ctx->TextureFormatSupported[MESA_FORMAT_ETC2_SRGB8_PUNCHTHROUGH_ALPHA1] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_RGB8] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_SRGB8] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_RGBA8_EAC] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_SRGB8_ALPHA8_EAC] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_R11_EAC] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_RG11_EAC] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_SIGNED_R11_EAC] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_SIGNED_RG11_EAC] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_RGB8_PUNCHTHROUGH_ALPHA1] = true;
+   screen->mesa_format_supports_texture[MESA_FORMAT_ETC2_SRGB8_PUNCHTHROUGH_ALPHA1] = true;
+}
+
+void
+brw_init_surface_formats(struct brw_context *brw)
+{
+   struct intel_screen *screen = brw->screen;
+   struct gl_context *ctx = &brw->ctx;
+
+   brw->mesa_format_supports_render = screen->mesa_format_supports_render;
+   brw->mesa_to_isl_render_format = screen->mesa_to_isl_render_format;
+
+   STATIC_ASSERT(ARRAY_SIZE(ctx->TextureFormatSupported) ==
+                 ARRAY_SIZE(screen->mesa_format_supports_texture));
+
+   for (unsigned i = 0; i < ARRAY_SIZE(ctx->TextureFormatSupported); ++i) {
+      ctx->TextureFormatSupported[i] = screen->mesa_format_supports_texture[i];
+   }
 }
 
 bool
