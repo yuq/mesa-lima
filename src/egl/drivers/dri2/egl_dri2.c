@@ -726,6 +726,12 @@ dri2_setup_screen(_EGLDisplay *disp)
           dri2_dpy->image->createImageFromDmaBufs) {
          disp->Extensions.EXT_image_dma_buf_import = EGL_TRUE;
       }
+      if (dri2_dpy->image->base.version >= 15 &&
+          dri2_dpy->image->createImageFromDmaBufs2 &&
+          dri2_dpy->image->queryDmaBufFormats &&
+          dri2_dpy->image->queryDmaBufModifiers) {
+         disp->Extensions.EXT_image_dma_buf_import_modifiers = EGL_TRUE;
+      }
 #endif
    }
 }
