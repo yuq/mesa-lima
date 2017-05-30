@@ -2092,7 +2092,7 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
     *  generated if any of the EGL_DMA_BUF_PLANE1_* or EGL_DMA_BUF_PLANE2_*
     *  attributes are specified."
     */
-   for (i = plane_n; i < 3; ++i) {
+   for (i = plane_n; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneFds[i].IsPresent ||
           attrs->DMABufPlaneOffsets[i].IsPresent ||
           attrs->DMABufPlanePitches[i].IsPresent) {
@@ -2125,9 +2125,9 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
    __DRIimage *dri_image;
    unsigned num_fds;
    unsigned i;
-   int fds[3];
-   int pitches[3];
-   int offsets[3];
+   int fds[DMA_BUF_MAX_PLANES];
+   int pitches[DMA_BUF_MAX_PLANES];
+   int offsets[DMA_BUF_MAX_PLANES];
    unsigned error;
 
    /**

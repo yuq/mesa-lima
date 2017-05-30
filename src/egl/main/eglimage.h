@@ -46,6 +46,8 @@ struct _egl_image_attrib_int
    EGLBoolean IsPresent;
 };
 
+#define DMA_BUF_MAX_PLANES 3
+
 struct _egl_image_attribs
 {
    /* EGL_KHR_image_base */
@@ -67,9 +69,9 @@ struct _egl_image_attribs
 
    /* EGL_EXT_image_dma_buf_import */
    struct _egl_image_attrib_int DMABufFourCC;
-   struct _egl_image_attrib_int DMABufPlaneFds[3];
-   struct _egl_image_attrib_int DMABufPlaneOffsets[3];
-   struct _egl_image_attrib_int DMABufPlanePitches[3];
+   struct _egl_image_attrib_int DMABufPlaneFds[DMA_BUF_MAX_PLANES];
+   struct _egl_image_attrib_int DMABufPlaneOffsets[DMA_BUF_MAX_PLANES];
+   struct _egl_image_attrib_int DMABufPlanePitches[DMA_BUF_MAX_PLANES];
    struct _egl_image_attrib_int DMABufYuvColorSpaceHint;
    struct _egl_image_attrib_int DMABufSampleRangeHint;
    struct _egl_image_attrib_int DMABufChromaHorizontalSiting;
