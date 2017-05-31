@@ -533,10 +533,13 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
    if (brw->gen < 5 && brw->has_swizzling)
       return false;
 
+   int level = texImage->Level + texImage->TexObject->MinLevel;
+
    /* Since we are going to write raw data to the miptree, we need to resolve
     * any pending fast color clears before we start.
     */
-   intel_miptree_all_slices_resolve_color(brw, image->mt, 0);
+   assert(image->mt->logical_depth0 == 1);
+   intel_miptree_resolve_color(brw, image->mt, level, 1, 0, 1, 0);
 
    bo = image->mt->bo;
 
@@ -560,8 +563,6 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
        format, type, texImage->TexFormat, image->mt->tiling,
        packing->Alignment, packing->RowLength, packing->SkipPixels,
        packing->SkipRows);
-
-   int level = texImage->Level + texImage->TexObject->MinLevel;
 
    /* Adjust x and y offset based on miplevel */
    xoffset += image->mt->level[level].level_x;
