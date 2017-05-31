@@ -1450,8 +1450,8 @@ static void si_build_shader_variant(void *job, int thread_index)
 	int r;
 
 	if (thread_index >= 0) {
-		assert(thread_index < ARRAY_SIZE(sscreen->tm));
-		tm = sscreen->tm[thread_index];
+		assert(thread_index < ARRAY_SIZE(sscreen->tm_low_priority));
+		tm = sscreen->tm_low_priority[thread_index];
 		if (!debug->async)
 			debug = NULL;
 	} else {
@@ -1679,7 +1679,7 @@ again:
 	    !is_pure_monolithic &&
 	    thread_index < 0) {
 		/* Compile it asynchronously. */
-		util_queue_add_job(&sscreen->shader_compiler_queue,
+		util_queue_add_job(&sscreen->shader_compiler_queue_low_priority,
 				   shader, &shader->optimized_ready,
 				   si_build_shader_variant, NULL);
 
@@ -2258,7 +2258,7 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 {
 	if (shader->is_optimized) {
-		util_queue_drop_job(&sctx->screen->shader_compiler_queue,
+		util_queue_drop_job(&sctx->screen->shader_compiler_queue_low_priority,
 				    &shader->optimized_ready);
 		util_queue_fence_destroy(&shader->optimized_ready);
 	}

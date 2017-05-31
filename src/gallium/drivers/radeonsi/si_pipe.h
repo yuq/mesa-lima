@@ -110,6 +110,9 @@ struct si_screen {
 	/* Shader compiler queue for multithreaded compilation. */
 	struct util_queue		shader_compiler_queue;
 	LLVMTargetMachineRef		tm[4]; /* used by the queue only */
+
+	struct util_queue		shader_compiler_queue_low_priority;
+	LLVMTargetMachineRef		tm_low_priority[4];
 };
 
 struct si_blend_color {

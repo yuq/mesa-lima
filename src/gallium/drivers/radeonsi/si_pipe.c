@@ -742,10 +742,15 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 		return;
 
 	util_queue_destroy(&sscreen->shader_compiler_queue);
+	util_queue_destroy(&sscreen->shader_compiler_queue_low_priority);
 
 	for (i = 0; i < ARRAY_SIZE(sscreen->tm); i++)
 		if (sscreen->tm[i])
 			LLVMDisposeTargetMachine(sscreen->tm[i]);
+
+	for (i = 0; i < ARRAY_SIZE(sscreen->tm_low_priority); i++)
+		if (sscreen->tm_low_priority[i])
+			LLVMDisposeTargetMachine(sscreen->tm_low_priority[i]);
 
 	/* Free shader parts. */
 	for (i = 0; i < ARRAY_SIZE(parts); i++) {
@@ -860,7 +865,7 @@ static void si_test_vmfault(struct si_screen *sscreen)
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
-	unsigned num_cpus, num_compiler_threads, i;
+	unsigned num_threads, num_compiler_threads, num_compiler_threads_lowprio, i;
 
 	if (!sscreen) {
 		return NULL;
@@ -885,15 +890,31 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	/* Only enable as many threads as we have target machines, but at most
 	 * the number of CPUs - 1 if there is more than one.
 	 */
-	num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
-	num_cpus = MAX2(1, num_cpus - 1);
-	num_compiler_threads = MIN2(num_cpus, ARRAY_SIZE(sscreen->tm));
+	num_threads = sysconf(_SC_NPROCESSORS_ONLN);
+	num_threads = MAX2(1, num_threads - 1);
+	num_compiler_threads = MIN2(num_threads, ARRAY_SIZE(sscreen->tm));
+	num_compiler_threads_lowprio =
+		MIN2(num_threads, ARRAY_SIZE(sscreen->tm_low_priority));
 
 	if (!util_queue_init(&sscreen->shader_compiler_queue, "si_shader",
 			     32, num_compiler_threads, 0)) {
 		si_destroy_shader_cache(sscreen);
 		FREE(sscreen);
 		return NULL;
+	}
+
+	/* The queue must be large enough so that adding optimized shaders
+	 * doesn't stall draw calls when the queue is full. Especially varying
+	 * packing generates a very high volume of optimized shader compilation
+	 * jobs.
+	 */
+	if (!util_queue_init(&sscreen->shader_compiler_queue_low_priority,
+			     "si_shader_low",
+			     1024, num_compiler_threads,
+			     UTIL_QUEUE_INIT_USE_MINIMUM_PRIORITY)) {
+	       si_destroy_shader_cache(sscreen);
+	       FREE(sscreen);
+	       return NULL;
 	}
 
 	si_handle_env_var_force_family(sscreen);
@@ -959,6 +980,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 	for (i = 0; i < num_compiler_threads; i++)
 		sscreen->tm[i] = si_create_llvm_target_machine(sscreen);
+	for (i = 0; i < num_compiler_threads_lowprio; i++)
+		sscreen->tm_low_priority[i] = si_create_llvm_target_machine(sscreen);
 
 	/* Create the auxiliary context. This must be done last. */
 	sscreen->b.aux_context = si_create_context(&sscreen->b.b, 0);
