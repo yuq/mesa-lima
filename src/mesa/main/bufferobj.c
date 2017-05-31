@@ -1229,6 +1229,16 @@ _mesa_buffer_unmap_all_mappings(struct gl_context *ctx,
 /**********************************************************************/
 
 void GLAPIENTRY
+_mesa_BindBuffer_no_error(GLenum target, GLuint buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_buffer_object **bindTarget = get_buffer_target(ctx, target);
+   bind_buffer_object(ctx, bindTarget, buffer);
+}
+
+
+void GLAPIENTRY
 _mesa_BindBuffer(GLenum target, GLuint buffer)
 {
    GET_CURRENT_CONTEXT(ctx);

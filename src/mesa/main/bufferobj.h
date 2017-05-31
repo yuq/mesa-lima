@@ -156,6 +156,9 @@ _mesa_ClearBufferSubData_sw(struct gl_context *ctx,
  * API functions
  */
 void GLAPIENTRY
+_mesa_BindBuffer_no_error(GLenum target, GLuint buffer);
+
+void GLAPIENTRY
 _mesa_BindBuffer(GLenum target, GLuint buffer);
 
 void GLAPIENTRY
