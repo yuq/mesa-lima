@@ -4309,6 +4309,15 @@ _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
 }
 
 void GLAPIENTRY
+_mesa_InvalidateBufferData_no_error(GLuint buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_buffer_object *bufObj =_mesa_lookup_bufferobj(ctx, buffer);
+   invalidate_buffer_subdata(ctx, bufObj, 0, bufObj->Size);
+}
+
+void GLAPIENTRY
 _mesa_InvalidateBufferData(GLuint buffer)
 {
    GET_CURRENT_CONTEXT(ctx);

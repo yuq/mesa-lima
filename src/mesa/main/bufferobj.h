@@ -348,6 +348,9 @@ _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
                               GLsizeiptr length);
 
 void GLAPIENTRY
+_mesa_InvalidateBufferData_no_error(GLuint buffer);
+
+void GLAPIENTRY
 _mesa_InvalidateBufferData(GLuint buffer);
 
 void GLAPIENTRY

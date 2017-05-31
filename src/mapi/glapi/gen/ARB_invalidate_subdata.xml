@@ -25,7 +25,7 @@
     <param name="length" type="GLsizeiptr"/>
   </function>
 
-  <function name="InvalidateBufferData">
+  <function name="InvalidateBufferData" no_error="true">
     <param name="buffer" type="GLuint"/>
   </function>
 
