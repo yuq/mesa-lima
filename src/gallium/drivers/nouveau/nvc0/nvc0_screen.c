@@ -27,9 +27,6 @@
 #include "util/u_format_s3tc.h"
 #include "pipe/p_screen.h"
 
-#include "vl/vl_decoder.h"
-#include "vl/vl_video_buffer.h"
-
 #include "nouveau_vp3_video.h"
 
 #include "nvc0/nvc0_context.h"
