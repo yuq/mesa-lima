@@ -4237,6 +4237,15 @@ _mesa_BindBuffersBase(GLenum target, GLuint first, GLsizei count,
    }
 }
 
+static ALWAYS_INLINE void
+invalidate_buffer_subdata(struct gl_context *ctx,
+                          struct gl_buffer_object *bufObj, GLintptr offset,
+                          GLsizeiptr length)
+{
+   if (ctx->Driver.InvalidateBufferSubData)
+      ctx->Driver.InvalidateBufferSubData(ctx, bufObj, offset, length);
+}
+
 void GLAPIENTRY
 _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
                               GLsizeiptr length)
@@ -4286,8 +4295,7 @@ _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
       return;
    }
 
-   if (ctx->Driver.InvalidateBufferSubData)
-      ctx->Driver.InvalidateBufferSubData(ctx, bufObj, offset, length);
+   invalidate_buffer_subdata(ctx, bufObj, offset, length);
 }
 
 void GLAPIENTRY
@@ -4324,8 +4332,7 @@ _mesa_InvalidateBufferData(GLuint buffer)
       return;
    }
 
-   if (ctx->Driver.InvalidateBufferSubData)
-      ctx->Driver.InvalidateBufferSubData(ctx, bufObj, 0, bufObj->Size);
+   invalidate_buffer_subdata(ctx, bufObj, 0, bufObj->Size);
 }
 
 static void
