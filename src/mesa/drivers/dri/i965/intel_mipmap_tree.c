@@ -1986,7 +1986,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
  * Does the miptree slice have hiz enabled?
  */
 bool
-intel_miptree_level_has_hiz(struct intel_mipmap_tree *mt, uint32_t level)
+intel_miptree_level_has_hiz(const struct intel_mipmap_tree *mt, uint32_t level)
 {
    intel_miptree_check_level_layer(mt, level, 0);
    return mt->level[level].has_hiz;

@@ -858,7 +858,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 			struct intel_mipmap_tree *mt);
 
 bool
-intel_miptree_level_has_hiz(struct intel_mipmap_tree *mt, uint32_t level);
+intel_miptree_level_has_hiz(const struct intel_mipmap_tree *mt, uint32_t level);
 
 /**
  * \return false if no resolve was needed
