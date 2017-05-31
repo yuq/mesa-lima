@@ -180,13 +180,15 @@ util_queue_thread_func(void *input)
 
    /* signal remaining jobs before terminating */
    mtx_lock(&queue->lock);
-   while (queue->jobs[queue->read_idx].job) {
-      util_queue_fence_signal(queue->jobs[queue->read_idx].fence);
-
-      queue->jobs[queue->read_idx].job = NULL;
-      queue->read_idx = (queue->read_idx + 1) % queue->max_jobs;
+   for (unsigned i = queue->read_idx; i != queue->write_idx;
+        i = (i + 1) % queue->max_jobs) {
+      if (queue->jobs[i].job) {
+         util_queue_fence_signal(queue->jobs[i].fence);
+         queue->jobs[i].job = NULL;
+      }
    }
-   queue->num_queued = 0; /* reset this when exiting the thread */
+   queue->read_idx = queue->write_idx;
+   queue->num_queued = 0;
    mtx_unlock(&queue->lock);
    return 0;
 }
@@ -327,6 +329,45 @@ util_queue_add_job(struct util_queue *queue,
    queue->num_queued++;
    cnd_signal(&queue->has_queued_cond);
    mtx_unlock(&queue->lock);
+}
+
+/**
+ * Remove a queued job. If the job hasn't started execution, it's removed from
+ * the queue. If the job has started execution, the function waits for it to
+ * complete.
+ *
+ * In all cases, the fence is signalled when the function returns.
+ *
+ * The function can be used when destroying an object associated with the job
+ * when you don't care about the job completion state.
+ */
+void
+util_queue_drop_job(struct util_queue *queue, struct util_queue_fence *fence)
+{
+   bool removed = false;
+
+   if (util_queue_fence_is_signalled(fence))
+      return;
+
+   mtx_lock(&queue->lock);
+   for (unsigned i = queue->read_idx; i != queue->write_idx;
+        i = (i + 1) % queue->max_jobs) {
+      if (queue->jobs[i].fence == fence) {
+         if (queue->jobs[i].cleanup)
+            queue->jobs[i].cleanup(queue->jobs[i].job, -1);
+
+         /* Just clear it. The threads will treat as a no-op job. */
+         memset(&queue->jobs[i], 0, sizeof(queue->jobs[i]));
+         removed = true;
+         break;
+      }
+   }
+   mtx_unlock(&queue->lock);
+
+   if (removed)
+      util_queue_fence_signal(fence);
+   else
+      util_queue_fence_wait(fence);
 }
 
 int64_t

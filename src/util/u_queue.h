@@ -92,6 +92,8 @@ void util_queue_add_job(struct util_queue *queue,
                         struct util_queue_fence *fence,
                         util_queue_execute_func execute,
                         util_queue_execute_func cleanup);
+void util_queue_drop_job(struct util_queue *queue,
+                         struct util_queue_fence *fence);
 
 void util_queue_fence_wait(struct util_queue_fence *fence);
 int64_t util_queue_get_thread_time_nano(struct util_queue *queue,
