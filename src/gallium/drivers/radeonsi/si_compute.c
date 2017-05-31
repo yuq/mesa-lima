@@ -860,7 +860,8 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	}
 
 	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
-		util_queue_fence_wait(&program->ready);
+		util_queue_drop_job(&sctx->screen->shader_compiler_queue,
+				    &program->ready);
 		util_queue_fence_destroy(&program->ready);
 	}
 

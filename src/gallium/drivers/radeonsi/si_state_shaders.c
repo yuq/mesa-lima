@@ -2258,7 +2258,8 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 {
 	if (shader->is_optimized) {
-		util_queue_fence_wait(&shader->optimized_ready);
+		util_queue_drop_job(&sctx->screen->shader_compiler_queue,
+				    &shader->optimized_ready);
 		util_queue_fence_destroy(&shader->optimized_ready);
 	}
 
@@ -2315,7 +2316,7 @@ static void si_destroy_shader_selector(struct si_context *sctx,
 		[PIPE_SHADER_FRAGMENT] = &sctx->ps_shader,
 	};
 
-	util_queue_fence_wait(&sel->ready);
+	util_queue_drop_job(&sctx->screen->shader_compiler_queue, &sel->ready);
 
 	if (current_shader[sel->type]->cso == sel) {
 		current_shader[sel->type]->cso = NULL;
