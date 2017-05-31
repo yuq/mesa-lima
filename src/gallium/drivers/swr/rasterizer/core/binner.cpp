@@ -809,7 +809,6 @@ endBinTriangles:
         TRIANGLE_WORK_DESC &desc = work.desc.tri;
 
         desc.triFlags.frontFacing = state.forceFront ? 1 : ((frontFaceMask >> triIndex) & 1);
-        desc.triFlags.primID = pPrimID[triIndex];
         desc.triFlags.renderTargetArrayIndex = aRTAI[triIndex];
         desc.triFlags.viewportIndex = pViewportIndex[triIndex];
 
@@ -1257,7 +1256,6 @@ endBinTriangles:
         TRIANGLE_WORK_DESC &desc = work.desc.tri;
 
         desc.triFlags.frontFacing = state.forceFront ? 1 : ((frontFaceMask >> triIndex) & 1);
-        desc.triFlags.primID = pPrimID[triIndex];
         desc.triFlags.renderTargetArrayIndex = aRTAI[triIndex];
         desc.triFlags.viewportIndex = pViewportIndex[triIndex];
 
@@ -1451,7 +1449,6 @@ void BinPostSetupPoints(
 
             // points are always front facing
             desc.triFlags.frontFacing = 1;
-            desc.triFlags.primID = pPrimID[primIndex];
             desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
             desc.triFlags.viewportIndex = pViewportIndex[primIndex];
 
@@ -1601,7 +1598,6 @@ void BinPostSetupPoints(
             TRIANGLE_WORK_DESC &desc = work.desc.tri;
 
             desc.triFlags.frontFacing = 1;
-            desc.triFlags.primID = pPrimID[primIndex];
             desc.triFlags.pointSize = aPointSize[primIndex];
             desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
             desc.triFlags.viewportIndex = pViewportIndex[primIndex];
@@ -1823,7 +1819,6 @@ void BinPostSetupPoints_simd16(
 
             // points are always front facing
             desc.triFlags.frontFacing = 1;
-            desc.triFlags.primID = pPrimID[primIndex];
             desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
             desc.triFlags.viewportIndex = pViewportIndex[primIndex];
 
@@ -1978,7 +1973,6 @@ void BinPostSetupPoints_simd16(
             TRIANGLE_WORK_DESC &desc = work.desc.tri;
 
             desc.triFlags.frontFacing = 1;
-            desc.triFlags.primID = pPrimID[primIndex];
             desc.triFlags.pointSize = aPointSize[primIndex];
             desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
             desc.triFlags.viewportIndex = pViewportIndex[primIndex];
@@ -2246,7 +2240,6 @@ void BinPostSetupLines(
         TRIANGLE_WORK_DESC &desc = work.desc.tri;
 
         desc.triFlags.frontFacing = 1;
-        desc.triFlags.primID = pPrimID[primIndex];
         desc.triFlags.yMajor = (yMajorMask >> primIndex) & 1;
         desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
         desc.triFlags.viewportIndex = pViewportIndex[primIndex];
@@ -2464,7 +2457,6 @@ void BinPostSetupLines_simd16(
         TRIANGLE_WORK_DESC &desc = work.desc.tri;
 
         desc.triFlags.frontFacing = 1;
-        desc.triFlags.primID = pPrimID[primIndex];
         desc.triFlags.yMajor = (yMajorMask >> primIndex) & 1;
         desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
         desc.triFlags.viewportIndex = pViewportIndex[primIndex];

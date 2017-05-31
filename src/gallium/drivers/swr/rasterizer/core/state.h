@@ -186,11 +186,10 @@ enum SWR_VTX_SLOTS
     VERTEX_ATTRIB_START_SLOT         = ( 1 + VERTEX_POSITION_END_SLOT),
     VERTEX_ATTRIB_END_SLOT           = (32 + VERTEX_POSITION_END_SLOT),
     VERTEX_RTAI_SLOT                 = (33 + VERTEX_POSITION_END_SLOT), // GS writes RenderTargetArrayIndex here
-    VERTEX_PRIMID_SLOT               = (34 + VERTEX_POSITION_END_SLOT), // GS writes PrimId here
-    VERTEX_CLIPCULL_DIST_LO_SLOT     = (35 + VERTEX_POSITION_END_SLOT), // VS writes lower 4 clip/cull dist
-    VERTEX_CLIPCULL_DIST_HI_SLOT     = (36 + VERTEX_POSITION_END_SLOT), // VS writes upper 4 clip/cull dist
-    VERTEX_POINT_SIZE_SLOT           = (37 + VERTEX_POSITION_END_SLOT), // VS writes point size here
-    VERTEX_VIEWPORT_ARRAY_INDEX_SLOT = (38 + VERTEX_POSITION_END_SLOT),
+    VERTEX_CLIPCULL_DIST_LO_SLOT     = (34 + VERTEX_POSITION_END_SLOT), // VS writes lower 4 clip/cull dist
+    VERTEX_CLIPCULL_DIST_HI_SLOT     = (35 + VERTEX_POSITION_END_SLOT), // VS writes upper 4 clip/cull dist
+    VERTEX_POINT_SIZE_SLOT           = (36 + VERTEX_POSITION_END_SLOT), // VS writes point size here
+    VERTEX_VIEWPORT_ARRAY_INDEX_SLOT = (37 + VERTEX_POSITION_END_SLOT),
     SWR_VTX_NUM_SLOTS                 = VERTEX_VIEWPORT_ARRAY_INDEX_SLOT,
 };
 
@@ -343,7 +342,6 @@ struct SWR_PS_CONTEXT
                                 // OUT: result color per rendertarget
 
     uint32_t frontFace;                 // IN: front- 1, back- 0
-    uint32_t primID;                    // IN: primitive ID
     uint32_t sampleIndex;               // IN: sampleIndex
     uint32_t renderTargetArrayIndex;    // IN: render target array index from GS
     uint32_t rasterizerSampleCount;     // IN: sample count used by the rasterizer
@@ -715,9 +713,6 @@ struct SWR_GS_STATE
 
     // geometry shader emits renderTargetArrayIndex
     bool emitsRenderTargetArrayIndex;
-
-    // geometry shader emits PrimitiveID
-    bool emitsPrimitiveID;
 
     // geometry shader emits ViewportArrayIndex
     bool emitsViewportArrayIndex;

@@ -406,8 +406,6 @@ BuilderSWR::swr_gs_llvm_emit_vertex(const struct lp_build_tgsi_gs_iface *gs_base
        uint32_t attribSlot = attrib;
        if (iface->info->output_semantic_name[attrib] == TGSI_SEMANTIC_PSIZE)
           attribSlot = VERTEX_POINT_SIZE_SLOT;
-       else if (iface->info->output_semantic_name[attrib] == TGSI_SEMANTIC_PRIMID)
-          attribSlot = VERTEX_PRIMID_SLOT;
        else if (iface->info->output_semantic_name[attrib] == TGSI_SEMANTIC_LAYER)
           attribSlot = VERTEX_RTAI_SLOT;
 
@@ -534,7 +532,6 @@ BuilderSWR::CompileGS(struct swr_context *ctx, swr_jit_gs_key &key)
    pGS->instanceCount = info->properties[TGSI_PROPERTY_GS_INVOCATIONS];
 
    pGS->emitsRenderTargetArrayIndex = info->writes_layer;
-   pGS->emitsPrimitiveID = info->writes_primid;
    pGS->emitsViewportArrayIndex = info->writes_viewport_index;
 
    // XXX: single stream for now...
@@ -1043,23 +1040,23 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
          inputs[attrib][3] =
             wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vOneOverW, PixelPositions_center}, "vOneOverW"));
          continue;
-      } else if (semantic_name == TGSI_SEMANTIC_PRIMID) {
-         Value *primID = LOAD(pPS, {0, SWR_PS_CONTEXT_primID}, "primID");
-         inputs[attrib][0] = wrap(VECTOR_SPLAT(JM()->mVWidth, primID));
-         inputs[attrib][1] = wrap(VIMMED1(0));
-         inputs[attrib][2] = wrap(VIMMED1(0));
-         inputs[attrib][3] = wrap(VIMMED1(0));
-         continue;
       }
 
       unsigned linkedAttrib =
          locate_linkage(semantic_name, semantic_idx, pPrevShader);
 
-      if (semantic_name == TGSI_SEMANTIC_GENERIC &&
+      uint32_t extraAttribs = 0;
+      if (semantic_name == TGSI_SEMANTIC_PRIMID && !ctx->gs) {
+         /* non-gs generated primID - need to grab from swizzleMap override */
+         linkedAttrib = pPrevShader->num_outputs - 1;
+         swr_fs->constantMask |= 1 << linkedAttrib;
+         extraAttribs++;
+      } else if (semantic_name == TGSI_SEMANTIC_GENERIC &&
           key.sprite_coord_enable & (1 << semantic_idx)) {
          /* we add an extra attrib to the backendState in swr_update_derived. */
-         linkedAttrib = pPrevShader->num_outputs - 1;
+         linkedAttrib = pPrevShader->num_outputs + extraAttribs - 1;
          swr_fs->pointSpriteMask |= (1 << linkedAttrib);
+         extraAttribs++;
       } else if (linkedAttrib == 0xFFFFFFFF) {
          inputs[attrib][0] = wrap(VIMMED1(0.0f));
          inputs[attrib][1] = wrap(VIMMED1(0.0f));

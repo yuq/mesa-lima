@@ -62,7 +62,6 @@ struct TRI_FLAGS
     uint32_t coverageMask : (SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM);
     uint32_t reserved : 32 - 1 - 1 - (SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM);
     float pointSize;
-    uint32_t primID;
     uint32_t renderTargetArrayIndex;
     uint32_t viewportIndex;
 };

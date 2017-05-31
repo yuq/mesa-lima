@@ -948,18 +948,7 @@ static void GeometryShaderStage(
                             if (HasRastT::value && state.soState.streamToRasterizer == stream)
                             {
 #if USE_SIMD16_FRONTEND
-                                simd16scalari vPrimId;
-                                // pull primitiveID from the GS output if available
-                                if (state.gsState.emitsPrimitiveID)
-                                {
-                                    simd16vector primIdAttrib[3];
-                                    gsPa.Assemble_simd16(VERTEX_PRIMID_SLOT, primIdAttrib);
-                                    vPrimId = _simd16_castps_si(primIdAttrib[state.frontendState.topologyProvokingVertex].x);
-                                }
-                                else
-                                {
-                                    vPrimId = _simd16_set1_epi32(pPrimitiveId[inputPrim]);
-                                }
+                                simd16scalari vPrimId = _simd16_set1_epi32(pPrimitiveId[inputPrim]);
 
                                 // use viewport array index if GS declares it as an output attribute. Otherwise use index 0.
                                 simd16scalari vViewPortIdx;
@@ -983,18 +972,7 @@ static void GeometryShaderStage(
                                 gsPa.useAlternateOffset = false;
                                 pfnClipFunc(pDC, gsPa, workerId, attrib_simd16, GenMask(gsPa.NumPrims()), vPrimId, vViewPortIdx);
 #else
-                                simdscalari vPrimId;
-                                // pull primitiveID from the GS output if available
-                                if (state.gsState.emitsPrimitiveID)
-                                {
-                                    simdvector primIdAttrib[3];
-                                    gsPa.Assemble(VERTEX_PRIMID_SLOT, primIdAttrib);
-                                    vPrimId = _simd_castps_si(primIdAttrib[state.frontendState.topologyProvokingVertex].x);
-                                }
-                                else
-                                {
-                                    vPrimId = _simd_set1_epi32(pPrimitiveId[inputPrim]);
-                                }
+                                simdscalari vPrimId = _simd_set1_epi32(pPrimitiveId[inputPrim]);
 
                                 // use viewport array index if GS declares it as an output attribute. Otherwise use index 0.
                                 simdscalari vViewPortIdx;
