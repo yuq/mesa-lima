@@ -1363,11 +1363,6 @@ static void declare_input_fs(
 		interp_param = LLVMGetParam(ctx->main_fn, interp_param_idx);
 	}
 
-	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
-	    decl->Interp.Interpolate == TGSI_INTERPOLATE_COLOR &&
-	    ctx->shader->key.part.ps.prolog.flatshade_colors)
-		interp_param = NULL; /* load the constant color */
-
 	interp_fs_input(ctx, input_index, decl->Semantic.Name,
 			decl->Semantic.Index, shader->selector->info.num_inputs,
 			shader->selector->info.colors_read, interp_param,
