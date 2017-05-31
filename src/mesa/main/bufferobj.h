@@ -338,6 +338,11 @@ _mesa_BindBuffersRange(GLenum target, GLuint first, GLsizei count,
 void GLAPIENTRY
 _mesa_BindBuffersBase(GLenum target, GLuint first, GLsizei count,
                       const GLuint *buffers);
+
+void GLAPIENTRY
+_mesa_InvalidateBufferSubData_no_error(GLuint buffer, GLintptr offset,
+                                       GLsizeiptr length);
+
 void GLAPIENTRY
 _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
                               GLsizeiptr length);
