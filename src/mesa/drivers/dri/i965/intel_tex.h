@@ -35,8 +35,6 @@ void intelInitTextureFuncs(struct dd_function_table *functions);
 
 void intelInitTextureImageFuncs(struct dd_function_table *functions);
 
-void intelInitTextureSubImageFuncs(struct dd_function_table *functions);
-
 void intelInitTextureCopyImageFuncs(struct dd_function_table *functions);
 
 void intelInitCopyImageFuncs(struct dd_function_table *functions);

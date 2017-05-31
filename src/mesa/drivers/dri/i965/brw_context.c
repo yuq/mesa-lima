@@ -282,7 +282,6 @@ brw_init_driver_functions(struct brw_context *brw,
 
    intelInitTextureFuncs(functions);
    intelInitTextureImageFuncs(functions);
-   intelInitTextureSubImageFuncs(functions);
    intelInitTextureCopyImageFuncs(functions);
    intelInitCopyImageFuncs(functions);
    intelInitClearFuncs(functions);
