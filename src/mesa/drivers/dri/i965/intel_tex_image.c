@@ -284,62 +284,7 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
 
 
 static void
-intelTexImage(struct gl_context * ctx,
-              GLuint dims,
-              struct gl_texture_image *texImage,
-              GLenum format, GLenum type, const void *pixels,
-              const struct gl_pixelstore_attrib *unpack)
-{
-   struct intel_texture_image *intelImage = intel_texture_image(texImage);
-   bool ok;
-
-   bool tex_busy = intelImage->mt && brw_bo_busy(intelImage->mt->bo);
-
-   DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
-       __func__, _mesa_get_format_name(texImage->TexFormat),
-       _mesa_enum_to_string(texImage->TexObject->Target),
-       _mesa_enum_to_string(format), _mesa_enum_to_string(type),
-       texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
-
-   /* Allocate storage for texture data. */
-   if (!ctx->Driver.AllocTextureImageBuffer(ctx, texImage)) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glTexImage%uD", dims);
-      return;
-   }
-
-   assert(intelImage->mt);
-
-   if (intelImage->mt->format == MESA_FORMAT_S_UINT8)
-      intelImage->mt->r8stencil_needs_update = true;
-
-   ok = _mesa_meta_pbo_TexSubImage(ctx, dims, texImage, 0, 0, 0,
-                                   texImage->Width, texImage->Height,
-                                   texImage->Depth,
-                                   format, type, pixels,
-                                   tex_busy, unpack);
-   if (ok)
-      return;
-
-   ok = intel_texsubimage_tiled_memcpy(ctx, dims, texImage,
-                                       0, 0, 0, /*x,y,z offsets*/
-                                       texImage->Width,
-                                       texImage->Height,
-                                       texImage->Depth,
-                                       format, type, pixels, unpack);
-   if (ok)
-      return;
-
-   DBG("%s: upload image %dx%dx%d pixels %p\n",
-       __func__, texImage->Width, texImage->Height, texImage->Depth,
-       pixels);
-
-   _mesa_store_teximage(ctx, dims, texImage,
-                        format, type, pixels, unpack);
-}
-
-
-static void
-intelTexSubImage(struct gl_context * ctx,
+intel_upload_tex(struct gl_context * ctx,
                  GLuint dims,
                  struct gl_texture_image *texImage,
                  GLint xoffset, GLint yoffset, GLint zoffset,
@@ -355,12 +300,6 @@ intelTexSubImage(struct gl_context * ctx,
 
    if (mt && mt->format == MESA_FORMAT_S_UINT8)
       mt->r8stencil_needs_update = true;
-
-   DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
-       __func__, _mesa_get_format_name(texImage->TexFormat),
-       _mesa_enum_to_string(texImage->TexObject->Target),
-       _mesa_enum_to_string(format), _mesa_enum_to_string(type),
-       texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
 
    ok = _mesa_meta_pbo_TexSubImage(ctx, dims, texImage,
                                    xoffset, yoffset, zoffset,
@@ -380,6 +319,54 @@ intelTexSubImage(struct gl_context * ctx,
                            xoffset, yoffset, zoffset,
                            width, height, depth,
                            format, type, pixels, packing);
+}
+
+
+static void
+intelTexImage(struct gl_context * ctx,
+              GLuint dims,
+              struct gl_texture_image *texImage,
+              GLenum format, GLenum type, const void *pixels,
+              const struct gl_pixelstore_attrib *unpack)
+{
+   DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
+       __func__, _mesa_get_format_name(texImage->TexFormat),
+       _mesa_enum_to_string(texImage->TexObject->Target),
+       _mesa_enum_to_string(format), _mesa_enum_to_string(type),
+       texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
+
+   /* Allocate storage for texture data. */
+   if (!ctx->Driver.AllocTextureImageBuffer(ctx, texImage)) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glTexImage%uD", dims);
+      return;
+   }
+
+   assert(intel_texture_image(texImage)->mt);
+
+   intel_upload_tex(ctx, dims, texImage, 0, 0, 0,
+                    texImage->Width, texImage->Height, texImage->Depth,
+                    format, type, pixels, unpack);
+}
+
+
+static void
+intelTexSubImage(struct gl_context * ctx,
+                 GLuint dims,
+                 struct gl_texture_image *texImage,
+                 GLint xoffset, GLint yoffset, GLint zoffset,
+                 GLsizei width, GLsizei height, GLsizei depth,
+                 GLenum format, GLenum type,
+                 const GLvoid * pixels,
+                 const struct gl_pixelstore_attrib *packing)
+{
+   DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
+       __func__, _mesa_get_format_name(texImage->TexFormat),
+       _mesa_enum_to_string(texImage->TexObject->Target),
+       _mesa_enum_to_string(format), _mesa_enum_to_string(type),
+       texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
+
+   intel_upload_tex(ctx, dims, texImage, xoffset, yoffset, zoffset,
+                    width, height, depth, format, type, pixels, packing);
 }
 
 
