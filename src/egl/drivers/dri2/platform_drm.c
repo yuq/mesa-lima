@@ -672,7 +672,6 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    struct dri2_egl_display *dri2_dpy;
    struct gbm_device *gbm;
    const char *err;
-   int fd = -1;
 
    loader_set_logger(_eglLog);
 
@@ -688,18 +687,18 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
       char buf[64];
       int n = snprintf(buf, sizeof(buf), DRM_DEV_NAME, DRM_DIR_NAME, 0);
       if (n != -1 && n < sizeof(buf))
-         fd = loader_open_device(buf);
-      if (fd < 0)
-         fd = loader_open_device("/dev/dri/card0");
-      gbm = gbm_create_device(fd);
+         dri2_dpy->fd = loader_open_device(buf);
+      if (dri2_dpy->fd < 0)
+         dri2_dpy->fd = loader_open_device("/dev/dri/card0");
+      gbm = gbm_create_device(dri2_dpy->fd);
       if (gbm == NULL) {
          err = "DRI2: failed to create gbm device";
          goto cleanup;
       }
       dri2_dpy->own_device = 1;
    } else {
-      fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
-      if (fd < 0) {
+      dri2_dpy->fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
+      if (dri2_dpy->fd < 0) {
          err = "DRI2: failed to fcntl() existing gbm device";
          goto cleanup;
       }
@@ -711,7 +710,6 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    }
 
    dri2_dpy->gbm_dri = gbm_dri_device(gbm);
-   dri2_dpy->fd = fd;
    dri2_dpy->driver_name = strdup(dri2_dpy->gbm_dri->driver_name);
 
    dri2_dpy->dri_screen = dri2_dpy->gbm_dri->screen;
