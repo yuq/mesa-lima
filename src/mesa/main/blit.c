@@ -690,6 +690,24 @@ blit_named_framebuffer(struct gl_context *ctx,
 
 
 void GLAPIENTRY
+_mesa_BlitNamedFramebuffer_no_error(GLuint readFramebuffer,
+                                    GLuint drawFramebuffer,
+                                    GLint srcX0, GLint srcY0,
+                                    GLint srcX1, GLint srcY1,
+                                    GLint dstX0, GLint dstY0,
+                                    GLint dstX1, GLint dstY1,
+                                    GLbitfield mask, GLenum filter)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   blit_named_framebuffer(ctx, readFramebuffer, drawFramebuffer,
+                          srcX0, srcY0, srcX1, srcY1,
+                          dstX0, dstY0, dstX1, dstY1,
+                          mask, filter, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BlitNamedFramebuffer(GLuint readFramebuffer, GLuint drawFramebuffer,
                            GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
                            GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
