@@ -276,7 +276,7 @@ batch_flush(struct fd_batch *batch)
 		fd_batch_reference(&tmp, batch);
 
 		if (!util_queue_is_initialized(&batch->ctx->flush_queue))
-			util_queue_init(&batch->ctx->flush_queue, "flush_queue", 16, 1);
+			util_queue_init(&batch->ctx->flush_queue, "flush_queue", 16, 1, 0);
 
 		util_queue_add_job(&batch->ctx->flush_queue,
 				batch, &batch->flush_fence,

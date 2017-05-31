@@ -890,7 +890,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	num_compiler_threads = MIN2(num_cpus, ARRAY_SIZE(sscreen->tm));
 
 	if (!util_queue_init(&sscreen->shader_compiler_queue, "si_shader",
-			     32, num_compiler_threads)) {
+			     32, num_compiler_threads, 0)) {
 		si_destroy_shader_cache(sscreen);
 		FREE(sscreen);
 		return NULL;
