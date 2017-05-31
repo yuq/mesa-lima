@@ -153,7 +153,7 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
  * regions are updated with glTexSubImage2D. On some workloads, the
  * performance gain of this fastpath on Sandybridge is over 5x.
  */
-bool
+static bool
 intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
                                GLuint dims,
                                struct gl_texture_image *texImage,
@@ -581,7 +581,7 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
  *
  * \see intel_readpixels_tiled_memcpy()
  */
-bool
+static bool
 intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
                                   struct gl_texture_image *texImage,
                                   GLint xoffset, GLint yoffset,
