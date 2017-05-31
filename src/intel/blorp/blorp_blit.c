@@ -1672,11 +1672,15 @@ try_blorp_blit(struct blorp_batch *batch,
       /* The MinLOD and MinimumArrayElement don't work properly for cube maps.
        * Convert them to a single slice on gen4.
        */
-      if (params->dst.surf.usage & ISL_SURF_USAGE_CUBE_BIT)
+      if (params->dst.surf.usage & ISL_SURF_USAGE_CUBE_BIT) {
          blorp_surf_convert_to_single_slice(batch->blorp->isl_dev, &params->dst);
+         wm_prog_key->need_dst_offset = true;
+      }
 
-      if (params->src.surf.usage & ISL_SURF_USAGE_CUBE_BIT)
+      if (params->src.surf.usage & ISL_SURF_USAGE_CUBE_BIT) {
          blorp_surf_convert_to_single_slice(batch->blorp->isl_dev, &params->src);
+         wm_prog_key->need_src_offset = true;
+      }
    }
 
    if (devinfo->gen > 6 &&
