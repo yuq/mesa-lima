@@ -27,8 +27,7 @@
 #ifndef U_DYNARRAY_H
 #define U_DYNARRAY_H
 
-#include "pipe/p_compiler.h"
-#include "util/u_memory.h"
+#include <stdlib.h>
 
 /* A zero-initialized version of this is guaranteed to represent an
  * empty array.
@@ -52,9 +51,8 @@ util_dynarray_init(struct util_dynarray *buf)
 static inline void
 util_dynarray_fini(struct util_dynarray *buf)
 {
-   if(buf->data)
-   {
-      FREE(buf->data);
+   if (buf->data) {
+      free(buf->data);
       util_dynarray_init(buf);
    }
 }
@@ -63,18 +61,18 @@ util_dynarray_fini(struct util_dynarray *buf)
 static inline void *
 util_dynarray_resize(struct util_dynarray *buf, unsigned newsize)
 {
-   char *p;
-   if(newsize > buf->capacity)
-   {
+   void *p;
+   if (newsize > buf->capacity) {
       unsigned newcap = buf->capacity << 1;
-      if(newsize > newcap)
+      if (newsize > newcap)
 	      newcap = newsize;
-      buf->data = REALLOC(buf->data, buf->capacity, newcap);
+      buf->data = realloc(buf->data, newcap);
       buf->capacity = newcap;
    }
 
-   p = (char *)buf->data + buf->size;
+   p = (void *)((char *)buf->data + buf->size);
    buf->size = newsize;
+
    return p;
 }
 
@@ -89,11 +87,10 @@ util_dynarray_trim(struct util_dynarray *buf)
 {
    if (buf->size != buf->capacity) {
       if (buf->size) {
-         buf->data = REALLOC(buf->data, buf->capacity, buf->size);
+         buf->data = realloc(buf->data, buf->size);
          buf->capacity = buf->size;
-      }
-      else {
-         FREE(buf->data);
+      } else {
+         free(buf->data);
          buf->data = 0;
          buf->capacity = 0;
       }
