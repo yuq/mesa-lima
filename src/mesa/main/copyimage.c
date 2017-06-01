@@ -517,6 +517,29 @@ copy_image_subdata(struct gl_context *ctx,
 }
 
 void GLAPIENTRY
+_mesa_CopyImageSubData_no_error(GLuint srcName, GLenum srcTarget, GLint srcLevel,
+                                GLint srcX, GLint srcY, GLint srcZ,
+                                GLuint dstName, GLenum dstTarget, GLint dstLevel,
+                                GLint dstX, GLint dstY, GLint dstZ,
+                                GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth)
+{
+   struct gl_texture_image *srcTexImage, *dstTexImage;
+   struct gl_renderbuffer *srcRenderbuffer, *dstRenderbuffer;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   prepare_target(ctx, srcName, srcTarget, srcLevel, srcZ, &srcTexImage,
+                  &srcRenderbuffer);
+
+   prepare_target(ctx, dstName, dstTarget, dstLevel, dstZ, &dstTexImage,
+                  &dstRenderbuffer);
+
+   copy_image_subdata(ctx, srcTexImage, srcRenderbuffer, srcX, srcY, srcZ,
+                      srcLevel, dstTexImage, dstRenderbuffer, dstX, dstY, dstZ,
+                      dstLevel, srcWidth, srcHeight, srcDepth);
+}
+
+void GLAPIENTRY
 _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
                        GLint srcX, GLint srcY, GLint srcZ,
                        GLuint dstName, GLenum dstTarget, GLint dstLevel,
