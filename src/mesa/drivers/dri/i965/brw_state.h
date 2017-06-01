@@ -42,7 +42,6 @@ extern "C" {
 enum intel_msaa_layout;
 
 extern const struct brw_tracked_state brw_blend_constant_color;
-extern const struct brw_tracked_state brw_cc_unit;
 extern const struct brw_tracked_state brw_clip_unit;
 extern const struct brw_tracked_state brw_vs_pull_constants;
 extern const struct brw_tracked_state brw_tcs_pull_constants;

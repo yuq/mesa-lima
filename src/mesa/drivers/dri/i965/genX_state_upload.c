@@ -1217,7 +1217,7 @@ set_depth_stencil_bits(struct brw_context *brw, DEPTH_STENCIL_GENXML *ds)
             intel_translate_stencil_op(stencil->ZFailFunc[b]);
       }
 
-#if GEN_GEN >= 9
+#if GEN_GEN <= 5 || GEN_GEN >= 9
       ds->StencilReferenceValue = _mesa_get_stencil_ref(ctx, 0);
       ds->BackfaceStencilReferenceValue = _mesa_get_stencil_ref(ctx, b);
 #endif
@@ -2530,6 +2530,28 @@ fix_dual_blend_alpha_to_one(GLenum function)
 #define blend_factor(x) brw_translate_blend_factor(x)
 #define blend_eqn(x) brw_translate_blend_equation(x)
 
+/**
+ * Modify blend function to force destination alpha to 1.0
+ *
+ * If \c function specifies a blend function that uses destination alpha,
+ * replace it with a function that hard-wires destination alpha to 1.0.  This
+ * is used when rendering to xRGB targets.
+ */
+static GLenum
+brw_fix_xRGB_alpha(GLenum function)
+{
+   switch (function) {
+   case GL_DST_ALPHA:
+      return GL_ONE;
+
+   case GL_ONE_MINUS_DST_ALPHA:
+   case GL_SRC_ALPHA_SATURATE:
+      return GL_ZERO;
+   }
+
+   return function;
+}
+
 #if GEN_GEN >= 6
 typedef struct GENX(BLEND_STATE_ENTRY) BLEND_ENTRY_GENXML;
 #else
@@ -2555,6 +2577,9 @@ set_blend_entry_bits(struct brw_context *brw, BLEND_ENTRY_GENXML *entry, int i,
     */
    const bool integer = ctx->DrawBuffer->_IntegerBuffers & (0x1 << i);
 
+   const unsigned blend_enabled = GEN_GEN >= 6 ?
+      ctx->Color.BlendEnabled & (1 << i) : ctx->Color.BlendEnabled;
+
    /* _NEW_COLOR */
    if (ctx->Color.ColorLogicOpEnabled) {
       GLenum rb_type = rb ? _mesa_get_format_datatype(rb->Format)
@@ -2570,8 +2595,8 @@ set_blend_entry_bits(struct brw_context *brw, BLEND_ENTRY_GENXML *entry, int i,
          entry->LogicOpFunction =
             intel_translate_logic_op(ctx->Color.LogicOp);
       }
-   } else if (ctx->Color.BlendEnabled & (1 << i) && !integer &&
-              !ctx->Color._AdvancedBlendMode) {
+   } else if (blend_enabled && !ctx->Color._AdvancedBlendMode
+              && (GEN_GEN <= 5 || !integer)) {
       GLenum eqRGB = ctx->Color.Blend[i].EquationRGB;
       GLenum eqA = ctx->Color.Blend[i].EquationA;
       GLenum srcRGB = ctx->Color.Blend[i].SrcRGB;
@@ -2997,17 +3022,36 @@ static const struct brw_tracked_state genX(multisample_state) = {
 
 /* ---------------------------------------------------------------------- */
 
-#if GEN_GEN >= 6
 static void
 genX(upload_color_calc_state)(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
 
    brw_state_emit(brw, GENX(COLOR_CALC_STATE), 64, &brw->cc.state_offset, cc) {
+#if GEN_GEN <= 5
+      cc.IndependentAlphaBlendEnable =
+         set_blend_entry_bits(brw, &cc, 0, false);
+      set_depth_stencil_bits(brw, &cc);
+
+      if (ctx->Color.AlphaEnabled &&
+          ctx->DrawBuffer->_NumColorDrawBuffers <= 1) {
+         cc.AlphaTestEnable = true;
+         cc.AlphaTestFunction =
+            intel_translate_compare_func(ctx->Color.AlphaFunc);
+      }
+
+      cc.ColorDitherEnable = ctx->Color.DitherFlag;
+
+      cc.StatisticsEnable = brw->stats_wm;
+
+      cc.CCViewportStatePointer =
+         instruction_ro_bo(brw->batch.bo, brw->cc.vp_offset);
+#else
       /* _NEW_COLOR */
-      cc.AlphaTestFormat = ALPHATEST_UNORM8;
-      UNCLAMPED_FLOAT_TO_UBYTE(cc.AlphaReferenceValueAsUNORM8,
-                               ctx->Color.AlphaRef);
+      cc.BlendConstantColorRed = ctx->Color.BlendColorUnclamped[0];
+      cc.BlendConstantColorGreen = ctx->Color.BlendColorUnclamped[1];
+      cc.BlendConstantColorBlue = ctx->Color.BlendColorUnclamped[2];
+      cc.BlendConstantColorAlpha = ctx->Color.BlendColorUnclamped[3];
 
 #if GEN_GEN < 9
       /* _NEW_STENCIL */
@@ -3016,34 +3060,42 @@ genX(upload_color_calc_state)(struct brw_context *brw)
          _mesa_get_stencil_ref(ctx, ctx->Stencil._BackFace);
 #endif
 
+#endif
+
       /* _NEW_COLOR */
-      cc.BlendConstantColorRed = ctx->Color.BlendColorUnclamped[0];
-      cc.BlendConstantColorGreen = ctx->Color.BlendColorUnclamped[1];
-      cc.BlendConstantColorBlue = ctx->Color.BlendColorUnclamped[2];
-      cc.BlendConstantColorAlpha = ctx->Color.BlendColorUnclamped[3];
+      UNCLAMPED_FLOAT_TO_UBYTE(cc.AlphaReferenceValueAsUNORM8,
+                               ctx->Color.AlphaRef);
    }
 
+#if GEN_GEN >= 6
    brw_batch_emit(brw, GENX(3DSTATE_CC_STATE_POINTERS), ptr) {
       ptr.ColorCalcStatePointer = brw->cc.state_offset;
 #if GEN_GEN != 7
       ptr.ColorCalcStatePointerValid = true;
 #endif
    }
+#else
+   brw->ctx.NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
+#endif
 }
 
 static const struct brw_tracked_state genX(color_calc_state) = {
    .dirty = {
       .mesa = _NEW_COLOR |
-              _NEW_STENCIL,
+              _NEW_STENCIL |
+              (GEN_GEN <= 5 ? _NEW_BUFFERS |
+                              _NEW_DEPTH
+                            : 0),
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
-             BRW_NEW_CC_STATE |
-             BRW_NEW_STATE_BASE_ADDRESS,
+             (GEN_GEN <= 5 ? BRW_NEW_CC_VP |
+                             BRW_NEW_STATS_WM
+                           : BRW_NEW_CC_STATE |
+                             BRW_NEW_STATE_BASE_ADDRESS),
    },
    .emit = genX(upload_color_calc_state),
 };
 
-#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -4924,7 +4976,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_recalculate_urb_fence,
 
       &genX(cc_vp),
-      &brw_cc_unit,
+      &genX(color_calc_state),
 
       /* Surface state setup.  Must come before the VS/WM unit.  The binding
        * table upload must be last.

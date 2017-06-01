@@ -38,7 +38,6 @@
 
 extern GLuint brw_translate_blend_factor( GLenum factor );
 extern GLuint brw_translate_blend_equation( GLenum mode );
-extern GLenum brw_fix_xRGB_alpha(GLenum function);
 
 static inline float
 brw_get_line_width(struct brw_context *brw)
