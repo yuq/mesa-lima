@@ -3282,6 +3282,24 @@ texsubimage_err(struct gl_context *ctx, GLuint dims, GLenum target, GLint level,
 }
 
 
+static void
+texsubimage(struct gl_context *ctx, GLuint dims, GLenum target, GLint level,
+            GLint xoffset, GLint yoffset, GLint zoffset,
+            GLsizei width, GLsizei height, GLsizei depth,
+            GLenum format, GLenum type, const GLvoid *pixels)
+{
+   struct gl_texture_object *texObj;
+   struct gl_texture_image *texImage;
+
+   texObj = _mesa_get_current_tex_object(ctx, target);
+   texImage = _mesa_select_tex_image(texObj, target, level);
+
+   texture_sub_image(ctx, dims, texObj, texImage, target, level,
+                     xoffset, yoffset, zoffset, width, height, depth,
+                     format, type, pixels, false);
+}
+
+
 /**
  * Implement all the glTextureSubImage1/2/3D() functions.
  * Must split this out this way because of GL_TEXTURE_CUBE_MAP.
