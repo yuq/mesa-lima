@@ -2121,7 +2121,6 @@ fs_visitor::lower_constant_loads()
 
          assert(inst->src[i].stride == 0);
 
-         const unsigned index = stage_prog_data->binding_table.pull_constants_start;
          const unsigned block_sz = 64; /* Fetch one cacheline at a time. */
          const fs_builder ubld = ibld.exec_all().group(block_sz / 4, 0);
          const fs_reg dst = ubld.vgrf(BRW_REGISTER_TYPE_UD);
