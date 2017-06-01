@@ -755,26 +755,6 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    return bo->map_gtt;
 }
 
-/**
- * Performs a mapping of the buffer object like the normal GTT
- * mapping, but avoids waiting for the GPU to be done reading from or
- * rendering to the buffer.
- *
- * This is used in the implementation of GL_ARB_map_buffer_range: The
- * user asks to create a buffer, then does a mapping, fills some
- * space, runs a drawing command, then asks to map it again without
- * synchronizing because it guarantees that it won't write over the
- * data that the GPU is busy using (or, more specifically, that if it
- * does write over the data, it acknowledges that rendering is
- * undefined).
- */
-
-void *
-brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo)
-{
-   return brw_bo_map_gtt(brw, bo, MAP_READ | MAP_WRITE | MAP_ASYNC);
-}
-
 static bool
 can_map_cpu(struct brw_bo *bo, unsigned flags)
 {

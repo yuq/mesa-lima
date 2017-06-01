@@ -262,7 +262,6 @@ struct brw_bo *brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
                                            const char *name,
                                            unsigned int handle);
 void brw_bufmgr_enable_reuse(struct brw_bufmgr *bufmgr);
-MUST_CHECK void *brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo);
 
 int brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns);
 
