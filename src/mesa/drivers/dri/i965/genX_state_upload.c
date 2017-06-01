@@ -2531,6 +2531,104 @@ fix_dual_blend_alpha_to_one(GLenum function)
 #define blend_eqn(x) brw_translate_blend_equation(x)
 
 #if GEN_GEN >= 6
+typedef struct GENX(BLEND_STATE_ENTRY) BLEND_ENTRY_GENXML;
+#else
+typedef struct GENX(COLOR_CALC_STATE) BLEND_ENTRY_GENXML;
+#endif
+
+UNUSED static bool
+set_blend_entry_bits(struct brw_context *brw, BLEND_ENTRY_GENXML *entry, int i,
+                     bool alpha_to_one)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_BUFFERS */
+   const struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[i];
+
+   bool independent_alpha_blend = false;
+
+   /* Used for implementing the following bit of GL_EXT_texture_integer:
+    * "Per-fragment operations that require floating-point color
+    *  components, including multisample alpha operations, alpha test,
+    *  blending, and dithering, have no effect when the corresponding
+    *  colors are written to an integer color buffer."
+    */
+   const bool integer = ctx->DrawBuffer->_IntegerBuffers & (0x1 << i);
+
+   /* _NEW_COLOR */
+   if (ctx->Color.ColorLogicOpEnabled) {
+      GLenum rb_type = rb ? _mesa_get_format_datatype(rb->Format)
+         : GL_UNSIGNED_NORMALIZED;
+      WARN_ONCE(ctx->Color.LogicOp != GL_COPY &&
+                rb_type != GL_UNSIGNED_NORMALIZED &&
+                rb_type != GL_FLOAT, "Ignoring %s logic op on %s "
+                "renderbuffer\n",
+                _mesa_enum_to_string(ctx->Color.LogicOp),
+                _mesa_enum_to_string(rb_type));
+      if (GEN_GEN >= 8 || rb_type == GL_UNSIGNED_NORMALIZED) {
+         entry->LogicOpEnable = true;
+         entry->LogicOpFunction =
+            intel_translate_logic_op(ctx->Color.LogicOp);
+      }
+   } else if (ctx->Color.BlendEnabled & (1 << i) && !integer &&
+              !ctx->Color._AdvancedBlendMode) {
+      GLenum eqRGB = ctx->Color.Blend[i].EquationRGB;
+      GLenum eqA = ctx->Color.Blend[i].EquationA;
+      GLenum srcRGB = ctx->Color.Blend[i].SrcRGB;
+      GLenum dstRGB = ctx->Color.Blend[i].DstRGB;
+      GLenum srcA = ctx->Color.Blend[i].SrcA;
+      GLenum dstA = ctx->Color.Blend[i].DstA;
+
+      if (eqRGB == GL_MIN || eqRGB == GL_MAX)
+         srcRGB = dstRGB = GL_ONE;
+
+      if (eqA == GL_MIN || eqA == GL_MAX)
+         srcA = dstA = GL_ONE;
+
+      /* Due to hardware limitations, the destination may have information
+       * in an alpha channel even when the format specifies no alpha
+       * channel. In order to avoid getting any incorrect blending due to
+       * that alpha channel, coerce the blend factors to values that will
+       * not read the alpha channel, but will instead use the correct
+       * implicit value for alpha.
+       */
+      if (rb && !_mesa_base_format_has_channel(rb->_BaseFormat,
+                                               GL_TEXTURE_ALPHA_TYPE)) {
+         srcRGB = brw_fix_xRGB_alpha(srcRGB);
+         srcA = brw_fix_xRGB_alpha(srcA);
+         dstRGB = brw_fix_xRGB_alpha(dstRGB);
+         dstA = brw_fix_xRGB_alpha(dstA);
+      }
+
+      /* From the BLEND_STATE docs, DWord 0, Bit 29 (AlphaToOne Enable):
+       * "If Dual Source Blending is enabled, this bit must be disabled."
+       *
+       * We override SRC1_ALPHA to ONE and ONE_MINUS_SRC1_ALPHA to ZERO,
+       * and leave it enabled anyway.
+       */
+      if (GEN_GEN >= 6 && ctx->Color.Blend[i]._UsesDualSrc && alpha_to_one) {
+         srcRGB = fix_dual_blend_alpha_to_one(srcRGB);
+         srcA = fix_dual_blend_alpha_to_one(srcA);
+         dstRGB = fix_dual_blend_alpha_to_one(dstRGB);
+         dstA = fix_dual_blend_alpha_to_one(dstA);
+      }
+
+      entry->ColorBufferBlendEnable = true;
+      entry->DestinationBlendFactor = blend_factor(dstRGB);
+      entry->SourceBlendFactor = blend_factor(srcRGB);
+      entry->DestinationAlphaBlendFactor = blend_factor(dstA);
+      entry->SourceAlphaBlendFactor = blend_factor(srcA);
+      entry->ColorBlendFunction = blend_eqn(eqRGB);
+      entry->AlphaBlendFunction = blend_eqn(eqA);
+
+      if (srcA != srcRGB || dstA != dstRGB || eqA != eqRGB)
+         independent_alpha_blend = true;
+   }
+
+   return independent_alpha_blend;
+}
+
+#if GEN_GEN >= 6
 static void
 genX(upload_blend_state)(struct brw_context *brw)
 {
@@ -2597,87 +2695,9 @@ genX(upload_blend_state)(struct brw_context *brw)
 #else
       {
 #endif
-
-         /* _NEW_BUFFERS */
-         struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[i];
-
-         /* Used for implementing the following bit of GL_EXT_texture_integer:
-          * "Per-fragment operations that require floating-point color
-          *  components, including multisample alpha operations, alpha test,
-          *  blending, and dithering, have no effect when the corresponding
-          *  colors are written to an integer color buffer."
-          */
-         bool integer = ctx->DrawBuffer->_IntegerBuffers & (0x1 << i);
-
-         /* _NEW_COLOR */
-         if (ctx->Color.ColorLogicOpEnabled) {
-            GLenum rb_type = rb ? _mesa_get_format_datatype(rb->Format)
-                                : GL_UNSIGNED_NORMALIZED;
-            WARN_ONCE(ctx->Color.LogicOp != GL_COPY &&
-                      rb_type != GL_UNSIGNED_NORMALIZED &&
-                      rb_type != GL_FLOAT, "Ignoring %s logic op on %s "
-                      "renderbuffer\n",
-                      _mesa_enum_to_string(ctx->Color.LogicOp),
-                      _mesa_enum_to_string(rb_type));
-            if (GEN_GEN >= 8 || rb_type == GL_UNSIGNED_NORMALIZED) {
-               entry.LogicOpEnable = true;
-               entry.LogicOpFunction =
-                  intel_translate_logic_op(ctx->Color.LogicOp);
-            }
-         } else if (ctx->Color.BlendEnabled & (1 << i) && !integer &&
-                    !ctx->Color._AdvancedBlendMode) {
-            GLenum eqRGB = ctx->Color.Blend[i].EquationRGB;
-            GLenum eqA = ctx->Color.Blend[i].EquationA;
-            GLenum srcRGB = ctx->Color.Blend[i].SrcRGB;
-            GLenum dstRGB = ctx->Color.Blend[i].DstRGB;
-            GLenum srcA = ctx->Color.Blend[i].SrcA;
-            GLenum dstA = ctx->Color.Blend[i].DstA;
-
-            if (eqRGB == GL_MIN || eqRGB == GL_MAX)
-               srcRGB = dstRGB = GL_ONE;
-
-            if (eqA == GL_MIN || eqA == GL_MAX)
-               srcA = dstA = GL_ONE;
-
-            /* Due to hardware limitations, the destination may have information
-             * in an alpha channel even when the format specifies no alpha
-             * channel. In order to avoid getting any incorrect blending due to
-             * that alpha channel, coerce the blend factors to values that will
-             * not read the alpha channel, but will instead use the correct
-             * implicit value for alpha.
-             */
-            if (rb && !_mesa_base_format_has_channel(rb->_BaseFormat,
-                                                     GL_TEXTURE_ALPHA_TYPE)) {
-               srcRGB = brw_fix_xRGB_alpha(srcRGB);
-               srcA = brw_fix_xRGB_alpha(srcA);
-               dstRGB = brw_fix_xRGB_alpha(dstRGB);
-               dstA = brw_fix_xRGB_alpha(dstA);
-            }
-
-            /* From the BLEND_STATE docs, DWord 0, Bit 29 (AlphaToOne Enable):
-             * "If Dual Source Blending is enabled, this bit must be disabled."
-             *
-             * We override SRC1_ALPHA to ONE and ONE_MINUS_SRC1_ALPHA to ZERO,
-             * and leave it enabled anyway.
-             */
-            if (ctx->Color.Blend[i]._UsesDualSrc && blend.AlphaToOneEnable) {
-               srcRGB = fix_dual_blend_alpha_to_one(srcRGB);
-               srcA = fix_dual_blend_alpha_to_one(srcA);
-               dstRGB = fix_dual_blend_alpha_to_one(dstRGB);
-               dstA = fix_dual_blend_alpha_to_one(dstA);
-            }
-
-            entry.ColorBufferBlendEnable = true;
-            entry.DestinationBlendFactor = blend_factor(dstRGB);
-            entry.SourceBlendFactor = blend_factor(srcRGB);
-            entry.DestinationAlphaBlendFactor = blend_factor(dstA);
-            entry.SourceAlphaBlendFactor = blend_factor(srcA);
-            entry.ColorBlendFunction = blend_eqn(eqRGB);
-            entry.AlphaBlendFunction = blend_eqn(eqA);
-
-            if (srcA != srcRGB || dstA != dstRGB || eqA != eqRGB)
-               blend.IndependentAlphaBlendEnable = true;
-         }
+         blend.IndependentAlphaBlendEnable =
+            set_blend_entry_bits(brw, &entry, i, blend.AlphaToOneEnable) ||
+            blend.IndependentAlphaBlendEnable;
 
          /* See section 8.1.6 "Pre-Blend Color Clamping" of the
           * SandyBridge PRM Volume 2 Part 1 for HW requirements.
