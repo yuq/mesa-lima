@@ -254,16 +254,8 @@ gen_get_l3_config(const struct gen_device_info *devinfo,
 static unsigned
 get_l3_way_size(const struct gen_device_info *devinfo)
 {
-   if (devinfo->is_baytrail)
-      return 2;
-
-   else if (devinfo->gt == 1 ||
-            devinfo->is_cherryview ||
-            devinfo->is_broxton)
-      return 4;
-
-   else
-      return 8 * devinfo->num_slices;
+   assert(devinfo->l3_banks);
+   return 2 * devinfo->l3_banks;
 }
 
 /**
