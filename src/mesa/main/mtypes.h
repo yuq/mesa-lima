@@ -704,8 +704,8 @@ struct gl_multisample_attrib
    /* ARB_texture_multisample / GL3.2 additions */
    GLboolean SampleMask;
 
-   GLfloat SampleCoverageValue;
-   GLfloat MinSampleShadingValue;
+   GLfloat SampleCoverageValue;  /**< In range [0, 1] */
+   GLfloat MinSampleShadingValue;  /**< In range [0, 1] */
 
    /** The GL spec defines this as an array but >32x MSAA is madness */
    GLbitfield SampleMaskValue;
