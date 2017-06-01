@@ -214,6 +214,30 @@ prepare_target_err(struct gl_context *ctx, GLuint name, GLenum target,
    return true;
 }
 
+static void
+prepare_target(struct gl_context *ctx, GLuint name, GLenum target,
+               int level, int z,
+               struct gl_texture_image **texImage,
+               struct gl_renderbuffer **renderbuffer)
+{
+   if (target == GL_RENDERBUFFER) {
+      struct gl_renderbuffer *rb = _mesa_lookup_renderbuffer(ctx, name);
+
+      *renderbuffer = rb;
+      *texImage = NULL;
+   } else {
+      struct gl_texture_object *texObj = _mesa_lookup_texture(ctx, name);
+
+      if (target == GL_TEXTURE_CUBE_MAP) {
+         *texImage = texObj->Image[z][level];
+      }
+      else {
+         *texImage = _mesa_select_tex_image(texObj, target, level);
+      }
+
+      *renderbuffer = NULL;
+   }
+}
 
 /**
  * Check that the x,y,z,width,height,region is within the texture image
