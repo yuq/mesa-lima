@@ -249,7 +249,7 @@ struct xmesa_buffer {
 #define PACK_TRUECOLOR( PIXEL, R, G, B )	\
    PIXEL = xmesa->xm_visual->RtoPixel[R]	\
          | xmesa->xm_visual->GtoPixel[G]	\
-         | xmesa->xm_visual->BtoPixel[B];	\
+         | xmesa->xm_visual->BtoPixel[B];
 
 
 /**

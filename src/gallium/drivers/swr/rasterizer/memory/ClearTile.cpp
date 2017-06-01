@@ -283,7 +283,7 @@ void SwrStoreHotTileClear(
     sStoreTilesClearColorTable[B10G10R10A2_UINT]      = StoreMacroTileClear<R32G32B32A32_FLOAT, B10G10R10A2_UINT>::StoreClear; \
     sStoreTilesClearColorTable[B10G10R10A2_SINT]      = StoreMacroTileClear<R32G32B32A32_FLOAT, B10G10R10A2_SINT>::StoreClear; \
     sStoreTilesClearColorTable[R8G8B8_UINT]      = StoreMacroTileClear<R32G32B32A32_FLOAT, R8G8B8_UINT>::StoreClear; \
-    sStoreTilesClearColorTable[R8G8B8_SINT]      = StoreMacroTileClear<R32G32B32A32_FLOAT, R8G8B8_SINT>::StoreClear; \
+    sStoreTilesClearColorTable[R8G8B8_SINT]      = StoreMacroTileClear<R32G32B32A32_FLOAT, R8G8B8_SINT>::StoreClear;
 
 //////////////////////////////////////////////////////////////////////////
 /// INIT_STORE_TILES_TABLE - Helper macro for setting up the tables.
@@ -293,7 +293,7 @@ void SwrStoreHotTileClear(
     sStoreTilesClearDepthTable[R32_FLOAT] = StoreMacroTileClear<R32_FLOAT, R32_FLOAT>::StoreClear; \
     sStoreTilesClearDepthTable[R32_FLOAT_X8X24_TYPELESS] = StoreMacroTileClear<R32_FLOAT, R32_FLOAT_X8X24_TYPELESS>::StoreClear; \
     sStoreTilesClearDepthTable[R24_UNORM_X8_TYPELESS] = StoreMacroTileClear<R32_FLOAT, R24_UNORM_X8_TYPELESS>::StoreClear; \
-    sStoreTilesClearDepthTable[R16_UNORM] = StoreMacroTileClear<R32_FLOAT, R16_UNORM>::StoreClear; \
+    sStoreTilesClearDepthTable[R16_UNORM] = StoreMacroTileClear<R32_FLOAT, R16_UNORM>::StoreClear;
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Sets up tables for ClearTile

@@ -171,7 +171,7 @@ enum svga_stats_time {
    SVGA_STATS_PREFIX "SamplerView",           \
    SVGA_STATS_PREFIX "SurfaceWriteFlush",     \
    SVGA_STATS_PREFIX "TextureReadback",       \
-   SVGA_STATS_PREFIX "VertexElement"          \
+   SVGA_STATS_PREFIX "VertexElement"
 
 #define SVGA_STATS_TIME_NAMES                       \
    SVGA_STATS_PREFIX "BuffersFlush",                \
