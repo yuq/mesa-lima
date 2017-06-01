@@ -980,51 +980,76 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 
 /* Set this if you want the 3D engine to wait until CP DMA is done.
  * It should be set on the last CP DMA packet. */
-#define R600_CP_DMA_SYNC	(1 << 0) /* R600+ */
+#define CP_DMA_SYNC	(1 << 0)
 
 /* Set this if the source data was used as a destination in a previous CP DMA
  * packet. It's for preventing a read-after-write (RAW) hazard between two
  * CP DMA packets. */
-#define SI_CP_DMA_RAW_WAIT	(1 << 1) /* SI+ */
-#define CIK_CP_DMA_USE_L2	(1 << 2)
+#define CP_DMA_RAW_WAIT	(1 << 1)
+#define CP_DMA_USE_L2	(1 << 2)
+#define CP_DMA_CLEAR	(1 << 3)
 
 /* Alignment for optimal performance. */
-#define CP_DMA_ALIGNMENT	32
-/* The max number of bytes to copy per packet. */
-#define CP_DMA_MAX_BYTE_COUNT	((1 << 21) - CP_DMA_ALIGNMENT)
+#define SI_CPDMA_ALIGNMENT	32
 
-static void si_emit_cp_dma_copy_buffer(struct radv_cmd_buffer *cmd_buffer,
-				       uint64_t dst_va, uint64_t src_va,
-				       unsigned size, unsigned flags)
+/* The max number of bytes that can be copied per packet. */
+static inline unsigned cp_dma_max_byte_count(struct radv_cmd_buffer *cmd_buffer)
+{
+	unsigned max = S_414_BYTE_COUNT_GFX6(~0u);
+
+	/* make it aligned for optimal performance */
+	return max & ~(SI_CPDMA_ALIGNMENT - 1);
+}
+
+static void si_emit_cp_dma(struct radv_cmd_buffer *cmd_buffer,
+			   uint64_t dst_va, uint64_t src_va,
+			   unsigned size, unsigned flags)
 {
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
-	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
-	uint32_t wr_confirm = !(flags & R600_CP_DMA_SYNC) ? S_414_DISABLE_WR_CONFIRM_GFX6(1) : 0;
-	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
-	uint32_t sel = flags & CIK_CP_DMA_USE_L2 ?
-			   S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2) |
-			   S_411_DSL_SEL(V_411_DST_ADDR_TC_L2) : 0;
+	uint32_t header = 0, command = 0;
 
 	assert(size);
-	assert((size & ((1<<21)-1)) == size);
+	assert(size <= cp_dma_max_byte_count(cmd_buffer));
 
 	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 9);
 
+	command |= S_414_BYTE_COUNT_GFX6(size);
+
+	/* Sync flags. */
+	if (flags & CP_DMA_SYNC)
+		header |= S_411_CP_SYNC(1);
+	else {
+		command |= S_414_DISABLE_WR_CONFIRM_GFX6(1);
+	}
+
+	if (flags & CP_DMA_RAW_WAIT)
+		command |= S_414_RAW_WAIT(1);
+
+	/* Src and dst flags. */
+	if (flags & CP_DMA_USE_L2)
+		header |= S_411_DSL_SEL(V_411_DST_ADDR_TC_L2);
+
+	if (flags & CP_DMA_CLEAR)
+		header |= S_411_SRC_SEL(V_411_DATA);
+	else if (flags & CP_DMA_USE_L2)
+		header |= S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2);
+
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
 		radeon_emit(cs, PKT3(PKT3_DMA_DATA, 5, 0));
-		radeon_emit(cs, sync_flag | sel);	/* CP_SYNC [31] */
+		radeon_emit(cs, header);
 		radeon_emit(cs, src_va);		/* SRC_ADDR_LO [31:0] */
 		radeon_emit(cs, src_va >> 32);		/* SRC_ADDR_HI [31:0] */
 		radeon_emit(cs, dst_va);		/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, dst_va >> 32);		/* DST_ADDR_HI [31:0] */
-		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
+		radeon_emit(cs, command);
 	} else {
+		header |= S_411_SRC_ADDR_HI(src_va >> 32);
 		radeon_emit(cs, PKT3(PKT3_CP_DMA, 4, 0));
 		radeon_emit(cs, src_va);			/* SRC_ADDR_LO [31:0] */
-		radeon_emit(cs, sync_flag | ((src_va >> 32) & 0xffff)); /* CP_SYNC [31] | SRC_ADDR_HI [15:0] */
+		radeon_emit(cs, header);			/* SRC_ADDR_HI [15:0] + flags. */
 		radeon_emit(cs, dst_va);			/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, (dst_va >> 32) & 0xffff);	/* DST_ADDR_HI [15:0] */
-		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
+		radeon_emit(cs, command);
 	}
 
 	/* CP DMA is executed in ME, but index buffers are read by PFP.
@@ -1032,63 +1057,22 @@ static void si_emit_cp_dma_copy_buffer(struct radv_cmd_buffer *cmd_buffer,
 	 * indices. If we wanted to execute CP DMA in PFP, this packet
 	 * should precede it.
 	 */
-	if (sync_flag && cmd_buffer->queue_family_index == RADV_QUEUE_GENERAL) {
+	if ((flags & CP_DMA_SYNC) && cmd_buffer->queue_family_index == RADV_QUEUE_GENERAL) {
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
 
-	radv_cmd_buffer_trace_emit(cmd_buffer);
-}
-
-/* Emit a CP DMA packet to clear a buffer. The size must fit in bits [20:0]. */
-static void si_emit_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer,
-					uint64_t dst_va, unsigned size,
-					uint32_t clear_value, unsigned flags)
-{
-	struct radeon_winsys_cs *cs = cmd_buffer->cs;
-	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
-	uint32_t wr_confirm = !(flags & R600_CP_DMA_SYNC) ? S_414_DISABLE_WR_CONFIRM_GFX6(1) : 0;
-	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
-	uint32_t dst_sel = flags & CIK_CP_DMA_USE_L2 ? S_411_DSL_SEL(V_411_DST_ADDR_TC_L2) : 0;
-
-	assert(size);
-	assert((size & ((1<<21)-1)) == size);
-
-	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 9);
-
-	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
-		radeon_emit(cs, PKT3(PKT3_DMA_DATA, 5, 0));
-		radeon_emit(cs, sync_flag | dst_sel | S_411_SRC_SEL(V_411_DATA)); /* CP_SYNC [31] | SRC_SEL[30:29] */
-		radeon_emit(cs, clear_value);		/* DATA [31:0] */
-		radeon_emit(cs, 0);
-		radeon_emit(cs, dst_va);		/* DST_ADDR_LO [31:0] */
-		radeon_emit(cs, dst_va >> 32);		/* DST_ADDR_HI [15:0] */
-		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
-	} else {
-		radeon_emit(cs, PKT3(PKT3_CP_DMA, 4, 0));
-		radeon_emit(cs, clear_value);		/* DATA [31:0] */
-		radeon_emit(cs, sync_flag | S_411_SRC_SEL(V_411_DATA)); /* CP_SYNC [31] | SRC_SEL[30:29] */
-		radeon_emit(cs, dst_va);			/* DST_ADDR_LO [31:0] */
-		radeon_emit(cs, (dst_va >> 32) & 0xffff);	/* DST_ADDR_HI [15:0] */
-		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
-	}
-
-	/* See "copy_buffer" for explanation. */
-	if (sync_flag && cmd_buffer->queue_family_index == RADV_QUEUE_GENERAL) {
-		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
-		radeon_emit(cs, 0);
-	}
 	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 void si_cp_dma_prefetch(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
                         unsigned size)
 {
-	uint64_t aligned_va = va & ~(CP_DMA_ALIGNMENT - 1);
-	uint64_t aligned_size = ((va + size + CP_DMA_ALIGNMENT -1) & ~(CP_DMA_ALIGNMENT - 1)) - aligned_va;
+	uint64_t aligned_va = va & ~(SI_CPDMA_ALIGNMENT - 1);
+	uint64_t aligned_size = ((va + size + SI_CPDMA_ALIGNMENT -1) & ~(SI_CPDMA_ALIGNMENT - 1)) - aligned_va;
 
-	si_emit_cp_dma_copy_buffer(cmd_buffer, aligned_va, aligned_va,
-	                           aligned_size, CIK_CP_DMA_USE_L2);
+	si_emit_cp_dma(cmd_buffer, aligned_va, aligned_va,
+		       aligned_size, CP_DMA_USE_L2);
 }
 
 static void si_cp_dma_prepare(struct radv_cmd_buffer *cmd_buffer, uint64_t byte_count,
@@ -1100,14 +1084,14 @@ static void si_cp_dma_prepare(struct radv_cmd_buffer *cmd_buffer, uint64_t byte_
 	 */
 	if (cmd_buffer->state.flush_bits) {
 		si_emit_cache_flush(cmd_buffer);
-		*flags |= SI_CP_DMA_RAW_WAIT;
+		*flags |= CP_DMA_RAW_WAIT;
 	}
 
 	/* Do the synchronization after the last dma, so that all data
 	 * is written to memory.
 	 */
 	if (byte_count == remaining_size)
-		*flags |= R600_CP_DMA_SYNC;
+		*flags |= CP_DMA_SYNC;
 }
 
 static void si_cp_dma_realign_engine(struct radv_cmd_buffer *cmd_buffer, unsigned size)
@@ -1115,20 +1099,20 @@ static void si_cp_dma_realign_engine(struct radv_cmd_buffer *cmd_buffer, unsigne
 	uint64_t va;
 	uint32_t offset;
 	unsigned dma_flags = 0;
-	unsigned buf_size = CP_DMA_ALIGNMENT * 2;
+	unsigned buf_size = SI_CPDMA_ALIGNMENT * 2;
 	void *ptr;
 
-	assert(size < CP_DMA_ALIGNMENT);
+	assert(size < SI_CPDMA_ALIGNMENT);
 
-	radv_cmd_buffer_upload_alloc(cmd_buffer, buf_size, CP_DMA_ALIGNMENT,  &offset, &ptr);
+	radv_cmd_buffer_upload_alloc(cmd_buffer, buf_size, SI_CPDMA_ALIGNMENT,  &offset, &ptr);
 
 	va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
 	va += offset;
 
 	si_cp_dma_prepare(cmd_buffer, size, size, &dma_flags);
 
-	si_emit_cp_dma_copy_buffer(cmd_buffer, va, va + CP_DMA_ALIGNMENT, size,
-				   dma_flags);
+	si_emit_cp_dma(cmd_buffer, va, va + SI_CPDMA_ALIGNMENT, size,
+		       dma_flags);
 }
 
 void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
@@ -1145,15 +1129,15 @@ void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 		 * just to align the internal counter. Otherwise, the DMA engine
 		 * would slow down by an order of magnitude for following copies.
 		 */
-		if (size % CP_DMA_ALIGNMENT)
-			realign_size = CP_DMA_ALIGNMENT - (size % CP_DMA_ALIGNMENT);
+		if (size % SI_CPDMA_ALIGNMENT)
+			realign_size = SI_CPDMA_ALIGNMENT - (size % SI_CPDMA_ALIGNMENT);
 
 		/* If the copy begins unaligned, we must start copying from the next
 		 * aligned block and the skipped part should be copied after everything
 		 * else has been copied. Only the src alignment matters, not dst.
 		 */
-		if (src_va % CP_DMA_ALIGNMENT) {
-			skipped_size = CP_DMA_ALIGNMENT - (src_va % CP_DMA_ALIGNMENT);
+		if (src_va % SI_CPDMA_ALIGNMENT) {
+			skipped_size = SI_CPDMA_ALIGNMENT - (src_va % SI_CPDMA_ALIGNMENT);
 			/* The main part will be skipped if the size is too small. */
 			skipped_size = MIN2(skipped_size, size);
 			size -= skipped_size;
@@ -1164,14 +1148,14 @@ void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 
 	while (size) {
 		unsigned dma_flags = 0;
-		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
+		unsigned byte_count = MIN2(size, cp_dma_max_byte_count(cmd_buffer));
 
 		si_cp_dma_prepare(cmd_buffer, byte_count,
 				  size + skipped_size + realign_size,
 				  &dma_flags);
 
-		si_emit_cp_dma_copy_buffer(cmd_buffer, main_dest_va, main_src_va,
-					   byte_count, dma_flags);
+		si_emit_cp_dma(cmd_buffer, main_dest_va, main_src_va,
+			       byte_count, dma_flags);
 
 		size -= byte_count;
 		main_src_va += byte_count;
@@ -1185,8 +1169,8 @@ void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 				  size + skipped_size + realign_size,
 				  &dma_flags);
 
-		si_emit_cp_dma_copy_buffer(cmd_buffer, dest_va, src_va,
-					   skipped_size, dma_flags);
+		si_emit_cp_dma(cmd_buffer, dest_va, src_va,
+			       skipped_size, dma_flags);
 	}
 	if (realign_size)
 		si_cp_dma_realign_engine(cmd_buffer, realign_size);
@@ -1202,14 +1186,14 @@ void si_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
 	assert(va % 4 == 0 && size % 4 == 0);
 
 	while (size) {
-		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
-		unsigned dma_flags = 0;
+		unsigned byte_count = MIN2(size, cp_dma_max_byte_count(cmd_buffer));
+		unsigned dma_flags = CP_DMA_CLEAR;
 
 		si_cp_dma_prepare(cmd_buffer, byte_count, size, &dma_flags);
 
 		/* Emit the clear packet. */
-		si_emit_cp_dma_clear_buffer(cmd_buffer, va, byte_count, value,
-					    dma_flags);
+		si_emit_cp_dma(cmd_buffer, va, value, byte_count,
+			       dma_flags);
 
 		size -= byte_count;
 		va += byte_count;
