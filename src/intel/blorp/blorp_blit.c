@@ -202,6 +202,9 @@ static nir_ssa_def *
 blorp_nir_tex(nir_builder *b, struct brw_blorp_blit_vars *v,
               const struct brw_blorp_blit_prog_key *key, nir_ssa_def *pos)
 {
+   if (key->need_src_offset)
+      pos = nir_fadd(b, pos, nir_i2f32(b, nir_load_var(b, v->v_src_offset)));
+
    /* If the sampler requires normalized coordinates, we need to compensate. */
    if (key->src_coords_normalized)
       pos = nir_fmul(b, pos, nir_load_var(b, v->v_src_inv_size));
