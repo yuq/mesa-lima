@@ -1634,9 +1634,11 @@ again:
 			else
 				assert(0);
 
+			mtx_lock(&previous_stage_sel->mutex);
 			ok = si_check_missing_main_part(sscreen,
 							previous_stage_sel,
 							compiler_state, &shader1_key);
+			mtx_unlock(&previous_stage_sel->mutex);
 		} else {
 			ok = si_check_missing_main_part(sscreen, sel,
 							compiler_state, key);
