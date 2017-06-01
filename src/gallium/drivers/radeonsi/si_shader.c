@@ -1355,7 +1355,7 @@ static void declare_input_fs(
 	}
 
 	interp_fs_input(ctx, input_index, decl->Semantic.Name,
-			decl->Semantic.Index, shader->selector->info.num_inputs,
+			decl->Semantic.Index, 0, /* this param is unused */
 			shader->selector->info.colors_read, interp_param,
 			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK),
 			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE),
