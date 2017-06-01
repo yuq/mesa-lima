@@ -1335,36 +1335,36 @@ struct radv_sampler {
 };
 
 struct radv_color_buffer_info {
-	uint32_t cb_color_base;
+	uint64_t cb_color_base;
+	uint64_t cb_color_cmask;
+	uint64_t cb_color_fmask;
+	uint64_t cb_dcc_base;
 	uint32_t cb_color_pitch;
 	uint32_t cb_color_slice;
 	uint32_t cb_color_view;
 	uint32_t cb_color_info;
 	uint32_t cb_color_attrib;
 	uint32_t cb_dcc_control;
-	uint32_t cb_color_cmask;
 	uint32_t cb_color_cmask_slice;
-	uint32_t cb_color_fmask;
 	uint32_t cb_color_fmask_slice;
 	uint32_t cb_clear_value0;
 	uint32_t cb_clear_value1;
-	uint32_t cb_dcc_base;
 	uint32_t micro_tile_mode;
 };
 
 struct radv_ds_buffer_info {
+	uint64_t db_z_read_base;
+	uint64_t db_stencil_read_base;
+	uint64_t db_z_write_base;
+	uint64_t db_stencil_write_base;
+	uint64_t db_htile_data_base;
 	uint32_t db_depth_info;
 	uint32_t db_z_info;
 	uint32_t db_stencil_info;
-	uint32_t db_z_read_base;
-	uint32_t db_stencil_read_base;
-	uint32_t db_z_write_base;
-	uint32_t db_stencil_write_base;
 	uint32_t db_depth_view;
 	uint32_t db_depth_size;
 	uint32_t db_depth_slice;
 	uint32_t db_htile_surface;
-	uint32_t db_htile_data_base;
 	uint32_t pa_su_poly_offset_db_fmt_cntl;
 	float offset_scale;
 };
