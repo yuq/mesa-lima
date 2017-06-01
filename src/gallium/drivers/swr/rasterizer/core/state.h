@@ -175,22 +175,21 @@ enum SWR_OUTER_TESSFACTOR_ID
 /////////////////////////////////////////////////////////////////////////
 /// simdvertex
 /// @brief Defines a vertex element that holds all the data for SIMD vertices.
-///        Contains position in clip space, hardcoded to attribute 0,
-///        space for up to 32 attributes, as well as any SGV values generated
-///        by the pipeline
+///        Contains space for position, SGV, and 32 generic attributes
 /////////////////////////////////////////////////////////////////////////
 enum SWR_VTX_SLOTS
 {
-    VERTEX_POSITION_SLOT             = 0,
-    VERTEX_POSITION_END_SLOT         = 0,
-    VERTEX_ATTRIB_START_SLOT         = ( 1 + VERTEX_POSITION_END_SLOT),
-    VERTEX_ATTRIB_END_SLOT           = (32 + VERTEX_POSITION_END_SLOT),
-    VERTEX_RTAI_SLOT                 = (33 + VERTEX_POSITION_END_SLOT), // GS writes RenderTargetArrayIndex here
-    VERTEX_CLIPCULL_DIST_LO_SLOT     = (34 + VERTEX_POSITION_END_SLOT), // VS writes lower 4 clip/cull dist
-    VERTEX_CLIPCULL_DIST_HI_SLOT     = (35 + VERTEX_POSITION_END_SLOT), // VS writes upper 4 clip/cull dist
-    VERTEX_POINT_SIZE_SLOT           = (36 + VERTEX_POSITION_END_SLOT), // VS writes point size here
-    VERTEX_VIEWPORT_ARRAY_INDEX_SLOT = (37 + VERTEX_POSITION_END_SLOT),
-    SWR_VTX_NUM_SLOTS                 = VERTEX_VIEWPORT_ARRAY_INDEX_SLOT,
+    VERTEX_SGV_SLOT                 = 0,
+        VERTEX_SGV_RTAI_COMP        = 0,
+        VERTEX_SGV_VAI_COMP         = 1,
+        VERTEX_SGV_POINT_SIZE_COMP  = 2,
+    VERTEX_POSITION_SLOT            = 1,
+    VERTEX_POSITION_END_SLOT        = 1,
+    VERTEX_CLIPCULL_DIST_LO_SLOT    = (1 + VERTEX_POSITION_END_SLOT), // VS writes lower 4 clip/cull dist
+    VERTEX_CLIPCULL_DIST_HI_SLOT    = (2 + VERTEX_POSITION_END_SLOT), // VS writes upper 4 clip/cull dist
+    VERTEX_ATTRIB_START_SLOT        = (3 + VERTEX_POSITION_END_SLOT),
+    VERTEX_ATTRIB_END_SLOT          = (34 + VERTEX_POSITION_END_SLOT),
+    SWR_VTX_NUM_SLOTS               = (1 + VERTEX_ATTRIB_END_SLOT)
 };
 
 // SoAoSoA

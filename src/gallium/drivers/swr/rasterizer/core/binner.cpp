@@ -766,9 +766,9 @@ endBinTriangles:
     if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
     {
         simdvector vRtai[3];
-        pa.Assemble(VERTEX_RTAI_SLOT, vRtai);
+        pa.Assemble(VERTEX_SGV_SLOT, vRtai);
         simdscalari vRtaii;
-        vRtaii = _simd_castps_si(vRtai[0].x);
+        vRtaii = _simd_castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
         _simd_store_si((simdscalari*)aRTAI, vRtaii);
     }
     else
@@ -1114,10 +1114,14 @@ void SIMDAPI BinTriangles_simd16(
         scisYmax = _simd16_set1_epi32(state.scissorsInFixedPoint[0].ymax);
     }
 
+    // Make triangle bbox inclusive
+    bbox.xmax = _simd16_sub_epi32(bbox.xmax, _simd16_set1_epi32(1));
+    bbox.ymax = _simd16_sub_epi32(bbox.ymax, _simd16_set1_epi32(1));
+
     bbox.xmin = _simd16_max_epi32(bbox.xmin, scisXmin);
     bbox.ymin = _simd16_max_epi32(bbox.ymin, scisYmin);
-    bbox.xmax = _simd16_min_epi32(_simd16_sub_epi32(bbox.xmax, _simd16_set1_epi32(1)), scisXmax);
-    bbox.ymax = _simd16_min_epi32(_simd16_sub_epi32(bbox.ymax, _simd16_set1_epi32(1)), scisYmax);
+    bbox.xmax = _simd16_min_epi32(bbox.xmax, scisXmax);
+    bbox.ymax = _simd16_min_epi32(bbox.ymax, scisYmax);
 
     if (CT::IsConservativeT::value)
     {
@@ -1212,9 +1216,9 @@ endBinTriangles:
     if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
     {
         simd16vector vRtai[3];
-        pa.Assemble_simd16(VERTEX_RTAI_SLOT, vRtai);
+        pa.Assemble_simd16(VERTEX_SGV_SLOT, vRtai);
         simd16scalari vRtaii;
-        vRtaii = _simd16_castps_si(vRtai[0].x);
+        vRtaii = _simd16_castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
         _simd16_store_si(reinterpret_cast<simd16scalari *>(aRTAI), vRtaii);
     }
     else
@@ -1422,8 +1426,8 @@ void BinPostSetupPoints(
         if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
         {
             simdvector vRtai;
-            pa.Assemble(VERTEX_RTAI_SLOT, &vRtai);
-            simdscalari vRtaii = _simd_castps_si(vRtai.x);
+            pa.Assemble(VERTEX_SGV_SLOT, &vRtai);
+            simdscalari vRtaii = _simd_castps_si(vRtai[VERTEX_SGV_RTAI_COMP]);
             _simd_store_si((simdscalari*)aRTAI, vRtaii);
         }
         else
@@ -1496,8 +1500,8 @@ void BinPostSetupPoints(
         if (rastState.pointParam)
         {
             simdvector size[3];
-            pa.Assemble(VERTEX_POINT_SIZE_SLOT, size);
-            vPointSize = size[0].x;
+            pa.Assemble(VERTEX_SGV_SLOT, size);
+            vPointSize = size[0][VERTEX_SGV_POINT_SIZE_COMP];
         }
         else
         {
@@ -1562,8 +1566,8 @@ void BinPostSetupPoints(
         if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
         {
             simdvector vRtai[2];
-            pa.Assemble(VERTEX_RTAI_SLOT, vRtai);
-            simdscalari vRtaii = _simd_castps_si(vRtai[0].x);
+            pa.Assemble(VERTEX_SGV_SLOT, vRtai);
+            simdscalari vRtaii = _simd_castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
             _simd_store_si((simdscalari*)aRTAI, vRtaii);
         }
         else
@@ -1792,8 +1796,8 @@ void BinPostSetupPoints_simd16(
         if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
         {
             simd16vector vRtai;
-            pa.Assemble_simd16(VERTEX_RTAI_SLOT, &vRtai);
-            simd16scalari vRtaii = _simd16_castps_si(vRtai.x);
+            pa.Assemble_simd16(VERTEX_SGV_SLOT, &vRtai);
+            simd16scalari vRtaii = _simd16_castps_si(vRtai[VERTEX_SGV_RTAI_COMP]);
             _simd16_store_si(reinterpret_cast<simd16scalari *>(aRTAI), vRtaii);
         }
         else
@@ -1868,8 +1872,8 @@ void BinPostSetupPoints_simd16(
         if (rastState.pointParam)
         {
             simd16vector size[3];
-            pa.Assemble_simd16(VERTEX_POINT_SIZE_SLOT, size);
-            vPointSize = size[0].x;
+            pa.Assemble_simd16(VERTEX_SGV_SLOT, size);
+            vPointSize = size[0][VERTEX_SGV_POINT_SIZE_COMP];
         }
         else
         {
@@ -1937,8 +1941,8 @@ void BinPostSetupPoints_simd16(
         if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
         {
             simd16vector vRtai[2];
-            pa.Assemble_simd16(VERTEX_RTAI_SLOT, vRtai);
-            simd16scalari vRtaii = _simd16_castps_si(vRtai[0].x);
+            pa.Assemble_simd16(VERTEX_SGV_SLOT, vRtai);
+            simd16scalari vRtaii = _simd16_castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
             _simd16_store_si(reinterpret_cast<simd16scalari *>(aRTAI), vRtaii);
         }
         else
@@ -2218,8 +2222,8 @@ void BinPostSetupLines(
     if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
     {
         simdvector vRtai[2];
-        pa.Assemble(VERTEX_RTAI_SLOT, vRtai);
-        simdscalari vRtaii = _simd_castps_si(vRtai[0].x);
+        pa.Assemble(VERTEX_SGV_SLOT, vRtai);
+        simdscalari vRtaii = _simd_castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
         _simd_store_si((simdscalari*)aRTAI, vRtaii);
     }
     else
@@ -2435,8 +2439,8 @@ void BinPostSetupLines_simd16(
     if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
     {
         simd16vector vRtai[2];
-        pa.Assemble_simd16(VERTEX_RTAI_SLOT, vRtai);
-        simd16scalari vRtaii = _simd16_castps_si(vRtai[0].x);
+        pa.Assemble_simd16(VERTEX_SGV_SLOT, vRtai);
+        simd16scalari vRtaii = _simd16_castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
         _simd16_store_si(reinterpret_cast<simd16scalari *>(aRTAI), vRtaii);
     }
     else

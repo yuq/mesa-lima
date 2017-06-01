@@ -955,14 +955,13 @@ static void GeometryShaderStage(
                                 if (state.gsState.emitsViewportArrayIndex)
                                 {
                                     simd16vector vpiAttrib[3];
-                                    gsPa.Assemble_simd16(VERTEX_VIEWPORT_ARRAY_INDEX_SLOT, vpiAttrib);
+                                    gsPa.Assemble_simd16(VERTEX_SGV_SLOT, vpiAttrib);
 
                                     // OOB indices => forced to zero.
+                                    simd16scalari vpai = _simd16_castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
                                     simd16scalari vNumViewports = _simd16_set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
-                                    simd16scalari vClearMask = _simd16_cmplt_epi32(_simd16_castps_si(vpiAttrib[0].x), vNumViewports);
-                                    vpiAttrib[0].x = _simd16_and_ps(_simd16_castsi_ps(vClearMask), vpiAttrib[0].x);
-
-                                    vViewPortIdx = _simd16_castps_si(vpiAttrib[0].x);
+                                    simd16scalari vClearMask = _simd16_cmplt_epi32(vpai, vNumViewports);
+                                    vViewPortIdx = _simd16_and_si(vClearMask, vpai);
                                 }
                                 else
                                 {
@@ -979,14 +978,13 @@ static void GeometryShaderStage(
                                 if (state.gsState.emitsViewportArrayIndex)
                                 {
                                     simdvector vpiAttrib[3];
-                                    gsPa.Assemble(VERTEX_VIEWPORT_ARRAY_INDEX_SLOT, vpiAttrib);
+                                    gsPa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
+                                    simdscalari vpai = _simd_castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
 
                                     // OOB indices => forced to zero.
                                     simdscalari vNumViewports = _simd_set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
-                                    simdscalari vClearMask = _simd_cmplt_epi32(_simd_castps_si(vpiAttrib[0].x), vNumViewports);
-                                    vpiAttrib[0].x = _simd_and_ps(_simd_castsi_ps(vClearMask), vpiAttrib[0].x);
-
-                                    vViewPortIdx = _simd_castps_si(vpiAttrib[0].x);
+                                    simdscalari vClearMask = _simd_cmplt_epi32(vpai, vNumViewports);
+                                    vViewPortIdx = _simd_and_si(vClearMask, vpai);
                                 }
                                 else
                                 {
