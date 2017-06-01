@@ -3245,6 +3245,9 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
                        "compute shader variables cannot be given "
                        "explicit locations");
       return;
+   default:
+      fail = true;
+      break;
    };
 
    if (fail) {
@@ -3276,7 +3279,7 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
             ? (qual_location + FRAG_RESULT_DATA0)
             : (qual_location + VARYING_SLOT_VAR0);
          break;
-      case MESA_SHADER_COMPUTE:
+      default:
          assert(!"Unexpected shader type");
          break;
       }
@@ -4088,6 +4091,8 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
          break;
       case MESA_SHADER_COMPUTE:
          /* Invariance isn't meaningful in compute shaders. */
+         break;
+      default:
          break;
       }
    }

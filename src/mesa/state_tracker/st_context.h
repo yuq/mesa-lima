@@ -363,6 +363,8 @@ st_shader_stage_to_ptarget(gl_shader_stage stage)
       return PIPE_SHADER_TESS_EVAL;
    case MESA_SHADER_COMPUTE:
       return PIPE_SHADER_COMPUTE;
+   default:
+      break;
    }
 
    assert(!"should not be reached");

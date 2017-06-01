@@ -1412,7 +1412,7 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
 
    if (!disable_varying_packing &&
        (needs_flat_qualifier ||
-        (consumer_stage != -1 && consumer_stage != MESA_SHADER_FRAGMENT))) {
+        (consumer_stage != MESA_SHADER_NONE && consumer_stage != MESA_SHADER_FRAGMENT))) {
       /* Since this varying is not being consumed by the fragment shader, its
        * interpolation type varying cannot possibly affect rendering.
        * Also, this variable is non-flat and is (or contains) an integer
@@ -2170,8 +2170,8 @@ assign_varying_locations(struct gl_context *ctx,
 
    varying_matches matches(disable_varying_packing, xfb_enabled,
                            ctx->Extensions.ARB_enhanced_layouts,
-                           producer ? producer->Stage : (gl_shader_stage)-1,
-                           consumer ? consumer->Stage : (gl_shader_stage)-1);
+                           producer ? producer->Stage : MESA_SHADER_NONE,
+                           consumer ? consumer->Stage : MESA_SHADER_NONE);
    hash_table *tfeedback_candidates =
          _mesa_hash_table_create(NULL, _mesa_key_hash_string,
                                  _mesa_key_string_equal);
