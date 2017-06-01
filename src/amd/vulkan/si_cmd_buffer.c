@@ -762,6 +762,51 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 
 }
 
+void si_cs_emit_write_event_eop(struct radeon_winsys_cs *cs,
+				enum chip_class chip_class,
+				bool is_mec,
+				unsigned event, unsigned event_flags,
+				unsigned data_sel,
+				uint64_t va,
+				uint32_t old_fence,
+				uint32_t new_fence)
+{
+	unsigned op = EVENT_TYPE(event) |
+		EVENT_INDEX(5) |
+		event_flags;
+
+	if (is_mec) {
+		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 5, 0));
+		radeon_emit(cs, op);
+		radeon_emit(cs, EOP_DATA_SEL(data_sel));
+		radeon_emit(cs, va);            /* address lo */
+		radeon_emit(cs, va >> 32);      /* address hi */
+		radeon_emit(cs, new_fence);     /* immediate data lo */
+		radeon_emit(cs, 0); /* immediate data hi */
+	} else {
+		if (chip_class == CIK ||
+		    chip_class == VI) {
+			/* Two EOP events are required to make all engines go idle
+			 * (and optional cache flushes executed) before the timstamp
+			 * is written.
+			 */
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+			radeon_emit(cs, op);
+			radeon_emit(cs, va);
+			radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
+			radeon_emit(cs, old_fence); /* immediate data */
+			radeon_emit(cs, 0); /* unused */
+		}
+
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+		radeon_emit(cs, op);
+		radeon_emit(cs, va);
+		radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
+		radeon_emit(cs, new_fence); /* immediate data */
+		radeon_emit(cs, 0); /* unused */
+	}
+}
+
 void
 si_emit_wait_fence(struct radeon_winsys_cs *cs,
 		   uint64_t va, uint32_t ref,
@@ -826,13 +871,11 @@ si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
 
 		/* Necessary for DCC */
 		if (chip_class >= VI) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-			radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_DATA_TS) |
-			                            EVENT_INDEX(5));
-			radeon_emit(cs, 0);
-			radeon_emit(cs, 0);
-			radeon_emit(cs, 0);
-			radeon_emit(cs, 0);
+			si_cs_emit_write_event_eop(cs,
+						   chip_class,
+						   is_mec,
+						   V_028A90_FLUSH_AND_INV_CB_DATA_TS,
+						   0, 0, 0, 0, 0);
 		}
 	}
 

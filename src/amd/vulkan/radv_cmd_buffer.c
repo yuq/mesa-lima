@@ -3228,28 +3228,16 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, event->bo, 8);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 12);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 18);
 
 	/* TODO: this is overkill. Probably should figure something out from
 	 * the stage mask. */
 
-	if (cmd_buffer->device->physical_device->rad_info.chip_class == CIK) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
-				EVENT_INDEX(5));
-		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
-		radeon_emit(cs, 2);
-		radeon_emit(cs, 0);
-	}
-
-	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
-			EVENT_INDEX(5));
-	radeon_emit(cs, va);
-	radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
-	radeon_emit(cs, value);
-	radeon_emit(cs, 0);
+	si_cs_emit_write_event_eop(cs,
+				   cmd_buffer->device->physical_device->rad_info.chip_class == CIK,
+				   false,
+				   EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
+				   1, va, 2, value);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }

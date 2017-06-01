@@ -1144,7 +1144,7 @@ void radv_CmdEndQuery(
 
 		break;
 	case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-		radeon_check_space(cmd_buffer->device->ws, cs, 10);
+		radeon_check_space(cmd_buffer->device->ws, cs, 16);
 
 		va += pipelinestat_block_size;
 
@@ -1153,13 +1153,11 @@ void radv_CmdEndQuery(
 		radeon_emit(cs, va);
 		radeon_emit(cs, va >> 32);
 
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
-				EVENT_INDEX(5));
-		radeon_emit(cs, avail_va);
-		radeon_emit(cs, (avail_va >> 32) | EOP_DATA_SEL(1));
-		radeon_emit(cs, 1);
-		radeon_emit(cs, 0);
+		si_cs_emit_write_event_eop(cs,
+					   cmd_buffer->device->physical_device->rad_info.chip_class,
+					   false,
+					   EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
+					   1, avail_va, 0, 1);
 		break;
 	default:
 		unreachable("ending unhandled query type");
@@ -1182,7 +1180,7 @@ void radv_CmdWriteTimestamp(
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, pool->bo, 5);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 14);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 28);
 
 	switch(pipelineStage) {
 	case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
@@ -1204,37 +1202,16 @@ void radv_CmdWriteTimestamp(
 		radeon_emit(cs, 1);
 		break;
 	default:
-		if (mec) {
-			radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 5, 0));
-			radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
-			radeon_emit(cs, 3 << 29);
-			radeon_emit(cs, query_va);
-			radeon_emit(cs, query_va >> 32);
-			radeon_emit(cs, 0);
-			radeon_emit(cs, 0);
-
-			radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 5, 0));
-			radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
-			radeon_emit(cs, 1 << 29);
-			radeon_emit(cs, avail_va);
-			radeon_emit(cs, avail_va >> 32);
-			radeon_emit(cs, 1);
-			radeon_emit(cs, 0);
-		} else {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-			radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
-			radeon_emit(cs, query_va);
-			radeon_emit(cs, (3 << 29) | ((query_va >> 32) & 0xFFFF));
-			radeon_emit(cs, 0);
-			radeon_emit(cs, 0);
-
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-			radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
-			radeon_emit(cs, avail_va);
-			radeon_emit(cs, (1 << 29) | ((avail_va >> 32) & 0xFFFF));
-			radeon_emit(cs, 1);
-			radeon_emit(cs, 0);
-		}
+		si_cs_emit_write_event_eop(cs,
+					   cmd_buffer->device->physical_device->rad_info.chip_class,
+					   mec,
+					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
+					   3, query_va, 0, 0);
+		si_cs_emit_write_event_eop(cs,
+					   cmd_buffer->device->physical_device->rad_info.chip_class,
+					   mec,
+					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
+					   1, avail_va, 0, 1);
 		break;
 	}
 
