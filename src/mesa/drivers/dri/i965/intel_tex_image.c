@@ -296,6 +296,10 @@ intel_upload_tex(struct gl_context * ctx,
    struct intel_mipmap_tree *mt = intel_texture_image(texImage)->mt;
    bool ok;
 
+   /* Check that there is actually data to store. */
+   if (pixels == NULL && !_mesa_is_bufferobj(packing->BufferObj))
+      return;
+
    bool tex_busy = mt && brw_bo_busy(mt->bo);
 
    if (mt && mt->format == MESA_FORMAT_S_UINT8)
