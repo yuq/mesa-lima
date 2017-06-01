@@ -57,16 +57,16 @@ enum mesa_block_class {
  * \return true if success, false if error
  */
 static bool
-prepare_target(struct gl_context *ctx, GLuint name, GLenum target,
-               int level, int z, int depth,
-               struct gl_texture_image **tex_image,
-               struct gl_renderbuffer **renderbuffer,
-               mesa_format *format,
-               GLenum *internalFormat,
-               GLuint *width,
-               GLuint *height,
-               GLuint *num_samples,
-               const char *dbg_prefix)
+prepare_target_err(struct gl_context *ctx, GLuint name, GLenum target,
+                   int level, int z, int depth,
+                   struct gl_texture_image **tex_image,
+                   struct gl_renderbuffer **renderbuffer,
+                   mesa_format *format,
+                   GLenum *internalFormat,
+                   GLuint *width,
+                   GLuint *height,
+                   GLuint *num_samples,
+                   const char *dbg_prefix)
 {
    if (name == 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
@@ -484,14 +484,16 @@ _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
       return;
    }
 
-   if (!prepare_target(ctx, srcName, srcTarget, srcLevel, srcZ, srcDepth,
-                       &srcTexImage, &srcRenderbuffer, &srcFormat,
-                       &srcIntFormat, &src_w, &src_h, &src_num_samples, "src"))
+   if (!prepare_target_err(ctx, srcName, srcTarget, srcLevel, srcZ, srcDepth,
+                           &srcTexImage, &srcRenderbuffer, &srcFormat,
+                           &srcIntFormat, &src_w, &src_h, &src_num_samples,
+                           "src"))
       return;
 
-   if (!prepare_target(ctx, dstName, dstTarget, dstLevel, dstZ, srcDepth,
-                       &dstTexImage, &dstRenderbuffer, &dstFormat,
-                       &dstIntFormat, &dst_w, &dst_h, &dst_num_samples, "dst"))
+   if (!prepare_target_err(ctx, dstName, dstTarget, dstLevel, dstZ, srcDepth,
+                           &dstTexImage, &dstRenderbuffer, &dstFormat,
+                           &dstIntFormat, &dst_w, &dst_h, &dst_num_samples,
+                           "dst"))
       return;
 
    _mesa_get_format_block_size(srcFormat, &src_bw, &src_bh);
