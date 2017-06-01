@@ -1602,6 +1602,10 @@ again:
 			previous_stage_sel = key->part.tcs.ls;
 		else if (sel->type == PIPE_SHADER_GEOMETRY)
 			previous_stage_sel = key->part.gs.es;
+
+		/* We need to wait for the previous shader. */
+		if (previous_stage_sel && thread_index < 0)
+			util_queue_fence_wait(&previous_stage_sel->ready);
 	}
 
 	/* Compile the main shader part if it doesn't exist. This can happen
