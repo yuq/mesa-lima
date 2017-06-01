@@ -28,6 +28,7 @@
 #define U_DYNARRAY_H
 
 #include <stdlib.h>
+#include "ralloc.h"
 
 /* A zero-initialized version of this is guaranteed to represent an
  * empty array.
@@ -37,25 +38,33 @@
  */
 struct util_dynarray
 {
+   void *mem_ctx;
    void *data;
    unsigned size;
    unsigned capacity;
 };
 
 static inline void
-util_dynarray_init(struct util_dynarray *buf)
+util_dynarray_init(struct util_dynarray *buf, void *mem_ctx)
 {
    memset(buf, 0, sizeof(*buf));
+   buf->mem_ctx = mem_ctx;
 }
 
 static inline void
 util_dynarray_fini(struct util_dynarray *buf)
 {
    if (buf->data) {
-      free(buf->data);
-      util_dynarray_init(buf);
+      if (buf->mem_ctx) {
+         ralloc_free(buf->data);
+      } else {
+         free(buf->data);
+      }
+      util_dynarray_init(buf, buf->mem_ctx);
    }
 }
+
+#define DYN_ARRAY_INITIAL_SIZE 64
 
 /* use util_dynarray_trim to reduce the allocated storage */
 static inline void *
@@ -63,11 +72,17 @@ util_dynarray_resize(struct util_dynarray *buf, unsigned newsize)
 {
    void *p;
    if (newsize > buf->capacity) {
-      unsigned newcap = buf->capacity << 1;
-      if (newsize > newcap)
-	      newcap = newsize;
-      buf->data = realloc(buf->data, newcap);
-      buf->capacity = newcap;
+      if (buf->capacity == 0)
+         buf->capacity = DYN_ARRAY_INITIAL_SIZE;
+
+      while (newsize > buf->capacity)
+         buf->capacity *= 2;
+
+      if (buf->mem_ctx) {
+         buf->data = reralloc_size(buf->mem_ctx, buf->data, buf->capacity);
+      } else {
+         buf->data = realloc(buf->data, buf->capacity);
+      }
    }
 
    p = (void *)((char *)buf->data + buf->size);
@@ -87,10 +102,18 @@ util_dynarray_trim(struct util_dynarray *buf)
 {
    if (buf->size != buf->capacity) {
       if (buf->size) {
-         buf->data = realloc(buf->data, buf->size);
+         if (buf->mem_ctx) {
+            reralloc_size(buf->mem_ctx, buf->data, buf->size);
+         } else {
+            buf->data = realloc(buf->data, buf->size);
+         }
          buf->capacity = buf->size;
       } else {
-         free(buf->data);
+         if (buf->mem_ctx) {
+            ralloc_free(buf->data);
+         } else {
+            free(buf->data);
+         }
          buf->data = 0;
          buf->capacity = 0;
       }
@@ -106,6 +129,10 @@ util_dynarray_trim(struct util_dynarray *buf)
 #define util_dynarray_element(buf, type, idx) ((type*)(buf)->data + (idx))
 #define util_dynarray_begin(buf) ((buf)->data)
 #define util_dynarray_end(buf) ((void*)util_dynarray_element((buf), char, (buf)->size))
+
+#define util_dynarray_foreach(buf, type, elem) \
+   for (type *elem = (type *)(buf)->data; \
+        elem < (type *)((char *)(buf)->data + (buf)->size); elem++)
 
 #endif /* U_DYNARRAY_H */
 

@@ -76,14 +76,14 @@ batch_init(struct fd_batch *batch)
 	batch->max_scissor.minx = batch->max_scissor.miny = ~0;
 	batch->max_scissor.maxx = batch->max_scissor.maxy = 0;
 
-	util_dynarray_init(&batch->draw_patches);
+	util_dynarray_init(&batch->draw_patches, NULL);
 
 	if (is_a3xx(ctx->screen))
-		util_dynarray_init(&batch->rbrc_patches);
+		util_dynarray_init(&batch->rbrc_patches, NULL);
 
 	assert(batch->resources->entries == 0);
 
-	util_dynarray_init(&batch->samples);
+	util_dynarray_init(&batch->samples, NULL);
 }
 
 struct fd_batch *

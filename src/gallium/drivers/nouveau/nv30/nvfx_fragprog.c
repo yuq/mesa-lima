@@ -1119,7 +1119,7 @@ _nvfx_fragprog_translate(uint16_t oclass, struct nv30_fragprog *fp)
       goto out_err;
 
    tgsi_parse_init(&parse, fp->pipe.tokens);
-   util_dynarray_init(&insns);
+   util_dynarray_init(&insns, NULL);
 
    while (!tgsi_parse_end_of_tokens(&parse)) {
       tgsi_parse_token(&parse);

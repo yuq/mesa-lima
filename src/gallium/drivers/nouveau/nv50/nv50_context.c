@@ -377,7 +377,7 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
 
    nv50->base.scratch.bo_size = 2 << 20;
 
-   util_dynarray_init(&nv50->global_residents);
+   util_dynarray_init(&nv50->global_residents, NULL);
 
    return pipe;
 
