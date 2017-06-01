@@ -1822,6 +1822,17 @@ try_blorp_blit(struct blorp_batch *batch,
 
    params->num_samples = params->dst.surf.samples;
 
+   if (wm_prog_key->bilinear_filter && batch->blorp->isl_dev->info->gen < 6) {
+      /* Gen4-5 don't support non-normalized texture coordinates */
+      wm_prog_key->src_coords_normalized = true;
+      params->wm_inputs.src_inv_size[0] =
+         1.0f / minify(params->src.surf.logical_level0_px.width,
+                       params->src.view.base_level);
+      params->wm_inputs.src_inv_size[1] =
+         1.0f / minify(params->src.surf.logical_level0_px.height,
+                       params->src.view.base_level);
+   }
+
    if (params->src.tile_x_sa || params->src.tile_y_sa) {
       assert(wm_prog_key->need_src_offset);
       surf_get_intratile_offset_px(&params->src,
@@ -2085,15 +2096,6 @@ blorp_blit(struct blorp_batch *batch,
    if (filter == GL_LINEAR &&
        params.src.surf.samples <= 1 && params.dst.surf.samples <= 1) {
       wm_prog_key.bilinear_filter = true;
-
-      if (batch->blorp->isl_dev->info->gen < 6) {
-         /* Gen4-5 don't support non-normalized texture coordinates */
-         wm_prog_key.src_coords_normalized = true;
-         params.wm_inputs.src_inv_size[0] =
-            1.0f / minify(params.src.surf.logical_level0_px.width, src_level);
-         params.wm_inputs.src_inv_size[1] =
-            1.0f / minify(params.src.surf.logical_level0_px.height, src_level);
-      }
    }
 
    if ((params.src.surf.usage & ISL_SURF_USAGE_DEPTH_BIT) == 0 &&
