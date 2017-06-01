@@ -702,9 +702,11 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 }
 
 static void *
-map_gtt(struct brw_bo *bo)
+brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
+
+   pthread_mutex_lock(&bufmgr->lock);
 
    /* Get a mapping of the buffer if we haven't before. */
    if (bo->map_gtt == NULL) {
@@ -721,6 +723,7 @@ map_gtt(struct brw_bo *bo)
       if (ret != 0) {
          DBG("%s:%d: Error preparing buffer map %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+         pthread_mutex_unlock(&bufmgr->lock);
          return NULL;
       }
 
@@ -731,39 +734,15 @@ map_gtt(struct brw_bo *bo)
          bo->map_gtt = NULL;
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+         pthread_mutex_unlock(&bufmgr->lock);
          return NULL;
       }
+      bo->map_count++;
    }
 
    DBG("bo_map_gtt: %d (%s) -> %p\n", bo->gem_handle, bo->name,
        bo->map_gtt);
 
-   bo->map_count++;
-   return bo->map_gtt;
-}
-
-static void *
-brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
-{
-   struct brw_bufmgr *bufmgr = bo->bufmgr;
-
-   pthread_mutex_lock(&bufmgr->lock);
-
-   void *map = map_gtt(bo);
-   if (map == NULL) {
-      pthread_mutex_unlock(&bufmgr->lock);
-      return NULL;
-   }
-
-   /* Now move it to the GTT domain so that the GPU and CPU
-    * caches are flushed and the GPU isn't actively using the
-    * buffer.
-    *
-    * The pagefault handler does this domain change for us when
-    * it has unbound the BO from the GTT, but it's up to us to
-    * tell it when we're about to use things if we had done
-    * rendering and it still happens to be bound to the GTT.
-    */
    if (!(flags & MAP_ASYNC)) {
       set_domain(brw, "GTT mapping", bo,
                  I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
@@ -773,7 +752,7 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    VG(VALGRIND_MAKE_MEM_DEFINED(bo->map_gtt, bo->size));
    pthread_mutex_unlock(&bufmgr->lock);
 
-   return map;
+   return bo->map_gtt;
 }
 
 /**
@@ -804,18 +783,8 @@ brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo)
     */
    if (!bufmgr->has_llc)
       return brw_bo_map_gtt(brw, bo, MAP_READ | MAP_WRITE);
-
-   pthread_mutex_lock(&bufmgr->lock);
-
-   void *map = map_gtt(bo);
-   if (map != NULL) {
-      bo_mark_mmaps_incoherent(bo);
-      VG(VALGRIND_MAKE_MEM_DEFINED(bo->map_gtt, bo->size));
-   }
-
-   pthread_mutex_unlock(&bufmgr->lock);
-
-   return map;
+   else
+      return brw_bo_map_gtt(brw, bo, MAP_READ | MAP_WRITE | MAP_ASYNC);
 }
 
 static bool
