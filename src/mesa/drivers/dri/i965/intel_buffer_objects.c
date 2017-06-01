@@ -400,15 +400,8 @@ brw_map_buffer_range(struct gl_context *ctx,
       return obj->Mappings[index].Pointer;
    }
 
-   void *map;
-   if (access & GL_MAP_UNSYNCHRONIZED_BIT) {
-      if (!brw->has_llc && brw->perf_debug &&
-          brw_bo_busy(intel_obj->buffer)) {
-         perf_debug("MapBufferRange with GL_MAP_UNSYNCHRONIZED_BIT stalling (it's actually synchronized on non-LLC platforms)\n");
-      }
-      map = brw_bo_map_unsynchronized(brw, intel_obj->buffer);
-   } else {
-      map = brw_bo_map(brw, intel_obj->buffer, access);
+   void *map = brw_bo_map(brw, intel_obj->buffer, access);
+   if (!(access & GL_MAP_UNSYNCHRONIZED_BIT)) {
       mark_buffer_inactive(intel_obj);
    }
 

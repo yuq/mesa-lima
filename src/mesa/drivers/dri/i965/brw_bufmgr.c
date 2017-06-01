@@ -772,19 +772,7 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 void *
 brw_bo_map_unsynchronized(struct brw_context *brw, struct brw_bo *bo)
 {
-   struct brw_bufmgr *bufmgr = bo->bufmgr;
-
-   /* If the CPU cache isn't coherent with the GTT, then use a
-    * regular synchronized mapping.  The problem is that we don't
-    * track where the buffer was last used on the CPU side in
-    * terms of brw_bo_map_cpu vs brw_bo_map_gtt, so
-    * we would potentially corrupt the buffer even when the user
-    * does reasonable things.
-    */
-   if (!bufmgr->has_llc)
-      return brw_bo_map_gtt(brw, bo, MAP_READ | MAP_WRITE);
-   else
-      return brw_bo_map_gtt(brw, bo, MAP_READ | MAP_WRITE | MAP_ASYNC);
+   return brw_bo_map_gtt(brw, bo, MAP_READ | MAP_WRITE | MAP_ASYNC);
 }
 
 static bool
