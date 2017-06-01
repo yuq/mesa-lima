@@ -689,8 +689,10 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    DBG("brw_bo_map_cpu: %d (%s) -> %p\n", bo->gem_handle, bo->name,
        bo->map_cpu);
 
-   set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
-              flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
+   if (!(flags & MAP_ASYNC)) {
+      set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
+                 flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
+   }
 
    bo_mark_mmaps_incoherent(bo);
    VG(VALGRIND_MAKE_MEM_DEFINED(bo->map_cpu, bo->size));
@@ -762,8 +764,10 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
     * tell it when we're about to use things if we had done
     * rendering and it still happens to be bound to the GTT.
     */
-   set_domain(brw, "GTT mapping", bo,
-              I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
+   if (!(flags & MAP_ASYNC)) {
+      set_domain(brw, "GTT mapping", bo,
+                 I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
+   }
 
    bo_mark_mmaps_incoherent(bo);
    VG(VALGRIND_MAKE_MEM_DEFINED(bo->map_gtt, bo->size));
