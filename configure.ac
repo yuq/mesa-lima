@@ -1066,16 +1066,12 @@ AC_SUBST([LLVM_INCLUDEDIR])
 dnl
 dnl libunwind
 dnl
+PKG_CHECK_EXISTS(libunwind, [HAVE_LIBUNWIND=yes], [HAVE_LIBUNWIND=no])
 AC_ARG_ENABLE([libunwind],
     [AS_HELP_STRING([--enable-libunwind],
             [Use libunwind for backtracing (default: auto)])],
         [LIBUNWIND="$enableval"],
-        [LIBUNWIND="auto"])
-
-PKG_CHECK_EXISTS(libunwind, [HAVE_LIBUNWIND=yes], [HAVE_LIBUNWIND=no])
-if test "x$LIBUNWIND" = "xauto"; then
-    LIBUNWIND="$HAVE_LIBUNWIND"
-fi
+        [LIBUNWIND="$HAVE_LIBUNWIND"])
 
 if test "x$LIBUNWIND" = "xyes"; then
     PKG_CHECK_MODULES(LIBUNWIND, libunwind)
