@@ -474,6 +474,48 @@ copy_format_compatible(const struct gl_context *ctx,
    return false;
 }
 
+static void
+copy_image_subdata(struct gl_context *ctx,
+                   struct gl_texture_image *srcTexImage,
+                   struct gl_renderbuffer *srcRenderbuffer,
+                   int srcX, int srcY, int srcZ, int srcLevel,
+                   struct gl_texture_image *dstTexImage,
+                   struct gl_renderbuffer *dstRenderbuffer,
+                   int dstX, int dstY, int dstZ, int dstLevel,
+                   int srcWidth, int srcHeight, int srcDepth)
+{
+   /* loop over 2D slices/faces/layers */
+   for (int i = 0; i < srcDepth; ++i) {
+      int newSrcZ = srcZ + i;
+      int newDstZ = dstZ + i;
+
+      if (srcTexImage &&
+          srcTexImage->TexObject->Target == GL_TEXTURE_CUBE_MAP) {
+         /* need to update srcTexImage pointer for the cube face */
+         assert(srcZ + i < MAX_FACES);
+         srcTexImage = srcTexImage->TexObject->Image[srcZ + i][srcLevel];
+         assert(srcTexImage);
+         newSrcZ = 0;
+      }
+
+      if (dstTexImage &&
+          dstTexImage->TexObject->Target == GL_TEXTURE_CUBE_MAP) {
+         /* need to update dstTexImage pointer for the cube face */
+         assert(dstZ + i < MAX_FACES);
+         dstTexImage = dstTexImage->TexObject->Image[dstZ + i][dstLevel];
+         assert(dstTexImage);
+         newDstZ = 0;
+      }
+
+      ctx->Driver.CopyImageSubData(ctx,
+                                   srcTexImage, srcRenderbuffer,
+                                   srcX, srcY, newSrcZ,
+                                   dstTexImage, dstRenderbuffer,
+                                   dstX, dstY, newDstZ,
+                                   srcWidth, srcHeight);
+   }
+}
+
 void GLAPIENTRY
 _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
                        GLint srcX, GLint srcY, GLint srcZ,
@@ -490,7 +532,6 @@ _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
    GLuint src_bw, src_bh, dst_bw, dst_bh;
    GLuint src_num_samples, dst_num_samples;
    int dstWidth, dstHeight, dstDepth;
-   int i;
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glCopyImageSubData(%u, %s, %d, %d, %d, %d, "
@@ -606,34 +647,7 @@ _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
       return;
    }
 
-   /* loop over 2D slices/faces/layers */
-   for (i = 0; i < srcDepth; ++i) {
-      int newSrcZ = srcZ + i;
-      int newDstZ = dstZ + i;
-
-      if (srcTexImage &&
-          srcTexImage->TexObject->Target == GL_TEXTURE_CUBE_MAP) {
-         /* need to update srcTexImage pointer for the cube face */
-         assert(srcZ + i < MAX_FACES);
-         srcTexImage = srcTexImage->TexObject->Image[srcZ + i][srcLevel];
-         assert(srcTexImage);
-         newSrcZ = 0;
-      }
-
-      if (dstTexImage &&
-          dstTexImage->TexObject->Target == GL_TEXTURE_CUBE_MAP) {
-         /* need to update dstTexImage pointer for the cube face */
-         assert(dstZ + i < MAX_FACES);
-         dstTexImage = dstTexImage->TexObject->Image[dstZ + i][dstLevel];
-         assert(dstTexImage);
-         newDstZ = 0;
-      }
-
-      ctx->Driver.CopyImageSubData(ctx,
-                                   srcTexImage, srcRenderbuffer,
-                                   srcX, srcY, newSrcZ,
-                                   dstTexImage, dstRenderbuffer,
-                                   dstX, dstY, newDstZ,
-                                   srcWidth, srcHeight);
-   }
+   copy_image_subdata(ctx, srcTexImage, srcRenderbuffer, srcX, srcY, srcZ,
+                      srcLevel, dstTexImage, dstRenderbuffer, dstX, dstY, dstZ,
+                      dstLevel, srcWidth, srcHeight, srcDepth);
 }
