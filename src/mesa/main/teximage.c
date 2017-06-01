@@ -3414,6 +3414,20 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
 
 
 void GLAPIENTRY
+_mesa_TexSubImage1D_no_error(GLenum target, GLint level,
+                             GLint xoffset, GLsizei width,
+                             GLenum format, GLenum type,
+                             const GLvoid *pixels)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   texsubimage(ctx, 1, target, level,
+               xoffset, 0, 0,
+               width, 1, 1,
+               format, type, pixels);
+}
+
+
+void GLAPIENTRY
 _mesa_TexSubImage1D( GLenum target, GLint level,
                      GLint xoffset, GLsizei width,
                      GLenum format, GLenum type,
@@ -3424,6 +3438,21 @@ _mesa_TexSubImage1D( GLenum target, GLint level,
                    xoffset, 0, 0,
                    width, 1, 1,
                    format, type, pixels, "glTexSubImage1D");
+}
+
+
+void GLAPIENTRY
+_mesa_TexSubImage2D_no_error(GLenum target, GLint level,
+                             GLint xoffset, GLint yoffset,
+                             GLsizei width, GLsizei height,
+                             GLenum format, GLenum type,
+                             const GLvoid *pixels)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   texsubimage(ctx, 2, target, level,
+               xoffset, yoffset, 0,
+               width, height, 1,
+               format, type, pixels);
 }
 
 
@@ -3441,6 +3470,20 @@ _mesa_TexSubImage2D( GLenum target, GLint level,
                    format, type, pixels, "glTexSubImage2D");
 }
 
+
+void GLAPIENTRY
+_mesa_TexSubImage3D_no_error(GLenum target, GLint level,
+                             GLint xoffset, GLint yoffset, GLint zoffset,
+                             GLsizei width, GLsizei height, GLsizei depth,
+                             GLenum format, GLenum type,
+                             const GLvoid *pixels)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   texsubimage(ctx, 3, target, level,
+               xoffset, yoffset, zoffset,
+               width, height, depth,
+               format, type, pixels);
+}
 
 
 void GLAPIENTRY

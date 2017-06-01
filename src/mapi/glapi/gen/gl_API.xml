@@ -3299,7 +3299,7 @@
         <glx rop="4122"/>
     </function>
 
-    <function name="TexSubImage1D">
+    <function name="TexSubImage1D" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
@@ -3311,7 +3311,7 @@
         <glx rop="4099" large="true"/>
     </function>
 
-    <function name="TexSubImage2D" es1="1.0" es2="2.0">
+    <function name="TexSubImage2D" es1="1.0" es2="2.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
@@ -4025,7 +4025,7 @@
         <glx rop="4114" large="true"/>
     </function>
 
-    <function name="TexSubImage3D" es2="3.0">
+    <function name="TexSubImage3D" es2="3.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
