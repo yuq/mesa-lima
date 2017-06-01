@@ -487,9 +487,12 @@ struct si_shader_key {
 	struct {
 		/* One byte for every input: SI_FIX_FETCH_* enums. */
 		uint8_t		vs_fix_fetch[SI_MAX_ATTRIBS];
-		uint64_t	ff_tcs_inputs_to_copy; /* for fixed-func TCS */
-		/* When PS needs PrimID and GS is disabled. */
-		unsigned	vs_export_prim_id:1;
+
+		union {
+			uint64_t	ff_tcs_inputs_to_copy; /* for fixed-func TCS */
+			/* When PS needs PrimID and GS is disabled. */
+			unsigned	vs_export_prim_id:1;
+		} u;
 	} mono;
 
 	/* Optimization flags for asynchronous compilation only. */

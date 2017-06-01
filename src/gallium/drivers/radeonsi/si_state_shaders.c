@@ -843,7 +843,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 	unsigned oc_lds_en;
 	unsigned window_space =
 	   shader->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
-	bool enable_prim_id = shader->key.mono.vs_export_prim_id || shader->selector->info.uses_primid;
+	bool enable_prim_id = shader->key.mono.u.vs_export_prim_id || shader->selector->info.uses_primid;
 
 	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
@@ -1267,7 +1267,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			si_shader_selector_key_hw_vs(sctx, sel, key);
 
 			if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
-				key->mono.vs_export_prim_id = 1;
+				key->mono.u.vs_export_prim_id = 1;
 		}
 		break;
 	case PIPE_SHADER_TESS_CTRL:
@@ -1283,7 +1283,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			sctx->tes_shader.cso->info.reads_tess_factors;
 
 		if (sel == sctx->fixed_func_tcs_shader.cso)
-			key->mono.ff_tcs_inputs_to_copy = sctx->vs_shader.cso->outputs_written;
+			key->mono.u.ff_tcs_inputs_to_copy = sctx->vs_shader.cso->outputs_written;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)
@@ -1292,7 +1292,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			si_shader_selector_key_hw_vs(sctx, sel, key);
 
 			if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
-				key->mono.vs_export_prim_id = 1;
+				key->mono.u.vs_export_prim_id = 1;
 		}
 		break;
 	case PIPE_SHADER_GEOMETRY:

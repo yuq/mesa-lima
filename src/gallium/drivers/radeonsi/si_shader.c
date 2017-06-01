@@ -2492,7 +2492,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 	lds_base = get_tcs_in_current_patch_offset(ctx);
 	lds_base = LLVMBuildAdd(gallivm->builder, lds_base, lds_vertex_offset, "");
 
-	inputs = ctx->shader->key.mono.ff_tcs_inputs_to_copy;
+	inputs = ctx->shader->key.mono.u.ff_tcs_inputs_to_copy;
 	while (inputs) {
 		unsigned i = u_bit_scan64(&inputs);
 
@@ -3019,7 +3019,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 		si_llvm_emit_streamout(ctx, outputs, i, 0);
 
 	/* Export PrimitiveID. */
-	if (ctx->shader->key.mono.vs_export_prim_id) {
+	if (ctx->shader->key.mono.u.vs_export_prim_id) {
 		outputs[i].semantic_name = TGSI_SEMANTIC_PRIMID;
 		outputs[i].semantic_index = 0;
 		outputs[i].values[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
@@ -5273,8 +5273,8 @@ static void si_dump_shader_key(unsigned processor, const struct si_shader *shade
 				      "part.vs.prolog", f);
 		fprintf(f, "  as_es = %u\n", key->as_es);
 		fprintf(f, "  as_ls = %u\n", key->as_ls);
-		fprintf(f, "  mono.vs_export_prim_id = %u\n",
-			key->mono.vs_export_prim_id);
+		fprintf(f, "  mono.u.vs_export_prim_id = %u\n",
+			key->mono.u.vs_export_prim_id);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
@@ -5283,13 +5283,13 @@ static void si_dump_shader_key(unsigned processor, const struct si_shader *shade
 					      "part.tcs.ls_prolog", f);
 		}
 		fprintf(f, "  part.tcs.epilog.prim_mode = %u\n", key->part.tcs.epilog.prim_mode);
-		fprintf(f, "  mono.ff_tcs_inputs_to_copy = 0x%"PRIx64"\n", key->mono.ff_tcs_inputs_to_copy);
+		fprintf(f, "  mono.u.ff_tcs_inputs_to_copy = 0x%"PRIx64"\n", key->mono.u.ff_tcs_inputs_to_copy);
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
 		fprintf(f, "  as_es = %u\n", key->as_es);
-		fprintf(f, "  mono.vs_export_prim_id = %u\n",
-			key->mono.vs_export_prim_id);
+		fprintf(f, "  mono.u.vs_export_prim_id = %u\n",
+			key->mono.u.vs_export_prim_id);
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
