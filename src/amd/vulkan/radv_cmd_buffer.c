@@ -3297,14 +3297,7 @@ void radv_CmdWaitEvents(VkCommandBuffer commandBuffer,
 
 		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 7);
 
-		radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
-		radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
-		radeon_emit(cs, va);
-		radeon_emit(cs, va >> 32);
-		radeon_emit(cs, 1); /* reference value */
-		radeon_emit(cs, 0xffffffff); /* mask */
-		radeon_emit(cs, 4); /* poll interval */
-
+		si_emit_wait_fence(cs, va, 1, 0xffffffff);
 		assert(cmd_buffer->cs->cdw <= cdw_max);
 	}
 

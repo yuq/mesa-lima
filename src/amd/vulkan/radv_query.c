@@ -997,13 +997,7 @@ void radv_CmdCopyQueryPoolResults(
 				uint64_t avail_va = va + pool->availability_offset + 4 * query;
 
 				/* This waits on the ME. All copies below are done on the ME */
-				radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
-				radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
-				radeon_emit(cs, avail_va);
-				radeon_emit(cs, avail_va >> 32);
-				radeon_emit(cs, 1); /* reference value */
-				radeon_emit(cs, 0xffffffff); /* mask */
-				radeon_emit(cs, 4); /* poll interval */
+				si_emit_wait_fence(cs, avail_va, 1, 0xffffffff);
 			}
 		}
 		radv_query_shader(cmd_buffer, cmd_buffer->device->meta_state.query.pipeline_statistics_query_pipeline,
@@ -1026,13 +1020,7 @@ void radv_CmdCopyQueryPoolResults(
 				uint64_t avail_va = va + pool->availability_offset + 4 * query;
 
 				/* This waits on the ME. All copies below are done on the ME */
-				radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
-				radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
-				radeon_emit(cs, avail_va);
-				radeon_emit(cs, avail_va >> 32);
-				radeon_emit(cs, 1); /* reference value */
-				radeon_emit(cs, 0xffffffff); /* mask */
-				radeon_emit(cs, 4); /* poll interval */
+				si_emit_wait_fence(cs, avail_va, 1, 0xffffffff);
 			}
 			if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
 				uint64_t avail_va = va + pool->availability_offset + 4 * query;
