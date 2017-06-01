@@ -5,6 +5,7 @@
 #include "util/u_dynarray.h"
 #include "util/u_inlines.h"
 #include "util/u_debug.h"
+#include "util/u_memory.h"
 
 #include "pipe/p_shader_tokens.h"
 #include "tgsi/tgsi_parse.h"
