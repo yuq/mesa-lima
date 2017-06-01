@@ -47,6 +47,8 @@
 #define GREEN_HEADER CSI "1;42m"
 #define NORMAL       CSI "0m"
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 /* options */
 
 static bool option_full_decode = true;
@@ -220,7 +222,15 @@ struct program {
 
 #define MAX_NUM_PROGRAMS 4096
 static struct program programs[MAX_NUM_PROGRAMS];
-static int num_programs = 0;
+static int idx_program = 0, num_programs = 0;
+
+static int next_program(void)
+{
+   int ret = idx_program;
+   idx_program = (idx_program + 1) % MAX_NUM_PROGRAMS;
+   num_programs = MIN(num_programs + 1, MAX_NUM_PROGRAMS);
+   return ret;
+}
 
 static void decode(struct gen_spec *spec,
                    const char *buffer_name,
@@ -300,7 +310,7 @@ static void decode(struct gen_spec *spec,
                                enabled[1] ? "SIMD16 fragment shader" :
                                enabled[2] ? "SIMD32 fragment shader" : NULL;
 
-            programs[num_programs++] = (struct program) {
+            programs[next_program()] = (struct program) {
                .type = type,
                .command = inst->name,
                .command_offset = offset,
@@ -309,7 +319,7 @@ static void decode(struct gen_spec *spec,
             };
          } else {
             if (enabled[0]) /* SIMD8 */ {
-               programs[num_programs++] = (struct program) {
+               programs[next_program()] = (struct program) {
                   .type = "SIMD8 fragment shader",
                   .command = inst->name,
                   .command_offset = offset,
@@ -318,7 +328,7 @@ static void decode(struct gen_spec *spec,
                };
             }
             if (enabled[1]) /* SIMD16 */ {
-               programs[num_programs++] = (struct program) {
+               programs[next_program()] = (struct program) {
                   .type = "SIMD16 fragment shader",
                   .command = inst->name,
                   .command_offset = offset,
@@ -327,7 +337,7 @@ static void decode(struct gen_spec *spec,
                };
             }
             if (enabled[2]) /* SIMD32 */ {
-               programs[num_programs++] = (struct program) {
+               programs[next_program()] = (struct program) {
                   .type = "SIMD32 fragment shader",
                   .command = inst->name,
                   .command_offset = offset,
@@ -374,7 +384,7 @@ static void decode(struct gen_spec *spec,
             NULL;
 
          if (is_enabled) {
-            programs[num_programs++] = (struct program) {
+            programs[next_program()] = (struct program) {
                .type = type,
                .command = inst->name,
                .command_offset = offset,
@@ -383,8 +393,6 @@ static void decode(struct gen_spec *spec,
             };
          }
       }
-
-      assert(num_programs < MAX_NUM_PROGRAMS);
    }
 }
 
@@ -593,14 +601,15 @@ read_data_file(FILE *file)
             printf("Disassembly of programs in instruction buffer at "
                    "0x%08"PRIx64":\n", gtt_offset);
             for (int i = 0; i < num_programs; i++) {
-               if (programs[i].instruction_base_address == gtt_offset) {
+               int idx = (idx_program + i) % MAX_NUM_PROGRAMS;
+               if (programs[idx].instruction_base_address == gtt_offset) {
                     printf("\n%s (specified by %s at batch offset "
                            "0x%08"PRIx64") at offset 0x%08"PRIx64"\n",
-                           programs[i].type,
-                           programs[i].command,
-                           programs[i].command_offset,
-                           programs[i].ksp);
-                    gen_disasm_disassemble(disasm, data, programs[i].ksp,
+                           programs[idx].type,
+                           programs[idx].command,
+                           programs[idx].command_offset,
+                           programs[idx].ksp);
+                    gen_disasm_disassemble(disasm, data, programs[idx].ksp,
                                            stdout);
                }
             }
