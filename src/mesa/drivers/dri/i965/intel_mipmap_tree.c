@@ -333,6 +333,9 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->msaa_layout = INTEL_MSAA_LAYOUT_NONE;
    mt->refcount = 1;
 
+   if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8)
+      layout_flags |= MIPTREE_LAYOUT_GEN6_HIZ_STENCIL;
+
    int depth_multiply = 1;
    if (num_samples > 1) {
       /* Adjust width/height/depth for MSAA */
@@ -463,8 +466,7 @@ intel_miptree_create_layout(struct brw_context *brw,
          intel_miptree_wants_hiz_buffer(brw, mt)))) {
       uint32_t stencil_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
       if (brw->gen == 6) {
-         stencil_flags |= MIPTREE_LAYOUT_GEN6_HIZ_STENCIL |
-                          MIPTREE_LAYOUT_TILING_ANY;
+         stencil_flags |= MIPTREE_LAYOUT_TILING_ANY;
       }
 
       mt->stencil_mt = intel_miptree_create(brw,
