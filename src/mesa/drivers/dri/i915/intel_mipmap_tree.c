@@ -1,8 +1,8 @@
 /**************************************************************************
- * 
+ *
  * Copyright 2006 VMware, Inc.
  * All Rights Reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -10,11 +10,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -22,7 +22,7 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  **************************************************************************/
 
 #include <GL/gl.h>
@@ -96,7 +96,7 @@ intel_miptree_create_layout(struct intel_context *intel,
    mt->cpp = _mesa_get_format_bytes(mt->format) / bw;
 
    mt->compressed = _mesa_is_format_compressed(format);
-   mt->refcount = 1; 
+   mt->refcount = 1;
 
    if (target == GL_TEXTURE_CUBE_MAP) {
       assert(depth0 == 1);
@@ -108,9 +108,8 @@ intel_miptree_create_layout(struct intel_context *intel,
    mt->physical_depth0 = depth0;
 
    intel_get_texture_alignment_unit(intel, mt->format,
-				    &mt->align_w, &mt->align_h);
+                                    &mt->align_w, &mt->align_h);
 
-   (void) intel;
    if (intel->is_945)
       i945_miptree_layout(mt);
    else
@@ -159,14 +158,14 @@ intel_miptree_choose_tiling(struct intel_context *intel,
 
 struct intel_mipmap_tree *
 intel_miptree_create(struct intel_context *intel,
-		     GLenum target,
-		     mesa_format format,
-		     GLuint first_level,
-		     GLuint last_level,
-		     GLuint width0,
-		     GLuint height0,
-		     GLuint depth0,
-		     bool expect_accelerated_upload,
+                     GLenum target,
+                     mesa_format format,
+                     GLuint first_level,
+                     GLuint last_level,
+                     GLuint width0,
+                     GLuint height0,
+                     GLuint depth0,
+                     bool expect_accelerated_upload,
                      enum intel_miptree_tiling_mode requested_tiling)
 {
    struct intel_mipmap_tree *mt;
@@ -174,11 +173,10 @@ intel_miptree_create(struct intel_context *intel,
 
 
    mt = intel_miptree_create_layout(intel, target, format,
-				      first_level, last_level, width0,
-				      height0, depth0);
-   /*
-    * pitch == 0 || height == 0  indicates the null texture
-    */
+                                    first_level, last_level, width0,
+                                    height0, depth0);
+
+   /* pitch == 0 || height == 0  indicates the null texture */
    if (!mt || !mt->total_width || !mt->total_height) {
       intel_miptree_release(&mt);
       return NULL;
@@ -193,11 +191,11 @@ intel_miptree_create(struct intel_context *intel,
    bool y_or_x = tiling == (I915_TILING_Y | I915_TILING_X);
 
    mt->region = intel_region_alloc(intel->intelScreen,
-				   y_or_x ? I915_TILING_Y : tiling,
-				   mt->cpp,
-				   total_width,
-				   total_height,
-				   expect_accelerated_upload);
+                                   y_or_x ? I915_TILING_Y : tiling,
+                                   mt->cpp,
+                                   total_width,
+                                   total_height,
+                                   expect_accelerated_upload);
 
    /* If the region is too large to fit in the aperture, we need to use the
     * BLT engine to support it.  The BLT paths can't currently handle Y-tiling,
@@ -284,7 +282,7 @@ intel_miptree_create_for_bo(struct intel_context *intel,
  * a singlesample miptree, then creates a multisample miptree into which the
  * singlesample miptree is embedded as a child.
  */
-struct intel_mipmap_tree*
+struct intel_mipmap_tree *
 intel_miptree_create_for_dri2_buffer(struct intel_context *intel,
                                      unsigned dri_attachment,
                                      mesa_format format,
@@ -323,7 +321,7 @@ intel_miptree_create_for_dri2_buffer(struct intel_context *intel,
  * a singlesample miptree, then creates a multisample miptree into which the
  * singlesample miptree is embedded as a child.
  */
-struct intel_mipmap_tree*
+struct intel_mipmap_tree *
 intel_miptree_create_for_image_buffer(struct intel_context *intel,
                                       enum __DRIimageBufferMask buffer_type,
                                       mesa_format format,
@@ -349,7 +347,7 @@ intel_miptree_create_for_image_buffer(struct intel_context *intel,
    return mt;
 }
 
-struct intel_mipmap_tree*
+struct intel_mipmap_tree *
 intel_miptree_create_for_renderbuffer(struct intel_context *intel,
                                       mesa_format format,
                                       uint32_t width,
@@ -395,7 +393,7 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
       intel_region_release(&((*mt)->region));
 
       for (i = 0; i < MAX_TEXTURE_LEVELS; i++) {
-	 free((*mt)->level[i].slice);
+         free((*mt)->level[i].slice);
       }
 
       free(*mt);
@@ -456,7 +454,7 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
     * tree, changed targets, etc.
     */
    if (mt->target == GL_TEXTURE_2D_MULTISAMPLE ||
-         mt->target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
+       mt->target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
       /* nonzero level here is always bogus */
       assert(level == 0);
 
@@ -481,9 +479,9 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
 
 void
 intel_miptree_set_level_info(struct intel_mipmap_tree *mt,
-			     GLuint level,
-			     GLuint x, GLuint y,
-			     GLuint w, GLuint h, GLuint d)
+                             GLuint level,
+                             GLuint x, GLuint y,
+                             GLuint w, GLuint h, GLuint d)
 {
    mt->level[level].width = w;
    mt->level[level].height = h;
@@ -504,8 +502,8 @@ intel_miptree_set_level_info(struct intel_mipmap_tree *mt,
 
 void
 intel_miptree_set_image_offset(struct intel_mipmap_tree *mt,
-			       GLuint level, GLuint img,
-			       GLuint x, GLuint y)
+                               GLuint level, GLuint img,
+                               GLuint x, GLuint y)
 {
    if (img == 0 && level == 0)
       assert(x == 0 && y == 0);
@@ -523,8 +521,8 @@ intel_miptree_set_image_offset(struct intel_mipmap_tree *mt,
 
 void
 intel_miptree_get_image_offset(struct intel_mipmap_tree *mt,
-			       GLuint level, GLuint slice,
-			       GLuint *x, GLuint *y)
+                               GLuint level, GLuint slice,
+                               GLuint *x, GLuint *y)
 {
    assert(slice < mt->level[level].depth);
 
@@ -614,11 +612,11 @@ intel_miptree_copy_slice_sw(struct intel_context *intel,
 
 static void
 intel_miptree_copy_slice(struct intel_context *intel,
-			 struct intel_mipmap_tree *dst_mt,
-			 struct intel_mipmap_tree *src_mt,
-			 int level,
-			 int face,
-			 int depth)
+                         struct intel_mipmap_tree *dst_mt,
+                         struct intel_mipmap_tree *src_mt,
+                         int level,
+                         int face,
+                         int depth)
 
 {
    mesa_format format = src_mt->format;
@@ -672,8 +670,8 @@ intel_miptree_copy_slice(struct intel_context *intel,
  */
 void
 intel_miptree_copy_teximage(struct intel_context *intel,
-			    struct intel_texture_image *intelImage,
-			    struct intel_mipmap_tree *dst_mt,
+                            struct intel_texture_image *intelImage,
+                            struct intel_mipmap_tree *dst_mt,
                             bool invalidate)
 {
    struct intel_mipmap_tree *src_mt = intelImage->mt;
@@ -722,9 +720,9 @@ intel_miptree_unmap_raw(struct intel_mipmap_tree *mt)
 
 static void
 intel_miptree_map_gtt(struct intel_context *intel,
-		      struct intel_mipmap_tree *mt,
-		      struct intel_miptree_map *map,
-		      unsigned int level, unsigned int slice)
+                      struct intel_mipmap_tree *mt,
+                      struct intel_miptree_map *map,
+                      unsigned int level, unsigned int slice)
 {
    unsigned int bw, bh;
    void *base;
@@ -770,9 +768,9 @@ intel_miptree_unmap_gtt(struct intel_mipmap_tree *mt)
 
 static void
 intel_miptree_map_blit(struct intel_context *intel,
-		       struct intel_mipmap_tree *mt,
-		       struct intel_miptree_map *map,
-		       unsigned int level, unsigned int slice)
+                       struct intel_mipmap_tree *mt,
+                       struct intel_miptree_map *map,
+                       unsigned int level, unsigned int slice)
 {
    map->mt = intel_miptree_create(intel, GL_TEXTURE_2D, mt->format,
                                   0, 0,
@@ -813,10 +811,10 @@ fail:
 
 static void
 intel_miptree_unmap_blit(struct intel_context *intel,
-			 struct intel_mipmap_tree *mt,
-			 struct intel_miptree_map *map,
-			 unsigned int level,
-			 unsigned int slice)
+                         struct intel_mipmap_tree *mt,
+                         struct intel_miptree_map *map,
+                         unsigned int level,
+                         unsigned int slice)
 {
    struct gl_context *ctx = &intel->ctx;
 
@@ -897,7 +895,7 @@ intel_miptree_map(struct intel_context *intel,
    struct intel_miptree_map *map;
 
    map = intel_miptree_attach_map(mt, level, slice, x, y, w, h, mode);
-   if (!map){
+   if (!map) {
       *out_ptr = NULL;
       *out_stride = 0;
       return;
