@@ -83,9 +83,6 @@ intel_miptree_create_layout(struct intel_context *intel,
    mt->format = format;
    mt->first_level = first_level;
    mt->last_level = last_level;
-   mt->logical_width0 = width0;
-   mt->logical_height0 = height0;
-   mt->logical_depth0 = depth0;
 
    /* The cpp is bytes per (1, blockheight)-sized block for compressed
     * textures.  This is why you'll see divides by blockheight all over

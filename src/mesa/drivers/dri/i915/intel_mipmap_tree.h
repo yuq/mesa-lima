@@ -168,14 +168,6 @@ struct intel_mipmap_tree
    GLuint cpp;
    bool compressed;
 
-   /**
-    * Level zero image dimensions.  These dimensions correspond to the
-    * logical width, height, and depth of the region as seen by client code.
-    * Accordingly, they do not account for the extra factor of 6 in depth that
-    * must be allocated in order to accommodate cubemap textures.
-    */
-   uint32_t logical_width0, logical_height0, logical_depth0;
-
    /* Derived from the above:
     */
    GLuint total_width;
