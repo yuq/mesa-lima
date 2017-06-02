@@ -129,13 +129,8 @@ pipe_r600_la_LIBADD = \
 	$(top_builddir)/src/gallium/drivers/radeon/libradeon.la \
 	$(top_builddir)/src/gallium/drivers/r600/libr600.la \
 	$(LIBDRM_LIBS) \
-	$(RADEON_LIBS)
-
-if HAVE_GALLIUM_LLVM
-pipe_r600_la_LIBADD += \
-	$(top_builddir)/src/amd/common/libamd_common.la
-endif
-
+	$(RADEON_LIBS) \
+	$(LIBELF_LIBS)
 endif
 
 if HAVE_GALLIUM_RADEONSI
