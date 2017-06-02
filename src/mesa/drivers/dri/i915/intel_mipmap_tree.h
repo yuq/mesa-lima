@@ -176,15 +176,6 @@ struct intel_mipmap_tree
     */
    uint32_t logical_width0, logical_height0, logical_depth0;
 
-   /**
-    * For 1D array, 2D array, cube, and 2D multisampled surfaces on Gen7: true
-    * if the surface only contains LOD 0, and hence no space is for LOD's
-    * other than 0 in between array slices.
-    *
-    * Corresponds to the surface_array_spacing bit in gen7_surface_state.
-    */
-   bool array_spacing_lod0;
-
    /* Derived from the above:
     */
    GLuint total_width;
