@@ -119,6 +119,9 @@ _mesa_SampleMaski(GLuint index, GLbitfield mask)
       return;
    }
 
+   if (ctx->Multisample.SampleMaskValue == mask)
+      return;
+
    FLUSH_VERTICES(ctx, _NEW_MULTISAMPLE);
    ctx->Multisample.SampleMaskValue = mask;
 }
