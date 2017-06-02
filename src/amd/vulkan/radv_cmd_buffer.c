@@ -1243,38 +1243,39 @@ emit_stage_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 
 static void
 radv_emit_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
-				  struct radv_pipeline *pipeline,
 				  VkShaderStageFlags stages,
 				  struct radv_descriptor_set *set,
 				  unsigned idx)
 {
-	if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
-		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
-						   idx, set->va,
-						   MESA_SHADER_FRAGMENT);
+	if (cmd_buffer->state.pipeline) {
+		if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
+			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
+							   idx, set->va,
+							   MESA_SHADER_FRAGMENT);
 
-	if (stages & VK_SHADER_STAGE_VERTEX_BIT)
-		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
-						   idx, set->va,
-						   MESA_SHADER_VERTEX);
+		if (stages & VK_SHADER_STAGE_VERTEX_BIT)
+			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
+							   idx, set->va,
+							   MESA_SHADER_VERTEX);
 
-	if ((stages & VK_SHADER_STAGE_GEOMETRY_BIT) && radv_pipeline_has_gs(pipeline))
-		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
-						   idx, set->va,
-						   MESA_SHADER_GEOMETRY);
+		if ((stages & VK_SHADER_STAGE_GEOMETRY_BIT) && radv_pipeline_has_gs(cmd_buffer->state.pipeline))
+			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
+							   idx, set->va,
+							   MESA_SHADER_GEOMETRY);
 
-	if ((stages & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) && radv_pipeline_has_tess(pipeline))
-		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
-						   idx, set->va,
-						   MESA_SHADER_TESS_CTRL);
+		if ((stages & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) && radv_pipeline_has_tess(cmd_buffer->state.pipeline))
+			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
+							   idx, set->va,
+							   MESA_SHADER_TESS_CTRL);
 
-	if ((stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) && radv_pipeline_has_tess(pipeline))
-		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
-						   idx, set->va,
-						   MESA_SHADER_TESS_EVAL);
+		if ((stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) && radv_pipeline_has_tess(cmd_buffer->state.pipeline))
+			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
+							   idx, set->va,
+							   MESA_SHADER_TESS_EVAL);
+	}
 
-	if (stages & VK_SHADER_STAGE_COMPUTE_BIT)
-		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
+	if (cmd_buffer->state.compute_pipeline && (stages & VK_SHADER_STAGE_COMPUTE_BIT))
+		emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.compute_pipeline,
 						   idx, set->va,
 						   MESA_SHADER_COMPUTE);
 }
@@ -1298,8 +1299,7 @@ radv_flush_push_descriptors(struct radv_cmd_buffer *cmd_buffer)
 }
 
 static void
-radv_flush_indirect_descriptor_sets(struct radv_cmd_buffer *cmd_buffer,
-				    struct radv_pipeline *pipeline)
+radv_flush_indirect_descriptor_sets(struct radv_cmd_buffer *cmd_buffer)
 {
 	uint32_t size = MAX_SETS * 2 * 4;
 	uint32_t offset;
@@ -1322,34 +1322,35 @@ radv_flush_indirect_descriptor_sets(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
 	va += offset;
 
-	if (pipeline->shaders[MESA_SHADER_VERTEX])
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_VERTEX,
-					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+	if (cmd_buffer->state.pipeline) {
+		if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_VERTEX])
+			radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
+						   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
 
-	if (pipeline->shaders[MESA_SHADER_FRAGMENT])
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_FRAGMENT,
-					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+		if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_FRAGMENT])
+			radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_FRAGMENT,
+						   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
 
-	if (radv_pipeline_has_gs(pipeline))
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_GEOMETRY,
-					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+		if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
+			radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_GEOMETRY,
+						   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
 
-	if (radv_pipeline_has_tess(pipeline))
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_TESS_CTRL,
-					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+		if (radv_pipeline_has_tess(cmd_buffer->state.pipeline))
+			radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_TESS_CTRL,
+						   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
 
-	if (radv_pipeline_has_tess(pipeline))
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_TESS_EVAL,
-					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+		if (radv_pipeline_has_tess(cmd_buffer->state.pipeline))
+			radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_TESS_EVAL,
+						   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
+	}
 
-	if (pipeline->shaders[MESA_SHADER_COMPUTE])
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_COMPUTE,
+	if (cmd_buffer->state.compute_pipeline)
+		radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.compute_pipeline, MESA_SHADER_COMPUTE,
 					   AC_UD_INDIRECT_DESCRIPTOR_SETS, va);
 }
 
 static void
 radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
-		       struct radv_pipeline *pipeline,
 		       VkShaderStageFlags stages)
 {
 	unsigned i;
@@ -1360,8 +1361,9 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 	if (cmd_buffer->state.push_descriptors_dirty)
 		radv_flush_push_descriptors(cmd_buffer);
 
-	if (pipeline->need_indirect_descriptor_sets) {
-		radv_flush_indirect_descriptor_sets(cmd_buffer, pipeline);
+	if ((cmd_buffer->state.pipeline && cmd_buffer->state.pipeline->need_indirect_descriptor_sets) ||
+	    (cmd_buffer->state.compute_pipeline && cmd_buffer->state.compute_pipeline->need_indirect_descriptor_sets)) {
+		radv_flush_indirect_descriptor_sets(cmd_buffer);
 	}
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
@@ -1375,7 +1377,7 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 		if (!set)
 			continue;
 
-		radv_emit_descriptor_set_userdata(cmd_buffer, pipeline, stages, set, i);
+		radv_emit_descriptor_set_userdata(cmd_buffer, stages, set, i);
 	}
 	cmd_buffer->state.descriptors_dirty = 0;
 	cmd_buffer->state.push_descriptors_dirty = false;
@@ -1546,8 +1548,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 
 	radv_emit_primitive_reset_state(cmd_buffer, indexed_draw);
 
-	radv_flush_descriptors(cmd_buffer, cmd_buffer->state.pipeline,
-			       VK_SHADER_STAGE_ALL_GRAPHICS);
+	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
 			     VK_SHADER_STAGE_ALL_GRAPHICS);
 
@@ -2802,8 +2803,7 @@ static void
 radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
 {
 	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_descriptors(cmd_buffer, cmd_buffer->state.compute_pipeline,
-			       VK_SHADER_STAGE_COMPUTE_BIT);
+	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
 			     VK_SHADER_STAGE_COMPUTE_BIT);
 	si_emit_cache_flush(cmd_buffer);
