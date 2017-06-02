@@ -2096,6 +2096,25 @@ fs_visitor::assign_constant_locations()
          new_thread_local_id_index;
 }
 
+bool
+fs_visitor::get_pull_locs(const fs_reg &src,
+                          unsigned *out_surf_index,
+                          unsigned *out_pull_index)
+{
+   assert(src.file == UNIFORM);
+
+   const unsigned location = src.nr + src.offset / 4;
+
+   if (location < uniforms && pull_constant_loc[location] != -1) {
+      /* A regular uniform push constant */
+      *out_surf_index = stage_prog_data->binding_table.pull_constants_start;
+      *out_pull_index = pull_constant_loc[location];
+      return true;
+   }
+
+   return false;
+}
+
 /**
  * Replace UNIFORM register file access with either UNIFORM_PULL_CONSTANT_LOAD
  * or VARYING_PULL_CONSTANT_LOAD instructions which load values into VGRFs.
@@ -2103,7 +2122,7 @@ fs_visitor::assign_constant_locations()
 void
 fs_visitor::lower_constant_loads()
 {
-   const unsigned index = stage_prog_data->binding_table.pull_constants_start;
+   unsigned index, pull_index;
 
    foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
       /* Set up the annotation tracking for new generated instructions. */
@@ -2117,13 +2136,7 @@ fs_visitor::lower_constant_loads()
          if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0)
             continue;
 
-         unsigned location = inst->src[i].nr + inst->src[i].offset / 4;
-         if (location >= uniforms)
-            continue; /* Out of bounds access */
-
-         int pull_index = pull_constant_loc[location];
-
-         if (pull_index == -1)
+         if (!get_pull_locs(inst->src[i], &index, &pull_index))
 	    continue;
 
          assert(inst->src[i].stride == 0);
@@ -2148,14 +2161,8 @@ fs_visitor::lower_constant_loads()
       if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT &&
           inst->src[0].file == UNIFORM) {
 
-         unsigned location = inst->src[0].nr + inst->src[0].offset / 4;
-         if (location >= uniforms)
-            continue; /* Out of bounds access */
-
-         int pull_index = pull_constant_loc[location];
-
-         if (pull_index == -1)
-	    continue;
+         if (!get_pull_locs(inst->src[0], &index, &pull_index))
+            continue;
 
          VARYING_PULL_CONSTANT_LOAD(ibld, inst->dst,
                                     brw_imm_ud(index),
