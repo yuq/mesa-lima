@@ -258,9 +258,6 @@ _mesa_WindowRectanglesEXT(GLenum mode, GLsizei count, const GLint *box)
           sizeof(struct gl_scissor_rect) * count);
    ctx->Scissor.NumWindowRects = count;
    ctx->Scissor.WindowRectMode = mode;
-
-   if (ctx->Driver.Scissor)
-      ctx->Driver.Scissor(ctx);
 }
 
 
