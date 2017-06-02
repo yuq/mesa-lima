@@ -140,10 +140,13 @@ _mesa_MinSampleShading(GLclampf value)
       return;
    }
 
-   FLUSH_VERTICES(ctx, 0);
+   value = CLAMP(value, 0.0f, 1.0f);
 
-   ctx->Multisample.MinSampleShadingValue = CLAMP(value, 0.0f, 1.0f);
-   ctx->NewState |= _NEW_MULTISAMPLE;
+   if (ctx->Multisample.MinSampleShadingValue == value)
+      return;
+
+   FLUSH_VERTICES(ctx, _NEW_MULTISAMPLE);
+   ctx->Multisample.MinSampleShadingValue = value;
 }
 
 /**
