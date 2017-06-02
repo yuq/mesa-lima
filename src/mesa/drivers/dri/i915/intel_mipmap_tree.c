@@ -276,11 +276,7 @@ intel_miptree_create_for_bo(struct intel_context *intel,
 
 
 /**
- * For a singlesample DRI2 buffer, this simply wraps the given region with a miptree.
- *
- * For a multisample DRI2 buffer, this wraps the given region with
- * a singlesample miptree, then creates a multisample miptree into which the
- * singlesample miptree is embedded as a child.
+ * Wraps the given region with a miptree.
  */
 struct intel_mipmap_tree *
 intel_miptree_create_for_dri2_buffer(struct intel_context *intel,
@@ -315,11 +311,7 @@ intel_miptree_create_for_dri2_buffer(struct intel_context *intel,
 }
 
 /**
- * For a singlesample image buffer, this simply wraps the given region with a miptree.
- *
- * For a multisample image buffer, this wraps the given region with
- * a singlesample miptree, then creates a multisample miptree into which the
- * singlesample miptree is embedded as a child.
+ * Wraps the given region with a miptree.
  */
 struct intel_mipmap_tree *
 intel_miptree_create_for_image_buffer(struct intel_context *intel,
@@ -453,24 +445,10 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
     * minification.  This will also catch images not present in the
     * tree, changed targets, etc.
     */
-   if (mt->target == GL_TEXTURE_2D_MULTISAMPLE ||
-       mt->target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
-      /* nonzero level here is always bogus */
-      assert(level == 0);
-
-      if (width != mt->logical_width0 ||
-            height != mt->logical_height0 ||
-            depth != mt->logical_depth0) {
-         return false;
-      }
-   }
-   else {
-      /* all normal textures, renderbuffers, etc */
-      if (width != mt->level[level].width ||
-          height != mt->level[level].height ||
-          depth != mt->level[level].depth) {
-         return false;
-      }
+   if (width != mt->level[level].width ||
+       height != mt->level[level].height ||
+       depth != mt->level[level].depth) {
+      return false;
    }
 
    return true;

@@ -160,10 +160,8 @@ struct intel_mipmap_tree
    /**
     * Level zero image dimensions.  These dimensions correspond to the
     * physical layout of data in memory.  Accordingly, they account for the
-    * extra width, height, and or depth that must be allocated in order to
-    * accommodate multisample formats, and they account for the extra factor
-    * of 6 in depth that must be allocated in order to accommodate cubemap
-    * textures.
+    * extra factor of 6 in depth that must be allocated in order to
+    * accommodate cubemap textures.
     */
    GLuint physical_width0, physical_height0, physical_depth0;
 
@@ -173,9 +171,7 @@ struct intel_mipmap_tree
    /**
     * Level zero image dimensions.  These dimensions correspond to the
     * logical width, height, and depth of the region as seen by client code.
-    * Accordingly, they do not account for the extra width, height, and/or
-    * depth that must be allocated in order to accommodate multisample
-    * formats, nor do they account for the extra factor of 6 in depth that
+    * Accordingly, they do not account for the extra factor of 6 in depth that
     * must be allocated in order to accommodate cubemap textures.
     */
    uint32_t logical_width0, logical_height0, logical_depth0;
