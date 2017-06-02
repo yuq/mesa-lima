@@ -4397,6 +4397,11 @@ struct gl_driver_flags
     * gl_context::IntelConservativeRasterization
     */
    uint64_t NewIntelConservativeRasterization;
+
+   /**
+    * gl_context::Scissor::WindowRects
+    */
+   uint64_t NewWindowRectangles;
 };
 
 struct gl_uniform_buffer_binding
