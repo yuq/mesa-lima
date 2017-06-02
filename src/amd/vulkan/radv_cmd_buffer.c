@@ -2186,6 +2186,13 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
 
+static void radv_mark_descriptor_sets_dirty(struct radv_cmd_buffer *cmd_buffer)
+{
+	for (unsigned i = 0; i < MAX_SETS; i++) {
+		if (cmd_buffer->state.descriptors[i])
+			cmd_buffer->state.descriptors_dirty |= (1u << i);
+	}
+}
 
 void radv_CmdBindPipeline(
 	VkCommandBuffer                             commandBuffer,
@@ -2195,10 +2202,7 @@ void radv_CmdBindPipeline(
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_pipeline, pipeline, _pipeline);
 
-	for (unsigned i = 0; i < MAX_SETS; i++) {
-		if (cmd_buffer->state.descriptors[i])
-			cmd_buffer->state.descriptors_dirty |= (1u << i);
-	}
+	radv_mark_descriptor_sets_dirty(cmd_buffer);
 
 	switch (pipelineBindPoint) {
 	case VK_PIPELINE_BIND_POINT_COMPUTE:
@@ -2207,6 +2211,9 @@ void radv_CmdBindPipeline(
 		break;
 	case VK_PIPELINE_BIND_POINT_GRAPHICS:
 		cmd_buffer->state.pipeline = pipeline;
+		if (!pipeline)
+			break;
+
 		cmd_buffer->state.vertex_descriptors_dirty = true;
 		cmd_buffer->state.dirty |= RADV_CMD_DIRTY_PIPELINE;
 		cmd_buffer->push_constant_stages |= pipeline->active_stages;
@@ -2369,7 +2376,6 @@ void radv_CmdSetStencilReference(
 	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE;
 }
 
-
 void radv_CmdExecuteCommands(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    commandBufferCount,
@@ -2414,6 +2420,7 @@ void radv_CmdExecuteCommands(
 		primary->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_ALL;
 		primary->state.last_primitive_reset_en = -1;
 		primary->state.last_primitive_reset_index = 0;
+		radv_mark_descriptor_sets_dirty(primary);
 	}
 }
 
