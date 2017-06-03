@@ -286,7 +286,8 @@ retry:
     * rendering tracks for GL.
     */
    brw->ctx.NewDriverState |= BRW_NEW_BLORP;
-   brw->no_depth_or_stencil = false;
+   brw->no_depth_or_stencil = !params->depth.enabled &&
+                              !params->stencil.enabled;
    brw->ib.index_size = -1;
 
    if (params->dst.enabled)
