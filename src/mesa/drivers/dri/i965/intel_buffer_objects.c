@@ -74,8 +74,26 @@ static void
 alloc_buffer_object(struct brw_context *brw,
                     struct intel_buffer_object *intel_obj)
 {
-   intel_obj->buffer = brw_bo_alloc(brw->bufmgr, "bufferobj",
-					  intel_obj->Base.Size, 64);
+   const struct gl_context *ctx = &brw->ctx;
+
+   uint64_t size = intel_obj->Base.Size;
+   if (ctx->Const.RobustAccess) {
+      /* Pad out buffer objects with an extra 2kB (half a page).
+       *
+       * When pushing UBOs, we need to safeguard against 3DSTATE_CONSTANT_*
+       * reading out of bounds memory.  The application might bind a UBO that's
+       * smaller than what the program expects.  Ideally, we'd bind an extra
+       * push buffer containing zeros, but we have a limited number of those,
+       * so it's not always viable.  Our only safe option is to pad all buffer
+       * objects by the maximum push data length, so that it will never read
+       * past the end of a BO.
+       *
+       * This is unfortunate, but it should result in at most 1 extra page,
+       * which probably isn't too terrible.
+       */
+      size += 64 * 32; /* max read length of 64 256-bit units */
+   }
+   intel_obj->buffer = brw_bo_alloc(brw->bufmgr, "bufferobj", size, 64);
 
    /* the buffer might be bound as a uniform buffer, need to update it
     */
