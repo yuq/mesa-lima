@@ -348,8 +348,7 @@ fd5_emit_tile_init(struct fd_batch *batch)
 
 	fd5_emit_restore(batch, ring);
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, LRZ_FLUSH);
+	fd5_emit_lrz_flush(ring);
 
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x0);
@@ -629,8 +628,7 @@ fd5_emit_tile_fini(struct fd_batch *batch)
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x0);
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, LRZ_FLUSH);
+	fd5_emit_lrz_flush(ring);
 
 	fd5_cache_flush(batch, ring);
 	fd5_set_render_mode(batch->ctx, ring, BYPASS);
@@ -644,8 +642,7 @@ fd5_emit_sysmem_prep(struct fd_batch *batch)
 
 	fd5_emit_restore(batch, ring);
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, LRZ_FLUSH);
+	fd5_emit_lrz_flush(ring);
 
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x0);
@@ -719,8 +716,7 @@ fd5_emit_sysmem_fini(struct fd_batch *batch)
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x0);
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, LRZ_FLUSH);
+	fd5_emit_lrz_flush(ring);
 
 	OUT_PKT7(ring, CP_EVENT_WRITE, 4);
 	OUT_RING(ring, UNK_1D);
