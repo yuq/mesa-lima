@@ -189,6 +189,11 @@ device::has_doubles() const {
    return pipe->get_param(pipe, PIPE_CAP_DOUBLES);
 }
 
+bool
+device::has_unified_memory() const {
+   return pipe->get_param(pipe, PIPE_CAP_UMA);
+}
+
 std::vector<size_t>
 device::max_block_size() const {
    auto v = get_compute_param<uint64_t>(pipe, ir_format(),
