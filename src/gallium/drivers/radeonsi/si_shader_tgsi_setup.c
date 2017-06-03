@@ -1451,6 +1451,8 @@ void si_llvm_optimize_module(struct si_shader_context *ctx)
 	LLVMAddLICMPass(gallivm->passmgr);
 	LLVMAddAggressiveDCEPass(gallivm->passmgr);
 	LLVMAddCFGSimplificationPass(gallivm->passmgr);
+	/* This is recommended by the instruction combining pass. */
+	LLVMAddEarlyCSEMemSSAPass(gallivm->passmgr);
 	LLVMAddInstructionCombiningPass(gallivm->passmgr);
 
 	/* Run the pass */
