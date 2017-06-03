@@ -51,6 +51,12 @@ struct fd5_emit {
 	bool rasterflat;
 	bool no_decode_srgb;
 
+	/* in binning pass, we don't have real frag shader, so we
+	 * don't know if real draw disqualifies lrz write.  So just
+	 * figure that out up-front and stash it in the emit.
+	 */
+	bool no_lrz_write;
+
 	/* cached to avoid repeated lookups of same variants: */
 	const struct ir3_shader_variant *vp, *fp;
 	/* TODO: other shader stages.. */

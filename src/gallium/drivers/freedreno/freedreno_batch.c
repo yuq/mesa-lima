@@ -118,6 +118,10 @@ batch_fini(struct fd_batch *batch)
 	fd_ringbuffer_del(batch->draw);
 	fd_ringbuffer_del(batch->binning);
 	fd_ringbuffer_del(batch->gmem);
+	if (batch->lrz_clear) {
+		fd_ringbuffer_del(batch->lrz_clear);
+		batch->lrz_clear = NULL;
+	}
 
 	util_dynarray_fini(&batch->draw_patches);
 

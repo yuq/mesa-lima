@@ -78,6 +78,7 @@ static const struct debug_named_value debug_options[] = {
 		{"inorder",   FD_DBG_INORDER,"Disable reordering for draws/blits"},
 		{"bstat",     FD_DBG_BSTAT,  "Print batch stats at context destroy"},
 		{"nogrow",    FD_DBG_NOGROW, "Disable \"growable\" cmdstream buffers, even if kernel supports it"},
+		{"lrz",       FD_DBG_LRZ,    "Enable experimental LRZ support (a5xx+)"},
 		DEBUG_NAMED_VALUE_END
 };
 

@@ -781,6 +781,25 @@ fd_resource_resize(struct pipe_resource *prsc, uint32_t sz)
 	realloc_bo(rsc, setup_slices(rsc, 1, prsc->format));
 }
 
+// TODO common helper?
+static bool
+has_depth(enum pipe_format format)
+{
+	switch (format) {
+	case PIPE_FORMAT_Z16_UNORM:
+	case PIPE_FORMAT_Z32_UNORM:
+	case PIPE_FORMAT_Z32_FLOAT:
+	case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+	case PIPE_FORMAT_S8_UINT_Z24_UNORM:
+	case PIPE_FORMAT_Z24X8_UNORM:
+	case PIPE_FORMAT_X8Z24_UNORM:
+		return true;
+	default:
+		return false;
+	}
+}
+
 /**
  * Create a new texture object, using the given template info.
  */
@@ -788,6 +807,7 @@ static struct pipe_resource *
 fd_resource_create(struct pipe_screen *pscreen,
 		const struct pipe_resource *tmpl)
 {
+	struct fd_screen *screen = fd_screen(pscreen);
 	struct fd_resource *rsc = CALLOC_STRUCT(fd_resource);
 	struct pipe_resource *prsc = &rsc->base.b;
 	enum pipe_format format = tmpl->format;
@@ -815,7 +835,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 
 	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
 		format = PIPE_FORMAT_Z32_FLOAT;
-	else if (fd_screen(pscreen)->gpu_id < 400 &&
+	else if (screen->gpu_id < 400 &&
 			 util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC)
 		format = PIPE_FORMAT_R8G8B8A8_UNORM;
 	rsc->internal_format = format;
@@ -823,8 +843,24 @@ fd_resource_create(struct pipe_screen *pscreen,
 
 	assert(rsc->cpp);
 
+	// XXX probably need some extra work if we hit rsc shadowing path w/ lrz..
+	if (is_a5xx(screen) && (fd_mesa_debug & FD_DBG_LRZ) && has_depth(format)) {
+		const uint32_t flags = DRM_FREEDRENO_GEM_CACHE_WCOMBINE |
+				DRM_FREEDRENO_GEM_TYPE_KMEM; /* TODO */
+		unsigned lrz_pitch  = align(DIV_ROUND_UP(tmpl->width0, 8), 32);
+		unsigned lrz_height = DIV_ROUND_UP(tmpl->height0, 8);
+		unsigned size = lrz_pitch * lrz_height * 2;
+
+		size += 0x1000; /* for GRAS_LRZ_FAST_CLEAR_BUFFER */
+
+		rsc->lrz_height = lrz_height;
+		rsc->lrz_width = lrz_pitch;
+		rsc->lrz_pitch = lrz_pitch;
+		rsc->lrz = fd_bo_new(screen->dev, size, flags);
+	}
+
 	alignment = slice_alignment(pscreen, tmpl);
-	if (is_a4xx(fd_screen(pscreen)) || is_a5xx(fd_screen(pscreen))) {
+	if (is_a4xx(screen) || is_a5xx(screen)) {
 		switch (tmpl->target) {
 		case PIPE_TEXTURE_3D:
 			rsc->layer_first = false;

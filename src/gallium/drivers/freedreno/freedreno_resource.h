@@ -95,6 +95,15 @@ struct fd_resource {
 	 * shadowed.
 	 */
 	uint32_t bc_batch_mask;
+
+	/*
+	 * LRZ
+	 */
+	bool lrz_valid : 1;
+	uint16_t lrz_width;  // for lrz clear, does this differ from lrz_pitch?
+	uint16_t lrz_height;
+	uint16_t lrz_pitch;
+	struct fd_bo *lrz;
 };
 
 static inline struct fd_resource *

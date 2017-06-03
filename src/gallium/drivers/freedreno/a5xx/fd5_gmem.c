@@ -162,6 +162,24 @@ emit_zs(struct fd_ringbuffer *ring, struct pipe_surface *zsbuf,
 		OUT_RING(ring, 0x00000000);    /* RB_DEPTH_FLAG_BUFFER_BASE_HI */
 		OUT_RING(ring, 0x00000000);    /* RB_DEPTH_FLAG_BUFFER_PITCH */
 
+		if (rsc->lrz) {
+			OUT_PKT4(ring, REG_A5XX_GRAS_LRZ_BUFFER_BASE_LO, 3);
+			OUT_RELOCW(ring, rsc->lrz, 0x1000, 0, 0);
+			OUT_RING(ring, A5XX_GRAS_LRZ_BUFFER_PITCH(rsc->lrz_pitch));
+
+			OUT_PKT4(ring, REG_A5XX_GRAS_LRZ_FAST_CLEAR_BUFFER_BASE_LO, 2);
+			OUT_RELOCW(ring, rsc->lrz, 0, 0, 0);
+		} else {
+			OUT_PKT4(ring, REG_A5XX_GRAS_LRZ_BUFFER_BASE_LO, 3);
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);     /* GRAS_LRZ_BUFFER_PITCH */
+
+			OUT_PKT4(ring, REG_A5XX_GRAS_LRZ_FAST_CLEAR_BUFFER_BASE_LO, 2);
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+		}
+
 		if (rsc->stencil) {
 			if (gmem) {
 				stride = 1 * gmem->bin_w;
@@ -344,11 +362,19 @@ emit_binning_pass(struct fd_batch *batch)
 static void
 fd5_emit_tile_init(struct fd_batch *batch)
 {
+	struct fd_context *ctx = batch->ctx;
 	struct fd_ringbuffer *ring = batch->gmem;
+	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 
 	fd5_emit_restore(batch, ring);
 
+	if (batch->lrz_clear)
+		ctx->emit_ib(ring, batch->lrz_clear);
+
 	fd5_emit_lrz_flush(ring);
+
+	OUT_PKT4(ring, REG_A5XX_GRAS_CL_CNTL, 1);
+	OUT_RING(ring, 0x00000080);   /* GRAS_CL_CNTL */
 
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x0);
@@ -364,8 +390,12 @@ fd5_emit_tile_init(struct fd_batch *batch)
 	OUT_PKT4(ring, REG_A5XX_RB_CCU_CNTL, 1);
 	OUT_RING(ring, 0x7c13c080);   /* RB_CCU_CNTL */
 
+	emit_zs(ring, pfb->zsbuf, &ctx->gmem);
+	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, &ctx->gmem);
+
 	if (use_hw_binning(batch)) {
 		emit_binning_pass(batch);
+		fd5_emit_lrz_flush(ring);
 		patch_draws(batch, USE_VISIBILITY);
 	} else {
 		patch_draws(batch, IGNORE_VISIBILITY);

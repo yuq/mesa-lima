@@ -459,6 +459,7 @@ void
 fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd5_emit *emit)
 {
+	struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 	const struct ir3_shader_variant *vp = fd5_emit_get_vp(emit);
 	const struct ir3_shader_variant *fp = fd5_emit_get_fp(emit);
 	const enum fd_dirty_3d_state dirty = emit->dirty;
@@ -467,7 +468,6 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	emit_marker5(ring, 5);
 
 	if ((dirty & FD_DIRTY_FRAMEBUFFER) && !emit->key.binning_pass) {
-		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 		unsigned char mrt_comp[A5XX_MAX_RENDER_TARGETS] = {0};
 
 		for (unsigned i = 0; i < A5XX_MAX_RENDER_TARGETS; i++) {
@@ -487,7 +487,6 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_FRAMEBUFFER)) {
 		struct fd5_zsa_stateobj *zsa = fd5_zsa_stateobj(ctx->zsa);
-		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 		uint32_t rb_alpha_control = zsa->rb_alpha_control;
 
 		if (util_format_is_pure_integer(pipe_surface_format(pfb->cbufs[0])))
@@ -498,6 +497,24 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 		OUT_PKT4(ring, REG_A5XX_RB_STENCIL_CONTROL, 1);
 		OUT_RING(ring, zsa->rb_stencil_control);
+	}
+
+	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_BLEND | FD_DIRTY_PROG)) {
+		struct fd5_blend_stateobj *blend = fd5_blend_stateobj(ctx->blend);
+		struct fd5_zsa_stateobj *zsa = fd5_zsa_stateobj(ctx->zsa);
+
+		if (pfb->zsbuf) {
+			struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
+			uint32_t gras_lrz_cntl = zsa->gras_lrz_cntl;
+
+			if (emit->no_lrz_write || !rsc->lrz || !rsc->lrz_valid)
+				gras_lrz_cntl = 0;
+			else if (emit->key.binning_pass && blend->lrz_write && zsa->lrz_write)
+				gras_lrz_cntl |= A5XX_GRAS_LRZ_CNTL_LRZ_WRITE;
+
+			OUT_PKT4(ring, REG_A5XX_GRAS_LRZ_CNTL, 1);
+			OUT_RING(ring, gras_lrz_cntl);
+		}
 	}
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_STENCIL_REF)) {
@@ -588,7 +605,6 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & (FD_DIRTY_FRAMEBUFFER | FD_DIRTY_RASTERIZER)) {
-		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
 		uint32_t posz_regid = ir3_find_output_regid(fp, FRAG_RESULT_DEPTH);
 		unsigned nr = pfb->nr_cbufs;
 
@@ -648,8 +664,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		uint32_t i;
 
 		for (i = 0; i < A5XX_MAX_RENDER_TARGETS; i++) {
-			enum pipe_format format = pipe_surface_format(
-					ctx->batch->framebuffer.cbufs[i]);
+			enum pipe_format format = pipe_surface_format(pfb->cbufs[i]);
 			bool is_int = util_format_is_pure_integer(format);
 			bool has_alpha = util_format_has_alpha(format);
 			uint32_t control = blend->rb_mrt[i].control;
@@ -857,10 +872,6 @@ t7              opcode: CP_WAIT_FOR_IDLE (26) (1 dwords)
 			CP_SET_DRAW_STATE__0_GROUP_ID(0));
 	OUT_RING(ring, CP_SET_DRAW_STATE__1_ADDR_LO(0));
 	OUT_RING(ring, CP_SET_DRAW_STATE__2_ADDR_HI(0));
-
-	/* other regs not used (yet?) and always seem to have same value: */
-	OUT_PKT4(ring, REG_A5XX_GRAS_CL_CNTL, 1);
-	OUT_RING(ring, 0x00000080);   /* GRAS_CL_CNTL */
 
 	OUT_PKT4(ring, REG_A5XX_GRAS_SU_CONSERVATIVE_RAS_CNTL, 1);
 	OUT_RING(ring, 0x00000000);   /* GRAS_SU_CONSERVATIVE_RAS_CNTL */
