@@ -964,22 +964,10 @@ struct brw_context
 
    struct {
       struct brw_stage_state base;
-
-      /**
-       * True if the 3DSTATE_HS command most recently emitted to the 3D
-       * pipeline enabled the HS; false otherwise.
-       */
-      bool enabled;
    } tcs;
 
    struct {
       struct brw_stage_state base;
-
-      /**
-       * True if the 3DSTATE_DS command most recently emitted to the 3D
-       * pipeline enabled the DS; false otherwise.
-       */
-      bool enabled;
    } tes;
 
    struct {
