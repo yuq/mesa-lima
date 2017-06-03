@@ -71,7 +71,6 @@ struct fd_resource {
 	bool layer_first;        /* see above description */
 	uint32_t layer_size;
 	struct fd_resource_slice slices[MAX_MIP_LEVELS];
-	uint32_t timestamp;
 	/* buffer range that has been initialized */
 	struct util_range valid_buffer_range;
 
