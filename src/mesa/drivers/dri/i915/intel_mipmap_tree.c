@@ -525,14 +525,13 @@ intel_miptree_get_tile_offsets(struct intel_mipmap_tree *mt,
    uint32_t x, y;
    uint32_t mask_x, mask_y;
 
-   intel_region_get_tile_masks(region, &mask_x, &mask_y, false);
+   intel_region_get_tile_masks(region, &mask_x, &mask_y);
    intel_miptree_get_image_offset(mt, level, slice, &x, &y);
 
    *tile_x = x & mask_x;
    *tile_y = y & mask_y;
 
-   return intel_region_get_aligned_offset(region, x & ~mask_x, y & ~mask_y,
-                                          false);
+   return intel_region_get_aligned_offset(region, x & ~mask_x, y & ~mask_y);
 }
 
 static void

@@ -278,7 +278,7 @@ intel_setup_image_from_mipmap_tree(struct intel_context *intel, __DRIimage *imag
 
    intel_miptree_check_level_layer(mt, level, zoffset);
 
-   intel_region_get_tile_masks(mt->region, &mask_x, &mask_y, false);
+   intel_region_get_tile_masks(mt->region, &mask_x, &mask_y);
    intel_miptree_get_image_offset(mt, level, zoffset, &draw_x, &draw_y);
 
    image->width = mt->level[level].width;
@@ -288,8 +288,7 @@ intel_setup_image_from_mipmap_tree(struct intel_context *intel, __DRIimage *imag
 
    image->offset = intel_region_get_aligned_offset(mt->region,
                                                    draw_x & ~mask_x,
-                                                   draw_y & ~mask_y,
-                                                   false);
+                                                   draw_y & ~mask_y);
 
    intel_region_reference(&image->region, mt->region);
 }
@@ -685,7 +684,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
     image->offset = offset;
     intel_setup_image_from_dimensions(image);
 
-    intel_region_get_tile_masks(image->region, &mask_x, &mask_y, false);
+    intel_region_get_tile_masks(image->region, &mask_x, &mask_y);
     if (offset & mask_x)
        _mesa_warning(NULL,
                      "intel_create_sub_image: offset not on tile boundary");
