@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31668 bytes, from 2017-05-30 16:52:40)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-06-02 15:50:23)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-05-30 19:25:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 136835 bytes, from 2017-05-30 20:06:17)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 142603 bytes, from 2017-06-06 17:02:32)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -76,7 +76,7 @@ enum vgt_event_type {
 	UNK_1D = 29,
 	BLIT = 30,
 	UNK_25 = 37,
-	UNK_26 = 38,
+	LRZ_FLUSH = 38,
 	UNK_2C = 44,
 	UNK_2D = 45,
 };
@@ -299,11 +299,13 @@ enum render_mode_cmd {
 	BINNING = 2,
 	GMEM = 3,
 	BLIT2D = 5,
+	BLIT2DSCALE = 7,
 };
 
 enum cp_blit_cmd {
 	BLIT_OP_FILL = 0,
 	BLIT_OP_COPY = 1,
+	BLIT_OP_SCALE = 3,
 };
 
 #define REG_CP_LOAD_STATE_0					0x00000000

@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31668 bytes, from 2017-05-30 16:52:40)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-06-02 15:50:23)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-05-30 19:25:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 136835 bytes, from 2017-05-30 20:06:17)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 142603 bytes, from 2017-06-06 17:02:32)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -2858,12 +2858,22 @@ static inline uint32_t A5XX_GRAS_SC_WINDOW_SCISSOR_BR_Y(uint32_t val)
 }
 
 #define REG_A5XX_GRAS_LRZ_CNTL					0x0000e100
+#define A5XX_GRAS_LRZ_CNTL_ENABLE				0x00000001
+#define A5XX_GRAS_LRZ_CNTL_LRZ_WRITE				0x00000002
+#define A5XX_GRAS_LRZ_CNTL_GREATER				0x00000004
 
 #define REG_A5XX_GRAS_LRZ_BUFFER_BASE_LO			0x0000e101
 
 #define REG_A5XX_GRAS_LRZ_BUFFER_BASE_HI			0x0000e102
 
 #define REG_A5XX_GRAS_LRZ_BUFFER_PITCH				0x0000e103
+#define A5XX_GRAS_LRZ_BUFFER_PITCH__MASK			0xffffffff
+#define A5XX_GRAS_LRZ_BUFFER_PITCH__SHIFT			0
+static inline uint32_t A5XX_GRAS_LRZ_BUFFER_PITCH(uint32_t val)
+{
+	assert(!(val & 0x1f));
+	return ((val >> 5) << A5XX_GRAS_LRZ_BUFFER_PITCH__SHIFT) & A5XX_GRAS_LRZ_BUFFER_PITCH__MASK;
+}
 
 #define REG_A5XX_GRAS_LRZ_FAST_CLEAR_BUFFER_BASE_LO		0x0000e104
 
@@ -3967,6 +3977,8 @@ static inline uint32_t A5XX_SP_FS_CTRL_REG0_BRANCHSTACK(uint32_t val)
 #define REG_A5XX_SP_FS_OBJ_START_HI				0x0000e5c4
 
 #define REG_A5XX_SP_BLEND_CNTL					0x0000e5c9
+#define A5XX_SP_BLEND_CNTL_ENABLED				0x00000001
+#define A5XX_SP_BLEND_CNTL_UNK8					0x00000100
 
 #define REG_A5XX_SP_FS_OUTPUT_CNTL				0x0000e5ca
 #define A5XX_SP_FS_OUTPUT_CNTL_MRT__MASK			0x0000000f
