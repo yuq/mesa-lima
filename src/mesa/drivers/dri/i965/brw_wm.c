@@ -191,7 +191,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    program = brw_compile_fs(brw->screen->compiler, brw, mem_ctx,
                             key, &prog_data, fp->program.nir,
                             &fp->program, st_index8, st_index16,
-                            true, brw->use_rep_send, vue_map,
+                            true, false, vue_map,
                             &program_size, &error_str);
 
    if (program == NULL) {

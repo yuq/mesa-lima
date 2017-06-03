@@ -1318,7 +1318,7 @@ genX(upload_clip_state)(struct brw_context *brw)
          clip.ClipMode = CLIPMODE_NORMAL;
       }
 
-      clip.ClipEnable = brw->primitive != _3DPRIM_RECTLIST;
+      clip.ClipEnable = true;
 
       /* _NEW_POLYGON,
        * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_TES_PROG_DATA | BRW_NEW_PRIMITIVE
