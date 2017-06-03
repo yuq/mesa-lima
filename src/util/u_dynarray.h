@@ -30,6 +30,10 @@
 #include <stdlib.h>
 #include "ralloc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* A zero-initialized version of this is guaranteed to represent an
  * empty array.
  *
@@ -133,6 +137,10 @@ util_dynarray_trim(struct util_dynarray *buf)
 #define util_dynarray_foreach(buf, type, elem) \
    for (type *elem = (type *)(buf)->data; \
         elem < (type *)((char *)(buf)->data + (buf)->size); elem++)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* U_DYNARRAY_H */
 
