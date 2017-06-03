@@ -395,11 +395,6 @@ intel_miptree_get_dimensions_for_image(struct gl_texture_image *image,
                                        int *width, int *height, int *depth)
 {
    switch (image->TexObject->Target) {
-   case GL_TEXTURE_1D_ARRAY:
-      *width = image->Width;
-      *height = 1;
-      *depth = image->Height;
-      break;
    default:
       *width = image->Width;
       *height = image->Height;

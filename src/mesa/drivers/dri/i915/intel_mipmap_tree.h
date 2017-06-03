@@ -94,8 +94,6 @@ struct intel_mipmap_level
     *
     * The exact semantics of depth varies according to the texture target:
     *    - For GL_TEXTURE_CUBE_MAP, depth is 6.
-    *    - For GL_TEXTURE_2D_ARRAY, depth is the number of array slices. It is
-    *      identical for all miplevels in the texture.
     *    - For GL_TEXTURE_3D, it is the texture's depth at this miplevel. Its
     *      value, like width and height, varies with miplevel.
     *    - For other texture types, depth is 1.
