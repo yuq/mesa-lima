@@ -627,9 +627,9 @@ etna_copy_resource(struct pipe_context *pctx, struct pipe_resource *dst,
    for (int level = first_level; level <= last_level; level++) {
       blit.src.level = blit.dst.level = level;
       blit.src.box.width = blit.dst.box.width =
-         MIN2(src_priv->levels[level].width, dst_priv->levels[level].width);
+         MIN2(src_priv->levels[level].padded_width, dst_priv->levels[level].padded_width);
       blit.src.box.height = blit.dst.box.height =
-         MIN2(src_priv->levels[level].height, dst_priv->levels[level].height);
+         MIN2(src_priv->levels[level].padded_height, dst_priv->levels[level].padded_height);
 
       for (int layer = 0; layer < dst->array_size; layer++) {
          blit.src.box.z = blit.dst.box.z = layer;
