@@ -314,6 +314,7 @@ st_destroy_context_priv(struct st_context *st, bool destroy_pipe)
    free( st );
 }
 
+static void st_init_driver_flags(struct st_context *st);
 
 static struct st_context *
 st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
@@ -499,12 +500,15 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    _mesa_initialize_dispatch_tables(ctx);
    _mesa_initialize_vbo_vtxfmt(ctx);
+   st_init_driver_flags(st);
 
    return st;
 }
 
-static void st_init_driver_flags(struct gl_driver_flags *f)
+static void st_init_driver_flags(struct st_context *st)
 {
+   struct gl_driver_flags *f = &st->ctx->DriverFlags;
+
    f->NewArray = ST_NEW_VERTEX_ARRAYS;
    f->NewRasterizerDiscard = ST_NEW_RASTERIZER;
    f->NewUniformBuffer = ST_NEW_UNIFORM_BUFFER;
@@ -514,6 +518,7 @@ static void st_init_driver_flags(struct gl_driver_flags *f)
    f->NewShaderStorageBuffer = ST_NEW_STORAGE_BUFFER;
    f->NewImageUnits = ST_NEW_IMAGE_UNITS;
    f->NewWindowRectangles = ST_NEW_WINDOW_RECTANGLES;
+   f->NewFramebufferSRGB = ST_NEW_FRAMEBUFFER;
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
@@ -543,8 +548,6 @@ struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
    if (pipe->screen->get_disk_shader_cache &&
        !(ST_DEBUG & DEBUG_TGSI))
       ctx->Cache = pipe->screen->get_disk_shader_cache(pipe->screen);
-
-   st_init_driver_flags(&ctx->DriverFlags);
 
    /* XXX: need a capability bit in gallium to query if the pipe
     * driver prefers DP4 or MUL/MAD for vertex transformation.
