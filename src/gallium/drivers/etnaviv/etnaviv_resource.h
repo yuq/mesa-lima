@@ -102,7 +102,7 @@ etna_resource_older(struct etna_resource *a, struct etna_resource *b)
 static inline bool
 etna_resource_needs_flush(struct etna_resource *res)
 {
-   return (int)(res->seqno - res->flush_seqno) > 0;
+   return res->ts_bo && ((int)(res->seqno - res->flush_seqno) > 0);
 }
 
 /* is the resource only used on the sampler? */
