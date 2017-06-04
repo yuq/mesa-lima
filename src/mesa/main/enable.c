@@ -258,7 +258,10 @@ _mesa_set_framebuffer_srgb(struct gl_context *ctx, GLboolean state)
 {
    if (ctx->Color.sRGBEnabled == state)
       return;
-   FLUSH_VERTICES(ctx, _NEW_BUFFERS);
+
+   /* TODO: Switch i965 to the new flag and remove the conditional */
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewFramebufferSRGB ? 0 : _NEW_BUFFERS);
+   ctx->NewDriverState |= ctx->DriverFlags.NewFramebufferSRGB;
    ctx->Color.sRGBEnabled = state;
 
    if (ctx->Driver.Enable) {
