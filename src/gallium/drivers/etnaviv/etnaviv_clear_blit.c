@@ -100,13 +100,24 @@ etna_rs_gen_clear_surface(struct etna_context *ctx, struct etna_surface *surf,
    });
 }
 
+static inline uint32_t
+pack_rgba(enum pipe_format format, const float *rgba)
+{
+   union util_color uc;
+   util_pack_color(rgba, format, &uc);
+   if (util_format_get_blocksize(format) == 2)
+      return uc.ui[0] << 16 | uc.ui[0];
+   else
+      return uc.ui[0];
+}
+
 static void
 etna_blit_clear_color(struct pipe_context *pctx, struct pipe_surface *dst,
                       const union pipe_color_union *color)
 {
    struct etna_context *ctx = etna_context(pctx);
    struct etna_surface *surf = etna_surface(dst);
-   uint32_t new_clear_value = translate_clear_color(surf->base.format, color);
+   uint32_t new_clear_value = pack_rgba(surf->base.format, color->f);
 
    if (surf->surf.ts_size) { /* TS: use precompiled clear command */
       ctx->framebuffer.TS_COLOR_CLEAR_VALUE = new_clear_value;
