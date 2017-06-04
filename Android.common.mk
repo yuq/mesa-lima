@@ -44,6 +44,7 @@ LOCAL_CFLAGS += \
 # It's likely due to a bug elsewhere, but let's temporarily add them
 # here to fix the radeonsi build.
 LOCAL_CFLAGS += \
+	-DANDROID_API_LEVEL=$(PLATFORM_SDK_VERSION) \
 	-DENABLE_SHADER_CACHE \
 	-D__STDC_CONSTANT_MACROS \
 	-D__STDC_LIMIT_MACROS \
