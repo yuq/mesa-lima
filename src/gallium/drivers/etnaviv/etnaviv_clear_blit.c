@@ -446,7 +446,8 @@ etna_try_rs_blit(struct pipe_context *pctx,
    if (width > src_lev->padded_width ||
        width > dst_lev->padded_width * msaa_xscale ||
        height > src_lev->padded_height ||
-       height > dst_lev->padded_height * msaa_yscale)
+       height > dst_lev->padded_height * msaa_yscale ||
+       width & (w_align - 1) || height & (h_align - 1))
       goto manual;
 
    if (src->base.nr_samples > 1) {
