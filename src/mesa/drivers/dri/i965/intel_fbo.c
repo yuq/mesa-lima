@@ -539,6 +539,10 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
       irb->layer_count = 1;
    } else if (mt->target != GL_TEXTURE_3D && image->TexObject->NumLayers > 0) {
       irb->layer_count = image->TexObject->NumLayers;
+   } else if (mt->surf.size > 0) {
+      irb->layer_count = mt->surf.dim == ISL_SURF_DIM_3D ?
+                            minify(mt->surf.logical_level0_px.depth, level) :
+                            mt->surf.logical_level0_px.array_len;
    } else {
       irb->layer_count = mt->level[level].depth / layer_multiplier;
    }
