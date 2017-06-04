@@ -580,7 +580,6 @@ destroy_tex_sampler_cb(GLuint id, void *data, void *userData)
 void st_destroy_context( struct st_context *st )
 {
    struct gl_context *ctx = st->ctx;
-   GLuint i;
 
    /* This must be called first so that glthread has a chance to finish */
    _mesa_glthread_destroy(ctx);
@@ -594,11 +593,6 @@ void st_destroy_context( struct st_context *st )
    st_reference_prog(st, &st->tep, NULL);
    st_reference_compprog(st, &st->cp, NULL);
 
-   /* release framebuffer surfaces */
-   for (i = 0; i < PIPE_MAX_COLOR_BUFS; i++) {
-      pipe_surface_reference(&st->state.framebuffer.cbufs[i], NULL);
-   }
-   pipe_surface_reference(&st->state.framebuffer.zsbuf, NULL);
    pipe_sampler_view_reference(&st->pixel_xfer.pixelmap_sampler_view, NULL);
    pipe_resource_reference(&st->pixel_xfer.pixelmap_texture, NULL);
 

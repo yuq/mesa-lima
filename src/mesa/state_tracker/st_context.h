@@ -139,7 +139,10 @@ struct st_context
          void *ptr;
          unsigned size;
       } constants[PIPE_SHADER_TYPES];
-      struct pipe_framebuffer_state framebuffer;
+      unsigned fb_width;
+      unsigned fb_height;
+      unsigned fb_num_samples;
+      unsigned fb_num_layers;
       struct pipe_scissor_state scissor[PIPE_MAX_VIEWPORTS];
       struct pipe_viewport_state viewport[PIPE_MAX_VIEWPORTS];
       struct {
