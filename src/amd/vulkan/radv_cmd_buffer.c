@@ -557,8 +557,9 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_02881C_PA_CL_VS_OUT_CNTL,
 			       pipeline->graphics.pa_cl_vs_out_cntl);
 
-	radeon_set_context_reg(cmd_buffer->cs, R_028AB4_VGT_REUSE_OFF,
-			       S_028AB4_REUSE_OFF(outinfo->writes_viewport_index));
+	if (cmd_buffer->device->physical_device->rad_info.chip_class <= VI)
+		radeon_set_context_reg(cmd_buffer->cs, R_028AB4_VGT_REUSE_OFF,
+				       S_028AB4_REUSE_OFF(outinfo->writes_viewport_index));
 }
 
 static void

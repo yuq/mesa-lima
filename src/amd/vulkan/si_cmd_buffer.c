@@ -242,6 +242,9 @@ si_emit_config(struct radv_physical_device *physical_device,
 	radeon_set_context_reg(cs, R_028B28_VGT_STRMOUT_DRAW_OPAQUE_OFFSET, 0);
 
 	radeon_set_context_reg(cs, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
+	radeon_set_context_reg(cs, R_028AA0_VGT_INSTANCE_STEP_RATE_0, 1);
+	if (physical_device->rad_info.chip_class >= GFX9)
+		radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF, 0);
 	radeon_set_context_reg(cs, R_028AB8_VGT_VTX_CNT_EN, 0x0);
 	if (physical_device->rad_info.chip_class < CIK)
 		radeon_set_config_reg(cs, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
@@ -374,22 +377,31 @@ si_emit_config(struct radv_physical_device *physical_device,
 			       S_02800C_FORCE_HIS_ENABLE0(V_02800C_FORCE_DISABLE) |
 			       S_02800C_FORCE_HIS_ENABLE1(V_02800C_FORCE_DISABLE));
 
-	radeon_set_context_reg(cs, R_028400_VGT_MAX_VTX_INDX, ~0);
-	radeon_set_context_reg(cs, R_028404_VGT_MIN_VTX_INDX, 0);
-	radeon_set_context_reg(cs, R_028408_VGT_INDX_OFFSET, 0);
+	if (physical_device->rad_info.chip_class >= GFX9) {
+		radeon_set_context_reg(cs, R_030920_VGT_MAX_VTX_INDX, ~0);
+		radeon_set_context_reg(cs, R_030924_VGT_MIN_VTX_INDX, 0);
+		radeon_set_context_reg(cs, R_030928_VGT_INDX_OFFSET, 0);
+	} else {
+		radeon_set_context_reg(cs, R_028400_VGT_MAX_VTX_INDX, ~0);
+		radeon_set_context_reg(cs, R_028404_VGT_MIN_VTX_INDX, 0);
+		radeon_set_context_reg(cs, R_028408_VGT_INDX_OFFSET, 0);
+	}
 
 	if (physical_device->rad_info.chip_class >= CIK) {
-		/* If this is 0, Bonaire can hang even if GS isn't being used.
-		 * Other chips are unaffected. These are suboptimal values,
-		 * but we don't use on-chip GS.
-		 */
-		radeon_set_context_reg(cs, R_028A44_VGT_GS_ONCHIP_CNTL,
-				       S_028A44_ES_VERTS_PER_SUBGRP(64) |
-				       S_028A44_GS_PRIMS_PER_SUBGRP(4));
-
-		radeon_set_sh_reg(cs, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xffff));
-		radeon_set_sh_reg(cs, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, 0);
-		radeon_set_sh_reg(cs, R_00B31C_SPI_SHADER_PGM_RSRC3_ES, S_00B31C_CU_EN(0xffff));
+		if (physical_device->rad_info.chip_class >= GFX9) {
+			radeon_set_sh_reg(cs, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, S_00B41C_CU_EN(0xffff));
+		} else {
+			radeon_set_sh_reg(cs, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xffff));
+			radeon_set_sh_reg(cs, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, 0);
+			radeon_set_sh_reg(cs, R_00B31C_SPI_SHADER_PGM_RSRC3_ES, S_00B31C_CU_EN(0xffff));
+			/* If this is 0, Bonaire can hang even if GS isn't being used.
+			 * Other chips are unaffected. These are suboptimal values,
+			 * but we don't use on-chip GS.
+			 */
+			radeon_set_context_reg(cs, R_028A44_VGT_GS_ONCHIP_CNTL,
+					       S_028A44_ES_VERTS_PER_SUBGRP(64) |
+					       S_028A44_GS_PRIMS_PER_SUBGRP(4));
+		}
 		radeon_set_sh_reg(cs, R_00B21C_SPI_SHADER_PGM_RSRC3_GS, S_00B21C_CU_EN(0xffff));
 
 		if (physical_device->rad_info.num_good_compute_units /
@@ -443,6 +455,38 @@ si_emit_config(struct radv_physical_device *physical_device,
 	if (physical_device->rad_info.family == CHIP_STONEY)
 		radeon_set_context_reg(cs, R_028C40_PA_SC_SHADER_CONTROL, 0);
 
+	if (physical_device->rad_info.chip_class >= GFX9) {
+		unsigned num_se = physical_device->rad_info.max_se;
+		unsigned pc_lines = 0;
+
+		switch (physical_device->rad_info.family) {
+		case CHIP_VEGA10:
+			pc_lines = 4096;
+			break;
+		case CHIP_RAVEN:
+			pc_lines = 1024;
+			break;
+		default:
+			assert(0);
+		}
+
+		radeon_set_context_reg(cs, R_028060_DB_DFSM_CONTROL,
+				       S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
+		radeon_set_context_reg(cs, R_028064_DB_RENDER_FILTER, 0);
+		/* TODO: We can use this to disable RBs for rendering to GART: */
+		radeon_set_context_reg(cs, R_02835C_PA_SC_TILE_STEERING_OVERRIDE, 0);
+		radeon_set_context_reg(cs, R_02883C_PA_SU_OVER_RASTERIZATION_CNTL, 0);
+		/* TODO: Enable the binner: */
+		radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
+				       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
+				       S_028C44_DISABLE_START_OF_PRIM(1));
+		radeon_set_context_reg(cs, R_028C48_PA_SC_BINNER_CNTL_1,
+				       S_028C48_MAX_ALLOC_COUNT(MIN2(128, pc_lines / (4 * num_se))) |
+				       S_028C48_MAX_PRIM_PER_BATCH(1023));
+		radeon_set_context_reg(cs, R_028C4C_PA_SC_CONSERVATIVE_RASTERIZATION_CNTL,
+				       S_028C4C_NULL_SQUAD_AA_MASK_ENABLE(1));
+		radeon_set_context_reg(cs, R_030968_VGT_INSTANCE_BASE_ID, 0);
+	}
 	si_emit_compute(physical_device, cs);
 }
 
