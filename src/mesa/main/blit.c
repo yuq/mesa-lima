@@ -177,6 +177,81 @@ is_valid_blit_filter(const struct gl_context *ctx, GLenum filter)
 }
 
 
+static bool
+validate_color_buffer(struct gl_context *ctx, struct gl_framebuffer *readFb,
+                      struct gl_framebuffer *drawFb, GLenum filter,
+                      const char *func)
+{
+   const GLuint numColorDrawBuffers = drawFb->_NumColorDrawBuffers;
+   const struct gl_renderbuffer *colorReadRb = readFb->_ColorReadBuffer;
+   const struct gl_renderbuffer *colorDrawRb = NULL;
+   GLuint i;
+
+   for (i = 0; i < numColorDrawBuffers; i++) {
+      colorDrawRb = drawFb->_ColorDrawBuffers[i];
+      if (!colorDrawRb)
+         continue;
+
+      /* Page 193 (page 205 of the PDF) in section 4.3.2 of the OpenGL
+       * ES 3.0.1 spec says:
+       *
+       *     "If the source and destination buffers are identical, an
+       *     INVALID_OPERATION error is generated. Different mipmap levels of a
+       *     texture, different layers of a three- dimensional texture or
+       *     two-dimensional array texture, and different faces of a cube map
+       *     texture do not constitute identical buffers."
+       */
+      if (_mesa_is_gles3(ctx) && (colorDrawRb == colorReadRb)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(source and destination color buffer cannot be the "
+                     "same)", func);
+         return false;
+      }
+
+      if (!compatible_color_datatypes(colorReadRb->Format,
+                                      colorDrawRb->Format)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(color buffer datatypes mismatch)", func);
+         return false;
+      }
+
+      /* extra checks for multisample copies... */
+      if (readFb->Visual.samples > 0 || drawFb->Visual.samples > 0) {
+         /* color formats must match on GLES. This isn't checked on desktop GL
+          * because the GL 4.4 spec was changed to allow it.  In the section
+          * entitled “Changes in the released
+          * Specification of July 22, 2013” it says:
+          *
+          * “Relax BlitFramebuffer in section 18.3.1 so that format conversion
+          * can take place during multisample blits, since drivers already
+          * allow this and some apps depend on it.”
+          */
+         if (_mesa_is_gles(ctx) &&
+             !compatible_resolve_formats(colorReadRb, colorDrawRb)) {
+            _mesa_error(ctx, GL_INVALID_OPERATION,
+                        "%s(bad src/dst multisample pixel formats)", func);
+            return false;
+         }
+      }
+
+   }
+
+   if (filter != GL_NEAREST) {
+      /* From EXT_framebuffer_multisample_blit_scaled specification:
+       * "Calling BlitFramebuffer will result in an INVALID_OPERATION error if
+       * filter is not NEAREST and read buffer contains integer data."
+       */
+      GLenum type = _mesa_get_format_datatype(colorReadRb->Format);
+      if (type == GL_INT || type == GL_UNSIGNED_INT) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(integer color type)", func);
+         return false;
+      }
+   }
+   return true;
+}
+
+
 static ALWAYS_INLINE void
 blit_framebuffer(struct gl_context *ctx,
                  struct gl_framebuffer *readFb, struct gl_framebuffer *drawFb,
@@ -298,8 +373,6 @@ blit_framebuffer(struct gl_context *ctx,
    if (mask & GL_COLOR_BUFFER_BIT) {
       const GLuint numColorDrawBuffers = drawFb->_NumColorDrawBuffers;
       const struct gl_renderbuffer *colorReadRb = readFb->_ColorReadBuffer;
-      const struct gl_renderbuffer *colorDrawRb = NULL;
-      GLuint i;
 
       /* From the EXT_framebuffer_object spec:
        *
@@ -310,65 +383,8 @@ blit_framebuffer(struct gl_context *ctx,
       if (!colorReadRb || numColorDrawBuffers == 0) {
          mask &= ~GL_COLOR_BUFFER_BIT;
       } else if (!no_error) {
-         for (i = 0; i < numColorDrawBuffers; i++) {
-            colorDrawRb = drawFb->_ColorDrawBuffers[i];
-            if (!colorDrawRb)
-               continue;
-
-            /* Page 193 (page 205 of the PDF) in section 4.3.2 of the OpenGL
-             * ES 3.0.1 spec says:
-             *
-             *     "If the source and destination buffers are identical, an
-             *     INVALID_OPERATION error is generated. Different mipmap
-             *     levels of a texture, different layers of a three-
-             *     dimensional texture or two-dimensional array texture, and
-             *     different faces of a cube map texture do not constitute
-             *     identical buffers."
-             */
-            if (_mesa_is_gles3(ctx) && (colorDrawRb == colorReadRb)) {
-               _mesa_error(ctx, GL_INVALID_OPERATION,
-                           "%s(source and destination color "
-                           "buffer cannot be the same)", func);
-               return;
-            }
-
-            if (!compatible_color_datatypes(colorReadRb->Format,
-                                            colorDrawRb->Format)) {
-               _mesa_error(ctx, GL_INVALID_OPERATION,
-                           "%s(color buffer datatypes mismatch)", func);
-               return;
-            }
-            /* extra checks for multisample copies... */
-            if (readFb->Visual.samples > 0 || drawFb->Visual.samples > 0) {
-               /* color formats must match on GLES. This isn't checked on
-                * desktop GL because the GL 4.4 spec was changed to allow it.
-                * In the section entitled “Changes in the released
-                * Specification of July 22, 2013” it says:
-                *
-                * “Relax BlitFramebuffer in section 18.3.1 so that format
-                *  conversion can take place during multisample blits, since
-                *  drivers already allow this and some apps depend on it.”
-                */
-               if (_mesa_is_gles(ctx) &&
-                   !compatible_resolve_formats(colorReadRb, colorDrawRb)) {
-                  _mesa_error(ctx, GL_INVALID_OPERATION,
-                         "%s(bad src/dst multisample pixel formats)", func);
-                  return;
-               }
-            }
-         }
-         if (filter != GL_NEAREST) {
-            /* From EXT_framebuffer_multisample_blit_scaled specification:
-             * "Calling BlitFramebuffer will result in an INVALID_OPERATION error
-             * if filter is not NEAREST and read buffer contains integer data."
-             */
-            GLenum type = _mesa_get_format_datatype(colorReadRb->Format);
-            if (type == GL_INT || type == GL_UNSIGNED_INT) {
-               _mesa_error(ctx, GL_INVALID_OPERATION,
-                           "%s(integer color type)", func);
-               return;
-            }
-         }
+         if (!validate_color_buffer(ctx, readFb, drawFb, filter, func))
+            return;
       }
    }
 
