@@ -1723,6 +1723,6 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
 
    surf.clear_color.f32[0] = ANV_HZ_FC_VAL;
 
-   blorp_gen6_hiz_op(&batch, &surf, 0, 0, op);
+   blorp_hiz_op(&batch, &surf, 0, 0, 1, op);
    blorp_batch_finish(&batch);
 }

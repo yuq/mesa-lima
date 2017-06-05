@@ -1074,8 +1074,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
-      for (unsigned a = 0; a < num_layers; a++)
-         blorp_gen6_hiz_op(&batch, &surf, level, start_layer + a, op);
+      blorp_hiz_op(&batch, &surf, level, start_layer, num_layers, op);
       blorp_batch_finish(&batch);
    }
 

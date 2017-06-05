@@ -286,60 +286,66 @@ blorp_ensure_sf_program(struct blorp_context *blorp,
 }
 
 void
-blorp_gen6_hiz_op(struct blorp_batch *batch,
-                  struct blorp_surf *surf, unsigned level, unsigned layer,
-                  enum blorp_hiz_op op)
+blorp_hiz_op(struct blorp_batch *batch, struct blorp_surf *surf,
+             uint32_t level, uint32_t start_layer, uint32_t num_layers,
+             enum blorp_hiz_op op)
 {
    struct blorp_params params;
    blorp_params_init(&params);
 
    params.hiz_op = op;
 
-   brw_blorp_surface_info_init(batch->blorp, &params.depth, surf, level, layer,
-                               surf->surf->format, true);
+   for (uint32_t a = 0; a < num_layers; a++) {
+      const uint32_t layer = start_layer + a;
 
-   /* Align the rectangle primitive to 8x4 pixels.
-    *
-    * During fast depth clears, the emitted rectangle primitive  must be
-    * aligned to 8x4 pixels.  From the Ivybridge PRM, Vol 2 Part 1 Section
-    * 11.5.3.1 Depth Buffer Clear (and the matching section in the Sandybridge
-    * PRM):
-    *     If Number of Multisamples is NUMSAMPLES_1, the rectangle must be
-    *     aligned to an 8x4 pixel block relative to the upper left corner
-    *     of the depth buffer [...]
-    *
-    * For hiz resolves, the rectangle must also be 8x4 aligned. Item
-    * WaHizAmbiguate8x4Aligned from the Haswell workarounds page and the
-    * Ivybridge simulator require the alignment.
-    *
-    * To be safe, let's just align the rect for all hiz operations and all
-    * hardware generations.
-    *
-    * However, for some miptree slices of a Z24 texture, emitting an 8x4
-    * aligned rectangle that covers the slice may clobber adjacent slices if
-    * we strictly adhered to the texture alignments specified in the PRM.  The
-    * Ivybridge PRM, Section "Alignment Unit Size", states that
-    * SURFACE_STATE.Surface_Horizontal_Alignment should be 4 for Z24 surfaces,
-    * not 8. But commit 1f112cc increased the alignment from 4 to 8, which
-    * prevents the clobbering.
-    */
-   params.x1 = minify(params.depth.surf.logical_level0_px.width,
-                      params.depth.view.base_level);
-   params.y1 = minify(params.depth.surf.logical_level0_px.height,
-                      params.depth.view.base_level);
-   params.x1 = ALIGN(params.x1, 8);
-   params.y1 = ALIGN(params.y1, 4);
+      brw_blorp_surface_info_init(batch->blorp, &params.depth, surf, level,
+                                  layer, surf->surf->format, true);
 
-   if (params.depth.view.base_level == 0) {
-      /* TODO: What about MSAA? */
-      params.depth.surf.logical_level0_px.width = params.x1;
-      params.depth.surf.logical_level0_px.height = params.y1;
+      /* Align the rectangle primitive to 8x4 pixels.
+       *
+       * During fast depth clears, the emitted rectangle primitive  must be
+       * aligned to 8x4 pixels.  From the Ivybridge PRM, Vol 2 Part 1 Section
+       * 11.5.3.1 Depth Buffer Clear (and the matching section in the
+       * Sandybridge PRM):
+       *
+       *     If Number of Multisamples is NUMSAMPLES_1, the rectangle must be
+       *     aligned to an 8x4 pixel block relative to the upper left corner
+       *     of the depth buffer [...]
+       *
+       * For hiz resolves, the rectangle must also be 8x4 aligned. Item
+       * WaHizAmbiguate8x4Aligned from the Haswell workarounds page and the
+       * Ivybridge simulator require the alignment.
+       *
+       * To be safe, let's just align the rect for all hiz operations and all
+       * hardware generations.
+       *
+       * However, for some miptree slices of a Z24 texture, emitting an 8x4
+       * aligned rectangle that covers the slice may clobber adjacent slices
+       * if we strictly adhered to the texture alignments specified in the
+       * PRM.  The Ivybridge PRM, Section "Alignment Unit Size", states that
+       * SURFACE_STATE.Surface_Horizontal_Alignment should be 4 for Z24
+       * surfaces, not 8. But commit 1f112cc increased the alignment from 4 to
+       * 8, which prevents the clobbering.
+       */
+      params.x1 = minify(params.depth.surf.logical_level0_px.width,
+                         params.depth.view.base_level);
+      params.y1 = minify(params.depth.surf.logical_level0_px.height,
+                         params.depth.view.base_level);
+      params.x1 = ALIGN(params.x1, 8);
+      params.y1 = ALIGN(params.y1, 4);
+
+      if (params.depth.view.base_level == 0) {
+         /* TODO: What about MSAA? */
+         params.depth.surf.logical_level0_px.width = params.x1;
+         params.depth.surf.logical_level0_px.height = params.y1;
+      }
+
+      params.dst.surf.samples = params.depth.surf.samples;
+      params.dst.surf.logical_level0_px = params.depth.surf.logical_level0_px;
+      params.depth_format =
+         isl_format_get_depth_format(surf->surf->format, false);
+      params.num_samples = params.depth.surf.samples;
+
+      batch->blorp->exec(batch, &params);
    }
-
-   params.dst.surf.samples = params.depth.surf.samples;
-   params.dst.surf.logical_level0_px = params.depth.surf.logical_level0_px;
-   params.depth_format = isl_format_get_depth_format(surf->surf->format, false);
-   params.num_samples = params.depth.surf.samples;
-
-   batch->blorp->exec(batch, &params);
 }

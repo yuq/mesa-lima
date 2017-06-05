@@ -209,9 +209,9 @@ enum blorp_hiz_op {
 };
 
 void
-blorp_gen6_hiz_op(struct blorp_batch *batch,
-                  struct blorp_surf *surf, unsigned level, unsigned layer,
-                  enum blorp_hiz_op op);
+blorp_hiz_op(struct blorp_batch *batch, struct blorp_surf *surf,
+             uint32_t level, uint32_t start_layer, uint32_t num_layers,
+             enum blorp_hiz_op op);
 
 #ifdef __cplusplus
 } /* end extern "C" */
