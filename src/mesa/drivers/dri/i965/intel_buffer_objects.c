@@ -216,17 +216,13 @@ brw_buffer_subdata(struct gl_context *ctx,
     */
    if (offset + size <= intel_obj->gpu_active_start ||
        intel_obj->gpu_active_end <= offset) {
-      if (brw->has_llc) {
-         void *map = brw_bo_map_unsynchronized(brw, intel_obj->buffer);
-         memcpy(map + offset, data, size);
-         brw_bo_unmap(intel_obj->buffer);
+      void *map = brw_bo_map(brw, intel_obj->buffer, MAP_WRITE | MAP_ASYNC);
+      memcpy(map + offset, data, size);
+      brw_bo_unmap(intel_obj->buffer);
 
-         if (intel_obj->gpu_active_end > intel_obj->gpu_active_start)
-            intel_obj->prefer_stall_to_blit = true;
-         return;
-      } else {
-         perf_debug("BufferSubData could be unsynchronized, but !LLC doesn't support it yet\n");
-      }
+      if (intel_obj->gpu_active_end > intel_obj->gpu_active_start)
+         intel_obj->prefer_stall_to_blit = true;
+      return;
    }
 
    busy =
