@@ -112,6 +112,7 @@ EXTRA_DIST = \
 	brw_oa_bxt.xml \
 	brw_oa_kblgt2.xml \
 	brw_oa_kblgt3.xml \
+	brw_oa_glk.xml \
 	brw_oa.py
 
 # Note: we avoid using a multi target rule here and outputting both the
