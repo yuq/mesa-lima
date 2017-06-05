@@ -2149,10 +2149,15 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 				S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
 		else
 			stages |= S_028B54_VS_EN(V_028B54_VS_STAGE_DS);
+
 	} else if (radv_pipeline_has_gs(pipeline))
 		stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
 			S_028B54_GS_EN(1) |
 			S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+
+	if (device->physical_device->rad_info.chip_class >= GFX9)
+		stages |= S_028B54_MAX_PRIMGRP_IN_WAVE(2);
+
 	pipeline->graphics.vgt_shader_stages_en = stages;
 
 	if (radv_pipeline_has_gs(pipeline))

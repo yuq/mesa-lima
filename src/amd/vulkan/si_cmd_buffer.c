@@ -716,7 +716,8 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
 		if (cmd_buffer->device->has_distributed_tess) {
 			if (radv_pipeline_has_gs(cmd_buffer->state.pipeline)) {
-				partial_es_wave = true;
+				if (chip_class <= VI)
+					partial_es_wave = true;
 
 				if (family == CHIP_TONGA ||
 				    family == CHIP_FIJI ||
@@ -784,7 +785,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
 	/* If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
-	if (ia_switch_on_eoi)
+	if (chip_class <= VI && ia_switch_on_eoi)
 		partial_es_wave = true;
 
 	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline)) {
@@ -806,8 +807,11 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
 		S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1) |
 		S_028AA8_WD_SWITCH_ON_EOP(chip_class >= CIK ? wd_switch_on_eop : 0) |
-		S_028AA8_MAX_PRIMGRP_IN_WAVE(chip_class >= VI ?
-					     max_primgroup_in_wave : 0);
+		/* The following field was moved to VGT_SHADER_STAGES_EN in GFX9. */
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(chip_class == VI ?
+					     max_primgroup_in_wave : 0) |
+		S_030960_EN_INST_OPT_BASIC(chip_class >= GFX9) |
+		S_030960_EN_INST_OPT_ADV(chip_class >= GFX9);
 
 }
 
