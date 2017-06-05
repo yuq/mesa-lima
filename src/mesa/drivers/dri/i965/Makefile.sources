@@ -4,7 +4,6 @@ i965_FILES = \
 	brw_blorp.h \
 	brw_bufmgr.c \
 	brw_bufmgr.h \
-	brw_cc.c \
 	brw_clear.c \
 	brw_clip.c \
 	brw_clip_state.c \

@@ -4962,6 +4962,32 @@ const struct brw_tracked_state genX(cs_samplers) = {
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN <= 5
+
+static void genX(upload_blend_constant_color)(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_COLOR), blend_cc) {
+      blend_cc.BlendConstantColorRed = ctx->Color.BlendColorUnclamped[0];
+      blend_cc.BlendConstantColorGreen = ctx->Color.BlendColorUnclamped[1];
+      blend_cc.BlendConstantColorBlue = ctx->Color.BlendColorUnclamped[2];
+      blend_cc.BlendConstantColorAlpha = ctx->Color.BlendColorUnclamped[3];
+   }
+}
+
+static const struct brw_tracked_state genX(blend_constant_color) = {
+   .dirty = {
+      .mesa = _NEW_COLOR,
+      .brw = BRW_NEW_CONTEXT |
+             BRW_NEW_BLORP,
+   },
+   .emit = genX(upload_blend_constant_color)
+};
+#endif
+
+/* ---------------------------------------------------------------------- */
+
 void
 genX(init_atoms)(struct brw_context *brw)
 {
@@ -5005,7 +5031,7 @@ genX(init_atoms)(struct brw_context *brw)
       &brw_invariant_state,
 
       &brw_binding_table_pointers,
-      &brw_blend_constant_color,
+      &genX(blend_constant_color),
 
       &brw_depthbuffer,
 
