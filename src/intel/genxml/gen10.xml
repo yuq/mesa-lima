@@ -3734,4 +3734,22 @@
     <field name="Sampler L2 Disable Mask" start="31" end="31" type="bool"/>
   </register>
 
+  <register name="CACHE_MODE_1" length="1" num="0x7004">
+    <field name="Partial Resolve Disable In VC" start="1" end="1" type="bool"/>
+    <field name="RCZ PMA Promoted 2 Not-Promoted Allocation stall optimization Disable" start="3" end="3" type="bool"/>
+    <field name="MCS Cache Disable" start="5" end="5" type="bool"/>
+    <field name="MSC RAW Hazard Avoidance Bit" start="9" end="9" type="bool"/>
+    <field name="NP Early Z Fails Disable" start="13" end="13" type="uint"/>
+    <field name="Blend Optimization Fix Disable" start="14" end="14" type="bool"/>
+    <field name="Color Compression Disable" start="15" end="15" type="bool"/>
+
+    <field name="Partial Resolve Disable In VC Mask" start="17" end="17" type="bool"/>
+    <field name="RCZ PMA Promoted 2 Not-Promoted Allocation stall optimization Disable Mask" start="19" end="19" type="bool"/>
+    <field name="MCS Cache Disable Mask" start="21" end="21" type="bool"/>
+    <field name="MSC RAW Hazard Avoidance Bit Mask" start="25" end="25" type="bool"/>
+    <field name="NP Early Z Fails Disable Mask" start="29" end="29" type="bool"/>
+    <field name="Blend Optimization Fix Disable Mask" start="30" end="30" type="bool"/>
+    <field name="Color Compression Disable Mask" start="31" end="31" type="bool"/>
+  </register>
+
 </genxml>
