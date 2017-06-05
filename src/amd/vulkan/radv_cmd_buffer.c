@@ -1248,30 +1248,12 @@ radv_emit_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 				  unsigned idx)
 {
 	if (cmd_buffer->state.pipeline) {
-		if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
-			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
-							   idx, set->va,
-							   MESA_SHADER_FRAGMENT);
-
-		if (stages & VK_SHADER_STAGE_VERTEX_BIT)
-			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
-							   idx, set->va,
-							   MESA_SHADER_VERTEX);
-
-		if ((stages & VK_SHADER_STAGE_GEOMETRY_BIT) && radv_pipeline_has_gs(cmd_buffer->state.pipeline))
-			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
-							   idx, set->va,
-							   MESA_SHADER_GEOMETRY);
-
-		if ((stages & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) && radv_pipeline_has_tess(cmd_buffer->state.pipeline))
-			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
-							   idx, set->va,
-							   MESA_SHADER_TESS_CTRL);
-
-		if ((stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) && radv_pipeline_has_tess(cmd_buffer->state.pipeline))
-			emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
-							   idx, set->va,
-							   MESA_SHADER_TESS_EVAL);
+		radv_foreach_stage(stage, stages) {
+			if (cmd_buffer->state.pipeline->shaders[stage])
+				emit_stage_descriptor_set_userdata(cmd_buffer, cmd_buffer->state.pipeline,
+								   idx, set->va,
+								   stage);
+		}
 	}
 
 	if (cmd_buffer->state.compute_pipeline && (stages & VK_SHADER_STAGE_COMPUTE_BIT))
@@ -1412,29 +1394,13 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 	                                                   cmd_buffer->cs, MESA_SHADER_STAGES * 4);
-	if (stages & VK_SHADER_STAGE_VERTEX_BIT)
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_VERTEX,
-					   AC_UD_PUSH_CONSTANTS, va);
 
-	if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_FRAGMENT,
-					   AC_UD_PUSH_CONSTANTS, va);
-
-	if ((stages & VK_SHADER_STAGE_GEOMETRY_BIT) && radv_pipeline_has_gs(pipeline))
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_GEOMETRY,
-					   AC_UD_PUSH_CONSTANTS, va);
-
-	if ((stages & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) && radv_pipeline_has_tess(pipeline))
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_TESS_CTRL,
-					   AC_UD_PUSH_CONSTANTS, va);
-
-	if ((stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) && radv_pipeline_has_tess(pipeline))
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_TESS_EVAL,
-					   AC_UD_PUSH_CONSTANTS, va);
-
-	if (stages & VK_SHADER_STAGE_COMPUTE_BIT)
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_COMPUTE,
-					   AC_UD_PUSH_CONSTANTS, va);
+	radv_foreach_stage(stage, stages) {
+		if (pipeline->shaders[stage]) {
+			radv_emit_userdata_address(cmd_buffer, pipeline, stage,
+						   AC_UD_PUSH_CONSTANTS, va);
+		}
+	}
 
 	cmd_buffer->push_constant_stages &= ~stages;
 	assert(cmd_buffer->cs->cdw <= cdw_max);
