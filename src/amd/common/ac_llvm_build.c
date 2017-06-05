@@ -244,6 +244,32 @@ ac_build_optimization_barrier(struct ac_llvm_context *ctx,
 }
 
 LLVMValueRef
+ac_build_ballot(struct ac_llvm_context *ctx,
+		LLVMValueRef value)
+{
+	LLVMValueRef args[3] = {
+		value,
+		ctx->i32_0,
+		LLVMConstInt(ctx->i32, LLVMIntNE, 0)
+	};
+
+	/* We currently have no other way to prevent LLVM from lifting the icmp
+	 * calls to a dominating basic block.
+	 */
+	ac_build_optimization_barrier(ctx, &args[0]);
+
+	if (LLVMTypeOf(args[0]) != ctx->i32)
+		args[0] = LLVMBuildBitCast(ctx->builder, args[0], ctx->i32, "");
+
+	return ac_build_intrinsic(ctx,
+				  "llvm.amdgcn.icmp.i32",
+				  ctx->i64, args, 3,
+				  AC_FUNC_ATTR_NOUNWIND |
+				  AC_FUNC_ATTR_READNONE |
+				  AC_FUNC_ATTR_CONVERGENT);
+}
+
+LLVMValueRef
 ac_build_gather_values_extended(struct ac_llvm_context *ctx,
 				LLVMValueRef *values,
 				unsigned value_count,

@@ -3814,32 +3814,6 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	}
 }
 
-static LLVMValueRef si_emit_ballot(struct si_shader_context *ctx,
-				   LLVMValueRef value)
-{
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMValueRef args[3] = {
-		value,
-		ctx->i32_0,
-		LLVMConstInt(ctx->i32, LLVMIntNE, 0)
-	};
-
-	/* We currently have no other way to prevent LLVM from lifting the icmp
-	 * calls to a dominating basic block.
-	 */
-	ac_build_optimization_barrier(&ctx->ac, &args[0]);
-
-	if (LLVMTypeOf(args[0]) != ctx->i32)
-		args[0] = LLVMBuildBitCast(gallivm->builder, args[0], ctx->i32, "");
-
-	return lp_build_intrinsic(gallivm->builder,
-				  "llvm.amdgcn.icmp.i32",
-				  ctx->i64, args, 3,
-				  LP_FUNC_ATTR_NOUNWIND |
-				  LP_FUNC_ATTR_READNONE |
-				  LP_FUNC_ATTR_CONVERGENT);
-}
-
 static void vote_all_emit(
 	const struct lp_build_tgsi_action *action,
 	struct lp_build_tgsi_context *bld_base,
@@ -3850,8 +3824,8 @@ static void vote_all_emit(
 	LLVMValueRef active_set, vote_set;
 	LLVMValueRef tmp;
 
-	active_set = si_emit_ballot(ctx, ctx->i32_1);
-	vote_set = si_emit_ballot(ctx, emit_data->args[0]);
+	active_set = ac_build_ballot(&ctx->ac, ctx->i32_1);
+	vote_set = ac_build_ballot(&ctx->ac, emit_data->args[0]);
 
 	tmp = LLVMBuildICmp(gallivm->builder, LLVMIntEQ, vote_set, active_set, "");
 	emit_data->output[emit_data->chan] =
@@ -3868,7 +3842,7 @@ static void vote_any_emit(
 	LLVMValueRef vote_set;
 	LLVMValueRef tmp;
 
-	vote_set = si_emit_ballot(ctx, emit_data->args[0]);
+	vote_set = ac_build_ballot(&ctx->ac, emit_data->args[0]);
 
 	tmp = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
 			    vote_set, LLVMConstInt(ctx->i64, 0, 0), "");
@@ -3886,8 +3860,8 @@ static void vote_eq_emit(
 	LLVMValueRef active_set, vote_set;
 	LLVMValueRef all, none, tmp;
 
-	active_set = si_emit_ballot(ctx, ctx->i32_1);
-	vote_set = si_emit_ballot(ctx, emit_data->args[0]);
+	active_set = ac_build_ballot(&ctx->ac, ctx->i32_1);
+	vote_set = ac_build_ballot(&ctx->ac, emit_data->args[0]);
 
 	all = LLVMBuildICmp(gallivm->builder, LLVMIntEQ, vote_set, active_set, "");
 	none = LLVMBuildICmp(gallivm->builder, LLVMIntEQ,
@@ -3907,7 +3881,7 @@ static void ballot_emit(
 	LLVMValueRef tmp;
 
 	tmp = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
-	tmp = si_emit_ballot(ctx, tmp);
+	tmp = ac_build_ballot(&ctx->ac, tmp);
 	tmp = LLVMBuildBitCast(builder, tmp, ctx->v2i32, "");
 
 	emit_data->output[0] = LLVMBuildExtractElement(builder, tmp, ctx->i32_0, "");
