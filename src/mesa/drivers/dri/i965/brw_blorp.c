@@ -1030,7 +1030,12 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    DBG("%s %s to mt %p level %d layers %d-%d\n",
        __func__, opname, mt, level, start_layer, start_layer + num_layers - 1);
 
-   if (op == BLORP_HIZ_OP_DEPTH_CLEAR) {
+   /* The following stalls and flushes are only documented to be required for
+    * HiZ clear operations.  However, they also seem to be required for the
+    * HiZ resolve operation which is basically the same as a fast clear only a
+    * different value is written into the HiZ surface.
+    */
+   if (op == BLORP_HIZ_OP_DEPTH_CLEAR || op == BLORP_HIZ_OP_HIZ_RESOLVE) {
       if (brw->gen == 6) {
          /* From the Sandy Bridge PRM, volume 2 part 1, page 313:
           *
@@ -1081,18 +1086,26 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
          gen6_blorp_hiz_exec(brw, mt, level, start_layer + a, op);
    }
 
-   if (brw->gen == 6 && op == BLORP_HIZ_OP_DEPTH_CLEAR) {
-      /* From the Sandy Bridge PRM, volume 2 part 1, page 314:
-       *
-       *     "DevSNB, DevSNB-B{W/A}]: Depth buffer clear pass must be followed
-       *      by a PIPE_CONTROL command with DEPTH_STALL bit set and Then
-       *      followed by Depth FLUSH'
-      */
-      brw_emit_pipe_control_flush(brw,
-                                  PIPE_CONTROL_DEPTH_STALL);
 
-      brw_emit_pipe_control_flush(brw,
-                                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                                  PIPE_CONTROL_CS_STALL);
+   /* The following stalls and flushes are only documented to be required for
+    * HiZ clear operations.  However, they also seem to be required for the
+    * HiZ resolve operation which is basically the same as a fast clear only a
+    * different value is written into the HiZ surface.
+    */
+   if (op == BLORP_HIZ_OP_DEPTH_CLEAR || op == BLORP_HIZ_OP_HIZ_RESOLVE) {
+      if (brw->gen == 6) {
+         /* From the Sandy Bridge PRM, volume 2 part 1, page 314:
+          *
+          *     "DevSNB, DevSNB-B{W/A}]: Depth buffer clear pass must be
+          *     followed by a PIPE_CONTROL command with DEPTH_STALL bit set
+          *     and Then followed by Depth FLUSH'
+         */
+         brw_emit_pipe_control_flush(brw,
+                                     PIPE_CONTROL_DEPTH_STALL);
+
+         brw_emit_pipe_control_flush(brw,
+                                     PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                     PIPE_CONTROL_CS_STALL);
+      }
    }
 }
