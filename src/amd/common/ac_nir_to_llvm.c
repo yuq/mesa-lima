@@ -531,16 +531,17 @@ get_tcs_out_current_patch_data_offset(struct nir_to_llvm_context *ctx)
 			    "");
 }
 
-static void set_userdata_location(struct ac_userdata_info *ud_info, uint8_t sgpr_idx, uint8_t num_sgprs)
+static void set_userdata_location(struct ac_userdata_info *ud_info, uint8_t *sgpr_idx, uint8_t num_sgprs)
 {
-	ud_info->sgpr_idx = sgpr_idx;
+	ud_info->sgpr_idx = *sgpr_idx;
 	ud_info->num_sgprs = num_sgprs;
 	ud_info->indirect = false;
 	ud_info->indirect_offset = 0;
+	*sgpr_idx += num_sgprs;
 }
 
 static void set_userdata_location_shader(struct nir_to_llvm_context *ctx,
-					 int idx, uint8_t sgpr_idx, uint8_t num_sgprs)
+					 int idx, uint8_t *sgpr_idx, uint8_t num_sgprs)
 {
 	set_userdata_location(&ctx->shader_info->user_sgprs_locs.shader_data[idx], sgpr_idx, num_sgprs);
 }
@@ -643,7 +644,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	unsigned sgpr_count = 0, user_sgpr_count;
 	unsigned i;
 	unsigned num_sets = ctx->options->layout ? ctx->options->layout->num_sets : 0;
-	unsigned user_sgpr_idx;
+	uint8_t user_sgpr_idx;
 	struct user_sgpr_info user_sgpr_info;
 
 	allocate_user_sgprs(ctx, &user_sgpr_info);
@@ -802,8 +803,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	user_sgpr_idx = 0;
 
 	if (ctx->options->supports_spill || user_sgpr_info.need_ring_offsets) {
-		set_userdata_location_shader(ctx, AC_UD_SCRATCH_RING_OFFSETS, user_sgpr_idx, 2);
-		user_sgpr_idx += 2;
+		set_userdata_location_shader(ctx, AC_UD_SCRATCH_RING_OFFSETS, &user_sgpr_idx, 2);
 		if (ctx->options->supports_spill) {
 			ctx->ring_offsets = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.implicit.buffer.ptr",
 							       LLVMPointerType(ctx->i8, CONST_ADDR_SPACE),
@@ -817,8 +817,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	if (!user_sgpr_info.indirect_all_descriptor_sets) {
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
-				set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], user_sgpr_idx, 2);
-				user_sgpr_idx += 2;
+				set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], &user_sgpr_idx, 2);
 				ctx->descriptor_sets[i] =
 					LLVMGetParam(ctx->main_function, arg_idx++);
 			} else
@@ -827,8 +826,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	} else {
 		uint32_t desc_sgpr_idx = user_sgpr_idx;
 		LLVMValueRef desc_sets = LLVMGetParam(ctx->main_function, arg_idx++);
-		set_userdata_location_shader(ctx, AC_UD_INDIRECT_DESCRIPTOR_SETS, user_sgpr_idx, 2);
-		user_sgpr_idx += 2;
+		set_userdata_location_shader(ctx, AC_UD_INDIRECT_DESCRIPTOR_SETS, &user_sgpr_idx, 2);
 
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
@@ -843,15 +841,13 @@ static void create_function(struct nir_to_llvm_context *ctx)
 
 	if (ctx->shader_info->info.needs_push_constants) {
 		ctx->push_constants = LLVMGetParam(ctx->main_function, arg_idx++);
-		set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx, 2);
-		user_sgpr_idx += 2;
+		set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS, &user_sgpr_idx, 2);
 	}
 
 	switch (ctx->stage) {
 	case MESA_SHADER_COMPUTE:
 		if (ctx->shader_info->info.cs.grid_components_used) {
-			set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE, user_sgpr_idx, ctx->shader_info->info.cs.grid_components_used);
-			user_sgpr_idx += ctx->shader_info->info.cs.grid_components_used;
+			set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE, &user_sgpr_idx, ctx->shader_info->info.cs.grid_components_used);
 			ctx->num_work_groups =
 				LLVMGetParam(ctx->main_function, arg_idx++);
 		}
@@ -865,16 +861,14 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	case MESA_SHADER_VERTEX:
 		if (!ctx->is_gs_copy_shader) {
 			if (ctx->shader_info->info.vs.has_vertex_buffers) {
-				set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, user_sgpr_idx, 2);
-				user_sgpr_idx += 2;
+				set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, &user_sgpr_idx, 2);
 				ctx->vertex_buffers = LLVMGetParam(ctx->main_function, arg_idx++);
 			}
 			unsigned vs_num = 2;
 			if (ctx->shader_info->info.vs.needs_draw_id)
 				vs_num++;
 
-			set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, vs_num);
-			user_sgpr_idx += vs_num;
+			set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, &user_sgpr_idx, vs_num);
 
 			ctx->base_vertex = LLVMGetParam(ctx->main_function, arg_idx++);
 			ctx->start_instance = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -884,8 +878,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		if (ctx->options->key.vs.as_es)
 			ctx->es2gs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
 		else if (ctx->options->key.vs.as_ls) {
-			set_userdata_location_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT, user_sgpr_idx, 1);
-			user_sgpr_idx += 1;
+			set_userdata_location_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT, &user_sgpr_idx, 1);
 			ctx->ls_out_layout = LLVMGetParam(ctx->main_function, arg_idx++);
 		}
 		ctx->vertex_id = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -898,8 +891,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 			declare_tess_lds(ctx);
 		break;
 	case MESA_SHADER_TESS_CTRL:
-		set_userdata_location_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, user_sgpr_idx, 4);
-		user_sgpr_idx += 4;
+		set_userdata_location_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 4);
 		ctx->tcs_offchip_layout = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->tcs_out_offsets = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->tcs_out_layout = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -912,8 +904,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		declare_tess_lds(ctx);
 		break;
 	case MESA_SHADER_TESS_EVAL:
-		set_userdata_location_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, user_sgpr_idx, 1);
-		user_sgpr_idx += 1;
+		set_userdata_location_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, &user_sgpr_idx, 1);
 		ctx->tcs_offchip_layout = LLVMGetParam(ctx->main_function, arg_idx++);
 		if (ctx->options->key.tes.as_es) {
 			ctx->oc_lds = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -929,8 +920,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		ctx->tes_patch_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_GEOMETRY:
-		set_userdata_location_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES, user_sgpr_idx, 2);
-		user_sgpr_idx += 2;
+		set_userdata_location_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES, &user_sgpr_idx, 2);
 		ctx->gsvs_ring_stride = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->gsvs_num_entries = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->gs2vs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -946,8 +936,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		break;
 	case MESA_SHADER_FRAGMENT:
 		if (ctx->shader_info->info.ps.needs_sample_positions) {
-			set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS_OFFSET, user_sgpr_idx, 1);
-			user_sgpr_idx += 1;
+			set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS_OFFSET, &user_sgpr_idx, 1);
 			ctx->sample_pos_offset = LLVMGetParam(ctx->main_function, arg_idx++);
 		}
 		ctx->prim_mask = LLVMGetParam(ctx->main_function, arg_idx++);
