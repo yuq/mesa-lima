@@ -390,9 +390,9 @@
 #define   S_028C70_FAST_CLEAR(x)                       (((unsigned)(x) & 0x1) << 17)
 #define   G_028C70_FAST_CLEAR(x)                       (((x) >> 17) & 0x1)
 #define   C_028C70_FAST_CLEAR                          0xFFFDFFFF
-#define   S_028C70_COMPRESSION(x)                      (((unsigned)(x) & 0x3) << 18)
-#define   G_028C70_COMPRESSION(x)                      (((x) >> 18) & 0x3)
-#define   C_028C70_COMPRESSION                         0xFFF3FFFF
+#define   S_028C70_COMPRESSION(x)                      (((unsigned)(x) & 0x1) << 18)
+#define   G_028C70_COMPRESSION(x)                      (((x) >> 18) & 0x1)
+#define   C_028C70_COMPRESSION                         0xFFFBFFFF
 #define   S_028C70_BLEND_CLAMP(x)                      (((unsigned)(x) & 0x1) << 19)
 #define   G_028C70_BLEND_CLAMP(x)                      (((x) >> 19) & 0x1)
 #define   C_028C70_BLEND_CLAMP                         0xFFF7FFFF
@@ -851,6 +851,7 @@
 #define     V_02880C_EXPORT_DB_FOUR16                  0x01
 #define     V_02880C_EXPORT_DB_TWO                     0x02
 #define   S_02880C_ALPHA_TO_MASK_DISABLE(x)            (((unsigned)(x) & 0x1) << 12)
+#define   S_02880C_DEPTH_BEFORE_SHADER(x)              (((unsigned)(x) & 0x1) << 15)
 #define   S_02880C_CONSERVATIVE_Z_EXPORT(x)            (((unsigned)(x) & 0x03) << 16)
 #define   G_02880C_CONSERVATIVE_Z_EXPORT(x)            (((x) >> 16) & 0x03)
 #define   C_02880C_CONSERVATIVE_Z_EXPORT               0xFFFCFFFF
