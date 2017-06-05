@@ -66,6 +66,8 @@ struct ac_llvm_context {
 void
 ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context);
 
+unsigned ac_get_type_size(LLVMTypeRef type);
+
 LLVMValueRef
 ac_build_intrinsic(struct ac_llvm_context *ctx, const char *name,
 		   LLVMTypeRef return_type, LLVMValueRef *params,

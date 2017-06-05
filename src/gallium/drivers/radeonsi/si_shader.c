@@ -89,8 +89,6 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 static void si_dump_shader_key(unsigned processor, const struct si_shader *shader,
 			       FILE *f);
 
-static unsigned llvm_get_type_size(LLVMTypeRef type);
-
 static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
 static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
@@ -3558,7 +3556,7 @@ static void emit_optimization_barrier(struct si_shader_context *ctx,
 		LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, code, "=v,0", true, false);
 		LLVMValueRef vgpr = *pvgpr;
 		LLVMTypeRef vgpr_type = LLVMTypeOf(vgpr);
-		unsigned vgpr_size = llvm_get_type_size(vgpr_type);
+		unsigned vgpr_size = ac_get_type_size(vgpr_type);
 		LLVMValueRef vgpr0;
 
 		assert(vgpr_size % 4 == 0);
@@ -4226,29 +4224,6 @@ static void declare_streamout_params(struct si_shader_context *ctx,
 	}
 }
 
-static unsigned llvm_get_type_size(LLVMTypeRef type)
-{
-	LLVMTypeKind kind = LLVMGetTypeKind(type);
-
-	switch (kind) {
-	case LLVMIntegerTypeKind:
-		return LLVMGetIntTypeWidth(type) / 8;
-	case LLVMFloatTypeKind:
-		return 4;
-	case LLVMPointerTypeKind:
-		return 8;
-	case LLVMVectorTypeKind:
-		return LLVMGetVectorSize(type) *
-		       llvm_get_type_size(LLVMGetElementType(type));
-	case LLVMArrayTypeKind:
-		return LLVMGetArrayLength(type) *
-		       llvm_get_type_size(LLVMGetElementType(type));
-	default:
-		assert(0);
-		return 0;
-	}
-}
-
 static void declare_lds_as_pointer(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -4702,10 +4677,10 @@ static void create_function(struct si_shader_context *ctx)
 	shader->info.num_input_vgprs = 0;
 
 	for (i = 0; i < fninfo.num_sgpr_params; ++i)
-		shader->info.num_input_sgprs += llvm_get_type_size(fninfo.types[i]) / 4;
+		shader->info.num_input_sgprs += ac_get_type_size(fninfo.types[i]) / 4;
 
 	for (; i < fninfo.num_params; ++i)
-		shader->info.num_input_vgprs += llvm_get_type_size(fninfo.types[i]) / 4;
+		shader->info.num_input_vgprs += ac_get_type_size(fninfo.types[i]) / 4;
 
 	assert(shader->info.num_input_vgprs >= num_prolog_vgprs);
 	shader->info.num_input_vgprs -= num_prolog_vgprs;
@@ -5671,7 +5646,7 @@ static void si_count_scratch_private_memory(struct si_shader_context *ctx)
 			LLVMTypeRef type = LLVMGetElementType(LLVMTypeOf(inst));
 			/* No idea why LLVM aligns allocas to 4 elements. */
 			unsigned alignment = LLVMGetAlignment(inst);
-			unsigned dw_size = align(llvm_get_type_size(type) / 4, alignment);
+			unsigned dw_size = align(ac_get_type_size(type) / 4, alignment);
 			ctx->shader->config.private_mem_vgprs += dw_size;
 		}
 		bb = LLVMGetNextBasicBlock(bb);
@@ -6193,9 +6168,9 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 		if (ac_is_sgpr_param(param)) {
 			assert(num_vgprs == 0);
-			num_sgprs += llvm_get_type_size(LLVMTypeOf(param)) / 4;
+			num_sgprs += ac_get_type_size(LLVMTypeOf(param)) / 4;
 		} else {
-			num_vgprs += llvm_get_type_size(LLVMTypeOf(param)) / 4;
+			num_vgprs += ac_get_type_size(LLVMTypeOf(param)) / 4;
 		}
 	}
 
@@ -6203,7 +6178,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 	while (gprs < num_sgprs + num_vgprs) {
 		LLVMValueRef param = LLVMGetParam(parts[main_part], fninfo.num_params);
 		LLVMTypeRef type = LLVMTypeOf(param);
-		unsigned size = llvm_get_type_size(type) / 4;
+		unsigned size = ac_get_type_size(type) / 4;
 
 		add_arg(&fninfo, gprs < num_sgprs ? ARG_SGPR : ARG_VGPR, type);
 
@@ -6230,7 +6205,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 		LLVMValueRef param = LLVMGetParam(ctx->main_fn, i);
 		LLVMTypeRef param_type = LLVMTypeOf(param);
 		LLVMTypeRef out_type = i < fninfo.num_sgpr_params ? ctx->i32 : ctx->f32;
-		unsigned size = llvm_get_type_size(param_type) / 4;
+		unsigned size = ac_get_type_size(param_type) / 4;
 
 		if (size == 1) {
 			if (param_type != out_type)
@@ -6292,7 +6267,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 			param = LLVMGetParam(parts[part], param_idx);
 			param_type = LLVMTypeOf(param);
-			param_size = llvm_get_type_size(param_type) / 4;
+			param_size = ac_get_type_size(param_type) / 4;
 			is_sgpr = ac_is_sgpr_param(param);
 
 			if (is_sgpr) {

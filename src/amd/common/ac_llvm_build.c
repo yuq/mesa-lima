@@ -88,6 +88,30 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context)
 	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
 }
 
+unsigned
+ac_get_type_size(LLVMTypeRef type)
+{
+	LLVMTypeKind kind = LLVMGetTypeKind(type);
+
+	switch (kind) {
+	case LLVMIntegerTypeKind:
+		return LLVMGetIntTypeWidth(type) / 8;
+	case LLVMFloatTypeKind:
+		return 4;
+	case LLVMPointerTypeKind:
+		return 8;
+	case LLVMVectorTypeKind:
+		return LLVMGetVectorSize(type) *
+		       ac_get_type_size(LLVMGetElementType(type));
+	case LLVMArrayTypeKind:
+		return LLVMGetArrayLength(type) *
+		       ac_get_type_size(LLVMGetElementType(type));
+	default:
+		assert(0);
+		return 0;
+	}
+}
+
 LLVMValueRef
 ac_build_intrinsic(struct ac_llvm_context *ctx, const char *name,
 		   LLVMTypeRef return_type, LLVMValueRef *params,
