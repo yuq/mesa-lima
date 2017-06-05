@@ -470,6 +470,11 @@ radv_update_multisample_state(struct radv_cmd_buffer *cmd_buffer,
 
 	radv_cayman_emit_msaa_sample_locs(cmd_buffer->cs, num_samples);
 
+	/* GFX9: Flush DFSM when the AA mode changes. */
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cmd_buffer->cs, EVENT_TYPE(V_028A90_FLUSH_DFSM) | EVENT_INDEX(0));
+	}
 	if (pipeline->shaders[MESA_SHADER_FRAGMENT]->info.info.ps.needs_sample_positions) {
 		uint32_t offset;
 		struct ac_userdata_info *loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_FRAGMENT, AC_UD_PS_SAMPLE_POS_OFFSET);
@@ -838,6 +843,12 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_028238_CB_TARGET_MASK, blend->cb_target_mask);
 	radeon_set_context_reg(cmd_buffer->cs, R_02823C_CB_SHADER_MASK, blend->cb_shader_mask);
 
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+		/* optimise this? */
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cmd_buffer->cs, EVENT_TYPE(V_028A90_FLUSH_DFSM) | EVENT_INDEX(0));
+	}
+
 	if (pipeline->graphics.ps_input_cntl_num) {
 		radeon_set_context_reg_seq(cmd_buffer->cs, R_028644_SPI_PS_INPUT_CNTL_0, pipeline->graphics.ps_input_cntl_num);
 		for (unsigned i = 0; i < pipeline->graphics.ps_input_cntl_num; i++) {
@@ -1193,6 +1204,11 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 	radeon_set_context_reg(cmd_buffer->cs, R_028208_PA_SC_WINDOW_SCISSOR_BR,
 			       S_028208_BR_X(framebuffer->width) |
 			       S_028208_BR_Y(framebuffer->height));
+
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cmd_buffer->cs, EVENT_TYPE(V_028A90_BREAK_BATCH) | EVENT_INDEX(0));
+	}
 }
 
 void radv_set_db_count_control(struct radv_cmd_buffer *cmd_buffer)
