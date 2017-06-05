@@ -260,6 +260,9 @@ struct arg_info {
 	uint8_t count;
 	uint8_t user_sgpr_count;
 	uint8_t sgpr_count;
+	uint8_t num_user_sgprs_used;
+	uint8_t num_sgprs_used;
+	uint8_t num_vgprs_used;
 };
 
 static inline void
@@ -277,6 +280,7 @@ add_sgpr_argument(struct arg_info *info,
 		  LLVMTypeRef type, LLVMValueRef *param_ptr)
 {
 	add_argument(info, type, param_ptr);
+	info->num_sgprs_used += llvm_get_type_size(type) / 4;
 	info->sgpr_count++;
 }
 
@@ -286,6 +290,7 @@ add_user_sgpr_argument(struct arg_info *info,
 		       LLVMValueRef *param_ptr)
 {
 	add_sgpr_argument(info, type, param_ptr);
+	info->num_user_sgprs_used += llvm_get_type_size(type) / 4;
 	info->user_sgpr_count++;
 }
 
@@ -295,6 +300,7 @@ add_vgpr_argument(struct arg_info *info,
 		  LLVMValueRef *param_ptr)
 {
 	add_argument(info, type, param_ptr);
+	info->num_vgprs_used += llvm_get_type_size(type) / 4;
 }
 
 static inline void
@@ -827,20 +833,16 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	    ctx->options->unsafe_math);
 	set_llvm_calling_convention(ctx->main_function, ctx->stage);
 
-	ctx->shader_info->num_input_sgprs = 0;
+
 	ctx->shader_info->num_input_vgprs = 0;
+	ctx->shader_info->num_input_sgprs = ctx->shader_info->num_user_sgprs =
+	  ctx->options->supports_spill ? 2 : 0;
 
-	ctx->shader_info->num_user_sgprs = ctx->options->supports_spill ? 2 : 0;
-	for (i = 0; i < args.user_sgpr_count; i++)
-		ctx->shader_info->num_user_sgprs += llvm_get_type_size(args.types[i]) / 4;
-
-	ctx->shader_info->num_input_sgprs = ctx->shader_info->num_user_sgprs;
-	for (; i < args.sgpr_count; i++)
-		ctx->shader_info->num_input_sgprs += llvm_get_type_size(args.types[i]) / 4;
+	ctx->shader_info->num_user_sgprs += args.num_user_sgprs_used;
+	ctx->shader_info->num_input_sgprs += args.num_sgprs_used;
 
 	if (ctx->stage != MESA_SHADER_FRAGMENT)
-		for (; i < args.count; ++i)
-			ctx->shader_info->num_input_vgprs += llvm_get_type_size(args.types[i]) / 4;
+		ctx->shader_info->num_input_vgprs = args.num_vgprs_used;
 
 	assign_arguments(ctx->main_function, &args);
 
