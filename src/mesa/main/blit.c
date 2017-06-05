@@ -252,6 +252,52 @@ validate_color_buffer(struct gl_context *ctx, struct gl_framebuffer *readFb,
 }
 
 
+static bool
+validate_stencil_buffer(struct gl_context *ctx, struct gl_framebuffer *readFb,
+                        struct gl_framebuffer *drawFb, const char *func)
+{
+   struct gl_renderbuffer *readRb =
+      readFb->Attachment[BUFFER_STENCIL].Renderbuffer;
+   struct gl_renderbuffer *drawRb =
+      drawFb->Attachment[BUFFER_STENCIL].Renderbuffer;
+   int read_z_bits, draw_z_bits;
+
+   if (_mesa_is_gles3(ctx) && (drawRb == readRb)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(source and destination stencil buffer cannot be the "
+                  "same)", func);
+      return false;
+   }
+
+   if (_mesa_get_format_bits(readRb->Format, GL_STENCIL_BITS) !=
+       _mesa_get_format_bits(drawRb->Format, GL_STENCIL_BITS)) {
+      /* There is no need to check the stencil datatype here, because
+       * there is only one: GL_UNSIGNED_INT.
+       */
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(stencil attachment format mismatch)", func);
+      return false;
+   }
+
+   read_z_bits = _mesa_get_format_bits(readRb->Format, GL_DEPTH_BITS);
+   draw_z_bits = _mesa_get_format_bits(drawRb->Format, GL_DEPTH_BITS);
+
+   /* If both buffers also have depth data, the depth formats must match
+    * as well.  If one doesn't have depth, it's not blitted, so we should
+    * ignore the depth format check.
+    */
+   if (read_z_bits > 0 && draw_z_bits > 0 &&
+       (read_z_bits != draw_z_bits ||
+        _mesa_get_format_datatype(readRb->Format) !=
+        _mesa_get_format_datatype(drawRb->Format))) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(stencil attachment depth format mismatch)", func);
+      return false;
+   }
+   return true;
+}
+
+
 static ALWAYS_INLINE void
 blit_framebuffer(struct gl_context *ctx,
                  struct gl_framebuffer *readFb, struct gl_framebuffer *drawFb,
@@ -403,41 +449,8 @@ blit_framebuffer(struct gl_context *ctx,
       if ((readRb == NULL) || (drawRb == NULL)) {
          mask &= ~GL_STENCIL_BUFFER_BIT;
       } else if (!no_error) {
-         int read_z_bits, draw_z_bits;
-
-         if (_mesa_is_gles3(ctx) && (drawRb == readRb)) {
-            _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "%s(source and destination stencil "
-                        "buffer cannot be the same)", func);
+         if (!validate_stencil_buffer(ctx, readFb, drawFb, func))
             return;
-         }
-
-         if (_mesa_get_format_bits(readRb->Format, GL_STENCIL_BITS) !=
-             _mesa_get_format_bits(drawRb->Format, GL_STENCIL_BITS)) {
-            /* There is no need to check the stencil datatype here, because
-             * there is only one: GL_UNSIGNED_INT.
-             */
-            _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "%s(stencil attachment format mismatch)", func);
-            return;
-         }
-
-         read_z_bits = _mesa_get_format_bits(readRb->Format, GL_DEPTH_BITS);
-         draw_z_bits = _mesa_get_format_bits(drawRb->Format, GL_DEPTH_BITS);
-
-         /* If both buffers also have depth data, the depth formats must match
-          * as well.  If one doesn't have depth, it's not blitted, so we should
-          * ignore the depth format check.
-          */
-         if (read_z_bits > 0 && draw_z_bits > 0 &&
-             (read_z_bits != draw_z_bits ||
-              _mesa_get_format_datatype(readRb->Format) !=
-              _mesa_get_format_datatype(drawRb->Format))) {
-
-            _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "%s(stencil attachment depth format mismatch)", func);
-            return;
-         }
       }
    }
 
