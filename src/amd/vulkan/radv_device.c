@@ -2703,7 +2703,20 @@ radv_initialise_color_surface(struct radv_device *device,
 
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 
-	{
+	if (device->physical_device->rad_info.chip_class >= GFX9) {
+		struct gfx9_surf_meta_flags meta;
+		if (iview->image->dcc_offset)
+			meta = iview->image->surface.u.gfx9.dcc;
+		else
+			meta = iview->image->surface.u.gfx9.cmask;
+
+		cb->cb_color_attrib |= S_028C74_COLOR_SW_MODE(iview->image->surface.u.gfx9.surf.swizzle_mode) |
+			S_028C74_FMASK_SW_MODE(iview->image->surface.u.gfx9.fmask.swizzle_mode) |
+			S_028C74_RB_ALIGNED(meta.rb_aligned) |
+			S_028C74_PIPE_ALIGNED(meta.pipe_aligned);
+
+		va += iview->image->surface.u.gfx9.surf_offset >> 8;
+	} else {
 		const struct legacy_surf_level *level_info = &surf->u.legacy.level[iview->base_mip];
 		unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
 
@@ -2834,6 +2847,21 @@ radv_initialise_color_surface(struct radv_device *device,
 	    device->physical_device->rad_info.chip_class == SI) {
 		unsigned bankh = util_logbase2(iview->image->surface.u.legacy.bankh);
 		cb->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
+	}
+
+	if (device->physical_device->rad_info.chip_class >= GFX9) {
+		uint32_t max_slice = radv_surface_layer_count(iview);
+		unsigned mip0_depth = iview->base_layer + max_slice - 1;
+
+		cb->cb_color_view |= S_028C6C_MIP_LEVEL(iview->base_mip);
+		cb->cb_color_attrib |= S_028C74_MIP0_DEPTH(mip0_depth) |
+			S_028C74_RESOURCE_TYPE(iview->image->surface.u.gfx9.resource_type);
+		cb->cb_color_attrib2 = S_028C68_MIP0_WIDTH(iview->image->info.width - 1) |
+			S_028C68_MIP0_HEIGHT(iview->image->info.height - 1) |
+			S_028C68_MAX_MIP(iview->image->info.levels);
+
+		cb->gfx9_epitch = S_0287A0_EPITCH(iview->image->surface.u.gfx9.surf.epitch);
+
 	}
 }
 
