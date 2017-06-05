@@ -540,6 +540,10 @@
 #define   S_SQ_MEM_GDS_WORD1_DST_REL(x)                              (((unsigned)(x) & 0x3) << 7)
 #define   S_SQ_MEM_GDS_WORD1_GDS_OP(x)                               (((unsigned)(x) & 0x3f) << 9)
 #define   S_SQ_MEM_GDS_WORD1_SRC_GPR(x)                              (((unsigned)(x) & 0x7f) << 16)
+#define   S_SQ_MEM_GDS_WORD1_UAV_INDEX_MODE(x)                       (((unsigned)(x) & 0x3) << 24)
+#define   S_SQ_MEM_GDS_WORD1_UAV_ID(x)                               (((unsigned)(x) & 0xf) << 26)
+#define   S_SQ_MEM_GDS_WORD1_ALLOC_CONSUME(x)                        (((unsigned)(x) & 0x1) << 30)
+#define   S_SQ_MEM_GDS_WORD1_BCAST_FIRST_REQ(x)                      (((unsigned)(x) & 0x1) << 31)
 
 #define P_SQ_MEM_GDS_WORD2
 #define   S_SQ_MEM_GDS_WORD2_DST_SEL_X(x)                            (((unsigned)(x) & 0x7) << 0)
