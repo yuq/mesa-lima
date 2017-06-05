@@ -67,9 +67,10 @@ struct PA_STATE
     typedef         simdscalari         SIMDSCALARI;
 
 #endif
-    DRAW_CONTEXT *pDC{ nullptr };              // draw context
-    uint8_t* pStreamBase{ nullptr };           // vertex stream
-    uint32_t streamSizeInVerts{ 0 };     // total size of the input stream in verts
+    DRAW_CONTEXT *pDC{ nullptr };       // draw context
+    uint8_t* pStreamBase{ nullptr };    // vertex stream
+    uint32_t streamSizeInVerts{ 0 };    // total size of the input stream in verts
+    uint32_t vertexStride{ 0 };         // stride of a vertex in simdvector units
 
     // The topology the binner will use. In some cases the FE changes the topology from the api state.
     PRIMITIVE_TOPOLOGY binTopology{ TOP_UNKNOWN };
@@ -79,8 +80,8 @@ struct PA_STATE
 
 #endif
     PA_STATE() {}
-    PA_STATE(DRAW_CONTEXT *in_pDC, uint8_t* in_pStreamBase, uint32_t in_streamSizeInVerts) :
-        pDC(in_pDC), pStreamBase(in_pStreamBase), streamSizeInVerts(in_streamSizeInVerts) {}
+    PA_STATE(DRAW_CONTEXT *in_pDC, uint8_t* in_pStreamBase, uint32_t in_streamSizeInVerts, uint32_t in_vertexStride) :
+        pDC(in_pDC), pStreamBase(in_pStreamBase), streamSizeInVerts(in_streamSizeInVerts), vertexStride(in_vertexStride) {}
 
     virtual bool HasWork() = 0;
     virtual simdvector& GetSimdVector(uint32_t index, uint32_t slot) = 0;
@@ -164,7 +165,7 @@ struct PA_STATE_OPT : public PA_STATE
     
     PA_STATE_OPT() {}
     PA_STATE_OPT(DRAW_CONTEXT* pDC, uint32_t numPrims, uint8_t* pStream, uint32_t streamSizeInVerts,
-        bool in_isStreaming, PRIMITIVE_TOPOLOGY topo = TOP_UNKNOWN);
+        uint32_t vertexStride, bool in_isStreaming, PRIMITIVE_TOPOLOGY topo = TOP_UNKNOWN);
 
     bool HasWork()
     {
@@ -173,15 +174,19 @@ struct PA_STATE_OPT : public PA_STATE
 
     simdvector& GetSimdVector(uint32_t index, uint32_t slot)
     {
-        simdvertex* pVertex = (simdvertex*)pStreamBase;
-        return pVertex[index].attrib[slot];
+        SWR_ASSERT(slot < vertexStride);
+        uint32_t offset = index * vertexStride + slot;
+        simdvector& vertexSlot = ((simdvector*)pStreamBase)[offset];
+        return vertexSlot;
     }
 
 #if ENABLE_AVX512_SIMD16
     simd16vector& GetSimdVector_simd16(uint32_t index, uint32_t slot)
     {
-        simd16vertex* pVertex = (simd16vertex*)pStreamBase;
-        return pVertex[index].attrib[slot];
+        SWR_ASSERT(slot < vertexStride);
+        uint32_t offset = index * vertexStride + slot;
+        simd16vector& vertexSlot = ((simd16vector*)pStreamBase)[offset];
+        return vertexSlot;
     }
 
 #endif
@@ -262,8 +267,9 @@ struct PA_STATE_OPT : public PA_STATE
         }
 
         SWR_ASSERT(cur < numSimdVerts);
+        SIMDVECTOR* pVertex = &((SIMDVECTOR*)pStreamBase)[cur * vertexStride];
 
-        return reinterpret_cast<SIMDVERTEX *>(pStreamBase)[cur];
+        return *(SIMDVERTEX*)pVertex;
     }
 
     SIMDMASK& GetNextVsIndices()
@@ -423,9 +429,9 @@ struct PA_STATE_CUT : public PA_STATE
     PFN_PA_FUNC pfnPa{ nullptr };        // per-topology function that processes a single vert
 
     PA_STATE_CUT() {}
-    PA_STATE_CUT(DRAW_CONTEXT* pDC, uint8_t* in_pStream, uint32_t in_streamSizeInVerts, SIMDMASK* in_pIndices, uint32_t in_numVerts,
+    PA_STATE_CUT(DRAW_CONTEXT* pDC, uint8_t* in_pStream, uint32_t in_streamSizeInVerts, uint32_t in_vertexStride, SIMDMASK* in_pIndices, uint32_t in_numVerts,
         uint32_t in_numAttribs, PRIMITIVE_TOPOLOGY topo, bool in_processCutVerts)
-        : PA_STATE(pDC, in_pStream, in_streamSizeInVerts)
+        : PA_STATE(pDC, in_pStream, in_streamSizeInVerts, in_vertexStride)
     {
         numVerts = in_streamSizeInVerts;
         numAttribs = in_numAttribs;
@@ -480,7 +486,9 @@ struct PA_STATE_CUT : public PA_STATE
         uint32_t vertexIndex = this->headVertex / SIMD_WIDTH;
         this->headVertex = (this->headVertex + SIMD_WIDTH) % this->numVerts;
         this->needOffsets = true;
-        return ((SIMDVERTEX*)pStreamBase)[vertexIndex];
+        SIMDVECTOR* pVertex = &((SIMDVECTOR*)pStreamBase)[vertexIndex * vertexStride];
+
+        return *(SIMDVERTEX*)pVertex;
     }
 
     SIMDMASK& GetNextVsIndices()
@@ -635,16 +643,17 @@ struct PA_STATE_CUT : public PA_STATE
     {
         for (uint32_t v = 0; v < this->vertsPerPrim; ++v)
         {
+            uint32_t vertexStrideBytes = vertexStride * sizeof(SIMDVECTOR);
             SIMDSCALARI vIndices = *(SIMDSCALARI*)&this->indices[v][0];
 
             // step to simdvertex batch
             const uint32_t simdShift = SIMD_WIDTH_LOG2;
 #if USE_SIMD16_FRONTEND
             SIMDSCALARI vVertexBatch = _simd16_srai_epi32(vIndices, simdShift);
-            this->vOffsets[v] = _simd16_mullo_epi32(vVertexBatch, _simd16_set1_epi32(sizeof(SIMDVERTEX)));
+            this->vOffsets[v] = _simd16_mullo_epi32(vVertexBatch, _simd16_set1_epi32(vertexStrideBytes));
 #else
             SIMDSCALARI vVertexBatch = _simd_srai_epi32(vIndices, simdShift);
-            this->vOffsets[v] = _simd_mullo_epi32(vVertexBatch, _simd_set1_epi32(sizeof(SIMDVERTEX)));
+            this->vOffsets[v] = _simd_mullo_epi32(vVertexBatch, _simd_set1_epi32(vertexStrideBytes));
 #endif
 
             // step to index
@@ -1132,12 +1141,13 @@ struct PA_TESS : PA_STATE
         DRAW_CONTEXT *in_pDC,
         const SIMDSCALAR* in_pVertData,
         uint32_t in_attributeStrideInVectors,
+        uint32_t in_vertexStride,
         uint32_t in_numAttributes,
         uint32_t* (&in_ppIndices)[3],
         uint32_t in_numPrims,
         PRIMITIVE_TOPOLOGY in_binTopology) :
 
-        PA_STATE(in_pDC, nullptr, 0),
+        PA_STATE(in_pDC, nullptr, 0, in_vertexStride),
         m_pVertexData(in_pVertData),
         m_attributeStrideInVectors(in_attributeStrideInVectors),
         m_numAttributes(in_numAttributes),
@@ -1407,7 +1417,7 @@ private:
 template <typename IsIndexedT, typename IsCutIndexEnabledT>
 struct PA_FACTORY
 {
-    PA_FACTORY(DRAW_CONTEXT* pDC, PRIMITIVE_TOPOLOGY in_topo, uint32_t numVerts, PA_STATE::SIMDVERTEX *pVertexStore, uint32_t vertexStoreSize) : topo(in_topo)
+    PA_FACTORY(DRAW_CONTEXT* pDC, PRIMITIVE_TOPOLOGY in_topo, uint32_t numVerts, PA_STATE::SIMDVERTEX *pVertexStore, uint32_t vertexStoreSize, uint32_t vertexStride) : topo(in_topo)
     {
 #if KNOB_ENABLE_CUT_AWARE_PA == TRUE
         const API_STATE& state = GetApiState(pDC);
@@ -1424,14 +1434,14 @@ struct PA_FACTORY
             uint32_t numAttribs = state.feNumAttributes;
 
             new (&this->paCut) PA_STATE_CUT(pDC, reinterpret_cast<uint8_t *>(pVertexStore), vertexStoreSize * PA_STATE::SIMD_WIDTH,
-                &this->indexStore[0], numVerts, numAttribs, state.topology, false);
+                vertexStride, &this->indexStore[0], numVerts, numAttribs, state.topology, false);
             cutPA = true;
         }
         else
 #endif
         {
             uint32_t numPrims = GetNumPrims(in_topo, numVerts);
-            new (&this->paOpt) PA_STATE_OPT(pDC, numPrims, reinterpret_cast<uint8_t *>(pVertexStore), vertexStoreSize * PA_STATE::SIMD_WIDTH, false);
+            new (&this->paOpt) PA_STATE_OPT(pDC, numPrims, reinterpret_cast<uint8_t *>(pVertexStore), vertexStoreSize * PA_STATE::SIMD_WIDTH, vertexStride, false);
             cutPA = false;
         }
 

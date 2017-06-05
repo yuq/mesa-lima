@@ -673,7 +673,7 @@ public:
                 }
             }
 
-            PA_STATE_OPT clipPa(this->pDC, numEmittedPrims, (uint8_t*)&transposedPrims[0], numEmittedVerts, true, clipTopology);
+            PA_STATE_OPT clipPa(this->pDC, numEmittedPrims, (uint8_t*)&transposedPrims[0], numEmittedVerts, SWR_VTX_NUM_SLOTS, true, clipTopology);
 
             while (clipPa.GetNextStreamOutput())
             {
@@ -914,7 +914,7 @@ public:
                 }
             }
 
-            PA_STATE_OPT clipPa(this->pDC, numEmittedPrims, (uint8_t*)&transposedPrims[0], numEmittedVerts, true, clipTopology);
+            PA_STATE_OPT clipPa(this->pDC, numEmittedPrims, (uint8_t*)&transposedPrims[0], numEmittedVerts, SWR_VTX_NUM_SLOTS, true, clipTopology);
 
             while (clipPa.GetNextStreamOutput())
             {

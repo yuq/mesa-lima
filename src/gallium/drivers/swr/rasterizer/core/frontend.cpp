@@ -916,10 +916,10 @@ static void GeometryShaderStage(
                 }
 
 #if USE_SIMD16_FRONTEND
-                PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, reinterpret_cast<simd16mask *>(pCutBuffer), numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
+                PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, SWR_VTX_NUM_SLOTS, reinterpret_cast<simd16mask *>(pCutBuffer), numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
 
 #else
-                PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, pCutBuffer, numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
+                PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, SWR_VTX_NUM_SLOTS, pCutBuffer, numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
 
 #endif
                 while (gsPa.GetNextStreamOutput())
@@ -1277,6 +1277,7 @@ static void TessellationStages(
             dsContext.pOutputData,
             dsContext.vectorStride,
 #endif
+            SWR_VTX_NUM_SLOTS,
             tsState.numDsOutputAttribs,
             tsData.ppIndices,
             tsData.NumPrimitives,
@@ -1503,7 +1504,7 @@ void ProcessDraw(
     }
 
     // choose primitive assembler
-    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, pVertexStore, gVertexStoreSize);
+    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, pVertexStore, gVertexStoreSize, SWR_VTX_NUM_SLOTS);
     PA_STATE& pa = paFactory.GetPA();
 
 #if USE_SIMD16_FRONTEND
