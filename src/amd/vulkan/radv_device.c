@@ -2913,7 +2913,39 @@ radv_initialise_ds_surface(struct radv_device *device,
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	s_offs = z_offs = va;
 
-	{
+	if (device->physical_device->rad_info.chip_class >= GFX9) {
+		assert(iview->image->surface.u.gfx9.surf_offset == 0);
+		s_offs += iview->image->surface.u.gfx9.stencil_offset;
+
+		ds->db_z_info = S_028038_FORMAT(format) |
+			S_028038_NUM_SAMPLES(util_logbase2(iview->image->info.samples)) |
+			S_028038_SW_MODE(iview->image->surface.u.gfx9.surf.swizzle_mode) |
+			S_028038_MAXMIP(iview->image->info.levels - 1);
+		ds->db_stencil_info = S_02803C_FORMAT(stencil_format) |
+			S_02803C_SW_MODE(iview->image->surface.u.gfx9.stencil.swizzle_mode);
+
+		ds->db_z_info2 = S_028068_EPITCH(iview->image->surface.u.gfx9.surf.epitch);
+		ds->db_stencil_info2 = S_02806C_EPITCH(iview->image->surface.u.gfx9.stencil.epitch);
+		ds->db_depth_view |= S_028008_MIPID(level);
+
+		ds->db_depth_size = S_02801C_X_MAX(iview->image->info.width - 1) |
+			S_02801C_Y_MAX(iview->image->info.height - 1);
+
+		/* Only use HTILE for the first level. */
+		if (iview->image->surface.htile_size && !level) {
+			ds->db_z_info |= S_028038_TILE_SURFACE_ENABLE(1);
+
+			if (!(iview->image->surface.flags & RADEON_SURF_SBUFFER))
+				/* Use all of the htile_buffer for depth if there's no stencil. */
+				ds->db_stencil_info |= S_02803C_TILE_STENCIL_DISABLE(1);
+			va = device->ws->buffer_get_va(iview->bo) + iview->image->offset +
+				iview->image->htile_offset;
+			ds->db_htile_data_base = va >> 8;
+			ds->db_htile_surface = S_028ABC_FULL_CACHE(1) |
+				S_028ABC_PIPE_ALIGNED(iview->image->surface.u.gfx9.htile.pipe_aligned) |
+				S_028ABC_RB_ALIGNED(iview->image->surface.u.gfx9.htile.rb_aligned);
+		}
+	} else {
 		const struct legacy_surf_level *level_info = &iview->image->surface.u.legacy.level[level];
 
 		if (stencil_only)
