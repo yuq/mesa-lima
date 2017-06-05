@@ -653,6 +653,13 @@ vc4_simulator_ioctl(int fd, unsigned long request, void *args)
                  */
                 return 0;
 
+        case DRM_IOCTL_VC4_GET_TILING:
+        case DRM_IOCTL_VC4_SET_TILING:
+                /* Disable these for now, since the sharing with i965 requires
+                 * linear buffers.
+                 */
+                return -1;
+
         case DRM_IOCTL_VC4_GET_PARAM:
                 return vc4_simulator_get_param_ioctl(fd, args);
 
