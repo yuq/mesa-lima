@@ -234,6 +234,14 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 	cmd_buffer->record_fail = false;
 
 	cmd_buffer->ring_offsets_idx = -1;
+
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+		void *fence_ptr;
+		radv_cmd_buffer_upload_alloc(cmd_buffer, 8, 0,
+					     &cmd_buffer->gfx9_fence_offset,
+					     &fence_ptr);
+		cmd_buffer->gfx9_fence_bo = cmd_buffer->upload.upload_bo;
+	}
 }
 
 static bool

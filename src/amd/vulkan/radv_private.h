@@ -822,6 +822,9 @@ struct radv_cmd_buffer {
 	bool record_fail;
 
 	int ring_offsets_idx; /* just used for verification */
+	uint32_t gfx9_fence_offset;
+	struct radeon_winsys_bo *gfx9_fence_bo;
+	uint32_t gfx9_fence_idx;
 };
 
 struct radv_image;
@@ -854,9 +857,10 @@ void si_emit_wait_fence(struct radeon_winsys_cs *cs,
 			uint64_t va, uint32_t ref,
 			uint32_t mask);
 void si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
-                            enum chip_class chip_class,
-                            bool is_mec,
-                            enum radv_cmd_flush_bits flush_bits);
+			    enum chip_class chip_class,
+			    uint32_t *fence_ptr, uint64_t va,
+			    bool is_mec,
+			    enum radv_cmd_flush_bits flush_bits);
 void si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer);
 void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 			   uint64_t src_va, uint64_t dest_va,
