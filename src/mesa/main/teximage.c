@@ -3186,15 +3186,15 @@ _mesa_EGLImageTargetTexture2DOES (GLenum target, GLeglImageOES image)
  * Helper that implements the glTexSubImage1/2/3D()
  * and glTextureSubImage1/2/3D() functions.
  */
-void
-_mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
-                        struct gl_texture_object *texObj,
-                        struct gl_texture_image *texImage,
-                        GLenum target, GLint level,
-                        GLint xoffset, GLint yoffset, GLint zoffset,
-                        GLsizei width, GLsizei height, GLsizei depth,
-                        GLenum format, GLenum type, const GLvoid *pixels,
-                        bool dsa)
+static void
+texture_sub_image(struct gl_context *ctx, GLuint dims,
+                  struct gl_texture_object *texObj,
+                  struct gl_texture_image *texImage,
+                  GLenum target, GLint level,
+                  GLint xoffset, GLint yoffset, GLint zoffset,
+                  GLsizei width, GLsizei height, GLsizei depth,
+                  GLenum format, GLenum type, const GLvoid *pixels,
+                  bool dsa)
 {
    FLUSH_VERTICES(ctx, 0);
 
@@ -3276,9 +3276,9 @@ texsubimage_err(struct gl_context *ctx, GLuint dims, GLenum target, GLint level,
                   _mesa_enum_to_string(format),
                   _mesa_enum_to_string(type), pixels);
 
-   _mesa_texture_sub_image(ctx, dims, texObj, texImage, target, level,
-                           xoffset, yoffset, zoffset, width, height, depth,
-                           format, type, pixels, false);
+   texture_sub_image(ctx, dims, texObj, texImage, target, level,
+                     xoffset, yoffset, zoffset, width, height, depth,
+                     format, type, pixels, false);
 }
 
 
@@ -3376,10 +3376,10 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
          texImage = texObj->Image[i][level];
          assert(texImage);
 
-         _mesa_texture_sub_image(ctx, 3, texObj, texImage, texObj->Target,
-                                 level, xoffset, yoffset, 0,
-                                 width, height, 1, format,
-                                 type, pixels, true);
+         texture_sub_image(ctx, 3, texObj, texImage, texObj->Target,
+                           level, xoffset, yoffset, 0,
+                           width, height, 1, format,
+                           type, pixels, true);
          pixels = (GLubyte *) pixels + imageStride;
       }
    }
@@ -3387,10 +3387,10 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
       texImage = _mesa_select_tex_image(texObj, texObj->Target, level);
       assert(texImage);
 
-      _mesa_texture_sub_image(ctx, dims, texObj, texImage, texObj->Target,
-                              level, xoffset, yoffset, zoffset,
-                              width, height, depth, format,
-                              type, pixels, true);
+      texture_sub_image(ctx, dims, texObj, texImage, texObj->Target,
+                        level, xoffset, yoffset, zoffset,
+                        width, height, depth, format,
+                        type, pixels, true);
    }
 }
 
