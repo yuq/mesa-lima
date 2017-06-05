@@ -452,7 +452,7 @@ si_emit_config(struct radv_physical_device *physical_device,
 		radeon_set_context_reg(cs, R_028C5C_VGT_OUT_DEALLOC_CNTL, 16);
 	}
 
-	if (physical_device->rad_info.family == CHIP_STONEY)
+	if (physical_device->has_rbplus)
 		radeon_set_context_reg(cs, R_028C40_PA_SC_SHADER_CONTROL, 0);
 
 	if (physical_device->rad_info.chip_class >= GFX9) {

@@ -304,6 +304,12 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	radv_get_device_uuid(drm_device, device->device_uuid);
 
+	if (device->rad_info.family == CHIP_STONEY ||
+	    device->rad_info.chip_class >= GFX9) {
+		device->has_rbplus = true;
+		device->rbplus_allowed = device->rad_info.family == CHIP_STONEY;
+	}
+
 	return VK_SUCCESS;
 
 fail:

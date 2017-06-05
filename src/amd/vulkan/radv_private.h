@@ -273,6 +273,9 @@ struct radv_physical_device {
 	int local_fd;
 	struct wsi_device                       wsi_device;
 	struct radv_extensions                      extensions;
+
+	bool has_rbplus; /* if RB+ register exist */
+	bool rbplus_allowed; /* if RB+ is allowed */
 };
 
 struct radv_instance {

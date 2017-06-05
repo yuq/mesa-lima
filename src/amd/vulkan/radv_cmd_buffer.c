@@ -366,6 +366,13 @@ radv_emit_graphics_blend_state(struct radv_cmd_buffer *cmd_buffer,
 			  8);
 	radeon_set_context_reg(cmd_buffer->cs, R_028808_CB_COLOR_CONTROL, pipeline->graphics.blend.cb_color_control);
 	radeon_set_context_reg(cmd_buffer->cs, R_028B70_DB_ALPHA_TO_MASK, pipeline->graphics.blend.db_alpha_to_mask);
+
+	if (cmd_buffer->device->physical_device->has_rbplus) {
+		radeon_set_context_reg_seq(cmd_buffer->cs, R_028754_SX_PS_DOWNCONVERT, 3);
+		radeon_emit(cmd_buffer->cs, 0);	/* R_028754_SX_PS_DOWNCONVERT */
+		radeon_emit(cmd_buffer->cs, 0);	/* R_028758_SX_BLEND_OPT_EPSILON */
+		radeon_emit(cmd_buffer->cs, 0);	/* R_02875C_SX_BLEND_OPT_CONTROL */
+	}
 }
 
 static void

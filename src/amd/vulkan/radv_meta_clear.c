@@ -915,6 +915,11 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	if (clear_rect->layerCount != iview->image->info.array_size)
 		goto fail;
 
+	/* RB+ doesn't work with CMASK fast clear on Stoney. */
+	if (!iview->image->surface.dcc_size &&
+	    cmd_buffer->device->physical_device->rad_info.family == CHIP_STONEY)
+		goto fail;
+
 	/* DCC */
 	ret = radv_format_pack_clear_color(iview->image->vk_format,
 					   clear_color, &clear_value);
