@@ -39,9 +39,13 @@ struct gen_device_info
    bool is_ivybridge;
    bool is_baytrail;
    bool is_haswell;
+   bool is_broadwell;
    bool is_cherryview;
+   bool is_skylake;
    bool is_broxton;
    bool is_kabylake;
+   bool is_geminilake;
+   bool is_cannonlake;
 
    bool has_hiz_and_separate_stencil;
    bool must_use_separate_stencil;

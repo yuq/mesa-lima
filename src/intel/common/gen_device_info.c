@@ -304,6 +304,7 @@ static const struct gen_device_info gen_device_info_hsw_gt3 = {
 
 static const struct gen_device_info gen_device_info_bdw_gt1 = {
    GEN8_FEATURES, .gt = 1,
+   .is_broadwell = true,
    .num_slices = 1,
    .l3_banks = 2,
    .max_cs_threads = 42,
@@ -324,6 +325,7 @@ static const struct gen_device_info gen_device_info_bdw_gt1 = {
 
 static const struct gen_device_info gen_device_info_bdw_gt2 = {
    GEN8_FEATURES, .gt = 2,
+   .is_broadwell = true,
    .num_slices = 1,
    .l3_banks = 4,
    .max_cs_threads = 56,
@@ -344,6 +346,7 @@ static const struct gen_device_info gen_device_info_bdw_gt2 = {
 
 static const struct gen_device_info gen_device_info_bdw_gt3 = {
    GEN8_FEATURES, .gt = 3,
+   .is_broadwell = true,
    .num_slices = 2,
    .l3_banks = 8,
    .max_cs_threads = 56,
@@ -412,7 +415,6 @@ static const struct gen_device_info gen_device_info_chv = {
 
 #define GEN9_LP_FEATURES                           \
    GEN9_FEATURES,                                  \
-   .is_broxton = 1,                                \
    .gt = 1,                                        \
    .has_llc = false,                               \
    .num_slices = 1,                                \
@@ -463,6 +465,7 @@ static const struct gen_device_info gen_device_info_chv = {
 
 static const struct gen_device_info gen_device_info_skl_gt1 = {
    GEN9_FEATURES, .gt = 1,
+   .is_skylake = true,
    .num_slices = 1,
    .l3_banks = 2,
    .urb.size = 192,
@@ -470,18 +473,21 @@ static const struct gen_device_info gen_device_info_skl_gt1 = {
 
 static const struct gen_device_info gen_device_info_skl_gt2 = {
    GEN9_FEATURES, .gt = 2,
+   .is_skylake = true,
    .num_slices = 1,
    .l3_banks = 4,
 };
 
 static const struct gen_device_info gen_device_info_skl_gt3 = {
    GEN9_FEATURES, .gt = 3,
+   .is_skylake = true,
    .num_slices = 2,
    .l3_banks = 8,
 };
 
 static const struct gen_device_info gen_device_info_skl_gt4 = {
    GEN9_FEATURES, .gt = 4,
+   .is_skylake = true,
    .num_slices = 3,
    .l3_banks = 12,
    /* From the "L3 Allocation and Programming" documentation:
@@ -497,11 +503,13 @@ static const struct gen_device_info gen_device_info_skl_gt4 = {
 
 static const struct gen_device_info gen_device_info_bxt = {
    GEN9_LP_FEATURES,
+   .is_broxton = true,
    .l3_banks = 2,
 };
 
 static const struct gen_device_info gen_device_info_bxt_2x6 = {
    GEN9_LP_FEATURES_2X6,
+   .is_broxton = true,
    .l3_banks = 1,
 };
 /*
@@ -570,12 +578,14 @@ static const struct gen_device_info gen_device_info_kbl_gt4 = {
 
 static const struct gen_device_info gen_device_info_glk = {
    GEN9_LP_FEATURES,
+   .is_geminilake = true,
    .l3_banks = 2,
 };
 
 /*TODO: Initialize l3_banks when we know the number. */
 static const struct gen_device_info gen_device_info_glk_2x6 = {
-   GEN9_LP_FEATURES_2X6
+   GEN9_LP_FEATURES_2X6,
+   .is_geminilake = true,
 };
 
 #define GEN10_HW_INFO                               \
@@ -606,22 +616,26 @@ static const struct gen_device_info gen_device_info_glk_2x6 = {
 
 static const struct gen_device_info gen_device_info_cnl_2x8 = {
    /* GT0.5 */
-   GEN10_FEATURES(1, 1, 2)
+   GEN10_FEATURES(1, 1, 2),
+   .is_cannonlake = true,
 };
 
 static const struct gen_device_info gen_device_info_cnl_3x8 = {
    /* GT1 */
-   GEN10_FEATURES(1, 1, 3)
+   GEN10_FEATURES(1, 1, 3),
+   .is_cannonlake = true,
 };
 
 static const struct gen_device_info gen_device_info_cnl_4x8 = {
    /* GT 1.5 */
-   GEN10_FEATURES(1, 2, 6)
+   GEN10_FEATURES(1, 2, 6),
+   .is_cannonlake = true,
 };
 
 static const struct gen_device_info gen_device_info_cnl_5x8 = {
    /* GT2 */
-   GEN10_FEATURES(2, 2, 6)
+   GEN10_FEATURES(2, 2, 6),
+   .is_cannonlake = true,
 };
 
 bool
