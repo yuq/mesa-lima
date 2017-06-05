@@ -116,6 +116,7 @@ enum {
 };
 
 #define I915_TEX_UNITS 8
+#define I915_WPOS_TEX_INVALID 0xff
 
 #define I915_MAX_CONSTANT      32
 #define I915_CONSTANT_SIZE     (2+(4*I915_MAX_CONSTANT))

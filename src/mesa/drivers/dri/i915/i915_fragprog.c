@@ -1063,7 +1063,7 @@ check_wpos(struct i915_fragment_program *p)
    GLint i;
    unsigned unit = 0;
 
-   p->wpos_tex = -1;
+   p->wpos_tex = I915_WPOS_TEX_INVALID;
 
    if ((inputs & VARYING_BIT_POS) == 0)
       return;
@@ -1252,7 +1252,7 @@ i915ValidateFragmentProgram(struct i915_context *i915)
    intel->coloroffset = 0;
    intel->specoffset = 0;
 
-   if (inputsRead & VARYING_BITS_TEX_ANY || p->wpos_tex != -1) {
+   if (inputsRead & VARYING_BITS_TEX_ANY || p->wpos_tex != I915_WPOS_TEX_INVALID) {
       EMIT_ATTR(_TNL_ATTRIB_POS, EMIT_4F_VIEWPORT, S4_VFMT_XYZW, 16);
    }
    else {
