@@ -514,8 +514,8 @@ void radv_GetPhysicalDeviceFeatures(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceFeatures*                   pFeatures)
 {
-	//   RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
-
+	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
+	bool is_gfx9 = pdevice->rad_info.chip_class >= GFX9;
 	memset(pFeatures, 0, sizeof(*pFeatures));
 
 	*pFeatures = (VkPhysicalDeviceFeatures) {
@@ -523,8 +523,8 @@ void radv_GetPhysicalDeviceFeatures(
 		.fullDrawIndexUint32                      = true,
 		.imageCubeArray                           = true,
 		.independentBlend                         = true,
-		.geometryShader                           = true,
-		.tessellationShader                       = true,
+		.geometryShader                           = !is_gfx9,
+		.tessellationShader                       = !is_gfx9,
 		.sampleRateShading                        = false,
 		.dualSrcBlend                             = true,
 		.logicOp                                  = true,
