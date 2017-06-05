@@ -428,7 +428,7 @@ tc_call_render_condition(struct pipe_context *pipe, union tc_payload *payload)
 static void
 tc_render_condition(struct pipe_context *_pipe,
                     struct pipe_query *query, boolean condition,
-                    uint mode)
+                    enum pipe_render_cond_flag mode)
 {
    struct threaded_context *tc = threaded_context(_pipe);
    struct tc_render_condition *p =
@@ -597,7 +597,7 @@ tc_call_set_constant_buffer(struct pipe_context *pipe, union tc_payload *payload
 
 static void
 tc_set_constant_buffer(struct pipe_context *_pipe,
-                       uint shader, uint index,
+                       enum pipe_shader_type shader, uint index,
                        const struct pipe_constant_buffer *cb)
 {
    struct threaded_context *tc = threaded_context(_pipe);
@@ -845,7 +845,8 @@ tc_call_set_shader_buffers(struct pipe_context *pipe, union tc_payload *payload)
 }
 
 static void
-tc_set_shader_buffers(struct pipe_context *_pipe, unsigned shader,
+tc_set_shader_buffers(struct pipe_context *_pipe,
+                      enum pipe_shader_type shader,
                       unsigned start, unsigned count,
                       const struct pipe_shader_buffer *buffers)
 {
@@ -2172,10 +2173,11 @@ threaded_context_create(struct pipe_context *pipe,
    memset(tc, 0, sizeof(*tc));
 
    assert((uintptr_t)tc % 16 == 0);
-   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[0]) % 16 == 0);
-   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[0].call[0]) % 16 == 0);
-   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[0].call[1]) % 16 == 0);
-   STATIC_ASSERT(offsetof(struct threaded_context, batch_slots[1].call[0]) % 16 == 0);
+   /* These should be static asserts, but they don't work with MSVC */
+   assert(offsetof(struct threaded_context, batch_slots) % 16 == 0);
+   assert(offsetof(struct threaded_context, batch_slots[0].call) % 16 == 0);
+   assert(offsetof(struct threaded_context, batch_slots[0].call[1]) % 16 == 0);
+   assert(offsetof(struct threaded_context, batch_slots[1].call) % 16 == 0);
 
    /* The driver context isn't wrapped, so set its "priv" to NULL. */
    pipe->priv = NULL;
