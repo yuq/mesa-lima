@@ -787,7 +787,7 @@ void si_cs_emit_write_event_eop(struct radeon_winsys_cs *cs,
 		if (chip_class == CIK ||
 		    chip_class == VI) {
 			/* Two EOP events are required to make all engines go idle
-			 * (and optional cache flushes executed) before the timstamp
+			 * (and optional cache flushes executed) before the timestamp
 			 * is written.
 			 */
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
