@@ -217,3 +217,13 @@ ac_dump_module(LLVMModuleRef module)
 	fprintf(stderr, "%s", str);
 	LLVMDisposeMessage(str);
 }
+
+void
+ac_llvm_add_target_dep_function_attr(LLVMValueRef F,
+				     const char *name, int value)
+{
+	char str[16];
+
+	snprintf(str, sizeof(str), "%i", value);
+	LLVMAddTargetDependentFunctionAttr(F, name, str);
+}
