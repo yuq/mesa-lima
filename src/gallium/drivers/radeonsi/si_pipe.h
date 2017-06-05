@@ -67,6 +67,7 @@
 #define SI_CONTEXT_VGT_STREAMOUT_SYNC	(R600_CONTEXT_PRIVATE_FLAG << 13)
 
 #define SI_MAX_BORDER_COLORS	4096
+#define SIX_BITS		0x3F
 
 struct si_compute;
 struct hash_table;

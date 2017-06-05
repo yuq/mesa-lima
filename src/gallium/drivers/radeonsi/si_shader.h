@@ -326,6 +326,9 @@ struct si_shader_selector {
 	/* PIPE_SHADER_[VERTEX|FRAGMENT|...] */
 	unsigned	type;
 	bool		vs_needs_prolog;
+	unsigned	pa_cl_vs_out_cntl;
+	ubyte		clipdist_mask;
+	ubyte		culldist_mask;
 
 	/* GS parameters. */
 	unsigned	esgs_itemsize;

@@ -2087,6 +2087,22 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		break;
 	}
 
+	/* PA_CL_VS_OUT_CNTL */
+	bool misc_vec_ena =
+		sel->info.writes_psize || sel->info.writes_edgeflag ||
+		sel->info.writes_layer || sel->info.writes_viewport_index;
+	sel->pa_cl_vs_out_cntl =
+		S_02881C_USE_VTX_POINT_SIZE(sel->info.writes_psize) |
+		S_02881C_USE_VTX_EDGE_FLAG(sel->info.writes_edgeflag) |
+		S_02881C_USE_VTX_RENDER_TARGET_INDX(sel->info.writes_layer) |
+		S_02881C_USE_VTX_VIEWPORT_INDX(sel->info.writes_viewport_index) |
+		S_02881C_VS_OUT_MISC_VEC_ENA(misc_vec_ena) |
+		S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(misc_vec_ena);
+	sel->clipdist_mask = sel->info.writes_clipvertex ?
+				     SIX_BITS : sel->info.clipdist_writemask;
+	sel->culldist_mask = sel->info.culldist_writemask <<
+			     sel->info.num_written_clipdistance;
+
 	/* DB_SHADER_CONTROL */
 	sel->db_shader_control =
 		S_02880C_Z_EXPORT_ENABLE(sel->info.writes_z) |
