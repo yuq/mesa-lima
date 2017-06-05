@@ -29,6 +29,7 @@
 #include "vk_format.h"
 #include "radv_radeon_winsys.h"
 #include "sid.h"
+#include "gfx9d.h"
 #include "util/debug.h"
 static unsigned
 radv_choose_tiling(struct radv_device *Device,

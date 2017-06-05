@@ -35,6 +35,7 @@
 #include <llvm-c/TargetMachine.h>
 
 #include "sid.h"
+#include "gfx9d.h"
 #include "r600d_common.h"
 #include "ac_binary.h"
 #include "ac_llvm_util.h"

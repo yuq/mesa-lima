@@ -42,6 +42,7 @@
 #include "ac_llvm_util.h"
 #include "vk_format.h"
 #include "sid.h"
+#include "gfx9d.h"
 #include "util/debug.h"
 
 static int
@@ -230,6 +231,8 @@ get_chip_name(enum radeon_family family)
 	case CHIP_POLARIS11: return "AMD RADV POLARIS11";
 	case CHIP_POLARIS12: return "AMD RADV POLARIS12";
 	case CHIP_STONEY: return "AMD RADV STONEY";
+	case CHIP_VEGA10: return "AMD RADV VEGA";
+	case CHIP_RAVEN: return "AMD RADV RAVEN";
 	default: return "AMD RADV unknown";
 	}
 }
@@ -975,6 +978,8 @@ radv_device_init_gs_info(struct radv_device *device)
 	case CHIP_POLARIS10:
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12:
+	case CHIP_VEGA10:
+	case CHIP_RAVEN:
 		device->gs_table_depth = 32;
 		return;
 	default:
@@ -1476,6 +1481,7 @@ radv_get_hs_offchip_param(struct radv_device *device, uint32_t *max_offchip_buff
 		break;
 	case CIK:
 	case VI:
+	case GFX9:
 	default:
 		max_offchip_buffers = MIN2(max_offchip_buffers, 508);
 		break;
