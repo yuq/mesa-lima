@@ -603,9 +603,27 @@ static void *si_create_blend_state(struct pipe_context *ctx,
 static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	si_pm4_bind_state(sctx, blend, (struct si_state_blend *)state);
-	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
-	sctx->do_update_shaders = true;
+	struct si_state_blend *old_blend = sctx->queued.named.blend;
+	struct si_state_blend *blend = (struct si_state_blend *)state;
+
+	if (!state)
+		return;
+
+	if (!old_blend ||
+	     old_blend->cb_target_mask != blend->cb_target_mask ||
+	     old_blend->dual_src_blend != blend->dual_src_blend)
+		si_mark_atom_dirty(sctx, &sctx->cb_render_state);
+
+	si_pm4_bind_state(sctx, blend, state);
+
+	if (!old_blend ||
+	    old_blend->cb_target_mask != blend->cb_target_mask ||
+	    old_blend->alpha_to_coverage != blend->alpha_to_coverage ||
+	    old_blend->alpha_to_one != blend->alpha_to_one ||
+	    old_blend->dual_src_blend != blend->dual_src_blend ||
+	    old_blend->blend_enable_4bit != blend->blend_enable_4bit ||
+	    old_blend->need_src_alpha_4bit != blend->need_src_alpha_4bit)
+		sctx->do_update_shaders = true;
 }
 
 static void si_delete_blend_state(struct pipe_context *ctx, void *state)
@@ -921,10 +939,27 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_poly_offset_state(sctx);
 
-	si_mark_atom_dirty(sctx, &sctx->clip_regs);
+	if (!old_rs ||
+	    old_rs->clip_plane_enable != rs->clip_plane_enable ||
+	    old_rs->pa_cl_clip_cntl != rs->pa_cl_clip_cntl)
+		si_mark_atom_dirty(sctx, &sctx->clip_regs);
+
 	sctx->ia_multi_vgt_param_key.u.line_stipple_enabled =
 		rs->line_stipple_enable;
-	sctx->do_update_shaders = true;
+
+	if (!old_rs ||
+	    old_rs->clip_plane_enable != rs->clip_plane_enable ||
+	    old_rs->rasterizer_discard != rs->rasterizer_discard ||
+	    old_rs->sprite_coord_enable != rs->sprite_coord_enable ||
+	    old_rs->flatshade != rs->flatshade ||
+	    old_rs->two_side != rs->two_side ||
+	    old_rs->multisample_enable != rs->multisample_enable ||
+	    old_rs->poly_stipple_enable != rs->poly_stipple_enable ||
+	    old_rs->poly_smooth != rs->poly_smooth ||
+	    old_rs->line_smooth != rs->line_smooth ||
+	    old_rs->clamp_fragment_color != rs->clamp_fragment_color ||
+	    old_rs->force_persample_interp != rs->force_persample_interp)
+		sctx->do_update_shaders = true;
 }
 
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)
@@ -1062,6 +1097,7 @@ static void *si_create_dsa_state(struct pipe_context *ctx,
 static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
 {
         struct si_context *sctx = (struct si_context *)ctx;
+	struct si_state_dsa *old_dsa = sctx->queued.named.dsa;
         struct si_state_dsa *dsa = state;
 
         if (!state)
@@ -1074,7 +1110,9 @@ static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
 		sctx->stencil_ref.dsa_part = dsa->stencil_ref;
 		si_mark_atom_dirty(sctx, &sctx->stencil_ref.atom);
 	}
-	sctx->do_update_shaders = true;
+
+	if (!old_dsa || old_dsa->alpha_func != dsa->alpha_func)
+		sctx->do_update_shaders = true;
 }
 
 static void si_delete_dsa_state(struct pipe_context *ctx, void *state)
@@ -3693,6 +3731,9 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 			return NULL;
 		}
 
+		if (elements[i].instance_divisor)
+			v->uses_instance_divisors = true;
+
 		if (!used[vbo_index]) {
 			v->first_vb_use_mask |= 1 << i;
 			used[vbo_index] = true;
@@ -3806,11 +3847,19 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 static void si_bind_vertex_elements(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_vertex_element *old = sctx->vertex_elements;
 	struct si_vertex_element *v = (struct si_vertex_element*)state;
 
 	sctx->vertex_elements = v;
 	sctx->vertex_buffers_dirty = true;
-	sctx->do_update_shaders = true;
+
+	if (v &&
+	    (!old ||
+	     old->count != v->count ||
+	     old->uses_instance_divisors != v->uses_instance_divisors ||
+	     v->uses_instance_divisors || /* we don't check which divisors changed */
+	     memcmp(old->fix_fetch, v->fix_fetch, sizeof(v->fix_fetch[0]) * v->count)))
+		sctx->do_update_shaders = true;
 }
 
 static void si_delete_vertex_element(struct pipe_context *ctx, void *state)

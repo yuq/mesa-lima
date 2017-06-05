@@ -2314,18 +2314,25 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_shader_selector *old_sel = sctx->ps_shader.cso;
 	struct si_shader_selector *sel = state;
 
 	/* skip if supplied shader is one already in use */
-	if (sctx->ps_shader.cso == sel)
+	if (old_sel == sel)
 		return;
 
 	sctx->ps_shader.cso = sel;
 	sctx->ps_shader.current = sel ? sel->first_variant : NULL;
 	sctx->do_update_shaders = true;
-	if (sel && sctx->ia_multi_vgt_param_key.u.uses_tess)
-		si_update_tess_uses_prim_id(sctx);
-	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
+
+	if (sel) {
+		if (sctx->ia_multi_vgt_param_key.u.uses_tess)
+			si_update_tess_uses_prim_id(sctx);
+
+		if (!old_sel ||
+		    old_sel->info.colors_written != sel->info.colors_written)
+			si_mark_atom_dirty(sctx, &sctx->cb_render_state);
+	}
 	si_set_active_descriptors_for_shader(sctx, sel);
 }
 
@@ -3088,6 +3095,9 @@ bool si_update_shaders(struct si_context *sctx)
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct si_shader *old_vs = si_get_vs_state(sctx);
 	bool old_clip_disable = old_vs ? old_vs->key.opt.hw_vs.clip_disable : false;
+	struct si_shader *old_ps = sctx->ps_shader.current;
+	unsigned old_spi_shader_col_format =
+		old_ps ? old_ps->key.part.ps.epilog.spi_shader_col_format : 0;
 	int r;
 
 	compiler_state.tm = sctx->tm;
@@ -3212,7 +3222,11 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->spi_map);
 		}
 
-		if (sctx->screen->b.rbplus_allowed && si_pm4_state_changed(sctx, ps))
+		if (sctx->screen->b.rbplus_allowed &&
+		    si_pm4_state_changed(sctx, ps) &&
+		    (!old_ps ||
+		     old_spi_shader_col_format !=
+		     sctx->ps_shader.current->key.part.ps.epilog.spi_shader_col_format))
 			si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 
 		if (sctx->ps_db_shader_control != db_shader_control) {
