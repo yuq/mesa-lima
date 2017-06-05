@@ -168,9 +168,11 @@ rebase_depth_stencil(struct brw_context *brw, struct intel_renderbuffer *irb,
                  irb->mt_level, tile_x, tile_y);
       intel_renderbuffer_move_to_temp(brw, irb, invalidate);
 
-      /* Get the new offset. */
-      tile_x = irb->draw_x & tile_mask_x;
-      tile_y = irb->draw_y & tile_mask_y;
+      /* There is now only single slice miptree. */
+      brw->depthstencil.tile_x = 0;
+      brw->depthstencil.tile_y = 0;
+      brw->depthstencil.depth_offset = 0;
+      return true;
    }
 
    /* While we just tried to get everything aligned, we may have failed to do
@@ -192,7 +194,7 @@ rebase_depth_stencil(struct brw_context *brw, struct intel_renderbuffer *irb,
                                        irb->draw_x & ~tile_mask_x,
                                        irb->draw_y & ~tile_mask_y);
 
-   return rebase;
+   return false;
 }
 
 void
