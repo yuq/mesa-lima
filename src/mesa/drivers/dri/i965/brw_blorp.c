@@ -1007,7 +1007,8 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
  */
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-	       unsigned int level, unsigned int layer, enum blorp_hiz_op op)
+               unsigned int level, unsigned int start_layer,
+               unsigned int num_layers, enum blorp_hiz_op op)
 {
    const char *opname = NULL;
 
@@ -1026,12 +1027,14 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
       break;
    }
 
-   DBG("%s %s to mt %p level %d layer %d\n",
-       __func__, opname, mt, level, layer);
+   DBG("%s %s to mt %p level %d layers %d-%d\n",
+       __func__, opname, mt, level, start_layer, start_layer + num_layers - 1);
 
    if (brw->gen >= 8) {
-      gen8_hiz_exec(brw, mt, level, layer, op);
+      for (unsigned a = 0; a < num_layers; a++)
+         gen8_hiz_exec(brw, mt, level, start_layer + a, op);
    } else {
-      gen6_blorp_hiz_exec(brw, mt, level, layer, op);
+      for (unsigned a = 0; a < num_layers; a++)
+         gen6_blorp_hiz_exec(brw, mt, level, start_layer + a, op);
    }
 }

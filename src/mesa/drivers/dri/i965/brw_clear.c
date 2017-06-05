@@ -208,13 +208,11 @@ brw_fast_clear_depth(struct gl_context *ctx)
    }
 
    if (fb->MaxNumLayers > 0) {
-      for (unsigned layer = 0; layer < depth_irb->layer_count; layer++) {
-         intel_hiz_exec(brw, mt, depth_irb->mt_level,
-                        depth_irb->mt_layer + layer,
-                        BLORP_HIZ_OP_DEPTH_CLEAR);
-      }
+      intel_hiz_exec(brw, mt, depth_irb->mt_level,
+                     depth_irb->mt_layer, depth_irb->layer_count,
+                     BLORP_HIZ_OP_DEPTH_CLEAR);
    } else {
-      intel_hiz_exec(brw, mt, depth_irb->mt_level, depth_irb->mt_layer,
+      intel_hiz_exec(brw, mt, depth_irb->mt_level, depth_irb->mt_layer, 1,
                      BLORP_HIZ_OP_DEPTH_CLEAR);
    }
 
