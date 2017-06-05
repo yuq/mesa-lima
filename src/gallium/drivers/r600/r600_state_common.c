@@ -1400,6 +1400,32 @@ static void r600_generate_fixed_func_tcs(struct r600_context *rctx)
 		ureg_create_shader_and_destroy(ureg, &rctx->b.b);
 }
 
+static void r600_update_compressed_resource_state(struct r600_context *rctx)
+{
+	unsigned i;
+	unsigned counter;
+
+	counter = p_atomic_read(&rctx->screen->b.compressed_colortex_counter);
+	if (counter != rctx->b.last_compressed_colortex_counter) {
+		rctx->b.last_compressed_colortex_counter = counter;
+
+		for (i = 0; i < PIPE_SHADER_TYPES; ++i) {
+			r600_update_compressed_colortex_mask(&rctx->samplers[i].views);
+		}
+	}
+
+	/* Decompress textures if needed. */
+	for (i = 0; i < PIPE_SHADER_TYPES; i++) {
+		struct r600_samplerview_state *views = &rctx->samplers[i].views;
+		if (views->compressed_depthtex_mask) {
+			r600_decompress_depth_textures(rctx, views);
+		}
+		if (views->compressed_colortex_mask) {
+			r600_decompress_color_textures(rctx, views);
+		}
+	}
+}
+
 #define SELECT_SHADER_OR_FAIL(x) do {					\
 		r600_shader_select(ctx, rctx->x##_shader, &x##_dirty);	\
 		if (unlikely(!rctx->x##_shader->current))		\
@@ -1440,30 +1466,8 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 	bool need_buf_const;
 	struct r600_pipe_shader *clip_so_current = NULL;
 
-	if (!rctx->blitter->running) {
-		unsigned i;
-		unsigned counter;
-
-		counter = p_atomic_read(&rctx->screen->b.compressed_colortex_counter);
-		if (counter != rctx->b.last_compressed_colortex_counter) {
-			rctx->b.last_compressed_colortex_counter = counter;
-
-			for (i = 0; i < PIPE_SHADER_TYPES; ++i) {
-				r600_update_compressed_colortex_mask(&rctx->samplers[i].views);
-			}
-		}
-
-		/* Decompress textures if needed. */
-		for (i = 0; i < PIPE_SHADER_TYPES; i++) {
-			struct r600_samplerview_state *views = &rctx->samplers[i].views;
-			if (views->compressed_depthtex_mask) {
-				r600_decompress_depth_textures(rctx, views);
-			}
-			if (views->compressed_colortex_mask) {
-				r600_decompress_color_textures(rctx, views);
-			}
-		}
-	}
+	if (!rctx->blitter->running)
+		r600_update_compressed_resource_state(rctx);
 
 	SELECT_SHADER_OR_FAIL(ps);
 
