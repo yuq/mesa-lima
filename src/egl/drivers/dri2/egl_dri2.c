@@ -2278,9 +2278,8 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
     * will be present in attrs.DMABufPlaneModifiersLo[0] and
     * attrs.DMABufPlaneModifiersHi[0] */
    if (attrs.DMABufPlaneModifiersLo[0].IsPresent) {
-      modifier =
-         ((uint64_t) attrs.DMABufPlaneModifiersHi[0].Value << 32) |
-         attrs.DMABufPlaneModifiersLo[0].Value;
+      modifier = (uint64_t) attrs.DMABufPlaneModifiersHi[0].Value << 32;
+      modifier |= (uint64_t) (attrs.DMABufPlaneModifiersLo[0].Value & 0xffffffff);
       has_modifier = true;
    } else {
       modifier = DRM_FORMAT_MOD_INVALID;
