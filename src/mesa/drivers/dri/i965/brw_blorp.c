@@ -979,23 +979,6 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
                                PIPE_CONTROL_CS_STALL);
 }
 
-static void
-gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
-                    unsigned int level, unsigned int layer, enum blorp_hiz_op op)
-{
-   assert(intel_miptree_level_has_hiz(mt, level));
-
-   struct isl_surf isl_tmp[2];
-   struct blorp_surf surf;
-   blorp_surf_for_miptree(brw, &surf, mt, true, (1 << ISL_AUX_USAGE_HIZ),
-                          &level, layer, 1, isl_tmp);
-
-   struct blorp_batch batch;
-   blorp_batch_init(&brw->blorp, &batch, brw, 0);
-   blorp_gen6_hiz_op(&batch, &surf, level, layer, op);
-   blorp_batch_finish(&batch);
-}
-
 /**
  * Perform a HiZ or depth resolve operation.
  *
@@ -1082,8 +1065,18 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
       for (unsigned a = 0; a < num_layers; a++)
          gen8_hiz_exec(brw, mt, level, start_layer + a, op);
    } else {
+      assert(intel_miptree_level_has_hiz(mt, level));
+
+      struct isl_surf isl_tmp[2];
+      struct blorp_surf surf;
+      blorp_surf_for_miptree(brw, &surf, mt, true, (1 << ISL_AUX_USAGE_HIZ),
+                             &level, start_layer, num_layers, isl_tmp);
+
+      struct blorp_batch batch;
+      blorp_batch_init(&brw->blorp, &batch, brw, 0);
       for (unsigned a = 0; a < num_layers; a++)
-         gen6_blorp_hiz_exec(brw, mt, level, start_layer + a, op);
+         blorp_gen6_hiz_op(&batch, &surf, level, start_layer + a, op);
+      blorp_batch_finish(&batch);
    }
 
 
