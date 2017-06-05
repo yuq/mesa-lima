@@ -139,6 +139,18 @@ blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
    return vb_state.map;
 }
 
+#if GEN_GEN >= 8
+static struct blorp_address
+blorp_get_workaround_page(struct blorp_batch *batch)
+{
+   struct anv_cmd_buffer *cmd_buffer = batch->driver_batch;
+
+   return (struct blorp_address) {
+      .buffer = &cmd_buffer->device->workaround_bo,
+   };
+}
+#endif
+
 static void
 blorp_flush_range(struct blorp_batch *batch, void *start, size_t size)
 {

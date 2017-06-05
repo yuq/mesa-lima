@@ -150,6 +150,19 @@ blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
    return data;
 }
 
+#if GEN_GEN >= 8
+static struct blorp_address
+blorp_get_workaround_page(struct blorp_batch *batch)
+{
+   assert(batch->blorp->driver_ctx == batch->driver_batch);
+   struct brw_context *brw = batch->driver_batch;
+
+   return (struct blorp_address) {
+      .buffer = brw->workaround_bo,
+   };
+}
+#endif
+
 static void
 blorp_flush_range(struct blorp_batch *batch, void *start, size_t size)
 {

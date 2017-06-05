@@ -27,6 +27,7 @@
 #include "blorp_priv.h"
 #include "common/gen_device_info.h"
 #include "common/gen_sample_positions.h"
+#include "genxml/gen_macros.h"
 
 /**
  * This file provides the blorp pipeline setup and execution functionality.
@@ -59,6 +60,11 @@ static void *
 blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
                           struct blorp_address *addr);
 
+#if GEN_GEN >= 8
+static struct blorp_address
+blorp_get_workaround_page(struct blorp_batch *batch);
+#endif
+
 static void
 blorp_alloc_binding_table(struct blorp_batch *batch, unsigned num_entries,
                           unsigned state_size, unsigned state_alignment,
@@ -81,8 +87,6 @@ blorp_emit_pipeline(struct blorp_batch *batch,
                     const struct blorp_params *params);
 
 /***** BEGIN blorp_exec implementation ******/
-
-#include "genxml/gen_macros.h"
 
 static uint64_t
 _blorp_combine_address(struct blorp_batch *batch, void *location,
@@ -1497,6 +1501,7 @@ blorp_emit_gen8_hiz_op(struct blorp_batch *batch,
     */
    blorp_emit(batch, GENX(PIPE_CONTROL), pc) {
       pc.PostSyncOperation = WriteImmediateData;
+      pc.Address = blorp_get_workaround_page(batch);
    }
 
    blorp_emit(batch, GENX(3DSTATE_WM_HZ_OP), hzp);
