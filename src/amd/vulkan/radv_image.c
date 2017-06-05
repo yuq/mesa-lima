@@ -310,14 +310,18 @@ si_make_texture_descriptor(struct radv_device *device,
 		    S_008F1C_LAST_LEVEL(image->info.samples > 1 ?
 					util_logbase2(image->info.samples) :
 					last_level) |
-		    S_008F1C_POW2_PAD(image->info.levels > 1) |
 		    S_008F1C_TYPE(type));
-	state[4] = S_008F20_DEPTH(depth - 1);
-	state[5] = (S_008F24_BASE_ARRAY(first_layer) |
-		    S_008F24_LAST_ARRAY(last_layer));
+	state[4] = 0;
+	state[5] = S_008F24_BASE_ARRAY(first_layer);
+
 	state[6] = 0;
 	state[7] = 0;
 
+	{
+		state[3] |= S_008F1C_POW2_PAD(image->info.levels > 1);
+		state[4] |= S_008F20_DEPTH(depth - 1);
+		state[5] |= S_008F24_LAST_ARRAY(last_layer);
+	}
 	if (image->dcc_offset) {
 		unsigned swap = radv_translate_colorswap(vk_format, FALSE);
 
@@ -367,14 +371,18 @@ si_make_texture_descriptor(struct radv_device *device,
 			S_008F1C_DST_SEL_Y(V_008F1C_SQ_SEL_X) |
 			S_008F1C_DST_SEL_Z(V_008F1C_SQ_SEL_X) |
 			S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_X) |
-			S_008F1C_TILING_INDEX(image->fmask.tile_mode_index) |
 			S_008F1C_TYPE(radv_tex_dim(image->type, view_type, 1, 0, false));
-		fmask_state[4] = S_008F20_DEPTH(depth - 1) |
-			S_008F20_PITCH_GFX6(image->fmask.pitch_in_pixels - 1);
-		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer) |
-			S_008F24_LAST_ARRAY(last_layer);
+		fmask_state[4] = 0;
+		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer);
 		fmask_state[6] = 0;
 		fmask_state[7] = 0;
+
+		{
+			fmask_state[3] |= S_008F1C_TILING_INDEX(image->fmask.tile_mode_index);
+			fmask_state[4] |= S_008F20_DEPTH(depth - 1) |
+				S_008F20_PITCH_GFX6(image->fmask.pitch_in_pixels - 1);
+			fmask_state[5] |= S_008F24_LAST_ARRAY(last_layer);
+		}
 	}
 }
 
