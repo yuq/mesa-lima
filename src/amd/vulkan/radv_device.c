@@ -2687,24 +2687,55 @@ radv_initialise_color_surface(struct radv_device *device,
 	const struct vk_format_description *desc;
 	unsigned ntype, format, swap, endian;
 	unsigned blend_clamp = 0, blend_bypass = 0;
-	unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
 	uint64_t va;
 	const struct radeon_surf *surf = &iview->image->surface;
-	const struct legacy_surf_level *level_info = &surf->u.legacy.level[iview->base_mip];
 
 	desc = vk_format_description(iview->vk_format);
 
 	memset(cb, 0, sizeof(*cb));
 
+	/* Intensity is implemented as Red, so treat it that way. */
+	cb->cb_color_attrib = S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == VK_SWIZZLE_1);
+
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
-	va += level_info->offset;
+
+	{
+		const struct legacy_surf_level *level_info = &surf->u.legacy.level[iview->base_mip];
+		unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
+
+		va += level_info->offset;
+
+		pitch_tile_max = level_info->nblk_x / 8 - 1;
+		slice_tile_max = (level_info->nblk_x * level_info->nblk_y) / 64 - 1;
+		tile_mode_index = si_tile_mode_index(iview->image, iview->base_mip, false);
+
+		cb->cb_color_pitch = S_028C64_TILE_MAX(pitch_tile_max);
+		cb->cb_color_slice = S_028C68_TILE_MAX(slice_tile_max);
+		cb->cb_color_cmask_slice = iview->image->cmask.slice_tile_max;
+
+		cb->cb_color_attrib |= S_028C74_TILE_MODE_INDEX(tile_mode_index);
+		cb->micro_tile_mode = iview->image->surface.micro_tile_mode;
+
+		if (iview->image->fmask.size) {
+			if (device->physical_device->rad_info.chip_class >= CIK)
+				cb->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(iview->image->fmask.pitch_in_pixels / 8 - 1);
+			cb->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(iview->image->fmask.tile_mode_index);
+			cb->cb_color_fmask_slice = S_028C88_TILE_MAX(iview->image->fmask.slice_tile_max);
+		} else {
+			/* This must be set for fast clear to work without FMASK. */
+			if (device->physical_device->rad_info.chip_class >= CIK)
+				cb->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(pitch_tile_max);
+			cb->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(tile_mode_index);
+			cb->cb_color_fmask_slice = S_028C88_TILE_MAX(slice_tile_max);
+		}
+	}
+
 	cb->cb_color_base = va >> 8;
 
 	/* CMASK variables */
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	va += iview->image->cmask.offset;
 	cb->cb_color_cmask = va >> 8;
-	cb->cb_color_cmask_slice = iview->image->cmask.slice_tile_max;
 
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	va += iview->image->dcc_offset;
@@ -2713,18 +2744,6 @@ radv_initialise_color_surface(struct radv_device *device,
 	uint32_t max_slice = radv_surface_layer_count(iview);
 	cb->cb_color_view = S_028C6C_SLICE_START(iview->base_layer) |
 		S_028C6C_SLICE_MAX(iview->base_layer + max_slice - 1);
-
-	cb->micro_tile_mode = iview->image->surface.micro_tile_mode;
-	pitch_tile_max = level_info->nblk_x / 8 - 1;
-	slice_tile_max = (level_info->nblk_x * level_info->nblk_y) / 64 - 1;
-	tile_mode_index = si_tile_mode_index(iview->image, iview->base_mip, false);
-
-	cb->cb_color_pitch = S_028C64_TILE_MAX(pitch_tile_max);
-	cb->cb_color_slice = S_028C68_TILE_MAX(slice_tile_max);
-
-	/* Intensity is implemented as Red, so treat it that way. */
-	cb->cb_color_attrib = S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == VK_SWIZZLE_1) |
-		S_028C74_TILE_MODE_INDEX(tile_mode_index);
 
 	if (iview->image->info.samples > 1) {
 		unsigned log_samples = util_logbase2(iview->image->info.samples);
@@ -2735,18 +2754,9 @@ radv_initialise_color_surface(struct radv_device *device,
 
 	if (iview->image->fmask.size) {
 		va = device->ws->buffer_get_va(iview->bo) + iview->image->offset + iview->image->fmask.offset;
-		if (device->physical_device->rad_info.chip_class >= CIK)
-			cb->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(iview->image->fmask.pitch_in_pixels / 8 - 1);
-		cb->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(iview->image->fmask.tile_mode_index);
 		cb->cb_color_fmask = va >> 8;
-		cb->cb_color_fmask_slice = S_028C88_TILE_MAX(iview->image->fmask.slice_tile_max);
 	} else {
-		/* This must be set for fast clear to work without FMASK. */
-		if (device->physical_device->rad_info.chip_class >= CIK)
-			cb->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(pitch_tile_max);
-		cb->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(tile_mode_index);
 		cb->cb_color_fmask = cb->cb_color_base;
-		cb->cb_color_fmask_slice = S_028C88_TILE_MAX(slice_tile_max);
 	}
 
 	ntype = radv_translate_color_numformat(iview->vk_format,
