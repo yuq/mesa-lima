@@ -857,10 +857,6 @@ void si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
                             enum chip_class chip_class,
                             bool is_mec,
                             enum radv_cmd_flush_bits flush_bits);
-void si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
-                            enum chip_class chip_class,
-                            bool is_mec,
-                            enum radv_cmd_flush_bits flush_bits);
 void si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer);
 void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 			   uint64_t src_va, uint64_t dest_va,
