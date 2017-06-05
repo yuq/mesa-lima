@@ -3530,47 +3530,6 @@ static void si_llvm_return_fs_outputs(struct ac_shader_abi *abi,
 	ctx->return_value = ret;
 }
 
-/* Prevent optimizations (at least of memory accesses) across the current
- * point in the program by emitting empty inline assembly that is marked as
- * having side effects.
- *
- * Optionally, a value can be passed through the inline assembly to prevent
- * LLVM from hoisting calls to ReadNone functions.
- */
-static void emit_optimization_barrier(struct si_shader_context *ctx,
-				      LLVMValueRef *pvgpr)
-{
-	static int counter = 0;
-
-	LLVMBuilderRef builder = ctx->gallivm.builder;
-	char code[16];
-
-	snprintf(code, sizeof(code), "; %d", p_atomic_inc_return(&counter));
-
-	if (!pvgpr) {
-		LLVMTypeRef ftype = LLVMFunctionType(ctx->voidt, NULL, 0, false);
-		LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, code, "", true, false);
-		LLVMBuildCall(builder, inlineasm, NULL, 0, "");
-	} else {
-		LLVMTypeRef ftype = LLVMFunctionType(ctx->i32, &ctx->i32, 1, false);
-		LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, code, "=v,0", true, false);
-		LLVMValueRef vgpr = *pvgpr;
-		LLVMTypeRef vgpr_type = LLVMTypeOf(vgpr);
-		unsigned vgpr_size = ac_get_type_size(vgpr_type);
-		LLVMValueRef vgpr0;
-
-		assert(vgpr_size % 4 == 0);
-
-		vgpr = LLVMBuildBitCast(builder, vgpr, LLVMVectorType(ctx->i32, vgpr_size / 4), "");
-		vgpr0 = LLVMBuildExtractElement(builder, vgpr, ctx->i32_0, "");
-		vgpr0 = LLVMBuildCall(builder, inlineasm, &vgpr0, 1, "");
-		vgpr = LLVMBuildInsertElement(builder, vgpr, vgpr0, ctx->i32_0, "");
-		vgpr = LLVMBuildBitCast(builder, vgpr, vgpr_type, "");
-
-		*pvgpr = vgpr;
-	}
-}
-
 void si_emit_waitcnt(struct si_shader_context *ctx, unsigned simm16)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -3868,7 +3827,7 @@ static LLVMValueRef si_emit_ballot(struct si_shader_context *ctx,
 	/* We currently have no other way to prevent LLVM from lifting the icmp
 	 * calls to a dominating basic block.
 	 */
-	emit_optimization_barrier(ctx, &args[0]);
+	ac_build_optimization_barrier(&ctx->ac, &args[0]);
 
 	if (LLVMTypeOf(args[0]) != ctx->i32)
 		args[0] = LLVMBuildBitCast(gallivm->builder, args[0], ctx->i32, "");
@@ -3979,7 +3938,7 @@ static void read_lane_emit(
 	/* We currently have no other way to prevent LLVM from lifting the icmp
 	 * calls to a dominating basic block.
 	 */
-	emit_optimization_barrier(ctx, &emit_data->args[0]);
+	ac_build_optimization_barrier(&ctx->ac, &emit_data->args[0]);
 
 	for (unsigned i = 0; i < emit_data->arg_count; ++i) {
 		emit_data->args[i] = LLVMBuildBitCast(builder, emit_data->args[i],
