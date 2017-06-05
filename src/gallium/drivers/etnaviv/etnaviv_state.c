@@ -43,20 +43,6 @@
 #include "util/u_memory.h"
 
 static void
-etna_set_blend_color(struct pipe_context *pctx, const struct pipe_blend_color *bc)
-{
-   struct etna_context *ctx = etna_context(pctx);
-   struct compiled_blend_color *cs = &ctx->blend_color;
-
-   cs->PE_ALPHA_BLEND_COLOR =
-      VIVS_PE_ALPHA_BLEND_COLOR_R(etna_cfloat_to_uint8(bc->color[0])) |
-      VIVS_PE_ALPHA_BLEND_COLOR_G(etna_cfloat_to_uint8(bc->color[1])) |
-      VIVS_PE_ALPHA_BLEND_COLOR_B(etna_cfloat_to_uint8(bc->color[2])) |
-      VIVS_PE_ALPHA_BLEND_COLOR_A(etna_cfloat_to_uint8(bc->color[3]));
-   ctx->dirty |= ETNA_DIRTY_BLEND_COLOR;
-}
-
-static void
 etna_set_stencil_ref(struct pipe_context *pctx, const struct pipe_stencil_ref *sr)
 {
    struct etna_context *ctx = etna_context(pctx);
@@ -600,6 +586,9 @@ static const struct etna_state_updater etna_state_updates[] = {
    },
    {
       etna_update_blend, ETNA_DIRTY_BLEND | ETNA_DIRTY_FRAMEBUFFER
+   },
+   {
+      etna_update_blend_color, ETNA_DIRTY_BLEND_COLOR | ETNA_DIRTY_FRAMEBUFFER,
    }
 };
 
