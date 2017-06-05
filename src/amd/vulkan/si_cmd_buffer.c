@@ -1001,6 +1001,10 @@ static inline unsigned cp_dma_max_byte_count(struct radv_cmd_buffer *cmd_buffer)
 	return max & ~(SI_CPDMA_ALIGNMENT - 1);
 }
 
+/* Emit a CP DMA packet to do a copy from one buffer to another, or to clear
+ * a buffer. The size must fit in bits [20:0]. If CP_DMA_CLEAR is set, src_va is a 32-bit
+ * clear value.
+ */
 static void si_emit_cp_dma(struct radv_cmd_buffer *cmd_buffer,
 			   uint64_t dst_va, uint64_t src_va,
 			   unsigned size, unsigned flags)
