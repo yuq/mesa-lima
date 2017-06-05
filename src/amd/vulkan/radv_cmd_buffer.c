@@ -1494,8 +1494,13 @@ static void radv_emit_primitive_reset_state(struct radv_cmd_buffer *cmd_buffer,
 
 	if (primitive_reset_en != cmd_buffer->state.last_primitive_reset_en) {
 		cmd_buffer->state.last_primitive_reset_en = primitive_reset_en;
-		radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
-				       primitive_reset_en);
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+			radeon_set_uconfig_reg(cmd_buffer->cs, R_03092C_VGT_MULTI_PRIM_IB_RESET_EN,
+					       primitive_reset_en);
+		} else {
+			radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
+					       primitive_reset_en);
+		}
 	}
 
 	if (primitive_reset_en) {
@@ -1902,7 +1907,7 @@ static void emit_gfx_buffer_state(struct radv_cmd_buffer *cmd_buffer)
 		device->ws->cs_add_buffer(cmd_buffer->cs, device->gfx_init, 8);
 		radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
 		radeon_emit(cmd_buffer->cs, va);
-		radeon_emit(cmd_buffer->cs, (va >> 32) & 0xffff);
+		radeon_emit(cmd_buffer->cs, va >> 32);
 		radeon_emit(cmd_buffer->cs, device->gfx_init_size_dw & 0xffff);
 	} else
 		si_init_config(cmd_buffer);
@@ -2655,8 +2660,13 @@ void radv_CmdDrawIndexed(
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 15);
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
-	radeon_emit(cmd_buffer->cs, cmd_buffer->state.index_type);
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+		radeon_set_uconfig_reg_idx(cmd_buffer->cs, R_03090C_VGT_INDEX_TYPE,
+					   2, cmd_buffer->state.index_type);
+	} else {
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
+		radeon_emit(cmd_buffer->cs, cmd_buffer->state.index_type);
+	}
 
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);

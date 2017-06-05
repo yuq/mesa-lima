@@ -1332,11 +1332,12 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 		S_028A4C_MULTI_SHADER_ENGINE_PRIM_DISCARD_ENABLE(1) |
 		EG_S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
 		EG_S_028A4C_FORCE_EOV_REZ_ENABLE(1);
+	ms->pa_sc_mode_cntl_0 = S_028A48_ALTERNATE_RBS_PER_TILE(pipeline->device->physical_device->rad_info.chip_class >= GFX9);
 
 	if (ms->num_samples > 1) {
 		unsigned log_samples = util_logbase2(ms->num_samples);
 		unsigned log_ps_iter_samples = util_logbase2(util_next_power_of_two(ps_iter_samples));
-		ms->pa_sc_mode_cntl_0 = S_028A48_MSAA_ENABLE(1);
+		ms->pa_sc_mode_cntl_0 |= S_028A48_MSAA_ENABLE(1);
 		ms->pa_sc_line_cntl |= S_028BDC_EXPAND_LINE_WIDTH(1); /* CM_R_028BDC_PA_SC_LINE_CNTL */
 		ms->db_eqaa |= S_028804_MAX_ANCHOR_SAMPLES(log_samples) |
 			S_028804_PS_ITER_SAMPLES(log_ps_iter_samples) |

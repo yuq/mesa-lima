@@ -1728,6 +1728,10 @@ radv_get_preamble_cs(struct radv_queue *queue,
 						       S_030938_SIZE(tess_factor_ring_size / 4));
 				radeon_set_uconfig_reg(cs, R_030940_VGT_TF_MEMORY_BASE,
 						       tf_va >> 8);
+				if (queue->device->physical_device->rad_info.chip_class >= GFX9) {
+					radeon_set_uconfig_reg(cs, R_030944_VGT_TF_MEMORY_BASE_HI,
+							       tf_va >> 40);
+				}
 				radeon_set_uconfig_reg(cs, R_03093C_VGT_HS_OFFCHIP_PARAM, hs_offchip_param);
 			} else {
 				radeon_set_config_reg(cs, R_008988_VGT_TF_RING_SIZE,
