@@ -46,8 +46,10 @@ do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 	if (!ac_query_gpu_info(fd, ws->dev, &ws->info, &ws->amdinfo))
 		return false;
 
-	if (ws->info.chip_class >= GFX9) {
-		fprintf(stderr, "radv: GFX9 is not supported.\n");
+	/* LLVM 5.0 is required for GFX9. */
+	if (ws->info.chip_class >= GFX9 && HAVE_LLVM < 0x0500) {
+		fprintf(stderr, "amdgpu: LLVM 5.0 is required, got LLVM %i.%i\n",
+			HAVE_LLVM >> 8, HAVE_LLVM & 255);
 		return false;
 	}
 
