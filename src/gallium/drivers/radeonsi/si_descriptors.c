@@ -339,8 +339,7 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 	}
 
 	if (rtex->htile_buffer &&
-	    rtex->tc_compatible_htile &&
-	    !is_stencil_sampler) {
+	    rtex->tc_compatible_htile) {
 		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
 						    rtex->htile_buffer, usage,
 						    RADEON_PRIO_HTILE, check_mem);
@@ -424,7 +423,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 
 			if (sscreen->b.chip_class <= VI)
 				meta_va += base_level_info->dcc_offset;
-		} else if (tex->tc_compatible_htile && !is_stencil) {
+		} else if (tex->tc_compatible_htile) {
 			meta_va = tex->htile_buffer->gpu_address;
 		}
 
@@ -571,7 +570,8 @@ static bool depth_needs_decompression(struct r600_texture *rtex,
 				      struct si_sampler_view *sview)
 {
 	return rtex->db_compatible &&
-	       (!rtex->tc_compatible_htile || sview->is_stencil_sampler);
+	       (!rtex->tc_compatible_htile ||
+		!r600_can_sample_zs(rtex, sview->is_stencil_sampler));
 }
 
 static void si_update_compressed_tex_shader_mask(struct si_context *sctx,

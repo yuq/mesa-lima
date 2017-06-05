@@ -332,6 +332,8 @@ si_flush_depth_texture(struct si_context *sctx,
 	}
 
 	assert(!tex->tc_compatible_htile || levels_z == 0);
+	assert(!tex->tc_compatible_htile || levels_s == 0 ||
+	       !r600_can_sample_zs(tex, true));
 
 	/* We may have to allocate the flushed texture here when called from
 	 * si_decompress_subresource.
