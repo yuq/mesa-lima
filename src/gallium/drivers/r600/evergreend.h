@@ -2230,6 +2230,18 @@
 #define   S_028B98_STREAM_1_BUFFER_EN(x)		(((unsigned)(x) & 0x0F) << 4)
 #define   S_028B98_STREAM_2_BUFFER_EN(x)		(((unsigned)(x) & 0x0F) << 8)
 #define   S_028B98_STREAM_3_BUFFER_EN(x)		(((unsigned)(x) & 0x0F) << 12)
+#define R_028B9C_CB_IMMED0_BASE                      0x00028B9C
+#define R_028BA0_CB_IMMED1_BASE                      0x00028BA0
+#define R_028BA4_CB_IMMED2_BASE                      0x00028BA4
+#define R_028BA4_CB_IMMED3_BASE                      0x00028BA8
+#define R_028BA4_CB_IMMED4_BASE                      0x00028BAC
+#define R_028BA4_CB_IMMED5_BASE                      0x00028BB0
+#define R_028BA4_CB_IMMED6_BASE                      0x00028BB4
+#define R_028BA4_CB_IMMED7_BASE                      0x00028BB8
+#define R_028BA4_CB_IMMED8_BASE                      0x00028BBC
+#define R_028BA4_CB_IMMED9_BASE                      0x00028BC0
+#define R_028BA4_CB_IMMED10_BASE                     0x00028BC4
+#define R_028BA4_CB_IMMED11_BASE                     0x00028BC8
 #define R_028C00_PA_SC_LINE_CNTL                     0x00028C00
 #define   S_028C00_EXPAND_LINE_WIDTH(x)                (((unsigned)(x) & 0x1) << 9)
 #define   G_028C00_EXPAND_LINE_WIDTH(x)                (((x) >> 9) & 0x1)
