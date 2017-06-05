@@ -329,24 +329,28 @@ si_emit_config(struct radv_physical_device *physical_device,
 		raster_config_1 = 0x00000000;
 		break;
 	default:
-		fprintf(stderr,
-			"radeonsi: Unknown GPU, using 0 for raster_config\n");
-		raster_config = 0x00000000;
-		raster_config_1 = 0x00000000;
+		if (physical_device->rad_info.chip_class <= VI) {
+			fprintf(stderr,
+				"radeonsi: Unknown GPU, using 0 for raster_config\n");
+			raster_config = 0x00000000;
+			raster_config_1 = 0x00000000;
+		}
 		break;
 	}
 
 	/* Always use the default config when all backends are enabled
 	 * (or when we failed to determine the enabled backends).
 	 */
-	if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
-		radeon_set_context_reg(cs, R_028350_PA_SC_RASTER_CONFIG,
-				       raster_config);
-		if (physical_device->rad_info.chip_class >= CIK)
-			radeon_set_context_reg(cs, R_028354_PA_SC_RASTER_CONFIG_1,
-					       raster_config_1);
-	} else {
-		si_write_harvested_raster_configs(physical_device, cs, raster_config, raster_config_1);
+	if (physical_device->rad_info.chip_class <= VI) {
+		if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
+			radeon_set_context_reg(cs, R_028350_PA_SC_RASTER_CONFIG,
+					       raster_config);
+			if (physical_device->rad_info.chip_class >= CIK)
+				radeon_set_context_reg(cs, R_028354_PA_SC_RASTER_CONFIG_1,
+						       raster_config_1);
+		} else {
+			si_write_harvested_raster_configs(physical_device, cs, raster_config, raster_config_1);
+		}
 	}
 
 	radeon_set_context_reg(cs, R_028204_PA_SC_WINDOW_SCISSOR_TL, S_028204_WINDOW_OFFSET_DISABLE(1));
