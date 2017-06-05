@@ -1475,11 +1475,9 @@ radv_get_hs_offchip_param(struct radv_device *device, uint32_t *max_offchip_buff
 		max_offchip_buffers = MIN2(max_offchip_buffers, 126);
 		break;
 	case CIK:
-		max_offchip_buffers = MIN2(max_offchip_buffers, 508);
-		break;
 	case VI:
 	default:
-		max_offchip_buffers = MIN2(max_offchip_buffers, 512);
+		max_offchip_buffers = MIN2(max_offchip_buffers, 508);
 		break;
 	}
 
