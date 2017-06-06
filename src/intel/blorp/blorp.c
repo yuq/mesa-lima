@@ -294,6 +294,7 @@ blorp_hiz_op(struct blorp_batch *batch, struct blorp_surf *surf,
    blorp_params_init(&params);
 
    params.hiz_op = op;
+   params.full_surface_hiz_op = true;
 
    for (uint32_t a = 0; a < num_layers; a++) {
       const uint32_t layer = start_layer + a;

@@ -1470,11 +1470,14 @@ blorp_emit_gen8_hiz_op(struct blorp_batch *batch,
          hzp.StencilBufferClearEnable = params->stencil.enabled;
          hzp.DepthBufferClearEnable = params->depth.enabled;
          hzp.StencilClearValue = params->stencil_ref;
+         hzp.FullSurfaceDepthandStencilClear = params->full_surface_hiz_op;
          break;
       case BLORP_HIZ_OP_DEPTH_RESOLVE:
+         assert(params->full_surface_hiz_op);
          hzp.DepthBufferResolveEnable = true;
          break;
       case BLORP_HIZ_OP_HIZ_RESOLVE:
+         assert(params->full_surface_hiz_op);
          hzp.HierarchicalDepthBufferResolveEnable = true;
          break;
       case BLORP_HIZ_OP_NONE:
