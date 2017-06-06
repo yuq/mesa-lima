@@ -1098,6 +1098,24 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
          brw_emit_pipe_control_flush(brw,
                                      PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                                      PIPE_CONTROL_CS_STALL);
+      } else if (brw->gen >= 8) {
+         /*
+          * From the Broadwell PRM, volume 7, "Depth Buffer Clear":
+          *
+          *    "Depth buffer clear pass using any of the methods (WM_STATE,
+          *    3DSTATE_WM or 3DSTATE_WM_HZ_OP) must be followed by a
+          *    PIPE_CONTROL command with DEPTH_STALL bit and Depth FLUSH bits
+          *    "set" before starting to render.  DepthStall and DepthFlush are
+          *    not needed between consecutive depth clear passes nor is it
+          *    required if the depth clear pass was done with
+          *    'full_surf_clear' bit set in the 3DSTATE_WM_HZ_OP."
+          *
+          *  TODO: Such as the spec says, this could be conditional.
+          */
+         brw_emit_pipe_control_flush(brw,
+                                     PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                     PIPE_CONTROL_DEPTH_STALL);
+
       }
    }
 }
