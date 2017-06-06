@@ -34,6 +34,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
 
 LOCAL_MODULE := libmesa_pipe_svga
 
+LOCAL_STATIC_LIBRARIES += libmesa_git_sha1
+
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
