@@ -55,22 +55,10 @@ set_scissor_no_notify(struct gl_context *ctx, unsigned idx,
    ctx->Scissor.ScissorArray[idx].Height = height;
 }
 
-/**
- * Called via glScissor
- */
-void GLAPIENTRY
-_mesa_Scissor( GLint x, GLint y, GLsizei width, GLsizei height )
+static void
+scissor(struct gl_context *ctx, GLint x, GLint y, GLsizei width, GLsizei height)
 {
    unsigned i;
-   GET_CURRENT_CONTEXT(ctx);
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glScissor %d %d %d %d\n", x, y, width, height);
-
-   if (width < 0 || height < 0) {
-      _mesa_error( ctx, GL_INVALID_VALUE, "glScissor" );
-      return;
-   }
 
    /* The GL_ARB_viewport_array spec says:
     *
@@ -89,6 +77,25 @@ _mesa_Scissor( GLint x, GLint y, GLsizei width, GLsizei height )
 
    if (ctx->Driver.Scissor)
       ctx->Driver.Scissor(ctx);
+}
+
+/**
+ * Called via glScissor
+ */
+void GLAPIENTRY
+_mesa_Scissor(GLint x, GLint y, GLsizei width, GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glScissor %d %d %d %d\n", x, y, width, height);
+
+   if (width < 0 || height < 0) {
+      _mesa_error( ctx, GL_INVALID_VALUE, "glScissor" );
+      return;
+   }
+
+   scissor(ctx, x, y, width, height);
 }
 
 
@@ -110,6 +117,19 @@ _mesa_set_scissor(struct gl_context *ctx, unsigned idx,
                   GLint x, GLint y, GLsizei width, GLsizei height)
 {
    set_scissor_no_notify(ctx, idx, x, y, width, height);
+
+   if (ctx->Driver.Scissor)
+      ctx->Driver.Scissor(ctx);
+}
+
+static void
+scissor_array(struct gl_context *ctx, GLuint first, GLsizei count,
+              struct gl_scissor_rect *rect)
+{
+   for (GLsizei i = 0; i < count; i++) {
+      set_scissor_no_notify(ctx, i + first, rect[i].X, rect[i].Y,
+                            rect[i].Width, rect[i].Height);
+   }
 
    if (ctx->Driver.Scissor)
       ctx->Driver.Scissor(ctx);
@@ -150,12 +170,7 @@ _mesa_ScissorArrayv(GLuint first, GLsizei count, const GLint *v)
       }
    }
 
-   for (i = 0; i < count; i++)
-      set_scissor_no_notify(ctx, i + first,
-                            p[i].X, p[i].Y, p[i].Width, p[i].Height);
-
-   if (ctx->Driver.Scissor)
-      ctx->Driver.Scissor(ctx);
+   scissor_array(ctx, first, count, p);
 }
 
 /**
