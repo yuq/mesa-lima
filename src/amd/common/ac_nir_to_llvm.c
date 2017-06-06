@@ -176,7 +176,7 @@ struct nir_to_llvm_context {
 };
 
 static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
-				     nir_deref_var *deref,
+				     const nir_deref_var *deref,
 				     enum desc_type desc_type);
 static unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
 {
@@ -1035,7 +1035,7 @@ build_store_values_extended(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMTypeRef get_def_type(struct nir_to_llvm_context *ctx,
-                                nir_ssa_def *def)
+                                const nir_ssa_def *def)
 {
 	LLVMTypeRef type = LLVMIntTypeInContext(ctx->context, def->bit_size);
 	if (def->num_components > 1) {
@@ -1053,7 +1053,7 @@ static LLVMValueRef get_src(struct nir_to_llvm_context *ctx, nir_src src)
 
 
 static LLVMBasicBlockRef get_block(struct nir_to_llvm_context *ctx,
-                                   struct nir_block *b)
+                                   const struct nir_block *b)
 {
 	struct hash_entry *entry = _mesa_hash_table_search(ctx->defs, b);
 	return (LLVMBasicBlockRef)entry->data;
@@ -1343,7 +1343,7 @@ static LLVMValueRef emit_imul_high(struct nir_to_llvm_context *ctx,
 
 static LLVMValueRef emit_bitfield_extract(struct nir_to_llvm_context *ctx,
 					  bool is_signed,
-					  LLVMValueRef srcs[3])
+					  const LLVMValueRef srcs[3])
 {
 	LLVMValueRef result;
 	LLVMValueRef icond = LLVMBuildICmp(ctx->builder, LLVMIntEQ, srcs[2], LLVMConstInt(ctx->i32, 32, false), "");
@@ -1482,7 +1482,7 @@ static LLVMValueRef emit_ddxy_interp(
 	return ac_build_gather_values(&ctx->ac, result, 4);
 }
 
-static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
+static void visit_alu(struct nir_to_llvm_context *ctx, const nir_alu_instr *instr)
 {
 	LLVMValueRef src[4], result = NULL;
 	unsigned num_components = instr->dest.dest.ssa.num_components;
@@ -1848,7 +1848,7 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 }
 
 static void visit_load_const(struct nir_to_llvm_context *ctx,
-                             nir_load_const_instr *instr)
+                             const nir_load_const_instr *instr)
 {
 	LLVMValueRef values[4], value = NULL;
 	LLVMTypeRef element_type =
@@ -1932,7 +1932,7 @@ static void build_int_type_name(
 
 static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 					       struct ac_image_args *args,
-					       nir_tex_instr *instr)
+					       const nir_tex_instr *instr)
 {
 	enum glsl_base_type stype = glsl_get_sampler_result_type(instr->texture->var->type);
 	LLVMValueRef coord = args->addr;
@@ -2045,7 +2045,7 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef build_tex_intrinsic(struct nir_to_llvm_context *ctx,
-					nir_tex_instr *instr,
+					const nir_tex_instr *instr,
 					bool lod_is_zero,
 					struct ac_image_args *args)
 {
@@ -2158,7 +2158,7 @@ static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef visit_get_buffer_size(struct nir_to_llvm_context *ctx,
-                                          nir_intrinsic_instr *instr)
+                                          const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef desc = get_src(ctx, instr->src[0]);
 
@@ -2251,7 +2251,7 @@ static void visit_store_ssbo(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
-                                      nir_intrinsic_instr *instr)
+                                      const nir_intrinsic_instr *instr)
 {
 	const char *name;
 	LLVMValueRef params[6];
@@ -2307,7 +2307,7 @@ static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
-                                      nir_intrinsic_instr *instr)
+                                      const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef results[2];
 	int load_components;
@@ -2367,7 +2367,7 @@ static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
-                                          nir_intrinsic_instr *instr)
+                                          const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef results[8], ret;
 	LLVMValueRef rsrc = get_src(ctx, instr->src[0]);
@@ -2762,7 +2762,7 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 
 static LLVMValueRef
 load_tes_input(struct nir_to_llvm_context *ctx,
-	       nir_intrinsic_instr *instr)
+	       const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef buf_addr;
 	LLVMValueRef result;
@@ -3164,7 +3164,7 @@ static LLVMValueRef adjust_sample_index_using_fmask(struct nir_to_llvm_context *
 }
 
 static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
-				     nir_intrinsic_instr *instr)
+				     const nir_intrinsic_instr *instr)
 {
 	const struct glsl_type *type = instr->variables[0]->var->type;
 	if(instr->variables[0]->deref.child)
@@ -3242,7 +3242,7 @@ static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
-				     nir_intrinsic_instr *instr)
+				     const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef params[7];
 	LLVMValueRef res;
@@ -3358,7 +3358,7 @@ static void visit_image_store(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef visit_image_atomic(struct nir_to_llvm_context *ctx,
-                                       nir_intrinsic_instr *instr)
+                                       const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef params[6];
 	int param_count = 0;
@@ -3432,7 +3432,7 @@ static LLVMValueRef visit_image_atomic(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef visit_image_size(struct nir_to_llvm_context *ctx,
-				     nir_intrinsic_instr *instr)
+				     const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef res;
 	const nir_variable *var = instr->variables[0]->var;
@@ -3496,7 +3496,7 @@ static void emit_barrier(struct nir_to_llvm_context *ctx)
 }
 
 static void emit_discard_if(struct nir_to_llvm_context *ctx,
-			    nir_intrinsic_instr *instr)
+			    const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef cond;
 	ctx->shader_info->fs.can_discard = true;
@@ -3523,7 +3523,7 @@ visit_load_local_invocation_index(struct nir_to_llvm_context *ctx)
 }
 
 static LLVMValueRef visit_var_atomic(struct nir_to_llvm_context *ctx,
-				     nir_intrinsic_instr *instr)
+				     const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef ptr, result;
 	int idx = instr->variables[0]->var->data.driver_location;
@@ -3635,7 +3635,7 @@ static LLVMValueRef load_sample_pos(struct nir_to_llvm_context *ctx)
 }
 
 static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
-				 nir_intrinsic_instr *instr)
+				 const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef result[2];
 	LLVMValueRef interp_param, attr_number;
@@ -3740,7 +3740,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 
 static void
 visit_emit_vertex(struct nir_to_llvm_context *ctx,
-		  nir_intrinsic_instr *instr)
+		  const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef gs_next_vertex;
 	LLVMValueRef can_emit, kill;
@@ -3808,14 +3808,14 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 
 static void
 visit_end_primitive(struct nir_to_llvm_context *ctx,
-		    nir_intrinsic_instr *instr)
+		    const nir_intrinsic_instr *instr)
 {
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
 }
 
 static LLVMValueRef
 visit_load_tess_coord(struct nir_to_llvm_context *ctx,
-		      nir_intrinsic_instr *instr)
+		      const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef coord[4] = {
 		ctx->tes_u,
@@ -4013,8 +4013,8 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
-					  nir_deref_var *deref,
-					  enum desc_type desc_type)
+				     const nir_deref_var *deref,
+				     enum desc_type desc_type)
 {
 	unsigned desc_set = deref->var->data.descriptor_set;
 	LLVMValueRef list = ctx->descriptor_sets[desc_set];
@@ -4056,7 +4056,8 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 	}
 
 	if (deref->deref.child) {
-		nir_deref_array *child = (nir_deref_array*)deref->deref.child;
+		const nir_deref_array *child =
+			(const nir_deref_array *)deref->deref.child;
 
 		assert(child->deref_array_type != nir_deref_array_type_wildcard);
 		offset += child->base_offset * stride;
@@ -4097,7 +4098,7 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 
 static void set_tex_fetch_args(struct nir_to_llvm_context *ctx,
 			       struct ac_image_args *args,
-			       nir_tex_instr *instr,
+			       const nir_tex_instr *instr,
 			       nir_texop op,
 			       LLVMValueRef res_ptr, LLVMValueRef samp_ptr,
 			       LLVMValueRef *param, unsigned count,
@@ -4511,7 +4512,7 @@ static void phi_post_pass(struct nir_to_llvm_context *ctx)
 
 
 static void visit_ssa_undef(struct nir_to_llvm_context *ctx,
-			    nir_ssa_undef_instr *instr)
+			    const nir_ssa_undef_instr *instr)
 {
 	unsigned num_components = instr->def.num_components;
 	LLVMValueRef undef;
@@ -4525,7 +4526,7 @@ static void visit_ssa_undef(struct nir_to_llvm_context *ctx,
 }
 
 static void visit_jump(struct nir_to_llvm_context *ctx,
-		       nir_jump_instr *instr)
+		       const nir_jump_instr *instr)
 {
 	switch (instr->type) {
 	case nir_jump_break:
@@ -5820,7 +5821,7 @@ ac_setup_rings(struct nir_to_llvm_context *ctx)
 
 static unsigned
 ac_nir_get_max_workgroup_size(enum chip_class chip_class,
-			      struct nir_shader *nir)
+			      const struct nir_shader *nir)
 {
 	switch (nir->stage) {
 	case MESA_SHADER_TESS_CTRL:
