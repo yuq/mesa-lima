@@ -1077,6 +1077,8 @@ struct radv_pipeline {
 			uint32_t ps_input_cntl_num;
 			uint32_t pa_cl_vs_out_cntl;
 			uint32_t vgt_shader_stages_en;
+			uint32_t vtx_base_sgpr;
+			uint8_t vtx_emit_num;
 			struct radv_prim_vertex_count prim_vertex_count;
  			bool can_use_guardband;
 		} graphics;
