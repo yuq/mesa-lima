@@ -407,10 +407,10 @@ _mesa_intersect_scissor_bounding_box(const struct gl_context *ctx,
  *
  * \sa _mesa_clip_to_region
  */
-void
-_mesa_scissor_bounding_box(const struct gl_context *ctx,
-                           const struct gl_framebuffer *buffer,
-                           unsigned idx, int *bbox)
+static void
+scissor_bounding_box(const struct gl_context *ctx,
+                     const struct gl_framebuffer *buffer,
+                     unsigned idx, int *bbox)
 {
    bbox[0] = 0;
    bbox[2] = 0;
@@ -444,7 +444,7 @@ _mesa_update_draw_buffer_bounds(struct gl_context *ctx,
    }
 
    /* Default to the first scissor as that's always valid */
-   _mesa_scissor_bounding_box(ctx, buffer, 0, bbox);
+   scissor_bounding_box(ctx, buffer, 0, bbox);
    buffer->_Xmin = bbox[0];
    buffer->_Ymin = bbox[2];
    buffer->_Xmax = bbox[1];
