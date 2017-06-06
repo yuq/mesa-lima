@@ -1527,7 +1527,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 4096);
 
-	if ((cmd_buffer->state.vertex_descriptors_dirty || cmd_buffer->state.vb_dirty) &&
+	if ((cmd_buffer->state.pipeline != cmd_buffer->state.emitted_pipeline || cmd_buffer->state.vb_dirty) &&
 	    cmd_buffer->state.pipeline->num_vertex_attribs &&
 	    cmd_buffer->state.pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.has_vertex_buffers) {
 		unsigned vb_offset;
@@ -1568,7 +1568,6 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 					   AC_UD_VS_VERTEX_BUFFERS, va);
 	}
 
-	cmd_buffer->state.vertex_descriptors_dirty = false;
 	cmd_buffer->state.vb_dirty = 0;
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
 		radv_emit_graphics_pipeline(cmd_buffer, pipeline);
@@ -2268,7 +2267,6 @@ void radv_CmdBindPipeline(
 		if (!pipeline)
 			break;
 
-		cmd_buffer->state.vertex_descriptors_dirty = true;
 		cmd_buffer->state.dirty |= RADV_CMD_DIRTY_PIPELINE;
 		cmd_buffer->push_constant_stages |= pipeline->active_stages;
 
