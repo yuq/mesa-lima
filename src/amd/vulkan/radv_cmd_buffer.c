@@ -1525,17 +1525,9 @@ static void radv_emit_primitive_reset_state(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
-			    bool indexed_draw, bool instanced_draw,
-			    bool indirect_draw,
-			    uint32_t draw_vertex_count)
+radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 {
-	struct radv_pipeline *pipeline = cmd_buffer->state.pipeline;
 	struct radv_device *device = cmd_buffer->device;
-	uint32_t ia_multi_vgt_param;
-
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
-							   cmd_buffer->cs, 4096);
 
 	if ((cmd_buffer->state.pipeline != cmd_buffer->state.emitted_pipeline || cmd_buffer->state.vb_dirty) &&
 	    cmd_buffer->state.pipeline->num_vertex_attribs &&
@@ -1574,11 +1566,26 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 		va = device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
 		va += vb_offset;
 
-		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_VERTEX,
+		radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 					   AC_UD_VS_VERTEX_BUFFERS, va);
 	}
-
 	cmd_buffer->state.vb_dirty = 0;
+}
+
+static void
+radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
+			    bool indexed_draw, bool instanced_draw,
+			    bool indirect_draw,
+			    uint32_t draw_vertex_count)
+{
+	struct radv_pipeline *pipeline = cmd_buffer->state.pipeline;
+	uint32_t ia_multi_vgt_param;
+
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
+							   cmd_buffer->cs, 4096);
+
+	radv_cmd_buffer_update_vertex_descriptors(cmd_buffer);
+
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
 		radv_emit_graphics_pipeline(cmd_buffer, pipeline);
 
