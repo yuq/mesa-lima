@@ -201,8 +201,7 @@ st_invalidate_state(struct gl_context * ctx)
          st->dirty |= ST_NEW_RASTERIZER;
 
       if (new_state & _NEW_SCISSOR)
-         st->dirty |= ST_NEW_RASTERIZER |
-                      ST_NEW_SCISSOR;
+         st->dirty |= ST_NEW_RASTERIZER;
 
       if (new_state & _NEW_FOG)
          st->dirty |= ST_NEW_FS_STATE;
@@ -523,6 +522,7 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewImageUnits = ST_NEW_IMAGE_UNITS;
    f->NewWindowRectangles = ST_NEW_WINDOW_RECTANGLES;
    f->NewFramebufferSRGB = ST_NEW_FRAMEBUFFER;
+   f->NewScissorRect = ST_NEW_SCISSOR;
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
