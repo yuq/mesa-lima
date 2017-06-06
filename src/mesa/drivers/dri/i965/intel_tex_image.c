@@ -570,6 +570,31 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
    intel_miptree_release(&mt);
 }
 
+static bool
+intel_gettexsubimage_blorp(struct brw_context *brw,
+                           struct gl_texture_image *tex_image,
+                           unsigned x, unsigned y, unsigned z,
+                           unsigned width, unsigned height, unsigned depth,
+                           GLenum format, GLenum type, const void *pixels,
+                           const struct gl_pixelstore_attrib *packing)
+{
+   struct intel_texture_image *intel_image = intel_texture_image(tex_image);
+   const unsigned mt_level = tex_image->Level + tex_image->TexObject->MinLevel;
+   const unsigned mt_z = tex_image->TexObject->MinLayer + tex_image->Face + z;
+
+   /* The blorp path can't understand crazy format hackery */
+   if (_mesa_base_tex_format(&brw->ctx, tex_image->InternalFormat) !=
+       _mesa_get_format_base_format(tex_image->TexFormat))
+      return false;
+
+   return brw_blorp_download_miptree(brw, intel_image->mt,
+                                     tex_image->TexFormat, SWIZZLE_XYZW,
+                                     mt_level, x, y, mt_z,
+                                     width, height, depth,
+                                     tex_image->TexObject->Target,
+                                     format, type, false, pixels, packing);
+}
+
 /**
  * \brief A fast path for glGetTexImage.
  *
@@ -719,10 +744,10 @@ intel_get_tex_sub_image(struct gl_context *ctx,
    DBG("%s\n", __func__);
 
    if (_mesa_is_bufferobj(ctx->Pack.BufferObj)) {
-      if (_mesa_meta_pbo_GetTexSubImage(ctx, 3, texImage,
-                                        xoffset, yoffset, zoffset,
-                                        width, height, depth, format, type,
-                                        pixels, &ctx->Pack)) {
+      if (intel_gettexsubimage_blorp(brw, texImage,
+                                     xoffset, yoffset, zoffset,
+                                     width, height, depth, format, type,
+                                     pixels, &ctx->Pack)) {
          /* Flush to guarantee coherency between the render cache and other
           * caches the PBO could potentially be bound to after this point.
           * See the related comment in intelReadPixels() for a more detailed
