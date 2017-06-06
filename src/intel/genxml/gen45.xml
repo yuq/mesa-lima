@@ -646,7 +646,7 @@
     <field name="URB Entry Allocation Size" start="147" end="151" type="uint"/>
     <field name="Number of URB Entries" start="139" end="146" type="uint"/>
     <field name="Statistics Enable" start="138" end="138" type="bool"/>
-    <field name="Setup Viewport State Offset" start="165" end="191" type="offset"/>
+    <field name="Setup Viewport State Offset" start="165" end="191" type="address"/>
     <field name="Viewport Transform Enable" start="161" end="161" type="bool"/>
     <field name="Front Winding" start="160" end="160" type="uint">
       <value name="FRONTWINDING_CW" value="0"/>
