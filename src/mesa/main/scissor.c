@@ -83,6 +83,13 @@ scissor(struct gl_context *ctx, GLint x, GLint y, GLsizei width, GLsizei height)
  * Called via glScissor
  */
 void GLAPIENTRY
+_mesa_Scissor_no_error(GLint x, GLint y, GLsizei width, GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   scissor(ctx, x, y, width, height);
+}
+
+void GLAPIENTRY
 _mesa_Scissor(GLint x, GLint y, GLsizei width, GLsizei height)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -147,6 +154,15 @@ scissor_array(struct gl_context *ctx, GLuint first, GLsizei count,
  * Verifies the parameters and call set_scissor_no_notify to do the work.
  */
 void GLAPIENTRY
+_mesa_ScissorArrayv_no_error(GLuint first, GLsizei count, const GLint *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_scissor_rect *p = (struct gl_scissor_rect *)v;
+   scissor_array(ctx, first, count, p);
+}
+
+void GLAPIENTRY
 _mesa_ScissorArrayv(GLuint first, GLsizei count, const GLint *v)
 {
    int i;
@@ -210,12 +226,27 @@ scissor_indexed_err(struct gl_context *ctx, GLuint index, GLint left,
 }
 
 void GLAPIENTRY
+_mesa_ScissorIndexed_no_error(GLuint index, GLint left, GLint bottom,
+                              GLsizei width, GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_set_scissor(ctx, index, left, bottom, width, height);
+}
+
+void GLAPIENTRY
 _mesa_ScissorIndexed(GLuint index, GLint left, GLint bottom,
                      GLsizei width, GLsizei height)
 {
    GET_CURRENT_CONTEXT(ctx);
    scissor_indexed_err(ctx, index, left, bottom, width, height,
                        "glScissorIndexed");
+}
+
+void GLAPIENTRY
+_mesa_ScissorIndexedv_no_error(GLuint index, const GLint *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_set_scissor(ctx, index, v[0], v[1], v[2], v[3]);
 }
 
 void GLAPIENTRY
