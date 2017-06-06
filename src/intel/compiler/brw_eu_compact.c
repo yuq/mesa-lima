@@ -911,6 +911,8 @@ brw_try_compact_3src_instruction(const struct gen_device_info *devinfo,
 
 #define compact(field) \
    brw_compact_inst_set_3src_##field(devinfo, dst, brw_inst_3src_##field(devinfo, src))
+#define compact_a16(field) \
+   brw_compact_inst_set_3src_##field(devinfo, dst, brw_inst_3src_a16_##field(devinfo, src))
 
    compact(opcode);
 
@@ -921,20 +923,21 @@ brw_try_compact_3src_instruction(const struct gen_device_info *devinfo,
       return false;
 
    compact(dst_reg_nr);
-   compact(src0_rep_ctrl);
+   compact_a16(src0_rep_ctrl);
    brw_compact_inst_set_3src_cmpt_control(devinfo, dst, true);
    compact(debug_control);
    compact(saturate);
-   compact(src1_rep_ctrl);
-   compact(src2_rep_ctrl);
+   compact_a16(src1_rep_ctrl);
+   compact_a16(src2_rep_ctrl);
    compact(src0_reg_nr);
    compact(src1_reg_nr);
    compact(src2_reg_nr);
-   compact(src0_subreg_nr);
-   compact(src1_subreg_nr);
-   compact(src2_subreg_nr);
+   compact_a16(src0_subreg_nr);
+   compact_a16(src1_subreg_nr);
+   compact_a16(src2_subreg_nr);
 
 #undef compact
+#undef compact_a16
 
    return true;
 }
@@ -1257,6 +1260,8 @@ brw_uncompact_3src_instruction(const struct gen_device_info *devinfo,
 
 #define uncompact(field) \
    brw_inst_set_3src_##field(devinfo, dst, brw_compact_inst_3src_##field(devinfo, src))
+#define uncompact_a16(field) \
+   brw_inst_set_3src_a16_##field(devinfo, dst, brw_compact_inst_3src_##field(devinfo, src))
 
    uncompact(opcode);
 
@@ -1264,20 +1269,21 @@ brw_uncompact_3src_instruction(const struct gen_device_info *devinfo,
    set_uncompacted_3src_source_index(devinfo, dst, src);
 
    uncompact(dst_reg_nr);
-   uncompact(src0_rep_ctrl);
+   uncompact_a16(src0_rep_ctrl);
    brw_inst_set_3src_cmpt_control(devinfo, dst, false);
    uncompact(debug_control);
    uncompact(saturate);
-   uncompact(src1_rep_ctrl);
-   uncompact(src2_rep_ctrl);
+   uncompact_a16(src1_rep_ctrl);
+   uncompact_a16(src2_rep_ctrl);
    uncompact(src0_reg_nr);
    uncompact(src1_reg_nr);
    uncompact(src2_reg_nr);
-   uncompact(src0_subreg_nr);
-   uncompact(src1_subreg_nr);
-   uncompact(src2_subreg_nr);
+   uncompact_a16(src0_subreg_nr);
+   uncompact_a16(src1_subreg_nr);
+   uncompact_a16(src2_subreg_nr);
 
 #undef uncompact
+#undef uncompact_a16
 }
 
 void

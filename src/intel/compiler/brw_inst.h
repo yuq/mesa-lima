@@ -198,33 +198,33 @@ F(opcode,                6,   0)
  * Three-source instructions:
  *  @{
  */
-F(3src_src2_reg_nr,    125, 118)
-F(3src_src2_subreg_nr, 117, 115) /* Extra discontiguous bit on CHV? */
-F(3src_src2_swizzle,   114, 107)
-F(3src_src2_rep_ctrl,  106, 106)
-F(3src_src1_reg_nr,    104,  97)
-F(3src_src1_subreg_nr,  96,  94) /* Extra discontiguous bit on CHV? */
-F(3src_src1_swizzle,    93,  86)
-F(3src_src1_rep_ctrl,   85,  85)
-F(3src_src0_reg_nr,     83,  76)
-F(3src_src0_subreg_nr,  75,  73) /* Extra discontiguous bit on CHV? */
-F(3src_src0_swizzle,    72,  65)
-F(3src_src0_rep_ctrl,   64,  64)
-F(3src_dst_reg_nr,      63,  56)
-F(3src_dst_subreg_nr,   55,  53)
-F(3src_dst_writemask,   52,  49)
-F8(3src_nib_ctrl,       47, 47, 11, 11) /* only exists on IVB+ */
-F8(3src_dst_type,       45, 44, 48, 46) /* only exists on IVB+ */
-F8(3src_src_type,       43, 42, 45, 43)
-F8(3src_src2_negate,    41, 41, 42, 42)
-F8(3src_src2_abs,       40, 40, 41, 41)
-F8(3src_src1_negate,    39, 39, 40, 40)
-F8(3src_src1_abs,       38, 38, 39, 39)
-F8(3src_src0_negate,    37, 37, 38, 38)
-F8(3src_src0_abs,       36, 36, 37, 37)
-F8(3src_flag_reg_nr,    34, 34, 33, 33)
-F8(3src_flag_subreg_nr, 33, 33, 32, 32)
-FF(3src_dst_reg_file,
+F(3src_src2_reg_nr,        125, 118) /* same in align1 */
+F(3src_a16_src2_subreg_nr, 117, 115) /* Extra discontiguous bit on CHV? */
+F(3src_a16_src2_swizzle,   114, 107)
+F(3src_a16_src2_rep_ctrl,  106, 106)
+F(3src_src1_reg_nr,        104,  97) /* same in align1 */
+F(3src_a16_src1_subreg_nr,  96,  94) /* Extra discontiguous bit on CHV? */
+F(3src_a16_src1_swizzle,    93,  86)
+F(3src_a16_src1_rep_ctrl,   85,  85)
+F(3src_src0_reg_nr,         83,  76) /* same in align1 */
+F(3src_a16_src0_subreg_nr,  75,  73) /* Extra discontiguous bit on CHV? */
+F(3src_a16_src0_swizzle,    72,  65)
+F(3src_a16_src0_rep_ctrl,   64,  64)
+F(3src_dst_reg_nr,          63,  56) /* same in align1 */
+F(3src_a16_dst_subreg_nr,   55,  53)
+F(3src_a16_dst_writemask,   52,  49)
+F8(3src_a16_nib_ctrl,       47, 47, 11, 11) /* only exists on IVB+ */
+F8(3src_a16_dst_type,       45, 44, 48, 46) /* only exists on IVB+ */
+F8(3src_a16_src_type,       43, 42, 45, 43)
+F8(3src_src2_negate,        41, 41, 42, 42)
+F8(3src_src2_abs,           40, 40, 41, 41)
+F8(3src_src1_negate,        39, 39, 40, 40)
+F8(3src_src1_abs,           38, 38, 39, 39)
+F8(3src_src0_negate,        37, 37, 38, 38)
+F8(3src_src0_abs,           36, 36, 37, 37)
+F8(3src_a16_flag_reg_nr,    34, 34, 33, 33)
+F8(3src_a16_flag_subreg_nr, 33, 33, 32, 32)
+FF(3src_a16_dst_reg_file,
    /* 4-5: doesn't exist - no 3-source instructions */ -1, -1, -1, -1, -1, -1,
    /* 6: */ 32, 32,
    /* 7-8: doesn't exist - no MRFs */ -1, -1, -1, -1)

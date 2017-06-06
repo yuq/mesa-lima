@@ -689,45 +689,45 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
           dest.type == BRW_REGISTER_TYPE_D  ||
           dest.type == BRW_REGISTER_TYPE_UD);
    if (devinfo->gen == 6) {
-      brw_inst_set_3src_dst_reg_file(devinfo, inst,
-                                     dest.file == BRW_MESSAGE_REGISTER_FILE);
+      brw_inst_set_3src_a16_dst_reg_file(devinfo, inst,
+                                         dest.file == BRW_MESSAGE_REGISTER_FILE);
    }
    brw_inst_set_3src_dst_reg_nr(devinfo, inst, dest.nr);
-   brw_inst_set_3src_dst_subreg_nr(devinfo, inst, dest.subnr / 16);
-   brw_inst_set_3src_dst_writemask(devinfo, inst, dest.writemask);
+   brw_inst_set_3src_a16_dst_subreg_nr(devinfo, inst, dest.subnr / 16);
+   brw_inst_set_3src_a16_dst_writemask(devinfo, inst, dest.writemask);
 
    assert(src0.file == BRW_GENERAL_REGISTER_FILE);
    assert(src0.address_mode == BRW_ADDRESS_DIRECT);
    assert(src0.nr < 128);
-   brw_inst_set_3src_src0_swizzle(devinfo, inst, src0.swizzle);
-   brw_inst_set_3src_src0_subreg_nr(devinfo, inst, get_3src_subreg_nr(src0));
+   brw_inst_set_3src_a16_src0_swizzle(devinfo, inst, src0.swizzle);
+   brw_inst_set_3src_a16_src0_subreg_nr(devinfo, inst, get_3src_subreg_nr(src0));
    brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
    brw_inst_set_3src_src0_abs(devinfo, inst, src0.abs);
    brw_inst_set_3src_src0_negate(devinfo, inst, src0.negate);
-   brw_inst_set_3src_src0_rep_ctrl(devinfo, inst,
-                                   src0.vstride == BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_3src_a16_src0_rep_ctrl(devinfo, inst,
+                                       src0.vstride == BRW_VERTICAL_STRIDE_0);
 
    assert(src1.file == BRW_GENERAL_REGISTER_FILE);
    assert(src1.address_mode == BRW_ADDRESS_DIRECT);
    assert(src1.nr < 128);
-   brw_inst_set_3src_src1_swizzle(devinfo, inst, src1.swizzle);
-   brw_inst_set_3src_src1_subreg_nr(devinfo, inst, get_3src_subreg_nr(src1));
+   brw_inst_set_3src_a16_src1_swizzle(devinfo, inst, src1.swizzle);
+   brw_inst_set_3src_a16_src1_subreg_nr(devinfo, inst, get_3src_subreg_nr(src1));
    brw_inst_set_3src_src1_reg_nr(devinfo, inst, src1.nr);
    brw_inst_set_3src_src1_abs(devinfo, inst, src1.abs);
    brw_inst_set_3src_src1_negate(devinfo, inst, src1.negate);
-   brw_inst_set_3src_src1_rep_ctrl(devinfo, inst,
-                                   src1.vstride == BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_3src_a16_src1_rep_ctrl(devinfo, inst,
+                                       src1.vstride == BRW_VERTICAL_STRIDE_0);
 
    assert(src2.file == BRW_GENERAL_REGISTER_FILE);
    assert(src2.address_mode == BRW_ADDRESS_DIRECT);
    assert(src2.nr < 128);
-   brw_inst_set_3src_src2_swizzle(devinfo, inst, src2.swizzle);
-   brw_inst_set_3src_src2_subreg_nr(devinfo, inst, get_3src_subreg_nr(src2));
+   brw_inst_set_3src_a16_src2_swizzle(devinfo, inst, src2.swizzle);
+   brw_inst_set_3src_a16_src2_subreg_nr(devinfo, inst, get_3src_subreg_nr(src2));
    brw_inst_set_3src_src2_reg_nr(devinfo, inst, src2.nr);
    brw_inst_set_3src_src2_abs(devinfo, inst, src2.abs);
    brw_inst_set_3src_src2_negate(devinfo, inst, src2.negate);
-   brw_inst_set_3src_src2_rep_ctrl(devinfo, inst,
-                                   src2.vstride == BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_3src_a16_src2_rep_ctrl(devinfo, inst,
+                                       src2.vstride == BRW_VERTICAL_STRIDE_0);
 
    if (devinfo->gen >= 7) {
       /* Set both the source and destination types based on dest.type,
@@ -738,20 +738,20 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
        */
       switch (dest.type) {
       case BRW_REGISTER_TYPE_F:
-         brw_inst_set_3src_src_type(devinfo, inst, BRW_3SRC_TYPE_F);
-         brw_inst_set_3src_dst_type(devinfo, inst, BRW_3SRC_TYPE_F);
+         brw_inst_set_3src_a16_src_type(devinfo, inst, BRW_3SRC_TYPE_F);
+         brw_inst_set_3src_a16_dst_type(devinfo, inst, BRW_3SRC_TYPE_F);
          break;
       case BRW_REGISTER_TYPE_DF:
-         brw_inst_set_3src_src_type(devinfo, inst, BRW_3SRC_TYPE_DF);
-         brw_inst_set_3src_dst_type(devinfo, inst, BRW_3SRC_TYPE_DF);
+         brw_inst_set_3src_a16_src_type(devinfo, inst, BRW_3SRC_TYPE_DF);
+         brw_inst_set_3src_a16_dst_type(devinfo, inst, BRW_3SRC_TYPE_DF);
          break;
       case BRW_REGISTER_TYPE_D:
-         brw_inst_set_3src_src_type(devinfo, inst, BRW_3SRC_TYPE_D);
-         brw_inst_set_3src_dst_type(devinfo, inst, BRW_3SRC_TYPE_D);
+         brw_inst_set_3src_a16_src_type(devinfo, inst, BRW_3SRC_TYPE_D);
+         brw_inst_set_3src_a16_dst_type(devinfo, inst, BRW_3SRC_TYPE_D);
          break;
       case BRW_REGISTER_TYPE_UD:
-         brw_inst_set_3src_src_type(devinfo, inst, BRW_3SRC_TYPE_UD);
-         brw_inst_set_3src_dst_type(devinfo, inst, BRW_3SRC_TYPE_UD);
+         brw_inst_set_3src_a16_src_type(devinfo, inst, BRW_3SRC_TYPE_UD);
+         brw_inst_set_3src_a16_dst_type(devinfo, inst, BRW_3SRC_TYPE_UD);
          break;
       default:
          unreachable("not reached");

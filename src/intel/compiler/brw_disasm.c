@@ -766,12 +766,12 @@ dest_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
    uint32_t reg_file;
    enum brw_reg_type type =
       brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_dst_type(devinfo, inst));
+                                   brw_inst_3src_a16_dst_type(devinfo, inst));
    unsigned dst_subreg_nr =
-      brw_inst_3src_dst_subreg_nr(devinfo, inst) * 4 /
+      brw_inst_3src_a16_dst_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
 
-   if (devinfo->gen == 6 && brw_inst_3src_dst_reg_file(devinfo, inst))
+   if (devinfo->gen == 6 && brw_inst_3src_a16_dst_reg_file(devinfo, inst))
       reg_file = BRW_MESSAGE_REGISTER_FILE;
    else
       reg_file = BRW_GENERAL_REGISTER_FILE;
@@ -783,9 +783,9 @@ dest_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
       format(file, ".%u", dst_subreg_nr);
    string(file, "<1>");
    err |= control(file, "writemask", writemask,
-                  brw_inst_3src_dst_writemask(devinfo, inst), NULL);
+                  brw_inst_3src_a16_dst_writemask(devinfo, inst), NULL);
    err |= control(file, "dest reg encoding", three_source_reg_encoding,
-                  brw_inst_3src_dst_type(devinfo, inst), NULL);
+                  brw_inst_3src_a16_dst_type(devinfo, inst), NULL);
 
    return 0;
 }
@@ -936,9 +936,9 @@ src0_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
    int err = 0;
    enum brw_reg_type type =
       brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_src_type(devinfo, inst));
+                                   brw_inst_3src_a16_src_type(devinfo, inst));
    unsigned src0_subreg_nr =
-      brw_inst_3src_src0_subreg_nr(devinfo, inst) * 4 /
+      brw_inst_3src_a16_src0_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
@@ -949,16 +949,16 @@ src0_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
               brw_inst_3src_src0_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (src0_subreg_nr || brw_inst_3src_src0_rep_ctrl(devinfo, inst))
+   if (src0_subreg_nr || brw_inst_3src_a16_src0_rep_ctrl(devinfo, inst))
       format(file, ".%d", src0_subreg_nr);
-   if (brw_inst_3src_src0_rep_ctrl(devinfo, inst))
+   if (brw_inst_3src_a16_src0_rep_ctrl(devinfo, inst))
       string(file, "<0,1,0>");
    else {
       string(file, "<4,4,1>");
-      err |= src_swizzle(file, brw_inst_3src_src0_swizzle(devinfo, inst));
+      err |= src_swizzle(file, brw_inst_3src_a16_src0_swizzle(devinfo, inst));
    }
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
-                  brw_inst_3src_src_type(devinfo, inst), NULL);
+                  brw_inst_3src_a16_src_type(devinfo, inst), NULL);
    return err;
 }
 
@@ -968,9 +968,9 @@ src1_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
    int err = 0;
    enum brw_reg_type type =
       brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_src_type(devinfo, inst));
+                                   brw_inst_3src_a16_src_type(devinfo, inst));
    unsigned src1_subreg_nr =
-      brw_inst_3src_src1_subreg_nr(devinfo, inst) * 4 /
+      brw_inst_3src_a16_src1_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
@@ -981,16 +981,16 @@ src1_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
               brw_inst_3src_src1_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (src1_subreg_nr || brw_inst_3src_src1_rep_ctrl(devinfo, inst))
+   if (src1_subreg_nr || brw_inst_3src_a16_src1_rep_ctrl(devinfo, inst))
       format(file, ".%d", src1_subreg_nr);
-   if (brw_inst_3src_src1_rep_ctrl(devinfo, inst))
+   if (brw_inst_3src_a16_src1_rep_ctrl(devinfo, inst))
       string(file, "<0,1,0>");
    else {
       string(file, "<4,4,1>");
-      err |= src_swizzle(file, brw_inst_3src_src1_swizzle(devinfo, inst));
+      err |= src_swizzle(file, brw_inst_3src_a16_src1_swizzle(devinfo, inst));
    }
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
-                  brw_inst_3src_src_type(devinfo, inst), NULL);
+                  brw_inst_3src_a16_src_type(devinfo, inst), NULL);
    return err;
 }
 
@@ -1001,9 +1001,9 @@ src2_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
    int err = 0;
    enum brw_reg_type type =
       brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_src_type(devinfo, inst));
+                                   brw_inst_3src_a16_src_type(devinfo, inst));
    unsigned src2_subreg_nr =
-      brw_inst_3src_src2_subreg_nr(devinfo, inst) * 4 /
+      brw_inst_3src_a16_src2_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
@@ -1014,16 +1014,16 @@ src2_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
               brw_inst_3src_src2_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (src2_subreg_nr || brw_inst_3src_src2_rep_ctrl(devinfo, inst))
+   if (src2_subreg_nr || brw_inst_3src_a16_src2_rep_ctrl(devinfo, inst))
       format(file, ".%d", src2_subreg_nr);
-   if (brw_inst_3src_src2_rep_ctrl(devinfo, inst))
+   if (brw_inst_3src_a16_src2_rep_ctrl(devinfo, inst))
       string(file, "<0,1,0>");
    else {
       string(file, "<4,4,1>");
-      err |= src_swizzle(file, brw_inst_3src_src2_swizzle(devinfo, inst));
+      err |= src_swizzle(file, brw_inst_3src_a16_src2_swizzle(devinfo, inst));
    }
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
-                  brw_inst_3src_src_type(devinfo, inst), NULL);
+                  brw_inst_3src_a16_src_type(devinfo, inst), NULL);
    return err;
 }
 
