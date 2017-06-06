@@ -626,10 +626,9 @@ update_image_transfer_state(struct gl_context *ctx)
 /**
  * Update mesa pixel transfer derived state.
  */
-void _mesa_update_pixel( struct gl_context *ctx, GLuint new_state )
+void _mesa_update_pixel( struct gl_context *ctx )
 {
-   if (new_state & _NEW_PIXEL)
-      update_image_transfer_state(ctx);
+   update_image_transfer_state(ctx);
 }
 
 
