@@ -2643,6 +2643,12 @@ void radv_CmdDraw(
 	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
+static
+uint32_t radv_get_max_index_count(struct radv_cmd_buffer *cmd_buffer) {
+	int index_size_shift = cmd_buffer->state.index_type ? 2 : 1;
+	return (cmd_buffer->state.index_buffer->size - cmd_buffer->state.index_offset) >> index_size_shift;
+}
+
 void radv_CmdDrawIndexed(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    indexCount,
@@ -2653,7 +2659,7 @@ void radv_CmdDrawIndexed(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	int index_size = cmd_buffer->state.index_type ? 4 : 2;
-	uint32_t index_max_size = (cmd_buffer->state.index_buffer->size - cmd_buffer->state.index_offset) / index_size;
+	uint32_t index_max_size = radv_get_max_index_count(cmd_buffer);
 	uint64_t index_va;
 
 	radv_cmd_buffer_flush_state(cmd_buffer, true, (instanceCount > 1), false, indexCount);
@@ -2789,8 +2795,7 @@ radv_cmd_draw_indexed_indirect_count(
 	uint32_t                                    stride)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	int index_size = cmd_buffer->state.index_type ? 4 : 2;
-	uint32_t index_max_size = (cmd_buffer->state.index_buffer->size - cmd_buffer->state.index_offset) / index_size;
+	uint32_t index_max_size = radv_get_max_index_count(cmd_buffer);
 	uint64_t index_va;
 	radv_cmd_buffer_flush_state(cmd_buffer, true, false, true, 0);
 
