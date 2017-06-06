@@ -954,9 +954,8 @@ void si_emit_cache_flush(struct si_context *sctx)
 	 * wait for idle on GFX9. We have to use a TS event.
 	 */
 	if (sctx->b.chip_class >= GFX9 && flush_cb_db) {
-		struct r600_resource *rbuf = NULL;
 		uint64_t va;
-		unsigned offset = 0, tc_flags, cb_db_event;
+		unsigned tc_flags, cb_db_event;
 
 		/* Set the CB/DB flush event. */
 		switch (flush_cb_db) {
@@ -997,14 +996,15 @@ void si_emit_cache_flush(struct si_context *sctx)
 			sctx->b.num_L2_invalidates++;
 		}
 
-		/* Allocate memory for the fence. */
-		u_suballocator_alloc(rctx->allocator_zeroed_memory, 4, 4,
-				     &offset, (struct pipe_resource**)&rbuf);
-		va = rbuf->gpu_address + offset;
+		/* Do the flush (enqueue the event and wait for it). */
+		va = sctx->wait_mem_scratch->gpu_address;
+		sctx->wait_mem_number++;
 
 		r600_gfx_write_event_eop(rctx, cb_db_event, tc_flags, 1,
-					 rbuf, va, 0, 1);
-		r600_gfx_wait_fence(rctx, va, 1, 0xffffffff);
+					 sctx->wait_mem_scratch, va,
+					 sctx->wait_mem_number - 1,
+					 sctx->wait_mem_number);
+		r600_gfx_wait_fence(rctx, va, sctx->wait_mem_number, 0xffffffff);
 	}
 
 	/* Make sure ME is idle (it executes most packets) before continuing.

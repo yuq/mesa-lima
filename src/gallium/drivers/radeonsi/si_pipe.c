@@ -64,6 +64,7 @@ static void si_destroy_context(struct pipe_context *context)
 	free(sctx->border_color_table);
 	r600_resource_reference(&sctx->scratch_buffer, NULL);
 	r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
+	r600_resource_reference(&sctx->wait_mem_scratch, NULL);
 
 	si_pm4_free_state(sctx, sctx->init_config, ~0);
 	if (sctx->init_config_gs_rings)
@@ -268,6 +269,23 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	/* these must be last */
 	si_begin_new_cs(sctx);
+
+	if (sctx->b.chip_class >= GFX9) {
+		sctx->wait_mem_scratch = (struct r600_resource*)
+			pipe_buffer_create(screen, 0, PIPE_USAGE_DEFAULT, 4);
+		if (!sctx->wait_mem_scratch)
+			goto fail;
+
+		/* Initialize the memory. */
+		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+		radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
+		radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
+			    S_370_WR_CONFIRM(1) |
+			    S_370_ENGINE_SEL(V_370_ME));
+		radeon_emit(cs, sctx->wait_mem_scratch->gpu_address);
+		radeon_emit(cs, sctx->wait_mem_scratch->gpu_address >> 32);
+		radeon_emit(cs, sctx->wait_mem_number);
+	}
 
 	/* CIK cannot unbind a constant buffer (S_BUFFER_LOAD doesn't skip loads
 	 * if NUM_RECORDS == 0). We need to use a dummy buffer instead. */

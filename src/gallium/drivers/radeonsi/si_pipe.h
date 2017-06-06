@@ -263,6 +263,8 @@ struct si_context {
 	struct si_screen		*screen;
 	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
+	struct r600_resource		*wait_mem_scratch;
+	unsigned			wait_mem_number;
 
 	struct radeon_winsys_cs		*ce_ib;
 	struct radeon_winsys_cs		*ce_preamble_ib;
