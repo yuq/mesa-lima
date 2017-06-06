@@ -142,6 +142,8 @@ fd5_blend_state_create(struct pipe_context *pctx,
 
 	so->rb_blend_cntl = A5XX_RB_BLEND_CNTL_ENABLE_BLEND(mrt_blend) |
 		COND(cso->independent_blend_enable, A5XX_RB_BLEND_CNTL_INDEPENDENT_BLEND);
+	so->sp_blend_cntl = A5XX_SP_BLEND_CNTL_UNK8 |
+		COND(mrt_blend, A5XX_SP_BLEND_CNTL_ENABLED);
 
 	return so;
 }

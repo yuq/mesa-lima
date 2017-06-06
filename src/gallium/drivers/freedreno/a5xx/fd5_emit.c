@@ -694,7 +694,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A5XX_RB_BLEND_CNTL_SAMPLE_MASK(0xffff));
 
 		OUT_PKT4(ring, REG_A5XX_SP_BLEND_CNTL, 1);
-		OUT_RING(ring, 0x00000100);
+		OUT_RING(ring, blend->sp_blend_cntl);
 	}
 
 	if (dirty & FD_DIRTY_BLEND_COLOR) {
