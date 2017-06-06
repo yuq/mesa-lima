@@ -31,6 +31,7 @@ VULKAN_COMMON_INCLUDES := \
 	$(MESA_TOP)/src/gallium/include \
 	$(MESA_TOP)/src/mesa \
 	$(MESA_TOP)/src/vulkan/wsi \
+	$(MESA_TOP)/src/vulkan/util \
 	$(MESA_TOP)/src/intel \
 	$(MESA_TOP)/src/intel/vulkan
 

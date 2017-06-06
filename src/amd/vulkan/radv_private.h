@@ -47,8 +47,8 @@
 #include "compiler/shader_enums.h"
 #include "util/macros.h"
 #include "util/list.h"
-#include "util/vk_alloc.h"
 #include "main/macros.h"
+#include "vk_alloc.h"
 
 #include "radv_radeon_winsys.h"
 #include "ac_binary.h"

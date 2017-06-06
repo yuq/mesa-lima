@@ -26,7 +26,7 @@
 
 #include "anv_private.h"
 #include "vk_format_info.h"
-#include "util/vk_util.h"
+#include "vk_util.h"
 
 #include "common/gen_l3_config.h"
 #include "genxml/gen_macros.h"

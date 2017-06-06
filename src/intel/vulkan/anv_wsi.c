@@ -24,7 +24,7 @@
 #include "anv_private.h"
 #include "wsi_common.h"
 #include "vk_format_info.h"
-#include "util/vk_util.h"
+#include "vk_util.h"
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 static const struct wsi_callbacks wsi_cbs = {

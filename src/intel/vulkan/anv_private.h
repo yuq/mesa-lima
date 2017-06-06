@@ -47,7 +47,7 @@
 #include "util/macros.h"
 #include "util/list.h"
 #include "util/u_vector.h"
-#include "util/vk_alloc.h"
+#include "vk_alloc.h"
 
 /* Pre-declarations needed for WSI entrypoints */
 struct wl_surface;

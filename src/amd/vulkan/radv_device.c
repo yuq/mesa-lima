@@ -33,7 +33,7 @@
 #include "radv_cs.h"
 #include "util/disk_cache.h"
 #include "util/strtod.h"
-#include "util/vk_util.h"
+#include "vk_util.h"
 #include <xf86drm.h>
 #include <amdgpu.h>
 #include <amdgpu_drm.h>

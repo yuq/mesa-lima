@@ -30,7 +30,7 @@
 #include <sys/eventfd.h>
 
 #include "anv_private.h"
-#include "util/vk_util.h"
+#include "vk_util.h"
 
 #include "genxml/gen7_pack.h"
 

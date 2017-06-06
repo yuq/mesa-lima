@@ -23,8 +23,7 @@
 
 #include "anv_private.h"
 #include "vk_format_info.h"
-
-#include "util/vk_util.h"
+#include "vk_util.h"
 
 /*
  * gcc-4 and earlier don't allow compound literals where a constant
