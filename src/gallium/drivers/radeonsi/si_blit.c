@@ -433,9 +433,9 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 				level_mask &= ~(1 << i);
 		}
 	} else if (rtex->fmask.size) {
-		custom_blend = sctx->custom_blend_decompress;
+		custom_blend = sctx->custom_blend_fmask_decompress;
 	} else {
-		custom_blend = sctx->custom_blend_fastclear;
+		custom_blend = sctx->custom_blend_eliminate_fastclear;
 	}
 
 	while (level_mask) {

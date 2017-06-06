@@ -76,10 +76,10 @@ static void si_destroy_context(struct pipe_context *context)
 		sctx->b.b.delete_depth_stencil_alpha_state(&sctx->b.b, sctx->custom_dsa_flush);
 	if (sctx->custom_blend_resolve)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_resolve);
-	if (sctx->custom_blend_decompress)
-		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_decompress);
-	if (sctx->custom_blend_fastclear)
-		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_fastclear);
+	if (sctx->custom_blend_fmask_decompress)
+		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_fmask_decompress);
+	if (sctx->custom_blend_eliminate_fastclear)
+		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_eliminate_fastclear);
 	if (sctx->custom_blend_dcc_decompress)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_dcc_decompress);
 

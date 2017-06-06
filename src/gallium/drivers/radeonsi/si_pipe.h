@@ -232,8 +232,8 @@ struct si_context {
 	struct blitter_context		*blitter;
 	void				*custom_dsa_flush;
 	void				*custom_blend_resolve;
-	void				*custom_blend_decompress;
-	void				*custom_blend_fastclear;
+	void				*custom_blend_fmask_decompress;
+	void				*custom_blend_eliminate_fastclear;
 	void				*custom_blend_dcc_decompress;
 	struct si_screen		*screen;
 
