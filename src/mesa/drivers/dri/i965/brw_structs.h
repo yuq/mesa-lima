@@ -321,8 +321,8 @@ struct brw_sf_unit_state
       unsigned use_point_size_state:1;
       unsigned subpixel_precision:1;
       unsigned sprite_point:1;
-      unsigned pad0:10;
       unsigned aa_line_distance_mode:1;
+      unsigned pad0:10;
       unsigned trifan_pv:2;
       unsigned linestrip_pv:2;
       unsigned tristrip_pv:2;
