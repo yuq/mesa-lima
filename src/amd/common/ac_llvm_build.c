@@ -270,6 +270,36 @@ ac_build_ballot(struct ac_llvm_context *ctx,
 }
 
 LLVMValueRef
+ac_build_vote_all(struct ac_llvm_context *ctx, LLVMValueRef value)
+{
+	LLVMValueRef active_set = ac_build_ballot(ctx, ctx->i32_1);
+	LLVMValueRef vote_set = ac_build_ballot(ctx, value);
+	return LLVMBuildICmp(ctx->builder, LLVMIntEQ, vote_set, active_set, "");
+}
+
+LLVMValueRef
+ac_build_vote_any(struct ac_llvm_context *ctx, LLVMValueRef value)
+{
+	LLVMValueRef vote_set = ac_build_ballot(ctx, value);
+	return LLVMBuildICmp(ctx->builder, LLVMIntNE, vote_set,
+			     LLVMConstInt(ctx->i64, 0, 0), "");
+}
+
+LLVMValueRef
+ac_build_vote_eq(struct ac_llvm_context *ctx, LLVMValueRef value)
+{
+	LLVMValueRef active_set = ac_build_ballot(ctx, ctx->i32_1);
+	LLVMValueRef vote_set = ac_build_ballot(ctx, value);
+
+	LLVMValueRef all = LLVMBuildICmp(ctx->builder, LLVMIntEQ,
+					 vote_set, active_set, "");
+	LLVMValueRef none = LLVMBuildICmp(ctx->builder, LLVMIntEQ,
+					  vote_set,
+					  LLVMConstInt(ctx->i64, 0, 0), "");
+	return LLVMBuildOr(ctx->builder, all, none, "");
+}
+
+LLVMValueRef
 ac_build_gather_values_extended(struct ac_llvm_context *ctx,
 				LLVMValueRef *values,
 				unsigned value_count,

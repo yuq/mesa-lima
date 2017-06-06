@@ -3821,13 +3821,8 @@ static void vote_all_emit(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMValueRef active_set, vote_set;
-	LLVMValueRef tmp;
 
-	active_set = ac_build_ballot(&ctx->ac, ctx->i32_1);
-	vote_set = ac_build_ballot(&ctx->ac, emit_data->args[0]);
-
-	tmp = LLVMBuildICmp(gallivm->builder, LLVMIntEQ, vote_set, active_set, "");
+        LLVMValueRef tmp = ac_build_vote_all(&ctx->ac, emit_data->args[0]);
 	emit_data->output[emit_data->chan] =
 		LLVMBuildSExt(gallivm->builder, tmp, ctx->i32, "");
 }
@@ -3839,13 +3834,8 @@ static void vote_any_emit(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMValueRef vote_set;
-	LLVMValueRef tmp;
 
-	vote_set = ac_build_ballot(&ctx->ac, emit_data->args[0]);
-
-	tmp = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
-			    vote_set, LLVMConstInt(ctx->i64, 0, 0), "");
+        LLVMValueRef tmp = ac_build_vote_any(&ctx->ac, emit_data->args[0]);
 	emit_data->output[emit_data->chan] =
 		LLVMBuildSExt(gallivm->builder, tmp, ctx->i32, "");
 }
@@ -3857,16 +3847,8 @@ static void vote_eq_emit(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMValueRef active_set, vote_set;
-	LLVMValueRef all, none, tmp;
 
-	active_set = ac_build_ballot(&ctx->ac, ctx->i32_1);
-	vote_set = ac_build_ballot(&ctx->ac, emit_data->args[0]);
-
-	all = LLVMBuildICmp(gallivm->builder, LLVMIntEQ, vote_set, active_set, "");
-	none = LLVMBuildICmp(gallivm->builder, LLVMIntEQ,
-			     vote_set, LLVMConstInt(ctx->i64, 0, 0), "");
-	tmp = LLVMBuildOr(gallivm->builder, all, none, "");
+        LLVMValueRef tmp = ac_build_vote_eq(&ctx->ac, emit_data->args[0]);
 	emit_data->output[emit_data->chan] =
 		LLVMBuildSExt(gallivm->builder, tmp, ctx->i32, "");
 }
