@@ -1079,7 +1079,7 @@ void
 si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 {
 	bool is_compute = cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE;
-	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
+
 	if (is_compute)
 		cmd_buffer->state.flush_bits &= ~(RADV_CMD_FLAG_FLUSH_AND_INV_CB |
 	                                          RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
@@ -1092,6 +1092,7 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 	if (!cmd_buffer->state.flush_bits)
 		return;
 
+	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
 	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 128);
 
 	uint32_t *ptr = NULL;
