@@ -32,9 +32,11 @@
 #include "main/readpix.h"
 #include "main/state.h"
 #include "main/glformats.h"
+#include "program/prog_instruction.h"
 #include "drivers/common/meta.h"
 
 #include "brw_context.h"
+#include "brw_blorp.h"
 #include "intel_screen.h"
 #include "intel_batchbuffer.h"
 #include "intel_blit.h"
@@ -212,6 +214,45 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
    return true;
 }
 
+static bool
+intel_readpixels_blorp(struct gl_context *ctx,
+                       unsigned x, unsigned y,
+                       unsigned w, unsigned h,
+                       GLenum format, GLenum type, const void *pixels,
+                       const struct gl_pixelstore_attrib *packing)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct gl_renderbuffer *rb = ctx->ReadBuffer->_ColorReadBuffer;
+   if (!rb)
+      return false;
+
+   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+
+   /* _mesa_get_readpixels_transfer_ops() includes the cases of read
+    * color clamping along with the ctx->_ImageTransferState.
+    */
+   if (_mesa_get_readpixels_transfer_ops(ctx, rb->Format, format,
+                                         type, GL_FALSE))
+      return false;
+
+   GLenum dst_base_format = _mesa_unpack_format_to_base_format(format);
+   if (_mesa_need_rgb_to_luminance_conversion(rb->_BaseFormat,
+                                              dst_base_format))
+      return false;
+
+   unsigned swizzle;
+   if (irb->Base.Base._BaseFormat == GL_RGB) {
+      swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_ONE);
+   } else {
+      swizzle = SWIZZLE_XYZW;
+   }
+
+   return brw_blorp_download_miptree(brw, irb->mt, rb->Format, swizzle,
+                                     irb->mt_level, x, y, irb->mt_layer,
+                                     w, h, 1, GL_TEXTURE_2D, format, type,
+                                     rb->Name == 0, pixels, packing);
+}
+
 void
 intelReadPixels(struct gl_context * ctx,
                 GLint x, GLint y, GLsizei width, GLsizei height,
@@ -225,10 +266,17 @@ intelReadPixels(struct gl_context * ctx,
 
    DBG("%s\n", __func__);
 
+   /* Reading pixels wont dirty the front buffer, so reset the dirty
+    * flag after calling intel_prepare_render().
+    */
+   dirty = brw->front_buffer_dirty;
+   intel_prepare_render(brw);
+   brw->front_buffer_dirty = dirty;
+
    if (_mesa_is_bufferobj(pack->BufferObj)) {
-      if (_mesa_meta_pbo_GetTexSubImage(ctx, 2, NULL, x, y, 0, width, height, 1,
-                                        format, type, pixels, pack)) {
-         /* _mesa_meta_pbo_GetTexSubImage() implements PBO transfers by
+      if (intel_readpixels_blorp(ctx, x, y, width, height,
+                                 format, type, pixels, pack)) {
+         /* intel_readpixels_blorp() implements PBO transfers by
           * binding the user-provided BO as a fake framebuffer and rendering
           * to it.  This breaks the invariant of the GL that nothing is able
           * to render to a BO, causing nondeterministic corruption issues
@@ -254,12 +302,6 @@ intelReadPixels(struct gl_context * ctx,
 
       perf_debug("%s: fallback to CPU mapping in PBO case\n", __func__);
    }
-
-   /* Reading pixels wont dirty the front buffer, so reset the dirty
-    * flag after calling intel_prepare_render(). */
-   dirty = brw->front_buffer_dirty;
-   intel_prepare_render(brw);
-   brw->front_buffer_dirty = dirty;
 
    ok = intel_readpixels_tiled_memcpy(ctx, x, y, width, height,
                                       format, type, pixels, pack);
