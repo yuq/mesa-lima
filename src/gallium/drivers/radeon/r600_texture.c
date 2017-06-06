@@ -240,10 +240,7 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		bpe = 4; /* stencil is allocated separately on evergreen */
 	} else {
 		bpe = util_format_get_blocksize(ptex->format);
-		/* align byte per element on dword */
-		if (bpe == 3) {
-			bpe = 4;
-		}
+		assert(util_is_power_of_two(bpe));
 	}
 
 	if (!is_flushed_depth && is_depth) {
