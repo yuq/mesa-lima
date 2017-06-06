@@ -5760,23 +5760,25 @@ ac_nir_eliminate_const_vs_outputs(struct nir_to_llvm_context *ctx)
 {
 	struct ac_vs_output_info *outinfo;
 
-	if (ctx->stage == MESA_SHADER_FRAGMENT ||
-	    ctx->stage == MESA_SHADER_COMPUTE ||
-	    ctx->stage == MESA_SHADER_TESS_CTRL ||
-	    ctx->stage == MESA_SHADER_GEOMETRY)
+	switch (ctx->stage) {
+	case MESA_SHADER_FRAGMENT:
+	case MESA_SHADER_COMPUTE:
+	case MESA_SHADER_TESS_CTRL:
+	case MESA_SHADER_GEOMETRY:
 		return;
-
-	if (ctx->stage == MESA_SHADER_VERTEX) {
+	case MESA_SHADER_VERTEX:
 		if (ctx->options->key.vs.as_ls ||
 		    ctx->options->key.vs.as_es)
 			return;
 		outinfo = &ctx->shader_info->vs.outinfo;
-	}
-
-	if (ctx->stage == MESA_SHADER_TESS_EVAL) {
+		break;
+	case MESA_SHADER_TESS_EVAL:
 		if (ctx->options->key.vs.as_es)
 			return;
 		outinfo = &ctx->shader_info->tes.outinfo;
+		break;
+	default:
+		unreachable("Unhandled shader type");
 	}
 
 	ac_optimize_vs_outputs(&ctx->ac,
