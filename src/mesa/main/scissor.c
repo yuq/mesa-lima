@@ -192,10 +192,7 @@ ScissorIndexed(GLuint index, GLint left, GLint bottom,
       return;
    }
 
-   set_scissor_no_notify(ctx, index, left, bottom, width, height);
-
-   if (ctx->Driver.Scissor)
-      ctx->Driver.Scissor(ctx);
+   _mesa_set_scissor(ctx, index, left, bottom, width, height);
 }
 
 void GLAPIENTRY
