@@ -994,15 +994,18 @@ struct isl_format_layout {
    uint8_t bh; /**< Block height, in pixels */
    uint8_t bd; /**< Block depth, in pixels */
 
-   struct {
-      struct isl_channel_layout r; /**< Red channel */
-      struct isl_channel_layout g; /**< Green channel */
-      struct isl_channel_layout b; /**< Blue channel */
-      struct isl_channel_layout a; /**< Alpha channel */
-      struct isl_channel_layout l; /**< Luminance channel */
-      struct isl_channel_layout i; /**< Intensity channel */
-      struct isl_channel_layout p; /**< Palette channel */
-   } channels;
+   union {
+      struct {
+         struct isl_channel_layout r; /**< Red channel */
+         struct isl_channel_layout g; /**< Green channel */
+         struct isl_channel_layout b; /**< Blue channel */
+         struct isl_channel_layout a; /**< Alpha channel */
+         struct isl_channel_layout l; /**< Luminance channel */
+         struct isl_channel_layout i; /**< Intensity channel */
+         struct isl_channel_layout p; /**< Palette channel */
+      } channels;
+      struct isl_channel_layout channels_array[7];
+   };
 
    enum isl_colorspace colorspace;
    enum isl_txc txc;
