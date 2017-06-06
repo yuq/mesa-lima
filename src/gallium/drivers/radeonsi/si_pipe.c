@@ -1010,8 +1010,10 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
 
 	sscreen->b.barrier_flags.cp_to_L2 = SI_CONTEXT_INV_SMEM_L1 |
-					    SI_CONTEXT_INV_VMEM_L1 |
-					    SI_CONTEXT_INV_GLOBAL_L2;
+					    SI_CONTEXT_INV_VMEM_L1;
+	if (sscreen->b.chip_class <= VI)
+		sscreen->b.barrier_flags.cp_to_L2 |= SI_CONTEXT_INV_GLOBAL_L2;
+
 	sscreen->b.barrier_flags.compute_to_L2 = SI_CONTEXT_CS_PARTIAL_FLUSH;
 
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", false))

@@ -4023,7 +4023,9 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 				 SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 	}
 
-	if (flags & PIPE_BARRIER_INDIRECT_BUFFER)
+	/* Indirect buffers use TC L2 on GFX9, but not older hw. */
+	if (sctx->screen->b.chip_class <= VI &&
+	    flags & PIPE_BARRIER_INDIRECT_BUFFER)
 		sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 }
 

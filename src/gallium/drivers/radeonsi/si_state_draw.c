@@ -1320,15 +1320,18 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		/* Add the buffer size for memory checking in need_cs_space. */
 		r600_context_add_resource_size(ctx, indirect->buffer);
 
-		if (r600_resource(indirect->buffer)->TC_L2_dirty) {
-			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-			r600_resource(indirect->buffer)->TC_L2_dirty = false;
-		}
+		/* Indirect buffers use TC L2 on GFX9, but not older hw. */
+		if (sctx->b.chip_class <= VI) {
+			if (r600_resource(indirect->buffer)->TC_L2_dirty) {
+				sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
+				r600_resource(indirect->buffer)->TC_L2_dirty = false;
+			}
 
-		if (indirect->indirect_draw_count &&
-		    r600_resource(indirect->indirect_draw_count)->TC_L2_dirty) {
-			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-			r600_resource(indirect->indirect_draw_count)->TC_L2_dirty = false;
+			if (indirect->indirect_draw_count &&
+			    r600_resource(indirect->indirect_draw_count)->TC_L2_dirty) {
+				sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
+				r600_resource(indirect->indirect_draw_count)->TC_L2_dirty = false;
+			}
 		}
 	}
 
