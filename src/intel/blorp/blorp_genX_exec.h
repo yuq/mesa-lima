@@ -535,7 +535,7 @@ blorp_emit_sampler_state(struct blorp_batch *batch,
       sampler.VAddressMagFilterRoundingEnable = true;
       sampler.UAddressMinFilterRoundingEnable = true;
       sampler.UAddressMagFilterRoundingEnable = true;
-#if GEN_GEN >= 6
+#if GEN_GEN > 6
       sampler.NonnormalizedCoordinateEnable = true;
 #endif
    }

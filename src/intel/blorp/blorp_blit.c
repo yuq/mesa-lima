@@ -1195,9 +1195,10 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
           * representing the four samples that maxe up a pixel.  So we need
           * to multiply our X and Y coordinates each by 2 and then add 1.
           */
-         src_pos = nir_ishl(&b, src_pos, nir_imm_int(&b, 1));
-         src_pos = nir_iadd(&b, src_pos, nir_imm_int(&b, 1));
-         src_pos = nir_i2f32(&b, src_pos);
+         assert(key->src_coords_normalized);
+         src_pos = nir_fadd(&b,
+                            nir_i2f32(&b, src_pos),
+                            nir_imm_float(&b, 0.5f));
          color = blorp_nir_tex(&b, &v, key, src_pos);
       } else {
          /* Gen7+ hardware doesn't automaticaly blend. */
@@ -1825,7 +1826,9 @@ try_blorp_blit(struct blorp_batch *batch,
 
    params->num_samples = params->dst.surf.samples;
 
-   if (wm_prog_key->bilinear_filter && batch->blorp->isl_dev->info->gen < 6) {
+   if ((wm_prog_key->bilinear_filter ||
+        (wm_prog_key->blend && !wm_prog_key->blit_scaled)) &&
+       batch->blorp->isl_dev->info->gen <= 6) {
       /* Gen4-5 don't support non-normalized texture coordinates */
       wm_prog_key->src_coords_normalized = true;
       params->wm_inputs.src_inv_size[0] =
