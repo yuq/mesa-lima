@@ -177,7 +177,7 @@ is_valid_blit_filter(const struct gl_context *ctx, GLenum filter)
 }
 
 
-static void
+static ALWAYS_INLINE void
 blit_framebuffer(struct gl_context *ctx,
                  struct gl_framebuffer *readFb, struct gl_framebuffer *drawFb,
                  GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
@@ -537,6 +537,22 @@ blit_framebuffer(struct gl_context *ctx,
 }
 
 
+static void
+blit_framebuffer_err(struct gl_context *ctx,
+                     struct gl_framebuffer *readFb,
+                     struct gl_framebuffer *drawFb,
+                     GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
+                     GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
+                     GLbitfield mask, GLenum filter, const char *func)
+{
+   /* We are wrapping the err variant of the always inlined
+    * blit_framebuffer() to avoid inlining it in every caller.
+    */
+   blit_framebuffer(ctx, readFb, drawFb, srcX0, srcY0, srcX1, srcY1,
+                    dstX0, dstY0, dstX1, dstY1, mask, filter, false, func);
+}
+
+
 /**
  * Blit rectangular region, optionally from one framebuffer to another.
  *
@@ -558,10 +574,10 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
                   dstX0, dstY0, dstX1, dstY1,
                   mask, _mesa_enum_to_string(filter));
 
-   blit_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
-                    srcX0, srcY0, srcX1, srcY1,
-                    dstX0, dstY0, dstX1, dstY1,
-                    mask, filter, false, "glBlitFramebuffer");
+   blit_framebuffer_err(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                        srcX0, srcY0, srcX1, srcY1,
+                        dstX0, dstY0, dstX1, dstY1,
+                        mask, filter, "glBlitFramebuffer");
 }
 
 
@@ -609,8 +625,8 @@ _mesa_BlitNamedFramebuffer(GLuint readFramebuffer, GLuint drawFramebuffer,
    else
       drawFb = ctx->WinSysDrawBuffer;
 
-   blit_framebuffer(ctx, readFb, drawFb,
-                    srcX0, srcY0, srcX1, srcY1,
-                    dstX0, dstY0, dstX1, dstY1,
-                    mask, filter, false, "glBlitNamedFramebuffer");
+   blit_framebuffer_err(ctx, readFb, drawFb,
+                        srcX0, srcY0, srcX1, srcY1,
+                        dstX0, dstY0, dstX1, dstY1,
+                        mask, filter, "glBlitNamedFramebuffer");
 }
