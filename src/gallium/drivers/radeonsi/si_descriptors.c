@@ -337,13 +337,6 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 						    rtex->dcc_separate_buffer, usage,
 						    RADEON_PRIO_DCC, check_mem);
 	}
-
-	if (rtex->htile_buffer &&
-	    rtex->tc_compatible_htile) {
-		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
-						    rtex->htile_buffer, usage,
-						    RADEON_PRIO_HTILE, check_mem);
-	}
 }
 
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
@@ -424,7 +417,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 			if (sscreen->b.chip_class <= VI)
 				meta_va += base_level_info->dcc_offset;
 		} else if (tex->tc_compatible_htile) {
-			meta_va = tex->htile_buffer->gpu_address;
+			meta_va = tex->resource.gpu_address + tex->htile_offset;
 		}
 
 		if (meta_va) {

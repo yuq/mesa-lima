@@ -2316,7 +2316,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 				      S_02801C_Y_MAX(rtex->resource.b.b.height0 - 1);
 
 		/* Only use HTILE for the first level. */
-		if (rtex->htile_buffer && !level) {
+		if (rtex->htile_offset && !level) {
 			z_info |= S_028038_TILE_SURFACE_ENABLE(1) |
 				  S_028038_ALLOW_EXPCLEAR(1);
 
@@ -2342,7 +2342,8 @@ static void si_init_depth_surface(struct si_context *sctx,
 				s_info |= S_02803C_TILE_STENCIL_DISABLE(1);
 			}
 
-			surf->db_htile_data_base = rtex->htile_buffer->gpu_address >> 8;
+			surf->db_htile_data_base = (rtex->resource.gpu_address +
+						    rtex->htile_offset) >> 8;
 			surf->db_htile_surface = S_028ABC_FULL_CACHE(1) |
 						 S_028ABC_PIPE_ALIGNED(rtex->surface.u.gfx9.htile.pipe_aligned) |
 						 S_028ABC_RB_ALIGNED(rtex->surface.u.gfx9.htile.rb_aligned);
@@ -2394,7 +2395,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 								levelinfo->nblk_y) / 64 - 1);
 
 		/* Only use HTILE for the first level. */
-		if (rtex->htile_buffer && !level) {
+		if (rtex->htile_offset && !level) {
 			z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 				  S_028040_ALLOW_EXPCLEAR(1);
 
@@ -2420,7 +2421,8 @@ static void si_init_depth_surface(struct si_context *sctx,
 				s_info |= S_028044_TILE_STENCIL_DISABLE(1);
 			}
 
-			surf->db_htile_data_base = rtex->htile_buffer->gpu_address >> 8;
+			surf->db_htile_data_base = (rtex->resource.gpu_address +
+						    rtex->htile_offset) >> 8;
 			surf->db_htile_surface = S_028ABC_FULL_CACHE(1);
 
 			if (rtex->tc_compatible_htile) {
@@ -2814,12 +2816,6 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 				      zb->base.texture->nr_samples > 1 ?
 					      RADEON_PRIO_DEPTH_BUFFER_MSAA :
 					      RADEON_PRIO_DEPTH_BUFFER);
-
-		if (zb->db_htile_data_base) {
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-					      rtex->htile_buffer, RADEON_USAGE_READWRITE,
-					      RADEON_PRIO_HTILE);
-		}
 
 		if (sctx->b.chip_class >= GFX9) {
 			radeon_set_context_reg_seq(cs, R_028014_DB_HTILE_DATA_BASE, 3);

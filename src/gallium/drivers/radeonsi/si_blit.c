@@ -726,7 +726,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		}
 	}
 
-	if (zstex && zstex->htile_buffer &&
+	if (zstex && zstex->htile_offset &&
 	    zsbuf->u.tex.level == 0 &&
 	    zsbuf->u.tex.first_layer == 0 &&
 	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->resource.b.b, 0)) {

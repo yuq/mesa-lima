@@ -509,7 +509,7 @@ static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
 	rtex->cb_color_info = new_tex->cb_color_info;
 	rtex->cmask = new_tex->cmask; /* needed even without CMASK */
 
-	assert(!rtex->htile_buffer);
+	assert(!rtex->htile_offset);
 	assert(!rtex->cmask.size);
 	assert(!rtex->fmask.size);
 	assert(!rtex->dcc_offset);
@@ -612,7 +612,6 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 
 	r600_texture_reference(&rtex->flushed_depth_texture, NULL);
 
-	r600_resource_reference(&rtex->htile_buffer, NULL);
 	if (rtex->cmask_buffer != &rtex->resource) {
 	    r600_resource_reference(&rtex->cmask_buffer, NULL);
 	}
@@ -929,33 +928,14 @@ static void r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 					struct r600_texture *rtex)
 {
-	uint32_t clear_value;
-
-	if (rscreen->chip_class >= GFX9 || rtex->tc_compatible_htile) {
-		clear_value = 0x0000030F;
-	} else {
+	if (rscreen->chip_class <= VI && !rtex->tc_compatible_htile)
 		r600_texture_get_htile_size(rscreen, rtex);
-		clear_value = 0;
-	}
 
 	if (!rtex->surface.htile_size)
 		return;
 
-	rtex->htile_buffer = (struct r600_resource*)
-		r600_aligned_buffer_create(&rscreen->b,
-					   R600_RESOURCE_FLAG_UNMAPPABLE,
-					   PIPE_USAGE_DEFAULT,
-					   rtex->surface.htile_size,
-					   rtex->surface.htile_alignment);
-	if (rtex->htile_buffer == NULL) {
-		/* this is not a fatal error as we can still keep rendering
-		 * without htile buffer */
-		R600_ERR("Failed to create buffer object for htile buffer.\n");
-	} else {
-		r600_screen_clear_buffer(rscreen, &rtex->htile_buffer->b.b,
-					 0, rtex->surface.htile_size,
-					 clear_value);
-	}
+	rtex->htile_offset = align(rtex->size, rtex->surface.htile_alignment);
+	rtex->size = rtex->htile_offset + rtex->surface.htile_size;
 }
 
 void r600_print_texture_info(struct r600_common_screen *rscreen,
@@ -1004,11 +984,12 @@ void r600_print_texture_info(struct r600_common_screen *rscreen,
 				rtex->surface.u.gfx9.cmask.pipe_aligned);
 		}
 
-		if (rtex->htile_buffer) {
-			fprintf(f, "  HTile: size=%u, alignment=%u, "
+		if (rtex->htile_offset) {
+			fprintf(f, "  HTile: offset=%"PRIu64", size=%"PRIu64", alignment=%u, "
 				"rb_aligned=%u, pipe_aligned=%u\n",
-				rtex->htile_buffer->b.b.width0,
-				rtex->htile_buffer->buf->alignment,
+				rtex->htile_offset,
+				rtex->surface.htile_size,
+				rtex->surface.htile_alignment,
 				rtex->surface.u.gfx9.htile.rb_aligned,
 				rtex->surface.u.gfx9.htile.pipe_aligned);
 		}
@@ -1051,10 +1032,11 @@ void r600_print_texture_info(struct r600_common_screen *rscreen,
 			rtex->cmask.offset, rtex->cmask.size, rtex->cmask.alignment,
 			rtex->cmask.slice_tile_max);
 
-	if (rtex->htile_buffer)
-		fprintf(f, "  HTile: size=%u, alignment=%u, TC_compatible = %u\n",
-			rtex->htile_buffer->b.b.width0,
-			rtex->htile_buffer->buf->alignment,
+	if (rtex->htile_offset)
+		fprintf(f, "  HTile: offset=%"PRIu64", size=%"PRIu64", "
+			"alignment=%u, TC_compatible = %u\n",
+			rtex->htile_offset, rtex->surface.htile_size,
+			rtex->surface.htile_alignment,
 			rtex->tc_compatible_htile);
 
 	if (rtex->dcc_offset) {
@@ -1241,6 +1223,17 @@ r600_texture_create_object(struct pipe_screen *screen,
 		r600_screen_clear_buffer(rscreen, &rtex->cmask_buffer->b.b,
 					 rtex->cmask.offset, rtex->cmask.size,
 					 0xCCCCCCCC);
+	}
+	if (rtex->htile_offset) {
+		uint32_t clear_value = 0;
+
+		if (rscreen->chip_class >= GFX9 || rtex->tc_compatible_htile)
+			clear_value = 0x0000030F;
+
+		r600_screen_clear_buffer(rscreen, &rtex->resource.b.b,
+					 rtex->htile_offset,
+					 rtex->surface.htile_size,
+					 clear_value);
 	}
 
 	/* Initialize DCC only if the texture is not being imported. */

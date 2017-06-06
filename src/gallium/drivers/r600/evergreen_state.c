@@ -1393,8 +1393,8 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	}
 
 	/* use htile only for first level */
-	if (rtex->htile_buffer && !level) {
-		uint64_t va = rtex->htile_buffer->gpu_address;
+	if (rtex->htile_offset && !level) {
+		uint64_t va = rtex->resource.gpu_address + rtex->htile_offset;
 		surf->db_htile_data_base = va >> 8;
 		surf->db_htile_surface = S_028ABC_HTILE_WIDTH(1) |
 					 S_028ABC_HTILE_HEIGHT(1) |
@@ -1876,7 +1876,7 @@ static void evergreen_emit_db_state(struct r600_context *rctx, struct r600_atom 
 		radeon_set_context_reg(cs, R_028ABC_DB_HTILE_SURFACE, a->rsurf->db_htile_surface);
 		radeon_set_context_reg(cs, R_028AC8_DB_PRELOAD_CONTROL, a->rsurf->db_preload_control);
 		radeon_set_context_reg(cs, R_028014_DB_HTILE_DATA_BASE, a->rsurf->db_htile_data_base);
-		reloc_idx = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rtex->htile_buffer,
+		reloc_idx = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, &rtex->resource,
 						  RADEON_USAGE_READWRITE, RADEON_PRIO_HTILE);
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, reloc_idx);

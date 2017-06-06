@@ -232,7 +232,7 @@ struct r600_texture {
 	unsigned			last_msaa_resolve_target_micro_mode;
 
 	/* Depth buffer compression and fast clear. */
-	struct r600_resource		*htile_buffer;
+	uint64_t			htile_offset;
 	bool				tc_compatible_htile;
 	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
