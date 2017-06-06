@@ -700,9 +700,9 @@
       <value name="8 Sub-Pixel Precision Bits" value="0"/>
       <value name="4 Sub-Pixel Precision Bits" value="1"/>
     </field>
-    <field name="Use Point Width State" start="235" end="235" type="uint">
-      <value name="Use Point Width on Vertex" value="0"/>
-      <value name="Use Point Width from State" value="1"/>
+    <field name="Point Width Source" start="235" end="235" type="uint">
+      <value name="Vertex" value="0"/>
+      <value name="State" value="1"/>
     </field>
     <field name="Point Width" start="224" end="234" type="u8.3"/>
   </struct>
