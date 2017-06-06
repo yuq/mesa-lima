@@ -652,7 +652,7 @@
       <value name="FRONTWINDING_CW" value="0"/>
       <value name="FRONTWINDING_CCW" value="1"/>
     </field>
-    <field name="Anti-aliasing Enable" start="223" end="223" type="bool"/>
+    <field name="Anti-Aliasing Enable" start="223" end="223" type="bool"/>
     <field name="Cull Mode" start="221" end="222" type="uint" prefix="CULLMODE">
       <value name="BOTH" value="0"/>
       <value name="NONE" value="1"/>
