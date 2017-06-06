@@ -4406,6 +4406,12 @@ struct gl_driver_flags
 
    /** gl_context::Color::sRGBEnabled */
    uint64_t NewFramebufferSRGB;
+
+   /** gl_context::Scissor::EnableFlags */
+   uint64_t NewScissorTest;
+
+   /** gl_context::Scissor::ScissorArray */
+   uint64_t NewScissorRect;
 };
 
 struct gl_uniform_buffer_binding
