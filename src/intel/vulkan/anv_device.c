@@ -883,7 +883,7 @@ void anv_GetPhysicalDeviceProperties(
 
    *pProperties = (VkPhysicalDeviceProperties) {
       .apiVersion = VK_MAKE_VERSION(1, 0, 42),
-      .driverVersion = 1,
+      .driverVersion = vk_get_driver_version(),
       .vendorID = 0x8086,
       .deviceID = pdevice->chipset_id,
       .deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
