@@ -5278,8 +5278,8 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       fprintf(file, "%s", conditional_modifier[inst->conditional_mod]);
       if (!inst->predicate &&
           (devinfo->gen < 5 || (inst->opcode != BRW_OPCODE_SEL &&
-                              inst->opcode != BRW_OPCODE_IF &&
-                              inst->opcode != BRW_OPCODE_WHILE))) {
+                                inst->opcode != BRW_OPCODE_IF &&
+                                inst->opcode != BRW_OPCODE_WHILE))) {
          fprintf(file, ".f0.%d", inst->flag_subreg);
       }
    }

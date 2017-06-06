@@ -1271,8 +1271,8 @@ brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
        */
       if (brw_inst_cond_modifier(devinfo, inst) &&
           (devinfo->gen < 6 || (opcode != BRW_OPCODE_SEL &&
-                            opcode != BRW_OPCODE_IF &&
-                            opcode != BRW_OPCODE_WHILE))) {
+                                opcode != BRW_OPCODE_IF &&
+                                opcode != BRW_OPCODE_WHILE))) {
          format(file, ".f%"PRIu64,
                 devinfo->gen >= 7 ? brw_inst_flag_reg_nr(devinfo, inst) : 0);
          if (brw_inst_flag_subreg_nr(devinfo, inst))
@@ -1304,15 +1304,15 @@ brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
          format(file, "JIP: %d", brw_inst_gen6_jump_count(devinfo, inst));
       }
    } else if (devinfo->gen < 6 && (opcode == BRW_OPCODE_BREAK ||
-                               opcode == BRW_OPCODE_CONTINUE ||
-                               opcode == BRW_OPCODE_ELSE)) {
+                                   opcode == BRW_OPCODE_CONTINUE ||
+                                   opcode == BRW_OPCODE_ELSE)) {
       pad(file, 16);
       format(file, "Jump: %d", brw_inst_gen4_jump_count(devinfo, inst));
       pad(file, 32);
       format(file, "Pop: %"PRIu64, brw_inst_gen4_pop_count(devinfo, inst));
    } else if (devinfo->gen < 6 && (opcode == BRW_OPCODE_IF ||
-                               opcode == BRW_OPCODE_IFF ||
-                               opcode == BRW_OPCODE_HALT)) {
+                                   opcode == BRW_OPCODE_IFF ||
+                                   opcode == BRW_OPCODE_HALT)) {
       pad(file, 16);
       format(file, "Jump: %d", brw_inst_gen4_jump_count(devinfo, inst));
    } else if (devinfo->gen < 6 && opcode == BRW_OPCODE_ENDIF) {
