@@ -845,6 +845,15 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
    image->pitch = strides[0];
 
    image->planar_format = f;
+
+   image->bo = brw_bo_gem_create_from_prime(screen->bufmgr, fds[0]);
+   if (image->bo == NULL) {
+      free(image);
+      return NULL;
+   }
+
+   image->modifier = tiling_to_modifier(image->bo->tiling_mode);
+
    int size = 0;
    for (i = 0; i < f->nplanes; i++) {
       index = f->planes[i].buffer_index;
@@ -857,13 +866,15 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
          size = end;
    }
 
-   image->bo = brw_bo_gem_create_from_prime(screen->bufmgr,
-                                                  fds[0], size);
-   if (image->bo == NULL) {
+   /* Check that the requested image actually fits within the BO. 'size'
+    * is already relative to the offsets, so we don't need to add that. */
+   if (image->bo->size == 0) {
+      image->bo->size = size;
+   } else if (size > image->bo->size) {
+      brw_bo_unreference(image->bo);
       free(image);
       return NULL;
    }
-   image->modifier = tiling_to_modifier(image->bo->tiling_mode);
 
    if (f->nplanes == 1) {
       image->offset = image->offsets[0];

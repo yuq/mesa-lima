@@ -270,7 +270,7 @@ void brw_destroy_hw_context(struct brw_bufmgr *bufmgr, uint32_t ctx_id);
 
 int brw_bo_gem_export_to_prime(struct brw_bo *bo, int *prime_fd);
 struct brw_bo *brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr,
-                                            int prime_fd, int size);
+                                            int prime_fd);
 
 int brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset,
                  uint64_t *result);

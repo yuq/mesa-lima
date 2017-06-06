@@ -971,8 +971,7 @@ brw_bo_get_tiling(struct brw_bo *bo, uint32_t *tiling_mode,
 }
 
 struct brw_bo *
-brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd,
-                             int size)
+brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd)
 {
    int ret;
    uint32_t handle;
@@ -1013,8 +1012,6 @@ brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd,
    ret = lseek(prime_fd, 0, SEEK_END);
    if (ret != -1)
       bo->size = ret;
-   else
-      bo->size = size;
 
    bo->bufmgr = bufmgr;
 
