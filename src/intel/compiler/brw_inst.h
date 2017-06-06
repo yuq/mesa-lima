@@ -268,6 +268,114 @@ REG_TYPE(src)
 #undef REG_TYPE
 
 /**
+ * Three-source align1 instructions:
+ *  @{
+ */
+/* Reserved 127:126 */
+/* src2_reg_nr same in align16 */
+FC(3src_a1_src2_subreg_nr, 117, 113, devinfo->gen >= 10)
+FC(3src_a1_src2_hstride,   112, 111, devinfo->gen >= 10)
+/* Reserved 110:109. src2 vstride is an implied parameter */
+FC(3src_a1_src2_hw_type,   108, 106, devinfo->gen >= 10)
+/* Reserved 105 */
+/* src1_reg_nr same in align16 */
+FC(3src_a1_src1_subreg_nr,  96,  92, devinfo->gen >= 10)
+FC(3src_a1_src1_hstride,    91,  90, devinfo->gen >= 10)
+FC(3src_a1_src1_vstride,    89,  88, devinfo->gen >= 10)
+FC(3src_a1_src1_hw_type,    87,  85, devinfo->gen >= 10)
+/* Reserved 84 */
+/* src0_reg_nr same in align16 */
+FC(3src_a1_src0_subreg_nr,  75,  71, devinfo->gen >= 10)
+FC(3src_a1_src0_hstride,    70,  69, devinfo->gen >= 10)
+FC(3src_a1_src0_vstride,    68,  67, devinfo->gen >= 10)
+FC(3src_a1_src0_hw_type,    66,  64, devinfo->gen >= 10)
+/* dst_reg_nr same in align16 */
+FC(3src_a1_dst_subreg_nr,   55,  54, devinfo->gen >= 10)
+FC(3src_a1_special_acc,     55,  52, devinfo->gen >= 10) /* aliases dst_subreg_nr */
+/* Reserved 51:50 */
+FC(3src_a1_dst_hstride,     49,  49, devinfo->gen >= 10)
+FC(3src_a1_dst_hw_type,     48,  46, devinfo->gen >= 10)
+FC(3src_a1_src2_reg_file,   45,  45, devinfo->gen >= 10)
+FC(3src_a1_src1_reg_file,   44,  44, devinfo->gen >= 10)
+FC(3src_a1_src0_reg_file,   43,  43, devinfo->gen >= 10)
+/* Source Modifier fields same in align16 */
+FC(3src_a1_dst_reg_file,    36,  36, devinfo->gen >= 10)
+FC(3src_a1_exec_type,       35,  35, devinfo->gen >= 10)
+/* Fields below this same in align16 */
+/** @} */
+
+#define REG_TYPE(reg)                                                         \
+static inline void                                                            \
+brw_inst_set_3src_a1_##reg##_type(const struct gen_device_info *devinfo,      \
+                                  brw_inst *inst, enum brw_reg_type type)     \
+{                                                                             \
+   UNUSED enum gen10_align1_3src_exec_type exec_type =                        \
+      (enum gen10_align1_3src_exec_type) brw_inst_3src_a1_exec_type(devinfo,  \
+                                                                    inst);    \
+   if (brw_reg_type_is_floating_point(type)) {                                \
+      assert(exec_type == BRW_ALIGN1_3SRC_EXEC_TYPE_FLOAT);                   \
+   } else {                                                                   \
+      assert(exec_type == BRW_ALIGN1_3SRC_EXEC_TYPE_INT);                     \
+   }                                                                          \
+   unsigned hw_type = brw_reg_type_to_a1_hw_3src_type(devinfo, type);         \
+   brw_inst_set_3src_a1_##reg##_hw_type(devinfo, inst, hw_type);              \
+}                                                                             \
+                                                                              \
+static inline enum brw_reg_type                                               \
+brw_inst_3src_a1_##reg##_type(const struct gen_device_info *devinfo,          \
+                              const brw_inst *inst)                           \
+{                                                                             \
+   enum gen10_align1_3src_exec_type exec_type =                               \
+      (enum gen10_align1_3src_exec_type) brw_inst_3src_a1_exec_type(devinfo,  \
+                                                                    inst);    \
+   unsigned hw_type = brw_inst_3src_a1_##reg##_hw_type(devinfo, inst);        \
+   return brw_a1_hw_3src_type_to_reg_type(devinfo, hw_type, exec_type);       \
+}
+
+REG_TYPE(dst)
+REG_TYPE(src0)
+REG_TYPE(src1)
+REG_TYPE(src2)
+#undef REG_TYPE
+
+/**
+ * Three-source align1 instruction immediates:
+ *  @{
+ */
+static inline uint16_t
+brw_inst_3src_a1_src0_imm(const struct gen_device_info *devinfo,
+                          const brw_inst *insn)
+{
+   assert(devinfo->gen >= 10);
+   return brw_inst_bits(insn, 82, 67);
+}
+
+static inline uint16_t
+brw_inst_3src_a1_src2_imm(const struct gen_device_info *devinfo,
+                          const brw_inst *insn)
+{
+   assert(devinfo->gen >= 10);
+   return brw_inst_bits(insn, 124, 109);
+}
+
+static inline void
+brw_inst_set_3src_a1_src0_imm(const struct gen_device_info *devinfo,
+                              brw_inst *insn, uint16_t value)
+{
+   assert(devinfo->gen >= 10);
+   brw_inst_set_bits(insn, 82, 67, value);
+}
+
+static inline void
+brw_inst_set_3src_a1_src2_imm(const struct gen_device_info *devinfo,
+                              brw_inst *insn, uint16_t value)
+{
+   assert(devinfo->gen >= 10);
+   brw_inst_set_bits(insn, 124, 109, value);
+}
+/** @} */
+
+/**
  * Flow control instruction bits:
  *  @{
  */
