@@ -764,9 +764,9 @@ struct radv_cmd_state {
 	struct radv_descriptor_set *                  descriptors[MAX_SETS];
 	struct radv_attachment_state *                attachments;
 	VkRect2D                                     render_area;
-	struct radv_buffer *                         index_buffer;
 	uint32_t                                     index_type;
-	uint32_t                                     index_offset;
+	uint64_t                                     index_va;
+	uint32_t                                     max_index_count;
 	int32_t                                      last_primitive_reset_en;
 	uint32_t                                     last_primitive_reset_index;
 	enum radv_cmd_flush_bits                     flush_bits;

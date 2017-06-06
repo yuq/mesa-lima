@@ -1987,12 +1987,16 @@ void radv_CmdBindIndexBuffer(
 	VkIndexType indexType)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_buffer, index_buffer, buffer);
 
-	cmd_buffer->state.index_buffer = radv_buffer_from_handle(buffer);
-	cmd_buffer->state.index_offset = offset;
 	cmd_buffer->state.index_type = indexType; /* vk matches hw */
+	cmd_buffer->state.index_va = cmd_buffer->device->ws->buffer_get_va(index_buffer->bo);
+	cmd_buffer->state.index_va += index_buffer->offset + offset;
+
+	int index_size_shift = cmd_buffer->state.index_type ? 2 : 1;
+	cmd_buffer->state.max_index_count = (index_buffer->size - offset) >> index_size_shift;
 	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
-	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, cmd_buffer->state.index_buffer->bo, 8);
+	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, index_buffer->bo, 8);
 }
 
 
@@ -2639,12 +2643,6 @@ void radv_CmdDraw(
 	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
-static
-uint32_t radv_get_max_index_count(struct radv_cmd_buffer *cmd_buffer) {
-	int index_size_shift = cmd_buffer->state.index_type ? 2 : 1;
-	return (cmd_buffer->state.index_buffer->size - cmd_buffer->state.index_offset) >> index_size_shift;
-}
-
 void radv_CmdDrawIndexed(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    indexCount,
@@ -2655,7 +2653,6 @@ void radv_CmdDrawIndexed(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	int index_size = cmd_buffer->state.index_type ? 4 : 2;
-	uint32_t index_max_size = radv_get_max_index_count(cmd_buffer);
 	uint64_t index_va;
 
 	radv_cmd_buffer_flush_state(cmd_buffer, true, (instanceCount > 1), false, indexCount);
@@ -2681,10 +2678,10 @@ void radv_CmdDrawIndexed(
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
 	radeon_emit(cmd_buffer->cs, instanceCount);
 
-	index_va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->state.index_buffer->bo);
-	index_va += firstIndex * index_size + cmd_buffer->state.index_buffer->offset + cmd_buffer->state.index_offset;
+	index_va = cmd_buffer->state.index_va;
+	index_va += firstIndex * index_size;
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DRAW_INDEX_2, 4, false));
-	radeon_emit(cmd_buffer->cs, index_max_size);
+	radeon_emit(cmd_buffer->cs, cmd_buffer->state.max_index_count);
 	radeon_emit(cmd_buffer->cs, index_va);
 	radeon_emit(cmd_buffer->cs, (index_va >> 32UL) & 0xFF);
 	radeon_emit(cmd_buffer->cs, indexCount);
@@ -2780,12 +2777,10 @@ radv_cmd_draw_indexed_indirect_count(
 	uint32_t                                    stride)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	uint32_t index_max_size = radv_get_max_index_count(cmd_buffer);
 	uint64_t index_va;
 	radv_cmd_buffer_flush_state(cmd_buffer, true, false, true, 0);
 
-	index_va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->state.index_buffer->bo);
-	index_va += cmd_buffer->state.index_buffer->offset + cmd_buffer->state.index_offset;
+	index_va = cmd_buffer->state.index_va;
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 21);
 
@@ -2797,7 +2792,7 @@ radv_cmd_draw_indexed_indirect_count(
 	radeon_emit(cmd_buffer->cs, index_va >> 32);
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_BUFFER_SIZE, 0, 0));
-	radeon_emit(cmd_buffer->cs, index_max_size);
+	radeon_emit(cmd_buffer->cs, cmd_buffer->state.max_index_count);
 
 	radv_emit_indirect_draw(cmd_buffer, buffer, offset,
 	                        countBuffer, countBufferOffset, maxDrawCount, stride, true);
