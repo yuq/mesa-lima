@@ -856,6 +856,10 @@ struct SWR_FRONTEND_STATE
         uint32_t bits;
     } provokingVertex;
     uint32_t topologyProvokingVertex; // provoking vertex for the draw topology
+
+    // Size of a vertex in simdvector units. Should be sized to the 
+    // maximum of the input/output of the vertex shader.
+    uint32_t vsVertexSize;
 };
 
 //////////////////////////////////////////////////////////////////////////

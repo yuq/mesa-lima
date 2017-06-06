@@ -128,6 +128,10 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    /* Set up frontend state
     * XXX setup provokingVertex & topologyProvokingVertex */
    SWR_FRONTEND_STATE feState = {0};
+
+   /* XXX this value should be minimized based on the shader set */
+   feState.vsVertexSize = SWR_VTX_NUM_SLOTS;
+
    if (ctx->rasterizer->flatshade_first) {
       feState.provokingVertex = {1, 0, 0};
    } else {

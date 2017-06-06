@@ -1475,36 +1475,36 @@ void ProcessDraw(
         pSoPrimData = (uint32_t*)pDC->pArena->AllocAligned(4096, 16);
     }
 
-    const uint32_t vertexCount = NumVertsPerPrim(state.topology, state.gsState.gsEnable);
+    const uint32_t vertexCount = NumVertsPerPrim(state.topology, true);
+#if USE_SIMD16_FRONTEND
+    uint32_t simdVertexSizeBytes = state.frontendState.vsVertexSize * sizeof(simd16vector);
+#else
+    uint32_t simdVertexSizeBytes = state.frontendState.vsVertexSize * sizeof(simdvector);
+#endif
 
     SWR_ASSERT(vertexCount <= MAX_NUM_VERTS_PER_PRIM);
 
+    // Compute storage requirements for vertex store
+    // TODO: allocation needs to be rethought for better cut support
+    uint32_t numVerts = vertexCount + 2; // Need extra space for PA state machine
+    uint32_t vertexStoreSize = numVerts * simdVertexSizeBytes;
+
     // grow the vertex store for the PA as necessary
-    if (gVertexStoreSize < vertexCount)
+    if (gVertexStoreSize < vertexStoreSize)
     {
         if (pVertexStore != nullptr)
         {
             AlignedFree(pVertexStore);
         }
 
-        while (gVertexStoreSize < vertexCount)
-        {
-#if USE_SIMD16_FRONTEND
-            gVertexStoreSize += 4;  // grow in chunks of 4 simd16vertex
-#else
-            gVertexStoreSize += 8;  // grow in chunks of 8 simdvertex
-#endif
-        }
-
-        SWR_ASSERT(gVertexStoreSize <= MAX_NUM_VERTS_PER_PRIM);
-
-        pVertexStore = reinterpret_cast<PA_STATE::SIMDVERTEX *>(AlignedMalloc(gVertexStoreSize * sizeof(pVertexStore[0]), 64));
+        pVertexStore = reinterpret_cast<PA_STATE::SIMDVERTEX *>(AlignedMalloc(vertexStoreSize, 64));
+        gVertexStoreSize = vertexStoreSize;
 
         SWR_ASSERT(pVertexStore != nullptr);
     }
 
     // choose primitive assembler
-    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, pVertexStore, gVertexStoreSize, SWR_VTX_NUM_SLOTS);
+    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, pVertexStore, numVerts, state.frontendState.vsVertexSize);
     PA_STATE& pa = paFactory.GetPA();
 
 #if USE_SIMD16_FRONTEND
