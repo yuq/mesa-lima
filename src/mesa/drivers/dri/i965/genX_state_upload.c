@@ -2475,7 +2475,22 @@ genX(upload_gs_state)(struct brw_context *brw)
       /* In gen6, transform feedback for the VS stage is done with an ad-hoc GS
        * program. This function provides the needed 3DSTATE_GS for this.
        */
-      upload_gs_state_for_tf(brw);
+      brw_batch_emit(brw, GENX(3DSTATE_GS), gs) {
+         gs.KernelStartPointer = KSP(brw, brw->ff_gs.prog_offset);
+         gs.SingleProgramFlow = true;
+         gs.VectorMaskEnable = true;
+         gs.DispatchGRFStartRegisterForURBData = 2;
+         gs.VertexURBEntryReadLength = brw->ff_gs.prog_data->urb_read_length;
+         gs.MaximumNumberofThreads = devinfo->max_gs_threads - 1;
+         gs.StatisticsEnable = true;
+         gs.SOStatisticsEnable = true;
+         gs.RenderingEnabled = true;
+         gs.SVBIPayloadEnable = true;
+         gs.SVBIPostIncrementEnable = true;
+         gs.SVBIPostIncrementValue =
+            brw->ff_gs.prog_data->svbi_postincrement_value;
+         gs.Enable = true;
+      }
 #endif
    } else {
       brw_batch_emit(brw, GENX(3DSTATE_GS), gs) {
