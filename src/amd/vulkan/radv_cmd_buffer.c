@@ -3300,7 +3300,7 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	 * the stage mask. */
 
 	si_cs_emit_write_event_eop(cs,
-				   cmd_buffer->device->physical_device->rad_info.chip_class == CIK,
+				   cmd_buffer->device->physical_device->rad_info.chip_class,
 				   false,
 				   EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
 				   1, va, 2, value);
