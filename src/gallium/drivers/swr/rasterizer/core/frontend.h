@@ -189,28 +189,36 @@ void calcDeterminantIntVertical(const simd16scalari vA[3], const simd16scalari v
     // refer to calcDeterminantInt comment for calculation explanation
 
     // A1*B2
-    simd16scalari vA1_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[1], 0));// 0 1 2 3 4 5 6 7 (64b), upper 32b zero, lower 32b used
-    simd16scalari vA1_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[1], 1));// 8 9 A B C D E F (64b), upper 32b zero, lower 32b used
+    simd16scalari vA1_lo = _simd16_unpacklo_epi32(vA[1], vA[1]);                // X 0 X 1 X 4 X 5 X 8 X 9 X C X D (32b)
+    simd16scalari vA1_hi = _simd16_unpackhi_epi32(vA[1], vA[1]);                // X 2 X 3 X 6 X 7 X A X B X E X F
 
-    simd16scalari vB2_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[2], 0));// 0 1 2 3 4 5 6 7 (64b), upper 32b zero, lower 32b used
-    simd16scalari vB2_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[2], 1));// 8 9 A B C D E F (64b), upper 32b zero, lower 32b used
+    simd16scalari vB2_lo = _simd16_unpacklo_epi32(vB[2], vB[2]);
+    simd16scalari vB2_hi = _simd16_unpackhi_epi32(vB[2], vB[2]);
 
-    simd16scalari vA1B2_lo = _simd16_mul_epi32(vA1_lo, vB2_lo);                 // 0 1 2 3 4 5 6 7 (64b)
-    simd16scalari vA1B2_hi = _simd16_mul_epi32(vA1_hi, vB2_hi);                 // 8 9 A B C D E F (64b)
+    simd16scalari vA1B2_lo = _simd16_mul_epi32(vA1_lo, vB2_lo);                 // 0 1 4 5 8 9 C D (64b)
+    simd16scalari vA1B2_hi = _simd16_mul_epi32(vA1_hi, vB2_hi);                 // 2 3 6 7 A B E F
 
     // B1*A2
-    simd16scalari vA2_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[2], 0));
-    simd16scalari vA2_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vA[2], 1));
+    simd16scalari vA2_lo = _simd16_unpacklo_epi32(vA[2], vA[2]);
+    simd16scalari vA2_hi = _simd16_unpackhi_epi32(vA[2], vA[2]);
 
-    simd16scalari vB1_lo = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[1], 0));
-    simd16scalari vB1_hi = _simd16_cvtepu32_epi64(_simd16_extract_si(vB[1], 1));
+    simd16scalari vB1_lo = _simd16_unpacklo_epi32(vB[1], vB[1]);
+    simd16scalari vB1_hi = _simd16_unpackhi_epi32(vB[1], vB[1]);
 
     simd16scalari vA2B1_lo = _simd16_mul_epi32(vA2_lo, vB1_lo);
     simd16scalari vA2B1_hi = _simd16_mul_epi32(vA2_hi, vB1_hi);
 
     // A1*B2 - A2*B1
-    pvDet[0] = _simd16_sub_epi64(vA1B2_lo, vA2B1_lo);                           // 0 1 2 3 4 5 6 7 (64b)
-    pvDet[1] = _simd16_sub_epi64(vA1B2_hi, vA2B1_hi);                           // 8 9 A B C D E F (64b)
+    simd16scalari difflo = _simd16_sub_epi64(vA1B2_lo, vA2B1_lo);               // 0 1 4 5 8 9 C D (64b)
+    simd16scalari diffhi = _simd16_sub_epi64(vA1B2_hi, vA2B1_hi);               // 2 3 6 7 A B E F
+
+    // (1, 0, 1, 0) = 01 00 01 00 = 0x44, (3, 2, 3, 2) = 11 10 11 10 = 0xEE
+    simd16scalari templo = _simd16_permute2f128_si(difflo, diffhi, 0x44);       // 0 1 4 5 2 3 6 7 (64b)
+    simd16scalari temphi = _simd16_permute2f128_si(difflo, diffhi, 0xEE);       // 8 9 C D A B E F
+
+    // (3, 1, 2, 0) = 11 01 10 00 = 0xD8
+    pvDet[0] = _simd16_permute2f128_si(templo, templo, 0xD8);                   // 0 1 2 3 4 5 6 7 (64b)
+    pvDet[1] = _simd16_permute2f128_si(temphi, temphi, 0xD8);                   // 8 9 A B C D E F
 }
 
 #endif
