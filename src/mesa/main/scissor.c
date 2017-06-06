@@ -169,11 +169,10 @@ _mesa_ScissorArrayv(GLuint first, GLsizei count, const GLint *v)
  * Verifies the parameters call set_scissor_no_notify to do the work.
  */
 static void
-ScissorIndexed(GLuint index, GLint left, GLint bottom,
-               GLsizei width, GLsizei height, const char *function)
+scissor_indexed_err(struct gl_context *ctx, GLuint index, GLint left,
+                    GLint bottom, GLsizei width, GLsizei height,
+                    const char *function)
 {
-   GET_CURRENT_CONTEXT(ctx);
-
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "%s(%d, %d, %d, %d, %d)\n",
                   function, index, left, bottom, width, height);
@@ -199,13 +198,17 @@ void GLAPIENTRY
 _mesa_ScissorIndexed(GLuint index, GLint left, GLint bottom,
                      GLsizei width, GLsizei height)
 {
-   ScissorIndexed(index, left, bottom, width, height, "glScissorIndexed");
+   GET_CURRENT_CONTEXT(ctx);
+   scissor_indexed_err(ctx, index, left, bottom, width, height,
+                       "glScissorIndexed");
 }
 
 void GLAPIENTRY
 _mesa_ScissorIndexedv(GLuint index, const GLint *v)
 {
-   ScissorIndexed(index, v[0], v[1], v[2], v[3], "glScissorIndexedv");
+   GET_CURRENT_CONTEXT(ctx);
+   scissor_indexed_err(ctx, index, v[0], v[1], v[2], v[3],
+                       "glScissorIndexedv");
 }
 
 void GLAPIENTRY
