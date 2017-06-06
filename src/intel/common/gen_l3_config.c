@@ -255,6 +255,10 @@ static unsigned
 get_l3_way_size(const struct gen_device_info *devinfo)
 {
    assert(devinfo->l3_banks);
+
+   if (devinfo->is_broxton)
+      return 4;
+
    return 2 * devinfo->l3_banks;
 }
 
