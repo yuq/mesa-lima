@@ -598,12 +598,13 @@ _mesa_PixelTransferi( GLenum pname, GLint param )
 /*****                    State Management                        *****/
 /**********************************************************************/
 
-/*
- * Return a bitmask of IMAGE_*_BIT flags which to indicate which
- * pixel transfer operations are enabled.
+
+/**
+ * Update mesa pixel transfer derived state to indicate which operations are
+ * enabled.
  */
-static void
-update_image_transfer_state(struct gl_context *ctx)
+void
+_mesa_update_pixel( struct gl_context *ctx )
 {
    GLuint mask = 0;
 
@@ -620,15 +621,6 @@ update_image_transfer_state(struct gl_context *ctx)
       mask |= IMAGE_MAP_COLOR_BIT;
 
    ctx->_ImageTransferState = mask;
-}
-
-
-/**
- * Update mesa pixel transfer derived state.
- */
-void _mesa_update_pixel( struct gl_context *ctx )
-{
-   update_image_transfer_state(ctx);
 }
 
 
