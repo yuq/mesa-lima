@@ -102,6 +102,9 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	 * It would be wrong to think that TCS = TES. */
 	struct si_shader_selector *tcs =
 		sctx->tcs_shader.cso ? sctx->tcs_shader.cso : sctx->tes_shader.cso;
+	unsigned tess_uses_primid = sctx->ia_multi_vgt_param_key.u.tess_uses_prim_id;
+	bool has_primid_instancing_bug = sctx->b.chip_class == SI &&
+					 sctx->b.screen->info.max_se == 1;
 	unsigned tes_sh_base = sctx->shader_userdata.sh_base[PIPE_SHADER_TESS_EVAL];
 	unsigned num_tcs_input_cp = info->vertices_per_patch;
 	unsigned num_tcs_output_cp, num_tcs_inputs, num_tcs_outputs;
@@ -128,7 +131,9 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	if (sctx->last_ls == ls_current &&
 	    sctx->last_tcs == tcs &&
 	    sctx->last_tes_sh_base == tes_sh_base &&
-	    sctx->last_num_tcs_input_cp == num_tcs_input_cp) {
+	    sctx->last_num_tcs_input_cp == num_tcs_input_cp &&
+	    (!has_primid_instancing_bug ||
+	     (sctx->last_tess_uses_primid == tess_uses_primid))) {
 		*num_patches = sctx->last_num_patches;
 		return;
 	}
@@ -137,6 +142,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	sctx->last_tcs = tcs;
 	sctx->last_tes_sh_base = tes_sh_base;
 	sctx->last_num_tcs_input_cp = num_tcs_input_cp;
+	sctx->last_tess_uses_primid = tess_uses_primid;
 
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
@@ -194,21 +200,20 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 		 */
 		unsigned one_wave = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp);
 		*num_patches = MIN2(*num_patches, one_wave);
-
-		if (sctx->screen->b.info.max_se == 1) {
-			/* The VGT HS block increments the patch ID unconditionally
-			 * within a single threadgroup. This results in incorrect
-			 * patch IDs when instanced draws are used.
-			 *
-			 * The intended solution is to restrict threadgroups to
-			 * a single instance by setting SWITCH_ON_EOI, which
-			 * should cause IA to split instances up. However, this
-			 * doesn't work correctly on SI when there is no other
-			 * SE to switch to.
-			 */
-			*num_patches = 1;
-		}
 	}
+
+	/* The VGT HS block increments the patch ID unconditionally
+	 * within a single threadgroup. This results in incorrect
+	 * patch IDs when instanced draws are used.
+	 *
+	 * The intended solution is to restrict threadgroups to
+	 * a single instance by setting SWITCH_ON_EOI, which
+	 * should cause IA to split instances up. However, this
+	 * doesn't work correctly on SI when there is no other
+	 * SE to switch to.
+	 */
+	if (has_primid_instancing_bug)
+		*num_patches = 1;
 
 	sctx->last_num_patches = *num_patches;
 
