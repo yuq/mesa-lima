@@ -637,6 +637,8 @@ struct radeon_winsys {
 
     bool (*read_registers)(struct radeon_winsys *ws, unsigned reg_offset,
                            unsigned num_registers, uint32_t *out);
+
+    const char* (*get_chip_name)(struct radeon_winsys *ws);
 };
 
 static inline bool radeon_emitted(struct radeon_winsys_cs *cs, unsigned num_dw)

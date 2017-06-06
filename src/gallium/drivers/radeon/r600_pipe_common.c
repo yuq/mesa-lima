@@ -790,6 +790,15 @@ static const char* r600_get_device_vendor(struct pipe_screen* pscreen)
 
 static const char* r600_get_chip_name(struct r600_common_screen *rscreen)
 {
+	const char *mname;
+
+	if (rscreen->ws->get_chip_name) {
+		mname = rscreen->ws->get_chip_name(rscreen->ws);
+		if (mname != NULL)
+			return mname;
+	}
+
+	/* fall back to family names*/
 	switch (rscreen->info.family) {
 	case CHIP_R600: return "AMD R600";
 	case CHIP_RV610: return "AMD RV610";
@@ -1321,6 +1330,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	struct utsname uname_data;
 
 	ws->query_info(ws, &rscreen->info);
+	rscreen->ws = ws;
 
 	if (uname(&uname_data) == 0)
 		snprintf(kernel_version, sizeof(kernel_version),
@@ -1362,7 +1372,6 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	r600_init_screen_texture_functions(rscreen);
 	r600_init_screen_query_functions(rscreen);
 
-	rscreen->ws = ws;
 	rscreen->family = rscreen->info.family;
 	rscreen->chip_class = rscreen->info.chip_class;
 	rscreen->debug_flags = debug_get_flags_option("R600_DEBUG", common_debug_options, 0);

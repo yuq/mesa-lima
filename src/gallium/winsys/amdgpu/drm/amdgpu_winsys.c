@@ -221,6 +221,13 @@ static bool amdgpu_winsys_unref(struct radeon_winsys *rws)
    return destroy;
 }
 
+static const char* amdgpu_get_chip_name(struct radeon_winsys *ws)
+{
+   amdgpu_device_handle dev = ((struct amdgpu_winsys *)ws)->dev;
+   return amdgpu_get_marketing_name(dev);
+}
+
+
 PUBLIC struct radeon_winsys *
 amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
 {
@@ -296,6 +303,7 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    ws->base.cs_request_feature = amdgpu_cs_request_feature;
    ws->base.query_value = amdgpu_query_value;
    ws->base.read_registers = amdgpu_read_registers;
+   ws->base.get_chip_name = amdgpu_get_chip_name;
 
    amdgpu_bo_init_functions(ws);
    amdgpu_cs_init_functions(ws);
