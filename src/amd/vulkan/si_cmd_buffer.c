@@ -1089,6 +1089,9 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 	                                          RADV_CMD_FLAG_VS_PARTIAL_FLUSH |
 	                                          RADV_CMD_FLAG_VGT_FLUSH);
 
+	if (!cmd_buffer->state.flush_bits)
+		return;
+
 	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 128);
 
 	uint32_t *ptr = NULL;
@@ -1104,8 +1107,7 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 	                       cmd_buffer->state.flush_bits);
 
 
-	if (cmd_buffer->state.flush_bits)
-		radv_cmd_buffer_trace_emit(cmd_buffer);
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 	cmd_buffer->state.flush_bits = 0;
 }
 
