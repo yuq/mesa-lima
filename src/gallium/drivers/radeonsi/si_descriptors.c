@@ -559,7 +559,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 	sctx->descriptors_dirty |= 1u << si_sampler_and_image_descriptors_idx(shader);
 }
 
-static bool is_compressed_colortex(struct r600_texture *rtex)
+static bool color_needs_decompression(struct r600_texture *rtex)
 {
 	return rtex->fmask.size ||
 	       (rtex->dirty_level_mask &&
@@ -622,7 +622,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			} else {
 				samplers->depth_texture_mask &= ~(1u << slot);
 			}
-			if (is_compressed_colortex(rtex)) {
+			if (color_needs_decompression(rtex)) {
 				samplers->compressed_colortex_mask |= 1u << slot;
 			} else {
 				samplers->compressed_colortex_mask &= ~(1u << slot);
@@ -652,7 +652,7 @@ si_samplers_update_compressed_colortex_mask(struct si_textures_info *samplers)
 		if (res && res->target != PIPE_BUFFER) {
 			struct r600_texture *rtex = (struct r600_texture *)res;
 
-			if (is_compressed_colortex(rtex)) {
+			if (color_needs_decompression(rtex)) {
 				samplers->compressed_colortex_mask |= 1u << i;
 			} else {
 				samplers->compressed_colortex_mask &= ~(1u << i);
@@ -781,7 +781,7 @@ static void si_set_shader_image(struct si_context *ctx,
 				ctx->b.decompress_dcc(&ctx->b.b, tex);
 		}
 
-		if (is_compressed_colortex(tex)) {
+		if (color_needs_decompression(tex)) {
 			images->compressed_colortex_mask |= 1 << slot;
 		} else {
 			images->compressed_colortex_mask &= ~(1 << slot);
@@ -876,7 +876,7 @@ si_images_update_compressed_colortex_mask(struct si_images_info *images)
 		if (res && res->target != PIPE_BUFFER) {
 			struct r600_texture *rtex = (struct r600_texture *)res;
 
-			if (is_compressed_colortex(rtex)) {
+			if (color_needs_decompression(rtex)) {
 				images->compressed_colortex_mask |= 1 << i;
 			} else {
 				images->compressed_colortex_mask &= ~(1 << i);
