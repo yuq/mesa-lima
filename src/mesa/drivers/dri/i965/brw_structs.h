@@ -272,65 +272,6 @@ struct brw_cc_unit_state
    } cc7;
 };
 
-struct brw_sf_unit_state
-{
-   struct thread0 thread0;
-   struct thread1 thread1;
-   struct thread2 thread2;
-   struct thread3 thread3;
-
-   struct
-   {
-      unsigned pad0:10;
-      unsigned stats_enable:1;
-      unsigned nr_urb_entries:7;
-      unsigned pad1:1;
-      unsigned urb_entry_allocation_size:5;
-      unsigned pad2:1;
-      unsigned max_threads:6;
-      unsigned pad3:1;
-   } thread4;
-
-   struct
-   {
-      unsigned front_winding:1;
-      unsigned viewport_transform:1;
-      unsigned pad0:3;
-      unsigned sf_viewport_state_offset:27; /* Offset from GENERAL_STATE_BASE */
-   } sf5;
-
-   struct
-   {
-      unsigned pad0:9;
-      unsigned dest_org_vbias:4;
-      unsigned dest_org_hbias:4;
-      unsigned scissor:1;
-      unsigned disable_2x2_trifilter:1;
-      unsigned disable_zero_pix_trifilter:1;
-      unsigned point_rast_rule:2;
-      unsigned line_endcap_aa_region_width:2;
-      unsigned line_width:4;
-      unsigned fast_scissor_disable:1;
-      unsigned cull_mode:2;
-      unsigned aa_enable:1;
-   } sf6;
-
-   struct
-   {
-      unsigned point_size:11;
-      unsigned use_point_size_state:1;
-      unsigned subpixel_precision:1;
-      unsigned sprite_point:1;
-      unsigned aa_line_distance_mode:1;
-      unsigned pad0:10;
-      unsigned trifan_pv:2;
-      unsigned linestrip_pv:2;
-      unsigned tristrip_pv:2;
-      unsigned line_last_pixel_enable:1;
-   } sf7;
-
-};
-
 struct brw_gs_unit_state
 {
    struct thread0 thread0;

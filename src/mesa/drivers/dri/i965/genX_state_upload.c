@@ -154,6 +154,29 @@ vertex_bo(struct brw_bo *bo, uint32_t offset)
    };
 }
 
+#if GEN_GEN == 4
+static inline struct brw_address
+KSP(struct brw_context *brw, uint32_t offset)
+{
+   return instruction_bo(brw->cache.bo, offset);
+}
+
+static inline struct brw_address
+KSP_ro(struct brw_context *brw, uint32_t offset)
+{
+   return instruction_ro_bo(brw->cache.bo, offset);
+}
+#else
+static inline uint32_t
+KSP(struct brw_context *brw, uint32_t offset)
+{
+   return offset;
+}
+
+#define KSP_ro KSP
+
+#endif
+
 #include "genxml/genX_pack.h"
 
 #define _brw_cmd_length(cmd) cmd ## _length
@@ -1357,7 +1380,6 @@ static const struct brw_tracked_state genX(clip_state) = {
 
 /* ---------------------------------------------------------------------- */
 
-#if GEN_GEN >= 6
 static void
 genX(upload_sf)(struct brw_context *brw)
 {
@@ -1367,11 +1389,48 @@ genX(upload_sf)(struct brw_context *brw)
 #if GEN_GEN <= 7
    /* _NEW_BUFFERS */
    bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
-   const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
+   UNUSED const bool multisampled_fbo =
+      _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 #endif
 
+#if GEN_GEN < 6
+   const struct brw_sf_prog_data *sf_prog_data = brw->sf.prog_data;
+
+   ctx->NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
+
+   brw_state_emit(brw, GENX(SF_STATE), 64, &brw->sf.state_offset, sf) {
+      sf.KernelStartPointer = KSP_ro(brw, brw->sf.prog_offset);
+      sf.FloatingPointMode = FLOATING_POINT_MODE_Alternate;
+      sf.GRFRegisterCount = DIV_ROUND_UP(sf_prog_data->total_grf, 16) - 1;
+      sf.DispatchGRFStartRegisterForURBData = 3;
+      sf.VertexURBEntryReadOffset = BRW_SF_URB_ENTRY_READ_OFFSET;
+      sf.VertexURBEntryReadLength = sf_prog_data->urb_read_length;
+      sf.NumberofURBEntries = brw->urb.nr_sf_entries;
+      sf.URBEntryAllocationSize = brw->urb.sfsize - 1;
+
+      /* STATE_PREFETCH command description describes this state as being
+       * something loaded through the GPE (L2 ISC), so it's INSTRUCTION
+       * domain.
+       */
+      sf.SetupViewportStateOffset =
+         instruction_ro_bo(brw->batch.bo, brw->sf.vp_offset);
+
+      sf.PointRasterizationRule = RASTRULE_UPPER_RIGHT;
+
+      /* sf.ConstantURBEntryReadLength = stage_prog_data->curb_read_length; */
+      /* sf.ConstantURBEntryReadOffset = brw->curbe.vs_start * 2; */
+
+      sf.MaximumNumberofThreads =
+         MIN2(GEN_GEN == 5 ? 48 : 24, brw->urb.nr_sf_entries) - 1;
+
+      sf.SpritePointEnable = ctx->Point.PointSprite;
+
+      sf.DestinationOriginHorizontalBias = 0.5;
+      sf.DestinationOriginVerticalBias = 0.5;
+#else
    brw_batch_emit(brw, GENX(3DSTATE_SF), sf) {
       sf.StatisticsEnable = true;
+#endif
       sf.ViewportTransformEnable = true;
 
 #if GEN_GEN == 7
@@ -1382,6 +1441,7 @@ genX(upload_sf)(struct brw_context *brw)
 #if GEN_GEN <= 7
       /* _NEW_POLYGON */
       sf.FrontWinding = ctx->Polygon._FrontBit == render_to_fbo;
+#if GEN_GEN >= 6
       sf.GlobalDepthOffsetEnableSolid = ctx->Polygon.OffsetFill;
       sf.GlobalDepthOffsetEnableWireframe = ctx->Polygon.OffsetLine;
       sf.GlobalDepthOffsetEnablePoint = ctx->Polygon.OffsetPoint;
@@ -1414,6 +1474,14 @@ genX(upload_sf)(struct brw_context *brw)
             unreachable("not reached");
       }
 
+      if (multisampled_fbo && ctx->Multisample.Enabled)
+         sf.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
+
+      sf.GlobalDepthOffsetConstant = ctx->Polygon.OffsetUnits * 2;
+      sf.GlobalDepthOffsetScale = ctx->Polygon.OffsetFactor;
+      sf.GlobalDepthOffsetClamp = ctx->Polygon.OffsetClamp;
+#endif
+
       sf.ScissorRectangleEnable = true;
 
       if (ctx->Polygon.CullFlag) {
@@ -1438,12 +1506,6 @@ genX(upload_sf)(struct brw_context *brw)
       sf.LineStippleEnable = ctx->Line.StippleFlag;
 #endif
 
-      if (multisampled_fbo && ctx->Multisample.Enabled)
-         sf.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
-
-      sf.GlobalDepthOffsetConstant = ctx->Polygon.OffsetUnits * 2;
-      sf.GlobalDepthOffsetScale = ctx->Polygon.OffsetFactor;
-      sf.GlobalDepthOffsetClamp = ctx->Polygon.OffsetClamp;
 #endif
 
       /* _NEW_LINE */
@@ -1479,7 +1541,9 @@ genX(upload_sf)(struct brw_context *brw)
          sf.SmoothPointEnable = true;
 #endif
 
+#if GEN_IS_G4X || GEN_GEN >= 5
       sf.AALineDistanceMode = AALINEDISTANCE_TRUE;
+#endif
 
       /* _NEW_LIGHT */
       if (ctx->Light.ProvokingVertex != GL_FIRST_VERTEX_CONVENTION) {
@@ -1529,14 +1593,21 @@ static const struct brw_tracked_state genX(sf_state) = {
    .dirty = {
       .mesa  = _NEW_LIGHT |
                _NEW_LINE |
-               _NEW_MULTISAMPLE |
                _NEW_POINT |
                _NEW_PROGRAM |
+               (GEN_GEN >= 6 ? _NEW_MULTISAMPLE : 0) |
                (GEN_GEN <= 7 ? _NEW_BUFFERS | _NEW_POLYGON : 0),
       .brw   = BRW_NEW_BLORP |
-               BRW_NEW_CONTEXT |
                BRW_NEW_VUE_MAP_GEOM_OUT |
-               (GEN_GEN <= 7 ? BRW_NEW_GS_PROG_DATA |
+               (GEN_GEN <= 5 ? BRW_NEW_BATCH |
+                               BRW_NEW_PROGRAM_CACHE |
+                               BRW_NEW_SF_PROG_DATA |
+                               BRW_NEW_SF_VP |
+                               BRW_NEW_URB_FENCE
+                             : 0) |
+               (GEN_GEN >= 6 ? BRW_NEW_CONTEXT : 0) |
+               (GEN_GEN >= 6 && GEN_GEN <= 7 ?
+                               BRW_NEW_GS_PROG_DATA |
                                BRW_NEW_PRIMITIVE |
                                BRW_NEW_TES_PROG_DATA
                              : 0) |
@@ -1546,7 +1617,6 @@ static const struct brw_tracked_state genX(sf_state) = {
    },
    .emit = genX(upload_sf),
 };
-#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -1730,20 +1800,6 @@ static const struct brw_tracked_state genX(wm_state) = {
 #endif
 
 /* ---------------------------------------------------------------------- */
-
-#if GEN_GEN == 4
-static inline struct brw_address
-KSP(struct brw_context *brw, uint32_t offset)
-{
-   return instruction_bo(brw->cache.bo, offset);
-}
-#else
-static inline uint32_t
-KSP(struct brw_context *brw, uint32_t offset)
-{
-   return offset;
-}
-#endif
 
 #define INIT_THREAD_DISPATCH_FIELDS(pkt, prefix) \
    pkt.KernelStartPointer = KSP(brw, stage_state->prog_offset);           \
@@ -4178,7 +4234,7 @@ genX(init_atoms)(struct brw_context *brw)
       /* These set up state for brw_psp_urb_cbs */
       &brw_wm_unit,
       &genX(sf_clip_viewport),
-      &brw_sf_unit,
+      &genX(sf_state),
       &genX(vs_state), /* always required, enabled or not */
       &brw_clip_unit,
       &brw_gs_unit,
