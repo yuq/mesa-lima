@@ -993,6 +993,8 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                unsigned int level, unsigned int start_layer,
                unsigned int num_layers, enum blorp_hiz_op op)
 {
+   assert(intel_miptree_level_has_hiz(mt, level));
+   assert(op != BLORP_HIZ_OP_NONE);
    const char *opname = NULL;
 
    switch (op) {
@@ -1061,23 +1063,16 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
       }
    }
 
-   if (brw->gen >= 8) {
-      for (unsigned a = 0; a < num_layers; a++)
-         gen8_hiz_exec(brw, mt, level, start_layer + a, op);
-   } else {
-      assert(intel_miptree_level_has_hiz(mt, level));
 
-      struct isl_surf isl_tmp[2];
-      struct blorp_surf surf;
-      blorp_surf_for_miptree(brw, &surf, mt, true, (1 << ISL_AUX_USAGE_HIZ),
-                             &level, start_layer, num_layers, isl_tmp);
+   struct isl_surf isl_tmp[2];
+   struct blorp_surf surf;
+   blorp_surf_for_miptree(brw, &surf, mt, true, (1 << ISL_AUX_USAGE_HIZ),
+                          &level, start_layer, num_layers, isl_tmp);
 
-      struct blorp_batch batch;
-      blorp_batch_init(&brw->blorp, &batch, brw, 0);
-      blorp_hiz_op(&batch, &surf, level, start_layer, num_layers, op);
-      blorp_batch_finish(&batch);
-   }
-
+   struct blorp_batch batch;
+   blorp_batch_init(&brw->blorp, &batch, brw, 0);
+   blorp_hiz_op(&batch, &surf, level, start_layer, num_layers, op);
+   blorp_batch_finish(&batch);
 
    /* The following stalls and flushes are only documented to be required for
     * HiZ clear operations.  However, they also seem to be required for the
