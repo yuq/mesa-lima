@@ -395,7 +395,7 @@ si_flush_depth_textures(struct si_context *sctx,
 			struct si_textures_info *textures)
 {
 	unsigned i;
-	unsigned mask = textures->depth_texture_mask;
+	unsigned mask = textures->needs_depth_decompress_mask;
 
 	while (mask) {
 		struct pipe_sampler_view *view;
@@ -507,7 +507,7 @@ si_decompress_sampler_color_textures(struct si_context *sctx,
 				     struct si_textures_info *textures)
 {
 	unsigned i;
-	unsigned mask = textures->compressed_colortex_mask;
+	unsigned mask = textures->needs_color_decompress_mask;
 
 	while (mask) {
 		struct pipe_sampler_view *view;
@@ -530,7 +530,7 @@ si_decompress_image_color_textures(struct si_context *sctx,
 				   struct si_images_info *images)
 {
 	unsigned i;
-	unsigned mask = images->compressed_colortex_mask;
+	unsigned mask = images->needs_color_decompress_mask;
 
 	while (mask) {
 		const struct pipe_image_view *view;
@@ -664,13 +664,13 @@ static void si_decompress_textures(struct si_context *sctx, unsigned shader_mask
 	while (mask) {
 		unsigned i = u_bit_scan(&mask);
 
-		if (sctx->samplers[i].depth_texture_mask) {
+		if (sctx->samplers[i].needs_depth_decompress_mask) {
 			si_flush_depth_textures(sctx, &sctx->samplers[i]);
 		}
-		if (sctx->samplers[i].compressed_colortex_mask) {
+		if (sctx->samplers[i].needs_color_decompress_mask) {
 			si_decompress_sampler_color_textures(sctx, &sctx->samplers[i]);
 		}
-		if (sctx->images[i].compressed_colortex_mask) {
+		if (sctx->images[i].needs_color_decompress_mask) {
 			si_decompress_image_color_textures(sctx, &sctx->images[i]);
 		}
 	}
