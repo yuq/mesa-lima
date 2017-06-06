@@ -378,9 +378,9 @@ si_emit_config(struct radv_physical_device *physical_device,
 			       S_02800C_FORCE_HIS_ENABLE1(V_02800C_FORCE_DISABLE));
 
 	if (physical_device->rad_info.chip_class >= GFX9) {
-		radeon_set_context_reg(cs, R_030920_VGT_MAX_VTX_INDX, ~0);
-		radeon_set_context_reg(cs, R_030924_VGT_MIN_VTX_INDX, 0);
-		radeon_set_context_reg(cs, R_030928_VGT_INDX_OFFSET, 0);
+		radeon_set_uconfig_reg(cs, R_030920_VGT_MAX_VTX_INDX, ~0);
+		radeon_set_uconfig_reg(cs, R_030924_VGT_MIN_VTX_INDX, 0);
+		radeon_set_uconfig_reg(cs, R_030928_VGT_INDX_OFFSET, 0);
 	} else {
 		radeon_set_context_reg(cs, R_028400_VGT_MAX_VTX_INDX, ~0);
 		radeon_set_context_reg(cs, R_028404_VGT_MIN_VTX_INDX, 0);
@@ -485,7 +485,7 @@ si_emit_config(struct radv_physical_device *physical_device,
 				       S_028C48_MAX_PRIM_PER_BATCH(1023));
 		radeon_set_context_reg(cs, R_028C4C_PA_SC_CONSERVATIVE_RASTERIZATION_CNTL,
 				       S_028C4C_NULL_SQUAD_AA_MASK_ENABLE(1));
-		radeon_set_context_reg(cs, R_030968_VGT_INSTANCE_BASE_ID, 0);
+		radeon_set_uconfig_reg(cs, R_030968_VGT_INSTANCE_BASE_ID, 0);
 	}
 	si_emit_compute(physical_device, cs);
 }
