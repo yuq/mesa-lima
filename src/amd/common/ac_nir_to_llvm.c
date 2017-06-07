@@ -708,7 +708,6 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 
 static void create_function(struct nir_to_llvm_context *ctx)
 {
-	unsigned i;
 	unsigned num_sets = ctx->options->layout ? ctx->options->layout->num_sets : 0;
 	uint8_t user_sgpr_idx;
 	struct user_sgpr_info user_sgpr_info;
