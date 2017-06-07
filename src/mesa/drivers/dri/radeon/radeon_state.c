@@ -34,7 +34,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "main/glheader.h"
 #include "main/imports.h"
-#include "main/api_arrayelt.h"
 #include "main/enums.h"
 #include "main/light.h"
 #include "main/context.h"
@@ -2051,7 +2050,6 @@ static void radeonInvalidateState( struct gl_context *ctx, GLuint new_state )
    _swsetup_InvalidateState( ctx, new_state );
    _vbo_InvalidateState( ctx, new_state );
    _tnl_InvalidateState( ctx, new_state );
-   _ae_invalidate_state( ctx, new_state );
    R100_CONTEXT(ctx)->radeon.NewGLState |= new_state;
 }
 
