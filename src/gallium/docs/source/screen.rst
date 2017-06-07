@@ -624,16 +624,25 @@ get_name
 
 Returns an identifying name for the screen.
 
+The returned string should remain valid and immutable for the lifetime of
+pipe_screen.
+
 get_vendor
 ^^^^^^^^^^
 
 Returns the screen vendor.
+
+The returned string should remain valid and immutable for the lifetime of
+pipe_screen.
 
 get_device_vendor
 ^^^^^^^^^^^^^^^^^
 
 Returns the actual vendor of the device driving the screen
 (as opposed to the driver vendor).
+
+The returned string should remain valid and immutable for the lifetime of
+pipe_screen.
 
 .. _get_param:
 
