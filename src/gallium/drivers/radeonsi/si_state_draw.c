@@ -993,6 +993,7 @@ void si_emit_cache_flush(struct si_context *sctx)
 			rctx->flags &= ~(SI_CONTEXT_INV_GLOBAL_L2 |
 					 SI_CONTEXT_WRITEBACK_GLOBAL_L2 |
 					 SI_CONTEXT_INV_VMEM_L1);
+			sctx->b.num_L2_invalidates++;
 		}
 
 		/* Allocate memory for the fence. */
