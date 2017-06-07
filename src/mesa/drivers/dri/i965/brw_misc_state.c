@@ -383,8 +383,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
    OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch - 1 : 0) |
              (depthbuffer_format << 18) |
              (BRW_TILEWALK_YMAJOR << 26) |
-             ((depth_mt ? depth_mt->surf.tiling != ISL_TILING_LINEAR : 1)
-              << 27) |
+             (1 << 27) |
              (depth_surface_type << 29));
 
    if (depth_mt) {
