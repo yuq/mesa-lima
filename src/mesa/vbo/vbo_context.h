@@ -98,14 +98,15 @@ vbo_exec_invalidate_state(struct gl_context *ctx)
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
 
-   if (!exec->validating && ctx->NewState & (_NEW_PROGRAM | _NEW_ARRAY)) {
-      exec->array.recalculate_inputs = GL_TRUE;
+   if (ctx->NewState & (_NEW_PROGRAM | _NEW_ARRAY)) {
+      if (!exec->validating)
+         exec->array.recalculate_inputs = GL_TRUE;
+
+      _ae_invalidate_state(ctx);
    }
 
    if (ctx->NewState & _NEW_EVAL)
       exec->eval.recalculate_maps = GL_TRUE;
-
-   _ae_invalidate_state(ctx, ctx->NewState);
 }
 
 
