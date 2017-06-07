@@ -593,6 +593,10 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                             pDepthBuffer, depthPassMask, vCoverageMask, pStencilBuffer, stencilPassMask);
                         goto Endtile;
                     }
+                } else {
+                    // for early z, consolidate discards from shader
+                    // into depthPassMask
+                    depthPassMask = _simd_and_ps(depthPassMask, vCoverageMask);
                 }
 
                 uint32_t statMask = _simd_movemask_ps(depthPassMask);
