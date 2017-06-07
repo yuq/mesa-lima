@@ -39,8 +39,6 @@
 #include "st_context.h"
 #include "st_cb_strings.h"
 
-#define ST_VERSION_STRING "0.4"
-
 static const GLubyte *
 st_get_string(struct gl_context * ctx, GLenum name)
 {
@@ -55,11 +53,7 @@ st_get_string(struct gl_context * ctx, GLenum name)
    }
 
    case GL_RENDERER:
-      util_snprintf(st->renderer, sizeof(st->renderer), "Gallium %s on %s", 
-               ST_VERSION_STRING,
-	       screen->get_name( screen ));
-
-      return (GLubyte *) st->renderer;
+      return (GLubyte *) screen->get_name(screen);
 
    default:
       return NULL;

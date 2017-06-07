@@ -164,7 +164,6 @@ struct st_context
    } state;
 
    char vendor[100];
-   char renderer[100];
 
    uint64_t dirty; /**< dirty states */
 
