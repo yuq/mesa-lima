@@ -2339,18 +2339,18 @@ static const struct brw_tracked_state genX(sf_clip_viewport) = {
 
 /* ---------------------------------------------------------------------- */
 
-#if GEN_GEN >= 6
 static void
 genX(upload_gs_state)(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED struct gl_context *ctx = &brw->ctx;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct brw_stage_state *stage_state = &brw->gs.base;
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   bool active = brw->geometry_program;
+   bool active = GEN_GEN >= 6 && brw->geometry_program;
 
    /* BRW_NEW_GS_PROG_DATA */
    struct brw_stage_prog_data *stage_prog_data = stage_state->prog_data;
-   const struct brw_vue_prog_data *vue_prog_data =
+   UNUSED const struct brw_vue_prog_data *vue_prog_data =
       brw_vue_prog_data(stage_prog_data);
 #if GEN_GEN >= 7
    const struct brw_gs_prog_data *gs_prog_data =
@@ -2384,7 +2384,14 @@ genX(upload_gs_state)(struct brw_context *brw)
       gen7_emit_cs_stall_flush(brw);
 #endif
 
+#if GEN_GEN >= 6
    brw_batch_emit(brw, GENX(3DSTATE_GS), gs) {
+#else
+   ctx->NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
+   brw_state_emit(brw, GENX(GS_STATE), 32, &brw->ff_gs.state_offset, gs) {
+#endif
+
+#if GEN_GEN >= 6
       if (active) {
          INIT_THREAD_DISPATCH_FIELDS(gs, Vertex);
 
@@ -2435,7 +2442,6 @@ genX(upload_gs_state)(struct brw_context *brw)
 
 #if GEN_GEN < 7
          gs.SOStatisticsEnable = true;
-         gs.RenderingEnabled = 1;
          if (brw->geometry_program->info.has_transform_feedback_varyings)
             gs.SVBIPayloadEnable = true;
 
@@ -2469,33 +2475,41 @@ genX(upload_gs_state)(struct brw_context *brw)
          gs.VertexURBEntryOutputReadOffset = urb_entry_write_offset;
          gs.VertexURBEntryOutputLength = MAX2(urb_entry_output_length, 1);
 #endif
-#if GEN_GEN < 7
-      } else if (brw->ff_gs.prog_active) {
+      }
+#endif
+
+#if GEN_GEN <= 6
+      if (!active && brw->ff_gs.prog_active) {
          /* In gen6, transform feedback for the VS stage is done with an
           * ad-hoc GS program. This function provides the needed 3DSTATE_GS
           * for this.
           */
          gs.KernelStartPointer = KSP(brw, brw->ff_gs.prog_offset);
          gs.SingleProgramFlow = true;
-         gs.VectorMaskEnable = true;
-         gs.DispatchGRFStartRegisterForURBData = 2;
+         gs.DispatchGRFStartRegisterForURBData = GEN_GEN == 6 ? 2 : 1;
          gs.VertexURBEntryReadLength = brw->ff_gs.prog_data->urb_read_length;
-         gs.MaximumNumberofThreads = devinfo->max_gs_threads - 1;
-         gs.StatisticsEnable = true;
-         gs.SOStatisticsEnable = true;
-         gs.RenderingEnabled = true;
+
+#if GEN_GEN <= 5
+         gs.GRFRegisterCount =
+            DIV_ROUND_UP(brw->ff_gs.prog_data->total_grf, 16) - 1;
+         /* BRW_NEW_URB_FENCE */
+         gs.NumberofURBEntries = brw->urb.nr_gs_entries;
+         gs.URBEntryAllocationSize = brw->urb.vsize - 1;
+         gs.MaximumNumberofThreads = brw->urb.nr_gs_entries >= 8 ? 1 : 0;
+         gs.FloatingPointMode = FLOATING_POINT_MODE_Alternate;
+#else
+         gs.Enable = true;
+         gs.VectorMaskEnable = true;
          gs.SVBIPayloadEnable = true;
          gs.SVBIPostIncrementEnable = true;
          gs.SVBIPostIncrementValue =
             brw->ff_gs.prog_data->svbi_postincrement_value;
-         gs.Enable = true;
+         gs.SOStatisticsEnable = true;
+         gs.MaximumNumberofThreads = devinfo->max_gs_threads - 1;
 #endif
-      } else {
-         gs.StatisticsEnable = true;
-#if GEN_GEN < 7
-         gs.RenderingEnabled = true;
+      }
 #endif
-
+      if (!active && !brw->ff_gs.prog_active) {
 #if GEN_GEN < 8
          gs.DispatchGRFStartRegisterForURBData = 1;
 #if GEN_GEN >= 7
@@ -2503,6 +2517,16 @@ genX(upload_gs_state)(struct brw_context *brw)
 #endif
 #endif
       }
+
+#if GEN_GEN >= 6
+      gs.StatisticsEnable = true;
+#endif
+#if GEN_GEN == 5 || GEN_GEN == 6
+      gs.RenderingEnabled = true;
+#endif
+#if GEN_GEN <= 5
+      gs.MaximumVPIndex = brw->clip.viewport_count - 1;
+#endif
    }
 
 #if GEN_GEN == 6
@@ -2512,17 +2536,22 @@ genX(upload_gs_state)(struct brw_context *brw)
 
 static const struct brw_tracked_state genX(gs_state) = {
    .dirty = {
-      .mesa  = (GEN_GEN < 7 ? _NEW_PROGRAM_CONSTANTS : 0),
+      .mesa  = (GEN_GEN == 6 ? _NEW_PROGRAM_CONSTANTS : 0),
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_CONTEXT |
-               BRW_NEW_GEOMETRY_PROGRAM |
-               BRW_NEW_GS_PROG_DATA |
+               (GEN_GEN <= 5 ? BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+                               BRW_NEW_PROGRAM_CACHE |
+                               BRW_NEW_URB_FENCE |
+                               BRW_NEW_VIEWPORT_COUNT
+                             : 0) |
+               (GEN_GEN >= 6 ? BRW_NEW_CONTEXT |
+                               BRW_NEW_GEOMETRY_PROGRAM |
+                               BRW_NEW_GS_PROG_DATA
+                             : 0) |
                (GEN_GEN < 7 ? BRW_NEW_FF_GS_PROG_DATA : 0),
    },
    .emit = genX(upload_gs_state),
 };
-#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -5037,7 +5066,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(sf_state),
       &genX(vs_state), /* always required, enabled or not */
       &brw_clip_unit,
-      &brw_gs_unit,
+      &genX(gs_state),
 
       /* Command packets:
        */

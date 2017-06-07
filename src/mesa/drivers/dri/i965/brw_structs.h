@@ -180,50 +180,6 @@ struct brw_clip_unit_state
    float viewport_ymax;
 };
 
-struct brw_gs_unit_state
-{
-   struct thread0 thread0;
-   struct thread1 thread1;
-   struct thread2 thread2;
-   struct thread3 thread3;
-
-   struct
-   {
-      unsigned pad0:8;
-      unsigned rendering_enable:1; /* for Ironlake */
-      unsigned pad4:1;
-      unsigned stats_enable:1;
-      unsigned nr_urb_entries:7;
-      unsigned pad1:1;
-      unsigned urb_entry_allocation_size:5;
-      unsigned pad2:1;
-      unsigned max_threads:5;
-      unsigned pad3:2;
-   } thread4;
-
-   struct
-   {
-      unsigned sampler_count:3;
-      unsigned pad0:2;
-      unsigned sampler_state_pointer:27;
-   } gs5;
-
-
-   struct
-   {
-      unsigned max_vp_index:4;
-      unsigned pad0:12;
-      unsigned svbi_post_inc_value:10;
-      unsigned pad1:1;
-      unsigned svbi_post_inc_enable:1;
-      unsigned svbi_payload:1;
-      unsigned discard_adjaceny:1;
-      unsigned reorder_enable:1;
-      unsigned pad2:1;
-   } gs6;
-};
-
-
 struct brw_wm_unit_state
 {
    struct thread0 thread0;
