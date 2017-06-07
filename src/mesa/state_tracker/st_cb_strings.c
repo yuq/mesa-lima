@@ -47,9 +47,7 @@ st_get_string(struct gl_context * ctx, GLenum name)
 
    switch (name) {
    case GL_VENDOR: {
-      const char *vendor = screen->get_vendor( screen );
-      util_snprintf(st->vendor, sizeof(st->vendor), "%s", vendor);
-      return (GLubyte *) st->vendor;
+      return (GLubyte *) screen->get_vendor(screen);
    }
 
    case GL_RENDERER:

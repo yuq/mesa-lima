@@ -163,8 +163,6 @@ struct st_context
       GLuint fb_orientation;
    } state;
 
-   char vendor[100];
-
    uint64_t dirty; /**< dirty states */
 
    /** This masks out unused shader resources. Only valid in draw calls. */
