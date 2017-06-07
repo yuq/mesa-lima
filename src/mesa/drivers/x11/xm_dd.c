@@ -689,7 +689,6 @@ xmesa_update_state(struct gl_context *ctx)
     */
    _swrast_InvalidateState( ctx, new_state );
    _tnl_InvalidateState( ctx, new_state );
-   _vbo_InvalidateState( ctx, new_state );
    _swsetup_InvalidateState( ctx, new_state );
 
    if (_mesa_is_user_fbo(ctx->DrawBuffer))

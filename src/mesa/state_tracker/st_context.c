@@ -279,11 +279,6 @@ st_invalidate_state(struct gl_context * ctx)
 
    if (new_state & _NEW_PROGRAM_CONSTANTS)
       st->dirty |= st->active_states & ST_NEW_CONSTANTS;
-
-   /* This is the only core Mesa module we depend upon.
-    * No longer use swrast, swsetup, tnl.
-    */
-   _vbo_InvalidateState(ctx, new_state);
 }
 
 

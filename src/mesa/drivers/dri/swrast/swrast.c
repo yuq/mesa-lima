@@ -704,7 +704,6 @@ update_state(struct gl_context *ctx)
     /* not much to do here - pass it on */
     _swrast_InvalidateState( ctx, new_state );
     _swsetup_InvalidateState( ctx, new_state );
-    _vbo_InvalidateState( ctx, new_state );
     _tnl_InvalidateState( ctx, new_state );
 }
 

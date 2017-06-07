@@ -26,7 +26,6 @@
  */
 
 
-#include "main/api_arrayelt.h"
 #include "main/glheader.h"
 #include "main/mtypes.h"
 #include "main/vtxfmt.h"
@@ -67,27 +66,6 @@ void vbo_exec_destroy( struct gl_context *ctx )
    }
 
    vbo_exec_vtx_destroy( exec );
-}
-
-
-/**
- * Really want to install these callbacks to a central facility to be
- * invoked according to the state flags.  That will have to wait for a
- * mesa rework:
- */ 
-void vbo_exec_invalidate_state( struct gl_context *ctx, GLbitfield new_state )
-{
-   struct vbo_context *vbo = vbo_context(ctx);
-   struct vbo_exec_context *exec = &vbo->exec;
-
-   if (!exec->validating && new_state & (_NEW_PROGRAM|_NEW_ARRAY)) {
-      exec->array.recalculate_inputs = GL_TRUE;
-   }
-
-   if (new_state & _NEW_EVAL)
-      exec->eval.recalculate_maps = GL_TRUE;
-
-   _ae_invalidate_state(ctx, new_state);
 }
 
 

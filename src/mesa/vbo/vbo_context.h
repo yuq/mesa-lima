@@ -56,6 +56,7 @@
 #include "vbo_exec.h"
 #include "vbo_save.h"
 
+#include "main/api_arrayelt.h"
 #include "main/macros.h"
 
 #ifdef __cplusplus
@@ -88,6 +89,23 @@ struct vbo_context {
 static inline struct vbo_context *vbo_context(struct gl_context *ctx) 
 {
    return ctx->vbo_context;
+}
+
+
+static inline void
+vbo_exec_invalidate_state(struct gl_context *ctx)
+{
+   struct vbo_context *vbo = vbo_context(ctx);
+   struct vbo_exec_context *exec = &vbo->exec;
+
+   if (!exec->validating && ctx->NewState & (_NEW_PROGRAM | _NEW_ARRAY)) {
+      exec->array.recalculate_inputs = GL_TRUE;
+   }
+
+   if (ctx->NewState & _NEW_EVAL)
+      exec->eval.recalculate_maps = GL_TRUE;
+
+   _ae_invalidate_state(ctx, ctx->NewState);
 }
 
 
