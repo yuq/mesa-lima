@@ -1727,11 +1727,7 @@ void ProcessDraw(
     }
 
 #else
-    simdvertex          vin;
     SWR_VS_CONTEXT      vsContext;
-
-    vsContext.pVin = &vin;
-
     SWR_FETCH_CONTEXT   fetchInfo = { 0 };
 
     fetchInfo.pStreams = &state.vertexBuffers[0];
@@ -1787,6 +1783,7 @@ void ProcessDraw(
             }
 
             simdvertex& vout = pa.GetNextVsOutput();
+            vsContext.pVin = &vout;
             vsContext.pVout = &vout;
 
             if (i < endVertex)
@@ -1794,7 +1791,7 @@ void ProcessDraw(
 
                 // 1. Execute FS/VS for a single SIMD.
                 AR_BEGIN(FEFetchShader, pDC->drawId);
-                state.pfnFetchFunc(fetchInfo, vin);
+                state.pfnFetchFunc(fetchInfo, vout);
                 AR_END(FEFetchShader, 0);
 
                 // forward fetch generated vertex IDs to the vertex shader
