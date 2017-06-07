@@ -622,7 +622,8 @@ brw_prepare_vertices(struct brw_context *brw)
       const uint32_t start = buffer_range_start[i];
       const uint32_t range = buffer_range_end[i] - buffer_range_start[i];
 
-      buffer->bo = intel_bufferobj_buffer(brw, enabled_buffer[i], start, range);
+      buffer->bo = intel_bufferobj_buffer(brw, enabled_buffer[i], start,
+                                          range, false);
       brw_bo_reference(buffer->bo);
    }
 
@@ -739,7 +740,7 @@ brw_upload_indices(struct brw_context *brw)
 
       struct brw_bo *bo =
          intel_bufferobj_buffer(brw, intel_buffer_object(bufferobj),
-                                offset, ib_size);
+                                offset, ib_size, false);
       if (bo != brw->ib.bo) {
          brw_bo_unreference(brw->ib.bo);
          brw->ib.bo = bo;

@@ -335,7 +335,8 @@ intel_set_texture_storage_for_buffer_object(struct gl_context *ctx,
 
    struct brw_bo *bo = intel_bufferobj_buffer(brw, intel_buffer_obj,
                                              buffer_offset,
-                                             row_stride * image->Height);
+                                             row_stride * image->Height,
+                                             !read_only);
    intel_texobj->mt =
       intel_miptree_create_for_bo(brw, bo,
                                   image->TexFormat,

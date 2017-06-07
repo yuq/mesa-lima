@@ -83,9 +83,10 @@ struct intel_buffer_object
 /* Get the bm buffer associated with a GL bufferobject:
  */
 struct brw_bo *intel_bufferobj_buffer(struct brw_context *brw,
-                                     struct intel_buffer_object *obj,
-                                     uint32_t offset,
-                                     uint32_t size);
+                                      struct intel_buffer_object *obj,
+                                      uint32_t offset,
+                                      uint32_t size,
+                                      bool write);
 
 void intel_upload_data(struct brw_context *brw,
                        const void *data,

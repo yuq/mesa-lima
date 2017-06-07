@@ -540,7 +540,7 @@ brw_unmap_buffer(struct gl_context *ctx,
 struct brw_bo *
 intel_bufferobj_buffer(struct brw_context *brw,
                        struct intel_buffer_object *intel_obj,
-                       uint32_t offset, uint32_t size)
+                       uint32_t offset, uint32_t size, bool write)
 {
    /* This is needed so that things like transform feedback and texture buffer
     * objects that need a BO but don't want to check that they exist for
@@ -576,8 +576,8 @@ brw_copy_buffer_subdata(struct gl_context *ctx,
    if (size == 0)
       return;
 
-   dst_bo = intel_bufferobj_buffer(brw, intel_dst, write_offset, size);
-   src_bo = intel_bufferobj_buffer(brw, intel_src, read_offset, size);
+   dst_bo = intel_bufferobj_buffer(brw, intel_dst, write_offset, size, true);
+   src_bo = intel_bufferobj_buffer(brw, intel_src, read_offset, size, false);
 
    intel_emit_linear_blit(brw,
 			  dst_bo, write_offset,

@@ -698,7 +698,8 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
 
    if (intel_obj) {
       size = MIN2(size, intel_obj->Base.Size);
-      bo = intel_bufferobj_buffer(brw, intel_obj, tObj->BufferOffset, size);
+      bo = intel_bufferobj_buffer(brw, intel_obj, tObj->BufferOffset, size,
+                                  false);
    }
 
    /* The ARB_texture_buffer_specification says:
@@ -786,7 +787,8 @@ brw_update_sol_surface(struct brw_context *brw,
    uint32_t offset_bytes = 4 * offset_dwords;
    struct brw_bo *bo = intel_bufferobj_buffer(brw, intel_bo,
                                              offset_bytes,
-                                             buffer_obj->Size - offset_bytes);
+                                             buffer_obj->Size - offset_bytes,
+                                             true);
    uint32_t *surf = brw_state_batch(brw, 6 * 4, 32, out_offset);
    uint32_t pitch_minus_1 = 4*stride_dwords - 1;
    size_t size_dwords = buffer_obj->Size / 4;
@@ -1412,7 +1414,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          struct brw_bo *bo =
             intel_bufferobj_buffer(brw, intel_bo,
                                    binding->Offset,
-                                   size);
+                                   size, false);
          brw_create_constant_surface(brw, bo, binding->Offset,
                                      size,
                                      &ubo_surf_offsets[i]);
@@ -1437,7 +1439,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          struct brw_bo *bo =
             intel_bufferobj_buffer(brw, intel_bo,
                                    binding->Offset,
-                                   size);
+                                   size, true);
          brw_create_buffer_surface(brw, bo, binding->Offset,
                                    size,
                                    &ssbo_surf_offsets[i]);
@@ -1509,8 +1511,10 @@ brw_upload_abo_surfaces(struct brw_context *brw,
             &ctx->AtomicBufferBindings[prog->sh.AtomicBuffers[i]->Binding];
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
-         struct brw_bo *bo = intel_bufferobj_buffer(
-            brw, intel_bo, binding->Offset, intel_bo->Base.Size - binding->Offset);
+         struct brw_bo *bo =
+            intel_bufferobj_buffer(brw, intel_bo, binding->Offset,
+                                   intel_bo->Base.Size - binding->Offset,
+                                   true);
 
          brw_emit_buffer_surface_state(brw, &surf_offsets[i], bo,
                                        binding->Offset, ISL_FORMAT_RAW,

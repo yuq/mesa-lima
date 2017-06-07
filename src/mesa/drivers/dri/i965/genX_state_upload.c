@@ -3387,7 +3387,7 @@ genX(upload_3dstate_so_buffers)(struct brw_context *brw)
       assert(start % 4 == 0);
       uint32_t end = ALIGN(start + xfb_obj->Size[i], 4);
       struct brw_bo *bo =
-         intel_bufferobj_buffer(brw, bufferobj, start, end - start);
+         intel_bufferobj_buffer(brw, bufferobj, start, end - start, true);
       assert(end <= bo->size);
 
       brw_batch_emit(brw, GENX(3DSTATE_SO_BUFFER), sob) {
