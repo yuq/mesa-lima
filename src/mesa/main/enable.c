@@ -37,7 +37,6 @@
 #include "light.h"
 #include "mtypes.h"
 #include "enums.h"
-#include "api_arrayelt.h"
 #include "texstate.h"
 
 
@@ -125,8 +124,6 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
       return;
 
    FLUSH_VERTICES(ctx, _NEW_ARRAY);
-
-   _ae_invalidate_state(ctx, _NEW_ARRAY);
 
    *var = state;
 
