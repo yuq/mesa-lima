@@ -485,7 +485,7 @@
     <field name="Number of URB Entries" start="139" end="146" type="uint"/>
     <field name="GS Statistics Enable" start="138" end="138" type="bool"/>
     <field name="SO Statistics Enable" start="137" end="137" type="bool"/>
-    <field name="Rendering Enable" start="136" end="136" type="bool"/>
+    <field name="Rendering Enabled" start="136" end="136" type="bool"/>
     <field name="Sampler State Pointer" start="165" end="191" type="address"/>
     <field name="Sampler Count" start="160" end="162" type="uint"/>
     <field name="Reorder Enable" start="222" end="222" type="bool"/>
