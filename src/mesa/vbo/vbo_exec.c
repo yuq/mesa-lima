@@ -34,24 +34,26 @@
 
 
 
-void vbo_exec_init( struct gl_context *ctx )
+void
+vbo_exec_init(struct gl_context *ctx)
 {
    struct vbo_exec_context *exec = &vbo_context(ctx)->exec;
 
    exec->ctx = ctx;
 
-   /* Initialize the arrayelt helper
-    */
-   if (!ctx->aelt_context &&
-       !_ae_create_context( ctx )) 
-      return;
+   /* aelt_context should have been created by the caller */
+   assert(ctx->aelt_context);
 
-   vbo_exec_vtx_init( exec );
+   vbo_exec_vtx_init(exec);
 
    ctx->Driver.NeedFlush = 0;
    ctx->Driver.CurrentExecPrimitive = PRIM_OUTSIDE_BEGIN_END;
 
-   vbo_exec_invalidate_state( ctx, ~0 );
+   /* The aelt_context state should still be dirty from its creation */
+   assert(_ae_is_state_dirty(ctx));
+
+   exec->array.recalculate_inputs = GL_TRUE;
+   exec->eval.recalculate_maps = GL_TRUE;
 }
 
 

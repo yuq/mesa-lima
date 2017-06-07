@@ -94,6 +94,13 @@ TYPE_IDX(GLenum t)
 }
 
 
+bool
+_ae_is_state_dirty(struct gl_context *ctx)
+{
+   return AE_CONTEXT(ctx)->NewState;
+}
+
+
 #define NUM_TYPES 8
 
 
