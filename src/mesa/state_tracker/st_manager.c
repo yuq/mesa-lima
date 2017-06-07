@@ -911,7 +911,7 @@ st_manager_add_color_renderbuffer(struct st_context *st,
    if (stfb->iface)
       stfb->iface_stamp = p_atomic_read(&stfb->iface->stamp) - 1;
 
-   st_invalidate_state(st->ctx, _NEW_BUFFERS);
+   st_invalidate_buffers(st);
 
    return TRUE;
 }

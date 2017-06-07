@@ -504,7 +504,7 @@ st_render_texture(struct gl_context *ctx,
     * That's where the new renderbuffer (which we just created) gets
     * passed to the pipe as a (color/depth) render target.
     */
-   st_invalidate_state(ctx, _NEW_BUFFERS);
+   st_invalidate_buffers(st);
 
 
    /* Need to trigger a call to update_framebuffer() since we just
@@ -520,6 +520,7 @@ st_render_texture(struct gl_context *ctx,
 static void
 st_finish_render_texture(struct gl_context *ctx, struct gl_renderbuffer *rb)
 {
+   struct st_context *st = st_context(ctx);
    struct st_renderbuffer *strb = st_renderbuffer(rb);
 
    if (!strb)
@@ -528,7 +529,7 @@ st_finish_render_texture(struct gl_context *ctx, struct gl_renderbuffer *rb)
    strb->is_rtt = FALSE;
 
    /* restore previous framebuffer state */
-   st_invalidate_state(ctx, _NEW_BUFFERS);
+   st_invalidate_buffers(st);
 }
 
 

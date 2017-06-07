@@ -305,7 +305,8 @@ struct st_framebuffer
 extern void st_init_driver_functions(struct pipe_screen *screen,
                                      struct dd_function_table *functions);
 
-void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state);
+void
+st_invalidate_buffers(struct st_context *st);
 
 /* Invalidate the readpixels cache to ensure we don't read stale data.
  */

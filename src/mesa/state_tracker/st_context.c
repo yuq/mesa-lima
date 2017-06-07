@@ -161,25 +161,33 @@ st_get_active_states(struct gl_context *ctx)
 }
 
 
+void
+st_invalidate_buffers(struct st_context *st)
+{
+   st->dirty |= ST_NEW_BLEND |
+                ST_NEW_DSA |
+                ST_NEW_FB_STATE |
+                ST_NEW_SAMPLE_MASK |
+                ST_NEW_SAMPLE_SHADING |
+                ST_NEW_FS_STATE |
+                ST_NEW_POLY_STIPPLE |
+                ST_NEW_VIEWPORT |
+                ST_NEW_RASTERIZER |
+                ST_NEW_SCISSOR |
+                ST_NEW_WINDOW_RECTANGLES;
+}
+
+
 /**
  * Called via ctx->Driver.UpdateState()
  */
-void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
+static void
+st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
 {
    struct st_context *st = st_context(ctx);
 
    if (new_state & _NEW_BUFFERS) {
-      st->dirty |= ST_NEW_BLEND |
-                   ST_NEW_DSA |
-                   ST_NEW_FB_STATE |
-                   ST_NEW_SAMPLE_MASK |
-                   ST_NEW_SAMPLE_SHADING |
-                   ST_NEW_FS_STATE |
-                   ST_NEW_POLY_STIPPLE |
-                   ST_NEW_VIEWPORT |
-                   ST_NEW_RASTERIZER |
-                   ST_NEW_SCISSOR |
-                   ST_NEW_WINDOW_RECTANGLES;
+      st_invalidate_buffers(st);
    } else {
       /* These set a subset of flags set by _NEW_BUFFERS, so we only have to
        * check them when _NEW_BUFFERS isn't set.
