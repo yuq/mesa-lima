@@ -648,6 +648,7 @@ brw_prepare_vertices(struct brw_context *brw)
 				 buffer, interleaved);
 	 buffer->offset -= delta * interleaved;
          buffer->size += delta * interleaved;
+         buffer->step_rate = 0;
 
 	 for (i = 0; i < nr_uploads; i++) {
 	    /* Then, just point upload[i] at upload[0]'s buffer. */
