@@ -300,7 +300,7 @@ struct si_context {
 	struct si_descriptors		descriptors[SI_NUM_DESCS];
 	unsigned			descriptors_dirty;
 	unsigned			shader_pointers_dirty;
-	unsigned			compressed_tex_shader_mask;
+	unsigned			shader_needs_decompress_mask;
 	struct si_buffer_resources	rw_buffers;
 	struct si_buffer_resources	const_and_shader_buffers[SI_NUM_SHADERS];
 	struct si_textures_info		samplers[SI_NUM_SHADERS];

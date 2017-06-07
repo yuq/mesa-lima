@@ -326,7 +326,7 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 			    const uint8_t *ptr, unsigned size, uint32_t *const_offset);
 void si_update_all_texture_descriptors(struct si_context *sctx);
 void si_shader_change_notify(struct si_context *sctx);
-void si_update_compressed_colortex_masks(struct si_context *sctx);
+void si_update_needs_color_decompress_masks(struct si_context *sctx);
 void si_emit_graphics_shader_userdata(struct si_context *sctx,
                                       struct r600_atom *atom);
 void si_emit_compute_shader_userdata(struct si_context *sctx);

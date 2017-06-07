@@ -567,8 +567,8 @@ static bool depth_needs_decompression(struct r600_texture *rtex,
 		!r600_can_sample_zs(rtex, sview->is_stencil_sampler));
 }
 
-static void si_update_compressed_tex_shader_mask(struct si_context *sctx,
-						 unsigned shader)
+static void si_update_shader_needs_decompress_mask(struct si_context *sctx,
+						   unsigned shader)
 {
 	struct si_textures_info *samplers = &sctx->samplers[shader];
 	unsigned shader_bit = 1 << shader;
@@ -576,9 +576,9 @@ static void si_update_compressed_tex_shader_mask(struct si_context *sctx,
 	if (samplers->needs_depth_decompress_mask ||
 	    samplers->needs_color_decompress_mask ||
 	    sctx->images[shader].needs_color_decompress_mask)
-		sctx->compressed_tex_shader_mask |= shader_bit;
+		sctx->shader_needs_decompress_mask |= shader_bit;
 	else
-		sctx->compressed_tex_shader_mask &= ~shader_bit;
+		sctx->shader_needs_decompress_mask &= ~shader_bit;
 }
 
 static void si_set_sampler_views(struct pipe_context *ctx,
@@ -630,11 +630,11 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		}
 	}
 
-	si_update_compressed_tex_shader_mask(sctx, shader);
+	si_update_shader_needs_decompress_mask(sctx, shader);
 }
 
 static void
-si_samplers_update_compressed_colortex_mask(struct si_textures_info *samplers)
+si_samplers_update_needs_color_decompress_mask(struct si_textures_info *samplers)
 {
 	unsigned mask = samplers->views.enabled_mask;
 
@@ -854,11 +854,11 @@ si_set_shader_images(struct pipe_context *pipe,
 			si_set_shader_image(ctx, shader, slot, NULL, false);
 	}
 
-	si_update_compressed_tex_shader_mask(ctx, shader);
+	si_update_shader_needs_decompress_mask(ctx, shader);
 }
 
 static void
-si_images_update_compressed_colortex_mask(struct si_images_info *images)
+si_images_update_needs_color_decompress_mask(struct si_images_info *images)
 {
 	unsigned mask = images->enabled_mask;
 
@@ -1577,14 +1577,14 @@ static void si_set_polygon_stipple(struct pipe_context *ctx,
 
 /* CMASK can be enabled (for fast clear) and disabled (for texture export)
  * while the texture is bound, possibly by a different context. In that case,
- * call this function to update compressed_colortex_masks.
+ * call this function to update needs_*_decompress_masks.
  */
-void si_update_compressed_colortex_masks(struct si_context *sctx)
+void si_update_needs_color_decompress_masks(struct si_context *sctx)
 {
 	for (int i = 0; i < SI_NUM_SHADERS; ++i) {
-		si_samplers_update_compressed_colortex_mask(&sctx->samplers[i]);
-		si_images_update_compressed_colortex_mask(&sctx->images[i]);
-		si_update_compressed_tex_shader_mask(sctx, i);
+		si_samplers_update_needs_color_decompress_mask(&sctx->samplers[i]);
+		si_images_update_needs_color_decompress_mask(&sctx->images[i]);
+		si_update_shader_needs_decompress_mask(sctx, i);
 	}
 }
 
@@ -1823,7 +1823,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 					    samplers->views[i], true);
 		}
 
-		si_update_compressed_tex_shader_mask(sctx, shader);
+		si_update_shader_needs_decompress_mask(sctx, shader);
 	}
 }
 

@@ -655,11 +655,11 @@ static void si_decompress_textures(struct si_context *sctx, unsigned shader_mask
 	compressed_colortex_counter = p_atomic_read(&sctx->screen->b.compressed_colortex_counter);
 	if (compressed_colortex_counter != sctx->b.last_compressed_colortex_counter) {
 		sctx->b.last_compressed_colortex_counter = compressed_colortex_counter;
-		si_update_compressed_colortex_masks(sctx);
+		si_update_needs_color_decompress_masks(sctx);
 	}
 
 	/* Decompress color & depth textures if needed. */
-	mask = sctx->compressed_tex_shader_mask & shader_mask;
+	mask = sctx->shader_needs_decompress_mask & shader_mask;
 	while (mask) {
 		unsigned i = u_bit_scan(&mask);
 
