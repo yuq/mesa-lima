@@ -130,7 +130,8 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 		return NULL;
 
 	rctx->b.b.screen = screen;
-	rctx->b.b.priv = priv;
+	assert(!priv);
+	rctx->b.b.priv = NULL; /* for threaded_context_unwrap_sync */
 	rctx->b.b.destroy = r600_destroy_context;
 	rctx->b.set_atom_dirty = (void *)r600_set_atom_dirty;
 
