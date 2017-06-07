@@ -354,10 +354,6 @@ xmesa_init_driver_functions( XMesaVisual xmvisual,
                              struct dd_function_table *driver );
 
 extern void
-xmesa_update_state( struct gl_context *ctx, GLbitfield new_state );
-
-
-extern void
 xmesa_MapRenderbuffer(struct gl_context *ctx,
                       struct gl_renderbuffer *rb,
                       GLuint x, GLuint y, GLuint w, GLuint h,

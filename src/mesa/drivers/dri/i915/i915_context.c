@@ -52,8 +52,10 @@
 /* Override intel default.
  */
 static void
-i915InvalidateState(struct gl_context * ctx, GLuint new_state)
+i915InvalidateState(struct gl_context * ctx)
 {
+   GLuint new_state = ctx->NewState;
+
    _swrast_InvalidateState(ctx, new_state);
    _swsetup_InvalidateState(ctx, new_state);
    _vbo_InvalidateState(ctx, new_state);

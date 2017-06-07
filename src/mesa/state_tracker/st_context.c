@@ -182,8 +182,9 @@ st_invalidate_buffers(struct st_context *st)
  * Called via ctx->Driver.UpdateState()
  */
 static void
-st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
+st_invalidate_state(struct gl_context * ctx)
 {
+   GLbitfield new_state = ctx->NewState;
    struct st_context *st = st_context(ctx);
 
    if (new_state & _NEW_BUFFERS) {

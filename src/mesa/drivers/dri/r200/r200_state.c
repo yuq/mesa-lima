@@ -2276,8 +2276,10 @@ GLboolean r200ValidateState( struct gl_context *ctx )
 }
 
 
-static void r200InvalidateState( struct gl_context *ctx, GLuint new_state )
+static void r200InvalidateState(struct gl_context *ctx)
 {
+   GLuint new_state = ctx->NewState;
+
    r200ContextPtr rmesa = R200_CONTEXT(ctx);
 
    _swrast_InvalidateState( ctx, new_state );

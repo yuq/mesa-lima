@@ -678,9 +678,10 @@ enable( struct gl_context *ctx, GLenum pname, GLboolean state )
  * Called when the driver should update its state, based on the new_state
  * flags.
  */
-void
-xmesa_update_state( struct gl_context *ctx, GLbitfield new_state )
+static void
+xmesa_update_state(struct gl_context *ctx)
 {
+   GLbitfield new_state = ctx->NewState;
    const XMesaContext xmesa = XMESA_CONTEXT(ctx);
 
    /* Propagate statechange information to swrast and swrast_setup

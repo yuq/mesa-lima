@@ -415,13 +415,10 @@ _mesa_update_state_locked( struct gl_context *ctx )
     * The driver might plug in different span functions, for example.
     * Also, this is where the driver can invalidate the state of any
     * active modules (such as swrast_setup, swrast, tnl, etc).
-    *
-    * Set ctx->NewState to zero to avoid recursion if
-    * Driver.UpdateState() has to call FLUSH_VERTICES().  (fixed?)
     */
-   new_state = ctx->NewState | new_prog_state;
+   ctx->NewState |= new_prog_state;
+   ctx->Driver.UpdateState(ctx);
    ctx->NewState = 0;
-   ctx->Driver.UpdateState(ctx, new_state);
    ctx->Array.VAO->NewArrays = 0x0;
 }
 

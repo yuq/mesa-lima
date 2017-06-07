@@ -314,8 +314,9 @@ static const struct debug_control debug_control[] = {
 
 
 static void
-intelInvalidateState(struct gl_context * ctx, GLuint new_state)
+intelInvalidateState(struct gl_context * ctx)
 {
+   GLuint new_state = ctx->NewState;
     struct intel_context *intel = intel_context(ctx);
 
     if (ctx->swrast_context)

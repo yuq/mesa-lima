@@ -451,8 +451,9 @@ nouveau_state_emit(struct gl_context *ctx)
 }
 
 static void
-nouveau_update_state(struct gl_context *ctx, GLbitfield new_state)
+nouveau_update_state(struct gl_context *ctx)
 {
+	GLbitfield new_state = ctx->NewState;
 	int i;
 
 	if (new_state & (_NEW_PROJECTION | _NEW_MODELVIEW))

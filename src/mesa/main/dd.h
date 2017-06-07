@@ -93,7 +93,7 @@ struct dd_function_table {
     * This is in addition to any state change callbacks Mesa may already have
     * made.
     */
-   void (*UpdateState)( struct gl_context *ctx, GLbitfield new_state );
+   void (*UpdateState)(struct gl_context *ctx);
 
    /**
     * This is called whenever glFinish() is called.

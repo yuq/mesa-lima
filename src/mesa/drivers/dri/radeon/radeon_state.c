@@ -2044,8 +2044,10 @@ GLboolean radeonValidateState( struct gl_context *ctx )
 }
 
 
-static void radeonInvalidateState( struct gl_context *ctx, GLuint new_state )
+static void radeonInvalidateState(struct gl_context *ctx)
 {
+   GLuint new_state = ctx->NewState;
+
    _swrast_InvalidateState( ctx, new_state );
    _swsetup_InvalidateState( ctx, new_state );
    _vbo_InvalidateState( ctx, new_state );

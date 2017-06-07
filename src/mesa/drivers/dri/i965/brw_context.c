@@ -187,8 +187,9 @@ intel_disable_rb_aux_buffer(struct brw_context *brw, const struct brw_bo *bo)
 }
 
 static void
-intel_update_state(struct gl_context * ctx, GLuint new_state)
+intel_update_state(struct gl_context * ctx)
 {
+   GLuint new_state = ctx->NewState;
    struct brw_context *brw = brw_context(ctx);
    struct intel_texture_object *tex_obj;
    struct intel_renderbuffer *depth_irb;

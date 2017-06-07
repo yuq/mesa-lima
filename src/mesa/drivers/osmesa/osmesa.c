@@ -117,7 +117,7 @@ get_string( struct gl_context *ctx, GLenum name )
 
 
 static void
-osmesa_update_state( struct gl_context *ctx, GLuint new_state )
+osmesa_update_state(struct gl_context *ctx, GLuint new_state)
 {
    /* easy - just propogate */
    _swrast_InvalidateState( ctx, new_state );
@@ -126,6 +126,11 @@ osmesa_update_state( struct gl_context *ctx, GLuint new_state )
    _vbo_InvalidateState( ctx, new_state );
 }
 
+static void
+osmesa_update_state_wrapper(struct gl_context *ctx)
+{
+   osmesa_update_state(ctx, ctx->NewState);
+}
 
 
 /**
@@ -828,7 +833,7 @@ OSMesaCreateContextAttribs(const int *attribList, OSMesaContext sharelist)
       _mesa_init_driver_functions(&functions);
       /* override with our functions */
       functions.GetString = get_string;
-      functions.UpdateState = osmesa_update_state;
+      functions.UpdateState = osmesa_update_state_wrapper;
 
       if (!_mesa_initialize_context(&osmesa->mesa,
                                     api_profile,
