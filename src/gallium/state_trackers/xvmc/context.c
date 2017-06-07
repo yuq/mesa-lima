@@ -239,7 +239,7 @@ Status XvMCCreateContext(Display *dpy, XvPortID port, int surface_type_id,
       return BadAlloc;
    }
 
-   pipe = vscreen->pscreen->context_create(vscreen->pscreen, vscreen, 0);
+   pipe = vscreen->pscreen->context_create(vscreen->pscreen, NULL, 0);
    if (!pipe) {
       XVMC_MSG(XVMC_ERR, "[XvMC] Could not create VL context.\n");
       vscreen->destroy(vscreen);
