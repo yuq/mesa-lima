@@ -147,21 +147,6 @@ util_queue_thread_func(void *input)
       u_thread_setname(name);
    }
 
-   if (queue->flags & UTIL_QUEUE_INIT_USE_MINIMUM_PRIORITY) {
-#if defined(__linux__)
-      struct sched_param sched_param = {0};
-
-      /* The nice() function can only set a maximum of 19.
-       * SCHED_IDLE is the same as nice = 20.
-       *
-       * Note that Linux only allows decreasing the priority. The original
-       * priority can't be restored.
-       */
-      pthread_setschedparam(queue->threads[thread_index], SCHED_IDLE,
-                            &sched_param);
-#endif
-   }
-
    while (1) {
       struct util_queue_job job;
 
@@ -220,7 +205,6 @@ util_queue_init(struct util_queue *queue,
    memset(queue, 0, sizeof(*queue));
    queue->name = name;
    queue->num_threads = num_threads;
-   queue->flags = flags;
    queue->max_jobs = max_jobs;
 
    queue->jobs = (struct util_queue_job*)
@@ -258,6 +242,20 @@ util_queue_init(struct util_queue *queue,
             queue->num_threads = i;
             break;
          }
+      }
+
+      if (flags & UTIL_QUEUE_INIT_USE_MINIMUM_PRIORITY) {
+   #if defined(__linux__)
+         struct sched_param sched_param = {0};
+
+         /* The nice() function can only set a maximum of 19.
+          * SCHED_IDLE is the same as nice = 20.
+          *
+          * Note that Linux only allows decreasing the priority. The original
+          * priority can't be restored.
+          */
+         pthread_setschedparam(queue->threads[i], SCHED_IDLE, &sched_param);
+   #endif
       }
    }
 

@@ -71,7 +71,6 @@ struct util_queue {
    thrd_t *threads;
    int num_queued;
    unsigned num_threads;
-   unsigned flags;
    int kill_threads;
    int max_jobs;
    int write_idx, read_idx; /* ring buffer pointers */
