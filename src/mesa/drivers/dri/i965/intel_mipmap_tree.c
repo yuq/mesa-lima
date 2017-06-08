@@ -1309,7 +1309,7 @@ intel_miptree_copy_slice_sw(struct brw_context *brw,
    }
 }
 
-static void
+void
 intel_miptree_copy_slice(struct brw_context *brw,
                          struct intel_mipmap_tree *src_mt,
                          unsigned src_level, unsigned src_layer,

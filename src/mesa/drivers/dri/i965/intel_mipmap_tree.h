@@ -814,6 +814,13 @@ void intel_miptree_set_image_offset(struct intel_mipmap_tree *mt,
                                     GLuint img, GLuint x, GLuint y);
 
 void
+intel_miptree_copy_slice(struct brw_context *brw,
+                         struct intel_mipmap_tree *src_mt,
+                         unsigned src_level, unsigned src_layer,
+                         struct intel_mipmap_tree *dst_mt,
+                         unsigned dst_level, unsigned dst_layer);
+
+void
 intel_miptree_copy_teximage(struct brw_context *brw,
                             struct intel_texture_image *intelImage,
                             struct intel_mipmap_tree *dst_mt, bool invalidate);

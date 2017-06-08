@@ -133,7 +133,7 @@ get_stencil_miptree(struct intel_renderbuffer *irb)
       return NULL;
    if (irb->mt->stencil_mt)
       return irb->mt->stencil_mt;
-   return irb->mt;
+   return intel_renderbuffer_get_mt(irb);
 }
 
 static bool
@@ -262,7 +262,7 @@ brw_emit_depthbuffer(struct brw_context *brw)
    /* _NEW_BUFFERS */
    struct intel_renderbuffer *depth_irb = intel_get_renderbuffer(fb, BUFFER_DEPTH);
    struct intel_renderbuffer *stencil_irb = intel_get_renderbuffer(fb, BUFFER_STENCIL);
-   struct intel_mipmap_tree *depth_mt = depth_irb ? depth_irb->mt : NULL;
+   struct intel_mipmap_tree *depth_mt = intel_renderbuffer_get_mt(depth_irb);
    struct intel_mipmap_tree *stencil_mt = get_stencil_miptree(stencil_irb);
    uint32_t tile_x = brw->depthstencil.tile_x;
    uint32_t tile_y = brw->depthstencil.tile_y;

@@ -1009,7 +1009,8 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
 	  * miptree and render into that.
 	  */
 	 intel_renderbuffer_move_to_temp(brw, irb, false);
-	 mt = irb->mt;
+	 assert(irb->align_wa_mt);
+	 mt = irb->align_wa_mt;
       }
    }
 

@@ -67,6 +67,16 @@ struct intel_renderbuffer
     */
    struct intel_mipmap_tree *singlesample_mt;
 
+   /* Gen < 6 doesn't have layer specifier for render targets or depth. Driver
+    * needs to manually offset surfaces to correct level/layer. There are,
+    * however, alignment restrictions to respect as well and in come cases
+    * the only option is to use temporary single slice surface which driver
+    * copies after rendering to the full miptree.
+    *
+    * See intel_renderbuffer_move_to_temp().
+    */
+   struct intel_mipmap_tree *align_wa_mt;
+
    /**
     * \name Miptree view
     * \{
@@ -136,6 +146,14 @@ intel_renderbuffer(struct gl_renderbuffer *rb)
       return NULL;
 }
 
+static inline struct intel_mipmap_tree *
+intel_renderbuffer_get_mt(struct intel_renderbuffer *irb)
+{
+   if (!irb)
+      return NULL;
+
+   return (irb->align_wa_mt) ? irb->align_wa_mt : irb->mt;
+}
 
 /**
  * \brief Return the framebuffer attachment specified by attIndex.
@@ -188,6 +206,12 @@ intel_renderbuffer_get_tile_offsets(struct intel_renderbuffer *irb,
                                     uint32_t *tile_x,
                                     uint32_t *tile_y)
 {
+   if (irb->align_wa_mt) {
+      *tile_x = 0;
+      *tile_y = 0;
+      return 0;
+   }
+
    return intel_miptree_get_tile_offsets(irb->mt, irb->mt_level, irb->mt_layer,
                                          tile_x, tile_y);
 }
