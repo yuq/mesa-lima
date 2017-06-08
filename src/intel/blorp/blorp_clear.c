@@ -479,6 +479,16 @@ blorp_clear_depth_stencil(struct blorp_batch *batch,
    params.x1 = x1;
    params.y1 = y1;
 
+   if (ISL_DEV_GEN(batch->blorp->isl_dev) == 6) {
+      /* For some reason, Sandy Bridge gets occlusion queries wrong if we
+       * don't have a shader.  In particular, it records samples even though
+       * we disable statistics in 3DSTATE_WM.  Give it the usual clear shader
+       * to work around the issue.
+       */
+      if (!blorp_params_get_clear_kernel(batch->blorp, &params, false))
+         return;
+   }
+
    while (num_layers > 0) {
       params.num_layers = num_layers;
 
