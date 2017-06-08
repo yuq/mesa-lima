@@ -386,7 +386,10 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
 
         if (pHotTile->state == HOTTILE_DIRTY || pHotTile->state == HOTTILE_RESOLVED)
         {
-            pHotTile->state = (HOTTILE_STATE)pDesc->postStoreTileState;
+            if (!(pDesc->postStoreTileState == HOTTILE_DIRTY && pHotTile->state == HOTTILE_RESOLVED))
+            {
+                pHotTile->state = (HOTTILE_STATE)pDesc->postStoreTileState;
+            }
         }
     }
     AR_END(BEStoreTiles, 1);
