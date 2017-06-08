@@ -2557,6 +2557,7 @@ etna_link_shader(struct etna_shader_link_info *info,
       const struct etna_shader_inout *fsio = &fs->infile.reg[idx];
       const struct etna_shader_inout *vsio = etna_shader_vs_lookup(vs, fsio);
       struct etna_varying *varying;
+      bool interpolate_always = fsio->semantic.Name != TGSI_SEMANTIC_COLOR;
 
       assert(fsio->reg > 0 && fsio->reg <= ARRAY_SIZE(info->varyings));
 
@@ -2566,27 +2567,24 @@ etna_link_shader(struct etna_shader_link_info *info,
       varying = &info->varyings[fsio->reg - 1];
       varying->num_components = fsio->num_components;
 
-      if (fsio->semantic.Name == TGSI_SEMANTIC_COLOR) /* colors affected by flat shading */
+      if (!interpolate_always) /* colors affected by flat shading */
          varying->pa_attributes = 0x200;
       else /* texture coord or other bypasses flat shading */
          varying->pa_attributes = 0x2f1;
 
-      if (fsio->semantic.Name == TGSI_SEMANTIC_PCOORD) {
-         varying->use[0] = VARYING_COMPONENT_USE_POINTCOORD_X;
-         varying->use[1] = VARYING_COMPONENT_USE_POINTCOORD_Y;
-         varying->use[2] = VARYING_COMPONENT_USE_USED;
-         varying->use[3] = VARYING_COMPONENT_USE_USED;
-         varying->reg = 0; /* replaced by point coord -- doesn't matter */
+      varying->use[0] = interpolate_always ? VARYING_COMPONENT_USE_POINTCOORD_X : VARYING_COMPONENT_USE_USED;
+      varying->use[1] = interpolate_always ? VARYING_COMPONENT_USE_POINTCOORD_Y : VARYING_COMPONENT_USE_USED;
+      varying->use[2] = VARYING_COMPONENT_USE_USED;
+      varying->use[3] = VARYING_COMPONENT_USE_USED;
+
+
+      /* point coord is position output from VS, so has no dedicated reg */
+      if (fsio->semantic.Name == TGSI_SEMANTIC_PCOORD)
          continue;
-      }
 
       if (vsio == NULL)
          return true; /* not found -- link error */
 
-      varying->use[0] = VARYING_COMPONENT_USE_USED;
-      varying->use[1] = VARYING_COMPONENT_USE_USED;
-      varying->use[2] = VARYING_COMPONENT_USE_USED;
-      varying->use[3] = VARYING_COMPONENT_USE_USED;
       varying->reg = vsio->reg;
    }
 
