@@ -35,6 +35,13 @@ struct ac_shader_abi {
 	LLVMValueRef draw_id;
 	LLVMValueRef vertex_id;
 	LLVMValueRef instance_id;
+
+	/* For VS and PS: pre-loaded shader inputs.
+	 *
+	 * Currently only used for NIR shaders; indexed by variables'
+	 * driver_location.
+	 */
+	LLVMValueRef *inputs;
 };
 
 #endif /* AC_SHADER_ABI_H */

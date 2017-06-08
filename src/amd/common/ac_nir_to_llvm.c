@@ -6156,6 +6156,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	if (nir->stage == MESA_SHADER_FRAGMENT)
 		handle_fs_inputs_pre(&ctx, nir);
 
+	ctx.abi.inputs = &ctx.inputs[0];
+
 	ac_nir_translate(&ctx.ac, &ctx.abi, nir, &ctx);
 
 	LLVMBuildRetVoid(ctx.builder);
