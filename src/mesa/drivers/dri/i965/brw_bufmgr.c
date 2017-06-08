@@ -324,6 +324,7 @@ retry:
          goto err;
 
       bo->size = bo_size;
+      bo->idle = true;
 
       memclear(create);
       create.size = bo_size;
