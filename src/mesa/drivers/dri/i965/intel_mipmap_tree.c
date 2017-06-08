@@ -1312,22 +1312,14 @@ static void
 intel_miptree_copy_slice(struct brw_context *brw,
 			 struct intel_mipmap_tree *dst_mt,
 			 struct intel_mipmap_tree *src_mt,
-			 int level,
-			 int face,
-			 int depth)
+			 unsigned level, unsigned slice)
 
 {
    mesa_format format = src_mt->format;
    uint32_t width = minify(src_mt->physical_width0, level - src_mt->first_level);
    uint32_t height = minify(src_mt->physical_height0, level - src_mt->first_level);
-   int slice;
 
-   if (face > 0)
-      slice = face;
-   else
-      slice = depth;
-
-   assert(depth < src_mt->level[level].depth);
+   assert(slice < src_mt->level[level].depth);
    assert(src_mt->format == dst_mt->format);
 
    if (dst_mt->compressed) {
@@ -1390,17 +1382,26 @@ intel_miptree_copy_teximage(struct brw_context *brw,
    struct intel_texture_object *intel_obj =
       intel_texture_object(intelImage->base.Base.TexObject);
    int level = intelImage->base.Base.Level;
-   int face = intelImage->base.Base.Face;
+   const unsigned face = intelImage->base.Base.Face;
+   unsigned start_layer, end_layer;
 
-   GLuint depth;
-   if (intel_obj->base.Target == GL_TEXTURE_1D_ARRAY)
-      depth = intelImage->base.Base.Height;
-   else
-      depth = intelImage->base.Base.Depth;
+   if (intel_obj->base.Target == GL_TEXTURE_1D_ARRAY) {
+      assert(face == 0);
+      assert(intelImage->base.Base.Height);
+      start_layer = 0;
+      end_layer = intelImage->base.Base.Height - 1;
+   } else if (face > 0) {
+      start_layer = face;
+      end_layer = face;
+   } else {
+      assert(intelImage->base.Base.Depth);
+      start_layer = 0;
+      end_layer = intelImage->base.Base.Depth - 1;
+   }
 
    if (!invalidate) {
-      for (int slice = 0; slice < depth; slice++) {
-         intel_miptree_copy_slice(brw, dst_mt, src_mt, level, face, slice);
+      for (unsigned i = start_layer; i <= end_layer; i++) {
+         intel_miptree_copy_slice(brw, dst_mt, src_mt, level, i);
       }
    }
 
