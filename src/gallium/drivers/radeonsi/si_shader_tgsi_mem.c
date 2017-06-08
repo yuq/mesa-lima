@@ -37,13 +37,6 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 
 static const struct lp_build_tgsi_action tex_action;
 
-enum desc_type {
-	DESC_IMAGE,
-	DESC_BUFFER,
-	DESC_FMASK,
-	DESC_SAMPLER,
-};
-
 /**
  * Given a v8i32 resource descriptor for a buffer, extract the size of the
  * buffer in number of elements and return it as an i32.
@@ -1127,31 +1120,31 @@ static void resq_emit(
 /**
  * Load an image view, fmask view. or sampler state descriptor.
  */
-static LLVMValueRef load_sampler_desc(struct si_shader_context *ctx,
-				      LLVMValueRef list, LLVMValueRef index,
-				      enum desc_type type)
+LLVMValueRef si_load_sampler_desc(struct si_shader_context *ctx,
+				  LLVMValueRef list, LLVMValueRef index,
+				  enum ac_descriptor_type type)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 
 	switch (type) {
-	case DESC_IMAGE:
+	case AC_DESC_IMAGE:
 		/* The image is at [0:7]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 2, 0), "");
 		break;
-	case DESC_BUFFER:
+	case AC_DESC_BUFFER:
 		/* The buffer is in [4:7]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
 		index = LLVMBuildAdd(builder, index, ctx->i32_1, "");
 		list = LLVMBuildPointerCast(builder, list,
 					    si_const_array(ctx->v4i32, 0), "");
 		break;
-	case DESC_FMASK:
+	case AC_DESC_FMASK:
 		/* The FMASK is at [8:15]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 2, 0), "");
 		index = LLVMBuildAdd(builder, index, ctx->i32_1, "");
 		break;
-	case DESC_SAMPLER:
+	case AC_DESC_SAMPLER:
 		/* The sampler state is at [12:15]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
 		index = LLVMBuildAdd(builder, index, LLVMConstInt(ctx->i32, 3, 0), "");
@@ -1233,9 +1226,9 @@ static void tex_fetch_ptrs(
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER)
-		*res_ptr = load_sampler_desc(ctx, list, index, DESC_BUFFER);
+		*res_ptr = si_load_sampler_desc(ctx, list, index, AC_DESC_BUFFER);
 	else
-		*res_ptr = load_sampler_desc(ctx, list, index, DESC_IMAGE);
+		*res_ptr = si_load_sampler_desc(ctx, list, index, AC_DESC_IMAGE);
 
 	if (samp_ptr)
 		*samp_ptr = NULL;
@@ -1245,12 +1238,12 @@ static void tex_fetch_ptrs(
 	if (target == TGSI_TEXTURE_2D_MSAA ||
 	    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
 		if (fmask_ptr)
-			*fmask_ptr = load_sampler_desc(ctx, list, index,
-						       DESC_FMASK);
+			*fmask_ptr = si_load_sampler_desc(ctx, list, index,
+						          AC_DESC_FMASK);
 	} else if (target != TGSI_TEXTURE_BUFFER) {
 		if (samp_ptr) {
-			*samp_ptr = load_sampler_desc(ctx, list, index,
-						      DESC_SAMPLER);
+			*samp_ptr = si_load_sampler_desc(ctx, list, index,
+						         AC_DESC_SAMPLER);
 			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 		}
 	}

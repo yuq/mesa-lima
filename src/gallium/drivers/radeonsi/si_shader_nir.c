@@ -342,6 +342,37 @@ static void declare_nir_input_fs(struct si_shader_context *ctx,
 	(*fs_attr_idx)++;
 }
 
+static LLVMValueRef
+si_nir_load_sampler_desc(struct ac_shader_abi *abi,
+		         unsigned descriptor_set, unsigned base_index,
+		         unsigned constant_index, LLVMValueRef dynamic_index,
+		         enum ac_descriptor_type desc_type)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	LLVMBuilderRef builder = ctx->ac.builder;
+	LLVMValueRef list = LLVMGetParam(ctx->main_fn, ctx->param_samplers_and_images);
+	LLVMValueRef index = dynamic_index;
+
+	assert(!descriptor_set);
+
+	if (!index)
+		index = ctx->ac.i32_0;
+
+	index = LLVMBuildAdd(builder, index,
+			     LLVMConstInt(ctx->ac.i32, base_index + constant_index, false),
+			     "");
+
+	assert(base_index + constant_index < ctx->num_samplers);
+
+	if (dynamic_index)
+		index = si_llvm_bound_index(ctx, index, ctx->num_samplers);
+
+	index = LLVMBuildAdd(ctx->gallivm.builder, index,
+			     LLVMConstInt(ctx->i32, SI_NUM_IMAGES / 2, 0), "");
+
+	return si_load_sampler_desc(ctx, list, index, desc_type);
+}
+
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 {
 	unsigned fs_attr_idx = 0;
@@ -366,6 +397,7 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 	}
 
 	ctx->abi.inputs = &ctx->inputs[0];
+	ctx->abi.load_sampler_desc = si_nir_load_sampler_desc;
 
 	ac_nir_translate(&ctx->ac, &ctx->abi, nir, NULL);
 

@@ -314,6 +314,10 @@ LLVMTypeRef si_const_array(LLVMTypeRef elem_type, int num_elements);
 void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base);
 void si_shader_context_init_mem(struct si_shader_context *ctx);
 
+LLVMValueRef si_load_sampler_desc(struct si_shader_context *ctx,
+				  LLVMValueRef list, LLVMValueRef index,
+				  enum ac_descriptor_type type);
+
 void si_llvm_load_input_vs(
 	struct si_shader_context *ctx,
 	unsigned input_index,
