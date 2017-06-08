@@ -1248,26 +1248,25 @@ intel_miptree_get_tile_offsets(const struct intel_mipmap_tree *mt,
 
 static void
 intel_miptree_copy_slice_sw(struct brw_context *brw,
-                            struct intel_mipmap_tree *dst_mt,
                             struct intel_mipmap_tree *src_mt,
-                            int level,
-                            int slice,
-                            int width,
-                            int height)
+                            unsigned src_level, unsigned src_layer,
+                            struct intel_mipmap_tree *dst_mt,
+                            unsigned dst_level, unsigned dst_layer,
+                            unsigned width, unsigned height)
 {
    void *src, *dst;
    ptrdiff_t src_stride, dst_stride;
    int cpp = dst_mt->cpp;
 
    intel_miptree_map(brw, src_mt,
-                     level, slice,
+                     src_level, src_layer,
                      0, 0,
                      width, height,
                      GL_MAP_READ_BIT | BRW_MAP_DIRECT_BIT,
                      &src, &src_stride);
 
    intel_miptree_map(brw, dst_mt,
-                     level, slice,
+                     dst_level, dst_layer,
                      0, 0,
                      width, height,
                      GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
@@ -1293,8 +1292,8 @@ intel_miptree_copy_slice_sw(struct brw_context *brw,
       }
    }
 
-   intel_miptree_unmap(brw, dst_mt, level, slice);
-   intel_miptree_unmap(brw, src_mt, level, slice);
+   intel_miptree_unmap(brw, dst_mt, dst_level, dst_layer);
+   intel_miptree_unmap(brw, src_mt, src_level, src_layer);
 
    /* Don't forget to copy the stencil data over, too.  We could have skipped
     * passing BRW_MAP_DIRECT_BIT, but that would have meant intel_miptree_map
@@ -1303,23 +1302,28 @@ intel_miptree_copy_slice_sw(struct brw_context *brw,
     */
    if (dst_mt->stencil_mt) {
       assert(src_mt->stencil_mt);
-      intel_miptree_copy_slice_sw(brw, dst_mt->stencil_mt, src_mt->stencil_mt,
-                                  level, slice, width, height);
+      intel_miptree_copy_slice_sw(brw,
+                                  src_mt->stencil_mt, src_level, src_layer,
+                                  dst_mt->stencil_mt, dst_level, dst_layer,
+                                  width, height);
    }
 }
 
 static void
 intel_miptree_copy_slice(struct brw_context *brw,
-			 struct intel_mipmap_tree *dst_mt,
-			 struct intel_mipmap_tree *src_mt,
-			 unsigned level, unsigned slice)
+                         struct intel_mipmap_tree *src_mt,
+                         unsigned src_level, unsigned src_layer,
+                         struct intel_mipmap_tree *dst_mt,
+                         unsigned dst_level, unsigned dst_layer)
 
 {
+   uint32_t width = minify(src_mt->physical_width0,
+                           src_level - src_mt->first_level);
+   uint32_t height = minify(src_mt->physical_height0,
+                            src_level - src_mt->first_level);
    mesa_format format = src_mt->format;
-   uint32_t width = minify(src_mt->physical_width0, level - src_mt->first_level);
-   uint32_t height = minify(src_mt->physical_height0, level - src_mt->first_level);
 
-   assert(slice < src_mt->level[level].depth);
+   assert(src_layer < src_mt->level[src_level].depth);
    assert(src_mt->format == dst_mt->format);
 
    if (dst_mt->compressed) {
@@ -1335,15 +1339,17 @@ intel_miptree_copy_slice(struct brw_context *brw,
     */
    if (src_mt->stencil_mt) {
       intel_miptree_copy_slice_sw(brw,
-                                  dst_mt, src_mt,
-                                  level, slice,
+                                  src_mt, src_level, src_layer,
+                                  dst_mt, dst_level, dst_layer,
                                   width, height);
       return;
    }
 
    uint32_t dst_x, dst_y, src_x, src_y;
-   intel_miptree_get_image_offset(dst_mt, level, slice, &dst_x, &dst_y);
-   intel_miptree_get_image_offset(src_mt, level, slice, &src_x, &src_y);
+   intel_miptree_get_image_offset(dst_mt, dst_level, dst_layer,
+                                  &dst_x, &dst_y);
+   intel_miptree_get_image_offset(src_mt, src_level, src_layer,
+                                  &src_x, &src_y);
 
    DBG("validate blit mt %s %p %d,%d/%d -> mt %s %p %d,%d/%d (%dx%d)\n",
        _mesa_get_format_name(src_mt->format),
@@ -1353,13 +1359,15 @@ intel_miptree_copy_slice(struct brw_context *brw,
        width, height);
 
    if (!intel_miptree_blit(brw,
-                           src_mt, level, slice, 0, 0, false,
-                           dst_mt, level, slice, 0, 0, false,
+                           src_mt, src_level, src_layer, 0, 0, false,
+                           dst_mt, dst_level, dst_layer, 0, 0, false,
                            width, height, GL_COPY)) {
       perf_debug("miptree validate blit for %s failed\n",
                  _mesa_get_format_name(format));
 
-      intel_miptree_copy_slice_sw(brw, dst_mt, src_mt, level, slice,
+      intel_miptree_copy_slice_sw(brw,
+                                  src_mt, src_level, src_layer,
+                                  dst_mt, dst_level, dst_layer,
                                   width, height);
    }
 }
@@ -1401,7 +1409,9 @@ intel_miptree_copy_teximage(struct brw_context *brw,
 
    if (!invalidate) {
       for (unsigned i = start_layer; i <= end_layer; i++) {
-         intel_miptree_copy_slice(brw, dst_mt, src_mt, level, i);
+         intel_miptree_copy_slice(brw,
+                                  src_mt, level, i,
+                                  dst_mt, level, i);
       }
    }
 
