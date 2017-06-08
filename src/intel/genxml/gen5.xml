@@ -370,6 +370,10 @@
     <field name="Maximum Number of Threads" start="153" end="158" type="uint"/>
     <field name="URB Entry Allocation Size" start="147" end="151" type="uint"/>
     <field name="Number of URB Entries" start="139" end="146" type="uint"/>
+    <field name="API Mode" start="190" end="190" type="uint" prefix="APIMODE">
+      <value name="OGL" value="0"/>
+      <value name="D3D" value="1"/>
+    </field>
     <field name="Vertex Position Space" start="189" end="189" type="uint" prefix="VPOS">
       <value name="NDCSPACE" value="0"/>
       <value name="SCREENSPACE" value="1"/>

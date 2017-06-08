@@ -370,6 +370,7 @@
     <field name="GS Output Object Statistics Enable" start="138" end="138" type="bool"/>
     <field name="API Mode" start="190" end="190" type="uint" prefix="APIMODE">
       <value name="OGL" value="0"/>
+      <value name="D3D" value="1"/>
     </field>
     <field name="Vertex Position Space" start="189" end="189" type="uint" prefix="VPOS">
       <value name="NDCSPACE" value="0"/>
