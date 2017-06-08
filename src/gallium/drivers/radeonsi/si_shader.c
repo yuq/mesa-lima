@@ -409,10 +409,9 @@ static LLVMValueRef extract_double_to_float(struct si_shader_context *ctx,
 	return LLVMBuildFPTrunc(builder, value, ctx->f32, "");
 }
 
-static void declare_input_vs(
+void si_llvm_load_input_vs(
 	struct si_shader_context *ctx,
 	unsigned input_index,
-	const struct tgsi_full_declaration *decl,
 	LLVMValueRef out[4])
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -615,6 +614,14 @@ static void declare_input_vs(
 	}
 }
 
+static void declare_input_vs(
+	struct si_shader_context *ctx,
+	unsigned input_index,
+	const struct tgsi_full_declaration *decl,
+	LLVMValueRef out[4])
+{
+	si_llvm_load_input_vs(ctx, input_index, out);
+}
 
 static LLVMValueRef get_primitive_id(struct si_shader_context *ctx,
 				     unsigned swizzle)

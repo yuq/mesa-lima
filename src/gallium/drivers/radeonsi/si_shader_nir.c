@@ -313,8 +313,34 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	}
 }
 
+static void declare_nir_input_vs(struct si_shader_context *ctx,
+				 struct nir_variable *variable, unsigned rel,
+				 LLVMValueRef out[4])
+{
+	si_llvm_load_input_vs(ctx, variable->data.driver_location / 4 + rel, out);
+}
+
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 {
+	nir_foreach_variable(variable, &nir->inputs) {
+		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
+								   nir->stage == MESA_SHADER_VERTEX);
+		unsigned input_idx = variable->data.driver_location;
+
+		for (unsigned i = 0; i < attrib_count; ++i) {
+			LLVMValueRef data[4];
+
+			declare_nir_input_vs(ctx, variable, i, data);
+
+			for (unsigned chan = 0; chan < 4; chan++) {
+				ctx->inputs[input_idx + chan] =
+					LLVMBuildBitCast(ctx->ac.builder, data[chan], ctx->ac.i32, "");
+			}
+		}
+	}
+
+	ctx->abi.inputs = &ctx->inputs[0];
+
 	ac_nir_translate(&ctx->ac, &ctx->abi, nir, NULL);
 
 	return true;
