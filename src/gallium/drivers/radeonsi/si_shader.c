@@ -3357,9 +3357,11 @@ static void si_export_null(struct lp_build_tgsi_context *bld_base)
  *
  * The alpha-ref SGPR is returned via its original location.
  */
-static void si_llvm_return_fs_outputs(struct lp_build_tgsi_context *bld_base)
+static void si_llvm_return_fs_outputs(struct ac_shader_abi *abi,
+				      unsigned max_outputs,
+				      LLVMValueRef *addrs)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct si_shader *shader = ctx->shader;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMBuilderRef builder = ctx->gallivm.builder;
@@ -3381,22 +3383,22 @@ static void si_llvm_return_fs_outputs(struct lp_build_tgsi_context *bld_base)
 		case TGSI_SEMANTIC_COLOR:
 			assert(semantic_index < 8);
 			for (j = 0; j < 4; j++) {
-				LLVMValueRef ptr = ctx->outputs[i][j];
+				LLVMValueRef ptr = addrs[4 * i + j];
 				LLVMValueRef result = LLVMBuildLoad(builder, ptr, "");
 				color[semantic_index][j] = result;
 			}
 			break;
 		case TGSI_SEMANTIC_POSITION:
 			depth = LLVMBuildLoad(builder,
-					      ctx->outputs[i][2], "");
+					      addrs[4 * i + 2], "");
 			break;
 		case TGSI_SEMANTIC_STENCIL:
 			stencil = LLVMBuildLoad(builder,
-						ctx->outputs[i][1], "");
+						addrs[4 * i + 1], "");
 			break;
 		case TGSI_SEMANTIC_SAMPLEMASK:
 			samplemask = LLVMBuildLoad(builder,
-						   ctx->outputs[i][0], "");
+						   addrs[4 * i + 0], "");
 			break;
 		default:
 			fprintf(stderr, "Warning: SI unhandled fs output type:%d\n",
@@ -3409,9 +3411,10 @@ static void si_llvm_return_fs_outputs(struct lp_build_tgsi_context *bld_base)
 
 	/* Set SGPRs. */
 	ret = LLVMBuildInsertValue(builder, ret,
-				   bitcast(bld_base, TGSI_TYPE_SIGNED,
-					   LLVMGetParam(ctx->main_fn,
-							SI_PARAM_ALPHA_REF)),
+				   LLVMBuildBitCast(ctx->ac.builder,
+						LLVMGetParam(ctx->main_fn,
+							SI_PARAM_ALPHA_REF),
+						ctx->i32, ""),
 				   SI_SGPR_ALPHA_REF, "");
 
 	/* Set VGPRs */
@@ -5629,7 +5632,8 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		ctx->load_input = declare_input_fs;
-		bld_base->emit_epilogue = si_llvm_return_fs_outputs;
+		ctx->abi.emit_outputs = si_llvm_return_fs_outputs;
+		bld_base->emit_epilogue = si_tgsi_emit_epilogue;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		ctx->declare_memory_region = declare_compute_memory;
