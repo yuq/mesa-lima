@@ -2472,10 +2472,10 @@ if test -n "$with_gallium_drivers"; then
         xswr)
             llvm_require_version $LLVM_REQUIRED_SWR "swr"
 
-            swr_require_cxx_feature_flags "C++14" "__cplusplus >= 201402L" \
-                "-std=c++14" \
-                SWR_CXX14_CXXFLAGS
-            AC_SUBST([SWR_CXX14_CXXFLAGS])
+            swr_require_cxx_feature_flags "C++11" "__cplusplus >= 201103L" \
+                ",-std=c++11" \
+                SWR_CXX11_CXXFLAGS
+            AC_SUBST([SWR_CXX11_CXXFLAGS])
 
             swr_require_cxx_feature_flags "AVX" "defined(__AVX__)" \
                 ",-mavx,-march=core-avx" \
