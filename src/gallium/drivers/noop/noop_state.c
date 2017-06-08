@@ -76,7 +76,10 @@ static struct pipe_sampler_view *noop_create_sampler_view(struct pipe_context *c
 
    if (!sampler_view)
       return NULL;
+
    /* initialize base object */
+   *sampler_view = *state;
+   sampler_view->texture = NULL;
    pipe_resource_reference(&sampler_view->texture, texture);
    pipe_reference_init(&sampler_view->reference, 1);
    sampler_view->context = ctx;
