@@ -1310,15 +1310,13 @@ glsl_to_tgsi_visitor::get_temp(const glsl_type *type)
 variable_storage *
 glsl_to_tgsi_visitor::find_variable_storage(ir_variable *var)
 {
-   struct hash_entry *entry = _mesa_hash_table_search(this->variables,
-                                                      var);
-   variable_storage *storage;
+   struct hash_entry *entry;
+
+   entry = _mesa_hash_table_search(this->variables, var);
    if (!entry)
       return NULL;
 
-   storage = (variable_storage *)entry->data;
-
-   return storage;
+   return (variable_storage *)entry->data;
 }
 
 void
