@@ -318,6 +318,10 @@ void si_llvm_load_input_vs(
 	struct si_shader_context *ctx,
 	unsigned input_index,
 	LLVMValueRef out[4]);
+void si_llvm_load_input_fs(
+	struct si_shader_context *ctx,
+	unsigned input_index,
+	LLVMValueRef out[4]);
 
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir);
 

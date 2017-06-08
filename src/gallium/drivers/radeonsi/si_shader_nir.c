@@ -320,8 +320,31 @@ static void declare_nir_input_vs(struct si_shader_context *ctx,
 	si_llvm_load_input_vs(ctx, variable->data.driver_location / 4 + rel, out);
 }
 
+static void declare_nir_input_fs(struct si_shader_context *ctx,
+				 struct nir_variable *variable, unsigned rel,
+				 unsigned *fs_attr_idx,
+				 LLVMValueRef out[4])
+{
+	unsigned slot = variable->data.location + rel;
+
+	assert(variable->data.location >= VARYING_SLOT_VAR0 || rel == 0);
+
+	if (slot == VARYING_SLOT_POS) {
+		out[0] = LLVMGetParam(ctx->main_fn, SI_PARAM_POS_X_FLOAT);
+		out[1] = LLVMGetParam(ctx->main_fn, SI_PARAM_POS_Y_FLOAT);
+		out[2] = LLVMGetParam(ctx->main_fn, SI_PARAM_POS_Z_FLOAT);
+		out[3] = ac_build_fdiv(&ctx->ac, ctx->ac.f32_1,
+				LLVMGetParam(ctx->main_fn, SI_PARAM_POS_W_FLOAT));
+		return;
+	}
+
+	si_llvm_load_input_fs(ctx, *fs_attr_idx, out);
+	(*fs_attr_idx)++;
+}
+
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 {
+	unsigned fs_attr_idx = 0;
 	nir_foreach_variable(variable, &nir->inputs) {
 		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
 								   nir->stage == MESA_SHADER_VERTEX);
@@ -330,7 +353,10 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 		for (unsigned i = 0; i < attrib_count; ++i) {
 			LLVMValueRef data[4];
 
-			declare_nir_input_vs(ctx, variable, i, data);
+			if (nir->stage == MESA_SHADER_VERTEX)
+				declare_nir_input_vs(ctx, variable, i, data);
+			else if (nir->stage == MESA_SHADER_FRAGMENT)
+				declare_nir_input_fs(ctx, variable, i, &fs_attr_idx, data);
 
 			for (unsigned chan = 0; chan < 4; chan++) {
 				ctx->inputs[input_idx + chan] =

@@ -1392,25 +1392,28 @@ static void interp_fs_input(struct si_shader_context *ctx,
 	}
 }
 
-static void declare_input_fs(
+void si_llvm_load_input_fs(
 	struct si_shader_context *ctx,
 	unsigned input_index,
-	const struct tgsi_full_declaration *decl,
 	LLVMValueRef out[4])
 {
 	struct lp_build_context *base = &ctx->bld_base.base;
 	struct si_shader *shader = ctx->shader;
+	struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMValueRef main_fn = ctx->main_fn;
 	LLVMValueRef interp_param = NULL;
 	int interp_param_idx;
+	enum tgsi_semantic semantic_name = info->input_semantic_name[input_index];
+	unsigned semantic_index = info->input_semantic_index[input_index];
+	enum tgsi_interpolate_mode interp_mode = info->input_interpolate[input_index];
+	enum tgsi_interpolate_loc interp_loc = info->input_interpolate_loc[input_index];
 
 	/* Get colors from input VGPRs (set by the prolog). */
-	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR) {
-		unsigned i = decl->Semantic.Index;
+	if (semantic_name == TGSI_SEMANTIC_COLOR) {
 		unsigned colors_read = shader->selector->info.colors_read;
-		unsigned mask = colors_read >> (i * 4);
+		unsigned mask = colors_read >> (semantic_index * 4);
 		unsigned offset = SI_PARAM_POS_FIXED_PT + 1 +
-				  (i ? util_bitcount(colors_read & 0xf) : 0);
+				  (semantic_index ? util_bitcount(colors_read & 0xf) : 0);
 
 		out[0] = mask & 0x1 ? LLVMGetParam(main_fn, offset++) : base->undef;
 		out[1] = mask & 0x2 ? LLVMGetParam(main_fn, offset++) : base->undef;
@@ -1419,20 +1422,28 @@ static void declare_input_fs(
 		return;
 	}
 
-	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
-						     decl->Interp.Location);
+	interp_param_idx = lookup_interp_param_index(interp_mode, interp_loc);
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx) {
 		interp_param = LLVMGetParam(ctx->main_fn, interp_param_idx);
 	}
 
-	interp_fs_input(ctx, input_index, decl->Semantic.Name,
-			decl->Semantic.Index, 0, /* this param is unused */
+	interp_fs_input(ctx, input_index, semantic_name,
+			semantic_index, 0, /* this param is unused */
 			shader->selector->info.colors_read, interp_param,
 			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK),
 			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE),
 			&out[0]);
+}
+
+static void declare_input_fs(
+	struct si_shader_context *ctx,
+	unsigned input_index,
+	const struct tgsi_full_declaration *decl,
+	LLVMValueRef out[4])
+{
+	si_llvm_load_input_fs(ctx, input_index, out);
 }
 
 static LLVMValueRef get_sample_id(struct si_shader_context *ctx)
