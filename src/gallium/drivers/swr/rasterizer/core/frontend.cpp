@@ -787,7 +787,7 @@ static void GeometryShaderStage(
     tlsGsContext.PrimitiveID = primID;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, true);
-    simdvector attrib[MAX_ATTRIBUTES];
+    simdvector attrib[MAX_NUM_VERTS_PER_PRIM];
 
     // assemble all attributes for the input primitive
     for (uint32_t slot = 0; slot < pState->numInputAttribs; ++slot)
