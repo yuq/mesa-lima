@@ -148,3 +148,38 @@ tgsi_get_gl_varying_semantic(gl_varying_slot attr,
       break;
    }
 }
+
+/**
+ * Determine the semantic name and index used for the given fragment shader
+ * result.
+ */
+void
+tgsi_get_gl_frag_result_semantic(gl_frag_result frag_result,
+                                 unsigned *semantic_name,
+                                 unsigned *semantic_index)
+{
+   if (frag_result >= FRAG_RESULT_DATA0) {
+      *semantic_name = TGSI_SEMANTIC_COLOR;
+      *semantic_index = frag_result - FRAG_RESULT_DATA0;
+      return;
+   }
+
+   *semantic_index = 0;
+
+   switch (frag_result) {
+   case FRAG_RESULT_DEPTH:
+      *semantic_name = TGSI_SEMANTIC_POSITION;
+      break;
+   case FRAG_RESULT_STENCIL:
+      *semantic_name = TGSI_SEMANTIC_STENCIL;
+      break;
+   case FRAG_RESULT_COLOR:
+      *semantic_name = TGSI_SEMANTIC_COLOR;
+      break;
+   case FRAG_RESULT_SAMPLE_MASK:
+      *semantic_name = TGSI_SEMANTIC_SAMPLEMASK;
+      break;
+   default:
+      assert(false);
+   }
+}

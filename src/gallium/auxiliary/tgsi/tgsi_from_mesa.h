@@ -42,6 +42,11 @@ unsigned
 tgsi_get_generic_gl_varying_index(gl_varying_slot attr,
                                   bool needs_texcoord_semantic);
 
+void
+tgsi_get_gl_frag_result_semantic(gl_frag_result frag_result,
+                                 unsigned *semantic_name,
+                                 unsigned *semantic_index);
+
 static inline enum pipe_shader_type
 pipe_shader_type_from_mesa(gl_shader_stage stage)
 {
