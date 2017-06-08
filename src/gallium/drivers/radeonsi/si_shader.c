@@ -5494,6 +5494,8 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 {
 	struct lp_build_tgsi_context *bld_base;
 
+	ctx->abi.chip_class = sscreen->b.chip_class;
+
 	si_llvm_context_init(ctx, sscreen, tm);
 
 	bld_base = &ctx->bld_base;
