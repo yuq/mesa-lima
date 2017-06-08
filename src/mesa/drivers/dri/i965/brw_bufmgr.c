@@ -689,7 +689,7 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    DBG("brw_bo_map_cpu: %d (%s) -> %p\n", bo->gem_handle, bo->name,
        bo->map_cpu);
 
-   if (!(flags & MAP_ASYNC)) {
+   if (!(flags & MAP_ASYNC) || !bufmgr->has_llc) {
       set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
                  flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
    }
@@ -743,7 +743,7 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    DBG("bo_map_gtt: %d (%s) -> %p\n", bo->gem_handle, bo->name,
        bo->map_gtt);
 
-   if (!(flags & MAP_ASYNC)) {
+   if (!(flags & MAP_ASYNC) || !bufmgr->has_llc) {
       set_domain(brw, "GTT mapping", bo,
                  I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
    }
