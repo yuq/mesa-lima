@@ -26,6 +26,13 @@
 
 #include <llvm-c/Core.h>
 
+enum ac_descriptor_type {
+	AC_DESC_IMAGE,
+	AC_DESC_FMASK,
+	AC_DESC_SAMPLER,
+	AC_DESC_BUFFER,
+};
+
 /* Document the shader ABI during compilation. This is what allows radeonsi and
  * radv to share a compiler backend.
  */
@@ -50,6 +57,23 @@ struct ac_shader_abi {
 			     LLVMValueRef *addrs);
 
 	LLVMValueRef (*load_ubo)(struct ac_shader_abi *abi, LLVMValueRef index);
+
+	/**
+	 * Load a descriptor associated to a sampler.
+	 *
+	 * \param descriptor_set the descriptor set index (only for Vulkan)
+	 * \param base_index the base index of the sampler variable
+	 * \param constant_index constant part of an array index (or 0, if the
+	 *                       sampler variable is not an array)
+	 * \param index non-constant part of an array index (may be NULL)
+	 * \param desc_type the type of descriptor to load
+	 */
+	LLVMValueRef (*load_sampler_desc)(struct ac_shader_abi *abi,
+					  unsigned descriptor_set,
+					  unsigned base_index,
+					  unsigned constant_index,
+					  LLVMValueRef index,
+					  enum ac_descriptor_type desc_type);
 };
 
 #endif /* AC_SHADER_ABI_H */
