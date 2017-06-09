@@ -365,7 +365,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
       case GL_DEPTH_TEST:
          if (ctx->Depth.Test == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_DEPTH);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewDepth ? 0 : _NEW_DEPTH);
+         ctx->NewDriverState |= ctx->DriverFlags.NewDepth;
          ctx->Depth.Test = state;
          break;
       case GL_DEBUG_OUTPUT:
@@ -934,7 +935,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
          CHECK_EXTENSION(EXT_depth_bounds_test, cap);
          if (ctx->Depth.BoundsTest == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_DEPTH);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewDepth ? 0 : _NEW_DEPTH);
+         ctx->NewDriverState |= ctx->DriverFlags.NewDepth;
          ctx->Depth.BoundsTest = state;
          break;
 
