@@ -40,4 +40,7 @@ pipe_etna_create_screen(int fd);
 struct pipe_screen *
 pipe_imx_drm_create_screen(int fd);
 
+struct pipe_screen *
+pipe_lima_create_screen(int fd);
+
 #endif /* _DRM_HELPER_PUBLIC_H */

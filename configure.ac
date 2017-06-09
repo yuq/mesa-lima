@@ -81,6 +81,7 @@ LIBDRM_NOUVEAU_REQUIRED=2.4.66
 LIBDRM_FREEDRENO_REQUIRED=2.4.74
 LIBDRM_VC4_REQUIRED=2.4.69
 LIBDRM_ETNAVIV_REQUIRED=2.4.80
+LIBDRM_LIMA_REQUIRED=2.4.75
 
 dnl Versions for external dependencies
 DRI2PROTO_REQUIRED=2.8
@@ -1240,7 +1241,7 @@ GALLIUM_DRIVERS_DEFAULT="r300,r600,svga,swrast"
 AC_ARG_WITH([gallium-drivers],
     [AS_HELP_STRING([--with-gallium-drivers@<:@=DIRS...@:>@],
         [comma delimited Gallium drivers list, e.g.
-        "i915,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,swr,vc4,virgl,etnaviv,imx"
+        "i915,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,swr,vc4,virgl,etnaviv,imx,lima"
         @<:@default=r300,r600,svga,swrast@:>@])],
     [with_gallium_drivers="$withval"],
     [with_gallium_drivers="$GALLIUM_DRIVERS_DEFAULT"])
@@ -2422,6 +2423,11 @@ if test -n "$with_gallium_drivers"; then
        ximx)
             HAVE_GALLIUM_IMX=yes
             ;;
+        xlima)
+            HAVE_GALLIUM_LIMA=yes
+            PKG_CHECK_MODULES([LIMA], [libdrm >= $LIBDRM_LIMA_REQUIRED libdrm_lima >= $LIBDRM_LIMA_REQUIRED])
+            require_libdrm "lima"
+            ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
             if test "x$enable_llvm" = xyes; then
@@ -2560,6 +2566,7 @@ AM_CONDITIONAL(HAVE_GALLIUM_NOUVEAU, test "x$HAVE_GALLIUM_NOUVEAU" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_FREEDRENO, test "x$HAVE_GALLIUM_FREEDRENO" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_ETNAVIV, test "x$HAVE_GALLIUM_ETNAVIV" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_IMX, test "x$HAVE_GALLIUM_IMX" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_LIMA, test "x$HAVE_GALLIUM_LIMA" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SOFTPIPE, test "x$HAVE_GALLIUM_SOFTPIPE" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_LLVMPIPE, test "x$HAVE_GALLIUM_LLVMPIPE" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SWR, test "x$HAVE_GALLIUM_SWR" = xyes)
@@ -2713,6 +2720,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/drivers/imx/Makefile
 		src/gallium/drivers/vc4/Makefile
 		src/gallium/drivers/virgl/Makefile
+		src/gallium/drivers/lima/Makefile
 		src/gallium/state_trackers/clover/Makefile
 		src/gallium/state_trackers/dri/Makefile
 		src/gallium/state_trackers/glx/xlib/Makefile
@@ -2742,6 +2750,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/tests/unit/Makefile
 		src/gallium/winsys/etnaviv/drm/Makefile
 		src/gallium/winsys/imx/drm/Makefile
+		src/gallium/winsys/lima/drm/Makefile
 		src/gallium/winsys/freedreno/drm/Makefile
 		src/gallium/winsys/i915/drm/Makefile
 		src/gallium/winsys/nouveau/drm/Makefile
