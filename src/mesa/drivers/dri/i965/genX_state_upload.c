@@ -31,6 +31,7 @@
 #include "main/context.h"
 #include "main/enums.h"
 #include "main/macros.h"
+#include "main/state.h"
 
 #include "brw_context.h"
 #if GEN_GEN == 6
@@ -1117,7 +1118,7 @@ genX(calculate_attr_overrides)(const struct brw_context *brw,
          genX(get_attr_override)(&attribute,
                                  &brw->vue_map_geom_out,
                                  *urb_entry_read_offset, attr,
-                                 brw->ctx.VertexProgram._TwoSideEnabled,
+                                 _mesa_vertex_program_two_side_enabled(ctx),
                                  &max_source_attr);
       }
 

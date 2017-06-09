@@ -72,4 +72,15 @@ _mesa_need_secondary_color(const struct gl_context *ctx)
    return GL_FALSE;
 }
 
+/** Compute two sided lighting state for fixed function or programs. */
+static inline bool
+_mesa_vertex_program_two_side_enabled(const struct gl_context *ctx)
+{
+   if (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] ||
+       ctx->VertexProgram._Enabled)
+      return ctx->VertexProgram.TwoSideEnabled;
+
+   return ctx->Light.Enabled && ctx->Light.Model.TwoSide;
+}
+
 #endif

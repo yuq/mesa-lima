@@ -34,6 +34,7 @@
 #include "main/mtypes.h"
 #include "main/enums.h"
 #include "main/fbobject.h"
+#include "main/state.h"
 
 #include "intel_batchbuffer.h"
 
@@ -152,8 +153,7 @@ brw_upload_sf_prog(struct brw_context *brw)
    }
 
    /* _NEW_LIGHT | _NEW_PROGRAM */
-   key.do_twoside_color = ((ctx->Light.Enabled && ctx->Light.Model.TwoSide) ||
-                           ctx->VertexProgram._TwoSideEnabled);
+   key.do_twoside_color = _mesa_vertex_program_two_side_enabled(ctx);
 
    /* _NEW_POLYGON */
    if (key.do_twoside_color) {
