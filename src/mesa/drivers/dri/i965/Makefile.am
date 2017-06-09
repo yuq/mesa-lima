@@ -102,6 +102,7 @@ BUILT_SOURCES = $(i965_oa_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST = \
+	gen4_blorp_exec.h \
 	brw_oa_hsw.xml \
 	brw_oa.py
 
