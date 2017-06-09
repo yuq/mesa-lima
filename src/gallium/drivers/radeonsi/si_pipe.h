@@ -237,19 +237,19 @@ struct si_context {
 	void				*custom_blend_eliminate_fastclear;
 	void				*custom_blend_dcc_decompress;
 	struct si_screen		*screen;
+	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
+	struct si_shader_ctx_state	fixed_func_tcs_shader;
 
 	struct radeon_winsys_cs		*ce_ib;
 	struct radeon_winsys_cs		*ce_preamble_ib;
 	struct r600_resource		*ce_ram_saved_buffer;
-	unsigned			ce_ram_saved_offset;
-	unsigned			total_ce_ram_allocated;
-	bool				ce_need_synchronization;
 	struct u_suballocator		*ce_suballocator;
+	unsigned			ce_ram_saved_offset;
+	uint16_t			total_ce_ram_allocated;
+	bool				ce_need_synchronization:1;
 
-	struct si_shader_ctx_state	fixed_func_tcs_shader;
-	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
-	bool				gfx_flush_in_progress;
-	bool				compute_is_busy;
+	bool				gfx_flush_in_progress:1;
+	bool				compute_is_busy:1;
 
 	/* Atoms (direct states). */
 	union si_state_atoms		atoms;
@@ -327,19 +327,20 @@ struct si_context {
 	bool				smoothing_enabled;
 
 	/* DB render state. */
-	bool			dbcb_depth_copy_enabled;
-	bool			dbcb_stencil_copy_enabled;
-	unsigned		dbcb_copy_sample;
-	bool			db_flush_depth_inplace;
-	bool			db_flush_stencil_inplace;
-	bool			db_depth_clear;
-	bool			db_depth_disable_expclear;
-	bool			db_stencil_clear;
-	bool			db_stencil_disable_expclear;
 	unsigned		ps_db_shader_control;
-	bool			occlusion_queries_disabled;
+	unsigned		dbcb_copy_sample;
+	bool			dbcb_depth_copy_enabled:1;
+	bool			dbcb_stencil_copy_enabled:1;
+	bool			db_flush_depth_inplace:1;
+	bool			db_flush_stencil_inplace:1;
+	bool			db_depth_clear:1;
+	bool			db_depth_disable_expclear:1;
+	bool			db_stencil_clear:1;
+	bool			db_stencil_disable_expclear:1;
+	bool			occlusion_queries_disabled:1;
 
 	/* Emitted draw state. */
+	bool			gs_tri_strip_adj_fix:1;
 	int			last_index_size;
 	int			last_base_vertex;
 	int			last_start_instance;
@@ -355,7 +356,6 @@ struct si_context {
 	unsigned		current_vs_state;
 	unsigned		last_vs_state;
 	enum pipe_prim_type	current_rast_prim; /* primitive type after TES, GS */
-	bool			gs_tri_strip_adj_fix;
 
 	/* Scratch buffer */
 	struct r600_atom	scratch_state;
