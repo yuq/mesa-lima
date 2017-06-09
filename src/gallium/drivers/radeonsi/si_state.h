@@ -98,7 +98,7 @@ struct si_stencil_ref {
 	struct si_dsa_stencil_ref_part	dsa_part;
 };
 
-struct si_vertex_element
+struct si_vertex_elements
 {
 	unsigned			count;
 	unsigned			first_vb_use_mask;

@@ -1027,7 +1027,7 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 
 bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 {
-	struct si_vertex_element *velems = sctx->vertex_elements;
+	struct si_vertex_elements *velems = sctx->vertex_elements;
 	struct si_descriptors *desc = &sctx->vertex_buffers;
 	unsigned i, count;
 	unsigned desc_list_byte_size;

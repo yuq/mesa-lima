@@ -3716,7 +3716,7 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				       const struct pipe_vertex_element *elements)
 {
 	struct si_screen *sscreen = (struct si_screen*)ctx->screen;
-	struct si_vertex_element *v = CALLOC_STRUCT(si_vertex_element);
+	struct si_vertex_elements *v = CALLOC_STRUCT(si_vertex_elements);
 	bool used[SI_NUM_VERTEX_BUFFERS] = {};
 	int i;
 
@@ -3856,8 +3856,8 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 static void si_bind_vertex_elements(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_vertex_element *old = sctx->vertex_elements;
-	struct si_vertex_element *v = (struct si_vertex_element*)state;
+	struct si_vertex_elements *old = sctx->vertex_elements;
+	struct si_vertex_elements *v = (struct si_vertex_elements*)state;
 
 	sctx->vertex_elements = v;
 	sctx->vertex_buffers_dirty = true;

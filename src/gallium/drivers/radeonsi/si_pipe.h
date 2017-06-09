@@ -290,7 +290,7 @@ struct si_context {
 	struct si_cs_shader_state	cs_shader_state;
 
 	/* shader information */
-	struct si_vertex_element	*vertex_elements;
+	struct si_vertex_elements	*vertex_elements;
 	unsigned			sprite_coord_enable;
 	bool				flatshade;
 	bool				do_update_shaders;
