@@ -274,21 +274,6 @@ update_program_constants(struct gl_context *ctx)
 }
 
 
-
-
-/**
- * Update the ctx->Polygon._FrontBit flag.
- */
-static void
-update_frontbit(struct gl_context *ctx)
-{
-   if (ctx->Transform.ClipOrigin == GL_LOWER_LEFT)
-      ctx->Polygon._FrontBit = (ctx->Polygon.FrontFace == GL_CW);
-   else
-      ctx->Polygon._FrontBit = (ctx->Polygon.FrontFace == GL_CCW);
-}
-
-
 /**
  * Compute derived GL state.
  * If __struct gl_contextRec::NewState is non-zero then this function \b must
@@ -347,9 +332,6 @@ _mesa_update_state_locked( struct gl_context *ctx )
 
    if (new_state & (_NEW_TEXTURE_OBJECT | _NEW_TEXTURE_STATE | _NEW_PROGRAM))
       _mesa_update_texture_state(ctx);
-
-   if (new_state & _NEW_POLYGON)
-      update_frontbit( ctx );
 
    if (new_state & _NEW_BUFFERS)
       _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);

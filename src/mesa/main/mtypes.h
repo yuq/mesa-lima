@@ -803,7 +803,6 @@ struct gl_polygon_attrib
    GLenum FrontFace;		/**< Either GL_CW or GL_CCW */
    GLenum FrontMode;		/**< Either GL_POINT, GL_LINE or GL_FILL */
    GLenum BackMode;		/**< Either GL_POINT, GL_LINE or GL_FILL */
-   GLboolean _FrontBit;		/**< 0=GL_CCW, 1=GL_CW */
    GLboolean CullFlag;		/**< Culling on/off flag */
    GLboolean SmoothFlag;	/**< True if GL_POLYGON_SMOOTH is enabled */
    GLboolean StippleFlag;	/**< True if GL_POLYGON_STIPPLE is enabled */

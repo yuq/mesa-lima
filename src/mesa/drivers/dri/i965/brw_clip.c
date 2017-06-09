@@ -181,7 +181,7 @@ brw_upload_clip_prog(struct brw_context *brw)
 	       key.offset_clamp = ctx->Polygon.OffsetClamp * ctx->DrawBuffer->_MRD;
 	    }
 
-	    if (!ctx->Polygon._FrontBit) {
+	    if (!brw->polygon_front_bit) {
 	       key.fill_ccw = fill_front;
 	       key.fill_cw = fill_back;
 	       key.offset_ccw = offset_front;

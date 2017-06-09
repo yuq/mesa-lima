@@ -83,4 +83,14 @@ _mesa_vertex_program_two_side_enabled(const struct gl_context *ctx)
    return ctx->Light.Enabled && ctx->Light.Model.TwoSide;
 }
 
+/** Return 0=GL_CCW or 1=GL_CW */
+static inline bool
+_mesa_polygon_get_front_bit(const struct gl_context *ctx)
+{
+   if (ctx->Transform.ClipOrigin == GL_LOWER_LEFT)
+      return ctx->Polygon.FrontFace == GL_CW;
+
+   return ctx->Polygon.FrontFace == GL_CCW;
+}
+
 #endif

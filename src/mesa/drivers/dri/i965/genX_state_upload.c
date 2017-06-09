@@ -1274,7 +1274,7 @@ genX(upload_clip_state)(struct brw_context *brw)
 #endif
 
 #if GEN_GEN == 7
-      clip.FrontWinding = ctx->Polygon._FrontBit == _mesa_is_user_fbo(fb);
+      clip.FrontWinding = brw->polygon_front_bit == _mesa_is_user_fbo(fb);
 
       if (ctx->Polygon.CullFlag) {
          switch (ctx->Polygon.CullFaceMode) {
@@ -1441,7 +1441,7 @@ genX(upload_sf)(struct brw_context *brw)
 
 #if GEN_GEN <= 7
       /* _NEW_POLYGON */
-      sf.FrontWinding = ctx->Polygon._FrontBit == render_to_fbo;
+      sf.FrontWinding = brw->polygon_front_bit == render_to_fbo;
 #if GEN_GEN >= 6
       sf.GlobalDepthOffsetEnableSolid = ctx->Polygon.OffsetFill;
       sf.GlobalDepthOffsetEnableWireframe = ctx->Polygon.OffsetLine;
@@ -3879,7 +3879,7 @@ genX(upload_raster)(struct brw_context *brw)
    struct gl_point_attrib *point = &ctx->Point;
 
    brw_batch_emit(brw, GENX(3DSTATE_RASTER), raster) {
-      if (polygon->_FrontBit == render_to_fbo)
+      if (brw->polygon_front_bit == render_to_fbo)
          raster.FrontWinding = CounterClockwise;
 
       if (polygon->CullFlag) {

@@ -30,6 +30,7 @@
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "main/stencil.h"
+#include "main/state.h"
 
 #include "tnl/t_context.h"
 

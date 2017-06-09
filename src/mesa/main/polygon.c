@@ -318,7 +318,6 @@ void _mesa_init_polygon( struct gl_context * ctx )
    ctx->Polygon.CullFlag = GL_FALSE;
    ctx->Polygon.CullFaceMode = GL_BACK;
    ctx->Polygon.FrontFace = GL_CCW;
-   ctx->Polygon._FrontBit = 0;
    ctx->Polygon.FrontMode = GL_FILL;
    ctx->Polygon.BackMode = GL_FILL;
    ctx->Polygon.SmoothFlag = GL_FALSE;

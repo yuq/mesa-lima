@@ -44,6 +44,7 @@
 #include "main/texobj.h"
 #include "main/framebuffer.h"
 #include "main/stencil.h"
+#include "main/state.h"
 
 #include "vbo/vbo_context.h"
 
@@ -208,6 +209,9 @@ intel_update_state(struct gl_context * ctx)
       brw->stencil_write_enabled =
          _mesa_stencil_is_write_enabled(ctx, brw->stencil_two_sided);
    }
+
+   if (new_state & _NEW_POLYGON)
+      brw->polygon_front_bit = _mesa_polygon_get_front_bit(ctx);
 
    intel_prepare_render(brw);
 
