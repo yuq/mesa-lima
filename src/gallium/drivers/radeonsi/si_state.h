@@ -267,11 +267,12 @@ struct si_sampler_views {
 };
 
 struct si_buffer_resources {
-	enum radeon_bo_usage		shader_usage; /* READ, WRITE, or READWRITE */
-	enum radeon_bo_usage		shader_usage_constbuf;
-	enum radeon_bo_priority		priority;
-	enum radeon_bo_priority		priority_constbuf;
 	struct pipe_resource		**buffers; /* this has num_buffers elements */
+
+	enum radeon_bo_usage		shader_usage:4; /* READ, WRITE, or READWRITE */
+	enum radeon_bo_usage		shader_usage_constbuf:4;
+	enum radeon_bo_priority		priority:6;
+	enum radeon_bo_priority		priority_constbuf:6;
 
 	/* The i-th bit is set if that element is enabled (non-NULL resource). */
 	unsigned			enabled_mask;
