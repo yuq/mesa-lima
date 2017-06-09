@@ -314,7 +314,8 @@ DD_CSO_DELETE(vertex_elements)
       struct dd_state *hstate = state; \
    \
       pipe->delete_##name##_state(pipe, hstate->cso); \
-      tgsi_free_tokens(hstate->state.shader.tokens); \
+      if (hstate->state.shader.type == PIPE_SHADER_IR_TGSI) \
+         tgsi_free_tokens(hstate->state.shader.tokens); \
       FREE(hstate); \
    }
 
@@ -330,7 +331,8 @@ DD_CSO_DELETE(vertex_elements)
          return NULL; \
       hstate->cso = pipe->create_##name##_state(pipe, state); \
       hstate->state.shader = *state; \
-      hstate->state.shader.tokens = tgsi_dup_tokens(state->tokens); \
+      if (hstate->state.shader.type == PIPE_SHADER_IR_TGSI) \
+         hstate->state.shader.tokens = tgsi_dup_tokens(state->tokens); \
       return hstate; \
    } \
     \

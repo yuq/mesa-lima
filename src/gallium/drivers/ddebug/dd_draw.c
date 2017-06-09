@@ -98,8 +98,13 @@ dd_num_active_viewports(struct dd_draw_state *dstate)
    else
       return 1;
 
-   tgsi_scan_shader(tokens, &info);
-   return info.writes_viewport_index ? PIPE_MAX_VIEWPORTS : 1;
+   if (tokens) {
+      tgsi_scan_shader(tokens, &info);
+      if (info.writes_viewport_index)
+         return PIPE_MAX_VIEWPORTS;
+   }
+
+   return 1;
 }
 
 #define COLOR_RESET	"\033[0m"
@@ -831,8 +836,12 @@ dd_copy_draw_state(struct dd_draw_state *dst, struct dd_draw_state *src)
 
       if (src->shaders[i]) {
          dst->shaders[i]->state.shader = src->shaders[i]->state.shader;
-         dst->shaders[i]->state.shader.tokens =
-            tgsi_dup_tokens(src->shaders[i]->state.shader.tokens);
+         if (src->shaders[i]->state.shader.tokens) {
+            dst->shaders[i]->state.shader.tokens =
+               tgsi_dup_tokens(src->shaders[i]->state.shader.tokens);
+         } else {
+            dst->shaders[i]->state.shader.ir.nir = NULL;
+         }
       } else {
          dst->shaders[i] = NULL;
       }
