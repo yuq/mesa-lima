@@ -208,7 +208,7 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
    struct etna_bo *bo = etna_bo_new(screen->dev, size, flags);
    if (unlikely(bo == NULL)) {
       BUG("Problem allocating video memory for resource");
-      return NULL;
+      goto free_rsc;
    }
 
    rsc->bo = bo;
@@ -223,6 +223,10 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
    }
 
    return &rsc->base;
+
+free_rsc:
+   FREE(rsc);
+   return NULL;
 }
 
 static struct pipe_resource *
