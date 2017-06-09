@@ -266,7 +266,6 @@ void
 _mesa_update_state_locked( struct gl_context *ctx )
 {
    GLbitfield new_state = ctx->NewState;
-   GLbitfield prog_flags = _NEW_PROGRAM;
    GLbitfield new_prog_state = 0x0;
    const GLbitfield computed_states = ~(_NEW_CURRENT_ATTRIB | _NEW_LINE);
 
@@ -279,59 +278,72 @@ _mesa_update_state_locked( struct gl_context *ctx )
    if (MESA_VERBOSE & VERBOSE_STATE)
       _mesa_print_state("_mesa_update_state", new_state);
 
-   /* Determine which state flags effect vertex/fragment program state */
-   if (ctx->FragmentProgram._MaintainTexEnvProgram) {
-      prog_flags |= (_NEW_BUFFERS | _NEW_TEXTURE_OBJECT | _NEW_FOG |
-		     _NEW_VARYING_VP_INPUTS | _NEW_LIGHT | _NEW_POINT |
-		     _NEW_RENDERMODE | _NEW_PROGRAM | _NEW_FRAG_CLAMP |
-		     _NEW_COLOR | _NEW_TEXTURE_STATE);
-   }
-   if (ctx->VertexProgram._MaintainTnlProgram) {
-      prog_flags |= (_NEW_VARYING_VP_INPUTS | _NEW_TEXTURE_OBJECT |
-                     _NEW_TEXTURE_MATRIX | _NEW_TRANSFORM | _NEW_POINT |
-                     _NEW_FOG | _NEW_LIGHT | _NEW_TEXTURE_STATE |
-                     _MESA_NEW_NEED_EYE_COORDS);
-   }
-
-   /*
-    * Now update derived state info
-    */
-   if (new_state & (_NEW_MODELVIEW|_NEW_PROJECTION))
-      _mesa_update_modelview_project( ctx, new_state );
-
-   if (new_state & _NEW_TEXTURE_MATRIX)
-      _mesa_update_texture_matrices(ctx);
-
-   if (new_state & (_NEW_TEXTURE_OBJECT | _NEW_TEXTURE_STATE | _NEW_PROGRAM))
-      _mesa_update_texture_state(ctx);
-
    if (new_state & _NEW_BUFFERS)
       _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
 
-   if (new_state & _NEW_LIGHT)
-      _mesa_update_lighting( ctx );
+   /* Handle Core and Compatibility contexts separately. */
+   if (ctx->API == API_OPENGL_COMPAT ||
+       ctx->API == API_OPENGLES) {
+      GLbitfield prog_flags = _NEW_PROGRAM;
 
-   if (new_state & _NEW_PIXEL)
-      _mesa_update_pixel( ctx );
+      /* Determine which state flags effect vertex/fragment program state */
+      if (ctx->FragmentProgram._MaintainTexEnvProgram) {
+         prog_flags |= (_NEW_BUFFERS | _NEW_TEXTURE_OBJECT | _NEW_FOG |
+                        _NEW_VARYING_VP_INPUTS | _NEW_LIGHT | _NEW_POINT |
+                        _NEW_RENDERMODE | _NEW_PROGRAM | _NEW_FRAG_CLAMP |
+                        _NEW_COLOR | _NEW_TEXTURE_STATE);
+      }
+      if (ctx->VertexProgram._MaintainTnlProgram) {
+         prog_flags |= (_NEW_VARYING_VP_INPUTS | _NEW_TEXTURE_OBJECT |
+                        _NEW_TEXTURE_MATRIX | _NEW_TRANSFORM | _NEW_POINT |
+                        _NEW_FOG | _NEW_LIGHT | _NEW_TEXTURE_STATE |
+                        _MESA_NEW_NEED_EYE_COORDS);
+      }
 
-   /* ctx->_NeedEyeCoords is now up to date.
-    *
-    * If the truth value of this variable has changed, update for the
-    * new lighting space and recompute the positions of lights and the
-    * normal transform.
-    *
-    * If the lighting space hasn't changed, may still need to recompute
-    * light positions & normal transforms for other reasons.
-    */
-   if (new_state & _MESA_NEW_NEED_EYE_COORDS) 
-      _mesa_update_tnl_spaces( ctx, new_state );
-
-   if (new_state & prog_flags) {
-      /* When we generate programs from fixed-function vertex/fragment state
-       * this call may generate/bind a new program.  If so, we need to
-       * propogate the _NEW_PROGRAM flag to the driver.
+      /*
+       * Now update derived state info
        */
-      new_prog_state |= update_program( ctx );
+      if (new_state & (_NEW_MODELVIEW|_NEW_PROJECTION))
+         _mesa_update_modelview_project( ctx, new_state );
+
+      if (new_state & _NEW_TEXTURE_MATRIX)
+         _mesa_update_texture_matrices(ctx);
+
+      if (new_state & (_NEW_TEXTURE_OBJECT | _NEW_TEXTURE_STATE | _NEW_PROGRAM))
+         _mesa_update_texture_state(ctx);
+
+      if (new_state & _NEW_LIGHT)
+         _mesa_update_lighting(ctx);
+
+      if (new_state & _NEW_PIXEL)
+         _mesa_update_pixel( ctx );
+
+      /* ctx->_NeedEyeCoords is now up to date.
+       *
+       * If the truth value of this variable has changed, update for the
+       * new lighting space and recompute the positions of lights and the
+       * normal transform.
+       *
+       * If the lighting space hasn't changed, may still need to recompute
+       * light positions & normal transforms for other reasons.
+       */
+      if (new_state & _MESA_NEW_NEED_EYE_COORDS)
+         _mesa_update_tnl_spaces( ctx, new_state );
+
+      if (new_state & prog_flags) {
+         /* When we generate programs from fixed-function vertex/fragment state
+          * this call may generate/bind a new program.  If so, we need to
+          * propogate the _NEW_PROGRAM flag to the driver.
+          */
+         new_prog_state |= update_program(ctx);
+      }
+   } else {
+      /* GL Core and GLES 2/3 contexts */
+      if (new_state & (_NEW_TEXTURE_OBJECT | _NEW_PROGRAM))
+         _mesa_update_texture_state(ctx);
+
+      if (new_state & _NEW_PROGRAM)
+         update_program(ctx);
    }
 
    if (new_state & _NEW_ARRAY)
