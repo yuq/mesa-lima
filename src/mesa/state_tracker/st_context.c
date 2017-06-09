@@ -520,7 +520,7 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewShaderStorageBuffer = ST_NEW_STORAGE_BUFFER;
    f->NewImageUnits = ST_NEW_IMAGE_UNITS;
    f->NewWindowRectangles = ST_NEW_WINDOW_RECTANGLES;
-   f->NewFramebufferSRGB = ST_NEW_FRAMEBUFFER;
+   f->NewFramebufferSRGB = ST_NEW_FB_STATE;
    f->NewScissorRect = ST_NEW_SCISSOR;
    f->NewScissorTest = ST_NEW_SCISSOR | ST_NEW_RASTERIZER;
 }
