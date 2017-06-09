@@ -143,22 +143,28 @@ static LLVMValueRef force_dcc_off(struct si_shader_context *ctx,
 	}
 }
 
-static LLVMValueRef load_image_desc(struct si_shader_context *ctx,
-				    LLVMValueRef list, LLVMValueRef index,
-				    unsigned target)
+LLVMValueRef si_load_image_desc(struct si_shader_context *ctx,
+				LLVMValueRef list, LLVMValueRef index,
+				enum ac_descriptor_type desc_type, bool dcc_off)
 {
 	LLVMBuilderRef builder = ctx->gallivm.builder;
+	LLVMValueRef rsrc;
 
-	if (target == TGSI_TEXTURE_BUFFER) {
+	if (desc_type == AC_DESC_BUFFER) {
 		index = LLVMBuildMul(builder, index,
 				     LLVMConstInt(ctx->i32, 2, 0), "");
 		index = LLVMBuildAdd(builder, index,
 				     ctx->i32_1, "");
 		list = LLVMBuildPointerCast(builder, list,
 					    si_const_array(ctx->v4i32, 0), "");
+	} else {
+		assert(desc_type == AC_DESC_IMAGE);
 	}
 
-	return ac_build_indexed_load_const(&ctx->ac, list, index);
+	rsrc = ac_build_indexed_load_const(&ctx->ac, list, index);
+	if (dcc_off)
+		rsrc = force_dcc_off(ctx, rsrc);
+	return rsrc;
 }
 
 /**
@@ -217,9 +223,9 @@ image_fetch_rsrc(
 		index = LLVMConstInt(ctx->i32, 0, 0);
 	}
 
-	*rsrc = load_image_desc(ctx, rsrc_ptr, index, target);
-	if (dcc_off && target != TGSI_TEXTURE_BUFFER)
-		*rsrc = force_dcc_off(ctx, *rsrc);
+	*rsrc = si_load_image_desc(ctx, rsrc_ptr, index,
+				   target == TGSI_TEXTURE_BUFFER ? AC_DESC_BUFFER : AC_DESC_IMAGE,
+				   dcc_off);
 }
 
 static LLVMValueRef image_fetch_coords(

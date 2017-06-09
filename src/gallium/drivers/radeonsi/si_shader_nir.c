@@ -363,6 +363,21 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 			     LLVMConstInt(ctx->ac.i32, base_index + constant_index, false),
 			     "");
 
+	if (image) {
+		assert(desc_type == AC_DESC_IMAGE || desc_type == AC_DESC_BUFFER);
+		assert(base_index + constant_index < ctx->num_images);
+
+		if (dynamic_index)
+			index = si_llvm_bound_index(ctx, index, ctx->num_images);
+
+		index = LLVMBuildSub(ctx->gallivm.builder,
+				     LLVMConstInt(ctx->i32, SI_NUM_IMAGES - 1, 0),
+				     index, "");
+
+		/* TODO: be smarter about when we use dcc_off */
+		return si_load_image_desc(ctx, list, index, desc_type, write);
+	}
+
 	assert(base_index + constant_index < ctx->num_samplers);
 
 	if (dynamic_index)

@@ -317,6 +317,9 @@ void si_shader_context_init_mem(struct si_shader_context *ctx);
 LLVMValueRef si_load_sampler_desc(struct si_shader_context *ctx,
 				  LLVMValueRef list, LLVMValueRef index,
 				  enum ac_descriptor_type type);
+LLVMValueRef si_load_image_desc(struct si_shader_context *ctx,
+				LLVMValueRef list, LLVMValueRef index,
+				enum ac_descriptor_type desc_type, bool dcc_off);
 
 void si_llvm_load_input_vs(
 	struct si_shader_context *ctx,
