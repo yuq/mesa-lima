@@ -840,13 +840,7 @@ _mesa_update_texture_state(struct gl_context *ctx)
    int old_max_unit = ctx->Texture._MaxEnabledTexImageUnit;
    BITSET_DECLARE(enabled_texture_units, MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 
-   for (i = 0; i < MESA_SHADER_STAGES; i++) {
-      if (ctx->_Shader->CurrentProgram[i]) {
-         prog[i] = ctx->_Shader->CurrentProgram[i];
-      } else {
-         prog[i] = NULL;
-      }
-   }
+   memcpy(prog, ctx->_Shader->CurrentProgram, sizeof(prog));
 
    if (prog[MESA_SHADER_FRAGMENT] == NULL &&
        _mesa_arb_fragment_program_enabled(ctx)) {
