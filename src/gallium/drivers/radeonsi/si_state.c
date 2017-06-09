@@ -3740,8 +3740,10 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 			return NULL;
 		}
 
-		if (elements[i].instance_divisor)
+		if (elements[i].instance_divisor) {
 			v->uses_instance_divisors = true;
+			v->instance_divisors[i] = elements[i].instance_divisor;
+		}
 
 		if (!used[vbo_index]) {
 			v->first_vb_use_mask |= 1 << i;
@@ -3756,6 +3758,8 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		memcpy(swizzle, desc->swizzle, sizeof(swizzle));
 
 		v->format_size[i] = desc->block.bits / 8;
+		v->src_offset[i] = elements[i].src_offset;
+		v->vertex_buffer_index[i] = vbo_index;
 
 		/* The hardware always treats the 2-bit alpha channel as
 		 * unsigned, so a shader workaround is needed. The affected
@@ -3848,8 +3852,6 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				   S_008F0C_NUM_FORMAT(num_format) |
 				   S_008F0C_DATA_FORMAT(data_format);
 	}
-	memcpy(v->elements, elements, sizeof(struct pipe_vertex_element) * count);
-
 	return v;
 }
 

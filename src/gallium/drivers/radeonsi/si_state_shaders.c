@@ -1189,11 +1189,8 @@ static void si_shader_selector_key_vs(struct si_context *sctx,
 
 	unsigned count = MIN2(vs->info.num_inputs,
 			      sctx->vertex_elements->count);
-	for (unsigned i = 0; i < count; ++i) {
-		prolog_key->instance_divisors[i] =
-			sctx->vertex_elements->elements[i].instance_divisor;
-	}
-
+	memcpy(prolog_key->instance_divisors,
+	       sctx->vertex_elements->instance_divisors, count * 4);
 	memcpy(key->mono.vs_fix_fetch, sctx->vertex_elements->fix_fetch, count);
 }
 

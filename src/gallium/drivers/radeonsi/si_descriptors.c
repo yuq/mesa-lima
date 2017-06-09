@@ -1006,7 +1006,7 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 	int i;
 
 	for (i = 0; i < count; i++) {
-		int vb = sctx->vertex_elements->elements[i].vertex_buffer_index;
+		int vb = sctx->vertex_elements->vertex_buffer_index[i];
 
 		if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
 			continue;
@@ -1065,11 +1065,10 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	assert(count <= SI_MAX_ATTRIBS);
 
 	for (i = 0; i < count; i++) {
-		struct pipe_vertex_element *ve = &velems->elements[i];
 		struct pipe_vertex_buffer *vb;
 		struct r600_resource *rbuffer;
 		unsigned offset;
-		unsigned vbo_index = ve->vertex_buffer_index;
+		unsigned vbo_index = velems->vertex_buffer_index[i];
 		uint32_t *desc = &ptr[i*4];
 
 		vb = &sctx->vertex_buffer[vbo_index];
@@ -1079,7 +1078,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 			continue;
 		}
 
-		offset = vb->buffer_offset + ve->src_offset;
+		offset = vb->buffer_offset + velems->src_offset[i];
 		va = rbuffer->gpu_address + offset;
 
 		/* Fill in T# buffer resource description */
@@ -1637,7 +1636,7 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 	/* Vertex buffers. */
 	if (rbuffer->bind_history & PIPE_BIND_VERTEX_BUFFER) {
 		for (i = 0; i < num_elems; i++) {
-			int vb = sctx->vertex_elements->elements[i].vertex_buffer_index;
+			int vb = sctx->vertex_elements->vertex_buffer_index[i];
 
 			if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
 				continue;

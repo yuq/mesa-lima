@@ -108,7 +108,9 @@ struct si_vertex_elements
 	uint8_t				fix_fetch[SI_MAX_ATTRIBS];
 	uint32_t			rsrc_word3[SI_MAX_ATTRIBS];
 	uint32_t			format_size[SI_MAX_ATTRIBS];
-	struct pipe_vertex_element	elements[SI_MAX_ATTRIBS];
+	uint8_t				vertex_buffer_index[SI_MAX_ATTRIBS];
+	uint16_t			src_offset[SI_MAX_ATTRIBS];
+	unsigned			instance_divisors[SI_MAX_ATTRIBS];
 	bool				uses_instance_divisors;
 };
 
