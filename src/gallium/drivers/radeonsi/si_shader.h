@@ -500,10 +500,9 @@ struct si_shader_key {
 
 	/* Optimization flags for asynchronous compilation only. */
 	struct {
-		struct {
-			uint64_t	kill_outputs; /* "get_unique_index" bits */
-			unsigned	clip_disable:1;
-		} hw_vs; /* HW VS (it can be VS, TES, GS) */
+		/* For HW VS (it can be VS, TES, GS) */
+		uint64_t	kill_outputs; /* "get_unique_index" bits */
+		unsigned	clip_disable:1;
 
 		/* For shaders where monolithic variants have better code.
 		 *

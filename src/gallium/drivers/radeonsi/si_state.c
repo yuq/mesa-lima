@@ -695,7 +695,7 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 	unsigned culldist_mask = vs_sel->culldist_mask;
 	unsigned total_mask;
 
-	if (vs->key.opt.hw_vs.clip_disable) {
+	if (vs->key.opt.clip_disable) {
 		assert(!info->culldist_writemask);
 		clipdist_mask = 0;
 		culldist_mask = 0;

@@ -1203,7 +1203,7 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 {
 	struct si_shader_selector *ps = sctx->ps_shader.cso;
 
-	key->opt.hw_vs.clip_disable =
+	key->opt.clip_disable =
 		sctx->queued.named.rasterizer->clip_plane_enable == 0 &&
 		(vs->info.clipdist_writemask ||
 		 vs->info.writes_clipvertex) &&
@@ -1243,7 +1243,7 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 
 	uint64_t linked = outputs_written & inputs_read;
 
-	key->opt.hw_vs.kill_outputs = ~linked & outputs_written;
+	key->opt.kill_outputs = ~linked & outputs_written;
 }
 
 /* Compute the key for the hw shader variant */
@@ -2195,8 +2195,8 @@ static void si_update_clip_regs(struct si_context *sctx,
 	     old_hw_vs->culldist_mask != next_hw_vs->culldist_mask ||
 	     !old_hw_vs_variant ||
 	     !next_hw_vs_variant ||
-	     old_hw_vs_variant->key.opt.hw_vs.clip_disable !=
-	     next_hw_vs_variant->key.opt.hw_vs.clip_disable))
+	     old_hw_vs_variant->key.opt.clip_disable !=
+	     next_hw_vs_variant->key.opt.clip_disable))
 		si_mark_atom_dirty(sctx, &sctx->clip_regs);
 }
 
@@ -3094,7 +3094,7 @@ bool si_update_shaders(struct si_context *sctx)
 	struct si_compiler_ctx_state compiler_state;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct si_shader *old_vs = si_get_vs_state(sctx);
-	bool old_clip_disable = old_vs ? old_vs->key.opt.hw_vs.clip_disable : false;
+	bool old_clip_disable = old_vs ? old_vs->key.opt.clip_disable : false;
 	struct si_shader *old_ps = sctx->ps_shader.current;
 	unsigned old_spi_shader_col_format =
 		old_ps ? old_ps->key.part.ps.epilog.spi_shader_col_format : 0;
@@ -3199,7 +3199,7 @@ bool si_update_shaders(struct si_context *sctx)
 
 	si_update_vgt_shader_config(sctx);
 
-	if (old_clip_disable != si_get_vs_state(sctx)->key.opt.hw_vs.clip_disable)
+	if (old_clip_disable != si_get_vs_state(sctx)->key.opt.clip_disable)
 		si_mark_atom_dirty(sctx, &sctx->clip_regs);
 
 	if (sctx->ps_shader.cso) {
