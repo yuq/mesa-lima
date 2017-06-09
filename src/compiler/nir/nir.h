@@ -2442,6 +2442,8 @@ void nir_lower_io_to_scalar(nir_shader *shader, nir_variable_mode mask);
 
 bool nir_lower_samplers(nir_shader *shader,
                         const struct gl_shader_program *shader_program);
+bool nir_lower_samplers_as_deref(nir_shader *shader,
+                                 const struct gl_shader_program *shader_program);
 
 bool nir_lower_system_values(nir_shader *shader);
 
