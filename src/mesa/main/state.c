@@ -90,7 +90,6 @@ update_program(struct gl_context *ctx)
    const struct gl_program *prevTCP = ctx->TessCtrlProgram._Current;
    const struct gl_program *prevTEP = ctx->TessEvalProgram._Current;
    const struct gl_program *prevCP = ctx->ComputeProgram._Current;
-   GLbitfield new_state = 0x0;
 
    /*
     * Set the ctx->VertexProgram._Current and ctx->FragmentProgram._Current
@@ -213,9 +212,9 @@ update_program(struct gl_context *ctx)
        ctx->TessEvalProgram._Current != prevTEP ||
        ctx->TessCtrlProgram._Current != prevTCP ||
        ctx->ComputeProgram._Current != prevCP)
-      new_state |= _NEW_PROGRAM;
+      return _NEW_PROGRAM;
 
-   return new_state;
+   return 0;
 }
 
 
