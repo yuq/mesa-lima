@@ -28,6 +28,7 @@
 #pragma once
 
 #include "utils.h"
+#include "common/simdintrin.h"
 
 //////////////////////////////////////////////////////////////////////////
 /// PackTraits - Helpers for packing / unpacking same pixel sizes

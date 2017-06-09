@@ -28,7 +28,7 @@
 #pragma once
 
 #include "common/formats.h"
-#include "common/simdintrin.h"
+#include "common/intrin.h"
 #include <functional>
 #include <algorithm>
 
@@ -798,6 +798,13 @@ enum SWR_MULTISAMPLE_COUNT
     SWR_MULTISAMPLE_TYPE_COUNT
 };
 
+INLINE uint32_t GetNumSamples(SWR_MULTISAMPLE_COUNT sampleCount) // @llvm_func_start
+{
+    static const uint32_t sampleCountLUT[SWR_MULTISAMPLE_TYPE_COUNT] {1, 2, 4, 8, 16};
+    assert(sampleCount < SWR_MULTISAMPLE_TYPE_COUNT);
+    return sampleCountLUT[sampleCount];
+} // @llvm_func_end
+
 struct SWR_BLEND_STATE
 {
     // constant blend factor color in RGBA float
@@ -951,43 +958,13 @@ public:
     INLINE const __m128i& TileSampleOffsetsX() const { return tileSampleOffsetsX; }; // @llvm_func
     INLINE const __m128i& TileSampleOffsetsY() const { return tileSampleOffsetsY; }; // @llvm_func
     
-    INLINE void PrecalcSampleData(int numSamples)   // @llvm_func_start
-    {                                                                      
-        for(int i = 0; i < numSamples; i++)
-        {
-            _vXi[i] = _mm_set1_epi32(_xi[i]);
-            _vYi[i] = _mm_set1_epi32(_yi[i]);
-            _vX[i] = _simd_set1_ps(_x[i]);
-            _vY[i] = _simd_set1_ps(_y[i]);
-        }
-        // precalculate the raster tile BB for the rasterizer.
-        CalcTileSampleOffsets(numSamples);                                 
-    } // @llvm_func_end
-
+    INLINE void PrecalcSampleData(int numSamples); //@llvm_func
 
 private:
     template <typename MaskT>
-    INLINE __m128i expandThenBlend4(uint32_t* min, uint32_t* max) // @llvm_func_start
-    {
-        __m128i vMin = _mm_set1_epi32(*min);
-        __m128i vMax = _mm_set1_epi32(*max);
-        return _simd_blend4_epi32<MaskT::value>(vMin, vMax);
-    }  // @llvm_func_end
+    INLINE __m128i expandThenBlend4(uint32_t* min, uint32_t* max); // @llvm_func
+    INLINE void CalcTileSampleOffsets(int numSamples);   // @llvm_func
 
-    INLINE void CalcTileSampleOffsets(int numSamples)   // @llvm_func_start
-    {
-        auto minXi = std::min_element(std::begin(_xi), &_xi[numSamples]);
-        auto maxXi = std::max_element(std::begin(_xi), &_xi[numSamples]);
-        using xMask = std::integral_constant<int, 0xA>;
-        // BR(max),    BL(min),    UR(max),    UL(min)
-        tileSampleOffsetsX = expandThenBlend4<xMask>(minXi, maxXi);
-
-        auto minYi = std::min_element(std::begin(_yi), &_yi[numSamples]);
-        auto maxYi = std::max_element(std::begin(_yi), &_yi[numSamples]);
-        using yMask = std::integral_constant<int, 0xC>;
-        // BR(max),    BL(min),    UR(max),    UL(min)
-        tileSampleOffsetsY = expandThenBlend4<yMask>(minYi, maxYi);
-    };  // @llvm_func_end
     // scalar sample values
     uint32_t _xi[SWR_MAX_NUM_MULTISAMPLES];
     uint32_t _yi[SWR_MAX_NUM_MULTISAMPLES];
@@ -1000,8 +977,7 @@ private:
     simdscalar _vX[SWR_MAX_NUM_MULTISAMPLES];
     simdscalar _vY[SWR_MAX_NUM_MULTISAMPLES];
     __m128i tileSampleOffsetsX;
-    __m128i tileSampleOffsetsY;    
-
+    __m128i tileSampleOffsetsY;
 };
 
 //////////////////////////////////////////////////////////////////////////

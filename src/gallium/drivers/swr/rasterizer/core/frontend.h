@@ -28,6 +28,7 @@
 ******************************************************************************/
 #pragma once
 #include "context.h"
+#include "common/simdintrin.h"
 #include <type_traits>
 
 // Calculates the A and B coefficients for the 3 edges of the triangle

@@ -30,7 +30,7 @@
 #pragma once
 
 #include "format_types.h"
-#include "utils.h"
+#include "format_utils.h"
 
 //////////////////////////////////////////////////////////////////////////
 /// FormatSwizzle - Component swizzle selects

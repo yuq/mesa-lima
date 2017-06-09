@@ -34,7 +34,7 @@
 #include <assert.h>
 #include <algorithm>
 
-#include "common/simdintrin.h"
+#include "common/intrin.h"
 #include "common/formats.h"
 #include "core/state.h"
 

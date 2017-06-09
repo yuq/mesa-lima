@@ -26,58 +26,6 @@
 
 #if ENABLE_AVX512_SIMD16
 
-#if KNOB_SIMD16_WIDTH == 16
-
-#if ENABLE_AVX512_EMULATION
-struct simd16scalar
-{
-    __m256  lo;
-    __m256  hi;
-};
-struct simd16scalard
-{
-    __m256d lo;
-    __m256d hi;
-};
-struct simd16scalari
-{
-    __m256i lo;
-    __m256i hi;
-};
-typedef uint16_t simd16mask;
-
-#else
-typedef __m512 simd16scalar;
-typedef __m512d simd16scalard;
-typedef __m512i simd16scalari;
-typedef __mmask16 simd16mask;
-#endif//ENABLE_AVX512_EMULATION
-#else
-#error Unsupported vector width
-#endif//KNOB_SIMD16_WIDTH == 16
-
-#define _simd16_masklo(mask) ((mask) & 0xFF)
-#define _simd16_maskhi(mask) (((mask) >> 8) & 0xFF)
-#define _simd16_setmask(hi, lo) (((hi) << 8) | (lo))
-
-#if defined(_WIN32)
-#define SIMDAPI __vectorcall
-#else
-#define SIMDAPI
-#endif
-
-OSALIGN(union, KNOB_SIMD16_BYTES) simd16vector
-{
-    simd16scalar  v[4];
-    struct
-    {
-        simd16scalar x, y, z, w;
-    };
-
-    simd16scalar& operator[] (const int i) { return v[i]; }
-    const simd16scalar& operator[] (const int i) const { return v[i]; }
-};
-
 #if ENABLE_AVX512_EMULATION
 
 #define SIMD16_EMU_AVX512_0(type, func, intrin) \

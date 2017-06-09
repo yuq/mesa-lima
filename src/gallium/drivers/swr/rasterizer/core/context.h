@@ -39,7 +39,7 @@
 #include "core/arena.h"
 #include "core/fifo.hpp"
 #include "core/knobs.h"
-#include "common/simdintrin.h"
+#include "common/intrin.h"
 #include "core/threads.h"
 #include "ringbuffer.h"
 #include "archrast/archrast.h"
