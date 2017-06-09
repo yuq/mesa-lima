@@ -680,7 +680,7 @@ void SwrSetBlendFunc(
 // update guardband multipliers for the viewport
 void updateGuardbands(API_STATE *pState)
 {
-    uint32_t numGbs = pState->gsState.emitsRenderTargetArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
+    uint32_t numGbs = pState->backendState.readRenderTargetArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
 
     for(uint32_t i = 0; i < numGbs; ++i)
     {

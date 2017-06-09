@@ -710,9 +710,6 @@ struct SWR_GS_STATE
     // instance count
     uint32_t instanceCount;
 
-    // geometry shader emits renderTargetArrayIndex
-    bool emitsRenderTargetArrayIndex;
-
     // geometry shader emits ViewportArrayIndex
     bool emitsViewportArrayIndex;
 
@@ -1074,6 +1071,8 @@ struct SWR_BACKEND_STATE
                                         // setting up attributes for the backend, otherwise
                                         // all attributes up to numAttributes will be sent
     SWR_ATTRIB_SWIZZLE swizzleMap[32];
+
+    bool readRenderTargetArrayIndex;    // Forward render target array index from last FE stage to the backend
 };
 
 

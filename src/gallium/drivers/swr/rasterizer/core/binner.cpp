@@ -763,7 +763,7 @@ endBinTriangles:
 
     // store render target array index
     OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
-    if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+    if (state.backendState.readRenderTargetArrayIndex)
     {
         simdvector vRtai[3];
         pa.Assemble(VERTEX_SGV_SLOT, vRtai);
@@ -1213,7 +1213,7 @@ endBinTriangles:
 
     // store render target array index
     OSALIGNSIMD16(uint32_t) aRTAI[KNOB_SIMD16_WIDTH];
-    if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+    if (state.backendState.readRenderTargetArrayIndex)
     {
         simd16vector vRtai[3];
         pa.Assemble_simd16(VERTEX_SGV_SLOT, vRtai);
@@ -1423,7 +1423,7 @@ void BinPostSetupPoints(
 
         // store render target array index
         OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
-        if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+        if (state.backendState.readRenderTargetArrayIndex)
         {
             simdvector vRtai;
             pa.Assemble(VERTEX_SGV_SLOT, &vRtai);
@@ -1563,7 +1563,7 @@ void BinPostSetupPoints(
 
         // store render target array index
         OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
-        if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+        if (state.backendState.readRenderTargetArrayIndex)
         {
             simdvector vRtai[2];
             pa.Assemble(VERTEX_SGV_SLOT, vRtai);
@@ -1793,7 +1793,7 @@ void BinPostSetupPoints_simd16(
 
         // store render target array index
         OSALIGNSIMD16(uint32_t) aRTAI[KNOB_SIMD16_WIDTH];
-        if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+        if (state.backendState.readRenderTargetArrayIndex)
         {
             simd16vector vRtai;
             pa.Assemble_simd16(VERTEX_SGV_SLOT, &vRtai);
@@ -1938,7 +1938,7 @@ void BinPostSetupPoints_simd16(
 
         // store render target array index
         OSALIGNSIMD16(uint32_t) aRTAI[KNOB_SIMD16_WIDTH];
-        if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+        if (state.backendState.readRenderTargetArrayIndex)
         {
             simd16vector vRtai[2];
             pa.Assemble_simd16(VERTEX_SGV_SLOT, vRtai);
@@ -2219,7 +2219,7 @@ void BinPostSetupLines(
 
     // store render target array index
     OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
-    if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+    if (state.backendState.readRenderTargetArrayIndex)
     {
         simdvector vRtai[2];
         pa.Assemble(VERTEX_SGV_SLOT, vRtai);
@@ -2436,7 +2436,7 @@ void BinPostSetupLines_simd16(
 
     // store render target array index
     OSALIGNSIMD16(uint32_t) aRTAI[KNOB_SIMD16_WIDTH];
-    if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+    if (state.backendState.readRenderTargetArrayIndex)
     {
         simd16vector vRtai[2];
         pa.Assemble_simd16(VERTEX_SGV_SLOT, vRtai);

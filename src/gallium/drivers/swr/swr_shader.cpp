@@ -547,7 +547,6 @@ BuilderSWR::CompileGS(struct swr_context *ctx, swr_jit_gs_key &key)
    pGS->maxNumVerts = info->properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES];
    pGS->instanceCount = info->properties[TGSI_PROPERTY_GS_INVOCATIONS];
 
-   pGS->emitsRenderTargetArrayIndex = info->writes_layer;
    pGS->emitsViewportArrayIndex = info->writes_viewport_index;
 
    // XXX: single stream for now...
