@@ -61,24 +61,24 @@ struct si_state_rasterizer {
 	struct si_pm4_state	pm4;
 	/* poly offset states for 16-bit, 24-bit, and 32-bit zbuffers */
 	struct si_pm4_state	pm4_poly_offset[3];
-	bool			flatshade;
-	bool			two_side;
-	bool			multisample_enable;
-	bool			force_persample_interp;
-	bool			line_stipple_enable;
-	unsigned		sprite_coord_enable;
 	unsigned		pa_sc_line_stipple;
 	unsigned		pa_cl_clip_cntl;
-	unsigned		clip_plane_enable;
-	bool			poly_stipple_enable;
-	bool			line_smooth;
-	bool			poly_smooth;
-	bool			uses_poly_offset;
-	bool			clamp_fragment_color;
-	bool			clamp_vertex_color;
-	bool			rasterizer_discard;
-	bool			scissor_enable;
-	bool			clip_halfz;
+	unsigned		sprite_coord_enable:8;
+	unsigned		clip_plane_enable:8;
+	unsigned		flatshade:1;
+	unsigned		two_side:1;
+	unsigned		multisample_enable:1;
+	unsigned		force_persample_interp:1;
+	unsigned		line_stipple_enable:1;
+	unsigned		poly_stipple_enable:1;
+	unsigned		line_smooth:1;
+	unsigned		poly_smooth:1;
+	unsigned		uses_poly_offset:1;
+	unsigned		clamp_fragment_color:1;
+	unsigned		clamp_vertex_color:1;
+	unsigned		rasterizer_discard:1;
+	unsigned		scissor_enable:1;
+	unsigned		clip_halfz:1;
 };
 
 struct si_dsa_stencil_ref_part {
