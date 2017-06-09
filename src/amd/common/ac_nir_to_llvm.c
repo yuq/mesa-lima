@@ -3431,9 +3431,6 @@ static void visit_image_store(struct ac_nir_context *ctx,
 	if (force_glc)
 		glc = i1true;
 
-	if (ctx->stage == MESA_SHADER_FRAGMENT)
-		ctx->nctx->shader_info->fs.writes_memory = true;
-
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
 		params[0] = to_float(&ctx->ac, get_src(ctx, instr->src[2])); /* data */
 		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, true, true);
@@ -3492,9 +3489,6 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 	LLVMValueRef i1false = LLVMConstInt(ctx->ac.i1, 0, false);
 	LLVMValueRef i1true = LLVMConstInt(ctx->ac.i1, 1, false);
 	MAYBE_UNUSED int length;
-
-	if (ctx->stage == MESA_SHADER_FRAGMENT)
-		ctx->nctx->shader_info->fs.writes_memory = true;
 
 	switch (instr->intrinsic) {
 	case nir_intrinsic_image_atomic_add:
@@ -4167,6 +4161,9 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 	LLVMTypeRef type;
 
 	assert(base_index < layout->binding_count);
+
+	if (write && ctx->stage == MESA_SHADER_FRAGMENT)
+		ctx->shader_info->fs.writes_memory = true;
 
 	switch (desc_type) {
 	case AC_DESC_IMAGE:
