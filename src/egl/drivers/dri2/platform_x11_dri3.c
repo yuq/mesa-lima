@@ -458,6 +458,7 @@ struct dri2_egl_display_vtbl dri3_x11_display_vtbl = {
    .swap_buffers = dri3_swap_buffers,
    .swap_buffers_with_damage = dri2_fallback_swap_buffers_with_damage,
    .swap_buffers_region = dri2_fallback_swap_buffers_region,
+   .set_damage_region = dri2_fallback_set_damage_region,
    .post_sub_buffer = dri2_fallback_post_sub_buffer,
    .copy_buffers = dri3_copy_buffers,
    .query_buffer_age = dri3_query_buffer_age,

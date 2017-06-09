@@ -110,6 +110,8 @@ struct _egl_api
                              _EGLSurface *draw);
    EGLBoolean (*CopyBuffers)(_EGLDriver *drv, _EGLDisplay *dpy,
                              _EGLSurface *surface, void *native_pixmap_target);
+   EGLBoolean (*SetDamageRegion)(_EGLDriver *drv, _EGLDisplay *dpy,
+                                 _EGLSurface *surface, EGLint *rects, EGLint n_rects);
 
    /* misc functions */
    EGLBoolean (*WaitClient)(_EGLDriver *drv, _EGLDisplay *dpy,

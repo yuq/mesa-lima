@@ -118,6 +118,7 @@ struct _egl_extensions
    EGLBoolean KHR_image_base;
    EGLBoolean KHR_image_pixmap;
    EGLBoolean KHR_no_config_context;
+   EGLBoolean KHR_partial_update;
    EGLBoolean KHR_reusable_sync;
    EGLBoolean KHR_surfaceless_context;
    EGLBoolean KHR_wait_sync;

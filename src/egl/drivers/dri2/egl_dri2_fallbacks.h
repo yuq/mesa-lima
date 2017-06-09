@@ -95,6 +95,14 @@ dri2_fallback_copy_buffers(_EGLDriver *drv, _EGLDisplay *dpy,
    return EGL_FALSE;
 }
 
+static inline EGLBoolean
+dri2_fallback_set_damage_region(_EGLDriver *drv, _EGLDisplay *dpy,
+                                _EGLSurface *surf,
+                                const EGLint *rects, EGLint n_rects)
+{
+   return EGL_FALSE;
+}
+
 static inline EGLint
 dri2_fallback_query_buffer_age(_EGLDriver *drv, _EGLDisplay *dpy,
                                _EGLSurface *surf)
