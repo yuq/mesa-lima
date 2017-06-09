@@ -100,18 +100,19 @@ struct si_stencil_ref {
 
 struct si_vertex_elements
 {
-	unsigned			count;
-	unsigned			first_vb_use_mask;
-	/* Vertex buffer descriptor list size aligned for optimal prefetch. */
-	unsigned			desc_list_byte_size;
-
-	uint8_t				fix_fetch[SI_MAX_ATTRIBS];
+	uint32_t			instance_divisors[SI_MAX_ATTRIBS];
 	uint32_t			rsrc_word3[SI_MAX_ATTRIBS];
-	uint32_t			format_size[SI_MAX_ATTRIBS];
-	uint8_t				vertex_buffer_index[SI_MAX_ATTRIBS];
 	uint16_t			src_offset[SI_MAX_ATTRIBS];
-	unsigned			instance_divisors[SI_MAX_ATTRIBS];
+	uint8_t				fix_fetch[SI_MAX_ATTRIBS];
+	uint8_t				format_size[SI_MAX_ATTRIBS];
+	uint8_t				vertex_buffer_index[SI_MAX_ATTRIBS];
+
+	uint8_t				count;
 	bool				uses_instance_divisors;
+
+	uint16_t			first_vb_use_mask;
+	/* Vertex buffer descriptor list size aligned for optimal prefetch. */
+	uint16_t			desc_list_byte_size;
 };
 
 union si_state {
