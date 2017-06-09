@@ -171,6 +171,8 @@ etna_submit_rs_state(struct etna_context *ctx,
    struct etna_cmd_stream *stream = ctx->stream;
    struct etna_coalesce coalesce;
 
+   ctx->stats.rs_operations++;
+
    if (screen->specs.pixel_pipes == 1) {
       etna_cmd_stream_reserve(stream, 22);
       etna_coalesce_start(stream, &coalesce);

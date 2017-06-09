@@ -174,6 +174,7 @@ struct etna_context {
    struct {
       uint64_t prims_emitted;
       uint64_t draw_calls;
+      uint64_t rs_operations;
    } stats;
 
    struct pipe_debug_callback debug;
