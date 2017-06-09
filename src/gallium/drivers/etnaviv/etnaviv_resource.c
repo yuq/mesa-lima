@@ -212,9 +212,15 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
    rsc->ts_bo = 0; /* TS is only created when first bound to surface */
 
    if (templat->bind & PIPE_BIND_SCANOUT) {
+      struct pipe_resource scanout_templat = *templat;
       struct winsys_handle handle;
-      rsc->scanout = renderonly_scanout_for_resource(&rsc->base, screen->ro,
-                                                     &handle);
+
+      /* pad scanout buffer size to be compatible with the RS */
+      etna_adjust_rs_align(screen->specs.pixel_pipes,
+                           &scanout_templat.width0, &scanout_templat.height0);
+
+      rsc->scanout = renderonly_scanout_for_resource(&scanout_templat,
+                                                     screen->ro, &handle);
       if (!rsc->scanout)
          goto free_rsc;
 
