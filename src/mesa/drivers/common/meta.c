@@ -2350,7 +2350,7 @@ _mesa_meta_Bitmap(struct gl_context *ctx,
     * Check if swrast fallback is needed.
     */
    if (ctx->_ImageTransferState ||
-       ctx->FragmentProgram._Enabled ||
+       _mesa_arb_fragment_program_enabled(ctx) ||
        ctx->Fog.Enabled ||
        ctx->Texture._MaxEnabledTexImageUnit != -1 ||
        width > tex->MaxSize ||

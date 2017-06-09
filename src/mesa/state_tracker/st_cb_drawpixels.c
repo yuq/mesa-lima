@@ -41,6 +41,7 @@
 #include "main/pack.h"
 #include "main/pbo.h"
 #include "main/readpix.h"
+#include "main/state.h"
 #include "main/texformat.h"
 #include "main/teximage.h"
 #include "main/texstore.h"
@@ -1319,7 +1320,7 @@ blit_copy_pixels(struct gl_context *ctx, GLint srcx, GLint srcy,
        !ctx->FragmentProgram.Enabled &&
        !ctx->VertexProgram.Enabled &&
        !ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT] &&
-       !ctx->ATIFragmentShader._Enabled &&
+       !_mesa_ati_fragment_shader_enabled(ctx) &&
        ctx->DrawBuffer->_NumColorDrawBuffers == 1 &&
        !ctx->Query.CondRenderQuery &&
        !ctx->Query.CurrentOcclusionObject) {

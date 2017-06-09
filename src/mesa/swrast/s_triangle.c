@@ -1042,7 +1042,7 @@ _swrast_choose_triangle( struct gl_context *ctx )
        */
       if (ctx->Texture._EnabledCoordUnits ||
 	  _swrast_use_fragment_program(ctx) ||
-          ctx->ATIFragmentShader._Enabled ||
+          _mesa_ati_fragment_shader_enabled(ctx) ||
           _mesa_need_secondary_color(ctx) ||
           swrast->_FogEnabled) {
          /* Ugh, we do a _lot_ of tests to pick the best textured tri func */
@@ -1071,7 +1071,7 @@ _swrast_choose_triangle( struct gl_context *ctx )
          /* First see if we can use an optimized 2-D texture function */
          if (ctx->Texture._EnabledCoordUnits == 0x1
              && !_swrast_use_fragment_program(ctx)
-             && !ctx->ATIFragmentShader._Enabled
+             && !_mesa_ati_fragment_shader_enabled(ctx)
              && ctx->Texture._MaxEnabledTexImageUnit == 0
              && ctx->Texture.Unit[0]._Current->Target == GL_TEXTURE_2D
              && samp->WrapS == GL_REPEAT

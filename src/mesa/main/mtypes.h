@@ -2251,7 +2251,6 @@ struct gl_program_state
 struct gl_vertex_program_state
 {
    GLboolean Enabled;            /**< User-set GL_VERTEX_PROGRAM_ARB/NV flag */
-   GLboolean _Enabled;           /**< Enabled and _valid_ user program? */
    GLboolean PointSizeEnabled;   /**< GL_VERTEX_PROGRAM_POINT_SIZE_ARB/NV */
    GLboolean TwoSideEnabled;     /**< GL_VERTEX_PROGRAM_TWO_SIDE_ARB/NV */
    struct gl_program *Current;  /**< User-bound vertex program */
@@ -2315,7 +2314,6 @@ struct gl_geometry_program_state
 struct gl_fragment_program_state
 {
    GLboolean Enabled;     /**< User-set fragment program enable flag */
-   GLboolean _Enabled;    /**< Enabled and _valid_ user program? */
    struct gl_program *Current;  /**< User-bound fragment program */
 
    /** Currently enabled and valid fragment program (including internal
@@ -2384,7 +2382,6 @@ struct ati_fragment_shader
 struct gl_ati_fragment_shader_state
 {
    GLboolean Enabled;
-   GLboolean _Enabled;                  /**< enabled and valid shader? */
    GLboolean Compiling;
    GLfloat GlobalConstants[8][4];
    struct ati_fragment_shader *Current;

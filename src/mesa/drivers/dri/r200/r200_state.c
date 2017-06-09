@@ -39,6 +39,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "main/light.h"
 #include "main/framebuffer.h"
 #include "main/fbobject.h"
+#include "main/state.h"
 #include "main/stencil.h"
 #include "main/viewport.h"
 
@@ -2265,7 +2266,7 @@ GLboolean r200ValidateState( struct gl_context *ctx )
 	_NEW_MODELVIEW|_NEW_PROJECTION|_NEW_TRANSFORM|
 	_NEW_LIGHT|_NEW_TEXTURE|_NEW_TEXTURE_MATRIX|
 	_NEW_FOG|_NEW_POINT|_NEW_TRACK_MATRIX)) {
-      if (ctx->VertexProgram._Enabled) {
+      if (_mesa_arb_vertex_program_enabled(ctx)) {
 	 r200SetupVertexProg( ctx );
       }
       else TCL_FALLBACK(ctx, R200_TCL_FALLBACK_VERTEX_PROGRAM, 0);
@@ -2328,7 +2329,8 @@ static void r200WrapRunPipeline( struct gl_context *ctx )
       if (!r200ValidateState( ctx ))
 	 FALLBACK(rmesa, RADEON_FALLBACK_TEXTURE, GL_TRUE);
 
-   has_material = !ctx->VertexProgram._Enabled && ctx->Light.Enabled && check_material( ctx );
+   has_material = !_mesa_arb_vertex_program_enabled(ctx) &&
+                  ctx->Light.Enabled && check_material( ctx );
 
    if (has_material) {
       TCL_FALLBACK( ctx, R200_TCL_FALLBACK_MATERIAL, GL_TRUE );

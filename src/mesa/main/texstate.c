@@ -38,6 +38,7 @@
 #include "teximage.h"
 #include "texstate.h"
 #include "mtypes.h"
+#include "state.h"
 #include "util/bitscan.h"
 #include "util/bitset.h"
 
@@ -847,7 +848,8 @@ _mesa_update_texture_state(struct gl_context *ctx)
       }
    }
 
-   if (prog[MESA_SHADER_FRAGMENT] == NULL && ctx->FragmentProgram._Enabled) {
+   if (prog[MESA_SHADER_FRAGMENT] == NULL &&
+       _mesa_arb_fragment_program_enabled(ctx)) {
       prog[MESA_SHADER_FRAGMENT] = ctx->FragmentProgram.Current;
    }
 

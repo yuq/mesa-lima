@@ -57,29 +57,6 @@
 
 
 /**
- * Update the following fields:
- *   ctx->VertexProgram._Enabled
- *   ctx->FragmentProgram._Enabled
- *   ctx->ATIFragmentShader._Enabled
- * This needs to be done before texture state validation.
- */
-static void
-update_program_enables(struct gl_context *ctx)
-{
-   /* These _Enabled flags indicate if the user-defined ARB/NV vertex/fragment
-    * program is enabled AND valid.  Similarly for ATI fragment shaders.
-    * GLSL shaders not relevant here.
-    */
-   ctx->VertexProgram._Enabled = ctx->VertexProgram.Enabled
-      && ctx->VertexProgram.Current->arb.Instructions;
-   ctx->FragmentProgram._Enabled = ctx->FragmentProgram.Enabled
-      && ctx->FragmentProgram.Current->arb.Instructions;
-   ctx->ATIFragmentShader._Enabled = ctx->ATIFragmentShader.Enabled
-      && ctx->ATIFragmentShader.Current->Instructions[0];
-}
-
-
-/**
  * Update the ctx->*Program._Current pointers to point to the
  * current/active programs.
  *
@@ -138,14 +115,14 @@ update_program(struct gl_context *ctx)
       _mesa_reference_program(ctx, &ctx->FragmentProgram._TexEnvProgram,
                               NULL);
    }
-   else if (ctx->FragmentProgram._Enabled) {
+   else if (_mesa_arb_fragment_program_enabled(ctx)) {
       /* Use user-defined fragment program */
       _mesa_reference_program(ctx, &ctx->FragmentProgram._Current,
                               ctx->FragmentProgram.Current);
       _mesa_reference_program(ctx, &ctx->FragmentProgram._TexEnvProgram,
 			      NULL);
    }
-   else if (ctx->ATIFragmentShader._Enabled &&
+   else if (_mesa_ati_fragment_shader_enabled(ctx) &&
             ctx->ATIFragmentShader.Current->Program) {
        /* Use the enabled ATI fragment shader's associated program */
       _mesa_reference_program(ctx, &ctx->FragmentProgram._Current,
@@ -203,7 +180,7 @@ update_program(struct gl_context *ctx)
       /* Use GLSL vertex shader */
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current, vsProg);
    }
-   else if (ctx->VertexProgram._Enabled) {
+   else if (_mesa_arb_vertex_program_enabled(ctx)) {
       /* Use user-defined vertex program */
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current,
                               ctx->VertexProgram.Current);
@@ -320,10 +297,6 @@ _mesa_update_state_locked( struct gl_context *ctx )
    /*
     * Now update derived state info
     */
-
-   if (new_state & prog_flags)
-      update_program_enables( ctx );
-
    if (new_state & (_NEW_MODELVIEW|_NEW_PROJECTION))
       _mesa_update_modelview_project( ctx, new_state );
 
