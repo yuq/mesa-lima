@@ -2665,8 +2665,7 @@ struct gl_uniform_block
 
    /**
     * Index (GL_UNIFORM_BLOCK_BINDING) into ctx->UniformBufferBindings[] to use
-    * with glBindBufferBase to bind a buffer object to this uniform block.  When
-    * updated in the program, _NEW_BUFFER_OBJECT will be set.
+    * with glBindBufferBase to bind a buffer object to this uniform block.
     */
    GLuint Binding;
 
@@ -4279,7 +4278,7 @@ struct gl_matrix_stack
 #define _NEW_TRACK_MATRIX      (1u << 25)  /**< gl_context::VertexProgram */
 #define _NEW_PROGRAM           (1u << 26)  /**< New program/shader state */
 #define _NEW_PROGRAM_CONSTANTS (1u << 27)
-#define _NEW_BUFFER_OBJECT     (1u << 28)
+/* gap */
 #define _NEW_FRAG_CLAMP        (1u << 29)
 /* gap, re-use for core Mesa state only; use ctx->DriverFlags otherwise */
 #define _NEW_VARYING_VP_INPUTS (1u << 31) /**< gl_context::varying_vp_inputs */
