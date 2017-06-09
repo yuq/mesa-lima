@@ -28,6 +28,7 @@
 #include "main/glheader.h"
 #include "main/image.h"
 #include "main/state.h"
+#include "main/stencil.h"
 #include "main/mtypes.h"
 #include "main/condrender.h"
 #include "main/fbobject.h"
@@ -111,7 +112,7 @@ do_blit_copypixels(struct gl_context * ctx,
       return false;
    }
 
-   if (ctx->Stencil._Enabled) {
+   if (_mesa_stencil_is_enabled(ctx)) {
       perf_debug("glCopyPixels(): Unsupported stencil test state\n");
       return false;
    }

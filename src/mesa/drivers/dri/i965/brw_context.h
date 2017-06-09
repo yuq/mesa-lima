@@ -774,6 +774,11 @@ struct brw_context
     */
    bool needs_unlit_centroid_workaround;
 
+   /** Derived stencil states. */
+   bool stencil_enabled;
+   bool stencil_two_sided;
+   bool stencil_write_enabled;
+
    struct isl_device isl_dev;
 
    struct blorp_context blorp;

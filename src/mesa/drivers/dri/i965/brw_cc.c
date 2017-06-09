@@ -72,7 +72,7 @@ static void upload_cc_unit(struct brw_context *brw)
    memset(cc, 0, sizeof(*cc));
 
    /* _NEW_STENCIL | _NEW_BUFFERS */
-   if (ctx->Stencil._Enabled) {
+   if (brw->stencil_enabled) {
       const unsigned back = ctx->Stencil._BackFace;
 
       cc->cc0.stencil_enable = 1;
@@ -88,7 +88,7 @@ static void upload_cc_unit(struct brw_context *brw)
       cc->cc1.stencil_write_mask = ctx->Stencil.WriteMask[0];
       cc->cc1.stencil_test_mask = ctx->Stencil.ValueMask[0];
 
-      if (ctx->Stencil._TestTwoSide) {
+      if (brw->stencil_two_sided) {
 	 cc->cc0.bf_stencil_enable = 1;
 	 cc->cc0.bf_stencil_func =
 	    intel_translate_compare_func(ctx->Stencil.Function[back]);
@@ -106,7 +106,7 @@ static void upload_cc_unit(struct brw_context *brw)
       /* Not really sure about this:
        */
       if (ctx->Stencil.WriteMask[0] ||
-	  (ctx->Stencil._TestTwoSide && ctx->Stencil.WriteMask[back]))
+	  (brw->stencil_two_sided && ctx->Stencil.WriteMask[back]))
 	 cc->cc0.stencil_write_enable = 1;
    }
 

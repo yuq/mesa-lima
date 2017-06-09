@@ -43,6 +43,7 @@
 #include "main/vtxfmt.h"
 #include "main/texobj.h"
 #include "main/framebuffer.h"
+#include "main/stencil.h"
 
 #include "vbo/vbo_context.h"
 
@@ -200,6 +201,13 @@ intel_update_state(struct gl_context * ctx)
    brw->NewGLState |= new_state;
 
    _mesa_unlock_context_textures(ctx);
+
+   if (new_state & (_NEW_STENCIL | _NEW_BUFFERS)) {
+      brw->stencil_enabled = _mesa_stencil_is_enabled(ctx);
+      brw->stencil_two_sided = _mesa_stencil_is_two_sided(ctx);
+      brw->stencil_write_enabled =
+         _mesa_stencil_is_write_enabled(ctx, brw->stencil_two_sided);
+   }
 
    intel_prepare_render(brw);
 

@@ -607,34 +607,6 @@ _mesa_StencilMaskSeparate(GLenum face, GLuint mask)
 
 
 /**
- * Update derived stencil state.
- */
-void
-_mesa_update_stencil(struct gl_context *ctx)
-{
-   const GLint face = ctx->Stencil._BackFace;
-
-   ctx->Stencil._Enabled = (ctx->Stencil.Enabled &&
-                            ctx->DrawBuffer->Visual.stencilBits > 0);
-
-    ctx->Stencil._TestTwoSide =
-       ctx->Stencil._Enabled &&
-       (ctx->Stencil.Function[0] != ctx->Stencil.Function[face] ||
-	ctx->Stencil.FailFunc[0] != ctx->Stencil.FailFunc[face] ||
-	ctx->Stencil.ZPassFunc[0] != ctx->Stencil.ZPassFunc[face] ||
-	ctx->Stencil.ZFailFunc[0] != ctx->Stencil.ZFailFunc[face] ||
-	ctx->Stencil.Ref[0] != ctx->Stencil.Ref[face] ||
-	ctx->Stencil.ValueMask[0] != ctx->Stencil.ValueMask[face] ||
-	ctx->Stencil.WriteMask[0] != ctx->Stencil.WriteMask[face]);
-
-   ctx->Stencil._WriteEnabled =
-      ctx->Stencil._Enabled &&
-      (ctx->Stencil.WriteMask[0] != 0 ||
-       (ctx->Stencil._TestTwoSide && ctx->Stencil.WriteMask[face] != 0));
-}
-
-
-/**
  * Initialize the context stipple state.
  *
  * \param ctx GL context.

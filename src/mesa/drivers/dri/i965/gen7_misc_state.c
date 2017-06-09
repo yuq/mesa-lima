@@ -108,7 +108,7 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
    OUT_BATCH((depth_mt ? depth_mt->pitch - 1 : 0) |
              (depthbuffer_format << 18) |
              ((hiz ? 1 : 0) << 22) |
-             ((stencil_mt != NULL && ctx->Stencil._WriteEnabled) << 27) |
+             ((stencil_mt != NULL && brw->stencil_write_enabled) << 27) |
              (brw_depth_writes_enabled(brw) << 28) |
              (surftype << 29));
 

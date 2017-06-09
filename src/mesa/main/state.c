@@ -379,9 +379,6 @@ _mesa_update_state_locked( struct gl_context *ctx )
    if (new_state & (_NEW_LIGHT | _NEW_PROGRAM))
       update_twoside( ctx );
 
-   if (new_state & (_NEW_STENCIL | _NEW_BUFFERS))
-      _mesa_update_stencil( ctx );
-
    if (new_state & _NEW_PIXEL)
       _mesa_update_pixel( ctx );
 

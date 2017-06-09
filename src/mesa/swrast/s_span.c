@@ -39,6 +39,7 @@
 #include "main/imports.h"
 #include "main/image.h"
 #include "main/samplerobj.h"
+#include "main/stencil.h"
 #include "main/teximage.h"
 
 #include "s_atifragshader.h"
@@ -1213,14 +1214,14 @@ _swrast_write_rgba_span( struct gl_context *ctx, SWspan *span)
    }
 
    /* Stencil and Z testing */
-   if (ctx->Stencil._Enabled || ctx->Depth.Test) {
+   if (_mesa_stencil_is_enabled(ctx) || ctx->Depth.Test) {
       if (!(span->arrayMask & SPAN_Z))
          _swrast_span_interpolate_z(ctx, span);
 
       if (ctx->Transform.DepthClamp)
 	 _swrast_depth_clamp_span(ctx, span);
 
-      if (ctx->Stencil._Enabled) {
+      if (_mesa_stencil_is_enabled(ctx)) {
          /* Combined Z/stencil tests */
          if (!_swrast_stencil_and_ztest_span(ctx, span)) {
             /* all fragments failed test */

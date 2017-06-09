@@ -219,7 +219,7 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
 
    emit_depth_packets(brw, depth_mt, brw_depthbuffer_format(brw), surftype,
                       brw_depth_writes_enabled(brw),
-                      stencil_mt, ctx->Stencil._WriteEnabled,
+                      stencil_mt, brw->stencil_write_enabled,
                       hiz, width, height, depth, lod, min_array_element);
 }
 
@@ -287,7 +287,7 @@ pma_fix_enable(const struct brw_context *brw)
     * !3DSTATE_DEPTH_BUFFER::Stencil Buffer Enable ||
     * !3DSTATE_STENCIL_BUFFER::Stencil Buffer Enable
     */
-   const bool stencil_writes_enabled = ctx->Stencil._WriteEnabled;
+   const bool stencil_writes_enabled = brw->stencil_write_enabled;
 
    /* 3DSTATE_PS_EXTRA::Pixel Shader Computed Depth Mode != PSCDEPTH_OFF */
    const bool ps_computes_depth =
@@ -340,7 +340,7 @@ gen8_write_pma_stall_bits(struct brw_context *brw, uint32_t pma_stall_bits)
     * Flush is also necessary.
     */
    const uint32_t render_cache_flush =
-      ctx->Stencil._WriteEnabled ? PIPE_CONTROL_RENDER_TARGET_FLUSH : 0;
+      brw->stencil_write_enabled ? PIPE_CONTROL_RENDER_TARGET_FLUSH : 0;
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_CS_STALL |
                                PIPE_CONTROL_DEPTH_CACHE_FLUSH |

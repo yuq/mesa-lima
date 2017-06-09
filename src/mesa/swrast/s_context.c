@@ -29,6 +29,7 @@
 #include "main/bufferobj.h"
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
+#include "main/stencil.h"
 #include "main/teximage.h"
 #include "program/prog_parameter.h"
 #include "program/prog_statevars.h"
@@ -61,7 +62,7 @@ _swrast_update_rasterflags( struct gl_context *ctx )
    if (ctx->Depth.Test)                   rasterMask |= DEPTH_BIT;
    if (swrast->_FogEnabled)               rasterMask |= FOG_BIT;
    if (ctx->Scissor.EnableFlags)          rasterMask |= CLIP_BIT;
-   if (ctx->Stencil._Enabled)             rasterMask |= STENCIL_BIT;
+   if (_mesa_stencil_is_enabled(ctx))     rasterMask |= STENCIL_BIT;
    for (i = 0; i < ctx->Const.MaxDrawBuffers; i++) {
       if (!ctx->Color.ColorMask[i][0] ||
           !ctx->Color.ColorMask[i][1] ||

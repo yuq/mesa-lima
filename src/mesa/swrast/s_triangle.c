@@ -36,6 +36,7 @@
 #include "main/mtypes.h"
 #include "main/state.h"
 #include "main/samplerobj.h"
+#include "main/stencil.h"
 #include "main/teximage.h"
 #include "program/prog_instruction.h"
 
@@ -1023,7 +1024,7 @@ _swrast_choose_triangle( struct gl_context *ctx )
           ctx->Depth.Test &&
           ctx->Depth.Mask == GL_FALSE &&
           ctx->Depth.Func == GL_LESS &&
-          !ctx->Stencil._Enabled &&
+          !_mesa_stencil_is_enabled(ctx) &&
           depthRb &&
           depthRb->Format == MESA_FORMAT_Z_UNORM16) {
          if (ctx->Color.ColorMask[0][0] == 0 &&

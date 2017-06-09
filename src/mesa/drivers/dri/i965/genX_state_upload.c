@@ -1182,7 +1182,7 @@ genX(upload_depth_stencil_state)(struct brw_context *brw)
          wmds.DepthTestFunction = intel_translate_compare_func(depth->Func);
       }
 
-      if (stencil->_Enabled) {
+      if (brw->stencil_enabled) {
          wmds.StencilTestEnable = true;
          wmds.StencilWriteMask = stencil->WriteMask[0] & 0xff;
          wmds.StencilTestMask = stencil->ValueMask[0] & 0xff;
@@ -1196,9 +1196,9 @@ genX(upload_depth_stencil_state)(struct brw_context *brw)
          wmds.StencilPassDepthFailOp =
             intel_translate_stencil_op(stencil->ZFailFunc[0]);
 
-         wmds.StencilBufferWriteEnable = stencil->_WriteEnabled;
+         wmds.StencilBufferWriteEnable = brw->stencil_write_enabled;
 
-         if (stencil->_TestTwoSide) {
+         if (brw->stencil_two_sided) {
             wmds.DoubleSidedStencilEnable = true;
             wmds.BackfaceStencilWriteMask = stencil->WriteMask[b] & 0xff;
             wmds.BackfaceStencilTestMask = stencil->ValueMask[b] & 0xff;

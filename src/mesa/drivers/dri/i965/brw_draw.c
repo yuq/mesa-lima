@@ -391,7 +391,7 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
    }
 
    if (ctx->Extensions.ARB_stencil_texturing &&
-       stencil_irb && ctx->Stencil._WriteEnabled) {
+       stencil_irb && brw->stencil_write_enabled) {
       brw_render_cache_set_add_bo(brw, stencil_irb->mt->bo);
    }
 
