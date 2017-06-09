@@ -4224,17 +4224,32 @@ static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 {
 	LLVMValueRef index = NULL;
 	unsigned constant_index = 0;
+	const nir_deref *tail = &deref->deref;
 
-	if (deref->deref.child) {
-		const nir_deref_array *child =
-			(const nir_deref_array *)deref->deref.child;
+	while (tail->child) {
+		const nir_deref_array *child = nir_deref_as_array(tail->child);
+		unsigned array_size = glsl_get_aoa_size(tail->child->type);
+
+		if (!array_size)
+			array_size = 1;
 
 		assert(child->deref_array_type != nir_deref_array_type_wildcard);
+
 		if (child->deref_array_type == nir_deref_array_type_indirect) {
-			index = get_src(ctx, child->indirect);
+			LLVMValueRef indirect = get_src(ctx, child->indirect);
+
+			indirect = LLVMBuildMul(ctx->ac.builder, indirect,
+				LLVMConstInt(ctx->ac.i32, array_size, false), "");
+
+			if (!index)
+				index = indirect;
+			else
+				index = LLVMBuildAdd(ctx->ac.builder, index, indirect, "");
 		}
 
-		constant_index = child->base_offset;
+		constant_index += child->base_offset * array_size;
+
+		tail = &child->deref;
 	}
 
 	return ctx->abi->load_sampler_desc(ctx->abi,
