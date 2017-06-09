@@ -3298,8 +3298,9 @@ TGSI_SEMANTIC_SAMPLEMASK
 """"""""""""""""""""""""
 
 For fragment shaders, this semantic label indicates that an output contains
-the sample mask used to disable further sample processing
-(i.e. gl_SampleMask). Only the X value is used, up to 32x MS.
+the sample mask used to disable further sample processing.  The output's
+type is uint[4] but only the X component is used (i.e. gl_SampleMask[0]).
+Each bit corresponds to one sample position (up to 32x MSAA is supported).
 
 TGSI_SEMANTIC_INVOCATIONID
 """"""""""""""""""""""""""
