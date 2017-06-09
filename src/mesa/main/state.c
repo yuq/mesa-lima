@@ -336,9 +336,6 @@ _mesa_update_state_locked( struct gl_context *ctx )
    if (new_state & _NEW_BUFFERS)
       _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
 
-   if (new_state & (_NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT))
-      _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
-
    if (new_state & _NEW_LIGHT)
       _mesa_update_lighting( ctx );
 

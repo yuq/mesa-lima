@@ -203,6 +203,9 @@ intel_update_state(struct gl_context * ctx)
 
    _mesa_unlock_context_textures(ctx);
 
+   if (new_state & (_NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT))
+      _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
+
    if (new_state & (_NEW_STENCIL | _NEW_BUFFERS)) {
       brw->stencil_enabled = _mesa_stencil_is_enabled(ctx);
       brw->stencil_two_sided = _mesa_stencil_is_two_sided(ctx);

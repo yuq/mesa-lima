@@ -324,6 +324,9 @@ intelInvalidateState(struct gl_context * ctx)
 
    intel->NewGLState |= new_state;
 
+   if (new_state & (_NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT))
+      _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
+
    if (intel->vtbl.invalidate_state)
       intel->vtbl.invalidate_state( intel, new_state );
 }

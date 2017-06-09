@@ -119,6 +119,9 @@ get_string( struct gl_context *ctx, GLenum name )
 static void
 osmesa_update_state(struct gl_context *ctx, GLuint new_state)
 {
+   if (new_state & (_NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT))
+      _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
+
    /* easy - just propogate */
    _swrast_InvalidateState( ctx, new_state );
    _swsetup_InvalidateState( ctx, new_state );

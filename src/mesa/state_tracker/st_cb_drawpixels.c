@@ -1072,6 +1072,8 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    /* Mesa state should be up to date by now */
    assert(ctx->NewState == 0x0);
 
+   _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
+
    st_flush_bitmap_cache(st);
    st_invalidate_readpix_cache(st);
 
@@ -1436,6 +1438,8 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
    GLboolean invertTex = GL_FALSE;
    GLint readX, readY, readW, readH;
    struct gl_pixelstore_attrib pack = ctx->DefaultPacking;
+
+   _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
 
    st_flush_bitmap_cache(st);
    st_invalidate_readpix_cache(st);

@@ -684,6 +684,9 @@ xmesa_update_state(struct gl_context *ctx)
    GLbitfield new_state = ctx->NewState;
    const XMesaContext xmesa = XMESA_CONTEXT(ctx);
 
+   if (new_state & (_NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT))
+      _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
+
    /* Propagate statechange information to swrast and swrast_setup
     * modules.  The X11 driver has no internal GL-dependent state.
     */

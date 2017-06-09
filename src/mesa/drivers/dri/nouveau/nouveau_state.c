@@ -32,6 +32,7 @@
 #include "swrast/swrast.h"
 #include "tnl/tnl.h"
 #include "util/bitscan.h"
+#include "main/framebuffer.h"
 
 static void
 nouveau_alpha_func(struct gl_context *ctx, GLenum func, GLfloat ref)
@@ -455,6 +456,9 @@ nouveau_update_state(struct gl_context *ctx)
 {
 	GLbitfield new_state = ctx->NewState;
 	int i;
+
+	if (new_state & (_NEW_SCISSOR | _NEW_BUFFERS | _NEW_VIEWPORT))
+		_mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
 
 	if (new_state & (_NEW_PROJECTION | _NEW_MODELVIEW))
 		context_dirty(ctx, PROJECTION);
