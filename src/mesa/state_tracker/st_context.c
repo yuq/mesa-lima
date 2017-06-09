@@ -236,9 +236,6 @@ st_invalidate_state(struct gl_context * ctx)
        st_user_clip_planes_enabled(ctx))
       st->dirty |= ST_NEW_CLIP_STATE;
 
-   if (new_state & _NEW_COLOR)
-      st->dirty |= ST_NEW_BLEND;
-
    if (new_state & _NEW_PIXEL)
       st->dirty |= ST_NEW_PIXEL_TRANSFER;
 
@@ -519,7 +516,11 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewScissorRect = ST_NEW_SCISSOR;
    f->NewScissorTest = ST_NEW_SCISSOR | ST_NEW_RASTERIZER;
    f->NewAlphaTest = ST_NEW_DSA;
+   f->NewBlend = ST_NEW_BLEND;
+   f->NewBlendColor = ST_NEW_BLEND; /* TODO: add an atom for blend color */
+   f->NewColorMask = ST_NEW_BLEND;
    f->NewDepth = ST_NEW_DSA;
+   f->NewLogicOp = ST_NEW_BLEND;
    f->NewStencil = ST_NEW_DSA;
 }
 

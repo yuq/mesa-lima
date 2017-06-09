@@ -29,6 +29,7 @@
 
 
 #include "glheader.h"
+#include "blend.h"
 #include "clip.h"
 #include "context.h"
 #include "debug_output.h"
@@ -311,7 +312,7 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             GLbitfield newEnabled =
                state * ((1 << ctx->Const.MaxDrawBuffers) - 1);
             if (newEnabled != ctx->Color.BlendEnabled) {
-               FLUSH_VERTICES(ctx, _NEW_COLOR);
+               _mesa_flush_vertices_for_blend_state(ctx);
                ctx->Color.BlendEnabled = newEnabled;
             }
          }
@@ -378,7 +379,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
       case GL_DITHER:
          if (ctx->Color.DitherFlag == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_COLOR);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewBlend ? 0 : _NEW_COLOR);
+         ctx->NewDriverState |= ctx->DriverFlags.NewBlend;
          ctx->Color.DitherFlag = state;
          break;
       case GL_FOG:
@@ -440,7 +442,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Color.IndexLogicOpEnabled == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_COLOR);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewLogicOp ? 0 : _NEW_COLOR);
+         ctx->NewDriverState |= ctx->DriverFlags.NewLogicOp;
          ctx->Color.IndexLogicOpEnabled = state;
          break;
       case GL_CONSERVATIVE_RASTERIZATION_INTEL:
@@ -458,7 +461,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Color.ColorLogicOpEnabled == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_COLOR);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewLogicOp ? 0 : _NEW_COLOR);
+         ctx->NewDriverState |= ctx->DriverFlags.NewLogicOp;
          ctx->Color.ColorLogicOpEnabled = state;
          break;
       case GL_MAP1_COLOR_4:
@@ -1040,7 +1044,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
          CHECK_EXTENSION(KHR_blend_equation_advanced_coherent, cap);
          if (ctx->Color.BlendCoherent == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_COLOR);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewBlend ? 0 : _NEW_COLOR);
+         ctx->NewDriverState |= ctx->DriverFlags.NewBlend;
          ctx->Color.BlendCoherent = state;
          break;
 
@@ -1106,7 +1111,7 @@ _mesa_set_enablei(struct gl_context *ctx, GLenum cap,
          return;
       }
       if (((ctx->Color.BlendEnabled >> index) & 1) != state) {
-         FLUSH_VERTICES(ctx, _NEW_COLOR);
+         _mesa_flush_vertices_for_blend_state(ctx);
          if (state)
             ctx->Color.BlendEnabled |= (1 << index);
          else
