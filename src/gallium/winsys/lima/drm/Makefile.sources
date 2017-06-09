@@ -1,0 +1,3 @@
+C_SOURCES := \
+	lima_drm_public.h \
+	lima_drm_winsys.c
