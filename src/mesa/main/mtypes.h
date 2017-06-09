@@ -4475,6 +4475,9 @@ struct gl_driver_flags
    /** gl_context::Scissor::ScissorArray */
    uint64_t NewScissorRect;
 
+   /** gl_context::Color::Alpha* */
+   uint64_t NewAlphaTest;
+
    /** gl_context::Depth */
    uint64_t NewDepth;
 
