@@ -214,8 +214,20 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
    rsc->bo = bo;
    rsc->ts_bo = 0; /* TS is only created when first bound to surface */
 
-   if (templat->bind & PIPE_BIND_SCANOUT)
-      rsc->scanout = renderonly_scanout_for_resource(&rsc->base, screen->ro);
+   if (templat->bind & PIPE_BIND_SCANOUT) {
+      struct winsys_handle handle;
+      rsc->scanout = renderonly_scanout_for_resource(&rsc->base, screen->ro,
+                                                     &handle);
+      if (!rsc->scanout)
+         goto free_rsc;
+
+      rsc->external = pscreen->resource_from_handle(pscreen, &rsc->base,
+                                                    &handle,
+                                                    PIPE_HANDLE_USAGE_WRITE);
+      close(handle.handle);
+      if (!rsc->external)
+         goto free_rsc;
+   }
 
    if (DBG_ENABLED(ETNA_DBG_ZERO)) {
       void *map = etna_bo_map(bo);
@@ -310,6 +322,7 @@ etna_resource_destroy(struct pipe_screen *pscreen, struct pipe_resource *prsc)
    list_delinit(&rsc->list);
 
    pipe_resource_reference(&rsc->texture, NULL);
+   pipe_resource_reference(&rsc->external, NULL);
 
    FREE(rsc);
 }
@@ -379,16 +392,12 @@ etna_resource_from_handle(struct pipe_screen *pscreen,
       /* Render targets are linear in Xorg but must be tiled
       * here. It would be nice if dri_drawable_get_format()
       * set scanout for these buffers too. */
-      struct etna_resource *tiled;
 
       ptiled = etna_resource_create(pscreen, tmpl);
       if (!ptiled)
          goto fail;
 
-      tiled = etna_resource(ptiled);
-      tiled->scanout = renderonly_scanout_for_prime(prsc, screen->ro);
-      if (!tiled->scanout)
-         goto fail;
+      etna_resource(ptiled)->external = prsc;
 
       return ptiled;
    }
@@ -410,9 +419,18 @@ etna_resource_get_handle(struct pipe_screen *pscreen,
                          struct winsys_handle *handle, unsigned usage)
 {
    struct etna_resource *rsc = etna_resource(prsc);
+   /* Scanout is always attached to the base resource */
+   struct renderonly_scanout *scanout = rsc->scanout;
+
+   /*
+    * External resources are preferred, so a import->export chain of
+    * render/sampler incompatible buffers yield the same handle.
+    */
+   if (rsc->external)
+      rsc = etna_resource(rsc->external);
 
    if (handle->type == DRM_API_HANDLE_TYPE_KMS &&
-       renderonly_get_handle(rsc->scanout, handle))
+       renderonly_get_handle(scanout, handle))
       return TRUE;
 
    return etna_screen_bo_get_handle(pscreen, rsc->bo, rsc->levels[0].stride,

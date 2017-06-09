@@ -75,6 +75,11 @@ struct etna_resource {
 
    /* When we are rendering to a texture, we need a differently tiled resource */
    struct pipe_resource *texture;
+   /*
+    * If imported resources have an render/sampler incompatible tiling, we keep
+    * them as an external resource, which is blitted as needed.
+    */
+   struct pipe_resource *external;
 
    enum etna_resource_status status;
 

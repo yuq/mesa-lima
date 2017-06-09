@@ -671,7 +671,7 @@ vc4_resource_create_with_modifiers(struct pipe_screen *pscreen,
 
         if (screen->ro && tmpl->bind & PIPE_BIND_SCANOUT) {
                 rsc->scanout =
-                        renderonly_scanout_for_resource(prsc, screen->ro);
+                        renderonly_scanout_for_resource(prsc, screen->ro, NULL);
                 if (!rsc->scanout)
                         goto fail;
         }
@@ -769,7 +769,8 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
                  */
                 rsc->scanout =
                         renderonly_create_gpu_import_for_resource(prsc,
-                                                                  screen->ro);
+                                                                  screen->ro,
+                                                                  NULL);
                 if (!rsc->scanout)
                         goto fail;
         }
