@@ -220,42 +220,42 @@ struct si_descriptors {
 	uint32_t *list;
 	/* The list in mapped GPU memory. */
 	uint32_t *gpu_list;
-	/* The size of one descriptor. */
-	unsigned element_dw_size;
-	/* The maximum number of descriptors. */
-	unsigned num_elements;
+	/* Slots that have been changed and need to be uploaded. */
+	uint64_t dirty_mask;
 
 	/* The buffer where the descriptors have been uploaded. */
 	struct r600_resource *buffer;
 	int buffer_offset; /* can be negative if not using lower slots */
 
+	/* The size of one descriptor. */
+	ubyte element_dw_size;
+	/* The maximum number of descriptors. */
+	ubyte num_elements;
+
 	/* Offset in CE RAM */
-	unsigned ce_offset;
+	uint16_t ce_offset;
 
 	/* Slots allocated in CE RAM. If we get active slots outside of this
 	 * range, direct uploads to memory will be used instead. This basically
 	 * governs switching between onchip (CE) and offchip (upload) modes.
 	 */
-	unsigned first_ce_slot;
-	unsigned num_ce_slots;
+	ubyte first_ce_slot;
+	ubyte num_ce_slots;
 
 	/* Slots that are used by currently-bound shaders.
 	 * With CE: It determines which slots are dumped to L2.
 	 *          It doesn't skip uploads to CE RAM.
 	 * Without CE: It determines which slots are uploaded.
 	 */
-	unsigned first_active_slot;
-	unsigned num_active_slots;
-
-	/* Slots that have been changed and need to be uploaded. */
-	uint64_t dirty_mask;
+	ubyte first_active_slot;
+	ubyte num_active_slots;
 
 	/* Whether CE is used to upload this descriptor array. */
 	bool uses_ce;
 
-	/* The shader userdata offset within a shader where the 64-bit pointer to the descriptor
-	 * array will be stored. */
-	unsigned shader_userdata_offset;
+	/* The SGPR index where the 64-bit pointer to the descriptor array will
+	 * be stored. */
+	ubyte shader_userdata_offset;
 };
 
 struct si_sampler_views {
