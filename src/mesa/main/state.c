@@ -406,6 +406,10 @@ void
 _mesa_set_varying_vp_inputs( struct gl_context *ctx,
                              GLbitfield64 varying_inputs )
 {
+   if (ctx->API != API_OPENGL_COMPAT &&
+       ctx->API != API_OPENGLES)
+      return;
+
    if (ctx->varying_vp_inputs != varying_inputs) {
       ctx->varying_vp_inputs = varying_inputs;
 
