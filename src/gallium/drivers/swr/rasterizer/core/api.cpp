@@ -680,7 +680,7 @@ void SwrSetBlendFunc(
 // update guardband multipliers for the viewport
 void updateGuardbands(API_STATE *pState)
 {
-    uint32_t numGbs = pState->backendState.readRenderTargetArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
+    uint32_t numGbs = pState->backendState.readViewportArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
 
     for(uint32_t i = 0; i < numGbs; ++i)
     {
@@ -736,7 +736,7 @@ void SwrSetScissorRects(
 void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
 {
     API_STATE *pState = &pDC->pState->state;
-    uint32_t numScissors = pState->gsState.emitsViewportArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
+    uint32_t numScissors = pState->backendState.readViewportArrayIndex ? KNOB_NUM_VIEWPORTS_SCISSORS : 1;
     pState->scissorsTileAligned = true;
 
     for (uint32_t index = 0; index < numScissors; ++index)

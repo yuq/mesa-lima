@@ -160,35 +160,35 @@ int ClipTriToPlane( const float *pInPts, int numInPts,
     return i;
 }
 
-void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
+void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipTriangles, pDC->drawId);
     Clipper<3> clipper(workerId, pDC);
-    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
+    clipper.ExecuteStage(pa, prims, primMask, primId);
     AR_END(FEClipTriangles, 1);
 }
 
-void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
+void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipLines, pDC->drawId);
     Clipper<2> clipper(workerId, pDC);
-    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
+    clipper.ExecuteStage(pa, prims, primMask, primId);
     AR_END(FEClipLines, 1);
 }
 
-void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
+void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipPoints, pDC->drawId);
     Clipper<1> clipper(workerId, pDC);
-    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
+    clipper.ExecuteStage(pa, prims, primMask, primId);
     AR_END(FEClipPoints, 1);
 }
 
 #if USE_SIMD16_FRONTEND
-void SIMDAPI ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx)
+void SIMDAPI ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipTriangles, pDC->drawId);
@@ -198,12 +198,12 @@ void SIMDAPI ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t work
     Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
 
     pa.useAlternateOffset = false;
-    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
+    clipper.ExecuteStage(pa, prims, primMask, primId);
 
     AR_END(FEClipTriangles, 1);
 }
 
-void SIMDAPI ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx)
+void SIMDAPI ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipLines, pDC->drawId);
@@ -213,12 +213,12 @@ void SIMDAPI ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId
     Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
 
     pa.useAlternateOffset = false;
-    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
+    clipper.ExecuteStage(pa, prims, primMask, primId);
 
     AR_END(FEClipLines, 1);
 }
 
-void SIMDAPI ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId, simd16scalari viewportIdx)
+void SIMDAPI ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipPoints, pDC->drawId);
@@ -228,7 +228,7 @@ void SIMDAPI ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerI
     Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
 
     pa.useAlternateOffset = false;
-    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx);
+    clipper.ExecuteStage(pa, prims, primMask, primId);
 
     AR_END(FEClipPoints, 1);
 }

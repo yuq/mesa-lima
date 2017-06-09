@@ -710,9 +710,6 @@ struct SWR_GS_STATE
     // instance count
     uint32_t instanceCount;
 
-    // geometry shader emits ViewportArrayIndex
-    bool emitsViewportArrayIndex;
-
     // if true, geometry shader emits a single stream, with separate cut buffer.
     // if false, geometry shader emits vertices for multiple streams to the stream buffer, with a separate StreamID buffer
     // to map vertices to streams
@@ -1049,6 +1046,7 @@ struct SWR_BACKEND_STATE
     SWR_ATTRIB_SWIZZLE swizzleMap[32];
 
     bool readRenderTargetArrayIndex;    // Forward render target array index from last FE stage to the backend
+    bool readViewportArrayIndex;        // Read viewport array index from last FE stage during binning
 };
 
 

@@ -1755,12 +1755,12 @@ swr_update_derived(struct pipe_context *pipe,
       (ctx->rasterizer->flatshade ? ctx->fs->flatConstantMask : 0);
    backendState.pointSpriteTexCoordMask = ctx->fs->pointSpriteMask;
 
-   if (ctx->gs)
-      backendState.readRenderTargetArrayIndex =
-         ctx->gs->info.base.writes_layer;
-   else
-      backendState.readRenderTargetArrayIndex =
-         ctx->vs->info.base.writes_layer;
+   struct tgsi_shader_info *pLastFE =
+      ctx->gs ?
+      &ctx->gs->info.base :
+      &ctx->vs->info.base;
+   backendState.readRenderTargetArrayIndex = pLastFE->writes_layer;
+   backendState.readViewportArrayIndex = pLastFE->writes_viewport_index;
 
    SwrSetBackendState(ctx->swrContext, &backendState);
 
