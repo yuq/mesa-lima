@@ -35,6 +35,10 @@ AM_CFLAGS += \
 	-DHAVE_OPENCL
 endif
 
+CLEANFILES = \
+	egd_tables.h
+
 EXTRA_DIST = \
+	egd_tables.py \
 	sb/notes.markdown \
 	sb/sb_bc_fmt_def.inc
