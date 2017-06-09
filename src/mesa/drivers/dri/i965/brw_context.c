@@ -201,6 +201,8 @@ intel_update_state(struct gl_context * ctx)
 
    _mesa_unlock_context_textures(ctx);
 
+   intel_prepare_render(brw);
+
    /* Resolve the depth buffer's HiZ buffer. */
    depth_irb = intel_get_renderbuffer(ctx->DrawBuffer, BUFFER_DEPTH);
    if (depth_irb && depth_irb->mt) {
