@@ -2628,7 +2628,7 @@ static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
 void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct pipe_framebuffer_state *fb,
 				   struct r600_atom *fb_state,
-				   unsigned *buffers, unsigned *dirty_cbufs,
+				   unsigned *buffers, ubyte *dirty_cbufs,
 				   const union pipe_color_union *color)
 {
 	int i;

@@ -166,17 +166,17 @@ struct si_images_info {
 struct si_framebuffer {
 	struct r600_atom		atom;
 	struct pipe_framebuffer_state	state;
-	unsigned			nr_samples;
-	unsigned			log_samples;
-	unsigned			compressed_cb_mask;
 	unsigned			colorbuf_enabled_4bit;
 	unsigned			spi_shader_col_format;
 	unsigned			spi_shader_col_format_alpha;
 	unsigned			spi_shader_col_format_blend;
 	unsigned			spi_shader_col_format_blend_alpha;
-	unsigned			color_is_int8;
-	unsigned			color_is_int10;
-	unsigned			dirty_cbufs;
+	ubyte				nr_samples:5; /* at most 16xAA */
+	ubyte				log_samples:3; /* at most 4 = 16xAA */
+	ubyte				compressed_cb_mask;
+	ubyte				color_is_int8;
+	ubyte				color_is_int10;
+	ubyte				dirty_cbufs;
 	bool				dirty_zsbuf;
 	bool				any_dst_linear;
 	bool				do_update_surf_dirtiness;
