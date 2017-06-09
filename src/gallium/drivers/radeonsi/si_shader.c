@@ -2276,6 +2276,7 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 		semantic_name = outputs[i].semantic_name;
 		semantic_index = outputs[i].semantic_index;
 		bool export_param = true;
+		unsigned id;
 
 		switch (semantic_name) {
 		case TGSI_SEMANTIC_POSITION: /* ignore these */
@@ -2289,8 +2290,8 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 				break;
 			/* fall through */
 		default:
-			if (shader->key.opt.kill_outputs &
-			    (1ull << si_shader_io_get_unique_index(semantic_name, semantic_index)))
+			id = si_shader_io_get_unique_index(semantic_name, semantic_index);
+			if (shader->key.opt.kill_outputs[id / 32] & (1u << (id % 32)))
 				export_param = false;
 		}
 
@@ -5335,7 +5336,8 @@ static void si_dump_shader_key(unsigned processor, const struct si_shader *shade
 	     processor == PIPE_SHADER_TESS_EVAL ||
 	     processor == PIPE_SHADER_VERTEX) &&
 	    !key->as_es && !key->as_ls) {
-		fprintf(f, "  opt.kill_outputs = 0x%"PRIx64"\n", key->opt.kill_outputs);
+		fprintf(f, "  opt.kill_outputs[0] = 0x%x\n", key->opt.kill_outputs[0]);
+		fprintf(f, "  opt.kill_outputs[1] = 0x%x\n", key->opt.kill_outputs[1]);
 		fprintf(f, "  opt.clip_disable = %u\n", key->opt.clip_disable);
 	}
 }
