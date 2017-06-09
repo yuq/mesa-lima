@@ -2192,6 +2192,8 @@ void si_emit_graphics_shader_userdata(struct si_context *sctx,
 					       R_00B330_SPI_SHADER_USER_DATA_ES_0);
 			si_emit_shader_pointer(sctx, descs,
 					       R_00B430_SPI_SHADER_USER_DATA_HS_0);
+			si_emit_shader_pointer(sctx, descs,
+					       R_00B530_SPI_SHADER_USER_DATA_LS_0);
 		}
 	}
 

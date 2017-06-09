@@ -115,6 +115,8 @@ struct si_vertex_elements
 	uint16_t			first_vb_use_mask;
 	/* Vertex buffer descriptor list size aligned for optimal prefetch. */
 	uint16_t			desc_list_byte_size;
+	uint16_t			instance_divisor_is_one; /* bitmask of inputs */
+	uint16_t			instance_divisor_is_fetched;  /* bitmask of inputs */
 };
 
 union si_state {
@@ -182,6 +184,7 @@ enum {
 	SI_VS_STREAMOUT_BUF3,
 
 	SI_HS_CONST_DEFAULT_TESS_LEVELS,
+	SI_VS_CONST_INSTANCE_DIVISORS,
 	SI_VS_CONST_CLIP_PLANES,
 	SI_PS_CONST_POLY_STIPPLE,
 	SI_PS_CONST_SAMPLE_POSITIONS,

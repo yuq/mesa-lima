@@ -385,7 +385,14 @@ struct si_shader_selector {
 
 /* Common VS bits between the shader key and the prolog key. */
 struct si_vs_prolog_bits {
-	unsigned	instance_divisors[SI_MAX_ATTRIBS];
+	/* - If neither "is_one" nor "is_fetched" has a bit set, the instance
+	 *   divisor is 0.
+	 * - If "is_one" has a bit set, the instance divisor is 1.
+	 * - If "is_fetched" has a bit set, the instance divisor will be loaded
+	 *   from the constant buffer.
+	 */
+	uint16_t	instance_divisor_is_one;     /* bitmask of inputs */
+	uint16_t	instance_divisor_is_fetched; /* bitmask of inputs */
 };
 
 /* Common TCS bits between the shader key and the epilog key. */

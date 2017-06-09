@@ -312,7 +312,7 @@ get_tcs_out_current_patch_data_offset(struct si_shader_context *ctx)
 
 static LLVMValueRef get_instance_index_for_fetch(
 	struct si_shader_context *ctx,
-	unsigned param_start_instance, unsigned divisor)
+	unsigned param_start_instance, LLVMValueRef divisor)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 
@@ -320,9 +320,8 @@ static LLVMValueRef get_instance_index_for_fetch(
 					   ctx->param_instance_id);
 
 	/* The division must be done before START_INSTANCE is added. */
-	if (divisor > 1)
-		result = LLVMBuildUDiv(gallivm->builder, result,
-				LLVMConstInt(ctx->i32, divisor, 0), "");
+	if (divisor != ctx->i32_1)
+		result = LLVMBuildUDiv(gallivm->builder, result, divisor, "");
 
 	return LLVMBuildAdd(gallivm->builder, result,
 			    LLVMGetParam(ctx->main_fn, param_start_instance), "");
@@ -5282,12 +5281,10 @@ static void si_dump_shader_key_vs(const struct si_shader_key *key,
 				  const struct si_vs_prolog_bits *prolog,
 				  const char *prefix, FILE *f)
 {
-	fprintf(f, "  %s.instance_divisors = {", prefix);
-	for (int i = 0; i < ARRAY_SIZE(prolog->instance_divisors); i++) {
-		fprintf(f, !i ? "%u" : ", %u",
-			prolog->instance_divisors[i]);
-	}
-	fprintf(f, "}\n");
+	fprintf(f, "  %s.instance_divisor_is_one = %u\n",
+		prefix, prolog->instance_divisor_is_one);
+	fprintf(f, "  %s.instance_divisor_is_fetched = %u\n",
+		prefix, prolog->instance_divisor_is_fetched);
 
 	fprintf(f, "  mono.vs.fix_fetch = {");
 	for (int i = 0; i < SI_MAX_ATTRIBS; i++)
@@ -5603,10 +5600,12 @@ static void si_get_vs_prolog_key(const struct tgsi_shader_info *info,
 		key->vs_prolog.num_merged_next_stage_vgprs = 5;
 	}
 
-	/* Set the instanceID flag. */
-	for (unsigned i = 0; i < info->num_inputs; i++)
-		if (key->vs_prolog.states.instance_divisors[i])
-			shader_out->info.uses_instanceid = true;
+	/* Enable loading the InstanceID VGPR. */
+	uint16_t input_mask = u_bit_consecutive(0, info->num_inputs);
+
+	if ((key->vs_prolog.states.instance_divisor_is_one |
+	     key->vs_prolog.states.instance_divisor_is_fetched) & input_mask)
+		shader_out->info.uses_instanceid = true;
 }
 
 /**
@@ -6527,6 +6526,21 @@ out:
 	return result;
 }
 
+static LLVMValueRef si_prolog_get_rw_buffers(struct si_shader_context *ctx)
+{
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	LLVMValueRef ptr[2], list;
+
+	/* Get the pointer to rw buffers. */
+	ptr[0] = LLVMGetParam(ctx->main_fn, SI_SGPR_RW_BUFFERS);
+	ptr[1] = LLVMGetParam(ctx->main_fn, SI_SGPR_RW_BUFFERS_HI);
+	list = lp_build_gather_values(gallivm, ptr, 2);
+	list = LLVMBuildBitCast(gallivm->builder, list, ctx->i64, "");
+	list = LLVMBuildIntToPtr(gallivm->builder, list,
+				 si_const_array(ctx->v4i32, SI_NUM_RW_BUFFERS), "");
+	return list;
+}
+
 /**
  * Build the vertex shader prolog function.
  *
@@ -6609,11 +6623,33 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	}
 
 	/* Compute vertex load indices from instance divisors. */
+	LLVMValueRef instance_divisor_constbuf = NULL;
+
+	if (key->vs_prolog.states.instance_divisor_is_fetched) {
+		LLVMValueRef list = si_prolog_get_rw_buffers(ctx);
+		LLVMValueRef buf_index =
+			LLVMConstInt(ctx->i32, SI_VS_CONST_INSTANCE_DIVISORS, 0);
+		instance_divisor_constbuf =
+			ac_build_indexed_load_const(&ctx->ac, list, buf_index);
+	}
+
 	for (i = 0; i <= key->vs_prolog.last_input; i++) {
-		unsigned divisor = key->vs_prolog.states.instance_divisors[i];
+		bool divisor_is_one =
+			key->vs_prolog.states.instance_divisor_is_one & (1u << i);
+		bool divisor_is_fetched =
+			key->vs_prolog.states.instance_divisor_is_fetched & (1u << i);
 		LLVMValueRef index;
 
-		if (divisor) {
+		if (divisor_is_one || divisor_is_fetched) {
+			LLVMValueRef divisor = ctx->i32_1;
+
+			if (divisor_is_fetched) {
+				divisor = buffer_load_const(ctx, instance_divisor_constbuf,
+							    LLVMConstInt(ctx->i32, i * 4, 0));
+				divisor = LLVMBuildBitCast(gallivm->builder, divisor,
+							   ctx->i32, "");
+			}
+
 			/* InstanceID / Divisor + StartInstance */
 			index = get_instance_index_for_fetch(ctx,
 							     user_sgpr_base +
@@ -6866,15 +6902,7 @@ static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 		/* POS_FIXED_PT is always last. */
 		unsigned pos = key->ps_prolog.num_input_sgprs +
 			       key->ps_prolog.num_input_vgprs - 1;
-		LLVMValueRef ptr[2], list;
-
-		/* Get the pointer to rw buffers. */
-		ptr[0] = LLVMGetParam(func, SI_SGPR_RW_BUFFERS);
-		ptr[1] = LLVMGetParam(func, SI_SGPR_RW_BUFFERS_HI);
-		list = lp_build_gather_values(gallivm, ptr, 2);
-		list = LLVMBuildBitCast(gallivm->builder, list, ctx->i64, "");
-		list = LLVMBuildIntToPtr(gallivm->builder, list,
-					  si_const_array(ctx->v4i32, SI_NUM_RW_BUFFERS), "");
+		LLVMValueRef list = si_prolog_get_rw_buffers(ctx);
 
 		si_llvm_emit_polygon_stipple(ctx, list, pos);
 	}

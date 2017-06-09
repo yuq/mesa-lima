@@ -308,6 +308,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 		si_set_rw_buffer(sctx, SI_HS_CONST_DEFAULT_TESS_LEVELS,
 				 &sctx->null_const_buf);
+		si_set_rw_buffer(sctx, SI_VS_CONST_INSTANCE_DIVISORS,
+				 &sctx->null_const_buf);
 		si_set_rw_buffer(sctx, SI_VS_CONST_CLIP_PLANES,
 				 &sctx->null_const_buf);
 		si_set_rw_buffer(sctx, SI_PS_CONST_POLY_STIPPLE,
