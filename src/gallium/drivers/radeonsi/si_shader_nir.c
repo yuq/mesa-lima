@@ -375,6 +375,8 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 {
+	struct tgsi_shader_info *info = &ctx->shader->selector->info;
+
 	unsigned fs_attr_idx = 0;
 	nir_foreach_variable(variable, &nir->inputs) {
 		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
@@ -398,6 +400,9 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 
 	ctx->abi.inputs = &ctx->inputs[0];
 	ctx->abi.load_sampler_desc = si_nir_load_sampler_desc;
+
+	ctx->num_samplers = util_last_bit(info->samplers_declared);
+	ctx->num_images = util_last_bit(info->images_declared);
 
 	ac_nir_translate(&ctx->ac, &ctx->abi, nir, NULL);
 
