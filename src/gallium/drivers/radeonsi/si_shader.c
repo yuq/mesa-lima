@@ -2493,7 +2493,8 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 	lds_base = get_tcs_in_current_patch_offset(ctx);
 	lds_base = LLVMBuildAdd(gallivm->builder, lds_base, lds_vertex_offset, "");
 
-	inputs = ctx->shader->key.mono.u.ff_tcs_inputs_to_copy;
+	inputs = ctx->shader->key.mono.u.ff_tcs_inputs_to_copy[0] |
+		 ((uint64_t)ctx->shader->key.mono.u.ff_tcs_inputs_to_copy[1] << 32);
 	while (inputs) {
 		unsigned i = u_bit_scan64(&inputs);
 
@@ -5284,7 +5285,10 @@ static void si_dump_shader_key(unsigned processor, const struct si_shader *shade
 					      "part.tcs.ls_prolog", f);
 		}
 		fprintf(f, "  part.tcs.epilog.prim_mode = %u\n", key->part.tcs.epilog.prim_mode);
-		fprintf(f, "  mono.u.ff_tcs_inputs_to_copy = 0x%"PRIx64"\n", key->mono.u.ff_tcs_inputs_to_copy);
+		fprintf(f, "  mono.u.ff_tcs_inputs_to_copy[0] = 0x%x\n",
+			key->mono.u.ff_tcs_inputs_to_copy[0]);
+		fprintf(f, "  mono.u.ff_tcs_inputs_to_copy[1] = 0x%x\n",
+			key->mono.u.ff_tcs_inputs_to_copy[1]);
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
