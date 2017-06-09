@@ -346,7 +346,8 @@ static LLVMValueRef
 si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 		         unsigned descriptor_set, unsigned base_index,
 		         unsigned constant_index, LLVMValueRef dynamic_index,
-		         enum ac_descriptor_type desc_type)
+		         enum ac_descriptor_type desc_type, bool image,
+			 bool write)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	LLVMBuilderRef builder = ctx->ac.builder;

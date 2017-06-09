@@ -67,13 +67,15 @@ struct ac_shader_abi {
 	 *                       sampler variable is not an array)
 	 * \param index non-constant part of an array index (may be NULL)
 	 * \param desc_type the type of descriptor to load
+	 * \param image whether the descriptor is loaded for an image operation
 	 */
 	LLVMValueRef (*load_sampler_desc)(struct ac_shader_abi *abi,
 					  unsigned descriptor_set,
 					  unsigned base_index,
 					  unsigned constant_index,
 					  LLVMValueRef index,
-					  enum ac_descriptor_type desc_type);
+					  enum ac_descriptor_type desc_type,
+					  bool image, bool write);
 };
 
 #endif /* AC_SHADER_ABI_H */

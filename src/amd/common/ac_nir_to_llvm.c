@@ -191,7 +191,8 @@ nir_to_llvm_context_from_abi(struct ac_shader_abi *abi)
 
 static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 				     const nir_deref_var *deref,
-				     enum ac_descriptor_type desc_type);
+				     enum ac_descriptor_type desc_type,
+				     bool image, bool write);
 
 static unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
 {
@@ -3321,7 +3322,7 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 							       fmask_load_address[1],
 							       fmask_load_address[2],
 							       sample_index,
-							       get_sampler_desc(ctx, instr->variables[0], AC_DESC_FMASK));
+							       get_sampler_desc(ctx, instr->variables[0], AC_DESC_FMASK, true, false));
 	}
 	if (count == 1) {
 		if (instr->src[0].ssa->num_components)
@@ -3370,7 +3371,7 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 
 	type = glsl_without_array(type);
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
-		params[0] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER);
+		params[0] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, true, false);
 		params[1] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
 						    ctx->ac.i32_0, ""); /* vindex */
 		params[2] = ctx->ac.i32_0; /* voffset */
@@ -3389,7 +3390,7 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		LLVMValueRef slc = i1false;
 
 		params[0] = get_image_coords(ctx, instr);
-		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE);
+		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, true, false);
 		params[2] = LLVMConstInt(ctx->ac.i32, 15, false); /* dmask */
 		if (HAVE_LLVM <= 0x0309) {
 			params[3] = i1false;  /* r128 */
@@ -3435,7 +3436,7 @@ static void visit_image_store(struct ac_nir_context *ctx,
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
 		params[0] = to_float(&ctx->ac, get_src(ctx, instr->src[2])); /* data */
-		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER);
+		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, true, true);
 		params[2] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
 						    ctx->ac.i32_0, ""); /* vindex */
 		params[3] = ctx->ac.i32_0; /* voffset */
@@ -3451,7 +3452,7 @@ static void visit_image_store(struct ac_nir_context *ctx,
 
 		params[0] = to_float(&ctx->ac, get_src(ctx, instr->src[2]));
 		params[1] = get_image_coords(ctx, instr); /* coords */
-		params[2] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE);
+		params[2] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, true, true);
 		params[3] = LLVMConstInt(ctx->ac.i32, 15, false); /* dmask */
 		if (HAVE_LLVM <= 0x0309) {
 			params[4] = i1false;  /* r128 */
@@ -3529,7 +3530,8 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 	params[param_count++] = get_src(ctx, instr->src[2]);
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
-		params[param_count++] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER);
+		params[param_count++] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER,
+							 true, true);
 		params[param_count++] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
 								ctx->ac.i32_0, ""); /* vindex */
 		params[param_count++] = ctx->ac.i32_0; /* voffset */
@@ -3544,7 +3546,8 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
 
 		LLVMValueRef coords = params[param_count++] = get_image_coords(ctx, instr);
-		params[param_count++] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE);
+		params[param_count++] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE,
+							 true, true);
 		params[param_count++] = i1false; /* r128 */
 		params[param_count++] = da ? i1true : i1false;      /* da */
 		params[param_count++] = i1false;  /* slc */
@@ -3572,13 +3575,15 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 		type = instr->variables[0]->deref.child->type;
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF)
-		return get_buffer_size(ctx, get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER), true);
+		return get_buffer_size(ctx,
+			get_sampler_desc(ctx, instr->variables[0],
+					 AC_DESC_BUFFER, true, false), true);
 
 	struct ac_image_args args = { 0 };
 
 	args.da = da;
 	args.dmask = 0xf;
-	args.resource = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE);
+	args.resource = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, true, false);
 	args.opcode = ac_image_get_resinfo;
 	args.addr = ctx->ac.i32_0;
 
@@ -4148,7 +4153,8 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 					  unsigned base_index,
 					  unsigned constant_index,
 					  LLVMValueRef index,
-					  enum ac_descriptor_type desc_type)
+					  enum ac_descriptor_type desc_type,
+					  bool image, bool write)
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef list = ctx->descriptor_sets[descriptor_set];
@@ -4220,7 +4226,8 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 
 static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 				     const nir_deref_var *deref,
-				     enum ac_descriptor_type desc_type)
+				     enum ac_descriptor_type desc_type,
+				     bool image, bool write)
 {
 	LLVMValueRef index = NULL;
 	unsigned constant_index = 0;
@@ -4256,7 +4263,7 @@ static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 					  deref->var->data.descriptor_set,
 					  deref->var->data.binding,
 					  constant_index, index,
-					  desc_type);
+					  desc_type, image, write);
 }
 
 static void set_tex_fetch_args(struct ac_llvm_context *ctx,
@@ -4329,20 +4336,20 @@ static void tex_fetch_ptrs(struct ac_nir_context *ctx,
 			   LLVMValueRef *fmask_ptr)
 {
 	if (instr->sampler_dim  == GLSL_SAMPLER_DIM_BUF)
-		*res_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_BUFFER);
+		*res_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_BUFFER, false, false);
 	else
-		*res_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_IMAGE);
+		*res_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_IMAGE, false, false);
 	if (samp_ptr) {
 		if (instr->sampler)
-			*samp_ptr = get_sampler_desc(ctx, instr->sampler, AC_DESC_SAMPLER);
+			*samp_ptr = get_sampler_desc(ctx, instr->sampler, AC_DESC_SAMPLER, false, false);
 		else
-			*samp_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_SAMPLER);
+			*samp_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_SAMPLER, false, false);
 		if (instr->sampler_dim < GLSL_SAMPLER_DIM_RECT)
 			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 	}
 	if (fmask_ptr && !instr->sampler && (instr->op == nir_texop_txf_ms ||
 					     instr->op == nir_texop_samples_identical))
-		*fmask_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_FMASK);
+		*fmask_ptr = get_sampler_desc(ctx, instr->texture, AC_DESC_FMASK, false, false);
 }
 
 static LLVMValueRef apply_round_slice(struct ac_llvm_context *ctx,
