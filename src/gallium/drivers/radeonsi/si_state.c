@@ -870,6 +870,15 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(state->fill_front)) |
 		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(state->fill_back)));
 
+	if (!rs->uses_poly_offset)
+		return rs;
+
+	rs->pm4_poly_offset = CALLOC(3, sizeof(struct si_pm4_state));
+	if (!rs->pm4_poly_offset) {
+		FREE(rs);
+		return NULL;
+	}
+
 	/* Precalculate polygon offset states for 16-bit, 24-bit, and 32-bit zbuffers. */
 	for (i = 0; i < 3; i++) {
 		struct si_pm4_state *pm4 = &rs->pm4_poly_offset[i];
@@ -965,10 +974,13 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_state_rasterizer *rs = (struct si_state_rasterizer *)state;
 
 	if (sctx->queued.named.rasterizer == state)
 		si_pm4_bind_state(sctx, poly_offset, NULL);
-	si_pm4_delete_state(sctx, rasterizer, (struct si_state_rasterizer *)state);
+
+	FREE(rs->pm4_poly_offset);
+	si_pm4_delete_state(sctx, rasterizer, rs);
 }
 
 /*

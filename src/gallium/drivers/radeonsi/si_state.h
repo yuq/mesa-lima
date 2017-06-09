@@ -60,7 +60,7 @@ struct si_state_blend {
 struct si_state_rasterizer {
 	struct si_pm4_state	pm4;
 	/* poly offset states for 16-bit, 24-bit, and 32-bit zbuffers */
-	struct si_pm4_state	pm4_poly_offset[3];
+	struct si_pm4_state	*pm4_poly_offset;
 	unsigned		pa_sc_line_stipple;
 	unsigned		pa_cl_clip_cntl;
 	unsigned		sprite_coord_enable:8;
