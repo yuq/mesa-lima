@@ -679,7 +679,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
       case GL_STENCIL_TEST:
          if (ctx->Stencil.Enabled == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_STENCIL);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewStencil ? 0 : _NEW_STENCIL);
+         ctx->NewDriverState |= ctx->DriverFlags.NewStencil;
          ctx->Stencil.Enabled = state;
          break;
       case GL_TEXTURE_1D:
@@ -905,7 +906,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
          CHECK_EXTENSION(EXT_stencil_two_side, cap);
          if (ctx->Stencil.TestTwoSide == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_STENCIL);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewStencil ? 0 : _NEW_STENCIL);
+         ctx->NewDriverState |= ctx->DriverFlags.NewStencil;
          ctx->Stencil.TestTwoSide = state;
          if (state) {
             ctx->Stencil._BackFace = 2;

@@ -193,8 +193,7 @@ st_invalidate_state(struct gl_context * ctx)
       /* These set a subset of flags set by _NEW_BUFFERS, so we only have to
        * check them when _NEW_BUFFERS isn't set.
        */
-      if (new_state & (_NEW_DEPTH |
-                       _NEW_STENCIL))
+      if (new_state & _NEW_DEPTH)
          st->dirty |= ST_NEW_DSA;
 
       if (new_state & _NEW_PROGRAM)
@@ -523,6 +522,7 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewFramebufferSRGB = ST_NEW_FB_STATE;
    f->NewScissorRect = ST_NEW_SCISSOR;
    f->NewScissorTest = ST_NEW_SCISSOR | ST_NEW_RASTERIZER;
+   f->NewStencil = ST_NEW_DSA;
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,

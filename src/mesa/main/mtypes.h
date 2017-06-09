@@ -4481,6 +4481,9 @@ struct gl_driver_flags
 
    /** gl_context::Scissor::ScissorArray */
    uint64_t NewScissorRect;
+
+   /** gl_context::Stencil */
+   uint64_t NewStencil;
 };
 
 struct gl_uniform_buffer_binding
