@@ -85,6 +85,8 @@ include $(top_srcdir)/src/gallium/drivers/virgl/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/etnaviv/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/imx/Automake.inc
 
+include $(top_srcdir)/src/gallium/drivers/lima/Automake.inc
+
 include $(top_srcdir)/src/gallium/drivers/softpipe/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/llvmpipe/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/swr/Automake.inc
