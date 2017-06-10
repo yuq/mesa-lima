@@ -4,4 +4,7 @@ C_SOURCES := \
 	  lima_context.c \
 	  lima_context.h \
 	  lima_resource.c \
-	  lima_resource.h
+	  lima_resource.h \
+	  lima_state.c \
+	  lima_draw.c \
+	  lima_program.c

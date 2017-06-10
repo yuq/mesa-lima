@@ -31,6 +31,32 @@ struct pipe_screen;
 
 struct lima_context {
    struct pipe_context base;
+
+   struct u_upload_mgr *uploader;
+};
+
+struct lima_depth_stencil_alpha_state {
+   int dummy;
+};
+
+struct lima_fs_shader_state {
+   int dummy;
+};
+
+struct lima_vs_shader_state {
+   int dummy;
+};
+
+struct lima_rasterizer_state {
+   int dummy;
+};
+
+struct lima_blend_state {
+   int dummy;
+};
+
+struct lima_vertex_element_state {
+   int dummy;
 };
 
 static inline struct lima_context *
@@ -38,6 +64,10 @@ lima_context(struct pipe_context *pctx)
 {
    return (struct lima_context *)pctx;
 }
+
+void lima_state_init(struct lima_context *ctx);
+void lima_draw_init(struct lima_context *ctx);
+void lima_program_init(struct lima_context *ctx);
 
 struct pipe_context *
 lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags);

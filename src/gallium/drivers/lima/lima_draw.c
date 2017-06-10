@@ -22,43 +22,17 @@
  *
  */
 
-#include "util/u_memory.h"
-#include "util/u_upload_mgr.h"
-
 #include "lima_context.h"
-#include "lima_resource.h"
 
 static void
-lima_context_destroy(struct pipe_context *pctx)
+lima_clear(struct pipe_context *pctx, unsigned buffers,
+           const union pipe_color_union *color, double depth, unsigned stencil)
 {
-   struct lima_context *ctx = lima_context(pctx);
-
-   if (ctx->uploader)
-      u_upload_destroy(ctx->uploader);
-
-   FREE(ctx);
+   printf("dummy %s\n", __func__);
 }
 
-struct pipe_context *
-lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
+void
+lima_draw_init(struct lima_context *ctx)
 {
-   struct lima_context *ctx;
-
-   ctx = CALLOC_STRUCT(lima_context);
-   if (!ctx)
-      return NULL;
-
-   ctx->base.screen = pscreen;
-   ctx->base.destroy = lima_context_destroy;
-
-   lima_resource_context_init(ctx);
-   lima_state_init(ctx);
-   lima_draw_init(ctx);
-   lima_program_init(ctx);
-
-   ctx->uploader = u_upload_create_default(&ctx->base);
-   ctx->base.stream_uploader = ctx->uploader;
-   ctx->base.const_uploader = ctx->uploader;
-
-   return &ctx->base;
+   ctx->base.clear = lima_clear;
 }
