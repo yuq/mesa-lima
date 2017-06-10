@@ -346,7 +346,16 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
                 == ((GLuint) state << p))
                return;
 
-            FLUSH_VERTICES(ctx, _NEW_TRANSFORM);
+            /* The compatibility profile needs _NEW_TRANSFORM to transform
+             * clip planes according to the projection matrix.
+             */
+            if (ctx->API == API_OPENGL_COMPAT || ctx->API == API_OPENGLES ||
+                !ctx->DriverFlags.NewClipPlaneEnable) {
+               FLUSH_VERTICES(ctx, _NEW_TRANSFORM);
+            } else {
+               FLUSH_VERTICES(ctx, 0);
+            }
+            ctx->NewDriverState |= ctx->DriverFlags.NewClipPlaneEnable;
 
             if (state) {
                ctx->Transform.ClipPlanesEnabled |= (1 << p);
@@ -973,7 +982,9 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
          CHECK_EXTENSION(ARB_depth_clamp, cap);
          if (ctx->Transform.DepthClamp == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_TRANSFORM);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewDepthClamp ? 0 :
+                                                           _NEW_TRANSFORM);
+         ctx->NewDriverState |= ctx->DriverFlags.NewDepthClamp;
          ctx->Transform.DepthClamp = state;
          break;
 

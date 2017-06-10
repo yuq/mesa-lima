@@ -213,12 +213,10 @@ st_invalidate_state(struct gl_context * ctx)
    if (new_state & (_NEW_LIGHT |
                     _NEW_LINE |
                     _NEW_POINT |
-                    _NEW_POLYGON |
-                    _NEW_TRANSFORM))
+                    _NEW_POLYGON))
       st->dirty |= ST_NEW_RASTERIZER;
 
-   if (new_state & (_NEW_PROJECTION |
-                    _NEW_TRANSFORM) &&
+   if (new_state & _NEW_PROJECTION &&
        st_user_clip_planes_enabled(ctx))
       st->dirty |= ST_NEW_CLIP_STATE;
 
@@ -523,6 +521,9 @@ static void st_init_driver_flags(struct st_context *st)
    }
 
    f->NewClipControl = ST_NEW_VIEWPORT | ST_NEW_RASTERIZER;
+   f->NewClipPlane = ST_NEW_CLIP_STATE;
+   f->NewClipPlaneEnable = ST_NEW_RASTERIZER;
+   f->NewDepthClamp = ST_NEW_RASTERIZER;
    f->NewViewport = ST_NEW_VIEWPORT;
 }
 

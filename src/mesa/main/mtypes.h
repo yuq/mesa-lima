@@ -4508,8 +4508,17 @@ struct gl_driver_flags
    /** gl_context::Stencil */
    uint64_t NewStencil;
 
-   /** gl_context::Transform::Clip* */
+   /** gl_context::Transform::ClipOrigin/ClipDepthMode */
    uint64_t NewClipControl;
+
+   /** gl_context::Transform::EyeUserPlane */
+   uint64_t NewClipPlane;
+
+   /** gl_context::Transform::ClipPlanesEnabled */
+   uint64_t NewClipPlaneEnable;
+
+   /** gl_context::Transform::DepthClamp */
+   uint64_t NewDepthClamp;
 
    /** gl_context::ViewportArray */
    uint64_t NewViewport;
