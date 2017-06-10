@@ -872,7 +872,7 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Transform.RasterPositionUnclipped == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_TRANSFORM);
+         FLUSH_VERTICES(ctx, 0);
          ctx->Transform.RasterPositionUnclipped = state;
          break;
 
