@@ -1105,6 +1105,20 @@ _mesa_PopAttrib(void)
                enable = (const struct gl_enable_attrib *) attr->data;
                pop_enable_group(ctx, enable);
 	       ctx->NewState |= _NEW_ALL;
+               ctx->NewDriverState |= ctx->DriverFlags.NewAlphaTest |
+                                      ctx->DriverFlags.NewBlend |
+                                      ctx->DriverFlags.NewClipPlaneEnable |
+                                      ctx->DriverFlags.NewDepth |
+                                      ctx->DriverFlags.NewDepthClamp |
+                                      ctx->DriverFlags.NewFramebufferSRGB |
+                                      ctx->DriverFlags.NewLineState |
+                                      ctx->DriverFlags.NewLogicOp |
+                                      ctx->DriverFlags.NewMultisampleEnable |
+                                      ctx->DriverFlags.NewPolygonState |
+                                      ctx->DriverFlags.NewSampleAlphaToXEnable |
+                                      ctx->DriverFlags.NewSampleMask |
+                                      ctx->DriverFlags.NewScissorTest |
+                                      ctx->DriverFlags.NewStencil;
             }
             break;
          case GL_EVAL_BIT:
