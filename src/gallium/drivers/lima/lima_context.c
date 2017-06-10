@@ -25,6 +25,7 @@
 #include "util/u_memory.h"
 
 #include "lima_context.h"
+#include "lima_resource.h"
 
 static void
 lima_context_destroy(struct pipe_context *pctx)
@@ -45,6 +46,8 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    ctx->base.screen = pscreen;
    ctx->base.destroy = lima_context_destroy;
+
+   lima_resource_context_init(ctx);
 
    return &ctx->base;
 }
