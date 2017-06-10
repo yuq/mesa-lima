@@ -57,7 +57,6 @@ struct sampler_info
 {
    struct cso_sampler *cso_samplers[PIPE_MAX_SAMPLERS];
    void *samplers[PIPE_MAX_SAMPLERS];
-   unsigned nr_samplers;
 };
 
 
@@ -82,6 +81,11 @@ struct cso_context {
 
    struct sampler_info fragment_samplers_saved;
    struct sampler_info samplers[PIPE_SHADER_TYPES];
+
+   /* Temporary number until cso_single_sampler_done is called.
+    * It tracks the highest sampler seen in cso_single_sampler.
+    */
+   int max_sampler_seen;
 
    struct pipe_vertex_buffer aux_vertex_buffer_current;
    struct pipe_vertex_buffer aux_vertex_buffer_saved;
@@ -240,7 +244,7 @@ sanitize_hash(struct cso_hash *hash, enum cso_cache_type type,
        * table, to prevent them from being deleted
        */
       for (i = 0; i < PIPE_SHADER_TYPES; i++) {
-         for (j = 0; j < ctx->samplers[i].nr_samplers; j++) {
+         for (j = 0; j < PIPE_MAX_SAMPLERS; j++) {
             struct cso_sampler *sampler = ctx->samplers[i].cso_samplers[j];
 
             if (sampler && cso_hash_take(hash, sampler->hash_key))
@@ -334,6 +338,7 @@ cso_create_context(struct pipe_context *pipe, unsigned u_vbuf_flags)
       ctx->has_streamout = TRUE;
    }
 
+   ctx->max_sampler_seen = -1;
    return ctx;
 
 out:
@@ -1230,9 +1235,7 @@ cso_single_sampler(struct cso_context *ctx, enum pipe_shader_type shader_stage,
 
       ctx->samplers[shader_stage].cso_samplers[idx] = cso;
       ctx->samplers[shader_stage].samplers[idx] = cso->data;
-   } else {
-      ctx->samplers[shader_stage].cso_samplers[idx] = NULL;
-      ctx->samplers[shader_stage].samplers[idx] = NULL;
+      ctx->max_sampler_seen = MAX2(ctx->max_sampler_seen, (int)idx);
    }
 
    return PIPE_OK;
@@ -1247,19 +1250,14 @@ cso_single_sampler_done(struct cso_context *ctx,
                         enum pipe_shader_type shader_stage)
 {
    struct sampler_info *info = &ctx->samplers[shader_stage];
-   const unsigned old_nr_samplers = info->nr_samplers;
-   unsigned i;
 
-   /* find highest non-null sampler */
-   for (i = PIPE_MAX_SAMPLERS; i > 0; i--) {
-      if (info->samplers[i - 1] != NULL)
-         break;
-   }
+   if (ctx->max_sampler_seen == -1)
+      return;
 
-   info->nr_samplers = i;
    ctx->pipe->bind_sampler_states(ctx->pipe, shader_stage, 0,
-                                  MAX2(old_nr_samplers, info->nr_samplers),
+                                  ctx->max_sampler_seen + 1,
                                   info->samplers);
+   ctx->max_sampler_seen = -1;
 }
 
 
@@ -1274,18 +1272,11 @@ cso_set_samplers(struct cso_context *ctx,
                  unsigned nr,
                  const struct pipe_sampler_state **templates)
 {
-   struct sampler_info *info = &ctx->samplers[shader_stage];
    unsigned i;
    enum pipe_error temp, error = PIPE_OK;
 
    for (i = 0; i < nr; i++) {
       temp = cso_single_sampler(ctx, shader_stage, i, templates[i]);
-      if (temp != PIPE_OK)
-         error = temp;
-   }
-
-   for ( ; i < info->nr_samplers; i++) {
-      temp = cso_single_sampler(ctx, shader_stage, i, NULL);
       if (temp != PIPE_OK)
          error = temp;
    }
@@ -1301,11 +1292,9 @@ cso_save_fragment_samplers(struct cso_context *ctx)
    struct sampler_info *info = &ctx->samplers[PIPE_SHADER_FRAGMENT];
    struct sampler_info *saved = &ctx->fragment_samplers_saved;
 
-   saved->nr_samplers = info->nr_samplers;
-   memcpy(saved->cso_samplers, info->cso_samplers, info->nr_samplers *
-          sizeof(*info->cso_samplers));
-   memcpy(saved->samplers, info->samplers, info->nr_samplers *
-          sizeof(*info->samplers));
+   memcpy(saved->cso_samplers, info->cso_samplers,
+          sizeof(info->cso_samplers));
+   memcpy(saved->samplers, info->samplers, sizeof(info->samplers));
 }
 
 
@@ -1314,18 +1303,16 @@ cso_restore_fragment_samplers(struct cso_context *ctx)
 {
    struct sampler_info *info = &ctx->samplers[PIPE_SHADER_FRAGMENT];
    struct sampler_info *saved = &ctx->fragment_samplers_saved;
-   int delta = (int)info->nr_samplers - saved->nr_samplers;
 
    memcpy(info->cso_samplers, saved->cso_samplers,
-          saved->nr_samplers * sizeof(*info->cso_samplers));
-   memcpy(info->samplers, saved->samplers,
-          saved->nr_samplers * sizeof(*info->samplers));
+          sizeof(info->cso_samplers));
+   memcpy(info->samplers, saved->samplers, sizeof(info->samplers));
 
-   if (delta > 0) {
-      memset(&info->cso_samplers[saved->nr_samplers], 0,
-             delta * sizeof(*info->cso_samplers));
-      memset(&info->samplers[saved->nr_samplers], 0,
-             delta * sizeof(*info->samplers));
+   for (int i = PIPE_MAX_SAMPLERS - 1; i >= 0; i--) {
+      if (info->samplers[i]) {
+         ctx->max_sampler_seen = i;
+         break;
+      }
    }
 
    cso_single_sampler_done(ctx, PIPE_SHADER_FRAGMENT);
