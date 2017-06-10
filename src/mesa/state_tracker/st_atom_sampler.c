@@ -275,7 +275,7 @@ update_shader_samplers(struct st_context *st,
    const GLuint old_max = *num_samplers;
    const struct pipe_sampler_state *states[PIPE_MAX_SAMPLERS];
 
-   if (*num_samplers == 0 && samplers_used == 0x0)
+   if (samplers_used == 0x0)
       return;
 
    *num_samplers = 0;
