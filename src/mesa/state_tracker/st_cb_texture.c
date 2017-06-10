@@ -154,6 +154,8 @@ st_NewTextureObject(struct gl_context * ctx, GLuint name, GLenum target)
    DBG("%s\n", __func__);
    _mesa_initialize_texture_object(ctx, &obj->base, name, target);
 
+   obj->needs_validation = true;
+
    return &obj->base;
 }
 
@@ -605,6 +607,8 @@ st_AllocTextureImageBuffer(struct gl_context *ctx,
    DBG("%s\n", __func__);
 
    assert(!stImage->pt); /* xxx this might be wrong */
+
+   stObj->needs_validation = true;
 
    etc_fallback_allocate(st, stImage);
 
@@ -2485,6 +2489,16 @@ st_finalize_texture(struct gl_context *ctx,
    firstImage = st_texture_image_const(stObj->base.Image[cubeMapFace][stObj->base.BaseLevel]);
    assert(firstImage);
 
+   /* Skip the loop over images in the common case of no images having
+    * changed.  But if the GL_BASE_LEVEL or GL_MAX_LEVEL change to something we
+    * haven't looked at, then we do need to look at those new images.
+    */
+   if (!stObj->needs_validation &&
+       stObj->base.BaseLevel >= stObj->validated_first_level &&
+       stObj->lastLevel <= stObj->validated_last_level) {
+      return GL_TRUE;
+   }
+
    /* If both firstImage and stObj point to a texture which can contain
     * all active images, favour firstImage.  Note that because of the
     * completeness requirement, we know that the image dimensions
@@ -2631,6 +2645,10 @@ st_finalize_texture(struct gl_context *ctx,
       }
    }
 
+   stObj->validated_first_level = stObj->base.BaseLevel;
+   stObj->validated_last_level = stObj->lastLevel;
+   stObj->needs_validation = false;
+
    return GL_TRUE;
 }
 
@@ -2711,6 +2729,11 @@ st_AllocTextureStorage(struct gl_context *ctx,
          etc_fallback_allocate(st, stImage);
       }
    }
+
+   /* The texture is in a validated state, so no need to check later. */
+   stObj->needs_validation = false;
+   stObj->validated_first_level = 0;
+   stObj->validated_last_level = levels - 1;
 
    return GL_TRUE;
 }
@@ -2809,6 +2832,11 @@ st_TextureView(struct gl_context *ctx,
     * change the texture view parameters.
     */
    st_texture_release_all_sampler_views(st, tex);
+
+   /* The texture is in a validated state, so no need to check later. */
+   tex->needs_validation = false;
+   tex->validated_first_level = 0;
+   tex->validated_last_level = numLevels - 1;
 
    return GL_TRUE;
 }

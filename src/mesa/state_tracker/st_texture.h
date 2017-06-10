@@ -84,6 +84,9 @@ struct st_texture_object
     */
    GLuint lastLevel;
 
+   unsigned int validated_first_level;
+   unsigned int validated_last_level;
+
    /* On validation any active images held in main memory or in other
     * textures will be copied to this texture and the old storage freed.
     */
@@ -121,6 +124,12 @@ struct st_texture_object
    unsigned prev_glsl_version;
    /** The value of the sampler's sRGBDecode state at the previous validation */
    GLenum prev_sRGBDecode;
+
+    /**
+     * Set when the texture images of this texture object might not all be in
+     * the pipe_resource *pt above.
+     */
+    bool needs_validation;
 };
 
 

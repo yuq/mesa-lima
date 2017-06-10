@@ -592,6 +592,8 @@ st_context_teximage(struct st_context_iface *stctxi,
    pipe_resource_reference(&stImage->pt, tex);
    stObj->surface_format = pipe_format;
 
+   stObj->needs_validation = true;
+
    _mesa_dirty_texobj(ctx, texObj);
    _mesa_unlock_texture(ctx, texObj);
 
