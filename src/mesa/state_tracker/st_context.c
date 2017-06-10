@@ -243,9 +243,6 @@ st_invalidate_state(struct gl_context * ctx)
          st->dirty |= ST_NEW_FS_STATE;
       }
    }
-
-   if (new_state & _NEW_PROGRAM_CONSTANTS)
-      st->dirty |= st->active_states & ST_NEW_CONSTANTS;
 }
 
 

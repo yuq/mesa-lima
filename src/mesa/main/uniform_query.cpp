@@ -1002,6 +1002,23 @@ validate_uniform(GLint location, GLsizei count, const GLvoid *values,
    return uni;
 }
 
+void
+_mesa_flush_vertices_for_uniforms(struct gl_context *ctx,
+                                  const struct gl_uniform_storage *uni)
+{
+   uint64_t new_driver_state = 0;
+   unsigned mask = uni->active_shader_mask;
+
+   while (mask) {
+      unsigned index = u_bit_scan(&mask);
+
+      assert(index < MESA_SHADER_STAGES);
+      new_driver_state |= ctx->DriverFlags.NewShaderConstants[index];
+   }
+
+   FLUSH_VERTICES(ctx, new_driver_state ? 0 : _NEW_PROGRAM_CONSTANTS);
+   ctx->NewDriverState |= new_driver_state;
+}
 
 /**
  * Called via glUniform*() functions.
@@ -1056,7 +1073,7 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
       count = MIN2(count, (int) (uni->array_elements - offset));
    }
 
-   FLUSH_VERTICES(ctx, _NEW_PROGRAM_CONSTANTS);
+   _mesa_flush_vertices_for_uniforms(ctx, uni);
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
@@ -1272,7 +1289,7 @@ _mesa_uniform_matrix(GLint location, GLsizei count,
       count = MIN2(count, (int) (uni->array_elements - offset));
    }
 
-   FLUSH_VERTICES(ctx, _NEW_PROGRAM_CONSTANTS);
+   _mesa_flush_vertices_for_uniforms(ctx, uni);
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
@@ -1426,7 +1443,7 @@ _mesa_uniform_handle(GLint location, GLsizei count, const GLvoid *values,
       count = MIN2(count, (int) (uni->array_elements - offset));
    }
 
-   FLUSH_VERTICES(ctx, _NEW_PROGRAM_CONSTANTS);
+   _mesa_flush_vertices_for_uniforms(ctx, uni);
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
