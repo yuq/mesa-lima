@@ -966,6 +966,9 @@ get_shaderiv(struct gl_context *ctx, GLuint name, GLenum pname, GLint *params)
    case GL_SHADER_SOURCE_LENGTH:
       *params = shader->Source ? strlen((char *) shader->Source) + 1 : 0;
       break;
+   case GL_SPIR_V_BINARY_ARB:
+      *params = (shader->spirv_data != NULL);
+      break;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glGetShaderiv(pname)");
       return;
