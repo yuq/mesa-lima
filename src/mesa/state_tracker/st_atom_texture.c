@@ -55,7 +55,7 @@
 /**
  * Get a pipe_sampler_view object from a texture unit.
  */
-GLboolean
+void
 st_update_single_texture(struct st_context *st,
                          struct pipe_sampler_view **sampler_view,
                          GLuint texUnit, unsigned glsl_version)
@@ -76,7 +76,8 @@ st_update_single_texture(struct st_context *st,
    retval = st_finalize_texture(ctx, st->pipe, texObj, 0);
    if (!retval) {
       /* out of mem */
-      return GL_FALSE;
+      *sampler_view = NULL;
+      return;
    }
 
    /* Check a few pieces of state outside the texture object to see if we
@@ -97,7 +98,6 @@ st_update_single_texture(struct st_context *st,
 
    *sampler_view =
       st_get_texture_sampler_view_from_stobj(st, stObj, samp, glsl_version);
-   return GL_TRUE;
 }
 
 
@@ -129,13 +129,8 @@ update_textures(struct st_context *st,
          /* prog->sh.data is NULL if it's ARB_fragment_program */
          unsigned glsl_version = prog->sh.data ? prog->sh.data->Version : 0;
          const GLuint texUnit = prog->SamplerUnits[unit];
-         GLboolean retval;
 
-         retval = st_update_single_texture(st, &sampler_view, texUnit,
-                                           glsl_version);
-         if (retval == GL_FALSE)
-            continue;
-
+         st_update_single_texture(st, &sampler_view, texUnit, glsl_version);
          num_textures = unit + 1;
       }
 

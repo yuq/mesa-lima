@@ -512,7 +512,8 @@ st_create_texture_handle_from_unit(struct st_context *st,
    struct pipe_sampler_view *view;
    struct pipe_sampler_state sampler = {0};
 
-   if (!st_update_single_texture(st, &view, texUnit, prog->sh.data->Version))
+   st_update_single_texture(st, &view, texUnit, prog->sh.data->Version);
+   if (!view)
       return 0;
 
    if (view->target != PIPE_BUFFER)

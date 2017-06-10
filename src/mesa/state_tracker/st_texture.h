@@ -288,7 +288,7 @@ st_convert_sampler_from_unit(const struct st_context *st,
                              struct pipe_sampler_state *sampler,
                              GLuint texUnit);
 
-GLboolean
+void
 st_update_single_texture(struct st_context *st,
                          struct pipe_sampler_view **sampler_view,
                          GLuint texUnit, unsigned glsl_version);
