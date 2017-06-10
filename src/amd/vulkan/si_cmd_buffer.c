@@ -1193,6 +1193,7 @@ static void si_emit_cp_dma(struct radv_cmd_buffer *cmd_buffer,
 		radeon_emit(cs, dst_va >> 32);		/* DST_ADDR_HI [31:0] */
 		radeon_emit(cs, command);
 	} else {
+		assert(!(flags & CP_DMA_USE_L2));
 		header |= S_411_SRC_ADDR_HI(src_va >> 32);
 		radeon_emit(cs, PKT3(PKT3_CP_DMA, 4, 0));
 		radeon_emit(cs, src_va);			/* SRC_ADDR_LO [31:0] */
