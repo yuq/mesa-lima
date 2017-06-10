@@ -503,7 +503,7 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewScissorTest = ST_NEW_SCISSOR | ST_NEW_RASTERIZER;
    f->NewAlphaTest = ST_NEW_DSA;
    f->NewBlend = ST_NEW_BLEND;
-   f->NewBlendColor = ST_NEW_BLEND; /* TODO: add an atom for blend color */
+   f->NewBlendColor = ST_NEW_BLEND_COLOR;
    f->NewColorMask = ST_NEW_BLEND;
    f->NewDepth = ST_NEW_DSA;
    f->NewLogicOp = ST_NEW_BLEND;

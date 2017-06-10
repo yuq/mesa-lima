@@ -14,6 +14,7 @@ ST_STATE(ST_NEW_VIEWPORT, st_update_viewport)
 ST_STATE(ST_NEW_SCISSOR, st_update_scissor)
 ST_STATE(ST_NEW_WINDOW_RECTANGLES, st_update_window_rectangles)
 ST_STATE(ST_NEW_BLEND, st_update_blend)
+ST_STATE(ST_NEW_BLEND_COLOR, st_update_blend_color)
 
 ST_STATE(ST_NEW_VS_SAMPLER_VIEWS, st_update_vertex_textures)
 ST_STATE(ST_NEW_FS_SAMPLER_VIEWS, st_update_fragment_textures)
