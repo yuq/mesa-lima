@@ -3083,6 +3083,7 @@ void
 _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 {
    unsigned int i;
+   bool spirv;
 
    _mesa_clear_shader_program_data(ctx, prog);
 
@@ -3092,7 +3093,21 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
    for (i = 0; i < prog->NumShaders; i++) {
       if (!prog->Shaders[i]->CompileStatus) {
-	 linker_error(prog, "linking with uncompiled shader");
+	 linker_error(prog, "linking with uncompiled/unspecialized shader");
+      }
+
+      if (!i) {
+         spirv = (prog->Shaders[i]->spirv_data != NULL);
+      } else if (spirv && !prog->Shaders[i]->spirv_data) {
+         /* The GL_ARB_gl_spirv spec adds a new bullet point to the list of
+          * reasons LinkProgram can fail:
+          *
+          *    "All the shader objects attached to <program> do not have the
+          *     same value for the SPIR_V_BINARY_ARB state."
+          */
+         linker_error(prog,
+                      "not all attached shaders have the same "
+                      "SPIR_V_BINARY_ARB state");
       }
    }
 

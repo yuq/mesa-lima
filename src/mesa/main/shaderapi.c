@@ -1097,6 +1097,18 @@ _mesa_compile_shader(struct gl_context *ctx, struct gl_shader *sh)
    if (!sh)
       return;
 
+   /* The GL_ARB_gl_spirv spec says:
+    *
+    *    "Add a new error for the CompileShader command:
+    *
+    *      An INVALID_OPERATION error is generated if the SPIR_V_BINARY_ARB
+    *      state of <shader> is TRUE."
+    */
+   if (sh->spirv_data) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glCompileShader(SPIR-V)");
+      return;
+   }
+
    if (!sh->Source) {
       /* If the user called glCompileShader without first calling
        * glShaderSource, we should fail to compile, but not raise a GL_ERROR.
