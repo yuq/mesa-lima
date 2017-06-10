@@ -107,9 +107,9 @@ update_textures(struct st_context *st,
                 enum pipe_shader_type shader_stage,
                 const struct gl_program *prog,
                 struct pipe_sampler_view **sampler_views,
-                unsigned *num_textures)
+                unsigned *out_num_textures)
 {
-   const GLuint old_max = *num_textures;
+   const GLuint old_max = *out_num_textures;
    GLbitfield samplers_used = prog->SamplersUsed;
    GLbitfield free_slots = ~prog->SamplersUsed;
    GLbitfield external_samplers_used = prog->ExternalSamplersUsed;
@@ -118,7 +118,7 @@ update_textures(struct st_context *st,
    if (samplers_used == 0x0 && old_max == 0)
       return;
 
-   *num_textures = 0;
+   unsigned num_textures = 0;
 
    /* loop over sampler units (aka tex image units) */
    for (unit = 0; samplers_used || unit < old_max;
@@ -136,7 +136,7 @@ update_textures(struct st_context *st,
          if (retval == GL_FALSE)
             continue;
 
-         *num_textures = unit + 1;
+         num_textures = unit + 1;
       }
 
       pipe_sampler_view_reference(&(sampler_views[unit]), sampler_view);
@@ -186,13 +186,14 @@ update_textures(struct st_context *st,
          break;
       }
 
-      *num_textures = MAX2(*num_textures, extra + 1);
+      num_textures = MAX2(num_textures, extra + 1);
    }
 
    cso_set_sampler_views(st->cso_context,
                          shader_stage,
-                         *num_textures,
+                         num_textures,
                          sampler_views);
+   *out_num_textures = num_textures;
 }
 
 
