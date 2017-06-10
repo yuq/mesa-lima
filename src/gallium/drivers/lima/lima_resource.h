@@ -30,6 +30,7 @@
 #include <lima.h>
 
 struct lima_screen;
+struct lima_context;
 
 struct lima_resource {
    struct pipe_resource base;
@@ -38,13 +39,26 @@ struct lima_resource {
    uint32_t stride;
 };
 
+struct lima_surface {
+   struct pipe_surface base;
+};
+
 static inline struct lima_resource *
 lima_resource(struct pipe_resource *res)
 {
    return (struct lima_resource *)res;
 }
 
+static inline struct lima_surface *
+lima_surface(struct pipe_surface *surf)
+{
+   return (struct lima_surface *)surf;
+}
+
 void
 lima_resource_screen_init(struct lima_screen *screen);
+
+void
+lima_resource_context_init(struct lima_context *ctx);
 
 #endif
