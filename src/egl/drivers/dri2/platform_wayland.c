@@ -436,7 +436,7 @@ back_bo_to_dri_buffer(struct dri2_egl_surface *dri2_surf, __DRIbuffer *buffer)
 
 static int
 get_aux_bo(struct dri2_egl_surface *dri2_surf,
-	   unsigned int attachment, unsigned int format, __DRIbuffer *buffer)
+           unsigned int attachment, unsigned int format, __DRIbuffer *buffer)
 {
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
@@ -444,9 +444,9 @@ get_aux_bo(struct dri2_egl_surface *dri2_surf,
 
    if (b == NULL) {
       b = dri2_dpy->dri2->allocateBuffer(dri2_dpy->dri_screen,
-					 attachment, format,
-					 dri2_surf->base.Width,
-					 dri2_surf->base.Height);
+                                         attachment, format,
+                                         dri2_surf->base.Width,
+                                         dri2_surf->base.Height);
       dri2_surf->dri_buffers[attachment] = b;
    }
    if (b == NULL)
@@ -514,20 +514,20 @@ dri2_wl_get_buffers_with_format(__DRIdrawable * driDrawable,
       switch (attachments[i]) {
       case __DRI_BUFFER_BACK_LEFT:
          back_bo_to_dri_buffer(dri2_surf, &dri2_surf->buffers[j]);
-	 break;
+         break;
       default:
-	 if (get_aux_bo(dri2_surf, attachments[i], attachments[i + 1],
-			&dri2_surf->buffers[j]) < 0) {
-	    _eglError(EGL_BAD_ALLOC, "failed to allocate aux buffer");
-	    return NULL;
-	 }
-	 break;
+         if (get_aux_bo(dri2_surf, attachments[i], attachments[i + 1],
+                        &dri2_surf->buffers[j]) < 0) {
+            _eglError(EGL_BAD_ALLOC, "failed to allocate aux buffer");
+            return NULL;
+         }
+         break;
       }
    }
 
    *out_count = j;
    if (j == 0)
-	   return NULL;
+      return NULL;
 
    *width = dri2_surf->base.Width;
    *height = dri2_surf->base.Height;
@@ -926,7 +926,7 @@ drm_handle_device(void *data, struct wl_drm *drm, const char *device)
    dri2_dpy->fd = loader_open_device(dri2_dpy->device_name);
    if (dri2_dpy->fd == -1) {
       _eglLog(_EGL_WARNING, "wayland-egl: could not open %s (%s)",
-	      dri2_dpy->device_name, strerror(errno));
+              dri2_dpy->device_name, strerror(errno));
       return;
    }
 
@@ -980,8 +980,9 @@ static const struct wl_drm_listener drm_listener = {
 };
 
 static void
-registry_handle_global_drm(void *data, struct wl_registry *registry, uint32_t name,
-		       const char *interface, uint32_t version)
+registry_handle_global_drm(void *data, struct wl_registry *registry,
+                           uint32_t name, const char *interface,
+                           uint32_t version)
 {
    struct dri2_egl_display *dri2_dpy = data;
 
@@ -996,7 +997,7 @@ registry_handle_global_drm(void *data, struct wl_registry *registry, uint32_t na
 
 static void
 registry_handle_global_remove(void *data, struct wl_registry *registry,
-			      uint32_t name)
+                              uint32_t name)
 {
 }
 
@@ -1736,8 +1737,9 @@ static const struct wl_shm_listener shm_listener = {
 };
 
 static void
-registry_handle_global_swrast(void *data, struct wl_registry *registry, uint32_t name,
-                              const char *interface, uint32_t version)
+registry_handle_global_swrast(void *data, struct wl_registry *registry,
+                              uint32_t name, const char *interface,
+                              uint32_t version)
 {
    struct dri2_egl_display *dri2_dpy = data;
 
