@@ -72,6 +72,7 @@ EXT(ARB_framebuffer_object                  , ARB_framebuffer_object            
 EXT(ARB_framebuffer_sRGB                    , EXT_framebuffer_sRGB                   , GLL, GLC,  x ,  x , 1998)
 EXT(ARB_get_program_binary                  , dummy_true                             , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_get_texture_sub_image               , dummy_true                             , GLL, GLC,  x ,  x , 2014)
+EXT(ARB_gl_spirv                            , ARB_gl_spirv                           ,  x,  GLC,  x ,  x , 2016)
 EXT(ARB_gpu_shader5                         , ARB_gpu_shader5                        ,  x , GLC,  x ,  x , 2010)
 EXT(ARB_gpu_shader_fp64                     , ARB_gpu_shader_fp64                    ,  x , GLC,  x ,  x , 2010)
 EXT(ARB_gpu_shader_int64                    , ARB_gpu_shader_int64                   ,  x , GLC,  x ,  x , 2015)

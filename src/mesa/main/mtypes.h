@@ -4074,6 +4074,7 @@ struct gl_extensions
    GLboolean ARB_enhanced_layouts;
    GLboolean ARB_explicit_attrib_location;
    GLboolean ARB_explicit_uniform_location;
+   GLboolean ARB_gl_spirv;
    GLboolean ARB_gpu_shader5;
    GLboolean ARB_gpu_shader_fp64;
    GLboolean ARB_gpu_shader_int64;

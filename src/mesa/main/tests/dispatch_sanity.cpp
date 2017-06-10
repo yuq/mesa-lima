@@ -1963,6 +1963,9 @@ const struct function gl_core_functions_possible[] = {
    { "glProgramUniform3ui64vARB", 45, -1 },
    { "glProgramUniform4ui64vARB", 45, -1 },
 
+   /* GL_ARB_gl_spirv */
+   { "glSpecializeShaderARB", 45, -1 },
+
    { NULL, 0, -1 }
 };
 
