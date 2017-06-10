@@ -230,7 +230,12 @@ update_program_constants(struct gl_context *ctx)
       const struct gl_program_parameter_list *params =
          ctx->FragmentProgram._Current->Parameters;
       if (params && params->StateFlags & ctx->NewState) {
-         new_state |= _NEW_PROGRAM_CONSTANTS;
+         if (ctx->DriverFlags.NewShaderConstants[MESA_SHADER_FRAGMENT]) {
+            ctx->NewDriverState |=
+               ctx->DriverFlags.NewShaderConstants[MESA_SHADER_FRAGMENT];
+         } else {
+            new_state |= _NEW_PROGRAM_CONSTANTS;
+         }
       }
    }
 
@@ -242,7 +247,12 @@ update_program_constants(struct gl_context *ctx)
       const struct gl_program_parameter_list *params =
          ctx->VertexProgram._Current->Parameters;
       if (params && params->StateFlags & ctx->NewState) {
-         new_state |= _NEW_PROGRAM_CONSTANTS;
+         if (ctx->DriverFlags.NewShaderConstants[MESA_SHADER_VERTEX]) {
+            ctx->NewDriverState |=
+               ctx->DriverFlags.NewShaderConstants[MESA_SHADER_VERTEX];
+         } else {
+            new_state |= _NEW_PROGRAM_CONSTANTS;
+         }
       }
    }
 
