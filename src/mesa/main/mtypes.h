@@ -4507,6 +4507,12 @@ struct gl_driver_flags
 
    /** gl_context::Stencil */
    uint64_t NewStencil;
+
+   /** gl_context::Transform::Clip* */
+   uint64_t NewClipControl;
+
+   /** gl_context::ViewportArray */
+   uint64_t NewViewport;
 };
 
 struct gl_uniform_buffer_binding

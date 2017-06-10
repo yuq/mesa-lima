@@ -40,7 +40,8 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
                        GLfloat x, GLfloat y,
                        GLfloat width, GLfloat height)
 {
-   FLUSH_VERTICES(ctx, _NEW_VIEWPORT);
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewViewport ? 0 : _NEW_VIEWPORT);
+   ctx->NewDriverState |= ctx->DriverFlags.NewViewport;
 
    /* clamp width and height to the implementation dependent range */
    width  = MIN2(width, (GLfloat) ctx->Const.MaxViewportWidth);
@@ -241,7 +242,9 @@ set_depth_range_no_notify(struct gl_context *ctx, unsigned idx,
        ctx->ViewportArray[idx].Far == farval)
       return;
 
+   /* The depth range is needed by program state constants. */
    FLUSH_VERTICES(ctx, _NEW_VIEWPORT);
+   ctx->NewDriverState |= ctx->DriverFlags.NewViewport;
 
    ctx->ViewportArray[idx].Near = CLAMP(nearval, 0.0, 1.0);
    ctx->ViewportArray[idx].Far = CLAMP(farval, 0.0, 1.0);
@@ -449,7 +452,9 @@ _mesa_ClipControl(GLenum origin, GLenum depth)
       return;
 
    /* Affects transform state and the viewport transform */
-   FLUSH_VERTICES(ctx, _NEW_TRANSFORM | _NEW_VIEWPORT);
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewClipControl ? 0 :
+                                          _NEW_TRANSFORM | _NEW_VIEWPORT);
+   ctx->NewDriverState |= ctx->DriverFlags.NewClipControl;
 
    if (ctx->Transform.ClipOrigin != origin) {
       ctx->Transform.ClipOrigin = origin;

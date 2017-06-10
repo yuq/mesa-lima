@@ -202,9 +202,6 @@ st_invalidate_state(struct gl_context * ctx)
       if (new_state & _NEW_POLYGONSTIPPLE)
          st->dirty |= ST_NEW_POLY_STIPPLE;
 
-      if (new_state & _NEW_VIEWPORT)
-         st->dirty |= ST_NEW_VIEWPORT;
-
       if (new_state & _NEW_FRAG_CLAMP) {
          if (st->clamp_frag_color_in_shader)
             st->dirty |= ST_NEW_FS_STATE;
@@ -524,6 +521,9 @@ static void st_init_driver_flags(struct st_context *st)
    } else {
       f->NewSampleShading |= ST_NEW_RASTERIZER;
    }
+
+   f->NewClipControl = ST_NEW_VIEWPORT | ST_NEW_RASTERIZER;
+   f->NewViewport = ST_NEW_VIEWPORT;
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
