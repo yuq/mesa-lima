@@ -176,37 +176,42 @@ st_convert_sampler(const struct st_context *st,
        msamp->BorderColor.ui[1] ||
        msamp->BorderColor.ui[2] ||
        msamp->BorderColor.ui[3]) {
-      const struct st_texture_object *stobj = st_texture_object_const(texobj);
       const GLboolean is_integer = texobj->_IsIntegerFormat;
-      const struct pipe_sampler_view *sv = NULL;
-      union pipe_color_union border_color;
-      GLuint i;
 
-      /* Just search for the first used view. We can do this because the
-         swizzle is per-texture, not per context. */
-      /* XXX: clean that up to not use the sampler view at all */
-      for (i = 0; i < stobj->num_sampler_views; ++i) {
-         if (stobj->sampler_views[i]) {
-            sv = stobj->sampler_views[i];
-            break;
+      if (st->apply_texture_swizzle_to_border_color) {
+         const struct st_texture_object *stobj = st_texture_object_const(texobj);
+         const struct pipe_sampler_view *sv = NULL;
+
+         /* Just search for the first used view. We can do this because the
+            swizzle is per-texture, not per context. */
+         /* XXX: clean that up to not use the sampler view at all */
+         for (unsigned i = 0; i < stobj->num_sampler_views; ++i) {
+            if (stobj->sampler_views[i]) {
+               sv = stobj->sampler_views[i];
+               break;
+            }
          }
-      }
 
-      if (st->apply_texture_swizzle_to_border_color && sv) {
-         const unsigned char swz[4] =
-         {
-            sv->swizzle_r,
-            sv->swizzle_g,
-            sv->swizzle_b,
-            sv->swizzle_a,
-         };
+         if (sv) {
+            union pipe_color_union tmp;
+            const unsigned char swz[4] =
+            {
+               sv->swizzle_r,
+               sv->swizzle_g,
+               sv->swizzle_b,
+               sv->swizzle_a,
+            };
 
-         st_translate_color(&msamp->BorderColor,
-                            &border_color,
-                            texBaseFormat, is_integer);
+            st_translate_color(&msamp->BorderColor, &tmp,
+                               texBaseFormat, is_integer);
 
-         util_format_apply_color_swizzle(&sampler->border_color,
-                                         &border_color, swz, is_integer);
+            util_format_apply_color_swizzle(&sampler->border_color,
+                                            &tmp, swz, is_integer);
+         } else {
+            st_translate_color(&msamp->BorderColor,
+                               &sampler->border_color,
+                               texBaseFormat, is_integer);
+         }
       } else {
          st_translate_color(&msamp->BorderColor,
                             &sampler->border_color,
