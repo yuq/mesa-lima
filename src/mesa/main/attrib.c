@@ -1287,7 +1287,12 @@ _mesa_PopAttrib(void)
             break;
 	 case GL_POLYGON_STIPPLE_BIT:
 	    memcpy( ctx->PolygonStipple, attr->data, 32*sizeof(GLuint) );
-	    ctx->NewState |= _NEW_POLYGONSTIPPLE;
+
+            if (ctx->DriverFlags.NewPolygonStipple)
+               ctx->NewDriverState |= ctx->DriverFlags.NewPolygonStipple;
+            else
+               ctx->NewState |= _NEW_POLYGONSTIPPLE;
+
 	    if (ctx->Driver.PolygonStipple)
 	       ctx->Driver.PolygonStipple( ctx, (const GLubyte *) attr->data );
 	    break;

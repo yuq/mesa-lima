@@ -199,7 +199,9 @@ _mesa_PolygonStipple(const GLubyte *pattern)
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glPolygonStipple\n");
 
-   FLUSH_VERTICES(ctx, _NEW_POLYGONSTIPPLE);
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewPolygonStipple ? 0 :
+                                                      _NEW_POLYGONSTIPPLE);
+   ctx->NewDriverState |= ctx->DriverFlags.NewPolygonStipple;
 
    pattern = _mesa_map_validate_pbo_source(ctx, 2,
                                            &ctx->Unpack, 32, 32, 1,

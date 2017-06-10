@@ -4526,6 +4526,9 @@ struct gl_driver_flags
    /** gl_context::Polygon */
    uint64_t NewPolygonState;
 
+   /** gl_context::PolygonStipple */
+   uint64_t NewPolygonStipple;
+
    /** gl_context::ViewportArray */
    uint64_t NewViewport;
 };

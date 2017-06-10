@@ -199,9 +199,6 @@ st_invalidate_state(struct gl_context * ctx)
       if (new_state & _NEW_FOG)
          st->dirty |= ST_NEW_FS_STATE;
 
-      if (new_state & _NEW_POLYGONSTIPPLE)
-         st->dirty |= ST_NEW_POLY_STIPPLE;
-
       if (new_state & _NEW_FRAG_CLAMP) {
          if (st->clamp_frag_color_in_shader)
             st->dirty |= ST_NEW_FS_STATE;
@@ -524,6 +521,7 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewDepthClamp = ST_NEW_RASTERIZER;
    f->NewLineState = ST_NEW_RASTERIZER;
    f->NewPolygonState = ST_NEW_RASTERIZER;
+   f->NewPolygonStipple = ST_NEW_POLY_STIPPLE;
    f->NewViewport = ST_NEW_VIEWPORT;
 }
 
