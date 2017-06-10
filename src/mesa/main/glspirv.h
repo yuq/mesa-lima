@@ -31,6 +31,22 @@ extern "C" {
 #endif
 
 /**
+ * A SPIR-V module contains the raw SPIR-V binary as set by ShaderBinary.
+ *
+ * It is reference-counted, because the same module can be attached to multiple
+ * shader objects simultaneously.
+ */
+struct gl_spirv_module {
+   unsigned RefCount;
+   GLint Length;
+   char Binary[0];
+};
+
+void
+_mesa_spirv_module_reference(struct gl_spirv_module **dest,
+                             struct gl_spirv_module *src);
+
+/**
  * \name API functions
  */
 /*@{*/

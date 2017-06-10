@@ -25,6 +25,23 @@
 
 #include "errors.h"
 
+#include "util/u_atomic.h"
+
+void
+_mesa_spirv_module_reference(struct gl_spirv_module **dest,
+                             struct gl_spirv_module *src)
+{
+   struct gl_spirv_module *old = *dest;
+
+   if (old && p_atomic_dec_zero(&old->RefCount))
+      free(old);
+
+   *dest = src;
+
+   if (src)
+      p_atomic_inc(&src->RefCount);
+}
+
 void GLAPIENTRY
 _mesa_SpecializeShaderARB(GLuint shader,
                           const GLchar *pEntryPoint,
