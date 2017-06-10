@@ -382,7 +382,9 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
       case GL_CULL_FACE:
          if (ctx->Polygon.CullFlag == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_POLYGON);
+         FLUSH_VERTICES(ctx,
+                        ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+         ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
          ctx->Polygon.CullFlag = state;
          break;
       case GL_DEPTH_TEST:
@@ -650,7 +652,9 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Polygon.SmoothFlag == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_POLYGON);
+         FLUSH_VERTICES(ctx,
+                        ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+         ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
          ctx->Polygon.SmoothFlag = state;
          break;
       case GL_POLYGON_STIPPLE:
@@ -658,7 +662,9 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Polygon.StippleFlag == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_POLYGON);
+         FLUSH_VERTICES(ctx,
+                        ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+         ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
          ctx->Polygon.StippleFlag = state;
          break;
       case GL_POLYGON_OFFSET_POINT:
@@ -666,7 +672,9 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Polygon.OffsetPoint == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_POLYGON);
+         FLUSH_VERTICES(ctx,
+                        ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+         ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
          ctx->Polygon.OffsetPoint = state;
          break;
       case GL_POLYGON_OFFSET_LINE:
@@ -674,13 +682,17 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Polygon.OffsetLine == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_POLYGON);
+         FLUSH_VERTICES(ctx,
+                        ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+         ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
          ctx->Polygon.OffsetLine = state;
          break;
       case GL_POLYGON_OFFSET_FILL:
          if (ctx->Polygon.OffsetFill == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_POLYGON);
+         FLUSH_VERTICES(ctx,
+                        ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+         ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
          ctx->Polygon.OffsetFill = state;
          break;
       case GL_RESCALE_NORMAL_EXT:

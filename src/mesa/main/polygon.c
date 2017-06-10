@@ -66,7 +66,8 @@ _mesa_CullFace( GLenum mode )
    if (ctx->Polygon.CullFaceMode == mode)
       return;
 
-   FLUSH_VERTICES(ctx, _NEW_POLYGON);
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+   ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
    ctx->Polygon.CullFaceMode = mode;
 
    if (ctx->Driver.CullFace)
@@ -101,7 +102,8 @@ _mesa_FrontFace( GLenum mode )
       return;
    }
 
-   FLUSH_VERTICES(ctx, _NEW_POLYGON);
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+   ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
    ctx->Polygon.FrontFace = mode;
 
    if (ctx->Driver.FrontFace)
@@ -153,13 +155,15 @@ _mesa_PolygonMode( GLenum face, GLenum mode )
       }
       if (ctx->Polygon.FrontMode == mode)
          return;
-      FLUSH_VERTICES(ctx, _NEW_POLYGON);
+      FLUSH_VERTICES(ctx, ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+      ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
       ctx->Polygon.FrontMode = mode;
       break;
    case GL_FRONT_AND_BACK:
       if (ctx->Polygon.FrontMode == mode && ctx->Polygon.BackMode == mode)
          return;
-      FLUSH_VERTICES(ctx, _NEW_POLYGON);
+      FLUSH_VERTICES(ctx, ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+      ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
       ctx->Polygon.FrontMode = mode;
       ctx->Polygon.BackMode = mode;
       break;
@@ -170,7 +174,8 @@ _mesa_PolygonMode( GLenum face, GLenum mode )
       }
       if (ctx->Polygon.BackMode == mode)
          return;
-      FLUSH_VERTICES(ctx, _NEW_POLYGON);
+      FLUSH_VERTICES(ctx, ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+      ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
       ctx->Polygon.BackMode = mode;
       break;
    default:
@@ -252,7 +257,8 @@ _mesa_polygon_offset_clamp(struct gl_context *ctx,
        ctx->Polygon.OffsetClamp == clamp)
       return;
 
-   FLUSH_VERTICES(ctx, _NEW_POLYGON);
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewPolygonState ? 0 : _NEW_POLYGON);
+   ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
    ctx->Polygon.OffsetFactor = factor;
    ctx->Polygon.OffsetUnits = units;
    ctx->Polygon.OffsetClamp = clamp;

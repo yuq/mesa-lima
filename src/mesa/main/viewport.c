@@ -460,7 +460,10 @@ _mesa_ClipControl(GLenum origin, GLenum depth)
       ctx->Transform.ClipOrigin = origin;
 
       /* Affects the winding order of the front face. */
-      ctx->NewState |= _NEW_POLYGON;
+      if (ctx->DriverFlags.NewPolygonState)
+         ctx->NewDriverState |= ctx->DriverFlags.NewPolygonState;
+      else
+         ctx->NewState |= _NEW_POLYGON;
 
       if (ctx->Driver.FrontFace)
          ctx->Driver.FrontFace(ctx, ctx->Polygon.FrontFace);

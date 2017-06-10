@@ -4520,6 +4520,9 @@ struct gl_driver_flags
    /** gl_context::Transform::DepthClamp */
    uint64_t NewDepthClamp;
 
+   /** gl_context::Polygon */
+   uint64_t NewPolygonState;
+
    /** gl_context::ViewportArray */
    uint64_t NewViewport;
 };
