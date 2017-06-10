@@ -211,7 +211,6 @@ st_invalidate_state(struct gl_context * ctx)
    }
 
    if (new_state & (_NEW_LIGHT |
-                    _NEW_LINE |
                     _NEW_POINT))
       st->dirty |= ST_NEW_RASTERIZER;
 
@@ -523,6 +522,7 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewClipPlane = ST_NEW_CLIP_STATE;
    f->NewClipPlaneEnable = ST_NEW_RASTERIZER;
    f->NewDepthClamp = ST_NEW_RASTERIZER;
+   f->NewLineState = ST_NEW_RASTERIZER;
    f->NewPolygonState = ST_NEW_RASTERIZER;
    f->NewViewport = ST_NEW_VIEWPORT;
 }

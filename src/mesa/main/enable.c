@@ -448,7 +448,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Line.SmoothFlag == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_LINE);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewLineState ? 0 : _NEW_LINE);
+         ctx->NewDriverState |= ctx->DriverFlags.NewLineState;
          ctx->Line.SmoothFlag = state;
          break;
       case GL_LINE_STIPPLE:
@@ -456,7 +457,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->Line.StippleFlag == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_LINE);
+         FLUSH_VERTICES(ctx, ctx->DriverFlags.NewLineState ? 0 : _NEW_LINE);
+         ctx->NewDriverState |= ctx->DriverFlags.NewLineState;
          ctx->Line.StippleFlag = state;
          break;
       case GL_INDEX_LOGIC_OP:
