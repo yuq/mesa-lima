@@ -58,71 +58,43 @@
 static GLuint
 gl_wrap_xlate(GLenum wrap)
 {
-   switch (wrap) {
-   case GL_REPEAT:
-      return PIPE_TEX_WRAP_REPEAT;
-   case GL_CLAMP:
-      return PIPE_TEX_WRAP_CLAMP;
-   case GL_CLAMP_TO_EDGE:
-      return PIPE_TEX_WRAP_CLAMP_TO_EDGE;
-   case GL_CLAMP_TO_BORDER:
-      return PIPE_TEX_WRAP_CLAMP_TO_BORDER;
-   case GL_MIRRORED_REPEAT:
-      return PIPE_TEX_WRAP_MIRROR_REPEAT;
-   case GL_MIRROR_CLAMP_EXT:
-      return PIPE_TEX_WRAP_MIRROR_CLAMP;
-   case GL_MIRROR_CLAMP_TO_EDGE_EXT:
-      return PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE;
-   case GL_MIRROR_CLAMP_TO_BORDER_EXT:
-      return PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER;
-   default:
-      assert(0);
-      return 0;
-   }
+   /* Take advantage of how the enums are defined. */
+   static const unsigned table[32] = {
+      [GL_REPEAT & 0x1f] = PIPE_TEX_WRAP_REPEAT,
+      [GL_CLAMP & 0x1f] = PIPE_TEX_WRAP_CLAMP,
+      [GL_CLAMP_TO_EDGE & 0x1f] = PIPE_TEX_WRAP_CLAMP_TO_EDGE,
+      [GL_CLAMP_TO_BORDER & 0x1f] = PIPE_TEX_WRAP_CLAMP_TO_BORDER,
+      [GL_MIRRORED_REPEAT & 0x1f] = PIPE_TEX_WRAP_MIRROR_REPEAT,
+      [GL_MIRROR_CLAMP_EXT & 0x1f] = PIPE_TEX_WRAP_MIRROR_CLAMP,
+      [GL_MIRROR_CLAMP_TO_EDGE & 0x1f] = PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE,
+      [GL_MIRROR_CLAMP_TO_BORDER_EXT & 0x1f] = PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER,
+   };
+
+   return table[wrap & 0x1f];
 }
 
 
 static GLuint
 gl_filter_to_mip_filter(GLenum filter)
 {
-   switch (filter) {
-   case GL_NEAREST:
-   case GL_LINEAR:
+   /* Take advantage of how the enums are defined. */
+   if (filter <= GL_LINEAR)
       return PIPE_TEX_MIPFILTER_NONE;
-
-   case GL_NEAREST_MIPMAP_NEAREST:
-   case GL_LINEAR_MIPMAP_NEAREST:
+   if (filter <= GL_LINEAR_MIPMAP_NEAREST)
       return PIPE_TEX_MIPFILTER_NEAREST;
 
-   case GL_NEAREST_MIPMAP_LINEAR:
-   case GL_LINEAR_MIPMAP_LINEAR:
-      return PIPE_TEX_MIPFILTER_LINEAR;
-
-   default:
-      assert(0);
-      return PIPE_TEX_MIPFILTER_NONE;
-   }
+   return PIPE_TEX_MIPFILTER_LINEAR;
 }
 
 
 static GLuint
 gl_filter_to_img_filter(GLenum filter)
 {
-   switch (filter) {
-   case GL_NEAREST:
-   case GL_NEAREST_MIPMAP_NEAREST:
-   case GL_NEAREST_MIPMAP_LINEAR:
-      return PIPE_TEX_FILTER_NEAREST;
-
-   case GL_LINEAR:
-   case GL_LINEAR_MIPMAP_NEAREST:
-   case GL_LINEAR_MIPMAP_LINEAR:
+   /* Take advantage of how the enums are defined. */
+   if (filter & 1)
       return PIPE_TEX_FILTER_LINEAR;
 
-   default:
-      assert(0);
-      return PIPE_TEX_FILTER_NEAREST;
-   }
+   return PIPE_TEX_FILTER_NEAREST;
 }
 
 
