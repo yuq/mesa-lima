@@ -23,6 +23,11 @@
 
 #include "glspirv.h"
 #include "errors.h"
+#include "shaderobj.h"
+
+#include "compiler/nir/nir.h"
+#include "compiler/spirv/nir_spirv.h"
+
 #include "util/u_atomic.h"
 
 void
@@ -106,7 +111,105 @@ _mesa_SpecializeShaderARB(GLuint shader,
                           const GLuint *pConstantValue)
 {
    GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader *sh;
+   bool has_entry_point;
+   struct nir_spirv_specialization *spec_entries = NULL;
 
-   /* Just return GL_INVALID_OPERATION error while this is boilerplate */
-   _mesa_error(ctx, GL_INVALID_OPERATION, "SpecializeShaderARB");
+   if (!ctx->Extensions.ARB_gl_spirv) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glSpecializeShaderARB");
+      return;
+   }
+
+   sh = _mesa_lookup_shader_err(ctx, shader, "glSpecializeShaderARB");
+   if (!sh)
+      return;
+
+   if (!sh->spirv_data) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glSpecializeShaderARB(not SPIR-V)");
+      return;
+   }
+
+   if (sh->CompileStatus) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glSpecializeShaderARB(already specialized)");
+      return;
+   }
+
+   struct gl_shader_spirv_data *spirv_data = sh->spirv_data;
+
+   /* From the GL_ARB_gl_spirv spec:
+    *
+    *    "The OpenGL API expects the SPIR-V module to have already been
+    *     validated, and can return an error if it discovers anything invalid
+    *     in the module. An invalid SPIR-V module is allowed to result in
+    *     undefined behavior."
+    *
+    * However, the following errors still need to be detected (from the same
+    * spec):
+    *
+    *    "INVALID_VALUE is generated if <pEntryPoint> does not name a valid
+    *     entry point for <shader>.
+    *
+    *     INVALID_VALUE is generated if any element of <pConstantIndex>
+    *     refers to a specialization constant that does not exist in the
+    *     shader module contained in <shader>."
+    *
+    * We cannot flag those errors a-priori because detecting them requires
+    * parsing the module. However, flagging them during specialization is okay,
+    * since it makes no difference in terms of application-visible state.
+    */
+   spec_entries = calloc(sizeof(*spec_entries), numSpecializationConstants);
+
+   for (unsigned i = 0; i < numSpecializationConstants; ++i) {
+      spec_entries[i].id = pConstantIndex[i];
+      spec_entries[i].data32 = pConstantValue[i];
+      spec_entries[i].defined_on_module = false;
+   }
+
+   has_entry_point =
+      gl_spirv_validation((uint32_t *)&spirv_data->SpirVModule->Binary[0],
+                          spirv_data->SpirVModule->Length / 4,
+                          spec_entries, numSpecializationConstants,
+                          sh->Stage, pEntryPoint);
+
+   /* See previous spec comment */
+   if (!has_entry_point) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "glSpecializeShaderARB(\"%s\" is not a valid entry point"
+                  " for shader)", pEntryPoint);
+      goto end;
+   }
+
+   for (unsigned i = 0; i < numSpecializationConstants; ++i) {
+      if (spec_entries[i].defined_on_module == false) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "glSpecializeShaderARB(constant \"%i\" does not exist "
+                     "in shader)", spec_entries[i].id);
+         goto end;
+      }
+   }
+
+   spirv_data->SpirVEntryPoint = ralloc_strdup(spirv_data, pEntryPoint);
+
+   /* Note that we didn't make a real compilation of the module (spirv_to_nir),
+    * but just checked some error conditions. Real "compilation" will be done
+    * later, upon linking.
+    */
+   sh->CompileStatus = COMPILE_SUCCESS;
+
+   spirv_data->NumSpecializationConstants = numSpecializationConstants;
+   spirv_data->SpecializationConstantsIndex =
+      rzalloc_array_size(spirv_data, sizeof(GLuint),
+                         numSpecializationConstants);
+   spirv_data->SpecializationConstantsValue =
+      rzalloc_array_size(spirv_data, sizeof(GLuint),
+                         numSpecializationConstants);
+   for (unsigned i = 0; i < numSpecializationConstants; ++i) {
+      spirv_data->SpecializationConstantsIndex[i] = pConstantIndex[i];
+      spirv_data->SpecializationConstantsValue[i] = pConstantValue[i];
+   }
+
+ end:
+   free(spec_entries);
 }
