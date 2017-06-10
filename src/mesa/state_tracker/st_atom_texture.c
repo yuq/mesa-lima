@@ -106,7 +106,6 @@ static void
 update_textures(struct st_context *st,
                 enum pipe_shader_type shader_stage,
                 const struct gl_program *prog,
-                unsigned max_units,
                 struct pipe_sampler_view **sampler_views,
                 unsigned *num_textures)
 {
@@ -122,7 +121,8 @@ update_textures(struct st_context *st,
    *num_textures = 0;
 
    /* loop over sampler units (aka tex image units) */
-   for (unit = 0; unit < max_units; unit++, samplers_used >>= 1) {
+   for (unit = 0; samplers_used || unit < old_max;
+        unit++, samplers_used >>= 1) {
       struct pipe_sampler_view *sampler_view = NULL;
 
       if (samplers_used & 1) {
@@ -137,10 +137,6 @@ update_textures(struct st_context *st,
             continue;
 
          *num_textures = unit + 1;
-      }
-      else if (samplers_used == 0 && unit >= old_max) {
-         /* if we've reset all the old views and we have no more new ones */
-         break;
       }
 
       pipe_sampler_view_reference(&(sampler_views[unit]), sampler_view);
@@ -210,7 +206,6 @@ st_update_vertex_textures(struct st_context *st)
       update_textures(st,
                       PIPE_SHADER_VERTEX,
                       ctx->VertexProgram._Current,
-                      ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_VERTEX],
                       &st->state.num_sampler_views[PIPE_SHADER_VERTEX]);
    }
@@ -225,7 +220,6 @@ st_update_fragment_textures(struct st_context *st)
    update_textures(st,
                    PIPE_SHADER_FRAGMENT,
                    ctx->FragmentProgram._Current,
-                   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits,
                    st->state.sampler_views[PIPE_SHADER_FRAGMENT],
                    &st->state.num_sampler_views[PIPE_SHADER_FRAGMENT]);
 }
@@ -240,7 +234,6 @@ st_update_geometry_textures(struct st_context *st)
       update_textures(st,
                       PIPE_SHADER_GEOMETRY,
                       ctx->GeometryProgram._Current,
-                      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_GEOMETRY],
                       &st->state.num_sampler_views[PIPE_SHADER_GEOMETRY]);
    }
@@ -256,7 +249,6 @@ st_update_tessctrl_textures(struct st_context *st)
       update_textures(st,
                       PIPE_SHADER_TESS_CTRL,
                       ctx->TessCtrlProgram._Current,
-                      ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_TESS_CTRL],
                       &st->state.num_sampler_views[PIPE_SHADER_TESS_CTRL]);
    }
@@ -272,7 +264,6 @@ st_update_tesseval_textures(struct st_context *st)
       update_textures(st,
                       PIPE_SHADER_TESS_EVAL,
                       ctx->TessEvalProgram._Current,
-                      ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_TESS_EVAL],
                       &st->state.num_sampler_views[PIPE_SHADER_TESS_EVAL]);
    }
@@ -288,7 +279,6 @@ st_update_compute_textures(struct st_context *st)
       update_textures(st,
                       PIPE_SHADER_COMPUTE,
                       ctx->ComputeProgram._Current,
-                      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_COMPUTE],
                       &st->state.num_sampler_views[PIPE_SHADER_COMPUTE]);
    }
