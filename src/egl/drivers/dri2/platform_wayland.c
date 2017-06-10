@@ -986,11 +986,9 @@ registry_handle_global_drm(void *data, struct wl_registry *registry,
 {
    struct dri2_egl_display *dri2_dpy = data;
 
-   if (version > 1)
-      version = 2;
    if (strcmp(interface, "wl_drm") == 0) {
       dri2_dpy->wl_drm =
-         wl_registry_bind(registry, name, &wl_drm_interface, version);
+         wl_registry_bind(registry, name, &wl_drm_interface, MIN2(version, 2));
       wl_drm_add_listener(dri2_dpy->wl_drm, &drm_listener, dri2_dpy);
    }
 }
