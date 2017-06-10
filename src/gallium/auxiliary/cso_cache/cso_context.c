@@ -1198,7 +1198,7 @@ unsigned cso_get_aux_vertex_buffer_slot(struct cso_context *ctx)
 
 
 
-enum pipe_error
+void
 cso_single_sampler(struct cso_context *ctx, enum pipe_shader_type shader_stage,
                    unsigned idx, const struct pipe_sampler_state *templ)
 {
@@ -1214,7 +1214,7 @@ cso_single_sampler(struct cso_context *ctx, enum pipe_shader_type shader_stage,
       if (cso_hash_iter_is_null(iter)) {
          cso = MALLOC(sizeof(struct cso_sampler));
          if (!cso)
-            return PIPE_ERROR_OUT_OF_MEMORY;
+            return;
 
          memcpy(&cso->state, templ, sizeof(*templ));
          cso->data = ctx->pipe->create_sampler_state(ctx->pipe, &cso->state);
@@ -1226,7 +1226,7 @@ cso_single_sampler(struct cso_context *ctx, enum pipe_shader_type shader_stage,
          iter = cso_insert_state(ctx->cache, hash_key, CSO_SAMPLER, cso);
          if (cso_hash_iter_is_null(iter)) {
             FREE(cso);
-            return PIPE_ERROR_OUT_OF_MEMORY;
+            return;
          }
       }
       else {
@@ -1237,8 +1237,6 @@ cso_single_sampler(struct cso_context *ctx, enum pipe_shader_type shader_stage,
       ctx->samplers[shader_stage].samplers[idx] = cso->data;
       ctx->max_sampler_seen = MAX2(ctx->max_sampler_seen, (int)idx);
    }
-
-   return PIPE_OK;
 }
 
 
@@ -1266,24 +1264,16 @@ cso_single_sampler_done(struct cso_context *ctx,
  * last one. Done to always try to set as many samplers
  * as possible.
  */
-enum pipe_error
+void
 cso_set_samplers(struct cso_context *ctx,
                  enum pipe_shader_type shader_stage,
                  unsigned nr,
                  const struct pipe_sampler_state **templates)
 {
-   unsigned i;
-   enum pipe_error temp, error = PIPE_OK;
-
-   for (i = 0; i < nr; i++) {
-      temp = cso_single_sampler(ctx, shader_stage, i, templates[i]);
-      if (temp != PIPE_OK)
-         error = temp;
-   }
+   for (unsigned i = 0; i < nr; i++)
+      cso_single_sampler(ctx, shader_stage, i, templates[i]);
 
    cso_single_sampler_done(ctx, shader_stage);
-
-   return error;
 }
 
 static void
