@@ -4135,6 +4135,9 @@ struct gl_constants
 
    /** Is the drivers uniform storage packed or padded to 16 bytes. */
    bool PackedDriverUniformStorage;
+
+   /** GL_ARB_gl_spirv */
+   struct spirv_supported_capabilities SpirVCapabilities;
 };
 
 
