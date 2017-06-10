@@ -128,12 +128,11 @@ st_update_fp( struct st_context *st )
 
    key.external = st_get_external_sampler_key(st, &stfp->Base);
 
-   st->fp_variant = st_get_fp_variant(st, stfp, &key);
+   void *shader = st_get_fp_variant(st, stfp, &key)->driver_shader;
 
    st_reference_fragprog(st, &st->fp, stfp);
 
-   cso_set_fragment_shader_handle(st->cso_context,
-                                  st->fp_variant->driver_shader);
+   cso_set_fragment_shader_handle(st->cso_context, shader);
 }
 
 
@@ -196,13 +195,12 @@ st_update_gp( struct st_context *st )
    stgp = st_common_program(st->ctx->GeometryProgram._Current);
    assert(stgp->Base.Target == GL_GEOMETRY_PROGRAM_NV);
 
-   st->gp_variant = st_get_basic_variant(st, PIPE_SHADER_GEOMETRY,
-                                         &stgp->tgsi, &stgp->variants);
+   void *shader = st_get_basic_variant(st, PIPE_SHADER_GEOMETRY, &stgp->tgsi,
+                                       &stgp->variants)->driver_shader;
 
    st_reference_prog(st, &st->gp, stgp);
 
-   cso_set_geometry_shader_handle(st->cso_context,
-                                  st->gp_variant->driver_shader);
+   cso_set_geometry_shader_handle(st->cso_context, shader);
 }
 
 
@@ -220,13 +218,12 @@ st_update_tcp( struct st_context *st )
    sttcp = st_common_program(st->ctx->TessCtrlProgram._Current);
    assert(sttcp->Base.Target == GL_TESS_CONTROL_PROGRAM_NV);
 
-   st->tcp_variant = st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL,
-                                          &sttcp->tgsi, &sttcp->variants);
+   void *shader = st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL, &sttcp->tgsi,
+                                       &sttcp->variants)->driver_shader;
 
    st_reference_prog(st, &st->tcp, sttcp);
 
-   cso_set_tessctrl_shader_handle(st->cso_context,
-                                  st->tcp_variant->driver_shader);
+   cso_set_tessctrl_shader_handle(st->cso_context, shader);
 }
 
 
@@ -244,13 +241,12 @@ st_update_tep( struct st_context *st )
    sttep = st_common_program(st->ctx->TessEvalProgram._Current);
    assert(sttep->Base.Target == GL_TESS_EVALUATION_PROGRAM_NV);
 
-   st->tep_variant = st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL,
-                                          &sttep->tgsi, &sttep->variants);
+   void *shader = st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL, &sttep->tgsi,
+                                       &sttep->variants)->driver_shader;
 
    st_reference_prog(st, &st->tep, sttep);
 
-   cso_set_tesseval_shader_handle(st->cso_context,
-                                  st->tep_variant->driver_shader);
+   cso_set_tesseval_shader_handle(st->cso_context, shader);
 }
 
 
@@ -268,10 +264,10 @@ st_update_cp( struct st_context *st )
    stcp = st_compute_program(st->ctx->ComputeProgram._Current);
    assert(stcp->Base.Target == GL_COMPUTE_PROGRAM_NV);
 
-   st->cp_variant = st_get_cp_variant(st, &stcp->tgsi, &stcp->variants);
+   void *shader = st_get_cp_variant(st, &stcp->tgsi,
+                                    &stcp->variants)->driver_shader;
 
    st_reference_compprog(st, &st->cp, stcp);
 
-   cso_set_compute_shader_handle(st->cso_context,
-                                 st->cp_variant->driver_shader);
+   cso_set_compute_shader_handle(st->cso_context, shader);
 }

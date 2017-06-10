@@ -185,11 +185,6 @@ struct st_context
    struct st_compute_program *cp;   /**< Currently bound compute program */
 
    struct st_vp_variant *vp_variant;
-   struct st_fp_variant *fp_variant;
-   struct st_basic_variant *gp_variant;
-   struct st_basic_variant *tcp_variant;
-   struct st_basic_variant *tep_variant;
-   struct st_basic_variant *cp_variant;
 
    struct {
       struct pipe_resource *pixelmap_texture;
