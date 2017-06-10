@@ -4493,6 +4493,18 @@ struct gl_driver_flags
    /** gl_context::Color::LogicOp/ColorLogicOp/IndexLogicOp */
    uint64_t NewLogicOp;
 
+   /** gl_context::Multisample::Enabled */
+   uint64_t NewMultisampleEnable;
+
+   /** gl_context::Multisample::SampleAlphaTo* */
+   uint64_t NewSampleAlphaToXEnable;
+
+   /** gl_context::Multisample::SampleCoverage/SampleMaskValue */
+   uint64_t NewSampleMask;
+
+   /** gl_context::Multisample::(Min)SampleShading */
+   uint64_t NewSampleShading;
+
    /** gl_context::Stencil */
    uint64_t NewStencil;
 };

@@ -213,23 +213,12 @@ st_invalidate_state(struct gl_context * ctx)
       }
    }
 
-   if (new_state & _NEW_MULTISAMPLE) {
-      st->dirty |= ST_NEW_BLEND |
-                   ST_NEW_SAMPLE_MASK |
-                   ST_NEW_SAMPLE_SHADING |
-                   ST_NEW_RASTERIZER |
-                   ST_NEW_FS_STATE;
-   } else {
-      /* These set a subset of flags set by _NEW_MULTISAMPLE, so we only
-       * have to check them when _NEW_MULTISAMPLE isn't set.
-       */
-      if (new_state & (_NEW_LIGHT |
-                       _NEW_LINE |
-                       _NEW_POINT |
-                       _NEW_POLYGON |
-                       _NEW_TRANSFORM))
-         st->dirty |= ST_NEW_RASTERIZER;
-   }
+   if (new_state & (_NEW_LIGHT |
+                    _NEW_LINE |
+                    _NEW_POINT |
+                    _NEW_POLYGON |
+                    _NEW_TRANSFORM))
+      st->dirty |= ST_NEW_RASTERIZER;
 
    if (new_state & (_NEW_PROJECTION |
                     _NEW_TRANSFORM) &&
@@ -522,6 +511,19 @@ static void st_init_driver_flags(struct st_context *st)
    f->NewDepth = ST_NEW_DSA;
    f->NewLogicOp = ST_NEW_BLEND;
    f->NewStencil = ST_NEW_DSA;
+   f->NewMultisampleEnable = ST_NEW_BLEND | ST_NEW_RASTERIZER |
+                             ST_NEW_SAMPLE_MASK | ST_NEW_SAMPLE_SHADING;
+   f->NewSampleAlphaToXEnable = ST_NEW_BLEND;
+   f->NewSampleMask = ST_NEW_SAMPLE_MASK;
+   f->NewSampleShading = ST_NEW_SAMPLE_SHADING;
+
+   /* This depends on what the gallium driver wants. */
+   if (st->force_persample_in_shader) {
+      f->NewMultisampleEnable |= ST_NEW_FS_STATE;
+      f->NewSampleShading |= ST_NEW_FS_STATE;
+   } else {
+      f->NewSampleShading |= ST_NEW_RASTERIZER;
+   }
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
