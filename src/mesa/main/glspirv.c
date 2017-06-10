@@ -25,6 +25,8 @@
 
 #include "errors.h"
 
+#include "errors.h"
+
 #include "util/u_atomic.h"
 
 void
@@ -57,6 +59,47 @@ _mesa_shader_spirv_data_reference(struct gl_shader_spirv_data **dest,
 
    if (src)
       p_atomic_inc(&src->RefCount);
+}
+
+void
+_mesa_spirv_shader_binary(struct gl_context *ctx,
+                          unsigned n, struct gl_shader **shaders,
+                          const void* binary, size_t length)
+{
+   struct gl_spirv_module *module;
+   struct gl_shader_spirv_data *spirv_data;
+
+   assert(length >= 0);
+
+   module = malloc(sizeof(*module) + length);
+   if (!module) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glShaderBinary");
+      return;
+   }
+
+   p_atomic_set(&module->RefCount, 0);
+   module->Length = length;
+   memcpy(&module->Binary[0], binary, length);
+
+   for (int i = 0; i < n; ++i) {
+      struct gl_shader *sh = shaders[i];
+
+      spirv_data = rzalloc(NULL, struct gl_shader_spirv_data);
+      _mesa_shader_spirv_data_reference(&sh->spirv_data, spirv_data);
+      _mesa_spirv_module_reference(&spirv_data->SpirVModule, module);
+
+      sh->CompileStatus = compile_failure;
+
+      free((void *)sh->Source);
+      sh->Source = NULL;
+      free((void *)sh->FallbackSource);
+      sh->FallbackSource = NULL;
+
+      ralloc_free(sh->ir);
+      sh->ir = NULL;
+      ralloc_free(sh->symbols);
+      sh->symbols = NULL;
+   }
 }
 
 void GLAPIENTRY

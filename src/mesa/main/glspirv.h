@@ -71,6 +71,11 @@ void
 _mesa_shader_spirv_data_reference(struct gl_shader_spirv_data **dest,
                                   struct gl_shader_spirv_data *src);
 
+void
+_mesa_spirv_shader_binary(struct gl_context *ctx,
+                          unsigned n, struct gl_shader **shaders,
+                          const void* binary, size_t length);
+
 /**
  * \name API functions
  */
