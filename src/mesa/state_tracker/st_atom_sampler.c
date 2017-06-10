@@ -107,10 +107,6 @@ st_convert_sampler(const struct st_context *st,
                    const struct gl_sampler_object *msamp,
                    struct pipe_sampler_state *sampler)
 {
-   GLenum texBaseFormat;
-
-   texBaseFormat = _mesa_texture_base_format(texobj);
-
    memset(sampler, 0, sizeof(*sampler));
    sampler->wrap_s = gl_wrap_xlate(msamp->WrapS);
    sampler->wrap_t = gl_wrap_xlate(msamp->WrapT);
@@ -149,6 +145,7 @@ st_convert_sampler(const struct st_context *st,
        msamp->BorderColor.ui[2] ||
        msamp->BorderColor.ui[3]) {
       const GLboolean is_integer = texobj->_IsIntegerFormat;
+      GLenum texBaseFormat = _mesa_base_tex_image(texobj)->_BaseFormat;
 
       if (st->apply_texture_swizzle_to_border_color) {
          const struct st_texture_object *stobj = st_texture_object_const(texobj);
@@ -195,11 +192,14 @@ st_convert_sampler(const struct st_context *st,
                               0 : (GLuint) msamp->MaxAnisotropy);
 
    /* If sampling a depth texture and using shadow comparison */
-   if ((texBaseFormat == GL_DEPTH_COMPONENT ||
-        (texBaseFormat == GL_DEPTH_STENCIL && !texobj->StencilSampling)) &&
-       msamp->CompareMode == GL_COMPARE_R_TO_TEXTURE) {
-      sampler->compare_mode = PIPE_TEX_COMPARE_R_TO_TEXTURE;
-      sampler->compare_func = st_compare_func_to_pipe(msamp->CompareFunc);
+   if (msamp->CompareMode == GL_COMPARE_R_TO_TEXTURE) {
+      GLenum texBaseFormat = _mesa_base_tex_image(texobj)->_BaseFormat;
+
+      if (texBaseFormat == GL_DEPTH_COMPONENT ||
+          (texBaseFormat == GL_DEPTH_STENCIL && !texobj->StencilSampling)) {
+         sampler->compare_mode = PIPE_TEX_COMPARE_R_TO_TEXTURE;
+         sampler->compare_func = st_compare_func_to_pipe(msamp->CompareFunc);
+      }
    }
 
    /* Only set the seamless cube map texture parameter because the per-context
