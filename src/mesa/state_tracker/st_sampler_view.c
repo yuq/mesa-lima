@@ -281,31 +281,28 @@ get_texture_format_swizzle(const struct st_context *st,
                            const struct st_texture_object *stObj,
                            unsigned glsl_version)
 {
-   GLenum baseFormat = _mesa_texture_base_format(&stObj->base);
+   GLenum baseFormat = _mesa_base_tex_image(&stObj->base)->_BaseFormat;
    unsigned tex_swizzle;
+   GLenum depth_mode = stObj->base.DepthMode;
 
-   if (baseFormat != GL_NONE) {
-      GLenum depth_mode = stObj->base.DepthMode;
-      /* In ES 3.0, DEPTH_TEXTURE_MODE is expected to be GL_RED for textures
-       * with depth component data specified with a sized internal format.
-       */
-      if (_mesa_is_gles3(st->ctx) &&
-          util_format_is_depth_or_stencil(stObj->pt->format)) {
-         const struct gl_texture_image *firstImage =
-            _mesa_base_tex_image(&stObj->base);
-         if (firstImage->InternalFormat != GL_DEPTH_COMPONENT &&
-             firstImage->InternalFormat != GL_DEPTH_STENCIL &&
-             firstImage->InternalFormat != GL_STENCIL_INDEX)
-            depth_mode = GL_RED;
-      }
-      tex_swizzle = compute_texture_format_swizzle(baseFormat,
-                                                   depth_mode,
-                                                   stObj->pt->format,
-                                                   glsl_version);
+   /* In ES 3.0, DEPTH_TEXTURE_MODE is expected to be GL_RED for textures
+    * with depth component data specified with a sized internal format.
+    */
+   if (_mesa_is_gles3(st->ctx) &&
+       (baseFormat == GL_DEPTH_COMPONENT ||
+        baseFormat == GL_DEPTH_STENCIL ||
+        baseFormat == GL_STENCIL_INDEX)) {
+      const struct gl_texture_image *firstImage =
+         _mesa_base_tex_image(&stObj->base);
+      if (firstImage->InternalFormat != GL_DEPTH_COMPONENT &&
+          firstImage->InternalFormat != GL_DEPTH_STENCIL &&
+          firstImage->InternalFormat != GL_STENCIL_INDEX)
+         depth_mode = GL_RED;
    }
-   else {
-      tex_swizzle = SWIZZLE_XYZW;
-   }
+   tex_swizzle = compute_texture_format_swizzle(baseFormat,
+                                                depth_mode,
+                                                stObj->pt->format,
+                                                glsl_version);
 
    /* Combine the texture format swizzle with user's swizzle */
    return swizzle_swizzle(stObj->base._Swizzle, tex_swizzle);
