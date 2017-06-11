@@ -373,10 +373,11 @@ st_create_texture_sampler_view_from_stobj(struct st_context *st,
 					  enum pipe_format format,
                                           bool glsl130_or_later)
 {
+   /* There is no need to clear this structure (consider CPU overhead). */
    struct pipe_sampler_view templ;
    unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl130_or_later);
 
-   u_sampler_view_default_template(&templ, stObj->pt, format);
+   templ.format = format;
 
    templ.u.tex.first_level = stObj->base.MinLevel + stObj->base.BaseLevel;
    templ.u.tex.last_level = last_level(stObj);
