@@ -33,6 +33,8 @@ lima_screen_destroy(struct pipe_screen *pscreen)
 {
    struct lima_screen *screen = lima_screen(pscreen);
 
+   slab_destroy_parent(&screen->transfer_pool);
+
    lima_device_delete(screen->dev);
    FREE(screen);
 }
@@ -471,6 +473,8 @@ lima_screen_create(int fd)
    screen->base.is_format_supported = lima_screen_is_format_supported;
 
    lima_resource_screen_init(screen);
+
+   slab_create_parent(&screen->transfer_pool, sizeof(struct lima_transfer), 16);
 
    screen->refcnt = 1;
 
