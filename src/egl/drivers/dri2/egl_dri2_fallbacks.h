@@ -68,6 +68,7 @@ dri2_fallback_swap_buffers_with_damage(_EGLDriver *drv, _EGLDisplay *dpy,
                                       const EGLint *rects, EGLint n_rects)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   dri2_dpy->vtbl->set_damage_region(drv, dpy, surf, rects, n_rects);
    return dri2_dpy->vtbl->swap_buffers(drv, dpy, surf);
 }
 
