@@ -25,6 +25,8 @@
 #ifndef H_LIMA_CONTEXT
 #define H_LIMA_CONTEXT
 
+#include "util/slab.h"
+
 #include "pipe/p_context.h"
 
 struct pipe_screen;
@@ -33,6 +35,8 @@ struct lima_context {
    struct pipe_context base;
 
    struct u_upload_mgr *uploader;
+
+   struct slab_child_pool transfer_pool;
 };
 
 struct lima_depth_stencil_alpha_state {

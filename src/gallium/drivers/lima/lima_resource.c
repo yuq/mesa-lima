@@ -150,9 +150,81 @@ lima_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
    FREE(surf);
 }
 
+static void *
+lima_transfer_map(struct pipe_context *pctx,
+                  struct pipe_resource *pres,
+                  unsigned level,
+                  unsigned usage,
+                  const struct pipe_box *box,
+                  struct pipe_transfer **pptrans)
+{
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_resource *res = lima_resource(pres);
+   struct lima_transfer *trans;
+   struct pipe_transfer *ptrans;
+   void *map;
+   unsigned bo_op = 0;
+
+   if (usage & PIPE_TRANSFER_READ)
+      bo_op |= LIMA_BO_WAIT_FLAG_READ;
+   if (usage & PIPE_TRANSFER_WRITE)
+      bo_op |= LIMA_BO_WAIT_FLAG_WRITE;
+
+   if (lima_bo_wait(res->bo, bo_op, 1000000000, true))
+      return NULL;
+
+   map = lima_bo_map(res->bo);
+   if (!map)
+      return NULL;
+
+   trans = slab_alloc(&ctx->transfer_pool);
+   if (!trans)
+      return NULL;
+
+   memset(trans, 0, sizeof(*trans));
+   ptrans = &trans->base;
+
+   pipe_resource_reference(&ptrans->resource, pres);
+   ptrans->level = level;
+   ptrans->usage = usage;
+   ptrans->box = *box;
+   ptrans->stride = util_format_get_stride(pres->format, pres->width0);
+   ptrans->layer_stride = ptrans->stride * util_format_get_nblocksy(pres->format, pres->height0);
+
+   *pptrans = ptrans;
+
+   return map + box->z * ptrans->layer_stride +
+      box->y / util_format_get_blockheight(pres->format) * ptrans->stride +
+      box->x / util_format_get_blockwidth(pres->format) *
+      util_format_get_blocksize(pres->format);
+}
+
+static void
+lima_transfer_flush_region(struct pipe_context *pctx,
+                           struct pipe_transfer *ptrans,
+                           const struct pipe_box *box)
+{
+   
+}
+
+static void
+lima_transfer_unmap(struct pipe_context *pctx,
+                    struct pipe_transfer *ptrans)
+{
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_transfer *trans = lima_transfer(ptrans);
+
+   pipe_resource_reference(&ptrans->resource, NULL);
+   slab_free(&ctx->transfer_pool, trans);
+}
+
 void
 lima_resource_context_init(struct lima_context *ctx)
 {
    ctx->base.create_surface = lima_surface_create;
    ctx->base.surface_destroy = lima_surface_destroy;
+
+   ctx->base.transfer_map = lima_transfer_map;
+   ctx->base.transfer_flush_region = lima_transfer_flush_region;
+   ctx->base.transfer_unmap = lima_transfer_unmap;
 }
