@@ -31,8 +31,15 @@ lima_clear(struct pipe_context *pctx, unsigned buffers,
    printf("dummy %s\n", __func__);
 }
 
+static void
+lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
+{
+   printf("dummy %s\n", __func__);
+}
+
 void
 lima_draw_init(struct lima_context *ctx)
 {
    ctx->base.clear = lima_clear;
+   ctx->base.draw_vbo = lima_draw_vbo;
 }
