@@ -25,6 +25,8 @@
 #ifndef H_LIMA_SCREEN
 #define H_LIMA_SCREEN
 
+#include "util/slab.h"
+
 #include "pipe/p_screen.h"
 
 #include <lima.h>
@@ -37,6 +39,8 @@ struct lima_screen {
 
    lima_device_handle dev;
    int fd;
+
+   struct slab_parent_pool transfer_pool;
 };
 
 static inline struct lima_screen *
