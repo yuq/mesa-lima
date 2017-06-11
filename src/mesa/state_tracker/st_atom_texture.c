@@ -58,7 +58,7 @@
 void
 st_update_single_texture(struct st_context *st,
                          struct pipe_sampler_view **sampler_view,
-                         GLuint texUnit, unsigned glsl_version)
+                         GLuint texUnit, bool glsl130_or_later)
 {
    struct gl_context *ctx = st->ctx;
    const struct gl_sampler_object *samp;
@@ -88,12 +88,12 @@ st_update_single_texture(struct st_context *st,
    /* Check a few pieces of state outside the texture object to see if we
     * need to force revalidation.
     */
-   if (stObj->prev_glsl_version != glsl_version ||
+   if (stObj->prev_glsl130_or_later != glsl130_or_later ||
        stObj->prev_sRGBDecode != samp->sRGBDecode) {
 
       st_texture_release_all_sampler_views(st, stObj);
 
-      stObj->prev_glsl_version = glsl_version;
+      stObj->prev_glsl130_or_later = glsl130_or_later;
       stObj->prev_sRGBDecode = samp->sRGBDecode;
    }
 
@@ -102,7 +102,8 @@ st_update_single_texture(struct st_context *st,
          stObj->pt->screen->resource_changed(stObj->pt->screen, stObj->pt);
 
    *sampler_view =
-      st_get_texture_sampler_view_from_stobj(st, stObj, samp, glsl_version);
+      st_get_texture_sampler_view_from_stobj(st, stObj, samp,
+                                             glsl130_or_later);
 }
 
 
@@ -125,17 +126,18 @@ update_textures(struct st_context *st,
 
    unsigned num_textures = 0;
 
+   /* prog->sh.data is NULL if it's ARB_fragment_program */
+   bool glsl130 = (prog->sh.data ? prog->sh.data->Version : 0) >= 130;
+
    /* loop over sampler units (aka tex image units) */
    for (unit = 0; samplers_used || unit < old_max;
         unit++, samplers_used >>= 1) {
       struct pipe_sampler_view *sampler_view = NULL;
 
       if (samplers_used & 1) {
-         /* prog->sh.data is NULL if it's ARB_fragment_program */
-         unsigned glsl_version = prog->sh.data ? prog->sh.data->Version : 0;
          const GLuint texUnit = prog->SamplerUnits[unit];
 
-         st_update_single_texture(st, &sampler_view, texUnit, glsl_version);
+         st_update_single_texture(st, &sampler_view, texUnit, glsl130);
          num_textures = unit + 1;
       }
 

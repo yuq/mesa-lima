@@ -190,7 +190,7 @@ swizzle_swizzle(unsigned swizzle1, unsigned swizzle2)
 static unsigned
 compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
                                enum pipe_format actualFormat,
-                               unsigned glsl_version)
+                               bool glsl130_or_later)
 {
    switch (baseFormat) {
    case GL_RGBA:
@@ -257,7 +257,7 @@ compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
           * BTW, it's required that sampler views are updated when
           * shaders change (check_sampler_swizzle takes care of that).
           */
-         if (glsl_version && glsl_version >= 130)
+         if (glsl130_or_later)
             return SWIZZLE_XXXX;
          else
             return MAKE_SWIZZLE4(SWIZZLE_ZERO, SWIZZLE_ZERO,
@@ -279,7 +279,7 @@ compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
 static unsigned
 get_texture_format_swizzle(const struct st_context *st,
                            const struct st_texture_object *stObj,
-                           unsigned glsl_version)
+                           bool glsl130_or_later)
 {
    GLenum baseFormat = _mesa_base_tex_image(&stObj->base)->_BaseFormat;
    unsigned tex_swizzle;
@@ -302,7 +302,7 @@ get_texture_format_swizzle(const struct st_context *st,
    tex_swizzle = compute_texture_format_swizzle(baseFormat,
                                                 depth_mode,
                                                 stObj->pt->format,
-                                                glsl_version);
+                                                glsl130_or_later);
 
    /* Combine the texture format swizzle with user's swizzle */
    return swizzle_swizzle(stObj->base._Swizzle, tex_swizzle);
@@ -318,9 +318,10 @@ get_texture_format_swizzle(const struct st_context *st,
 MAYBE_UNUSED static boolean
 check_sampler_swizzle(const struct st_context *st,
                       const struct st_texture_object *stObj,
-		      const struct pipe_sampler_view *sv, unsigned glsl_version)
+                      const struct pipe_sampler_view *sv,
+                      bool glsl130_or_later)
 {
-   unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl_version);
+   unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl130_or_later);
 
    return ((sv->swizzle_r != GET_SWZ(swizzle, 0)) ||
            (sv->swizzle_g != GET_SWZ(swizzle, 1)) ||
@@ -393,10 +394,10 @@ static struct pipe_sampler_view *
 st_create_texture_sampler_view_from_stobj(struct st_context *st,
 					  struct st_texture_object *stObj,
 					  enum pipe_format format,
-                                          unsigned glsl_version)
+                                          bool glsl130_or_later)
 {
    struct pipe_sampler_view templ;
-   unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl_version);
+   unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl130_or_later);
 
    u_sampler_view_default_template(&templ, stObj->pt, format);
 
@@ -425,7 +426,7 @@ struct pipe_sampler_view *
 st_get_texture_sampler_view_from_stobj(struct st_context *st,
                                        struct st_texture_object *stObj,
                                        const struct gl_sampler_object *samp,
-                                       unsigned glsl_version)
+                                       bool glsl130_or_later)
 {
    struct pipe_sampler_view **sv;
 
@@ -441,7 +442,7 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
        */
       MAYBE_UNUSED struct pipe_sampler_view *view = *sv;
       assert(stObj->pt == view->texture);
-      assert(!check_sampler_swizzle(st, stObj, view, glsl_version));
+      assert(!check_sampler_swizzle(st, stObj, view, glsl130_or_later));
       assert(get_sampler_view_format(st, stObj, samp) == view->format);
       assert(gl_target_to_pipe(stObj->base.Target) == view->target);
       assert(stObj->base.MinLevel + stObj->base.BaseLevel ==
@@ -458,7 +459,7 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
       enum pipe_format format = get_sampler_view_format(st, stObj, samp);
 
       *sv = st_create_texture_sampler_view_from_stobj(st, stObj,
-                                                      format, glsl_version);
+                                                      format, glsl130_or_later);
 
    }
 
