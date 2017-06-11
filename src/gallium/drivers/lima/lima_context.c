@@ -25,6 +25,7 @@
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
 
+#include "lima_screen.h"
 #include "lima_context.h"
 #include "lima_resource.h"
 
@@ -36,12 +37,15 @@ lima_context_destroy(struct pipe_context *pctx)
    if (ctx->uploader)
       u_upload_destroy(ctx->uploader);
 
+   slab_destroy_child(&ctx->transfer_pool);
+
    FREE(ctx);
 }
 
 struct pipe_context *
 lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
+   struct lima_screen *screen = lima_screen(pscreen);
    struct lima_context *ctx;
 
    ctx = CALLOC_STRUCT(lima_context);
@@ -59,6 +63,8 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    ctx->uploader = u_upload_create_default(&ctx->base);
    ctx->base.stream_uploader = ctx->uploader;
    ctx->base.const_uploader = ctx->uploader;
+
+   slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 
    return &ctx->base;
 }

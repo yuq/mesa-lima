@@ -43,6 +43,10 @@ struct lima_surface {
    struct pipe_surface base;
 };
 
+struct lima_transfer {
+   struct pipe_transfer base;
+};
+
 static inline struct lima_resource *
 lima_resource(struct pipe_resource *res)
 {
@@ -53,6 +57,12 @@ static inline struct lima_surface *
 lima_surface(struct pipe_surface *surf)
 {
    return (struct lima_surface *)surf;
+}
+
+static inline struct lima_transfer *
+lima_transfer(struct pipe_transfer *trans)
+{
+   return (struct lima_transfer *)trans;
 }
 
 void
