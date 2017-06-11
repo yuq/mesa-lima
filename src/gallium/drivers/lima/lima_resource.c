@@ -204,7 +204,7 @@ lima_transfer_flush_region(struct pipe_context *pctx,
                            struct pipe_transfer *ptrans,
                            const struct pipe_box *box)
 {
-   
+   printf("dummy %s\n", __func__);
 }
 
 static void
@@ -218,6 +218,12 @@ lima_transfer_unmap(struct pipe_context *pctx,
    slab_free(&ctx->transfer_pool, trans);
 }
 
+static void
+lima_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
+{
+   printf("dummy %s\n", __func__);
+}
+
 void
 lima_resource_context_init(struct lima_context *ctx)
 {
@@ -227,4 +233,6 @@ lima_resource_context_init(struct lima_context *ctx)
    ctx->base.transfer_map = lima_transfer_map;
    ctx->base.transfer_flush_region = lima_transfer_flush_region;
    ctx->base.transfer_unmap = lima_transfer_unmap;
+
+   ctx->base.flush_resource = lima_flush_resource;
 }
