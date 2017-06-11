@@ -2469,23 +2469,6 @@ st_finalize_texture(struct gl_context *ctx,
          stObj->lastLevel = stObj->base._MaxLevel;
    }
 
-   if (tObj->Target == GL_TEXTURE_BUFFER) {
-      struct st_buffer_object *st_obj = st_buffer_object(tObj->BufferObject);
-
-      if (!st_obj) {
-         pipe_resource_reference(&stObj->pt, NULL);
-         st_texture_release_all_sampler_views(st, stObj);
-         return GL_TRUE;
-      }
-
-      if (st_obj->buffer != stObj->pt) {
-         pipe_resource_reference(&stObj->pt, st_obj->buffer);
-         st_texture_release_all_sampler_views(st, stObj);
-      }
-      return GL_TRUE;
-
-   }
-
    firstImage = st_texture_image_const(stObj->base.Image[cubeMapFace][stObj->base.BaseLevel]);
    assert(firstImage);
 
@@ -2923,9 +2906,10 @@ st_NewTextureHandle(struct gl_context *ctx, struct gl_texture_object *texObj,
          return 0;
 
       st_convert_sampler(st, texObj, sampObj, &sampler);
+      view = st_get_texture_sampler_view_from_stobj(st, stObj, sampObj, 0);
+   } else {
+      view = st_get_buffer_sampler_view_from_stobj(st, stObj);
    }
-
-   view = st_get_texture_sampler_view_from_stobj(st, stObj, sampObj, 0);
 
    return pipe->create_texture_handle(pipe, view, &sampler);
 }

@@ -73,6 +73,11 @@ st_update_single_texture(struct st_context *st,
 
    stObj = st_texture_object(texObj);
 
+   if (unlikely(texObj->Target == GL_TEXTURE_BUFFER)) {
+      *sampler_view = st_get_buffer_sampler_view_from_stobj(st, stObj);
+      return;
+   }
+
    retval = st_finalize_texture(ctx, st->pipe, texObj, 0);
    if (!retval) {
       /* out of mem */
