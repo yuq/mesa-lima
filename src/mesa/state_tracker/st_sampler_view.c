@@ -189,49 +189,27 @@ swizzle_swizzle(unsigned swizzle1, unsigned swizzle2)
  */
 static unsigned
 compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
-                               enum pipe_format actualFormat,
                                bool glsl130_or_later)
 {
    switch (baseFormat) {
    case GL_RGBA:
       return SWIZZLE_XYZW;
    case GL_RGB:
-      if (util_format_has_alpha(actualFormat))
-         return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_ONE);
-      else
-         return SWIZZLE_XYZW;
+      return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_ONE);
    case GL_RG:
-      if (util_format_get_nr_components(actualFormat) > 2)
-         return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_ZERO, SWIZZLE_ONE);
-      else
-         return SWIZZLE_XYZW;
+      return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_ZERO, SWIZZLE_ONE);
    case GL_RED:
-      if (util_format_get_nr_components(actualFormat) > 1)
-         return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_ZERO,
-                              SWIZZLE_ZERO, SWIZZLE_ONE);
-      else
-         return SWIZZLE_XYZW;
+      return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_ZERO,
+                           SWIZZLE_ZERO, SWIZZLE_ONE);
    case GL_ALPHA:
-      if (util_format_get_nr_components(actualFormat) > 1)
-         return MAKE_SWIZZLE4(SWIZZLE_ZERO, SWIZZLE_ZERO,
-                              SWIZZLE_ZERO, SWIZZLE_W);
-      else
-         return SWIZZLE_XYZW;
+      return MAKE_SWIZZLE4(SWIZZLE_ZERO, SWIZZLE_ZERO,
+                           SWIZZLE_ZERO, SWIZZLE_W);
    case GL_LUMINANCE:
-      if (util_format_get_nr_components(actualFormat) > 1)
-         return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_ONE);
-      else
-         return SWIZZLE_XYZW;
+      return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_ONE);
    case GL_LUMINANCE_ALPHA:
-      if (util_format_get_nr_components(actualFormat) > 2)
-         return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_W);
-      else
-         return SWIZZLE_XYZW;
+      return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_W);
    case GL_INTENSITY:
-      if (util_format_get_nr_components(actualFormat) > 1)
-         return SWIZZLE_XXXX;
-      else
-         return SWIZZLE_XYZW;
+      return SWIZZLE_XXXX;
    case GL_STENCIL_INDEX:
    case GL_DEPTH_STENCIL:
    case GL_DEPTH_COMPONENT:
@@ -301,7 +279,6 @@ get_texture_format_swizzle(const struct st_context *st,
    }
    tex_swizzle = compute_texture_format_swizzle(baseFormat,
                                                 depth_mode,
-                                                stObj->pt->format,
                                                 glsl130_or_later);
 
    /* Combine the texture format swizzle with user's swizzle */
