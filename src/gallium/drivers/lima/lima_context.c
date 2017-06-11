@@ -42,6 +42,13 @@ lima_context_destroy(struct pipe_context *pctx)
    FREE(ctx);
 }
 
+static void
+lima_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
+                unsigned flags)
+{
+   printf("dummy %s\n", __func__);
+}
+
 struct pipe_context *
 lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
@@ -54,6 +61,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    ctx->base.screen = pscreen;
    ctx->base.destroy = lima_context_destroy;
+   ctx->base.flush = lima_pipe_flush;
 
    lima_resource_context_init(ctx);
    lima_state_init(ctx);
