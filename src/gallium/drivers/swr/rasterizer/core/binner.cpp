@@ -80,12 +80,12 @@ INLINE void ProcessAttributes(
         if (IsSwizzledT::value)
         {
             SWR_ATTRIB_SWIZZLE attribSwizzle = backendState.swizzleMap[i];
-            inputSlot = VERTEX_ATTRIB_START_SLOT + attribSwizzle.sourceAttrib;
+            inputSlot = backendState.vertexAttribOffset + attribSwizzle.sourceAttrib;
 
         }
         else
         {
-            inputSlot = VERTEX_ATTRIB_START_SLOT + i;
+            inputSlot = backendState.vertexAttribOffset + i;
         }
 
         __m128 attrib[3];    // triangle attribs (always 4 wide)

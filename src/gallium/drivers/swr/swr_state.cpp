@@ -351,6 +351,7 @@ swr_create_vs_state(struct pipe_context *pipe,
       for (uint32_t i = 0; i < MAX_SO_STREAMS; i++) {
         swr_vs->soState.streamNumEntries[i] =
              _mm_popcnt_u32(swr_vs->soState.streamMasks[i]);
+        swr_vs->soState.vertexAttribOffset[i] = VERTEX_ATTRIB_START_SLOT; // TODO: optimize
        }
    }
 
@@ -1747,6 +1748,7 @@ swr_update_derived(struct pipe_context *pipe,
       &ctx->vs->info.base;
    backendState.readRenderTargetArrayIndex = pLastFE->writes_layer;
    backendState.readViewportArrayIndex = pLastFE->writes_viewport_index;
+   backendState.vertexAttribOffset = VERTEX_ATTRIB_START_SLOT; // TODO: optimize
 
    SwrSetBackendState(ctx->swrContext, &backendState);
 

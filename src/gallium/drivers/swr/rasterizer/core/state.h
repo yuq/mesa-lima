@@ -673,6 +673,9 @@ struct SWR_STREAMOUT_STATE
     // Number of attributes, including position, per vertex that are streamed out.
     // This should match number of bits in stream mask.
     uint32_t streamNumEntries[MAX_SO_STREAMS];
+
+    // Offset to the start of the attributes of the input vertices, in simdvector units
+    uint32_t vertexAttribOffset[MAX_SO_STREAMS];
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -718,6 +721,9 @@ struct SWR_GS_STATE
     // when single stream is enabled, singleStreamID dictates which stream is being output.
     // field ignored if isSingleStream is false
     uint32_t singleStreamID;
+
+    // Offset to the start of the attributes of the input vertices, in simdvector units
+    uint32_t vertexAttribOffset;
 };
 
 
@@ -773,6 +779,9 @@ struct SWR_TS_STATE
     uint32_t                numHsInputAttribs;
     uint32_t                numHsOutputAttribs;
     uint32_t                numDsOutputAttribs;
+
+    // Offset to the start of the attributes of the input vertices, in simdvector units
+    uint32_t vertexAttribOffset;
 };
 
 // output merger state
@@ -1047,6 +1056,9 @@ struct SWR_BACKEND_STATE
 
     bool readRenderTargetArrayIndex;    // Forward render target array index from last FE stage to the backend
     bool readViewportArrayIndex;        // Read viewport array index from last FE stage during binning
+    
+	// Offset to the start of the attributes of the input vertices, in simdvector units
+    uint32_t vertexAttribOffset;
 };
 
 

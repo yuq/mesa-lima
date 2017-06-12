@@ -489,7 +489,7 @@ public:
             // Compute absolute attrib slot in vertex array
             uint32_t mapSlot = backendState.swizzleEnable ? backendState.swizzleMap[slot].sourceAttrib : slot;
             maxSlot = std::max<int32_t>(maxSlot, mapSlot);
-            uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + mapSlot;
+            uint32_t inputSlot = backendState.vertexAttribOffset + mapSlot;
 
             pa.Assemble(inputSlot, tmpVector);
 
@@ -625,10 +625,10 @@ public:
             }
 
             // transpose attribs
-            pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_ATTRIB_START_SLOT]) + sizeof(float) * inputPrim;
+            pBase = (uint8_t*)(&vertices[0].attrib[backendState.vertexAttribOffset]) + sizeof(float) * inputPrim;
             for (uint32_t attrib = 0; attrib < numAttribs; ++attrib)
             {
-                uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + attrib;
+                uint32_t attribSlot = backendState.vertexAttribOffset + attrib;
                 for (uint32_t c = 0; c < 4; ++c)
                 {
 #if USE_SIMD16_FRONTEND
@@ -746,7 +746,7 @@ public:
             // Compute absolute attrib slot in vertex array
             uint32_t mapSlot = backendState.swizzleEnable ? backendState.swizzleMap[slot].sourceAttrib : slot;
             maxSlot = std::max<int32_t>(maxSlot, mapSlot);
-            uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + mapSlot;
+            uint32_t inputSlot = backendState.vertexAttribOffset + mapSlot;
 
             pa.Assemble_simd16(inputSlot, tmpVector);
 
@@ -877,10 +877,10 @@ public:
             }
 
             // transpose attribs
-            pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_ATTRIB_START_SLOT]) + sizeof(float) * inputPrim;
+            pBase = (uint8_t*)(&vertices[0].attrib[backendState.vertexAttribOffset]) + sizeof(float) * inputPrim;
             for (uint32_t attrib = 0; attrib < numAttribs; ++attrib)
             {
-                uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + attrib;
+                uint32_t attribSlot = backendState.vertexAttribOffset + attrib;
                 for (uint32_t c = 0; c < 4; ++c)
                 {
                     simdscalar temp = _simd_mask_i32gather_ps(_simd_setzero_ps(), (const float *)pBase, vOffsets, vMask, 1);
@@ -1230,6 +1230,8 @@ private:
         uint32_t numInAttribs,          // number of attributes per vertex.
         float *pOutVerts)               // array of output positions. We'll write our new intersection point at i*4.
     {
+        uint32_t vertexAttribOffset = this->state.backendState.vertexAttribOffset;
+
         // compute interpolation factor
         simdscalar t;
         switch (ClippingPlane)
@@ -1263,7 +1265,7 @@ private:
         // interpolate attributes and store
         for (uint32_t a = 0; a < numInAttribs; ++a)
         {
-            uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+            uint32_t attribSlot = vertexAttribOffset + a;
             for (uint32_t c = 0; c < 4; ++c)
             {
                 simdscalar vAttrib0 = GatherComponent(pInVerts, attribSlot, vActiveMask, s, c);
@@ -1312,6 +1314,8 @@ private:
         uint32_t numInAttribs,          // number of attributes per vertex.
         float *pOutVerts)               // array of output positions. We'll write our new intersection point at i*4.
     {
+        uint32_t vertexAttribOffset = this->state.backendState.vertexAttribOffset;
+
         // compute interpolation factor
         simd16scalar t;
         switch (ClippingPlane)
@@ -1345,7 +1349,7 @@ private:
         // interpolate attributes and store
         for (uint32_t a = 0; a < numInAttribs; ++a)
         {
-            uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+            uint32_t attribSlot = vertexAttribOffset + a;
             for (uint32_t c = 0; c < 4; ++c)
             {
                 simd16scalar vAttrib0 = GatherComponent(pInVerts, attribSlot, vActiveMask, s, c);
@@ -1421,6 +1425,8 @@ private:
     template<SWR_CLIPCODES ClippingPlane>
     simdscalari ClipTriToPlane(const float* pInVerts, const simdscalari& vNumInPts, uint32_t numInAttribs, float* pOutVerts)
     {
+        uint32_t vertexAttribOffset = this->state.backendState.vertexAttribOffset;
+
         simdscalari vCurIndex = _simd_setzero_si();
         simdscalari vOutIndex = _simd_setzero_si();
         simdscalar vActiveMask = _simd_castsi_ps(_simd_cmplt_epi32(vCurIndex, vNumInPts));
@@ -1461,7 +1467,7 @@ private:
                 // store attribs
                 for (uint32_t a = 0; a < numInAttribs; ++a)
                 {
-                    uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+                    uint32_t attribSlot = vertexAttribOffset + a;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         simdscalar vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
@@ -1515,6 +1521,8 @@ private:
     template<SWR_CLIPCODES ClippingPlane>
     simd16scalari ClipTriToPlane(const float* pInVerts, const simd16scalari& vNumInPts, uint32_t numInAttribs, float* pOutVerts)
     {
+        uint32_t vertexAttribOffset = this->state.backendState.vertexAttribOffset;
+
         simd16scalari vCurIndex = _simd16_setzero_si();
         simd16scalari vOutIndex = _simd16_setzero_si();
         simd16scalar vActiveMask = _simd16_castsi_ps(_simd16_cmplt_epi32(vCurIndex, vNumInPts));
@@ -1555,7 +1563,7 @@ private:
                 // store attribs
                 for (uint32_t a = 0; a < numInAttribs; ++a)
                 {
-                    uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+                    uint32_t attribSlot = vertexAttribOffset + a;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         simd16scalar vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
@@ -1609,6 +1617,8 @@ private:
     template<SWR_CLIPCODES ClippingPlane>
     simdscalari ClipLineToPlane(const float* pInVerts, const simdscalari& vNumInPts, uint32_t numInAttribs, float* pOutVerts)
     {
+        uint32_t vertexAttribOffset = this->state.backendState.vertexAttribOffset;
+
         simdscalari vCurIndex = _simd_setzero_si();
         simdscalari vOutIndex = _simd_setzero_si();
         simdscalar vActiveMask = _simd_castsi_ps(_simd_cmplt_epi32(vCurIndex, vNumInPts));
@@ -1646,7 +1656,7 @@ private:
                 // interpolate attributes and store
                 for (uint32_t a = 0; a < numInAttribs; ++a)
                 {
-                    uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+                    uint32_t attribSlot = vertexAttribOffset + a;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         simdscalar vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
@@ -1679,7 +1689,7 @@ private:
                 // interpolate attributes and store
                 for (uint32_t a = 0; a < numInAttribs; ++a)
                 {
-                    uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+                    uint32_t attribSlot = vertexAttribOffset + a;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         simdscalar vAttrib = GatherComponent(pInVerts, attribSlot, p_in, p, c);
@@ -1699,6 +1709,8 @@ private:
     template<SWR_CLIPCODES ClippingPlane>
     simd16scalari ClipLineToPlane(const float* pInVerts, const simd16scalari& vNumInPts, uint32_t numInAttribs, float* pOutVerts)
     {
+        uint32_t vertexAttribOffset = this->state.backendState.vertexAttribOffset;
+
         simd16scalari vCurIndex = _simd16_setzero_si();
         simd16scalari vOutIndex = _simd16_setzero_si();
         simd16scalar vActiveMask = _simd16_castsi_ps(_simd16_cmplt_epi32(vCurIndex, vNumInPts));
@@ -1736,7 +1748,7 @@ private:
                 // interpolate attributes and store
                 for (uint32_t a = 0; a < numInAttribs; ++a)
                 {
-                    uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+                    uint32_t attribSlot = vertexAttribOffset + a;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         simd16scalar vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
@@ -1769,7 +1781,7 @@ private:
                 // interpolate attributes and store
                 for (uint32_t a = 0; a < numInAttribs; ++a)
                 {
-                    uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+                    uint32_t attribSlot = vertexAttribOffset + a;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         simd16scalar vAttrib = GatherComponent(pInVerts, attribSlot, p_in, p, c);

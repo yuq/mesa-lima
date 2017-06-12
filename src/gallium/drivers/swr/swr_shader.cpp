@@ -551,6 +551,8 @@ BuilderSWR::CompileGS(struct swr_context *ctx, swr_jit_gs_key &key)
    pGS->isSingleStream = true;
    pGS->singleStreamID = 0;
 
+   pGS->vertexAttribOffset = VERTEX_ATTRIB_START_SLOT; // TODO: optimize
+
    struct swr_geometry_shader *gs = ctx->gs;
 
    LLVMValueRef inputs[PIPE_MAX_SHADER_INPUTS][TGSI_NUM_CHANNELS];
