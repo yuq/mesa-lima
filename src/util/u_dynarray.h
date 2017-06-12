@@ -107,7 +107,7 @@ util_dynarray_trim(struct util_dynarray *buf)
    if (buf->size != buf->capacity) {
       if (buf->size) {
          if (buf->mem_ctx) {
-            reralloc_size(buf->mem_ctx, buf->data, buf->size);
+            buf->data = reralloc_size(buf->mem_ctx, buf->data, buf->size);
          } else {
             buf->data = realloc(buf->data, buf->size);
          }
