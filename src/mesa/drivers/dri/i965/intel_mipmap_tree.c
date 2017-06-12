@@ -1595,13 +1595,8 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    const uint32_t alloc_flags =
       is_lossless_compressed ? 0 : BO_ALLOC_FOR_RENDER;
 
-   /* ISL has stricter set of alignment rules then the drm allocator.
-    * Therefore one can pass the ISL dimensions in terms of bytes instead of
-    * trying to recalculate based on different format block sizes.
-    */
-   buf->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "ccs-miptree",
-                                   buf->pitch, buf->size / buf->pitch,
-                                   1, I915_TILING_Y, &buf->pitch, alloc_flags);
+   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, "ccs-miptree", buf->size,
+                                I915_TILING_Y, buf->pitch, alloc_flags);
    if (!buf->bo) {
       free(buf);
       free(aux_state);
