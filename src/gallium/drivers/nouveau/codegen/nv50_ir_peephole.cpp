@@ -938,8 +938,9 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
       bld.setPosition(i, false);
 
       uint8_t size = i->getDef(0)->reg.size;
-      uint32_t mask = (1ULL << size) - 1;
-      assert(size <= 32);
+      uint8_t bitsize = size * 8;
+      uint32_t mask = (1ULL << bitsize) - 1;
+      assert(bitsize <= 32);
 
       uint64_t val = imm0.reg.data.u64;
       for (int8_t d = 0; i->defExists(d); ++d) {
@@ -947,7 +948,7 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          assert(def->reg.size == size);
 
          newi = bld.mkMov(def, bld.mkImm((uint32_t)(val & mask)), TYPE_U32);
-         val >>= size;
+         val >>= bitsize;
       }
       delete_Instruction(prog, i);
       break;
