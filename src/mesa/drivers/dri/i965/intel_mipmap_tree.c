@@ -1077,6 +1077,8 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
       return NULL;
 
    mt->target = target;
+   mt->level[0].level_x = image->tile_x;
+   mt->level[0].level_y = image->tile_y;
    mt->level[0].slice[0].x_offset = image->tile_x;
    mt->level[0].slice[0].y_offset = image->tile_y;
    mt->total_width += image->tile_x;
