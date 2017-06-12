@@ -1480,12 +1480,12 @@ anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
 
       /* Blorp likes to treat 2D_ARRAY and 3D the same. */
       uint32_t blorp_base_layer, blorp_layer_count;
-      if (view) {
-         blorp_base_layer = view->base_array_layer;
-         blorp_layer_count = view->array_len;
-      } else if (image->type == VK_IMAGE_TYPE_3D) {
+      if (image->type == VK_IMAGE_TYPE_3D) {
          blorp_base_layer = 0;
          blorp_layer_count = extent.depth;
+      } else if (view) {
+         blorp_base_layer = view->base_array_layer;
+         blorp_layer_count = view->array_len;
       } else {
          blorp_base_layer = subresourceRange->baseArrayLayer;
          blorp_layer_count = anv_get_layerCount(image, subresourceRange);
