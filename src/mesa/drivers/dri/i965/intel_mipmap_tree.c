@@ -27,6 +27,7 @@
 #include <GL/internal/dri_interface.h>
 
 #include "intel_batchbuffer.h"
+#include "intel_image.h"
 #include "intel_mipmap_tree.h"
 #include "intel_tex.h"
 #include "intel_blit.h"
@@ -992,6 +993,111 @@ intel_miptree_create_for_bo(struct brw_context *brw,
          }
       }
    }
+
+   return mt;
+}
+
+static struct intel_mipmap_tree *
+miptree_create_for_planar_image(struct brw_context *brw,
+                                __DRIimage *image, GLenum target)
+{
+   struct intel_image_format *f = image->planar_format;
+   struct intel_mipmap_tree *planar_mt;
+
+   for (int i = 0; i < f->nplanes; i++) {
+      const int index = f->planes[i].buffer_index;
+      const uint32_t dri_format = f->planes[i].dri_format;
+      const mesa_format format = driImageFormatToGLFormat(dri_format);
+      const uint32_t width = image->width >> f->planes[i].width_shift;
+      const uint32_t height = image->height >> f->planes[i].height_shift;
+
+      /* Disable creation of the texture's aux buffers because the driver
+       * exposes no EGL API to manage them. That is, there is no API for
+       * resolving the aux buffer's content to the main buffer nor for
+       * invalidating the aux buffer's content.
+       */
+      struct intel_mipmap_tree *mt =
+         intel_miptree_create_for_bo(brw, image->bo, format,
+                                     image->offsets[index],
+                                     width, height, 1,
+                                     image->strides[index],
+                                     MIPTREE_LAYOUT_DISABLE_AUX);
+      if (mt == NULL)
+         return NULL;
+
+      mt->target = target;
+      mt->total_width = width;
+      mt->total_height = height;
+
+      if (i == 0)
+         planar_mt = mt;
+      else
+         planar_mt->plane[i - 1] = mt;
+   }
+
+   return planar_mt;
+}
+
+struct intel_mipmap_tree *
+intel_miptree_create_for_dri_image(struct brw_context *brw,
+                                   __DRIimage *image, GLenum target)
+{
+   if (image->planar_format && image->planar_format->nplanes > 0)
+      return miptree_create_for_planar_image(brw, image, target);
+
+   mesa_format format = image->format;
+
+   if (!brw->ctx.TextureFormatSupported[format]) {
+      /* The texture storage paths in core Mesa detect if the driver does not
+       * support the user-requested format, and then searches for a
+       * fallback format. The DRIimage code bypasses core Mesa, though. So we
+       * do the fallbacks here for important formats.
+       *
+       * We must support DRM_FOURCC_XBGR8888 textures because the Android
+       * framework produces HAL_PIXEL_FORMAT_RGBX8888 winsys surfaces, which
+       * the Chrome OS compositor consumes as dma_buf EGLImages.
+       */
+      format = _mesa_format_fallback_rgbx_to_rgba(format);
+   }
+
+   if (!brw->ctx.TextureFormatSupported[format])
+      return NULL;
+
+   /* Disable creation of the texture's aux buffers because the driver exposes
+    * no EGL API to manage them. That is, there is no API for resolving the aux
+    * buffer's content to the main buffer nor for invalidating the aux buffer's
+    * content.
+    */
+   struct intel_mipmap_tree *mt =
+      intel_miptree_create_for_bo(brw, image->bo, format,
+                                  0, image->width, image->height, 1,
+                                  image->pitch,
+                                  MIPTREE_LAYOUT_DISABLE_AUX);
+   if (mt == NULL)
+      return NULL;
+
+   mt->target = target;
+   mt->total_width = image->width;
+   mt->total_height = image->height;
+   mt->level[0].slice[0].x_offset = image->tile_x;
+   mt->level[0].slice[0].y_offset = image->tile_y;
+
+   /* From "OES_EGL_image" error reporting. We report GL_INVALID_OPERATION
+    * for EGL images from non-tile aligned sufaces in gen4 hw and earlier which has
+    * trouble resolving back to destination image due to alignment issues.
+    */
+   if (!brw->has_surface_tile_offset) {
+      uint32_t draw_x, draw_y;
+      intel_miptree_get_tile_offsets(mt, 0, 0, &draw_x, &draw_y);
+
+      if (draw_x != 0 || draw_y != 0) {
+         _mesa_error(&brw->ctx, GL_INVALID_OPERATION, __func__);
+         intel_miptree_release(&mt);
+         return NULL;
+      }
+   }
+
+   mt->offset = image->offset;
 
    return mt;
 }
