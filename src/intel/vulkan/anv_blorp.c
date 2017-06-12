@@ -1496,7 +1496,6 @@ anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
 
 static void
 ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
-                       struct blorp_batch *batch,
                        uint32_t att)
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
@@ -1592,12 +1591,6 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    if (resolve_op == BLORP_FAST_CLEAR_OP_NONE)
       return;
 
-   struct blorp_surf surf;
-   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                att_state->aux_usage, &surf);
-   if (att_state->fast_clear)
-      surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
-
    /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
     *
     *    "When performing a render target resolve, PIPE_CONTROL with end of
@@ -1613,12 +1606,8 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 
-   for (uint32_t layer = 0; layer < fb->layers; layer++) {
-      blorp_ccs_resolve(batch, &surf,
-                        iview->isl.base_level,
-                        iview->isl.base_array_layer + layer,
-                        iview->isl.format, resolve_op);
-   }
+   anv_ccs_resolve(cmd_buffer, att_state->color_rt_state, image,
+                   iview->isl.base_level, fb->layers, resolve_op);
 
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
@@ -1636,16 +1625,13 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
 
 
-   struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
-
    for (uint32_t i = 0; i < subpass->color_count; ++i) {
       const uint32_t att = subpass->color_attachments[i].attachment;
       if (att == VK_ATTACHMENT_UNUSED)
          continue;
 
       assert(att < cmd_buffer->state.pass->attachment_count);
-      ccs_resolve_attachment(cmd_buffer, &batch, att);
+      ccs_resolve_attachment(cmd_buffer, att);
    }
 
    if (subpass->has_resolve) {
@@ -1684,6 +1670,10 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
          const VkRect2D render_area = cmd_buffer->state.render_area;
 
          assert(src_iview->aspect_mask == dst_iview->aspect_mask);
+
+         struct blorp_batch batch;
+         blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
          resolve_image(&batch, src_iview->image,
                        src_iview->isl.base_level,
                        src_iview->isl.base_array_layer,
@@ -1695,11 +1685,12 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
                        render_area.offset.x, render_area.offset.y,
                        render_area.extent.width, render_area.extent.height);
 
-         ccs_resolve_attachment(cmd_buffer, &batch, dst_att);
+         blorp_batch_finish(&batch);
+
+         ccs_resolve_attachment(cmd_buffer, dst_att);
       }
    }
 
-   blorp_batch_finish(&batch);
 }
 
 void
