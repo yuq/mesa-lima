@@ -679,9 +679,9 @@ intel_create_image_common(__DRIscreen *dri_screen,
       return NULL;
 
    cpp = _mesa_get_format_bytes(image->format);
-   image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image",
-                                  width, tiled_height, cpp, tiling,
-                                  &image->pitch, 0);
+   image->bo = brw_bo_alloc_tiled_2d(screen->bufmgr, "image",
+                                     width, tiled_height, cpp, tiling,
+                                     &image->pitch, 0);
    if (image->bo == NULL) {
       free(image);
       return NULL;
@@ -1500,8 +1500,8 @@ intel_detect_swizzling(struct intel_screen *screen)
    uint32_t tiling = I915_TILING_X;
    uint32_t swizzle_mode = 0;
 
-   buffer = brw_bo_alloc_tiled(screen->bufmgr, "swizzle test",
-                               64, 64, 4, tiling, &aligned_pitch, flags);
+   buffer = brw_bo_alloc_tiled_2d(screen->bufmgr, "swizzle test",
+                                  64, 64, 4, tiling, &aligned_pitch, flags);
    if (buffer == NULL)
       return false;
 
@@ -2314,13 +2314,13 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
     * through to here. */
    uint32_t pitch;
    int cpp = format / 8;
-   intelBuffer->bo = brw_bo_alloc_tiled(screen->bufmgr,
-                                        "intelAllocateBuffer",
-                                        width,
-                                        height,
-                                        cpp,
-                                        I915_TILING_X, &pitch,
-                                        BO_ALLOC_FOR_RENDER);
+   intelBuffer->bo = brw_bo_alloc_tiled_2d(screen->bufmgr,
+                                           "intelAllocateBuffer",
+                                           width,
+                                           height,
+                                           cpp,
+                                           I915_TILING_X, &pitch,
+                                           BO_ALLOC_FOR_RENDER);
 
    if (intelBuffer->bo == NULL) {
 	   free(intelBuffer);

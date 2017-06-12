@@ -157,12 +157,12 @@ struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
  * 'tiling_mode' field on return, as well as the pitch value, which
  * may have been rounded up to accommodate for tiling restrictions.
  */
-struct brw_bo *brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr,
-                                  const char *name,
-                                  int x, int y, int cpp,
-                                  uint32_t tiling_mode,
-                                  uint32_t *pitch,
-                                  unsigned flags);
+struct brw_bo *brw_bo_alloc_tiled_2d(struct brw_bufmgr *bufmgr,
+                                     const char *name,
+                                     int x, int y, int cpp,
+                                     uint32_t tiling_mode,
+                                     uint32_t *pitch,
+                                     unsigned flags);
 
 /** Takes a reference on a buffer object */
 void brw_bo_reference(struct brw_bo *bo);
