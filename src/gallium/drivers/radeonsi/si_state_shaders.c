@@ -1447,9 +1447,10 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		memset(&key->opt, 0, sizeof(key->opt));
 }
 
-static void si_build_shader_variant(void *job, int thread_index)
+static void si_build_shader_variant(struct si_shader *shader,
+				    int thread_index,
+				    bool low_priority)
 {
-	struct si_shader *shader = (struct si_shader *)job;
 	struct si_shader_selector *sel = shader->selector;
 	struct si_screen *sscreen = sel->screen;
 	LLVMTargetMachineRef tm;
@@ -1457,11 +1458,17 @@ static void si_build_shader_variant(void *job, int thread_index)
 	int r;
 
 	if (thread_index >= 0) {
-		assert(thread_index < ARRAY_SIZE(sscreen->tm_low_priority));
-		tm = sscreen->tm_low_priority[thread_index];
+		if (low_priority) {
+			assert(thread_index < ARRAY_SIZE(sscreen->tm_low_priority));
+			tm = sscreen->tm_low_priority[thread_index];
+		} else {
+			assert(thread_index < ARRAY_SIZE(sscreen->tm));
+			tm = sscreen->tm[thread_index];
+		}
 		if (!debug->async)
 			debug = NULL;
 	} else {
+		assert(!low_priority);
 		tm = shader->compiler_ctx_state.tm;
 	}
 
@@ -1483,6 +1490,15 @@ static void si_build_shader_variant(void *job, int thread_index)
 	}
 
 	si_shader_init_pm4_state(sscreen, shader);
+}
+
+static void si_build_shader_variant_low_priority(void *job, int thread_index)
+{
+	struct si_shader *shader = (struct si_shader *)job;
+
+	assert(thread_index >= 0);
+
+	si_build_shader_variant(shader, thread_index, true);
 }
 
 static const struct si_shader_key zeroed;
@@ -1690,7 +1706,7 @@ again:
 		/* Compile it asynchronously. */
 		util_queue_add_job(&sscreen->shader_compiler_queue_low_priority,
 				   shader, &shader->optimized_ready,
-				   si_build_shader_variant, NULL);
+				   si_build_shader_variant_low_priority, NULL);
 
 		/* Use the default (unoptimized) shader for now. */
 		memset(&key->opt, 0, sizeof(key->opt));
@@ -1699,7 +1715,7 @@ again:
 	}
 
 	assert(!shader->is_optimized);
-	si_build_shader_variant(shader, thread_index);
+	si_build_shader_variant(shader, thread_index, false);
 
 	if (!shader->compilation_failed)
 		state->current = shader;
