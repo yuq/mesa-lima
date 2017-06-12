@@ -2300,6 +2300,7 @@ intel_miptree_finish_hiz_write(struct brw_context *brw,
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_AUX_INVALID);
       }
+      break;
 
    case ISL_AUX_STATE_PASS_THROUGH:
       if (written_with_hiz) {
