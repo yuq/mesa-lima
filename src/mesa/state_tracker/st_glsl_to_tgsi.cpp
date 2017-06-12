@@ -3776,10 +3776,11 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 
    st_src_reg reladdr;
    st_src_reg image(PROGRAM_IMAGE, 0, GLSL_TYPE_UINT);
-
+   uint16_t index;
    get_deref_offsets(img, &sampler_array_size, &sampler_base,
-                     (uint16_t*)&image.index, &reladdr, true);
+                     &index, &reladdr, true);
 
+   image.index = index;
    if (reladdr.file != PROGRAM_UNDEFINED) {
       image.reladdr = ralloc(mem_ctx, st_src_reg);
       *image.reladdr = reladdr;
@@ -4391,9 +4392,11 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
 
    st_src_reg sampler(PROGRAM_SAMPLER, 0, GLSL_TYPE_UINT);
 
+   uint16_t index;
    get_deref_offsets(ir->sampler, &sampler_array_size, &sampler_base,
-                     (uint16_t *)&sampler.index, &reladdr, true);
+                     &index, &reladdr, true);
 
+   sampler.index = index;
    if (reladdr.file != PROGRAM_UNDEFINED) {
       sampler.reladdr = ralloc(mem_ctx, st_src_reg);
       *sampler.reladdr = reladdr;
