@@ -1618,10 +1618,7 @@ static const struct format_cap format_cap_table[] = {
       SVGA3D_Z_D24S8_INT,
       SVGA3D_DEVCAP_SURFACEFMT_Z_D24S8_INT,
       1, 1, 4,
-      SVGA3DFORMAT_OP_TEXTURE |
-      SVGA3DFORMAT_OP_CUBETEXTURE |
-      SVGA3DFORMAT_OP_VOLUMETEXTURE |
-      SVGA3DFORMAT_OP_ZSTENCIL
+      0
    },
    {
       "SVGA3D_YV12",
