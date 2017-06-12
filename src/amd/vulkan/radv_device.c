@@ -2108,9 +2108,10 @@ VkResult radv_AllocateMemory(
 		       VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX);
 		mem->bo = device->ws->buffer_from_fd(device->ws, import_info->fd,
 						     NULL, NULL);
-		if (!mem->bo)
+		if (!mem->bo) {
+			result = VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX;
 			goto fail;
-		else
+		} else
 			goto out_success;
 	}
 
