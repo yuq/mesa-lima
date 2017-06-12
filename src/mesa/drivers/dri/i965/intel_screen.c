@@ -2121,6 +2121,9 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->hw_has_swizzling = intel_detect_swizzling(screen);
    screen->hw_has_timestamp = intel_detect_timestamp(screen);
 
+   isl_device_init(&screen->isl_dev, &screen->devinfo,
+                   screen->hw_has_swizzling);
+
    /* GENs prior to 8 do not support EU/Subslice info */
    if (devinfo->gen >= 8) {
       intel_detect_sseu(screen);
