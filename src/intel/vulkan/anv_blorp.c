@@ -1436,10 +1436,15 @@ void anv_CmdResolveImage(
 void
 anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
                     const struct anv_image *image,
-                    const struct isl_view *view,
-                    const VkImageSubresourceRange *subresourceRange)
+                    const uint32_t base_level, const uint32_t level_count,
+                    const uint32_t base_layer, uint32_t layer_count)
 {
    assert(image->type == VK_IMAGE_TYPE_3D || image->extent.depth == 1);
+
+   if (image->type == VK_IMAGE_TYPE_3D) {
+      assert(base_layer == 0);
+      assert(layer_count == anv_minify(image->extent.depth, base_level));
+   }
 
    struct blorp_batch batch;
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
@@ -1466,11 +1471,8 @@ anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 
-   const uint32_t level_count =
-      view ? view->levels : anv_get_levelCount(image, subresourceRange);
    for (uint32_t l = 0; l < level_count; l++) {
-      const uint32_t level =
-         (view ? view->base_level : subresourceRange->baseMipLevel) + l;
+      const uint32_t level = base_level + l;
 
       const VkExtent3D extent = {
          .width = anv_minify(image->extent.width, level),
@@ -1478,24 +1480,13 @@ anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
          .depth = anv_minify(image->extent.depth, level),
       };
 
-      /* Blorp likes to treat 2D_ARRAY and 3D the same. */
-      uint32_t blorp_base_layer, blorp_layer_count;
-      if (image->type == VK_IMAGE_TYPE_3D) {
-         blorp_base_layer = 0;
-         blorp_layer_count = extent.depth;
-      } else if (view) {
-         blorp_base_layer = view->base_array_layer;
-         blorp_layer_count = view->array_len;
-      } else {
-         blorp_base_layer = subresourceRange->baseArrayLayer;
-         blorp_layer_count = anv_get_layerCount(image, subresourceRange);
-      }
+      if (image->type == VK_IMAGE_TYPE_3D)
+         layer_count = extent.depth;
 
       assert(level < anv_image_aux_levels(image));
-      assert(blorp_base_layer + blorp_layer_count <=
-             anv_image_aux_layers(image, level));
+      assert(base_layer + layer_count <= anv_image_aux_layers(image, level));
       blorp_fast_clear(&batch, &surf, surf.surf->format,
-                       level, blorp_base_layer, blorp_layer_count,
+                       level, base_layer, layer_count,
                        0, 0, extent.width, extent.height);
    }
 

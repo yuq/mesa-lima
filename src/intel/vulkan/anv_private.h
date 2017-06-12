@@ -2132,8 +2132,8 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
 void
 anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
                     const struct anv_image *image,
-                    const struct isl_view *view,
-                    const VkImageSubresourceRange *subresourceRange);
+                    const uint32_t base_level, const uint32_t level_count,
+                    const uint32_t base_layer, uint32_t layer_count);
 
 enum isl_aux_usage
 anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,

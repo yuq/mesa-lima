@@ -387,10 +387,10 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
 static void
 transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
+                        const uint32_t base_level, uint32_t level_count,
+                        uint32_t base_layer, uint32_t layer_count,
                         VkImageLayout initial_layout,
-                        VkImageLayout final_layout,
-                        const struct isl_view *view,
-                        const VkImageSubresourceRange *subresourceRange)
+                        VkImageLayout final_layout)
 {
    if (image->aux_usage != ISL_AUX_USAGE_CCS_E)
       return;
@@ -399,13 +399,20 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
        initial_layout != VK_IMAGE_LAYOUT_PREINITIALIZED)
       return;
 
+   /* A transition of a 3D subresource works on all slices at a time. */
+   if (image->type == VK_IMAGE_TYPE_3D) {
+      base_layer = 0;
+      layer_count = anv_minify(image->extent.depth, base_level);
+   }
+
 #if GEN_GEN >= 9
    /* We're transitioning from an undefined layout so it doesn't really matter
     * what data ends up in the color buffer.  We do, however, need to ensure
     * that the CCS has valid data in it.  One easy way to do that is to
     * fast-clear the specified range.
     */
-   anv_image_ccs_clear(cmd_buffer, image, view, subresourceRange);
+   anv_image_ccs_clear(cmd_buffer, image, base_level, level_count,
+                       base_layer, layer_count);
 #endif
 }
 
@@ -990,18 +997,21 @@ void genX(CmdPipelineBarrier)(
       src_flags |= pImageMemoryBarriers[i].srcAccessMask;
       dst_flags |= pImageMemoryBarriers[i].dstAccessMask;
       ANV_FROM_HANDLE(anv_image, image, pImageMemoryBarriers[i].image);
-      if (pImageMemoryBarriers[i].subresourceRange.aspectMask &
-          VK_IMAGE_ASPECT_DEPTH_BIT) {
+      const VkImageSubresourceRange *range =
+         &pImageMemoryBarriers[i].subresourceRange;
+
+      if (range->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
          transition_depth_buffer(cmd_buffer, image,
                                  pImageMemoryBarriers[i].oldLayout,
                                  pImageMemoryBarriers[i].newLayout);
-      } else if (pImageMemoryBarriers[i].subresourceRange.aspectMask ==
-                 VK_IMAGE_ASPECT_COLOR_BIT) {
+      } else if (range->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT) {
          transition_color_buffer(cmd_buffer, image,
+                                 range->baseMipLevel,
+                                 anv_get_levelCount(image, range),
+                                 range->baseArrayLayer,
+                                 anv_get_layerCount(image, range),
                                  pImageMemoryBarriers[i].oldLayout,
-                                 pImageMemoryBarriers[i].newLayout,
-                                 NULL,
-                                 &pImageMemoryBarriers[i].subresourceRange);
+                                 pImageMemoryBarriers[i].newLayout);
       }
    }
 
@@ -2490,8 +2500,10 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
                                     image->aspects, target_layout);
       } else if (image->aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
          transition_color_buffer(cmd_buffer, image,
-                                 att_state->current_layout, target_layout,
-                                 &iview->isl, NULL);
+                                 iview->isl.base_level, 1,
+                                 iview->isl.base_array_layer,
+                                 iview->isl.array_len,
+                                 att_state->current_layout, target_layout);
       }
 
       att_state->current_layout = target_layout;
