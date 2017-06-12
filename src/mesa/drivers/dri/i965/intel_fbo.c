@@ -362,30 +362,9 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
     * buffer's content to the main buffer nor for invalidating the aux buffer's
     * content.
     */
-   irb->mt = intel_miptree_create_for_bo(brw,
-                                         image->bo,
-                                         image->format,
-                                         image->offset,
-                                         image->width,
-                                         image->height,
-                                         1,
-                                         image->pitch,
-                                         MIPTREE_LAYOUT_DISABLE_AUX);
+   irb->mt = intel_miptree_create_for_dri_image(brw, image, GL_TEXTURE_2D);
    if (!irb->mt)
       return;
-
-   /* Adjust the miptree's upper-left coordinate.
-    *
-    * FIXME: Adjusting the miptree's layout outside of
-    * intel_miptree_create_layout() is fragile. Plumb the adjustment through
-    * intel_miptree_create_layout() and brw_tex_layout().
-    */
-   irb->mt->level[0].level_x = image->tile_x;
-   irb->mt->level[0].level_y = image->tile_y;
-   irb->mt->level[0].slice[0].x_offset = image->tile_x;
-   irb->mt->level[0].slice[0].y_offset = image->tile_y;
-   irb->mt->total_width += image->tile_x;
-   irb->mt->total_height += image->tile_y;
 
    rb->InternalFormat = image->internal_format;
    rb->Width = image->width;
