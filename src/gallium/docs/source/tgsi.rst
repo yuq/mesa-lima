@@ -3297,10 +3297,17 @@ and Y values are used.
 TGSI_SEMANTIC_SAMPLEMASK
 """"""""""""""""""""""""
 
-For fragment shaders, this semantic label indicates that an output contains
-the sample mask used to disable further sample processing.  The output's
-type is uint[4] but only the X component is used (i.e. gl_SampleMask[0]).
-Each bit corresponds to one sample position (up to 32x MSAA is supported).
+For fragment shaders, this semantic label can be applied to either a
+shader system value input or output.
+
+For a system value, the sample mask indicates the set of samples covered by
+the current primitive.  If MSAA is not enabled, the value is (1, 0, 0, 0).
+
+For an output, the sample mask is used to disable further sample processing.
+
+For both, the register type is uint[4] but only the X component is used
+(i.e. gl_SampleMask[0]). Each bit corresponds to one sample position (up
+to 32x MSAA is supported).
 
 TGSI_SEMANTIC_INVOCATIONID
 """"""""""""""""""""""""""
