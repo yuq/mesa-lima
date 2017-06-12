@@ -1032,6 +1032,25 @@ struct isl_tile_info {
 };
 
 /**
+ * Metadata about a DRM format modifier.
+ */
+struct isl_drm_modifier_info {
+   uint64_t modifier;
+
+   /** Text name of the modifier */
+   const char *name;
+
+   /** ISL tiling implied by this modifier */
+   enum isl_tiling tiling;
+
+   /** ISL aux usage implied by this modifier */
+   enum isl_aux_usage aux_usage;
+
+   /** Whether or not this modifier supports clear color */
+   bool supports_clear_color;
+};
+
+/**
  * @brief Input to surface initialization
  *
  * @invariant width >= 1
@@ -1493,6 +1512,9 @@ isl_tiling_is_std_y(enum isl_tiling tiling)
 {
    return (1u << tiling) & ISL_TILING_STD_Y_MASK;
 }
+
+const struct isl_drm_modifier_info * ATTRIBUTE_CONST
+isl_drm_modifier_get_info(uint64_t modifier);
 
 struct isl_extent2d ATTRIBUTE_CONST
 isl_get_interleaved_msaa_px_size_sa(uint32_t samples);
