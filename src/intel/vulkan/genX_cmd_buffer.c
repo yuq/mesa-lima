@@ -992,9 +992,8 @@ void genX(CmdPipelineBarrier)(
          transition_depth_buffer(cmd_buffer, image,
                                  pImageMemoryBarriers[i].oldLayout,
                                  pImageMemoryBarriers[i].newLayout);
-      }
-      if (pImageMemoryBarriers[i].subresourceRange.aspectMask &
-          VK_IMAGE_ASPECT_COLOR_BIT) {
+      } else if (pImageMemoryBarriers[i].subresourceRange.aspectMask ==
+                 VK_IMAGE_ASPECT_COLOR_BIT) {
          transition_color_buffer(cmd_buffer, image,
                                  pImageMemoryBarriers[i].oldLayout,
                                  pImageMemoryBarriers[i].newLayout,
@@ -2484,8 +2483,7 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
          att_state->aux_usage =
             anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
                                     image->aspects, target_layout);
-      }
-      if (image->aspects & VK_IMAGE_ASPECT_COLOR_BIT) {
+      } else if (image->aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
          transition_color_buffer(cmd_buffer, image,
                                  att_state->current_layout, target_layout,
                                  &iview->isl, NULL);
