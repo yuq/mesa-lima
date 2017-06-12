@@ -374,6 +374,14 @@ brw_bo_alloc(struct brw_bufmgr *bufmgr,
 }
 
 struct brw_bo *
+brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
+                   uint64_t size, uint32_t tiling_mode, uint32_t pitch,
+                   unsigned flags)
+{
+   return bo_alloc_internal(bufmgr, name, size, flags, tiling_mode, pitch, 0);
+}
+
+struct brw_bo *
 brw_bo_alloc_tiled_2d(struct brw_bufmgr *bufmgr, const char *name,
                       int x, int y, int cpp, uint32_t tiling,
                       uint32_t *pitch, unsigned flags)
