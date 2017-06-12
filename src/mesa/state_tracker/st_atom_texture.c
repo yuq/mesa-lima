@@ -64,7 +64,6 @@ st_update_single_texture(struct st_context *st,
    const struct gl_sampler_object *samp;
    struct gl_texture_object *texObj;
    struct st_texture_object *stObj;
-   GLboolean retval;
 
    samp = _mesa_get_samplerobj(ctx, texUnit);
 
@@ -78,8 +77,8 @@ st_update_single_texture(struct st_context *st,
       return;
    }
 
-   retval = st_finalize_texture(ctx, st->pipe, texObj, 0);
-   if (!retval) {
+   if (!st_finalize_texture(ctx, st->pipe, texObj, 0) ||
+       !stObj->pt) {
       /* out of mem */
       *sampler_view = NULL;
       return;

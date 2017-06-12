@@ -408,10 +408,6 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
 {
    struct pipe_sampler_view **sv;
 
-   if (!stObj || !stObj->pt) {
-      return NULL;
-   }
-
    sv = st_texture_get_sampler_view(st, stObj);
 
    if (*sv) {
