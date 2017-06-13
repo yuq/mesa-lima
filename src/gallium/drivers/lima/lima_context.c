@@ -35,6 +35,8 @@ lima_context_destroy(struct pipe_context *pctx)
 {
    struct lima_context *ctx = lima_context(pctx);
 
+   lima_state_fini(ctx);
+
    pipe_surface_reference(&ctx->framebuffer.cbuf, NULL);
    pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
 

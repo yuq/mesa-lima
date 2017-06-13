@@ -24,6 +24,7 @@
 
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
+#include "util/u_helpers.h"
 
 #include "pipe/p_state.h"
 
@@ -180,6 +181,15 @@ lima_set_vertex_buffers(struct pipe_context *pctx,
                         const struct pipe_vertex_buffer *vb)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_context_vertex_buffer *so = &ctx->vertex_buffers;
+
+   util_set_vertex_buffers_mask(so->vb, &so->enabled_mask, vb,
+                                start_slot, count);
+   so->count = util_last_bit(so->enabled_mask);
+
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_VERTEX_BUFF;
 }
 
 static void
@@ -213,4 +223,13 @@ lima_state_init(struct lima_context *ctx)
    ctx->base.create_vertex_elements_state = lima_create_vertex_elements_state;
    ctx->base.bind_vertex_elements_state = lima_bind_vertex_elements_state;
    ctx->base.delete_vertex_elements_state = lima_delete_vertex_elements_state;
+}
+
+void
+lima_state_fini(struct lima_context *ctx)
+{
+   struct lima_context_vertex_buffer *so = &ctx->vertex_buffers;
+
+   util_set_vertex_buffers_mask(so->vb, &so->enabled_mask, NULL,
+                                0, ARRAY_SIZE(so->vb));
 }

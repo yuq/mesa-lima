@@ -71,6 +71,13 @@ struct lima_vertex_element_state {
    unsigned num_elements;
 };
 
+struct lima_context_vertex_buffer {
+   struct pipe_vertex_buffer vb[PIPE_MAX_ATTRIBS];
+   unsigned count;
+   uint32_t enabled_mask;
+   uint32_t dirty_mask;
+};
+
 struct lima_context {
    struct pipe_context base;
 
@@ -80,6 +87,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_SHADER_VERT  = (1 << 2),
       LIMA_CONTEXT_DIRTY_SHADER_FRAG  = (1 << 3),
       LIMA_CONTEXT_DIRTY_VERTEX_ELEM  = (1 << 4),
+      LIMA_CONTEXT_DIRTY_VERTEX_BUFF  = (1 << 5),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -91,6 +99,7 @@ struct lima_context {
    struct lima_vs_shader_state *vs;
    struct lima_fs_shader_state *fs;
    struct lima_vertex_element_state *vertex_elements;
+   struct lima_context_vertex_buffer vertex_buffers;
 };
 
 static inline struct lima_context *
@@ -100,6 +109,7 @@ lima_context(struct pipe_context *pctx)
 }
 
 void lima_state_init(struct lima_context *ctx);
+void lima_state_fini(struct lima_context *ctx);
 void lima_draw_init(struct lima_context *ctx);
 void lima_program_init(struct lima_context *ctx);
 
