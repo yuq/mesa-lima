@@ -232,4 +232,7 @@ lima_state_fini(struct lima_context *ctx)
 
    util_set_vertex_buffers_mask(so->vb, &so->enabled_mask, NULL,
                                 0, ARRAY_SIZE(so->vb));
+
+   pipe_surface_reference(&ctx->framebuffer.cbuf, NULL);
+   pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
 }
