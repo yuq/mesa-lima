@@ -1222,7 +1222,7 @@ intel_resolve_for_dri2_flush(struct brw_context *brw,
       if (rb->mt->surf.samples == 1) {
          assert(rb->mt_layer == 0 && rb->mt_level == 0 &&
                 rb->layer_count == 1);
-         intel_miptree_prepare_access(brw, rb->mt, 0, 1, 0, 1, false, false);
+         intel_miptree_prepare_external(brw, rb->mt);
       } else {
          intel_renderbuffer_downsample(brw, rb);
       }

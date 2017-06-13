@@ -25,6 +25,7 @@
 
 #include <GL/gl.h>
 #include <GL/internal/dri_interface.h>
+#include <drm_fourcc.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_image.h"
@@ -596,6 +597,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    mt->aux_state = NULL;
    mt->cpp = isl_format_get_layout(mt->surf.format)->bpb / 8;
    mt->compressed = _mesa_is_format_compressed(format);
+   mt->drm_modifier = DRM_FORMAT_MOD_INVALID;
 
    return mt;
 
@@ -876,6 +878,8 @@ miptree_create_for_planar_image(struct brw_context *brw,
          planar_mt->plane[i - 1] = mt;
    }
 
+   planar_mt->drm_modifier = image->modifier;
+
    return planar_mt;
 }
 
@@ -1014,6 +1018,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    mt->target = target;
    mt->level[0].level_x = image->tile_x;
    mt->level[0].level_y = image->tile_y;
+   mt->drm_modifier = image->modifier;
 
    /* From "OES_EGL_image" error reporting. We report GL_INVALID_OPERATION
     * for EGL images from non-tile aligned sufaces in gen4 hw and earlier which has
@@ -2738,6 +2743,37 @@ intel_miptree_finish_depth(struct brw_context *brw,
       intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
                                  mt->hiz_buf != NULL);
    }
+}
+
+void
+intel_miptree_prepare_external(struct brw_context *brw,
+                               struct intel_mipmap_tree *mt)
+{
+   enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
+   bool supports_fast_clear = false;
+
+   const struct isl_drm_modifier_info *mod_info =
+      isl_drm_modifier_get_info(mt->drm_modifier);
+
+   if (mod_info && mod_info->aux_usage != ISL_AUX_USAGE_NONE) {
+      /* CCS_E is the only supported aux for external images and it's only
+       * supported on very simple images.
+       */
+      assert(mod_info->aux_usage == ISL_AUX_USAGE_CCS_E);
+      assert(_mesa_is_format_color_format(mt->format));
+      assert(mt->first_level == 0 && mt->last_level == 0);
+      assert(mt->surf.logical_level0_px.depth == 1);
+      assert(mt->surf.logical_level0_px.array_len == 1);
+      assert(mt->surf.samples == 1);
+      assert(mt->mcs_buf != NULL);
+
+      aux_usage = mod_info->aux_usage;
+      supports_fast_clear = mod_info->supports_clear_color;
+   }
+
+   intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
+                                0, INTEL_REMAINING_LAYERS,
+                                aux_usage, supports_fast_clear);
 }
 
 /**

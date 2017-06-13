@@ -339,6 +339,13 @@ struct intel_mipmap_tree
     */
    union isl_color_value fast_clear_color;
 
+   /**
+    * For external surfaces, this is DRM format modifier that was used to
+    * create or import the surface.  For internal surfaces, this will always
+    * be DRM_FORMAT_MOD_INVALID.
+    */
+   uint64_t drm_modifier;
+
    /* These are also refcounted:
     */
    GLuint refcount;
@@ -663,6 +670,9 @@ intel_miptree_finish_depth(struct brw_context *brw,
                            struct intel_mipmap_tree *mt, uint32_t level,
                            uint32_t start_layer, uint32_t layer_count,
                            bool depth_written);
+void
+intel_miptree_prepare_external(struct brw_context *brw,
+                               struct intel_mipmap_tree *mt);
 
 void
 intel_miptree_make_shareable(struct brw_context *brw,
