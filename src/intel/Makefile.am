@@ -33,6 +33,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gtest/include \
 	-I$(top_builddir)/src/intel \
 	-I$(top_srcdir)/src/intel \
+	-I$(top_srcdir)/include/drm-uapi \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
 	-I$(top_srcdir)/src/gallium/auxiliary \
