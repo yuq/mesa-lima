@@ -698,8 +698,14 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
    const uint32_t levels = mt->last_level + 1;
 
    uint32_t total_slices = 0;
-   for (uint32_t level = 0; level < levels; level++)
-      total_slices += mt->level[level].depth;
+   for (uint32_t level = 0; level < levels; level++) {
+      if (mt->surf.size > 0)
+         total_slices += (mt->surf.dim == ISL_SURF_DIM_3D ?
+                             minify(mt->surf.phys_level0_sa.depth, level) :
+                             mt->surf.phys_level0_sa.array_len);
+      else
+         total_slices += mt->level[level].depth;
+   }
 
    const size_t per_level_array_size = levels * sizeof(enum isl_aux_state *);
 
@@ -717,7 +723,16 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
    enum isl_aux_state *s = data + per_level_array_size;
    for (uint32_t level = 0; level < levels; level++) {
       per_level_arr[level] = s;
-      for (uint32_t a = 0; a < mt->level[level].depth; a++)
+
+      unsigned level_depth;
+      if (mt->surf.size > 0)
+         level_depth = mt->surf.dim == ISL_SURF_DIM_3D ?
+                          minify(mt->surf.phys_level0_sa.depth, level) :
+                          mt->surf.phys_level0_sa.array_len;
+      else
+         level_depth = mt->level[level].depth;
+              
+      for (uint32_t a = 0; a < level_depth; a++)
          *(s++) = initial;
    }
    assert((void *)s == data + total_size);
