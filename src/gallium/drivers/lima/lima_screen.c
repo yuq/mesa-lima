@@ -290,7 +290,11 @@ get_vertex_shader_param(struct lima_screen *screen,
    case PIPE_SHADER_CAP_SUBROUTINES:
    case PIPE_SHADER_CAP_INTEGERS:
    case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
+      return 0;
+
    case PIPE_SHADER_CAP_PREFERRED_IR:
+      return PIPE_SHADER_IR_TGSI;
+
    case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
    case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
    case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
@@ -446,6 +450,15 @@ lima_screen_is_format_supported(struct pipe_screen *pscreen,
    return TRUE;
 }
 
+static const void *
+lima_screen_get_compiler_options(struct pipe_screen *pscreen,
+                                 enum pipe_shader_ir ir,
+                                 enum pipe_shader_type shader)
+{
+   printf("dummy %s\n", __func__);
+   return NULL;
+}
+
 struct pipe_screen *
 lima_screen_create(int fd)
 {
@@ -471,6 +484,7 @@ lima_screen_create(int fd)
    screen->base.get_shader_param = lima_screen_get_shader_param;
    screen->base.context_create = lima_context_create;
    screen->base.is_format_supported = lima_screen_is_format_supported;
+   screen->base.get_compiler_options = lima_screen_get_compiler_options;
 
    lima_resource_screen_init(screen);
 
