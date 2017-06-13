@@ -72,7 +72,7 @@ set_query_availability(struct brw_context *brw, struct brw_query_object *query,
 
       brw_emit_pipe_control_write(brw, flags,
                                   query->bo, 2 * sizeof(uint64_t),
-                                  available, 0);
+                                  available);
    }
 }
 

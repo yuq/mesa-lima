@@ -178,7 +178,7 @@ brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags)
 void
 brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
                             struct brw_bo *bo, uint32_t offset,
-                            uint32_t imm_lower, uint32_t imm_upper)
+                            uint64_t imm)
 {
    if (brw->gen >= 8) {
       if (brw->gen == 8)
@@ -189,8 +189,8 @@ brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
       OUT_BATCH(flags);
       OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   offset);
-      OUT_BATCH(imm_lower);
-      OUT_BATCH(imm_upper);
+      OUT_BATCH(imm);
+      OUT_BATCH(imm >> 32);
       ADVANCE_BATCH();
    } else if (brw->gen >= 6) {
       flags |= gen7_cs_stall_every_four_pipe_controls(brw, flags);
@@ -205,16 +205,16 @@ brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
       OUT_BATCH(flags);
       OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 gen6_gtt | offset);
-      OUT_BATCH(imm_lower);
-      OUT_BATCH(imm_upper);
+      OUT_BATCH(imm);
+      OUT_BATCH(imm >> 32);
       ADVANCE_BATCH();
    } else {
       BEGIN_BATCH(4);
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | flags | (4 - 2));
       OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 PIPE_CONTROL_GLOBAL_GTT_WRITE | offset);
-      OUT_BATCH(imm_lower);
-      OUT_BATCH(imm_upper);
+      OUT_BATCH(imm);
+      OUT_BATCH(imm >> 32);
       ADVANCE_BATCH();
    }
 }
@@ -264,8 +264,7 @@ gen7_emit_vs_workaround_flush(struct brw_context *brw)
    brw_emit_pipe_control_write(brw,
                                PIPE_CONTROL_WRITE_IMMEDIATE
                                | PIPE_CONTROL_DEPTH_STALL,
-                               brw->workaround_bo, 0,
-                               0, 0);
+                               brw->workaround_bo, 0, 0);
 }
 
 
@@ -278,8 +277,7 @@ gen7_emit_cs_stall_flush(struct brw_context *brw)
    brw_emit_pipe_control_write(brw,
                                PIPE_CONTROL_CS_STALL
                                | PIPE_CONTROL_WRITE_IMMEDIATE,
-                               brw->workaround_bo, 0,
-                               0, 0);
+                               brw->workaround_bo, 0, 0);
 }
 
 
@@ -328,7 +326,7 @@ brw_emit_post_sync_nonzero_flush(struct brw_context *brw)
                                PIPE_CONTROL_STALL_AT_SCOREBOARD);
 
    brw_emit_pipe_control_write(brw, PIPE_CONTROL_WRITE_IMMEDIATE,
-                               brw->workaround_bo, 0, 0, 0);
+                               brw->workaround_bo, 0, 0);
 }
 
 /* Emit a pipelined flush to either flush render and texture cache for
