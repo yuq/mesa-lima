@@ -36,11 +36,19 @@ struct lima_context_framebuffer {
    struct pipe_surface *cbuf, *zsbuf;
 };
 
+struct lima_context_clear {
+   unsigned buffers;
+   uint32_t color[4];
+   uint32_t depth;
+   uint32_t stencil;
+};
+
 struct lima_context {
    struct pipe_context base;
 
    enum {
       LIMA_CONTEXT_DIRTY_FRAMEBUFFER = (1 << 0),
+      LIMA_CONTEXT_DIRTY_CLEAR       = (1 << 1),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -48,6 +56,7 @@ struct lima_context {
    struct slab_child_pool transfer_pool;
 
    struct lima_context_framebuffer framebuffer;
+   struct lima_context_clear clear;
 };
 
 struct lima_depth_stencil_alpha_state {
