@@ -87,6 +87,83 @@ gen7_cs_stall_every_four_pipe_controls(struct brw_context *brw, uint32_t flags)
    return 0;
 }
 
+static void
+brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
+                      struct brw_bo *bo, uint32_t offset, uint64_t imm)
+{
+   if (brw->gen >= 8) {
+      if (brw->gen == 8)
+         gen8_add_cs_stall_workaround_bits(&flags);
+
+      if (brw->gen == 9 &&
+          (flags & PIPE_CONTROL_VF_CACHE_INVALIDATE)) {
+         /* Hardware workaround: SKL
+          *
+          * Emit Pipe Control with all bits set to zero before emitting
+          * a Pipe Control with VF Cache Invalidate set.
+          */
+         brw_emit_pipe_control_flush(brw, 0);
+      }
+
+      BEGIN_BATCH(6);
+      OUT_BATCH(_3DSTATE_PIPE_CONTROL | (6 - 2));
+      OUT_BATCH(flags);
+      if (bo) {
+         OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION,
+                     I915_GEM_DOMAIN_INSTRUCTION, offset);
+      } else {
+         OUT_BATCH(0);
+         OUT_BATCH(0);
+      }
+      OUT_BATCH(imm);
+      OUT_BATCH(imm >> 32);
+      ADVANCE_BATCH();
+   } else if (brw->gen >= 6) {
+      if (brw->gen == 6 &&
+          (flags & PIPE_CONTROL_RENDER_TARGET_FLUSH)) {
+         /* Hardware workaround: SNB B-Spec says:
+          *
+          *   [Dev-SNB{W/A}]: Before a PIPE_CONTROL with Write Cache Flush
+          *   Enable = 1, a PIPE_CONTROL with any non-zero post-sync-op is
+          *   required.
+          */
+         brw_emit_post_sync_nonzero_flush(brw);
+      }
+
+      flags |= gen7_cs_stall_every_four_pipe_controls(brw, flags);
+
+      /* PPGTT/GGTT is selected by DW2 bit 2 on Sandybridge, but DW1 bit 24
+       * on later platforms.  We always use PPGTT on Gen7+.
+       */
+      unsigned gen6_gtt = brw->gen == 6 ? PIPE_CONTROL_GLOBAL_GTT_WRITE : 0;
+
+      BEGIN_BATCH(5);
+      OUT_BATCH(_3DSTATE_PIPE_CONTROL | (5 - 2));
+      OUT_BATCH(flags);
+      if (bo) {
+         OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                   gen6_gtt | offset);
+      } else {
+         OUT_BATCH(0);
+      }
+      OUT_BATCH(imm);
+      OUT_BATCH(imm >> 32);
+      ADVANCE_BATCH();
+   } else {
+      BEGIN_BATCH(4);
+      OUT_BATCH(_3DSTATE_PIPE_CONTROL | flags | (4 - 2));
+      if (bo) {
+         OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                   PIPE_CONTROL_GLOBAL_GTT_WRITE | offset);
+      } else {
+         OUT_BATCH(0);
+      }
+      OUT_BATCH(imm);
+      OUT_BATCH(imm >> 32);
+      ADVANCE_BATCH();
+   }
+}
+
 /**
  * Emit a PIPE_CONTROL with various flushing flags.
  *
@@ -114,57 +191,7 @@ brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags)
       flags &= ~(PIPE_CONTROL_CACHE_FLUSH_BITS | PIPE_CONTROL_CS_STALL);
    }
 
-   if (brw->gen >= 8) {
-      if (brw->gen == 8)
-         gen8_add_cs_stall_workaround_bits(&flags);
-
-      if (brw->gen == 9 &&
-          (flags & PIPE_CONTROL_VF_CACHE_INVALIDATE)) {
-         /* Hardware workaround: SKL
-          *
-          * Emit Pipe Control with all bits set to zero before emitting
-          * a Pipe Control with VF Cache Invalidate set.
-          */
-         brw_emit_pipe_control_flush(brw, 0);
-      }
-
-      BEGIN_BATCH(6);
-      OUT_BATCH(_3DSTATE_PIPE_CONTROL | (6 - 2));
-      OUT_BATCH(flags);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
-   } else if (brw->gen >= 6) {
-      if (brw->gen == 6 &&
-          (flags & PIPE_CONTROL_RENDER_TARGET_FLUSH)) {
-         /* Hardware workaround: SNB B-Spec says:
-          *
-          *   [Dev-SNB{W/A}]: Before a PIPE_CONTROL with Write Cache Flush
-          *   Enable = 1, a PIPE_CONTROL with any non-zero post-sync-op is
-          *   required.
-          */
-         brw_emit_post_sync_nonzero_flush(brw);
-      }
-
-      flags |= gen7_cs_stall_every_four_pipe_controls(brw, flags);
-
-      BEGIN_BATCH(5);
-      OUT_BATCH(_3DSTATE_PIPE_CONTROL | (5 - 2));
-      OUT_BATCH(flags);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
-   } else {
-      BEGIN_BATCH(4);
-      OUT_BATCH(_3DSTATE_PIPE_CONTROL | flags | (4 - 2));
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
-   }
+   brw_emit_pipe_control(brw, flags, NULL, 0, 0);
 }
 
 /**
@@ -180,43 +207,7 @@ brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
                             struct brw_bo *bo, uint32_t offset,
                             uint64_t imm)
 {
-   if (brw->gen >= 8) {
-      if (brw->gen == 8)
-         gen8_add_cs_stall_workaround_bits(&flags);
-
-      BEGIN_BATCH(6);
-      OUT_BATCH(_3DSTATE_PIPE_CONTROL | (6 - 2));
-      OUT_BATCH(flags);
-      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  offset);
-      OUT_BATCH(imm);
-      OUT_BATCH(imm >> 32);
-      ADVANCE_BATCH();
-   } else if (brw->gen >= 6) {
-      flags |= gen7_cs_stall_every_four_pipe_controls(brw, flags);
-
-      /* PPGTT/GGTT is selected by DW2 bit 2 on Sandybridge, but DW1 bit 24
-       * on later platforms.  We always use PPGTT on Gen7+.
-       */
-      unsigned gen6_gtt = brw->gen == 6 ? PIPE_CONTROL_GLOBAL_GTT_WRITE : 0;
-
-      BEGIN_BATCH(5);
-      OUT_BATCH(_3DSTATE_PIPE_CONTROL | (5 - 2));
-      OUT_BATCH(flags);
-      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                gen6_gtt | offset);
-      OUT_BATCH(imm);
-      OUT_BATCH(imm >> 32);
-      ADVANCE_BATCH();
-   } else {
-      BEGIN_BATCH(4);
-      OUT_BATCH(_3DSTATE_PIPE_CONTROL | flags | (4 - 2));
-      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                PIPE_CONTROL_GLOBAL_GTT_WRITE | offset);
-      OUT_BATCH(imm);
-      OUT_BATCH(imm >> 32);
-      ADVANCE_BATCH();
-   }
+   brw_emit_pipe_control(brw, flags, bo, offset, imm);
 }
 
 /**
