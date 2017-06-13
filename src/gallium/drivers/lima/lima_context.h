@@ -28,6 +28,7 @@
 #include "util/slab.h"
 
 #include "pipe/p_context.h"
+#include "pipe/p_state.h"
 
 struct pipe_screen;
 struct pipe_surface;
@@ -66,7 +67,8 @@ struct lima_blend_state {
 };
 
 struct lima_vertex_element_state {
-   int dummy;
+   struct pipe_vertex_element pipe[PIPE_MAX_ATTRIBS];
+   unsigned num_elements;
 };
 
 struct lima_context {
@@ -77,6 +79,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_CLEAR        = (1 << 1),
       LIMA_CONTEXT_DIRTY_SHADER_VERT  = (1 << 2),
       LIMA_CONTEXT_DIRTY_SHADER_FRAG  = (1 << 3),
+      LIMA_CONTEXT_DIRTY_VERTEX_ELEM  = (1 << 4),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -87,6 +90,7 @@ struct lima_context {
    struct lima_context_clear clear;
    struct lima_vs_shader_state *vs;
    struct lima_fs_shader_state *fs;
+   struct lima_vertex_element_state *vertex_elements;
 };
 
 static inline struct lima_context *

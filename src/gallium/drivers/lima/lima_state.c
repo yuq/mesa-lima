@@ -151,6 +151,9 @@ lima_create_vertex_elements_state(struct pipe_context *pctx, unsigned num_elemen
 
    printf("dummy %s\n", __func__);
 
+   memcpy(so->pipe, elements, sizeof(*elements) * num_elements);
+   so->num_elements = num_elements;
+
    return so;
 }
 
@@ -158,6 +161,11 @@ static void
 lima_bind_vertex_elements_state(struct pipe_context *pctx, void *hwcso)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->vertex_elements = hwcso;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_VERTEX_ELEM;
 }
 
 static void
