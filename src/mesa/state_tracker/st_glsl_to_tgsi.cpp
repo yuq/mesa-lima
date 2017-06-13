@@ -3776,7 +3776,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 
    st_src_reg reladdr;
    st_src_reg image(PROGRAM_IMAGE, 0, GLSL_TYPE_UINT);
-   uint16_t index;
+   uint16_t index = 0;
    get_deref_offsets(img, &sampler_array_size, &sampler_base,
                      &index, &reladdr, true);
 
@@ -4392,7 +4392,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
 
    st_src_reg sampler(PROGRAM_SAMPLER, 0, GLSL_TYPE_UINT);
 
-   uint16_t index;
+   uint16_t index = 0;
    get_deref_offsets(ir->sampler, &sampler_array_size, &sampler_base,
                      &index, &reladdr, true);
 
