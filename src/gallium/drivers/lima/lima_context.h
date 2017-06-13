@@ -30,13 +30,24 @@
 #include "pipe/p_context.h"
 
 struct pipe_screen;
+struct pipe_surface;
+
+struct lima_context_framebuffer {
+   struct pipe_surface *cbuf, *zsbuf;
+};
 
 struct lima_context {
    struct pipe_context base;
 
+   enum {
+      LIMA_CONTEXT_DIRTY_FRAMEBUFFER = (1 << 0),
+   } dirty;
+
    struct u_upload_mgr *uploader;
 
    struct slab_child_pool transfer_pool;
+
+   struct lima_context_framebuffer framebuffer;
 };
 
 struct lima_depth_stencil_alpha_state {
