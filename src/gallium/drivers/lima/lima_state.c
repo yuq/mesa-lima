@@ -33,6 +33,9 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
                            const struct pipe_framebuffer_state *framebuffer)
 {
    printf("dummy %s\n", __func__);
+
+   printf("%s: psurf color=%p z=%p\n", __func__,
+          framebuffer->cbufs[0], framebuffer->zsbuf);
 }
 
 static void
