@@ -299,14 +299,13 @@ static const struct {
    uint32_t tiling;
    uint64_t modifier;
    unsigned since_gen;
-   unsigned height_align;
 } tiling_modifier_map[] = {
    { .tiling = I915_TILING_NONE, .modifier = DRM_FORMAT_MOD_LINEAR,
-     .since_gen = 1, .height_align = 1 },
+     .since_gen = 1 },
    { .tiling = I915_TILING_X, .modifier = I915_FORMAT_MOD_X_TILED,
-     .since_gen = 1, .height_align = 8 },
+     .since_gen = 1 },
    { .tiling = I915_TILING_Y, .modifier = I915_FORMAT_MOD_Y_TILED,
-     .since_gen = 6, .height_align = 32 },
+     .since_gen = 6 },
 };
 
 static bool
@@ -333,19 +332,6 @@ tiling_to_modifier(uint32_t tiling)
    }
 
    unreachable("tiling_to_modifier received unknown tiling mode");
-}
-
-static unsigned
-get_tiled_height(uint64_t modifier, unsigned height)
-{
-   int i;
-
-   for (i = 0; i < ARRAY_SIZE(tiling_modifier_map); i++) {
-      if (tiling_modifier_map[i].modifier == modifier)
-         return ALIGN(height, tiling_modifier_map[i].height_align);
-   }
-
-   unreachable("get_tiled_height received unknown tiling mode");
 }
 
 static void
