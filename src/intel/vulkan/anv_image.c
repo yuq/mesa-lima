@@ -211,7 +211,7 @@ make_surface(const struct anv_device *dev,
       if (!unlikely(INTEL_DEBUG & DEBUG_NO_RBC)) {
          assert(image->aux_surface.isl.size == 0);
          ok = isl_surf_get_ccs_surf(&dev->isl_dev, &anv_surf->isl,
-                                    &image->aux_surface.isl);
+                                    &image->aux_surface.isl, 0);
          if (ok) {
             add_surface(image, &image->aux_surface);
 

@@ -1836,7 +1836,8 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     * calculate equivalent CCS surface against it.
     */
    intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
-   if (!isl_surf_get_ccs_surf(&brw->isl_dev, &temp_main_surf, &temp_ccs_surf))
+   if (!isl_surf_get_ccs_surf(&brw->isl_dev, &temp_main_surf,
+                              &temp_ccs_surf, 0))
       return false;
 
    assert(temp_ccs_surf.size &&
