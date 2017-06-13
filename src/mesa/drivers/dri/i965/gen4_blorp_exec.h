@@ -139,9 +139,9 @@ blorp_emit_wm_state(struct blorp_batch *batch,
          wm._16PixelDispatchEnable = prog_data->dispatch_16;
 
 #if GEN_GEN == 4
-         wm.KernelStartPointer =
+         wm.KernelStartPointer0 =
             instruction_state_address(batch, params->wm_prog_kernel);
-         wm.GRFRegisterCount = prog_data->reg_blocks_0;
+         wm.GRFRegisterCount0 = prog_data->reg_blocks_0;
 #else
          wm.KernelStartPointer0 = params->wm_prog_kernel;
          wm.GRFRegisterCount0 = prog_data->reg_blocks_0;

@@ -762,8 +762,8 @@
   </struct>
 
   <struct name="WM_STATE" length="8">
-    <field name="Kernel Start Pointer" start="6" end="31" type="address"/>
-    <field name="GRF Register Count" start="1" end="3" type="uint"/>
+    <field name="Kernel Start Pointer 0" start="6" end="31" type="address"/>
+    <field name="GRF Register Count 0" start="1" end="3" type="uint"/>
     <field name="Single Program Flow" start="63" end="63" type="bool"/>
     <field name="Binding Table Entry Count" start="50" end="57" type="uint"/>
     <field name="Thread Priority" start="49" end="49" type="uint">
