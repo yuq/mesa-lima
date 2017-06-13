@@ -131,7 +131,7 @@ blorp_emit_wm_state(struct blorp_batch *batch,
          wm.SetupURBEntryReadOffset = 0;
 
          wm.DepthCoefficientURBReadOffset = 1;
-         wm.PixelShaderKillPixel = prog_data->uses_kill;
+         wm.PixelShaderKillsPixel = prog_data->uses_kill;
          wm.ThreadDispatchEnable = true;
          wm.EarlyDepthTestEnable = true;
 
