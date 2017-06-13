@@ -55,10 +55,13 @@ genX(init_device_state)(struct anv_device *device)
 #if GEN_GEN >= 9
    uint32_t cache_mode_1;
    anv_pack_struct(&cache_mode_1, GENX(CACHE_MODE_1),
-                   .PartialResolveDisableInVC = true,
-                   .PartialResolveDisableInVCMask = true,
+#if GEN_GEN == 9
                    .FloatBlendOptimizationEnable = true,
-                   .FloatBlendOptimizationEnableMask = true);
+                   .FloatBlendOptimizationEnableMask = true,
+#endif
+                   .PartialResolveDisableInVC = true,
+                   .PartialResolveDisableInVCMask = true);
+
    anv_batch_emit(&batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
       lri.RegisterOffset = GENX(CACHE_MODE_1_num);
       lri.DataDWord      = cache_mode_1;
