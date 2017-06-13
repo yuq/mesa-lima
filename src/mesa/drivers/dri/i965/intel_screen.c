@@ -860,8 +860,8 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
    struct intel_screen *screen = dri_screen->driverPrivate;
    struct intel_image_format *f;
    __DRIimage *image;
-   unsigned tiled_height;
    int i, index;
+   bool ok;
 
    if (fds == NULL || num_fds < 1)
       return NULL;
@@ -912,7 +912,6 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
       image->modifier = modifier;
    else
       image->modifier = tiling_to_modifier(image->bo->tiling_mode);
-   tiled_height = get_tiled_height(image->modifier, height);
 
    int size = 0;
    for (i = 0; i < f->nplanes; i++) {
@@ -920,8 +919,33 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
       image->offsets[index] = offsets[index];
       image->strides[index] = strides[index];
 
-      const int plane_height = tiled_height >> f->planes[i].height_shift;
-      const int end = offsets[index] + plane_height * strides[index];
+      const struct isl_drm_modifier_info *mod_info =
+         isl_drm_modifier_get_info(image->modifier);
+
+      mesa_format format = driImageFormatToGLFormat(f->planes[i].dri_format);
+
+      struct isl_surf surf;
+      ok = isl_surf_init(&screen->isl_dev, &surf,
+                         .dim = ISL_SURF_DIM_2D,
+                         .format = brw_isl_format_for_mesa_format(format),
+                         .width = image->width >> f->planes[i].width_shift,
+                         .height = image->height >> f->planes[i].height_shift,
+                         .depth = 1,
+                         .levels = 1,
+                         .array_len = 1,
+                         .samples = 1,
+                         .row_pitch = strides[index],
+                         .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                                  ISL_SURF_USAGE_TEXTURE_BIT |
+                                  ISL_SURF_USAGE_STORAGE_BIT,
+                         .tiling_flags = (1 << mod_info->tiling));
+      if (!ok) {
+         brw_bo_unreference(image->bo);
+         free(image);
+         return NULL;
+      }
+
+      const int end = offsets[index] + surf.size;
       if (size < end)
          size = end;
    }
