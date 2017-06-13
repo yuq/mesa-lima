@@ -23,6 +23,7 @@
  */
 
 #include "util/u_memory.h"
+#include "util/u_inlines.h"
 
 #include "pipe/p_state.h"
 
@@ -36,6 +37,18 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
 
    printf("%s: psurf color=%p z=%p\n", __func__,
           framebuffer->cbufs[0], framebuffer->zsbuf);
+
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_context_framebuffer *fb = &ctx->framebuffer;
+
+   if (framebuffer->nr_cbufs > 0)
+      pipe_surface_reference(&fb->cbuf, framebuffer->cbufs[0]);
+   else
+      pipe_surface_reference(&fb->cbuf, NULL);
+
+   pipe_surface_reference(&fb->zsbuf, framebuffer->zsbuf);
+
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_FRAMEBUFFER;
 }
 
 static void
