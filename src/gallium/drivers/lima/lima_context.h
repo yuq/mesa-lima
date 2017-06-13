@@ -43,32 +43,18 @@ struct lima_context_clear {
    uint32_t stencil;
 };
 
-struct lima_context {
-   struct pipe_context base;
-
-   enum {
-      LIMA_CONTEXT_DIRTY_FRAMEBUFFER = (1 << 0),
-      LIMA_CONTEXT_DIRTY_CLEAR       = (1 << 1),
-   } dirty;
-
-   struct u_upload_mgr *uploader;
-
-   struct slab_child_pool transfer_pool;
-
-   struct lima_context_framebuffer framebuffer;
-   struct lima_context_clear clear;
-};
-
 struct lima_depth_stencil_alpha_state {
    int dummy;
 };
 
 struct lima_fs_shader_state {
-   int dummy;
+   void *shader;
+   int shader_size;
 };
 
 struct lima_vs_shader_state {
-   int dummy;
+   void *shader;
+   int shader_size;
 };
 
 struct lima_rasterizer_state {
@@ -81,6 +67,26 @@ struct lima_blend_state {
 
 struct lima_vertex_element_state {
    int dummy;
+};
+
+struct lima_context {
+   struct pipe_context base;
+
+   enum {
+      LIMA_CONTEXT_DIRTY_FRAMEBUFFER  = (1 << 0),
+      LIMA_CONTEXT_DIRTY_CLEAR        = (1 << 1),
+      LIMA_CONTEXT_DIRTY_SHADER_VERT  = (1 << 2),
+      LIMA_CONTEXT_DIRTY_SHADER_FRAG  = (1 << 3),
+   } dirty;
+
+   struct u_upload_mgr *uploader;
+
+   struct slab_child_pool transfer_pool;
+
+   struct lima_context_framebuffer framebuffer;
+   struct lima_context_clear clear;
+   struct lima_vs_shader_state *vs;
+   struct lima_fs_shader_state *fs;
 };
 
 static inline struct lima_context *
