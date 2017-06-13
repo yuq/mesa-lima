@@ -883,13 +883,19 @@ brw_upload_state_base_address(struct brw_context *brw)
        * and flushes prior to executing our batch.  However, it doesn't seem
        * as if the kernel's flushing is always sufficient and we don't want to
        * rely on it.
+       *
+       * We make this an end-of-pipe sync instead of a normal flush because we
+       * do not know the current status of the GPU.  On Haswell at least,
+       * having a fast-clear operation in flight at the same time as a normal
+       * rendering operation can cause hangs.  Since the kernel's flushing is
+       * insufficient, we need to ensure that any rendering operations from
+       * other processes are definitely complete before we try to do our own
+       * rendering.  It's a bit of a big hammer but it appears to work.
        */
-      brw_emit_pipe_control_flush(brw,
-                                  PIPE_CONTROL_RENDER_TARGET_FLUSH |
-                                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                                  dc_flush |
-                                  PIPE_CONTROL_NO_WRITE |
-                                  PIPE_CONTROL_CS_STALL);
+      brw_emit_end_of_pipe_sync(brw,
+                                PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                dc_flush);
    }
 
    if (brw->gen >= 8) {
