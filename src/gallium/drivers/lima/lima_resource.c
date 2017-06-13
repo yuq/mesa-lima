@@ -63,6 +63,9 @@ lima_resource_create(struct pipe_screen *pscreen,
       return NULL;
    }
 
+   printf("%s: pres=%p width=%u height=%u\n", __func__, &res->base,
+          pres->width0, pres->height0);
+
    return pres;
 }
 
@@ -138,6 +141,8 @@ lima_surface_create(struct pipe_context *pctx,
    psurf->u.tex.first_layer = surf_tmpl->u.tex.first_layer;
    psurf->u.tex.last_layer = surf_tmpl->u.tex.last_layer;
 
+   printf("%s: pres=%p psurf=%p\n", __func__, pres, psurf);
+
    return &surf->base;
 }
 
@@ -164,6 +169,8 @@ lima_transfer_map(struct pipe_context *pctx,
    struct pipe_transfer *ptrans;
    void *map;
    unsigned bo_op = 0;
+
+   printf("%s: pres=%p\n", __func__, pres);
 
    if (usage & PIPE_TRANSFER_READ)
       bo_op |= LIMA_BO_WAIT_FLAG_READ;
