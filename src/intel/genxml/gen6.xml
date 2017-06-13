@@ -1409,9 +1409,9 @@
     <field name="Thread Priority" start="81" end="81" type="uint">
       <value name="High" value="1"/>
     </field>
-    <field name="Floating Point Mode" start="80" end="80" type="uint">
+    <field name="Floating Point Mode" start="80" end="80" type="uint" prefix="FLOATING_POINT_MODE">
       <value name="IEEE-745" value="0"/>
-      <value name="Alt" value="1"/>
+      <value name="Alternate" value="1"/>
     </field>
     <field name="Illegal Opcode Exception Enable" start="77" end="77" type="bool"/>
     <field name="MaskStack Exception Enable" start="75" end="75" type="bool"/>
