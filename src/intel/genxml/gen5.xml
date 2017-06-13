@@ -893,7 +893,7 @@
     <field name="Constant URB Entry Read Offset" start="114" end="119" type="uint"/>
     <field name="Setup URB Entry Read Length" start="107" end="112" type="uint"/>
     <field name="Setup URB Entry Read Offset" start="100" end="105" type="uint"/>
-    <field name="Dispatch GRF Start Register For URB Data" start="96" end="99" type="uint"/>
+    <field name="Dispatch GRF Start Register For Constant/Setup Data 0" start="96" end="99" type="uint"/>
     <field name="Sampler State Pointer" start="133" end="159" type="address"/>
     <field name="Sampler Count" start="130" end="132" type="uint"/>
     <field name="Statistics Enable" start="128" end="128" type="bool"/>

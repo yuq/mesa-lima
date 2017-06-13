@@ -125,7 +125,7 @@ blorp_emit_wm_state(struct blorp_batch *batch,
       }
 
       if (prog_data) {
-         wm.DispatchGRFStartRegisterForURBData =
+         wm.DispatchGRFStartRegisterForConstantSetupData0 =
             prog_data->base.dispatch_grf_start_reg;
          wm.SetupURBEntryReadLength = prog_data->num_varying_inputs * 2;
          wm.SetupURBEntryReadOffset = 0;
