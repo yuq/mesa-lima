@@ -24,11 +24,39 @@
 
 #include "lima_context.h"
 
+union lima_float_uint_type {
+   uint32_t u;
+   float f;
+};
+
 static void
 lima_clear(struct pipe_context *pctx, unsigned buffers,
            const union pipe_color_union *color, double depth, unsigned stencil)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_context_clear *clear = &ctx->clear;
+
+   clear->buffers = buffers;
+
+   if (buffers & PIPE_CLEAR_COLOR0) {
+      clear->color[0] = color->ui[0];
+      clear->color[1] = color->ui[1];
+      clear->color[2] = color->ui[2];
+      clear->color[3] = color->ui[3];
+   }
+
+   if (buffers & PIPE_CLEAR_DEPTH) {
+      union lima_float_uint_type d;
+      d.f = depth;
+      clear->depth = d.u;
+   }
+
+   if (buffers & PIPE_CLEAR_STENCIL)
+      clear->stencil = stencil;
+
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_CLEAR;
 }
 
 static void
