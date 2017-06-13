@@ -2513,7 +2513,14 @@ miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
                            uint32_t start_layer, uint32_t num_layers)
 {
    assert(level <= mt->last_level);
-   uint32_t total_num_layers = mt->level[level].depth;
+   uint32_t total_num_layers;
+
+   if (mt->surf.size > 0)
+      total_num_layers = mt->surf.dim == ISL_SURF_DIM_3D ?
+         minify(mt->surf.phys_level0_sa.depth, level) :
+         mt->surf.phys_level0_sa.array_len;
+   else 
+      total_num_layers = mt->level[level].depth;
 
    assert(start_layer < total_num_layers);
    if (num_layers == INTEL_REMAINING_LAYERS)
