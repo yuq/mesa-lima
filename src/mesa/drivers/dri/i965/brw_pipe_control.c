@@ -184,10 +184,10 @@ brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags)
        * caches are coherent with memory once the specified R/O caches are
        * invalidated.  On pre-Gen6 hardware the (implicit) R/O cache
        * invalidation seems to happen at the bottom of the pipeline together
-       * with any write cache flush, so this shouldn't be a concern.
+       * with any write cache flush, so this shouldn't be a concern.  In order
+       * to ensure a full stall, we do an end-of-pipe sync.
        */
-      brw_emit_pipe_control_flush(brw, (flags & PIPE_CONTROL_CACHE_FLUSH_BITS) |
-                                       PIPE_CONTROL_CS_STALL);
+      brw_emit_end_of_pipe_sync(brw, (flags & PIPE_CONTROL_CACHE_FLUSH_BITS));
       flags &= ~(PIPE_CONTROL_CACHE_FLUSH_BITS | PIPE_CONTROL_CS_STALL);
    }
 
