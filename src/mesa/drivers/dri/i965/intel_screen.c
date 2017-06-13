@@ -37,6 +37,7 @@
 #include "swrast/s_renderbuffer.h"
 #include "util/ralloc.h"
 #include "brw_defines.h"
+#include "brw_state.h"
 #include "compiler/nir/nir.h"
 
 #include "utils.h"
@@ -319,19 +320,6 @@ modifier_is_supported(uint64_t modifier)
    }
 
    return false;
-}
-
-static uint32_t
-modifier_to_tiling(uint64_t modifier)
-{
-   int i;
-
-   for (i = 0; i < ARRAY_SIZE(tiling_modifier_map); i++) {
-      if (tiling_modifier_map[i].modifier == modifier)
-         return tiling_modifier_map[i].tiling;
-   }
-
-   unreachable("modifier_to_tiling should only receive known modifiers");
 }
 
 static uint64_t
@@ -641,10 +629,8 @@ intel_create_image_common(__DRIscreen *dri_screen,
 {
    __DRIimage *image;
    struct intel_screen *screen = dri_screen->driverPrivate;
-   uint32_t tiling;
    uint64_t modifier = DRM_FORMAT_MOD_INVALID;
-   unsigned tiled_height;
-   int cpp;
+   bool ok;
 
    /* Callers of this may specify a modifier, or a dri usage, but not both. The
     * newer modifier interface deprecates the older usage flags newer modifier
@@ -674,23 +660,44 @@ intel_create_image_common(__DRIscreen *dri_screen,
          modifier = I915_FORMAT_MOD_X_TILED;
       }
    }
-   tiling = modifier_to_tiling(modifier);
-   tiled_height = get_tiled_height(modifier, height);
 
    image = intel_allocate_image(screen, format, loaderPrivate);
    if (image == NULL)
       return NULL;
 
-   cpp = _mesa_get_format_bytes(image->format);
-   image->bo = brw_bo_alloc_tiled_2d(screen->bufmgr, "image",
-                                     width, tiled_height, cpp, tiling,
-                                     &image->pitch, 0);
+   const struct isl_drm_modifier_info *mod_info =
+      isl_drm_modifier_get_info(modifier);
+
+   struct isl_surf surf;
+   ok = isl_surf_init(&screen->isl_dev, &surf,
+                      .dim = ISL_SURF_DIM_2D,
+                      .format = brw_isl_format_for_mesa_format(image->format),
+                      .width = width,
+                      .height = height,
+                      .depth = 1,
+                      .levels = 1,
+                      .array_len = 1,
+                      .samples = 1,
+                      .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                               ISL_SURF_USAGE_TEXTURE_BIT |
+                               ISL_SURF_USAGE_STORAGE_BIT,
+                      .tiling_flags = (1 << mod_info->tiling));
+   assert(ok);
+   if (!ok) {
+      free(image);
+      return NULL;
+   }
+
+   image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image", surf.size,
+                                  isl_tiling_to_i915_tiling(mod_info->tiling),
+                                  surf.row_pitch, 0);
    if (image->bo == NULL) {
       free(image);
       return NULL;
    }
    image->width = width;
    image->height = height;
+   image->pitch = surf.row_pitch;
    image->modifier = modifier;
 
    return image;
