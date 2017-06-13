@@ -23,6 +23,7 @@
  */
 
 #include "util/u_memory.h"
+#include "tgsi/tgsi_dump.h"
 
 #include "pipe/p_state.h"
 
@@ -38,6 +39,23 @@ lima_create_fs_state(struct pipe_context *pctx,
       return NULL;
 
    printf("dummy %s\n", __func__);
+
+   assert(cso->type == PIPE_SHADER_IR_TGSI);
+   tgsi_dump(cso->tokens, 0);
+
+   static const uint32_t fs[] = {
+      0x00021025, 0x0000014c, 0x03c007cf, 0x00000000, /* 0x00000000 */
+   };
+
+   so->shader = MALLOC(sizeof(fs));
+   if (!so->shader) {
+      FREE(so);
+      return NULL;
+   }
+
+   memcpy(so->shader, fs, sizeof(fs));
+   so->shader_size = sizeof(fs);
+
    return so;
 }
 
@@ -45,12 +63,20 @@ static void
 lima_bind_fs_state(struct pipe_context *pctx, void *hwcso)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->fs = hwcso;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_SHADER_FRAG;
 }
 
 static void
 lima_delete_fs_state(struct pipe_context *pctx, void *hwcso)
 {
-   FREE(hwcso);
+   struct lima_fs_shader_state *so = hwcso;
+
+   FREE(so->shader);
+   FREE(so);
 }
 
 static void *
@@ -63,6 +89,28 @@ lima_create_vs_state(struct pipe_context *pctx,
       return NULL;
 
    printf("dummy %s\n", __func__);
+
+   assert(cso->type == PIPE_SHADER_IR_TGSI);
+   tgsi_dump(cso->tokens, 0);
+
+   static const uint32_t vs[] = {
+      0x00028000, 0x50000000, 0x00000001, 0x50000000, /* 0x00000000 */
+      0x10014480, 0x30030000, 0x10000280, 0x40050000, /* 0x00000010 */
+      0x00201000, 0x10000040, 0x00000000, 0x10000042, /* 0x00000020 */
+      0x00000003, 0x10000041, 0x100144c0, 0x20020000, /* 0x00000030 */
+      0x100144d0, 0x20020008, 0x03000000, 0x00000000, /* 0x00000040 */
+      0x00000000, 0x60000000, 0x00000000, 0x50000000, /* 0x00000050 */
+   };
+
+   so->shader = MALLOC(sizeof(vs));
+   if (!so->shader) {
+      FREE(so);
+      return NULL;
+   }
+
+   memcpy(so->shader, vs, sizeof(vs));
+   so->shader_size = sizeof(vs);
+
    return so;
 }
 
@@ -70,12 +118,20 @@ static void
 lima_bind_vs_state(struct pipe_context *pctx, void *hwcso)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->vs = hwcso;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_SHADER_VERT;
 }
 
 static void
 lima_delete_vs_state(struct pipe_context *pctx, void *hwcso)
 {
-   FREE(hwcso);
+   struct lima_vs_shader_state *so = hwcso;
+
+   FREE(so->shader);
+   FREE(so);
 }
 
 void
