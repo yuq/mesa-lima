@@ -37,6 +37,7 @@ struct lima_screen {
    int refcnt;
    void *winsys_priv;
 
+   struct lima_device_info info;
    lima_device_handle dev;
    int fd;
 

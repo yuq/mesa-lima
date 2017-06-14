@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2011-2013 Luc Verhaegen <libv@skynet.be>
  * Copyright (c) 2017 Lima Project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -48,6 +49,46 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
       pipe_surface_reference(&fb->cbuf, NULL);
 
    pipe_surface_reference(&fb->zsbuf, framebuffer->zsbuf);
+
+   /* assume always has cbuf */
+   int width = align(fb->cbuf->width, 16) >> 4;
+   int height = align(fb->cbuf->height, 16) >> 4;
+   if (fb->tiled_w != width || fb->tiled_h != height) {
+      fb->tiled_w = width;
+      fb->tiled_h = height;
+
+      /* max 512, not sure if set to 512 will affect performance */
+      int limit = 500;
+      while ((width * height) > limit) {
+         if (width >= height) {
+            width = (width + 1) >> 1;
+            fb->shift_w++;
+         } else {
+            height = (height + 1) >> 1;
+            fb->shift_h++;
+         }
+      }
+
+      fb->block_w = width;
+      fb->block_h = height;
+
+      int max;
+      if (fb->shift_h > fb->shift_w)
+         max = fb->shift_h;
+      else
+         max = fb->shift_w;
+
+      if (max > 2)
+         fb->shift_max = 2;
+      else if (max)
+         fb->shift_max = 1;
+
+      printf("fb dim change tiled=%d/%d block=%d/%d shift=%d/%d\n",
+             fb->tiled_w, fb->tiled_h, fb->block_w, fb->block_h,
+             fb->shift_w, fb->shift_h);
+
+      fb->dirty_dim = true;
+   }
 
    ctx->dirty |= LIMA_CONTEXT_DIRTY_FRAMEBUFFER;
 }
