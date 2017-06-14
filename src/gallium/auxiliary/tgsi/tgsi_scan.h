@@ -198,7 +198,7 @@ tgsi_scan_arrays(const struct tgsi_token *tokens,
                  unsigned max_array_id,
                  struct tgsi_array_info *arrays);
 
-inline bool
+static inline bool
 tgsi_is_bindless_image_file(unsigned file)
 {
    return file != TGSI_FILE_IMAGE &&
