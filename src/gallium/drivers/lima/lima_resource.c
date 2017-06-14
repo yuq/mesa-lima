@@ -25,6 +25,7 @@
 #include "util/u_memory.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
+#include "util/u_math.h"
 
 #include "state_tracker/drm_driver.h"
 
@@ -32,6 +33,56 @@
 #include "lima_context.h"
 #include "lima_resource.h"
 
+
+void
+lima_buffer_free(struct lima_buffer *buffer)
+{
+   if (buffer->bo)
+      lima_bo_free(buffer->bo);
+
+   if (buffer->va)
+      lima_va_range_free(buffer->screen->dev, buffer->size, buffer->va);
+
+   FREE(buffer);
+}
+
+struct lima_buffer *
+lima_buffer_alloc(struct lima_screen *screen, uint32_t size,
+                     enum lima_buffer_alloc_flag flags)
+{
+   struct lima_buffer *buffer = CALLOC_STRUCT(lima_buffer);
+
+   if (!buffer)
+      return NULL;
+
+   buffer->size = size;
+   buffer->screen = screen;
+
+   struct lima_bo_create_request req = {
+      .size = size,
+      .flags = 0,
+   };
+   if (lima_bo_create(screen->dev, &req, &buffer->bo))
+      goto err_out;
+
+   if (flags & LIMA_BUFFER_ALLOC_MAP) {
+      buffer->map = lima_bo_map(buffer->bo);
+      if (!buffer->map)
+         goto err_out;
+   }
+
+   if (flags & LIMA_BUFFER_ALLOC_VA) {
+      if (lima_va_range_alloc(screen->dev, size, &buffer->va) ||
+          lima_bo_va_map(buffer->bo, buffer->va, 0))
+          goto err_out;
+   }
+
+   return buffer;
+
+err_out:
+   lima_buffer_free(buffer);
+   return NULL;
+}
 
 static struct pipe_resource *
 lima_resource_create(struct pipe_screen *pscreen,
@@ -52,13 +103,12 @@ lima_resource_create(struct pipe_screen *pscreen,
    struct pipe_resource *pres = &res->base;
    res->stride = util_format_get_stride(pres->format, pres->width0);
 
-   struct lima_bo_create_request req = {
-      .size = res->stride *
-         util_format_get_nblocksy(pres->format, pres->height0) *
-         pres->array_size * pres->depth0,
-      .flags = 0,
-   };
-   if (lima_bo_create(screen->dev, &req, &res->bo)) {
+   uint32_t size = res->stride *
+      util_format_get_nblocksy(pres->format, pres->height0) *
+      pres->array_size * pres->depth0;
+
+   res->buffer = lima_buffer_alloc(screen, align(size, 0x1000), 0);
+   if (!res->buffer) {
       FREE(res);
       return NULL;
    }
@@ -74,8 +124,8 @@ lima_resource_destroy(struct pipe_screen *pscreen, struct pipe_resource *pres)
 {
    struct lima_resource *res = lima_resource(pres);
 
-   if (res->bo)
-      lima_bo_free(res->bo);
+   if (res->buffer)
+      lima_buffer_free(res->buffer);
 
    FREE(res);
 }
@@ -87,16 +137,17 @@ lima_resource_get_handle(struct pipe_screen *pscreen,
                          struct winsys_handle *handle, unsigned usage)
 {
    struct lima_resource *res = lima_resource(pres);
+   lima_bo_handle bo = res->buffer->bo;
    int err;
 
    switch (handle->type) {
    case DRM_API_HANDLE_TYPE_SHARED:
-      err = lima_bo_export(res->bo, lima_bo_handle_type_gem_flink_name, &handle->handle);
+      err = lima_bo_export(bo, lima_bo_handle_type_gem_flink_name, &handle->handle);
       if (err)
          return FALSE;
       break;
    case DRM_API_HANDLE_TYPE_KMS:
-      err = lima_bo_export(res->bo, lima_bo_handle_type_kms, &handle->handle);
+      err = lima_bo_export(bo, lima_bo_handle_type_kms, &handle->handle);
       if (err)
          return FALSE;
    default:
@@ -165,9 +216,9 @@ lima_transfer_map(struct pipe_context *pctx,
 {
    struct lima_context *ctx = lima_context(pctx);
    struct lima_resource *res = lima_resource(pres);
+   struct lima_buffer *buffer = res->buffer;
    struct lima_transfer *trans;
    struct pipe_transfer *ptrans;
-   void *map;
    unsigned bo_op = 0;
 
    printf("%s: pres=%p\n", __func__, pres);
@@ -177,12 +228,14 @@ lima_transfer_map(struct pipe_context *pctx,
    if (usage & PIPE_TRANSFER_WRITE)
       bo_op |= LIMA_BO_WAIT_FLAG_WRITE;
 
-   if (lima_bo_wait(res->bo, bo_op, 1000000000, true))
+   if (lima_bo_wait(buffer->bo, bo_op, 1000000000, true))
       return NULL;
 
-   map = lima_bo_map(res->bo);
-   if (!map)
-      return NULL;
+   if (!buffer->map) {
+      buffer->map = lima_bo_map(buffer->bo);
+      if (!buffer->map)
+         return NULL;
+   }
 
    trans = slab_alloc(&ctx->transfer_pool);
    if (!trans)
@@ -200,7 +253,7 @@ lima_transfer_map(struct pipe_context *pctx,
 
    *pptrans = ptrans;
 
-   return map + box->z * ptrans->layer_stride +
+   return buffer->map + box->z * ptrans->layer_stride +
       box->y / util_format_get_blockheight(pres->format) * ptrans->stride +
       box->x / util_format_get_blockwidth(pres->format) *
       util_format_get_blocksize(pres->format);
