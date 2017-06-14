@@ -84,20 +84,57 @@ static const struct {
  * and unsigned doublewords, so a new field is also available in the da3src
  * struct (part of struct brw_instruction.bits1 in brw_structs.h) to select
  * dst and shared-src types.
+ *
+ * CNL adds support for 3-src instructions in align1 mode, and with it support
+ * for most register types.
  */
 enum hw_3src_reg_type {
    GEN7_3SRC_TYPE_F  = 0,
    GEN7_3SRC_TYPE_D  = 1,
    GEN7_3SRC_TYPE_UD = 2,
    GEN7_3SRC_TYPE_DF = 3,
+
+   /** When ExecutionDatatype is 1: @{ */
+   GEN10_ALIGN1_3SRC_REG_TYPE_HF = 0b000,
+   GEN10_ALIGN1_3SRC_REG_TYPE_F  = 0b001,
+   GEN10_ALIGN1_3SRC_REG_TYPE_DF = 0b010,
+   /** @} */
+
+   /** When ExecutionDatatype is 0: @{ */
+   GEN10_ALIGN1_3SRC_REG_TYPE_UD = 0b000,
+   GEN10_ALIGN1_3SRC_REG_TYPE_D  = 0b001,
+   GEN10_ALIGN1_3SRC_REG_TYPE_UW = 0b010,
+   GEN10_ALIGN1_3SRC_REG_TYPE_W  = 0b011,
+   GEN10_ALIGN1_3SRC_REG_TYPE_UB = 0b100,
+   GEN10_ALIGN1_3SRC_REG_TYPE_B  = 0b101,
+   /** @} */
 };
 
-static const enum hw_3src_reg_type gen7_3src_type[] = {
-   [0 ... BRW_REGISTER_TYPE_LAST] = INVALID,
-   [BRW_REGISTER_TYPE_F]  = GEN7_3SRC_TYPE_F,
-   [BRW_REGISTER_TYPE_D]  = GEN7_3SRC_TYPE_D,
-   [BRW_REGISTER_TYPE_UD] = GEN7_3SRC_TYPE_UD,
-   [BRW_REGISTER_TYPE_DF] = GEN7_3SRC_TYPE_DF,
+static const struct hw_3src_type {
+   enum hw_3src_reg_type reg_type;
+   enum gen10_align1_3src_exec_type exec_type;
+} gen7_hw_3src_type[] = {
+   [0 ... BRW_REGISTER_TYPE_LAST] = { INVALID },
+
+   [BRW_REGISTER_TYPE_F]  = { GEN7_3SRC_TYPE_F  },
+   [BRW_REGISTER_TYPE_D]  = { GEN7_3SRC_TYPE_D  },
+   [BRW_REGISTER_TYPE_UD] = { GEN7_3SRC_TYPE_UD },
+   [BRW_REGISTER_TYPE_DF] = { GEN7_3SRC_TYPE_DF },
+}, gen10_hw_3src_align1_type[] = {
+#define E(x) BRW_ALIGN1_3SRC_EXEC_TYPE_##x
+   [0 ... BRW_REGISTER_TYPE_LAST] = { INVALID },
+
+   [BRW_REGISTER_TYPE_DF] = { GEN10_ALIGN1_3SRC_REG_TYPE_DF, E(FLOAT) },
+   [BRW_REGISTER_TYPE_F]  = { GEN10_ALIGN1_3SRC_REG_TYPE_F,  E(FLOAT) },
+   [BRW_REGISTER_TYPE_HF] = { GEN10_ALIGN1_3SRC_REG_TYPE_HF, E(FLOAT) },
+
+   [BRW_REGISTER_TYPE_D]  = { GEN10_ALIGN1_3SRC_REG_TYPE_D,  E(INT)   },
+   [BRW_REGISTER_TYPE_UD] = { GEN10_ALIGN1_3SRC_REG_TYPE_UD, E(INT)   },
+   [BRW_REGISTER_TYPE_W]  = { GEN10_ALIGN1_3SRC_REG_TYPE_W,  E(INT)   },
+   [BRW_REGISTER_TYPE_UW] = { GEN10_ALIGN1_3SRC_REG_TYPE_UW, E(INT)   },
+   [BRW_REGISTER_TYPE_B]  = { GEN10_ALIGN1_3SRC_REG_TYPE_B,  E(INT)   },
+   [BRW_REGISTER_TYPE_UB] = { GEN10_ALIGN1_3SRC_REG_TYPE_UB, E(INT)   },
+#undef E
 };
 
 /**
@@ -148,27 +185,57 @@ brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
 
 /**
  * Convert a brw_reg_type enumeration value into the hardware representation
- * for a 3-src instruction
+ * for a 3-src align16 instruction
  */
 unsigned
-brw_reg_type_to_hw_3src_type(const struct gen_device_info *devinfo,
-                             enum brw_reg_type type)
+brw_reg_type_to_a16_hw_3src_type(const struct gen_device_info *devinfo,
+                                 enum brw_reg_type type)
 {
-   assert(type < ARRAY_SIZE(gen7_3src_type));
-   assert(gen7_3src_type[type] != -1);
-   return gen7_3src_type[type];
+   assert(type < ARRAY_SIZE(gen7_hw_3src_type));
+   assert(gen7_hw_3src_type[type].reg_type != (enum hw_3src_reg_type)INVALID);
+   return gen7_hw_3src_type[type].reg_type;
 }
 
 /**
- * Convert the hardware representation for a 3-src instruction into a
+ * Convert a brw_reg_type enumeration value into the hardware representation
+ * for a 3-src align1 instruction
+ */
+unsigned
+brw_reg_type_to_a1_hw_3src_type(const struct gen_device_info *devinfo,
+                                enum brw_reg_type type)
+{
+   assert(type < ARRAY_SIZE(gen10_hw_3src_align1_type));
+   assert(gen10_hw_3src_align1_type[type].reg_type != (enum hw_3src_reg_type)INVALID);
+   return gen10_hw_3src_align1_type[type].reg_type;
+}
+
+/**
+ * Convert the hardware representation for a 3-src align16 instruction into a
  * brw_reg_type enumeration value.
  */
 enum brw_reg_type
-brw_hw_3src_type_to_reg_type(const struct gen_device_info *devinfo,
-                             unsigned hw_type)
+brw_a16_hw_3src_type_to_reg_type(const struct gen_device_info *devinfo,
+                                 unsigned hw_type)
 {
    for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
-      if (gen7_3src_type[i] == hw_type) {
+      if (gen7_hw_3src_type[i].reg_type == hw_type) {
+         return i;
+      }
+   }
+   unreachable("not reached");
+}
+
+/**
+ * Convert the hardware representation for a 3-src align1 instruction into a
+ * brw_reg_type enumeration value.
+ */
+enum brw_reg_type
+brw_a1_hw_3src_type_to_reg_type(const struct gen_device_info *devinfo,
+                                unsigned hw_type, unsigned exec_type)
+{
+   for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
+      if (gen10_hw_3src_align1_type[i].reg_type == hw_type &&
+          gen10_hw_3src_align1_type[i].exec_type == exec_type) {
          return i;
       }
    }

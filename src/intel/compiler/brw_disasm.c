@@ -764,9 +764,7 @@ dest_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
 {
    int err = 0;
    uint32_t reg_file;
-   enum brw_reg_type type =
-      brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_a16_dst_hw_type(devinfo, inst));
+   enum brw_reg_type type = brw_inst_3src_a16_dst_type(devinfo, inst);
    unsigned dst_subreg_nr =
       brw_inst_3src_a16_dst_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
@@ -934,9 +932,7 @@ static int
 src0_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   enum brw_reg_type type =
-      brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_a16_src_hw_type(devinfo, inst));
+   enum brw_reg_type type = brw_inst_3src_a16_src_type(devinfo, inst);
    unsigned src0_subreg_nr =
       brw_inst_3src_a16_src0_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
@@ -966,9 +962,7 @@ static int
 src1_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   enum brw_reg_type type =
-      brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_a16_src_hw_type(devinfo, inst));
+   enum brw_reg_type type = brw_inst_3src_a16_src_type(devinfo, inst);
    unsigned src1_subreg_nr =
       brw_inst_3src_a16_src1_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
@@ -999,9 +993,7 @@ static int
 src2_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   enum brw_reg_type type =
-      brw_hw_3src_type_to_reg_type(devinfo,
-                                   brw_inst_3src_a16_src_hw_type(devinfo, inst));
+   enum brw_reg_type type = brw_inst_3src_a16_src_type(devinfo, inst);
    unsigned src2_subreg_nr =
       brw_inst_3src_a16_src2_subreg_nr(devinfo, inst) * 4 /
       brw_reg_type_to_size(type);
