@@ -533,6 +533,20 @@ is_sampler_border_color_valid(struct gl_sampler_object *samp)
 }
 
 GLuint64 GLAPIENTRY
+_mesa_GetTextureHandleARB_no_error(GLuint texture)
+{
+   struct gl_texture_object *texObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = _mesa_lookup_texture(ctx, texture);
+   if (!_mesa_is_texture_complete(texObj, &texObj->Sampler))
+      _mesa_test_texobj_completeness(ctx, texObj);
+
+   return get_texture_handle(ctx, texObj, &texObj->Sampler);
+}
+
+GLuint64 GLAPIENTRY
 _mesa_GetTextureHandleARB(GLuint texture)
 {
    struct gl_texture_object *texObj = NULL;
@@ -581,6 +595,23 @@ _mesa_GetTextureHandleARB(GLuint texture)
    }
 
    return get_texture_handle(ctx, texObj, &texObj->Sampler);
+}
+
+GLuint64 GLAPIENTRY
+_mesa_GetTextureSamplerHandleARB_no_error(GLuint texture, GLuint sampler)
+{
+   struct gl_texture_object *texObj;
+   struct gl_sampler_object *sampObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = _mesa_lookup_texture(ctx, texture);
+   sampObj = _mesa_lookup_samplerobj(ctx, sampler);
+
+   if (!_mesa_is_texture_complete(texObj, sampObj))
+      _mesa_test_texobj_completeness(ctx, texObj);
+
+   return get_texture_handle(ctx, texObj, sampObj);
 }
 
 GLuint64 GLAPIENTRY

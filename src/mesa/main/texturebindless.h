@@ -68,7 +68,14 @@ _mesa_delete_sampler_handles(struct gl_context *ctx,
 /*@{*/
 
 GLuint64 GLAPIENTRY
+_mesa_GetTextureHandleARB_no_error(GLuint texture);
+
+GLuint64 GLAPIENTRY
 _mesa_GetTextureHandleARB(GLuint texture);
+
+GLuint64 GLAPIENTRY
+_mesa_GetTextureSamplerHandleARB_no_error(GLuint texture, GLuint sampler);
+
 GLuint64 GLAPIENTRY
 _mesa_GetTextureSamplerHandleARB(GLuint texture, GLuint sampler);
 
