@@ -152,24 +152,8 @@ fail:
 
 static const VkPipelineVertexInputStateCreateInfo normal_vi_create_info = {
 	.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-	.vertexBindingDescriptionCount = 1,
-	.pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
-		{
-			.binding = 0,
-			.stride = 2 * sizeof(float),
-			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-		},
-	},
-	.vertexAttributeDescriptionCount = 1,
-	.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
-		{
-			/* Texture Coordinate */
-			.location = 0,
-			.binding = 0,
-			.format = VK_FORMAT_R32G32_SFLOAT,
-			.offset = 0
-		},
-	},
+	.vertexBindingDescriptionCount = 0,
+	.vertexAttributeDescriptionCount = 0,
 };
 
 static VkFormat pipeline_formats[] = {
