@@ -764,6 +764,12 @@ dest_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
 {
    int err = 0;
    uint32_t reg_file;
+   enum brw_reg_type type =
+      brw_hw_3src_type_to_reg_type(devinfo,
+                                   brw_inst_3src_dst_type(devinfo, inst));
+   unsigned dst_subreg_nr =
+      brw_inst_3src_dst_subreg_nr(devinfo, inst) * 4 /
+      brw_reg_type_to_size(type);
 
    if (devinfo->gen == 6 && brw_inst_3src_dst_reg_file(devinfo, inst))
       reg_file = BRW_MESSAGE_REGISTER_FILE;
@@ -773,8 +779,8 @@ dest_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
    err |= reg(file, reg_file, brw_inst_3src_dst_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (brw_inst_3src_dst_subreg_nr(devinfo, inst))
-      format(file, ".%"PRIu64, brw_inst_3src_dst_subreg_nr(devinfo, inst));
+   if (dst_subreg_nr)
+      format(file, ".%u", dst_subreg_nr);
    string(file, "<1>");
    err |= control(file, "writemask", writemask,
                   brw_inst_3src_dst_writemask(devinfo, inst), NULL);
@@ -928,7 +934,12 @@ static int
 src0_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   unsigned src0_subreg_nr = brw_inst_3src_src0_subreg_nr(devinfo, inst);
+   enum brw_reg_type type =
+      brw_hw_3src_type_to_reg_type(devinfo,
+                                   brw_inst_3src_src_type(devinfo, inst));
+   unsigned src0_subreg_nr =
+      brw_inst_3src_src0_subreg_nr(devinfo, inst) * 4 /
+      brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
                   brw_inst_3src_src0_negate(devinfo, inst), NULL);
@@ -955,7 +966,12 @@ static int
 src1_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   unsigned src1_subreg_nr = brw_inst_3src_src1_subreg_nr(devinfo, inst);
+   enum brw_reg_type type =
+      brw_hw_3src_type_to_reg_type(devinfo,
+                                   brw_inst_3src_src_type(devinfo, inst));
+   unsigned src1_subreg_nr =
+      brw_inst_3src_src1_subreg_nr(devinfo, inst) * 4 /
+      brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
                   brw_inst_3src_src1_negate(devinfo, inst), NULL);
@@ -983,7 +999,12 @@ static int
 src2_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   unsigned src2_subreg_nr = brw_inst_3src_src2_subreg_nr(devinfo, inst);
+   enum brw_reg_type type =
+      brw_hw_3src_type_to_reg_type(devinfo,
+                                   brw_inst_3src_src_type(devinfo, inst));
+   unsigned src2_subreg_nr =
+      brw_inst_3src_src2_subreg_nr(devinfo, inst) * 4 /
+      brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
                   brw_inst_3src_src2_negate(devinfo, inst), NULL);
