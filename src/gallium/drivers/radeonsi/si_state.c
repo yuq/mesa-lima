@@ -2530,11 +2530,18 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * - shader write -> FB read
 	 *
 	 * DB caches are flushed on demand (using si_decompress_textures).
+	 *
+	 * When MSAA is enabled, CB and TC caches are flushed on demand
+	 * (after FMASK decompression). Shader write -> FB read transitions
+	 * cannot happen for MSAA textures, because MSAA shader images are
+	 * not supported.
 	 */
-	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
-			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_FLUSH_AND_INV_CB |
-			 SI_CONTEXT_CS_PARTIAL_FLUSH;
+	if (sctx->framebuffer.nr_samples <= 1) {
+		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
+				 SI_CONTEXT_INV_GLOBAL_L2 |
+				 SI_CONTEXT_FLUSH_AND_INV_CB;
+	}
+	sctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH;
 
 	/* u_blitter doesn't invoke depth decompression when it does multiple
 	 * blits in a row, but the only case when it matters for DB is when
@@ -2542,8 +2549,11 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * individual generate_mipmap blits.
 	 * Note that lower mipmap levels aren't compressed.
 	 */
-	if (sctx->generate_mipmap_for_depth)
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB;
+	if (sctx->generate_mipmap_for_depth) {
+		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
+				 SI_CONTEXT_INV_GLOBAL_L2 |
+				 SI_CONTEXT_FLUSH_AND_INV_DB;
+	}
 
 	/* Take the maximum of the old and new count. If the new count is lower,
 	 * dirtying is needed to disable the unbound colorbuffers.
@@ -3961,9 +3971,12 @@ static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
-			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_FLUSH_AND_INV_CB;
+	/* Multisample surfaces are flushed in si_decompress_textures. */
+	if (sctx->framebuffer.nr_samples <= 1) {
+		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
+				 SI_CONTEXT_INV_GLOBAL_L2 |
+				 SI_CONTEXT_FLUSH_AND_INV_CB;
+	}
 	sctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
@@ -4001,12 +4014,16 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 	}
 
-	/* Depth and stencil are flushed in si_decompress_textures when needed. */
-	if (flags & PIPE_BARRIER_FRAMEBUFFER)
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
+	/* MSAA color, any depth and any stencil are flushed in
+	 * si_decompress_textures when needed.
+	 */
+	if (flags & PIPE_BARRIER_FRAMEBUFFER &&
+	    sctx->framebuffer.nr_samples <= 1) {
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+				 SI_CONTEXT_WRITEBACK_GLOBAL_L2;
+	}
 
-	if (flags & (PIPE_BARRIER_FRAMEBUFFER |
-		     PIPE_BARRIER_INDIRECT_BUFFER))
+	if (flags & PIPE_BARRIER_INDIRECT_BUFFER)
 		sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 }
 

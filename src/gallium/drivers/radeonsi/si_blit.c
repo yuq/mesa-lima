@@ -405,6 +405,14 @@ si_decompress_depth(struct si_context *sctx,
 				tex->stencil_dirty_level_mask = 0;
 		}
 	}
+	/* set_framebuffer_state takes care of coherency for single-sample.
+	 * The DB->CB copy uses CB for the final writes.
+	 */
+	if (copy_planes && tex->resource.b.b.nr_samples > 1) {
+		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
+				 SI_CONTEXT_INV_GLOBAL_L2 |
+				 SI_CONTEXT_FLUSH_AND_INV_CB;
+	}
 }
 
 static void
@@ -487,9 +495,18 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 			surf_tmpl.u.tex.last_layer = layer;
 			cbsurf = ctx->create_surface(ctx, &rtex->resource.b.b, &surf_tmpl);
 
+			/* Required before and after FMASK and DCC_DECOMPRESS. */
+			if (custom_blend == sctx->custom_blend_fmask_decompress ||
+			    custom_blend == sctx->custom_blend_dcc_decompress)
+				sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
+
 			si_blitter_begin(ctx, SI_DECOMPRESS);
 			util_blitter_custom_color(sctx->blitter, cbsurf, custom_blend);
 			si_blitter_end(ctx);
+
+			if (custom_blend == sctx->custom_blend_fmask_decompress ||
+			    custom_blend == sctx->custom_blend_dcc_decompress)
+				sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
 
 			pipe_surface_reference(&cbsurf, NULL);
 		}
@@ -503,6 +520,10 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 
 	sctx->decompression_enabled = false;
 	sctx->framebuffer.do_update_surf_dirtiness = old_update_dirtiness;
+
+	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_INV_GLOBAL_L2 |
+			 SI_CONTEXT_INV_VMEM_L1;
 }
 
 static void
@@ -1157,6 +1178,9 @@ static void si_do_CB_resolve(struct si_context *sctx,
 			     unsigned dst_level, unsigned dst_z,
 			     enum pipe_format format)
 {
+	/* Required before and after CB_RESOLVE. */
+	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
+
 	si_blitter_begin(&sctx->b.b, SI_COLOR_RESOLVE |
 			 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
 	util_blitter_custom_resolve_color(sctx->blitter, dst, dst_level, dst_z,
@@ -1164,6 +1188,11 @@ static void si_do_CB_resolve(struct si_context *sctx,
 					  ~0, sctx->custom_blend_resolve,
 					  format);
 	si_blitter_end(&sctx->b.b);
+
+	/* Flush caches for possible texturing. */
+	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_INV_GLOBAL_L2 |
+			 SI_CONTEXT_INV_VMEM_L1;
 }
 
 static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
