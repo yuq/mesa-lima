@@ -24,6 +24,7 @@
 
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_math.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
@@ -43,6 +44,9 @@ lima_context_destroy(struct pipe_context *pctx)
 
    if (ctx->tile_heap)
       lima_buffer_free(ctx->tile_heap);
+
+   if (ctx->plb)
+      lima_buffer_free(ctx->plb);
 
    FREE(ctx);
 }
@@ -64,12 +68,6 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    if (!ctx)
       return NULL;
 
-   ctx->tile_heap = lima_buffer_alloc(screen, 0x2000, LIMA_BUFFER_ALLOC_VA);
-   if (!ctx->tile_heap) {
-      FREE(ctx);
-      return NULL;
-   }
-
    ctx->base.screen = pscreen;
    ctx->base.destroy = lima_context_destroy;
    ctx->base.flush = lima_pipe_flush;
@@ -85,5 +83,41 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 
+   ctx->tile_heap = lima_buffer_alloc(screen, 0x2000, LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->tile_heap)
+      goto err_out;
+
+   /* assume max fb size 4096x4096  */
+   int block_size = 0x200;
+   int max_plb = 512;
+   int plb_size = block_size * max_plb;
+   int plbu_size = max_plb * sizeof(uint32_t);
+   int pp_end_mark = 2 * sizeof(uint32_t) * 4;
+   /* max possible plb pp stream */
+   int pp_size = (4096 >> 4) * (4096 >> 4) * 4 * sizeof(uint32_t) + pp_end_mark;
+
+   ctx->plb = lima_buffer_alloc(screen, align(plb_size + plbu_size + pp_size, 0x1000),
+                                LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->plb)
+      goto err_out;
+
+   ctx->plb_plbu_offset = 0;
+   ctx->plb_offset = ctx->plb_plbu_offset + plbu_size;
+
+   /* plb address stream for pp depends on framebuffer dimension */
+   int i;
+   int per_pp_size = align(pp_size, 0x1000) / screen->info.num_pp;
+   for (i = 0; i < screen->info.num_pp; i++)
+      ctx->plb_pp_offset[i] = ctx->plb_offset + plb_size + i * per_pp_size;
+
+   /* plb address stream for plbu is static for any framebuffer */
+   for (i = 0; i < max_plb; i++)
+      ((uint32_t *)(ctx->plb->map + ctx->plb_plbu_offset))[i] =
+         ctx->plb->va + ctx->plb_offset + block_size * i;
+
    return &ctx->base;
+
+err_out:
+   lima_context_destroy(&ctx->base);
+   return NULL;
 }
