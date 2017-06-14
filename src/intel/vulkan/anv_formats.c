@@ -378,11 +378,6 @@ get_buffer_format_properties(const struct gen_device_info *devinfo,
    if (format == ISL_FORMAT_R32_SINT || format == ISL_FORMAT_R32_UINT)
       flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
 
-   if (flags) {
-      flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
-               VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
-   }
-
    return flags;
 }
 
