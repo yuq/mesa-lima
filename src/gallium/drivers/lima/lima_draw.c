@@ -157,6 +157,22 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_FRAMEBUFFER;
    }
+
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT) {
+      struct lima_vs_shader_state *vs = ctx->vs;
+
+      assert(!lima_bo_wait(ctx->vs_program->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true));
+      memcpy(ctx->vs_program->map, vs->shader, vs->shader_size);
+      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_VERT;
+   }
+
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG) {
+      struct lima_fs_shader_state *fs = ctx->fs;
+
+      assert(!lima_bo_wait(ctx->fs_program->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true));
+      memcpy(ctx->fs_program->map, fs->shader, fs->shader_size);
+      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_FRAG;
+   }
 }
 
 void
