@@ -73,7 +73,14 @@ GLuint64 GLAPIENTRY
 _mesa_GetTextureSamplerHandleARB(GLuint texture, GLuint sampler);
 
 void GLAPIENTRY
+_mesa_MakeTextureHandleResidentARB_no_error(GLuint64 handle);
+
+void GLAPIENTRY
 _mesa_MakeTextureHandleResidentARB(GLuint64 handle);
+
+void GLAPIENTRY
+_mesa_MakeTextureHandleNonResidentARB_no_error(GLuint64 handle);
+
 void GLAPIENTRY
 _mesa_MakeTextureHandleNonResidentARB(GLuint64 handle);
 
@@ -82,7 +89,14 @@ _mesa_GetImageHandleARB(GLuint texture, GLint level, GLboolean layered,
                         GLint layer, GLenum format);
 
 void GLAPIENTRY
+_mesa_MakeImageHandleResidentARB_no_error(GLuint64 handle, GLenum access);
+
+void GLAPIENTRY
 _mesa_MakeImageHandleResidentARB(GLuint64 handle, GLenum access);
+
+void GLAPIENTRY
+_mesa_MakeImageHandleNonResidentARB_no_error(GLuint64 handle);
+
 void GLAPIENTRY
 _mesa_MakeImageHandleNonResidentARB(GLuint64 handle);
 

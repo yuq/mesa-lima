@@ -19,11 +19,11 @@
       <param name="sampler" type="GLuint" />
    </function>
 
-   <function name="MakeTextureHandleResidentARB">
+   <function name="MakeTextureHandleResidentARB" no_error="true">
       <param name="handle" type="GLuint64" />
    </function>
 
-   <function name="MakeTextureHandleNonResidentARB">
+   <function name="MakeTextureHandleNonResidentARB" no_error="true">
       <param name="handle" type="GLuint64" />
    </function>
 
@@ -36,12 +36,12 @@
       <param name="format" type="GLenum" />
    </function>
 
-   <function name="MakeImageHandleResidentARB">
+   <function name="MakeImageHandleResidentARB" no_error="true">
       <param name="handle" type="GLuint64" />
       <param name="access" type="GLenum" />
    </function>
 
-   <function name="MakeImageHandleNonResidentARB">
+   <function name="MakeImageHandleNonResidentARB" no_error="true">
       <param name="handle" type="GLuint64" />
    </function>
 

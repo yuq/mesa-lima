@@ -649,6 +649,17 @@ _mesa_GetTextureSamplerHandleARB(GLuint texture, GLuint sampler)
 }
 
 void GLAPIENTRY
+_mesa_MakeTextureHandleResidentARB_no_error(GLuint64 handle)
+{
+   struct gl_texture_handle_object *texHandleObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   texHandleObj = lookup_texture_handle(ctx, handle);
+   make_texture_handle_resident(ctx, texHandleObj, true);
+}
+
+void GLAPIENTRY
 _mesa_MakeTextureHandleResidentARB(GLuint64 handle)
 {
    struct gl_texture_handle_object *texHandleObj;
@@ -681,6 +692,17 @@ _mesa_MakeTextureHandleResidentARB(GLuint64 handle)
    }
 
    make_texture_handle_resident(ctx, texHandleObj, true);
+}
+
+void GLAPIENTRY
+_mesa_MakeTextureHandleNonResidentARB_no_error(GLuint64 handle)
+{
+   struct gl_texture_handle_object *texHandleObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   texHandleObj = lookup_texture_handle(ctx, handle);
+   make_texture_handle_resident(ctx, texHandleObj, false);
 }
 
 void GLAPIENTRY
@@ -790,6 +812,17 @@ _mesa_GetImageHandleARB(GLuint texture, GLint level, GLboolean layered,
 }
 
 void GLAPIENTRY
+_mesa_MakeImageHandleResidentARB_no_error(GLuint64 handle, GLenum access)
+{
+   struct gl_image_handle_object *imgHandleObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   imgHandleObj = lookup_image_handle(ctx, handle);
+   make_image_handle_resident(ctx, imgHandleObj, access, true);
+}
+
+void GLAPIENTRY
 _mesa_MakeImageHandleResidentARB(GLuint64 handle, GLenum access)
 {
    struct gl_image_handle_object *imgHandleObj;
@@ -831,6 +864,17 @@ _mesa_MakeImageHandleResidentARB(GLuint64 handle, GLenum access)
    }
 
    make_image_handle_resident(ctx, imgHandleObj, access, true);
+}
+
+void GLAPIENTRY
+_mesa_MakeImageHandleNonResidentARB_no_error(GLuint64 handle)
+{
+   struct gl_image_handle_object *imgHandleObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   imgHandleObj = lookup_image_handle(ctx, handle);
+   make_image_handle_resident(ctx, imgHandleObj, GL_READ_ONLY, false);
 }
 
 void GLAPIENTRY
