@@ -4132,6 +4132,9 @@ struct gl_constants
 
    /** GL_ARB_get_program_binary */
    GLuint NumProgramBinaryFormats;
+
+   /** Is the drivers uniform storage packed or padded to 16 bytes. */
+   bool PackedDriverUniformStorage;
 };
 
 
