@@ -359,7 +359,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
 
             if (state) {
                ctx->Transform.ClipPlanesEnabled |= (1 << p);
-               _mesa_update_clip_plane(ctx, p);
+               if (ctx->API == API_OPENGL_COMPAT || ctx->API == API_OPENGLES)
+                  _mesa_update_clip_plane(ctx, p);
             }
             else {
                ctx->Transform.ClipPlanesEnabled &= ~(1 << p);
