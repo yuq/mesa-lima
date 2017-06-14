@@ -470,10 +470,12 @@ lima_screen_create(int fd)
 
    screen = CALLOC_STRUCT(lima_screen);
    if (!screen)
-      return NULL;
+      goto err_out0;
 
    screen->fd = fd;
    screen->dev = dev;
+   if (lima_device_query_info(dev, &screen->info))
+      goto err_out1;
 
    screen->base.destroy = lima_screen_destroy;
    screen->base.get_name = lima_screen_get_name;
@@ -493,4 +495,10 @@ lima_screen_create(int fd)
    screen->refcnt = 1;
 
    return &screen->base;
+
+err_out1:
+   FREE(screen);
+err_out0:
+   lima_device_delete(dev);
+   return NULL;
 }
