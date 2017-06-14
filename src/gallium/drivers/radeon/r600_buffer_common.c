@@ -110,6 +110,8 @@ void r600_init_resource_fields(struct r600_common_screen *rscreen,
 	res->bo_size = size;
 	res->bo_alignment = alignment;
 	res->flags = 0;
+	res->texture_handle_allocated = false;
+	res->image_handle_allocated = false;
 
 	switch (res->b.b.usage) {
 	case PIPE_USAGE_STREAM:
