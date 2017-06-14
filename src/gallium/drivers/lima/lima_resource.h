@@ -32,10 +32,24 @@
 struct lima_screen;
 struct lima_context;
 
+struct lima_buffer {
+   struct lima_screen *screen;
+
+   lima_bo_handle bo;
+   uint32_t size;
+   void *map;
+   uint32_t va;
+};
+
+enum lima_buffer_alloc_flag {
+   LIMA_BUFFER_ALLOC_MAP = (1 << 0),
+   LIMA_BUFFER_ALLOC_VA  = (1 << 1),
+};
+
 struct lima_resource {
    struct pipe_resource base;
 
-   lima_bo_handle bo;
+   struct lima_buffer *buffer;
    uint32_t stride;
 };
 
@@ -64,6 +78,13 @@ lima_transfer(struct pipe_transfer *trans)
 {
    return (struct lima_transfer *)trans;
 }
+
+struct lima_buffer *
+lima_buffer_alloc(struct lima_screen *screen, uint32_t size,
+                     enum lima_buffer_alloc_flag flags);
+
+void
+lima_buffer_free(struct lima_buffer *buffer);
 
 void
 lima_resource_screen_init(struct lima_screen *screen);

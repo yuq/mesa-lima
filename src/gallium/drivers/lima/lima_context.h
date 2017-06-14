@@ -32,6 +32,7 @@
 
 struct pipe_screen;
 struct pipe_surface;
+struct lima_buffer;
 
 struct lima_context_framebuffer {
    struct pipe_surface *cbuf, *zsbuf;
@@ -100,6 +101,8 @@ struct lima_context {
    struct lima_fs_shader_state *fs;
    struct lima_vertex_element_state *vertex_elements;
    struct lima_context_vertex_buffer vertex_buffers;
+
+   struct lima_buffer *tile_heap;
 };
 
 static inline struct lima_context *

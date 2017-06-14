@@ -41,6 +41,9 @@ lima_context_destroy(struct pipe_context *pctx)
 
    slab_destroy_child(&ctx->transfer_pool);
 
+   if (ctx->tile_heap)
+      lima_buffer_free(ctx->tile_heap);
+
    FREE(ctx);
 }
 
@@ -60,6 +63,12 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    ctx = CALLOC_STRUCT(lima_context);
    if (!ctx)
       return NULL;
+
+   ctx->tile_heap = lima_buffer_alloc(screen, 0x2000, LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->tile_heap) {
+      FREE(ctx);
+      return NULL;
+   }
 
    ctx->base.screen = pscreen;
    ctx->base.destroy = lima_context_destroy;
