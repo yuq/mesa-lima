@@ -106,6 +106,9 @@ brw_wm_debug_recompile(struct brw_context *brw, struct gl_program *prog,
                       old_key->alpha_test_func, key->alpha_test_func);
    found |= key_debug(brw, "mrt alpha test reference value",
                       old_key->alpha_test_ref, key->alpha_test_ref);
+   found |= key_debug(brw, "force dual color blending",
+                      old_key->force_dual_color_blend,
+                      key->force_dual_color_blend);
 
    found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
 
