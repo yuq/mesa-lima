@@ -103,6 +103,7 @@ static void si_destroy_context(struct pipe_context *context)
 
 	util_dynarray_fini(&sctx->resident_tex_handles);
 	util_dynarray_fini(&sctx->resident_img_handles);
+	util_dynarray_fini(&sctx->resident_tex_needs_depth_decompress);
 	FREE(sctx);
 }
 
@@ -342,6 +343,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	util_dynarray_init(&sctx->resident_tex_handles, NULL);
 	util_dynarray_init(&sctx->resident_img_handles, NULL);
+	util_dynarray_init(&sctx->resident_tex_needs_depth_decompress, NULL);
 
 	return &sctx->b.b;
 fail:

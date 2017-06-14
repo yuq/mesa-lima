@@ -2352,8 +2352,13 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 			struct r600_texture *rtex =
 				(struct r600_texture *)sview->base.texture;
 
-			tex_handle->needs_depth_decompress =
-				depth_needs_decompression(rtex, sview);
+			if (depth_needs_decompression(rtex, sview)) {
+				util_dynarray_append(
+					&sctx->resident_tex_needs_depth_decompress,
+					struct si_texture_handle *,
+					tex_handle);
+			}
+
 			tex_handle->needs_color_decompress =
 				color_needs_decompression(rtex);
 
@@ -2386,6 +2391,12 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 		util_dynarray_delete_unordered(&sctx->resident_tex_handles,
 					       struct si_texture_handle *,
 					       tex_handle);
+
+		if (sview->base.texture->target != PIPE_BUFFER) {
+			util_dynarray_delete_unordered(
+				&sctx->resident_tex_needs_depth_decompress,
+				struct si_texture_handle *, tex_handle);
+		}
 	}
 }
 

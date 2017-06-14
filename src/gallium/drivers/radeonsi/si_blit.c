@@ -705,12 +705,18 @@ static void si_decompress_resident_textures(struct si_context *sctx)
 		if ((*tex_handle)->needs_color_decompress)
 			si_decompress_color_texture(sctx, tex, view->u.tex.first_level,
 						    view->u.tex.last_level);
+	}
 
-		if ((*tex_handle)->needs_depth_decompress)
-			si_decompress_depth(sctx, tex,
-				sview->is_stencil_sampler ? PIPE_MASK_S : PIPE_MASK_Z,
-				view->u.tex.first_level, view->u.tex.last_level,
-				0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
+	util_dynarray_foreach(&sctx->resident_tex_needs_depth_decompress,
+			      struct si_texture_handle *, tex_handle) {
+		struct pipe_sampler_view *view = (*tex_handle)->view;
+		struct si_sampler_view *sview = (struct si_sampler_view *)view;
+		struct r600_texture *tex = (struct r600_texture *)view->texture;
+
+		si_decompress_depth(sctx, tex,
+			sview->is_stencil_sampler ? PIPE_MASK_S : PIPE_MASK_Z,
+			view->u.tex.first_level, view->u.tex.last_level,
+			0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
 	}
 }
 
