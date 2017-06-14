@@ -86,7 +86,7 @@ void st_update_rasterizer( struct st_context *st )
        * must match OpenGL conventions so FBOs use Y=0=BOTTOM.  In that
        * case, we must invert Y and flip the notion of front vs. back.
        */
-      if (st_fb_orientation(ctx->DrawBuffer) == Y_0_BOTTOM) {
+      if (st->state.fb_orientation == Y_0_BOTTOM) {
          /* Drawing to an FBO.  The viewport will be inverted. */
          raster->front_ccw ^= 1;
       }
@@ -174,7 +174,7 @@ void st_update_rasterizer( struct st_context *st )
    if (ctx->Point.PointSprite) {
       /* origin */
       if ((ctx->Point.SpriteOrigin == GL_UPPER_LEFT) ^
-          (st_fb_orientation(ctx->DrawBuffer) == Y_0_BOTTOM))
+          (st->state.fb_orientation == Y_0_BOTTOM))
          raster->sprite_coord_mode = PIPE_SPRITE_COORD_UPPER_LEFT;
       else 
          raster->sprite_coord_mode = PIPE_SPRITE_COORD_LOWER_LEFT;
@@ -269,7 +269,7 @@ void st_update_rasterizer( struct st_context *st )
                                   ctx->Color._ClampFragmentColor;
 
    raster->half_pixel_center = 1;
-   if (st_fb_orientation(ctx->DrawBuffer) == Y_0_TOP)
+   if (st->state.fb_orientation == Y_0_TOP)
       raster->bottom_edge_rule = 1;
    /* _NEW_TRANSFORM */
    if (ctx->Transform.ClipOrigin == GL_UPPER_LEFT)
