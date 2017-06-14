@@ -2595,6 +2595,9 @@ void si_all_resident_buffers_begin_new_cs(struct si_context *sctx)
 					   RADEON_USAGE_READWRITE,
 					   false, false);
 	}
+
+	sctx->b.num_resident_handles += num_resident_tex_handles +
+					num_resident_img_handles;
 }
 
 /* INIT/DEINIT/UPLOAD */

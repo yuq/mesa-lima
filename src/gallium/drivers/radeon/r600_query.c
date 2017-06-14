@@ -134,6 +134,9 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_NUM_L2_WRITEBACKS:
 		query->begin_result = rctx->num_L2_writebacks;
 		break;
+	case R600_QUERY_NUM_RESIDENT_HANDLES:
+		query->begin_result = rctx->num_resident_handles;
+		break;
 	case R600_QUERY_TC_OFFLOADED_SLOTS:
 		query->begin_result = rctx->tc ? rctx->tc->num_offloaded_slots : 0;
 		break;
@@ -275,6 +278,9 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_NUM_L2_WRITEBACKS:
 		query->end_result = rctx->num_L2_writebacks;
+		break;
+	case R600_QUERY_NUM_RESIDENT_HANDLES:
+		query->end_result = rctx->num_resident_handles;
 		break;
 	case R600_QUERY_TC_OFFLOADED_SLOTS:
 		query->end_result = rctx->tc ? rctx->tc->num_offloaded_slots : 0;
@@ -1834,6 +1840,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-fb-cache-flushes",	NUM_FB_CACHE_FLUSHES,	UINT64, AVERAGE),
 	X("num-L2-invalidates",		NUM_L2_INVALIDATES,	UINT64, AVERAGE),
 	X("num-L2-writebacks",		NUM_L2_WRITEBACKS,	UINT64, AVERAGE),
+	X("num-resident-handles",	NUM_RESIDENT_HANDLES,	UINT64, AVERAGE),
 	X("tc-offloaded-slots",		TC_OFFLOADED_SLOTS,     UINT64, AVERAGE),
 	X("tc-direct-slots",		TC_DIRECT_SLOTS,	UINT64, AVERAGE),
 	X("tc-num-syncs",		TC_NUM_SYNCS,		UINT64, AVERAGE),
