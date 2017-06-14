@@ -62,12 +62,7 @@ void st_update_sample_mask( struct st_context *st )
          sample_mask &= st->ctx->Multisample.SampleMaskValue;
    }
 
-   /* mask off unused bits or don't care? */
-
-   if (sample_mask != st->state.sample_mask) {
-      st->state.sample_mask = sample_mask;
-      cso_set_sample_mask(st->cso_context, sample_mask);
-   }
+   cso_set_sample_mask(st->cso_context, sample_mask);
 }
 
 void st_update_sample_shading( struct st_context *st )

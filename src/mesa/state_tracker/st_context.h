@@ -156,7 +156,6 @@ struct st_context
          boolean include;
          struct pipe_scissor_state rects[PIPE_MAX_WINDOW_RECTANGLES];
       } window_rects;
-      unsigned sample_mask;
 
       GLuint poly_stipple[32];  /**< In OpenGL's bottom-to-top order */
 
