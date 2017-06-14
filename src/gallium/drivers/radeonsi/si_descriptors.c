@@ -1617,40 +1617,27 @@ static void si_set_polygon_stipple(struct pipe_context *ctx,
 static void
 si_resident_handles_update_needs_color_decompress(struct si_context *sctx)
 {
-	unsigned num_resident_tex_handles, num_resident_img_handles;
-	unsigned i;
-
-	num_resident_tex_handles = sctx->resident_tex_handles.size /
-				   sizeof(struct si_texture_handle *);
-
-	for (i = 0; i < num_resident_tex_handles; i++) {
-		struct si_texture_handle *tex_handle =
-			*util_dynarray_element(&sctx->resident_tex_handles,
-					       struct si_texture_handle *, i);
-		struct pipe_resource *res = tex_handle->view->texture;
+	util_dynarray_foreach(&sctx->resident_tex_handles,
+			      struct si_texture_handle *, tex_handle) {
+		struct pipe_resource *res = (*tex_handle)->view->texture;
 
 		if (res && res->target != PIPE_BUFFER) {
 			struct r600_texture *rtex = (struct r600_texture *)res;
 
-			tex_handle->needs_color_decompress =
+			(*tex_handle)->needs_color_decompress =
 				color_needs_decompression(rtex);
 		}
 	}
 
-	num_resident_img_handles = sctx->resident_img_handles.size /
-				   sizeof(struct si_image_handle *);
-
-	for (i = 0; i < num_resident_img_handles; i++) {
-		struct si_image_handle *img_handle =
-			*util_dynarray_element(&sctx->resident_img_handles,
-					       struct si_image_handle *, i);
-		struct pipe_image_view *view = &img_handle->view;
+	util_dynarray_foreach(&sctx->resident_img_handles,
+			      struct si_image_handle *, img_handle) {
+		struct pipe_image_view *view = &(*img_handle)->view;
 		struct pipe_resource *res = view->resource;
 
 		if (res && res->target != PIPE_BUFFER) {
 			struct r600_texture *rtex = (struct r600_texture *)res;
 
-			img_handle->needs_color_decompress =
+			(*img_handle)->needs_color_decompress =
 				color_needs_decompression(rtex);
 		}
 	}
@@ -1850,17 +1837,10 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 
 	/* Bindless texture handles */
 	if (rbuffer->texture_handle_allocated) {
-		unsigned num_resident_tex_handles;
-
-		num_resident_tex_handles = sctx->resident_tex_handles.size /
-					   sizeof(struct si_texture_handle *);
-
-		for (i = 0; i < num_resident_tex_handles; i++) {
-			struct si_texture_handle *tex_handle =
-				*util_dynarray_element(&sctx->resident_tex_handles,
-						       struct si_texture_handle *, i);
-			struct pipe_sampler_view *view = tex_handle->view;
-			struct si_bindless_descriptor *desc = tex_handle->desc;
+		util_dynarray_foreach(&sctx->resident_tex_handles,
+				      struct si_texture_handle *, tex_handle) {
+			struct pipe_sampler_view *view = (*tex_handle)->view;
+			struct si_bindless_descriptor *desc = (*tex_handle)->desc;
 
 			if (view->texture == buf) {
 				si_set_buf_desc_address(rbuffer,
@@ -1879,17 +1859,10 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 
 	/* Bindless image handles */
 	if (rbuffer->image_handle_allocated) {
-		unsigned num_resident_img_handles;
-
-		num_resident_img_handles = sctx->resident_img_handles.size /
-					   sizeof(struct si_image_handle *);
-
-		for (i = 0; i < num_resident_img_handles; i++) {
-			struct si_image_handle *img_handle =
-				*util_dynarray_element(&sctx->resident_img_handles,
-						       struct si_image_handle *, i);
-			struct pipe_image_view *view = &img_handle->view;
-			struct si_bindless_descriptor *desc = img_handle->desc;
+		util_dynarray_foreach(&sctx->resident_img_handles,
+				      struct si_image_handle *, img_handle) {
+			struct pipe_image_view *view = &(*img_handle)->view;
+			struct si_bindless_descriptor *desc = (*img_handle)->desc;
 
 			if (view->resource == buf) {
 				if (view->access & PIPE_IMAGE_ACCESS_WRITE)
@@ -2544,8 +2517,6 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 void si_all_resident_buffers_begin_new_cs(struct si_context *sctx)
 {
 	unsigned num_resident_tex_handles, num_resident_img_handles;
-	unsigned num_bindless_descriptors;
-	unsigned i;
 
 	num_resident_tex_handles = sctx->resident_tex_handles.size /
 				   sizeof(struct si_texture_handle *);
@@ -2557,27 +2528,20 @@ void si_all_resident_buffers_begin_new_cs(struct si_context *sctx)
 	if (!num_resident_tex_handles && !num_resident_img_handles)
 		return;
 
-	num_bindless_descriptors = sctx->bindless_descriptors.size /
-				   sizeof(struct r600_resource *);
-
 	/* Add all bindless descriptors. */
-	for (i = 0; i < num_bindless_descriptors; i++) {
-		struct r600_resource *desc =
-			*util_dynarray_element(&sctx->bindless_descriptors,
-					       struct r600_resource *, i);
+	util_dynarray_foreach(&sctx->bindless_descriptors,
+			      struct r600_resource *, desc) {
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, *desc,
 					  RADEON_USAGE_READWRITE,
 					  RADEON_PRIO_DESCRIPTORS);
 	}
 
 	/* Add all resident texture handles. */
-	for (i = 0; i < num_resident_tex_handles; i++) {
-		struct si_texture_handle *tex_handle =
-			*util_dynarray_element(&sctx->resident_tex_handles,
-					       struct si_texture_handle *, i);
+	util_dynarray_foreach(&sctx->resident_tex_handles,
+			      struct si_texture_handle *, tex_handle) {
 		struct si_sampler_view *sview =
-			(struct si_sampler_view *)tex_handle->view;
+			(struct si_sampler_view *)(*tex_handle)->view;
 
 		si_sampler_view_add_buffer(sctx, sview->base.texture,
 					   RADEON_USAGE_READ,
@@ -2585,11 +2549,9 @@ void si_all_resident_buffers_begin_new_cs(struct si_context *sctx)
 	}
 
 	/* Add all resident image handles. */
-	for (i = 0; i < num_resident_img_handles; i++) {
-		struct si_image_handle *img_handle =
-			*util_dynarray_element(&sctx->resident_img_handles,
-					       struct si_image_handle *, i);
-		struct pipe_image_view *view = &img_handle->view;
+	util_dynarray_foreach(&sctx->resident_img_handles,
+			      struct si_image_handle *, img_handle) {
+		struct pipe_image_view *view = &(*img_handle)->view;
 
 		si_sampler_view_add_buffer(sctx, view->resource,
 					   RADEON_USAGE_READWRITE,
@@ -2787,9 +2749,6 @@ static void si_upload_bindless_descriptor(struct si_context *sctx,
 
 static void si_upload_bindless_descriptors(struct si_context *sctx)
 {
-	unsigned num_resident_tex_handles, num_resident_img_handles;
-	unsigned i;
-
 	if (!sctx->bindless_descriptors_dirty)
 		return;
 
@@ -2800,14 +2759,9 @@ static void si_upload_bindless_descriptors(struct si_context *sctx)
 			 SI_CONTEXT_CS_PARTIAL_FLUSH;
 	si_emit_cache_flush(sctx);
 
-	num_resident_tex_handles = sctx->resident_tex_handles.size /
-				   sizeof(struct si_texture_handle *);
-
-	for (i = 0; i < num_resident_tex_handles; i++) {
-		struct si_texture_handle *tex_handle =
-			*util_dynarray_element(&sctx->resident_tex_handles,
-					       struct si_texture_handle *, i);
-		struct si_bindless_descriptor *desc = tex_handle->desc;
+	util_dynarray_foreach(&sctx->resident_tex_handles,
+			      struct si_texture_handle *, tex_handle) {
+		struct si_bindless_descriptor *desc = (*tex_handle)->desc;
 
 		if (!desc->dirty)
 			continue;
@@ -2816,14 +2770,9 @@ static void si_upload_bindless_descriptors(struct si_context *sctx)
 		desc->dirty = false;
 	}
 
-	num_resident_img_handles = sctx->resident_img_handles.size /
-				   sizeof(struct si_image_handle *);
-
-	for (i = 0; i < num_resident_img_handles; i++) {
-		struct si_image_handle *img_handle =
-			*util_dynarray_element(&sctx->resident_img_handles,
-					       struct si_image_handle *, i);
-		struct si_bindless_descriptor *desc = img_handle->desc;
+	util_dynarray_foreach(&sctx->resident_img_handles,
+			      struct si_image_handle *, img_handle) {
+		struct si_bindless_descriptor *desc = (*img_handle)->desc;
 
 		if (!desc->dirty)
 			continue;
