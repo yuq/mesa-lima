@@ -1402,11 +1402,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			struct pipe_surface *surf = sctx->framebuffer.state.zsbuf;
 			struct r600_texture *rtex = (struct r600_texture *)surf->texture;
 
-			if (!rtex->tc_compatible_htile)
-				rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+			rtex->dirty_level_mask |= 1 << surf->u.tex.level;
 
-			if (rtex->surface.flags & RADEON_SURF_SBUFFER &&
-			    (!rtex->tc_compatible_htile || !rtex->can_sample_s))
+			if (rtex->surface.flags & RADEON_SURF_SBUFFER)
 				rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
 		}
 		if (sctx->framebuffer.compressed_cb_mask) {

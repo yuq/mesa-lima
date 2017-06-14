@@ -344,10 +344,6 @@ si_decompress_depth(struct si_context *sctx,
 		}
 	}
 
-	assert(!tex->tc_compatible_htile || levels_z == 0);
-	assert(!tex->tc_compatible_htile || levels_s == 0 ||
-	       !r600_can_sample_zs(tex, true));
-
 	/* We may have to allocate the flushed texture here when called from
 	 * si_decompress_subresource.
 	 */
@@ -384,10 +380,30 @@ si_decompress_depth(struct si_context *sctx,
 	}
 
 	if (inplace_planes) {
-		si_blit_decompress_zs_in_place(
-			sctx, tex,
-			levels_z, levels_s,
-			first_layer, last_layer);
+		if (!tex->tc_compatible_htile) {
+			si_blit_decompress_zs_in_place(
+						sctx, tex,
+						levels_z, levels_s,
+						first_layer, last_layer);
+		}
+
+		/* Only in-place decompression needs to flush DB caches, or
+		 * when we don't decompress but TC-compatible planes are dirty.
+		 */
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
+				 SI_CONTEXT_INV_GLOBAL_L2 |
+				 SI_CONTEXT_INV_VMEM_L1;
+
+		/* If we flush DB caches for TC-compatible depth, the dirty
+		 * state becomes 0 for the whole mipmap tree and all planes.
+		 * (there is nothing else to flush)
+		 */
+		if (tex->tc_compatible_htile) {
+			if (r600_can_sample_zs(tex, false))
+				tex->dirty_level_mask = 0;
+			if (r600_can_sample_zs(tex, true))
+				tex->stencil_dirty_level_mask = 0;
+		}
 	}
 }
 
@@ -1352,11 +1368,15 @@ static boolean si_generate_mipmap(struct pipe_context *ctx,
 	rtex->dirty_level_mask &= ~u_bit_consecutive(base_level + 1,
 						     last_level - base_level);
 
+	sctx->generate_mipmap_for_depth = rtex->is_depth;
+
 	si_blitter_begin(ctx, SI_BLIT | SI_DISABLE_RENDER_COND);
 	util_blitter_generate_mipmap(sctx->blitter, tex, format,
 				     base_level, last_level,
 				     first_layer, last_layer);
 	si_blitter_end(ctx);
+
+	sctx->generate_mipmap_for_depth = false;
 	return true;
 }
 

@@ -362,6 +362,7 @@ struct si_context {
 	bool			db_stencil_clear:1;
 	bool			db_stencil_disable_expclear:1;
 	bool			occlusion_queries_disabled:1;
+	bool			generate_mipmap_for_depth:1;
 
 	/* Emitted draw state. */
 	bool			gs_tri_strip_adj_fix:1;

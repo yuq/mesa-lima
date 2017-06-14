@@ -584,12 +584,14 @@ static bool color_needs_decompression(struct r600_texture *rtex)
 		(rtex->cmask.size || rtex->dcc_offset));
 }
 
-static bool depth_needs_decompression(struct r600_texture *rtex,
-				      struct si_sampler_view *sview)
+static bool depth_needs_decompression(struct r600_texture *rtex)
 {
-	return rtex->db_compatible &&
-	       (!rtex->tc_compatible_htile ||
-		!r600_can_sample_zs(rtex, sview->is_stencil_sampler));
+	/* If the depth/stencil texture is TC-compatible, no decompression
+	 * will be done. The decompression function will only flush DB caches
+	 * to make it coherent with shaders. That's necessary because the driver
+	 * doesn't flush DB caches in any other case.
+	 */
+	return rtex->db_compatible;
 }
 
 static void si_update_shader_needs_decompress_mask(struct si_context *sctx,
@@ -633,9 +635,8 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		if (views[i]->texture && views[i]->texture->target != PIPE_BUFFER) {
 			struct r600_texture *rtex =
 				(struct r600_texture*)views[i]->texture;
-			struct si_sampler_view *rview = (struct si_sampler_view *)views[i];
 
-			if (depth_needs_decompression(rtex, rview)) {
+			if (depth_needs_decompression(rtex)) {
 				samplers->needs_depth_decompress_mask |= 1u << slot;
 			} else {
 				samplers->needs_depth_decompress_mask &= ~(1u << slot);
@@ -2470,7 +2471,7 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 			struct r600_texture *rtex =
 				(struct r600_texture *)sview->base.texture;
 
-			if (depth_needs_decompression(rtex, sview)) {
+			if (depth_needs_decompression(rtex)) {
 				util_dynarray_append(
 					&sctx->resident_tex_needs_depth_decompress,
 					struct si_texture_handle *,

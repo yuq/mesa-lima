@@ -2525,14 +2525,25 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * the only client not using TC that can change textures is
 	 * the framebuffer.
 	 *
-	 * Flush all CB and DB caches here because all buffers can be used
-	 * for write by both TC (with shader image stores) and CB/DB.
+	 * Wait for compute shaders because of possible transitions:
+	 * - FB write -> shader read
+	 * - shader write -> FB read
+	 *
+	 * DB caches are flushed on demand (using si_decompress_textures).
 	 */
 	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
 			 SI_CONTEXT_FLUSH_AND_INV_CB |
-			 SI_CONTEXT_FLUSH_AND_INV_DB |
 			 SI_CONTEXT_CS_PARTIAL_FLUSH;
+
+	/* u_blitter doesn't invoke depth decompression when it does multiple
+	 * blits in a row, but the only case when it matters for DB is when
+	 * doing generate_mipmap. So here we flush DB manually between
+	 * individual generate_mipmap blits.
+	 * Note that lower mipmap levels aren't compressed.
+	 */
+	if (sctx->generate_mipmap_for_depth)
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB;
 
 	/* Take the maximum of the old and new count. If the new count is lower,
 	 * dirtying is needed to disable the unbound colorbuffers.
@@ -3990,9 +4001,9 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 	}
 
+	/* Depth and stencil are flushed in si_decompress_textures when needed. */
 	if (flags & PIPE_BARRIER_FRAMEBUFFER)
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
-				 SI_CONTEXT_FLUSH_AND_INV_DB;
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
 
 	if (flags & (PIPE_BARRIER_FRAMEBUFFER |
 		     PIPE_BARRIER_INDIRECT_BUFFER))
