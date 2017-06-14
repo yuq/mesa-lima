@@ -837,17 +837,6 @@ enum PACKED gen10_align1_3src_reg_file {
    BRW_ALIGN1_3SRC_ACCUMULATOR           = 1, /* dest, src1 */
 };
 
-/* SNB adds 3-src instructions (MAD and LRP) that only operate on floats, so
- * the types were implied. IVB adds BFE and BFI2 that operate on doublewords
- * and unsigned doublewords, so a new field is also available in the da3src
- * struct (part of struct brw_instruction.bits1 in brw_structs.h) to select
- * dst and shared-src types. The values are different from BRW_REGISTER_TYPE_*.
- */
-#define BRW_3SRC_TYPE_F  0
-#define BRW_3SRC_TYPE_D  1
-#define BRW_3SRC_TYPE_UD 2
-#define BRW_3SRC_TYPE_DF 3
-
 /* CNL adds Align1 support for 3-src instructions. Bit 35 of the instruction
  * word is "Execution Datatype" which controls whether the instruction operates
  * on float or integer types. The register arguments have fields that offer

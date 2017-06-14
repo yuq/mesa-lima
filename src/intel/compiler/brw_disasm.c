@@ -30,6 +30,7 @@
 #include "brw_reg.h"
 #include "brw_inst.h"
 #include "brw_eu.h"
+#include "util/half_float.h"
 
 static bool
 has_jip(const struct gen_device_info *devinfo, enum opcode opcode)
@@ -235,13 +236,6 @@ static const char *const mask_ctrl[4] = {
 static const char *const access_mode[2] = {
    [0] = "align1",
    [1] = "align16",
-};
-
-static const char *const three_source_reg_encoding[] = {
-   [BRW_3SRC_TYPE_F]  = "F",
-   [BRW_3SRC_TYPE_D]  = "D",
-   [BRW_3SRC_TYPE_UD] = "UD",
-   [BRW_3SRC_TYPE_DF] = "DF",
 };
 
 static const char *const reg_file[4] = {
@@ -762,14 +756,15 @@ dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 static int
 dest_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
+   bool is_align1 = brw_inst_3src_access_mode(devinfo, inst) == BRW_ALIGN_1;
    int err = 0;
    uint32_t reg_file;
-   enum brw_reg_type type = brw_inst_3src_a16_dst_type(devinfo, inst);
-   unsigned dst_subreg_nr =
-      brw_inst_3src_a16_dst_subreg_nr(devinfo, inst) * 4 /
-      brw_reg_type_to_size(type);
+   unsigned subreg_nr;
+   enum brw_reg_type type;
 
-   if (devinfo->gen == 6 && brw_inst_3src_a16_dst_reg_file(devinfo, inst))
+   if (is_align1 && brw_inst_3src_a1_dst_reg_file(devinfo, inst))
+      reg_file = BRW_ARCHITECTURE_REGISTER_FILE;
+   else if (devinfo->gen == 6 && brw_inst_3src_a16_dst_reg_file(devinfo, inst))
       reg_file = BRW_MESSAGE_REGISTER_FILE;
    else
       reg_file = BRW_GENERAL_REGISTER_FILE;
@@ -777,13 +772,25 @@ dest_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
    err |= reg(file, reg_file, brw_inst_3src_dst_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (dst_subreg_nr)
-      format(file, ".%u", dst_subreg_nr);
+
+   if (is_align1) {
+      type = brw_inst_3src_a1_dst_type(devinfo, inst);
+      subreg_nr = brw_inst_3src_a1_dst_subreg_nr(devinfo, inst);
+   } else {
+      type = brw_inst_3src_a16_dst_type(devinfo, inst);
+      subreg_nr = brw_inst_3src_a16_dst_subreg_nr(devinfo, inst) * 4;
+   }
+   subreg_nr /= brw_reg_type_to_size(type);
+
+   if (subreg_nr)
+      format(file, ".%u", subreg_nr);
    string(file, "<1>");
-   err |= control(file, "writemask", writemask,
-                  brw_inst_3src_a16_dst_writemask(devinfo, inst), NULL);
-   err |= control(file, "dest reg encoding", three_source_reg_encoding,
-                  brw_inst_3src_a16_dst_hw_type(devinfo, inst), NULL);
+
+   if (!is_align1) {
+      err |= control(file, "writemask", writemask,
+                     brw_inst_3src_a16_dst_writemask(devinfo, inst), NULL);
+   }
+   string(file, brw_reg_type_to_letters(type));
 
    return 0;
 }
@@ -928,33 +935,161 @@ src_da16(FILE *file,
    return err;
 }
 
+static enum brw_vertical_stride
+vstride_from_align1_3src_vstride(enum gen10_align1_3src_vertical_stride vstride)
+{
+   switch (vstride) {
+   case BRW_ALIGN1_3SRC_VERTICAL_STRIDE_0: return BRW_VERTICAL_STRIDE_0;
+   case BRW_ALIGN1_3SRC_VERTICAL_STRIDE_2: return BRW_VERTICAL_STRIDE_2;
+   case BRW_ALIGN1_3SRC_VERTICAL_STRIDE_4: return BRW_VERTICAL_STRIDE_4;
+   case BRW_ALIGN1_3SRC_VERTICAL_STRIDE_8: return BRW_VERTICAL_STRIDE_8;
+   default:
+      unreachable("not reached");
+   }
+}
+
+static enum brw_horizontal_stride
+hstride_from_align1_3src_hstride(enum gen10_align1_3src_src_horizontal_stride hstride)
+{
+   switch (hstride) {
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0: return BRW_HORIZONTAL_STRIDE_0;
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1: return BRW_HORIZONTAL_STRIDE_1;
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_2: return BRW_HORIZONTAL_STRIDE_2;
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_4: return BRW_HORIZONTAL_STRIDE_4;
+   default:
+      unreachable("not reached");
+   }
+}
+
+static enum brw_vertical_stride
+vstride_from_align1_3src_hstride(enum gen10_align1_3src_src_horizontal_stride hstride)
+{
+   switch (hstride) {
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0: return BRW_VERTICAL_STRIDE_0;
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1: return BRW_VERTICAL_STRIDE_1;
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_2: return BRW_VERTICAL_STRIDE_2;
+   case BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_4: return BRW_VERTICAL_STRIDE_4;
+   default:
+      unreachable("not reached");
+   }
+}
+
+/* From "GEN10 Regioning Rules for Align1 Ternary Operations" in the
+ * "Register Region Restrictions" documentation
+ */
+static enum brw_width
+implied_width(enum brw_vertical_stride _vert_stride,
+              enum brw_horizontal_stride _horiz_stride)
+{
+   /* "1. Width is 1 when Vertical and Horizontal Strides are both zero." */
+   if (_vert_stride == BRW_VERTICAL_STRIDE_0 &&
+       _horiz_stride == BRW_HORIZONTAL_STRIDE_0) {
+      return BRW_WIDTH_1;
+
+   /* "2. Width is equal to vertical stride when Horizontal Stride is zero." */
+   } else if (_horiz_stride == BRW_HORIZONTAL_STRIDE_0) {
+      switch (_vert_stride) {
+      case BRW_VERTICAL_STRIDE_2: return BRW_WIDTH_2;
+      case BRW_VERTICAL_STRIDE_4: return BRW_WIDTH_4;
+      case BRW_VERTICAL_STRIDE_8: return BRW_WIDTH_8;
+      case BRW_VERTICAL_STRIDE_0:
+      default:
+         unreachable("not reached");
+      }
+
+   } else {
+      /* FINISHME: Implement these: */
+
+      /* "3. Width is equal to Vertical Stride/Horizontal Stride when both
+       *     Strides are non-zero.
+       *
+       *  4. Vertical Stride must not be zero if Horizontal Stride is non-zero.
+       *     This implies Vertical Stride is always greater than Horizontal
+       *     Stride."
+       *
+       * Given these statements and the knowledge that the stride and width
+       * values are encoded in logarithmic form, we can perform the division
+       * by just subtracting.
+       */
+      return _vert_stride - _horiz_stride;
+   }
+}
+
 static int
 src0_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   enum brw_reg_type type = brw_inst_3src_a16_src_type(devinfo, inst);
-   unsigned src0_subreg_nr =
-      brw_inst_3src_a16_src0_subreg_nr(devinfo, inst) * 4 /
-      brw_reg_type_to_size(type);
+   unsigned reg_nr, subreg_nr;
+   enum brw_reg_file _file;
+   enum brw_reg_type type;
+   enum brw_vertical_stride _vert_stride;
+   enum brw_width _width;
+   enum brw_horizontal_stride _horiz_stride;
+   bool is_scalar_region;
+   bool is_align1 = brw_inst_3src_access_mode(devinfo, inst) == BRW_ALIGN_1;
+
+   if (is_align1) {
+      if (brw_inst_3src_a1_src0_reg_file(devinfo, inst) ==
+          BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE) {
+         _file = BRW_GENERAL_REGISTER_FILE;
+         reg_nr = brw_inst_3src_src0_reg_nr(devinfo, inst);
+         subreg_nr = brw_inst_3src_a1_src0_subreg_nr(devinfo, inst);
+         type = brw_inst_3src_a1_src0_type(devinfo, inst);
+      } else {
+         _file = BRW_IMMEDIATE_VALUE;
+         uint16_t imm_val = brw_inst_3src_a1_src0_imm(devinfo, inst);
+         enum brw_reg_type type = brw_inst_3src_a1_src0_type(devinfo, inst);
+
+         if (type == BRW_REGISTER_TYPE_W) {
+            format(file, "%dW", imm_val);
+         } else if (type == BRW_REGISTER_TYPE_UW) {
+            format(file, "0x%04xUW", imm_val);
+         } else if (type == BRW_REGISTER_TYPE_HF) {
+            format(file, "%-gF", _mesa_half_to_float(imm_val));
+         }
+         return 0;
+      }
+
+      _vert_stride = vstride_from_align1_3src_vstride(
+                        brw_inst_3src_a1_src0_vstride(devinfo, inst));
+      _horiz_stride = hstride_from_align1_3src_hstride(
+                         brw_inst_3src_a1_src0_hstride(devinfo, inst));
+      _width = implied_width(_vert_stride, _horiz_stride);
+   } else {
+      _file = BRW_GENERAL_REGISTER_FILE;
+      reg_nr = brw_inst_3src_src0_reg_nr(devinfo, inst);
+      subreg_nr = brw_inst_3src_a16_src0_subreg_nr(devinfo, inst) * 4;
+      type = brw_inst_3src_a16_src_type(devinfo, inst);
+
+      if (brw_inst_3src_a16_src0_rep_ctrl(devinfo, inst)) {
+         _vert_stride = BRW_VERTICAL_STRIDE_0;
+         _width = BRW_WIDTH_1;
+         _horiz_stride = BRW_HORIZONTAL_STRIDE_0;
+      } else {
+         _vert_stride = BRW_VERTICAL_STRIDE_4;
+         _width = BRW_WIDTH_4;
+         _horiz_stride = BRW_HORIZONTAL_STRIDE_1;
+      }
+   }
+   is_scalar_region = _vert_stride == BRW_VERTICAL_STRIDE_0 &&
+                      _width == BRW_WIDTH_1 &&
+                      _horiz_stride == BRW_HORIZONTAL_STRIDE_0;
+
+   subreg_nr /= brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
                   brw_inst_3src_src0_negate(devinfo, inst), NULL);
    err |= control(file, "abs", _abs, brw_inst_3src_src0_abs(devinfo, inst), NULL);
 
-   err |= reg(file, BRW_GENERAL_REGISTER_FILE,
-              brw_inst_3src_src0_reg_nr(devinfo, inst));
+   err |= reg(file, _file, reg_nr);
    if (err == -1)
       return 0;
-   if (src0_subreg_nr || brw_inst_3src_a16_src0_rep_ctrl(devinfo, inst))
-      format(file, ".%d", src0_subreg_nr);
-   if (brw_inst_3src_a16_src0_rep_ctrl(devinfo, inst))
-      string(file, "<0,1,0>");
-   else {
-      string(file, "<4,4,1>");
+   if (subreg_nr || is_scalar_region)
+      format(file, ".%d", subreg_nr);
+   src_align1_region(file, _vert_stride, _width, _horiz_stride);
+   if (!is_scalar_region && !is_align1)
       err |= src_swizzle(file, brw_inst_3src_a16_src0_swizzle(devinfo, inst));
-   }
-   err |= control(file, "src da16 reg type", three_source_reg_encoding,
-                  brw_inst_3src_a16_src_hw_type(devinfo, inst), NULL);
+   string(file, brw_reg_type_to_letters(type));
    return err;
 }
 
@@ -962,60 +1097,149 @@ static int
 src1_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   enum brw_reg_type type = brw_inst_3src_a16_src_type(devinfo, inst);
-   unsigned src1_subreg_nr =
-      brw_inst_3src_a16_src1_subreg_nr(devinfo, inst) * 4 /
-      brw_reg_type_to_size(type);
+   unsigned reg_nr, subreg_nr;
+   enum brw_reg_file _file;
+   enum brw_reg_type type;
+   enum brw_vertical_stride _vert_stride;
+   enum brw_width _width;
+   enum brw_horizontal_stride _horiz_stride;
+   bool is_scalar_region;
+   bool is_align1 = brw_inst_3src_access_mode(devinfo, inst) == BRW_ALIGN_1;
+
+   if (is_align1) {
+      if (brw_inst_3src_a1_src1_reg_file(devinfo, inst) ==
+          BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE) {
+         _file = BRW_GENERAL_REGISTER_FILE;
+      } else {
+         _file = BRW_ARCHITECTURE_REGISTER_FILE;
+      }
+
+      reg_nr = brw_inst_3src_src1_reg_nr(devinfo, inst);
+      subreg_nr = brw_inst_3src_a1_src1_subreg_nr(devinfo, inst);
+      type = brw_inst_3src_a1_src1_type(devinfo, inst);
+
+      _vert_stride = vstride_from_align1_3src_vstride(
+                        brw_inst_3src_a1_src1_vstride(devinfo, inst));
+      _horiz_stride = hstride_from_align1_3src_hstride(
+                         brw_inst_3src_a1_src1_hstride(devinfo, inst));
+      _width = implied_width(_vert_stride, _horiz_stride);
+   } else {
+      _file = BRW_GENERAL_REGISTER_FILE;
+      reg_nr = brw_inst_3src_src1_reg_nr(devinfo, inst);
+      subreg_nr = brw_inst_3src_a16_src1_subreg_nr(devinfo, inst) * 4;
+      type = brw_inst_3src_a16_src_type(devinfo, inst);
+
+      if (brw_inst_3src_a16_src1_rep_ctrl(devinfo, inst)) {
+         _vert_stride = BRW_VERTICAL_STRIDE_0;
+         _width = BRW_WIDTH_1;
+         _horiz_stride = BRW_HORIZONTAL_STRIDE_0;
+      } else {
+         _vert_stride = BRW_VERTICAL_STRIDE_4;
+         _width = BRW_WIDTH_4;
+         _horiz_stride = BRW_HORIZONTAL_STRIDE_1;
+      }
+   }
+   is_scalar_region = _vert_stride == BRW_VERTICAL_STRIDE_0 &&
+                      _width == BRW_WIDTH_1 &&
+                      _horiz_stride == BRW_HORIZONTAL_STRIDE_0;
+
+   subreg_nr /= brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
                   brw_inst_3src_src1_negate(devinfo, inst), NULL);
    err |= control(file, "abs", _abs, brw_inst_3src_src1_abs(devinfo, inst), NULL);
 
-   err |= reg(file, BRW_GENERAL_REGISTER_FILE,
-              brw_inst_3src_src1_reg_nr(devinfo, inst));
+   err |= reg(file, _file, reg_nr);
    if (err == -1)
       return 0;
-   if (src1_subreg_nr || brw_inst_3src_a16_src1_rep_ctrl(devinfo, inst))
-      format(file, ".%d", src1_subreg_nr);
-   if (brw_inst_3src_a16_src1_rep_ctrl(devinfo, inst))
-      string(file, "<0,1,0>");
-   else {
-      string(file, "<4,4,1>");
+   if (subreg_nr || is_scalar_region)
+      format(file, ".%d", subreg_nr);
+   src_align1_region(file, _vert_stride, _width, _horiz_stride);
+   if (!is_scalar_region && !is_align1)
       err |= src_swizzle(file, brw_inst_3src_a16_src1_swizzle(devinfo, inst));
-   }
-   err |= control(file, "src da16 reg type", three_source_reg_encoding,
-                  brw_inst_3src_a16_src_hw_type(devinfo, inst), NULL);
+   string(file, brw_reg_type_to_letters(type));
    return err;
 }
-
 
 static int
 src2_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    int err = 0;
-   enum brw_reg_type type = brw_inst_3src_a16_src_type(devinfo, inst);
-   unsigned src2_subreg_nr =
-      brw_inst_3src_a16_src2_subreg_nr(devinfo, inst) * 4 /
-      brw_reg_type_to_size(type);
+   unsigned reg_nr, subreg_nr;
+   enum brw_reg_file _file;
+   enum brw_reg_type type;
+   enum brw_vertical_stride _vert_stride;
+   enum brw_width _width;
+   enum brw_horizontal_stride _horiz_stride;
+   bool is_scalar_region;
+   bool is_align1 = brw_inst_3src_access_mode(devinfo, inst) == BRW_ALIGN_1;
+
+   if (is_align1) {
+      if (brw_inst_3src_a1_src2_reg_file(devinfo, inst) ==
+          BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE) {
+         _file = BRW_GENERAL_REGISTER_FILE;
+         reg_nr = brw_inst_3src_src2_reg_nr(devinfo, inst);
+         subreg_nr = brw_inst_3src_a1_src2_subreg_nr(devinfo, inst);
+         type = brw_inst_3src_a1_src2_type(devinfo, inst);
+      } else {
+         _file = BRW_IMMEDIATE_VALUE;
+         uint16_t imm_val = brw_inst_3src_a1_src2_imm(devinfo, inst);
+         enum brw_reg_type type = brw_inst_3src_a1_src2_type(devinfo, inst);
+
+         if (type == BRW_REGISTER_TYPE_W) {
+            format(file, "%dW", imm_val);
+         } else if (type == BRW_REGISTER_TYPE_UW) {
+            format(file, "0x%04xUW", imm_val);
+         } else if (type == BRW_REGISTER_TYPE_HF) {
+            format(file, "%-gF", _mesa_half_to_float(imm_val));
+         }
+         return 0;
+      }
+
+      /* FINISHME: No vertical stride on src2. Is using the hstride in place
+       *           correct? Doesn't seem like it, since there's hstride=1 but
+       *           no vstride=1.
+       */
+      _vert_stride = vstride_from_align1_3src_hstride(
+                        brw_inst_3src_a1_src2_hstride(devinfo, inst));
+      _horiz_stride = hstride_from_align1_3src_hstride(
+                         brw_inst_3src_a1_src2_hstride(devinfo, inst));
+      _width = implied_width(_vert_stride, _horiz_stride);
+   } else {
+      _file = BRW_GENERAL_REGISTER_FILE;
+      reg_nr = brw_inst_3src_src2_reg_nr(devinfo, inst);
+      subreg_nr = brw_inst_3src_a16_src2_subreg_nr(devinfo, inst) * 4;
+      type = brw_inst_3src_a16_src_type(devinfo, inst);
+
+      if (brw_inst_3src_a16_src2_rep_ctrl(devinfo, inst)) {
+         _vert_stride = BRW_VERTICAL_STRIDE_0;
+         _width = BRW_WIDTH_1;
+         _horiz_stride = BRW_HORIZONTAL_STRIDE_0;
+      } else {
+         _vert_stride = BRW_VERTICAL_STRIDE_4;
+         _width = BRW_WIDTH_4;
+         _horiz_stride = BRW_HORIZONTAL_STRIDE_1;
+      }
+   }
+   is_scalar_region = _vert_stride == BRW_VERTICAL_STRIDE_0 &&
+                      _width == BRW_WIDTH_1 &&
+                      _horiz_stride == BRW_HORIZONTAL_STRIDE_0;
+
+   subreg_nr /= brw_reg_type_to_size(type);
 
    err |= control(file, "negate", m_negate,
                   brw_inst_3src_src2_negate(devinfo, inst), NULL);
    err |= control(file, "abs", _abs, brw_inst_3src_src2_abs(devinfo, inst), NULL);
 
-   err |= reg(file, BRW_GENERAL_REGISTER_FILE,
-              brw_inst_3src_src2_reg_nr(devinfo, inst));
+   err |= reg(file, _file, reg_nr);
    if (err == -1)
       return 0;
-   if (src2_subreg_nr || brw_inst_3src_a16_src2_rep_ctrl(devinfo, inst))
-      format(file, ".%d", src2_subreg_nr);
-   if (brw_inst_3src_a16_src2_rep_ctrl(devinfo, inst))
-      string(file, "<0,1,0>");
-   else {
-      string(file, "<4,4,1>");
+   if (subreg_nr || is_scalar_region)
+      format(file, ".%d", subreg_nr);
+   src_align1_region(file, _vert_stride, _width, _horiz_stride);
+   if (!is_scalar_region && !is_align1)
       err |= src_swizzle(file, brw_inst_3src_a16_src2_swizzle(devinfo, inst));
-   }
-   err |= control(file, "src da16 reg type", three_source_reg_encoding,
-                  brw_inst_3src_a16_src_hw_type(devinfo, inst), NULL);
+   string(file, brw_reg_type_to_letters(type));
    return err;
 }
 
