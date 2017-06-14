@@ -36,6 +36,11 @@ struct lima_buffer;
 
 struct lima_context_framebuffer {
    struct pipe_surface *cbuf, *zsbuf;
+   int tiled_w, tiled_h;
+   int shift_w, shift_h;
+   int block_w, block_h;
+   int shift_max;
+   bool dirty_dim;
 };
 
 struct lima_context_clear {
@@ -103,6 +108,11 @@ struct lima_context {
    struct lima_context_vertex_buffer vertex_buffers;
 
    struct lima_buffer *tile_heap;
+
+   struct lima_buffer *plb;
+   int plb_plbu_offset;
+   int plb_pp_offset[4];
+   int plb_offset;
 };
 
 static inline struct lima_context *
