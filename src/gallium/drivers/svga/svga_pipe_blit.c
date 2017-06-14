@@ -547,6 +547,7 @@ try_blit(struct svga_context *svga, const struct pipe_blit_info *blit_info)
                       blit.src.level, &blit.src.box,
                       &copy_region_blit);
       if (!try_copy_region(svga, &copy_region_blit)) {
+         debug_printf("svga: Source blit format conversion failed.\n");
          ret = false;
          goto done;
       }
@@ -593,13 +594,14 @@ try_blit(struct svga_context *svga, const struct pipe_blit_info *blit_info)
        * A temporary resource was created for the blit, we need to
        * copy from the temporary resource back to the original destination.
        */
-      build_blit_info(blit.dst.resource,
+      build_blit_info(dst,
                       blit.dst.level, blit.dst.box.x,
                       blit.dst.box.y, blit.dst.box.z,
                       newDst,
                       blit.dst.level, &blit.dst.box,
                       &copy_region_blit);
       if (!try_copy_region(svga, &copy_region_blit)) {
+         debug_printf("svga: Destination blit format conversion failed.\n");
          ret = false;
          goto done;
       }
