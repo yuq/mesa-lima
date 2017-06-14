@@ -69,12 +69,12 @@
       <param name="value" type="const GLuint64 *" />
    </function>
 
-   <function name="IsTextureHandleResidentARB">
+   <function name="IsTextureHandleResidentARB" no_error="true">
       <return type="GLboolean"/>
       <param name="handle" type="GLuint64" />
    </function>
 
-   <function name="IsImageHandleResidentARB">
+   <function name="IsImageHandleResidentARB" no_error="true">
       <return type="GLboolean"/>
       <param name="handle" type="GLuint64" />
    </function>

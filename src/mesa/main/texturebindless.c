@@ -870,6 +870,13 @@ _mesa_MakeImageHandleNonResidentARB(GLuint64 handle)
 }
 
 GLboolean GLAPIENTRY
+_mesa_IsTextureHandleResidentARB_no_error(GLuint64 handle)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   return is_texture_handle_resident(ctx, handle);
+}
+
+GLboolean GLAPIENTRY
 _mesa_IsTextureHandleResidentARB(GLuint64 handle)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -893,6 +900,13 @@ _mesa_IsTextureHandleResidentARB(GLuint64 handle)
    }
 
    return is_texture_handle_resident(ctx, handle);
+}
+
+GLboolean GLAPIENTRY
+_mesa_IsImageHandleResidentARB_no_error(GLuint64 handle)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   return is_image_handle_resident(ctx, handle);
 }
 
 GLboolean GLAPIENTRY

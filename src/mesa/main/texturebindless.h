@@ -87,7 +87,14 @@ void GLAPIENTRY
 _mesa_MakeImageHandleNonResidentARB(GLuint64 handle);
 
 GLboolean GLAPIENTRY
+_mesa_IsTextureHandleResidentARB_no_error(GLuint64 handle);
+
+GLboolean GLAPIENTRY
 _mesa_IsTextureHandleResidentARB(GLuint64 handle);
+
+GLboolean GLAPIENTRY
+_mesa_IsImageHandleResidentARB_no_error(GLuint64 handle);
+
 GLboolean GLAPIENTRY
 _mesa_IsImageHandleResidentARB(GLuint64 handle);
 
