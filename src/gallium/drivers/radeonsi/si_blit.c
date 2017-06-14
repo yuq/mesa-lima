@@ -1151,6 +1151,21 @@ void si_resource_copy_region(struct pipe_context *ctx,
 	pipe_sampler_view_reference(&src_view, NULL);
 }
 
+static void si_do_CB_resolve(struct si_context *sctx,
+			     const struct pipe_blit_info *info,
+			     struct pipe_resource *dst,
+			     unsigned dst_level, unsigned dst_z,
+			     enum pipe_format format)
+{
+	si_blitter_begin(&sctx->b.b, SI_COLOR_RESOLVE |
+			 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
+	util_blitter_custom_resolve_color(sctx->blitter, dst, dst_level, dst_z,
+					  info->src.resource, info->src.box.z,
+					  ~0, sctx->custom_blend_resolve,
+					  format);
+	si_blitter_end(&sctx->b.b);
+}
+
 static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 				     const struct pipe_blit_info *info)
 {
@@ -1161,7 +1176,6 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	unsigned dst_width = u_minify(info->dst.resource->width0, info->dst.level);
 	unsigned dst_height = u_minify(info->dst.resource->height0, info->dst.level);
 	enum pipe_format format = info->src.format;
-	unsigned sample_mask = ~0;
 	struct pipe_resource *tmp, templ;
 	struct pipe_blit_info blit;
 
@@ -1228,15 +1242,8 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 		}
 
 		/* Resolve directly from src to dst. */
-		si_blitter_begin(ctx, SI_COLOR_RESOLVE |
-				 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
-		util_blitter_custom_resolve_color(sctx->blitter,
-						  info->dst.resource, info->dst.level,
-						  info->dst.box.z,
-						  info->src.resource, info->src.box.z,
-						  sample_mask, sctx->custom_blend_resolve,
-						  format);
-		si_blitter_end(ctx);
+		si_do_CB_resolve(sctx, info, info->dst.resource,
+				 info->dst.level, info->dst.box.z, format);
 		return true;
 	}
 
@@ -1270,13 +1277,7 @@ resolve_to_temp:
 	assert(src->surface.micro_tile_mode == rtmp->surface.micro_tile_mode);
 
 	/* resolve */
-	si_blitter_begin(ctx, SI_COLOR_RESOLVE |
-			 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
-	util_blitter_custom_resolve_color(sctx->blitter, tmp, 0, 0,
-					  info->src.resource, info->src.box.z,
-					  sample_mask, sctx->custom_blend_resolve,
-					  format);
-	si_blitter_end(ctx);
+	si_do_CB_resolve(sctx, info, tmp, 0, 0, format);
 
 	/* blit */
 	blit = *info;
