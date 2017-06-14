@@ -673,13 +673,22 @@ fs_generator::generate_linterp(fs_inst *inst,
    struct brw_reg delta_x = src[0];
    struct brw_reg delta_y = offset(src[0], inst->exec_size / 8);
    struct brw_reg interp = src[1];
+   brw_inst *i[2];
 
    if (devinfo->has_pln &&
        (devinfo->gen >= 7 || (delta_x.nr & 1) == 0)) {
       brw_PLN(p, dst, interp, delta_x);
    } else {
-      brw_LINE(p, brw_null_reg(), interp, delta_x);
-      brw_MAC(p, dst, suboffset(interp, 1), delta_y);
+      i[0] = brw_LINE(p, brw_null_reg(), interp, delta_x);
+      i[1] = brw_MAC(p, dst, suboffset(interp, 1), delta_y);
+
+      brw_inst_set_cond_modifier(p->devinfo, i[1], inst->conditional_mod);
+
+      /* brw_set_default_saturate() is called before emitting instructions, so
+       * the saturate bit is set in each instruction, so we need to unset it on
+       * the first instruction.
+       */
+      brw_inst_set_saturate(p->devinfo, i[0], false);
    }
 }
 
