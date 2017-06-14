@@ -678,66 +678,171 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
 
    gen7_convert_mrf_to_grf(p, &dest);
 
-   assert(brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_16);
-
-   assert(dest.file == BRW_GENERAL_REGISTER_FILE ||
-	  dest.file == BRW_MESSAGE_REGISTER_FILE);
    assert(dest.nr < 128);
-   assert(dest.address_mode == BRW_ADDRESS_DIRECT);
-   assert(dest.type == BRW_REGISTER_TYPE_F  ||
-          dest.type == BRW_REGISTER_TYPE_DF ||
-          dest.type == BRW_REGISTER_TYPE_D  ||
-          dest.type == BRW_REGISTER_TYPE_UD);
-   if (devinfo->gen == 6) {
-      brw_inst_set_3src_a16_dst_reg_file(devinfo, inst,
-                                         dest.file == BRW_MESSAGE_REGISTER_FILE);
-   }
-   brw_inst_set_3src_dst_reg_nr(devinfo, inst, dest.nr);
-   brw_inst_set_3src_a16_dst_subreg_nr(devinfo, inst, dest.subnr / 16);
-   brw_inst_set_3src_a16_dst_writemask(devinfo, inst, dest.writemask);
-
-   assert(src0.file == BRW_GENERAL_REGISTER_FILE);
-   assert(src0.address_mode == BRW_ADDRESS_DIRECT);
    assert(src0.nr < 128);
-   brw_inst_set_3src_a16_src0_swizzle(devinfo, inst, src0.swizzle);
-   brw_inst_set_3src_a16_src0_subreg_nr(devinfo, inst, get_3src_subreg_nr(src0));
-   brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
-   brw_inst_set_3src_src0_abs(devinfo, inst, src0.abs);
-   brw_inst_set_3src_src0_negate(devinfo, inst, src0.negate);
-   brw_inst_set_3src_a16_src0_rep_ctrl(devinfo, inst,
-                                       src0.vstride == BRW_VERTICAL_STRIDE_0);
-
-   assert(src1.file == BRW_GENERAL_REGISTER_FILE);
-   assert(src1.address_mode == BRW_ADDRESS_DIRECT);
    assert(src1.nr < 128);
-   brw_inst_set_3src_a16_src1_swizzle(devinfo, inst, src1.swizzle);
-   brw_inst_set_3src_a16_src1_subreg_nr(devinfo, inst, get_3src_subreg_nr(src1));
-   brw_inst_set_3src_src1_reg_nr(devinfo, inst, src1.nr);
-   brw_inst_set_3src_src1_abs(devinfo, inst, src1.abs);
-   brw_inst_set_3src_src1_negate(devinfo, inst, src1.negate);
-   brw_inst_set_3src_a16_src1_rep_ctrl(devinfo, inst,
-                                       src1.vstride == BRW_VERTICAL_STRIDE_0);
-
-   assert(src2.file == BRW_GENERAL_REGISTER_FILE);
-   assert(src2.address_mode == BRW_ADDRESS_DIRECT);
    assert(src2.nr < 128);
-   brw_inst_set_3src_a16_src2_swizzle(devinfo, inst, src2.swizzle);
-   brw_inst_set_3src_a16_src2_subreg_nr(devinfo, inst, get_3src_subreg_nr(src2));
-   brw_inst_set_3src_src2_reg_nr(devinfo, inst, src2.nr);
-   brw_inst_set_3src_src2_abs(devinfo, inst, src2.abs);
-   brw_inst_set_3src_src2_negate(devinfo, inst, src2.negate);
-   brw_inst_set_3src_a16_src2_rep_ctrl(devinfo, inst,
-                                       src2.vstride == BRW_VERTICAL_STRIDE_0);
+   assert(dest.address_mode == BRW_ADDRESS_DIRECT);
+   assert(src0.address_mode == BRW_ADDRESS_DIRECT);
+   assert(src1.address_mode == BRW_ADDRESS_DIRECT);
+   assert(src2.address_mode == BRW_ADDRESS_DIRECT);
 
-   if (devinfo->gen >= 7) {
-      /* Set both the source and destination types based on dest.type,
-       * ignoring the source register types.  The MAD and LRP emitters ensure
-       * that all four types are float.  The BFE and BFI2 emitters, however,
-       * may send us mixed D and UD types and want us to ignore that and use
-       * the destination type.
-       */
-      brw_inst_set_3src_a16_src_type(devinfo, inst, dest.type);
-      brw_inst_set_3src_a16_dst_type(devinfo, inst, dest.type);
+   if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
+      assert(dest.file == BRW_GENERAL_REGISTER_FILE ||
+             dest.file == BRW_ARCHITECTURE_REGISTER_FILE);
+
+      if (dest.file == BRW_ARCHITECTURE_REGISTER_FILE) {
+         brw_inst_set_3src_a1_dst_reg_file(devinfo, inst,
+                                           BRW_ALIGN1_3SRC_ACCUMULATOR);
+         brw_inst_set_3src_dst_reg_nr(devinfo, inst, BRW_ARF_ACCUMULATOR);
+      } else {
+         brw_inst_set_3src_a1_dst_reg_file(devinfo, inst,
+                                           BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE);
+         brw_inst_set_3src_dst_reg_nr(devinfo, inst, dest.nr);
+      }
+      brw_inst_set_3src_a1_dst_subreg_nr(devinfo, inst, dest.subnr / 8);
+
+      brw_inst_set_3src_a1_dst_hstride(devinfo, inst, BRW_ALIGN1_3SRC_DST_HORIZONTAL_STRIDE_1);
+
+      if (brw_reg_type_is_floating_point(dest.type)) {
+         brw_inst_set_3src_a1_exec_type(devinfo, inst,
+                                        BRW_ALIGN1_3SRC_EXEC_TYPE_FLOAT);
+      } else {
+         brw_inst_set_3src_a1_exec_type(devinfo, inst,
+                                        BRW_ALIGN1_3SRC_EXEC_TYPE_INT);
+      }
+
+      brw_inst_set_3src_a1_dst_type(devinfo, inst, dest.type);
+      brw_inst_set_3src_a1_src0_type(devinfo, inst, src0.type);
+      brw_inst_set_3src_a1_src1_type(devinfo, inst, src1.type);
+      brw_inst_set_3src_a1_src2_type(devinfo, inst, src2.type);
+
+      assert((src0.vstride == BRW_VERTICAL_STRIDE_0 &&
+              src0.hstride == BRW_HORIZONTAL_STRIDE_0) ||
+             (src0.vstride == BRW_VERTICAL_STRIDE_8 &&
+              src0.hstride == BRW_HORIZONTAL_STRIDE_1));
+      assert((src1.vstride == BRW_VERTICAL_STRIDE_0 &&
+              src1.hstride == BRW_HORIZONTAL_STRIDE_0) ||
+             (src1.vstride == BRW_VERTICAL_STRIDE_8 &&
+              src1.hstride == BRW_HORIZONTAL_STRIDE_1));
+      assert((src2.vstride == BRW_VERTICAL_STRIDE_0 &&
+              src2.hstride == BRW_HORIZONTAL_STRIDE_0) ||
+             (src2.vstride == BRW_VERTICAL_STRIDE_8 &&
+              src2.hstride == BRW_HORIZONTAL_STRIDE_1));
+
+      brw_inst_set_3src_a1_src0_vstride(devinfo, inst,
+                                        src0.vstride == BRW_VERTICAL_STRIDE_0 ?
+                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_0 :
+                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_8);
+      brw_inst_set_3src_a1_src1_vstride(devinfo, inst,
+                                        src1.vstride == BRW_VERTICAL_STRIDE_0 ?
+                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_0 :
+                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_8);
+      /* no vstride on src2 */
+
+      brw_inst_set_3src_a1_src0_hstride(devinfo, inst,
+                                        src0.hstride == BRW_HORIZONTAL_STRIDE_0 ?
+                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0 :
+                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1);
+      brw_inst_set_3src_a1_src1_hstride(devinfo, inst,
+                                        src1.hstride == BRW_HORIZONTAL_STRIDE_0 ?
+                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0 :
+                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1);
+      brw_inst_set_3src_a1_src2_hstride(devinfo, inst,
+                                        src2.hstride == BRW_HORIZONTAL_STRIDE_0 ?
+                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0 :
+                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1);
+
+      brw_inst_set_3src_a1_src0_subreg_nr(devinfo, inst, src0.subnr);
+      brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
+      brw_inst_set_3src_src0_abs(devinfo, inst, src0.abs);
+      brw_inst_set_3src_src0_negate(devinfo, inst, src0.negate);
+
+      brw_inst_set_3src_a1_src1_subreg_nr(devinfo, inst, src1.subnr);
+      if (src1.file == BRW_ARCHITECTURE_REGISTER_FILE) {
+         brw_inst_set_3src_src1_reg_nr(devinfo, inst, BRW_ARF_ACCUMULATOR);
+      } else {
+         brw_inst_set_3src_src1_reg_nr(devinfo, inst, src1.nr);
+      }
+      brw_inst_set_3src_src1_abs(devinfo, inst, src1.abs);
+      brw_inst_set_3src_src1_negate(devinfo, inst, src1.negate);
+
+      brw_inst_set_3src_a1_src2_subreg_nr(devinfo, inst, src2.subnr);
+      brw_inst_set_3src_src2_reg_nr(devinfo, inst, src2.nr);
+      brw_inst_set_3src_src2_abs(devinfo, inst, src2.abs);
+      brw_inst_set_3src_src2_negate(devinfo, inst, src2.negate);
+
+      assert(src0.file == BRW_GENERAL_REGISTER_FILE ||
+             src0.file == BRW_IMMEDIATE_VALUE);
+      assert(src1.file == BRW_GENERAL_REGISTER_FILE ||
+             src1.file == BRW_ARCHITECTURE_REGISTER_FILE);
+      assert(src2.file == BRW_GENERAL_REGISTER_FILE ||
+             src2.file == BRW_IMMEDIATE_VALUE);
+
+      brw_inst_set_3src_a1_src0_reg_file(devinfo, inst,
+                                         src0.file == BRW_GENERAL_REGISTER_FILE ?
+                                         BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE :
+                                         BRW_ALIGN1_3SRC_IMMEDIATE_VALUE);
+      brw_inst_set_3src_a1_src1_reg_file(devinfo, inst,
+                                         src1.file == BRW_GENERAL_REGISTER_FILE ?
+                                         BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE :
+                                         BRW_ALIGN1_3SRC_ACCUMULATOR);
+      brw_inst_set_3src_a1_src2_reg_file(devinfo, inst,
+                                         src2.file == BRW_GENERAL_REGISTER_FILE ?
+                                         BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE :
+                                         BRW_ALIGN1_3SRC_IMMEDIATE_VALUE);
+   } else {
+      assert(dest.file == BRW_GENERAL_REGISTER_FILE ||
+             dest.file == BRW_MESSAGE_REGISTER_FILE);
+      assert(dest.type == BRW_REGISTER_TYPE_F  ||
+             dest.type == BRW_REGISTER_TYPE_DF ||
+             dest.type == BRW_REGISTER_TYPE_D  ||
+             dest.type == BRW_REGISTER_TYPE_UD);
+      if (devinfo->gen == 6) {
+         brw_inst_set_3src_a16_dst_reg_file(devinfo, inst,
+                                            dest.file == BRW_MESSAGE_REGISTER_FILE);
+      }
+      brw_inst_set_3src_dst_reg_nr(devinfo, inst, dest.nr);
+      brw_inst_set_3src_a16_dst_subreg_nr(devinfo, inst, dest.subnr / 16);
+      brw_inst_set_3src_a16_dst_writemask(devinfo, inst, dest.writemask);
+
+      assert(src0.file == BRW_GENERAL_REGISTER_FILE);
+      brw_inst_set_3src_a16_src0_swizzle(devinfo, inst, src0.swizzle);
+      brw_inst_set_3src_a16_src0_subreg_nr(devinfo, inst, get_3src_subreg_nr(src0));
+      brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
+      brw_inst_set_3src_src0_abs(devinfo, inst, src0.abs);
+      brw_inst_set_3src_src0_negate(devinfo, inst, src0.negate);
+      brw_inst_set_3src_a16_src0_rep_ctrl(devinfo, inst,
+                                          src0.vstride == BRW_VERTICAL_STRIDE_0);
+
+      assert(src1.file == BRW_GENERAL_REGISTER_FILE);
+      brw_inst_set_3src_a16_src1_swizzle(devinfo, inst, src1.swizzle);
+      brw_inst_set_3src_a16_src1_subreg_nr(devinfo, inst, get_3src_subreg_nr(src1));
+      brw_inst_set_3src_src1_reg_nr(devinfo, inst, src1.nr);
+      brw_inst_set_3src_src1_abs(devinfo, inst, src1.abs);
+      brw_inst_set_3src_src1_negate(devinfo, inst, src1.negate);
+      brw_inst_set_3src_a16_src1_rep_ctrl(devinfo, inst,
+                                          src1.vstride == BRW_VERTICAL_STRIDE_0);
+
+      assert(src2.file == BRW_GENERAL_REGISTER_FILE);
+      brw_inst_set_3src_a16_src2_swizzle(devinfo, inst, src2.swizzle);
+      brw_inst_set_3src_a16_src2_subreg_nr(devinfo, inst, get_3src_subreg_nr(src2));
+      brw_inst_set_3src_src2_reg_nr(devinfo, inst, src2.nr);
+      brw_inst_set_3src_src2_abs(devinfo, inst, src2.abs);
+      brw_inst_set_3src_src2_negate(devinfo, inst, src2.negate);
+      brw_inst_set_3src_a16_src2_rep_ctrl(devinfo, inst,
+                                          src2.vstride == BRW_VERTICAL_STRIDE_0);
+
+      if (devinfo->gen >= 7) {
+         /* Set both the source and destination types based on dest.type,
+          * ignoring the source register types.  The MAD and LRP emitters ensure
+          * that all four types are float.  The BFE and BFI2 emitters, however,
+          * may send us mixed D and UD types and want us to ignore that and use
+          * the destination type.
+          */
+         brw_inst_set_3src_a16_src_type(devinfo, inst, dest.type);
+         brw_inst_set_3src_a16_dst_type(devinfo, inst, dest.type);
+      }
    }
 
    return inst;
