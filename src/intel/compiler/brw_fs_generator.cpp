@@ -646,9 +646,9 @@ fs_generator::generate_barrier(fs_inst *inst, struct brw_reg src)
    brw_WAIT(p);
 }
 
-void
+bool
 fs_generator::generate_linterp(fs_inst *inst,
-			     struct brw_reg dst, struct brw_reg *src)
+                               struct brw_reg dst, struct brw_reg *src)
 {
    /* PLN reads:
     *                      /   in SIMD16   \
@@ -678,6 +678,8 @@ fs_generator::generate_linterp(fs_inst *inst,
    if (devinfo->has_pln &&
        (devinfo->gen >= 7 || (delta_x.nr & 1) == 0)) {
       brw_PLN(p, dst, interp, delta_x);
+
+      return false;
    } else {
       i[0] = brw_LINE(p, brw_null_reg(), interp, delta_x);
       i[1] = brw_MAC(p, dst, suboffset(interp, 1), delta_y);
@@ -689,6 +691,8 @@ fs_generator::generate_linterp(fs_inst *inst,
        * the first instruction.
        */
       brw_inst_set_saturate(p->devinfo, i[0], false);
+
+      return true;
    }
 }
 
@@ -1963,7 +1967,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 brw_MOV(p, dst, src[0]);
 	 break;
       case FS_OPCODE_LINTERP:
-	 generate_linterp(inst, dst, src);
+	 multiple_instructions_emitted = generate_linterp(inst, dst, src);
 	 break;
       case FS_OPCODE_PIXEL_X:
          assert(src[0].type == BRW_REGISTER_TYPE_UW);
