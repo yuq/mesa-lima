@@ -735,7 +735,7 @@ vec4_instruction *
 vec4_visitor::emit_lrp(const dst_reg &dst,
                        const src_reg &x, const src_reg &y, const src_reg &a)
 {
-   if (devinfo->gen >= 6) {
+   if (devinfo->gen >= 6 && devinfo->gen <= 10) {
       /* Note that the instruction's argument order is reversed from GLSL
        * and the IR.
        */

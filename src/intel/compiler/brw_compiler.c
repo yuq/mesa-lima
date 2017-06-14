@@ -46,20 +46,28 @@
    .use_interpolated_input_intrinsics = true,                                 \
    .vertex_id_zero_based = true
 
+#define COMMON_SCALAR_OPTIONS                                                 \
+   .lower_pack_half_2x16 = true,                                              \
+   .lower_pack_snorm_2x16 = true,                                             \
+   .lower_pack_snorm_4x8 = true,                                              \
+   .lower_pack_unorm_2x16 = true,                                             \
+   .lower_pack_unorm_4x8 = true,                                              \
+   .lower_unpack_half_2x16 = true,                                            \
+   .lower_unpack_snorm_2x16 = true,                                           \
+   .lower_unpack_snorm_4x8 = true,                                            \
+   .lower_unpack_unorm_2x16 = true,                                           \
+   .lower_unpack_unorm_4x8 = true,                                            \
+   .max_unroll_iterations = 32
+
 static const struct nir_shader_compiler_options scalar_nir_options = {
    COMMON_OPTIONS,
-   .lower_pack_half_2x16 = true,
-   .lower_pack_snorm_2x16 = true,
-   .lower_pack_snorm_4x8 = true,
-   .lower_pack_unorm_2x16 = true,
-   .lower_pack_unorm_4x8 = true,
-   .lower_unpack_half_2x16 = true,
-   .lower_unpack_snorm_2x16 = true,
-   .lower_unpack_snorm_4x8 = true,
-   .lower_unpack_unorm_2x16 = true,
-   .lower_unpack_unorm_4x8 = true,
-   .vs_inputs_dual_locations = true,
-   .max_unroll_iterations = 32,
+   COMMON_SCALAR_OPTIONS,
+};
+
+static const struct nir_shader_compiler_options scalar_nir_options_gen11 = {
+   COMMON_OPTIONS,
+   COMMON_SCALAR_OPTIONS,
+   .lower_flrp32 = true,
 };
 
 static const struct nir_shader_compiler_options vector_nir_options = {
@@ -149,7 +157,8 @@ brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
       compiler->glsl_compiler_options[i].OptimizeForAOS = !is_scalar;
 
       if (is_scalar) {
-         compiler->glsl_compiler_options[i].NirOptions = &scalar_nir_options;
+         compiler->glsl_compiler_options[i].NirOptions =
+            devinfo->gen < 11 ? &scalar_nir_options : &scalar_nir_options_gen11;
       } else {
          compiler->glsl_compiler_options[i].NirOptions =
             devinfo->gen < 6 ? &vector_nir_options : &vector_nir_options_gen6;
