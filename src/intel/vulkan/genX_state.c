@@ -52,13 +52,11 @@ genX(init_device_state)(struct anv_device *device)
       ps.PipelineSelection = _3D;
    }
 
-#if GEN_GEN >= 9
+#if GEN_GEN == 9
    uint32_t cache_mode_1;
    anv_pack_struct(&cache_mode_1, GENX(CACHE_MODE_1),
-#if GEN_GEN == 9
                    .FloatBlendOptimizationEnable = true,
                    .FloatBlendOptimizationEnableMask = true,
-#endif
                    .PartialResolveDisableInVC = true,
                    .PartialResolveDisableInVCMask = true);
 
