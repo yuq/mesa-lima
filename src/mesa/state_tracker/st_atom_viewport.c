@@ -47,7 +47,7 @@ st_update_viewport( struct st_context *st )
 
    /* _NEW_VIEWPORT 
     */
-   for (i = 0; i < ctx->Const.MaxViewports; i++) {
+   for (i = 0; i < st->state.num_viewports; i++) {
       float *scale = st->state.viewport[i].scale;
       float *translate = st->state.viewport[i].translate;
 
@@ -62,6 +62,11 @@ st_update_viewport( struct st_context *st )
    }
 
    cso_set_viewport(st->cso_context, &st->state.viewport[0]);
-   if (ctx->Const.MaxViewports > 1)
-      st->pipe->set_viewport_states(st->pipe, 1, ctx->Const.MaxViewports - 1, &st->state.viewport[1]);
+
+   if (st->state.num_viewports > 1) {
+      struct pipe_context *pipe = st->pipe;
+
+      pipe->set_viewport_states(pipe, 1, st->state.num_viewports - 1,
+                                &st->state.viewport[1]);
+   }
 }

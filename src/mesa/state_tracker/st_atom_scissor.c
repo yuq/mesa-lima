@@ -53,7 +53,7 @@ st_update_scissor( struct st_context *st )
    unsigned i;
    bool changed = false;
 
-   for (i = 0 ; i < ctx->Const.MaxViewports; i++) {
+   for (i = 0 ; i < st->state.num_viewports; i++) {
       scissor[i].minx = 0;
       scissor[i].miny = 0;
       scissor[i].maxx = fb_width;
@@ -95,8 +95,12 @@ st_update_scissor( struct st_context *st )
          changed = true;
       }
    }
-   if (changed)
-      st->pipe->set_scissor_states(st->pipe, 0, ctx->Const.MaxViewports, scissor); /* activate */
+
+   if (changed) {
+      struct pipe_context *pipe = st->pipe;
+
+      pipe->set_scissor_states(pipe, 0, st->state.num_viewports, scissor);
+   }
 }
 
 void

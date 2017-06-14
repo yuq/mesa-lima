@@ -149,6 +149,7 @@ struct st_context
       unsigned fb_height;
       unsigned fb_num_samples;
       unsigned fb_num_layers;
+      unsigned num_viewports;
       struct pipe_scissor_state scissor[PIPE_MAX_VIEWPORTS];
       struct pipe_viewport_state viewport[PIPE_MAX_VIEWPORTS];
       struct {
