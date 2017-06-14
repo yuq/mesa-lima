@@ -113,6 +113,9 @@ struct lima_context {
    int plb_plbu_offset;
    int plb_pp_offset[4];
    int plb_offset;
+
+   struct lima_buffer *vs_program;
+   struct lima_buffer *fs_program;
 };
 
 static inline struct lima_context *
