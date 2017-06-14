@@ -275,8 +275,17 @@ static bool
 can_blit_via_svga_copy_region(struct svga_context *svga,
                               const struct pipe_blit_info *blit_info)
 {
-   if (!util_can_blit_via_copy_region(blit_info, FALSE) &&
-       !util_can_blit_via_copy_region(blit_info, TRUE))
+   struct pipe_blit_info local_blit = *blit_info;
+
+   /* First basic checks to catch incompatibilities in new or locally unchecked
+    * struct pipe_blit_info members but bypass the format check here.
+    * Also since util_can_blit_via_copy_region() requires a dimension match,
+    * PIPE_FILTER_LINEAR should be equal to PIPE_FILTER_NEAREST.
+    */
+   local_blit.dst.format = local_blit.src.format;
+   if (local_blit.filter == PIPE_TEX_FILTER_LINEAR)
+      local_blit.filter = PIPE_TEX_FILTER_NEAREST;
+   if (!util_can_blit_via_copy_region(&local_blit, TRUE))
       return false;
 
    /* For depth+stencil formats, copy with mask != PIPE_MASK_ZS is not
@@ -330,6 +339,21 @@ can_blit_via_surface_copy(struct svga_context *svga,
                           const struct pipe_blit_info *blit_info)
 {
    struct svga_texture *dtex, *stex;
+
+   /* Mimic the format tests in util_can_blit_via_copy_region(), but
+    * skip the other tests that have already been performed.
+    */
+   if (blit_info->src.format != blit_info->dst.format) {
+      const struct util_format_description *src_desc, *dst_desc;
+
+      src_desc = util_format_description(blit_info->src.resource->format);
+      dst_desc = util_format_description(blit_info->dst.resource->format);
+
+      if (blit_info->src.resource->format != blit_info->src.format ||
+          blit_info->dst.resource->format != blit_info->dst.format ||
+          !util_is_format_compatible(src_desc, dst_desc));
+      return FALSE;
+   }
 
    if (svga->render_condition && blit_info->render_condition_enable)
       return false;
