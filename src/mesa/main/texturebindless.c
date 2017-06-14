@@ -772,6 +772,21 @@ _mesa_MakeTextureHandleNonResidentARB(GLuint64 handle)
 }
 
 GLuint64 GLAPIENTRY
+_mesa_GetImageHandleARB_no_error(GLuint texture, GLint level, GLboolean layered,
+                                 GLint layer, GLenum format)
+{
+   struct gl_texture_object *texObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = _mesa_lookup_texture(ctx, texture);
+   if (!_mesa_is_texture_complete(texObj, &texObj->Sampler))
+      _mesa_test_texobj_completeness(ctx, texObj);
+
+   return get_image_handle(ctx, texObj, level, layered, layer, format);
+}
+
+GLuint64 GLAPIENTRY
 _mesa_GetImageHandleARB(GLuint texture, GLint level, GLboolean layered,
                         GLint layer, GLenum format)
 {

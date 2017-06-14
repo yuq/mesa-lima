@@ -27,7 +27,7 @@
       <param name="handle" type="GLuint64" />
    </function>
 
-   <function name="GetImageHandleARB">
+   <function name="GetImageHandleARB" no_error="true">
       <return type="GLuint64"/>
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />

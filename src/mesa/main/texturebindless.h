@@ -92,6 +92,10 @@ void GLAPIENTRY
 _mesa_MakeTextureHandleNonResidentARB(GLuint64 handle);
 
 GLuint64 GLAPIENTRY
+_mesa_GetImageHandleARB_no_error(GLuint texture, GLint level, GLboolean layered,
+                                 GLint layer, GLenum format);
+
+GLuint64 GLAPIENTRY
 _mesa_GetImageHandleARB(GLuint texture, GLint level, GLboolean layered,
                         GLint layer, GLenum format);
 
