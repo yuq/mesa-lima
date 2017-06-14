@@ -1617,29 +1617,40 @@ static void si_set_polygon_stipple(struct pipe_context *ctx,
 static void
 si_resident_handles_update_needs_color_decompress(struct si_context *sctx)
 {
+	util_dynarray_clear(&sctx->resident_tex_needs_color_decompress);
+	util_dynarray_clear(&sctx->resident_img_needs_color_decompress);
+
 	util_dynarray_foreach(&sctx->resident_tex_handles,
 			      struct si_texture_handle *, tex_handle) {
 		struct pipe_resource *res = (*tex_handle)->view->texture;
+		struct r600_texture *rtex;
 
-		if (res && res->target != PIPE_BUFFER) {
-			struct r600_texture *rtex = (struct r600_texture *)res;
+		if (!res || res->target == PIPE_BUFFER)
+			continue;
 
-			(*tex_handle)->needs_color_decompress =
-				color_needs_decompression(rtex);
-		}
+		rtex = (struct r600_texture *)res;
+		if (!color_needs_decompression(rtex))
+			continue;
+
+		util_dynarray_append(&sctx->resident_tex_needs_color_decompress,
+				     struct si_texture_handle *, *tex_handle);
 	}
 
 	util_dynarray_foreach(&sctx->resident_img_handles,
 			      struct si_image_handle *, img_handle) {
 		struct pipe_image_view *view = &(*img_handle)->view;
 		struct pipe_resource *res = view->resource;
+		struct r600_texture *rtex;
 
-		if (res && res->target != PIPE_BUFFER) {
-			struct r600_texture *rtex = (struct r600_texture *)res;
+		if (!res || res->target == PIPE_BUFFER)
+			continue;
 
-			(*img_handle)->needs_color_decompress =
-				color_needs_decompression(rtex);
-		}
+		rtex = (struct r600_texture *)res;
+		if (!color_needs_decompression(rtex))
+			continue;
+
+		util_dynarray_append(&sctx->resident_img_needs_color_decompress,
+				     struct si_image_handle *, *img_handle);
 	}
 }
 
@@ -2359,8 +2370,12 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 					tex_handle);
 			}
 
-			tex_handle->needs_color_decompress =
-				color_needs_decompression(rtex);
+			if (color_needs_decompression(rtex)) {
+				util_dynarray_append(
+					&sctx->resident_tex_needs_color_decompress,
+					struct si_texture_handle *,
+					tex_handle);
+			}
 
 			if (rtex->dcc_offset &&
 			    p_atomic_read(&rtex->framebuffers_bound))
@@ -2395,6 +2410,10 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 		if (sview->base.texture->target != PIPE_BUFFER) {
 			util_dynarray_delete_unordered(
 				&sctx->resident_tex_needs_depth_decompress,
+				struct si_texture_handle *, tex_handle);
+
+			util_dynarray_delete_unordered(
+				&sctx->resident_tex_needs_color_decompress,
 				struct si_texture_handle *, tex_handle);
 		}
 	}
@@ -2471,6 +2490,7 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_image_handle *img_handle;
 	struct pipe_image_view *view;
+	struct r600_resource *res;
 	struct hash_entry *entry;
 
 	entry = _mesa_hash_table_search(sctx->img_handles, (void *)handle);
@@ -2479,17 +2499,19 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 
 	img_handle = (struct si_image_handle *)entry->data;
 	view = &img_handle->view;
+	res = (struct r600_resource *)view->resource;
 
 	if (resident) {
-		struct r600_resource *res =
-			(struct r600_resource *)view->resource;
-
 		if (res->b.b.target != PIPE_BUFFER) {
 			struct r600_texture *rtex = (struct r600_texture *)res;
 			unsigned level = view->u.tex.level;
 
-			img_handle->needs_color_decompress =
-				color_needs_decompression(rtex);
+			if (color_needs_decompression(rtex)) {
+				util_dynarray_append(
+					&sctx->resident_img_needs_color_decompress,
+					struct si_image_handle *,
+					img_handle);
+			}
 
 			if (vi_dcc_enabled(rtex, level) &&
 			    p_atomic_read(&rtex->framebuffers_bound))
@@ -2521,6 +2543,13 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 		util_dynarray_delete_unordered(&sctx->resident_img_handles,
 					       struct si_image_handle *,
 					       img_handle);
+
+		if (res->b.b.target != PIPE_BUFFER) {
+			util_dynarray_delete_unordered(
+				&sctx->resident_img_needs_color_decompress,
+				struct si_image_handle *,
+				img_handle);
+		}
 	}
 }
 

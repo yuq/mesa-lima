@@ -693,18 +693,13 @@ static void si_check_render_feedback(struct si_context *sctx)
 
 static void si_decompress_resident_textures(struct si_context *sctx)
 {
-	util_dynarray_foreach(&sctx->resident_tex_handles,
+	util_dynarray_foreach(&sctx->resident_tex_needs_color_decompress,
 			      struct si_texture_handle *, tex_handle) {
 		struct pipe_sampler_view *view = (*tex_handle)->view;
-		struct si_sampler_view *sview = (struct si_sampler_view *)view;
 		struct r600_texture *tex = (struct r600_texture *)view->texture;
 
-		if (view->texture->target == PIPE_BUFFER)
-			continue;
-
-		if ((*tex_handle)->needs_color_decompress)
-			si_decompress_color_texture(sctx, tex, view->u.tex.first_level,
-						    view->u.tex.last_level);
+		si_decompress_color_texture(sctx, tex, view->u.tex.first_level,
+					    view->u.tex.last_level);
 	}
 
 	util_dynarray_foreach(&sctx->resident_tex_needs_depth_decompress,
@@ -722,17 +717,13 @@ static void si_decompress_resident_textures(struct si_context *sctx)
 
 static void si_decompress_resident_images(struct si_context *sctx)
 {
-	util_dynarray_foreach(&sctx->resident_img_handles,
+	util_dynarray_foreach(&sctx->resident_img_needs_color_decompress,
 			      struct si_image_handle *, img_handle) {
 		struct pipe_image_view *view = &(*img_handle)->view;
 		struct r600_texture *tex = (struct r600_texture *)view->resource;
 
-		if (view->resource->target == PIPE_BUFFER)
-			continue;
-
-		if ((*img_handle)->needs_color_decompress)
-			si_decompress_color_texture(sctx, tex, view->u.tex.level,
-						    view->u.tex.level);
+		si_decompress_color_texture(sctx, tex, view->u.tex.level,
+					    view->u.tex.level);
 	}
 }
 

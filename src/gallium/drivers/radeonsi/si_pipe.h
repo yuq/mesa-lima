@@ -243,14 +243,12 @@ struct si_texture_handle
 {
 	struct si_bindless_descriptor	*desc;
 	struct pipe_sampler_view	*view;
-	bool				needs_color_decompress;
 };
 
 struct si_image_handle
 {
 	struct si_bindless_descriptor	*desc;
 	struct pipe_image_view		view;
-	bool				needs_color_decompress;
 };
 
 struct si_context {
@@ -432,6 +430,8 @@ struct si_context {
 	struct util_dynarray	resident_img_handles;
 
 	/* Resident bindless handles which need decompression */
+	struct util_dynarray	resident_tex_needs_color_decompress;
+	struct util_dynarray	resident_img_needs_color_decompress;
 	struct util_dynarray	resident_tex_needs_depth_decompress;
 
 	/* Bindless state */
