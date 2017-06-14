@@ -443,7 +443,6 @@ void BinTriangles(
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
     const SWR_FRONTEND_STATE& feState = state.frontendState;
-    const SWR_GS_STATE& gsState = state.gsState;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
     simdscalar vRecipW0 = _simd_set1_ps(1.0f);
@@ -886,7 +885,6 @@ void SIMDAPI BinTriangles_simd16(
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
     const SWR_FRONTEND_STATE& feState = state.frontendState;
-    const SWR_GS_STATE& gsState = state.gsState;
 
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
@@ -1393,7 +1391,6 @@ void BinPostSetupPoints(
     simdvector& primVerts = prim[0];
 
     const API_STATE& state = GetApiState(pDC);
-    const SWR_GS_STATE& gsState = state.gsState;
     const SWR_RASTSTATE& rastState = state.rastState;
     const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
 
@@ -1773,7 +1770,6 @@ void BinPostSetupPoints_simd16(
     simd16vector& primVerts = prim[0];
 
     const API_STATE& state = GetApiState(pDC);
-    const SWR_GS_STATE& gsState = state.gsState;
     const SWR_RASTSTATE& rastState = state.rastState;
     const uint32_t *pViewportIndex = (uint32_t *)&viewportIdx;
 
@@ -2164,7 +2160,6 @@ void BinPostSetupLines(
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
-    const SWR_GS_STATE& gsState = state.gsState;
 
     // Select attribute processor
     PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(2,
@@ -2367,7 +2362,6 @@ void BinPostSetupLines_simd16(
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
-    const SWR_GS_STATE& gsState = state.gsState;
 
     // Select attribute processor
     PFN_PROCESS_ATTRIBUTES pfnProcessAttribs = GetProcessAttributesFunc(2,
