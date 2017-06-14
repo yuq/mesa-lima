@@ -48,6 +48,12 @@ lima_context_destroy(struct pipe_context *pctx)
    if (ctx->plb)
       lima_buffer_free(ctx->plb);
 
+   if (ctx->vs_program)
+      lima_buffer_free(ctx->vs_program);
+
+   if (ctx->fs_program)
+      lima_buffer_free(ctx->fs_program);
+
    FREE(ctx);
 }
 
@@ -114,6 +120,16 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    for (i = 0; i < max_plb; i++)
       ((uint32_t *)(ctx->plb->map + ctx->plb_plbu_offset))[i] =
          ctx->plb->va + ctx->plb_offset + block_size * i;
+
+   ctx->vs_program = lima_buffer_alloc(
+      screen, 0x1000, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->vs_program)
+      goto err_out;
+
+   ctx->fs_program = lima_buffer_alloc(
+      screen, 0x1000, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->fs_program)
+      goto err_out;
 
    return &ctx->base;
 
