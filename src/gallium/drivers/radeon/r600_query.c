@@ -125,8 +125,11 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_NUM_CS_FLUSHES:
 		query->begin_result = rctx->num_cs_flushes;
 		break;
-	case R600_QUERY_NUM_FB_CACHE_FLUSHES:
-		query->begin_result = rctx->num_fb_cache_flushes;
+	case R600_QUERY_NUM_CB_CACHE_FLUSHES:
+		query->begin_result = rctx->num_cb_cache_flushes;
+		break;
+	case R600_QUERY_NUM_DB_CACHE_FLUSHES:
+		query->begin_result = rctx->num_db_cache_flushes;
 		break;
 	case R600_QUERY_NUM_L2_INVALIDATES:
 		query->begin_result = rctx->num_L2_invalidates;
@@ -270,8 +273,11 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	case R600_QUERY_NUM_CS_FLUSHES:
 		query->end_result = rctx->num_cs_flushes;
 		break;
-	case R600_QUERY_NUM_FB_CACHE_FLUSHES:
-		query->end_result = rctx->num_fb_cache_flushes;
+	case R600_QUERY_NUM_CB_CACHE_FLUSHES:
+		query->end_result = rctx->num_cb_cache_flushes;
+		break;
+	case R600_QUERY_NUM_DB_CACHE_FLUSHES:
+		query->end_result = rctx->num_db_cache_flushes;
 		break;
 	case R600_QUERY_NUM_L2_INVALIDATES:
 		query->end_result = rctx->num_L2_invalidates;
@@ -1837,7 +1843,8 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-vs-flushes",		NUM_VS_FLUSHES,		UINT64, AVERAGE),
 	X("num-ps-flushes",		NUM_PS_FLUSHES,		UINT64, AVERAGE),
 	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, AVERAGE),
-	X("num-fb-cache-flushes",	NUM_FB_CACHE_FLUSHES,	UINT64, AVERAGE),
+	X("num-CB-cache-flushes",	NUM_CB_CACHE_FLUSHES,	UINT64, AVERAGE),
+	X("num-DB-cache-flushes",	NUM_DB_CACHE_FLUSHES,	UINT64, AVERAGE),
 	X("num-L2-invalidates",		NUM_L2_INVALIDATES,	UINT64, AVERAGE),
 	X("num-L2-writebacks",		NUM_L2_WRITEBACKS,	UINT64, AVERAGE),
 	X("num-resident-handles",	NUM_RESIDENT_HANDLES,	UINT64, AVERAGE),

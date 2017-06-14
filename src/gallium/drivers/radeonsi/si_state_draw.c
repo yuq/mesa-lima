@@ -861,9 +861,10 @@ void si_emit_cache_flush(struct si_context *sctx)
 	uint32_t flush_cb_db = rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
 					      SI_CONTEXT_FLUSH_AND_INV_DB);
 
-	if (rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
-			   SI_CONTEXT_FLUSH_AND_INV_DB))
-		sctx->b.num_fb_cache_flushes++;
+	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB)
+		sctx->b.num_cb_cache_flushes++;
+	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB)
+		sctx->b.num_db_cache_flushes++;
 
 	/* SI has a bug that it always flushes ICACHE and KCACHE if either
 	 * bit is set. An alternative way is to write SQC_CACHES, but that

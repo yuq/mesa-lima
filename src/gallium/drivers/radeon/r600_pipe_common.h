@@ -595,7 +595,8 @@ struct r600_common_context {
 	unsigned			num_vs_flushes;
 	unsigned			num_ps_flushes;
 	unsigned			num_cs_flushes;
-	unsigned			num_fb_cache_flushes;
+	unsigned			num_cb_cache_flushes;
+	unsigned			num_db_cache_flushes;
 	unsigned			num_L2_invalidates;
 	unsigned			num_L2_writebacks;
 	unsigned			num_resident_handles;
