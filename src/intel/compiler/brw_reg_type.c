@@ -79,6 +79,27 @@ static const struct {
    [BRW_REGISTER_TYPE_UV] = { INVALID,             BRW_HW_IMM_TYPE_UV  },
 };
 
+/* SNB adds 3-src instructions (MAD and LRP) that only operate on floats, so
+ * the types were implied. IVB adds BFE and BFI2 that operate on doublewords
+ * and unsigned doublewords, so a new field is also available in the da3src
+ * struct (part of struct brw_instruction.bits1 in brw_structs.h) to select
+ * dst and shared-src types.
+ */
+enum hw_3src_reg_type {
+   GEN7_3SRC_TYPE_F  = 0,
+   GEN7_3SRC_TYPE_D  = 1,
+   GEN7_3SRC_TYPE_UD = 2,
+   GEN7_3SRC_TYPE_DF = 3,
+};
+
+static const enum hw_3src_reg_type gen7_3src_type[] = {
+   [0 ... BRW_REGISTER_TYPE_LAST] = INVALID,
+   [BRW_REGISTER_TYPE_F]  = GEN7_3SRC_TYPE_F,
+   [BRW_REGISTER_TYPE_D]  = GEN7_3SRC_TYPE_D,
+   [BRW_REGISTER_TYPE_UD] = GEN7_3SRC_TYPE_UD,
+   [BRW_REGISTER_TYPE_DF] = GEN7_3SRC_TYPE_DF,
+};
+
 /**
  * Convert a brw_reg_type enumeration value into the hardware representation.
  *
@@ -120,6 +141,35 @@ brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
          if (gen4_hw_type[i].reg_type == (enum hw_reg_type)hw_type) {
             return i;
          }
+      }
+   }
+   unreachable("not reached");
+}
+
+/**
+ * Convert a brw_reg_type enumeration value into the hardware representation
+ * for a 3-src instruction
+ */
+unsigned
+brw_reg_type_to_hw_3src_type(const struct gen_device_info *devinfo,
+                             enum brw_reg_type type)
+{
+   assert(type < ARRAY_SIZE(gen7_3src_type));
+   assert(gen7_3src_type[type] != -1);
+   return gen7_3src_type[type];
+}
+
+/**
+ * Convert the hardware representation for a 3-src instruction into a
+ * brw_reg_type enumeration value.
+ */
+enum brw_reg_type
+brw_hw_3src_type_to_reg_type(const struct gen_device_info *devinfo,
+                             unsigned hw_type)
+{
+   for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
+      if (gen7_3src_type[i] == hw_type) {
+         return i;
       }
    }
    unreachable("not reached");

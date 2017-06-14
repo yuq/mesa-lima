@@ -89,6 +89,14 @@ brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
                         enum brw_reg_file file, unsigned hw_type);
 
 unsigned
+brw_reg_type_to_hw_3src_type(const struct gen_device_info *devinfo,
+                             enum brw_reg_type type);
+
+enum brw_reg_type
+brw_hw_3src_type_to_reg_type(const struct gen_device_info *devinfo,
+                             unsigned hw_type);
+
+unsigned
 brw_reg_type_to_size(enum brw_reg_type type);
 
 const char *
