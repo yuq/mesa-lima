@@ -1035,6 +1035,12 @@ src0_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
          reg_nr = brw_inst_3src_src0_reg_nr(devinfo, inst);
          subreg_nr = brw_inst_3src_a1_src0_subreg_nr(devinfo, inst);
          type = brw_inst_3src_a1_src0_type(devinfo, inst);
+      } else if (brw_inst_3src_a1_src0_type(devinfo, inst) ==
+                 BRW_REGISTER_TYPE_NF) {
+         _file = BRW_ARCHITECTURE_REGISTER_FILE;
+         reg_nr = brw_inst_3src_src0_reg_nr(devinfo, inst);
+         subreg_nr = brw_inst_3src_a1_src0_subreg_nr(devinfo, inst);
+         type = brw_inst_3src_a1_src0_type(devinfo, inst);
       } else {
          _file = BRW_IMMEDIATE_VALUE;
          uint16_t imm_val = brw_inst_3src_a1_src0_imm(devinfo, inst);
@@ -1288,6 +1294,7 @@ imm(FILE *file, const struct gen_device_info *devinfo, enum brw_reg_type type,
    case BRW_REGISTER_TYPE_HF:
       string(file, "Half Float IMM");
       break;
+   case BRW_REGISTER_TYPE_NF:
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
       format(file, "*** invalid immediate type %d ", type);

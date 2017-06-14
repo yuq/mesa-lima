@@ -771,7 +771,11 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
                                         to_3src_align1_hstride(src2.hstride));
 
       brw_inst_set_3src_a1_src0_subreg_nr(devinfo, inst, src0.subnr);
-      brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
+      if (src0.type == BRW_REGISTER_TYPE_NF) {
+         brw_inst_set_3src_src0_reg_nr(devinfo, inst, BRW_ARF_ACCUMULATOR);
+      } else {
+         brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
+      }
       brw_inst_set_3src_src0_abs(devinfo, inst, src0.abs);
       brw_inst_set_3src_src0_negate(devinfo, inst, src0.negate);
 
@@ -790,7 +794,9 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
       brw_inst_set_3src_src2_negate(devinfo, inst, src2.negate);
 
       assert(src0.file == BRW_GENERAL_REGISTER_FILE ||
-             src0.file == BRW_IMMEDIATE_VALUE);
+             src0.file == BRW_IMMEDIATE_VALUE ||
+             (src0.file == BRW_ARCHITECTURE_REGISTER_FILE &&
+              src0.type == BRW_REGISTER_TYPE_NF));
       assert(src1.file == BRW_GENERAL_REGISTER_FILE ||
              src1.file == BRW_ARCHITECTURE_REGISTER_FILE);
       assert(src2.file == BRW_GENERAL_REGISTER_FILE ||

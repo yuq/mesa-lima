@@ -541,6 +541,8 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
       unreachable("unimplemented: saturate vector immediate");
    case BRW_REGISTER_TYPE_HF:
       unreachable("unimplemented: saturate HF immediate");
+   case BRW_REGISTER_TYPE_NF:
+      unreachable("no NF immediates");
    }
 
    if (size < 8) {
@@ -590,6 +592,8 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
       assert(!"unimplemented: negate UV/V immediate");
    case BRW_REGISTER_TYPE_HF:
       assert(!"unimplemented: negate HF immediate");
+   case BRW_REGISTER_TYPE_NF:
+      unreachable("no NF immediates");
    }
 
    return false;
@@ -632,6 +636,8 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
       assert(!"unimplemented: abs V immediate");
    case BRW_REGISTER_TYPE_HF:
       assert(!"unimplemented: abs HF immediate");
+   case BRW_REGISTER_TYPE_NF:
+      unreachable("no NF immediates");
    }
 
    return false;

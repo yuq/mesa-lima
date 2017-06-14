@@ -52,6 +52,7 @@ enum hw_reg_type {
    GEN11_HW_REG_TYPE_HF = 8,
    GEN11_HW_REG_TYPE_F  = 9,
    GEN11_HW_REG_TYPE_DF = 10,
+   GEN11_HW_REG_TYPE_NF = 11,
 };
 
 enum hw_imm_type {
@@ -87,6 +88,8 @@ static const struct hw_type {
    enum hw_reg_type reg_type;
    enum hw_imm_type imm_type;
 } gen4_hw_type[] = {
+   [0 ... BRW_REGISTER_TYPE_LAST] = {     INVALID, INVALID             },
+
    [BRW_REGISTER_TYPE_DF] = { GEN7_HW_REG_TYPE_DF, GEN8_HW_IMM_TYPE_DF },
    [BRW_REGISTER_TYPE_F]  = { BRW_HW_REG_TYPE_F,   BRW_HW_IMM_TYPE_F   },
    [BRW_REGISTER_TYPE_HF] = { GEN8_HW_REG_TYPE_HF, GEN8_HW_IMM_TYPE_HF },
@@ -103,6 +106,7 @@ static const struct hw_type {
    [BRW_REGISTER_TYPE_V]  = { INVALID,             BRW_HW_IMM_TYPE_V   },
    [BRW_REGISTER_TYPE_UV] = { INVALID,             BRW_HW_IMM_TYPE_UV  },
 }, gen11_hw_type[] = {
+   [BRW_REGISTER_TYPE_NF] = { GEN11_HW_REG_TYPE_NF, INVALID              },
    [BRW_REGISTER_TYPE_DF] = { GEN11_HW_REG_TYPE_DF, GEN11_HW_IMM_TYPE_DF },
    [BRW_REGISTER_TYPE_F]  = { GEN11_HW_REG_TYPE_F,  GEN11_HW_IMM_TYPE_F  },
    [BRW_REGISTER_TYPE_HF] = { GEN11_HW_REG_TYPE_HF, GEN11_HW_IMM_TYPE_HF },
@@ -139,6 +143,7 @@ enum hw_3src_reg_type {
    GEN10_ALIGN1_3SRC_REG_TYPE_HF = 0b000,
    GEN10_ALIGN1_3SRC_REG_TYPE_F  = 0b001,
    GEN10_ALIGN1_3SRC_REG_TYPE_DF = 0b010,
+   GEN11_ALIGN1_3SRC_REG_TYPE_NF = 0b011,
    /** @} */
 
    /** When ExecutionDatatype is 0: @{ */
@@ -165,6 +170,7 @@ static const struct hw_3src_type {
 #define E(x) BRW_ALIGN1_3SRC_EXEC_TYPE_##x
    [0 ... BRW_REGISTER_TYPE_LAST] = { INVALID },
 
+   [BRW_REGISTER_TYPE_NF] = { GEN11_ALIGN1_3SRC_REG_TYPE_NF, E(FLOAT) },
    [BRW_REGISTER_TYPE_DF] = { GEN10_ALIGN1_3SRC_REG_TYPE_DF, E(FLOAT) },
    [BRW_REGISTER_TYPE_F]  = { GEN10_ALIGN1_3SRC_REG_TYPE_F,  E(FLOAT) },
    [BRW_REGISTER_TYPE_HF] = { GEN10_ALIGN1_3SRC_REG_TYPE_HF, E(FLOAT) },
@@ -306,6 +312,7 @@ unsigned
 brw_reg_type_to_size(enum brw_reg_type type)
 {
    static const unsigned type_size[] = {
+      [BRW_REGISTER_TYPE_NF] = 8,
       [BRW_REGISTER_TYPE_DF] = 8,
       [BRW_REGISTER_TYPE_F]  = 4,
       [BRW_REGISTER_TYPE_HF] = 2,
@@ -335,6 +342,7 @@ const char *
 brw_reg_type_to_letters(enum brw_reg_type type)
 {
    static const char letters[][3] = {
+      [BRW_REGISTER_TYPE_NF] = "NF",
       [BRW_REGISTER_TYPE_DF] = "DF",
       [BRW_REGISTER_TYPE_F]  = "F",
       [BRW_REGISTER_TYPE_HF] = "HF",
