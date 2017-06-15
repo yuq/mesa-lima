@@ -274,7 +274,7 @@ brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
                PIPE_CONTROL_RENDER_TARGET_FLUSH);
 
    if (barriers & GL_FRAMEBUFFER_BARRIER_BIT)
-      bits |= (PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+      bits |= (PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
                PIPE_CONTROL_RENDER_TARGET_FLUSH);
 
    /* Typed surface messages are handled by the render cache on IVB, so we
