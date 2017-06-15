@@ -84,6 +84,36 @@ err_out:
    return NULL;
 }
 
+int
+lima_buffer_update(struct lima_buffer *buffer,
+                   enum lima_buffer_alloc_flag flags)
+{
+   if ((flags & LIMA_BUFFER_ALLOC_MAP) && !buffer->map) {
+      buffer->map = lima_bo_map(buffer->bo);
+      if (!buffer->map)
+         return -1;
+   }
+
+   if ((flags & LIMA_BUFFER_ALLOC_VA) && !buffer->va) {
+      uint32_t va;
+      int err;
+
+      err = lima_va_range_alloc(buffer->screen->dev, buffer->size, &va);
+      if (err)
+         return err;
+
+      err = lima_bo_va_map(buffer->bo, va, 0);
+      if (err) {
+         lima_va_range_free(buffer->screen->dev, buffer->size, va);
+         return err;
+      }
+
+      buffer->va = va;
+   }
+
+   return 0;
+}
+
 static struct pipe_resource *
 lima_resource_create(struct pipe_screen *pscreen,
                      const struct pipe_resource *templat)
