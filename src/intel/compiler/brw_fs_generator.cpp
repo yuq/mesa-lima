@@ -1148,12 +1148,12 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
  * appropriate swizzling.
  */
 void
-fs_generator::generate_ddx(enum opcode opcode,
+fs_generator::generate_ddx(const fs_inst *inst,
                            struct brw_reg dst, struct brw_reg src)
 {
    unsigned vstride, width;
 
-   if (opcode == FS_OPCODE_DDX_FINE) {
+   if (inst->opcode == FS_OPCODE_DDX_FINE) {
       /* produce accurate derivatives */
       vstride = BRW_VERTICAL_STRIDE_2;
       width = BRW_WIDTH_2;
@@ -1185,10 +1185,10 @@ fs_generator::generate_ddx(enum opcode opcode,
  * left.
  */
 void
-fs_generator::generate_ddy(enum opcode opcode,
+fs_generator::generate_ddy(const fs_inst *inst,
                            struct brw_reg dst, struct brw_reg src)
 {
-   if (opcode == FS_OPCODE_DDY_FINE) {
+   if (inst->opcode == FS_OPCODE_DDY_FINE) {
       /* produce accurate derivatives */
       struct brw_reg src0 = brw_reg(src.file, src.nr, 0,
                                     src.negate, src.abs,
@@ -2044,11 +2044,11 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 break;
       case FS_OPCODE_DDX_COARSE:
       case FS_OPCODE_DDX_FINE:
-         generate_ddx(inst->opcode, dst, src[0]);
+         generate_ddx(inst, dst, src[0]);
          break;
       case FS_OPCODE_DDY_COARSE:
       case FS_OPCODE_DDY_FINE:
-         generate_ddy(inst->opcode, dst, src[0]);
+         generate_ddy(inst, dst, src[0]);
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
