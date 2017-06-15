@@ -159,6 +159,8 @@ brw_fast_clear_depth(struct gl_context *ctx)
       break;
    }
 
+   const uint32_t num_layers = depth_att->Layered ? depth_irb->layer_count : 1;
+
    /* If we're clearing to a new clear value, then we need to resolve any clear
     * flags out of the HiZ buffer into the real depth buffer.
     */
@@ -169,27 +171,16 @@ brw_fast_clear_depth(struct gl_context *ctx)
       mt->fast_clear_color.f32[0] = ctx->Depth.Clear;
    }
 
-   if (depth_att->Layered) {
-      intel_hiz_exec(brw, mt, depth_irb->mt_level,
-                     depth_irb->mt_layer, depth_irb->layer_count,
-                     BLORP_HIZ_OP_DEPTH_CLEAR);
-   } else {
-      intel_hiz_exec(brw, mt, depth_irb->mt_level, depth_irb->mt_layer, 1,
-                     BLORP_HIZ_OP_DEPTH_CLEAR);
-   }
+   intel_hiz_exec(brw, mt, depth_irb->mt_level,
+                  depth_irb->mt_layer, num_layers,
+                  BLORP_HIZ_OP_DEPTH_CLEAR);
 
    /* Now, the HiZ buffer contains data that needs to be resolved to the depth
     * buffer.
     */
-   if (depth_att->Layered) {
-      intel_miptree_set_aux_state(brw, mt, depth_irb->mt_level,
-                                  depth_irb->mt_layer, depth_irb->layer_count,
-                                  ISL_AUX_STATE_CLEAR);
-   } else {
-      intel_miptree_set_aux_state(brw, mt, depth_irb->mt_level,
-                                  depth_irb->mt_layer, 1,
-                                  ISL_AUX_STATE_CLEAR);
-   }
+   intel_miptree_set_aux_state(brw, mt, depth_irb->mt_level,
+                               depth_irb->mt_layer, num_layers,
+                               ISL_AUX_STATE_CLEAR);
 
    return true;
 }
