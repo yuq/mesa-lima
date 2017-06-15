@@ -139,11 +139,25 @@ st_convert_sampler(const struct st_context *st,
       assert(sampler->min_lod <= sampler->max_lod);
    }
 
+   /* Check that only wrap modes using the border color have the first bit
+    * set.
+    */
+   STATIC_ASSERT(PIPE_TEX_WRAP_CLAMP & 0x1);
+   STATIC_ASSERT(PIPE_TEX_WRAP_CLAMP_TO_BORDER & 0x1);
+   STATIC_ASSERT(PIPE_TEX_WRAP_MIRROR_CLAMP & 0x1);
+   STATIC_ASSERT(PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER & 0x1);
+   STATIC_ASSERT(((PIPE_TEX_WRAP_REPEAT |
+                   PIPE_TEX_WRAP_CLAMP_TO_EDGE |
+                   PIPE_TEX_WRAP_MIRROR_REPEAT |
+                   PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE) & 0x1) == 0);
+
    /* For non-black borders... */
-   if (msamp->BorderColor.ui[0] ||
-       msamp->BorderColor.ui[1] ||
-       msamp->BorderColor.ui[2] ||
-       msamp->BorderColor.ui[3]) {
+   if (/* This is true if wrap modes are using the border color: */
+       (sampler->wrap_s | sampler->wrap_t | sampler->wrap_r) & 0x1 &&
+       (msamp->BorderColor.ui[0] ||
+        msamp->BorderColor.ui[1] ||
+        msamp->BorderColor.ui[2] ||
+        msamp->BorderColor.ui[3])) {
       const GLboolean is_integer = texobj->_IsIntegerFormat;
       GLenum texBaseFormat = _mesa_base_tex_image(texobj)->_BaseFormat;
 
