@@ -23,6 +23,7 @@
  */
 
 #include "util/u_math.h"
+#include "util/u_format.h"
 
 #include "lima_context.h"
 #include "lima_screen.h"
@@ -139,6 +140,67 @@ lima_update_plb(struct lima_context *ctx)
    }
 }
 
+enum lima_attrib_type {
+   LIMA_ATTRIB_FLOAT = 0x000,
+   /* todo: find out what lives here. */
+   LIMA_ATTRIB_I16   = 0x004,
+   LIMA_ATTRIB_U16   = 0x005,
+   LIMA_ATTRIB_I8    = 0x006,
+   LIMA_ATTRIB_U8    = 0x007,
+   LIMA_ATTRIB_I8N   = 0x008,
+   LIMA_ATTRIB_U8N   = 0x009,
+   LIMA_ATTRIB_I16N  = 0x00A,
+   LIMA_ATTRIB_U16N  = 0x00B,
+   /* todo: where is the 32 int */
+   /* todo: find out what lives here. */
+   LIMA_ATTRIB_FIXED = 0x101
+};
+
+static enum lima_attrib_type
+lima_pipe_format_to_attrib_type(enum pipe_format format)
+{
+   const struct util_format_description *desc = util_format_description(format);
+   int i = util_format_get_first_non_void_channel(format);
+   const struct util_format_channel_description *c = desc->channel + i;
+
+   switch (c->type) {
+   case UTIL_FORMAT_TYPE_FLOAT:
+      return LIMA_ATTRIB_FLOAT;
+   case UTIL_FORMAT_TYPE_FIXED:
+      return LIMA_ATTRIB_FIXED;
+   case UTIL_FORMAT_TYPE_SIGNED:
+      if (c->size == 8) {
+         if (c->normalized)
+            return LIMA_ATTRIB_I8N;
+         else
+            return LIMA_ATTRIB_I8;
+      }
+      else if (c->size == 16) {
+         if (c->normalized)
+            return LIMA_ATTRIB_I16N;
+         else
+            return LIMA_ATTRIB_I16;
+      }
+      break;
+   case UTIL_FORMAT_TYPE_UNSIGNED:
+      if (c->size == 8) {
+         if (c->normalized)
+            return LIMA_ATTRIB_U8N;
+         else
+            return LIMA_ATTRIB_U8;
+      }
+      else if (c->size == 16) {
+         if (c->normalized)
+            return LIMA_ATTRIB_U16N;
+         else
+            return LIMA_ATTRIB_U16;
+      }
+      break;
+   }
+
+   return LIMA_ATTRIB_FLOAT;
+}
+
 static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -157,19 +219,60 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_FRAMEBUFFER;
    }
 
+   if (ctx->dirty)
+      assert(!lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true));
+
+   if (ctx->dirty & (LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF)) {
+      struct lima_vertex_element_state *ve = ctx->vertex_elements;
+      struct lima_context_vertex_buffer *vb = &ctx->vertex_buffers;
+      uint32_t *attribute = ctx->gp_buffer->map + attribute_info_offset;
+      int n = 0;
+
+      for (int i = 0; i < ve->num_elements; i++) {
+         struct pipe_vertex_element *pve = ve->pipe + i;
+
+         assert(pve->vertex_buffer_index < vb->count);
+         assert(vb->enabled_mask & (1 << pve->vertex_buffer_index));
+
+         struct pipe_vertex_buffer *pvb = vb->vb + pve->vertex_buffer_index;
+         struct lima_resource *res = lima_resource(pvb->buffer);
+         assert(!lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA));
+
+         /* draw_info start vertex should also be here which is very bad
+          * make this bo must be updated also when start vertex change
+          * now ignore it first
+          */
+         attribute[n++] = res->buffer->va + pvb->buffer_offset + pve->src_offset
+            //+ info->start * pvb->stride
+            ;
+         attribute[n++] = (pvb->stride << 11) |
+            (lima_pipe_format_to_attrib_type(pve->src_format) << 2) |
+            (util_format_get_nr_components(pve->src_format) - 1);
+      }
+
+      ctx->dirty &= ~(LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF);
+   }
+
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT) {
       struct lima_vs_shader_state *vs = ctx->vs;
+      uint32_t *varying = ctx->gp_buffer->map + varying_info_offset;
+      int n = 0;
 
-      assert(!lima_bo_wait(ctx->vs_program->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true));
-      memcpy(ctx->vs_program->map, vs->shader, vs->shader_size);
+      memcpy(ctx->gp_buffer->map + vs_program_offset, vs->shader, vs->shader_size);
+
+      /* no varing info build for now, just assume only gl_Position
+       * it should be built when create vs state with compiled vs info
+       */
+      varying[n++] = ctx->gp_buffer->va + varying_offset;
+      varying[n++] = 0x8020;
+
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_VERT;
    }
 
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG) {
       struct lima_fs_shader_state *fs = ctx->fs;
 
-      assert(!lima_bo_wait(ctx->fs_program->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true));
-      memcpy(ctx->fs_program->map, fs->shader, fs->shader_size);
+      memcpy(ctx->gp_buffer->map + fs_program_offset, fs->shader, fs->shader_size);
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_FRAG;
    }
 }

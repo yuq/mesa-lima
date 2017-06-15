@@ -86,6 +86,10 @@ lima_buffer_alloc(struct lima_screen *screen, uint32_t size,
 void
 lima_buffer_free(struct lima_buffer *buffer);
 
+int
+lima_buffer_update(struct lima_buffer *buffer,
+                   enum lima_buffer_alloc_flag flags);
+
 void
 lima_resource_screen_init(struct lima_screen *screen);
 

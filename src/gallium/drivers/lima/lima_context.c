@@ -42,17 +42,11 @@ lima_context_destroy(struct pipe_context *pctx)
 
    slab_destroy_child(&ctx->transfer_pool);
 
-   if (ctx->tile_heap)
-      lima_buffer_free(ctx->tile_heap);
-
    if (ctx->plb)
       lima_buffer_free(ctx->plb);
 
-   if (ctx->vs_program)
-      lima_buffer_free(ctx->vs_program);
-
-   if (ctx->fs_program)
-      lima_buffer_free(ctx->fs_program);
+   if (ctx->gp_buffer)
+      lima_buffer_free(ctx->gp_buffer);
 
    FREE(ctx);
 }
@@ -89,10 +83,6 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 
-   ctx->tile_heap = lima_buffer_alloc(screen, 0x2000, LIMA_BUFFER_ALLOC_VA);
-   if (!ctx->tile_heap)
-      goto err_out;
-
    /* assume max fb size 4096x4096  */
    int block_size = 0x200;
    int max_plb = 512;
@@ -121,14 +111,9 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
       ((uint32_t *)(ctx->plb->map + ctx->plb_plbu_offset))[i] =
          ctx->plb->va + ctx->plb_offset + block_size * i;
 
-   ctx->vs_program = lima_buffer_alloc(
-      screen, 0x1000, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
-   if (!ctx->vs_program)
-      goto err_out;
-
-   ctx->fs_program = lima_buffer_alloc(
-      screen, 0x1000, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
-   if (!ctx->fs_program)
+   ctx->gp_buffer = lima_buffer_alloc(
+      screen, gp_buffer_size, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->gp_buffer)
       goto err_out;
 
    return &ctx->base;
