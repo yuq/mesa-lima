@@ -43,10 +43,10 @@ enum SWR_BACKEND_FUNCS
 };
 
 #if KNOB_SIMD_WIDTH == 8
-static const simdscalar vCenterOffsetsX = __m256{0.5, 1.5, 0.5, 1.5, 2.5, 3.5, 2.5, 3.5};
-static const simdscalar vCenterOffsetsY = __m256{0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5};
-static const simdscalar vULOffsetsX = __m256{0.0, 1.0, 0.0, 1.0, 2.0, 3.0, 2.0, 3.0};
-static const simdscalar vULOffsetsY = __m256{0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
+static const __m256 vCenterOffsetsX = __m256{0.5, 1.5, 0.5, 1.5, 2.5, 3.5, 2.5, 3.5};
+static const __m256 vCenterOffsetsY = __m256{0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5};
+static const __m256 vULOffsetsX = __m256{0.0, 1.0, 0.0, 1.0, 2.0, 3.0, 2.0, 3.0};
+static const __m256 vULOffsetsY = __m256{0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0};
 #define MASK 0xff
 #endif
 
@@ -163,52 +163,52 @@ struct generateInputCoverage
             uint32_t centerCoverage = ((uint32_t)(*coverageMask) & MASK);
             if(T::MultisampleT::numSamples == 1)
             {
-                sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, centerCoverage);
+                sampleCoverage[0] = _simd_set_epi32(0, 0, 0, 0, 0, 0, 0, centerCoverage);
             }
             else if(T::MultisampleT::numSamples == 2)
             {
-                sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, centerCoverage, centerCoverage);
+                sampleCoverage[0] = _simd_set_epi32(0, 0, 0, 0, 0, 0, centerCoverage, centerCoverage);
             }
             else if(T::MultisampleT::numSamples == 4)
             {
-                sampleCoverage[0] = _mm256_set_epi32(0, 0, 0, 0, centerCoverage, centerCoverage, centerCoverage, centerCoverage);
+                sampleCoverage[0] = _simd_set_epi32(0, 0, 0, 0, centerCoverage, centerCoverage, centerCoverage, centerCoverage);
             }
             else if(T::MultisampleT::numSamples == 8)
             {
-                sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
+                sampleCoverage[0] = _simd_set1_epi32(centerCoverage);
             }
             else if(T::MultisampleT::numSamples == 16)
             {
-                sampleCoverage[0] = _mm256_set1_epi32(centerCoverage);
-                sampleCoverage[1] = _mm256_set1_epi32(centerCoverage);
+                sampleCoverage[0] = _simd_set1_epi32(centerCoverage);
+                sampleCoverage[1] = _simd_set1_epi32(centerCoverage);
             }
         }
         else
         {
-            __m256i src = _mm256_set1_epi32(0);
-            __m256i index0 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), index1;
+            simdscalari src = _simd_set1_epi32(0);
+            simdscalari index0 = _simd_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), index1;
 
             if(T::MultisampleT::numSamples == 1)
             {
-                mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, -1);
+                mask[0] = _simd_set_epi32(0, 0, 0, 0, 0, 0, 0, -1);
             }
             else if(T::MultisampleT::numSamples == 2)
             {
-                mask[0] = _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
+                mask[0] = _simd_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
             }
             else if(T::MultisampleT::numSamples == 4)
             {
-                mask[0] = _mm256_set_epi32(0, 0, 0, 0, -1, -1, -1, -1);
+                mask[0] = _simd_set_epi32(0, 0, 0, 0, -1, -1, -1, -1);
             }
             else if(T::MultisampleT::numSamples == 8)
             {
-                mask[0] = _mm256_set1_epi32(-1);
+                mask[0] = _simd_set1_epi32(-1);
             }
             else if(T::MultisampleT::numSamples == 16)
             {
-                mask[0] = _mm256_set1_epi32(-1);
-                mask[1] = _mm256_set1_epi32(-1);
-                index1 = _mm256_set_epi32(15, 14, 13, 12, 11, 10, 9, 8);
+                mask[0] = _simd_set1_epi32(-1);
+                mask[1] = _simd_set1_epi32(-1);
+                index1 = _simd_set_epi32(15, 14, 13, 12, 11, 10, 9, 8);
             }
 
             // gather coverage for samples 0-7
@@ -253,14 +253,14 @@ struct generateInputCoverage
             packedSampleCoverage = packedCoverage0;
         }
     #else
-        simdscalari permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x4, 0x0);
+        simdscalari permMask = _simd_set_epi32(0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x4, 0x0);
         // pack lower 32 bits of each 128 bit lane into lower 64 bits of single 128 bit lane 
         packedCoverage0 = _mm256_permutevar8x32_epi32(packedCoverage0, permMask);
 
         simdscalari packedSampleCoverage;
         if(T::MultisampleT::numSamples > 8)
         {
-            permMask = _mm256_set_epi32(0x7, 0x7, 0x7, 0x7, 0x4, 0x0, 0x7, 0x7);
+            permMask = _simd_set_epi32(0x7, 0x7, 0x7, 0x7, 0x4, 0x0, 0x7, 0x7);
             // pack lower 32 bits of each 128 bit lane into upper 64 bits of single 128 bit lane
             packedCoverage1 = _mm256_permutevar8x32_epi32(packedCoverage1, permMask);
 
@@ -293,7 +293,7 @@ struct generateInputCoverage
     {
         uint32_t inputMask[KNOB_SIMD_WIDTH];
         generateInputCoverage<T, T::InputCoverage>(coverageMask, inputMask, sampleMask);
-        inputCoverage = _simd_castsi_ps(_mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]));
+        inputCoverage = _simd_castsi_ps(_simd_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]));
     }
 
 };
@@ -305,10 +305,10 @@ struct generateInputCoverage<T, SWR_INPUT_COVERAGE_INNER_CONSERVATIVE>
     {
         // will need to update for avx512
         assert(KNOB_SIMD_WIDTH == 8);
-        simdscalari vec = _mm256_set1_epi32(coverageMask[0]);
-        const simdscalari bit = _mm256_set_epi32(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01);
+        simdscalari vec = _simd_set1_epi32(coverageMask[0]);
+        const simdscalari bit = _simd_set_epi32(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01);
         vec = _simd_and_si(vec, bit);
-        vec = _simd_cmplt_epi32(_mm256_setzero_si256(), vec);
+        vec = _simd_cmplt_epi32(_simd_setzero_si(), vec);
         vec = _simd_blendv_epi32(_simd_setzero_si(), _simd_set1_epi32(1), vec);
         inputCoverage = _simd_castsi_ps(vec);
     }
@@ -357,7 +357,7 @@ INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const SWR_MULTISAMPLE_POS
     (inputMask[7] > 0) ? (_BitScanForward(&sampleNum[7], inputMask[7])) : (sampleNum[7] = 0);
 
     // look up and set the sample offsets from UL pixel corner for first covered sample 
-    __m256 vXSample = _mm256_set_ps(samplePos.X(sampleNum[7]),
+    simdscalar vXSample = _simd_set_ps(samplePos.X(sampleNum[7]),
                                     samplePos.X(sampleNum[6]),
                                     samplePos.X(sampleNum[5]),
                                     samplePos.X(sampleNum[4]),
@@ -366,7 +366,7 @@ INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const SWR_MULTISAMPLE_POS
                                     samplePos.X(sampleNum[1]),
                                     samplePos.X(sampleNum[0]));
 
-    __m256 vYSample = _mm256_set_ps(samplePos.Y(sampleNum[7]),
+    simdscalar vYSample = _simd_set_ps(samplePos.Y(sampleNum[7]),
                                     samplePos.Y(sampleNum[6]),
                                     samplePos.Y(sampleNum[5]),
                                     samplePos.Y(sampleNum[4]),
@@ -380,7 +380,7 @@ INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const SWR_MULTISAMPLE_POS
 
     // Case (1) and case (3b) - All samples covered or not covered with full SampleMask
     static const simdscalari vFullyCoveredMask = T::MultisampleT::FullSampleMask();
-    simdscalari vInputCoveragei =  _mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]);
+    simdscalari vInputCoveragei =  _simd_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]);
     simdscalari vAllSamplesCovered = _simd_cmpeq_epi32(vInputCoveragei, vFullyCoveredMask);
 
     static const simdscalari vZero = _simd_setzero_si();

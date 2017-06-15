@@ -391,7 +391,7 @@ struct PA_STATE_BASE;  // forward decl
 void BinPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID);
 void BinLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], uint32_t primMask, simdscalari primID);
 #if USE_SIMD16_FRONTEND
-void SIMDAPI BinPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], uint32_t primMask, simd16scalari primID);
-void SIMDAPI BinLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], uint32_t primMask, simd16scalari primID);
+void SIMDCALL BinPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], uint32_t primMask, simd16scalari primID);
+void SIMDCALL BinLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], uint32_t primMask, simd16scalari primID);
 #endif
 

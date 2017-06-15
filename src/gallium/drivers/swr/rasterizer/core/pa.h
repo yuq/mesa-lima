@@ -92,7 +92,7 @@ struct PA_STATE
 #if ENABLE_AVX512_SIMD16
     virtual bool Assemble_simd16(uint32_t slot, simd16vector verts[]) = 0;
 #endif
-    virtual void AssembleSingle(uint32_t slot, uint32_t primIndex, __m128 verts[]) = 0;
+    virtual void AssembleSingle(uint32_t slot, uint32_t primIndex, simd4scalar verts[]) = 0;
     virtual bool NextPrim() = 0;
     virtual SIMDVERTEX& GetNextVsOutput() = 0;
     virtual bool GetNextStreamOutput() = 0;
@@ -139,7 +139,7 @@ struct PA_STATE_OPT : public PA_STATE
 #if ENABLE_AVX512_SIMD16
     typedef bool(*PFN_PA_FUNC_SIMD16)(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
 #endif
-    typedef void(*PFN_PA_SINGLE_FUNC)(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
+    typedef void(*PFN_PA_SINGLE_FUNC)(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, simd4scalar verts[]);
 
     PFN_PA_FUNC        pfnPaFunc{ nullptr };        // PA state machine function for assembling 4 triangles.
 #if ENABLE_AVX512_SIMD16
@@ -205,7 +205,7 @@ struct PA_STATE_OPT : public PA_STATE
 
 #endif
     // Assembles 1 primitive. Each simdscalar is a vertex (xyzw).
-    void AssembleSingle(uint32_t slot, uint32_t primIndex, __m128 verts[])
+    void AssembleSingle(uint32_t slot, uint32_t primIndex, simd4scalar verts[])
     {
         return this->pfnPaSingleFunc(*this, slot, primIndex, verts);
     }
@@ -767,7 +767,7 @@ PRAGMA_WARNING_POP()
     }
 
 #endif
-    void AssembleSingle(uint32_t slot, uint32_t triIndex, __m128 tri[3])
+    void AssembleSingle(uint32_t slot, uint32_t triIndex, simd4scalar tri[3])
     {
         // move to slot
         for (uint32_t v = 0; v < this->vertsPerPrim; ++v)
@@ -1253,7 +1253,7 @@ struct PA_TESS : PA_STATE
                     _simd16_setzero_ps(),
                     pBase,
                     indices,
-                    mask,
+                    _simd16_castsi_ps(mask),
                     4 /* gcc doesn't like sizeof(float) */);
 
                 verts[i].v[c] = useAlternateOffset ? _simd16_extract_ps(temp, 1) : _simd16_extract_ps(temp, 0);
@@ -1263,7 +1263,7 @@ struct PA_TESS : PA_STATE
                     pBase,
                     indices,
                     _simd_castsi_ps(mask),
-                    4 /* gcc doesn't like sizeof(float) */);
+                    4); // gcc doesn't like sizeof(float)
 #endif
                 pBase += m_attributeStrideInVectors * SIMD_WIDTH;
             }
@@ -1302,7 +1302,7 @@ struct PA_TESS : PA_STATE
                     _simd16_setzero_ps(),
                     pBase,
                     indices,
-                    mask,
+                    _simd16_castsi_ps(mask),
                     4 /* gcc doesn't like sizeof(float) */);
 #else
                 simdscalar temp = _simd_mask_i32gather_ps(
@@ -1321,7 +1321,7 @@ struct PA_TESS : PA_STATE
     }
 
 #endif
-    void AssembleSingle(uint32_t slot, uint32_t primIndex, __m128 verts[])
+    void AssembleSingle(uint32_t slot, uint32_t primIndex, simd4scalar verts[])
     {
         SWR_ASSERT(slot < m_numAttributes);
         SWR_ASSERT(primIndex < PA_TESS::NumPrims());

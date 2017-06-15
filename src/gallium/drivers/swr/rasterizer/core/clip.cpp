@@ -188,7 +188,7 @@ void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector p
 }
 
 #if USE_SIMD16_FRONTEND
-void SIMDAPI ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
+void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipTriangles, pDC->drawId);
@@ -203,7 +203,7 @@ void SIMDAPI ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t work
     AR_END(FEClipTriangles, 1);
 }
 
-void SIMDAPI ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
+void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipLines, pDC->drawId);
@@ -218,7 +218,7 @@ void SIMDAPI ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId
     AR_END(FEClipLines, 1);
 }
 
-void SIMDAPI ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
+void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipPoints, pDC->drawId);

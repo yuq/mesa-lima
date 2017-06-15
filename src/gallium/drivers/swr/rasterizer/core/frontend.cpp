@@ -527,7 +527,7 @@ static void StreamOut(
         // Write all entries into primitive data buffer for SOS.
         while (_BitScanForward(&slot, soMask))
         {
-            __m128 attrib[MAX_NUM_VERTS_PER_PRIM];    // prim attribs (always 4 wide)
+            simd4scalar attrib[MAX_NUM_VERTS_PER_PRIM];    // prim attribs (always 4 wide)
             uint32_t paSlot = slot + soState.vertexAttribOffset[streamIndex];
             pa.AssembleSingle(paSlot, primIndex, attrib);
 
@@ -941,7 +941,9 @@ static void GeometryShaderStage(
 
                             if (HasStreamOutT::value)
                             {
+#if ENABLE_AVX512_SIMD16
                                 gsPa.useAlternateOffset = false;
+#endif
                                 StreamOut(pDC, gsPa, workerId, pSoPrimData, stream);
                             }
 
@@ -1279,7 +1281,9 @@ static void TessellationStages(
             {
                 if (HasStreamOutT::value)
                 {
+#if ENABLE_AVX512_SIMD16
                     tessPa.useAlternateOffset = false;
+#endif
                     StreamOut(pDC, tessPa, workerId, pSoPrimData, 0);
                 }
 

@@ -1095,7 +1095,7 @@ public:
             AR_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(vMask16(primMask), vMask16(clipMask), pa, primId);
+            ClipSimd(_simd16_vmask_ps(primMask), _simd16_vmask_ps(clipMask), pa, primId);
             AR_END(FEGuardbandClip, 1);
         }
         else if (validMask)
@@ -1180,7 +1180,7 @@ private:
     {
         simd16scalari vOffsets = ComputeOffsets(attrib, vIndices, component);
         simd16scalar vSrc = _simd16_setzero_ps();
-        return _simd16_mask_i32gather_ps(vSrc, pBuffer, vOffsets, _simd16_castps_si(vMask), 1);
+        return _simd16_mask_i32gather_ps(vSrc, pBuffer, vOffsets, vMask, 1);
     }
 
 #endif
@@ -1895,8 +1895,8 @@ void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvecto
 void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
 void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
 #if USE_SIMD16_FRONTEND
-void SIMDAPI ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
-void SIMDAPI ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
-void SIMDAPI ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
+void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
+void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
+void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
 #endif
 
