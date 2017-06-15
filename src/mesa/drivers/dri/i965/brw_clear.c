@@ -165,9 +165,42 @@ brw_fast_clear_depth(struct gl_context *ctx)
     * flags out of the HiZ buffer into the real depth buffer.
     */
    if (mt->fast_clear_color.f32[0] != ctx->Depth.Clear) {
-      intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
-                                   0, INTEL_REMAINING_LAYERS,
-                                   ISL_AUX_USAGE_HIZ, false);
+      for (uint32_t level = mt->first_level; level <= mt->last_level; level++) {
+         if (!intel_miptree_level_has_hiz(mt, level))
+            continue;
+
+         const unsigned level_layers = brw_get_num_logical_layers(mt, level);
+
+         for (uint32_t layer = 0; layer < level_layers; layer++) {
+            if (level == depth_irb->mt_level &&
+                layer >= depth_irb->mt_layer &&
+                layer < depth_irb->mt_layer + num_layers) {
+               /* We're going to clear this layer anyway.  Leave it alone. */
+               continue;
+            }
+
+            enum isl_aux_state aux_state =
+               intel_miptree_get_aux_state(mt, level, layer);
+
+            if (aux_state != ISL_AUX_STATE_CLEAR &&
+                aux_state != ISL_AUX_STATE_COMPRESSED_CLEAR) {
+               /* This slice doesn't have any fast-cleared bits. */
+               continue;
+            }
+
+            /* If we got here, then the level may have fast-clear bits that
+             * use the old clear value.  We need to do a depth resolve to get
+             * rid of their use of the clear value before we can change it.
+             * Fortunately, few applications ever change their depth clear
+             * value so this shouldn't happen often.
+             */
+            intel_hiz_exec(brw, mt, level, layer, 1,
+                           BLORP_HIZ_OP_DEPTH_RESOLVE);
+            intel_miptree_set_aux_state(brw, mt, level, layer, 1,
+                                        ISL_AUX_STATE_RESOLVED);
+         }
+      }
+
       mt->fast_clear_color.f32[0] = ctx->Depth.Clear;
    }
 
