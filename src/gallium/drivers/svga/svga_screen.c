@@ -1142,18 +1142,18 @@ svga_screen_create(struct svga_winsys_screen *sws)
       get_bool_cap(sws, SVGA3D_DEVCAP_LINE_STIPPLE, FALSE);
 
    svgascreen->maxLineWidth =
-      get_float_cap(sws, SVGA3D_DEVCAP_MAX_LINE_WIDTH, 1.0f);
+      MAX2(1.0, get_float_cap(sws, SVGA3D_DEVCAP_MAX_LINE_WIDTH, 1.0f));
 
    svgascreen->maxLineWidthAA =
-      get_float_cap(sws, SVGA3D_DEVCAP_MAX_AA_LINE_WIDTH, 1.0f);
+      MAX2(1.0, get_float_cap(sws, SVGA3D_DEVCAP_MAX_AA_LINE_WIDTH, 1.0f));
 
    if (0) {
       debug_printf("svga: haveProvokingVertex %u\n",
                    svgascreen->haveProvokingVertex);
       debug_printf("svga: haveLineStip %u  "
-                   "haveLineSmooth %u  maxLineWidth %f\n",
+                   "haveLineSmooth %u  maxLineWidth %.2f  maxLineWidthAA %.2f\n",
                    svgascreen->haveLineStipple, svgascreen->haveLineSmooth,
-                   svgascreen->maxLineWidth);
+                   svgascreen->maxLineWidth, svgascreen->maxLineWidthAA);
       debug_printf("svga: maxPointSize %g\n", svgascreen->maxPointSize);
       debug_printf("svga: msaa samples mask: 0x%x\n", svgascreen->ms_samples);
    }
