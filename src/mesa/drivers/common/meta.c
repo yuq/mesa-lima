@@ -2770,7 +2770,7 @@ get_temp_image_type(struct gl_context *ctx, mesa_format format)
  * glBlitFramebuffer() to implement glCopyTexSubImage().
  */
 static bool
-copytexsubimage_using_blit_framebuffer(struct gl_context *ctx, GLuint dims,
+copytexsubimage_using_blit_framebuffer(struct gl_context *ctx,
                                        struct gl_texture_image *texImage,
                                        GLint xoffset,
                                        GLint yoffset,
@@ -2864,7 +2864,7 @@ _mesa_meta_CopyTexSubImage(struct gl_context *ctx, GLuint dims,
    GLint bpp;
    void *buf;
 
-   if (copytexsubimage_using_blit_framebuffer(ctx, dims,
+   if (copytexsubimage_using_blit_framebuffer(ctx,
                                               texImage,
                                               xoffset, yoffset, zoffset,
                                               rb,
