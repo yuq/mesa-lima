@@ -280,6 +280,7 @@
 #define     S_500_DSL_SEL(x)		(((unsigned)(x) & 0x3) << 20)
 #define       V_500_DST_ADDR		0
 #define       V_500_GDS			1 /* program DAS to 1 as well */
+#define       V_500_NOWHERE		2 /* new for GFX9 */
 #define       V_500_DST_ADDR_TC_L2	3 /* new for CIK */
 #define     S_500_ENGINE(x)		((x) & 0x1)
 #define       V_500_ME			0
