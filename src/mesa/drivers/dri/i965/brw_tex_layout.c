@@ -272,7 +272,9 @@ brw_miptree_layout_gen6_hiz_stencil(struct intel_mipmap_tree *mt)
    mt->total_height = 0;
 
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
-      intel_miptree_set_level_info(mt, level, x, y, depth);
+      intel_miptree_set_level_info(
+         mt, level, x, y,
+         mt->target == GL_TEXTURE_3D ? minify(depth, level) : depth);
 
       const unsigned img_width = ALIGN(DIV_ROUND_UP(width, bw), mt->halign);
       const unsigned img_height =
