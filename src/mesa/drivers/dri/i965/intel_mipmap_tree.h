@@ -561,7 +561,7 @@ struct intel_mipmap_tree
     * To allocate the hiz buffer, use intel_miptree_alloc_hiz().
     *
     * To determine if hiz is enabled, do not check this pointer. Instead, use
-    * intel_miptree_slice_has_hiz().
+    * intel_miptree_level_has_hiz().
     */
    struct intel_miptree_aux_buffer *hiz_buf;
 
