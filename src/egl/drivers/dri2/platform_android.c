@@ -752,7 +752,7 @@ droid_create_image_from_prime_fd_yuv(_EGLDisplay *disp, _EGLContext *ctx,
    }
 
    if (ycbcr.chroma_step == 2) {
-      /* Semi-planar Y + CbCr or Y + CbCr format. */
+      /* Semi-planar Y + CbCr or Y + CrCb format. */
       const EGLint attr_list_2plane[] = {
          EGL_WIDTH, buf->width,
          EGL_HEIGHT, buf->height,
