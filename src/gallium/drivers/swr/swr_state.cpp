@@ -935,6 +935,11 @@ swr_change_rt(struct swr_context *ctx,
        * INVALID so they are reloaded from surface. */
       swr_store_render_target(&ctx->pipe, attachment, SWR_TILE_INVALID);
       need_fence = true;
+   } else {
+      /* if no previous attachment, invalidate tiles that may be marked
+       * RESOLVED because of an old attachment */
+      swr_invalidate_render_target(&ctx->pipe, attachment, sf->width, sf->height);
+      /* no need to set fence here */
    }
 
    /* Make new attachment */

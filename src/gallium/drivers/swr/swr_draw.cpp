@@ -219,6 +219,25 @@ swr_finish(struct pipe_context *pipe)
    swr_fence_reference(pipe->screen, &fence, NULL);
 }
 
+/*
+ * Invalidate tiles so they can be reloaded back when needed
+ */
+void
+swr_invalidate_render_target(struct pipe_context *pipe,
+                             uint32_t attachment,
+                             uint16_t width, uint16_t height)
+{
+   struct swr_context *ctx = swr_context(pipe);
+
+   /* grab the rect from the passed in arguments */
+   swr_update_draw_context(ctx);
+   SWR_RECT full_rect =
+      {0, 0, (int32_t)width, (int32_t)height};
+   SwrInvalidateTiles(ctx->swrContext,
+                      1 << attachment,
+                      full_rect);
+}
+
 
 /*
  * Store SWR HotTiles back to renderTarget surface.
