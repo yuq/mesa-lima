@@ -86,7 +86,7 @@ pipe_i915_la_LIBADD = \
 	$(top_builddir)/src/gallium/winsys/i915/drm/libi915drm.la \
 	$(top_builddir)/src/gallium/drivers/i915/libi915.la \
 	$(LIBDRM_LIBS) \
-	$(INTEL_LIBS)
+	$(I915_LIBS)
 
 endif
 
