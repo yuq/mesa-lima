@@ -107,15 +107,21 @@ struct lima_context {
    struct lima_vertex_element_state *vertex_elements;
    struct lima_context_vertex_buffer vertex_buffers;
 
-   struct lima_buffer *tile_heap;
-
    struct lima_buffer *plb;
    int plb_plbu_offset;
    int plb_pp_offset[4];
    int plb_offset;
 
-   struct lima_buffer *vs_program;
-   struct lima_buffer *fs_program;
+   struct lima_buffer *gp_buffer;
+   #define vs_program_offset      0x0000
+   #define fs_program_offset      0x0800
+   #define varying_offset         0x1000
+   #define varying_info_offset    0x2000
+   #define attribute_info_offset  0x2100
+   #define vs_cmd_offset          0x2200
+   #define plbu_cmd_offset        0x2900
+   #define tile_heap_offset       0x3000
+   #define gp_buffer_size         0x5000
 };
 
 static inline struct lima_context *
