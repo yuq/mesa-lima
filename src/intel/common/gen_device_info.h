@@ -101,6 +101,12 @@ struct gen_device_info
     * to change, so we program @max_cs_threads as the lower maximum.
     */
    unsigned num_slices;
+
+   /**
+    * Number of threads per eu, varies between 4 and 8 between generations.
+    */
+   unsigned num_thread_per_eu;
+
    unsigned l3_banks;
    unsigned max_vs_threads;   /**< Maximum Vertex Shader threads */
    unsigned max_tcs_threads;  /**< Maximum Hull Shader threads */
