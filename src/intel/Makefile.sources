@@ -117,6 +117,12 @@ COMPILER_FILES = \
 COMPILER_GENERATED_FILES = \
 	compiler/brw_nir_trig_workarounds.c
 
+DRM_INTEL_FILES = \
+	drm/drm.h \
+	drm/drm_fourcc.h \
+	drm/drm_mode.h \
+	drm/i915_drm.h
+
 GENXML_XML_FILES = \
 	genxml/gen4.xml \
 	genxml/gen45.xml \

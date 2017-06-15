@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -19,46 +19,4 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-noinst_PROGRAMS += \
-	tools/aubinator \
-	tools/aubinator_error_decode
-
-tools_aubinator_SOURCES = \
-	tools/aubinator.c \
-	tools/disasm.c \
-	tools/gen_disasm.h
-
-tools_aubinator_CFLAGS = \
-	$(AM_CFLAGS) \
-	$(EXPAT_CFLAGS) \
-	$(ZLIB_CFLAGS)
-
-tools_aubinator_LDADD = \
-	common/libintel_common.la \
-	compiler/libintel_compiler.la \
-	$(top_builddir)/src/util/libmesautil.la \
-	$(PER_GEN_LIBS) \
-	$(PTHREAD_LIBS) \
-	$(DLOPEN_LIBS) \
-	$(EXPAT_LIBS) \
-	$(ZLIB_LIBS) \
-	-lm
-
-
-tools_aubinator_error_decode_SOURCES = \
-	tools/aubinator_error_decode.c \
-	tools/disasm.c \
-	tools/gen_disasm.h
-
-tools_aubinator_error_decode_LDADD = \
-	common/libintel_common.la \
-	compiler/libintel_compiler.la \
-	$(top_builddir)/src/util/libmesautil.la \
-	$(PTHREAD_LIBS) \
-	$(EXPAT_LIBS) \
-	$(ZLIB_LIBS)
-
-tools_aubinator_error_decode_CFLAGS = \
-	$(AM_CFLAGS) \
-	$(EXPAT_CFLAGS) \
-	$(ZLIB_CFLAGS)
+EXTRA_DIST += $(DRM_INTEL_FILES)

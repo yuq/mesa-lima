@@ -1835,7 +1835,6 @@ if test -n "$with_dri_drivers"; then
         xi965)
             require_libdrm "i965"
             HAVE_I965_DRI=yes
-            PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             ;;
         xnouveau)
             require_libdrm "nouveau"
@@ -1947,7 +1946,6 @@ if test -n "$with_vulkan_drivers"; then
         case "x$driver" in
         xintel)
             require_libdrm "ANV"
-            PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             require_x11_dri3 "ANV"
             HAVE_INTEL_VULKAN=yes
             ;;

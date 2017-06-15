@@ -84,6 +84,7 @@ VULKAN_CFLAGS = \
 VULKAN_CPPFLAGS = \
 	-I$(top_srcdir)/src/compiler \
 	-I$(top_srcdir)/src/intel/compiler \
+	-I$(top_srcdir)/src/intel/drm \
 	-I$(top_builddir)/src/intel/vulkan \
 	-I$(top_srcdir)/src/intel/vulkan \
 	-I$(top_srcdir)/src/vulkan/wsi \
