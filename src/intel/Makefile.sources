@@ -48,6 +48,7 @@ COMPILER_FILES = \
 	compiler/brw_eu_util.c \
 	compiler/brw_eu_validate.c \
 	compiler/brw_fs_builder.h \
+	compiler/brw_fs_bank_conflicts.cpp \
 	compiler/brw_fs_cmod_propagation.cpp \
 	compiler/brw_fs_combine_constants.cpp \
 	compiler/brw_fs_copy_propagation.cpp \

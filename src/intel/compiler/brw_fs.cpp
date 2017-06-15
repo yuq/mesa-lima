@@ -6065,6 +6065,8 @@ fs_visitor::allocate_registers(unsigned min_dispatch_width, bool allow_spilling)
    if (failed)
       return;
 
+   opt_bank_conflicts();
+
    schedule_instructions(SCHEDULE_POST);
 
    if (last_scratch > 0) {

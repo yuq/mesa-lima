@@ -43,6 +43,7 @@ libintel_compiler_files = files(
   'brw_eu.h',
   'brw_eu_util.c',
   'brw_eu_validate.c',
+  'brw_fs_bank_conflicts.cpp',
   'brw_fs_builder.h',
   'brw_fs_cmod_propagation.cpp',
   'brw_fs_combine_constants.cpp',
