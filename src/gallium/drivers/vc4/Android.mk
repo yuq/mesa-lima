@@ -29,6 +29,8 @@ LOCAL_SRC_FILES := \
 	$(C_SOURCES)
 
 LOCAL_GENERATED_SOURCES := $(MESA_GEN_NIR_H)
+LOCAL_C_INCLUDES := \
+	$(MESA_TOP)/include/drm-uapi
 
 # We need libmesa_nir to get NIR's generated include directories.
 LOCAL_STATIC_LIBRARIES := \
