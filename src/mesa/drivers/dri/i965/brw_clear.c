@@ -204,9 +204,37 @@ brw_fast_clear_depth(struct gl_context *ctx)
       mt->fast_clear_color.f32[0] = ctx->Depth.Clear;
    }
 
-   intel_hiz_exec(brw, mt, depth_irb->mt_level,
-                  depth_irb->mt_layer, num_layers,
-                  BLORP_HIZ_OP_DEPTH_CLEAR);
+   bool need_clear = false;
+   for (unsigned a = 0; a < num_layers; a++) {
+      enum isl_aux_state aux_state =
+         intel_miptree_get_aux_state(mt, depth_irb->mt_level,
+                                     depth_irb->mt_layer + a);
+
+      if (aux_state != ISL_AUX_STATE_CLEAR) {
+         need_clear = true;
+         break;
+      }
+   }
+
+   if (!need_clear) {
+      /* If all of the layers we intend to clear are already in the clear
+       * state then simply updating the miptree fast clear value is sufficient
+       * to change their clear value.
+       */
+      return true;
+   }
+
+   for (unsigned a = 0; a < num_layers; a++) {
+      enum isl_aux_state aux_state =
+         intel_miptree_get_aux_state(mt, depth_irb->mt_level,
+                                     depth_irb->mt_layer + a);
+
+      if (aux_state != ISL_AUX_STATE_CLEAR) {
+         intel_hiz_exec(brw, mt, depth_irb->mt_level,
+                        depth_irb->mt_layer + a, 1,
+                        BLORP_HIZ_OP_DEPTH_CLEAR);
+      }
+   }
 
    /* Now, the HiZ buffer contains data that needs to be resolved to the depth
     * buffer.
