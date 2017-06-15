@@ -8,6 +8,7 @@ import xml.parsers.expat
 import re
 import sys
 import copy
+import textwrap
 
 license =  """/*
  * Copyright (C) 2016 Intel Corporation
@@ -578,8 +579,12 @@ class Parser(object):
 
     def emit_pack_function(self, name, group):
         name = self.gen_prefix(name)
-        print("static inline void\n%s_pack(__gen_user_data *data, void * restrict dst,\n%sconst struct %s * restrict values)\n{" %
-              (name, ' ' * (len(name) + 6), name))
+        print(textwrap.dedent("""\
+            static inline void
+            %s_pack(__attribute__((unused)) __gen_user_data *data,
+                  %s__attribute__((unused)) void * restrict dst,
+                  %s__attribute__((unused)) const struct %s * restrict values)
+            {""") % (name, ' ' * len(name), ' ' * len(name), name))
 
         (dwords, length) = group.collect_dwords_and_length()
         if length:
