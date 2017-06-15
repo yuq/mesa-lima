@@ -47,7 +47,7 @@ brw_timebase_scale(struct brw_context *brw, uint64_t gpu_timestamp)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   return (double)gpu_timestamp * devinfo->timebase_scale;
+   return (1000000000ull * gpu_timestamp) / devinfo->timestamp_frequency;
 }
 
 /* As best we know currently, the Gen HW timestamps are 36bits across

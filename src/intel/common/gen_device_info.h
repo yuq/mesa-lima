@@ -26,6 +26,7 @@
 #define GEN_DEVICE_INFO_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /**
  * Intel hardware information and quirks
@@ -159,7 +160,7 @@ struct gen_device_info
     * corresponded to 80 nanoseconds.
     *
     * Since Gen9 the numbers aren't so round, with a a frequency of 12MHz for
-    * SKL (or scale factor of 83.33333333) and a frequency of 19200123Hz for
+    * SKL (or scale factor of 83.33333333) and a frequency of 19200000Hz for
     * BXT.
     *
     * For simplicty to fit with the current code scaling by a single constant
@@ -174,7 +175,7 @@ struct gen_device_info
     * E.g. with crude testing on my system using the 'correct' scale factor I'm
     * seeing a drift of ~2 milliseconds per second.
     */
-   double timebase_scale;
+   uint64_t timestamp_frequency;
 
    /** @} */
 };
