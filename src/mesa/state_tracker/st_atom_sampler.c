@@ -223,6 +223,7 @@ st_convert_sampler_from_unit(const struct st_context *st,
 
    texobj = ctx->Texture.Unit[texUnit]._Current;
    assert(texobj);
+   assert(texobj->Target != GL_TEXTURE_BUFFER);
 
    msamp = _mesa_get_samplerobj(ctx, texUnit);
 
@@ -244,6 +245,7 @@ update_shader_samplers(struct st_context *st,
                        struct pipe_sampler_state *samplers,
                        unsigned *out_num_samplers)
 {
+   struct gl_context *ctx = st->ctx;
    GLbitfield samplers_used = prog->SamplersUsed;
    GLbitfield free_slots = ~prog->SamplersUsed;
    GLbitfield external_samplers_used = prog->ExternalSamplersUsed;
@@ -258,9 +260,14 @@ update_shader_samplers(struct st_context *st,
    /* loop over sampler units (aka tex image units) */
    for (unit = 0; samplers_used; unit++, samplers_used >>= 1) {
       struct pipe_sampler_state *sampler = samplers + unit;
+      unsigned tex_unit = prog->SamplerUnits[unit];
 
-      if (samplers_used & 1) {
-         st_convert_sampler_from_unit(st, sampler, prog->SamplerUnits[unit]);
+      /* Don't update the sampler for TBOs. cso_context will not bind sampler
+       * states that are NULL.
+       */
+      if (samplers_used & 1 &&
+          ctx->Texture.Unit[tex_unit]._Current->Target != GL_TEXTURE_BUFFER) {
+         st_convert_sampler_from_unit(st, sampler, tex_unit);
          states[unit] = sampler;
       } else {
          states[unit] = NULL;

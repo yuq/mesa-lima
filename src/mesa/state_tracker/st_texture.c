@@ -510,12 +510,13 @@ st_create_texture_handle_from_unit(struct st_context *st,
 {
    struct pipe_context *pipe = st->pipe;
    struct pipe_sampler_view *view;
-   struct pipe_sampler_state sampler;
+   struct pipe_sampler_state sampler = {0};
 
    if (!st_update_single_texture(st, &view, texUnit, prog->sh.data->Version))
       return 0;
 
-   st_convert_sampler_from_unit(st, &sampler, texUnit);
+   if (view->target != PIPE_BUFFER)
+      st_convert_sampler_from_unit(st, &sampler, texUnit);
 
    assert(st->ctx->Texture.Unit[texUnit]._Current);
 
