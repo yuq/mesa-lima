@@ -4201,6 +4201,22 @@ static const struct brw_tracked_state genX(vf_topology) = {
 
 /* ---------------------------------------------------------------------- */
 
+#if GEN_GEN >= 7
+static void
+genX(emit_mi_report_perf_count)(struct brw_context *brw,
+                                struct brw_bo *bo,
+                                uint32_t offset_in_bytes,
+                                uint32_t report_id)
+{
+   brw_batch_emit(brw, GENX(MI_REPORT_PERF_COUNT), mi_rpc) {
+      mi_rpc.MemoryAddress = instruction_bo(bo, offset_in_bytes);
+      mi_rpc.ReportID = report_id;
+   }
+}
+#endif
+
+/* ---------------------------------------------------------------------- */
+
 void
 genX(init_atoms)(struct brw_context *brw)
 {
@@ -4536,5 +4552,7 @@ genX(init_atoms)(struct brw_context *brw)
    STATIC_ASSERT(ARRAY_SIZE(compute_atoms) <= ARRAY_SIZE(brw->compute_atoms));
    brw_copy_pipeline_atoms(brw, BRW_COMPUTE_PIPELINE,
                            compute_atoms, ARRAY_SIZE(compute_atoms));
+
+   brw->vtbl.emit_mi_report_perf_count = genX(emit_mi_report_perf_count);
 #endif
 }

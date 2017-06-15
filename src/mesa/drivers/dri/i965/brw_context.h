@@ -646,6 +646,17 @@ struct brw_context
                                      uint32_t width, uint32_t height,
                                      uint32_t tile_x, uint32_t tile_y);
 
+      /**
+       * Emit an MI_REPORT_PERF_COUNT command packet.
+       *
+       * This asks the GPU to write a report of the current OA counter values
+       * into @bo at the given offset and containing the given @report_id
+       * which we can cross-reference when parsing the report (gen7+ only).
+       */
+      void (*emit_mi_report_perf_count)(struct brw_context *brw,
+                                        struct brw_bo *bo,
+                                        uint32_t offset_in_bytes,
+                                        uint32_t report_id);
    } vtbl;
 
    struct brw_bufmgr *bufmgr;
