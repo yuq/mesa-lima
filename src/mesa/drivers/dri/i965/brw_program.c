@@ -268,8 +268,10 @@ brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
    if (barriers & GL_TEXTURE_FETCH_BARRIER_BIT)
       bits |= PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE;
 
-   if (barriers & GL_TEXTURE_UPDATE_BARRIER_BIT)
-      bits |= PIPE_CONTROL_RENDER_TARGET_FLUSH;
+   if (barriers & (GL_TEXTURE_UPDATE_BARRIER_BIT |
+                   GL_PIXEL_BUFFER_BARRIER_BIT))
+      bits |= (PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
+               PIPE_CONTROL_RENDER_TARGET_FLUSH);
 
    if (barriers & GL_FRAMEBUFFER_BARRIER_BIT)
       bits |= (PIPE_CONTROL_DEPTH_CACHE_FLUSH |
