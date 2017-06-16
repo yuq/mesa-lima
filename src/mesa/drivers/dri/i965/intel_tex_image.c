@@ -356,7 +356,8 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
       return;
    }
 
-   mt = intel_miptree_create_for_dri_image(brw, image, target);
+   mt = intel_miptree_create_for_dri_image(brw, image, target,
+                                           ISL_COLORSPACE_NONE);
    if (mt == NULL)
       return;
 

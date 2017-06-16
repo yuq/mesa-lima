@@ -362,7 +362,8 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
     * buffer's content to the main buffer nor for invalidating the aux buffer's
     * content.
     */
-   irb->mt = intel_miptree_create_for_dri_image(brw, image, GL_TEXTURE_2D);
+   irb->mt = intel_miptree_create_for_dri_image(brw, image, GL_TEXTURE_2D,
+                                                ISL_COLORSPACE_NONE);
    if (!irb->mt)
       return;
 
