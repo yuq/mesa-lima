@@ -772,7 +772,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    if (set_write_disables(irb, ctx->Color.ColorMask[buf], color_write_disable))
       can_fast_clear = false;
 
-   if (irb->mt->aux_disable & INTEL_AUX_DISABLE_CCS ||
+   if (!irb->mt->supports_fast_clear ||
        !brw_is_color_fast_clear_compatible(brw, irb->mt, &ctx->Color.ClearColor))
       can_fast_clear = false;
 
@@ -793,7 +793,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
     */
    if (can_fast_clear && !irb->mt->mcs_buf) {
       assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
-      if (!intel_miptree_alloc_ccs(brw, irb->mt, false)) {
+      if (!intel_miptree_alloc_ccs(brw, irb->mt)) {
          /* There are a few reasons in addition to out-of-memory, that can
           * cause intel_miptree_alloc_non_msrt_mcs to fail.  Try to recover by
           * falling back to non-fast clear.

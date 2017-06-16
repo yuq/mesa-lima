@@ -287,16 +287,6 @@ enum miptree_array_layout {
    GEN6_HIZ_STENCIL,
 };
 
-enum intel_aux_disable {
-   INTEL_AUX_DISABLE_NONE = 0,
-   INTEL_AUX_DISABLE_HIZ  = 1 << 1,
-   INTEL_AUX_DISABLE_MCS  = 1 << 2,
-   INTEL_AUX_DISABLE_CCS  = 1 << 3,
-   INTEL_AUX_DISABLE_ALL  = INTEL_AUX_DISABLE_HIZ |
-                            INTEL_AUX_DISABLE_MCS |
-                            INTEL_AUX_DISABLE_CCS
-};
-
 /**
  * Miptree aux buffer. These buffers are associated with a miptree, but the
  * format is managed by the hardware.
@@ -566,6 +556,25 @@ struct intel_mipmap_tree
    struct intel_miptree_aux_buffer *hiz_buf;
 
    /**
+    * \brief The type of auxiliary compression used by this miptree.
+    *
+    * This describes the type of auxiliary compression that is intended to be
+    * used by this miptree.  An aux usage of ISL_AUX_USAGE_NONE means that
+    * auxiliary compression is permanently disabled.  An aux usage other than
+    * ISL_AUX_USAGE_NONE does not imply that the auxiliary buffer has actually
+    * been allocated nor does it imply that auxiliary compression will always
+    * be enabled for this surface.  For instance, with CCS_D, we may allocate
+    * the CCS on-the-fly and it may not be used for texturing if the miptree
+    * is fully resolved.
+    */
+   enum isl_aux_usage aux_usage;
+
+   /**
+    * \brief Whether or not this miptree supports fast clears.
+    */
+   bool supports_fast_clear;
+
+   /**
     * \brief Maps miptree slices to their current aux state
     *
     * This two-dimensional array is indexed as [level][layer] and stores an
@@ -621,13 +630,6 @@ struct intel_mipmap_tree
    union isl_color_value fast_clear_color;
 
    /**
-    * Disable allocation of auxiliary buffers, such as the HiZ buffer and MCS
-    * buffer. This is useful for sharing the miptree bo with an external client
-    * that doesn't understand auxiliary buffers.
-    */
-   enum intel_aux_disable aux_disable;
-
-   /**
     * Tells if the underlying buffer is to be also consumed by entities other
     * than the driver. This allows logic to turn off features such as lossless
     * compression which is not currently understood by client applications.
@@ -645,8 +647,7 @@ intel_miptree_is_lossless_compressed(const struct brw_context *brw,
 
 bool
 intel_miptree_alloc_ccs(struct brw_context *brw,
-                        struct intel_mipmap_tree *mt,
-                        bool is_ccs_e);
+                        struct intel_mipmap_tree *mt);
 
 enum {
    MIPTREE_LAYOUT_ACCELERATED_UPLOAD       = 1 << 0,
@@ -800,10 +801,6 @@ intel_miptree_copy_teximage(struct brw_context *brw,
  * It is safe to call the "slice_set_need_resolve" and "slice_resolve"
  * functions on a miptree without HiZ. In that case, each function is a no-op.
  */
-
-bool
-intel_miptree_wants_hiz_buffer(struct brw_context *brw,
-			       struct intel_mipmap_tree *mt);
 
 /**
  * \brief Allocate the miptree's embedded HiZ miptree.
