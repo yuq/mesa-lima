@@ -643,31 +643,28 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
                  __DRIimage *image)
 {
    struct wl_buffer *ret;
-   int fd, stride, name;
+   int width, height, fourcc;
+
+   dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_WIDTH, &width);
+   dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_HEIGHT, &height);
+   dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FOURCC, &fourcc);
 
    if (dri2_dpy->capabilities & WL_DRM_CAPABILITY_PRIME) {
+      int fd, stride;
+
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FD, &fd);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
-
       ret = wl_drm_create_prime_buffer(dri2_surf->wl_drm_wrapper,
-                                       fd,
-                                       dri2_surf->base.Width,
-                                       dri2_surf->base.Height,
-                                       dri2_surf->format,
-                                       0, stride,
-                                       0, 0,
-                                       0, 0);
+                                       fd, width, height, fourcc, 0, stride,
+                                       0, 0, 0, 0);
       close(fd);
    } else {
+      int name, stride;
+
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_NAME, &name);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
-
       ret = wl_drm_create_buffer(dri2_surf->wl_drm_wrapper,
-                                 name,
-                                 dri2_surf->base.Width,
-                                 dri2_surf->base.Height,
-                                 stride,
-                                 dri2_surf->format);
+                                 name, width, height, stride, fourcc);
    }
 
    return ret;
