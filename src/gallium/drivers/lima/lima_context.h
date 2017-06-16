@@ -51,7 +51,7 @@ struct lima_context_clear {
 };
 
 struct lima_depth_stencil_alpha_state {
-   int dummy;
+   struct pipe_depth_stencil_alpha_state base;
 };
 
 struct lima_fs_shader_state {
@@ -103,6 +103,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_SCISSOR      = (1 << 7),
       LIMA_CONTEXT_DIRTY_INDEX_BUFF   = (1 << 8),
       LIMA_CONTEXT_DIRTY_RASTERIZER   = (1 << 9),
+      LIMA_CONTEXT_DIRTY_ZSA          = (1 << 10),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -119,6 +120,7 @@ struct lima_context {
    struct lima_context_vertex_buffer vertex_buffers;
    struct pipe_index_buffer index_buffer;
    struct lima_rasterizer_state *rasterizer;
+   struct lima_depth_stencil_alpha_state *zsa;
 
    struct lima_buffer *plb;
    int plb_plbu_offset;
@@ -131,7 +133,8 @@ struct lima_context {
    #define varying_offset         0x1000
    #define varying_info_offset    0x2000
    #define attribute_info_offset  0x2100
-   #define vs_cmd_offset          0x2200
+   #define render_state_offset    0x2200
+   #define vs_cmd_offset          0x2300
    #define plbu_cmd_offset        0x2900
    #define tile_heap_offset       0x3000
    #define gp_buffer_size         0x5000
