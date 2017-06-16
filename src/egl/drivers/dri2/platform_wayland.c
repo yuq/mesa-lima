@@ -650,21 +650,23 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
    dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FOURCC, &fourcc);
 
    if (dri2_dpy->capabilities & WL_DRM_CAPABILITY_PRIME) {
+      struct wl_drm *wl_drm =
+         dri2_surf ? dri2_surf->wl_drm_wrapper : dri2_dpy->wl_drm;
       int fd, stride;
 
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FD, &fd);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
-      ret = wl_drm_create_prime_buffer(dri2_surf->wl_drm_wrapper,
-                                       fd, width, height, fourcc, 0, stride,
-                                       0, 0, 0, 0);
+      ret = wl_drm_create_prime_buffer(wl_drm, fd, width, height, fourcc, 0,
+                                       stride, 0, 0, 0, 0);
       close(fd);
    } else {
+      struct wl_drm *wl_drm =
+         dri2_surf ? dri2_surf->wl_drm_wrapper : dri2_dpy->wl_drm;
       int name, stride;
 
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_NAME, &name);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
-      ret = wl_drm_create_buffer(dri2_surf->wl_drm_wrapper,
-                                 name, width, height, stride, fourcc);
+      ret = wl_drm_create_buffer(wl_drm, name, width, height, stride, fourcc);
    }
 
    return ret;
@@ -820,62 +822,30 @@ dri2_wl_create_wayland_buffer_from_image(_EGLDriver *drv,
    struct dri2_egl_image *dri2_img = dri2_egl_image(img);
    __DRIimage *image = dri2_img->dri_image;
    struct wl_buffer *buffer;
-   int width, height, format, pitch;
-   enum wl_drm_format wl_format;
+   int format;
 
    dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FORMAT, &format);
-
    switch (format) {
    case __DRI_IMAGE_FORMAT_ARGB8888:
       if (!(dri2_dpy->formats & HAS_ARGB8888))
          goto bad_format;
-      wl_format = WL_DRM_FORMAT_ARGB8888;
       break;
    case __DRI_IMAGE_FORMAT_XRGB8888:
       if (!(dri2_dpy->formats & HAS_XRGB8888))
          goto bad_format;
-      wl_format = WL_DRM_FORMAT_XRGB8888;
       break;
    default:
       goto bad_format;
    }
 
-   dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_WIDTH, &width);
-   dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_HEIGHT, &height);
-   dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &pitch);
-
-   if (dri2_dpy->capabilities & WL_DRM_CAPABILITY_PRIME) {
-      int fd;
-
-      dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FD, &fd);
-
-      buffer =
-         wl_drm_create_prime_buffer(dri2_dpy->wl_drm,
-                                    fd,
-                                    width, height,
-                                    wl_format,
-                                    0, pitch,
-                                    0, 0,
-                                    0, 0);
-
-      close(fd);
-   } else {
-      int name;
-
-      dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_NAME, &name);
-
-      buffer =
-         wl_drm_create_buffer(dri2_dpy->wl_drm,
-                              name,
-                              width, height,
-                              pitch,
-                              wl_format);
-   }
+   buffer = create_wl_buffer(dri2_dpy, NULL, image);
 
    /* The buffer object will have been created with our internal event queue
     * because it is using the wl_drm object as a proxy factory. We want the
     * buffer to be used by the application so we'll reset it to the display's
-    * default event queue */
+    * default event queue. This isn't actually racy, as the only event the
+    * buffer can get is a buffer release, which doesn't happen with an explicit
+    * attach. */
    if (buffer)
       wl_proxy_set_queue((struct wl_proxy *) buffer, NULL);
 
