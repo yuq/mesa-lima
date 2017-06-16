@@ -248,11 +248,18 @@ lima_set_viewport_states(struct pipe_context *pctx,
 
    struct lima_context *ctx = lima_context(pctx);
 
-   printf("viewport scale=%f/%f/%f translate=%f/%f/%f\n",
-          viewport->scale[0], viewport->scale[1], viewport->scale[2],
-          viewport->translate[0], viewport->translate[1], viewport->translate[2]);
+   /* reverse calculate the parameter of glViewport */
+   ctx->viewport.x = viewport->translate[0] - viewport->scale[0];
+   ctx->viewport.y = fabsf(viewport->translate[1] - fabsf(viewport->scale[1]));
+   ctx->viewport.width = viewport->scale[0] * 2;
+   ctx->viewport.height = fabsf(viewport->scale[1] * 2);
 
-   ctx->viewport = *viewport;
+   printf("viewport scale=%f/%f/%f translate=%f/%f/%f orig=%f/%f/%f/%f\n",
+          viewport->scale[0], viewport->scale[1], viewport->scale[2],
+          viewport->translate[0], viewport->translate[1], viewport->translate[2],
+          ctx->viewport.x, ctx->viewport.y, ctx->viewport.width, ctx->viewport.height);
+
+   ctx->viewport.transform = *viewport;
    ctx->dirty |= LIMA_CONTEXT_DIRTY_VIEWPORT;
 }
 
