@@ -36,14 +36,25 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <xf86drm.h>
+#include <drm_fourcc.h>
 #include <sys/mman.h>
 
 #include "egl_dri2.h"
 #include "egl_dri2_fallbacks.h"
 #include "loader.h"
+#include "util/u_vector.h"
 
 #include <wayland-client.h>
 #include "wayland-drm-client-protocol.h"
+#include "linux-dmabuf-unstable-v1-client-protocol.h"
+
+#ifndef DRM_FORMAT_MOD_INVALID
+#define DRM_FORMAT_MOD_INVALID ((1ULL << 56) - 1)
+#endif
+
+#ifndef DRM_FORMAT_MOD_LINEAR
+#define DRM_FORMAT_MOD_LINEAR 0
+#endif
 
 enum wl_drm_format_flags {
    HAS_ARGB8888 = 1,
@@ -331,6 +342,8 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       dri2_egl_display(dri2_surf->base.Resource.Display);
    int use_flags;
    unsigned int dri_image_format;
+   uint64_t *modifiers;
+   int num_modifiers;
 
    /* currently supports three WL DRM formats,
     * WL_DRM_FORMAT_ARGB8888, WL_DRM_FORMAT_XRGB8888,
@@ -339,12 +352,18 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    switch (dri2_surf->format) {
    case WL_DRM_FORMAT_ARGB8888:
       dri_image_format = __DRI_IMAGE_FORMAT_ARGB8888;
+      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.argb8888);
+      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.argb8888);
       break;
    case WL_DRM_FORMAT_XRGB8888:
       dri_image_format = __DRI_IMAGE_FORMAT_XRGB8888;
+      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.xrgb8888);
+      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.xrgb8888);
       break;
    case WL_DRM_FORMAT_RGB565:
       dri_image_format = __DRI_IMAGE_FORMAT_RGB565;
+      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.rgb565);
+      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.rgb565);
       break;
    default:
       /* format is not supported */
@@ -382,27 +401,60 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
 
    if (dri2_dpy->is_different_gpu &&
        dri2_surf->back->linear_copy == NULL) {
-       dri2_surf->back->linear_copy =
-          dri2_dpy->image->createImage(dri2_dpy->dri_screen,
-                                      dri2_surf->base.Width,
-                                      dri2_surf->base.Height,
-                                      dri_image_format,
-                                      use_flags |
-                                      __DRI_IMAGE_USE_LINEAR,
-                                      NULL);
+      /* The LINEAR modifier should be a perfect alias of the LINEAR use
+       * flag; try the new interface first before the old, then fall back. */
+      if (dri2_dpy->image->base.version >= 15 &&
+           dri2_dpy->image->createImageWithModifiers) {
+         uint64_t linear_mod = DRM_FORMAT_MOD_LINEAR;
+
+         dri2_surf->back->linear_copy =
+            dri2_dpy->image->createImageWithModifiers(dri2_dpy->dri_screen,
+                                                      dri2_surf->base.Width,
+                                                      dri2_surf->base.Height,
+                                                      dri_image_format,
+                                                      &linear_mod,
+                                                      1,
+                                                      NULL);
+      } else {
+         dri2_surf->back->linear_copy =
+            dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+                                         dri2_surf->base.Width,
+                                         dri2_surf->base.Height,
+                                         dri_image_format,
+                                         use_flags |
+                                         __DRI_IMAGE_USE_LINEAR,
+                                         NULL);
+      }
       if (dri2_surf->back->linear_copy == NULL)
           return -1;
    }
 
    if (dri2_surf->back->dri_image == NULL) {
-      dri2_surf->back->dri_image =
-         dri2_dpy->image->createImage(dri2_dpy->dri_screen,
-                                      dri2_surf->base.Width,
-                                      dri2_surf->base.Height,
-                                      dri_image_format,
-                                      dri2_dpy->is_different_gpu ?
-                                         0 : use_flags,
-                                      NULL);
+      /* If our DRIImage implementation does not support
+       * createImageWithModifiers, then fall back to the old createImage,
+       * and hope it allocates an image which is acceptable to the winsys.
+        */
+      if (num_modifiers && dri2_dpy->image->base.version >= 15 &&
+          dri2_dpy->image->createImageWithModifiers) {
+         dri2_surf->back->dri_image =
+           dri2_dpy->image->createImageWithModifiers(dri2_dpy->dri_screen,
+                                                     dri2_surf->base.Width,
+                                                     dri2_surf->base.Height,
+                                                     dri_image_format,
+                                                     modifiers,
+                                                     num_modifiers,
+                                                     NULL);
+      } else {
+         dri2_surf->back->dri_image =
+            dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+                                         dri2_surf->base.Width,
+                                         dri2_surf->base.Height,
+                                         dri_image_format,
+                                         dri2_dpy->is_different_gpu ?
+                                              0 : use_flags,
+                                         NULL);
+      }
+
       dri2_surf->back->age = 0;
    }
    if (dri2_surf->back->dri_image == NULL)
@@ -643,16 +695,67 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
                  __DRIimage *image)
 {
    struct wl_buffer *ret;
-   int width, height, fourcc;
+   int width, height, fourcc, num_planes;
 
    dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_WIDTH, &width);
    dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_HEIGHT, &height);
    dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FOURCC, &fourcc);
+   dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_NUM_PLANES,
+                               &num_planes);
 
-   if (dri2_dpy->capabilities & WL_DRM_CAPABILITY_PRIME) {
+   if (dri2_dpy->wl_dmabuf && dri2_dpy->image->base.version >= 15) {
+      struct zwp_linux_buffer_params_v1 *params;
+      int mod_hi, mod_lo;
+      int i;
+
+      dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_MODIFIER_UPPER,
+                                  &mod_hi);
+      dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_MODIFIER_LOWER,
+                                  &mod_lo);
+
+      /* We don't need a wrapper for wl_dmabuf objects, because we have to
+       * create the intermediate params object; we can set the queue on this,
+       * and the wl_buffer inherits it race-free. */
+      params = zwp_linux_dmabuf_v1_create_params(dri2_dpy->wl_dmabuf);
+      if (dri2_surf)
+         wl_proxy_set_queue((struct wl_proxy *) params, dri2_surf->wl_queue);
+
+      for (i = 0; i < num_planes; i++) {
+         __DRIimage *p_image;
+         int stride, offset, fd;
+
+         if (i == 0)
+            p_image = image;
+         else
+            p_image = dri2_dpy->image->fromPlanar(image, i, NULL);
+         if (!p_image) {
+            zwp_linux_buffer_params_v1_destroy(params);
+            return NULL;
+         }
+
+         dri2_dpy->image->queryImage(p_image, __DRI_IMAGE_ATTRIB_FD, &fd);
+         dri2_dpy->image->queryImage(p_image, __DRI_IMAGE_ATTRIB_STRIDE,
+                                     &stride);
+         dri2_dpy->image->queryImage(p_image, __DRI_IMAGE_ATTRIB_OFFSET,
+                                     &offset);
+         if (image != p_image)
+            dri2_dpy->image->destroyImage(p_image);
+
+         zwp_linux_buffer_params_v1_add(params, fd, i, offset, stride,
+                                        mod_hi, mod_lo);
+         close(fd);
+      }
+
+      ret = zwp_linux_buffer_params_v1_create_immed(params, width, height,
+                                                    fourcc, 0);
+      zwp_linux_buffer_params_v1_destroy(params);
+   } else if (dri2_dpy->capabilities & WL_DRM_CAPABILITY_PRIME) {
       struct wl_drm *wl_drm =
          dri2_surf ? dri2_surf->wl_drm_wrapper : dri2_dpy->wl_drm;
       int fd, stride;
+
+      if (num_planes > 1)
+         return NULL;
 
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FD, &fd);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
@@ -663,6 +766,9 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
       struct wl_drm *wl_drm =
          dri2_surf ? dri2_surf->wl_drm_wrapper : dri2_dpy->wl_drm;
       int name, stride;
+
+      if (num_planes > 1)
+         return NULL;
 
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_NAME, &name);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
@@ -949,6 +1055,47 @@ static const struct wl_drm_listener drm_listener = {
 };
 
 static void
+dmabuf_ignore_format(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
+                     uint32_t format)
+{
+   /* formats are implicitly advertised by the 'modifier' event, so ignore */
+}
+
+static void
+dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
+                       uint32_t format, uint32_t modifier_hi,
+                       uint32_t modifier_lo)
+{
+   struct dri2_egl_display *dri2_dpy = data;
+   uint64_t *mod = NULL;
+
+   switch (format) {
+   case WL_DRM_FORMAT_ARGB8888:
+      mod = u_vector_add(&dri2_dpy->wl_modifiers.argb8888);
+      break;
+   case WL_DRM_FORMAT_XRGB8888:
+      mod = u_vector_add(&dri2_dpy->wl_modifiers.xrgb8888);
+      break;
+   case WL_DRM_FORMAT_RGB565:
+      mod = u_vector_add(&dri2_dpy->wl_modifiers.rgb565);
+      break;
+   default:
+      break;
+   }
+
+   if (!mod)
+      return;
+
+   *mod = (uint64_t) modifier_hi << 32;
+   *mod |= (uint64_t) (modifier_lo & 0xffffffff);
+}
+
+static const struct zwp_linux_dmabuf_v1_listener dmabuf_listener = {
+   .format = dmabuf_ignore_format,
+   .modifier = dmabuf_handle_modifier,
+};
+
+static void
 registry_handle_global_drm(void *data, struct wl_registry *registry,
                            uint32_t name, const char *interface,
                            uint32_t version)
@@ -959,6 +1106,12 @@ registry_handle_global_drm(void *data, struct wl_registry *registry,
       dri2_dpy->wl_drm =
          wl_registry_bind(registry, name, &wl_drm_interface, MIN2(version, 2));
       wl_drm_add_listener(dri2_dpy->wl_drm, &drm_listener, dri2_dpy);
+   } else if (strcmp(interface, "zwp_linux_dmabuf_v1") == 0 && version >= 3) {
+      dri2_dpy->wl_dmabuf =
+         wl_registry_bind(registry, name, &zwp_linux_dmabuf_v1_interface,
+                          MIN2(version, 3));
+      zwp_linux_dmabuf_v1_add_listener(dri2_dpy->wl_dmabuf, &dmabuf_listener,
+                                       dri2_dpy);
    }
 }
 
@@ -1125,6 +1278,12 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->own_device = true;
    } else {
       dri2_dpy->wl_dpy = disp->PlatformDisplay;
+   }
+
+   if (!u_vector_init(&dri2_dpy->wl_modifiers.xrgb8888, sizeof(uint64_t), 32) ||
+       !u_vector_init(&dri2_dpy->wl_modifiers.argb8888, sizeof(uint64_t), 32) ||
+       !u_vector_init(&dri2_dpy->wl_modifiers.rgb565, sizeof(uint64_t), 32)) {
+      goto cleanup;
    }
 
    dri2_dpy->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);

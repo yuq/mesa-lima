@@ -88,6 +88,7 @@ LIBOMXIL_BELLAGIO_REQUIRED=0.0
 LIBVA_REQUIRED=0.38.0
 VDPAU_REQUIRED=1.1
 WAYLAND_REQUIRED=1.11
+WAYLAND_PROTOCOLS_REQUIRED=1.8
 XCB_REQUIRED=1.9.3
 XCBDRI2_REQUIRED=1.8
 XCBGLX_REQUIRED=1.8.1
@@ -1686,7 +1687,9 @@ for plat in $platforms; do
 	case "$plat" in
 	wayland)
 
-		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
+		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED])
+                ac_wayland_protocols_pkgdatadir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
+                AC_SUBST(WAYLAND_PROTOCOLS_DATADIR, $ac_wayland_protocols_pkgdatadir)
 
 		if test "x$WAYLAND_SCANNER" = "x:"; then
 			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland platform])
