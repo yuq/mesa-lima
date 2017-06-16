@@ -201,6 +201,54 @@ lima_pipe_format_to_attrib_type(enum pipe_format format)
    return LIMA_ATTRIB_FLOAT;
 }
 
+static int
+lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
+{
+   int i = 0;
+   uint32_t *vs_cmd = ctx->gp_buffer->map + vs_cmd_offset;
+
+   if (!info->indexed) {
+      vs_cmd[i++] = 0x00028000;
+      vs_cmd[i++] = 0x50000000;
+      vs_cmd[i++] = 0x00000001;
+      vs_cmd[i++] = 0x50000000;
+   }
+
+   vs_cmd[i++] = ctx->gp_buffer->va + vs_program_offset;
+   vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16);
+
+   /* 3 is prefetch, what's it? */
+   vs_cmd[i++] = ((3 - 1) << 20) | ((align(ctx->vs->shader_size, 16) / 16 - 1) << 10);
+   vs_cmd[i++] = 0x10000040;
+
+   /* assume to 1 before vs compiler is ready */
+   int num_varryings = 1;
+   int num_attributes = ctx->vertex_elements->num_elements;
+
+   vs_cmd[i++] = ((num_varryings - 1) << 8) | ((num_attributes - 1) << 24);
+   vs_cmd[i++] = 0x10000042;
+
+   vs_cmd[i++] = 0x00000003;
+   vs_cmd[i++] = 0x10000041;
+
+   vs_cmd[i++] = ctx->gp_buffer->va + attribute_info_offset;
+   vs_cmd[i++] = 0x20000000 | (num_attributes << 17);
+
+   vs_cmd[i++] = ctx->gp_buffer->va + varying_info_offset;
+   vs_cmd[i++] = 0x20000008 | (num_varryings << 17);
+
+   vs_cmd[i++] = (info->count << 24) | (info->indexed ? 1 : 0);
+   vs_cmd[i++] = 0x00000000 | (info->count >> 8);
+
+   vs_cmd[i++] = 0x00000000;
+   vs_cmd[i++] = 0x60000000;
+
+   vs_cmd[i++] = info->indexed ? 0x00018000 : 0x00000000;
+   vs_cmd[i++] = 0x50000000;
+
+   return i << 2;
+}
+
 static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -248,6 +296,8 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          attribute[n++] = (pvb->stride << 11) |
             (lima_pipe_format_to_attrib_type(pve->src_format) << 2) |
             (util_format_get_nr_components(pve->src_format) - 1);
+
+         printf("attribute %d: %x %x\n", i, attribute[n - 2], attribute[n - 1]);
       }
 
       ctx->dirty &= ~(LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF);
@@ -275,6 +325,9 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       memcpy(ctx->gp_buffer->map + fs_program_offset, fs->shader, fs->shader_size);
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_FRAG;
    }
+
+   int vs_cmd_size = lima_pack_vs_cmd(ctx, info);
+   (void)vs_cmd_size;
 }
 
 void
