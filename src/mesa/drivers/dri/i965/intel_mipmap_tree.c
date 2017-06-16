@@ -101,9 +101,8 @@ compute_msaa_layout(struct brw_context *brw, mesa_format format,
    }
 }
 
-bool
-intel_tiling_supports_non_msrt_mcs(const struct brw_context *brw,
-                                   unsigned tiling)
+static bool
+intel_tiling_supports_ccs(const struct brw_context *brw, unsigned tiling)
 {
    /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
     * Target(s)", beneath the "Fast Color Clear" bullet (p326):
@@ -141,9 +140,9 @@ intel_tiling_supports_non_msrt_mcs(const struct brw_context *brw,
  *     - MCS and Lossless compression is supported for TiledY/TileYs/TileYf
  *     non-MSRTs only.
  */
-bool
-intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
-                                           const struct intel_mipmap_tree *mt)
+static bool
+intel_miptree_supports_ccs(struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt)
 {
    /* MCS support does not exist prior to Gen7 */
    if (brw->gen < 7)
@@ -243,9 +242,9 @@ intel_miptree_is_lossless_compressed(const struct brw_context *brw,
    return mt->num_samples <= 1;
 }
 
-bool
-intel_miptree_supports_lossless_compressed(struct brw_context *brw,
-                                           const struct intel_mipmap_tree *mt)
+static bool
+intel_miptree_supports_ccs_e(struct brw_context *brw,
+                             const struct intel_mipmap_tree *mt)
 {
    /* For now compression is only enabled for integer formats even though
     * there exist supported floating point formats also. This is a heuristic
@@ -257,8 +256,7 @@ intel_miptree_supports_lossless_compressed(struct brw_context *brw,
    if (_mesa_get_format_datatype(mt->format) == GL_FLOAT)
       return false;
 
-   /* Fast clear mechanism and lossless compression go hand in hand. */
-   if (!intel_miptree_supports_non_msrt_fast_clear(brw, mt))
+   if (!intel_miptree_supports_ccs(brw, mt))
       return false;
 
    /* Fast clear can be also used to clear srgb surfaces by using equivalent
@@ -539,7 +537,7 @@ intel_miptree_create_layout(struct brw_context *brw,
     *  7   |      ?         |        ?
     *  6   |      ?         |        ?
     */
-   if (intel_miptree_supports_non_msrt_fast_clear(brw, mt)) {
+   if (intel_miptree_supports_ccs(brw, mt)) {
       if (brw->gen >= 9 || (brw->gen == 8 && num_samples <= 1))
          layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    } else if (brw->gen >= 9 && num_samples > 1) {
@@ -861,8 +859,8 @@ intel_miptree_create(struct brw_context *brw,
     * clear actually occurs or when compressed single sampled buffer is
     * written by the GPU for the first time.
     */
-   if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
-       intel_miptree_supports_non_msrt_fast_clear(brw, mt)) {
+   if (intel_tiling_supports_ccs(brw, mt->tiling) &&
+       intel_miptree_supports_ccs(brw, mt)) {
       mt->aux_disable &= ~INTEL_AUX_DISABLE_CCS;
       assert(brw->gen < 8 || mt->halign == 16 || num_samples <= 1);
 
@@ -874,10 +872,10 @@ intel_miptree_create(struct brw_context *brw,
       const bool is_lossless_compressed =
          unlikely(!lossless_compression_disabled) &&
          brw->gen >= 9 && !mt->is_scanout &&
-         intel_miptree_supports_lossless_compressed(brw, mt);
+         intel_miptree_supports_ccs_e(brw, mt);
 
       if (is_lossless_compressed) {
-         intel_miptree_alloc_non_msrt_mcs(brw, mt, is_lossless_compressed);
+         intel_miptree_alloc_ccs(brw, mt, is_lossless_compressed);
       }
    }
 
@@ -996,8 +994,8 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
     * Allocation of the MCS miptree will be deferred until the first fast
     * clear actually occurs.
     */
-   if (intel_tiling_supports_non_msrt_mcs(intel, singlesample_mt->tiling) &&
-       intel_miptree_supports_non_msrt_fast_clear(intel, singlesample_mt)) {
+   if (intel_tiling_supports_ccs(intel, singlesample_mt->tiling) &&
+       intel_miptree_supports_ccs(intel, singlesample_mt)) {
       singlesample_mt->aux_disable &= ~INTEL_AUX_DISABLE_CCS;
    }
 
@@ -1710,9 +1708,9 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
 }
 
 bool
-intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
-                                 struct intel_mipmap_tree *mt,
-                                 bool is_lossless_compressed)
+intel_miptree_alloc_ccs(struct brw_context *brw,
+                        struct intel_mipmap_tree *mt,
+                        bool is_ccs_e)
 {
    assert(mt->mcs_buf == NULL);
    assert(!(mt->aux_disable & (INTEL_AUX_DISABLE_MCS | INTEL_AUX_DISABLE_CCS)));
@@ -1740,8 +1738,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     * not use the gpu access flag which can cause an unnecessary delay if the
     * backing pages happened to be just used by the GPU.
     */
-   const uint32_t alloc_flags =
-      is_lossless_compressed ? 0 : BO_ALLOC_FOR_RENDER;
+   const uint32_t alloc_flags = is_ccs_e ? 0 : BO_ALLOC_FOR_RENDER;
    mt->mcs_buf = intel_alloc_aux_buffer(brw, "ccs-miptree",
                                         &temp_ccs_surf, alloc_flags, mt);
    if (!mt->mcs_buf) {
@@ -1755,7 +1752,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     * used for lossless compression which requires similar initialisation
     * as multi-sample compression.
     */
-   if (is_lossless_compressed) {
+   if (is_ccs_e) {
       /* Hardware sets the auxiliary buffer to all zeroes when it does full
        * resolve. Initialize it accordingly in case the first renderer is
        * cpu (or other none compression aware party).

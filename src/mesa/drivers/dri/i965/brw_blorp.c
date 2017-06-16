@@ -793,7 +793,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
     */
    if (can_fast_clear && !irb->mt->mcs_buf) {
       assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
-      if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
+      if (!intel_miptree_alloc_ccs(brw, irb->mt, false)) {
          /* There are a few reasons in addition to out-of-memory, that can
           * cause intel_miptree_alloc_non_msrt_mcs to fail.  Try to recover by
           * falling back to non-fast clear.
