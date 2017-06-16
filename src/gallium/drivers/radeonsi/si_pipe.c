@@ -548,6 +548,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 			sscreen->b.info.drm_minor < 50);
 
 	case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
+		/* TODO: GFX9 hangs. */
+		if (sscreen->b.chip_class >= GFX9)
+			return 0;
 		/* Disable on SI due to VM faults in CP DMA. Enable once these
 		 * faults are mitigated in software.
 		 */
