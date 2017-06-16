@@ -163,6 +163,9 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    struct etna_context *ctx = etna_context(pctx);
    const uint32_t format = translate_texture_format(so->format);
    const bool ext = !!(format & EXT_FORMAT);
+   const uint32_t swiz = get_texture_swiz(so->format, so->swizzle_r,
+                                          so->swizzle_g, so->swizzle_b,
+                                          so->swizzle_a);
 
    if (!sv)
       return NULL;
@@ -217,11 +220,7 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    }
 
    sv->TE_SAMPLER_CONFIG1 = COND(ext, VIVS_TE_SAMPLER_CONFIG1_FORMAT_EXT(format)) |
-                            VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_R(so->swizzle_r) |
-                            VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_G(so->swizzle_g) |
-                            VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_B(so->swizzle_b) |
-                            VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_A(so->swizzle_a) |
-                            VIVS_TE_SAMPLER_CONFIG1_HALIGN(res->halign);
+                            VIVS_TE_SAMPLER_CONFIG1_HALIGN(res->halign) | swiz;
    sv->TE_SAMPLER_SIZE = VIVS_TE_SAMPLER_SIZE_WIDTH(res->base.width0) |
                          VIVS_TE_SAMPLER_SIZE_HEIGHT(res->base.height0);
    sv->TE_SAMPLER_LOG_SIZE =

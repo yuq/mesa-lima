@@ -36,6 +36,13 @@
 uint32_t
 translate_texture_format(enum pipe_format fmt);
 
+bool
+texture_format_needs_swiz(enum pipe_format fmt);
+
+uint32_t
+get_texture_swiz(enum pipe_format fmt, unsigned swizzle_r,
+                 unsigned swizzle_g, unsigned swizzle_b, unsigned swizzle_a);
+
 uint32_t
 translate_rs_format(enum pipe_format fmt);
 
