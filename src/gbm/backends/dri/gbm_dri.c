@@ -600,31 +600,42 @@ gbm_dri_to_gbm_format(int dri_format)
    return 0;
 }
 
-
 static int
 gbm_dri_is_format_supported(struct gbm_device *gbm,
                             uint32_t format,
                             uint32_t usage)
 {
-   switch (format) {
-   case GBM_BO_FORMAT_XRGB8888:
-   case GBM_FORMAT_XBGR8888:
-   case GBM_FORMAT_XRGB8888:
-      break;
-   case GBM_BO_FORMAT_ARGB8888:
-   case GBM_FORMAT_ARGB8888:
-      if (usage & GBM_BO_USE_SCANOUT)
-         return 0;
-      break;
-   default:
+   struct gbm_dri_device *dri = gbm_dri_device(gbm);
+   int count;
+
+   if ((usage & GBM_BO_USE_CURSOR) && (usage & GBM_BO_USE_RENDERING))
       return 0;
+
+   format = gbm_format_canonicalize(format);
+   if (gbm_format_to_dri_format(format) == 0)
+      return 0;
+
+   /* If there is no query, fall back to the small table which was originally
+    * here. */
+   if (dri->image->base.version <= 15 || !dri->image->queryDmaBufModifiers) {
+      switch (format) {
+      case GBM_FORMAT_XRGB8888:
+      case GBM_FORMAT_ARGB8888:
+      case GBM_FORMAT_XBGR8888:
+         return 1;
+      default:
+         return 0;
+      }
    }
 
-   if (usage & GBM_BO_USE_CURSOR &&
-       usage & GBM_BO_USE_RENDERING)
+   /* Check if the driver returns any modifiers for this format; since linear
+    * is counted as a modifier, we will have at least one modifier for any
+    * supported format. */
+   if (!dri->image->queryDmaBufModifiers(dri->screen, format, 0, NULL, NULL,
+                                         &count))
       return 0;
 
-   return 1;
+   return (count > 0);
 }
 
 static int
