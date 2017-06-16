@@ -100,7 +100,7 @@ lima_update_plb(struct lima_context *ctx)
    struct lima_context_framebuffer *fb = &ctx->framebuffer;
    struct lima_screen *screen = lima_screen(ctx->base.screen);
 
-   assert(!lima_bo_wait(ctx->plb->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true));
+   lima_bo_wait(ctx->plb->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
 
    /* use hilbert_coords to generates 1D to 2D relationship.
     * 1D for pp stream index and 2D for plb block x/y on framebuffer.
@@ -269,7 +269,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    }
 
    if (ctx->dirty)
-      assert(!lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true));
+      lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
 
    if (ctx->dirty & (LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF)) {
       struct lima_vertex_element_state *ve = ctx->vertex_elements;
@@ -285,7 +285,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
          struct pipe_vertex_buffer *pvb = vb->vb + pve->vertex_buffer_index;
          struct lima_resource *res = lima_resource(pvb->buffer);
-         assert(!lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA));
+         lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
 
          /* draw_info start vertex should also be here which is very bad
           * make this bo must be updated also when start vertex change
