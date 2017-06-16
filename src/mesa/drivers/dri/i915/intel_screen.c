@@ -227,17 +227,20 @@ static struct intel_image_format intel_image_formats[] = {
      { { 0, 0, 0, __DRI_IMAGE_FORMAT_R8, 1 },
        { 1, 1, 0, __DRI_IMAGE_FORMAT_GR88, 2 } } },
 
-   /* For YUYV buffers, we set up two overlapping DRI images and treat
-    * them as planar buffers in the compositors.  Plane 0 is GR88 and
-    * samples YU or YV pairs and places Y into the R component, while
-    * plane 1 is ARGB and samples YUYV clusters and places pairs and
-    * places U into the G component and V into A.  This lets the
-    * texture sampler interpolate the Y components correctly when
-    * sampling from plane 0, and interpolate U and V correctly when
-    * sampling from plane 1. */
+   /* For YUYV and UYVY buffers, we set up two overlapping DRI images
+    * and treat them as planar buffers in the compositors.
+    * Plane 0 is GR88 and samples YU or YV pairs and places Y into
+    * the R component, while plane 1 is ARGB/ABGR and samples YUYV/UYVY
+    * clusters and places pairs and places U into the G component and
+    * V into A.  This lets the texture sampler interpolate the Y
+    * components correctly when sampling from plane 0, and interpolate
+    * U and V correctly when sampling from plane 1. */
    { __DRI_IMAGE_FOURCC_YUYV, __DRI_IMAGE_COMPONENTS_Y_XUXV, 2,
      { { 0, 0, 0, __DRI_IMAGE_FORMAT_GR88, 2 },
-       { 0, 1, 0, __DRI_IMAGE_FORMAT_ARGB8888, 4 } } }
+       { 0, 1, 0, __DRI_IMAGE_FORMAT_ARGB8888, 4 } } },
+   { __DRI_IMAGE_FOURCC_UYVY, __DRI_IMAGE_COMPONENTS_Y_UXVX, 2,
+     { { 0, 0, 0, __DRI_IMAGE_FORMAT_GR88, 2 },
+       { 0, 1, 0, __DRI_IMAGE_FORMAT_ABGR8888, 4 } } }
 };
 
 static __DRIimage *
