@@ -1252,12 +1252,10 @@ i915ValidateFragmentProgram(struct i915_context *i915)
    intel->coloroffset = 0;
    intel->specoffset = 0;
 
-   if (inputsRead & VARYING_BITS_TEX_ANY || p->wpos_tex != I915_WPOS_TEX_INVALID) {
-      EMIT_ATTR(_TNL_ATTRIB_POS, EMIT_4F_VIEWPORT, S4_VFMT_XYZW, 16);
-   }
-   else {
-      EMIT_ATTR(_TNL_ATTRIB_POS, EMIT_3F_VIEWPORT, S4_VFMT_XYZ, 12);
-   }
+   /* Always emit W to get consistent perspective
+    * correct interpolation of primary/secondary colors.
+    */
+   EMIT_ATTR(_TNL_ATTRIB_POS, EMIT_4F_VIEWPORT, S4_VFMT_XYZW, 16);
 
    /* Handle gl_PointSize builtin var here */
    if (ctx->Point._Attenuated || ctx->VertexProgram.PointSizeEnabled)
