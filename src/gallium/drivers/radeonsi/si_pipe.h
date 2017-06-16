@@ -559,6 +559,7 @@ struct si_context {
 	uint16_t			prefetch_L2_mask;
 
 	bool				gfx_flush_in_progress:1;
+	bool				gfx_last_ib_is_busy:1;
 	bool				compute_is_busy:1;
 
 	unsigned			num_gfx_cs_flushes;

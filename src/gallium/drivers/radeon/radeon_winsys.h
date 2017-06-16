@@ -28,6 +28,13 @@
 
 /* The public winsys interface header for the radeon driver. */
 
+/* Whether the next IB can start immediately and not wait for draws and
+ * dispatches from the current IB to finish. */
+#define RADEON_FLUSH_START_NEXT_GFX_IB_NOW	(1u << 31)
+
+#define RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW \
+	(PIPE_FLUSH_ASYNC | RADEON_FLUSH_START_NEXT_GFX_IB_NOW)
+
 #include "pipebuffer/pb_buffer.h"
 
 #include "amd/common/ac_gpu_info.h"
