@@ -958,26 +958,50 @@ static void strcat_without_spaces(char *dst, const char *src)
    *dst = 0;
 }
 
+
+#ifdef PIPE_OS_WINDOWS
+#define W_OK 0
+static int
+access(const char *pathname, int mode)
+{
+   /* no-op */
+   return 0;
+}
+
+#define PATH_SEP "\\"
+
+#else
+
+#define PATH_SEP "/"
+
+#endif
+
+
+/**
+ * If the GALLIUM_HUD_DUMP_DIR env var is set, we'll write the raw
+ * HUD values to files at ${GALLIUM_HUD_DUMP_DIR}/<stat> where <stat>
+ * is a HUD variable such as "fps", or "cpu"
+ */
 static void
 hud_graph_set_dump_file(struct hud_graph *gr)
 {
-#ifndef PIPE_OS_WINDOWS
    const char *hud_dump_dir = getenv("GALLIUM_HUD_DUMP_DIR");
-   char *dump_file;
 
    if (hud_dump_dir && access(hud_dump_dir, W_OK) == 0) {
-      dump_file = malloc(strlen(hud_dump_dir) + sizeof("/") + sizeof(gr->name));
+      char *dump_file = malloc(strlen(hud_dump_dir) + sizeof(PATH_SEP)
+                               + sizeof(gr->name));
       if (dump_file) {
          strcpy(dump_file, hud_dump_dir);
-         strcat(dump_file, "/");
+         strcat(dump_file, PATH_SEP);
          strcat_without_spaces(dump_file, gr->name);
          gr->fd = fopen(dump_file, "w+");
-         if (gr->fd)
+         if (gr->fd) {
+            /* flush output after each line is written */
             setvbuf(gr->fd, NULL, _IOLBF, 0);
+         }
          free(dump_file);
       }
    }
-#endif
 }
 
 /**
