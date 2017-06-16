@@ -850,23 +850,9 @@ gbm_dri_bo_import(struct gbm_device *gbm,
 
       image = dri->image->dupImage(wb->driver_buffer, NULL);
 
-      switch (wb->format) {
-      case WL_DRM_FORMAT_XRGB8888:
-         gbm_format = GBM_FORMAT_XRGB8888;
-         break;
-      case WL_DRM_FORMAT_ARGB8888:
-         gbm_format = GBM_FORMAT_ARGB8888;
-         break;
-      case WL_DRM_FORMAT_RGB565:
-         gbm_format = GBM_FORMAT_RGB565;
-         break;
-      case WL_DRM_FORMAT_YUYV:
-         gbm_format = GBM_FORMAT_YUYV;
-         break;
-      default:
-         dri->image->destroyImage(image);
-         return NULL;
-      }
+      /* GBM_FORMAT_* is identical to WL_DRM_FORMAT_*, so no conversion
+       * required. */
+      gbm_format = wb->format;
       break;
    }
 #endif
@@ -895,23 +881,27 @@ gbm_dri_bo_import(struct gbm_device *gbm,
    {
       struct gbm_import_fd_data *fd_data = buffer;
       int stride = fd_data->stride, offset = 0;
-      int dri_format;
+      int fourcc;
 
+      /* GBM's GBM_FORMAT_* tokens are a strict superset of the DRI FourCC
+       * tokens accepted by createImageFromFds, except for not supporting
+       * the sARGB format. Also, GBM_BO_FORMAT_* are defined differently to
+       * their GBM_FORMAT_* equivalents, so remap them here. */
       switch (fd_data->format) {
       case GBM_BO_FORMAT_XRGB8888:
-         dri_format = GBM_FORMAT_XRGB8888;
+         fourcc = GBM_FORMAT_XRGB8888;
          break;
       case GBM_BO_FORMAT_ARGB8888:
-         dri_format = GBM_FORMAT_ARGB8888;
+         fourcc = GBM_FORMAT_ARGB8888;
          break;
       default:
-         dri_format = fd_data->format;
+         fourcc = fd_data->format;
       }
 
       image = dri->image->createImageFromFds(dri->screen,
                                              fd_data->width,
                                              fd_data->height,
-                                             dri_format,
+                                             fourcc,
                                              &fd_data->fd, 1,
                                              &stride, &offset,
                                              NULL);
@@ -936,27 +926,19 @@ gbm_dri_bo_import(struct gbm_device *gbm,
          return NULL;
       }
 
-      switch(fd_data->format) {
-      case GBM_FORMAT_RGB565:
-         fourcc = __DRI_IMAGE_FOURCC_RGB565;
-         break;
-      case GBM_FORMAT_ARGB8888:
-      case GBM_BO_FORMAT_ARGB8888:
-         fourcc = __DRI_IMAGE_FOURCC_ARGB8888;
-         break;
-      case GBM_FORMAT_XRGB8888:
+      /* GBM's GBM_FORMAT_* tokens are a strict superset of the DRI FourCC
+       * tokens accepted by createImageFromDmaBufs2, except for not supporting
+       * the sARGB format. Also, GBM_BO_FORMAT_* are defined differently to
+       * their GBM_FORMAT_* equivalents, so remap them here. */
+      switch (fd_data->format) {
       case GBM_BO_FORMAT_XRGB8888:
-         fourcc = __DRI_IMAGE_FOURCC_XRGB8888;
+         fourcc = GBM_FORMAT_XRGB8888;
          break;
-      case GBM_FORMAT_ABGR8888:
-         fourcc = __DRI_IMAGE_FOURCC_ABGR8888;
-         break;
-      case GBM_FORMAT_XBGR8888:
-         fourcc = __DRI_IMAGE_FOURCC_XBGR8888;
+      case GBM_BO_FORMAT_ARGB8888:
+         fourcc = GBM_FORMAT_ARGB8888;
          break;
       default:
-         errno = EINVAL;
-         return NULL;
+         fourcc = fd_data->format;
       }
 
       image = dri->image->createImageFromDmaBufs2(dri->screen, fd_data->width,
@@ -973,7 +955,7 @@ gbm_dri_bo_import(struct gbm_device *gbm,
          return NULL;
       }
 
-      gbm_format = fd_data->format;
+      gbm_format = fourcc;
       break;
    }
 
