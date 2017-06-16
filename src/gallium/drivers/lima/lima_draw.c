@@ -335,6 +335,10 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SCISSOR;
    }
 
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_INDEX_BUFF) {
+      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_INDEX_BUFF;
+   }
+
    int vs_cmd_size = lima_pack_vs_cmd(ctx, info);
    (void)vs_cmd_size;
 }
