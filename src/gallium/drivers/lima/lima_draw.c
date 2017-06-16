@@ -267,8 +267,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_FRAMEBUFFER;
    }
 
-   if (ctx->dirty)
-      lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
+   lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
 
    if (ctx->dirty & (LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF)) {
       struct lima_vertex_element_state *ve = ctx->vertex_elements;
@@ -324,6 +323,15 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
       memcpy(ctx->gp_buffer->map + fs_program_offset, fs->shader, fs->shader_size);
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_FRAG;
+   }
+
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_VIEWPORT) {
+      /* should update uniform */
+      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_VIEWPORT;
+   }
+
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_SCISSOR) {
+      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SCISSOR;
    }
 
    int vs_cmd_size = lima_pack_vs_cmd(ctx, info);

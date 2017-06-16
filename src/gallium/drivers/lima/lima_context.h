@@ -94,6 +94,8 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_SHADER_FRAG  = (1 << 3),
       LIMA_CONTEXT_DIRTY_VERTEX_ELEM  = (1 << 4),
       LIMA_CONTEXT_DIRTY_VERTEX_BUFF  = (1 << 5),
+      LIMA_CONTEXT_DIRTY_VIEWPORT     = (1 << 6),
+      LIMA_CONTEXT_DIRTY_SCISSOR      = (1 << 7),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -101,6 +103,8 @@ struct lima_context {
    struct slab_child_pool transfer_pool;
 
    struct lima_context_framebuffer framebuffer;
+   struct pipe_viewport_state viewport;
+   struct pipe_scissor_state scissor;
    struct lima_context_clear clear;
    struct lima_vs_shader_state *vs;
    struct lima_fs_shader_state *fs;
