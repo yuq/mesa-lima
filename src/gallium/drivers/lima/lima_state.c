@@ -49,9 +49,8 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
 
    pipe_surface_reference(&fb->zsbuf, framebuffer->zsbuf);
 
-   /* assume always has cbuf */
-   int width = align(fb->cbuf->width, 16) >> 4;
-   int height = align(fb->cbuf->height, 16) >> 4;
+   int width = align(framebuffer->width, 16) >> 4;
+   int height = align(framebuffer->height, 16) >> 4;
    if (fb->tiled_w != width || fb->tiled_h != height) {
       fb->tiled_w = width;
       fb->tiled_h = height;
@@ -239,11 +238,49 @@ lima_set_index_buffer(struct pipe_context *pctx,
    printf("dummy %s\n", __func__);
 }
 
+static void
+lima_set_viewport_states(struct pipe_context *pctx,
+                         unsigned start_slot,
+                         unsigned num_viewports,
+                         const struct pipe_viewport_state *viewport)
+{
+   printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   printf("viewport scale=%f/%f/%f translate=%f/%f/%f\n",
+          viewport->scale[0], viewport->scale[1], viewport->scale[2],
+          viewport->translate[0], viewport->translate[1], viewport->translate[2]);
+
+   ctx->viewport = *viewport;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_VIEWPORT;
+}
+
+static void
+lima_set_scissor_states(struct pipe_context *pctx,
+                        unsigned start_slot,
+                        unsigned num_scissors,
+                        const struct pipe_scissor_state *scissor)
+{
+   printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   printf("scissor min=%d/%d max=%d/%d\n",
+          scissor->minx, scissor->miny,
+          scissor->maxx, scissor->maxy);
+
+   ctx->scissor = *scissor;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_SCISSOR;
+}
+
 void
 lima_state_init(struct lima_context *ctx)
 {
    ctx->base.set_framebuffer_state = lima_set_framebuffer_state;
    ctx->base.set_polygon_stipple = lima_set_polygon_stipple;
+   ctx->base.set_viewport_states = lima_set_viewport_states;
+   ctx->base.set_scissor_states = lima_set_scissor_states;
 
    ctx->base.set_vertex_buffers = lima_set_vertex_buffers;
    ctx->base.set_index_buffer = lima_set_index_buffer;
