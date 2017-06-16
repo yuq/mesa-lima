@@ -84,6 +84,11 @@ struct lima_context_vertex_buffer {
    uint32_t dirty_mask;
 };
 
+struct lima_context_viewport_state {
+   struct pipe_viewport_state transform;
+   float x, y, width, height;
+};
+
 struct lima_context {
    struct pipe_context base;
 
@@ -103,7 +108,7 @@ struct lima_context {
    struct slab_child_pool transfer_pool;
 
    struct lima_context_framebuffer framebuffer;
-   struct pipe_viewport_state viewport;
+   struct lima_context_viewport_state viewport;
    struct pipe_scissor_state scissor;
    struct lima_context_clear clear;
    struct lima_vs_shader_state *vs;
