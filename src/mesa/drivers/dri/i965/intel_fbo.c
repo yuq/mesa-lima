@@ -989,10 +989,6 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                  irb->mt->num_samples,
                                  layout_flags);
 
-   if (intel_miptree_wants_hiz_buffer(brw, new_mt)) {
-      intel_miptree_alloc_hiz(brw, new_mt);
-   }
-
    if (!invalidate)
       intel_miptree_copy_slice(brw, intel_image->mt,
                                intel_image->base.Base.Level, irb->mt_layer,
