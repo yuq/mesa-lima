@@ -385,6 +385,7 @@ typedef unsigned (*slot_remap_func)(unsigned);
 static void si_dump_descriptor_list(struct si_descriptors *desc,
 				    const char *shader_name,
 				    const char *elem_name,
+				    unsigned element_dw_size,
 				    unsigned num_elements,
 				    slot_remap_func slot_remap,
 				    FILE *f)
@@ -392,7 +393,7 @@ static void si_dump_descriptor_list(struct si_descriptors *desc,
 	unsigned i, j;
 
 	for (i = 0; i < num_elements; i++) {
-		unsigned dw_offset = slot_remap(i) * desc->element_dw_size;
+		unsigned dw_offset = slot_remap(i) * element_dw_size;
 		uint32_t *gpu_ptr = desc->gpu_list ? desc->gpu_list : desc->list;
 		const char *list_note = desc->gpu_list ? "GPU list" : "CPU list";
 		uint32_t *cpu_list = desc->list + dw_offset;
@@ -401,7 +402,7 @@ static void si_dump_descriptor_list(struct si_descriptors *desc,
 		fprintf(f, COLOR_GREEN "%s%s slot %u (%s):" COLOR_RESET "\n",
 			shader_name, elem_name, i, list_note);
 
-		switch (desc->element_dw_size) {
+		switch (element_dw_size) {
 		case 4:
 			for (j = 0; j < 4; j++)
 				ac_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
@@ -461,45 +462,50 @@ static void si_dump_descriptors(struct si_context *sctx,
 		&sctx->descriptors[SI_DESCS_FIRST_SHADER +
 				   processor * SI_NUM_SHADER_DESCS];
 	static const char *shader_name[] = {"VS", "PS", "GS", "TCS", "TES", "CS"};
+	const char *name = shader_name[processor];
+	unsigned enabled_constbuf, enabled_shaderbuf, enabled_samplers;
+	unsigned enabled_images;
 
-	static const char *elem_name[] = {
-		" - Constant buffer",
-		" - Shader buffer",
-		" - Sampler",
-		" - Image",
-	};
-	static const slot_remap_func remap_func[] = {
-		si_get_constbuf_slot,
-		si_get_shaderbuf_slot,
-		si_identity,
-		si_identity,
-	};
-	unsigned enabled_slots[] = {
-		sctx->const_and_shader_buffers[processor].enabled_mask >> SI_NUM_SHADER_BUFFERS,
-		util_bitreverse(sctx->const_and_shader_buffers[processor].enabled_mask &
-				u_bit_consecutive(0, SI_NUM_SHADER_BUFFERS)),
-		sctx->samplers[processor].views.enabled_mask,
-		sctx->images[processor].enabled_mask,
-	};
-	unsigned required_slots[] = {
-		info ? info->const_buffers_declared : 0,
-		info ? info->shader_buffers_declared : 0,
-		info ? info->samplers_declared : 0,
-		info ? info->images_declared : 0,
-	};
+	if (info) {
+		enabled_constbuf = info->const_buffers_declared;
+		enabled_shaderbuf = info->shader_buffers_declared;
+		enabled_samplers = info->samplers_declared;
+		enabled_images = info->images_declared;
+	} else {
+		enabled_constbuf = sctx->const_and_shader_buffers[processor].enabled_mask >>
+				   SI_NUM_SHADER_BUFFERS;
+		enabled_shaderbuf = sctx->const_and_shader_buffers[processor].enabled_mask &
+				    u_bit_consecutive(0, SI_NUM_SHADER_BUFFERS);
+		enabled_shaderbuf = util_bitreverse(enabled_shaderbuf) >>
+				    (32 - SI_NUM_SHADER_BUFFERS);
+		enabled_samplers = sctx->samplers[processor].views.enabled_mask;
+		enabled_images = sctx->images[processor].enabled_mask;
+	}
 
 	if (processor == PIPE_SHADER_VERTEX) {
 		assert(info); /* only CS may not have an info struct */
 
-		si_dump_descriptor_list(&sctx->vertex_buffers, shader_name[processor],
-					" - Vertex buffer", info->num_inputs,
+		si_dump_descriptor_list(&sctx->vertex_buffers, name,
+					" - Vertex buffer", 4, info->num_inputs,
 					si_identity, f);
 	}
 
-	for (unsigned i = 0; i < SI_NUM_SHADER_DESCS; ++i, ++descs)
-		si_dump_descriptor_list(descs, shader_name[processor], elem_name[i],
-					util_last_bit(enabled_slots[i] | required_slots[i]),
-					remap_func[i], f);
+	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS],
+				name, " - Constant buffer", 4,
+				util_last_bit(enabled_constbuf),
+				si_get_constbuf_slot, f);
+	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS],
+				name, " - Shader buffer", 4,
+				util_last_bit(enabled_shaderbuf),
+				si_get_shaderbuf_slot, f);
+	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_SAMPLERS_AND_IMAGES],
+				name, " - Sampler", 16,
+				util_last_bit(enabled_samplers),
+				si_get_sampler_slot, f);
+	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_SAMPLERS_AND_IMAGES],
+				name, " - Image", 8,
+				util_last_bit(enabled_images),
+				si_get_image_slot, f);
 }
 
 static void si_dump_gfx_descriptors(struct si_context *sctx,
@@ -818,7 +824,7 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		}
 
 		si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
-					"", "RW buffers", SI_NUM_RW_BUFFERS,
+					"", "RW buffers", 4, SI_NUM_RW_BUFFERS,
 					si_identity, f);
 		si_dump_gfx_descriptors(sctx, &sctx->vs_shader, f);
 		si_dump_gfx_descriptors(sctx, &sctx->tcs_shader, f);
