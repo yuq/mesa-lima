@@ -35,7 +35,6 @@
 #ifndef SVGA_WINSYS_H_
 #define SVGA_WINSYS_H_
 
-
 #include "svga_types.h"
 #include "svga_reg.h"
 #include "svga3d_reg.h"
@@ -101,6 +100,7 @@ struct svga_winsys_stats_timeframe {
 
 enum svga_stats_count {
    SVGA_STATS_COUNT_BLENDSTATE,
+   SVGA_STATS_COUNT_BLITBLITTERCOPY,
    SVGA_STATS_COUNT_DEPTHSTENCILSTATE,
    SVGA_STATS_COUNT_RASTERIZERSTATE,
    SVGA_STATS_COUNT_SAMPLER,
@@ -112,11 +112,16 @@ enum svga_stats_count {
 };
 
 enum svga_stats_time {
+   SVGA_STATS_TIME_BLIT,
+   SVGA_STATS_TIME_BLITBLITTER,
+   SVGA_STATS_TIME_BLITFALLBACK,
    SVGA_STATS_TIME_BUFFERSFLUSH,
    SVGA_STATS_TIME_BUFFERTRANSFERMAP,
    SVGA_STATS_TIME_BUFFERTRANSFERUNMAP,
    SVGA_STATS_TIME_CONTEXTFINISH,
    SVGA_STATS_TIME_CONTEXTFLUSH,
+   SVGA_STATS_TIME_COPYREGION,
+   SVGA_STATS_TIME_COPYREGIONFALLBACK,
    SVGA_STATS_TIME_CREATEBACKEDSURFACEVIEW,
    SVGA_STATS_TIME_CREATEBUFFER,
    SVGA_STATS_TIME_CREATECONTEXT,
@@ -134,6 +139,7 @@ enum svga_stats_time {
    SVGA_STATS_TIME_EMITFS,
    SVGA_STATS_TIME_EMITGS,
    SVGA_STATS_TIME_EMITVS,
+   SVGA_STATS_TIME_EMULATESURFACEVIEW,
    SVGA_STATS_TIME_FENCEFINISH,
    SVGA_STATS_TIME_GENERATEINDICES,
    SVGA_STATS_TIME_HWTNLDRAWARRAYS,
@@ -165,20 +171,26 @@ enum svga_stats_time {
 
 #define SVGA_STATS_COUNT_NAMES                \
    SVGA_STATS_PREFIX "BlendState",            \
+   SVGA_STATS_PREFIX "BlitBlitterCopy",       \
    SVGA_STATS_PREFIX "DepthStencilState",     \
    SVGA_STATS_PREFIX "RasterizerState",       \
    SVGA_STATS_PREFIX "Sampler",               \
    SVGA_STATS_PREFIX "SamplerView",           \
    SVGA_STATS_PREFIX "SurfaceWriteFlush",     \
    SVGA_STATS_PREFIX "TextureReadback",       \
-   SVGA_STATS_PREFIX "VertexElement"
+   SVGA_STATS_PREFIX "VertexElement"          \
 
 #define SVGA_STATS_TIME_NAMES                       \
+   SVGA_STATS_PREFIX "Blit",                        \
+   SVGA_STATS_PREFIX "BlitBlitter",                 \
+   SVGA_STATS_PREFIX "BlitFallback",                \
    SVGA_STATS_PREFIX "BuffersFlush",                \
    SVGA_STATS_PREFIX "BufferTransferMap",           \
    SVGA_STATS_PREFIX "BufferTransferUnmap",         \
    SVGA_STATS_PREFIX "ContextFinish",               \
    SVGA_STATS_PREFIX "ContextFlush",                \
+   SVGA_STATS_PREFIX "CopyRegion",                  \
+   SVGA_STATS_PREFIX "CopyRegionFallback",          \
    SVGA_STATS_PREFIX "CreateBackedSurfaceView",     \
    SVGA_STATS_PREFIX "CreateBuffer",                \
    SVGA_STATS_PREFIX "CreateContext",               \
@@ -196,6 +208,7 @@ enum svga_stats_time {
    SVGA_STATS_PREFIX "EmitFS",                      \
    SVGA_STATS_PREFIX "EmitGS",                      \
    SVGA_STATS_PREFIX "EmitVS",                      \
+   SVGA_STATS_PREFIX "EmulateSurfaceView",          \
    SVGA_STATS_PREFIX "FenceFinish",                 \
    SVGA_STATS_PREFIX "GenerateIndices",             \
    SVGA_STATS_PREFIX "HWtnlDrawArrays",             \
