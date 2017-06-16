@@ -34,6 +34,8 @@
 
 #include <stdio.h>
 
+#include "amd/common/ac_binary.h"
+
 #include "radeon/radeon_winsys.h"
 
 #include "util/disk_cache.h"
@@ -131,6 +133,9 @@ struct r600_common_context;
 struct r600_perfcounters;
 struct tgsi_shader_info;
 struct r600_qbo_state;
+
+void radeon_shader_binary_init(struct ac_shader_binary *b);
+void radeon_shader_binary_clean(struct ac_shader_binary *b);
 
 /* Only 32-bit buffer allocations are supported, gallium doesn't support more
  * at the moment.

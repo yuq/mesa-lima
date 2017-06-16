@@ -64,6 +64,27 @@ struct r600_multi_fence {
 };
 
 /*
+ * shader binary helpers.
+ */
+void radeon_shader_binary_init(struct ac_shader_binary *b)
+{
+	memset(b, 0, sizeof(*b));
+}
+
+void radeon_shader_binary_clean(struct ac_shader_binary *b)
+{
+	if (!b)
+		return;
+	FREE(b->code);
+	FREE(b->config);
+	FREE(b->rodata);
+	FREE(b->global_symbol_offsets);
+	FREE(b->relocs);
+	FREE(b->disasm_string);
+	FREE(b->llvm_ir_string);
+}
+
+/*
  * pipe_context
  */
 

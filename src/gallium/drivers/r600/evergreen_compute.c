@@ -180,27 +180,6 @@ static void evergreen_cs_set_constant_buffer(struct r600_context *rctx,
 #define R_028850_SQ_PGM_RESOURCES_PS                 0x028850
 
 #ifdef HAVE_OPENCL
-/*
- * shader binary helpers.
- */
-static void r600_shader_binary_init(struct ac_shader_binary *b)
-{
-	memset(b, 0, sizeof(*b));
-}
-
-static void r600_shader_binary_clean(struct ac_shader_binary *b)
-{
-	if (!b)
-		return;
-	FREE(b->code);
-	FREE(b->config);
-	FREE(b->rodata);
-	FREE(b->global_symbol_offsets);
-	FREE(b->relocs);
-	FREE(b->disasm_string);
-	FREE(b->llvm_ir_string);
-}
-
 static void parse_symbol_table(Elf_Data *symbol_table_data,
 				const GElf_Shdr *symbol_table_header,
 				struct ac_shader_binary *binary)
@@ -435,7 +414,7 @@ static void *evergreen_create_compute_state(struct pipe_context *ctx,
 	COMPUTE_DBG(rctx->screen, "*** evergreen_create_compute_state\n");
 	header = cso->prog;
 	code = cso->prog + sizeof(struct pipe_llvm_program_header);
-	r600_shader_binary_init(&shader->binary);
+	radeon_shader_binary_init(&shader->binary);
 	r600_elf_read(code, header->num_bytes, &shader->binary);
 	r600_create_shader(&shader->bc, &shader->binary, &use_kill);
 
@@ -467,7 +446,7 @@ static void evergreen_delete_compute_state(struct pipe_context *ctx, void *state
 		return;
 
 #ifdef HAVE_OPENCL
-	r600_shader_binary_clean(&shader->binary);
+	radeon_shader_binary_clean(&shader->binary);
 #endif
 	r600_destroy_shader(&shader->bc);
 
