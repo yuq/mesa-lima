@@ -1187,15 +1187,45 @@ fs_generator::generate_ddy(const fs_inst *inst,
 {
    if (inst->opcode == FS_OPCODE_DDY_FINE) {
       /* produce accurate derivatives */
-      struct brw_reg src0 = stride(src, 4, 4, 1);
-      struct brw_reg src1 = stride(src, 4, 4, 1);
-      src0.swizzle = BRW_SWIZZLE_XYXY;
-      src1.swizzle = BRW_SWIZZLE_ZWZW;
+      if (devinfo->gen >= 11) {
+         src = stride(src, 0, 2, 1);
+         struct brw_reg src_0  = byte_offset(src,  0 * sizeof(float));
+         struct brw_reg src_2  = byte_offset(src,  2 * sizeof(float));
+         struct brw_reg src_4  = byte_offset(src,  4 * sizeof(float));
+         struct brw_reg src_6  = byte_offset(src,  6 * sizeof(float));
+         struct brw_reg src_8  = byte_offset(src,  8 * sizeof(float));
+         struct brw_reg src_10 = byte_offset(src, 10 * sizeof(float));
+         struct brw_reg src_12 = byte_offset(src, 12 * sizeof(float));
+         struct brw_reg src_14 = byte_offset(src, 14 * sizeof(float));
 
-      brw_push_insn_state(p);
-      brw_set_default_access_mode(p, BRW_ALIGN_16);
-      brw_ADD(p, dst, negate(src0), src1);
-      brw_pop_insn_state(p);
+         struct brw_reg dst_0  = byte_offset(dst,  0 * sizeof(float));
+         struct brw_reg dst_4  = byte_offset(dst,  4 * sizeof(float));
+         struct brw_reg dst_8  = byte_offset(dst,  8 * sizeof(float));
+         struct brw_reg dst_12 = byte_offset(dst, 12 * sizeof(float));
+
+         brw_push_insn_state(p);
+         brw_set_default_exec_size(p, BRW_EXECUTE_4);
+
+         brw_ADD(p, dst_0, negate(src_0), src_2);
+         brw_ADD(p, dst_4, negate(src_4), src_6);
+
+         if (inst->exec_size == 16) {
+            brw_ADD(p, dst_8,  negate(src_8),  src_10);
+            brw_ADD(p, dst_12, negate(src_12), src_14);
+         }
+
+         brw_pop_insn_state(p);
+      } else {
+         struct brw_reg src0 = stride(src, 4, 4, 1);
+         struct brw_reg src1 = stride(src, 4, 4, 1);
+         src0.swizzle = BRW_SWIZZLE_XYXY;
+         src1.swizzle = BRW_SWIZZLE_ZWZW;
+
+         brw_push_insn_state(p);
+         brw_set_default_access_mode(p, BRW_ALIGN_16);
+         brw_ADD(p, dst, negate(src0), src1);
+         brw_pop_insn_state(p);
+      }
    } else {
       /* replicate the derivative at the top-left pixel to other pixels */
       struct brw_reg src0 = stride(src, 4, 4, 0);
