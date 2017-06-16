@@ -3227,6 +3227,12 @@ si_make_texture_descriptor(struct si_screen *screen,
 		data_format = V_008F14_IMG_DATA_FORMAT_24_8;
 	}
 
+	/* S8 with Z32 HTILE needs a special format. */
+	if (screen->b.chip_class >= GFX9 &&
+	    pipe_format == PIPE_FORMAT_S8_UINT &&
+	    tex->tc_compatible_htile)
+		data_format = V_008F14_IMG_DATA_FORMAT_S8_32;
+
 	if (!sampler &&
 	    (res->target == PIPE_TEXTURE_CUBE ||
 	     res->target == PIPE_TEXTURE_CUBE_ARRAY ||
