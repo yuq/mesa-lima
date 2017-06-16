@@ -1493,7 +1493,8 @@ static void tex_fetch_args(
 		LLVMValueRef filler;
 
 		/* Use 0.5, so that we don't sample the border color. */
-		if (opcode == TGSI_OPCODE_TXF)
+		if (opcode == TGSI_OPCODE_TXF ||
+		    opcode == TGSI_OPCODE_TXF_LZ)
 			filler = ctx->i32_0;
 		else
 			filler = LLVMConstReal(ctx->f32, 0.5);
