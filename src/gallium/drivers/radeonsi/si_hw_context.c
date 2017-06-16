@@ -129,13 +129,17 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	r600_preflush_suspend_features(&ctx->b);
 
-	ctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
-			SI_CONTEXT_PS_PARTIAL_FLUSH;
-
 	/* DRM 3.1.0 doesn't flush TC for VI correctly. */
-	if (ctx->b.chip_class == VI && ctx->b.screen->info.drm_minor <= 1)
-		ctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2 |
+	if (ctx->b.chip_class == VI && ctx->b.screen->info.drm_minor <= 1) {
+		ctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+				SI_CONTEXT_CS_PARTIAL_FLUSH |
+				SI_CONTEXT_INV_GLOBAL_L2 |
 				SI_CONTEXT_INV_VMEM_L1;
+	} else if (ctx->b.chip_class == SI) {
+		/* The kernel doesn't wait for idle before doing SURFACE_SYNC. */
+		ctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+				SI_CONTEXT_CS_PARTIAL_FLUSH;
+	}
 
 	si_emit_cache_flush(ctx);
 
