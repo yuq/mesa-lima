@@ -979,20 +979,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    mt->offset = offset;
    mt->tiling = tiling;
 
-   if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX)) {
+   if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
-
-      /* Since CCS_E can compress more than just clear color, we create the
-       * CCS for it up-front.  For CCS_D which only compresses clears, we
-       * create the CCS on-demand when a clear occurs that wants one.
-       */
-      if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
-         if (!intel_miptree_alloc_ccs(brw, mt)) {
-            intel_miptree_release(&mt);
-            return NULL;
-         }
-      }
-   }
 
    return mt;
 }
@@ -1124,6 +1112,17 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
 
       if (draw_x != 0 || draw_y != 0) {
          _mesa_error(&brw->ctx, GL_INVALID_OPERATION, __func__);
+         intel_miptree_release(&mt);
+         return NULL;
+      }
+   }
+
+   /* Since CCS_E can compress more than just clear color, we create the CCS
+    * for it up-front.  For CCS_D which only compresses clears, we create the
+    * CCS on-demand when a clear occurs that wants one.
+    */
+   if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
+      if (!intel_miptree_alloc_ccs(brw, mt)) {
          intel_miptree_release(&mt);
          return NULL;
       }
