@@ -916,6 +916,8 @@ svga_get_driver_query_info(struct pipe_screen *screen,
             PIPE_DRIVER_QUERY_TYPE_UINT64),
       QUERY("num-generate-mipmap", SVGA_QUERY_NUM_GENERATE_MIPMAP,
             PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-failed-allocations", SVGA_QUERY_NUM_FAILED_ALLOCATIONS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
    };
 #undef QUERY
 
