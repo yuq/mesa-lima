@@ -1041,7 +1041,8 @@ miptree_create_for_planar_image(struct brw_context *brw,
 struct intel_mipmap_tree *
 intel_miptree_create_for_dri_image(struct brw_context *brw,
                                    __DRIimage *image, GLenum target,
-                                   enum isl_colorspace colorspace)
+                                   enum isl_colorspace colorspace,
+                                   bool is_winsys_image)
 {
    if (image->planar_format && image->planar_format->nplanes > 0) {
       assert(colorspace == ISL_COLORSPACE_NONE ||
@@ -1083,6 +1084,16 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    if (!brw->ctx.TextureFormatSupported[format])
       return NULL;
 
+   /* If this image comes in from a window system, we have different
+    * requirements than if it comes in via an EGL import operation.  Window
+    * system images can use any form of auxiliary compression we wish because
+    * they get "flushed" before being handed off to the window system and we
+    * have the opportunity to do resolves.  Window system buffers also may be
+    * used for scanout so we need to flag that appropriately.
+    */
+   const uint32_t mt_layout_flags =
+      is_winsys_image ? MIPTREE_LAYOUT_FOR_SCANOUT : MIPTREE_LAYOUT_DISABLE_AUX;
+
    /* Disable creation of the texture's aux buffers because the driver exposes
     * no EGL API to manage them. That is, there is no API for resolving the aux
     * buffer's content to the main buffer nor for invalidating the aux buffer's
@@ -1091,8 +1102,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    struct intel_mipmap_tree *mt =
       intel_miptree_create_for_bo(brw, image->bo, format,
                                   image->offset, image->width, image->height, 1,
-                                  image->pitch,
-                                  MIPTREE_LAYOUT_DISABLE_AUX);
+                                  image->pitch, mt_layout_flags);
    if (mt == NULL)
       return NULL;
 

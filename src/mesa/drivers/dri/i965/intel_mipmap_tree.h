@@ -690,7 +690,8 @@ struct intel_mipmap_tree *
 intel_miptree_create_for_dri_image(struct brw_context *brw,
                                    __DRIimage *image,
                                    GLenum target,
-                                   enum isl_colorspace colorspace);
+                                   enum isl_colorspace colorspace,
+                                   bool is_winsys_image);
 
 bool
 intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
