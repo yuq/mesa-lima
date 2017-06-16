@@ -65,7 +65,7 @@ struct lima_vs_shader_state {
 };
 
 struct lima_rasterizer_state {
-   int dummy;
+   struct pipe_rasterizer_state base;
 };
 
 struct lima_blend_state {
@@ -102,6 +102,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_VIEWPORT     = (1 << 6),
       LIMA_CONTEXT_DIRTY_SCISSOR      = (1 << 7),
       LIMA_CONTEXT_DIRTY_INDEX_BUFF   = (1 << 8),
+      LIMA_CONTEXT_DIRTY_RASTERIZER   = (1 << 9),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -117,6 +118,7 @@ struct lima_context {
    struct lima_vertex_element_state *vertex_elements;
    struct lima_context_vertex_buffer vertex_buffers;
    struct pipe_index_buffer index_buffer;
+   struct lima_rasterizer_state *rasterizer;
 
    struct lima_buffer *plb;
    int plb_plbu_offset;
