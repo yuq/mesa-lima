@@ -1163,20 +1163,17 @@ fs_generator::generate_ddx(const fs_inst *inst,
       width = BRW_WIDTH_4;
    }
 
-   struct brw_reg src0 = brw_reg(src.file, src.nr, 1,
-                                 src.negate, src.abs,
-				 BRW_REGISTER_TYPE_F,
-				 vstride,
-				 width,
-				 BRW_HORIZONTAL_STRIDE_0,
-				 BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
-   struct brw_reg src1 = brw_reg(src.file, src.nr, 0,
-                                 src.negate, src.abs,
-				 BRW_REGISTER_TYPE_F,
-				 vstride,
-				 width,
-				 BRW_HORIZONTAL_STRIDE_0,
-				 BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
+   struct brw_reg src0 = src;
+   struct brw_reg src1 = src;
+
+   src0.subnr   = sizeof(float);
+   src0.vstride = vstride;
+   src0.width   = width;
+   src0.hstride = BRW_HORIZONTAL_STRIDE_0;
+   src1.vstride = vstride;
+   src1.width   = width;
+   src1.hstride = BRW_HORIZONTAL_STRIDE_0;
+
    brw_ADD(p, dst, src0, negate(src1));
 }
 
@@ -1190,40 +1187,22 @@ fs_generator::generate_ddy(const fs_inst *inst,
 {
    if (inst->opcode == FS_OPCODE_DDY_FINE) {
       /* produce accurate derivatives */
-      struct brw_reg src0 = brw_reg(src.file, src.nr, 0,
-                                    src.negate, src.abs,
-                                    BRW_REGISTER_TYPE_F,
-                                    BRW_VERTICAL_STRIDE_4,
-                                    BRW_WIDTH_4,
-                                    BRW_HORIZONTAL_STRIDE_1,
-                                    BRW_SWIZZLE_XYXY, WRITEMASK_XYZW);
-      struct brw_reg src1 = brw_reg(src.file, src.nr, 0,
-                                    src.negate, src.abs,
-                                    BRW_REGISTER_TYPE_F,
-                                    BRW_VERTICAL_STRIDE_4,
-                                    BRW_WIDTH_4,
-                                    BRW_HORIZONTAL_STRIDE_1,
-                                    BRW_SWIZZLE_ZWZW, WRITEMASK_XYZW);
+      struct brw_reg src0 = stride(src, 4, 4, 1);
+      struct brw_reg src1 = stride(src, 4, 4, 1);
+      src0.swizzle = BRW_SWIZZLE_XYXY;
+      src1.swizzle = BRW_SWIZZLE_ZWZW;
+
       brw_push_insn_state(p);
       brw_set_default_access_mode(p, BRW_ALIGN_16);
       brw_ADD(p, dst, negate(src0), src1);
       brw_pop_insn_state(p);
    } else {
       /* replicate the derivative at the top-left pixel to other pixels */
-      struct brw_reg src0 = brw_reg(src.file, src.nr, 0,
-                                    src.negate, src.abs,
-                                    BRW_REGISTER_TYPE_F,
-                                    BRW_VERTICAL_STRIDE_4,
-                                    BRW_WIDTH_4,
-                                    BRW_HORIZONTAL_STRIDE_0,
-                                    BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
-      struct brw_reg src1 = brw_reg(src.file, src.nr, 2,
-                                    src.negate, src.abs,
-                                    BRW_REGISTER_TYPE_F,
-                                    BRW_VERTICAL_STRIDE_4,
-                                    BRW_WIDTH_4,
-                                    BRW_HORIZONTAL_STRIDE_0,
-                                    BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
+      struct brw_reg src0 = stride(src, 4, 4, 0);
+      struct brw_reg src1 = stride(src, 4, 4, 0);
+      src0.subnr = 0 * sizeof(float);
+      src1.subnr = 2 * sizeof(float);
+
       brw_ADD(p, dst, negate(src0), src1);
    }
 }
