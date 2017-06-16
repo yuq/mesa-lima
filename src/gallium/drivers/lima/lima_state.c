@@ -102,13 +102,15 @@ static void *
 lima_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                                       const struct pipe_depth_stencil_alpha_state *cso)
 {
+   printf("dummy %s\n", __func__);
+
    struct lima_depth_stencil_alpha_state *so;
 
    so = CALLOC_STRUCT(lima_depth_stencil_alpha_state);
    if (!so)
       return NULL;
 
-   printf("dummy %s\n", __func__);
+   so->base = *cso;
 
    return so;
 }
@@ -117,6 +119,11 @@ static void
 lima_bind_depth_stencil_alpha_state(struct pipe_context *pctx, void *hwcso)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->zsa = hwcso;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_ZSA;
 }
 
 static void
