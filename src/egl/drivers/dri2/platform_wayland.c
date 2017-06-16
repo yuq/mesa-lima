@@ -637,51 +637,40 @@ static const struct wl_callback_listener throttle_listener = {
    .done = wayland_throttle_callback
 };
 
-static void
-create_wl_buffer(struct dri2_egl_surface *dri2_surf)
+static struct wl_buffer *
+create_wl_buffer(struct dri2_egl_display *dri2_dpy,
+                 struct dri2_egl_surface *dri2_surf,
+                 __DRIimage *image)
 {
-   struct dri2_egl_display *dri2_dpy =
-      dri2_egl_display(dri2_surf->base.Resource.Display);
-   __DRIimage *image;
+   struct wl_buffer *ret;
    int fd, stride, name;
 
-   if (dri2_surf->current->wl_buffer != NULL)
-      return;
-
-   if (dri2_dpy->is_different_gpu) {
-      image = dri2_surf->current->linear_copy;
-   } else {
-      image = dri2_surf->current->dri_image;
-   }
    if (dri2_dpy->capabilities & WL_DRM_CAPABILITY_PRIME) {
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FD, &fd);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
 
-      dri2_surf->current->wl_buffer =
-         wl_drm_create_prime_buffer(dri2_surf->wl_drm_wrapper,
-                                    fd,
-                                    dri2_surf->base.Width,
-                                    dri2_surf->base.Height,
-                                    dri2_surf->format,
-                                    0, stride,
-                                    0, 0,
-                                    0, 0);
+      ret = wl_drm_create_prime_buffer(dri2_surf->wl_drm_wrapper,
+                                       fd,
+                                       dri2_surf->base.Width,
+                                       dri2_surf->base.Height,
+                                       dri2_surf->format,
+                                       0, stride,
+                                       0, 0,
+                                       0, 0);
       close(fd);
    } else {
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_NAME, &name);
       dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
 
-      dri2_surf->current->wl_buffer =
-         wl_drm_create_buffer(dri2_surf->wl_drm_wrapper,
-                              name,
-                              dri2_surf->base.Width,
-                              dri2_surf->base.Height,
-                              stride,
-                              dri2_surf->format);
+      ret = wl_drm_create_buffer(dri2_surf->wl_drm_wrapper,
+                                 name,
+                                 dri2_surf->base.Width,
+                                 dri2_surf->base.Height,
+                                 stride,
+                                 dri2_surf->format);
    }
 
-   wl_buffer_add_listener(dri2_surf->current->wl_buffer,
-                          &wl_buffer_listener, dri2_surf);
+   return ret;
 }
 
 static EGLBoolean
@@ -741,7 +730,20 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
    dri2_surf->current = dri2_surf->back;
    dri2_surf->back = NULL;
 
-   create_wl_buffer(dri2_surf);
+   if (!dri2_surf->current->wl_buffer) {
+      __DRIimage *image;
+
+      if (dri2_dpy->is_different_gpu)
+         image = dri2_surf->current->linear_copy;
+      else
+         image = dri2_surf->current->dri_image;
+
+      dri2_surf->current->wl_buffer =
+         create_wl_buffer(dri2_dpy, dri2_surf, image);
+
+      wl_buffer_add_listener(dri2_surf->current->wl_buffer,
+                             &wl_buffer_listener, dri2_surf);
+   }
 
    wl_surface_attach(dri2_surf->wl_surface_wrapper,
                      dri2_surf->current->wl_buffer,
