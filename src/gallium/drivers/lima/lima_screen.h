@@ -31,6 +31,8 @@
 
 #include <lima.h>
 
+#define LIMA_MAX_MIP_LEVELS 12
+
 struct lima_screen {
    struct pipe_screen base;
 

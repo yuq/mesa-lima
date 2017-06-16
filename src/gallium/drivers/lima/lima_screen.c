@@ -68,7 +68,11 @@ lima_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
    case PIPE_CAP_ANISOTROPIC_FILTER:
    case PIPE_CAP_POINT_SPRITE:
+      return 0;
+
    case PIPE_CAP_MAX_RENDER_TARGETS:
+      return 1;
+
    case PIPE_CAP_OCCLUSION_QUERY:
    case PIPE_CAP_QUERY_TIME_ELAPSED:
       return 0;
@@ -77,7 +81,11 @@ lima_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return 1;
 
    case PIPE_CAP_TEXTURE_SWIZZLE:
+      return 0;
+
    case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
+      return LIMA_MAX_MIP_LEVELS;
+
    case PIPE_CAP_MAX_TEXTURE_3D_LEVELS:
    case PIPE_CAP_MAX_TEXTURE_CUBE_LEVELS:
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
@@ -140,7 +148,11 @@ lima_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_QUERY_PIPELINE_STATISTICS:
    case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
    case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
+      return 0;
+
    case PIPE_CAP_MAX_VIEWPORTS:
+      return 1;
+
    case PIPE_CAP_ENDIANNESS:
    case PIPE_CAP_MIXED_FRAMEBUFFER_SIZES:
    case PIPE_CAP_TGSI_VS_LAYER_VIEWPORT:
