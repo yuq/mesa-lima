@@ -101,6 +101,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_VERTEX_BUFF  = (1 << 5),
       LIMA_CONTEXT_DIRTY_VIEWPORT     = (1 << 6),
       LIMA_CONTEXT_DIRTY_SCISSOR      = (1 << 7),
+      LIMA_CONTEXT_DIRTY_INDEX_BUFF   = (1 << 8),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -115,6 +116,7 @@ struct lima_context {
    struct lima_fs_shader_state *fs;
    struct lima_vertex_element_state *vertex_elements;
    struct lima_context_vertex_buffer vertex_buffers;
+   struct pipe_index_buffer index_buffer;
 
    struct lima_buffer *plb;
    int plb_plbu_offset;

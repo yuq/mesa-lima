@@ -236,6 +236,19 @@ lima_set_index_buffer(struct pipe_context *pctx,
                       const struct pipe_index_buffer *ib)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   if (ib) {
+      pipe_resource_reference(&ctx->index_buffer.buffer, ib->buffer);
+      ctx->index_buffer.index_size = ib->index_size;
+      ctx->index_buffer.offset = ib->offset;
+      ctx->index_buffer.user_buffer = ib->user_buffer;
+   } else {
+      pipe_resource_reference(&ctx->index_buffer.buffer, NULL);
+   }
+
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_INDEX_BUFF;
 }
 
 static void
@@ -319,4 +332,6 @@ lima_state_fini(struct lima_context *ctx)
 
    pipe_surface_reference(&ctx->framebuffer.cbuf, NULL);
    pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
+
+   pipe_resource_reference(&ctx->index_buffer.buffer, NULL);
 }
