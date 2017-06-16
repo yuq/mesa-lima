@@ -138,7 +138,10 @@ svga_buffer_create_hw_storage(struct svga_screen *ss,
 }
 
 
-
+/**
+ * Allocate graphics memory for vertex/index/constant/etc buffer (not
+ * textures).
+ */
 enum pipe_error
 svga_buffer_create_host_surface(struct svga_screen *ss,
                                 struct svga_buffer *sbuf)
