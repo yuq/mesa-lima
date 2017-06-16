@@ -3527,18 +3527,41 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader *shader = ctx->shader;
 	struct gallivm_state *gallivm = &ctx->gallivm;
+	const struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMValueRef interp_param;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	int input_index = inst->Src[0].Register.Index;
+	const struct tgsi_full_src_register *input = &inst->Src[0];
+	int input_base, input_array_size;
 	int chan;
 	int i;
-	LLVMValueRef attr_number;
 	LLVMValueRef params = LLVMGetParam(ctx->main_fn, SI_PARAM_PRIM_MASK);
+	LLVMValueRef array_idx;
 	int interp_param_idx;
-	unsigned interp = shader->selector->info.input_interpolate[input_index];
+	unsigned interp;
 	unsigned location;
 
-	assert(inst->Src[0].Register.File == TGSI_FILE_INPUT);
+	assert(input->Register.File == TGSI_FILE_INPUT);
+
+	if (input->Register.Indirect) {
+		unsigned array_id = input->Indirect.ArrayID;
+
+		if (array_id) {
+			input_base = info->input_array_first[array_id];
+			input_array_size = info->input_array_last[array_id] - input_base + 1;
+		} else {
+			input_base = inst->Src[0].Register.Index;
+			input_array_size = info->num_inputs - input_base;
+		}
+
+		array_idx = get_indirect_index(ctx, &input->Indirect,
+					       input->Register.Index - input_base);
+	} else {
+		input_base = inst->Src[0].Register.Index;
+		input_array_size = 1;
+		array_idx = ctx->i32_0;
+	}
+
+	interp = shader->selector->info.input_interpolate[input_base];
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
 	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE)
@@ -3553,8 +3576,6 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 		interp_param = LLVMGetParam(ctx->main_fn, interp_param_idx);
 	else
 		interp_param = NULL;
-
-	attr_number = LLVMConstInt(ctx->i32, input_index, 0);
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
 	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
@@ -3594,28 +3615,45 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 		interp_param = lp_build_gather_values(gallivm, ij_out, 2);
 	}
 
+	if (interp_param) {
+		interp_param = LLVMBuildBitCast(gallivm->builder,
+			interp_param, LLVMVectorType(ctx->f32, 2), "");
+	}
+
 	for (chan = 0; chan < 4; chan++) {
 		LLVMValueRef llvm_chan;
+		LLVMValueRef gather = LLVMGetUndef(LLVMVectorType(ctx->f32, input_array_size));
 		unsigned schan;
 
 		schan = tgsi_util_get_full_src_register_swizzle(&inst->Src[0], chan);
 		llvm_chan = LLVMConstInt(ctx->i32, schan, 0);
 
-		if (interp_param) {
-			interp_param = LLVMBuildBitCast(gallivm->builder,
-				interp_param, LLVMVectorType(ctx->f32, 2), "");
-			LLVMValueRef i = LLVMBuildExtractElement(
-				gallivm->builder, interp_param, ctx->i32_0, "");
-			LLVMValueRef j = LLVMBuildExtractElement(
-				gallivm->builder, interp_param, ctx->i32_1, "");
-			emit_data->output[chan] = ac_build_fs_interp(&ctx->ac,
-				llvm_chan, attr_number, params,
-				i, j);
-		} else {
-			emit_data->output[chan] = ac_build_fs_interp_mov(&ctx->ac,
-				LLVMConstInt(ctx->i32, 2, 0), /* P0 */
-				llvm_chan, attr_number, params);
+		for (unsigned i = 0; i < input_array_size; ++i) {
+			LLVMValueRef attr_number = LLVMConstInt(ctx->i32, input_base + i, false);
+			LLVMValueRef v;
+
+			if (interp_param) {
+				interp_param = LLVMBuildBitCast(gallivm->builder,
+					interp_param, LLVMVectorType(ctx->f32, 2), "");
+				LLVMValueRef i = LLVMBuildExtractElement(
+					gallivm->builder, interp_param, ctx->i32_0, "");
+				LLVMValueRef j = LLVMBuildExtractElement(
+					gallivm->builder, interp_param, ctx->i32_1, "");
+				v = ac_build_fs_interp(&ctx->ac,
+					llvm_chan, attr_number, params,
+					i, j);
+			} else {
+				v = ac_build_fs_interp_mov(&ctx->ac,
+					LLVMConstInt(ctx->i32, 2, 0), /* P0 */
+					llvm_chan, attr_number, params);
+			}
+
+			gather = LLVMBuildInsertElement(gallivm->builder,
+				gather, v, LLVMConstInt(ctx->i32, i, false), "");
 		}
+
+		emit_data->output[chan] = LLVMBuildExtractElement(
+			gallivm->builder, gather, array_idx, "");
 	}
 }
 
