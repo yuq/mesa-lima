@@ -130,13 +130,15 @@ static void *
 lima_create_rasterizer_state(struct pipe_context *pctx,
                              const struct pipe_rasterizer_state *cso)
 {
+   printf("dummy %s\n", __func__);
+
    struct lima_rasterizer_state *so;
 
    so = CALLOC_STRUCT(lima_rasterizer_state);
    if (!so)
       return NULL;
 
-   printf("dummy %s\n", __func__);
+   so->base = *cso;
 
    return so;
 }
@@ -145,6 +147,11 @@ static void
 lima_bind_rasterizer_state(struct pipe_context *pctx, void *hwcso)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->rasterizer = hwcso;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_RASTERIZER;
 }
 
 static void
