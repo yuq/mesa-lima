@@ -228,11 +228,10 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
    }
 
    if (mask & BUFFER_BITS_COLOR) {
-      const bool encode_srgb = ctx->Color.sRGBEnabled;
-      if (brw_blorp_clear_color(brw, fb, mask, partial_clear, encode_srgb)) {
-         debug_mask("blorp color", mask & BUFFER_BITS_COLOR);
-         mask &= ~BUFFER_BITS_COLOR;
-      }
+      brw_blorp_clear_color(brw, fb, mask, partial_clear,
+                            ctx->Color.sRGBEnabled);
+      debug_mask("blorp color", mask & BUFFER_BITS_COLOR);
+      mask &= ~BUFFER_BITS_COLOR;
    }
 
    if (brw->gen >= 6 && (mask & BUFFER_BITS_DEPTH_STENCIL)) {
@@ -241,9 +240,8 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
       mask &= ~BUFFER_BITS_DEPTH_STENCIL;
    }
 
-   GLbitfield tri_mask = mask & (BUFFER_BITS_COLOR |
-				 BUFFER_BIT_STENCIL |
-				 BUFFER_BIT_DEPTH);
+   GLbitfield tri_mask = mask & (BUFFER_BIT_STENCIL |
+                                 BUFFER_BIT_DEPTH);
 
    if (tri_mask) {
       debug_mask("tri", tri_mask);
@@ -256,7 +254,10 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
       }
    }
 
-   /* Any strange buffers get passed off to swrast */
+   /* Any strange buffers get passed off to swrast.  The only thing that
+    * should be left at this point is the accumulation buffer.
+    */
+   assert((mask & ~BUFFER_BIT_ACCUM) == 0);
    if (mask) {
       debug_mask("swrast", mask);
       _swrast_Clear(ctx, mask);

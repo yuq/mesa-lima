@@ -739,7 +739,7 @@ irb_logical_mt_layer(struct intel_renderbuffer *irb)
    return physical_to_logical_layer(irb->mt, irb->mt_layer);
 }
 
-static bool
+static void
 do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                       struct gl_renderbuffer *rb, unsigned buf,
                       bool partial_clear, bool encode_srgb)
@@ -764,7 +764,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
    /* If the clear region is empty, just return. */
    if (x0 == x1 || y0 == y1)
-      return true;
+      return;
 
    bool can_fast_clear = !partial_clear;
 
@@ -789,21 +789,20 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    unsigned level = irb->mt_level;
    const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
-   if (can_fast_clear) {
-      /* If the MCS buffer hasn't been allocated yet, we need to allocate
-       * it now.
-       */
-      if (!irb->mt->mcs_buf) {
-         assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
-         if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
-            /* MCS allocation failed--probably this will only happen in
-             * out-of-memory conditions.  But in any case, try to recover
-             * by falling back to a non-blorp clear technique.
-             */
-            return false;
-         }
+   /* If the MCS buffer hasn't been allocated yet, we need to allocate it now.
+    */
+   if (can_fast_clear && !irb->mt->mcs_buf) {
+      assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
+      if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
+         /* There are a few reasons in addition to out-of-memory, that can
+          * cause intel_miptree_alloc_non_msrt_mcs to fail.  Try to recover by
+          * falling back to non-fast clear.
+          */
+         can_fast_clear = false;
       }
+   }
 
+   if (can_fast_clear) {
       const enum isl_aux_state aux_state =
          intel_miptree_get_aux_state(irb->mt, irb->mt_level, logical_layer);
       union isl_color_value clear_color =
@@ -816,7 +815,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       if (aux_state == ISL_AUX_STATE_CLEAR &&
           memcmp(&irb->mt->fast_clear_color,
                  &clear_color, sizeof(clear_color)) == 0)
-         return true;
+         return;
 
       irb->mt->fast_clear_color = clear_color;
 
@@ -886,10 +885,10 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       blorp_batch_finish(&batch);
    }
 
-   return true;
+   return;
 }
 
-bool
+void
 brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
                       GLbitfield mask, bool partial_clear, bool encode_srgb)
 {
@@ -908,15 +907,11 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
       if (rb == NULL)
          continue;
 
-      if (!do_single_blorp_clear(brw, fb, rb, buf, partial_clear,
-                                 encode_srgb)) {
-         return false;
-      }
-
+      do_single_blorp_clear(brw, fb, rb, buf, partial_clear, encode_srgb);
       irb->need_downsample = true;
    }
 
-   return true;
+   return;
 }
 
 void
