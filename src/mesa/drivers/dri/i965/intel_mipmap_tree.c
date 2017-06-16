@@ -2536,20 +2536,6 @@ intel_miptree_prepare_render(struct brw_context *brw,
       intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
                                    false, false);
    }
-
-   /* For layered rendering non-compressed fast cleared buffers need to be
-    * resolved. Surface state can carry only one fast color clear value
-    * while each layer may have its own fast clear color value. For
-    * compressed buffers color value is available in the color buffer.
-    */
-   if (layer_count > 1 &&
-       !(mt->aux_disable & INTEL_AUX_DISABLE_CCS) &&
-       !intel_miptree_is_lossless_compressed(brw, mt)) {
-      assert(brw->gen >= 8);
-
-      intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
-                                   false, false);
-   }
 }
 
 void
