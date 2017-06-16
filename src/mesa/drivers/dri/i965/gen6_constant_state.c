@@ -68,9 +68,10 @@ brw_param_value(struct brw_context *brw,
 
    case BRW_PARAM_DOMAIN_PARAMETER: {
       unsigned idx = BRW_PARAM_PARAMETER_IDX(param);
+      unsigned offset = prog->Parameters->ParameterValueOffset[idx];
       unsigned comp = BRW_PARAM_PARAMETER_COMP(param);
       assert(idx < prog->Parameters->NumParameters);
-      return prog->Parameters->ParameterValues[idx][comp].u;
+      return prog->Parameters->ParameterValues[offset + comp].u;
    }
 
    case BRW_PARAM_DOMAIN_UNIFORM: {

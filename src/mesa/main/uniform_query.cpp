@@ -723,13 +723,15 @@ log_program_parameters(const struct gl_shader_program *shProg)
       printf("Program %d %s shader parameters:\n",
              shProg->Name, _mesa_shader_stage_to_string(i));
       for (unsigned j = 0; j < prog->Parameters->NumParameters; j++) {
-	 printf("%s: %p %f %f %f %f\n",
+         unsigned pvo = prog->Parameters->ParameterValueOffset[j];
+         printf("%s: %u %p %f %f %f %f\n",
 		prog->Parameters->Parameters[j].Name,
-		prog->Parameters->ParameterValues[j],
-		prog->Parameters->ParameterValues[j][0].f,
-		prog->Parameters->ParameterValues[j][1].f,
-		prog->Parameters->ParameterValues[j][2].f,
-		prog->Parameters->ParameterValues[j][3].f);
+                pvo,
+                prog->Parameters->ParameterValues + pvo,
+                prog->Parameters->ParameterValues[pvo].f,
+                prog->Parameters->ParameterValues[pvo + 1].f,
+                prog->Parameters->ParameterValues[pvo + 2].f,
+                prog->Parameters->ParameterValues[pvo + 3].f);
       }
    }
    fflush(stdout);

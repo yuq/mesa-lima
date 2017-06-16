@@ -2452,7 +2452,7 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
    for (unsigned i = 0; i < num_params; i++) {
       unsigned comps = 4;
       _mesa_add_parameter(params, PROGRAM_UNIFORM, name, comps,
-                          type->gl_type, NULL, NULL);
+                          type->gl_type, NULL, NULL, true);
    }
 
    /* The first part of the uniform that's processed determines the base
@@ -2582,9 +2582,10 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
             break;
          }
 
+         unsigned pvo = params->ParameterValueOffset[i];
          _mesa_uniform_attach_driver_storage(storage, dmul * columns, dmul,
                                              format,
-                                             &params->ParameterValues[i]);
+                                             &params->ParameterValues[pvo]);
 
          /* When a bindless sampler/image is bound to a texture/image unit, we
           * have to overwrite the constant value by the resident handle
@@ -2601,11 +2602,11 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
                if (storage->type->without_array()->is_sampler()) {
                   assert(unit >= 0 && unit < prog->sh.NumBindlessSamplers);
                   prog->sh.BindlessSamplers[unit].data =
-                     &params->ParameterValues[i] + j;
+                     &params->ParameterValues[pvo] + 4 * j;
                } else if (storage->type->without_array()->is_image()) {
                   assert(unit >= 0 && unit < prog->sh.NumBindlessImages);
                   prog->sh.BindlessImages[unit].data =
-                     &params->ParameterValues[i] + j;
+                     &params->ParameterValues[pvo] + 4 * j;
                }
             }
          }
