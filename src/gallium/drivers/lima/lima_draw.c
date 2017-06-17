@@ -209,43 +209,43 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    uint32_t *vs_cmd = ctx->gp_buffer->map + vs_cmd_offset;
 
    if (!info->indexed) {
-      vs_cmd[i++] = 0x00028000;
-      vs_cmd[i++] = 0x50000000;
-      vs_cmd[i++] = 0x00000001;
-      vs_cmd[i++] = 0x50000000;
+      vs_cmd[i++] = 0x00028000; /* ARRAYS_SEMAPHORE_BEGIN_1 */
+      vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
+      vs_cmd[i++] = 0x00000001; /* ARRAYS_SEMAPHORE_BEGIN_2 */
+      vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
    }
 
    vs_cmd[i++] = ctx->gp_buffer->va + vs_program_offset;
-   vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16);
+   vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16); /* SHADER_ADDRESS */
 
    /* 3 is prefetch, what's it? */
    vs_cmd[i++] = ((3 - 1) << 20) | ((align(ctx->vs->shader_size, 16) / 16 - 1) << 10);
-   vs_cmd[i++] = 0x10000040;
+   vs_cmd[i++] = 0x10000040; /* SHADER_INFO */
 
    /* assume to 1 before vs compiler is ready */
    int num_varryings = 1;
    int num_attributes = ctx->vertex_elements->num_elements;
 
    vs_cmd[i++] = ((num_varryings - 1) << 8) | ((num_attributes - 1) << 24);
-   vs_cmd[i++] = 0x10000042;
+   vs_cmd[i++] = 0x10000042; /* VARYING_ATTRIBUTE_COUNT */
 
    vs_cmd[i++] = 0x00000003;
-   vs_cmd[i++] = 0x10000041;
+   vs_cmd[i++] = 0x10000041; /* ?? */
 
    vs_cmd[i++] = ctx->gp_buffer->va + attribute_info_offset;
-   vs_cmd[i++] = 0x20000000 | (num_attributes << 17);
+   vs_cmd[i++] = 0x20000000 | (num_attributes << 17); /* ATTRIBUTES_ADDRESS */
 
    vs_cmd[i++] = ctx->gp_buffer->va + varying_info_offset;
-   vs_cmd[i++] = 0x20000008 | (num_varryings << 17);
+   vs_cmd[i++] = 0x20000008 | (num_varryings << 17); /* VARYINGS_ADDRESS */
 
    vs_cmd[i++] = (info->count << 24) | (info->indexed ? 1 : 0);
-   vs_cmd[i++] = 0x00000000 | (info->count >> 8);
+   vs_cmd[i++] = 0x00000000 | (info->count >> 8); /* DRAW */
 
    vs_cmd[i++] = 0x00000000;
-   vs_cmd[i++] = 0x60000000;
+   vs_cmd[i++] = 0x60000000; /* ?? */
 
-   vs_cmd[i++] = info->indexed ? 0x00018000 : 0x00000000;
-   vs_cmd[i++] = 0x50000000;
+   vs_cmd[i++] = info->indexed ? 0x00018000 : 0x00000000; /* ARRAYS_SEMAPHORE_NEXT : ARRAYS_SEMAPHORE_END */
+   vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
 
    return i << 2;
 }
