@@ -107,6 +107,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_ZSA          = (1 << 10),
       LIMA_CONTEXT_DIRTY_BLEND_COLOR  = (1 << 11),
       LIMA_CONTEXT_DIRTY_BLEND        = (1 << 12),
+      LIMA_CONTEXT_DIRTY_STENCIL_REF  = (1 << 13),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -126,6 +127,7 @@ struct lima_context {
    struct lima_depth_stencil_alpha_state *zsa;
    struct pipe_blend_color blend_color;
    struct lima_blend_state *blend;
+   struct pipe_stencil_ref stencil_ref;
 
    struct lima_buffer *plb;
    int plb_plbu_offset;
