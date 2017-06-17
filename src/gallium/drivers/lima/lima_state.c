@@ -110,6 +110,9 @@ lima_create_depth_stencil_alpha_state(struct pipe_context *pctx,
    if (!so)
       return NULL;
 
+   printf("depth enable=%d min_b=%f max_b=%f\n",
+          cso->depth.enabled, cso->depth.bounds_min, cso->depth.bounds_max);
+
    so->base = *cso;
 
    return so;
@@ -281,10 +284,17 @@ lima_set_viewport_states(struct pipe_context *pctx,
    ctx->viewport.width = viewport->scale[0] * 2;
    ctx->viewport.height = fabsf(viewport->scale[1] * 2);
 
-   printf("viewport scale=%f/%f/%f translate=%f/%f/%f orig=%f/%f/%f/%f\n",
+   /* reverse calculate the parameter of glDepthRange */
+   ctx->viewport.near = viewport->translate[2] - viewport->scale[2];
+   ctx->viewport.far = viewport->translate[2] + viewport->scale[2];
+
+   printf("viewport scale=%f/%f/%f translate=%f/%f/%f\n",
           viewport->scale[0], viewport->scale[1], viewport->scale[2],
-          viewport->translate[0], viewport->translate[1], viewport->translate[2],
+          viewport->translate[0], viewport->translate[1], viewport->translate[2]);
+   printf("glViewport x/y/w/h = %f/%f/%f/%f\n",
           ctx->viewport.x, ctx->viewport.y, ctx->viewport.width, ctx->viewport.height);
+   printf("glDepthRange n/f = %f/%f\n",
+          ctx->viewport.near, ctx->viewport.far);
 
    ctx->viewport.transform = *viewport;
    ctx->dirty |= LIMA_CONTEXT_DIRTY_VIEWPORT;
