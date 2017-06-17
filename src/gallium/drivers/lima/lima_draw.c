@@ -347,6 +347,190 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    return i << 2;
 }
 
+struct lima_render_state {
+   uint32_t blend_color_bg;
+   uint32_t blend_color_ra;
+   uint32_t alpha_blend;
+   uint32_t depth_test;
+   uint32_t depth_range;
+   uint32_t stencil_front;
+   uint32_t stencil_back;
+   uint32_t stencil_test;
+   uint32_t multi_sample;
+   uint32_t shader_address;
+   uint32_t varying_types;
+   uint32_t uniforms_address;
+   uint32_t textures_address;
+   uint32_t aux0;
+   uint32_t aux1;
+   uint32_t varyings_address;
+};
+
+static int
+lima_blend_func(enum pipe_blend_func pipe)
+{
+   switch (pipe) {
+   case PIPE_BLEND_ADD:
+      return 2;
+   case PIPE_BLEND_SUBTRACT:
+      return 0;
+   case PIPE_BLEND_REVERSE_SUBTRACT:
+      return 1;
+   case PIPE_BLEND_MIN:
+      return 4;
+   case PIPE_BLEND_MAX:
+      return 5;
+   }
+   return -1;
+}
+
+static int
+lima_blend_factor(enum pipe_blendfactor pipe)
+{
+   switch (pipe) {
+   case PIPE_BLENDFACTOR_ONE:
+      return 11;
+   case PIPE_BLENDFACTOR_SRC_COLOR:
+      return 0;
+   case PIPE_BLENDFACTOR_SRC_ALPHA:
+      return 16;
+   case PIPE_BLENDFACTOR_DST_ALPHA:
+      return 17;
+   case PIPE_BLENDFACTOR_DST_COLOR:
+      return 1;
+   case PIPE_BLENDFACTOR_SRC_ALPHA_SATURATE:
+      return 7;
+   case PIPE_BLENDFACTOR_CONST_COLOR:
+      return 2;
+   case PIPE_BLENDFACTOR_CONST_ALPHA:
+      return 18;
+   case PIPE_BLENDFACTOR_ZERO:
+      return 3;
+   case PIPE_BLENDFACTOR_INV_SRC_COLOR:
+      return 8;
+   case PIPE_BLENDFACTOR_INV_SRC_ALPHA:
+      return 24;
+   case PIPE_BLENDFACTOR_INV_DST_ALPHA:
+      return 25;
+   case PIPE_BLENDFACTOR_INV_DST_COLOR:
+      return 9;
+   case PIPE_BLENDFACTOR_INV_CONST_COLOR:
+      return 10;
+   case PIPE_BLENDFACTOR_INV_CONST_ALPHA:
+      return 26;
+   case PIPE_BLENDFACTOR_SRC1_COLOR:
+   case PIPE_BLENDFACTOR_SRC1_ALPHA:
+   case PIPE_BLENDFACTOR_INV_SRC1_COLOR:
+   case PIPE_BLENDFACTOR_INV_SRC1_ALPHA:
+      return -1; /* not support */
+   }
+   return -1;
+}
+
+static int
+lima_stencil_op(enum pipe_stencil_op pipe)
+{
+   switch (pipe) {
+   case PIPE_STENCIL_OP_KEEP:
+      return 0;
+   case PIPE_STENCIL_OP_ZERO:
+      return 2;
+   case PIPE_STENCIL_OP_REPLACE:
+      return 1;
+   case PIPE_STENCIL_OP_INCR:
+      return 6;
+   case PIPE_STENCIL_OP_DECR:
+      return 7;
+   case PIPE_STENCIL_OP_INCR_WRAP:
+      return 4;
+   case PIPE_STENCIL_OP_DECR_WRAP:
+      return 5;
+   case PIPE_STENCIL_OP_INVERT:
+      return 3;
+   }
+   return -1;
+}
+
+static void
+lima_pack_render_state(struct lima_context *ctx)
+{
+   struct lima_render_state *render = ctx->gp_buffer->map + render_state_offset;
+
+   /* do we need to check if blend enabled to setup these fields?
+    * ctx->blend->base.rt[0].blend_enable
+    *
+    * do hw support RGBA independ blend?
+    * PIPE_CAP_INDEP_BLEND_ENABLE
+    *
+    * how to handle the no cbuf only zbuf case?
+    */
+   struct pipe_rt_blend_state *rt = ctx->blend->base.rt;
+   render->blend_color_bg = float_to_ubyte(ctx->blend_color.color[2]) |
+      (float_to_ubyte(ctx->blend_color.color[1]) << 16);
+   render->blend_color_ra = float_to_ubyte(ctx->blend_color.color[0]) |
+      (float_to_ubyte(ctx->blend_color.color[3]) << 16);
+   render->alpha_blend = lima_blend_func(rt->rgb_func) |
+      (lima_blend_func(rt->alpha_func) << 3) |
+      (lima_blend_factor(rt->rgb_src_factor) << 6) |
+      (lima_blend_factor(rt->rgb_dst_factor) << 11) |
+      ((lima_blend_factor(rt->alpha_src_factor) & 0xF) << 16) |
+      ((lima_blend_factor(rt->alpha_dst_factor) & 0xF) << 20) |
+      0xFC000000; /* need check if this GLESv1 glAlphaFunc */
+
+   struct pipe_depth_state *depth = &ctx->zsa->base.depth;
+   //struct pipe_rasterizer_state *rst = &ctx->rasterizer->base;
+   render->depth_test = depth->enabled |
+      (depth->func << 1);
+   /* need more investigation */
+   //(some_transform(rst->offset_scale) << 16) |
+   //(some_transform(rst->offset_units) << 24) |
+
+   /* overlap with plbu? any place can remove one? */
+   render->depth_range = float_to_ushort(ctx->viewport.near) |
+      (float_to_ushort(ctx->viewport.far) << 16);
+
+   struct pipe_stencil_state *stencil = ctx->zsa->base.stencil;
+   struct pipe_stencil_ref *ref = &ctx->stencil_ref;
+   render->stencil_front = stencil[0].func |
+      (lima_stencil_op(stencil[0].fail_op) << 3) |
+      (lima_stencil_op(stencil[0].zfail_op) << 6) |
+      (lima_stencil_op(stencil[0].zpass_op) << 9) |
+      (ref->ref_value[0] << 16) |
+      (stencil[0].valuemask << 24);
+   render->stencil_back = stencil[1].func |
+      (lima_stencil_op(stencil[1].fail_op) << 3) |
+      (lima_stencil_op(stencil[1].zfail_op) << 6) |
+      (lima_stencil_op(stencil[1].zpass_op) << 9) |
+      (ref->ref_value[1] << 16) |
+      (stencil[1].valuemask << 24);
+
+   /* seems not correct? */
+   //struct pipe_alpha_state *alpha = &ctx->zsa->base.alpha;
+   render->stencil_test = 0;
+   //(stencil->enabled ? 0xFF : 0x00) | (float_to_ubyte(alpha->ref_value) << 16)
+
+   /* need more investigation */
+   render->multi_sample = 0x0000F807;
+
+   render->shader_address = (ctx->gp_buffer->va + fs_program_offset) |
+      ctx->fs->first_inst_size;
+
+   /* after compiler */
+   render->varying_types = 0x00000000;
+
+   /* seems not needed */
+   render->uniforms_address = 0x00000000;
+
+   render->textures_address = 0x00000000;
+
+   /* more investigation */
+   render->aux0 = 0x00000300;
+   render->aux1 = 0x00003000;
+
+   /* seems not needed */
+   render->varyings_address = 0x00000000;
+}
+
 static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -455,6 +639,8 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_STENCIL_REF) {
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_STENCIL_REF;
    }
+
+   lima_pack_render_state(ctx);
 
    int vs_cmd_size = lima_pack_vs_cmd(ctx, info);
    (void)vs_cmd_size;
