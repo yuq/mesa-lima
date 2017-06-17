@@ -24,8 +24,10 @@
  *      Adam Rak <adam.rak@streamnovation.com>
  */
 
+#ifdef HAVE_OPENCL
 #include <gelf.h>
 #include <libelf.h>
+#endif
 #include <stdio.h>
 #include <errno.h>
 #include "pipe/p_defines.h"
