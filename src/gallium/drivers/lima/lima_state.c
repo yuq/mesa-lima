@@ -319,6 +319,18 @@ lima_set_scissor_states(struct pipe_context *pctx,
    ctx->dirty |= LIMA_CONTEXT_DIRTY_SCISSOR;
 }
 
+static void
+lima_set_blend_color(struct pipe_context *pctx,
+                     const struct pipe_blend_color *blend_color)
+{
+   printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->blend_color = *blend_color;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_BLEND_COLOR;
+}
+
 void
 lima_state_init(struct lima_context *ctx)
 {
@@ -326,6 +338,7 @@ lima_state_init(struct lima_context *ctx)
    ctx->base.set_polygon_stipple = lima_set_polygon_stipple;
    ctx->base.set_viewport_states = lima_set_viewport_states;
    ctx->base.set_scissor_states = lima_set_scissor_states;
+   ctx->base.set_blend_color = lima_set_blend_color;
 
    ctx->base.set_vertex_buffers = lima_set_vertex_buffers;
    ctx->base.set_index_buffer = lima_set_index_buffer;
