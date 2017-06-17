@@ -69,7 +69,7 @@ struct lima_rasterizer_state {
 };
 
 struct lima_blend_state {
-   int dummy;
+   struct pipe_blend_state base;
 };
 
 struct lima_vertex_element_state {
@@ -106,6 +106,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_RASTERIZER   = (1 << 9),
       LIMA_CONTEXT_DIRTY_ZSA          = (1 << 10),
       LIMA_CONTEXT_DIRTY_BLEND_COLOR  = (1 << 11),
+      LIMA_CONTEXT_DIRTY_BLEND        = (1 << 12),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -124,6 +125,7 @@ struct lima_context {
    struct lima_rasterizer_state *rasterizer;
    struct lima_depth_stencil_alpha_state *zsa;
    struct pipe_blend_color blend_color;
+   struct lima_blend_state *blend;
 
    struct lima_buffer *plb;
    int plb_plbu_offset;
