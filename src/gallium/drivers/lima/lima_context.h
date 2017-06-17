@@ -57,6 +57,7 @@ struct lima_depth_stencil_alpha_state {
 struct lima_fs_shader_state {
    void *shader;
    int shader_size;
+   int first_inst_size;
 };
 
 struct lima_vs_shader_state {
