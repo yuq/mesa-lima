@@ -337,6 +337,18 @@ lima_set_blend_color(struct pipe_context *pctx,
    ctx->dirty |= LIMA_CONTEXT_DIRTY_BLEND_COLOR;
 }
 
+static void
+lima_set_stencil_ref(struct pipe_context *pctx,
+                     const struct pipe_stencil_ref *stencil_ref)
+{
+   printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->stencil_ref = *stencil_ref;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_STENCIL_REF;
+}
+
 void
 lima_state_init(struct lima_context *ctx)
 {
@@ -345,6 +357,7 @@ lima_state_init(struct lima_context *ctx)
    ctx->base.set_viewport_states = lima_set_viewport_states;
    ctx->base.set_scissor_states = lima_set_scissor_states;
    ctx->base.set_blend_color = lima_set_blend_color;
+   ctx->base.set_stencil_ref = lima_set_stencil_ref;
 
    ctx->base.set_vertex_buffers = lima_set_vertex_buffers;
    ctx->base.set_index_buffer = lima_set_index_buffer;
