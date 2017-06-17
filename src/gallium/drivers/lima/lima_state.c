@@ -173,13 +173,15 @@ static void *
 lima_create_blend_state(struct pipe_context *pctx,
                         const struct pipe_blend_state *cso)
 {
+   printf("dummy %s\n", __func__);
+
    struct lima_blend_state *so;
 
    so = CALLOC_STRUCT(lima_blend_state);
    if (!so)
       return NULL;
 
-   printf("dummy %s\n", __func__);
+   so->base = *cso;
 
    return so;
 }
@@ -188,6 +190,11 @@ static void
 lima_bind_blend_state(struct pipe_context *pctx, void *hwcso)
 {
    printf("dummy %s\n", __func__);
+
+   struct lima_context *ctx = lima_context(pctx);
+
+   ctx->blend = hwcso;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_BLEND;
 }
 
 static void
