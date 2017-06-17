@@ -249,6 +249,104 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    return i << 2;
 }
 
+static int
+lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
+{
+   int i = 0;
+   uint32_t *plbu_cmd = ctx->gp_buffer->map + plbu_cmd_offset;
+   struct lima_context_framebuffer *fb = &ctx->framebuffer;
+
+   plbu_cmd[i++] = 0x00000200;
+   plbu_cmd[i++] = 0x1000010B; /* PRIMITIVE_SETUP */
+
+   plbu_cmd[i++] = (fb->shift_max << 28) | (fb->shift_h << 16) | fb->shift_w;
+   plbu_cmd[i++] = 0x1000010C; /* BLOCK_STEP */
+
+   plbu_cmd[i++] = ((fb->tiled_w - 1) << 24) | ((fb->tiled_h - 1) << 8);
+   plbu_cmd[i++] = 0x10000109; /* TILED_DIMENSIONS */
+
+   plbu_cmd[i++] = fb->block_w;
+   plbu_cmd[i++] = 0x30000000; /* PLBU_BLOCK_STRIDE */
+
+   plbu_cmd[i++] = ctx->plb->va + ctx->plb_plbu_offset;
+   plbu_cmd[i++] = 0x28000000 | (fb->block_w * fb->block_h - 1); /* PLBU_ARRAY_ADDRESS */
+
+   plbu_cmd[i++] = fui(ctx->viewport.x);
+   plbu_cmd[i++] = 0x10000107; /* VIEWPORT_X */
+
+   plbu_cmd[i++] = fui(ctx->viewport.width);
+   plbu_cmd[i++] = 0x10000108; /* VIEWPORT_W */
+
+   plbu_cmd[i++] = fui(ctx->viewport.y);
+   plbu_cmd[i++] = 0x10000105; /* VIEWPORT_Y */
+
+   plbu_cmd[i++] = fui(ctx->viewport.height);
+   plbu_cmd[i++] = 0x10000106; /* VIEWPORT_H */
+
+   if (!info->indexed) {
+      plbu_cmd[i++] = 0x00010002; /* ARRAYS_SEMAPHORE_BEGIN */
+      plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
+   }
+
+   int cf = ctx->rasterizer->base.cull_face;
+   int ccw = ctx->rasterizer->base.front_ccw;
+   uint32_t cull = 0;
+   if (cf != PIPE_FACE_NONE) {
+      if (cf & PIPE_FACE_FRONT)
+         cull |= ccw ? 0x00040000 : 0x00020000;
+      if (cf & PIPE_FACE_BACK)
+         cull |= ccw ? 0x00020000 : 0x00040000;
+   }
+   plbu_cmd[i++] = 0x00002000 | 0x00000200 | cull |
+      (info->indexed && ctx->index_buffer.index_size == 2 ? 0x00000400 : 0);
+   plbu_cmd[i++] = 0x1000010B; /* PRIMITIVE_SETUP */
+
+   /* before we have a compiler, assume gl_position here */
+   uint32_t gl_position_va = ctx->gp_buffer->va + varying_offset;
+   plbu_cmd[i++] = ctx->gp_buffer->va + render_state_offset;
+   plbu_cmd[i++] = 0x80000000 | (gl_position_va >> 4); /* RSW_VERTEX_ARRAY */
+
+   plbu_cmd[i++] = 0x00000000;
+   plbu_cmd[i++] = 0x1000010A; /* ?? */
+
+   plbu_cmd[i++] = fui(ctx->viewport.near);
+   plbu_cmd[i++] = 0x1000010E; /* DEPTH_RANGE_NEAR */
+
+   plbu_cmd[i++] = fui(ctx->viewport.far);
+   plbu_cmd[i++] = 0x1000010F; /* DEPTH_RANGE_FAR */
+
+   if (info->indexed) {
+      plbu_cmd[i++] = gl_position_va;
+      plbu_cmd[i++] = 0x10000100; /* INDEXED_DEST */
+
+      struct lima_resource *res = lima_resource(ctx->index_buffer.buffer);
+      lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
+      plbu_cmd[i++] = res->buffer->va + ctx->index_buffer.offset +
+         info->start_instance * ctx->index_buffer.index_size;
+      plbu_cmd[i++] = 0x10000101; /* INDICES */
+   }
+   else {
+      /* can this make the attribute info static? */
+      plbu_cmd[i++] = (info->count << 24) | info->start;
+      plbu_cmd[i++] = 0x00000000 | 0x00000000 |
+         ((info->mode & 0x1F) << 16) | (info->count >> 8); /* DRAW | DRAW_ARRAYS */
+   }
+
+   plbu_cmd[i++] = 0x00010001; /* ARRAYS_SEMAPHORE_END */
+   plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
+
+   if (info->indexed) {
+      plbu_cmd[i++] = (info->count << 24) | info->start;
+      plbu_cmd[i++] = 0x00000000 | 0x00200000 |
+         ((info->mode & 0x1F) << 16) | (info->count >> 8); /* DRAW | DRAW_ELEMENTS */
+   }
+
+   plbu_cmd[i++] = 0x00000000;
+   plbu_cmd[i++] = 0x50000000; /* END */
+
+   return i << 2;
+}
+
 static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -348,6 +446,9 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    int vs_cmd_size = lima_pack_vs_cmd(ctx, info);
    (void)vs_cmd_size;
+
+   int plbu_cmd_size = lima_pack_plbu_cmd(ctx, info);
+   (void)plbu_cmd_size;
 }
 
 void
