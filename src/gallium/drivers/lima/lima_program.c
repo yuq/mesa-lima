@@ -55,6 +55,7 @@ lima_create_fs_state(struct pipe_context *pctx,
 
    memcpy(so->shader, fs, sizeof(fs));
    so->shader_size = sizeof(fs);
+   so->first_inst_size = 5;
 
    return so;
 }
