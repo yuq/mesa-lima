@@ -783,7 +783,7 @@ dri2_create_screen(_EGLDisplay *disp)
       return EGL_FALSE;
    }
 
-   dri2_dpy->own_dri_screen = 1;
+   dri2_dpy->own_dri_screen = true;
    return EGL_TRUE;
 }
 

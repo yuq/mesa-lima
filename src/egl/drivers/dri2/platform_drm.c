@@ -56,7 +56,7 @@ lock_front_buffer(struct gbm_surface *_surf)
    bo = dri2_surf->current->bo;
 
    if (device->dri2) {
-      dri2_surf->current->locked = 1;
+      dri2_surf->current->locked = true;
       dri2_surf->current = NULL;
    }
 
@@ -72,7 +72,7 @@ release_buffer(struct gbm_surface *_surf, struct gbm_bo *bo)
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
       if (dri2_surf->color_buffers[i].bo == bo) {
-	 dri2_surf->color_buffers[i].locked = 0;
+	 dri2_surf->color_buffers[i].locked = false;
       }
    }
 }
@@ -696,7 +696,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
          err = "DRI2: failed to create gbm device";
          goto cleanup;
       }
-      dri2_dpy->own_device = 1;
+      dri2_dpy->own_device = true;
    } else {
       dri2_dpy->fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
       if (dri2_dpy->fd < 0) {

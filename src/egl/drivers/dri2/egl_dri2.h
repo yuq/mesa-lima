@@ -28,6 +28,7 @@
 #ifndef EGL_DRI2_INCLUDED
 #define EGL_DRI2_INCLUDED
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef HAVE_X11_PLATFORM
@@ -158,7 +159,7 @@ struct dri2_egl_display
    int                       dri2_major;
    int                       dri2_minor;
    __DRIscreen              *dri_screen;
-   int                       own_dri_screen;
+   bool                      own_dri_screen;
    const __DRIconfig       **driver_configs;
    void                     *driver;
    const __DRIcoreExtension       *core;
@@ -179,8 +180,8 @@ struct dri2_egl_display
     * dri2_make_current (tracks if there are active contexts/surfaces). */
    int                       ref_count;
 
-   int                       own_device;
-   int                       invalidate_available;
+   bool                      own_device;
+   bool                      invalidate_available;
    int                       min_swap_interval;
    int                       max_swap_interval;
    int                       default_swap_interval;
@@ -196,7 +197,7 @@ struct dri2_egl_display
 #ifdef HAVE_X11_PLATFORM
    xcb_connection_t         *conn;
    xcb_screen_t             *screen;
-   int                      swap_available;
+   bool                     swap_available;
 #ifdef HAVE_DRI3
    struct loader_dri3_extensions loader_dri3_ext;
 #endif
@@ -210,7 +211,7 @@ struct dri2_egl_display
    struct wl_drm            *wl_drm;
    struct wl_shm            *wl_shm;
    struct wl_event_queue    *wl_queue;
-   int                       authenticated;
+   bool                      authenticated;
    int                       formats;
    uint32_t                  capabilities;
    char                     *device_name;
@@ -220,7 +221,7 @@ struct dri2_egl_display
    const gralloc_module_t *gralloc;
 #endif
 
-   int                       is_render_node;
+   bool                      is_render_node;
    int                       is_different_gpu;
 };
 
@@ -245,7 +246,7 @@ struct dri2_egl_surface
    __DRIdrawable       *dri_drawable;
    __DRIbuffer          buffers[5];
    int                  buffer_count;
-   int                  have_fake_front;
+   bool                 have_fake_front;
 
 #ifdef HAVE_X11_PLATFORM
    xcb_drawable_t       drawable;
@@ -287,7 +288,7 @@ struct dri2_egl_surface
 #ifdef HAVE_DRM_PLATFORM
       struct gbm_bo       *bo;
 #endif
-      int                 locked;
+      bool                locked;
       int                 age;
    } color_buffers[4], *back, *current;
 #endif

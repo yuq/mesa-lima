@@ -76,7 +76,7 @@ wl_buffer_release(void *data, struct wl_buffer *buffer)
       return;
    }
 
-   dri2_surf->color_buffers[i].locked = 0;
+   dri2_surf->color_buffers[i].locked = false;
 }
 
 static const struct wl_buffer_listener wl_buffer_listener = {
@@ -314,7 +314,7 @@ dri2_wl_release_buffers(struct dri2_egl_surface *dri2_surf)
       dri2_surf->color_buffers[i].dri_image = NULL;
       dri2_surf->color_buffers[i].linear_copy = NULL;
       dri2_surf->color_buffers[i].data = NULL;
-      dri2_surf->color_buffers[i].locked = 0;
+      dri2_surf->color_buffers[i].locked = false;
    }
 
    if (dri2_dpy->dri2) {
@@ -410,7 +410,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    if (dri2_surf->back->dri_image == NULL)
       return -1;
 
-   dri2_surf->back->locked = 1;
+   dri2_surf->back->locked = true;
 
    return 0;
 }
@@ -908,7 +908,7 @@ dri2_wl_authenticate(_EGLDisplay *disp, uint32_t id)
                             "authenticate for render-nodes");
       return 0;
    }
-   dri2_dpy->authenticated = 0;
+   dri2_dpy->authenticated = false;
 
    wl_drm_authenticate(dri2_dpy->wl_drm, id);
    if (roundtrip(dri2_dpy) < 0)
@@ -918,7 +918,7 @@ dri2_wl_authenticate(_EGLDisplay *disp, uint32_t id)
       ret = -1;
 
    /* reset authenticated */
-   dri2_dpy->authenticated = 1;
+   dri2_dpy->authenticated = true;
 
    return ret;
 }
@@ -941,7 +941,7 @@ drm_handle_device(void *data, struct wl_drm *drm, const char *device)
    }
 
    if (drmGetNodeTypeFromFd(dri2_dpy->fd) == DRM_NODE_RENDER) {
-      dri2_dpy->authenticated = 1;
+      dri2_dpy->authenticated = true;
    } else {
       drmGetMagic(dri2_dpy->fd, &magic);
       wl_drm_authenticate(dri2_dpy->wl_drm, magic);
@@ -979,7 +979,7 @@ drm_handle_authenticated(void *data, struct wl_drm *drm)
 {
    struct dri2_egl_display *dri2_dpy = data;
 
-   dri2_dpy->authenticated = 1;
+   dri2_dpy->authenticated = true;
 }
 
 static const struct wl_drm_listener drm_listener = {
@@ -1164,7 +1164,7 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->wl_dpy = wl_display_connect(NULL);
       if (dri2_dpy->wl_dpy == NULL)
          goto cleanup;
-      dri2_dpy->own_device = 1;
+      dri2_dpy->own_device = true;
    } else {
       dri2_dpy->wl_dpy = disp->PlatformDisplay;
    }
@@ -1526,7 +1526,7 @@ swrast_update_buffers(struct dri2_egl_surface *dri2_surf)
       return -1;
    }
 
-   dri2_surf->back->locked = 1;
+   dri2_surf->back->locked = true;
 
    /* If we have an extra unlocked buffer at this point, we had to do triple
     * buffering for a while, but now can go back to just double buffering.
@@ -1814,7 +1814,7 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->wl_dpy = wl_display_connect(NULL);
       if (dri2_dpy->wl_dpy == NULL)
          goto cleanup;
-      dri2_dpy->own_device = 1;
+      dri2_dpy->own_device = true;
    } else {
       dri2_dpy->wl_dpy = disp->PlatformDisplay;
    }
