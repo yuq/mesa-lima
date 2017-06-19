@@ -703,6 +703,13 @@ void anv_GetPhysicalDeviceFeatures2KHR(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES_KHR: {
+         VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR *features =
+            (VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR *) ext;
+         features->samplerYcbcrConversion = true;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
@@ -1828,6 +1835,44 @@ void anv_GetImageMemoryRequirements2KHR(
 {
    anv_GetImageMemoryRequirements(_device, pInfo->image,
                                   &pMemoryRequirements->memoryRequirements);
+
+   vk_foreach_struct_const(ext, pInfo->pNext) {
+      switch (ext->sType) {
+      case VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO_KHR: {
+         ANV_FROM_HANDLE(anv_image, image, pInfo->image);
+         ANV_FROM_HANDLE(anv_device, device, _device);
+         struct anv_physical_device *pdevice = &device->instance->physicalDevice;
+         const VkImagePlaneMemoryRequirementsInfoKHR *plane_reqs =
+            (const VkImagePlaneMemoryRequirementsInfoKHR *) ext;
+         uint32_t plane = anv_image_aspect_to_plane(image->aspects,
+                                                    plane_reqs->planeAspect);
+
+         assert(image->planes[plane].offset == 0);
+
+         /* The Vulkan spec (git aaed022) says:
+          *
+          *    memoryTypeBits is a bitfield and contains one bit set for every
+          *    supported memory type for the resource. The bit `1<<i` is set
+          *    if and only if the memory type `i` in the
+          *    VkPhysicalDeviceMemoryProperties structure for the physical
+          *    device is supported.
+          *
+          * All types are currently supported for images.
+          */
+         pMemoryRequirements->memoryRequirements.memoryTypeBits =
+               (1ull << pdevice->memory.type_count) - 1;
+
+         pMemoryRequirements->memoryRequirements.size = image->planes[plane].size;
+         pMemoryRequirements->memoryRequirements.alignment =
+            image->planes[plane].alignment;
+         break;
+      }
+
+      default:
+         anv_debug_ignored_stype(ext->sType);
+         break;
+      }
+   }
 
    vk_foreach_struct(ext, pMemoryRequirements->pNext) {
       switch (ext->sType) {

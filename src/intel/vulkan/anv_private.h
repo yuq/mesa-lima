@@ -2338,6 +2338,9 @@ struct anv_image {
    VkDeviceSize size;
    uint32_t alignment;
 
+   /* Whether the image is made of several underlying buffer objects rather a
+    * single one with different offsets.
+    */
    bool disjoint;
 
    /**
@@ -2862,6 +2865,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_semaphore, VkSemaphore)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_debug_report_callback, VkDebugReportCallbackEXT)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_ycbcr_conversion, VkSamplerYcbcrConversionKHR)
 
 /* Gen-specific function declarations */
 #ifdef genX

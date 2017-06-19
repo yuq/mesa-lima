@@ -683,7 +683,8 @@ static VkResult
 anv_get_image_format_properties(
    struct anv_physical_device *physical_device,
    const VkPhysicalDeviceImageFormatInfo2KHR *info,
-   VkImageFormatProperties *pImageFormatProperties)
+   VkImageFormatProperties *pImageFormatProperties,
+   VkSamplerYcbcrConversionImageFormatPropertiesKHR *pYcbcrImageFormatProperties)
 {
    VkFormatProperties format_props;
    VkFormatFeatureFlags format_feature_flags;
@@ -816,6 +817,11 @@ anv_get_image_format_properties(
       .maxResourceSize = UINT32_MAX,
    };
 
+   if (pYcbcrImageFormatProperties) {
+      pYcbcrImageFormatProperties->combinedImageSamplerDescriptorCount =
+         format->n_planes;
+   }
+
    return VK_SUCCESS;
 
 unsupported:
@@ -852,7 +858,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    };
 
    return anv_get_image_format_properties(physical_device, &info,
-                                          pImageFormatProperties);
+                                          pImageFormatProperties, NULL);
 }
 
 static const VkExternalMemoryPropertiesKHR prime_fd_props = {
@@ -874,12 +880,8 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
    const VkPhysicalDeviceExternalImageFormatInfoKHR *external_info = NULL;
    VkExternalImageFormatPropertiesKHR *external_props = NULL;
+   VkSamplerYcbcrConversionImageFormatPropertiesKHR *ycbcr_props = NULL;
    VkResult result;
-
-   result = anv_get_image_format_properties(physical_device, base_info,
-               &base_props->imageFormatProperties);
-   if (result != VK_SUCCESS)
-      goto fail;
 
    /* Extract input structs */
    vk_foreach_struct_const(s, base_info->pNext) {
@@ -899,11 +901,19 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
       case VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES_KHR:
          external_props = (void *) s;
          break;
+      case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_IMAGE_FORMAT_PROPERTIES_KHR:
+         ycbcr_props = (void *) s;
+         break;
       default:
          anv_debug_ignored_stype(s->sType);
          break;
       }
    }
+
+   result = anv_get_image_format_properties(physical_device, base_info,
+               &base_props->imageFormatProperties, ycbcr_props);
+   if (result != VK_SUCCESS)
+      goto fail;
 
    /* From the Vulkan 1.0.42 spec:
     *
@@ -1005,4 +1015,63 @@ void anv_GetPhysicalDeviceExternalBufferPropertiesKHR(
  unsupported:
    pExternalBufferProperties->externalMemoryProperties =
       (VkExternalMemoryPropertiesKHR) {0};
+}
+
+VkResult anv_CreateSamplerYcbcrConversionKHR(
+    VkDevice                                    _device,
+    const VkSamplerYcbcrConversionCreateInfoKHR* pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSamplerYcbcrConversionKHR*                pYcbcrConversion)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_ycbcr_conversion *conversion;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO_KHR);
+
+   conversion = vk_alloc2(&device->alloc, pAllocator, sizeof(*conversion), 8,
+                          VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (!conversion)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   memset(conversion, 0, sizeof(*conversion));
+
+   conversion->format = anv_get_format(pCreateInfo->format);
+   conversion->ycbcr_model = pCreateInfo->ycbcrModel;
+   conversion->ycbcr_range = pCreateInfo->ycbcrRange;
+   conversion->mapping[0] = pCreateInfo->components.r;
+   conversion->mapping[1] = pCreateInfo->components.g;
+   conversion->mapping[2] = pCreateInfo->components.b;
+   conversion->mapping[3] = pCreateInfo->components.a;
+   conversion->chroma_offsets[0] = pCreateInfo->xChromaOffset;
+   conversion->chroma_offsets[1] = pCreateInfo->yChromaOffset;
+   conversion->chroma_filter = pCreateInfo->chromaFilter;
+
+   bool has_chroma_subsampled = false;
+   for (uint32_t p = 0; p < conversion->format->n_planes; p++) {
+      if (conversion->format->planes[p].has_chroma &&
+          (conversion->format->planes[p].denominator_scales[0] > 1 ||
+           conversion->format->planes[p].denominator_scales[1] > 1))
+         has_chroma_subsampled = true;
+   }
+   conversion->chroma_reconstruction = has_chroma_subsampled &&
+      (conversion->chroma_offsets[0] == VK_CHROMA_LOCATION_COSITED_EVEN_KHR ||
+       conversion->chroma_offsets[1] == VK_CHROMA_LOCATION_COSITED_EVEN_KHR);
+
+   *pYcbcrConversion = anv_ycbcr_conversion_to_handle(conversion);
+
+   return VK_SUCCESS;
+}
+
+void anv_DestroySamplerYcbcrConversionKHR(
+    VkDevice                                    _device,
+    VkSamplerYcbcrConversionKHR                 YcbcrConversion,
+    const VkAllocationCallbacks*                pAllocator)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_ycbcr_conversion, conversion, YcbcrConversion);
+
+   if (!conversion)
+      return;
+
+   vk_free2(&device->alloc, pAllocator, conversion);
 }

@@ -33,6 +33,8 @@
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
+#include "vk_util.h"
+
 VkResult
 genX(init_device_state)(struct anv_device *device)
 {
@@ -176,12 +178,44 @@ VkResult genX(CreateSampler)(
    uint32_t border_color_offset = device->border_colors.offset +
                                   pCreateInfo->borderColor * 64;
 
-   bool enable_min_filter_addr_rounding =
-      pCreateInfo->minFilter != VK_FILTER_NEAREST;
-   bool enable_mag_filter_addr_rounding =
-      pCreateInfo->magFilter != VK_FILTER_NEAREST;
+   vk_foreach_struct(ext, pCreateInfo->pNext) {
+      switch (ext->sType) {
+      case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO_KHR: {
+         VkSamplerYcbcrConversionInfoKHR *pSamplerConversion =
+            (VkSamplerYcbcrConversionInfoKHR *) ext;
+         ANV_FROM_HANDLE(anv_ycbcr_conversion, conversion,
+                         pSamplerConversion->conversion);
+
+         if (conversion == NULL)
+            break;
+
+         sampler->n_planes = conversion->format->n_planes;
+         sampler->conversion = conversion;
+         break;
+      }
+      default:
+         anv_debug_ignored_stype(ext->sType);
+         break;
+      }
+   }
 
    for (unsigned p = 0; p < sampler->n_planes; p++) {
+      const bool plane_has_chroma =
+         sampler->conversion && sampler->conversion->format->planes[p].has_chroma;
+      const VkFilter min_filter =
+         plane_has_chroma ? sampler->conversion->chroma_filter : pCreateInfo->minFilter;
+      const VkFilter mag_filter =
+         plane_has_chroma ? sampler->conversion->chroma_filter : pCreateInfo->magFilter;
+      const bool enable_min_filter_addr_rounding = min_filter != VK_FILTER_NEAREST;
+      const bool enable_mag_filter_addr_rounding = mag_filter != VK_FILTER_NEAREST;
+      /* From Broadwell PRM, SAMPLER_STATE:
+       *   "Mip Mode Filter must be set to MIPFILTER_NONE for Planar YUV surfaces."
+       */
+      const uint32_t mip_filter_mode =
+         (sampler->conversion &&
+          isl_format_is_yuv(sampler->conversion->format->planes[0].isl_format)) ?
+         MIPFILTER_NONE : vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode];
+
       struct GENX(SAMPLER_STATE) sampler_state = {
          .SamplerDisable = false,
          .TextureBorderColorMode = DX10OGL,
@@ -195,11 +229,9 @@ VkResult genX(CreateSampler)(
 #if GEN_GEN == 8
          .BaseMipLevel = 0.0,
 #endif
-         .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
-         .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
-                                               pCreateInfo->anisotropyEnable),
-         .MinModeFilter = vk_to_gen_tex_filter(pCreateInfo->minFilter,
-                                               pCreateInfo->anisotropyEnable),
+         .MipModeFilter = mip_filter_mode,
+         .MagModeFilter = vk_to_gen_tex_filter(mag_filter, pCreateInfo->anisotropyEnable),
+         .MinModeFilter = vk_to_gen_tex_filter(min_filter, pCreateInfo->anisotropyEnable),
          .TextureLODBias = anv_clamp_f(pCreateInfo->mipLodBias, -16, 15.996),
          .AnisotropicAlgorithm = EWAApproximation,
          .MinLOD = anv_clamp_f(pCreateInfo->minLod, 0, 14),

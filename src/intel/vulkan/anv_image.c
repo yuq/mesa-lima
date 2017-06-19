@@ -516,6 +516,7 @@ anv_image_create(VkDevice _device,
    image->samples = pCreateInfo->samples;
    image->usage = pCreateInfo->usage;
    image->tiling = pCreateInfo->tiling;
+   image->disjoint = pCreateInfo->flags & VK_IMAGE_CREATE_DISJOINT_BIT_KHR;
 
    const struct anv_format *format = anv_get_format(image->vk_format);
    assert(format != NULL);
@@ -613,9 +614,25 @@ VkResult anv_BindImageMemory2KHR(
       const VkBindImageMemoryInfoKHR *bind_info = &pBindInfos[i];
       ANV_FROM_HANDLE(anv_device_memory, mem, bind_info->memory);
       ANV_FROM_HANDLE(anv_image, image, bind_info->image);
-      uint32_t aspect_bit;
+      VkImageAspectFlags aspects = image->aspects;
 
-      anv_foreach_image_aspect_bit(aspect_bit, image, image->aspects) {
+      vk_foreach_struct_const(s, bind_info->pNext) {
+         switch (s->sType) {
+         case VK_STRUCTURE_TYPE_BIND_IMAGE_PLANE_MEMORY_INFO_KHR: {
+            const VkBindImagePlaneMemoryInfoKHR *plane_info =
+               (const VkBindImagePlaneMemoryInfoKHR *) s;
+
+            aspects = plane_info->planeAspect;
+            break;
+         }
+         default:
+            anv_debug_ignored_stype(s->sType);
+            break;
+         }
+      }
+
+      uint32_t aspect_bit;
+      anv_foreach_image_aspect_bit(aspect_bit, image, aspects) {
          uint32_t plane =
             anv_image_aspect_to_plane(image->aspects, 1UL << aspect_bit);
          anv_image_bind_memory_plane(device, image, plane,
