@@ -1913,6 +1913,108 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	si_rebind_buffer(ctx, buf, old_va);
 }
 
+static void si_upload_bindless_descriptor(struct si_context *sctx,
+					  struct si_bindless_descriptor *desc)
+{
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	uint64_t va = desc->buffer->gpu_address + desc->offset;
+	unsigned num_dwords = sizeof(desc->desc_list) / 4;
+
+	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 2 + num_dwords, 0));
+	radeon_emit(cs, S_370_DST_SEL(V_370_TC_L2) |
+		    S_370_WR_CONFIRM(1) |
+		    S_370_ENGINE_SEL(V_370_ME));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit_array(cs, desc->desc_list, num_dwords);
+}
+
+static void si_upload_bindless_descriptors(struct si_context *sctx)
+{
+	if (!sctx->bindless_descriptors_dirty)
+		return;
+
+	/* Wait for graphics/compute to be idle before updating the resident
+	 * descriptors directly in memory, in case the GPU is using them.
+	 */
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+			 SI_CONTEXT_CS_PARTIAL_FLUSH;
+	si_emit_cache_flush(sctx);
+
+	util_dynarray_foreach(&sctx->resident_tex_handles,
+			      struct si_texture_handle *, tex_handle) {
+		struct si_bindless_descriptor *desc = (*tex_handle)->desc;
+
+		if (!desc->dirty)
+			continue;
+
+		si_upload_bindless_descriptor(sctx, desc);
+		desc->dirty = false;
+	}
+
+	util_dynarray_foreach(&sctx->resident_img_handles,
+			      struct si_image_handle *, img_handle) {
+		struct si_bindless_descriptor *desc = (*img_handle)->desc;
+
+		if (!desc->dirty)
+			continue;
+
+		si_upload_bindless_descriptor(sctx, desc);
+		desc->dirty = false;
+	}
+
+	/* Invalidate L1 because it doesn't know that L2 changed. */
+	sctx->b.flags |= SI_CONTEXT_INV_SMEM_L1;
+	si_emit_cache_flush(sctx);
+
+	sctx->bindless_descriptors_dirty = false;
+}
+
+/* Update mutable image descriptor fields of all resident textures. */
+static void si_update_all_resident_texture_descriptors(struct si_context *sctx)
+{
+	util_dynarray_foreach(&sctx->resident_tex_handles,
+			      struct si_texture_handle *, tex_handle) {
+		struct si_bindless_descriptor *desc = (*tex_handle)->desc;
+		struct si_sampler_view *sview =
+			(struct si_sampler_view *)(*tex_handle)->view;
+		uint32_t desc_list[16];
+
+		if (sview->base.texture->target == PIPE_BUFFER)
+			continue;
+
+		memcpy(desc_list, desc->desc_list, sizeof(desc_list));
+		si_set_sampler_view_desc(sctx, sview, &(*tex_handle)->sstate,
+					 &desc->desc_list[0]);
+
+		if (memcmp(desc_list, desc->desc_list, sizeof(desc_list))) {
+			desc->dirty = true;
+			sctx->bindless_descriptors_dirty = true;
+		}
+	}
+
+	util_dynarray_foreach(&sctx->resident_img_handles,
+			      struct si_image_handle *, img_handle) {
+		struct si_bindless_descriptor *desc = (*img_handle)->desc;
+		struct pipe_image_view *view = &(*img_handle)->view;
+		uint32_t desc_list[16];
+
+		if (view->resource->target == PIPE_BUFFER)
+			continue;
+
+		memcpy(desc_list, desc->desc_list, sizeof(desc_list));
+		si_set_shader_image_desc(sctx, view, true,
+					 &desc->desc_list[0]);
+
+		if (memcmp(desc_list, desc->desc_list, sizeof(desc_list))) {
+			desc->dirty = true;
+			sctx->bindless_descriptors_dirty = true;
+		}
+	}
+
+	si_upload_bindless_descriptors(sctx);
+}
+
 /* Update mutable image descriptor fields of all bound textures. */
 void si_update_all_texture_descriptors(struct si_context *sctx)
 {
@@ -1953,6 +2055,8 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 
 		si_update_shader_needs_decompress_mask(sctx, shader);
 	}
+
+	si_update_all_resident_texture_descriptors(sctx);
 }
 
 /* SHADER USER DATA */
@@ -2770,63 +2874,6 @@ void si_init_all_descriptors(struct si_context *sctx)
 				      R_00B230_SPI_SHADER_USER_DATA_GS_0);
 	}
 	si_set_user_data_base(sctx, PIPE_SHADER_FRAGMENT, R_00B030_SPI_SHADER_USER_DATA_PS_0);
-}
-
-static void si_upload_bindless_descriptor(struct si_context *sctx,
-					  struct si_bindless_descriptor *desc)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	uint64_t va = desc->buffer->gpu_address + desc->offset;
-	unsigned num_dwords = sizeof(desc->desc_list) / 4;
-
-	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 2 + num_dwords, 0));
-	radeon_emit(cs, S_370_DST_SEL(V_370_TC_L2) |
-		    S_370_WR_CONFIRM(1) |
-		    S_370_ENGINE_SEL(V_370_ME));
-	radeon_emit(cs, va);
-	radeon_emit(cs, va >> 32);
-	radeon_emit_array(cs, desc->desc_list, num_dwords);
-}
-
-static void si_upload_bindless_descriptors(struct si_context *sctx)
-{
-	if (!sctx->bindless_descriptors_dirty)
-		return;
-
-	/* Wait for graphics/compute to be idle before updating the resident
-	 * descriptors directly in memory, in case the GPU is using them.
-	 */
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-			 SI_CONTEXT_CS_PARTIAL_FLUSH;
-	si_emit_cache_flush(sctx);
-
-	util_dynarray_foreach(&sctx->resident_tex_handles,
-			      struct si_texture_handle *, tex_handle) {
-		struct si_bindless_descriptor *desc = (*tex_handle)->desc;
-
-		if (!desc->dirty)
-			continue;
-
-		si_upload_bindless_descriptor(sctx, desc);
-		desc->dirty = false;
-	}
-
-	util_dynarray_foreach(&sctx->resident_img_handles,
-			      struct si_image_handle *, img_handle) {
-		struct si_bindless_descriptor *desc = (*img_handle)->desc;
-
-		if (!desc->dirty)
-			continue;
-
-		si_upload_bindless_descriptor(sctx, desc);
-		desc->dirty = false;
-	}
-
-	/* Invalidate L1 because it doesn't know that L2 changed. */
-	sctx->b.flags |= SI_CONTEXT_INV_SMEM_L1;
-	si_emit_cache_flush(sctx);
-
-	sctx->bindless_descriptors_dirty = false;
 }
 
 bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
