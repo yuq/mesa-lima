@@ -214,6 +214,10 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
    }
 
+   /* static uniform only for viewport transform now */
+   vs_cmd[i++] = ctx->gp_buffer->va + uniform_offset;
+   vs_cmd[i++] = 0x30000000 | (32 << 12); /* UNIFORMS_ADDRESS */
+
    vs_cmd[i++] = ctx->gp_buffer->va + vs_program_offset;
    vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16); /* SHADER_ADDRESS */
 
@@ -609,6 +613,17 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_VIEWPORT) {
       /* should update uniform */
+      float *trans = ctx->gp_buffer->map + uniform_offset;
+      struct pipe_viewport_state *vp = &ctx->viewport.transform;
+      trans[0] = vp->scale[0];
+      trans[1] = vp->scale[1];
+      trans[2] = vp->scale[2];
+      trans[3] = 1;
+      trans[4] = vp->translate[0];
+      trans[5] = vp->translate[1];
+      trans[6] = vp->translate[2];
+      trans[7] = 0;
+
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_VIEWPORT;
    }
 
