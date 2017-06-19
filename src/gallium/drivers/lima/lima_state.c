@@ -350,6 +350,17 @@ lima_set_stencil_ref(struct pipe_context *pctx,
    ctx->dirty |= LIMA_CONTEXT_DIRTY_STENCIL_REF;
 }
 
+static void
+lima_set_constant_buffer(struct pipe_context *pctx,
+                         enum pipe_shader_type shader, uint index,
+                         const struct pipe_constant_buffer *cb)
+{
+   printf("dummy %s\n", __func__);
+
+   printf("shader %d index %u cb buffer %p offset %x size %x\n",
+          shader, index, cb->buffer, cb->buffer_offset, cb->buffer_size);
+}
+
 void
 lima_state_init(struct lima_context *ctx)
 {
@@ -362,6 +373,7 @@ lima_state_init(struct lima_context *ctx)
 
    ctx->base.set_vertex_buffers = lima_set_vertex_buffers;
    ctx->base.set_index_buffer = lima_set_index_buffer;
+   ctx->base.set_constant_buffer = lima_set_constant_buffer;
 
    ctx->base.create_depth_stencil_alpha_state = lima_create_depth_stencil_alpha_state;
    ctx->base.bind_depth_stencil_alpha_state = lima_bind_depth_stencil_alpha_state;
