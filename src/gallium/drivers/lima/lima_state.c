@@ -29,6 +29,7 @@
 #include "pipe/p_state.h"
 
 #include "lima_context.h"
+#include "lima_resource.h"
 
 static void
 lima_set_framebuffer_state(struct pipe_context *pctx,
@@ -239,6 +240,50 @@ lima_delete_vertex_elements_state(struct pipe_context *pctx, void *hwcso)
 }
 
 static void
+_lima_set_vertex_buffers(struct lima_context *ctx,
+                         unsigned start_slot, unsigned count,
+                         const struct pipe_vertex_buffer *vb)
+{
+   struct lima_context_vertex_buffer *so = &ctx->vertex_buffers;
+   unsigned i;
+
+   for (i = 0; i < count; i++) {
+      if ((so->enabled_mask & (1 << (start_slot + i))) &&
+          so->vb[start_slot + i].buffer) {
+         struct lima_resource *res = lima_resource(so->vb[start_slot + i].buffer);
+         lima_submit_remove_bo(ctx->gp_submit, res->buffer->bo);
+      }
+   }
+
+   if (vb) {
+      for (i = 0; i < count; i++) {
+         if (vb[i].buffer) {
+            struct lima_resource *res = lima_resource(vb[i].buffer);
+            lima_submit_add_bo(ctx->gp_submit, res->buffer->bo, LIMA_SUBMIT_BO_FLAG_READ);
+         }
+
+         if (vb[i].buffer || vb[i].user_buffer)
+            so->enabled_mask |= 1 << (start_slot + i);
+         else
+            so->enabled_mask &= ~(1 << (start_slot + i));
+
+         pipe_resource_reference(&so->vb[start_slot + i].buffer, vb[i].buffer);
+      }
+      memcpy(so->vb + start_slot, vb, count * sizeof(struct pipe_vertex_buffer));
+   }
+   else {
+      for (i = 0; i < count; i++) {
+         pipe_resource_reference(&so->vb[start_slot + i].buffer, NULL);
+         so->vb[start_slot + i].user_buffer = NULL;
+      }
+
+      so->enabled_mask &= ~(((1ull << count) - 1) << start_slot);
+   }
+
+   so->count = util_last_bit(so->enabled_mask);
+}
+
+static void
 lima_set_vertex_buffers(struct pipe_context *pctx,
                         unsigned start_slot, unsigned count,
                         const struct pipe_vertex_buffer *vb)
@@ -246,12 +291,8 @@ lima_set_vertex_buffers(struct pipe_context *pctx,
    printf("dummy %s\n", __func__);
 
    struct lima_context *ctx = lima_context(pctx);
-   struct lima_context_vertex_buffer *so = &ctx->vertex_buffers;
 
-   util_set_vertex_buffers_mask(so->vb, &so->enabled_mask, vb,
-                                start_slot, count);
-   so->count = util_last_bit(so->enabled_mask);
-
+   _lima_set_vertex_buffers(ctx, start_slot, count, vb);
    ctx->dirty |= LIMA_CONTEXT_DIRTY_VERTEX_BUFF;
 }
 
@@ -396,8 +437,7 @@ lima_state_fini(struct lima_context *ctx)
 {
    struct lima_context_vertex_buffer *so = &ctx->vertex_buffers;
 
-   util_set_vertex_buffers_mask(so->vb, &so->enabled_mask, NULL,
-                                0, ARRAY_SIZE(so->vb));
+   _lima_set_vertex_buffers(ctx, 0, ARRAY_SIZE(so->vb), NULL);
 
    pipe_surface_reference(&ctx->framebuffer.cbuf, NULL);
    pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
