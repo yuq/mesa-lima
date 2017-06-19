@@ -378,6 +378,11 @@ struct si_shader_selector {
  * -> = merged with the next stage
  */
 
+/* Use the byte alignment for all following structure members for optimal
+ * shader key memory footprint.
+ */
+#pragma pack(push, 1)
+
 /* Common VS bits between the shader key and the prolog key. */
 struct si_vs_prolog_bits {
 	unsigned	instance_divisors[SI_MAX_ATTRIBS];
@@ -513,6 +518,9 @@ struct si_shader_key {
 		unsigned	prefer_mono:1;
 	} opt;
 };
+
+/* Restore the pack alignment to default. */
+#pragma pack(pop)
 
 struct si_shader_config {
 	unsigned			num_sgprs;
