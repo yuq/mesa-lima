@@ -501,8 +501,7 @@ struct si_shader_key {
 	/* Optimization flags for asynchronous compilation only. */
 	struct {
 		/* For HW VS (it can be VS, TES, GS) */
-		/* Don't use "uint64_t" in order to get 32-bit alignment. */
-		uint32_t	kill_outputs[2]; /* "get_unique_index" bits */
+		uint64_t	kill_outputs; /* "get_unique_index" bits */
 		unsigned	clip_disable:1;
 
 		/* For shaders where monolithic variants have better code.

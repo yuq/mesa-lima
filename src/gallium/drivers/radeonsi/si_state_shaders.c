@@ -1238,10 +1238,9 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 		inputs_read = ps->inputs_read;
 	}
 
-	uint64_t kill_outputs = ~(outputs_written & inputs_read) & outputs_written;
+	uint64_t linked = outputs_written & inputs_read;
 
-	key->opt.kill_outputs[0] = kill_outputs;
-	key->opt.kill_outputs[1] = kill_outputs >> 32;
+	key->opt.kill_outputs = ~linked & outputs_written;
 }
 
 /* Compute the key for the hw shader variant */
