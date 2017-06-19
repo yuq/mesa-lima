@@ -292,7 +292,10 @@ get_vertex_shader_param(struct lima_screen *screen,
       return 16; /* varying */
 
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
+      return 4096; /* need investigate */
    case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
+      return 1;
+
    case PIPE_SHADER_CAP_MAX_TEMPS:
    case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
    case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
@@ -339,8 +342,13 @@ get_fragment_shader_param(struct lima_screen *screen,
       return 16; /* varying */
 
    case PIPE_SHADER_CAP_MAX_OUTPUTS:
+      return 0;
+
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
+      return 4096; /* need investigate */
    case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
+      return 1;
+
    case PIPE_SHADER_CAP_MAX_TEMPS:
    case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
    case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
