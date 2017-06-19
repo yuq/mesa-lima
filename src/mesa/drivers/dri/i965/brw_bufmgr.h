@@ -124,6 +124,11 @@ struct brw_bo {
    bool reusable;
 
    /**
+    * Boolean of whether this buffer has been shared with an external client.
+    */
+   bool external;
+
+   /**
     * Boolean of whether this buffer is cache coherent
     */
    bool cache_coherent;

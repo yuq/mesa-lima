@@ -483,6 +483,7 @@ brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
    bo->name = name;
    bo->global_name = handle;
    bo->reusable = false;
+   bo->external = true;
 
    _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
    _mesa_hash_table_insert(bufmgr->name_table, &bo->global_name, bo);
@@ -997,6 +998,7 @@ brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd)
 
    bo->name = "prime";
    bo->reusable = false;
+   bo->external = true;
 
    memclear(get_tiling);
    get_tiling.handle = bo->gem_handle;
@@ -1027,6 +1029,7 @@ brw_bo_gem_export_to_prime(struct brw_bo *bo, int *prime_fd)
       return -errno;
 
    bo->reusable = false;
+   bo->external = true;
 
    return 0;
 }
@@ -1048,6 +1051,7 @@ brw_bo_flink(struct brw_bo *bo, uint32_t *name)
       if (!bo->global_name) {
          bo->global_name = flink.name;
          bo->reusable = false;
+         bo->external = true;
 
          _mesa_hash_table_insert(bufmgr->name_table, &bo->global_name, bo);
       }
