@@ -219,6 +219,7 @@ VULKAN_FILES := \
 	vulkan/anv_nir_lower_input_attachments.c \
 	vulkan/anv_nir_lower_multiview.c \
 	vulkan/anv_nir_lower_push_constants.c \
+	vulkan/anv_nir_lower_ycbcr_textures.c \
 	vulkan/anv_pass.c \
 	vulkan/anv_pipeline.c \
 	vulkan/anv_pipeline_cache.c \

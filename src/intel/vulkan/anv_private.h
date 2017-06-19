@@ -2544,9 +2544,21 @@ void anv_fill_buffer_surface_state(struct anv_device *device,
                                    uint32_t offset, uint32_t range,
                                    uint32_t stride);
 
+
+struct anv_ycbcr_conversion {
+   const struct anv_format *        format;
+   VkSamplerYcbcrModelConversionKHR ycbcr_model;
+   VkSamplerYcbcrRangeKHR           ycbcr_range;
+   VkComponentSwizzle               mapping[4];
+   VkChromaLocationKHR              chroma_offsets[2];
+   VkFilter                         chroma_filter;
+   bool                             chroma_reconstruction;
+};
+
 struct anv_sampler {
-   uint32_t state[3][4];
-   uint32_t n_planes;
+   uint32_t                     state[3][4];
+   uint32_t                     n_planes;
+   struct anv_ycbcr_conversion *conversion;
 };
 
 struct anv_framebuffer {
