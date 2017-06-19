@@ -128,6 +128,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_TEXTURE_MULTISAMPLE:
         case PIPE_CAP_TEXTURE_SWIZZLE:
         case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
+        case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
                 return 1;
 
                 /* lying for GL 2.0 */
@@ -255,7 +256,6 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_TGSI_BALLOT:
         case PIPE_CAP_TGSI_TES_LAYER_VIEWPORT:
 	case PIPE_CAP_CAN_BIND_CONST_BUFFER_AS_VERTEX:
-	case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
         case PIPE_CAP_POST_DEPTH_COVERAGE:
         case PIPE_CAP_BINDLESS_TEXTURE:
                 return 0;
