@@ -47,6 +47,9 @@ lima_context_destroy(struct pipe_context *pctx)
    if (ctx->gp_submit)
       lima_submit_delete(ctx->gp_submit);
 
+   if (ctx->pp_submit)
+      lima_submit_delete(ctx->pp_submit);
+
    if (ctx->plb)
       lima_buffer_free(ctx->plb);
 
@@ -130,6 +133,13 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    if (lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer->bo,
                           LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE))
+      goto err_out;
+
+   if (lima_submit_create(screen->dev, LIMA_PIPE_PP, &ctx->pp_submit))
+      goto err_out;
+
+   if (lima_submit_add_bo(ctx->pp_submit, ctx->plb->bo,
+                          LIMA_SUBMIT_BO_READ))
       goto err_out;
 
    return &ctx->base;
