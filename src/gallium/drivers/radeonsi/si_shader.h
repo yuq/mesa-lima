@@ -492,8 +492,7 @@ struct si_shader_key {
 		uint8_t		vs_fix_fetch[SI_MAX_ATTRIBS];
 
 		union {
-			/* Don't use "uint64_t" in order to get 32-bit alignment. */
-			uint32_t	ff_tcs_inputs_to_copy[2]; /* for fixed-func TCS */
+			uint64_t	ff_tcs_inputs_to_copy; /* for fixed-func TCS */
 			/* When PS needs PrimID and GS is disabled. */
 			unsigned	vs_export_prim_id:1;
 		} u;

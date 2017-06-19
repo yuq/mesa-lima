@@ -1280,12 +1280,8 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		key->part.tcs.epilog.tes_reads_tess_factors =
 			sctx->tes_shader.cso->info.reads_tess_factors;
 
-		if (sel == sctx->fixed_func_tcs_shader.cso) {
-			uint64_t outputs_written = sctx->vs_shader.cso->outputs_written;
-
-			key->mono.u.ff_tcs_inputs_to_copy[0] = outputs_written;
-			key->mono.u.ff_tcs_inputs_to_copy[1] = outputs_written >> 32;
-		}
+		if (sel == sctx->fixed_func_tcs_shader.cso)
+			key->mono.u.ff_tcs_inputs_to_copy = sctx->vs_shader.cso->outputs_written;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)
