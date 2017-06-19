@@ -2297,6 +2297,7 @@ static uint64_t si_create_texture_handle(struct pipe_context *ctx,
 	}
 
 	si_set_sampler_view_desc(sctx, sview, sstate, &desc_list[0]);
+	memcpy(&tex_handle->sstate, sstate, sizeof(*sstate));
 	ctx->delete_sampler_state(ctx, sstate);
 
 	tex_handle->desc = si_create_bindless_descriptor(sctx, desc_list,

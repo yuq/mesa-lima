@@ -243,6 +243,7 @@ struct si_texture_handle
 {
 	struct si_bindless_descriptor	*desc;
 	struct pipe_sampler_view	*view;
+	struct si_sampler_state		sstate;
 };
 
 struct si_image_handle
