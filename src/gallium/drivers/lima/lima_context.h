@@ -142,6 +142,7 @@ struct lima_context {
    #define varying_info_offset    0x2000
    #define attribute_info_offset  0x2100
    #define render_state_offset    0x2200
+   #define uniform_offset         0x2280
    #define vs_cmd_offset          0x2300
    #define plbu_cmd_offset        0x2900
    #define tile_heap_offset       0x3000
