@@ -50,12 +50,12 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     BarycentricCoeffs coeffs;
     SetupBarycentricCoeffs(&coeffs, work);
 
-    uint8_t *pColorBuffer[SWR_NUM_RENDERTARGETS], *pDepthBuffer, *pStencilBuffer;
-    SetupRenderBuffers(pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
-
     SWR_PS_CONTEXT psContext;
     const SWR_MULTISAMPLE_POS& samplePos = state.rastState.samplePositions;
     SetupPixelShaderContext<T>(&psContext, samplePos, work);
+
+    uint8_t *pDepthBuffer, *pStencilBuffer;
+    SetupRenderBuffers(psContext.pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
 
     AR_END(BESetup, 0);
 
@@ -75,7 +75,6 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
         {
 #if USE_8x2_TILE_BACKEND
             const bool useAlternateOffset = ((xx & SIMD_TILE_X_DIM) != 0);
-
 #endif
             if (T::InputCoverage != SWR_INPUT_COVERAGE_NONE)
             {
@@ -199,9 +198,9 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     // output merger
                     AR_BEGIN(BEOutputMerger, pDC->drawId);
 #if USE_8x2_TILE_BACKEND
-                    OutputMerger8x2(psContext, pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.numRenderTargets, state.colorHottileEnable, useAlternateOffset);
+                    OutputMerger8x2(psContext, psContext.pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.numRenderTargets, state.colorHottileEnable, useAlternateOffset);
 #else
-                    OutputMerger4x2(psContext, pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.numRenderTargets);
+                    OutputMerger4x2(psContext, psContext.pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.numRenderTargets);
 #endif
 
                     // do final depth write after all pixel kills
@@ -230,13 +229,13 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
             {
                 for (uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
                 {
-                    pColorBuffer[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
+                    psContext.pColorBuffer[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
                 }
             }
 #else
             for (uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
             {
-                pColorBuffer[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
+                psContext.pColorBuffer[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
             }
 #endif
             pDepthBuffer += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
