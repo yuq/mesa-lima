@@ -150,6 +150,7 @@ struct lima_context {
    #define gp_buffer_size         0x5000
 
    lima_submit_handle gp_submit;
+   lima_submit_handle pp_submit;
 };
 
 static inline struct lima_context *
