@@ -30,6 +30,8 @@
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 
+#include <lima.h>
+
 struct pipe_screen;
 struct pipe_surface;
 struct lima_buffer;
@@ -82,7 +84,6 @@ struct lima_context_vertex_buffer {
    struct pipe_vertex_buffer vb[PIPE_MAX_ATTRIBS];
    unsigned count;
    uint32_t enabled_mask;
-   uint32_t dirty_mask;
 };
 
 struct lima_context_viewport_state {
@@ -147,6 +148,8 @@ struct lima_context {
    #define plbu_cmd_offset        0x2900
    #define tile_heap_offset       0x3000
    #define gp_buffer_size         0x5000
+
+   lima_submit_handle gp_submit;
 };
 
 static inline struct lima_context *
