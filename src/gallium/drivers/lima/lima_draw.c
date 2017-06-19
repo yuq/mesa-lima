@@ -30,6 +30,8 @@
 #include "lima_screen.h"
 #include "lima_resource.h"
 
+#include <lima_drm.h>
+
 static void
 lima_clear(struct pipe_context *pctx, unsigned buffers,
            const union pipe_color_union *color, double depth, unsigned stencil)
@@ -251,6 +253,10 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = info->indexed ? 0x00018000 : 0x00000000; /* ARRAYS_SEMAPHORE_NEXT : ARRAYS_SEMAPHORE_END */
    vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
 
+   for (int j = 0; j < i; j += 4)
+      printf("vs_cmd %08x %08x %08x %08x\n",
+             vs_cmd[j], vs_cmd[j + 1], vs_cmd[j + 2], vs_cmd[j + 3]);
+
    return i << 2;
 }
 
@@ -348,6 +354,10 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
 
    plbu_cmd[i++] = 0x00000000;
    plbu_cmd[i++] = 0x50000000; /* END */
+
+   for (int j = 0; j < i; j += 4)
+      printf("plbu_cmd %08x %08x %08x %08x\n",
+             plbu_cmd[j], plbu_cmd[j + 1], plbu_cmd[j + 2], plbu_cmd[j + 3]);
 
    return i << 2;
 }
@@ -534,6 +544,11 @@ lima_pack_render_state(struct lima_context *ctx)
 
    /* seems not needed */
    render->varyings_address = 0x00000000;
+
+   uint32_t *rd = (uint32_t *)render;
+   for (int j = 0; j < sizeof(*render)/4; j += 4)
+      printf("render %08x %08x %08x %08x\n",
+             rd[j], rd[j + 1], rd[j + 2], rd[j + 3]);
 }
 
 static void
@@ -659,10 +674,27 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    lima_pack_render_state(ctx);
 
    int vs_cmd_size = lima_pack_vs_cmd(ctx, info);
-   (void)vs_cmd_size;
-
    int plbu_cmd_size = lima_pack_plbu_cmd(ctx, info);
-   (void)plbu_cmd_size;
+
+   struct drm_lima_m400_gp_frame gp_frame = {
+      .vs_cmd_start = ctx->gp_buffer->va + vs_cmd_offset,
+      .vs_cmd_end = ctx->gp_buffer->va + vs_cmd_offset + vs_cmd_size,
+      .plbu_cmd_start = ctx->gp_buffer->va + plbu_cmd_offset,
+      .plbu_cmd_end = ctx->gp_buffer->va + plbu_cmd_offset + plbu_cmd_size,
+      .tile_heap_start = ctx->gp_buffer->va + tile_heap_offset,
+      .tile_heap_end = ctx->gp_buffer->va + gp_buffer_size,
+   };
+
+   lima_submit_set_frame(ctx->gp_submit, &gp_frame, sizeof(gp_frame));
+   if (lima_submit_start(ctx->gp_submit))
+      printf("gp submit error\n");
+   if (lima_submit_wait(ctx->gp_submit, 1000000000, true))
+      printf("gp submit wait error\n");
+   float *varying = ctx->gp_buffer->map + varying_offset;
+   printf("varing %f %f %f %f %f %f %f %f %f %f %f %f\n",
+          varying[0], varying[1], varying[2], varying[3],
+          varying[4], varying[5], varying[6], varying[7],
+          varying[8], varying[9], varying[10], varying[11]);
 }
 
 void
