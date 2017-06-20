@@ -2449,10 +2449,26 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
 
    _mesa_reserve_parameter_storage(params, num_params);
    index = params->NumParameters;
-   for (unsigned i = 0; i < num_params; i++) {
-      unsigned comps = 4;
-      _mesa_add_parameter(params, PROGRAM_UNIFORM, name, comps,
-                          type->gl_type, NULL, NULL, true);
+
+   if (ctx->Const.PackedDriverUniformStorage) {
+      for (unsigned i = 0; i < num_params; i++) {
+         unsigned dmul = type->without_array()->is_64bit() ? 2 : 1;
+         unsigned comps = type->without_array()->vector_elements * dmul;
+         if (is_dual_slot) {
+            if (i & 0x1)
+               comps -= 4;
+            else
+               comps = 4;
+         }
+
+         _mesa_add_parameter(params, PROGRAM_UNIFORM, name, comps,
+                             type->gl_type, NULL, NULL, false);
+      }
+   } else {
+      for (unsigned i = 0; i < num_params; i++) {
+         _mesa_add_parameter(params, PROGRAM_UNIFORM, name, 4,
+                             type->gl_type, NULL, NULL, true);
+      }
    }
 
    /* The first part of the uniform that's processed determines the base
@@ -2527,7 +2543,13 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
       if (location != last_location) {
          enum gl_uniform_driver_format format = uniform_native;
          unsigned columns = 0;
-         int dmul = 4 * sizeof(float);
+
+         int dmul;
+         if (ctx->Const.PackedDriverUniformStorage && !prog->is_arb_asm) {
+            dmul = storage->type->vector_elements * sizeof(float);
+         } else {
+            dmul = 4 * sizeof(float);
+         }
 
          switch (storage->type->base_type) {
          case GLSL_TYPE_UINT64:
