@@ -125,7 +125,7 @@ lima_update_plb(struct lima_context *ctx)
       if (x < fb->tiled_w && y < fb->tiled_h) {
          int pp = index % num_pp;
          int offset = ((y >> fb->shift_h) * fb->block_w + (x >> fb->shift_w)) * 512;
-         int plb_va = ctx->plb->va + offset;
+         int plb_va = ctx->plb->va + ctx->plb_offset + offset;
 
          stream[pp][0] = 0;
          stream[pp][1] = 0xB8000000 | x | (y << 8);
@@ -219,7 +219,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
 
    /* static uniform only for viewport transform now */
    vs_cmd[i++] = ctx->gp_buffer->va + uniform_offset;
-   vs_cmd[i++] = 0x30000000 | (32 << 12); /* UNIFORMS_ADDRESS */
+   vs_cmd[i++] = 0x30000000 | (48 << 12); /* UNIFORMS_ADDRESS */
 
    vs_cmd[i++] = ctx->gp_buffer->va + vs_program_offset;
    vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16); /* SHADER_ADDRESS */
@@ -252,10 +252,6 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
 
    vs_cmd[i++] = info->indexed ? 0x00018000 : 0x00000000; /* ARRAYS_SEMAPHORE_NEXT : ARRAYS_SEMAPHORE_END */
    vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
-
-   for (int j = 0; j < i; j += 4)
-      printf("vs_cmd %08x %08x %08x %08x\n",
-             vs_cmd[j], vs_cmd[j + 1], vs_cmd[j + 2], vs_cmd[j + 3]);
 
    return i << 2;
 }
@@ -354,10 +350,6 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
 
    plbu_cmd[i++] = 0x00000000;
    plbu_cmd[i++] = 0x50000000; /* END */
-
-   for (int j = 0; j < i; j += 4)
-      printf("plbu_cmd %08x %08x %08x %08x\n",
-             plbu_cmd[j], plbu_cmd[j + 1], plbu_cmd[j + 2], plbu_cmd[j + 3]);
 
    return i << 2;
 }
@@ -467,7 +459,7 @@ lima_stencil_op(enum pipe_stencil_op pipe)
 }
 
 static void
-lima_pack_render_state(struct lima_context *ctx)
+lima_pack_gp_render_state(struct lima_context *ctx)
 {
    struct lima_render_state *render = ctx->gp_buffer->map + render_state_offset;
 
@@ -484,6 +476,7 @@ lima_pack_render_state(struct lima_context *ctx)
       (float_to_ubyte(ctx->blend_color.color[1]) << 16);
    render->blend_color_ra = float_to_ubyte(ctx->blend_color.color[0]) |
       (float_to_ubyte(ctx->blend_color.color[3]) << 16);
+#if 1
    render->alpha_blend = lima_blend_func(rt->rgb_func) |
       (lima_blend_func(rt->alpha_func) << 3) |
       (lima_blend_factor(rt->rgb_src_factor) << 6) |
@@ -491,7 +484,11 @@ lima_pack_render_state(struct lima_context *ctx)
       ((lima_blend_factor(rt->alpha_src_factor) & 0xF) << 16) |
       ((lima_blend_factor(rt->alpha_dst_factor) & 0xF) << 20) |
       0xFC000000; /* need check if this GLESv1 glAlphaFunc */
+#else
+   render->alpha_blend = 0xfc3b1ad2;
+#endif
 
+#if 0
    struct pipe_depth_state *depth = &ctx->zsa->base.depth;
    //struct pipe_rasterizer_state *rst = &ctx->rasterizer->base;
    render->depth_test = depth->enabled |
@@ -499,11 +496,15 @@ lima_pack_render_state(struct lima_context *ctx)
    /* need more investigation */
    //(some_transform(rst->offset_scale) << 16) |
    //(some_transform(rst->offset_units) << 24) |
+#else
+   render->depth_test = 0x0000003e;
+#endif
 
    /* overlap with plbu? any place can remove one? */
    render->depth_range = float_to_ushort(ctx->viewport.near) |
       (float_to_ushort(ctx->viewport.far) << 16);
 
+#if 0
    struct pipe_stencil_state *stencil = ctx->zsa->base.stencil;
    struct pipe_stencil_ref *ref = &ctx->stencil_ref;
    render->stencil_front = stencil[0].func |
@@ -518,6 +519,10 @@ lima_pack_render_state(struct lima_context *ctx)
       (lima_stencil_op(stencil[1].zpass_op) << 9) |
       (ref->ref_value[1] << 16) |
       (stencil[1].valuemask << 24);
+#else
+   render->stencil_front = 0xff000007;
+   render->stencil_back = 0xff000007;
+#endif
 
    /* seems not correct? */
    //struct pipe_alpha_state *alpha = &ctx->zsa->base.alpha;
@@ -544,11 +549,23 @@ lima_pack_render_state(struct lima_context *ctx)
 
    /* seems not needed */
    render->varyings_address = 0x00000000;
+}
 
-   uint32_t *rd = (uint32_t *)render;
-   for (int j = 0; j < sizeof(*render)/4; j += 4)
-      printf("render %08x %08x %08x %08x\n",
-             rd[j], rd[j + 1], rd[j + 2], rd[j + 3]);
+static void
+lima_pack_pp_render_state(struct lima_context *ctx)
+{
+   struct lima_render_state *render = ctx->pp_buffer->map + pp_render_state_offset;
+
+   memset(render, 0, sizeof(*render));
+
+   /* need more investigation */
+   render->multi_sample = 0x0000F008;
+
+   /* why no first instruction size here */
+   render->shader_address = ctx->pp_buffer->va + pp_program_offset;
+
+   /* more investigation */
+   render->aux0 = 0x00000100;
 }
 
 static void
@@ -597,8 +614,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          attribute[n++] = (pvb->stride << 11) |
             (lima_pipe_format_to_attrib_type(pve->src_format) << 2) |
             (util_format_get_nr_components(pve->src_format) - 1);
-
-         printf("attribute %d: %x %x\n", i, attribute[n - 2], attribute[n - 1]);
       }
 
       ctx->dirty &= ~(LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF);
@@ -639,6 +654,10 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       trans[5] = vp->translate[1];
       trans[6] = vp->translate[2];
       trans[7] = 0;
+      trans[8] = 1;
+      trans[9] = 0;
+      trans[10] = 0;
+      trans[11] = 0;
 
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_VIEWPORT;
    }
@@ -671,7 +690,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_STENCIL_REF;
    }
 
-   lima_pack_render_state(ctx);
+   lima_pack_gp_render_state(ctx);
 
    int vs_cmd_size = lima_pack_vs_cmd(ctx, info);
    int plbu_cmd_size = lima_pack_plbu_cmd(ctx, info);
@@ -688,6 +707,8 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    lima_submit_set_frame(ctx->gp_submit, &gp_frame, sizeof(gp_frame));
    if (lima_submit_start(ctx->gp_submit))
       printf("gp submit error\n");
+
+/*
    if (lima_submit_wait(ctx->gp_submit, 1000000000, true))
       printf("gp submit wait error\n");
    float *varying = ctx->gp_buffer->map + varying_offset;
@@ -695,6 +716,78 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
           varying[0], varying[1], varying[2], varying[3],
           varying[4], varying[5], varying[6], varying[7],
           varying[8], varying[9], varying[10], varying[11]);
+   uint32_t *plb = ctx->plb->map + ctx->plb_offset;
+   printf("plb %x %x %x %x %x %x %x %x\n",
+          plb[0], plb[1], plb[2], plb[3],
+          plb[4], plb[5], plb[6], plb[7]);
+//*/
+
+   lima_pack_pp_render_state(ctx);
+
+   struct lima_screen *screen = lima_screen(pctx->screen);
+   struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
+   lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
+
+   struct drm_lima_m400_pp_frame pp_frame = {
+      .frame = {
+         .plbu_array_address = 0,
+         .render_address = ctx->pp_buffer->va + pp_render_state_offset,
+         .unused_0 = 0,
+         .flags = 0x02,
+         .clear_value_depth = ctx->clear.depth,
+         //.clear_value_depth = 0x00FFFFFF,
+         .clear_value_stencil = ctx->clear.stencil,
+         .clear_value_color = ctx->clear.color[0],
+         .clear_value_color_1 = ctx->clear.color[1],
+         .clear_value_color_2 = ctx->clear.color[2],
+         .clear_value_color_3 = ctx->clear.color[3],
+         /* different with limare */
+         .width = 0,
+         .height = 0,
+         .fragment_stack_address = 0,
+         .fragment_stack_size = 0,
+         .unused_1 = 0,
+         .unused_2 = 0,
+         .one = 1,
+         .supersampled_height = ctx->framebuffer.height * 2 - 1,
+         .dubya = 0x77,
+         .onscreen = 1,
+         .blocking = (ctx->framebuffer.shift_max << 28) |
+                     (ctx->framebuffer.shift_h << 16) | ctx->framebuffer.shift_w,
+         /* different with limare */
+         .scale = 0xE0C,
+         .foureight = 0x8888,
+      },
+
+      .wb[0] = {
+         .type = 0x02, /* 1 for depth, stencil */
+         .address = res->buffer->va,
+         .pixel_format = 0x03, /* RGBA8888 */
+         .downsample_factor = 0,
+         .pixel_layout = 0,
+         .pitch = res->stride / 8,
+         .mrt_bits = 0,
+         .mrt_pitch = 0,
+         .zero = 0,
+         .unused0 = 0,
+         .unused1 = 0,
+         .unused2 = 0,
+      },
+      .wb[1] = {0},
+      .wb[2] = {0},
+
+      .plbu_array_address = {0},
+      .fragment_stack_address = {0},
+      .num_pp = screen->info.num_pp,
+   };
+
+   for (int i = 0; i < screen->info.num_pp; i++)
+      pp_frame.plbu_array_address[i] = ctx->plb->va + ctx->plb_pp_offset[i];
+
+   lima_submit_set_frame(ctx->pp_submit, &pp_frame, sizeof(pp_frame));
+
+   if (lima_submit_start(ctx->pp_submit))
+      printf("pp submit error\n");
 }
 
 void
