@@ -1747,7 +1747,7 @@ struct __DRIimageList {
 };
 
 #define __DRI_IMAGE_LOADER "DRI_IMAGE_LOADER"
-#define __DRI_IMAGE_LOADER_VERSION 2
+#define __DRI_IMAGE_LOADER_VERSION 3
 
 struct __DRIimageLoaderExtensionRec {
     __DRIextension base;
@@ -1791,6 +1791,20 @@ struct __DRIimageLoaderExtensionRec {
      * \since 2
      */
     unsigned (*getCapability)(void *loaderPrivate, enum dri_loader_cap cap);
+
+    /**
+     * Flush swap buffers
+     *
+     * Make sure any outstanding swap buffers have been submitted to the
+     * device.
+     *
+     * \param driDrawable    Drawable whose swaps need to be flushed
+     * \param loaderPrivate  Loader's private data that was previously passed
+     *                       into __DRIdri2ExtensionRec::createNewDrawable
+     *
+     * \since 3
+     */
+    void (*flushSwapBuffers)(__DRIdrawable *driDrawable, void *loaderPrivate);
 };
 
 /**
