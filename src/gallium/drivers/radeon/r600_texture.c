@@ -2411,6 +2411,14 @@ static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 	bool main_value = false;
 	bool extra_value = false;
 	int extra_channel;
+
+	/* This is needed to get the correct DCC clear value for luminance formats.
+	 * 1) Get the linear format (because the next step can't handle L8_SRGB).
+	 * 2) Convert luminance to red. (the real hw format for luminance)
+	 */
+	surface_format = util_format_linear(surface_format);
+	surface_format = util_format_luminance_to_red(surface_format);
+
 	const struct util_format_description *desc = util_format_description(surface_format);
 
 	if (desc->block.bits == 128 &&
@@ -2429,7 +2437,8 @@ static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 
 	if (surface_format == PIPE_FORMAT_R11G11B10_FLOAT ||
 	    surface_format == PIPE_FORMAT_B5G6R5_UNORM ||
-	    surface_format == PIPE_FORMAT_B5G6R5_SRGB) {
+	    surface_format == PIPE_FORMAT_B5G6R5_SRGB ||
+	    util_format_is_alpha(surface_format)) {
 		extra_channel = -1;
 	} else if (desc->layout == UTIL_FORMAT_LAYOUT_PLAIN) {
 		if(r600_translate_colorswap(surface_format, false) <= 1)
