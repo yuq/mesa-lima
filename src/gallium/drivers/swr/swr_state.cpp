@@ -31,6 +31,7 @@
 #include "jit_api.h"
 #include "gen_state_llvm.h"
 #include "core/multisample.h"
+#include "core/state_funcs.h"
 
 #include "gallivm/lp_bld_tgsi.h"
 #include "util/u_format.h"
