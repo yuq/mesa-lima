@@ -532,19 +532,14 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
    irb->mt_level = level;
    irb->mt_layer = layer;
 
-   const unsigned layer_multiplier = 
-      mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY ? mt->surf.samples : 1;
-
    if (!layered) {
       irb->layer_count = 1;
    } else if (mt->target != GL_TEXTURE_3D && image->TexObject->NumLayers > 0) {
       irb->layer_count = image->TexObject->NumLayers;
-   } else if (mt->surf.size > 0) {
+   } else {
       irb->layer_count = mt->surf.dim == ISL_SURF_DIM_3D ?
                             minify(mt->surf.logical_level0_px.depth, level) :
                             mt->surf.logical_level0_px.array_len;
-   } else {
-      irb->layer_count = mt->level[level].depth / layer_multiplier;
    }
 
    intel_miptree_reference(&irb->mt, mt);
@@ -660,32 +655,17 @@ intel_validate_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 
    if (depth_mt && stencil_mt) {
       if (brw->gen >= 6) {
-         unsigned d_width, d_height, d_depth;
-         unsigned s_width, s_height, s_depth;
+         const unsigned d_width = depth_mt->surf.phys_level0_sa.width;
+         const unsigned d_height = depth_mt->surf.phys_level0_sa.height;
+         const unsigned d_depth = depth_mt->surf.dim == ISL_SURF_DIM_3D ?
+                                     depth_mt->surf.phys_level0_sa.depth :
+                                     depth_mt->surf.phys_level0_sa.array_len;
 
-         if (depth_mt->surf.size > 0) {
-             d_width = depth_mt->surf.phys_level0_sa.width;
-             d_height = depth_mt->surf.phys_level0_sa.height;
-             d_depth = depth_mt->surf.dim == ISL_SURF_DIM_3D ?
-                          depth_mt->surf.phys_level0_sa.depth :
-                          depth_mt->surf.phys_level0_sa.array_len;
-         } else {
-             d_width = depth_mt->physical_width0;
-             d_height = depth_mt->physical_height0;
-             d_depth = depth_mt->physical_depth0;
-         }
-
-         if (stencil_mt->surf.size > 0) {
-             s_width = stencil_mt->surf.phys_level0_sa.width;
-             s_height = stencil_mt->surf.phys_level0_sa.height;
-             s_depth = stencil_mt->surf.dim == ISL_SURF_DIM_3D ?
-                          stencil_mt->surf.phys_level0_sa.depth :
-                          stencil_mt->surf.phys_level0_sa.array_len;
-         } else {
-             s_width = stencil_mt->physical_width0;
-             s_height = stencil_mt->physical_height0;
-             s_depth = stencil_mt->physical_depth0;
-         }
+         const unsigned s_width = stencil_mt->surf.phys_level0_sa.width;
+         const unsigned s_height = stencil_mt->surf.phys_level0_sa.height;
+         const unsigned s_depth = stencil_mt->surf.dim == ISL_SURF_DIM_3D ?
+                                     stencil_mt->surf.phys_level0_sa.depth :
+                                     stencil_mt->surf.phys_level0_sa.array_len;
 
          /* For gen >= 6, we are using the lod/minimum-array-element fields
           * and supporting layered rendering. This means that we must restrict

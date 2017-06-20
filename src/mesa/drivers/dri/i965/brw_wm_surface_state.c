@@ -80,15 +80,7 @@ get_isl_surf(struct brw_context *brw, struct intel_mipmap_tree *mt,
              uint32_t *tile_x, uint32_t *tile_y,
              uint32_t *offset, struct isl_surf *surf)
 {
-   if (mt->surf.size > 0) {
-      *surf = mt->surf;
-   } else {
-      intel_miptree_get_isl_surf(brw, mt, surf);
-
-      surf->dim = get_isl_surf_dim(target);
-   }
-
-   assert(mt->array_layout != GEN6_HIZ_STENCIL);
+   *surf = mt->surf;
 
    const enum isl_dim_layout dim_layout =
       get_isl_dim_layout(&brw->screen->devinfo, mt->surf.tiling, target);
@@ -561,12 +553,10 @@ brw_update_texture_surface(struct gl_context *ctx,
       unsigned view_num_layers;
       if (obj->Immutable && obj->Target != GL_TEXTURE_3D) {
          view_num_layers = obj->NumLayers;
-      } else if (mt->surf.size > 0) {
+      } else {
          view_num_layers = mt->surf.dim == ISL_SURF_DIM_3D ?
                               mt->surf.logical_level0_px.depth :
                               mt->surf.logical_level0_px.array_len;
-      } else {
-         view_num_layers = mt->logical_depth0;
       }
 
       /* Handling GL_ALPHA as a surface format override breaks 1.30+ style
@@ -1663,14 +1653,9 @@ get_image_num_layers(const struct intel_mipmap_tree *mt, GLenum target,
    if (target == GL_TEXTURE_CUBE_MAP)
       return 6;
 
-   if (mt->surf.size > 0) {
-      return target == GL_TEXTURE_3D ?
-         minify(mt->surf.logical_level0_px.depth, level) :
-         mt->surf.logical_level0_px.array_len;
-   }
-
    return target == GL_TEXTURE_3D ?
-      minify(mt->logical_depth0, level) : mt->logical_depth0;
+      minify(mt->surf.logical_level0_px.depth, level) :
+      mt->surf.logical_level0_px.array_len;
 }
 
 static void

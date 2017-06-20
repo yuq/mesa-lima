@@ -100,21 +100,6 @@ struct intel_mipmap_level
    GLuint level_y;
 
    /**
-    * \brief Number of 2D slices in this miplevel.
-    *
-    * The exact semantics of depth varies according to the texture target:
-    *    - For GL_TEXTURE_CUBE_MAP, depth is 6.
-    *    - For GL_TEXTURE_2D_ARRAY, depth is the number of array slices. It is
-    *      identical for all miplevels in the texture.
-    *    - For GL_TEXTURE_3D, it is the texture's depth at this miplevel. Its
-    *      value, like width and height, varies with miplevel.
-    *    - For other texture types, depth is 1.
-    *    - Additionally, for UMS and CMS miptrees, depth is multiplied by
-    *      sample count.
-    */
-   GLuint depth;
-
-   /**
     * \brief Is HiZ enabled for this level?
     *
     * If \c mt->level[l].has_hiz is set, then (1) \c mt->hiz_mt has been
@@ -131,118 +116,11 @@ struct intel_mipmap_level
     */
    struct intel_mipmap_slice {
       /**
-       * \name Offset to slice
-       * \{
-       *
-       * Hardware formats are so diverse that that there is no unified way to
-       * compute the slice offsets, so we store them in this table.
-       *
-       * The (x, y) offset to slice \c s at level \c l relative the miptrees
-       * base address is
-       * \code
-       *     x = mt->level[l].slice[s].x_offset
-       *     y = mt->level[l].slice[s].y_offset
-       *
-       * On some hardware generations, we program these offsets into
-       * RENDER_SURFACE_STATE.XOffset and RENDER_SURFACE_STATE.YOffset.
-       */
-      GLuint x_offset;
-      GLuint y_offset;
-      /** \} */
-
-      /**
        * Mapping information. Persistent for the duration of
        * intel_miptree_map/unmap on this slice.
        */
       struct intel_miptree_map *map;
    } *slice;
-};
-
-enum miptree_array_layout {
-   /* Each array slice contains all miplevels packed together.
-    *
-    * Gen hardware usually wants multilevel miptrees configured this way.
-    *
-    * A 2D Array texture with 2 slices and multiple LODs using
-    * ALL_LOD_IN_EACH_SLICE would look somewhat like this:
-    *
-    *   +----------+
-    *   |          |
-    *   |          |
-    *   +----------+
-    *   +---+ +-+
-    *   |   | +-+
-    *   +---+ *
-    *   +----------+
-    *   |          |
-    *   |          |
-    *   +----------+
-    *   +---+ +-+
-    *   |   | +-+
-    *   +---+ *
-    */
-   ALL_LOD_IN_EACH_SLICE,
-
-   /* Each LOD contains all slices of that LOD packed together.
-    *
-    * In some situations, Gen7+ hardware can use the array_spacing_lod0
-    * feature to save space when the surface only contains LOD 0.
-    *
-    * Gen6 uses this for separate stencil and hiz since gen6 does not support
-    * multiple LODs for separate stencil and hiz.
-    *
-    * A 2D Array texture with 2 slices and multiple LODs using
-    * ALL_SLICES_AT_EACH_LOD would look somewhat like this:
-    *
-    *   +----------+
-    *   |          |
-    *   |          |
-    *   +----------+
-    *   |          |
-    *   |          |
-    *   +----------+
-    *   +---+ +-+
-    *   |   | +-+
-    *   +---+ +-+
-    *   |   | :
-    *   +---+
-    */
-   ALL_SLICES_AT_EACH_LOD,
-
-   /* On Sandy Bridge, HiZ and stencil buffers work the same as on Ivy Bridge
-    * except that they don't technically support mipmapping.  That does not,
-    * however, stop us from doing it.  As far as Sandy Bridge hardware is
-    * concerned, HiZ and stencil always operates on a single miplevel 2D
-    * (possibly array) image.  The dimensions of that image are NOT minified.
-    *
-    * In order to implement HiZ and stencil on Sandy Bridge, we create one
-    * full-sized 2D (possibly array) image for every LOD with every image
-    * aligned to a page boundary.  In order to save memory, we pretend that
-    * the width of each miplevel is minified and we place LOD1 and above below
-    * LOD0 but horizontally adjacent to each other.  When considered as
-    * full-sized images, LOD1 and above technically overlap.  However, since
-    * we only write to part of that image, the hardware will never notice the
-    * overlap.
-    *
-    * This layout looks something like this:
-    *
-    *   +---------+
-    *   |         |
-    *   |         |
-    *   +---------+
-    *   |         |
-    *   |         |
-    *   +---------+
-    *
-    *   +----+ +-+ .
-    *   |    | +-+
-    *   +----+
-    *
-    *   +----+ +-+ .
-    *   |    | +-+
-    *   +----+
-    */
-   GEN6_HIZ_STENCIL,
 };
 
 /**
@@ -354,107 +232,13 @@ struct intel_mipmap_tree
     */
    mesa_format etc_format;
 
-   /**
-    * @name Surface Alignment
-    * @{
-    *
-    * This defines the alignment of the upperleft pixel of each "slice" in the
-    * surface. The alignment is in pixel coordinates relative to the surface's
-    * most upperleft pixel, which is the pixel at (x=0, y=0, layer=0,
-    * level=0).
-    *
-    * The hardware docs do not use the term "slice".  We use "slice" to mean
-    * the pixels at a given miplevel and layer. For 2D surfaces, the layer is
-    * the array slice; for 3D surfaces, the layer is the z offset.
-    *
-    * In the surface layout equations found in the hardware docs, the
-    * horizontal and vertical surface alignments often appear as variables 'i'
-    * and 'j'.
-    */
-
-   /** @see RENDER_SURFACE_STATE.SurfaceHorizontalAlignment */
-   uint32_t halign;
-
-   /** @see RENDER_SURFACE_STATE.SurfaceVerticalAlignment */
-   uint32_t valign;
-   /** @} */
-
    GLuint first_level;
    GLuint last_level;
-
-   /**
-    * Level zero image dimensions.  These dimensions correspond to the
-    * physical layout of data in memory.  Accordingly, they account for the
-    * extra width, height, and or depth that must be allocated in order to
-    * accommodate multisample formats, and they account for the extra factor
-    * of 6 in depth that must be allocated in order to accommodate cubemap
-    * textures.
-    */
-   GLuint physical_width0, physical_height0, physical_depth0;
 
    /** Bytes per pixel (or bytes per block if compressed) */
    GLuint cpp;
 
    bool compressed;
-
-   /**
-    * @name Level zero image dimensions
-    * @{
-    *
-    * These dimensions correspond to the
-    * logical width, height, and depth of the texture as seen by client code.
-    * Accordingly, they do not account for the extra width, height, and/or
-    * depth that must be allocated in order to accommodate multisample
-    * formats, nor do they account for the extra factor of 6 in depth that
-    * must be allocated in order to accommodate cubemap textures.
-    */
-
-   /**
-    * @see RENDER_SURFACE_STATE.Width
-    * @see 3DSTATE_DEPTH_BUFFER.Width
-    */
-   uint32_t logical_width0;
-
-   /**
-    * @see RENDER_SURFACE_STATE.Height
-    * @see 3DSTATE_DEPTH_BUFFER.Height
-    */
-   uint32_t logical_height0;
-
-   /**
-    * @see RENDER_SURFACE_STATE.Depth
-    * @see 3DSTATE_DEPTH_BUFFER.Depth
-    */
-   uint32_t logical_depth0;
-   /** @} */
-
-   /**
-    * Indicates if we use the standard miptree layout (ALL_LOD_IN_EACH_SLICE),
-    * or if we tightly pack array slices at each LOD (ALL_SLICES_AT_EACH_LOD).
-    */
-   enum miptree_array_layout array_layout;
-
-   /**
-    * The distance in between array slices.
-    *
-    * The value is the one that is sent in the surface state. The actual
-    * meaning depends on certain criteria. Usually it is simply the number of
-    * uncompressed rows between each slice. However on Gen9+ for compressed
-    * surfaces it is the number of blocks. For 1D array surfaces that have the
-    * mipmap tree stored horizontally it is the number of pixels between each
-    * slice.
-    *
-    * @see RENDER_SURFACE_STATE.SurfaceQPitch
-    * @see 3DSTATE_DEPTH_BUFFER.SurfaceQPitch
-    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceQPitch
-    * @see 3DSTATE_STENCIL_BUFFER.SurfaceQPitch
-    */
-   uint32_t qpitch;
-
-   /* Derived from the above:
-    */
-   GLuint total_width;
-   GLuint total_height;
 
    /* Includes image offset tables: */
    struct intel_mipmap_level level[MAX_TEXTURE_LEVELS];
@@ -670,14 +454,6 @@ enum isl_dim_layout
 get_isl_dim_layout(const struct gen_device_info *devinfo,
                    enum isl_tiling tiling, GLenum target);
 
-enum isl_tiling
-intel_miptree_get_isl_tiling(const struct intel_mipmap_tree *mt);
-
-void
-intel_miptree_get_isl_surf(struct brw_context *brw,
-                           const struct intel_mipmap_tree *mt,
-                           struct isl_surf *surf);
-
 enum isl_aux_usage
 intel_miptree_get_aux_isl_usage(const struct brw_context *brw,
                                 const struct intel_mipmap_tree *mt);
@@ -702,14 +478,6 @@ intel_miptree_get_tile_offsets(const struct intel_mipmap_tree *mt,
 uint32_t
 intel_miptree_get_aligned_offset(const struct intel_mipmap_tree *mt,
                                  uint32_t x, uint32_t y);
-
-void intel_miptree_set_level_info(struct intel_mipmap_tree *mt,
-                                  GLuint level,
-                                  GLuint x, GLuint y, GLuint d);
-
-void intel_miptree_set_image_offset(struct intel_mipmap_tree *mt,
-                                    GLuint level,
-                                    GLuint img, GLuint x, GLuint y);
 
 void
 intel_miptree_copy_slice(struct brw_context *brw,
@@ -892,15 +660,6 @@ intel_miptree_updownsample(struct brw_context *brw,
 void
 intel_update_r8stencil(struct brw_context *brw,
                        struct intel_mipmap_tree *mt);
-
-/**
- * Horizontal distance from one slice to the next in the two-dimensional
- * miptree layout.
- */
-unsigned
-brw_miptree_get_horizontal_slice_pitch(const struct brw_context *brw,
-                                       const struct intel_mipmap_tree *mt,
-                                       unsigned level);
 
 bool
 brw_miptree_layout(struct brw_context *brw,

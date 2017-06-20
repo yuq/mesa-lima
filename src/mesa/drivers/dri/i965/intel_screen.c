@@ -410,15 +410,10 @@ intel_setup_image_from_mipmap_tree(struct brw_context *brw, __DRIimage *image,
 
    intel_miptree_check_level_layer(mt, level, zoffset);
 
-   if (mt->surf.size > 0) {
-      image->width = minify(mt->surf.phys_level0_sa.width,
-                            level - mt->first_level);
-      image->height = minify(mt->surf.phys_level0_sa.height,
-                             level - mt->first_level);
-   } else {
-      image->width = minify(mt->physical_width0, level - mt->first_level);
-      image->height = minify(mt->physical_height0, level - mt->first_level);
-   }
+   image->width = minify(mt->surf.phys_level0_sa.width,
+                         level - mt->first_level);
+   image->height = minify(mt->surf.phys_level0_sa.height,
+                          level - mt->first_level);
    image->pitch = mt->surf.row_pitch;
 
    image->offset = intel_miptree_get_tile_offsets(mt, level, zoffset,

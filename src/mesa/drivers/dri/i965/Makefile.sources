@@ -51,7 +51,6 @@ i965_FILES = \
 	brw_tcs_surface_state.c \
 	brw_tes.c \
 	brw_tes_surface_state.c \
-	brw_tex_layout.c \
 	brw_urb.c \
 	brw_util.c \
 	brw_util.h \

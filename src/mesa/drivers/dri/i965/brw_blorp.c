@@ -147,13 +147,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
          intel_miptree_check_level_layer(mt, *level, start_layer + i);
    }
 
-   if (mt->surf.size > 0) {
-      surf->surf = &mt->surf;
-   } else {
-      intel_miptree_get_isl_surf(brw, mt, &tmp_surfs[0]);
-      surf->surf = &tmp_surfs[0];
-   }
-
+   surf->surf = &mt->surf;
    surf->addr = (struct blorp_address) {
       .buffer = mt->bo,
       .offset = mt->offset,

@@ -91,8 +91,7 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
       break;
    case GL_TEXTURE_3D:
       assert(mt);
-      depth = mt->surf.size > 0 ? mt->surf.logical_level0_px.depth :
-                                  MAX2(mt->logical_depth0, 1);
+      depth = mt->surf.logical_level0_px.depth;
       /* fallthrough */
    default:
       surftype = translate_tex_target(gl_target);
@@ -103,12 +102,9 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
 
    lod = irb ? irb->mt_level - irb->mt->first_level : 0;
 
-   if (mt && mt->surf.size > 0) {
+   if (mt) {
       width = mt->surf.logical_level0_px.width;
       height = mt->surf.logical_level0_px.height;
-   } else if (mt) {
-      width = mt->logical_width0;
-      height = mt->logical_height0;
    }
 
    BEGIN_BATCH(7);

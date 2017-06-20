@@ -171,12 +171,12 @@ get_blit_intratile_offset_el(const struct brw_context *brw,
                              uint32_t *x_offset_el,
                              uint32_t *y_offset_el)
 {
-   enum isl_tiling tiling = intel_miptree_get_isl_tiling(mt);
-   isl_tiling_get_intratile_offset_el(tiling, mt->cpp * 8, mt->surf.row_pitch,
+   isl_tiling_get_intratile_offset_el(mt->surf.tiling,
+                                      mt->cpp * 8, mt->surf.row_pitch,
                                       total_x_offset_el, total_y_offset_el,
                                       base_address_offset,
                                       x_offset_el, y_offset_el);
-   if (tiling == ISL_TILING_LINEAR) {
+   if (mt->surf.tiling == ISL_TILING_LINEAR) {
       /* From the Broadwell PRM docs for XY_SRC_COPY_BLT::SourceBaseAddress:
        *
        *    "Base address of the destination surface: X=0, Y=0. Lower 32bits
@@ -329,14 +329,12 @@ intel_miptree_blit(struct brw_context *brw,
    intel_miptree_access_raw(brw, dst_mt, dst_level, dst_slice, true);
 
    if (src_flip) {
-      const unsigned h0 = src_mt->surf.size > 0 ?
-         src_mt->surf.phys_level0_sa.height : src_mt->physical_height0;
+      const unsigned h0 = src_mt->surf.phys_level0_sa.height;
       src_y = minify(h0, src_level - src_mt->first_level) - src_y - height;
    }
  
    if (dst_flip) {
-      const unsigned h0 = dst_mt->surf.size > 0 ?
-         dst_mt->surf.phys_level0_sa.height : dst_mt->physical_height0;
+      const unsigned h0 = dst_mt->surf.phys_level0_sa.height;
       dst_y = minify(h0, dst_level - dst_mt->first_level) - dst_y - height;
    }
 
@@ -407,21 +405,12 @@ intel_miptree_copy(struct brw_context *brw,
       assert(src_x % bw == 0);
       assert(src_y % bh == 0);
 
-      if (src_mt->surf.size > 0) {
-         assert(src_width % bw == 0 ||
-                src_x + src_width ==
-                minify(src_mt->surf.logical_level0_px.width, src_level));
-         assert(src_height % bh == 0 ||
-                src_y + src_height ==
-                minify(src_mt->surf.logical_level0_px.height, src_level));
-      } else {
-         assert(src_width % bw == 0 ||
-                src_x + src_width ==
-                minify(src_mt->logical_width0, src_level));
-         assert(src_height % bh == 0 ||
-                src_y + src_height ==
-                minify(src_mt->logical_height0, src_level));
-      }
+      assert(src_width % bw == 0 ||
+             src_x + src_width ==
+             minify(src_mt->surf.logical_level0_px.width, src_level));
+      assert(src_height % bh == 0 ||
+             src_y + src_height ==
+             minify(src_mt->surf.logical_level0_px.height, src_level));
 
       src_x /= (int)bw;
       src_y /= (int)bh;

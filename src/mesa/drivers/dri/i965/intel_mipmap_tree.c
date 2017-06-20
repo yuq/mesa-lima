@@ -97,29 +97,6 @@ is_mcs_supported(const struct brw_context *brw, mesa_format format,
    }
 }
 
-/**
- * Determine which MSAA layout should be used by the MSAA surface being
- * created, based on the chip generation and the surface type.
- */
-static enum isl_msaa_layout
-compute_msaa_layout(struct brw_context *brw, mesa_format format,
-                    uint32_t layout_flags)
-{
-   /* Prior to Gen7, all MSAA surfaces used IMS layout. */
-   if (brw->gen < 7)
-      return ISL_MSAA_LAYOUT_INTERLEAVED;
-
-   /* In Gen7, IMS layout is only used for depth and stencil buffers. */
-   switch (_mesa_get_format_base_format(format)) {
-   case GL_DEPTH_COMPONENT:
-   case GL_STENCIL_INDEX:
-   case GL_DEPTH_STENCIL:
-      return ISL_MSAA_LAYOUT_INTERLEAVED;
-   default:
-      return ISL_MSAA_LAYOUT_ARRAY;
-   }
-}
-
 static bool
 intel_tiling_supports_ccs(const struct brw_context *brw,
                           enum isl_tiling tiling)
@@ -345,222 +322,6 @@ needs_separate_stencil(const struct brw_context *brw,
 }
 
 /**
- * @param for_bo Indicates that the caller is
- *        intel_miptree_create_for_bo(). If true, then do not create
- *        \c stencil_mt.
- */
-static struct intel_mipmap_tree *
-intel_miptree_create_layout(struct brw_context *brw,
-                            GLenum target,
-                            mesa_format format,
-                            GLuint first_level,
-                            GLuint last_level,
-                            GLuint width0,
-                            GLuint height0,
-                            GLuint depth0,
-                            GLuint num_samples,
-                            uint32_t layout_flags)
-{
-   assert(num_samples > 0);
-
-   struct intel_mipmap_tree *mt = calloc(sizeof(*mt), 1);
-   if (!mt)
-      return NULL;
-
-   DBG("%s target %s format %s level %d..%d slices %d <-- %p\n", __func__,
-       _mesa_enum_to_string(target),
-       _mesa_get_format_name(format),
-       first_level, last_level, depth0, mt);
-
-   if (target == GL_TEXTURE_1D_ARRAY)
-      assert(height0 == 1);
-
-   mt->target = target;
-   mt->format = format;
-   mt->first_level = first_level;
-   mt->last_level = last_level;
-   mt->logical_width0 = width0;
-   mt->logical_height0 = height0;
-   mt->logical_depth0 = depth0;
-   mt->is_scanout = (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT) != 0;
-   mt->aux_usage = ISL_AUX_USAGE_NONE;
-   mt->supports_fast_clear = false;
-   mt->aux_state = NULL;
-   mt->cpp = _mesa_get_format_bytes(format);
-   mt->surf.samples = num_samples;
-   mt->compressed = _mesa_is_format_compressed(format);
-   mt->surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
-   mt->refcount = 1;
-
-   if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8)
-      layout_flags |= MIPTREE_LAYOUT_GEN6_HIZ_STENCIL;
-
-   int depth_multiply = 1;
-   if (num_samples > 1) {
-      /* Adjust width/height/depth for MSAA */
-      mt->surf.msaa_layout = compute_msaa_layout(brw, format, layout_flags);
-      if (mt->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
-         /* From the Ivybridge PRM, Volume 1, Part 1, page 108:
-          * "If the surface is multisampled and it is a depth or stencil
-          *  surface or Multisampled Surface StorageFormat in SURFACE_STATE is
-          *  MSFMT_DEPTH_STENCIL, WL and HL must be adjusted as follows before
-          *  proceeding:
-          *
-          *  +----------------------------------------------------------------+
-          *  | Num Multisamples |        W_l =         |        H_l =         |
-          *  +----------------------------------------------------------------+
-          *  |         2        | ceiling(W_l / 2) * 4 | H_l (no adjustment)  |
-          *  |         4        | ceiling(W_l / 2) * 4 | ceiling(H_l / 2) * 4 |
-          *  |         8        | ceiling(W_l / 2) * 8 | ceiling(H_l / 2) * 4 |
-          *  |        16        | ceiling(W_l / 2) * 8 | ceiling(H_l / 2) * 8 |
-          *  +----------------------------------------------------------------+
-          * "
-          *
-          * Note that MSFMT_DEPTH_STENCIL just means the IMS (interleaved)
-          * format rather than UMS/CMS (array slices).  The Sandybridge PRM,
-          * Volume 1, Part 1, Page 111 has the same formula for 4x MSAA.
-          *
-          * Another more complicated explanation for these adjustments comes
-          * from the Sandybridge PRM, volume 4, part 1, page 31:
-          *
-          *     "Any of the other messages (sample*, LOD, load4) used with a
-          *      (4x) multisampled surface will in-effect sample a surface with
-          *      double the height and width as that indicated in the surface
-          *      state. Each pixel position on the original-sized surface is
-          *      replaced with a 2x2 of samples with the following arrangement:
-          *
-          *         sample 0 sample 2
-          *         sample 1 sample 3"
-          *
-          * Thus, when sampling from a multisampled texture, it behaves as
-          * though the layout in memory for (x,y,sample) is:
-          *
-          *      (0,0,0) (0,0,2)   (1,0,0) (1,0,2)
-          *      (0,0,1) (0,0,3)   (1,0,1) (1,0,3)
-          *
-          *      (0,1,0) (0,1,2)   (1,1,0) (1,1,2)
-          *      (0,1,1) (0,1,3)   (1,1,1) (1,1,3)
-          *
-          * However, the actual layout of multisampled data in memory is:
-          *
-          *      (0,0,0) (1,0,0)   (0,0,1) (1,0,1)
-          *      (0,1,0) (1,1,0)   (0,1,1) (1,1,1)
-          *
-          *      (0,0,2) (1,0,2)   (0,0,3) (1,0,3)
-          *      (0,1,2) (1,1,2)   (0,1,3) (1,1,3)
-          *
-          * This pattern repeats for each 2x2 pixel block.
-          *
-          * As a result, when calculating the size of our 4-sample buffer for
-          * an odd width or height, we have to align before scaling up because
-          * sample 3 is in that bottom right 2x2 block.
-          */
-         switch (num_samples) {
-         case 2:
-            assert(brw->gen >= 8);
-            width0 = ALIGN(width0, 2) * 2;
-            height0 = ALIGN(height0, 2);
-            break;
-         case 4:
-            width0 = ALIGN(width0, 2) * 2;
-            height0 = ALIGN(height0, 2) * 2;
-            break;
-         case 8:
-            width0 = ALIGN(width0, 2) * 4;
-            height0 = ALIGN(height0, 2) * 2;
-            break;
-         case 16:
-            width0 = ALIGN(width0, 2) * 4;
-            height0 = ALIGN(height0, 2) * 4;
-            break;
-         default:
-            /* num_samples should already have been quantized to 0, 1, 2, 4, 8
-             * or 16.
-             */
-            unreachable("not reached");
-         }
-      } else {
-         /* Non-interleaved */
-         depth_multiply = num_samples;
-         depth0 *= depth_multiply;
-      }
-   }
-
-   if (!create_mapping_table(target, first_level, last_level, depth0,
-                             mt->level)) {
-      free(mt);
-      return NULL;
-   }
-
-   /* Set array_layout to ALL_SLICES_AT_EACH_LOD when array_spacing_lod0 can
-    * be used. array_spacing_lod0 is only used for non-IMS MSAA surfaces on
-    * Gen 7 and 8. On Gen 8 and 9 this layout is not available but it is still
-    * used on Gen8 to make it pick a qpitch value which doesn't include space
-    * for the mipmaps. On Gen9 this is not necessary because it will
-    * automatically pick a packed qpitch value whenever mt->first_level ==
-    * mt->last_level.
-    * TODO: can we use it elsewhere?
-    * TODO: also disable this on Gen8 and pick the qpitch value like Gen9
-    */
-   if (brw->gen >= 9) {
-      mt->array_layout = ALL_LOD_IN_EACH_SLICE;
-   } else {
-      switch (mt->surf.msaa_layout) {
-      case ISL_MSAA_LAYOUT_NONE:
-      case ISL_MSAA_LAYOUT_INTERLEAVED:
-         mt->array_layout = ALL_LOD_IN_EACH_SLICE;
-         break;
-      case ISL_MSAA_LAYOUT_ARRAY:
-         mt->array_layout = ALL_SLICES_AT_EACH_LOD;
-         break;
-      }
-   }
-
-   if (target == GL_TEXTURE_CUBE_MAP)
-      assert(depth0 == 6 * depth_multiply);
-
-   mt->physical_width0 = width0;
-   mt->physical_height0 = height0;
-   mt->physical_depth0 = depth0;
-
-   assert(!needs_separate_stencil(brw, mt, format, layout_flags));
-
-   /*
-    * Obey HALIGN_16 constraints for Gen8 and Gen9 buffers which are
-    * multisampled or have an AUX buffer attached to it.
-    *
-    * GEN  |    MSRT        | AUX_CCS_* or AUX_MCS
-    *  -------------------------------------------
-    *  9   |  HALIGN_16     |    HALIGN_16
-    *  8   |  HALIGN_ANY    |    HALIGN_16
-    *  7   |      ?         |        ?
-    *  6   |      ?         |        ?
-    */
-   if (intel_miptree_supports_ccs(brw, mt)) {
-      if (brw->gen >= 9 || (brw->gen == 8 && num_samples == 1))
-         layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
-   } else if (brw->gen >= 9 && num_samples > 1) {
-      layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
-   } else {
-      const UNUSED bool is_lossless_compressed_aux =
-         brw->gen >= 9 && num_samples == 1 &&
-         mt->format == MESA_FORMAT_R_UINT32;
-
-      /* For now, nothing else has this requirement */
-      assert(is_lossless_compressed_aux ||
-             (layout_flags & MIPTREE_LAYOUT_FORCE_HALIGN16) == 0);
-   }
-
-   if (!brw_miptree_layout(brw, mt, layout_flags)) {
-      intel_miptree_release(&mt);
-      return NULL;
-   }
-
-   return mt;
-}
-
-
-/**
  * Choose the aux usage for this miptree.  This function must be called fairly
  * late in the miptree create process after we have a tiling.
  */
@@ -662,11 +423,7 @@ intel_miptree_check_level_layer(const struct intel_mipmap_tree *mt,
 
    assert(level >= mt->first_level);
    assert(level <= mt->last_level);
-
-   if (mt->surf.size > 0)
-      assert(layer < get_num_phys_layers(&mt->surf, level));
-   else
-      assert(layer < mt->level[level].depth);
+   assert(layer < get_num_phys_layers(&mt->surf, level));
 }
 
 static enum isl_aux_state **
@@ -676,12 +433,8 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
    const uint32_t levels = mt->last_level + 1;
 
    uint32_t total_slices = 0;
-   for (uint32_t level = 0; level < levels; level++) {
-      if (mt->surf.size > 0)
-         total_slices += get_num_phys_layers(&mt->surf, level);
-      else
-         total_slices += mt->level[level].depth;
-   }
+   for (uint32_t level = 0; level < levels; level++)
+      total_slices += get_num_phys_layers(&mt->surf, level);
 
    const size_t per_level_array_size = levels * sizeof(enum isl_aux_state *);
 
@@ -700,11 +453,7 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
    for (uint32_t level = 0; level < levels; level++) {
       per_level_arr[level] = s;
 
-      unsigned level_depth;
-      if (mt->surf.size > 0)
-         level_depth = get_num_phys_layers(&mt->surf, level);
-      else
-         level_depth = mt->level[level].depth;
+      const unsigned level_depth = get_num_phys_layers(&mt->surf, level);
               
       for (uint32_t a = 0; a < level_depth; a++)
          *(s++) = initial;
@@ -1212,8 +961,6 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    mt->target = target;
    mt->level[0].level_x = image->tile_x;
    mt->level[0].level_y = image->tile_y;
-   mt->level[0].slice[0].x_offset = image->tile_x;
-   mt->level[0].slice[0].y_offset = image->tile_y;
 
    /* From "OES_EGL_image" error reporting. We report GL_INVALID_OPERATION
     * for EGL images from non-tile aligned sufaces in gen4 hw and earlier which has
@@ -1456,79 +1203,18 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
    if (mt->target == GL_TEXTURE_CUBE_MAP)
       depth = 6;
 
-   if (mt->surf.size > 0) {
-      if (level >= mt->surf.levels)
-         return false;
-
-      const unsigned level_depth =
-         mt->surf.dim == ISL_SURF_DIM_3D ?
-            minify(mt->surf.logical_level0_px.depth, level) :
-            mt->surf.logical_level0_px.array_len;
-
-      return width == minify(mt->surf.logical_level0_px.width, level) &&
-             height == minify(mt->surf.logical_level0_px.height, level) &&
-             depth == level_depth &&
-             MAX2(image->NumSamples, 1) == mt->surf.samples;
-   }
-
-   int level_depth = mt->level[level].depth;
-   if (mt->surf.samples > 1 && mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY)
-      level_depth /= mt->surf.samples;
-
-   /* Test image dimensions against the base level image adjusted for
-    * minification.  This will also catch images not present in the
-    * tree, changed targets, etc.
-    */
-   if (width != minify(mt->logical_width0, level - mt->first_level) ||
-       height != minify(mt->logical_height0, level - mt->first_level) ||
-       depth != level_depth) {
-      return false;
-   }
-
-   /* Core uses sample number of zero to indicate single-sampled. */
-   if (MAX2(image->NumSamples, 1) != mt->surf.samples)
+   if (level >= mt->surf.levels)
       return false;
 
-   return true;
-}
+   const unsigned level_depth =
+      mt->surf.dim == ISL_SURF_DIM_3D ?
+         minify(mt->surf.logical_level0_px.depth, level) :
+         mt->surf.logical_level0_px.array_len;
 
-
-void
-intel_miptree_set_level_info(struct intel_mipmap_tree *mt,
-			     GLuint level,
-			     GLuint x, GLuint y, GLuint d)
-{
-   mt->level[level].depth = d;
-   mt->level[level].level_x = x;
-   mt->level[level].level_y = y;
-
-   DBG("%s level %d, depth %d, offset %d,%d\n", __func__,
-       level, d, x, y);
-
-   assert(mt->level[level].slice);
-
-   mt->level[level].slice[0].x_offset = mt->level[level].level_x;
-   mt->level[level].slice[0].y_offset = mt->level[level].level_y;
-}
-
-
-void
-intel_miptree_set_image_offset(struct intel_mipmap_tree *mt,
-			       GLuint level, GLuint img,
-			       GLuint x, GLuint y)
-{
-   if (img == 0 && level == 0)
-      assert(x == 0 && y == 0);
-
-   assert(img < mt->level[level].depth);
-
-   mt->level[level].slice[img].x_offset = mt->level[level].level_x + x;
-   mt->level[level].slice[img].y_offset = mt->level[level].level_y + y;
-
-   DBG("%s level %d img %d pos %d,%d\n",
-       __func__, level, img,
-       mt->level[level].slice[img].x_offset,
-       mt->level[level].slice[img].y_offset);
+   return width == minify(mt->surf.logical_level0_px.width, level) &&
+          height == minify(mt->surf.logical_level0_px.height, level) &&
+          depth == level_depth &&
+          MAX2(image->NumSamples, 1) == mt->surf.samples;
 }
 
 void
@@ -1542,36 +1228,28 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
       return;
    }
 
-   if (mt->surf.size > 0) {
-      uint32_t x_offset_sa, y_offset_sa;
+   uint32_t x_offset_sa, y_offset_sa;
 
-      /* Miptree itself can have an offset only if it represents a single
-       * slice in an imported buffer object.
-       * See intel_miptree_create_for_dri_image().
-       */
-      assert(mt->level[0].level_x == 0);
-      assert(mt->level[0].level_y == 0);
+   /* Miptree itself can have an offset only if it represents a single
+    * slice in an imported buffer object.
+    * See intel_miptree_create_for_dri_image().
+    */
+   assert(mt->level[0].level_x == 0);
+   assert(mt->level[0].level_y == 0);
 
-      /* Given level is relative to level zero while the miptree may be
-       * represent just a subset of all levels starting from 'first_level'.
-       */
-      assert(level >= mt->first_level);
-      level -= mt->first_level;
+   /* Given level is relative to level zero while the miptree may be
+    * represent just a subset of all levels starting from 'first_level'.
+    */
+   assert(level >= mt->first_level);
+   level -= mt->first_level;
 
-      const unsigned z = mt->surf.dim == ISL_SURF_DIM_3D ? slice : 0;
-      slice = mt->surf.dim == ISL_SURF_DIM_3D ? 0 : slice;
-      isl_surf_get_image_offset_el(&mt->surf, level, slice, z,
-                                   &x_offset_sa, &y_offset_sa);
+   const unsigned z = mt->surf.dim == ISL_SURF_DIM_3D ? slice : 0;
+   slice = mt->surf.dim == ISL_SURF_DIM_3D ? 0 : slice;
+   isl_surf_get_image_offset_el(&mt->surf, level, slice, z,
+                                &x_offset_sa, &y_offset_sa);
 
-      *x = x_offset_sa;
-      *y = y_offset_sa;
-      return;
-   }
-
-   assert(slice < mt->level[level].depth);
-
-   *x = mt->level[level].slice[slice].x_offset;
-   *y = mt->level[level].slice[slice].y_offset;
+   *x = x_offset_sa;
+   *y = y_offset_sa;
 }
 
 
@@ -1686,8 +1364,7 @@ intel_miptree_copy_slice_sw(struct brw_context *brw,
 {
    void *src, *dst;
    ptrdiff_t src_stride, dst_stride;
-   const unsigned cpp = dst_mt->surf.size > 0 ?
-      (isl_format_get_layout(dst_mt->surf.format)->bpb / 8) : dst_mt->cpp;
+   const unsigned cpp = (isl_format_get_layout(dst_mt->surf.format)->bpb / 8);
 
    intel_miptree_map(brw, src_mt,
                      src_level, src_layer,
@@ -1749,24 +1426,13 @@ intel_miptree_copy_slice(struct brw_context *brw,
 
 {
    mesa_format format = src_mt->format;
-   uint32_t width, height;
+   unsigned width = minify(src_mt->surf.phys_level0_sa.width,
+                           src_level - src_mt->first_level);
+   unsigned height = minify(src_mt->surf.phys_level0_sa.height,
+                            src_level - src_mt->first_level);
 
-   if (src_mt->surf.size > 0) {
-      width = minify(src_mt->surf.phys_level0_sa.width,
-                     src_level - src_mt->first_level);
-      height = minify(src_mt->surf.phys_level0_sa.height,
-                      src_level - src_mt->first_level);
-
-      assert(src_layer <
-             get_num_phys_layers(&src_mt->surf,
-                                 src_level - src_mt->first_level));
-   } else {
-      width = minify(src_mt->physical_width0,
-                     src_level - src_mt->first_level);
-      height = minify(src_mt->physical_height0,
-                      src_level - src_mt->first_level);
-      assert(src_layer < src_mt->level[src_level].depth);
-   }
+   assert(src_layer < get_num_phys_layers(&src_mt->surf,
+                                          src_level - src_mt->first_level));
 
    assert(src_mt->format == dst_mt->format);
 
@@ -2200,8 +1866,7 @@ intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
    num_levels = last_level - start_level + 1;
 
    for (uint32_t level = start_level; level <= last_level; level++) {
-      uint32_t level_layers = mt->surf.size > 0 ?
-         get_num_phys_layers(&mt->surf, level) : mt->level[level].depth;
+      uint32_t level_layers = get_num_phys_layers(&mt->surf, level);
 
       level_layers = MIN2(num_layers, level_layers);
 
@@ -2542,12 +2207,7 @@ miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
                            uint32_t start_layer, uint32_t num_layers)
 {
    assert(level <= mt->last_level);
-   uint32_t total_num_layers;
-
-   if (mt->surf.size > 0)
-      total_num_layers = get_num_phys_layers(&mt->surf, level);
-   else 
-      total_num_layers = mt->level[level].depth;
+   const uint32_t total_num_layers = get_num_phys_layers(&mt->surf, level);
 
    assert(start_layer < total_num_layers);
    if (num_layers == INTEL_REMAINING_LAYERS)
@@ -2958,23 +2618,10 @@ intel_miptree_updownsample(struct brw_context *brw,
                            struct intel_mipmap_tree *src,
                            struct intel_mipmap_tree *dst)
 {
-   unsigned src_w, src_h, dst_w, dst_h;
-
-   if (src->surf.size > 0) {
-      src_w = src->surf.logical_level0_px.width;
-      src_h = src->surf.logical_level0_px.height;
-   } else {
-      src_w = src->logical_width0;
-      src_h = src->logical_height0;
-   }
-
-   if (dst->surf.size > 0) {
-      dst_w = dst->surf.logical_level0_px.width;
-      dst_h = dst->surf.logical_level0_px.height;
-   } else {
-      dst_w = dst->logical_width0;
-      dst_h = dst->logical_height0;
-   }
+   unsigned src_w = src->surf.logical_level0_px.width;
+   unsigned src_h = src->surf.logical_level0_px.height;
+   unsigned dst_w = dst->surf.logical_level0_px.width;
+   unsigned dst_h = dst->surf.logical_level0_px.height;
 
    brw_blorp_blit_miptrees(brw,
                            src, 0 /* level */, 0 /* layer */,
@@ -2986,21 +2633,10 @@ intel_miptree_updownsample(struct brw_context *brw,
                            false, false);
 
    if (src->stencil_mt) {
-      if (src->stencil_mt->surf.size > 0) {
-         src_w = src->stencil_mt->surf.logical_level0_px.width;
-         src_h = src->stencil_mt->surf.logical_level0_px.height;
-      } else {
-         src_w = src->stencil_mt->logical_width0;
-         src_h = src->stencil_mt->logical_height0;
-      }
-
-      if (dst->stencil_mt->surf.size > 0) {
-         dst_w = dst->stencil_mt->surf.logical_level0_px.width;
-         dst_h = dst->stencil_mt->surf.logical_level0_px.height;
-      } else {
-         dst_w = dst->stencil_mt->logical_width0;
-         dst_h = dst->stencil_mt->logical_height0;
-      }
+      src_w = src->stencil_mt->surf.logical_level0_px.width;
+      src_h = src->stencil_mt->surf.logical_level0_px.height;
+      dst_w = dst->stencil_mt->surf.logical_level0_px.width;
+      dst_h = dst->stencil_mt->surf.logical_level0_px.height;
 
       brw_blorp_blit_miptrees(brw,
                               src->stencil_mt, 0 /* level */, 0 /* layer */,
@@ -3796,129 +3432,6 @@ get_isl_dim_layout(const struct gen_device_info *devinfo,
    }
 
    unreachable("Invalid texture target");
-}
-
-enum isl_tiling
-intel_miptree_get_isl_tiling(const struct intel_mipmap_tree *mt)
-{
-   if (mt->format == MESA_FORMAT_S_UINT8)
-      return ISL_TILING_W;
-   return mt->surf.tiling;
-}
-
-void
-intel_miptree_get_isl_surf(struct brw_context *brw,
-                           const struct intel_mipmap_tree *mt,
-                           struct isl_surf *surf)
-{
-   assert(mt->array_layout != GEN6_HIZ_STENCIL);
-
-   surf->dim = get_isl_surf_dim(mt->target);
-   surf->dim_layout = get_isl_dim_layout(&brw->screen->devinfo,
-                                         mt->surf.tiling, mt->target);
-   surf->msaa_layout = mt->surf.msaa_layout;
-   surf->tiling = intel_miptree_get_isl_tiling(mt);
-   surf->row_pitch = mt->surf.row_pitch;
-   surf->format = translate_tex_format(brw, mt->format, false);
-
-   if (brw->gen >= 9) {
-      if (surf->dim == ISL_SURF_DIM_1D && surf->tiling == ISL_TILING_LINEAR) {
-         /* For gen9 1-D surfaces, intel_mipmap_tree has a bogus alignment. */
-         surf->image_alignment_el = isl_extent3d(64, 1, 1);
-      } else {
-         /* On gen9+, intel_mipmap_tree stores the horizontal and vertical
-          * alignment in terms of surface elements like we want.
-          */
-         surf->image_alignment_el = isl_extent3d(mt->halign, mt->valign, 1);
-      }
-   } else {
-      /* On earlier gens it's stored in pixels. */
-      unsigned bw, bh;
-      _mesa_get_format_block_size(mt->format, &bw, &bh);
-      surf->image_alignment_el =
-         isl_extent3d(mt->halign / bw, mt->valign / bh, 1);
-   }
-
-   surf->logical_level0_px.width = mt->logical_width0;
-   surf->logical_level0_px.height = mt->logical_height0;
-   if (surf->dim == ISL_SURF_DIM_3D) {
-      surf->logical_level0_px.depth = mt->logical_depth0;
-      surf->logical_level0_px.array_len = 1;
-   } else {
-      surf->logical_level0_px.depth = 1;
-      surf->logical_level0_px.array_len = mt->logical_depth0;
-   }
-
-   surf->phys_level0_sa.width = mt->physical_width0;
-   surf->phys_level0_sa.height = mt->physical_height0;
-   if (surf->dim == ISL_SURF_DIM_3D) {
-      surf->phys_level0_sa.depth = mt->physical_depth0;
-      surf->phys_level0_sa.array_len = 1;
-   } else {
-      surf->phys_level0_sa.depth = 1;
-      surf->phys_level0_sa.array_len = mt->physical_depth0;
-   }
-
-   surf->levels = mt->last_level - mt->first_level + 1;
-   surf->samples = mt->surf.samples;
-
-   surf->size = 0; /* TODO */
-   surf->alignment = 0; /* TODO */
-
-   switch (surf->dim_layout) {
-   case ISL_DIM_LAYOUT_GEN4_2D:
-   case ISL_DIM_LAYOUT_GEN4_3D:
-   case ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ:
-      if (brw->gen >= 9) {
-         surf->array_pitch_el_rows = mt->qpitch;
-      } else {
-         unsigned bw, bh;
-         _mesa_get_format_block_size(mt->format, &bw, &bh);
-         assert(mt->qpitch % bh == 0);
-         surf->array_pitch_el_rows = mt->qpitch / bh;
-      }
-      break;
-   case ISL_DIM_LAYOUT_GEN9_1D:
-      surf->array_pitch_el_rows = 1;
-      break;
-   }
-
-   switch (mt->array_layout) {
-   case ALL_LOD_IN_EACH_SLICE:
-      surf->array_pitch_span = ISL_ARRAY_PITCH_SPAN_FULL;
-      break;
-   case ALL_SLICES_AT_EACH_LOD:
-   case GEN6_HIZ_STENCIL:
-      surf->array_pitch_span = ISL_ARRAY_PITCH_SPAN_COMPACT;
-      break;
-   default:
-      unreachable("Invalid array layout");
-   }
-
-   GLenum base_format = _mesa_get_format_base_format(mt->format);
-   switch (base_format) {
-   case GL_DEPTH_COMPONENT:
-      surf->usage = ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT;
-      break;
-   case GL_STENCIL_INDEX:
-      surf->usage = ISL_SURF_USAGE_STENCIL_BIT;
-      if (brw->gen >= 8)
-         surf->usage |= ISL_SURF_USAGE_TEXTURE_BIT;
-      break;
-   case GL_DEPTH_STENCIL:
-      /* In this case we only texture from the depth part */
-      surf->usage = ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_STENCIL_BIT |
-                    ISL_SURF_USAGE_TEXTURE_BIT;
-      break;
-   default:
-      surf->usage = ISL_SURF_USAGE_TEXTURE_BIT;
-      if (brw->mesa_format_supports_render[mt->format])
-         surf->usage = ISL_SURF_USAGE_RENDER_TARGET_BIT;
-      break;
-   }
-
-   if (_mesa_is_cube_map_texture(mt->target))
-      surf->usage |= ISL_SURF_USAGE_CUBE_BIT;
 }
 
 enum isl_aux_usage
