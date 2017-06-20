@@ -971,22 +971,15 @@ void si_emit_cache_flush(struct si_context *sctx)
 		}
 
 		/* TC    | TC_WB         = invalidate L2 data
-		 * TC_MD | TC_WB         = invalidate L2 metadata
+		 * TC_MD | TC_WB         = invalidate L2 metadata (DCC, etc.)
 		 * TC    | TC_WB | TC_MD = invalidate L2 data & metadata
-		 *
-		 * The metadata cache must always be invalidated for coherency
-		 * between CB/DB and shaders. (metadata = HTILE, CMASK, DCC)
-		 *
-		 * TC must be invalidated on GFX9 only if the CB/DB surface is
-		 * not pipe-aligned. If the surface is RB-aligned, it might not
-		 * strictly be pipe-aligned since RB alignment takes precendence.
 		 */
-		tc_flags = EVENT_TC_WB_ACTION_ENA |
-			   EVENT_TC_MD_ACTION_ENA;
+		tc_flags = 0;
 
 		/* Ideally flush TC together with CB/DB. */
 		if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {
 			tc_flags |= EVENT_TC_ACTION_ENA |
+				    EVENT_TC_WB_ACTION_ENA |
 				    EVENT_TCL1_ACTION_ENA;
 
 			/* Clear the flags. */
