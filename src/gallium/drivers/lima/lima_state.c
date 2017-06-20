@@ -68,6 +68,10 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
                         LIMA_SUBMIT_BO_FLAG_WRITE);
    pipe_surface_reference(&fb->zsbuf, framebuffer->zsbuf);
 
+   /* need align here? */
+   fb->width = framebuffer->width;
+   fb->height = framebuffer->height;
+
    int width = align(framebuffer->width, 16) >> 4;
    int height = align(framebuffer->height, 16) >> 4;
    if (fb->tiled_w != width || fb->tiled_h != height) {

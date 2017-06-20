@@ -56,6 +56,9 @@ lima_context_destroy(struct pipe_context *pctx)
    if (ctx->gp_buffer)
       lima_buffer_free(ctx->gp_buffer);
 
+   if (ctx->pp_buffer)
+      lima_buffer_free(ctx->pp_buffer);
+
    FREE(ctx);
 }
 
@@ -91,14 +94,14 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 
-   /* assume max fb size 4096x4096  */
+   /* assume max fb size 2048x2048  */
    int block_size = 0x200;
    int max_plb = 512;
    int plb_size = block_size * max_plb;
    int plbu_size = max_plb * sizeof(uint32_t);
    int pp_end_mark = 2 * sizeof(uint32_t) * 4;
    /* max possible plb pp stream */
-   int pp_size = (4096 >> 4) * (4096 >> 4) * 4 * sizeof(uint32_t) + pp_end_mark;
+   int pp_size = (2048 >> 4) * (2048 >> 4) * 4 * sizeof(uint32_t) + pp_end_mark;
 
    ctx->plb = lima_buffer_alloc(screen, align(plb_size + plbu_size + pp_size, 0x1000),
                                 LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
@@ -135,11 +138,26 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
                           LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE))
       goto err_out;
 
+   ctx->pp_buffer = lima_buffer_alloc(
+      screen, pp_buffer_size, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->pp_buffer)
+      goto err_out;
+
+   static uint32_t pp_program[] = {
+      0x00020425, 0x0000000c, 0x01e007cf, 0xb0000000, /* 0x00000020 */
+      0x000005f5, 0x00000000, 0x00000000, 0x00000000, /* 0x00000030 */
+   };
+   memcpy(ctx->pp_buffer->map + pp_program_offset, pp_program, sizeof(pp_program));
+
    if (lima_submit_create(screen->dev, LIMA_PIPE_PP, &ctx->pp_submit))
       goto err_out;
 
    if (lima_submit_add_bo(ctx->pp_submit, ctx->plb->bo,
-                          LIMA_SUBMIT_BO_READ))
+                          LIMA_SUBMIT_BO_FLAG_READ))
+      goto err_out;
+
+   if (lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer->bo,
+                          LIMA_SUBMIT_BO_FLAG_READ | LIMA_SUBMIT_BO_FLAG_WRITE))
       goto err_out;
 
    return &ctx->base;

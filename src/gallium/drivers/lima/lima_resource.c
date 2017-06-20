@@ -75,6 +75,7 @@ lima_buffer_alloc(struct lima_screen *screen, uint32_t size,
       if (lima_va_range_alloc(screen->dev, size, &buffer->va) ||
           lima_bo_va_map(buffer->bo, buffer->va, 0))
           goto err_out;
+      printf("create buffer %x-%x\n", buffer->va, size);
    }
 
    return buffer;
@@ -109,6 +110,7 @@ lima_buffer_update(struct lima_buffer *buffer,
       }
 
       buffer->va = va;
+      printf("update buffer %x-%x\n", va, buffer->size);
    }
 
    return 0;

@@ -38,6 +38,7 @@ struct lima_buffer;
 
 struct lima_context_framebuffer {
    struct pipe_surface *cbuf, *zsbuf;
+   int width, height;
    int tiled_w, tiled_h;
    int shift_w, shift_h;
    int block_w, block_h;
@@ -148,6 +149,12 @@ struct lima_context {
    #define plbu_cmd_offset        0x2900
    #define tile_heap_offset       0x3000
    #define gp_buffer_size         0x5000
+
+   struct lima_buffer *pp_buffer;
+   #define pp_render_state_offset 0x0000
+   #define pp_program_offset      0x0040
+   #define pp_stack_offset        0x0080
+   #define pp_buffer_size         0x4000
 
    lima_submit_handle gp_submit;
    lima_submit_handle pp_submit;
