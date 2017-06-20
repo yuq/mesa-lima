@@ -2025,8 +2025,13 @@ dri2_init_screen(__DRIscreen * sPriv)
    if (screen->fd < 0 || (fd = fcntl(screen->fd, F_DUPFD_CLOEXEC, 3)) < 0)
       goto free_screen;
 
-   if (pipe_loader_drm_probe_fd(&screen->dev, fd))
-      pscreen = pipe_loader_create_screen(screen->dev, 0);
+
+   if (pipe_loader_drm_probe_fd(&screen->dev, fd)) {
+      unsigned flags =
+         dri_init_options_get_screen_flags(screen, screen->dev->driver_name);
+
+      pscreen = pipe_loader_create_screen(screen->dev, flags);
+   }
 
    if (!pscreen)
        goto release_pipe;
@@ -2064,7 +2069,7 @@ dri2_init_screen(__DRIscreen * sPriv)
    else
       sPriv->extensions = dri_screen_extensions;
 
-   configs = dri_init_screen_helper(screen, pscreen, screen->dev->driver_name);
+   configs = dri_init_screen_helper(screen, pscreen);
    if (!configs)
       goto destroy_screen;
 
@@ -2116,8 +2121,10 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    if (screen->fd < 0 || (fd = fcntl(screen->fd, F_DUPFD_CLOEXEC, 3)) < 0)
       goto free_screen;
 
+   unsigned flags = dri_init_options_get_screen_flags(screen, "swrast");
+
    if (pipe_loader_sw_probe_kms(&screen->dev, fd))
-      pscreen = pipe_loader_create_screen(screen->dev, 0);
+      pscreen = pipe_loader_create_screen(screen->dev, flags);
 
    if (!pscreen)
        goto release_pipe;
@@ -2137,7 +2144,7 @@ dri_kms_init_screen(__DRIscreen * sPriv)
 
    sPriv->extensions = dri_screen_extensions;
 
-   configs = dri_init_screen_helper(screen, pscreen, "swrast");
+   configs = dri_init_screen_helper(screen, pscreen);
    if (!configs)
       goto destroy_screen;
 

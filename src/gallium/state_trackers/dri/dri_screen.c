@@ -460,10 +460,25 @@ dri_set_background_context(struct st_context_iface *st)
    backgroundCallable->setBackgroundContext(ctx->cPriv->loaderPrivate);
 }
 
+unsigned
+dri_init_options_get_screen_flags(struct dri_screen *screen,
+                                  const char* driver_name)
+{
+   unsigned flags = 0;
+
+   driParseOptionInfo(&screen->optionCacheDefaults, gallium_config_options.xml);
+   driParseConfigFiles(&screen->optionCache,
+                       &screen->optionCacheDefaults,
+                       screen->sPriv->myNum,
+                       driver_name);
+   dri_fill_st_options(screen);
+
+   return flags;
+}
+
 const __DRIconfig **
 dri_init_screen_helper(struct dri_screen *screen,
-                       struct pipe_screen *pscreen,
-                       const char* driver_name)
+                       struct pipe_screen *pscreen)
 {
    screen->base.screen = pscreen;
    screen->base.get_egl_image = dri_get_egl_image;
@@ -478,15 +493,6 @@ dri_init_screen_helper(struct dri_screen *screen,
       screen->target = PIPE_TEXTURE_2D;
    else
       screen->target = PIPE_TEXTURE_RECT;
-
-   driParseOptionInfo(&screen->optionCacheDefaults, gallium_config_options.xml);
-
-   driParseConfigFiles(&screen->optionCache,
-                       &screen->optionCacheDefaults,
-                       screen->sPriv->myNum,
-                       driver_name);
-
-   dri_fill_st_options(screen);
 
    /* Handle force_s3tc_enable. */
    if (!util_format_s3tc_enabled && screen->options.force_s3tc_enable) {
