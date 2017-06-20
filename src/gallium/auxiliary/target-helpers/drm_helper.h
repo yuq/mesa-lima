@@ -90,7 +90,7 @@ pipe_r300_create_screen(int fd, unsigned flags)
 {
    struct radeon_winsys *rw;
 
-   rw = radeon_drm_winsys_create(fd, r300_screen_create);
+   rw = radeon_drm_winsys_create(fd, flags, r300_screen_create);
    return rw ? debug_screen_wrap(rw->screen) : NULL;
 }
 
@@ -115,7 +115,7 @@ pipe_r600_create_screen(int fd, unsigned flags)
 {
    struct radeon_winsys *rw;
 
-   rw = radeon_drm_winsys_create(fd, r600_screen_create);
+   rw = radeon_drm_winsys_create(fd, flags, r600_screen_create);
    return rw ? debug_screen_wrap(rw->screen) : NULL;
 }
 
@@ -142,10 +142,10 @@ pipe_radeonsi_create_screen(int fd, unsigned flags)
    struct radeon_winsys *rw;
 
    /* First, try amdgpu. */
-   rw = amdgpu_winsys_create(fd, radeonsi_screen_create);
+   rw = amdgpu_winsys_create(fd, flags, radeonsi_screen_create);
 
    if (!rw)
-      rw = radeon_drm_winsys_create(fd, radeonsi_screen_create);
+      rw = radeon_drm_winsys_create(fd, flags, radeonsi_screen_create);
 
    return rw ? debug_screen_wrap(rw->screen) : NULL;
 }

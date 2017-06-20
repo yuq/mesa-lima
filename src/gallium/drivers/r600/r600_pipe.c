@@ -632,7 +632,7 @@ static struct pipe_resource *r600_resource_create(struct pipe_screen *screen,
 	return r600_resource_create_common(screen, templ);
 }
 
-struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
+struct pipe_screen *r600_screen_create(struct radeon_winsys *ws, unsigned flags)
 {
 	struct r600_screen *rscreen = CALLOC_STRUCT(r600_screen);
 
@@ -647,7 +647,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 	rscreen->b.b.get_shader_param = r600_get_shader_param;
 	rscreen->b.b.resource_create = r600_resource_create;
 
-	if (!r600_common_screen_init(&rscreen->b, ws)) {
+	if (!r600_common_screen_init(&rscreen->b, ws, flags)) {
 		FREE(rscreen);
 		return NULL;
 	}

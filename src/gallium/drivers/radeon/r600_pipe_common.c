@@ -1322,7 +1322,7 @@ struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 }
 
 bool r600_common_screen_init(struct r600_common_screen *rscreen,
-			     struct radeon_winsys *ws)
+			     struct radeon_winsys *ws, unsigned flags)
 {
 	char family_name[32] = {}, llvm_string[32] = {}, kernel_version[128] = {};
 	struct utsname uname_data;

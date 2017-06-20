@@ -229,7 +229,8 @@ static const char* amdgpu_get_chip_name(struct radeon_winsys *ws)
 
 
 PUBLIC struct radeon_winsys *
-amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
+amdgpu_winsys_create(int fd, unsigned flags,
+		     radeon_screen_create_t screen_create)
 {
    struct amdgpu_winsys *ws;
    drmVersionPtr version = drmGetVersion(fd);
@@ -324,7 +325,7 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
     *
     * Alternatively, we could create the screen based on "ws->gen"
     * and link all drivers into one binary blob. */
-   ws->base.screen = screen_create(&ws->base);
+   ws->base.screen = screen_create(&ws->base, flags);
    if (!ws->base.screen) {
       amdgpu_winsys_destroy(&ws->base);
       mtx_unlock(&dev_tab_mutex);
