@@ -4760,12 +4760,6 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	       !mainb->rodata_size);
 	assert(!epilog || !epilog->rodata_size);
 
-	/* GFX9 can fetch at most 128 bytes past the end of the shader.
-	 * Prevent VM faults.
-	 */
-	if (sscreen->b.chip_class >= GFX9)
-		bo_size += 128;
-
 	r600_resource_reference(&shader->bo, NULL);
 	shader->bo = (struct r600_resource*)
 		     pipe_buffer_create(&sscreen->b.b, 0,
