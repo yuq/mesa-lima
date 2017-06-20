@@ -2556,7 +2556,7 @@
         <glx rop="161"/>
     </function>
 
-    <function name="StencilFunc" es1="1.0" es2="2.0">
+    <function name="StencilFunc" es1="1.0" es2="2.0" no_error="true">
         <param name="func" type="GLenum"/>
         <param name="ref" type="GLint"/>
         <param name="mask" type="GLuint"/>

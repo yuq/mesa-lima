@@ -230,6 +230,14 @@ stencil_func(struct gl_context *ctx, GLenum func, GLint ref, GLuint mask)
 
 
 void GLAPIENTRY
+_mesa_StencilFunc_no_error(GLenum func, GLint ref, GLuint mask)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   stencil_func(ctx, func, ref, mask);
+}
+
+
+void GLAPIENTRY
 _mesa_StencilFunc(GLenum func, GLint ref, GLuint mask)
 {
    GET_CURRENT_CONTEXT(ctx);
