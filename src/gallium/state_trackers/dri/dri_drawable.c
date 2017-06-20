@@ -123,6 +123,23 @@ dri_st_framebuffer_flush_front(struct st_context_iface *stctx,
 }
 
 /**
+ * The state tracker framebuffer interface flush_swapbuffers callback
+ */
+static boolean
+dri_st_framebuffer_flush_swapbuffers(struct st_context_iface *stctx,
+                                     struct st_framebuffer_iface *stfbi)
+{
+   struct dri_context *ctx = (struct dri_context *)stctx->st_manager_private;
+   struct dri_drawable *drawable =
+      (struct dri_drawable *) stfbi->st_manager_private;
+
+   if (drawable->flush_swapbuffers)
+      drawable->flush_swapbuffers(ctx, drawable);
+
+   return TRUE;
+}
+
+/**
  * This is called when we need to set up GL rendering to a new X window.
  */
 boolean
@@ -146,6 +163,7 @@ dri_create_buffer(__DRIscreen * sPriv,
    drawable->base.visual = &drawable->stvis;
    drawable->base.flush_front = dri_st_framebuffer_flush_front;
    drawable->base.validate = dri_st_framebuffer_validate;
+   drawable->base.flush_swapbuffers = dri_st_framebuffer_flush_swapbuffers;
    drawable->base.st_manager_private = (void *) drawable;
 
    drawable->screen = screen;

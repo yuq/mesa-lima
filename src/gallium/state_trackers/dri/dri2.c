@@ -861,6 +861,21 @@ dri2_flush_frontbuffer(struct dri_context *ctx,
    }
 }
 
+/**
+ * The struct dri_drawable flush_swapbuffers callback
+ */
+static void
+dri2_flush_swapbuffers(struct dri_context *ctx,
+                       struct dri_drawable *drawable)
+{
+   __DRIdrawable *dri_drawable = drawable->dPriv;
+   const __DRIimageLoaderExtension *image = drawable->sPriv->image.loader;
+
+   if (image && image->base.version >= 3 && image->flushSwapBuffers) {
+      image->flushSwapBuffers(dri_drawable, dri_drawable->loaderPrivate);
+   }
+}
+
 static void
 dri2_update_tex_buffer(struct dri_drawable *drawable,
                        struct dri_context *ctx,
@@ -2218,6 +2233,7 @@ dri2_create_buffer(__DRIscreen * sPriv,
    drawable->allocate_textures = dri2_allocate_textures;
    drawable->flush_frontbuffer = dri2_flush_frontbuffer;
    drawable->update_tex_buffer = dri2_update_tex_buffer;
+   drawable->flush_swapbuffers = dri2_flush_swapbuffers;
 
    return TRUE;
 }
