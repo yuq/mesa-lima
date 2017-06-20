@@ -61,6 +61,10 @@ extern void GLAPIENTRY
 _mesa_StencilOpSeparate(GLenum face, GLenum fail, GLenum zfail, GLenum zpass);
 
 
+void GLAPIENTRY
+_mesa_StencilFuncSeparate_no_error(GLenum face, GLenum func, GLint ref,
+                                   GLuint mask);
+
 extern void GLAPIENTRY
 _mesa_StencilFuncSeparate(GLenum face, GLenum func, GLint ref, GLuint mask);
 

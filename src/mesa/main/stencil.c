@@ -476,6 +476,15 @@ stencil_func_separate(struct gl_context *ctx, GLenum face, GLenum func,
 
 /* OpenGL 2.0 */
 void GLAPIENTRY
+_mesa_StencilFuncSeparate_no_error(GLenum face, GLenum func, GLint ref,
+                                   GLuint mask)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   stencil_func_separate(ctx, face, func, ref, mask);
+}
+
+
+void GLAPIENTRY
 _mesa_StencilFuncSeparate(GLenum face, GLenum func, GLint ref, GLuint mask)
 {
    GET_CURRENT_CONTEXT(ctx);
