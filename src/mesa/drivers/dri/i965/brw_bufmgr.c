@@ -762,10 +762,18 @@ can_map_cpu(struct brw_bo *bo, unsigned flags)
    if (bo->cache_coherent)
       return true;
 
-   if (flags & MAP_PERSISTENT)
-      return false;
-
-   if (flags & MAP_COHERENT)
+   /* If PERSISTENT or COHERENT are set, the mmapping needs to remain valid
+    * across batch flushes where the kernel will change cache domains of the
+    * bo, invalidating continued access to the CPU mmap on non-LLC device.
+    *
+    * Similarly, ASYNC typically means that the buffer will be accessed via
+    * both the CPU and the GPU simultaneously.  Batches may be executed that
+    * use the BO even while it is mapped.  While OpenGL technically disallows
+    * most drawing while non-persistent mappings are active, we may still use
+    * the GPU for blits or other operations, causing batches to happen at
+    * inconvenient times.
+    */
+   if (flags & (MAP_PERSISTENT | MAP_COHERENT | MAP_ASYNC))
       return false;
 
    return !(flags & MAP_WRITE);
