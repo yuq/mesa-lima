@@ -6,7 +6,7 @@
 #include "radeonsi/si_public.h"
 
 static struct pipe_screen *
-create_screen(int fd)
+create_screen(int fd, unsigned flags)
 {
    struct radeon_winsys *rw;
 

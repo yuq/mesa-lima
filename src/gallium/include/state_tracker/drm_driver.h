@@ -102,7 +102,7 @@ struct drm_driver_descriptor
     * This function does any wrapping of the screen.
     * For example wrapping trace or rbug debugging drivers around it.
     */
-   struct pipe_screen* (*create_screen)(int drm_fd);
+   struct pipe_screen* (*create_screen)(int drm_fd, unsigned flags);
 
    /**
     * Return a configuration value.
