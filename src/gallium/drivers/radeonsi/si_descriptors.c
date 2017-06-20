@@ -867,7 +867,9 @@ static void si_set_shader_image(struct si_context *ctx,
 
 	/* Since this can flush, it must be done after enabled_mask is updated. */
 	si_sampler_view_add_buffer(ctx, &res->b.b,
-				   RADEON_USAGE_READWRITE, false, true);
+				   (view->access & PIPE_IMAGE_ACCESS_WRITE) ?
+				   RADEON_USAGE_READWRITE : RADEON_USAGE_READ,
+				   false, true);
 }
 
 static void
