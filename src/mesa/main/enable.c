@@ -66,6 +66,7 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
    struct gl_vertex_array_object *vao = ctx->Array.VAO;
    GLbitfield64 flag;
    GLboolean *var;
+   uint64_t new_state = _NEW_ARRAY;
 
    switch (cap) {
       case GL_VERTEX_ARRAY:
@@ -115,6 +116,7 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
          }
          var = &ctx->Array.PrimitiveRestart;
          flag = 0;
+         new_state = 0; /* primitive restart is not a vertex array state */
          break;
 
       default:
@@ -124,7 +126,7 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
    if (*var == state)
       return;
 
-   FLUSH_VERTICES(ctx, _NEW_ARRAY);
+   FLUSH_VERTICES(ctx, new_state);
 
    *var = state;
 
