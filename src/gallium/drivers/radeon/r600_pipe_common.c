@@ -1382,6 +1382,11 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->has_rbplus = false;
 	rscreen->rbplus_allowed = false;
 
+	/* Set the flag in debug_flags, so that the shader cache takes it
+	 * into account. */
+	if (flags & PIPE_SCREEN_ENABLE_CORRECT_TGSI_DERIVATIVES_AFTER_KILL)
+		rscreen->debug_flags |= DBG_FS_CORRECT_DERIVS_AFTER_KILL;
+
 	r600_disk_cache_create(rscreen);
 
 	slab_create_parent(&rscreen->pool_transfers, sizeof(struct r600_transfer), 64);

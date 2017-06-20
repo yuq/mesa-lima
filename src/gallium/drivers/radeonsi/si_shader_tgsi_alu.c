@@ -60,6 +60,27 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+
+	if (ctx->postponed_kill) {
+		if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF) {
+			LLVMValueRef val;
+
+			/* Take the minimum kill value. This is the same as OR
+			 * between 2 kill values. If the value is negative,
+			 * the pixel will be killed.
+			 */
+			val = LLVMBuildLoad(builder, ctx->postponed_kill, "");
+			val = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MIN,
+							val, emit_data->args[0]);
+			LLVMBuildStore(builder, val, ctx->postponed_kill);
+		} else {
+			LLVMBuildStore(builder,
+				       LLVMConstReal(ctx->f32, -1),
+				       ctx->postponed_kill);
+		}
+		return;
+	}
 
 	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF)
 		ac_build_kill(&ctx->ac, emit_data->args[0]);

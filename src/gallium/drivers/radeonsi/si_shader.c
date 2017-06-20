@@ -3251,6 +3251,9 @@ static void si_llvm_return_fs_outputs(struct lp_build_tgsi_context *bld_base)
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
 	LLVMValueRef ret;
 
+	if (ctx->postponed_kill)
+		ac_build_kill(&ctx->ac, LLVMBuildLoad(builder, ctx->postponed_kill, ""));
+
 	/* Read the output values. */
 	for (i = 0; i < info->num_outputs; i++) {
 		unsigned semantic_name = info->output_semantic_name[i];
@@ -5528,6 +5531,12 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 				lp_build_alloca(&ctx->gallivm,
 						ctx->i32, "");
 		}
+	}
+
+	if (ctx->type == PIPE_SHADER_FRAGMENT && sel->info.uses_kill &&
+	    ctx->screen->b.debug_flags & DBG_FS_CORRECT_DERIVS_AFTER_KILL) {
+		/* This is initialized to 0.0 = not kill. */
+		ctx->postponed_kill = lp_build_alloca(&ctx->gallivm, ctx->f32, "");
 	}
 
 	if (!lp_build_tgsi_llvm(bld_base, sel->tokens)) {
