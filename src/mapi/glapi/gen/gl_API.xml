@@ -2563,7 +2563,7 @@
         <glx rop="162"/>
     </function>
 
-    <function name="StencilOp" es1="1.0" es2="2.0">
+    <function name="StencilOp" es1="1.0" es2="2.0" no_error="true">
         <param name="fail" type="GLenum"/>
         <param name="zfail" type="GLenum"/>
         <param name="zpass" type="GLenum"/>

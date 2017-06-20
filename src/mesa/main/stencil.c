@@ -367,6 +367,14 @@ stencil_op(struct gl_context *ctx, GLenum fail, GLenum zfail, GLenum zpass)
 
 
 void GLAPIENTRY
+_mesa_StencilOp_no_error(GLenum fail, GLenum zfail, GLenum zpass)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   stencil_op(ctx, fail, zfail, zpass);
+}
+
+
+void GLAPIENTRY
 _mesa_StencilOp(GLenum fail, GLenum zfail, GLenum zpass)
 {
    GET_CURRENT_CONTEXT(ctx);
