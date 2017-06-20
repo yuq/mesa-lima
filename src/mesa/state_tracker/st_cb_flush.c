@@ -46,35 +46,6 @@
 #include "util/u_gen_mipmap.h"
 
 
-/** Check if we have a front color buffer and if it's been drawn to. */
-static inline GLboolean
-is_front_buffer_dirty(struct st_context *st)
-{
-   struct gl_framebuffer *fb = st->ctx->DrawBuffer;
-   struct st_renderbuffer *strb
-      = st_renderbuffer(fb->Attachment[BUFFER_FRONT_LEFT].Renderbuffer);
-   return strb && strb->defined;
-}
-
-
-/**
- * Tell the screen to display the front color buffer on-screen.
- */
-static void
-display_front_buffer(struct st_context *st)
-{
-   struct gl_framebuffer *fb = st->ctx->DrawBuffer;
-   struct st_renderbuffer *strb
-      = st_renderbuffer(fb->Attachment[BUFFER_FRONT_LEFT].Renderbuffer);
-
-   if (strb) {
-      /* Hook for copying "fake" frontbuffer if necessary:
-       */
-      st_manager_flush_frontbuffer(st);
-   }
-}
-
-
 void st_flush(struct st_context *st,
               struct pipe_fence_handle **fence,
               unsigned flags)
@@ -120,9 +91,7 @@ static void st_glFlush(struct gl_context *ctx)
     */
    st_flush(st, NULL, 0);
 
-   if (is_front_buffer_dirty(st)) {
-      display_front_buffer(st);
-   }
+   st_manager_flush_frontbuffer(st);
 }
 
 
@@ -135,9 +104,7 @@ static void st_glFinish(struct gl_context *ctx)
 
    st_finish(st);
 
-   if (is_front_buffer_dirty(st)) {
-      display_front_buffer(st);
-   }
+   st_manager_flush_frontbuffer(st);
 }
 
 

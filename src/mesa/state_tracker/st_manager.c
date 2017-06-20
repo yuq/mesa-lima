@@ -1036,11 +1036,15 @@ st_manager_flush_frontbuffer(struct st_context *st)
 
    if (stfb)
       strb = st_renderbuffer(stfb->Base.Attachment[BUFFER_FRONT_LEFT].Renderbuffer);
-   if (!strb)
-      return;
 
-   /* never a dummy fb */
-   stfb->iface->flush_front(&st->iface, stfb->iface, ST_ATTACHMENT_FRONT_LEFT);
+   /* Do we have a front color buffer and has it been drawn to since last
+    * frontbuffer flush?
+    */
+   if (strb && strb->defined) {
+      stfb->iface->flush_front(&st->iface, stfb->iface,
+                               ST_ATTACHMENT_FRONT_LEFT);
+      strb->defined = GL_FALSE;
+   }
 }
 
 /**
