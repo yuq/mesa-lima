@@ -546,21 +546,6 @@ bo_free(struct brw_bo *bo)
    free(bo);
 }
 
-static void
-bo_mark_mmaps_incoherent(struct brw_bo *bo)
-{
-#if HAVE_VALGRIND
-   if (bo->map_cpu)
-      VALGRIND_MAKE_MEM_NOACCESS(bo->map_cpu, bo->size);
-
-   if (bo->map_wc)
-      VALGRIND_MAKE_MEM_NOACCESS(bo->map_wc, bo->size);
-
-   if (bo->map_gtt)
-      VALGRIND_MAKE_MEM_NOACCESS(bo->map_gtt, bo->size);
-#endif
-}
-
 /** Frees all cached buffers significantly older than @time. */
 static void
 cleanup_bo_cache(struct brw_bufmgr *bufmgr, time_t time)
@@ -593,13 +578,6 @@ bo_unreference_final(struct brw_bo *bo, time_t time)
    struct bo_cache_bucket *bucket;
 
    DBG("bo_unreference final: %d (%s)\n", bo->gem_handle, bo->name);
-
-   /* Clear any left-over mappings */
-   if (bo->map_count) {
-      DBG("bo freed with non-zero map-count %d\n", bo->map_count);
-      bo->map_count = 0;
-      bo_mark_mmaps_incoherent(bo);
-   }
 
    bucket = bucket_for_size(bufmgr, bo->size);
    /* Put the buffer into our internal cache for reuse if we can. */
@@ -677,8 +655,7 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    if (!bo->map_cpu) {
       struct drm_i915_gem_mmap mmap_arg;
 
-      DBG("brw_bo_map_cpu: %d (%s), map_count=%d\n",
-          bo->gem_handle, bo->name, bo->map_count);
+      DBG("brw_bo_map_cpu: %d (%s)\n", bo->gem_handle, bo->name);
 
       memclear(mmap_arg);
       mmap_arg.handle = bo->gem_handle;
@@ -691,7 +668,6 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
          pthread_mutex_unlock(&bufmgr->lock);
          return NULL;
       }
-      bo->map_count++;
       VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
       bo->map_cpu = (void *) (uintptr_t) mmap_arg.addr_ptr;
    }
@@ -703,8 +679,6 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
                  flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
    }
 
-   bo_mark_mmaps_incoherent(bo);
-   VG(VALGRIND_MAKE_MEM_DEFINED(bo->map_cpu, bo->size));
    pthread_mutex_unlock(&bufmgr->lock);
 
    return bo->map_cpu;
@@ -721,8 +695,7 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    if (bo->map_gtt == NULL) {
       struct drm_i915_gem_mmap_gtt mmap_arg;
 
-      DBG("bo_map_gtt: mmap %d (%s), map_count=%d\n",
-          bo->gem_handle, bo->name, bo->map_count);
+      DBG("bo_map_gtt: mmap %d (%s)\n", bo->gem_handle, bo->name);
 
       memclear(mmap_arg);
       mmap_arg.handle = bo->gem_handle;
@@ -748,7 +721,6 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
          pthread_mutex_unlock(&bufmgr->lock);
          return NULL;
       }
-      bo->map_count++;
    }
 
    DBG("bo_map_gtt: %d (%s) -> %p\n", bo->gem_handle, bo->name,
@@ -759,8 +731,6 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
                  I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
    }
 
-   bo_mark_mmaps_incoherent(bo);
-   VG(VALGRIND_MAKE_MEM_DEFINED(bo->map_gtt, bo->size));
    pthread_mutex_unlock(&bufmgr->lock);
 
    return bo->map_gtt;
@@ -795,26 +765,7 @@ brw_bo_map(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 int
 brw_bo_unmap(struct brw_bo *bo)
 {
-   struct brw_bufmgr *bufmgr = bo->bufmgr;
-   int ret = 0;
-
-   pthread_mutex_lock(&bufmgr->lock);
-
-   if (bo->map_count <= 0) {
-      DBG("attempted to unmap an unmapped bo\n");
-      pthread_mutex_unlock(&bufmgr->lock);
-      /* Preserve the old behaviour of just treating this as a
-       * no-op rather than reporting the error.
-       */
-      return 0;
-   }
-
-   if (--bo->map_count == 0) {
-      bo_mark_mmaps_incoherent(bo);
-   }
-   pthread_mutex_unlock(&bufmgr->lock);
-
-   return ret;
+   return 0;
 }
 
 int

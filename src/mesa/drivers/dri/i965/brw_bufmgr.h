@@ -114,7 +114,6 @@ struct brw_bo {
    void *map_gtt;
    /** WC CPU address for the buffer, saved across map/unmap cycles */
    void *map_wc;
-   int map_count;
 
    /** BO cache list */
    struct list_head head;
