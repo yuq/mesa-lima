@@ -80,6 +80,7 @@ const __DRIconfigOptionsExtension gallium_config_options = {
          DRI_CONF_ALLOW_GLSL_BUILTIN_VARIABLE_REDECLARATION("false")
          DRI_CONF_ALLOW_HIGHER_COMPAT_VERSION("false")
          DRI_CONF_FORCE_GLSL_ABS_SQRT("false")
+         DRI_CONF_GLSL_CORRECT_DERIVATIVES_AFTER_DISCARD("false")
       DRI_CONF_SECTION_END
 
       DRI_CONF_SECTION_MISCELLANEOUS
@@ -472,6 +473,10 @@ dri_init_options_get_screen_flags(struct dri_screen *screen,
                        screen->sPriv->myNum,
                        driver_name);
    dri_fill_st_options(screen);
+
+   if (driQueryOptionb(&screen->optionCache,
+                       "glsl_correct_derivatives_after_discard"))
+      flags |= PIPE_SCREEN_ENABLE_CORRECT_TGSI_DERIVATIVES_AFTER_KILL;
 
    return flags;
 }
