@@ -123,6 +123,14 @@ static void upload_cc_unit(struct brw_context *brw)
       GLenum srcA = ctx->Color.Blend[0].SrcA;
       GLenum dstA = ctx->Color.Blend[0].DstA;
 
+      if (eqRGB == GL_MIN || eqRGB == GL_MAX) {
+	 srcRGB = dstRGB = GL_ONE;
+      }
+
+      if (eqA == GL_MIN || eqA == GL_MAX) {
+	 srcA = dstA = GL_ONE;
+      }
+
       /* If the renderbuffer is XRGB, we have to frob the blend function to
        * force the destination alpha to 1.0.  This means replacing GL_DST_ALPHA
        * with GL_ONE and GL_ONE_MINUS_DST_ALPHA with GL_ZERO.
@@ -134,14 +142,6 @@ static void upload_cc_unit(struct brw_context *brw)
 	 srcA   = brw_fix_xRGB_alpha(srcA);
 	 dstRGB = brw_fix_xRGB_alpha(dstRGB);
 	 dstA   = brw_fix_xRGB_alpha(dstA);
-      }
-
-      if (eqRGB == GL_MIN || eqRGB == GL_MAX) {
-	 srcRGB = dstRGB = GL_ONE;
-      }
-
-      if (eqA == GL_MIN || eqA == GL_MAX) {
-	 srcA = dstA = GL_ONE;
       }
 
       cc->cc6.dest_blend_factor = brw_translate_blend_factor(dstRGB);
