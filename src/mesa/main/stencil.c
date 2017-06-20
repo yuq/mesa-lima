@@ -506,6 +506,25 @@ _mesa_StencilFuncSeparate(GLenum face, GLenum func, GLint ref, GLuint mask)
 }
 
 
+static void
+stencil_mask_separate(struct gl_context *ctx, GLenum face, GLuint mask)
+{
+   FLUSH_VERTICES(ctx, _NEW_STENCIL);
+
+   if (face != GL_BACK) {
+      ctx->Stencil.WriteMask[0] = mask;
+   }
+
+   if (face != GL_FRONT) {
+      ctx->Stencil.WriteMask[1] = mask;
+   }
+
+   if (ctx->Driver.StencilMaskSeparate) {
+      ctx->Driver.StencilMaskSeparate(ctx, face, mask);
+   }
+}
+
+
 /* OpenGL 2.0 */
 void GLAPIENTRY
 _mesa_StencilMaskSeparate(GLenum face, GLuint mask)
@@ -520,17 +539,7 @@ _mesa_StencilMaskSeparate(GLenum face, GLuint mask)
       return;
    }
 
-   FLUSH_VERTICES(ctx, _NEW_STENCIL);
-
-   if (face != GL_BACK) {
-      ctx->Stencil.WriteMask[0] = mask;
-   }
-   if (face != GL_FRONT) {
-      ctx->Stencil.WriteMask[1] = mask;
-   }
-   if (ctx->Driver.StencilMaskSeparate) {
-      ctx->Driver.StencilMaskSeparate(ctx, face, mask);
-   }
+   stencil_mask_separate(ctx, face, mask);
 }
 
 
