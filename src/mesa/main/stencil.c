@@ -184,19 +184,10 @@ _mesa_StencilFuncSeparateATI( GLenum frontfunc, GLenum backfunc, GLint ref, GLui
  * __struct gl_contextRec::Stencil. On change flushes the vertices and notifies
  * the driver via the dd_function_table::StencilFunc callback.
  */
-void GLAPIENTRY
-_mesa_StencilFunc( GLenum func, GLint ref, GLuint mask )
+static void
+stencil_func(struct gl_context *ctx, GLenum func, GLint ref, GLuint mask)
 {
-   GET_CURRENT_CONTEXT(ctx);
    const GLint face = ctx->Stencil.ActiveFace;
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glStencilFunc()\n");
-
-   if (!validate_stencil_func(ctx, func)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilFunc(func)");
-      return;
-   }
 
    if (face != 0) {
       if (ctx->Stencil.Function[face] == func &&
@@ -235,6 +226,23 @@ _mesa_StencilFunc( GLenum func, GLint ref, GLuint mask )
                                          func, ref, mask);
       }
    }
+}
+
+
+void GLAPIENTRY
+_mesa_StencilFunc(GLenum func, GLint ref, GLuint mask)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glStencilFunc()\n");
+
+   if (!validate_stencil_func(ctx, func)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilFunc(func)");
+      return;
+   }
+
+   stencil_func(ctx, func, ref, mask);
 }
 
 

@@ -42,7 +42,7 @@ _mesa_ClearStencil( GLint s );
 
 
 extern void GLAPIENTRY
-_mesa_StencilFunc( GLenum func, GLint ref, GLuint mask );
+_mesa_StencilFunc(GLenum func, GLint ref, GLuint mask);
 
 
 extern void GLAPIENTRY
