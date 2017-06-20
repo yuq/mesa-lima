@@ -391,32 +391,11 @@ _mesa_ActiveStencilFaceEXT(GLenum face)
 }
 
 
-
-void GLAPIENTRY
-_mesa_StencilOpSeparate(GLenum face, GLenum sfail, GLenum zfail, GLenum zpass)
+static void
+stencil_op_separate(struct gl_context *ctx, GLenum face, GLenum sfail,
+                    GLenum zfail, GLenum zpass)
 {
    GLboolean set = GL_FALSE;
-   GET_CURRENT_CONTEXT(ctx);
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glStencilOpSeparate()\n");
-
-   if (!validate_stencil_op(ctx, sfail)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(sfail)");
-      return;
-   }
-   if (!validate_stencil_op(ctx, zfail)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(zfail)");
-      return;
-   }
-   if (!validate_stencil_op(ctx, zpass)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(zpass)");
-      return;
-   }
-   if (face != GL_FRONT && face != GL_BACK && face != GL_FRONT_AND_BACK) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(face)");
-      return;
-   }
 
    if (face != GL_BACK) {
       /* set front */
@@ -430,6 +409,7 @@ _mesa_StencilOpSeparate(GLenum face, GLenum sfail, GLenum zfail, GLenum zpass)
          set = GL_TRUE;
       }
    }
+
    if (face != GL_FRONT) {
       /* set back */
       if (ctx->Stencil.ZFailFunc[1] != zfail ||
@@ -442,9 +422,42 @@ _mesa_StencilOpSeparate(GLenum face, GLenum sfail, GLenum zfail, GLenum zpass)
          set = GL_TRUE;
       }
    }
+
    if (set && ctx->Driver.StencilOpSeparate) {
       ctx->Driver.StencilOpSeparate(ctx, face, sfail, zfail, zpass);
    }
+}
+
+
+void GLAPIENTRY
+_mesa_StencilOpSeparate(GLenum face, GLenum sfail, GLenum zfail, GLenum zpass)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glStencilOpSeparate()\n");
+
+   if (!validate_stencil_op(ctx, sfail)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(sfail)");
+      return;
+   }
+
+   if (!validate_stencil_op(ctx, zfail)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(zfail)");
+      return;
+   }
+
+   if (!validate_stencil_op(ctx, zpass)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(zpass)");
+      return;
+   }
+
+   if (face != GL_FRONT && face != GL_BACK && face != GL_FRONT_AND_BACK) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOpSeparate(face)");
+      return;
+   }
+
+   stencil_op_separate(ctx, face, sfail, zfail, zpass);
 }
 
 
