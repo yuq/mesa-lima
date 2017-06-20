@@ -406,7 +406,7 @@ isl_format_supports_sampling(const struct gen_device_info *devinfo,
        */
       if (fmtl->txc == ISL_TXC_ASTC)
          return format < ISL_FORMAT_ASTC_HDR_2D_4X4_FLT16;
-   } else if (devinfo->is_broxton) {
+   } else if (gen_device_info_is_9lp(devinfo)) {
       const struct isl_format_layout *fmtl = isl_format_get_layout(format);
       /* Support for ASTC HDR exists on Broxton even though big-core
        * GPUs didn't get it until Cannonlake.
@@ -439,7 +439,7 @@ isl_format_supports_filtering(const struct gen_device_info *devinfo,
        */
       if (fmtl->txc == ISL_TXC_ASTC)
          return format < ISL_FORMAT_ASTC_HDR_2D_4X4_FLT16;
-   } else if (devinfo->is_broxton) {
+   } else if (gen_device_info_is_9lp(devinfo)) {
       const struct isl_format_layout *fmtl = isl_format_get_layout(format);
       /* Support for ASTC HDR exists on Broxton even though big-core
        * GPUs didn't get it until Cannonlake.

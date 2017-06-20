@@ -3348,7 +3348,7 @@ fs_visitor::lower_integer_multiplication()
           * operation directly, but CHV/BXT cannot.
           */
          if (devinfo->gen >= 8 &&
-             !devinfo->is_cherryview && !devinfo->is_broxton)
+             !devinfo->is_cherryview && !gen_device_info_is_9lp(devinfo))
             continue;
 
          if (inst->src[1].file == IMM &&

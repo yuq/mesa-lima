@@ -985,7 +985,7 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
     * affected, at least by the 64b restriction, since DepCtrl with double
     * precision instructions seems to produce GPU hangs in some cases.
     */
-   if (devinfo->gen == 8 || devinfo->is_broxton) {
+   if (devinfo->gen == 8 || gen_device_info_is_9lp(devinfo)) {
       if (inst->opcode == BRW_OPCODE_MUL &&
          IS_DWORD(inst->src[0]) &&
          IS_DWORD(inst->src[1]))

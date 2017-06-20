@@ -639,7 +639,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        */
       if (nir_dest_bit_size(instr->dest.dest) == 64 &&
           nir_src_bit_size(instr->src[0].src) == 32 &&
-          (devinfo->is_cherryview || devinfo->is_broxton)) {
+          (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo))) {
          fs_reg tmp = bld.vgrf(result.type, 1);
          tmp = subscript(tmp, op[0].type, 0);
          inst = bld.MOV(tmp, op[0]);
@@ -3748,7 +3748,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             (instr->num_components - 1) * type_sz(dest.type);
 
          bool supports_64bit_indirects =
-            !devinfo->is_cherryview && !devinfo->is_broxton;
+            !devinfo->is_cherryview && !gen_device_info_is_9lp(devinfo);
 
          if (type_sz(dest.type) != 8 || supports_64bit_indirects) {
             for (unsigned j = 0; j < instr->num_components; j++) {
