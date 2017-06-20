@@ -178,6 +178,7 @@ struct ac_shader_variant_info {
 			unsigned invocations;
 			unsigned gsvs_vertex_size;
 			unsigned max_gsvs_emit_size;
+			bool uses_prim_id;
 		} gs;
 		struct {
 			bool uses_prim_id;

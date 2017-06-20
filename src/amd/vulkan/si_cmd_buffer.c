@@ -789,6 +789,11 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		partial_es_wave = true;
 
 	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline)) {
+
+		if (radv_pipeline_has_gs(cmd_buffer->state.pipeline) &&
+		    cmd_buffer->state.pipeline->shaders[MESA_SHADER_GEOMETRY]->info.gs.uses_prim_id)
+			ia_switch_on_eoi = true;
+
 		/* GS requirement. */
 		if (SI_GS_PER_ES / primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
 			partial_es_wave = true;

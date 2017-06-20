@@ -3867,9 +3867,10 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 			result = ctx->gs_invocation_id;
 		break;
 	case nir_intrinsic_load_primitive_id:
-		if (ctx->stage == MESA_SHADER_GEOMETRY)
+		if (ctx->stage == MESA_SHADER_GEOMETRY) {
+			ctx->shader_info->gs.uses_prim_id = true;
 			result = ctx->gs_prim_id;
-		else if (ctx->stage == MESA_SHADER_TESS_CTRL) {
+		} else if (ctx->stage == MESA_SHADER_TESS_CTRL) {
 			ctx->shader_info->tcs.uses_prim_id = true;
 			result = ctx->tcs_patch_id;
 		} else if (ctx->stage == MESA_SHADER_TESS_EVAL) {
