@@ -320,27 +320,10 @@ _mesa_StencilMask( GLuint mask )
  * __struct gl_contextRec::Stencil. On change flushes the vertices and notifies
  * the driver via the dd_function_table::StencilOp callback.
  */
-void GLAPIENTRY
-_mesa_StencilOp(GLenum fail, GLenum zfail, GLenum zpass)
+static void
+stencil_op(struct gl_context *ctx, GLenum fail, GLenum zfail, GLenum zpass)
 {
-   GET_CURRENT_CONTEXT(ctx);
    const GLint face = ctx->Stencil.ActiveFace;
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glStencilOp()\n");
-
-   if (!validate_stencil_op(ctx, fail)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOp(sfail)");
-      return;
-   }
-   if (!validate_stencil_op(ctx, zfail)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOp(zfail)");
-      return;
-   }
-   if (!validate_stencil_op(ctx, zpass)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOp(zpass)");
-      return;
-   }
 
    if (face != 0) {
       /* only set active face state */
@@ -382,6 +365,32 @@ _mesa_StencilOp(GLenum fail, GLenum zfail, GLenum zpass)
    }
 }
 
+
+void GLAPIENTRY
+_mesa_StencilOp(GLenum fail, GLenum zfail, GLenum zpass)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glStencilOp()\n");
+
+   if (!validate_stencil_op(ctx, fail)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOp(sfail)");
+      return;
+   }
+
+   if (!validate_stencil_op(ctx, zfail)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOp(zfail)");
+      return;
+   }
+
+   if (!validate_stencil_op(ctx, zpass)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glStencilOp(zpass)");
+      return;
+   }
+
+   stencil_op(ctx, fail, zfail, zpass);
+}
 
 
 /* GL_EXT_stencil_two_side */

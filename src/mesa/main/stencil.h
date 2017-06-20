@@ -53,7 +53,7 @@ _mesa_StencilMask( GLuint mask );
 
 
 extern void GLAPIENTRY
-_mesa_StencilOp( GLenum fail, GLenum zfail, GLenum zpass );
+_mesa_StencilOp(GLenum fail, GLenum zfail, GLenum zpass);
 
 
 extern void GLAPIENTRY
