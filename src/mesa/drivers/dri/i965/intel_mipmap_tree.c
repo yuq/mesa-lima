@@ -742,6 +742,21 @@ need_to_retile_as_linear(struct brw_context *brw, unsigned row_pitch,
    return false;
 }
 
+static bool
+need_to_retile_as_x(const struct brw_context *brw, uint64_t size,
+                    enum isl_tiling tiling)
+{
+   /* If the BO is too large to fit in the aperture, we need to use the
+    * BLT engine to support it.  Prior to Sandybridge, the BLT paths can't
+    * handle Y-tiling, so we need to fall back to X.
+    */
+   if (brw->gen < 6 && size >= brw->max_gtt_map_object_size &&
+       tiling == ISL_TILING_Y0)
+      return true;
+
+   return false;
+}
+
 static struct intel_mipmap_tree *
 make_surface(struct brw_context *brw, GLenum target, mesa_format format,
              unsigned first_level, unsigned last_level,
@@ -798,6 +813,10 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
       if (need_to_retile_as_linear(brw, mt->surf.row_pitch,
                                    mt->surf.tiling, mt->surf.samples)) {
          init_info.tiling_flags = 1u << ISL_TILING_LINEAR;
+         if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
+            goto fail;
+      } else if (need_to_retile_as_x(brw, mt->surf.size, mt->surf.tiling)) {
+         init_info.tiling_flags = 1u << ISL_TILING_X;
          if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
             goto fail;
       }
@@ -1000,12 +1019,7 @@ intel_miptree_create(struct brw_context *brw,
    if (!mt)
       return NULL;
 
-   /* If the BO is too large to fit in the aperture, we need to use the
-    * BLT engine to support it.  Prior to Sandybridge, the BLT paths can't
-    * handle Y-tiling, so we need to fall back to X.
-    */
-   if (brw->gen < 6 && mt->bo->size >= brw->max_gtt_map_object_size &&
-       mt->surf.tiling == ISL_TILING_Y0) {
+   if (need_to_retile_as_x(brw, mt->bo->size, mt->surf.tiling)) {
       const uint32_t alloc_flags =
          (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD) ?
          BO_ALLOC_FOR_RENDER : 0;
