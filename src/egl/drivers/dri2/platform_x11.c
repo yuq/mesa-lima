@@ -1070,12 +1070,7 @@ dri2_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
       return EGL_NO_IMAGE_KHR;
    }
 
-   if (!_eglInitImage(&dri2_img->base, disp)) {
-      free(buffers_reply);
-      free(geometry_reply);
-      free(dri2_img);
-      return EGL_NO_IMAGE_KHR;
-   }
+   _eglInitImage(&dri2_img->base, disp);
 
    stride = buffers[0].pitch / buffers[0].cpp;
    dri2_img->dri_image =

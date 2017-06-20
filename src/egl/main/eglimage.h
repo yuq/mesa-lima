@@ -96,8 +96,11 @@ _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                          const EGLint *attrib_list);
 
 
-extern EGLBoolean
-_eglInitImage(_EGLImage *img, _EGLDisplay *dpy);
+static inline void
+_eglInitImage(_EGLImage *img, _EGLDisplay *dpy)
+{
+   _eglInitResource(&img->Resource, sizeof(*img), dpy);
+}
 
 
 /**

@@ -1669,10 +1669,7 @@ dri2_create_image_from_dri(_EGLDisplay *disp, __DRIimage *dri_image)
       return NULL;
    }
 
-   if (!_eglInitImage(&dri2_img->base, disp)) {
-      free(dri2_img);
-      return NULL;
-   }
+   _eglInitImage(&dri2_img->base, disp);
 
    dri2_img->dri_image = dri_image;
 
@@ -1869,11 +1866,7 @@ dri2_create_image_khr_texture(_EGLDisplay *disp, _EGLContext *ctx,
       return EGL_NO_IMAGE_KHR;
    }
 
-   if (!_eglInitImage(&dri2_img->base, disp)) {
-      _eglError(EGL_BAD_ALLOC, "dri2_create_image_khr");
-      free(dri2_img);
-      return EGL_NO_IMAGE_KHR;
-   }
+   _eglInitImage(&dri2_img->base, disp);
 
    dri2_img->dri_image =
       dri2_dpy->image->createImageFromTexture(dri2_ctx->dri_context,
@@ -2345,10 +2338,7 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
       goto cleanup_img;
    }
 
-   if (!_eglInitImage(&dri2_img->base, disp)) {
-      err = EGL_BAD_PARAMETER;
-      goto cleanup_img;
-   }
+   _eglInitImage(&dri2_img->base, disp);
 
    err = _eglParseImageAttribList(&attrs, disp, attr_list);
    if (err != EGL_SUCCESS)

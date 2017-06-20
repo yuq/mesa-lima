@@ -245,12 +245,3 @@ _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
 
    return err;
 }
-
-
-EGLBoolean
-_eglInitImage(_EGLImage *img, _EGLDisplay *dpy)
-{
-   _eglInitResource(&img->Resource, sizeof(*img), dpy);
-
-   return EGL_TRUE;
-}
