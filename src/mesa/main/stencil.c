@@ -527,6 +527,14 @@ stencil_mask_separate(struct gl_context *ctx, GLenum face, GLuint mask)
 
 /* OpenGL 2.0 */
 void GLAPIENTRY
+_mesa_StencilMaskSeparate_no_error(GLenum face, GLuint mask)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   stencil_mask_separate(ctx, face, mask);
+}
+
+
+void GLAPIENTRY
 _mesa_StencilMaskSeparate(GLenum face, GLuint mask)
 {
    GET_CURRENT_CONTEXT(ctx);

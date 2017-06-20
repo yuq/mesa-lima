@@ -5287,7 +5287,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="StencilMaskSeparate" es2="2.0">
+    <function name="StencilMaskSeparate" es2="2.0" no_error="true">
         <param name="face" type="GLenum"/>
         <param name="mask" type="GLuint"/>
         <glx ignore="true"/>
