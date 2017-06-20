@@ -73,6 +73,8 @@ void st_finish( struct st_context *st )
                                      PIPE_TIMEOUT_INFINITE);
       st->pipe->screen->fence_reference(st->pipe->screen, &fence, NULL);
    }
+
+   st_manager_flush_swapbuffers();
 }
 
 

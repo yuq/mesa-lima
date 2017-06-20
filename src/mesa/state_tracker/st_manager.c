@@ -1064,6 +1064,28 @@ st_manager_validate_framebuffers(struct st_context *st)
    st_context_validate(st, stdraw, stread);
 }
 
+
+/**
+ * Flush any outstanding swapbuffers on the current draw framebuffer.
+ */
+void
+st_manager_flush_swapbuffers(void)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct st_context *st = (ctx) ? ctx->st : NULL;
+   struct st_framebuffer *stfb;
+
+   if (!st)
+      return;
+
+   stfb = st_ws_framebuffer(ctx->DrawBuffer);
+   if (!stfb || !stfb->iface->flush_swapbuffers)
+      return;
+
+   stfb->iface->flush_swapbuffers(&st->iface, stfb->iface);
+}
+
+
 /**
  * Add a color renderbuffer on demand.  The FBO must correspond to a window,
  * not a user-created FBO.
