@@ -349,7 +349,7 @@ _mesa_ClientActiveTexture(GLenum texture)
       return;
    }
 
-   FLUSH_VERTICES(ctx, _NEW_ARRAY);
+   /* Don't flush vertices. This is a "latched" state. */
    ctx->Array.ActiveTexture = texUnit;
 }
 
