@@ -448,6 +448,32 @@ _mesa_StencilOpSeparate(GLenum face, GLenum sfail, GLenum zfail, GLenum zpass)
 }
 
 
+static void
+stencil_func_separate(struct gl_context *ctx, GLenum face, GLenum func,
+                      GLint ref, GLuint mask)
+{
+   FLUSH_VERTICES(ctx, _NEW_STENCIL);
+
+   if (face != GL_BACK) {
+      /* set front */
+      ctx->Stencil.Function[0] = func;
+      ctx->Stencil.Ref[0] = ref;
+      ctx->Stencil.ValueMask[0] = mask;
+   }
+
+   if (face != GL_FRONT) {
+      /* set back */
+      ctx->Stencil.Function[1] = func;
+      ctx->Stencil.Ref[1] = ref;
+      ctx->Stencil.ValueMask[1] = mask;
+   }
+
+   if (ctx->Driver.StencilFuncSeparate) {
+      ctx->Driver.StencilFuncSeparate(ctx, face, func, ref, mask);
+   }
+}
+
+
 /* OpenGL 2.0 */
 void GLAPIENTRY
 _mesa_StencilFuncSeparate(GLenum face, GLenum func, GLint ref, GLuint mask)
@@ -461,28 +487,13 @@ _mesa_StencilFuncSeparate(GLenum face, GLenum func, GLint ref, GLuint mask)
       _mesa_error(ctx, GL_INVALID_ENUM, "glStencilFuncSeparate(face)");
       return;
    }
+
    if (!validate_stencil_func(ctx, func)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glStencilFuncSeparate(func)");
       return;
    }
 
-   FLUSH_VERTICES(ctx, _NEW_STENCIL);
-
-   if (face != GL_BACK) {
-      /* set front */
-      ctx->Stencil.Function[0] = func;
-      ctx->Stencil.Ref[0] = ref;
-      ctx->Stencil.ValueMask[0] = mask;
-   }
-   if (face != GL_FRONT) {
-      /* set back */
-      ctx->Stencil.Function[1] = func;
-      ctx->Stencil.Ref[1] = ref;
-      ctx->Stencil.ValueMask[1] = mask;
-   }
-   if (ctx->Driver.StencilFuncSeparate) {
-      ctx->Driver.StencilFuncSeparate(ctx, face, func, ref, mask);
-   }
+   stencil_func_separate(ctx, face, func, ref, mask);
 }
 
 
