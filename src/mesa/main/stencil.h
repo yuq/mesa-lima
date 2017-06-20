@@ -56,6 +56,9 @@ _mesa_StencilOp( GLenum fail, GLenum zfail, GLenum zpass );
 extern void GLAPIENTRY
 _mesa_ActiveStencilFaceEXT(GLenum face);
 
+void GLAPIENTRY
+_mesa_StencilOpSeparate_no_error(GLenum face, GLenum fail, GLenum zfail,
+                                 GLenum zpass);
 
 extern void GLAPIENTRY
 _mesa_StencilOpSeparate(GLenum face, GLenum fail, GLenum zfail, GLenum zpass);

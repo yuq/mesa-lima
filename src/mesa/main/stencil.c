@@ -430,6 +430,15 @@ stencil_op_separate(struct gl_context *ctx, GLenum face, GLenum sfail,
 
 
 void GLAPIENTRY
+_mesa_StencilOpSeparate_no_error(GLenum face, GLenum sfail, GLenum zfail,
+                                 GLenum zpass)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   stencil_op_separate(ctx, face, sfail, zfail, zpass);
+}
+
+
+void GLAPIENTRY
 _mesa_StencilOpSeparate(GLenum face, GLenum sfail, GLenum zfail, GLenum zpass)
 {
    GET_CURRENT_CONTEXT(ctx);

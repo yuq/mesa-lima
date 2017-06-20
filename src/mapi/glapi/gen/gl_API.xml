@@ -5279,7 +5279,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="StencilOpSeparate" es2="2.0">
+    <function name="StencilOpSeparate" es2="2.0" no_error="true">
         <param name="face" type="GLenum"/>
         <param name="sfail" type="GLenum"/>
         <param name="zfail" type="GLenum"/>
