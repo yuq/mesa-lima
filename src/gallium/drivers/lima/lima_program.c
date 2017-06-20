@@ -43,17 +43,11 @@ lima_create_fs_state(struct pipe_context *pctx,
    assert(cso->type == PIPE_SHADER_IR_TGSI);
    tgsi_dump(cso->tokens, 0);
 
-   static const uint32_t fs[] = {
+   static uint32_t fs[] = {
       0x00021025, 0x0000014c, 0x03c007cf, 0x00000000, /* 0x00000000 */
    };
 
-   so->shader = MALLOC(sizeof(fs));
-   if (!so->shader) {
-      FREE(so);
-      return NULL;
-   }
-
-   memcpy(so->shader, fs, sizeof(fs));
+   so->shader = fs;
    so->shader_size = sizeof(fs);
    so->first_inst_size = 5;
 
@@ -76,7 +70,6 @@ lima_delete_fs_state(struct pipe_context *pctx, void *hwcso)
 {
    struct lima_fs_shader_state *so = hwcso;
 
-   FREE(so->shader);
    FREE(so);
 }
 
@@ -94,7 +87,7 @@ lima_create_vs_state(struct pipe_context *pctx,
    assert(cso->type == PIPE_SHADER_IR_TGSI);
    tgsi_dump(cso->tokens, 0);
 
-   static const uint32_t vs[] = {
+   static uint32_t vs[] = {
       0xad4ad6b5, 0x0380a2cc, 0x0007ff80, 0x000ad500, /* 0x00000000 */
       0xad4685c2, 0x438002b5, 0x0007ff80, 0x000ad500, /* 0x00000010 */
       0xad4cc980, 0x438022d9, 0x0007ff80, 0x000ad500, /* 0x00000020 */
@@ -102,13 +95,7 @@ lima_create_vs_state(struct pipe_context *pctx,
       0x6c8b66b5, 0x03804193, 0x4243c080, 0x000ac508, /* 0x00000040 */
    };
 
-   so->shader = MALLOC(sizeof(vs));
-   if (!so->shader) {
-      FREE(so);
-      return NULL;
-   }
-
-   memcpy(so->shader, vs, sizeof(vs));
+   so->shader = vs;
    so->shader_size = sizeof(vs);
 
    return so;
@@ -130,7 +117,6 @@ lima_delete_vs_state(struct pipe_context *pctx, void *hwcso)
 {
    struct lima_vs_shader_state *so = hwcso;
 
-   FREE(so->shader);
    FREE(so);
 }
 
