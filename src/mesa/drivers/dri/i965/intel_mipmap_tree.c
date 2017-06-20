@@ -889,6 +889,8 @@ intel_miptree_create(struct brw_context *brw,
                                      first_level, last_level,
                                      width0, height0, depth0, num_samples,
                                      layout_flags);
+   if (!mt)
+      return NULL;
 
    /* If the BO is too large to fit in the aperture, we need to use the
     * BLT engine to support it.  Prior to Sandybridge, the BLT paths can't
