@@ -666,10 +666,8 @@ droid_set_damage_region(_EGLDriver *drv,
       return EGL_TRUE;
 
    droid_rects = malloc(n_rects * sizeof(android_native_rect_t));
-   if (droid_rects == NULL) {
-     _eglError(EGL_BAD_ALLOC, "eglSetDamageRegionKHR");
-     return EGL_FALSE;
-   }
+   if (droid_rects == NULL)
+     return _eglError(EGL_BAD_ALLOC, "eglSetDamageRegionKHR");
 
    for (EGLint num_drects = 0; num_drects < n_rects; num_drects++) {
       EGLint i = num_drects * 4;

@@ -489,10 +489,8 @@ _eglInitContext(_EGLContext *ctx, _EGLDisplay *dpy, _EGLConfig *conf,
    const EGLenum api = eglQueryAPI();
    EGLint err;
 
-   if (api == EGL_NONE) {
-      _eglError(EGL_BAD_MATCH, "eglCreateContext(no client API)");
-      return EGL_FALSE;
-   }
+   if (api == EGL_NONE)
+      return _eglError(EGL_BAD_MATCH, "eglCreateContext(no client API)");
 
    _eglInitResource(&ctx->Resource, sizeof(*ctx), dpy);
    ctx->ClientAPI = api;

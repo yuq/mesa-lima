@@ -727,10 +727,8 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
 
    /* Make sure we have a back buffer in case we're swapping without ever
     * rendering. */
-   if (get_back_bo(dri2_surf) < 0) {
-      _eglError(EGL_BAD_ALLOC, "dri2_swap_buffers");
-      return EGL_FALSE;
-   }
+   if (get_back_bo(dri2_surf) < 0)
+      return _eglError(EGL_BAD_ALLOC, "dri2_swap_buffers");
 
    if (draw->SwapInterval > 0) {
       dri2_surf->throttle_callback =

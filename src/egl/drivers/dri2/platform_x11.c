@@ -902,8 +902,7 @@ dri2_x11_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 
    if (dri2_x11_swap_buffers_msc(drv, disp, draw, 0, 0, 0) == -1) {
       /* Swap failed with a window drawable. */
-      _eglError(EGL_BAD_NATIVE_WINDOW, __func__);
-      return EGL_FALSE;
+      return _eglError(EGL_BAD_NATIVE_WINDOW, __func__);
    }
    return EGL_TRUE;
 }
@@ -1116,10 +1115,8 @@ dri2_x11_get_sync_values(_EGLDisplay *display, _EGLSurface *surface,
    cookie = xcb_dri2_get_msc(dri2_dpy->conn, dri2_surf->drawable);
    reply = xcb_dri2_get_msc_reply(dri2_dpy->conn, cookie, NULL);
 
-   if (!reply) {
-      _eglError(EGL_BAD_ACCESS, __func__);
-      return EGL_FALSE;
-   }
+   if (!reply)
+      return _eglError(EGL_BAD_ACCESS, __func__);
 
    *ust = ((EGLuint64KHR) reply->ust_hi << 32) | reply->ust_lo;
    *msc = ((EGLuint64KHR) reply->msc_hi << 32) | reply->msc_lo;

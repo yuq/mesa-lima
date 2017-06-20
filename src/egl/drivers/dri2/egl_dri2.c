@@ -1969,10 +1969,8 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
      *    incomplete, EGL_BAD_PARAMETER is generated."
      */
    if (attrs->Width <= 0 || attrs->Height <= 0 ||
-       !attrs->DMABufFourCC.IsPresent) {
-      _eglError(EGL_BAD_PARAMETER, "attribute(s) missing");
-      return EGL_FALSE;
-   }
+       !attrs->DMABufFourCC.IsPresent)
+      return _eglError(EGL_BAD_PARAMETER, "attribute(s) missing");
 
    /**
     * Also:
@@ -1983,10 +1981,8 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
     */
    for (unsigned i = 0; i < ARRAY_SIZE(attrs->DMABufPlanePitches); ++i) {
       if (attrs->DMABufPlanePitches[i].IsPresent &&
-          attrs->DMABufPlanePitches[i].Value <= 0) {
-         _eglError(EGL_BAD_ACCESS, "invalid pitch");
-         return EGL_FALSE;
-      }
+          attrs->DMABufPlanePitches[i].Value <= 0)
+         return _eglError(EGL_BAD_ACCESS, "invalid pitch");
    }
 
    /**
@@ -1998,10 +1994,8 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
     */
    for (unsigned i = 0; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneModifiersLo[i].IsPresent !=
-          attrs->DMABufPlaneModifiersHi[i].IsPresent) {
-         _eglError(EGL_BAD_PARAMETER, "modifier attribute lo or hi missing");
-         return EGL_FALSE;
-      }
+          attrs->DMABufPlaneModifiersHi[i].IsPresent)
+         return _eglError(EGL_BAD_PARAMETER, "modifier attribute lo or hi missing");
    }
 
    /* Although the EGL_EXT_image_dma_buf_import_modifiers spec doesn't
@@ -2013,10 +2007,8 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
              (attrs->DMABufPlaneModifiersLo[0].Value !=
                attrs->DMABufPlaneModifiersLo[i].Value) ||
              (attrs->DMABufPlaneModifiersHi[0].Value !=
-               attrs->DMABufPlaneModifiersHi[i].Value)) {
-            _eglError(EGL_BAD_PARAMETER, "modifier attributes not equal");
-            return EGL_FALSE;
-         }
+               attrs->DMABufPlaneModifiersHi[i].Value))
+            return _eglError(EGL_BAD_PARAMETER, "modifier attributes not equal");
       }
    }
 
@@ -2160,10 +2152,8 @@ dri2_query_dma_buf_formats(_EGLDriver *drv, _EGLDisplay *disp,
                             EGLint max, EGLint *formats, EGLint *count)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   if (max < 0 || (max > 0 && formats == NULL)) {
-      _eglError(EGL_BAD_PARAMETER, "invalid value for max count of formats");
-      return EGL_FALSE;
-   }
+   if (max < 0 || (max > 0 && formats == NULL))
+      return _eglError(EGL_BAD_PARAMETER, "invalid value for max count of formats");
 
    if (dri2_dpy->image->base.version < 15 ||
        dri2_dpy->image->queryDmaBufFormats == NULL)
@@ -2183,15 +2173,11 @@ dri2_query_dma_buf_modifiers(_EGLDriver *drv, _EGLDisplay *disp, EGLint format,
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
 
-   if (max < 0) {
-      _eglError(EGL_BAD_PARAMETER, "invalid value for max count of formats");
-      return EGL_FALSE;
-   }
+   if (max < 0)
+      return _eglError(EGL_BAD_PARAMETER, "invalid value for max count of formats");
 
-   if (max > 0 && modifiers == NULL) {
-      _eglError(EGL_BAD_PARAMETER, "invalid modifiers array");
-      return EGL_FALSE;
-   }
+   if (max > 0 && modifiers == NULL)
+      return _eglError(EGL_BAD_PARAMETER, "invalid modifiers array");
 
    if (dri2_dpy->image->base.version < 15 ||
        dri2_dpy->image->queryDmaBufModifiers == NULL)
@@ -2200,10 +2186,8 @@ dri2_query_dma_buf_modifiers(_EGLDriver *drv, _EGLDisplay *disp, EGLint format,
    if (dri2_dpy->image->queryDmaBufModifiers(dri2_dpy->dri_screen, format,
                                              max, modifiers,
                                              (unsigned int *) external_only,
-                                             count) == false) {
-      _eglError(EGL_BAD_PARAMETER, "invalid format");
-      return EGL_FALSE;
-   }
+                                             count) == false)
+      return _eglError(EGL_BAD_PARAMETER, "invalid format");
 
    return EGL_TRUE;
 }
@@ -2406,10 +2390,8 @@ dri2_export_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *img,
    (void) drv;
 
    if (name && !dri2_dpy->image->queryImage(dri2_img->dri_image,
-                                            __DRI_IMAGE_ATTRIB_NAME, name)) {
-      _eglError(EGL_BAD_ALLOC, "dri2_export_drm_image_mesa");
-      return EGL_FALSE;
-   }
+                                            __DRI_IMAGE_ATTRIB_NAME, name))
+      return _eglError(EGL_BAD_ALLOC, "dri2_export_drm_image_mesa");
 
    if (handle)
       dri2_dpy->image->queryImage(dri2_img->dri_image,
@@ -2966,15 +2948,11 @@ dri2_signal_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
    struct dri2_egl_sync *dri2_sync = dri2_egl_sync(sync);
    EGLint ret;
 
-   if (sync->Type != EGL_SYNC_REUSABLE_KHR) {
-      _eglError(EGL_BAD_MATCH, "eglSignalSyncKHR");
-      return EGL_FALSE;
-   }
+   if (sync->Type != EGL_SYNC_REUSABLE_KHR)
+      return _eglError(EGL_BAD_MATCH, "eglSignalSyncKHR");
 
-   if (mode != EGL_SIGNALED_KHR && mode != EGL_UNSIGNALED_KHR) {
-      _eglError(EGL_BAD_ATTRIBUTE, "eglSignalSyncKHR");
-      return EGL_FALSE;
-   }
+   if (mode != EGL_SIGNALED_KHR && mode != EGL_UNSIGNALED_KHR)
+      return _eglError(EGL_BAD_ATTRIBUTE, "eglSignalSyncKHR");
 
    dri2_sync->base.SyncStatus = mode;
 
@@ -2982,10 +2960,8 @@ dri2_signal_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
       ret = cnd_broadcast(&dri2_sync->cond);
 
       /* fail to broadcast */
-      if (ret) {
-         _eglError(EGL_BAD_ACCESS, "eglSignalSyncKHR");
-         return EGL_FALSE;
-      }
+      if (ret)
+         return _eglError(EGL_BAD_ACCESS, "eglSignalSyncKHR");
    }
 
    return EGL_TRUE;

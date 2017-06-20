@@ -434,10 +434,8 @@ dri2_drm_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 
       /* Make sure we have a back buffer in case we're swapping without
        * ever rendering. */
-      if (get_back_bo(dri2_surf) < 0) {
-         _eglError(EGL_BAD_ALLOC, "dri2_swap_buffers");
-         return EGL_FALSE;
-      }
+      if (get_back_bo(dri2_surf) < 0)
+         return _eglError(EGL_BAD_ALLOC, "dri2_swap_buffers");
 
       dri2_surf->current = dri2_surf->back;
       dri2_surf->current->age = 1;
