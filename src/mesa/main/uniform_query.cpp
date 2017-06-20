@@ -1523,10 +1523,20 @@ _mesa_uniform_handle(GLint location, GLsizei count, const GLvoid *values,
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
-   memcpy(&uni->storage[size_mul * components * offset], values,
-          sizeof(uni->storage[0]) * components * count * size_mul);
+   gl_constant_value *storage;
+   if (ctx->Const.PackedDriverUniformStorage) {
+      for (unsigned s = 0; s < uni->num_driver_storage; s++) {
+         storage = (gl_constant_value *)
+            uni->driver_storage[s].data + (size_mul * offset * components);
+         memcpy(storage, values,
+                sizeof(uni->storage[0]) * components * count * size_mul);
+      }
+   } else {
+      memcpy(&uni->storage[size_mul * components * offset], values,
+             sizeof(uni->storage[0]) * components * count * size_mul);
 
-   _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
+      _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
+   }
 
    if (uni->type->is_sampler()) {
       /* Mark this bindless sampler as not bound to a texture unit because
