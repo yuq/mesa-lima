@@ -336,8 +336,14 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
       /* Calculate the source base address *BEFORE* modifying elements to
        * account for the size of the user's buffer.
        */
-      const union gl_constant_value *const src =
-         &uni->storage[offset * elements * dmul];
+      const union gl_constant_value *src;
+      if (ctx->Const.PackedDriverUniformStorage &&
+          (uni->is_bindless || !uni->type->contains_opaque())) {
+         src = (gl_constant_value *) uni->driver_storage[0].data +
+            (offset * elements * dmul);
+      } else {
+         src = &uni->storage[offset * elements * dmul];
+      }
 
       assert(returnType == GLSL_TYPE_FLOAT || returnType == GLSL_TYPE_INT ||
              returnType == GLSL_TYPE_UINT || returnType == GLSL_TYPE_DOUBLE ||
@@ -1030,19 +1036,20 @@ _mesa_flush_vertices_for_uniforms(struct gl_context *ctx,
 }
 
 static void
-copy_uniforms_to_storage(struct gl_uniform_storage *uni,
+copy_uniforms_to_storage(gl_constant_value *storage,
+                         struct gl_uniform_storage *uni,
                          struct gl_context *ctx, GLsizei count,
                          const GLvoid *values, const int size_mul,
                          const unsigned offset, const unsigned components,
                          enum glsl_base_type basicType)
 {
    if (!uni->type->is_boolean() && !uni->is_bindless) {
-      memcpy(&uni->storage[size_mul * components * offset], values,
-             sizeof(uni->storage[0]) * components * count * size_mul);
+      memcpy(storage, values,
+             sizeof(storage[0]) * components * count * size_mul);
    } else if (uni->is_bindless) {
       const union gl_constant_value *src =
          (const union gl_constant_value *) values;
-      GLuint64 *dst = (GLuint64 *)&uni->storage[components * offset].i;
+      GLuint64 *dst = (GLuint64 *)&storage->i;
       const unsigned elems = components * count;
 
       for (unsigned i = 0; i < elems; i++) {
@@ -1051,7 +1058,7 @@ copy_uniforms_to_storage(struct gl_uniform_storage *uni,
    } else {
       const union gl_constant_value *src =
          (const union gl_constant_value *) values;
-      union gl_constant_value *dst = &uni->storage[components * offset];
+      union gl_constant_value *dst = storage;
       const unsigned elems = components * count;
 
       for (unsigned i = 0; i < elems; i++) {
@@ -1127,10 +1134,23 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
-   copy_uniforms_to_storage(uni, ctx, count, values, size_mul, offset,
-                            components, basicType);
+   gl_constant_value *storage;
+   if (ctx->Const.PackedDriverUniformStorage &&
+       (uni->is_bindless || !uni->type->contains_opaque())) {
+      for (unsigned s = 0; s < uni->num_driver_storage; s++) {
+         storage = (gl_constant_value *)
+            uni->driver_storage[s].data + (size_mul * offset * components);
 
-   _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
+         copy_uniforms_to_storage(storage, uni, ctx, count, values, size_mul,
+                                  offset, components, basicType);
+      }
+   } else {
+      storage = &uni->storage[size_mul * components * offset];
+      copy_uniforms_to_storage(storage, uni, ctx, count, values, size_mul,
+                               offset, components, basicType);
+
+      _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
+   }
 
    /* If the uniform is a sampler, do the extra magic necessary to propagate
     * the changes through.
@@ -1222,7 +1242,7 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
 
 
 static void
-copy_uniform_matrix_to_storage(struct gl_uniform_storage *const uni,
+copy_uniform_matrix_to_storage(gl_constant_value *storage,
                                GLsizei count, const void *values,
                                const unsigned size_mul, const unsigned offset,
                                const unsigned components,
@@ -1233,13 +1253,13 @@ copy_uniform_matrix_to_storage(struct gl_uniform_storage *const uni,
    const unsigned elements = components * vectors;
 
    if (!transpose) {
-      memcpy(&uni->storage[size_mul * elements * offset], values,
-             sizeof(uni->storage[0]) * elements * count * size_mul);
+      memcpy(storage, values,
+             sizeof(storage[0]) * elements * count * size_mul);
    } else if (basicType == GLSL_TYPE_FLOAT) {
       /* Copy and transpose the matrix.
        */
       const float *src = (const float *)values;
-      float *dst = &uni->storage[elements * offset].f;
+      float *dst = &storage->f;
 
       for (int i = 0; i < count; i++) {
          for (unsigned r = 0; r < rows; r++) {
@@ -1254,7 +1274,7 @@ copy_uniform_matrix_to_storage(struct gl_uniform_storage *const uni,
    } else {
       assert(basicType == GLSL_TYPE_DOUBLE);
       const double *src = (const double *)values;
-      double *dst = (double *)&uni->storage[elements * offset].f;
+      double *dst = (double *)&storage->f;
 
       for (int i = 0; i < count; i++) {
          for (unsigned r = 0; r < rows; r++) {
@@ -1369,11 +1389,25 @@ _mesa_uniform_matrix(GLint location, GLsizei count,
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
-   copy_uniform_matrix_to_storage(uni, count, values, size_mul, offset,
-                                  components, vectors, transpose, cols, rows,
-                                  basicType);
+   gl_constant_value *storage;
+   const unsigned elements = components * vectors;
+   if (ctx->Const.PackedDriverUniformStorage) {
+      for (unsigned s = 0; s < uni->num_driver_storage; s++) {
+         storage = (gl_constant_value *)
+            uni->driver_storage[s].data + (size_mul * offset * elements);
 
-   _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
+         copy_uniform_matrix_to_storage(storage, count, values, size_mul,
+                                        offset, components, vectors,
+                                        transpose, cols, rows, basicType);
+      }
+   } else {
+      storage =  &uni->storage[size_mul * elements * offset];
+      copy_uniform_matrix_to_storage(storage, count, values, size_mul, offset,
+                                     components, vectors, transpose, cols,
+                                     rows, basicType);
+
+      _mesa_propagate_uniforms_to_driver_storage(uni, offset, count);
+   }
 }
 
 static void
