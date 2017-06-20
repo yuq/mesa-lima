@@ -1988,6 +1988,33 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 	radv_pipeline_init_blend_state(pipeline, pCreateInfo, extra);
 
+	if (!modules[MESA_SHADER_FRAGMENT]) {
+		nir_builder fs_b;
+		nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
+		fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "noop_fs");
+		fs_m.nir = fs_b.shader;
+		modules[MESA_SHADER_FRAGMENT] = &fs_m;
+	}
+
+	if (modules[MESA_SHADER_FRAGMENT]) {
+		union ac_shader_variant_key key;
+		key.fs.col_format = pipeline->graphics.blend.spi_shader_col_format;
+		key.fs.is_int8 = radv_pipeline_compute_is_int8(pCreateInfo);
+
+		const VkPipelineShaderStageCreateInfo *stage = pStages[MESA_SHADER_FRAGMENT];
+
+		pipeline->shaders[MESA_SHADER_FRAGMENT] =
+			 radv_pipeline_compile(pipeline, cache, modules[MESA_SHADER_FRAGMENT],
+					       stage ? stage->pName : "main",
+					       MESA_SHADER_FRAGMENT,
+					       stage ? stage->pSpecializationInfo : NULL,
+					       pipeline->layout, &key);
+		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_FRAGMENT);
+	}
+
+	if (fs_m.nir)
+		ralloc_free(fs_m.nir);
+
 	if (modules[MESA_SHADER_VERTEX]) {
 		bool as_es = false;
 		bool as_ls = false;
@@ -2039,33 +2066,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_TESS_EVAL) |
 			mesa_to_vk_shader_stage(MESA_SHADER_TESS_CTRL);
 	}
-
-	if (!modules[MESA_SHADER_FRAGMENT]) {
-		nir_builder fs_b;
-		nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
-		fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "noop_fs");
-		fs_m.nir = fs_b.shader;
-		modules[MESA_SHADER_FRAGMENT] = &fs_m;
-	}
-
-	if (modules[MESA_SHADER_FRAGMENT]) {
-		union ac_shader_variant_key key;
-		key.fs.col_format = pipeline->graphics.blend.spi_shader_col_format;
-		key.fs.is_int8 = radv_pipeline_compute_is_int8(pCreateInfo);
-
-		const VkPipelineShaderStageCreateInfo *stage = pStages[MESA_SHADER_FRAGMENT];
-
-		pipeline->shaders[MESA_SHADER_FRAGMENT] =
-			 radv_pipeline_compile(pipeline, cache, modules[MESA_SHADER_FRAGMENT],
-					       stage ? stage->pName : "main",
-					       MESA_SHADER_FRAGMENT,
-					       stage ? stage->pSpecializationInfo : NULL,
-					       pipeline->layout, &key);
-		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_FRAGMENT);
-	}
-
-	if (fs_m.nir)
-		ralloc_free(fs_m.nir);
 
 	radv_pipeline_init_depth_stencil_state(pipeline, pCreateInfo, extra);
 	radv_pipeline_init_raster_state(pipeline, pCreateInfo);
