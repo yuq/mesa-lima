@@ -5124,6 +5124,7 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 
 static void
 handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
+		       bool export_prim_id,
 		       struct ac_vs_output_info *outinfo)
 {
 	uint32_t param_count = 0;
@@ -5263,6 +5264,23 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 		if (pos_idx == num_pos_exports)
 			pos_args[i].done = 1;
 		ac_build_export(&ctx->ac, &pos_args[i]);
+	}
+
+
+	if (export_prim_id) {
+		LLVMValueRef values[4];
+		target = V_008DFC_SQ_EXP_PARAM + param_count;
+		outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count;
+		param_count++;
+
+		values[0] = ctx->vs_prim_id;
+		ctx->shader_info->vs.vgpr_comp_cnt = MAX2(2,
+							  ctx->shader_info->vs.vgpr_comp_cnt);
+		for (unsigned j = 1; j < 4; j++)
+			values[j] = ctx->f32zero;
+		si_llvm_init_export_args(ctx, values, target, &args);
+		ac_build_export(&ctx->ac, &args);
+		outinfo->export_prim_id = true;
 	}
 
 	outinfo->pos_exports = num_pos_exports;
@@ -5700,7 +5718,8 @@ handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 		else if (ctx->options->key.vs.as_es)
 			handle_es_outputs_post(ctx, &ctx->shader_info->vs.es_info);
 		else
-			handle_vs_outputs_post(ctx, &ctx->shader_info->vs.outinfo);
+			handle_vs_outputs_post(ctx, ctx->options->key.vs.export_prim_id,
+					       &ctx->shader_info->vs.outinfo);
 		break;
 	case MESA_SHADER_FRAGMENT:
 		handle_fs_outputs_post(ctx);
@@ -5715,7 +5734,8 @@ handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 		if (ctx->options->key.tes.as_es)
 			handle_es_outputs_post(ctx, &ctx->shader_info->tes.es_info);
 		else
-			handle_vs_outputs_post(ctx, &ctx->shader_info->tes.outinfo);
+			handle_vs_outputs_post(ctx, ctx->options->key.tes.export_prim_id,
+					       &ctx->shader_info->tes.outinfo);
 		break;
 	default:
 		break;
@@ -6191,7 +6211,7 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 		}
 		idx += slot_inc;
 	}
-	handle_vs_outputs_post(ctx, &ctx->shader_info->vs.outinfo);
+	handle_vs_outputs_post(ctx, false, &ctx->shader_info->vs.outinfo);
 }
 
 void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,

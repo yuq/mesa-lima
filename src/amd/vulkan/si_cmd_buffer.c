@@ -700,6 +700,9 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 
 	multi_instances_smaller_than_primgroup = indirect_draw || (instanced_draw &&
 								   num_prims < primgroup_size);
+	if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.prim_id_input)
+		ia_switch_on_eoi = true;
+
 	if (radv_pipeline_has_tess(cmd_buffer->state.pipeline)) {
 		/* SWITCH_ON_EOI must be set if PrimID is used. */
 		if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.uses_prim_id ||
