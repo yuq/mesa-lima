@@ -1238,6 +1238,7 @@ i915ValidateFragmentProgram(struct i915_context *i915)
    const GLbitfield64 inputsRead = p->FragProg.info.inputs_read;
    GLuint s4 = i915->state.Ctx[I915_CTXREG_LIS4] & ~S4_VFMT_MASK;
    GLuint s2 = S2_TEXCOORD_NONE;
+   GLuint s3 = 0;
    int i, offset = 0;
 
    /* Important:
@@ -1301,6 +1302,7 @@ i915ValidateFragmentProgram(struct i915_context *i915)
           */
          s2 &= ~S2_TEXCOORD_FMT(i, S2_TEXCOORD_FMT0_MASK);
          s2 |= S2_TEXCOORD_FMT(i, SZ_TO_HW(wpos_size));
+         s3 |= S3_TEXCOORD_PERSPECTIVE_DISABLE(i);
 
          intel->wpos_offset = offset;
          EMIT_PAD(wpos_size);
@@ -1308,6 +1310,7 @@ i915ValidateFragmentProgram(struct i915_context *i915)
    }
 
    if (s2 != i915->state.Ctx[I915_CTXREG_LIS2] ||
+       s3 != i915->state.Ctx[I915_CTXREG_LIS3] ||
        s4 != i915->state.Ctx[I915_CTXREG_LIS4]) {
       I915_STATECHANGE(i915, I915_UPLOAD_CTX);
 
@@ -1326,6 +1329,7 @@ i915ValidateFragmentProgram(struct i915_context *i915)
       intel->vertex_size >>= 2;
 
       i915->state.Ctx[I915_CTXREG_LIS2] = s2;
+      i915->state.Ctx[I915_CTXREG_LIS3] = s3;
       i915->state.Ctx[I915_CTXREG_LIS4] = s4;
 
       assert(intel->vtbl.check_vertex_size(intel, intel->vertex_size));
