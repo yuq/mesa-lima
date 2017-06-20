@@ -3064,6 +3064,11 @@ decompress_texture_image(struct gl_context *ctx,
    if (width > decompress_fbo->Width || height > decompress_fbo->Height) {
       _mesa_renderbuffer_storage(ctx, decompress_fbo->rb, rbFormat,
                                  width, height, 0);
+
+      /* Do the full completeness check to recompute
+       * ctx->DrawBuffer->Width/Height.
+       */
+      ctx->DrawBuffer->_Status = GL_FRAMEBUFFER_UNDEFINED;
       status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
       if (status != GL_FRAMEBUFFER_COMPLETE) {
          /* If the framebuffer isn't complete then we'll leave
