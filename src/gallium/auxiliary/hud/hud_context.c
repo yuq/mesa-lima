@@ -1150,8 +1150,11 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       else if (sscanf(name, "cpu%u%s", &i, s) == 1) {
          hud_cpu_graph_install(pane, i);
       }
+      else if (strcmp(name, "API-thread-busy") == 0) {
+         hud_thread_busy_install(pane, name, false);
+      }
       else if (strcmp(name, "main-thread-busy") == 0) {
-         hud_main_thread_busy_install(pane, name);
+         hud_thread_busy_install(pane, name, true);
       }
 #if HAVE_GALLIUM_EXTRA_HUD
       else if (sscanf(name, "nic-rx-%s", arg_name) == 1) {

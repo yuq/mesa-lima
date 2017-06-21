@@ -32,6 +32,7 @@
 #include "os/os_time.h"
 #include "os/os_thread.h"
 #include "util/u_memory.h"
+#include "util/u_queue.h"
 #include <stdio.h>
 #include <inttypes.h>
 #ifdef PIPE_OS_WINDOWS
@@ -231,6 +232,7 @@ hud_get_num_cpus(void)
 }
 
 struct thread_info {
+   bool main_thread;
    int64_t last_time;
    int64_t last_thread_time;
 };
@@ -243,7 +245,19 @@ query_api_thread_busy_status(struct hud_graph *gr)
 
    if (info->last_time) {
       if (info->last_time + gr->pane->period*1000 <= now) {
-         int64_t thread_now = pipe_current_thread_get_time_nano();
+         int64_t thread_now;
+
+         if (info->main_thread) {
+            thread_now = pipe_current_thread_get_time_nano();
+         } else {
+            struct util_queue_monitoring *mon = gr->pane->hud->monitored_queue;
+
+            if (mon && mon->queue)
+               thread_now = util_queue_get_thread_time_nano(mon->queue, 0);
+            else
+               thread_now = 0;
+         }
+
          unsigned percent = (thread_now - info->last_thread_time) * 100 /
                             (now - info->last_time);
 
@@ -266,7 +280,7 @@ query_api_thread_busy_status(struct hud_graph *gr)
 }
 
 void
-hud_main_thread_busy_install(struct hud_pane *pane, const char *name)
+hud_thread_busy_install(struct hud_pane *pane, const char *name, bool main)
 {
    struct hud_graph *gr;
 
@@ -282,6 +296,7 @@ hud_main_thread_busy_install(struct hud_pane *pane, const char *name)
       return;
    }
 
+   ((struct thread_info*)gr->query_data)->main_thread = main;
    gr->query_new_value = query_api_thread_busy_status;
 
    /* Don't use free() as our callback as that messes up Gallium's
