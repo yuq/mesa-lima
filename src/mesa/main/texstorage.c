@@ -539,13 +539,9 @@ texturestorage(GLuint dims, GLuint texture, GLsizei levels,
       return;
    }
 
-   /* Get the texture object by Name. */
-   texObj = _mesa_lookup_texture(ctx, texture);
-   if (!texObj) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(texture = %d)", caller, texture);
+   texObj = _mesa_lookup_texture_err(ctx, texture, caller);
+   if (!texObj)
       return;
-   }
 
    /* Check target.  This is done here so that _mesa_texture_storage
     * can receive unsized formats.
