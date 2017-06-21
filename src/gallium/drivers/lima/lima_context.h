@@ -60,7 +60,6 @@ struct lima_depth_stencil_alpha_state {
 struct lima_fs_shader_state {
    void *shader;
    int shader_size;
-   int first_inst_size;
 };
 
 struct lima_vs_shader_state {
@@ -132,29 +131,36 @@ struct lima_context {
    struct lima_blend_state *blend;
    struct pipe_stencil_ref stencil_ref;
 
-   struct lima_buffer *plb;
-   int plb_plbu_offset;
-   int plb_pp_offset[4];
-   int plb_offset;
+   struct lima_buffer *share_buffer;
+   #define sh_plb_offset             0x00000
+   /* max_plb = 512, block_size = 0x200, size = block_size * max_plb */
+   #define sh_varying_offset         0x40000
+   #define sh_buffer_size            0x41000
 
    struct lima_buffer *gp_buffer;
-   #define vs_program_offset      0x0000
-   #define fs_program_offset      0x0800
-   #define varying_offset         0x1000
-   #define varying_info_offset    0x2000
-   #define attribute_info_offset  0x2100
-   #define render_state_offset    0x2200
-   #define uniform_offset         0x2280
-   #define vs_cmd_offset          0x2300
-   #define plbu_cmd_offset        0x2900
-   #define tile_heap_offset       0x3000
-   #define gp_buffer_size         0x5000
+   #define gp_vs_program_offset      0x0000
+   #define gp_plbu_plb_offset        0x0800
+   #define gp_varying_info_offset    0x1000
+   #define gp_attribute_info_offset  0x1080
+   /* max_attr/varying_info = 16, each_info = 8, size = max * each */
+   #define gp_uniform_offset         0x1100
+   /* viewport transform size = 0x30 */
+   #define gp_vs_cmd_offset          0x1130
+   #define gp_plbu_cmd_offset        0x1800
+   #define gp_tile_heap_offset       0x2000
+   #define gp_buffer_size            0x4000
 
    struct lima_buffer *pp_buffer;
-   #define pp_render_state_offset 0x0000
-   #define pp_program_offset      0x0040
-   #define pp_stack_offset        0x0080
-   #define pp_buffer_size         0x4000
+   #define pp_fs_program_offset      0x00000
+   #define pp_frame_rsw_offset       0x00800
+   #define pp_plb_rsw_offset         0x00840
+   #define pp_clear_program_offset   0x00880
+   #define pp_plb_offset_start       0x008a0
+   /* max_screen_w/h_size = 2048, max_pp = 4, plb_stream_size = ((max >> 4)^2 + max_pp) * 16 */
+   #define pp_stack_offset           0x40900
+   #define pp_buffer_size            0x41000
+   #define pp_plb_offset(i, n)       \
+      (pp_plb_offset_start + i * ((pp_stack_offset - pp_plb_offset_start) / n))
 
    lima_submit_handle gp_submit;
    lima_submit_handle pp_submit;
