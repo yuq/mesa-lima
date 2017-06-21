@@ -104,6 +104,7 @@ struct hud_graph {
 
 struct hud_pane {
    struct list_head head;
+   struct hud_context *hud;
    unsigned x1, y1, x2, y2;
    unsigned inner_x1;
    unsigned inner_y1;

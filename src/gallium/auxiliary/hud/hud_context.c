@@ -778,7 +778,8 @@ hud_pane_update_dyn_ceiling(struct hud_graph *gr, struct hud_pane *pane)
 }
 
 static struct hud_pane *
-hud_pane_create(unsigned x1, unsigned y1, unsigned x2, unsigned y2,
+hud_pane_create(struct hud_context *hud,
+                unsigned x1, unsigned y1, unsigned x2, unsigned y2,
                 unsigned period, uint64_t max_value, uint64_t ceiling,
                 boolean dyn_ceiling, boolean sort_items)
 {
@@ -787,6 +788,7 @@ hud_pane_create(unsigned x1, unsigned y1, unsigned x2, unsigned y2,
    if (!pane)
       return NULL;
 
+   pane->hud = hud;
    pane->x1 = x1;
    pane->y1 = y1;
    pane->x2 = x2;
@@ -1123,8 +1125,8 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
      column_width = width > column_width ? width : column_width;
 
       if (!pane) {
-         pane = hud_pane_create(x, y, x + width, y + height, period, 10,
-                         ceiling, dyn_ceiling, sort_items);
+         pane = hud_pane_create(hud, x, y, x + width, y + height, period, 10,
+                                ceiling, dyn_ceiling, sort_items);
          if (!pane)
             return;
       }
