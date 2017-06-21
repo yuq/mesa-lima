@@ -246,7 +246,7 @@ ir_algebraic_visitor::reassociate_operands(ir_expression *ir1,
 /**
  * Reassociates a constant down a tree of adds or multiplies.
  *
- * Consider (2 * (a * (b * 0.5))).  We want to send up with a * b.
+ * Consider (2 * (a * (b * 0.5))).  We want to end up with a * b.
  */
 bool
 ir_algebraic_visitor::reassociate_constant(ir_expression *ir1, int const_index,
