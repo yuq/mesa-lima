@@ -50,8 +50,8 @@ lima_context_destroy(struct pipe_context *pctx)
    if (ctx->pp_submit)
       lima_submit_delete(ctx->pp_submit);
 
-   if (ctx->plb)
-      lima_buffer_free(ctx->plb);
+   if (ctx->share_buffer)
+      lima_buffer_free(ctx->share_buffer);
 
    if (ctx->gp_buffer)
       lima_buffer_free(ctx->gp_buffer);
@@ -94,44 +94,27 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 
-   /* assume max fb size 2048x2048  */
-   int block_size = 0x200;
-   int max_plb = 512;
-   int plb_size = block_size * max_plb;
-   int plbu_size = max_plb * sizeof(uint32_t);
-   int pp_end_mark = 2 * sizeof(uint32_t) * 4;
-   /* max possible plb pp stream */
-   int pp_size = (2048 >> 4) * (2048 >> 4) * 4 * sizeof(uint32_t) + pp_end_mark;
-
-   ctx->plb = lima_buffer_alloc(screen, align(plb_size + plbu_size + pp_size, 0x1000),
-                                LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
-   if (!ctx->plb)
+   ctx->share_buffer =
+      lima_buffer_alloc(screen, sh_buffer_size, LIMA_BUFFER_ALLOC_VA);
+   if (!ctx->share_buffer)
       goto err_out;
-
-   ctx->plb_plbu_offset = 0;
-   ctx->plb_offset = ctx->plb_plbu_offset + plbu_size;
-
-   /* plb address stream for pp depends on framebuffer dimension */
-   int i;
-   int per_pp_size = align(pp_size, 0x1000) / screen->info.num_pp;
-   for (i = 0; i < screen->info.num_pp; i++)
-      ctx->plb_pp_offset[i] = ctx->plb_offset + plb_size + i * per_pp_size;
-
-   /* plb address stream for plbu is static for any framebuffer */
-   for (i = 0; i < max_plb; i++)
-      ((uint32_t *)(ctx->plb->map + ctx->plb_plbu_offset))[i] =
-         ctx->plb->va + ctx->plb_offset + block_size * i;
 
    ctx->gp_buffer = lima_buffer_alloc(
       screen, gp_buffer_size, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
    if (!ctx->gp_buffer)
       goto err_out;
 
+   /* plb address stream for plbu is static for any framebuffer */
+   int max_plb = 512, block_size = 0x200;
+   uint32_t *plbu_stream = ctx->gp_buffer->map + gp_plbu_plb_offset;
+   for (int i = 0; i < max_plb; i++)
+      plbu_stream[i] = ctx->share_buffer->va + sh_plb_offset + block_size * i;
+
    if (lima_submit_create(screen->dev, LIMA_PIPE_GP, &ctx->gp_submit))
       goto err_out;
 
-   if (lima_submit_add_bo(ctx->gp_submit, ctx->plb->bo,
-                          LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE))
+   if (lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer->bo,
+                          LIMA_SUBMIT_BO_FLAG_WRITE))
       goto err_out;
 
    if (lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer->bo,
@@ -143,16 +126,24 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    if (!ctx->pp_buffer)
       goto err_out;
 
+   /* fs program for clear buffer? */
    static uint32_t pp_program[] = {
-      0x00020425, 0x0000000c, 0x01e007cf, 0xb0000000, /* 0x00000020 */
-      0x000005f5, 0x00000000, 0x00000000, 0x00000000, /* 0x00000030 */
+      0x00020425, 0x0000000c, 0x01e007cf, 0xb0000000, /* 0x00000000 */
+      0x000005f5, 0x00000000, 0x00000000, 0x00000000, /* 0x00000010 */
    };
-   memcpy(ctx->pp_buffer->map + pp_program_offset, pp_program, sizeof(pp_program));
+   memcpy(ctx->pp_buffer->map + pp_clear_program_offset, pp_program, sizeof(pp_program));
+
+   /* is pp frame render state static? */
+   uint32_t *pp_frame_rsw = ctx->pp_buffer->map + pp_frame_rsw_offset;
+   memset(pp_frame_rsw, 0, 0x40);
+   pp_frame_rsw[8] = 0x0000f008;
+   pp_frame_rsw[9] = ctx->pp_buffer->va + pp_clear_program_offset;
+   pp_frame_rsw[13] = 0x00000100;
 
    if (lima_submit_create(screen->dev, LIMA_PIPE_PP, &ctx->pp_submit))
       goto err_out;
 
-   if (lima_submit_add_bo(ctx->pp_submit, ctx->plb->bo,
+   if (lima_submit_add_bo(ctx->pp_submit, ctx->share_buffer->bo,
                           LIMA_SUBMIT_BO_FLAG_READ))
       goto err_out;
 
