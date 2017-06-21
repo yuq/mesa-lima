@@ -1672,8 +1672,9 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     * calculate equivalent MCS surface against it.
     */
    intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
-   assert(isl_surf_get_mcs_surf(&brw->isl_dev, &temp_main_surf,
-                                &temp_mcs_surf));
+   MAYBE_UNUSED bool ok =
+      isl_surf_get_mcs_surf(&brw->isl_dev, &temp_main_surf, &temp_mcs_surf);
+   assert(ok);
 
    /* Buffer needs to be initialised requiring the buffer to be immediately
     * mapped to cpu space for writing. Therefore do not use the gpu access
@@ -1832,8 +1833,9 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
    struct isl_surf temp_hiz_surf;
 
    intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
-   assert(isl_surf_get_hiz_surf(&brw->isl_dev, &temp_main_surf,
-                                &temp_hiz_surf));
+   MAYBE_UNUSED bool ok =
+      isl_surf_get_hiz_surf(&brw->isl_dev, &temp_main_surf, &temp_hiz_surf);
+   assert(ok);
 
    const uint32_t alloc_flags = BO_ALLOC_FOR_RENDER;
    mt->hiz_buf = intel_alloc_aux_buffer(brw, "hiz-miptree",
