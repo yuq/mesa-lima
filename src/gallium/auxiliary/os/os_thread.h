@@ -42,17 +42,6 @@
 #include "util/u_thread.h"
 
 
-static inline int pipe_thread_is_self( thrd_t thread )
-{
-#if defined(HAVE_PTHREAD)
-#  if defined(__GNU_LIBRARY__) && defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
-      (__GLIBC__ >= 3 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 12))
-   return pthread_equal(pthread_self(), thread);
-#  endif
-#endif
-   return 0;
-}
-
 #define pipe_mutex_assert_locked(mutex) \
    __pipe_mutex_assert_locked(&(mutex))
 

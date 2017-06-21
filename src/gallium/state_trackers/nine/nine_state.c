@@ -293,7 +293,7 @@ nine_context_get_pipe_multithread( struct NineDevice9 *device )
     if (!device->csmt_active)
         return device->context.pipe;
 
-    if (!pipe_thread_is_self(ctx->worker))
+    if (!u_thread_is_self(ctx->worker))
         nine_csmt_process(device);
 
     return device->context.pipe;
