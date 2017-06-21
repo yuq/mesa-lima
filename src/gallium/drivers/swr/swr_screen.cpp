@@ -1065,10 +1065,6 @@ swr_create_screen_internal(struct sw_winsys *winsys)
    if (!screen)
       return NULL;
 
-   if (!getenv("KNOB_MAX_PRIMS_PER_DRAW")) {
-      g_GlobalKnobs.MAX_PRIMS_PER_DRAW.Value(49152);
-   }
-
    if (!lp_build_init()) {
       FREE(screen);
       return NULL;
