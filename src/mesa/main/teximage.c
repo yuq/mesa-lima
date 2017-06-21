@@ -3336,12 +3336,9 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
                   _mesa_enum_to_string(type), pixels);
 
    /* Get the texture object by Name. */
-   texObj = _mesa_lookup_texture(ctx, texture);
-   if (!texObj) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureSubImage%uD(texture)",
-                  dims);
+   texObj = _mesa_lookup_texture_err(ctx, texture, callerName);
+   if (!texObj)
       return;
-   }
 
    /* check target (proxies not allowed) */
    if (!legal_texsubimage_target(ctx, dims, texObj->Target, true)) {
