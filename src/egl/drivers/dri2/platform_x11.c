@@ -773,7 +773,8 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
             dri2_conf = dri2_add_config(disp, config, count + 1, surface_type,
                                         config_attrs, rgba_masks);
             if (dri2_conf)
-               count++;
+               if (dri2_conf->base.ConfigID == count + 1)
+                  count++;
 
             /* Allow a 24-bit RGB visual to match a 32-bit RGBA EGLConfig.
              * Otherwise it will only match a 32-bit RGBA visual.  On a
@@ -788,7 +789,8 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
                dri2_conf = dri2_add_config(disp, config, count + 1, surface_type,
                                            config_attrs, rgba_masks);
                if (dri2_conf)
-                  count++;
+                  if (dri2_conf->base.ConfigID == count + 1)
+                     count++;
             }
 	 }
       }
