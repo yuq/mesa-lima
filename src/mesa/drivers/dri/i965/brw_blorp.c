@@ -311,17 +311,16 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     */
    if (src_aux_usage == ISL_AUX_USAGE_HIZ)
       src_aux_usage = ISL_AUX_USAGE_NONE;
-   const bool src_aux_supported = src_aux_usage != ISL_AUX_USAGE_NONE;
    const bool src_clear_supported =
-      src_aux_supported && (src_mt->format == src_format);
+      src_aux_usage != ISL_AUX_USAGE_NONE && src_mt->format == src_format;
    intel_miptree_prepare_access(brw, src_mt, src_level, 1, src_layer, 1,
-                                src_aux_supported, src_clear_supported);
+                                src_aux_usage, src_clear_supported);
 
    enum isl_aux_usage dst_aux_usage =
       intel_miptree_render_aux_usage(brw, dst_mt, encode_srgb);
-   const bool dst_aux_supported = dst_aux_usage != ISL_AUX_USAGE_NONE;
+   const bool dst_clear_supported = dst_aux_usage != ISL_AUX_USAGE_NONE;
    intel_miptree_prepare_access(brw, dst_mt, dst_level, 1, dst_layer, 1,
-                                dst_aux_supported, dst_aux_supported);
+                                dst_aux_usage, dst_clear_supported);
 
    struct isl_surf tmp_surfs[2];
    struct blorp_surf src_surf, dst_surf;
@@ -350,7 +349,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    blorp_batch_finish(&batch);
 
    intel_miptree_finish_write(brw, dst_mt, dst_level, dst_layer, 1,
-                              dst_aux_supported);
+                              dst_aux_usage);
 }
 
 void
@@ -409,11 +408,9 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
    }
 
    intel_miptree_prepare_access(brw, src_mt, src_level, 1, src_layer, 1,
-                                src_aux_usage != ISL_AUX_USAGE_NONE,
-                                src_clear_supported);
+                                src_aux_usage, src_clear_supported);
    intel_miptree_prepare_access(brw, dst_mt, dst_level, 1, dst_layer, 1,
-                                dst_aux_usage != ISL_AUX_USAGE_NONE,
-                                dst_clear_supported);
+                                dst_aux_usage, dst_clear_supported);
 
    struct isl_surf tmp_surfs[2];
    struct blorp_surf src_surf, dst_surf;
@@ -430,7 +427,7 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
    blorp_batch_finish(&batch);
 
    intel_miptree_finish_write(brw, dst_mt, dst_level, dst_layer, 1,
-                              dst_aux_usage != ISL_AUX_USAGE_NONE);
+                              dst_aux_usage);
 }
 
 static struct intel_mipmap_tree *
@@ -1024,7 +1021,8 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
       stencil_mask = ctx->Stencil.WriteMask[0] & 0xff;
 
       intel_miptree_prepare_access(brw, stencil_mt, level, 1,
-                                   start_layer, num_layers, false, false);
+                                   start_layer, num_layers,
+                                   ISL_AUX_USAGE_NONE, false);
 
       unsigned stencil_level = level;
       blorp_surf_for_miptree(brw, &stencil_surf, stencil_mt,
@@ -1051,7 +1049,8 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
 
    if (stencil_mask) {
       intel_miptree_finish_write(brw, stencil_mt, level,
-                                 start_layer, num_layers, false);
+                                 start_layer, num_layers,
+                                 ISL_AUX_USAGE_NONE);
    }
 }
 

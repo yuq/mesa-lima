@@ -1917,8 +1917,13 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
 
 static enum blorp_fast_clear_op
 get_ccs_d_resolve_op(enum isl_aux_state aux_state,
-                     bool ccs_supported, bool fast_clear_supported)
+                     enum isl_aux_usage aux_usage,
+                     bool fast_clear_supported)
 {
+   assert(aux_usage == ISL_AUX_USAGE_NONE || aux_usage == ISL_AUX_USAGE_CCS_D);
+
+   const bool ccs_supported = aux_usage == ISL_AUX_USAGE_CCS_D;
+
    assert(ccs_supported == fast_clear_supported);
 
    switch (aux_state) {
@@ -1943,8 +1948,13 @@ get_ccs_d_resolve_op(enum isl_aux_state aux_state,
 
 static enum blorp_fast_clear_op
 get_ccs_e_resolve_op(enum isl_aux_state aux_state,
-                     bool ccs_supported, bool fast_clear_supported)
+                     enum isl_aux_usage aux_usage,
+                     bool fast_clear_supported)
 {
+   assert(aux_usage == ISL_AUX_USAGE_NONE || aux_usage == ISL_AUX_USAGE_CCS_E);
+
+   const bool ccs_supported = aux_usage == ISL_AUX_USAGE_CCS_E;
+
    switch (aux_state) {
    case ISL_AUX_STATE_CLEAR:
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
@@ -1976,18 +1986,18 @@ static void
 intel_miptree_prepare_ccs_access(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt,
                                  uint32_t level, uint32_t layer,
-                                 bool aux_supported,
+                                 enum isl_aux_usage aux_usage,
                                  bool fast_clear_supported)
 {
    enum isl_aux_state aux_state = intel_miptree_get_aux_state(mt, level, layer);
 
    enum blorp_fast_clear_op resolve_op;
    if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
-      resolve_op = get_ccs_e_resolve_op(aux_state, aux_supported,
+      resolve_op = get_ccs_e_resolve_op(aux_state, aux_usage,
                                         fast_clear_supported);
    } else {
       assert(mt->aux_usage == ISL_AUX_USAGE_CCS_D);
-      resolve_op = get_ccs_d_resolve_op(aux_state, aux_supported,
+      resolve_op = get_ccs_d_resolve_op(aux_state, aux_usage,
                                         fast_clear_supported);
    }
 
@@ -2020,25 +2030,29 @@ static void
 intel_miptree_finish_ccs_write(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
                                uint32_t level, uint32_t layer,
-                               bool written_with_ccs)
+                               enum isl_aux_usage aux_usage)
 {
+   assert(aux_usage == ISL_AUX_USAGE_NONE ||
+          aux_usage == ISL_AUX_USAGE_CCS_D ||
+          aux_usage == ISL_AUX_USAGE_CCS_E);
+
    enum isl_aux_state aux_state = intel_miptree_get_aux_state(mt, level, layer);
 
    if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
       switch (aux_state) {
       case ISL_AUX_STATE_CLEAR:
-         assert(written_with_ccs);
+         assert(aux_usage == ISL_AUX_USAGE_CCS_E);
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_COMPRESSED_CLEAR);
          break;
 
       case ISL_AUX_STATE_COMPRESSED_CLEAR:
       case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
-         assert(written_with_ccs);
+         assert(aux_usage == ISL_AUX_USAGE_CCS_E);
          break; /* Nothing to do */
 
       case ISL_AUX_STATE_PASS_THROUGH:
-         if (written_with_ccs) {
+         if (aux_usage == ISL_AUX_USAGE_CCS_E) {
             intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                         ISL_AUX_STATE_COMPRESSED_NO_CLEAR);
          } else {
@@ -2055,13 +2069,13 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
       /* CCS_D is a bit simpler */
       switch (aux_state) {
       case ISL_AUX_STATE_CLEAR:
-         assert(written_with_ccs);
+         assert(aux_usage == ISL_AUX_USAGE_CCS_D);
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_COMPRESSED_CLEAR);
          break;
 
       case ISL_AUX_STATE_COMPRESSED_CLEAR:
-         assert(written_with_ccs);
+         assert(aux_usage == ISL_AUX_USAGE_CCS_D);
          break; /* Nothing to do */
 
       case ISL_AUX_STATE_PASS_THROUGH:
@@ -2080,13 +2094,14 @@ static void
 intel_miptree_prepare_mcs_access(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt,
                                  uint32_t layer,
-                                 bool mcs_supported,
+                                 enum isl_aux_usage aux_usage,
                                  bool fast_clear_supported)
 {
+   assert(aux_usage == ISL_AUX_USAGE_MCS);
+
    switch (intel_miptree_get_aux_state(mt, 0, layer)) {
    case ISL_AUX_STATE_CLEAR:
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
-      assert(mcs_supported);
       if (!fast_clear_supported) {
          brw_blorp_mcs_partial_resolve(brw, mt, layer, 1);
          intel_miptree_set_aux_state(brw, mt, 0, layer, 1,
@@ -2095,7 +2110,6 @@ intel_miptree_prepare_mcs_access(struct brw_context *brw,
       break;
 
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
-      assert(mcs_supported);
       break; /* Nothing to do */
 
    case ISL_AUX_STATE_RESOLVED:
@@ -2109,18 +2123,18 @@ static void
 intel_miptree_finish_mcs_write(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
                                uint32_t layer,
-                               bool written_with_mcs)
+                               enum isl_aux_usage aux_usage)
 {
+   assert(aux_usage == ISL_AUX_USAGE_MCS);
+
    switch (intel_miptree_get_aux_state(mt, 0, layer)) {
    case ISL_AUX_STATE_CLEAR:
-      assert(written_with_mcs);
       intel_miptree_set_aux_state(brw, mt, 0, layer, 1,
                                   ISL_AUX_STATE_COMPRESSED_CLEAR);
       break;
 
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
-      assert(written_with_mcs);
       break; /* Nothing to do */
 
    case ISL_AUX_STATE_RESOLVED:
@@ -2134,18 +2148,21 @@ static void
 intel_miptree_prepare_hiz_access(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt,
                                  uint32_t level, uint32_t layer,
-                                 bool hiz_supported, bool fast_clear_supported)
+                                 enum isl_aux_usage aux_usage,
+                                 bool fast_clear_supported)
 {
+   assert(aux_usage == ISL_AUX_USAGE_NONE || aux_usage == ISL_AUX_USAGE_HIZ);
+
    enum blorp_hiz_op hiz_op = BLORP_HIZ_OP_NONE;
    switch (intel_miptree_get_aux_state(mt, level, layer)) {
    case ISL_AUX_STATE_CLEAR:
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
-      if (!hiz_supported || !fast_clear_supported)
+      if (aux_usage != ISL_AUX_USAGE_HIZ || !fast_clear_supported)
          hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
       break;
 
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
-      if (!hiz_supported)
+      if (aux_usage != ISL_AUX_USAGE_HIZ)
          hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
       break;
 
@@ -2154,7 +2171,7 @@ intel_miptree_prepare_hiz_access(struct brw_context *brw,
       break;
 
    case ISL_AUX_STATE_AUX_INVALID:
-      if (hiz_supported)
+      if (aux_usage == ISL_AUX_USAGE_HIZ)
          hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
       break;
    }
@@ -2184,22 +2201,24 @@ static void
 intel_miptree_finish_hiz_write(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
                                uint32_t level, uint32_t layer,
-                               bool written_with_hiz)
+                               enum isl_aux_usage aux_usage)
 {
+   assert(aux_usage == ISL_AUX_USAGE_NONE || aux_usage == ISL_AUX_USAGE_HIZ);
+
    switch (intel_miptree_get_aux_state(mt, level, layer)) {
    case ISL_AUX_STATE_CLEAR:
-      assert(written_with_hiz);
+      assert(aux_usage == ISL_AUX_USAGE_HIZ);
       intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                   ISL_AUX_STATE_COMPRESSED_CLEAR);
       break;
 
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
-      assert(written_with_hiz);
+      assert(aux_usage == ISL_AUX_USAGE_HIZ);
       break; /* Nothing to do */
 
    case ISL_AUX_STATE_RESOLVED:
-      if (written_with_hiz) {
+      if (aux_usage == ISL_AUX_USAGE_HIZ) {
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_COMPRESSED_NO_CLEAR);
       } else {
@@ -2209,14 +2228,14 @@ intel_miptree_finish_hiz_write(struct brw_context *brw,
       break;
 
    case ISL_AUX_STATE_PASS_THROUGH:
-      if (written_with_hiz) {
+      if (aux_usage == ISL_AUX_USAGE_HIZ) {
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_COMPRESSED_NO_CLEAR);
       }
       break;
 
    case ISL_AUX_STATE_AUX_INVALID:
-      assert(!written_with_hiz);
+      assert(aux_usage != ISL_AUX_USAGE_HIZ);
       break;
    }
 }
@@ -2259,7 +2278,8 @@ intel_miptree_prepare_access(struct brw_context *brw,
                              struct intel_mipmap_tree *mt,
                              uint32_t start_level, uint32_t num_levels,
                              uint32_t start_layer, uint32_t num_layers,
-                             bool aux_supported, bool fast_clear_supported)
+                             enum isl_aux_usage aux_usage,
+                             bool fast_clear_supported)
 {
    num_levels = miptree_level_range_length(mt, start_level, num_levels);
 
@@ -2275,8 +2295,7 @@ intel_miptree_prepare_access(struct brw_context *brw,
          miptree_layer_range_length(mt, 0, start_layer, num_layers);
       for (uint32_t a = 0; a < level_layers; a++) {
          intel_miptree_prepare_mcs_access(brw, mt, start_layer + a,
-                                          aux_supported,
-                                          fast_clear_supported);
+                                          aux_usage, fast_clear_supported);
       }
       break;
 
@@ -2291,8 +2310,8 @@ intel_miptree_prepare_access(struct brw_context *brw,
             miptree_layer_range_length(mt, level, start_layer, num_layers);
          for (uint32_t a = 0; a < level_layers; a++) {
             intel_miptree_prepare_ccs_access(brw, mt, level,
-                                             start_layer + a, aux_supported,
-                                             fast_clear_supported);
+                                             start_layer + a,
+                                             aux_usage, fast_clear_supported);
          }
       }
       break;
@@ -2308,8 +2327,7 @@ intel_miptree_prepare_access(struct brw_context *brw,
             miptree_layer_range_length(mt, level, start_layer, num_layers);
          for (uint32_t a = 0; a < level_layers; a++) {
             intel_miptree_prepare_hiz_access(brw, mt, level, start_layer + a,
-                                             aux_supported,
-                                             fast_clear_supported);
+                                             aux_usage, fast_clear_supported);
          }
       }
       break;
@@ -2323,7 +2341,7 @@ void
 intel_miptree_finish_write(struct brw_context *brw,
                            struct intel_mipmap_tree *mt, uint32_t level,
                            uint32_t start_layer, uint32_t num_layers,
-                           bool written_with_aux)
+                           enum isl_aux_usage aux_usage)
 {
    num_layers = miptree_layer_range_length(mt, level, start_layer, num_layers);
 
@@ -2336,7 +2354,7 @@ intel_miptree_finish_write(struct brw_context *brw,
       assert(mt->mcs_buf);
       for (uint32_t a = 0; a < num_layers; a++) {
          intel_miptree_finish_mcs_write(brw, mt, start_layer + a,
-                                        written_with_aux);
+                                        aux_usage);
       }
       break;
 
@@ -2347,7 +2365,7 @@ intel_miptree_finish_write(struct brw_context *brw,
 
       for (uint32_t a = 0; a < num_layers; a++) {
          intel_miptree_finish_ccs_write(brw, mt, level, start_layer + a,
-                                        written_with_aux);
+                                        aux_usage);
       }
       break;
 
@@ -2357,7 +2375,7 @@ intel_miptree_finish_write(struct brw_context *brw,
 
       for (uint32_t a = 0; a < num_layers; a++) {
          intel_miptree_finish_hiz_write(brw, mt, level, start_layer + a,
-                                        written_with_aux);
+                                        aux_usage);
       }
       break;
 
@@ -2488,8 +2506,7 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
 
    intel_miptree_prepare_access(brw, mt, start_level, num_levels,
                                 start_layer, num_layers,
-                                aux_usage != ISL_AUX_USAGE_NONE,
-                                clear_supported);
+                                aux_usage, clear_supported);
    if (aux_supported_out)
       *aux_supported_out = aux_usage != ISL_AUX_USAGE_NONE;
 }
@@ -2512,7 +2529,8 @@ intel_miptree_prepare_image(struct brw_context *brw,
 {
    /* The data port doesn't understand any compression */
    intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
-                                0, INTEL_REMAINING_LAYERS, false, false);
+                                0, INTEL_REMAINING_LAYERS,
+                                ISL_AUX_USAGE_NONE, false);
 }
 
 void
@@ -2588,7 +2606,7 @@ intel_miptree_finish_render(struct brw_context *brw,
    enum isl_aux_usage aux_usage =
       intel_miptree_render_aux_usage(brw, mt, srgb_enabled);
    intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
-                              aux_usage != ISL_AUX_USAGE_NONE);
+                              aux_usage);
 }
 
 void
@@ -2597,7 +2615,7 @@ intel_miptree_prepare_depth(struct brw_context *brw,
                             uint32_t start_layer, uint32_t layer_count)
 {
    intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
-                                mt->hiz_buf != NULL, mt->hiz_buf != NULL);
+                                mt->aux_usage, mt->hiz_buf != NULL);
 }
 
 void
@@ -2635,7 +2653,8 @@ intel_miptree_make_shareable(struct brw_context *brw,
           mt->surf.samples == 1);
 
    intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
-                                0, INTEL_REMAINING_LAYERS, false, false);
+                                0, INTEL_REMAINING_LAYERS,
+                                ISL_AUX_USAGE_NONE, false);
 
    if (mt->mcs_buf) {
       brw_bo_unreference(mt->mcs_buf->bo);

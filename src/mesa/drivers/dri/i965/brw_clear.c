@@ -164,7 +164,8 @@ brw_fast_clear_depth(struct gl_context *ctx)
     */
    if (mt->fast_clear_color.f32[0] != ctx->Depth.Clear) {
       intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
-                                   0, INTEL_REMAINING_LAYERS, true, false);
+                                   0, INTEL_REMAINING_LAYERS,
+                                   ISL_AUX_USAGE_HIZ, false);
       mt->fast_clear_color.f32[0] = ctx->Depth.Clear;
    }
 

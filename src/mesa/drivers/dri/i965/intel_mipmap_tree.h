@@ -545,7 +545,8 @@ intel_miptree_prepare_access(struct brw_context *brw,
                              struct intel_mipmap_tree *mt,
                              uint32_t start_level, uint32_t num_levels,
                              uint32_t start_layer, uint32_t num_layers,
-                             bool aux_supported, bool fast_clear_supported);
+                             enum isl_aux_usage aux_usage,
+                             bool fast_clear_supported);
 
 /** Complete a write operation
  *
@@ -571,7 +572,7 @@ void
 intel_miptree_finish_write(struct brw_context *brw,
                            struct intel_mipmap_tree *mt, uint32_t level,
                            uint32_t start_layer, uint32_t num_layers,
-                           bool written_with_aux);
+                           enum isl_aux_usage aux_usage);
 
 /** Get the auxiliary compression state of a miptree slice */
 enum isl_aux_state
