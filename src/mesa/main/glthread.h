@@ -26,8 +26,16 @@
 
 #include "main/mtypes.h"
 
-/* Command size is a number of bytes stored in a short. */
-#define MARSHAL_MAX_CMD_SIZE 65535
+/* The size of one batch and the maximum size of one call.
+ *
+ * This should be as low as possible, so that:
+ * - multiple synchronizations within a frame don't slow us down much
+ * - a smaller number of calls per frame can still get decent parallelism
+ * - the memory footprint of the queue is low, and with that comes a lower
+ *   chance of experiencing CPU cache thrashing
+ * but it should be high enough so that u_queue overhead remains negligible.
+ */
+#define MARSHAL_MAX_CMD_SIZE (8 * 1024)
 
 /* The number of batch slots in memory.
  *
@@ -35,7 +43,7 @@
  * waiting batches. There must be at least 1 slot for a waiting batch,
  * so the minimum number of batches is 3.
  */
-#define MARSHAL_MAX_BATCHES 4
+#define MARSHAL_MAX_BATCHES 8
 
 #include <inttypes.h>
 #include <stdbool.h>
