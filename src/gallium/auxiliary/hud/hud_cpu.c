@@ -266,7 +266,7 @@ query_api_thread_busy_status(struct hud_graph *gr)
 }
 
 void
-hud_api_thread_busy_install(struct hud_pane *pane)
+hud_main_thread_busy_install(struct hud_pane *pane, const char *name)
 {
    struct hud_graph *gr;
 
@@ -274,7 +274,7 @@ hud_api_thread_busy_install(struct hud_pane *pane)
    if (!gr)
       return;
 
-   strcpy(gr->name, "API-thread-busy");
+   strcpy(gr->name, name);
 
    gr->query_data = CALLOC_STRUCT(thread_info);
    if (!gr->query_data) {
