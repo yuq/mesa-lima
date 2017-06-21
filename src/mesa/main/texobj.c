@@ -234,11 +234,14 @@ _mesa_get_current_tex_object(struct gl_context *ctx, GLenum target)
  * \return pointer to new texture object.
  */
 struct gl_texture_object *
-_mesa_new_texture_object( struct gl_context *ctx, GLuint name, GLenum target )
+_mesa_new_texture_object(struct gl_context *ctx, GLuint name, GLenum target)
 {
    struct gl_texture_object *obj;
-   (void) ctx;
+
    obj = MALLOC_STRUCT(gl_texture_object);
+   if (!obj)
+      return NULL;
+
    _mesa_initialize_texture_object(ctx, obj, name, target);
    return obj;
 }
