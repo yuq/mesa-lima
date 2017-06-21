@@ -29,7 +29,55 @@
 #define HUD_PRIVATE_H
 
 #include "pipe/p_context.h"
+#include "pipe/p_state.h"
 #include "util/list.h"
+#include "hud/font.h"
+
+struct hud_context {
+   struct pipe_context *pipe;
+   struct cso_context *cso;
+
+   struct hud_batch_query_context *batch_query;
+   struct list_head pane_list;
+
+   /* states */
+   struct pipe_blend_state no_blend, alpha_blend;
+   struct pipe_depth_stencil_alpha_state dsa;
+   void *fs_color, *fs_text;
+   struct pipe_rasterizer_state rasterizer, rasterizer_aa_lines;
+   void *vs;
+   struct pipe_vertex_element velems[2];
+
+   /* font */
+   struct util_font font;
+   struct pipe_sampler_view *font_sampler_view;
+   struct pipe_sampler_state font_sampler_state;
+
+   /* VS constant buffer */
+   struct {
+      float color[4];
+      float two_div_fb_width;
+      float two_div_fb_height;
+      float translate[2];
+      float scale[2];
+      float padding[2];
+   } constants;
+   struct pipe_constant_buffer constbuf;
+
+   unsigned fb_width, fb_height;
+
+   /* vertices for text and background drawing are accumulated here and then
+    * drawn all at once */
+   struct vertex_queue {
+      float *vertices;
+      struct pipe_vertex_buffer vbuf;
+      unsigned max_num_vertices;
+      unsigned num_vertices;
+      unsigned buffer_size;
+   } text, bg, whitelines, color_prims;
+
+   bool has_srgb;
+};
 
 struct hud_graph {
    /* initialized by common code */
