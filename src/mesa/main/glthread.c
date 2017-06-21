@@ -38,8 +38,6 @@
 #include "main/marshal_generated.h"
 #include "util/u_thread.h"
 
-#ifdef HAVE_PTHREAD
-
 static void
 glthread_allocate_batch(struct gl_context *ctx)
 {
@@ -284,5 +282,3 @@ _mesa_glthread_finish(struct gl_context *ctx)
 
    pthread_mutex_unlock(&glthread->mutex);
 }
-
-#endif

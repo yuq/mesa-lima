@@ -47,8 +47,6 @@ struct marshal_cmd_base
    uint16_t cmd_size;
 };
 
-#ifdef HAVE_PTHREAD
-
 static inline void *
 _mesa_glthread_allocate_command(struct gl_context *ctx,
                                 uint16_t cmd_id,
@@ -93,31 +91,6 @@ _mesa_glthread_is_non_vbo_draw_elements(const struct gl_context *ctx)
 
    return ctx->API != API_OPENGL_CORE && !glthread->element_array_is_vbo;
 }
-
-#else
-
-/* FIXME: dummy functions for non PTHREAD platforms */
-static inline void *
-_mesa_glthread_allocate_command(struct gl_context *ctx,
-                                uint16_t cmd_id,
-                                size_t size)
-{
-   return NULL;
-}
-
-static inline bool
-_mesa_glthread_is_non_vbo_vertex_attrib_pointer(const struct gl_context *ctx)
-{
-   return false;
-}
-
-static inline bool
-_mesa_glthread_is_non_vbo_draw_elements(const struct gl_context *ctx)
-{
-   return false;
-}
-
-#endif
 
 #define DEBUG_MARSHAL_PRINT_CALLS 0
 
