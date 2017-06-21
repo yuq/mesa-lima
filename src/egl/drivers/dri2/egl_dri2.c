@@ -162,10 +162,10 @@ const __DRIconfig *
 dri2_get_dri_config(struct dri2_egl_config *conf, EGLint surface_type,
                     EGLenum colorspace)
 {
+   const bool double_buffer = surface_type == EGL_WINDOW_BIT;
    const bool srgb = colorspace == EGL_GL_COLORSPACE_SRGB_KHR;
 
-   return surface_type == EGL_WINDOW_BIT ? conf->dri_double_config[srgb] :
-                                           conf->dri_single_config[srgb];
+   return conf->dri_config[double_buffer][srgb];
 }
 
 static EGLBoolean
@@ -323,10 +323,8 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    if (num_configs == 1) {
       conf = (struct dri2_egl_config *) matching_config;
 
-      if (double_buffer && !conf->dri_double_config[srgb])
-         conf->dri_double_config[srgb] = dri_config;
-      else if (!double_buffer && !conf->dri_single_config[srgb])
-         conf->dri_single_config[srgb] = dri_config;
+      if (!conf->dri_config[double_buffer][srgb])
+         conf->dri_config[double_buffer][srgb] = dri_config;
       else
          /* a similar config type is already added (unlikely) => discard */
          return NULL;
@@ -336,10 +334,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
       if (conf == NULL)
          return NULL;
 
-      if (double_buffer)
-         conf->dri_double_config[srgb] = dri_config;
-      else
-         conf->dri_single_config[srgb] = dri_config;
+      conf->dri_config[double_buffer][srgb] = dri_config;
 
       memcpy(&conf->base, &base, sizeof base);
       conf->base.SurfaceType = 0;
@@ -1188,13 +1183,13 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
        * doubleBufferMode check in
        * src/mesa/main/context.c:check_compatible()
        */
-      if (dri2_config->dri_double_config[0])
-         dri_config = dri2_config->dri_double_config[0];
+      if (dri2_config->dri_config[1][0])
+         dri_config = dri2_config->dri_config[1][0];
       else
-         dri_config = dri2_config->dri_single_config[0];
+         dri_config = dri2_config->dri_config[0][0];
 
-      /* EGL_WINDOW_BIT is set only when there is a dri_double_config.  This
-       * makes sure the back buffer will always be used.
+      /* EGL_WINDOW_BIT is set only when there is a double-buffered dri_config.
+       * This makes sure the back buffer will always be used.
        */
       if (conf->SurfaceType & EGL_WINDOW_BIT)
          dri2_ctx->base.WindowRenderBuffer = EGL_BACK_BUFFER;
