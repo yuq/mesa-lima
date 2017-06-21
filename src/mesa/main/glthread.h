@@ -29,55 +29,50 @@
 /* Command size is a number of bytes stored in a short. */
 #define MARSHAL_MAX_CMD_SIZE 65535
 
+/* The number of batch slots in memory.
+ *
+ * One batch is being executed, one batch is being filled, the rest are
+ * waiting batches. There must be at least 1 slot for a waiting batch,
+ * so the minimum number of batches is 3.
+ */
+#define MARSHAL_MAX_BATCHES 4
+
 #include <inttypes.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include "util/u_queue.h"
 
 enum marshal_dispatch_cmd_id;
 
+/** A single batch of commands queued up for execution. */
+struct glthread_batch
+{
+   /** Batch fence for waiting for the execution to finish. */
+   struct util_queue_fence fence;
+
+   /** The worker thread will access the context with this. */
+   struct gl_context *ctx;
+
+   /** Amount of data used by batch commands, in bytes. */
+   size_t used;
+
+   /** Data contained in the command buffer. */
+   uint8_t buffer[MARSHAL_MAX_CMD_SIZE];
+};
+
 struct glthread_state
 {
-   /** The worker thread that asynchronously processes our GL commands. */
-   pthread_t thread;
+   /** Multithreaded queue. */
+   struct util_queue queue;
 
-   /**
-    * Mutex used for synchronizing between the main thread and the worker
-    * thread.
-    */
-   pthread_mutex_t mutex;
+   /** The ring of batches in memory. */
+   struct glthread_batch batches[MARSHAL_MAX_BATCHES];
 
-   /** Condvar used for waking the worker thread. */
-   pthread_cond_t new_work;
+   /** Index of the last submitted batch. */
+   unsigned last;
 
-   /** Condvar used for waking the main thread. */
-   pthread_cond_t work_done;
-
-   /** Used to tell the worker thread to quit */
-   bool shutdown;
-
-   /** Indicates that the worker thread is currently processing a batch */
-   bool busy;
-
-   /**
-    * Singly-linked list of command batches that are awaiting execution by
-    * a thread pool task.  NULL if empty.
-    */
-   struct glthread_batch *batch_queue;
-
-   /**
-    * Tail pointer for appending batches to the end of batch_queue.  If the
-    * queue is empty, this points to batch_queue.
-    */
-   struct glthread_batch **batch_queue_tail;
-
-   /**
-    * Batch containing commands that are being prepared for insertion into
-    * batch_queue.  NULL if there are no such commands.
-    *
-    * Since this is only used by the main thread, it doesn't need the mutex to
-    * be accessed.
-    */
-   struct glthread_batch *batch;
+   /** Index of the batch being filled and about to be submitted. */
+   unsigned next;
 
    /**
     * Tracks on the main thread side whether the current vertex array binding
@@ -90,29 +85,6 @@ struct glthread_state
     * buffer) binding is in a VBO.
     */
    bool element_array_is_vbo;
-};
-
-/**
- * A single batch of commands queued up for later execution by a thread pool
- * task.
- */
-struct glthread_batch
-{
-   /**
-    * Next batch of commands to execute after this batch, or NULL if this is
-    * the last set of commands queued.  Protected by ctx->Marshal.Mutex.
-    */
-   struct glthread_batch *next;
-
-   /**
-    * Amount of data used by batch commands, in bytes.
-    */
-   size_t used;
-
-   /**
-    * Data contained in the command buffer.
-    */
-   uint8_t buffer[MARSHAL_MAX_CMD_SIZE];
 };
 
 void _mesa_glthread_init(struct gl_context *ctx);
