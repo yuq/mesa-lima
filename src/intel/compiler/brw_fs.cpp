@@ -857,6 +857,24 @@ namespace {
       const unsigned end = start + inst->exec_size;
       return ((1 << DIV_ROUND_UP(end, 8)) - 1) & ~((1 << (start / 8)) - 1);
    }
+
+   unsigned
+   bit_mask(unsigned n)
+   {
+      return (n >= CHAR_BIT * sizeof(bit_mask(n)) ? ~0u : (1u << n) - 1);
+   }
+
+   unsigned
+   flag_mask(const fs_reg &r, unsigned sz)
+   {
+      if (r.file == ARF) {
+         const unsigned start = (r.nr - BRW_ARF_FLAG) * 4 + r.subnr;
+         const unsigned end = start + sz;
+         return bit_mask(end) & ~bit_mask(start);
+      } else {
+         return 0;
+      }
+   }
 }
 
 unsigned
@@ -882,16 +900,13 @@ fs_inst::flags_read(const gen_device_info *devinfo) const
 unsigned
 fs_inst::flags_written() const
 {
-   /* XXX - This doesn't consider explicit uses of the flag register as
-    *       destination region.
-    */
    if ((conditional_mod && (opcode != BRW_OPCODE_SEL &&
                             opcode != BRW_OPCODE_IF &&
                             opcode != BRW_OPCODE_WHILE)) ||
        opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS) {
       return flag_mask(this);
    } else {
-      return 0;
+      return flag_mask(dst, size_written);
    }
 }
 
