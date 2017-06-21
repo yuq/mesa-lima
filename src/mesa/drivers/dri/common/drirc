@@ -155,6 +155,10 @@ TODO: document the other workarounds.
         <application name="Rocket League" executable="RocketLeague">
             <option name="glsl_correct_derivatives_after_discard" value="true"/>
         </application>
+
+        <application name="The Witcher 2" executable="witcher2">
+            <option name="glsl_correct_derivatives_after_discard" value="true"/>
+        </application>
     </device>
     <!-- vmwgfx doesn't like full buffer swaps and can't sync to vertical retraces.-->
     <device driver="vmwgfx">
