@@ -33,6 +33,12 @@
 #include "util/list.h"
 #include "hud/font.h"
 
+enum hud_counter {
+   HUD_COUNTER_OFFLOADED,
+   HUD_COUNTER_DIRECT,
+   HUD_COUNTER_SYNCS,
+};
+
 struct hud_context {
    struct pipe_context *pipe;
    struct cso_context *cso;
@@ -145,6 +151,8 @@ int hud_get_num_cpus(void);
 void hud_fps_graph_install(struct hud_pane *pane);
 void hud_cpu_graph_install(struct hud_pane *pane, unsigned cpu_index);
 void hud_thread_busy_install(struct hud_pane *pane, const char *name, bool main);
+void hud_thread_counter_install(struct hud_pane *pane, const char *name,
+                                enum hud_counter counter);
 void hud_pipe_query_install(struct hud_batch_query_context **pbq,
                             struct hud_pane *pane, struct pipe_context *pipe,
                             const char *name, unsigned query_type,

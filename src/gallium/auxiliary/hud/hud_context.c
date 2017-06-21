@@ -1153,6 +1153,15 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       else if (strcmp(name, "API-thread-busy") == 0) {
          hud_thread_busy_install(pane, name, false);
       }
+      else if (strcmp(name, "API-thread-offloaded-slots") == 0) {
+         hud_thread_counter_install(pane, name, HUD_COUNTER_OFFLOADED);
+      }
+      else if (strcmp(name, "API-thread-direct-slots") == 0) {
+         hud_thread_counter_install(pane, name, HUD_COUNTER_DIRECT);
+      }
+      else if (strcmp(name, "API-thread-num-syncs") == 0) {
+         hud_thread_counter_install(pane, name, HUD_COUNTER_SYNCS);
+      }
       else if (strcmp(name, "main-thread-busy") == 0) {
          hud_thread_busy_install(pane, name, true);
       }

@@ -307,3 +307,77 @@ hud_thread_busy_install(struct hud_pane *pane, const char *name, bool main)
    hud_pane_add_graph(pane, gr);
    hud_pane_set_max_value(pane, 100);
 }
+
+struct counter_info {
+   enum hud_counter counter;
+   unsigned last_value;
+   int64_t last_time;
+};
+
+static unsigned get_counter(struct hud_graph *gr, enum hud_counter counter)
+{
+   struct util_queue_monitoring *mon = gr->pane->hud->monitored_queue;
+
+   if (!mon || !mon->queue)
+      return 0;
+
+   switch (counter) {
+   case HUD_COUNTER_OFFLOADED:
+      return mon->num_offloaded_items;
+   case HUD_COUNTER_DIRECT:
+      return mon->num_direct_items;
+   case HUD_COUNTER_SYNCS:
+      return mon->num_syncs;
+   default:
+      assert(0);
+      return 0;
+   }
+}
+
+static void
+query_thread_counter(struct hud_graph *gr)
+{
+   struct counter_info *info = gr->query_data;
+   int64_t now = os_time_get_nano();
+
+   if (info->last_time) {
+      if (info->last_time + gr->pane->period*1000 <= now) {
+         unsigned current_value = get_counter(gr, info->counter);
+
+         hud_graph_add_value(gr, current_value - info->last_value);
+         info->last_value = current_value;
+         info->last_time = now;
+      }
+   } else {
+      /* initialize */
+      info->last_value = get_counter(gr, info->counter);
+      info->last_time = now;
+   }
+}
+
+void hud_thread_counter_install(struct hud_pane *pane, const char *name,
+                                enum hud_counter counter)
+{
+   struct hud_graph *gr = CALLOC_STRUCT(hud_graph);
+   if (!gr)
+      return;
+
+   strcpy(gr->name, name);
+
+   gr->query_data = CALLOC_STRUCT(counter_info);
+   if (!gr->query_data) {
+      FREE(gr);
+      return;
+   }
+
+   ((struct counter_info*)gr->query_data)->counter = counter;
+   gr->query_new_value = query_thread_counter;
+
+   /* Don't use free() as our callback as that messes up Gallium's
+    * memory debugger.  Use simple free_query_data() wrapper.
+    */
+   gr->free_query_data = free_query_data;
+
+   hud_pane_add_graph(pane, gr);
+   hud_pane_set_max_value(pane, 100);
+}
