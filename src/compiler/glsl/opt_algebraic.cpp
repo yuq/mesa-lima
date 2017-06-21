@@ -313,7 +313,6 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
 {
    ir_constant *op_const[4] = {NULL, NULL, NULL, NULL};
    ir_expression *op_expr[4] = {NULL, NULL, NULL, NULL};
-   unsigned int i;
 
    if (ir->operation == ir_binop_mul &&
        ir->operands[0]->type->is_matrix() &&
@@ -330,7 +329,7 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
    }
 
    assert(ir->get_num_operands() <= 4);
-   for (i = 0; i < ir->get_num_operands(); i++) {
+   for (unsigned i = 0; i < ir->get_num_operands(); i++) {
       if (ir->operands[i]->type->is_matrix())
 	 return ir;
 
