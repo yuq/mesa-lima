@@ -799,6 +799,15 @@ nir_visitor::visit(ir_call *ir)
       case ir_intrinsic_shared_atomic_comp_swap:
          op = nir_intrinsic_shared_atomic_comp_swap;
          break;
+      case ir_intrinsic_vote_any:
+         op = nir_intrinsic_vote_any;
+         break;
+      case ir_intrinsic_vote_all:
+         op = nir_intrinsic_vote_all;
+         break;
+      case ir_intrinsic_vote_eq:
+         op = nir_intrinsic_vote_eq;
+         break;
       default:
          unreachable("not reached");
       }
@@ -1132,6 +1141,19 @@ nir_visitor::visit(ir_call *ir)
          nir_ssa_dest_init(&instr->instr, &instr->dest,
                            ir->return_deref->type->vector_elements,
                            bit_size, NULL);
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      }
+      case nir_intrinsic_vote_any:
+      case nir_intrinsic_vote_all:
+      case nir_intrinsic_vote_eq: {
+         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
+
+         instr->variables[0] = evaluate_deref(&instr->instr, ir->return_deref);
+
+         ir_rvalue *value = (ir_rvalue *) ir->actual_parameters.get_head();
+         instr->src[0] = nir_src_for_ssa(evaluate_rvalue(value));
+
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
