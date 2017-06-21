@@ -4118,6 +4118,56 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_vote_any: {
+      const fs_builder ubld = bld.exec_all();
+
+      /* The any/all predicates do not consider channel enables. To prevent
+       * dead channels from affecting the result, we initialize the flag with
+       * with the identity value for the logical operation.
+       */
+      ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0));
+      bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
+      bld.MOV(dest, brw_imm_d(-1));
+      set_predicate(dispatch_width == 8 ?
+                    BRW_PREDICATE_ALIGN1_ANY8H :
+                    BRW_PREDICATE_ALIGN1_ANY16H,
+                    bld.SEL(dest, dest, brw_imm_d(0)));
+      break;
+   }
+   case nir_intrinsic_vote_all: {
+      const fs_builder ubld = bld.exec_all();
+
+      /* The any/all predicates do not consider channel enables. To prevent
+       * dead channels from affecting the result, we initialize the flag with
+       * with the identity value for the logical operation.
+       */
+      ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
+      bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
+      bld.MOV(dest, brw_imm_d(-1));
+      set_predicate(dispatch_width == 8 ?
+                    BRW_PREDICATE_ALIGN1_ALL8H :
+                    BRW_PREDICATE_ALIGN1_ALL16H,
+                    bld.SEL(dest, dest, brw_imm_d(0)));
+      break;
+   }
+   case nir_intrinsic_vote_eq: {
+      fs_reg value = get_nir_src(instr->src[0]);
+      fs_reg uniformized = bld.emit_uniformize(value);
+      const fs_builder ubld = bld.exec_all();
+
+      /* The any/all predicates do not consider channel enables. To prevent
+       * dead channels from affecting the result, we initialize the flag with
+       * with the identity value for the logical operation.
+       */
+      ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
+      bld.CMP(bld.null_reg_d(), value, uniformized, BRW_CONDITIONAL_Z);
+      bld.MOV(dest, brw_imm_d(-1));
+      set_predicate(dispatch_width == 8 ?
+                    BRW_PREDICATE_ALIGN1_ALL8H :
+                    BRW_PREDICATE_ALIGN1_ALL16H,
+                    bld.SEL(dest, dest, brw_imm_d(0)));
+      break;
+   }
    default:
       unreachable("unknown intrinsic");
    }
