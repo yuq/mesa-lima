@@ -2940,6 +2940,8 @@ void si_release_all_descriptors(struct si_context *sctx)
 	}
 	si_release_buffer_resources(&sctx->rw_buffers,
 				    &sctx->descriptors[SI_DESCS_RW_BUFFERS]);
+	for (i = 0; i < SI_NUM_VERTEX_BUFFERS; i++)
+		pipe_vertex_buffer_unreference(&sctx->vertex_buffer[i]);
 
 	for (i = 0; i < SI_NUM_DESCS; ++i)
 		si_release_descriptors(&sctx->descriptors[i]);
