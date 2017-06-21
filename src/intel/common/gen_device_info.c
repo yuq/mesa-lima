@@ -21,15 +21,18 @@
  * IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "gen_device_info.h"
 #include "compiler/shader_enums.h"
+#include "util/macros.h"
 
 static const struct gen_device_info gen_device_info_i965 = {
    .gen = 4,
    .has_negative_rhw_bug = true,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 4,
    .max_vs_threads = 16,
    .max_gs_threads = 2,
@@ -47,6 +50,7 @@ static const struct gen_device_info gen_device_info_g4x = {
    .has_surface_tile_offset = true,
    .is_g4x = true,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 5,
    .max_vs_threads = 32,
    .max_gs_threads = 2,
@@ -63,6 +67,7 @@ static const struct gen_device_info gen_device_info_ilk = {
    .has_compr4 = true,
    .has_surface_tile_offset = true,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 6,
    .max_vs_threads = 72,
    .max_gs_threads = 32,
@@ -82,6 +87,7 @@ static const struct gen_device_info gen_device_info_snb_gt1 = {
    .has_surface_tile_offset = true,
    .needs_unlit_centroid_workaround = true,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 6, /* Not confirmed */
    .max_vs_threads = 24,
    .max_gs_threads = 21, /* conservative; 24 if rendering disabled. */
@@ -108,6 +114,7 @@ static const struct gen_device_info gen_device_info_snb_gt2 = {
    .has_surface_tile_offset = true,
    .needs_unlit_centroid_workaround = true,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 6, /* Not confirmed */
    .max_vs_threads = 60,
    .max_gs_threads = 60,
@@ -137,6 +144,7 @@ static const struct gen_device_info gen_device_info_snb_gt2 = {
 static const struct gen_device_info gen_device_info_ivb_gt1 = {
    GEN7_FEATURES, .is_ivybridge = true, .gt = 1,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 6,
    .l3_banks = 2,
    .max_vs_threads = 36,
@@ -163,6 +171,7 @@ static const struct gen_device_info gen_device_info_ivb_gt1 = {
 static const struct gen_device_info gen_device_info_ivb_gt2 = {
    GEN7_FEATURES, .is_ivybridge = true, .gt = 2,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 8, /* Not sure why this isn't a multiple of
                             * @max_wm_threads ... */
    .l3_banks = 4,
@@ -190,6 +199,7 @@ static const struct gen_device_info gen_device_info_ivb_gt2 = {
 static const struct gen_device_info gen_device_info_byt = {
    GEN7_FEATURES, .is_baytrail = true, .gt = 1,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 8,
    .l3_banks = 1,
    .has_llc = false,
@@ -223,6 +233,7 @@ static const struct gen_device_info gen_device_info_byt = {
 static const struct gen_device_info gen_device_info_hsw_gt1 = {
    HSW_FEATURES, .gt = 1,
    .num_slices = 1,
+   .num_subslices = { 1, },
    .num_thread_per_eu = 7,
    .l3_banks = 2,
    .max_vs_threads = 70,
@@ -249,6 +260,7 @@ static const struct gen_device_info gen_device_info_hsw_gt1 = {
 static const struct gen_device_info gen_device_info_hsw_gt2 = {
    HSW_FEATURES, .gt = 2,
    .num_slices = 1,
+   .num_subslices = { 2, },
    .num_thread_per_eu = 7,
    .l3_banks = 4,
    .max_vs_threads = 280,
@@ -275,6 +287,7 @@ static const struct gen_device_info gen_device_info_hsw_gt2 = {
 static const struct gen_device_info gen_device_info_hsw_gt3 = {
    HSW_FEATURES, .gt = 3,
    .num_slices = 2,
+   .num_subslices = { 2, },
    .num_thread_per_eu = 7,
    .l3_banks = 8,
    .max_vs_threads = 280,
@@ -318,6 +331,7 @@ static const struct gen_device_info gen_device_info_bdw_gt1 = {
    GEN8_FEATURES, .gt = 1,
    .is_broadwell = true,
    .num_slices = 1,
+   .num_subslices = { 2, },
    .num_thread_per_eu = 7,
    .l3_banks = 2,
    .max_cs_threads = 42,
@@ -340,6 +354,7 @@ static const struct gen_device_info gen_device_info_bdw_gt2 = {
    GEN8_FEATURES, .gt = 2,
    .is_broadwell = true,
    .num_slices = 1,
+   .num_subslices = { 3, },
    .num_thread_per_eu = 7,
    .l3_banks = 4,
    .max_cs_threads = 56,
@@ -362,6 +377,7 @@ static const struct gen_device_info gen_device_info_bdw_gt3 = {
    GEN8_FEATURES, .gt = 3,
    .is_broadwell = true,
    .num_slices = 2,
+   .num_subslices = { 3, 3, },
    .num_thread_per_eu = 7,
    .l3_banks = 8,
    .max_cs_threads = 56,
@@ -384,6 +400,7 @@ static const struct gen_device_info gen_device_info_chv = {
    GEN8_FEATURES, .is_cherryview = 1, .gt = 1,
    .has_llc = false,
    .num_slices = 1,
+   .num_subslices = { 2, },
    .num_thread_per_eu = 7,
    .l3_banks = 2,
    .max_vs_threads = 80,
@@ -456,8 +473,13 @@ static const struct gen_device_info gen_device_info_chv = {
       },                                           \
    }
 
+#define GEN9_LP_FEATURES_3X6                       \
+   GEN9_LP_FEATURES,                               \
+   .num_subslices = { 3, }
+
 #define GEN9_LP_FEATURES_2X6                       \
    GEN9_LP_FEATURES,                               \
+   .num_subslices = { 2, },                        \
    .max_vs_threads = 56,                           \
    .max_tcs_threads = 56,                          \
    .max_tes_threads = 56,                          \
@@ -486,6 +508,7 @@ static const struct gen_device_info gen_device_info_skl_gt1 = {
    GEN9_FEATURES, .gt = 1,
    .is_skylake = true,
    .num_slices = 1,
+   .num_subslices = { 2, },
    .l3_banks = 2,
    .urb.size = 192,
 };
@@ -494,6 +517,7 @@ static const struct gen_device_info gen_device_info_skl_gt2 = {
    GEN9_FEATURES, .gt = 2,
    .is_skylake = true,
    .num_slices = 1,
+   .num_subslices = { 3, },
    .l3_banks = 4,
 };
 
@@ -501,6 +525,7 @@ static const struct gen_device_info gen_device_info_skl_gt3 = {
    GEN9_FEATURES, .gt = 3,
    .is_skylake = true,
    .num_slices = 2,
+   .num_subslices = { 3, 3, },
    .l3_banks = 8,
 };
 
@@ -508,6 +533,7 @@ static const struct gen_device_info gen_device_info_skl_gt4 = {
    GEN9_FEATURES, .gt = 4,
    .is_skylake = true,
    .num_slices = 3,
+   .num_subslices = { 3, 3, 3, },
    .l3_banks = 12,
    /* From the "L3 Allocation and Programming" documentation:
     *
@@ -521,7 +547,7 @@ static const struct gen_device_info gen_device_info_skl_gt4 = {
 };
 
 static const struct gen_device_info gen_device_info_bxt = {
-   GEN9_LP_FEATURES,
+   GEN9_LP_FEATURES_3X6,
    .is_broxton = true,
    .l3_banks = 2,
 };
@@ -544,6 +570,7 @@ static const struct gen_device_info gen_device_info_kbl_gt1 = {
    .max_cs_threads = 7 * 6,
    .urb.size = 192,
    .num_slices = 1,
+   .num_subslices = { 2, },
    .l3_banks = 2,
 };
 
@@ -554,6 +581,7 @@ static const struct gen_device_info gen_device_info_kbl_gt1_5 = {
 
    .max_cs_threads = 7 * 6,
    .num_slices = 1,
+   .num_subslices = { 3, },
    .l3_banks = 4,
 };
 
@@ -563,6 +591,7 @@ static const struct gen_device_info gen_device_info_kbl_gt2 = {
    .gt = 2,
 
    .num_slices = 1,
+   .num_subslices = { 3, },
    .l3_banks = 4,
 };
 
@@ -572,6 +601,7 @@ static const struct gen_device_info gen_device_info_kbl_gt3 = {
    .gt = 3,
 
    .num_slices = 2,
+   .num_subslices = { 3, 3, },
    .l3_banks = 8,
 };
 
@@ -592,11 +622,12 @@ static const struct gen_device_info gen_device_info_kbl_gt4 = {
     */
    .urb.size = 1008 / 3,
    .num_slices = 3,
+   .num_subslices = { 3, 3, 3, },
    .l3_banks = 12,
 };
 
 static const struct gen_device_info gen_device_info_glk = {
-   GEN9_LP_FEATURES,
+   GEN9_LP_FEATURES_3X6,
    .is_geminilake = true,
    .l3_banks = 2,
 };
@@ -613,6 +644,7 @@ static const struct gen_device_info gen_device_info_cfl_gt1 = {
    .gt = 1,
 
    .num_slices = 1,
+   .num_subslices = { 2, },
    .l3_banks = 2,
 };
 static const struct gen_device_info gen_device_info_cfl_gt2 = {
@@ -621,6 +653,7 @@ static const struct gen_device_info gen_device_info_cfl_gt2 = {
    .gt = 2,
 
    .num_slices = 1,
+   .num_subslices = { 3, },
    .l3_banks = 4,
 };
 
@@ -630,6 +663,7 @@ static const struct gen_device_info gen_device_info_cfl_gt3 = {
    .gt = 3,
 
    .num_slices = 2,
+   .num_subslices = { 3, 3, },
    .l3_banks = 8,
 };
 
@@ -656,32 +690,37 @@ static const struct gen_device_info gen_device_info_cfl_gt3 = {
       },                                            \
    }
 
-#define GEN10_FEATURES(_gt, _slices, _l3)           \
+#define subslices(args...) { args, }
+
+#define GEN10_FEATURES(_gt, _slices, _subslices, _l3) \
    GEN8_FEATURES,                                   \
    GEN10_HW_INFO,                                   \
-   .gt = _gt, .num_slices = _slices, .l3_banks = _l3
+   .gt = _gt,                                       \
+   .num_slices = _slices,                           \
+   .num_subslices = _subslices,                     \
+   .l3_banks = _l3
 
 static const struct gen_device_info gen_device_info_cnl_2x8 = {
    /* GT0.5 */
-   GEN10_FEATURES(1, 1, 2),
+   GEN10_FEATURES(1, 1, subslices(2), 2),
    .is_cannonlake = true,
 };
 
 static const struct gen_device_info gen_device_info_cnl_3x8 = {
    /* GT1 */
-   GEN10_FEATURES(1, 1, 3),
+   GEN10_FEATURES(1, 1, subslices(3), 3),
    .is_cannonlake = true,
 };
 
 static const struct gen_device_info gen_device_info_cnl_4x8 = {
    /* GT 1.5 */
-   GEN10_FEATURES(1, 2, 6),
+   GEN10_FEATURES(1, 2, subslices(2, 2), 6),
    .is_cannonlake = true,
 };
 
 static const struct gen_device_info gen_device_info_cnl_5x8 = {
    /* GT2 */
-   GEN10_FEATURES(2, 2, 6),
+   GEN10_FEATURES(2, 2, subslices(3, 2), 6),
    .is_cannonlake = true,
 };
 
@@ -716,6 +755,8 @@ gen_get_device_info(int devid, struct gen_device_info *devinfo)
                               * devinfo->num_slices
                               * 4; /* effective subslices per slice */
    }
+
+   assert(devinfo->num_slices <= ARRAY_SIZE(devinfo->num_subslices));
 
    return true;
 }

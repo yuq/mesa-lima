@@ -104,6 +104,11 @@ struct gen_device_info
    unsigned num_slices;
 
    /**
+    * Number of subslices for each slice (used to be uniform until CNL).
+    */
+   unsigned num_subslices[3];
+
+   /**
     * Number of threads per eu, varies between 4 and 8 between generations.
     */
    unsigned num_thread_per_eu;
