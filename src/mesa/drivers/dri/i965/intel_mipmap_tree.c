@@ -897,7 +897,22 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 {
    struct intel_mipmap_tree *mt;
    uint32_t tiling, swizzle;
-   GLenum target;
+   const GLenum target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
+
+   if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8) {
+      mt = make_surface(brw, target, MESA_FORMAT_S_UINT8,
+                        0, 0, width, height, depth, 1, ISL_TILING_W,
+                        ISL_SURF_USAGE_STENCIL_BIT |
+                        ISL_SURF_USAGE_TEXTURE_BIT,
+                        BO_ALLOC_FOR_RENDER, bo);
+      if (!mt)
+         return NULL;
+
+      assert(bo->size >= mt->surf.size);
+
+      brw_bo_reference(bo);
+      return mt;
+   }
 
    brw_bo_get_tiling(bo, &tiling, &swizzle);
 
@@ -911,8 +926,6 @@ intel_miptree_create_for_bo(struct brw_context *brw,
     * that's outside of the scope of the mt.
     */
    assert(pitch >= 0);
-
-   target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
 
    /* The BO already has a tiling format and we shouldn't confuse the lower
     * layers by making it try to find a tiling format again.
