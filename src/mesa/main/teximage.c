@@ -4143,17 +4143,9 @@ get_tex_obj_for_clear(struct gl_context *ctx,
 {
    struct gl_texture_object *texObj;
 
-   if (texture == 0) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(zero texture)", function);
+   texObj = _mesa_lookup_texture_err(ctx, texture, function);
+   if (!texObj)
       return NULL;
-   }
-
-   texObj = _mesa_lookup_texture(ctx, texture);
-
-   if (texObj == NULL) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-gen name)", function);
-      return NULL;
-   }
 
    if (texObj->Target == 0) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(unbound tex)", function);
