@@ -1738,7 +1738,33 @@ static const struct brw_tracked_state genX(sf_state) = {
 
 /* ---------------------------------------------------------------------- */
 
-#if GEN_GEN >= 6
+static bool
+brw_color_buffer_write_enabled(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_FRAGMENT_PROGRAM */
+   const struct gl_program *fp = brw->fragment_program;
+   unsigned i;
+
+   /* _NEW_BUFFERS */
+   for (i = 0; i < ctx->DrawBuffer->_NumColorDrawBuffers; i++) {
+      struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[i];
+      uint64_t outputs_written = fp->info.outputs_written;
+
+      /* _NEW_COLOR */
+      if (rb && (outputs_written & BITFIELD64_BIT(FRAG_RESULT_COLOR) ||
+                 outputs_written & BITFIELD64_BIT(FRAG_RESULT_DATA0 + i)) &&
+          (ctx->Color.ColorMask[i][0] ||
+           ctx->Color.ColorMask[i][1] ||
+           ctx->Color.ColorMask[i][2] ||
+           ctx->Color.ColorMask[i][3])) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
 static void
 genX(upload_wm)(struct brw_context *brw)
 {
@@ -1750,11 +1776,10 @@ genX(upload_wm)(struct brw_context *brw)
 
    UNUSED bool writes_depth =
       wm_prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
+   UNUSED struct brw_stage_state *stage_state = &brw->wm.base;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-#if GEN_GEN < 7
-   const struct brw_stage_state *stage_state = &brw->wm.base;
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
+#if GEN_GEN == 6
    /* We can't fold this into gen6_upload_wm_push_constants(), because
     * according to the SNB PRM, vol 2 part 1 section 7.2.2
     * (3DSTATE_CONSTANT_PS [DevSNB]):
@@ -1773,27 +1798,94 @@ genX(upload_wm)(struct brw_context *brw)
    }
 #endif
 
+#if GEN_GEN >= 6
    brw_batch_emit(brw, GENX(3DSTATE_WM), wm) {
-      wm.StatisticsEnable = true;
       wm.LineAntialiasingRegionWidth = _10pixels;
       wm.LineEndCapAntialiasingRegionWidth = _05pixels;
 
+      wm.PointRasterizationRule = RASTRULE_UPPER_RIGHT;
+      wm.BarycentricInterpolationMode = wm_prog_data->barycentric_interp_modes;
+#else
+   ctx->NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
+   brw_state_emit(brw, GENX(WM_STATE), 64, &stage_state->state_offset, wm) {
+      if (wm_prog_data->dispatch_8 && wm_prog_data->dispatch_16) {
+         /* These two fields should be the same pre-gen6, which is why we
+          * only have one hardware field to program for both dispatch
+          * widths.
+          */
+         assert(wm_prog_data->base.dispatch_grf_start_reg ==
+                wm_prog_data->dispatch_grf_start_reg_2);
+      }
+
+      if (wm_prog_data->dispatch_8 || wm_prog_data->dispatch_16)
+         wm.GRFRegisterCount0 = wm_prog_data->reg_blocks_0;
+
+      if (stage_state->sampler_count)
+         wm.SamplerStatePointer =
+            instruction_ro_bo(brw->batch.bo, stage_state->sampler_offset);
+#if GEN_GEN == 5
+      if (wm_prog_data->prog_offset_2)
+         wm.GRFRegisterCount2 = wm_prog_data->reg_blocks_2;
+#endif
+
+      wm.SetupURBEntryReadLength = wm_prog_data->num_varying_inputs * 2;
+      wm.ConstantURBEntryReadLength = wm_prog_data->base.curb_read_length;
+      /* BRW_NEW_PUSH_CONSTANT_ALLOCATION */
+      wm.ConstantURBEntryReadOffset = brw->curbe.wm_start * 2;
+      wm.EarlyDepthTestEnable = true;
+      wm.LineAntialiasingRegionWidth = _05pixels;
+      wm.LineEndCapAntialiasingRegionWidth = _10pixels;
+
+      /* _NEW_POLYGON */
+      if (ctx->Polygon.OffsetFill) {
+         wm.GlobalDepthOffsetEnable = true;
+         /* Something weird going on with legacy_global_depth_bias,
+          * offset_constant, scaling and MRD.  This value passes glean
+          * but gives some odd results elsewere (eg. the
+          * quad-offset-units test).
+          */
+         wm.GlobalDepthOffsetConstant = ctx->Polygon.OffsetUnits * 2;
+
+         /* This is the only value that passes glean:
+         */
+         wm.GlobalDepthOffsetScale = ctx->Polygon.OffsetFactor;
+      }
+
+      wm.DepthCoefficientURBReadOffset = 1;
+#endif
+
+      /* BRW_NEW_STATS_WM */
+      wm.StatisticsEnable = GEN_GEN >= 6 || brw->stats_wm;
+
 #if GEN_GEN < 7
       if (wm_prog_data->base.use_alt_mode)
-         wm.FloatingPointMode = Alternate;
+         wm.FloatingPointMode = FLOATING_POINT_MODE_Alternate;
 
-      wm.SamplerCount = DIV_ROUND_UP(stage_state->sampler_count, 4);
-      wm.BindingTableEntryCount = wm_prog_data->base.binding_table.size_bytes / 4;
+      wm.SamplerCount = GEN_GEN == 5 ?
+         0 : DIV_ROUND_UP(stage_state->sampler_count, 4);
+
+      wm.BindingTableEntryCount =
+         wm_prog_data->base.binding_table.size_bytes / 4;
       wm.MaximumNumberofThreads = devinfo->max_wm_threads - 1;
       wm._8PixelDispatchEnable = wm_prog_data->dispatch_8;
       wm._16PixelDispatchEnable = wm_prog_data->dispatch_16;
       wm.DispatchGRFStartRegisterForConstantSetupData0 =
          wm_prog_data->base.dispatch_grf_start_reg;
-      wm.DispatchGRFStartRegisterForConstantSetupData2 =
-         wm_prog_data->dispatch_grf_start_reg_2;
-      wm.KernelStartPointer0 = stage_state->prog_offset;
-      wm.KernelStartPointer2 = stage_state->prog_offset +
-         wm_prog_data->prog_offset_2;
+      if (GEN_GEN == 6 ||
+          wm_prog_data->dispatch_8 || wm_prog_data->dispatch_16) {
+         wm.KernelStartPointer0 = KSP_ro(brw,
+                                         stage_state->prog_offset);
+      }
+
+#if GEN_GEN >= 5
+      if (GEN_GEN == 6 || wm_prog_data->prog_offset_2) {
+         wm.KernelStartPointer2 =
+            KSP_ro(brw, stage_state->prog_offset +
+                   wm_prog_data->prog_offset_2);
+      }
+#endif
+
+#if GEN_GEN == 6
       wm.DualSourceBlendEnable =
          wm_prog_data->dual_src_blend && (ctx->Color.BlendEnabled & 1) &&
          ctx->Color.Blend[0]._UsesDualSrc;
@@ -1817,42 +1909,34 @@ genX(upload_wm)(struct brw_context *brw)
       else
          wm.PositionXYOffsetSelect = POSOFFSET_NONE;
 
+      wm.DispatchGRFStartRegisterForConstantSetupData2 =
+         wm_prog_data->dispatch_grf_start_reg_2;
+#endif
+
       if (wm_prog_data->base.total_scratch) {
          wm.ScratchSpaceBasePointer =
-            render_bo(stage_state->scratch_bo,
-                      ffs(stage_state->per_thread_scratch) - 11);
+            render_bo(stage_state->scratch_bo, 0);
+         wm.PerThreadScratchSpace =
+            ffs(stage_state->per_thread_scratch) - 11;
       }
 
       wm.PixelShaderComputedDepth = writes_depth;
 #endif
-
-      wm.PointRasterizationRule = RASTRULE_UPPER_RIGHT;
 
       /* _NEW_LINE */
       wm.LineStippleEnable = ctx->Line.StippleFlag;
 
       /* _NEW_POLYGON */
       wm.PolygonStippleEnable = ctx->Polygon.StippleFlag;
-      wm.BarycentricInterpolationMode = wm_prog_data->barycentric_interp_modes;
 
 #if GEN_GEN < 8
+
+#if GEN_GEN >= 6
+      wm.PixelShaderUsesSourceW = wm_prog_data->uses_src_w;
+
       /* _NEW_BUFFERS */
       const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
-      wm.PixelShaderUsesSourceDepth = wm_prog_data->uses_src_depth;
-      wm.PixelShaderUsesSourceW = wm_prog_data->uses_src_w;
-      if (wm_prog_data->uses_kill ||
-          _mesa_is_alpha_test_enabled(ctx) ||
-          _mesa_is_alpha_to_coverage_enabled(ctx) ||
-          wm_prog_data->uses_omask) {
-         wm.PixelShaderKillsPixel = true;
-      }
-
-      /* _NEW_BUFFERS | _NEW_COLOR */
-      if (brw_color_buffer_write_enabled(brw) || writes_depth ||
-          wm_prog_data->has_side_effects || wm.PixelShaderKillsPixel) {
-         wm.ThreadDispatchEnable = true;
-      }
       if (multisampled_fbo) {
          /* _NEW_MULTISAMPLE */
          if (ctx->Multisample.Enabled)
@@ -1867,6 +1951,21 @@ genX(upload_wm)(struct brw_context *brw)
       } else {
          wm.MultisampleRasterizationMode = MSRASTMODE_OFF_PIXEL;
          wm.MultisampleDispatchMode = MSDISPMODE_PERSAMPLE;
+      }
+#endif
+      wm.PixelShaderUsesSourceDepth = wm_prog_data->uses_src_depth;
+      if (wm_prog_data->uses_kill ||
+          _mesa_is_alpha_test_enabled(ctx) ||
+          _mesa_is_alpha_to_coverage_enabled(ctx) ||
+          (GEN_GEN >= 6 && wm_prog_data->uses_omask)) {
+         wm.PixelShaderKillsPixel = true;
+      }
+
+      /* _NEW_BUFFERS | _NEW_COLOR */
+      if (brw_color_buffer_write_enabled(brw) || writes_depth ||
+          wm.PixelShaderKillsPixel ||
+          (GEN_GEN >= 6 && wm_prog_data->has_side_effects)) {
+         wm.ThreadDispatchEnable = true;
       }
 
 #if GEN_GEN >= 7
@@ -1898,6 +1997,16 @@ genX(upload_wm)(struct brw_context *brw)
          wm.EarlyDepthStencilControl = EDSC_PSEXEC;
 #endif
    }
+
+#if GEN_GEN <= 5
+   if (brw->wm.offset_clamp != ctx->Polygon.OffsetClamp) {
+      brw_batch_emit(brw, GENX(3DSTATE_GLOBAL_DEPTH_OFFSET_CLAMP), clamp) {
+         clamp.GlobalDepthOffsetClamp = ctx->Polygon.OffsetClamp;
+      }
+
+      brw->wm.offset_clamp = ctx->Polygon.OffsetClamp;
+   }
+#endif
 }
 
 static const struct brw_tracked_state genX(wm_state) = {
@@ -1905,17 +2014,23 @@ static const struct brw_tracked_state genX(wm_state) = {
       .mesa  = _NEW_LINE |
                _NEW_POLYGON |
                (GEN_GEN < 8 ? _NEW_BUFFERS |
-                              _NEW_COLOR |
-                              _NEW_MULTISAMPLE :
+                              _NEW_COLOR :
                               0) |
-               (GEN_GEN < 7 ? _NEW_PROGRAM_CONSTANTS : 0),
+               (GEN_GEN == 6 ? _NEW_PROGRAM_CONSTANTS : 0) |
+               (GEN_GEN < 6 ? _NEW_POLYGONSTIPPLE : 0) |
+               (GEN_GEN < 8 && GEN_GEN >= 6 ? _NEW_MULTISAMPLE : 0),
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_FS_PROG_DATA |
+               (GEN_GEN < 6 ? BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+                              BRW_NEW_FRAGMENT_PROGRAM |
+                              BRW_NEW_PROGRAM_CACHE |
+                              BRW_NEW_SAMPLER_STATE_TABLE |
+                              BRW_NEW_STATS_WM
+                            : 0) |
                (GEN_GEN < 7 ? BRW_NEW_BATCH : BRW_NEW_CONTEXT),
    },
    .emit = genX(upload_wm),
 };
-#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -5217,7 +5332,7 @@ genX(init_atoms)(struct brw_context *brw)
       &genX(vs_samplers),
 
       /* These set up state for brw_psp_urb_cbs */
-      &brw_wm_unit,
+      &genX(wm_state),
       &genX(sf_clip_viewport),
       &genX(sf_state),
       &genX(vs_state), /* always required, enabled or not */

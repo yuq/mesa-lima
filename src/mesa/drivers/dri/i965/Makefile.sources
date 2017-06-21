@@ -60,7 +60,6 @@ i965_FILES = \
 	brw_vs_surface_state.c \
 	brw_wm.c \
 	brw_wm.h \
-	brw_wm_state.c \
 	brw_wm_surface_state.c \
 	gen4_blorp_exec.h \
 	gen6_clip_state.c \
