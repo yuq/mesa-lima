@@ -161,6 +161,8 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    struct etna_sampler_view *sv = CALLOC_STRUCT(etna_sampler_view);
    struct etna_resource *res = etna_resource(prsc);
    struct etna_context *ctx = etna_context(pctx);
+   const uint32_t format = translate_texture_format(so->format);
+   const bool ext = !!(format & EXT_FORMAT);
 
    if (!sv)
       return NULL;
@@ -191,8 +193,7 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    sv->base.context = pctx;
 
    /* merged with sampler state */
-   sv->TE_SAMPLER_CONFIG0 =
-      VIVS_TE_SAMPLER_CONFIG0_FORMAT(translate_texture_format(sv->base.format));
+   sv->TE_SAMPLER_CONFIG0 = COND(!ext, VIVS_TE_SAMPLER_CONFIG0_FORMAT(format));
    sv->TE_SAMPLER_CONFIG0_MASK = 0xffffffff;
 
    switch (sv->base.target) {
@@ -215,7 +216,8 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
       return NULL;
    }
 
-   sv->TE_SAMPLER_CONFIG1 = VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_R(so->swizzle_r) |
+   sv->TE_SAMPLER_CONFIG1 = COND(ext, VIVS_TE_SAMPLER_CONFIG1_FORMAT_EXT(format)) |
+                            VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_R(so->swizzle_r) |
                             VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_G(so->swizzle_g) |
                             VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_B(so->swizzle_b) |
                             VIVS_TE_SAMPLER_CONFIG1_SWIZZLE_A(so->swizzle_a) |

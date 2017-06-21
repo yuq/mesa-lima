@@ -231,7 +231,7 @@ static struct etna_format formats[PIPE_FORMAT_COUNT] = {
 uint32_t
 translate_texture_format(enum pipe_format fmt)
 {
-   /* XXX with TEXTURE_FORMAT_EXT and swizzle on newer chips we can
+   /* XXX with swizzle on newer chips we can
     * support much more */
    if (!formats[fmt].present)
       return ETNA_NO_MATCH;

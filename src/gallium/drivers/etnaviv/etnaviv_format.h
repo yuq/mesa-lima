@@ -31,6 +31,7 @@
 #include <stdint.h>
 
 #define ETNA_NO_MATCH (~0)
+#define EXT_FORMAT (1 << 31)
 
 uint32_t
 translate_texture_format(enum pipe_format fmt);
