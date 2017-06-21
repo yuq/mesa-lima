@@ -36,6 +36,7 @@
 #include "main/glthread.h"
 #include "main/marshal.h"
 #include "main/marshal_generated.h"
+#include "util/u_atomic.h"
 #include "util/u_thread.h"
 
 
@@ -60,7 +61,7 @@ glthread_thread_initialization(void *job, int thread_index)
 {
    struct gl_context *ctx = (struct gl_context*)job;
 
-   ctx->Driver.SetBackgroundContext(ctx);
+   ctx->Driver.SetBackgroundContext(ctx, &ctx->GLThread->stats);
    _glapi_set_context(ctx);
 }
 
@@ -90,6 +91,7 @@ _mesa_glthread_init(struct gl_context *ctx)
       util_queue_fence_init(&glthread->batches[i].fence);
    }
 
+   glthread->stats.queue = &glthread->queue;
    ctx->CurrentClientDispatch = ctx->MarshalExec;
    ctx->GLThread = glthread;
 
@@ -159,6 +161,8 @@ _mesa_glthread_flush_batch(struct gl_context *ctx)
       return;
    }
 
+   p_atomic_add(&glthread->stats.num_offloaded_items, next->used);
+
    util_queue_add_job(&glthread->queue, next, &next->fence,
                       glthread_unmarshal_batch, NULL);
    glthread->last = glthread->next;
@@ -188,16 +192,29 @@ _mesa_glthread_finish(struct gl_context *ctx)
 
    struct glthread_batch *last = &glthread->batches[glthread->last];
    struct glthread_batch *next = &glthread->batches[glthread->next];
+   bool synced = false;
 
-   if (!util_queue_fence_is_signalled(&last->fence))
+   if (!util_queue_fence_is_signalled(&last->fence)) {
       util_queue_fence_wait(&last->fence);
+      synced = true;
+   }
 
    if (next->used) {
+      p_atomic_add(&glthread->stats.num_direct_items, next->used);
+
       /* Since glthread_unmarshal_batch changes the dispatch to direct,
        * restore it after it's done.
        */
       struct _glapi_table *dispatch = _glapi_get_dispatch();
       glthread_unmarshal_batch(next, 0);
       _glapi_set_dispatch(dispatch);
+
+      /* It's not a sync because we don't enqueue partial batches, but
+       * it would be a sync if we did. So count it anyway.
+       */
+      synced = true;
    }
+
+   if (synced)
+      p_atomic_inc(&glthread->stats.num_syncs);
 }

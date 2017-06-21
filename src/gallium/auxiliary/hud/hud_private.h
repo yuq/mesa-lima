@@ -40,6 +40,8 @@ struct hud_context {
    struct hud_batch_query_context *batch_query;
    struct list_head pane_list;
 
+   struct util_queue_monitoring *monitored_queue;
+
    /* states */
    struct pipe_blend_state no_blend, alpha_blend;
    struct pipe_depth_stencil_alpha_state dsa;

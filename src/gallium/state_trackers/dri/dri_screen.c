@@ -447,7 +447,8 @@ dri_postprocessing_init(struct dri_screen *screen)
 }
 
 static void
-dri_set_background_context(struct st_context_iface *st)
+dri_set_background_context(struct st_context_iface *st,
+                           struct util_queue_monitoring *queue_info)
 {
    struct dri_context *ctx = (struct dri_context *)st->st_manager_private;
    const __DRIbackgroundCallableExtension *backgroundCallable =
@@ -459,6 +460,9 @@ dri_set_background_context(struct st_context_iface *st)
     */
    assert(backgroundCallable);
    backgroundCallable->setBackgroundContext(ctx->cPriv->loaderPrivate);
+
+   if (ctx->hud)
+      hud_add_queue_for_monitoring(ctx->hud, queue_info);
 }
 
 unsigned

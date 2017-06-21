@@ -179,6 +179,7 @@ enum st_manager_param {
 struct pipe_context;
 struct pipe_resource;
 struct pipe_fence_handle;
+struct util_queue_monitoring;
 
 /**
  * Used in st_context_iface->get_resource_for_egl_image.
@@ -474,7 +475,8 @@ struct st_manager
     * Call the loader function setBackgroundContext. Called from the worker
     * thread.
     */
-   void (*set_background_context)(struct st_context_iface *stctxi);
+   void (*set_background_context)(struct st_context_iface *stctxi,
+                                  struct util_queue_monitoring *queue_info);
 };
 
 /**

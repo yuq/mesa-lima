@@ -1694,3 +1694,11 @@ hud_destroy(struct hud_context *hud)
    pipe_resource_reference(&hud->font.texture, NULL);
    FREE(hud);
 }
+
+void
+hud_add_queue_for_monitoring(struct hud_context *hud,
+                             struct util_queue_monitoring *queue_info)
+{
+   assert(!hud->monitored_queue);
+   hud->monitored_queue = queue_info;
+}

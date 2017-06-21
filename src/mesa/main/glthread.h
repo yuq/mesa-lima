@@ -65,6 +65,9 @@ struct glthread_state
    /** Multithreaded queue. */
    struct util_queue queue;
 
+   /** This is sent to the driver for framebuffer overlay / HUD. */
+   struct util_queue_monitoring stats;
+
    /** The ring of batches in memory. */
    struct glthread_batch batches[MARSHAL_MAX_BATCHES];
 
