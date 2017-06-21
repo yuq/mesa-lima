@@ -2263,37 +2263,42 @@ intel_miptree_prepare_access(struct brw_context *brw,
 {
    num_levels = miptree_level_range_length(mt, start_level, num_levels);
 
-   if (_mesa_is_format_color_format(mt->format)) {
+   switch (mt->aux_usage) {
+   case ISL_AUX_USAGE_NONE:
+      /* Nothing to do */
+      break;
+
+   case ISL_AUX_USAGE_MCS:
+      assert(mt->mcs_buf);
+      assert(start_level == 0 && num_levels == 1);
+      const uint32_t level_layers =
+         miptree_layer_range_length(mt, 0, start_layer, num_layers);
+      for (uint32_t a = 0; a < level_layers; a++) {
+         intel_miptree_prepare_mcs_access(brw, mt, start_layer + a,
+                                          aux_supported,
+                                          fast_clear_supported);
+      }
+      break;
+
+   case ISL_AUX_USAGE_CCS_D:
+   case ISL_AUX_USAGE_CCS_E:
       if (!mt->mcs_buf)
          return;
 
-      if (mt->surf.samples > 1) {
-         assert(start_level == 0 && num_levels == 1);
+      for (uint32_t l = 0; l < num_levels; l++) {
+         const uint32_t level = start_level + l;
          const uint32_t level_layers =
-            miptree_layer_range_length(mt, 0, start_layer, num_layers);
+            miptree_layer_range_length(mt, level, start_layer, num_layers);
          for (uint32_t a = 0; a < level_layers; a++) {
-            intel_miptree_prepare_mcs_access(brw, mt, start_layer + a,
-                                             aux_supported,
+            intel_miptree_prepare_ccs_access(brw, mt, level,
+                                             start_layer + a, aux_supported,
                                              fast_clear_supported);
          }
-      } else {
-         for (uint32_t l = 0; l < num_levels; l++) {
-            const uint32_t level = start_level + l;
-            const uint32_t level_layers =
-               miptree_layer_range_length(mt, level, start_layer, num_layers);
-            for (uint32_t a = 0; a < level_layers; a++) {
-               intel_miptree_prepare_ccs_access(brw, mt, level,
-                                                start_layer + a, aux_supported,
-                                                fast_clear_supported);
-            }
-         }
       }
-   } else if (mt->format == MESA_FORMAT_S_UINT8) {
-      /* Nothing to do for stencil */
-   } else {
-      if (!mt->hiz_buf)
-         return;
+      break;
 
+   case ISL_AUX_USAGE_HIZ:
+      assert(mt->hiz_buf);
       for (uint32_t l = 0; l < num_levels; l++) {
          const uint32_t level = start_level + l;
          if (!intel_miptree_level_has_hiz(mt, level))
@@ -2307,6 +2312,10 @@ intel_miptree_prepare_access(struct brw_context *brw,
                                              fast_clear_supported);
          }
       }
+      break;
+
+   default:
+      unreachable("Invalid aux usage");
    }
 }
 
@@ -2318,25 +2327,31 @@ intel_miptree_finish_write(struct brw_context *brw,
 {
    num_layers = miptree_layer_range_length(mt, level, start_layer, num_layers);
 
-   if (_mesa_is_format_color_format(mt->format)) {
+   switch (mt->aux_usage) {
+   case ISL_AUX_USAGE_NONE:
+      /* Nothing to do */
+      break;
+
+   case ISL_AUX_USAGE_MCS:
+      assert(mt->mcs_buf);
+      for (uint32_t a = 0; a < num_layers; a++) {
+         intel_miptree_finish_mcs_write(brw, mt, start_layer + a,
+                                        written_with_aux);
+      }
+      break;
+
+   case ISL_AUX_USAGE_CCS_D:
+   case ISL_AUX_USAGE_CCS_E:
       if (!mt->mcs_buf)
          return;
 
-      if (mt->surf.samples > 1) {
-         assert(level == 0);
-         for (uint32_t a = 0; a < num_layers; a++) {
-            intel_miptree_finish_mcs_write(brw, mt, start_layer + a,
-                                           written_with_aux);
-         }
-      } else {
-         for (uint32_t a = 0; a < num_layers; a++) {
-            intel_miptree_finish_ccs_write(brw, mt, level, start_layer + a,
-                                           written_with_aux);
-         }
+      for (uint32_t a = 0; a < num_layers; a++) {
+         intel_miptree_finish_ccs_write(brw, mt, level, start_layer + a,
+                                        written_with_aux);
       }
-   } else if (mt->format == MESA_FORMAT_S_UINT8) {
-      /* Nothing to do for stencil */
-   } else {
+      break;
+
+   case ISL_AUX_USAGE_HIZ:
       if (!intel_miptree_level_has_hiz(mt, level))
          return;
 
@@ -2344,6 +2359,10 @@ intel_miptree_finish_write(struct brw_context *brw,
          intel_miptree_finish_hiz_write(brw, mt, level, start_layer + a,
                                         written_with_aux);
       }
+      break;
+
+   default:
+      unreachable("Invavlid aux usage");
    }
 }
 
