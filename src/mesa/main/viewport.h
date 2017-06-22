@@ -74,6 +74,9 @@ extern void
 _mesa_init_viewport(struct gl_context *ctx);
 
 
+void GLAPIENTRY
+_mesa_ClipControl_no_error(GLenum origin, GLenum depth);
+
 extern void GLAPIENTRY
 _mesa_ClipControl(GLenum origin, GLenum depth);
 

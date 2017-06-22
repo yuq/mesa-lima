@@ -455,6 +455,14 @@ clip_control(struct gl_context *ctx, GLenum origin, GLenum depth)
 
 
 void GLAPIENTRY
+_mesa_ClipControl_no_error(GLenum origin, GLenum depth)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   clip_control(ctx, origin, depth);
+}
+
+
+void GLAPIENTRY
 _mesa_ClipControl(GLenum origin, GLenum depth)
 {
    GET_CURRENT_CONTEXT(ctx);
