@@ -1928,7 +1928,7 @@ get_ccs_d_resolve_op(enum isl_aux_state aux_state,
 
    switch (aux_state) {
    case ISL_AUX_STATE_CLEAR:
-   case ISL_AUX_STATE_COMPRESSED_CLEAR:
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
       if (!ccs_supported)
          return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
       else
@@ -1937,9 +1937,9 @@ get_ccs_d_resolve_op(enum isl_aux_state aux_state,
    case ISL_AUX_STATE_PASS_THROUGH:
       return BLORP_FAST_CLEAR_OP_NONE;
 
-   case ISL_AUX_STATE_PARTIAL_CLEAR:
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_AUX_INVALID:
+   case ISL_AUX_STATE_COMPRESSED_CLEAR:
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
       break;
    }
@@ -2074,10 +2074,10 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
       case ISL_AUX_STATE_CLEAR:
          assert(aux_usage == ISL_AUX_USAGE_CCS_D);
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
-                                     ISL_AUX_STATE_COMPRESSED_CLEAR);
+                                     ISL_AUX_STATE_PARTIAL_CLEAR);
          break;
 
-      case ISL_AUX_STATE_COMPRESSED_CLEAR:
+      case ISL_AUX_STATE_PARTIAL_CLEAR:
          assert(aux_usage == ISL_AUX_USAGE_CCS_D);
          break; /* Nothing to do */
 
@@ -2085,7 +2085,7 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
          /* Nothing to do */
          break;
 
-      case ISL_AUX_STATE_PARTIAL_CLEAR:
+      case ISL_AUX_STATE_COMPRESSED_CLEAR:
       case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
       case ISL_AUX_STATE_RESOLVED:
       case ISL_AUX_STATE_AUX_INVALID:
