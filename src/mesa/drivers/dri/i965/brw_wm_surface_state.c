@@ -215,9 +215,8 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
    struct intel_mipmap_tree *mt = irb->mt;
 
-   enum isl_aux_usage aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
-   if (!mt->mcs_buf)
-      aux_usage = ISL_AUX_USAGE_NONE;
+   enum isl_aux_usage aux_usage =
+      intel_miptree_render_aux_usage(brw, mt, ctx->Color.sRGBEnabled);
 
    if (flags & INTEL_AUX_BUFFER_DISABLED) {
       assert(brw->gen >= 9);
@@ -441,95 +440,21 @@ swizzle_to_scs(GLenum swizzle, bool need_green_to_blue)
    return (need_green_to_blue && scs == HSW_SCS_GREEN) ? HSW_SCS_BLUE : scs;
 }
 
-static unsigned
-brw_find_matching_rb(const struct gl_framebuffer *fb,
-                     const struct intel_mipmap_tree *mt)
+static bool
+brw_aux_surface_disabled(const struct brw_context *brw,
+                         const struct intel_mipmap_tree *mt)
 {
+   const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
+
    for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
       const struct intel_renderbuffer *irb =
          intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
       if (irb && irb->mt == mt)
-         return i;
+         return brw->draw_aux_buffer_disabled[i];
    }
 
-   return fb->_NumColorDrawBuffers;
-}
-
-static inline bool
-brw_texture_view_sane(const struct brw_context *brw,
-                      const struct intel_mipmap_tree *mt,
-                      const struct isl_view *view)
-{
-   /* There are special cases only for lossless compression. */
-   if (mt->aux_usage != ISL_AUX_USAGE_CCS_E)
-      return true;
-
-   if (isl_format_supports_ccs_e(&brw->screen->devinfo, view->format))
-      return true;
-
-   /* Logic elsewhere needs to take care to resolve the color buffer prior
-    * to sampling it as non-compressed.
-    */
-   if (intel_miptree_has_color_unresolved(mt, view->base_level, view->levels,
-                                          view->base_array_layer,
-                                          view->array_len))
-      return false;
-
-   const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
-   const unsigned rb_index = brw_find_matching_rb(fb, mt);
-
-   if (rb_index == fb->_NumColorDrawBuffers)
-      return true;
-
-   /* Underlying surface is compressed but it is sampled using a format that
-    * the sampling engine doesn't support as compressed. Compression must be
-    * disabled for both sampling engine and data port in case the same surface
-    * is used also as render target.
-    */
-   return brw->draw_aux_buffer_disabled[rb_index];
-}
-
-static bool
-brw_disable_aux_surface(const struct brw_context *brw,
-                        const struct intel_mipmap_tree *mt,
-                        const struct isl_view *view)
-{
-   /* Nothing to disable. */
-   if (!mt->mcs_buf)
-      return false;
-
-   const bool is_unresolved = intel_miptree_has_color_unresolved(
-                                 mt, view->base_level, view->levels,
-                                 view->base_array_layer, view->array_len);
-
-   /* There are special cases only for lossless compression. */
-   if (mt->aux_usage != ISL_AUX_USAGE_CCS_E)
-      return !is_unresolved;
-
-   const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
-   const unsigned rb_index = brw_find_matching_rb(fb, mt);
-
-   /* If we are drawing into this with compression enabled, then we must also
-    * enable compression when texturing from it regardless of
-    * fast_clear_state.  If we don't then, after the first draw call with
-    * this setup, there will be data in the CCS which won't get picked up by
-    * subsequent texturing operations as required by ARB_texture_barrier.
-    * Since we don't want to re-emit the binding table or do a resolve
-    * operation every draw call, the easiest thing to do is just enable
-    * compression on the texturing side.  This is completely safe to do
-    * since, if compressed texturing weren't allowed, we would have disabled
-    * compression of render targets in whatever_that_function_is_called().
-    */
-   if (rb_index < fb->_NumColorDrawBuffers) {
-      if (brw->draw_aux_buffer_disabled[rb_index]) {
-         assert(!is_unresolved);
-      }
-
-      return brw->draw_aux_buffer_disabled[rb_index];
-   }
-
-   return !is_unresolved;
+   return false;
 }
 
 void
@@ -656,13 +581,10 @@ brw_update_texture_surface(struct gl_context *ctx,
           obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY)
          view.usage |= ISL_SURF_USAGE_CUBE_BIT;
 
-      assert(brw_texture_view_sane(brw, mt, &view));
+      enum isl_aux_usage aux_usage =
+         intel_miptree_texture_aux_usage(brw, mt, format);
 
-      enum isl_aux_usage aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
-      if (!mt->mcs_buf && !intel_miptree_sample_with_hiz(brw, mt))
-         aux_usage = ISL_AUX_USAGE_NONE;
-
-      if (brw_disable_aux_surface(brw, mt, &view))
+      if (brw_aux_surface_disabled(brw, mt))
          aux_usage = ISL_AUX_USAGE_NONE;
 
       brw_emit_surface_state(brw, mt, mt->target, view, aux_usage,
@@ -1235,11 +1157,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
             };
 
             enum isl_aux_usage aux_usage =
-               intel_miptree_get_aux_isl_usage(brw, irb->mt);
-            if (!irb->mt->mcs_buf &&
-                !intel_miptree_sample_with_hiz(brw, irb->mt))
-               aux_usage = ISL_AUX_USAGE_NONE;
-
+               intel_miptree_texture_aux_usage(brw, irb->mt, format);
             if (brw->draw_aux_buffer_disabled[i])
                aux_usage = ISL_AUX_USAGE_NONE;
 
