@@ -607,6 +607,32 @@ static const struct gen_device_info gen_device_info_glk_2x6 = {
    .is_geminilake = true,
 };
 
+static const struct gen_device_info gen_device_info_cfl_gt1 = {
+   GEN9_FEATURES,
+   .is_coffeelake = true,
+   .gt = 1,
+
+   .num_slices = 1,
+   .l3_banks = 2,
+};
+static const struct gen_device_info gen_device_info_cfl_gt2 = {
+   GEN9_FEATURES,
+   .is_coffeelake = true,
+   .gt = 2,
+
+   .num_slices = 1,
+   .l3_banks = 4,
+};
+
+static const struct gen_device_info gen_device_info_cfl_gt3 = {
+   GEN9_FEATURES,
+   .is_coffeelake = true,
+   .gt = 3,
+
+   .num_slices = 2,
+   .l3_banks = 8,
+};
+
 #define GEN10_HW_INFO                               \
    .gen = 10,                                       \
    .num_thread_per_eu = 7,                          \

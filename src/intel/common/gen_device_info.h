@@ -46,6 +46,7 @@ struct gen_device_info
    bool is_broxton;
    bool is_kabylake;
    bool is_geminilake;
+   bool is_coffeelake;
    bool is_cannonlake;
 
    bool has_hiz_and_separate_stencil;
