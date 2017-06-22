@@ -808,6 +808,15 @@ nir_visitor::visit(ir_call *ir)
       case ir_intrinsic_vote_eq:
          op = nir_intrinsic_vote_eq;
          break;
+      case ir_intrinsic_ballot:
+         op = nir_intrinsic_ballot;
+         break;
+      case ir_intrinsic_read_invocation:
+         op = nir_intrinsic_read_invocation;
+         break;
+      case ir_intrinsic_read_first_invocation:
+         op = nir_intrinsic_read_first_invocation;
+         break;
       default:
          unreachable("not reached");
       }
@@ -1150,6 +1159,42 @@ nir_visitor::visit(ir_call *ir)
          nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
 
          instr->variables[0] = evaluate_deref(&instr->instr, ir->return_deref);
+
+         ir_rvalue *value = (ir_rvalue *) ir->actual_parameters.get_head();
+         instr->src[0] = nir_src_for_ssa(evaluate_rvalue(value));
+
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      }
+
+      case nir_intrinsic_ballot: {
+         nir_ssa_dest_init(&instr->instr, &instr->dest,
+                           ir->return_deref->type->vector_elements, 64, NULL);
+
+         ir_rvalue *value = (ir_rvalue *) ir->actual_parameters.get_head();
+         instr->src[0] = nir_src_for_ssa(evaluate_rvalue(value));
+
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      }
+      case nir_intrinsic_read_invocation: {
+         nir_ssa_dest_init(&instr->instr, &instr->dest,
+                           ir->return_deref->type->vector_elements, 32, NULL);
+         instr->num_components = ir->return_deref->type->vector_elements;
+
+         ir_rvalue *value = (ir_rvalue *) ir->actual_parameters.get_head();
+         instr->src[0] = nir_src_for_ssa(evaluate_rvalue(value));
+
+         ir_rvalue *invocation = (ir_rvalue *) ir->actual_parameters.get_head()->next;
+         instr->src[1] = nir_src_for_ssa(evaluate_rvalue(invocation));
+
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      }
+      case nir_intrinsic_read_first_invocation: {
+         nir_ssa_dest_init(&instr->instr, &instr->dest,
+                           ir->return_deref->type->vector_elements, 32, NULL);
+         instr->num_components = ir->return_deref->type->vector_elements;
 
          ir_rvalue *value = (ir_rvalue *) ir->actual_parameters.get_head();
          instr->src[0] = nir_src_for_ssa(evaluate_rvalue(value));

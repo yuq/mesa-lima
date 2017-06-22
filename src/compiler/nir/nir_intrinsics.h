@@ -94,6 +94,19 @@ BARRIER(memory_barrier)
 INTRINSIC(shader_clock, 0, ARR(0), true, 2, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
 /*
+ * Shader ballot intrinsics with semantics analogous to the
+ *
+ *    ballotARB()
+ *    readInvocationARB()
+ *    readFirstInvocationARB()
+ *
+ * GLSL functions from ARB_shader_ballot.
+ */
+INTRINSIC(ballot, 1, ARR(1), true, 1, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(read_invocation, 2, ARR(0, 1), true, 0, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(read_first_invocation, 1, ARR(0), true, 0, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+
+/*
  * Memory barrier with semantics analogous to the compute shader
  * groupMemoryBarrier(), memoryBarrierAtomicCounter(), memoryBarrierBuffer(),
  * memoryBarrierImage() and memoryBarrierShared() GLSL intrinsics.
