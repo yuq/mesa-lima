@@ -520,6 +520,9 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
       assert(!color_aspect);
       return ISL_AUX_USAGE_HIZ;
+
+   case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
+      unreachable("VK_KHR_shared_presentable_image is unsupported");
    }
 
    /* If the layout isn't recognized in the exhaustive switch above, the
