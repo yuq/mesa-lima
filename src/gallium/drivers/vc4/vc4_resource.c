@@ -421,7 +421,7 @@ vc4_resource_get_handle(struct pipe_screen *pscreen,
 }
 
 static void
-vc4_setup_slices(struct vc4_resource *rsc)
+vc4_setup_slices(struct vc4_resource *rsc, const char *caller)
 {
         struct pipe_resource *prsc = &rsc->base;
         uint32_t width = prsc->width0;
@@ -487,9 +487,9 @@ vc4_setup_slices(struct vc4_resource *rsc)
                                 [VC4_TILING_FORMAT_T] = 'T'
                         };
                         fprintf(stderr,
-                                "rsc setup %p (format %s: vc4 %d), %dx%d: "
+                                "rsc %s %p (format %s: vc4 %d), %dx%d: "
                                 "level %d (%c) -> %dx%d, stride %d@0x%08x\n",
-                                rsc,
+                                caller, rsc,
                                 util_format_short_name(prsc->format),
                                 rsc->vc4_format,
                                 prsc->width0, prsc->height0,
@@ -586,7 +586,7 @@ vc4_resource_create(struct pipe_screen *pscreen,
         if (tmpl->target != PIPE_BUFFER)
                 rsc->vc4_format = get_resource_texture_format(prsc);
 
-        vc4_setup_slices(rsc);
+        vc4_setup_slices(rsc, "create");
         if (!vc4_resource_bo_alloc(rsc))
                 goto fail;
 
@@ -613,28 +613,9 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
         struct vc4_resource *rsc = vc4_resource_setup(pscreen, tmpl);
         struct pipe_resource *prsc = &rsc->base;
         struct vc4_resource_slice *slice = &rsc->slices[0];
-        uint32_t expected_stride =
-            align(prsc->width0, vc4_utile_width(rsc->cpp)) * rsc->cpp;
 
         if (!rsc)
                 return NULL;
-
-        if (whandle->stride != expected_stride) {
-                static bool warned = false;
-                if (!warned) {
-                        warned = true;
-                        fprintf(stderr,
-                                "Attempting to import %dx%d %s with "
-                                "unsupported stride %d instead of %d\n",
-                                prsc->width0, prsc->height0,
-                                util_format_short_name(prsc->format),
-                                whandle->stride,
-                                expected_stride);
-                }
-                goto fail;
-        }
-
-        rsc->tiled = false;
 
         if (whandle->offset != 0) {
                 fprintf(stderr,
@@ -661,10 +642,9 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
         if (!rsc->bo)
                 goto fail;
 
-        slice->stride = whandle->stride;
-        slice->tiling = VC4_TILING_FORMAT_LINEAR;
-
+        rsc->tiled = false;
         rsc->vc4_format = get_resource_texture_format(prsc);
+        vc4_setup_slices(rsc, "import");
 
         if (screen->ro) {
                 /* Make sure that renderonly has a handle to our buffer in the
@@ -678,13 +658,19 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
                         goto fail;
         }
 
-        if (vc4_debug & VC4_DEBUG_SURFACE) {
-                fprintf(stderr,
-                        "rsc import %p (format %d), %dx%d: "
-                        "level 0 (R) -> stride %d@0x%08x\n",
-                        rsc, rsc->vc4_format,
-                        prsc->width0, prsc->height0,
-                        slice->stride, slice->offset);
+        if (whandle->stride != slice->stride) {
+                static bool warned = false;
+                if (!warned) {
+                        warned = true;
+                        fprintf(stderr,
+                                "Attempting to import %dx%d %s with "
+                                "unsupported stride %d instead of %d\n",
+                                prsc->width0, prsc->height0,
+                                util_format_short_name(prsc->format),
+                                whandle->stride,
+                                slice->stride);
+                }
+                goto fail;
         }
 
         return prsc;
