@@ -243,6 +243,9 @@ static bool
 intel_miptree_supports_ccs_e(struct brw_context *brw,
                              const struct intel_mipmap_tree *mt)
 {
+   if (brw->gen < 9)
+      return false;
+
    /* For now compression is only enabled for integer formats even though
     * there exist supported floating point formats also. This is a heuristic
     * decision based on current public benchmarks. In none of the cases these
@@ -338,7 +341,6 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
    } else if (intel_tiling_supports_ccs(brw, mt->surf.tiling) &&
               intel_miptree_supports_ccs(brw, mt)) {
       if (!unlikely(INTEL_DEBUG & DEBUG_NO_RBC) &&
-          brw->gen >= 9 && !mt->is_scanout &&
           intel_miptree_supports_ccs_e(brw, mt)) {
          mt->aux_usage = ISL_AUX_USAGE_CCS_E;
       } else {
@@ -722,10 +724,8 @@ miptree_create(struct brw_context *brw,
 
    mt->etc_format = etc_format;
 
-   if (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT) {
+   if (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT)
       mt->bo->cache_coherent = false;
-      mt->is_scanout = true;
-   }
 
    if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
       intel_miptree_choose_aux_usage(brw, mt);

@@ -339,13 +339,6 @@ struct intel_mipmap_tree
     */
    union isl_color_value fast_clear_color;
 
-   /**
-    * Tells if the underlying buffer is to be also consumed by entities other
-    * than the driver. This allows logic to turn off features such as lossless
-    * compression which is not currently understood by client applications.
-    */
-   bool is_scanout;
-
    /* These are also refcounted:
     */
    GLuint refcount;
