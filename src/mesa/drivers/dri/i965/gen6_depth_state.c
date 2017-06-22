@@ -116,7 +116,7 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
    OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (7 - 2));
 
    /* 3DSTATE_DEPTH_BUFFER dw1 */
-   OUT_BATCH((depth_mt ? depth_mt->pitch - 1 : 0) |
+   OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch - 1 : 0) |
              (depthbuffer_format << 18) |
              ((enable_hiz_ss ? 1 : 0) << 21) | /* separate stencil enable */
              ((enable_hiz_ss ? 1 : 0) << 22) | /* hiz enable */

@@ -1034,7 +1034,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
 	      (rb->Height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
 
    surf[3] = (brw_get_surface_tiling_bits(mt->surf.tiling) |
-	      (mt->pitch - 1) << BRW_SURFACE_PITCH_SHIFT);
+	      (mt->surf.row_pitch - 1) << BRW_SURFACE_PITCH_SHIFT);
 
    surf[4] = brw_get_surface_num_multisamples(mt->surf.samples);
 

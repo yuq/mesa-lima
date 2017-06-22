@@ -131,7 +131,7 @@ set_blitter_tiling(struct brw_context *brw,
 static int
 blt_pitch(struct intel_mipmap_tree *mt)
 {
-   int pitch = mt->pitch;
+   int pitch = mt->surf.row_pitch;
    if (mt->surf.tiling != ISL_TILING_LINEAR)
       pitch /= 4;
    return pitch;
@@ -172,7 +172,7 @@ get_blit_intratile_offset_el(const struct brw_context *brw,
                              uint32_t *y_offset_el)
 {
    enum isl_tiling tiling = intel_miptree_get_isl_tiling(mt);
-   isl_tiling_get_intratile_offset_el(tiling, mt->cpp * 8, mt->pitch,
+   isl_tiling_get_intratile_offset_el(tiling, mt->cpp * 8, mt->surf.row_pitch,
                                       total_x_offset_el, total_y_offset_el,
                                       base_address_offset,
                                       x_offset_el, y_offset_el);
@@ -187,7 +187,7 @@ get_blit_intratile_offset_el(const struct brw_context *brw,
        * The offsets we get from ISL in the tiled case are already aligned.
        * In the linear case, we need to do some of our own aligning.
        */
-      assert(mt->pitch % 64 == 0);
+      assert(mt->surf.row_pitch % 64 == 0);
       uint32_t delta = *base_address_offset & 63;
       assert(delta % mt->cpp == 0);
       *base_address_offset -= delta;
@@ -251,10 +251,11 @@ emit_miptree_blit(struct brw_context *brw,
 
          if (!intelEmitCopyBlit(brw,
                                 src_mt->cpp,
-                                reverse ? -src_mt->pitch : src_mt->pitch,
+                                reverse ? -src_mt->surf.row_pitch :
+                                           src_mt->surf.row_pitch,
                                 src_mt->bo, src_mt->offset + src_offset,
                                 src_mt->surf.tiling,
-                                dst_mt->pitch,
+                                dst_mt->surf.row_pitch,
                                 dst_mt->bo, dst_mt->offset + dst_offset,
                                 dst_mt->surf.tiling,
                                 src_tile_x, src_tile_y,
@@ -772,7 +773,7 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
    uint32_t BR13, CMD;
    int pitch, cpp;
 
-   pitch = mt->pitch;
+   pitch = mt->surf.row_pitch;
    cpp = mt->cpp;
 
    DBG("%s dst:buf(%p)/%d %d,%d sz:%dx%d\n",

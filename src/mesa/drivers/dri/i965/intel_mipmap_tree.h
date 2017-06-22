@@ -320,17 +320,6 @@ struct intel_mipmap_tree
    struct brw_bo *bo;
 
    /**
-    * Pitch in bytes.
-    *
-    * @see RENDER_SURFACE_STATE.SurfacePitch
-    * @see RENDER_SURFACE_STATE.AuxiliarySurfacePitch
-    * @see 3DSTATE_DEPTH_BUFFER.SurfacePitch
-    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfacePitch
-    * @see 3DSTATE_STENCIL_BUFFER.SurfacePitch
-    */
-   uint32_t pitch;
-
-   /**
     * @brief One of GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY, etc.
     *
     * @see RENDER_SURFACE_STATE.SurfaceType

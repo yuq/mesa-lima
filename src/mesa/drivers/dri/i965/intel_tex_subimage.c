@@ -191,7 +191,7 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
       yoffset, yoffset + height,
       map,
       pixels - (ptrdiff_t) yoffset * src_pitch - (ptrdiff_t) xoffset * cpp,
-      image->mt->pitch, src_pitch,
+      image->mt->surf.row_pitch, src_pitch,
       brw->has_swizzling,
       image->mt->surf.tiling,
       mem_copy

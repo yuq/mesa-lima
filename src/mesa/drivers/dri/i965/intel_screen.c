@@ -412,7 +412,7 @@ intel_setup_image_from_mipmap_tree(struct brw_context *brw, __DRIimage *image,
 
    image->width = minify(mt->physical_width0, level - mt->first_level);
    image->height = minify(mt->physical_height0, level - mt->first_level);
-   image->pitch = mt->pitch;
+   image->pitch = mt->surf.row_pitch;
 
    image->offset = intel_miptree_get_tile_offsets(mt, level, zoffset,
                                                   &image->tile_x,
@@ -488,7 +488,7 @@ intel_create_image_from_renderbuffer(__DRIcontext *context,
    brw_bo_reference(irb->mt->bo);
    image->width = rb->Width;
    image->height = rb->Height;
-   image->pitch = irb->mt->pitch;
+   image->pitch = irb->mt->surf.row_pitch;
    image->dri_format = driGLFormatToImageFormat(image->format);
    image->has_depthstencil = irb->mt->stencil_mt? true : false;
 

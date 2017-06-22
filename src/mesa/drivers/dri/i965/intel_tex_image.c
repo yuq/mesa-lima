@@ -205,8 +205,8 @@ intel_set_texture_image_mt(struct brw_context *brw,
    brw->ctx.Driver.FreeTextureImageBuffer(&brw->ctx, image);
 
    intel_texobj->needs_validate = true;
-   intel_image->base.RowStride = mt->pitch / mt->cpp;
-   assert(mt->pitch % mt->cpp == 0);
+   intel_image->base.RowStride = mt->surf.row_pitch / mt->cpp;
+   assert(mt->surf.row_pitch % mt->cpp == 0);
 
    intel_miptree_reference(&intel_image->mt, mt);
 
@@ -264,7 +264,7 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
    mt = intel_miptree_create_for_bo(brw, rb->mt->bo, texFormat, 0,
                                     rb->Base.Base.Width,
                                     rb->Base.Base.Height,
-                                    1, rb->mt->pitch, 0);
+                                    1, rb->mt->surf.row_pitch, 0);
    if (mt == NULL)
        return;
    mt->target = target;
@@ -492,7 +492,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
       yoffset, yoffset + height,
       pixels - (ptrdiff_t) yoffset * dst_pitch - (ptrdiff_t) xoffset * cpp,
       map,
-      dst_pitch, image->mt->pitch,
+      dst_pitch, image->mt->surf.row_pitch,
       brw->has_swizzling,
       image->mt->surf.tiling,
       mem_copy
