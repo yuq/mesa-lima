@@ -1639,6 +1639,12 @@ get_image_num_layers(const struct intel_mipmap_tree *mt, GLenum target,
    if (target == GL_TEXTURE_CUBE_MAP)
       return 6;
 
+   if (mt->surf.size > 0) {
+      return target == GL_TEXTURE_3D ?
+         minify(mt->surf.logical_level0_px.depth, level) :
+         mt->surf.logical_level0_px.array_len;
+   }
+
    return target == GL_TEXTURE_3D ?
       minify(mt->logical_depth0, level) : mt->logical_depth0;
 }
