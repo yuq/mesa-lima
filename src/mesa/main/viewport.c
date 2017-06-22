@@ -119,6 +119,13 @@ viewport(struct gl_context *ctx, GLint x, GLint y, GLsizei width,
  * parameters.
  */
 void GLAPIENTRY
+_mesa_Viewport_no_error(GLint x, GLint y, GLsizei width, GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   viewport(ctx, x, y, width, height);
+}
+
+void GLAPIENTRY
 _mesa_Viewport(GLint x, GLint y, GLsizei width, GLsizei height)
 {
    GET_CURRENT_CONTEXT(ctx);
