@@ -2421,6 +2421,33 @@ can_texture_with_ccs(struct brw_context *brw,
    return true;
 }
 
+enum isl_aux_usage
+intel_miptree_texture_aux_usage(struct brw_context *brw,
+                                struct intel_mipmap_tree *mt,
+                                enum isl_format view_format)
+{
+   switch (mt->aux_usage) {
+   case ISL_AUX_USAGE_HIZ:
+      if (intel_miptree_sample_with_hiz(brw, mt))
+         return ISL_AUX_USAGE_HIZ;
+      break;
+
+   case ISL_AUX_USAGE_MCS:
+      return ISL_AUX_USAGE_MCS;
+
+   case ISL_AUX_USAGE_CCS_D:
+   case ISL_AUX_USAGE_CCS_E:
+      if (mt->mcs_buf && can_texture_with_ccs(brw, mt, view_format))
+         return ISL_AUX_USAGE_CCS_E;
+      break;
+
+   default:
+      break;
+   }
+
+   return ISL_AUX_USAGE_NONE;
+}
+
 static void
 intel_miptree_prepare_texture_slices(struct brw_context *brw,
                                      struct intel_mipmap_tree *mt,
@@ -2429,31 +2456,23 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
                                      uint32_t start_layer, uint32_t num_layers,
                                      bool *aux_supported_out)
 {
-   bool aux_supported, clear_supported;
-   if (_mesa_is_format_color_format(mt->format)) {
-      if (mt->surf.samples > 1) {
-         aux_supported = clear_supported = true;
-      } else {
-         aux_supported = can_texture_with_ccs(brw, mt, view_format);
-      }
+   enum isl_aux_usage aux_usage =
+      intel_miptree_texture_aux_usage(brw, mt, view_format);
+   bool clear_supported = aux_usage != ISL_AUX_USAGE_NONE;
 
-      /* Clear color is specified as ints or floats and the conversion is
-       * done by the sampler.  If we have a texture view, we would have to
-       * perform the clear color conversion manually.  Just disable clear
-       * color.
-       */
-      clear_supported = aux_supported && (mt->format == view_format);
-   } else if (mt->format == MESA_FORMAT_S_UINT8) {
-      aux_supported = clear_supported = false;
-   } else {
-      aux_supported = clear_supported = intel_miptree_sample_with_hiz(brw, mt);
-   }
+   /* Clear color is specified as ints or floats and the conversion is done by
+    * the sampler.  If we have a texture view, we would have to perform the
+    * clear color conversion manually.  Just disable clear color.
+    */
+   if (mt->format != view_format)
+      clear_supported = false;
 
    intel_miptree_prepare_access(brw, mt, start_level, num_levels,
                                 start_layer, num_layers,
-                                aux_supported, clear_supported);
+                                aux_usage != ISL_AUX_USAGE_NONE,
+                                clear_supported);
    if (aux_supported_out)
-      *aux_supported_out = aux_supported;
+      *aux_supported_out = aux_usage != ISL_AUX_USAGE_NONE;
 }
 
 void

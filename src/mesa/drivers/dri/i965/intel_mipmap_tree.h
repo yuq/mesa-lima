@@ -610,6 +610,10 @@ intel_miptree_access_raw(struct brw_context *brw,
       intel_miptree_finish_write(brw, mt, level, layer, 1, false);
 }
 
+enum isl_aux_usage
+intel_miptree_texture_aux_usage(struct brw_context *brw,
+                                struct intel_mipmap_tree *mt,
+                                enum isl_format view_format);
 void
 intel_miptree_prepare_texture(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
