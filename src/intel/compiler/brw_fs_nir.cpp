@@ -4103,6 +4103,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_load_subgroup_size:
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), brw_imm_d(dispatch_width));
+      break;
+
    case nir_intrinsic_load_subgroup_invocation: {
       fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UW);
       dest = retype(dest, BRW_REGISTER_TYPE_UD);
@@ -4117,6 +4121,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       bld.MOV(dest, tmp);
       break;
    }
+
+   case nir_intrinsic_load_subgroup_eq_mask:
+   case nir_intrinsic_load_subgroup_ge_mask:
+   case nir_intrinsic_load_subgroup_gt_mask:
+   case nir_intrinsic_load_subgroup_le_mask:
+   case nir_intrinsic_load_subgroup_lt_mask:
+      unreachable("not reached");
 
    case nir_intrinsic_vote_any: {
       const fs_builder ubld = bld.exec_all();
@@ -4168,6 +4179,41 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                     bld.SEL(dest, dest, brw_imm_d(0)));
       break;
    }
+
+   case nir_intrinsic_ballot: {
+      const fs_reg value = retype(get_nir_src(instr->src[0]),
+                                  BRW_REGISTER_TYPE_UD);
+      const struct brw_reg flag = retype(brw_flag_reg(0, 0),
+                                         BRW_REGISTER_TYPE_UD);
+
+      bld.exec_all().MOV(flag, brw_imm_ud(0u));
+      bld.CMP(bld.null_reg_ud(), value, brw_imm_ud(0u), BRW_CONDITIONAL_NZ);
+
+      dest.type = BRW_REGISTER_TYPE_UQ;
+      bld.MOV(dest, flag);
+      break;
+   }
+
+   case nir_intrinsic_read_invocation: {
+      const fs_reg value = get_nir_src(instr->src[0]);
+      const fs_reg invocation = get_nir_src(instr->src[1]);
+      fs_reg tmp = bld.vgrf(value.type);
+
+      bld.exec_all().emit(SHADER_OPCODE_BROADCAST, tmp, value,
+                          component(invocation, 0));
+
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
+              fs_reg(component(tmp, 0)));
+      break;
+   }
+
+   case nir_intrinsic_read_first_invocation: {
+      const fs_reg value = get_nir_src(instr->src[0]);
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
+              bld.emit_uniformize(value));
+      break;
+   }
+
    default:
       unreachable("unknown intrinsic");
    }
