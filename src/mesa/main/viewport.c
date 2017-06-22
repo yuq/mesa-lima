@@ -85,6 +85,32 @@ struct gl_depthrange_inputs {
    GLdouble Near, Far;          /**< Depth buffer range */
 };
 
+static void
+viewport(struct gl_context *ctx, GLint x, GLint y, GLsizei width,
+         GLsizei height)
+{
+   /* The GL_ARB_viewport_array spec says:
+    *
+    *     "Viewport sets the parameters for all viewports to the same values
+    *     and is equivalent (assuming no errors are generated) to:
+    *
+    *     for (uint i = 0; i < MAX_VIEWPORTS; i++)
+    *         ViewportIndexedf(i, 1, (float)x, (float)y, (float)w, (float)h);"
+    *
+    * Set all of the viewports supported by the implementation, but only
+    * signal the driver once at the end.
+    */
+   for (unsigned i = 0; i < ctx->Const.MaxViewports; i++)
+      set_viewport_no_notify(ctx, i, x, y, width, height);
+
+   if (ctx->Driver.Viewport) {
+      /* Many drivers will use this call to check for window size changes
+       * and reallocate the z/stencil/accum/etc buffers if needed.
+       */
+      ctx->Driver.Viewport(ctx);
+   }
+}
+
 /**
  * Set the viewport.
  * \sa Called via glViewport() or display list execution.
@@ -95,7 +121,6 @@ struct gl_depthrange_inputs {
 void GLAPIENTRY
 _mesa_Viewport(GLint x, GLint y, GLsizei width, GLsizei height)
 {
-   unsigned i;
    GET_CURRENT_CONTEXT(ctx);
    FLUSH_VERTICES(ctx, 0);
 
@@ -108,26 +133,7 @@ _mesa_Viewport(GLint x, GLint y, GLsizei width, GLsizei height)
       return;
    }
 
-   /* The GL_ARB_viewport_array spec says:
-    *
-    *     "Viewport sets the parameters for all viewports to the same values
-    *     and is equivalent (assuming no errors are generated) to:
-    *
-    *     for (uint i = 0; i < MAX_VIEWPORTS; i++)
-    *         ViewportIndexedf(i, 1, (float)x, (float)y, (float)w, (float)h);"
-    *
-    * Set all of the viewports supported by the implementation, but only
-    * signal the driver once at the end.
-    */
-   for (i = 0; i < ctx->Const.MaxViewports; i++)
-      set_viewport_no_notify(ctx, i, x, y, width, height);
-
-   if (ctx->Driver.Viewport) {
-      /* Many drivers will use this call to check for window size changes
-       * and reallocate the z/stencil/accum/etc buffers if needed.
-       */
-      ctx->Driver.Viewport(ctx);
-   }
+   viewport(ctx, x, y, width, height);
 }
 
 
