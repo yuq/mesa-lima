@@ -59,6 +59,24 @@ static enum etna_surface_layout modifier_to_layout(uint64_t modifier)
    }
 }
 
+static uint64_t layout_to_modifier(enum etna_surface_layout layout)
+{
+   switch (layout) {
+   case ETNA_LAYOUT_TILED:
+      return DRM_FORMAT_MOD_VIVANTE_TILED;
+   case ETNA_LAYOUT_SUPER_TILED:
+      return DRM_FORMAT_MOD_VIVANTE_SUPER_TILED;
+   case ETNA_LAYOUT_MULTI_TILED:
+      return DRM_FORMAT_MOD_VIVANTE_SPLIT_TILED;
+   case ETNA_LAYOUT_MULTI_SUPERTILED:
+      return DRM_FORMAT_MOD_VIVANTE_SPLIT_SUPER_TILED;
+   case ETNA_LAYOUT_LINEAR:
+      return DRM_FORMAT_MOD_LINEAR;
+   default:
+      return DRM_FORMAT_MOD_INVALID;
+   }
+}
+
 /* A tile is 4x4 pixels, having 'screen->specs.bits_per_tile' of tile status.
  * So, in a buffer of N pixels, there are N / (4 * 4) tiles.
  * We need N * screen->specs.bits_per_tile / (4 * 4) bits of tile status, or
@@ -480,6 +498,7 @@ etna_resource_get_handle(struct pipe_screen *pscreen,
       rsc = etna_resource(rsc->external);
 
    handle->stride = rsc->levels[0].stride;
+   handle->modifier = layout_to_modifier(rsc->layout);
 
    if (handle->type == DRM_API_HANDLE_TYPE_SHARED) {
       return etna_bo_get_name(rsc->bo, &handle->handle) == 0;
