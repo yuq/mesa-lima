@@ -40,9 +40,10 @@
 #include "svga_screen.h"
 
 
-static void svga_set_vertex_buffers(struct pipe_context *pipe,
-                                    unsigned start_slot, unsigned count,
-                                    const struct pipe_vertex_buffer *buffers)
+static void
+svga_set_vertex_buffers(struct pipe_context *pipe,
+                        unsigned start_slot, unsigned count,
+                        const struct pipe_vertex_buffer *buffers)
 {
    struct svga_context *svga = svga_context(pipe);
 
@@ -314,10 +315,12 @@ svga_delete_vertex_elements_state(struct pipe_context *pipe, void *state)
    svga->hud.num_vertexelement_objects--;
 }
 
-void svga_cleanup_vertex_state( struct svga_context *svga )
+
+void
+svga_cleanup_vertex_state(struct svga_context *svga)
 {
    unsigned i;
-   
+
    for (i = 0 ; i < svga->curr.num_vertex_buffers; i++)
       pipe_vertex_buffer_unreference(&svga->curr.vb[i]);
 
@@ -328,7 +331,8 @@ void svga_cleanup_vertex_state( struct svga_context *svga )
 }
 
 
-void svga_init_vertex_functions( struct svga_context *svga )
+void
+svga_init_vertex_functions(struct svga_context *svga)
 {
    svga->pipe.set_vertex_buffers = svga_set_vertex_buffers;
    svga->pipe.create_vertex_elements_state = svga_create_vertex_elements_state;
