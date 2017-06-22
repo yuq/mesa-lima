@@ -4103,7 +4103,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
-   case nir_intrinsic_load_channel_num: {
+   case nir_intrinsic_load_subgroup_invocation: {
       fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UW);
       dest = retype(dest, BRW_REGISTER_TYPE_UD);
       const fs_builder allbld8 = bld.group(8, 0).exec_all();

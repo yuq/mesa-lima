@@ -1822,6 +1822,7 @@ typedef struct nir_shader_compiler_options {
    bool lower_extract_word;
 
    bool lower_vote_trivial;
+   bool lower_subgroup_masks;
 
    /**
     * Does the driver support real 32-bit integers?  (Otherwise, integers

@@ -88,10 +88,10 @@ lower_cs_intrinsics_convert_block(struct lower_intrinsics_state *state,
          /* We construct the local invocation index from:
           *
           *    gl_LocalInvocationIndex =
-          *       cs_thread_local_id + channel_num;
+          *       cs_thread_local_id + subgroup_invocation;
           */
          nir_ssa_def *thread_local_id = read_thread_local_id(state);
-         nir_ssa_def *channel = nir_load_channel_num(b);
+         nir_ssa_def *channel = nir_load_subgroup_invocation(b);
          sysval = nir_iadd(b, channel, thread_local_id);
          break;
       }

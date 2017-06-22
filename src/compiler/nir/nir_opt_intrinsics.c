@@ -62,6 +62,37 @@ opt_intrinsics_impl(nir_function_impl *impl)
             replacement = nir_imm_int(&b, NIR_TRUE);
             break;
          }
+         case nir_intrinsic_load_subgroup_eq_mask:
+         case nir_intrinsic_load_subgroup_ge_mask:
+         case nir_intrinsic_load_subgroup_gt_mask:
+         case nir_intrinsic_load_subgroup_le_mask:
+         case nir_intrinsic_load_subgroup_lt_mask: {
+            if (!b.shader->options->lower_subgroup_masks)
+               break;
+
+            nir_ssa_def *count = nir_load_subgroup_invocation(&b);
+
+            switch (intrin->intrinsic) {
+            case nir_intrinsic_load_subgroup_eq_mask:
+               replacement = nir_ishl(&b, nir_imm_int64(&b, 1ull), count);
+               break;
+            case nir_intrinsic_load_subgroup_ge_mask:
+               replacement = nir_ishl(&b, nir_imm_int64(&b, ~0ull), count);
+               break;
+            case nir_intrinsic_load_subgroup_gt_mask:
+               replacement = nir_ishl(&b, nir_imm_int64(&b, ~1ull), count);
+               break;
+            case nir_intrinsic_load_subgroup_le_mask:
+               replacement = nir_inot(&b, nir_ishl(&b, nir_imm_int64(&b, ~1ull), count));
+               break;
+            case nir_intrinsic_load_subgroup_lt_mask:
+               replacement = nir_inot(&b, nir_ishl(&b, nir_imm_int64(&b, ~0ull), count));
+               break;
+            default:
+               unreachable("you seriously can't tell this is unreachable?");
+            }
+            break;
+         }
          default:
             break;
          }
