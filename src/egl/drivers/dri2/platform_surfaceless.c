@@ -201,11 +201,10 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
       { "RGB565",   { 0x00f800, 0x07e0, 0x1f, 0x0 } },
    };
    unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
-   unsigned int count, i, j;
+   unsigned int count = 0;
 
-   count = 0;
-   for (i = 0; dri2_dpy->driver_configs[i] != NULL; i++) {
-      for (j = 0; j < ARRAY_SIZE(visuals); j++) {
+   for (unsigned i = 0; dri2_dpy->driver_configs[i] != NULL; i++) {
+      for (unsigned j = 0; j < ARRAY_SIZE(visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
          dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[i],
@@ -219,7 +218,7 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
       }
    }
 
-   for (i = 0; i < ARRAY_SIZE(format_count); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(format_count); i++) {
       if (!format_count[i]) {
          _eglLog(_EGL_DEBUG, "No DRI config supports native format %s",
                visuals[i].format_name);
@@ -272,7 +271,6 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy;
    const char* err;
-   int i;
    int driver_loaded = 0;
 
    loader_set_logger(_eglLog);
@@ -286,7 +284,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
 
    const int limit = 64;
    const int base = 128;
-   for (i = 0; i < limit; ++i) {
+   for (int i = 0; i < limit; ++i) {
       char *card_path;
       if (asprintf(&card_path, DRM_RENDER_DEV_NAME, DRM_DIR_NAME, base + i) < 0)
          continue;
