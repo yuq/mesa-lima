@@ -442,14 +442,13 @@ dri2_x11_process_buffers(struct dri2_egl_surface *dri2_surf,
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
    xcb_rectangle_t rectangle;
-   unsigned i;
 
    dri2_surf->buffer_count = count;
    dri2_surf->have_fake_front = false;
 
    /* This assumes the DRI2 buffer attachment tokens matches the
     * __DRIbuffer tokens. */
-   for (i = 0; i < count; i++) {
+   for (unsigned i = 0; i < count; i++) {
       dri2_surf->buffers[i].attachment = buffers[i].attachment;
       dri2_surf->buffers[i].name = buffers[i].name;
       dri2_surf->buffers[i].pitch = buffers[i].pitch;
@@ -730,7 +729,7 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
 {
    xcb_depth_iterator_t d;
    xcb_visualtype_t *visuals;
-   int i, j, count;
+   int count = 0;
    unsigned int rgba_masks[4];
    EGLint surface_type;
    EGLint config_attrs[] = {
@@ -740,7 +739,6 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
    };
 
    d = xcb_screen_allowed_depths_iterator(dri2_dpy->screen);
-   count = 0;
 
    surface_type =
       EGL_WINDOW_BIT |
@@ -754,12 +752,14 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
       EGLBoolean class_added[6] = { 0, };
 
       visuals = xcb_depth_visuals(d.data);
-      for (i = 0; i < xcb_depth_visuals_length(d.data); i++) {
+
+      for (int i = 0; i < xcb_depth_visuals_length(d.data); i++) {
 	 if (class_added[visuals[i]._class])
 	    continue;
 
 	 class_added[visuals[i]._class] = EGL_TRUE;
-	 for (j = 0; dri2_dpy->driver_configs[j]; j++) {
+
+	 for (int j = 0; dri2_dpy->driver_configs[j]; j++) {
             struct dri2_egl_config *dri2_conf;
             const __DRIconfig *config = dri2_dpy->driver_configs[j];
 
@@ -916,12 +916,11 @@ dri2_x11_swap_buffers_region(_EGLDriver *drv, _EGLDisplay *disp,
    EGLBoolean ret;
    xcb_xfixes_region_t region;
    xcb_rectangle_t rectangles[16];
-   int i;
 
    if (numRects > (int)ARRAY_SIZE(rectangles))
       return dri2_copy_region(drv, disp, draw, dri2_surf->region);
 
-   for (i = 0; i < numRects; i++) {
+   for (int i = 0; i < numRects; i++) {
       rectangles[i].x = rects[i * 4];
       rectangles[i].y = dri2_surf->base.Height - rects[i * 4 + 1] - rects[i * 4 + 3];
       rectangles[i].width = rects[i * 4 + 2];
