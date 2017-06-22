@@ -40,9 +40,6 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
                        GLfloat x, GLfloat y,
                        GLfloat width, GLfloat height)
 {
-   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewViewport ? 0 : _NEW_VIEWPORT);
-   ctx->NewDriverState |= ctx->DriverFlags.NewViewport;
-
    /* clamp width and height to the implementation dependent range */
    width  = MIN2(width, (GLfloat) ctx->Const.MaxViewportWidth);
    height = MIN2(height, (GLfloat) ctx->Const.MaxViewportHeight);
@@ -69,6 +66,9 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
        ctx->ViewportArray[idx].Y == y &&
        ctx->ViewportArray[idx].Height == height)
       return;
+
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewViewport ? 0 : _NEW_VIEWPORT);
+   ctx->NewDriverState |= ctx->DriverFlags.NewViewport;
 
    ctx->ViewportArray[idx].X = x;
    ctx->ViewportArray[idx].Width = width;
