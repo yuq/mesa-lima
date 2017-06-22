@@ -798,6 +798,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    mt->target = target;
    mt->format = format;
    mt->aux_state = NULL;
+   mt->cpp = isl_format_get_layout(mt->surf.format)->bpb / 8;
 
    return mt;
 
