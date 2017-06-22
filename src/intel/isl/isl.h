@@ -1499,6 +1499,14 @@ isl_format_block_is_1x1x1(enum isl_format fmt)
 }
 
 static inline bool
+isl_format_is_srgb(enum isl_format fmt)
+{
+   return isl_format_layouts[fmt].colorspace == ISL_COLORSPACE_SRGB;
+}
+
+enum isl_format isl_format_srgb_to_linear(enum isl_format fmt);
+
+static inline bool
 isl_format_is_rgb(enum isl_format fmt)
 {
    return isl_format_layouts[fmt].channels.r.bits > 0 &&

@@ -88,6 +88,19 @@ isl_format_layouts[] = {
 
 % endfor
 };
+
+enum isl_format
+isl_format_srgb_to_linear(enum isl_format format)
+{
+    switch (format) {
+% for srgb, rgb in srgb_to_linear_map:
+    case ISL_FORMAT_${srgb}:
+        return ISL_FORMAT_${rgb};
+%endfor
+    default:
+        return format;
+    }
+}
 """)
 
 
@@ -167,6 +180,34 @@ def reader(csvfile):
             if line and not line[0].startswith('#'):
                 yield line
 
+def get_srgb_to_linear_map(formats):
+    """Compute a map from sRGB to linear formats.
+
+    This function uses some probably somewhat fragile string munging to do
+    the conversion.  However, we do assert that, if it's SRGB, the munging
+    succeeded so that gives some safety.
+    """
+    names = {f.name for f in formats}
+    for fmt in formats:
+        if fmt.colorspace != 'SRGB':
+            continue
+
+        replacements = [
+            ('_SRGB',   ''),
+            ('SRGB',    'RGB'),
+            ('U8SRGB',  'FLT16'),
+        ]
+
+        found = False;
+        for rep in replacements:
+            rgb_name = fmt.name.replace(rep[0], rep[1])
+            if rgb_name in names:
+                found = True
+                yield fmt.name, rgb_name
+                break;
+
+        # We should have found a format name
+        assert found
 
 def main():
     """Main function."""
@@ -183,11 +224,14 @@ def main():
     # problem: Unicode can be rendered even if the shell calling this script
     # doesn't.
     with open(args.out, 'wb') as f:
+        formats = [Format(l) for l in reader(args.csv)]
         try:
             # This basically does lazy evaluation and initialization, which
             # saves on memory and startup overhead.
             f.write(TEMPLATE.render(
-                formats=(Format(l) for l in reader(args.csv))))
+                formats             = formats,
+                srgb_to_linear_map  = list(get_srgb_to_linear_map(formats)),
+            ))
         except Exception:
             # In the even there's an error this imports some helpers from mako
             # to print a useful stack trace and prints it, then exits with
