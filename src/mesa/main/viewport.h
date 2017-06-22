@@ -37,8 +37,15 @@ _mesa_Viewport(GLint x, GLint y, GLsizei width, GLsizei height);
 extern void GLAPIENTRY
 _mesa_ViewportArrayv(GLuint first, GLsizei count, const GLfloat * v);
 
+void GLAPIENTRY
+_mesa_ViewportIndexedf_no_error(GLuint index, GLfloat x, GLfloat y, GLfloat w,
+                                GLfloat h);
+
 extern void GLAPIENTRY
 _mesa_ViewportIndexedf(GLuint index, GLfloat x, GLfloat y, GLfloat w, GLfloat h);
+
+void GLAPIENTRY
+_mesa_ViewportIndexedfv_no_error(GLuint index, const GLfloat * v);
 
 extern void GLAPIENTRY
 _mesa_ViewportIndexedfv(GLuint index, const GLfloat * v);

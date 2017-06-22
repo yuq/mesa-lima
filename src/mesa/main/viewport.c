@@ -220,11 +220,26 @@ viewport_indexed_err(struct gl_context *ctx, GLuint index, GLfloat x, GLfloat y,
 }
 
 void GLAPIENTRY
+_mesa_ViewportIndexedf_no_error(GLuint index, GLfloat x, GLfloat y,
+                                GLfloat w, GLfloat h)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_set_viewport(ctx, index, x, y, w, h);
+}
+
+void GLAPIENTRY
 _mesa_ViewportIndexedf(GLuint index, GLfloat x, GLfloat y,
                        GLfloat w, GLfloat h)
 {
    GET_CURRENT_CONTEXT(ctx);
    viewport_indexed_err(ctx, index, x, y, w, h, "glViewportIndexedf");
+}
+
+void GLAPIENTRY
+_mesa_ViewportIndexedfv_no_error(GLuint index, const GLfloat *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_set_viewport(ctx, index, v[0], v[1], v[2], v[3]);
 }
 
 void GLAPIENTRY
