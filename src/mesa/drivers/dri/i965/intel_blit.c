@@ -406,10 +406,22 @@ intel_miptree_copy(struct brw_context *brw,
        */
       assert(src_x % bw == 0);
       assert(src_y % bh == 0);
-      assert(src_width % bw == 0 ||
-             src_x + src_width == minify(src_mt->logical_width0, src_level));
-      assert(src_height % bh == 0 ||
-             src_y + src_height == minify(src_mt->logical_height0, src_level));
+
+      if (src_mt->surf.size > 0) {
+         assert(src_width % bw == 0 ||
+                src_x + src_width ==
+                minify(src_mt->surf.logical_level0_px.width, src_level));
+         assert(src_height % bh == 0 ||
+                src_y + src_height ==
+                minify(src_mt->surf.logical_level0_px.height, src_level));
+      } else {
+         assert(src_width % bw == 0 ||
+                src_x + src_width ==
+                minify(src_mt->logical_width0, src_level));
+         assert(src_height % bh == 0 ||
+                src_y + src_height ==
+                minify(src_mt->logical_height0, src_level));
+      }
 
       src_x /= (int)bw;
       src_y /= (int)bh;
