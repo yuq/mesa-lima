@@ -111,7 +111,7 @@ swrastGetDrawableInfo(__DRIdrawable * draw,
    xcb_get_geometry_reply_t *reply;
    xcb_generic_error_t *error;
 
-   *w = *h = 0;
+   *x = *y = *w = *h = 0;
    cookie = xcb_get_geometry (dri2_dpy->conn, dri2_surf->drawable);
    reply = xcb_get_geometry_reply (dri2_dpy->conn, cookie, &error);
    if (reply == NULL)
@@ -121,6 +121,8 @@ swrastGetDrawableInfo(__DRIdrawable * draw,
       _eglLog(_EGL_WARNING, "error in xcb_get_geometry");
       free(error);
    } else {
+      *x = reply->x;
+      *y = reply->y;
       *w = reply->width;
       *h = reply->height;
    }
