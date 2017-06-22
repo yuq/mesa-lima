@@ -2464,18 +2464,15 @@ intel_miptree_set_aux_state(struct brw_context *brw,
 static bool
 can_texture_with_ccs(struct brw_context *brw,
                      struct intel_mipmap_tree *mt,
-                     mesa_format view_format)
+                     enum isl_format view_format)
 {
    if (mt->aux_usage != ISL_AUX_USAGE_CCS_E)
       return false;
 
-   enum isl_format isl_mt_format = brw_isl_format_for_mesa_format(mt->format);
-   enum isl_format isl_view_format = brw_isl_format_for_mesa_format(view_format);
-
    if (!isl_formats_are_ccs_e_compatible(&brw->screen->devinfo,
-                                         isl_mt_format, isl_view_format)) {
+                                         mt->surf.format, view_format)) {
       perf_debug("Incompatible sampling format (%s) for rbc (%s)\n",
-                 _mesa_get_format_name(view_format),
+                 isl_format_get_layout(view_format)->name,
                  _mesa_get_format_name(mt->format));
       return false;
    }
@@ -2513,7 +2510,7 @@ intel_miptree_texture_aux_usage(struct brw_context *brw,
 static void
 intel_miptree_prepare_texture_slices(struct brw_context *brw,
                                      struct intel_mipmap_tree *mt,
-                                     mesa_format view_format,
+                                     enum isl_format view_format,
                                      uint32_t start_level, uint32_t num_levels,
                                      uint32_t start_layer, uint32_t num_layers,
                                      bool *aux_supported_out)
@@ -2526,7 +2523,7 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
     * the sampler.  If we have a texture view, we would have to perform the
     * clear color conversion manually.  Just disable clear color.
     */
-   if (mt->format != view_format)
+   if (mt->surf.format != view_format)
       clear_supported = false;
 
    intel_miptree_prepare_access(brw, mt, start_level, num_levels,
@@ -2539,7 +2536,7 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
 void
 intel_miptree_prepare_texture(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
-                              mesa_format view_format,
+                              enum isl_format view_format,
                               bool *aux_supported_out)
 {
    intel_miptree_prepare_texture_slices(brw, mt, view_format,
@@ -2563,7 +2560,7 @@ intel_miptree_prepare_fb_fetch(struct brw_context *brw,
                                struct intel_mipmap_tree *mt, uint32_t level,
                                uint32_t start_layer, uint32_t num_layers)
 {
-   intel_miptree_prepare_texture_slices(brw, mt, mt->format, level, 1,
+   intel_miptree_prepare_texture_slices(brw, mt, mt->surf.format, level, 1,
                                         start_layer, num_layers, NULL);
 }
 

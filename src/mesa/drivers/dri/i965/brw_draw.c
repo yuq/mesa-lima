@@ -383,8 +383,12 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
       if (!tex_obj || !tex_obj->mt)
 	 continue;
 
+      struct gl_sampler_object *sampler = _mesa_get_samplerobj(ctx, i);
+      enum isl_format view_format =
+         translate_tex_format(brw, tex_obj->_Format, sampler->sRGBDecode);
+
       bool aux_supported;
-      intel_miptree_prepare_texture(brw, tex_obj->mt, tex_obj->_Format,
+      intel_miptree_prepare_texture(brw, tex_obj->mt, view_format,
                                     &aux_supported);
 
       if (!aux_supported && brw->gen >= 9 &&

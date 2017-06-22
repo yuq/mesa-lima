@@ -618,7 +618,7 @@ intel_miptree_texture_aux_usage(struct brw_context *brw,
 void
 intel_miptree_prepare_texture(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
-                              mesa_format view_format,
+                              enum isl_format view_format,
                               bool *aux_supported_out);
 void
 intel_miptree_prepare_image(struct brw_context *brw,
