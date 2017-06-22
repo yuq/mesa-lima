@@ -1006,6 +1006,12 @@ void
 _mesa_flush_vertices_for_uniforms(struct gl_context *ctx,
                                   const struct gl_uniform_storage *uni)
 {
+   /* Opaque uniforms have no storage unless they are bindless */
+   if (!uni->is_bindless && uni->type->contains_opaque()) {
+      FLUSH_VERTICES(ctx, 0);
+      return;
+   }
+
    uint64_t new_driver_state = 0;
    unsigned mask = uni->active_shader_mask;
 
