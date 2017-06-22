@@ -195,16 +195,15 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    _EGLConfig *matching_config;
    EGLint num_configs = 0;
    EGLint config_id;
-   int i;
 
    _eglInitConfig(&base, disp, id);
 
-   i = 0;
    double_buffer = 0;
    bind_to_texture_rgb = 0;
    bind_to_texture_rgba = 0;
 
-   while (dri2_dpy->core->indexConfigAttrib(dri_config, i++, &attrib, &value)) {
+   for (int i = 0; dri2_dpy->core->indexConfigAttrib(dri_config, i, &attrib,
+                                                     &value); ++i) {
       switch (attrib) {
       case __DRI_ATTRIB_RENDER_TYPE:
          if (value & __DRI_ATTRIB_RGBA_BIT)
@@ -287,7 +286,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    }
 
    if (attr_list)
-      for (i = 0; attr_list[i] != EGL_NONE; i += 2)
+      for (int i = 0; attr_list[i] != EGL_NONE; i += 2)
          _eglSetConfigKey(&base, attr_list[i], attr_list[i+1]);
 
    if (rgba_masks && memcmp(rgba_masks, dri_masks, sizeof(dri_masks)))
@@ -442,12 +441,12 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
                      const __DRIextension **extensions,
                      bool optional)
 {
-   int i, j, ret = EGL_TRUE;
+   int ret = EGL_TRUE;
    void *field;
 
-   for (i = 0; extensions[i]; i++) {
+   for (int i = 0; extensions[i]; i++) {
       _eglLog(_EGL_DEBUG, "found extension `%s'", extensions[i]->name);
-      for (j = 0; matches[j].name; j++) {
+      for (int j = 0; matches[j].name; j++) {
          if (strcmp(extensions[i]->name, matches[j].name) == 0 &&
              extensions[i]->version >= matches[j].version) {
             field = ((char *) dri2_dpy + matches[j].offset);
@@ -459,7 +458,7 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
       }
    }
 
-   for (j = 0; matches[j].name; j++) {
+   for (int j = 0; matches[j].name; j++) {
       field = ((char *) dri2_dpy + matches[j].offset);
       if (*(const __DRIextension **) field == NULL) {
          if (optional) {
@@ -481,7 +480,7 @@ dri2_open_driver(_EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    const __DRIextension **extensions = NULL;
-   char path[PATH_MAX], *search_paths, *p, *next, *end;
+   char path[PATH_MAX], *search_paths, *next, *end;
    char *get_extensions_name;
    const __DRIextension **(*get_extensions)(void);
 
@@ -495,7 +494,7 @@ dri2_open_driver(_EGLDisplay *disp)
 
    dri2_dpy->driver = NULL;
    end = search_paths + strlen(search_paths);
-   for (p = search_paths; p < end; p = next + 1) {
+   for (char *p = search_paths; p < end; p = next + 1) {
       int len;
       next = strchr(p, ':');
       if (next == NULL)
@@ -911,7 +910,6 @@ void
 dri2_display_destroy(_EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   unsigned i;
 
    if (dri2_dpy->own_dri_screen)
       dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
@@ -963,7 +961,7 @@ dri2_display_destroy(_EGLDisplay *disp)
     * for the cleanup.
     */
    if (disp->Platform != _EGL_PLATFORM_DRM && dri2_dpy->driver_configs) {
-      for (i = 0; dri2_dpy->driver_configs[i]; i++)
+      for (unsigned i = 0; dri2_dpy->driver_configs[i]; i++)
          free((__DRIconfig *) dri2_dpy->driver_configs[i]);
       free(dri2_dpy->driver_configs);
    }
@@ -1961,8 +1959,6 @@ dri2_create_image_mesa_drm_buffer(_EGLDisplay *disp, _EGLContext *ctx,
 static EGLBoolean
 dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
 {
-   unsigned i;
-
    /**
      * The spec says:
      *
@@ -1992,7 +1988,7 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
     *  specified for a plane's pitch or offset isn't supported by EGL,
     *  EGL_BAD_ACCESS is generated."
     */
-   for (i = 0; i < ARRAY_SIZE(attrs->DMABufPlanePitches); ++i) {
+   for (unsigned i = 0; i < ARRAY_SIZE(attrs->DMABufPlanePitches); ++i) {
       if (attrs->DMABufPlanePitches[i].IsPresent &&
           attrs->DMABufPlanePitches[i].Value <= 0) {
          _eglError(EGL_BAD_ACCESS, "invalid pitch");
@@ -2007,7 +2003,7 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
     * This is referring to EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT and
     * EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, and the same for other planes.
     */
-   for (i = 0; i < DMA_BUF_MAX_PLANES; ++i) {
+   for (unsigned i = 0; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneModifiersLo[i].IsPresent !=
           attrs->DMABufPlaneModifiersHi[i].IsPresent) {
          _eglError(EGL_BAD_PARAMETER, "modifier attribute lo or hi missing");
@@ -2017,7 +2013,7 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
 
    /* Although the EGL_EXT_image_dma_buf_import_modifiers spec doesn't
     * mandate it, we only accept the same modifier across all planes. */
-   for (i = 1; i < DMA_BUF_MAX_PLANES; ++i) {
+   for (unsigned i = 1; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneFds[i].IsPresent) {
          if ((attrs->DMABufPlaneModifiersLo[0].IsPresent !=
                attrs->DMABufPlaneModifiersLo[i].IsPresent) ||
@@ -2038,7 +2034,7 @@ dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
 static unsigned
 dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
 {
-   unsigned i, plane_n;
+   unsigned plane_n;
 
    switch (attrs->DMABufFourCC.Value) {
    case DRM_FORMAT_R8:
@@ -2119,7 +2115,7 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
      * "* If <target> is EGL_LINUX_DMA_BUF_EXT, and the list of attributes is
      *    incomplete, EGL_BAD_PARAMETER is generated."
      */
-   for (i = 0; i < plane_n; ++i) {
+   for (unsigned i = 0; i < plane_n; ++i) {
       if (!attrs->DMABufPlaneFds[i].IsPresent ||
           !attrs->DMABufPlaneOffsets[i].IsPresent ||
           !attrs->DMABufPlanePitches[i].IsPresent) {
@@ -2136,7 +2132,7 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
     *  generated if any of the EGL_DMA_BUF_PLANE1_* or EGL_DMA_BUF_PLANE2_*
     *  or EGL_DMA_BUF_PLANE3_* attributes are specified."
     */
-   for (i = plane_n; i < DMA_BUF_MAX_PLANES; ++i) {
+   for (unsigned i = plane_n; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneFds[i].IsPresent ||
           attrs->DMABufPlaneOffsets[i].IsPresent ||
           attrs->DMABufPlanePitches[i].IsPresent ||
@@ -2239,7 +2235,6 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
    _EGLImageAttribs attrs;
    __DRIimage *dri_image;
    unsigned num_fds;
-   unsigned i;
    int fds[DMA_BUF_MAX_PLANES];
    int pitches[DMA_BUF_MAX_PLANES];
    int offsets[DMA_BUF_MAX_PLANES];
@@ -2271,7 +2266,7 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
    if (!num_fds)
       return NULL;
 
-   for (i = 0; i < num_fds; ++i) {
+   for (unsigned i = 0; i < num_fds; ++i) {
       fds[i] = attrs.DMABufPlaneFds[i].Value;
       pitches[i] = attrs.DMABufPlanePitches[i].Value;
       offsets[i] = attrs.DMABufPlaneOffsets[i].Value;
@@ -2560,7 +2555,7 @@ dri2_wl_reference_buffer(void *user_data, uint32_t name, int fd,
    _EGLDisplay *disp = user_data;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    __DRIimage *img;
-   int i, dri_components = 0;
+   int dri_components = 0;
 
    if (fd == -1)
       img = dri2_dpy->image->createImageFromNames(dri2_dpy->dri_screen,
@@ -2587,7 +2582,7 @@ dri2_wl_reference_buffer(void *user_data, uint32_t name, int fd,
    dri2_dpy->image->queryImage(img, __DRI_IMAGE_ATTRIB_COMPONENTS, &dri_components);
 
    buffer->driver_format = NULL;
-   for (i = 0; i < ARRAY_SIZE(wl_drm_components); i++)
+   for (int i = 0; i < ARRAY_SIZE(wl_drm_components); i++)
       if (wl_drm_components[i].dri_components == dri_components)
          buffer->driver_format = &wl_drm_components[i];
 
