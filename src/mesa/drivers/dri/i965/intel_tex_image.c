@@ -198,9 +198,16 @@ intel_set_texture_image_mt(struct brw_context *brw,
    struct intel_texture_object *intel_texobj = intel_texture_object(texobj);
    struct intel_texture_image *intel_image = intel_texture_image(image);
 
-   _mesa_init_teximage_fields(&brw->ctx, image,
-			      mt->logical_width0, mt->logical_height0, 1,
-			      0, internal_format, mt->format);
+   if (mt->surf.size > 0) {
+      _mesa_init_teximage_fields(&brw->ctx, image,
+                                 mt->surf.logical_level0_px.width,
+                                 mt->surf.logical_level0_px.height, 1,
+                                 0, internal_format, mt->format);
+   } else {
+      _mesa_init_teximage_fields(&brw->ctx, image,
+                                 mt->logical_width0, mt->logical_height0, 1,
+                                 0, internal_format, mt->format);
+   }
 
    brw->ctx.Driver.FreeTextureImageBuffer(&brw->ctx, image);
 
@@ -455,7 +462,12 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
    /* Since we are going to write raw data to the miptree, we need to resolve
     * any pending fast color clears before we start.
     */
-   assert(image->mt->logical_depth0 == 1);
+   if (image->mt->surf.size > 0) {
+      assert(image->mt->surf.logical_level0_px.depth == 1);
+      assert(image->mt->surf.logical_level0_px.array_len == 1);
+   } else {
+      assert(image->mt->logical_depth0 == 1);
+   }
    intel_miptree_access_raw(brw, image->mt, level, 0, true);
 
    bo = image->mt->bo;

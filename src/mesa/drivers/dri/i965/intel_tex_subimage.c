@@ -150,7 +150,13 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
    /* Since we are going to write raw data to the miptree, we need to resolve
     * any pending fast color clears before we start.
     */
-   assert(image->mt->logical_depth0 == 1);
+   if (image->mt->surf.size > 0) {
+      assert(image->mt->surf.logical_level0_px.depth == 1);
+      assert(image->mt->surf.logical_level0_px.array_len == 1);
+   } else {
+      assert(image->mt->logical_depth0 == 1);
+   }
+
    intel_miptree_access_raw(brw, image->mt, level, 0, true);
 
    bo = image->mt->bo;
