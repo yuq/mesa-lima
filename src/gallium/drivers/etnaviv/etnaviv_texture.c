@@ -113,16 +113,24 @@ etna_delete_sampler_state(struct pipe_context *pctx, void *ss)
 static void
 etna_update_sampler_source(struct pipe_sampler_view *view)
 {
-   struct etna_resource *res = etna_resource(view->texture);
+   struct etna_resource *base = etna_resource(view->texture);
+   struct etna_resource *to = base, *from = base;
 
-   if (res->texture && etna_resource_older(etna_resource(res->texture), res)) {
-      /* Texture is older than render buffer, copy the texture using RS */
-      etna_copy_resource(view->context, res->texture, view->texture, 0,
+   if (base->external && etna_resource_newer(etna_resource(base->external), base))
+      from = etna_resource(base->external);
+
+   if (base->texture)
+      to = etna_resource(base->texture);
+
+   if ((to != from) && etna_resource_older(to, from)) {
+      etna_copy_resource(view->context, &to->base, &from->base, 0,
                          view->texture->last_level);
-      etna_resource(res->texture)->seqno = res->seqno;
-   } else if (etna_resource_needs_flush(res)) {
-      etna_copy_resource(view->context, view->texture, view->texture, 0, 0);
-      res->flush_seqno = res->seqno;
+      to->seqno = from->seqno;
+   } else if ((to == from) && etna_resource_needs_flush(to)) {
+      /* Resolve TS if needed, remove when adding sampler TS */
+      etna_copy_resource(view->context, &to->base, &from->base, 0,
+                         view->texture->last_level);
+      to->flush_seqno = from->seqno;
    }
 }
 
