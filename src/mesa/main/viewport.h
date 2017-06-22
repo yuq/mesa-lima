@@ -34,6 +34,9 @@ struct gl_context;
 extern void GLAPIENTRY
 _mesa_Viewport(GLint x, GLint y, GLsizei width, GLsizei height);
 
+void GLAPIENTRY
+_mesa_ViewportArrayv_no_error(GLuint first, GLsizei count, const GLfloat * v);
+
 extern void GLAPIENTRY
 _mesa_ViewportArrayv(GLuint first, GLsizei count, const GLfloat * v);
 

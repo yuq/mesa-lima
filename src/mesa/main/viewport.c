@@ -169,6 +169,15 @@ viewport_array(struct gl_context *ctx, GLuint first, GLsizei count,
 }
 
 void GLAPIENTRY
+_mesa_ViewportArrayv_no_error(GLuint first, GLsizei count, const GLfloat *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   const struct gl_viewport_inputs *const p = (struct gl_viewport_inputs *)v;
+   viewport_array(ctx, first, count, p);
+}
+
+void GLAPIENTRY
 _mesa_ViewportArrayv(GLuint first, GLsizei count, const GLfloat *v)
 {
    int i;
