@@ -48,7 +48,7 @@ opt_intrinsics_impl(nir_function_impl *impl)
          case nir_intrinsic_vote_any:
          case nir_intrinsic_vote_all: {
             nir_const_value *val = nir_src_as_const_value(intrin->src[0]);
-            if (!val)
+            if (!val && !b.shader->options->lower_vote_trivial)
                continue;
 
             replacement = nir_ssa_for_src(&b, intrin->src[0], 1);
@@ -56,7 +56,7 @@ opt_intrinsics_impl(nir_function_impl *impl)
          }
          case nir_intrinsic_vote_eq: {
             nir_const_value *val = nir_src_as_const_value(intrin->src[0]);
-            if (!val)
+            if (!val && !b.shader->options->lower_vote_trivial)
                continue;
 
             replacement = nir_imm_int(&b, NIR_TRUE);
