@@ -58,6 +58,45 @@ static bool
 intel_miptree_alloc_aux(struct brw_context *brw,
                         struct intel_mipmap_tree *mt);
 
+static bool
+is_mcs_supported(const struct brw_context *brw, mesa_format format,
+                 uint32_t layout_flags)
+{
+   /* Prior to Gen7, all MSAA surfaces used IMS layout. */
+   if (brw->gen < 7)
+      return false;
+
+   /* In Gen7, IMS layout is only used for depth and stencil buffers. */
+   switch (_mesa_get_format_base_format(format)) {
+   case GL_DEPTH_COMPONENT:
+   case GL_STENCIL_INDEX:
+   case GL_DEPTH_STENCIL:
+      return false;
+   default:
+      /* From the Ivy Bridge PRM, Vol4 Part1 p77 ("MCS Enable"):
+       *
+       *   This field must be set to 0 for all SINT MSRTs when all RT channels
+       *   are not written
+       *
+       * In practice this means that we have to disable MCS for all signed
+       * integer MSAA buffers.  The alternative, to disable MCS only when one
+       * of the render target channels is disabled, is impractical because it
+       * would require converting between CMS and UMS MSAA layouts on the fly,
+       * which is expensive.
+       */
+      if (brw->gen == 7 && _mesa_get_format_datatype(format) == GL_INT) {
+         return false;
+      } else if (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) {
+         /* We can't use the CMS layout because it uses an aux buffer, the MCS
+          * buffer. So fallback to UMS, which is identical to CMS without the
+          * MCS. */
+         return false;
+      } else {
+         return true;
+      }
+   }
+}
+
 /**
  * Determine which MSAA layout should be used by the MSAA surface being
  * created, based on the chip generation and the surface type.
@@ -567,7 +606,9 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
 {
    assert(mt->aux_usage == ISL_AUX_USAGE_NONE);
 
-   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
+   const unsigned no_flags = 0;
+   if (mt->num_samples > 1 && is_mcs_supported(brw, mt->format, no_flags)) {
+      assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
       mt->aux_usage = ISL_AUX_USAGE_MCS;
    } else if (intel_tiling_supports_ccs(brw, mt->tiling) &&
               intel_miptree_supports_ccs(brw, mt)) {

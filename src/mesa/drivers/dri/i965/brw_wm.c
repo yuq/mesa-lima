@@ -396,9 +396,11 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* From gen9 onwards some single sampled buffers can also be
           * compressed. These don't need ld2dms sampling along with mcs fetch.
           */
-         if (brw->gen >= 7 &&
-             intel_tex->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS &&
-             intel_tex->mt->num_samples > 1) {
+         if (intel_tex->mt->aux_usage == ISL_AUX_USAGE_MCS) {
+            assert(brw->gen >= 7);
+            assert(intel_tex->mt->num_samples > 1);
+            assert(intel_tex->mt->mcs_buf);
+            assert(intel_tex->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
             key->compressed_multisample_layout_mask |= 1 << s;
 
             if (intel_tex->mt->num_samples >= 16) {
