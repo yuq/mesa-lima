@@ -201,18 +201,19 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
       { "RGB565",   { 0x00f800, 0x07e0, 0x1f, 0x0 } },
    };
    unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
-   unsigned int count = 0;
+   unsigned int config_count = 0;
 
    for (unsigned i = 0; dri2_dpy->driver_configs[i] != NULL; i++) {
       for (unsigned j = 0; j < ARRAY_SIZE(visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
          dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[i],
-               count + 1, EGL_PBUFFER_BIT, NULL, visuals[j].rgba_masks);
+               config_count + 1, EGL_PBUFFER_BIT, NULL,
+               visuals[j].rgba_masks);
 
          if (dri2_conf) {
-            if (dri2_conf->base.ConfigID == count + 1)
-               count++;
+            if (dri2_conf->base.ConfigID == config_count + 1)
+               config_count++;
             format_count[j]++;
          }
       }
@@ -225,7 +226,7 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
       }
    }
 
-   return (count != 0);
+   return (config_count != 0);
 }
 
 static const struct dri2_egl_display_vtbl dri2_surfaceless_display_vtbl = {
