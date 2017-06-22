@@ -1937,6 +1937,7 @@ get_ccs_d_resolve_op(enum isl_aux_state aux_state,
    case ISL_AUX_STATE_PASS_THROUGH:
       return BLORP_FAST_CLEAR_OP_NONE;
 
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_AUX_INVALID:
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
@@ -1974,6 +1975,7 @@ get_ccs_e_resolve_op(enum isl_aux_state aux_state,
    case ISL_AUX_STATE_PASS_THROUGH:
       return BLORP_FAST_CLEAR_OP_NONE;
 
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_AUX_INVALID:
       break;
@@ -2060,6 +2062,7 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
          }
          break;
 
+      case ISL_AUX_STATE_PARTIAL_CLEAR:
       case ISL_AUX_STATE_RESOLVED:
       case ISL_AUX_STATE_AUX_INVALID:
          unreachable("Invalid aux state for CCS_E");
@@ -2082,6 +2085,7 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
          /* Nothing to do */
          break;
 
+      case ISL_AUX_STATE_PARTIAL_CLEAR:
       case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
       case ISL_AUX_STATE_RESOLVED:
       case ISL_AUX_STATE_AUX_INVALID:
@@ -2115,6 +2119,7 @@ intel_miptree_prepare_mcs_access(struct brw_context *brw,
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_PASS_THROUGH:
    case ISL_AUX_STATE_AUX_INVALID:
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
       unreachable("Invalid aux state for MCS");
    }
 }
@@ -2140,6 +2145,7 @@ intel_miptree_finish_mcs_write(struct brw_context *brw,
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_PASS_THROUGH:
    case ISL_AUX_STATE_AUX_INVALID:
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
       unreachable("Invalid aux state for MCS");
    }
 }
@@ -2174,6 +2180,9 @@ intel_miptree_prepare_hiz_access(struct brw_context *brw,
       if (aux_usage == ISL_AUX_USAGE_HIZ)
          hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
       break;
+
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
+      unreachable("Invalid HiZ state");
    }
 
    if (hiz_op != BLORP_HIZ_OP_NONE) {
@@ -2237,6 +2246,9 @@ intel_miptree_finish_hiz_write(struct brw_context *brw,
    case ISL_AUX_STATE_AUX_INVALID:
       assert(aux_usage != ISL_AUX_USAGE_HIZ);
       break;
+
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
+      unreachable("Invalid HiZ state");
    }
 }
 
