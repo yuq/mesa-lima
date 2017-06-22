@@ -121,7 +121,8 @@ compute_msaa_layout(struct brw_context *brw, mesa_format format,
 }
 
 static bool
-intel_tiling_supports_ccs(const struct brw_context *brw, unsigned tiling)
+intel_tiling_supports_ccs(const struct brw_context *brw,
+                          enum isl_tiling tiling)
 {
    /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
     * Target(s)", beneath the "Fast Color Clear" bullet (p326):
@@ -131,9 +132,9 @@ intel_tiling_supports_ccs(const struct brw_context *brw, unsigned tiling)
     * Gen9 changes the restriction to Y-tile only.
     */
    if (brw->gen >= 9)
-      return tiling == I915_TILING_Y;
+      return tiling == ISL_TILING_Y0;
    else if (brw->gen >= 7)
-      return tiling != I915_TILING_NONE;
+      return tiling != ISL_TILING_LINEAR;
    else
       return false;
 }
@@ -232,12 +233,13 @@ intel_miptree_supports_ccs(struct brw_context *brw,
 }
 
 static bool
-intel_tiling_supports_hiz(const struct brw_context *brw, unsigned tiling)
+intel_tiling_supports_hiz(const struct brw_context *brw,
+                          enum isl_tiling tiling)
 {
    if (brw->gen < 6)
       return false;
 
-   return tiling == I915_TILING_Y;
+   return tiling == ISL_TILING_Y0;
 }
 
 static bool
@@ -607,7 +609,7 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
    if (mt->surf.samples > 1 && is_mcs_supported(brw, mt->format, no_flags)) {
       assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
       mt->aux_usage = ISL_AUX_USAGE_MCS;
-   } else if (intel_tiling_supports_ccs(brw, mt->tiling) &&
+   } else if (intel_tiling_supports_ccs(brw, mt->surf.tiling) &&
               intel_miptree_supports_ccs(brw, mt)) {
       if (!unlikely(INTEL_DEBUG & DEBUG_NO_RBC) &&
           brw->gen >= 9 && !mt->is_scanout &&
@@ -616,7 +618,7 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
       } else {
          mt->aux_usage = ISL_AUX_USAGE_CCS_D;
       }
-   } else if (intel_tiling_supports_hiz(brw, mt->tiling) &&
+   } else if (intel_tiling_supports_hiz(brw, mt->surf.tiling) &&
               intel_miptree_supports_hiz(brw, mt)) {
       mt->aux_usage = ISL_AUX_USAGE_HIZ;
    }
@@ -841,9 +843,6 @@ miptree_create(struct brw_context *brw,
    if (!mt)
       return NULL;
 
-   if (mt->tiling == (I915_TILING_Y | I915_TILING_X))
-      mt->tiling = I915_TILING_Y;
-
    if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
 
@@ -854,12 +853,18 @@ miptree_create(struct brw_context *brw,
       mt->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "miptree",
                                      ALIGN(mt->total_width, 64),
                                      ALIGN(mt->total_height, 64),
-                                     mt->cpp, mt->tiling, &mt->pitch,
+                                     mt->cpp,
+                                     isl_tiling_to_i915_tiling(
+                                        mt->surf.tiling),
+                                     &mt->pitch,
                                      alloc_flags);
    } else {
       mt->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "miptree",
                                      mt->total_width, mt->total_height,
-                                     mt->cpp, mt->tiling, &mt->pitch,
+                                     mt->cpp,
+                                     isl_tiling_to_i915_tiling(
+                                        mt->surf.tiling),
+                                     &mt->pitch,
                                      alloc_flags);
    }
 
@@ -899,18 +904,20 @@ intel_miptree_create(struct brw_context *brw,
     * handle Y-tiling, so we need to fall back to X.
     */
    if (brw->gen < 6 && mt->bo->size >= brw->max_gtt_map_object_size &&
-       mt->tiling == I915_TILING_Y) {
+       mt->surf.tiling == ISL_TILING_Y0) {
       const uint32_t alloc_flags =
          (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD) ?
          BO_ALLOC_FOR_RENDER : 0;
       perf_debug("%dx%d miptree larger than aperture; falling back to X-tiled\n",
                  mt->total_width, mt->total_height);
 
-      mt->tiling = I915_TILING_X;
+      mt->surf.tiling = ISL_TILING_X;
       brw_bo_unreference(mt->bo);
       mt->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "miptree",
                                      mt->total_width, mt->total_height, mt->cpp,
-                                     mt->tiling, &mt->pitch, alloc_flags);
+                                     isl_tiling_to_i915_tiling(
+                                        mt->surf.tiling),
+                                     &mt->pitch, alloc_flags);
    }
 
    mt->offset = 0;
@@ -991,7 +998,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    mt->bo = bo;
    mt->pitch = pitch;
    mt->offset = offset;
-   mt->tiling = tiling;
+   mt->surf.tiling = isl_tiling_from_i915_tiling(tiling);
 
    if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
@@ -1465,19 +1472,19 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
  * and tile_h is set to 1.
  */
 void
-intel_get_tile_dims(uint32_t tiling, uint32_t cpp,
+intel_get_tile_dims(enum isl_tiling tiling, uint32_t cpp,
                     uint32_t *tile_w, uint32_t *tile_h)
 {
    switch (tiling) {
-   case I915_TILING_X:
+   case ISL_TILING_X:
       *tile_w = 512;
       *tile_h = 8;
       break;
-   case I915_TILING_Y:
+   case ISL_TILING_Y0:
       *tile_w = 128;
       *tile_h = 32;
       break;
-   case I915_TILING_NONE:
+   case ISL_TILING_LINEAR:
       *tile_w = cpp;
       *tile_h = 1;
       break;
@@ -1493,7 +1500,7 @@ intel_get_tile_dims(uint32_t tiling, uint32_t cpp,
  * untiled, the masks are set to 0.
  */
 void
-intel_get_tile_masks(uint32_t tiling, uint32_t cpp,
+intel_get_tile_masks(enum isl_tiling tiling, uint32_t cpp,
                      uint32_t *mask_x, uint32_t *mask_y)
 {
    uint32_t tile_w_bytes, tile_h;
@@ -1515,18 +1522,17 @@ intel_miptree_get_aligned_offset(const struct intel_mipmap_tree *mt,
 {
    int cpp = mt->cpp;
    uint32_t pitch = mt->pitch;
-   uint32_t tiling = mt->tiling;
 
-   switch (tiling) {
+   switch (mt->surf.tiling) {
    default:
       unreachable("not reached");
-   case I915_TILING_NONE:
+   case ISL_TILING_LINEAR:
       return y * pitch + x * cpp;
-   case I915_TILING_X:
+   case ISL_TILING_X:
       assert((x % (512 / cpp)) == 0);
       assert((y % 8) == 0);
       return y * pitch + x / (512 / cpp) * 4096;
-   case I915_TILING_Y:
+   case ISL_TILING_Y0:
       assert((x % (128 / cpp)) == 0);
       assert((y % 32) == 0);
       return y * pitch + x / (128 / cpp) * 4096;
@@ -1552,7 +1558,7 @@ intel_miptree_get_tile_offsets(const struct intel_mipmap_tree *mt,
    uint32_t x, y;
    uint32_t mask_x, mask_y;
 
-   intel_get_tile_masks(mt->tiling, mt->cpp, &mask_x, &mask_y);
+   intel_get_tile_masks(mt->surf.tiling, mt->cpp, &mask_x, &mask_y);
    intel_miptree_get_image_offset(mt, level, slice, &x, &y);
 
    *tile_x = x & mask_x;
@@ -3536,15 +3542,15 @@ use_intel_mipree_map_blit(struct brw_context *brw,
        */
        !(mode & GL_MAP_WRITE_BIT) &&
        !mt->compressed &&
-       (mt->tiling == I915_TILING_X ||
+       (mt->surf.tiling == ISL_TILING_X ||
         /* Prior to Sandybridge, the blitter can't handle Y tiling */
-        (brw->gen >= 6 && mt->tiling == I915_TILING_Y) ||
+        (brw->gen >= 6 && mt->surf.tiling == ISL_TILING_Y0) ||
         /* Fast copy blit on skl+ supports all tiling formats. */
         brw->gen >= 9) &&
        can_blit_slice(mt, level, slice))
       return true;
 
-   if (mt->tiling != I915_TILING_NONE &&
+   if (mt->surf.tiling != ISL_TILING_LINEAR &&
        mt->bo->size >= brw->max_gtt_map_object_size) {
       assert(can_blit_slice(mt, level, slice));
       return true;
@@ -3679,8 +3685,9 @@ get_isl_surf_dim(GLenum target)
 }
 
 enum isl_dim_layout
-get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
-                   GLenum target, enum miptree_array_layout array_layout)
+get_isl_dim_layout(const struct gen_device_info *devinfo,
+                   enum isl_tiling tiling, GLenum target,
+                   enum miptree_array_layout array_layout)
 {
    if (array_layout == GEN6_HIZ_STENCIL)
       return ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ;
@@ -3688,7 +3695,7 @@ get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
    switch (target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
-      return (devinfo->gen >= 9 && tiling == I915_TILING_NONE ?
+      return (devinfo->gen >= 9 && tiling == ISL_TILING_LINEAR ?
               ISL_DIM_LAYOUT_GEN9_1D : ISL_DIM_LAYOUT_GEN4_2D);
 
    case GL_TEXTURE_2D:
@@ -3715,20 +3722,9 @@ get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
 enum isl_tiling
 intel_miptree_get_isl_tiling(const struct intel_mipmap_tree *mt)
 {
-   if (mt->format == MESA_FORMAT_S_UINT8) {
+   if (mt->format == MESA_FORMAT_S_UINT8)
       return ISL_TILING_W;
-   } else {
-      switch (mt->tiling) {
-      case I915_TILING_NONE:
-         return ISL_TILING_LINEAR;
-      case I915_TILING_X:
-         return ISL_TILING_X;
-      case I915_TILING_Y:
-            return ISL_TILING_Y0;
-      default:
-         unreachable("Invalid tiling mode");
-      }
-   }
+   return mt->surf.tiling;
 }
 
 void
@@ -3738,7 +3734,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
 {
    surf->dim = get_isl_surf_dim(mt->target);
    surf->dim_layout = get_isl_dim_layout(&brw->screen->devinfo,
-                                         mt->tiling, mt->target,
+                                         mt->surf.tiling, mt->target,
                                          mt->array_layout);
    surf->msaa_layout = mt->surf.msaa_layout;
    surf->tiling = intel_miptree_get_isl_tiling(mt);

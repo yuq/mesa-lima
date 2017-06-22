@@ -121,7 +121,7 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
              ((enable_hiz_ss ? 1 : 0) << 21) | /* separate stencil enable */
              ((enable_hiz_ss ? 1 : 0) << 22) | /* hiz enable */
              (BRW_TILEWALK_YMAJOR << 26) |
-             ((depth_mt ? depth_mt->tiling != I915_TILING_NONE : 1)
+             ((depth_mt ? depth_mt->surf.tiling != ISL_TILING_LINEAR : 1)
               << 27) |
              (surftype << 29));
 

@@ -128,8 +128,8 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
       ctx->Driver.AllocTextureImageBuffer(ctx, texImage);
 
    if (!image->mt ||
-       (image->mt->tiling != I915_TILING_X &&
-       image->mt->tiling != I915_TILING_Y)) {
+       (image->mt->surf.tiling != ISL_TILING_X &&
+        image->mt->surf.tiling != ISL_TILING_Y0)) {
       /* The algorithm is written only for X- or Y-tiled memory. */
       return false;
    }
@@ -176,7 +176,7 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
        "packing=(alignment=%d row_length=%d skip_pixels=%d skip_rows=%d) "
        "for_glTexImage=%d\n",
        __func__, texImage->Level, xoffset, yoffset, width, height,
-       format, type, texImage->TexFormat, image->mt->tiling,
+       format, type, texImage->TexFormat, image->mt->surf.tiling,
        packing->Alignment, packing->RowLength, packing->SkipPixels,
        packing->SkipRows, for_glTexImage);
 
@@ -193,7 +193,7 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
       pixels - (ptrdiff_t) yoffset * src_pitch - (ptrdiff_t) xoffset * cpp,
       image->mt->pitch, src_pitch,
       brw->has_swizzling,
-      image->mt->tiling,
+      image->mt->surf.tiling,
       mem_copy
    );
 

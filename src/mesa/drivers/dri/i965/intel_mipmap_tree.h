@@ -331,14 +331,6 @@ struct intel_mipmap_tree
    uint32_t pitch;
 
    /**
-    * One of the I915_TILING_* flags.
-    *
-    * @see RENDER_SURFACE_STATE.TileMode
-    * @see 3DSTATE_DEPTH_BUFFER.TileMode
-    */
-   uint32_t tiling;
-
-   /**
     * @brief One of GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY, etc.
     *
     * @see RENDER_SURFACE_STATE.SurfaceType
@@ -686,7 +678,8 @@ enum isl_surf_dim
 get_isl_surf_dim(GLenum target);
 
 enum isl_dim_layout
-get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
+get_isl_dim_layout(const struct gen_device_info *devinfo,
+                   enum isl_tiling tiling,
                    GLenum target, enum miptree_array_layout array_layout);
 
 enum isl_tiling
@@ -706,11 +699,11 @@ intel_get_image_dims(struct gl_texture_image *image,
                      int *width, int *height, int *depth);
 
 void
-intel_get_tile_masks(uint32_t tiling, uint32_t cpp,
+intel_get_tile_masks(enum isl_tiling tiling, uint32_t cpp,
                      uint32_t *mask_x, uint32_t *mask_y);
 
 void
-intel_get_tile_dims(uint32_t tiling, uint32_t cpp,
+intel_get_tile_dims(enum isl_tiling tiling, uint32_t cpp,
                     uint32_t *tile_w, uint32_t *tile_h);
 
 uint32_t

@@ -479,7 +479,8 @@ intel_create_image_from_renderbuffer(__DRIcontext *context,
 
    image->internal_format = rb->InternalFormat;
    image->format = rb->Format;
-   image->modifier = tiling_to_modifier(irb->mt->tiling);
+   image->modifier = tiling_to_modifier(
+                        isl_tiling_to_i915_tiling(irb->mt->surf.tiling));
    image->offset = 0;
    image->data = loaderPrivate;
    brw_bo_unreference(image->bo);
@@ -541,7 +542,8 @@ intel_create_image_from_texture(__DRIcontext *context, int target,
 
    image->internal_format = obj->Image[face][level]->InternalFormat;
    image->format = obj->Image[face][level]->TexFormat;
-   image->modifier = tiling_to_modifier(iobj->mt->tiling);
+   image->modifier = tiling_to_modifier(
+                        isl_tiling_to_i915_tiling(iobj->mt->surf.tiling));
    image->data = loaderPrivate;
    intel_setup_image_from_mipmap_tree(brw, image, iobj->mt, level, zoffset);
    image->dri_format = driGLFormatToImageFormat(image->format);

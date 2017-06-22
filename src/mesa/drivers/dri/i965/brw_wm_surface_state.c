@@ -91,7 +91,7 @@ brw_emit_surface_state(struct brw_context *brw,
    surf.dim = get_isl_surf_dim(target);
 
    const enum isl_dim_layout dim_layout =
-      get_isl_dim_layout(&brw->screen->devinfo, mt->tiling, target,
+      get_isl_dim_layout(&brw->screen->devinfo, mt->surf.tiling, target,
                          mt->array_layout);
 
    if (surf.dim_layout != dim_layout) {
@@ -265,12 +265,12 @@ translate_tex_target(GLenum target)
 }
 
 uint32_t
-brw_get_surface_tiling_bits(uint32_t tiling)
+brw_get_surface_tiling_bits(enum isl_tiling tiling)
 {
    switch (tiling) {
-   case I915_TILING_X:
+   case ISL_TILING_X:
       return BRW_SURFACE_TILED;
-   case I915_TILING_Y:
+   case ISL_TILING_Y0:
       return BRW_SURFACE_TILED | BRW_SURFACE_TILED_Y;
    default:
       return 0;
@@ -1033,7 +1033,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    surf[2] = ((rb->Width - 1) << BRW_SURFACE_WIDTH_SHIFT |
 	      (rb->Height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
 
-   surf[3] = (brw_get_surface_tiling_bits(mt->tiling) |
+   surf[3] = (brw_get_surface_tiling_bits(mt->surf.tiling) |
 	      (mt->pitch - 1) << BRW_SURFACE_PITCH_SHIFT);
 
    surf[4] = brw_get_surface_num_multisamples(mt->surf.samples);

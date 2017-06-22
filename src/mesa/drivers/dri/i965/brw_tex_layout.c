@@ -494,7 +494,7 @@ brw_miptree_layout_texture_3d(struct brw_context *brw,
 /**
  * \brief Helper function for intel_miptree_create().
  */
-static uint32_t
+static enum isl_tiling
 brw_miptree_choose_tiling(struct brw_context *brw,
                           const struct intel_mipmap_tree *mt,
                           uint32_t layout_flags)
@@ -503,7 +503,7 @@ brw_miptree_choose_tiling(struct brw_context *brw,
       /* The stencil buffer is W tiled. However, we request from the kernel a
        * non-tiled buffer because the GTT is incapable of W fencing.
        */
-      return I915_TILING_NONE;
+      return ISL_TILING_LINEAR;
    }
 
    /* Do not support changing the tiling for miptrees with pre-allocated BOs. */
@@ -516,9 +516,9 @@ brw_miptree_choose_tiling(struct brw_context *brw,
    case MIPTREE_LAYOUT_TILING_ANY:
       break;
    case MIPTREE_LAYOUT_TILING_Y:
-      return I915_TILING_Y;
+      return ISL_TILING_Y0;
    case MIPTREE_LAYOUT_TILING_NONE:
-      return I915_TILING_NONE;
+      return ISL_TILING_LINEAR;
    }
 
    if (mt->surf.samples > 1) {
@@ -534,36 +534,36 @@ brw_miptree_choose_tiling(struct brw_context *brw,
        * and another buffer, and the blitting engine doesn't support that.
        * So use Y tiling, since it makes better use of the cache.
        */
-      return I915_TILING_Y;
+      return ISL_TILING_Y0;
    }
 
    GLenum base_format = _mesa_get_format_base_format(mt->format);
    if (base_format == GL_DEPTH_COMPONENT ||
        base_format == GL_DEPTH_STENCIL_EXT)
-      return I915_TILING_Y;
+      return ISL_TILING_Y0;
 
    /* 1D textures (and 1D array textures) don't get any benefit from tiling,
     * in fact it leads to a less efficient use of memory space and bandwidth
     * due to tile alignment.
     */
    if (mt->logical_height0 == 1)
-      return I915_TILING_NONE;
+      return ISL_TILING_LINEAR;
 
    int minimum_pitch = mt->total_width * mt->cpp;
 
    /* If the width is much smaller than a tile, don't bother tiling. */
    if (minimum_pitch < 64)
-      return I915_TILING_NONE;
+      return ISL_TILING_LINEAR;
 
    if (ALIGN(minimum_pitch, 512) >= 32768) {
       perf_debug("%dx%d miptree too large to blit, falling back to untiled",
                  mt->total_width, mt->total_height);
-      return I915_TILING_NONE;
+      return ISL_TILING_LINEAR;
    }
 
    /* Pre-gen6 doesn't have BLORP to handle Y-tiling, so use X-tiling. */
    if (brw->gen < 6)
-      return I915_TILING_X;
+      return ISL_TILING_X;
 
    /* From the Sandybridge PRM, Volume 1, Part 2, page 32:
     * "NOTE: 128BPE Format Color Buffer ( render target ) MUST be either TileX
@@ -572,7 +572,7 @@ brw_miptree_choose_tiling(struct brw_context *brw,
     * all the way back to 965, but is permitted on Gen7+.
     */
    if (brw->gen < 7 && mt->cpp >= 16)
-      return I915_TILING_X;
+      return ISL_TILING_X;
 
    /* From the Ivy Bridge PRM, Vol4 Part1 2.12.2.1 (SURFACE_STATE for most
     * messages), on p64, under the heading "Surface Vertical Alignment":
@@ -588,10 +588,10 @@ brw_miptree_choose_tiling(struct brw_context *brw,
     */
    if (brw->gen == 7 && mt->valign == 2 &&
        brw->mesa_format_supports_render[mt->format]) {
-      return I915_TILING_X;
+      return ISL_TILING_X;
    }
 
-   return I915_TILING_Y | I915_TILING_X;
+   return ISL_TILING_Y0;
 }
 
 static void
@@ -728,7 +728,7 @@ brw_miptree_layout(struct brw_context *brw,
    }
 
    if ((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0)
-      mt->tiling = brw_miptree_choose_tiling(brw, mt, layout_flags);
+      mt->surf.tiling = brw_miptree_choose_tiling(brw, mt, layout_flags);
 
    return true;
 }
