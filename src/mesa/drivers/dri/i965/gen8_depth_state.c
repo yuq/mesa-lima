@@ -324,8 +324,6 @@ pma_fix_enable(const struct brw_context *brw)
 void
 gen8_write_pma_stall_bits(struct brw_context *brw, uint32_t pma_stall_bits)
 {
-   struct gl_context *ctx = &brw->ctx;
-
    /* If we haven't actually changed the value, bail now to avoid unnecessary
     * pipeline stalls and register writes.
     */
