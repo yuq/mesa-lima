@@ -194,11 +194,9 @@ _mesa_ViewportArrayv(GLuint first, GLsizei count, const GLfloat *v)
 }
 
 static void
-ViewportIndexedf(GLuint index, GLfloat x, GLfloat y,
-                 GLfloat w, GLfloat h, const char *function)
+viewport_indexed_err(struct gl_context *ctx, GLuint index, GLfloat x, GLfloat y,
+                     GLfloat w, GLfloat h, const char *function)
 {
-   GET_CURRENT_CONTEXT(ctx);
-
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "%s(%d, %f, %f, %f, %f)\n",
                   function, index, x, y, w, h);
@@ -225,13 +223,16 @@ void GLAPIENTRY
 _mesa_ViewportIndexedf(GLuint index, GLfloat x, GLfloat y,
                        GLfloat w, GLfloat h)
 {
-   ViewportIndexedf(index, x, y, w, h, "glViewportIndexedf");
+   GET_CURRENT_CONTEXT(ctx);
+   viewport_indexed_err(ctx, index, x, y, w, h, "glViewportIndexedf");
 }
 
 void GLAPIENTRY
 _mesa_ViewportIndexedfv(GLuint index, const GLfloat *v)
 {
-   ViewportIndexedf(index, v[0], v[1], v[2], v[3], "glViewportIndexedfv");
+   GET_CURRENT_CONTEXT(ctx);
+   viewport_indexed_err(ctx, index, v[0], v[1], v[2], v[3],
+                        "glViewportIndexedfv");
 }
 
 static void
