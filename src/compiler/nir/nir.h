@@ -2644,6 +2644,8 @@ bool nir_opt_gcm(nir_shader *shader, bool value_number);
 
 bool nir_opt_if(nir_shader *shader);
 
+bool nir_opt_intrinsics(nir_shader *shader);
+
 bool nir_opt_loop_unroll(nir_shader *shader, nir_variable_mode indirect_mask);
 
 bool nir_opt_move_comparisons(nir_shader *shader);
