@@ -352,6 +352,8 @@ etna_resource_from_handle(struct pipe_screen *pscreen,
 
    level->padded_width = align(level->width, paddingX);
    level->padded_height = align(level->height, paddingY);
+   level->layer_stride = level->stride * util_format_get_nblocksy(prsc->format,
+                                                                  level->padded_height);
 
    /* The DDX must give us a BO which conforms to our padding size.
     * The stride of the BO must be greater or equal to our padded
