@@ -708,25 +708,6 @@ fail:
    return false;
 }
 
-boolean
-etna_screen_bo_get_handle(struct pipe_screen *pscreen, struct etna_bo *bo,
-                          unsigned stride, struct winsys_handle *whandle)
-{
-   whandle->stride = stride;
-
-   if (whandle->type == DRM_API_HANDLE_TYPE_SHARED) {
-      return etna_bo_get_name(bo, &whandle->handle) == 0;
-   } else if (whandle->type == DRM_API_HANDLE_TYPE_KMS) {
-      whandle->handle = etna_bo_handle(bo);
-      return TRUE;
-   } else if (whandle->type == DRM_API_HANDLE_TYPE_FD) {
-      whandle->handle = etna_bo_dmabuf(bo);
-      return TRUE;
-   } else {
-      return FALSE;
-   }
-}
-
 struct etna_bo *
 etna_screen_bo_from_handle(struct pipe_screen *pscreen,
                            struct winsys_handle *whandle, unsigned *out_stride)

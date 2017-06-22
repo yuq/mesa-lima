@@ -479,12 +479,23 @@ etna_resource_get_handle(struct pipe_screen *pscreen,
    if (rsc->external)
       rsc = etna_resource(rsc->external);
 
-   if (handle->type == DRM_API_HANDLE_TYPE_KMS &&
-       renderonly_get_handle(scanout, handle))
-      return TRUE;
+   handle->stride = rsc->levels[0].stride;
 
-   return etna_screen_bo_get_handle(pscreen, rsc->bo, rsc->levels[0].stride,
-                                    handle);
+   if (handle->type == DRM_API_HANDLE_TYPE_SHARED) {
+      return etna_bo_get_name(rsc->bo, &handle->handle) == 0;
+   } else if (handle->type == DRM_API_HANDLE_TYPE_KMS) {
+      if (renderonly_get_handle(scanout, handle)) {
+         return TRUE;
+      } else {
+         handle->handle = etna_bo_handle(rsc->bo);
+         return TRUE;
+      }
+   } else if (handle->type == DRM_API_HANDLE_TYPE_FD) {
+      handle->handle = etna_bo_dmabuf(rsc->bo);
+      return TRUE;
+   } else {
+      return FALSE;
+   }
 }
 
 void
