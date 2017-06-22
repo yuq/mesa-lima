@@ -66,7 +66,6 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
    struct gl_vertex_array_object *vao = ctx->Array.VAO;
    GLbitfield64 flag;
    GLboolean *var;
-   uint64_t new_state = _NEW_ARRAY;
 
    switch (cap) {
       case GL_VERTEX_ARRAY:
@@ -111,13 +110,15 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
 
       /* GL_NV_primitive_restart */
       case GL_PRIMITIVE_RESTART_NV:
-         if (!ctx->Extensions.NV_primitive_restart) {
+         if (!ctx->Extensions.NV_primitive_restart)
             goto invalid_enum_error;
-         }
-         var = &ctx->Array.PrimitiveRestart;
-         flag = 0;
-         new_state = 0; /* primitive restart is not a vertex array state */
-         break;
+         if (ctx->Array.PrimitiveRestart == state)
+            return;
+
+         FLUSH_VERTICES(ctx, 0);
+         ctx->Array.PrimitiveRestart = state;
+         update_derived_primitive_restart_state(ctx);
+         return;
 
       default:
          goto invalid_enum_error;
@@ -126,11 +127,9 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
    if (*var == state)
       return;
 
-   FLUSH_VERTICES(ctx, new_state);
+   FLUSH_VERTICES(ctx, _NEW_ARRAY);
 
    *var = state;
-
-   update_derived_primitive_restart_state(ctx);
 
    if (state)
       vao->_Enabled |= flag;
