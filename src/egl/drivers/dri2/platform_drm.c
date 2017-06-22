@@ -598,10 +598,7 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       { GBM_FORMAT_ARGB8888,    0x00ff0000, 0xff000000 },
       { GBM_FORMAT_RGB565,      0x0000f800, 0x00000000 },
    };
-   EGLint attr_list[] = {
-      EGL_NATIVE_VISUAL_ID, 0,
-      EGL_NONE,
-   };
+
    unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
    unsigned int count = 0;
 
@@ -619,7 +616,10 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
          if (visuals[j].red_mask != red || visuals[j].alpha_mask != alpha)
             continue;
 
-         attr_list[1] = visuals[j].format;
+         const EGLint attr_list[] = {
+            EGL_NATIVE_VISUAL_ID,  visuals[j].format,
+            EGL_NONE,
+         };
 
          dri2_conf = dri2_add_config(disp, dri2_dpy->driver_configs[i],
                count + 1, EGL_WINDOW_BIT, attr_list, NULL);
