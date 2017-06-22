@@ -319,8 +319,6 @@ _mesa_DepthRange(GLclampd nearval, GLclampd farval)
    unsigned i;
    GET_CURRENT_CONTEXT(ctx);
 
-   FLUSH_VERTICES(ctx, 0);
-
    if (MESA_VERBOSE&VERBOSE_API)
       _mesa_debug(ctx, "glDepthRange %f %f\n", nearval, farval);
 
