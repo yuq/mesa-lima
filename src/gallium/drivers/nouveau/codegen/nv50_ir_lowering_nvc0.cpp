@@ -882,10 +882,12 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
       if (i->tex.rIndirectSrc >= 0 || i->tex.sIndirectSrc >= 0) {
          // XXX this ignores tsc, and assumes a 1:1 mapping
          assert(i->tex.rIndirectSrc >= 0);
-         Value *hnd = loadTexHandle(i->getIndirectR(), i->tex.r);
-         i->tex.r = 0xff;
-         i->tex.s = 0x1f;
-         i->setIndirectR(hnd);
+         if (!i->tex.bindless) {
+            Value *hnd = loadTexHandle(i->getIndirectR(), i->tex.r);
+            i->tex.r = 0xff;
+            i->tex.s = 0x1f;
+            i->setIndirectR(hnd);
+         }
          i->setIndirectS(NULL);
       } else if (i->tex.r == i->tex.s || i->op == OP_TXF) {
          if (i->tex.r == 0xffff)

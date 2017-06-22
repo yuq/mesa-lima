@@ -193,6 +193,8 @@ extern const struct nvc0_vertex_format nvc0_vertex_format[];
 static inline void
 nvc0_screen_tic_unlock(struct nvc0_screen *screen, struct nv50_tic_entry *tic)
 {
+   if (tic->bindless)
+      return;
    if (tic->id >= 0)
       screen->tic.lock[tic->id / 32] &= ~(1 << (tic->id % 32));
 }

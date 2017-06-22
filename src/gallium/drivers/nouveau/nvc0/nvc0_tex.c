@@ -90,6 +90,7 @@ gm107_create_texture_view(struct pipe_context *pipe,
    view->pipe.context = pipe;
 
    view->id = -1;
+   view->bindless = 0;
 
    pipe_resource_reference(&view->pipe.texture, texture);
 
@@ -302,6 +303,7 @@ gf100_create_texture_view(struct pipe_context *pipe,
    view->pipe.context = pipe;
 
    view->id = -1;
+   view->bindless = 0;
 
    pipe_resource_reference(&view->pipe.texture, texture);
 
@@ -762,6 +764,124 @@ nve4_set_tex_handles(struct nvc0_context *nvc0)
    }
 }
 
+static uint64_t
+nve4_create_texture_handle(struct pipe_context *pipe,
+                           struct pipe_sampler_view *view,
+                           const struct pipe_sampler_state *sampler)
+{
+   /* We have to create persistent handles that won't change for these objects
+    * That means that we have to upload them into place and lock them so that
+    * they can't be kicked out later.
+    */
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nv50_tic_entry *tic = nv50_tic_entry(view);
+   struct nv50_tsc_entry *tsc = pipe->create_sampler_state(pipe, sampler);
+   struct pipe_sampler_view *v = NULL;
+
+   tsc->id = nvc0_screen_tsc_alloc(nvc0->screen, tsc);
+   if (tsc->id < 0)
+      goto fail;
+
+   if (tic->id < 0) {
+      tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
+      if (tic->id < 0)
+         goto fail;
+
+      nve4_p2mf_push_linear(&nvc0->base, nvc0->screen->txc, tic->id * 32,
+                            NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
+                            tic->tic);
+
+      IMMED_NVC0(push, NVC0_3D(TIC_FLUSH), 0);
+   }
+
+   nve4_p2mf_push_linear(&nvc0->base, nvc0->screen->txc,
+                         65536 + tsc->id * 32,
+                         NV_VRAM_DOMAIN(&nvc0->screen->base),
+                         32, tsc->tsc);
+
+   IMMED_NVC0(push, NVC0_3D(TSC_FLUSH), 0);
+
+   // Add an extra reference to this sampler view effectively held by this
+   // texture handle. This is to deal with the sampler view being dereferenced
+   // before the handle is. However we need the view to still be live until the
+   // handle to it is deleted.
+   pipe_sampler_view_reference(&v, view);
+   p_atomic_inc(&tic->bindless);
+
+   nvc0->screen->tic.lock[tic->id / 32] |= 1 << (tic->id % 32);
+   nvc0->screen->tsc.lock[tsc->id / 32] |= 1 << (tsc->id % 32);
+
+   return 0x100000000ULL | (tsc->id << 20) | tic->id;
+
+fail:
+   pipe->delete_sampler_state(pipe, tsc);
+   return 0;
+}
+
+static bool
+view_bound(struct nvc0_context *nvc0, struct pipe_sampler_view *view) {
+   for (int s = 0; s < 6; s++) {
+      for (int i = 0; i < nvc0->num_textures[s]; i++)
+         if (nvc0->textures[s][i] == view)
+            return true;
+   }
+   return false;
+}
+
+static void
+nve4_delete_texture_handle(struct pipe_context *pipe, uint64_t handle)
+{
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+   uint32_t tic = handle & NVE4_TIC_ENTRY_INVALID;
+   uint32_t tsc = (handle & NVE4_TSC_ENTRY_INVALID) >> 20;
+   struct nv50_tic_entry *entry = nvc0->screen->tic.entries[tic];
+
+   if (entry) {
+      struct pipe_sampler_view *view = &entry->pipe;
+      assert(entry->bindless);
+      p_atomic_dec(&entry->bindless);
+      if (!view_bound(nvc0, view))
+         nvc0_screen_tic_unlock(nvc0->screen, entry);
+      pipe_sampler_view_reference(&view, NULL);
+   }
+
+   pipe->delete_sampler_state(pipe, nvc0->screen->tsc.entries[tsc]);
+}
+
+static void
+nve4_make_texture_handle_resident(struct pipe_context *pipe,
+                                  uint64_t handle, bool resident)
+{
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+   if (resident) {
+      struct nvc0_resident *res = calloc(1, sizeof(struct nvc0_resident));
+      struct nv50_tic_entry *tic =
+         nvc0->screen->tic.entries[handle & NVE4_TIC_ENTRY_INVALID];
+      assert(tic);
+      assert(tic->bindless);
+
+      res->handle = handle;
+      res->buf = nv04_resource(tic->pipe.texture);
+      res->flags = NOUVEAU_BO_RD;
+      list_add(&res->list, &nvc0->tex_head);
+   } else {
+      list_for_each_entry_safe(struct nvc0_resident, pos, &nvc0->tex_head, list) {
+         if (pos->handle == handle) {
+            list_del(&pos->list);
+            free(pos);
+            break;
+         }
+      }
+   }
+}
+
+void
+nvc0_init_bindless_functions(struct pipe_context *pipe) {
+   pipe->create_texture_handle = nve4_create_texture_handle;
+   pipe->delete_texture_handle = nve4_delete_texture_handle;
+   pipe->make_texture_handle_resident = nve4_make_texture_handle_resident;
+}
 
 static const uint8_t nve4_su_format_map[PIPE_FORMAT_COUNT];
 static const uint16_t nve4_su_format_aux_map[PIPE_FORMAT_COUNT];

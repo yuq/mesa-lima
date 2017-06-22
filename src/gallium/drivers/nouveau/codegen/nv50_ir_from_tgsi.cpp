@@ -2206,6 +2206,16 @@ Converter::setTexRS(TexInstruction *tex, unsigned int& s, int R, int S)
 {
    unsigned rIdx = 0, sIdx = 0;
 
+   if (R >= 0 && tgsi.getSrc(R).getFile() != TGSI_FILE_SAMPLER) {
+      // This is the bindless case. We have to get the actual value and pass
+      // it in. This will be the complete handle.
+      tex->tex.rIndirectSrc = s;
+      tex->setSrc(s++, fetchSrc(R, 0));
+      tex->setTexture(tgsi.getTexture(code, R), 0xff, 0x1f);
+      tex->tex.bindless = true;
+      return;
+   }
+
    if (R >= 0)
       rIdx = tgsi.getSrc(R).getIndex(0);
    if (S >= 0)

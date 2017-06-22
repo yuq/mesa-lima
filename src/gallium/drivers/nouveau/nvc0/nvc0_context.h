@@ -5,6 +5,7 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_state.h"
 
+#include "util/list.h"
 #include "util/u_memory.h"
 #include "util/u_math.h"
 #include "util/u_inlines.h"
@@ -81,6 +82,7 @@
 #define NVC0_BIND_3D_SUF         245
 #define NVC0_BIND_3D_BUF         246
 #define NVC0_BIND_3D_SCREEN      247
+#define NVC0_BIND_3D_BINDLESS    248
 #define NVC0_BIND_3D_TLS         249
 #define NVC0_BIND_3D_TEXT        250
 #define NVC0_BIND_3D_COUNT       251
@@ -95,7 +97,8 @@
 #define NVC0_BIND_CP_QUERY       52
 #define NVC0_BIND_CP_BUF         53
 #define NVC0_BIND_CP_TEXT        54
-#define NVC0_BIND_CP_COUNT       55
+#define NVC0_BIND_CP_BINDLESS    55
+#define NVC0_BIND_CP_COUNT       56
 
 /* bufctx for other operations */
 #define NVC0_BIND_2D            0
@@ -150,6 +153,13 @@ struct nvc0_blitctx;
 
 bool nvc0_blitctx_create(struct nvc0_context *);
 void nvc0_blitctx_destroy(struct nvc0_context *);
+
+struct nvc0_resident {
+   struct list_head list;
+   uint64_t handle;
+   struct nv04_resource *buf;
+   uint32_t flags;
+};
 
 struct nvc0_context {
    struct nouveau_context base;
@@ -211,6 +221,9 @@ struct nvc0_context {
    struct pipe_sampler_view *fbtexture;
 
    uint32_t tex_handles[6][PIPE_MAX_SAMPLERS]; /* for nve4 */
+
+   struct list_head tex_head;
+   struct list_head img_head;
 
    struct pipe_framebuffer_state framebuffer;
    struct pipe_blend_color blend_colour;
@@ -361,6 +374,8 @@ nvc0_create_sampler_view(struct pipe_context *,
 struct pipe_sampler_view *
 gm107_create_texture_view_from_image(struct pipe_context *,
                                      const struct pipe_image_view *);
+
+void nvc0_init_bindless_functions(struct pipe_context *);
 
 /* nvc0_transfer.c */
 void
