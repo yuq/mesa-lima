@@ -208,7 +208,7 @@ brw_emit_surface_state(struct brw_context *brw,
 uint32_t
 brw_update_renderbuffer_surface(struct brw_context *brw,
                                 struct gl_renderbuffer *rb,
-                                uint32_t flags, unsigned unit /* unused */,
+                                uint32_t flags, unsigned unit,
                                 uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -216,7 +216,8 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    struct intel_mipmap_tree *mt = irb->mt;
 
    enum isl_aux_usage aux_usage =
-      intel_miptree_render_aux_usage(brw, mt, ctx->Color.sRGBEnabled);
+      intel_miptree_render_aux_usage(brw, mt, ctx->Color.sRGBEnabled,
+                                     ctx->Color.BlendEnabled & (1 << unit));
 
    if (flags & INTEL_AUX_BUFFER_DISABLED) {
       assert(brw->gen >= 9);
