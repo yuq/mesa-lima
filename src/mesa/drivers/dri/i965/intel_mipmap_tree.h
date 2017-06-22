@@ -158,48 +158,6 @@ struct intel_mipmap_level
    } *slice;
 };
 
-/**
- * Enum for keeping track of the different MSAA layouts supported by Gen7.
- */
-enum intel_msaa_layout
-{
-   /**
-    * Ordinary surface with no MSAA.
-    */
-   INTEL_MSAA_LAYOUT_NONE,
-
-   /**
-    * Interleaved Multisample Surface.  The additional samples are
-    * accommodated by scaling up the width and the height of the surface so
-    * that all the samples corresponding to a pixel are located at nearby
-    * memory locations.
-    *
-    * @see PRM section "Interleaved Multisampled Surfaces"
-    */
-   INTEL_MSAA_LAYOUT_IMS,
-
-   /**
-    * Uncompressed Multisample Surface.  The surface is stored as a 2D array,
-    * with array slice n containing all pixel data for sample n.
-    *
-    * @see PRM section "Uncompressed Multisampled Surfaces"
-    */
-   INTEL_MSAA_LAYOUT_UMS,
-
-   /**
-    * Compressed Multisample Surface.  The surface is stored as in
-    * INTEL_MSAA_LAYOUT_UMS, but there is an additional buffer called the MCS
-    * (Multisample Control Surface) buffer.  Each pixel in the MCS buffer
-    * indicates the mapping from sample number to array slice.  This allows
-    * the common case (where all samples constituting a pixel have the same
-    * color value) to be stored efficiently by just using a single array
-    * slice.
-    *
-    * @see PRM section "Compressed Multisampled Surfaces"
-    */
-   INTEL_MSAA_LAYOUT_CMS,
-};
-
 enum miptree_array_layout {
    /* Each array slice contains all miplevels packed together.
     *
@@ -517,13 +475,6 @@ struct intel_mipmap_tree
     * @see 3DSTATE_STENCIL_BUFFER.SurfaceQPitch
     */
    uint32_t qpitch;
-
-   /**
-    * MSAA layout used by this buffer.
-    *
-    * @see RENDER_SURFACE_STATE.MultisampledSurfaceStorageFormat
-    */
-   enum intel_msaa_layout msaa_layout;
 
    /* Derived from the above:
     */

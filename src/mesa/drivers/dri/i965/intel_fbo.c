@@ -532,16 +532,9 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
    irb->mt_level = level;
    irb->mt_layer = layer;
 
-   int layer_multiplier;
-   switch (mt->msaa_layout) {
-      case INTEL_MSAA_LAYOUT_UMS:
-      case INTEL_MSAA_LAYOUT_CMS:
-         layer_multiplier = MAX2(mt->num_samples, 1);
-         break;
-
-      default:
-         layer_multiplier = 1;
-   }
+   const unsigned layer_multiplier = 
+      mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY ?
+      MAX2(mt->num_samples, 1) : 1;
 
    if (!layered) {
       irb->layer_count = 1;

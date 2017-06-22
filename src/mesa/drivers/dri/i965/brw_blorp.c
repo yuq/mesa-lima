@@ -134,8 +134,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
                        unsigned start_layer, unsigned num_layers,
                        struct isl_surf tmp_surfs[1])
 {
-   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-       mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
+   if (mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY) {
       const unsigned num_samples = MAX2(1, mt->num_samples);
       for (unsigned i = 0; i < num_layers; i++) {
          for (unsigned s = 0; s < num_samples; s++) {

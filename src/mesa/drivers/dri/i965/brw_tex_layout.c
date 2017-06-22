@@ -625,13 +625,12 @@ intel_miptree_set_total_width_height(struct brw_context *brw,
       break;
 
    default:
-      switch (mt->msaa_layout) {
-      case INTEL_MSAA_LAYOUT_UMS:
-      case INTEL_MSAA_LAYOUT_CMS:
+      switch (mt->surf.msaa_layout) {
+      case ISL_MSAA_LAYOUT_ARRAY:
          brw_miptree_layout_texture_array(brw, mt);
          break;
-      case INTEL_MSAA_LAYOUT_NONE:
-      case INTEL_MSAA_LAYOUT_IMS:
+      case ISL_MSAA_LAYOUT_NONE:
+      case ISL_MSAA_LAYOUT_INTERLEAVED:
          if (gen9_use_linear_1d_layout(brw, mt))
             gen9_miptree_layout_1d(mt);
          else if (mt->array_layout == GEN6_HIZ_STENCIL)

@@ -101,42 +101,22 @@ is_mcs_supported(const struct brw_context *brw, mesa_format format,
  * Determine which MSAA layout should be used by the MSAA surface being
  * created, based on the chip generation and the surface type.
  */
-static enum intel_msaa_layout
+static enum isl_msaa_layout
 compute_msaa_layout(struct brw_context *brw, mesa_format format,
                     uint32_t layout_flags)
 {
    /* Prior to Gen7, all MSAA surfaces used IMS layout. */
    if (brw->gen < 7)
-      return INTEL_MSAA_LAYOUT_IMS;
+      return ISL_MSAA_LAYOUT_INTERLEAVED;
 
    /* In Gen7, IMS layout is only used for depth and stencil buffers. */
    switch (_mesa_get_format_base_format(format)) {
    case GL_DEPTH_COMPONENT:
    case GL_STENCIL_INDEX:
    case GL_DEPTH_STENCIL:
-      return INTEL_MSAA_LAYOUT_IMS;
+      return ISL_MSAA_LAYOUT_INTERLEAVED;
    default:
-      /* From the Ivy Bridge PRM, Vol4 Part1 p77 ("MCS Enable"):
-       *
-       *   This field must be set to 0 for all SINT MSRTs when all RT channels
-       *   are not written
-       *
-       * In practice this means that we have to disable MCS for all signed
-       * integer MSAA buffers.  The alternative, to disable MCS only when one
-       * of the render target channels is disabled, is impractical because it
-       * would require converting between CMS and UMS MSAA layouts on the fly,
-       * which is expensive.
-       */
-      if (brw->gen == 7 && _mesa_get_format_datatype(format) == GL_INT) {
-         return INTEL_MSAA_LAYOUT_UMS;
-      } else if (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) {
-         /* We can't use the CMS layout because it uses an aux buffer, the MCS
-          * buffer. So fallback to UMS, which is identical to CMS without the
-          * MCS. */
-         return INTEL_MSAA_LAYOUT_UMS;
-      } else {
-         return INTEL_MSAA_LAYOUT_CMS;
-      }
+      return ISL_MSAA_LAYOUT_ARRAY;
    }
 }
 
@@ -404,7 +384,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->cpp = _mesa_get_format_bytes(format);
    mt->num_samples = num_samples;
    mt->compressed = _mesa_is_format_compressed(format);
-   mt->msaa_layout = INTEL_MSAA_LAYOUT_NONE;
+   mt->surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
    mt->refcount = 1;
 
    if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8)
@@ -413,8 +393,8 @@ intel_miptree_create_layout(struct brw_context *brw,
    int depth_multiply = 1;
    if (num_samples > 1) {
       /* Adjust width/height/depth for MSAA */
-      mt->msaa_layout = compute_msaa_layout(brw, format, layout_flags);
-      if (mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
+      mt->surf.msaa_layout = compute_msaa_layout(brw, format, layout_flags);
+      if (mt->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
          /* From the Ivybridge PRM, Volume 1, Part 1, page 108:
           * "If the surface is multisampled and it is a depth or stencil
           *  surface or Multisampled Surface StorageFormat in SURFACE_STATE is
@@ -520,13 +500,12 @@ intel_miptree_create_layout(struct brw_context *brw,
    if (brw->gen >= 9) {
       mt->array_layout = ALL_LOD_IN_EACH_SLICE;
    } else {
-      switch (mt->msaa_layout) {
-      case INTEL_MSAA_LAYOUT_NONE:
-      case INTEL_MSAA_LAYOUT_IMS:
+      switch (mt->surf.msaa_layout) {
+      case ISL_MSAA_LAYOUT_NONE:
+      case ISL_MSAA_LAYOUT_INTERLEAVED:
          mt->array_layout = ALL_LOD_IN_EACH_SLICE;
          break;
-      case INTEL_MSAA_LAYOUT_UMS:
-      case INTEL_MSAA_LAYOUT_CMS:
+      case ISL_MSAA_LAYOUT_ARRAY:
          mt->array_layout = ALL_SLICES_AT_EACH_LOD;
          break;
       }
@@ -624,7 +603,7 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
 
    const unsigned no_flags = 0;
    if (mt->num_samples > 1 && is_mcs_supported(brw, mt->format, no_flags)) {
-      assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
+      assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
       mt->aux_usage = ISL_AUX_USAGE_MCS;
    } else if (intel_tiling_supports_ccs(brw, mt->tiling) &&
               intel_miptree_supports_ccs(brw, mt)) {
@@ -1385,17 +1364,8 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
    }
 
    int level_depth = mt->level[level].depth;
-   if (mt->num_samples > 1) {
-      switch (mt->msaa_layout) {
-      case INTEL_MSAA_LAYOUT_NONE:
-      case INTEL_MSAA_LAYOUT_IMS:
-         break;
-      case INTEL_MSAA_LAYOUT_UMS:
-      case INTEL_MSAA_LAYOUT_CMS:
-         level_depth /= mt->num_samples;
-         break;
-      }
-   }
+   if (mt->num_samples > 1 && mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY)
+      level_depth /= mt->num_samples;
 
    /* Test image dimensions against the base level image adjusted for
     * minification.  This will also catch images not present in the
@@ -2571,7 +2541,8 @@ intel_miptree_get_aux_state(const struct intel_mipmap_tree *mt,
 
    if (_mesa_is_format_color_format(mt->format)) {
       assert(mt->mcs_buf != NULL);
-      assert(mt->num_samples <= 1 || mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
+      assert(mt->num_samples <= 1 ||
+             mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       unreachable("Cannot get aux state for stencil");
    } else {
@@ -2591,7 +2562,8 @@ intel_miptree_set_aux_state(struct brw_context *brw,
 
    if (_mesa_is_format_color_format(mt->format)) {
       assert(mt->mcs_buf != NULL);
-      assert(mt->num_samples <= 1 || mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
+      assert(mt->num_samples <= 1 ||
+             mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       unreachable("Cannot get aux state for stencil");
    } else {
@@ -2774,7 +2746,8 @@ intel_miptree_make_shareable(struct brw_context *brw,
     * pixel data is stored.  Fortunately this code path should never be
     * reached for multisample buffers.
     */
-   assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE || mt->num_samples <= 1);
+   assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_NONE ||
+          mt->num_samples <= 1);
 
    intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
                                 0, INTEL_REMAINING_LAYERS, false, false);
@@ -3761,23 +3734,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
    surf->dim_layout = get_isl_dim_layout(&brw->screen->devinfo,
                                          mt->tiling, mt->target,
                                          mt->array_layout);
-
-   if (mt->num_samples > 1) {
-      switch (mt->msaa_layout) {
-      case INTEL_MSAA_LAYOUT_IMS:
-         surf->msaa_layout = ISL_MSAA_LAYOUT_INTERLEAVED;
-         break;
-      case INTEL_MSAA_LAYOUT_UMS:
-      case INTEL_MSAA_LAYOUT_CMS:
-         surf->msaa_layout = ISL_MSAA_LAYOUT_ARRAY;
-         break;
-      default:
-         unreachable("Invalid MSAA layout");
-      }
-   } else {
-      surf->msaa_layout = ISL_MSAA_LAYOUT_NONE;
-   }
-
+   surf->msaa_layout = mt->surf.msaa_layout;
    surf->tiling = intel_miptree_get_isl_tiling(mt);
 
    if (mt->format == MESA_FORMAT_S_UINT8) {
