@@ -135,7 +135,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
                        struct isl_surf tmp_surfs[1])
 {
    if (mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY) {
-      const unsigned num_samples =  mt->num_samples;
+      const unsigned num_samples = mt->surf.samples;
       for (unsigned i = 0; i < num_layers; i++) {
          for (unsigned s = 0; s < num_samples; s++) {
             const unsigned phys_layer = (start_layer + i) * num_samples + s;
@@ -275,7 +275,7 @@ swizzle_to_scs(GLenum swizzle)
  * Note: if the src (or dst) is a 2D multisample array texture on Gen7+ using
  * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src_layer (dst_layer) is
  * the physical layer holding sample 0.  So, for example, if
- * src_mt->num_samples == 4, then logical layer n corresponds to src_layer ==
+ * src_mt->surf.samples == 4, then logical layer n corresponds to src_layer ==
  * 4*n.
  */
 void
@@ -296,9 +296,9 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    DBG("%s from %dx %s mt %p %d %d (%f,%f) (%f,%f)"
        "to %dx %s mt %p %d %d (%f,%f) (%f,%f) (flip %d,%d)\n",
        __func__,
-       src_mt->num_samples, _mesa_get_format_name(src_mt->format), src_mt,
+       src_mt->surf.samples, _mesa_get_format_name(src_mt->format), src_mt,
        src_level, src_layer, src_x0, src_y0, src_x1, src_y1,
-       dst_mt->num_samples, _mesa_get_format_name(dst_mt->format), dst_mt,
+       dst_mt->surf.samples, _mesa_get_format_name(dst_mt->format), dst_mt,
        dst_level, dst_layer, dst_x0, dst_y0, dst_x1, dst_y1,
        mirror_x, mirror_y);
 
@@ -318,7 +318,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * R32_FLOAT, so only the contents of the red channel matters.
     */
    if (brw->gen == 6 &&
-       src_mt->num_samples > 1 && dst_mt->num_samples <= 1 &&
+       src_mt->surf.samples > 1 && dst_mt->surf.samples <= 1 &&
        src_mt->format == dst_mt->format &&
        (dst_format == MESA_FORMAT_L_FLOAT32 ||
         dst_format == MESA_FORMAT_I_FLOAT32)) {
@@ -375,9 +375,9 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
    DBG("%s from %dx %s mt %p %d %d (%d,%d) %dx%d"
        "to %dx %s mt %p %d %d (%d,%d)\n",
        __func__,
-       src_mt->num_samples, _mesa_get_format_name(src_mt->format), src_mt,
+       src_mt->surf.samples, _mesa_get_format_name(src_mt->format), src_mt,
        src_level, src_layer, src_x, src_y, src_width, src_height,
-       dst_mt->num_samples, _mesa_get_format_name(dst_mt->format), dst_mt,
+       dst_mt->surf.samples, _mesa_get_format_name(dst_mt->format), dst_mt,
        dst_level, dst_layer, dst_x, dst_y);
 
    struct isl_surf tmp_surfs[2];
@@ -564,7 +564,7 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    struct intel_mipmap_tree *dst_mt = intel_image->mt;
 
    /* There is support for only up to eight samples. */
-   if (src_mt->num_samples > 8 || dst_mt->num_samples > 8)
+   if (src_mt->surf.samples > 8 || dst_mt->surf.samples > 8)
       return false;
 
    if (_mesa_get_format_base_format(src_rb->Format) !=

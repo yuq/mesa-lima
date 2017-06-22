@@ -168,7 +168,7 @@ intel_miptree_supports_ccs(struct brw_context *brw,
       return false;
 
    /* This function applies only to non-multisampled render targets. */
-   if (mt->num_samples > 1)
+   if (mt->surf.samples > 1)
       return false;
 
    /* MCS is only supported for color buffers */
@@ -191,7 +191,7 @@ intel_miptree_supports_ccs(struct brw_context *brw,
         * accidentally reject a multisampled surface here. We should have
         * rejected it earlier by explicitly checking the sample count.
         */
-      assert(mt->num_samples == 1);
+      assert(mt->surf.samples == 1);
    }
 
    /* Handle the hardware restrictions...
@@ -384,7 +384,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->supports_fast_clear = false;
    mt->aux_state = NULL;
    mt->cpp = _mesa_get_format_bytes(format);
-   mt->num_samples = num_samples;
+   mt->surf.samples = num_samples;
    mt->compressed = _mesa_is_format_compressed(format);
    mt->surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
    mt->refcount = 1;
@@ -604,7 +604,7 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
    assert(mt->aux_usage == ISL_AUX_USAGE_NONE);
 
    const unsigned no_flags = 0;
-   if (mt->num_samples > 1 && is_mcs_supported(brw, mt->format, no_flags)) {
+   if (mt->surf.samples > 1 && is_mcs_supported(brw, mt->format, no_flags)) {
       assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
       mt->aux_usage = ISL_AUX_USAGE_MCS;
    } else if (intel_tiling_supports_ccs(brw, mt->tiling) &&
@@ -1369,8 +1369,8 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
    }
 
    int level_depth = mt->level[level].depth;
-   if (mt->num_samples > 1 && mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY)
-      level_depth /= mt->num_samples;
+   if (mt->surf.samples > 1 && mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY)
+      level_depth /= mt->surf.samples;
 
    /* Test image dimensions against the base level image adjusted for
     * minification.  This will also catch images not present in the
@@ -1383,7 +1383,7 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
    }
 
    /* Core uses sample number of zero to indicate single-sampled. */
-   if (MAX2(image->NumSamples, 1) != mt->num_samples)
+   if (MAX2(image->NumSamples, 1) != mt->surf.samples)
       return false;
 
    return true;
@@ -2004,8 +2004,8 @@ intel_miptree_alloc_aux(struct brw_context *brw,
 
    case ISL_AUX_USAGE_MCS:
       assert(_mesa_is_format_color_format(mt->format));
-      assert(mt->num_samples > 1);
-      if (!intel_miptree_alloc_mcs(brw, mt, mt->num_samples))
+      assert(mt->surf.samples > 1);
+      if (!intel_miptree_alloc_mcs(brw, mt, mt->surf.samples))
          return false;
       return true;
 
@@ -2017,7 +2017,7 @@ intel_miptree_alloc_aux(struct brw_context *brw,
 
    case ISL_AUX_USAGE_CCS_E:
       assert(_mesa_is_format_color_format(mt->format));
-      assert(mt->num_samples == 1);
+      assert(mt->surf.samples == 1);
       if (!intel_miptree_alloc_ccs(brw, mt))
          return false;
       return true;
@@ -2066,7 +2066,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
     * There is no such blurb for 1D textures, but there is sufficient evidence
     * that this is broken on SKL+.
     */
-   return (mt->num_samples == 1 &&
+   return (mt->surf.samples == 1 &&
            mt->target != GL_TEXTURE_3D &&
            mt->target != GL_TEXTURE_1D /* gen9+ restriction */);
 }
@@ -2126,7 +2126,7 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
           (level == 0 && mt->first_level == 0 && mt->last_level == 0));
 
    /* Compression of arrayed msaa surfaces is supported. */
-   if (mt->num_samples > 1)
+   if (mt->surf.samples > 1)
       return;
 
    /* Fast color clear is supported for non-msaa arrays only on Gen8+. */
@@ -2466,7 +2466,7 @@ intel_miptree_prepare_access(struct brw_context *brw,
       if (!mt->mcs_buf)
          return;
 
-      if (mt->num_samples > 1) {
+      if (mt->surf.samples > 1) {
          /* Nothing to do for MSAA */
          assert(aux_supported && fast_clear_supported);
       } else {
@@ -2515,7 +2515,7 @@ intel_miptree_finish_write(struct brw_context *brw,
       if (!mt->mcs_buf)
          return;
 
-      if (mt->num_samples > 1) {
+      if (mt->surf.samples > 1) {
          for (uint32_t a = 0; a < num_layers; a++) {
             intel_miptree_finish_mcs_write(brw, mt, level, start_layer + a,
                                            written_with_aux);
@@ -2547,7 +2547,7 @@ intel_miptree_get_aux_state(const struct intel_mipmap_tree *mt,
 
    if (_mesa_is_format_color_format(mt->format)) {
       assert(mt->mcs_buf != NULL);
-      assert(mt->num_samples == 1 ||
+      assert(mt->surf.samples == 1 ||
              mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       unreachable("Cannot get aux state for stencil");
@@ -2568,7 +2568,7 @@ intel_miptree_set_aux_state(struct brw_context *brw,
 
    if (_mesa_is_format_color_format(mt->format)) {
       assert(mt->mcs_buf != NULL);
-      assert(mt->num_samples == 1 ||
+      assert(mt->surf.samples == 1 ||
              mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       unreachable("Cannot get aux state for stencil");
@@ -2623,7 +2623,7 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
 {
    bool aux_supported, clear_supported;
    if (_mesa_is_format_color_format(mt->format)) {
-      if (mt->num_samples > 1) {
+      if (mt->surf.samples > 1) {
          aux_supported = clear_supported = true;
       } else {
          aux_supported = can_texture_with_ccs(brw, mt, view_format);
@@ -2690,7 +2690,7 @@ intel_miptree_prepare_render(struct brw_context *brw,
     * enabled because otherwise the surface state will be programmed with
     * the linear equivalent format anyway.
     */
-   if (brw->gen == 9 && srgb_enabled && mt->num_samples == 1 &&
+   if (brw->gen == 9 && srgb_enabled && mt->surf.samples == 1 &&
        _mesa_get_srgb_format_linear(mt->format) != mt->format) {
 
       /* Lossless compression is not supported for SRGB formats, it
@@ -2753,7 +2753,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
     * reached for multisample buffers.
     */
    assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_NONE ||
-          mt->num_samples == 1);
+          mt->surf.samples == 1);
 
    intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
                                 0, INTEL_REMAINING_LAYERS, false, false);
@@ -2931,7 +2931,7 @@ intel_update_r8stencil(struct brw_context *brw,
                                               src->logical_width0,
                                               src->logical_height0,
                                               src->logical_depth0,
-                                              src->num_samples,
+                                              src->surf.samples,
                                               r8stencil_flags);
       assert(mt->r8stencil_mt);
    }
@@ -3579,7 +3579,7 @@ intel_miptree_map(struct brw_context *brw,
 {
    struct intel_miptree_map *map;
 
-   assert(mt->num_samples == 1 || mt->surf.samples == 1);
+   assert(mt->surf.samples == 1);
 
    map = intel_miptree_attach_map(mt, level, slice, x, y, w, h, mode);
    if (!map){
@@ -3625,7 +3625,7 @@ intel_miptree_unmap(struct brw_context *brw,
 {
    struct intel_miptree_map *map = mt->level[level].slice[slice].map;
 
-   assert(mt->num_samples == 1 || mt->surf.samples == 1);
+   assert(mt->surf.samples == 1);
 
    if (!map)
       return;
@@ -3794,7 +3794,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
    }
 
    surf->levels = mt->last_level - mt->first_level + 1;
-   surf->samples = mt->num_samples;
+   surf->samples = mt->surf.samples;
 
    surf->size = 0; /* TODO */
    surf->alignment = 0; /* TODO */

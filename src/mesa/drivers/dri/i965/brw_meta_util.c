@@ -298,7 +298,7 @@ brw_is_color_fast_clear_compatible(struct brw_context *brw,
     * fast clear because it's very likely to be immediately resolved.
     */
    if (brw->gen >= 9 &&
-       mt->num_samples == 1 &&
+       mt->surf.samples == 1 &&
        ctx->Color.sRGBEnabled &&
        _mesa_get_srgb_format_linear(mt->format) != mt->format)
       return false;

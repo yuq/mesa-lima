@@ -101,7 +101,7 @@ do_blit_copypixels(struct gl_context * ctx,
       return false;
    }
 
-   if (draw_irb->mt->num_samples > 1 || read_irb->mt->num_samples > 1) {
+   if (draw_irb->mt->surf.samples > 1 || read_irb->mt->surf.samples > 1) {
       perf_debug("glCopyPixels() fallback: multisampled buffers\n");
       return false;
    }

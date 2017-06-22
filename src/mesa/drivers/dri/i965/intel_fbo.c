@@ -533,7 +533,7 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
    irb->mt_layer = layer;
 
    const unsigned layer_multiplier = 
-      mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY ? mt->num_samples : 1;
+      mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY ? mt->surf.samples : 1;
 
    if (!layered) {
       irb->layer_count = 1;
@@ -970,7 +970,7 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                  intel_image->base.Base.TexFormat,
                                  0, 0,
                                  width, height, 1,
-                                 irb->mt->num_samples,
+                                 irb->mt->surf.samples,
                                  layout_flags);
 
    if (!invalidate)

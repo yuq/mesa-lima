@@ -1036,7 +1036,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    surf[3] = (brw_get_surface_tiling_bits(mt->tiling) |
 	      (mt->pitch - 1) << BRW_SURFACE_PITCH_SHIFT);
 
-   surf[4] = brw_get_surface_num_multisamples(mt->num_samples);
+   surf[4] = brw_get_surface_num_multisamples(mt->surf.samples);
 
    assert(brw->has_surface_tile_offset || (tile_x == 0 && tile_y == 0));
    /* Note that the low bits of these fields are missing, so

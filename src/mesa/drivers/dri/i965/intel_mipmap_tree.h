@@ -414,12 +414,6 @@ struct intel_mipmap_tree
    /** Bytes per pixel (or bytes per block if compressed) */
    GLuint cpp;
 
-   /**
-    * @see RENDER_SURFACE_STATE.NumberOfMultisamples
-    * @see 3DSTATE_MULTISAMPLE.NumberOfMultisamples
-    */
-   GLuint num_samples;
-
    bool compressed;
 
    /**

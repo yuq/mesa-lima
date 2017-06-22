@@ -398,12 +398,12 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
           */
          if (intel_tex->mt->aux_usage == ISL_AUX_USAGE_MCS) {
             assert(brw->gen >= 7);
-            assert(intel_tex->mt->num_samples > 1);
+            assert(intel_tex->mt->surf.samples > 1);
             assert(intel_tex->mt->mcs_buf);
             assert(intel_tex->mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
             key->compressed_multisample_layout_mask |= 1 << s;
 
-            if (intel_tex->mt->num_samples >= 16) {
+            if (intel_tex->mt->surf.samples >= 16) {
                assert(brw->gen >= 9);
                key->msaa_16 |= 1 << s;
             }

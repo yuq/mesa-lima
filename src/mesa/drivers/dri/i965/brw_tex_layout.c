@@ -100,7 +100,7 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
    if (brw->gen >= 8)
       return 4;
 
-   if (mt->num_samples > 1)
+   if (mt->surf.samples > 1)
       return 4;
 
    GLenum base_format = _mesa_get_format_base_format(mt->format);
@@ -521,7 +521,7 @@ brw_miptree_choose_tiling(struct brw_context *brw,
       return I915_TILING_NONE;
    }
 
-   if (mt->num_samples > 1) {
+   if (mt->surf.samples > 1) {
       /* From p82 of the Sandy Bridge PRM, dw3[1] of SURFACE_STATE ("Tiled
        * Surface"):
        *
