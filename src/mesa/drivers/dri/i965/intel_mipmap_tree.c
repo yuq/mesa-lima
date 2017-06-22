@@ -1952,14 +1952,26 @@ get_ccs_e_resolve_op(enum isl_aux_state aux_state,
                      enum isl_aux_usage aux_usage,
                      bool fast_clear_supported)
 {
-   assert(aux_usage == ISL_AUX_USAGE_NONE || aux_usage == ISL_AUX_USAGE_CCS_E);
+   /* CCS_E surfaces can be accessed as CCS_D if we're careful. */
+   assert(aux_usage == ISL_AUX_USAGE_NONE ||
+          aux_usage == ISL_AUX_USAGE_CCS_D ||
+          aux_usage == ISL_AUX_USAGE_CCS_E);
 
-   const bool ccs_supported = aux_usage == ISL_AUX_USAGE_CCS_E;
+   if (aux_usage == ISL_AUX_USAGE_CCS_D)
+      assert(fast_clear_supported);
 
    switch (aux_state) {
    case ISL_AUX_STATE_CLEAR:
+   case ISL_AUX_STATE_PARTIAL_CLEAR:
+      if (fast_clear_supported)
+         return BLORP_FAST_CLEAR_OP_NONE;
+      else if (aux_usage == ISL_AUX_USAGE_CCS_E)
+         return BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+      else
+         return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
-      if (!ccs_supported)
+      if (aux_usage != ISL_AUX_USAGE_CCS_E)
          return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
       else if (!fast_clear_supported)
          return BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
@@ -1967,7 +1979,7 @@ get_ccs_e_resolve_op(enum isl_aux_state aux_state,
          return BLORP_FAST_CLEAR_OP_NONE;
 
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
-      if (!ccs_supported)
+      if (aux_usage != ISL_AUX_USAGE_CCS_E)
          return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
       else
          return BLORP_FAST_CLEAR_OP_NONE;
@@ -1975,7 +1987,6 @@ get_ccs_e_resolve_op(enum isl_aux_state aux_state,
    case ISL_AUX_STATE_PASS_THROUGH:
       return BLORP_FAST_CLEAR_OP_NONE;
 
-   case ISL_AUX_STATE_PARTIAL_CLEAR:
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_AUX_INVALID:
       break;
@@ -2043,9 +2054,17 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
    if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
       switch (aux_state) {
       case ISL_AUX_STATE_CLEAR:
-         assert(aux_usage == ISL_AUX_USAGE_CCS_E);
-         intel_miptree_set_aux_state(brw, mt, level, layer, 1,
-                                     ISL_AUX_STATE_COMPRESSED_CLEAR);
+      case ISL_AUX_STATE_PARTIAL_CLEAR:
+         assert(aux_usage == ISL_AUX_USAGE_CCS_E ||
+                aux_usage == ISL_AUX_USAGE_CCS_D);
+
+         if (aux_usage == ISL_AUX_USAGE_CCS_E) {
+            intel_miptree_set_aux_state(brw, mt, level, layer, 1,
+                                        ISL_AUX_STATE_COMPRESSED_CLEAR);
+         } else if (aux_state != ISL_AUX_STATE_PARTIAL_CLEAR) {
+            intel_miptree_set_aux_state(brw, mt, level, layer, 1,
+                                        ISL_AUX_STATE_PARTIAL_CLEAR);
+         }
          break;
 
       case ISL_AUX_STATE_COMPRESSED_CLEAR:
@@ -2062,7 +2081,6 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
          }
          break;
 
-      case ISL_AUX_STATE_PARTIAL_CLEAR:
       case ISL_AUX_STATE_RESOLVED:
       case ISL_AUX_STATE_AUX_INVALID:
          unreachable("Invalid aux state for CCS_E");
