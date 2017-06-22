@@ -129,8 +129,9 @@ get_isl_surf(struct brw_context *brw, struct intel_mipmap_tree *mt,
 
 static void
 brw_emit_surface_state(struct brw_context *brw,
-                       struct intel_mipmap_tree *mt, uint32_t flags,
+                       struct intel_mipmap_tree *mt,
                        GLenum target, struct isl_view view,
+                       enum isl_aux_usage aux_usage,
                        uint32_t mocs, uint32_t *surf_offset, int surf_index,
                        unsigned read_domains, unsigned write_domains)
 {
@@ -147,23 +148,26 @@ brw_emit_surface_state(struct brw_context *brw,
    struct brw_bo *aux_bo;
    struct isl_surf *aux_surf = NULL;
    uint64_t aux_offset = 0;
-   enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
-   if ((mt->mcs_buf || intel_miptree_sample_with_hiz(brw, mt)) &&
-       !(flags & INTEL_AUX_BUFFER_DISABLED)) {
-      aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
+   switch (aux_usage) {
+   case ISL_AUX_USAGE_MCS:
+   case ISL_AUX_USAGE_CCS_D:
+   case ISL_AUX_USAGE_CCS_E:
+      aux_surf = &mt->mcs_buf->surf;
+      aux_bo = mt->mcs_buf->bo;
+      aux_offset = mt->mcs_buf->bo->offset64 + mt->mcs_buf->offset;
+      break;
 
-      if (mt->mcs_buf) {
-         aux_surf = &mt->mcs_buf->surf;
+   case ISL_AUX_USAGE_HIZ:
+      aux_surf = &mt->hiz_buf->surf;
+      aux_bo = mt->hiz_buf->bo;
+      aux_offset = mt->hiz_buf->bo->offset64;
+      break;
 
-         aux_bo = mt->mcs_buf->bo;
-         aux_offset = mt->mcs_buf->bo->offset64 + mt->mcs_buf->offset;
-      } else {
-         aux_surf = &mt->hiz_buf->surf;
+   case ISL_AUX_USAGE_NONE:
+      break;
+   }
 
-         aux_bo = mt->hiz_buf->bo;
-         aux_offset = mt->hiz_buf->bo->offset64;
-      }
-
+   if (aux_usage != ISL_AUX_USAGE_NONE) {
       /* We only really need a clear color if we also have an auxiliary
        * surface.  Without one, it does nothing.
        */
@@ -211,8 +215,13 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
    struct intel_mipmap_tree *mt = irb->mt;
 
-   if (brw->gen < 9) {
-      assert(!(flags & INTEL_AUX_BUFFER_DISABLED));
+   enum isl_aux_usage aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
+   if (!mt->mcs_buf)
+      aux_usage = ISL_AUX_USAGE_NONE;
+
+   if (flags & INTEL_AUX_BUFFER_DISABLED) {
+      assert(brw->gen >= 9);
+      aux_usage = ISL_AUX_USAGE_NONE;
    }
 
    assert(brw_render_target_supported(brw, rb));
@@ -234,7 +243,7 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    };
 
    uint32_t offset;
-   brw_emit_surface_state(brw, mt, flags, mt->target, view,
+   brw_emit_surface_state(brw, mt, mt->target, view, aux_usage,
                           rb_mocs[brw->gen],
                           &offset, surf_index,
                           I915_GEM_DOMAIN_RENDER,
@@ -649,9 +658,14 @@ brw_update_texture_surface(struct gl_context *ctx,
 
       assert(brw_texture_view_sane(brw, mt, &view));
 
-      const int flags = brw_disable_aux_surface(brw, mt, &view) ?
-                           INTEL_AUX_BUFFER_DISABLED : 0;
-      brw_emit_surface_state(brw, mt, flags, mt->target, view,
+      enum isl_aux_usage aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
+      if (!mt->mcs_buf && !intel_miptree_sample_with_hiz(brw, mt))
+         aux_usage = ISL_AUX_USAGE_NONE;
+
+      if (brw_disable_aux_surface(brw, mt, &view))
+         aux_usage = ISL_AUX_USAGE_NONE;
+
+      brw_emit_surface_state(brw, mt, mt->target, view, aux_usage,
                              tex_mocs[brw->gen],
                              surf_offset, surf_index,
                              I915_GEM_DOMAIN_SAMPLER, 0);
@@ -1220,9 +1234,16 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
                .usage = ISL_SURF_USAGE_TEXTURE_BIT,
             };
 
-            const int flags = brw->draw_aux_buffer_disabled[i] ?
-                                 INTEL_AUX_BUFFER_DISABLED : 0;
-            brw_emit_surface_state(brw, irb->mt, flags, target, view,
+            enum isl_aux_usage aux_usage =
+               intel_miptree_get_aux_isl_usage(brw, irb->mt);
+            if (!irb->mt->mcs_buf &&
+                !intel_miptree_sample_with_hiz(brw, irb->mt))
+               aux_usage = ISL_AUX_USAGE_NONE;
+
+            if (brw->draw_aux_buffer_disabled[i])
+               aux_usage = ISL_AUX_USAGE_NONE;
+
+            brw_emit_surface_state(brw, irb->mt, target, view, aux_usage,
                                    tex_mocs[brw->gen],
                                    surf_offset, surf_index,
                                    I915_GEM_DOMAIN_SAMPLER, 0);
@@ -1711,8 +1732,8 @@ update_image_surface(struct brw_context *brw,
                                                        view.base_level, 1,
                                                        view.base_array_layer,
                                                        view.array_len));
-            brw_emit_surface_state(brw, mt, INTEL_AUX_BUFFER_DISABLED,
-                                   mt->target, view, tex_mocs[brw->gen],
+            brw_emit_surface_state(brw, mt, mt->target, view,
+                                   ISL_AUX_USAGE_NONE, tex_mocs[brw->gen],
                                    surf_offset, surf_index,
                                    I915_GEM_DOMAIN_SAMPLER,
                                    access == GL_READ_ONLY ? 0 :
