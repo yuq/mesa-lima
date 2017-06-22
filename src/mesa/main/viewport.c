@@ -103,12 +103,8 @@ viewport(struct gl_context *ctx, GLint x, GLint y, GLsizei width,
    for (unsigned i = 0; i < ctx->Const.MaxViewports; i++)
       set_viewport_no_notify(ctx, i, x, y, width, height);
 
-   if (ctx->Driver.Viewport) {
-      /* Many drivers will use this call to check for window size changes
-       * and reallocate the z/stencil/accum/etc buffers if needed.
-       */
+   if (ctx->Driver.Viewport)
       ctx->Driver.Viewport(ctx);
-   }
 }
 
 /**
@@ -159,12 +155,8 @@ _mesa_set_viewport(struct gl_context *ctx, unsigned idx, GLfloat x, GLfloat y,
 {
    set_viewport_no_notify(ctx, idx, x, y, width, height);
 
-   if (ctx->Driver.Viewport) {
-      /* Many drivers will use this call to check for window size changes
-       * and reallocate the z/stencil/accum/etc buffers if needed.
-       */
+   if (ctx->Driver.Viewport)
       ctx->Driver.Viewport(ctx);
-   }
 }
 
 static void
