@@ -68,9 +68,8 @@ release_buffer(struct gbm_surface *_surf, struct gbm_bo *bo)
 {
    struct gbm_dri_surface *surf = (struct gbm_dri_surface *) _surf;
    struct dri2_egl_surface *dri2_surf = surf->dri_private;
-   unsigned i;
 
-   for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
       if (dri2_surf->color_buffers[i].bo == bo) {
 	 dri2_surf->color_buffers[i].locked = false;
       }
@@ -82,9 +81,8 @@ has_free_buffers(struct gbm_surface *_surf)
 {
    struct gbm_dri_surface *surf = (struct gbm_dri_surface *) _surf;
    struct dri2_egl_surface *dri2_surf = surf->dri_private;
-   unsigned i;
 
-   for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
+   for (unsigned i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
       if (!dri2_surf->color_buffers[i].locked)
 	 return 1;
 
@@ -189,16 +187,15 @@ dri2_drm_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
-   unsigned i;
 
    dri2_dpy->core->destroyDrawable(dri2_surf->dri_drawable);
 
-   for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
       if (dri2_surf->color_buffers[i].bo)
 	 gbm_bo_destroy(dri2_surf->color_buffers[i].bo);
    }
 
-   for (i = 0; i < __DRI_BUFFER_COUNT; i++) {
+   for (unsigned i = 0; i < __DRI_BUFFER_COUNT; i++) {
       if (dri2_surf->dri_buffers[i])
          dri2_dpy->dri2->releaseBuffer(dri2_dpy->dri_screen,
                                        dri2_surf->dri_buffers[i]);
@@ -216,10 +213,9 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       dri2_egl_display(dri2_surf->base.Resource.Display);
    struct gbm_dri_surface *surf = dri2_surf->gbm_surf;
    int age = 0;
-   unsigned i;
 
    if (dri2_surf->back == NULL) {
-      for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
+      for (unsigned i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
 	 if (!dri2_surf->color_buffers[i].locked &&
 	      dri2_surf->color_buffers[i].age >= age) {
 	    dri2_surf->back = &dri2_surf->color_buffers[i];
@@ -367,7 +363,6 @@ dri2_drm_get_buffers(__DRIdrawable * driDrawable,
    unsigned int *attachments_with_format;
    __DRIbuffer *buffer;
    const unsigned int format = 32;
-   int i;
 
    attachments_with_format = calloc(count, 2 * sizeof(unsigned int));
    if (!attachments_with_format) {
@@ -375,7 +370,7 @@ dri2_drm_get_buffers(__DRIdrawable * driDrawable,
       return NULL;
    }
 
-   for (i = 0; i < count; ++i) {
+   for (int i = 0; i < count; ++i) {
       attachments_with_format[2*i] = attachments[i];
       attachments_with_format[2*i + 1] = format;
    }
@@ -424,7 +419,6 @@ dri2_drm_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
-   unsigned i;
 
    if (!dri2_dpy->flush) {
       dri2_dpy->core->swapBuffers(dri2_surf->dri_drawable);
@@ -434,7 +428,7 @@ dri2_drm_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
    if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
       if (dri2_surf->current)
          _eglError(EGL_BAD_SURFACE, "dri2_swap_buffers");
-      for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
+      for (unsigned i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
          if (dri2_surf->color_buffers[i].age > 0)
             dri2_surf->color_buffers[i].age++;
 
@@ -534,7 +528,7 @@ swrast_put_image2(__DRIdrawable *driDrawable,
                   void          *loaderPrivate)
 {
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
-   int internal_stride, i;
+   int internal_stride;
    struct gbm_dri_bo *bo;
 
    if (op != __DRI_SWRAST_IMAGE_OP_DRAW &&
@@ -550,7 +544,7 @@ swrast_put_image2(__DRIdrawable *driDrawable,
 
    internal_stride = bo->base.stride;
 
-   for (i = 0; i < height; i++) {
+   for (int i = 0; i < height; i++) {
       memcpy(bo->map + (x + i) * internal_stride + y,
              data + i * stride, stride);
    }
@@ -568,7 +562,7 @@ swrast_get_image(__DRIdrawable *driDrawable,
                  void          *loaderPrivate)
 {
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
-   int internal_stride, stride, i;
+   int internal_stride, stride;
    struct gbm_dri_bo *bo;
 
    if (get_swrast_front_bo(dri2_surf) < 0)
@@ -581,7 +575,7 @@ swrast_get_image(__DRIdrawable *driDrawable,
    internal_stride = bo->base.stride;
    stride = width * 4;
 
-   for (i = 0; i < height; i++) {
+   for (int i = 0; i < height; i++) {
       memcpy(data + i * stride,
              bo->map + (x + i) * internal_stride + y, stride);
    }
@@ -609,10 +603,9 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       EGL_NONE,
    };
    unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
-   unsigned int count, i, j;
+   unsigned int count = 0;
 
-   count = 0;
-   for (i = 0; dri2_dpy->driver_configs[i]; i++) {
+   for (unsigned i = 0; dri2_dpy->driver_configs[i]; i++) {
       unsigned int red, alpha;
 
       dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
@@ -620,7 +613,7 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
                                       __DRI_ATTRIB_ALPHA_MASK, &alpha);
 
-      for (j = 0; j < ARRAY_SIZE(visuals); j++) {
+      for (unsigned j = 0; j < ARRAY_SIZE(visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
          if (visuals[j].red_mask != red || visuals[j].alpha_mask != alpha)
@@ -638,7 +631,7 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       }
    }
 
-   for (i = 0; i < ARRAY_SIZE(format_count); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(format_count); i++) {
       if (!format_count[i]) {
          _eglLog(_EGL_DEBUG, "No DRI config supports native format 0x%x",
                  visuals[i].format);
