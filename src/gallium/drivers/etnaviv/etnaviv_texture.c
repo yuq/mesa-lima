@@ -36,6 +36,8 @@
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
 
+#include <drm_fourcc.h>
+
 static void *
 etna_create_sampler_state(struct pipe_context *pipe,
                           const struct pipe_sampler_state *ss)
@@ -187,7 +189,8 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
          templat.bind &= ~(PIPE_BIND_DEPTH_STENCIL | PIPE_BIND_RENDER_TARGET |
                            PIPE_BIND_BLENDABLE);
          res->texture =
-            etna_resource_alloc(pctx->screen, ETNA_LAYOUT_TILED, &templat);
+            etna_resource_alloc(pctx->screen, ETNA_LAYOUT_TILED,
+                                DRM_FORMAT_MOD_LINEAR, &templat);
       }
 
       if (!res->texture) {

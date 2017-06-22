@@ -179,7 +179,7 @@ setup_miptree(struct etna_resource *rsc, unsigned paddingX, unsigned paddingY,
 /* Create a new resource object, using the given template info */
 struct pipe_resource *
 etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
-                    const struct pipe_resource *templat)
+                    uint64_t modifier, const struct pipe_resource *templat)
 {
    struct etna_screen *screen = etna_screen(pscreen);
    struct etna_resource *rsc;
@@ -231,8 +231,11 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
       struct winsys_handle handle;
 
       /* pad scanout buffer size to be compatible with the RS */
-      etna_adjust_rs_align(screen->specs.pixel_pipes,
-                           &scanout_templat.width0, &scanout_templat.height0);
+      if (modifier == DRM_FORMAT_MOD_LINEAR)
+         etna_adjust_rs_align(screen->specs.pixel_pipes, &paddingX, &paddingY);
+
+      scanout_templat.width0 = align(scanout_templat.width0, paddingX);
+      scanout_templat.height0 = align(scanout_templat.height0, paddingY);
 
       scanout = renderonly_scanout_for_resource(&scanout_templat,
                                                 screen->ro, &handle);
@@ -240,6 +243,7 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
          return NULL;
 
       assert(handle.type == DRM_API_HANDLE_TYPE_FD);
+      handle.modifier = modifier;
       rsc = etna_resource(pscreen->resource_from_handle(pscreen, templat,
                                                         &handle,
                                                         PIPE_HANDLE_USAGE_WRITE));
@@ -344,7 +348,89 @@ etna_resource_create(struct pipe_screen *pscreen,
    if (templat->target == PIPE_TEXTURE_3D)
       layout = ETNA_LAYOUT_LINEAR;
 
-   return etna_resource_alloc(pscreen, layout, templat);
+   /* modifier is only used for scanout surfaces, so safe to use LINEAR here */
+   return etna_resource_alloc(pscreen, layout, DRM_FORMAT_MOD_LINEAR, templat);
+}
+
+enum modifier_priority {
+   MODIFIER_PRIORITY_INVALID = 0,
+   MODIFIER_PRIORITY_LINEAR,
+   MODIFIER_PRIORITY_SPLIT_TILED,
+   MODIFIER_PRIORITY_SPLIT_SUPER_TILED,
+   MODIFIER_PRIORITY_TILED,
+   MODIFIER_PRIORITY_SUPER_TILED,
+};
+
+const uint64_t priority_to_modifier[] = {
+   [MODIFIER_PRIORITY_INVALID] = DRM_FORMAT_MOD_INVALID,
+   [MODIFIER_PRIORITY_LINEAR] = DRM_FORMAT_MOD_LINEAR,
+   [MODIFIER_PRIORITY_SPLIT_TILED] = DRM_FORMAT_MOD_VIVANTE_SPLIT_TILED,
+   [MODIFIER_PRIORITY_SPLIT_SUPER_TILED] = DRM_FORMAT_MOD_VIVANTE_SPLIT_SUPER_TILED,
+   [MODIFIER_PRIORITY_TILED] = DRM_FORMAT_MOD_VIVANTE_TILED,
+   [MODIFIER_PRIORITY_SUPER_TILED] = DRM_FORMAT_MOD_VIVANTE_SUPER_TILED,
+};
+
+static uint64_t
+select_best_modifier(const struct etna_screen * screen,
+                     const uint64_t *modifiers, const unsigned count)
+{
+   enum modifier_priority prio = MODIFIER_PRIORITY_INVALID;
+
+   for (int i = 0; i < count; i++) {
+      switch (modifiers[i]) {
+      case DRM_FORMAT_MOD_VIVANTE_SUPER_TILED:
+         if ((screen->specs.pixel_pipes > 1 && !screen->specs.single_buffer) ||
+             !screen->specs.can_supertile)
+            break;
+         prio = MAX2(prio, MODIFIER_PRIORITY_SUPER_TILED);
+         break;
+      case DRM_FORMAT_MOD_VIVANTE_TILED:
+         if (screen->specs.pixel_pipes > 1 && !screen->specs.single_buffer)
+            break;
+         prio = MAX2(prio, MODIFIER_PRIORITY_TILED);
+         break;
+      case DRM_FORMAT_MOD_VIVANTE_SPLIT_SUPER_TILED:
+         if ((screen->specs.pixel_pipes < 2) || !screen->specs.can_supertile)
+            break;
+         prio = MAX2(prio, MODIFIER_PRIORITY_SPLIT_SUPER_TILED);
+         break;
+      case DRM_FORMAT_MOD_VIVANTE_SPLIT_TILED:
+         if (screen->specs.pixel_pipes < 2)
+            break;
+         prio = MAX2(prio, MODIFIER_PRIORITY_SPLIT_TILED);
+         break;
+      case DRM_FORMAT_MOD_LINEAR:
+         prio = MAX2(prio, MODIFIER_PRIORITY_LINEAR);
+         break;
+      case DRM_FORMAT_MOD_INVALID:
+      default:
+         break;
+      }
+   }
+
+   return priority_to_modifier[prio];
+}
+
+static struct pipe_resource *
+etna_resource_create_modifiers(struct pipe_screen *pscreen,
+                               const struct pipe_resource *templat,
+                               const uint64_t *modifiers, int count)
+{
+   struct etna_screen *screen = etna_screen(pscreen);
+   struct pipe_resource tmpl = *templat;
+   uint64_t modifier = select_best_modifier(screen, modifiers, count);
+
+   if (modifier == DRM_FORMAT_MOD_INVALID)
+      return NULL;
+
+   /*
+    * We currently assume that all buffers allocated through this interface
+    * should be scanout enabled.
+    */
+   tmpl.bind |= PIPE_BIND_SCANOUT;
+
+   return etna_resource_alloc(pscreen, modifier_to_layout(modifier),
+                              modifier, &tmpl);
 }
 
 static void
@@ -542,6 +628,7 @@ etna_resource_screen_init(struct pipe_screen *pscreen)
 {
    pscreen->can_create_resource = etna_screen_can_create_resource;
    pscreen->resource_create = etna_resource_create;
+   pscreen->resource_create_with_modifiers = etna_resource_create_modifiers;
    pscreen->resource_from_handle = etna_resource_from_handle;
    pscreen->resource_get_handle = etna_resource_get_handle;
    pscreen->resource_changed = etna_resource_changed;

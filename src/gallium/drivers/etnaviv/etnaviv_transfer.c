@@ -39,6 +39,8 @@
 #include "util/u_surface.h"
 #include "util/u_transfer.h"
 
+#include <drm_fourcc.h>
+
 /* Compute offset into a 1D/2D/3D buffer of a certain box.
  * This box must be aligned to the block width and height of the
  * underlying format. */
@@ -203,7 +205,8 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
       templ.nr_samples = 0;
       templ.bind = PIPE_BIND_RENDER_TARGET;
 
-      trans->rsc = etna_resource_alloc(pctx->screen, ETNA_LAYOUT_LINEAR, &templ);
+      trans->rsc = etna_resource_alloc(pctx->screen, ETNA_LAYOUT_LINEAR,
+                                       DRM_FORMAT_MOD_LINEAR, &templ);
       if (!trans->rsc) {
          slab_free(&ctx->transfer_pool, trans);
          return NULL;

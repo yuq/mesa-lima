@@ -151,7 +151,7 @@ etna_screen_resource_alloc_ts(struct pipe_screen *pscreen,
 
 struct pipe_resource *
 etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
-                    const struct pipe_resource *templat);
+                    uint64_t modifier, const struct pipe_resource *templat);
 
 void
 etna_resource_screen_init(struct pipe_screen *pscreen);
