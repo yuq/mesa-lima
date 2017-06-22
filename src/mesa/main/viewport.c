@@ -420,40 +420,16 @@ void _mesa_init_viewport(struct gl_context *ctx)
 }
 
 
-extern void GLAPIENTRY
-_mesa_ClipControl(GLenum origin, GLenum depth)
+static void
+clip_control(struct gl_context *ctx, GLenum origin, GLenum depth)
 {
-   GET_CURRENT_CONTEXT(ctx);
-
-   if (MESA_VERBOSE&VERBOSE_API)
-      _mesa_debug(ctx, "glClipControl(%s, %s)\n",
-	          _mesa_enum_to_string(origin),
-                  _mesa_enum_to_string(depth));
-
-   ASSERT_OUTSIDE_BEGIN_END(ctx);
-
-   if (!ctx->Extensions.ARB_clip_control) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glClipControl");
-      return;
-   }
-
-   if (origin != GL_LOWER_LEFT && origin != GL_UPPER_LEFT) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
-      return;
-   }
-
-   if (depth != GL_NEGATIVE_ONE_TO_ONE && depth != GL_ZERO_TO_ONE) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
-      return;
-   }
-
    if (ctx->Transform.ClipOrigin == origin &&
        ctx->Transform.ClipDepthMode == depth)
       return;
 
    /* Affects transform state and the viewport transform */
    FLUSH_VERTICES(ctx, ctx->DriverFlags.NewClipControl ? 0 :
-                                          _NEW_TRANSFORM | _NEW_VIEWPORT);
+                  _NEW_TRANSFORM | _NEW_VIEWPORT);
    ctx->NewDriverState |= ctx->DriverFlags.NewClipControl;
 
    if (ctx->Transform.ClipOrigin != origin) {
@@ -475,6 +451,37 @@ _mesa_ClipControl(GLenum origin, GLenum depth)
       if (ctx->Driver.DepthRange)
          ctx->Driver.DepthRange(ctx);
    }
+}
+
+
+void GLAPIENTRY
+_mesa_ClipControl(GLenum origin, GLenum depth)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glClipControl(%s, %s)\n",
+	          _mesa_enum_to_string(origin),
+                  _mesa_enum_to_string(depth));
+
+   ASSERT_OUTSIDE_BEGIN_END(ctx);
+
+   if (!ctx->Extensions.ARB_clip_control) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glClipControl");
+      return;
+   }
+
+   if (origin != GL_LOWER_LEFT && origin != GL_UPPER_LEFT) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
+      return;
+   }
+
+   if (depth != GL_NEGATIVE_ONE_TO_ONE && depth != GL_ZERO_TO_ONE) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
+      return;
+   }
+
+   clip_control(ctx, origin, depth);
 }
 
 /**
