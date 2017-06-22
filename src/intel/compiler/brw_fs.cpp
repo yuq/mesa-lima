@@ -880,9 +880,6 @@ namespace {
 unsigned
 fs_inst::flags_read(const gen_device_info *devinfo) const
 {
-   /* XXX - This doesn't consider explicit uses of the flag register as source
-    *       region.
-    */
    if (predicate == BRW_PREDICATE_ALIGN1_ANYV ||
        predicate == BRW_PREDICATE_ALIGN1_ALLV) {
       /* The vertical predication modes combine corresponding bits from
@@ -893,7 +890,11 @@ fs_inst::flags_read(const gen_device_info *devinfo) const
    } else if (predicate) {
       return flag_mask(this);
    } else {
-      return 0;
+      unsigned mask = 0;
+      for (int i = 0; i < sources; i++) {
+         mask |= flag_mask(src[i], size_read(i));
+      }
+      return mask;
    }
 }
 
