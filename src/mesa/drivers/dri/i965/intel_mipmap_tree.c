@@ -1854,6 +1854,39 @@ intel_miptree_level_has_hiz(const struct intel_mipmap_tree *mt, uint32_t level)
    return mt->level[level].has_hiz;
 }
 
+static inline uint32_t
+miptree_level_range_length(const struct intel_mipmap_tree *mt,
+                           uint32_t start_level, uint32_t num_levels)
+{
+   assert(start_level >= mt->first_level);
+   assert(start_level <= mt->last_level);
+
+   if (num_levels == INTEL_REMAINING_LAYERS)
+      num_levels = mt->last_level - start_level + 1;
+   /* Check for overflow */
+   assert(start_level + num_levels >= start_level);
+   assert(start_level + num_levels <= mt->last_level + 1);
+
+   return num_levels;
+}
+
+static inline uint32_t
+miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
+                           uint32_t start_layer, uint32_t num_layers)
+{
+   assert(level <= mt->last_level);
+
+   const uint32_t total_num_layers = get_num_logical_layers(mt, level);
+   assert(start_layer < total_num_layers);
+   if (num_layers == INTEL_REMAINING_LAYERS)
+      num_layers = total_num_layers - start_layer;
+   /* Check for overflow */
+   assert(start_layer + num_layers >= start_layer);
+   assert(start_layer + num_layers <= total_num_layers);
+
+   return num_layers;
+}
+
 bool
 intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
                                    unsigned start_level, unsigned num_levels,
@@ -1865,17 +1898,12 @@ intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
       return false;
 
    /* Clamp the level range to fit the miptree */
-   assert(start_level + num_levels >= start_level);
-   const uint32_t last_level =
-      MIN2(mt->last_level, start_level + num_levels - 1);
-   start_level = MAX2(mt->first_level, start_level);
-   num_levels = last_level - start_level + 1;
+   num_levels = miptree_level_range_length(mt, start_level, num_levels);
 
-   for (uint32_t level = start_level; level <= last_level; level++) {
-      uint32_t level_layers = get_num_phys_layers(&mt->surf, level);
-
-      level_layers = MIN2(num_layers, level_layers);
-
+   for (uint32_t l = 0; l < num_levels; l++) {
+      const uint32_t level = start_level + l;
+      const uint32_t level_layers =
+         miptree_layer_range_length(mt, level, start_layer, num_layers);
       for (unsigned a = 0; a < level_layers; a++) {
          enum isl_aux_state aux_state =
             intel_miptree_get_aux_state(mt, level, start_layer + a);
@@ -2268,39 +2296,6 @@ intel_miptree_finish_hiz_write(struct brw_context *brw,
    case ISL_AUX_STATE_PARTIAL_CLEAR:
       unreachable("Invalid HiZ state");
    }
-}
-
-static inline uint32_t
-miptree_level_range_length(const struct intel_mipmap_tree *mt,
-                           uint32_t start_level, uint32_t num_levels)
-{
-   assert(start_level >= mt->first_level);
-   assert(start_level <= mt->last_level);
-
-   if (num_levels == INTEL_REMAINING_LAYERS)
-      num_levels = mt->last_level - start_level + 1;
-   /* Check for overflow */
-   assert(start_level + num_levels >= start_level);
-   assert(start_level + num_levels <= mt->last_level + 1);
-
-   return num_levels;
-}
-
-static inline uint32_t
-miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
-                           uint32_t start_layer, uint32_t num_layers)
-{
-   assert(level <= mt->last_level);
-
-   const uint32_t total_num_layers = get_num_logical_layers(mt, level);
-   assert(start_layer < total_num_layers);
-   if (num_layers == INTEL_REMAINING_LAYERS)
-      num_layers = total_num_layers - start_layer;
-   /* Check for overflow */
-   assert(start_layer + num_layers >= start_layer);
-   assert(start_layer + num_layers <= total_num_layers);
-
-   return num_layers;
 }
 
 void
