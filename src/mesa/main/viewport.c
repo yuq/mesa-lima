@@ -155,6 +155,19 @@ _mesa_set_viewport(struct gl_context *ctx, unsigned idx, GLfloat x, GLfloat y,
    }
 }
 
+static void
+viewport_array(struct gl_context *ctx, GLuint first, GLsizei count,
+               const struct gl_viewport_inputs *inputs)
+{
+   for (GLsizei i = 0; i < count; i++) {
+      set_viewport_no_notify(ctx, i + first, inputs[i].X, inputs[i].Y,
+                             inputs[i].Width, inputs[i].Height);
+   }
+
+   if (ctx->Driver.Viewport)
+      ctx->Driver.Viewport(ctx);
+}
+
 void GLAPIENTRY
 _mesa_ViewportArrayv(GLuint first, GLsizei count, const GLfloat *v)
 {
@@ -184,13 +197,7 @@ _mesa_ViewportArrayv(GLuint first, GLsizei count, const GLfloat *v)
       }
    }
 
-   for (i = 0; i < count; i++)
-      set_viewport_no_notify(ctx, i + first,
-                             p[i].X, p[i].Y,
-                             p[i].Width, p[i].Height);
-
-   if (ctx->Driver.Viewport)
-      ctx->Driver.Viewport(ctx);
+   viewport_array(ctx, first, count, p);
 }
 
 static void
