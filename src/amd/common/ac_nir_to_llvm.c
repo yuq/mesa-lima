@@ -3397,7 +3397,7 @@ static LLVMValueRef visit_image_atomic(struct nir_to_llvm_context *ctx,
 	const char *base_name = "llvm.amdgcn.image.atomic";
 	const char *atomic_name;
 	LLVMValueRef coords;
-	char intrinsic_name[32], coords_type[8];
+	char intrinsic_name[41], coords_type[8];
 	const struct glsl_type *type = glsl_without_array(var->type);
 
 	if (ctx->stage == MESA_SHADER_FRAGMENT)
