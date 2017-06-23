@@ -205,6 +205,12 @@ blorp_ccs_resolve_attachment(struct blorp_batch *batch,
                              const enum isl_format format,
                              const enum blorp_fast_clear_op resolve_op);
 
+void
+blorp_mcs_partial_resolve(struct blorp_batch *batch,
+                          struct blorp_surf *surf,
+                          enum isl_format format,
+                          uint32_t start_layer, uint32_t num_layers);
+
 /**
  * For an overview of the HiZ operations, see the following sections of the
  * Sandy Bridge PRM, Volume 1, Part2:

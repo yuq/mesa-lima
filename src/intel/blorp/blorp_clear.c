@@ -29,7 +29,7 @@
 #include "blorp_priv.h"
 #include "compiler/brw_eu_defines.h"
 
-#include "compiler/nir/nir_builder.h"
+#include "blorp_nir_builder.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
@@ -791,6 +791,109 @@ blorp_ccs_resolve_attachment(struct blorp_batch *batch,
    params.use_pre_baked_binding_table = true;
    params.pre_baked_binding_table_offset = binding_table_offset;
    params.num_layers = num_layers;
+
+   batch->blorp->exec(batch, &params);
+}
+
+struct blorp_mcs_partial_resolve_key
+{
+   enum blorp_shader_type shader_type;
+   uint32_t num_samples;
+};
+
+static bool
+blorp_params_get_mcs_partial_resolve_kernel(struct blorp_context *blorp,
+                                            struct blorp_params *params)
+{
+   const struct blorp_mcs_partial_resolve_key blorp_key = {
+      .shader_type = BLORP_SHADER_TYPE_MCS_PARTIAL_RESOLVE,
+      .num_samples = params->num_samples,
+   };
+
+   if (blorp->lookup_shader(blorp, &blorp_key, sizeof(blorp_key),
+                            &params->wm_prog_kernel, &params->wm_prog_data))
+      return true;
+
+   void *mem_ctx = ralloc_context(NULL);
+
+   nir_builder b;
+   nir_builder_init_simple_shader(&b, mem_ctx, MESA_SHADER_FRAGMENT, NULL);
+   b.shader->info.name = ralloc_strdup(b.shader, "BLORP-mcs-partial-resolve");
+
+   nir_variable *v_color =
+      BLORP_CREATE_NIR_INPUT(b.shader, clear_color, glsl_vec4_type());
+
+   nir_variable *frag_color =
+      nir_variable_create(b.shader, nir_var_shader_out,
+                          glsl_vec4_type(), "gl_FragColor");
+   frag_color->data.location = FRAG_RESULT_COLOR;
+
+   /* Do an MCS fetch and check if it is equal to the magic clear value */
+   nir_ssa_def *mcs =
+      blorp_nir_txf_ms_mcs(&b, nir_f2i32(&b, blorp_nir_frag_coord(&b)),
+                               nir_load_layer_id(&b));
+   nir_ssa_def *is_clear =
+      blorp_nir_mcs_is_clear_color(&b, mcs, blorp_key.num_samples);
+
+   /* If we aren't the clear value, discard. */
+   nir_intrinsic_instr *discard =
+      nir_intrinsic_instr_create(b.shader, nir_intrinsic_discard_if);
+   discard->src[0] = nir_src_for_ssa(nir_inot(&b, is_clear));
+   nir_builder_instr_insert(&b, &discard->instr);
+
+   nir_copy_var(&b, frag_color, v_color);
+
+   struct brw_wm_prog_key wm_key;
+   brw_blorp_init_wm_prog_key(&wm_key);
+   wm_key.tex.compressed_multisample_layout_mask = 1;
+   wm_key.tex.msaa_16 = blorp_key.num_samples == 16;
+   wm_key.multisample_fbo = true;
+
+   struct brw_wm_prog_data prog_data;
+   unsigned program_size;
+   const unsigned *program =
+      blorp_compile_fs(blorp, mem_ctx, b.shader, &wm_key, false,
+                       &prog_data, &program_size);
+
+   bool result =
+      blorp->upload_shader(blorp, &blorp_key, sizeof(blorp_key),
+                           program, program_size,
+                           &prog_data.base, sizeof(prog_data),
+                           &params->wm_prog_kernel, &params->wm_prog_data);
+
+   ralloc_free(mem_ctx);
+   return result;
+}
+
+void
+blorp_mcs_partial_resolve(struct blorp_batch *batch,
+                          struct blorp_surf *surf,
+                          enum isl_format format,
+                          uint32_t start_layer, uint32_t num_layers)
+{
+   struct blorp_params params;
+   blorp_params_init(&params);
+
+   assert(batch->blorp->isl_dev->info->gen >= 7);
+
+   params.x0 = 0;
+   params.y0 = 0;
+   params.x1 = surf->surf->logical_level0_px.width;
+   params.y1 = surf->surf->logical_level0_px.height;
+
+   brw_blorp_surface_info_init(batch->blorp, &params.src, surf, 0,
+                               start_layer, format, false);
+   brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, 0,
+                               start_layer, format, true);
+
+   params.num_samples = params.dst.surf.samples;
+   params.num_layers = num_layers;
+
+   memcpy(&params.wm_inputs.clear_color,
+          surf->clear_color.f32, sizeof(float) * 4);
+
+   if (!blorp_params_get_mcs_partial_resolve_kernel(batch->blorp, &params))
+      return;
 
    batch->blorp->exec(batch, &params);
 }
