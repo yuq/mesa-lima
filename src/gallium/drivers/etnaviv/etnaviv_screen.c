@@ -45,6 +45,8 @@
 
 #include "state_tracker/drm_driver.h"
 
+#include <drm_fourcc.h>
+
 #define ETNA_DRM_VERSION(major, minor) ((major) << 16 | (minor))
 #define ETNA_DRM_VERSION_FENCE_FD      ETNA_DRM_VERSION(1, 1)
 
@@ -557,6 +559,47 @@ etna_screen_is_format_supported(struct pipe_screen *pscreen,
    return usage == allowed;
 }
 
+const uint64_t supported_modifiers[] = {
+   DRM_FORMAT_MOD_LINEAR,
+   DRM_FORMAT_MOD_VIVANTE_TILED,
+   DRM_FORMAT_MOD_VIVANTE_SUPER_TILED,
+   DRM_FORMAT_MOD_VIVANTE_SPLIT_TILED,
+   DRM_FORMAT_MOD_VIVANTE_SPLIT_SUPER_TILED,
+};
+
+static void
+etna_screen_query_dmabuf_modifiers(struct pipe_screen *pscreen,
+                                   enum pipe_format format, int max,
+                                   uint64_t *modifiers,
+                                   unsigned int *external_only, int *count)
+{
+   struct etna_screen *screen = etna_screen(pscreen);
+   int i, num_modifiers = 0;
+
+   if (max > ARRAY_SIZE(supported_modifiers))
+      max = ARRAY_SIZE(supported_modifiers);
+
+   if (!max) {
+      modifiers = NULL;
+      max = ARRAY_SIZE(supported_modifiers);
+   }
+
+   for (i = 0; num_modifiers < max; i++) {
+      /* don't advertise split tiled formats on single pipe/buffer GPUs */
+      if ((screen->specs.pixel_pipes == 1 || screen->specs.single_buffer) &&
+          i >= 3)
+         break;
+
+      if (modifiers)
+         modifiers[num_modifiers] = supported_modifiers[i];
+      if (external_only)
+         external_only[num_modifiers] = 0;
+      num_modifiers++;
+   }
+
+   *count = num_modifiers;
+}
+
 static boolean
 etna_get_specs(struct etna_screen *screen)
 {
@@ -852,6 +895,7 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
    pscreen->get_timestamp = etna_screen_get_timestamp;
    pscreen->context_create = etna_context_create;
    pscreen->is_format_supported = etna_screen_is_format_supported;
+   pscreen->query_dmabuf_modifiers = etna_screen_query_dmabuf_modifiers;
 
    etna_fence_screen_init(pscreen);
    etna_query_screen_init(pscreen);
