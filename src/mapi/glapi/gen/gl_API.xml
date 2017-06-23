@@ -2570,7 +2570,7 @@
         <glx rop="163"/>
     </function>
 
-    <function name="DepthFunc" es1="1.0" es2="2.0">
+    <function name="DepthFunc" es1="1.0" es2="2.0" no_error="true">
         <param name="func" type="GLenum"/>
         <glx rop="164"/>
     </function>

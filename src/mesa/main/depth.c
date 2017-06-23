@@ -90,6 +90,14 @@ depth_func(struct gl_context *ctx, GLenum func, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_DepthFunc_no_error(GLenum func)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   depth_func(ctx, func, true);
+}
+
+
+void GLAPIENTRY
 _mesa_DepthFunc(GLenum func)
 {
    GET_CURRENT_CONTEXT(ctx);
