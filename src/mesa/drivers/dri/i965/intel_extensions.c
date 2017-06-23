@@ -271,6 +271,7 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (brw->gen >= 8) {
       ctx->Extensions.ARB_gpu_shader_int64 = true;
+      ctx->Extensions.ARB_shader_ballot = true; /* requires ARB_gpu_shader_int64 */
       ctx->Extensions.ARB_ES3_2_compatibility = true;
    }
 
