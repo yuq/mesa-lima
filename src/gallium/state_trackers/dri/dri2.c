@@ -1179,6 +1179,12 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
             NULL, image->texture, &whandle, usage);
       *value = whandle.stride;
       return GL_TRUE;
+   case __DRI_IMAGE_ATTRIB_OFFSET:
+      whandle.type = DRM_API_HANDLE_TYPE_KMS;
+      image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage);
+      *value = whandle.offset;
+      return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_HANDLE:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
       image->texture->screen->resource_get_handle(image->texture->screen,
