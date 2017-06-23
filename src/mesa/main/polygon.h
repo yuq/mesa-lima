@@ -46,7 +46,7 @@ extern void GLAPIENTRY
 _mesa_CullFace(GLenum mode);
 
 extern void GLAPIENTRY
-_mesa_FrontFace( GLenum mode );
+_mesa_FrontFace(GLenum mode);
 
 extern void GLAPIENTRY
 _mesa_PolygonMode( GLenum face, GLenum mode );
