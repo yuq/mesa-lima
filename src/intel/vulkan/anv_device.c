@@ -359,8 +359,9 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    if (device->info.is_cherryview &&
        device->subslice_total > 0 && device->eu_total > 0) {
-      /* Logical CS threads = EUs per subslice * 7 threads per EU */
-      uint32_t max_cs_threads = device->eu_total / device->subslice_total * 7;
+      /* Logical CS threads = EUs per subslice * num threads per EU */
+      uint32_t max_cs_threads =
+         device->eu_total / device->subslice_total * device->info.num_thread_per_eu;
 
       /* Fuse configurations may give more threads than expected, never less. */
       if (max_cs_threads > device->info.max_cs_threads)
