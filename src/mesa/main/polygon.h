@@ -45,6 +45,9 @@ _mesa_CullFace_no_error(GLenum mode);
 extern void GLAPIENTRY
 _mesa_CullFace(GLenum mode);
 
+void GLAPIENTRY
+_mesa_FrontFace_no_error(GLenum mode);
+
 extern void GLAPIENTRY
 _mesa_FrontFace(GLenum mode);
 

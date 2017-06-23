@@ -1990,7 +1990,7 @@
         <glx rop="83"/>
     </function>
 
-    <function name="FrontFace" es1="1.0" es2="2.0">
+    <function name="FrontFace" es1="1.0" es2="2.0" no_error="true">
         <param name="mode" type="GLenum"/>
         <glx rop="84"/>
     </function>

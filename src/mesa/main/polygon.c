@@ -122,6 +122,14 @@ front_face(struct gl_context *ctx, GLenum mode, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_FrontFace_no_error(GLenum mode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   front_face(ctx, mode, true);
+}
+
+
+void GLAPIENTRY
 _mesa_FrontFace(GLenum mode)
 {
    GET_CURRENT_CONTEXT(ctx);
