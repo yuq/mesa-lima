@@ -74,6 +74,11 @@ brw_blorp_resolve_color(struct brw_context *brw,
                         enum blorp_fast_clear_op resolve_op);
 
 void
+brw_blorp_mcs_partial_resolve(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt,
+                              uint32_t start_layer, uint32_t num_layers);
+
+void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                unsigned int level, unsigned int start_layer,
                unsigned int num_layers, enum blorp_hiz_op op);

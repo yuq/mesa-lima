@@ -1035,6 +1035,30 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
    brw_emit_end_of_pipe_sync(brw, PIPE_CONTROL_RENDER_TARGET_FLUSH);
 }
 
+void
+brw_blorp_mcs_partial_resolve(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt,
+                              uint32_t start_layer, uint32_t num_layers)
+{
+   DBG("%s to mt %p layers %u-%u\n", __FUNCTION__, mt,
+       start_layer, start_layer + num_layers - 1);
+
+   const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
+   enum isl_format isl_format = brw_blorp_to_isl_format(brw, format, true);
+
+   struct isl_surf isl_tmp[1];
+   struct blorp_surf surf;
+   uint32_t level = 0;
+   blorp_surf_for_miptree(brw, &surf, mt, true, false, 0,
+                          &level, start_layer, num_layers, isl_tmp);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&brw->blorp, &batch, brw, 0);
+   blorp_mcs_partial_resolve(&batch, &surf, isl_format,
+                             start_layer, num_layers);
+   blorp_batch_finish(&batch);
+}
+
 /**
  * Perform a HiZ or depth resolve operation.
  *

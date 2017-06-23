@@ -2077,6 +2077,35 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
 }
 
 static void
+intel_miptree_prepare_mcs_access(struct brw_context *brw,
+                                 struct intel_mipmap_tree *mt,
+                                 uint32_t layer,
+                                 bool mcs_supported,
+                                 bool fast_clear_supported)
+{
+   switch (intel_miptree_get_aux_state(mt, 0, layer)) {
+   case ISL_AUX_STATE_CLEAR:
+   case ISL_AUX_STATE_COMPRESSED_CLEAR:
+      assert(mcs_supported);
+      if (!fast_clear_supported) {
+         brw_blorp_mcs_partial_resolve(brw, mt, layer, 1);
+         intel_miptree_set_aux_state(brw, mt, 0, layer, 1,
+                                     ISL_AUX_STATE_COMPRESSED_NO_CLEAR);
+      }
+      break;
+
+   case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
+      assert(mcs_supported);
+      break; /* Nothing to do */
+
+   case ISL_AUX_STATE_RESOLVED:
+   case ISL_AUX_STATE_PASS_THROUGH:
+   case ISL_AUX_STATE_AUX_INVALID:
+      unreachable("Invalid aux state for MCS");
+   }
+}
+
+static void
 intel_miptree_finish_mcs_write(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
                                uint32_t layer,
@@ -2090,10 +2119,10 @@ intel_miptree_finish_mcs_write(struct brw_context *brw,
       break;
 
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
+   case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
       assert(written_with_mcs);
       break; /* Nothing to do */
 
-   case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_PASS_THROUGH:
    case ISL_AUX_STATE_AUX_INVALID:
@@ -2239,8 +2268,14 @@ intel_miptree_prepare_access(struct brw_context *brw,
          return;
 
       if (mt->surf.samples > 1) {
-         /* Nothing to do for MSAA */
-         assert(aux_supported && fast_clear_supported);
+         assert(start_level == 0 && num_levels == 1);
+         const uint32_t level_layers =
+            miptree_layer_range_length(mt, 0, start_layer, num_layers);
+         for (uint32_t a = 0; a < level_layers; a++) {
+            intel_miptree_prepare_mcs_access(brw, mt, start_layer + a,
+                                             aux_supported,
+                                             fast_clear_supported);
+         }
       } else {
          for (uint32_t l = 0; l < num_levels; l++) {
             const uint32_t level = start_level + l;
