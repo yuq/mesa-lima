@@ -44,7 +44,7 @@ extern void GLAPIENTRY
 _mesa_ClearDepthf( GLclampf depth );
 
 extern void GLAPIENTRY
-_mesa_DepthFunc( GLenum func );
+_mesa_DepthFunc(GLenum func);
 
 extern void GLAPIENTRY
 _mesa_DepthMask( GLboolean flag );
