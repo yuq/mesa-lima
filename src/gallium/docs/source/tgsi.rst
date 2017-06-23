@@ -26,7 +26,13 @@ each of the components of *dst*. When this happens, the result is said to be
 Modifiers
 ^^^^^^^^^^^^^^^
 
-TGSI supports modifiers on inputs (as well as saturate modifier on instructions).
+TGSI supports modifiers on inputs (as well as saturate and precise modifier
+on instructions).
+
+For arithmetic instruction having a precise modifier certain optimizations
+which may alter the result are disallowed. Example: *add(mul(a,b),c)* can't be
+optimized to TGSI_OPCODE_MAD, because some hardware only supports the fused
+MAD instruction.
 
 For inputs which have a floating point type, both absolute value and
 negation modifiers are supported (with absolute value being applied
@@ -236,6 +242,9 @@ This instruction replicates its result.
 
 
 .. opcode:: MAD - Multiply And Add
+
+Perform a * b + c. The implementation is free to decide whether there is an
+intermediate rounding step or not.
 
 .. math::
 
