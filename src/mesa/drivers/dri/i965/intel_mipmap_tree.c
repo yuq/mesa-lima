@@ -2079,18 +2079,18 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
 static void
 intel_miptree_finish_mcs_write(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
-                               uint32_t level, uint32_t layer,
-                               bool written_with_aux)
+                               uint32_t layer,
+                               bool written_with_mcs)
 {
-   switch (intel_miptree_get_aux_state(mt, level, layer)) {
+   switch (intel_miptree_get_aux_state(mt, 0, layer)) {
    case ISL_AUX_STATE_CLEAR:
-      assert(written_with_aux);
-      intel_miptree_set_aux_state(brw, mt, level, layer, 1,
+      assert(written_with_mcs);
+      intel_miptree_set_aux_state(brw, mt, 0, layer, 1,
                                   ISL_AUX_STATE_COMPRESSED_CLEAR);
       break;
 
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
-      assert(written_with_aux);
+      assert(written_with_mcs);
       break; /* Nothing to do */
 
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
@@ -2288,8 +2288,9 @@ intel_miptree_finish_write(struct brw_context *brw,
          return;
 
       if (mt->surf.samples > 1) {
+         assert(level == 0);
          for (uint32_t a = 0; a < num_layers; a++) {
-            intel_miptree_finish_mcs_write(brw, mt, level, start_layer + a,
+            intel_miptree_finish_mcs_write(brw, mt, start_layer + a,
                                            written_with_aux);
          }
       } else {
