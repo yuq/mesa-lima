@@ -546,7 +546,8 @@ ureg_insn(struct ureg_program *ureg,
           const struct ureg_dst *dst,
           unsigned nr_dst,
           const struct ureg_src *src,
-          unsigned nr_src );
+          unsigned nr_src,
+          unsigned precise );
 
 
 void
@@ -586,6 +587,7 @@ struct ureg_emit_insn_result
 ureg_emit_insn(struct ureg_program *ureg,
                unsigned opcode,
                boolean saturate,
+               unsigned precise,
                unsigned num_dst,
                unsigned num_src);
 
@@ -632,6 +634,7 @@ static inline void ureg_##op( struct ureg_program *ureg )       \
                          opcode,                                \
                          FALSE,                                 \
                          0,                                     \
+                         0,                                     \
                          0);                                    \
    ureg_fixup_insn_size( ureg, insn.insn_token );               \
 }
@@ -645,6 +648,7 @@ static inline void ureg_##op( struct ureg_program *ureg,        \
    insn = ureg_emit_insn(ureg,                                  \
                          opcode,                                \
                          FALSE,                                 \
+                         0,                                     \
                          0,                                     \
                          1);                                    \
    ureg_emit_src( ureg, src );                                  \
@@ -661,6 +665,7 @@ static inline void ureg_##op( struct ureg_program *ureg,        \
                          opcode,                                \
                          FALSE,                                 \
                          0,                                     \
+                         0,                                     \
                          0);                                    \
    ureg_emit_label( ureg, insn.extended_token, label_token );   \
    ureg_fixup_insn_size( ureg, insn.insn_token );               \
@@ -676,6 +681,7 @@ static inline void ureg_##op( struct ureg_program *ureg,        \
    insn = ureg_emit_insn(ureg,                                  \
                          opcode,                                \
                          FALSE,                                 \
+                         0,                                     \
                          0,                                     \
                          1);                                    \
    ureg_emit_label( ureg, insn.extended_token, label_token );   \
@@ -694,6 +700,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
    insn = ureg_emit_insn(ureg,                                          \
                          opcode,                                        \
                          dst.Saturate,                                  \
+                         0,                                             \
                          1,                                             \
                          0);                                            \
    ureg_emit_dst( ureg, dst );                                          \
@@ -713,6 +720,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
    insn = ureg_emit_insn(ureg,                                          \
                          opcode,                                        \
                          dst.Saturate,                                  \
+                         0,                                             \
                          1,                                             \
                          1);                                            \
    ureg_emit_dst( ureg, dst );                                          \
@@ -733,6 +741,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
    insn = ureg_emit_insn(ureg,                                          \
                          opcode,                                        \
                          dst.Saturate,                                  \
+                         0,                                             \
                          1,                                             \
                          2);                                            \
    ureg_emit_dst( ureg, dst );                                          \
@@ -756,6 +765,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
    insn = ureg_emit_insn(ureg,                                          \
                          opcode,                                        \
                          dst.Saturate,                                  \
+                         0,                                             \
                          1,                                             \
                          2);                                            \
    ureg_emit_texture( ureg, insn.extended_token, target,                \
@@ -780,6 +790,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
    insn = ureg_emit_insn(ureg,                                          \
                          opcode,                                        \
                          dst.Saturate,                                  \
+                         0,                                             \
                          1,                                             \
                          3);                                            \
    ureg_emit_dst( ureg, dst );                                          \
@@ -806,6 +817,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
    insn = ureg_emit_insn(ureg,                                          \
                          opcode,                                        \
                          dst.Saturate,                                  \
+                         0,                                             \
                          1,                                             \
                          4);                                            \
    ureg_emit_texture( ureg, insn.extended_token, target,                \

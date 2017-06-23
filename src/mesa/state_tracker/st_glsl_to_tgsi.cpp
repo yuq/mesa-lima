@@ -5961,7 +5961,7 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_IF:
    case TGSI_OPCODE_UIF:
       assert(num_dst == 0);
-      ureg_insn(ureg, inst->op, NULL, 0, src, num_src);
+      ureg_insn(ureg, inst->op, NULL, 0, src, num_src, inst->precise);
       return;
 
    case TGSI_OPCODE_TEX:
@@ -6065,14 +6065,14 @@ compile_tgsi_instruction(struct st_translate *t,
 
    case TGSI_OPCODE_SCS:
       dst[0] = ureg_writemask(dst[0], TGSI_WRITEMASK_XY);
-      ureg_insn(ureg, inst->op, dst, num_dst, src, num_src);
+      ureg_insn(ureg, inst->op, dst, num_dst, src, num_src, inst->precise);
       break;
 
    default:
       ureg_insn(ureg,
                 inst->op,
                 dst, num_dst,
-                src, num_src);
+                src, num_src, inst->precise);
       break;
    }
 }
