@@ -638,7 +638,8 @@ struct tgsi_instruction
    unsigned Label      : 1;
    unsigned Texture    : 1;
    unsigned Memory     : 1;
-   unsigned Padding    : 2;
+   unsigned Precise    : 1;
+   unsigned Padding    : 1;
 };
 
 /*
