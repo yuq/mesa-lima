@@ -87,6 +87,13 @@ static int swizzle_for_type(const glsl_type *type, int component = 0)
    return swizzle;
 }
 
+static unsigned is_precise(const ir_variable *ir)
+{
+   if (!ir)
+      return 0;
+   return ir->data.precise || ir->data.invariant;
+}
+
 /**
  * This struct is a corresponding struct to TGSI ureg_src.
  */
@@ -296,6 +303,7 @@ public:
    ir_instruction *ir;
 
    unsigned op:8; /**< TGSI opcode */
+   unsigned precise:1;
    unsigned saturate:1;
    unsigned is_64bit_expanded:1;
    unsigned sampler_base:5;
@@ -435,6 +443,7 @@ public:
    bool have_fma;
    bool use_shared_memory;
    bool has_tex_txf_lz;
+   bool precise;
 
    variable_storage *find_variable_storage(ir_variable *var);
 
@@ -691,6 +700,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    STATIC_ASSERT(TGSI_OPCODE_LAST <= 255);
 
    inst->op = op;
+   inst->precise = this->precise;
    inst->info = tgsi_get_opcode_info(op);
    inst->dst[0] = dst;
    inst->dst[1] = dst1;
@@ -3147,6 +3157,8 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
    st_dst_reg l;
    st_src_reg r;
 
+   /* all generated instructions need to be flaged as precise */
+   this->precise = is_precise(ir->lhs->variable_referenced());
    ir->rhs->accept(this);
    r = this->result;
 
@@ -3238,6 +3250,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
    } else {
       emit_block_mov(ir, ir->rhs->type, &l, &r, NULL, false);
    }
+   this->precise = 0;
 }
 
 
