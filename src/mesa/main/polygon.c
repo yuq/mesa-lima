@@ -66,6 +66,14 @@ cull_face(struct gl_context *ctx, GLenum mode)
 
 
 void GLAPIENTRY
+_mesa_CullFace_no_error(GLenum mode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   cull_face(ctx, mode);
+}
+
+
+void GLAPIENTRY
 _mesa_CullFace(GLenum mode)
 {
    GET_CURRENT_CONTEXT(ctx);

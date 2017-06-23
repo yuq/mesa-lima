@@ -1961,7 +1961,7 @@
         <glx rop="78"/>
     </function>
 
-    <function name="CullFace" es1="1.0" es2="2.0">
+    <function name="CullFace" es1="1.0" es2="2.0" no_error="true">
         <param name="mode" type="GLenum"/>
         <glx rop="79"/>
     </function>
