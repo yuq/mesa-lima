@@ -1345,12 +1345,27 @@ validate_program(struct gl_context *ctx, GLuint program)
 }
 
 
+void GLAPIENTRY
+_mesa_AttachObjectARB_no_error(GLhandleARB program, GLhandleARB shader)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   attach_shader_no_error(ctx, program, shader);
+}
+
 
 void GLAPIENTRY
 _mesa_AttachObjectARB(GLhandleARB program, GLhandleARB shader)
 {
    GET_CURRENT_CONTEXT(ctx);
    attach_shader_err(ctx, program, shader, "glAttachObjectARB");
+}
+
+
+void GLAPIENTRY
+_mesa_AttachShader_no_error(GLuint program, GLuint shader)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   attach_shader_no_error(ctx, program, shader);
 }
 
 

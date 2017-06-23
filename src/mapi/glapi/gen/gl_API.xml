@@ -5295,7 +5295,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="AttachShader" es2="2.0">
+    <function name="AttachShader" es2="2.0" no_error="true">
         <param name="program" type="GLuint"/>
         <param name="shader" type="GLuint"/>
         <glx ignore="true"/>
@@ -7709,7 +7709,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="AttachObjectARB">
+    <function name="AttachObjectARB" no_error="true">
         <param name="containerObj" type="GLhandleARB"/>
         <param name="obj" type="GLhandleARB"/>
         <glx ignore="true"/>
