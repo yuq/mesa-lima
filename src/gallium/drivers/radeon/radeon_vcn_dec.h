@@ -103,6 +103,8 @@
 
 #define RDECODE_FEEDBACK_PROFILING			0x00000001
 
+#define RDECODE_SPS_INFO_H264_EXTENSION_SUPPORT_FLAG_SHIFT	7
+
 typedef struct rvcn_dec_message_index_s {
 	unsigned int	message_id;
 	unsigned int	offset;

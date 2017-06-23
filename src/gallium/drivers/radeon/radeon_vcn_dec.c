@@ -111,6 +111,7 @@ static rvcn_dec_message_avc_t get_h264_msg(struct radeon_decoder *dec,
 	result.sps_info_flags |= pic->pps->sps->mb_adaptive_frame_field_flag << 1;
 	result.sps_info_flags |= pic->pps->sps->frame_mbs_only_flag << 2;
 	result.sps_info_flags |= pic->pps->sps->delta_pic_order_always_zero_flag << 3;
+	result.sps_info_flags |= 1 << RDECODE_SPS_INFO_H264_EXTENSION_SUPPORT_FLAG_SHIFT;
 
 	result.bit_depth_luma_minus8 = pic->pps->sps->bit_depth_luma_minus8;
 	result.bit_depth_chroma_minus8 = pic->pps->sps->bit_depth_chroma_minus8;
