@@ -244,8 +244,27 @@ is_shader(struct gl_context *ctx, GLuint name)
  * Attach shader to a shader program.
  */
 static void
-attach_shader(struct gl_context *ctx, GLuint program, GLuint shader,
-              const char *caller)
+attach_shader(struct gl_context *ctx, struct gl_shader_program *shProg,
+              struct gl_shader *sh)
+{
+   GLuint n = shProg->NumShaders;
+
+   shProg->Shaders = realloc(shProg->Shaders,
+                             (n + 1) * sizeof(struct gl_shader *));
+   if (!shProg->Shaders) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glAttachShader");
+      return;
+   }
+
+   /* append */
+   shProg->Shaders[n] = NULL; /* since realloc() didn't zero the new space */
+   _mesa_reference_shader(ctx, &shProg->Shaders[n], sh);
+   shProg->NumShaders++;
+}
+
+static void
+attach_shader_err(struct gl_context *ctx, GLuint program, GLuint shader,
+                  const char *caller)
 {
    struct gl_shader_program *shProg;
    struct gl_shader *sh;
@@ -288,20 +307,20 @@ attach_shader(struct gl_context *ctx, GLuint program, GLuint shader,
       }
    }
 
-   /* grow list */
-   shProg->Shaders = realloc(shProg->Shaders,
-                             (n + 1) * sizeof(struct gl_shader *));
-   if (!shProg->Shaders) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, caller);
-      return;
-   }
-
-   /* append */
-   shProg->Shaders[n] = NULL; /* since realloc() didn't zero the new space */
-   _mesa_reference_shader(ctx, &shProg->Shaders[n], sh);
-   shProg->NumShaders++;
+   attach_shader(ctx, shProg, sh);
 }
 
+static void
+attach_shader_no_error(struct gl_context *ctx, GLuint program, GLuint shader)
+{
+   struct gl_shader_program *shProg;
+   struct gl_shader *sh;
+
+   shProg = _mesa_lookup_shader_program(ctx, program);
+   sh = _mesa_lookup_shader(ctx, shader);
+
+   attach_shader(ctx, shProg, sh);
+}
 
 static GLuint
 create_shader(struct gl_context *ctx, GLenum type)
@@ -1331,7 +1350,7 @@ void GLAPIENTRY
 _mesa_AttachObjectARB(GLhandleARB program, GLhandleARB shader)
 {
    GET_CURRENT_CONTEXT(ctx);
-   attach_shader(ctx, program, shader, "glAttachObjectARB");
+   attach_shader_err(ctx, program, shader, "glAttachObjectARB");
 }
 
 
@@ -1339,7 +1358,7 @@ void GLAPIENTRY
 _mesa_AttachShader(GLuint program, GLuint shader)
 {
    GET_CURRENT_CONTEXT(ctx);
-   attach_shader(ctx, program, shader, "glAttachShader");
+   attach_shader_err(ctx, program, shader, "glAttachShader");
 }
 
 
@@ -2263,7 +2282,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 
 	 get_shaderiv(ctx, shader, GL_COMPILE_STATUS, &compiled);
 	 if (compiled) {
-	    attach_shader(ctx, program, shader, "glCreateShaderProgramv");
+	    attach_shader_err(ctx, program, shader, "glCreateShaderProgramv");
 	    _mesa_link_program(ctx, shProg);
 	    detach_shader(ctx, program, shader);
 
