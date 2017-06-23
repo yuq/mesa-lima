@@ -2435,14 +2435,14 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
          aux_supported = clear_supported = true;
       } else {
          aux_supported = can_texture_with_ccs(brw, mt, view_format);
-
-         /* Clear color is specified as ints or floats and the conversion is
-          * done by the sampler.  If we have a texture view, we would have to
-          * perform the clear color conversion manually.  Just disable clear
-          * color.
-          */
-         clear_supported = aux_supported && (mt->format == view_format);
       }
+
+      /* Clear color is specified as ints or floats and the conversion is
+       * done by the sampler.  If we have a texture view, we would have to
+       * perform the clear color conversion manually.  Just disable clear
+       * color.
+       */
+      clear_supported = aux_supported && (mt->format == view_format);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       aux_supported = clear_supported = false;
    } else {
