@@ -3189,6 +3189,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          geni->subOp = tgsi::opcodeToSubOp(tgsi.getOpcode());
          if (op == OP_MUL && dstTy == TYPE_F32)
             geni->dnz = info->io.mul_zero_wins;
+         geni->precise = insn->Instruction.Precise;
       }
       break;
    case TGSI_OPCODE_MAD:
@@ -3202,6 +3203,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          geni = mkOp3(op, dstTy, dst0[c], src0, src1, src2);
          if (dstTy == TYPE_F32)
             geni->dnz = info->io.mul_zero_wins;
+         geni->precise = insn->Instruction.Precise;
       }
       break;
    case TGSI_OPCODE_MOV:
