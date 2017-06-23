@@ -1557,7 +1557,7 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
 
    /* Quick peephole: Emit MAD(a, b, c) instead of ADD(MUL(a, b), c)
     */
-   if (ir->operation == ir_binop_add) {
+   if (!this->precise && ir->operation == ir_binop_add) {
       if (try_emit_mad(ir, 1))
          return;
       if (try_emit_mad(ir, 0))
