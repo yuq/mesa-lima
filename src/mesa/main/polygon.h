@@ -40,7 +40,7 @@ extern void GLAPIENTRY
 _mesa_GetnPolygonStippleARB( GLsizei bufSize, GLubyte *dest );
 
 extern void GLAPIENTRY
-_mesa_CullFace( GLenum mode );
+_mesa_CullFace(GLenum mode);
 
 extern void GLAPIENTRY
 _mesa_FrontFace( GLenum mode );
