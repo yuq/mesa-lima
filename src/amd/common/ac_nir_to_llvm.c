@@ -1133,7 +1133,9 @@ static LLVMValueRef emit_intrin_1f_param(struct ac_llvm_context *ctx,
 		to_float(ctx, src0),
 	};
 
-	sprintf(name, "%s.f%d", intrin, get_elem_bits(ctx, result_type));
+	MAYBE_UNUSED const int length = snprintf(name, sizeof(name), "%s.f%d", intrin,
+						 get_elem_bits(ctx, result_type));
+	assert(length < sizeof(name));
 	return ac_build_intrinsic(ctx, name, result_type, params, 1, AC_FUNC_ATTR_READNONE);
 }
 
@@ -1148,7 +1150,9 @@ static LLVMValueRef emit_intrin_2f_param(struct ac_llvm_context *ctx,
 		to_float(ctx, src1),
 	};
 
-	sprintf(name, "%s.f%d", intrin, get_elem_bits(ctx, result_type));
+	MAYBE_UNUSED const int length = snprintf(name, sizeof(name), "%s.f%d", intrin,
+						 get_elem_bits(ctx, result_type));
+	assert(length < sizeof(name));
 	return ac_build_intrinsic(ctx, name, result_type, params, 2, AC_FUNC_ATTR_READNONE);
 }
 
@@ -1164,7 +1168,9 @@ static LLVMValueRef emit_intrin_3f_param(struct ac_llvm_context *ctx,
 		to_float(ctx, src2),
 	};
 
-	sprintf(name, "%s.f%d", intrin, get_elem_bits(ctx, result_type));
+	MAYBE_UNUSED const int length = snprintf(name, sizeof(name), "%s.f%d", intrin,
+						 get_elem_bits(ctx, result_type));
+	assert(length < sizeof(name));
 	return ac_build_intrinsic(ctx, name, result_type, params, 3, AC_FUNC_ATTR_READNONE);
 }
 
@@ -3456,8 +3462,9 @@ static LLVMValueRef visit_image_atomic(struct nir_to_llvm_context *ctx,
 	build_int_type_name(LLVMTypeOf(coords),
 			    coords_type, sizeof(coords_type));
 
-	snprintf(intrinsic_name, sizeof(intrinsic_name),
-			 "%s.%s.%s", base_name, atomic_name, coords_type);
+	MAYBE_UNUSED const int length = snprintf(intrinsic_name, sizeof(intrinsic_name),
+						 "%s.%s.%s", base_name, atomic_name, coords_type);
+	assert(length < sizeof(intrinsic_name));
 	return ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->i32, params, param_count, 0);
 }
 
