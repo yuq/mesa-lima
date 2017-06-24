@@ -202,17 +202,6 @@ blorp_surf_for_miptree(struct brw_context *brw,
    *level -= mt->first_level;
 }
 
-static enum isl_aux_usage
-blorp_get_aux_usage(struct brw_context *brw,
-                    struct intel_mipmap_tree *mt,
-                    uint32_t safe_aux_usage)
-{
-   enum isl_aux_usage aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
-   if (!(safe_aux_usage & (1 << aux_usage)))
-      aux_usage = ISL_AUX_USAGE_NONE;
-   return aux_usage;
-}
-
 static enum isl_format
 brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
                         bool is_render_target)
@@ -997,38 +986,30 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
    struct isl_surf isl_tmp[4];
    struct blorp_surf depth_surf, stencil_surf;
 
+   struct intel_mipmap_tree *depth_mt = NULL;
    if (mask & BUFFER_BIT_DEPTH) {
       struct intel_renderbuffer *irb = intel_renderbuffer(depth_rb);
-      struct intel_mipmap_tree *depth_mt =
-         find_miptree(GL_DEPTH_BUFFER_BIT, irb);
+      depth_mt = find_miptree(GL_DEPTH_BUFFER_BIT, irb);
 
       level = irb->mt_level;
       start_layer = irb->mt_layer;
       num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
-
-      enum isl_aux_usage aux_usage =
-         blorp_get_aux_usage(brw, depth_mt, (1 << ISL_AUX_USAGE_HIZ));
-      intel_miptree_prepare_access(brw, depth_mt, level, 1,
-                                   start_layer, num_layers,
-                                   aux_usage != ISL_AUX_USAGE_NONE,
-                                   aux_usage != ISL_AUX_USAGE_NONE);
-      intel_miptree_finish_write(brw, depth_mt, level,
-                                 start_layer, num_layers,
-                                 aux_usage != ISL_AUX_USAGE_NONE);
+      intel_miptree_prepare_depth(brw, depth_mt, level,
+                                  start_layer, num_layers);
 
       unsigned depth_level = level;
-      blorp_surf_for_miptree(brw, &depth_surf, depth_mt, aux_usage, true,
-                             &depth_level, start_layer, num_layers,
+      blorp_surf_for_miptree(brw, &depth_surf, depth_mt, depth_mt->aux_usage,
+                             true, &depth_level, start_layer, num_layers,
                              &isl_tmp[0]);
       assert(depth_level == level);
    }
 
    uint8_t stencil_mask = 0;
+   struct intel_mipmap_tree *stencil_mt = NULL;
    if (mask & BUFFER_BIT_STENCIL) {
       struct intel_renderbuffer *irb = intel_renderbuffer(stencil_rb);
-      struct intel_mipmap_tree *stencil_mt =
-         find_miptree(GL_STENCIL_BUFFER_BIT, irb);
+      stencil_mt = find_miptree(GL_STENCIL_BUFFER_BIT, irb);
 
       if (mask & BUFFER_BIT_DEPTH) {
          assert(level == irb->mt_level);
@@ -1042,18 +1023,12 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
 
       stencil_mask = ctx->Stencil.WriteMask[0] & 0xff;
 
-      enum isl_aux_usage aux_usage =
-         blorp_get_aux_usage(brw, stencil_mt, 0);
       intel_miptree_prepare_access(brw, stencil_mt, level, 1,
-                                   start_layer, num_layers,
-                                   aux_usage != ISL_AUX_USAGE_NONE,
-                                   aux_usage != ISL_AUX_USAGE_NONE);
-      intel_miptree_finish_write(brw, stencil_mt, level,
-                                 start_layer, num_layers,
-                                 aux_usage != ISL_AUX_USAGE_NONE);
+                                   start_layer, num_layers, false, false);
 
       unsigned stencil_level = level;
-      blorp_surf_for_miptree(brw, &stencil_surf, stencil_mt, aux_usage, true,
+      blorp_surf_for_miptree(brw, &stencil_surf, stencil_mt,
+                             ISL_AUX_USAGE_NONE, true,
                              &stencil_level, start_layer, num_layers,
                              &isl_tmp[2]);
    }
@@ -1068,6 +1043,16 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
                              (mask & BUFFER_BIT_DEPTH), ctx->Depth.Clear,
                              stencil_mask, ctx->Stencil.Clear);
    blorp_batch_finish(&batch);
+
+   if (mask & BUFFER_BIT_DEPTH) {
+      intel_miptree_finish_depth(brw, depth_mt, level,
+                                 start_layer, num_layers, true);
+   }
+
+   if (stencil_mask) {
+      intel_miptree_finish_write(brw, stencil_mt, level,
+                                 start_layer, num_layers, false);
+   }
 }
 
 void
