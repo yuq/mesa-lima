@@ -3732,7 +3732,10 @@ create_shader_variable(struct gl_shader_program *shProg,
                        bool use_implicit_location, int location,
                        const glsl_type *outermost_struct_type)
 {
-   gl_shader_variable *out = ralloc(shProg, struct gl_shader_variable);
+   /* Allocate zero-initialized memory to ensure that bitfield padding
+    * is zero.
+    */
+   gl_shader_variable *out = rzalloc(shProg, struct gl_shader_variable);
    if (!out)
       return NULL;
 
