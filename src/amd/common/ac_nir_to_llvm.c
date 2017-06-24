@@ -6198,7 +6198,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	memset(shader_info, 0, sizeof(*shader_info));
 
 	ac_nir_shader_info_pass(nir, options, &shader_info->info);
-		
+
 	LLVMSetTarget(ctx.module, options->supports_spill ? "amdgcn-mesa-mesa3d" : "amdgcn--");
 
 	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(tm);
