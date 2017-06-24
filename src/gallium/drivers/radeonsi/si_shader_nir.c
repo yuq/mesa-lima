@@ -313,6 +313,32 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	}
 }
 
+/**
+ * Perform "lowering" operations on the NIR that are run once when the shader
+ * selector is created.
+ */
+void
+si_lower_nir(struct si_shader_selector* sel)
+{
+	/* Adjust the driver location of inputs and outputs. The state tracker
+	 * interprets them as slots, while the ac/nir backend interprets them
+	 * as individual components.
+	 */
+	nir_foreach_variable(variable, &sel->nir->inputs)
+		variable->data.driver_location *= 4;
+
+	nir_foreach_variable(variable, &sel->nir->outputs) {
+		variable->data.driver_location *= 4;
+
+		if (sel->nir->stage == MESA_SHADER_FRAGMENT) {
+			if (variable->data.location == FRAG_RESULT_DEPTH)
+				variable->data.driver_location += 2;
+			else if (variable->data.location == FRAG_RESULT_STENCIL)
+				variable->data.driver_location += 1;
+		}
+	}
+}
+
 static void declare_nir_input_vs(struct si_shader_context *ctx,
 				 struct nir_variable *variable, unsigned rel,
 				 LLVMValueRef out[4])

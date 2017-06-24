@@ -1989,6 +1989,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		sel->nir = state->ir.nir;
 
 		si_nir_scan_shader(sel->nir, &sel->info);
+
+		si_lower_nir(sel);
 	}
 
 	sel->type = sel->info.processor;
