@@ -188,6 +188,8 @@ brw_dispatch_compute_common(struct gl_context *ctx)
 
    brw_validate_textures(brw);
 
+   brw_predraw_resolve_inputs(brw);
+
    const int sampler_state_size = 16; /* 16 bytes */
    estimated_buffer_space_needed = 512; /* batchbuffer commands */
    estimated_buffer_space_needed += (BRW_MAX_TEX_UNIT *
