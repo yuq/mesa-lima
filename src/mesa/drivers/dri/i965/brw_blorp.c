@@ -889,19 +889,10 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       DBG("%s (slow) to mt %p level %d layer %d+%d\n", __FUNCTION__,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);
 
-
       enum isl_aux_usage aux_usage =
-         blorp_get_aux_usage(brw, irb->mt,
-                             (1 << ISL_AUX_USAGE_MCS) |
-                             (1 << ISL_AUX_USAGE_CCS_E) |
-                             (1 << ISL_AUX_USAGE_CCS_D));
-      intel_miptree_prepare_access(brw, irb->mt, level, 1,
-                                   irb->mt_layer, num_layers,
-                                   aux_usage != ISL_AUX_USAGE_NONE,
-                                   aux_usage != ISL_AUX_USAGE_NONE);
-      intel_miptree_finish_write(brw, irb->mt, level,
-                                 irb->mt_layer, num_layers,
-                                 aux_usage != ISL_AUX_USAGE_NONE);
+         intel_miptree_render_aux_usage(brw, irb->mt, encode_srgb);
+      intel_miptree_prepare_render(brw, irb->mt, level, irb->mt_layer,
+                                   num_layers, encode_srgb);
 
       struct isl_surf isl_tmp[2];
       struct blorp_surf surf;
@@ -920,6 +911,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                   x0, y0, x1, y1,
                   clear_color, color_write_disable);
       blorp_batch_finish(&batch);
+
+      intel_miptree_finish_render(brw, irb->mt, level,
+                                  irb->mt_layer, num_layers, encode_srgb);
    }
 
    return;
