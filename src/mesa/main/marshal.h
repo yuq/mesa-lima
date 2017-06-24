@@ -205,6 +205,8 @@ struct marshal_cmd_Flush;
 struct marshal_cmd_BindBuffer;
 struct marshal_cmd_BufferData;
 struct marshal_cmd_BufferSubData;
+struct marshal_cmd_NamedBufferData;
+struct marshal_cmd_NamedBufferSubData;
 struct marshal_cmd_ClearBufferfv;
 
 void
@@ -251,6 +253,22 @@ _mesa_unmarshal_BufferSubData(struct gl_context *ctx,
 void GLAPIENTRY
 _mesa_marshal_BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size,
                             const GLvoid * data);
+
+void
+_mesa_unmarshal_NamedBufferData(struct gl_context *ctx,
+                                const struct marshal_cmd_NamedBufferData *cmd);
+
+void GLAPIENTRY
+_mesa_marshal_NamedBufferData(GLuint buffer, GLsizeiptr size,
+                              const GLvoid * data, GLenum usage);
+
+void
+_mesa_unmarshal_NamedBufferSubData(struct gl_context *ctx,
+                                   const struct marshal_cmd_NamedBufferSubData *cmd);
+
+void GLAPIENTRY
+_mesa_marshal_NamedBufferSubData(GLuint buffer, GLintptr offset, GLsizeiptr size,
+                                 const GLvoid * data);
 
 void
 _mesa_unmarshal_ClearBufferfv(struct gl_context *ctx,
