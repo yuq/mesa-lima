@@ -3623,18 +3623,18 @@ static void emit_barrier(struct nir_to_llvm_context *ctx)
 			   ctx->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
 
-static void emit_discard_if(struct nir_to_llvm_context *ctx,
+static void emit_discard_if(struct ac_nir_context *ctx,
 			    const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef cond;
 
-	cond = LLVMBuildICmp(ctx->builder, LLVMIntNE,
-			     get_src(ctx->nir, instr->src[0]),
-			     ctx->i32zero, "");
+	cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntNE,
+			     get_src(ctx, instr->src[0]),
+			     ctx->ac.i32_0, "");
 
-	cond = LLVMBuildSelect(ctx->builder, cond,
-			       LLVMConstReal(ctx->f32, -1.0f),
-			       ctx->f32zero, "");
+	cond = LLVMBuildSelect(ctx->ac.builder, cond,
+			       LLVMConstReal(ctx->ac.f32, -1.0f),
+			       ctx->ac.f32_0, "");
 	ac_build_kill(&ctx->ac, cond);
 }
 
@@ -4090,7 +4090,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 				   NULL, 0, AC_FUNC_ATTR_LEGACY);
 		break;
 	case nir_intrinsic_discard_if:
-		emit_discard_if(ctx->nctx, instr);
+		emit_discard_if(ctx, instr);
 		break;
 	case nir_intrinsic_memory_barrier:
 		emit_waitcnt(ctx->nctx, VM_CNT);
