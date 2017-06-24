@@ -160,7 +160,6 @@ struct nir_to_llvm_context {
 	uint64_t output_mask;
 	int num_locals;
 	LLVMValueRef *locals;
-	bool has_ddxy;
 	uint8_t num_output_clips;
 	uint8_t num_output_culls;
 
@@ -1455,7 +1454,6 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 	unsigned mask;
 	int idx;
 	LLVMValueRef result;
-	ctx->has_ddxy = true;
 
 	if (!ctx->lds && !ctx->has_ds_bpermute)
 		ctx->lds = LLVMAddGlobalInAddressSpace(ctx->module,
