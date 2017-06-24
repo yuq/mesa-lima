@@ -3627,7 +3627,6 @@ static void emit_discard_if(struct nir_to_llvm_context *ctx,
 			    const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef cond;
-	ctx->shader_info->fs.can_discard = true;
 
 	cond = LLVMBuildICmp(ctx->builder, LLVMIntNE,
 			     get_src(ctx->nir, instr->src[0]),
@@ -4086,7 +4085,6 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = visit_image_size(ctx, instr);
 		break;
 	case nir_intrinsic_discard:
-		ctx->nctx->shader_info->fs.can_discard = true;
 		ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kilp",
 				   LLVMVoidTypeInContext(ctx->ac.context),
 				   NULL, 0, AC_FUNC_ATTR_LEGACY);
@@ -6234,6 +6232,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.shader_info->vs.vgpr_comp_cnt =
 				MAX2(3, ctx.shader_info->vs.vgpr_comp_cnt);
 		}
+	} else if (nir->stage == MESA_SHADER_FRAGMENT) {
+		shader_info->fs.can_discard = nir->info.fs.uses_discard;
 	}
 
 	ac_setup_rings(&ctx);
