@@ -76,22 +76,15 @@ shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 			 const struct tgsi_full_src_register *reg)
 {
 	LLVMValueRef index;
-	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->main_fn,
-					     ctx->param_const_and_shader_buffers);
 
 	if (!reg->Register.Indirect) {
-		index = LLVMConstInt(ctx->i32,
-				     si_get_shaderbuf_slot(reg->Register.Index), 0);
+		index = LLVMConstInt(ctx->i32, reg->Register.Index, false);
 	} else {
-		index = si_get_bounded_indirect_index(ctx, &reg->Indirect,
-						      reg->Register.Index,
-						      ctx->num_shader_buffers);
-		index = LLVMBuildSub(ctx->gallivm.builder,
-				     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS - 1, 0),
-				     index, "");
+		index = si_get_indirect_index(ctx, &reg->Indirect,
+					      reg->Register.Index);
 	}
 
-	return ac_build_indexed_load_const(&ctx->ac, rsrc_ptr, index);
+	return ctx->abi.load_ssbo(&ctx->abi, index, false);
 }
 
 static bool tgsi_is_array_sampler(unsigned target)

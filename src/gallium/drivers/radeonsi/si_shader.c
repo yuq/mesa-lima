@@ -1806,6 +1806,21 @@ static LLVMValueRef load_ubo(struct ac_shader_abi *abi, LLVMValueRef index)
 	return ac_build_indexed_load_const(&ctx->ac, ptr, index);
 }
 
+static LLVMValueRef
+load_ssbo(struct ac_shader_abi *abi, LLVMValueRef index, bool write)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->main_fn,
+					     ctx->param_const_and_shader_buffers);
+
+	index = si_llvm_bound_index(ctx, index, ctx->num_shader_buffers);
+	index = LLVMBuildSub(ctx->gallivm.builder,
+			     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS - 1, 0),
+			     index, "");
+
+	return ac_build_indexed_load_const(&ctx->ac, rsrc_ptr, index);
+}
+
 static LLVMValueRef fetch_constant(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
@@ -5646,6 +5661,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	}
 
 	ctx->abi.load_ubo = load_ubo;
+	ctx->abi.load_ssbo = load_ssbo;
 
 	create_function(ctx);
 	preload_ring_buffers(ctx);
