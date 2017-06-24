@@ -59,6 +59,16 @@ struct ac_shader_abi {
 	LLVMValueRef (*load_ubo)(struct ac_shader_abi *abi, LLVMValueRef index);
 
 	/**
+	 * Load the descriptor for the given buffer.
+	 *
+	 * \param buffer the buffer as presented in NIR: this is the descriptor
+	 *               in Vulkan, and the buffer index in OpenGL/Gallium
+	 * \param write whether buffer contents will be written
+	 */
+	LLVMValueRef (*load_ssbo)(struct ac_shader_abi *abi,
+				  LLVMValueRef buffer, bool write);
+
+	/**
 	 * Load a descriptor associated to a sampler.
 	 *
 	 * \param descriptor_set the descriptor set index (only for Vulkan)

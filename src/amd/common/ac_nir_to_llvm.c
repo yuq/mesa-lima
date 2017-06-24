@@ -2251,10 +2251,8 @@ static void visit_store_ssbo(struct nir_to_llvm_context *ctx,
 	LLVMValueRef base_data, base_offset;
 	LLVMValueRef params[6];
 
-	if (ctx->stage == MESA_SHADER_FRAGMENT)
-		ctx->shader_info->fs.writes_memory = true;
-
-	params[1] = get_src(ctx->nir, instr->src[1]);
+	params[1] = ctx->abi.load_ssbo(&ctx->abi,
+				       get_src(ctx->nir, instr->src[1]), true);
 	params[2] = LLVMConstInt(ctx->i32, 0, false); /* vindex */
 	params[4] = ctx->i1false;  /* glc */
 	params[5] = ctx->i1false;  /* slc */
@@ -2331,14 +2329,14 @@ static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
 	const char *name;
 	LLVMValueRef params[6];
 	int arg_count = 0;
-	if (ctx->stage == MESA_SHADER_FRAGMENT)
-		ctx->shader_info->fs.writes_memory = true;
 
 	if (instr->intrinsic == nir_intrinsic_ssbo_atomic_comp_swap) {
 		params[arg_count++] = llvm_extract_elem(&ctx->ac, get_src(ctx->nir, instr->src[3]), 0);
 	}
 	params[arg_count++] = llvm_extract_elem(&ctx->ac, get_src(ctx->nir, instr->src[2]), 0);
-	params[arg_count++] = get_src(ctx->nir, instr->src[0]);
+	params[arg_count++] = ctx->abi.load_ssbo(&ctx->abi,
+						 get_src(ctx->nir, instr->src[0]),
+						 true);
 	params[arg_count++] = LLVMConstInt(ctx->i32, 0, false); /* vindex */
 	params[arg_count++] = get_src(ctx->nir, instr->src[1]);      /* voffset */
 	params[arg_count++] = ctx->i1false;  /* slc */
@@ -2412,7 +2410,9 @@ static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
 			unreachable("unhandled number of components");
 
 		LLVMValueRef params[] = {
-			get_src(ctx->nir, instr->src[0]),
+			ctx->abi.load_ssbo(&ctx->abi,
+					   get_src(ctx->nir, instr->src[0]),
+					   false),
 			LLVMConstInt(ctx->i32, 0, false),
 			offset,
 			ctx->i1false,
@@ -4136,6 +4136,17 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	if (result) {
 		_mesa_hash_table_insert(ctx->defs, &instr->dest.ssa, result);
 	}
+}
+
+static LLVMValueRef radv_load_ssbo(struct ac_shader_abi *abi,
+				   LLVMValueRef buffer, bool write)
+{
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+
+	if (write && ctx->stage == MESA_SHADER_FRAGMENT)
+		ctx->shader_info->fs.writes_memory = true;
+
+	return buffer;
 }
 
 static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
@@ -6250,6 +6261,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.abi.chip_class = options->chip_class;
 	ctx.abi.inputs = &ctx.inputs[0];
 	ctx.abi.emit_outputs = handle_shader_outputs_post;
+	ctx.abi.load_ssbo = radv_load_ssbo;
 	ctx.abi.load_sampler_desc = radv_get_sampler_desc;
 
 	nir_foreach_variable(variable, &nir->outputs)
