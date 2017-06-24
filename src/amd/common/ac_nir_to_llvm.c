@@ -4624,7 +4624,9 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 
 	if (instr->op == nir_texop_query_levels)
 		result = LLVMBuildExtractElement(ctx->ac.builder, result, LLVMConstInt(ctx->ac.i32, 3, false), "");
-	else if (instr->is_shadow && instr->op != nir_texop_txs && instr->op != nir_texop_lod && instr->op != nir_texop_tg4)
+	else if (instr->is_shadow && instr->is_new_style_shadow &&
+		 instr->op != nir_texop_txs && instr->op != nir_texop_lod &&
+		 instr->op != nir_texop_tg4)
 		result = LLVMBuildExtractElement(ctx->ac.builder, result, ctx->ac.i32_0, "");
 	else if (instr->op == nir_texop_txs &&
 		 instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
