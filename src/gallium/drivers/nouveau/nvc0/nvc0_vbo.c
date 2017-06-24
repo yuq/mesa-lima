@@ -921,8 +921,6 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    struct nvc0_screen *screen = nvc0->screen;
    int s;
 
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_IDX);
-
    /* NOTE: caller must ensure that (min_index + index_bias) is >= 0 */
    nvc0->vb_elt_first = info->min_index + info->index_bias;
    nvc0->vb_elt_limit = info->max_index - info->min_index;
@@ -1029,9 +1027,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 
    if (nvc0->state.vbo_mode) {
       nvc0_push_vbo(nvc0, info);
-      push->kick_notify = nvc0_default_kick_notify;
-      nouveau_pushbuf_bufctx(push, NULL);
-      return;
+      goto cleanup;
    }
 
    /* space for base instance, flush, and prim restart */
@@ -1078,9 +1074,13 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
                        info->mode, info->start, info->count,
                        info->instance_count);
    }
+
+cleanup:
    push->kick_notify = nvc0_default_kick_notify;
 
    nvc0_release_user_vbufs(nvc0);
 
    nouveau_pushbuf_bufctx(push, NULL);
+
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_IDX);
 }
