@@ -382,23 +382,49 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
        dst_mt->surf.samples, _mesa_get_format_name(dst_mt->format), dst_mt,
        dst_level, dst_layer, dst_x, dst_y);
 
-   enum isl_aux_usage src_aux_usage =
-      blorp_get_aux_usage(brw, src_mt,
-                          (1 << ISL_AUX_USAGE_MCS) |
-                          (1 << ISL_AUX_USAGE_CCS_E));
+   enum isl_aux_usage src_aux_usage, dst_aux_usage;
+   bool src_clear_supported, dst_clear_supported;
+
+   switch (src_mt->aux_usage) {
+   case ISL_AUX_USAGE_MCS:
+   case ISL_AUX_USAGE_CCS_E:
+      src_aux_usage = src_mt->aux_usage;
+      /* Prior to gen9, fast-clear only supported 0/1 clear colors.  Since
+       * we're going to re-interpret the format as an integer format possibly
+       * with a different number of components, we can't handle clear colors
+       * until gen9.
+       */
+      src_clear_supported = brw->gen >= 9;
+      break;
+   default:
+      src_aux_usage = ISL_AUX_USAGE_NONE;
+      src_clear_supported = false;
+      break;
+   }
+
+   switch (dst_mt->aux_usage) {
+   case ISL_AUX_USAGE_MCS:
+   case ISL_AUX_USAGE_CCS_E:
+      dst_aux_usage = dst_mt->aux_usage;
+      /* Prior to gen9, fast-clear only supported 0/1 clear colors.  Since
+       * we're going to re-interpret the format as an integer format possibly
+       * with a different number of components, we can't handle clear colors
+       * until gen9.
+       */
+      dst_clear_supported = brw->gen >= 9;
+      break;
+   default:
+      dst_aux_usage = ISL_AUX_USAGE_NONE;
+      dst_clear_supported = false;
+      break;
+   }
+
    intel_miptree_prepare_access(brw, src_mt, src_level, 1, src_layer, 1,
                                 src_aux_usage != ISL_AUX_USAGE_NONE,
-                                src_aux_usage != ISL_AUX_USAGE_NONE);
-
-   enum isl_aux_usage dst_aux_usage =
-      blorp_get_aux_usage(brw, dst_mt,
-                          (1 << ISL_AUX_USAGE_MCS) |
-                          (1 << ISL_AUX_USAGE_CCS_E));
+                                src_clear_supported);
    intel_miptree_prepare_access(brw, dst_mt, dst_level, 1, dst_layer, 1,
                                 dst_aux_usage != ISL_AUX_USAGE_NONE,
-                                dst_aux_usage != ISL_AUX_USAGE_NONE);
-   intel_miptree_finish_write(brw, dst_mt, dst_level, dst_layer, 1,
-                              dst_aux_usage != ISL_AUX_USAGE_NONE);
+                                dst_clear_supported);
 
    struct isl_surf tmp_surfs[2];
    struct blorp_surf src_surf, dst_surf;
@@ -413,6 +439,9 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
               &dst_surf, dst_level, dst_layer,
               src_x, src_y, dst_x, dst_y, src_width, src_height);
    blorp_batch_finish(&batch);
+
+   intel_miptree_finish_write(brw, dst_mt, dst_level, dst_layer, 1,
+                              dst_aux_usage != ISL_AUX_USAGE_NONE);
 }
 
 static struct intel_mipmap_tree *
