@@ -295,15 +295,16 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	ctx->b.num_gfx_cs_flushes++;
 
 	if (ctx->is_debug) {
-		bool ret = ws->fence_wait(ws, ctx->b.last_gfx_fence, 10000000);
-		if (ret == false) {
+		if (!ws->fence_wait(ws, ctx->b.last_gfx_fence, 10000000)) {
 			const char *fname = getenv("R600_TRACE");
 			if (!fname)
 				exit(-1);
 			FILE *fl = fopen(fname, "w+");
-			if (fl)
+			if (fl) {
 				eg_dump_debug_state(&ctx->b.b, fl, 0);
-			fclose(fl);
+				fclose(fl);
+			} else
+				perror(fname);
 			exit(-1);
 		}
 	}
