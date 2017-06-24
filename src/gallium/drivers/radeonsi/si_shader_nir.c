@@ -337,6 +337,47 @@ si_lower_nir(struct si_shader_selector* sel)
 				variable->data.driver_location += 1;
 		}
 	}
+
+	/* Perform lowerings (and optimizations) of code.
+	 *
+	 * Performance considerations aside, we must:
+	 * - lower certain ALU operations
+	 * - ensure constant offsets for texture instructions are folded
+	 *   and copy-propagated
+	 */
+	NIR_PASS_V(sel->nir, nir_lower_returns);
+	NIR_PASS_V(sel->nir, nir_lower_vars_to_ssa);
+	NIR_PASS_V(sel->nir, nir_lower_alu_to_scalar);
+	NIR_PASS_V(sel->nir, nir_lower_phis_to_scalar);
+
+	bool progress;
+	do {
+		progress = false;
+
+		/* (Constant) copy propagation is needed for txf with offsets. */
+		NIR_PASS(progress, sel->nir, nir_copy_prop);
+		NIR_PASS(progress, sel->nir, nir_opt_remove_phis);
+		NIR_PASS(progress, sel->nir, nir_opt_dce);
+		if (nir_opt_trivial_continues(sel->nir)) {
+			progress = true;
+			NIR_PASS(progress, sel->nir, nir_copy_prop);
+			NIR_PASS(progress, sel->nir, nir_opt_dce);
+		}
+		NIR_PASS(progress, sel->nir, nir_opt_if);
+		NIR_PASS(progress, sel->nir, nir_opt_dead_cf);
+		NIR_PASS(progress, sel->nir, nir_opt_cse);
+		NIR_PASS(progress, sel->nir, nir_opt_peephole_select, 8);
+
+		/* Needed for algebraic lowering */
+		NIR_PASS(progress, sel->nir, nir_opt_algebraic);
+		NIR_PASS(progress, sel->nir, nir_opt_constant_folding);
+
+		NIR_PASS(progress, sel->nir, nir_opt_undef);
+		NIR_PASS(progress, sel->nir, nir_opt_conditional_discard);
+		if (sel->nir->options->max_unroll_iterations) {
+			NIR_PASS(progress, sel->nir, nir_opt_loop_unroll, 0);
+		}
+	} while (progress);
 }
 
 static void declare_nir_input_vs(struct si_shader_context *ctx,
