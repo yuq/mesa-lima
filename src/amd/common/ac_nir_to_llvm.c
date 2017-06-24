@@ -1190,7 +1190,7 @@ static LLVMValueRef emit_find_lsb(struct nir_to_llvm_context *ctx,
 		 *
 		 * The hardware already implements the correct behavior.
 		 */
-		LLVMConstInt(ctx->i32, 1, false),
+		LLVMConstInt(ctx->i1, 1, false),
 	};
 	return ac_build_intrinsic(&ctx->ac, "llvm.cttz.i32", ctx->i32, params, 2, AC_FUNC_ATTR_READNONE);
 }
