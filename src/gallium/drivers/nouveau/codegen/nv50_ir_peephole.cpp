@@ -2486,6 +2486,10 @@ MemoryOpt::combineLd(Record *rec, Instruction *ld)
 
    assert(sizeRc + sizeLd <= 16 && offRc != offLd);
 
+   // lock any stores that overlap with the load being merged into the
+   // existing record.
+   lockStores(ld);
+
    for (j = 0; sizeRc; sizeRc -= rec->insn->getDef(j)->reg.size, ++j);
 
    if (offLd < offRc) {
@@ -2541,6 +2545,10 @@ MemoryOpt::combineSt(Record *rec, Instruction *st)
    // for compute indirect stores are not guaranteed to be aligned
    if (prog->getType() == Program::TYPE_COMPUTE && rec->rel[0])
       return false;
+
+   // remove any existing load/store records for the store being merged into
+   // the existing record.
+   purgeRecords(st, DATA_FILE_COUNT);
 
    st->takeExtraSources(0, extra); // save predicate and indirect address
 
