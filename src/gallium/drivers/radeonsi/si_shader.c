@@ -652,9 +652,9 @@ static LLVMValueRef get_primitive_id(struct si_shader_context *ctx,
  * Return the value of tgsi_ind_register for indexing.
  * This is the indirect index with the constant offset added to it.
  */
-static LLVMValueRef get_indirect_index(struct si_shader_context *ctx,
-				       const struct tgsi_ind_register *ind,
-				       int rel_index)
+LLVMValueRef si_get_indirect_index(struct si_shader_context *ctx,
+				   const struct tgsi_ind_register *ind,
+				   int rel_index)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMValueRef result;
@@ -667,14 +667,14 @@ static LLVMValueRef get_indirect_index(struct si_shader_context *ctx,
 }
 
 /**
- * Like get_indirect_index, but restricts the return value to a (possibly
+ * Like si_get_indirect_index, but restricts the return value to a (possibly
  * undefined) value inside [0..num).
  */
 LLVMValueRef si_get_bounded_indirect_index(struct si_shader_context *ctx,
 					   const struct tgsi_ind_register *ind,
 					   int rel_index, unsigned num)
 {
-	LLVMValueRef result = get_indirect_index(ctx, ind, rel_index);
+	LLVMValueRef result = si_get_indirect_index(ctx, ind, rel_index);
 
 	return si_llvm_bound_index(ctx, result, num);
 }
@@ -714,7 +714,7 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 		LLVMValueRef index;
 
 		if (reg.Dimension.Indirect)
-			index = get_indirect_index(ctx, &reg.DimIndirect,
+			index = si_get_indirect_index(ctx, &reg.DimIndirect,
 						   reg.Dimension.Index);
 		else
 			index = LLVMConstInt(ctx->i32, reg.Dimension.Index, 0);
@@ -747,7 +747,7 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 		else
 			first = reg.Register.Index;
 
-		ind_index = get_indirect_index(ctx, &reg.Indirect,
+		ind_index = si_get_indirect_index(ctx, &reg.Indirect,
 					   reg.Register.Index - first);
 
 		base_addr = LLVMBuildAdd(gallivm->builder, base_addr,
@@ -850,7 +850,7 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 	if (reg.Register.Dimension) {
 
 		if (reg.Dimension.Indirect)
-			vertex_index = get_indirect_index(ctx, &reg.DimIndirect,
+			vertex_index = si_get_indirect_index(ctx, &reg.DimIndirect,
 			                                  reg.Dimension.Index);
 		else
 			vertex_index = LLVMConstInt(ctx->i32, reg.Dimension.Index, 0);
@@ -876,7 +876,7 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 		else
 			param_base = reg.Register.Index;
 
-		param_index = get_indirect_index(ctx, &reg.Indirect,
+		param_index = si_get_indirect_index(ctx, &reg.Indirect,
 		                                 reg.Register.Index - param_base);
 
 	} else {
@@ -3674,7 +3674,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 			input_array_size = info->num_inputs - input_base;
 		}
 
-		array_idx = get_indirect_index(ctx, &input->Indirect,
+		array_idx = si_get_indirect_index(ctx, &input->Indirect,
 					       input->Register.Index - input_base);
 	} else {
 		input_base = inst->Src[0].Register.Index;
