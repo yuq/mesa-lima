@@ -1057,7 +1057,8 @@ nvc0_screen_create(struct nouveau_device *dev)
    if (ret)
       FAIL_SCREEN_INIT("Error allocating TEXT area: %d\n", ret);
 
-   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 12, 7 << 16, NULL,
+   /* 6 user uniform areas, 6 driver areas, and 1 for the runout */
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 12, 13 << 16, NULL,
                         &screen->uniform_bo);
    if (ret)
       FAIL_SCREEN_INIT("Error allocating uniform BO: %d\n", ret);
@@ -1279,8 +1280,11 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    PUSH_KICK (push);
 
-   screen->tic.entries = CALLOC(4096, sizeof(void *));
-   screen->tsc.entries = screen->tic.entries + 2048;
+   screen->tic.entries = CALLOC(
+         NVC0_TIC_MAX_ENTRIES + NVC0_TSC_MAX_ENTRIES + NVE4_IMG_MAX_HANDLES,
+         sizeof(void *));
+   screen->tsc.entries = screen->tic.entries + NVC0_TIC_MAX_ENTRIES;
+   screen->img.entries = (void *)(screen->tsc.entries + NVC0_TSC_MAX_ENTRIES);
 
    if (!nvc0_blitter_create(screen))
       goto fail;

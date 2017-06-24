@@ -108,9 +108,9 @@
 /* 6 user uniform buffers, at 64K each */
 #define NVC0_CB_USR_INFO(s)         (s << 16)
 #define NVC0_CB_USR_SIZE            (6 << 16)
-/* 6 driver constbuts, at 2K each */
-#define NVC0_CB_AUX_INFO(s)         NVC0_CB_USR_SIZE + (s << 11)
-#define NVC0_CB_AUX_SIZE            (1 << 11)
+/* 6 driver constbuts, at 64K each */
+#define NVC0_CB_AUX_INFO(s)         NVC0_CB_USR_SIZE + (s << 16)
+#define NVC0_CB_AUX_SIZE            (1 << 16)
 /* XXX: Figure out what this UNK data is. */
 #define NVC0_CB_AUX_UNK_INFO        0x000
 #define NVC0_CB_AUX_UNK_SIZE        (8 * 4)
@@ -146,6 +146,9 @@
 /* 1 64-bits address and 1 32-bits sequence */
 #define NVC0_CB_AUX_MP_INFO         0x620
 #define NVC0_CB_AUX_MP_SIZE         3 * 4
+/* 512 64-byte blocks for bindless image handles */
+#define NVC0_CB_AUX_BINDLESS_INFO(i) 0x630 + (i) * 16 * 4
+#define NVC0_CB_AUX_BINDLESS_SIZE   (NVE4_IMG_MAX_HANDLES * 16 * 4)
 /* 4 32-bits floats for the vertex runout, put at the end */
 #define NVC0_CB_AUX_RUNOUT_INFO     NVC0_CB_USR_SIZE + (NVC0_CB_AUX_SIZE * 6)
 
@@ -355,7 +358,8 @@ void nvc0_validate_textures(struct nvc0_context *);
 void nvc0_validate_samplers(struct nvc0_context *);
 void nve4_set_tex_handles(struct nvc0_context *);
 void nvc0_validate_surfaces(struct nvc0_context *);
-void nve4_set_surface_info(struct nouveau_pushbuf *, struct pipe_image_view *,
+void nve4_set_surface_info(struct nouveau_pushbuf *,
+                           const struct pipe_image_view *,
                            struct nvc0_context *);
 void nvc0_mark_image_range_valid(const struct pipe_image_view *);
 bool nvc0_update_tic(struct nvc0_context *, struct nv50_tic_entry *,

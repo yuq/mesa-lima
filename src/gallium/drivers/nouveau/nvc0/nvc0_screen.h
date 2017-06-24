@@ -13,6 +13,7 @@
 
 #define NVC0_TIC_MAX_ENTRIES 2048
 #define NVC0_TSC_MAX_ENTRIES 2048
+#define NVE4_IMG_MAX_HANDLES 512
 
 /* doesn't count driver-reserved slot */
 #define NVC0_MAX_PIPE_CONSTBUFS         15
@@ -95,6 +96,11 @@ struct nvc0_screen {
       int next;
       uint32_t lock[NVC0_TSC_MAX_ENTRIES / 32];
    } tsc;
+
+   struct {
+      struct pipe_image_view **entries;
+      int next;
+   } img;
 
    struct {
       struct nouveau_bo *bo;

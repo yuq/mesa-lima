@@ -180,6 +180,7 @@ struct nv50_ir_prog_info
       uint16_t texBindBase;      /* base address for tex handles (nve4) */
       uint16_t fbtexBindBase;    /* base address for fbtex handle (nve4) */
       uint16_t suInfoBase;       /* base address for surface info (nve4) */
+      uint16_t bindlessBase;     /* base address for bindless image info (nve4) */
       uint16_t bufInfoBase;      /* base address for buffer info */
       uint16_t sampleInfoBase;   /* base address for sample positions */
       uint8_t msInfoCBSlot;      /* cX[] used for multisample info */

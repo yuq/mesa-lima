@@ -592,6 +592,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    if (info->target >= NVISA_GK104_CHIPSET) {
       info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
       info->io.fbtexBindBase = NVC0_CB_AUX_FB_TEX_INFO;
+      info->io.bindlessBase = NVC0_CB_AUX_BINDLESS_INFO(0);
    }
 
    if (prog->type == PIPE_SHADER_COMPUTE) {

@@ -876,20 +876,13 @@ nve4_make_texture_handle_resident(struct pipe_context *pipe,
    }
 }
 
-void
-nvc0_init_bindless_functions(struct pipe_context *pipe) {
-   pipe->create_texture_handle = nve4_create_texture_handle;
-   pipe->delete_texture_handle = nve4_delete_texture_handle;
-   pipe->make_texture_handle_resident = nve4_make_texture_handle_resident;
-}
-
 static const uint8_t nve4_su_format_map[PIPE_FORMAT_COUNT];
 static const uint16_t nve4_su_format_aux_map[PIPE_FORMAT_COUNT];
 static const uint16_t nve4_suldp_lib_offset[PIPE_FORMAT_COUNT];
 
 static void
-nvc0_get_surface_dims(struct pipe_image_view *view, int *width, int *height,
-                      int *depth)
+nvc0_get_surface_dims(const struct pipe_image_view *view,
+                      int *width, int *height, int *depth)
 {
    struct nv04_resource *res = nv04_resource(view->resource);
    int level;
@@ -937,7 +930,7 @@ nvc0_mark_image_range_valid(const struct pipe_image_view *view)
 
 void
 nve4_set_surface_info(struct nouveau_pushbuf *push,
-                      struct pipe_image_view *view,
+                      const struct pipe_image_view *view,
                       struct nvc0_context *nvc0)
 {
    struct nvc0_screen *screen = nvc0->screen;
@@ -1070,7 +1063,7 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
 
 static inline void
 nvc0_set_surface_info(struct nouveau_pushbuf *push,
-                      struct pipe_image_view *view, uint64_t address,
+                      const struct pipe_image_view *view, uint64_t address,
                       int width, int height, int depth)
 {
    struct nv04_resource *res;
@@ -1317,6 +1310,91 @@ nvc0_validate_surfaces(struct nvc0_context *nvc0)
    } else {
       nvc0_update_surface_bindings(nvc0);
    }
+}
+
+static uint64_t
+nve4_create_image_handle(struct pipe_context *pipe,
+                         const struct pipe_image_view *view)
+{
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
+   int i = screen->img.next, s;
+
+   while (screen->img.entries[i]) {
+      i = (i + 1) & (NVE4_IMG_MAX_HANDLES - 1);
+      if (i == screen->img.next)
+         return 0;
+   }
+
+   screen->img.next = (i + 1) & (NVE4_IMG_MAX_HANDLES - 1);
+   screen->img.entries[i] = calloc(1, sizeof(struct pipe_image_view));
+   *screen->img.entries[i] = *view;
+
+   for (s = 0; s < 6; s++) {
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
+      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s));
+      BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 16);
+      PUSH_DATA (push, NVC0_CB_AUX_BINDLESS_INFO(i));
+      nve4_set_surface_info(push, view, nvc0);
+   }
+
+   return 0x100000000ULL | i;
+}
+
+static void
+nve4_delete_image_handle(struct pipe_context *pipe, uint64_t handle)
+{
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+   struct nvc0_screen *screen = nvc0->screen;
+   int i = handle & (NVE4_IMG_MAX_HANDLES - 1);
+
+   free(screen->img.entries[i]);
+   screen->img.entries[i] = NULL;
+}
+
+static void
+nve4_make_image_handle_resident(struct pipe_context *pipe, uint64_t handle,
+                                unsigned access, bool resident)
+{
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+   struct nvc0_screen *screen = nvc0->screen;
+
+   if (resident) {
+      struct nvc0_resident *res = calloc(1, sizeof(struct nvc0_resident));
+      struct pipe_image_view *view =
+         screen->img.entries[handle & (NVE4_IMG_MAX_HANDLES - 1)];
+      assert(view);
+
+      if (view->resource->target == PIPE_BUFFER &&
+          access & PIPE_IMAGE_ACCESS_WRITE)
+         nvc0_mark_image_range_valid(view);
+      res->handle = handle;
+      res->buf = nv04_resource(view->resource);
+      res->flags = (access & 3) << 8;
+      list_add(&res->list, &nvc0->img_head);
+   } else {
+      list_for_each_entry_safe(struct nvc0_resident, pos, &nvc0->img_head, list) {
+         if (pos->handle == handle) {
+            list_del(&pos->list);
+            free(pos);
+            break;
+         }
+      }
+   }
+}
+
+void
+nvc0_init_bindless_functions(struct pipe_context *pipe) {
+   pipe->create_texture_handle = nve4_create_texture_handle;
+   pipe->delete_texture_handle = nve4_delete_texture_handle;
+   pipe->make_texture_handle_resident = nve4_make_texture_handle_resident;
+
+   pipe->create_image_handle = nve4_create_image_handle;
+   pipe->delete_image_handle = nve4_delete_image_handle;
+   pipe->make_image_handle_resident = nve4_make_image_handle_resident;
 }
 
 
