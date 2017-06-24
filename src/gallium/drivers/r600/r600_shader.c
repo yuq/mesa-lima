@@ -1134,9 +1134,10 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 
 		if (enabled) {
 			int gpr = gpr_offset + num_regs++;
+			ctx->shader->nsys_inputs++;
 
 			// add to inputs, allocate a gpr
-			k = ctx->shader->ninput ++;
+			k = ctx->shader->ninput++;
 			ctx->shader->input[k].name = name;
 			ctx->shader->input[k].sid = 0;
 			ctx->shader->input[k].interpolate = TGSI_INTERPOLATE_CONSTANT;
@@ -2945,6 +2946,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->indirect_files = ctx.info.indirect_files;
 
 	shader->uses_doubles = ctx.info.uses_doubles;
+	shader->nsys_inputs = 0;
 
 	indirect_gprs = ctx.info.indirect_files & ~((1 << TGSI_FILE_CONSTANT) | (1 << TGSI_FILE_SAMPLER));
 	tgsi_parse_init(&ctx.parse, tokens);
@@ -6322,11 +6324,9 @@ static int tgsi_interp_egcm(struct r600_shader_ctx *ctx)
 	struct r600_bytecode_alu alu;
 	int r, i = 0, k, interp_gpr, interp_base_chan, tmp, lasti;
 	unsigned location;
-	int input;
+	const int input = inst->Src[0].Register.Index + ctx->shader->nsys_inputs;
 
 	assert(inst->Src[0].Register.File == TGSI_FILE_INPUT);
-
-	input = inst->Src[0].Register.Index;
 
 	/* Interpolators have been marked for use already by allocate_system_value_inputs */
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
