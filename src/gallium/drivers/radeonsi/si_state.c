@@ -2535,8 +2535,11 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * (after FMASK decompression). Shader write -> FB read transitions
 	 * cannot happen for MSAA textures, because MSAA shader images are
 	 * not supported.
+	 *
+	 * Only flush and wait for CB if there is actually a bound color buffer.
 	 */
-	if (sctx->framebuffer.nr_samples <= 1) {
+	if (sctx->framebuffer.nr_samples <= 1 &&
+	    sctx->framebuffer.state.nr_cbufs) {
 		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 				 SI_CONTEXT_INV_GLOBAL_L2 |
 				 SI_CONTEXT_FLUSH_AND_INV_CB;
