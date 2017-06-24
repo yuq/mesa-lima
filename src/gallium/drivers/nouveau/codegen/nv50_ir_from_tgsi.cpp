@@ -216,6 +216,15 @@ public:
 
    nv50_ir::TexInstruction::Target getTexture(const Source *, int s) const;
 
+   const nv50_ir::TexInstruction::ImgFormatDesc *getImageFormat() const {
+      return &nv50_ir::TexInstruction::formatTable[
+            translateImgFormat(insn->Memory.Format)];
+   }
+
+   nv50_ir::TexTarget getImageTarget() const {
+      return translateTexture(insn->Memory.Texture);
+   }
+
    nv50_ir::CacheMode getCacheMode() const {
       if (!insn->Instruction.Memory)
          return nv50_ir::CACHE_CA;
@@ -1064,14 +1073,6 @@ public:
    std::vector<Resource> resources;
    */
 
-   struct Image {
-      uint8_t target; // TGSI_TEXTURE_*
-      bool raw;
-      uint8_t slot;
-      uint16_t format; // PIPE_FORMAT_*
-   };
-   std::vector<Image> images;
-
    struct MemoryFile {
       uint8_t mem_type; // TGSI_MEMORY_TYPE_*
    };
@@ -1125,7 +1126,6 @@ bool Source::scanSource()
 
    textureViews.resize(scan.file_max[TGSI_FILE_SAMPLER_VIEW] + 1);
    //resources.resize(scan.file_max[TGSI_FILE_RESOURCE] + 1);
-   images.resize(scan.file_max[TGSI_FILE_IMAGE] + 1);
    tempArrayId.resize(scan.file_max[TGSI_FILE_TEMPORARY] + 1);
    memoryFiles.resize(scan.file_max[TGSI_FILE_MEMORY] + 1);
 
@@ -1458,14 +1458,6 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       }
       break;
 */
-   case TGSI_FILE_IMAGE:
-      for (i = first; i <= last; ++i) {
-         images[i].target = decl->Image.Resource;
-         images[i].raw = decl->Image.Raw;
-         images[i].format = decl->Image.Format;
-         images[i].slot = i;
-      }
-      break;
    case TGSI_FILE_SAMPLER_VIEW:
       for (i = first; i <= last; ++i)
          textureViews[i].target = decl->SamplerView.Resource;
@@ -1487,6 +1479,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
    case TGSI_FILE_IMMEDIATE:
    case TGSI_FILE_SAMPLER:
    case TGSI_FILE_BUFFER:
+   case TGSI_FILE_IMAGE:
       break;
    default:
       ERROR("unhandled TGSI_FILE %d\n", decl->Declaration.File);
@@ -1689,7 +1682,7 @@ private:
    void handleUserClipPlanes();
 
    // Symbol *getResourceBase(int r);
-   void getImageCoords(std::vector<Value *>&, int r, int s);
+   void getImageCoords(std::vector<Value *>&, int s);
 
    void handleLOAD(Value *dst0[4]);
    void handleSTORE();
@@ -2586,24 +2579,11 @@ partitionLoadStore(uint8_t comp[2], uint8_t size[2], uint8_t mask)
    return n + 1;
 }
 
-static inline nv50_ir::TexTarget
-getImageTarget(const tgsi::Source *code, int r)
-{
-   return tgsi::translateTexture(code->images.at(r).target);
-}
-
-static inline const nv50_ir::TexInstruction::ImgFormatDesc *
-getImageFormat(const tgsi::Source *code, int r)
-{
-   return &nv50_ir::TexInstruction::formatTable[
-      tgsi::translateImgFormat(code->images.at(r).format)];
-}
-
 void
-Converter::getImageCoords(std::vector<Value *> &coords, int r, int s)
+Converter::getImageCoords(std::vector<Value *> &coords, int s)
 {
    TexInstruction::Target t =
-      TexInstruction::Target(getImageTarget(code, r));
+      TexInstruction::Target(tgsi.getImageTarget());
    const int arg = t.getDim() + (t.isArray() || t.isCube());
 
    for (int c = 0; c < arg; ++c)
@@ -2656,9 +2636,7 @@ Converter::handleLOAD(Value *dst0[4])
       }
       break;
    case TGSI_FILE_IMAGE: {
-      assert(!code->images[r].raw);
-
-      getImageCoords(off, r, 1);
+      getImageCoords(off, 1);
       def.resize(4);
 
       for (c = 0; c < 4; ++c) {
@@ -2669,10 +2647,9 @@ Converter::handleLOAD(Value *dst0[4])
       }
 
       TexInstruction *ld =
-         mkTex(OP_SULDP, getImageTarget(code, r), code->images[r].slot, 0,
-               def, off);
+         mkTex(OP_SULDP, tgsi.getImageTarget(), r, 0, def, off);
       ld->tex.mask = tgsi.getDst(0).getMask();
-      ld->tex.format = getImageFormat(code, r);
+      ld->tex.format = tgsi.getImageFormat();
       ld->cache = tgsi.getCacheMode();
       if (ind)
          ld->setIndirectR(ind);
@@ -2794,19 +2771,16 @@ Converter::handleSTORE()
       }
       break;
    case TGSI_FILE_IMAGE: {
-      assert(!code->images[r].raw);
-
-      getImageCoords(off, r, 0);
+      getImageCoords(off, 0);
       src = off;
 
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
          src.push_back(fetchSrc(1, c));
 
       TexInstruction *st =
-         mkTex(OP_SUSTP, getImageTarget(code, r), code->images[r].slot,
-               0, dummy, src);
+         mkTex(OP_SUSTP, tgsi.getImageTarget(), r, 0, dummy, src);
       st->tex.mask = tgsi.getDst(0).getMask();
-      st->tex.format = getImageFormat(code, r);
+      st->tex.format = tgsi.getImageFormat();
       st->cache = tgsi.getCacheMode();
       if (ind)
          st->setIndirectR(ind);
@@ -2913,20 +2887,18 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
             dst0[c] = dst; // not equal to rDst so handleInstruction will do mkMov
       break;
    case TGSI_FILE_IMAGE: {
-      assert(!code->images[r].raw);
-
-      getImageCoords(srcv, r, 1);
+      getImageCoords(srcv, 1);
       defv.push_back(dst);
       srcv.push_back(fetchSrc(2, 0));
 
       if (subOp == NV50_IR_SUBOP_ATOM_CAS)
          srcv.push_back(fetchSrc(3, 0));
 
-      TexInstruction *tex = mkTex(OP_SUREDP, getImageTarget(code, r),
-                                  code->images[r].slot, 0, defv, srcv);
+      TexInstruction *tex = mkTex(OP_SUREDP, tgsi.getImageTarget(),
+                                  r, 0, defv, srcv);
       tex->subOp = subOp;
       tex->tex.mask = 1;
-      tex->tex.format = getImageFormat(code, r);
+      tex->tex.format = tgsi.getImageFormat();
       tex->setType(ty);
       if (ind)
          tex->setIndirectR(ind);
@@ -3775,7 +3747,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
             }
          }
          texi->tex.r = tgsi.getSrc(0).getIndex(0);
-         texi->tex.target = getImageTarget(code, texi->tex.r);
+         texi->tex.target = tgsi.getImageTarget();
 
          if (tgsi.getSrc(0).isIndirect(0))
             texi->setIndirectR(fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, NULL));
