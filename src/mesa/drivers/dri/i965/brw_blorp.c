@@ -315,27 +315,24 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       src_format = dst_format = MESA_FORMAT_R_FLOAT32;
    }
 
-   uint32_t src_usage_flags = (1 << ISL_AUX_USAGE_MCS);
-   if (src_format == src_mt->format)
-      src_usage_flags |= (1 << ISL_AUX_USAGE_CCS_E);
    enum isl_aux_usage src_aux_usage =
-      blorp_get_aux_usage(brw, src_mt, src_usage_flags);
+      intel_miptree_texture_aux_usage(brw, src_mt, src_format);
+   /* We do format workarounds for some depth formats so we can't reliably
+    * sample with HiZ.  One of these days, we should fix that.
+    */
+   if (src_aux_usage == ISL_AUX_USAGE_HIZ)
+      src_aux_usage = ISL_AUX_USAGE_NONE;
+   const bool src_aux_supported = src_aux_usage != ISL_AUX_USAGE_NONE;
+   const bool src_clear_supported =
+      src_aux_supported && (src_mt->format == src_format);
    intel_miptree_prepare_access(brw, src_mt, src_level, 1, src_layer, 1,
-                                src_aux_usage != ISL_AUX_USAGE_NONE,
-                                src_aux_usage != ISL_AUX_USAGE_NONE);
+                                src_aux_supported, src_clear_supported);
 
-   uint32_t dst_usage_flags = (1 << ISL_AUX_USAGE_MCS);
-   if (dst_format == dst_mt->format) {
-      dst_usage_flags |= (1 << ISL_AUX_USAGE_CCS_E) |
-                         (1 << ISL_AUX_USAGE_CCS_D);
-   }
    enum isl_aux_usage dst_aux_usage =
-      blorp_get_aux_usage(brw, dst_mt, dst_usage_flags);
+      intel_miptree_render_aux_usage(brw, dst_mt, encode_srgb);
+   const bool dst_aux_supported = dst_aux_usage != ISL_AUX_USAGE_NONE;
    intel_miptree_prepare_access(brw, dst_mt, dst_level, 1, dst_layer, 1,
-                                dst_aux_usage != ISL_AUX_USAGE_NONE,
-                                dst_aux_usage != ISL_AUX_USAGE_NONE);
-   intel_miptree_finish_write(brw, dst_mt, dst_level, dst_layer, 1,
-                              dst_aux_usage != ISL_AUX_USAGE_NONE);
+                                dst_aux_supported, dst_aux_supported);
 
    struct isl_surf tmp_surfs[2];
    struct blorp_surf src_surf, dst_surf;
@@ -362,6 +359,9 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
               dst_x0, dst_y0, dst_x1, dst_y1,
               filter, mirror_x, mirror_y);
    blorp_batch_finish(&batch);
+
+   intel_miptree_finish_write(brw, dst_mt, dst_level, dst_layer, 1,
+                              dst_aux_supported);
 }
 
 void
