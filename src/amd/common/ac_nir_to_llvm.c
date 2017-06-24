@@ -68,6 +68,8 @@ struct ac_nir_context {
 	int num_locals;
 	LLVMValueRef *locals;
 
+	LLVMValueRef ddxy_lds;
+
 	struct nir_to_llvm_context *nctx; /* TODO get rid of this */
 };
 
@@ -170,8 +172,6 @@ struct nir_to_llvm_context {
 	uint64_t output_mask;
 	uint8_t num_output_clips;
 	uint8_t num_output_culls;
-
-	bool has_ds_bpermute;
 
 	bool is_gs_copy_shader;
 	LLVMValueRef gs_next_vertex;
@@ -1453,17 +1453,18 @@ static LLVMValueRef emit_unpack_half_2x16(struct ac_llvm_context *ctx,
 	return result;
 }
 
-static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
+static LLVMValueRef emit_ddxy(struct ac_nir_context *ctx,
 			      nir_op op,
 			      LLVMValueRef src0)
 {
 	unsigned mask;
 	int idx;
 	LLVMValueRef result;
+	bool has_ds_bpermute = ctx->abi->chip_class >= VI;
 
-	if (!ctx->lds && !ctx->has_ds_bpermute)
-		ctx->lds = LLVMAddGlobalInAddressSpace(ctx->module,
-						       LLVMArrayType(ctx->i32, 64),
+	if (!ctx->ddxy_lds && !has_ds_bpermute)
+		ctx->ddxy_lds = LLVMAddGlobalInAddressSpace(ctx->ac.module,
+						       LLVMArrayType(ctx->ac.i32, 64),
 						       "ddxy_lds", LOCAL_ADDR_SPACE);
 
 	if (op == nir_op_fddx_fine || op == nir_op_fddx)
@@ -1481,8 +1482,8 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 	else
 		idx = 2;
 
-	result = ac_build_ddxy(&ctx->ac, ctx->has_ds_bpermute,
-			      mask, idx, ctx->lds,
+	result = ac_build_ddxy(&ctx->ac, has_ds_bpermute,
+			      mask, idx, ctx->ddxy_lds,
 			      src0);
 	return result;
 }
@@ -1493,15 +1494,15 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
  * it returns DDX(I), DDX(J), DDY(I), DDY(J).
  */
 static LLVMValueRef emit_ddxy_interp(
-	struct nir_to_llvm_context *ctx,
+	struct ac_nir_context *ctx,
 	LLVMValueRef interp_ij)
 {
 	LLVMValueRef result[4], a;
 	unsigned i;
 
 	for (i = 0; i < 2; i++) {
-		a = LLVMBuildExtractElement(ctx->builder, interp_ij,
-					    LLVMConstInt(ctx->i32, i, false), "");
+		a = LLVMBuildExtractElement(ctx->ac.builder, interp_ij,
+					    LLVMConstInt(ctx->ac.i32, i, false), "");
 		result[i] = emit_ddxy(ctx, nir_op_fddx, a);
 		result[2+i] = emit_ddxy(ctx, nir_op_fddy, a);
 	}
@@ -1874,7 +1875,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	case nir_op_fddy_fine:
 	case nir_op_fddx_coarse:
 	case nir_op_fddy_coarse:
-		result = emit_ddxy(ctx->nctx, instr->op, src[0]);
+		result = emit_ddxy(ctx, instr->op, src[0]);
 		break;
 
 	case nir_op_unpack_64_2x32_split_x: {
@@ -3807,7 +3808,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 
 	if (location == INTERP_SAMPLE || location == INTERP_CENTER) {
 		LLVMValueRef ij_out[2];
-		LLVMValueRef ddxy_out = emit_ddxy_interp(ctx, interp_param);
+		LLVMValueRef ddxy_out = emit_ddxy_interp(ctx->nir, interp_param);
 
 		/*
 		 * take the I then J parameters, and the DDX/Y for it, and
@@ -6207,8 +6208,6 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	ac_llvm_context_init(&ctx.ac, ctx.context);
 	ctx.ac.module = ctx.module;
-
-	ctx.has_ds_bpermute = ctx.options->chip_class >= VI;
 
 	memset(shader_info, 0, sizeof(*shader_info));
 
