@@ -1287,6 +1287,15 @@ static LLVMValueRef emit_b2f(struct nir_to_llvm_context *ctx,
 	return LLVMBuildAnd(ctx->builder, src0, LLVMBuildBitCast(ctx->builder, LLVMConstReal(ctx->f32, 1.0), ctx->i32, ""), "");
 }
 
+static LLVMValueRef emit_f2b(struct ac_llvm_context *ctx,
+			     LLVMValueRef src0)
+{
+	src0 = to_float(ctx, src0);
+	return LLVMBuildSExt(ctx->builder,
+			     LLVMBuildFCmp(ctx->builder, LLVMRealUNE, src0, ctx->f32_0, ""),
+			     ctx->i32, "");
+}
+
 static LLVMValueRef emit_b2i(struct ac_llvm_context *ctx,
 			     LLVMValueRef src0)
 {
@@ -1821,6 +1830,9 @@ static void visit_alu(struct nir_to_llvm_context *ctx, const nir_alu_instr *inst
 		break;
 	case nir_op_b2f:
 		result = emit_b2f(ctx, src[0]);
+		break;
+	case nir_op_f2b:
+		result = emit_f2b(&ctx->ac, src[0]);
 		break;
 	case nir_op_b2i:
 		result = emit_b2i(&ctx->ac, src[0]);
