@@ -45,6 +45,8 @@ struct ac_shader_abi {
 	LLVMValueRef vertex_id;
 	LLVMValueRef instance_id;
 	LLVMValueRef front_face;
+	LLVMValueRef ancillary;
+	LLVMValueRef sample_coverage;
 
 	/* For VS and PS: pre-loaded shader inputs.
 	 *

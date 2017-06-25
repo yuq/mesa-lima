@@ -4541,8 +4541,10 @@ static void create_function(struct si_shader_context *ctx)
 		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->i32,
 				       &ctx->abi.front_face, SI_PARAM_FRONT_FACE);
 		shader->info.face_vgpr_index = 20;
-		add_arg_checked(&fninfo, ARG_VGPR, ctx->i32, SI_PARAM_ANCILLARY);
-		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_SAMPLE_COVERAGE);
+		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->i32,
+				       &ctx->abi.ancillary, SI_PARAM_ANCILLARY);
+		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->f32,
+				       &ctx->abi.sample_coverage, SI_PARAM_SAMPLE_COVERAGE);
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->i32, SI_PARAM_POS_FIXED_PT);
 
 		/* Color inputs from the prolog. */
