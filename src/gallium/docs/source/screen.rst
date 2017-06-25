@@ -396,6 +396,8 @@ The integer capabilities:
   ``TGSI_PROPERTY_FS_POST_DEPTH_COVERAGE`` is supported.
 * ``PIPE_CAP_BINDLESS_TEXTURE``: Whether bindless texture operations are
   supported.
+* ``PIPE_CAP_NIR_SAMPLERS_AS_DEREF``: Whether NIR tex instructions should
+  reference texture and sampler as NIR derefs instead of by indices.
 
 
 .. _pipe_capf:
