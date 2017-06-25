@@ -2502,7 +2502,7 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 			edgeflag_value = LLVMBuildFPToUI(ctx->gallivm.builder,
 							 edgeflag_value,
 							 ctx->i32, "");
-			edgeflag_value = lp_build_min(&bld_base->int_bld,
+			edgeflag_value = ac_build_umin(&ctx->ac,
 						      edgeflag_value,
 						      ctx->i32_1);
 

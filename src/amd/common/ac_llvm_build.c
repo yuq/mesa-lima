@@ -908,6 +908,13 @@ ac_build_umsb(struct ac_llvm_context *ctx,
 			       LLVMConstInt(ctx->i32, -1, true), msb, "");
 }
 
+LLVMValueRef ac_build_umin(struct ac_llvm_context *ctx, LLVMValueRef a,
+			   LLVMValueRef b)
+{
+	LLVMValueRef cmp = LLVMBuildICmp(ctx->builder, LLVMIntULE, a, b, "");
+	return LLVMBuildSelect(ctx->builder, cmp, a, b, "");
+}
+
 LLVMValueRef ac_build_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 {
 	if (HAVE_LLVM >= 0x0500) {
