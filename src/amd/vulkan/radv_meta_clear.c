@@ -881,8 +881,6 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 
 	if (!radv_layout_can_fast_clear(iview->image, image_layout, radv_image_queue_family_mask(iview->image, cmd_buffer->queue_family_index, cmd_buffer->queue_family_index)))
 		goto fail;
-	if (vk_format_get_blocksizebits(iview->image->vk_format) > 64)
-		goto fail;
 
 	/* don't fast clear 3D */
 	if (iview->image->type == VK_IMAGE_TYPE_3D)
@@ -936,6 +934,11 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 				 iview->image->offset + iview->image->dcc_offset,
 				 iview->image->surface.dcc_size, 0x20202020);
 	} else {
+
+		if (iview->image->surface.bpe > 8) {
+			/* 128 bit formats not supported */
+			return false;
+		}
 		radv_fill_buffer(cmd_buffer, iview->image->bo,
 				 iview->image->offset + iview->image->cmask.offset,
 				 iview->image->cmask.size, 0);

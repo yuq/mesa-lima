@@ -977,6 +977,27 @@ bool radv_format_pack_clear_color(VkFormat format,
 		clear_vals[0] = float3_to_r11g11b10f(value->float32);
 		clear_vals[1] = 0;
 		break;
+	case VK_FORMAT_R32G32B32A32_SFLOAT:
+		if (value->float32[0] != value->float32[1] ||
+		    value->float32[0] != value->float32[2])
+			return false;
+		clear_vals[0] = fui(value->float32[0]);
+		clear_vals[1] = fui(value->float32[3]);
+		break;
+	case VK_FORMAT_R32G32B32A32_UINT:
+		if (value->uint32[0] != value->uint32[1] ||
+		    value->uint32[0] != value->uint32[2])
+			return false;
+		clear_vals[0] = value->uint32[0];
+		clear_vals[1] = value->uint32[3];
+		break;
+	case VK_FORMAT_R32G32B32A32_SINT:
+		if (value->int32[0] != value->int32[1] ||
+		    value->int32[0] != value->int32[2])
+			return false;
+		clear_vals[0] = value->int32[0];
+		clear_vals[1] = value->int32[3];
+		break;
 	default:
 		fprintf(stderr, "failed to fast clear %d\n", format);
 		return false;
