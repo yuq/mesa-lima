@@ -715,9 +715,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
-   mesa_format format = irb->mt->format;
    uint32_t x0, x1, y0, y1;
 
+   mesa_format format = irb->Base.Base.Format;
    if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
       format = _mesa_get_srgb_format_linear(format);
 
@@ -739,6 +739,14 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
    bool color_write_disable[4] = { false, false, false, false };
    if (set_write_disables(irb, ctx->Color.ColorMask[buf], color_write_disable))
+      can_fast_clear = false;
+
+   /* We store clear colors as floats or uints as needed.  If there are
+    * texture views in play, the formats will not properly be respected
+    * during resolves because the resolve operations only know about the
+    * miptree and not the renderbuffer.
+    */
+   if (irb->Base.Base.Format != irb->mt->format)
       can_fast_clear = false;
 
    if (!irb->mt->supports_fast_clear ||
