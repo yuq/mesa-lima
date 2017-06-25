@@ -557,8 +557,10 @@ st_create_vp_variant(struct st_context *st,
       vpv->tgsi.ir.nir = nir_shader_clone(NULL, stvp->tgsi.ir.nir);
       if (key->clamp_color)
          NIR_PASS_V(vpv->tgsi.ir.nir, nir_lower_clamp_color_outputs);
-      if (key->passthrough_edgeflags)
+      if (key->passthrough_edgeflags) {
          NIR_PASS_V(vpv->tgsi.ir.nir, nir_lower_passthrough_edgeflags);
+         vpv->num_inputs++;
+      }
 
       st_finalize_nir(st, &stvp->Base, vpv->tgsi.ir.nir);
 
