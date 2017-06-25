@@ -150,12 +150,19 @@ static unsigned add_arg(struct si_function_info *fninfo,
 	return add_arg_assign(fninfo, regfile, type, NULL);
 }
 
+static void add_arg_assign_checked(struct si_function_info *fninfo,
+				   enum si_arg_regfile regfile, LLVMTypeRef type,
+				   LLVMValueRef *assign, unsigned idx)
+{
+	MAYBE_UNUSED unsigned actual = add_arg_assign(fninfo, regfile, type, assign);
+	assert(actual == idx);
+}
+
 static void add_arg_checked(struct si_function_info *fninfo,
 			    enum si_arg_regfile regfile, LLVMTypeRef type,
 			    unsigned idx)
 {
-	MAYBE_UNUSED unsigned actual = add_arg(fninfo, regfile, type);
-	assert(actual == idx);
+	add_arg_assign_checked(fninfo, regfile, type, NULL, idx);
 }
 
 /**
@@ -1563,7 +1570,7 @@ static void declare_system_value(struct si_shader_context *ctx,
 	}
 
 	case TGSI_SEMANTIC_FACE:
-		value = LLVMGetParam(ctx->main_fn, SI_PARAM_FRONT_FACE);
+		value = ctx->abi.front_face;
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEID:
@@ -4531,7 +4538,8 @@ static void create_function(struct si_shader_context *ctx)
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_POS_Y_FLOAT);
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_POS_Z_FLOAT);
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_POS_W_FLOAT);
-		add_arg_checked(&fninfo, ARG_VGPR, ctx->i32, SI_PARAM_FRONT_FACE);
+		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->i32,
+				       &ctx->abi.front_face, SI_PARAM_FRONT_FACE);
 		shader->info.face_vgpr_index = 20;
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->i32, SI_PARAM_ANCILLARY);
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_SAMPLE_COVERAGE);

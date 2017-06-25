@@ -132,7 +132,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef sample_pos_offset;
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
-	LLVMValueRef front_face;
 	LLVMValueRef ancillary;
 	LLVMValueRef sample_coverage;
 	LLVMValueRef frag_pos[4];
@@ -816,7 +815,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		add_vgpr_argument(&args, ctx->f32, &ctx->frag_pos[1]);  /* pos y float */
 		add_vgpr_argument(&args, ctx->f32, &ctx->frag_pos[2]);  /* pos z float */
 		add_vgpr_argument(&args, ctx->f32, &ctx->frag_pos[3]);  /* pos w float */
-		add_vgpr_argument(&args, ctx->i32, &ctx->front_face);  /* front face */
+		add_vgpr_argument(&args, ctx->i32, &ctx->abi.front_face);  /* front face */
 		add_vgpr_argument(&args, ctx->i32, &ctx->ancillary);  /* ancillary */
 		add_vgpr_argument(&args, ctx->i32, &ctx->sample_coverage);  /* sample coverage */
 		add_vgpr_argument(&args, ctx->i32, NULL);  /* fixed pt */
@@ -4023,7 +4022,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = ctx->nctx->sample_coverage;
 		break;
 	case nir_intrinsic_load_front_face:
-		result = ctx->nctx->front_face;
+		result = ctx->abi->front_face;
 		break;
 	case nir_intrinsic_load_instance_id:
 		result = ctx->abi->instance_id;

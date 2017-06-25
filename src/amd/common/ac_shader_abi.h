@@ -44,6 +44,7 @@ struct ac_shader_abi {
 	LLVMValueRef draw_id;
 	LLVMValueRef vertex_id;
 	LLVMValueRef instance_id;
+	LLVMValueRef front_face;
 
 	/* For VS and PS: pre-loaded shader inputs.
 	 *
