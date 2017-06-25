@@ -1017,11 +1017,6 @@ build_store_values_extended(struct ac_llvm_context *ac,
 	LLVMBuilderRef builder = ac->builder;
 	unsigned i;
 
-	if (value_count == 1) {
-		LLVMBuildStore(builder, vec, values[0]);
-		return;
-	}
-
 	for (i = 0; i < value_count; i++) {
 		LLVMValueRef ptr = values[i * value_stride];
 		LLVMValueRef index = LLVMConstInt(ac->i32, i, false);
@@ -2986,7 +2981,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->abi->inputs + idx + chan, count,
-						4, false);
+						4, false, true);
 
 				values[chan] = LLVMBuildExtractElement(ctx->ac.builder,
 								       tmp_vec,
@@ -3003,7 +2998,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->locals + idx + chan, count,
-						4, true);
+						4, true, true);
 
 				values[chan] = LLVMBuildExtractElement(ctx->ac.builder,
 								       tmp_vec,
@@ -3031,7 +3026,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->outputs + idx + chan, count,
-						4, true);
+						4, true, true);
 
 				values[chan] = LLVMBuildExtractElement(ctx->ac.builder,
 								       tmp_vec,
@@ -3100,13 +3095,10 @@ visit_store_var(struct ac_nir_context *ctx,
 				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->outputs + idx + chan, count,
-						stride, true);
+						stride, true, true);
 
-				if (get_llvm_num_components(tmp_vec) > 1) {
-					tmp_vec = LLVMBuildInsertElement(ctx->ac.builder, tmp_vec,
-									 value, indir_index, "");
-				} else
-					tmp_vec = value;
+				tmp_vec = LLVMBuildInsertElement(ctx->ac.builder, tmp_vec,
+							         value, indir_index, "");
 				build_store_values_extended(&ctx->ac, ctx->outputs + idx + chan,
 							    count, stride, tmp_vec);
 
@@ -3129,7 +3121,7 @@ visit_store_var(struct ac_nir_context *ctx,
 				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 					&ctx->ac, ctx->locals + idx + chan, count,
-					4, true);
+					4, true, true);
 
 				tmp_vec = LLVMBuildInsertElement(ctx->ac.builder, tmp_vec,
 								 value, indir_index, "");

@@ -181,13 +181,14 @@ ac_build_gather_values_extended(struct ac_llvm_context *ctx,
 				LLVMValueRef *values,
 				unsigned value_count,
 				unsigned value_stride,
-				bool load)
+				bool load,
+				bool always_vector)
 {
 	LLVMBuilderRef builder = ctx->builder;
 	LLVMValueRef vec = NULL;
 	unsigned i;
 
-	if (value_count == 1) {
+	if (value_count == 1 && !always_vector) {
 		if (load)
 			return LLVMBuildLoad(builder, values[0], "");
 		return values[0];
@@ -212,7 +213,7 @@ ac_build_gather_values(struct ac_llvm_context *ctx,
 		       LLVMValueRef *values,
 		       unsigned value_count)
 {
-	return ac_build_gather_values_extended(ctx, values, value_count, 1, false);
+	return ac_build_gather_values_extended(ctx, values, value_count, 1, false, false);
 }
 
 LLVMValueRef
