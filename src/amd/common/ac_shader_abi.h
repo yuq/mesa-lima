@@ -44,6 +44,7 @@ struct ac_shader_abi {
 	LLVMValueRef draw_id;
 	LLVMValueRef vertex_id;
 	LLVMValueRef instance_id;
+	LLVMValueRef frag_pos[4];
 	LLVMValueRef front_face;
 	LLVMValueRef ancillary;
 	LLVMValueRef sample_coverage;

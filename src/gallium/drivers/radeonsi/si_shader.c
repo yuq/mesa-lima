@@ -4534,10 +4534,14 @@ static void create_function(struct si_shader_context *ctx)
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->v2i32, SI_PARAM_LINEAR_CENTER);
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->v2i32, SI_PARAM_LINEAR_CENTROID);
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_LINE_STIPPLE_TEX);
-		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_POS_X_FLOAT);
-		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_POS_Y_FLOAT);
-		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_POS_Z_FLOAT);
-		add_arg_checked(&fninfo, ARG_VGPR, ctx->f32, SI_PARAM_POS_W_FLOAT);
+		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->f32,
+				       &ctx->abi.frag_pos[0], SI_PARAM_POS_X_FLOAT);
+		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->f32,
+				       &ctx->abi.frag_pos[1], SI_PARAM_POS_Y_FLOAT);
+		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->f32,
+				       &ctx->abi.frag_pos[2], SI_PARAM_POS_Z_FLOAT);
+		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->f32,
+				       &ctx->abi.frag_pos[3], SI_PARAM_POS_W_FLOAT);
 		add_arg_assign_checked(&fninfo, ARG_VGPR, ctx->i32,
 				       &ctx->abi.front_face, SI_PARAM_FRONT_FACE);
 		shader->info.face_vgpr_index = 20;

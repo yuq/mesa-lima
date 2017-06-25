@@ -132,7 +132,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef sample_pos_offset;
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
-	LLVMValueRef frag_pos[4];
 
 	LLVMTypeRef i1;
 	LLVMTypeRef i8;
@@ -809,10 +808,10 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		add_vgpr_argument(&args, ctx->v2i32, &ctx->linear_center); /* linear center */
 		add_vgpr_argument(&args, ctx->v2i32, &ctx->linear_centroid); /* linear centroid */
 		add_vgpr_argument(&args, ctx->f32, NULL);  /* line stipple tex */
-		add_vgpr_argument(&args, ctx->f32, &ctx->frag_pos[0]);  /* pos x float */
-		add_vgpr_argument(&args, ctx->f32, &ctx->frag_pos[1]);  /* pos y float */
-		add_vgpr_argument(&args, ctx->f32, &ctx->frag_pos[2]);  /* pos z float */
-		add_vgpr_argument(&args, ctx->f32, &ctx->frag_pos[3]);  /* pos w float */
+		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[0]);  /* pos x float */
+		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[1]);  /* pos y float */
+		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[2]);  /* pos z float */
+		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[3]);  /* pos w float */
 		add_vgpr_argument(&args, ctx->i32, &ctx->abi.front_face);  /* front face */
 		add_vgpr_argument(&args, ctx->i32, &ctx->abi.ancillary);  /* ancillary */
 		add_vgpr_argument(&args, ctx->i32, &ctx->abi.sample_coverage);  /* sample coverage */
@@ -3309,7 +3308,10 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 			fmask_load_address[2] = NULL;
 		if (add_frag_pos) {
 			for (chan = 0; chan < 2; ++chan)
-				fmask_load_address[chan] = LLVMBuildAdd(ctx->ac.builder, fmask_load_address[chan], LLVMBuildFPToUI(ctx->ac.builder, ctx->nctx->frag_pos[chan], ctx->ac.i32, ""), "");
+				fmask_load_address[chan] =
+					LLVMBuildAdd(ctx->ac.builder, fmask_load_address[chan],
+						LLVMBuildFPToUI(ctx->ac.builder, ctx->abi->frag_pos[chan],
+								ctx->ac.i32, ""), "");
 		}
 		sample_index = adjust_sample_index_using_fmask(&ctx->ac,
 							       fmask_load_address[0],
@@ -3333,7 +3335,8 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 
 		if (add_frag_pos) {
 			for (chan = 0; chan < count; ++chan)
-				coords[chan] = LLVMBuildAdd(ctx->ac.builder, coords[chan], LLVMBuildFPToUI(ctx->ac.builder, ctx->nctx->frag_pos[chan], ctx->ac.i32, ""), "");
+				coords[chan] = LLVMBuildAdd(ctx->ac.builder, coords[chan], LLVMBuildFPToUI(ctx->ac.builder, ctx->abi->frag_pos[chan],
+						ctx->ac.i32, ""), "");
 		}
 		if (is_ms) {
 			coords[count] = sample_index;
@@ -3745,12 +3748,12 @@ static LLVMValueRef load_sample_position(struct nir_to_llvm_context *ctx,
 	return result;
 }
 
-static LLVMValueRef load_sample_pos(struct nir_to_llvm_context *ctx)
+static LLVMValueRef load_sample_pos(struct ac_nir_context *ctx)
 {
 	LLVMValueRef values[2];
 
-	values[0] = emit_ffract(&ctx->ac, ctx->frag_pos[0]);
-	values[1] = emit_ffract(&ctx->ac, ctx->frag_pos[1]);
+	values[0] = emit_ffract(&ctx->ac, ctx->abi->frag_pos[0]);
+	values[1] = emit_ffract(&ctx->ac, ctx->abi->frag_pos[1]);
 	return ac_build_gather_values(&ctx->ac, values, 2);
 }
 
@@ -4004,7 +4007,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = unpack_param(ctx->nctx, ctx->abi->ancillary, 8, 4);
 		break;
 	case nir_intrinsic_load_sample_pos:
-		result = load_sample_pos(ctx->nctx);
+		result = load_sample_pos(ctx);
 		break;
 	case nir_intrinsic_load_sample_mask_in:
 		result = ctx->abi->sample_coverage;
@@ -5011,9 +5014,10 @@ handle_fs_inputs_pre(struct nir_to_llvm_context *ctx,
 			++index;
 		} else if (i == VARYING_SLOT_POS) {
 			for(int i = 0; i < 3; ++i)
-				inputs[i] = ctx->frag_pos[i];
+				inputs[i] = ctx->abi.frag_pos[i];
 
-			inputs[3] = ac_build_fdiv(&ctx->ac, ctx->f32one, ctx->frag_pos[3]);
+			inputs[3] = ac_build_fdiv(&ctx->ac, ctx->f32one,
+						  ctx->abi.frag_pos[3]);
 		}
 	}
 	ctx->shader_info->fs.num_interp = index;
