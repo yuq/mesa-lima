@@ -236,7 +236,6 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
       return prog->nir;
 
    nir = glsl_to_nir(shader_program, stage, options);
-   prog->nir = nir;
 
    NIR_PASS_V(nir, nir_lower_io_to_temporaries,
          nir_shader_get_entrypoint(nir),
@@ -280,6 +279,8 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
       nir_print_shader(nir, _mesa_get_log_file());
       _mesa_log("\n\n");
    }
+
+   prog->nir = nir;
 
    return nir;
 }
