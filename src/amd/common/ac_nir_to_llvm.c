@@ -4003,11 +4003,9 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 			fprintf(stderr, "Unknown primitive id intrinsic: %d", ctx->stage);
 		break;
 	case nir_intrinsic_load_sample_id:
-		ctx->nctx->shader_info->fs.force_persample = true;
 		result = unpack_param(ctx->nctx, ctx->nctx->ancillary, 8, 4);
 		break;
 	case nir_intrinsic_load_sample_pos:
-		ctx->nctx->shader_info->fs.force_persample = true;
 		result = load_sample_pos(ctx->nctx);
 		break;
 	case nir_intrinsic_load_sample_mask_in:
@@ -4960,7 +4958,7 @@ handle_fs_input_decl(struct nir_to_llvm_context *ctx,
 		unsigned interp_type;
 		if (variable->data.sample) {
 			interp_type = INTERP_SAMPLE;
-			ctx->shader_info->fs.force_persample = true;
+			ctx->shader_info->info.ps.force_persample = true;
 		} else if (variable->data.centroid)
 			interp_type = INTERP_CENTROID;
 		else

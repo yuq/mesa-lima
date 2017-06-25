@@ -36,6 +36,7 @@ struct ac_shader_info {
 		bool needs_instance_id;
 	} vs;
 	struct {
+		bool force_persample;
 		bool needs_sample_positions;
 	} ps;
 	struct {
