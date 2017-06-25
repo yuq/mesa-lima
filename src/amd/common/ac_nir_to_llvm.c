@@ -475,7 +475,7 @@ static int get_elem_bits(struct ac_llvm_context *ctx, LLVMTypeRef type)
 	unreachable("Unhandled type kind in get_elem_bits");
 }
 
-static LLVMValueRef unpack_param(struct nir_to_llvm_context *ctx,
+static LLVMValueRef unpack_param(struct ac_llvm_context *ctx,
 				 LLVMValueRef param, unsigned rshift,
 				 unsigned bitwidth)
 {
@@ -496,7 +496,7 @@ static LLVMValueRef get_rel_patch_id(struct nir_to_llvm_context *ctx)
 {
 	switch (ctx->stage) {
 	case MESA_SHADER_TESS_CTRL:
-		return unpack_param(ctx, ctx->tcs_rel_ids, 0, 8);
+		return unpack_param(&ctx->ac, ctx->tcs_rel_ids, 0, 8);
 	case MESA_SHADER_TESS_EVAL:
 		return ctx->tes_rel_patch_id;
 		break;
@@ -529,9 +529,9 @@ static LLVMValueRef
 get_tcs_in_patch_stride(struct nir_to_llvm_context *ctx)
 {
 	if (ctx->stage == MESA_SHADER_VERTEX)
-		return unpack_param(ctx, ctx->ls_out_layout, 0, 13);
+		return unpack_param(&ctx->ac, ctx->ls_out_layout, 0, 13);
 	else if (ctx->stage == MESA_SHADER_TESS_CTRL)
-		return unpack_param(ctx, ctx->tcs_in_layout, 0, 13);
+		return unpack_param(&ctx->ac, ctx->tcs_in_layout, 0, 13);
 	else {
 		assert(0);
 		return NULL;
@@ -541,14 +541,14 @@ get_tcs_in_patch_stride(struct nir_to_llvm_context *ctx)
 static LLVMValueRef
 get_tcs_out_patch_stride(struct nir_to_llvm_context *ctx)
 {
-	return unpack_param(ctx, ctx->tcs_out_layout, 0, 13);
+	return unpack_param(&ctx->ac, ctx->tcs_out_layout, 0, 13);
 }
 
 static LLVMValueRef
 get_tcs_out_patch0_offset(struct nir_to_llvm_context *ctx)
 {
 	return LLVMBuildMul(ctx->builder,
-			    unpack_param(ctx, ctx->tcs_out_offsets, 0, 16),
+			    unpack_param(&ctx->ac, ctx->tcs_out_offsets, 0, 16),
 			    LLVMConstInt(ctx->i32, 4, false), "");
 }
 
@@ -556,7 +556,7 @@ static LLVMValueRef
 get_tcs_out_patch0_patch_data_offset(struct nir_to_llvm_context *ctx)
 {
 	return LLVMBuildMul(ctx->builder,
-			    unpack_param(ctx, ctx->tcs_out_offsets, 16, 16),
+			    unpack_param(&ctx->ac, ctx->tcs_out_offsets, 16, 16),
 			    LLVMConstInt(ctx->i32, 4, false), "");
 }
 
@@ -2592,8 +2592,8 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct nir_to_llvm_context *ctx,
 	LLVMValueRef param_stride, constant16;
 	LLVMValueRef rel_patch_id = get_rel_patch_id(ctx);
 
-	vertices_per_patch = unpack_param(ctx, ctx->tcs_offchip_layout, 9, 6);
-	num_patches = unpack_param(ctx, ctx->tcs_offchip_layout, 0, 9);
+	vertices_per_patch = unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 9, 6);
+	num_patches = unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
 	total_vertices = LLVMBuildMul(ctx->builder, vertices_per_patch,
 	                              num_patches, "");
 
@@ -2619,7 +2619,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct nir_to_llvm_context *ctx,
 
 	if (!vertex_index) {
 		LLVMValueRef patch_data_offset =
-		           unpack_param(ctx, ctx->tcs_offchip_layout, 16, 16);
+		           unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 16, 16);
 
 		base_addr = LLVMBuildAdd(ctx->builder, base_addr,
 		                         patch_data_offset, "");
@@ -2711,7 +2711,7 @@ load_tcs_input(struct nir_to_llvm_context *ctx,
 			 false, NULL, per_vertex ? &vertex_index : NULL,
 			 &const_index, &indir_index);
 
-	stride = unpack_param(ctx, ctx->tcs_in_layout, 13, 8);
+	stride = unpack_param(&ctx->ac, ctx->tcs_in_layout, 13, 8);
 	dw_addr = get_tcs_in_current_patch_offset(ctx);
 	dw_addr = get_dw_address(ctx, dw_addr, param, const_index, is_compact, vertex_index, stride,
 				 indir_index);
@@ -2744,7 +2744,7 @@ load_tcs_output(struct nir_to_llvm_context *ctx,
 			 &const_index, &indir_index);
 
 	if (!instr->variables[0]->var->data.patch) {
-		stride = unpack_param(ctx, ctx->tcs_out_layout, 13, 8);
+		stride = unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
 		dw_addr = get_tcs_out_current_patch_offset(ctx);
 	} else {
 		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
@@ -2790,7 +2790,7 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 	}
 
 	if (!instr->variables[0]->var->data.patch) {
-		stride = unpack_param(ctx, ctx->tcs_out_layout, 13, 8);
+		stride = unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
 		dw_addr = get_tcs_out_current_patch_offset(ctx);
 	} else {
 		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
@@ -3986,7 +3986,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_load_invocation_id:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
-			result = unpack_param(ctx->nctx, ctx->nctx->tcs_rel_ids, 8, 5);
+			result = unpack_param(&ctx->ac, ctx->nctx->tcs_rel_ids, 8, 5);
 		else
 			result = ctx->nctx->gs_invocation_id;
 		break;
@@ -4004,7 +4004,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 			fprintf(stderr, "Unknown primitive id intrinsic: %d", ctx->stage);
 		break;
 	case nir_intrinsic_load_sample_id:
-		result = unpack_param(ctx->nctx, ctx->abi->ancillary, 8, 4);
+		result = unpack_param(&ctx->ac, ctx->abi->ancillary, 8, 4);
 		break;
 	case nir_intrinsic_load_sample_pos:
 		result = load_sample_pos(ctx);
@@ -5617,7 +5617,7 @@ static void
 handle_ls_outputs_post(struct nir_to_llvm_context *ctx)
 {
 	LLVMValueRef vertex_id = ctx->rel_auto_id;
-	LLVMValueRef vertex_dw_stride = unpack_param(ctx, ctx->ls_out_layout, 13, 8);
+	LLVMValueRef vertex_dw_stride = unpack_param(&ctx->ac, ctx->ls_out_layout, 13, 8);
 	LLVMValueRef base_dw_addr = LLVMBuildMul(ctx->builder, vertex_id,
 						 vertex_dw_stride, "");
 
@@ -5741,8 +5741,8 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 {
 	unsigned stride, outer_comps, inner_comps;
 	struct ac_build_if_state if_ctx, inner_if_ctx;
-	LLVMValueRef invocation_id = unpack_param(ctx, ctx->tcs_rel_ids, 8, 5);
-	LLVMValueRef rel_patch_id = unpack_param(ctx, ctx->tcs_rel_ids, 0, 8);
+	LLVMValueRef invocation_id = unpack_param(&ctx->ac, ctx->tcs_rel_ids, 8, 5);
+	LLVMValueRef rel_patch_id = unpack_param(&ctx->ac, ctx->tcs_rel_ids, 0, 8);
 	unsigned tess_inner_index, tess_outer_index;
 	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];
