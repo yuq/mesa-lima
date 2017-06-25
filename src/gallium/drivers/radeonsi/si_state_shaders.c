@@ -1740,6 +1740,7 @@ static int si_shader_select(struct pipe_context *ctx,
 }
 
 static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
+					  bool streamout,
 					  struct si_shader_key *key)
 {
 	unsigned next_shader = info->properties[TGSI_PROPERTY_NEXT_SHADER];
@@ -1755,11 +1756,12 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
 			key->as_ls = 1;
 			break;
 		default:
-			/* If POSITION isn't written, it can't be a HW VS.
-			 * Assume that it's a HW LS. (the next shader is TCS)
+			/* If POSITION isn't written, it can only be a HW VS
+			 * if streamout is used. If streamout isn't used,
+			 * assume that it's a HW LS. (the next shader is TCS)
 			 * This heuristic is needed for separate shader objects.
 			 */
-			if (!info->writes_position)
+			if (!info->writes_position && !streamout)
 				key->as_ls = 1;
 		}
 		break;
@@ -1808,7 +1810,9 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		}
 
 		shader->selector = sel;
-		si_parse_next_shader_property(&sel->info, &shader->key);
+		si_parse_next_shader_property(&sel->info,
+					      sel->so.num_outputs != 0,
+					      &shader->key);
 
 		if (sel->tokens)
 			tgsi_binary = si_get_tgsi_binary(sel);
@@ -1890,7 +1894,9 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		struct si_shader_key key;
 
 		memset(&key, 0, sizeof(key));
-		si_parse_next_shader_property(&sel->info, &key);
+		si_parse_next_shader_property(&sel->info,
+					      sel->so.num_outputs != 0,
+					      &key);
 
 		/* Set reasonable defaults, so that the shader key doesn't
 		 * cause any code to be eliminated.
