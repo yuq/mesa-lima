@@ -2876,7 +2876,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 	uint64_t va, s_offs, z_offs;
 	bool stencil_only = false;
 	memset(ds, 0, sizeof(*ds));
-	switch (iview->vk_format) {
+	switch (iview->image->vk_format) {
 	case VK_FORMAT_D24_UNORM_S8_UINT:
 	case VK_FORMAT_X8_D24_UNORM_PACK32:
 		ds->pa_su_poly_offset_db_fmt_cntl = S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(-24);
@@ -2900,7 +2900,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		break;
 	}
 
-	format = radv_translate_dbformat(iview->vk_format);
+	format = radv_translate_dbformat(iview->image->vk_format);
 	stencil_format = iview->image->surface.flags & RADEON_SURF_SBUFFER ?
 		V_028044_STENCIL_8 : V_028044_STENCIL_INVALID;
 
