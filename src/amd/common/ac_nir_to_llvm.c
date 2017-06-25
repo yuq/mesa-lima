@@ -4483,7 +4483,19 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 
 	/* Pack depth comparison value */
 	if (instr->is_shadow && comparator) {
-		address[count++] = llvm_extract_elem(&ctx->ac, comparator, 0);
+		LLVMValueRef z = llvm_extract_elem(&ctx->ac, comparator, 0);
+
+		/* TC-compatible HTILE promotes Z16 and Z24 to Z32_FLOAT,
+		 * so the depth comparison value isn't clamped for Z16 and
+		 * Z24 anymore. Do it manually here.
+		 *
+		 * It's unnecessary if the original texture format was
+		 * Z32_FLOAT, but we don't know that here.
+		 */
+		if (ctx->abi->chip_class == VI)
+			z = ac_build_clamp(&ctx->ac, z);
+
+		address[count++] = z;
 	}
 
 	/* pack derivatives */
