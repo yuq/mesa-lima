@@ -53,7 +53,6 @@ enum blit2d_src_type {
 static void
 create_iview(struct radv_cmd_buffer *cmd_buffer,
              struct radv_meta_blit2d_surf *surf,
-             VkImageUsageFlags usage,
              struct radv_image_view *iview, VkFormat depth_format)
 {
 	VkFormat format;
@@ -76,7 +75,7 @@ create_iview(struct radv_cmd_buffer *cmd_buffer,
 					     .baseArrayLayer = surf->layer,
 					     .layerCount = 1
 				     },
-					     }, cmd_buffer, usage);
+			     });
 }
 
 static void
@@ -139,8 +138,7 @@ blit2d_bind_src(struct radv_cmd_buffer *cmd_buffer,
 				      VK_SHADER_STAGE_FRAGMENT_BIT, 16, 4,
 				      &src_buf->pitch);
 	} else {
-		create_iview(cmd_buffer, src_img, VK_IMAGE_USAGE_SAMPLED_BIT, &tmp->iview,
-			     depth_format);
+		create_iview(cmd_buffer, src_img, &tmp->iview, depth_format);
 
 		radv_meta_push_descriptor_set(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 					      device->meta_state.blit2d.p_layouts[src_type],
@@ -179,15 +177,7 @@ blit2d_bind_dst(struct radv_cmd_buffer *cmd_buffer,
 		VkFormat depth_format,
                 struct blit2d_dst_temps *tmp)
 {
-	VkImageUsageFlagBits bits;
-
-	if (dst->aspect_mask == VK_IMAGE_ASPECT_COLOR_BIT)
-		bits = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	else
-		bits = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-
-	create_iview(cmd_buffer, dst, bits,
-		     &tmp->iview, depth_format);
+	create_iview(cmd_buffer, dst, &tmp->iview, depth_format);
 
 	radv_CreateFramebuffer(radv_device_to_handle(cmd_buffer->device),
 			       &(VkFramebufferCreateInfo) {

@@ -1285,9 +1285,7 @@ VkResult radv_image_create(VkDevice _device,
 
 void radv_image_view_init(struct radv_image_view *view,
 			  struct radv_device *device,
-			  const VkImageViewCreateInfo* pCreateInfo,
-			  struct radv_cmd_buffer *cmd_buffer,
-			  VkImageUsageFlags usage_mask);
+			  const VkImageViewCreateInfo* pCreateInfo);
 
 struct radv_buffer_view {
 	struct radeon_winsys_bo *bo;
