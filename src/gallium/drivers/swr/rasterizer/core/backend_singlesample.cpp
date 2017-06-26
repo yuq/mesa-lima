@@ -55,7 +55,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     SetupPixelShaderContext<T>(&psContext, samplePos, work);
 
     uint8_t *pDepthBuffer, *pStencilBuffer;
-    SetupRenderBuffers(psContext.pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
+    SetupRenderBuffers(psContext.pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.colorHottileEnable, renderBuffers);
 
     AR_END(BESetup, 1);
 
@@ -183,9 +183,9 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 // output merger
                 AR_BEGIN(BEOutputMerger, pDC->drawId);
 #if USE_8x2_TILE_BACKEND
-                OutputMerger8x2(psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.numRenderTargets, state.colorHottileEnable, useAlternateOffset);
+                OutputMerger8x2(psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.renderTargetMask, useAlternateOffset);
 #else
-                OutputMerger4x2(psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.numRenderTargets);
+                OutputMerger4x2(psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.renderTargetMask);
 #endif
 
                 // do final depth write after all pixel kills
@@ -209,14 +209,20 @@ Endtile:
 #if USE_8x2_TILE_BACKEND
             if (useAlternateOffset)
             {
-                for (uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
+                DWORD rt;
+                uint32_t rtMask = state.colorHottileEnable;
+                while(_BitScanForward(&rt, rtMask))
                 {
+                    rtMask &= ~(1 << rt);
                     psContext.pColorBuffer[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
                 }
             }
 #else
-            for (uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
+            DWORD rt;
+            uint32_t rtMask = state.colorHottileEnable;
+            while (_BitScanForward(&rt, rtMask))
             {
+                rtMask &= ~(1 << rt);
                 psContext.pColorBuffer[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
             }
 #endif

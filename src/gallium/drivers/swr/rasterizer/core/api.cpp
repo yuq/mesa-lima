@@ -957,20 +957,26 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
                                           (pState->state.depthStencilState.stencilTestEnable  ||
                                            pState->state.depthStencilState.stencilWriteEnable)) ? true : false;
 
-    uint32_t numRTs = pState->state.psState.numRenderTargets;
-    pState->state.colorHottileEnable = 0;
+    pState->state.colorHottileEnable = pState->state.psState.renderTargetMask;
+
+    // Disable hottile for surfaces with no writes
     if (psState.pfnPixelShader != nullptr)
     {
-        for (uint32_t rt = 0; rt < numRTs; ++rt)
+        DWORD rt;
+        uint32_t rtMask = pState->state.colorHottileEnable;
+        while (_BitScanForward(&rt, rtMask))
         {
-            pState->state.colorHottileEnable |=  
-                (!pState->state.blendState.renderTarget[rt].writeDisableAlpha ||
-                 !pState->state.blendState.renderTarget[rt].writeDisableRed ||
-                 !pState->state.blendState.renderTarget[rt].writeDisableGreen ||
-                 !pState->state.blendState.renderTarget[rt].writeDisableBlue) ? (1 << rt) : 0;
+            rtMask &= ~(1 << rt);
+
+            if (pState->state.blendState.renderTarget[rt].writeDisableAlpha &&
+                pState->state.blendState.renderTarget[rt].writeDisableRed &&
+                pState->state.blendState.renderTarget[rt].writeDisableGreen &&
+                pState->state.blendState.renderTarget[rt].writeDisableBlue)
+            {
+                pState->state.colorHottileEnable &= ~(1 << rt);
+            }
         }
     }
-
     // Setup depth quantization function
     if (pState->state.depthHottileEnable)
     {

@@ -475,16 +475,15 @@ inline void SetupBarycentricCoeffs(BarycentricCoeffs *coeffs, const SWR_TRIANGLE
     coeffs->vCOneOverW = _simd_broadcast_ss(&work.OneOverW[2]);
 }
 
-inline void SetupRenderBuffers(uint8_t *pColorBuffer[SWR_NUM_RENDERTARGETS], uint8_t **pDepthBuffer, uint8_t **pStencilBuffer, uint32_t colorBufferCount, RenderOutputBuffers &renderBuffers)
+inline void SetupRenderBuffers(uint8_t *pColorBuffer[SWR_NUM_RENDERTARGETS], uint8_t **pDepthBuffer, uint8_t **pStencilBuffer, uint32_t colorHotTileMask, RenderOutputBuffers &renderBuffers)
 {
-    assert(colorBufferCount <= SWR_NUM_RENDERTARGETS);
-
-    if (pColorBuffer)
+    
+    DWORD index;
+    while (_BitScanForward(&index, colorHotTileMask))
     {
-        for (uint32_t index = 0; index < colorBufferCount; index += 1)
-        {
-            pColorBuffer[index] = renderBuffers.pColor[index];
-        }
+        assert(index < SWR_NUM_RENDERTARGETS);
+        colorHotTileMask &= ~(1 << index);
+        pColorBuffer[index] = renderBuffers.pColor[index];
     }
 
     if (pDepthBuffer)
@@ -712,14 +711,16 @@ static INLINE void CalcSampleBarycentrics(const BarycentricCoeffs& coeffs, SWR_P
 
 // Merge Output to 4x2 SIMD Tile Format
 INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
-    const PFN_BLEND_JIT_FUNC (&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, const uint32_t NumRT)
+    const PFN_BLEND_JIT_FUNC (&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, uint32_t renderTargetMask)
 {
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     const uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
     simdvector blendOut;
 
-    for(uint32_t rt = 0; rt < NumRT; ++rt)
+    DWORD rt = 0;
+    while (_BitScanForward(&rt, renderTargetMask))
     {
+        renderTargetMask &= ~(1 << rt);
         uint8_t *pColorSample = pColorBase[rt] + rasterTileColorOffset;
 
         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
@@ -776,7 +777,7 @@ INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
 #if USE_8x2_TILE_BACKEND
 // Merge Output to 8x2 SIMD16 Tile Format
 INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
-    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, const uint32_t NumRT, const uint32_t colorBufferEnableMask, bool useAlternateOffset)
+    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, uint32_t renderTargetMask, bool useAlternateOffset)
 {
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
@@ -789,19 +790,26 @@ INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
     simdvector blendSrc;
     simdvector blendOut;
 
-    uint32_t colorBufferBit = 1;
-    for (uint32_t rt = 0; rt < NumRT; rt += 1, colorBufferBit <<= 1)
+    DWORD rt;
+    while (_BitScanForward(&rt, renderTargetMask))
     {
-        simdscalar *pColorSample = reinterpret_cast<simdscalar *>(pColorBase[rt] + rasterTileColorOffset);
+        renderTargetMask &= ~(1 << rt);
 
         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
 
-        if (colorBufferBit & colorBufferEnableMask)
+        simdscalar* pColorSample;
+        bool hotTileEnable = !pRTBlend->writeDisableAlpha || !pRTBlend->writeDisableRed || !pRTBlend->writeDisableGreen || !pRTBlend->writeDisableBlue;
+        if (hotTileEnable)
         {
+            pColorSample = reinterpret_cast<simdscalar *>(pColorBase[rt] + rasterTileColorOffset);
             blendSrc[0] = pColorSample[0];
             blendSrc[1] = pColorSample[2];
             blendSrc[2] = pColorSample[4];
             blendSrc[3] = pColorSample[6];
+        }
+        else
+        {
+            pColorSample = nullptr;
         }
 
         {
@@ -874,7 +882,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     SetupPixelShaderContext<T>(&psContext, samplePos, work);
 
     uint8_t *pDepthBuffer, *pStencilBuffer;
-    SetupRenderBuffers(psContext.pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
+    SetupRenderBuffers(psContext.pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.colorHottileEnable, renderBuffers);
 
     AR_END(BESetup, 0);
 
@@ -994,9 +1002,9 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 
                 // broadcast the results of the PS to all passing pixels
 #if USE_8x2_TILE_BACKEND
-                OutputMerger8x2(psContext, psContext.pColorBuffer, sample, &state.blendState,state.pfnBlendFunc, coverageMask, depthMask, state.psState.numRenderTargets, state.colorHottileEnable, useAlternateOffset);
+                OutputMerger8x2(psContext, psContext.pColorBuffer, sample, &state.blendState,state.pfnBlendFunc, coverageMask, depthMask, state.psState.renderTargetMask, useAlternateOffset);
 #else // USE_8x2_TILE_BACKEND
-                OutputMerger4x2(psContext, psContext.pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, coverageMask, depthMask, state.psState.numRenderTargets);
+                OutputMerger4x2(psContext, psContext.pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, coverageMask, depthMask, state.psState.renderTargetMask);
 #endif // USE_8x2_TILE_BACKEND
 
                 if(!state.psState.forceEarlyZ && !T::bForcedSampleCount)
@@ -1026,14 +1034,20 @@ Endtile:
 #if USE_8x2_TILE_BACKEND
             if (useAlternateOffset)
             {
-                for (uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
+                DWORD rt;
+                uint32_t rtMask = state.colorHottileEnable;
+                while (_BitScanForward(&rt, rtMask))
                 {
+                    rtMask &= ~(1 << rt);
                     psContext.pColorBuffer[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
                 }
             }
 #else
-            for(uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
+            DWORD rt;
+            uint32_t rtMask = state.colorHottileEnable;
+            while (_BitScanForward(&rt, rtMask))
             {
+                rtMask &= ~(1 << rt);
                 psContext.pColorBuffer[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
             }
 #endif

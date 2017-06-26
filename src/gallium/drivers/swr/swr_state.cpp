@@ -1461,7 +1461,7 @@ swr_update_derived(struct pipe_context *pipe,
       psState.writesODepth = ctx->fs->info.base.writes_z;
       psState.usesSourceDepth = ctx->fs->info.base.reads_z;
       psState.shadingRate = SWR_SHADING_RATE_PIXEL;
-      psState.numRenderTargets = ctx->framebuffer.nr_cbufs;
+      psState.renderTargetMask = (1 << ctx->framebuffer.nr_cbufs) - 1;
       psState.posOffset = SWR_PS_POSITION_SAMPLE_NONE;
       uint32_t barycentricsMask = 0;
 #if 0

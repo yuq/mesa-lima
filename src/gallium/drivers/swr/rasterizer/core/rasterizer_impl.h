@@ -42,9 +42,9 @@ extern PFN_WORK_FUNC gRasterizerFuncs[SWR_MULTISAMPLE_TYPE_COUNT][2][2][SWR_INPU
 template <uint32_t numSamples = 1>
 void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t x, uint32_t y, RenderOutputBuffers &renderBuffers, uint32_t renderTargetArrayIndex);
 template <typename RT>
-void StepRasterTileX(uint32_t MaxRT, RenderOutputBuffers &buffers);
+void StepRasterTileX(uint32_t colorHotTileMask, RenderOutputBuffers &buffers);
 template <typename RT>
-void StepRasterTileY(uint32_t MaxRT, RenderOutputBuffers &buffers, RenderOutputBuffers &startBufferRow);
+void StepRasterTileY(uint32_t colorHotTileMask, RenderOutputBuffers &buffers, RenderOutputBuffers &startBufferRow);
 
 #define MASKTOVEC(i3,i2,i1,i0) {-i0,-i1,-i2,-i3}
 static const __m256d gMaskToVecpd[] =
@@ -1281,7 +1281,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
             {
                 vEdgeFix16[e] = _mm256_add_pd(vEdgeFix16[e], _mm256_set1_pd(rastEdges[e].stepRasterTileX));
             }
-            StepRasterTileX<RT>(state.psState.numRenderTargets, renderBuffers);
+            StepRasterTileX<RT>(state.colorHottileEnable, renderBuffers);
         }
 
         // step to the next tile in Y
@@ -1289,7 +1289,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         {
             vEdgeFix16[e] = _mm256_add_pd(vStartOfRowEdge[e], _mm256_set1_pd(rastEdges[e].stepRasterTileY));
         }
-        StepRasterTileY<RT>(state.psState.numRenderTargets, renderBuffers, currentRenderBufferRow);
+        StepRasterTileY<RT>(state.colorHottileEnable, renderBuffers, currentRenderBufferRow);
     }
 
     AR_END(BERasterizeTriangle, 1);
@@ -1348,10 +1348,12 @@ void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint
 }
 
 template <typename RT>
-INLINE void StepRasterTileX(uint32_t NumRT, RenderOutputBuffers &buffers)
+INLINE void StepRasterTileX(uint32_t colorHotTileMask, RenderOutputBuffers &buffers)
 {
-    for(uint32_t rt = 0; rt < NumRT; ++rt)
+    DWORD rt = 0;
+    while (_BitScanForward(&rt, colorHotTileMask))
     {
+        colorHotTileMask &= ~(1 << rt);
         buffers.pColor[rt] += RT::colorRasterTileStep;
     }
     
@@ -1360,10 +1362,12 @@ INLINE void StepRasterTileX(uint32_t NumRT, RenderOutputBuffers &buffers)
 }
 
 template <typename RT>
-INLINE void StepRasterTileY(uint32_t NumRT, RenderOutputBuffers &buffers, RenderOutputBuffers &startBufferRow)
+INLINE void StepRasterTileY(uint32_t colorHotTileMask, RenderOutputBuffers &buffers, RenderOutputBuffers &startBufferRow)
 {
-    for(uint32_t rt = 0; rt < NumRT; ++rt)
+    DWORD rt = 0;
+    while (_BitScanForward(&rt, colorHotTileMask))
     {
+        colorHotTileMask &= ~(1 << rt);
         startBufferRow.pColor[rt] += RT::colorRasterTileRowStep;
         buffers.pColor[rt] = startBufferRow.pColor[rt];
     }
