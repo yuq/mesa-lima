@@ -241,6 +241,12 @@ void GLAPIENTRY
 _mesa_UniformBlockBinding(GLuint program,
 			  GLuint uniformBlockIndex,
 			  GLuint uniformBlockBinding);
+
+void GLAPIENTRY
+_mesa_ShaderStorageBlockBinding_no_error(GLuint program,
+                                         GLuint shaderStorageBlockIndex,
+                                         GLuint shaderStorageBlockBinding);
+
 void GLAPIENTRY
 _mesa_ShaderStorageBlockBinding(GLuint program,
                                 GLuint shaderStorageBlockIndex,

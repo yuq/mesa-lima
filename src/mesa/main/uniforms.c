@@ -1163,6 +1163,18 @@ shader_storage_block_binding(struct gl_context *ctx,
 }
 
 void GLAPIENTRY
+_mesa_ShaderStorageBlockBinding_no_error(GLuint program,
+                                         GLuint shaderStorageBlockIndex,
+                                         GLuint shaderStorageBlockBinding)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *shProg = _mesa_lookup_shader_program(ctx, program);
+   shader_storage_block_binding(ctx, shProg, shaderStorageBlockIndex,
+                                shaderStorageBlockBinding);
+}
+
+void GLAPIENTRY
 _mesa_ShaderStorageBlockBinding(GLuint program,
 			        GLuint shaderStorageBlockIndex,
 			        GLuint shaderStorageBlockBinding)
