@@ -34,6 +34,7 @@ COMMON_CXXFLAGS = \
 	$(LLVM_CXXFLAGS) \
 	$(SWR_CXX11_CXXFLAGS) \
 	-I$(builddir)/rasterizer/codegen \
+	-I$(builddir)/rasterizer/core \
 	-I$(builddir)/rasterizer/jitter \
 	-I$(builddir)/rasterizer/archrast \
 	-I$(srcdir)/rasterizer \
@@ -62,7 +63,11 @@ BUILT_SOURCES = \
 	rasterizer/archrast/gen_ar_event.cpp \
 	rasterizer/archrast/gen_ar_eventhandler.hpp \
 	rasterizer/archrast/gen_ar_eventhandlerfile.hpp \
-	rasterizer/core/gen_BackendPixelRate0.cpp
+	rasterizer/core/backends/gen_BackendPixelRate0.cpp \
+	rasterizer/core/backends/gen_BackendPixelRate1.cpp \
+	rasterizer/core/backends/gen_BackendPixelRate2.cpp \
+	rasterizer/core/backends/gen_BackendPixelRate3.cpp \
+	rasterizer/core/backends/gen_BackendPixelRate.hpp
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
@@ -140,20 +145,33 @@ rasterizer/archrast/gen_ar_eventhandlerfile.hpp: rasterizer/codegen/gen_archrast
 		--output rasterizer/archrast/gen_ar_eventhandlerfile.hpp \
 		--gen_eventhandlerfile_h
 
+rasterizer/core/backends/gen_BackendPixelRate0.cpp \
+rasterizer/core/backends/gen_BackendPixelRate1.cpp \
+rasterizer/core/backends/gen_BackendPixelRate2.cpp \
+rasterizer/core/backends/gen_BackendPixelRate3.cpp \
+rasterizer/core/backends/gen_BackendPixelRate.hpp: \
+backend.intermediate
+
 # 5 SWR_MULTISAMPLE_TYPE_COUNT
 # 2 SWR_MSAA_SAMPLE_PATTERN_COUNT
 # 3 SWR_INPUT_COVERAGE_COUNT
 # 2 centroid
 # 2 forcedSampleCount
 # 2 canEarlyZ
-rasterizer/core/gen_BackendPixelRate0.cpp: rasterizer/codegen/gen_backends.py rasterizer/codegen/templates/gen_backend.cpp
+
+# use intermediate rule to tell make that all files can be
+# generated in one invocation of gen_backends.py (prevents
+# parallel make race condition)
+.INTERMEDIATE: backend.intermediate
+backend.intermediate: rasterizer/codegen/gen_backends.py rasterizer/codegen/templates/gen_backend.cpp rasterizer/codegen/templates/gen_header_init.hpp
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_backends.py \
-		--outdir rasterizer/core \
+		--outdir rasterizer/core/backends \
 		--dim 5 2 3 2 2 2 \
-		--split 0 \
-		--cpp
+		--numfiles 4 \
+		--cpp \
+		--hpp
 
 COMMON_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
@@ -227,5 +245,6 @@ EXTRA_DIST = \
 	rasterizer/codegen/templates/gen_ar_eventhandlerfile.hpp \
 	rasterizer/codegen/templates/gen_backend.cpp \
 	rasterizer/codegen/templates/gen_builder.hpp \
+	rasterizer/codegen/templates/gen_header_init.hpp \
 	rasterizer/codegen/templates/gen_knobs.cpp \
 	rasterizer/codegen/templates/gen_llvm.hpp

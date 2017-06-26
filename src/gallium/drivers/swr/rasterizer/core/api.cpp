@@ -784,9 +784,6 @@ void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
 
 
 // templated backend function tables
-extern PFN_BACKEND_FUNC gBackendNullPs[SWR_MULTISAMPLE_TYPE_COUNT];
-extern PFN_BACKEND_FUNC gBackendSingleSample[SWR_INPUT_COVERAGE_COUNT][2][2];
-extern PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_COUNT][SWR_INPUT_COVERAGE_COUNT][2][2];
 
 void SetupPipeline(DRAW_CONTEXT *pDC)
 {
@@ -838,7 +835,9 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
             break;
         }
     }
-    
+
+    SWR_ASSERT(backendFuncs.pfnBackend);
+
     PFN_PROCESS_PRIMS pfnBinner;
 #if USE_SIMD16_FRONTEND
     PFN_PROCESS_PRIMS_SIMD16 pfnBinner_simd16;

@@ -35,7 +35,9 @@ def main(args=sys.argv[1:]):
     parser.add_argument('--dim', help='gBackendPixelRateTable array dimensions', nargs='+', type=int, required=True)
     parser.add_argument('--outdir', help='output directory', nargs='?', type=str, default=thisDir)
     parser.add_argument('--split', help='how many lines of initialization per file [0=no split]', nargs='?', type=int, default='512')
+    parser.add_argument('--numfiles', help='how many output files to generate', nargs='?', type=int, default='0')
     parser.add_argument('--cpp', help='Generate cpp file(s)', action='store_true', default=False)
+    parser.add_argument('--hpp', help='Generate hpp file', action='store_true', default=False)
     parser.add_argument('--cmake', help='Generate cmake file', action='store_true', default=False)
 
     args = parser.parse_args(args);
@@ -43,11 +45,14 @@ def main(args=sys.argv[1:]):
     class backendStrs :
         def __init__(self) :
             self.outFileName = 'gen_BackendPixelRate%s.cpp'
+            self.outHeaderName = 'gen_BackendPixelRate.hpp'
             self.functionTableName = 'gBackendPixelRateTable'
             self.funcInstanceHeader = ' = BackendPixelRate<SwrBackendTraits<'
             self.template = 'gen_backend.cpp'
+            self.hpp_template = 'gen_header_init.hpp'
             self.cmakeFileName = 'gen_backends.cmake'
             self.cmakeSrcVar = 'GEN_BACKEND_SOURCES'
+            self.tableName = 'BackendPixelRate'
 
     backend = backendStrs()
 
@@ -77,6 +82,8 @@ def main(args=sys.argv[1:]):
         numFiles = 1
     else:
         numFiles = (len(output_list) + args.split - 1) // args.split
+    if (args.numfiles != 0):
+        numFiles = args.numfiles
     linesPerFile = (len(output_list) + numFiles - 1) // numFiles
     chunkedList = [output_list[x:x+linesPerFile] for x in range(0, len(output_list), linesPerFile)]
 
@@ -93,6 +100,18 @@ def main(args=sys.argv[1:]):
                 cmdline=sys.argv,
                 fileNum=fileNum,
                 funcList=chunkedList[fileNum])
+
+    if args.hpp:
+        baseHppName = os.path.join(args.outdir, backend.outHeaderName)
+        templateHpp = os.path.join(thisDir, 'templates', backend.hpp_template)
+
+        MakoTemplateWriter.to_file(
+            templateHpp,
+            baseHppName,
+            cmdline=sys.argv,
+            numFiles=numFiles,
+            filename=backend.outHeaderName,
+            tableName=backend.tableName)
 
     # generate gen_backend.cmake file
     if args.cmake:

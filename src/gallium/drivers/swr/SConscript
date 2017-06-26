@@ -140,12 +140,22 @@ Depends('rasterizer/jitter/gen_state_llvm.h',
 # 2 centroid
 # 2 forcedSampleCount
 # 2 canEarlyZ
+backendPixelRateFileCount = 4
+backendPixelRateFilePat = "rasterizer/core/backends/gen_BackendPixelRate%s.cpp"
+backendPixelRateFiles = map(lambda x: backendPixelRateFilePat % x,
+                            range(0, backendPixelRateFileCount))
 env.CodeGenerate(
-    target = 'rasterizer/core/gen_BackendPixelRate0.cpp',
+    target = 'rasterizer/core/backends/gen_BackendPixelRate.hpp',
     script = swrroot + 'rasterizer/codegen/gen_backends.py',
     source = '',
-    command = python_cmd + ' $SCRIPT --outdir ' + bldroot + '/rasterizer/core --dim 5 2 3 2 2 2 --split 0 --cpp'
-)
+    command = python_cmd + ' $SCRIPT --outdir ' + bldroot + '/rasterizer/core/backends --dim 5 2 3 2 2 2 --numfiles ' + str(backendPixelRateFileCount) + ' --cpp --hpp'
+    )
+Depends(backendPixelRateFiles,
+        ['rasterizer/core/backends/gen_BackendPixelRate.hpp',
+         'rasterizer/archrast/gen_ar_event.hpp',
+         'rasterizer/codegen/gen_knobs.h']
+        )
+
 Depends('rasterizer/jitter/gen_state_llvm.h',
         swrroot + 'rasterizer/codegen/templates/gen_backend.cpp')
 
@@ -153,8 +163,9 @@ Depends('rasterizer/jitter/gen_state_llvm.h',
 built_sources = [
     'rasterizer/codegen/gen_knobs.cpp',
     'rasterizer/archrast/gen_ar_event.cpp',
-    'rasterizer/core/gen_BackendPixelRate0.cpp',
     ]
+
+built_sources += backendPixelRateFiles
 
 source = built_sources
 source += env.ParseSourceList(swrroot + 'Makefile.sources', [

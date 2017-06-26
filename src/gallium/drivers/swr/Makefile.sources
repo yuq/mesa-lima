@@ -73,7 +73,11 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/api.h \
 	rasterizer/core/arena.h \
 	rasterizer/core/backend.cpp \
+	rasterizer/core/backend_clear.cpp \
+	rasterizer/core/backend_sample.cpp \
+	rasterizer/core/backend_singlesample.cpp \
 	rasterizer/core/backend.h \
+	rasterizer/core/backend_impl.h \
 	rasterizer/core/binner.cpp \
 	rasterizer/core/binner.h \
 	rasterizer/core/blend.h \

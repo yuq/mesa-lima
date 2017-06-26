@@ -20,7 +20,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 // 
-// @file BackendPixelRate${fileNum}.cpp
+// @file ${filename}
 // 
 // @brief auto-generated file
 // 
@@ -31,12 +31,13 @@
 //
 //============================================================================
 
-#include "core/backend.h"
-#include "core/backend_impl.h"
+%for num in range(numFiles):
+void Init${tableName}${num}();
+%endfor
 
-void InitBackendPixelRate${fileNum}()
+static INLINE void Init${tableName}()
 {
-    %for func in funcList:
-    ${func}
+    %for num in range(numFiles):
+    Init${tableName}${num}();
     %endfor
 }
