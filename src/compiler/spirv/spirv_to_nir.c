@@ -2008,6 +2008,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       intrin->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[3])->def);
       break;
 
+   case SpvOpAtomicCompareExchange:
    case SpvOpAtomicIIncrement:
    case SpvOpAtomicIDecrement:
    case SpvOpAtomicExchange:
