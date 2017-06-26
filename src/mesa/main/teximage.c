@@ -2870,14 +2870,14 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
          GLenum target, GLint level, GLint internalFormat,
          GLsizei width, GLsizei height, GLsizei depth,
          GLint border, GLenum format, GLenum type,
-         GLsizei imageSize, const GLvoid *pixels)
+         GLsizei imageSize, const GLvoid *pixels, bool no_error)
 {
    const char *func = compressed ? "glCompressedTexImage" : "glTexImage";
    struct gl_pixelstore_attrib unpack_no_border;
    const struct gl_pixelstore_attrib *unpack = &ctx->Unpack;
    struct gl_texture_object *texObj;
    mesa_format texFormat;
-   GLboolean dimensionsOK, sizeOK;
+   bool dimensionsOK = true, sizeOK = true;
 
    FLUSH_VERTICES(ctx, 0);
 
@@ -2902,26 +2902,27 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
 
    internalFormat = override_internal_format(internalFormat, width, height);
 
-   /* target error checking */
-   if (!legal_teximage_target(ctx, dims, target)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s%uD(target=%s)",
-                  func, dims, _mesa_enum_to_string(target));
-      return;
-   }
+   if (!no_error) {
+      /* target error checking */
+      if (!legal_teximage_target(ctx, dims, target)) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "%s%uD(target=%s)",
+                     func, dims, _mesa_enum_to_string(target));
+         return;
+      }
 
-   /* general error checking */
-   if (compressed) {
-      if (compressed_texture_error_check(ctx, dims, target, level,
-                                         internalFormat,
-                                         width, height, depth,
-                                         border, imageSize, pixels))
-         return;
-   }
-   else {
-      if (texture_error_check(ctx, dims, target, level, internalFormat,
-                              format, type, width, height, depth, border,
-                              pixels))
-         return;
+      /* general error checking */
+      if (compressed) {
+         if (compressed_texture_error_check(ctx, dims, target, level,
+                                            internalFormat,
+                                            width, height, depth,
+                                            border, imageSize, pixels))
+            return;
+      } else {
+         if (texture_error_check(ctx, dims, target, level, internalFormat,
+                                 format, type, width, height, depth, border,
+                                 pixels))
+            return;
+      }
    }
 
    /* Here we convert a cpal compressed image into a regular glTexImage2D
@@ -2976,14 +2977,16 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
 
    assert(texFormat != MESA_FORMAT_NONE);
 
-   /* check that width, height, depth are legal for the mipmap level */
-   dimensionsOK = _mesa_legal_texture_dimensions(ctx, target, level, width,
-                                                 height, depth, border);
+   if (!no_error) {
+      /* check that width, height, depth are legal for the mipmap level */
+      dimensionsOK = _mesa_legal_texture_dimensions(ctx, target, level, width,
+                                                    height, depth, border);
 
-   /* check that the texture won't take too much memory, etc */
-   sizeOK = ctx->Driver.TestProxyTexImage(ctx, proxy_target(target),
-                                          0, level, texFormat, 1,
-                                          width, height, depth);
+      /* check that the texture won't take too much memory, etc */
+      sizeOK = ctx->Driver.TestProxyTexImage(ctx, proxy_target(target),
+                                             0, level, texFormat, 1,
+                                             width, height, depth);
+   }
 
    if (_mesa_is_proxy_texture(target)) {
       /* Proxy texture: just clear or set state depending on error checking */
@@ -3083,7 +3086,7 @@ teximage_err(struct gl_context *ctx, GLboolean compressed, GLuint dims,
              GLsizei imageSize, const GLvoid *pixels)
 {
    teximage(ctx, compressed, dims, target, level, internalFormat, width, height,
-            depth, border, format, type, imageSize, pixels);
+            depth, border, format, type, imageSize, pixels, false);
 }
 
 
