@@ -479,6 +479,10 @@ etna_try_rs_blit(struct pipe_context *pctx,
       etna_set_state(ctx->stream, VIVS_GL_FLUSH_CACHE,
 		     VIVS_GL_FLUSH_CACHE_COLOR | VIVS_GL_FLUSH_CACHE_DEPTH);
       etna_stall(ctx->stream, SYNC_RECIPIENT_RA, SYNC_RECIPIENT_PE);
+
+      if (src->levels[blit_info->src.level].ts_size &&
+          src->levels[blit_info->src.level].ts_valid)
+         etna_set_state(ctx->stream, VIVS_TS_FLUSH_CACHE, VIVS_TS_FLUSH_CACHE_FLUSH);
    }
 
    /* Set up color TS to source surface before blit, if needed */
