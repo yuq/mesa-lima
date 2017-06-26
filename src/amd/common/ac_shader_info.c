@@ -39,6 +39,9 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, struct ac_shader_info *info)
 	case nir_intrinsic_load_draw_id:
 		info->vs.needs_draw_id = true;
 		break;
+	case nir_intrinsic_load_instance_id:
+		info->vs.needs_instance_id = true;
+		break;
 	case nir_intrinsic_load_num_work_groups:
 		info->cs.grid_components_used = instr->num_components;
 		break;

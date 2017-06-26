@@ -33,6 +33,7 @@ struct ac_shader_info {
 	struct {
 		bool has_vertex_buffers; /* needs vertex buffers and base/start */
 		bool needs_draw_id;
+		bool needs_instance_id;
 	} vs;
 	struct {
 		bool needs_sample_positions;

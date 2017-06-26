@@ -4023,8 +4023,6 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_load_instance_id:
 		result = ctx->abi->instance_id;
-		ctx->nctx->shader_info->vs.vgpr_comp_cnt = MAX2(3,
-		                            ctx->nctx->shader_info->vs.vgpr_comp_cnt);
 		break;
 	case nir_intrinsic_load_num_work_groups:
 		result = ctx->nctx->num_work_groups;
@@ -6229,6 +6227,11 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		ctx.gs_max_out_vertices = nir->info.gs.vertices_out;
 	} else if (nir->stage == MESA_SHADER_TESS_EVAL) {
 		ctx.tes_primitive_mode = nir->info.tess.primitive_mode;
+	} else if (nir->stage == MESA_SHADER_VERTEX) {
+		if (shader_info->info.vs.needs_instance_id) {
+			ctx.shader_info->vs.vgpr_comp_cnt =
+				MAX2(3, ctx.shader_info->vs.vgpr_comp_cnt);
+		}
 	}
 
 	ac_setup_rings(&ctx);
