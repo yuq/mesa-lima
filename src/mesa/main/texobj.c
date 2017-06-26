@@ -1195,14 +1195,6 @@ create_textures(struct gl_context *ctx, GLenum target,
    GLuint first;
    GLint i;
 
-   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "%s %d\n", caller, n);
-
-   if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", caller);
-      return;
-   }
-
    if (!textures)
       return;
 
@@ -1233,6 +1225,22 @@ create_textures(struct gl_context *ctx, GLenum target,
    _mesa_HashUnlockMutex(ctx->Shared->TexObjects);
 }
 
+
+static void
+create_textures_err(struct gl_context *ctx, GLenum target,
+                    GLsizei n, GLuint *textures, const char *caller)
+{
+   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
+      _mesa_debug(ctx, "%s %d\n", caller, n);
+
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", caller);
+      return;
+   }
+
+   create_textures(ctx, target, n, textures, caller);
+}
+
 /*@}*/
 
 
@@ -1257,7 +1265,7 @@ void GLAPIENTRY
 _mesa_GenTextures(GLsizei n, GLuint *textures)
 {
    GET_CURRENT_CONTEXT(ctx);
-   create_textures(ctx, 0, n, textures, "glGenTextures");
+   create_textures_err(ctx, 0, n, textures, "glGenTextures");
 }
 
 /**
@@ -1290,7 +1298,7 @@ _mesa_CreateTextures(GLenum target, GLsizei n, GLuint *textures)
       return;
    }
 
-   create_textures(ctx, target, n, textures, "glCreateTextures");
+   create_textures_err(ctx, target, n, textures, "glCreateTextures");
 }
 
 /**
