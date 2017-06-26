@@ -1220,7 +1220,7 @@ create_textures(struct gl_context *ctx, GLenum target,
       texObj = ctx->Driver.NewTextureObject(ctx, name, target);
       if (!texObj) {
          _mesa_HashUnlockMutex(ctx->Shared->TexObjects);
-         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sTextures", caller);
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", caller);
          return;
       }
 
