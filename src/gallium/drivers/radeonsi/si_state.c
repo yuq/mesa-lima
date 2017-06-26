@@ -3975,7 +3975,8 @@ static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 	struct si_context *sctx = (struct si_context *)ctx;
 
 	/* Multisample surfaces are flushed in si_decompress_textures. */
-	if (sctx->framebuffer.nr_samples <= 1) {
+	if (sctx->framebuffer.nr_samples <= 1 &&
+	    sctx->framebuffer.state.nr_cbufs) {
 		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 				 SI_CONTEXT_INV_GLOBAL_L2 |
 				 SI_CONTEXT_FLUSH_AND_INV_CB;
@@ -4021,7 +4022,8 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 	 * si_decompress_textures when needed.
 	 */
 	if (flags & PIPE_BARRIER_FRAMEBUFFER &&
-	    sctx->framebuffer.nr_samples <= 1) {
+	    sctx->framebuffer.nr_samples <= 1 &&
+	    sctx->framebuffer.state.nr_cbufs) {
 		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
 				 SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 	}
