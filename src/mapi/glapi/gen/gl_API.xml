@@ -2626,7 +2626,7 @@
         <glx rop="170" large="true"/>
     </function>
 
-    <function name="ReadBuffer" es2="3.0">
+    <function name="ReadBuffer" es2="3.0" no_error="true">
         <param name="mode" type="GLenum"/>
         <glx rop="171"/>
     </function>

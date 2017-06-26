@@ -801,11 +801,44 @@ read_buffer_err(struct gl_context *ctx, struct gl_framebuffer *fb,
 }
 
 
+static void
+read_buffer_no_error(struct gl_context *ctx, struct gl_framebuffer *fb,
+                     GLenum buffer, const char *caller)
+{
+   read_buffer(ctx, fb, buffer, caller, true);
+}
+
+
+void GLAPIENTRY
+_mesa_ReadBuffer_no_error(GLenum buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   read_buffer_no_error(ctx, ctx->ReadBuffer, buffer, "glReadBuffer");
+}
+
+
 void GLAPIENTRY
 _mesa_ReadBuffer(GLenum buffer)
 {
    GET_CURRENT_CONTEXT(ctx);
    read_buffer_err(ctx, ctx->ReadBuffer, buffer, "glReadBuffer");
+}
+
+
+void GLAPIENTRY
+_mesa_NamedFramebufferReadBuffer_no_error(GLuint framebuffer, GLenum src)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_framebuffer *fb;
+
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer(ctx, framebuffer);
+   } else {
+      fb = ctx->WinSysReadBuffer;
+   }
+
+   read_buffer_no_error(ctx, fb, src, "glNamedFramebufferReadBuffer");
 }
 
 

@@ -197,7 +197,7 @@
       <param name="bufs" type="const GLenum *" />
    </function>
 
-   <function name="NamedFramebufferReadBuffer">
+   <function name="NamedFramebufferReadBuffer" no_error="true">
       <param name="framebuffer" type="GLuint" />
       <param name="buf" type="GLenum" />
    </function>
