@@ -1705,11 +1705,6 @@ create_render_buffers(struct gl_context *ctx, GLsizei n, GLuint *renderbuffers,
    GLuint first;
    GLint i;
 
-   if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n<0)", func);
-      return;
-   }
-
    if (!renderbuffers)
       return;
 
@@ -1734,11 +1729,26 @@ create_render_buffers(struct gl_context *ctx, GLsizei n, GLuint *renderbuffers,
 }
 
 
+static void
+create_render_buffers_err(struct gl_context *ctx, GLsizei n,
+                          GLuint *renderbuffers, bool dsa)
+{
+   const char *func = dsa ? "glCreateRenderbuffers" : "glGenRenderbuffers";
+
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n<0)", func);
+      return;
+   }
+
+   create_render_buffers(ctx, n, renderbuffers, dsa);
+}
+
+
 void GLAPIENTRY
 _mesa_GenRenderbuffers(GLsizei n, GLuint *renderbuffers)
 {
    GET_CURRENT_CONTEXT(ctx);
-   create_render_buffers(ctx, n, renderbuffers, false);
+   create_render_buffers_err(ctx, n, renderbuffers, false);
 }
 
 
@@ -1746,7 +1756,7 @@ void GLAPIENTRY
 _mesa_CreateRenderbuffers(GLsizei n, GLuint *renderbuffers)
 {
    GET_CURRENT_CONTEXT(ctx);
-   create_render_buffers(ctx, n, renderbuffers, true);
+   create_render_buffers_err(ctx, n, renderbuffers, true);
 }
 
 
