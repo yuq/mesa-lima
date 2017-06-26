@@ -3783,6 +3783,23 @@ copy_texture_sub_image_err(struct gl_context *ctx, GLuint dims,
 }
 
 
+static void
+copy_texture_sub_image_no_error(struct gl_context *ctx, GLuint dims,
+                                struct gl_texture_object *texObj,
+                                GLenum target, GLint level,
+                                GLint xoffset, GLint yoffset, GLint zoffset,
+                                GLint x, GLint y, GLsizei width, GLsizei height)
+{
+   FLUSH_VERTICES(ctx, 0);
+
+   if (ctx->NewState & NEW_COPY_TEX_STATE)
+      _mesa_update_state(ctx);
+
+   copy_texture_sub_image(ctx, dims, texObj, target, level, xoffset, yoffset,
+                          zoffset, x, y, width, height);
+}
+
+
 /**
  * Implement the glCopyTexImage1/2D() functions.
  */
