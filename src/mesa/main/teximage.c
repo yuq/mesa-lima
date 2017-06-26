@@ -2865,7 +2865,7 @@ strip_texture_border(GLenum target,
  * \param type  the user's image type (only used if !compressed)
  * \param imageSize  only used for glCompressedTexImage1D/2D/3D calls.
  */
-static void
+static ALWAYS_INLINE void
 teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
          GLenum target, GLint level, GLint internalFormat,
          GLsizei width, GLsizei height, GLsizei depth,
@@ -3072,6 +3072,19 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
    }
 }
 
+/* This is a wrapper around teximage() so that we can force the KHR_no_error
+ * logic to be inlined without inlining the function into all the callers.
+ */
+static void
+teximage_err(struct gl_context *ctx, GLboolean compressed, GLuint dims,
+             GLenum target, GLint level, GLint internalFormat,
+             GLsizei width, GLsizei height, GLsizei depth,
+             GLint border, GLenum format, GLenum type,
+             GLsizei imageSize, const GLvoid *pixels)
+{
+   teximage(ctx, compressed, dims, target, level, internalFormat, width, height,
+            depth, border, format, type, imageSize, pixels);
+}
 
 
 /*
@@ -3083,8 +3096,8 @@ _mesa_TexImage1D( GLenum target, GLint level, GLint internalFormat,
                   GLenum type, const GLvoid *pixels )
 {
    GET_CURRENT_CONTEXT(ctx);
-   teximage(ctx, GL_FALSE, 1, target, level, internalFormat, width, 1, 1,
-            border, format, type, 0, pixels);
+   teximage_err(ctx, GL_FALSE, 1, target, level, internalFormat, width, 1, 1,
+                border, format, type, 0, pixels);
 }
 
 
@@ -3095,8 +3108,8 @@ _mesa_TexImage2D( GLenum target, GLint level, GLint internalFormat,
                   const GLvoid *pixels )
 {
    GET_CURRENT_CONTEXT(ctx);
-   teximage(ctx, GL_FALSE, 2, target, level, internalFormat, width, height, 1,
-            border, format, type, 0, pixels);
+   teximage_err(ctx, GL_FALSE, 2, target, level, internalFormat, width, height, 1,
+                border, format, type, 0, pixels);
 }
 
 
@@ -3111,9 +3124,8 @@ _mesa_TexImage3D( GLenum target, GLint level, GLint internalFormat,
                   const GLvoid *pixels )
 {
    GET_CURRENT_CONTEXT(ctx);
-   teximage(ctx, GL_FALSE, 3, target, level, internalFormat,
-            width, height, depth,
-            border, format, type, 0, pixels);
+   teximage_err(ctx, GL_FALSE, 3, target, level, internalFormat,
+                width, height, depth, border, format, type, 0, pixels);
 }
 
 
@@ -4527,8 +4539,8 @@ _mesa_CompressedTexImage1D(GLenum target, GLint level,
                               const GLvoid *data)
 {
    GET_CURRENT_CONTEXT(ctx);
-   teximage(ctx, GL_TRUE, 1, target, level, internalFormat,
-            width, 1, 1, border, GL_NONE, GL_NONE, imageSize, data);
+   teximage_err(ctx, GL_TRUE, 1, target, level, internalFormat,
+                width, 1, 1, border, GL_NONE, GL_NONE, imageSize, data);
 }
 
 
@@ -4539,8 +4551,8 @@ _mesa_CompressedTexImage2D(GLenum target, GLint level,
                               const GLvoid *data)
 {
    GET_CURRENT_CONTEXT(ctx);
-   teximage(ctx, GL_TRUE, 2, target, level, internalFormat,
-            width, height, 1, border, GL_NONE, GL_NONE, imageSize, data);
+   teximage_err(ctx, GL_TRUE, 2, target, level, internalFormat,
+                width, height, 1, border, GL_NONE, GL_NONE, imageSize, data);
 }
 
 
@@ -4551,8 +4563,8 @@ _mesa_CompressedTexImage3D(GLenum target, GLint level,
                               GLsizei imageSize, const GLvoid *data)
 {
    GET_CURRENT_CONTEXT(ctx);
-   teximage(ctx, GL_TRUE, 3, target, level, internalFormat,
-            width, height, depth, border, GL_NONE, GL_NONE, imageSize, data);
+   teximage_err(ctx, GL_TRUE, 3, target, level, internalFormat, width, height,
+                depth, border, GL_NONE, GL_NONE, imageSize, data);
 }
 
 
