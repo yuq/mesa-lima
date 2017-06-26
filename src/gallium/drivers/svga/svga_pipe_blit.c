@@ -731,9 +731,10 @@ svga_resource_copy_region(struct pipe_context *pipe,
          struct svga_winsys_surface *src_surf;
          struct svga_winsys_surface *dst_surf;
          struct svga_buffer *dbuffer = svga_buffer(dst_tex);
+         struct svga_buffer *sbuffer = svga_buffer(src_tex);
 
-         src_surf = svga_buffer_handle(svga, src_tex);
-         dst_surf = svga_buffer_handle(svga, dst_tex);
+         src_surf = svga_buffer_handle(svga, src_tex, sbuffer->bind_flags);
+         dst_surf = svga_buffer_handle(svga, dst_tex, dbuffer->bind_flags);
 
          ret = SVGA3D_vgpu10_BufferCopy(svga->swc, src_surf, dst_surf,
                                         src_box->x, dstx, src_box->width);

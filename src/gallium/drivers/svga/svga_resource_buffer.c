@@ -114,7 +114,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
       assert(svga_have_vgpu10(svga));
 
       if (!sbuf->user) {
-         (void) svga_buffer_handle(svga, resource);
+         (void) svga_buffer_handle(svga, resource, sbuf->bind_flags);
       }
 
       if (sbuf->dma.pending > 0) {

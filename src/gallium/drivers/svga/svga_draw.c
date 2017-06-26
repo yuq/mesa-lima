@@ -201,7 +201,8 @@ draw_vgpu9(struct svga_hwtnl *hwtnl)
 
    for (i = 0; i < hwtnl->cmd.vdecl_count; i++) {
       unsigned j = hwtnl->cmd.vdecl_buffer_index[i];
-      handle = svga_buffer_handle(svga, hwtnl->cmd.vbufs[j].buffer.resource);
+      handle = svga_buffer_handle(svga, hwtnl->cmd.vbufs[j].buffer.resource,
+                                  PIPE_BIND_VERTEX_BUFFER);
       if (!handle)
          return PIPE_ERROR_OUT_OF_MEMORY;
 
@@ -210,7 +211,8 @@ draw_vgpu9(struct svga_hwtnl *hwtnl)
 
    for (i = 0; i < hwtnl->cmd.prim_count; i++) {
       if (hwtnl->cmd.prim_ib[i]) {
-         handle = svga_buffer_handle(svga, hwtnl->cmd.prim_ib[i]);
+         handle = svga_buffer_handle(svga, hwtnl->cmd.prim_ib[i],
+                                     PIPE_BIND_INDEX_BUFFER);
          if (!handle)
             return PIPE_ERROR_OUT_OF_MEMORY;
       }
@@ -344,7 +346,8 @@ validate_sampler_resources(struct svga_context *svga)
 
          if (sv) {
             if (sv->base.texture->target == PIPE_BUFFER) {
-               surfaces[i] = svga_buffer_handle(svga, sv->base.texture);
+               surfaces[i] = svga_buffer_handle(svga, sv->base.texture,
+                                                PIPE_BIND_SAMPLER_VIEW);
             }
             else {
                surfaces[i] = svga_texture(sv->base.texture)->handle;
@@ -421,7 +424,8 @@ validate_constant_buffers(struct svga_context *svga)
          unsigned i = u_bit_scan(&enabled_constbufs);
          buffer = svga_buffer(svga->curr.constbufs[shader][i].buffer);
          if (buffer) {
-            handle = svga_buffer_handle(svga, &buffer->b.b);
+            handle = svga_buffer_handle(svga, &buffer->b.b,
+                                        PIPE_BIND_CONSTANT_BUFFER);
 
             if (svga->rebind.flags.constbufs) {
                ret = svga->swc->resource_rebind(svga->swc,
@@ -526,7 +530,8 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
 
       if (sbuf) {
          assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_VERTEX_BUFFER);
-         vbuffer_handles[i] = svga_buffer_handle(svga, &sbuf->b.b);
+         vbuffer_handles[i] = svga_buffer_handle(svga, &sbuf->b.b,
+                                                 PIPE_BIND_VERTEX_BUFFER);
          if (vbuffer_handles[i] == NULL)
             return PIPE_ERROR_OUT_OF_MEMORY;
          vbuffers[i] = &sbuf->b.b;
@@ -550,7 +555,7 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
       assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_INDEX_BUFFER);
       (void) sbuf; /* silence unused var warning */
 
-      ib_handle = svga_buffer_handle(svga, ib);
+      ib_handle = svga_buffer_handle(svga, ib, PIPE_BIND_INDEX_BUFFER);
       if (!ib_handle)
          return PIPE_ERROR_OUT_OF_MEMORY;
    }

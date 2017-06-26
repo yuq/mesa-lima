@@ -1452,7 +1452,7 @@ svga_texture_transfer_unmap_upload(struct svga_context *svga,
    /* unmap the texture upload buffer */
    u_upload_unmap(svga->tex_upload);
 
-   srcsurf = svga_buffer_handle(svga, st->upload.buf);
+   srcsurf = svga_buffer_handle(svga, st->upload.buf, 0);
    dstsurf = svga_texture(texture)->handle;
    assert(dstsurf);
 

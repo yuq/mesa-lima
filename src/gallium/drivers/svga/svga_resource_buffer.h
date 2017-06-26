@@ -325,7 +325,8 @@ svga_buffer_create(struct pipe_screen *screen,
  */
 struct svga_winsys_surface *
 svga_buffer_handle(struct svga_context *svga,
-                   struct pipe_resource *buf);
+                   struct pipe_resource *buf,
+                   unsigned tobind_flags);
 
 void
 svga_context_flush_buffers(struct svga_context *svga);

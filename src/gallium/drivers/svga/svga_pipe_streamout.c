@@ -282,7 +282,8 @@ svga_set_stream_output_targets(struct pipe_context *pipe,
       assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_STREAM_OUTPUT);
       (void) sbuf;
 
-      svga->so_surfaces[i] = svga_buffer_handle(svga, sot->base.buffer);
+      svga->so_surfaces[i] = svga_buffer_handle(svga, sot->base.buffer,
+                                                PIPE_BIND_STREAM_OUTPUT);
       svga->so_targets[i] = &sot->base;
       soBindings[i].offset = sot->base.buffer_offset;
 

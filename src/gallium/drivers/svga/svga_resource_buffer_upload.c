@@ -776,7 +776,8 @@ svga_buffer_upload_piecewise(struct svga_screen *ss,
  * if there are mapped ranges and the data is currently in a malloc'ed buffer.
  */
 struct svga_winsys_surface *
-svga_buffer_handle(struct svga_context *svga, struct pipe_resource *buf)
+svga_buffer_handle(struct svga_context *svga, struct pipe_resource *buf,
+                   unsigned tobind_flags)
 {
    struct pipe_screen *screen = svga->pipe.screen;
    struct svga_screen *ss = svga_screen(screen);

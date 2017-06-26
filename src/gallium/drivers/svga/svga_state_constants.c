@@ -591,7 +591,8 @@ emit_constbuf_vgpu10(struct svga_context *svga, enum pipe_shader_type shader)
       /* we must unmap the buffer before getting the winsys handle */
       u_upload_unmap(svga->const0_upload);
 
-      dst_handle = svga_buffer_handle(svga, dst_buffer);
+      dst_handle = svga_buffer_handle(svga, dst_buffer,
+                                      PIPE_BIND_CONSTANT_BUFFER);
       if (!dst_handle) {
          pipe_resource_reference(&dst_buffer, NULL);
          return PIPE_ERROR_OUT_OF_MEMORY;
@@ -660,7 +661,8 @@ emit_consts_vgpu10(struct svga_context *svga, enum pipe_shader_type shader)
       struct svga_winsys_surface *handle;
 
       if (buffer) {
-         handle = svga_buffer_handle(svga, &buffer->b.b);
+         handle = svga_buffer_handle(svga, &buffer->b.b,
+                                     PIPE_BIND_CONSTANT_BUFFER);
          enabled_constbufs |= 1 << index;
       }
       else {
