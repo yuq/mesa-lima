@@ -1,7 +1,7 @@
 # Copyright (C) 2017 Intel Corporation.   All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
+# copy of this software and associated documentation files (the 'Software'),
 # to deal in the Software without restriction, including without limitation
 # the rights to use, copy, modify, merge, publish, distribute, sublicense,
 # and/or sell copies of the Software, and to permit persons to whom the
@@ -11,7 +11,7 @@
 # paragraph) shall be included in all copies or substantial portions of the
 # Software.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -31,12 +31,12 @@ from gen_common import ArgumentParser, MakoTemplateWriter
 
 def main(args=sys.argv[1:]):
     thisDir = os.path.dirname(os.path.realpath(__file__))
-    parser = ArgumentParser("Generate files and initialization functions for all permutuations of BackendPixelRate.")
-    parser.add_argument('--dim', help="gBackendPixelRateTable array dimensions", nargs='+', type=int, required=True)
-    parser.add_argument('--outdir', help="output directory", nargs='?', type=str, default=thisDir)
-    parser.add_argument('--split', help="how many lines of initialization per file [0=no split]", nargs='?', type=int, default='512')
-    parser.add_argument('--cpp', help="Generate cpp file(s)", action='store_true', default=False)
-    parser.add_argument('--cmake', help="Generate cmake file", action='store_true', default=False)
+    parser = ArgumentParser('Generate files and initialization functions for all permutuations of BackendPixelRate.')
+    parser.add_argument('--dim', help='gBackendPixelRateTable array dimensions', nargs='+', type=int, required=True)
+    parser.add_argument('--outdir', help='output directory', nargs='?', type=str, default=thisDir)
+    parser.add_argument('--split', help='how many lines of initialization per file [0=no split]', nargs='?', type=int, default='512')
+    parser.add_argument('--cpp', help='Generate cpp file(s)', action='store_true', default=False)
+    parser.add_argument('--cmake', help='Generate cmake file', action='store_true', default=False)
 
     args = parser.parse_args(args);
 
