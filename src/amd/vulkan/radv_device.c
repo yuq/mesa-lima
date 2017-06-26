@@ -1095,6 +1095,7 @@ VkResult radv_CreateDevice(
 		case RADV_QUEUE_GENERAL:
 		case RADV_QUEUE_COMPUTE:
 			si_cs_emit_cache_flush(device->flush_cs[family],
+					       false,
 			                       device->physical_device->rad_info.chip_class,
 					       NULL, 0,
 			                       family == RADV_QUEUE_COMPUTE && device->physical_device->rad_info.chip_class >= CIK,
@@ -1111,6 +1112,7 @@ VkResult radv_CreateDevice(
 		case RADV_QUEUE_GENERAL:
 		case RADV_QUEUE_COMPUTE:
 			si_cs_emit_cache_flush(device->flush_shader_cs[family],
+					       false,
 			                       device->physical_device->rad_info.chip_class,
 					       NULL, 0,
 			                       family == RADV_QUEUE_COMPUTE && device->physical_device->rad_info.chip_class >= CIK,
@@ -1761,6 +1763,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 
 		if (!i) {
 			si_cs_emit_cache_flush(cs,
+					       false,
 			                       queue->device->physical_device->rad_info.chip_class,
 					       NULL, 0,
 			                       queue->queue_family_index == RING_COMPUTE &&
