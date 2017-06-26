@@ -323,14 +323,14 @@ attach_shader_no_error(struct gl_context *ctx, GLuint program, GLuint shader)
 }
 
 static GLuint
-create_shader(struct gl_context *ctx, GLenum type)
+create_shader(struct gl_context *ctx, GLenum type, const char *caller)
 {
    struct gl_shader *sh;
    GLuint name;
 
    if (!_mesa_validate_shader_target(ctx, type)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "CreateShader(%s)",
-                  _mesa_enum_to_string(type));
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(%s)",
+                  caller, _mesa_enum_to_string(type));
       return 0;
    }
 
@@ -1394,7 +1394,7 @@ _mesa_CreateShader(GLenum type)
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glCreateShader %s\n", _mesa_enum_to_string(type));
-   return create_shader(ctx, type);
+   return create_shader(ctx, type, "glCreateShader");
 }
 
 
@@ -1402,7 +1402,7 @@ GLhandleARB GLAPIENTRY
 _mesa_CreateShaderObjectARB(GLenum type)
 {
    GET_CURRENT_CONTEXT(ctx);
-   return create_shader(ctx, type);
+   return create_shader(ctx, type, "glCreateShaderObjectARB");
 }
 
 
@@ -2268,7 +2268,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   const GLuint shader = create_shader(ctx, type);
+   const GLuint shader = create_shader(ctx, type, "glCreateShaderProgramv");
    GLuint program = 0;
 
    /*
