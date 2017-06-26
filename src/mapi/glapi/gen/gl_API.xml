@@ -5318,7 +5318,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="CreateShader" es2="2.0">
+    <function name="CreateShader" es2="2.0" no_error="true">
         <param name="type" type="GLenum"/>
         <return type="GLuint"/>
         <glx ignore="true"/>
@@ -7687,7 +7687,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="CreateShaderObjectARB">
+    <function name="CreateShaderObjectARB" no_error="true">
         <param name="shaderType" type="GLenum"/>
         <return type="GLhandleARB"/>
         <glx ignore="true"/>

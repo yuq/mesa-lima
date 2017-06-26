@@ -1396,6 +1396,14 @@ _mesa_CompileShader(GLuint shaderObj)
 
 
 GLuint GLAPIENTRY
+_mesa_CreateShader_no_error(GLenum type)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   return create_shader(ctx, type);
+}
+
+
+GLuint GLAPIENTRY
 _mesa_CreateShader(GLenum type)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -1404,6 +1412,14 @@ _mesa_CreateShader(GLenum type)
       _mesa_debug(ctx, "glCreateShader %s\n", _mesa_enum_to_string(type));
 
    return create_shader_err(ctx, type, "glCreateShader");
+}
+
+
+GLhandleARB GLAPIENTRY
+_mesa_CreateShaderObjectARB_no_error(GLenum type)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   return create_shader(ctx, type);
 }
 
 

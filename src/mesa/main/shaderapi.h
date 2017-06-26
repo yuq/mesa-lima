@@ -86,6 +86,9 @@ _mesa_CompileShader(GLuint);
 extern GLhandleARB GLAPIENTRY
 _mesa_CreateProgramObjectARB(void);
 
+GLhandleARB GLAPIENTRY
+_mesa_CreateShaderObjectARB_no_error(GLenum type);
+
 extern GLhandleARB GLAPIENTRY
 _mesa_CreateShaderObjectARB(GLenum type);
 
@@ -163,6 +166,9 @@ _mesa_AttachShader_no_error(GLuint program, GLuint shader);
 
 extern void GLAPIENTRY
 _mesa_AttachShader(GLuint program, GLuint shader);
+
+GLuint GLAPIENTRY
+_mesa_CreateShader_no_error(GLenum);
 
 extern GLuint GLAPIENTRY
 _mesa_CreateShader(GLenum);
