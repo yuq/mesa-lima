@@ -226,15 +226,6 @@ _mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
                         GLenum format, GLenum type, const GLvoid *pixels,
                         bool dsa);
 
-extern void
-_mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
-                             struct gl_texture_object *texObj,
-                             GLenum target, GLint level,
-                             GLint xoffset, GLint yoffset, GLint zoffset,
-                             GLint x, GLint y,
-                             GLsizei width, GLsizei height,
-                             const char *caller);
-
 bool
 _mesa_is_cube_map_texture(GLenum target);
 

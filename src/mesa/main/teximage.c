@@ -3708,6 +3708,73 @@ can_avoid_reallocation(const struct gl_texture_image *texImage,
    return true;
 }
 
+
+/**
+ * Implementation for glCopyTex(ture)SubImage1/2/3D() functions.
+ */
+static void
+copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
+                       struct gl_texture_object *texObj,
+                       GLenum target, GLint level,
+                       GLint xoffset, GLint yoffset, GLint zoffset,
+                       GLint x, GLint y, GLsizei width, GLsizei height,
+                       const char *caller)
+{
+   struct gl_texture_image *texImage;
+
+   FLUSH_VERTICES(ctx, 0);
+
+   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
+      _mesa_debug(ctx, "%s %s %d %d %d %d %d %d %d %d\n", caller,
+                  _mesa_enum_to_string(target),
+                  level, xoffset, yoffset, zoffset, x, y, width, height);
+
+   if (ctx->NewState & NEW_COPY_TEX_STATE)
+      _mesa_update_state(ctx);
+
+   if (copytexsubimage_error_check(ctx, dims, texObj, target, level,
+                                   xoffset, yoffset, zoffset,
+                                   width, height, caller)) {
+      return;
+   }
+
+   _mesa_lock_texture(ctx, texObj);
+
+   texImage = _mesa_select_tex_image(texObj, target, level);
+
+   /* If we have a border, offset=-1 is legal.  Bias by border width. */
+   switch (dims) {
+   case 3:
+      if (target != GL_TEXTURE_2D_ARRAY)
+         zoffset += texImage->Border;
+      /* fall-through */
+   case 2:
+      if (target != GL_TEXTURE_1D_ARRAY)
+         yoffset += texImage->Border;
+      /* fall-through */
+   case 1:
+      xoffset += texImage->Border;
+   }
+
+   if (_mesa_clip_copytexsubimage(ctx, &xoffset, &yoffset, &x, &y,
+                                  &width, &height)) {
+      struct gl_renderbuffer *srcRb =
+         get_copy_tex_image_source(ctx, texImage->TexFormat);
+
+      copytexsubimage_by_slice(ctx, texImage, dims, xoffset, yoffset, zoffset,
+                               srcRb, x, y, width, height);
+
+      check_gen_mipmap(ctx, target, texObj, level);
+
+      /* NOTE: Don't signal _NEW_TEXTURE_OBJECT since we've only changed
+       * the texel data, not the texture format, size, etc.
+       */
+   }
+
+   _mesa_unlock_texture(ctx, texObj);
+}
+
+
 /**
  * Implement the glCopyTexImage1/2D() functions.
  */
@@ -3760,9 +3827,8 @@ copyteximage(struct gl_context *ctx, GLuint dims,
       if (texImage && can_avoid_reallocation(texImage, internalFormat, texFormat,
                                              x, y, width, height, border)) {
          _mesa_unlock_texture(ctx, texObj);
-         _mesa_copy_texture_sub_image(ctx, dims, texObj, target, level,
-                                      0, 0, 0, x, y, width, height,
-                                      "CopyTexImage");
+         copy_texture_sub_image(ctx, dims, texObj, target, level, 0, 0, 0, x, y,
+                                width, height,"CopyTexImage");
          return;
       }
    }
@@ -3888,72 +3954,7 @@ _mesa_CopyTexImage2D( GLenum target, GLint level, GLenum internalFormat,
                 x, y, width, height, border);
 }
 
-/**
- * Implementation for glCopyTex(ture)SubImage1/2/3D() functions.
- */
-void
-_mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
-                             struct gl_texture_object *texObj,
-                             GLenum target, GLint level,
-                             GLint xoffset, GLint yoffset, GLint zoffset,
-                             GLint x, GLint y,
-                             GLsizei width, GLsizei height,
-                             const char *caller)
-{
-   struct gl_texture_image *texImage;
 
-   FLUSH_VERTICES(ctx, 0);
-
-   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "%s %s %d %d %d %d %d %d %d %d\n", caller,
-                  _mesa_enum_to_string(target),
-                  level, xoffset, yoffset, zoffset, x, y, width, height);
-
-   if (ctx->NewState & NEW_COPY_TEX_STATE)
-      _mesa_update_state(ctx);
-
-   if (copytexsubimage_error_check(ctx, dims, texObj, target, level,
-                                   xoffset, yoffset, zoffset,
-                                   width, height, caller)) {
-      return;
-   }
-
-   _mesa_lock_texture(ctx, texObj);
-   {
-      texImage = _mesa_select_tex_image(texObj, target, level);
-
-      /* If we have a border, offset=-1 is legal.  Bias by border width. */
-      switch (dims) {
-      case 3:
-         if (target != GL_TEXTURE_2D_ARRAY)
-            zoffset += texImage->Border;
-         /* fall-through */
-      case 2:
-         if (target != GL_TEXTURE_1D_ARRAY)
-            yoffset += texImage->Border;
-         /* fall-through */
-      case 1:
-         xoffset += texImage->Border;
-      }
-
-      if (_mesa_clip_copytexsubimage(ctx, &xoffset, &yoffset, &x, &y,
-                                     &width, &height)) {
-         struct gl_renderbuffer *srcRb =
-            get_copy_tex_image_source(ctx, texImage->TexFormat);
-
-         copytexsubimage_by_slice(ctx, texImage, dims,
-                                  xoffset, yoffset, zoffset,
-                                  srcRb, x, y, width, height);
-
-         check_gen_mipmap(ctx, target, texObj, level);
-
-         /* NOTE: Don't signal _NEW_TEXTURE_OBJECT since we've only changed
-          * the texel data, not the texture format, size, etc.
-          */
-      }
-   }
-   _mesa_unlock_texture(ctx, texObj);
-}
 
 void GLAPIENTRY
 _mesa_CopyTexSubImage1D( GLenum target, GLint level,
@@ -3976,11 +3977,9 @@ _mesa_CopyTexSubImage1D( GLenum target, GLint level,
    if (!texObj)
       return;
 
-   _mesa_copy_texture_sub_image(ctx, 1, texObj, target, level, xoffset, 0, 0,
-                                x, y, width, 1, self);
+   copy_texture_sub_image(ctx, 1, texObj, target, level, xoffset, 0, 0,
+                          x, y, width, 1, self);
 }
-
-
 
 void GLAPIENTRY
 _mesa_CopyTexSubImage2D( GLenum target, GLint level,
@@ -4004,9 +4003,8 @@ _mesa_CopyTexSubImage2D( GLenum target, GLint level,
    if (!texObj)
       return;
 
-   _mesa_copy_texture_sub_image(ctx, 2, texObj, target, level,
-                                xoffset, yoffset, 0,
-                                x, y, width, height, self);
+   copy_texture_sub_image(ctx, 2, texObj, target, level, xoffset, yoffset, 0,
+                          x, y, width, height, self);
 }
 
 
@@ -4033,9 +4031,8 @@ _mesa_CopyTexSubImage3D( GLenum target, GLint level,
    if (!texObj)
       return;
 
-   _mesa_copy_texture_sub_image(ctx, 3, texObj, target, level,
-                                xoffset, yoffset, zoffset,
-                                x, y, width, height, self);
+   copy_texture_sub_image(ctx, 3, texObj, target, level, xoffset, yoffset,
+                          zoffset, x, y, width, height, self);
 }
 
 void GLAPIENTRY
@@ -4057,8 +4054,8 @@ _mesa_CopyTextureSubImage1D(GLuint texture, GLint level,
       return;
    }
 
-   _mesa_copy_texture_sub_image(ctx, 1, texObj, texObj->Target, level,
-                                xoffset, 0, 0, x, y, width, 1, self);
+   copy_texture_sub_image(ctx, 1, texObj, texObj->Target, level, xoffset, 0, 0,
+                          x, y, width, 1, self);
 }
 
 void GLAPIENTRY
@@ -4081,9 +4078,8 @@ _mesa_CopyTextureSubImage2D(GLuint texture, GLint level,
       return;
    }
 
-   _mesa_copy_texture_sub_image(ctx, 2, texObj, texObj->Target, level,
-                                xoffset, yoffset, 0,
-                                x, y, width, height, self);
+   copy_texture_sub_image(ctx, 2, texObj, texObj->Target, level, xoffset,
+                          yoffset, 0, x, y, width, height, self);
 }
 
 
@@ -4110,15 +4106,14 @@ _mesa_CopyTextureSubImage3D(GLuint texture, GLint level,
 
    if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
       /* Act like CopyTexSubImage2D */
-      _mesa_copy_texture_sub_image(ctx, 2, texObj,
-                                   GL_TEXTURE_CUBE_MAP_POSITIVE_X + zoffset,
-                                   level, xoffset, yoffset, 0,
-                                   x, y, width, height, self);
+      copy_texture_sub_image(ctx, 2, texObj,
+                             GL_TEXTURE_CUBE_MAP_POSITIVE_X + zoffset,
+                             level, xoffset, yoffset, 0, x, y, width, height,
+                             self);
    }
    else
-      _mesa_copy_texture_sub_image(ctx, 3, texObj, texObj->Target, level,
-                                   xoffset, yoffset, zoffset,
-                                   x, y, width, height, self);
+      copy_texture_sub_image(ctx, 3, texObj, texObj->Target, level, xoffset,
+                             yoffset, zoffset, x, y, width, height, self);
 }
 
 static bool
