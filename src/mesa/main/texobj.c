@@ -1262,6 +1262,14 @@ create_textures_err(struct gl_context *ctx, GLenum target,
  * objects are also generated.
  */
 void GLAPIENTRY
+_mesa_GenTextures_no_error(GLsizei n, GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_textures(ctx, 0, n, textures, "glGenTextures");
+}
+
+
+void GLAPIENTRY
 _mesa_GenTextures(GLsizei n, GLuint *textures)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -1281,6 +1289,14 @@ _mesa_GenTextures(GLsizei n, GLuint *textures)
  * IDs which are stored in \p textures.  Corresponding empty texture
  * objects are also generated.
  */
+void GLAPIENTRY
+_mesa_CreateTextures_no_error(GLenum target, GLsizei n, GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_textures(ctx, target, n, textures, "glCreateTextures");
+}
+
+
 void GLAPIENTRY
 _mesa_CreateTextures(GLenum target, GLsizei n, GLuint *textures)
 {

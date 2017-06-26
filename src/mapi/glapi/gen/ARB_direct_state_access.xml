@@ -311,7 +311,7 @@
 
    <!-- Texture object functions -->
 
-   <function name="CreateTextures">
+   <function name="CreateTextures" no_error="true">
       <param name="target" type="GLenum" />
       <param name="n" type="GLsizei" />
       <param name="textures" type="GLuint *" />

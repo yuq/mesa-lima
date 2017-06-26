@@ -3345,7 +3345,7 @@
         <glx sop="144"/>
     </function>
 
-    <function name="GenTextures" es1="1.0" es2="2.0">
+    <function name="GenTextures" es1="1.0" es2="2.0" no_error="true">
         <param name="n" type="GLsizei" counter="true"/>
         <param name="textures" type="GLuint *" output="true" count="n"/>
         <glx sop="145" always_array="true"/>
