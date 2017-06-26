@@ -3806,7 +3806,8 @@ copy_texture_sub_image_no_error(struct gl_context *ctx, GLuint dims,
 static ALWAYS_INLINE void
 copyteximage(struct gl_context *ctx, GLuint dims,
              GLenum target, GLint level, GLenum internalFormat,
-             GLint x, GLint y, GLsizei width, GLsizei height, GLint border )
+             GLint x, GLint y, GLsizei width, GLsizei height, GLint border,
+             bool no_error)
 {
    struct gl_texture_image *texImage;
    struct gl_texture_object *texObj;
@@ -3824,15 +3825,17 @@ copyteximage(struct gl_context *ctx, GLuint dims,
    if (ctx->NewState & NEW_COPY_TEX_STATE)
       _mesa_update_state(ctx);
 
-   if (copytexture_error_check(ctx, dims, target, level, internalFormat,
-                               width, height, border))
-      return;
+   if (!no_error) {
+      if (copytexture_error_check(ctx, dims, target, level, internalFormat,
+                                  width, height, border))
+         return;
 
-   if (!_mesa_legal_texture_dimensions(ctx, target, level, width, height,
-                                       1, border)) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glCopyTexImage%uD(invalid width or height)", dims);
-      return;
+      if (!_mesa_legal_texture_dimensions(ctx, target, level, width, height,
+                                          1, border)) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "glCopyTexImage%uD(invalid width or height)", dims);
+         return;
+      }
    }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
@@ -3850,8 +3853,13 @@ copyteximage(struct gl_context *ctx, GLuint dims,
       if (texImage && can_avoid_reallocation(texImage, internalFormat, texFormat,
                                              x, y, width, height, border)) {
          _mesa_unlock_texture(ctx, texObj);
-         copy_texture_sub_image_err(ctx, dims, texObj, target, level, 0, 0, 0,
-                                    x, y, width, height,"CopyTexImage");
+         if (no_error) {
+            copy_texture_sub_image_no_error(ctx, dims, texObj, target, level, 0,
+                                            0, 0, x, y, width, height);
+         } else {
+            copy_texture_sub_image_err(ctx, dims, texObj, target, level, 0, 0,
+                                       0, x, y, width, height,"CopyTexImage");
+         }
          return;
       }
    }
@@ -3859,7 +3867,7 @@ copyteximage(struct gl_context *ctx, GLuint dims,
    _mesa_perf_debug(ctx, MESA_DEBUG_SEVERITY_LOW, "glCopyTexImage "
                     "can't avoid reallocating texture storage\n");
 
-   if (_mesa_is_gles3(ctx)) {
+   if (!no_error && _mesa_is_gles3(ctx)) {
       struct gl_renderbuffer *rb =
          _mesa_get_read_renderbuffer_for_format(ctx, internalFormat);
 
@@ -3962,7 +3970,16 @@ copyteximage_err(struct gl_context *ctx, GLuint dims, GLenum target,
                  GLsizei width, GLsizei height, GLint border)
 {
    copyteximage(ctx, dims, target, level, internalFormat, x, y, width, height,
-                border);
+                border, false);
+}
+
+static void
+copyteximage_no_error(struct gl_context *ctx, GLuint dims, GLenum target,
+                      GLint level, GLenum internalFormat, GLint x, GLint y,
+                      GLsizei width, GLsizei height, GLint border)
+{
+   copyteximage(ctx, dims, target, level, internalFormat, x, y, width, height,
+                border, true);
 }
 
 
