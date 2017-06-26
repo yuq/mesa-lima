@@ -1479,6 +1479,14 @@ create_buffers_err(struct gl_context *ctx, GLsizei n, GLuint *buffers, bool dsa)
  * \param buffers  Array of \c n locations to store the IDs.
  */
 void GLAPIENTRY
+_mesa_GenBuffers_no_error(GLsizei n, GLuint *buffers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_buffers(ctx, n, buffers, false);
+}
+
+
+void GLAPIENTRY
 _mesa_GenBuffers(GLsizei n, GLuint *buffers)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -1491,6 +1499,14 @@ _mesa_GenBuffers(GLsizei n, GLuint *buffers)
  * \param n        Number of IDs to generate.
  * \param buffers  Array of \c n locations to store the IDs.
  */
+void GLAPIENTRY
+_mesa_CreateBuffers_no_error(GLsizei n, GLuint *buffers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_buffers(ctx, n, buffers, true);
+}
+
+
 void GLAPIENTRY
 _mesa_CreateBuffers(GLsizei n, GLuint *buffers)
 {

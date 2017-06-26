@@ -49,7 +49,7 @@
 
    <!-- Buffer object functions -->
 
-   <function name="CreateBuffers">
+   <function name="CreateBuffers" no_error="true">
       <param name="n" type="GLsizei" />
       <param name="buffers" type="GLuint *" />
    </function>
