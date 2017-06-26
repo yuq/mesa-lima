@@ -647,6 +647,13 @@ create_program_pipelines_err(struct gl_context *ctx, GLsizei n,
 }
 
 void GLAPIENTRY
+_mesa_GenProgramPipelines_no_error(GLsizei n, GLuint *pipelines)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_program_pipelines(ctx, n, pipelines, false);
+}
+
+void GLAPIENTRY
 _mesa_GenProgramPipelines(GLsizei n, GLuint *pipelines)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -655,6 +662,13 @@ _mesa_GenProgramPipelines(GLsizei n, GLuint *pipelines)
       _mesa_debug(ctx, "glGenProgramPipelines(%d, %p)\n", n, pipelines);
 
    create_program_pipelines_err(ctx, n, pipelines, false);
+}
+
+void GLAPIENTRY
+_mesa_CreateProgramPipelines_no_error(GLsizei n, GLuint *pipelines)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_program_pipelines(ctx, n, pipelines, true);
 }
 
 void GLAPIENTRY

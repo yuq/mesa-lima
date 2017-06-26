@@ -682,7 +682,7 @@
 
    <!-- Program Pipeline object functions -->
 
-   <function name="CreateProgramPipelines">
+   <function name="CreateProgramPipelines" no_error="true">
       <param name="n" type="GLsizei" />
       <param name="pipelines" type="GLuint *" />
    </function>
