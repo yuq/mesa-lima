@@ -1085,6 +1085,21 @@ _mesa_GetUniformIndices(GLuint program,
    }
 }
 
+static void
+uniform_block_binding(struct gl_context *ctx, struct gl_shader_program *shProg,
+                      GLuint uniformBlockIndex, GLuint uniformBlockBinding)
+{
+   if (shProg->data->UniformBlocks[uniformBlockIndex].Binding !=
+       uniformBlockBinding) {
+
+      FLUSH_VERTICES(ctx, 0);
+      ctx->NewDriverState |= ctx->DriverFlags.NewUniformBuffer;
+
+      shProg->data->UniformBlocks[uniformBlockIndex].Binding =
+         uniformBlockBinding;
+   }
+}
+
 void GLAPIENTRY
 _mesa_UniformBlockBinding(GLuint program,
 			  GLuint uniformBlockIndex,
@@ -1117,15 +1132,7 @@ _mesa_UniformBlockBinding(GLuint program,
       return;
    }
 
-   if (shProg->data->UniformBlocks[uniformBlockIndex].Binding !=
-       uniformBlockBinding) {
-
-      FLUSH_VERTICES(ctx, 0);
-      ctx->NewDriverState |= ctx->DriverFlags.NewUniformBuffer;
-
-      shProg->data->UniformBlocks[uniformBlockIndex].Binding =
-         uniformBlockBinding;
-   }
+   uniform_block_binding(ctx, shProg, uniformBlockIndex, uniformBlockBinding);
 }
 
 void GLAPIENTRY
