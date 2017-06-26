@@ -5301,7 +5301,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="BindAttribLocation" es2="2.0">
+    <function name="BindAttribLocation" es2="2.0" no_error="true">
         <param name="program" type="GLuint"/>
         <param name="index" type="GLuint"/>
         <param name="name" type="const GLchar *"/>

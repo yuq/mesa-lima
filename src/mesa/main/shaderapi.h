@@ -143,6 +143,9 @@ extern void GLAPIENTRY
 _mesa_ValidateProgram(GLuint);
 
 
+void GLAPIENTRY
+_mesa_BindAttribLocation_no_error(GLuint program, GLuint, const GLchar *);
+
 extern void GLAPIENTRY
 _mesa_BindAttribLocation(GLuint program, GLuint, const GLchar *);
 

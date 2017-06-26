@@ -97,6 +97,17 @@ bind_attrib_location(struct gl_context *ctx,
 }
 
 void GLAPIENTRY
+_mesa_BindAttribLocation_no_error(GLuint program, GLuint index,
+                                  const GLchar *name)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *const shProg =
+      _mesa_lookup_shader_program(ctx, program);
+   bind_attrib_location(ctx, shProg, index, name, true);
+}
+
+void GLAPIENTRY
 _mesa_BindAttribLocation(GLuint program, GLuint index,
                          const GLchar *name)
 {
