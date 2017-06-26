@@ -63,6 +63,9 @@ _mesa_DeleteSync(GLsync sync);
 extern GLsync GLAPIENTRY
 _mesa_FenceSync(GLenum condition, GLbitfield flags);
 
+GLenum GLAPIENTRY
+_mesa_ClientWaitSync_no_error(GLsync sync, GLbitfield flags, GLuint64 timeout);
+
 extern GLenum GLAPIENTRY
 _mesa_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout);
 

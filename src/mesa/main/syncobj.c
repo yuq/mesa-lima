@@ -337,6 +337,16 @@ client_wait_sync(struct gl_context *ctx, struct gl_sync_object *syncObj,
 
 
 GLenum GLAPIENTRY
+_mesa_ClientWaitSync_no_error(GLsync sync, GLbitfield flags, GLuint64 timeout)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_sync_object *syncObj = _mesa_get_and_ref_sync(ctx, sync, true);
+   return client_wait_sync(ctx, syncObj, flags, timeout);
+}
+
+
+GLenum GLAPIENTRY
 _mesa_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
 {
    GET_CURRENT_CONTEXT(ctx);
