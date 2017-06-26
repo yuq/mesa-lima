@@ -3803,7 +3803,7 @@ copy_texture_sub_image_no_error(struct gl_context *ctx, GLuint dims,
 /**
  * Implement the glCopyTexImage1/2D() functions.
  */
-static void
+static ALWAYS_INLINE void
 copyteximage(struct gl_context *ctx, GLuint dims,
              GLenum target, GLint level, GLenum internalFormat,
              GLint x, GLint y, GLsizei width, GLsizei height, GLint border )
@@ -3956,6 +3956,15 @@ copyteximage(struct gl_context *ctx, GLuint dims,
 }
 
 
+static void
+copyteximage_err(struct gl_context *ctx, GLuint dims, GLenum target,
+                 GLint level, GLenum internalFormat, GLint x, GLint y,
+                 GLsizei width, GLsizei height, GLint border)
+{
+   copyteximage(ctx, dims, target, level, internalFormat, x, y, width, height,
+                border);
+}
+
 
 void GLAPIENTRY
 _mesa_CopyTexImage1D( GLenum target, GLint level,
@@ -3964,7 +3973,8 @@ _mesa_CopyTexImage1D( GLenum target, GLint level,
                       GLsizei width, GLint border )
 {
    GET_CURRENT_CONTEXT(ctx);
-   copyteximage(ctx, 1, target, level, internalFormat, x, y, width, 1, border);
+   copyteximage_err(ctx, 1, target, level, internalFormat, x, y, width, 1,
+                    border);
 }
 
 
@@ -3975,8 +3985,8 @@ _mesa_CopyTexImage2D( GLenum target, GLint level, GLenum internalFormat,
                       GLint border )
 {
    GET_CURRENT_CONTEXT(ctx);
-   copyteximage(ctx, 2, target, level, internalFormat,
-                x, y, width, height, border);
+   copyteximage_err(ctx, 2, target, level, internalFormat,
+                    x, y, width, height, border);
 }
 
 
