@@ -1139,11 +1139,12 @@ struct SWR_PS_STATE
     uint32_t writesODepth           : 1;    // pixel shader writes to depth
     uint32_t usesSourceDepth        : 1;    // pixel shader reads depth
     uint32_t shadingRate            : 2;    // shading per pixel / sample / coarse pixel
-    uint32_t renderTargetMask       : 8;    // number of render target outputs in use (0-8)
     uint32_t posOffset              : 2;    // type of offset (none, sample, centroid) to add to pixel position
     uint32_t barycentricsMask       : 3;    // which type(s) of barycentric coords does the PS interpolate attributes with
     uint32_t usesUAV                : 1;    // pixel shader accesses UAV 
     uint32_t forceEarlyZ            : 1;    // force execution of early depth/stencil test
+
+    uint8_t renderTargetMask;               // Mask of render targets written
 };
 
 // depth bounds state
