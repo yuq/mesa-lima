@@ -95,12 +95,12 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/frontend.h \
 	rasterizer/core/knobs.h \
 	rasterizer/core/knobs_init.h \
-	rasterizer/core/multisample.cpp \
 	rasterizer/core/multisample.h \
 	rasterizer/core/pa_avx.cpp \
 	rasterizer/core/pa.h \
 	rasterizer/core/rasterizer.cpp \
 	rasterizer/core/rasterizer.h \
+	rasterizer/core/rasterizer_impl.h \
 	rasterizer/core/rdtsc_core.cpp \
 	rasterizer/core/rdtsc_core.h \
 	rasterizer/core/ringbuffer.h \

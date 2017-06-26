@@ -1651,6 +1651,7 @@ void SwrInit()
 
     InitClearTilesTable();
     InitBackendFuncTables();
+    InitRasterizerFunctions();
 }
 
 void SwrGetInterface(SWR_INTERFACE &out_funcs)

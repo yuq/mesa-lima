@@ -156,6 +156,28 @@ Depends(backendPixelRateFiles,
          'rasterizer/codegen/gen_knobs.h']
         )
 
+# 5 SWR_MULTISAMPLE_TYPE_COUNT
+# 2 CenterPattern
+# 2 Conservative
+# 3 SWR_INPUT_COVERAGE_COUNT
+# 5 STATE_VALID_TRI_EDGE_COUNT
+# 2 RasterScissorEdges
+genRasterizerFileCount = 4
+genRasterizerFilePat = "rasterizer/core/backends/gen_rasterizer%s.cpp"
+genRasterizerFiles = map(lambda x: genRasterizerFilePat % x,
+                         range(0, genRasterizerFileCount))
+env.CodeGenerate(
+    target = 'rasterizer/core/backends/gen_rasterizer.hpp',
+    script = swrroot + 'rasterizer/codegen/gen_backends.py',
+    source = '',
+    command = python_cmd + ' $SCRIPT --outdir ' + bldroot + '/rasterizer/core/backends --rast --dim 5 2 2 3 5 2 --numfiles ' + str(genRasterizerFileCount) + ' --cpp --hpp'
+    )
+Depends(genRasterizerFiles,
+        ['rasterizer/core/backends/gen_rasterizer.hpp',
+         'rasterizer/archrast/gen_ar_event.hpp',
+         'rasterizer/codegen/gen_knobs.h']
+        )
+
 Depends('rasterizer/jitter/gen_state_llvm.h',
         swrroot + 'rasterizer/codegen/templates/gen_backend.cpp')
 
@@ -165,7 +187,7 @@ built_sources = [
     'rasterizer/archrast/gen_ar_event.cpp',
     ]
 
-built_sources += backendPixelRateFiles
+built_sources += [backendPixelRateFiles, genRasterizerFiles]
 
 source = built_sources
 source += env.ParseSourceList(swrroot + 'Makefile.sources', [

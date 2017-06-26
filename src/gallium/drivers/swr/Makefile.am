@@ -67,7 +67,12 @@ BUILT_SOURCES = \
 	rasterizer/core/backends/gen_BackendPixelRate1.cpp \
 	rasterizer/core/backends/gen_BackendPixelRate2.cpp \
 	rasterizer/core/backends/gen_BackendPixelRate3.cpp \
-	rasterizer/core/backends/gen_BackendPixelRate.hpp
+	rasterizer/core/backends/gen_BackendPixelRate.hpp \
+	rasterizer/core/backends/gen_rasterizer0.cpp \
+	rasterizer/core/backends/gen_rasterizer1.cpp \
+	rasterizer/core/backends/gen_rasterizer2.cpp \
+	rasterizer/core/backends/gen_rasterizer3.cpp \
+	rasterizer/core/backends/gen_rasterizer.hpp
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
@@ -173,6 +178,35 @@ backend.intermediate: rasterizer/codegen/gen_backends.py rasterizer/codegen/temp
 		--cpp \
 		--hpp
 
+rasterizer/core/backends/gen_rasterizer0.cpp \
+rasterizer/core/backends/gen_rasterizer1.cpp \
+rasterizer/core/backends/gen_rasterizer2.cpp \
+rasterizer/core/backends/gen_rasterizer3.cpp \
+rasterizer/core/backends/gen_rasterizer.hpp: \
+rasterizer.intermediate
+
+# 5 SWR_MULTISAMPLE_TYPE_COUNT
+# 2 CenterPattern
+# 2 Conservative
+# 3 SWR_INPUT_COVERAGE_COUNT
+# 5 STATE_VALID_TRI_EDGE_COUNT
+# 2 RasterScissorEdges
+
+# use intermediate rule to tell make that all files can be
+# generated in one invocation of gen_backends.py (prevents
+# parallel make race condition)
+.INTERMEDIATE: rasterizer.intermediate
+rasterizer.intermediate: rasterizer/codegen/gen_backends.py rasterizer/codegen/templates/gen_rasterizer.cpp rasterizer/codegen/templates/gen_header_init.hpp
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) \
+		$(srcdir)/rasterizer/codegen/gen_backends.py \
+		--outdir rasterizer/core/backends \
+		--rast \
+		--dim 5 2 2 3 5 2 \
+		--numfiles 4 \
+		--cpp \
+		--hpp
+
 COMMON_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/mesa/libmesagallium.la \
@@ -247,4 +281,5 @@ EXTRA_DIST = \
 	rasterizer/codegen/templates/gen_builder.hpp \
 	rasterizer/codegen/templates/gen_header_init.hpp \
 	rasterizer/codegen/templates/gen_knobs.cpp \
-	rasterizer/codegen/templates/gen_llvm.hpp
+	rasterizer/codegen/templates/gen_llvm.hpp \
+	rasterizer/codegen/templates/gen_rasterizer.cpp

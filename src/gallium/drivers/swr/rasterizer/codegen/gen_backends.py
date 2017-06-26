@@ -39,6 +39,7 @@ def main(args=sys.argv[1:]):
     parser.add_argument('--cpp', help='Generate cpp file(s)', action='store_true', default=False)
     parser.add_argument('--hpp', help='Generate hpp file', action='store_true', default=False)
     parser.add_argument('--cmake', help='Generate cmake file', action='store_true', default=False)
+    parser.add_argument('--rast', help='Generate rasterizer functions instead of normal backend', action='store_true', default=False)
 
     args = parser.parse_args(args)
 
@@ -54,6 +55,17 @@ def main(args=sys.argv[1:]):
             self.cmakeFileName = 'gen_backends.cmake'
             self.cmakeSrcVar = 'GEN_BACKEND_SOURCES'
             self.tableName = 'BackendPixelRate'
+
+            if args.rast:
+                self.outFileName = 'gen_rasterizer%s.cpp'
+                self.outHeaderName = 'gen_rasterizer.hpp'
+                self.functionTableName = 'gRasterizerFuncs'
+                self.funcInstanceHeader = ' = RasterizeTriangle<RasterizerTraits<'
+                self.template = 'gen_rasterizer.cpp'
+                self.cmakeFileName = 'gen_rasterizer.cmake'
+                self.cmakeSrcVar = 'GEN_RASTERIZER_SOURCES'
+                self.tableName = 'RasterizerFuncs'
+
 
     backend = backendStrs()
 
