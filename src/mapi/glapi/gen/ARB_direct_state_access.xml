@@ -675,7 +675,7 @@
 
    <!-- Sampler object functions -->
 
-   <function name="CreateSamplers">
+   <function name="CreateSamplers" no_error="true">
       <param name="n" type="GLsizei" />
       <param name="samplers" type="GLuint *" />
    </function>
