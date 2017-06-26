@@ -292,6 +292,14 @@ fence_sync(struct gl_context *ctx, GLenum condition, GLbitfield flags)
 
 
 GLsync GLAPIENTRY
+_mesa_FenceSync_no_error(GLenum condition, GLbitfield flags)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   return fence_sync(ctx, condition, flags);
+}
+
+
+GLsync GLAPIENTRY
 _mesa_FenceSync(GLenum condition, GLbitfield flags)
 {
    GET_CURRENT_CONTEXT(ctx);

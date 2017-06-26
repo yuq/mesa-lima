@@ -39,7 +39,7 @@
     -->
 
 
-    <function name="FenceSync" es2="3.0">
+    <function name="FenceSync" es2="3.0" no_error="true">
         <param name="condition" type="GLenum"/>
         <param name="flags" type="GLbitfield"/>
         <return type="GLsync"/>
