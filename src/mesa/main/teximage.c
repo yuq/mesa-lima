@@ -4141,6 +4141,87 @@ _mesa_CopyTextureSubImage3D(GLuint texture, GLint level,
                                  yoffset, zoffset, x, y, width, height, self);
 }
 
+
+void GLAPIENTRY
+_mesa_CopyTexSubImage1D_no_error(GLenum target, GLint level, GLint xoffset,
+                                 GLint x, GLint y, GLsizei width)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object* texObj = _mesa_get_current_tex_object(ctx, target);
+   copy_texture_sub_image_no_error(ctx, 1, texObj, target, level, xoffset, 0, 0,
+                                   x, y, width, 1);
+}
+
+void GLAPIENTRY
+_mesa_CopyTexSubImage2D_no_error(GLenum target, GLint level, GLint xoffset,
+                                 GLint yoffset, GLint x, GLint y, GLsizei width,
+                                 GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object* texObj = _mesa_get_current_tex_object(ctx, target);
+   copy_texture_sub_image_no_error(ctx, 2, texObj, target, level, xoffset,
+                                   yoffset, 0, x, y, width, height);
+}
+
+void GLAPIENTRY
+_mesa_CopyTexSubImage3D_no_error(GLenum target, GLint level, GLint xoffset,
+                                 GLint yoffset, GLint zoffset, GLint x, GLint y,
+                                 GLsizei width, GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object* texObj = _mesa_get_current_tex_object(ctx, target);
+   copy_texture_sub_image_no_error(ctx, 3, texObj, target, level, xoffset,
+                                   yoffset, zoffset, x, y, width, height);
+}
+
+void GLAPIENTRY
+_mesa_CopyTextureSubImage1D_no_error(GLuint texture, GLint level, GLint xoffset,
+                                     GLint x, GLint y, GLsizei width)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object* texObj = _mesa_lookup_texture(ctx, texture);
+   copy_texture_sub_image_no_error(ctx, 1, texObj, texObj->Target, level,
+                                   xoffset, 0, 0, x, y, width, 1);
+}
+
+void GLAPIENTRY
+_mesa_CopyTextureSubImage2D_no_error(GLuint texture, GLint level, GLint xoffset,
+                                     GLint yoffset, GLint x, GLint y,
+                                     GLsizei width, GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object* texObj = _mesa_lookup_texture(ctx, texture);
+   copy_texture_sub_image_no_error(ctx, 2, texObj, texObj->Target, level,
+                                   xoffset, yoffset, 0, x, y, width, height);
+}
+
+void GLAPIENTRY
+_mesa_CopyTextureSubImage3D_no_error(GLuint texture, GLint level, GLint xoffset,
+                                     GLint yoffset, GLint zoffset, GLint x,
+                                     GLint y, GLsizei width, GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object* texObj = _mesa_lookup_texture(ctx, texture);
+   if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
+      /* Act like CopyTexSubImage2D */
+      copy_texture_sub_image_no_error(ctx, 2, texObj,
+                                      GL_TEXTURE_CUBE_MAP_POSITIVE_X + zoffset,
+                                      level, xoffset, yoffset, 0, x, y, width,
+                                      height);
+   }
+   else
+      copy_texture_sub_image_no_error(ctx, 3, texObj, texObj->Target, level,
+                                      xoffset, yoffset, zoffset, x, y, width,
+                                      height);
+}
+
+
 static bool
 check_clear_tex_image(struct gl_context *ctx,
                       const char *function,

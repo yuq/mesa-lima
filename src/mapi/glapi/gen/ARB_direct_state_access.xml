@@ -446,7 +446,7 @@
       <param name="data" type="const GLvoid *" />
    </function>
 
-   <function name="CopyTextureSubImage1D">
+   <function name="CopyTextureSubImage1D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />
@@ -455,7 +455,7 @@
       <param name="width" type="GLsizei" />
    </function>
 
-   <function name="CopyTextureSubImage2D">
+   <function name="CopyTextureSubImage2D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />
@@ -466,7 +466,7 @@
       <param name="height" type="GLsizei" />
    </function>
 
-   <function name="CopyTextureSubImage3D">
+   <function name="CopyTextureSubImage3D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />

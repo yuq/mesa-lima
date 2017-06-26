@@ -3277,7 +3277,7 @@
         <glx rop="4120"/>
     </function>
 
-    <function name="CopyTexSubImage1D">
+    <function name="CopyTexSubImage1D" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
@@ -3287,7 +3287,7 @@
         <glx rop="4121"/>
     </function>
 
-    <function name="CopyTexSubImage2D" es1="1.0" es2="2.0">
+    <function name="CopyTexSubImage2D" es1="1.0" es2="2.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
@@ -4041,7 +4041,7 @@
         <glx rop="4115" large="true"/>
     </function>
 
-    <function name="CopyTexSubImage3D" es2="3.0">
+    <function name="CopyTexSubImage3D" es2="3.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
