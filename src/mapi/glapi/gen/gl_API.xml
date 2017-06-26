@@ -2291,7 +2291,7 @@
         <glx rop="126"/>
     </function>
 
-    <function name="Clear" es1="1.0" es2="2.0">
+    <function name="Clear" es1="1.0" es2="2.0" no_error="true">
         <param name="mask" type="GLbitfield"/>
         <glx rop="127"/>
     </function>

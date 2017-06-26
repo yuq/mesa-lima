@@ -224,6 +224,14 @@ clear(struct gl_context *ctx, GLbitfield mask, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_Clear_no_error(GLbitfield mask)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   clear(ctx, mask, true);
+}
+
+
+void GLAPIENTRY
 _mesa_Clear(GLbitfield mask)
 {
    GET_CURRENT_CONTEXT(ctx);
