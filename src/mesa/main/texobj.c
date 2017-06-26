@@ -1741,6 +1741,14 @@ bind_texture_unit(struct gl_context *ctx, GLuint unit, GLuint texture,
 
 
 void GLAPIENTRY
+_mesa_BindTextureUnit_no_error(GLuint unit, GLuint texture)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_texture_unit(ctx, unit, texture, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BindTextureUnit(GLuint unit, GLuint texture)
 {
    GET_CURRENT_CONTEXT(ctx);

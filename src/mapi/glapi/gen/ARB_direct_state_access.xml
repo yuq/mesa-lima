@@ -518,7 +518,7 @@
       <param name="texture" type="GLuint" />
    </function>
 
-   <function name="BindTextureUnit">
+   <function name="BindTextureUnit" no_error="true">
       <param name="unit" type="GLuint" />
       <param name="texture" type="GLuint" />
    </function>
