@@ -3808,11 +3808,9 @@ copyteximage(struct gl_context *ctx, GLuint dims,
              GLenum target, GLint level, GLenum internalFormat,
              GLint x, GLint y, GLsizei width, GLsizei height, GLint border )
 {
-   struct gl_texture_object *texObj;
    struct gl_texture_image *texImage;
-   const GLuint face = _mesa_tex_target_to_face(target);
+   struct gl_texture_object *texObj;
    mesa_format texFormat;
-   struct gl_renderbuffer *rb;
 
    FLUSH_VERTICES(ctx, 0);
 
@@ -3861,9 +3859,10 @@ copyteximage(struct gl_context *ctx, GLuint dims,
    _mesa_perf_debug(ctx, MESA_DEBUG_SEVERITY_LOW, "glCopyTexImage "
                     "can't avoid reallocating texture storage\n");
 
-   rb = _mesa_get_read_renderbuffer_for_format(ctx, internalFormat);
-
    if (_mesa_is_gles3(ctx)) {
+      struct gl_renderbuffer *rb =
+         _mesa_get_read_renderbuffer_for_format(ctx, internalFormat);
+
       if (_mesa_is_enum_format_unsized(internalFormat)) {
       /* Conversion from GL_RGB10_A2 source buffer format is not allowed in
        * OpenGL ES 3.0. Khronos bug# 9807.
@@ -3923,6 +3922,7 @@ copyteximage(struct gl_context *ctx, GLuint dims,
       }
       else {
          GLint srcX = x, srcY = y, dstX = 0, dstY = 0, dstZ = 0;
+         const GLuint face = _mesa_tex_target_to_face(target);
 
          /* Free old texture image */
          ctx->Driver.FreeTextureImageBuffer(ctx, texImage);
