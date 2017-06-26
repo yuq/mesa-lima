@@ -2576,6 +2576,16 @@ vertex_array_attrib_binding(struct gl_context *ctx,
 
 
 void GLAPIENTRY
+_mesa_VertexAttribBinding_no_error(GLuint attribIndex, GLuint bindingIndex)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   vertex_attrib_binding(ctx, ctx->Array.VAO,
+                         VERT_ATTRIB_GENERIC(attribIndex),
+                         VERT_ATTRIB_GENERIC(bindingIndex));
+}
+
+
+void GLAPIENTRY
 _mesa_VertexAttribBinding(GLuint attribIndex, GLuint bindingIndex)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -2595,6 +2605,19 @@ _mesa_VertexAttribBinding(GLuint attribIndex, GLuint bindingIndex)
    vertex_array_attrib_binding(ctx, ctx->Array.VAO,
                                attribIndex, bindingIndex,
                                "glVertexAttribBinding");
+}
+
+
+void GLAPIENTRY
+_mesa_VertexArrayAttribBinding_no_error(GLuint vaobj, GLuint attribIndex,
+                                        GLuint bindingIndex)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_vertex_array_object *vao = _mesa_lookup_vao(ctx, vaobj);
+   vertex_attrib_binding(ctx, vao,
+                         VERT_ATTRIB_GENERIC(attribIndex),
+                         VERT_ATTRIB_GENERIC(bindingIndex));
 }
 
 

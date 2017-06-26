@@ -641,7 +641,7 @@
       <param name="relativeoffset" type="GLuint" />
    </function>
 
-   <function name="VertexArrayAttribBinding">
+   <function name="VertexArrayAttribBinding" no_error="true">
       <param name="vaobj" type="GLuint" />
       <param name="attribindex" type="GLuint" />
       <param name="bindingindex" type="GLuint" />

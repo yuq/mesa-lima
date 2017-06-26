@@ -425,8 +425,15 @@ _mesa_VertexArrayAttribLFormat(GLuint vaobj, GLuint attribIndex,
                                GLint size, GLenum type,
                                GLuint relativeOffset);
 
+void GLAPIENTRY
+_mesa_VertexAttribBinding_no_error(GLuint attribIndex, GLuint bindingIndex);
+
 extern void GLAPIENTRY
 _mesa_VertexAttribBinding(GLuint attribIndex, GLuint bindingIndex);
+
+void GLAPIENTRY
+_mesa_VertexArrayAttribBinding_no_error(GLuint vaobj, GLuint attribIndex,
+                                        GLuint bindingIndex);
 
 extern void GLAPIENTRY
 _mesa_VertexArrayAttribBinding(GLuint vaobj, GLuint attribIndex,
