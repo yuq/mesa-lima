@@ -269,6 +269,22 @@ _mesa_TexImage3DEXT( GLenum target, GLint level, GLenum internalformat,
                      const GLvoid *pixels );
 
 extern void GLAPIENTRY
+_mesa_TexImage1D_no_error(GLenum target, GLint level, GLint internalformat,
+                          GLsizei width, GLint border,
+                          GLenum format, GLenum type, const GLvoid *pixels);
+
+extern void GLAPIENTRY
+_mesa_TexImage2D_no_error(GLenum target, GLint level, GLint internalformat,
+                          GLsizei width, GLsizei height, GLint border,
+                          GLenum format, GLenum type, const GLvoid *pixels);
+
+extern void GLAPIENTRY
+_mesa_TexImage3D_no_error(GLenum target, GLint level, GLint internalformat,
+                          GLsizei width, GLsizei height, GLsizei depth,
+                          GLint border, GLenum format, GLenum type,
+                          const GLvoid *pixels);
+
+extern void GLAPIENTRY
 _mesa_EGLImageTargetTexture2DOES( GLenum target, GLeglImageOES image );
 
 void GLAPIENTRY
@@ -403,6 +419,24 @@ _mesa_CompressedTexImage3D(GLenum target, GLint level,
                               GLenum internalformat, GLsizei width,
                               GLsizei height, GLsizei depth, GLint border,
                               GLsizei imageSize, const GLvoid *data);
+
+extern void GLAPIENTRY
+_mesa_CompressedTexImage1D_no_error(GLenum target, GLint level,
+                                    GLenum internalformat, GLsizei width,
+                                    GLint border, GLsizei imageSize,
+                                    const GLvoid *data);
+
+extern void GLAPIENTRY
+_mesa_CompressedTexImage2D_no_error(GLenum target, GLint level,
+                                    GLenum internalformat, GLsizei width,
+                                    GLsizei height, GLint border,
+                                    GLsizei imageSize, const GLvoid *data);
+
+extern void GLAPIENTRY
+_mesa_CompressedTexImage3D_no_error(GLenum target, GLint level,
+                                    GLenum internalformat, GLsizei width,
+                                    GLsizei height, GLsizei depth, GLint border,
+                                    GLsizei imageSize, const GLvoid *data);
 
 
 extern void GLAPIENTRY

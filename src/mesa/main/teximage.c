@@ -3090,6 +3090,18 @@ teximage_err(struct gl_context *ctx, GLboolean compressed, GLuint dims,
 }
 
 
+static void
+teximage_no_error(struct gl_context *ctx, GLboolean compressed, GLuint dims,
+                  GLenum target, GLint level, GLint internalFormat,
+                  GLsizei width, GLsizei height, GLsizei depth,
+                  GLint border, GLenum format, GLenum type,
+                  GLsizei imageSize, const GLvoid *pixels)
+{
+   teximage(ctx, compressed, dims, target, level, internalFormat, width, height,
+            depth, border, format, type, imageSize, pixels, true);
+}
+
+
 /*
  * Called from the API.  Note that width includes the border.
  */
@@ -3140,6 +3152,40 @@ _mesa_TexImage3DEXT( GLenum target, GLint level, GLenum internalFormat,
 {
    _mesa_TexImage3D(target, level, (GLint) internalFormat, width, height,
                     depth, border, format, type, pixels);
+}
+
+
+void GLAPIENTRY
+_mesa_TexImage1D_no_error(GLenum target, GLint level, GLint internalFormat,
+                          GLsizei width, GLint border, GLenum format,
+                          GLenum type, const GLvoid *pixels)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   teximage_no_error(ctx, GL_FALSE, 1, target, level, internalFormat, width, 1,
+                     1, border, format, type, 0, pixels);
+}
+
+
+void GLAPIENTRY
+_mesa_TexImage2D_no_error(GLenum target, GLint level, GLint internalFormat,
+                          GLsizei width, GLsizei height, GLint border,
+                          GLenum format, GLenum type, const GLvoid *pixels)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   teximage_no_error(ctx, GL_FALSE, 2, target, level, internalFormat, width,
+                     height, 1, border, format, type, 0, pixels);
+}
+
+
+void GLAPIENTRY
+_mesa_TexImage3D_no_error(GLenum target, GLint level, GLint internalFormat,
+                          GLsizei width, GLsizei height, GLsizei depth,
+                          GLint border, GLenum format, GLenum type,
+                          const GLvoid *pixels )
+{
+   GET_CURRENT_CONTEXT(ctx);
+   teximage_no_error(ctx, GL_FALSE, 3, target, level, internalFormat,
+                     width, height, depth, border, format, type, 0, pixels);
 }
 
 
@@ -4568,6 +4614,42 @@ _mesa_CompressedTexImage3D(GLenum target, GLint level,
    GET_CURRENT_CONTEXT(ctx);
    teximage_err(ctx, GL_TRUE, 3, target, level, internalFormat, width, height,
                 depth, border, GL_NONE, GL_NONE, imageSize, data);
+}
+
+
+void GLAPIENTRY
+_mesa_CompressedTexImage1D_no_error(GLenum target, GLint level,
+                                    GLenum internalFormat, GLsizei width,
+                                    GLint border, GLsizei imageSize,
+                                    const GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   teximage_no_error(ctx, GL_TRUE, 1, target, level, internalFormat, width, 1,
+                     1, border, GL_NONE, GL_NONE, imageSize, data);
+}
+
+
+void GLAPIENTRY
+_mesa_CompressedTexImage2D_no_error(GLenum target, GLint level,
+                                    GLenum internalFormat, GLsizei width,
+                                    GLsizei height, GLint border,
+                                    GLsizei imageSize, const GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   teximage_no_error(ctx, GL_TRUE, 2, target, level, internalFormat, width,
+                     height, 1, border, GL_NONE, GL_NONE, imageSize, data);
+}
+
+
+void GLAPIENTRY
+_mesa_CompressedTexImage3D_no_error(GLenum target, GLint level,
+                                    GLenum internalFormat, GLsizei width,
+                                    GLsizei height, GLsizei depth, GLint border,
+                                    GLsizei imageSize, const GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   teximage_no_error(ctx, GL_TRUE, 3, target, level, internalFormat, width,
+                     height, depth, border, GL_NONE, GL_NONE, imageSize, data);
 }
 
 

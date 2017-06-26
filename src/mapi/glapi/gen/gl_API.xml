@@ -2149,7 +2149,7 @@
         <glx rop="108"/>
     </function>
 
-    <function name="TexImage1D">
+    <function name="TexImage1D" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLint"/>
@@ -2161,7 +2161,7 @@
         <glx rop="109" large="true"/>
     </function>
 
-    <function name="TexImage2D" es1="1.0" es2="2.0">
+    <function name="TexImage2D" es1="1.0" es2="2.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLint"/>
@@ -4011,7 +4011,7 @@
         <glx rop="4113"/>
     </function>
 
-    <function name="TexImage3D" es2="3.0">
+    <function name="TexImage3D" es2="3.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLint"/>
@@ -4507,7 +4507,8 @@
         <glx rop="229"/>
     </function>
 
-    <function name="CompressedTexImage3D" es2="3.0" marshal="sync">
+    <function name="CompressedTexImage3D" es2="3.0" marshal="sync"
+              no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>
@@ -4520,7 +4521,8 @@
         <glx rop="216" handcode="client"/>
     </function>
 
-    <function name="CompressedTexImage2D" es1="1.0" es2="2.0" marshal="sync">
+    <function name="CompressedTexImage2D" es1="1.0" es2="2.0" marshal="sync"
+               no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>
@@ -4532,7 +4534,7 @@
         <glx rop="215" handcode="client"/>
     </function>
 
-    <function name="CompressedTexImage1D" marshal="sync">
+    <function name="CompressedTexImage1D" marshal="sync" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>
