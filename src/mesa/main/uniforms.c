@@ -1101,6 +1101,16 @@ uniform_block_binding(struct gl_context *ctx, struct gl_shader_program *shProg,
 }
 
 void GLAPIENTRY
+_mesa_UniformBlockBinding_no_error(GLuint program, GLuint uniformBlockIndex,
+                                   GLuint uniformBlockBinding)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *shProg = _mesa_lookup_shader_program(ctx, program);
+   uniform_block_binding(ctx, shProg, uniformBlockIndex, uniformBlockBinding);
+}
+
+void GLAPIENTRY
 _mesa_UniformBlockBinding(GLuint program,
 			  GLuint uniformBlockIndex,
 			  GLuint uniformBlockBinding)
