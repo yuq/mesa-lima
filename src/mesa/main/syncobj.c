@@ -305,24 +305,11 @@ _mesa_FenceSync(GLenum condition, GLbitfield flags)
 }
 
 
-GLenum GLAPIENTRY
-_mesa_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
+static GLenum
+client_wait_sync(struct gl_context *ctx, struct gl_sync_object *syncObj,
+                 GLbitfield flags, GLuint64 timeout)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_sync_object *syncObj;
    GLenum ret;
-   ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, GL_WAIT_FAILED);
-
-   if ((flags & ~GL_SYNC_FLUSH_COMMANDS_BIT) != 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glClientWaitSync(flags=0x%x)", flags);
-      return GL_WAIT_FAILED;
-   }
-
-   syncObj = _mesa_get_and_ref_sync(ctx, sync, true);
-   if (!syncObj) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glClientWaitSync (not a valid sync object)");
-      return GL_WAIT_FAILED;
-   }
 
    /* From the GL_ARB_sync spec:
     *
@@ -346,6 +333,29 @@ _mesa_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
 
    _mesa_unref_sync_object(ctx, syncObj, 1);
    return ret;
+}
+
+
+GLenum GLAPIENTRY
+_mesa_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_sync_object *syncObj;
+
+   ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, GL_WAIT_FAILED);
+
+   if ((flags & ~GL_SYNC_FLUSH_COMMANDS_BIT) != 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glClientWaitSync(flags=0x%x)", flags);
+      return GL_WAIT_FAILED;
+   }
+
+   syncObj = _mesa_get_and_ref_sync(ctx, sync, true);
+   if (!syncObj) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glClientWaitSync (not a valid sync object)");
+      return GL_WAIT_FAILED;
+   }
+
+   return client_wait_sync(ctx, syncObj, flags, timeout);
 }
 
 
