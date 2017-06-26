@@ -87,7 +87,6 @@ def main(args=sys.argv[1:]):
 
         for fileNum in range(numFiles):
             filename = baseCppName % str(fileNum)
-            #print('Generating', filename)
             MakoTemplateWriter.to_file(
                 templateCpp,
                 baseCppName % str(fileNum),
@@ -99,7 +98,7 @@ def main(args=sys.argv[1:]):
     if args.cmake:
         templateCmake = os.path.join(thisDir, 'templates', 'gen_backend.cmake')
         cmakeFile = os.path.join(args.outdir, backend.cmakeFileName)
-        #print('Generating', cmakeFile)
+
         MakoTemplateWriter.to_file(
             templateCmake,
             cmakeFile,
@@ -107,8 +106,6 @@ def main(args=sys.argv[1:]):
             srcVar=backend.cmakeSrcVar,
             numFiles=numFiles,
             baseCppName='${RASTY_GEN_SRC_DIR}/backends/' + os.path.basename(baseCppName))
-
-    #print("Generated %d template instantiations in %d files" % (len(output_list), numFiles))
 
     return 0
 
