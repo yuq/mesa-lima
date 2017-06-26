@@ -46,6 +46,7 @@
 #include "compiler/brw_compiler.h"
 #include "util/macros.h"
 #include "util/list.h"
+#include "util/u_atomic.h"
 #include "util/u_vector.h"
 #include "vk_alloc.h"
 
@@ -1862,14 +1863,14 @@ static inline void
 anv_shader_bin_ref(struct anv_shader_bin *shader)
 {
    assert(shader && shader->ref_cnt >= 1);
-   __sync_fetch_and_add(&shader->ref_cnt, 1);
+   p_atomic_inc(&shader->ref_cnt);
 }
 
 static inline void
 anv_shader_bin_unref(struct anv_device *device, struct anv_shader_bin *shader)
 {
    assert(shader && shader->ref_cnt >= 1);
-   if (__sync_fetch_and_add(&shader->ref_cnt, -1) == 1)
+   if (p_atomic_dec_zero(&shader->ref_cnt))
       anv_shader_bin_destroy(device, shader);
 }
 
