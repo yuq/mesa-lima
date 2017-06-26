@@ -258,24 +258,10 @@ _mesa_DeleteSync(GLsync sync)
 }
 
 
-GLsync GLAPIENTRY
-_mesa_FenceSync(GLenum condition, GLbitfield flags)
+static GLsync
+fence_sync(struct gl_context *ctx, GLenum condition, GLbitfield flags)
 {
-   GET_CURRENT_CONTEXT(ctx);
    struct gl_sync_object *syncObj;
-   ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, 0);
-
-   if (condition != GL_SYNC_GPU_COMMANDS_COMPLETE) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glFenceSync(condition=0x%x)",
-		  condition);
-      return 0;
-   }
-
-   if (flags != 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glFenceSync(flags=0x%x)",
-		  condition);
-      return 0;
-   }
 
    syncObj = ctx->Driver.NewSyncObject(ctx, GL_SYNC_FENCE);
    if (syncObj != NULL) {
@@ -298,10 +284,32 @@ _mesa_FenceSync(GLenum condition, GLbitfield flags)
       _mesa_set_add(ctx->Shared->SyncObjects, syncObj);
       mtx_unlock(&ctx->Shared->Mutex);
 
-      return (GLsync) syncObj;
+      return (GLsync)syncObj;
    }
 
    return NULL;
+}
+
+
+GLsync GLAPIENTRY
+_mesa_FenceSync(GLenum condition, GLbitfield flags)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, 0);
+
+   if (condition != GL_SYNC_GPU_COMMANDS_COMPLETE) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glFenceSync(condition=0x%x)",
+		  condition);
+      return 0;
+   }
+
+   if (flags != 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glFenceSync(flags=0x%x)",
+		  condition);
+      return 0;
+   }
+
+   return fence_sync(ctx, condition, flags);
 }
 
 
