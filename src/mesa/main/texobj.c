@@ -1700,20 +1700,11 @@ _mesa_BindTexture( GLenum target, GLuint texName )
  * If the named texture is not 0 or a recognized texture name, this throws
  * GL_INVALID_OPERATION.
  */
-void GLAPIENTRY
-_mesa_BindTextureUnit(GLuint unit, GLuint texture)
+static ALWAYS_INLINE void
+bind_texture_unit(struct gl_context *ctx, GLuint unit, GLuint texture,
+                  bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
    struct gl_texture_object *texObj;
-
-   if (unit >= _mesa_max_tex_unit(ctx)) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBindTextureUnit(unit=%u)", unit);
-      return;
-   }
-
-   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "glBindTextureUnit %s %d\n",
-                  _mesa_enum_to_string(GL_TEXTURE0+unit), (GLint) texture);
 
    /* Section 8.1 (Texture Objects) of the OpenGL 4.5 core profile spec
     * (20141030) says:
@@ -1728,21 +1719,42 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
 
    /* Get the non-default texture object */
    texObj = _mesa_lookup_texture(ctx, texture);
+   if (!no_error) {
+      /* Error checking */
+      if (!texObj) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBindTextureUnit(non-gen name)");
+         return;
+      }
 
-   /* Error checking */
-   if (!texObj) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindTextureUnit(non-gen name)");
-      return;
+      if (texObj->Target == 0) {
+         /* Texture object was gen'd but never bound so the target is not set */
+         _mesa_error(ctx, GL_INVALID_OPERATION, "glBindTextureUnit(target)");
+         return;
+      }
    }
-   if (texObj->Target == 0) {
-      /* Texture object was gen'd but never bound so the target is not set */
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBindTextureUnit(target)");
-      return;
-   }
+
    assert(valid_texture_object(texObj));
 
    bind_texture(ctx, unit, texObj);
+}
+
+
+void GLAPIENTRY
+_mesa_BindTextureUnit(GLuint unit, GLuint texture)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (unit >= _mesa_max_tex_unit(ctx)) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindTextureUnit(unit=%u)", unit);
+      return;
+   }
+
+   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
+      _mesa_debug(ctx, "glBindTextureUnit %s %d\n",
+                  _mesa_enum_to_string(GL_TEXTURE0+unit), (GLint) texture);
+
+   bind_texture_unit(ctx, unit, texture, false);
 }
 
 
