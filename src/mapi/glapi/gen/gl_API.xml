@@ -3254,7 +3254,7 @@
         <glx rop="192"/>
     </function>
 
-    <function name="CopyTexImage1D">
+    <function name="CopyTexImage1D" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>
@@ -3265,7 +3265,7 @@
         <glx rop="4119"/>
     </function>
 
-    <function name="CopyTexImage2D" es1="1.0" es2="2.0">
+    <function name="CopyTexImage2D" es1="1.0" es2="2.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>

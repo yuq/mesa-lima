@@ -352,6 +352,17 @@ _mesa_CopyTexImage2D( GLenum target, GLint level,
 
 
 extern void GLAPIENTRY
+_mesa_CopyTexImage1D_no_error(GLenum target, GLint level, GLenum internalformat,
+                              GLint x, GLint y, GLsizei width, GLint border);
+
+
+extern void GLAPIENTRY
+_mesa_CopyTexImage2D_no_error(GLenum target, GLint level, GLenum internalformat,
+                              GLint x, GLint y, GLsizei width, GLsizei height,
+                              GLint border );
+
+
+extern void GLAPIENTRY
 _mesa_CopyTexSubImage1D( GLenum target, GLint level, GLint xoffset,
                          GLint x, GLint y, GLsizei width );
 
