@@ -2849,6 +2849,16 @@ _mesa_check_framebuffer_status(struct gl_context *ctx,
 
 
 GLenum GLAPIENTRY
+_mesa_CheckFramebufferStatus_no_error(GLenum target)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_framebuffer *fb = get_framebuffer_target(ctx, target);
+   return _mesa_check_framebuffer_status(ctx, fb);
+}
+
+
+GLenum GLAPIENTRY
 _mesa_CheckFramebufferStatus(GLenum target)
 {
    struct gl_framebuffer *fb;

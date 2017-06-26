@@ -215,6 +215,9 @@ _mesa_GenFramebuffers(GLsizei n, GLuint *framebuffers);
 extern void GLAPIENTRY
 _mesa_CreateFramebuffers(GLsizei n, GLuint *framebuffers);
 
+GLenum GLAPIENTRY
+_mesa_CheckFramebufferStatus_no_error(GLenum target);
+
 extern GLenum GLAPIENTRY
 _mesa_CheckFramebufferStatus(GLenum target);
 

@@ -212,7 +212,7 @@
 	<glx vendorpriv="1426" always_array="true"/>
     </function>
 
-    <function name="CheckFramebufferStatus" es2="2.0">
+    <function name="CheckFramebufferStatus" es2="2.0" no_error="true">
         <param name="target" type="GLenum"/>
 	<return type="GLenum"/>
 	<glx vendorpriv="1427"/>
