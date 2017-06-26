@@ -323,16 +323,10 @@ attach_shader_no_error(struct gl_context *ctx, GLuint program, GLuint shader)
 }
 
 static GLuint
-create_shader(struct gl_context *ctx, GLenum type, const char *caller)
+create_shader(struct gl_context *ctx, GLenum type)
 {
    struct gl_shader *sh;
    GLuint name;
-
-   if (!_mesa_validate_shader_target(ctx, type)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s(%s)",
-                  caller, _mesa_enum_to_string(type));
-      return 0;
-   }
 
    _mesa_HashLockMutex(ctx->Shared->ShaderObjects);
    name = _mesa_HashFindFreeKeyBlock(ctx->Shared->ShaderObjects, 1);
@@ -342,6 +336,19 @@ create_shader(struct gl_context *ctx, GLenum type, const char *caller)
    _mesa_HashUnlockMutex(ctx->Shared->ShaderObjects);
 
    return name;
+}
+
+
+static GLuint
+create_shader_err(struct gl_context *ctx, GLenum type, const char *caller)
+{
+   if (!_mesa_validate_shader_target(ctx, type)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(%s)",
+                  caller, _mesa_enum_to_string(type));
+      return 0;
+   }
+
+   return create_shader(ctx, type);
 }
 
 
@@ -1392,9 +1399,11 @@ GLuint GLAPIENTRY
 _mesa_CreateShader(GLenum type)
 {
    GET_CURRENT_CONTEXT(ctx);
+
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glCreateShader %s\n", _mesa_enum_to_string(type));
-   return create_shader(ctx, type, "glCreateShader");
+
+   return create_shader_err(ctx, type, "glCreateShader");
 }
 
 
@@ -1402,7 +1411,7 @@ GLhandleARB GLAPIENTRY
 _mesa_CreateShaderObjectARB(GLenum type)
 {
    GET_CURRENT_CONTEXT(ctx);
-   return create_shader(ctx, type, "glCreateShaderObjectARB");
+   return create_shader_err(ctx, type, "glCreateShaderObjectARB");
 }
 
 
@@ -2268,7 +2277,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   const GLuint shader = create_shader(ctx, type, "glCreateShaderProgramv");
+   const GLuint shader = create_shader_err(ctx, type, "glCreateShaderProgramv");
    GLuint program = 0;
 
    /*
