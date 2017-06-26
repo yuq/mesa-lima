@@ -158,7 +158,7 @@
 	<glx rop="4317"/>
     </function>
 
-    <function name="GenRenderbuffers" es2="2.0">
+    <function name="GenRenderbuffers" es2="2.0" no_error="true">
         <param name="n" type="GLsizei" counter="true"/>
         <param name="renderbuffers" type="GLuint *" count="n" output="true"/>
 	<glx vendorpriv="1423" always_array="true"/>

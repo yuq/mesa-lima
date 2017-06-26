@@ -1745,10 +1745,26 @@ create_render_buffers_err(struct gl_context *ctx, GLsizei n,
 
 
 void GLAPIENTRY
+_mesa_GenRenderbuffers_no_error(GLsizei n, GLuint *renderbuffers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_render_buffers(ctx, n, renderbuffers, false);
+}
+
+
+void GLAPIENTRY
 _mesa_GenRenderbuffers(GLsizei n, GLuint *renderbuffers)
 {
    GET_CURRENT_CONTEXT(ctx);
    create_render_buffers_err(ctx, n, renderbuffers, false);
+}
+
+
+void GLAPIENTRY
+_mesa_CreateRenderbuffers_no_error(GLsizei n, GLuint *renderbuffers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_render_buffers(ctx, n, renderbuffers, true);
 }
 
 

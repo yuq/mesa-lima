@@ -283,7 +283,7 @@
 
    <!-- Renderbuffer object functions -->
 
-   <function name="CreateRenderbuffers">
+   <function name="CreateRenderbuffers" no_error="true">
       <param name="n" type="GLsizei" />
       <param name="renderbuffers" type="GLuint *" />
    </function>
