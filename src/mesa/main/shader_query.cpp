@@ -62,30 +62,26 @@ DECL_RESOURCE_FUNC(XFV, gl_transform_feedback_varying_info);
 DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_buffer);
 DECL_RESOURCE_FUNC(SUB, gl_subroutine_function);
 
-void GLAPIENTRY
-_mesa_BindAttribLocation(GLuint program, GLuint index,
-                         const GLchar *name)
+static void
+bind_attrib_location(struct gl_context *ctx,
+                     struct gl_shader_program *const shProg, GLuint index,
+                     const GLchar *name, bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
-
-   struct gl_shader_program *const shProg =
-      _mesa_lookup_shader_program_err(ctx, program, "glBindAttribLocation");
-   if (!shProg)
-      return;
-
    if (!name)
       return;
 
-   if (strncmp(name, "gl_", 3) == 0) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindAttribLocation(illegal name)");
-      return;
-   }
+   if (!no_error) {
+      if (strncmp(name, "gl_", 3) == 0) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBindAttribLocation(illegal name)");
+         return;
+      }
 
-   if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBindAttribLocation(%u >= %u)",
-                  index, ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs);
-      return;
+      if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
+         _mesa_error(ctx, GL_INVALID_VALUE, "glBindAttribLocation(%u >= %u)",
+                     index, ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs);
+         return;
+      }
    }
 
    /* Replace the current value if it's already in the list.  Add
@@ -98,6 +94,20 @@ _mesa_BindAttribLocation(GLuint program, GLuint index,
     * Note that this attribute binding won't go into effect until
     * glLinkProgram is called again.
     */
+}
+
+void GLAPIENTRY
+_mesa_BindAttribLocation(GLuint program, GLuint index,
+                         const GLchar *name)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *const shProg =
+      _mesa_lookup_shader_program_err(ctx, program, "glBindAttribLocation");
+   if (!shProg)
+      return;
+
+   bind_attrib_location(ctx, shProg, index, name, false);
 }
 
 void GLAPIENTRY
