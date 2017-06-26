@@ -2504,6 +2504,8 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
                             GLint xoffset, GLint yoffset, GLint zoffset,
                             GLint width, GLint height, const char *caller)
 {
+   assert(texObj);
+
    struct gl_texture_image *texImage;
 
    /* Check that the source buffer is complete */
@@ -2527,12 +2529,6 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    /* Check level */
    if (level < 0 || level >= _mesa_max_texture_levels(ctx, target)) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(level=%d)", caller, level);
-      return GL_TRUE;
-   }
-
-   /* Get dest image pointers */
-   if (!texObj) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s()", caller);
       return GL_TRUE;
    }
 
