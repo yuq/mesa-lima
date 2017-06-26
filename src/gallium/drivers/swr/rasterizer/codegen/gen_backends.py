@@ -40,7 +40,8 @@ def main(args=sys.argv[1:]):
     parser.add_argument('--hpp', help='Generate hpp file', action='store_true', default=False)
     parser.add_argument('--cmake', help='Generate cmake file', action='store_true', default=False)
 
-    args = parser.parse_args(args);
+    args = parser.parse_args(args)
+
 
     class backendStrs :
         def __init__(self) :
