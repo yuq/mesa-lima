@@ -668,8 +668,6 @@ struct PA_STATE_CUT : public PA_STATE
         }
     }
 
-// disabling buffer overrun warning for this function for what appears to be a bug in MSVC 2017
-PRAGMA_WARNING_PUSH_DISABLE(4789)
     bool Assemble(uint32_t slot, simdvector *verts)
     {
         // process any outstanding verts
@@ -717,7 +715,6 @@ PRAGMA_WARNING_PUSH_DISABLE(4789)
 
         return true;
     }
-PRAGMA_WARNING_POP()
 
 #if ENABLE_AVX512_SIMD16
     bool Assemble_simd16(uint32_t slot, simd16vector verts[])
