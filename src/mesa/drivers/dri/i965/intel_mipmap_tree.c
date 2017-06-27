@@ -1024,8 +1024,6 @@ miptree_create_for_planar_image(struct brw_context *brw,
          return NULL;
 
       mt->target = target;
-      mt->total_width = width;
-      mt->total_height = height;
 
       if (i == 0)
          planar_mt = mt;
@@ -1109,8 +1107,6 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    mt->level[0].level_y = image->tile_y;
    mt->level[0].slice[0].x_offset = image->tile_x;
    mt->level[0].slice[0].y_offset = image->tile_y;
-   mt->total_width += image->tile_x;
-   mt->total_height += image->tile_y;
 
    /* From "OES_EGL_image" error reporting. We report GL_INVALID_OPERATION
     * for EGL images from non-tile aligned sufaces in gen4 hw and earlier which has

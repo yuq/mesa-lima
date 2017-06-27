@@ -268,8 +268,6 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
    if (mt == NULL)
        return;
    mt->target = target;
-   mt->total_width = rb->Base.Base.Width;
-   mt->total_height = rb->Base.Base.Height;
 
    _mesa_lock_texture(&brw->ctx, texObj);
    texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
