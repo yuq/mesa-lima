@@ -253,6 +253,7 @@ svga_context_create(struct pipe_screen *screen, void *priv, unsigned flags)
    memset(svga->state.hw_draw.sampler_views, 0,
           sizeof(svga->state.hw_draw.sampler_views));
    svga->state.hw_draw.num_views = 0;
+   svga->state.hw_draw.num_backed_views = 0;
    svga->state.hw_draw.rasterizer_discard = FALSE;
 
    /* Initialize the shader pointers */

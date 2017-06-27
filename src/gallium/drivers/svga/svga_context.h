@@ -348,9 +348,12 @@ struct svga_hw_draw_state
    unsigned rs[SVGA3D_RS_MAX];
    /** VGPU9 texture sampler and bindings state */
    unsigned ts[SVGA3D_PIXEL_SAMPLERREG_MAX][SVGA3D_TS_MAX];
+
    /** VGPU9 texture views */
    unsigned num_views;
+   unsigned num_backed_views; /* views with backing copy of texture */
    struct svga_hw_view_state views[PIPE_MAX_SAMPLERS];
+
    /** VGPU9 constant buffer values */
    float cb[PIPE_SHADER_TYPES][SVGA3D_CONSTREG_MAX][4];
 
