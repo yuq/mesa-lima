@@ -720,7 +720,10 @@ static void si_emit_dispatch_packets(struct si_context *sctx,
 
 	unsigned dispatch_initiator =
 		S_00B800_COMPUTE_SHADER_EN(1) |
-		S_00B800_FORCE_START_AT_000(1);
+		S_00B800_FORCE_START_AT_000(1) |
+		/* If the KMD allows it (there is a KMD hw register for it),
+		 * allow launching waves out-of-order. (same as Vulkan) */
+		S_00B800_ORDER_MODE(sctx->b.chip_class >= CIK);
 
 	if (info->indirect) {
 		uint64_t base_va = r600_resource(info->indirect)->gpu_address;
