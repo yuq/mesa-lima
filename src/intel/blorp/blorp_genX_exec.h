@@ -1391,7 +1391,7 @@ blorp_emit_surface_states(struct blorp_batch *batch,
       }
    }
 
-#if GEN_GEN >= 7 && GEN_GEN <= 10
+#if GEN_GEN >= 7
    if (has_indirect_clear_color) {
       /* Updating a surface state object may require that the state cache be
        * invalidated. From the SKL PRM, Shared Functions -> State -> State
