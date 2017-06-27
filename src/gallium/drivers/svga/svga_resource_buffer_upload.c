@@ -234,7 +234,7 @@ svga_buffer_recreate_host_surface(struct svga_context *svga,
    assert(old_handle);
 
    sbuf->handle = NULL;
- 
+
    /* Create a new resource with the requested bind_flags */
    ret = svga_buffer_create_host_surface(svga_screen(svga->pipe.screen),
                                          sbuf, bind_flags);
@@ -382,7 +382,7 @@ svga_buffer_validate_host_surface(struct svga_context *svga,
     * surface with compatible bind flags that can be promoted.
     */
    bufsurf = svga_buffer_get_host_surface(sbuf, tobind_flags);
-   
+
    if (bufsurf) {
       if ((bufsurf->bind_flags & tobind_flags) == tobind_flags) {
          /* there is a surface with the requested bind flags */
@@ -397,7 +397,7 @@ svga_buffer_validate_host_surface(struct svga_context *svga,
          /* Destroy the old surface */
          svga_screen_surface_destroy(svga_screen(sbuf->b.b.screen),
                                      &bufsurf->key, &bufsurf->handle);
-         
+
          LIST_DEL(&bufsurf->list);
          FREE(bufsurf);
       }
@@ -435,7 +435,7 @@ svga_buffer_destroy_host_surface(struct svga_screen *ss,
  */
 static enum pipe_error
 svga_buffer_upload_gb_command(struct svga_context *svga,
-			      struct svga_buffer *sbuf)
+                              struct svga_buffer *sbuf)
 {
    struct svga_winsys_context *swc = svga->swc;
    SVGA3dCmdUpdateGBImage *update_cmd;
@@ -463,11 +463,12 @@ svga_buffer_upload_gb_command(struct svga_context *svga,
                                           SVGA_3D_CMD_INVALIDATE_GB_IMAGE,
                                           total_commands_size, 1 + numBoxes);
       if (!invalidate_cmd)
-	 return PIPE_ERROR_OUT_OF_MEMORY;
+         return PIPE_ERROR_OUT_OF_MEMORY;
 
       cicmd = container_of(invalidate_cmd, cicmd, body);
       cicmd->header.size = sizeof(*invalidate_cmd);
-      swc->surface_relocation(swc, &invalidate_cmd->image.sid, NULL, sbuf->handle,
+      swc->surface_relocation(swc, &invalidate_cmd->image.sid, NULL,
+                              sbuf->handle,
                               (SVGA_RELOC_WRITE |
                                SVGA_RELOC_INTERNAL |
                                SVGA_RELOC_DMA));
@@ -491,7 +492,7 @@ svga_buffer_upload_gb_command(struct svga_context *svga,
                                       SVGA_3D_CMD_UPDATE_GB_IMAGE,
                                       total_commands_size, numBoxes);
       if (!update_cmd)
-	 return PIPE_ERROR_OUT_OF_MEMORY;
+         return PIPE_ERROR_OUT_OF_MEMORY;
 
       /* The whole_update_command is a SVGA3dCmdHeader plus the
        * SVGA3dCmdUpdateGBImage command.
@@ -502,7 +503,7 @@ svga_buffer_upload_gb_command(struct svga_context *svga,
    /* Init the first UPDATE_GB_IMAGE command */
    whole_update_cmd->header.size = sizeof(*update_cmd);
    swc->surface_relocation(swc, &update_cmd->image.sid, NULL, sbuf->handle,
-			   SVGA_RELOC_WRITE | SVGA_RELOC_INTERNAL);
+                           SVGA_RELOC_WRITE | SVGA_RELOC_INTERNAL);
    update_cmd->image.face = 0;
    update_cmd->image.mipmap = 0;
 
@@ -635,8 +636,7 @@ svga_buffer_upload_command(struct svga_context *svga, struct svga_buffer *sbuf)
  * with the final ranges.
  */
 void
-svga_buffer_upload_flush(struct svga_context *svga,
-			 struct svga_buffer *sbuf)
+svga_buffer_upload_flush(struct svga_context *svga, struct svga_buffer *sbuf)
 {
    unsigned i;
    struct pipe_resource *dummy;
@@ -855,7 +855,7 @@ svga_buffer_update_hw(struct svga_context *svga, struct svga_buffer *sbuf,
       assert(map);
       assert(!retry);
       if (!map) {
-	 mtx_unlock(&ss->swc_mutex);
+         mtx_unlock(&ss->swc_mutex);
          svga_buffer_destroy_hw_storage(ss, sbuf);
          return PIPE_ERROR;
       }
@@ -1005,12 +1005,12 @@ svga_buffer_handle(struct svga_context *svga, struct pipe_resource *buf,
    } else {
       /* This call will set sbuf->handle */
       if (svga_have_gb_objects(svga)) {
-	 ret = svga_buffer_update_hw(svga, sbuf, sbuf->bind_flags);
+         ret = svga_buffer_update_hw(svga, sbuf, sbuf->bind_flags);
       } else {
-	 ret = svga_buffer_create_host_surface(ss, sbuf, sbuf->bind_flags);
+         ret = svga_buffer_create_host_surface(ss, sbuf, sbuf->bind_flags);
       }
       if (ret != PIPE_OK)
-	 return NULL;
+         return NULL;
    }
 
    assert(sbuf->handle);
@@ -1064,7 +1064,6 @@ svga_buffer_handle(struct svga_context *svga, struct pipe_resource *buf,
 
    return sbuf->handle;
 }
-
 
 
 void
