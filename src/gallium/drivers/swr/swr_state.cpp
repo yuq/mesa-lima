@@ -1212,12 +1212,13 @@ swr_update_derived(struct pipe_context *pipe,
       SwrSetViewports(ctx->swrContext, 1, vp, vpm);
    }
 
-   /* Set vertex & index buffers */
-   /* (using draw info if called by swr_draw_vbo) */
-   /* TODO: This is always true, because the index buffer comes from
+   /* Set vertex & index buffers
+    * (using draw info if called by swr_draw_vbo)
+    * If indexed draw, revalidate since index buffer comes from
     * pipe_draw_info.
     */
-   if (1 || ctx->dirty & SWR_NEW_VERTEX) {
+   if (ctx->dirty & SWR_NEW_VERTEX ||
+      (p_draw_info && p_draw_info->index_size)) {
       uint32_t scratch_total;
       uint8_t *scratch = NULL;
 
