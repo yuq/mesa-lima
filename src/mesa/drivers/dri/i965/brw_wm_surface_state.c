@@ -1633,73 +1633,6 @@ update_buffer_image_param(struct brw_context *brw,
 }
 
 static void
-update_texture_image_param(struct brw_context *brw,
-                           struct gl_image_unit *u,
-                           unsigned surface_idx,
-                           struct brw_image_param *param)
-{
-   struct intel_mipmap_tree *mt = intel_texture_object(u->TexObj)->mt;
-
-   update_default_image_param(brw, u, surface_idx, param);
-
-   param->size[0] = minify(mt->logical_width0, u->Level);
-   param->size[1] = minify(mt->logical_height0, u->Level);
-   param->size[2] = (!u->Layered ? 1 :
-                     u->TexObj->Target == GL_TEXTURE_CUBE_MAP ? 6 :
-                     u->TexObj->Target == GL_TEXTURE_3D ?
-                     minify(mt->logical_depth0, u->Level) :
-                     mt->logical_depth0);
-
-   intel_miptree_get_image_offset(mt, u->Level, u->_Layer,
-                                  &param->offset[0],
-                                  &param->offset[1]);
-
-   param->stride[0] = mt->cpp;
-   param->stride[1] = mt->pitch / mt->cpp;
-   param->stride[2] =
-      brw_miptree_get_horizontal_slice_pitch(brw, mt, u->Level);
-   param->stride[3] =
-      brw_miptree_get_vertical_slice_pitch(brw, mt, u->Level);
-
-   if (mt->tiling == I915_TILING_X) {
-      /* An X tile is a rectangular block of 512x8 bytes. */
-      param->tiling[0] = _mesa_logbase2(512 / mt->cpp);
-      param->tiling[1] = _mesa_logbase2(8);
-
-      if (brw->has_swizzling) {
-         /* Right shifts required to swizzle bits 9 and 10 of the memory
-          * address with bit 6.
-          */
-         param->swizzling[0] = 3;
-         param->swizzling[1] = 4;
-      }
-   } else if (mt->tiling == I915_TILING_Y) {
-      /* The layout of a Y-tiled surface in memory isn't really fundamentally
-       * different to the layout of an X-tiled surface, we simply pretend that
-       * the surface is broken up in a number of smaller 16Bx32 tiles, each
-       * one arranged in X-major order just like is the case for X-tiling.
-       */
-      param->tiling[0] = _mesa_logbase2(16 / mt->cpp);
-      param->tiling[1] = _mesa_logbase2(32);
-
-      if (brw->has_swizzling) {
-         /* Right shift required to swizzle bit 9 of the memory address with
-          * bit 6.
-          */
-         param->swizzling[0] = 3;
-      }
-   }
-
-   /* 3D textures are arranged in 2D in memory with 2^lod slices per row.  The
-    * address calculation algorithm (emit_address_calculation() in
-    * brw_fs_surface_builder.cpp) handles this as a sort of tiling with
-    * modulus equal to the LOD.
-    */
-   param->tiling[2] = (u->TexObj->Target == GL_TEXTURE_3D ? u->Level :
-                       0);
-}
-
-static void
 update_image_surface(struct brw_context *brw,
                      struct gl_image_unit *u,
                      GLenum access,
@@ -1727,6 +1660,19 @@ update_image_surface(struct brw_context *brw,
       } else {
          struct intel_texture_object *intel_obj = intel_texture_object(obj);
          struct intel_mipmap_tree *mt = intel_obj->mt;
+         const unsigned num_layers = (!u->Layered ? 1 :
+                                      obj->Target == GL_TEXTURE_CUBE_MAP ? 6 :
+                                      mt->logical_depth0);
+
+         struct isl_view view = {
+            .format = format,
+            .base_level = obj->MinLevel + u->Level,
+            .levels = 1,
+            .base_array_layer = obj->MinLayer + u->_Layer,
+            .array_len = num_layers,
+            .swizzle = ISL_SWIZZLE_IDENTITY,
+            .usage = ISL_SURF_USAGE_STORAGE_BIT,
+         };
 
          if (format == ISL_FORMAT_RAW) {
             brw_emit_buffer_surface_state(
@@ -1735,20 +1681,6 @@ update_image_surface(struct brw_context *brw,
                access != GL_READ_ONLY);
 
          } else {
-            const unsigned num_layers = (!u->Layered ? 1 :
-                                         obj->Target == GL_TEXTURE_CUBE_MAP ? 6 :
-                                         mt->logical_depth0);
-
-            struct isl_view view = {
-               .format = format,
-               .base_level = obj->MinLevel + u->Level,
-               .levels = 1,
-               .base_array_layer = obj->MinLayer + u->_Layer,
-               .array_len = num_layers,
-               .swizzle = ISL_SWIZZLE_IDENTITY,
-               .usage = ISL_SURF_USAGE_STORAGE_BIT,
-            };
-
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
             assert(!intel_miptree_has_color_unresolved(mt,
                                                        view.base_level, 1,
@@ -1762,7 +1694,11 @@ update_image_surface(struct brw_context *brw,
                                              I915_GEM_DOMAIN_SAMPLER);
          }
 
-         update_texture_image_param(brw, u, surface_idx, param);
+         struct isl_surf surf;
+         intel_miptree_get_isl_surf(brw, mt, &surf);
+
+         isl_surf_fill_image_param(&brw->isl_dev, param, &surf, &view);
+         param->surface_idx = surface_idx;
       }
 
    } else {

@@ -976,15 +976,6 @@ brw_miptree_get_horizontal_slice_pitch(const struct brw_context *brw,
                                        const struct intel_mipmap_tree *mt,
                                        unsigned level);
 
-/**
- * Vertical distance from one slice to the next in the two-dimensional miptree
- * layout.
- */
-unsigned
-brw_miptree_get_vertical_slice_pitch(const struct brw_context *brw,
-                                     const struct intel_mipmap_tree *mt,
-                                     unsigned level);
-
 bool
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
