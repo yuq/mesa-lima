@@ -1410,6 +1410,13 @@ static bool amdgpu_bo_is_user_ptr(struct pb_buffer *buf)
    return ((struct amdgpu_winsys_bo*)buf)->user_ptr != NULL;
 }
 
+static bool amdgpu_bo_is_suballocated(struct pb_buffer *buf)
+{
+   struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
+
+   return !bo->bo && !bo->sparse;
+}
+
 static uint64_t amdgpu_bo_get_va(struct pb_buffer *buf)
 {
    return ((struct amdgpu_winsys_bo*)buf)->va;
@@ -1426,6 +1433,7 @@ void amdgpu_bo_init_functions(struct amdgpu_winsys *ws)
    ws->base.buffer_from_handle = amdgpu_bo_from_handle;
    ws->base.buffer_from_ptr = amdgpu_bo_from_ptr;
    ws->base.buffer_is_user_ptr = amdgpu_bo_is_user_ptr;
+   ws->base.buffer_is_suballocated = amdgpu_bo_is_suballocated;
    ws->base.buffer_get_handle = amdgpu_bo_get_handle;
    ws->base.buffer_commit = amdgpu_bo_sparse_commit;
    ws->base.buffer_get_virtual_address = amdgpu_bo_get_va;
