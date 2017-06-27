@@ -690,7 +690,7 @@ sparse_backing_alloc(struct amdgpu_winsys_bo *bo, uint32_t *pstart_page, uint32_
 
       buf = amdgpu_bo_create(&bo->ws->base, size, RADEON_SPARSE_PAGE_SIZE,
                              bo->initial_domain,
-                             bo->u.sparse.flags | RADEON_FLAG_HANDLE);
+                             bo->u.sparse.flags | RADEON_FLAG_NO_SUBALLOC);
       if (!buf) {
          FREE(best_backing->chunks);
          FREE(best_backing);
@@ -1156,7 +1156,7 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    unsigned usage = 0, pb_cache_bucket;
 
    /* Sub-allocate small buffers from slabs. */
-   if (!(flags & (RADEON_FLAG_HANDLE | RADEON_FLAG_SPARSE)) &&
+   if (!(flags & (RADEON_FLAG_NO_SUBALLOC | RADEON_FLAG_SPARSE)) &&
        size <= (1 << AMDGPU_SLAB_MAX_SIZE_LOG2) &&
        alignment <= MAX2(1 << AMDGPU_SLAB_MIN_SIZE_LOG2, util_next_power_of_two(size))) {
       struct pb_slab_entry *entry;
@@ -1212,7 +1212,7 @@ no_slab:
    }
 
    /* This flag is irrelevant for the cache. */
-   flags &= ~RADEON_FLAG_HANDLE;
+   flags &= ~RADEON_FLAG_NO_SUBALLOC;
 
    /* Align size to page size. This is the minimum alignment for normal
     * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,

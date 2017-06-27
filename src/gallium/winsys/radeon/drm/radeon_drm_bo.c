@@ -943,7 +943,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
         return NULL;
 
     /* Sub-allocate small buffers from slabs. */
-    if (!(flags & RADEON_FLAG_HANDLE) &&
+    if (!(flags & RADEON_FLAG_NO_SUBALLOC) &&
         size <= (1 << RADEON_SLAB_MAX_SIZE_LOG2) &&
         ws->info.has_virtual_memory &&
         alignment <= MAX2(1 << RADEON_SLAB_MIN_SIZE_LOG2, util_next_power_of_two(size))) {
@@ -991,7 +991,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
 no_slab:
 
     /* This flag is irrelevant for the cache. */
-    flags &= ~RADEON_FLAG_HANDLE;
+    flags &= ~RADEON_FLAG_NO_SUBALLOC;
 
     /* Align size to page size. This is the minimum alignment for normal
      * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,
