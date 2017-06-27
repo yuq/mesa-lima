@@ -2444,7 +2444,7 @@ fs_visitor::opt_sampler_eot()
    if (stage != MESA_SHADER_FRAGMENT)
       return false;
 
-   if (devinfo->gen < 9 && !devinfo->is_cherryview)
+   if (devinfo->gen != 9 && !devinfo->is_cherryview)
       return false;
 
    /* FINISHME: It should be possible to implement this optimization when there
