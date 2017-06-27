@@ -162,13 +162,15 @@ svga_texture_view_surface(struct svga_context *svga,
                           struct svga_host_surface_cache_key *key) /* OUT */
 {
    struct svga_screen *ss = svga_screen(svga->pipe.screen);
-   struct svga_winsys_surface *handle;
+   struct svga_winsys_surface *handle = NULL;
    boolean validated;
    boolean needCopyResource;
 
    SVGA_DBG(DEBUG_PERF,
             "svga: Create surface view: layer %d zslice %d mips %d..%d\n",
             layer_pick, zslice_pick, start_mip, start_mip+num_mip-1);
+
+   SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_EMULATESURFACEVIEW);
 
    key->flags = flags;
    key->format = format;
@@ -197,7 +199,7 @@ svga_texture_view_surface(struct svga_context *svga,
 
    if (key->format == SVGA3D_FORMAT_INVALID) {
       key->cachable = 0;
-      return NULL;
+      goto done;
    }
 
    if (cacheable && tex->backed_handle &&
@@ -218,7 +220,7 @@ svga_texture_view_surface(struct svga_context *svga,
 
    if (!handle) {
       key->cachable = 0;
-      return NULL;
+      goto done;
    }
 
    SVGA_DBG(DEBUG_DMA, " --> got sid %p (texture view)\n", handle);
@@ -233,6 +235,9 @@ svga_texture_view_surface(struct svga_context *svga,
                                         zslice_pick, start_mip, layer_pick);
       tex->backed_age = tex->age;
    }
+
+done:
+   SVGA_STATS_TIME_POP(ss->sws);
 
    return handle;
 }
@@ -427,18 +432,18 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
    struct svga_texture *tex = svga_texture(s->base.texture);
 
-   SVGA_STATS_TIME_PUSH(svga_sws(svga),
-                        SVGA_STATS_TIME_CREATEBACKEDSURFACEVIEW);
-
    if (!s->backed) {
       struct pipe_surface *backed_view;
+
+      SVGA_STATS_TIME_PUSH(svga_sws(svga),
+                           SVGA_STATS_TIME_CREATEBACKEDSURFACEVIEW);
 
       backed_view = svga_create_surface_view(&svga->pipe,
                                              &tex->b.b,
                                              &s->base,
                                              TRUE);
       if (!backed_view)
-         return NULL;
+         goto done;
 
       s->backed = svga_surface(backed_view);
    }
@@ -469,13 +474,15 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
                                         bs->key.numMipLevels,
                                         bs->key.numFaces * bs->key.arraySize,
                                         zslice, s->base.u.tex.level, layer);
+
+      svga_mark_surface_dirty(&s->backed->base);
+
+      SVGA_STATS_TIME_POP(svga_sws(svga));
    }
 
-   svga_mark_surface_dirty(&s->backed->base);
    s->backed->age = tex->age;
 
-   SVGA_STATS_TIME_POP(svga_sws(svga));
-
+done:
    return s->backed;
 }
 
