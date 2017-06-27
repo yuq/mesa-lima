@@ -502,8 +502,9 @@ struct pb_slab *amdgpu_bo_slab_alloc(void *priv, unsigned heap,
    if (!slab)
       return NULL;
 
+   unsigned slab_size = 1 << AMDGPU_SLAB_BO_SIZE_LOG2;
    slab->buffer = amdgpu_winsys_bo(amdgpu_bo_create(&ws->base,
-                                                    64 * 1024, 64 * 1024,
+                                                    slab_size, slab_size,
                                                     domains, flags));
    if (!slab->buffer)
       goto fail;

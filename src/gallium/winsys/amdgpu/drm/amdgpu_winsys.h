@@ -41,8 +41,9 @@
 
 struct amdgpu_cs;
 
-#define AMDGPU_SLAB_MIN_SIZE_LOG2 9
-#define AMDGPU_SLAB_MAX_SIZE_LOG2 14
+#define AMDGPU_SLAB_MIN_SIZE_LOG2   9  /* 512 bytes */
+#define AMDGPU_SLAB_MAX_SIZE_LOG2   16 /* 64 KB */
+#define AMDGPU_SLAB_BO_SIZE_LOG2    17 /* 128 KB */
 
 struct amdgpu_winsys {
    struct radeon_winsys base;
