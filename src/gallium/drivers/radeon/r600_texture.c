@@ -565,6 +565,15 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		if (resource->nr_samples > 1 || rtex->is_depth)
 			return false;
 
+		/* Move a suballocated texture into a non-suballocated allocation. */
+		if (rscreen->ws->buffer_is_suballocated(res->buf)) {
+			assert(!res->b.is_shared);
+			r600_reallocate_texture_inplace(rctx, rtex,
+							PIPE_BIND_SHARED, false);
+			assert(res->b.b.bind & PIPE_BIND_SHARED);
+			assert(res->flags & RADEON_FLAG_NO_SUBALLOC);
+		}
+
 		/* Since shader image stores don't support DCC on VI,
 		 * disable it for external clients that want write
 		 * access.
@@ -1226,7 +1235,9 @@ r600_texture_create_object(struct pipe_screen *screen,
 		r600_init_resource_fields(rscreen, resource, rtex->size,
 					  rtex->surface.surf_alignment);
 
-		resource->flags |= RADEON_FLAG_NO_SUBALLOC;
+		/* Displayable surfaces are not suballocated. */
+		if (resource->b.b.bind & PIPE_BIND_SCANOUT)
+			resource->flags |= RADEON_FLAG_NO_SUBALLOC;
 
 		if (!r600_alloc_resource(rscreen, resource)) {
 			FREE(rtex);

@@ -184,6 +184,9 @@ void r600_init_resource_fields(struct r600_common_screen *rscreen,
 	if (rscreen->debug_flags & DBG_NO_WC)
 		res->flags &= ~RADEON_FLAG_GTT_WC;
 
+	if (res->b.b.bind & PIPE_BIND_SHARED)
+		res->flags |= RADEON_FLAG_NO_SUBALLOC;
+
 	/* Set expected VRAM and GART usage for the buffer. */
 	res->vram_usage = 0;
 	res->gart_usage = 0;
