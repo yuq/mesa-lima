@@ -2858,7 +2858,8 @@ upload_constant_state(struct brw_context *brw,
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
          pkt.ConstantBody.ReadLength[2] = stage_state->push_const_size;
          pkt.ConstantBody.Buffer[2] =
-            render_ro_bo(brw->curbe.curbe_bo, stage_state->push_const_offset);
+            render_ro_bo(stage_state->push_const_bo,
+                         stage_state->push_const_offset);
 #else
          pkt.ConstantBody.ReadLength[0] = stage_state->push_const_size;
          pkt.ConstantBody.Buffer[0].offset =

@@ -552,7 +552,8 @@ struct brw_stage_state
    /** Offset in the batchbuffer to Gen4-5 pipelined state (VS/WM/GS_STATE). */
    uint32_t state_offset;
 
-   uint32_t push_const_offset; /* Offset in the batchbuffer */
+   struct brw_bo *push_const_bo; /* NULL if using the batchbuffer */
+   uint32_t push_const_offset; /* Offset in the push constant BO or batch */
    int push_const_size; /* in 256-bit register increments */
 
    /* Binding table: pointers to SURFACE_STATE entries. */
