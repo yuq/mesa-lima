@@ -33,6 +33,7 @@
 #include "main/context.h"
 #include "main/colormac.h"
 #include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "main/macros.h"
 #include "main/mipmap.h"
 #include "main/image.h"
