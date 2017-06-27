@@ -184,7 +184,8 @@ intel_miptree_supports_ccs(struct brw_context *brw,
       return false;
 
    const bool mip_mapped = mt->first_level != 0 || mt->last_level != 0;
-   const bool arrayed = mt->physical_depth0 != 1;
+   const bool arrayed = mt->surf.logical_level0_px.array_len > 1 ||
+                        mt->surf.logical_level0_px.depth > 1;
 
    if (arrayed) {
        /* Multisample surfaces with the CMS layout are not layered surfaces,
@@ -940,7 +941,6 @@ miptree_create(struct brw_context *brw,
       return mt;
    }
 
-   struct intel_mipmap_tree *mt;
    mesa_format tex_format = format;
    mesa_format etc_format = MESA_FORMAT_NONE;
    uint32_t alloc_flags = 0;
@@ -950,52 +950,33 @@ miptree_create(struct brw_context *brw,
    etc_format = (format != tex_format) ? tex_format : MESA_FORMAT_NONE;
 
    assert((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0);
-   mt = intel_miptree_create_layout(brw, target, format,
-                                    first_level, last_level, width0,
-                                    height0, depth0, num_samples,
-                                    layout_flags);
-   if (!mt)
-      return NULL;
-
    if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
 
+   isl_tiling_flags_t tiling_flags = force_linear_tiling(layout_flags) ?
+      ISL_TILING_LINEAR_BIT : ISL_TILING_ANY_MASK;
+
+   /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
+   if (brw->gen < 6)
+      tiling_flags &= ~ISL_TILING_Y0_BIT;
+
+   struct intel_mipmap_tree *mt = make_surface(
+                                     brw, target, format,
+                                     first_level, last_level,
+                                     width0, height0, depth0,
+                                     num_samples, tiling_flags,
+                                     ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                                     ISL_SURF_USAGE_TEXTURE_BIT,
+                                     alloc_flags, 0, NULL);
+   if (!mt)
+      return NULL;
+
    mt->etc_format = etc_format;
 
-   if (format == MESA_FORMAT_S_UINT8) {
-      /* Align to size of W tile, 64x64. */
-      mt->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "miptree",
-                                     ALIGN(mt->total_width, 64),
-                                     ALIGN(mt->total_height, 64),
-                                     mt->cpp,
-                                     isl_tiling_to_i915_tiling(
-                                        mt->surf.tiling),
-                                     &mt->surf.row_pitch,
-                                     alloc_flags);
-
-      /* The stencil buffer has quirky pitch requirements.  From the
-       * Sandybridge PRM, Volume 2 Part 1, page 329 (3DSTATE_STENCIL_BUFFER
-       * dword 1 bits 16:0 - Surface Pitch):
-       *
-       *    The pitch must be set to 2x the value computed based on width, as
-       *    the stencil buffer is stored with two rows interleaved.
-       *
-       * While the Ivybridge PRM lacks this comment, the BSpec contains the
-       * same text, and experiments indicate that this is necessary.
-       */
-      mt->surf.row_pitch *= 2;
-   } else {
-      mt->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "miptree",
-                                     mt->total_width, mt->total_height,
-                                     mt->cpp,
-                                     isl_tiling_to_i915_tiling(
-                                        mt->surf.tiling),
-                                     &mt->surf.row_pitch,
-                                     alloc_flags);
-   }
-
-   if (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT)
+   if (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT) {
       mt->bo->cache_coherent = false;
+      mt->is_scanout = true;
+   }
 
    if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
@@ -1025,28 +1006,7 @@ intel_miptree_create(struct brw_context *brw,
    if (!mt)
       return NULL;
 
-   if (need_to_retile_as_x(brw, mt->bo->size, mt->surf.tiling)) {
-      const uint32_t alloc_flags =
-         (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD) ?
-         BO_ALLOC_FOR_RENDER : 0;
-      perf_debug("%dx%d miptree larger than aperture; falling back to X-tiled\n",
-                 mt->total_width, mt->total_height);
-
-      mt->surf.tiling = ISL_TILING_X;
-      brw_bo_unreference(mt->bo);
-      mt->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "miptree",
-                                     mt->total_width, mt->total_height, mt->cpp,
-                                     isl_tiling_to_i915_tiling(
-                                        mt->surf.tiling),
-                                     &mt->surf.row_pitch, alloc_flags);
-   }
-
    mt->offset = 0;
-
-   if (!mt->bo) {
-       intel_miptree_release(&mt);
-       return NULL;
-   }
 
    if (!intel_miptree_alloc_aux(brw, mt)) {
       intel_miptree_release(&mt);
@@ -1123,20 +1083,18 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    assert((layout_flags & MIPTREE_LAYOUT_TILING_ANY) == 0);
    assert((layout_flags & MIPTREE_LAYOUT_TILING_NONE) == 0);
 
-   layout_flags |= MIPTREE_LAYOUT_FOR_BO;
-   mt = intel_miptree_create_layout(brw, target, format,
-                                    0, 0,
-                                    width, height, depth,
-                                    1 /* num_samples */,
-                                    layout_flags);
+   mt = make_surface(brw, target, format,
+                     0, 0, width, height, depth, 1,
+                     1lu << isl_tiling_from_i915_tiling(tiling),
+                     ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                     ISL_SURF_USAGE_TEXTURE_BIT,
+                     0, pitch, bo);
    if (!mt)
       return NULL;
 
    brw_bo_reference(bo);
    mt->bo = bo;
-   mt->surf.row_pitch = pitch;
    mt->offset = offset;
-   mt->surf.tiling = isl_tiling_from_i915_tiling(tiling);
 
    if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
@@ -1320,8 +1278,8 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
       irb->singlesample_mt = singlesample_mt;
 
       if (!irb->mt ||
-          irb->mt->logical_width0 != width ||
-          irb->mt->logical_height0 != height) {
+          irb->mt->surf.logical_level0_px.width != width ||
+          irb->mt->surf.logical_level0_px.height != height) {
          multisample_mt = intel_miptree_create_for_renderbuffer(intel,
                                                                 format,
                                                                 width,
@@ -1981,15 +1939,10 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
    if (!aux_state)
       return false;
 
-   struct isl_surf temp_main_surf;
    struct isl_surf temp_mcs_surf;
 
-   /* Create first an ISL presentation for the main color surface and let ISL
-    * calculate equivalent MCS surface against it.
-    */
-   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
    MAYBE_UNUSED bool ok =
-      isl_surf_get_mcs_surf(&brw->isl_dev, &temp_main_surf, &temp_mcs_surf);
+      isl_surf_get_mcs_surf(&brw->isl_dev, &mt->surf, &temp_mcs_surf);
    assert(ok);
 
    /* Buffer needs to be initialised requiring the buffer to be immediately
@@ -2020,15 +1973,9 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
    assert(mt->aux_usage == ISL_AUX_USAGE_CCS_E ||
           mt->aux_usage == ISL_AUX_USAGE_CCS_D);
 
-   struct isl_surf temp_main_surf;
    struct isl_surf temp_ccs_surf;
 
-   /* Create first an ISL presentation for the main color surface and let ISL
-    * calculate equivalent CCS surface against it.
-    */
-   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
-   if (!isl_surf_get_ccs_surf(&brw->isl_dev, &temp_main_surf,
-                              &temp_ccs_surf, 0))
+   if (!isl_surf_get_ccs_surf(&brw->isl_dev, &mt->surf, &temp_ccs_surf, 0))
       return false;
 
    assert(temp_ccs_surf.size &&
@@ -2288,7 +2235,10 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
       return;
 
    /* Fast color clear is supported for non-msaa arrays only on Gen8+. */
-   assert(brw->gen >= 8 || (layer == 0 && mt->logical_depth0 == 1));
+   assert(brw->gen >= 8 ||
+          (layer == 0 &&
+           mt->surf.logical_level0_px.depth == 1 &&
+           mt->surf.logical_level0_px.array_len == 1));
 
    (void)level;
    (void)layer;

@@ -183,7 +183,7 @@ brw_emit_surface_state(struct brw_context *brw,
                                  brw->isl_dev.ss.align,
                                  surf_offset);
 
-   isl_surf_fill_state(&brw->isl_dev, state, .surf = &surf, .view = &view,
+   isl_surf_fill_state(&brw->isl_dev, state, .surf = &mt->surf, .view = &view,
                        .address = mt->bo->offset64 + offset,
                        .aux_surf = aux_surf, .aux_usage = aux_usage,
                        .aux_address = aux_offset,
@@ -1069,7 +1069,8 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    assert(tile_y % 2 == 0);
    surf[5] = ((tile_x / 4) << BRW_SURFACE_X_OFFSET_SHIFT |
 	      (tile_y / 2) << BRW_SURFACE_Y_OFFSET_SHIFT |
-	      (mt->valign == 4 ? BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0));
+	      (mt->surf.image_alignment_el.height == 4 ?
+                  BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0));
 
    if (brw->gen < 6) {
       /* _NEW_COLOR */
@@ -1733,10 +1734,7 @@ update_image_surface(struct brw_context *brw,
                                              I915_GEM_DOMAIN_SAMPLER);
          }
 
-         struct isl_surf surf;
-         intel_miptree_get_isl_surf(brw, mt, &surf);
-
-         isl_surf_fill_image_param(&brw->isl_dev, param, &surf, &view);
+         isl_surf_fill_image_param(&brw->isl_dev, param, &mt->surf, &view);
          param->surface_idx = surface_idx;
       }
 
