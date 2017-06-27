@@ -4551,7 +4551,7 @@ genX(update_sampler_state)(struct brw_context *brw,
    if (sampler->MaxAnisotropy > 1.0f) {
       if (samp_st.MinModeFilter == MAPFILTER_LINEAR)
          samp_st.MinModeFilter = MAPFILTER_ANISOTROPIC;
-      if (samp_st.MinModeFilter == MAPFILTER_LINEAR)
+      if (samp_st.MagModeFilter == MAPFILTER_LINEAR)
          samp_st.MagModeFilter = MAPFILTER_ANISOTROPIC;
 
       if (sampler->MaxAnisotropy > 2.0f) {
