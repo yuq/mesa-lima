@@ -610,8 +610,6 @@ struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 
 	r600_init_resource_fields(rscreen, rbuffer, templ->width0, alignment);
 
-	if (templ->bind & PIPE_BIND_SHARED)
-		rbuffer->flags |= RADEON_FLAG_HANDLE;
 	if (templ->flags & PIPE_RESOURCE_FLAG_SPARSE)
 		rbuffer->flags |= RADEON_FLAG_SPARSE;
 
