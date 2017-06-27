@@ -537,14 +537,13 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	ctx = threaded_context_unwrap_sync(ctx);
 	rctx = (struct r600_common_context*)(ctx ? ctx : rscreen->aux_context);
 
-	/* This is not supported now, but it might be required for OpenCL
-	 * interop in the future.
-	 */
-	if (resource->target != PIPE_BUFFER &&
-	    (resource->nr_samples > 1 || rtex->is_depth))
-		return false;
-
 	if (resource->target != PIPE_BUFFER) {
+		/* This is not supported now, but it might be required for OpenCL
+		 * interop in the future.
+		 */
+		if (resource->nr_samples > 1 || rtex->is_depth)
+			return false;
+
 		/* Since shader image stores don't support DCC on VI,
 		 * disable it for external clients that want write
 		 * access.
@@ -575,6 +574,23 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
 		}
+
+		if (rscreen->chip_class >= GFX9) {
+			offset = rtex->surface.u.gfx9.surf_offset;
+			stride = rtex->surface.u.gfx9.surf_pitch *
+				 rtex->surface.bpe;
+			slice_size = rtex->surface.u.gfx9.surf_slice_size;
+		} else {
+			offset = rtex->surface.u.legacy.level[0].offset;
+			stride = rtex->surface.u.legacy.level[0].nblk_x *
+				 rtex->surface.bpe;
+			slice_size = rtex->surface.u.legacy.level[0].slice_size;
+		}
+	} else {
+		/* Buffers */
+		offset = 0;
+		stride = 0;
+		slice_size = 0;
 	}
 
 	if (res->b.is_shared) {
@@ -589,23 +605,6 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		res->external_usage = usage;
 	}
 
-	if (res->b.b.target == PIPE_BUFFER) {
-		offset = 0;
-		stride = 0;
-		slice_size = 0;
-	} else {
-		if (rscreen->chip_class >= GFX9) {
-			offset = rtex->surface.u.gfx9.surf_offset;
-			stride = rtex->surface.u.gfx9.surf_pitch *
-				 rtex->surface.bpe;
-			slice_size = rtex->surface.u.gfx9.surf_slice_size;
-		} else {
-			offset = rtex->surface.u.legacy.level[0].offset;
-			stride = rtex->surface.u.legacy.level[0].nblk_x *
-				 rtex->surface.bpe;
-			slice_size = rtex->surface.u.legacy.level[0].slice_size;
-		}
-	}
 	return rscreen->ws->buffer_get_handle(res->buf, stride, offset,
 					      slice_size, whandle);
 }
