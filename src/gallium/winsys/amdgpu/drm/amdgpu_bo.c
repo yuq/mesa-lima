@@ -1365,10 +1365,9 @@ static bool amdgpu_bo_get_handle(struct pb_buffer *buffer,
    enum amdgpu_bo_handle_type type;
    int r;
 
-   if (!bo->bo) {
-      offset += bo->va - bo->u.slab.real->va;
-      bo = bo->u.slab.real;
-   }
+   /* Don't allow exports of slab entries and sparse buffers. */
+   if (!bo->bo)
+      return false;
 
    bo->u.real.use_reusable_pool = false;
 

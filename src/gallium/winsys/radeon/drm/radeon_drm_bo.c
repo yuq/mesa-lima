@@ -1290,10 +1290,9 @@ static bool radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
     struct radeon_bo *bo = radeon_bo(buffer);
     struct radeon_drm_winsys *ws = bo->rws;
 
-    if (!bo->handle) {
-        offset += bo->va - bo->u.slab.real->va;
-        bo = bo->u.slab.real;
-    }
+    /* Don't allow exports of slab entries. */
+    if (!bo->handle)
+        return false;
 
     memset(&flink, 0, sizeof(flink));
 
