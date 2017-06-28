@@ -91,7 +91,7 @@ struct _egl_image
 };
 
 
-extern EGLint
+EGLBoolean
 _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                          const EGLint *attrib_list);
 

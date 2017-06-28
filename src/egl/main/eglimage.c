@@ -30,14 +30,18 @@
 #include <assert.h>
 #include <string.h>
 
+#include "eglcurrent.h"
 #include "eglimage.h"
 #include "egllog.h"
 
 
 /**
- * Parse the list of image attributes and return the proper error code.
+ * Parse the list of image attributes.
+ *
+ * Returns EGL_TRUE on success and EGL_FALSE otherwise.
+ * Function calls _eglError to set the correct error code.
  */
-EGLint
+EGLBoolean
 _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                          const EGLint *attrib_list)
 {
@@ -48,7 +52,7 @@ _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
    memset(attrs, 0, sizeof(*attrs));
 
    if (!attrib_list)
-      return err;
+      return EGL_TRUE;
 
    for (i = 0; attrib_list[i] != EGL_NONE; i++) {
       EGLint attr = attrib_list[i++];
@@ -233,15 +237,12 @@ _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
          break;
 
       default:
-         /* unknown attrs are ignored */
-         break;
+         return _eglError(EGL_BAD_ATTRIBUTE, __func__);
       }
 
-      if (err != EGL_SUCCESS) {
-         _eglLog(_EGL_DEBUG, "bad image attribute 0x%04x", attr);
-         break;
-      }
+      if (err != EGL_SUCCESS)
+         return _eglError(err, __func__);
    }
 
-   return err;
+   return EGL_TRUE;
 }

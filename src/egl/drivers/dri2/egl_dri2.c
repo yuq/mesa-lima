@@ -1719,7 +1719,6 @@ dri2_create_image_wayland_wl_buffer(_EGLDisplay *disp, _EGLContext *ctx,
    const struct wl_drm_components_descriptor *f;
    __DRIimage *dri_image;
    _EGLImageAttribs attrs;
-   EGLint err;
    int32_t plane;
 
    buffer = wayland_drm_buffer_get(dri2_dpy->wl_server_drm,
@@ -1727,13 +1726,10 @@ dri2_create_image_wayland_wl_buffer(_EGLDisplay *disp, _EGLContext *ctx,
    if (!buffer)
        return NULL;
 
-   err = _eglParseImageAttribList(&attrs, disp, attr_list);
-   plane = attrs.PlaneWL;
-   if (err != EGL_SUCCESS) {
-      _eglError(EGL_BAD_PARAMETER, "dri2_create_image_wayland_wl_buffer");
+   if (!_eglParseImageAttribList(&attrs, disp, attr_list))
       return NULL;
-   }
 
+   plane = attrs.PlaneWL;
    f = buffer->driver_format;
    if (plane < 0 || plane >= f->nplanes) {
       _eglError(EGL_BAD_PARAMETER,
@@ -1819,7 +1815,7 @@ dri2_create_image_khr_texture(_EGLDisplay *disp, _EGLContext *ctx,
       return EGL_NO_IMAGE_KHR;
    }
 
-   if (_eglParseImageAttribList(&attrs, disp, attr_list) != EGL_SUCCESS)
+   if (!_eglParseImageAttribList(&attrs, disp, attr_list))
       return EGL_NO_IMAGE_KHR;
 
    switch (target) {
@@ -1906,8 +1902,7 @@ dri2_create_image_mesa_drm_buffer(_EGLDisplay *disp, _EGLContext *ctx,
 
    name = (EGLint) (uintptr_t) buffer;
 
-   err = _eglParseImageAttribList(&attrs, disp, attr_list);
-   if (err != EGL_SUCCESS)
+   if (!_eglParseImageAttribList(&attrs, disp, attr_list))
       return NULL;
 
    if (attrs.Width <= 0 || attrs.Height <= 0 ||
@@ -2199,7 +2194,6 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    _EGLImage *res;
-   EGLint err;
    _EGLImageAttribs attrs;
    __DRIimage *dri_image;
    unsigned num_fds;
@@ -2221,11 +2215,8 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
       return NULL;
    }
 
-   err = _eglParseImageAttribList(&attrs, disp, attr_list);
-   if (err != EGL_SUCCESS) {
-      _eglError(err, "bad attribute");
+   if (!_eglParseImageAttribList(&attrs, disp, attr_list))
       return NULL;
-   }
 
    if (!dri2_check_dma_buf_attribs(&attrs))
       return NULL;
@@ -2298,7 +2289,6 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
    _EGLImageAttribs attrs;
    unsigned int dri_use, valid_mask;
    int format;
-   EGLint err = EGL_SUCCESS;
 
    (void) drv;
 
@@ -2307,11 +2297,8 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
       return EGL_NO_IMAGE_KHR;
    }
 
-   err = _eglParseImageAttribList(&attrs, disp, attr_list);
-   if (err != EGL_SUCCESS) {
-      _eglError(EGL_BAD_PARAMETER, __func__);
+   if (!_eglParseImageAttribList(&attrs, disp, attr_list))
       return EGL_NO_IMAGE_KHR;
-   }
 
    if (attrs.Width <= 0 || attrs.Height <= 0) {
       _eglError(EGL_BAD_PARAMETER, __func__);
