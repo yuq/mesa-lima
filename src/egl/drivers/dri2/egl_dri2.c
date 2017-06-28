@@ -2238,8 +2238,6 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
       modifier = (uint64_t) attrs.DMABufPlaneModifiersHi[0].Value << 32;
       modifier |= (uint64_t) (attrs.DMABufPlaneModifiersLo[0].Value & 0xffffffff);
       has_modifier = true;
-   } else {
-      modifier = DRM_FORMAT_MOD_INVALID;
    }
 
    if (has_modifier) {
