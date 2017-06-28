@@ -238,6 +238,19 @@ _mesa_PixelStoref( GLenum pname, GLfloat param )
 }
 
 
+void GLAPIENTRY
+_mesa_PixelStorei_no_error(GLenum pname, GLint param)
+{
+   pixel_storei(pname, param, true);
+}
+
+
+void GLAPIENTRY
+_mesa_PixelStoref_no_error(GLenum pname, GLfloat param)
+{
+   _mesa_PixelStorei_no_error(pname, IROUND(param));
+}
+
 
 /**
  * Initialize the context's pixel store state.

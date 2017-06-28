@@ -2593,13 +2593,13 @@
         <glx rop="167"/>
     </function>
 
-    <function name="PixelStoref">
+    <function name="PixelStoref" no_error="true">
         <param name="pname" type="GLenum"/>
         <param name="param" type="GLfloat"/>
         <glx sop="109" handcode="client"/>
     </function>
 
-    <function name="PixelStorei" es1="1.0" es2="2.0">
+    <function name="PixelStorei" es1="1.0" es2="2.0" no_error="true">
         <param name="pname" type="GLenum"/>
         <param name="param" type="GLint"/>
         <glx sop="110" handcode="client"/>
