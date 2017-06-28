@@ -670,6 +670,21 @@ intel_lower_compressed_format(struct brw_context *brw, mesa_format format)
    }
 }
 
+static unsigned
+get_num_phys_layers(const struct isl_surf *surf, unsigned level)
+{
+   /* In case of physical dimensions one needs to consider also the layout.
+    * See isl_calc_phys_level0_extent_sa().
+    */
+   if (surf->dim != ISL_SURF_DIM_3D)
+      return surf->phys_level0_sa.array_len;
+
+   if (surf->dim_layout == ISL_DIM_LAYOUT_GEN4_2D)
+      return minify(surf->phys_level0_sa.array_len, level);
+
+   return minify(surf->phys_level0_sa.depth, level);
+}
+
 /** \brief Assert that the level and layer are valid for the miptree. */
 void
 intel_miptree_check_level_layer(const struct intel_mipmap_tree *mt,
@@ -684,9 +699,7 @@ intel_miptree_check_level_layer(const struct intel_mipmap_tree *mt,
    assert(level <= mt->last_level);
 
    if (mt->surf.size > 0)
-      assert(layer < (mt->surf.dim == ISL_SURF_DIM_3D ?
-                         minify(mt->surf.phys_level0_sa.depth, level) :
-                         mt->surf.phys_level0_sa.array_len));
+      assert(layer < get_num_phys_layers(&mt->surf, level));
    else
       assert(layer < mt->level[level].depth);
 }
@@ -700,9 +713,7 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
    uint32_t total_slices = 0;
    for (uint32_t level = 0; level < levels; level++) {
       if (mt->surf.size > 0)
-         total_slices += (mt->surf.dim == ISL_SURF_DIM_3D ?
-                             minify(mt->surf.phys_level0_sa.depth, level) :
-                             mt->surf.phys_level0_sa.array_len);
+         total_slices += get_num_phys_layers(&mt->surf, level);
       else
          total_slices += mt->level[level].depth;
    }
@@ -726,9 +737,7 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
 
       unsigned level_depth;
       if (mt->surf.size > 0)
-         level_depth = mt->surf.dim == ISL_SURF_DIM_3D ?
-                          minify(mt->surf.phys_level0_sa.depth, level) :
-                          mt->surf.phys_level0_sa.array_len;
+         level_depth = get_num_phys_layers(&mt->surf, level);
       else
          level_depth = mt->level[level].depth;
               
@@ -1689,11 +1698,9 @@ intel_miptree_copy_slice(struct brw_context *brw,
       height = minify(src_mt->surf.phys_level0_sa.height,
                       src_level - src_mt->first_level);
 
-      if (src_mt->surf.dim == ISL_SURF_DIM_3D)
-         assert(src_layer < minify(src_mt->surf.phys_level0_sa.depth,
-                                   src_level - src_mt->first_level));
-      else
-         assert(src_layer < src_mt->surf.phys_level0_sa.array_len);
+      assert(src_layer <
+             get_num_phys_layers(&src_mt->surf,
+                                 src_level - src_mt->first_level));
    } else {
       width = minify(src_mt->physical_width0,
                      src_level - src_mt->first_level);
@@ -2484,9 +2491,7 @@ miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
    uint32_t total_num_layers;
 
    if (mt->surf.size > 0)
-      total_num_layers = mt->surf.dim == ISL_SURF_DIM_3D ?
-         minify(mt->surf.phys_level0_sa.depth, level) :
-         mt->surf.phys_level0_sa.array_len;
+      total_num_layers = get_num_phys_layers(&mt->surf, level);
    else 
       total_num_layers = mt->level[level].depth;
 
