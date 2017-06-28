@@ -278,6 +278,18 @@ _mesa_BlendFunc( GLenum sfactor, GLenum dfactor )
 }
 
 
+void GLAPIENTRY
+_mesa_BlendFunc_no_error(GLenum sfactor, GLenum dfactor)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (skip_blend_state_update(ctx, sfactor, dfactor, sfactor, dfactor))
+      return;
+
+   blend_func_separate(ctx, sfactor, dfactor, sfactor, dfactor);
+}
+
+
 /**
  * Set the separate blend source/dest factors for all draw buffers.
  *
@@ -309,6 +321,19 @@ _mesa_BlendFuncSeparate( GLenum sfactorRGB, GLenum dfactorRGB,
                                sfactorA, dfactorA)) {
       return;
    }
+
+   blend_func_separate(ctx, sfactorRGB, dfactorRGB, sfactorA, dfactorA);
+}
+
+
+void GLAPIENTRY
+_mesa_BlendFuncSeparate_no_error(GLenum sfactorRGB, GLenum dfactorRGB,
+                                 GLenum sfactorA, GLenum dfactorA)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (skip_blend_state_update(ctx, sfactorRGB, dfactorRGB, sfactorA, dfactorA))
+      return;
 
    blend_func_separate(ctx, sfactorRGB, dfactorRGB, sfactorA, dfactorA);
 }

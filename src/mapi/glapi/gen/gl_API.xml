@@ -2545,7 +2545,7 @@
         <glx rop="159"/>
     </function>
 
-    <function name="BlendFunc" es1="1.0" es2="2.0">
+    <function name="BlendFunc" es1="1.0" es2="2.0" no_error="true">
         <param name="sfactor" type="GLenum"/>
         <param name="dfactor" type="GLenum"/>
         <glx rop="160"/>
@@ -4709,7 +4709,7 @@
     </enum>
     <enum name="COMPARE_R_TO_TEXTURE"                     value="0x884E"/>
 
-    <function name="BlendFuncSeparate" es2="2.0">
+    <function name="BlendFuncSeparate" es2="2.0" no_error="true">
         <param name="sfactorRGB" type="GLenum"/>
         <param name="dfactorRGB" type="GLenum"/>
         <param name="sfactorAlpha" type="GLenum"/>
