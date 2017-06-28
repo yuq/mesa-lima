@@ -2302,27 +2302,20 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
 
    (void) drv;
 
-   dri2_img = malloc(sizeof *dri2_img);
-   if (!dri2_img) {
-      _eglError(EGL_BAD_ALLOC, "dri2_create_image_khr");
+   if (!attr_list) {
+      _eglError(EGL_BAD_PARAMETER, __func__);
       return EGL_NO_IMAGE_KHR;
    }
 
-   if (!attr_list) {
-      err = EGL_BAD_PARAMETER;
-      goto cleanup_img;
+   err = _eglParseImageAttribList(&attrs, disp, attr_list);
+   if (err != EGL_SUCCESS) {
+      _eglError(EGL_BAD_PARAMETER, __func__);
+      return EGL_NO_IMAGE_KHR;
    }
 
-   _eglInitImage(&dri2_img->base, disp);
-
-   err = _eglParseImageAttribList(&attrs, disp, attr_list);
-   if (err != EGL_SUCCESS)
-      goto cleanup_img;
-
    if (attrs.Width <= 0 || attrs.Height <= 0) {
-      _eglLog(_EGL_WARNING, "bad width or height (%dx%d)",
-            attrs.Width, attrs.Height);
-      goto cleanup_img;
+      _eglError(EGL_BAD_PARAMETER, __func__);
+      return EGL_NO_IMAGE_KHR;
    }
 
    switch (attrs.DRMBufferFormatMESA) {
@@ -2330,9 +2323,8 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
       format = __DRI_IMAGE_FORMAT_ARGB8888;
       break;
    default:
-      _eglLog(_EGL_WARNING, "bad image format value 0x%04x",
-            attrs.DRMBufferFormatMESA);
-      goto cleanup_img;
+      _eglError(EGL_BAD_PARAMETER, __func__);
+      return EGL_NO_IMAGE_KHR;
    }
 
    valid_mask =
@@ -2340,9 +2332,8 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
       EGL_DRM_BUFFER_USE_SHARE_MESA |
       EGL_DRM_BUFFER_USE_CURSOR_MESA;
    if (attrs.DRMBufferUseMESA & ~valid_mask) {
-      _eglLog(_EGL_WARNING, "bad image use bit 0x%04x",
-            attrs.DRMBufferUseMESA & ~valid_mask);
-      goto cleanup_img;
+      _eglError(EGL_BAD_PARAMETER, __func__);
+      return EGL_NO_IMAGE_KHR;
    }
 
    dri_use = 0;
@@ -2353,22 +2344,25 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
    if (attrs.DRMBufferUseMESA & EGL_DRM_BUFFER_USE_CURSOR_MESA)
       dri_use |= __DRI_IMAGE_USE_CURSOR;
 
+   dri2_img = malloc(sizeof *dri2_img);
+   if (!dri2_img) {
+      _eglError(EGL_BAD_ALLOC, "dri2_create_image_khr");
+      return EGL_NO_IMAGE_KHR;
+   }
+
+   _eglInitImage(&dri2_img->base, disp);
+
    dri2_img->dri_image =
       dri2_dpy->image->createImage(dri2_dpy->dri_screen,
                                    attrs.Width, attrs.Height,
                                    format, dri_use, dri2_img);
    if (dri2_img->dri_image == NULL) {
-      err = EGL_BAD_ALLOC;
-      goto cleanup_img;
+      free(dri2_img);
+       _eglError(EGL_BAD_ALLOC, "dri2_create_drm_image_mesa");
+      return EGL_NO_IMAGE_KHR;
    }
 
    return &dri2_img->base;
-
- cleanup_img:
-   free(dri2_img);
-   _eglError(err, "dri2_create_drm_image_mesa");
-
-   return EGL_NO_IMAGE_KHR;
 }
 
 static EGLBoolean
