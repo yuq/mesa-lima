@@ -107,6 +107,12 @@ _eglParseEXTImageDmaBufImportAttribs(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                                      EGLint attr, EGLint val)
 {
    switch (attr) {
+   case EGL_WIDTH:
+      attrs->Width = val;
+      break;
+   case EGL_HEIGHT:
+      attrs->Height = val;
+      break;
    case EGL_LINUX_DRM_FOURCC_EXT:
       attrs->DMABufFourCC.Value = val;
       attrs->DMABufFourCC.IsPresent = EGL_TRUE;
