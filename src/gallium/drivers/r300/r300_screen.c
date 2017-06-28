@@ -726,7 +726,8 @@ static boolean r300_fence_finish(struct pipe_screen *screen,
     return rws->fence_wait(rws, fence, timeout);
 }
 
-struct pipe_screen* r300_screen_create(struct radeon_winsys *rws, unsigned flags)
+struct pipe_screen* r300_screen_create(struct radeon_winsys *rws,
+                                       const struct pipe_screen_config *config)
 {
     struct r300_screen *r300screen = CALLOC_STRUCT(r300_screen);
 

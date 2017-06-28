@@ -295,7 +295,7 @@ pipe_loader_sw_configuration(struct pipe_loader_device *dev,
 
 static struct pipe_screen *
 pipe_loader_sw_create_screen(struct pipe_loader_device *dev,
-                             unsigned flags)
+                             const struct pipe_screen_config *config)
 {
    struct pipe_loader_sw_device *sdev = pipe_loader_sw_device(dev);
    struct pipe_screen *screen;

@@ -2056,10 +2056,12 @@ dri2_init_screen(__DRIscreen * sPriv)
 
 
    if (pipe_loader_drm_probe_fd(&screen->dev, fd)) {
-      unsigned flags =
+      struct pipe_screen_config config = {};
+
+      config.flags =
          dri_init_options_get_screen_flags(screen, screen->dev->driver_name);
 
-      pscreen = pipe_loader_create_screen(screen->dev, flags);
+      pscreen = pipe_loader_create_screen(screen->dev, &config);
    }
 
    if (!pscreen)
@@ -2150,10 +2152,12 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    if (screen->fd < 0 || (fd = fcntl(screen->fd, F_DUPFD_CLOEXEC, 3)) < 0)
       goto free_screen;
 
-   unsigned flags = dri_init_options_get_screen_flags(screen, "swrast");
+   struct pipe_screen_config config = {};
+
+   config.flags = dri_init_options_get_screen_flags(screen, "swrast");
 
    if (pipe_loader_sw_probe_kms(&screen->dev, fd))
-      pscreen = pipe_loader_create_screen(screen->dev, flags);
+      pscreen = pipe_loader_create_screen(screen->dev, &config);
 
    if (!pscreen)
        goto release_pipe;

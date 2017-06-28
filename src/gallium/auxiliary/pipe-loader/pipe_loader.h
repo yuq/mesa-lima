@@ -82,9 +82,12 @@ pipe_loader_probe(struct pipe_loader_device **devs, int ndev);
  * Create a pipe_screen for the specified device.
  *
  * \param dev Device the screen will be created for.
+ * \param config Configuration options. The lifetime of this structure and its
+ *               elements may be limited to the duration of this call.
  */
 struct pipe_screen *
-pipe_loader_create_screen(struct pipe_loader_device *dev, unsigned flags);
+pipe_loader_create_screen(struct pipe_loader_device *dev,
+                          struct pipe_screen_config *config);
 
 /**
  * Query the configuration parameters for the specified device.

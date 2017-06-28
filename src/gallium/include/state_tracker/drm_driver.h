@@ -5,6 +5,7 @@
 #include "pipe/p_compiler.h"
 
 struct pipe_screen;
+struct pipe_screen_config;
 struct pipe_context;
 struct pipe_resource;
 
@@ -104,7 +105,8 @@ struct drm_driver_descriptor
     * This function does any wrapping of the screen.
     * For example wrapping trace or rbug debugging drivers around it.
     */
-   struct pipe_screen* (*create_screen)(int drm_fd, unsigned flags);
+   struct pipe_screen* (*create_screen)(int drm_fd,
+                                        const struct pipe_screen_config *config);
 
    /**
     * Return a configuration value.

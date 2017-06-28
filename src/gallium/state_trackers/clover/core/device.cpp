@@ -42,7 +42,7 @@ namespace {
 
 device::device(clover::platform &platform, pipe_loader_device *ldev) :
    platform(platform), ldev(ldev) {
-   pipe = pipe_loader_create_screen(ldev, 0);
+   pipe = pipe_loader_create_screen(ldev, NULL);
    if (!pipe || !pipe->get_param(pipe, PIPE_CAP_COMPUTE)) {
       if (pipe)
          pipe->destroy(pipe);

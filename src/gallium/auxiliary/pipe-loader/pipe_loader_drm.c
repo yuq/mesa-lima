@@ -281,11 +281,12 @@ pipe_loader_drm_configuration(struct pipe_loader_device *dev,
 }
 
 static struct pipe_screen *
-pipe_loader_drm_create_screen(struct pipe_loader_device *dev, unsigned flags)
+pipe_loader_drm_create_screen(struct pipe_loader_device *dev,
+                              const struct pipe_screen_config *config)
 {
    struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(dev);
 
-   return ddev->dd->create_screen(ddev->fd, flags);
+   return ddev->dd->create_screen(ddev->fd, config);
 }
 
 static const struct pipe_loader_ops pipe_loader_drm_ops = {

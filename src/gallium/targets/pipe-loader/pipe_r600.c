@@ -5,7 +5,7 @@
 #include "r600/r600_public.h"
 
 static struct pipe_screen *
-create_screen(int fd, unsigned flags)
+create_screen(int fd, const struct pipe_screen_config *config)
 {
    struct radeon_winsys *rw;
 

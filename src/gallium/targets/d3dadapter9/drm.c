@@ -229,7 +229,7 @@ drm_create_adapter( int fd,
         return D3DERR_DRIVERINTERNALERROR;
     }
 
-    ctx->base.hal = pipe_loader_create_screen(ctx->dev, 0);
+    ctx->base.hal = pipe_loader_create_screen(ctx->dev, NULL);
     if (!ctx->base.hal) {
         ERR("Unable to load requested driver.\n");
         drm_destroy(&ctx->base);
@@ -312,7 +312,7 @@ drm_create_adapter( int fd,
 
     /* wrap it to create a software screen that can share resources */
     if (pipe_loader_sw_probe_wrapped(&ctx->swdev, ctx->base.hal))
-        ctx->base.ref = pipe_loader_create_screen(ctx->swdev, 0);
+        ctx->base.ref = pipe_loader_create_screen(ctx->swdev, NULL);
 
     if (!ctx->base.ref) {
         ERR("Couldn't wrap drm screen to swrast screen. Software devices "
