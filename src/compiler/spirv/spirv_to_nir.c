@@ -1379,6 +1379,7 @@ static void
 vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
                          const uint32_t *w, unsigned count)
 {
+   struct vtn_type *res_type = vtn_value(b, w[1], vtn_value_type_type)->type;
    struct nir_function *callee =
       vtn_value(b, w[3], vtn_value_type_function)->func->impl->function;
 
@@ -1402,6 +1403,7 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
    }
 
    nir_variable *out_tmp = NULL;
+   assert(res_type->type == callee->return_type);
    if (!glsl_type_is_void(callee->return_type)) {
       out_tmp = nir_local_variable_create(b->impl, callee->return_type,
                                           "out_tmp");
@@ -1413,8 +1415,7 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
    if (glsl_type_is_void(callee->return_type)) {
       vtn_push_value(b, w[2], vtn_value_type_undef);
    } else {
-      struct vtn_value *retval = vtn_push_value(b, w[2], vtn_value_type_ssa);
-      retval->ssa = vtn_local_load(b, call->return_deref);
+      vtn_push_ssa(b, w[2], res_type, vtn_local_load(b, call->return_deref));
    }
 }
 

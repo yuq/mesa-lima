@@ -1774,6 +1774,8 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpLoad: {
+      struct vtn_type *res_type =
+         vtn_value(b, w[1], vtn_value_type_type)->type;
       struct vtn_pointer *src =
          vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
 
@@ -1783,8 +1785,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          return;
       }
 
-      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-      val->ssa = vtn_variable_load(b, src);
+      vtn_push_ssa(b, w[2], res_type, vtn_variable_load(b, src));
       break;
    }
 

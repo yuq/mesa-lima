@@ -514,6 +514,15 @@ vtn_push_value(struct vtn_builder *b, uint32_t value_id,
 }
 
 static inline struct vtn_value *
+vtn_push_ssa(struct vtn_builder *b, uint32_t value_id,
+             struct vtn_type *type, struct vtn_ssa_value *ssa)
+{
+   struct vtn_value *val = vtn_push_value(b, value_id, vtn_value_type_ssa);
+   val->ssa = ssa;
+   return val;
+}
+
+static inline struct vtn_value *
 vtn_untyped_value(struct vtn_builder *b, uint32_t value_id)
 {
    assert(value_id < b->value_id_bound);
