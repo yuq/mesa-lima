@@ -106,6 +106,28 @@ _mesa_get_srgb_format_linear(mesa_format format)
 }
 
 /**
+ * For a linear format, return the corresponding sRGB color space format.
+ * For an sRGB format, return the format as-is.
+ * Assert-fails if the format is not sRGB and does not have an sRGB equivalent.
+ */
+mesa_format
+_mesa_get_linear_format_srgb(mesa_format format)
+{
+   switch (format) {
+%for unorm, srgb in unorm_to_srgb_map:
+   case ${unorm}:
+      return ${srgb};
+%endfor
+%for unorm, srgb in unorm_to_srgb_map:
+   case ${srgb}:
+%endfor
+      return format;
+   default:
+      unreachable("Given format does not have an sRGB equivalent");
+   }
+}
+
+/**
  * If the format has an alpha channel, and there exists a non-alpha
  * variant of the format with an identical bit layout, then return
  * the non-alpha format. Otherwise return the original format.
