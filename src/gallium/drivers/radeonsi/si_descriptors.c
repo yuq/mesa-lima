@@ -125,19 +125,20 @@ static void si_init_descriptors(struct si_context *sctx,
 				unsigned num_ce_slots,
 				unsigned *ce_offset)
 {
-	assert(num_elements <= sizeof(desc->dirty_mask)*8);
-
 	desc->list = CALLOC(num_elements, element_dw_size * 4);
 	desc->element_dw_size = element_dw_size;
 	desc->num_elements = num_elements;
 	desc->first_ce_slot = sctx->ce_ib ? first_ce_slot : 0;
 	desc->num_ce_slots = sctx->ce_ib ? num_ce_slots : 0;
-	desc->dirty_mask = u_bit_consecutive64(0, num_elements);
+	desc->dirty_mask = 0;
 	desc->shader_userdata_offset = shader_userdata_index * 4;
 
 	if (desc->num_ce_slots) {
+		assert(num_elements <= sizeof(desc->dirty_mask)*8);
+
 		desc->uses_ce = true;
 		desc->ce_offset = *ce_offset;
+		desc->dirty_mask = u_bit_consecutive64(0, num_elements);
 
 		*ce_offset += element_dw_size * desc->num_ce_slots * 4;
 	}
