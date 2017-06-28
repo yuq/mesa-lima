@@ -2195,6 +2195,35 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 	radeon_emit(cs, va >> 32);
 }
 
+static void si_emit_global_shader_pointers(struct si_context *sctx,
+					   struct si_descriptors *descs)
+{
+	si_emit_shader_pointer(sctx, descs,
+			       R_00B030_SPI_SHADER_USER_DATA_PS_0);
+	si_emit_shader_pointer(sctx, descs,
+			       R_00B130_SPI_SHADER_USER_DATA_VS_0);
+
+	if (sctx->b.chip_class >= GFX9) {
+		/* GFX9 merged LS-HS and ES-GS.
+		 * Set RW_BUFFERS in the special registers, so that
+		 * it's preloaded into s[0:1] instead of s[8:9].
+		 */
+		si_emit_shader_pointer(sctx, descs,
+				       R_00B208_SPI_SHADER_USER_DATA_ADDR_LO_GS);
+		si_emit_shader_pointer(sctx, descs,
+				       R_00B408_SPI_SHADER_USER_DATA_ADDR_LO_HS);
+	} else {
+		si_emit_shader_pointer(sctx, descs,
+				       R_00B230_SPI_SHADER_USER_DATA_GS_0);
+		si_emit_shader_pointer(sctx, descs,
+				       R_00B330_SPI_SHADER_USER_DATA_ES_0);
+		si_emit_shader_pointer(sctx, descs,
+				       R_00B430_SPI_SHADER_USER_DATA_HS_0);
+		si_emit_shader_pointer(sctx, descs,
+				       R_00B530_SPI_SHADER_USER_DATA_LS_0);
+	}
+}
+
 void si_emit_graphics_shader_pointers(struct si_context *sctx,
                                       struct r600_atom *atom)
 {
@@ -2204,32 +2233,8 @@ void si_emit_graphics_shader_pointers(struct si_context *sctx,
 
 	descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
 
-	if (sctx->shader_pointers_dirty & (1 << SI_DESCS_RW_BUFFERS)) {
-		si_emit_shader_pointer(sctx, descs,
-				       R_00B030_SPI_SHADER_USER_DATA_PS_0);
-		si_emit_shader_pointer(sctx, descs,
-				       R_00B130_SPI_SHADER_USER_DATA_VS_0);
-
-		if (sctx->b.chip_class >= GFX9) {
-			/* GFX9 merged LS-HS and ES-GS.
-			 * Set RW_BUFFERS in the special registers, so that
-			 * it's preloaded into s[0:1] instead of s[8:9].
-			 */
-			si_emit_shader_pointer(sctx, descs,
-					       R_00B208_SPI_SHADER_USER_DATA_ADDR_LO_GS);
-			si_emit_shader_pointer(sctx, descs,
-					       R_00B408_SPI_SHADER_USER_DATA_ADDR_LO_HS);
-		} else {
-			si_emit_shader_pointer(sctx, descs,
-					       R_00B230_SPI_SHADER_USER_DATA_GS_0);
-			si_emit_shader_pointer(sctx, descs,
-					       R_00B330_SPI_SHADER_USER_DATA_ES_0);
-			si_emit_shader_pointer(sctx, descs,
-					       R_00B430_SPI_SHADER_USER_DATA_HS_0);
-			si_emit_shader_pointer(sctx, descs,
-					       R_00B530_SPI_SHADER_USER_DATA_LS_0);
-		}
-	}
+	if (sctx->shader_pointers_dirty & (1 << SI_DESCS_RW_BUFFERS))
+		si_emit_global_shader_pointers(sctx, descs);
 
 	mask = sctx->shader_pointers_dirty &
 	       u_bit_consecutive(SI_DESCS_FIRST_SHADER,
