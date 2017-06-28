@@ -133,7 +133,7 @@ format_fallback_deps := \
 $(intermediates)/main/format_fallback.c: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(FORMAT_FALLBACK)
 $(intermediates)/main/format_fallback.c: PRIVATE_XML :=
 $(intermediates)/main/format_fallback.c: $(format_fallback_deps)
-	$(call es-gen, $<)
+	$(call es-gen, $< /dev/stdout)
 
 FORMAT_INFO := $(LOCAL_PATH)/main/format_info.py
 format_info_deps := \
