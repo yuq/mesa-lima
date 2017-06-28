@@ -158,6 +158,14 @@ _mesa_BindFragDataLocationIndexed(GLuint program, GLuint colorNumber,
                                   GLuint index, const GLchar *name);
 
 extern void GLAPIENTRY
+_mesa_BindFragDataLocation_no_error(GLuint program, GLuint colorNumber,
+                                    const GLchar *name);
+
+extern void GLAPIENTRY
+_mesa_BindFragDataLocationIndexed_no_error(GLuint program, GLuint colorNumber,
+                                           GLuint index, const GLchar *name);
+
+extern void GLAPIENTRY
 _mesa_GetActiveAttrib(GLuint, GLuint, GLsizei, GLsizei *, GLint *,
                          GLenum *, GLchar *);
 

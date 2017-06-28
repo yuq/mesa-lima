@@ -280,6 +280,21 @@ _mesa_BindFragDataLocation(GLuint program, GLuint colorNumber,
 }
 
 void GLAPIENTRY
+_mesa_BindFragDataLocation_no_error(GLuint program, GLuint colorNumber,
+                                    const GLchar *name)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!name)
+      return;
+
+   struct gl_shader_program *const shProg =
+      _mesa_lookup_shader_program(ctx, program);
+
+   bind_frag_data_location(shProg, name, colorNumber, 0);
+}
+
+void GLAPIENTRY
 _mesa_BindFragDataLocationIndexed(GLuint program, GLuint colorNumber,
                                   GLuint index, const GLchar *name)
 {
@@ -312,6 +327,21 @@ _mesa_BindFragDataLocationIndexed(GLuint program, GLuint colorNumber,
       _mesa_error(ctx, GL_INVALID_VALUE, "glBindFragDataLocationIndexed(colorNumber)");
       return;
    }
+
+   bind_frag_data_location(shProg, name, colorNumber, index);
+}
+
+void GLAPIENTRY
+_mesa_BindFragDataLocationIndexed_no_error(GLuint program, GLuint colorNumber,
+                                           GLuint index, const GLchar *name)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!name)
+      return;
+
+   struct gl_shader_program *const shProg =
+      _mesa_lookup_shader_program(ctx, program);
 
    bind_frag_data_location(shProg, name, colorNumber, index);
 }
