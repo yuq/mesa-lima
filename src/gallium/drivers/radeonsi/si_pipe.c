@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"
 #include "util/u_tests.h"
+#include "util/xmlconfig.h"
 #include "vl/vl_decoder.h"
 #include "../ddebug/dd_util.h"
 
@@ -991,6 +992,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		FREE(sscreen);
 		return NULL;
 	}
+
+	if (driQueryOptionb(config->options, "radeonsi_enable_sisched"))
+		sscreen->b.debug_flags |= DBG_SI_SCHED;
 
 	/* Only enable as many threads as we have target machines, but at most
 	 * the number of CPUs - 1 if there is more than one.
