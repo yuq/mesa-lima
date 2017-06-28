@@ -63,6 +63,8 @@ enum drm_conf {
    DRM_CONF_THROTTLE, /* DRM_CONF_INT. */
    /* Can this driver, running on this kernel, import and export dma-buf fds? */
    DRM_CONF_SHARE_FD, /* DRM_CONF_BOOL. */
+   /* XML string describing the available config options. */
+   DRM_CONF_XML_OPTIONS, /* DRM_CONF_POINTER */
    DRM_CONF_MAX
 };
 
