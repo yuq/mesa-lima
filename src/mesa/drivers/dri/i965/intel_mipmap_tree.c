@@ -222,8 +222,8 @@ intel_tiling_supports_hiz(const struct brw_context *brw, unsigned tiling)
 }
 
 static bool
-intel_miptree_supports_hiz(struct brw_context *brw,
-                           struct intel_mipmap_tree *mt)
+intel_miptree_supports_hiz(const struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt)
 {
    if (!brw->has_hiz)
       return false;
