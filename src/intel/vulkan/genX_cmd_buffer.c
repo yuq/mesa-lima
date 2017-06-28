@@ -270,16 +270,18 @@ color_attachment_compute_aux_usage(struct anv_device * device,
        * also supports color compression.
        */
       if (isl_format_supports_ccs_e(&device->info, iview->isl.format)) {
-         /* TODO: Consider using a heuristic to determine if temporarily enabling
-          * CCS_E for this image view would be beneficial.
-          *
-          * While fast-clear resolves and partial resolves are fairly cheap in the
+         att_state->input_aux_usage = ISL_AUX_USAGE_CCS_D;
+
+         /* While fast-clear resolves and partial resolves are fairly cheap in the
           * case where you render to most of the pixels, full resolves are not
           * because they potentially involve reading and writing the entire
           * framebuffer.  If we can't texture with CCS_E, we should leave it off and
           * limit ourselves to fast clears.
           */
-         att_state->input_aux_usage = ISL_AUX_USAGE_CCS_D;
+         if (cmd_state->pass->attachments[att].first_subpass_layout ==
+             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+            anv_perf_warn("Not temporarily enabling CCS_E.");
+         }
       } else {
          att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
       }
