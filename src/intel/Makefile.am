@@ -62,7 +62,6 @@ EXTRA_DIST =
 include Makefile.blorp.am
 include Makefile.common.am
 include Makefile.compiler.am
-include Makefile.drm.am
 include Makefile.genxml.am
 include Makefile.isl.am
 include Makefile.tools.am

@@ -30,7 +30,7 @@ include $(LOCAL_PATH)/Makefile.sources
 I965_PERGEN_COMMON_INCLUDES := \
 	$(MESA_DRI_C_INCLUDES) \
 	$(MESA_TOP)/src/intel \
-	$(MESA_TOP)/src/intel/drm
+	$(MESA_TOP)/include/drm-uapi
 
 I965_PERGEN_SHARED_LIBRARIES := \
 	$(MESA_DRI_SHARED_LIBRARIES)
@@ -258,7 +258,7 @@ endif
 
 LOCAL_C_INCLUDES := \
 	$(MESA_DRI_C_INCLUDES) \
-	$(MESA_TOP)/src/intel/drm
+	$(MESA_TOP)/include/drm-uapi
 
 LOCAL_SRC_FILES := \
 	$(i965_FILES)
