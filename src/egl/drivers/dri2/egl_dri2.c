@@ -702,10 +702,11 @@ dri2_setup_screen(_EGLDisplay *disp)
           dri2_dpy->image->createImageFromTexture) {
          disp->Extensions.KHR_gl_texture_2D_image = EGL_TRUE;
          disp->Extensions.KHR_gl_texture_cubemap_image = EGL_TRUE;
+
+         if (dri2_renderer_query_integer(dri2_dpy,
+                                         __DRI2_RENDERER_HAS_TEXTURE_3D))
+             disp->Extensions.KHR_gl_texture_3D_image = EGL_TRUE;
       }
-      if (dri2_renderer_query_integer(dri2_dpy,
-                                      __DRI2_RENDERER_HAS_TEXTURE_3D))
-         disp->Extensions.KHR_gl_texture_3D_image = EGL_TRUE;
 #ifdef HAVE_LIBDRM
       if (dri2_dpy->image->base.version >= 8 &&
           dri2_dpy->image->createImageFromDmaBufs) {
