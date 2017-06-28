@@ -81,8 +81,8 @@ brw_emit_surface_state(struct brw_context *brw,
                        uint32_t mocs, uint32_t *surf_offset, int surf_index,
                        unsigned read_domains, unsigned write_domains)
 {
-   uint32_t tile_x = mt->level[0].slice[0].x_offset;
-   uint32_t tile_y = mt->level[0].slice[0].y_offset;
+   uint32_t tile_x = mt->level[0].level_x;
+   uint32_t tile_y = mt->level[0].level_y;
    uint32_t offset = mt->offset;
 
    struct isl_surf surf;
