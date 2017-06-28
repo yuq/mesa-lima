@@ -98,6 +98,10 @@ _mesa_LogicOp( GLenum opcode );
 
 
 extern void GLAPIENTRY
+_mesa_LogicOp_no_error(GLenum opcode);
+
+
+extern void GLAPIENTRY
 _mesa_IndexMask( GLuint mask );
 
 extern void GLAPIENTRY

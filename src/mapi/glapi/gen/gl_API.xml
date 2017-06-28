@@ -2551,7 +2551,7 @@
         <glx rop="160"/>
     </function>
 
-    <function name="LogicOp" es1="1.0">
+    <function name="LogicOp" es1="1.0" no_error="true">
         <param name="opcode" type="GLenum"/>
         <glx rop="161"/>
     </function>

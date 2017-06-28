@@ -816,6 +816,14 @@ _mesa_LogicOp( GLenum opcode )
 
 
 void GLAPIENTRY
+_mesa_LogicOp_no_error(GLenum opcode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   logic_op(ctx, opcode);
+}
+
+
+void GLAPIENTRY
 _mesa_IndexMask( GLuint mask )
 {
    GET_CURRENT_CONTEXT(ctx);
