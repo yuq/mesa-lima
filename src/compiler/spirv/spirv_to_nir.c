@@ -600,7 +600,8 @@ type_decoration_cb(struct vtn_builder *b,
    switch (dec->decoration) {
    case SpvDecorationArrayStride:
       assert(type->base_type == vtn_base_type_matrix ||
-             type->base_type == vtn_base_type_array);
+             type->base_type == vtn_base_type_array ||
+             type->base_type == vtn_base_type_pointer);
       type->stride = dec->literals[0];
       break;
    case SpvDecorationBlock:
@@ -3067,6 +3068,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpCopyMemory:
    case SpvOpCopyMemorySized:
    case SpvOpAccessChain:
+   case SpvOpPtrAccessChain:
    case SpvOpInBoundsAccessChain:
    case SpvOpArrayLength:
       vtn_handle_variables(b, opcode, w, count);

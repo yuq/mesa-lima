@@ -220,14 +220,14 @@ struct vtn_type {
    /* Specifies the length of complex types. */
    unsigned length;
 
+   /* for arrays, matrices and pointers, the array stride */
+   unsigned stride;
+
    union {
       /* Members for scalar, vector, and array-like types */
       struct {
          /* for arrays, the vtn_type for the elements of the array */
          struct vtn_type *array_element;
-
-         /* for arrays and matrices, the array stride */
-         unsigned stride;
 
          /* for matrices, whether the matrix is stored row-major */
          bool row_major:1;
@@ -307,6 +307,11 @@ struct vtn_access_link {
 
 struct vtn_access_chain {
    uint32_t length;
+
+   /** Whether or not to treat the base pointer as an array.  This is only
+    * true if this access chain came from an OpPtrAccessChain.
+    */
+   bool ptr_as_array;
 
    /** Struct elements and array offsets.
     *

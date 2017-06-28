@@ -67,6 +67,12 @@ vtn_access_chain_pointer_dereference(struct vtn_builder *b,
       vtn_access_chain_extend(b, base->chain, deref_chain->length);
    struct vtn_type *type = base->type;
 
+   /* OpPtrAccessChain is only allowed on things which support variable
+    * pointers.  For everything else, the client is expected to just pass us
+    * the right access chain.
+    */
+   assert(!deref_chain->ptr_as_array);
+
    unsigned start = base->chain ? base->chain->length : 0;
    for (unsigned i = 0; i < deref_chain->length; i++) {
       chain->link[start + i] = deref_chain->link[i];
@@ -135,6 +141,21 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
    struct vtn_type *type = base->type;
 
    unsigned idx = 0;
+   if (deref_chain->ptr_as_array) {
+      /* We need ptr_type for the stride */
+      assert(base->ptr_type);
+      /* This must be a pointer to an actual element somewhere */
+      assert(block_index && offset);
+      /* We need at least one element in the chain */
+      assert(deref_chain->length >= 1);
+
+      nir_ssa_def *elem_offset =
+         vtn_access_link_as_ssa(b, deref_chain->link[idx],
+                                base->ptr_type->stride);
+      offset = nir_iadd(&b->nb, offset, elem_offset);
+      idx++;
+   }
+
    if (!block_index) {
       assert(base->var);
       if (glsl_type_is_array(type->type)) {
@@ -1699,8 +1720,10 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpAccessChain:
+   case SpvOpPtrAccessChain:
    case SpvOpInBoundsAccessChain: {
       struct vtn_access_chain *chain = vtn_access_chain_create(b, count - 4);
+      chain->ptr_as_array = (opcode == SpvOpPtrAccessChain);
 
       unsigned idx = 0;
       for (int i = 4; i < count; i++) {
