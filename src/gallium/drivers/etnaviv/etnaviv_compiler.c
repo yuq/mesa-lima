@@ -885,6 +885,8 @@ etna_amode(struct tgsi_ind_register indirect)
    default:
       assert(!"Invalid swizzle");
    }
+
+   unreachable("bad swizzle");
 }
 
 /* convert destination operand */
