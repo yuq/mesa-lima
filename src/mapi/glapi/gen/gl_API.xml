@@ -5346,7 +5346,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="EnableVertexAttribArray" es2="2.0">
+    <function name="EnableVertexAttribArray" es2="2.0" no_error="true">
         <param name="index" type="GLuint"/>
         <glx ignore="true"/>
         <glx handcode="true"/>

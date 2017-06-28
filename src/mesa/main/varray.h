@@ -223,9 +223,16 @@ _mesa_VertexAttribLPointer(GLuint index, GLint size, GLenum type,
 extern void GLAPIENTRY
 _mesa_EnableVertexAttribArray(GLuint index);
 
+extern void GLAPIENTRY
+_mesa_EnableVertexAttribArray_no_error(GLuint index);
+
 
 extern void GLAPIENTRY
 _mesa_EnableVertexArrayAttrib(GLuint vaobj, GLuint index);
+
+extern void GLAPIENTRY
+_mesa_EnableVertexArrayAttrib_no_error(GLuint vaobj, GLuint index);
+
 
 
 extern void GLAPIENTRY
