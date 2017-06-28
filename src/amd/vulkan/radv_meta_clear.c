@@ -455,7 +455,7 @@ create_depthstencil_renderpass(struct radv_device *device,
 					       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 						       .attachmentCount = 1,
 						       .pAttachments = &(VkAttachmentDescription) {
-						       .format = VK_FORMAT_UNDEFINED,
+						       .format = VK_FORMAT_D32_SFLOAT_S8_UINT,
 						       .samples = samples,
 						       .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 						       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,

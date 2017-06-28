@@ -1217,12 +1217,24 @@ radv_pipeline_init_depth_stencil_state(struct radv_pipeline *pipeline,
 	memset(ds, 0, sizeof(*ds));
 	if (!vkds)
 		return;
-	ds->db_depth_control = S_028800_Z_ENABLE(vkds->depthTestEnable ? 1 : 0) |
-		S_028800_Z_WRITE_ENABLE(vkds->depthWriteEnable ? 1 : 0) |
-		S_028800_ZFUNC(vkds->depthCompareOp) |
-		S_028800_DEPTH_BOUNDS_ENABLE(vkds->depthBoundsTestEnable ? 1 : 0);
 
-	if (vkds->stencilTestEnable) {
+	RADV_FROM_HANDLE(radv_render_pass, pass, pCreateInfo->renderPass);
+	struct radv_subpass *subpass = pass->subpasses + pCreateInfo->subpass;
+	if (subpass->depth_stencil_attachment.attachment == VK_ATTACHMENT_UNUSED)
+		return;
+
+	struct radv_render_pass_attachment *attachment = pass->attachments + subpass->depth_stencil_attachment.attachment;
+	bool has_depth_attachment = vk_format_is_depth(attachment->format);
+	bool has_stencil_attachment = vk_format_is_stencil(attachment->format);
+
+	if (has_depth_attachment) {
+		ds->db_depth_control = S_028800_Z_ENABLE(vkds->depthTestEnable ? 1 : 0) |
+		                       S_028800_Z_WRITE_ENABLE(vkds->depthWriteEnable ? 1 : 0) |
+		                       S_028800_ZFUNC(vkds->depthCompareOp) |
+		                       S_028800_DEPTH_BOUNDS_ENABLE(vkds->depthBoundsTestEnable ? 1 : 0);
+	}
+
+	if (has_stencil_attachment && vkds->stencilTestEnable) {
 		ds->db_depth_control |= S_028800_STENCIL_ENABLE(1) | S_028800_BACKFACE_ENABLE(1);
 		ds->db_depth_control |= S_028800_STENCILFUNC(vkds->front.compareOp);
 		ds->db_stencil_control |= S_02842C_STENCILFAIL(si_translate_stencil_op(vkds->front.failOp));
