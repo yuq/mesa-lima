@@ -1170,6 +1170,14 @@ _mesa_DisableVertexAttribArray(GLuint index)
 
 
 void GLAPIENTRY
+_mesa_DisableVertexAttribArray_no_error(GLuint index)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   disable_vertex_array_attrib(ctx, ctx->Array.VAO, index);
+}
+
+
+void GLAPIENTRY
 _mesa_DisableVertexArrayAttrib(GLuint vaobj, GLuint index)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -1191,6 +1199,15 @@ _mesa_DisableVertexArrayAttrib(GLuint vaobj, GLuint index)
       return;
    }
 
+   disable_vertex_array_attrib(ctx, vao, index);
+}
+
+
+void GLAPIENTRY
+_mesa_DisableVertexArrayAttrib_no_error(GLuint vaobj, GLuint index)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_vertex_array_object *vao = _mesa_lookup_vao(ctx, vaobj);
    disable_vertex_array_attrib(ctx, vao, index);
 }
 

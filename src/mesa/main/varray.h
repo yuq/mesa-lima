@@ -238,9 +238,15 @@ _mesa_EnableVertexArrayAttrib_no_error(GLuint vaobj, GLuint index);
 extern void GLAPIENTRY
 _mesa_DisableVertexAttribArray(GLuint index);
 
+extern void GLAPIENTRY
+_mesa_DisableVertexAttribArray_no_error(GLuint index);
+
 
 extern void GLAPIENTRY
 _mesa_DisableVertexArrayAttrib(GLuint vaobj, GLuint index);
+
+extern void GLAPIENTRY
+_mesa_DisableVertexArrayAttrib_no_error(GLuint vaobj, GLuint index);
 
 
 extern void GLAPIENTRY

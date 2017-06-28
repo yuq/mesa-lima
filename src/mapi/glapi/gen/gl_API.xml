@@ -5340,7 +5340,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="DisableVertexAttribArray" es2="2.0">
+    <function name="DisableVertexAttribArray" es2="2.0" no_error="true">
         <param name="index" type="GLuint"/>
         <glx ignore="true"/>
         <glx handcode="true"/>

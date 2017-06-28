@@ -584,7 +584,7 @@
       <param name="arrays" type="GLuint *" />
    </function>
 
-   <function name="DisableVertexArrayAttrib">
+   <function name="DisableVertexArrayAttrib" no_error="true">
       <param name="vaobj" type="GLuint" />
       <param name="index" type="GLuint" />
    </function>
