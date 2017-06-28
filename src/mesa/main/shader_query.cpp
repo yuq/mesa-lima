@@ -254,6 +254,24 @@ _mesa_longest_attribute_name_length(struct gl_shader_program *shProg)
    return longest;
 }
 
+void static
+bind_frag_data_location(struct gl_shader_program *const shProg,
+                        const char *name, unsigned colorNumber,
+                        unsigned index)
+{
+   /* Replace the current value if it's already in the list.  Add
+    * FRAG_RESULT_DATA0 because that's how the linker differentiates
+    * between built-in attributes and user-defined attributes.
+    */
+   shProg->FragDataBindings->put(colorNumber + FRAG_RESULT_DATA0, name);
+   shProg->FragDataIndexBindings->put(index, name);
+
+   /*
+    * Note that this binding won't go into effect until
+    * glLinkProgram is called again.
+    */
+}
+
 void GLAPIENTRY
 _mesa_BindFragDataLocation(GLuint program, GLuint colorNumber,
 			   const GLchar *name)
@@ -295,17 +313,7 @@ _mesa_BindFragDataLocationIndexed(GLuint program, GLuint colorNumber,
       return;
    }
 
-   /* Replace the current value if it's already in the list.  Add
-    * FRAG_RESULT_DATA0 because that's how the linker differentiates
-    * between built-in attributes and user-defined attributes.
-    */
-   shProg->FragDataBindings->put(colorNumber + FRAG_RESULT_DATA0, name);
-   shProg->FragDataIndexBindings->put(index, name);
-   /*
-    * Note that this binding won't go into effect until
-    * glLinkProgram is called again.
-    */
-
+   bind_frag_data_location(shProg, name, colorNumber, index);
 }
 
 GLint GLAPIENTRY
