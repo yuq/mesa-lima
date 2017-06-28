@@ -239,7 +239,11 @@ color_attachment_compute_aux_usage(struct anv_device * device,
    struct anv_attachment_state *att_state = &cmd_state->attachments[att];
    struct anv_image_view *iview = cmd_state->framebuffer->attachments[att];
 
-   if (iview->image->aux_surface.isl.size == 0) {
+   if (iview->isl.base_array_layer >=
+       anv_image_aux_layers(iview->image, iview->isl.base_level)) {
+      /* There is no aux buffer which corresponds to the level and layer(s)
+       * being accessed.
+       */
       att_state->aux_usage = ISL_AUX_USAGE_NONE;
       att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
       att_state->fast_clear = false;
@@ -274,16 +278,6 @@ color_attachment_compute_aux_usage(struct anv_device * device,
           render_area.extent.width != iview->extent.width ||
           render_area.extent.height != iview->extent.height)
          att_state->fast_clear = false;
-
-      if (GEN_GEN <= 7) {
-         /* On gen7, we can't do multi-LOD or multi-layer fast-clears.  We
-          * technically can, but it comes with crazy restrictions that we
-          * don't want to deal with now.
-          */
-         if (iview->isl.base_level > 0 ||
-             iview->isl.base_array_layer > 0)
-            att_state->fast_clear = false;
-      }
 
       /* On Broadwell and earlier, we can only handle 0/1 clear colors */
       if (GEN_GEN <= 8 && !att_state->clear_color_is_zero_one)
