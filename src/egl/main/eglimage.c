@@ -106,8 +106,6 @@ static EGLint
 _eglParseEXTImageDmaBufImportAttribs(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                                      EGLint attr, EGLint val)
 {
-   EGLint err = EGL_SUCCESS;
-
    switch (attr) {
    case EGL_LINUX_DRM_FOURCC_EXT:
       attrs->DMABufFourCC.Value = val;
@@ -151,45 +149,40 @@ _eglParseEXTImageDmaBufImportAttribs(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
       break;
    case EGL_YUV_COLOR_SPACE_HINT_EXT:
       if (val != EGL_ITU_REC601_EXT && val != EGL_ITU_REC709_EXT &&
-          val != EGL_ITU_REC2020_EXT) {
-         err = EGL_BAD_ATTRIBUTE;
-      } else {
-         attrs->DMABufYuvColorSpaceHint.Value = val;
-         attrs->DMABufYuvColorSpaceHint.IsPresent = EGL_TRUE;
-      }
+          val != EGL_ITU_REC2020_EXT)
+         return EGL_BAD_ATTRIBUTE;
+
+      attrs->DMABufYuvColorSpaceHint.Value = val;
+      attrs->DMABufYuvColorSpaceHint.IsPresent = EGL_TRUE;
       break;
    case EGL_SAMPLE_RANGE_HINT_EXT:
-      if (val != EGL_YUV_FULL_RANGE_EXT && val != EGL_YUV_NARROW_RANGE_EXT) {
-         err = EGL_BAD_ATTRIBUTE;
-      } else {
-         attrs->DMABufSampleRangeHint.Value = val;
-         attrs->DMABufSampleRangeHint.IsPresent = EGL_TRUE;
-      }
+      if (val != EGL_YUV_FULL_RANGE_EXT && val != EGL_YUV_NARROW_RANGE_EXT)
+         return EGL_BAD_ATTRIBUTE;
+
+      attrs->DMABufSampleRangeHint.Value = val;
+      attrs->DMABufSampleRangeHint.IsPresent = EGL_TRUE;
       break;
    case EGL_YUV_CHROMA_HORIZONTAL_SITING_HINT_EXT:
       if (val != EGL_YUV_CHROMA_SITING_0_EXT &&
-          val != EGL_YUV_CHROMA_SITING_0_5_EXT) {
-         err = EGL_BAD_ATTRIBUTE;
-      } else {
-         attrs->DMABufChromaHorizontalSiting.Value = val;
-         attrs->DMABufChromaHorizontalSiting.IsPresent = EGL_TRUE;
-      }
+          val != EGL_YUV_CHROMA_SITING_0_5_EXT)
+         return EGL_BAD_ATTRIBUTE;
+
+      attrs->DMABufChromaHorizontalSiting.Value = val;
+      attrs->DMABufChromaHorizontalSiting.IsPresent = EGL_TRUE;
       break;
    case EGL_YUV_CHROMA_VERTICAL_SITING_HINT_EXT:
       if (val != EGL_YUV_CHROMA_SITING_0_EXT &&
-          val != EGL_YUV_CHROMA_SITING_0_5_EXT) {
-         err = EGL_BAD_ATTRIBUTE;
-      } else {
-         attrs->DMABufChromaVerticalSiting.Value = val;
-         attrs->DMABufChromaVerticalSiting.IsPresent = EGL_TRUE;
-      }
+          val != EGL_YUV_CHROMA_SITING_0_5_EXT)
+         return EGL_BAD_ATTRIBUTE;
+
+      attrs->DMABufChromaVerticalSiting.Value = val;
+      attrs->DMABufChromaVerticalSiting.IsPresent = EGL_TRUE;
       break;
    default:
-      err = EGL_BAD_PARAMETER;
-      break;
+      return EGL_BAD_PARAMETER;
    }
 
-   return err;
+   return EGL_SUCCESS;
 }
 
 static EGLint
