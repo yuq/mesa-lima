@@ -587,6 +587,10 @@ merge_tess_info(struct shader_info *tes_info,
           tcs_info->tess.spacing == tes_info->tess.spacing);
    tes_info->tess.spacing |= tcs_info->tess.spacing;
 
+   assert(tcs_info->tess.primitive_mode == 0 ||
+          tes_info->tess.primitive_mode == 0 ||
+          tcs_info->tess.primitive_mode == tes_info->tess.primitive_mode);
+   tes_info->tess.primitive_mode |= tcs_info->tess.primitive_mode;
    tes_info->tess.ccw |= tcs_info->tess.ccw;
    tes_info->tess.point_mode |= tcs_info->tess.point_mode;
 }
