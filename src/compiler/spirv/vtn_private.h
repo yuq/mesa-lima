@@ -369,6 +369,13 @@ struct vtn_pointer {
    struct nir_ssa_def *offset;
 };
 
+static inline bool
+vtn_pointer_uses_ssa_offset(struct vtn_pointer *ptr)
+{
+   return ptr->mode == vtn_variable_mode_ubo ||
+          ptr->mode == vtn_variable_mode_ssbo;
+}
+
 struct vtn_variable {
    enum vtn_variable_mode mode;
 
@@ -501,6 +508,12 @@ struct vtn_builder {
    bool has_loop_continue;
 };
 
+nir_ssa_def *
+vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr);
+struct vtn_pointer *
+vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
+                     struct vtn_type *ptr_type);
+
 static inline struct vtn_value *
 vtn_push_value(struct vtn_builder *b, uint32_t value_id,
                enum vtn_value_type value_type)
@@ -517,8 +530,14 @@ static inline struct vtn_value *
 vtn_push_ssa(struct vtn_builder *b, uint32_t value_id,
              struct vtn_type *type, struct vtn_ssa_value *ssa)
 {
-   struct vtn_value *val = vtn_push_value(b, value_id, vtn_value_type_ssa);
-   val->ssa = ssa;
+   struct vtn_value *val;
+   if (type->base_type == vtn_base_type_pointer) {
+      val = vtn_push_value(b, value_id, vtn_value_type_pointer);
+      val->pointer = vtn_pointer_from_ssa(b, ssa->def, type);
+   } else {
+      val = vtn_push_value(b, value_id, vtn_value_type_ssa);
+      val->ssa = ssa;
+   }
    return val;
 }
 

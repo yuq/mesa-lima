@@ -52,7 +52,8 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       func->num_params = func_type->length;
       func->params = ralloc_array(b->shader, nir_parameter, func->num_params);
       for (unsigned i = 0; i < func->num_params; i++) {
-         if (func_type->params[i]->base_type == vtn_base_type_pointer) {
+         if (func_type->params[i]->base_type == vtn_base_type_pointer &&
+             func_type->params[i]->type == NULL) {
             func->params[i].type = func_type->params[i]->deref->type;
          } else {
             func->params[i].type = func_type->params[i]->type;
@@ -82,7 +83,7 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       assert(b->func_param_idx < b->func->impl->num_params);
       nir_variable *param = b->func->impl->params[b->func_param_idx++];
 
-      if (type->base_type == vtn_base_type_pointer) {
+      if (type->base_type == vtn_base_type_pointer && type->type == NULL) {
          struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
          vtn_var->type = type->deref;
          vtn_var->var = param;
