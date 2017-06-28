@@ -298,7 +298,7 @@ intel_miptree_blit(struct brw_context *brw,
                    GLenum logicop)
 {
    /* The blitter doesn't understand multisampling at all. */
-   if (src_mt->num_samples > 0 || dst_mt->num_samples > 0)
+   if (src_mt->num_samples > 1 || dst_mt->num_samples > 1)
       return false;
 
    /* No sRGB decode or encode is done by the hardware blitter, which is
@@ -371,7 +371,7 @@ intel_miptree_copy(struct brw_context *brw,
                    uint32_t src_width, uint32_t src_height)
 {
    /* The blitter doesn't understand multisampling at all. */
-   if (src_mt->num_samples > 0 || dst_mt->num_samples > 0)
+   if (src_mt->num_samples > 1 || dst_mt->num_samples > 1)
       return false;
 
    if (src_mt->format == MESA_FORMAT_S_UINT8)
