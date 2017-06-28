@@ -2197,7 +2197,11 @@ intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
    num_levels = last_level - start_level + 1;
 
    for (uint32_t level = start_level; level <= last_level; level++) {
-      const uint32_t level_layers = MIN2(num_layers, mt->level[level].depth);
+      uint32_t level_layers = mt->surf.size > 0 ?
+         get_num_phys_layers(&mt->surf, level) : mt->level[level].depth;
+
+      level_layers = MIN2(num_layers, level_layers);
+
       for (unsigned a = 0; a < level_layers; a++) {
          enum isl_aux_state aux_state =
             intel_miptree_get_aux_state(mt, level, start_layer + a);
