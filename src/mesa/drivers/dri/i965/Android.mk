@@ -29,11 +29,11 @@ include $(LOCAL_PATH)/Makefile.sources
 
 I965_PERGEN_COMMON_INCLUDES := \
 	$(MESA_DRI_C_INCLUDES) \
-	$(MESA_TOP)/src/intel
+	$(MESA_TOP)/src/intel \
+	$(MESA_TOP)/src/intel/drm
 
 I965_PERGEN_SHARED_LIBRARIES := \
-	$(MESA_DRI_SHARED_LIBRARIES) \
-	libdrm_intel
+	$(MESA_DRI_SHARED_LIBRARIES)
 
 I965_PERGEN_STATIC_LIBRARIES := \
 	libmesa_genxml \
@@ -257,7 +257,8 @@ LOCAL_CFLAGS += \
 endif
 
 LOCAL_C_INCLUDES := \
-	$(MESA_DRI_C_INCLUDES)
+	$(MESA_DRI_C_INCLUDES) \
+	$(MESA_TOP)/src/intel/drm
 
 LOCAL_SRC_FILES := \
 	$(i965_FILES)
@@ -271,8 +272,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_intel_compiler
 
 LOCAL_SHARED_LIBRARIES := \
-	$(MESA_DRI_SHARED_LIBRARIES) \
-	libdrm_intel
+	$(MESA_DRI_SHARED_LIBRARIES)
 
 LOCAL_GENERATED_SOURCES := \
 	$(MESA_DRI_OPTIONS_H) \
