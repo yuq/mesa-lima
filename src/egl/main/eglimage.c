@@ -197,81 +197,59 @@ _eglParseEXTImageDmaBufImportModifiersAttribs(_EGLImageAttribs *attrs,
                                               _EGLDisplay *dpy,
                                               EGLint attr, EGLint val)
 {
-   EGLint err = EGL_SUCCESS;
+   if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
+      return EGL_BAD_PARAMETER;
 
    switch (attr) {
    case EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersLo[0].Value = val;
       attrs->DMABufPlaneModifiersLo[0].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersHi[0].Value = val;
       attrs->DMABufPlaneModifiersHi[0].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersLo[1].Value = val;
       attrs->DMABufPlaneModifiersLo[1].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersHi[1].Value = val;
       attrs->DMABufPlaneModifiersHi[1].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersLo[2].Value = val;
       attrs->DMABufPlaneModifiersLo[2].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersHi[2].Value = val;
       attrs->DMABufPlaneModifiersHi[2].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE3_FD_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneFds[3].Value = val;
       attrs->DMABufPlaneFds[3].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE3_OFFSET_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneOffsets[3].Value = val;
       attrs->DMABufPlaneOffsets[3].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE3_PITCH_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlanePitches[3].Value = val;
       attrs->DMABufPlanePitches[3].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersLo[3].Value = val;
       attrs->DMABufPlaneModifiersLo[3].IsPresent = EGL_TRUE;
       break;
    case EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT:
-      if (!dpy->Extensions.EXT_image_dma_buf_import_modifiers)
-         err = EGL_BAD_PARAMETER;
       attrs->DMABufPlaneModifiersHi[3].Value = val;
       attrs->DMABufPlaneModifiersHi[3].IsPresent = EGL_TRUE;
       break;
    default:
-      err = EGL_BAD_PARAMETER;
-      break;
+      return EGL_BAD_PARAMETER;
    }
 
-   return err;
+   return EGL_SUCCESS;
 }
 
 /**
