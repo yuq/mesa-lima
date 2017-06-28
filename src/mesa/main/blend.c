@@ -755,6 +755,21 @@ _mesa_AlphaFunc( GLenum func, GLclampf ref )
 }
 
 
+static void
+logic_op(struct gl_context *ctx, GLenum opcode)
+{
+   if (ctx->Color.LogicOp == opcode)
+      return;
+
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewLogicOp ? 0 : _NEW_COLOR);
+   ctx->NewDriverState |= ctx->DriverFlags.NewLogicOp;
+   ctx->Color.LogicOp = opcode;
+
+   if (ctx->Driver.LogicOpcode)
+      ctx->Driver.LogicOpcode(ctx, opcode);
+}
+
+
 /**
  * Specify a logic pixel operation for color index rendering.
  *
@@ -796,15 +811,7 @@ _mesa_LogicOp( GLenum opcode )
 	 return;
    }
 
-   if (ctx->Color.LogicOp == opcode)
-      return;
-
-   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewLogicOp ? 0 : _NEW_COLOR);
-   ctx->NewDriverState |= ctx->DriverFlags.NewLogicOp;
-   ctx->Color.LogicOp = opcode;
-
-   if (ctx->Driver.LogicOpcode)
-      ctx->Driver.LogicOpcode( ctx, opcode );
+   logic_op(ctx, opcode);
 }
 
 
