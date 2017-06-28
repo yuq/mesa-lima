@@ -1453,8 +1453,21 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
 			       GLuint level, GLuint slice,
 			       GLuint *x, GLuint *y)
 {
+   if (level == 0 && slice == 0) {
+      *x = mt->level[0].level_x;
+      *y = mt->level[0].level_y;
+      return;
+   }
+
    if (mt->surf.size > 0) {
       uint32_t x_offset_sa, y_offset_sa;
+
+      /* Miptree itself can have an offset only if it represents a single
+       * slice in an imported buffer object.
+       * See intel_miptree_create_for_dri_image().
+       */
+      assert(mt->level[0].level_x == 0);
+      assert(mt->level[0].level_y == 0);
 
       /* Given level is relative to level zero while the miptree may be
        * represent just a subset of all levels starting from 'first_level'.
