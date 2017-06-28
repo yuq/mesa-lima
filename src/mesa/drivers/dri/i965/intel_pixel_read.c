@@ -162,8 +162,11 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       return false;
    }
 
-   xoffset += irb->mt->level[irb->mt_level].slice[irb->mt_layer].x_offset;
-   yoffset += irb->mt->level[irb->mt_level].slice[irb->mt_layer].y_offset;
+   unsigned slice_offset_x, slice_offset_y;
+   intel_miptree_get_image_offset(irb->mt, irb->mt_level, irb->mt_layer,
+                                  &slice_offset_x, &slice_offset_y);
+   xoffset += slice_offset_x;
+   yoffset += slice_offset_y;
 
    dst_pitch = _mesa_image_row_stride(pack, width, format, type);
 
