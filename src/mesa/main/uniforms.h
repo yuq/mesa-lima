@@ -224,6 +224,8 @@ void GLAPIENTRY
 _mesa_GetUniformdv(GLuint, GLint, GLdouble *);
 GLint GLAPIENTRY
 _mesa_GetUniformLocation(GLuint, const GLcharARB *);
+GLint GLAPIENTRY
+_mesa_GetUniformLocation_no_error(GLuint, const GLcharARB *);
 GLuint GLAPIENTRY
 _mesa_GetUniformBlockIndex(GLuint program,
 			   const GLchar *uniformBlockName);

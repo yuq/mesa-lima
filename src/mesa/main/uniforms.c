@@ -1025,6 +1025,17 @@ _mesa_GetUniformLocation(GLuint programObj, const GLcharARB *name)
    return _mesa_program_resource_location(shProg, GL_UNIFORM, name);
 }
 
+GLint GLAPIENTRY
+_mesa_GetUniformLocation_no_error(GLuint programObj, const GLcharARB *name)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program(ctx, programObj);
+
+   return _mesa_program_resource_location(shProg, GL_UNIFORM, name);
+}
+
 GLuint GLAPIENTRY
 _mesa_GetUniformBlockIndex(GLuint program,
 			   const GLchar *uniformBlockName)

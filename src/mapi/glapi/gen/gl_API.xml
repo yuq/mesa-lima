@@ -5427,7 +5427,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="GetUniformLocation" es2="2.0">
+    <function name="GetUniformLocation" es2="2.0" no_error="true">
         <param name="program" type="GLuint"/>
         <param name="name" type="const GLchar *"/>
         <return type="GLint"/>
