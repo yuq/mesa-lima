@@ -39,16 +39,23 @@ _eglParseKHRImageAttribs(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                          EGLint attr, EGLint val)
 {
    switch (attr) {
-   /* EGL_KHR_image_base */
    case EGL_IMAGE_PRESERVED_KHR:
+      if (!dpy->Extensions.KHR_image_base)
+          return EGL_BAD_PARAMETER;
+
       attrs->ImagePreserved = val;
       break;
 
-   /* EGL_KHR_gl_image */
    case EGL_GL_TEXTURE_LEVEL_KHR:
+      if (!dpy->Extensions.KHR_gl_texture_2D_image)
+         return EGL_BAD_PARAMETER;
+
       attrs->GLTextureLevel = val;
       break;
    case EGL_GL_TEXTURE_ZOFFSET_KHR:
+      if (!dpy->Extensions.KHR_gl_texture_3D_image)
+         return EGL_BAD_PARAMETER;
+
       attrs->GLTextureZOffset = val;
       break;
    default:
@@ -62,8 +69,10 @@ static EGLint
 _eglParseMESADrmImageAttribs(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                              EGLint attr, EGLint val)
 {
+   if (!dpy->Extensions.MESA_drm_image)
+      return EGL_BAD_PARAMETER;
+
    switch (attr) {
-   /* EGL_MESA_drm_image */
    case EGL_WIDTH:
       attrs->Width = val;
       break;
@@ -90,8 +99,10 @@ static EGLint
 _eglParseWLBindWaylandDisplayAttribs(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                                      EGLint attr, EGLint val)
 {
+   if (!dpy->Extensions.WL_bind_wayland_display)
+      return EGL_BAD_PARAMETER;
+
    switch (attr) {
-   /* EGL_WL_bind_wayland_display */
    case EGL_WAYLAND_PLANE_WL:
       attrs->PlaneWL = val;
       break;
@@ -106,6 +117,9 @@ static EGLint
 _eglParseEXTImageDmaBufImportAttribs(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
                                      EGLint attr, EGLint val)
 {
+   if (!dpy->Extensions.EXT_image_dma_buf_import)
+      return EGL_BAD_PARAMETER;
+
    switch (attr) {
    case EGL_WIDTH:
       attrs->Width = val;
