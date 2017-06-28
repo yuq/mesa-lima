@@ -402,7 +402,7 @@ drisw_init_screen(__DRIscreen * sPriv)
 
    struct pipe_screen_config config;
 
-   config.flags = dri_init_options_get_screen_flags(screen, "swrast");
+   config.flags = dri_init_options_get_screen_flags(screen);
 
    if (pipe_loader_sw_probe_dri(&screen->dev, &drisw_lf))
       pscreen = pipe_loader_create_screen(screen->dev, &config);

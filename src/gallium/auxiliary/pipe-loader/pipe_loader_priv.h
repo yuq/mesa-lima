@@ -47,4 +47,15 @@ struct util_dl_library *
 pipe_loader_find_module(struct pipe_loader_device *dev,
                         const char *library_paths);
 
+/**
+ * Free the base device structure.
+ *
+ * Implementations of pipe_loader_ops::release must call this.
+ *
+ * (*dev)->driver_name must be freed by the caller if it was allocated on the
+ * heap.
+ */
+void
+pipe_loader_base_release(struct pipe_loader_device **dev);
+
 #endif /* PIPE_LOADER_PRIV_H */

@@ -282,8 +282,7 @@ pipe_loader_sw_release(struct pipe_loader_device **dev)
       close(sdev->fd);
 #endif
 
-   FREE(sdev);
-   *dev = NULL;
+   pipe_loader_base_release(dev);
 }
 
 static const struct drm_conf_ret *

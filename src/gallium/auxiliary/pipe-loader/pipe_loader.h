@@ -35,6 +35,7 @@
 
 #include "pipe/p_compiler.h"
 #include "state_tracker/drm_driver.h"
+#include "util/xmlconfig.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,6 +66,9 @@ struct pipe_loader_device {
 
    char *driver_name;
    const struct pipe_loader_ops *ops;
+
+   driOptionCache option_cache;
+   driOptionCache option_info;
 };
 
 /**
@@ -98,6 +102,16 @@ pipe_loader_create_screen(struct pipe_loader_device *dev,
 const struct drm_conf_ret *
 pipe_loader_configuration(struct pipe_loader_device *dev,
                           enum drm_conf conf);
+
+/**
+ * Ensure that dev->option_cache is initialized appropriately for the driver.
+ *
+ * This function can be called multiple times.
+ *
+ * \param dev Device for which options should be loaded.
+ */
+void
+pipe_loader_load_options(struct pipe_loader_device *dev);
 
 /**
  * Release resources allocated for a list of devices.

@@ -264,8 +264,7 @@ pipe_loader_drm_release(struct pipe_loader_device **dev)
 
    close(ddev->fd);
    FREE(ddev->base.driver_name);
-   FREE(ddev);
-   *dev = NULL;
+   pipe_loader_base_release(dev);
 }
 
 static const struct drm_conf_ret *

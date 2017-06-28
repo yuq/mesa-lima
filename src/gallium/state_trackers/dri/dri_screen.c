@@ -59,7 +59,7 @@ static void
 dri_fill_st_options(struct dri_screen *screen)
 {
    struct st_config_options *options = &screen->options;
-   const struct driOptionCache *optionCache = &screen->optionCache;
+   const struct driOptionCache *optionCache = &screen->dev->option_cache;
 
    options->disable_blend_func_extended =
       driQueryOptionb(optionCache, "disable_blend_func_extended");
@@ -156,7 +156,7 @@ dri_fill_in_modes(struct dri_screen *screen)
       GLX_NONE, GLX_SWAP_UNDEFINED_OML, GLX_SWAP_COPY_OML
    };
 
-   if (driQueryOptionb(&screen->optionCache, "always_have_depth_buffer")) {
+   if (driQueryOptionb(&screen->dev->option_cache, "always_have_depth_buffer")) {
       /* all visuals will have a depth buffer */
       depth_buffer_factor = 0;
    }
@@ -416,28 +416,6 @@ dri_get_param(struct st_manager *smapi,
    }
 }
 
-static void
-dri_destroy_option_cache(struct dri_screen * screen)
-{
-   int i;
-
-   if (screen->optionCache.info) {
-      for (i = 0; i < (1 << screen->optionCache.tableSize); ++i) {
-         free(screen->optionCache.info[i].name);
-         free(screen->optionCache.info[i].ranges);
-      }
-      free(screen->optionCache.info);
-   }
-
-   free(screen->optionCache.values);
-
-   /* Default values are copied to screen->optionCache->values in
-    * initOptionCache. The info field, however, is a pointer copy, so don't free
-    * that twice.
-    */
-   free(screen->optionCacheDefaults.values);
-}
-
 void
 dri_destroy_screen_helper(struct dri_screen * screen)
 {
@@ -450,7 +428,6 @@ dri_destroy_screen_helper(struct dri_screen * screen)
    if (screen->base.screen)
       screen->base.screen->destroy(screen->base.screen);
 
-   dri_destroy_option_cache(screen);
    mtx_destroy(&screen->opencl_func_mutex);
 }
 
@@ -474,7 +451,7 @@ dri_postprocessing_init(struct dri_screen *screen)
    unsigned i;
 
    for (i = 0; i < PP_FILTERS; i++) {
-      screen->pp_enabled[i] = driQueryOptioni(&screen->optionCache,
+      screen->pp_enabled[i] = driQueryOptioni(&screen->dev->option_cache,
                                               pp_filters[i].name);
    }
 }
@@ -499,19 +476,15 @@ dri_set_background_context(struct st_context_iface *st,
 }
 
 unsigned
-dri_init_options_get_screen_flags(struct dri_screen *screen,
-                                  const char* driver_name)
+dri_init_options_get_screen_flags(struct dri_screen *screen)
 {
    unsigned flags = 0;
 
-   driParseOptionInfo(&screen->optionCacheDefaults, gallium_config_options.xml);
-   driParseConfigFiles(&screen->optionCache,
-                       &screen->optionCacheDefaults,
-                       screen->sPriv->myNum,
-                       driver_name);
+   pipe_loader_load_options(screen->dev);
+
    dri_fill_st_options(screen);
 
-   if (driQueryOptionb(&screen->optionCache,
+   if (driQueryOptionb(&screen->dev->option_cache,
                        "glsl_correct_derivatives_after_discard"))
       flags |= PIPE_SCREEN_ENABLE_CORRECT_TGSI_DERIVATIVES_AFTER_KILL;
 

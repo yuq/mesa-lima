@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_string.h"
 #include "util/u_dl.h"
+#include "util/xmlconfig.h"
 #include "util/xmlpool.h"
 
 #ifdef _MSC_VER
@@ -71,11 +72,39 @@ pipe_loader_release(struct pipe_loader_device **devs, int ndev)
       devs[i]->ops->release(&devs[i]);
 }
 
+void
+pipe_loader_base_release(struct pipe_loader_device **dev)
+{
+   driDestroyOptionCache(&(*dev)->option_cache);
+   driDestroyOptionInfo(&(*dev)->option_info);
+
+   FREE(*dev);
+   *dev = NULL;
+}
+
 const struct drm_conf_ret *
 pipe_loader_configuration(struct pipe_loader_device *dev,
                           enum drm_conf conf)
 {
    return dev->ops->configuration(dev, conf);
+}
+
+void
+pipe_loader_load_options(struct pipe_loader_device *dev)
+{
+   if (dev->option_info.info)
+      return;
+
+   const char *xml_options = gallium_driinfo_xml;
+   const struct drm_conf_ret *xml_options_conf =
+      pipe_loader_configuration(dev, DRM_CONF_XML_OPTIONS);
+
+   if (xml_options_conf)
+      xml_options = xml_options_conf->val.val_pointer;
+
+   driParseOptionInfo(&dev->option_info, xml_options);
+   driParseConfigFiles(&dev->option_cache, &dev->option_info, 0,
+                       dev->driver_name);
 }
 
 struct pipe_screen *
