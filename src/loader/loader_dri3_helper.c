@@ -1289,7 +1289,6 @@ dri3_get_pixmap_buffer(__DRIdrawable *driDrawable, unsigned int format,
    buffer->own_pixmap = false;
    buffer->width = bp_reply->width;
    buffer->height = bp_reply->height;
-   buffer->buffer_type = buffer_type;
    buffer->shm_fence = shm_fence;
    buffer->sync_fence = sync_fence;
 
@@ -1399,7 +1398,6 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
          break;
       }
       buffer = new_buffer;
-      buffer->buffer_type = buffer_type;
       draw->buffers[buf_id] = buffer;
    }
    dri3_fence_await(draw->conn, buffer);

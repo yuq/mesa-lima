@@ -67,8 +67,6 @@ struct loader_dri3_buffer {
    uint32_t     flags;
    uint32_t     width, height;
    uint64_t     last_swap;
-
-   enum loader_dri3_buffer_type        buffer_type;
 };
 
 
