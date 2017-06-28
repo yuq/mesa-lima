@@ -822,7 +822,12 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
       }
    }
 
-   assert(mt->surf.size % mt->surf.row_pitch == 0);
+   /* In case of linear the buffer gets padded by fixed 64 bytes and therefore
+    * the size may not be multiple of row_pitch.
+    * See isl_apply_surface_padding().
+    */
+   if (mt->surf.tiling != ISL_TILING_LINEAR)
+      assert(mt->surf.size % mt->surf.row_pitch == 0);
 
    if (!bo) {
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "isl-miptree",
