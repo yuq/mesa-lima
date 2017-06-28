@@ -543,7 +543,7 @@ static SIMDINLINE Float SIMDCALL mask_i32gather_ps(Float old, float const* p, In
 {
     __mmask16 k = _mm512_cmpneq_ps_mask(mask, setzero_ps());
 
-    return _mm512_mask_i32gather_ps(old, k, idx, p, ScaleT);
+    return _mm512_mask_i32gather_ps(old, k, idx, p, static_cast<int>(ScaleT));
 }
 
 static SIMDINLINE void SIMDCALL maskstore_ps(float *p, Integer mask, Float src)

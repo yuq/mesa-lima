@@ -1076,13 +1076,14 @@ void SIMDCALL BinTriangles_simd16(
             (SWR_INPUT_COVERAGE)pDC->pState->state.psState.inputCoverage, EdgeValToEdgeState(ALL_EDGES_VALID), (state.scissorsTileAligned == false));
     }
 
+    simd16BBox bbox;
+
     if (!triMask)
     {
         goto endBinTriangles;
     }
 
     // Calc bounding box of triangles
-    simd16BBox bbox;
     calcBoundingBoxIntVertical<CT>(tri, vXi, vYi, bbox);
 
     // determine if triangle falls between pixel centers and discard
@@ -2102,7 +2103,7 @@ void SIMDCALL BinPoints_simd16(
 
         // OOB indices => forced to zero.
         simd16scalari vpai = _simd16_castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
-        vpai = _simd16_max_epi32(_simd16_setzero_si(), vpai)
+        vpai = _simd16_max_epi32(_simd16_setzero_si(), vpai);
         simd16scalari vNumViewports = _simd16_set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
         simd16scalari vClearMask = _simd16_cmplt_epi32(vpai, vNumViewports);
         viewportIdx = _simd16_and_si(vClearMask, vpai);
@@ -2461,6 +2462,13 @@ void BinPostSetupLines_simd16(
 
     const simdscalar unused = _simd_setzero_ps();
 
+    // transpose verts needed for backend
+    /// @todo modify BE to take non-transformed verts
+    simd4scalar vHorizX[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
+    simd4scalar vHorizY[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
+    simd4scalar vHorizZ[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
+    simd4scalar vHorizW[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
+
     if (!primMask)
     {
         goto endBinLines;
@@ -2478,13 +2486,6 @@ void BinPostSetupLines_simd16(
     _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTRight),   bbox.xmax);
     _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTTop),     bbox.ymin);
     _simd16_store_si(reinterpret_cast<simd16scalari *>(aMTBottom),  bbox.ymax);
-
-    // transpose verts needed for backend
-    /// @todo modify BE to take non-transformed verts
-    simd4scalar vHorizX[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
-    simd4scalar vHorizY[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
-    simd4scalar vHorizZ[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
-    simd4scalar vHorizW[2][KNOB_SIMD_WIDTH]; // KNOB_SIMD16_WIDTH
 
     vTranspose3x8(vHorizX[0], _simd16_extract_ps(prim[0].x, 0), _simd16_extract_ps(prim[1].x, 0), unused);
     vTranspose3x8(vHorizY[0], _simd16_extract_ps(prim[0].y, 0), _simd16_extract_ps(prim[1].y, 0), unused);

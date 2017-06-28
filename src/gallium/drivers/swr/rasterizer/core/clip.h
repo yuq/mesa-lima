@@ -1095,7 +1095,7 @@ public:
             AR_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(_simd16_vmask_ps(primMask), _simd16_vmask_ps(clipMask), pa, primId);
+            ClipSimd(vMask(primMask), vMask(clipMask), pa, primId);
             AR_END(FEGuardbandClip, 1);
         }
         else if (validMask)
