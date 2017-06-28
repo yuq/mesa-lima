@@ -530,10 +530,10 @@ struct format_cap {
  * avoid querying the host.  In particular, depth/stencil formats which
  * can be rendered to and sampled from.  For example, the gallium format
  * PIPE_FORMAT_Z24_UNORM_S8_UINT is converted to SVGA3D_D24_UNORM_S8_UINT
- * for rendering but converted to SVGA3D_R24_UNORM_X8_TYPELESS for sampling.
+ * for rendering but converted to SVGA3D_R24_UNORM_X8 for sampling.
  * If we want to query if a format supports both rendering and sampling the
  * host will tell us no for SVGA3D_D24_UNORM_S8_UINT, SVGA3D_D16_UNORM and
- * SVGA3D_R24_UNORM_X8_TYPELESS.  So we override the host query for those
+ * SVGA3D_R24_UNORM_X8.  So we override the host query for those
  * formats and report that both can do rendering and sampling.
  */
 static const struct format_cap format_cap_table[] = {
@@ -1026,8 +1026,8 @@ static const struct format_cap format_cap_table[] = {
    {
       /* Special case: no devcap / report sampler and depth/stencil ability
        */
-      "SVGA3D_R32_FLOAT_X8X24_TYPELESS",
-      SVGA3D_R32_FLOAT_X8X24_TYPELESS,
+      "SVGA3D_R32_FLOAT_X8X24",
+      SVGA3D_R32_FLOAT_X8X24,
       0, /*SVGA3D_DEVCAP_DXFMT_R32_FLOAT_X8X24_TYPELESS*/
       1, 1, 8,
       SVGA3DFORMAT_OP_TEXTURE |
@@ -1036,8 +1036,8 @@ static const struct format_cap format_cap_table[] = {
       SVGA3DFORMAT_OP_ZSTENCIL
    },
    {
-      "SVGA3D_X32_TYPELESS_G8X24_UINT",
-      SVGA3D_X32_TYPELESS_G8X24_UINT,
+      "SVGA3D_X32_G8X24_UINT",
+      SVGA3D_X32_G8X24_UINT,
       SVGA3D_DEVCAP_DXFMT_X32_TYPELESS_G8X24_UINT,
       1, 1, 4, 0
    },
@@ -1158,8 +1158,8 @@ static const struct format_cap format_cap_table[] = {
    {
       /* Special case: no devcap / report sampler and depth/stencil ability
        */
-      "SVGA3D_R24_UNORM_X8_TYPELESS",
-      SVGA3D_R24_UNORM_X8_TYPELESS,
+      "SVGA3D_R24_UNORM_X8",
+      SVGA3D_R24_UNORM_X8,
       0, /*SVGA3D_DEVCAP_DXFMT_R24_UNORM_X8_TYPELESS*/
       1, 1, 4,
       SVGA3DFORMAT_OP_TEXTURE |
@@ -1168,8 +1168,8 @@ static const struct format_cap format_cap_table[] = {
       SVGA3DFORMAT_OP_ZSTENCIL
    },
    {
-      "SVGA3D_X24_TYPELESS_G8_UINT",
-      SVGA3D_X24_TYPELESS_G8_UINT,
+      "SVGA3D_X24_G8_UINT",
+      SVGA3D_X24_G8_UINT,
       SVGA3D_DEVCAP_DXFMT_X24_TYPELESS_G8_UINT,
       1, 1, 4, 0
    },
@@ -1827,8 +1827,8 @@ svga_typeless_format(SVGA3dSurfaceFormat format)
       return SVGA3D_R32G32_TYPELESS;
    case SVGA3D_D32_FLOAT_S8X24_UINT:
       return SVGA3D_R32G8X24_TYPELESS;
-   case SVGA3D_X32_TYPELESS_G8X24_UINT:
-      return SVGA3D_R32_FLOAT_X8X24_TYPELESS;
+   case SVGA3D_X32_G8X24_UINT:
+      return SVGA3D_R32_FLOAT_X8X24;
    case SVGA3D_R10G10B10A2_UINT:
    case SVGA3D_R10G10B10A2_UNORM:
       return SVGA3D_R10G10B10A2_TYPELESS;
@@ -1851,8 +1851,8 @@ svga_typeless_format(SVGA3dSurfaceFormat format)
       return SVGA3D_R32_TYPELESS;
    case SVGA3D_D24_UNORM_S8_UINT:
       return SVGA3D_R24G8_TYPELESS;
-   case SVGA3D_X24_TYPELESS_G8_UINT:
-      return SVGA3D_R24_UNORM_X8_TYPELESS;
+   case SVGA3D_X24_G8_UINT:
+      return SVGA3D_R24_UNORM_X8;
    case SVGA3D_R8G8_UNORM:
    case SVGA3D_R8G8_SNORM:
    case SVGA3D_R8G8_UINT:
@@ -1919,11 +1919,11 @@ svga_sampler_format(SVGA3dSurfaceFormat format)
    case SVGA3D_D16_UNORM:
       return SVGA3D_R16_UNORM;
    case SVGA3D_D24_UNORM_S8_UINT:
-      return SVGA3D_R24_UNORM_X8_TYPELESS;
+      return SVGA3D_R24_UNORM_X8;
    case SVGA3D_D32_FLOAT:
       return SVGA3D_R32_FLOAT;
    case SVGA3D_D32_FLOAT_S8X24_UINT:
-      return SVGA3D_R32_FLOAT_X8X24_TYPELESS;
+      return SVGA3D_R32_FLOAT_X8X24;
    default:
       return format;
    }
