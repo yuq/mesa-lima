@@ -26,7 +26,8 @@ noinst_PROGRAMS += \
 tools_aubinator_SOURCES = \
 	tools/aubinator.c \
 	tools/disasm.c \
-	tools/gen_disasm.h
+	tools/gen_disasm.h \
+	tools/intel_aub.h
 
 tools_aubinator_CFLAGS = \
 	$(AM_CFLAGS) \
