@@ -136,7 +136,6 @@ struct nir_to_llvm_context {
 	LLVMTypeRef f16;
 	LLVMTypeRef v2f32;
 	LLVMTypeRef v4f32;
-	LLVMTypeRef v16i8;
 	LLVMTypeRef voidt;
 
 	LLVMValueRef i1true;
@@ -715,7 +714,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 
 	allocate_user_sgprs(ctx, &user_sgpr_info);
 	if (user_sgpr_info.need_ring_offsets && !ctx->options->supports_spill) {
-		add_user_sgpr_argument(&args, const_array(ctx->v16i8, 16), &ctx->ring_offsets); /* address of rings */
+		add_user_sgpr_argument(&args, const_array(ctx->v4i32, 16), &ctx->ring_offsets); /* address of rings */
 	}
 
 	/* 1 for each descriptor set */
@@ -744,7 +743,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	case MESA_SHADER_VERTEX:
 		if (!ctx->is_gs_copy_shader) {
 			if (ctx->shader_info->info.vs.has_vertex_buffers)
-				add_user_sgpr_argument(&args, const_array(ctx->v16i8, 16), &ctx->vertex_buffers); /* vertex buffers */
+				add_user_sgpr_argument(&args, const_array(ctx->v4i32, 16), &ctx->vertex_buffers); /* vertex buffers */
 			add_user_sgpr_argument(&args, ctx->i32, &ctx->base_vertex); // base vertex
 			add_user_sgpr_argument(&args, ctx->i32, &ctx->start_instance);// start instance
 			if (ctx->shader_info->info.vs.needs_draw_id)
@@ -853,7 +852,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 							       LLVMPointerType(ctx->i8, CONST_ADDR_SPACE),
 							       NULL, 0, AC_FUNC_ATTR_READNONE);
 			ctx->ring_offsets = LLVMBuildBitCast(ctx->builder, ctx->ring_offsets,
-							     const_array(ctx->v16i8, 16), "");
+							     const_array(ctx->v4i32, 16), "");
 		}
 	}
 
@@ -945,7 +944,6 @@ static void setup_types(struct nir_to_llvm_context *ctx)
 	ctx->f64 = LLVMDoubleTypeInContext(ctx->context);
 	ctx->v2f32 = LLVMVectorType(ctx->f32, 2);
 	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
-	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
 
 	ctx->i1false = LLVMConstInt(ctx->i1, 0, false);
 	ctx->i1true = LLVMConstInt(ctx->i1, 1, false);
@@ -5875,8 +5873,6 @@ ac_setup_rings(struct nir_to_llvm_context *ctx)
 		tmp = LLVMBuildExtractElement(ctx->builder, ctx->gsvs_ring, ctx->i32one, "");
 		tmp = LLVMBuildOr(ctx->builder, tmp, ctx->gsvs_ring_stride, "");
 		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->builder, ctx->gsvs_ring, tmp, ctx->i32one, "");
-
-		ctx->gsvs_ring = LLVMBuildBitCast(ctx->builder, ctx->gsvs_ring, ctx->v16i8, "");
 	}
 
 	if (ctx->stage == MESA_SHADER_TESS_CTRL ||
