@@ -738,7 +738,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
              unsigned width0, unsigned height0, unsigned depth0,
              unsigned num_samples, enum isl_tiling isl_tiling,
              isl_surf_usage_flags_t isl_usage_flags, uint32_t alloc_flags,
-             struct brw_bo *bo)
+             unsigned row_pitch, struct brw_bo *bo)
 {
    struct intel_mipmap_tree *mt = calloc(sizeof(*mt), 1);
    if (!mt)
@@ -772,6 +772,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
       .levels = last_level - first_level + 1,
       .array_len = target == GL_TEXTURE_3D ? 1 : depth0,
       .samples = MAX2(num_samples, 1),
+      .row_pitch = row_pitch,
       .usage = isl_usage_flags, 
       .tiling_flags = 1u << isl_tiling
    };
@@ -822,7 +823,7 @@ miptree_create(struct brw_context *brw,
                           width0, height0, depth0, num_samples, ISL_TILING_W,
                           ISL_SURF_USAGE_STENCIL_BIT |
                           ISL_SURF_USAGE_TEXTURE_BIT,
-                          BO_ALLOC_FOR_RENDER, NULL);
+                          BO_ALLOC_FOR_RENDER, 0, NULL);
 
    struct intel_mipmap_tree *mt;
    mesa_format tex_format = format;
@@ -946,7 +947,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                         0, 0, width, height, depth, 1, ISL_TILING_W,
                         ISL_SURF_USAGE_STENCIL_BIT |
                         ISL_SURF_USAGE_TEXTURE_BIT,
-                        BO_ALLOC_FOR_RENDER, bo);
+                        BO_ALLOC_FOR_RENDER, pitch, bo);
       if (!mt)
          return NULL;
 
