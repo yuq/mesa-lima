@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_string.h"
 #include "util/u_dl.h"
+#include "util/xmlpool.h"
 
 #ifdef _MSC_VER
 #include <stdlib.h>
@@ -45,6 +46,10 @@ static int (*backends[])(struct pipe_loader_device **, int) = {
 #endif
    &pipe_loader_sw_probe
 };
+
+const char gallium_driinfo_xml[] =
+#include "driinfo_gallium.h"
+;
 
 int
 pipe_loader_probe(struct pipe_loader_device **devs, int ndev)

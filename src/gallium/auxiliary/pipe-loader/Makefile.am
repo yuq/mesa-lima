@@ -5,6 +5,7 @@ include $(top_srcdir)/src/gallium/Automake.inc
 AM_CFLAGS = \
 	-I$(top_srcdir)/src/loader \
 	-I$(top_srcdir)/src/gallium/winsys \
+	-I$(top_builddir)/src/util \
 	$(GALLIUM_PIPE_LOADER_DEFINES) \
 	$(GALLIUM_CFLAGS) \
 	$(VISIBILITY_CFLAGS)

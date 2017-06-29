@@ -183,6 +183,8 @@ pipe_loader_drm_probe(struct pipe_loader_device **devs, int ndev);
 bool
 pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd);
 
+extern const char gallium_driinfo_xml[];
+
 #ifdef __cplusplus
 }
 #endif
