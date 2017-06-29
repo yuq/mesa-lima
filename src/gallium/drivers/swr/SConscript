@@ -30,12 +30,6 @@ else:
     llvm_includedir = env.backtick('%s --includedir' % llvm_config).rstrip()
     print "llvm include dir %s" % llvm_includedir
 
-# the loader is included in the mesa lib itself
-# All the remaining files are in loadable modules
-loadersource = env.ParseSourceList('Makefile.sources', [
-    'LOADER_SOURCES'
-])
-
 if not env['msvc'] :
     env.Append(CCFLAGS = [
         '-std=c++11',
@@ -191,15 +185,11 @@ built_sources += [backendPixelRateFiles, genRasterizerFiles]
 
 source = built_sources
 source += env.ParseSourceList(swrroot + 'Makefile.sources', [
-    'CXX_SOURCES',
     'ARCHRAST_CXX_SOURCES',
     'COMMON_CXX_SOURCES',
     'CORE_CXX_SOURCES',
-    'JITTER_CXX_SOURCES',
     'MEMORY_CXX_SOURCES'
 ])
-
-env.Prepend(LIBS = [ mesautil, mesa, gallium ])
 
 env.Prepend(CPPPATH = [
     '.',
@@ -242,13 +232,23 @@ swrAVX2 = envavx2.SharedLibrary(
     )
 env.Alias('swrAVX2', swrAVX2)
 
+source = env.ParseSourceList(swrroot + 'Makefile.sources', [
+    'CXX_SOURCES',
+    'COMMON_CXX_SOURCES',
+    'JITTER_CXX_SOURCES',
+    'LOADER_SOURCES'
+])
+source += [
+    'rasterizer/codegen/gen_knobs.cpp',
+    'rasterizer/archrast/gen_ar_event.cpp',
+    ]
 
 # main SWR lib
-swr = env.ConvenienceLibrary(
+envSWR = envavx.Clone() # pick up the arch flag for intrinsic usage
+swr = envSWR.ConvenienceLibrary(
     target = 'swr',
-    source = loadersource,
+    source = source,
     )
-
 
 # treat arch libs as dependencies, even though they are not linked
 # into swr, so we don't have to build them separately

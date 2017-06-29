@@ -47,6 +47,8 @@ struct swr_screen {
    uint8_t msaa_max_count;
 
    HANDLE hJitMgr;
+
+   PFNSwrGetInterface pfnSwrGetInterface;
 };
 
 static INLINE struct swr_screen *

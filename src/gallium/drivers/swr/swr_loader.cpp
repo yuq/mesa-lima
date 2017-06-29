@@ -24,12 +24,9 @@
 #include "util/u_cpu_detect.h"
 #include "util/u_dl.h"
 #include "swr_public.h"
-
-#include "pipe/p_screen.h"
+#include "swr_screen.h"
 
 #include <stdio.h>
-
-typedef pipe_screen *(*screen_create_proc)(struct sw_winsys *winsys);
 
 struct pipe_screen *
 swr_create_screen(struct sw_winsys *winsys)
@@ -57,16 +54,17 @@ swr_create_screen(struct sw_winsys *winsys)
       exit(-1);
    }
 
-   util_dl_proc pScreenProc = util_dl_get_proc_address(pLibrary, "swr_create_screen_internal");
+   util_dl_proc pApiProc = util_dl_get_proc_address(pLibrary, "SwrGetInterface");
 
-   if (!pScreenProc) {
+   if (!pApiProc) {
       fprintf(stderr, "SWR library search failure: %s\n", util_dl_error());
       exit(-1);
    }
 
-   screen_create_proc pScreenCreate = (screen_create_proc)pScreenProc;
+   struct pipe_screen *screen = swr_create_screen_internal(winsys);
+   swr_screen(screen)->pfnSwrGetInterface = (PFNSwrGetInterface)pApiProc;
 
-   return pScreenCreate(winsys);
+   return screen;
 }
 
 

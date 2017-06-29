@@ -26,7 +26,14 @@ AM_CXXFLAGS = $(GALLIUM_DRIVER_CFLAGS) $(SWR_CXX11_CXXFLAGS)
 
 noinst_LTLIBRARIES = libmesaswr.la
 
-libmesaswr_la_SOURCES = $(LOADER_SOURCES)
+# gen_knobs.* included here to provide driver access to swr configuration
+libmesaswr_la_SOURCES = \
+	$(CXX_SOURCES) \
+	$(COMMON_CXX_SOURCES) \
+	$(JITTER_CXX_SOURCES) \
+	rasterizer/codegen/gen_knobs.cpp \
+	rasterizer/codegen/gen_knobs.h \
+	$(LOADER_SOURCES)
 
 COMMON_CXXFLAGS = \
 	-fno-strict-aliasing \
@@ -43,12 +50,15 @@ COMMON_CXXFLAGS = \
 	-I$(srcdir)/rasterizer/jitter \
 	-I$(srcdir)/rasterizer/archrast
 
+# SWR_AVX_CXXFLAGS needed for intrinsic usage in swr api headers
+libmesaswr_la_CXXFLAGS = \
+	$(SWR_AVX_CXXFLAGS) \
+	$(COMMON_CXXFLAGS)
+
 COMMON_SOURCES = \
-	$(CXX_SOURCES) \
 	$(ARCHRAST_CXX_SOURCES) \
 	$(COMMON_CXX_SOURCES) \
 	$(CORE_CXX_SOURCES) \
-	$(JITTER_CXX_SOURCES) \
 	$(MEMORY_CXX_SOURCES) \
 	$(BUILT_SOURCES)
 
@@ -207,19 +217,12 @@ rasterizer.intermediate: rasterizer/codegen/gen_backends.py rasterizer/codegen/t
 		--cpp \
 		--hpp
 
-COMMON_LIBADD = \
-	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
-	$(top_builddir)/src/mesa/libmesagallium.la \
-	$(LLVM_LIBS)
-
 COMMON_LDFLAGS = \
 	-shared \
 	-module \
 	-no-undefined \
 	$(GC_SECTIONS) \
-	$(NO_UNDEFINED) \
-	$(LLVM_LDFLAGS)
-
+	$(NO_UNDEFINED)
 
 lib_LTLIBRARIES = libswrAVX.la libswrAVX2.la
 
@@ -231,9 +234,6 @@ libswrAVX_la_CXXFLAGS = \
 libswrAVX_la_SOURCES = \
 	$(COMMON_SOURCES)
 
-libswrAVX_la_LIBADD = \
-	$(COMMON_LIBADD)
-
 libswrAVX_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)
 
@@ -244,9 +244,6 @@ libswrAVX2_la_CXXFLAGS = \
 
 libswrAVX2_la_SOURCES = \
 	$(COMMON_SOURCES)
-
-libswrAVX2_la_LIBADD = \
-	$(COMMON_LIBADD)
 
 libswrAVX2_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)

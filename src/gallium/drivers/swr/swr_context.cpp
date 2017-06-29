@@ -467,7 +467,7 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
       AlignedMalloc(sizeof(struct swr_context), KNOB_SIMD_BYTES);
    memset(ctx, 0, sizeof(struct swr_context));
 
-   SwrGetInterface(ctx->api);
+   swr_screen(p_screen)->pfnSwrGetInterface(ctx->api);
    ctx->swrDC.pAPI = &ctx->api;
 
    ctx->blendJIT =
