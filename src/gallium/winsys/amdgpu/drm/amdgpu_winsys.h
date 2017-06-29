@@ -65,6 +65,7 @@ struct amdgpu_winsys {
    uint64_t num_gfx_IBs;
    uint64_t num_sdma_IBs;
    uint64_t num_mapped_buffers;
+   uint64_t gfx_bo_list_counter;
 
    struct radeon_info info;
 

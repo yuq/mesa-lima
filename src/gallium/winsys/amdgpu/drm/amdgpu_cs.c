@@ -1225,6 +1225,9 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          cs->flags[i] = (util_last_bit64(buffer->u.real.priority_usage) - 1) / 4;
       }
 
+      if (acs->ring_type == RING_GFX)
+         ws->gfx_bo_list_counter += cs->num_real_buffers;
+
       r = amdgpu_bo_list_create(ws->dev, cs->num_real_buffers,
                                 cs->handles, cs->flags,
                                 &cs->request.resources);

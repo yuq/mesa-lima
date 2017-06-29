@@ -631,6 +631,7 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
     case RADEON_NUM_EVICTIONS:
     case RADEON_NUM_VRAM_CPU_PAGE_FAULTS:
     case RADEON_VRAM_VIS_USAGE:
+    case RADEON_GFX_BO_LIST_COUNTER:
         return 0; /* unimplemented */
     case RADEON_VRAM_USAGE:
         radeon_get_drm_value(ws->fd, RADEON_INFO_VRAM_USAGE,

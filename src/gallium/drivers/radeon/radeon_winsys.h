@@ -91,6 +91,7 @@ enum radeon_value_id {
     RADEON_TIMESTAMP,
     RADEON_NUM_GFX_IBS,
     RADEON_NUM_SDMA_IBS,
+    RADEON_GFX_BO_LIST_COUNTER, /* number of BOs submitted in gfx IBs */
     RADEON_NUM_BYTES_MOVED,
     RADEON_NUM_EVICTIONS,
     RADEON_NUM_VRAM_CPU_PAGE_FAULTS,
