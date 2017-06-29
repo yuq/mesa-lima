@@ -293,7 +293,7 @@ namespace SIMDImpl
         using __mmask16 = uint16_t;
 #endif
 
-#if SIMD_ARCH >= SIMD_ARCH_AVX512
+#if defined(__INTEL_COMPILER) || (SIMD_ARCH >= SIMD_ARCH_AVX512)
 #define SIMD_ALIGNMENT_BYTES 64
 #else
 #define SIMD_ALIGNMENT_BYTES 32
