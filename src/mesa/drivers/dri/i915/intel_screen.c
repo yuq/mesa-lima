@@ -802,6 +802,7 @@ static const __DRIextension *intelScreenExtensions[] = {
     &intelImageExtension.base,
     &intelRendererQueryExtension.base,
     &dri2ConfigQueryExtension.base,
+    &dri2NoErrorExtension.base,
     NULL
 };
 

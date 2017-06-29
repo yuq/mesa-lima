@@ -324,6 +324,7 @@ static const __DRIextension *nouveau_screen_extensions[] = {
     &nouveau_texbuffer_extension.base,
     &nouveau_renderer_query_extension.base,
     &dri2ConfigQueryExtension.base,
+    &dri2NoErrorExtension.base,
     NULL
 };
 
