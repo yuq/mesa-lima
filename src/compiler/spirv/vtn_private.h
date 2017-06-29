@@ -284,14 +284,23 @@ struct vtn_pointer {
    /** The dereferenced type of this pointer */
    struct vtn_type *type;
 
-   /** The referenced variable */
+   /** The referenced variable, if known
+    *
+    * This field may be NULL if the pointer uses a (block_index, offset) pair
+    * instead of an access chain.
+    */
    struct vtn_variable *var;
 
    /** An access chain describing how to get from var to the referenced data
     *
-    * This field may be NULL if the pointer references the entire variable.
+    * This field may be NULL if the pointer references the entire variable or
+    * if a (block_index, offset) pair is used instead of an access chain.
     */
    struct vtn_access_chain *chain;
+
+   /** A (block_index, offset) pair representing a UBO or SSBO position. */
+   struct nir_ssa_def *block_index;
+   struct nir_ssa_def *offset;
 };
 
 struct vtn_variable {

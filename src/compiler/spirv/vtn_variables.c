@@ -59,9 +59,9 @@ vtn_access_chain_extend(struct vtn_builder *b, struct vtn_access_chain *old,
 
 /* Dereference the given base pointer by the access chain */
 static struct vtn_pointer *
-vtn_pointer_dereference(struct vtn_builder *b,
-                        struct vtn_pointer *base,
-                        struct vtn_access_chain *deref_chain)
+vtn_access_chain_pointer_dereference(struct vtn_builder *b,
+                                     struct vtn_pointer *base,
+                                     struct vtn_access_chain *deref_chain)
 {
    struct vtn_access_chain *chain =
       vtn_access_chain_extend(b, base->chain, deref_chain->length);
@@ -100,6 +100,113 @@ vtn_access_link_as_ssa(struct vtn_builder *b, struct vtn_access_link link,
    } else {
       return nir_imul(&b->nb, vtn_ssa_value(b, link.id)->def,
                               nir_imm_int(&b->nb, stride));
+   }
+}
+
+static nir_ssa_def *
+vtn_variable_resource_index(struct vtn_builder *b, struct vtn_variable *var,
+                            nir_ssa_def *desc_array_index)
+{
+   if (!desc_array_index) {
+      assert(glsl_type_is_struct(var->type->type));
+      desc_array_index = nir_imm_int(&b->nb, 0);
+   }
+
+   nir_intrinsic_instr *instr =
+      nir_intrinsic_instr_create(b->nb.shader,
+                                 nir_intrinsic_vulkan_resource_index);
+   instr->src[0] = nir_src_for_ssa(desc_array_index);
+   nir_intrinsic_set_desc_set(instr, var->descriptor_set);
+   nir_intrinsic_set_binding(instr, var->binding);
+
+   nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
+   nir_builder_instr_insert(&b->nb, &instr->instr);
+
+   return &instr->dest.ssa;
+}
+
+static struct vtn_pointer *
+vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
+                                   struct vtn_pointer *base,
+                                   struct vtn_access_chain *deref_chain)
+{
+   nir_ssa_def *block_index = base->block_index;
+   nir_ssa_def *offset = base->offset;
+   struct vtn_type *type = base->type;
+
+   unsigned idx = 0;
+   if (!block_index) {
+      assert(base->var);
+      if (glsl_type_is_array(type->type)) {
+         /* We need at least one element in the chain */
+         assert(deref_chain->length >= 1);
+
+         nir_ssa_def *desc_arr_idx =
+            vtn_access_link_as_ssa(b, deref_chain->link[0], 1);
+         block_index = vtn_variable_resource_index(b, base->var, desc_arr_idx);
+         type = type->array_element;
+         idx++;
+      } else {
+         block_index = vtn_variable_resource_index(b, base->var, NULL);
+      }
+
+      /* This is the first access chain so we also need an offset */
+      assert(!offset);
+      offset = nir_imm_int(&b->nb, 0);
+   }
+   assert(offset);
+
+   for (; idx < deref_chain->length; idx++) {
+      switch (glsl_get_base_type(type->type)) {
+      case GLSL_TYPE_UINT:
+      case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT64:
+      case GLSL_TYPE_INT64:
+      case GLSL_TYPE_FLOAT:
+      case GLSL_TYPE_DOUBLE:
+      case GLSL_TYPE_BOOL:
+      case GLSL_TYPE_ARRAY: {
+         nir_ssa_def *elem_offset =
+            vtn_access_link_as_ssa(b, deref_chain->link[idx], type->stride);
+         offset = nir_iadd(&b->nb, offset, elem_offset);
+         type = type->array_element;
+         break;
+      }
+
+      case GLSL_TYPE_STRUCT: {
+         assert(deref_chain->link[idx].mode == vtn_access_mode_literal);
+         unsigned member = deref_chain->link[idx].id;
+         nir_ssa_def *mem_offset = nir_imm_int(&b->nb, type->offsets[member]);
+         offset = nir_iadd(&b->nb, offset, mem_offset);
+         type = type->members[member];
+         break;
+      }
+
+      default:
+         unreachable("Invalid type for deref");
+      }
+   }
+
+   struct vtn_pointer *ptr = rzalloc(b, struct vtn_pointer);
+   ptr->mode = base->mode;
+   ptr->type = type;
+   ptr->block_index = block_index;
+   ptr->offset = offset;
+
+   return ptr;
+}
+
+/* Dereference the given base pointer by the access chain */
+static struct vtn_pointer *
+vtn_pointer_dereference(struct vtn_builder *b,
+                        struct vtn_pointer *base,
+                        struct vtn_access_chain *deref_chain)
+{
+   if (base->mode == vtn_variable_mode_ubo ||
+       base->mode == vtn_variable_mode_ssbo) {
+      return vtn_ssa_offset_pointer_dereference(b, base, deref_chain);
+   } else {
+      return vtn_access_chain_pointer_dereference(b, base, deref_chain);
    }
 }
 
@@ -354,35 +461,30 @@ get_vulkan_resource_index(struct vtn_builder *b, struct vtn_pointer *ptr,
       return NULL;
    }
 
-   nir_ssa_def *array_index;
    if (glsl_type_is_array(ptr->var->type->type)) {
       assert(ptr->chain->length > 0);
-      array_index = vtn_access_link_as_ssa(b, ptr->chain->link[0], 1);
+      nir_ssa_def *desc_array_index =
+         vtn_access_link_as_ssa(b, ptr->chain->link[0], 1);
       *chain_idx = 1;
       *type = ptr->var->type->array_element;
+      return vtn_variable_resource_index(b, ptr->var, desc_array_index);
    } else {
-      array_index = nir_imm_int(&b->nb, 0);
       *chain_idx = 0;
       *type = ptr->var->type;
+      return vtn_variable_resource_index(b, ptr->var, NULL);
    }
-
-   nir_intrinsic_instr *instr =
-      nir_intrinsic_instr_create(b->nb.shader,
-                                 nir_intrinsic_vulkan_resource_index);
-   instr->src[0] = nir_src_for_ssa(array_index);
-   nir_intrinsic_set_desc_set(instr, ptr->var->descriptor_set);
-   nir_intrinsic_set_binding(instr, ptr->var->binding);
-
-   nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
-   nir_builder_instr_insert(&b->nb, &instr->instr);
-
-   return &instr->dest.ssa;
 }
 
 nir_ssa_def *
 vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
                       nir_ssa_def **index_out, unsigned *end_idx_out)
 {
+   if (ptr->offset) {
+      assert(ptr->block_index);
+      *index_out = ptr->block_index;
+      return ptr->offset;
+   }
+
    unsigned idx = 0;
    struct vtn_type *type;
    *index_out = get_vulkan_resource_index(b, ptr, &type, &idx);
@@ -727,11 +829,11 @@ vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
 }
 
 static bool
-vtn_variable_is_external_block(struct vtn_variable *var)
+vtn_pointer_is_external_block(struct vtn_pointer *ptr)
 {
-   return var->mode == vtn_variable_mode_ssbo ||
-          var->mode == vtn_variable_mode_ubo ||
-          var->mode == vtn_variable_mode_push_constant;
+   return ptr->mode == vtn_variable_mode_ssbo ||
+          ptr->mode == vtn_variable_mode_ubo ||
+          ptr->mode == vtn_variable_mode_push_constant;
 }
 
 static void
@@ -793,7 +895,7 @@ _vtn_variable_load_store(struct vtn_builder *b, bool load,
 struct vtn_ssa_value *
 vtn_variable_load(struct vtn_builder *b, struct vtn_pointer *src)
 {
-   if (vtn_variable_is_external_block(src->var)) {
+   if (vtn_pointer_is_external_block(src)) {
       return vtn_block_load(b, src);
    } else {
       struct vtn_ssa_value *val = NULL;
@@ -806,8 +908,8 @@ void
 vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                    struct vtn_pointer *dest)
 {
-   if (vtn_variable_is_external_block(dest->var)) {
-      assert(dest->var->mode == vtn_variable_mode_ssbo);
+   if (vtn_pointer_is_external_block(dest)) {
+      assert(dest->mode == vtn_variable_mode_ssbo);
       vtn_block_store(b, src, dest);
    } else {
       _vtn_variable_load_store(b, false, dest, &src);
