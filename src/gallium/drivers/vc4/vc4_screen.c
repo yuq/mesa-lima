@@ -43,6 +43,8 @@
 static const struct debug_named_value debug_options[] = {
         { "cl",       VC4_DEBUG_CL,
           "Dump command list during creation" },
+        { "surf",       VC4_DEBUG_SURFACE,
+          "Dump surface layouts" },
         { "qpu",      VC4_DEBUG_QPU,
           "Dump generated QPU instructions" },
         { "qir",      VC4_DEBUG_QIR,
