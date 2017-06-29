@@ -44,7 +44,7 @@ enum vtn_value_type {
    vtn_value_type_decoration_group,
    vtn_value_type_type,
    vtn_value_type_constant,
-   vtn_value_type_access_chain,
+   vtn_value_type_pointer,
    vtn_value_type_function,
    vtn_value_type_block,
    vtn_value_type_ssa,
@@ -302,7 +302,7 @@ struct vtn_variable {
     */
    struct vtn_access_chain *copy_prop_sampler;
 
-   struct vtn_access_chain chain;
+   struct vtn_access_chain ptr;
 };
 
 struct vtn_image_pointer {
@@ -328,7 +328,7 @@ struct vtn_value {
          nir_constant *constant;
          const struct glsl_type *const_type;
       };
-      struct vtn_access_chain *access_chain;
+      struct vtn_access_chain *pointer;
       struct vtn_image_pointer *image;
       struct vtn_sampled_image *sampled_image;
       struct vtn_function *func;
@@ -459,13 +459,13 @@ nir_ssa_def *vtn_vector_insert_dynamic(struct vtn_builder *b, nir_ssa_def *src,
 
 nir_deref_var *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
 
-nir_deref_var *vtn_access_chain_to_deref(struct vtn_builder *b,
-                                         struct vtn_access_chain *chain);
+nir_deref_var *vtn_pointer_to_deref(struct vtn_builder *b,
+                                    struct vtn_access_chain *ptr);
 nir_ssa_def *
-vtn_access_chain_to_offset(struct vtn_builder *b,
-                           struct vtn_access_chain *chain,
-                           nir_ssa_def **index_out, struct vtn_type **type_out,
-                           unsigned *end_idx_out, bool stop_at_matrix);
+vtn_pointer_to_offset(struct vtn_builder *b,
+                      struct vtn_access_chain *ptr,
+                      nir_ssa_def **index_out, struct vtn_type **type_out,
+                      unsigned *end_idx_out, bool stop_at_matrix);
 
 struct vtn_ssa_value *vtn_local_load(struct vtn_builder *b, nir_deref_var *src);
 

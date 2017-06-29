@@ -185,9 +185,9 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
    case vtn_value_type_ssa:
       return val->ssa;
 
-   case vtn_value_type_access_chain:
+   case vtn_value_type_pointer:
       /* This is needed for function parameters */
-      return vtn_variable_load(b, val->access_chain);
+      return vtn_variable_load(b, val->pointer);
 
    default:
       unreachable("Invalid type for an SSA value");
@@ -1345,8 +1345,8 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
    for (unsigned i = 0; i < call->num_params; i++) {
       unsigned arg_id = w[4 + i];
       struct vtn_value *arg = vtn_untyped_value(b, arg_id);
-      if (arg->value_type == vtn_value_type_access_chain) {
-         nir_deref_var *d = vtn_access_chain_to_deref(b, arg->access_chain);
+      if (arg->value_type == vtn_value_type_pointer) {
+         nir_deref_var *d = vtn_pointer_to_deref(b, arg->pointer);
          call->params[i] = nir_deref_var_clone(d, call);
       } else {
          struct vtn_ssa_value *arg_ssa = vtn_ssa_value(b, arg_id);
@@ -1434,19 +1434,18 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          vtn_push_value(b, w[2], vtn_value_type_sampled_image);
       val->sampled_image = ralloc(b, struct vtn_sampled_image);
       val->sampled_image->image =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+         vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
       val->sampled_image->sampler =
-         vtn_value(b, w[4], vtn_value_type_access_chain)->access_chain;
+         vtn_value(b, w[4], vtn_value_type_pointer)->pointer;
       return;
    } else if (opcode == SpvOpImage) {
-      struct vtn_value *val =
-         vtn_push_value(b, w[2], vtn_value_type_access_chain);
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
       struct vtn_value *src_val = vtn_untyped_value(b, w[3]);
       if (src_val->value_type == vtn_value_type_sampled_image) {
-         val->access_chain = src_val->sampled_image->image;
+         val->pointer = src_val->sampled_image->image;
       } else {
-         assert(src_val->value_type == vtn_value_type_access_chain);
-         val->access_chain = src_val->access_chain;
+         assert(src_val->value_type == vtn_value_type_pointer);
+         val->pointer = src_val->pointer;
       }
       return;
    }
@@ -1459,9 +1458,9 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    if (sampled_val->value_type == vtn_value_type_sampled_image) {
       sampled = *sampled_val->sampled_image;
    } else {
-      assert(sampled_val->value_type == vtn_value_type_access_chain);
+      assert(sampled_val->value_type == vtn_value_type_pointer);
       sampled.image = NULL;
-      sampled.sampler = sampled_val->access_chain;
+      sampled.sampler = sampled_val->pointer;
    }
 
    const struct glsl_type *image_type;
@@ -1685,10 +1684,10 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       unreachable("Invalid base type for sampler result");
    }
 
-   nir_deref_var *sampler = vtn_access_chain_to_deref(b, sampled.sampler);
+   nir_deref_var *sampler = vtn_pointer_to_deref(b, sampled.sampler);
    nir_deref_var *texture;
    if (sampled.image) {
-      nir_deref_var *image = vtn_access_chain_to_deref(b, sampled.image);
+      nir_deref_var *image = vtn_pointer_to_deref(b, sampled.image);
       texture = image;
    } else {
       texture = sampler;
@@ -1850,8 +1849,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
          vtn_push_value(b, w[2], vtn_value_type_image_pointer);
       val->image = ralloc(b, struct vtn_image_pointer);
 
-      val->image->image =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+      val->image->image = vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
       val->image->coord = get_image_coord(b, w[4]);
       val->image->sample = vtn_ssa_value(b, w[5])->def;
       return;
@@ -1883,15 +1881,13 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpImageQuerySize:
-      image.image =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+      image.image = vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
       image.coord = NULL;
       image.sample = NULL;
       break;
 
    case SpvOpImageRead:
-      image.image =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+      image.image = vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
       image.coord = get_image_coord(b, w[4]);
 
       if (count > 5 && (w[5] & SpvImageOperandsSampleMask)) {
@@ -1903,8 +1899,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpImageWrite:
-      image.image =
-         vtn_value(b, w[1], vtn_value_type_access_chain)->access_chain;
+      image.image = vtn_value(b, w[1], vtn_value_type_pointer)->pointer;
       image.coord = get_image_coord(b, w[2]);
 
       /* texel = w[3] */
@@ -1949,7 +1944,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
 
    nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(b->shader, op);
 
-   nir_deref_var *image_deref = vtn_access_chain_to_deref(b, image.image);
+   nir_deref_var *image_deref = vtn_pointer_to_deref(b, image.image);
    intrin->variables[0] = nir_deref_var_clone(image_deref, intrin);
 
    /* ImageQuerySize doesn't take any extra parameters */
@@ -2074,7 +2069,7 @@ static void
 vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
                                  const uint32_t *w, unsigned count)
 {
-   struct vtn_access_chain *chain;
+   struct vtn_access_chain *ptr;
    nir_intrinsic_instr *atomic;
 
    switch (opcode) {
@@ -2093,13 +2088,11 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    case SpvOpAtomicAnd:
    case SpvOpAtomicOr:
    case SpvOpAtomicXor:
-      chain =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+      ptr = vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
       break;
 
    case SpvOpAtomicStore:
-      chain =
-         vtn_value(b, w[1], vtn_value_type_access_chain)->access_chain;
+      ptr = vtn_value(b, w[1], vtn_value_type_pointer)->pointer;
       break;
 
    default:
@@ -2111,8 +2104,8 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    SpvMemorySemanticsMask semantics = w[5];
    */
 
-   if (chain->var->mode == vtn_variable_mode_workgroup) {
-      nir_deref_var *deref = vtn_access_chain_to_deref(b, chain);
+   if (ptr->var->mode == vtn_variable_mode_workgroup) {
+      nir_deref_var *deref = vtn_pointer_to_deref(b, ptr);
       const struct glsl_type *deref_type = nir_deref_tail(&deref->deref)->type;
       nir_intrinsic_op op = get_shared_nir_atomic_op(opcode);
       atomic = nir_intrinsic_instr_create(b->nb.shader, op);
@@ -2151,10 +2144,10 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
 
       }
    } else {
-      assert(chain->var->mode == vtn_variable_mode_ssbo);
+      assert(ptr->var->mode == vtn_variable_mode_ssbo);
       struct vtn_type *type;
       nir_ssa_def *offset, *index;
-      offset = vtn_access_chain_to_offset(b, chain, &index, &type, NULL, false);
+      offset = vtn_pointer_to_offset(b, ptr, &index, &type, NULL, false);
 
       nir_intrinsic_op op = get_ssbo_nir_atomic_op(opcode);
 
@@ -3071,7 +3064,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpImageQuerySize: {
       struct vtn_access_chain *image =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+         vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
       if (glsl_type_is_image(image->var->var->interface_type)) {
          vtn_handle_image(b, opcode, w, count);
       } else {
@@ -3099,7 +3092,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       if (pointer->value_type == vtn_value_type_image_pointer) {
          vtn_handle_image(b, opcode, w, count);
       } else {
-         assert(pointer->value_type == vtn_value_type_access_chain);
+         assert(pointer->value_type == vtn_value_type_pointer);
          vtn_handle_ssbo_or_shared_atomic(b, opcode, w, count);
       }
       break;
@@ -3110,7 +3103,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       if (pointer->value_type == vtn_value_type_image_pointer) {
          vtn_handle_image(b, opcode, w, count);
       } else {
-         assert(pointer->value_type == vtn_value_type_access_chain);
+         assert(pointer->value_type == vtn_value_type_pointer);
          vtn_handle_ssbo_or_shared_atomic(b, opcode, w, count);
       }
       break;

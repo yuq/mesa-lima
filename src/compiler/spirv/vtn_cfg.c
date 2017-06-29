@@ -84,8 +84,7 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpFunctionParameter: {
-      struct vtn_value *val =
-         vtn_push_value(b, w[2], vtn_value_type_access_chain);
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
 
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
 
@@ -100,8 +99,8 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
       vtn_var->type = type;
       vtn_var->var = param;
-      vtn_var->chain.var = vtn_var;
-      vtn_var->chain.length = 0;
+      vtn_var->ptr.var = vtn_var;
+      vtn_var->ptr.length = 0;
 
       struct vtn_type *without_array = type;
       while(glsl_type_is_array(without_array->type))
@@ -117,7 +116,7 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
          vtn_var->mode = vtn_variable_mode_param;
       }
 
-      val->access_chain = &vtn_var->chain;
+      val->pointer = &vtn_var->ptr;
       break;
    }
 

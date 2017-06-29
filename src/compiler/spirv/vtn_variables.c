@@ -94,11 +94,11 @@ rewrite_deref_types(nir_deref *deref, const struct glsl_type *type)
 }
 
 nir_deref_var *
-vtn_access_chain_to_deref(struct vtn_builder *b, struct vtn_access_chain *chain)
+vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_access_chain *chain)
 {
    /* Do on-the-fly copy propagation for samplers. */
    if (chain->var->copy_prop_sampler)
-      return vtn_access_chain_to_deref(b, chain->var->copy_prop_sampler);
+      return vtn_pointer_to_deref(b, chain->var->copy_prop_sampler);
 
    nir_deref_var *deref_var;
    if (chain->var->var) {
@@ -237,9 +237,9 @@ nir_deref_var *
 vtn_nir_deref(struct vtn_builder *b, uint32_t id)
 {
    struct vtn_access_chain *chain =
-      vtn_value(b, id, vtn_value_type_access_chain)->access_chain;
+      vtn_value(b, id, vtn_value_type_pointer)->pointer;
 
-   return vtn_access_chain_to_deref(b, chain);
+   return vtn_pointer_to_deref(b, chain);
 }
 
 /*
@@ -338,10 +338,10 @@ get_vulkan_resource_index(struct vtn_builder *b, struct vtn_access_chain *chain,
 }
 
 nir_ssa_def *
-vtn_access_chain_to_offset(struct vtn_builder *b,
-                           struct vtn_access_chain *chain,
-                           nir_ssa_def **index_out, struct vtn_type **type_out,
-                           unsigned *end_idx_out, bool stop_at_matrix)
+vtn_pointer_to_offset(struct vtn_builder *b,
+                      struct vtn_access_chain *chain,
+                      nir_ssa_def **index_out, struct vtn_type **type_out,
+                      unsigned *end_idx_out, bool stop_at_matrix)
 {
    unsigned idx = 0;
    struct vtn_type *type;
@@ -712,7 +712,7 @@ vtn_block_load(struct vtn_builder *b, struct vtn_access_chain *src)
    nir_ssa_def *offset, *index = NULL;
    struct vtn_type *type;
    unsigned chain_idx;
-   offset = vtn_access_chain_to_offset(b, src, &index, &type, &chain_idx, true);
+   offset = vtn_pointer_to_offset(b, src, &index, &type, &chain_idx, true);
 
    struct vtn_ssa_value *value = NULL;
    _vtn_block_load_store(b, op, true, index, offset,
@@ -728,7 +728,7 @@ vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
    nir_ssa_def *offset, *index = NULL;
    struct vtn_type *type;
    unsigned chain_idx;
-   offset = vtn_access_chain_to_offset(b, dst, &index, &type, &chain_idx, true);
+   offset = vtn_pointer_to_offset(b, dst, &index, &type, &chain_idx, true);
 
    _vtn_block_load_store(b, nir_intrinsic_store_ssbo, false, index, offset,
                          0, 0, dst, chain_idx, type, &src);
@@ -764,9 +764,9 @@ _vtn_variable_load_store(struct vtn_builder *b, bool load,
        * are storred row-major in a UBO.
        */
       if (load) {
-         *inout = vtn_local_load(b, vtn_access_chain_to_deref(b, chain));
+         *inout = vtn_local_load(b, vtn_pointer_to_deref(b, chain));
       } else {
-         vtn_local_store(b, *inout, vtn_access_chain_to_deref(b, chain));
+         vtn_local_store(b, *inout, vtn_pointer_to_deref(b, chain));
       }
       return;
 
@@ -1215,9 +1215,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       break;
    }
 
-   if (val->value_type == vtn_value_type_access_chain) {
-      assert(val->access_chain->length == 0);
-      assert(val->access_chain->var == void_var);
+   if (val->value_type == vtn_value_type_pointer) {
+      assert(val->pointer->length == 0);
+      assert(val->pointer->var == void_var);
       assert(member == -1);
    } else {
       assert(val->value_type == vtn_value_type_type);
@@ -1389,12 +1389,11 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_variable *var = rzalloc(b, struct vtn_variable);
       var->type = vtn_value(b, w[1], vtn_value_type_type)->type;
 
-      var->chain.var = var;
-      var->chain.length = 0;
+      var->ptr.var = var;
+      var->ptr.length = 0;
 
-      struct vtn_value *val =
-         vtn_push_value(b, w[2], vtn_value_type_access_chain);
-      val->access_chain = &var->chain;
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
+      val->pointer = &var->ptr;
 
       struct vtn_type *without_array = var->type;
       while(glsl_type_is_array(without_array->type))
@@ -1595,8 +1594,8 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
           */
          base = base_val->sampled_image->image;
       } else {
-         assert(base_val->value_type == vtn_value_type_access_chain);
-         base = base_val->access_chain;
+         assert(base_val->value_type == vtn_value_type_pointer);
+         base = base_val->pointer;
       }
 
       chain = vtn_access_chain_extend(b, base, count - 4);
@@ -1622,27 +1621,27 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          val->sampled_image->sampler = base_val->sampled_image->sampler;
       } else {
          struct vtn_value *val =
-            vtn_push_value(b, w[2], vtn_value_type_access_chain);
-         val->access_chain = chain;
+            vtn_push_value(b, w[2], vtn_value_type_pointer);
+         val->pointer = chain;
       }
       break;
    }
 
    case SpvOpCopyMemory: {
-      struct vtn_value *dest = vtn_value(b, w[1], vtn_value_type_access_chain);
-      struct vtn_value *src = vtn_value(b, w[2], vtn_value_type_access_chain);
+      struct vtn_value *dest = vtn_value(b, w[1], vtn_value_type_pointer);
+      struct vtn_value *src = vtn_value(b, w[2], vtn_value_type_pointer);
 
-      vtn_variable_copy(b, dest->access_chain, src->access_chain);
+      vtn_variable_copy(b, dest->pointer, src->pointer);
       break;
    }
 
    case SpvOpLoad: {
       struct vtn_access_chain *src =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+         vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
 
       if (src->var->mode == vtn_variable_mode_image ||
           src->var->mode == vtn_variable_mode_sampler) {
-         vtn_push_value(b, w[2], vtn_value_type_access_chain)->access_chain = src;
+         vtn_push_value(b, w[2], vtn_value_type_pointer)->pointer = src;
          return;
       }
 
@@ -1653,14 +1652,14 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpStore: {
       struct vtn_access_chain *dest =
-         vtn_value(b, w[1], vtn_value_type_access_chain)->access_chain;
+         vtn_value(b, w[1], vtn_value_type_pointer)->pointer;
 
       if (glsl_type_is_sampler(dest->var->type->type)) {
          vtn_warn("OpStore of a sampler detected.  Doing on-the-fly copy "
                   "propagation to workaround the problem.");
          assert(dest->var->copy_prop_sampler == NULL);
          dest->var->copy_prop_sampler =
-            vtn_value(b, w[2], vtn_value_type_access_chain)->access_chain;
+            vtn_value(b, w[2], vtn_value_type_pointer)->pointer;
          break;
       }
 
@@ -1671,7 +1670,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpArrayLength: {
       struct vtn_access_chain *chain =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+         vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
 
       const uint32_t offset = chain->var->type->offsets[w[4]];
       const uint32_t stride = chain->var->type->members[w[4]]->stride;
