@@ -415,32 +415,27 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
    struct vtn_type *dest = ralloc(b, struct vtn_type);
    *dest = *src;
 
-   if (!glsl_type_is_scalar(src->type)) {
-      switch (glsl_get_base_type(src->type)) {
-      case GLSL_TYPE_INT:
-      case GLSL_TYPE_UINT:
-      case GLSL_TYPE_INT64:
-      case GLSL_TYPE_UINT64:
-      case GLSL_TYPE_BOOL:
-      case GLSL_TYPE_FLOAT:
-      case GLSL_TYPE_DOUBLE:
-      case GLSL_TYPE_ARRAY:
-         break;
+   switch (src->base_type) {
+   case vtn_base_type_void:
+   case vtn_base_type_scalar:
+   case vtn_base_type_vector:
+   case vtn_base_type_matrix:
+   case vtn_base_type_array:
+   case vtn_base_type_image:
+   case vtn_base_type_sampler:
+   case vtn_base_type_function:
+      /* Nothing more to do */
+      break;
 
-      case GLSL_TYPE_STRUCT: {
-         unsigned elems = glsl_get_length(src->type);
+   case vtn_base_type_struct:
+      dest->members = ralloc_array(b, struct vtn_type *, src->length);
+      memcpy(dest->members, src->members,
+             src->length * sizeof(src->members[0]));
 
-         dest->members = ralloc_array(b, struct vtn_type *, elems);
-         memcpy(dest->members, src->members, elems * sizeof(struct vtn_type *));
-
-         dest->offsets = ralloc_array(b, unsigned, elems);
-         memcpy(dest->offsets, src->offsets, elems * sizeof(unsigned));
-         break;
-      }
-
-      default:
-         unreachable("unhandled type");
-      }
+      dest->offsets = ralloc_array(b, unsigned, src->length);
+      memcpy(dest->offsets, src->offsets,
+             src->length * sizeof(src->offsets[0]));
+      break;
    }
 
    return dest;
@@ -732,14 +727,17 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
    switch (opcode) {
    case SpvOpTypeVoid:
+      val->type->base_type = vtn_base_type_void;
       val->type->type = glsl_void_type();
       break;
    case SpvOpTypeBool:
+      val->type->base_type = vtn_base_type_scalar;
       val->type->type = glsl_bool_type();
       break;
    case SpvOpTypeInt: {
       int bit_size = w[2];
       const bool signedness = w[3];
+      val->type->base_type = vtn_base_type_scalar;
       if (bit_size == 64)
          val->type->type = (signedness ? glsl_int64_t_type() : glsl_uint64_t_type());
       else
@@ -748,6 +746,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    }
    case SpvOpTypeFloat: {
       int bit_size = w[2];
+      val->type->base_type = vtn_base_type_scalar;
       val->type->type = bit_size == 64 ? glsl_double_type() : glsl_float_type();
       break;
    }
@@ -757,6 +756,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       unsigned elems = w[3];
 
       assert(glsl_type_is_scalar(base->type));
+      val->type->base_type = vtn_base_type_vector;
       val->type->type = glsl_vector_type(glsl_get_base_type(base->type), elems);
 
       /* Vectors implicitly have sizeof(base_type) stride.  For now, this
@@ -773,10 +773,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       unsigned columns = w[3];
 
       assert(glsl_type_is_vector(base->type));
+      val->type->base_type = vtn_base_type_matrix;
       val->type->type = glsl_matrix_type(glsl_get_base_type(base->type),
                                          glsl_get_vector_elements(base->type),
                                          columns);
       assert(!glsl_type_is_error(val->type->type));
+      val->type->length = columns;
       val->type->array_element = base;
       val->type->row_major = false;
       val->type->stride = 0;
@@ -788,16 +790,16 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *array_element =
          vtn_value(b, w[2], vtn_value_type_type)->type;
 
-      unsigned length;
       if (opcode == SpvOpTypeRuntimeArray) {
          /* A length of 0 is used to denote unsized arrays */
-         length = 0;
+         val->type->length = 0;
       } else {
-         length =
+         val->type->length =
             vtn_value(b, w[3], vtn_value_type_constant)->constant->values[0].u32[0];
       }
 
-      val->type->type = glsl_array_type(array_element->type, length);
+      val->type->base_type = vtn_base_type_array;
+      val->type->type = glsl_array_type(array_element->type, val->type->length);
       val->type->array_element = array_element;
       val->type->stride = 0;
       break;
@@ -805,6 +807,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpTypeStruct: {
       unsigned num_fields = count - 2;
+      val->type->base_type = vtn_base_type_struct;
+      val->type->length = num_fields;
       val->type->members = ralloc_array(b, struct vtn_type *, num_fields);
       val->type->offsets = ralloc_array(b, unsigned, num_fields);
 
@@ -835,6 +839,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpTypeFunction: {
+      val->type->base_type = vtn_base_type_function;
+
       const struct glsl_type *return_type =
          vtn_value(b, w[2], vtn_value_type_type)->type->type;
       NIR_VLA(struct glsl_function_param, params, count - 3);
@@ -858,6 +864,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpTypeImage: {
+      val->type->base_type = vtn_base_type_image;
+
       const struct glsl_type *sampled_type =
          vtn_value(b, w[2], vtn_value_type_type)->type->type;
 
@@ -899,10 +907,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type->image_format = translate_image_format(format);
 
       if (sampled == 1) {
+         val->type->sampled = true;
          val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
                                              glsl_get_base_type(sampled_type));
       } else if (sampled == 2) {
          assert(!is_shadow);
+         val->type->sampled = false;
          val->type->type = glsl_image_type(dim, is_array,
                                            glsl_get_base_type(sampled_type));
       } else {
@@ -921,6 +931,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
        * matters is that it's a sampler type as opposed to an integer type
        * so the backend knows what to do.
        */
+      val->type->base_type = vtn_base_type_sampler;
       val->type->type = glsl_bare_sampler_type();
       break;
 

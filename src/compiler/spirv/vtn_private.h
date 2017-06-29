@@ -196,11 +196,28 @@ struct vtn_ssa_value {
    const struct glsl_type *type;
 };
 
+enum vtn_base_type {
+   vtn_base_type_void,
+   vtn_base_type_scalar,
+   vtn_base_type_vector,
+   vtn_base_type_matrix,
+   vtn_base_type_array,
+   vtn_base_type_struct,
+   vtn_base_type_image,
+   vtn_base_type_sampler,
+   vtn_base_type_function,
+};
+
 struct vtn_type {
+   enum vtn_base_type base_type;
+
    const struct glsl_type *type;
 
    /* The value that declares this type.  Used for finding decorations */
    struct vtn_value *val;
+
+   /* Specifies the length of complex types. */
+   unsigned length;
 
    union {
       /* Members for scalar, vector, and array-like types */
@@ -245,6 +262,9 @@ struct vtn_type {
 
       /* Members for image types */
       struct {
+         /* For images, indicates whether it's sampled or storage */
+         bool sampled;
+
          /* Image format for image_load_store type images */
          unsigned image_format;
 
