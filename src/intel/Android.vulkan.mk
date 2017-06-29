@@ -33,6 +33,7 @@ VULKAN_COMMON_INCLUDES := \
 	$(MESA_TOP)/src/vulkan/wsi \
 	$(MESA_TOP)/src/vulkan/util \
 	$(MESA_TOP)/src/intel \
+	$(MESA_TOP)/src/intel/drm \
 	$(MESA_TOP)/src/intel/vulkan
 
 # libmesa_anv_entrypoints with header and dummy.c
@@ -93,7 +94,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm_intel
+LOCAL_SHARED_LIBRARIES := libdrm
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
