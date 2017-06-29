@@ -1289,6 +1289,69 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    }
 }
 
+static enum vtn_variable_mode
+vtn_storage_class_to_mode(SpvStorageClass class,
+                          struct vtn_type *interface_type,
+                          nir_variable_mode *nir_mode_out)
+{
+   enum vtn_variable_mode mode;
+   nir_variable_mode nir_mode;
+   switch (class) {
+   case SpvStorageClassUniform:
+   case SpvStorageClassUniformConstant:
+      if (interface_type->block) {
+         mode = vtn_variable_mode_ubo;
+         nir_mode = 0;
+      } else if (interface_type->buffer_block) {
+         mode = vtn_variable_mode_ssbo;
+         nir_mode = 0;
+      } else if (glsl_type_is_image(interface_type->type)) {
+         mode = vtn_variable_mode_image;
+         nir_mode = nir_var_uniform;
+      } else if (glsl_type_is_sampler(interface_type->type)) {
+         mode = vtn_variable_mode_sampler;
+         nir_mode = nir_var_uniform;
+      } else {
+         assert(!"Invalid uniform variable type");
+      }
+      break;
+   case SpvStorageClassPushConstant:
+      mode = vtn_variable_mode_push_constant;
+      nir_mode = nir_var_uniform;
+      break;
+   case SpvStorageClassInput:
+      mode = vtn_variable_mode_input;
+      nir_mode = nir_var_shader_in;
+      break;
+   case SpvStorageClassOutput:
+      mode = vtn_variable_mode_output;
+      nir_mode = nir_var_shader_out;
+      break;
+   case SpvStorageClassPrivate:
+      mode = vtn_variable_mode_global;
+      nir_mode = nir_var_global;
+      break;
+   case SpvStorageClassFunction:
+      mode = vtn_variable_mode_local;
+      nir_mode = nir_var_local;
+      break;
+   case SpvStorageClassWorkgroup:
+      mode = vtn_variable_mode_workgroup;
+      nir_mode = nir_var_shared;
+      break;
+   case SpvStorageClassCrossWorkgroup:
+   case SpvStorageClassGeneric:
+   case SpvStorageClassAtomicCounter:
+   default:
+      unreachable("Unhandled variable storage class");
+   }
+
+   if (nir_mode_out)
+      *nir_mode_out = nir_mode;
+
+   return mode;
+}
+
 static bool
 is_per_vertex_inout(const struct vtn_variable *var, gl_shader_stage stage)
 {
@@ -1334,57 +1397,27 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          without_array = without_array->array_element;
 
       nir_variable_mode nir_mode;
-      switch ((SpvStorageClass)w[3]) {
-      case SpvStorageClassUniform:
-      case SpvStorageClassUniformConstant:
-         if (without_array->block) {
-            var->mode = vtn_variable_mode_ubo;
-            b->shader->info.num_ubos++;
-         } else if (without_array->buffer_block) {
-            var->mode = vtn_variable_mode_ssbo;
-            b->shader->info.num_ssbos++;
-         } else if (glsl_type_is_image(without_array->type)) {
-            var->mode = vtn_variable_mode_image;
-            nir_mode = nir_var_uniform;
-            b->shader->info.num_images++;
-         } else if (glsl_type_is_sampler(without_array->type)) {
-            var->mode = vtn_variable_mode_sampler;
-            nir_mode = nir_var_uniform;
-            b->shader->info.num_textures++;
-         } else {
-            assert(!"Invalid uniform variable type");
-         }
+      var->mode = vtn_storage_class_to_mode(w[3], without_array, &nir_mode);
+
+      switch (var->mode) {
+      case vtn_variable_mode_ubo:
+         b->shader->info.num_ubos++;
          break;
-      case SpvStorageClassPushConstant:
-         var->mode = vtn_variable_mode_push_constant;
-         assert(b->shader->num_uniforms == 0);
+      case vtn_variable_mode_ssbo:
+         b->shader->info.num_ssbos++;
+         break;
+      case vtn_variable_mode_image:
+         b->shader->info.num_images++;
+         break;
+      case vtn_variable_mode_sampler:
+         b->shader->info.num_textures++;
+         break;
+      case vtn_variable_mode_push_constant:
          b->shader->num_uniforms = vtn_type_block_size(var->type);
          break;
-      case SpvStorageClassInput:
-         var->mode = vtn_variable_mode_input;
-         nir_mode = nir_var_shader_in;
-         break;
-      case SpvStorageClassOutput:
-         var->mode = vtn_variable_mode_output;
-         nir_mode = nir_var_shader_out;
-         break;
-      case SpvStorageClassPrivate:
-         var->mode = vtn_variable_mode_global;
-         nir_mode = nir_var_global;
-         break;
-      case SpvStorageClassFunction:
-         var->mode = vtn_variable_mode_local;
-         nir_mode = nir_var_local;
-         break;
-      case SpvStorageClassWorkgroup:
-         var->mode = vtn_variable_mode_workgroup;
-         nir_mode = nir_var_shared;
-         break;
-      case SpvStorageClassCrossWorkgroup:
-      case SpvStorageClassGeneric:
-      case SpvStorageClassAtomicCounter:
       default:
-         unreachable("Unhandled variable storage class");
+         /* No tallying is needed */
+         break;
       }
 
       switch (var->mode) {
