@@ -1,6 +1,8 @@
 #ifndef _DRM_HELPER_PUBLIC_H
 #define _DRM_HELPER_PUBLIC_H
 
+enum drm_conf;
+struct drm_conf_ret;
 
 struct pipe_screen;
 struct pipe_screen_config;
@@ -43,5 +45,8 @@ pipe_etna_create_screen(int fd, const struct pipe_screen_config *config);
 
 struct pipe_screen *
 pipe_imx_drm_create_screen(int fd, const struct pipe_screen_config *config);
+
+const struct drm_conf_ret *
+pipe_default_configuration_query(enum drm_conf conf);
 
 #endif /* _DRM_HELPER_PUBLIC_H */

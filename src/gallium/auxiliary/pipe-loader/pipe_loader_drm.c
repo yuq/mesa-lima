@@ -64,95 +64,71 @@ struct pipe_loader_drm_device {
 static const struct pipe_loader_ops pipe_loader_drm_ops;
 
 #ifdef GALLIUM_STATIC_TARGETS
-static const struct drm_conf_ret throttle_ret = {
-   .type = DRM_CONF_INT,
-   .val.val_int = 2,
-};
-
-static const struct drm_conf_ret share_fd_ret = {
-   .type = DRM_CONF_BOOL,
-   .val.val_bool = true,
-};
-
-static inline const struct drm_conf_ret *
-configuration_query(enum drm_conf conf)
-{
-   switch (conf) {
-   case DRM_CONF_THROTTLE:
-      return &throttle_ret;
-   case DRM_CONF_SHARE_FD:
-      return &share_fd_ret;
-   default:
-      break;
-   }
-   return NULL;
-}
-
 static const struct drm_driver_descriptor driver_descriptors[] = {
     {
         .driver_name = "i915",
         .create_screen = pipe_i915_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "nouveau",
         .create_screen = pipe_nouveau_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "r300",
         .create_screen = pipe_r300_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "r600",
         .create_screen = pipe_r600_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "radeonsi",
         .create_screen = pipe_radeonsi_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "vmwgfx",
         .create_screen = pipe_vmwgfx_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "kgsl",
         .create_screen = pipe_freedreno_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "msm",
         .create_screen = pipe_freedreno_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
        .driver_name = "pl111",
         .create_screen = pipe_pl111_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "virtio_gpu",
         .create_screen = pipe_virgl_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "vc4",
         .create_screen = pipe_vc4_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "etnaviv",
         .create_screen = pipe_etna_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     },
     {
         .driver_name = "imx-drm",
         .create_screen = pipe_imx_drm_create_screen,
-        .configuration = configuration_query,
+        .configuration = pipe_default_configuration_query,
     }
 };
 #endif
