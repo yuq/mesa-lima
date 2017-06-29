@@ -744,7 +744,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
        * is always 4 bytes.  This will have to change if we want to start
        * supporting doubles or half-floats.
        */
-      val->type->stride = 4;
+      val->type->stride = glsl_get_bit_size(base->type) / 8;
       val->type->array_element = base;
       break;
    }
