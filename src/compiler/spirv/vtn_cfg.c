@@ -52,7 +52,11 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       func->num_params = func_type->length;
       func->params = ralloc_array(b->shader, nir_parameter, func->num_params);
       for (unsigned i = 0; i < func->num_params; i++) {
-         func->params[i].type = func_type->params[i]->type;
+         if (func_type->params[i]->base_type == vtn_base_type_pointer) {
+            func->params[i].type = func_type->params[i]->deref->type;
+         } else {
+            func->params[i].type = func_type->params[i]->type;
+         }
 
          /* TODO: We could do something smarter here. */
          func->params[i].param_type = nir_parameter_inout;
@@ -73,11 +77,15 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpFunctionParameter: {
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+      if (type->base_type == vtn_base_type_pointer) {
+         type = type->deref;
+         assert(type->base_type != vtn_base_type_pointer);
+      }
 
       assert(b->func_param_idx < b->func->impl->num_params);
       nir_variable *param = b->func->impl->params[b->func_param_idx++];
 
-      assert(param->type == type->type);
+      assert(type->type == param->type);
 
       struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
       vtn_var->type = type;
@@ -102,7 +110,7 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       /* Name the parameter so it shows up nicely in NIR */
       param->name = ralloc_strdup(param, val->name);
 
-      val->pointer = vtn_pointer_for_variable(b, vtn_var);
+      val->pointer = vtn_pointer_for_variable(b, vtn_var, NULL);
       break;
    }
 

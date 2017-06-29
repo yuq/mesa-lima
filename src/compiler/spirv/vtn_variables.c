@@ -227,12 +227,13 @@ rewrite_deref_types(nir_deref *deref, const struct glsl_type *type)
 
 struct vtn_pointer *
 vtn_pointer_for_variable(struct vtn_builder *b,
-                         struct vtn_variable *var)
+                         struct vtn_variable *var, struct vtn_type *ptr_type)
 {
    struct vtn_pointer *pointer = rzalloc(b, struct vtn_pointer);
 
    pointer->mode = var->mode;
    pointer->type = var->type;
+   pointer->ptr_type = ptr_type;
    pointer->var = var;
 
    return pointer;
@@ -1470,9 +1471,13 @@ is_per_vertex_inout(const struct vtn_variable *var, gl_shader_stage stage)
 
 static void
 vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
-                    struct vtn_type *type, SpvStorageClass storage_class,
+                    struct vtn_type *ptr_type, SpvStorageClass storage_class,
                     nir_constant *initializer)
 {
+   assert(ptr_type->base_type == vtn_base_type_pointer);
+   struct vtn_type *type = ptr_type->deref;
+   assert(type->base_type != vtn_base_type_pointer);
+
    struct vtn_type *without_array = type;
    while(glsl_type_is_array(without_array->type))
       without_array = without_array->array_element;
@@ -1507,7 +1512,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    var->mode = mode;
 
    assert(val->value_type == vtn_value_type_pointer);
-   val->pointer = vtn_pointer_for_variable(b, var);
+   val->pointer = vtn_pointer_for_variable(b, var, ptr_type);
 
    switch (var->mode) {
    case vtn_variable_mode_local:
@@ -1674,7 +1679,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpVariable: {
-      struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+      struct vtn_type *ptr_type = vtn_value(b, w[1], vtn_value_type_type)->type;
 
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
 
@@ -1683,7 +1688,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       if (count > 4)
          initializer = vtn_value(b, w[4], vtn_value_type_constant)->constant;
 
-      vtn_create_variable(b, val, type, storage_class, initializer);
+      vtn_create_variable(b, val, ptr_type, storage_class, initializer);
       break;
    }
 
@@ -1705,6 +1710,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          idx++;
       }
 
+      struct vtn_type *ptr_type = vtn_value(b, w[1], vtn_value_type_type)->type;
       struct vtn_value *base_val = vtn_untyped_value(b, w[3]);
       if (base_val->value_type == vtn_value_type_sampled_image) {
          /* This is rather insane.  SPIR-V allows you to use OpSampledImage
@@ -1725,6 +1731,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          struct vtn_value *val =
             vtn_push_value(b, w[2], vtn_value_type_pointer);
          val->pointer = vtn_pointer_dereference(b, base_val->pointer, chain);
+         val->pointer->ptr_type = ptr_type;
       }
       break;
    }

@@ -421,6 +421,7 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
    case vtn_base_type_vector:
    case vtn_base_type_matrix:
    case vtn_base_type_array:
+   case vtn_base_type_pointer:
    case vtn_base_type_image:
    case vtn_base_type_sampler:
       /* Nothing more to do */
@@ -858,13 +859,17 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
-   case SpvOpTypePointer:
-      /* FIXME:  For now, we'll just do the really lame thing and return
-       * the same type.  The validator should ensure that the proper number
-       * of dereferences happen
-       */
-      val->type = vtn_value(b, w[3], vtn_value_type_type)->type;
+   case SpvOpTypePointer: {
+      SpvStorageClass storage_class = w[2];
+      struct vtn_type *deref_type =
+         vtn_value(b, w[3], vtn_value_type_type)->type;
+
+      val->type->base_type = vtn_base_type_pointer;
+      val->type->type = NULL;
+      val->type->storage_class = storage_class;
+      val->type->deref = deref_type;
       break;
+   }
 
    case SpvOpTypeImage: {
       val->type->base_type = vtn_base_type_image;
@@ -955,6 +960,12 @@ static nir_constant *
 vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
 {
    nir_constant *c = rzalloc(b, nir_constant);
+
+   /* For pointers and other typeless things, we have to return something but
+    * it doesn't matter what.
+    */
+   if (!type)
+      return c;
 
    switch (glsl_get_base_type(type)) {
    case GLSL_TYPE_INT:

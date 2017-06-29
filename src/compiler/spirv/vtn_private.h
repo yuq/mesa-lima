@@ -203,6 +203,7 @@ enum vtn_base_type {
    vtn_base_type_matrix,
    vtn_base_type_array,
    vtn_base_type_struct,
+   vtn_base_type_pointer,
    vtn_base_type_image,
    vtn_base_type_sampler,
    vtn_base_type_function,
@@ -258,6 +259,15 @@ struct vtn_type {
           * (i.e. a block that contains only builtins).
           */
          bool builtin_block:1;
+      };
+
+      /* Members for pointer types */
+      struct {
+         /* For pointers, the vtn_type for dereferenced type */
+         struct vtn_type *deref;
+
+         /* Storage class for pointers */
+         SpvStorageClass storage_class;
       };
 
       /* Members for image types */
@@ -326,6 +336,14 @@ struct vtn_pointer {
 
    /** The dereferenced type of this pointer */
    struct vtn_type *type;
+
+   /** The pointer type of this pointer
+    *
+    * This may be NULL for some temporary pointers constructed as part of a
+    * large load, store, or copy.  It MUST be valid for all pointers which are
+    * stored as SPIR-V SSA values.
+    */
+   struct vtn_type *ptr_type;
 
    /** The referenced variable, if known
     *
@@ -529,7 +547,8 @@ nir_ssa_def *vtn_vector_insert_dynamic(struct vtn_builder *b, nir_ssa_def *src,
 nir_deref_var *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
 
 struct vtn_pointer *vtn_pointer_for_variable(struct vtn_builder *b,
-                                             struct vtn_variable *var);
+                                             struct vtn_variable *var,
+                                             struct vtn_type *ptr_type);
 
 nir_deref_var *vtn_pointer_to_deref(struct vtn_builder *b,
                                     struct vtn_pointer *ptr);
