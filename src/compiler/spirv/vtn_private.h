@@ -255,8 +255,12 @@ struct vtn_access_link {
 struct vtn_access_chain {
    uint32_t length;
 
-   /* Struct elements and array offsets */
-   struct vtn_access_link link[0];
+   /** Struct elements and array offsets.
+    *
+    * This is an array of 1 so that it can conveniently be created on the
+    * stack but the real length is given by the length field.
+    */
+   struct vtn_access_link link[1];
 };
 
 enum vtn_variable_mode {
