@@ -233,6 +233,8 @@ vtn_pointer_for_variable(struct vtn_builder *b,
 
    pointer->mode = var->mode;
    pointer->type = var->type;
+   assert(ptr_type->base_type == vtn_base_type_pointer);
+   assert(ptr_type->deref->type == var->type->type);
    pointer->ptr_type = ptr_type;
    pointer->var = var;
 

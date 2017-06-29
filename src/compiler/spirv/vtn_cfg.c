@@ -65,6 +65,7 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       func->return_type = func_type->return_type->type;
 
       b->func->impl = nir_function_impl_create(func);
+      b->nb.cursor = nir_before_cf_list(&b->func->impl->body);
 
       b->func_param_idx = 0;
       break;
@@ -77,40 +78,47 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpFunctionParameter: {
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-      if (type->base_type == vtn_base_type_pointer) {
-         type = type->deref;
-         assert(type->base_type != vtn_base_type_pointer);
-      }
 
       assert(b->func_param_idx < b->func->impl->num_params);
       nir_variable *param = b->func->impl->params[b->func_param_idx++];
 
-      assert(type->type == param->type);
+      if (type->base_type == vtn_base_type_pointer) {
+         struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
+         vtn_var->type = type->deref;
+         vtn_var->var = param;
 
-      struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
-      vtn_var->type = type;
-      vtn_var->var = param;
+         assert(vtn_var->type->type == param->type);
 
-      struct vtn_type *without_array = type;
-      while(glsl_type_is_array(without_array->type))
-         without_array = without_array->array_element;
+         struct vtn_type *without_array = vtn_var->type;
+         while(glsl_type_is_array(without_array->type))
+            without_array = without_array->array_element;
 
-      if (glsl_type_is_image(without_array->type)) {
-         vtn_var->mode = vtn_variable_mode_image;
-         param->interface_type = without_array->type;
-      } else if (glsl_type_is_sampler(without_array->type)) {
-         vtn_var->mode = vtn_variable_mode_sampler;
-         param->interface_type = without_array->type;
+         if (glsl_type_is_image(without_array->type)) {
+            vtn_var->mode = vtn_variable_mode_image;
+            param->interface_type = without_array->type;
+         } else if (glsl_type_is_sampler(without_array->type)) {
+            vtn_var->mode = vtn_variable_mode_sampler;
+            param->interface_type = without_array->type;
+         } else {
+            vtn_var->mode = vtn_variable_mode_param;
+         }
+
+         struct vtn_value *val =
+            vtn_push_value(b, w[2], vtn_value_type_pointer);
+
+         /* Name the parameter so it shows up nicely in NIR */
+         param->name = ralloc_strdup(param, val->name);
+
+         val->pointer = vtn_pointer_for_variable(b, vtn_var, type);
       } else {
-         vtn_var->mode = vtn_variable_mode_param;
+         /* We're a regular SSA value. */
+         struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
+
+         /* Name the parameter so it shows up nicely in NIR */
+         param->name = ralloc_strdup(param, val->name);
+
+         val->ssa = vtn_local_load(b, nir_deref_var_create(b, param));
       }
-
-      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
-
-      /* Name the parameter so it shows up nicely in NIR */
-      param->name = ralloc_strdup(param, val->name);
-
-      val->pointer = vtn_pointer_for_variable(b, vtn_var, NULL);
       break;
    }
 

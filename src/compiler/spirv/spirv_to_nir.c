@@ -185,10 +185,6 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
    case vtn_value_type_ssa:
       return val->ssa;
 
-   case vtn_value_type_pointer:
-      /* This is needed for function parameters */
-      return vtn_variable_load(b, val->pointer);
-
    default:
       unreachable("Invalid type for an SSA value");
    }
