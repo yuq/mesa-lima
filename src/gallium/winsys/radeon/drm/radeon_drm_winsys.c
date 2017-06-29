@@ -776,7 +776,7 @@ radeon_drm_winsys_create(int fd, unsigned flags,
          */
         if (!pb_slabs_init(&ws->bo_slabs,
                            RADEON_SLAB_MIN_SIZE_LOG2, RADEON_SLAB_MAX_SIZE_LOG2,
-                           12,
+                           RADEON_MAX_SLAB_HEAPS,
                            ws,
                            radeon_bo_can_reclaim_slab,
                            radeon_bo_slab_alloc,

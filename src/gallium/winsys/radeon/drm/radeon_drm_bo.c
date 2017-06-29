@@ -729,28 +729,12 @@ struct pb_slab *radeon_bo_slab_alloc(void *priv, unsigned heap,
 {
     struct radeon_drm_winsys *ws = priv;
     struct radeon_slab *slab = CALLOC_STRUCT(radeon_slab);
-    enum radeon_bo_domain domains;
-    enum radeon_bo_flag flags = 0;
+    enum radeon_bo_domain domains = radeon_domain_from_heap(heap);
+    enum radeon_bo_flag flags = radeon_flags_from_heap(heap);
     unsigned base_hash;
 
     if (!slab)
         return NULL;
-
-    if (heap & 1)
-        flags |= RADEON_FLAG_GTT_WC;
-
-    switch (heap >> 2) {
-    case 0:
-        domains = RADEON_DOMAIN_VRAM;
-        break;
-    default:
-    case 1:
-        domains = RADEON_DOMAIN_VRAM_GTT;
-        break;
-    case 2:
-        domains = RADEON_DOMAIN_GTT;
-        break;
-    }
 
     slab->buffer = radeon_bo(radeon_winsys_bo_create(&ws->base,
                                                      64 * 1024, 64 * 1024,
@@ -938,32 +922,20 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     if (size > UINT_MAX)
         return NULL;
 
+    /* VRAM implies WC. This is not optional. */
+    if (domain & RADEON_DOMAIN_VRAM)
+        flags |= RADEON_FLAG_GTT_WC;
+
     /* Sub-allocate small buffers from slabs. */
     if (!(flags & RADEON_FLAG_NO_SUBALLOC) &&
         size <= (1 << RADEON_SLAB_MAX_SIZE_LOG2) &&
         ws->info.has_virtual_memory &&
         alignment <= MAX2(1 << RADEON_SLAB_MIN_SIZE_LOG2, util_next_power_of_two(size))) {
         struct pb_slab_entry *entry;
-        unsigned heap = 0;
+        int heap = radeon_get_heap_index(domain, flags);
 
-        if (flags & RADEON_FLAG_GTT_WC)
-            heap |= 1;
-        if (flags & ~RADEON_FLAG_GTT_WC)
+        if (heap < 0 || heap >= RADEON_MAX_SLAB_HEAPS)
             goto no_slab;
-
-        switch (domain) {
-        case RADEON_DOMAIN_VRAM:
-            heap |= 0 * 4;
-            break;
-        case RADEON_DOMAIN_VRAM_GTT:
-            heap |= 1 * 4;
-            break;
-        case RADEON_DOMAIN_GTT:
-            heap |= 2 * 4;
-            break;
-        default:
-            goto no_slab;
-        }
 
         entry = pb_slab_alloc(&ws->bo_slabs, size, heap);
         if (!entry) {

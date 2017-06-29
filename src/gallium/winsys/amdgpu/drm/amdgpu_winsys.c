@@ -287,7 +287,7 @@ amdgpu_winsys_create(int fd, unsigned flags,
 
    if (!pb_slabs_init(&ws->bo_slabs,
                       AMDGPU_SLAB_MIN_SIZE_LOG2, AMDGPU_SLAB_MAX_SIZE_LOG2,
-                      12, /* number of heaps (domain/flags combinations) */
+                      RADEON_MAX_SLAB_HEAPS,
                       ws,
                       amdgpu_bo_can_reclaim_slab,
                       amdgpu_bo_slab_alloc,

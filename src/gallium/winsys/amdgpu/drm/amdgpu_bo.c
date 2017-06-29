@@ -495,28 +495,12 @@ struct pb_slab *amdgpu_bo_slab_alloc(void *priv, unsigned heap,
 {
    struct amdgpu_winsys *ws = priv;
    struct amdgpu_slab *slab = CALLOC_STRUCT(amdgpu_slab);
-   enum radeon_bo_domain domains;
-   enum radeon_bo_flag flags = 0;
+   enum radeon_bo_domain domains = radeon_domain_from_heap(heap);
+   enum radeon_bo_flag flags = radeon_flags_from_heap(heap);
    uint32_t base_id;
 
    if (!slab)
       return NULL;
-
-   if (heap & 1)
-      flags |= RADEON_FLAG_GTT_WC;
-
-   switch (heap >> 2) {
-   case 0:
-      domains = RADEON_DOMAIN_VRAM;
-      break;
-   default:
-   case 1:
-      domains = RADEON_DOMAIN_VRAM_GTT;
-      break;
-   case 2:
-      domains = RADEON_DOMAIN_GTT;
-      break;
-   }
 
    slab->buffer = amdgpu_winsys_bo(amdgpu_bo_create(&ws->base,
                                                     64 * 1024, 64 * 1024,
@@ -1151,31 +1135,18 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    struct amdgpu_winsys_bo *bo;
    unsigned usage = 0, pb_cache_bucket;
 
+   /* VRAM implies WC. This is not optional. */
+   assert(!(domain & RADEON_DOMAIN_VRAM) || flags & RADEON_FLAG_GTT_WC);
+
    /* Sub-allocate small buffers from slabs. */
    if (!(flags & (RADEON_FLAG_NO_SUBALLOC | RADEON_FLAG_SPARSE)) &&
        size <= (1 << AMDGPU_SLAB_MAX_SIZE_LOG2) &&
        alignment <= MAX2(1 << AMDGPU_SLAB_MIN_SIZE_LOG2, util_next_power_of_two(size))) {
       struct pb_slab_entry *entry;
-      unsigned heap = 0;
+      int heap = radeon_get_heap_index(domain, flags);
 
-      if (flags & RADEON_FLAG_GTT_WC)
-         heap |= 1;
-      if (flags & ~RADEON_FLAG_GTT_WC)
+      if (heap < 0 || heap >= RADEON_MAX_SLAB_HEAPS)
          goto no_slab;
-
-      switch (domain) {
-      case RADEON_DOMAIN_VRAM:
-         heap |= 0 * 4;
-         break;
-      case RADEON_DOMAIN_VRAM_GTT:
-         heap |= 1 * 4;
-         break;
-      case RADEON_DOMAIN_GTT:
-         heap |= 2 * 4;
-         break;
-      default:
-         goto no_slab;
-      }
 
       entry = pb_slab_alloc(&ws->bo_slabs, size, heap);
       if (!entry) {
