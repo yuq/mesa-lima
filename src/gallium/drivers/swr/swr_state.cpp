@@ -1294,7 +1294,7 @@ swr_update_derived(struct pipe_context *pipe,
          const uint8_t *p_data;
          uint32_t size, pitch;
 
-         pitch = p_draw_info->index_size ? p_draw_info->index_size : sizeof(uint32_t);
+         pitch = info.index_size ? info.index_size : sizeof(uint32_t);
          index_type = swr_convert_index_type(pitch);
 
          if (!info.has_user_indices) {
@@ -1320,7 +1320,7 @@ swr_update_derived(struct pipe_context *pipe,
          }
 
          SWR_INDEX_BUFFER_STATE swrIndexBuffer;
-         swrIndexBuffer.format = swr_convert_index_type(p_draw_info->index_size);
+         swrIndexBuffer.format = swr_convert_index_type(info.index_size);
          swrIndexBuffer.pIndices = p_data;
          swrIndexBuffer.size = size;
 
