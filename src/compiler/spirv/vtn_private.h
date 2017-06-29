@@ -271,6 +271,15 @@ struct vtn_type {
          /* Access qualifier for storage images */
          SpvAccessQualifier access_qualifier;
       };
+
+      /* Members for function types */
+      struct {
+         /* For functions, the vtn_type for each parameter */
+         struct vtn_type **params;
+
+         /* Return type for functions */
+         struct vtn_type *return_type;
+      };
    };
 };
 

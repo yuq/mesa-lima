@@ -41,36 +41,24 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_function);
       val->func = b->func;
 
-      const struct glsl_type *func_type =
-         vtn_value(b, w[4], vtn_value_type_type)->type->type;
+      const struct vtn_type *func_type =
+         vtn_value(b, w[4], vtn_value_type_type)->type;
 
-      assert(glsl_get_function_return_type(func_type) == result_type);
+      assert(func_type->return_type->type == result_type);
 
       nir_function *func =
          nir_function_create(b->shader, ralloc_strdup(b->shader, val->name));
 
-      func->num_params = glsl_get_length(func_type);
+      func->num_params = func_type->length;
       func->params = ralloc_array(b->shader, nir_parameter, func->num_params);
       for (unsigned i = 0; i < func->num_params; i++) {
-         const struct glsl_function_param *param =
-            glsl_get_function_param(func_type, i);
-         func->params[i].type = param->type;
-         if (param->in) {
-            if (param->out) {
-               func->params[i].param_type = nir_parameter_inout;
-            } else {
-               func->params[i].param_type = nir_parameter_in;
-            }
-         } else {
-            if (param->out) {
-               func->params[i].param_type = nir_parameter_out;
-            } else {
-               assert(!"Parameter is neither in nor out");
-            }
-         }
+         func->params[i].type = func_type->params[i]->type;
+
+         /* TODO: We could do something smarter here. */
+         func->params[i].param_type = nir_parameter_inout;
       }
 
-      func->return_type = glsl_get_function_return_type(func_type);
+      func->return_type = func_type->return_type->type;
 
       b->func->impl = nir_function_impl_create(func);
 

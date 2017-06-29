@@ -423,7 +423,6 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
    case vtn_base_type_array:
    case vtn_base_type_image:
    case vtn_base_type_sampler:
-   case vtn_base_type_function:
       /* Nothing more to do */
       break;
 
@@ -435,6 +434,11 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
       dest->offsets = ralloc_array(b, unsigned, src->length);
       memcpy(dest->offsets, src->offsets,
              src->length * sizeof(src->offsets[0]));
+      break;
+
+   case vtn_base_type_function:
+      dest->params = ralloc_array(b, struct vtn_type *, src->length);
+      memcpy(dest->params, src->params, src->length * sizeof(src->params[0]));
       break;
    }
 
@@ -840,18 +844,17 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpTypeFunction: {
       val->type->base_type = vtn_base_type_function;
+      val->type->type = NULL;
 
-      const struct glsl_type *return_type =
-         vtn_value(b, w[2], vtn_value_type_type)->type->type;
-      NIR_VLA(struct glsl_function_param, params, count - 3);
+      val->type->return_type = vtn_value(b, w[2], vtn_value_type_type)->type;
+
+      const unsigned num_params = count - 3;
+      val->type->length = num_params;
+      val->type->params = ralloc_array(b, struct vtn_type *, num_params);
       for (unsigned i = 0; i < count - 3; i++) {
-         params[i].type = vtn_value(b, w[i + 3], vtn_value_type_type)->type->type;
-
-         /* FIXME: */
-         params[i].in = true;
-         params[i].out = true;
+         val->type->params[i] =
+            vtn_value(b, w[i + 3], vtn_value_type_type)->type;
       }
-      val->type->type = glsl_function_type(return_type, params, count - 3);
       break;
    }
 
