@@ -202,42 +202,56 @@ struct vtn_type {
    /* The value that declares this type.  Used for finding decorations */
    struct vtn_value *val;
 
-   /* for matrices, whether the matrix is stored row-major */
-   bool row_major;
+   union {
+      /* Members for scalar, vector, and array-like types */
+      struct {
+         /* for arrays, the vtn_type for the elements of the array */
+         struct vtn_type *array_element;
 
-   /* for structs, the offset of each member */
-   unsigned *offsets;
+         /* for arrays and matrices, the array stride */
+         unsigned stride;
 
-   /* for structs, whether it was decorated as a "non-SSBO-like" block */
-   bool block;
+         /* for matrices, whether the matrix is stored row-major */
+         bool row_major:1;
 
-   /* for structs, whether it was decorated as an "SSBO-like" block */
-   bool buffer_block;
+         /* Whether this type, or a parent type, has been decorated as a
+          * builtin
+          */
+         bool is_builtin:1;
 
-   /* for structs with block == true, whether this is a builtin block (i.e. a
-    * block that contains only builtins).
-    */
-   bool builtin_block;
+         /* Which built-in to use */
+         SpvBuiltIn builtin;
+      };
 
-   /* Image format for image_load_store type images */
-   unsigned image_format;
+      /* Members for struct types */
+      struct {
+         /* for structures, the vtn_type for each member */
+         struct vtn_type **members;
 
-   /* Access qualifier for storage images */
-   SpvAccessQualifier access_qualifier;
+         /* for structs, the offset of each member */
+         unsigned *offsets;
 
-   /* for arrays and matrices, the array stride */
-   unsigned stride;
+         /* for structs, whether it was decorated as a "non-SSBO-like" block */
+         bool block:1;
 
-   /* for arrays, the vtn_type for the elements of the array */
-   struct vtn_type *array_element;
+         /* for structs, whether it was decorated as an "SSBO-like" block */
+         bool buffer_block:1;
 
-   /* for structures, the vtn_type for each member */
-   struct vtn_type **members;
+         /* for structs with block == true, whether this is a builtin block
+          * (i.e. a block that contains only builtins).
+          */
+         bool builtin_block:1;
+      };
 
-   /* Whether this type, or a parent type, has been decorated as a builtin */
-   bool is_builtin;
+      /* Members for image types */
+      struct {
+         /* Image format for image_load_store type images */
+         unsigned image_format;
 
-   SpvBuiltIn builtin;
+         /* Access qualifier for storage images */
+         SpvAccessQualifier access_qualifier;
+      };
+   };
 };
 
 struct vtn_variable;
