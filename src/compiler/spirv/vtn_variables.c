@@ -1327,6 +1327,200 @@ is_per_vertex_inout(const struct vtn_variable *var, gl_shader_stage stage)
    return false;
 }
 
+static void
+vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
+                    struct vtn_type *type, SpvStorageClass storage_class,
+                    nir_constant *initializer)
+{
+   struct vtn_type *without_array = type;
+   while(glsl_type_is_array(without_array->type))
+      without_array = without_array->array_element;
+
+   enum vtn_variable_mode mode;
+   nir_variable_mode nir_mode;
+   mode = vtn_storage_class_to_mode(storage_class, without_array, &nir_mode);
+
+   switch (mode) {
+   case vtn_variable_mode_ubo:
+      b->shader->info.num_ubos++;
+      break;
+   case vtn_variable_mode_ssbo:
+      b->shader->info.num_ssbos++;
+      break;
+   case vtn_variable_mode_image:
+      b->shader->info.num_images++;
+      break;
+   case vtn_variable_mode_sampler:
+      b->shader->info.num_textures++;
+      break;
+   case vtn_variable_mode_push_constant:
+      b->shader->num_uniforms = vtn_type_block_size(type);
+      break;
+   default:
+      /* No tallying is needed */
+      break;
+   }
+
+   struct vtn_variable *var = rzalloc(b, struct vtn_variable);
+   var->type = type;
+   var->mode = mode;
+
+   assert(val->value_type == vtn_value_type_pointer);
+   val->pointer = vtn_pointer_for_variable(b, var);
+
+   switch (var->mode) {
+   case vtn_variable_mode_local:
+   case vtn_variable_mode_global:
+   case vtn_variable_mode_image:
+   case vtn_variable_mode_sampler:
+   case vtn_variable_mode_workgroup:
+      /* For these, we create the variable normally */
+      var->var = rzalloc(b->shader, nir_variable);
+      var->var->name = ralloc_strdup(var->var, val->name);
+      var->var->type = var->type->type;
+      var->var->data.mode = nir_mode;
+
+      switch (var->mode) {
+      case vtn_variable_mode_image:
+      case vtn_variable_mode_sampler:
+         var->var->interface_type = without_array->type;
+         break;
+      default:
+         var->var->interface_type = NULL;
+         break;
+      }
+      break;
+
+   case vtn_variable_mode_input:
+   case vtn_variable_mode_output: {
+      /* In order to know whether or not we're a per-vertex inout, we need
+       * the patch qualifier.  This means walking the variable decorations
+       * early before we actually create any variables.  Not a big deal.
+       *
+       * GLSLang really likes to place decorations in the most interior
+       * thing it possibly can.  In particular, if you have a struct, it
+       * will place the patch decorations on the struct members.  This
+       * should be handled by the variable splitting below just fine.
+       *
+       * If you have an array-of-struct, things get even more weird as it
+       * will place the patch decorations on the struct even though it's
+       * inside an array and some of the members being patch and others not
+       * makes no sense whatsoever.  Since the only sensible thing is for
+       * it to be all or nothing, we'll call it patch if any of the members
+       * are declared patch.
+       */
+      var->patch = false;
+      vtn_foreach_decoration(b, val, var_is_patch_cb, &var->patch);
+      if (glsl_type_is_array(var->type->type) &&
+          glsl_type_is_struct(without_array->type)) {
+         vtn_foreach_decoration(b, without_array->val,
+                                var_is_patch_cb, &var->patch);
+      }
+
+      /* For inputs and outputs, we immediately split structures.  This
+       * is for a couple of reasons.  For one, builtins may all come in
+       * a struct and we really want those split out into separate
+       * variables.  For another, interpolation qualifiers can be
+       * applied to members of the top-level struct ane we need to be
+       * able to preserve that information.
+       */
+
+      int array_length = -1;
+      struct vtn_type *interface_type = var->type;
+      if (is_per_vertex_inout(var, b->shader->stage)) {
+         /* In Geometry shaders (and some tessellation), inputs come
+          * in per-vertex arrays.  However, some builtins come in
+          * non-per-vertex, hence the need for the is_array check.  In
+          * any case, there are no non-builtin arrays allowed so this
+          * check should be sufficient.
+          */
+         interface_type = var->type->array_element;
+         array_length = glsl_get_length(var->type->type);
+      }
+
+      if (glsl_type_is_struct(interface_type->type)) {
+         /* It's a struct.  Split it. */
+         unsigned num_members = glsl_get_length(interface_type->type);
+         var->members = ralloc_array(b, nir_variable *, num_members);
+
+         for (unsigned i = 0; i < num_members; i++) {
+            const struct glsl_type *mtype = interface_type->members[i]->type;
+            if (array_length >= 0)
+               mtype = glsl_array_type(mtype, array_length);
+
+            var->members[i] = rzalloc(b->shader, nir_variable);
+            var->members[i]->name =
+               ralloc_asprintf(var->members[i], "%s.%d", val->name, i);
+            var->members[i]->type = mtype;
+            var->members[i]->interface_type =
+               interface_type->members[i]->type;
+            var->members[i]->data.mode = nir_mode;
+            var->members[i]->data.patch = var->patch;
+         }
+      } else {
+         var->var = rzalloc(b->shader, nir_variable);
+         var->var->name = ralloc_strdup(var->var, val->name);
+         var->var->type = var->type->type;
+         var->var->interface_type = interface_type->type;
+         var->var->data.mode = nir_mode;
+         var->var->data.patch = var->patch;
+      }
+
+      /* For inputs and outputs, we need to grab locations and builtin
+       * information from the interface type.
+       */
+      vtn_foreach_decoration(b, interface_type->val, var_decoration_cb, var);
+      break;
+   }
+
+   case vtn_variable_mode_param:
+      unreachable("Not created through OpVariable");
+
+   case vtn_variable_mode_ubo:
+   case vtn_variable_mode_ssbo:
+   case vtn_variable_mode_push_constant:
+      /* These don't need actual variables. */
+      break;
+   }
+
+   if (initializer) {
+      var->var->constant_initializer =
+         nir_constant_clone(initializer, var->var);
+   }
+
+   vtn_foreach_decoration(b, val, var_decoration_cb, var);
+
+   if (var->mode == vtn_variable_mode_image ||
+       var->mode == vtn_variable_mode_sampler) {
+      /* XXX: We still need the binding information in the nir_variable
+       * for these. We should fix that.
+       */
+      var->var->data.binding = var->binding;
+      var->var->data.descriptor_set = var->descriptor_set;
+      var->var->data.index = var->input_attachment_index;
+
+      if (var->mode == vtn_variable_mode_image)
+         var->var->data.image.format = without_array->image_format;
+   }
+
+   if (var->mode == vtn_variable_mode_local) {
+      assert(var->members == NULL && var->var != NULL);
+      nir_function_impl_add_variable(b->impl, var->var);
+   } else if (var->var) {
+      nir_shader_add_variable(b->shader, var->var);
+   } else if (var->members) {
+      unsigned count = glsl_get_length(without_array->type);
+      for (unsigned i = 0; i < count; i++) {
+         assert(var->members[i]->data.mode != nir_var_local);
+         nir_shader_add_variable(b->shader, var->members[i]);
+      }
+   } else {
+      assert(var->mode == vtn_variable_mode_ubo ||
+             var->mode == vtn_variable_mode_ssbo ||
+             var->mode == vtn_variable_mode_push_constant);
+   }
+}
+
 void
 vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
@@ -1341,196 +1535,14 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    case SpvOpVariable: {
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
 
-      struct vtn_type *without_array = type;
-      while(glsl_type_is_array(without_array->type))
-         without_array = without_array->array_element;
-
-      enum vtn_variable_mode mode;
-      nir_variable_mode nir_mode;
-      mode = vtn_storage_class_to_mode(w[3], without_array, &nir_mode);
-
-      switch (mode) {
-      case vtn_variable_mode_ubo:
-         b->shader->info.num_ubos++;
-         break;
-      case vtn_variable_mode_ssbo:
-         b->shader->info.num_ssbos++;
-         break;
-      case vtn_variable_mode_image:
-         b->shader->info.num_images++;
-         break;
-      case vtn_variable_mode_sampler:
-         b->shader->info.num_textures++;
-         break;
-      case vtn_variable_mode_push_constant:
-         b->shader->num_uniforms = vtn_type_block_size(type);
-         break;
-      default:
-         /* No tallying is needed */
-         break;
-      }
-
-      struct vtn_variable *var = rzalloc(b, struct vtn_variable);
-      var->type = type;
-      var->mode = mode;
-
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
-      val->pointer = vtn_pointer_for_variable(b, var);
 
-      switch (var->mode) {
-      case vtn_variable_mode_local:
-      case vtn_variable_mode_global:
-      case vtn_variable_mode_image:
-      case vtn_variable_mode_sampler:
-      case vtn_variable_mode_workgroup:
-         /* For these, we create the variable normally */
-         var->var = rzalloc(b->shader, nir_variable);
-         var->var->name = ralloc_strdup(var->var, val->name);
-         var->var->type = var->type->type;
-         var->var->data.mode = nir_mode;
+      SpvStorageClass storage_class = w[3];
+      nir_constant *initializer = NULL;
+      if (count > 4)
+         initializer = vtn_value(b, w[4], vtn_value_type_constant)->constant;
 
-         switch (var->mode) {
-         case vtn_variable_mode_image:
-         case vtn_variable_mode_sampler:
-            var->var->interface_type = without_array->type;
-            break;
-         default:
-            var->var->interface_type = NULL;
-            break;
-         }
-         break;
-
-      case vtn_variable_mode_input:
-      case vtn_variable_mode_output: {
-         /* In order to know whether or not we're a per-vertex inout, we need
-          * the patch qualifier.  This means walking the variable decorations
-          * early before we actually create any variables.  Not a big deal.
-          *
-          * GLSLang really likes to place decorations in the most interior
-          * thing it possibly can.  In particular, if you have a struct, it
-          * will place the patch decorations on the struct members.  This
-          * should be handled by the variable splitting below just fine.
-          *
-          * If you have an array-of-struct, things get even more weird as it
-          * will place the patch decorations on the struct even though it's
-          * inside an array and some of the members being patch and others not
-          * makes no sense whatsoever.  Since the only sensible thing is for
-          * it to be all or nothing, we'll call it patch if any of the members
-          * are declared patch.
-          */
-         var->patch = false;
-         vtn_foreach_decoration(b, val, var_is_patch_cb, &var->patch);
-         if (glsl_type_is_array(var->type->type) &&
-             glsl_type_is_struct(without_array->type)) {
-            vtn_foreach_decoration(b, without_array->val,
-                                   var_is_patch_cb, &var->patch);
-         }
-
-         /* For inputs and outputs, we immediately split structures.  This
-          * is for a couple of reasons.  For one, builtins may all come in
-          * a struct and we really want those split out into separate
-          * variables.  For another, interpolation qualifiers can be
-          * applied to members of the top-level struct ane we need to be
-          * able to preserve that information.
-          */
-
-         int array_length = -1;
-         struct vtn_type *interface_type = var->type;
-         if (is_per_vertex_inout(var, b->shader->stage)) {
-            /* In Geometry shaders (and some tessellation), inputs come
-             * in per-vertex arrays.  However, some builtins come in
-             * non-per-vertex, hence the need for the is_array check.  In
-             * any case, there are no non-builtin arrays allowed so this
-             * check should be sufficient.
-             */
-            interface_type = var->type->array_element;
-            array_length = glsl_get_length(var->type->type);
-         }
-
-         if (glsl_type_is_struct(interface_type->type)) {
-            /* It's a struct.  Split it. */
-            unsigned num_members = glsl_get_length(interface_type->type);
-            var->members = ralloc_array(b, nir_variable *, num_members);
-
-            for (unsigned i = 0; i < num_members; i++) {
-               const struct glsl_type *mtype = interface_type->members[i]->type;
-               if (array_length >= 0)
-                  mtype = glsl_array_type(mtype, array_length);
-
-               var->members[i] = rzalloc(b->shader, nir_variable);
-               var->members[i]->name =
-                  ralloc_asprintf(var->members[i], "%s.%d", val->name, i);
-               var->members[i]->type = mtype;
-               var->members[i]->interface_type =
-                  interface_type->members[i]->type;
-               var->members[i]->data.mode = nir_mode;
-               var->members[i]->data.patch = var->patch;
-            }
-         } else {
-            var->var = rzalloc(b->shader, nir_variable);
-            var->var->name = ralloc_strdup(var->var, val->name);
-            var->var->type = var->type->type;
-            var->var->interface_type = interface_type->type;
-            var->var->data.mode = nir_mode;
-            var->var->data.patch = var->patch;
-         }
-
-         /* For inputs and outputs, we need to grab locations and builtin
-          * information from the interface type.
-          */
-         vtn_foreach_decoration(b, interface_type->val, var_decoration_cb, var);
-         break;
-      }
-
-      case vtn_variable_mode_param:
-         unreachable("Not created through OpVariable");
-
-      case vtn_variable_mode_ubo:
-      case vtn_variable_mode_ssbo:
-      case vtn_variable_mode_push_constant:
-         /* These don't need actual variables. */
-         break;
-      }
-
-      if (count > 4) {
-         assert(count == 5);
-         nir_constant *constant =
-            vtn_value(b, w[4], vtn_value_type_constant)->constant;
-         var->var->constant_initializer =
-            nir_constant_clone(constant, var->var);
-      }
-
-      vtn_foreach_decoration(b, val, var_decoration_cb, var);
-
-      if (var->mode == vtn_variable_mode_image ||
-          var->mode == vtn_variable_mode_sampler) {
-         /* XXX: We still need the binding information in the nir_variable
-          * for these. We should fix that.
-          */
-         var->var->data.binding = var->binding;
-         var->var->data.descriptor_set = var->descriptor_set;
-         var->var->data.index = var->input_attachment_index;
-
-         if (var->mode == vtn_variable_mode_image)
-            var->var->data.image.format = without_array->image_format;
-      }
-
-      if (var->mode == vtn_variable_mode_local) {
-         assert(var->members == NULL && var->var != NULL);
-         nir_function_impl_add_variable(b->impl, var->var);
-      } else if (var->var) {
-         nir_shader_add_variable(b->shader, var->var);
-      } else if (var->members) {
-         unsigned count = glsl_get_length(without_array->type);
-         for (unsigned i = 0; i < count; i++) {
-            assert(var->members[i]->data.mode != nir_var_local);
-            nir_shader_add_variable(b->shader, var->members[i]);
-         }
-      } else {
-         assert(var->mode == vtn_variable_mode_ubo ||
-                var->mode == vtn_variable_mode_ssbo ||
-                var->mode == vtn_variable_mode_push_constant);
-      }
+      vtn_create_variable(b, val, type, storage_class, initializer);
       break;
    }
 
