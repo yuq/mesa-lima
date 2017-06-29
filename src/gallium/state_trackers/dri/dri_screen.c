@@ -56,6 +56,7 @@ const __DRIconfigOptionsExtension gallium_config_options = {
    DRI_CONF_BEGIN
       DRI_CONF_SECTION_PERFORMANCE
          DRI_CONF_MESA_GLTHREAD("false")
+         DRI_CONF_MESA_NO_ERROR("false")
          DRI_CONF_DISABLE_EXT_BUFFER_AGE("false")
          DRI_CONF_DISABLE_OML_SYNC_CONTROL("false")
       DRI_CONF_SECTION_END
