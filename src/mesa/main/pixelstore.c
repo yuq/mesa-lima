@@ -215,26 +215,26 @@ pixel_storei(GLenum pname, GLint param, bool no_error)
    return;
 
 invalid_enum_error:
-   _mesa_error( ctx, GL_INVALID_ENUM, "glPixelStore" );
+   _mesa_error(ctx, GL_INVALID_ENUM, "glPixelStore");
    return;
 
 invalid_value_error:
-   _mesa_error( ctx, GL_INVALID_VALUE, "glPixelStore(param)" );
+   _mesa_error(ctx, GL_INVALID_VALUE, "glPixelStore(param)");
    return;
 }
 
 
 void GLAPIENTRY
-_mesa_PixelStorei( GLenum pname, GLint param )
+_mesa_PixelStorei(GLenum pname, GLint param)
 {
    pixel_storei(pname, param, false);
 }
 
 
 void GLAPIENTRY
-_mesa_PixelStoref( GLenum pname, GLfloat param )
+_mesa_PixelStoref(GLenum pname, GLfloat param)
 {
-   _mesa_PixelStorei( pname, IROUND(param) );
+   _mesa_PixelStorei(pname, IROUND(param));
 }
 
 
@@ -256,7 +256,7 @@ _mesa_PixelStoref_no_error(GLenum pname, GLfloat param)
  * Initialize the context's pixel store state.
  */
 void
-_mesa_init_pixelstore( struct gl_context *ctx )
+_mesa_init_pixelstore(struct gl_context *ctx)
 {
    /* Pixel transfer */
    ctx->Pack.Alignment = 4;
