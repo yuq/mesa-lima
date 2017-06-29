@@ -41,7 +41,7 @@ swr_copy_to_scratch_space(struct swr_context *ctx,
 
    if (size >= 2048) { /* XXX TODO create KNOB_ for this */
       /* Use per draw SwrAllocDrawContextMemory for larger copies */
-      ptr = SwrAllocDrawContextMemory(ctx->swrContext, size, 4);
+      ptr = ctx->api.pfnSwrAllocDrawContextMemory(ctx->swrContext, size, 4);
    } else {
       /* Allocate enough so that MAX_DRAWS_IN_FLIGHT sets fit. */
       unsigned int max_size_in_flight = size * KNOB_MAX_DRAWS_IN_FLIGHT;

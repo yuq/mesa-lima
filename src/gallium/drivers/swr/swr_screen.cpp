@@ -1016,11 +1016,12 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
    struct sw_winsys *winsys = screen->winsys;
    struct swr_resource *spr = swr_resource(resource);
    struct pipe_context *pipe = screen->pipe;
+   struct swr_context *ctx = swr_context(pipe);
 
    if (pipe) {
       swr_fence_finish(p_screen, NULL, screen->flush_fence, 0);
       swr_resource_unused(resource);
-      SwrEndFrame(swr_context(pipe)->swrContext);
+      ctx->api.pfnSwrEndFrame(ctx->swrContext);
    }
 
    /* Multisample resolved into resolve_target at flush with store_resource */

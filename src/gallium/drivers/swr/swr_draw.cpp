@@ -100,7 +100,7 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
          assert(ctx->vs->soFunc[info->mode] && "Error: SoShader = NULL");
       }
 
-      SwrSetSoFunc(ctx->swrContext, ctx->vs->soFunc[info->mode], 0);
+      ctx->api.pfnSwrSetSoFunc(ctx->swrContext, ctx->vs->soFunc[info->mode], 0);
    }
 
    struct swr_vertex_element_state *velems = ctx->velems;
@@ -123,7 +123,7 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       velems->map.insert(std::make_pair(key, velems->fsFunc));
    }
 
-   SwrSetFetchFunc(ctx->swrContext, velems->fsFunc);
+   ctx->api.pfnSwrSetFetchFunc(ctx->swrContext, velems->fsFunc);
 
    /* Set up frontend state
     * XXX setup provokingVertex & topologyProvokingVertex */
@@ -171,23 +171,23 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    feState.bEnableCutIndex = info->primitive_restart;
-   SwrSetFrontendState(ctx->swrContext, &feState);
+   ctx->api.pfnSwrSetFrontendState(ctx->swrContext, &feState);
 
    if (info->index_size)
-      SwrDrawIndexedInstanced(ctx->swrContext,
-                              swr_convert_prim_topology(info->mode),
-                              info->count,
-                              info->instance_count,
-                              info->start,
-                              info->index_bias,
-                              info->start_instance);
+      ctx->api.pfnSwrDrawIndexedInstanced(ctx->swrContext,
+                                          swr_convert_prim_topology(info->mode),
+                                          info->count,
+                                          info->instance_count,
+                                          info->start,
+                                          info->index_bias,
+                                          info->start_instance);
    else
-      SwrDrawInstanced(ctx->swrContext,
-                       swr_convert_prim_topology(info->mode),
-                       info->count,
-                       info->instance_count,
-                       info->start,
-                       info->start_instance);
+      ctx->api.pfnSwrDrawInstanced(ctx->swrContext,
+                                   swr_convert_prim_topology(info->mode),
+                                   info->count,
+                                   info->instance_count,
+                                   info->start,
+                                   info->start_instance);
 }
 
 
@@ -235,9 +235,9 @@ swr_invalidate_render_target(struct pipe_context *pipe,
    swr_update_draw_context(ctx);
    SWR_RECT full_rect =
       {0, 0, (int32_t)width, (int32_t)height};
-   SwrInvalidateTiles(ctx->swrContext,
-                      1 << attachment,
-                      full_rect);
+   ctx->api.pfnSwrInvalidateTiles(ctx->swrContext,
+                                  1 << attachment,
+                                  full_rect);
 }
 
 
@@ -260,10 +260,10 @@ swr_store_render_target(struct pipe_context *pipe,
          {0, 0,
           (int32_t)u_minify(renderTarget->width, renderTarget->lod),
           (int32_t)u_minify(renderTarget->height, renderTarget->lod)};
-      SwrStoreTiles(ctx->swrContext,
-                    1 << attachment,
-                    post_tile_state,
-                    full_rect);
+      ctx->api.pfnSwrStoreTiles(ctx->swrContext,
+                                1 << attachment,
+                                post_tile_state,
+                                full_rect);
    }
 }
 

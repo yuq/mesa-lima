@@ -102,6 +102,7 @@ struct swr_draw_context {
 
    SWR_SURFACE_STATE renderTargets[SWR_NUM_ATTACHMENTS];
    struct swr_query_result *pStats; // @llvm_struct
+   SWR_INTERFACE *pAPI; // @llvm_struct - Needed for the swr_memory callbacks
 };
 
 /* gen_llvm_types FINI */
@@ -169,6 +170,8 @@ struct swr_context {
    struct swr_draw_context swrDC;
 
    unsigned dirty; /**< Mask of SWR_NEW_x flags */
+
+   SWR_INTERFACE api;
 };
 
 static INLINE struct swr_context *
@@ -182,7 +185,7 @@ swr_update_draw_context(struct swr_context *ctx,
       struct swr_query_result *pqr = nullptr)
 {
    swr_draw_context *pDC =
-      (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+      (swr_draw_context *)ctx->api.pfnSwrGetPrivateContextState(ctx->swrContext);
    if (pqr)
       ctx->swrDC.pStats = pqr;
    memcpy(pDC, &ctx->swrDC, sizeof(swr_draw_context));

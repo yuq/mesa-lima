@@ -34,7 +34,7 @@ swr_LoadHotTile(HANDLE hPrivateContext,
    swr_draw_context *pDC = (swr_draw_context*)hPrivateContext;
    SWR_SURFACE_STATE *pSrcSurface = &pDC->renderTargets[renderTargetIndex];
 
-   SwrLoadHotTile(pSrcSurface, dstFormat, renderTargetIndex, x, y, renderTargetArrayIndex, pDstHotTile);
+   pDC->pAPI->pfnSwrLoadHotTile(pSrcSurface, dstFormat, renderTargetIndex, x, y, renderTargetArrayIndex, pDstHotTile);
 }
 
 INLINE void
@@ -48,7 +48,7 @@ swr_StoreHotTile(HANDLE hPrivateContext,
    swr_draw_context *pDC = (swr_draw_context*)hPrivateContext;
    SWR_SURFACE_STATE *pDstSurface = &pDC->renderTargets[renderTargetIndex];
 
-   SwrStoreHotTileToSurface(pDstSurface, srcFormat, renderTargetIndex, x, y, renderTargetArrayIndex, pSrcHotTile);
+   pDC->pAPI->pfnSwrStoreHotTileToSurface(pDstSurface, srcFormat, renderTargetIndex, x, y, renderTargetArrayIndex, pSrcHotTile);
 }
 
 INLINE void
@@ -63,5 +63,5 @@ swr_StoreHotTileClear(HANDLE hPrivateContext,
    swr_draw_context *pDC = (swr_draw_context*)hPrivateContext;
    SWR_SURFACE_STATE *pDstSurface = &pDC->renderTargets[renderTargetIndex];
 
-   SwrStoreHotTileClear(pDstSurface, renderTargetIndex, x, y, renderTargetArrayIndex, pClearColor);
+   pDC->pAPI->pfnSwrStoreHotTileClear(pDstSurface, renderTargetIndex, x, y, renderTargetArrayIndex, pClearColor);
 }

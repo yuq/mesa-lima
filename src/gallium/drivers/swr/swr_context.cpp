@@ -311,8 +311,8 @@ swr_blit(struct pipe_context *pipe, const struct pipe_blit_info *blit_info)
    }
 
    if (ctx->active_queries) {
-      SwrEnableStatsFE(ctx->swrContext, FALSE);
-      SwrEnableStatsBE(ctx->swrContext, FALSE);
+      ctx->api.pfnSwrEnableStatsFE(ctx->swrContext, FALSE);
+      ctx->api.pfnSwrEnableStatsBE(ctx->swrContext, FALSE);
    }
 
    util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vertex_buffer);
@@ -349,8 +349,8 @@ swr_blit(struct pipe_context *pipe, const struct pipe_blit_info *blit_info)
    util_blitter_blit(ctx->blitter, &info);
 
    if (ctx->active_queries) {
-      SwrEnableStatsFE(ctx->swrContext, TRUE);
-      SwrEnableStatsBE(ctx->swrContext, TRUE);
+      ctx->api.pfnSwrEnableStatsFE(ctx->swrContext, TRUE);
+      ctx->api.pfnSwrEnableStatsBE(ctx->swrContext, TRUE);
    }
 }
 
@@ -383,10 +383,10 @@ swr_destroy(struct pipe_context *pipe)
 
    /* Idle core after destroying buffer resources, but before deleting
     * context.  Destroying resources has potentially called StoreTiles.*/
-   SwrWaitForIdle(ctx->swrContext);
+   ctx->api.pfnSwrWaitForIdle(ctx->swrContext);
 
    if (ctx->swrContext)
-      SwrDestroyContext(ctx->swrContext);
+      ctx->api.pfnSwrDestroyContext(ctx->swrContext);
 
    delete ctx->blendJIT;
 
@@ -467,6 +467,9 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
       AlignedMalloc(sizeof(struct swr_context), KNOB_SIMD_BYTES);
    memset(ctx, 0, sizeof(struct swr_context));
 
+   SwrGetInterface(ctx->api);
+   ctx->swrDC.pAPI = &ctx->api;
+
    ctx->blendJIT =
       new std::unordered_map<BLEND_COMPILE_STATE, PFN_BLEND_JIT_FUNC>;
 
@@ -478,9 +481,9 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    createInfo.pfnClearTile = swr_StoreHotTileClear;
    createInfo.pfnUpdateStats = swr_UpdateStats;
    createInfo.pfnUpdateStatsFE = swr_UpdateStatsFE;
-   ctx->swrContext = SwrCreateContext(&createInfo);
+   ctx->swrContext = ctx->api.pfnSwrCreateContext(&createInfo);
 
-   SwrInit();
+   ctx->api.pfnSwrInit();
 
    if (ctx->swrContext == NULL)
       goto fail;

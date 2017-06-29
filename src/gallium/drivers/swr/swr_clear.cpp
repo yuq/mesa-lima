@@ -78,9 +78,9 @@ swr_clear(struct pipe_context *pipe,
 
    for (unsigned i = 0; i < layers; ++i) {
       swr_update_draw_context(ctx);
-      SwrClearRenderTarget(ctx->swrContext, clearMask, i,
-                           color->f, depth, stencil,
-                           clear_rect);
+      ctx->api.pfnSwrClearRenderTarget(ctx->swrContext, clearMask, i,
+                                       color->f, depth, stencil,
+                                       clear_rect);
 
       // Mask out the attachments that are out of layers.
       if (fb->zsbuf &&
