@@ -167,8 +167,8 @@ SIMD_WRAPPER_3(fmsub_ps);   // return (a * b) - c
 SIMD_WRAPPER_2(max_ps);     // return (a > b) ? a : b
 SIMD_WRAPPER_2(min_ps);     // return (a < b) ? a : b
 SIMD_WRAPPER_2(mul_ps);     // return a * b
-SIMD_WRAPPER_1_(rcp_ps, rcp28_ps, __mmask16(0xf));     // return 1.0f / a
-SIMD_WRAPPER_1_(rsqrt_ps, rsqrt28_ps, __mmask16(0xf));   // return 1.0f / sqrt(a)
+SIMD_WRAPPER_1_(rcp_ps, rcp14_ps, __mmask16(0xf));     // return 1.0f / a
+SIMD_WRAPPER_1_(rsqrt_ps, rsqrt14_ps, __mmask16(0xf));   // return 1.0f / sqrt(a)
 SIMD_WRAPPER_2(sub_ps);     // return a - b
 
 //-----------------------------------------------------------------------

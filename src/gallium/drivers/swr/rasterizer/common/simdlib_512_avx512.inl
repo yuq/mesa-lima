@@ -167,8 +167,8 @@ SIMD_WRAPPER_3(fmsub_ps);   // return (a * b) - c
 SIMD_WRAPPER_2(max_ps);     // return (a > b) ? a : b
 SIMD_WRAPPER_2(min_ps);     // return (a < b) ? a : b
 SIMD_WRAPPER_2(mul_ps);     // return a * b
-SIMD_WRAPPER_1_(rcp_ps, _mm512_rcp28_ps);       // return 1.0f / a
-SIMD_WRAPPER_1_(rsqrt_ps, _mm512_rsqrt28_ps);   // return 1.0f / sqrt(a)
+SIMD_WRAPPER_1_(rcp_ps, _mm512_rcp14_ps);       // return 1.0f / a
+SIMD_WRAPPER_1_(rsqrt_ps, _mm512_rsqrt14_ps);   // return 1.0f / sqrt(a)
 SIMD_WRAPPER_2(sub_ps);     // return a - b
 
 template <RoundMode RMT>
