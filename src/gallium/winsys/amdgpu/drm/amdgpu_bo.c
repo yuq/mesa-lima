@@ -1138,6 +1138,9 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    /* VRAM implies WC. This is not optional. */
    assert(!(domain & RADEON_DOMAIN_VRAM) || flags & RADEON_FLAG_GTT_WC);
 
+   /* NO_CPU_ACCESS is valid with VRAM only. */
+   assert(domain == RADEON_DOMAIN_VRAM || !(flags & RADEON_FLAG_NO_CPU_ACCESS));
+
    /* Sub-allocate small buffers from slabs. */
    if (!(flags & (RADEON_FLAG_NO_SUBALLOC | RADEON_FLAG_SPARSE)) &&
        size <= (1 << AMDGPU_SLAB_MAX_SIZE_LOG2) &&

@@ -659,6 +659,7 @@ static inline void radeon_emit_array(struct radeon_winsys_cs *cs,
 }
 
 enum radeon_heap {
+    RADEON_HEAP_VRAM_NO_CPU_ACCESS,
     RADEON_HEAP_VRAM,
     RADEON_HEAP_VRAM_GTT, /* combined heaps */
     RADEON_HEAP_GTT_WC,
@@ -669,6 +670,7 @@ enum radeon_heap {
 static inline enum radeon_bo_domain radeon_domain_from_heap(enum radeon_heap heap)
 {
     switch (heap) {
+    case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
     case RADEON_HEAP_VRAM:
         return RADEON_DOMAIN_VRAM;
     case RADEON_HEAP_VRAM_GTT:
@@ -685,6 +687,8 @@ static inline enum radeon_bo_domain radeon_domain_from_heap(enum radeon_heap hea
 static inline unsigned radeon_flags_from_heap(enum radeon_heap heap)
 {
     switch (heap) {
+    case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
+        return RADEON_FLAG_GTT_WC | RADEON_FLAG_NO_CPU_ACCESS;
     case RADEON_HEAP_VRAM:
     case RADEON_HEAP_VRAM_GTT:
     case RADEON_HEAP_GTT_WC:
@@ -701,14 +705,19 @@ static inline int radeon_get_heap_index(enum radeon_bo_domain domain,
 {
     /* VRAM implies WC (write combining) */
     assert(!(domain & RADEON_DOMAIN_VRAM) || flags & RADEON_FLAG_GTT_WC);
+    /* NO_CPU_ACCESS implies VRAM only. */
+    assert(!(flags & RADEON_FLAG_NO_CPU_ACCESS) || domain == RADEON_DOMAIN_VRAM);
 
-    /* Unsupported flags: NO_CPU_ACCESS, NO_SUBALLOC, SPARSE. */
-    if (flags & ~RADEON_FLAG_GTT_WC)
+    /* Unsupported flags: NO_SUBALLOC, SPARSE. */
+    if (flags & ~(RADEON_FLAG_GTT_WC | RADEON_FLAG_NO_CPU_ACCESS))
         return -1;
 
     switch (domain) {
     case RADEON_DOMAIN_VRAM:
-        return RADEON_HEAP_VRAM;
+        if (flags & RADEON_FLAG_NO_CPU_ACCESS)
+            return RADEON_HEAP_VRAM_NO_CPU_ACCESS;
+        else
+            return RADEON_HEAP_VRAM;
     case RADEON_DOMAIN_VRAM_GTT:
         return RADEON_HEAP_VRAM_GTT;
     case RADEON_DOMAIN_GTT:
