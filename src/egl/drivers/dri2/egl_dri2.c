@@ -428,6 +428,7 @@ static const struct dri2_extension_match swrast_core_extensions[] = {
 
 static const struct dri2_extension_match optional_core_extensions[] = {
    { __DRI2_ROBUSTNESS, 1, offsetof(struct dri2_egl_display, robustness) },
+   { __DRI2_NO_ERROR, 1, offsetof(struct dri2_egl_display, no_error) },
    { __DRI2_CONFIG_QUERY, 1, offsetof(struct dri2_egl_display, config) },
    { __DRI2_FENCE, 1, offsetof(struct dri2_egl_display, fence) },
    { __DRI2_RENDERER_QUERY, 1, offsetof(struct dri2_egl_display, rendererQuery) },
@@ -664,6 +665,9 @@ dri2_setup_screen(_EGLDisplay *disp)
       if (dri2_dpy->robustness)
          disp->Extensions.EXT_create_context_robustness = EGL_TRUE;
    }
+
+   if (dri2_dpy->no_error)
+      disp->Extensions.KHR_create_context_no_error = EGL_TRUE;
 
    if (dri2_dpy->fence) {
       disp->Extensions.KHR_fence_sync = EGL_TRUE;
@@ -1057,7 +1061,7 @@ dri2_fill_context_attribs(struct dri2_egl_context *dri2_ctx,
    ctx_attribs[pos++] = __DRI_CTX_ATTRIB_MINOR_VERSION;
    ctx_attribs[pos++] = dri2_ctx->base.ClientMinorVersion;
 
-   if (dri2_ctx->base.Flags != 0) {
+   if (dri2_ctx->base.Flags != 0 || dri2_ctx->base.NoError) {
       /* If the implementation doesn't support the __DRI2_ROBUSTNESS
        * extension, don't even try to send it the robust-access flag.
        * It may explode.  Instead, generate the required EGL error here.
@@ -1069,7 +1073,8 @@ dri2_fill_context_attribs(struct dri2_egl_context *dri2_ctx,
       }
 
       ctx_attribs[pos++] = __DRI_CTX_ATTRIB_FLAGS;
-      ctx_attribs[pos++] = dri2_ctx->base.Flags;
+      ctx_attribs[pos++] = dri2_ctx->base.Flags |
+            dri2_ctx->base.NoError ? __DRI_CTX_FLAG_NO_ERROR : 0;
    }
 
    if (dri2_ctx->base.ResetNotificationStrategy != EGL_NO_RESET_NOTIFICATION_KHR) {
@@ -1128,6 +1133,17 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
     */
    if (share_list && share_list->ResetNotificationStrategy !=
                      dri2_ctx->base.ResetNotificationStrategy) {
+      _eglError(EGL_BAD_MATCH, "eglCreateContext");
+      goto cleanup;
+   }
+
+   /* The EGL_KHR_create_context_no_error spec says:
+    *
+    *    "BAD_MATCH is generated if the value of EGL_CONTEXT_OPENGL_NO_ERROR_KHR
+    *    used to create <share_context> does not match the value of
+    *    EGL_CONTEXT_OPENGL_NO_ERROR_KHR for the context being created."
+    */
+   if (share_list && share_list->NoError != dri2_ctx->base.NoError) {
       _eglError(EGL_BAD_MATCH, "eglCreateContext");
       goto cleanup;
    }

@@ -494,6 +494,7 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_cl_event2);
    _EGL_CHECK_EXTENSION(KHR_config_attribs);
    _EGL_CHECK_EXTENSION(KHR_create_context);
+   _EGL_CHECK_EXTENSION(KHR_create_context_no_error);
    _EGL_CHECK_EXTENSION(KHR_fence_sync);
    _EGL_CHECK_EXTENSION(KHR_get_all_proc_addresses);
    _EGL_CHECK_EXTENSION(KHR_gl_colorspace);

@@ -122,6 +122,7 @@ struct _egl_extensions
    EGLBoolean KHR_reusable_sync;
    EGLBoolean KHR_surfaceless_context;
    EGLBoolean KHR_wait_sync;
+   EGLBoolean KHR_create_context_no_error;
 
    EGLBoolean MESA_drm_image;
    EGLBoolean MESA_image_dma_buf_export;
