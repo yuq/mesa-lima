@@ -84,8 +84,6 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpFunctionParameter: {
-      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
-
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
 
       assert(b->func_param_idx < b->func->impl->num_params);
@@ -93,14 +91,9 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
 
       assert(param->type == type->type);
 
-      /* Name the parameter so it shows up nicely in NIR */
-      param->name = ralloc_strdup(param, val->name);
-
       struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
       vtn_var->type = type;
       vtn_var->var = param;
-      vtn_var->ptr.var = vtn_var;
-      vtn_var->ptr.length = 0;
 
       struct vtn_type *without_array = type;
       while(glsl_type_is_array(without_array->type))
@@ -116,7 +109,12 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
          vtn_var->mode = vtn_variable_mode_param;
       }
 
-      val->pointer = &vtn_var->ptr;
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_pointer);
+
+      /* Name the parameter so it shows up nicely in NIR */
+      param->name = ralloc_strdup(param, val->name);
+
+      val->pointer = vtn_pointer_for_variable(b, vtn_var);
       break;
    }
 

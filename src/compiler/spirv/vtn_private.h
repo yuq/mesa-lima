@@ -253,8 +253,6 @@ struct vtn_access_link {
 };
 
 struct vtn_access_chain {
-   struct vtn_variable *var;
-
    uint32_t length;
 
    /* Struct elements and array offsets */
@@ -273,6 +271,23 @@ enum vtn_variable_mode {
    vtn_variable_mode_workgroup,
    vtn_variable_mode_input,
    vtn_variable_mode_output,
+};
+
+struct vtn_pointer {
+   /** The variable mode for the referenced data */
+   enum vtn_variable_mode mode;
+
+   /** The dereferenced type of this pointer */
+   struct vtn_type *type;
+
+   /** The referenced variable */
+   struct vtn_variable *var;
+
+   /** An access chain describing how to get from var to the referenced data
+    *
+    * This field may be NULL if the pointer references the entire variable.
+    */
+   struct vtn_access_chain *chain;
 };
 
 struct vtn_variable {
@@ -300,20 +315,18 @@ struct vtn_variable {
     * around this GLSLang issue in SPIR-V -> NIR.  Hopefully, we can drop this
     * hack at some point in the future.
     */
-   struct vtn_access_chain *copy_prop_sampler;
-
-   struct vtn_access_chain ptr;
+   struct vtn_pointer *copy_prop_sampler;
 };
 
 struct vtn_image_pointer {
-   struct vtn_access_chain *image;
+   struct vtn_pointer *image;
    nir_ssa_def *coord;
    nir_ssa_def *sample;
 };
 
 struct vtn_sampled_image {
-   struct vtn_access_chain *image; /* Image or array of images */
-   struct vtn_access_chain *sampler; /* Sampler */
+   struct vtn_pointer *image; /* Image or array of images */
+   struct vtn_pointer *sampler; /* Sampler */
 };
 
 struct vtn_value {
@@ -328,7 +341,7 @@ struct vtn_value {
          nir_constant *constant;
          const struct glsl_type *const_type;
       };
-      struct vtn_access_chain *pointer;
+      struct vtn_pointer *pointer;
       struct vtn_image_pointer *image;
       struct vtn_sampled_image *sampled_image;
       struct vtn_function *func;
@@ -459,11 +472,13 @@ nir_ssa_def *vtn_vector_insert_dynamic(struct vtn_builder *b, nir_ssa_def *src,
 
 nir_deref_var *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
 
+struct vtn_pointer *vtn_pointer_for_variable(struct vtn_builder *b,
+                                             struct vtn_variable *var);
+
 nir_deref_var *vtn_pointer_to_deref(struct vtn_builder *b,
-                                    struct vtn_access_chain *ptr);
+                                    struct vtn_pointer *ptr);
 nir_ssa_def *
-vtn_pointer_to_offset(struct vtn_builder *b,
-                      struct vtn_access_chain *ptr,
+vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
                       nir_ssa_def **index_out, struct vtn_type **type_out,
                       unsigned *end_idx_out, bool stop_at_matrix);
 
@@ -473,10 +488,10 @@ void vtn_local_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                      nir_deref_var *dest);
 
 struct vtn_ssa_value *
-vtn_variable_load(struct vtn_builder *b, struct vtn_access_chain *src);
+vtn_variable_load(struct vtn_builder *b, struct vtn_pointer *src);
 
 void vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
-                        struct vtn_access_chain *dest);
+                        struct vtn_pointer *dest);
 
 void vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                           const uint32_t *w, unsigned count);
