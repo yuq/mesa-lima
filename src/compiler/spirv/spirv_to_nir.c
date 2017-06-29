@@ -520,7 +520,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
       ctx->type->offsets[member] = dec->literals[0];
       break;
    case SpvDecorationMatrixStride:
-      mutable_matrix_member(b, ctx->type, member)->stride = dec->literals[0];
+      /* Handled as a second pass */
       break;
    case SpvDecorationColMajor:
       break; /* Nothing to do here.  Column-major is the default. */
@@ -568,6 +568,32 @@ struct_member_decoration_cb(struct vtn_builder *b,
 
    default:
       unreachable("Unhandled decoration");
+   }
+}
+
+/* Matrix strides are handled as a separate pass because we need to know
+ * whether the matrix is row-major or not first.
+ */
+static void
+struct_member_matrix_stride_cb(struct vtn_builder *b,
+                               struct vtn_value *val, int member,
+                               const struct vtn_decoration *dec,
+                               void *void_ctx)
+{
+   if (dec->decoration != SpvDecorationMatrixStride)
+      return;
+   assert(member >= 0);
+
+   struct member_decoration_ctx *ctx = void_ctx;
+
+   struct vtn_type *mat_type = mutable_matrix_member(b, ctx->type, member);
+   if (mat_type->row_major) {
+      mat_type->array_element = vtn_type_copy(b, mat_type->array_element);
+      mat_type->stride = mat_type->array_element->stride;
+      mat_type->array_element->stride = dec->literals[0];
+   } else {
+      assert(mat_type->array_element->stride > 0);
+      mat_type->stride = dec->literals[0];
    }
 }
 
@@ -807,6 +833,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       };
 
       vtn_foreach_decoration(b, val, struct_member_decoration_cb, &ctx);
+      vtn_foreach_decoration(b, val, struct_member_matrix_stride_cb, &ctx);
 
       const char *name = val->name ? val->name : "struct";
 

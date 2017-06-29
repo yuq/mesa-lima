@@ -543,114 +543,77 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
        * a vector, a scalar, or a matrix.
        */
       if (glsl_type_is_matrix(type->type)) {
-         if (chain == NULL) {
-            /* Loading the whole matrix */
-            struct vtn_ssa_value *transpose;
-            unsigned num_ops, vec_width;
-            if (type->row_major) {
-               num_ops = glsl_get_vector_elements(type->type);
-               vec_width = glsl_get_matrix_columns(type->type);
-               if (load) {
-                  const struct glsl_type *transpose_type =
-                     glsl_matrix_type(base_type, vec_width, num_ops);
-                  *inout = vtn_create_ssa_value(b, transpose_type);
-               } else {
-                  transpose = vtn_ssa_transpose(b, *inout);
-                  inout = &transpose;
-               }
+         /* Loading the whole matrix */
+         struct vtn_ssa_value *transpose;
+         unsigned num_ops, vec_width, col_stride;
+         if (type->row_major) {
+            num_ops = glsl_get_vector_elements(type->type);
+            vec_width = glsl_get_matrix_columns(type->type);
+            col_stride = type->array_element->stride;
+            if (load) {
+               const struct glsl_type *transpose_type =
+                  glsl_matrix_type(base_type, vec_width, num_ops);
+               *inout = vtn_create_ssa_value(b, transpose_type);
             } else {
-               num_ops = glsl_get_matrix_columns(type->type);
-               vec_width = glsl_get_vector_elements(type->type);
-            }
-
-            for (unsigned i = 0; i < num_ops; i++) {
-               nir_ssa_def *elem_offset =
-                  nir_iadd(&b->nb, offset,
-                           nir_imm_int(&b->nb, i * type->stride));
-               _vtn_load_store_tail(b, op, load, index, elem_offset,
-                                    access_offset, access_size,
-                                    &(*inout)->elems[i],
-                                    glsl_vector_type(base_type, vec_width));
-            }
-
-            if (load && type->row_major)
-               *inout = vtn_ssa_transpose(b, *inout);
-         } else if (type->row_major) {
-            /* Row-major but with an access chiain. */
-            nir_ssa_def *col_offset =
-               vtn_access_link_as_ssa(b, chain->link[chain_idx],
-                                      type->array_element->stride);
-            offset = nir_iadd(&b->nb, offset, col_offset);
-
-            if (chain_idx + 1 < chain->length) {
-               /* Picking off a single element */
-               nir_ssa_def *row_offset =
-                  vtn_access_link_as_ssa(b, chain->link[chain_idx + 1],
-                                         type->stride);
-               offset = nir_iadd(&b->nb, offset, row_offset);
-               if (load)
-                  *inout = vtn_create_ssa_value(b, glsl_scalar_type(base_type));
-               _vtn_load_store_tail(b, op, load, index, offset,
-                                    access_offset, access_size,
-                                    inout, glsl_scalar_type(base_type));
-            } else {
-               /* Grabbing a column; picking one element off each row */
-               unsigned num_comps = glsl_get_vector_elements(type->type);
-               const struct glsl_type *column_type =
-                  glsl_get_column_type(type->type);
-
-               nir_ssa_def *comps[4];
-               for (unsigned i = 0; i < num_comps; i++) {
-                  nir_ssa_def *elem_offset =
-                     nir_iadd(&b->nb, offset,
-                              nir_imm_int(&b->nb, i * type->stride));
-
-                  struct vtn_ssa_value *comp, temp_val;
-                  if (!load) {
-                     temp_val.def = nir_channel(&b->nb, (*inout)->def, i);
-                     temp_val.type = glsl_scalar_type(base_type);
-                  }
-                  comp = &temp_val;
-                  _vtn_load_store_tail(b, op, load, index, elem_offset,
-                                       access_offset, access_size,
-                                       &comp, glsl_scalar_type(base_type));
-                  comps[i] = comp->def;
-               }
-
-               if (load) {
-                  if (*inout == NULL)
-                     *inout = vtn_create_ssa_value(b, column_type);
-
-                  (*inout)->def = nir_vec(&b->nb, comps, num_comps);
-               }
+               transpose = vtn_ssa_transpose(b, *inout);
+               inout = &transpose;
             }
          } else {
-            /* Column-major with a deref. Fall through to array case. */
-            nir_ssa_def *col_offset =
-               vtn_access_link_as_ssa(b, chain->link[chain_idx], type->stride);
-            offset = nir_iadd(&b->nb, offset, col_offset);
-
-            _vtn_block_load_store(b, op, load, index, offset,
-                                  access_offset, access_size,
-                                  chain, chain_idx + 1,
-                                  type->array_element, inout);
+            num_ops = glsl_get_matrix_columns(type->type);
+            vec_width = glsl_get_vector_elements(type->type);
+            col_stride = type->stride;
          }
-      } else if (chain == NULL) {
-         /* Single whole vector */
-         assert(glsl_type_is_vector_or_scalar(type->type));
-         _vtn_load_store_tail(b, op, load, index, offset,
-                              access_offset, access_size,
-                              inout, type->type);
-      } else {
-         /* Single component of a vector. Fall through to array case. */
-         nir_ssa_def *elem_offset =
-            vtn_access_link_as_ssa(b, chain->link[chain_idx], type->stride);
-         offset = nir_iadd(&b->nb, offset, elem_offset);
 
-         _vtn_block_load_store(b, op, load, index, offset,
-                               access_offset, access_size,
-                               NULL, 0,
-                               type->array_element, inout);
+         for (unsigned i = 0; i < num_ops; i++) {
+            nir_ssa_def *elem_offset =
+               nir_iadd(&b->nb, offset, nir_imm_int(&b->nb, i * col_stride));
+            _vtn_load_store_tail(b, op, load, index, elem_offset,
+                                 access_offset, access_size,
+                                 &(*inout)->elems[i],
+                                 glsl_vector_type(base_type, vec_width));
+         }
+
+         if (load && type->row_major)
+            *inout = vtn_ssa_transpose(b, *inout);
+      } else {
+         unsigned elems = glsl_get_vector_elements(type->type);
+         unsigned type_size = glsl_get_bit_size(type->type) / 8;
+         if (elems == 1 || type->stride == type_size) {
+            /* This is a tightly-packed normal scalar or vector load */
+            assert(glsl_type_is_vector_or_scalar(type->type));
+            _vtn_load_store_tail(b, op, load, index, offset,
+                                 access_offset, access_size,
+                                 inout, type->type);
+         } else {
+            /* This is a strided load.  We have to load N things separately.
+             * This is the single column of a row-major matrix case.
+             */
+            assert(type->stride > type_size);
+            assert(type->stride % type_size == 0);
+
+            nir_ssa_def *per_comp[4];
+            for (unsigned i = 0; i < elems; i++) {
+               nir_ssa_def *elem_offset =
+                  nir_iadd(&b->nb, offset,
+                                   nir_imm_int(&b->nb, i * type->stride));
+               struct vtn_ssa_value *comp, temp_val;
+               if (!load) {
+                  temp_val.def = nir_channel(&b->nb, (*inout)->def, i);
+                  temp_val.type = glsl_scalar_type(base_type);
+               }
+               comp = &temp_val;
+               _vtn_load_store_tail(b, op, load, index, elem_offset,
+                                    access_offset, access_size,
+                                    &comp, glsl_scalar_type(base_type));
+               per_comp[i] = comp->def;
+            }
+
+            if (load) {
+               if (*inout == NULL)
+                  *inout = vtn_create_ssa_value(b, type->type);
+               (*inout)->def = nir_vec(&b->nb, per_comp, elems);
+            }
+         }
       }
       return;
 
@@ -709,7 +672,7 @@ vtn_block_load(struct vtn_builder *b, struct vtn_pointer *src)
    nir_ssa_def *offset, *index = NULL;
    unsigned chain_idx;
    struct vtn_type *type;
-   offset = vtn_pointer_to_offset(b, src, &index, &type, &chain_idx, true);
+   offset = vtn_pointer_to_offset(b, src, &index, &type, &chain_idx, false);
 
    struct vtn_ssa_value *value = NULL;
    _vtn_block_load_store(b, op, true, index, offset,
@@ -725,7 +688,7 @@ vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
    nir_ssa_def *offset, *index = NULL;
    unsigned chain_idx;
    struct vtn_type *type;
-   offset = vtn_pointer_to_offset(b, dst, &index, &type, &chain_idx, true);
+   offset = vtn_pointer_to_offset(b, dst, &index, &type, &chain_idx, false);
 
    _vtn_block_load_store(b, nir_intrinsic_store_ssbo, false, index, offset,
                          0, 0, dst->chain, chain_idx, type, &src);
