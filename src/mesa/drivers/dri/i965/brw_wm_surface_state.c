@@ -88,9 +88,10 @@ get_isl_surf(struct brw_context *brw, struct intel_mipmap_tree *mt,
       surf->dim = get_isl_surf_dim(target);
    }
 
+   assert(mt->array_layout != GEN6_HIZ_STENCIL);
+
    const enum isl_dim_layout dim_layout =
-      get_isl_dim_layout(&brw->screen->devinfo, mt->surf.tiling, target,
-                         mt->array_layout);
+      get_isl_dim_layout(&brw->screen->devinfo, mt->surf.tiling, target);
 
    if (surf->dim_layout == dim_layout)
       return;

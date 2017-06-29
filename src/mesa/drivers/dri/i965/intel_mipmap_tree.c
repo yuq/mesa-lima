@@ -3819,12 +3819,8 @@ get_isl_surf_dim(GLenum target)
 
 enum isl_dim_layout
 get_isl_dim_layout(const struct gen_device_info *devinfo,
-                   enum isl_tiling tiling, GLenum target,
-                   enum miptree_array_layout array_layout)
+                   enum isl_tiling tiling, GLenum target)
 {
-   if (array_layout == GEN6_HIZ_STENCIL)
-      return ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ;
-
    switch (target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
@@ -3865,10 +3861,11 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
                            const struct intel_mipmap_tree *mt,
                            struct isl_surf *surf)
 {
+   assert(mt->array_layout != GEN6_HIZ_STENCIL);
+
    surf->dim = get_isl_surf_dim(mt->target);
    surf->dim_layout = get_isl_dim_layout(&brw->screen->devinfo,
-                                         mt->surf.tiling, mt->target,
-                                         mt->array_layout);
+                                         mt->surf.tiling, mt->target);
    surf->msaa_layout = mt->surf.msaa_layout;
    surf->tiling = intel_miptree_get_isl_tiling(mt);
    surf->row_pitch = mt->surf.row_pitch;

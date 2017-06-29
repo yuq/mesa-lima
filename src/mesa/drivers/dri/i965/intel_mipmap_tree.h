@@ -668,8 +668,7 @@ get_isl_surf_dim(GLenum target);
 
 enum isl_dim_layout
 get_isl_dim_layout(const struct gen_device_info *devinfo,
-                   enum isl_tiling tiling,
-                   GLenum target, enum miptree_array_layout array_layout);
+                   enum isl_tiling tiling, GLenum target);
 
 enum isl_tiling
 intel_miptree_get_isl_tiling(const struct intel_mipmap_tree *mt);
