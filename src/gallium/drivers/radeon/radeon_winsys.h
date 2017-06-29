@@ -665,6 +665,7 @@ enum radeon_heap {
     RADEON_HEAP_GTT_WC,
     RADEON_HEAP_GTT,
     RADEON_MAX_SLAB_HEAPS,
+    RADEON_MAX_CACHED_HEAPS = RADEON_MAX_SLAB_HEAPS,
 };
 
 static inline enum radeon_bo_domain radeon_domain_from_heap(enum radeon_heap heap)
@@ -696,6 +697,25 @@ static inline unsigned radeon_flags_from_heap(enum radeon_heap heap)
     case RADEON_HEAP_GTT:
     default:
         return 0;
+    }
+}
+
+/* The pb cache bucket is chosen to minimize pb_cache misses.
+ * It must be between 0 and 3 inclusive.
+ */
+static inline unsigned radeon_get_pb_cache_bucket_index(enum radeon_heap heap)
+{
+    switch (heap) {
+    case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
+        return 0;
+    case RADEON_HEAP_VRAM:
+    case RADEON_HEAP_VRAM_GTT:
+        return 1;
+    case RADEON_HEAP_GTT_WC:
+        return 2;
+    case RADEON_HEAP_GTT:
+    default:
+        return 3;
     }
 }
 

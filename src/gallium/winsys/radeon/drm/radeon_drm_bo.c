@@ -969,22 +969,11 @@ no_slab:
     size = align(size, ws->info.gart_page_size);
     alignment = align(alignment, ws->info.gart_page_size);
 
-    /* Only set one usage bit each for domains and flags, or the cache manager
-     * might consider different sets of domains / flags compatible
-     */
-    if (domain == RADEON_DOMAIN_VRAM_GTT)
-        usage = 1 << 2;
-    else
-        usage = (unsigned)domain >> 1;
-    assert(flags < sizeof(usage) * 8 - 3);
-    usage |= 1 << (flags + 3);
+    int heap = radeon_get_heap_index(domain, flags);
+    assert(heap >= 0 && heap < RADEON_MAX_CACHED_HEAPS);
+    usage = 1 << heap; /* Only set one usage bit for each heap. */
 
-    /* Determine the pb_cache bucket for minimizing pb_cache misses. */
-    pb_cache_bucket = 0;
-    if (domain & RADEON_DOMAIN_VRAM) /* VRAM or VRAM+GTT */
-       pb_cache_bucket += 1;
-    if (flags == RADEON_FLAG_GTT_WC) /* WC */
-       pb_cache_bucket += 2;
+    pb_cache_bucket = radeon_get_pb_cache_bucket_index(heap);
     assert(pb_cache_bucket < ARRAY_SIZE(ws->bo_cache.buckets));
 
     bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment,
