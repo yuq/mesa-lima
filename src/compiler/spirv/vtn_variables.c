@@ -1298,21 +1298,25 @@ vtn_storage_class_to_mode(SpvStorageClass class,
    nir_variable_mode nir_mode;
    switch (class) {
    case SpvStorageClassUniform:
-   case SpvStorageClassUniformConstant:
       if (interface_type->block) {
          mode = vtn_variable_mode_ubo;
          nir_mode = 0;
       } else if (interface_type->buffer_block) {
          mode = vtn_variable_mode_ssbo;
          nir_mode = 0;
-      } else if (glsl_type_is_image(interface_type->type)) {
+      } else {
+         assert(!"Invalid uniform variable type");
+      }
+      break;
+   case SpvStorageClassUniformConstant:
+      if (glsl_type_is_image(interface_type->type)) {
          mode = vtn_variable_mode_image;
          nir_mode = nir_var_uniform;
       } else if (glsl_type_is_sampler(interface_type->type)) {
          mode = vtn_variable_mode_sampler;
          nir_mode = nir_var_uniform;
       } else {
-         assert(!"Invalid uniform variable type");
+         assert(!"Invalid uniform constant variable type");
       }
       break;
    case SpvStorageClassPushConstant:
