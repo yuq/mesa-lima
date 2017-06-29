@@ -272,20 +272,6 @@ swizzle_to_scs(GLenum swizzle)
    return (enum isl_channel_select)((swizzle + 4) & 7);
 }
 
-static unsigned
-physical_to_logical_layer(struct intel_mipmap_tree *mt,
-                          unsigned physical_layer)
-{
-   if (mt->num_samples > 1 &&
-       (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-        mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS)) {
-      assert(physical_layer % mt->num_samples == 0);
-      return physical_layer / mt->num_samples;
-   } else {
-      return physical_layer;
-   }
-}
-
 /**
  * Note: if the src (or dst) is a 2D multisample array texture on Gen7+ using
  * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src_layer (dst_layer) is
@@ -308,10 +294,6 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                         GLenum filter, bool mirror_x, bool mirror_y,
                         bool decode_srgb, bool encode_srgb)
 {
-   /* Blorp operates in logical layers */
-   src_layer = physical_to_logical_layer(src_mt, src_layer);
-   dst_layer = physical_to_logical_layer(dst_mt, dst_layer);
-
    DBG("%s from %dx %s mt %p %d %d (%f,%f) (%f,%f)"
        "to %dx %s mt %p %d %d (%f,%f) (%f,%f) (flip %d,%d)\n",
        __func__,
@@ -733,12 +715,6 @@ set_write_disables(const struct intel_renderbuffer *irb,
    return disables;
 }
 
-static unsigned
-irb_logical_mt_layer(struct intel_renderbuffer *irb)
-{
-   return physical_to_logical_layer(irb->mt, irb->mt_layer);
-}
-
 static void
 do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                       struct gl_renderbuffer *rb, unsigned buf,
@@ -776,8 +752,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        !brw_is_color_fast_clear_compatible(brw, irb->mt, &ctx->Color.ClearColor))
       can_fast_clear = false;
 
-   const unsigned logical_layer = irb_logical_mt_layer(irb);
-
    /* Surface state can only record one fast clear color value. Therefore
     * unless different levels/layers agree on the color it can be used to
     * represent only single level/layer. Here it will be reserved for the
@@ -804,7 +778,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
    if (can_fast_clear) {
       const enum isl_aux_state aux_state =
-         intel_miptree_get_aux_state(irb->mt, irb->mt_level, logical_layer);
+         intel_miptree_get_aux_state(irb->mt, irb->mt_level, irb->mt_layer);
       union isl_color_value clear_color =
          brw_meta_convert_fast_clear_color(brw, irb->mt,
                                            &ctx->Color.ClearColor);
@@ -826,7 +800,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       struct isl_surf isl_tmp[2];
       struct blorp_surf surf;
       blorp_surf_for_miptree(brw, &surf, irb->mt, true, false, 0,
-                             &level, logical_layer, num_layers, isl_tmp);
+                             &level, irb->mt_layer, num_layers, isl_tmp);
 
       /* Ivybrigde PRM Vol 2, Part 1, "11.7 MCS Buffer for Render Target(s)":
        *
@@ -846,7 +820,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_fast_clear(&batch, &surf,
                        brw->mesa_to_isl_render_format[format],
-                       level, logical_layer, num_layers,
+                       level, irb->mt_layer, num_layers,
                        x0, y0, x1, y1);
       blorp_batch_finish(&batch);
 
@@ -857,7 +831,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * redundant clears.
        */
       intel_miptree_set_aux_state(brw, irb->mt, irb->mt_level,
-                                  logical_layer, num_layers,
+                                  irb->mt_layer, num_layers,
                                   ISL_AUX_STATE_CLEAR);
    } else {
       DBG("%s (slow) to mt %p level %d layer %d+%d\n", __FUNCTION__,
@@ -869,7 +843,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                              (1 << ISL_AUX_USAGE_MCS) |
                              (1 << ISL_AUX_USAGE_CCS_E) |
                              (1 << ISL_AUX_USAGE_CCS_D),
-                             &level, logical_layer, num_layers, isl_tmp);
+                             &level, irb->mt_layer, num_layers, isl_tmp);
 
       union isl_color_value clear_color;
       memcpy(clear_color.f32, ctx->Color.ClearColor.f, sizeof(float) * 4);
@@ -879,7 +853,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       blorp_clear(&batch, &surf,
                   brw->mesa_to_isl_render_format[format],
                   ISL_SWIZZLE_IDENTITY,
-                  level, irb_logical_mt_layer(irb), num_layers,
+                  level, irb->mt_layer, num_layers,
                   x0, y0, x1, y1,
                   clear_color, color_write_disable);
       blorp_batch_finish(&batch);
@@ -972,7 +946,7 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
          find_miptree(GL_DEPTH_BUFFER_BIT, irb);
 
       level = irb->mt_level;
-      start_layer = irb_logical_mt_layer(irb);
+      start_layer = irb->mt_layer;
       num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
       unsigned depth_level = level;
@@ -991,11 +965,11 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
 
       if (mask & BUFFER_BIT_DEPTH) {
          assert(level == irb->mt_level);
-         assert(start_layer == irb_logical_mt_layer(irb));
+         assert(start_layer == irb->mt_layer);
          assert(num_layers == fb->MaxNumLayers ? irb->layer_count : 1);
       } else {
          level = irb->mt_level;
-         start_layer = irb_logical_mt_layer(irb);
+         start_layer = irb->mt_layer;
          num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
       }
 

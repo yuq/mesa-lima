@@ -530,6 +530,7 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
 
    intel_miptree_check_level_layer(mt, level, layer);
    irb->mt_level = level;
+   irb->mt_layer = layer;
 
    int layer_multiplier;
    switch (mt->msaa_layout) {
@@ -541,8 +542,6 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
       default:
          layer_multiplier = 1;
    }
-
-   irb->mt_layer = layer_multiplier * layer;
 
    if (!layered) {
       irb->layer_count = 1;

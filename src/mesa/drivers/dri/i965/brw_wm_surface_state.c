@@ -215,16 +215,11 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
                     __func__, _mesa_get_format_name(rb_format));
    }
 
-   const unsigned layer_multiplier =
-      (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-       irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
-      MAX2(irb->mt->num_samples, 1) : 1;
-
    struct isl_view view = {
       .format = brw->mesa_to_isl_render_format[rb_format],
       .base_level = irb->mt_level - irb->mt->first_level,
       .levels = 1,
-      .base_array_layer = irb->mt_layer / layer_multiplier,
+      .base_array_layer = irb->mt_layer,
       .array_len = MAX2(irb->layer_count, 1),
       .swizzle = ISL_SWIZZLE_IDENTITY,
       .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT,
@@ -1201,21 +1196,11 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
                irb->mt->target == GL_TEXTURE_1D_ARRAY ? GL_TEXTURE_2D_ARRAY :
                irb->mt->target;
 
-            /* intel_renderbuffer::mt_layer is expressed in sample units for
-             * the UMS and CMS multisample layouts, but
-             * intel_renderbuffer::layer_count is expressed in units of whole
-             * logical layers regardless of the multisample layout.
-             */
-            const unsigned mt_layer_unit =
-               (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-                irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
-               MAX2(irb->mt->num_samples, 1) : 1;
-
             const struct isl_view view = {
                .format = format,
                .base_level = irb->mt_level - irb->mt->first_level,
                .levels = 1,
-               .base_array_layer = irb->mt_layer / mt_layer_unit,
+               .base_array_layer = irb->mt_layer,
                .array_len = irb->layer_count,
                .swizzle = ISL_SWIZZLE_IDENTITY,
                .usage = ISL_SURF_USAGE_TEXTURE_BIT,
