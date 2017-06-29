@@ -1490,10 +1490,10 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
           */
          vtn_foreach_decoration(b, interface_type->val, var_decoration_cb, var);
          break;
+      }
 
       case vtn_variable_mode_param:
          unreachable("Not created through OpVariable");
-      }
 
       case vtn_variable_mode_ubo:
       case vtn_variable_mode_ssbo:
