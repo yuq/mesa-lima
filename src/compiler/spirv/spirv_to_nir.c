@@ -413,10 +413,7 @@ static struct vtn_type *
 vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
 {
    struct vtn_type *dest = ralloc(b, struct vtn_type);
-   dest->type = src->type;
-   dest->is_builtin = src->is_builtin;
-   if (src->is_builtin)
-      dest->builtin = src->builtin;
+   *dest = *src;
 
    if (!glsl_type_is_scalar(src->type)) {
       switch (glsl_get_base_type(src->type)) {
@@ -428,9 +425,6 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_ARRAY:
-         dest->row_major = src->row_major;
-         dest->stride = src->stride;
-         dest->array_element = src->array_element;
          break;
 
       case GLSL_TYPE_STRUCT: {
