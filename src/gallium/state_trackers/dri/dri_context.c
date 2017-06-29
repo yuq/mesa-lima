@@ -107,6 +107,9 @@ dri_create_context(gl_api api, const struct gl_config * visual,
    if (notify_reset)
       attribs.flags |= ST_CONTEXT_FLAG_RESET_NOTIFICATION_ENABLED;
 
+   if (flags & __DRI_CTX_FLAG_NO_ERROR)
+      attribs.flags |= ST_CONTEXT_FLAG_NO_ERROR;
+
    if (sharedContextPrivate) {
       st_share = ((struct dri_context *)sharedContextPrivate)->st;
    }

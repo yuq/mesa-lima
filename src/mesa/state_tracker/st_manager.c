@@ -679,6 +679,7 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    struct pipe_context *pipe;
    struct gl_config mode;
    gl_api api;
+   bool no_error = false;
    unsigned ctx_flags = PIPE_CONTEXT_PREFER_THREADED;
 
    if (!(stapi->profile_mask & (1 << attribs->profile)))
@@ -705,6 +706,9 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    if (attribs->flags & ST_CONTEXT_FLAG_ROBUST_ACCESS)
       ctx_flags |= PIPE_CONTEXT_ROBUST_BUFFER_ACCESS;
 
+   if (attribs->flags & ST_CONTEXT_FLAG_NO_ERROR)
+      no_error = true;
+
    pipe = smapi->screen->context_create(smapi->screen, NULL, ctx_flags);
    if (!pipe) {
       *error = ST_CONTEXT_ERROR_NO_MEMORY;
@@ -712,7 +716,7 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    }
 
    st_visual_to_context_mode(&attribs->visual, &mode);
-   st = st_create_context(api, pipe, &mode, shared_ctx, &attribs->options);
+   st = st_create_context(api, pipe, &mode, shared_ctx, &attribs->options, no_error);
    if (!st) {
       *error = ST_CONTEXT_ERROR_NO_MEMORY;
       pipe->destroy(pipe);

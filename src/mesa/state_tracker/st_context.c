@@ -289,7 +289,7 @@ static void st_init_driver_flags(struct st_context *st);
 
 static struct st_context *
 st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
-		const struct st_config_options *options)
+		const struct st_config_options *options, bool no_error)
 {
    struct pipe_screen *screen = pipe->screen;
    uint i;
@@ -369,6 +369,9 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    ctx->FragmentProgram._MaintainTexEnvProgram = GL_TRUE;
 
    ctx->VertexProgram._MaintainTnlProgram = GL_TRUE;
+
+   if (no_error)
+      ctx->Const.ContextFlags |= GL_CONTEXT_FLAG_NO_ERROR_BIT_KHR;
 
    st->has_stencil_export =
       screen->get_param(screen, PIPE_CAP_SHADER_STENCIL_EXPORT);
@@ -536,7 +539,8 @@ static void st_init_driver_flags(struct st_context *st)
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
                                      const struct gl_config *visual,
                                      struct st_context *share,
-                                     const struct st_config_options *options)
+                                     const struct st_config_options *options,
+                                     bool no_error)
 {
    struct gl_context *ctx;
    struct gl_context *shareCtx = share ? share->ctx : NULL;
@@ -567,7 +571,7 @@ struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
    if (debug_get_option_mesa_mvp_dp4())
       ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = GL_TRUE;
 
-   st = st_create_context_priv(ctx, pipe, options);
+   st = st_create_context_priv(ctx, pipe, options, no_error);
    if (!st) {
       _mesa_destroy_context(ctx);
    }
