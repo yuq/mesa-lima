@@ -611,8 +611,6 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
 
     if (flags & RADEON_FLAG_GTT_WC)
         args.flags |= RADEON_GEM_GTT_WC;
-    if (flags & RADEON_FLAG_CPU_ACCESS)
-        args.flags |= RADEON_GEM_CPU_ACCESS;
     if (flags & RADEON_FLAG_NO_CPU_ACCESS)
         args.flags |= RADEON_GEM_NO_CPU_ACCESS;
 
@@ -740,8 +738,6 @@ struct pb_slab *radeon_bo_slab_alloc(void *priv, unsigned heap,
 
     if (heap & 1)
         flags |= RADEON_FLAG_GTT_WC;
-    if (heap & 2)
-        flags |= RADEON_FLAG_CPU_ACCESS;
 
     switch (heap >> 2) {
     case 0:
@@ -952,9 +948,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
 
         if (flags & RADEON_FLAG_GTT_WC)
             heap |= 1;
-        if (flags & RADEON_FLAG_CPU_ACCESS)
-            heap |= 2;
-        if (flags & ~(RADEON_FLAG_GTT_WC | RADEON_FLAG_CPU_ACCESS))
+        if (flags & ~RADEON_FLAG_GTT_WC)
             goto no_slab;
 
         switch (domain) {

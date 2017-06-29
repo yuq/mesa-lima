@@ -398,8 +398,6 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    if (initial_domain & RADEON_DOMAIN_GTT)
       request.preferred_heap |= AMDGPU_GEM_DOMAIN_GTT;
 
-   if (flags & RADEON_FLAG_CPU_ACCESS)
-      request.flags |= AMDGPU_GEM_CREATE_CPU_ACCESS_REQUIRED;
    if (flags & RADEON_FLAG_NO_CPU_ACCESS)
       request.flags |= AMDGPU_GEM_CREATE_NO_CPU_ACCESS;
    if (flags & RADEON_FLAG_GTT_WC)
@@ -506,8 +504,6 @@ struct pb_slab *amdgpu_bo_slab_alloc(void *priv, unsigned heap,
 
    if (heap & 1)
       flags |= RADEON_FLAG_GTT_WC;
-   if (heap & 2)
-      flags |= RADEON_FLAG_CPU_ACCESS;
 
    switch (heap >> 2) {
    case 0:
@@ -1164,9 +1160,7 @@ amdgpu_bo_create(struct radeon_winsys *rws,
 
       if (flags & RADEON_FLAG_GTT_WC)
          heap |= 1;
-      if (flags & RADEON_FLAG_CPU_ACCESS)
-         heap |= 2;
-      if (flags & ~(RADEON_FLAG_GTT_WC | RADEON_FLAG_CPU_ACCESS))
+      if (flags & ~RADEON_FLAG_GTT_WC)
          goto no_slab;
 
       switch (domain) {
@@ -1204,7 +1198,6 @@ no_slab:
 
    if (flags & RADEON_FLAG_SPARSE) {
       assert(RADEON_SPARSE_PAGE_SIZE % alignment == 0);
-      assert(!(flags & RADEON_FLAG_CPU_ACCESS));
 
       flags |= RADEON_FLAG_NO_CPU_ACCESS;
 

@@ -581,8 +581,7 @@ static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib)
 
    pb = ws->base.buffer_create(&ws->base, buffer_size,
                                ws->info.gart_page_size,
-                               RADEON_DOMAIN_GTT,
-                               RADEON_FLAG_CPU_ACCESS);
+                               RADEON_DOMAIN_GTT, 0);
    if (!pb)
       return false;
 
