@@ -88,7 +88,7 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
     {
         .driver_name = "radeonsi",
         .create_screen = pipe_radeonsi_create_screen,
-        .configuration = pipe_default_configuration_query,
+        .configuration = pipe_radeonsi_configuration_query,
     },
     {
         .driver_name = "vmwgfx",

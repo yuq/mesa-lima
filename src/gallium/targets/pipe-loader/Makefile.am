@@ -27,6 +27,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/gallium/drivers \
 	-I$(top_srcdir)/src/gallium/winsys \
+	-I$(top_builddir)/src/util \
 	$(GALLIUM_PIPE_LOADER_DEFINES) \
 	$(LIBDRM_CFLAGS) \
 	$(VISIBILITY_CFLAGS) \

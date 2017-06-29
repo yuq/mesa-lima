@@ -24,6 +24,8 @@ pipe_r600_create_screen(int fd, const struct pipe_screen_config *config);
 
 struct pipe_screen *
 pipe_radeonsi_create_screen(int fd, const struct pipe_screen_config *config);
+const struct drm_conf_ret *
+pipe_radeonsi_configuration_query(enum drm_conf conf);
 
 struct pipe_screen *
 pipe_vmwgfx_create_screen(int fd, const struct pipe_screen_config *config);

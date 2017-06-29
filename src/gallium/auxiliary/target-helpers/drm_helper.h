@@ -5,6 +5,7 @@
 #include "target-helpers/inline_debug_helper.h"
 #include "target-helpers/drm_helper_public.h"
 #include "state_tracker/drm_driver.h"
+#include "util/xmlpool.h"
 
 static const struct drm_conf_ret throttle_ret = {
    .type = DRM_CONF_INT,
@@ -175,12 +176,36 @@ pipe_radeonsi_create_screen(int fd, const struct pipe_screen_config *config)
    return rw ? debug_screen_wrap(rw->screen) : NULL;
 }
 
+const struct drm_conf_ret *
+pipe_radeonsi_configuration_query(enum drm_conf conf)
+{
+   static const struct drm_conf_ret xml_options_ret = {
+      .type = DRM_CONF_POINTER,
+      .val.val_pointer =
+#include "radeonsi/si_driinfo.h"
+   };
+
+   switch (conf) {
+   case DRM_CONF_XML_OPTIONS:
+      return &xml_options_ret;
+   default:
+      break;
+   }
+   return pipe_default_configuration_query(conf);
+}
+
 #else
 
 struct pipe_screen *
 pipe_radeonsi_create_screen(int fd, const struct pipe_screen_config *config)
 {
    fprintf(stderr, "radeonsi: driver missing\n");
+   return NULL;
+}
+
+const struct drm_conf_ret *
+pipe_radeonsi_configuration_query(enum drm_conf conf)
+{
    return NULL;
 }
 

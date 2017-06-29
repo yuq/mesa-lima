@@ -1,4 +1,8 @@
+GENERATED_SOURCES := \
+	si_driinfo.h
+
 C_SOURCES := \
+	$(GENERATED_SOURCES) \
 	cik_sdma.c \
 	si_blit.c \
 	si_compute.c \
