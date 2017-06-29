@@ -46,6 +46,7 @@ SUPPORTED_EXTENSIONS = [
     'VK_KHR_push_descriptor',
     'VK_KHR_sampler_mirror_clamp_to_edge',
     'VK_KHR_shader_draw_parameters',
+    'VK_KHR_storage_buffer_storage_class',
     'VK_KHR_surface',
     'VK_KHR_swapchain',
     'VK_KHR_wayland_surface',

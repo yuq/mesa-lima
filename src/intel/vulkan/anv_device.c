@@ -485,6 +485,10 @@ static const VkExtensionProperties device_extensions[] = {
       .specVersion = 1,
    },
    {
+      .extensionName = VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME,
+      .specVersion = 1,
+   },
+   {
       .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
       .specVersion = 68,
    },
