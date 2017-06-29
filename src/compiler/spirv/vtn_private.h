@@ -479,8 +479,7 @@ nir_deref_var *vtn_pointer_to_deref(struct vtn_builder *b,
                                     struct vtn_pointer *ptr);
 nir_ssa_def *
 vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
-                      nir_ssa_def **index_out, struct vtn_type **type_out,
-                      unsigned *end_idx_out, bool stop_at_matrix);
+                      nir_ssa_def **index_out, unsigned *end_idx_out);
 
 struct vtn_ssa_value *vtn_local_load(struct vtn_builder *b, nir_deref_var *src);
 

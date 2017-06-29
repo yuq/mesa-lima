@@ -340,8 +340,7 @@ get_vulkan_resource_index(struct vtn_builder *b, struct vtn_pointer *ptr,
 
 nir_ssa_def *
 vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
-                      nir_ssa_def **index_out, struct vtn_type **type_out,
-                      unsigned *end_idx_out, bool stop_at_matrix)
+                      nir_ssa_def **index_out, unsigned *end_idx_out)
 {
    unsigned idx = 0;
    struct vtn_type *type;
@@ -358,11 +357,6 @@ vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
-         /* Some users may not want matrix or vector derefs */
-         if (stop_at_matrix)
-            goto end;
-         /* Fall through */
-
       case GLSL_TYPE_ARRAY:
          offset = nir_iadd(&b->nb, offset,
                            vtn_access_link_as_ssa(b, ptr->chain->link[idx],
@@ -385,8 +379,7 @@ vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
       }
    }
 
-end:
-   *type_out = type;
+   assert(type == ptr->type);
    if (end_idx_out)
       *end_idx_out = idx;
 
@@ -671,13 +664,12 @@ vtn_block_load(struct vtn_builder *b, struct vtn_pointer *src)
 
    nir_ssa_def *offset, *index = NULL;
    unsigned chain_idx;
-   struct vtn_type *type;
-   offset = vtn_pointer_to_offset(b, src, &index, &type, &chain_idx, false);
+   offset = vtn_pointer_to_offset(b, src, &index, &chain_idx);
 
    struct vtn_ssa_value *value = NULL;
    _vtn_block_load_store(b, op, true, index, offset,
                          access_offset, access_size,
-                         src->chain, chain_idx, type, &value);
+                         src->chain, chain_idx, src->type, &value);
    return value;
 }
 
@@ -687,11 +679,10 @@ vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
 {
    nir_ssa_def *offset, *index = NULL;
    unsigned chain_idx;
-   struct vtn_type *type;
-   offset = vtn_pointer_to_offset(b, dst, &index, &type, &chain_idx, false);
+   offset = vtn_pointer_to_offset(b, dst, &index, &chain_idx);
 
    _vtn_block_load_store(b, nir_intrinsic_store_ssbo, false, index, offset,
-                         0, 0, dst->chain, chain_idx, type, &src);
+                         0, 0, dst->chain, chain_idx, dst->type, &src);
 }
 
 static bool
