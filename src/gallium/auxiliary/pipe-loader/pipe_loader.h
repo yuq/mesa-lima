@@ -114,6 +114,14 @@ void
 pipe_loader_load_options(struct pipe_loader_device *dev);
 
 /**
+ * Get the driinfo XML string used by the given driver.
+ *
+ * The returned string is heap-allocated.
+ */
+char *
+pipe_loader_get_driinfo_xml(const char *driver_name);
+
+/**
  * Release resources allocated for a list of devices.
  *
  * Should be called when the specified devices are no longer in use to
@@ -196,6 +204,14 @@ pipe_loader_drm_probe(struct pipe_loader_device **devs, int ndev);
  */
 bool
 pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd);
+
+/**
+ * Get the driinfo XML used for the DRM driver of the given name, if any.
+ *
+ * The returned string is heap-allocated.
+ */
+char *
+pipe_loader_drm_get_driinfo_xml(const char *driver_name);
 
 extern const char gallium_driinfo_xml[];
 

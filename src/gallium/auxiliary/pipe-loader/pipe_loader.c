@@ -34,6 +34,8 @@
 #include "util/xmlconfig.h"
 #include "util/xmlpool.h"
 
+#include <string.h>
+
 #ifdef _MSC_VER
 #include <stdlib.h>
 #define PATH_MAX _MAX_PATH
@@ -105,6 +107,17 @@ pipe_loader_load_options(struct pipe_loader_device *dev)
    driParseOptionInfo(&dev->option_info, xml_options);
    driParseConfigFiles(&dev->option_cache, &dev->option_info, 0,
                        dev->driver_name);
+}
+
+char *
+pipe_loader_get_driinfo_xml(const char *driver_name)
+{
+   char *xml = pipe_loader_drm_get_driinfo_xml(driver_name);
+
+   if (!xml)
+      xml = strdup(gallium_driinfo_xml);
+
+   return xml;
 }
 
 struct pipe_screen *

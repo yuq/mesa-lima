@@ -32,6 +32,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 #include <xf86drm.h>
 #include <unistd.h>
 
@@ -297,6 +298,28 @@ pipe_loader_drm_create_screen(struct pipe_loader_device *dev,
    struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(dev);
 
    return ddev->dd->create_screen(ddev->fd, config);
+}
+
+char *
+pipe_loader_drm_get_driinfo_xml(const char *driver_name)
+{
+   char *xml = NULL;
+   struct util_dl_library *lib = NULL;
+   const struct drm_driver_descriptor *dd =
+      get_driver_descriptor(driver_name, &lib);
+   if (!dd)
+      goto out;
+
+   const struct drm_conf_ret *conf = dd->configuration(DRM_CONF_XML_OPTIONS);
+   if (!conf)
+      goto out;
+
+   xml = strdup((const char *)conf->val.val_pointer);
+
+out:
+   if (lib)
+      util_dl_close(lib);
+   return xml;
 }
 
 static const struct pipe_loader_ops pipe_loader_drm_ops = {
