@@ -118,7 +118,7 @@ pipe_loader_create_screen(struct pipe_loader_device *dev,
 }
 
 struct util_dl_library *
-pipe_loader_find_module(struct pipe_loader_device *dev,
+pipe_loader_find_module(const char *driver_name,
                         const char *library_paths)
 {
    struct util_dl_library *lib;
@@ -133,10 +133,10 @@ pipe_loader_find_module(struct pipe_loader_device *dev,
       if (len)
          ret = util_snprintf(path, sizeof(path), "%.*s/%s%s%s",
                              len, library_paths,
-                             MODULE_PREFIX, dev->driver_name, UTIL_DL_EXT);
+                             MODULE_PREFIX, driver_name, UTIL_DL_EXT);
       else
          ret = util_snprintf(path, sizeof(path), "%s%s%s",
-                             MODULE_PREFIX, dev->driver_name, UTIL_DL_EXT);
+                             MODULE_PREFIX, driver_name, UTIL_DL_EXT);
 
       if (ret > 0 && ret < sizeof(path)) {
          lib = util_dl_open(path);

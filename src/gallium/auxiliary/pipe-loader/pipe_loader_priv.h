@@ -41,10 +41,10 @@ struct pipe_loader_ops {
 };
 
 /**
- * Open the pipe driver module that handles a specified device.
+ * Open the pipe driver module that contains the specified driver.
  */
 struct util_dl_library *
-pipe_loader_find_module(struct pipe_loader_device *dev,
+pipe_loader_find_module(const char *driver_name,
                         const char *library_paths);
 
 /**
