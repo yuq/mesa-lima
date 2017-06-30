@@ -1539,6 +1539,9 @@ svga_texture_transfer_unmap_upload(struct svga_context *svga,
 boolean
 svga_texture_device_format_has_alpha(struct pipe_resource *texture)
 {
+   /* the svga_texture() call below is invalid for PIPE_BUFFER resources */
+   assert(texture->target != PIPE_BUFFER);
+
    enum svga3d_block_desc block_desc =
       svga3dsurface_get_desc(svga_texture(texture)->key.format)->block_desc;
 

@@ -224,7 +224,8 @@ svga_init_shader_key_common(const struct svga_context *svga,
             }
          }
 
-         swizzle_tab = (!util_format_has_alpha(view->format) &&
+         swizzle_tab = (view->texture->target != PIPE_BUFFER &&
+                        !util_format_has_alpha(view->format) &&
                         svga_texture_device_format_has_alpha(view->texture)) ?
             set_alpha : copy_alpha;
 
