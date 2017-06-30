@@ -513,6 +513,8 @@ STATETRACKER_FILES = \
 	state_tracker/st_glsl_to_tgsi.h \
 	state_tracker/st_glsl_to_tgsi_private.cpp \
 	state_tracker/st_glsl_to_tgsi_private.h \
+	state_tracker/st_glsl_to_tgsi_temprename.cpp \
+	state_tracker/st_glsl_to_tgsi_temprename.h \
 	state_tracker/st_glsl_types.cpp \
 	state_tracker/st_glsl_types.h \
 	state_tracker/st_manager.c \
