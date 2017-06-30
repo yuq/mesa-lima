@@ -763,12 +763,6 @@ brw_bo_map(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 }
 
 int
-brw_bo_unmap(struct brw_bo *bo)
-{
-   return 0;
-}
-
-int
 brw_bo_subdata(struct brw_bo *bo, uint64_t offset,
                uint64_t size, const void *data)
 {
