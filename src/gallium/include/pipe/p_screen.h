@@ -59,6 +59,7 @@ struct pipe_transfer;
 struct pipe_box;
 struct pipe_memory_info;
 struct disk_cache;
+struct driOptionCache;
 
 
 /**
@@ -365,6 +366,7 @@ struct pipe_screen {
  */
 struct pipe_screen_config {
    unsigned flags;
+   const struct driOptionCache *options;
 };
 
 
