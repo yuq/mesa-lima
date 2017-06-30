@@ -4189,7 +4189,11 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       bld.exec_all().MOV(flag, brw_imm_ud(0u));
       bld.CMP(bld.null_reg_ud(), value, brw_imm_ud(0u), BRW_CONDITIONAL_NZ);
 
-      dest.type = BRW_REGISTER_TYPE_UQ;
+      if (instr->dest.ssa.bit_size > 32) {
+         dest.type = BRW_REGISTER_TYPE_UQ;
+      } else {
+         dest.type = BRW_REGISTER_TYPE_UD;
+      }
       bld.MOV(dest, flag);
       break;
    }
