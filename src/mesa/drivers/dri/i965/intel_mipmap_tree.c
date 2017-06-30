@@ -842,6 +842,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    mt->format = format;
    mt->aux_state = NULL;
    mt->cpp = isl_format_get_layout(mt->surf.format)->bpb / 8;
+   mt->compressed = _mesa_is_format_compressed(format);
 
    return mt;
 
