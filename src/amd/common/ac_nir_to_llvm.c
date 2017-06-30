@@ -2408,8 +2408,6 @@ static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
 	LLVMValueRef offset = get_src(ctx, instr->src[1]);
 	int num_components = instr->num_components;
 
-	rsrc = LLVMBuildBitCast(ctx->builder, rsrc, LLVMVectorType(ctx->i8, 16), "");
-
 	if (instr->dest.ssa.bit_size == 64)
 		num_components *= 2;
 
@@ -2419,7 +2417,7 @@ static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
 			LLVMBuildAdd(ctx->builder, LLVMConstInt(ctx->i32, 4 * i, 0),
 				     offset, "")
 		};
-		results[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.load.const", ctx->f32,
+		results[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.load.const.v4i32", ctx->f32,
 						params, 2,
 						AC_FUNC_ATTR_READNONE |
 						AC_FUNC_ATTR_LEGACY);
