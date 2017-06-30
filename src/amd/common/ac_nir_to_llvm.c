@@ -3473,9 +3473,9 @@ static LLVMValueRef visit_image_atomic(struct nir_to_llvm_context *ctx,
 		abort();
 	}
 
-	params[param_count++] = get_src(ctx, instr->src[2]);
 	if (instr->intrinsic == nir_intrinsic_image_atomic_comp_swap)
 		params[param_count++] = get_src(ctx, instr->src[3]);
+	params[param_count++] = get_src(ctx, instr->src[2]);
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
 		params[param_count++] = get_sampler_desc(ctx, instr->variables[0], DESC_BUFFER);
