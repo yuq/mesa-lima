@@ -601,7 +601,7 @@ static void dump_instruction(int line, prog_scope *scope,
 /* Scan the program and estimate the required register life times.
  * The array lifetimes must be pre-allocated
  */
-void
+bool
 get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
                                       int ntemps, struct lifetime *lifetimes)
 {
@@ -743,6 +743,15 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
          }
          break;
       }
+      case TGSI_OPCODE_CAL:
+      case TGSI_OPCODE_RET:
+         /* These opcodes are not supported and if a subroutine would
+          * be called in a shader, then the lifetime tracking would have
+          * to follow that call to see which registers are used there.
+          * Since this is not done, we have to bail out here and signal
+          * that no register merge will take place.
+          */
+         return false;
       default: {
          for (unsigned j = 0; j < num_inst_src_regs(inst); j++) {
             const st_src_reg& src = inst->src[j];
@@ -782,6 +791,7 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
    RENAME_DEBUG(cerr << "==================================\n\n");
 
    delete[] acc;
+   return true;
 }
 
 /* Code below used for debugging */

@@ -38,7 +38,9 @@ struct lifetime {
    int end;
 };
 
-/** Evaluates the required life times of temporary registers in a shader
+/** Evaluates the required life times of temporary registers in a shader.
+ * The life time estimation can only be run sucessfully if the shader doesn't
+ * call a subroutine.
  * @param[in] mem_ctx a memory context that can be used with the ralloc_* functions
  * @param[in] instructions the shader to be anlzyed
  * @param[in] ntemps number of temporaries reserved for this shader
@@ -47,8 +49,10 @@ struct lifetime {
  *   allocated memory that can hold ntemps lifetime structures. On output
  *   the life times contains the life times for the registers with the
  *   exception of TEMP[0].
+ * @returns: true if the lifetimes were estimated, false if not (i.e. if a
+ * subroutine was called).
  */
-void
+bool
 get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
                                       int ntemps, struct lifetime *lifetimes);
 
