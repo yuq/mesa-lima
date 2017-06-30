@@ -484,8 +484,10 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
        packing->SkipRows);
 
    /* Adjust x and y offset based on miplevel */
-   xoffset += image->mt->level[level].level_x;
-   yoffset += image->mt->level[level].level_y;
+   unsigned level_x, level_y;
+   intel_miptree_get_image_offset(image->mt, level, 0, &level_x, &level_y);
+   xoffset += level_x;
+   yoffset += level_y;
 
    tiled_to_linear(
       xoffset * cpp, (xoffset + width) * cpp,
