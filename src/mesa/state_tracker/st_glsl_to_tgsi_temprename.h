@@ -55,5 +55,17 @@ struct lifetime {
 bool
 get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
                                       int ntemps, struct lifetime *lifetimes);
+/** Estimate the merge remapping of the registers.
+ * @param[in] mem_ctx a memory context that can be used with the ralloc_* functions
+ * @param[in] ntemps number of temporaries reserved for this shader
+ * @param[in] lifetimes required life time for each temporary register.
+ * @param[in,out] result memory location to store the register remapping table.
+ *  On input the parameter must point to allocated memory that can hold the
+ *  renaming information for ntemps registers, on output the mapping is stored.
+ *  Note that TEMP[0] is not considered for register renaming.
+ */
+void get_temp_registers_remapping(void *mem_ctx, int ntemps,
+                                  const struct lifetime* lifetimes,
+                                  struct rename_reg_pair *result);
 
 #endif

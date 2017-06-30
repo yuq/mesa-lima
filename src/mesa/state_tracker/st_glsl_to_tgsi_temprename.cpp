@@ -590,6 +590,19 @@ lifetime temp_comp_access::get_required_lifetime()
    return make_lifetime(first_write, last_read);
 }
 
+/* Helper class for sorting and searching the registers based
+ * on life times. */
+struct access_record {
+   int begin;
+   int end;
+   int reg;
+   bool erase;
+
+   bool operator < (const access_record& rhs) const {
+      return begin < rhs.begin;
+   }
+};
+
 }
 
 #ifndef NDEBUG
@@ -792,6 +805,110 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
 
    delete[] acc;
    return true;
+}
+
+/* Find the next register between [start, end) that has a life time starting
+ * at or after bound by using a binary search.
+ * start points at the beginning of the search range,
+ * end points at the element past the end of the search range, and
+ * the array comprising [start, end) must be sorted in ascending order.
+ */
+static access_record*
+find_next_rename(access_record* start, access_record* end, int bound)
+{
+   int delta = (end - start);
+
+   while (delta > 0) {
+      int half = delta >> 1;
+      access_record* middle = start + half;
+
+      if (bound <= middle->begin) {
+         delta = half;
+      } else {
+         start = middle;
+         ++start;
+         delta -= half + 1;
+      }
+   }
+
+   return start;
+}
+
+#ifndef USE_STL_SORT
+static int access_record_compare (const void *a, const void *b) {
+   const access_record *aa = static_cast<const access_record*>(a);
+   const access_record *bb = static_cast<const access_record*>(b);
+   return aa->begin < bb->begin ? -1 : (aa->begin > bb->begin ? 1 : 0);
+}
+#endif
+
+/* This functions evaluates the register merges by using a binary
+ * search to find suitable merge candidates. */
+void get_temp_registers_remapping(void *mem_ctx, int ntemps,
+                                  const struct lifetime* lifetimes,
+                                  struct rename_reg_pair *result)
+{
+   access_record *reg_access = ralloc_array(mem_ctx, access_record, ntemps);
+
+   int used_temps = 0;
+   for (int i = 0; i < ntemps; ++i) {
+      if (lifetimes[i].begin >= 0) {
+         reg_access[used_temps].begin = lifetimes[i].begin;
+         reg_access[used_temps].end = lifetimes[i].end;
+         reg_access[used_temps].reg = i;
+         reg_access[used_temps].erase = false;
+         ++used_temps;
+      }
+   }
+
+#ifdef USE_STL_SORT
+   std::sort(reg_access, reg_access + used_temps);
+#else
+   std::qsort(reg_access, used_temps, sizeof(access_record), access_record_compare);
+#endif
+
+   access_record *trgt = reg_access;
+   access_record *reg_access_end = reg_access + used_temps;
+   access_record *first_erase = reg_access_end;
+   access_record *search_start = trgt + 1;
+
+   while (trgt != reg_access_end) {
+      access_record *src = find_next_rename(search_start, reg_access_end,
+                                            trgt->end);
+      if (src != reg_access_end) {
+         result[src->reg].new_reg = trgt->reg;
+         result[src->reg].valid = true;
+         trgt->end = src->end;
+
+         /* Since we only search forward, don't remove the renamed
+          * register just now, only mark it. */
+         src->erase = true;
+
+         if (first_erase == reg_access_end)
+            first_erase = src;
+
+         search_start = src + 1;
+      } else {
+         /* Moving to the next target register it is time to remove
+          * the already merged registers from the search range */
+         if (first_erase != reg_access_end) {
+            access_record *outp = first_erase;
+            access_record *inp = first_erase + 1;
+
+            while (inp != reg_access_end) {
+               if (!inp->erase)
+                  *outp++ = *inp;
+               ++inp;
+            }
+
+            reg_access_end = outp;
+            first_erase = reg_access_end;
+         }
+         ++trgt;
+         search_start = trgt + 1;
+      }
+   }
+   ralloc_free(reg_access);
 }
 
 /* Code below used for debugging */

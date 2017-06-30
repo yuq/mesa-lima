@@ -1366,9 +1366,11 @@ void LifetimeEvaluatorTest::run(const vector<MockCodeline>& code, const expectat
    MockShader shader(code);
    std::vector<lifetime> result(shader.get_num_temps());
 
-   get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(),
-                                shader.get_num_temps(), &result[0]);
+   bool success =
+         get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(),
+                                               shader.get_num_temps(), &result[0]);
 
+   ASSERT_TRUE(success);
    ASSERT_EQ(result.size(), e.size());
    check(result, e);
 }
@@ -1379,9 +1381,10 @@ void LifetimeEvaluatorTest::run(const vector<MockCodelineWithSwizzle>& code,
    MockShader shader(code);
    std::vector<lifetime> result(shader.get_num_temps());
 
-   get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(),
-                                shader.get_num_temps(), &result[0]);
-
+   bool success =
+         get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(),
+                                               shader.get_num_temps(), &result[0]);
+   ASSERT_TRUE(success);
    ASSERT_EQ(result.size(), e.size());
    check(result, e);
 }
