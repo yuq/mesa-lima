@@ -1646,27 +1646,25 @@ generate_code(struct brw_codegen *p,
 
       case BRW_OPCODE_BFREV:
          assert(devinfo->gen >= 7);
-         /* BFREV only supports UD type for src and dst. */
          brw_BFREV(p, retype(dst, BRW_REGISTER_TYPE_UD),
                    retype(src[0], BRW_REGISTER_TYPE_UD));
          break;
       case BRW_OPCODE_FBH:
          assert(devinfo->gen >= 7);
-         /* FBH only supports UD type for dst. */
-         brw_FBH(p, retype(dst, BRW_REGISTER_TYPE_UD), src[0]);
+         brw_FBH(p, retype(dst, src[0].type), src[0]);
          break;
       case BRW_OPCODE_FBL:
          assert(devinfo->gen >= 7);
-         /* FBL only supports UD type for dst. */
-         brw_FBL(p, retype(dst, BRW_REGISTER_TYPE_UD), src[0]);
+         brw_FBL(p, retype(dst, BRW_REGISTER_TYPE_UD),
+                 retype(src[0], BRW_REGISTER_TYPE_UD));
          break;
       case BRW_OPCODE_LZD:
          brw_LZD(p, dst, src[0]);
          break;
       case BRW_OPCODE_CBIT:
          assert(devinfo->gen >= 7);
-         /* CBIT only supports UD type for dst. */
-         brw_CBIT(p, retype(dst, BRW_REGISTER_TYPE_UD), src[0]);
+         brw_CBIT(p, retype(dst, BRW_REGISTER_TYPE_UD),
+                  retype(src[0], BRW_REGISTER_TYPE_UD));
          break;
       case BRW_OPCODE_ADDC:
          assert(devinfo->gen >= 7);
