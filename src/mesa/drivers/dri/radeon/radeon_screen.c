@@ -62,7 +62,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* Radeon configuration
  */
-#include "xmlpool.h"
+#include "util/xmlpool.h"
 
 #define DRI_CONF_COMMAND_BUFFER_SIZE(def,min,max) \
 DRI_CONF_OPT_BEGIN_V(command_buffer_size,int,def, # min ":" # max ) \

@@ -2,6 +2,10 @@ import common
 
 Import('*')
 
+SConscript([
+   'xmlpool',
+])
+
 from sys import executable as python_cmd
 
 env = env.Clone()
@@ -10,6 +14,7 @@ env.MSVC2013Compat()
 
 env.Prepend(CPPPATH = [
     '#include',
+    xmlpool_options.dir.dir, # Dir to generated xmlpool/options.h
     '#src',
     '#src/mapi',
     '#src/mesa',
@@ -30,10 +35,17 @@ source_lists = env.ParseSourceList('Makefile.sources')
 
 mesautil_sources = (
     source_lists['MESA_UTIL_FILES'] +
-    source_lists['MESA_UTIL_GENERATED_FILES']
+    source_lists['MESA_UTIL_GENERATED_FILES'] +
+    source_lists['XMLCONFIG_FILES']
 )
 
-mesautil = env.ConvenienceLibrary(
+mesautilenv = env.Clone()
+
+mesautilenv.AppendUnique(LIBS = [
+    'expat',
+])
+
+mesautil = mesautilenv.ConvenienceLibrary(
     target = 'mesautil',
     source = mesautil_sources,
 )

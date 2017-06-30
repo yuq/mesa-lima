@@ -2898,7 +2898,6 @@ AC_CONFIG_FILES([Makefile
                  src/mesa/gl.pc
                  src/mesa/drivers/dri/dri.pc
                  src/mesa/drivers/dri/common/Makefile
-                 src/mesa/drivers/dri/common/xmlpool/Makefile
                  src/mesa/drivers/dri/i915/Makefile
                  src/mesa/drivers/dri/i965/Makefile
                  src/mesa/drivers/dri/Makefile
@@ -2912,6 +2911,7 @@ AC_CONFIG_FILES([Makefile
                  src/mesa/main/tests/Makefile
                  src/util/Makefile
                  src/util/tests/hash_table/Makefile
+                 src/util/xmlpool/Makefile
                  src/vulkan/Makefile])
 
 AC_OUTPUT

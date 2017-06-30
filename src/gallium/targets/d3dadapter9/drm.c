@@ -37,8 +37,8 @@
 #include "d3dadapter/d3dadapter9.h"
 #include "d3dadapter/drm.h"
 
-#include "xmlconfig.h"
-#include "xmlpool.h"
+#include "util/xmlconfig.h"
+#include "util/xmlpool.h"
 
 #include <drm.h>
 #include <sys/ioctl.h>

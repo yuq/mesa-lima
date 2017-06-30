@@ -33,7 +33,7 @@
 #define DRI_SCREEN_H
 
 #include "dri_util.h"
-#include "xmlconfig.h"
+#include "util/xmlconfig.h"
 
 #include "pipe/p_compiler.h"
 #include "pipe/p_context.h"

@@ -42,7 +42,7 @@
 #include <stdbool.h>
 #include "dri_util.h"
 #include "utils.h"
-#include "xmlpool.h"
+#include "util/xmlpool.h"
 #include "main/mtypes.h"
 #include "main/framebuffer.h"
 #include "main/version.h"

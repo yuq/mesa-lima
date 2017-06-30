@@ -19,11 +19,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-SUBDIRS = . tests/hash_table
+SUBDIRS = xmlpool . tests/hash_table
 
 include Makefile.sources
 
-noinst_LTLIBRARIES = libmesautil.la
+noinst_LTLIBRARIES = \
+	libmesautil.la \
+	libxmlconfig.la
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include
@@ -46,6 +48,18 @@ libmesautil_la_SOURCES = \
 
 libmesautil_la_LIBADD = $(ZLIB_LIBS)
 
+libxmlconfig_la_SOURCES = $(XMLCONFIG_FILES)
+libxmlconfig_la_CFLAGS = \
+	$(DEFINES) \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src \
+	-DSYSCONFDIR=\"$(sysconfdir)\" \
+	$(VISIBILITY_CFLAGS) \
+	$(EXPAT_CFLAGS)
+libxmlconfig_la_LIBADD = $(EXPAT_LIBS) -lm
+
+sysconf_DATA = drirc
+
 roundeven_test_LDADD = -lm
 
 check_PROGRAMS = u_atomic_test roundeven_test
@@ -54,8 +68,10 @@ TESTS = $(check_PROGRAMS)
 BUILT_SOURCES = $(MESA_UTIL_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
 EXTRA_DIST = \
+	drirc \
 	format_srgb.py \
 	SConscript \
+	xmlpool.h \
 	sha1/README
 
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)

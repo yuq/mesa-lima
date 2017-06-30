@@ -30,7 +30,7 @@
  */
 
 #include "utils.h"
-#include "xmlpool.h"
+#include "util/xmlpool.h"
 
 #include "dri_screen.h"
 #include "dri_context.h"

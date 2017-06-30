@@ -39,7 +39,7 @@
 #include "swrast/s_renderbuffer.h"
 
 #include "utils.h"
-#include "xmlpool.h"
+#include "util/xmlpool.h"
 
 static const __DRIconfigOptionsExtension i915_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },

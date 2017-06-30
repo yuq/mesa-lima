@@ -41,7 +41,7 @@
 #include "compiler/nir/nir.h"
 
 #include "utils.h"
-#include "xmlpool.h"
+#include "util/xmlpool.h"
 
 #ifndef DRM_FORMAT_MOD_INVALID
 #define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
