@@ -1655,13 +1655,29 @@ typedef struct __DRInoErrorExtensionRec {
  *
  * This extension provides the XML string containing driver options for use by
  * the loader in supporting the driconf application.
+ *
+ * v2:
+ * - Add the getXml getter function which allows the driver more flexibility in
+ *   how the XML is provided.
+ * - Deprecate the direct xml pointer. It is only provided as a fallback for
+ *   older versions of libGL and must not be used by clients that are aware of
+ *   the newer version. Future driver versions may set it to NULL.
  */
 #define __DRI_CONFIG_OPTIONS "DRI_ConfigOptions"
-#define __DRI_CONFIG_OPTIONS_VERSION 1
+#define __DRI_CONFIG_OPTIONS_VERSION 2
 
 typedef struct __DRIconfigOptionsExtensionRec {
    __DRIextension base;
-   const char *xml;
+   const char *xml; /**< deprecated since v2, use getXml instead */
+
+   /**
+    * Get an XML string that describes available driver options for use by a
+    * config application.
+    *
+    * The returned string must be heap-allocated. The caller is responsible for
+    * freeing it.
+    */
+   char *(*getXml)(const char *driver_name);
 } __DRIconfigOptionsExtension;
 
 /**
