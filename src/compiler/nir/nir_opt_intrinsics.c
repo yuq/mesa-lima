@@ -62,6 +62,24 @@ opt_intrinsics_impl(nir_function_impl *impl)
             replacement = nir_imm_int(&b, NIR_TRUE);
             break;
          }
+         case nir_intrinsic_ballot: {
+            assert(b.shader->options->max_subgroup_size != 0);
+            if (b.shader->options->max_subgroup_size > 32 ||
+                intrin->dest.ssa.bit_size <= 32)
+               continue;
+
+            nir_intrinsic_instr *ballot =
+               nir_intrinsic_instr_create(b.shader, nir_intrinsic_ballot);
+            nir_ssa_dest_init(&ballot->instr, &ballot->dest, 1, 32, NULL);
+            nir_src_copy(&ballot->src[0], &intrin->src[0], ballot);
+
+            nir_builder_instr_insert(&b, &ballot->instr);
+
+            replacement = nir_pack_64_2x32_split(&b,
+                                                 &ballot->dest.ssa,
+                                                 nir_imm_int(&b, 0));
+            break;
+         }
          case nir_intrinsic_load_subgroup_eq_mask:
          case nir_intrinsic_load_subgroup_ge_mask:
          case nir_intrinsic_load_subgroup_gt_mask:

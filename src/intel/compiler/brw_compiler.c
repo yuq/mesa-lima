@@ -58,6 +58,7 @@ static const struct nir_shader_compiler_options scalar_nir_options = {
    .lower_unpack_unorm_2x16 = true,
    .lower_unpack_unorm_4x8 = true,
    .lower_subgroup_masks = true,
+   .max_subgroup_size = 64, /* FIXME */
    .max_unroll_iterations = 32,
 };
 

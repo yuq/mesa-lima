@@ -1843,6 +1843,8 @@ typedef struct nir_shader_compiler_options {
     */
    bool use_interpolated_input_intrinsics;
 
+   unsigned max_subgroup_size;
+
    unsigned max_unroll_iterations;
 } nir_shader_compiler_options;
 
