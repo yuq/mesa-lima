@@ -719,6 +719,29 @@ free_aux_state_map(enum isl_aux_state **state)
    free(state);
 }
 
+static bool
+need_to_retile_as_linear(struct brw_context *brw, unsigned row_pitch,
+                         enum isl_tiling tiling, unsigned samples)
+{
+   if (samples > 1)
+      return false;
+
+   if (tiling == ISL_TILING_LINEAR)
+      return false;
+
+    /* If the width is much smaller than a tile, don't bother tiling. */
+   if (row_pitch < 64)
+      return true;
+
+   if (ALIGN(row_pitch, 512) >= 32768) {
+      perf_debug("row pitch %u too large to blit, falling back to untiled",
+                 row_pitch);
+      return true;
+   }
+
+   return false;
+}
+
 static struct intel_mipmap_tree *
 make_surface(struct brw_context *brw, GLenum target, mesa_format format,
              unsigned first_level, unsigned last_level,
@@ -766,6 +789,19 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
 
    if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
       goto fail;
+
+   /* In case caller doesn't specifically request Y-tiling (needed
+    * unconditionally for depth), check for corner cases needing special
+    * treatment.
+    */
+   if (tiling_flags & ~ISL_TILING_Y0_BIT) {
+      if (need_to_retile_as_linear(brw, mt->surf.row_pitch,
+                                   mt->surf.tiling, mt->surf.samples)) {
+         init_info.tiling_flags = 1u << ISL_TILING_LINEAR;
+         if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
+            goto fail;
+      }
+   }
 
    assert(mt->surf.size % mt->surf.row_pitch == 0);
 
