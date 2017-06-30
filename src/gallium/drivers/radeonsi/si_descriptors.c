@@ -2361,7 +2361,7 @@ static void si_invalidate_bindless_buf_desc(struct si_context *sctx,
 					    uint64_t offset)
 {
 	struct r600_resource *buf = r600_resource(resource);
-	uint32_t *desc_list = desc->desc_list;
+	uint32_t *desc_list = desc->desc_list + 4;
 	uint64_t old_desc_va;
 
 	assert(resource->target == PIPE_BUFFER);
@@ -2374,7 +2374,7 @@ static void si_invalidate_bindless_buf_desc(struct si_context *sctx,
 		/* The buffer has been invalidated when the handle wasn't
 		 * resident, update the descriptor and the dirty flag.
 		 */
-		si_set_buf_desc_address(buf, offset, &desc_list[4]);
+		si_set_buf_desc_address(buf, offset, &desc_list[0]);
 
 		desc->dirty = true;
 		sctx->bindless_descriptors_dirty = true;
