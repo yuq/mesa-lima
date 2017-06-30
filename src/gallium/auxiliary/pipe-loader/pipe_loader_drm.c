@@ -156,6 +156,31 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
 };
 #endif
 
+static const struct drm_driver_descriptor *
+get_driver_descriptor(const char *driver_name, struct util_dl_library **plib)
+{
+#ifdef GALLIUM_STATIC_TARGETS
+   for (int i = 0; i < ARRAY_SIZE(driver_descriptors); i++) {
+      if (strcmp(driver_descriptors[i].driver_name, driver_name) == 0)
+         return &driver_descriptors[i];
+   }
+#else
+   *plib = pipe_loader_find_module(driver_name, PIPE_SEARCH_DIR);
+   if (!*plib)
+      return NULL;
+
+   const struct drm_driver_descriptor *dd =
+         (const struct drm_driver_descriptor *)
+         util_dl_get_proc_address(*plib, "driver_descriptor");
+
+   /* sanity check on the driver name */
+   if (dd && strcmp(dd->driver_name, driver_name) == 0)
+      return dd;
+#endif
+
+   return NULL;
+}
+
 bool
 pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
 {
@@ -179,27 +204,13 @@ pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
    if (!ddev->base.driver_name)
       goto fail;
 
-#ifdef GALLIUM_STATIC_TARGETS
-   for (int i = 0; i < ARRAY_SIZE(driver_descriptors); i++) {
-      if (strcmp(driver_descriptors[i].driver_name, ddev->base.driver_name) == 0) {
-         ddev->dd = &driver_descriptors[i];
-         break;
-      }
-   }
+   struct util_dl_library **plib = NULL;
+#ifndef GALLIUM_STATIC_TARGETS
+   plib = &ddev->lib;
+#endif
+   ddev->dd = get_driver_descriptor(ddev->base.driver_name, plib);
    if (!ddev->dd)
       goto fail;
-#else
-   ddev->lib = pipe_loader_find_module(&ddev->base, PIPE_SEARCH_DIR);
-   if (!ddev->lib)
-      goto fail;
-
-   ddev->dd = (const struct drm_driver_descriptor *)
-      util_dl_get_proc_address(ddev->lib, "driver_descriptor");
-
-   /* sanity check on the driver name */
-   if (!ddev->dd || strcmp(ddev->dd->driver_name, ddev->base.driver_name) != 0)
-      goto fail;
-#endif
 
    *dev = &ddev->base;
    return true;
