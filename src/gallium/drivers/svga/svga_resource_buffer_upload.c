@@ -1003,6 +1003,12 @@ svga_buffer_handle(struct svga_context *svga, struct pipe_resource *buf,
             return NULL;
       }
    } else {
+      if (!sbuf->bind_flags) {
+         sbuf->bind_flags = tobind_flags;
+      }
+
+      assert((sbuf->bind_flags & tobind_flags) == tobind_flags);
+
       /* This call will set sbuf->handle */
       if (svga_have_gb_objects(svga)) {
          ret = svga_buffer_update_hw(svga, sbuf, sbuf->bind_flags);
