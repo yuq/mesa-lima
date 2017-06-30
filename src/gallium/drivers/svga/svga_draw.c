@@ -548,9 +548,9 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
       struct svga_buffer *sbuf = svga_buffer(hwtnl->cmd.vbufs[i].buffer.resource);
 
       if (sbuf) {
-         assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_VERTEX_BUFFER);
          vbuffer_handles[i] = svga_buffer_handle(svga, &sbuf->b.b,
                                                  PIPE_BIND_VERTEX_BUFFER);
+         assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_VERTEX_BUFFER);
          if (vbuffer_handles[i] == NULL)
             return PIPE_ERROR_OUT_OF_MEMORY;
          vbuffers[i] = &sbuf->b.b;
