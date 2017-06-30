@@ -939,7 +939,8 @@ XXX doesn't look like most of the opcodes really belong here.
 .. opcode:: TXF - Texel Fetch
 
   As per NV_gpu_shader4, extract a single texel from a specified texture
-  image. The source sampler may not be a CUBE or SHADOW.  src 0 is a
+  image or PIPE_BUFFER resource. The source sampler may not be a CUBE or
+  SHADOW.  src 0 is a
   four-component signed integer vector used to identify the single texel
   accessed. 3 components + level.  Just like texture instructions, an optional
   offset vector is provided, which is subject to various driver restrictions
