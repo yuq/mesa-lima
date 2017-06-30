@@ -650,10 +650,9 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
 
-   pthread_mutex_lock(&bufmgr->lock);
-
    if (!bo->map_cpu) {
       struct drm_i915_gem_mmap mmap_arg;
+      void *map;
 
       DBG("brw_bo_map_cpu: %d (%s)\n", bo->gem_handle, bo->name);
 
@@ -665,11 +664,15 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
          ret = -errno;
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         pthread_mutex_unlock(&bufmgr->lock);
          return NULL;
       }
       VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
-      bo->map_cpu = (void *) (uintptr_t) mmap_arg.addr_ptr;
+      map = (void *) (uintptr_t) mmap_arg.addr_ptr;
+
+      if (p_atomic_cmpxchg(&bo->map_cpu, NULL, map)) {
+         VG(VALGRIND_FREELIKE_BLOCK(map, 0));
+         drm_munmap(map, bo->size);
+      }
    }
    DBG("brw_bo_map_cpu: %d (%s) -> %p\n", bo->gem_handle, bo->name,
        bo->map_cpu);
@@ -679,8 +682,6 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
                  flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
    }
 
-   pthread_mutex_unlock(&bufmgr->lock);
-
    return bo->map_cpu;
 }
 
@@ -689,11 +690,10 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
 
-   pthread_mutex_lock(&bufmgr->lock);
-
    /* Get a mapping of the buffer if we haven't before. */
    if (bo->map_gtt == NULL) {
       struct drm_i915_gem_mmap_gtt mmap_arg;
+      void *map;
 
       DBG("bo_map_gtt: mmap %d (%s)\n", bo->gem_handle, bo->name);
 
@@ -712,14 +712,17 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
       /* and mmap it.  We don't need to use VALGRIND_MALLOCLIKE_BLOCK
        * because Valgrind will already intercept this mmap call.
        */
-      bo->map_gtt = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
-                             MAP_SHARED, bufmgr->fd, mmap_arg.offset);
-      if (bo->map_gtt == MAP_FAILED) {
+      map = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
+                     MAP_SHARED, bufmgr->fd, mmap_arg.offset);
+      if (map == MAP_FAILED) {
          bo->map_gtt = NULL;
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         pthread_mutex_unlock(&bufmgr->lock);
          return NULL;
+      }
+
+      if (p_atomic_cmpxchg(&bo->map_gtt, NULL, map)) {
+         drm_munmap(map, bo->size);
       }
    }
 
@@ -730,8 +733,6 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
       set_domain(brw, "GTT mapping", bo,
                  I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
    }
-
-   pthread_mutex_unlock(&bufmgr->lock);
 
    return bo->map_gtt;
 }
