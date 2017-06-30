@@ -101,7 +101,7 @@ struct swr_draw_context {
    uint32_t polyStipple[32];
 
    SWR_SURFACE_STATE renderTargets[SWR_NUM_ATTACHMENTS];
-   void *pStats;
+   struct swr_query_result *pStats; // @llvm_struct
 };
 
 /* gen_llvm_types FINI */

@@ -422,7 +422,7 @@ swr_UpdateStats(HANDLE hPrivateContext, const SWR_STATS *pStats)
    if (!pDC)
       return;
 
-   struct swr_query_result *pqr = (struct swr_query_result *)pDC->pStats;
+   struct swr_query_result *pqr = pDC->pStats;
 
    SWR_STATS *pSwrStats = &pqr->core;
 
@@ -439,7 +439,7 @@ swr_UpdateStatsFE(HANDLE hPrivateContext, const SWR_STATS_FE *pStats)
    if (!pDC)
       return;
 
-   struct swr_query_result *pqr = (struct swr_query_result *)pDC->pStats;
+   struct swr_query_result *pqr = pDC->pStats;
 
    SWR_STATS_FE *pSwrStats = &pqr->coreFE;
    p_atomic_add(&pSwrStats->IaVertices, pStats->IaVertices);
