@@ -736,7 +736,9 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
          return NULL;
       }
 
-      /* and mmap it */
+      /* and mmap it.  We don't need to use VALGRIND_MALLOCLIKE_BLOCK
+       * because Valgrind will already intercept this mmap call.
+       */
       bo->map_gtt = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
                              MAP_SHARED, bufmgr->fd, mmap_arg.offset);
       if (bo->map_gtt == MAP_FAILED) {
