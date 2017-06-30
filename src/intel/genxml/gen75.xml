@@ -362,6 +362,15 @@
     <value name="RAW" value="511"/>
   </enum>
 
+  <enum name="Shader Channel Select" prefix="SCS">
+    <value name="ZERO" value="0"/>
+    <value name="ONE" value="1"/>
+    <value name="RED" value="4"/>
+    <value name="GREEN" value="5"/>
+    <value name="BLUE" value="6"/>
+    <value name="ALPHA" value="7"/>
+  </enum>
+
   <enum name="Texture Coordinate Mode" prefix="TCM">
     <value name="WRAP" value="0"/>
     <value name="MIRROR" value="1"/>
@@ -691,17 +700,10 @@
     <field name="Green Clear Color" start="254" end="254" type="uint" />
     <field name="Blue Clear Color" start="253" end="253" type="uint" />
     <field name="Alpha Clear Color" start="252" end="252" type="uint" />
-    <field name="Shader Channel Select Red" start="249" end="251" type="uint">
-      <value name="SCS_ZERO" value="0"/>
-      <value name="SCS_ONE" value="1"/>
-      <value name="SCS_RED" value="4"/>
-      <value name="SCS_GREEN" value="5"/>
-      <value name="SCS_BLUE" value="6"/>
-      <value name="SCS_ALPHA" value="7"/>
-    </field>
-    <field name="Shader Channel Select Green" start="246" end="248" type="uint"/>
-    <field name="Shader Channel Select Blue" start="243" end="245" type="uint"/>
-    <field name="Shader Channel Select Alpha" start="240" end="242" type="uint"/>
+    <field name="Shader Channel Select Red" start="249" end="251" type="Shader Channel Select"/>
+    <field name="Shader Channel Select Green" start="246" end="248" type="Shader Channel Select"/>
+    <field name="Shader Channel Select Blue" start="243" end="245" type="Shader Channel Select"/>
+    <field name="Shader Channel Select Alpha" start="240" end="242" type="Shader Channel Select"/>
     <field name="Resource Min LOD" start="224" end="235" type="u4.8"/>
   </struct>
 
@@ -805,9 +807,9 @@
       <value name="LOW" value="3"/>
     </field>
     <field name="Non-normalized Coordinate Enable" start="106" end="106" type="bool"/>
-    <field name="TCX Address Control Mode" start="102" end="104" type="uint"/>
-    <field name="TCY Address Control Mode" start="99" end="101" type="uint"/>
-    <field name="TCZ Address Control Mode" start="96" end="98" type="uint"/>
+    <field name="TCX Address Control Mode" start="102" end="104" type="Texture Coordinate Mode"/>
+    <field name="TCY Address Control Mode" start="99" end="101" type="Texture Coordinate Mode"/>
+    <field name="TCZ Address Control Mode" start="96" end="98" type="Texture Coordinate Mode"/>
   </struct>
 
   <struct name="MI_MATH_ALU_INSTRUCTION" length="1">

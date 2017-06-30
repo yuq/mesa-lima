@@ -784,9 +784,9 @@
       <value name="LOW" value="3"/>
     </field>
     <field name="Non-normalized Coordinate Enable" start="106" end="106" type="bool"/>
-    <field name="TCX Address Control Mode" start="102" end="104" type="uint"/>
-    <field name="TCY Address Control Mode" start="99" end="101" type="uint"/>
-    <field name="TCZ Address Control Mode" start="96" end="98" type="uint"/>
+    <field name="TCX Address Control Mode" start="102" end="104" type="Texture Coordinate Mode"/>
+    <field name="TCY Address Control Mode" start="99" end="101" type="Texture Coordinate Mode"/>
+    <field name="TCZ Address Control Mode" start="96" end="98" type="Texture Coordinate Mode"/>
   </struct>
 
   <instruction name="3DPRIMITIVE" bias="2" length="7">

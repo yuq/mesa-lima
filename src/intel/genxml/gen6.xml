@@ -684,9 +684,9 @@
       <value name="CUBECTRLMODE_PROGRAMMED" value="0"/>
       <value name="CUBECTRLMODE_OVERRIDE" value="1"/>
     </field>
-    <field name="TCX Address Control Mode" start="38" end="40" type="uint"/>
-    <field name="TCY Address Control Mode" start="35" end="37" type="uint"/>
-    <field name="TCZ Address Control Mode" start="32" end="34" type="uint"/>
+    <field name="TCX Address Control Mode" start="38" end="40" type="Texture Coordinate Mode"/>
+    <field name="TCY Address Control Mode" start="35" end="37" type="Texture Coordinate Mode"/>
+    <field name="TCZ Address Control Mode" start="32" end="34" type="Texture Coordinate Mode"/>
     <field name="Border Color Pointer" start="69" end="95" type="offset"/>
     <field name="Monochrome Filter Height: Reserved" start="125" end="127" type="uint"/>
     <field name="Monochrome Filter Width" start="122" end="124" type="uint"/>

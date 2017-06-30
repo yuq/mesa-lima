@@ -780,10 +780,10 @@
       <value name="Vertical" value="1"/>
     </field>
     <field name="Memory Compression Enable" start="254" end="254" type="bool"/>
-    <field name="Shader Channel Select Red" start="249" end="251" type="uint"/>
-    <field name="Shader Channel Select Green" start="246" end="248" type="uint"/>
-    <field name="Shader Channel Select Blue" start="243" end="245" type="uint"/>
-    <field name="Shader Channel Select Alpha" start="240" end="242" type="uint"/>
+    <field name="Shader Channel Select Red" start="249" end="251" type="Shader Channel Select"/>
+    <field name="Shader Channel Select Green" start="246" end="248" type="Shader Channel Select"/>
+    <field name="Shader Channel Select Blue" start="243" end="245" type="Shader Channel Select"/>
+    <field name="Shader Channel Select Alpha" start="240" end="242" type="Shader Channel Select"/>
     <field name="Resource Min LOD" start="224" end="235" type="u4.8"/>
     <field name="Surface Base Address" start="256" end="319" type="address"/>
     <field name="X Offset for V Plane" start="368" end="381" type="uint"/>
@@ -905,9 +905,9 @@
     </field>
     <field name="Non-normalized Coordinate Enable" start="106" end="106" type="bool"/>
     <field name="Reduction Type Enable" start="105" end="105" type="bool"/>
-    <field name="TCX Address Control Mode" start="102" end="104" type="uint"/>
-    <field name="TCY Address Control Mode" start="99" end="101" type="uint"/>
-    <field name="TCZ Address Control Mode" start="96" end="98" type="uint"/>
+    <field name="TCX Address Control Mode" start="102" end="104" type="Texture Coordinate Mode"/>
+    <field name="TCY Address Control Mode" start="99" end="101" type="Texture Coordinate Mode"/>
+    <field name="TCZ Address Control Mode" start="96" end="98" type="Texture Coordinate Mode"/>
   </struct>
 
   <struct name="SAMPLER_STATE_8X8_AVS_COEFFICIENTS" length="8">
