@@ -124,6 +124,33 @@ protected:
    void check(const vector<lifetime>& result, const expectation& e);
 };
 
+/* With this test class the renaming mapping estimation is tested */
+class RegisterRemappingTest : public MesaTestWithMemCtx {
+protected:
+   void run(const vector<lifetime>& lt, const vector<int>& expect);
+};
+
+/* With this test class the combined lifetime estimation and renaming
+ * mepping estimation is tested
+ */
+class RegisterLifetimeAndRemappingTest : public RegisterRemappingTest  {
+protected:
+   using RegisterRemappingTest::run;
+   template <typename CodeLine>
+   void run(const vector<CodeLine>& code, const vector<int>& expect);
+};
+
+template <typename CodeLine>
+void RegisterLifetimeAndRemappingTest::run(const vector<CodeLine>& code,
+                                  const vector<int>& expect)
+{
+     MockShader shader(code);
+     std::vector<lifetime> lt(shader.get_num_temps());
+     get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(),
+                                           shader.get_num_temps(), &lt[0]);
+     this->run(lt, expect);
+}
+
 TEST_F(LifetimeEvaluatorExactTest, SimpleMoveAdd)
 {
    const vector<MockCodeline> code = {
@@ -1173,6 +1200,148 @@ TEST_F(LifetimeEvaluatorExactTest, NestedLoopWithWriteAfterBreak)
       { TGSI_OPCODE_END}
    };
    run (code, expectation({{-1,-1}, {0,8}}));
+}
+
+/* Test remapping table of registers. The tests don't assume
+ * that the sorting algorithm used to sort the lifetimes
+ * based on their 'begin' is stable.
+ */
+TEST_F(RegisterRemappingTest, RegisterRemapping1)
+{
+   vector<lifetime> lt({{-1,-1},
+                        {0,1},
+                        {0,2},
+                        {1,2},
+                        {2,10},
+                        {3,5},
+                        {5,10}
+                       });
+
+   vector<int> expect({0,1,2,1,1,2,2});
+   run(lt, expect);
+}
+
+TEST_F(RegisterRemappingTest, RegisterRemapping2)
+{
+   vector<lifetime> lt({{-1,-1},
+                        {0,1},
+                        {0,2},
+                        {3,4},
+                        {4,5},
+                       });
+   vector<int> expect({0,1,2,1,1});
+   run(lt, expect);
+}
+
+TEST_F(RegisterRemappingTest, RegisterRemappingMergeAllToOne)
+{
+   vector<lifetime> lt({{-1,-1},
+                        {0,1},
+                        {1,2},
+                        {2,3},
+                        {3,4},
+                       });
+   vector<int> expect({0,1,1,1,1});
+   run(lt, expect);
+}
+
+TEST_F(RegisterRemappingTest, RegisterRemappingIgnoreUnused)
+{
+   vector<lifetime> lt({{-1,-1},
+                        {0,1},
+                        {1,2},
+                        {2,3},
+                        {-1,-1},
+                        {3,4},
+                       });
+   vector<int> expect({0,1,1,1,4,1});
+   run(lt, expect);
+}
+
+TEST_F(RegisterRemappingTest, RegisterRemappingMergeZeroLifetimeRegisters)
+{
+   vector<lifetime> lt({{-1,-1},
+                        {0,1},
+                        {1,2},
+                        {2,3},
+                        {3,3},
+                        {3,4},
+                       });
+   vector<int> expect({0,1,1,1,1,1});
+   run(lt, expect);
+}
+
+TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemapping)
+{
+   const vector<MockCodeline> code = {
+      {TGSI_OPCODE_USEQ, {5}, {in0,in1}, {}},
+      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      {TGSI_OPCODE_FSLT, {2}, {1,in1}, {}},
+      {TGSI_OPCODE_UIF, {}, {2}, {}},
+      {  TGSI_OPCODE_MOV, {3}, {in1}, {}},
+      {TGSI_OPCODE_ELSE},
+      {  TGSI_OPCODE_MOV, {4}, {in1}, {}},
+      {  TGSI_OPCODE_MOV, {4}, {4}, {}},
+      {  TGSI_OPCODE_MOV, {3}, {4}, {}},
+      {TGSI_OPCODE_ENDIF},
+      {TGSI_OPCODE_MOV, {out1}, {3}, {}},
+      {TGSI_OPCODE_END}
+   };
+   run (code, vector<int>({0,1,5,5,1,5}));
+}
+
+TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyIgnored)
+{
+   const vector<MockCodeline> code = {
+      {TGSI_OPCODE_USEQ, {1}, {in0,in1}, {}},
+      {TGSI_OPCODE_UCMP, {2}, {1,in1,2}, {}},
+      {TGSI_OPCODE_UCMP, {4}, {2,in1,1}, {}},
+      {TGSI_OPCODE_ADD, {5}, {2,4}, {}},
+      {TGSI_OPCODE_UIF, {}, {7}, {}},
+      {  TGSI_OPCODE_ADD, {8}, {5,4}, {}},
+      {TGSI_OPCODE_ENDIF},
+      {TGSI_OPCODE_MOV, {out1}, {8}, {}},
+      {TGSI_OPCODE_END}
+   };
+   /* lt: 1: 0-2,2: 1-3 3: u 4: 2-5 5: 3-5 6: u 7: 0-(-1),8: 5-7 */
+   run (code, vector<int>({0,1,2,3,1,2,6,7,1}));
+}
+
+TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyRemappedTo)
+{
+   const vector<MockCodeline> code = {
+      {TGSI_OPCODE_USEQ, {1}, {in0,in1}, {}},
+      {TGSI_OPCODE_UIF, {}, {7}, {}},
+      {  TGSI_OPCODE_UCMP, {2}, {1,in1,2}, {}},
+      {  TGSI_OPCODE_UCMP, {4}, {2,in1,1}, {}},
+      {  TGSI_OPCODE_ADD, {5}, {2,4}, {}},
+      {  TGSI_OPCODE_ADD, {8}, {5,4}, {}},
+      {TGSI_OPCODE_ENDIF},
+      {TGSI_OPCODE_MOV, {out1}, {8}, {}},
+      {TGSI_OPCODE_END}
+   };
+   /* lt: 1: 0-3,2: 2-4 3: u 4: 3-5 5: 4-5 6: u 7: 1-1,8: 5-7 */
+   run (code, vector<int>({0,1,2,3,1,2,6,7,1}));
+}
+
+TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyRemapped)
+{
+   const vector<MockCodeline> code = {
+      {TGSI_OPCODE_USEQ, {0}, {in0,in1}, {}},
+      {TGSI_OPCODE_UCMP, {2}, {0,in1,2}, {}},
+      {TGSI_OPCODE_UCMP, {4}, {2,in1,0}, {}},
+      {TGSI_OPCODE_UIF, {}, {7}, {}},
+      {  TGSI_OPCODE_ADD, {5}, {4,4}, {}},
+      {  TGSI_OPCODE_ADD, {8}, {5,4}, {}},
+      {TGSI_OPCODE_ENDIF},
+      {TGSI_OPCODE_MOV, {out1}, {8}, {}},
+      {TGSI_OPCODE_END}
+   };
+   /* lt: 0: 0-2 1: u 2: 1-2 3: u 4: 2-5 5: 4-5 6: u 7:ro 8: 5-7 */
+   run (code, vector<int>({0,1,2,3,0,2,6,7,0}));
 }
 
 /* Implementation of helper and test classes */
