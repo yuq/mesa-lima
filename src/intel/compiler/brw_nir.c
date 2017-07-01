@@ -843,12 +843,18 @@ brw_type_for_nir_type(const struct gen_device_info *devinfo, nir_alu_type type)
    case nir_type_float:
    case nir_type_float32:
       return BRW_REGISTER_TYPE_F;
+   case nir_type_float16:
+      return BRW_REGISTER_TYPE_HF;
    case nir_type_float64:
       return BRW_REGISTER_TYPE_DF;
    case nir_type_int64:
       return devinfo->gen < 8 ? BRW_REGISTER_TYPE_DF : BRW_REGISTER_TYPE_Q;
    case nir_type_uint64:
       return devinfo->gen < 8 ? BRW_REGISTER_TYPE_DF : BRW_REGISTER_TYPE_UQ;
+   case nir_type_int16:
+      return BRW_REGISTER_TYPE_W;
+   case nir_type_uint16:
+      return BRW_REGISTER_TYPE_UW;
    default:
       unreachable("unknown type");
    }
@@ -867,6 +873,9 @@ brw_glsl_base_type_for_nir_type(nir_alu_type type)
    case nir_type_float32:
       return GLSL_TYPE_FLOAT;
 
+   case nir_type_float16:
+      return GLSL_TYPE_FLOAT16;
+
    case nir_type_float64:
       return GLSL_TYPE_DOUBLE;
 
@@ -877,6 +886,12 @@ brw_glsl_base_type_for_nir_type(nir_alu_type type)
    case nir_type_uint:
    case nir_type_uint32:
       return GLSL_TYPE_UINT;
+
+   case nir_type_int16:
+      return GLSL_TYPE_INT16;
+
+   case nir_type_uint16:
+      return GLSL_TYPE_UINT16;
 
    default:
       unreachable("bad type");
