@@ -724,6 +724,31 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+      /* In theory, it would be better to use BRW_OPCODE_F32TO16. Depending
+       * on the HW gen, it is a special hw opcode or just a MOV, and
+       * brw_F32TO16 (at brw_eu_emit) would do the work to chose.
+       *
+       * But if we want to use that opcode, we need to provide support on
+       * different optimizations and lowerings. As right now HF support is
+       * only for gen8+, it will be better to use directly the MOV, and use
+       * BRW_OPCODE_F32TO16 when/if we work for HF support on gen7.
+       */
+
+   case nir_op_f2f16_undef:
+   case nir_op_i2i16:
+   case nir_op_u2u16: {
+      /* TODO: Fixing aligment rules for conversions from 32-bits to
+       * 16-bit types should be moved to lower_conversions
+       */
+      fs_reg tmp = bld.vgrf(op[0].type, 1);
+      tmp = subscript(tmp, result.type, 0);
+      inst = bld.MOV(tmp, op[0]);
+      inst->saturate = instr->dest.saturate;
+      inst = bld.MOV(result, tmp);
+      inst->saturate = instr->dest.saturate;
+      break;
+   }
+
    case nir_op_f2f64:
    case nir_op_f2i64:
    case nir_op_f2u64:
