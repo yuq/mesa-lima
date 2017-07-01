@@ -295,9 +295,12 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
       switch (glsl_get_base_type(type->type)) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT16:
+      case GLSL_TYPE_INT16:
       case GLSL_TYPE_UINT64:
       case GLSL_TYPE_INT64:
       case GLSL_TYPE_FLOAT:
+      case GLSL_TYPE_FLOAT16:
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_ARRAY: {
@@ -408,9 +411,12 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
       switch (base_type) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT16:
+      case GLSL_TYPE_INT16:
       case GLSL_TYPE_UINT64:
       case GLSL_TYPE_INT64:
       case GLSL_TYPE_FLOAT:
+      case GLSL_TYPE_FLOAT16:
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_ARRAY: {
@@ -614,9 +620,12 @@ vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
       switch (base_type) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT16:
+      case GLSL_TYPE_INT16:
       case GLSL_TYPE_UINT64:
       case GLSL_TYPE_INT64:
       case GLSL_TYPE_FLOAT:
+      case GLSL_TYPE_FLOAT16:
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_ARRAY:
@@ -658,9 +667,12 @@ vtn_type_block_size(struct vtn_builder *b, struct vtn_type *type)
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT16:
+   case GLSL_TYPE_INT16:
    case GLSL_TYPE_UINT64:
    case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_FLOAT16:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_DOUBLE: {
       unsigned cols = type->row_major ? glsl_get_vector_elements(type->type) :
@@ -790,9 +802,12 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT16:
+   case GLSL_TYPE_INT16:
    case GLSL_TYPE_UINT64:
    case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_FLOAT16:
    case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_BOOL:
       /* This is where things get interesting.  At this point, we've hit
@@ -972,9 +987,12 @@ _vtn_variable_load_store(struct vtn_builder *b, bool load,
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT16:
+   case GLSL_TYPE_INT16:
    case GLSL_TYPE_UINT64:
    case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_FLOAT16:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_DOUBLE:
       /* At this point, we have a scalar, vector, or matrix so we know that
@@ -1053,9 +1071,12 @@ _vtn_variable_copy(struct vtn_builder *b, struct vtn_pointer *dest,
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT16:
+   case GLSL_TYPE_INT16:
    case GLSL_TYPE_UINT64:
    case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_FLOAT16:
    case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_BOOL:
       /* At this point, we have a scalar, vector, or matrix so we know that
