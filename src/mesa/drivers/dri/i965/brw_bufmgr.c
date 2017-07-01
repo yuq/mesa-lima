@@ -56,6 +56,7 @@
 #ifndef ETIME
 #define ETIME ETIMEDOUT
 #endif
+#include "common/gen_clflush.h"
 #include "common/gen_debug.h"
 #include "common/gen_device_info.h"
 #include "libdrm_macros.h"
@@ -703,9 +704,23 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
        bo->map_cpu);
    print_flags(flags);
 
-   if (!(flags & MAP_ASYNC) || !bufmgr->has_llc) {
+   if (!(flags & MAP_ASYNC)) {
       set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
                  flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
+   }
+
+   if (!bo->cache_coherent) {
+      /* If we're reusing an existing CPU mapping, the CPU caches may
+       * contain stale data from the last time we read from that mapping.
+       * (With the BO cache, it might even be data from a previous buffer!)
+       * Even if it's a brand new mapping, the kernel may have zeroed the
+       * buffer via CPU writes.
+       *
+       * We need to invalidate those cachelines so that we see the latest
+       * contents, and so long as we only read from the CPU mmap we do not
+       * need to write those cachelines back afterwards.
+       */
+      gen_invalidate_range(bo->map_cpu, bo->size);
    }
 
    return bo->map_cpu;
@@ -754,7 +769,7 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    DBG("bo_map_gtt: %d (%s) -> %p, ", bo->gem_handle, bo->name, bo->map_gtt);
    print_flags(flags);
 
-   if (!(flags & MAP_ASYNC) || !bufmgr->has_llc) {
+   if (!(flags & MAP_ASYNC)) {
       set_domain(brw, "GTT mapping", bo,
                  I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
    }
