@@ -222,9 +222,6 @@ static inline int brw_bo_unmap(struct brw_bo *bo) { return 0; }
 /** Write data into an object. */
 int brw_bo_subdata(struct brw_bo *bo, uint64_t offset,
                    uint64_t size, const void *data);
-/** Read data from an object. */
-int brw_bo_get_subdata(struct brw_bo *bo, uint64_t offset,
-                       uint64_t size, void *data);
 /**
  * Waits for rendering to an object by the GPU to have completed.
  *

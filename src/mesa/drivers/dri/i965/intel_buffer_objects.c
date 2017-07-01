@@ -289,7 +289,16 @@ brw_get_buffer_subdata(struct gl_context *ctx,
    if (brw_batch_references(&brw->batch, intel_obj->buffer)) {
       intel_batchbuffer_flush(brw);
    }
-   brw_bo_get_subdata(intel_obj->buffer, offset, size, data);
+
+   void *map = brw_bo_map(brw, intel_obj->buffer, MAP_READ);
+
+   if (unlikely(!map)) {
+      _mesa_error_no_memory(__func__);
+      return;
+   }
+
+   memcpy(data, map + offset, size);
+   brw_bo_unmap(intel_obj->buffer);
 
    mark_buffer_inactive(intel_obj);
 }

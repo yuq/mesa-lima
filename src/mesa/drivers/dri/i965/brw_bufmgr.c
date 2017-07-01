@@ -820,30 +820,6 @@ brw_bo_subdata(struct brw_bo *bo, uint64_t offset,
    return ret;
 }
 
-int
-brw_bo_get_subdata(struct brw_bo *bo, uint64_t offset,
-                   uint64_t size, void *data)
-{
-   struct brw_bufmgr *bufmgr = bo->bufmgr;
-   struct drm_i915_gem_pread pread;
-   int ret;
-
-   memclear(pread);
-   pread.handle = bo->gem_handle;
-   pread.offset = offset;
-   pread.size = size;
-   pread.data_ptr = (uint64_t) (uintptr_t) data;
-   ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_PREAD, &pread);
-   if (ret != 0) {
-      ret = -errno;
-      DBG("%s:%d: Error reading data from buffer %d: "
-          "(%"PRIu64" %"PRIu64") %s .\n",
-          __FILE__, __LINE__, bo->gem_handle, offset, size, strerror(errno));
-   }
-
-   return ret;
-}
-
 /** Waits for all GPU rendering with the object to have completed. */
 void
 brw_bo_wait_rendering(struct brw_bo *bo)
