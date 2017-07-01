@@ -510,6 +510,10 @@ brw_broadcast(struct brw_codegen *p,
               struct brw_reg src,
               struct brw_reg idx);
 
+void
+brw_rounding_mode(struct brw_codegen *p,
+                  enum brw_rnd_mode mode);
+
 /***********************************************************************
  * brw_eu_util.c:
  */

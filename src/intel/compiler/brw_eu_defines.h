@@ -400,6 +400,8 @@ enum opcode {
    SHADER_OPCODE_TYPED_SURFACE_WRITE,
    SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL,
 
+   SHADER_OPCODE_RND_MODE,
+
    SHADER_OPCODE_MEMORY_FENCE,
 
    SHADER_OPCODE_GEN4_SCRATCH_READ,
@@ -1237,5 +1239,19 @@ enum brw_message_target {
 
 /* R0 */
 # define GEN7_GS_PAYLOAD_INSTANCE_ID_SHIFT		27
+
+/* CR0.0[5:4] Floating-Point Rounding Modes
+ *  Skylake PRM, Volume 7 Part 1, "Control Register", page 756
+ */
+
+#define BRW_CR0_RND_MODE_MASK     0x30
+#define BRW_CR0_RND_MODE_SHIFT    4
+
+enum PACKED brw_rnd_mode {
+   BRW_RND_MODE_RTNE = 0,  /* Round to Nearest or Even */
+   BRW_RND_MODE_RU = 1,    /* Round Up, toward +inf */
+   BRW_RND_MODE_RD = 2,    /* Round Down, toward -inf */
+   BRW_RND_MODE_RTZ = 3,   /* Round Toward Zero */
+};
 
 #endif /* BRW_EU_DEFINES_H */

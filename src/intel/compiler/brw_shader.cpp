@@ -482,6 +482,9 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "tes_add_indirect_urb_offset";
    case TES_OPCODE_GET_PRIMITIVE_ID:
       return "tes_get_primitive_id";
+
+   case SHADER_OPCODE_RND_MODE:
+      return "rnd_mode";
    }
 
    unreachable("not reached");
@@ -974,6 +977,7 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_BARRIER:
    case TCS_OPCODE_URB_WRITE:
    case TCS_OPCODE_RELEASE_INPUT:
+   case SHADER_OPCODE_RND_MODE:
       return true;
    default:
       return eot;
