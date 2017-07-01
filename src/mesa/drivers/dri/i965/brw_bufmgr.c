@@ -669,6 +669,12 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
 
+   /* We disallow CPU maps for writing to non-coherent buffers, as the
+    * CPU map can become invalidated when a batch is flushed out, which
+    * can happen at unpredictable times.  You should use WC maps instead.
+    */
+   assert(bo->cache_coherent || !(flags & MAP_WRITE));
+
    if (!bo->map_cpu) {
       struct drm_i915_gem_mmap mmap_arg;
       void *map;
