@@ -142,6 +142,7 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
          .image_write_without_format = true,
          .multiview = true,
          .variable_pointers = true,
+         .storage_16bit = device->instance->physicalDevice.info.gen >= 8,
       },
    };
 

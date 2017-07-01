@@ -739,6 +739,19 @@ void anv_GetPhysicalDeviceFeatures2KHR(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES_KHR: {
+         ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+
+         VkPhysicalDevice16BitStorageFeaturesKHR *features =
+            (VkPhysicalDevice16BitStorageFeaturesKHR *)ext;
+
+         features->storageBuffer16BitAccess = pdevice->info.gen >= 8;
+         features->uniformAndStorageBuffer16BitAccess = pdevice->info.gen >= 8;
+         features->storagePushConstant16 = false;
+         features->storageInputOutput16 = false;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
