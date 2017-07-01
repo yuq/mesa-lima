@@ -382,6 +382,27 @@ handle_no_contraction(struct vtn_builder *b, struct vtn_value *val, int member,
    b->nb.exact = true;
 }
 
+static void
+handle_rounding_mode(struct vtn_builder *b, struct vtn_value *val, int member,
+                     const struct vtn_decoration *dec, void *_out_rounding_mode)
+{
+   nir_rounding_mode *out_rounding_mode = _out_rounding_mode;
+   assert(dec->scope == VTN_DEC_DECORATION);
+   if (dec->decoration != SpvDecorationFPRoundingMode)
+      return;
+   switch (dec->literals[0]) {
+   case SpvFPRoundingModeRTE:
+      *out_rounding_mode = nir_rounding_mode_rtne;
+      break;
+   case SpvFPRoundingModeRTZ:
+      *out_rounding_mode = nir_rounding_mode_rtz;
+      break;
+   default:
+      unreachable("Not supported rounding mode");
+      break;
+   }
+}
+
 void
 vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
                const uint32_t *w, unsigned count)
@@ -570,6 +591,18 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpBitcast:
       vtn_handle_bitcast(b, val->ssa, src[0]);
       break;
+
+   case SpvOpFConvert: {
+      nir_alu_type src_alu_type = nir_get_nir_type_for_glsl_type(vtn_src[0]->type);
+      nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(type);
+      nir_rounding_mode rounding_mode = nir_rounding_mode_undef;
+
+      vtn_foreach_decoration(b, val, handle_rounding_mode, &rounding_mode);
+      nir_op op = nir_type_conversion_op(src_alu_type, dst_alu_type, rounding_mode);
+
+      val->ssa->def = nir_build_alu(&b->nb, op, src[0], src[1], NULL, NULL);
+      break;
+   }
 
    default: {
       bool swap;
