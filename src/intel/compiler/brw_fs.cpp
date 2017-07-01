@@ -251,6 +251,7 @@ fs_inst::is_send_from_grf() const
    case SHADER_OPCODE_UNTYPED_SURFACE_READ:
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
    case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
+   case SHADER_OPCODE_BYTE_SCATTERED_READ:
    case SHADER_OPCODE_TYPED_ATOMIC:
    case SHADER_OPCODE_TYPED_SURFACE_READ:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
@@ -750,6 +751,18 @@ fs_inst::components_read(unsigned i) const
       else
          return 1;
 
+   case SHADER_OPCODE_BYTE_SCATTERED_READ_LOGICAL:
+      /* Scattered logical opcodes use the following params:
+       * src[0] Surface coordinates
+       * src[1] Surface operation source (ignored for reads)
+       * src[2] Surface
+       * src[3] IMM with always 1 dimension.
+       * src[4] IMM with arg bitsize for scattered read/write 8, 16, 32
+       */
+      assert(src[3].file == IMM &&
+             src[4].file == IMM);
+      return i == 1 ? 0 : 1;
+
    case SHADER_OPCODE_BYTE_SCATTERED_WRITE_LOGICAL:
       assert(src[3].file == IMM &&
              src[4].file == IMM);
@@ -798,6 +811,7 @@ fs_inst::size_read(int arg) const
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
    case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
+   case SHADER_OPCODE_BYTE_SCATTERED_READ:
       if (arg == 0)
          return mlen * REG_SIZE;
       break;
@@ -4545,6 +4559,12 @@ fs_visitor::lower_logical_sends()
                                     ibld.sample_mask_reg());
          break;
 
+      case SHADER_OPCODE_BYTE_SCATTERED_READ_LOGICAL:
+         lower_surface_logical_send(ibld, inst,
+                                    SHADER_OPCODE_BYTE_SCATTERED_READ,
+                                    fs_reg());
+         break;
+
       case SHADER_OPCODE_BYTE_SCATTERED_WRITE_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_BYTE_SCATTERED_WRITE,
@@ -5036,6 +5056,7 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
    case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
    case SHADER_OPCODE_BYTE_SCATTERED_WRITE_LOGICAL:
+   case SHADER_OPCODE_BYTE_SCATTERED_READ_LOGICAL:
       return MIN2(16, inst->exec_size);
 
    case SHADER_OPCODE_URB_READ_SIMD8:

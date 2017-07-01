@@ -409,6 +409,8 @@ enum opcode {
     * opcode, but instead of taking a single payload blog they expect their
     * arguments separately as individual sources, like untyped write/read.
     */
+   SHADER_OPCODE_BYTE_SCATTERED_READ,
+   SHADER_OPCODE_BYTE_SCATTERED_READ_LOGICAL,
    SHADER_OPCODE_BYTE_SCATTERED_WRITE,
    SHADER_OPCODE_BYTE_SCATTERED_WRITE_LOGICAL,
 

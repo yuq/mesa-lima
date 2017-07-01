@@ -2998,6 +2998,38 @@ brw_byte_scattered_data_element_from_bit_size(unsigned bit_size)
    }
 }
 
+
+void
+brw_byte_scattered_read(struct brw_codegen *p,
+                        struct brw_reg dst,
+                        struct brw_reg payload,
+                        struct brw_reg surface,
+                        unsigned msg_length,
+                        unsigned bit_size)
+{
+   const struct gen_device_info *devinfo = p->devinfo;
+   assert(devinfo->gen > 7 || devinfo->is_haswell);
+   assert(brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1);
+   const unsigned sfid =  GEN7_SFID_DATAPORT_DATA_CACHE;
+
+   struct brw_inst *insn = brw_send_indirect_surface_message(
+      p, sfid, dst, payload, surface, msg_length,
+      brw_surface_payload_size(p, 1, true, true),
+      false);
+
+   unsigned msg_control =
+      brw_byte_scattered_data_element_from_bit_size(bit_size) << 2;
+
+   if (brw_inst_exec_size(devinfo, p->current) == BRW_EXECUTE_16)
+      msg_control |= 1; /* SIMD16 mode */
+   else
+      msg_control |= 0; /* SIMD8 mode */
+
+   brw_inst_set_dp_msg_type(devinfo, insn,
+                            HSW_DATAPORT_DC_PORT0_BYTE_SCATTERED_READ);
+   brw_inst_set_dp_msg_control(devinfo, insn, msg_control);
+}
+
 void
 brw_byte_scattered_write(struct brw_codegen *p,
                          struct brw_reg payload,
