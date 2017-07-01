@@ -72,7 +72,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
 
    memcpy(bo.map, batch->start, size);
    if (!device->info.has_llc)
-      anv_flush_range(bo.map, size);
+      gen_flush_range(bo.map, size);
 
    exec_bos[0] = &bo;
    exec2_objects[0].handle = bo.gem_handle;

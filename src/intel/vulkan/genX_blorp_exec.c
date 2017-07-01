@@ -156,7 +156,7 @@ blorp_flush_range(struct blorp_batch *batch, void *start, size_t size)
 {
    struct anv_device *device = batch->blorp->driver_ctx;
    if (!device->info.has_llc)
-      anv_flush_range(start, size);
+      gen_flush_range(start, size);
 }
 
 static void

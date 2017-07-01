@@ -41,6 +41,7 @@
 #define VG(x)
 #endif
 
+#include "common/gen_clflush.h"
 #include "common/gen_device_info.h"
 #include "blorp/blorp.h"
 #include "compiler/brw_compiler.h"
@@ -529,35 +530,6 @@ struct anv_state_stream {
    struct anv_state_stream_block *block_list;
 };
 
-#define CACHELINE_SIZE 64
-#define CACHELINE_MASK 63
-
-static inline void
-anv_clflush_range(void *start, size_t size)
-{
-   void *p = (void *) (((uintptr_t) start) & ~CACHELINE_MASK);
-   void *end = start + size;
-
-   while (p < end) {
-      __builtin_ia32_clflush(p);
-      p += CACHELINE_SIZE;
-   }
-}
-
-static inline void
-anv_flush_range(void *start, size_t size)
-{
-   __builtin_ia32_mfence();
-   anv_clflush_range(start, size);
-}
-
-static inline void
-anv_invalidate_range(void *start, size_t size)
-{
-   anv_clflush_range(start, size);
-   __builtin_ia32_mfence();
-}
-
 /* The block_pool functions exported for testing only.  The block pool should
  * only be used via a state pool (see below).
  */
@@ -791,7 +763,7 @@ anv_state_flush(struct anv_device *device, struct anv_state state)
    if (device->info.has_llc)
       return;
 
-   anv_flush_range(state.map, state.alloc_size);
+   gen_flush_range(state.map, state.alloc_size);
 }
 
 void anv_device_init_blorp(struct anv_device *device);

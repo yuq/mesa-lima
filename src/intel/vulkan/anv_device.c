@@ -1750,7 +1750,7 @@ clflush_mapped_ranges(struct anv_device         *device,
       if (ranges[i].offset >= mem->map_size)
          continue;
 
-      anv_clflush_range(mem->map + ranges[i].offset,
+      gen_clflush_range(mem->map + ranges[i].offset,
                         MIN2(ranges[i].size, mem->map_size - ranges[i].offset));
    }
 }
