@@ -40,6 +40,6 @@ include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 ifneq ($(HAVE_GALLIUM_VMWGFX),)
-GALLIUM_TARGET_DRIVERS := vmwgfx
+GALLIUM_TARGET_DRIVERS += vmwgfx
 $(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_svga)
 endif

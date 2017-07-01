@@ -25,6 +25,7 @@
 
 GALLIUM_TOP := $(call my-dir)
 GALLIUM_COMMON_MK := $(GALLIUM_TOP)/Android.common.mk
+GALLIUM_TARGET_DRIVERS :=
 
 SUBDIRS := auxiliary
 SUBDIRS += auxiliary/pipe-loader
