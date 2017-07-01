@@ -655,6 +655,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       case SHADER_OPCODE_TYPED_ATOMIC:
       case SHADER_OPCODE_TYPED_SURFACE_READ:
       case SHADER_OPCODE_TYPED_SURFACE_WRITE:
+      case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
          /* We only propagate into the surface argument of the
           * instruction. Everything else goes through LOAD_PAYLOAD.
           */
@@ -694,6 +695,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
       case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
       case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
+      case SHADER_OPCODE_BYTE_SCATTERED_WRITE_LOGICAL:
          inst->src[i] = val;
          progress = true;
          break;

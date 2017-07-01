@@ -293,6 +293,11 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
    case SHADER_OPCODE_MEMORY_FENCE:
       return "memory_fence";
 
+   case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
+      return "byte_scattered_write";
+   case SHADER_OPCODE_BYTE_SCATTERED_WRITE_LOGICAL:
+      return "byte_scattered_write_logical";
+
    case SHADER_OPCODE_LOAD_PAYLOAD:
       return "load_payload";
    case FS_OPCODE_PACK:
@@ -963,6 +968,8 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
+   case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
+   case SHADER_OPCODE_BYTE_SCATTERED_WRITE_LOGICAL:
    case SHADER_OPCODE_TYPED_ATOMIC:
    case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
