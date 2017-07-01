@@ -1621,13 +1621,22 @@ static void visit_alu(struct nir_to_llvm_context *ctx, const nir_alu_instr *inst
 		result = LLVMBuildXor(ctx->builder, src[0], src[1], "");
 		break;
 	case nir_op_ishl:
-		result = LLVMBuildShl(ctx->builder, src[0], src[1], "");
+		result = LLVMBuildShl(ctx->builder, src[0],
+				      LLVMBuildZExt(ctx->builder, src[1],
+						    LLVMTypeOf(src[0]), ""),
+				      "");
 		break;
 	case nir_op_ishr:
-		result = LLVMBuildAShr(ctx->builder, src[0], src[1], "");
+		result = LLVMBuildAShr(ctx->builder, src[0],
+				       LLVMBuildZExt(ctx->builder, src[1],
+						     LLVMTypeOf(src[0]), ""),
+				       "");
 		break;
 	case nir_op_ushr:
-		result = LLVMBuildLShr(ctx->builder, src[0], src[1], "");
+		result = LLVMBuildLShr(ctx->builder, src[0],
+				       LLVMBuildZExt(ctx->builder, src[1],
+						     LLVMTypeOf(src[0]), ""),
+				       "");
 		break;
 	case nir_op_ilt:
 		result = emit_int_cmp(&ctx->ac, LLVMIntSLT, src[0], src[1]);
