@@ -817,6 +817,12 @@ brw_notification_reg(void)
 }
 
 static inline struct brw_reg
+brw_cr0_reg(unsigned subnr)
+{
+   return brw_ud1_reg(BRW_ARCHITECTURE_REGISTER_FILE, BRW_ARF_CONTROL, subnr);
+}
+
+static inline struct brw_reg
 brw_sr0_reg(unsigned subnr)
 {
    return brw_ud1_reg(BRW_ARCHITECTURE_REGISTER_FILE, BRW_ARF_STATE, subnr);
