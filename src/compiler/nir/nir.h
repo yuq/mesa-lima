@@ -106,6 +106,16 @@ typedef enum {
    nir_var_all             = ~0,
 } nir_variable_mode;
 
+/**
+ * Rounding modes.
+ */
+typedef enum {
+   nir_rounding_mode_undef = 0,
+   nir_rounding_mode_rtne  = 1, /* round to nearest even */
+   nir_rounding_mode_ru    = 2, /* round up */
+   nir_rounding_mode_rd    = 3, /* round down */
+   nir_rounding_mode_rtz   = 4, /* round towards zero */
+} nir_rounding_mode;
 
 typedef union {
    float f32[4];
