@@ -1378,13 +1378,15 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
 static bool
 type_is_float(glsl_base_type type)
 {
-   return type == GLSL_TYPE_FLOAT || type == GLSL_TYPE_DOUBLE;
+   return type == GLSL_TYPE_FLOAT || type == GLSL_TYPE_DOUBLE ||
+      type == GLSL_TYPE_FLOAT16;
 }
 
 static bool
 type_is_signed(glsl_base_type type)
 {
-   return type == GLSL_TYPE_INT || type == GLSL_TYPE_INT64;
+   return type == GLSL_TYPE_INT || type == GLSL_TYPE_INT64 ||
+      type == GLSL_TYPE_INT16;
 }
 
 void
