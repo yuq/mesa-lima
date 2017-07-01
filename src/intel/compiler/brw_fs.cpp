@@ -3092,6 +3092,42 @@ fs_visitor::remove_duplicate_mrf_writes()
    return progress;
 }
 
+/**
+ * Rounding modes for conversion instructions are included for each
+ * conversion, but right now it is a state. So once it is set,
+ * we don't need to call it again for subsequent calls.
+ *
+ * This is useful for vector/matrices conversions, as setting the
+ * mode once is enough for the full vector/matrix
+ */
+bool
+fs_visitor::remove_extra_rounding_modes()
+{
+   bool progress = false;
+
+   foreach_block (block, cfg) {
+      brw_rnd_mode prev_mode = BRW_RND_MODE_UNSPECIFIED;
+
+      foreach_inst_in_block_safe (fs_inst, inst, block) {
+         if (inst->opcode == SHADER_OPCODE_RND_MODE) {
+            assert(inst->src[0].file == BRW_IMMEDIATE_VALUE);
+            const brw_rnd_mode mode = (brw_rnd_mode) inst->src[0].d;
+            if (mode == prev_mode) {
+               inst->remove(block);
+               progress = true;
+            } else {
+               prev_mode = mode;
+            }
+         }
+      }
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 static void
 clear_deps_for_inst_src(fs_inst *inst, bool *deps, int first_grf, int grf_len)
 {
@@ -5808,6 +5844,7 @@ fs_visitor::optimize()
    int pass_num = 0;
 
    OPT(opt_drop_redundant_mov_to_flags);
+   OPT(remove_extra_rounding_modes);
 
    do {
       progress = false;

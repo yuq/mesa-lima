@@ -150,6 +150,7 @@ public:
    bool eliminate_find_live_channel();
    bool dead_code_eliminate();
    bool remove_duplicate_mrf_writes();
+   bool remove_extra_rounding_modes();
 
    bool opt_sampler_eot();
    bool virtual_grf_interferes(int a, int b);

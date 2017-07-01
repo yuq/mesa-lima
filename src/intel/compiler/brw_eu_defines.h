@@ -1252,6 +1252,7 @@ enum PACKED brw_rnd_mode {
    BRW_RND_MODE_RU = 1,    /* Round Up, toward +inf */
    BRW_RND_MODE_RD = 2,    /* Round Down, toward -inf */
    BRW_RND_MODE_RTZ = 3,   /* Round Toward Zero */
+   BRW_RND_MODE_UNSPECIFIED,  /* Unspecified rounding mode */
 };
 
 #endif /* BRW_EU_DEFINES_H */
