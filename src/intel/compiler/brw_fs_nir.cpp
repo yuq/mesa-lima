@@ -4075,30 +4075,35 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
        * Also, we have to suffle 64-bit data to be in the appropriate layout
        * expected by our 32-bit write messages.
        */
-      unsigned type_size = 4;
-      if (nir_src_bit_size(instr->src[0]) == 64) {
-         type_size = 8;
+      unsigned bit_size = nir_src_bit_size(instr->src[0]);
+      unsigned type_size = bit_size / 8;
+      if (bit_size == 64) {
          val_reg = shuffle_64bit_data_for_32bit_write(bld,
             val_reg, instr->num_components);
       }
 
-      unsigned type_slots = type_size / 4;
-
       /* Combine groups of consecutive enabled channels in one write
        * message. We use ffs to find the first enabled channel and then ffs on
-       * the bit-inverse, down-shifted writemask to determine the length of
-       * the block of enabled bits.
+       * the bit-inverse, down-shifted writemask to determine the num_components
+       * of the block of enabled bits.
        */
       while (writemask) {
          unsigned first_component = ffs(writemask) - 1;
-         unsigned length = ffs(~(writemask >> first_component)) - 1;
+         unsigned num_components = ffs(~(writemask >> first_component)) - 1;
 
-         /* We can't write more than 2 64-bit components at once. Limit the
-          * length of the write to what we can do and let the next iteration
-          * handle the rest
-          */
-         if (type_size > 4)
-            length = MIN2(2, length);
+         if (type_size > 4) {
+            /* We can't write more than 2 64-bit components at once. Limit
+             * the num_components of the write to what we can do and let the next
+             * iteration handle the rest.
+             */
+            num_components = MIN2(2, num_components);
+         } else if (type_size < 4) {
+            /* For 16-bit types we are using byte scattered writes, that can
+             * only write one component per call. So we limit the num_components,
+             * and let the write happening in several iterations.
+             */
+            num_components = 1;
+         }
 
          fs_reg offset_reg;
          nir_const_value *const_offset = nir_src_as_const_value(instr->src[2]);
@@ -4112,16 +4117,36 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                     brw_imm_ud(type_size * first_component));
          }
 
-
-         emit_untyped_write(bld, surf_index, offset_reg,
-                            offset(val_reg, bld, first_component * type_slots),
-                            1 /* dims */, length * type_slots,
-                            BRW_PREDICATE_NONE);
+         if (type_size < 4) {
+            /* Untyped Surface messages have a fixed 32-bit size, so we need
+             * to rely on byte scattered in order to write 16-bit elements.
+             * The byte_scattered_write message needs that every written 16-bit
+             * type to be aligned 32-bits (stride=2).
+             */
+            fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D);
+            bld.MOV(subscript(tmp, BRW_REGISTER_TYPE_W, 0),
+                     offset(val_reg, bld, first_component));
+            emit_byte_scattered_write(bld, surf_index, offset_reg,
+                                      tmp,
+                                      1 /* dims */, 1,
+                                      bit_size,
+                                      BRW_PREDICATE_NONE);
+         } else {
+            assert(num_components * type_size <= 16);
+            assert((num_components * type_size) % 4 == 0);
+            assert((first_component * type_size) % 4 == 0);
+            unsigned first_slot = (first_component * type_size) / 4;
+            unsigned num_slots = (num_components * type_size) / 4;
+            emit_untyped_write(bld, surf_index, offset_reg,
+                               offset(val_reg, bld, first_slot),
+                               1 /* dims */, num_slots,
+                               BRW_PREDICATE_NONE);
+         }
 
          /* Clear the bits in the writemask that we just wrote, then try
           * again to see if more channels are left.
           */
-         writemask &= (15 << (first_component + length));
+         writemask &= (15 << (first_component + num_components));
       }
       break;
    }
