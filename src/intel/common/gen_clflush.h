@@ -50,6 +50,18 @@ static inline void
 gen_invalidate_range(void *start, size_t size)
 {
    gen_clflush_range(start, size);
+
+   /* Modern Atom CPUs (Baytrail+) have issues with clflush serialization,
+    * where mfence is not a sufficient synchronization barrier.  We must
+    * double clflush the last cacheline.  This guarantees it will be ordered
+    * after the preceding clflushes, and then the mfence guards against
+    * prefetches crossing the clflush boundary.
+    *
+    * See kernel commit 396f5d62d1a5fd99421855a08ffdef8edb43c76e
+    * ("drm: Restore double clflush on the last partial cacheline")
+    * and https://bugs.freedesktop.org/show_bug.cgi?id=92845.
+    */
+   __builtin_ia32_clflush(start + size - 1);
    __builtin_ia32_mfence();
 }
 
