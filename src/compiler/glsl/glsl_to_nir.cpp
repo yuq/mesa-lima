@@ -1575,7 +1575,8 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_u642i64: {
       nir_alu_type src_type = nir_get_nir_type_for_glsl_base_type(types[0]);
       nir_alu_type dst_type = nir_get_nir_type_for_glsl_base_type(out_type);
-      result = nir_build_alu(&b, nir_type_conversion_op(src_type, dst_type),
+      result = nir_build_alu(&b, nir_type_conversion_op(src_type, dst_type,
+                                 nir_rounding_mode_undef),
                                  srcs[0], NULL, NULL, NULL);
       /* b2i and b2f don't have fixed bit-size versions so the builder will
        * just assume 32 and we have to fix it up here.

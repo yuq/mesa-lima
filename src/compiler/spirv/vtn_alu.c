@@ -356,7 +356,7 @@ vtn_nir_alu_op_for_spirv_opcode(struct vtn_builder *b,
    case SpvOpConvertUToF:
    case SpvOpSConvert:
    case SpvOpFConvert:
-      return nir_type_conversion_op(src, dst);
+      return nir_type_conversion_op(src, dst, nir_rounding_mode_undef);
 
    /* Derivatives: */
    case SpvOpDPdx:         return nir_op_fddx;
