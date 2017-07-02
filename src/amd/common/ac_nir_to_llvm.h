@@ -63,16 +63,18 @@ struct ac_fs_variant_key {
 	uint32_t multisample : 1;
 };
 
-union ac_shader_variant_key {
-	struct ac_vs_variant_key vs;
-	struct ac_fs_variant_key fs;
-	struct ac_tes_variant_key tes;
-	struct ac_tcs_variant_key tcs;
+struct ac_shader_variant_key {
+	union {
+		struct ac_vs_variant_key vs;
+		struct ac_fs_variant_key fs;
+		struct ac_tes_variant_key tes;
+		struct ac_tcs_variant_key tcs;
+	};
 };
 
 struct ac_nir_compiler_options {
 	struct radv_pipeline_layout *layout;
-	union ac_shader_variant_key key;
+	struct ac_shader_variant_key key;
 	bool unsafe_math;
 	bool supports_spill;
 	enum radeon_family family;
