@@ -1464,6 +1464,8 @@ struct radv_subpass {
 	bool                                         has_resolve;
 
 	struct radv_subpass_barrier                  start_barrier;
+
+	uint32_t                                     view_mask;
 };
 
 struct radv_render_pass_attachment {
@@ -1473,6 +1475,7 @@ struct radv_render_pass_attachment {
 	VkAttachmentLoadOp                           stencil_load_op;
 	VkImageLayout                                initial_layout;
 	VkImageLayout                                final_layout;
+	uint32_t                                     view_mask;
 };
 
 struct radv_render_pass {
