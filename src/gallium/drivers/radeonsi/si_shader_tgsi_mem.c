@@ -205,15 +205,22 @@ image_fetch_rsrc(
 	}
 
 	if (image->Register.File != TGSI_FILE_IMAGE) {
+		/* Bindless descriptors are accessible from a different pair of
+		 * user SGPR indices.
+		 */
 		struct gallivm_state *gallivm = &ctx->gallivm;
 		LLVMBuilderRef builder = gallivm->builder;
 
-		LLVMValueRef ptr =
-			lp_build_emit_fetch_src(bld_base, image,
-						TGSI_TYPE_UNSIGNED64, 0);
-		rsrc_ptr = LLVMBuildIntToPtr(builder, ptr,
-					     si_const_array(ctx->v8i32, 0), "");
-		index = LLVMConstInt(ctx->i32, 0, 0);
+		rsrc_ptr = LLVMGetParam(ctx->main_fn,
+					ctx->param_bindless_samplers_and_images);
+		index = lp_build_emit_fetch_src(bld_base, image,
+						TGSI_TYPE_UNSIGNED, 0);
+
+		/* For simplicity, bindless image descriptors use fixed
+		 * 16-dword slots for now.
+		 */
+		index = LLVMBuildMul(builder, index,
+				     LLVMConstInt(ctx->i32, 2, 0), "");
 	}
 
 	*rsrc = si_load_image_desc(ctx, rsrc_ptr, index,
@@ -1213,15 +1220,13 @@ static void tex_fetch_ptrs(
 	}
 
 	if (reg->Register.File != TGSI_FILE_SAMPLER) {
-		struct gallivm_state *gallivm = &ctx->gallivm;
-		LLVMBuilderRef builder = gallivm->builder;
-
-		LLVMValueRef ptr =
-			lp_build_emit_fetch_src(bld_base, reg,
-						TGSI_TYPE_UNSIGNED64, 0);
-		list = LLVMBuildIntToPtr(builder, ptr,
-					 si_const_array(ctx->v8i32, 0), "");
-		index = LLVMConstInt(ctx->i32, 0, 0);
+		/* Bindless descriptors are accessible from a different pair of
+		 * user SGPR indices.
+		 */
+		list = LLVMGetParam(ctx->main_fn,
+				    ctx->param_bindless_samplers_and_images);
+		index = lp_build_emit_fetch_src(bld_base, reg,
+						TGSI_TYPE_UNSIGNED, 0);
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER)

@@ -246,25 +246,18 @@ union si_vgt_param_key {
 	uint32_t index;
 };
 
-struct si_bindless_descriptor
-{
-	struct pb_slab_entry		entry;
-	struct r600_resource		*buffer;
-	unsigned			offset;
-	uint32_t			desc_list[16];
-	bool				dirty;
-};
-
 struct si_texture_handle
 {
-	struct si_bindless_descriptor	*desc;
+	unsigned			desc_slot;
+	bool				desc_dirty;
 	struct pipe_sampler_view	*view;
 	struct si_sampler_state		sstate;
 };
 
 struct si_image_handle
 {
-	struct si_bindless_descriptor	*desc;
+	unsigned			desc_slot;
+	bool				desc_dirty;
 	struct pipe_image_view		view;
 };
 
@@ -444,12 +437,12 @@ struct si_context {
 	union si_vgt_param_key  ia_multi_vgt_param_key;
 	unsigned		ia_multi_vgt_param[SI_NUM_VGT_PARAM_STATES];
 
-	/* Slab allocator for bindless descriptors. */
-	struct pb_slabs		bindless_descriptor_slabs;
-
 	/* Bindless descriptors. */
-	struct util_dynarray	bindless_descriptors;
+	struct si_descriptors	bindless_descriptors;
+	unsigned		num_bindless_descriptors;
 	bool			bindless_descriptors_dirty;
+	bool			graphics_bindless_pointer_dirty;
+	bool			compute_bindless_pointer_dirty;
 
 	/* Allocated bindless handles */
 	struct hash_table	*tex_handles;

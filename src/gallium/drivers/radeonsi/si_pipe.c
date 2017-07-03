@@ -98,9 +98,6 @@ static void si_destroy_context(struct pipe_context *context)
 
 	si_saved_cs_reference(&sctx->current_saved_cs, NULL);
 
-	pb_slabs_deinit(&sctx->bindless_descriptor_slabs);
-	util_dynarray_fini(&sctx->bindless_descriptors);
-
 	_mesa_hash_table_destroy(sctx->tex_handles, NULL);
 	_mesa_hash_table_destroy(sctx->img_handles, NULL);
 
@@ -370,15 +367,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 				   max_threads_per_block / 64);
 
 	sctx->tm = si_create_llvm_target_machine(sscreen);
-
-	/* Create a slab allocator for all bindless descriptors. */
-	if (!pb_slabs_init(&sctx->bindless_descriptor_slabs, 6, 6, 1, sctx,
-			   si_bindless_descriptor_can_reclaim_slab,
-			   si_bindless_descriptor_slab_alloc,
-			   si_bindless_descriptor_slab_free))
-		goto fail;
-
-	util_dynarray_init(&sctx->bindless_descriptors, NULL);
 
 	/* Bindless handles. */
 	sctx->tex_handles = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
