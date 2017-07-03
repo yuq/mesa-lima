@@ -709,6 +709,8 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
       return NULL;
    }
 
+   mt->refcount = 1;
+
    if (target == GL_TEXTURE_CUBE_MAP ||
        target == GL_TEXTURE_CUBE_MAP_ARRAY)
       isl_usage_flags |= ISL_SURF_USAGE_CUBE_BIT;
@@ -753,7 +755,6 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    mt->last_level = last_level;
    mt->target = target;
    mt->format = format;
-   mt->refcount = 1;
    mt->aux_state = NULL;
 
    return mt;
