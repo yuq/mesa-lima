@@ -350,6 +350,11 @@ si_lower_nir(struct si_shader_selector* sel)
 	NIR_PASS_V(sel->nir, nir_lower_alu_to_scalar);
 	NIR_PASS_V(sel->nir, nir_lower_phis_to_scalar);
 
+	static const struct nir_lower_tex_options lower_tex_options = {
+		.lower_txp = ~0u,
+	};
+	NIR_PASS_V(sel->nir, nir_lower_tex, &lower_tex_options);
+
 	bool progress;
 	do {
 		progress = false;
