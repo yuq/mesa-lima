@@ -736,7 +736,7 @@ static struct intel_mipmap_tree *
 make_surface(struct brw_context *brw, GLenum target, mesa_format format,
              unsigned first_level, unsigned last_level,
              unsigned width0, unsigned height0, unsigned depth0,
-             unsigned num_samples, enum isl_tiling isl_tiling,
+             unsigned num_samples, isl_tiling_flags_t tiling_flags,
              isl_surf_usage_flags_t isl_usage_flags, uint32_t alloc_flags,
              unsigned row_pitch, struct brw_bo *bo)
 {
@@ -774,7 +774,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
       .samples = MAX2(num_samples, 1),
       .row_pitch = row_pitch,
       .usage = isl_usage_flags, 
-      .tiling_flags = 1u << isl_tiling
+      .tiling_flags = tiling_flags,
    };
 
    if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
@@ -785,7 +785,8 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    if (!bo) {
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "isl-miptree",
                                   mt->surf.size,
-                                  isl_tiling_to_bufmgr_tiling(isl_tiling),
+                                  isl_tiling_to_bufmgr_tiling(
+                                     mt->surf.tiling),
                                   mt->surf.row_pitch, alloc_flags);
       if (!mt->bo)
          goto fail;
@@ -820,7 +821,8 @@ miptree_create(struct brw_context *brw,
 {
    if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8)
       return make_surface(brw, target, format, first_level, last_level,
-                          width0, height0, depth0, num_samples, ISL_TILING_W,
+                          width0, height0, depth0, num_samples,
+                          ISL_TILING_W_BIT,
                           ISL_SURF_USAGE_STENCIL_BIT |
                           ISL_SURF_USAGE_TEXTURE_BIT,
                           BO_ALLOC_FOR_RENDER, 0, NULL);
@@ -944,7 +946,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 
    if (brw->gen == 6 && format == MESA_FORMAT_S_UINT8) {
       mt = make_surface(brw, target, MESA_FORMAT_S_UINT8,
-                        0, 0, width, height, depth, 1, ISL_TILING_W,
+                        0, 0, width, height, depth, 1,
+                        ISL_TILING_W_BIT,
                         ISL_SURF_USAGE_STENCIL_BIT |
                         ISL_SURF_USAGE_TEXTURE_BIT,
                         BO_ALLOC_FOR_RENDER, pitch, bo);
