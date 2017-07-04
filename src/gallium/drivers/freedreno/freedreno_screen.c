@@ -223,6 +223,9 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
 		return is_a3xx(screen) || is_a4xx(screen);
 
+	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
+		return is_a5xx(screen);
+
 	case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
 		return 0;
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
@@ -276,7 +279,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_MULTI_DRAW_INDIRECT:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
 	case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
-	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
