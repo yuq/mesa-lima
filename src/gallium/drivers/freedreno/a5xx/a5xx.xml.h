@@ -8,7 +8,7 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141292 bytes, from 2017-07-04 16:29:34)
+- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141534 bytes, from 2017-07-04 21:36:44)
 - /home/ilia/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-11 01:04:14)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-07-04 02:59:47)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-07-04 02:59:47)
@@ -3684,6 +3684,19 @@ static inline uint32_t A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(uint32_t val)
 #define A5XX_PC_PRIM_VTX_CNTL_PSIZE				0x00000800
 
 #define REG_A5XX_PC_RASTER_CNTL					0x0000e388
+#define A5XX_PC_RASTER_CNTL_POLYMODE_FRONT_PTYPE__MASK		0x00000007
+#define A5XX_PC_RASTER_CNTL_POLYMODE_FRONT_PTYPE__SHIFT		0
+static inline uint32_t A5XX_PC_RASTER_CNTL_POLYMODE_FRONT_PTYPE(enum adreno_pa_su_sc_draw val)
+{
+	return ((val) << A5XX_PC_RASTER_CNTL_POLYMODE_FRONT_PTYPE__SHIFT) & A5XX_PC_RASTER_CNTL_POLYMODE_FRONT_PTYPE__MASK;
+}
+#define A5XX_PC_RASTER_CNTL_POLYMODE_BACK_PTYPE__MASK		0x00000038
+#define A5XX_PC_RASTER_CNTL_POLYMODE_BACK_PTYPE__SHIFT		3
+static inline uint32_t A5XX_PC_RASTER_CNTL_POLYMODE_BACK_PTYPE(enum adreno_pa_su_sc_draw val)
+{
+	return ((val) << A5XX_PC_RASTER_CNTL_POLYMODE_BACK_PTYPE__SHIFT) & A5XX_PC_RASTER_CNTL_POLYMODE_BACK_PTYPE__MASK;
+}
+#define A5XX_PC_RASTER_CNTL_POLYMODE_ENABLE			0x00000040
 
 #define REG_A5XX_UNKNOWN_E389					0x0000e389
 

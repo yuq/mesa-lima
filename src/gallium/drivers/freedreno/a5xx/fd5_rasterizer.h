@@ -42,6 +42,7 @@ struct fd5_rasterizer_stateobj {
 	uint32_t gras_su_cntl;
 	uint32_t gras_cl_clip_cntl;
 	uint32_t pc_primitive_cntl;
+	uint32_t pc_raster_cntl;
 };
 
 static inline struct fd5_rasterizer_stateobj *

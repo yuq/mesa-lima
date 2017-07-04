@@ -68,13 +68,13 @@ fd5_rasterizer_state_create(struct pipe_context *pctx,
 
 	so->gras_su_cntl =
 			A5XX_GRAS_SU_CNTL_LINEHALFWIDTH(cso->line_width/2.0);
-//	so->pc_prim_vtx_cntl2 =
-//		A5XX_PC_PRIM_VTX_CNTL2_POLYMODE_FRONT_PTYPE(fd_polygon_mode(cso->fill_front)) |
-//		A5XX_PC_PRIM_VTX_CNTL2_POLYMODE_BACK_PTYPE(fd_polygon_mode(cso->fill_back));
+	so->pc_raster_cntl =
+		A5XX_PC_RASTER_CNTL_POLYMODE_FRONT_PTYPE(fd_polygon_mode(cso->fill_front)) |
+		A5XX_PC_RASTER_CNTL_POLYMODE_BACK_PTYPE(fd_polygon_mode(cso->fill_back));
 
-//	if (cso->fill_front != PIPE_POLYGON_MODE_FILL ||
-//		cso->fill_back != PIPE_POLYGON_MODE_FILL)
-//		so->pc_prim_vtx_cntl2 |= A5XX_PC_PRIM_VTX_CNTL2_POLYMODE_ENABLE;
+	if (cso->fill_front != PIPE_POLYGON_MODE_FILL ||
+		cso->fill_back != PIPE_POLYGON_MODE_FILL)
+		so->pc_raster_cntl |= A5XX_PC_RASTER_CNTL_POLYMODE_ENABLE;
 
 	if (cso->cull_face & PIPE_FACE_FRONT)
 		so->gras_su_cntl |= A5XX_GRAS_SU_CNTL_CULL_FRONT;
