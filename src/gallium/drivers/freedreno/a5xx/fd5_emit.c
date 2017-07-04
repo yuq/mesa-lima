@@ -603,6 +603,9 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
 		OUT_RING(ring, rasterizer->pc_primitive_cntl |
 				 A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(max_loc));
+
+		OUT_PKT4(ring, REG_A5XX_GRAS_CL_CNTL, 1);
+		OUT_RING(ring, rasterizer->gras_cl_clip_cntl);
 	}
 
 	if (dirty & (FD_DIRTY_FRAMEBUFFER | FD_DIRTY_RASTERIZER)) {

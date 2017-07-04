@@ -8,7 +8,7 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141249 bytes, from 2017-07-04 04:13:12)
+- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141292 bytes, from 2017-07-04 16:29:34)
 - /home/ilia/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-11 01:04:14)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-07-04 02:59:47)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-07-04 02:59:47)
@@ -2623,6 +2623,7 @@ static inline uint32_t A5XX_VSC_RESOLVE_CNTL_Y(uint32_t val)
 #define REG_A5XX_GPU_CS_AMP_CALIBRATION_CONTROL1		0x0000c557
 
 #define REG_A5XX_GRAS_CL_CNTL					0x0000e000
+#define A5XX_GRAS_CL_CNTL_ZERO_GB_SCALE_Z			0x00000040
 
 #define REG_A5XX_UNKNOWN_E001					0x0000e001
 

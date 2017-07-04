@@ -55,7 +55,6 @@ fd5_rasterizer_state_create(struct pipe_context *pctx,
 		psize_max = cso->point_size;
 	}
 
-	so->gras_cl_clip_cntl = 0x80000; /* ??? */
 	so->gras_su_point_minmax =
 			A5XX_GRAS_SU_POINT_MINMAX_MIN(psize_min) |
 			A5XX_GRAS_SU_POINT_MINMAX_MAX(psize_max);
@@ -92,8 +91,8 @@ fd5_rasterizer_state_create(struct pipe_context *pctx,
 //	if (!cso->depth_clip)
 //		so->gras_cl_clip_cntl |= A5XX_GRAS_CL_CLIP_CNTL_ZNEAR_CLIP_DISABLE |
 //			A5XX_GRAS_CL_CLIP_CNTL_ZFAR_CLIP_DISABLE;
-//	if (cso->clip_halfz)
-//		so->gras_cl_clip_cntl |= A5XX_GRAS_CL_CLIP_CNTL_ZERO_GB_SCALE_Z;
+	if (cso->clip_halfz)
+		so->gras_cl_clip_cntl |= A5XX_GRAS_CL_CNTL_ZERO_GB_SCALE_Z;
 
 	return so;
 }
