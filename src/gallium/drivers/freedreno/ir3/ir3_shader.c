@@ -296,6 +296,9 @@ ir3_shader_create(struct ir3_compiler *compiler,
 	if (cso->type == PIPE_SHADER_IR_NIR) {
 		/* we take ownership of the reference: */
 		nir = cso->ir.nir;
+
+		NIR_PASS_V(nir, nir_lower_io, nir_var_all, ir3_glsl_type_size,
+			   (nir_lower_io_options)0);
 	} else {
 		debug_assert(cso->type == PIPE_SHADER_IR_TGSI);
 		if (fd_mesa_debug & FD_DBG_DISASM) {
@@ -342,6 +345,9 @@ ir3_shader_create_compute(struct ir3_compiler *compiler,
 	if (cso->ir_type == PIPE_SHADER_IR_NIR) {
 		/* we take ownership of the reference: */
 		nir = (nir_shader *)cso->prog;
+
+		NIR_PASS_V(nir, nir_lower_io, nir_var_all, ir3_glsl_type_size,
+			   (nir_lower_io_options)0);
 	} else {
 		debug_assert(cso->ir_type == PIPE_SHADER_IR_TGSI);
 		if (fd_mesa_debug & FD_DBG_DISASM) {

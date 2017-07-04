@@ -377,8 +377,7 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog, nir_shader *nir)
                                    &nir->uniforms, &nir->num_uniforms);
 
    NIR_PASS_V(nir, nir_lower_system_values);
-   NIR_PASS_V(nir, nir_lower_io, nir_var_all, type_size,
-              (nir_lower_io_options)0);
+
    if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
       NIR_PASS_V(nir, nir_lower_samplers_as_deref, shader_program);
    else
