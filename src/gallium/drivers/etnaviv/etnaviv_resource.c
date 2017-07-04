@@ -180,11 +180,8 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
                         &paddingY, &halign);
    assert(paddingX && paddingY);
 
-   if (templat->target != PIPE_BUFFER) {
-      unsigned min_paddingY = 4 * screen->specs.pixel_pipes;
-      if (paddingY < min_paddingY)
-         paddingY = min_paddingY;
-   }
+   if (templat->target != PIPE_BUFFER)
+      etna_adjust_rs_align(screen->specs.pixel_pipes, NULL, &paddingY);
 
    struct etna_resource *rsc = CALLOC_STRUCT(etna_resource);
 
@@ -368,11 +365,10 @@ etna_resource_from_handle(struct pipe_screen *pscreen,
 
    /* We will be using the RS to copy with this resource, so we must
     * ensure that it is appropriately aligned for the RS requirements. */
-   unsigned paddingX = ETNA_RS_WIDTH_MASK + 1;
-   unsigned paddingY = (ETNA_RS_HEIGHT_MASK + 1) * screen->specs.pixel_pipes;
+   level->padded_width = level->width;
+   level->padded_height = level->height;
+   etna_adjust_rs_align(&level->padded_width, &level->padded_height);
 
-   level->padded_width = align(level->width, paddingX);
-   level->padded_height = align(level->height, paddingY);
    level->layer_stride = level->stride * util_format_get_nblocksy(prsc->format,
                                                                   level->padded_height);
 
