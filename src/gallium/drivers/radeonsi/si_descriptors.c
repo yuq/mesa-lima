@@ -61,6 +61,7 @@
 #include "gfx9d.h"
 
 #include "util/hash_table.h"
+#include "util/u_idalloc.h"
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
@@ -2335,23 +2336,27 @@ static void si_init_bindless_descriptors(struct si_context *sctx,
 	 * considered to be a valid handle.
 	 */
 	sctx->num_bindless_descriptors = 1;
+
+	/* Track which bindless slots are used (or not). */
+	util_idalloc_init(&sctx->bindless_used_slots);
+	util_idalloc_resize(&sctx->bindless_used_slots, num_elements);
+
+	/* Reserve slot 0 because it's an invalid handle for bindless. */
+	assert(!util_idalloc_alloc(&sctx->bindless_used_slots));
 }
 
 static void si_release_bindless_descriptors(struct si_context *sctx)
 {
 	si_release_descriptors(&sctx->bindless_descriptors);
+	util_idalloc_fini(&sctx->bindless_used_slots);
 }
 
-static unsigned
-si_create_bindless_descriptor(struct si_context *sctx, uint32_t *desc_list,
-			      unsigned size)
+static unsigned si_get_first_free_bindless_slot(struct si_context *sctx)
 {
 	struct si_descriptors *desc = &sctx->bindless_descriptors;
-	unsigned desc_slot, desc_slot_offset;
+	unsigned desc_slot;
 
-	/* Reserve a new slot for this bindless descriptor. */
-	desc_slot = sctx->num_bindless_descriptors++;
-
+	desc_slot = util_idalloc_alloc(&sctx->bindless_used_slots);
 	if (desc_slot >= desc->num_elements) {
 		/* The array of bindless descriptors is full, resize it. */
 		unsigned slot_size = desc->element_dw_size * 4;
@@ -2362,6 +2367,20 @@ si_create_bindless_descriptor(struct si_context *sctx, uint32_t *desc_list,
 		desc->num_elements = new_num_elements;
 		desc->num_active_slots = new_num_elements;
 	}
+
+	assert(desc_slot);
+	return desc_slot;
+}
+
+static unsigned
+si_create_bindless_descriptor(struct si_context *sctx, uint32_t *desc_list,
+			      unsigned size)
+{
+	struct si_descriptors *desc = &sctx->bindless_descriptors;
+	unsigned desc_slot, desc_slot_offset;
+
+	/* Find a free slot. */
+	desc_slot = si_get_first_free_bindless_slot(sctx);
 
 	/* For simplicity, sampler and image bindless descriptors use fixed
 	 * 16-dword slots for now. Image descriptors only need 8-dword but this
@@ -2474,6 +2493,9 @@ static void si_delete_texture_handle(struct pipe_context *ctx, uint64_t handle)
 		return;
 
 	tex_handle = (struct si_texture_handle *)entry->data;
+
+	/* Allow this descriptor slot to be re-used. */
+	util_idalloc_free(&sctx->bindless_used_slots, tex_handle->desc_slot);
 
 	pipe_sampler_view_reference(&tex_handle->view, NULL);
 	_mesa_hash_table_remove(sctx->tex_handles, entry);

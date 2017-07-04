@@ -29,6 +29,7 @@
 #include "si_shader.h"
 
 #include "util/u_dynarray.h"
+#include "util/u_idalloc.h"
 
 #ifdef PIPE_ARCH_BIG_ENDIAN
 #define SI_BIG_ENDIAN 1
@@ -439,6 +440,7 @@ struct si_context {
 
 	/* Bindless descriptors. */
 	struct si_descriptors	bindless_descriptors;
+	struct util_idalloc	bindless_used_slots;
 	unsigned		num_bindless_descriptors;
 	bool			bindless_descriptors_dirty;
 	bool			graphics_bindless_pointer_dirty;
