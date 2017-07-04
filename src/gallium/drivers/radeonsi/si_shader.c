@@ -2348,9 +2348,6 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 		}
 	}
 
-	/* Build parameter exports. */
-	si_build_param_exports(ctx, outputs, noutput);
-
 	/* We need to add the position output manually if it's missing. */
 	if (!pos_args[0].out[0]) {
 		pos_args[0].enabled_channels = 0xf; /* writemask */
@@ -2449,6 +2446,9 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 
 		ac_build_export(&ctx->ac, &pos_args[i]);
 	}
+
+	/* Build parameter exports. */
+	si_build_param_exports(ctx, outputs, noutput);
 }
 
 /**
