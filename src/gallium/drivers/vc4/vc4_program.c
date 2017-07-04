@@ -33,16 +33,22 @@
 #include "tgsi/tgsi_parse.h"
 #include "compiler/nir/nir.h"
 #include "compiler/nir/nir_builder.h"
+#include "compiler/nir_types.h"
 #include "nir/tgsi_to_nir.h"
 #include "vc4_context.h"
 #include "vc4_qpu.h"
 #include "vc4_qir.h"
-#include "mesa/state_tracker/st_glsl_types.h"
 
 static struct qreg
 ntq_get_src(struct vc4_compile *c, nir_src src, int i);
 static void
 ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list);
+
+static int
+type_size(const struct glsl_type *type)
+{
+   return glsl_count_attribute_slots(type, false);
+}
 
 static void
 resize_qreg_array(struct vc4_compile *c,
@@ -1653,7 +1659,7 @@ static void
 ntq_setup_uniforms(struct vc4_compile *c)
 {
         nir_foreach_variable(var, &c->s->uniforms) {
-                uint32_t vec4_count = st_glsl_type_size(var->type);
+                uint32_t vec4_count = type_size(var->type);
                 unsigned vec4_size = 4 * sizeof(float);
 
                 declare_uniform_range(c, var->data.driver_location * vec4_size,

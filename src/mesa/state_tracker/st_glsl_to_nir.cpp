@@ -39,13 +39,18 @@
 
 #include "st_context.h"
 #include "st_program.h"
-#include "st_glsl_types.h"
 
 #include "compiler/nir/nir.h"
 #include "compiler/glsl_types.h"
 #include "compiler/glsl/glsl_to_nir.h"
 #include "compiler/glsl/ir.h"
 
+
+static int
+type_size(const struct glsl_type *type)
+{
+   return type->count_attribute_slots(false);
+}
 
 /* Depending on PIPE_CAP_TGSI_TEXCOORD (st->needs_texcoord_semantic) we
  * may need to fix up varying slots so the glsl->nir path is aligned
@@ -205,7 +210,7 @@ st_nir_assign_uniform_locations(struct gl_program *prog,
 
       uniform->data.driver_location = loc;
 
-      max = MAX2(max, loc + st_glsl_type_size(uniform->type));
+      max = MAX2(max, loc + type_size(uniform->type));
    }
    *size = max;
 }
@@ -332,17 +337,17 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog, nir_shader *nir)
       sort_varyings(&nir->outputs);
       nir_assign_var_locations(&nir->outputs,
                                &nir->num_outputs,
-                               st_glsl_type_size);
+                               type_size);
       st_nir_fixup_varying_slots(st, &nir->outputs);
    } else if (nir->stage == MESA_SHADER_FRAGMENT) {
       sort_varyings(&nir->inputs);
       nir_assign_var_locations(&nir->inputs,
                                &nir->num_inputs,
-                               st_glsl_type_size);
+                               type_size);
       st_nir_fixup_varying_slots(st, &nir->inputs);
       nir_assign_var_locations(&nir->outputs,
                                &nir->num_outputs,
-                               st_glsl_type_size);
+                               type_size);
    } else if (nir->stage == MESA_SHADER_COMPUTE) {
        /* TODO? */
    } else {
@@ -372,7 +377,7 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog, nir_shader *nir)
                                    &nir->uniforms, &nir->num_uniforms);
 
    NIR_PASS_V(nir, nir_lower_system_values);
-   NIR_PASS_V(nir, nir_lower_io, nir_var_all, st_glsl_type_size,
+   NIR_PASS_V(nir, nir_lower_io, nir_var_all, type_size,
               (nir_lower_io_options)0);
    if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
       NIR_PASS_V(nir, nir_lower_samplers_as_deref, shader_program);
