@@ -123,7 +123,6 @@ fd5_sampler_state_create(struct pipe_context *pctx,
 		A5XX_TEX_SAMP_0_WRAP_R(tex_clamp(cso->wrap_r, clamp_to_edge, &so->needs_border));
 
 	so->texsamp1 =
-		COND(miplinear, A5XX_TEX_SAMP_1_MIPFILTER_LINEAR_FAR) |
 		COND(!cso->seamless_cube_map, A5XX_TEX_SAMP_1_CUBEMAPSEAMLESSFILTOFF) |
 		COND(!cso->normalized_coords, A5XX_TEX_SAMP_1_UNNORM_COORDS);
 
