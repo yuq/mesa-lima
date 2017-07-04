@@ -246,8 +246,6 @@ si_shader_context(struct lp_build_tgsi_context *bld_base)
 
 void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
 
-LLVMTargetRef si_llvm_get_amdgpu_target(const char *triple);
-
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 			 LLVMTargetMachineRef tm,
 			 struct pipe_debug_callback *debug);

@@ -40,7 +40,6 @@
 #include <stdio.h>
 #include <llvm-c/Transforms/IPO.h>
 #include <llvm-c/Transforms/Scalar.h>
-#include <llvm-c/Support.h>
 
 /* Data for if/else/endif and bgnloop/endloop control flow structures.
  */
@@ -64,47 +63,6 @@ void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value)
 
 	snprintf(str, sizeof(str), "%i", value);
 	LLVMAddTargetDependentFunctionAttr(F, name, str);
-}
-
-static void init_amdgpu_target()
-{
-	LLVMInitializeAMDGPUTargetInfo();
-	LLVMInitializeAMDGPUTarget();
-	LLVMInitializeAMDGPUTargetMC();
-	LLVMInitializeAMDGPUAsmPrinter();
-
-	/* For inline assembly. */
-	LLVMInitializeAMDGPUAsmParser();
-
-	if (HAVE_LLVM >= 0x0400) {
-		/*
-		 * Workaround for bug in llvm 4.0 that causes image intrinsics
-		 * to disappear.
-		 * https://reviews.llvm.org/D26348
-		 */
-		const char *argv[2] = {"mesa", "-simplifycfg-sink-common=false"};
-		LLVMParseCommandLineOptions(2, argv, NULL);
-	}
-}
-
-static once_flag init_amdgpu_target_once_flag = ONCE_FLAG_INIT;
-
-LLVMTargetRef si_llvm_get_amdgpu_target(const char *triple)
-{
-	LLVMTargetRef target = NULL;
-	char *err_message = NULL;
-
-	call_once(&init_amdgpu_target_once_flag, init_amdgpu_target);
-
-	if (LLVMGetTargetFromTriple(triple, &target, &err_message)) {
-		fprintf(stderr, "Cannot find target for triple %s ", triple);
-		if (err_message) {
-			fprintf(stderr, "%s\n", err_message);
-		}
-		LLVMDisposeMessage(err_message);
-		return NULL;
-	}
-	return target;
 }
 
 struct si_llvm_diagnostics {

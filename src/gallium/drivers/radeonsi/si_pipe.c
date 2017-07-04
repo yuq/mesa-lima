@@ -145,7 +145,7 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 		 sscreen->b.chip_class >= GFX9 ? ",+xnack" : ",-xnack",
 		 sscreen->b.debug_flags & DBG_SI_SCHED ? ",+si-scheduler" : "");
 
-	return LLVMCreateTargetMachine(si_llvm_get_amdgpu_target(triple), triple,
+	return LLVMCreateTargetMachine(ac_get_llvm_target(triple), triple,
 				       r600_get_llvm_processor_name(sscreen->b.family),
 				       features,
 				       LLVMCodeGenLevelDefault,
