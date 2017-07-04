@@ -570,6 +570,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 			assert(!res->b.is_shared);
 			r600_reallocate_texture_inplace(rctx, rtex,
 							PIPE_BIND_SHARED, false);
+			rctx->b.flush(&rctx->b, NULL, 0);
 			assert(res->b.b.bind & PIPE_BIND_SHARED);
 			assert(res->flags & RADEON_FLAG_NO_SUBALLOC);
 		}
