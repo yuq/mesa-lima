@@ -8,15 +8,10 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-06-02 15:50:23)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-05-30 19:25:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 142603 bytes, from 2017-06-06 17:02:32)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
+- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141249 bytes, from 2017-07-04 04:13:12)
+- /home/ilia/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-11 01:04:14)
+- /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-07-04 02:59:47)
+- /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-07-04 02:59:47)
 
 Copyright (C) 2013-2017 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -119,6 +114,11 @@ enum a5xx_vtx_fmt {
 	VFMT5_8_8_8_8_SNORM = 50,
 	VFMT5_8_8_8_8_UINT = 51,
 	VFMT5_8_8_8_8_SINT = 52,
+	VFMT5_10_10_10_2_UNORM = 54,
+	VFMT5_10_10_10_2_SNORM = 57,
+	VFMT5_10_10_10_2_UINT = 58,
+	VFMT5_10_10_10_2_SINT = 59,
+	VFMT5_11_11_10_FLOAT = 66,
 	VFMT5_16_16_UNORM = 67,
 	VFMT5_16_16_SNORM = 68,
 	VFMT5_16_16_FLOAT = 69,
@@ -204,14 +204,45 @@ enum a5xx_tex_fmt {
 	TFMT5_32_32_FLOAT = 103,
 	TFMT5_32_32_UINT = 104,
 	TFMT5_32_32_SINT = 105,
+	TFMT5_32_32_32_UINT = 114,
+	TFMT5_32_32_32_SINT = 115,
+	TFMT5_32_32_32_FLOAT = 116,
 	TFMT5_32_32_32_32_FLOAT = 130,
 	TFMT5_32_32_32_32_UINT = 131,
 	TFMT5_32_32_32_32_SINT = 132,
 	TFMT5_X8Z24_UNORM = 160,
+	TFMT5_ETC2_RG11_UNORM = 171,
+	TFMT5_ETC2_RG11_SNORM = 172,
+	TFMT5_ETC2_R11_UNORM = 173,
+	TFMT5_ETC2_R11_SNORM = 174,
+	TFMT5_ETC1 = 175,
+	TFMT5_ETC2_RGB8 = 176,
+	TFMT5_ETC2_RGBA8 = 177,
+	TFMT5_ETC2_RGB8A1 = 178,
+	TFMT5_DXT1 = 179,
+	TFMT5_DXT3 = 180,
+	TFMT5_DXT5 = 181,
 	TFMT5_RGTC1_UNORM = 183,
 	TFMT5_RGTC1_SNORM = 184,
 	TFMT5_RGTC2_UNORM = 187,
 	TFMT5_RGTC2_SNORM = 188,
+	TFMT5_BPTC_UFLOAT = 190,
+	TFMT5_BPTC_FLOAT = 191,
+	TFMT5_BPTC = 192,
+	TFMT5_ASTC_4x4 = 193,
+	TFMT5_ASTC_5x4 = 194,
+	TFMT5_ASTC_5x5 = 195,
+	TFMT5_ASTC_6x5 = 196,
+	TFMT5_ASTC_6x6 = 197,
+	TFMT5_ASTC_8x5 = 198,
+	TFMT5_ASTC_8x6 = 199,
+	TFMT5_ASTC_8x8 = 200,
+	TFMT5_ASTC_10x5 = 201,
+	TFMT5_ASTC_10x6 = 202,
+	TFMT5_ASTC_10x8 = 203,
+	TFMT5_ASTC_10x10 = 204,
+	TFMT5_ASTC_12x10 = 205,
+	TFMT5_ASTC_12x12 = 206,
 };
 
 enum a5xx_tex_fetchsize {
@@ -3719,11 +3750,17 @@ static inline uint32_t A5XX_VFD_DECODE_INSTR_IDX(uint32_t val)
 	return ((val) << A5XX_VFD_DECODE_INSTR_IDX__SHIFT) & A5XX_VFD_DECODE_INSTR_IDX__MASK;
 }
 #define A5XX_VFD_DECODE_INSTR_INSTANCED				0x00020000
-#define A5XX_VFD_DECODE_INSTR_FORMAT__MASK			0x3ff00000
+#define A5XX_VFD_DECODE_INSTR_FORMAT__MASK			0x0ff00000
 #define A5XX_VFD_DECODE_INSTR_FORMAT__SHIFT			20
 static inline uint32_t A5XX_VFD_DECODE_INSTR_FORMAT(enum a5xx_vtx_fmt val)
 {
 	return ((val) << A5XX_VFD_DECODE_INSTR_FORMAT__SHIFT) & A5XX_VFD_DECODE_INSTR_FORMAT__MASK;
+}
+#define A5XX_VFD_DECODE_INSTR_SWAP__MASK			0x30000000
+#define A5XX_VFD_DECODE_INSTR_SWAP__SHIFT			28
+static inline uint32_t A5XX_VFD_DECODE_INSTR_SWAP(enum a3xx_color_swap val)
+{
+	return ((val) << A5XX_VFD_DECODE_INSTR_SWAP__SHIFT) & A5XX_VFD_DECODE_INSTR_SWAP__MASK;
 }
 #define A5XX_VFD_DECODE_INSTR_UNK30				0x40000000
 #define A5XX_VFD_DECODE_INSTR_FLOAT				0x80000000
