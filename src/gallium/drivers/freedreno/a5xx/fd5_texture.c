@@ -221,7 +221,6 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	struct fd5_pipe_sampler_view *so = CALLOC_STRUCT(fd5_pipe_sampler_view);
 	struct fd_resource *rsc = fd_resource(prsc);
 	unsigned lvl, layers;
-	uint32_t sz2 = 0;
 
 	if (!so)
 		return NULL;
@@ -298,8 +297,6 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 			A5XX_TEX_CONST_5_DEPTH(layers / 6);
 		break;
 	case PIPE_TEXTURE_3D:
-		while (lvl < cso->u.tex.last_level && sz2 != rsc->slices[lvl+1].size0)
-			sz2 = rsc->slices[++lvl].size0;
 		so->texconst3 =
 			A5XX_TEX_CONST_3_ARRAY_PITCH(rsc->slices[lvl].size0);
 		so->texconst5 =
