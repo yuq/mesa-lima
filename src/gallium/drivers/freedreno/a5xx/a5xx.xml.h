@@ -8,7 +8,7 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141534 bytes, from 2017-07-04 21:36:44)
+- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141659 bytes, from 2017-07-04 21:50:01)
 - /home/ilia/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-11 01:04:14)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-07-04 02:59:47)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-07-04 02:59:47)
@@ -3039,6 +3039,13 @@ static inline uint32_t REG_A5XX_RB_MRT(uint32_t i0) { return 0x0000e150 + 0x7*i0
 static inline uint32_t REG_A5XX_RB_MRT_CONTROL(uint32_t i0) { return 0x0000e150 + 0x7*i0; }
 #define A5XX_RB_MRT_CONTROL_BLEND				0x00000001
 #define A5XX_RB_MRT_CONTROL_BLEND2				0x00000002
+#define A5XX_RB_MRT_CONTROL_ROP_ENABLE				0x00000004
+#define A5XX_RB_MRT_CONTROL_ROP_CODE__MASK			0x00000078
+#define A5XX_RB_MRT_CONTROL_ROP_CODE__SHIFT			3
+static inline uint32_t A5XX_RB_MRT_CONTROL_ROP_CODE(enum a3xx_rop_code val)
+{
+	return ((val) << A5XX_RB_MRT_CONTROL_ROP_CODE__SHIFT) & A5XX_RB_MRT_CONTROL_ROP_CODE__MASK;
+}
 #define A5XX_RB_MRT_CONTROL_COMPONENT_ENABLE__MASK		0x00000780
 #define A5XX_RB_MRT_CONTROL_COMPONENT_ENABLE__SHIFT		7
 static inline uint32_t A5XX_RB_MRT_CONTROL_COMPONENT_ENABLE(uint32_t val)

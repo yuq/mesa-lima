@@ -679,7 +679,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 			if (is_int) {
 				control &= A5XX_RB_MRT_CONTROL_COMPONENT_ENABLE__MASK;
-//				control |= A5XX_RB_MRT_CONTROL_ROP_CODE(ROP_COPY);
+				control |= A5XX_RB_MRT_CONTROL_ROP_CODE(ROP_COPY);
 			}
 
 			if (has_alpha) {
