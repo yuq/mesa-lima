@@ -121,9 +121,7 @@ si_blit_dbcb_copy(struct si_context *sctx,
 
 	assert(sctx->dbcb_depth_copy_enabled || sctx->dbcb_stencil_copy_enabled);
 
-	bool old_update_dirtiness = sctx->framebuffer.do_update_surf_dirtiness;
 	sctx->decompression_enabled = true;
-	sctx->framebuffer.do_update_surf_dirtiness = false;
 
 	while (level_mask) {
 		unsigned level = u_bit_scan(&level_mask);
@@ -169,7 +167,6 @@ si_blit_dbcb_copy(struct si_context *sctx,
 	}
 
 	sctx->decompression_enabled = false;
-	sctx->framebuffer.do_update_surf_dirtiness = old_update_dirtiness;
 	sctx->dbcb_depth_copy_enabled = false;
 	sctx->dbcb_stencil_copy_enabled = false;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
@@ -225,9 +222,7 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 
 	surf_tmpl.format = texture->resource.b.b.format;
 
-	bool old_update_dirtiness = sctx->framebuffer.do_update_surf_dirtiness;
 	sctx->decompression_enabled = true;
-	sctx->framebuffer.do_update_surf_dirtiness = false;
 
 	while (level_mask) {
 		unsigned level = u_bit_scan(&level_mask);
@@ -267,7 +262,6 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 		texture->stencil_dirty_level_mask &= ~fully_decompressed_mask;
 
 	sctx->decompression_enabled = false;
-	sctx->framebuffer.do_update_surf_dirtiness = old_update_dirtiness;
 	sctx->db_flush_depth_inplace = false;
 	sctx->db_flush_stencil_inplace = false;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
@@ -474,9 +468,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 		custom_blend = sctx->custom_blend_eliminate_fastclear;
 	}
 
-	bool old_update_dirtiness = sctx->framebuffer.do_update_surf_dirtiness;
 	sctx->decompression_enabled = true;
-	sctx->framebuffer.do_update_surf_dirtiness = false;
 
 	while (level_mask) {
 		unsigned level = u_bit_scan(&level_mask);
@@ -519,7 +511,6 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 	}
 
 	sctx->decompression_enabled = false;
-	sctx->framebuffer.do_update_surf_dirtiness = old_update_dirtiness;
 
 	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
@@ -971,10 +962,32 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 		if (!(rtex->surface.flags & RADEON_SURF_SBUFFER))
 			planes &= ~PIPE_MASK_S;
 
+		/* If we've rendered into the framebuffer and it's a blitting
+		 * source, make sure the decompression pass is invoked
+		 * by dirtying the framebuffer.
+		 */
+		if (sctx->framebuffer.state.zsbuf &&
+		    sctx->framebuffer.state.zsbuf->u.tex.level == level &&
+		    sctx->framebuffer.state.zsbuf->texture == tex)
+			si_update_fb_dirtiness_after_rendering(sctx);
+
 		si_decompress_depth(sctx, rtex, planes,
 				    level, level,
 				    first_layer, last_layer);
 	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_offset) {
+		/* If we've rendered into the framebuffer and it's a blitting
+		 * source, make sure the decompression pass is invoked
+		 * by dirtying the framebuffer.
+		 */
+		for (unsigned i = 0; i < sctx->framebuffer.state.nr_cbufs; i++) {
+			if (sctx->framebuffer.state.cbufs[i] &&
+			    sctx->framebuffer.state.cbufs[i]->u.tex.level == level &&
+			    sctx->framebuffer.state.cbufs[i]->texture == tex) {
+				si_update_fb_dirtiness_after_rendering(sctx);
+				break;
+			}
+		}
+
 		si_blit_decompress_color(ctx, rtex, level, level,
 					 first_layer, last_layer, false);
 	}
