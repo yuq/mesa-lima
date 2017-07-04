@@ -684,7 +684,7 @@ static inline enum radeon_bo_domain radeon_domain_from_heap(enum radeon_heap hea
         return RADEON_DOMAIN_GTT;
     default:
         assert(0);
-        return 0;
+        return (enum radeon_bo_domain)0;
     }
 }
 
