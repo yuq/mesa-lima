@@ -439,6 +439,7 @@ fd5_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 			OUT_RING(ring, A5XX_VFD_DECODE_INSTR_IDX(j) |
 					A5XX_VFD_DECODE_INSTR_FORMAT(fmt) |
 					COND(elem->instance_divisor, A5XX_VFD_DECODE_INSTR_INSTANCED) |
+					A5XX_VFD_DECODE_INSTR_SWAP(fd5_pipe2swap(pfmt)) |
 					A5XX_VFD_DECODE_INSTR_UNK30 |
 					COND(!isint, A5XX_VFD_DECODE_INSTR_FLOAT));
 			OUT_RING(ring, MAX2(1, elem->instance_divisor)); /* VFD_DECODE[j].STEP_RATE */
