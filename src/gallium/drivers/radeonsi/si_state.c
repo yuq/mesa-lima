@@ -2456,6 +2456,38 @@ static void si_init_depth_surface(struct si_context *sctx,
 	surf->depth_initialized = true;
 }
 
+void si_update_fb_dirtiness_after_rendering(struct si_context *sctx)
+{
+	if (sctx->decompression_enabled)
+		return;
+
+	if (sctx->framebuffer.state.zsbuf) {
+		struct pipe_surface *surf = sctx->framebuffer.state.zsbuf;
+		struct r600_texture *rtex = (struct r600_texture *)surf->texture;
+
+		rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+
+		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
+			rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
+	}
+	if (sctx->framebuffer.compressed_cb_mask) {
+		struct pipe_surface *surf;
+		struct r600_texture *rtex;
+		unsigned mask = sctx->framebuffer.compressed_cb_mask;
+
+		do {
+			unsigned i = u_bit_scan(&mask);
+			surf = sctx->framebuffer.state.cbufs[i];
+			rtex = (struct r600_texture*)surf->texture;
+
+			if (rtex->fmask.size)
+				rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+			if (rtex->dcc_gather_statistics)
+				rtex->separate_dcc_dirty = true;
+		} while (mask);
+	}
+}
+
 static void si_dec_framebuffer_counters(const struct pipe_framebuffer_state *state)
 {
 	for (int i = 0; i < state->nr_cbufs; ++i) {
@@ -2482,6 +2514,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
 	bool unbound = false;
 	int i;
+
+	si_update_fb_dirtiness_after_rendering(sctx);
 
 	for (i = 0; i < sctx->framebuffer.state.nr_cbufs; i++) {
 		if (!sctx->framebuffer.state.cbufs[i])
@@ -2680,7 +2714,6 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		 * changes come from the decompression passes themselves.
 		 */
 		sctx->need_check_render_feedback = true;
-		sctx->framebuffer.do_update_surf_dirtiness = true;
 	}
 }
 
@@ -3988,6 +4021,8 @@ static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
+	si_update_fb_dirtiness_after_rendering(sctx);
+
 	/* Multisample surfaces are flushed in si_decompress_textures. */
 	if (sctx->framebuffer.nr_samples <= 1 &&
 	    sctx->framebuffer.state.nr_cbufs) {
@@ -3995,7 +4030,6 @@ static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 				 SI_CONTEXT_INV_GLOBAL_L2 |
 				 SI_CONTEXT_FLUSH_AND_INV_CB;
 	}
-	sctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
 /* This only ensures coherency for shader image/buffer stores. */

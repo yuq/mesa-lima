@@ -1207,7 +1207,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		sctx->framebuffer.dirty_cbufs |=
 			((1 << sctx->framebuffer.state.nr_cbufs) - 1);
 		sctx->framebuffer.dirty_zsbuf = true;
-		sctx->framebuffer.do_update_surf_dirtiness = true;
 		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
 		si_update_all_texture_descriptors(sctx);
 	}
@@ -1390,36 +1389,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	     sctx->b.family == CHIP_FIJI) &&
 	    r600_get_strmout_en(&sctx->b)) {
 		sctx->b.flags |= SI_CONTEXT_VGT_STREAMOUT_SYNC;
-	}
-
-	if (sctx->framebuffer.do_update_surf_dirtiness) {
-		/* Set the depth buffer as dirty. */
-		if (sctx->framebuffer.state.zsbuf) {
-			struct pipe_surface *surf = sctx->framebuffer.state.zsbuf;
-			struct r600_texture *rtex = (struct r600_texture *)surf->texture;
-
-			rtex->dirty_level_mask |= 1 << surf->u.tex.level;
-
-			if (rtex->surface.flags & RADEON_SURF_SBUFFER)
-				rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
-		}
-		if (sctx->framebuffer.compressed_cb_mask) {
-			struct pipe_surface *surf;
-			struct r600_texture *rtex;
-			unsigned mask = sctx->framebuffer.compressed_cb_mask;
-
-			do {
-				unsigned i = u_bit_scan(&mask);
-				surf = sctx->framebuffer.state.cbufs[i];
-				rtex = (struct r600_texture*)surf->texture;
-
-				if (rtex->fmask.size)
-					rtex->dirty_level_mask |= 1 << surf->u.tex.level;
-				if (rtex->dcc_gather_statistics)
-					rtex->separate_dcc_dirty = true;
-			} while (mask);
-		}
-		sctx->framebuffer.do_update_surf_dirtiness = false;
 	}
 
 	sctx->b.num_draw_calls++;
