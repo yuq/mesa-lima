@@ -288,13 +288,14 @@ void r600_replace_buffer_storage(struct pipe_context *ctx,
 
 	pb_reference(&rdst->buf, rsrc->buf);
 	rdst->gpu_address = rsrc->gpu_address;
+	rdst->b.b.bind = rsrc->b.b.bind;
+	rdst->flags = rsrc->flags;
 
 	assert(rdst->vram_usage == rsrc->vram_usage);
 	assert(rdst->gart_usage == rsrc->gart_usage);
 	assert(rdst->bo_size == rsrc->bo_size);
 	assert(rdst->bo_alignment == rsrc->bo_alignment);
 	assert(rdst->domains == rsrc->domains);
-	assert(rdst->flags == rsrc->flags);
 
 	rctx->rebind_buffer(ctx, dst, old_gpu_address);
 }

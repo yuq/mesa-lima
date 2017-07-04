@@ -618,6 +618,32 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 			slice_size = rtex->surface.u.legacy.level[0].slice_size;
 		}
 	} else {
+		/* Move a suballocated buffer into a non-suballocated allocation. */
+		if (rscreen->ws->buffer_is_suballocated(res->buf)) {
+			assert(!res->b.is_shared);
+
+			/* Allocate a new buffer with PIPE_BIND_SHARED. */
+			struct pipe_resource templ = res->b.b;
+			templ.bind |= PIPE_BIND_SHARED;
+
+			struct pipe_resource *newb =
+				screen->resource_create(screen, &templ);
+			if (!newb)
+				return false;
+
+			/* Copy the old buffer contents to the new one. */
+			struct pipe_box box;
+			u_box_1d(0, newb->width0, &box);
+			rctx->b.resource_copy_region(&rctx->b, newb, 0, 0, 0, 0,
+						     &res->b.b, 0, &box);
+			/* Move the new buffer storage to the old pipe_resource. */
+			r600_replace_buffer_storage(&rctx->b, &res->b.b, newb);
+			pipe_resource_reference(&newb, NULL);
+
+			assert(res->b.b.bind & PIPE_BIND_SHARED);
+			assert(res->flags & RADEON_FLAG_NO_SUBALLOC);
+		}
+
 		/* Buffers */
 		offset = 0;
 		stride = 0;
