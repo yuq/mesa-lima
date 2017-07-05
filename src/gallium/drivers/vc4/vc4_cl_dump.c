@@ -25,7 +25,7 @@
 #include "util/u_prim.h"
 #include "util/macros.h"
 #include "vc4_cl_dump.h"
-#include "vc4_packet.h"
+#include "kernel/vc4_packet.h"
 
 #define __gen_user_data void
 #define __gen_address_type uint32_t
