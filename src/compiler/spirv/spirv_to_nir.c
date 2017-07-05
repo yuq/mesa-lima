@@ -599,12 +599,16 @@ type_decoration_cb(struct vtn_builder *b,
 
    switch (dec->decoration) {
    case SpvDecorationArrayStride:
+      assert(type->base_type == vtn_base_type_matrix ||
+             type->base_type == vtn_base_type_array);
       type->stride = dec->literals[0];
       break;
    case SpvDecorationBlock:
+      assert(type->base_type == vtn_base_type_struct);
       type->block = true;
       break;
    case SpvDecorationBufferBlock:
+      assert(type->base_type == vtn_base_type_struct);
       type->buffer_block = true;
       break;
    case SpvDecorationGLSLShared:
