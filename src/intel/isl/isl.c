@@ -1699,7 +1699,7 @@ isl_surf_get_ccs_surf(const struct isl_device *dev,
    if (ISL_DEV_GEN(dev) <= 8 && surf->dim != ISL_SURF_DIM_2D)
       return false;
 
-   if (!isl_format_supports_rendering(dev->info, surf->format))
+   if (isl_format_is_compressed(surf->format))
       return false;
 
    /* TODO: More conditions where it can fail. */
