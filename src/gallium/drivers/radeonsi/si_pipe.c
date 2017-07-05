@@ -141,8 +141,9 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 	char features[256];
 
 	snprintf(features, sizeof(features),
-		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s",
+		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s%s",
 		 sscreen->b.chip_class >= GFX9 ? ",+xnack" : ",-xnack",
+		 sscreen->llvm_has_working_vgpr_indexing ? "" : ",-promote-alloca",
 		 sscreen->b.debug_flags & DBG_SI_SCHED ? ",+si-scheduler" : "");
 
 	return LLVMCreateTargetMachine(ac_get_llvm_target(triple), triple,
@@ -757,7 +758,6 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	/* Supported boolean features. */
 	case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
-	case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
 	case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
 	case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
 	case PIPE_SHADER_CAP_INTEGERS:
@@ -767,10 +767,18 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 		return 1;
 
 	case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
-		/* TODO: Indirection of geometry shader input dimension is not
-		 * handled yet
-		 */
-		return shader != PIPE_SHADER_GEOMETRY;
+		/* TODO: Indirect indexing of GS inputs is unimplemented. */
+		return shader != PIPE_SHADER_GEOMETRY &&
+		       (sscreen->llvm_has_working_vgpr_indexing ||
+			/* TCS and TES load inputs directly from LDS or
+			 * offchip memory, so indirect indexing is trivial. */
+			shader == PIPE_SHADER_TESS_CTRL ||
+			shader == PIPE_SHADER_TESS_EVAL);
+
+	case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
+		return sscreen->llvm_has_working_vgpr_indexing ||
+		       /* TCS stores outputs directly to memory. */
+		       shader == PIPE_SHADER_TESS_CTRL;
 
 	/* Unsupported boolean features. */
 	case PIPE_SHADER_CAP_SUBROUTINES:
@@ -1006,6 +1014,11 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 					    sscreen->b.family <= CHIP_POLARIS12) ||
 					   sscreen->b.family == CHIP_VEGA10 ||
 					   sscreen->b.family == CHIP_RAVEN;
+	/* While it would be nice not to have this flag, we are constrained
+	 * by the reality that LLVM 5.0 doesn't have working VGPR indexing
+	 * on GFX9.
+	 */
+	sscreen->llvm_has_working_vgpr_indexing = sscreen->b.chip_class <= VI;
 
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;

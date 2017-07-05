@@ -755,8 +755,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 * promote allocas into registers when profitable.
 			 */
 			if (array_size > 16 ||
-			    /* TODO: VGPR indexing is buggy on GFX9. */
-			    ctx->screen->b.chip_class == GFX9) {
+			    !ctx->screen->llvm_has_working_vgpr_indexing) {
 				array_alloca = LLVMBuildAlloca(builder,
 					LLVMArrayType(ctx->f32,
 						      array_size), "array");

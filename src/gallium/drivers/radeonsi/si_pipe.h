@@ -83,6 +83,7 @@ struct si_screen {
 	bool				has_draw_indirect_multi;
 	bool				has_ds_bpermute;
 	bool				has_msaa_sample_loc_bug;
+	bool				llvm_has_working_vgpr_indexing;
 
 	/* Whether shaders are monolithic (1-part) or separate (3-part). */
 	bool				use_monolithic_shaders;
