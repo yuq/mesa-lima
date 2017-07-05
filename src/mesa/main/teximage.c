@@ -4378,7 +4378,7 @@ get_tex_images_for_clear(struct gl_context *ctx,
                          struct gl_texture_image **texImages)
 {
    GLenum target;
-   int i;
+   int numFaces, i;
 
    if (level < 0 || level >= MAX_TEXTURE_LEVELS) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid level)", function);
@@ -4386,28 +4386,23 @@ get_tex_images_for_clear(struct gl_context *ctx,
    }
 
    if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
-      for (i = 0; i < MAX_FACES; i++) {
-         target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + i;
+      target = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+      numFaces = MAX_FACES;
+   }
+   else {
+      target = texObj->Target;
+      numFaces = 1;
+   }
 
-         texImages[i] = _mesa_select_tex_image(texObj, target, level);
-         if (texImages[i] == NULL) {
-            _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "%s(invalid level)", function);
-            return 0;
-         }
+   for (i = 0; i < numFaces; i++) {
+      texImages[i] = _mesa_select_tex_image(texObj, target + i, level);
+      if (texImages[i] == NULL) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid level)", function);
+         return 0;
       }
-
-      return MAX_FACES;
    }
 
-   texImages[0] = _mesa_select_tex_image(texObj, texObj->Target, level);
-
-   if (texImages[0] == NULL) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid level)", function);
-      return 0;
-   }
-
-   return 1;
+   return numFaces;
 }
 
 void GLAPIENTRY
