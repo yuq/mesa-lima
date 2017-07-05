@@ -1090,7 +1090,7 @@ isl_calc_phys_total_extent_el_gen9_1d(
 {
    MAYBE_UNUSED const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
 
-   assert(phys_level0_sa->height == 1);
+   assert(phys_level0_sa->height / fmtl->bh == 1);
    assert(phys_level0_sa->depth == 1);
    assert(info->samples == 1);
    assert(image_align_sa->w >= fmtl->bw);
