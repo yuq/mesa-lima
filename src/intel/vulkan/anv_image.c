@@ -214,6 +214,21 @@ make_surface(const struct anv_device *dev,
          ok = isl_surf_get_ccs_surf(&dev->isl_dev, &anv_surf->isl,
                                     &image->aux_surface.isl, 0);
          if (ok) {
+
+            /* Disable CCS when it is not useful (i.e., when you can't render
+             * to the image with CCS enabled).
+             */
+            if (!isl_format_supports_rendering(&dev->info, format)) {
+               /* While it may be technically possible to enable CCS for this
+                * image, we currently don't have things hooked up to get it
+                * working.
+                */
+               anv_perf_warn("This image format doesn't support rendering. "
+                             "Not allocating an CCS buffer.");
+               image->aux_surface.isl.size = 0;
+               return VK_SUCCESS;
+            }
+
             add_surface(image, &image->aux_surface);
 
             /* For images created without MUTABLE_FORMAT_BIT set, we know that
