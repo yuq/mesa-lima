@@ -1214,8 +1214,10 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
       goto cleanup;
    }
 
-   if (!dri2_setup_extensions(dpy))
+   if (!dri2_setup_extensions(dpy)) {
+      err = "DRI2: failed to setup extensions";
       goto cleanup;
+   }
 
    dri2_setup_screen(dpy);
 
