@@ -1248,9 +1248,25 @@ st_get_fp_variant(struct st_context *st,
       /* create new */
       fpv = st_create_fp_variant(st, stfp, key);
       if (fpv) {
-         /* insert into list */
-         fpv->next = stfp->variants;
-         stfp->variants = fpv;
+         if (key->bitmap || key->drawpixels) {
+            /* Regular variants should always come before the
+             * bitmap & drawpixels variants, (unless there
+             * are no regular variants) so that
+             * st_update_fp can take a fast path when
+             * shader_has_one_variant is set.
+             */
+            if (!stfp->variants) {
+               stfp->variants = fpv;
+            } else {
+               /* insert into list after the first one */
+               fpv->next = stfp->variants->next;
+               stfp->variants->next = fpv;
+            }
+         } else {
+            /* insert into list */
+            fpv->next = stfp->variants;
+            stfp->variants = fpv;
+         }
       }
    }
 
