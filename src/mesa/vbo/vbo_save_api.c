@@ -1035,7 +1035,7 @@ _save_CallLists(GLsizei n, GLenum type, const GLvoid * v)
  * Called when a glBegin is getting compiled into a display list.
  * Updating of ctx->Driver.CurrentSavePrimitive is already taken care of.
  */
-GLboolean
+void
 vbo_save_NotifyBegin(struct gl_context *ctx, GLenum mode)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
@@ -1064,11 +1064,6 @@ vbo_save_NotifyBegin(struct gl_context *ctx, GLenum mode)
 
    /* We need to call vbo_save_SaveFlushVertices() if there's state change */
    ctx->Driver.SaveNeedFlush = GL_TRUE;
-
-   /* GL_TRUE means we've handled this glBegin here; don't compile a BEGIN
-    * opcode into the display list.
-    */
-   return GL_TRUE;
 }
 
 

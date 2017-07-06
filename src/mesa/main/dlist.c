@@ -5766,25 +5766,9 @@ save_Begin(GLenum mode)
       _mesa_compile_error(ctx, GL_INVALID_OPERATION, "recursive glBegin");
    }
    else {
-      Node *n;
-
       ctx->Driver.CurrentSavePrimitive = mode;
 
-      /* Give the driver an opportunity to hook in an optimized
-       * display list compiler.
-       */
-      if (vbo_save_NotifyBegin(ctx, mode))
-         return;
-
-      SAVE_FLUSH_VERTICES(ctx);
-      n = alloc_instruction(ctx, OPCODE_BEGIN, 1);
-      if (n) {
-         n[1].e = mode;
-      }
-
-      if (ctx->ExecuteFlag) {
-         CALL_Begin(ctx->Exec, (mode));
-      }
+      vbo_save_NotifyBegin(ctx, mode);
    }
 }
 
