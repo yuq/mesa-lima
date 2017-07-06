@@ -182,7 +182,11 @@ static SIMDINLINE Float SIMDCALL fmadd_ps(Float a, Float b, Float c) // return (
     return add_ps(mul_ps(a, b), c);
 }
 
-SIMD_WRAPPER_3(fmsub_ps);   // return (a * b) - c
+static SIMDINLINE Float SIMDCALL fmsub_ps(Float a, Float b, Float c) // return (a * b) - c
+{
+    return sub_ps(mul_ps(a, b), c);
+}
+
 SIMD_WRAPPER_2(max_ps);     // return (a > b) ? a : b
 SIMD_WRAPPER_2(min_ps);     // return (a < b) ? a : b
 SIMD_WRAPPER_2(mul_ps);     // return a * b
