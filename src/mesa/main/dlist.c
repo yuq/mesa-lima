@@ -325,7 +325,8 @@ typedef enum
    OPCODE_STENCIL_FUNC_SEPARATE,
    OPCODE_STENCIL_OP_SEPARATE,
    OPCODE_STENCIL_MASK_SEPARATE,
-
+   /* GL_NV_primitive_restart */
+   OPCODE_PRIMITIVE_RESTART_NV,
    /* GL_ARB_shader_objects */
    OPCODE_USE_PROGRAM,
    OPCODE_UNIFORM_1F,
@@ -6095,6 +6096,19 @@ save_VertexAttrib4fvARB(GLuint index, const GLfloat * v)
 }
 
 static void GLAPIENTRY
+save_PrimitiveRestartNV(void)
+{
+   /* Note: this is used when outside a glBegin/End pair in a display list */
+   GET_CURRENT_CONTEXT(ctx);
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   (void) alloc_instruction(ctx, OPCODE_PRIMITIVE_RESTART_NV, 0);
+   if (ctx->ExecuteFlag) {
+      CALL_PrimitiveRestartNV(ctx->Exec, ());
+   }
+}
+
+
+static void GLAPIENTRY
 save_BlitFramebufferEXT(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
                         GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
                         GLbitfield mask, GLenum filter)
@@ -8670,6 +8684,10 @@ execute_list(struct gl_context *ctx, GLuint list)
                                                 n[5].i, n[6].i, n[7].i, n[8].i,
                                                 n[9].i, n[10].e));
             break;
+         case OPCODE_PRIMITIVE_RESTART_NV:
+            CALL_PrimitiveRestartNV(ctx->Exec, ());
+            break;
+
          case OPCODE_USE_PROGRAM:
             CALL_UseProgram(ctx->Exec, (n[1].ui));
             break;
@@ -10460,6 +10478,8 @@ save_vtxfmt_init(GLvertexformat * vfmt)
    vfmt->VertexAttrib3fvARB = save_VertexAttrib3fvARB;
    vfmt->VertexAttrib4fARB = save_VertexAttrib4fARB;
    vfmt->VertexAttrib4fvARB = save_VertexAttrib4fvARB;
+
+   vfmt->PrimitiveRestartNV = save_PrimitiveRestartNV;
 }
 
 
