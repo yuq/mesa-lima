@@ -56,6 +56,7 @@ enum ac_func_attr {
 
 enum ac_target_machine_options {
 	AC_TM_SUPPORTS_SPILL = (1 << 0),
+	AC_TM_SISCHED = (1 << 1),
 };
 LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, enum ac_target_machine_options tm_options);
 

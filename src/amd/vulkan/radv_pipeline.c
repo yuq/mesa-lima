@@ -467,6 +467,8 @@ static struct radv_shader_variant *radv_shader_variant_create(struct radv_device
 	options.supports_spill = device->llvm_supports_spill;
 	if (options.supports_spill)
 		tm_options |= AC_TM_SUPPORTS_SPILL;
+	if (device->instance->perftest_flags & RADV_PERFTEST_SISCHED)
+		tm_options |= AC_TM_SISCHED;
 	tm = ac_create_target_machine(chip_family, tm_options);
 	ac_compile_nir_shader(tm, &binary, &variant->config,
 			      &variant->info, shader, &options, dump);
@@ -508,6 +510,8 @@ radv_pipeline_create_gs_copy_shader(struct radv_pipeline *pipeline,
 	options.chip_class = pipeline->device->physical_device->rad_info.chip_class;
 	if (options.supports_spill)
 		tm_options |= AC_TM_SUPPORTS_SPILL;
+	if (pipeline->device->instance->perftest_flags & RADV_PERFTEST_SISCHED)
+		tm_options |= AC_TM_SISCHED;
 	tm = ac_create_target_machine(chip_family, tm_options);
 	ac_create_gs_copy_shader(tm, nir, &binary, &variant->config, &variant->info, &options, dump_shader);
 	LLVMDisposeTargetMachine(tm);
