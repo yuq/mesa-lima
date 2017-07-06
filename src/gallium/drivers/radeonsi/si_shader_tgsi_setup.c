@@ -68,7 +68,6 @@ void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value)
 
 static void init_amdgpu_target()
 {
-	gallivm_init_llvm_targets();
 	LLVMInitializeAMDGPUTargetInfo();
 	LLVMInitializeAMDGPUTarget();
 	LLVMInitializeAMDGPUTargetMC();
