@@ -1852,7 +1852,6 @@ init_oa_sys_vars(struct brw_context *brw, const char *sysfs_dev_dir)
       __DRIscreen *screen = brw->screen->driScrnPriv;
       drm_i915_getparam_t gp;
       int ret;
-      int n_eus = 0;
       int slice_mask = 0;
       int ss_mask = 0;
       int s_max = devinfo->num_slices; /* maximum number of slices */
@@ -1878,12 +1877,6 @@ init_oa_sys_vars(struct brw_context *brw, const char *sysfs_dev_dir)
       } else
          return false;
 
-      gp.param = I915_PARAM_EU_TOTAL;
-      gp.value = &n_eus;
-      ret = drmIoctl(screen->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-      if (ret)
-         return false;
-
       gp.param = I915_PARAM_SLICE_MASK;
       gp.value = &slice_mask;
       ret = drmIoctl(screen->fd, DRM_IOCTL_I915_GETPARAM, &gp);
@@ -1896,7 +1889,7 @@ init_oa_sys_vars(struct brw_context *brw, const char *sysfs_dev_dir)
       if (ret)
          return false;
 
-      brw->perfquery.sys_vars.n_eus = n_eus;
+      brw->perfquery.sys_vars.n_eus = brw->screen->eu_total;
       brw->perfquery.sys_vars.n_eu_slices = __builtin_popcount(slice_mask);
       brw->perfquery.sys_vars.slice_mask = slice_mask;
 
