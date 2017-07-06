@@ -37,7 +37,7 @@
 #include "vbo_context.h"
 
 
-typedef void (*attr_func)(struct gl_context *ctx, GLint target, const GLfloat *);
+typedef void (*attr_func)(struct gl_context *ctx, GLint index, const GLfloat *);
 
 
 /* This file makes heavy use of the aliasing of NV vertex attributes
@@ -45,30 +45,30 @@ typedef void (*attr_func)(struct gl_context *ctx, GLint target, const GLfloat *)
  * attributes as currently implemented.
  */
 static void
-VertexAttrib1fvNV(struct gl_context *ctx, GLint target, const GLfloat *v)
+VertexAttrib1fvNV(struct gl_context *ctx, GLint index, const GLfloat *v)
 {
-   CALL_VertexAttrib1fvNV(ctx->Exec, (target, v));
+   CALL_VertexAttrib1fvNV(ctx->Exec, (index, v));
 }
 
 
 static void
-VertexAttrib2fvNV(struct gl_context *ctx, GLint target, const GLfloat *v)
+VertexAttrib2fvNV(struct gl_context *ctx, GLint index, const GLfloat *v)
 {
-   CALL_VertexAttrib2fvNV(ctx->Exec, (target, v));
+   CALL_VertexAttrib2fvNV(ctx->Exec, (index, v));
 }
 
 
 static void
-VertexAttrib3fvNV(struct gl_context *ctx, GLint target, const GLfloat *v)
+VertexAttrib3fvNV(struct gl_context *ctx, GLint index, const GLfloat *v)
 {
-   CALL_VertexAttrib3fvNV(ctx->Exec, (target, v));
+   CALL_VertexAttrib3fvNV(ctx->Exec, (index, v));
 }
 
 
 static void
-VertexAttrib4fvNV(struct gl_context *ctx, GLint target, const GLfloat *v)
+VertexAttrib4fvNV(struct gl_context *ctx, GLint index, const GLfloat *v)
 {
-   CALL_VertexAttrib4fvNV(ctx->Exec, (target, v));
+   CALL_VertexAttrib4fvNV(ctx->Exec, (index, v));
 }
 
 
@@ -81,7 +81,7 @@ static attr_func vert_attrfunc[4] = {
 
 
 struct loopback_attr {
-   GLint target;
+   GLint index;
    GLint sz;
    attr_func func;
 };
@@ -127,7 +127,7 @@ loopback_prim(struct gl_context *ctx,
       const GLfloat *tmp = data + la[0].sz;
 
       for (k = 1; k < nr; k++) {
-         la[k].func(ctx, la[k].target, tmp);
+         la[k].func(ctx, la[k].index, tmp);
          tmp += la[k].sz;
       }
 
@@ -184,7 +184,7 @@ vbo_loopback_vertex_list(struct gl_context *ctx,
     */
    for (i = 0; i < VBO_ATTRIB_MAX; i++) {
       if (attrsz[i]) {
-         la[nr].target = i;
+         la[nr].index = i;
          la[nr].sz = attrsz[i];
          la[nr].func = vert_attrfunc[attrsz[i]-1];
          nr++;
