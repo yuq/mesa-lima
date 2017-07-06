@@ -126,7 +126,9 @@ LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, enum ac
 	LLVMTargetRef target = ac_get_llvm_target(triple);
 
 	snprintf(features, sizeof(features),
-		 "+DumpCode,+vgpr-spilling,-fp32-denormals,-xnack");
+		 "+DumpCode,+vgpr-spilling,-fp32-denormals%s",
+		 family >= CHIP_VEGA10 ? ",+xnack" : ",-xnack");
+	
 	LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
 	                             target,
 	                             triple,
