@@ -121,14 +121,17 @@ static const char *ac_get_llvm_processor_name(enum radeon_family family)
 LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, enum ac_target_machine_options tm_options)
 {
 	assert(family >= CHIP_TAHITI);
-
+	char features[256];
 	const char *triple = (tm_options & AC_TM_SUPPORTS_SPILL) ? "amdgcn-mesa-mesa3d" : "amdgcn--";
 	LLVMTargetRef target = ac_get_llvm_target(triple);
+
+	snprintf(features, sizeof(features),
+		 "+DumpCode,+vgpr-spilling,-fp32-denormals,-xnack");
 	LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
 	                             target,
 	                             triple,
 	                             ac_get_llvm_processor_name(family),
-	                             "+DumpCode,+vgpr-spilling,-fp32-denormals,-xnack",
+				     features,
 	                             LLVMCodeGenLevelDefault,
 	                             LLVMRelocDefault,
 	                             LLVMCodeModelDefault);
