@@ -89,8 +89,6 @@ struct FetchJit : public Builder
 
 Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 {
-    static std::size_t fetchNum = 0;
-
     std::stringstream fnName("FetchShader_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
     fnName << ComputeCRC(0, &fetchState, sizeof(fetchState));
 

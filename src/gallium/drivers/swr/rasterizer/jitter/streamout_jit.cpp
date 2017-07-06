@@ -263,8 +263,6 @@ struct StreamOutJit : public Builder
 
     Function* Create(const STREAMOUT_COMPILE_STATE& state)
     {
-        static std::size_t soNum = 0;
-
         std::stringstream fnName("SO_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
         fnName << ComputeCRC(0, &state, sizeof(state));
 
