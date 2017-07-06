@@ -1108,13 +1108,23 @@ _save_Begin(GLenum mode)
 static void GLAPIENTRY
 _save_PrimitiveRestartNV(void)
 {
-   GLenum curPrim;
    GET_CURRENT_CONTEXT(ctx);
+   struct vbo_save_context *save = &vbo_context(ctx)->save;
 
-   curPrim = ctx->Driver.CurrentSavePrimitive;
+   if (save->prim_count == 0) {
+      /* We're not inside a glBegin/End pair, so calling glPrimitiverRestartNV
+       * is an error.
+       */
+      _mesa_compile_error(ctx, GL_INVALID_OPERATION,
+                          "glPrimitiveRestartNV called outside glBegin/End");
+   } else {
+      /* get current primitive mode */
+      GLenum curPrim = save->prim[save->prim_count - 1].mode;
 
-   _save_End();
-   _save_Begin(curPrim);
+      /* restart primitive */
+      CALL_End(GET_DISPATCH(), ());
+      vbo_save_NotifyBegin(ctx, curPrim);
+   }
 }
 
 
