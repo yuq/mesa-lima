@@ -344,7 +344,7 @@ static void si_dump_bo_list(struct si_context *sctx,
 
 		/* Print the usage. */
 		for (j = 0; j < 64; j++) {
-			if (!(saved->bo_list[i].priority_usage & (1llu << j)))
+			if (!(saved->bo_list[i].priority_usage & (1ull << j)))
 				continue;
 
 			fprintf(f, "%s%s", !hit ? "" : ", ", priority_to_string(j));
@@ -894,7 +894,7 @@ static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
 			}
 			continue;
 		}
-		timestamp = sec * 1000000llu + usec;
+		timestamp = sec * 1000000ull + usec;
 
 		/* If just updating the timestamp. */
 		if (!out_addr)

@@ -847,11 +847,11 @@ static void *r600_create_shader_state(struct pipe_context *ctx,
 			case TGSI_SEMANTIC_TESSOUTER:
 			case TGSI_SEMANTIC_PATCH:
 				sel->lds_patch_outputs_written_mask |=
-					1llu << r600_get_lds_unique_index(name, index);
+					1ull << r600_get_lds_unique_index(name, index);
 				break;
 			default:
 				sel->lds_outputs_written_mask |=
-					1llu << r600_get_lds_unique_index(name, index);
+					1ull << r600_get_lds_unique_index(name, index);
 			}
 		}
 		break;

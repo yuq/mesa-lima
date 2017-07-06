@@ -215,7 +215,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	if (!size)
 		return;
 
-	dma_clear_size = size & ~3llu;
+       dma_clear_size = size & ~3ull;
 
 	/* Mark the buffer range of destination as valid (initialized),
 	 * so that transfer_map knows it should wait for the GPU when mapping

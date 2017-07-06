@@ -7138,7 +7138,7 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 		if (colors_written == 0x1 && key->ps_epilog.states.last_cbuf > 0) {
 			/* Just set this if any of the colorbuffers are enabled. */
 			if (spi_format &
-			    ((1llu << (4 * (key->ps_epilog.states.last_cbuf + 1))) - 1))
+			    ((1ull << (4 * (key->ps_epilog.states.last_cbuf + 1))) - 1))
 				last_color_export = 0;
 		} else {
 			for (i = 0; i < 8; i++)
