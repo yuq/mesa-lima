@@ -101,7 +101,7 @@ genX(init_device_state)(struct anv_device *device)
    return anv_device_submit_simple_batch(device, &batch);
 }
 
-static inline uint32_t
+static uint32_t
 vk_to_gen_tex_filter(VkFilter filter, bool anisotropyEnable)
 {
    switch (filter) {
@@ -114,7 +114,7 @@ vk_to_gen_tex_filter(VkFilter filter, bool anisotropyEnable)
    }
 }
 
-static inline uint32_t
+static uint32_t
 vk_to_gen_max_anisotropy(float ratio)
 {
    return (anv_clamp_f(ratio, 2, 16) - 2) / 2;

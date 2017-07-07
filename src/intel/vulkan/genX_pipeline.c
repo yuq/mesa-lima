@@ -281,7 +281,7 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
    }
 }
 
-static inline void
+static void
 emit_urb_setup(struct anv_pipeline *pipeline)
 {
    unsigned entry_size[4];
@@ -1077,19 +1077,19 @@ emit_3dstate_streamout(struct anv_pipeline *pipeline,
    }
 }
 
-static inline uint32_t
+static uint32_t
 get_sampler_count(const struct anv_shader_bin *bin)
 {
    return DIV_ROUND_UP(bin->bind_map.sampler_count, 4);
 }
 
-static inline uint32_t
+static uint32_t
 get_binding_table_entry_count(const struct anv_shader_bin *bin)
 {
    return DIV_ROUND_UP(bin->bind_map.surface_count, 32);
 }
 
-static inline struct anv_address
+static struct anv_address
 get_scratch_address(struct anv_pipeline *pipeline,
                     gl_shader_stage stage,
                     const struct anv_shader_bin *bin)
@@ -1102,20 +1102,20 @@ get_scratch_address(struct anv_pipeline *pipeline,
    };
 }
 
-static inline uint32_t
+static uint32_t
 get_scratch_space(const struct anv_shader_bin *bin)
 {
    return ffs(bin->prog_data->total_scratch / 2048);
 }
 
-static inline uint32_t
+static uint32_t
 get_urb_output_offset()
 {
    /* Skip the VUE header and position slots */
    return 1;
 }
 
-static inline uint32_t
+static uint32_t
 get_urb_output_length(const struct anv_shader_bin *bin)
 {
    const struct brw_vue_prog_data *prog_data =
@@ -1333,7 +1333,7 @@ emit_3dstate_gs(struct anv_pipeline *pipeline)
    }
 }
 
-static inline bool
+static bool
 has_color_buffer_write_enabled(const struct anv_pipeline *pipeline)
 {
    const struct anv_shader_bin *shader_bin =
@@ -1418,7 +1418,7 @@ emit_3dstate_wm(struct anv_pipeline *pipeline, struct anv_subpass *subpass,
    }
 }
 
-static inline bool
+static bool
 is_dual_src_blend_factor(VkBlendFactor factor)
 {
    return factor == VK_BLEND_FACTOR_SRC1_COLOR ||

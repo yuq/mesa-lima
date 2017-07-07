@@ -441,7 +441,7 @@ anv_batch_bo_list_clone(const struct list_head *list,
  * Functions related to anv_batch_bo
  *-----------------------------------------------------------------------*/
 
-static inline struct anv_batch_bo *
+static struct anv_batch_bo *
 anv_cmd_buffer_current_batch_bo(struct anv_cmd_buffer *cmd_buffer)
 {
    return LIST_ENTRY(struct anv_batch_bo, cmd_buffer->batch_bos.prev, link);
@@ -846,7 +846,7 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
-static inline VkResult
+static VkResult
 anv_cmd_buffer_add_seen_bbos(struct anv_cmd_buffer *cmd_buffer,
                              struct list_head *list)
 {

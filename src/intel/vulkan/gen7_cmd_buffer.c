@@ -34,7 +34,7 @@
 #include "genxml/genX_pack.h"
 
 #if GEN_GEN == 7 && !GEN_IS_HASWELL
-static inline int64_t
+static int64_t
 clamp_int64(int64_t x, int64_t min, int64_t max)
 {
    if (x < min)

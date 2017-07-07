@@ -507,7 +507,7 @@ void genX(CmdWriteTimestamp)(
 
 #if GEN_GEN > 7 || GEN_IS_HASWELL
 
-static inline uint32_t
+static uint32_t
 mi_alu(uint32_t opcode, uint32_t operand1, uint32_t operand2)
 {
    struct GENX(MI_MATH_ALU_INSTRUCTION) instr = {

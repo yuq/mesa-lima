@@ -594,7 +594,7 @@ do_buffer_copy(struct blorp_batch *batch,
 /**
  * Returns the greatest common divisor of a and b that is a power of two.
  */
-static inline uint64_t
+static uint64_t
 gcd_pow2_u64(uint64_t a, uint64_t b)
 {
    assert(a > 0 || b > 0);
