@@ -44,7 +44,7 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = \
 	$(VISIBILITY_CFLAGS) \
-	-Wno-override-init
+	$(WNO_OVERRIDE_INIT)
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)

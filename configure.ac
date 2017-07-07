@@ -339,6 +339,10 @@ esac
 AC_SUBST([VISIBILITY_CFLAGS])
 AC_SUBST([VISIBILITY_CXXFLAGS])
 
+AX_CHECK_COMPILE_FLAG([-Wno-override-init],                    [WNO_OVERRIDE_INIT="-Wno-override-init"])         # gcc
+AX_CHECK_COMPILE_FLAG([-Wno-initializer-overrides],            [WNO_OVERRIDE_INIT="-Wno-initializer-overrides"]) # clang
+AC_SUBST([WNO_OVERRIDE_INIT])
+
 dnl
 dnl Optional flags, check for compiler support
 dnl
