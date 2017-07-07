@@ -2251,7 +2251,6 @@ const __DRIextension *galliumdrm_driver_extensions[] = {
     &driImageDriverExtension.base,
     &driDRI2Extension.base,
     &gallium_config_options.base,
-    &dri2FenceExtension.base,
     NULL
 };
 
