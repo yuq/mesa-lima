@@ -88,7 +88,6 @@
 #include <string.h>
 #include "c99_compat.h"
 #include "c11/threads.h"
-#include "GL/mesa_glinterop.h"
 #include "util/macros.h"
 
 #include "eglglobals.h"
@@ -102,6 +101,7 @@
 #include "eglimage.h"
 #include "eglsync.h"
 
+#include "GL/mesa_glinterop.h"
 
 /**
  * Macros to help return an API entrypoint.

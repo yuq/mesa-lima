@@ -46,7 +46,6 @@
 #endif
 #include <GL/gl.h>
 #include <GL/internal/dri_interface.h>
-#include "GL/mesa_glinterop.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -61,6 +60,7 @@
 #endif
 
 #include "egl_dri2.h"
+#include "GL/mesa_glinterop.h"
 #include "loader/loader.h"
 #include "util/u_atomic.h"
 #include "util/u_vector.h"
