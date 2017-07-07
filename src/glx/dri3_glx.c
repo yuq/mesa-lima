@@ -357,7 +357,10 @@ dri3_create_drawable(struct glx_screen *base, XID xDrawable,
 {
    struct dri3_drawable *pdraw;
    struct dri3_screen *psc = (struct dri3_screen *) base;
+   const struct dri3_display *const pdp = (struct dri3_display *)
+      base->display->dri3Display;
    __GLXDRIconfigPrivate *config = (__GLXDRIconfigPrivate *) config_base;
+   bool has_multibuffer = false;
 
    pdraw = calloc(1, sizeof(*pdraw));
    if (!pdraw)
@@ -368,11 +371,16 @@ dri3_create_drawable(struct glx_screen *base, XID xDrawable,
    pdraw->base.drawable = drawable;
    pdraw->base.psc = &psc->base;
 
+   if ((psc->image && psc->image->base.version >= 15) &&
+       (pdp->dri3Major > 1 || (pdp->dri3Major == 1 && pdp->dri3Minor >= 2)))
+      has_multibuffer = true;
+
    (void) __glXInitialize(psc->base.dpy);
 
    if (loader_dri3_drawable_init(XGetXCBConnection(base->dpy),
                                  xDrawable, psc->driScreen,
-                                 psc->is_different_gpu, config->driConfig,
+                                 psc->is_different_gpu, has_multibuffer,
+                                 config->driConfig,
                                  &psc->loader_dri3_ext, &glx_dri3_vtable,
                                  &pdraw->loader_drawable)) {
       free(pdraw);
