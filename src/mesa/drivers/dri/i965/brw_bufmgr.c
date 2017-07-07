@@ -831,10 +831,12 @@ brw_bo_get_subdata(struct brw_bo *bo, uint64_t offset,
 
 /** Waits for all GPU rendering with the object to have completed. */
 void
-brw_bo_wait_rendering(struct brw_context *brw, struct brw_bo *bo)
+brw_bo_wait_rendering(struct brw_bo *bo)
 {
-   set_domain(brw, "waiting for",
-              bo, I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
+   /* We require a kernel recent enough for WAIT_IOCTL support.
+    * See intel_init_bufmgr()
+    */
+   brw_bo_wait(bo, -1);
 }
 
 /**

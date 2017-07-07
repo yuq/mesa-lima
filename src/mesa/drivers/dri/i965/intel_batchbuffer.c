@@ -497,7 +497,7 @@ throttle(struct brw_context *brw)
             /* Pass NULL rather than brw so we avoid perf_debug warnings;
              * stalling is common and expected here...
              */
-            brw_bo_wait_rendering(NULL, brw->throttle_batch[1]);
+            brw_bo_wait_rendering(brw->throttle_batch[1]);
          }
          brw_bo_unreference(brw->throttle_batch[1]);
       }
@@ -723,7 +723,7 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
 
    if (unlikely(INTEL_DEBUG & DEBUG_SYNC)) {
       fprintf(stderr, "waiting for idle\n");
-      brw_bo_wait_rendering(brw, brw->batch.bo);
+      brw_bo_wait_rendering(brw->batch.bo);
    }
 
    /* Start a new batch buffer. */

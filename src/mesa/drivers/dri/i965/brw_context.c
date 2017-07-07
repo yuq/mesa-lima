@@ -256,7 +256,7 @@ intel_finish(struct gl_context * ctx)
    intel_glFlush(ctx);
 
    if (brw->batch.last_bo)
-      brw_bo_wait_rendering(brw, brw->batch.last_bo);
+      brw_bo_wait_rendering(brw->batch.last_bo);
 }
 
 static void

@@ -1350,7 +1350,7 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
    if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
 
-   brw_bo_wait_rendering(brw, bo);
+   brw_bo_wait_rendering(bo);
 
    /* Due to a race condition between the OA unit signaling report
     * availability and the report actually being written into memory,

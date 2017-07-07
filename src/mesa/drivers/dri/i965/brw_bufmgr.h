@@ -227,7 +227,7 @@ int brw_bo_get_subdata(struct brw_bo *bo, uint64_t offset,
  * bo_subdata, etc.  It is merely a way for the driver to implement
  * glFinish.
  */
-void brw_bo_wait_rendering(struct brw_context *brw, struct brw_bo *bo);
+void brw_bo_wait_rendering(struct brw_bo *bo);
 
 /**
  * Tears down the buffer manager instance.
