@@ -8,7 +8,7 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141764 bytes, from 2017-07-05 00:40:13)
+- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141876 bytes, from 2017-07-07 04:12:33)
 - /home/ilia/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-11 01:04:14)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-07-04 02:59:47)
 - /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-07-04 02:59:47)
@@ -4096,6 +4096,8 @@ static inline uint32_t A5XX_SP_FS_MRT_REG_COLOR_FORMAT(enum a5xx_color_fmt val)
 {
 	return ((val) << A5XX_SP_FS_MRT_REG_COLOR_FORMAT__SHIFT) & A5XX_SP_FS_MRT_REG_COLOR_FORMAT__MASK;
 }
+#define A5XX_SP_FS_MRT_REG_COLOR_SINT				0x00000100
+#define A5XX_SP_FS_MRT_REG_COLOR_UINT				0x00000200
 #define A5XX_SP_FS_MRT_REG_COLOR_SRGB				0x00000400
 
 #define REG_A5XX_UNKNOWN_E5DB					0x0000e5db

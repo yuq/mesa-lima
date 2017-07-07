@@ -58,7 +58,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	for (i = 0; i < A5XX_MAX_RENDER_TARGETS; i++) {
 		enum a5xx_color_fmt format = 0;
 		enum a3xx_color_swap swap = WZYX;
-		bool srgb = false;
+		bool srgb = false, sint = false, uint = false;
 		struct fd_resource *rsc = NULL;
 		struct fd_resource_slice *slice = NULL;
 		uint32_t stride = 0;
@@ -76,6 +76,8 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			format = fd5_pipe2color(pformat);
 			swap = fd5_pipe2swap(pformat);
 			srgb = util_format_is_srgb(pformat);
+			sint = util_format_is_pure_sint(pformat);
+			uint = util_format_is_pure_uint(pformat);
 
 			debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
@@ -110,6 +112,8 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 
 		OUT_PKT4(ring, REG_A5XX_SP_FS_MRT_REG(i), 1);
 		OUT_RING(ring, A5XX_SP_FS_MRT_REG_COLOR_FORMAT(format) |
+				COND(sint, A5XX_SP_FS_MRT_REG_COLOR_SINT) |
+				COND(uint, A5XX_SP_FS_MRT_REG_COLOR_UINT) |
 				COND(srgb, A5XX_SP_FS_MRT_REG_COLOR_SRGB));
 
 		/* when we support UBWC, these would be the system memory
