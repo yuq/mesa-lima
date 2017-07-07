@@ -26,7 +26,7 @@
 #define __gen_address_type uint64_t
 #define __gen_user_data void
 
-static inline uint64_t
+static uint64_t
 __gen_combine_address(void *data, void *loc, uint64_t addr, uint32_t delta)
 {
    return addr + delta;
@@ -130,7 +130,7 @@ get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
  * hardware.  Note that this does NOT give you the actual hardware enum values
  * but an index into the isl_to_gen_[hv]align arrays above.
  */
-static inline struct isl_extent3d
+static struct isl_extent3d
 get_image_alignment(const struct isl_surf *surf)
 {
    if (GEN_GEN >= 9) {

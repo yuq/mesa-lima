@@ -26,7 +26,7 @@
 #define __gen_address_type uint64_t
 #define __gen_user_data void
 
-static inline uint64_t
+static uint64_t
 __gen_combine_address(void *data, void *loc, uint64_t addr, uint32_t delta)
 {
    return addr + delta;
