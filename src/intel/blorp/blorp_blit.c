@@ -1420,6 +1420,12 @@ blorp_surf_convert_to_single_slice(const struct isl_device *isl_dev,
    uint32_t tile_x_px, tile_y_px;
    surf_get_intratile_offset_px(info, &tile_x_px, &tile_y_px);
 
+   /* Even for cube maps there will be only single face, therefore drop the
+    * corresponding flag if present.
+    */
+   const isl_surf_usage_flags_t without_cube_map_flag =
+      info->surf.usage & (~ISL_SURF_USAGE_CUBE_BIT);
+
    struct isl_surf_init_info init_info = {
       .dim = ISL_SURF_DIM_2D,
       .format = info->surf.format,
@@ -1430,7 +1436,7 @@ blorp_surf_convert_to_single_slice(const struct isl_device *isl_dev,
       .array_len = 1,
       .samples = info->surf.samples,
       .row_pitch = info->surf.row_pitch,
-      .usage = info->surf.usage,
+      .usage = without_cube_map_flag,
       .tiling_flags = 1 << info->surf.tiling,
    };
 
