@@ -708,17 +708,15 @@ emit_fast_htile_clear(struct radv_cmd_buffer *cmd_buffer,
 	if (clear_rect->layerCount != iview->image->info.array_size)
 		goto fail;
 
-	/* Don't do stencil clears till we have figured out if the clear words are
-	 * correct. */
-	if (vk_format_aspects(iview->image->vk_format) & VK_IMAGE_ASPECT_STENCIL_BIT)
+	if ((clear_value.depth != 0.0 && clear_value.depth != 1.0) || !(aspects & VK_IMAGE_ASPECT_DEPTH_BIT))
 		goto fail;
 
-	if (clear_value.depth == 1.0)
-		clear_word = 0xfffffff0;
-	else if (clear_value.depth == 0.0)
-		clear_word = 0;
-	else
-		goto fail;
+	if (vk_format_aspects(iview->image->vk_format) & VK_IMAGE_ASPECT_STENCIL_BIT) {
+		if (clear_value.stencil != 0 || !(aspects & VK_IMAGE_ASPECT_STENCIL_BIT))
+			goto fail;
+		clear_word = clear_value.depth ? 0xfffc0000 : 0;
+	} else
+		clear_word = clear_value.depth ? 0xfffffff0 : 0;
 
 	if (pre_flush) {
 		cmd_buffer->state.flush_bits |= (RADV_CMD_FLAG_FLUSH_AND_INV_DB |
