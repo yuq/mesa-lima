@@ -2418,7 +2418,7 @@ class add_uniform_to_shader : public program_resource_visitor {
 public:
    add_uniform_to_shader(struct gl_shader_program *shader_program,
 			 struct gl_program_parameter_list *params)
-      : shader_program(shader_program), params(params), idx(-1)
+      : params(params), idx(-1)
    {
       /* empty */
    }
@@ -2437,7 +2437,6 @@ private:
                             const enum glsl_interface_packing packing,
                             bool last_field);
 
-   struct gl_shader_program *shader_program;
    struct gl_program_parameter_list *params;
    int idx;
    ir_variable *var;
