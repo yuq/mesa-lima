@@ -1951,7 +1951,7 @@ vec4_visitor::convert_to_hw_regs()
 {
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (int i = 0; i < 3; i++) {
-         struct src_reg &src = inst->src[i];
+         class src_reg &src = inst->src[i];
          struct brw_reg reg;
          switch (src.file) {
          case VGRF: {
