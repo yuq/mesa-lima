@@ -55,6 +55,14 @@ libmesaswr_la_CXXFLAGS = \
 	$(SWR_AVX_CXXFLAGS) \
 	$(COMMON_CXXFLAGS)
 
+if HAVE_SWR_AVX
+libmesaswr_la_CXXFLAGS += -DHAVE_SWR_AVX
+endif
+
+if HAVE_SWR_AVX2
+libmesaswr_la_CXXFLAGS += -DHAVE_SWR_AVX2
+endif
+
 COMMON_SOURCES = \
 	$(ARCHRAST_CXX_SOURCES) \
 	$(COMMON_CXX_SOURCES) \
@@ -224,7 +232,10 @@ COMMON_LDFLAGS = \
 	$(GC_SECTIONS) \
 	$(NO_UNDEFINED)
 
-lib_LTLIBRARIES = libswrAVX.la libswrAVX2.la
+lib_LTLIBRARIES =
+
+if HAVE_SWR_AVX
+lib_LTLIBRARIES += libswrAVX.la
 
 libswrAVX_la_CXXFLAGS = \
 	$(SWR_AVX_CXXFLAGS) \
@@ -236,7 +247,10 @@ libswrAVX_la_SOURCES = \
 
 libswrAVX_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)
+endif
 
+if HAVE_SWR_AVX2
+lib_LTLIBRARIES += libswrAVX2.la
 libswrAVX2_la_CXXFLAGS = \
 	$(SWR_AVX2_CXXFLAGS) \
 	-DKNOB_ARCH=KNOB_ARCH_AVX2 \
@@ -247,6 +261,7 @@ libswrAVX2_la_SOURCES = \
 
 libswrAVX2_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)
+endif
 
 include $(top_srcdir)/install-gallium-links.mk
 

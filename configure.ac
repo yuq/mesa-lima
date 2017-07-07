@@ -2352,6 +2352,15 @@ AC_ARG_WITH([d3d-libdir],
     [D3D_DRIVER_INSTALL_DIR="${libdir}/d3d"])
 AC_SUBST([D3D_DRIVER_INSTALL_DIR])
 
+dnl Architectures to build SWR library for
+
+AC_ARG_WITH([swr-archs],
+    [AS_HELP_STRING([--with-swr-archs@<:@=DIRS...@:>@],
+        [comma delimited swr architectures list, e.g.
+        "avx,avx2" @<:@default="avx,avx2"@:>@])],
+    [with_swr_archs="$withval"],
+    [with_swr_archs="avx,avx2"])
+
 dnl
 dnl r300 doesn't strictly require LLVM, but for performance reasons we
 dnl highly recommend LLVM usage. So require it at least on x86 and x86_64
@@ -2499,10 +2508,29 @@ if test -n "$with_gallium_drivers"; then
                 SWR_AVX_CXXFLAGS
             AC_SUBST([SWR_AVX_CXXFLAGS])
 
-            swr_require_cxx_feature_flags "AVX2" "defined(__AVX2__)" \
-                ",-mavx2 -mfma -mbmi2 -mf16c,-march=core-avx2" \
-                SWR_AVX2_CXXFLAGS
-            AC_SUBST([SWR_AVX2_CXXFLAGS])
+            swr_archs=`IFS=', '; echo $with_swr_archs`
+            for arch in $swr_archs; do
+                case "x$arch" in
+                xavx)
+                    HAVE_SWR_AVX=yes
+                    ;;
+                xavx2)
+                    swr_require_cxx_feature_flags "AVX2" "defined(__AVX2__)" \
+                        ",-mavx2 -mfma -mbmi2 -mf16c,-march=core-avx2" \
+                        SWR_AVX2_CXXFLAGS
+                    AC_SUBST([SWR_AVX2_CXXFLAGS])
+                    HAVE_SWR_AVX2=yes
+                    ;;
+                *)
+                    AC_MSG_ERROR([unknown SWR build architecture '$arch'])
+                    ;;
+                esac
+            done
+
+            if test "x$HAVE_SWR_AVX" != xyes -a \
+                    "x$HAVE_SWR_AVX2" != xyes; then
+               AC_MSG_ERROR([swr enabled but no swr architectures selected])
+            fi
 
             HAVE_GALLIUM_SWR=yes
             ;;
@@ -2540,6 +2568,9 @@ if test "x$enable_llvm" = "xyes" -a "$with_gallium_drivers"; then
     llvm_require_version $LLVM_REQUIRED_GALLIUM "gallium"
     llvm_add_default_components "gallium"
 fi
+
+AM_CONDITIONAL(HAVE_SWR_AVX, test "x$HAVE_SWR_AVX" = xyes)
+AM_CONDITIONAL(HAVE_SWR_AVX2, test "x$HAVE_SWR_AVX2" = xyes)
 
 dnl We need to validate some needed dependencies for renderonly drivers.
 
@@ -2978,6 +3009,11 @@ if test "x$enable_lmsensors" != xyes; then
     echo "        HUD lmsensors:   no"
 else
     echo "        HUD lmsensors:   yes"
+fi
+
+echo ""
+if test "x$HAVE_GALLIUM_SWR" != x; then
+    echo "        SWR archs:       $swr_archs"
 fi
 
 dnl Libraries

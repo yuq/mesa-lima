@@ -245,6 +245,7 @@ source += [
 
 # main SWR lib
 envSWR = envavx.Clone() # pick up the arch flag for intrinsic usage
+envSWR.Append(CPPDEFINES = ['HAVE_SWR_AVX', 'HAVE_SWR_AVX2'])
 swr = envSWR.ConvenienceLibrary(
     target = 'swr',
     source = source,
