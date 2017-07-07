@@ -548,7 +548,8 @@ isl_choose_image_alignment_el(const struct isl_device *dev,
 static enum isl_dim_layout
 isl_surf_choose_dim_layout(const struct isl_device *dev,
                            enum isl_surf_dim logical_dim,
-                           enum isl_tiling tiling)
+                           enum isl_tiling tiling,
+                           isl_surf_usage_flags_t usage)
 {
    /* Sandy bridge needs a special layout for HiZ and stencil. */
    if (ISL_DEV_GEN(dev) == 6 &&
@@ -584,6 +585,16 @@ isl_surf_choose_dim_layout(const struct isl_device *dev,
       switch (logical_dim) {
       case ISL_SURF_DIM_1D:
       case ISL_SURF_DIM_2D:
+         /* From the G45 PRM Vol. 1a, "6.17.4.1 Hardware Cube Map Layout":
+          *
+          * The cube face textures are stored in the same way as 3D surfaces
+          * are stored (see section 6.17.5 for details).  For cube surfaces,
+          * however, the depth is equal to the number of faces (always 6) and 
+          * is not reduced for each MIP.
+          */
+         if (ISL_DEV_GEN(dev) == 4 && (usage & ISL_SURF_USAGE_CUBE_BIT))
+            return ISL_DIM_LAYOUT_GEN4_3D;
+
          return ISL_DIM_LAYOUT_GEN4_2D;
       case ISL_SURF_DIM_3D:
          return ISL_DIM_LAYOUT_GEN4_3D;
@@ -635,8 +646,11 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       break;
 
    case ISL_SURF_DIM_2D:
-      assert(dim_layout == ISL_DIM_LAYOUT_GEN4_2D ||
-             dim_layout == ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ);
+      if (ISL_DEV_GEN(dev) == 4 && (info->usage & ISL_SURF_USAGE_CUBE_BIT))
+         assert(dim_layout == ISL_DIM_LAYOUT_GEN4_3D);
+      else
+         assert(dim_layout == ISL_DIM_LAYOUT_GEN4_2D ||
+                dim_layout == ISL_DIM_LAYOUT_GEN6_STENCIL_HIZ);
 
       if (tiling == ISL_TILING_Ys && info->samples > 1)
          isl_finishme("%s:%s: multisample TileYs layout", __FILE__, __func__);
@@ -952,7 +966,21 @@ isl_calc_phys_total_extent_el_gen4_3d(
    const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
 
    assert(info->samples == 1);
-   assert(phys_level0_sa->array_len == 1);
+
+   if (info->dim != ISL_SURF_DIM_3D) {
+      /* From the G45 PRM Vol. 1a, "6.17.4.1 Hardware Cube Map Layout":
+       *
+       * The cube face textures are stored in the same way as 3D surfaces
+       * are stored (see section 6.17.5 for details).  For cube surfaces,
+       * however, the depth is equal to the number of faces (always 6) and
+       * is not reduced for each MIP.
+       */
+      assert(ISL_DEV_GEN(dev) == 4);
+      assert(info->usage & ISL_SURF_USAGE_CUBE_BIT);
+      assert(phys_level0_sa->array_len == 6);
+   } else {
+      assert(phys_level0_sa->array_len == 1);
+   }
 
    uint32_t total_w = 0;
    uint32_t total_h = 0;
@@ -960,11 +988,12 @@ isl_calc_phys_total_extent_el_gen4_3d(
    uint32_t W0 = phys_level0_sa->w;
    uint32_t H0 = phys_level0_sa->h;
    uint32_t D0 = phys_level0_sa->d;
+   uint32_t A0 = phys_level0_sa->a;
 
    for (uint32_t l = 0; l < info->levels; ++l) {
       uint32_t level_w = isl_align_npot(isl_minify(W0, l), image_align_sa->w);
       uint32_t level_h = isl_align_npot(isl_minify(H0, l), image_align_sa->h);
-      uint32_t level_d = isl_align_npot(isl_minify(D0, l), image_align_sa->d);
+      uint32_t level_d = info->dim == ISL_SURF_DIM_3D ? isl_minify(D0, l) : A0;
 
       uint32_t max_layers_horiz = MIN(level_d, 1u << l);
       uint32_t max_layers_vert = isl_align(level_d, 1u << l) / (1u << l);
@@ -1427,7 +1456,7 @@ isl_surf_init_s(const struct isl_device *dev,
    isl_tiling_get_info(tiling, fmtl->bpb, &tile_info);
 
    const enum isl_dim_layout dim_layout =
-      isl_surf_choose_dim_layout(dev, info->dim, tiling);
+      isl_surf_choose_dim_layout(dev, info->dim, tiling, info->usage);
 
    enum isl_msaa_layout msaa_layout;
    if (!isl_choose_msaa_layout(dev, info, tiling, &msaa_layout))
