@@ -374,7 +374,7 @@ ddebug_screen_create(struct pipe_screen *screen)
 
       if (sscanf(option+8, "%u", &apitrace_dump_call) != 1)
          return screen;
-   } else if (!strncmp(option, "pipelined", 8)) {
+   } else if (!strncmp(option, "pipelined", 9)) {
       mode = DD_DETECT_HANGS_PIPELINED;
 
       if (sscanf(option+10, "%u", &timeout) != 1)
