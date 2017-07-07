@@ -100,7 +100,7 @@ __gen_combine_address(struct brw_context *brw, void *location,
    }
 }
 
-static inline struct brw_address
+static struct brw_address
 rw_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
@@ -110,7 +110,7 @@ rw_bo(struct brw_bo *bo, uint32_t offset)
    };
 }
 
-static inline struct brw_address
+static struct brw_address
 ro_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
@@ -119,7 +119,7 @@ ro_bo(struct brw_bo *bo, uint32_t offset)
    };
 }
 
-static inline struct brw_address
+static struct brw_address
 ggtt_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
@@ -130,13 +130,13 @@ ggtt_bo(struct brw_bo *bo, uint32_t offset)
 }
 
 #if GEN_GEN == 4
-static inline struct brw_address
+static struct brw_address
 KSP(struct brw_context *brw, uint32_t offset)
 {
    return ro_bo(brw->cache.bo, offset);
 }
 #else
-static inline uint32_t
+static uint32_t
 KSP(struct brw_context *brw, uint32_t offset)
 {
    return offset;
@@ -2201,7 +2201,7 @@ const struct brw_tracked_state genX(cc_vp) = {
 
 /* ---------------------------------------------------------------------- */
 
-static inline void
+static void
 set_scissor_bits(const struct gl_context *ctx, int i,
                  bool render_to_fbo, unsigned fb_width, unsigned fb_height,
                  struct GENX(SCISSOR_RECT) *sc)
@@ -3656,7 +3656,7 @@ genX(upload_3dstate_so_buffers)(struct brw_context *brw)
 #endif
 }
 
-static inline bool
+static bool
 query_active(struct gl_query_object *q)
 {
    return q && q->Active;
