@@ -148,9 +148,6 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    struct drm_i915_gem_relocation_entry *entry;
    int index;
 
-   const uint32_t domain =
-      (target_bo->flags & EXEC_OBJECT_WRITE) ? I915_GEM_DOMAIN_RENDER : 0;
-
    VkResult result = anv_reloc_list_grow(list, alloc, 1);
    if (result != VK_SUCCESS)
       return result;
@@ -163,8 +160,8 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    entry->delta = delta;
    entry->offset = offset;
    entry->presumed_offset = target_bo->offset;
-   entry->read_domains = domain;
-   entry->write_domain = domain;
+   entry->read_domains = 0;
+   entry->write_domain = 0;
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(entry, sizeof(*entry)));
 
    return VK_SUCCESS;
