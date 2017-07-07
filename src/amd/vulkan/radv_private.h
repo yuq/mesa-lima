@@ -547,6 +547,8 @@ struct radv_device {
 
 	/* Backup in-memory cache to be used if the app doesn't provide one */
 	struct radv_pipeline_cache *                mem_cache;
+
+	uint32_t image_mrt_offset_counter;
 };
 
 struct radv_device_memory {

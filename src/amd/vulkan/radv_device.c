@@ -2814,7 +2814,8 @@ radv_initialise_color_surface(struct radv_device *device,
 	}
 
 	cb->cb_color_base = va >> 8;
-
+	if (device->physical_device->rad_info.chip_class < GFX9)
+		cb->cb_color_base |= iview->image->surface.u.legacy.tile_swizzle;
 	/* CMASK variables */
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	va += iview->image->cmask.offset;
@@ -2823,6 +2824,8 @@ radv_initialise_color_surface(struct radv_device *device,
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	va += iview->image->dcc_offset;
 	cb->cb_dcc_base = va >> 8;
+	if (device->physical_device->rad_info.chip_class < GFX9)
+		cb->cb_dcc_base |= iview->image->surface.u.legacy.tile_swizzle;
 
 	uint32_t max_slice = radv_surface_layer_count(iview);
 	cb->cb_color_view = S_028C6C_SLICE_START(iview->base_layer) |
@@ -2838,6 +2841,8 @@ radv_initialise_color_surface(struct radv_device *device,
 	if (iview->image->fmask.size) {
 		va = device->ws->buffer_get_va(iview->bo) + iview->image->offset + iview->image->fmask.offset;
 		cb->cb_color_fmask = va >> 8;
+		if (device->physical_device->rad_info.chip_class < GFX9)
+			cb->cb_color_fmask |= iview->image->surface.u.legacy.tile_swizzle;
 	} else {
 		cb->cb_color_fmask = cb->cb_color_base;
 	}

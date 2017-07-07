@@ -692,6 +692,20 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		surf->htile_size *= 2;
 
 	surf->is_linear = surf->u.legacy.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
+
+	/* workout base swizzle */
+	if (!(surf->flags & RADEON_SURF_Z_OR_SBUFFER)) {
+		ADDR_COMPUTE_BASE_SWIZZLE_INPUT AddrBaseSwizzleIn = {0};
+		ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT AddrBaseSwizzleOut = {0};
+
+		AddrBaseSwizzleIn.surfIndex = config->info.surf_index;
+		AddrBaseSwizzleIn.tileIndex = AddrSurfInfoIn.tileIndex;
+		AddrBaseSwizzleIn.macroModeIndex = AddrSurfInfoOut.macroModeIndex;
+		AddrBaseSwizzleIn.pTileInfo = AddrSurfInfoOut.pTileInfo;
+		AddrBaseSwizzleIn.tileMode = AddrSurfInfoOut.tileMode;
+		AddrComputeBaseSwizzle(addrlib, &AddrBaseSwizzleIn, &AddrBaseSwizzleOut);
+		surf->u.legacy.tile_swizzle = AddrBaseSwizzleOut.tileSwizzle;
+	}
 	return 0;
 }
 
