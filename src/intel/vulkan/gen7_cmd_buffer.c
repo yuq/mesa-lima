@@ -33,6 +33,7 @@
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
+#if GEN_GEN == 7 && !GEN_IS_HASWELL
 static inline int64_t
 clamp_int64(int64_t x, int64_t min, int64_t max)
 {
@@ -44,7 +45,6 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
       return max;
 }
 
-#if GEN_GEN == 7 && !GEN_IS_HASWELL
 void
 gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
 {
