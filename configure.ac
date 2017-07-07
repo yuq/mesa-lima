@@ -2357,7 +2357,7 @@ dnl Architectures to build SWR library for
 AC_ARG_WITH([swr-archs],
     [AS_HELP_STRING([--with-swr-archs@<:@=DIRS...@:>@],
         [comma delimited swr architectures list, e.g.
-        "avx,avx2" @<:@default="avx,avx2"@:>@])],
+        "avx,avx2,knl,skx" @<:@default="avx,avx2"@:>@])],
     [with_swr_archs="$withval"],
     [with_swr_archs="avx,avx2"])
 
@@ -2521,6 +2521,20 @@ if test -n "$with_gallium_drivers"; then
                     AC_SUBST([SWR_AVX2_CXXFLAGS])
                     HAVE_SWR_AVX2=yes
                     ;;
+                xknl)
+                    swr_require_cxx_feature_flags "KNL" "defined(__AVX512F__) && defined(__AVX512ER__)" \
+                        ",-march=knl,-xMIC-AVX512" \
+                        SWR_KNL_CXXFLAGS
+                    AC_SUBST([SWR_KNL_CXXFLAGS])
+                    HAVE_SWR_KNL=yes
+                    ;;
+                xskx)
+                    swr_require_cxx_feature_flags "SKX" "defined(__AVX512F__) && defined(__AVX512BW__)" \
+                        ",-march=skylake-avx512,-xCORE-AVX512" \
+                        SWR_SKX_CXXFLAGS
+                    AC_SUBST([SWR_SKX_CXXFLAGS])
+                    HAVE_SWR_SKX=yes
+                    ;;
                 *)
                     AC_MSG_ERROR([unknown SWR build architecture '$arch'])
                     ;;
@@ -2528,7 +2542,9 @@ if test -n "$with_gallium_drivers"; then
             done
 
             if test "x$HAVE_SWR_AVX" != xyes -a \
-                    "x$HAVE_SWR_AVX2" != xyes; then
+                    "x$HAVE_SWR_AVX2" != xyes -a \
+                    "x$HAVE_SWR_KNL" != xyes -a \
+                    "x$HAVE_SWR_SKX" != xyes -a; then
                AC_MSG_ERROR([swr enabled but no swr architectures selected])
             fi
 
@@ -2571,6 +2587,8 @@ fi
 
 AM_CONDITIONAL(HAVE_SWR_AVX, test "x$HAVE_SWR_AVX" = xyes)
 AM_CONDITIONAL(HAVE_SWR_AVX2, test "x$HAVE_SWR_AVX2" = xyes)
+AM_CONDITIONAL(HAVE_SWR_KNL, test "x$HAVE_SWR_KNL" = xyes)
+AM_CONDITIONAL(HAVE_SWR_SKX, test "x$HAVE_SWR_SKX" = xyes)
 
 dnl We need to validate some needed dependencies for renderonly drivers.
 

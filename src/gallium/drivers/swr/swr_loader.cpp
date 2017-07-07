@@ -38,6 +38,26 @@ swr_create_screen(struct sw_winsys *winsys)
 
    util_cpu_detect();
 
+   if (!strlen(filename) &&
+       util_cpu_caps.has_avx512f && util_cpu_caps.has_avx512er) {
+#if HAVE_SWR_KNL
+      fprintf(stderr, "KNL ");
+      sprintf(filename, "%s%s%s", UTIL_DL_PREFIX, "swrKNL", UTIL_DL_EXT);
+#else
+      fprintf(stderr, "KNL (not built) ");
+#endif
+   }
+
+   if (!strlen(filename) &&
+       util_cpu_caps.has_avx512f && util_cpu_caps.has_avx512bw) {
+#if HAVE_SWR_SKX
+      fprintf(stderr, "SKX ");
+      sprintf(filename, "%s%s%s", UTIL_DL_PREFIX, "swrSKX", UTIL_DL_EXT);
+#else
+      fprintf(stderr, "SKX (not built) ");
+#endif
+   }
+
    if (!strlen(filename) && util_cpu_caps.has_avx2) {
 #if HAVE_SWR_AVX2
       fprintf(stderr, "AVX2 ");

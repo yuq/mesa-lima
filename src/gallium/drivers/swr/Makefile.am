@@ -63,6 +63,14 @@ if HAVE_SWR_AVX2
 libmesaswr_la_CXXFLAGS += -DHAVE_SWR_AVX2
 endif
 
+if HAVE_SWR_KNL
+libmesaswr_la_CXXFLAGS += -DHAVE_SWR_KNL
+endif
+
+if HAVE_SWR_SKX
+libmesaswr_la_CXXFLAGS += -DHAVE_SWR_SKX
+endif
+
 COMMON_SOURCES = \
 	$(ARCHRAST_CXX_SOURCES) \
 	$(COMMON_CXX_SOURCES) \
@@ -260,6 +268,36 @@ libswrAVX2_la_SOURCES = \
 	$(COMMON_SOURCES)
 
 libswrAVX2_la_LDFLAGS = \
+	$(COMMON_LDFLAGS)
+endif
+
+if HAVE_SWR_KNL
+lib_LTLIBRARIES += libswrKNL.la
+
+libswrKNL_la_CXXFLAGS = \
+	$(SWR_KNL_CXXFLAGS) \
+	-DKNOB_ARCH=KNOB_ARCH_AVX512 -DAVX512F_STRICT \
+	$(COMMON_CXXFLAGS)
+
+libswrKNL_la_SOURCES = \
+	$(COMMON_SOURCES)
+
+libswrKNL_la_LDFLAGS = \
+	$(COMMON_LDFLAGS)
+endif
+
+if HAVE_SWR_SKX
+lib_LTLIBRARIES += libswrSKX.la
+
+libswrSKX_la_CXXFLAGS = \
+	$(SWR_SKX_CXXFLAGS) \
+	-DKNOB_ARCH=KNOB_ARCH_AVX512 \
+	$(COMMON_CXXFLAGS)
+
+libswrSKX_la_SOURCES = \
+	$(COMMON_SOURCES)
+
+libswrSKX_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)
 endif
 
