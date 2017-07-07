@@ -522,9 +522,11 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd5_zsa_stateobj *zsa = fd5_zsa_stateobj(ctx->zsa);
 		struct pipe_stencil_ref *sr = &ctx->stencil_ref;
 
-		OUT_PKT4(ring, REG_A5XX_RB_STENCILREFMASK, 1);
+		OUT_PKT4(ring, REG_A5XX_RB_STENCILREFMASK, 2);
 		OUT_RING(ring, zsa->rb_stencilrefmask |
 				A5XX_RB_STENCILREFMASK_STENCILREF(sr->ref_value[0]));
+		OUT_RING(ring, zsa->rb_stencilrefmask_bf |
+				A5XX_RB_STENCILREFMASK_BF_STENCILREF(sr->ref_value[1]));
 	}
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_RASTERIZER | FD_DIRTY_PROG)) {
@@ -921,9 +923,6 @@ t7              opcode: CP_WAIT_FOR_IDLE (26) (1 dwords)
 
 	OUT_PKT4(ring, REG_A5XX_UNKNOWN_E093, 1);
 	OUT_RING(ring, 0x00000000);   /* UNKNOWN_E093 */
-
-	OUT_PKT4(ring, REG_A5XX_UNKNOWN_E1C7, 1);
-	OUT_RING(ring, 0x00000000);   /* UNKNOWN_E1C7 */
 
 	OUT_PKT4(ring, REG_A5XX_UNKNOWN_E29A, 1);
 	OUT_RING(ring, 0x00ffff00);   /* UNKNOWN_E29A */

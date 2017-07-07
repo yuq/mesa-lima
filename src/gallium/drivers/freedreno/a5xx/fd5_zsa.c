@@ -99,9 +99,9 @@ fd5_zsa_state_create(struct pipe_context *pctx,
 				A5XX_RB_STENCIL_CONTROL_FAIL_BF(fd_stencil_op(bs->fail_op)) |
 				A5XX_RB_STENCIL_CONTROL_ZPASS_BF(fd_stencil_op(bs->zpass_op)) |
 				A5XX_RB_STENCIL_CONTROL_ZFAIL_BF(fd_stencil_op(bs->zfail_op));
-//			so->rb_stencilrefmask_bf |=
-//				A5XX_RB_STENCILREFMASK_BF_STENCILWRITEMASK(bs->writemask) |
-//				A5XX_RB_STENCILREFMASK_BF_STENCILMASK(bs->valuemask);
+			so->rb_stencilrefmask_bf |=
+				A5XX_RB_STENCILREFMASK_BF_STENCILWRITEMASK(bs->writemask) |
+				A5XX_RB_STENCILREFMASK_BF_STENCILMASK(bs->valuemask);
 		}
 	}
 
