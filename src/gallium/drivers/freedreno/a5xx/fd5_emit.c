@@ -166,10 +166,14 @@ struct PACKED bcolor_entry {
 	uint16_t ui16[4];
 	int16_t  si16[4];
 	uint16_t fp16[4];
-	uint8_t  __pad0[8];
+	uint16_t rgb565;
+	uint16_t rgb5a1;
+	uint16_t rgba4;
+	uint8_t __pad0[2];
 	uint8_t  ui8[4];
 	int8_t   si8[4];
-	uint8_t  __pad1[40];
+	uint32_t rgb10a2;
+	uint8_t  __pad1[36];
 };
 
 #define FD5_BORDER_COLOR_SIZE        0x60
@@ -205,6 +209,11 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 		const struct util_format_description *desc =
 				util_format_description(tex->textures[i]->format);
 
+		e->rgb565 = 0;
+		e->rgb5a1 = 0;
+		e->rgba4 = 0;
+		e->rgb10a2 = 0;
+
 		for (j = 0; j < 4; j++) {
 			int c = desc->swizzle[j];
 
@@ -212,21 +221,60 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 				continue;
 
 			if (desc->channel[c].pure_integer) {
+				uint16_t clamped;
+				switch (desc->channel[c].size) {
+				case 2:
+					assert(desc->channel[c].type == UTIL_FORMAT_TYPE_UNSIGNED);
+					clamped = CLAMP(bc->ui[j], 0, 0x3);
+					break;
+				case 8:
+					if (desc->channel[c].type == UTIL_FORMAT_TYPE_SIGNED)
+						clamped = CLAMP(bc->i[j], -128, 127);
+					else
+						clamped = CLAMP(bc->ui[j], 0, 255);
+					break;
+				case 10:
+					assert(desc->channel[c].type == UTIL_FORMAT_TYPE_UNSIGNED);
+					clamped = CLAMP(bc->ui[j], 0, 0x3ff);
+					break;
+				case 16:
+					if (desc->channel[c].type == UTIL_FORMAT_TYPE_SIGNED)
+						clamped = CLAMP(bc->i[j], -32768, 32767);
+					else
+						clamped = CLAMP(bc->ui[j], 0, 65535);
+					break;
+				default:
+					assert(!"Unexpected bit size");
+				case 32:
+					clamped = 0;
+					break;
+				}
 				e->fp32[c] = bc->ui[j];
-				e->fp16[c] = bc->ui[j];
-				e->ui16[c] = bc->ui[j];
-				e->si16[c] = bc->i[j];
-				e->ui8[c]  = bc->ui[j];
-				e->si8[c]  = bc->i[j];
+				e->fp16[c] = clamped;
 			} else {
 				float f = bc->f[j];
+				float f_u = CLAMP(f, 0, 1);
+				float f_s = CLAMP(f, -1, 1);
 
 				e->fp32[c] = fui(f);
 				e->fp16[c] = util_float_to_half(f);
-				e->ui16[c] = f * 65535.0;
-				e->si16[c] = f * 32767.5;
-				e->ui8[c]  = f * 255.0;
-				e->si8[c]  = f * 128.0;
+				e->ui16[c] = f_u * 0xffff;
+				e->si16[c] = f_s * 0x7fff;
+				e->ui8[c]  = f_u * 0xff;
+				e->si8[c]  = f_s * 0x7f;
+				if (c == 1)
+					e->rgb565 |= (int)(f_u * 0x3f) << 5;
+				else if (c < 3)
+					e->rgb565 |= (int)(f_u * 0x1f) << (c ? 11 : 0);
+				if (c == 3)
+					e->rgb5a1 |= (f_u > 0.5) ? 0x8000 : 0;
+				else
+					e->rgb5a1 |= (int)(f_u * 0x1f) << (c * 5);
+				if (c == 3)
+					e->rgb10a2 |= (int)(f_u * 0x3) << 30;
+				else
+					e->rgb10a2 |= (int)(f_u * 0x3ff) << (c * 10);
+				e->rgba4 |= (int)(f_u * 0xf) << (c * 4);
 			}
 		}
 
