@@ -212,21 +212,21 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 				continue;
 
 			if (desc->channel[c].pure_integer) {
-				e->fp32[j] = bc->ui[c];
-				e->fp16[j] = bc->ui[c];
-				e->ui16[j] = bc->ui[c];
-				e->si16[j] = bc->i[c];
-				e->ui8[j]  = bc->ui[c];
-				e->si8[j]  = bc->i[c];
+				e->fp32[c] = bc->ui[j];
+				e->fp16[c] = bc->ui[j];
+				e->ui16[c] = bc->ui[j];
+				e->si16[c] = bc->i[j];
+				e->ui8[c]  = bc->ui[j];
+				e->si8[c]  = bc->i[j];
 			} else {
-				float f = bc->f[c];
+				float f = bc->f[j];
 
-				e->fp32[j] = fui(f);
-				e->fp16[j] = util_float_to_half(f);
-				e->ui16[j] = f * 65535.0;
-				e->si16[j] = f * 32767.5;
-				e->ui8[j]  = f * 255.0;
-				e->si8[j]  = f * 128.0;
+				e->fp32[c] = fui(f);
+				e->fp16[c] = util_float_to_half(f);
+				e->ui16[c] = f * 65535.0;
+				e->si16[c] = f * 32767.5;
+				e->ui8[c]  = f * 255.0;
+				e->si8[c]  = f * 128.0;
 			}
 		}
 
