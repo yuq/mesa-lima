@@ -173,7 +173,8 @@ struct PACKED bcolor_entry {
 	uint8_t  ui8[4];
 	int8_t   si8[4];
 	uint32_t rgb10a2;
-	uint8_t  __pad1[36];
+	uint32_t z24; /* also s8? */
+	uint8_t  __pad1[32];
 };
 
 #define FD5_BORDER_COLOR_SIZE        0x60
@@ -213,6 +214,7 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 		e->rgb5a1 = 0;
 		e->rgba4 = 0;
 		e->rgb10a2 = 0;
+		e->z24 = 0;
 
 		for (j = 0; j < 4; j++) {
 			int c = desc->swizzle[j];
@@ -275,6 +277,8 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 				else
 					e->rgb10a2 |= (int)(f_u * 0x3ff) << (c * 10);
 				e->rgba4 |= (int)(f_u * 0xf) << (c * 4);
+				if (c == 0)
+					e->z24 = f_u * 0xffffff;
 			}
 		}
 
