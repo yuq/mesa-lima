@@ -759,11 +759,6 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       assert(glsl_type_is_scalar(base->type));
       val->type->base_type = vtn_base_type_vector;
       val->type->type = glsl_vector_type(glsl_get_base_type(base->type), elems);
-
-      /* Vectors implicitly have sizeof(base_type) stride.  For now, this
-       * is always 4 bytes.  This will have to change if we want to start
-       * supporting doubles or half-floats.
-       */
       val->type->stride = glsl_get_bit_size(base->type) / 8;
       val->type->array_element = base;
       break;
