@@ -24,7 +24,6 @@
 <li><a href="#branch">Making a branchpoint</a>
 <li><a href="#prerelease">Pre-release announcement</a>
 <li><a href="#release">Making a new release</a>
-<li><a href="#calendar">Update the calendar</a>
 <li><a href="#announce">Announce the release</a>
 <li><a href="#website">Update the mesa3d.org website</a>
 <li><a href="#bugzilla">Update Bugzilla</a>
@@ -576,21 +575,15 @@ Something like the following steps will do the trick:
 </pre>
 
 <p>
-Also, edit docs/relnotes.html to add a link to the new release notes, and edit
-docs/index.html to add a news entry. Then commit and push:
+Also, edit docs/relnotes.html to add a link to the new release notes,
+edit docs/index.html to add a news entry, and remove the version from
+docs/release-calendar.html. Then commit and push:
 </p>
 
 <pre>
-	git commit -as -m "docs: add news item and link release notes for X.Y.Z"
+	git commit -as -m "docs: update calendar, add news item and link release notes for X.Y.Z"
 	git push origin master X.Y
 </pre>
-
-
-<h1 id="calendar">Update the calendar</h1>
-
-<p>
-Remove the version from the <a href="release-calendar.html" target="_parent">calendar</a>.
-</p>
 
 
 <h1 id="announce">Announce the release</h1>
