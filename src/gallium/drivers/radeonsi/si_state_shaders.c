@@ -2942,7 +2942,10 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	bool double_offchip_buffers = sctx->b.chip_class >= CIK &&
 				      sctx->b.family != CHIP_CARRIZO &&
 				      sctx->b.family != CHIP_STONEY;
-	unsigned max_offchip_buffers_per_se = double_offchip_buffers ? 128 : 64;
+	/* This must be one less than the maximum number due to a hw limitation.
+	 * Various hardware bugs in SI, CIK, and GFX9 need this.
+	 */
+	unsigned max_offchip_buffers_per_se = double_offchip_buffers ? 127 : 63;
 	unsigned max_offchip_buffers = max_offchip_buffers_per_se *
 				       sctx->screen->b.info.max_se;
 	unsigned offchip_granularity;
@@ -2957,20 +2960,6 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	case 4096:
 		offchip_granularity = V_03093C_X_4K_DWORDS;
 		break;
-	}
-
-	switch (sctx->b.chip_class) {
-	case SI:
-		max_offchip_buffers = MIN2(max_offchip_buffers, 126);
-		break;
-	case CIK:
-	case VI:
-	case GFX9:
-		max_offchip_buffers = MIN2(max_offchip_buffers, 508);
-		break;
-	default:
-		assert(0);
-		return;
 	}
 
 	assert(!sctx->tf_ring);
