@@ -212,10 +212,8 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 				continue;
 
 			if (desc->channel[c].pure_integer) {
-				float f = bc->i[c];
-
-				e->fp32[j] = fui(f);
-				e->fp16[j] = util_float_to_half(f);
+				e->fp32[j] = bc->ui[c];
+				e->fp16[j] = bc->ui[c];
 				e->ui16[j] = bc->ui[c];
 				e->si16[j] = bc->i[c];
 				e->ui8[j]  = bc->ui[c];
