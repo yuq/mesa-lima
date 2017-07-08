@@ -437,6 +437,8 @@ Here is one solution that I've been using.
 	chmod 755 -fR $__build_root; rm -rf $__build_root
 	mkdir -p $__build_root &amp;&amp; cd $__build_root
 
+	# For the distcheck, you may want to specify which LLVM to use:
+	# export LLVM_CONFIG=/usr/lib/llvm-3.9/bin/llvm-config
 	$__mesa_root/autogen.sh &amp;&amp; make -j2 distcheck
 
 	# Build check the tarballs (scons, linux)
@@ -445,18 +447,22 @@ Here is one solution that I've been using.
 	cd .. &amp;&amp; rm -rf mesa-$__version
 
 	# Build check the tarballs (scons, windows/mingw)
+	# You may need to unset LLVM if you set it before:
+	# unset LLVM_CONFIG
 	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
 	scons platform=windows toolchain=crossmingw
 	cd .. &amp;&amp; rm -rf mesa-$__version
 
 	# Test the automake binaries
 	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
+	# You may want to specify which LLVM to use:
 	./configure \
 		--with-dri-drivers=i965,swrast \
 		--with-gallium-drivers=swrast \
 		--with-vulkan-drivers=intel \
 		--enable-llvm-shared-libs \
 		--enable-llvm \
+		--with-llvm-prefix=/usr/lib/llvm-3.9 \
 		--enable-glx-tls \
 		--enable-gbm \
 		--enable-egl \
@@ -540,6 +546,8 @@ Start the release process.
 </p>
 
 <pre>
+	# For the dist/distcheck, you may want to specify which LLVM to use:
+	# export LLVM_CONFIG=/usr/lib/llvm-3.9/bin/llvm-config
 	../relative/path/to/release.sh . # append --dist if you've already done distcheck above
 </pre>
 
