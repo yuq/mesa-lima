@@ -127,38 +127,6 @@ fd5_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
  * the same as a6xx then move this somewhere common ;-)
  *
  * Entry layout looks like (total size, 0x60 bytes):
- *
- *   offset | description
- *   -------+-------------
- *     0x00 | fp32[0]
- *          | fp32[1]
- *          | fp32[2]
- *          | fp32[3]
- *     0x10 | uint16[0]
- *          | uint16[1]
- *          | uint16[2]
- *          | uint16[3]
- *     0x18 | int16[0]
- *          | int16[1]
- *          | int16[2]
- *          | int16[3]
- *     0x20 | fp16[0]
- *          | fp16[1]
- *          | fp16[2]
- *          | fp16[3]
- *     0x28 | ?? maybe padding ??
- *     0x30 | uint8[0]
- *          | uint8[1]
- *          | uint8[2]
- *          | uint8[3]
- *     0x34 | int8[0]
- *          | int8[1]
- *          | int8[2]
- *          | int8[3]
- *     0x38 | ?? maybe padding ??
- *
- * Some uncertainty, because not clear that this actually works properly
- * with blob, so who knows..
  */
 
 struct PACKED bcolor_entry {
@@ -184,6 +152,7 @@ static void
 setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entries)
 {
 	unsigned i, j;
+	STATIC_ASSERT(sizeof(struct bcolor_entry) == FD5_BORDER_COLOR_SIZE);
 
 	for (i = 0; i < tex->num_samplers; i++) {
 		struct bcolor_entry *e = &entries[i];
