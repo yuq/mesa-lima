@@ -580,15 +580,9 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (dirty & FD_DIRTY_PROG)
 		fd5_program_emit(ctx, ring, emit);
 
-	/* note: must come after program emit.. because there is some overlap
-	 * in registers, ex. PC_PRIMITIVE_CNTL and we rely on some cached
-	 * values from fd5_program_emit() to avoid having to re-emit the prog
-	 * every time rast state changes.
-	 */
-	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_RASTERIZER)) {
+	if (dirty & FD_DIRTY_RASTERIZER) {
 		struct fd5_rasterizer_stateobj *rasterizer =
 				fd5_rasterizer_stateobj(ctx->rasterizer);
-		unsigned max_loc = fd5_context(ctx)->max_loc;
 
 		OUT_PKT4(ring, REG_A5XX_GRAS_SU_CNTL, 1);
 		OUT_RING(ring, rasterizer->gras_su_cntl);
@@ -602,15 +596,31 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, rasterizer->gras_su_poly_offset_offset);
 		OUT_RING(ring, rasterizer->gras_su_poly_offset_clamp);
 
-		OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
-		OUT_RING(ring, rasterizer->pc_primitive_cntl |
-				 A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(max_loc));
-
 		OUT_PKT4(ring, REG_A5XX_PC_RASTER_CNTL, 1);
 		OUT_RING(ring, rasterizer->pc_raster_cntl);
 
 		OUT_PKT4(ring, REG_A5XX_GRAS_CL_CNTL, 1);
 		OUT_RING(ring, rasterizer->gras_cl_clip_cntl);
+	}
+
+	/* note: must come after program emit.. because there is some overlap
+	 * in registers, ex. PC_PRIMITIVE_CNTL and we rely on some cached
+	 * values from fd5_program_emit() to avoid having to re-emit the prog
+	 * every time rast state changes.
+	 *
+	 * Since the primitive restart state is not part of a tracked object, we
+	 * re-emit this register every time.
+	 */
+	if (emit->info && ctx->rasterizer) {
+		struct fd5_rasterizer_stateobj *rasterizer =
+				fd5_rasterizer_stateobj(ctx->rasterizer);
+		unsigned max_loc = fd5_context(ctx)->max_loc;
+
+		OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
+		OUT_RING(ring, rasterizer->pc_primitive_cntl |
+				 A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(max_loc) |
+				 COND(emit->info->primitive_restart && emit->info->index_size,
+					  A5XX_PC_PRIMITIVE_CNTL_PRIMITIVE_RESTART));
 	}
 
 	if (dirty & (FD_DIRTY_FRAMEBUFFER | FD_DIRTY_RASTERIZER)) {
