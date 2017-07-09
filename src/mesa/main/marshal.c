@@ -415,6 +415,7 @@ struct marshal_cmd_NamedBufferData
    GLuint name;
    GLsizei size;
    GLenum usage;
+   bool data_null; /* If set, no data follows for "data" */
    /* Next size bytes are GLubyte data[size] */
 };
 
@@ -425,7 +426,12 @@ _mesa_unmarshal_NamedBufferData(struct gl_context *ctx,
    const GLuint name = cmd->name;
    const GLsizei size = cmd->size;
    const GLenum usage = cmd->usage;
-   const void *data = (const void *) (cmd + 1);
+   const void *data;
+
+   if (cmd->data_null)
+      data = NULL;
+   else
+      data = (const void *) (cmd + 1);
 
    CALL_NamedBufferData(ctx->CurrentServerDispatch,
                         (name, size, data, usage));
@@ -436,7 +442,7 @@ _mesa_marshal_NamedBufferData(GLuint buffer, GLsizeiptr size,
                               const GLvoid * data, GLenum usage)
 {
    GET_CURRENT_CONTEXT(ctx);
-   size_t cmd_size = sizeof(struct marshal_cmd_NamedBufferData) + size;
+   size_t cmd_size = sizeof(struct marshal_cmd_NamedBufferData) + (data ? size : 0);
 
    debug_print_marshal("NamedBufferData");
    if (unlikely(size < 0)) {
@@ -452,8 +458,11 @@ _mesa_marshal_NamedBufferData(GLuint buffer, GLsizeiptr size,
       cmd->name = buffer;
       cmd->size = size;
       cmd->usage = usage;
-      char *variable_data = (char *) (cmd + 1);
-      memcpy(variable_data, data, size);
+      cmd->data_null = !data;
+      if (data) {
+         char *variable_data = (char *) (cmd + 1);
+         memcpy(variable_data, data, size);
+      }
       _mesa_post_marshal_hook(ctx);
    } else {
       _mesa_glthread_finish(ctx);
