@@ -446,6 +446,8 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
          goto done;
 
       s->backed = svga_surface(backed_view);
+
+      SVGA_STATS_TIME_POP(svga_sws(svga));
    }
    else if (s->backed->age < tex->age) {
       /*
@@ -474,12 +476,9 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
                                         bs->key.numMipLevels,
                                         bs->key.numFaces * bs->key.arraySize,
                                         zslice, s->base.u.tex.level, layer);
-
-      svga_mark_surface_dirty(&s->backed->base);
-
-      SVGA_STATS_TIME_POP(svga_sws(svga));
    }
 
+   svga_mark_surface_dirty(&s->backed->base);
    s->backed->age = tex->age;
 
 done:
