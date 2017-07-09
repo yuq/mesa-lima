@@ -2049,7 +2049,7 @@ vec4_visitor::nir_emit_jump(nir_jump_instr *instr)
    }
 }
 
-enum ir_texture_opcode
+static enum ir_texture_opcode
 ir_texture_opcode_for_nir_texop(nir_texop texop)
 {
    enum ir_texture_opcode op;
@@ -2073,7 +2073,8 @@ ir_texture_opcode_for_nir_texop(nir_texop texop)
 
    return op;
 }
-const glsl_type *
+
+static const glsl_type *
 glsl_type_for_nir_alu_type(nir_alu_type alu_type,
                            unsigned components)
 {
