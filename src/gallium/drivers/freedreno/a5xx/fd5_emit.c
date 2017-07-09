@@ -642,7 +642,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 					  A5XX_PC_PRIMITIVE_CNTL_PRIMITIVE_RESTART));
 	}
 
-	if (dirty & (FD_DIRTY_FRAMEBUFFER | FD_DIRTY_RASTERIZER)) {
+	if (dirty & (FD_DIRTY_FRAMEBUFFER | FD_DIRTY_RASTERIZER | FD_DIRTY_PROG)) {
 		uint32_t posz_regid = ir3_find_output_regid(fp, FRAG_RESULT_DEPTH);
 		unsigned nr = pfb->nr_cbufs;
 
