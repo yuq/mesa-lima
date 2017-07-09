@@ -675,7 +675,7 @@ analyze_clip_cull_usage(struct gl_shader_program *prog,
  *
  * \param shader  Vertex shader executable to be verified
  */
-void
+static void
 validate_vertex_shader_executable(struct gl_shader_program *prog,
                                   struct gl_linked_shader *shader,
                                   struct gl_context *ctx)
@@ -730,7 +730,7 @@ validate_vertex_shader_executable(struct gl_shader_program *prog,
                            &shader->Program->info.cull_distance_array_size);
 }
 
-void
+static void
 validate_tess_eval_shader_executable(struct gl_shader_program *prog,
                                      struct gl_linked_shader *shader,
                                      struct gl_context *ctx)
@@ -749,7 +749,7 @@ validate_tess_eval_shader_executable(struct gl_shader_program *prog,
  *
  * \param shader  Fragment shader executable to be verified
  */
-void
+static void
 validate_fragment_shader_executable(struct gl_shader_program *prog,
                                     struct gl_linked_shader *shader)
 {
@@ -775,7 +775,7 @@ validate_fragment_shader_executable(struct gl_shader_program *prog,
  *
  * \param shader Geometry shader executable to be verified
  */
-void
+static void
 validate_geometry_shader_executable(struct gl_shader_program *prog,
                                     struct gl_linked_shader *shader,
                                     struct gl_context *ctx)
@@ -892,7 +892,7 @@ validate_intrastage_arrays(struct gl_shader_program *prog,
 /**
  * Perform validation of global variables used across multiple shaders
  */
-void
+static void
 cross_validate_globals(struct gl_shader_program *prog,
                        struct exec_list *ir, glsl_symbol_table *variables,
                        bool uniforms_only)
@@ -1135,7 +1135,7 @@ cross_validate_globals(struct gl_shader_program *prog,
 /**
  * Perform validation of uniforms used across multiple shader stages
  */
-void
+static void
 cross_validate_uniforms(struct gl_shader_program *prog)
 {
    glsl_symbol_table variables;
@@ -1292,7 +1292,7 @@ populate_symbol_table(gl_linked_shader *sh)
  * \param instructions Instruction stream where new variable declarations
  *                     should be added.
  */
-void
+static void
 remap_variables(ir_instruction *inst, struct gl_linked_shader *target,
                 hash_table *temps)
 {
@@ -1366,7 +1366,7 @@ remap_variables(ir_instruction *inst, struct gl_linked_shader *target,
  * is suitable for use as the \c last parameter of a later call to this
  * function.
  */
-exec_node *
+static exec_node *
 move_non_declarations(exec_list *instructions, exec_node *last,
                       bool make_copies, gl_linked_shader *target)
 {
@@ -2548,7 +2548,7 @@ resize_tes_inputs(struct gl_context *ctx,
  * \return
  * Base location of the available bits on success or -1 on failure.
  */
-int
+static int
 find_available_slots(unsigned used_mask, unsigned needed_count)
 {
    unsigned needed_mask = (1 << needed_count) - 1;
@@ -2585,7 +2585,7 @@ find_available_slots(unsigned used_mask, unsigned needed_count)
  * If locations are successfully assigned, true is returned.  Otherwise an
  * error is emitted to the shader link log and false is returned.
  */
-bool
+static bool
 assign_attribute_or_color_locations(void *mem_ctx,
                                     gl_shader_program *prog,
                                     struct gl_constants *constants,

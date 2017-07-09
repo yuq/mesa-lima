@@ -1893,7 +1893,7 @@ private:
 
 namespace linker {
 
-void
+static void
 populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
                              hash_table *consumer_inputs,
                              hash_table *consumer_interface_inputs,
@@ -1951,7 +1951,7 @@ populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
  * This function only finds inputs with names that match.  There is no
  * validation (here) that the types, etc. are compatible.
  */
-ir_variable *
+static ir_variable *
 get_matching_input(void *mem_ctx,
                    const ir_variable *output_var,
                    hash_table *consumer_inputs,
@@ -2349,7 +2349,7 @@ assign_varying_locations(struct gl_context *ctx,
    return true;
 }
 
-bool
+static bool
 check_against_output_limit(struct gl_context *ctx,
                            struct gl_shader_program *prog,
                            gl_linked_shader *producer,
@@ -2393,7 +2393,7 @@ check_against_output_limit(struct gl_context *ctx,
    return true;
 }
 
-bool
+static bool
 check_against_input_limit(struct gl_context *ctx,
                           struct gl_shader_program *prog,
                           gl_linked_shader *consumer,

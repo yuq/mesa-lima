@@ -33,7 +33,7 @@
  */
 namespace linker {
 
-gl_uniform_storage *
+static gl_uniform_storage *
 get_storage(struct gl_shader_program *prog, const char *name)
 {
    unsigned id;
@@ -44,7 +44,7 @@ get_storage(struct gl_shader_program *prog, const char *name)
    return NULL;
 }
 
-void
+static void
 copy_constant_to_storage(union gl_constant_value *storage,
                          const ir_constant *val,
                          const enum glsl_base_type base_type,
@@ -95,7 +95,7 @@ copy_constant_to_storage(union gl_constant_value *storage,
  * qualifier specified in the shader.  Atomic counters are different because
  * they have no storage and should be handled elsewhere.
  */
-void
+static void
 set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
                    const ir_variable *var, const glsl_type *type,
                    const char *name, int *binding)
@@ -179,7 +179,7 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
    }
 }
 
-void
+static void
 set_block_binding(gl_shader_program *prog, const char *block_name,
                   unsigned mode, int binding)
 {
@@ -199,7 +199,7 @@ set_block_binding(gl_shader_program *prog, const char *block_name,
    unreachable("Failed to initialize block binding");
 }
 
-void
+static void
 set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
                         const char *name, const glsl_type *type,
                         ir_constant *val, unsigned int boolean_true)
