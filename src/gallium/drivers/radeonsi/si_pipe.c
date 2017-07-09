@@ -165,9 +165,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (!sctx)
 		return NULL;
 
-	if (sscreen->b.debug_flags & DBG_CHECK_VM)
-		flags |= PIPE_CONTEXT_DEBUG;
-
 	if (flags & PIPE_CONTEXT_DEBUG)
 		sscreen->record_llvm_ir = true; /* racy but not critical */
 
@@ -378,7 +375,12 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
 						   void *priv, unsigned flags)
 {
 	struct si_screen *sscreen = (struct si_screen *)screen;
-	struct pipe_context *ctx = si_create_context(screen, flags);
+	struct pipe_context *ctx;
+
+	if (sscreen->b.debug_flags & DBG_CHECK_VM)
+		flags |= PIPE_CONTEXT_DEBUG;
+
+	ctx = si_create_context(screen, flags);
 
 	if (!(flags & PIPE_CONTEXT_PREFER_THREADED))
 		return ctx;
