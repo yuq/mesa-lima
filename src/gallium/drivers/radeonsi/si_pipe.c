@@ -961,21 +961,17 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		MIN2(num_threads, ARRAY_SIZE(sscreen->tm_low_priority));
 
 	if (!util_queue_init(&sscreen->shader_compiler_queue, "si_shader",
-			     32, num_compiler_threads, 0)) {
+			     32, num_compiler_threads,
+			     UTIL_QUEUE_INIT_RESIZE_IF_FULL)) {
 		si_destroy_shader_cache(sscreen);
 		FREE(sscreen);
 		return NULL;
 	}
 
-	/* The queue must be large enough so that adding optimized shaders
-	 * doesn't stall draw calls when the queue is full. Especially varying
-	 * packing generates a very high volume of optimized shader compilation
-	 * jobs.
-	 */
 	if (!util_queue_init(&sscreen->shader_compiler_queue_low_priority,
 			     "si_shader_low",
-			     1024, num_compiler_threads,
-			     UTIL_QUEUE_INIT_USE_MINIMUM_PRIORITY)) {
+			     32, num_compiler_threads,
+			     UTIL_QUEUE_INIT_RESIZE_IF_FULL)) {
 	       si_destroy_shader_cache(sscreen);
 	       FREE(sscreen);
 	       return NULL;
