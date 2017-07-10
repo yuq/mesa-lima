@@ -706,7 +706,7 @@ emit_null_dst_register(struct svga_shader_emitter_v10 *emit)
  */
 static unsigned
 get_temp_array_id(const struct svga_shader_emitter_v10 *emit,
-                  unsigned file, unsigned index)
+                  enum tgsi_file_type file, unsigned index)
 {
    if (file == TGSI_FILE_TEMPORARY) {
       return emit->temp_map[index].arrayId;
@@ -723,7 +723,7 @@ get_temp_array_id(const struct svga_shader_emitter_v10 *emit,
  */
 static unsigned
 remap_temp_index(const struct svga_shader_emitter_v10 *emit,
-                 unsigned file, unsigned index)
+                 enum tgsi_file_type file, unsigned index)
 {
    if (file == TGSI_FILE_TEMPORARY) {
       return emit->temp_map[index].index;
@@ -741,7 +741,7 @@ remap_temp_index(const struct svga_shader_emitter_v10 *emit,
 static VGPU10OperandToken0
 setup_operand0_indexing(struct svga_shader_emitter_v10 *emit,
                         VGPU10OperandToken0 operand0,
-                        unsigned file,
+                        enum tgsi_file_type file,
                         boolean indirect, boolean index2D,
                         unsigned tempArrayID)
 {
@@ -849,7 +849,7 @@ static void
 emit_dst_register(struct svga_shader_emitter_v10 *emit,
                   const struct tgsi_full_dst_register *reg)
 {
-   unsigned file = reg->Register.File;
+   enum tgsi_file_type file = reg->Register.File;
    unsigned index = reg->Register.Index;
    const enum tgsi_semantic sem_name = emit->info.output_semantic_name[index];
    const unsigned sem_index = emit->info.output_semantic_index[index];
@@ -967,7 +967,7 @@ static void
 emit_src_register(struct svga_shader_emitter_v10 *emit,
                   const struct tgsi_full_src_register *reg)
 {
-   unsigned file = reg->Register.File;
+   enum tgsi_file_type file = reg->Register.File;
    unsigned index = reg->Register.Index;
    const unsigned indirect = reg->Register.Indirect;
    const unsigned tempArrayId = get_temp_array_id(emit, file, index);
@@ -1364,7 +1364,7 @@ free_temp_indexes(struct svga_shader_emitter_v10 *emit)
  * Create a tgsi_full_src_register.
  */
 static struct tgsi_full_src_register
-make_src_reg(unsigned file, unsigned index)
+make_src_reg(enum tgsi_file_type file, unsigned index)
 {
    struct tgsi_full_src_register reg;
 
@@ -1413,7 +1413,7 @@ make_src_immediate_reg(unsigned index)
  * Create a tgsi_full_dst_register.
  */
 static struct tgsi_full_dst_register
-make_dst_reg(unsigned file, unsigned index)
+make_dst_reg(enum tgsi_file_type file, unsigned index)
 {
    struct tgsi_full_dst_register reg;
 
