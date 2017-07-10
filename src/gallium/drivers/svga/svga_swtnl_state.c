@@ -253,7 +253,7 @@ svga_swtnl_update_vdecl( struct svga_context *svga )
    nr_decls++;
 
    for (i = 0; i < fs->base.info.num_inputs; i++) {
-      const unsigned sem_name = fs->base.info.input_semantic_name[i];
+      const enum tgsi_semantic sem_name = fs->base.info.input_semantic_name[i];
       const unsigned sem_index = fs->base.info.input_semantic_index[i];
 
       src = draw_find_shader_output(draw, sem_name, sem_index);

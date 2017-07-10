@@ -92,7 +92,8 @@ svga_create_stream_output(struct svga_context *svga,
    for (i = 0; i < info->num_outputs; i++) {
       unsigned reg_idx = info->output[i].register_index;
       unsigned buf_idx = info->output[i].output_buffer;
-      const unsigned sem_name = shader->info.output_semantic_name[reg_idx];
+      const enum tgsi_semantic sem_name =
+         shader->info.output_semantic_name[reg_idx];
 
       assert(buf_idx <= PIPE_MAX_SO_BUFFERS);
 

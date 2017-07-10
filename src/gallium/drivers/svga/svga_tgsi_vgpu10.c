@@ -851,7 +851,7 @@ emit_dst_register(struct svga_shader_emitter_v10 *emit,
 {
    unsigned file = reg->Register.File;
    unsigned index = reg->Register.Index;
-   const unsigned sem_name = emit->info.output_semantic_name[index];
+   const enum tgsi_semantic sem_name = emit->info.output_semantic_name[index];
    const unsigned sem_index = emit->info.output_semantic_index[index];
    unsigned writemask = reg->Register.WriteMask;
    const unsigned indirect = reg->Register.Indirect;
@@ -2178,7 +2178,7 @@ emit_fragdepth_output_declaration(struct svga_shader_emitter_v10 *emit)
  */
 static void
 emit_system_value_declaration(struct svga_shader_emitter_v10 *emit,
-                              unsigned semantic_name, unsigned index)
+                              enum tgsi_semantic semantic_name, unsigned index)
 {
    switch (semantic_name) {
    case TGSI_SEMANTIC_INSTANCEID:
@@ -2345,7 +2345,7 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
    if (emit->unit == PIPE_SHADER_FRAGMENT) {
 
       for (i = 0; i < emit->linkage.num_inputs; i++) {
-         unsigned semantic_name = emit->info.input_semantic_name[i];
+         enum tgsi_semantic semantic_name = emit->info.input_semantic_name[i];
          unsigned usage_mask = emit->info.input_usage_mask[i];
          unsigned index = emit->linkage.input_map[i];
          unsigned type, interpolationMode, name;
@@ -2404,7 +2404,7 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
    else if (emit->unit == PIPE_SHADER_GEOMETRY) {
 
       for (i = 0; i < emit->info.num_inputs; i++) {
-         unsigned semantic_name = emit->info.input_semantic_name[i];
+         enum tgsi_semantic semantic_name = emit->info.input_semantic_name[i];
          unsigned usage_mask = emit->info.input_usage_mask[i];
          unsigned index = emit->linkage.input_map[i];
          unsigned opcodeType, operandType;
@@ -2487,7 +2487,8 @@ emit_output_declarations(struct svga_shader_emitter_v10 *emit)
 
    for (i = 0; i < emit->info.num_outputs; i++) {
       /*const unsigned usage_mask = emit->info.output_usage_mask[i];*/
-      const unsigned semantic_name = emit->info.output_semantic_name[i];
+      const enum tgsi_semantic semantic_name =
+         emit->info.output_semantic_name[i];
       const unsigned semantic_index = emit->info.output_semantic_index[i];
       unsigned index = i;
 
