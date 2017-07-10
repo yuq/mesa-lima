@@ -2955,7 +2955,8 @@ emit_sampler_declarations(struct svga_shader_emitter_v10 *emit)
  * Translate TGSI_TEXTURE_x to VGAPU10_RESOURCE_DIMENSION_x.
  */
 static unsigned
-tgsi_texture_to_resource_dimension(unsigned target, boolean is_array)
+tgsi_texture_to_resource_dimension(enum tgsi_texture_type target,
+                                   boolean is_array)
 {
    switch (target) {
    case TGSI_TEXTURE_BUFFER:
@@ -4867,7 +4868,7 @@ setup_texcoord(struct svga_shader_emitter_v10 *emit,
  */
 static void
 emit_tex_compare_refcoord(struct svga_shader_emitter_v10 *emit,
-                          unsigned target,
+                          enum tgsi_texture_type target,
                           const struct tgsi_full_src_register *coord)
 {
    struct tgsi_full_src_register coord_src_ref;
@@ -4901,7 +4902,7 @@ struct tex_swizzle_info
    boolean swizzled;
    boolean shadow_compare;
    unsigned unit;
-   unsigned texture_target;  /**< TGSI_TEXTURE_x */
+   enum tgsi_texture_type texture_target;  /**< TGSI_TEXTURE_x */
    struct tgsi_full_src_register tmp_src;
    struct tgsi_full_dst_register tmp_dst;
    const struct tgsi_full_dst_register *inst_dst;
