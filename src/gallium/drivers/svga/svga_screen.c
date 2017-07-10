@@ -312,7 +312,10 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return svgascreen->ms_samples ? 1 : 0;
 
    case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
-      return SVGA3D_DX_MAX_RESOURCE_SIZE;
+      /* convert bytes to texels for the case of the largest texel
+       * size: float[4].
+       */
+      return SVGA3D_DX_MAX_RESOURCE_SIZE / (4 * sizeof(float));
 
    case PIPE_CAP_MIN_TEXEL_OFFSET:
       return sws->have_vgpu10 ? VGPU10_MIN_TEXEL_FETCH_OFFSET : 0;
