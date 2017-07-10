@@ -1470,7 +1470,7 @@ absolute_src(const struct tgsi_full_src_register *reg)
 
 /** Return the named swizzle term from the src register */
 static inline unsigned
-get_swizzle(const struct tgsi_full_src_register *reg, unsigned term)
+get_swizzle(const struct tgsi_full_src_register *reg, enum tgsi_swizzle term)
 {
    switch (term) {
    case TGSI_SWIZZLE_X:
@@ -1493,8 +1493,8 @@ get_swizzle(const struct tgsi_full_src_register *reg, unsigned term)
  */
 static struct tgsi_full_src_register
 swizzle_src(const struct tgsi_full_src_register *reg,
-            unsigned swizzleX, unsigned swizzleY,
-            unsigned swizzleZ, unsigned swizzleW)
+            enum tgsi_swizzle swizzleX, enum tgsi_swizzle swizzleY,
+            enum tgsi_swizzle swizzleZ, enum tgsi_swizzle swizzleW)
 {
    struct tgsi_full_src_register swizzled = *reg;
    /* Note: we swizzle the current swizzle */
@@ -1511,7 +1511,7 @@ swizzle_src(const struct tgsi_full_src_register *reg,
  * terms are the same.
  */
 static struct tgsi_full_src_register
-scalar_src(const struct tgsi_full_src_register *reg, unsigned swizzle)
+scalar_src(const struct tgsi_full_src_register *reg, enum tgsi_swizzle swizzle)
 {
    struct tgsi_full_src_register swizzled = *reg;
    /* Note: we swizzle the current swizzle */
