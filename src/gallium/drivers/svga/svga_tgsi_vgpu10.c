@@ -1843,7 +1843,8 @@ emit_vgpu10_immediates_block(struct svga_shader_emitter_v10 *emit)
  */
 static unsigned
 translate_interpolation(const struct svga_shader_emitter_v10 *emit,
-                        unsigned interp, unsigned interpolate_loc)
+                        enum tgsi_interpolate_mode interp,
+                        enum tgsi_interpolate_loc interpolate_loc)
 {
    if (interp == TGSI_INTERPOLATE_COLOR) {
       interp = emit->key.fs.flatshade ?
