@@ -47,22 +47,7 @@ anv_loge(const char *format, ...)
 void
 anv_loge_v(const char *format, va_list va)
 {
-   fprintf(stderr, "vk: error: ");
-   vfprintf(stderr, format, va);
-   fprintf(stderr, "\n");
-}
-
-void anv_printflike(3, 4)
-__anv_finishme(const char *file, int line, const char *format, ...)
-{
-   va_list ap;
-   char buffer[256];
-
-   va_start(ap, format);
-   vsnprintf(buffer, sizeof(buffer), format, ap);
-   va_end(ap);
-
-   fprintf(stderr, "%s:%d: FINISHME: %s\n", file, line, buffer);
+   intel_loge_v(format, va);
 }
 
 void anv_printflike(6, 7)
@@ -89,7 +74,7 @@ __anv_perf_warn(struct anv_instance *instance, const void *object,
                     "anv",
                     report);
 
-   fprintf(stderr, "%s:%d: PERF: %s\n", file, line, buffer);
+   intel_logw("%s:%d: PERF: %s", file, line, buffer);
 }
 
 VkResult
@@ -123,7 +108,7 @@ __vk_errorf(struct anv_instance *instance, const void *object,
                     "anv",
                     report);
 
-   fprintf(stderr, "%s\n", report);
+   intel_loge("%s", report);
 
    if (error == VK_ERROR_DEVICE_LOST &&
        env_var_as_boolean("ANV_ABORT_ON_DEVICE_LOSS", false))

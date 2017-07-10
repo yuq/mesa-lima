@@ -74,6 +74,7 @@ struct gen_l3_config;
 #include "isl/isl.h"
 
 #include "common/gen_debug.h"
+#include "common/intel_log.h"
 #include "wsi_common.h"
 
 /* Allowing different clear colors requires us to perform a depth resolve at
@@ -314,11 +315,9 @@ VkResult __vk_errorf(struct anv_instance *instance, const void *object,
 #define vk_errorf(instance, obj, error, format, ...)\
     __vk_errorf(instance, obj, REPORT_OBJECT_TYPE(obj), error,\
                 __FILE__, __LINE__, format, ## __VA_ARGS__);
-#define anv_debug(format, ...) fprintf(stderr, "debug: " format, ##__VA_ARGS__)
 #else
 #define vk_error(error) error
 #define vk_errorf(instance, obj, error, format, ...) error
-#define anv_debug(format, ...)
 #endif
 
 /**
@@ -337,10 +336,8 @@ VkResult __vk_errorf(struct anv_instance *instance, const void *object,
  *    defined by extensions supported by that component.
  */
 #define anv_debug_ignored_stype(sType) \
-   anv_debug("%s: ignored VkStructureType %u\n", __func__, (sType))
+   intel_logd("%s: ignored VkStructureType %u\n", __func__, (sType))
 
-void __anv_finishme(const char *file, int line, const char *format, ...)
-   anv_printflike(3, 4);
 void __anv_perf_warn(struct anv_instance *instance, const void *object,
                      VkDebugReportObjectTypeEXT type, const char *file,
                      int line, const char *format, ...)
@@ -364,7 +361,8 @@ void anv_debug_report(struct anv_instance *instance,
    do { \
       static bool reported = false; \
       if (!reported) { \
-         __anv_finishme(__FILE__, __LINE__, format, ##__VA_ARGS__); \
+         intel_logw("%s:%d: FINISHME: " format, __FILE__, __LINE__, \
+                    ##__VA_ARGS__); \
          reported = true; \
       } \
    } while (0)
@@ -386,7 +384,7 @@ void anv_debug_report(struct anv_instance *instance,
 #ifdef DEBUG
 #define anv_assert(x) ({ \
    if (unlikely(!(x))) \
-      fprintf(stderr, "%s:%d ASSERT: %s\n", __FILE__, __LINE__, #x); \
+      intel_loge("%s:%d ASSERT: %s", __FILE__, __LINE__, #x); \
 })
 #else
 #define anv_assert(x)

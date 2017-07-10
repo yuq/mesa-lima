@@ -50,7 +50,7 @@ compiler_perf_log(void *data, const char *fmt, ...)
    va_start(args, fmt);
 
    if (unlikely(INTEL_DEBUG & DEBUG_PERF))
-      vfprintf(stderr, fmt, args);
+      intel_logd_v(fmt, args);
 
    va_end(args);
 }
@@ -294,11 +294,11 @@ anv_physical_device_init(struct anv_physical_device *device,
    }
 
    if (device->info.is_haswell) {
-      fprintf(stderr, "WARNING: Haswell Vulkan support is incomplete\n");
+      intel_logw("Haswell Vulkan support is incomplete");
    } else if (device->info.gen == 7 && !device->info.is_baytrail) {
-      fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete\n");
+      intel_logw("Ivy Bridge Vulkan support is incomplete");
    } else if (device->info.gen == 7 && device->info.is_baytrail) {
-      fprintf(stderr, "WARNING: Bay Trail Vulkan support is incomplete\n");
+      intel_logw("Bay Trail Vulkan support is incomplete");
    } else if (device->info.gen >= 8 && device->info.gen <= 9) {
       /* Broadwell, Cherryview, Skylake, Broxton, Kabylake is as fully
        * supported as anything */
@@ -365,8 +365,7 @@ anv_physical_device_init(struct anv_physical_device *device,
        * many platforms, but otherwise, things will just work.
        */
       if (device->subslice_total < 1 || device->eu_total < 1) {
-         fprintf(stderr, "WARNING: Kernel 4.1 required to properly"
-                         " query GPU properties.\n");
+         intel_logw("Kernel 4.1 required to properly query GPU properties");
       }
    } else if (device->info.gen == 7) {
       device->subslice_total = 1 << (device->info.gt - 1);
