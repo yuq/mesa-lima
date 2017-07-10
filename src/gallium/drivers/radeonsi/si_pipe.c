@@ -509,6 +509,8 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_TEX_TXF_LZ:
 	case PIPE_CAP_TGSI_TES_LAYER_VIEWPORT:
 	case PIPE_CAP_BINDLESS_TEXTURE:
+	case PIPE_CAP_QUERY_TIMESTAMP:
+	case PIPE_CAP_QUERY_TIME_ELAPSED:
 		return 1;
 
 	case PIPE_CAP_INT64:
@@ -644,11 +646,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
 	case PIPE_CAP_MAX_RENDER_TARGETS:
 		return 8;
-
-	/* Timer queries, present when the clock frequency is non zero. */
-	case PIPE_CAP_QUERY_TIMESTAMP:
-	case PIPE_CAP_QUERY_TIME_ELAPSED:
-		return sscreen->b.info.clock_crystal_freq != 0;
 
  	case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
 	case PIPE_CAP_MIN_TEXEL_OFFSET:
