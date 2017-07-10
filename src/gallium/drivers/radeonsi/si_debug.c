@@ -866,7 +866,7 @@ static void si_dump_dma(struct si_context *sctx,
 	fprintf(f, "SDMA Dump Done.\n");
 }
 
-static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
+static bool si_vm_fault_occured(struct si_context *sctx, uint64_t *out_addr)
 {
 	char line[2000];
 	unsigned sec, usec;
@@ -921,18 +921,35 @@ static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
 		}
 		msg++;
 
+		const char *header_line, *addr_line_prefix, *addr_line_format;
+
+		if (sctx->b.chip_class >= GFX9) {
+			/* Match this:
+			 * ..: [gfxhub] VMC page fault (src_id:0 ring:158 vm_id:2 pas_id:0)
+			 * ..:   at page 0x0000000219f8f000 from 27
+			 * ..: VM_L2_PROTECTION_FAULT_STATUS:0x0020113C
+			 */
+			header_line = "VMC page fault";
+			addr_line_prefix = "   at page";
+			addr_line_format = "%"PRIx64;
+		} else {
+			header_line = "GPU fault detected:";
+			addr_line_prefix = "VM_CONTEXT1_PROTECTION_FAULT_ADDR";
+			addr_line_format = "%"PRIX64;
+		}
+
 		switch (progress) {
 		case 0:
-			if (strstr(msg, "GPU fault detected:"))
+			if (strstr(msg, header_line))
 				progress = 1;
 			break;
 		case 1:
-			msg = strstr(msg, "VM_CONTEXT1_PROTECTION_FAULT_ADDR");
+			msg = strstr(msg, addr_line_prefix);
 			if (msg) {
 				msg = strstr(msg, "0x");
 				if (msg) {
 					msg += 2;
-					if (sscanf(msg, "%X", out_addr) == 1)
+					if (sscanf(msg, addr_line_format, out_addr) == 1)
 						fault = true;
 				}
 			}
@@ -955,7 +972,7 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_screen *screen = sctx->b.b.screen;
 	FILE *f;
-	uint32_t addr;
+	uint64_t addr;
 	char cmd_line[4096];
 
 	if (!si_vm_fault_occured(sctx, &addr))
@@ -971,7 +988,7 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 	fprintf(f, "Driver vendor: %s\n", screen->get_vendor(screen));
 	fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));
 	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
-	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
+	fprintf(f, "Failing VM page: 0x%08"PRIx64"\n\n", addr);
 
 	if (sctx->apitrace_call_number)
 		fprintf(f, "Last apitrace call: %u\n\n",
