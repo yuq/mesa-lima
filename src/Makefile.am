@@ -72,7 +72,9 @@ endif
 if HAVE_VULKAN_COMMON
 SUBDIRS += vulkan
 endif
+
 EXTRA_DIST += vulkan/registry/vk.xml
+EXTRA_DIST += vulkan/registry/vk_android_native_buffer.xml
 
 if HAVE_AMD_DRIVERS
 SUBDIRS += amd
