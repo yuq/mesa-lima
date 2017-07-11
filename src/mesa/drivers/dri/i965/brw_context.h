@@ -373,7 +373,6 @@ struct brw_cache {
    GLuint size, n_items;
 
    uint32_t next_offset;
-   bool bo_used_by_gpu;
 };
 
 /* Considered adding a member to this struct to document which flags

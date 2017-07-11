@@ -465,12 +465,6 @@ brw_finish_batch(struct brw_context *brw)
                                           PIPE_CONTROL_CS_STALL);
       }
    }
-
-   /* Mark that the current program cache BO has been used by the GPU.
-    * It will be reallocated if we need to put new programs in for the
-    * next batch.
-    */
-   brw->cache.bo_used_by_gpu = true;
 }
 
 static void
