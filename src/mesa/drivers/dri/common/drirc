@@ -181,6 +181,9 @@ TODO: document the other workarounds.
         <application name="The Witcher 2" executable="witcher2">
             <option name="mesa_glthread" value="true"/>
         </application>
+        <application name="American Truck Simulator" executable="amtrucks">
+            <option name="mesa_glthread" value="true"/>
+        </application>
     </device>
     <!-- vmwgfx doesn't like full buffer swaps and can't sync to vertical retraces.-->
     <device driver="vmwgfx">
