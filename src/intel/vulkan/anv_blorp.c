@@ -915,7 +915,7 @@ clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
 
    uint32_t binding_table;
    VkResult result =
-      binding_table_for_surface_state(cmd_buffer, att_state->color_rt_state,
+      binding_table_for_surface_state(cmd_buffer, att_state->color.state,
                                       &binding_table);
    if (result != VK_SUCCESS)
       return;

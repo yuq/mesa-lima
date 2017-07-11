@@ -1619,6 +1619,23 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
                             const struct anv_dynamic_state *src,
                             uint32_t copy_mask);
 
+struct anv_surface_state {
+   struct anv_state state;
+   /** Address of the surface referred to by this state
+    *
+    * This address is relative to the start of the BO.
+    */
+   uint64_t address;
+   /* Address of the aux surface, if any
+    *
+    * This field is 0 if and only if no aux surface exists.
+    *
+    * This address is relative to the start of the BO.  On gen7, the bottom 12
+    * bits of this address include extra aux information.
+    */
+   uint64_t aux_address;
+};
+
 /**
  * Attachment state when recording a renderpass instance.
  *
@@ -1627,8 +1644,8 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 struct anv_attachment_state {
    enum isl_aux_usage                           aux_usage;
    enum isl_aux_usage                           input_aux_usage;
-   struct anv_state                             color_rt_state;
-   struct anv_state                             input_att_state;
+   struct anv_surface_state                     color;
+   struct anv_surface_state                     input;
 
    VkImageLayout                                current_layout;
    VkImageAspectFlags                           pending_clear_aspects;
@@ -2359,8 +2376,6 @@ anv_get_levelCount(const struct anv_image *image,
 
 struct anv_image_view {
    const struct anv_image *image; /**< VkImageViewCreateInfo::image */
-   struct anv_bo *bo;
-   uint32_t offset; /**< Offset into bo. */
 
    struct isl_view isl;
 
@@ -2372,23 +2387,21 @@ struct anv_image_view {
     * RENDER_SURFACE_STATE when using image as a sampler surface with an image
     * layout of SHADER_READ_ONLY_OPTIMAL or DEPTH_STENCIL_READ_ONLY_OPTIMAL.
     */
-   enum isl_aux_usage optimal_sampler_aux_usage;
-   struct anv_state optimal_sampler_surface_state;
+   struct anv_surface_state optimal_sampler_surface_state;
 
    /**
     * RENDER_SURFACE_STATE when using image as a sampler surface with an image
     * layout of GENERAL.
     */
-   enum isl_aux_usage general_sampler_aux_usage;
-   struct anv_state general_sampler_surface_state;
+   struct anv_surface_state general_sampler_surface_state;
 
    /**
     * RENDER_SURFACE_STATE when using image as a storage image. Separate states
     * for write-only and readable, using the real format for write-only and the
     * lowered format for readable.
     */
-   struct anv_state storage_surface_state;
-   struct anv_state writeonly_storage_surface_state;
+   struct anv_surface_state storage_surface_state;
+   struct anv_surface_state writeonly_storage_surface_state;
 
    struct brw_image_param storage_image_param;
 };
@@ -2406,7 +2419,7 @@ void anv_image_fill_surface_state(struct anv_device *device,
                                   enum isl_aux_usage aux_usage,
                                   const union isl_color_value *clear_color,
                                   enum anv_image_view_state_flags flags,
-                                  struct anv_state *state,
+                                  struct anv_surface_state *state_inout,
                                   struct brw_image_param *image_param_out);
 
 struct anv_image_create_info {
