@@ -641,7 +641,7 @@ etna_get_specs(struct etna_screen *screen)
       screen->model >= 0x1000 || screen->model == 0x880;
    screen->specs.npot_tex_any_wrap =
       VIV_FEATURE(screen, chipMinorFeatures1, NON_POWER_OF_TWO);
-   screen->specs.has_new_sin_cos =
+   screen->specs.has_new_transcendentals =
       VIV_FEATURE(screen, chipMinorFeatures3, HAS_FAST_TRANSCENDENTALS);
 
    if (VIV_FEATURE(screen, chipMinorFeatures3, INSTRUCTION_CACHE)) {
