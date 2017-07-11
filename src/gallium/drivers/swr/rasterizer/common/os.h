@@ -30,7 +30,7 @@
 #if (defined(FORCE_WINDOWS) || defined(_WIN32)) && !defined(FORCE_LINUX)
 
 #define SWR_API __cdecl
-#define SWR_VISIBLE
+#define SWR_VISIBLE  __declspec(dllexport)
 
 #ifndef NOMINMAX
 #define NOMINMAX
