@@ -1077,13 +1077,9 @@ struct anv_descriptor {
 
    union {
       struct {
+         VkImageLayout layout;
          struct anv_image_view *image_view;
          struct anv_sampler *sampler;
-
-         /* Used to determine whether or not we need the surface state to have
-          * the auxiliary buffer enabled.
-          */
-         enum isl_aux_usage aux_usage;
       };
 
       struct {
@@ -2164,14 +2160,19 @@ struct anv_image_view {
    VkFormat vk_format;
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 
-   /** RENDER_SURFACE_STATE when using image as a sampler surface. */
-   struct anv_state sampler_surface_state;
+   /**
+    * RENDER_SURFACE_STATE when using image as a sampler surface with an image
+    * layout of SHADER_READ_ONLY_OPTIMAL or DEPTH_STENCIL_READ_ONLY_OPTIMAL.
+    */
+   enum isl_aux_usage optimal_sampler_aux_usage;
+   struct anv_state optimal_sampler_surface_state;
 
    /**
-    * RENDER_SURFACE_STATE when using image as a sampler surface with the
-    * auxiliary buffer disabled.
+    * RENDER_SURFACE_STATE when using image as a sampler surface with an image
+    * layout of GENERAL.
     */
-   struct anv_state no_aux_sampler_surface_state;
+   enum isl_aux_usage general_sampler_aux_usage;
+   struct anv_state general_sampler_surface_state;
 
    /**
     * RENDER_SURFACE_STATE when using image as a storage image. Separate states

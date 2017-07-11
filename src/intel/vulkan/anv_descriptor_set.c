@@ -615,12 +615,9 @@ anv_descriptor_set_write_image_view(struct anv_descriptor_set *set,
 
    *desc = (struct anv_descriptor) {
       .type = type,
+      .layout = info->imageLayout,
       .image_view = image_view,
       .sampler = sampler,
-      .aux_usage = image_view == NULL ? ISL_AUX_USAGE_NONE :
-                   anv_layout_to_aux_usage(devinfo, image_view->image,
-                                           image_view->aspect_mask,
-                                           info->imageLayout),
    };
 }
 

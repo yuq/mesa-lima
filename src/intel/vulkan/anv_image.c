@@ -748,54 +748,50 @@ anv_CreateImageView(VkDevice _device,
    if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT ||
        (image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
         !(iview->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT))) {
-      iview->sampler_surface_state = alloc_surface_state(device);
-      iview->no_aux_sampler_surface_state = alloc_surface_state(device);
+      iview->optimal_sampler_surface_state = alloc_surface_state(device);
+      iview->general_sampler_surface_state = alloc_surface_state(device);
 
-      /* Sampling is performed in one of two buffer configurations in anv: with
-       * an auxiliary buffer or without it. Sampler states aren't always needed
-       * for both configurations, but are currently created unconditionally for
-       * simplicity.
-       *
-       * TODO: Consider allocating each surface state only when necessary.
-       */
-
-      /* Create a sampler state with the optimal aux_usage for sampling. This
-       * may use the aux_buffer.
-       */
-      const enum isl_aux_usage surf_usage =
+      iview->general_sampler_aux_usage =
+         anv_layout_to_aux_usage(&device->info, image, iview->aspect_mask,
+                                 VK_IMAGE_LAYOUT_GENERAL);
+      iview->optimal_sampler_aux_usage =
          anv_layout_to_aux_usage(&device->info, image, iview->aspect_mask,
                                  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
       /* If this is a HiZ buffer we can sample from with a programmable clear
        * value (SKL+), define the clear value to the optimal constant.
        */
-      const float red_clear_color = surf_usage == ISL_AUX_USAGE_HIZ &&
-                                    device->info.gen >= 9 ?
-                                    ANV_HZ_FC_VAL : 0.0f;
+      union isl_color_value clear_color = { .u32 = { 0, } };
+      if ((iview->aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) &&
+          device->info.gen >= 9)
+         clear_color.f32[0] = ANV_HZ_FC_VAL;
 
       struct isl_view view = iview->isl;
       view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
+
       isl_surf_fill_state(&device->isl_dev,
-                          iview->sampler_surface_state.map,
+                          iview->optimal_sampler_surface_state.map,
                           .surf = &surface->isl,
                           .view = &view,
-                          .clear_color.f32 = { red_clear_color,},
+                          .clear_color = clear_color,
                           .aux_surf = &image->aux_surface.isl,
-                          .aux_usage = surf_usage,
+                          .aux_usage = iview->optimal_sampler_aux_usage,
                           .mocs = device->default_mocs);
 
-      /* Create a sampler state that only uses the main buffer. */
       isl_surf_fill_state(&device->isl_dev,
-                          iview->no_aux_sampler_surface_state.map,
+                          iview->general_sampler_surface_state.map,
                           .surf = &surface->isl,
                           .view = &view,
+                          .clear_color = clear_color,
+                          .aux_surf = &image->aux_surface.isl,
+                          .aux_usage = iview->general_sampler_aux_usage,
                           .mocs = device->default_mocs);
 
-      anv_state_flush(device, iview->sampler_surface_state);
-      anv_state_flush(device, iview->no_aux_sampler_surface_state);
+      anv_state_flush(device, iview->optimal_sampler_surface_state);
+      anv_state_flush(device, iview->general_sampler_surface_state);
    } else {
-      iview->sampler_surface_state.alloc_size = 0;
-      iview->no_aux_sampler_surface_state.alloc_size = 0;
+      iview->optimal_sampler_surface_state.alloc_size = 0;
+      iview->general_sampler_surface_state.alloc_size = 0;
    }
 
    /* NOTE: This one needs to go last since it may stomp isl_view.format */
@@ -866,14 +862,14 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
    if (!iview)
       return;
 
-   if (iview->sampler_surface_state.alloc_size > 0) {
+   if (iview->optimal_sampler_surface_state.alloc_size > 0) {
       anv_state_pool_free(&device->surface_state_pool,
-                          iview->sampler_surface_state);
+                          iview->optimal_sampler_surface_state);
    }
 
-   if (iview->no_aux_sampler_surface_state.alloc_size > 0) {
+   if (iview->general_sampler_surface_state.alloc_size > 0) {
       anv_state_pool_free(&device->surface_state_pool,
-                          iview->no_aux_sampler_surface_state);
+                          iview->general_sampler_surface_state);
    }
 
    if (iview->storage_surface_state.alloc_size > 0) {

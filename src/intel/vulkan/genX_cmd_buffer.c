@@ -1584,28 +1584,39 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          continue;
 
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-         surface_state = desc->aux_usage == ISL_AUX_USAGE_NONE ?
-            desc->image_view->no_aux_sampler_surface_state :
-            desc->image_view->sampler_surface_state;
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE: {
+         enum isl_aux_usage aux_usage;
+         if (desc->layout == VK_IMAGE_LAYOUT_GENERAL) {
+            surface_state = desc->image_view->general_sampler_surface_state;
+            aux_usage = desc->image_view->general_sampler_aux_usage;
+         } else {
+            surface_state = desc->image_view->optimal_sampler_surface_state;
+            aux_usage = desc->image_view->optimal_sampler_aux_usage;
+         }
          assert(surface_state.alloc_size);
          add_image_relocs(cmd_buffer, desc->image_view->image,
                           desc->image_view->aspect_mask,
-                          desc->aux_usage, surface_state);
+                          aux_usage, surface_state);
          break;
+      }
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          assert(stage == MESA_SHADER_FRAGMENT);
          if (desc->image_view->aspect_mask != VK_IMAGE_ASPECT_COLOR_BIT) {
             /* For depth and stencil input attachments, we treat it like any
              * old texture that a user may have bound.
              */
-            surface_state = desc->aux_usage == ISL_AUX_USAGE_NONE ?
-               desc->image_view->no_aux_sampler_surface_state :
-               desc->image_view->sampler_surface_state;
+            enum isl_aux_usage aux_usage;
+            if (desc->layout == VK_IMAGE_LAYOUT_GENERAL) {
+               surface_state = desc->image_view->general_sampler_surface_state;
+               aux_usage = desc->image_view->general_sampler_aux_usage;
+            } else {
+               surface_state = desc->image_view->optimal_sampler_surface_state;
+               aux_usage = desc->image_view->optimal_sampler_aux_usage;
+            }
             assert(surface_state.alloc_size);
             add_image_relocs(cmd_buffer, desc->image_view->image,
                              desc->image_view->aspect_mask,
-                             desc->aux_usage, surface_state);
+                             aux_usage, surface_state);
          } else {
             /* For color input attachments, we create the surface state at
              * vkBeginRenderPass time so that we can include aux and clear
