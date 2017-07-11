@@ -121,6 +121,7 @@ struct brw_bufmgr {
    struct hash_table *handle_table;
 
    bool has_llc:1;
+   bool has_mmap_wc:1;
    bool bo_reuse:1;
 };
 
@@ -767,6 +768,52 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 }
 
 static void *
+brw_bo_map_wc(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
+{
+   struct brw_bufmgr *bufmgr = bo->bufmgr;
+
+   if (!bufmgr->has_mmap_wc)
+      return NULL;
+
+   if (!bo->map_wc) {
+      struct drm_i915_gem_mmap mmap_arg;
+      void *map;
+
+      DBG("brw_bo_map_wc: %d (%s)\n", bo->gem_handle, bo->name);
+
+      memclear(mmap_arg);
+      mmap_arg.handle = bo->gem_handle;
+      mmap_arg.size = bo->size;
+      mmap_arg.flags = I915_MMAP_WC;
+      int ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg);
+      if (ret != 0) {
+         ret = -errno;
+         DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
+             __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+         return NULL;
+      }
+
+      map = (void *) (uintptr_t) mmap_arg.addr_ptr;
+      VG_DEFINED(map, bo->size);
+
+      if (p_atomic_cmpxchg(&bo->map_wc, NULL, map)) {
+         VG_NOACCESS(map, bo->size);
+         drm_munmap(map, bo->size);
+      }
+   }
+   assert(bo->map_wc);
+
+   DBG("brw_bo_map_wc: %d (%s) -> %p\n", bo->gem_handle, bo->name, bo->map_wc);
+   print_flags(flags);
+
+   if (!(flags & MAP_ASYNC)) {
+      bo_wait_with_stall_warning(brw, bo, "WC mapping");
+   }
+
+   return bo->map_wc;
+}
+
+static void *
 brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
@@ -850,10 +897,32 @@ brw_bo_map(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
    if (bo->tiling_mode != I915_TILING_NONE && !(flags & MAP_RAW))
       return brw_bo_map_gtt(brw, bo, flags);
-   else if (can_map_cpu(bo, flags))
-      return brw_bo_map_cpu(brw, bo, flags);
+
+   void *map;
+
+   if (can_map_cpu(bo, flags))
+      map = brw_bo_map_cpu(brw, bo, flags);
    else
-      return brw_bo_map_gtt(brw, bo, flags);
+      map = brw_bo_map_wc(brw, bo, flags);
+
+   /* Allow the attempt to fail by falling back to the GTT where necessary.
+    *
+    * Not every buffer can be mmaped directly using the CPU (or WC), for
+    * example buffers that wrap stolen memory or are imported from other
+    * devices. For those, we have little choice but to use a GTT mmapping.
+    * However, if we use a slow GTT mmapping for reads where we expected fast
+    * access, that order of magnitude difference in throughput will be clearly
+    * expressed by angry users.
+    *
+    * We skip MAP_RAW because we want to avoid map_gtt's fence detiling.
+    */
+   if (!map && !(flags & MAP_RAW)) {
+      perf_debug("Fallback GTT mapping for %s with access flags %x\n",
+                 bo->name, flags);
+      map = brw_bo_map_gtt(brw, bo, flags);
+   }
+
+   return map;
 }
 
 int
@@ -1211,6 +1280,21 @@ brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset, uint64_t *result)
    return ret;
 }
 
+static int
+gem_param(int fd, int name)
+{
+   drm_i915_getparam_t gp;
+   int v = -1; /* No param uses (yet) the sign bit, reserve it for errors */
+
+   memset(&gp, 0, sizeof(gp));
+   gp.param = name;
+   gp.value = &v;
+   if (drmIoctl(fd, DRM_IOCTL_I915_GETPARAM, &gp))
+      return -1;
+
+   return v;
+}
+
 /**
  * Initializes the GEM buffer manager, which uses the kernel to allocate, map,
  * and manage map buffer objections.
@@ -1243,6 +1327,7 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd, int batch_size)
    }
 
    bufmgr->has_llc = devinfo->has_llc;
+   bufmgr->has_mmap_wc = gem_param(fd, I915_PARAM_MMAP_VERSION) > 0;
 
    init_cache_buckets(bufmgr);
 
