@@ -268,6 +268,18 @@ make_surface(const struct anv_device *dev,
                                                aspect, vk_info->tiling);
    assert(format != ISL_FORMAT_UNSUPPORTED);
 
+   /* If an image is created as BLOCK_TEXEL_VIEW_COMPATIBLE, then we need to
+    * fall back to linear because we aren't guaranteed that we can handle
+    * offsets correctly.
+    */
+   bool needs_shadow = false;
+   if ((vk_info->flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR) &&
+       vk_info->tiling == VK_IMAGE_TILING_OPTIMAL) {
+      assert(isl_format_is_compressed(format));
+      tiling_flags = ISL_TILING_LINEAR_BIT;
+      needs_shadow = true;
+   }
+
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
       .format = format,
@@ -288,6 +300,36 @@ make_surface(const struct anv_device *dev,
    assert(ok);
 
    add_surface(image, anv_surf);
+
+   /* If an image is created as BLOCK_TEXEL_VIEW_COMPATIBLE, then we need to
+    * create an identical tiled shadow surface for use while texturing so we
+    * don't get garbage performance.
+    */
+   if (needs_shadow) {
+      assert(aspect == VK_IMAGE_ASPECT_COLOR_BIT);
+      assert(tiling_flags == ISL_TILING_LINEAR_BIT);
+
+      ok = isl_surf_init(&dev->isl_dev, &image->shadow_surface.isl,
+         .dim = vk_to_isl_surf_dim[vk_info->imageType],
+         .format = format,
+         .width = image->extent.width,
+         .height = image->extent.height,
+         .depth = image->extent.depth,
+         .levels = vk_info->mipLevels,
+         .array_len = vk_info->arrayLayers,
+         .samples = vk_info->samples,
+         .min_alignment = 0,
+         .row_pitch = anv_info->stride,
+         .usage = choose_isl_surf_usage(image->usage, image->usage, aspect),
+         .tiling_flags = ISL_TILING_ANY_MASK);
+
+      /* isl_surf_init() will fail only if provided invalid input. Invalid input
+       * is illegal in Vulkan.
+       */
+      assert(ok);
+
+      add_surface(image, &image->shadow_surface);
+   }
 
    /* Add a HiZ surface to a depth buffer that will be used for rendering.
     */
@@ -730,6 +772,20 @@ anv_image_fill_surface_state(struct anv_device *device,
    struct isl_view view = *view_in;
    view.usage |= view_usage;
 
+   /* For texturing with VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL from a
+    * compressed surface with a shadow surface, we use the shadow instead of
+    * the primary surface.  The shadow surface will be tiled, unlike the main
+    * surface, so it should get significantly better performance.
+    */
+   if (image->shadow_surface.isl.size > 0 &&
+       isl_format_is_compressed(view.format) &&
+       (flags & ANV_IMAGE_VIEW_STATE_TEXTURE_OPTIMAL)) {
+      assert(isl_format_is_compressed(surface->isl.format));
+      assert(surface->isl.tiling == ISL_TILING_LINEAR);
+      assert(image->shadow_surface.isl.tiling != ISL_TILING_LINEAR);
+      surface = &image->shadow_surface;
+   }
+
    if (view_usage == ISL_SURF_USAGE_RENDER_TARGET_BIT)
       view.swizzle = anv_swizzle_for_render(view.swizzle);
 
@@ -775,16 +831,65 @@ anv_image_fill_surface_state(struct anv_device *device,
                                                       view.format);
       }
 
+      const struct isl_surf *isl_surf = &surface->isl;
+
+      struct isl_surf tmp_surf;
+      uint32_t offset_B = 0, tile_x_sa = 0, tile_y_sa = 0;
+      if (isl_format_is_compressed(surface->isl.format) &&
+          !isl_format_is_compressed(view.format)) {
+         /* We're creating an uncompressed view of a compressed surface.  This
+          * is allowed but only for a single level/layer.
+          */
+         assert(surface->isl.samples == 1);
+         assert(view.levels == 1);
+         assert(view.array_len == 1);
+
+         isl_surf_get_image_surf(&device->isl_dev, isl_surf,
+                                 view.base_level,
+                                 surface->isl.dim == ISL_SURF_DIM_3D ?
+                                    0 : view.base_array_layer,
+                                 surface->isl.dim == ISL_SURF_DIM_3D ?
+                                    view.base_array_layer : 0,
+                                 &tmp_surf,
+                                 &offset_B, &tile_x_sa, &tile_y_sa);
+
+         /* The newly created image represents the one subimage we're
+          * referencing with this view so it only has one array slice and
+          * miplevel.
+          */
+         view.base_array_layer = 0;
+         view.base_level = 0;
+
+         /* We're making an uncompressed view here.  The image dimensions need
+          * to be scaled down by the block size.
+          */
+         const struct isl_format_layout *fmtl =
+            isl_format_get_layout(surface->isl.format);
+         tmp_surf.format = view.format;
+         tmp_surf.logical_level0_px.width =
+            DIV_ROUND_UP(tmp_surf.logical_level0_px.width, fmtl->bw);
+         tmp_surf.logical_level0_px.height =
+            DIV_ROUND_UP(tmp_surf.logical_level0_px.height, fmtl->bh);
+         tmp_surf.phys_level0_sa.width /= fmtl->bw;
+         tmp_surf.phys_level0_sa.height /= fmtl->bh;
+
+         isl_surf = &tmp_surf;
+
+         assert(surface->isl.tiling == ISL_TILING_LINEAR);
+         assert(tile_x_sa == 0);
+         assert(tile_y_sa == 0);
+      }
+
       isl_surf_fill_state(&device->isl_dev, state_inout->state.map,
-                          .surf = &surface->isl,
+                          .surf = isl_surf,
                           .view = &view,
-                          .address = address,
+                          .address = address + offset_B,
                           .clear_color = *clear_color,
                           .aux_surf = &image->aux_surface.isl,
                           .aux_usage = aux_usage,
                           .aux_address = aux_address,
                           .mocs = device->default_mocs);
-      state_inout->address = address;
+      state_inout->address = address + offset_B;
       if (device->info.gen >= 8) {
          state_inout->aux_address = aux_address;
       } else {

@@ -1489,6 +1489,52 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 }
 
 void
+anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
+                         const struct anv_image *image,
+                         VkImageAspectFlagBits aspect,
+                         uint32_t base_level, uint32_t level_count,
+                         uint32_t base_layer, uint32_t layer_count)
+{
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
+   struct blorp_surf surf;
+   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                ISL_AUX_USAGE_NONE, &surf);
+
+   struct blorp_surf shadow_surf = {
+      .surf = &image->shadow_surface.isl,
+      .addr = {
+         .buffer = image->bo,
+         .offset = image->offset + image->shadow_surface.offset,
+      },
+   };
+
+   for (uint32_t l = 0; l < level_count; l++) {
+      const uint32_t level = base_level + l;
+
+      const VkExtent3D extent = {
+         .width = anv_minify(image->extent.width, level),
+         .height = anv_minify(image->extent.height, level),
+         .depth = anv_minify(image->extent.depth, level),
+      };
+
+      if (image->type == VK_IMAGE_TYPE_3D)
+         layer_count = extent.depth;
+
+      for (uint32_t a = 0; a < layer_count; a++) {
+         const uint32_t layer = base_layer + a;
+
+         blorp_copy(&batch, &surf, level, layer,
+                    &shadow_surf, level, layer,
+                    0, 0, 0, 0, extent.width, extent.height);
+      }
+   }
+
+   blorp_batch_finish(&batch);
+}
+
+void
 anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
                         enum blorp_hiz_op op)

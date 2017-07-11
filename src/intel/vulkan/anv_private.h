@@ -2266,6 +2266,13 @@ struct anv_image {
    };
 
    /**
+    * A surface which shadows the main surface and may have different tiling.
+    * This is used for sampling using a tiling that isn't supported for other
+    * operations.
+    */
+   struct anv_surface shadow_surface;
+
+   /**
     * For color images, this is the aux usage for this image when not used as a
     * color attachment.
     *
@@ -2351,6 +2358,13 @@ anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
                      const struct anv_image *image,
                      const uint32_t base_level, const uint32_t level_count,
                      const uint32_t base_layer, uint32_t layer_count);
+
+void
+anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
+                         const struct anv_image *image,
+                         VkImageAspectFlagBits aspect,
+                         uint32_t base_level, uint32_t level_count,
+                         uint32_t base_layer, uint32_t layer_count);
 
 enum isl_aux_usage
 anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,

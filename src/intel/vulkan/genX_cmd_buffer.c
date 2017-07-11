@@ -627,8 +627,25 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
    /* No work is necessary if the layout stays the same or if this subresource
     * range lacks auxiliary data.
     */
-   if (initial_layout == final_layout ||
-       base_layer >= anv_image_aux_layers(image, base_level))
+   if (initial_layout == final_layout)
+      return;
+
+   if (image->shadow_surface.isl.size > 0 &&
+       final_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+      /* This surface is a linear compressed image with a tiled shadow surface
+       * for texturing.  The client is about to use it in READ_ONLY_OPTIMAL so
+       * we need to ensure the shadow copy is up-to-date.
+       */
+      assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+      assert(image->color_surface.isl.tiling == ISL_TILING_LINEAR);
+      assert(image->shadow_surface.isl.tiling != ISL_TILING_LINEAR);
+      assert(isl_format_is_compressed(image->color_surface.isl.format));
+      anv_image_copy_to_shadow(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                               base_level, level_count,
+                               base_layer, layer_count);
+   }
+
+   if (base_layer >= anv_image_aux_layers(image, base_level))
       return;
 
    /* A transition of a 3D subresource works on all slices at a time. */
