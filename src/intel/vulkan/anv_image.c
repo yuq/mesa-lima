@@ -712,6 +712,79 @@ remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
    }
 }
 
+void
+anv_image_fill_surface_state(struct anv_device *device,
+                             const struct anv_image *image,
+                             VkImageAspectFlagBits aspect,
+                             const struct isl_view *view_in,
+                             isl_surf_usage_flags_t view_usage,
+                             enum isl_aux_usage aux_usage,
+                             const union isl_color_value *clear_color,
+                             enum anv_image_view_state_flags flags,
+                             struct anv_state *state,
+                             struct brw_image_param *image_param_out)
+{
+   const struct anv_surface *surface =
+      anv_image_get_surface_for_aspect_mask(image, aspect);
+
+   struct isl_view view = *view_in;
+   view.usage |= view_usage;
+
+   if (view_usage == ISL_SURF_USAGE_RENDER_TARGET_BIT)
+      view.swizzle = anv_swizzle_for_render(view.swizzle);
+
+   /* If this is a HiZ buffer we can sample from with a programmable clear
+    * value (SKL+), define the clear value to the optimal constant.
+    */
+   union isl_color_value default_clear_color = { .u32 = { 0, } };
+   if (device->info.gen >= 9 && aux_usage == ISL_AUX_USAGE_HIZ)
+      default_clear_color.f32[0] = ANV_HZ_FC_VAL;
+   if (!clear_color)
+      clear_color = &default_clear_color;
+
+   if (view_usage == ISL_SURF_USAGE_STORAGE_BIT &&
+       !(flags & ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY) &&
+       !isl_has_matching_typed_storage_image_format(&device->info,
+                                                    view.format)) {
+      /* In this case, we are a writeable storage buffer which needs to be
+       * lowered to linear. All tiling and offset calculations will be done in
+       * the shader.
+       */
+      assert(aux_usage == ISL_AUX_USAGE_NONE);
+      isl_buffer_fill_state(&device->isl_dev, state->map,
+                            .size = surface->isl.size,
+                            .format = ISL_FORMAT_RAW,
+                            .stride = 1,
+                            .mocs = device->default_mocs);
+   } else {
+      if (view_usage == ISL_SURF_USAGE_STORAGE_BIT &&
+          !(flags & ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY)) {
+         /* Typed surface reads support a very limited subset of the shader
+          * image formats.  Translate it into the closest format the hardware
+          * supports.
+          */
+         assert(aux_usage == ISL_AUX_USAGE_NONE);
+         view.format = isl_lower_storage_image_format(&device->info,
+                                                      view.format);
+      }
+
+      isl_surf_fill_state(&device->isl_dev, state->map,
+                          .surf = &surface->isl,
+                          .view = &view,
+                          .clear_color = *clear_color,
+                          .aux_surf = &image->aux_surface.isl,
+                          .aux_usage = aux_usage,
+                          .mocs = device->default_mocs);
+   }
+
+   anv_state_flush(device, *state);
+
+   if (image_param_out) {
+      assert(view_usage == ISL_SURF_USAGE_STORAGE_BIT);
+      isl_surf_fill_image_param(&device->isl_dev, image_param_out,
+                                &surface->isl, &view);
+   }
+}
 
 VkResult
 anv_CreateImageView(VkDevice _device,
@@ -825,37 +898,19 @@ anv_CreateImageView(VkDevice _device,
          anv_layout_to_aux_usage(&device->info, image, iview->aspect_mask,
                                  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-      /* If this is a HiZ buffer we can sample from with a programmable clear
-       * value (SKL+), define the clear value to the optimal constant.
-       */
-      union isl_color_value clear_color = { .u32 = { 0, } };
-      if ((iview->aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-          device->info.gen >= 9)
-         clear_color.f32[0] = ANV_HZ_FC_VAL;
+      anv_image_fill_surface_state(device, image, iview->aspect_mask,
+                                   &iview->isl, ISL_SURF_USAGE_TEXTURE_BIT,
+                                   iview->optimal_sampler_aux_usage, NULL,
+                                   ANV_IMAGE_VIEW_STATE_TEXTURE_OPTIMAL,
+                                   &iview->optimal_sampler_surface_state,
+                                   NULL);
 
-      struct isl_view view = iview->isl;
-      view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
-
-      isl_surf_fill_state(&device->isl_dev,
-                          iview->optimal_sampler_surface_state.map,
-                          .surf = &surface->isl,
-                          .view = &view,
-                          .clear_color = clear_color,
-                          .aux_surf = &image->aux_surface.isl,
-                          .aux_usage = iview->optimal_sampler_aux_usage,
-                          .mocs = device->default_mocs);
-
-      isl_surf_fill_state(&device->isl_dev,
-                          iview->general_sampler_surface_state.map,
-                          .surf = &surface->isl,
-                          .view = &view,
-                          .clear_color = clear_color,
-                          .aux_surf = &image->aux_surface.isl,
-                          .aux_usage = iview->general_sampler_aux_usage,
-                          .mocs = device->default_mocs);
-
-      anv_state_flush(device, iview->optimal_sampler_surface_state);
-      anv_state_flush(device, iview->general_sampler_surface_state);
+      anv_image_fill_surface_state(device, image, iview->aspect_mask,
+                                   &iview->isl, ISL_SURF_USAGE_TEXTURE_BIT,
+                                   iview->general_sampler_aux_usage, NULL,
+                                   0,
+                                   &iview->general_sampler_surface_state,
+                                   NULL);
    }
 
    /* NOTE: This one needs to go last since it may stomp isl_view.format */
@@ -863,49 +918,19 @@ anv_CreateImageView(VkDevice _device,
       iview->storage_surface_state = alloc_surface_state(device);
       iview->writeonly_storage_surface_state = alloc_surface_state(device);
 
-      struct isl_view view = iview->isl;
-      view.usage |= ISL_SURF_USAGE_STORAGE_BIT;
+      anv_image_fill_surface_state(device, image, iview->aspect_mask,
+                                   &iview->isl, ISL_SURF_USAGE_STORAGE_BIT,
+                                   ISL_AUX_USAGE_NONE, NULL,
+                                   0,
+                                   &iview->storage_surface_state,
+                                   &iview->storage_image_param);
 
-      /* Write-only accesses always used a typed write instruction and should
-       * therefore use the real format.
-       */
-      isl_surf_fill_state(&device->isl_dev,
-                          iview->writeonly_storage_surface_state.map,
-                          .surf = &surface->isl,
-                          .view = &view,
-                          .aux_surf = &image->aux_surface.isl,
-                          .aux_usage = image->aux_usage,
-                          .mocs = device->default_mocs);
-
-      if (isl_has_matching_typed_storage_image_format(&device->info,
-                                                      format.isl_format)) {
-         /* Typed surface reads support a very limited subset of the shader
-          * image formats.  Translate it into the closest format the hardware
-          * supports.
-          */
-         view.format = isl_lower_storage_image_format(&device->info,
-                                                      format.isl_format);
-
-         isl_surf_fill_state(&device->isl_dev,
-                             iview->storage_surface_state.map,
-                             .surf = &surface->isl,
-                             .view = &view,
-                             .aux_surf = &image->aux_surface.isl,
-                             .aux_usage = image->aux_usage,
-                             .mocs = device->default_mocs);
-      } else {
-         anv_fill_buffer_surface_state(device, iview->storage_surface_state,
-                                       ISL_FORMAT_RAW,
-                                       iview->offset,
-                                       iview->bo->size - iview->offset, 1);
-      }
-
-      isl_surf_fill_image_param(&device->isl_dev,
-                                &iview->storage_image_param,
-                                &surface->isl, &iview->isl);
-
-      anv_state_flush(device, iview->storage_surface_state);
-      anv_state_flush(device, iview->writeonly_storage_surface_state);
+      anv_image_fill_surface_state(device, image, iview->aspect_mask,
+                                   &iview->isl, ISL_SURF_USAGE_STORAGE_BIT,
+                                   ISL_AUX_USAGE_NONE, NULL,
+                                   ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY,
+                                   &iview->writeonly_storage_surface_state,
+                                   NULL);
    }
 
    *pView = anv_image_view_to_handle(iview);

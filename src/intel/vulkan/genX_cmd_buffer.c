@@ -768,26 +768,27 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
       genX(load_needs_resolve_predicate)(cmd_buffer, image, level);
 
+      enum isl_aux_usage aux_usage = image->aux_usage == ISL_AUX_USAGE_NONE ?
+                                     ISL_AUX_USAGE_CCS_D : image->aux_usage;
+
       /* Create a surface state with the right clear color and perform the
        * resolve.
        */
       struct anv_state surface_state =
          anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-      isl_surf_fill_state(&cmd_buffer->device->isl_dev, surface_state.map,
-                          .surf = &image->color_surface.isl,
-                          .view = &(struct isl_view) {
-                              .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT,
-                              .format = image->color_surface.isl.format,
-                              .swizzle = ISL_SWIZZLE_IDENTITY,
-                              .base_level = level,
-                              .levels = 1,
-                              .base_array_layer = base_layer,
-                              .array_len = layer_count,
-                           },
-                          .aux_surf = &image->aux_surface.isl,
-                          .aux_usage = image->aux_usage == ISL_AUX_USAGE_NONE ?
-                                       ISL_AUX_USAGE_CCS_D : image->aux_usage,
-                          .mocs = cmd_buffer->device->default_mocs);
+      anv_image_fill_surface_state(cmd_buffer->device,
+                                   image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                   &(struct isl_view) {
+                                      .format = image->color_surface.isl.format,
+                                      .swizzle = ISL_SWIZZLE_IDENTITY,
+                                      .base_level = level,
+                                      .levels = 1,
+                                      .base_array_layer = base_layer,
+                                      .array_len = layer_count,
+                                   },
+                                   ISL_SURF_USAGE_RENDER_TARGET_BIT,
+                                   aux_usage, NULL, 0,
+                                   &surface_state, NULL);
       add_image_relocs(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
                        image->aux_usage == ISL_AUX_USAGE_CCS_E ?
                        ISL_AUX_USAGE_CCS_E : ISL_AUX_USAGE_CCS_D,
@@ -917,17 +918,16 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                                state, i, begin->renderArea,
                                                &clear_color);
 
-            struct isl_view view = iview->isl;
-            view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
-            view.swizzle = anv_swizzle_for_render(view.swizzle);
-            isl_surf_fill_state(isl_dev,
-                                state->attachments[i].color_rt_state.map,
-                                .surf = &iview->image->color_surface.isl,
-                                .view = &view,
-                                .aux_surf = &iview->image->aux_surface.isl,
-                                .aux_usage = state->attachments[i].aux_usage,
-                                .clear_color = clear_color,
-                                .mocs = cmd_buffer->device->default_mocs);
+            anv_image_fill_surface_state(cmd_buffer->device,
+                                         iview->image,
+                                         VK_IMAGE_ASPECT_COLOR_BIT,
+                                         &iview->isl,
+                                         ISL_SURF_USAGE_RENDER_TARGET_BIT,
+                                         state->attachments[i].aux_usage,
+                                         &clear_color,
+                                         0,
+                                         &state->attachments[i].color_rt_state,
+                                         NULL);
 
             add_image_relocs(cmd_buffer, iview->image, iview->aspect_mask,
                              state->attachments[i].aux_usage,
@@ -942,24 +942,22 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          }
 
          if (need_input_attachment_state(&pass->attachments[i])) {
-            struct isl_view view = iview->isl;
-            view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
-            isl_surf_fill_state(isl_dev,
-                                state->attachments[i].input_att_state.map,
-                                .surf = &iview->image->color_surface.isl,
-                                .view = &view,
-                                .aux_surf = &iview->image->aux_surface.isl,
-                                .aux_usage = state->attachments[i].input_aux_usage,
-                                .clear_color = clear_color,
-                                .mocs = cmd_buffer->device->default_mocs);
+            anv_image_fill_surface_state(cmd_buffer->device,
+                                         iview->image,
+                                         VK_IMAGE_ASPECT_COLOR_BIT,
+                                         &iview->isl,
+                                         ISL_SURF_USAGE_TEXTURE_BIT,
+                                         state->attachments[i].input_aux_usage,
+                                         &clear_color,
+                                         0,
+                                         &state->attachments[i].input_att_state,
+                                         NULL);
 
             add_image_relocs(cmd_buffer, iview->image, iview->aspect_mask,
                              state->attachments[i].input_aux_usage,
                              state->attachments[i].input_att_state);
          }
       }
-
-      anv_state_flush(cmd_buffer->device, state->render_pass_states);
    }
 
    return VK_SUCCESS;

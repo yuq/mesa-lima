@@ -2393,6 +2393,22 @@ struct anv_image_view {
    struct brw_image_param storage_image_param;
 };
 
+enum anv_image_view_state_flags {
+   ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY   = (1 << 0),
+   ANV_IMAGE_VIEW_STATE_TEXTURE_OPTIMAL      = (1 << 1),
+};
+
+void anv_image_fill_surface_state(struct anv_device *device,
+                                  const struct anv_image *image,
+                                  VkImageAspectFlagBits aspect,
+                                  const struct isl_view *view,
+                                  isl_surf_usage_flags_t view_usage,
+                                  enum isl_aux_usage aux_usage,
+                                  const union isl_color_value *clear_color,
+                                  enum anv_image_view_state_flags flags,
+                                  struct anv_state *state,
+                                  struct brw_image_param *image_param_out);
+
 struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;
 
