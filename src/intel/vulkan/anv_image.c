@@ -661,7 +661,7 @@ anv_CreateImageView(VkDevice _device,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    struct anv_image_view *iview;
 
-   iview = vk_alloc2(&device->alloc, pAllocator, sizeof(*iview), 8,
+   iview = vk_zalloc2(&device->alloc, pAllocator, sizeof(*iview), 8,
                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (iview == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -788,9 +788,6 @@ anv_CreateImageView(VkDevice _device,
 
       anv_state_flush(device, iview->optimal_sampler_surface_state);
       anv_state_flush(device, iview->general_sampler_surface_state);
-   } else {
-      iview->optimal_sampler_surface_state.alloc_size = 0;
-      iview->general_sampler_surface_state.alloc_size = 0;
    }
 
    /* NOTE: This one needs to go last since it may stomp isl_view.format */
@@ -841,9 +838,6 @@ anv_CreateImageView(VkDevice _device,
 
       anv_state_flush(device, iview->storage_surface_state);
       anv_state_flush(device, iview->writeonly_storage_surface_state);
-   } else {
-      iview->storage_surface_state.alloc_size = 0;
-      iview->writeonly_storage_surface_state.alloc_size = 0;
    }
 
    *pView = anv_image_view_to_handle(iview);
