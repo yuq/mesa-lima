@@ -2318,6 +2318,47 @@ isl_surf_get_image_offset_B_tile_sa(const struct isl_surf *surf,
 }
 
 void
+isl_surf_get_image_surf(const struct isl_device *dev,
+                        const struct isl_surf *surf,
+                        uint32_t level,
+                        uint32_t logical_array_layer,
+                        uint32_t logical_z_offset_px,
+                        struct isl_surf *image_surf,
+                        uint32_t *offset_B,
+                        uint32_t *x_offset_sa,
+                        uint32_t *y_offset_sa)
+{
+   isl_surf_get_image_offset_B_tile_sa(surf,
+                                       level,
+                                       logical_array_layer,
+                                       logical_z_offset_px,
+                                       offset_B,
+                                       x_offset_sa,
+                                       y_offset_sa);
+
+   /* Even for cube maps there will be only single face, therefore drop the
+    * corresponding flag if present.
+    */
+   const isl_surf_usage_flags_t usage =
+      surf->usage & (~ISL_SURF_USAGE_CUBE_BIT);
+
+   bool ok UNUSED;
+   ok = isl_surf_init(dev, image_surf,
+                      .dim = ISL_SURF_DIM_2D,
+                      .format = surf->format,
+                      .width = isl_minify(surf->logical_level0_px.w, level),
+                      .height = isl_minify(surf->logical_level0_px.h, level),
+                      .depth = 1,
+                      .levels = 1,
+                      .array_len = 1,
+                      .samples = surf->samples,
+                      .row_pitch = surf->row_pitch,
+                      .usage = usage,
+                      .tiling_flags = (1 << surf->tiling));
+   assert(ok);
+}
+
+void
 isl_tiling_get_intratile_offset_el(enum isl_tiling tiling,
                                    uint32_t bpb,
                                    uint32_t row_pitch,
