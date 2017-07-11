@@ -24,10 +24,19 @@
 
 #include "util/u_memory.h"
 #include "tgsi/tgsi_dump.h"
+#include "compiler/nir/nir.h"
+#include "nir/tgsi_to_nir.h"
 
 #include "pipe/p_state.h"
 
 #include "lima_context.h"
+
+static const nir_shader_compiler_options nir_options = {
+   .lower_fpow = true,
+   .lower_ffract = true,
+   .lower_fdiv = true,
+   .lower_fsqrt = true,
+};
 
 static void *
 lima_create_fs_state(struct pipe_context *pctx,
@@ -41,10 +50,16 @@ lima_create_fs_state(struct pipe_context *pctx,
    printf("dummy %s\n", __func__);
 
    assert(cso->type == PIPE_SHADER_IR_TGSI);
+
    tgsi_dump(cso->tokens, 0);
+
+   nir_shader *s = tgsi_to_nir(cso->tokens, &nir_options);
+   nir_print_shader(s, stdout);
+   ralloc_free(s);
 
    static uint32_t fs[] = {
       0x00021025, 0x0000014c, 0x03c007cf, 0x00000000, /* 0x00000000 */
+      0x00000000,
    };
 
    so->shader = fs;
@@ -84,8 +99,33 @@ lima_create_vs_state(struct pipe_context *pctx,
    printf("dummy %s\n", __func__);
 
    assert(cso->type == PIPE_SHADER_IR_TGSI);
+
    tgsi_dump(cso->tokens, 0);
 
+   nir_shader *s = tgsi_to_nir(cso->tokens, &nir_options);
+   nir_print_shader(s, stdout);
+   ralloc_free(s);
+
+/*
+  uniform.load(2), acc[1].pass(uniform.x);
+  uniform.load(0), attribute.load(0), mul[0].mul(attribute.z, uniform.z), mul[1].mul(attribute.y, uniform.y);
+  uniform.load(0), attribute.load(0), mul[0].mul(attribute.x, uniform.x), mul[1].mul(mul[0].out[1], acc[1].out[2]), acc[1].pass(acc[1].out[2]);
+  uniform.load(1), mul[0].mul(mul[1].out[2], acc[1].out[1]), mul[1].mul(mul[0].out[1], acc[1].out[1]), acc[1].add(mul[1].out[1], uniform.z);
+  uniform.load(1), mul[1].pass(acc[1].out[2]), acc[0].add(mul[0].out[1], uniform.y), acc[1].add(mul[1].out[1], uniform.x), complex.pass(acc[1].out[1]), store[0].varying(0, acc[1].out, acc[0].out), store[1].varying(0, complex.out, mul[1].out);
+
+  void main()
+  {
+  004: varying[0].x = (((attribute[0].x * temp[0].x) * temp[2].x) + temp[1].x);
+  004: varying[0].y = (((attribute[0].y * temp[0].y) * temp[2].x) + temp[1].y);
+  004: varying[0].z = (((attribute[0].z * temp[0].z) * temp[2].x) + temp[1].z);
+  004: varying[0].w = temp[2].x;
+  }
+
+  sx * x * s = vx
+  sy * y * s = vy
+  sz * z * s = vz
+  s = vw
+ */
    static uint32_t vs[] = {
       0xad4ad6b5, 0x0380a2cc, 0x0007ff80, 0x000ad500, /* 0x00000000 */
       0xad4685c2, 0x438002b5, 0x0007ff80, 0x000ad500, /* 0x00000010 */
