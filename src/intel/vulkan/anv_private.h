@@ -2244,13 +2244,6 @@ void anv_fill_buffer_surface_state(struct anv_device *device,
                                    uint32_t offset, uint32_t range,
                                    uint32_t stride);
 
-void anv_image_view_fill_image_param(struct anv_device *device,
-                                     struct anv_image_view *view,
-                                     struct brw_image_param *param);
-void anv_buffer_view_fill_image_param(struct anv_device *device,
-                                      struct anv_buffer_view *view,
-                                      struct brw_image_param *param);
-
 struct anv_sampler {
    uint32_t state[4];
 };
