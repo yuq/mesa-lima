@@ -776,6 +776,11 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
                           iview->sampler_surface_state);
    }
 
+   if (iview->no_aux_sampler_surface_state.alloc_size > 0) {
+      anv_state_pool_free(&device->surface_state_pool,
+                          iview->no_aux_sampler_surface_state);
+   }
+
    if (iview->storage_surface_state.alloc_size > 0) {
       anv_state_pool_free(&device->surface_state_pool,
                           iview->storage_surface_state);
