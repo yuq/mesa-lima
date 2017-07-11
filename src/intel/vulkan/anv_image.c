@@ -269,11 +269,14 @@ make_surface(const struct anv_device *dev,
    assert(format != ISL_FORMAT_UNSUPPORTED);
 
    /* If an image is created as BLOCK_TEXEL_VIEW_COMPATIBLE, then we need to
-    * fall back to linear because we aren't guaranteed that we can handle
-    * offsets correctly.
+    * fall back to linear on Broadwell and earlier because we aren't
+    * guaranteed that we can handle offsets correctly.  On Sky Lake, the
+    * horizontal and vertical alignments are sufficiently high that we can
+    * just use RENDER_SURFACE_STATE::X/Y Offset.
     */
    bool needs_shadow = false;
-   if ((vk_info->flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR) &&
+   if (dev->info.gen <= 8 &&
+       (vk_info->flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR) &&
        vk_info->tiling == VK_IMAGE_TILING_OPTIMAL) {
       assert(isl_format_is_compressed(format));
       tiling_flags = ISL_TILING_LINEAR_BIT;
@@ -872,12 +875,16 @@ anv_image_fill_surface_state(struct anv_device *device,
             DIV_ROUND_UP(tmp_surf.logical_level0_px.height, fmtl->bh);
          tmp_surf.phys_level0_sa.width /= fmtl->bw;
          tmp_surf.phys_level0_sa.height /= fmtl->bh;
+         tile_x_sa /= fmtl->bw;
+         tile_y_sa /= fmtl->bh;
 
          isl_surf = &tmp_surf;
 
-         assert(surface->isl.tiling == ISL_TILING_LINEAR);
-         assert(tile_x_sa == 0);
-         assert(tile_y_sa == 0);
+         if (device->info.gen <= 8) {
+            assert(surface->isl.tiling == ISL_TILING_LINEAR);
+            assert(tile_x_sa == 0);
+            assert(tile_y_sa == 0);
+         }
       }
 
       isl_surf_fill_state(&device->isl_dev, state_inout->state.map,
@@ -888,7 +895,9 @@ anv_image_fill_surface_state(struct anv_device *device,
                           .aux_surf = &image->aux_surface.isl,
                           .aux_usage = aux_usage,
                           .aux_address = aux_address,
-                          .mocs = device->default_mocs);
+                          .mocs = device->default_mocs,
+                          .x_offset_sa = tile_x_sa,
+                          .y_offset_sa = tile_y_sa);
       state_inout->address = address + offset_B;
       if (device->info.gen >= 8) {
          state_inout->aux_address = aux_address;
