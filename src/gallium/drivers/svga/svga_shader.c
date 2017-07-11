@@ -192,7 +192,6 @@ svga_init_shader_key_common(const struct svga_context *svga,
                             struct svga_compile_key *key)
 {
    unsigned i, idx = 0;
-   const enum pipe_swizzle *swizzle_tab;
 
    assert(shader < ARRAY_SIZE(svga->curr.num_sampler_views));
 
@@ -224,16 +223,16 @@ svga_init_shader_key_common(const struct svga_context *svga,
             }
          }
 
-         swizzle_tab = (view->texture->target != PIPE_BUFFER &&
-                        !util_format_has_alpha(view->format) &&
-                        svga_texture_device_format_has_alpha(view->texture)) ?
-            set_alpha : copy_alpha;
-
          /* If we have a non-alpha view into an svga3d surface with an
           * alpha channel, then explicitly set the alpha channel to 1
           * when sampling. Note that we need to check the
           * actual device format to cover also imported surface cases.
           */
+         const enum pipe_swizzle *swizzle_tab =
+            (view->texture->target != PIPE_BUFFER &&
+             !util_format_has_alpha(view->format) &&
+             svga_texture_device_format_has_alpha(view->texture)) ?
+            set_alpha : copy_alpha;
 
          key->tex[i].swizzle_r = swizzle_tab[view->swizzle_r];
          key->tex[i].swizzle_g = swizzle_tab[view->swizzle_g];
