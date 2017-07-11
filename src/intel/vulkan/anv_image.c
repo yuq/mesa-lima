@@ -732,11 +732,17 @@ anv_CreateImageView(VkDevice _device,
 
    assert(range->layerCount > 0);
    assert(range->baseMipLevel < image->levels);
-   assert(image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
-                          VK_IMAGE_USAGE_STORAGE_BIT |
-                          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                          VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
-                          VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+
+   const VkImageViewUsageCreateInfoKHR *usage_info =
+      vk_find_struct_const(pCreateInfo, IMAGE_VIEW_USAGE_CREATE_INFO_KHR);
+   VkImageUsageFlags view_usage = usage_info ? usage_info->usage : image->usage;
+   /* View usage should be a subset of image usage */
+   assert((view_usage & ~image->usage) == 0);
+   assert(view_usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
+                        VK_IMAGE_USAGE_STORAGE_BIT |
+                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                        VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
 
    switch (image->type) {
    default:
@@ -806,8 +812,8 @@ anv_CreateImageView(VkDevice _device,
     * allow compression so we can just use the texture surface state from the
     * view.
     */
-   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT ||
-       (image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
+   if (view_usage & VK_IMAGE_USAGE_SAMPLED_BIT ||
+       (view_usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
         !(iview->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT))) {
       iview->optimal_sampler_surface_state = alloc_surface_state(device);
       iview->general_sampler_surface_state = alloc_surface_state(device);
@@ -853,7 +859,7 @@ anv_CreateImageView(VkDevice _device,
    }
 
    /* NOTE: This one needs to go last since it may stomp isl_view.format */
-   if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+   if (view_usage & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device);
       iview->writeonly_storage_surface_state = alloc_surface_state(device);
 
