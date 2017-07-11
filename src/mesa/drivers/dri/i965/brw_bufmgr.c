@@ -759,7 +759,6 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
       if (ret != 0) {
          DBG("%s:%d: Error preparing buffer map %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
-         pthread_mutex_unlock(&bufmgr->lock);
          return NULL;
       }
 
