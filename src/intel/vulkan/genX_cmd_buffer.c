@@ -429,19 +429,18 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
 
    vk_free(&cmd_buffer->pool->alloc, state->attachments);
 
-   if (pass->attachment_count == 0) {
+   if (pass->attachment_count > 0) {
+      state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
+                                    pass->attachment_count *
+                                         sizeof(state->attachments[0]),
+                                    8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+      if (state->attachments == NULL) {
+         /* Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
+         return anv_batch_set_error(&cmd_buffer->batch,
+                                    VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
+   } else {
       state->attachments = NULL;
-      return VK_SUCCESS;
-   }
-
-   state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
-                                 pass->attachment_count *
-                                      sizeof(state->attachments[0]),
-                                 8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (state->attachments == NULL) {
-      /* Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
-      return anv_batch_set_error(&cmd_buffer->batch,
-                                 VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
    /* Reserve one for the NULL state. */
