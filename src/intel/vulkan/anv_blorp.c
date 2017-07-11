@@ -1436,10 +1436,10 @@ void anv_CmdResolveImage(
 }
 
 void
-anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
-                    const struct anv_image *image,
-                    const uint32_t base_level, const uint32_t level_count,
-                    const uint32_t base_layer, uint32_t layer_count)
+anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
+                     const struct anv_image *image,
+                     const uint32_t base_level, const uint32_t level_count,
+                     const uint32_t base_layer, uint32_t layer_count)
 {
    assert(image->type == VK_IMAGE_TYPE_3D || image->extent.depth == 1);
 

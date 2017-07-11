@@ -2108,10 +2108,10 @@ anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
                 const enum blorp_fast_clear_op op);
 
 void
-anv_image_ccs_clear(struct anv_cmd_buffer *cmd_buffer,
-                    const struct anv_image *image,
-                    const uint32_t base_level, const uint32_t level_count,
-                    const uint32_t base_layer, uint32_t layer_count);
+anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
+                     const struct anv_image *image,
+                     const uint32_t base_level, const uint32_t level_count,
+                     const uint32_t base_layer, uint32_t layer_count);
 
 enum isl_aux_usage
 anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,

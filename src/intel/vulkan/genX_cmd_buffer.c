@@ -392,7 +392,9 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                         VkImageLayout initial_layout,
                         VkImageLayout final_layout)
 {
-   if (image->aux_usage != ISL_AUX_USAGE_CCS_E)
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+   if (image->aux_usage == ISL_AUX_USAGE_NONE)
       return;
 
    if (initial_layout != VK_IMAGE_LAYOUT_UNDEFINED &&
@@ -405,15 +407,30 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       layer_count = anv_minify(image->extent.depth, base_level);
    }
 
-#if GEN_GEN >= 9
-   /* We're transitioning from an undefined layout so it doesn't really matter
-    * what data ends up in the color buffer.  We do, however, need to ensure
-    * that the CCS has valid data in it.  One easy way to do that is to
-    * fast-clear the specified range.
-    */
-   anv_image_ccs_clear(cmd_buffer, image, base_level, level_count,
-                       base_layer, layer_count);
-#endif
+   if (image->aux_usage == ISL_AUX_USAGE_CCS_E ||
+       image->aux_usage == ISL_AUX_USAGE_MCS) {
+      /* We're transitioning from an undefined layout so it doesn't really
+       * matter what data ends up in the color buffer. We do, however, need to
+       * ensure that the auxiliary surface is not in an undefined state. This
+       * state is possible for CCS buffers SKL+ and MCS buffers with certain
+       * sample counts that require certain bits to be reserved (2x and 8x).
+       * One easy way to get to a valid state is to fast-clear the specified
+       * range.
+       *
+       * Even for MCS buffers that have sample counts that don't require
+       * certain bits to be reserved (4x and 8x), we're unsure if the hardware
+       * will be okay with the sample mappings given by the undefined buffer.
+       * We don't have any data to show that this is a problem, but we want to
+       * avoid causing difficult-to-debug problems.
+       */
+      if (image->samples == 4 || image->samples == 16) {
+         anv_perf_warn("Doing a potentially unnecessary fast-clear to define "
+                       "an MCS buffer.");
+      }
+
+      anv_image_fast_clear(cmd_buffer, image, base_level, level_count,
+                           base_layer, layer_count);
+   }
 }
 
 /**
