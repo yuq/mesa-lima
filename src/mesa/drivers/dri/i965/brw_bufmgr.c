@@ -78,6 +78,16 @@
 #define VG(x)
 #endif
 
+/* VALGRIND_FREELIKE_BLOCK unfortunately does not actually undo the earlier
+ * VALGRIND_MALLOCLIKE_BLOCK but instead leaves vg convinced the memory is
+ * leaked. All because it does not call VG(cli_free) from its
+ * VG_USERREQ__FREELIKE_BLOCK handler. Instead of treating the memory like
+ * and allocation, we mark it available for use upon mmapping and remove
+ * it upon unmapping.
+ */
+#define VG_DEFINED(ptr, size) VG(VALGRIND_MAKE_MEM_DEFINED(ptr, size))
+#define VG_NOACCESS(ptr, size) VG(VALGRIND_MAKE_MEM_NOACCESS(ptr, size))
+
 #define memclear(s) memset(&s, 0, sizeof(s))
 
 #define FILE_DEBUG_FLAG DEBUG_BUFMGR
@@ -519,14 +529,15 @@ bo_free(struct brw_bo *bo)
    int ret;
 
    if (bo->map_cpu) {
-      VG(VALGRIND_FREELIKE_BLOCK(bo->map_cpu, 0));
+      VG_NOACCESS(bo->map_cpu, bo->size);
       drm_munmap(bo->map_cpu, bo->size);
    }
    if (bo->map_wc) {
-      VG(VALGRIND_FREELIKE_BLOCK(bo->map_wc, 0));
+      VG_NOACCESS(bo->map_wc, bo->size);
       drm_munmap(bo->map_wc, bo->size);
    }
    if (bo->map_gtt) {
+      VG_NOACCESS(bo->map_gtt, bo->size);
       drm_munmap(bo->map_gtt, bo->size);
    }
 
@@ -692,14 +703,16 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
          return NULL;
       }
-      VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
       map = (void *) (uintptr_t) mmap_arg.addr_ptr;
+      VG_DEFINED(map, bo->size);
 
       if (p_atomic_cmpxchg(&bo->map_cpu, NULL, map)) {
-         VG(VALGRIND_FREELIKE_BLOCK(map, 0));
+         VG_NOACCESS(map, bo->size);
          drm_munmap(map, bo->size);
       }
    }
+   assert(bo->map_cpu);
+
    DBG("brw_bo_map_cpu: %d (%s) -> %p, ", bo->gem_handle, bo->name,
        bo->map_cpu);
    print_flags(flags);
@@ -750,9 +763,7 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
          return NULL;
       }
 
-      /* and mmap it.  We don't need to use VALGRIND_MALLOCLIKE_BLOCK
-       * because Valgrind will already intercept this mmap call.
-       */
+      /* and mmap it. */
       map = drm_mmap(0, bo->size, PROT_READ | PROT_WRITE,
                      MAP_SHARED, bufmgr->fd, mmap_arg.offset);
       if (map == MAP_FAILED) {
@@ -761,10 +772,19 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
          return NULL;
       }
 
+      /* We don't need to use VALGRIND_MALLOCLIKE_BLOCK because Valgrind will
+       * already intercept this mmap call. However, for consistency between
+       * all the mmap paths, we mark the pointer as defined now and mark it
+       * as inaccessible afterwards.
+       */
+      VG_DEFINED(map, bo->size);
+
       if (p_atomic_cmpxchg(&bo->map_gtt, NULL, map)) {
+         VG_NOACCESS(map, bo->size);
          drm_munmap(map, bo->size);
       }
    }
+   assert(bo->map_gtt);
 
    DBG("bo_map_gtt: %d (%s) -> %p, ", bo->gem_handle, bo->name, bo->map_gtt);
    print_flags(flags);
