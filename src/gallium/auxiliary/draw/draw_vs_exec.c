@@ -169,7 +169,7 @@ vs_exec_run_linear( struct draw_vertex_shader *shader,
        */
       for (j = 0; j < max_vertices; j++) {
          for (slot = 0; slot < shader->info.num_outputs; slot++) {
-            unsigned name = shader->info.output_semantic_name[slot];
+            enum tgsi_semantic name = shader->info.output_semantic_name[slot];
             if(clamp_vertex_color &&
                   (name == TGSI_SEMANTIC_COLOR || name == TGSI_SEMANTIC_BCOLOR))
             {
