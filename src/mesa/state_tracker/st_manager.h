@@ -33,6 +33,7 @@
 #include "pipe/p_compiler.h"
 
 struct st_context;
+struct st_framebuffer;
 
 void
 st_manager_flush_frontbuffer(struct st_context *st);
@@ -44,4 +45,7 @@ boolean
 st_manager_add_color_renderbuffer(struct st_context *st, struct gl_framebuffer *fb,
                                   gl_buffer_index idx);
 
+void
+st_framebuffer_reference(struct st_framebuffer **ptr,
+                         struct st_framebuffer *stfb);
 #endif /* ST_MANAGER_H */

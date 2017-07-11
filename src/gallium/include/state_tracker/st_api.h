@@ -311,6 +311,11 @@ struct st_framebuffer_iface
    int32_t stamp;
 
    /**
+    * Identifier that uniquely identifies the framebuffer interface object.
+    */
+   uint32_t ID;
+
+   /**
     * Available for the state tracker manager to use.
     */
    void *st_manager_private;

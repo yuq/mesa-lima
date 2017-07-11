@@ -38,6 +38,8 @@
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 
+static uint32_t drifb_ID = 0;
+
 static void
 swap_fences_unref(struct dri_drawable *draw);
 
@@ -155,6 +157,7 @@ dri_create_buffer(__DRIscreen * sPriv,
 
    dPriv->driverPrivate = (void *)drawable;
    p_atomic_set(&drawable->base.stamp, 1);
+   drawable->base.ID = p_atomic_inc_return(&drifb_ID);
 
    return GL_TRUE;
 fail:
@@ -177,6 +180,7 @@ dri_destroy_buffer(__DRIdrawable * dPriv)
 
    swap_fences_unref(drawable);
 
+   drawable->base.ID = 0;
    FREE(drawable);
 }
 

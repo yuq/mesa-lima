@@ -57,6 +57,7 @@
 #include "util/u_inlines.h"
 #include "util/u_atomic.h"
 #include "util/u_surface.h"
+#include "util/list.h"
 
 
 /**
@@ -459,6 +460,7 @@ st_framebuffer_create(struct st_context *st,
    _mesa_initialize_window_framebuffer(&stfb->Base, &mode);
 
    stfb->iface = stfbi;
+   stfb->iface_ID = stfbi->ID;
    stfb->iface_stamp = p_atomic_read(&stfbi->stamp) - 1;
 
    /* add the color buffer */
@@ -480,12 +482,35 @@ st_framebuffer_create(struct st_context *st,
 /**
  * Reference a framebuffer.
  */
-static void
+void
 st_framebuffer_reference(struct st_framebuffer **ptr,
                          struct st_framebuffer *stfb)
 {
    struct gl_framebuffer *fb = &stfb->Base;
    _mesa_reference_framebuffer((struct gl_framebuffer **) ptr, fb);
+}
+
+/**
+ * Purge the winsys buffers list to remove any references to
+ * non-existing framebuffer interface objects.
+ */
+static void
+st_framebuffers_purge(struct st_context *st)
+{
+   struct st_framebuffer *stfb, *next;
+
+   LIST_FOR_EACH_ENTRY_SAFE_REV(stfb, next, &st->winsys_buffers, head) {
+      /**
+       * If the corresponding framebuffer interface object no longer exists,
+       * remove the framebuffer object from the context's winsys buffers list,
+       * and unreference the framebuffer object, so its resources can be
+       * deleted.
+       */
+      if (stfb->iface->ID != stfb->iface_ID) {
+         LIST_DEL(&stfb->head);
+         st_framebuffer_reference(&stfb, NULL);
+      }
+   }
 }
 
 static void
@@ -761,17 +786,26 @@ st_framebuffer_reuse_or_create(struct st_context *st,
                                struct gl_framebuffer *fb,
                                struct st_framebuffer_iface *stfbi)
 {
-   struct st_framebuffer *cur = st_ws_framebuffer(fb), *stfb = NULL;
+   struct st_framebuffer *cur = NULL, *stfb = NULL;
 
-   /* dummy framebuffers cant be used as st_framebuffer */
-   if (cur && &cur->Base != _mesa_get_incomplete_framebuffer() &&
-       cur->iface == stfbi) {
-      /* reuse the current stfb */
-      st_framebuffer_reference(&stfb, cur);
+   /* Check if there is already a framebuffer object for the specified
+    * framebuffer interface in this context. If there is one, use it.
+    */
+   LIST_FOR_EACH_ENTRY(cur, &st->winsys_buffers, head) {
+      if (cur->iface_ID == stfbi->ID) {
+         st_framebuffer_reference(&stfb, cur);
+         break;
+      }
    }
-   else {
-      /* create a new one */
-      stfb = st_framebuffer_create(st, stfbi);
+
+   /* If there is not already a framebuffer object, create one */
+   if (stfb == NULL) {
+      cur = st_framebuffer_create(st, stfbi);
+
+      /* add to the context's winsys buffers list */
+      LIST_ADD(&cur->head, &st->winsys_buffers);
+
+      st_framebuffer_reference(&stfb, cur);
    }
 
    return stfb;
@@ -822,6 +856,11 @@ st_api_make_current(struct st_api *stapi, struct st_context_iface *stctxi,
 
       st_framebuffer_reference(&stdraw, NULL);
       st_framebuffer_reference(&stread, NULL);
+
+      /* Purge the context's winsys_buffers list in case any
+       * of the referenced drawables no longer exist.
+       */
+      st_framebuffers_purge(st);
    }
    else {
       ret = _mesa_make_current(NULL, NULL, NULL);
