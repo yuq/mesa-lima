@@ -4089,10 +4089,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
        */
       unsigned bit_size = nir_src_bit_size(instr->src[0]);
       unsigned type_size = bit_size / 8;
-      if (bit_size == 64) {
-         val_reg = shuffle_64bit_data_for_32bit_write(bld,
-            val_reg, instr->num_components);
-      }
 
       /* Combine groups of consecutive enabled channels in one write
        * message. We use ffs to find the first enabled channel and then ffs on
@@ -4102,6 +4098,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       while (writemask) {
          unsigned first_component = ffs(writemask) - 1;
          unsigned num_components = ffs(~(writemask >> first_component)) - 1;
+         fs_reg write_src = offset(val_reg, bld, first_component);
 
          if (type_size > 4) {
             /* We can't write more than 2 64-bit components at once. Limit
@@ -4109,12 +4106,45 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
              * iteration handle the rest.
              */
             num_components = MIN2(2, num_components);
+            write_src = shuffle_64bit_data_for_32bit_write(bld, write_src,
+                                                           num_components);
          } else if (type_size < 4) {
-            /* For 16-bit types we are using byte scattered writes, that can
-             * only write one component per call. So we limit the num_components,
-             * and let the write happening in several iterations.
+            assert(type_size == 2);
+            /* For 16-bit types we pack two consecutive values into a 32-bit
+             * word and use an untyped write message. For single values or not
+             * 32-bit-aligned we need to use byte-scattered writes because
+             * untyped writes works with 32-bit components with 32-bit
+             * alignment. byte_scattered_write messages only support one
+             * 16-bit component at a time.
+             *
+             * For example, if there is a 3-components vector we submit one
+             * untyped-write message of 32-bit (first two components), and one
+             * byte-scattered write message (the last component).
              */
-            num_components = 1;
+
+            if (first_component % 2) {
+               /* If we use a .yz writemask we also need to emit 2
+                * byte-scattered write messages because of y-component not
+                * being aligned to 32-bit.
+                */
+               num_components = 1;
+            } else if (num_components > 2 && (num_components % 2)) {
+               /* If there is an odd number of consecutive components we left
+                * the not paired component for a following emit of length == 1
+                * with byte_scattered_write.
+                */
+               num_components --;
+            }
+            /* For num_components == 1 we are also shuffling the component
+             * because byte scattered writes of 16-bit need values to be dword
+             * aligned. Shuffling only one component would be the same as
+             * striding it.
+             */
+            fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D,
+                                  DIV_ROUND_UP(num_components, 2));
+            shuffle_16bit_data_for_32bit_write(bld, tmp, write_src,
+                                               num_components);
+            write_src = tmp;
          }
 
          fs_reg offset_reg;
@@ -4129,7 +4159,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                     brw_imm_ud(type_size * first_component));
          }
 
-         if (type_size < 4) {
+         if (type_size < 4 && num_components == 1) {
+            assert(type_size == 2);
             /* Untyped Surface messages have a fixed 32-bit size, so we need
              * to rely on byte scattered in order to write 16-bit elements.
              * The byte_scattered_write message needs that every written 16-bit
@@ -4148,11 +4179,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                pred = BRW_PREDICATE_NORMAL;
             }
 
-            fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D);
-            bld.MOV(subscript(tmp, BRW_REGISTER_TYPE_W, 0),
-                     offset(val_reg, bld, first_component));
             emit_byte_scattered_write(bld, surf_index, offset_reg,
-                                      tmp,
+                                      write_src,
                                       1 /* dims */, 1,
                                       bit_size,
                                       pred);
@@ -4160,10 +4188,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             assert(num_components * type_size <= 16);
             assert((num_components * type_size) % 4 == 0);
             assert((first_component * type_size) % 4 == 0);
-            unsigned first_slot = (first_component * type_size) / 4;
             unsigned num_slots = (num_components * type_size) / 4;
+
             emit_untyped_write(bld, surf_index, offset_reg,
-                               offset(val_reg, bld, first_slot),
+                               write_src,
                                1 /* dims */, num_slots,
                                BRW_PREDICATE_NONE);
          }
