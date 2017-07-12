@@ -83,6 +83,15 @@ void anv_DestroyShaderModule(
 
 #define SPIR_V_MAGIC_NUMBER 0x07230203
 
+static const uint64_t stage_to_debug[] = {
+   [MESA_SHADER_VERTEX] = DEBUG_VS,
+   [MESA_SHADER_TESS_CTRL] = DEBUG_TCS,
+   [MESA_SHADER_TESS_EVAL] = DEBUG_TES,
+   [MESA_SHADER_GEOMETRY] = DEBUG_GS,
+   [MESA_SHADER_FRAGMENT] = DEBUG_WM,
+   [MESA_SHADER_COMPUTE] = DEBUG_CS,
+};
+
 /* Eventually, this will become part of anv_CreateShader.  Unfortunately,
  * we can't do that yet because we don't have the ability to copy nir.
  */
@@ -143,6 +152,12 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    ralloc_steal(mem_ctx, nir);
 
    free(spec_entries);
+
+   if (unlikely(INTEL_DEBUG & stage_to_debug[stage])) {
+      fprintf(stderr, "NIR (from SPIR-V) for %s shader:\n",
+              gl_shader_stage_name(stage));
+      nir_print_shader(nir, stderr);
+   }
 
    /* We have to lower away local constant initializers right before we
     * inline functions.  That way they get properly initialized at the top
