@@ -1267,12 +1267,20 @@ swr_update_derived(struct pipe_context *pipe,
             partial_inbounds = 0;
             min_vertex_index = info.min_index;
 
-            /* Copy only needed vertices to scratch space */
             size = AlignUp(size, 4);
-            const void *ptr = (const uint8_t *) vb->buffer.user + base;
-            ptr = (uint8_t *)swr_copy_to_scratch_space(
-               ctx, &ctx->scratch->vertex_buffer, ptr, size);
-            p_data = (const uint8_t *)ptr - base;
+            /* If size of client memory copy is too large, don't copy. The
+             * draw will access user-buffer directly and then block.  This is
+             * faster than queuing many large client draws. */
+            if (size >= screen->client_copy_limit) {
+               post_update_dirty_flags |= SWR_LARGE_CLIENT_DRAW;
+               p_data = (const uint8_t *) vb->buffer.user;
+            } else {
+               /* Copy only needed vertices to scratch space */
+               const void *ptr = (const uint8_t *) vb->buffer.user + base;
+               ptr = (uint8_t *)swr_copy_to_scratch_space(
+                     ctx, &ctx->scratch->vertex_buffer, ptr, size);
+               p_data = (const uint8_t *)ptr - base;
+            }
          }
 
          swrVertexBuffers[i] = {0};
@@ -1311,12 +1319,19 @@ swr_update_derived(struct pipe_context *pipe,
 
             size = info.count * pitch;
             size = AlignUp(size, 4);
-
-            /* Copy indices to scratch space */
-            const void *ptr = info.index.user;
-            ptr = swr_copy_to_scratch_space(
-               ctx, &ctx->scratch->index_buffer, ptr, size);
-            p_data = (const uint8_t *)ptr;
+            /* If size of client memory copy is too large, don't copy. The
+             * draw will access user-buffer directly and then block.  This is
+             * faster than queuing many large client draws. */
+            if (size >= screen->client_copy_limit) {
+               post_update_dirty_flags |= SWR_LARGE_CLIENT_DRAW;
+               p_data = (const uint8_t *) info.index.user;
+            } else {
+               /* Copy indices to scratch space */
+               const void *ptr = info.index.user;
+               ptr = swr_copy_to_scratch_space(
+                     ctx, &ctx->scratch->index_buffer, ptr, size);
+               p_data = (const uint8_t *)ptr;
+            }
          }
 
          SWR_INDEX_BUFFER_STATE swrIndexBuffer;

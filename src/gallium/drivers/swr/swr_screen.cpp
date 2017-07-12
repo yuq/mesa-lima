@@ -61,6 +61,9 @@
 #define SWR_MAX_TEXTURE_CUBE_LEVELS 14  /* 8K x 8K for now */
 #define SWR_MAX_TEXTURE_ARRAY_LAYERS 512 /* 8K x 512 / 8K x 8K x 512 */
 
+/* Default max client_copy_limit */
+#define SWR_CLIENT_COPY_LIMIT 32768
+
 /* Flag indicates creation of alternate surface, to prevent recursive loop
  * in resource creation when msaa_force_enable is set. */
 #define SWR_RESOURCE_FLAG_ALT_SURFACE (PIPE_RESOURCE_FLAG_DRV_PRIV << 0)
@@ -1067,6 +1070,16 @@ swr_destroy_screen(struct pipe_screen *p_screen)
 static void
 swr_validate_env_options(struct swr_screen *screen)
 {
+   /* The client_copy_limit sets a maximum on the amount of user-buffer memory
+    * copied to scratch space on a draw.  Past this, the draw will access
+    * user-buffer directly and then block.  This is faster than queuing many
+    * large client draws. */
+   screen->client_copy_limit = SWR_CLIENT_COPY_LIMIT;
+   int client_copy_limit =
+      debug_get_num_option("SWR_CLIENT_COPY_LIMIT", SWR_CLIENT_COPY_LIMIT);
+   if (client_copy_limit > 0)
+      screen->client_copy_limit = client_copy_limit;
+
    /* XXX msaa under development, disable by default for now */
    screen->msaa_max_count = 0; /* was SWR_MAX_NUM_MULTISAMPLES; */
 

@@ -51,6 +51,7 @@
 #define SWR_NEW_FRAMEBUFFER (1 << 15)
 #define SWR_NEW_CLIP (1 << 16)
 #define SWR_NEW_SO (1 << 17)
+#define SWR_LARGE_CLIENT_DRAW (1<<18) // Indicates client draw will block
 
 namespace std
 {
