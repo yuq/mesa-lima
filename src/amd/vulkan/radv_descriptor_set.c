@@ -317,7 +317,6 @@ radv_descriptor_set_create(struct radv_device *device,
 			}
 
 			if (pool->size - offset < layout_size) {
-				vk_free2(&device->alloc, NULL, set->dynamic_descriptors);
 				vk_free2(&device->alloc, NULL, set);
 				return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
 			}
