@@ -1057,6 +1057,9 @@ struct gl_texture_object
    /** GL_ARB_shader_image_load_store */
    GLenum ImageFormatCompatibilityType;
 
+   /** GL_EXT_memory_object */
+   GLenum TextureTiling;
+
    /** GL_ARB_bindless_texture */
    struct util_dynarray SamplerHandles;
    struct util_dynarray ImageHandles;
