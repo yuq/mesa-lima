@@ -556,12 +556,6 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
 
    intel_renderbuffer_set_draw_offset(irb);
 
-   if (mt->aux_usage == ISL_AUX_USAGE_HIZ && !mt->hiz_buf) {
-      intel_miptree_alloc_hiz(brw, mt);
-      if (!mt->hiz_buf)
-	 return false;
-   }
-
    return true;
 }
 

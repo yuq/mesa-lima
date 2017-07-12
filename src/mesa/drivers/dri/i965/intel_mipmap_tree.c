@@ -1190,7 +1190,6 @@ intel_miptree_create_for_renderbuffer(struct brw_context *brw,
 {
    struct intel_mipmap_tree *mt;
    uint32_t depth = 1;
-   bool ok;
    GLenum target = num_samples > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
    const uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
                                  MIPTREE_LAYOUT_TILING_ANY |
@@ -1201,12 +1200,6 @@ intel_miptree_create_for_renderbuffer(struct brw_context *brw,
                              layout_flags);
    if (!mt)
       goto fail;
-
-   if (mt->aux_usage == ISL_AUX_USAGE_HIZ) {
-      ok = intel_miptree_alloc_hiz(brw, mt);
-      if (!ok)
-         goto fail;
-   }
 
    return mt;
 
@@ -1993,9 +1986,9 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 /**
  * Allocate the initial aux surface for a miptree based on mt->aux_usage
  *
- * Since MCS and CCS_E can compress more than just clear color, we create the
- * auxiliary surfaces up-front.  CCS_D, on the other hand, can only compress
- * clear color so we wait until an actual fast-clear to allocate it.
+ * Since MCS, HiZ, and CCS_E can compress more than just clear color, we
+ * create the auxiliary surfaces up-front.  CCS_D, on the other hand, can only
+ * compress clear color so we wait until an actual fast-clear to allocate it.
  */
 static bool
 intel_miptree_alloc_aux(struct brw_context *brw,
@@ -2006,7 +1999,9 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       return true;
 
    case ISL_AUX_USAGE_HIZ:
-      /* HiZ gets allocated elsewhere for no good reason. */
+      assert(!_mesa_is_format_color_format(mt->format));
+      if (!intel_miptree_alloc_hiz(brw, mt))
+         return false;
       return true;
 
    case ISL_AUX_USAGE_MCS:
