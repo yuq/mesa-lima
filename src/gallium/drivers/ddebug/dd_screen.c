@@ -197,6 +197,22 @@ dd_screen_get_driver_query_group_info(struct pipe_screen *_screen,
 }
 
 
+static void
+dd_screen_get_driver_uuid(struct pipe_screen *_screen, char *uuid)
+{
+   struct pipe_screen *screen = dd_screen(_screen)->screen;
+
+   screen->get_driver_uuid(screen, uuid);
+}
+
+static void
+dd_screen_get_device_uuid(struct pipe_screen *_screen, char *uuid)
+{
+   struct pipe_screen *screen = dd_screen(_screen)->screen;
+
+   screen->get_device_uuid(screen, uuid);
+}
+
 /********************************************************************
  * resource
  */
@@ -462,6 +478,8 @@ ddebug_screen_create(struct pipe_screen *screen)
    SCR_INIT(get_driver_query_info);
    SCR_INIT(get_driver_query_group_info);
    SCR_INIT(get_compiler_options);
+   SCR_INIT(get_driver_uuid);
+   SCR_INIT(get_device_uuid);
 
 #undef SCR_INIT
 

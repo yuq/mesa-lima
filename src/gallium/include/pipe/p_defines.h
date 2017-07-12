@@ -1064,6 +1064,7 @@ enum pipe_debug_type
    PIPE_DEBUG_TYPE_CONFORMANCE,
 };
 
+#define PIPE_UUID_SIZE 16
 
 #ifdef __cplusplus
 }

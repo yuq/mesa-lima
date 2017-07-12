@@ -394,6 +394,19 @@ struct pipe_screen {
                                                   struct pipe_memory_object *memobj,
                                                   uint64_t offset);
 
+   /**
+    * Fill @uuid with a unique driver identifier
+    *
+    * \param uuid    pointer to a memory region of PIPE_UUID_SIZE bytes
+    */
+   void (*get_driver_uuid)(struct pipe_screen *screen, char *uuid);
+
+   /**
+    * Fill @uuid with a unique device identifier
+    *
+    * \param uuid    pointer to a memory region of PIPE_UUID_SIZE bytes
+    */
+   void (*get_device_uuid)(struct pipe_screen *screen, char *uuid);
 };
 
 

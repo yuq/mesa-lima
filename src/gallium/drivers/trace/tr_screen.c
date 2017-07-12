@@ -302,6 +302,35 @@ trace_screen_flush_frontbuffer(struct pipe_screen *_screen,
 }
 
 
+static void
+trace_screen_get_driver_uuid(struct pipe_screen *_screen, char *uuid)
+{
+   struct pipe_screen *screen = trace_screen(_screen)->screen;
+
+   trace_dump_call_begin("pipe_screen", "get_driver_uuid");
+   trace_dump_arg(ptr, screen);
+
+   screen->get_driver_uuid(screen, uuid);
+
+   trace_dump_ret(string, uuid);
+   trace_dump_call_end();
+}
+
+static void
+trace_screen_get_device_uuid(struct pipe_screen *_screen, char *uuid)
+{
+   struct pipe_screen *screen = trace_screen(_screen)->screen;
+
+   trace_dump_call_begin("pipe_screen", "get_device_uuid");
+   trace_dump_arg(ptr, screen);
+
+   screen->get_device_uuid(screen, uuid);
+
+   trace_dump_ret(string, uuid);
+   trace_dump_call_end();
+}
+
+
 /********************************************************************
  * texture
  */
@@ -617,6 +646,8 @@ trace_screen_create(struct pipe_screen *screen)
    SCR_INIT(memobj_destroy);
    tr_scr->base.flush_frontbuffer = trace_screen_flush_frontbuffer;
    tr_scr->base.get_timestamp = trace_screen_get_timestamp;
+   SCR_INIT(get_driver_uuid);
+   SCR_INIT(get_device_uuid);
 
    tr_scr->screen = screen;
 
