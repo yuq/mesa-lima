@@ -1900,6 +1900,22 @@ _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
 
 
 void GLAPIENTRY
+_mesa_BufferStorageMemEXT(GLenum target, GLsizeiptr size,
+                          GLuint memory, GLuint64 offset)
+{
+
+}
+
+
+void GLAPIENTRY
+_mesa_BufferStorageMemEXT_no_error(GLenum target, GLsizeiptr size,
+                                   GLuint memory, GLuint64 offset)
+{
+
+}
+
+
+void GLAPIENTRY
 _mesa_NamedBufferStorage_no_error(GLuint buffer, GLsizeiptr size,
                                   const GLvoid *data, GLbitfield flags)
 {
@@ -1920,6 +1936,21 @@ _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
     */
    inlined_buffer_storage(GL_NONE, buffer, size, data, flags, true, false,
                           "glNamedBufferStorage");
+}
+
+void GLAPIENTRY
+_mesa_NamedBufferStorageMemEXT(GLuint buffer, GLsizeiptr size,
+                               GLuint memory, GLuint64 offset)
+{
+
+}
+
+
+void GLAPIENTRY
+_mesa_NamedBufferStorageMemEXT_no_error(GLuint buffer, GLsizeiptr size,
+                                        GLuint memory, GLuint64 offset)
+{
+
 }
 
 

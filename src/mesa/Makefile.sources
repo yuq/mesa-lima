@@ -85,6 +85,8 @@ MAIN_FILES = \
 	main/extensions.h \
 	main/extensions_table.c \
 	main/extensions_table.h \
+	main/externalobjects.c \
+	main/externalobjects.h \
 	main/fbobject.c \
 	main/fbobject.h \
 	main/feedback.c \
