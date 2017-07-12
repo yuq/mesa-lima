@@ -5892,9 +5892,11 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = ctx->gallivm.builder;
-	/* PS epilog has one arg per color component */
-	LLVMTypeRef param_types[48];
-	LLVMValueRef initial[48], out[48];
+	/* PS epilog has one arg per color component; gfx9 merged shader
+	 * prologs need to forward 32 user SGPRs.
+	 */
+	LLVMTypeRef param_types[64];
+	LLVMValueRef initial[64], out[64];
 	LLVMTypeRef function_type;
 	unsigned num_params;
 	unsigned num_out, initial_num_out;
@@ -6114,6 +6116,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 				LLVMValueRef val =
 					LLVMBuildExtractValue(builder, ret, i, "");
 
+				assert(num_out < ARRAY_SIZE(out));
 				out[num_out++] = val;
 
 				if (LLVMTypeOf(val) == ctx->i32) {
