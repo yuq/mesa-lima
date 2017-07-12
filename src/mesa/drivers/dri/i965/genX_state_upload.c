@@ -206,7 +206,7 @@ KSP(struct brw_context *brw, uint32_t offset)
    })
 
 #define brw_state_emit(brw, cmd, align, offset, name)              \
-   for (struct cmd name = { 0, },                                  \
+   for (struct cmd name = {},                                      \
         *_dst = brw_state_batch(brw, _brw_cmd_length(cmd) * 4,     \
                                 align, offset);                    \
         __builtin_expect(_dst != NULL, 1);                         \
