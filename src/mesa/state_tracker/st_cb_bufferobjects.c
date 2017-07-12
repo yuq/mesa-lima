@@ -175,7 +175,7 @@ static GLboolean
 st_bufferobj_data(struct gl_context *ctx,
                   GLenum target,
                   GLsizeiptrARB size,
-                  const void * data,
+                  const void *data,
                   GLenum usage,
                   GLbitfield storageFlags,
                   struct gl_buffer_object *obj)
