@@ -311,7 +311,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
-	if (radv_device_get_cache_uuid(device->rad_info.family, device->uuid)) {
+	if (radv_device_get_cache_uuid(device->rad_info.family, device->cache_uuid)) {
 		radv_finish_wsi(device);
 		device->ws->destroy(device->ws);
 		result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
@@ -775,7 +775,7 @@ void radv_GetPhysicalDeviceProperties(
 	};
 
 	strcpy(pProperties->deviceName, pdevice->name);
-	memcpy(pProperties->pipelineCacheUUID, pdevice->uuid, VK_UUID_SIZE);
+	memcpy(pProperties->pipelineCacheUUID, pdevice->cache_uuid, VK_UUID_SIZE);
 }
 
 void radv_GetPhysicalDeviceProperties2KHR(
