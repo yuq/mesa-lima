@@ -149,9 +149,8 @@ svga_swtnl_draw_vbo(struct svga_context *svga,
 }
 
 
-
-
-boolean svga_init_swtnl( struct svga_context *svga )
+boolean
+svga_init_swtnl(struct svga_context *svga)
 {
    struct svga_screen *screen = svga_screen(svga->pipe.screen);
 
@@ -167,8 +166,8 @@ boolean svga_init_swtnl( struct svga_context *svga )
       goto fail;
 
 
-   draw_set_rasterize_stage(svga->swtnl.draw, 
-                            draw_vbuf_stage( svga->swtnl.draw, svga->swtnl.backend ));
+   draw_set_rasterize_stage(svga->swtnl.draw,
+                 draw_vbuf_stage(svga->swtnl.draw, svga->swtnl.backend));
 
    draw_set_render(svga->swtnl.draw, svga->swtnl.backend);
 
@@ -204,16 +203,17 @@ fail:
       util_blitter_destroy(svga->blitter);
 
    if (svga->swtnl.backend)
-      svga->swtnl.backend->destroy( svga->swtnl.backend );
+      svga->swtnl.backend->destroy(svga->swtnl.backend);
 
    if (svga->swtnl.draw)
-      draw_destroy( svga->swtnl.draw );
+      draw_destroy(svga->swtnl.draw);
 
    return FALSE;
 }
 
 
-void svga_destroy_swtnl( struct svga_context *svga )
+void
+svga_destroy_swtnl(struct svga_context *svga)
 {
-   draw_destroy( svga->swtnl.draw );
+   draw_destroy(svga->swtnl.draw);
 }
