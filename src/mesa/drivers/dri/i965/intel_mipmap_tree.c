@@ -55,9 +55,8 @@ static void *intel_miptree_map_raw(struct brw_context *brw,
 static void intel_miptree_unmap_raw(struct intel_mipmap_tree *mt);
 
 static bool
-intel_miptree_alloc_mcs(struct brw_context *brw,
-                        struct intel_mipmap_tree *mt,
-                        GLuint num_samples);
+intel_miptree_alloc_aux(struct brw_context *brw,
+                        struct intel_mipmap_tree *mt);
 
 /**
  * Determine which MSAA layout should be used by the MSAA surface being
@@ -893,24 +892,9 @@ intel_miptree_create(struct brw_context *brw,
        return NULL;
    }
 
-
-   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
-      assert(mt->num_samples > 1);
-      if (!intel_miptree_alloc_mcs(brw, mt, num_samples)) {
-         intel_miptree_release(&mt);
-         return NULL;
-      }
-   }
-
-   /* Since CCS_E can compress more than just clear color, we create the CCS
-    * for it up-front.  For CCS_D which only compresses clears, we create the
-    * CCS on-demand when a clear occurs that wants one.
-    */
-   if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
-      if (!intel_miptree_alloc_ccs(brw, mt)) {
-         intel_miptree_release(&mt);
-         return NULL;
-      }
+   if (!intel_miptree_alloc_aux(brw, mt)) {
+      intel_miptree_release(&mt);
+      return NULL;
    }
 
    return mt;
@@ -1117,15 +1101,9 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
       }
    }
 
-   /* Since CCS_E can compress more than just clear color, we create the CCS
-    * for it up-front.  For CCS_D which only compresses clears, we create the
-    * CCS on-demand when a clear occurs that wants one.
-    */
-   if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
-      if (!intel_miptree_alloc_ccs(brw, mt)) {
-         intel_miptree_release(&mt);
-         return NULL;
-      }
+   if (!intel_miptree_alloc_aux(brw, mt)) {
+      intel_miptree_release(&mt);
+      return NULL;
    }
 
    return mt;
@@ -2000,6 +1978,51 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 
    return true;
 }
+
+
+/**
+ * Allocate the initial aux surface for a miptree based on mt->aux_usage
+ *
+ * Since MCS and CCS_E can compress more than just clear color, we create the
+ * auxiliary surfaces up-front.  CCS_D, on the other hand, can only compress
+ * clear color so we wait until an actual fast-clear to allocate it.
+ */
+static bool
+intel_miptree_alloc_aux(struct brw_context *brw,
+                        struct intel_mipmap_tree *mt)
+{
+   switch (mt->aux_usage) {
+   case ISL_AUX_USAGE_NONE:
+      return true;
+
+   case ISL_AUX_USAGE_HIZ:
+      /* HiZ gets allocated elsewhere for no good reason. */
+      return true;
+
+   case ISL_AUX_USAGE_MCS:
+      assert(_mesa_is_format_color_format(mt->format));
+      assert(mt->num_samples > 1);
+      if (!intel_miptree_alloc_mcs(brw, mt, mt->num_samples))
+         return false;
+      return true;
+
+   case ISL_AUX_USAGE_CCS_D:
+      /* Since CCS_D can only compress clear color so we wait until an actual
+       * fast-clear to allocate it.
+       */
+      return true;
+
+   case ISL_AUX_USAGE_CCS_E:
+      assert(_mesa_is_format_color_format(mt->format));
+      assert(mt->num_samples <= 1);
+      if (!intel_miptree_alloc_ccs(brw, mt))
+         return false;
+      return true;
+   }
+
+   unreachable("Invalid aux usage");
+}
+
 
 /**
  * Can the miptree sample using the hiz buffer?
