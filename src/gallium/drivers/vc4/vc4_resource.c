@@ -258,10 +258,6 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                 ptrans->box.z = 0;
         }
 
-        /* Note that the current kernel implementation is synchronous, so no
-         * need to do syncing stuff here yet.
-         */
-
         if (usage & PIPE_TRANSFER_UNSYNCHRONIZED)
                 buf = vc4_bo_map_unsynchronized(rsc->bo);
         else
