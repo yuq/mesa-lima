@@ -38,7 +38,12 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libvc4.la
 
 libvc4_la_SOURCES = $(C_SOURCES)
-libvc4_la_LIBADD = $(SIM_LIB)
+
+libvc4_la_LIBADD = \
+	$(SIM_LIB) \
+	$(top_builddir)/src/broadcom/cle/libbroadcom_cle.la \
+	$()
+
 libvc4_la_LDFLAGS = $(SIM_LDFLAGS)
 
 EXTRA_DIST = kernel/README

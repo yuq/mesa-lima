@@ -34,7 +34,10 @@ LOCAL_C_INCLUDES := \
 
 # We need libmesa_nir to get NIR's generated include directories.
 LOCAL_STATIC_LIBRARIES := \
-	libmesa_nir \
+	libmesa_nir
+
+LOCAL_WHOLE_STATIC_LIBRARIES := \
+	libmesa_broadcom_cle \
 	libmesa_broadcom_genxml
 
 LOCAL_MODULE := libmesa_pipe_vc4
