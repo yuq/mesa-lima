@@ -54,6 +54,7 @@
 #include "st_cb_eglimage.h"
 #include "st_cb_fbo.h"
 #include "st_cb_feedback.h"
+#include "st_cb_memoryobjects.h"
 #include "st_cb_msaa.h"
 #include "st_cb_perfmon.h"
 #include "st_cb_program.h"
@@ -684,6 +685,7 @@ void st_init_driver_functions(struct pipe_screen *screen,
 
    st_init_fbo_functions(functions);
    st_init_feedback_functions(functions);
+   st_init_memoryobject_functions(functions);
    st_init_msaa_functions(functions);
    st_init_perfmon_functions(functions);
    st_init_program_functions(functions);
