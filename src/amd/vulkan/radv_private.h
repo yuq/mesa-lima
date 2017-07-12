@@ -267,6 +267,7 @@ struct radv_physical_device {
 	struct radeon_info rad_info;
 	char                                        path[20];
 	const char *                                name;
+	uint8_t                                     driver_uuid[VK_UUID_SIZE];
 	uint8_t                                     device_uuid[VK_UUID_SIZE];
 	uint8_t                                     cache_uuid[VK_UUID_SIZE];
 
