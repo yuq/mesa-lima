@@ -1087,6 +1087,16 @@ struct dd_function_table {
     */
    void (*DeleteMemoryObject)(struct gl_context *ctx,
                               struct gl_memory_object *memObj);
+
+   /**
+    * Set the given memory object as the texture's storage.
+    */
+   GLboolean (*SetTextureStorageForMemoryObject)(struct gl_context *ctx,
+                                                 struct gl_texture_object *tex_obj,
+                                                 struct gl_memory_object *mem_obj,
+                                                 GLsizei levels, GLsizei width,
+                                                 GLsizei height, GLsizei depth,
+                                                 GLuint64 offset);
    /*@}*/
 
    /**

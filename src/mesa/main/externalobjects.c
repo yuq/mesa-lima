@@ -24,6 +24,10 @@
 #include "macros.h"
 #include "mtypes.h"
 #include "externalobjects.h"
+#include "teximage.h"
+#include "texobj.h"
+#include "glformats.h"
+#include "texstorage.h"
 
 /**
  * Allocate and initialize a new memory object.  But don't put it into the
@@ -228,6 +232,100 @@ invalid_pname:
                "glGetMemoryObjectParameterivEXT(pname=0x%x)", pname);
 }
 
+static struct gl_memory_object *
+lookup_memory_object_err(struct gl_context *ctx, unsigned memory,
+                         const char* func)
+{
+   if (memory == 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(memory=0)", func);
+      return NULL;
+   }
+
+   struct gl_memory_object *memObj = _mesa_lookup_memory_object(ctx, memory);
+   if (!memObj)
+      return NULL;
+
+   if (!memObj->Immutable) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(no associated memory)",
+                  func);
+      return NULL;
+   }
+
+   return memObj;
+}
+
+/**
+ * Helper used by _mesa_TexStorageMem1/2/3DEXT().
+ */
+static void
+texstorage_memory(GLuint dims, GLenum target, GLsizei levels,
+                  GLenum internalFormat, GLsizei width, GLsizei height,
+                  GLsizei depth, GLuint memory, GLuint64 offset,
+                  const char *func)
+{
+   struct gl_texture_object *texObj;
+   struct gl_memory_object *memObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = _mesa_get_current_tex_object(ctx, target);
+   if (!texObj)
+      return;
+
+   memObj = lookup_memory_object_err(ctx, memory, func);
+   if (!memObj)
+      return;
+
+   _mesa_texture_storage_memory(ctx, dims, texObj, memObj, target,
+                                levels, internalFormat,
+                                width, height, depth, offset, false);
+}
+
+static void
+texstorage_memory_ms(GLuint dims, GLenum target, GLsizei samples,
+                     GLenum internalFormat, GLsizei width, GLsizei height,
+                     GLsizei depth, GLboolean fixedSampleLocations,
+                     GLuint memory, GLuint64 offset)
+{
+
+}
+
+/**
+ * Helper used by _mesa_TextureStorageMem1/2/3DEXT().
+ */
+static void
+texturestorage_memory(GLuint dims, GLuint texture, GLsizei levels,
+                      GLenum internalFormat, GLsizei width, GLsizei height,
+                      GLsizei depth, GLuint memory, GLuint64 offset,
+                      const char *func)
+{
+   struct gl_texture_object *texObj;
+   struct gl_memory_object *memObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = _mesa_lookup_texture(ctx, texture);
+   if (!texObj)
+      return;
+
+   memObj = lookup_memory_object_err(ctx, memory, func);
+   if (!memObj)
+      return;
+
+   _mesa_texture_storage_memory(ctx, dims, texObj, memObj, texObj->Target,
+                                levels, internalFormat,
+                                width, height, depth, offset, true);
+}
+
+static void
+texturestorage_memory_ms(GLuint dims, GLuint texture, GLsizei samples,
+                         GLenum internalFormat, GLsizei width, GLsizei height,
+                         GLsizei depth, GLboolean fixedSampleLocations,
+                         GLuint memory, GLuint64 offset)
+{
+
+}
+
 void GLAPIENTRY
 _mesa_TexStorageMem2DEXT(GLenum target,
                          GLsizei levels,
@@ -237,7 +335,8 @@ _mesa_TexStorageMem2DEXT(GLenum target,
                          GLuint memory,
                          GLuint64 offset)
 {
-
+   texstorage_memory(2, target, levels, internalFormat, width, height, 1,
+                     memory, offset, "glTexStorageMem2DEXT");
 }
 
 void GLAPIENTRY
@@ -250,7 +349,8 @@ _mesa_TexStorageMem2DMultisampleEXT(GLenum target,
                                     GLuint memory,
                                     GLuint64 offset)
 {
-
+   texstorage_memory_ms(2, target, samples, internalFormat, width, height, 1,
+                        fixedSampleLocations, memory, offset);
 }
 
 void GLAPIENTRY
@@ -263,7 +363,8 @@ _mesa_TexStorageMem3DEXT(GLenum target,
                          GLuint memory,
                          GLuint64 offset)
 {
-
+   texstorage_memory(3, target, levels, internalFormat, width, height, depth,
+                     memory, offset, "glTexStorageMem3DEXT");
 }
 
 void GLAPIENTRY
@@ -277,7 +378,8 @@ _mesa_TexStorageMem3DMultisampleEXT(GLenum target,
                                     GLuint memory,
                                     GLuint64 offset)
 {
-
+   texstorage_memory_ms(3, target, samples, internalFormat, width, height,
+                        depth, fixedSampleLocations, memory, offset);
 }
 
 void GLAPIENTRY
@@ -289,7 +391,8 @@ _mesa_TextureStorageMem2DEXT(GLuint texture,
                              GLuint memory,
                              GLuint64 offset)
 {
-
+   texturestorage_memory(2, texture, levels, internalFormat, width, height, 1,
+                         memory, offset, "glTexureStorageMem2DEXT");
 }
 
 void GLAPIENTRY
@@ -302,7 +405,8 @@ _mesa_TextureStorageMem2DMultisampleEXT(GLuint texture,
                                         GLuint memory,
                                         GLuint64 offset)
 {
-
+   texturestorage_memory_ms(2, texture, samples, internalFormat, width, height,
+                            1, fixedSampleLocations, memory, offset);
 }
 
 void GLAPIENTRY
@@ -315,7 +419,8 @@ _mesa_TextureStorageMem3DEXT(GLuint texture,
                              GLuint memory,
                              GLuint64 offset)
 {
-
+   texturestorage_memory(3, texture, levels, internalFormat, width, height,
+                         depth, memory, offset, "glTextureStorageMem3DEXT");
 }
 
 void GLAPIENTRY
@@ -329,7 +434,8 @@ _mesa_TextureStorageMem3DMultisampleEXT(GLuint texture,
                                         GLuint memory,
                                         GLuint64 offset)
 {
-
+   texturestorage_memory_ms(3, texture, samples, internalFormat, width, height,
+                            depth, fixedSampleLocations, memory, offset);
 }
 
 void GLAPIENTRY
@@ -340,7 +446,8 @@ _mesa_TexStorageMem1DEXT(GLenum target,
                          GLuint memory,
                          GLuint64 offset)
 {
-
+   texstorage_memory(1, target, levels, internalFormat, width, 1, 1, memory,
+                     offset, "glTexStorageMem1DEXT");
 }
 
 void GLAPIENTRY
@@ -351,7 +458,8 @@ _mesa_TextureStorageMem1DEXT(GLuint texture,
                              GLuint memory,
                              GLuint64 offset)
 {
-
+   texturestorage_memory(1, texture, levels, internalFormat, width, 1, 1,
+                         memory, offset, "glTextureStorageMem1DEXT");
 }
 
 void GLAPIENTRY
