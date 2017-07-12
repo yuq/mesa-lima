@@ -325,7 +325,7 @@ static unsigned gfx9_border_color_swizzle(const unsigned char swizzle[4])
 static void
 si_make_texture_descriptor(struct radv_device *device,
 			   struct radv_image *image,
-			   bool sampler,
+			   bool is_storage_image,
 			   VkImageViewType view_type,
 			   VkFormat vk_format,
 			   const VkComponentMapping *mapping,
@@ -362,7 +362,7 @@ si_make_texture_descriptor(struct radv_device *device,
 	}
 
 	type = radv_tex_dim(image->type, view_type, image->info.array_size, image->info.samples,
-			    (image->usage & VK_IMAGE_USAGE_STORAGE_BIT));
+			    is_storage_image);
 	if (type == V_008F1C_SQ_RSRC_IMG_1D_ARRAY) {
 	        height = 1;
 		depth = image->info.array_size;
@@ -526,7 +526,7 @@ radv_query_opaque_metadata(struct radv_device *device,
 	md->metadata[1] = si_get_bo_metadata_word1(device);
 
 
-	si_make_texture_descriptor(device, image, true,
+	si_make_texture_descriptor(device, image, false,
 				   (VkImageViewType)image->type, image->vk_format,
 				   &fixedmapping, 0, image->info.levels - 1, 0,
 				   image->info.array_size,
@@ -834,6 +834,50 @@ radv_image_create(VkDevice _device,
 	return VK_SUCCESS;
 }
 
+static void
+radv_image_view_make_descriptor(struct radv_image_view *iview,
+				struct radv_device *device,
+				const VkImageViewCreateInfo* pCreateInfo,
+				bool is_storage_image)
+{
+	RADV_FROM_HANDLE(radv_image, image, pCreateInfo->image);
+	const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+	bool is_stencil = iview->aspect_mask == VK_IMAGE_ASPECT_STENCIL_BIT;
+	uint32_t blk_w;
+	uint32_t *descriptor;
+	uint32_t *fmask_descriptor;
+
+	if (is_storage_image) {
+		descriptor = iview->storage_descriptor;
+		fmask_descriptor = iview->storage_fmask_descriptor;
+	} else {
+		descriptor = iview->descriptor;
+		fmask_descriptor = iview->fmask_descriptor;
+	}
+
+	assert(image->surface.blk_w % vk_format_get_blockwidth(image->vk_format) == 0);
+	blk_w = image->surface.blk_w / vk_format_get_blockwidth(image->vk_format) * vk_format_get_blockwidth(iview->vk_format);
+
+	si_make_texture_descriptor(device, image, is_storage_image,
+				   iview->type,
+				   iview->vk_format,
+				   &pCreateInfo->components,
+				   0, radv_get_levelCount(image, range) - 1,
+				   range->baseArrayLayer,
+				   range->baseArrayLayer + radv_get_layerCount(image, range) - 1,
+				   iview->extent.width,
+				   iview->extent.height,
+				   iview->extent.depth,
+				   descriptor,
+				   fmask_descriptor);
+	si_set_mutable_tex_desc_fields(device, image,
+				       is_stencil ? &image->surface.u.legacy.stencil_level[range->baseMipLevel]
+				                  : &image->surface.u.legacy.level[range->baseMipLevel],
+				       range->baseMipLevel,
+				       range->baseMipLevel,
+				       blk_w, is_stencil, descriptor);
+}
+
 void
 radv_image_view_init(struct radv_image_view *iview,
 		     struct radv_device *device,
@@ -841,8 +885,7 @@ radv_image_view_init(struct radv_image_view *iview,
 {
 	RADV_FROM_HANDLE(radv_image, image, pCreateInfo->image);
 	const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-	uint32_t blk_w;
-	bool is_stencil = false;
+
 	switch (image->type) {
 	case VK_IMAGE_TYPE_1D:
 	case VK_IMAGE_TYPE_2D:
@@ -862,7 +905,6 @@ radv_image_view_init(struct radv_image_view *iview,
 	iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
 
 	if (iview->aspect_mask == VK_IMAGE_ASPECT_STENCIL_BIT) {
-		is_stencil = true;
 		iview->vk_format = vk_format_stencil_only(iview->vk_format);
 	} else if (iview->aspect_mask == VK_IMAGE_ASPECT_DEPTH_BIT) {
 		iview->vk_format = vk_format_depth_only(iview->vk_format);
@@ -879,30 +921,15 @@ radv_image_view_init(struct radv_image_view *iview,
 	iview->extent.height = round_up_u32(iview->extent.height * vk_format_get_blockheight(iview->vk_format),
 					    vk_format_get_blockheight(image->vk_format));
 
-	assert(image->surface.blk_w % vk_format_get_blockwidth(image->vk_format) == 0);
-	blk_w = image->surface.blk_w / vk_format_get_blockwidth(image->vk_format) * vk_format_get_blockwidth(iview->vk_format);
 	iview->base_layer = range->baseArrayLayer;
 	iview->layer_count = radv_get_layerCount(image, range);
 	iview->base_mip = range->baseMipLevel;
 
-	si_make_texture_descriptor(device, image, false,
-				   iview->type,
-				   iview->vk_format,
-				   &pCreateInfo->components,
-				   0, radv_get_levelCount(image, range) - 1,
-				   range->baseArrayLayer,
-				   range->baseArrayLayer + radv_get_layerCount(image, range) - 1,
-				   iview->extent.width,
-				   iview->extent.height,
-				   iview->extent.depth,
-				   iview->descriptor,
-				   iview->fmask_descriptor);
-	si_set_mutable_tex_desc_fields(device, image,
-				       is_stencil ? &image->surface.u.legacy.stencil_level[range->baseMipLevel]
-				                  : &image->surface.u.legacy.level[range->baseMipLevel],
-				       range->baseMipLevel,
-				       range->baseMipLevel,
-				       blk_w, is_stencil, iview->descriptor);
+	radv_image_view_make_descriptor(iview, device, pCreateInfo, false);
+
+	/* For transfers we may use the image as a storage image. */
+	if (image->usage & (VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT))
+		radv_image_view_make_descriptor(iview, device, pCreateInfo, true);
 }
 
 bool radv_layout_has_htile(const struct radv_image *image,

@@ -1276,6 +1276,12 @@ struct radv_image_view {
 
 	uint32_t descriptor[8];
 	uint32_t fmask_descriptor[8];
+
+	/* Descriptor for use as a storage image as opposed to a sampled image.
+	 * This has a few differences for cube maps (e.g. type).
+	 */
+	uint32_t storage_descriptor[8];
+	uint32_t storage_fmask_descriptor[8];
 };
 
 struct radv_image_create_info {
