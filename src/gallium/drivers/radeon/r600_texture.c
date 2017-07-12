@@ -342,6 +342,39 @@ static void r600_texture_init_metadata(struct r600_common_screen *rscreen,
 	}
 }
 
+static void r600_surface_import_metadata(struct r600_common_screen *rscreen,
+					 struct radeon_surf *surf,
+					 struct radeon_bo_metadata *metadata,
+					 enum radeon_surf_mode *array_mode,
+					 bool *is_scanout)
+{
+	if (rscreen->chip_class >= GFX9) {
+		if (metadata->u.gfx9.swizzle_mode > 0)
+			*array_mode = RADEON_SURF_MODE_2D;
+		else
+			*array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+
+		*is_scanout = metadata->u.gfx9.swizzle_mode == 0 ||
+			metadata->u.gfx9.swizzle_mode % 4 == 2;
+	} else {
+		surf->u.legacy.pipe_config = metadata->u.legacy.pipe_config;
+		surf->u.legacy.bankw = metadata->u.legacy.bankw;
+		surf->u.legacy.bankh = metadata->u.legacy.bankh;
+		surf->u.legacy.tile_split = metadata->u.legacy.tile_split;
+		surf->u.legacy.mtilea = metadata->u.legacy.mtilea;
+		surf->u.legacy.num_banks = metadata->u.legacy.num_banks;
+
+		if (metadata->u.legacy.macrotile == RADEON_LAYOUT_TILED)
+			*array_mode = RADEON_SURF_MODE_2D;
+		else if (metadata->u.legacy.microtile == RADEON_LAYOUT_TILED)
+			*array_mode = RADEON_SURF_MODE_1D;
+		else
+			*array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+
+		*is_scanout = metadata->u.legacy.scanout;
+	}
+}
+
 static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
 					    struct r600_texture *rtex)
 {
@@ -1447,7 +1480,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct pb_buffer *buf = NULL;
 	unsigned stride = 0, offset = 0;
-	unsigned array_mode;
+	enum radeon_surf_mode array_mode;
 	struct radeon_surf surface = {};
 	int r;
 	struct radeon_bo_metadata metadata = {};
@@ -1464,32 +1497,8 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 		return NULL;
 
 	rscreen->ws->buffer_get_metadata(buf, &metadata);
-
-	if (rscreen->chip_class >= GFX9) {
-		if (metadata.u.gfx9.swizzle_mode > 0)
-			array_mode = RADEON_SURF_MODE_2D;
-		else
-			array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
-
-		is_scanout = metadata.u.gfx9.swizzle_mode == 0 ||
-			     metadata.u.gfx9.swizzle_mode % 4 == 2;
-	} else {
-		surface.u.legacy.pipe_config = metadata.u.legacy.pipe_config;
-		surface.u.legacy.bankw = metadata.u.legacy.bankw;
-		surface.u.legacy.bankh = metadata.u.legacy.bankh;
-		surface.u.legacy.tile_split = metadata.u.legacy.tile_split;
-		surface.u.legacy.mtilea = metadata.u.legacy.mtilea;
-		surface.u.legacy.num_banks = metadata.u.legacy.num_banks;
-
-		if (metadata.u.legacy.macrotile == RADEON_LAYOUT_TILED)
-			array_mode = RADEON_SURF_MODE_2D;
-		else if (metadata.u.legacy.microtile == RADEON_LAYOUT_TILED)
-			array_mode = RADEON_SURF_MODE_1D;
-		else
-			array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
-
-		is_scanout = metadata.u.legacy.scanout;
-	}
+	r600_surface_import_metadata(rscreen, &surface, &metadata,
+				     &array_mode, &is_scanout);
 
 	r = r600_init_surface(rscreen, &surface, templ, array_mode, stride,
 			      offset, true, is_scanout, false, false);
