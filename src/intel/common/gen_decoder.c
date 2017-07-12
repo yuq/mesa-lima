@@ -39,8 +39,6 @@
 
 #define XML_BUFFER_SIZE 4096
 
-#define MAKE_GEN(major, minor) ( ((major) << 8) | (minor) )
-
 struct gen_spec {
    uint32_t gen;
 
@@ -420,7 +418,7 @@ start_element(void *data, const char *element_name, const char **atts)
       if (n == 1)
          minor = 0;
 
-      ctx->spec->gen = MAKE_GEN(major, minor);
+      ctx->spec->gen = gen_make_gen(major, minor);
    } else if (strcmp(element_name, "instruction") == 0 ||
               strcmp(element_name, "struct") == 0) {
       ctx->group = create_group(ctx, name, atts, NULL);
