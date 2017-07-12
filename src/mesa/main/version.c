@@ -651,3 +651,16 @@ _mesa_compute_version(struct gl_context *ctx)
       break;
    }
 }
+
+
+void
+_mesa_get_driver_uuid(struct gl_context *ctx, GLint *uuid)
+{
+   ctx->Driver.GetDriverUuid(ctx, (char*) uuid);
+}
+
+void
+_mesa_get_device_uuid(struct gl_context *ctx, GLint *uuid)
+{
+   ctx->Driver.GetDeviceUuid(ctx, (char*) uuid);
+}

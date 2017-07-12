@@ -40,6 +40,7 @@
 #include "framebuffer.h"
 #include "samplerobj.h"
 #include "stencil.h"
+#include "version.h"
 
 /* This is a table driven implemetation of the glGet*v() functions.
  * The basic idea is that most getters just look up an int somewhere
@@ -837,6 +838,14 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
       unit = ctx->Texture.CurrentUnit;
       v->value_int =
          ctx->Texture.Unit[unit].CurrentTex[d->offset]->Name;
+      break;
+
+   /* GL_EXT_external_objects */
+   case GL_DRIVER_UUID_EXT:
+      _mesa_get_driver_uuid(ctx, v->value_int_4);
+      break;
+   case GL_DEVICE_UUID_EXT:
+      _mesa_get_device_uuid(ctx, v->value_int_4);
       break;
 
    /* GL_EXT_packed_float */
@@ -2501,6 +2510,14 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
          goto invalid_value;
       v->value_int = ctx->Const.MaxComputeVariableGroupSize[index];
       return TYPE_INT;
+
+   /* GL_EXT_external_objects */
+   case GL_DRIVER_UUID_EXT:
+      _mesa_get_driver_uuid(ctx, v->value_int_4);
+      return TYPE_INT_4;
+   case GL_DEVICE_UUID_EXT:
+      _mesa_get_device_uuid(ctx, v->value_int_4);
+      return TYPE_INT_4;
    }
 
  invalid_enum:

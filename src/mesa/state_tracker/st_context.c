@@ -665,6 +665,26 @@ st_set_background_context(struct gl_context *ctx,
    smapi->set_background_context(&st->iface, queue_info);
 }
 
+static void
+st_get_device_uuid(struct gl_context *ctx, char *uuid)
+{
+   struct pipe_screen *screen = st_context(ctx)->pipe->screen;
+
+   assert(GL_UUID_SIZE_EXT >= PIPE_UUID_SIZE);
+   memset(uuid, 0, GL_UUID_SIZE_EXT);
+   screen->get_device_uuid(screen, uuid);
+}
+
+static void
+st_get_driver_uuid(struct gl_context *ctx, char *uuid)
+{
+   struct pipe_screen *screen = st_context(ctx)->pipe->screen;
+
+   assert(GL_UUID_SIZE_EXT >= PIPE_UUID_SIZE);
+   memset(uuid, 0, GL_UUID_SIZE_EXT);
+   screen->get_driver_uuid(screen, uuid);
+}
+
 void st_init_driver_functions(struct pipe_screen *screen,
                               struct dd_function_table *functions)
 {
@@ -711,4 +731,6 @@ void st_init_driver_functions(struct pipe_screen *screen,
    functions->UpdateState = st_invalidate_state;
    functions->QueryMemoryInfo = st_query_memory_info;
    functions->SetBackgroundContext = st_set_background_context;
+   functions->GetDriverUuid = st_get_device_uuid;
+   functions->GetDeviceUuid = st_get_driver_uuid;
 }
