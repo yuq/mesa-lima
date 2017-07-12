@@ -706,9 +706,10 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 
    *(struct anv_batch_bo **)u_vector_add(&cmd_buffer->seen_bbos) = batch_bo;
 
+   /* u_vector requires power-of-two size elements */
+   unsigned pow2_state_size = util_next_power_of_two(sizeof(struct anv_state));
    success = u_vector_init(&cmd_buffer->bt_block_states,
-                           sizeof(struct anv_state),
-                           8 * sizeof(struct anv_state));
+                           pow2_state_size, 8 * pow2_state_size);
    if (!success)
       goto fail_seen_bbos;
 
