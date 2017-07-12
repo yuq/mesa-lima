@@ -39,8 +39,6 @@
 
 #define XML_BUFFER_SIZE 4096
 
-#define MAX(a, b) ((a) < (b) ? (b) : (a))
-
 #define MAKE_GEN(major, minor) ( ((major) << 8) | (minor) )
 
 struct gen_spec {
@@ -381,7 +379,7 @@ create_and_append_field(struct parser_context *ctx,
                         const char **atts)
 {
    if (ctx->group->nfields == ctx->group->fields_size) {
-      ctx->group->fields_size = MAX(ctx->group->fields_size * 2, 2);
+      ctx->group->fields_size = MAX2(ctx->group->fields_size * 2, 2);
       ctx->group->fields =
          (struct gen_field **) realloc(ctx->group->fields,
                                        sizeof(ctx->group->fields[0]) *
