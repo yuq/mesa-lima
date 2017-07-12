@@ -1063,6 +1063,39 @@ swr_destroy_screen(struct pipe_screen *p_screen)
    FREE(screen);
 }
 
+
+static void
+swr_validate_env_options(struct swr_screen *screen)
+{
+   /* XXX msaa under development, disable by default for now */
+   screen->msaa_max_count = 0; /* was SWR_MAX_NUM_MULTISAMPLES; */
+
+   /* validate env override values, within range and power of 2 */
+   int msaa_max_count = debug_get_num_option("SWR_MSAA_MAX_COUNT", 0);
+   if (msaa_max_count) {
+      if ((msaa_max_count < 0) || (msaa_max_count > SWR_MAX_NUM_MULTISAMPLES)
+            || !util_is_power_of_two(msaa_max_count)) {
+         fprintf(stderr, "SWR_MSAA_MAX_COUNT invalid: %d\n", msaa_max_count);
+         fprintf(stderr, "must be power of 2 between 1 and %d" \
+                         " (or 0 to disable msaa)\n",
+               SWR_MAX_NUM_MULTISAMPLES);
+         msaa_max_count = 0;
+      }
+
+      fprintf(stderr, "SWR_MSAA_MAX_COUNT: %d\n", msaa_max_count);
+      if (!msaa_max_count)
+         fprintf(stderr, "(msaa disabled)\n");
+
+      screen->msaa_max_count = msaa_max_count;
+   }
+
+   screen->msaa_force_enable = debug_get_bool_option(
+         "SWR_MSAA_FORCE_ENABLE", false);
+   if (screen->msaa_force_enable)
+      fprintf(stderr, "SWR_MSAA_FORCE_ENABLE: true\n");
+}
+
+
 PUBLIC
 struct pipe_screen *
 swr_create_screen_internal(struct sw_winsys *winsys)
@@ -1100,32 +1133,7 @@ swr_create_screen_internal(struct sw_winsys *winsys)
 
    util_format_s3tc_init();
 
-   /* XXX msaa under development, disable by default for now */
-   screen->msaa_max_count = 0; /* was SWR_MAX_NUM_MULTISAMPLES; */
-
-   /* validate env override values, within range and power of 2 */
-   int msaa_max_count = debug_get_num_option("SWR_MSAA_MAX_COUNT", 0);
-   if (msaa_max_count) {
-      if ((msaa_max_count < 0) || (msaa_max_count > SWR_MAX_NUM_MULTISAMPLES)
-            || !util_is_power_of_two(msaa_max_count)) {
-         fprintf(stderr, "SWR_MSAA_MAX_COUNT invalid: %d\n", msaa_max_count);
-         fprintf(stderr, "must be power of 2 between 1 and %d" \
-                         " (or 0 to disable msaa)\n",
-               SWR_MAX_NUM_MULTISAMPLES);
-         msaa_max_count = 0;
-      }
-
-      fprintf(stderr, "SWR_MSAA_MAX_COUNT: %d\n", msaa_max_count);
-      if (!msaa_max_count)
-         fprintf(stderr, "(msaa disabled)\n");
-
-      screen->msaa_max_count = msaa_max_count;
-   }
-
-   screen->msaa_force_enable = debug_get_bool_option(
-         "SWR_MSAA_FORCE_ENABLE", false);
-   if (screen->msaa_force_enable)
-      fprintf(stderr, "SWR_MSAA_FORCE_ENABLE: true\n");
+   swr_validate_env_options(screen);
 
    return &screen->base;
 }
