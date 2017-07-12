@@ -1097,6 +1097,18 @@ struct dd_function_table {
                                                  GLsizei levels, GLsizei width,
                                                  GLsizei height, GLsizei depth,
                                                  GLuint64 offset);
+
+   /**
+    * Use a memory object as the backing data for a buffer object
+    */
+   GLboolean (*BufferDataMem)(struct gl_context *ctx,
+                              GLenum target,
+                              GLsizeiptrARB size,
+                              struct gl_memory_object *memObj,
+                              GLuint64 offset,
+                              GLenum usage,
+                              struct gl_buffer_object *bufObj);
+
    /*@}*/
 
    /**
