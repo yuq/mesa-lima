@@ -28,6 +28,7 @@
 #include "swr_fence_work.h"
 #include "api.h"
 
+#define SCRATCH_SINGLE_ALLOCATION_LIMIT 2048
 
 void *
 swr_copy_to_scratch_space(struct swr_context *ctx,
@@ -39,7 +40,7 @@ swr_copy_to_scratch_space(struct swr_context *ctx,
    assert(space);
    assert(size);
 
-   if (size >= 2048) { /* XXX TODO create KNOB_ for this */
+   if (size >= SCRATCH_SINGLE_ALLOCATION_LIMIT) {
       /* Use per draw SwrAllocDrawContextMemory for larger copies */
       ptr = ctx->api.pfnSwrAllocDrawContextMemory(ctx->swrContext, size, 4);
    } else {
