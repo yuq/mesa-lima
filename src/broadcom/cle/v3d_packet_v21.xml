@@ -212,8 +212,8 @@
   </packet>
 
   <packet name="Viewport Offset" code="103">
-    <field name="Viewport Centre Y-coordinate" size="16" start="16" type="int"/>
-    <field name="Viewport Centre X-coordinate" size="16" start="0" type="int"/>
+    <field name="Viewport Centre Y-coordinate" size="16" start="16" type="s12.4"/>
+    <field name="Viewport Centre X-coordinate" size="16" start="0" type="s12.4"/>
   </packet>
 
   <packet name="Z min and max clipping planes" code="104">
