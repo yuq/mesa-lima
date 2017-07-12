@@ -135,6 +135,7 @@ struct brw_bo {
 };
 
 #define BO_ALLOC_FOR_RENDER (1<<0)
+#define BO_ALLOC_ZEROED     (1<<1)
 
 /**
  * Allocate a buffer object.

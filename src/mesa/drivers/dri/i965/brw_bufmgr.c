@@ -265,9 +265,19 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
    bool alloc_from_cache;
    uint64_t bo_size;
    bool for_render = false;
+   bool zeroed = false;
 
    if (flags & BO_ALLOC_FOR_RENDER)
       for_render = true;
+
+   if (flags & BO_ALLOC_ZEROED)
+      zeroed = true;
+
+   /* FOR_RENDER really means "I'm ok with a busy BO".  This doesn't really
+    * jive with ZEROED as we have to wait for it to be idle before we can
+    * memset.  Just disallow that combination.
+    */
+   assert(!(for_render && zeroed));
 
    /* Round the allocated size up to a power of two number of pages. */
    bucket = bucket_for_size(bufmgr, size);
@@ -288,10 +298,12 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
 retry:
    alloc_from_cache = false;
    if (bucket != NULL && !list_empty(&bucket->head)) {
-      if (for_render) {
+      if (for_render && !zeroed) {
          /* Allocate new render-target BOs from the tail (MRU)
           * of the list, as it will likely be hot in the GPU
-          * cache and in the aperture for us.
+          * cache and in the aperture for us.  If the caller
+          * asked us to zero the buffer, we don't want this
+          * because we are going to mmap it.
           */
          bo = LIST_ENTRY(struct brw_bo, bucket->head.prev, head);
          list_del(&bo->head);
@@ -324,6 +336,15 @@ retry:
             bo_free(bo);
             goto retry;
          }
+
+         if (zeroed) {
+            void *map = brw_bo_map(NULL, bo, MAP_WRITE | MAP_RAW);
+            if (!map) {
+               bo_free(bo);
+               goto retry;
+            }
+            memset(map, 0, bo_size);
+         }
       }
    }
 
@@ -340,6 +361,9 @@ retry:
       memclear(create);
       create.size = bo_size;
 
+      /* All new BOs we get from the kernel are zeroed, so we don't need to
+       * worry about that here.
+       */
       ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_CREATE, &create);
       if (ret != 0) {
          free(bo);
