@@ -476,6 +476,9 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    _mesa_initialize_vbo_vtxfmt(ctx);
    st_init_driver_flags(st);
 
+   /* Initialize context's winsys buffers list */
+   LIST_INITHEAD(&st->winsys_buffers);
+
    return st;
 }
 
@@ -575,9 +578,6 @@ struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
    if (!st) {
       _mesa_destroy_context(ctx);
    }
-
-   /* Initialize context's winsys buffers list */
-   LIST_INITHEAD(&st->winsys_buffers);
 
    return st;
 }
