@@ -4646,7 +4646,9 @@ struct gl_image_handle_object
 
 struct gl_memory_object
 {
-   GLuint Name;          /**< hash table ID/name */
+   GLuint Name;            /**< hash table ID/name */
+   GLboolean Immutable;    /**< denotes mutability state of parameters */
+   GLboolean Dedicated;    /**< import memory from a dedicated allocation */
 };
 
 /**
