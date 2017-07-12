@@ -3274,6 +3274,10 @@ struct gl_shared_state
     * Once this field becomes true, it is never reset to false.
     */
    bool ShareGroupReset;
+
+   /** EXT_external_objects */
+   struct _mesa_HashTable *MemoryObjects;
+
 };
 
 
@@ -4638,6 +4642,11 @@ struct gl_image_handle_object
 {
    struct gl_image_unit imgObj;
    GLuint64 handle;
+};
+
+struct gl_memory_object
+{
+   GLuint Name;          /**< hash table ID/name */
 };
 
 /**

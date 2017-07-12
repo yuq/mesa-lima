@@ -35,6 +35,37 @@
 #define EXTERNALOBJECTS_H
 
 #include "glheader.h"
+#include "hash.h"
+
+static inline struct gl_memory_object *
+_mesa_lookup_memory_object(struct gl_context *ctx, GLuint memory)
+{
+   if (!memory)
+      return NULL;
+
+   return (struct gl_memory_object *)
+      _mesa_HashLookup(ctx->Shared->MemoryObjects, memory);
+}
+
+static inline struct gl_memory_object *
+_mesa_lookup_memory_object_locked(struct gl_context *ctx, GLuint memory)
+{
+   if (!memory)
+      return NULL;
+
+   return (struct gl_memory_object *)
+      _mesa_HashLookupLocked(ctx->Shared->MemoryObjects, memory);
+}
+
+extern void
+_mesa_init_memory_object_functions(struct dd_function_table *driver);
+
+extern void
+_mesa_initialize_memory_object(struct gl_context *ctx,
+                               struct gl_memory_object *obj,
+                               GLuint name);
+extern void
+_mesa_delete_memory_object(struct gl_context *ctx, struct gl_memory_object *mo);
 
 extern void GLAPIENTRY
 _mesa_DeleteMemoryObjectsEXT(GLsizei n, const GLuint *memoryObjects);

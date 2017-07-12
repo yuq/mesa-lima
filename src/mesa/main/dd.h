@@ -1069,6 +1069,42 @@ struct dd_function_table {
    void (*MakeImageHandleResident)(struct gl_context *ctx, GLuint64 handle,
                                    GLenum access, bool resident);
    /*@}*/
+
+
+   /**
+    * \name GL_EXT_external_objects interface
+    */
+   /*@{*/
+  /**
+    * Called to allocate a new memory object.  Drivers will usually
+    * allocate/return a subclass of gl_memory_object.
+    */
+   struct gl_memory_object * (*NewMemoryObject)(struct gl_context *ctx,
+                                                GLuint name);
+   /**
+    * Called to delete/free a memory object.  Drivers should free the
+    * object and any image data it contains.
+    */
+   void (*DeleteMemoryObject)(struct gl_context *ctx,
+                              struct gl_memory_object *memObj);
+   /*@}*/
+
+   /**
+    * \name GL_EXT_external_objects_fd interface
+    */
+   /*@{*/
+   /**
+    * Called to import a memory object. The caller relinquishes ownership
+    * of fd after the call returns.
+    *
+    * Accessing fd after ImportMemoryObjectFd returns results in undefined
+    * behaviour. This is consistent with EXT_external_object_fd.
+    */
+   void (*ImportMemoryObjectFd)(struct gl_context *ctx,
+                                struct gl_memory_object *memObj,
+                                GLuint64 size,
+                                int fd);
+   /*@}*/
 };
 
 

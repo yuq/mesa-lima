@@ -130,6 +130,7 @@ _mesa_alloc_shared_state(struct gl_context *ctx)
    shared->SyncObjects = _mesa_set_create(NULL, _mesa_hash_pointer,
                                           _mesa_key_pointer_equal);
 
+   shared->MemoryObjects = _mesa_NewHashTable();
    return shared;
 }
 
@@ -295,6 +296,17 @@ delete_sampler_object_cb(GLuint id, void *data, void *userData)
    _mesa_reference_sampler_object(ctx, &sampObj, NULL);
 }
 
+/**
+ * Callback for deleting a memory object.  Called by _mesa_HashDeleteAll().
+ */
+static void
+delete_memory_object_cb(GLuint id, void *data, void *userData)
+{
+   struct gl_memory_object *memObj = (struct gl_memory_object *) data;
+   struct gl_context *ctx = (struct gl_context *) userData;
+   ctx->Driver.DeleteMemoryObject(ctx, memObj);
+}
+
 
 /**
  * Deallocate a shared state object and all children structures.
@@ -378,6 +390,11 @@ free_shared_state(struct gl_context *ctx, struct gl_shared_state *shared)
    _mesa_DeleteHashTable(shared->TexObjects);
 
    _mesa_free_shared_handles(shared);
+
+   if (shared->MemoryObjects) {
+      _mesa_HashDeleteAll(shared->MemoryObjects, delete_memory_object_cb, ctx);
+      _mesa_DeleteHashTable(shared->MemoryObjects);
+   }
 
    mtx_destroy(&shared->Mutex);
    mtx_destroy(&shared->TexMutex);
