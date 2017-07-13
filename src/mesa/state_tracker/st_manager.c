@@ -788,6 +788,9 @@ st_framebuffer_reuse_or_create(struct st_context *st,
 {
    struct st_framebuffer *cur = NULL, *stfb = NULL;
 
+   if (!stfbi)
+	return NULL;
+
    /* Check if there is already a framebuffer object for the specified
     * framebuffer interface in this context. If there is one, use it.
     */
