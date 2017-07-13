@@ -1402,8 +1402,9 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
    VkResult result = VK_SUCCESS;
    for (uint32_t i = 0; i < num_in_semaphores; i++) {
       ANV_FROM_HANDLE(anv_semaphore, semaphore, in_semaphores[i]);
-      assert(semaphore->temporary.type == ANV_SEMAPHORE_TYPE_NONE);
-      struct anv_semaphore_impl *impl = &semaphore->permanent;
+      struct anv_semaphore_impl *impl =
+         semaphore->temporary.type != ANV_SEMAPHORE_TYPE_NONE ?
+         &semaphore->temporary : &semaphore->permanent;
 
       switch (impl->type) {
       case ANV_SEMAPHORE_TYPE_BO:
@@ -1419,8 +1420,21 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
 
    for (uint32_t i = 0; i < num_out_semaphores; i++) {
       ANV_FROM_HANDLE(anv_semaphore, semaphore, out_semaphores[i]);
-      assert(semaphore->temporary.type == ANV_SEMAPHORE_TYPE_NONE);
-      struct anv_semaphore_impl *impl = &semaphore->permanent;
+
+      /* Under most circumstances, out fences won't be temporary.  However,
+       * the spec does allow it for opaque_fd.  From the Vulkan 1.0.53 spec:
+       *
+       *    "If the import is temporary, the implementation must restore the
+       *    semaphore to its prior permanent state after submitting the next
+       *    semaphore wait operation."
+       *
+       * The spec says nothing whatsoever about signal operations on
+       * temporarily imported semaphores so it appears they are allowed.
+       * There are also CTS tests that require this to work.
+       */
+      struct anv_semaphore_impl *impl =
+         semaphore->temporary.type != ANV_SEMAPHORE_TYPE_NONE ?
+         &semaphore->temporary : &semaphore->permanent;
 
       switch (impl->type) {
       case ANV_SEMAPHORE_TYPE_BO:
@@ -1439,6 +1453,20 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       return result;
 
    result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
+
+   for (uint32_t i = 0; i < num_in_semaphores; i++) {
+      ANV_FROM_HANDLE(anv_semaphore, semaphore, in_semaphores[i]);
+      /* From the Vulkan 1.0.53 spec:
+       *
+       *    "If the import is temporary, the implementation must restore the
+       *    semaphore to its prior permanent state after submitting the next
+       *    semaphore wait operation."
+       *
+       * This has to happen after the execbuf in case we close any syncobjs in
+       * the process.
+       */
+      anv_semaphore_reset_temporary(device, semaphore);
+   }
 
    anv_execbuf_finish(&execbuf, &device->alloc);
 

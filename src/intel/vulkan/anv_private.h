@@ -1765,6 +1765,9 @@ struct anv_semaphore {
    struct anv_semaphore_impl temporary;
 };
 
+void anv_semaphore_reset_temporary(struct anv_device *device,
+                                   struct anv_semaphore *semaphore);
+
 struct anv_shader_module {
    unsigned char                                sha1[20];
    uint32_t                                     size;
