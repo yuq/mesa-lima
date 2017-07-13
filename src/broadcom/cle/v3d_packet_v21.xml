@@ -1,4 +1,4 @@
-<vcxml ver="2.1">
+<vcxml gen="2.1">
   <packet name="Halt" code="0"/>
   <packet name="NOP" code="1"/>
   <packet name="Flush" code="4" cl="B"/>

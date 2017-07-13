@@ -383,8 +383,8 @@ class Parser(object):
 
     def start_element(self, name, attrs):
         if name == "vcxml":
-            self.platform = "V3D {}".format(attrs["ver"])
-            self.ver = attrs["ver"].replace('.', '')
+            self.platform = "V3D {}".format(attrs["gen"])
+            self.ver = attrs["gen"].replace('.', '')
             print(pack_header % {'license': license, 'platform': self.platform, 'guard': self.gen_guard()})
         elif name in ("packet", "struct", "register"):
             default_field = None
