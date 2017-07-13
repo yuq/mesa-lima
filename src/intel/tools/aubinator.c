@@ -904,6 +904,8 @@ aub_file_open(const char *filename)
       exit(EXIT_FAILURE);
    }
 
+   close(fd);
+
    file->cursor = file->map;
    file->end = file->map + sb.st_size / 4;
 
