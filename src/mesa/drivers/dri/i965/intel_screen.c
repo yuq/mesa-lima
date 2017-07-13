@@ -674,9 +674,13 @@ intel_create_image_common(__DRIscreen *dri_screen,
       return NULL;
    }
 
+   /* We request that the bufmgr zero because, if a buffer gets re-used from
+    * the pool, we don't want to leak random garbage from our process to some
+    * other.
+    */
    image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image", surf.size,
                                   isl_tiling_to_i915_tiling(mod_info->tiling),
-                                  surf.row_pitch, 0);
+                                  surf.row_pitch, BO_ALLOC_ZEROED);
    if (image->bo == NULL) {
       free(image);
       return NULL;
