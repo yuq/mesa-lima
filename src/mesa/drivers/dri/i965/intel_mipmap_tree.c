@@ -2965,11 +2965,13 @@ intel_miptree_map_gtt(struct brw_context *brw,
    y /= bh;
    x /= bw;
 
-   base = intel_miptree_map_raw(brw, mt, map->mode) + mt->offset;
+   base = intel_miptree_map_raw(brw, mt, map->mode);
 
    if (base == NULL)
       map->ptr = NULL;
    else {
+      base += mt->offset;
+
       /* Note that in the case of cube maps, the caller must have passed the
        * slice number referencing the face.
       */
