@@ -52,6 +52,13 @@ intel_copy_texsubimage(struct brw_context *brw,
 {
    const GLenum internalFormat = intelImage->base.Base.InternalFormat;
 
+   if (!intelImage->mt || !irb || !irb->mt) {
+      if (unlikely(INTEL_DEBUG & DEBUG_PERF))
+	 fprintf(stderr, "%s fail %p %p (0x%08x)\n",
+		 __func__, intelImage->mt, irb, internalFormat);
+      return false;
+   }
+
    /* No pixel transfer operations (zoom, bias, mapping), just a blit */
    if (brw->ctx._ImageTransferState)
       return false;
@@ -68,13 +75,6 @@ intel_copy_texsubimage(struct brw_context *brw,
 
    /* glCopyTexSubImage() can't be called on a multisampled texture. */
    assert(intelImage->base.Base.NumSamples == 0);
-
-   if (!intelImage->mt || !irb || !irb->mt) {
-      if (unlikely(INTEL_DEBUG & DEBUG_PERF))
-	 fprintf(stderr, "%s fail %p %p (0x%08x)\n",
-		 __func__, intelImage->mt, irb, internalFormat);
-      return false;
-   }
 
    /* account for view parameters and face index */
    int dst_level = intelImage->base.Base.Level +
