@@ -1847,13 +1847,20 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
    if (!aux_state)
       return false;
 
-   /* In case of compression mcs buffer needs to be initialised requiring the
-    * buffer to be immediately mapped to cpu space for writing. Therefore do
-    * not use the gpu access flag which can cause an unnecessary delay if the
-    * backing pages happened to be just used by the GPU.
+   /* When CCS_E is used, we need to ensure that the CCS starts off in a valid
+    * state.  From the Sky Lake PRM, "MCS Buffer for Render Target(s)":
+    *
+    *    "If Software wants to enable Color Compression without Fast clear,
+    *    Software needs to initialize MCS with zeros."
+    *
+    * A CCS value of 0 indicates that the corresponding block is in the
+    * pass-through state which is what we want.
+    *
+    * For CCS_D, on the other hand, we don't care as we're about to perform a
+    * fast-clear operation.  In that case, being hot in caches more useful.
     */
-   const uint32_t alloc_flags =
-      mt->aux_usage == ISL_AUX_USAGE_CCS_E ? 0 : BO_ALLOC_FOR_RENDER;
+   const uint32_t alloc_flags = mt->aux_usage == ISL_AUX_USAGE_CCS_E ?
+                                BO_ALLOC_ZEROED : BO_ALLOC_FOR_RENDER;
    mt->mcs_buf = intel_alloc_aux_buffer(brw, "ccs-miptree",
                                         &temp_ccs_surf, alloc_flags, mt);
    if (!mt->mcs_buf) {
@@ -1862,23 +1869,6 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
    }
   
    mt->aux_state = aux_state;
-
-   /* From Gen9 onwards single-sampled (non-msrt) auxiliary buffers are
-    * used for lossless compression which requires similar initialisation
-    * as multi-sample compression.
-    */
-   if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
-      /* Hardware sets the auxiliary buffer to all zeroes when it does full
-       * resolve. Initialize it accordingly in case the first renderer is
-       * cpu (or other none compression aware party).
-       *
-       * This is also explicitly stated in the spec (MCS Buffer for Render
-       * Target(s)):
-       *   "If Software wants to enable Color Compression without Fast clear,
-       *    Software needs to initialize MCS with zeros."
-       */
-      intel_miptree_init_mcs(brw, mt, 0);
-   }
 
    return true;
 }
