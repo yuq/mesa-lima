@@ -1910,7 +1910,7 @@ dri2_create_image_mesa_drm_buffer(_EGLDisplay *disp, _EGLContext *ctx,
                                   EGLClientBuffer buffer, const EGLint *attr_list)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   EGLint format, name, pitch, err;
+   EGLint format, name, pitch;
    _EGLImageAttribs attrs;
    __DRIimage *dri_image;
 
