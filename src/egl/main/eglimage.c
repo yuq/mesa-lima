@@ -302,6 +302,13 @@ _eglParseImageAttribList(_EGLImageAttribs *attrs, _EGLDisplay *dpy,
       if (err == EGL_SUCCESS)
           continue;
 
+      /* EXT_image_dma_buf_import states that if invalid value is provided for
+       * its attributes, we should return EGL_BAD_ATTRIBUTE.
+       * Bail out ASAP, since follow-up calls can return another EGL_BAD error.
+       */
+      if (err == EGL_BAD_ATTRIBUTE)
+          return _eglError(err, __func__);
+
       err = _eglParseEXTImageDmaBufImportModifiersAttribs(attrs, dpy, attr, val);
       if (err == EGL_SUCCESS)
           continue;
