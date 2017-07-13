@@ -99,6 +99,7 @@ brw_new_buffer_object(struct gl_context * ctx, GLuint name)
    struct intel_buffer_object *obj = CALLOC_STRUCT(intel_buffer_object);
    if (!obj) {
       _mesa_error_no_memory(__func__);
+      return NULL;
    }
 
    _mesa_initialize_buffer_object(ctx, &obj->Base, name);
