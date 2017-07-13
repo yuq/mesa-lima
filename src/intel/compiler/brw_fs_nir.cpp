@@ -1776,7 +1776,7 @@ fs_visitor::set_gs_stream_control_data_bits(const fs_reg &vertex_count,
    assert(gs_compile->control_data_bits_per_vertex == 2);
 
    /* Must be a valid stream */
-   assert(stream_id >= 0 && stream_id < MAX_VERTEX_STREAMS);
+   assert(stream_id < MAX_VERTEX_STREAMS);
 
    /* Control data bits are initialized to 0 so we don't have to set any
     * bits when sending vertices to stream 0.
