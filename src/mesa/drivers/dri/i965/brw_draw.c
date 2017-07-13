@@ -414,7 +414,7 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
             if (tex_obj && tex_obj->mt) {
                intel_miptree_prepare_image(brw, tex_obj->mt);
 
-               if (intel_miptree_is_lossless_compressed(brw, tex_obj->mt) &&
+               if (tex_obj->mt->aux_usage == ISL_AUX_USAGE_CCS_E &&
                    intel_disable_rb_aux_buffer(brw, tex_obj->mt->bo)) {
                   perf_debug("Using renderbuffer as shader image - turning "
                              "off lossless compression");

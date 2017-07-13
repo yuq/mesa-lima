@@ -792,7 +792,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    /* If the MCS buffer hasn't been allocated yet, we need to allocate it now.
     */
    if (can_fast_clear && !irb->mt->mcs_buf) {
-      assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
+      assert(irb->mt->aux_usage == ISL_AUX_USAGE_CCS_D);
       if (!intel_miptree_alloc_ccs(brw, irb->mt)) {
          /* There are a few reasons in addition to out-of-memory, that can
           * cause intel_miptree_alloc_non_msrt_mcs to fail.  Try to recover by

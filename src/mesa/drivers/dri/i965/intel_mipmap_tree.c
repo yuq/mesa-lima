@@ -240,34 +240,6 @@ intel_miptree_supports_hiz(struct brw_context *brw,
    }
 }
 
-
-/* On Gen9 support for color buffer compression was extended to single
- * sampled surfaces. This is a helper considering both auxiliary buffer
- * type and number of samples telling if the given miptree represents
- * the new single sampled case - also called lossless compression.
- */
-bool
-intel_miptree_is_lossless_compressed(const struct brw_context *brw,
-                                     const struct intel_mipmap_tree *mt)
-{
-   /* Only available from Gen9 onwards. */
-   if (brw->gen < 9)
-      return false;
-
-   /* Compression always requires auxiliary buffer. */
-   if (!mt->mcs_buf)
-      return false;
-
-   /* Single sample compression is represented re-using msaa compression
-    * layout type: "Compressed Multisampled Surfaces".
-    */
-   if (mt->msaa_layout != INTEL_MSAA_LAYOUT_CMS)
-      return false;
-
-   /* And finally distinguish between msaa and single sample case. */
-   return mt->num_samples <= 1;
-}
-
 static bool
 intel_miptree_supports_ccs_e(struct brw_context *brw,
                              const struct intel_mipmap_tree *mt)
@@ -1906,7 +1878,6 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
        *    Software needs to initialize MCS with zeros."
        */
       intel_miptree_init_mcs(brw, mt, 0);
-      mt->msaa_layout = INTEL_MSAA_LAYOUT_CMS;
    }
 
    return true;
@@ -2205,10 +2176,11 @@ intel_miptree_prepare_ccs_access(struct brw_context *brw,
    enum isl_aux_state aux_state = intel_miptree_get_aux_state(mt, level, layer);
 
    enum blorp_fast_clear_op resolve_op;
-   if (intel_miptree_is_lossless_compressed(brw, mt)) {
+   if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
       resolve_op = get_ccs_e_resolve_op(aux_state, aux_supported,
                                         fast_clear_supported);
    } else {
+      assert(mt->aux_usage == ISL_AUX_USAGE_CCS_D);
       resolve_op = get_ccs_d_resolve_op(aux_state, aux_supported,
                                         fast_clear_supported);
    }
@@ -2246,7 +2218,7 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
 {
    enum isl_aux_state aux_state = intel_miptree_get_aux_state(mt, level, layer);
 
-   if (intel_miptree_is_lossless_compressed(brw, mt)) {
+   if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
       switch (aux_state) {
       case ISL_AUX_STATE_CLEAR:
          assert(written_with_ccs);
@@ -2273,6 +2245,7 @@ intel_miptree_finish_ccs_write(struct brw_context *brw,
          unreachable("Invalid aux state for CCS_E");
       }
    } else {
+      assert(mt->aux_usage == ISL_AUX_USAGE_CCS_D);
       /* CCS_D is a bit simpler */
       switch (aux_state) {
       case ISL_AUX_STATE_CLEAR:
@@ -2594,7 +2567,7 @@ can_texture_with_ccs(struct brw_context *brw,
                      struct intel_mipmap_tree *mt,
                      mesa_format view_format)
 {
-   if (!intel_miptree_is_lossless_compressed(brw, mt))
+   if (mt->aux_usage != ISL_AUX_USAGE_CCS_E)
       return false;
 
    enum isl_format isl_mt_format = brw_isl_format_for_mesa_format(mt->format);
@@ -2694,7 +2667,7 @@ intel_miptree_prepare_render(struct brw_context *brw,
       /* Lossless compression is not supported for SRGB formats, it
        * should be impossible to get here with such surfaces.
        */
-      assert(!intel_miptree_is_lossless_compressed(brw, mt));
+      assert(mt->aux_usage != ISL_AUX_USAGE_CCS_E);
       intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
                                    false, false);
    }

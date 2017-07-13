@@ -451,7 +451,7 @@ brw_texture_view_sane(const struct brw_context *brw,
                       const struct isl_view *view)
 {
    /* There are special cases only for lossless compression. */
-   if (!intel_miptree_is_lossless_compressed(brw, mt))
+   if (mt->aux_usage != ISL_AUX_USAGE_CCS_E)
       return true;
 
    if (isl_format_supports_ccs_e(&brw->screen->devinfo, view->format))
@@ -493,7 +493,7 @@ brw_disable_aux_surface(const struct brw_context *brw,
                                  view->base_array_layer, view->array_len);
 
    /* There are special cases only for lossless compression. */
-   if (!intel_miptree_is_lossless_compressed(brw, mt))
+   if (mt->aux_usage != ISL_AUX_USAGE_CCS_E)
       return !is_unresolved;
 
    const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;

@@ -642,10 +642,6 @@ struct intel_mipmap_tree
 };
 
 bool
-intel_miptree_is_lossless_compressed(const struct brw_context *brw,
-                                     const struct intel_mipmap_tree *mt);
-
-bool
 intel_miptree_alloc_ccs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt);
 
