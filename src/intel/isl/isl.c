@@ -1469,7 +1469,7 @@ isl_surf_init_s(const struct isl_device *dev,
    uint32_t base_alignment;
    uint64_t size;
    if (tiling == ISL_TILING_LINEAR) {
-      size = row_pitch * padded_h_el + pad_bytes;
+      size = (uint64_t) row_pitch * padded_h_el + pad_bytes;
 
       /* From the Broadwell PRM Vol 2d, RENDER_SURFACE_STATE::SurfaceBaseAddress:
        *
@@ -1494,7 +1494,7 @@ isl_surf_init_s(const struct isl_device *dev,
       const uint32_t total_h_tl =
          isl_align_div(padded_h_el, tile_info.logical_extent_el.height);
 
-      size = total_h_tl * tile_info.phys_extent_B.height * row_pitch;
+      size = (uint64_t) total_h_tl * tile_info.phys_extent_B.height * row_pitch;
 
       const uint32_t tile_size = tile_info.phys_extent_B.width *
                                  tile_info.phys_extent_B.height;
