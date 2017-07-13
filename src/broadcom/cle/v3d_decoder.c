@@ -792,7 +792,7 @@ v3d_field_iterator_next(struct v3d_field_iterator *iter)
         case V3D_TYPE_ADDRESS:
         case V3D_TYPE_OFFSET:
                 snprintf(iter->value, sizeof(iter->value), "0x%08"PRIx64,
-                         __gen_unpack_uint(iter->p, s, e));
+                         __gen_unpack_uint(iter->p, s, e) << (31 - (e - s)));
                 break;
         case V3D_TYPE_STRUCT:
                 snprintf(iter->value, sizeof(iter->value), "<struct %s>",
