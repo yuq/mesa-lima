@@ -1280,14 +1280,14 @@ anv_bo_cache_import(struct anv_device *device,
    uint32_t gem_handle = anv_gem_fd_to_handle(device, fd);
    if (!gem_handle) {
       pthread_mutex_unlock(&cache->mutex);
-      return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX);
+      return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
    }
 
    struct anv_cached_bo *bo = anv_bo_cache_lookup_locked(cache, gem_handle);
    if (bo) {
       if (bo->bo.size != size) {
          pthread_mutex_unlock(&cache->mutex);
-         return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX);
+         return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
       }
       __sync_fetch_and_add(&bo->refcount, 1);
    } else {
@@ -1303,7 +1303,7 @@ anv_bo_cache_import(struct anv_device *device,
       if (import_size == (off_t)-1 || import_size != size) {
          anv_gem_close(device, gem_handle);
          pthread_mutex_unlock(&cache->mutex);
-         return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX);
+         return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
       }
 
       bo = vk_alloc(&device->alloc, sizeof(struct anv_cached_bo), 8,
