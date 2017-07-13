@@ -46,9 +46,6 @@ SUPPORTED_EXTENSIONS = [
     'VK_KHR_wayland_surface',
     'VK_KHR_xcb_surface',
     'VK_KHR_xlib_surface',
-    'VK_KHX_external_semaphore',
-    'VK_KHX_external_semaphore_capabilities',
-    'VK_KHX_external_semaphore_fd',
     'VK_KHX_multiview',
 ]
 
