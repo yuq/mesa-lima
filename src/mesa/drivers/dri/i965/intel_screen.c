@@ -2028,7 +2028,7 @@ parse_devid_override(const char *devid_override)
          return name_map[i].pci_id;
    }
 
-   return strtod(devid_override, NULL);
+   return strtol(devid_override, NULL, 0);
 }
 
 /**
