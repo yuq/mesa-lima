@@ -147,7 +147,6 @@ brw_emit_surface_state(struct brw_context *brw,
       if (mt->mcs_buf) {
          aux_surf = &mt->mcs_buf->surf;
 
-         assert(mt->mcs_buf->offset == 0);
          aux_bo = mt->mcs_buf->bo;
          aux_offset = mt->mcs_buf->bo->offset64 + mt->mcs_buf->offset;
       } else {
