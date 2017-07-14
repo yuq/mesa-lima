@@ -91,7 +91,7 @@ static const VkExtensionProperties instance_extensions[] = {
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 	{
 		.extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-		.specVersion = 5,
+		.specVersion = 6,
 	},
 #endif
 	{
