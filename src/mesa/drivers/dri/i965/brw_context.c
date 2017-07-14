@@ -813,8 +813,9 @@ brwCreateContext(gl_api api,
    /* Only allow the __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS flag if the kernel
     * provides us with context reset notifications.
     */
-   uint32_t allowed_flags = __DRI_CTX_FLAG_DEBUG
-      | __DRI_CTX_FLAG_FORWARD_COMPATIBLE;
+   uint32_t allowed_flags = __DRI_CTX_FLAG_DEBUG |
+                            __DRI_CTX_FLAG_FORWARD_COMPATIBLE |
+                            __DRI_CTX_FLAG_NO_ERROR;
 
    if (screen->has_context_reset_notification)
       allowed_flags |= __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS;
