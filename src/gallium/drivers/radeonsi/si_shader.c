@@ -2879,7 +2879,12 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 
 	if (ctx->screen->b.chip_class >= GFX9 && info->num_outputs) {
 		unsigned itemsize_dw = es->selector->esgs_itemsize / 4;
-		lds_base = LLVMBuildMul(gallivm->builder, ac_get_thread_id(&ctx->ac),
+		LLVMValueRef vertex_idx = ac_get_thread_id(&ctx->ac);
+		LLVMValueRef wave_idx = unpack_param(ctx, ctx->param_merged_wave_info, 24, 4);
+		vertex_idx = LLVMBuildOr(gallivm->builder, vertex_idx,
+					 LLVMBuildMul(gallivm->builder, wave_idx,
+						      LLVMConstInt(ctx->i32, 64, false), ""), "");
+		lds_base = LLVMBuildMul(gallivm->builder, vertex_idx,
 					LLVMConstInt(ctx->i32, itemsize_dw, 0), "");
 	}
 
