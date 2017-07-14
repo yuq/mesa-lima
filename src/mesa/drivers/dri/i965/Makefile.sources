@@ -6,7 +6,6 @@ i965_FILES = \
 	brw_bufmgr.h \
 	brw_clear.c \
 	brw_clip.c \
-	brw_clip_state.c \
 	brw_compute.c \
 	brw_conditional_render.c \
 	brw_context.c \
