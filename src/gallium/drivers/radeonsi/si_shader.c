@@ -7364,7 +7364,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		if (r)
 			return r;
 	} else {
-		/* The shader consists of 2-3 parts:
+		/* The shader consists of several parts:
 		 *
 		 * - the middle part is the user shader, it has 1 variant only
 		 *   and it was compiled during the creation of the shader
@@ -7373,6 +7373,10 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		 * - the epilog part is inserted at the end
 		 *
 		 * The prolog and epilog have many (but simple) variants.
+		 *
+		 * Starting with gfx9, geometry and tessellation control
+		 * shaders also contain the prolog and user shader parts of
+		 * the previous shader stage.
 		 */
 
 		/* Copy the compiled TGSI shader data over. */
