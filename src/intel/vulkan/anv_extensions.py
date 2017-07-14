@@ -63,3 +63,121 @@ EXTENSIONS = [
     Extension('VK_KHR_xlib_surface',                      6, 'VK_USE_PLATFORM_XLIB_KHR'),
     Extension('VK_KHX_multiview',                         1, True),
 ]
+
+def init_exts_from_xml(xml):
+    """ Walk the Vulkan XML and fill out extra extension information. """
+
+    xml = et.parse(xml)
+
+    ext_name_map = {}
+    for ext in EXTENSIONS:
+        ext_name_map[ext.name] = ext
+
+    for ext_elem in xml.findall('.extensions/extension'):
+        ext_name = ext_elem.attrib['name']
+        if ext_name not in ext_name_map:
+            continue
+        ext = ext_name_map[ext_name]
+
+        ext.type = ext_elem.attrib['type']
+
+    for ext in EXTENSIONS:
+        assert ext.type == 'instance' or ext.type == 'device'
+
+TEMPLATE = Template(COPYRIGHT + """
+#include "anv_private.h"
+
+#include "vk_util.h"
+
+/* Convert the VK_USE_PLATFORM_* defines to booleans */
+%for platform in ['ANDROID', 'WAYLAND', 'XCB', 'XLIB']:
+#ifdef VK_USE_PLATFORM_${platform}_KHR
+#   undef VK_USE_PLATFORM_${platform}_KHR
+#   define VK_USE_PLATFORM_${platform}_KHR true
+#else
+#   define VK_USE_PLATFORM_${platform}_KHR false
+#endif
+%endfor
+
+bool
+anv_instance_extension_supported(const char *name)
+{
+%for ext in instance_extensions:
+    if (strcmp(name, "${ext.name}") == 0)
+        return ${ext.enable};
+%endfor
+    return false;
+}
+
+VkResult anv_EnumerateInstanceExtensionProperties(
+    const char*                                 pLayerName,
+    uint32_t*                                   pPropertyCount,
+    VkExtensionProperties*                      pProperties)
+{
+    VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
+
+%for ext in instance_extensions:
+    if (${ext.enable}) {
+        vk_outarray_append(&out, prop) {
+            *prop = (VkExtensionProperties) {
+                .extensionName = "${ext.name}",
+                .specVersion = ${ext.ext_version},
+            };
+        }
+    }
+%endfor
+
+    return vk_outarray_status(&out);
+}
+
+bool
+anv_physical_device_extension_supported(struct anv_physical_device *device,
+                                        const char *name)
+{
+%for ext in device_extensions:
+    if (strcmp(name, "${ext.name}") == 0)
+        return ${ext.enable};
+%endfor
+    return false;
+}
+
+VkResult anv_EnumerateDeviceExtensionProperties(
+    VkPhysicalDevice                            physicalDevice,
+    const char*                                 pLayerName,
+    uint32_t*                                   pPropertyCount,
+    VkExtensionProperties*                      pProperties)
+{
+    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+    VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
+    (void)device;
+
+%for ext in device_extensions:
+    if (${ext.enable}) {
+        vk_outarray_append(&out, prop) {
+            *prop = (VkExtensionProperties) {
+                .extensionName = "${ext.name}",
+                .specVersion = ${ext.ext_version},
+            };
+        }
+    }
+%endfor
+
+    return vk_outarray_status(&out);
+}
+""")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--out', help='Output C file.', required=True)
+    parser.add_argument('--xml', help='Vulkan API XML file.', required=True)
+    args = parser.parse_args()
+
+    init_exts_from_xml(args.xml)
+
+    template_env = {
+        'instance_extensions': [e for e in EXTENSIONS if e.type == 'instance'],
+        'device_extensions': [e for e in EXTENSIONS if e.type == 'device'],
+    }
+
+    with open(args.out, 'w') as f:
+        f.write(TEMPLATE.render(**template_env))

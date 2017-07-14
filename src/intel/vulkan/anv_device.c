@@ -406,102 +406,6 @@ anv_physical_device_finish(struct anv_physical_device *device)
    close(device->local_fd);
 }
 
-static const VkExtensionProperties global_extensions[] = {
-   {
-      .extensionName = VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
-      .specVersion = 25,
-   },
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-   {
-      .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-      .specVersion = 6,
-   },
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
-   {
-      .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-      .specVersion = 6,
-   },
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-   {
-      .extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-      .specVersion = 6,
-   },
-#endif
-};
-
-static const VkExtensionProperties device_extensions[] = {
-   {
-      .extensionName = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-      .specVersion = 68,
-   },
-   {
-      .extensionName = VK_KHR_VARIABLE_POINTERS_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-   {
-      .extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
-      .specVersion = 1,
-   },
-};
-
 static void *
 default_alloc_func(void *pUserData, size_t size, size_t align,
                    VkSystemAllocationScope allocationScope)
@@ -556,15 +460,8 @@ VkResult anv_CreateInstance(
    }
 
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-      bool found = false;
-      for (uint32_t j = 0; j < ARRAY_SIZE(global_extensions); j++) {
-         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-                    global_extensions[j].extensionName) == 0) {
-            found = true;
-            break;
-         }
-      }
-      if (!found)
+      const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
+      if (!anv_instance_extension_supported(ext_name))
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
@@ -1130,15 +1027,8 @@ VkResult anv_CreateDevice(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-      bool found = false;
-      for (uint32_t j = 0; j < ARRAY_SIZE(device_extensions); j++) {
-         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-                    device_extensions[j].extensionName) == 0) {
-            found = true;
-            break;
-         }
-      }
-      if (!found)
+      const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
+      if (!anv_physical_device_extension_supported(physical_device, ext_name))
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
@@ -1346,45 +1236,6 @@ void anv_DestroyDevice(
    close(device->fd);
 
    vk_free(&device->alloc, device);
-}
-
-VkResult anv_EnumerateInstanceExtensionProperties(
-    const char*                                 pLayerName,
-    uint32_t*                                   pPropertyCount,
-    VkExtensionProperties*                      pProperties)
-{
-   if (pProperties == NULL) {
-      *pPropertyCount = ARRAY_SIZE(global_extensions);
-      return VK_SUCCESS;
-   }
-
-   *pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(global_extensions));
-   typed_memcpy(pProperties, global_extensions, *pPropertyCount);
-
-   if (*pPropertyCount < ARRAY_SIZE(global_extensions))
-      return VK_INCOMPLETE;
-
-   return VK_SUCCESS;
-}
-
-VkResult anv_EnumerateDeviceExtensionProperties(
-    VkPhysicalDevice                            physicalDevice,
-    const char*                                 pLayerName,
-    uint32_t*                                   pPropertyCount,
-    VkExtensionProperties*                      pProperties)
-{
-   if (pProperties == NULL) {
-      *pPropertyCount = ARRAY_SIZE(device_extensions);
-      return VK_SUCCESS;
-   }
-
-   *pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(device_extensions));
-   typed_memcpy(pProperties, device_extensions, *pPropertyCount);
-
-   if (*pPropertyCount < ARRAY_SIZE(device_extensions))
-      return VK_INCOMPLETE;
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_EnumerateInstanceLayerProperties(

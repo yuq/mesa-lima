@@ -25,6 +25,8 @@ include $(LOCAL_PATH)/Makefile.sources
 
 VK_ENTRYPOINTS_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/vulkan/anv_entrypoints_gen.py
 
+VK_EXTENSIONS_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/vulkan/anv_extensions.py
+
 VULKAN_COMMON_INCLUDES := \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/gallium/auxiliary \
@@ -53,6 +55,7 @@ LOCAL_C_INCLUDES := \
 	$(VULKAN_COMMON_INCLUDES)
 
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_entrypoints.h
+LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_extensions.c
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/dummy.c
 
 $(intermediates)/vulkan/dummy.c:
@@ -212,6 +215,12 @@ $(intermediates)/vulkan/anv_entrypoints.c:
 	$(VK_ENTRYPOINTS_SCRIPT) \
 		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
 		--outdir $(dir $@)
+
+$(intermediates)/vulkan/anv_extensions.c:
+	@mkdir -p $(dir $@)
+	$(VK_EXTENSIONS_SCRIPT) \
+		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
+		--out $@
 
 LOCAL_SHARED_LIBRARIES := libdrm
 

@@ -240,7 +240,8 @@ VULKAN_GEM_STUB_FILES := \
 
 VULKAN_GENERATED_FILES := \
 	vulkan/anv_entrypoints.c \
-	vulkan/anv_entrypoints.h
+	vulkan/anv_entrypoints.h \
+	vulkan/anv_extensions.c
 
 VULKAN_GENX_FILES := \
 	vulkan/genX_blorp_exec.c \
