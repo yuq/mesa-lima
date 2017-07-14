@@ -1074,7 +1074,7 @@ dri2_fill_context_attribs(struct dri2_egl_context *dri2_ctx,
 
       ctx_attribs[pos++] = __DRI_CTX_ATTRIB_FLAGS;
       ctx_attribs[pos++] = dri2_ctx->base.Flags |
-            dri2_ctx->base.NoError ? __DRI_CTX_FLAG_NO_ERROR : 0;
+         (dri2_ctx->base.NoError ? __DRI_CTX_FLAG_NO_ERROR : 0);
    }
 
    if (dri2_ctx->base.ResetNotificationStrategy != EGL_NO_RESET_NOTIFICATION_KHR) {
