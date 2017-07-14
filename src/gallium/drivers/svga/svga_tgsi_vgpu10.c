@@ -2853,7 +2853,11 @@ emit_constant_declaration(struct svga_shader_emitter_v10 *emit)
     */
    total_consts = emit->num_shader_consts[0];
 
-   /* Now, allocate constant slots for the "extra" constants */
+   /* Now, allocate constant slots for the "extra" constants.
+    * Note: it's critical that these extra constant locations
+    * exactly match what's emitted by the "extra" constants code
+    * in svga_state_constants.c
+    */
 
    /* Vertex position scale/translation */
    if (emit->vposition.need_prescale) {
