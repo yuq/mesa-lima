@@ -192,13 +192,18 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.offset = index_offset;
       ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.flags = ETNA_RELOC_READ;
       ctx->index_buffer.FE_INDEX_STREAM_CONTROL = translate_index_size(info->index_size);
-      ctx->dirty |= ETNA_DIRTY_INDEX_BUFFER;
 
       if (!ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo) {
          BUG("Unsupported or no index buffer");
          return;
       }
+   } else {
+      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo = 0;
+      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.offset = 0;
+      ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.flags = 0;
+      ctx->index_buffer.FE_INDEX_STREAM_CONTROL = 0;
    }
+   ctx->dirty |= ETNA_DIRTY_INDEX_BUFFER;
 
    struct etna_shader_key key = {};
    struct etna_surface *cbuf = etna_surface(pfb->cbufs[0]);
