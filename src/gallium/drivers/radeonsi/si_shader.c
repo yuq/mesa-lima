@@ -5038,6 +5038,13 @@ void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 		si_dump_shader_key(processor, shader, file);
 
 	if (!check_debug_option && shader->binary.llvm_ir_string) {
+		if (shader->previous_stage &&
+		    shader->previous_stage->binary.llvm_ir_string) {
+			fprintf(file, "\n%s - previous stage - LLVM IR:\n\n",
+				si_get_shader_name(shader, processor));
+			fprintf(file, "%s\n", shader->previous_stage->binary.llvm_ir_string);
+		}
+
 		fprintf(file, "\n%s - main shader part - LLVM IR:\n\n",
 			si_get_shader_name(shader, processor));
 		fprintf(file, "%s\n", shader->binary.llvm_ir_string);
