@@ -7379,6 +7379,9 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		 * the previous shader stage.
 		 */
 
+		if (!mainp)
+			return -1;
+
 		/* Copy the compiled TGSI shader data over. */
 		shader->is_binary_shared = true;
 		shader->binary = mainp->binary;
