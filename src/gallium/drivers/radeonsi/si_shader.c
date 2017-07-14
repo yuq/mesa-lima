@@ -175,6 +175,20 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 }
 
 /**
+ * Helper function that builds an LLVM IR PHI node and immediately adds
+ * incoming edges.
+ */
+static LLVMValueRef
+build_phi(struct ac_llvm_context *ctx, LLVMTypeRef type,
+	  unsigned count_incoming, LLVMValueRef *values,
+	  LLVMBasicBlockRef *blocks)
+{
+	LLVMValueRef phi = LLVMBuildPhi(ctx->builder, type, "");
+	LLVMAddIncoming(phi, values, blocks, count_incoming);
+	return phi;
+}
+
+/**
  * Get the value of a shader input parameter and extract a bitfield.
  */
 static LLVMValueRef unpack_param(struct si_shader_context *ctx,
@@ -2698,6 +2712,7 @@ si_insert_input_ptr_as_2xi32(struct si_shader_context *ctx, LLVMValueRef ret,
 static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef rel_patch_id, invocation_id, tf_lds_offset;
 
 	si_copy_tcs_inputs(bld_base);
@@ -2706,8 +2721,29 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	invocation_id = unpack_param(ctx, ctx->param_tcs_rel_ids, 8, 5);
 	tf_lds_offset = get_tcs_out_current_patch_data_offset(ctx);
 
+	if (ctx->screen->b.chip_class >= GFX9) {
+		LLVMBasicBlockRef blocks[2] = {
+			LLVMGetInsertBlock(builder),
+			ctx->merged_wrap_if_state.entry_block
+		};
+		LLVMValueRef values[2];
+
+		lp_build_endif(&ctx->merged_wrap_if_state);
+
+		values[0] = rel_patch_id;
+		values[1] = LLVMGetUndef(ctx->i32);
+		rel_patch_id = build_phi(&ctx->ac, ctx->i32, 2, values, blocks);
+
+		values[0] = tf_lds_offset;
+		values[1] = LLVMGetUndef(ctx->i32);
+		tf_lds_offset = build_phi(&ctx->ac, ctx->i32, 2, values, blocks);
+
+		values[0] = invocation_id;
+		values[1] = ctx->i32_1; /* cause the epilog to skip threads */
+		invocation_id = build_phi(&ctx->ac, ctx->i32, 2, values, blocks);
+	}
+
 	/* Return epilog parameters from this function. */
-	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef ret = ctx->return_value;
 	unsigned vgpr;
 
@@ -2935,6 +2971,9 @@ static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE,
 			 si_get_gs_wave_id(ctx));
+
+	if (ctx->screen->b.chip_class >= GFX9)
+		lp_build_endif(&ctx->merged_wrap_if_state);
 }
 
 static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -5502,14 +5541,20 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	preload_ring_buffers(ctx);
 
 	/* For GFX9 merged shaders:
-	 * - Set EXEC. If the prolog is present, set EXEC there instead.
+	 * - Set EXEC for the first shader. If the prolog is present, set
+	 *   EXEC there instead.
 	 * - Add a barrier before the second shader.
+	 * - In the second shader, reset EXEC to ~0 and wrap the main part in
+	 *   an if-statement. This is required for correctness in geometry
+	 *   shaders, to ensure that empty GS waves do not send GS_EMIT and
+	 *   GS_CUT messages.
 	 *
-	 * The same thing for monolithic shaders is done in
-	 * si_build_wrapper_function.
+	 * For monolithic merged shaders, the first shader is wrapped in an
+	 * if-block together with its prolog in si_build_wrapper_function.
 	 */
-	if (ctx->screen->b.chip_class >= GFX9 && !is_monolithic) {
-		if (sel->info.num_instructions > 1 && /* not empty shader */
+	if (ctx->screen->b.chip_class >= GFX9) {
+		if (!is_monolithic &&
+		    sel->info.num_instructions > 1 && /* not empty shader */
 		    (shader->key.as_es || shader->key.as_ls) &&
 		    (ctx->type == PIPE_SHADER_TESS_EVAL ||
 		     (ctx->type == PIPE_SHADER_VERTEX &&
@@ -5518,9 +5563,19 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 						ctx->param_merged_wave_info, 0);
 		} else if (ctx->type == PIPE_SHADER_TESS_CTRL ||
 			   ctx->type == PIPE_SHADER_GEOMETRY) {
-			si_init_exec_from_input(ctx,
-						ctx->param_merged_wave_info, 8);
+			if (!is_monolithic)
+				si_init_exec_full_mask(ctx);
+
+			/* The barrier must execute for all shaders in a
+			 * threadgroup.
+			 */
 			si_llvm_emit_barrier(NULL, bld_base, NULL);
+
+			LLVMValueRef num_threads = unpack_param(ctx, ctx->param_merged_wave_info, 8, 8);
+			LLVMValueRef ena =
+				LLVMBuildICmp(ctx->ac.builder, LLVMIntULT,
+					    ac_get_thread_id(&ctx->ac), num_threads, "");
+			lp_build_if(&ctx->merged_wrap_if_state, &ctx->gallivm, ena);
 		}
 	}
 
@@ -5991,15 +6046,9 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 		/* Merged shaders are executed conditionally depending
 		 * on the number of enabled threads passed in the input SGPRs. */
-		if (is_merged_shader(ctx->shader) &&
-		    (part == 0 || part == next_shader_first_part)) {
+		if (is_merged_shader(ctx->shader) && part == 0) {
 			LLVMValueRef ena, count = initial[3];
 
-			/* The thread count for the 2nd shader is at bit-offset 8. */
-			if (part == next_shader_first_part) {
-				count = LLVMBuildLShr(builder, count,
-						      LLVMConstInt(ctx->i32, 8, 0), "");
-			}
 			count = LLVMBuildAnd(builder, count,
 					     LLVMConstInt(ctx->i32, 0x7f, 0), "");
 			ena = LLVMBuildICmp(builder, LLVMIntULT,
@@ -6056,26 +6105,20 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 		ret = LLVMBuildCall(builder, parts[part], in, num_params, "");
 
 		if (is_merged_shader(ctx->shader) &&
-		    (part + 1 == next_shader_first_part ||
-		     part + 1 == num_parts)) {
+		    part + 1 == next_shader_first_part) {
 			lp_build_endif(&if_state);
 
-			if (part + 1 == next_shader_first_part) {
-				/* A barrier is required between 2 merged shaders. */
-				si_llvm_emit_barrier(NULL, &ctx->bld_base, NULL);
-
-				/* The second half of the merged shader should use
-				 * the inputs from the toplevel (wrapper) function,
-				 * not the return value from the last call.
-				 *
-				 * That's because the last call was executed condi-
-				 * tionally, so we can't consume it in the main
-				 * block.
-				 */
-				memcpy(out, initial, sizeof(initial));
-				num_out = initial_num_out;
-				num_out_sgpr = initial_num_out_sgpr;
-			}
+			/* The second half of the merged shader should use
+			 * the inputs from the toplevel (wrapper) function,
+			 * not the return value from the last call.
+			 *
+			 * That's because the last call was executed condi-
+			 * tionally, so we can't consume it in the main
+			 * block.
+			 */
+			memcpy(out, initial, sizeof(initial));
+			num_out = initial_num_out;
+			num_out_sgpr = initial_num_out_sgpr;
 			continue;
 		}
 

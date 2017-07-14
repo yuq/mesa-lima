@@ -25,6 +25,7 @@
 #define SI_SHADER_PRIVATE_H
 
 #include "si_shader.h"
+#include "gallivm/lp_bld_flow.h"
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_tgsi.h"
 #include "tgsi/tgsi_parse.h"
@@ -104,6 +105,8 @@ struct si_shader_context {
 	struct si_llvm_flow *flow;
 	unsigned flow_depth;
 	unsigned flow_depth_max;
+
+	struct lp_build_if_state merged_wrap_if_state;
 
 	struct tgsi_array_info *temp_arrays;
 	LLVMValueRef *temp_array_allocas;
