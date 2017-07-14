@@ -72,9 +72,9 @@ svga_get_extra_constants_common(struct svga_context *svga,
    unsigned count = 0;
 
    for (i = 0; i < variant->key.num_textures; i++) {
-      struct pipe_sampler_view *sv = svga->curr.sampler_views[shader][i];
+      const struct pipe_sampler_view *sv = svga->curr.sampler_views[shader][i];
       if (sv) {
-         struct pipe_resource *tex = sv->texture;
+         const struct pipe_resource *tex = sv->texture;
          /* Scaling factors needed for handling unnormalized texture coordinates
           * for texture rectangles.
           */
@@ -150,7 +150,7 @@ svga_get_prescale_constants(struct svga_context *svga, float **dest)
 static unsigned
 svga_get_pt_sprite_constants(struct svga_context *svga, float **dest)
 {
-   struct svga_screen *screen = svga_screen(svga->pipe.screen);
+   const struct svga_screen *screen = svga_screen(svga->pipe.screen);
    float *dst = *dest;
 
    dst[0] = 1.0 / (svga->curr.viewport.scale[0] * 2);
