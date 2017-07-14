@@ -340,8 +340,10 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_NATIVE_FENCE_FD:
       return sws->have_fence_fd;
 
-   /* Unsupported features */
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
+      return 1;
+
+   /* Unsupported features */
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
    case PIPE_CAP_SHADER_STENCIL_EXPORT:
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
