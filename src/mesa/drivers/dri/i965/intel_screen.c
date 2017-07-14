@@ -669,11 +669,29 @@ intel_create_image_common(__DRIscreen *dri_screen,
       return NULL;
    }
 
-   /* We request that the bufmgr zero because, if a buffer gets re-used from
-    * the pool, we don't want to leak random garbage from our process to some
-    * other.
+   struct isl_surf aux_surf;
+   if (mod_info->aux_usage == ISL_AUX_USAGE_CCS_E) {
+      ok = isl_surf_get_ccs_surf(&screen->isl_dev, &surf, &aux_surf, 0);
+      if (!ok) {
+         free(image);
+         return NULL;
+      }
+   } else {
+      assert(mod_info->aux_usage == ISL_AUX_USAGE_NONE);
+      aux_surf.size = 0;
+   }
+
+   /* We request that the bufmgr zero the buffer for us for two reasons:
+    *
+    *  1) If a buffer gets re-used from the pool, we don't want to leak random
+    *     garbage from our process to some other.
+    *
+    *  2) For images with CCS_E, we want to ensure that the CCS starts off in
+    *     a valid state.  A CCS value of 0 indicates that the given block is
+    *     in the pass-through state which is what we want.
     */
-   image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image", surf.size,
+   image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image",
+                                  surf.size + aux_surf.size,
                                   isl_tiling_to_i915_tiling(mod_info->tiling),
                                   surf.row_pitch, BO_ALLOC_ZEROED);
    if (image->bo == NULL) {
@@ -684,6 +702,11 @@ intel_create_image_common(__DRIscreen *dri_screen,
    image->height = height;
    image->pitch = surf.row_pitch;
    image->modifier = modifier;
+
+   if (aux_surf.size) {
+      image->aux_offset = surf.size;
+      image->aux_pitch = aux_surf.row_pitch;
+   }
 
    return image;
 }
@@ -899,18 +922,18 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
    else
       image->modifier = tiling_to_modifier(image->bo->tiling_mode);
 
+   const struct isl_drm_modifier_info *mod_info =
+      isl_drm_modifier_get_info(image->modifier);
+
    int size = 0;
+   struct isl_surf surf;
    for (i = 0; i < f->nplanes; i++) {
       index = f->planes[i].buffer_index;
       image->offsets[index] = offsets[index];
       image->strides[index] = strides[index];
 
-      const struct isl_drm_modifier_info *mod_info =
-         isl_drm_modifier_get_info(image->modifier);
-
       mesa_format format = driImageFormatToGLFormat(f->planes[i].dri_format);
 
-      struct isl_surf surf;
       ok = isl_surf_init(&screen->isl_dev, &surf,
                          .dim = ISL_SURF_DIM_2D,
                          .format = brw_isl_format_for_mesa_format(format),
@@ -934,6 +957,46 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
       const int end = offsets[index] + surf.size;
       if (size < end)
          size = end;
+   }
+
+   if (mod_info->aux_usage == ISL_AUX_USAGE_CCS_E) {
+      /* Even though we initialize surf in the loop above, we know that
+       * anything with CCS_E will have exactly one plane so surf is properly
+       * initialized when we get here.
+       */
+      assert(f->nplanes == 1);
+
+      image->aux_offset = offsets[1];
+      image->aux_pitch = strides[1];
+
+      /* Scanout hardware requires that the CCS be placed after the main
+       * surface in memory.  We consider any CCS that is placed any earlier in
+       * memory to be invalid and reject it.
+       *
+       * At some point in the future, this restriction may be relaxed if the
+       * hardware becomes less strict but we may need a new modifier for that.
+       */
+      assert(size > 0);
+      if (image->aux_offset < size) {
+         brw_bo_unreference(image->bo);
+         free(image);
+         return NULL;
+      }
+
+      struct isl_surf aux_surf;
+      ok = isl_surf_get_ccs_surf(&screen->isl_dev, &surf, &aux_surf,
+                                 image->aux_pitch);
+      if (!ok) {
+         brw_bo_unreference(image->bo);
+         free(image);
+         return NULL;
+      }
+
+      const int end = image->aux_offset + aux_surf.size;
+      if (size < end)
+         size = end;
+   } else {
+      assert(mod_info->aux_usage == ISL_AUX_USAGE_NONE);
    }
 
    /* Check that the requested image actually fits within the BO. 'size'
