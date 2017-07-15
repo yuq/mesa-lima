@@ -137,6 +137,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static VkResult
@@ -2206,6 +2210,15 @@ void radv_GetBufferMemoryRequirements(
 	pMemoryRequirements->size = align64(buffer->size, pMemoryRequirements->alignment);
 }
 
+void radv_GetBufferMemoryRequirements2KHR(
+	VkDevice                                     device,
+	const VkBufferMemoryRequirementsInfo2KHR*    pInfo,
+	VkMemoryRequirements2KHR*                    pMemoryRequirements)
+{
+	radv_GetBufferMemoryRequirements(device, pInfo->buffer,
+                                        &pMemoryRequirements->memoryRequirements);
+}
+
 void radv_GetImageMemoryRequirements(
 	VkDevice                                    device,
 	VkImage                                     _image,
@@ -2219,11 +2232,29 @@ void radv_GetImageMemoryRequirements(
 	pMemoryRequirements->alignment = image->alignment;
 }
 
+void radv_GetImageMemoryRequirements2KHR(
+	VkDevice                                    device,
+	const VkImageMemoryRequirementsInfo2KHR*    pInfo,
+	VkMemoryRequirements2KHR*                   pMemoryRequirements)
+{
+	radv_GetImageMemoryRequirements(device, pInfo->image,
+                                        &pMemoryRequirements->memoryRequirements);
+}
+
 void radv_GetImageSparseMemoryRequirements(
 	VkDevice                                    device,
 	VkImage                                     image,
 	uint32_t*                                   pSparseMemoryRequirementCount,
 	VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
+{
+	stub();
+}
+
+void radv_GetImageSparseMemoryRequirements2KHR(
+	VkDevice                                    device,
+	const VkImageSparseMemoryRequirementsInfo2KHR* pInfo,
+	uint32_t*                                   pSparseMemoryRequirementCount,
+	VkSparseImageMemoryRequirements2KHR*            pSparseMemoryRequirements)
 {
 	stub();
 }
