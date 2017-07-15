@@ -1,3 +1,8 @@
+gpir_SOURCES := \
+	  ir/gp/gpir.h \
+	  ir/gp/nir.c \
+	  ir/gp/program.c
+
 C_SOURCES := \
 	  lima_screen.c \
 	  lima_screen.h \
@@ -7,4 +12,5 @@ C_SOURCES := \
 	  lima_resource.h \
 	  lima_state.c \
 	  lima_draw.c \
-	  lima_program.c
+	  lima_program.c \
+	  $(gpir_SOURCES)
