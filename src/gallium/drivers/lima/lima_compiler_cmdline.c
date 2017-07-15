@@ -30,6 +30,8 @@
 #include "compiler/glsl/glsl_to_nir.h"
 #include "mesa/state_tracker/st_nir.h"
 
+#include "ir/gp/gpir.h"
+
 static void
 print_usage(void)
 {
@@ -170,6 +172,11 @@ main(int argc, char **argv)
 //*/
 
    nir_print_shader(nir, stdout);
+
+   gpir_prog *gpir = nir_to_gpir(nir);
+   if (gpir) {
+      printf("convert to gpir\n");
+   }
 
    ralloc_free(nir);
    return 0;
