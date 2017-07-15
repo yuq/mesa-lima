@@ -1205,6 +1205,8 @@ struct radv_image {
 	bool exclusive;
 	unsigned queue_family_mask;
 
+	bool shareable;
+
 	/* Set when bound */
 	struct radeon_winsys_bo *bo;
 	VkDeviceSize offset;
