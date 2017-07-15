@@ -98,10 +98,6 @@ static const VkExtensionProperties instance_extensions[] = {
 		.extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		.specVersion = 1,
 	},
-	{
-		.extensionName = VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
-		.specVersion = 1,
-	},
 };
 
 static const VkExtensionProperties common_device_extensions[] = {
@@ -139,14 +135,6 @@ static const VkExtensionProperties common_device_extensions[] = {
 	},
 	{
 		.extensionName = VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-	{
-		.extensionName = VK_KHX_EXTERNAL_MEMORY_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-	{
-		.extensionName = VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
 		.specVersion = 1,
 	},
 };
@@ -735,7 +723,6 @@ void radv_GetPhysicalDeviceProperties2KHR(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceProperties2KHR             *pProperties)
 {
-	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
 	radv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
 
 	vk_foreach_struct(ext, pProperties->pNext) {
@@ -744,13 +731,6 @@ void radv_GetPhysicalDeviceProperties2KHR(
 			VkPhysicalDevicePushDescriptorPropertiesKHR *properties =
 				(VkPhysicalDevicePushDescriptorPropertiesKHR *) ext;
 			properties->maxPushDescriptors = MAX_PUSH_DESCRIPTORS;
-			break;
-		}
-		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHX: {
-			VkPhysicalDeviceIDPropertiesKHX *properties = (VkPhysicalDeviceIDPropertiesKHX*)ext;
-			radv_device_get_cache_uuid(0, properties->driverUUID);
-			memcpy(properties->deviceUUID, pdevice->device_uuid, VK_UUID_SIZE);
-			properties->deviceLUIDValid = false;
 			break;
 		}
 		default:
@@ -2088,9 +2068,6 @@ VkResult radv_AllocateMemory(
 		*pMem = VK_NULL_HANDLE;
 		return VK_SUCCESS;
 	}
-
-	const VkImportMemoryFdInfoKHX *import_info =
-		vk_find_struct_const(pAllocateInfo->pNext, IMPORT_MEMORY_FD_INFO_KHX);
 	const VkDedicatedAllocationMemoryAllocateInfoNV *dedicate_info =
 		vk_find_struct_const(pAllocateInfo->pNext, DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV);
 
@@ -2105,18 +2082,6 @@ VkResult radv_AllocateMemory(
 	} else {
 		mem->image = NULL;
 		mem->buffer = NULL;
-	}
-
-	if (import_info) {
-		assert(import_info->handleType ==
-		       VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX);
-		mem->bo = device->ws->buffer_from_fd(device->ws, import_info->fd,
-						     NULL, NULL);
-		if (!mem->bo) {
-			result = VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX;
-			goto fail;
-		} else
-			goto out_success;
 	}
 
 	uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
@@ -2142,7 +2107,7 @@ VkResult radv_AllocateMemory(
 		goto fail;
 	}
 	mem->type_index = pAllocateInfo->memoryTypeIndex;
-out_success:
+
 	*pMem = radv_device_memory_to_handle(mem);
 
 	return VK_SUCCESS;
@@ -3289,35 +3254,4 @@ vk_icdNegotiateLoaderICDInterfaceVersion(uint32_t *pSupportedVersion)
 	*/
 	*pSupportedVersion = MIN2(*pSupportedVersion, 3u);
 	return VK_SUCCESS;
-}
-
-VkResult radv_GetMemoryFdKHX(VkDevice _device,
-			     VkDeviceMemory _memory,
-			     VkExternalMemoryHandleTypeFlagsKHX handleType,
-			     int *pFD)
-{
-	RADV_FROM_HANDLE(radv_device, device, _device);
-	RADV_FROM_HANDLE(radv_device_memory, memory, _memory);
-
-	/* We support only one handle type. */
-	assert(handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX);
-
-	bool ret = radv_get_memory_fd(device, memory, pFD);
-	if (ret == false)
-		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-	return VK_SUCCESS;
-}
-
-VkResult radv_GetMemoryFdPropertiesKHX(VkDevice _device,
-				       VkExternalMemoryHandleTypeFlagBitsKHX handleType,
-				       int fd,
-				       VkMemoryFdPropertiesKHX *pMemoryFdProperties)
-{
-   /* The valid usage section for this function says:
-    *
-    *    "handleType must not be one of the handle types defined as opaque."
-    *
-    * Since we only handle opaque handles for now, there are no FD properties.
-    */
-   return VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX;
 }

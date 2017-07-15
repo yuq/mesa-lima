@@ -1142,37 +1142,12 @@ VkResult radv_GetPhysicalDeviceImageFormatProperties(
 						pImageFormatProperties);
 }
 
-static void
-get_external_image_format_properties(const VkPhysicalDeviceImageFormatInfo2KHR *pImageFormatInfo,
-				     VkExternalMemoryPropertiesKHX *external_properties)
-{
-	VkExternalMemoryFeatureFlagBitsKHX flags = 0;
-	VkExternalMemoryHandleTypeFlagsKHX export_flags = 0;
-	VkExternalMemoryHandleTypeFlagsKHX compat_flags = 0;
-	switch (pImageFormatInfo->type) {
-	case VK_IMAGE_TYPE_2D:
-		flags = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_KHX|VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHX|VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHX;
-		compat_flags = export_flags = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX;
-		break;
-	default:
-		break;
-	}
-
-	*external_properties = (VkExternalMemoryPropertiesKHX) {
-		.externalMemoryFeatures = flags,
-		.exportFromImportedHandleTypes = export_flags,
-		.compatibleHandleTypes = compat_flags,
-	};
-}
-
 VkResult radv_GetPhysicalDeviceImageFormatProperties2KHR(
 	VkPhysicalDevice                            physicalDevice,
 	const VkPhysicalDeviceImageFormatInfo2KHR  *base_info,
 	VkImageFormatProperties2KHR                *base_props)
 {
 	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
-	const VkPhysicalDeviceExternalImageFormatInfoKHX *external_info = NULL;
-	VkExternalImageFormatPropertiesKHX *external_props = NULL;
 	VkResult result;
 
 	result = radv_get_image_format_properties(physical_device, base_info,
@@ -1180,69 +1155,7 @@ VkResult radv_GetPhysicalDeviceImageFormatProperties2KHR(
 	if (result != VK_SUCCESS)
 		return result;
 
-	   /* Extract input structs */
-	vk_foreach_struct_const(s, base_info->pNext) {
-		switch (s->sType) {
-		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO_KHX:
-			external_info = (const void *) s;
-			break;
-		default:
-			break;
-		}
-	}
-
-	/* Extract output structs */
-	vk_foreach_struct(s, base_props->pNext) {
-		switch (s->sType) {
-		case VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES_KHX:
-			external_props = (void *) s;
-			break;
-		default:
-			break;
-		}
-	}
-
-	/* From the Vulkan 1.0.42 spec:
-	 *
-	 *    If handleType is 0, vkGetPhysicalDeviceImageFormatProperties2KHR will
-	 *    behave as if VkPhysicalDeviceExternalImageFormatInfoKHX was not
-	 *    present and VkExternalImageFormatPropertiesKHX will be ignored.
-	 */
-	if (external_info && external_info->handleType != 0) {
-		switch (external_info->handleType) {
-		case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX:
-			get_external_image_format_properties(base_info, &external_props->externalMemoryProperties);
-			break;
-		default:
-			/* From the Vulkan 1.0.42 spec:
-			 *
-			 *    If handleType is not compatible with the [parameters] specified
-			 *    in VkPhysicalDeviceImageFormatInfo2KHR, then
-			 *    vkGetPhysicalDeviceImageFormatProperties2KHR returns
-			 *    VK_ERROR_FORMAT_NOT_SUPPORTED.
-			 */
-			result = vk_errorf(VK_ERROR_FORMAT_NOT_SUPPORTED,
-					   "unsupported VkExternalMemoryTypeFlagBitsKHX 0x%x",
-					   external_info->handleType);
-			goto fail;
-		}
-	}
-
 	return VK_SUCCESS;
-
-fail:
-	if (result == VK_ERROR_FORMAT_NOT_SUPPORTED) {
-		/* From the Vulkan 1.0.42 spec:
-		 *
-		 *    If the combination of parameters to
-		 *    vkGetPhysicalDeviceImageFormatProperties2KHR is not supported by
-		 *    the implementation for use in vkCreateImage, then all members of
-		 *    imageFormatProperties will be filled with zero.
-		 */
-		base_props->imageFormatProperties = (VkImageFormatProperties) {0};
-	}
-
-	return result;
 }
 
 void radv_GetPhysicalDeviceSparseImageFormatProperties(
@@ -1267,29 +1180,4 @@ void radv_GetPhysicalDeviceSparseImageFormatProperties2KHR(
 {
 	/* Sparse images are not yet supported. */
 	*pPropertyCount = 0;
-}
-
-void radv_GetPhysicalDeviceExternalBufferPropertiesKHX(
-	VkPhysicalDevice                            physicalDevice,
-	const VkPhysicalDeviceExternalBufferInfoKHX *pExternalBufferInfo,
-	VkExternalBufferPropertiesKHX               *pExternalBufferProperties)
-{
-	VkExternalMemoryFeatureFlagBitsKHX flags = 0;
-	VkExternalMemoryHandleTypeFlagsKHX export_flags = 0;
-	VkExternalMemoryHandleTypeFlagsKHX compat_flags = 0;
-	switch(pExternalBufferInfo->handleType) {
-	case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX:
-		flags = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_KHX |
-		        VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHX |
-		        VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHX;
-		compat_flags = export_flags = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX;
-		break;
-	default:
-		break;
-	}
-	pExternalBufferProperties->externalMemoryProperties = (VkExternalMemoryPropertiesKHX) {
-		.externalMemoryFeatures = flags,
-		.exportFromImportedHandleTypes = export_flags,
-		.compatibleHandleTypes = compat_flags,
-	};
 }
