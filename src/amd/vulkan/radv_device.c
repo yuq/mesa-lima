@@ -141,6 +141,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static VkResult
@@ -2072,8 +2076,8 @@ VkResult radv_AllocateMemory(
 		*pMem = VK_NULL_HANDLE;
 		return VK_SUCCESS;
 	}
-	const VkDedicatedAllocationMemoryAllocateInfoNV *dedicate_info =
-		vk_find_struct_const(pAllocateInfo->pNext, DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV);
+	const VkMemoryDedicatedAllocateInfoKHR *dedicate_info =
+		vk_find_struct_const(pAllocateInfo->pNext, MEMORY_DEDICATED_ALLOCATE_INFO_KHR);
 
 	mem = vk_alloc2(&device->alloc, pAllocator, sizeof(*mem), 8,
 			  VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -2217,6 +2221,20 @@ void radv_GetBufferMemoryRequirements2KHR(
 {
 	radv_GetBufferMemoryRequirements(device, pInfo->buffer,
                                         &pMemoryRequirements->memoryRequirements);
+
+	vk_foreach_struct(ext, pMemoryRequirements->pNext) {
+		switch (ext->sType) {
+		case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
+			VkMemoryDedicatedRequirementsKHR *req =
+			               (VkMemoryDedicatedRequirementsKHR *) ext;
+			req->requiresDedicatedAllocation = false;
+			req->prefersDedicatedAllocation = req->requiresDedicatedAllocation;
+			break;
+		}
+		default:
+			break;
+		}
+	}
 }
 
 void radv_GetImageMemoryRequirements(
@@ -2239,6 +2257,20 @@ void radv_GetImageMemoryRequirements2KHR(
 {
 	radv_GetImageMemoryRequirements(device, pInfo->image,
                                         &pMemoryRequirements->memoryRequirements);
+
+	vk_foreach_struct(ext, pMemoryRequirements->pNext) {
+		switch (ext->sType) {
+		case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
+			VkMemoryDedicatedRequirementsKHR *req =
+			               (VkMemoryDedicatedRequirementsKHR *) ext;
+			req->requiresDedicatedAllocation = false;
+			req->prefersDedicatedAllocation = req->requiresDedicatedAllocation;
+			break;
+		}
+		default:
+			break;
+		}
+	}
 }
 
 void radv_GetImageSparseMemoryRequirements(

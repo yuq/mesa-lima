@@ -43,6 +43,7 @@ supported_extensions = [
    'VK_KHR_xcb_surface',
    'VK_KHR_xlib_surface',
    'VK_KHR_get_memory_requirements2',
+   'VK_KHR_dedicated_allocation',
 ]
 
 # We generate a static hash table for entry point lookup
