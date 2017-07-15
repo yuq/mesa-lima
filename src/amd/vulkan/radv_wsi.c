@@ -185,8 +185,8 @@ radv_wsi_image_create(VkDevice device_h,
 
 	VkDeviceMemory memory_h;
 
-	const VkDedicatedAllocationMemoryAllocateInfoNV ded_alloc = {
-		.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV,
+	const VkMemoryDedicatedAllocateInfoKHR ded_alloc = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
 		.pNext = NULL,
 		.buffer = VK_NULL_HANDLE,
 		.image = image_h
