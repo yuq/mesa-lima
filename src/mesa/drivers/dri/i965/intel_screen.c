@@ -586,6 +586,9 @@ select_best_modifier(struct gen_device_info *devinfo,
    enum modifier_priority prio = MODIFIER_PRIORITY_INVALID;
 
    for (int i = 0; i < count; i++) {
+      if (!modifier_is_supported(devinfo, modifiers[i]))
+         continue;
+
       switch (modifiers[i]) {
       case I915_FORMAT_MOD_Y_TILED:
          prio = MAX2(prio, MODIFIER_PRIORITY_Y);
