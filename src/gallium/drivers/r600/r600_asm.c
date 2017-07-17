@@ -2376,6 +2376,12 @@ void r600_vertex_data_type(enum pipe_format pformat,
 		return;
 	}
 
+	if (pformat == PIPE_FORMAT_B5G5R5A1_UNORM) {
+		*format = FMT_1_5_5_5;
+		*endian = r600_endian_swap(16);
+		return;
+	}
+
 	desc = util_format_description(pformat);
 	if (desc->layout != UTIL_FORMAT_LAYOUT_PLAIN) {
 		goto out_unknown;
