@@ -117,6 +117,13 @@ sample_maski(struct gl_context *ctx, GLuint index, GLbitfield mask)
 }
 
 void GLAPIENTRY
+_mesa_SampleMaski_no_error(GLuint index, GLbitfield mask)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   sample_maski(ctx, index, mask);
+}
+
+void GLAPIENTRY
 _mesa_SampleMaski(GLuint index, GLbitfield mask)
 {
    GET_CURRENT_CONTEXT(ctx);

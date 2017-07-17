@@ -41,6 +41,9 @@ _mesa_init_multisample(struct gl_context *ctx);
 extern void GLAPIENTRY
 _mesa_GetMultisamplefv(GLenum pname, GLuint index, GLfloat* val);
 
+void GLAPIENTRY
+_mesa_SampleMaski_no_error(GLuint index, GLbitfield mask);
+
 extern void GLAPIENTRY
 _mesa_SampleMaski(GLuint index, GLbitfield mask);
 
