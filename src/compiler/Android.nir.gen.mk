@@ -94,3 +94,10 @@ nir_opt_algebraic_deps := \
 $(intermediates)/nir/nir_opt_algebraic.c: $(nir_opt_algebraic_deps)
 	@mkdir -p $(dir $@)
 	$(hide) $(MESA_PYTHON2) $(nir_opt_algebraic_gen) $< > $@
+
+LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
+	$(SPIRV_GENERATED_FILES))
+
+$(intermediates)/spirv/spirv_info.c: $(LOCAL_PATH)/spirv/spirv_info_c.py $(LOCAL_PATH)/spirv/spirv.core.grammar.json
+	@mkdir -p $(dir $@)
+	$(hide) $(MESA_PYTHON2) $(LOCAL_PATH)/spirv/spirv_info_c.py $(LOCAL_PATH)/spirv/spirv.core.grammar.json $@ || ($(RM) $@; false)
