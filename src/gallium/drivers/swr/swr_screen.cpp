@@ -46,11 +46,6 @@
 #include <stdio.h>
 #include <map>
 
-/* MSVC case instensitive compare */
-#if defined(PIPE_CC_MSVC)
-   #define strcasecmp lstrcmpiA
-#endif
-
 /*
  * Max texture sizes
  * XXX Check max texture size values against core and sampler.
