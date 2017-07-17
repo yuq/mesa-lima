@@ -399,6 +399,15 @@ intel_lower_compressed_format(struct brw_context *brw, mesa_format format)
 }
 
 static unsigned
+get_num_logical_layers(const struct intel_mipmap_tree *mt, unsigned level)
+{
+   if (mt->surf.dim == ISL_SURF_DIM_3D)
+      return minify(mt->surf.logical_level0_px.depth, level);
+   else
+      return mt->surf.logical_level0_px.array_len;
+}
+
+static unsigned
 get_num_phys_layers(const struct isl_surf *surf, unsigned level)
 {
    /* In case of physical dimensions one needs to consider also the layout.
@@ -436,7 +445,7 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
 
    uint32_t total_slices = 0;
    for (uint32_t level = 0; level < levels; level++)
-      total_slices += get_num_phys_layers(&mt->surf, level);
+      total_slices += get_num_logical_layers(mt, level);
 
    const size_t per_level_array_size = levels * sizeof(enum isl_aux_state *);
 
@@ -454,10 +463,8 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
    enum isl_aux_state *s = data + per_level_array_size;
    for (uint32_t level = 0; level < levels; level++) {
       per_level_arr[level] = s;
-
-      const unsigned level_depth = get_num_phys_layers(&mt->surf, level);
-              
-      for (uint32_t a = 0; a < level_depth; a++)
+      const unsigned level_layers = get_num_logical_layers(mt, level);
+      for (uint32_t a = 0; a < level_layers; a++)
          *(s++) = initial;
    }
    assert((void *)s == data + total_size);
@@ -2206,8 +2213,8 @@ miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
                            uint32_t start_layer, uint32_t num_layers)
 {
    assert(level <= mt->last_level);
-   const uint32_t total_num_layers = get_num_phys_layers(&mt->surf, level);
 
+   const uint32_t total_num_layers = get_num_logical_layers(mt, level);
    assert(start_layer < total_num_layers);
    if (num_layers == INTEL_REMAINING_LAYERS)
       num_layers = total_num_layers - start_layer;
