@@ -305,6 +305,9 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
                              GLint *params);
 
 /* GL_ARB_tessellation_shader */
+void GLAPIENTRY
+_mesa_PatchParameteri_no_error(GLenum pname, GLint value);
+
 extern void GLAPIENTRY
 _mesa_PatchParameteri(GLenum pname, GLint value);
 

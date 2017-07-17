@@ -2348,6 +2348,14 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 /**
  * For GL_ARB_tessellation_shader
  */
+void GLAPIENTRY
+_mesa_PatchParameteri_no_error(GLenum pname, GLint value)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   ctx->TessCtrlProgram.patch_vertices = value;
+}
+
+
 extern void GLAPIENTRY
 _mesa_PatchParameteri(GLenum pname, GLint value)
 {
