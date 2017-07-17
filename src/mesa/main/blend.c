@@ -552,6 +552,23 @@ _mesa_BlendEquation( GLenum mode )
 /**
  * Set blend equation for one color buffer/target.
  */
+static void
+blend_equationi(struct gl_context *ctx, GLuint buf, GLenum mode,
+                enum gl_advanced_blend_mode advanced_mode)
+{
+   if (ctx->Color.Blend[buf].EquationRGB == mode &&
+       ctx->Color.Blend[buf].EquationA == mode)
+      return;  /* no change */
+
+   _mesa_flush_vertices_for_blend_state(ctx);
+   ctx->Color.Blend[buf].EquationRGB = mode;
+   ctx->Color.Blend[buf].EquationA = mode;
+   ctx->Color._BlendEquationPerBuffer = GL_TRUE;
+
+   if (buf == 0)
+      ctx->Color._AdvancedBlendMode = advanced_mode;
+}
+
 void GLAPIENTRY
 _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
 {
@@ -573,17 +590,7 @@ _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
       return;
    }
 
-   if (ctx->Color.Blend[buf].EquationRGB == mode &&
-       ctx->Color.Blend[buf].EquationA == mode)
-      return;  /* no change */
-
-   _mesa_flush_vertices_for_blend_state(ctx);
-   ctx->Color.Blend[buf].EquationRGB = mode;
-   ctx->Color.Blend[buf].EquationA = mode;
-   ctx->Color._BlendEquationPerBuffer = GL_TRUE;
-
-   if (buf == 0)
-      ctx->Color._AdvancedBlendMode = advanced_mode;
+   blend_equationi(ctx, buf, mode, advanced_mode);
 }
 
 
