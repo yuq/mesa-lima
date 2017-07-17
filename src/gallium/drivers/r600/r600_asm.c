@@ -43,14 +43,10 @@ static inline bool alu_writes(struct r600_bytecode_alu *alu)
 	return alu->dst.write || alu->is_op3;
 }
 
-static inline unsigned int r600_bytecode_get_num_operands(
-		struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+static inline unsigned int r600_bytecode_get_num_operands(struct r600_bytecode_alu *alu)
 {
 	return r600_isa_alu(alu->op)->src_count;
 }
-
-int r700_bytecode_alu_build(struct r600_bytecode *bc,
-		struct r600_bytecode_alu *alu, unsigned id);
 
 static struct r600_bytecode_cf *r600_bytecode_cf(void)
 {
@@ -236,7 +232,7 @@ int r600_bytecode_add_output(struct r600_bytecode *bc,
 }
 
 /* alu instructions that can ony exits once per group */
-static int is_alu_once_inst(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+static int is_alu_once_inst(struct r600_bytecode_alu *alu)
 {
 	return r600_isa_alu(alu->op)->flags & (AF_KILL | AF_PRED) || alu->is_lds_idx_op || alu->op == ALU_OP0_GROUP_BARRIER;
 }
@@ -247,14 +243,14 @@ static int is_alu_reduction_inst(struct r600_bytecode *bc, struct r600_bytecode_
 			(r600_isa_alu_slots(bc->isa->hw_class, alu->op) == AF_4V);
 }
 
-static int is_alu_mova_inst(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+static int is_alu_mova_inst(struct r600_bytecode_alu *alu)
 {
 	return r600_isa_alu(alu->op)->flags & AF_MOVA;
 }
 
-static int alu_uses_rel(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+static int alu_uses_rel(struct r600_bytecode_alu *alu)
 {
-	unsigned num_src = r600_bytecode_get_num_operands(bc, alu);
+	unsigned num_src = r600_bytecode_get_num_operands(alu);
 	unsigned src;
 
 	if (alu->dst.rel) {
@@ -274,9 +270,9 @@ static int is_lds_read(int sel)
   return sel == EG_V_SQ_ALU_SRC_LDS_OQ_A_POP || sel == EG_V_SQ_ALU_SRC_LDS_OQ_B_POP;
 }
 
-static int alu_uses_lds(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+static int alu_uses_lds(struct r600_bytecode_alu *alu)
 {
-	unsigned num_src = r600_bytecode_get_num_operands(bc, alu);
+	unsigned num_src = r600_bytecode_get_num_operands(alu);
 	unsigned src;
 
 	for (src = 0; src < num_src; ++src) {
@@ -287,7 +283,7 @@ static int alu_uses_lds(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
 	return 0;
 }
 
-static int is_alu_64bit_inst(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+static int is_alu_64bit_inst(struct r600_bytecode_alu *alu)
 {
 	const struct alu_op_info *op = r600_isa_alu(alu->op);
 	return (op->flags & AF_64);
@@ -312,7 +308,7 @@ static int is_alu_any_unit_inst(struct r600_bytecode *bc, struct r600_bytecode_a
 	return slots == AF_VS;
 }
 
-static int is_nop_inst(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+static int is_nop_inst(struct r600_bytecode_alu *alu)
 {
 	return alu->op == ALU_OP0_NOP;
 }
@@ -453,7 +449,7 @@ static int check_vector(struct r600_bytecode *bc, struct r600_bytecode_alu *alu,
 {
 	int r, src, num_src, sel, elem, cycle;
 
-	num_src = r600_bytecode_get_num_operands(bc, alu);
+	num_src = r600_bytecode_get_num_operands(alu);
 	for (src = 0; src < num_src; src++) {
 		sel = alu->src[src].sel;
 		elem = alu->src[src].chan;
@@ -483,7 +479,7 @@ static int check_scalar(struct r600_bytecode *bc, struct r600_bytecode_alu *alu,
 {
 	int r, src, num_src, const_count, sel, elem, cycle;
 
-	num_src = r600_bytecode_get_num_operands(bc, alu);
+	num_src = r600_bytecode_get_num_operands(alu);
 	for (const_count = 0, src = 0; src < num_src; ++src) {
 		sel = alu->src[src].sel;
 		elem = alu->src[src].chan;
@@ -618,7 +614,7 @@ static int replace_gpr_with_pv_ps(struct r600_bytecode *bc,
 	for (i = 0; i < max_slots; ++i) {
 		if (prev[i] && alu_writes(prev[i]) && !prev[i]->dst.rel) {
 
-			if (is_alu_64bit_inst(bc, prev[i])) {
+			if (is_alu_64bit_inst(prev[i])) {
 				gpr[i] = -1;
 				continue;
 			}
@@ -638,9 +634,9 @@ static int replace_gpr_with_pv_ps(struct r600_bytecode *bc,
 		if (!alu)
 			continue;
 
-		if (is_alu_64bit_inst(bc, alu))
+		if (is_alu_64bit_inst(alu))
 			continue;
-		num_src = r600_bytecode_get_num_operands(bc, alu);
+		num_src = r600_bytecode_get_num_operands(alu);
 		for (src = 0; src < num_src; ++src) {
 			if (!is_gpr(alu->src[src].sel) || alu->src[src].rel)
 				continue;
@@ -703,10 +699,10 @@ void r600_bytecode_special_constants(uint32_t value, unsigned *sel, unsigned *ne
 }
 
 /* compute how many literal are needed */
-static int r600_bytecode_alu_nliterals(struct r600_bytecode *bc, struct r600_bytecode_alu *alu,
+static int r600_bytecode_alu_nliterals(struct r600_bytecode_alu *alu,
 				 uint32_t literal[4], unsigned *nliteral)
 {
-	unsigned num_src = r600_bytecode_get_num_operands(bc, alu);
+	unsigned num_src = r600_bytecode_get_num_operands(alu);
 	unsigned i, j;
 
 	for (i = 0; i < num_src; ++i) {
@@ -729,11 +725,10 @@ static int r600_bytecode_alu_nliterals(struct r600_bytecode *bc, struct r600_byt
 	return 0;
 }
 
-static void r600_bytecode_alu_adjust_literals(struct r600_bytecode *bc,
-					struct r600_bytecode_alu *alu,
-					uint32_t literal[4], unsigned nliteral)
+static void r600_bytecode_alu_adjust_literals(struct r600_bytecode_alu *alu,
+					      uint32_t literal[4], unsigned nliteral)
 {
-	unsigned num_src = r600_bytecode_get_num_operands(bc, alu);
+	unsigned num_src = r600_bytecode_get_num_operands(alu);
 	unsigned i, j;
 
 	for (i = 0; i < num_src; ++i) {
@@ -771,13 +766,13 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 		if (prev[i]) {
 		      if (prev[i]->pred_sel)
 			      return 0;
-		      if (is_alu_once_inst(bc, prev[i]))
+		      if (is_alu_once_inst(prev[i]))
 			      return 0;
 		}
 		if (slots[i]) {
 			if (slots[i]->pred_sel)
 				return 0;
-			if (is_alu_once_inst(bc, slots[i]))
+			if (is_alu_once_inst(slots[i]))
 				return 0;
 		}
 	}
@@ -790,28 +785,28 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 
 		/* check number of literals */
 		if (prev[i]) {
-			if (r600_bytecode_alu_nliterals(bc, prev[i], literal, &nliteral))
+			if (r600_bytecode_alu_nliterals(prev[i], literal, &nliteral))
 				return 0;
-			if (r600_bytecode_alu_nliterals(bc, prev[i], prev_literal, &prev_nliteral))
+			if (r600_bytecode_alu_nliterals(prev[i], prev_literal, &prev_nliteral))
 				return 0;
-			if (is_alu_mova_inst(bc, prev[i])) {
+			if (is_alu_mova_inst(prev[i])) {
 				if (have_rel)
 					return 0;
 				have_mova = 1;
 			}
 
-			if (alu_uses_rel(bc, prev[i])) {
+			if (alu_uses_rel(prev[i])) {
 				if (have_mova) {
 					return 0;
 				}
 				have_rel = 1;
 			}
-			if (alu_uses_lds(bc, prev[i]))
+			if (alu_uses_lds(prev[i]))
 				return 0;
 
-			num_once_inst += is_alu_once_inst(bc, prev[i]);
+			num_once_inst += is_alu_once_inst(prev[i]);
 		}
-		if (slots[i] && r600_bytecode_alu_nliterals(bc, slots[i], literal, &nliteral))
+		if (slots[i] && r600_bytecode_alu_nliterals(slots[i], literal, &nliteral))
 			return 0;
 
 		/* Let's check used slots. */
@@ -821,7 +816,7 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 		} else if (prev[i] && slots[i]) {
 			if (max_slots == 5 && result[4] == NULL && prev[4] == NULL && slots[4] == NULL) {
 				/* Trans unit is still free try to use it. */
-				if (is_alu_any_unit_inst(bc, slots[i]) && !alu_uses_lds(bc, slots[i])) {
+				if (is_alu_any_unit_inst(bc, slots[i]) && !alu_uses_lds(slots[i])) {
 					result[i] = prev[i];
 					result[4] = slots[i];
 				} else if (is_alu_any_unit_inst(bc, prev[i])) {
@@ -850,20 +845,20 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 		}
 
 		alu = slots[i];
-		num_once_inst += is_alu_once_inst(bc, alu);
+		num_once_inst += is_alu_once_inst(alu);
 
 		/* don't reschedule NOPs */
-		if (is_nop_inst(bc, alu))
+		if (is_nop_inst(alu))
 			return 0;
 
-		if (is_alu_mova_inst(bc, alu)) {
+		if (is_alu_mova_inst(alu)) {
 			if (have_rel) {
 				return 0;
 			}
 			have_mova = 1;
 		}
 
-		if (alu_uses_rel(bc, alu)) {
+		if (alu_uses_rel(alu)) {
 			if (have_mova) {
 				return 0;
 			}
@@ -875,7 +870,7 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 			return 0; /* data hazard with MOVA */
 
 		/* Let's check source gprs */
-		num_src = r600_bytecode_get_num_operands(bc, alu);
+		num_src = r600_bytecode_get_num_operands(alu);
 		for (src = 0; src < num_src; ++src) {
 
 			/* Constants don't matter. */
@@ -1021,7 +1016,7 @@ static int r600_bytecode_alloc_inst_kcache_lines(struct r600_bytecode *bc,
 	return 0;
 }
 
-static int r600_bytecode_assign_kcache_banks(struct r600_bytecode *bc,
+static int r600_bytecode_assign_kcache_banks(
 		struct r600_bytecode_alu *alu,
 		struct r600_bytecode_kcache * kcache)
 {
@@ -1283,7 +1278,7 @@ int r600_bytecode_add_alu_type(struct r600_bytecode *bc,
 
 		for (i = 0, nliteral = 0; i < max_slots; i++) {
 			if (slots[i]) {
-				r = r600_bytecode_alu_nliterals(bc, slots[i], literal, &nliteral);
+				r = r600_bytecode_alu_nliterals(slots[i], literal, &nliteral);
 				if (r)
 					return r;
 			}
@@ -1748,11 +1743,11 @@ int r600_bytecode_build(struct r600_bytecode *bc)
 			nliteral = 0;
 			memset(literal, 0, sizeof(literal));
 			LIST_FOR_EACH_ENTRY(alu, &cf->alu, list) {
-				r = r600_bytecode_alu_nliterals(bc, alu, literal, &nliteral);
+				r = r600_bytecode_alu_nliterals(alu, literal, &nliteral);
 				if (r)
 					return r;
-				r600_bytecode_alu_adjust_literals(bc, alu, literal, nliteral);
-				r600_bytecode_assign_kcache_banks(bc, alu, cf->kcache);
+				r600_bytecode_alu_adjust_literals(alu, literal, nliteral);
+				r600_bytecode_assign_kcache_banks(alu, cf->kcache);
 
 				switch(bc->chip_class) {
 				case R600:
@@ -2189,7 +2184,7 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 			const struct alu_op_info *aop = r600_isa_alu(alu->op);
 			int o = 0;
 
-			r600_bytecode_alu_nliterals(bc, alu, literal, &nliteral);
+			r600_bytecode_alu_nliterals(alu, literal, &nliteral);
 			o += fprintf(stderr, " %04d %08X %08X  ", id, bc->bytecode[id], bc->bytecode[id+1]);
 			if (last)
 				o += fprintf(stderr, "%4d ", ++ngr);
