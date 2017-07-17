@@ -359,10 +359,20 @@ _mesa_DepthRangef(GLclampf nearval, GLclampf farval)
  * \param v       pointer to memory containing
  *                GLclampd near and far clip-plane values
  */
+static ALWAYS_INLINE void
+depth_range_arrayv(struct gl_context *ctx, GLuint first, GLsizei count,
+                   const struct gl_depthrange_inputs *const inputs)
+{
+   for (GLsizei i = 0; i < count; i++)
+      set_depth_range_no_notify(ctx, i + first, inputs[i].Near, inputs[i].Far);
+
+   if (ctx->Driver.DepthRange)
+      ctx->Driver.DepthRange(ctx);
+}
+
 void GLAPIENTRY
 _mesa_DepthRangeArrayv(GLuint first, GLsizei count, const GLclampd *v)
 {
-   int i;
    const struct gl_depthrange_inputs *const p =
       (struct gl_depthrange_inputs *) v;
    GET_CURRENT_CONTEXT(ctx);
@@ -377,11 +387,7 @@ _mesa_DepthRangeArrayv(GLuint first, GLsizei count, const GLclampd *v)
       return;
    }
 
-   for (i = 0; i < count; i++)
-      set_depth_range_no_notify(ctx, i + first, p[i].Near, p[i].Far);
-
-   if (ctx->Driver.DepthRange)
-      ctx->Driver.DepthRange(ctx);
+   depth_range_arrayv(ctx, first, count, p);
 }
 
 void GLAPIENTRY
