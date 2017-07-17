@@ -43,7 +43,7 @@ static inline bool alu_writes(struct r600_bytecode_alu *alu)
 	return alu->dst.write || alu->is_op3;
 }
 
-static inline unsigned int r600_bytecode_get_num_operands(struct r600_bytecode_alu *alu)
+static inline unsigned int r600_bytecode_get_num_operands(const struct r600_bytecode_alu *alu)
 {
 	return r600_isa_alu(alu->op)->src_count;
 }
@@ -402,7 +402,8 @@ static int reserve_gpr(struct alu_bank_swizzle *bs, unsigned sel, unsigned chan,
 	return 0;
 }
 
-static int reserve_cfile(struct r600_bytecode *bc, struct alu_bank_swizzle *bs, unsigned sel, unsigned chan)
+static int reserve_cfile(const struct r600_bytecode *bc,
+			 struct alu_bank_swizzle *bs, unsigned sel, unsigned chan)
 {
 	int res, num_res = 4;
 	if (bc->chip_class >= R700) {
@@ -444,7 +445,7 @@ static int is_const(int sel)
 		sel <= V_SQ_ALU_SRC_LITERAL);
 }
 
-static int check_vector(struct r600_bytecode *bc, struct r600_bytecode_alu *alu,
+static int check_vector(const struct r600_bytecode *bc, const struct r600_bytecode_alu *alu,
 			struct alu_bank_swizzle *bs, int bank_swizzle)
 {
 	int r, src, num_src, sel, elem, cycle;
@@ -474,7 +475,7 @@ static int check_vector(struct r600_bytecode *bc, struct r600_bytecode_alu *alu,
 	return 0;
 }
 
-static int check_scalar(struct r600_bytecode *bc, struct r600_bytecode_alu *alu,
+static int check_scalar(const struct r600_bytecode *bc, const struct r600_bytecode_alu *alu,
 			struct alu_bank_swizzle *bs, int bank_swizzle)
 {
 	int r, src, num_src, const_count, sel, elem, cycle;
@@ -520,7 +521,7 @@ static int check_scalar(struct r600_bytecode *bc, struct r600_bytecode_alu *alu,
 	return 0;
 }
 
-static int check_and_set_bank_swizzle(struct r600_bytecode *bc,
+static int check_and_set_bank_swizzle(const struct r600_bytecode *bc,
 				      struct r600_bytecode_alu *slots[5])
 {
 	struct alu_bank_swizzle bs;
