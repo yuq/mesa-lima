@@ -105,6 +105,17 @@ _mesa_GetMultisamplefv(GLenum pname, GLuint index, GLfloat * val)
    }
 }
 
+static void
+sample_maski(struct gl_context *ctx, GLuint index, GLbitfield mask)
+{
+   if (ctx->Multisample.SampleMaskValue == mask)
+      return;
+
+   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewSampleMask ? 0 : _NEW_MULTISAMPLE);
+   ctx->NewDriverState |= ctx->DriverFlags.NewSampleMask;
+   ctx->Multisample.SampleMaskValue = mask;
+}
+
 void GLAPIENTRY
 _mesa_SampleMaski(GLuint index, GLbitfield mask)
 {
@@ -120,12 +131,7 @@ _mesa_SampleMaski(GLuint index, GLbitfield mask)
       return;
    }
 
-   if (ctx->Multisample.SampleMaskValue == mask)
-      return;
-
-   FLUSH_VERTICES(ctx, ctx->DriverFlags.NewSampleMask ? 0 : _NEW_MULTISAMPLE);
-   ctx->NewDriverState |= ctx->DriverFlags.NewSampleMask;
-   ctx->Multisample.SampleMaskValue = mask;
+   sample_maski(ctx, index, mask);
 }
 
 /**
