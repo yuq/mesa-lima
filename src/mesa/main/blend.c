@@ -569,6 +569,17 @@ blend_equationi(struct gl_context *ctx, GLuint buf, GLenum mode,
       ctx->Color._AdvancedBlendMode = advanced_mode;
 }
 
+
+void GLAPIENTRY
+_mesa_BlendEquationiARB_no_error(GLuint buf, GLenum mode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   enum gl_advanced_blend_mode advanced_mode = advanced_blend_mode(ctx, mode);
+   blend_equationi(ctx, buf, mode, advanced_mode);
+}
+
+
 void GLAPIENTRY
 _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
 {
