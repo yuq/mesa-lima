@@ -213,6 +213,15 @@ intel_miptree_supports_ccs(struct brw_context *brw,
 }
 
 static bool
+intel_tiling_supports_hiz(const struct brw_context *brw, unsigned tiling)
+{
+   if (brw->gen < 6)
+      return false;
+
+   return tiling == I915_TILING_Y;
+}
+
+static bool
 intel_miptree_supports_hiz(struct brw_context *brw,
                            struct intel_mipmap_tree *mt)
 {
@@ -597,7 +606,8 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
       } else {
          mt->aux_usage = ISL_AUX_USAGE_CCS_D;
       }
-   } else if (intel_miptree_supports_hiz(brw, mt)) {
+   } else if (intel_tiling_supports_hiz(brw, mt->tiling) &&
+              intel_miptree_supports_hiz(brw, mt)) {
       mt->aux_usage = ISL_AUX_USAGE_HIZ;
    }
 
