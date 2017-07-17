@@ -109,6 +109,7 @@ radv_init_surface(struct radv_device *device,
 		surface->flags |= RADEON_SURF_SBUFFER;
 
 	surface->flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
+	surface->flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
 	if ((pCreateInfo->usage & (VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 	                           VK_IMAGE_USAGE_STORAGE_BIT)) ||
