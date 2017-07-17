@@ -371,6 +371,16 @@ depth_range_arrayv(struct gl_context *ctx, GLuint first, GLsizei count,
 }
 
 void GLAPIENTRY
+_mesa_DepthRangeArrayv_no_error(GLuint first, GLsizei count, const GLclampd *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   const struct gl_depthrange_inputs *const p =
+      (struct gl_depthrange_inputs *)v;
+   depth_range_arrayv(ctx, first, count, p);
+}
+
+void GLAPIENTRY
 _mesa_DepthRangeArrayv(GLuint first, GLsizei count, const GLclampd *v)
 {
    const struct gl_depthrange_inputs *const p =
