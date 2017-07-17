@@ -670,22 +670,13 @@ brw_bo_unreference(struct brw_bo *bo)
 }
 
 static void
-set_domain(struct brw_context *brw, const char *action,
-           struct brw_bo *bo, uint32_t read_domains, uint32_t write_domain)
+bo_wait_with_stall_warning(struct brw_context *brw,
+                           struct brw_bo *bo,
+                           const char *action)
 {
-   struct drm_i915_gem_set_domain sd = {
-      .handle = bo->gem_handle,
-      .read_domains = read_domains,
-      .write_domain = write_domain,
-   };
-
    double elapsed = unlikely(brw && brw->perf_debug) ? -get_time() : 0.0;
 
-   if (drmIoctl(bo->bufmgr->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &sd) != 0) {
-      DBG("%s:%d: Error setting memory domains %d (%08x %08x): %s.\n",
-          __FILE__, __LINE__, bo->gem_handle, read_domains, write_domain,
-          strerror(errno));
-   }
+   brw_bo_wait_rendering(bo);
 
    if (unlikely(brw && brw->perf_debug)) {
       elapsed += get_time();
@@ -755,8 +746,7 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    print_flags(flags);
 
    if (!(flags & MAP_ASYNC)) {
-      set_domain(brw, "CPU mapping", bo, I915_GEM_DOMAIN_CPU,
-                 flags & MAP_WRITE ? I915_GEM_DOMAIN_CPU : 0);
+      bo_wait_with_stall_warning(brw, bo, "CPU mapping");
    }
 
    if (!bo->cache_coherent) {
@@ -826,8 +816,7 @@ brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    print_flags(flags);
 
    if (!(flags & MAP_ASYNC)) {
-      set_domain(brw, "GTT mapping", bo,
-                 I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
+      bo_wait_with_stall_warning(brw, bo, "GTT mapping");
    }
 
    return bo->map_gtt;
