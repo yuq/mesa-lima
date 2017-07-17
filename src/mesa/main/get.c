@@ -162,6 +162,7 @@ enum value_extra {
    EXTRA_EXT_SSBO_GS,
    EXTRA_EXT_FB_NO_ATTACH_GS,
    EXTRA_EXT_ES_GS,
+   EXTRA_EXT_PROVOKING_VERTEX_32,
 };
 
 #define NO_EXTRA NULL
@@ -572,6 +573,12 @@ static const int extra_EXT_shader_framebuffer_fetch[] = {
    EXT(MESA_shader_framebuffer_fetch),
    EXTRA_END
 };
+
+static const int extra_EXT_provoking_vertex_32[] = {
+   EXTRA_EXT_PROVOKING_VERTEX_32,
+   EXTRA_END
+};
+
 
 /* This is the big table describing all the enums we accept in
  * glGet*v().  The table is partitioned into six parts: enums
@@ -1292,6 +1299,11 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
          api_check = GL_TRUE;
          if (_mesa_has_OES_geometry_shader(ctx))
             api_found = GL_TRUE;
+         break;
+      case EXTRA_EXT_PROVOKING_VERTEX_32:
+         api_check = TRUE;
+         if (version <= 32)
+            api_found = ctx->Extensions.EXT_provoking_vertex;
          break;
       case EXTRA_END:
 	 break;
