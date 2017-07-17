@@ -86,7 +86,8 @@ struct winsys_handle;
 #define SVGA_QUERY_FLAG_SET        (1 << 0)
 #define SVGA_QUERY_FLAG_REF        (1 << 1)
 
-#define SVGA_HINT_FLAG_CAN_PRE_FLUSH (1 << 0)  /* Can preemptively flush */
+#define SVGA_HINT_FLAG_CAN_PRE_FLUSH   (1 << 0)  /* Can preemptively flush */
+#define SVGA_HINT_FLAG_EXPORT_FENCE_FD (1 << 1)  /* Export a Fence FD */
 
 /**
  * SVGA mks statistics info
@@ -374,6 +375,11 @@ struct svga_winsys_context
    uint32 hints;
 
    /**
+    * File descriptor for imported fence
+    */
+   int32 imported_fence_fd;
+
+   /**
     ** BEGIN new functions for guest-backed surfaces.
     **/
 
@@ -635,6 +641,31 @@ struct svga_winsys_screen
                         uint64_t timeout,
                         unsigned flag );
 
+   /**
+    * Get the file descriptor associated with the fence
+    * \param duplicate duplicate the fd before returning it
+    * \return zero on success.
+    */
+   int (*fence_get_fd)( struct svga_winsys_screen *sws,
+                        struct pipe_fence_handle *fence,
+                        boolean duplicate );
+
+   /**
+    * Create a fence using the given file descriptor
+    * \return zero on success.
+    */
+   void (*fence_create_fd)( struct svga_winsys_screen *sws,
+                            struct pipe_fence_handle **fence,
+                            int32_t fd );
+
+   /**
+    * Accumulates fence FD from other devices into the current context
+    * \param context_fd FD the context will be waiting on
+    * \return zero on success
+    */
+   int (*fence_server_sync)( struct svga_winsys_screen *sws,
+                             int32_t *context_fd,
+                             struct pipe_fence_handle *fence );
 
    /**
     ** BEGIN new functions for guest-backed surfaces.
@@ -726,6 +757,7 @@ struct svga_winsys_screen
    boolean have_generate_mipmap_cmd;
    boolean have_set_predication_cmd;
    boolean have_transfer_from_buffer_cmd;
+   boolean have_fence_fd;
 };
 
 
