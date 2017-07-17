@@ -924,6 +924,10 @@ brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns)
    struct drm_i915_gem_wait wait;
    int ret;
 
+   /* If we know it's idle, don't bother with the kernel round trip */
+   if (bo->idle && !bo->external)
+      return 0;
+
    memclear(wait);
    wait.bo_handle = bo->gem_handle;
    wait.timeout_ns = timeout_ns;
