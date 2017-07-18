@@ -1302,7 +1302,7 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
          break;
       case EXTRA_EXT_PROVOKING_VERTEX_32:
          api_check = TRUE;
-         if (version <= 32)
+         if (ctx->API == API_OPENGL_COMPAT || version == 32)
             api_found = ctx->Extensions.EXT_provoking_vertex;
          break;
       case EXTRA_END:
