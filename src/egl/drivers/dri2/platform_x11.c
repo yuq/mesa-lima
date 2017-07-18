@@ -445,7 +445,6 @@ dri2_x11_process_buffers(struct dri2_egl_surface *dri2_surf,
       dri2_egl_display(dri2_surf->base.Resource.Display);
    xcb_rectangle_t rectangle;
 
-   dri2_surf->buffer_count = count;
    dri2_surf->have_fake_front = false;
 
    /* This assumes the DRI2 buffer attachment tokens matches the

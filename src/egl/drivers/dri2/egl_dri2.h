@@ -256,7 +256,6 @@ struct dri2_egl_surface
    _EGLSurface          base;
    __DRIdrawable       *dri_drawable;
    __DRIbuffer          buffers[5];
-   int                  buffer_count;
    bool                 have_fake_front;
 
 #ifdef HAVE_X11_PLATFORM
