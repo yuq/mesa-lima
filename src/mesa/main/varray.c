@@ -2712,6 +2712,15 @@ vertex_array_binding_divisor(struct gl_context *ctx,
 
 
 void GLAPIENTRY
+_mesa_VertexBindingDivisor_no_error(GLuint bindingIndex, GLuint divisor)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   vertex_binding_divisor(ctx, ctx->Array.VAO,
+                          VERT_ATTRIB_GENERIC(bindingIndex), divisor);
+}
+
+
+void GLAPIENTRY
 _mesa_VertexBindingDivisor(GLuint bindingIndex, GLuint divisor)
 {
    GET_CURRENT_CONTEXT(ctx);
