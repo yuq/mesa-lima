@@ -1237,8 +1237,9 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 		unsigned msg_fb_it_size = FB_BUFFER_OFFSET + FB_BUFFER_SIZE;
 		if (have_it(dec))
 			msg_fb_it_size += IT_SCALING_TABLE_SIZE;
+		/* use vram to improve performance, workaround an unknown bug */
 		if (!rvid_create_buffer(dec->screen, &dec->msg_fb_it_buffers[i],
-					msg_fb_it_size, PIPE_USAGE_STAGING)) {
+					msg_fb_it_size, PIPE_USAGE_DEFAULT)) {
 			RVID_ERR("Can't allocated message buffers.\n");
 			goto error;
 		}
