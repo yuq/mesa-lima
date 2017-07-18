@@ -2881,17 +2881,14 @@ emit_constant_declaration(struct svga_shader_emitter_v10 *emit)
       }
    }
 
-   /* Texcoord scale factors for RECT textures */
-   {
-      for (i = 0; i < emit->num_samplers; i++) {
-         if (emit->key.tex[i].unnormalized) {
-            emit->texcoord_scale_index[i] = total_consts++;
-         }
-      }
-   }
-
-   /* Texture buffer sizes */
    for (i = 0; i < emit->num_samplers; i++) {
+
+      /* Texcoord scale factors for RECT textures */
+      if (emit->key.tex[i].unnormalized) {
+         emit->texcoord_scale_index[i] = total_consts++;
+      }
+
+      /* Texture buffer sizes */
       if (emit->sampler_target[i] == TGSI_TEXTURE_BUFFER) {
          emit->texture_buffer_size_index[i] = total_consts++;
       }
