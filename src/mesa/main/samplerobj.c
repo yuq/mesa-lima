@@ -326,25 +326,11 @@ _mesa_BindSampler(GLuint unit, GLuint sampler)
 }
 
 
-void GLAPIENTRY
-_mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
+static ALWAYS_INLINE void
+bind_samplers(struct gl_context *ctx, GLuint first, GLsizei count,
+              const GLuint *samplers, bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   GLint i;
-
-   /* The ARB_multi_bind spec says:
-    *
-    *   "An INVALID_OPERATION error is generated if <first> + <count> is
-    *    greater than the number of texture image units supported by
-    *    the implementation."
-    */
-   if (first + count > ctx->Const.MaxCombinedTextureImageUnits) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindSamplers(first=%u + count=%d > the value of "
-                  "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS=%u)",
-                  first, count, ctx->Const.MaxCombinedTextureImageUnits);
-      return;
-   }
+   GLsizei i;
 
    FLUSH_VERTICES(ctx, 0);
 
@@ -388,7 +374,7 @@ _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
              *     in <samplers> is not zero or the name of an existing
              *     sampler object (per binding)."
              */
-            if (!sampObj) {
+            if (!no_error && !sampObj) {
                _mesa_error(ctx, GL_INVALID_OPERATION,
                            "glBindSamplers(samplers[%d]=%u is not zero or "
                            "the name of an existing sampler object)",
@@ -422,6 +408,29 @@ _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
          }
       }
    }
+}
+
+
+void GLAPIENTRY
+_mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* The ARB_multi_bind spec says:
+    *
+    *   "An INVALID_OPERATION error is generated if <first> + <count> is
+    *    greater than the number of texture image units supported by
+    *    the implementation."
+    */
+   if (first + count > ctx->Const.MaxCombinedTextureImageUnits) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glBindSamplers(first=%u + count=%d > the value of "
+                  "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS=%u)",
+                  first, count, ctx->Const.MaxCombinedTextureImageUnits);
+      return;
+   }
+
+   bind_samplers(ctx, first, count, samplers, false);
 }
 
 
