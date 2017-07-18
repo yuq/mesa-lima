@@ -266,6 +266,14 @@ delete_samplers(struct gl_context *ctx, GLsizei count, const GLuint *samplers)
 
 
 void GLAPIENTRY
+_mesa_DeleteSamplers_no_error(GLsizei count, const GLuint *samplers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   delete_samplers(ctx, count, samplers);
+}
+
+
+void GLAPIENTRY
 _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
 {
    GET_CURRENT_CONTEXT(ctx);
