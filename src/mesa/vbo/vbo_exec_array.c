@@ -1714,9 +1714,16 @@ vbo_exec_MultiDrawArraysIndirect(GLenum mode, const GLvoid *indirect,
    if (stride == 0)
       stride = 4 * sizeof(GLuint);      /* sizeof(DrawArraysIndirectCommand) */
 
-   if (!_mesa_validate_MultiDrawArraysIndirect(ctx, mode, indirect,
-                                               primcount, stride))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_MultiDrawArraysIndirect(ctx, mode, indirect,
+                                                  primcount, stride))
+         return;
+   }
 
    if (skip_validated_draw(ctx))
       return;
@@ -1742,9 +1749,16 @@ vbo_exec_MultiDrawElementsIndirect(GLenum mode, GLenum type,
    if (stride == 0)
       stride = 5 * sizeof(GLuint);      /* sizeof(DrawElementsIndirectCommand) */
 
-   if (!_mesa_validate_MultiDrawElementsIndirect(ctx, mode, type, indirect,
-                                                 primcount, stride))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_MultiDrawElementsIndirect(ctx, mode, type, indirect,
+                                                    primcount, stride))
+         return;
+   }
 
    if (skip_validated_draw(ctx))
       return;
@@ -1832,10 +1846,17 @@ vbo_exec_MultiDrawArraysIndirectCount(GLenum mode, GLintptr indirect,
    if (stride == 0)
       stride = 4 * sizeof(GLuint);      /* sizeof(DrawArraysIndirectCommand) */
 
-   if (!_mesa_validate_MultiDrawArraysIndirectCount(ctx, mode,
-                                                    indirect, drawcount,
-                                                    maxdrawcount, stride))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_MultiDrawArraysIndirectCount(ctx, mode,
+                                                       indirect, drawcount,
+                                                       maxdrawcount, stride))
+         return;
+   }
 
    if (skip_validated_draw(ctx))
       return;
@@ -1863,10 +1884,17 @@ vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
    if (stride == 0)
       stride = 5 * sizeof(GLuint);      /* sizeof(DrawElementsIndirectCommand) */
 
-   if (!_mesa_validate_MultiDrawElementsIndirectCount(ctx, mode, type,
-                                                      indirect, drawcount,
-                                                      maxdrawcount, stride))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_MultiDrawElementsIndirectCount(ctx, mode, type,
+                                                         indirect, drawcount,
+                                                         maxdrawcount, stride))
+         return;
+   }
 
    if (skip_validated_draw(ctx))
       return;
