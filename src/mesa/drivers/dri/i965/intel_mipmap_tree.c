@@ -2507,6 +2507,23 @@ intel_miptree_texture_aux_usage(struct brw_context *brw,
    return ISL_AUX_USAGE_NONE;
 }
 
+static bool
+isl_formats_are_fast_clear_compatible(enum isl_format a, enum isl_format b)
+{
+   /* On gen8 and earlier, the hardware was only capable of handling 0/1 clear
+    * values so sRGB curve application was a no-op for all fast-clearable
+    * formats.
+    *
+    * On gen9+, the hardware supports arbitrary clear values.  For sRGB clear
+    * values, the hardware interprets the floats, not as what would be
+    * returned from the sampler (or written by the shader), but as being
+    * between format conversion and sRGB curve application.  This means that
+    * we can switch between sRGB and UNORM without having to whack the clear
+    * color.
+    */
+   return isl_format_srgb_to_linear(a) == isl_format_srgb_to_linear(b);
+}
+
 static void
 intel_miptree_prepare_texture_slices(struct brw_context *brw,
                                      struct intel_mipmap_tree *mt,
@@ -2523,7 +2540,7 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
     * the sampler.  If we have a texture view, we would have to perform the
     * clear color conversion manually.  Just disable clear color.
     */
-   if (mt->surf.format != view_format)
+   if (!isl_formats_are_fast_clear_compatible(mt->surf.format, view_format))
       clear_supported = false;
 
    intel_miptree_prepare_access(brw, mt, start_level, num_levels,
