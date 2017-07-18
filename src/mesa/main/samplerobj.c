@@ -231,22 +231,14 @@ _mesa_CreateSamplers(GLsizei count, GLuint *samplers)
 }
 
 
-void GLAPIENTRY
-_mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
+static void
+delete_samplers(struct gl_context *ctx, GLsizei count, const GLuint *samplers)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   GLsizei i;
-
    FLUSH_VERTICES(ctx, 0);
-
-   if (count < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteSamplers(count)");
-      return;
-   }
 
    _mesa_HashLockMutex(ctx->Shared->SamplerObjects);
 
-   for (i = 0; i < count; i++) {
+   for (GLsizei i = 0; i < count; i++) {
       if (samplers[i]) {
          GLuint j;
          struct gl_sampler_object *sampObj =
@@ -270,6 +262,20 @@ _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
    }
 
    _mesa_HashUnlockMutex(ctx->Shared->SamplerObjects);
+}
+
+
+void GLAPIENTRY
+_mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (count < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteSamplers(count)");
+      return;
+   }
+
+   delete_samplers(ctx, count, samplers);
 }
 
 
