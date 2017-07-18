@@ -233,6 +233,17 @@ static struct etna_format formats[PIPE_FORMAT_COUNT] = {
    _T(DXT3_RGBA, DXT2_DXT3, SWIZ(X, Y, Z, W), NONE),
    _T(DXT5_RGBA, DXT4_DXT5, SWIZ(X, Y, Z, W), NONE),
 
+   _T(ETC2_RGB8,       EXT_NONE | EXT_FORMAT,                          SWIZ(X, Y, Z, W), NONE), /* Extd. format NONE doubles as ETC2_RGB8 */
+   _T(ETC2_SRGB8,      EXT_NONE | EXT_FORMAT,                          SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_RGB8A1,     EXT_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 | EXT_FORMAT, SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_SRGB8A1,    EXT_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 | EXT_FORMAT, SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_RGBA8,      EXT_RGBA8_ETC2_EAC | EXT_FORMAT,                SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_SRGBA8,     EXT_RGBA8_ETC2_EAC | EXT_FORMAT,                SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_R11_UNORM,  EXT_R11_EAC | EXT_FORMAT,                       SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_R11_SNORM,  EXT_SIGNED_R11_EAC | EXT_FORMAT,                SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_RG11_UNORM, EXT_RG11_EAC | EXT_FORMAT,                      SWIZ(X, Y, Z, W), NONE),
+   _T(ETC2_RG11_SNORM, EXT_SIGNED_RG11_EAC | EXT_FORMAT,               SWIZ(X, Y, Z, W), NONE),
+
    /* YUV */
    _T(YUYV, YUY2, SWIZ(X, Y, Z, W), YUY2),
    _T(UYVY, UYVY, SWIZ(X, Y, Z, W), NONE),
