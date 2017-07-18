@@ -1126,11 +1126,27 @@ read_pixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format,
 }
 
 void GLAPIENTRY
+_mesa_ReadnPixelsARB_no_error(GLint x, GLint y, GLsizei width, GLsizei height,
+                              GLenum format, GLenum type, GLsizei bufSize,
+                              GLvoid *pixels)
+{
+   read_pixels(x, y, width, height, format, type, bufSize, pixels, true);
+}
+
+void GLAPIENTRY
 _mesa_ReadnPixelsARB(GLint x, GLint y, GLsizei width, GLsizei height,
                      GLenum format, GLenum type, GLsizei bufSize,
                      GLvoid *pixels)
 {
    read_pixels(x, y, width, height, format, type, bufSize, pixels, false);
+}
+
+void GLAPIENTRY
+_mesa_ReadPixels_no_error(GLint x, GLint y, GLsizei width, GLsizei height,
+                          GLenum format, GLenum type, GLvoid *pixels)
+{
+   _mesa_ReadnPixelsARB_no_error(x, y, width, height, format, type, INT_MAX,
+                                 pixels);
 }
 
 void GLAPIENTRY
