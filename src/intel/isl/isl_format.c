@@ -554,16 +554,19 @@ isl_format_supports_multisampling(const struct gen_device_info *devinfo,
     *       - any compressed texture format (BC*)
     *       - any YCRCB* format
     *
-    * The restriction on the format's size is removed on Broadwell.  Also,
-    * there is an exception for HiZ which we treat as a compressed format and
-    * is allowed to be multisampled on Broadwell and earlier.
+    * The restriction on the format's size is removed on Broadwell. Moreover,
+    * empirically it looks that even IvyBridge can handle multisampled surfaces
+    * with format sizes all the way to 128-bits (RGBA32F, RGBA32I, RGBA32UI).
+    *
+    * Also, there is an exception for HiZ which we treat as a compressed
+    * format and is allowed to be multisampled on Broadwell and earlier.
     */
    if (format == ISL_FORMAT_HIZ) {
       /* On SKL+, HiZ is always single-sampled even when the primary surface
        * is multisampled.  See also isl_surf_get_hiz_surf().
        */
       return devinfo->gen <= 8;
-   } else if (devinfo->gen < 8 && isl_format_get_layout(format)->bpb > 64) {
+   } else if (devinfo->gen < 7 && isl_format_get_layout(format)->bpb > 64) {
       return false;
    } else if (isl_format_is_compressed(format)) {
       return false;
