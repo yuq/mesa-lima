@@ -697,6 +697,24 @@ texture_view(struct gl_context *ctx, struct gl_texture_object *origTexObj,
 }
 
 void GLAPIENTRY
+_mesa_TextureView_no_error(GLuint texture, GLenum target, GLuint origtexture,
+                           GLenum internalformat,
+                           GLuint minlevel, GLuint numlevels,
+                           GLuint minlayer, GLuint numlayers)
+{
+   struct gl_texture_object *texObj;
+   struct gl_texture_object *origTexObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   origTexObj = _mesa_lookup_texture(ctx, origtexture);
+   texObj = _mesa_lookup_texture(ctx, texture);
+
+   texture_view(ctx, origTexObj, texObj, target, internalformat, minlevel,
+                numlevels, minlayer, numlayers, true);
+}
+
+void GLAPIENTRY
 _mesa_TextureView(GLuint texture, GLenum target, GLuint origtexture,
                   GLenum internalformat,
                   GLuint minlevel, GLuint numlevels,
