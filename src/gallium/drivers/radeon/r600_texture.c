@@ -2864,10 +2864,125 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 	}
 }
 
+static struct pipe_memory_object *
+r600_memobj_from_handle(struct pipe_screen *screen,
+			struct winsys_handle *whandle,
+			bool dedicated)
+{
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct r600_memory_object *memobj = CALLOC_STRUCT(r600_memory_object);
+	struct pb_buffer *buf = NULL;
+	uint32_t stride, offset;
+
+	if (!memobj)
+		return NULL;
+
+	buf = rscreen->ws->buffer_from_handle(rscreen->ws, whandle,
+					      &stride, &offset);
+	if (!buf) {
+		free(memobj);
+		return NULL;
+	}
+
+	memobj->b.dedicated = dedicated;
+	memobj->buf = buf;
+	memobj->stride = stride;
+	memobj->offset = offset;
+
+	return (struct pipe_memory_object *)memobj;
+
+}
+
+static void
+r600_memobj_destroy(struct pipe_screen *screen,
+		    struct pipe_memory_object *_memobj)
+{
+	struct r600_memory_object *memobj = (struct r600_memory_object *)_memobj;
+
+	pb_reference(&memobj->buf, NULL);
+	free(memobj);
+}
+
+static struct pipe_resource *
+r600_texture_from_memobj(struct pipe_screen *screen,
+			 const struct pipe_resource *templ,
+			 struct pipe_memory_object *_memobj,
+			 uint64_t offset)
+{
+	int r;
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct r600_memory_object *memobj = (struct r600_memory_object *)_memobj;
+	struct r600_texture *rtex;
+	struct radeon_surf surface;
+	struct radeon_bo_metadata metadata = {};
+	enum radeon_surf_mode array_mode;
+	bool is_scanout;
+	struct pb_buffer *buf = NULL;
+
+	if (memobj->b.dedicated) {
+		rscreen->ws->buffer_get_metadata(memobj->buf, &metadata);
+		r600_surface_import_metadata(rscreen, &surface, &metadata,
+				     &array_mode, &is_scanout);
+	} else {
+		/**
+		 * The bo metadata is unset for un-dedicated images. So we fall
+		 * back to linear. See answer to question 5 of the
+		 * VK_KHX_external_memory spec for some details.
+		 *
+		 * It is possible that this case isn't going to work if the
+		 * surface pitch isn't correctly aligned by default.
+		 *
+		 * In order to support it correctly we require multi-image
+		 * metadata to be syncrhonized between radv and radeonsi. The
+		 * semantics of associating multiple image metadata to a memory
+		 * object on the vulkan export side are not concretely defined
+		 * either.
+		 *
+		 * All the use cases we are aware of at the moment for memory
+		 * objects use dedicated allocations. So lets keep the initial
+		 * implementation simple.
+		 *
+		 * A possible alternative is to attempt to reconstruct the
+		 * tiling information when the TexParameter TEXTURE_TILING_EXT
+		 * is set.
+		 */
+		array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+		is_scanout = false;
+
+	}
+
+	r = r600_init_surface(rscreen, &surface, templ,
+			      array_mode, memobj->stride,
+			      offset, true, is_scanout,
+			      false, false);
+	if (r)
+		return NULL;
+
+	rtex = r600_texture_create_object(screen, templ, memobj->buf, &surface);
+	if (!rtex)
+		return NULL;
+
+	/* r600_texture_create_object doesn't increment refcount of
+	 * memobj->buf, so increment it here.
+	 */
+	pb_reference(&buf, memobj->buf);
+
+	rtex->resource.b.is_shared = true;
+	rtex->resource.external_usage = PIPE_HANDLE_USAGE_READ_WRITE;
+
+	if (rscreen->apply_opaque_metadata)
+		rscreen->apply_opaque_metadata(rscreen, rtex, &metadata);
+
+	return &rtex->resource.b.b;
+}
+
 void r600_init_screen_texture_functions(struct r600_common_screen *rscreen)
 {
 	rscreen->b.resource_from_handle = r600_texture_from_handle;
 	rscreen->b.resource_get_handle = r600_texture_get_handle;
+	rscreen->b.resource_from_memobj = r600_texture_from_memobj;
+	rscreen->b.memobj_create_from_handle = r600_memobj_from_handle;
+	rscreen->b.memobj_destroy = r600_memobj_destroy;
 }
 
 void r600_init_context_texture_functions(struct r600_common_context *rctx)
