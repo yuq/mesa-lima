@@ -54,6 +54,7 @@ enum radeon_bo_flag { /* bitfield */
     RADEON_FLAG_NO_CPU_ACCESS = (1 << 1),
     RADEON_FLAG_NO_SUBALLOC =   (1 << 2),
     RADEON_FLAG_SPARSE =        (1 << 3),
+    RADEON_FLAG_NO_INTERPROCESS_SHARING = (1 << 4),
 };
 
 enum radeon_bo_usage { /* bitfield */
@@ -661,14 +662,19 @@ static inline unsigned radeon_flags_from_heap(enum radeon_heap heap)
 {
     switch (heap) {
     case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
-        return RADEON_FLAG_GTT_WC | RADEON_FLAG_NO_CPU_ACCESS;
+        return RADEON_FLAG_GTT_WC |
+               RADEON_FLAG_NO_CPU_ACCESS |
+               RADEON_FLAG_NO_INTERPROCESS_SHARING;
+
     case RADEON_HEAP_VRAM:
     case RADEON_HEAP_VRAM_GTT:
     case RADEON_HEAP_GTT_WC:
-        return RADEON_FLAG_GTT_WC;
+        return RADEON_FLAG_GTT_WC |
+               RADEON_FLAG_NO_INTERPROCESS_SHARING;
+
     case RADEON_HEAP_GTT:
     default:
-        return 0;
+        return RADEON_FLAG_NO_INTERPROCESS_SHARING;
     }
 }
 
@@ -700,8 +706,14 @@ static inline int radeon_get_heap_index(enum radeon_bo_domain domain,
     /* NO_CPU_ACCESS implies VRAM only. */
     assert(!(flags & RADEON_FLAG_NO_CPU_ACCESS) || domain == RADEON_DOMAIN_VRAM);
 
+    /* Resources with interprocess sharing don't use any winsys allocators. */
+    if (!(flags & RADEON_FLAG_NO_INTERPROCESS_SHARING))
+        return -1;
+
     /* Unsupported flags: NO_SUBALLOC, SPARSE. */
-    if (flags & ~(RADEON_FLAG_GTT_WC | RADEON_FLAG_NO_CPU_ACCESS))
+    if (flags & ~(RADEON_FLAG_GTT_WC |
+                  RADEON_FLAG_NO_CPU_ACCESS |
+                  RADEON_FLAG_NO_INTERPROCESS_SHARING))
         return -1;
 
     switch (domain) {

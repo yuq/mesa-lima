@@ -167,6 +167,13 @@ void r600_init_resource_fields(struct r600_common_screen *rscreen,
 			 RADEON_FLAG_GTT_WC;
 	}
 
+	/* Only displayable single-sample textures can be shared between
+	 * processes. */
+	if (res->b.b.target == PIPE_BUFFER ||
+	    res->b.b.nr_samples >= 2 ||
+	    rtex->surface.micro_tile_mode != RADEON_MICRO_MODE_DISPLAY)
+		res->flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
+
 	/* If VRAM is just stolen system memory, allow both VRAM and
 	 * GTT, whichever has free space. If a buffer is evicted from
 	 * VRAM to GTT, it will stay there.
