@@ -221,8 +221,16 @@ struct radeon_winsys {
 			   bool absolute,
 			   uint64_t timeout);
 
+	/* old semaphores - non shareable */
 	struct radeon_winsys_sem *(*create_sem)(struct radeon_winsys *ws);
 	void (*destroy_sem)(struct radeon_winsys_sem *sem);
+
+	/* new shareable sync objects */
+	int (*create_syncobj)(struct radeon_winsys *ws, uint32_t *handle);
+	void (*destroy_syncobj)(struct radeon_winsys *ws, uint32_t handle);
+
+	int (*export_syncobj)(struct radeon_winsys *ws, uint32_t syncobj, int *fd);
+	int (*import_syncobj)(struct radeon_winsys *ws, int fd, uint32_t *syncobj);
 
 };
 
