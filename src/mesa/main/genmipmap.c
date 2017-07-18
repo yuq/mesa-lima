@@ -176,11 +176,28 @@ generate_texture_mipmap_error(struct gl_context *ctx,
    generate_texture_mipmap(ctx, texObj, target, dsa, false);
 }
 
+static void
+generate_texture_mipmap_no_error(struct gl_context *ctx,
+                                 struct gl_texture_object *texObj,
+                                 GLenum target, bool dsa)
+{
+   generate_texture_mipmap(ctx, texObj, target, dsa, true);
+}
+
 /**
  * Generate all the mipmap levels below the base level.
  * Note: this GL function would be more useful if one could specify a
  * cube face, a set of array slices, etc.
  */
+void GLAPIENTRY
+_mesa_GenerateMipmap_no_error(GLenum target)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object *texObj = _mesa_get_current_tex_object(ctx, target);
+   generate_texture_mipmap_no_error(ctx, texObj, target, false);
+}
+
 void GLAPIENTRY
 _mesa_GenerateMipmap(GLenum target)
 {
@@ -203,6 +220,15 @@ _mesa_GenerateMipmap(GLenum target)
 /**
  * Generate all the mipmap levels below the base level.
  */
+void GLAPIENTRY
+_mesa_GenerateTextureMipmap_no_error(GLuint texture)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object *texObj = _mesa_lookup_texture(ctx, texture);
+   generate_texture_mipmap_no_error(ctx, texObj, texObj->Target, true);
+}
+
 void GLAPIENTRY
 _mesa_GenerateTextureMipmap(GLuint texture)
 {

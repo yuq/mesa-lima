@@ -285,7 +285,7 @@
         <glx rop="4330"/>
     </function>
 
-    <function name="GenerateMipmap" es2="2.0">
+    <function name="GenerateMipmap" es2="2.0" no_error="true">
         <param name="target" type="GLenum"/>
 	<glx rop="4325"/>
     </function>

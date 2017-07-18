@@ -514,7 +514,7 @@
       <param name="param" type="const GLint *" />
    </function>
 
-   <function name="GenerateTextureMipmap">
+   <function name="GenerateTextureMipmap" no_error="true">
       <param name="texture" type="GLuint" />
    </function>
 
