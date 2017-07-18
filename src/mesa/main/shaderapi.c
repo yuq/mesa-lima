@@ -2141,17 +2141,10 @@ _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
 }
 
 
-void GLAPIENTRY
-_mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
+static ALWAYS_INLINE void
+program_parameteri(struct gl_context *ctx, struct gl_shader_program *shProg,
+                   GLuint pname, GLint value, bool no_error)
 {
-   struct gl_shader_program *shProg;
-   GET_CURRENT_CONTEXT(ctx);
-
-   shProg = _mesa_lookup_shader_program_err(ctx, program,
-                                            "glProgramParameteri");
-   if (!shProg)
-      return;
-
    switch (pname) {
    case GL_PROGRAM_BINARY_RETRIEVABLE_HINT:
       /* This enum isn't part of the OES extension for OpenGL ES 2.0, but it
@@ -2167,7 +2160,7 @@ _mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
        *     "An INVALID_VALUE error is generated if the <value> argument to
        *     ProgramParameteri is not TRUE or FALSE."
        */
-      if (value != GL_TRUE && value != GL_FALSE) {
+      if (!no_error && value != GL_TRUE && value != GL_FALSE) {
          goto invalid_value;
       }
 
@@ -2198,15 +2191,17 @@ _mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
       /* Spec imply that the behavior is the same as ARB_get_program_binary
        * Chapter 7.3 Program Objects
        */
-      if (value != GL_TRUE && value != GL_FALSE) {
+      if (!no_error && value != GL_TRUE && value != GL_FALSE) {
          goto invalid_value;
       }
       shProg->SeparateShader = value;
       return;
 
    default:
-      _mesa_error(ctx, GL_INVALID_ENUM, "glProgramParameteri(pname=%s)",
-                  _mesa_enum_to_string(pname));
+      if (!no_error) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "glProgramParameteri(pname=%s)",
+                     _mesa_enum_to_string(pname));
+      }
       return;
    }
 
@@ -2216,6 +2211,21 @@ invalid_value:
                "value must be 0 or 1.",
                _mesa_enum_to_string(pname),
                value);
+}
+
+
+void GLAPIENTRY
+_mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
+{
+   struct gl_shader_program *shProg;
+   GET_CURRENT_CONTEXT(ctx);
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program,
+                                            "glProgramParameteri");
+   if (!shProg)
+      return;
+
+   program_parameteri(ctx, shProg, pname, value, false);
 }
 
 
