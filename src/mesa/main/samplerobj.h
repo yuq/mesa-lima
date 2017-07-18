@@ -110,6 +110,10 @@ void GLAPIENTRY
 _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers);
 GLboolean GLAPIENTRY
 _mesa_IsSampler(GLuint sampler);
+
+void GLAPIENTRY
+_mesa_BindSampler_no_error(GLuint unit, GLuint sampler);
+
 void GLAPIENTRY
 _mesa_BindSampler(GLuint unit, GLuint sampler);
 

@@ -319,6 +319,13 @@ bind_sampler(struct gl_context *ctx, GLuint unit, GLuint sampler, bool no_error)
 }
 
 void GLAPIENTRY
+_mesa_BindSampler_no_error(GLuint unit, GLuint sampler)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_sampler(ctx, unit, sampler, true);
+}
+
+void GLAPIENTRY
 _mesa_BindSampler(GLuint unit, GLuint sampler)
 {
    GET_CURRENT_CONTEXT(ctx);
