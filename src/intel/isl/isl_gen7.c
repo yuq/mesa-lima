@@ -76,9 +76,10 @@ isl_gen7_choose_msaa_layout(const struct isl_device *dev,
     * Note that the above SINT restrictions apply only to *MSRTs* (that is,
     * *multisampled* render targets). The restrictions seem to permit an MCS
     * if the render target is singlesampled.
+    *
+    * Moreover, empirically it looks that hardware can render multisampled
+    * surfaces with RGBA8I, RGBA16I and RGBA32I.
     */
-   if (isl_format_has_sint_channel(info->format))
-      return false;
 
    /* More obvious restrictions */
    if (isl_surf_usage_is_display(info->usage))
