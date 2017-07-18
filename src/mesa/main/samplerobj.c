@@ -295,27 +295,20 @@ _mesa_bind_sampler(struct gl_context *ctx, GLuint unit,
                                   sampObj);
 }
 
-void GLAPIENTRY
-_mesa_BindSampler(GLuint unit, GLuint sampler)
+static ALWAYS_INLINE void
+bind_sampler(struct gl_context *ctx, GLuint unit, GLuint sampler, bool no_error)
 {
    struct gl_sampler_object *sampObj;
-   GET_CURRENT_CONTEXT(ctx);
-
-   if (unit >= ctx->Const.MaxCombinedTextureImageUnits) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBindSampler(unit %u)", unit);
-      return;
-   }
 
    if (sampler == 0) {
       /* Use the default sampler object, the one contained in the texture
        * object.
        */
       sampObj = NULL;
-   }
-   else {
+   } else {
       /* user-defined sampler object */
       sampObj = _mesa_lookup_samplerobj(ctx, sampler);
-      if (!sampObj) {
+      if (!no_error && !sampObj) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "glBindSampler(sampler)");
          return;
       }
@@ -323,6 +316,19 @@ _mesa_BindSampler(GLuint unit, GLuint sampler)
    
    /* bind new sampler */
    _mesa_bind_sampler(ctx, unit, sampObj);
+}
+
+void GLAPIENTRY
+_mesa_BindSampler(GLuint unit, GLuint sampler)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (unit >= ctx->Const.MaxCombinedTextureImageUnits) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindSampler(unit %u)", unit);
+      return;
+   }
+
+   bind_sampler(ctx, unit, sampler, false);
 }
 
 
