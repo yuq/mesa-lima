@@ -381,6 +381,15 @@ _mesa_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
 }
 
 
+static void
+wait_sync(struct gl_context *ctx, struct gl_sync_object *syncObj,
+          GLbitfield flags, GLuint64 timeout)
+{
+   ctx->Driver.ServerWaitSync(ctx, syncObj, flags, timeout);
+   _mesa_unref_sync_object(ctx, syncObj, 1);
+}
+
+
 void GLAPIENTRY
 _mesa_WaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
 {
@@ -404,8 +413,7 @@ _mesa_WaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout)
       return;
    }
 
-   ctx->Driver.ServerWaitSync(ctx, syncObj, flags, timeout);
-   _mesa_unref_sync_object(ctx, syncObj, 1);
+   wait_sync(ctx, syncObj, flags, timeout);
 }
 
 
