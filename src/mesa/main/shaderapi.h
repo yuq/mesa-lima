@@ -234,6 +234,9 @@ extern void GLAPIENTRY
 _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
                     const GLvoid *binary, GLsizei length);
 
+void GLAPIENTRY
+_mesa_ProgramParameteri_no_error(GLuint program, GLenum pname, GLint value);
+
 extern void GLAPIENTRY
 _mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value);
 

@@ -2215,6 +2215,16 @@ invalid_value:
 
 
 void GLAPIENTRY
+_mesa_ProgramParameteri_no_error(GLuint program, GLenum pname, GLint value)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *shProg = _mesa_lookup_shader_program(ctx, program);
+   program_parameteri(ctx, shProg, pname, value, true);
+}
+
+
+void GLAPIENTRY
 _mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
 {
    struct gl_shader_program *shProg;
