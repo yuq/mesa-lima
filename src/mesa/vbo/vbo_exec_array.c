@@ -1408,9 +1408,16 @@ vbo_exec_MultiDrawElementsBaseVertex(GLenum mode,
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   if (!_mesa_validate_MultiDrawElements(ctx, mode, count, type, indices,
-                                         primcount))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_MultiDrawElements(ctx, mode, count, type, indices,
+                                            primcount))
+         return;
+   }
 
    if (skip_validated_draw(ctx))
       return;
