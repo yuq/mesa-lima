@@ -466,16 +466,10 @@ _mesa_BindVertexArray(GLuint id)
  * \param n      Number of array objects to delete.
  * \param ids    Array of \c n array object IDs.
  */
-void GLAPIENTRY
-_mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
+static void
+delete_vertex_arrays(struct gl_context *ctx, GLsizei n, const GLuint *ids)
 {
-   GET_CURRENT_CONTEXT(ctx);
    GLsizei i;
-
-   if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteVertexArray(n)");
-      return;
-   }
 
    for (i = 0; i < n; i++) {
       struct gl_vertex_array_object *obj = _mesa_lookup_vao(ctx, ids[i]);
@@ -488,7 +482,7 @@ _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
           * becomes current."
           */
          if (obj == ctx->Array.VAO)
-            _mesa_BindVertexArray(0);
+            _mesa_BindVertexArray_no_error(0);
 
          /* The ID is immediately freed for re-use */
          _mesa_HashRemoveLocked(ctx->Array.Objects, obj->Name);
@@ -502,6 +496,20 @@ _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
          _mesa_reference_vao(ctx, &obj, NULL);
       }
    }
+}
+
+
+void GLAPIENTRY
+_mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteVertexArray(n)");
+      return;
+   }
+
+   delete_vertex_arrays(ctx, n, ids);
 }
 
 
