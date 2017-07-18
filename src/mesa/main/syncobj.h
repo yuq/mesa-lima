@@ -72,6 +72,9 @@ _mesa_ClientWaitSync_no_error(GLsync sync, GLbitfield flags, GLuint64 timeout);
 extern GLenum GLAPIENTRY
 _mesa_ClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout);
 
+void GLAPIENTRY
+_mesa_WaitSync_no_error(GLsync sync, GLbitfield flags, GLuint64 timeout);
+
 extern void GLAPIENTRY
 _mesa_WaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout);
 
