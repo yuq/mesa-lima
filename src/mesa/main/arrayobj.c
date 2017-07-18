@@ -508,14 +508,8 @@ gen_vertex_arrays(struct gl_context *ctx, GLsizei n, GLuint *arrays,
    GLuint first;
    GLint i;
 
-   if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", func);
+   if (!arrays)
       return;
-   }
-
-   if (!arrays) {
-      return;
-   }
 
    first = _mesa_HashFindFreeKeyBlock(ctx->Array.Objects, n);
 
@@ -539,6 +533,19 @@ gen_vertex_arrays(struct gl_context *ctx, GLsizei n, GLuint *arrays,
 }
 
 
+static void
+gen_vertex_arrays_err(struct gl_context *ctx, GLsizei n, GLuint *arrays,
+                      bool create, const char *func)
+{
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", func);
+      return;
+   }
+
+   gen_vertex_arrays(ctx, n, arrays, create, func);
+}
+
+
 /**
  * ARB version of glGenVertexArrays()
  * All arrays will be required to live in VBOs.
@@ -547,7 +554,7 @@ void GLAPIENTRY
 _mesa_GenVertexArrays(GLsizei n, GLuint *arrays)
 {
    GET_CURRENT_CONTEXT(ctx);
-   gen_vertex_arrays(ctx, n, arrays, false, "glGenVertexArrays");
+   gen_vertex_arrays_err(ctx, n, arrays, false, "glGenVertexArrays");
 }
 
 
@@ -559,7 +566,7 @@ void GLAPIENTRY
 _mesa_CreateVertexArrays(GLsizei n, GLuint *arrays)
 {
    GET_CURRENT_CONTEXT(ctx);
-   gen_vertex_arrays(ctx, n, arrays, true, "glCreateVertexArrays");
+   gen_vertex_arrays_err(ctx, n, arrays, true, "glCreateVertexArrays");
 }
 
 
