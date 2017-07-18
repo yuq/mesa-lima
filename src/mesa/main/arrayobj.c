@@ -500,6 +500,14 @@ delete_vertex_arrays(struct gl_context *ctx, GLsizei n, const GLuint *ids)
 
 
 void GLAPIENTRY
+_mesa_DeleteVertexArrays_no_error(GLsizei n, const GLuint *ids)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   delete_vertex_arrays(ctx, n, ids);
+}
+
+
+void GLAPIENTRY
 _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
 {
    GET_CURRENT_CONTEXT(ctx);

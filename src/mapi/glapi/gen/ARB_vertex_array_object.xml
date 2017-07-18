@@ -15,7 +15,7 @@
         <param name="array" type="GLuint"/>
     </function>
 
-    <function name="DeleteVertexArrays" es2="3.0">
+    <function name="DeleteVertexArrays" es2="3.0" no_error="true">
         <param name="n" type="GLsizei"/>
         <param name="arrays" type="const GLuint *" count="n"/>
     </function>

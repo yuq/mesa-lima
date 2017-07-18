@@ -99,6 +99,9 @@ _mesa_BindVertexArray_no_error(GLuint id);
 
 void GLAPIENTRY _mesa_BindVertexArray( GLuint id );
 
+void GLAPIENTRY
+_mesa_DeleteVertexArrays_no_error(GLsizei n, const GLuint *ids);
+
 void GLAPIENTRY _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids);
 
 void GLAPIENTRY
