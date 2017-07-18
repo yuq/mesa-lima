@@ -2744,6 +2744,17 @@ _mesa_VertexBindingDivisor(GLuint bindingIndex, GLuint divisor)
 
 
 void GLAPIENTRY
+_mesa_VertexArrayBindingDivisor_no_error(GLuint vaobj, GLuint bindingIndex,
+                                         GLuint divisor)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_vertex_array_object *vao = _mesa_lookup_vao(ctx, vaobj);
+   vertex_binding_divisor(ctx, vao, VERT_ATTRIB_GENERIC(bindingIndex), divisor);
+}
+
+
+void GLAPIENTRY
 _mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex,
                                 GLuint divisor)
 {
