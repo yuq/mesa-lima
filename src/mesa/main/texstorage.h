@@ -85,15 +85,27 @@ extern void GLAPIENTRY
 _mesa_TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat,
                    GLsizei width, GLsizei height, GLsizei depth);
 
+void GLAPIENTRY
+_mesa_TextureStorage1D_no_error(GLuint texture, GLsizei levels,
+                                GLenum internalformat, GLsizei width);
+
 extern void GLAPIENTRY
 _mesa_TextureStorage1D(GLuint texture, GLsizei levels, GLenum internalformat,
                        GLsizei width);
 
+void GLAPIENTRY
+_mesa_TextureStorage2D_no_error(GLuint texture, GLsizei levels,
+                                GLenum internalformat, GLsizei width,
+                                GLsizei height);
 
 extern void GLAPIENTRY
 _mesa_TextureStorage2D(GLuint texture, GLsizei levels, GLenum internalformat,
                        GLsizei width, GLsizei height);
 
+void GLAPIENTRY
+_mesa_TextureStorage3D_no_error(GLuint texture, GLsizei levels,
+                                GLenum internalformat, GLsizei width,
+                                GLsizei height, GLsizei depth);
 
 extern void GLAPIENTRY
 _mesa_TextureStorage3D(GLuint texture, GLsizei levels, GLenum internalformat,

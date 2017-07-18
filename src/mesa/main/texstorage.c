@@ -600,6 +600,19 @@ texturestorage_error(GLuint dims, GLuint texture, GLsizei levels,
 }
 
 
+static void
+texturestorage_no_error(GLuint dims, GLuint texture, GLsizei levels,
+                        GLenum internalformat, GLsizei width, GLsizei height,
+                        GLsizei depth)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_texture_object *texObj = _mesa_lookup_texture(ctx, texture);
+   texture_storage_no_error(ctx, dims, texObj, texObj->Target,
+                            levels, internalformat, width, height, depth, true);
+}
+
+
 void GLAPIENTRY
 _mesa_TexStorage1D_no_error(GLenum target, GLsizei levels,
                             GLenum internalformat, GLsizei width)
@@ -654,11 +667,28 @@ _mesa_TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat,
 
 
 void GLAPIENTRY
+_mesa_TextureStorage1D_no_error(GLuint texture, GLsizei levels,
+                                GLenum internalformat, GLsizei width)
+{
+   texturestorage_no_error(1, texture, levels, internalformat, width, 1, 1);
+}
+
+
+void GLAPIENTRY
 _mesa_TextureStorage1D(GLuint texture, GLsizei levels, GLenum internalformat,
                        GLsizei width)
 {
    texturestorage_error(1, texture, levels, internalformat, width, 1, 1,
                         "glTextureStorage1D");
+}
+
+
+void GLAPIENTRY
+_mesa_TextureStorage2D_no_error(GLuint texture, GLsizei levels,
+                                GLenum internalformat,
+                                GLsizei width, GLsizei height)
+{
+   texturestorage_no_error(2, texture, levels, internalformat, width, height, 1);
 }
 
 
@@ -669,6 +699,16 @@ _mesa_TextureStorage2D(GLuint texture, GLsizei levels,
 {
    texturestorage_error(2, texture, levels, internalformat, width, height, 1,
                         "glTextureStorage2D");
+}
+
+
+void GLAPIENTRY
+_mesa_TextureStorage3D_no_error(GLuint texture, GLsizei levels,
+                                GLenum internalformat, GLsizei width,
+                                GLsizei height, GLsizei depth)
+{
+   texturestorage_no_error(3, texture, levels, internalformat, width, height,
+                           depth);
 }
 
 

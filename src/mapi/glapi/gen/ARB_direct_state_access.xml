@@ -331,14 +331,14 @@
       <param name="size" type="GLsizeiptr" />
    </function>
 
-   <function name="TextureStorage1D">
+   <function name="TextureStorage1D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="levels" type="GLsizei" />
       <param name="internalformat" type="GLenum" />
       <param name="width" type="GLsizei" />
    </function>
 
-   <function name="TextureStorage2D">
+   <function name="TextureStorage2D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="levels" type="GLsizei" />
       <param name="internalformat" type="GLenum" />
@@ -346,7 +346,7 @@
       <param name="height" type="GLsizei" />
    </function>
 
-   <function name="TextureStorage3D">
+   <function name="TextureStorage3D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="levels" type="GLsizei" />
       <param name="internalformat" type="GLenum" />
