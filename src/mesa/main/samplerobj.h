@@ -112,8 +112,13 @@ GLboolean GLAPIENTRY
 _mesa_IsSampler(GLuint sampler);
 void GLAPIENTRY
 _mesa_BindSampler(GLuint unit, GLuint sampler);
+
+void GLAPIENTRY
+_mesa_BindSamplers_no_error(GLuint first, GLsizei count, const GLuint *samplers);
+
 void GLAPIENTRY
 _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers);
+
 void GLAPIENTRY
 _mesa_SamplerParameteri(GLuint sampler, GLenum pname, GLint param);
 void GLAPIENTRY

@@ -412,6 +412,14 @@ bind_samplers(struct gl_context *ctx, GLuint first, GLsizei count,
 
 
 void GLAPIENTRY
+_mesa_BindSamplers_no_error(GLuint first, GLsizei count, const GLuint *samplers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_samplers(ctx, first, count, samplers, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BindSamplers(GLuint first, GLsizei count, const GLuint *samplers)
 {
    GET_CURRENT_CONTEXT(ctx);
