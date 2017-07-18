@@ -445,6 +445,14 @@ bind_vertex_array(struct gl_context *ctx, GLuint id, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_BindVertexArray_no_error(GLuint id)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_vertex_array(ctx, id, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BindVertexArray(GLuint id)
 {
    GET_CURRENT_CONTEXT(ctx);

@@ -94,6 +94,9 @@ _mesa_all_buffers_are_unmapped(const struct gl_vertex_array_object *vao);
  */
 
 
+void GLAPIENTRY
+_mesa_BindVertexArray_no_error(GLuint id);
+
 void GLAPIENTRY _mesa_BindVertexArray( GLuint id );
 
 void GLAPIENTRY _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids);
