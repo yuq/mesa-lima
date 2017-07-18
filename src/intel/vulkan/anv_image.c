@@ -421,23 +421,48 @@ anv_DestroyImage(VkDevice _device, VkImage _image,
    vk_free2(&device->alloc, pAllocator, image);
 }
 
-VkResult anv_BindImageMemory(
-    VkDevice                                    _device,
-    VkImage                                     _image,
-    VkDeviceMemory                              _memory,
-    VkDeviceSize                                memoryOffset)
+static void
+anv_bind_image_memory(const VkBindImageMemoryInfoKHR *pBindInfo)
 {
-   ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
-   ANV_FROM_HANDLE(anv_image, image, _image);
+   ANV_FROM_HANDLE(anv_device_memory, mem, pBindInfo->memory);
+   ANV_FROM_HANDLE(anv_image, image, pBindInfo->image);
+
+   assert(pBindInfo->sType == VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO_KHR);
 
    if (mem == NULL) {
       image->bo = NULL;
       image->offset = 0;
-      return VK_SUCCESS;
+      return;
    }
 
    image->bo = mem->bo;
-   image->offset = memoryOffset;
+   image->offset = pBindInfo->memoryOffset;
+}
+
+VkResult anv_BindImageMemory(
+    VkDevice                                    device,
+    VkImage                                     image,
+    VkDeviceMemory                              memory,
+    VkDeviceSize                                memoryOffset)
+{
+   anv_bind_image_memory(
+      &(VkBindImageMemoryInfoKHR) {
+         .sType         = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO_KHR,
+         .image         = image,
+         .memory        = memory,
+         .memoryOffset  = memoryOffset,
+      });
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_BindImageMemory2KHR(
+    VkDevice                                    device,
+    uint32_t                                    bindInfoCount,
+    const VkBindImageMemoryInfoKHR*             pBindInfos)
+{
+   for (uint32_t i = 0; i < bindInfoCount; i++)
+      anv_bind_image_memory(&pBindInfos[i]);
 
    return VK_SUCCESS;
 }
