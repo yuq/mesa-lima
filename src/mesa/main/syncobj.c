@@ -256,6 +256,14 @@ delete_sync(struct gl_context *ctx, GLsync sync, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_DeleteSync_no_error(GLsync sync)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   delete_sync(ctx, sync, true);
+}
+
+
+void GLAPIENTRY
 _mesa_DeleteSync(GLsync sync)
 {
    GET_CURRENT_CONTEXT(ctx);

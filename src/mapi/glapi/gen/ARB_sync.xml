@@ -50,7 +50,7 @@
 	<return type="GLboolean"/>
     </function>
 
-    <function name="DeleteSync" es2="3.0">
+    <function name="DeleteSync" es2="3.0" no_error="true">
         <param name="sync" type="GLsync"/>
     </function>
 
