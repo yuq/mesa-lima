@@ -579,7 +579,7 @@
 
    <!-- Vertex Array object functions -->
 
-   <function name="CreateVertexArrays">
+   <function name="CreateVertexArrays" no_error="true">
       <param name="n" type="GLsizei" />
       <param name="arrays" type="GLuint *" />
    </function>

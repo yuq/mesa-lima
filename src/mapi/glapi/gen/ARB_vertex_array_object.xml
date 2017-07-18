@@ -20,7 +20,7 @@
         <param name="arrays" type="const GLuint *" count="n"/>
     </function>
 
-    <function name="GenVertexArrays" es2="3.0">
+    <function name="GenVertexArrays" es2="3.0" no_error="true">
         <param name="n" type="GLsizei"/>
         <param name="arrays" type="GLuint *"/>
     </function>

@@ -551,6 +551,14 @@ gen_vertex_arrays_err(struct gl_context *ctx, GLsizei n, GLuint *arrays,
  * All arrays will be required to live in VBOs.
  */
 void GLAPIENTRY
+_mesa_GenVertexArrays_no_error(GLsizei n, GLuint *arrays)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   gen_vertex_arrays(ctx, n, arrays, false, "glGenVertexArrays");
+}
+
+
+void GLAPIENTRY
 _mesa_GenVertexArrays(GLsizei n, GLuint *arrays)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -562,6 +570,14 @@ _mesa_GenVertexArrays(GLsizei n, GLuint *arrays)
  * ARB_direct_state_access
  * Generates ID's and creates the array objects.
  */
+void GLAPIENTRY
+_mesa_CreateVertexArrays_no_error(GLsizei n, GLuint *arrays)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   gen_vertex_arrays(ctx, n, arrays, true, "glCreateVertexArrays");
+}
+
+
 void GLAPIENTRY
 _mesa_CreateVertexArrays(GLsizei n, GLuint *arrays)
 {

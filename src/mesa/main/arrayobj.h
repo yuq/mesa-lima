@@ -98,7 +98,13 @@ void GLAPIENTRY _mesa_BindVertexArray( GLuint id );
 
 void GLAPIENTRY _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids);
 
+void GLAPIENTRY
+_mesa_GenVertexArrays_no_error(GLsizei n, GLuint *arrays);
+
 void GLAPIENTRY _mesa_GenVertexArrays(GLsizei n, GLuint *arrays);
+
+void GLAPIENTRY
+_mesa_CreateVertexArrays_no_error(GLsizei n, GLuint *arrays);
 
 void GLAPIENTRY _mesa_CreateVertexArrays(GLsizei n, GLuint *arrays);
 
