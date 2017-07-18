@@ -2029,6 +2029,16 @@ _mesa_unlock_context_textures( struct gl_context *ctx )
 
 
 void GLAPIENTRY
+_mesa_InvalidateTexSubImage_no_error(GLuint texture, GLint level, GLint xoffset,
+                                     GLint yoffset, GLint zoffset,
+                                     GLsizei width, GLsizei height,
+                                     GLsizei depth)
+{
+   /* no-op */
+}
+
+
+void GLAPIENTRY
 _mesa_InvalidateTexSubImage(GLuint texture, GLint level, GLint xoffset,
                             GLint yoffset, GLint zoffset, GLsizei width,
                             GLsizei height, GLsizei depth)
@@ -2172,6 +2182,13 @@ _mesa_InvalidateTexSubImage(GLuint texture, GLint level, GLint xoffset,
     * validating the parameters and generating the required errors.
     */
    return;
+}
+
+
+void GLAPIENTRY
+_mesa_InvalidateTexImage_no_error(GLuint texture, GLint level)
+{
+   /* no-op */
 }
 
 

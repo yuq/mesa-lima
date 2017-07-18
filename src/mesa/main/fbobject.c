@@ -4326,6 +4326,15 @@ invalid_enum:
 
 
 void GLAPIENTRY
+_mesa_InvalidateSubFramebuffer_no_error(GLenum target, GLsizei numAttachments,
+                                        const GLenum *attachments, GLint x,
+                                        GLint y, GLsizei width, GLsizei height)
+{
+   /* no-op */
+}
+
+
+void GLAPIENTRY
 _mesa_InvalidateSubFramebuffer(GLenum target, GLsizei numAttachments,
                                const GLenum *attachments, GLint x, GLint y,
                                GLsizei width, GLsizei height)
@@ -4373,6 +4382,14 @@ _mesa_InvalidateNamedFramebufferSubData(GLuint framebuffer,
    invalidate_framebuffer_storage(ctx, fb, numAttachments, attachments,
                                   x, y, width, height,
                                   "glInvalidateNamedFramebufferSubData");
+}
+
+
+void GLAPIENTRY
+_mesa_InvalidateFramebuffer_no_error(GLenum target, GLsizei numAttachments,
+                                     const GLenum *attachments)
+{
+   /* no-op */
 }
 
 
