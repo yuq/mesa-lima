@@ -268,6 +268,33 @@ isl_tiling_get_info(enum isl_tiling tiling,
    };
 }
 
+bool
+isl_color_value_is_zero_one(union isl_color_value value,
+                            enum isl_format format)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(format);
+
+#define RETURN_FALSE_IF_NOT_0_1(c, i, field) \
+   if (fmtl->channels.c.bits && value.field[i] != 0 && value.field[i] != 1) \
+      return false
+
+   if (isl_format_has_int_channel(format)) {
+      RETURN_FALSE_IF_NOT_0_1(r, 0, u32);
+      RETURN_FALSE_IF_NOT_0_1(g, 1, u32);
+      RETURN_FALSE_IF_NOT_0_1(b, 2, u32);
+      RETURN_FALSE_IF_NOT_0_1(a, 3, u32);
+   } else {
+      RETURN_FALSE_IF_NOT_0_1(r, 0, f32);
+      RETURN_FALSE_IF_NOT_0_1(g, 1, f32);
+      RETURN_FALSE_IF_NOT_0_1(b, 2, f32);
+      RETURN_FALSE_IF_NOT_0_1(a, 3, f32);
+   }
+
+#undef RETURN_FALSE_IF_NOT_0_1
+
+   return true;
+}
+
 /**
  * @param[out] tiling is set only on success
  */

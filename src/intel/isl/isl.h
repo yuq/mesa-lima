@@ -1637,6 +1637,9 @@ isl_extent4d(uint32_t width, uint32_t height, uint32_t depth,
    return e;
 }
 
+bool isl_color_value_is_zero_one(union isl_color_value value,
+                                 enum isl_format format);
+
 #define isl_surf_init(dev, surf, ...) \
    isl_surf_init_s((dev), (surf), \
                    &(struct isl_surf_init_info) {  __VA_ARGS__ });
