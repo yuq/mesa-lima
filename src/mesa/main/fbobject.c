@@ -3644,75 +3644,91 @@ _mesa_framebuffer_renderbuffer(struct gl_context *ctx,
    _mesa_update_framebuffer_visual(ctx, fb);
 }
 
-static void
+static ALWAYS_INLINE void
 framebuffer_renderbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
                          GLenum attachment, GLenum renderbuffertarget,
-                         GLuint renderbuffer, const char *func)
+                         GLuint renderbuffer, const char *func, bool no_error)
 {
    struct gl_renderbuffer_attachment *att;
    struct gl_renderbuffer *rb;
    bool is_color_attachment;
 
-   if (renderbuffertarget != GL_RENDERBUFFER) {
+   if (!no_error && renderbuffertarget != GL_RENDERBUFFER) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "%s(renderbuffertarget is not GL_RENDERBUFFER)", func);
       return;
    }
 
    if (renderbuffer) {
-      rb = _mesa_lookup_renderbuffer_err(ctx, renderbuffer, func);
-      if (!rb)
-         return;
+      if (!no_error) {
+         rb = _mesa_lookup_renderbuffer_err(ctx, renderbuffer, func);
+         if (!rb)
+            return;
+      } else {
+         rb = _mesa_lookup_renderbuffer(ctx, renderbuffer);
+      }
    } else {
       /* remove renderbuffer attachment */
       rb = NULL;
    }
 
-   if (_mesa_is_winsys_fbo(fb)) {
-      /* Can't attach new renderbuffers to a window system framebuffer */
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(window-system framebuffer)", func);
-      return;
-   }
-
-   att = get_attachment(ctx, fb, attachment, &is_color_attachment);
-   if (att == NULL) {
-      /*
-       * From OpenGL 4.5 spec, section 9.2.7 "Attaching Renderbuffer Images to
-       * a Framebuffer":
-       *
-       *    "An INVALID_OPERATION error is generated if attachment is COLOR_-
-       *     ATTACHMENTm where m is greater than or equal to the value of
-       *     MAX_COLOR_- ATTACHMENTS ."
-       *
-       * If we are at this point, is because the attachment is not valid, so
-       * if is_color_attachment is true, is because of the previous reason.
-       */
-      if (is_color_attachment) {
+   if (!no_error) {
+      if (_mesa_is_winsys_fbo(fb)) {
+         /* Can't attach new renderbuffers to a window system framebuffer */
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "%s(invalid color attachment %s)", func,
-                     _mesa_enum_to_string(attachment));
-      } else {
-         _mesa_error(ctx, GL_INVALID_ENUM,
-                     "%s(invalid attachment %s)", func,
-                     _mesa_enum_to_string(attachment));
+                     "%s(window-system framebuffer)", func);
+         return;
       }
 
-      return;
-   }
+      att = get_attachment(ctx, fb, attachment, &is_color_attachment);
+      if (att == NULL) {
+         /*
+          * From OpenGL 4.5 spec, section 9.2.7 "Attaching Renderbuffer Images
+          * to a Framebuffer":
+          *
+          *    "An INVALID_OPERATION error is generated if attachment is
+          *    COLOR_- ATTACHMENTm where m is greater than or equal to the
+          *    value of MAX_COLOR_- ATTACHMENTS ."
+          *
+          * If we are at this point, is because the attachment is not valid, so
+          * if is_color_attachment is true, is because of the previous reason.
+          */
+         if (is_color_attachment) {
+            _mesa_error(ctx, GL_INVALID_OPERATION,
+                        "%s(invalid color attachment %s)", func,
+                        _mesa_enum_to_string(attachment));
+         } else {
+            _mesa_error(ctx, GL_INVALID_ENUM,
+                        "%s(invalid attachment %s)", func,
+                        _mesa_enum_to_string(attachment));
+         }
 
-   if (attachment == GL_DEPTH_STENCIL_ATTACHMENT &&
-       rb && rb->Format != MESA_FORMAT_NONE) {
-      /* make sure the renderbuffer is a depth/stencil format */
-      const GLenum baseFormat = _mesa_get_format_base_format(rb->Format);
-      if (baseFormat != GL_DEPTH_STENCIL) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "%s(renderbuffer is not DEPTH_STENCIL format)", func);
          return;
+      }
+
+      if (attachment == GL_DEPTH_STENCIL_ATTACHMENT &&
+          rb && rb->Format != MESA_FORMAT_NONE) {
+         /* make sure the renderbuffer is a depth/stencil format */
+         const GLenum baseFormat = _mesa_get_format_base_format(rb->Format);
+         if (baseFormat != GL_DEPTH_STENCIL) {
+            _mesa_error(ctx, GL_INVALID_OPERATION,
+                        "%s(renderbuffer is not DEPTH_STENCIL format)", func);
+            return;
+         }
       }
    }
 
    _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb);
+}
+
+static void
+framebuffer_renderbuffer_error(struct gl_context *ctx,
+                               struct gl_framebuffer *fb, GLenum attachment,
+                               GLenum renderbuffertarget,
+                               GLuint renderbuffer, const char *func)
+{
+   framebuffer_renderbuffer(ctx, fb, attachment, renderbuffertarget,
+                            renderbuffer, func, false);
 }
 
 void GLAPIENTRY
@@ -3731,8 +3747,8 @@ _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
       return;
    }
 
-   framebuffer_renderbuffer(ctx, fb, attachment, renderbuffertarget,
-                            renderbuffer, "glFramebufferRenderbuffer");
+   framebuffer_renderbuffer_error(ctx, fb, attachment, renderbuffertarget,
+                                  renderbuffer, "glFramebufferRenderbuffer");
 }
 
 
@@ -3749,8 +3765,9 @@ _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
    if (!fb)
       return;
 
-   framebuffer_renderbuffer(ctx, fb, attachment, renderbuffertarget,
-                            renderbuffer, "glNamedFramebufferRenderbuffer");
+   framebuffer_renderbuffer_error(ctx, fb, attachment, renderbuffertarget,
+                                  renderbuffer,
+                                  "glNamedFramebufferRenderbuffer");
 }
 
 
