@@ -1447,26 +1447,15 @@ unbind_textures_from_unit(struct gl_context *ctx, GLuint unit)
  * Recall that texture objects can be shared among several rendering
  * contexts.
  */
-void GLAPIENTRY
-_mesa_DeleteTextures( GLsizei n, const GLuint *textures)
+static void
+delete_textures(struct gl_context *ctx, GLsizei n, const GLuint *textures)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   GLint i;
-
-   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "glDeleteTextures %d\n", n);
-
-   if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteTextures(n < 0)");
-      return;
-   }
-
    FLUSH_VERTICES(ctx, 0); /* too complex */
 
    if (!textures)
       return;
 
-   for (i = 0; i < n; i++) {
+   for (GLsizei i = 0; i < n; i++) {
       if (textures[i] > 0) {
          struct gl_texture_object *delObj
             = _mesa_lookup_texture(ctx, textures[i]);
@@ -1512,6 +1501,23 @@ _mesa_DeleteTextures( GLsizei n, const GLuint *textures)
          }
       }
    }
+}
+
+
+void GLAPIENTRY
+_mesa_DeleteTextures(GLsizei n, const GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
+      _mesa_debug(ctx, "glDeleteTextures %d\n", n);
+
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteTextures(n < 0)");
+      return;
+   }
+
+   delete_textures(ctx, n, textures);
 }
 
 
