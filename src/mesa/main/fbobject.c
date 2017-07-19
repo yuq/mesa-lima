@@ -3731,6 +3731,28 @@ framebuffer_renderbuffer_error(struct gl_context *ctx,
                             renderbuffer, func, false);
 }
 
+static void
+framebuffer_renderbuffer_no_error(struct gl_context *ctx,
+                                  struct gl_framebuffer *fb, GLenum attachment,
+                                  GLenum renderbuffertarget,
+                                  GLuint renderbuffer, const char *func)
+{
+   framebuffer_renderbuffer(ctx, fb, attachment, renderbuffertarget,
+                            renderbuffer, func, true);
+}
+
+void GLAPIENTRY
+_mesa_FramebufferRenderbuffer_no_error(GLenum target, GLenum attachment,
+                                       GLenum renderbuffertarget,
+                                       GLuint renderbuffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_framebuffer *fb = get_framebuffer_target(ctx, target);
+   framebuffer_renderbuffer_no_error(ctx, fb, attachment, renderbuffertarget,
+                                     renderbuffer, "glFramebufferRenderbuffer");
+}
+
 void GLAPIENTRY
 _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
                               GLenum renderbuffertarget,
