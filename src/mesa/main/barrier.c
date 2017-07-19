@@ -109,6 +109,13 @@ memory_barrier_by_region(struct gl_context *ctx, GLbitfield barriers,
 }
 
 void GLAPIENTRY
+_mesa_MemoryBarrierByRegion_no_error(GLbitfield barriers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   memory_barrier_by_region(ctx, barriers, true);
+}
+
+void GLAPIENTRY
 _mesa_MemoryBarrierByRegion(GLbitfield barriers)
 {
    GET_CURRENT_CONTEXT(ctx);
