@@ -186,7 +186,7 @@ gbm_bo_get_stride_for_plane(struct gbm_bo *bo, int plane)
  * The format of the pixels in the buffer.
  *
  * \param bo The buffer object
- * \return The format of buffer object, on of the GBM_FORMAT_* codes
+ * \return The format of buffer object, one of the GBM_FORMAT_* codes
  */
 GBM_EXPORT uint32_t
 gbm_bo_get_format(struct gbm_bo *bo)
