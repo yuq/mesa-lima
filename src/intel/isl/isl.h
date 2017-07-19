@@ -1516,6 +1516,9 @@ isl_tiling_is_std_y(enum isl_tiling tiling)
 uint32_t
 isl_tiling_to_i915_tiling(enum isl_tiling tiling);
 
+enum isl_tiling 
+isl_tiling_from_i915_tiling(uint32_t tiling);
+
 const struct isl_drm_modifier_info * ATTRIBUTE_CONST
 isl_drm_modifier_get_info(uint64_t modifier);
 

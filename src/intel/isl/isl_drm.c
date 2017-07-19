@@ -54,6 +54,23 @@ isl_tiling_to_i915_tiling(enum isl_tiling tiling)
    unreachable("Invalid ISL tiling");
 }
 
+enum isl_tiling
+isl_tiling_from_i915_tiling(uint32_t tiling)
+{
+   switch (tiling) {
+   case I915_TILING_NONE:
+      return ISL_TILING_LINEAR;
+
+   case I915_TILING_X:
+      return ISL_TILING_X;
+
+   case I915_TILING_Y:
+      return ISL_TILING_Y0;
+   }
+
+   unreachable("Invalid i915 tiling");
+}
+
 struct isl_drm_modifier_info modifier_info[] = {
    {
       .modifier = DRM_FORMAT_MOD_NONE,
