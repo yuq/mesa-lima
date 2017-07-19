@@ -1442,9 +1442,16 @@ vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
    struct vbo_context *vbo = vbo_context(ctx);
    struct _mesa_prim prim;
 
-   if (!_mesa_validate_DrawTransformFeedback(ctx, mode, obj, stream,
-                                             numInstances)) {
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_DrawTransformFeedback(ctx, mode, obj, stream,
+                                                numInstances)) {
+         return;
+      }
    }
 
    if (ctx->Driver.GetTransformFeedbackVertexCount &&
