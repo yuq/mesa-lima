@@ -438,7 +438,7 @@ util_cpu_detect(void)
           (xgetbv() & (0x7 << 5)) && // OPMASK: upper-256 enabled by OS
           ((xgetbv() & 6) == 6)) { // XMM/YMM enabled by OS
          uint32_t regs3[4];
-         cpuid(0x00000007, regs3);
+         cpuid_count(0x00000007, 0x00000000, regs3);
          util_cpu_caps.has_avx512f    = (regs3[1] >> 16) & 1;
          util_cpu_caps.has_avx512dq   = (regs3[1] >> 17) & 1;
          util_cpu_caps.has_avx512ifma = (regs3[1] >> 21) & 1;
