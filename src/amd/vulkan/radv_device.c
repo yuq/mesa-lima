@@ -153,6 +153,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static VkResult
