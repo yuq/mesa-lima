@@ -127,7 +127,7 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
 			       width,
 			       height,
 			       depth,
-                               intelImage->base.Base.NumSamples,
+                               MAX2(intelImage->base.Base.NumSamples, 1),
                                layout_flags | MIPTREE_LAYOUT_TILING_ANY);
 }
 

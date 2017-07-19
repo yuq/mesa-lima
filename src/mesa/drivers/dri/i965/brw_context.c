@@ -1218,7 +1218,7 @@ intel_resolve_for_dri2_flush(struct brw_context *brw,
       rb = intel_get_renderbuffer(fb, buffers[i]);
       if (rb == NULL || rb->mt == NULL)
          continue;
-      if (rb->mt->num_samples <= 1) {
+      if (rb->mt->num_samples == 1) {
          assert(rb->mt_layer == 0 && rb->mt_level == 0 &&
                 rb->layer_count == 1);
          intel_miptree_prepare_access(brw, rb->mt, 0, 1, 0, 1, false, false);

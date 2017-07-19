@@ -143,7 +143,7 @@ intel_map_renderbuffer(struct gl_context *ctx,
          irb->singlesample_mt =
             intel_miptree_create_for_renderbuffer(brw, irb->mt->format,
                                                   rb->Width, rb->Height,
-                                                  0 /*num_samples*/);
+                                                  1 /*num_samples*/);
          if (!irb->singlesample_mt)
             goto fail;
          irb->singlesample_mt_is_tmp = true;
@@ -303,7 +303,7 @@ intel_alloc_private_renderbuffer_storage(struct gl_context * ctx, struct gl_rend
 
    irb->mt = intel_miptree_create_for_renderbuffer(brw, rb->Format,
 						   width, height,
-                                                   rb->NumSamples);
+                                                   MAX2(rb->NumSamples, 1));
    if (!irb->mt)
       return false;
 
@@ -533,8 +533,7 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
    irb->mt_layer = layer;
 
    const unsigned layer_multiplier = 
-      mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY ?
-      MAX2(mt->num_samples, 1) : 1;
+      mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY ? mt->num_samples : 1;
 
    if (!layered) {
       irb->layer_count = 1;

@@ -3287,9 +3287,7 @@ static void
 genX(emit_3dstate_multisample2)(struct brw_context *brw,
                                 unsigned num_samples)
 {
-   assert(brw->num_samples <= 16);
-
-   unsigned log2_samples = ffs(MAX2(num_samples, 1)) - 1;
+   unsigned log2_samples = ffs(num_samples) - 1;
 
    brw_batch_emit(brw, GENX(3DSTATE_MULTISAMPLE), multi) {
       multi.PixelLocation = CENTER;
@@ -3320,6 +3318,8 @@ genX(emit_3dstate_multisample2)(struct brw_context *brw,
 static void
 genX(upload_multisample_state)(struct brw_context *brw)
 {
+   assert(brw->num_samples > 0 && brw->num_samples <= 16);
+
    genX(emit_3dstate_multisample2)(brw, brw->num_samples);
 
    brw_batch_emit(brw, GENX(3DSTATE_SAMPLE_MASK), sm) {

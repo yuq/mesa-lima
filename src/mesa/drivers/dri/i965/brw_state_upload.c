@@ -457,7 +457,8 @@ brw_upload_pipeline_state(struct brw_context *brw,
    int i;
    static int dirty_count = 0;
    struct brw_state_flags state = brw->state.pipelines[pipeline];
-   unsigned int fb_samples = _mesa_geometric_samples(ctx->DrawBuffer);
+   const unsigned fb_samples =
+      MAX2(_mesa_geometric_samples(ctx->DrawBuffer), 1);
 
    brw_select_pipeline(brw, pipeline);
 

@@ -191,7 +191,7 @@ intel_miptree_supports_ccs(struct brw_context *brw,
         * accidentally reject a multisampled surface here. We should have
         * rejected it earlier by explicitly checking the sample count.
         */
-      assert(mt->num_samples <= 1);
+      assert(mt->num_samples == 1);
    }
 
    /* Handle the hardware restrictions...
@@ -358,6 +358,8 @@ intel_miptree_create_layout(struct brw_context *brw,
                             GLuint num_samples,
                             uint32_t layout_flags)
 {
+   assert(num_samples > 0);
+
    struct intel_mipmap_tree *mt = calloc(sizeof(*mt), 1);
    if (!mt)
       return NULL;
@@ -568,7 +570,7 @@ intel_miptree_create_layout(struct brw_context *brw,
     *  6   |      ?         |        ?
     */
    if (intel_miptree_supports_ccs(brw, mt)) {
-      if (brw->gen >= 9 || (brw->gen == 8 && num_samples <= 1))
+      if (brw->gen >= 9 || (brw->gen == 8 && num_samples == 1))
          layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    } else if (brw->gen >= 9 && num_samples > 1) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
@@ -766,7 +768,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
       .depth = target == GL_TEXTURE_3D ? depth0 : 1,
       .levels = last_level - first_level + 1,
       .array_len = target == GL_TEXTURE_3D ? 1 : depth0,
-      .samples = MAX2(num_samples, 1),
+      .samples = num_samples,
       .row_pitch = row_pitch,
       .usage = isl_usage_flags, 
       .tiling_flags = tiling_flags,
@@ -882,6 +884,8 @@ intel_miptree_create(struct brw_context *brw,
                      GLuint num_samples,
                      uint32_t layout_flags)
 {
+   assert(num_samples > 0);
+
    struct intel_mipmap_tree *mt = miptree_create(
                                      brw, target, format,
                                      first_level, last_level,
@@ -977,7 +981,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    layout_flags |= MIPTREE_LAYOUT_FOR_BO;
    mt = intel_miptree_create_layout(brw, target, format,
                                     0, 0,
-                                    width, height, depth, 0,
+                                    width, height, depth,
+                                    1 /* num_samples */,
                                     layout_flags);
    if (!mt)
       return NULL;
@@ -1150,7 +1155,7 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
    struct intel_mipmap_tree *multisample_mt = NULL;
    struct gl_renderbuffer *rb = &irb->Base.Base;
    mesa_format format = rb->Format;
-   int num_samples = rb->NumSamples;
+   const unsigned num_samples = MAX2(rb->NumSamples, 1);
 
    /* Only the front and back buffers, which are color buffers, are allocated
     * through the image loader.
@@ -1160,7 +1165,7 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
 
    assert(singlesample_mt);
 
-   if (num_samples == 0) {
+   if (num_samples == 1) {
       intel_miptree_release(&irb->mt);
       irb->mt = singlesample_mt;
 
@@ -1377,7 +1382,8 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
       return false;
    }
 
-   if (image->NumSamples != mt->num_samples)
+   /* Core uses sample number of zero to indicate single-sampled. */
+   if (MAX2(image->NumSamples, 1) != mt->num_samples)
       return false;
 
    return true;
@@ -2011,7 +2017,7 @@ intel_miptree_alloc_aux(struct brw_context *brw,
 
    case ISL_AUX_USAGE_CCS_E:
       assert(_mesa_is_format_color_format(mt->format));
-      assert(mt->num_samples <= 1);
+      assert(mt->num_samples == 1);
       if (!intel_miptree_alloc_ccs(brw, mt))
          return false;
       return true;
@@ -2060,7 +2066,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
     * There is no such blurb for 1D textures, but there is sufficient evidence
     * that this is broken on SKL+.
     */
-   return (mt->num_samples <= 1 &&
+   return (mt->num_samples == 1 &&
            mt->target != GL_TEXTURE_3D &&
            mt->target != GL_TEXTURE_1D /* gen9+ restriction */);
 }
@@ -2541,7 +2547,7 @@ intel_miptree_get_aux_state(const struct intel_mipmap_tree *mt,
 
    if (_mesa_is_format_color_format(mt->format)) {
       assert(mt->mcs_buf != NULL);
-      assert(mt->num_samples <= 1 ||
+      assert(mt->num_samples == 1 ||
              mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       unreachable("Cannot get aux state for stencil");
@@ -2562,7 +2568,7 @@ intel_miptree_set_aux_state(struct brw_context *brw,
 
    if (_mesa_is_format_color_format(mt->format)) {
       assert(mt->mcs_buf != NULL);
-      assert(mt->num_samples <= 1 ||
+      assert(mt->num_samples == 1 ||
              mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
       unreachable("Cannot get aux state for stencil");
@@ -2684,7 +2690,7 @@ intel_miptree_prepare_render(struct brw_context *brw,
     * enabled because otherwise the surface state will be programmed with
     * the linear equivalent format anyway.
     */
-   if (brw->gen == 9 && srgb_enabled && mt->num_samples <= 1 &&
+   if (brw->gen == 9 && srgb_enabled && mt->num_samples == 1 &&
        _mesa_get_srgb_format_linear(mt->format) != mt->format) {
 
       /* Lossless compression is not supported for SRGB formats, it
@@ -2747,7 +2753,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
     * reached for multisample buffers.
     */
    assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_NONE ||
-          mt->num_samples <= 1);
+          mt->num_samples == 1);
 
    intel_miptree_prepare_access(brw, mt, 0, INTEL_REMAINING_LEVELS,
                                 0, INTEL_REMAINING_LAYERS, false, false);
@@ -3031,7 +3037,7 @@ intel_miptree_map_blit(struct brw_context *brw,
                                          /* first_level */ 0,
                                          /* last_level */ 0,
                                          map->w, map->h, 1,
-                                         /* samples */ 0,
+                                         /* samples */ 1,
                                          MIPTREE_LAYOUT_TILING_NONE);
 
    if (!map->linear_mt) {
@@ -3573,7 +3579,7 @@ intel_miptree_map(struct brw_context *brw,
 {
    struct intel_miptree_map *map;
 
-   assert(mt->num_samples <= 1);
+   assert(mt->num_samples == 1 || mt->surf.samples == 1);
 
    map = intel_miptree_attach_map(mt, level, slice, x, y, w, h, mode);
    if (!map){
@@ -3619,7 +3625,7 @@ intel_miptree_unmap(struct brw_context *brw,
 {
    struct intel_miptree_map *map = mt->level[level].slice[slice].map;
 
-   assert(mt->num_samples <= 1);
+   assert(mt->num_samples == 1 || mt->surf.samples == 1);
 
    if (!map)
       return;
@@ -3788,7 +3794,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
    }
 
    surf->levels = mt->last_level - mt->first_level + 1;
-   surf->samples = MAX2(mt->num_samples, 1);
+   surf->samples = mt->num_samples;
 
    surf->size = 0; /* TODO */
    surf->alignment = 0; /* TODO */
