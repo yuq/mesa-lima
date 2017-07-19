@@ -334,6 +334,9 @@ uint32_t
 gbm_bo_get_format(struct gbm_bo *bo);
 
 uint32_t
+gbm_bo_get_bpp(struct gbm_bo *bo);
+
+uint32_t
 gbm_bo_get_offset(struct gbm_bo *bo, int plane);
 
 struct gbm_device *

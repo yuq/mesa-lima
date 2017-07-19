@@ -194,6 +194,72 @@ gbm_bo_get_format(struct gbm_bo *bo)
    return bo->format;
 }
 
+/** Get the bit-per-pixel of the buffer object's format
+ *
+ * The bits-per-pixel of the buffer object's format.
+ *
+ * Note; The 'in-memory pixel' concept makes no sense for YUV formats
+ * (pixels are the result of the combination of multiple memory sources:
+ * Y, Cb & Cr; usually these are even in separate buffers), so YUV
+ * formats are not supported by this function.
+ *
+ * \param bo The buffer object
+ * \return The number of bits0per-pixel of the buffer object's format.
+ */
+GBM_EXPORT uint32_t
+gbm_bo_get_bpp(struct gbm_bo *bo)
+{
+   switch (bo->format) {
+      default:
+         return 0;
+      case GBM_FORMAT_C8:
+      case GBM_FORMAT_R8:
+      case GBM_FORMAT_RGB332:
+      case GBM_FORMAT_BGR233:
+         return 8;
+      case GBM_FORMAT_GR88:
+      case GBM_FORMAT_XRGB4444:
+      case GBM_FORMAT_XBGR4444:
+      case GBM_FORMAT_RGBX4444:
+      case GBM_FORMAT_BGRX4444:
+      case GBM_FORMAT_ARGB4444:
+      case GBM_FORMAT_ABGR4444:
+      case GBM_FORMAT_RGBA4444:
+      case GBM_FORMAT_BGRA4444:
+      case GBM_FORMAT_XRGB1555:
+      case GBM_FORMAT_XBGR1555:
+      case GBM_FORMAT_RGBX5551:
+      case GBM_FORMAT_BGRX5551:
+      case GBM_FORMAT_ARGB1555:
+      case GBM_FORMAT_ABGR1555:
+      case GBM_FORMAT_RGBA5551:
+      case GBM_FORMAT_BGRA5551:
+      case GBM_FORMAT_RGB565:
+      case GBM_FORMAT_BGR565:
+         return 16;
+      case GBM_FORMAT_RGB888:
+      case GBM_FORMAT_BGR888:
+         return 24;
+      case GBM_FORMAT_XRGB8888:
+      case GBM_FORMAT_XBGR8888:
+      case GBM_FORMAT_RGBX8888:
+      case GBM_FORMAT_BGRX8888:
+      case GBM_FORMAT_ARGB8888:
+      case GBM_FORMAT_ABGR8888:
+      case GBM_FORMAT_RGBA8888:
+      case GBM_FORMAT_BGRA8888:
+      case GBM_FORMAT_XRGB2101010:
+      case GBM_FORMAT_XBGR2101010:
+      case GBM_FORMAT_RGBX1010102:
+      case GBM_FORMAT_BGRX1010102:
+      case GBM_FORMAT_ARGB2101010:
+      case GBM_FORMAT_ABGR2101010:
+      case GBM_FORMAT_RGBA1010102:
+      case GBM_FORMAT_BGRA1010102:
+         return 32;
+   }
+}
+
 /** Get the offset for the data of the specified plane
  *
  * Extra planes, and even the first plane, may have an offset from the start of
