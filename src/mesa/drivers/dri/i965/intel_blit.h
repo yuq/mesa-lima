@@ -28,19 +28,6 @@
 
 #include "brw_context.h"
 
-static inline unsigned
-isl_tiling_to_bufmgr_tiling(enum isl_tiling tiling)
-{
-   if (tiling == ISL_TILING_X)
-      return I915_TILING_X;
-
-   if (tiling == ISL_TILING_Y0)
-      return I915_TILING_Y;
-
-   /* All other are unknown to buffer allocator. */
-   return I915_TILING_NONE;
-}
-
 bool
 intelEmitCopyBlit(struct brw_context *brw,
                   GLuint cpp,
