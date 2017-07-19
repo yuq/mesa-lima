@@ -344,6 +344,22 @@ _mesa_DrawBuffer(GLenum buffer)
 
 
 void GLAPIENTRY
+_mesa_NamedFramebufferDrawBuffer_no_error(GLuint framebuffer, GLenum buf)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
+
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer(ctx, framebuffer);
+   } else {
+      fb = ctx->WinSysDrawBuffer;
+   }
+
+   draw_buffer_no_error(ctx, fb, buf, "glNamedFramebufferDrawBuffer");
+}
+
+
+void GLAPIENTRY
 _mesa_NamedFramebufferDrawBuffer(GLuint framebuffer, GLenum buf)
 {
    GET_CURRENT_CONTEXT(ctx);

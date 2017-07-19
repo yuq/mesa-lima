@@ -186,7 +186,7 @@
       <param name="layer" type="GLint" />
    </function>
 
-   <function name="NamedFramebufferDrawBuffer">
+   <function name="NamedFramebufferDrawBuffer" no_error="true">
       <param name="framebuffer" type="GLuint" />
       <param name="buf" type="GLenum" />
    </function>
