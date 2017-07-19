@@ -21,6 +21,8 @@
 
 include Makefile.sources
 
+MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
+
 BUILT_SOURCES =
 
 AM_CFLAGS = \
