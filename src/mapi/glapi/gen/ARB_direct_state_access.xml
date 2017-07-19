@@ -594,7 +594,7 @@
       <param name="index" type="GLuint" />
    </function>
 
-   <function name="VertexArrayElementBuffer">
+   <function name="VertexArrayElementBuffer" no_error="true">
       <param name="vaobj" type="GLuint" />
       <param name="buffer" type="GLuint" />
    </function>

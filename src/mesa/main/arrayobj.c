@@ -687,6 +687,14 @@ vertex_array_element_buffer(struct gl_context *ctx, GLuint vaobj, GLuint buffer,
 
 
 void GLAPIENTRY
+_mesa_VertexArrayElementBuffer_no_error(GLuint vaobj, GLuint buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   vertex_array_element_buffer(ctx, vaobj, buffer, true);
+}
+
+
+void GLAPIENTRY
 _mesa_VertexArrayElementBuffer(GLuint vaobj, GLuint buffer)
 {
    GET_CURRENT_CONTEXT(ctx);
