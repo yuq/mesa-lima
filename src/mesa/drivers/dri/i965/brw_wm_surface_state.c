@@ -1632,6 +1632,17 @@ update_buffer_image_param(struct brw_context *brw,
    param->stride[0] = _mesa_get_format_bytes(u->_ActualFormat);
 }
 
+static unsigned
+get_image_num_layers(const struct intel_mipmap_tree *mt, GLenum target,
+                     unsigned level)
+{
+   if (target == GL_TEXTURE_CUBE_MAP)
+      return 6;
+
+   return target == GL_TEXTURE_3D ?
+      minify(mt->logical_depth0, level) : mt->logical_depth0;
+}
+
 static void
 update_image_surface(struct brw_context *brw,
                      struct gl_image_unit *u,
@@ -1660,9 +1671,8 @@ update_image_surface(struct brw_context *brw,
       } else {
          struct intel_texture_object *intel_obj = intel_texture_object(obj);
          struct intel_mipmap_tree *mt = intel_obj->mt;
-         const unsigned num_layers = (!u->Layered ? 1 :
-                                      obj->Target == GL_TEXTURE_CUBE_MAP ? 6 :
-                                      mt->logical_depth0);
+         const unsigned num_layers = u->Layered ?
+            get_image_num_layers(mt, obj->Target, u->Level) : 1;
 
          struct isl_view view = {
             .format = format,
