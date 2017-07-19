@@ -99,6 +99,7 @@ ac_get_type_size(LLVMTypeRef type)
 		return LLVMGetIntTypeWidth(type) / 8;
 	case LLVMFloatTypeKind:
 		return 4;
+	case LLVMDoubleTypeKind:
 	case LLVMPointerTypeKind:
 		return 8;
 	case LLVMVectorTypeKind:
