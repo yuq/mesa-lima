@@ -733,8 +733,15 @@ vbo_exec_MultiDrawArrays(GLenum mode, const GLint *first,
                   "glMultiDrawArrays(%s, %p, %p, %d)\n",
                   _mesa_enum_to_string(mode), first, count, primcount);
 
-   if (!_mesa_validate_MultiDrawArrays(ctx, mode, count, primcount))
-      return;
+   if (_mesa_is_no_error_enabled(ctx)) {
+      FLUSH_CURRENT(ctx, 0);
+
+      if (ctx->NewState)
+         _mesa_update_state(ctx);
+   } else {
+      if (!_mesa_validate_MultiDrawArrays(ctx, mode, count, primcount))
+         return;
+   }
 
    for (i = 0; i < primcount; i++) {
       if (count[i] > 0) {
