@@ -114,6 +114,67 @@ ac_get_type_size(LLVMTypeRef type)
 	}
 }
 
+static LLVMTypeRef to_integer_type_scalar(struct ac_llvm_context *ctx, LLVMTypeRef t)
+{
+	if (t == ctx->f16 || t == ctx->i16)
+		return ctx->i16;
+	else if (t == ctx->f32 || t == ctx->i32)
+		return ctx->i32;
+	else if (t == ctx->f64 || t == ctx->i64)
+		return ctx->i64;
+	else
+		unreachable("Unhandled integer size");
+}
+
+LLVMTypeRef
+ac_to_integer_type(struct ac_llvm_context *ctx, LLVMTypeRef t)
+{
+	if (LLVMGetTypeKind(t) == LLVMVectorTypeKind) {
+		LLVMTypeRef elem_type = LLVMGetElementType(t);
+		return LLVMVectorType(to_integer_type_scalar(ctx, elem_type),
+		                      LLVMGetVectorSize(t));
+	}
+	return to_integer_type_scalar(ctx, t);
+}
+
+LLVMValueRef
+ac_to_integer(struct ac_llvm_context *ctx, LLVMValueRef v)
+{
+	LLVMTypeRef type = LLVMTypeOf(v);
+	return LLVMBuildBitCast(ctx->builder, v, ac_to_integer_type(ctx, type), "");
+}
+
+static LLVMTypeRef to_float_type_scalar(struct ac_llvm_context *ctx, LLVMTypeRef t)
+{
+	if (t == ctx->i16 || t == ctx->f16)
+		return ctx->f16;
+	else if (t == ctx->i32 || t == ctx->f32)
+		return ctx->f32;
+	else if (t == ctx->i64 || t == ctx->f64)
+		return ctx->f64;
+	else
+		unreachable("Unhandled float size");
+}
+
+LLVMTypeRef
+ac_to_float_type(struct ac_llvm_context *ctx, LLVMTypeRef t)
+{
+	if (LLVMGetTypeKind(t) == LLVMVectorTypeKind) {
+		LLVMTypeRef elem_type = LLVMGetElementType(t);
+		return LLVMVectorType(to_float_type_scalar(ctx, elem_type),
+		                      LLVMGetVectorSize(t));
+	}
+	return to_float_type_scalar(ctx, t);
+}
+
+LLVMValueRef
+ac_to_float(struct ac_llvm_context *ctx, LLVMValueRef v)
+{
+	LLVMTypeRef type = LLVMTypeOf(v);
+	return LLVMBuildBitCast(ctx->builder, v, ac_to_float_type(ctx, type), "");
+}
+
+
 LLVMValueRef
 ac_build_intrinsic(struct ac_llvm_context *ctx, const char *name,
 		   LLVMTypeRef return_type, LLVMValueRef *params,
