@@ -1505,6 +1505,14 @@ delete_textures(struct gl_context *ctx, GLsizei n, const GLuint *textures)
 
 
 void GLAPIENTRY
+_mesa_DeleteTextures_no_error(GLsizei n, const GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   delete_textures(ctx, n, textures);
+}
+
+
+void GLAPIENTRY
 _mesa_DeleteTextures(GLsizei n, const GLuint *textures)
 {
    GET_CURRENT_CONTEXT(ctx);

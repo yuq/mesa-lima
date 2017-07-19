@@ -189,6 +189,9 @@ _mesa_CreateTextures_no_error(GLenum target, GLsizei n, GLuint *textures);
 extern void GLAPIENTRY
 _mesa_CreateTextures(GLenum target, GLsizei n, GLuint *textures);
 
+void GLAPIENTRY
+_mesa_DeleteTextures_no_error(GLsizei n, const GLuint *textures);
+
 extern void GLAPIENTRY
 _mesa_DeleteTextures( GLsizei n, const GLuint *textures );
 

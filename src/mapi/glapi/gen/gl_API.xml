@@ -3339,7 +3339,7 @@
         <glx rop="4117"/>
     </function>
 
-    <function name="DeleteTextures" es1="1.0" es2="2.0">
+    <function name="DeleteTextures" es1="1.0" es2="2.0" no_error="true">
         <param name="n" type="GLsizei" counter="true"/>
         <param name="textures" type="const GLuint *" count="n"/>
         <glx sop="144"/>
