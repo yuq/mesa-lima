@@ -11,6 +11,7 @@ env:
   global:
     - XORG_RELEASES=http://xorg.freedesktop.org/releases/individual
     - XCB_RELEASES=http://xcb.freedesktop.org/dist
+    - WAYLAND_RELEASES=http://wayland.freedesktop.org/releases
     - XORGMACROS_VERSION=util-macros-1.19.0
     - GLPROTO_VERSION=glproto-1.4.17
     - DRI2PROTO_VERSION=dri2proto-2.8
@@ -23,7 +24,8 @@ env:
     - LIBVDPAU_VERSION=libvdpau-1.1
     - LIBVA_VERSION=libva-1.6.2
     - LIBWAYLAND_VERSION=wayland-1.11.1
-    - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
+    - WAYLAND_PROTOCOLS_VERSION=wayland-protocols-1.8
+    - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig:$HOME/prefix/share/pkgconfig
     - LD_LIBRARY_PATH="$HOME/prefix/lib:$LD_LIBRARY_PATH"
 
 matrix:
@@ -336,9 +338,13 @@ install:
   - tar -jxvf $LIBVA_VERSION.tar.bz2
   - (cd $LIBVA_VERSION && ./configure --prefix=$HOME/prefix --disable-wayland --disable-dummy-driver && make install)
 
-  - wget http://wayland.freedesktop.org/releases/$LIBWAYLAND_VERSION.tar.xz
+  - wget $WAYLAND_RELEASES/$LIBWAYLAND_VERSION.tar.xz
   - tar -axvf $LIBWAYLAND_VERSION.tar.xz
   - (cd $LIBWAYLAND_VERSION && ./configure --prefix=$HOME/prefix --enable-libraries --without-host-scanner --disable-documentation --disable-dtd-validation && make install)
+
+  - wget $WAYLAND_RELEASES/$WAYLAND_PROTOCOLS_VERSION.tar.xz
+  - tar -axvf $WAYLAND_PROTOCOLS_VERSION.tar.xz
+  - (cd $WAYLAND_PROTOCOLS_VERSION && ./configure --prefix=$HOME/prefix && make install)
 
   # Generate the header since one is missing on the Travis instance
   - mkdir -p linux
