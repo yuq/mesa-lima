@@ -157,6 +157,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_VARIABLE_POINTERS_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static VkResult
@@ -589,6 +593,18 @@ void radv_GetPhysicalDeviceFeatures2KHR(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceFeatures2KHR               *pFeatures)
 {
+	vk_foreach_struct(ext, pFeatures->pNext) {
+		switch (ext->sType) {
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES_KHR: {
+			VkPhysicalDeviceVariablePointerFeaturesKHR *features = (void *)ext;
+			features->variablePointersStorageBuffer = true;
+			features->variablePointers = false;
+			break;
+		}
+		default:
+			break;
+		}
+	}
 	return radv_GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
 }
 
