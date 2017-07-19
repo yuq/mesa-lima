@@ -264,9 +264,9 @@ is_legal_es3_readbuffer_enum(GLenum buf)
  *
  * See the GL_EXT_framebuffer_object spec for more info.
  */
-static void
+static ALWAYS_INLINE void
 draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
-            GLenum buffer, const char *caller)
+            GLenum buffer, const char *caller, bool no_error)
 {
    GLbitfield destMask;
 
@@ -283,14 +283,14 @@ draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
       const GLbitfield supportedMask
          = supported_buffer_bitmask(ctx, fb);
       destMask = draw_buffer_enum_to_bitmask(ctx, buffer);
-      if (destMask == BAD_MASK) {
+      if (!no_error && destMask == BAD_MASK) {
          /* totally bogus buffer */
          _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid buffer %s)", caller,
                      _mesa_enum_to_string(buffer));
          return;
       }
       destMask &= supportedMask;
-      if (destMask == 0x0) {
+      if (!no_error && destMask == 0x0) {
          /* none of the named color buffers exist! */
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid buffer %s)",
                      caller, _mesa_enum_to_string(buffer));
@@ -311,11 +311,19 @@ draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
 }
 
 
+static void
+draw_buffer_error(struct gl_context *ctx, struct gl_framebuffer *fb,
+                  GLenum buffer, const char *caller)
+{
+   draw_buffer(ctx, fb, buffer, caller, false);
+}
+
+
 void GLAPIENTRY
 _mesa_DrawBuffer(GLenum buffer)
 {
    GET_CURRENT_CONTEXT(ctx);
-   draw_buffer(ctx, ctx->DrawBuffer, buffer, "glDrawBuffer");
+   draw_buffer_error(ctx, ctx->DrawBuffer, buffer, "glDrawBuffer");
 }
 
 
@@ -334,7 +342,7 @@ _mesa_NamedFramebufferDrawBuffer(GLuint framebuffer, GLenum buf)
    else
       fb = ctx->WinSysDrawBuffer;
 
-   draw_buffer(ctx, fb, buf, "glNamedFramebufferDrawBuffer");
+   draw_buffer_error(ctx, fb, buf, "glNamedFramebufferDrawBuffer");
 }
 
 
