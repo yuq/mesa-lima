@@ -1923,6 +1923,16 @@ _mesa_MultiModeDrawElementsIBM( const GLenum * mode, const GLsizei * count,
 }
 
 
+static void
+primitive_restart_index(struct gl_context *ctx, GLuint index)
+{
+   if (ctx->Array.RestartIndex != index) {
+      FLUSH_VERTICES(ctx, 0);
+      ctx->Array.RestartIndex = index;
+   }
+}
+
+
 /**
  * GL_NV_primitive_restart and GL 3.1
  */
@@ -1936,10 +1946,7 @@ _mesa_PrimitiveRestartIndex(GLuint index)
       return;
    }
 
-   if (ctx->Array.RestartIndex != index) {
-      FLUSH_VERTICES(ctx, 0);
-      ctx->Array.RestartIndex = index;
-   }
+   primitive_restart_index(ctx, index);
 }
 
 
