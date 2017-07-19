@@ -1637,18 +1637,15 @@ bind_texture_object(struct gl_context *ctx, unsigned unit,
  * \param target texture target.
  * \param texName texture name.
  */
-void GLAPIENTRY
-_mesa_BindTexture( GLenum target, GLuint texName )
+static ALWAYS_INLINE void
+bind_texture(struct gl_context *ctx, GLenum target, GLuint texName,
+             bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
    struct gl_texture_object *newTexObj = NULL;
+   int targetIndex;
 
-   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "glBindTexture %s %d\n",
-                  _mesa_enum_to_string(target), (GLint) texName);
-
-   int targetIndex = _mesa_tex_target_to_index(ctx, target);
-   if (targetIndex < 0) {
+   targetIndex = _mesa_tex_target_to_index(ctx, target);
+   if (!no_error && targetIndex < 0) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBindTexture(target = %s)",
                   _mesa_enum_to_string(target));
       return;
@@ -1661,13 +1658,13 @@ _mesa_BindTexture( GLenum target, GLuint texName )
    if (texName == 0) {
       /* Use a default texture object */
       newTexObj = ctx->Shared->DefaultTex[targetIndex];
-   }
-   else {
+   } else {
       /* non-default texture object */
       newTexObj = _mesa_lookup_texture(ctx, texName);
       if (newTexObj) {
          /* error checking */
-         if (newTexObj->Target != 0 && newTexObj->Target != target) {
+         if (!no_error &&
+             newTexObj->Target != 0 && newTexObj->Target != target) {
             /* The named texture object's target doesn't match the
              * given target
              */
@@ -1680,7 +1677,7 @@ _mesa_BindTexture( GLenum target, GLuint texName )
          }
       }
       else {
-         if (ctx->API == API_OPENGL_CORE) {
+         if (!no_error && ctx->API == API_OPENGL_CORE) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
                         "glBindTexture(non-gen name)");
             return;
@@ -1702,6 +1699,19 @@ _mesa_BindTexture( GLenum target, GLuint texName )
    assert(newTexObj->TargetIndex == targetIndex);
 
    bind_texture_object(ctx, ctx->Texture.CurrentUnit, newTexObj);
+}
+
+
+void GLAPIENTRY
+_mesa_BindTexture(GLenum target, GLuint texName)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
+      _mesa_debug(ctx, "glBindTexture %s %d\n",
+                  _mesa_enum_to_string(target), (GLint) texName);
+
+   bind_texture(ctx, target, texName, false);
 }
 
 
