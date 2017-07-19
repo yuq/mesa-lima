@@ -328,17 +328,6 @@ _eglParseContextAttribList(_EGLContext *ctx, _EGLDisplay *dpy,
             break;
          }
 
-         /* The EGL_KHR_create_context_no_error spec says:
-          *
-          *    "BAD_MATCH is generated if the EGL_CONTEXT_OPENGL_NO_ERROR_KHR is TRUE at
-          *    the same time as a debug or robustness context is specified."
-          */
-         if (ctx->Flags & EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR ||
-             ctx->Flags & EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR) {
-            err = EGL_BAD_MATCH;
-            break;
-         }
-
          /* Canonicalize value to EGL_TRUE/EGL_FALSE definitions */
          ctx->NoError = !!val;
          break;
@@ -487,6 +476,16 @@ _eglParseContextAttribList(_EGLContext *ctx, _EGLDisplay *dpy,
    default:
       err = EGL_BAD_ATTRIBUTE;
       break;
+   }
+
+   /* The EGL_KHR_create_context_no_error spec says:
+    *
+    *    "BAD_MATCH is generated if the EGL_CONTEXT_OPENGL_NO_ERROR_KHR is TRUE at
+    *    the same time as a debug or robustness context is specified."
+    */
+   if (ctx->NoError && (ctx->Flags & EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR ||
+                        ctx->Flags & EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR)) {
+      err = EGL_BAD_MATCH;
    }
 
    if ((ctx->Flags & ~(EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR
