@@ -598,6 +598,22 @@ draw_buffers_error(struct gl_context *ctx, struct gl_framebuffer *fb, GLsizei n,
 }
 
 
+static void
+draw_buffers_no_error(struct gl_context *ctx, struct gl_framebuffer *fb,
+                      GLsizei n, const GLenum *buffers, const char *caller)
+{
+   draw_buffers(ctx, fb, n, buffers, caller, true);
+}
+
+
+void GLAPIENTRY
+_mesa_DrawBuffers_no_error(GLsizei n, const GLenum *buffers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   draw_buffers_no_error(ctx, ctx->DrawBuffer, n, buffers, "glDrawBuffers");
+}
+
+
 void GLAPIENTRY
 _mesa_DrawBuffers(GLsizei n, const GLenum *buffers)
 {
