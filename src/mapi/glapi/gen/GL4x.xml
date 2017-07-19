@@ -9,7 +9,7 @@
   <enum name="SAMPLE_SHADING"                          value="0x8C36"/>
   <enum name="MIN_SAMPLE_SHADING_VALUE"                value="0x8C37"/>
 
-  <function name="MinSampleShading" es2="3.2">
+  <function name="MinSampleShading" es2="3.2" no_error="true">
     <param name="value" type="GLfloat"/>
   </function>
 

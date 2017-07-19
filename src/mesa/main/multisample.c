@@ -159,6 +159,13 @@ min_sample_shading(struct gl_context *ctx, GLclampf value)
  * Called via glMinSampleShadingARB
  */
 void GLAPIENTRY
+_mesa_MinSampleShading_no_error(GLclampf value)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   min_sample_shading(ctx, value);
+}
+
+void GLAPIENTRY
 _mesa_MinSampleShading(GLclampf value)
 {
    GET_CURRENT_CONTEXT(ctx);
