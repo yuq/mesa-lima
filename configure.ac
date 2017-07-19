@@ -287,9 +287,9 @@ if test "x$GCC" = xyes; then
     CFLAGS="$CFLAGS -Wall"
 
     if test "x$USE_GNU99" = xyes; then
-	CFLAGS="$CFLAGS -std=gnu99"
+        CFLAGS="$CFLAGS -std=gnu99"
     else
-	CFLAGS="$CFLAGS -std=c99"
+        CFLAGS="$CFLAGS -std=c99"
     fi
 
     # Enable -Werror=implicit-function-declaration and
@@ -301,9 +301,9 @@ if test "x$GCC" = xyes; then
     CFLAGS="$CFLAGS -Werror=implicit-function-declaration"
     CFLAGS="$CFLAGS -Werror=missing-prototypes"
     AC_LINK_IFELSE([AC_LANG_PROGRAM()],
-		   AC_MSG_RESULT([yes]),
-		   [CFLAGS="$save_CFLAGS -Wmissing-prototypes";
-		    AC_MSG_RESULT([no])])
+                   AC_MSG_RESULT([yes]),
+                   [CFLAGS="$save_CFLAGS -Wmissing-prototypes";
+                    AC_MSG_RESULT([no])])
 
     # Enable -fvisibility=hidden if using a gcc that supports it
     save_CFLAGS="$CFLAGS"
@@ -311,7 +311,7 @@ if test "x$GCC" = xyes; then
     VISIBILITY_CFLAGS="-fvisibility=hidden"
     CFLAGS="$CFLAGS $VISIBILITY_CFLAGS"
     AC_LINK_IFELSE([AC_LANG_PROGRAM()], AC_MSG_RESULT([yes]),
-		   [VISIBILITY_CFLAGS=""; AC_MSG_RESULT([no])])
+                   [VISIBILITY_CFLAGS=""; AC_MSG_RESULT([no])])
 
     # Restore CFLAGS; VISIBILITY_CFLAGS are added to it where needed.
     CFLAGS=$save_CFLAGS
@@ -333,10 +333,10 @@ if test "x$GCC" = xyes; then
     AC_MSG_CHECKING([whether $CC supports -Werror=vla])
     CFLAGS="$CFLAGS -Werror=vla"
     AC_LINK_IFELSE([AC_LANG_PROGRAM()],
-		   [MSVC2013_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=vla";
-		    MSVC2013_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS -Werror=vla";
-		    AC_MSG_RESULT([yes])],
-		    AC_MSG_RESULT([no]))
+                   [MSVC2013_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=vla";
+                    MSVC2013_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS -Werror=vla";
+                    AC_MSG_RESULT([yes])],
+                    AC_MSG_RESULT([no]))
     CFLAGS="$save_CFLAGS"
 fi
 if test "x$GXX" = xyes; then
@@ -349,7 +349,7 @@ if test "x$GXX" = xyes; then
     CXXFLAGS="$CXXFLAGS $VISIBILITY_CXXFLAGS"
     AC_LANG_PUSH([C++])
     AC_LINK_IFELSE([AC_LANG_PROGRAM()], AC_MSG_RESULT([yes]),
-		   [VISIBILITY_CXXFLAGS="" ; AC_MSG_RESULT([no])])
+                   [VISIBILITY_CXXFLAGS="" ; AC_MSG_RESULT([no])])
     AC_LANG_POP([C++])
 
     # Restore CXXFLAGS; VISIBILITY_CXXFLAGS are added to it where needed.
@@ -1416,7 +1416,7 @@ AC_SUBST([OSMESA_LIB])
 PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
                   [have_libdrm=yes], [have_libdrm=no])
 if test "x$have_libdrm" = xyes; then
-	DEFINES="$DEFINES -DHAVE_LIBDRM"
+    DEFINES="$DEFINES -DHAVE_LIBDRM"
 fi
 
 require_libdrm() {
@@ -1684,49 +1684,49 @@ fi
 # Do per platform setups and checks
 platforms=`IFS=', '; echo $with_platforms`
 for plat in $platforms; do
-	case "$plat" in
-	wayland)
+    case "$plat" in
+    wayland)
 
-		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED])
-                ac_wayland_protocols_pkgdatadir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
-                AC_SUBST(WAYLAND_PROTOCOLS_DATADIR, $ac_wayland_protocols_pkgdatadir)
+        PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED])
+        ac_wayland_protocols_pkgdatadir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
+        AC_SUBST(WAYLAND_PROTOCOLS_DATADIR, $ac_wayland_protocols_pkgdatadir)
 
-		if test "x$WAYLAND_SCANNER" = "x:"; then
-			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland platform])
-		fi
-		DEFINES="$DEFINES -DHAVE_WAYLAND_PLATFORM"
-		;;
+        if test "x$WAYLAND_SCANNER" = "x:"; then
+                AC_MSG_ERROR([wayland-scanner is needed to compile the wayland platform])
+        fi
+        DEFINES="$DEFINES -DHAVE_WAYLAND_PLATFORM"
+        ;;
 
-	x11)
-		PKG_CHECK_MODULES([XCB_DRI2], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED xcb-xfixes])
-		DEFINES="$DEFINES -DHAVE_X11_PLATFORM"
-		;;
+    x11)
+        PKG_CHECK_MODULES([XCB_DRI2], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED xcb-xfixes])
+        DEFINES="$DEFINES -DHAVE_X11_PLATFORM"
+        ;;
 
-	drm)
-		test "x$enable_gbm" = "xno" &&
-			AC_MSG_ERROR([EGL platform drm needs gbm])
-		DEFINES="$DEFINES -DHAVE_DRM_PLATFORM"
-		;;
+    drm)
+        test "x$enable_gbm" = "xno" &&
+                AC_MSG_ERROR([EGL platform drm needs gbm])
+        DEFINES="$DEFINES -DHAVE_DRM_PLATFORM"
+        ;;
 
-	surfaceless)
-		DEFINES="$DEFINES -DHAVE_SURFACELESS_PLATFORM"
-		;;
+    surfaceless)
+        DEFINES="$DEFINES -DHAVE_SURFACELESS_PLATFORM"
+        ;;
 
-	android)
-		PKG_CHECK_MODULES([ANDROID], [cutils hardware sync])
-		DEFINES="$DEFINES -DHAVE_ANDROID_PLATFORM"
-		;;
+    android)
+        PKG_CHECK_MODULES([ANDROID], [cutils hardware sync])
+        DEFINES="$DEFINES -DHAVE_ANDROID_PLATFORM"
+        ;;
 
-	*)
-		AC_MSG_ERROR([platform '$plat' does not exist])
-		;;
-	esac
+    *)
+        AC_MSG_ERROR([platform '$plat' does not exist])
+        ;;
+    esac
 
-	case "$plat" in
-	wayland|drm|surfaceless)
-		require_libdrm "Platform $plat"
-		;;
-	esac
+    case "$plat" in
+    wayland|drm|surfaceless)
+        require_libdrm "Platform $plat"
+        ;;
+    esac
 done
 
 if test "x$enable_glx" != xno; then
@@ -2108,7 +2108,7 @@ if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
     fi
 
     if test "x$enable_vdpau" = xauto -a "x$have_vdpau_platform" = xyes; then
-	PKG_CHECK_EXISTS([vdpau >= $VDPAU_REQUIRED], [enable_vdpau=yes], [enable_vdpau=no])
+        PKG_CHECK_EXISTS([vdpau >= $VDPAU_REQUIRED], [enable_vdpau=yes], [enable_vdpau=no])
     fi
 
     if test "x$enable_omx" = xauto -a "x$have_omx_platform" = xyes; then
@@ -2715,18 +2715,18 @@ AC_ARG_ENABLE(valgrind,
                              [Build mesa with valgrind support (default: auto)])],
                              [VALGRIND=$enableval], [VALGRIND=auto])
 if test "x$VALGRIND" != xno; then
-	PKG_CHECK_MODULES(VALGRIND, [valgrind], [have_valgrind=yes], [have_valgrind=no])
+    PKG_CHECK_MODULES(VALGRIND, [valgrind], [have_valgrind=yes], [have_valgrind=no])
 fi
 AC_MSG_CHECKING([whether to enable Valgrind support])
 if test "x$VALGRIND" = xauto; then
-	VALGRIND="$have_valgrind"
+    VALGRIND="$have_valgrind"
 fi
 
 if test "x$VALGRIND" = "xyes"; then
-	if ! test "x$have_valgrind" = xyes; then
-		AC_MSG_ERROR([Valgrind support required but not present])
-	fi
-	AC_DEFINE([HAVE_VALGRIND], 1, [Use valgrind intrinsics to suppress false warnings])
+    if ! test "x$have_valgrind" = xyes; then
+        AC_MSG_ERROR([Valgrind support required but not present])
+    fi
+    AC_DEFINE([HAVE_VALGRIND], 1, [Use valgrind intrinsics to suppress false warnings])
 fi
 
 AC_MSG_RESULT([$VALGRIND])
@@ -2747,116 +2747,116 @@ CXXFLAGS="$CXXFLAGS $USER_CXXFLAGS"
 
 dnl Substitute the config
 AC_CONFIG_FILES([Makefile
-		src/Makefile
-		src/amd/Makefile
-		src/amd/vulkan/Makefile
-		src/broadcom/Makefile
-		src/compiler/Makefile
-		src/egl/Makefile
-		src/egl/main/egl.pc
-		src/egl/wayland/wayland-drm/Makefile
-		src/egl/wayland/wayland-egl/Makefile
-		src/egl/wayland/wayland-egl/wayland-egl.pc
-		src/gallium/Makefile
-		src/gallium/auxiliary/Makefile
-		src/gallium/auxiliary/pipe-loader/Makefile
-		src/gallium/drivers/freedreno/Makefile
-		src/gallium/drivers/ddebug/Makefile
-		src/gallium/drivers/i915/Makefile
-		src/gallium/drivers/llvmpipe/Makefile
-		src/gallium/drivers/noop/Makefile
-		src/gallium/drivers/nouveau/Makefile
-		src/gallium/drivers/pl111/Makefile
-		src/gallium/drivers/r300/Makefile
-		src/gallium/drivers/r600/Makefile
-		src/gallium/drivers/radeon/Makefile
-		src/gallium/drivers/radeonsi/Makefile
-		src/gallium/drivers/rbug/Makefile
-		src/gallium/drivers/softpipe/Makefile
-		src/gallium/drivers/svga/Makefile
-		src/gallium/drivers/swr/Makefile
-		src/gallium/drivers/trace/Makefile
-		src/gallium/drivers/etnaviv/Makefile
-		src/gallium/drivers/imx/Makefile
-		src/gallium/drivers/vc4/Makefile
-		src/gallium/drivers/virgl/Makefile
-		src/gallium/state_trackers/clover/Makefile
-		src/gallium/state_trackers/dri/Makefile
-		src/gallium/state_trackers/glx/xlib/Makefile
-		src/gallium/state_trackers/nine/Makefile
-		src/gallium/state_trackers/omx/Makefile
-		src/gallium/state_trackers/osmesa/Makefile
-		src/gallium/state_trackers/va/Makefile
-		src/gallium/state_trackers/vdpau/Makefile
-		src/gallium/state_trackers/xa/Makefile
-		src/gallium/state_trackers/xvmc/Makefile
-		src/gallium/targets/d3dadapter9/Makefile
-		src/gallium/targets/d3dadapter9/d3d.pc
-		src/gallium/targets/dri/Makefile
-		src/gallium/targets/libgl-xlib/Makefile
-		src/gallium/targets/omx/Makefile
-		src/gallium/targets/opencl/Makefile
-		src/gallium/targets/opencl/mesa.icd
-		src/gallium/targets/osmesa/Makefile
-		src/gallium/targets/osmesa/osmesa.pc
-		src/gallium/targets/pipe-loader/Makefile
-		src/gallium/targets/va/Makefile
-		src/gallium/targets/vdpau/Makefile
-		src/gallium/targets/xa/Makefile
-		src/gallium/targets/xa/xatracker.pc
-		src/gallium/targets/xvmc/Makefile
-		src/gallium/tests/trivial/Makefile
-		src/gallium/tests/unit/Makefile
-		src/gallium/winsys/etnaviv/drm/Makefile
-		src/gallium/winsys/imx/drm/Makefile
-		src/gallium/winsys/freedreno/drm/Makefile
-		src/gallium/winsys/i915/drm/Makefile
-		src/gallium/winsys/nouveau/drm/Makefile
-		src/gallium/winsys/pl111/drm/Makefile
-		src/gallium/winsys/radeon/drm/Makefile
-		src/gallium/winsys/amdgpu/drm/Makefile
-		src/gallium/winsys/svga/drm/Makefile
-		src/gallium/winsys/sw/dri/Makefile
-		src/gallium/winsys/sw/kms-dri/Makefile
-		src/gallium/winsys/sw/null/Makefile
-		src/gallium/winsys/sw/wrapper/Makefile
-		src/gallium/winsys/sw/xlib/Makefile
-		src/gallium/winsys/vc4/drm/Makefile
-		src/gallium/winsys/virgl/drm/Makefile
-		src/gallium/winsys/virgl/vtest/Makefile
-		src/gbm/Makefile
-		src/gbm/main/gbm.pc
-		src/glx/Makefile
-		src/glx/apple/Makefile
-		src/glx/tests/Makefile
-		src/glx/windows/Makefile
-		src/glx/windows/windowsdriproto.pc
-		src/gtest/Makefile
-		src/intel/Makefile
-		src/loader/Makefile
-		src/mapi/Makefile
-		src/mapi/es1api/glesv1_cm.pc
-		src/mapi/es2api/glesv2.pc
-		src/mapi/glapi/gen/Makefile
-		src/mesa/Makefile
-		src/mesa/gl.pc
-		src/mesa/drivers/dri/dri.pc
-		src/mesa/drivers/dri/common/Makefile
-		src/mesa/drivers/dri/common/xmlpool/Makefile
-		src/mesa/drivers/dri/i915/Makefile
-		src/mesa/drivers/dri/i965/Makefile
-		src/mesa/drivers/dri/Makefile
-		src/mesa/drivers/dri/nouveau/Makefile
-		src/mesa/drivers/dri/r200/Makefile
-		src/mesa/drivers/dri/radeon/Makefile
-		src/mesa/drivers/dri/swrast/Makefile
-		src/mesa/drivers/osmesa/Makefile
-		src/mesa/drivers/osmesa/osmesa.pc
-		src/mesa/drivers/x11/Makefile
-		src/mesa/main/tests/Makefile
-		src/util/Makefile
-		src/util/tests/hash_table/Makefile
-		src/vulkan/Makefile])
+                 src/Makefile
+                 src/amd/Makefile
+                 src/amd/vulkan/Makefile
+                 src/broadcom/Makefile
+                 src/compiler/Makefile
+                 src/egl/Makefile
+                 src/egl/main/egl.pc
+                 src/egl/wayland/wayland-drm/Makefile
+                 src/egl/wayland/wayland-egl/Makefile
+                 src/egl/wayland/wayland-egl/wayland-egl.pc
+                 src/gallium/Makefile
+                 src/gallium/auxiliary/Makefile
+                 src/gallium/auxiliary/pipe-loader/Makefile
+                 src/gallium/drivers/freedreno/Makefile
+                 src/gallium/drivers/ddebug/Makefile
+                 src/gallium/drivers/i915/Makefile
+                 src/gallium/drivers/llvmpipe/Makefile
+                 src/gallium/drivers/noop/Makefile
+                 src/gallium/drivers/nouveau/Makefile
+                 src/gallium/drivers/pl111/Makefile
+                 src/gallium/drivers/r300/Makefile
+                 src/gallium/drivers/r600/Makefile
+                 src/gallium/drivers/radeon/Makefile
+                 src/gallium/drivers/radeonsi/Makefile
+                 src/gallium/drivers/rbug/Makefile
+                 src/gallium/drivers/softpipe/Makefile
+                 src/gallium/drivers/svga/Makefile
+                 src/gallium/drivers/swr/Makefile
+                 src/gallium/drivers/trace/Makefile
+                 src/gallium/drivers/etnaviv/Makefile
+                 src/gallium/drivers/imx/Makefile
+                 src/gallium/drivers/vc4/Makefile
+                 src/gallium/drivers/virgl/Makefile
+                 src/gallium/state_trackers/clover/Makefile
+                 src/gallium/state_trackers/dri/Makefile
+                 src/gallium/state_trackers/glx/xlib/Makefile
+                 src/gallium/state_trackers/nine/Makefile
+                 src/gallium/state_trackers/omx/Makefile
+                 src/gallium/state_trackers/osmesa/Makefile
+                 src/gallium/state_trackers/va/Makefile
+                 src/gallium/state_trackers/vdpau/Makefile
+                 src/gallium/state_trackers/xa/Makefile
+                 src/gallium/state_trackers/xvmc/Makefile
+                 src/gallium/targets/d3dadapter9/Makefile
+                 src/gallium/targets/d3dadapter9/d3d.pc
+                 src/gallium/targets/dri/Makefile
+                 src/gallium/targets/libgl-xlib/Makefile
+                 src/gallium/targets/omx/Makefile
+                 src/gallium/targets/opencl/Makefile
+                 src/gallium/targets/opencl/mesa.icd
+                 src/gallium/targets/osmesa/Makefile
+                 src/gallium/targets/osmesa/osmesa.pc
+                 src/gallium/targets/pipe-loader/Makefile
+                 src/gallium/targets/va/Makefile
+                 src/gallium/targets/vdpau/Makefile
+                 src/gallium/targets/xa/Makefile
+                 src/gallium/targets/xa/xatracker.pc
+                 src/gallium/targets/xvmc/Makefile
+                 src/gallium/tests/trivial/Makefile
+                 src/gallium/tests/unit/Makefile
+                 src/gallium/winsys/etnaviv/drm/Makefile
+                 src/gallium/winsys/imx/drm/Makefile
+                 src/gallium/winsys/freedreno/drm/Makefile
+                 src/gallium/winsys/i915/drm/Makefile
+                 src/gallium/winsys/nouveau/drm/Makefile
+                 src/gallium/winsys/pl111/drm/Makefile
+                 src/gallium/winsys/radeon/drm/Makefile
+                 src/gallium/winsys/amdgpu/drm/Makefile
+                 src/gallium/winsys/svga/drm/Makefile
+                 src/gallium/winsys/sw/dri/Makefile
+                 src/gallium/winsys/sw/kms-dri/Makefile
+                 src/gallium/winsys/sw/null/Makefile
+                 src/gallium/winsys/sw/wrapper/Makefile
+                 src/gallium/winsys/sw/xlib/Makefile
+                 src/gallium/winsys/vc4/drm/Makefile
+                 src/gallium/winsys/virgl/drm/Makefile
+                 src/gallium/winsys/virgl/vtest/Makefile
+                 src/gbm/Makefile
+                 src/gbm/main/gbm.pc
+                 src/glx/Makefile
+                 src/glx/apple/Makefile
+                 src/glx/tests/Makefile
+                 src/glx/windows/Makefile
+                 src/glx/windows/windowsdriproto.pc
+                 src/gtest/Makefile
+                 src/intel/Makefile
+                 src/loader/Makefile
+                 src/mapi/Makefile
+                 src/mapi/es1api/glesv1_cm.pc
+                 src/mapi/es2api/glesv2.pc
+                 src/mapi/glapi/gen/Makefile
+                 src/mesa/Makefile
+                 src/mesa/gl.pc
+                 src/mesa/drivers/dri/dri.pc
+                 src/mesa/drivers/dri/common/Makefile
+                 src/mesa/drivers/dri/common/xmlpool/Makefile
+                 src/mesa/drivers/dri/i915/Makefile
+                 src/mesa/drivers/dri/i965/Makefile
+                 src/mesa/drivers/dri/Makefile
+                 src/mesa/drivers/dri/nouveau/Makefile
+                 src/mesa/drivers/dri/r200/Makefile
+                 src/mesa/drivers/dri/radeon/Makefile
+                 src/mesa/drivers/dri/swrast/Makefile
+                 src/mesa/drivers/osmesa/Makefile
+                 src/mesa/drivers/osmesa/osmesa.pc
+                 src/mesa/drivers/x11/Makefile
+                 src/mesa/main/tests/Makefile
+                 src/util/Makefile
+                 src/util/tests/hash_table/Makefile
+                 src/vulkan/Makefile])
 
 AC_OUTPUT
 
