@@ -141,6 +141,20 @@ _mesa_SampleMaski(GLuint index, GLbitfield mask)
    sample_maski(ctx, index, mask);
 }
 
+static void
+min_sample_shading(struct gl_context *ctx, GLclampf value)
+{
+   value = CLAMP(value, 0.0f, 1.0f);
+
+   if (ctx->Multisample.MinSampleShadingValue == value)
+      return;
+
+   FLUSH_VERTICES(ctx,
+                  ctx->DriverFlags.NewSampleShading ? 0 : _NEW_MULTISAMPLE);
+   ctx->NewDriverState |= ctx->DriverFlags.NewSampleShading;
+   ctx->Multisample.MinSampleShadingValue = value;
+}
+
 /**
  * Called via glMinSampleShadingARB
  */
@@ -155,15 +169,7 @@ _mesa_MinSampleShading(GLclampf value)
       return;
    }
 
-   value = CLAMP(value, 0.0f, 1.0f);
-
-   if (ctx->Multisample.MinSampleShadingValue == value)
-      return;
-
-   FLUSH_VERTICES(ctx,
-                  ctx->DriverFlags.NewSampleShading ? 0 : _NEW_MULTISAMPLE);
-   ctx->NewDriverState |= ctx->DriverFlags.NewSampleShading;
-   ctx->Multisample.MinSampleShadingValue = value;
+   min_sample_shading(ctx, value);
 }
 
 /**
