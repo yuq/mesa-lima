@@ -1576,9 +1576,8 @@ _mesa_tex_target_to_index(const struct gl_context *ctx, GLenum target)
  * \param texObj  the new texture object (cannot be NULL)
  */
 static void
-bind_texture(struct gl_context *ctx,
-             unsigned unit,
-             struct gl_texture_object *texObj)
+bind_texture_object(struct gl_context *ctx, unsigned unit,
+                    struct gl_texture_object *texObj)
 {
    struct gl_texture_unit *texUnit;
    int targetIndex;
@@ -1702,7 +1701,7 @@ _mesa_BindTexture( GLenum target, GLuint texName )
    assert(newTexObj->Target == target);
    assert(newTexObj->TargetIndex == targetIndex);
 
-   bind_texture(ctx, ctx->Texture.CurrentUnit, newTexObj);
+   bind_texture_object(ctx, ctx->Texture.CurrentUnit, newTexObj);
 }
 
 
@@ -1755,7 +1754,7 @@ bind_texture_unit(struct gl_context *ctx, GLuint unit, GLuint texture,
 
    assert(valid_texture_object(texObj));
 
-   bind_texture(ctx, unit, texObj);
+   bind_texture_object(ctx, unit, texObj);
 }
 
 
@@ -1842,7 +1841,7 @@ _mesa_BindTextures(GLuint first, GLsizei count, const GLuint *textures)
                texObj = _mesa_lookup_texture_locked(ctx, textures[i]);
 
             if (texObj && texObj->Target != 0) {
-               bind_texture(ctx, first + i, texObj);
+               bind_texture_object(ctx, first + i, texObj);
             } else {
                /* The ARB_multi_bind spec says:
                 *
