@@ -605,18 +605,13 @@ _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
 }
 
 
-void GLAPIENTRY
-_mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA )
+static void
+blend_equation_separate(struct gl_context *ctx, GLenum modeRGB, GLenum modeA,
+                        bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
    const unsigned numBuffers = num_buffers(ctx);
    unsigned buf;
    bool changed = false;
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glBlendEquationSeparateEXT(%s %s)\n",
-                  _mesa_enum_to_string(modeRGB),
-                  _mesa_enum_to_string(modeA));
 
    if (ctx->Color._BlendEquationPerBuffer) {
       /* Check all per-buffer states */
@@ -627,8 +622,7 @@ _mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA )
             break;
          }
       }
-   }
-   else {
+   } else {
       /* only need to check 0th per-buffer state */
       if (ctx->Color.Blend[0].EquationRGB != modeRGB ||
           ctx->Color.Blend[0].EquationA != modeA) {
@@ -639,26 +633,29 @@ _mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA )
    if (!changed)
       return;
 
-   if ( (modeRGB != modeA) && !ctx->Extensions.EXT_blend_equation_separate ) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-		  "glBlendEquationSeparateEXT not supported by driver");
-      return;
-   }
+   if (!no_error) {
+      if ((modeRGB != modeA) && !ctx->Extensions.EXT_blend_equation_separate) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBlendEquationSeparateEXT not supported by driver");
+         return;
+      }
 
-   /* Only allow simple blending equations.
-    * The GL_KHR_blend_equation_advanced spec says:
-    *
-    *    "NOTE: These enums are not accepted by the <modeRGB> or <modeAlpha>
-    *     parameters of BlendEquationSeparate or BlendEquationSeparatei."
-    */
-   if (!legal_simple_blend_equation(ctx, modeRGB)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparateEXT(modeRGB)");
-      return;
-   }
+      /* Only allow simple blending equations.
+       * The GL_KHR_blend_equation_advanced spec says:
+       *
+       *    "NOTE: These enums are not accepted by the <modeRGB> or <modeAlpha>
+       *     parameters of BlendEquationSeparate or BlendEquationSeparatei."
+       */
+      if (!legal_simple_blend_equation(ctx, modeRGB)) {
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "glBlendEquationSeparateEXT(modeRGB)");
+         return;
+      }
 
-   if (!legal_simple_blend_equation(ctx, modeA)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparateEXT(modeA)");
-      return;
+      if (!legal_simple_blend_equation(ctx, modeA)) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparateEXT(modeA)");
+         return;
+      }
    }
 
    _mesa_flush_vertices_for_blend_state(ctx);
@@ -672,6 +669,20 @@ _mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA )
 
    if (ctx->Driver.BlendEquationSeparate)
       ctx->Driver.BlendEquationSeparate(ctx, modeRGB, modeA);
+}
+
+
+void GLAPIENTRY
+_mesa_BlendEquationSeparate(GLenum modeRGB, GLenum modeA)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glBlendEquationSeparateEXT(%s %s)\n",
+                  _mesa_enum_to_string(modeRGB),
+                  _mesa_enum_to_string(modeA));
+
+   blend_equation_separate(ctx, modeRGB, modeA, false);
 }
 
 
