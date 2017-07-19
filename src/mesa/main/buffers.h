@@ -58,6 +58,10 @@ _mesa_DrawBuffers_no_error(GLsizei n, const GLenum *buffers);
 extern void GLAPIENTRY
 _mesa_DrawBuffers(GLsizei n, const GLenum *buffers);
 
+void GLAPIENTRY
+_mesa_NamedFramebufferDrawBuffers_no_error(GLuint framebuffer, GLsizei n,
+                                           const GLenum *bufs);
+
 extern void GLAPIENTRY
 _mesa_NamedFramebufferDrawBuffers(GLuint framebuffer, GLsizei n,
                                   const GLenum *bufs);
