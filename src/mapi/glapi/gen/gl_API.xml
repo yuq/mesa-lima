@@ -3333,7 +3333,7 @@
         <glx sop="143" handcode="client" always_array="true"/>
     </function>
 
-    <function name="BindTexture" es1="1.0" es2="2.0">
+    <function name="BindTexture" es1="1.0" es2="2.0" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="texture" type="GLuint"/>
         <glx rop="4117"/>

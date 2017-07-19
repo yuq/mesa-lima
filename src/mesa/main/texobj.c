@@ -1703,6 +1703,14 @@ bind_texture(struct gl_context *ctx, GLenum target, GLuint texName,
 
 
 void GLAPIENTRY
+_mesa_BindTexture_no_error(GLenum target, GLuint texName)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_texture(ctx, target, texName, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BindTexture(GLenum target, GLuint texName)
 {
    GET_CURRENT_CONTEXT(ctx);

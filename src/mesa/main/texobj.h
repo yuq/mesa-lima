@@ -193,6 +193,9 @@ extern void GLAPIENTRY
 _mesa_DeleteTextures( GLsizei n, const GLuint *textures );
 
 
+void GLAPIENTRY
+_mesa_BindTexture_no_error(GLenum target, GLuint texture);
+
 extern void GLAPIENTRY
 _mesa_BindTexture( GLenum target, GLuint texture );
 
