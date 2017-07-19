@@ -1613,6 +1613,14 @@ delete_buffers(struct gl_context *ctx, GLsizei n, const GLuint *ids)
 
 
 void GLAPIENTRY
+_mesa_DeleteBuffers_no_error(GLsizei n, const GLuint *ids)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   delete_buffers(ctx, n, ids);
+}
+
+
+void GLAPIENTRY
 _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
 {
    GET_CURRENT_CONTEXT(ctx);
