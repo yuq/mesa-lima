@@ -575,20 +575,35 @@ swrast_get_image(__DRIdrawable *driDrawable,
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
    int internal_stride, stride;
    struct gbm_dri_bo *bo;
+   uint32_t bpp;
+   int x_bytes, width_bytes;
+   char *src, *dst;
 
    if (get_swrast_front_bo(dri2_surf) < 0)
       return;
 
    bo = gbm_dri_bo(dri2_surf->current->bo);
+
+   bpp = gbm_bo_get_bpp(&bo->base);
+   if (bpp == 0)
+      return;
+
+   x_bytes = x * (bpp >> 3);
+   width_bytes = width * (bpp >> 3);
+
+   internal_stride = bo->base.stride;
+   stride = width_bytes;
+
    if (gbm_dri_bo_map_dumb(bo) == NULL)
       return;
 
-   internal_stride = bo->base.stride;
-   stride = width * 4;
+   dst = data;
+   src = bo->map + x_bytes + (y * internal_stride);
 
    for (int i = 0; i < height; i++) {
-      memcpy(data + i * stride,
-             bo->map + (x + i) * internal_stride + y, stride);
+      memcpy(dst, src, width_bytes);
+      dst += stride;
+      src += internal_stride;
    }
 
    gbm_dri_bo_unmap_dumb(bo);
