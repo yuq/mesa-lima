@@ -1937,6 +1937,14 @@ primitive_restart_index(struct gl_context *ctx, GLuint index)
  * GL_NV_primitive_restart and GL 3.1
  */
 void GLAPIENTRY
+_mesa_PrimitiveRestartIndex_no_error(GLuint index)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   primitive_restart_index(ctx, index);
+}
+
+
+void GLAPIENTRY
 _mesa_PrimitiveRestartIndex(GLuint index)
 {
    GET_CURRENT_CONTEXT(ctx);

@@ -351,6 +351,9 @@ _mesa_DrawRangeElementsBaseVertex(GLenum mode, GLuint start, GLuint end,
 extern void GLAPIENTRY
 _mesa_DrawTransformFeedback(GLenum mode, GLuint name);
 
+void GLAPIENTRY
+_mesa_PrimitiveRestartIndex_no_error(GLuint index);
+
 extern void GLAPIENTRY
 _mesa_PrimitiveRestartIndex(GLuint index);
 
