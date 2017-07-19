@@ -858,6 +858,18 @@ miptree_create(struct brw_context *brw,
                                         mt->surf.tiling),
                                      &mt->pitch,
                                      alloc_flags);
+
+      /* The stencil buffer has quirky pitch requirements.  From the
+       * Sandybridge PRM, Volume 2 Part 1, page 329 (3DSTATE_STENCIL_BUFFER
+       * dword 1 bits 16:0 - Surface Pitch):
+       *
+       *    The pitch must be set to 2x the value computed based on width, as
+       *    the stencil buffer is stored with two rows interleaved.
+       *
+       * While the Ivybridge PRM lacks this comment, the BSpec contains the
+       * same text, and experiments indicate that this is necessary.
+       */
+      mt->pitch *= 2;
    } else {
       mt->bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "miptree",
                                      mt->total_width, mt->total_height,
@@ -2819,7 +2831,7 @@ intel_offset_S8(uint32_t stride, uint32_t x, uint32_t y, bool swizzled)
    uint32_t tile_size = 4096;
    uint32_t tile_width = 64;
    uint32_t tile_height = 64;
-   uint32_t row_size = 64 * stride;
+   uint32_t row_size = 64 * stride / 2; /* Two rows are interleaved. */
 
    uint32_t tile_x = x / tile_width;
    uint32_t tile_y = y / tile_height;
@@ -3197,12 +3209,8 @@ intel_miptree_map_s8(struct brw_context *brw,
     * temporary buffer back out.
     */
    if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
-      /* ISL uses a stencil pitch value that is expected by hardware whereas
-       * traditional miptree uses half of that. Below the value gets supplied
-       * to intel_offset_S8() which expects the legacy interpretation.
-       */
       const unsigned pitch = mt->surf.size > 0 ?
-                             mt->surf.row_pitch / 2 : mt->pitch;
+                             mt->surf.row_pitch : mt->pitch;
       uint8_t *untiled_s8_map = map->ptr;
       uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_READ_BIT);
       unsigned int image_x, image_y;
@@ -3239,12 +3247,8 @@ intel_miptree_unmap_s8(struct brw_context *brw,
 		       unsigned int slice)
 {
    if (map->mode & GL_MAP_WRITE_BIT) {
-      /* ISL uses a stencil pitch value that is expected by hardware whereas
-       * traditional miptree uses half of that. Below the value gets supplied
-       * to intel_offset_S8() which expects the legacy interpretation.
-       */
       const unsigned pitch = mt->surf.size > 0 ?
-                             mt->surf.row_pitch / 2: mt->pitch;
+                             mt->surf.row_pitch : mt->pitch;
       unsigned int image_x, image_y;
       uint8_t *untiled_s8_map = map->ptr;
       uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_WRITE_BIT);
@@ -3352,12 +3356,8 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
     * temporary buffer back out.
     */
    if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
-      /* ISL uses a stencil pitch value that is expected by hardware whereas
-       * traditional miptree uses half of that. Below the value gets supplied
-       * to intel_offset_S8() which expects the legacy interpretation.
-       */
       const unsigned s_pitch = s_mt->surf.size > 0 ?
-                               s_mt->surf.row_pitch / 2 : s_mt->pitch;
+                               s_mt->surf.row_pitch : s_mt->pitch;
       uint32_t *packed_map = map->ptr;
       uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_READ_BIT);
       uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_READ_BIT);
@@ -3419,12 +3419,8 @@ intel_miptree_unmap_depthstencil(struct brw_context *brw,
    bool map_z32f_x24s8 = mt->format == MESA_FORMAT_Z_FLOAT32;
 
    if (map->mode & GL_MAP_WRITE_BIT) {
-      /* ISL uses a stencil pitch value that is expected by hardware whereas
-       * traditional miptree uses half of that. Below the value gets supplied
-       * to intel_offset_S8() which expects the legacy interpretation.
-       */
       const unsigned s_pitch = s_mt->surf.size > 0 ?
-                               s_mt->surf.row_pitch / 2 : s_mt->pitch;
+                               s_mt->surf.row_pitch : s_mt->pitch;
       uint32_t *packed_map = map->ptr;
       uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_WRITE_BIT);
       uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_WRITE_BIT);
@@ -3738,17 +3734,7 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
                                          mt->array_layout);
    surf->msaa_layout = mt->surf.msaa_layout;
    surf->tiling = intel_miptree_get_isl_tiling(mt);
-
-   if (mt->format == MESA_FORMAT_S_UINT8) {
-      /* The ISL definition of row_pitch matches the surface state pitch field
-       * a bit better than intel_mipmap_tree.  In particular, ISL incorporates
-       * the factor of 2 for W-tiling in row_pitch.
-       */
-      surf->row_pitch = 2 * mt->pitch;
-   } else {
-      surf->row_pitch = mt->pitch;
-   }
-
+   surf->row_pitch = mt->pitch;
    surf->format = translate_tex_format(brw, mt->format, false);
 
    if (brw->gen >= 9) {

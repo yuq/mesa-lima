@@ -111,22 +111,8 @@ emit_depth_packets(struct brw_context *brw,
    } else {
       BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (5 - 2));
-      /* The stencil buffer has quirky pitch requirements.  From the Graphics
-       * BSpec: vol2a.11 3D Pipeline Windower > Early Depth/Stencil Processing
-       * > Depth/Stencil Buffer State > 3DSTATE_STENCIL_BUFFER [DevIVB+],
-       * field "Surface Pitch":
-       *
-       *    The pitch must be set to 2x the value computed based on width, as
-       *    the stencil buffer is stored with two rows interleaved.
-       *
-       * (Note that it is not 100% clear whether this intended to apply to
-       * Gen7; the BSpec flags this comment as "DevILK,DevSNB" (which would
-       * imply that it doesn't), however the comment appears on a "DevIVB+"
-       * page (which would imply that it does).  Experiments with the hardware
-       * indicate that it does.
-       */
       OUT_BATCH(HSW_STENCIL_ENABLED | mocs_wb << 22 |
-                (2 * stencil_mt->pitch - 1));
+                (stencil_mt->pitch - 1));
       OUT_RELOC64(stencil_mt->bo,
                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
       OUT_BATCH(stencil_mt ? stencil_mt->qpitch >> 2 : 0);

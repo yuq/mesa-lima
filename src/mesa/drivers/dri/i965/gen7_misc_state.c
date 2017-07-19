@@ -170,19 +170,9 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
 
       BEGIN_BATCH(3);
       OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (3 - 2));
-      /* The stencil buffer has quirky pitch requirements.  From the
-       * Sandybridge PRM, Volume 2 Part 1, page 329 (3DSTATE_STENCIL_BUFFER
-       * dword 1 bits 16:0 - Surface Pitch):
-       *
-       *    The pitch must be set to 2x the value computed based on width, as
-       *    the stencil buffer is stored with two rows interleaved.
-       *
-       * While the Ivybridge PRM lacks this comment, the BSpec contains the
-       * same text, and experiments indicate that this is necessary.
-       */
       OUT_BATCH(enabled |
                 mocs << 25 |
-	        (2 * stencil_mt->pitch - 1));
+	        (stencil_mt->pitch - 1));
       OUT_RELOC(stencil_mt->bo,
 	        I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
 		0);
