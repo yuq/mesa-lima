@@ -1072,51 +1072,48 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
        __func__, opname, mt, level, start_layer, start_layer + num_layers - 1);
 
    /* The following stalls and flushes are only documented to be required for
-    * HiZ clear operations.  However, they also seem to be required for the
-    * HiZ resolve operation which is basically the same as a fast clear only a
-    * different value is written into the HiZ surface.
+    * HiZ clear operations.  However, they also seem to be required for
+    * resolve operations.
     */
-   if (op == BLORP_HIZ_OP_DEPTH_CLEAR || op == BLORP_HIZ_OP_HIZ_RESOLVE) {
-      if (brw->gen == 6) {
-         /* From the Sandy Bridge PRM, volume 2 part 1, page 313:
-          *
-          *   "If other rendering operations have preceded this clear, a
-          *   PIPE_CONTROL with write cache flush enabled and Z-inhibit
-          *   disabled must be issued before the rectangle primitive used for
-          *   the depth buffer clear operation.
-          */
-          brw_emit_pipe_control_flush(brw,
-                                      PIPE_CONTROL_RENDER_TARGET_FLUSH |
-                                      PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                                      PIPE_CONTROL_CS_STALL);
-      } else if (brw->gen >= 7) {
-         /*
-          * From the Ivybridge PRM, volume 2, "Depth Buffer Clear":
-          *
-          *   If other rendering operations have preceded this clear, a
-          *   PIPE_CONTROL with depth cache flush enabled, Depth Stall bit
-          *   enabled must be issued before the rectangle primitive used for
-          *   the depth buffer clear operation.
-          *
-          * Same applies for Gen8 and Gen9.
-          *
-          * In addition, from the Ivybridge PRM, volume 2, 1.10.4.1
-          * PIPE_CONTROL, Depth Cache Flush Enable:
-          *
-          *   This bit must not be set when Depth Stall Enable bit is set in
-          *   this packet.
-          *
-          * This is confirmed to hold for real, HSW gets immediate gpu hangs.
-          *
-          * Therefore issue two pipe control flushes, one for cache flush and
-          * another for depth stall.
-          */
-          brw_emit_pipe_control_flush(brw,
-                                      PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                                      PIPE_CONTROL_CS_STALL);
+   if (brw->gen == 6) {
+      /* From the Sandy Bridge PRM, volume 2 part 1, page 313:
+       *
+       *   "If other rendering operations have preceded this clear, a
+       *   PIPE_CONTROL with write cache flush enabled and Z-inhibit
+       *   disabled must be issued before the rectangle primitive used for
+       *   the depth buffer clear operation.
+       */
+       brw_emit_pipe_control_flush(brw,
+                                   PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                   PIPE_CONTROL_CS_STALL);
+   } else if (brw->gen >= 7) {
+      /*
+       * From the Ivybridge PRM, volume 2, "Depth Buffer Clear":
+       *
+       *   If other rendering operations have preceded this clear, a
+       *   PIPE_CONTROL with depth cache flush enabled, Depth Stall bit
+       *   enabled must be issued before the rectangle primitive used for
+       *   the depth buffer clear operation.
+       *
+       * Same applies for Gen8 and Gen9.
+       *
+       * In addition, from the Ivybridge PRM, volume 2, 1.10.4.1
+       * PIPE_CONTROL, Depth Cache Flush Enable:
+       *
+       *   This bit must not be set when Depth Stall Enable bit is set in
+       *   this packet.
+       *
+       * This is confirmed to hold for real, HSW gets immediate gpu hangs.
+       *
+       * Therefore issue two pipe control flushes, one for cache flush and
+       * another for depth stall.
+       */
+       brw_emit_pipe_control_flush(brw,
+                                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                   PIPE_CONTROL_CS_STALL);
 
-          brw_emit_pipe_control_flush(brw, PIPE_CONTROL_DEPTH_STALL);
-      }
+       brw_emit_pipe_control_flush(brw, PIPE_CONTROL_DEPTH_STALL);
    }
 
 
@@ -1133,42 +1130,39 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    blorp_batch_finish(&batch);
 
    /* The following stalls and flushes are only documented to be required for
-    * HiZ clear operations.  However, they also seem to be required for the
-    * HiZ resolve operation which is basically the same as a fast clear only a
-    * different value is written into the HiZ surface.
+    * HiZ clear operations.  However, they also seem to be required for
+    * resolve operations.
     */
-   if (op == BLORP_HIZ_OP_DEPTH_CLEAR || op == BLORP_HIZ_OP_HIZ_RESOLVE) {
-      if (brw->gen == 6) {
-         /* From the Sandy Bridge PRM, volume 2 part 1, page 314:
-          *
-          *     "DevSNB, DevSNB-B{W/A}]: Depth buffer clear pass must be
-          *     followed by a PIPE_CONTROL command with DEPTH_STALL bit set
-          *     and Then followed by Depth FLUSH'
-         */
-         brw_emit_pipe_control_flush(brw,
-                                     PIPE_CONTROL_DEPTH_STALL);
+   if (brw->gen == 6) {
+      /* From the Sandy Bridge PRM, volume 2 part 1, page 314:
+       *
+       *     "DevSNB, DevSNB-B{W/A}]: Depth buffer clear pass must be
+       *     followed by a PIPE_CONTROL command with DEPTH_STALL bit set
+       *     and Then followed by Depth FLUSH'
+      */
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_DEPTH_STALL);
 
-         brw_emit_pipe_control_flush(brw,
-                                     PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                                     PIPE_CONTROL_CS_STALL);
-      } else if (brw->gen >= 8) {
-         /*
-          * From the Broadwell PRM, volume 7, "Depth Buffer Clear":
-          *
-          *    "Depth buffer clear pass using any of the methods (WM_STATE,
-          *    3DSTATE_WM or 3DSTATE_WM_HZ_OP) must be followed by a
-          *    PIPE_CONTROL command with DEPTH_STALL bit and Depth FLUSH bits
-          *    "set" before starting to render.  DepthStall and DepthFlush are
-          *    not needed between consecutive depth clear passes nor is it
-          *    required if the depth clear pass was done with
-          *    'full_surf_clear' bit set in the 3DSTATE_WM_HZ_OP."
-          *
-          *  TODO: Such as the spec says, this could be conditional.
-          */
-         brw_emit_pipe_control_flush(brw,
-                                     PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                                     PIPE_CONTROL_DEPTH_STALL);
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                  PIPE_CONTROL_CS_STALL);
+   } else if (brw->gen >= 8) {
+      /*
+       * From the Broadwell PRM, volume 7, "Depth Buffer Clear":
+       *
+       *    "Depth buffer clear pass using any of the methods (WM_STATE,
+       *    3DSTATE_WM or 3DSTATE_WM_HZ_OP) must be followed by a
+       *    PIPE_CONTROL command with DEPTH_STALL bit and Depth FLUSH bits
+       *    "set" before starting to render.  DepthStall and DepthFlush are
+       *    not needed between consecutive depth clear passes nor is it
+       *    required if the depth clear pass was done with
+       *    'full_surf_clear' bit set in the 3DSTATE_WM_HZ_OP."
+       *
+       *  TODO: Such as the spec says, this could be conditional.
+       */
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                  PIPE_CONTROL_DEPTH_STALL);
 
-      }
    }
 }
