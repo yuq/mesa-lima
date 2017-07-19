@@ -741,6 +741,16 @@ static SIMDINLINE void SIMDCALL storeu2_si(SIMD128Impl::Integer *phi, SIMD128Imp
     _mm256_storeu2_m128i(&phi->v, &plo->v, src);
 }
 
+static SIMDINLINE Float SIMDCALL vmask_ps(int32_t mask)
+{
+    Integer vec = set1_epi32(mask);
+    const Integer bit = set_epi32(
+        0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01);
+    vec = and_si(vec, bit);
+    vec = cmplt_epi32(setzero_si(), vec);
+    return castsi_ps(vec);
+}
+
 #undef SIMD_WRAPPER_1
 #undef SIMD_WRAPPER_2
 #undef SIMD_DWRAPPER_2

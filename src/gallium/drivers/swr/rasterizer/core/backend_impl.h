@@ -576,7 +576,7 @@ struct PixelRateZTestLoop
         for(uint32_t sample = 0; sample < T::MultisampleT::numCoverageSamples; sample++)
         {
             const uint8_t *pCoverageMask = (uint8_t*)&work.coverageMask[sample];
-            vCoverageMask[sample] = _simd_and_ps(activeLanes, vMask(pCoverageMask[currentSimdIn8x8] & MASK));
+            vCoverageMask[sample] = _simd_and_ps(activeLanes, _simd_vmask_ps(pCoverageMask[currentSimdIn8x8] & MASK));
 
             if(!_simd_movemask_ps(vCoverageMask[sample]))
             {
@@ -597,7 +597,7 @@ struct PixelRateZTestLoop
                 const float minz = state.depthBoundsState.depthBoundsTestMinValue;
                 const float maxz = state.depthBoundsState.depthBoundsTestMaxValue;
 
-                vCoverageMask[sample] = _simd_and_ps(vCoverageMask[sample], vMask(CalcDepthBoundsAcceptMask(z, minz, maxz)));
+                vCoverageMask[sample] = _simd_and_ps(vCoverageMask[sample], _simd_vmask_ps(CalcDepthBoundsAcceptMask(z, minz, maxz)));
             }
 
             AR_BEGIN(BEBarycentric, pDC->drawId);
@@ -630,7 +630,7 @@ struct PixelRateZTestLoop
             {
                 uint8_t clipMask = ComputeUserClipMask(clipDistanceMask, work.pUserClipBuffer, psContext.vI.sample, psContext.vJ.sample);
 
-                vCoverageMask[sample] = _simd_and_ps(vCoverageMask[sample], vMask(~clipMask));
+                vCoverageMask[sample] = _simd_and_ps(vCoverageMask[sample], _simd_vmask_ps(~clipMask));
             }
 
             // ZTest for this sample
@@ -907,7 +907,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
 #endif
             simdscalar activeLanes;
             if(!(work.anyCoveredSamples & MASK)) {goto Endtile;};
-            activeLanes = vMask(work.anyCoveredSamples & MASK);
+            activeLanes = _simd_vmask_ps(work.anyCoveredSamples & MASK);
 
             if (T::InputCoverage != SWR_INPUT_COVERAGE_NONE)
             {

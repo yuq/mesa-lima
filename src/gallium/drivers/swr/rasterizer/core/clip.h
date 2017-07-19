@@ -1013,7 +1013,7 @@ public:
             AR_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(vMask(primMask), vMask(clipMask), pa, primId);
+            ClipSimd(_simd_vmask_ps(primMask), _simd_vmask_ps(clipMask), pa, primId);
             AR_END(FEGuardbandClip, 1);
         }
         else if (validMask)
@@ -1081,7 +1081,7 @@ public:
 
         // cull prims outside view frustum
         simd16scalar clipIntersection = ComputeClipCodeIntersection_simd16();
-        int validMask = primMask & _simd16_movemask_ps(_simd16_cmpeq_ps(clipIntersection, _simd16_setzero_ps()));
+        int validMask = primMask & _simd16_cmpeq_ps_mask(clipIntersection, _simd16_setzero_ps());
 
         // skip clipping for points
         uint32_t clipMask = 0;
@@ -1095,7 +1095,7 @@ public:
             AR_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(vMask(primMask), vMask(clipMask), pa, primId);
+            ClipSimd(_simd16_vmask_ps(primMask), _simd16_vmask_ps(clipMask), pa, primId);
             AR_END(FEGuardbandClip, 1);
         }
         else if (validMask)

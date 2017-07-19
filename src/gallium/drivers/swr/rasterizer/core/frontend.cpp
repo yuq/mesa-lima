@@ -481,7 +481,7 @@ static INLINE simdscalari GenerateMask(uint32_t numItemsRemaining)
 {
     uint32_t numActive = (numItemsRemaining >= KNOB_SIMD_WIDTH) ? KNOB_SIMD_WIDTH : numItemsRemaining;
     uint32_t mask = (numActive > 0) ? ((1 << numActive) - 1) : 0;
-    return _simd_castps_si(vMask(mask));
+    return _simd_castps_si(_simd_vmask_ps(mask));
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -554,12 +554,12 @@ static SIMDINLINE uint64_t SIMDCALL movemask_epi8(Integer a)
 
 static SIMDINLINE uint32_t SIMDCALL movemask_pd(Double a)
 {
-    __mmask8 m = _mm512_cmplt_pd_mask(a, setzero_pd());
+    __mmask8 m = _mm512_test_epi64_mask(castpd_si(a), set1_epi32(-1));
     return static_cast<uint32_t>(m);
 }
 static SIMDINLINE uint32_t SIMDCALL movemask_ps(Float a)
 {
-    __mmask16 m = _mm512_cmplt_ps_mask(a, setzero_ps());
+    __mmask16 m = _mm512_test_epi32_mask(castps_si(a), set1_epi32(-1));
     return static_cast<uint32_t>(m);
 }
 

@@ -29,9 +29,6 @@
 //
 //============================================================================
 
-static const int TARGET_SIMD_WIDTH = 16;
-using SIMD256T = SIMD256Impl::AVX2Impl;
-
 #define SIMD_WRAPPER_1_(op, intrin)  \
     static SIMDINLINE Float SIMDCALL op(Float a)   \
     {\
@@ -134,24 +131,6 @@ using SIMD256T = SIMD256Impl::AVX2Impl;
         return _mm512_##intrin(a, b, ImmT);\
     }
 #define SIMD_IWRAPPER_2I(op) SIMD_IWRAPPER_2I_(op, op)
-
-private:
-    static SIMDINLINE Integer vmask(__mmask8 m)
-    {
-        return _mm512_maskz_set1_epi64(m, -1LL);
-    }
-    static SIMDINLINE Integer vmask(__mmask16 m)
-    {
-        return _mm512_maskz_set1_epi32(m, -1);
-    }
-    static SIMDINLINE Integer vmask(__mmask32 m)
-    {
-        return _mm512_maskz_set1_epi16(m, -1);
-    }
-    static SIMDINLINE Integer vmask(__mmask64 m)
-    {
-        return _mm512_maskz_set1_epi8(m, -1);
-    }
 
 public:
 SIMD_WRAPPERI_2_(and_ps, and_epi32);          // return a & b       (float treated as int)

@@ -821,13 +821,11 @@ static SIMDINLINE Float SIMDCALL set_ps(
 
 static SIMDINLINE Float SIMDCALL vmask_ps(int32_t mask)
 {
-    Integer vec = set1_epi32(mask);
-    const Integer bit = set_epi32(
-        0x8000, 0x4000, 0x2000, 0x1000, 0x0800, 0x0400, 0x0200, 0x0100,
-        0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01);
-    vec = and_si(vec, bit);
-    vec = cmplt_epi32(setzero_si(), vec);
-    return castsi_ps(vec);
+    return Float
+    {
+        SIMD256T::vmask_ps(mask),
+        SIMD256T::vmask_ps(mask >> TARGET_SIMD_WIDTH)
+    };
 }
 
 #undef SIMD_WRAPPER_1

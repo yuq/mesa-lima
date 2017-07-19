@@ -181,31 +181,12 @@ typedef SIMD256                             SIMD;
 #define _simd_storeu2_si                    SIMD::storeu2_si
 
 #define _simd_blendv_epi32                  SIMD::blendv_epi32
+#define _simd_vmask_ps                      SIMD::vmask_ps
 
 template<int mask> SIMDINLINE
 SIMD128::Integer _simd_blend4_epi32(SIMD128::Integer a, SIMD128::Integer b)
 {
     return SIMD128::castps_si(SIMD128::blend_ps<mask>(SIMD128::castsi_ps(a), SIMD128::castsi_ps(b)));
-}
-
-// convert bitmask to vector mask
-SIMDINLINE
-SIMD256::Float vMask(int32_t mask)
-{
-    SIMD256::Integer vec = SIMD256::set1_epi32(mask);
-    const SIMD256::Integer bit = SIMD256::set_epi32(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01);
-    vec = SIMD256::and_si(vec, bit);
-    vec = SIMD256::cmplt_epi32(SIMD256::setzero_si(), vec);
-    return SIMD256::castsi_ps(vec);
-}
-
-SIMDINLINE
-SIMD256::Integer vMaski(int32_t mask)
-{
-    SIMD256::Integer vec = SIMD256::set1_epi32(mask);
-    const SIMD256::Integer bit = SIMD256::set_epi32(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01);
-    vec = SIMD256::and_si(vec, bit);
-    return SIMD256::cmplt_epi32(SIMD256::setzero_si(), vec);
 }
 
 SIMDINLINE

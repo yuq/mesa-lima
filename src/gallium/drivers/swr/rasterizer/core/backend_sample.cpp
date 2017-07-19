@@ -133,7 +133,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                         coverageMask &= ~ComputeUserClipMask(state.rastState.clipDistanceMask, work.pUserClipBuffer, psContext.vI.sample, psContext.vJ.sample);
                     }
 
-                    simdscalar vCoverageMask = vMask(coverageMask);
+                    simdscalar vCoverageMask = _simd_vmask_ps(coverageMask);
                     simdscalar depthPassMask = vCoverageMask;
                     simdscalar stencilPassMask = vCoverageMask;
 

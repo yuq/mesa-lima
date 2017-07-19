@@ -117,7 +117,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                     coverageMask &= ~ComputeUserClipMask(state.rastState.clipDistanceMask, work.pUserClipBuffer, psContext.vI.center, psContext.vJ.center);
                 }
 
-                simdscalar vCoverageMask = vMask(coverageMask);
+                simdscalar vCoverageMask = _simd_vmask_ps(coverageMask);
                 simdscalar depthPassMask = vCoverageMask;
                 simdscalar stencilPassMask = vCoverageMask;
 
