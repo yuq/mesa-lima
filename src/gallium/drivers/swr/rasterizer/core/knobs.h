@@ -40,7 +40,7 @@
 
 #define ENABLE_AVX512_SIMD16    1
 #define USE_8x2_TILE_BACKEND    1
-#define USE_SIMD16_FRONTEND     0
+#define USE_SIMD16_FRONTEND     1
 
 ///////////////////////////////////////////////////////////////////////////////
 // Architecture validation
