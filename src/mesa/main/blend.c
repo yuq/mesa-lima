@@ -673,6 +673,14 @@ blend_equation_separate(struct gl_context *ctx, GLenum modeRGB, GLenum modeA,
 
 
 void GLAPIENTRY
+_mesa_BlendEquationSeparate_no_error(GLenum modeRGB, GLenum modeA)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   blend_equation_separate(ctx, modeRGB, modeA, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BlendEquationSeparate(GLenum modeRGB, GLenum modeA)
 {
    GET_CURRENT_CONTEXT(ctx);

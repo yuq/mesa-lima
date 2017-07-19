@@ -5261,7 +5261,7 @@
     <enum name="STENCIL_BACK_VALUE_MASK"          value="0x8CA4"/>
     <enum name="STENCIL_BACK_WRITEMASK"           value="0x8CA5"/>
 
-    <function name="BlendEquationSeparate" es2="2.0">
+    <function name="BlendEquationSeparate" es2="2.0" no_error="true">
         <param name="modeRGB" type="GLenum"/>
         <param name="modeA" type="GLenum"/>
         <glx rop="4228"/>
