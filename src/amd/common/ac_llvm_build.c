@@ -212,20 +212,6 @@ ac_build_intrinsic(struct ac_llvm_context *ctx, const char *name,
 	return call;
 }
 
-static LLVMValueRef bitcast_to_float(struct ac_llvm_context *ctx,
-				     LLVMValueRef value)
-{
-	LLVMTypeRef type = LLVMTypeOf(value);
-	LLVMTypeRef new_type;
-
-	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind)
-		new_type = LLVMVectorType(ctx->f32, LLVMGetVectorSize(type));
-	else
-		new_type = ctx->f32;
-
-	return LLVMBuildBitCast(ctx->builder, value, new_type, "");
-}
-
 /**
  * Given the i32 or vNi32 \p type, generate the textual name (e.g. for use with
  * intrinsic names).
@@ -761,7 +747,7 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 			offset = LLVMBuildAdd(ctx->builder, offset, voffset, "");
 
 		LLVMValueRef args[] = {
-			bitcast_to_float(ctx, vdata),
+			ac_to_float(ctx, vdata),
 			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
 			LLVMConstInt(ctx->i32, 0, 0),
 			offset,
@@ -1218,7 +1204,7 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 			      a->opcode == ac_image_get_lod;
 
 		if (sample)
-			args[num_args++] = bitcast_to_float(ctx, a->addr);
+			args[num_args++] = ac_to_float(ctx, a->addr);
 		else
 			args[num_args++] = a->addr;
 
