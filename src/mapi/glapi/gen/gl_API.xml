@@ -5334,7 +5334,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="DetachShader" es2="2.0">
+    <function name="DetachShader" es2="2.0" no_error="true">
         <param name="program" type="GLuint"/>
         <param name="shader" type="GLuint"/>
         <glx ignore="true"/>
@@ -7681,7 +7681,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="DetachObjectARB">
+    <function name="DetachObjectARB" no_error="true">
         <param name="containerObj" type="GLhandleARB"/>
         <param name="attachedObj" type="GLhandleARB"/>
         <glx ignore="true"/>

@@ -95,6 +95,9 @@ _mesa_CreateShaderObjectARB(GLenum type);
 extern void GLAPIENTRY
 _mesa_DeleteObjectARB(GLhandleARB obj);
 
+void GLAPIENTRY
+_mesa_DetachObjectARB_no_error(GLhandleARB, GLhandleARB);
+
 extern void GLAPIENTRY
 _mesa_DetachObjectARB(GLhandleARB, GLhandleARB);
 
@@ -192,6 +195,9 @@ _mesa_DeleteProgram(GLuint program);
 
 extern void GLAPIENTRY
 _mesa_DeleteShader(GLuint shader);
+
+void GLAPIENTRY
+_mesa_DetachShader_no_error(GLuint program, GLuint shader);
 
 extern void GLAPIENTRY
 _mesa_DetachShader(GLuint program, GLuint shader);

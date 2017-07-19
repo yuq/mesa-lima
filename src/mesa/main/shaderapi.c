@@ -504,6 +504,13 @@ detach_shader_error(struct gl_context *ctx, GLuint program, GLuint shader)
 }
 
 
+static void
+detach_shader_no_error(struct gl_context *ctx, GLuint program, GLuint shader)
+{
+   detach_shader(ctx, program, shader, true);
+}
+
+
 /**
  * Return list of shaders attached to shader program.
  */
@@ -1508,10 +1515,26 @@ _mesa_DeleteShader(GLuint name)
 
 
 void GLAPIENTRY
+_mesa_DetachObjectARB_no_error(GLhandleARB program, GLhandleARB shader)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   detach_shader_no_error(ctx, program, shader);
+}
+
+
+void GLAPIENTRY
 _mesa_DetachObjectARB(GLhandleARB program, GLhandleARB shader)
 {
    GET_CURRENT_CONTEXT(ctx);
    detach_shader_error(ctx, program, shader);
+}
+
+
+void GLAPIENTRY
+_mesa_DetachShader_no_error(GLuint program, GLuint shader)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   detach_shader_no_error(ctx, program, shader);
 }
 
 
