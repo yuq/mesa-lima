@@ -105,7 +105,7 @@ endif
 
 AM_CFLAGS += \
 	-I$(top_srcdir)/src/loader \
-	-I$(top_builddir)/src/egl/drivers/dri2 \ 
+	-I$(top_builddir)/src/egl/drivers/dri2 \
 	-I$(top_srcdir)/src/egl/drivers/dri2 \
 	-I$(top_srcdir)/src/gbm/backends/dri \
 	-I$(top_srcdir)/src/egl/wayland/wayland-egl \
