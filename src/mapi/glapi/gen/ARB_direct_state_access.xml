@@ -374,7 +374,7 @@
       <param name="fixedsamplelocations" type="GLboolean" />
    </function>
 
-   <function name="TextureSubImage1D">
+   <function name="TextureSubImage1D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />
@@ -384,7 +384,7 @@
       <param name="pixels" type="const GLvoid *" />
    </function>
 
-   <function name="TextureSubImage2D">
+   <function name="TextureSubImage2D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />
@@ -396,7 +396,7 @@
       <param name="pixels" type="const GLvoid *" />
    </function>
 
-   <function name="TextureSubImage3D">
+   <function name="TextureSubImage3D" no_error="true">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
       <param name="xoffset" type="GLint" />
