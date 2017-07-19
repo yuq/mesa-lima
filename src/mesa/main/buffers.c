@@ -319,6 +319,22 @@ draw_buffer_error(struct gl_context *ctx, struct gl_framebuffer *fb,
 }
 
 
+static void
+draw_buffer_no_error(struct gl_context *ctx, struct gl_framebuffer *fb,
+                     GLenum buffer, const char *caller)
+{
+   draw_buffer(ctx, fb, buffer, caller, true);
+}
+
+
+void GLAPIENTRY
+_mesa_DrawBuffer_no_error(GLenum buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   draw_buffer_no_error(ctx, ctx->DrawBuffer, buffer, "glDrawBuffer");
+}
+
+
 void GLAPIENTRY
 _mesa_DrawBuffer(GLenum buffer)
 {

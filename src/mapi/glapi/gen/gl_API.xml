@@ -2286,7 +2286,7 @@
         <glx rop="125"/>
     </function>
 
-    <function name="DrawBuffer">
+    <function name="DrawBuffer" no_error="true">
         <param name="mode" type="GLenum"/>
         <glx rop="126"/>
     </function>

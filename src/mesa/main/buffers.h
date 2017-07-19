@@ -40,6 +40,9 @@ struct gl_context;
 struct gl_framebuffer;
 
 
+void GLAPIENTRY
+_mesa_DrawBuffer_no_error(GLenum mode);
+
 extern void GLAPIENTRY
 _mesa_DrawBuffer( GLenum mode );
 
