@@ -80,8 +80,8 @@ VkResult anv_CreateDmaBufImageINTEL(
       pAllocator, &image_h);
 
    image = anv_image_from_handle(image_h);
-   image->bo = mem->bo;
-   image->offset = 0;
+   image->planes[0].bo = mem->bo;
+   image->planes[0].bo_offset = 0;
 
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);

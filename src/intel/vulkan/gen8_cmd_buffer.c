@@ -323,7 +323,7 @@ want_stencil_pma_fix(struct anv_cmd_buffer *cmd_buffer)
    /* HiZ is enabled so we had better have a depth buffer with HiZ */
    const struct anv_image_view *ds_iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
-   assert(ds_iview && ds_iview->image->aux_usage == ISL_AUX_USAGE_HIZ);
+   assert(ds_iview && ds_iview->image->planes[0].aux_usage == ISL_AUX_USAGE_HIZ);
 
    /* 3DSTATE_PS_EXTRA::PixelShaderValid */
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;

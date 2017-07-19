@@ -1551,6 +1551,16 @@ anv_pipe_invalidate_bits_for_access_flags(VkAccessFlags flags)
    return pipe_bits;
 }
 
+#define VK_IMAGE_ASPECT_ANY_COLOR_BIT (         \
+   VK_IMAGE_ASPECT_COLOR_BIT | \
+   VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | \
+   VK_IMAGE_ASPECT_PLANE_1_BIT_KHR | \
+   VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
+#define VK_IMAGE_ASPECT_PLANES_BITS ( \
+   VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | \
+   VK_IMAGE_ASPECT_PLANE_1_BIT_KHR | \
+   VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
+
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
    VkDeviceSize                                 offset;
@@ -2214,9 +2224,46 @@ anv_image_aspect_to_plane(VkImageAspectFlags image_aspects,
    case VK_IMAGE_ASPECT_PLANE_2_BIT_KHR:
       return 2;
    default:
+      /* Purposefully assert with depth/stencil aspects. */
       unreachable("invalid image aspect");
    }
 }
+
+static inline uint32_t
+anv_image_aspect_get_planes(VkImageAspectFlags aspect_mask)
+{
+   uint32_t planes = 0;
+
+   if (aspect_mask & (VK_IMAGE_ASPECT_COLOR_BIT |
+                      VK_IMAGE_ASPECT_DEPTH_BIT |
+                      VK_IMAGE_ASPECT_STENCIL_BIT |
+                      VK_IMAGE_ASPECT_PLANE_0_BIT_KHR))
+      planes++;
+   if (aspect_mask & VK_IMAGE_ASPECT_PLANE_1_BIT_KHR)
+      planes++;
+   if (aspect_mask & VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
+      planes++;
+
+   return planes;
+}
+
+static inline VkImageAspectFlags
+anv_plane_to_aspect(VkImageAspectFlags image_aspects,
+                    uint32_t plane)
+{
+   if (image_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+      if (_mesa_bitcount(image_aspects) > 1)
+         return VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << plane;
+      return VK_IMAGE_ASPECT_COLOR_BIT;
+   }
+   if (image_aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
+      return VK_IMAGE_ASPECT_DEPTH_BIT << plane;
+   assert(image_aspects == VK_IMAGE_ASPECT_STENCIL_BIT);
+   return VK_IMAGE_ASPECT_STENCIL_BIT;
+}
+
+#define anv_foreach_image_aspect_bit(b, image, aspects) \
+   for_each_bit(b, anv_image_expand_aspects(image, aspects))
 
 const struct anv_format *
 anv_get_format(VkFormat format);
@@ -2277,72 +2324,116 @@ struct anv_image {
     * of the actual surface formats.
     */
    VkFormat vk_format;
+   const struct anv_format *format;
+
    VkImageAspectFlags aspects;
    VkExtent3D extent;
    uint32_t levels;
    uint32_t array_size;
    uint32_t samples; /**< VkImageCreateInfo::samples */
+   uint32_t n_planes;
    VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
    VkImageTiling tiling; /** VkImageCreateInfo::tiling */
 
    VkDeviceSize size;
    uint32_t alignment;
 
-   /* Set when bound */
-   struct anv_bo *bo;
-   VkDeviceSize offset;
+   bool disjoint;
 
    /**
     * Image subsurfaces
     *
-    * For each foo, anv_image::foo_surface is valid if and only if
-    * anv_image::aspects has a foo aspect.
+    * For each foo, anv_image::planes[x].surface is valid if and only if
+    * anv_image::aspects has a x aspect. Refer to anv_image_aspect_to_plane()
+    * to figure the number associated with a given aspect.
     *
     * The hardware requires that the depth buffer and stencil buffer be
     * separate surfaces.  From Vulkan's perspective, though, depth and stencil
     * reside in the same VkImage.  To satisfy both the hardware and Vulkan, we
     * allocate the depth and stencil buffers as separate surfaces in the same
     * bo.
-    */
-   union {
-      struct anv_surface color_surface;
-
-      struct {
-         struct anv_surface depth_surface;
-         struct anv_surface stencil_surface;
-      };
-   };
-
-   /**
-    * A surface which shadows the main surface and may have different tiling.
-    * This is used for sampling using a tiling that isn't supported for other
-    * operations.
-    */
-   struct anv_surface shadow_surface;
-
-   /**
-    * For color images, this is the aux usage for this image when not used as a
-    * color attachment.
     *
-    * For depth/stencil images, this is set to ISL_AUX_USAGE_HIZ if the image
-    * has a HiZ buffer.
+    * Memory layout :
+    *
+    * -----------------------
+    * |     surface0        |   /|\
+    * -----------------------    |
+    * |   shadow surface0   |    |
+    * -----------------------    | Plane 0
+    * |    aux surface0     |    |
+    * -----------------------    |
+    * | fast clear colors0  |   \|/
+    * -----------------------
+    * |     surface1        |   /|\
+    * -----------------------    |
+    * |   shadow surface1   |    |
+    * -----------------------    | Plane 1
+    * |    aux surface1     |    |
+    * -----------------------    |
+    * | fast clear colors1  |   \|/
+    * -----------------------
+    * |        ...          |
+    * |                     |
+    * -----------------------
     */
-   enum isl_aux_usage aux_usage;
+   struct {
+      /**
+       * Offset of the entire plane (whenever the image is disjoint this is
+       * set to 0).
+       */
+      uint32_t offset;
 
-   struct anv_surface aux_surface;
+      VkDeviceSize size;
+      uint32_t alignment;
+
+      struct anv_surface surface;
+
+      /**
+       * A surface which shadows the main surface and may have different
+       * tiling. This is used for sampling using a tiling that isn't supported
+       * for other operations.
+       */
+      struct anv_surface shadow_surface;
+
+      /**
+       * For color images, this is the aux usage for this image when not used
+       * as a color attachment.
+       *
+       * For depth/stencil images, this is set to ISL_AUX_USAGE_HIZ if the
+       * image has a HiZ buffer.
+       */
+      enum isl_aux_usage aux_usage;
+
+      struct anv_surface aux_surface;
+
+      /**
+       * Offset of the fast clear state (used to compute the
+       * fast_clear_state_offset of the following planes).
+       */
+      uint32_t fast_clear_state_offset;
+
+      /**
+       * BO associated with this plane, set when bound.
+       */
+      struct anv_bo *bo;
+      VkDeviceSize bo_offset;
+   } planes[3];
 };
 
 /* Returns the number of auxiliary buffer levels attached to an image. */
 static inline uint8_t
-anv_image_aux_levels(const struct anv_image * const image)
+anv_image_aux_levels(const struct anv_image * const image,
+                     VkImageAspectFlagBits aspect)
 {
-   assert(image);
-   return image->aux_surface.isl.size > 0 ? image->aux_surface.isl.levels : 0;
+   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
+   return image->planes[plane].aux_surface.isl.size > 0 ?
+          image->planes[plane].aux_surface.isl.levels : 0;
 }
 
 /* Returns the number of auxiliary buffer layers attached to an image. */
 static inline uint32_t
 anv_image_aux_layers(const struct anv_image * const image,
+                     VkImageAspectFlagBits aspect,
                      const uint8_t miplevel)
 {
    assert(image);
@@ -2350,14 +2441,15 @@ anv_image_aux_layers(const struct anv_image * const image,
    /* The miplevel must exist in the main buffer. */
    assert(miplevel < image->levels);
 
-   if (miplevel >= anv_image_aux_levels(image)) {
+   if (miplevel >= anv_image_aux_levels(image, aspect)) {
       /* There are no layers with auxiliary data because the miplevel has no
        * auxiliary data.
        */
       return 0;
    } else {
-      return MAX2(image->aux_surface.isl.logical_level0_px.array_len,
-                  image->aux_surface.isl.logical_level0_px.depth >> miplevel);
+      uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
+      return MAX2(image->planes[plane].aux_surface.isl.logical_level0_px.array_len,
+                  image->planes[plane].aux_surface.isl.logical_level0_px.depth >> miplevel);
    }
 }
 
@@ -2400,19 +2492,20 @@ void
 anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
                 const struct anv_state surface_state,
                 const struct anv_image * const image,
+                VkImageAspectFlagBits aspect,
                 const uint8_t level, const uint32_t layer_count,
                 const enum blorp_fast_clear_op op);
 
 void
 anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
                      const struct anv_image *image,
+                     VkImageAspectFlagBits aspect,
                      const uint32_t base_level, const uint32_t level_count,
                      const uint32_t base_layer, uint32_t layer_count);
 
 void
 anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
                          const struct anv_image *image,
-                         VkImageAspectFlagBits aspect,
                          uint32_t base_level, uint32_t level_count,
                          uint32_t base_layer, uint32_t layer_count);
 
@@ -2437,37 +2530,72 @@ anv_get_levelCount(const struct anv_image *image,
           image->levels - range->baseMipLevel : range->levelCount;
 }
 
+static inline VkImageAspectFlags
+anv_image_expand_aspects(const struct anv_image *image,
+                         VkImageAspectFlags aspects)
+{
+   /* If the underlying image has color plane aspects and
+    * VK_IMAGE_ASPECT_COLOR_BIT has been requested, then return the aspects of
+    * the underlying image. */
+   if ((image->aspects & VK_IMAGE_ASPECT_PLANES_BITS) != 0 &&
+       aspects == VK_IMAGE_ASPECT_COLOR_BIT)
+      return image->aspects;
+
+   return aspects;
+}
+
+static inline bool
+anv_image_aspects_compatible(VkImageAspectFlags aspects1,
+                             VkImageAspectFlags aspects2)
+{
+   if (aspects1 == aspects2)
+      return true;
+
+   /* Only 1 color aspects are compatibles. */
+   if ((aspects1 & VK_IMAGE_ASPECT_ANY_COLOR_BIT) != 0 &&
+       (aspects2 & VK_IMAGE_ASPECT_ANY_COLOR_BIT) != 0 &&
+       _mesa_bitcount(aspects1) == _mesa_bitcount(aspects2))
+      return true;
+
+   return false;
+}
 
 struct anv_image_view {
    const struct anv_image *image; /**< VkImageViewCreateInfo::image */
-
-   struct isl_view isl;
 
    VkImageAspectFlags aspect_mask;
    VkFormat vk_format;
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 
-   /**
-    * RENDER_SURFACE_STATE when using image as a sampler surface with an image
-    * layout of SHADER_READ_ONLY_OPTIMAL or DEPTH_STENCIL_READ_ONLY_OPTIMAL.
-    */
-   struct anv_surface_state optimal_sampler_surface_state;
+   unsigned n_planes;
+   struct {
+      uint32_t image_plane;
 
-   /**
-    * RENDER_SURFACE_STATE when using image as a sampler surface with an image
-    * layout of GENERAL.
-    */
-   struct anv_surface_state general_sampler_surface_state;
+      struct isl_view isl;
 
-   /**
-    * RENDER_SURFACE_STATE when using image as a storage image. Separate states
-    * for write-only and readable, using the real format for write-only and the
-    * lowered format for readable.
-    */
-   struct anv_surface_state storage_surface_state;
-   struct anv_surface_state writeonly_storage_surface_state;
+      /**
+       * RENDER_SURFACE_STATE when using image as a sampler surface with an
+       * image layout of SHADER_READ_ONLY_OPTIMAL or
+       * DEPTH_STENCIL_READ_ONLY_OPTIMAL.
+       */
+      struct anv_surface_state optimal_sampler_surface_state;
 
-   struct brw_image_param storage_image_param;
+      /**
+       * RENDER_SURFACE_STATE when using image as a sampler surface with an
+       * image layout of GENERAL.
+       */
+      struct anv_surface_state general_sampler_surface_state;
+
+      /**
+       * RENDER_SURFACE_STATE when using image as a storage image. Separate
+       * states for write-only and readable, using the real format for
+       * write-only and the lowered format for readable.
+       */
+      struct anv_surface_state storage_surface_state;
+      struct anv_surface_state writeonly_storage_surface_state;
+
+      struct brw_image_param storage_image_param;
+   } planes[3];
 };
 
 enum anv_image_view_state_flags {
