@@ -423,16 +423,21 @@ delete_shader(struct gl_context *ctx, GLuint shader)
 }
 
 
-static void
-detach_shader(struct gl_context *ctx, GLuint program, GLuint shader)
+static ALWAYS_INLINE void
+detach_shader(struct gl_context *ctx, GLuint program, GLuint shader,
+              bool no_error)
 {
    struct gl_shader_program *shProg;
    GLuint n;
    GLuint i, j;
 
-   shProg = _mesa_lookup_shader_program_err(ctx, program, "glDetachShader");
-   if (!shProg)
-      return;
+   if (!no_error) {
+      shProg = _mesa_lookup_shader_program_err(ctx, program, "glDetachShader");
+      if (!shProg)
+         return;
+   } else {
+      shProg = _mesa_lookup_shader_program(ctx, program);
+   }
 
    n = shProg->NumShaders;
 
@@ -480,7 +485,7 @@ detach_shader(struct gl_context *ctx, GLuint program, GLuint shader)
    }
 
    /* not found */
-   {
+   if (!no_error) {
       GLenum err;
       if (is_shader(ctx, shader) || is_program(ctx, shader))
          err = GL_INVALID_OPERATION;
@@ -489,6 +494,13 @@ detach_shader(struct gl_context *ctx, GLuint program, GLuint shader)
       _mesa_error(ctx, err, "glDetachShader(shader)");
       return;
    }
+}
+
+
+static void
+detach_shader_error(struct gl_context *ctx, GLuint program, GLuint shader)
+{
+   detach_shader(ctx, program, shader, false);
 }
 
 
@@ -1499,7 +1511,7 @@ void GLAPIENTRY
 _mesa_DetachObjectARB(GLhandleARB program, GLhandleARB shader)
 {
    GET_CURRENT_CONTEXT(ctx);
-   detach_shader(ctx, program, shader);
+   detach_shader_error(ctx, program, shader);
 }
 
 
@@ -1507,7 +1519,7 @@ void GLAPIENTRY
 _mesa_DetachShader(GLuint program, GLuint shader)
 {
    GET_CURRENT_CONTEXT(ctx);
-   detach_shader(ctx, program, shader);
+   detach_shader_error(ctx, program, shader);
 }
 
 
@@ -2344,7 +2356,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 	 if (compiled) {
 	    attach_shader_err(ctx, program, shader, "glCreateShaderProgramv");
 	    _mesa_link_program(ctx, shProg);
-	    detach_shader(ctx, program, shader);
+	    detach_shader_error(ctx, program, shader);
 
 #if 0
 	    /* Possibly... */
