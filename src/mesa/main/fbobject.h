@@ -290,6 +290,12 @@ _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
                                  GLenum renderbuffertarget,
                                  GLuint renderbuffer);
 
+void GLAPIENTRY
+_mesa_NamedFramebufferRenderbuffer_no_error(GLuint framebuffer,
+                                            GLenum attachment,
+                                            GLenum renderbuffertarget,
+                                            GLuint renderbuffer);
+
 extern void GLAPIENTRY
 _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
                                    GLenum renderbuffertarget,

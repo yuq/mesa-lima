@@ -3773,6 +3773,19 @@ _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
                                   renderbuffer, "glFramebufferRenderbuffer");
 }
 
+void GLAPIENTRY
+_mesa_NamedFramebufferRenderbuffer_no_error(GLuint framebuffer,
+                                            GLenum attachment,
+                                            GLenum renderbuffertarget,
+                                            GLuint renderbuffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_framebuffer *fb = _mesa_lookup_framebuffer(ctx, framebuffer);
+   framebuffer_renderbuffer_no_error(ctx, fb, attachment, renderbuffertarget,
+                                     renderbuffer,
+                                     "glNamedFramebufferRenderbuffer");
+}
 
 void GLAPIENTRY
 _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
