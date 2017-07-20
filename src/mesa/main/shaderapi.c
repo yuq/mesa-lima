@@ -1242,6 +1242,13 @@ link_program_error(struct gl_context *ctx, struct gl_shader_program *shProg)
 }
 
 
+static void
+link_program_no_error(struct gl_context *ctx, struct gl_shader_program *shProg)
+{
+   link_program(ctx, shProg, true);
+}
+
+
 void
 _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
@@ -1699,6 +1706,17 @@ _mesa_IsShader(GLuint name)
 {
    GET_CURRENT_CONTEXT(ctx);
    return is_shader(ctx, name);
+}
+
+
+void GLAPIENTRY
+_mesa_LinkProgram_no_error(GLuint programObj)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program(ctx, programObj);
+   link_program_no_error(ctx, shProg);
 }
 
 
