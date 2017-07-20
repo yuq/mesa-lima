@@ -5045,7 +5045,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="BufferData" es1="1.1" es2="2.0" marshal="custom">
+    <function name="BufferData" es1="1.1" es2="2.0" marshal="custom" no_error="true">
         <param name="target" type="GLenum"/>
         <param name="size" type="GLsizeiptr" counter="true"/>
         <param name="data" type="const GLvoid *" count="size" img_null_flag="true"/>

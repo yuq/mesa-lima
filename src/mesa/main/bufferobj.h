@@ -197,8 +197,16 @@ _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
                          GLbitfield flags);
 
 void GLAPIENTRY
+_mesa_BufferData_no_error(GLenum target, GLsizeiptr size,
+                          const GLvoid *data, GLenum usage);
+
+void GLAPIENTRY
 _mesa_BufferData(GLenum target, GLsizeiptr size,
                  const GLvoid *data, GLenum usage);
+
+void GLAPIENTRY
+_mesa_NamedBufferData_no_error(GLuint buffer, GLsizeiptr size,
+                               const GLvoid *data, GLenum usage);
 
 void GLAPIENTRY
 _mesa_NamedBufferData(GLuint buffer, GLsizeiptr size,

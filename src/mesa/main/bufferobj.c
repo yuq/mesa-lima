@@ -2024,12 +2024,31 @@ buffer_data_error(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    buffer_data(ctx, bufObj, target, size, data, usage, func, false);
 }
 
+static void
+buffer_data_no_error(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                     GLenum target, GLsizeiptr size, const GLvoid *data,
+                     GLenum usage, const char *func)
+{
+   buffer_data(ctx, bufObj, target, size, data, usage, func, true);
+}
+
 void
 _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
                   GLenum target, GLsizeiptr size, const GLvoid *data,
                   GLenum usage, const char *func)
 {
    buffer_data_error(ctx, bufObj, target, size, data, usage, func);
+}
+
+void GLAPIENTRY
+_mesa_BufferData_no_error(GLenum target, GLsizeiptr size, const GLvoid *data,
+                          GLenum usage)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_buffer_object **bufObj = get_buffer_target(ctx, target);
+   buffer_data_no_error(ctx, *bufObj, target, size, data, usage,
+                        "glBufferData");
 }
 
 void GLAPIENTRY
@@ -2045,6 +2064,17 @@ _mesa_BufferData(GLenum target, GLsizeiptr size,
 
    _mesa_buffer_data(ctx, bufObj, target, size, data, usage,
                      "glBufferData");
+}
+
+void GLAPIENTRY
+_mesa_NamedBufferData_no_error(GLuint buffer, GLsizeiptr size,
+                               const GLvoid *data, GLenum usage)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_buffer_object *bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+   buffer_data_no_error(ctx, bufObj, GL_NONE, size, data, usage,
+                        "glNamedBufferData");
 }
 
 void GLAPIENTRY

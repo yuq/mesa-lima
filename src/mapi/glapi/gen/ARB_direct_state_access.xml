@@ -61,7 +61,7 @@
       <param name="flags" type="GLbitfield" />
    </function>
 
-   <function name="NamedBufferData" marshal="custom">
+   <function name="NamedBufferData" marshal="custom" no_error="true">
       <param name="buffer" type="GLuint" />
       <param name="size" type="GLsizeiptr" />
       <param name="data" type="const GLvoid *" />
