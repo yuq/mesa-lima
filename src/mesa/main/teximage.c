@@ -3007,8 +3007,8 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
 
       if (!dimensionsOK) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-                     "%s%uD(invalid width or height or depth)",
-                     func, dims);
+                     "%s%uD(invalid width=%d or height=%d or depth=%d)",
+                     func, dims, width, height, depth);
          return;
       }
 
@@ -3833,7 +3833,8 @@ copyteximage(struct gl_context *ctx, GLuint dims,
       if (!_mesa_legal_texture_dimensions(ctx, target, level, width, height,
                                           1, border)) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glCopyTexImage%uD(invalid width or height)", dims);
+                     "glCopyTexImage%uD(invalid width=%d or height=%d)",
+                     dims, width, height);
          return;
       }
    }
@@ -5743,7 +5744,7 @@ texture_image_multisample(struct gl_context *ctx, GLuint dims,
    else {
       if (!dimensionsOK) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-                     "%s(invalid width or height)", func);
+                     "%s(invalid width=%d or height=%d)", func, width, height);
          return;
       }
 
