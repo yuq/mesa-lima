@@ -295,12 +295,12 @@ SIMD_IWRAPPER_2_8(unpacklo_epi8);
 //-----------------------------------------------------------------------
 static SIMDINLINE Float SIMDCALL load_ps(float const *p)   // return *p    (loads SIMD width elements from memory)
 {
-    return __conv(_mm512_maskz_load_ps(__mmask16(0xff), p));
+    return __conv(_mm512_maskz_loadu_ps(__mmask16(0xff), p));
 }
 
 static SIMDINLINE Integer SIMDCALL load_si(Integer const *p)  // return *p
 {
-    return __conv(_mm512_maskz_load_epi32(__mmask16(0xff), p));
+    return __conv(_mm512_maskz_loadu_epi32(__mmask16(0xff), p));
 }
 
 static SIMDINLINE Float SIMDCALL loadu_ps(float const *p)  // return *p    (same as load_ps but allows for unaligned mem)
@@ -354,17 +354,17 @@ static SIMDINLINE void SIMDCALL maskstore_ps(float *p, Integer mask, Float src)
 {
     __mmask16 m = 0xff;
     m = _mm512_mask_test_epi32_mask(m, __conv(mask), _mm512_set1_epi32(0x80000000));
-    _mm512_mask_store_ps(p, m, __conv(src));
+    _mm512_mask_storeu_ps(p, m, __conv(src));
 }
 
 static SIMDINLINE void SIMDCALL store_ps(float *p, Float a)    // *p = a   (stores all elements contiguously in memory)
 {
-    _mm512_mask_store_ps(p, __mmask16(0xff), __conv(a));
+    _mm512_mask_storeu_ps(p, __mmask16(0xff), __conv(a));
 }
 
 static SIMDINLINE void SIMDCALL store_si(Integer *p, Integer a)   // *p = a
 {
-    _mm512_mask_store_epi32(p, __mmask16(0xff), __conv(a));
+    _mm512_mask_storeu_epi32(p, __mmask16(0xff), __conv(a));
 }
 
 //=======================================================================
