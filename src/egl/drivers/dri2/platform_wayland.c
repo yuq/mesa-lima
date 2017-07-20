@@ -43,6 +43,7 @@
 #include "egl_dri2_fallbacks.h"
 #include "loader.h"
 #include "util/u_vector.h"
+#include "eglglobals.h"
 
 #include <wayland-client.h>
 #include "wayland-drm-client-protocol.h"
@@ -109,6 +110,19 @@ destroy_window_callback(void *data)
 {
    struct dri2_egl_surface *dri2_surf = data;
    dri2_surf->wl_win = NULL;
+}
+
+static struct wl_surface *
+get_wl_surface_proxy(struct wl_egl_window *window)
+{
+    /* Version 3 of wl_egl_window introduced a version field at the same
+     * location where a pointer to wl_surface was stored. Thus, if
+     * window->version is dereferencable, we've been given an older version of
+     * wl_egl_window, and window->version points to wl_surface */
+   if (_eglPointerIsDereferencable((void *)(window->version))) {
+      return wl_proxy_create_wrapper((void *)(window->version));
+   }
+   return wl_proxy_create_wrapper(window->surface);
 }
 
 /**
@@ -182,7 +196,7 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    wl_proxy_set_queue((struct wl_proxy *)dri2_surf->wl_dpy_wrapper,
                       dri2_surf->wl_queue);
 
-   dri2_surf->wl_surface_wrapper = wl_proxy_create_wrapper(window->surface);
+   dri2_surf->wl_surface_wrapper = get_wl_surface_proxy(window);
    if (!dri2_surf->wl_surface_wrapper) {
       _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
       goto cleanup_drm;
