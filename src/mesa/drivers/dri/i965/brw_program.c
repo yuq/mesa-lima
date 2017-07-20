@@ -280,7 +280,7 @@ brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
    unsigned bits = (PIPE_CONTROL_DATA_CACHE_FLUSH |
                     PIPE_CONTROL_NO_WRITE |
                     PIPE_CONTROL_CS_STALL);
-   assert(devinfo->gen >= 7 && devinfo->gen <= 10);
+   assert(devinfo->gen >= 7 && devinfo->gen <= 11);
 
    if (barriers & (GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
                    GL_ELEMENT_ARRAY_BARRIER_BIT |
