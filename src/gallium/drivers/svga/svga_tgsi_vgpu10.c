@@ -4854,9 +4854,24 @@ setup_texcoord(struct svga_shader_emitter_v10 *emit,
       struct tgsi_full_dst_register tmp_dst = make_dst_temp_reg(tmp);
       struct tgsi_full_src_register scale_src = make_src_const_reg(scale_index);
 
-      /* MUL tmp, coord, const[] */
-      emit_instruction_op2(emit, VGPU10_OPCODE_MUL, &tmp_dst,
-                           coord, &scale_src, FALSE);
+      if (emit->key.tex[unit].texel_bias) {
+         /* to fix texture coordinate rounding issue, 0.0001 offset is
+          * been added. This fixes piglit test fbo-blit-scaled-linear. */
+         struct tgsi_full_src_register offset =
+            make_immediate_reg_float(emit, 0.0001f);
+
+         /* ADD tmp, coord, offset */
+         emit_instruction_op2(emit, VGPU10_OPCODE_ADD, &tmp_dst,
+                              coord, &offset, FALSE);
+         /* MUL tmp, tmp, scale */
+         emit_instruction_op2(emit, VGPU10_OPCODE_MUL, &tmp_dst,
+                              &tmp_src, &scale_src, FALSE);
+      }
+      else {
+         /* MUL tmp, coord, const[] */
+         emit_instruction_op2(emit, VGPU10_OPCODE_MUL, &tmp_dst,
+                              coord, &scale_src, FALSE);
+      }
       return tmp_src;
    }
    else {
@@ -6285,6 +6300,17 @@ alloc_common_immediates(struct svga_shader_emitter_v10 *emit)
 
       emit->common_immediate_pos[n++] =
          alloc_immediate_int4(emit, 22, 30, 0, 0);
+   }
+
+   unsigned i;
+
+   for (i = 0; i < PIPE_MAX_SAMPLERS; i++) {
+      if (emit->key.tex[i].texel_bias) {
+         /* Replace 0.0f if more immediate float value is needed */
+         emit->common_immediate_pos[n++] =
+            alloc_immediate_float4(emit, 0.0001f, 0.0f, 0.0f, 0.0f);
+         break;
+      }
    }
 
    assert(n <= ARRAY_SIZE(emit->common_immediate_pos));

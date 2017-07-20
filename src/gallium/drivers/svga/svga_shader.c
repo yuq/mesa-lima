@@ -246,6 +246,11 @@ svga_init_shader_key_common(const struct svga_context *svga,
             key->tex[i].width_height_idx = idx++;
             key->tex[i].unnormalized = TRUE;
             ++key->num_unnormalized_coords;
+
+            if (sampler->magfilter == SVGA3D_TEX_FILTER_NEAREST ||
+                sampler->minfilter == SVGA3D_TEX_FILTER_NEAREST) {
+                key->tex[i].texel_bias = TRUE;
+            }
          }
       }
    }
