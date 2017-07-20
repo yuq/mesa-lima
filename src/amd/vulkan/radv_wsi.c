@@ -145,11 +145,7 @@ radv_wsi_image_create(VkDevice device_h,
 		      const VkAllocationCallbacks* pAllocator,
 		      bool needs_linear_copy,
 		      bool linear,
-		      VkImage *image_p,
-		      VkDeviceMemory *memory_p,
-		      uint32_t *size,
-		      uint32_t *offset,
-		      uint32_t *row_pitch, int *fd_p)
+		      struct wsi_image *wsi_image)
 {
 	VkResult result = VK_SUCCESS;
 	struct radeon_surf *surface;
@@ -232,20 +228,22 @@ radv_wsi_image_create(VkDevice device_h,
 		RADV_FROM_HANDLE(radv_device_memory, memory, memory_h);
 		if (!radv_get_memory_fd(device, memory, &fd))
 			goto fail_alloc_memory;
-		*fd_p = fd;
+		wsi_image->fd = fd;
 	}
 
 	surface = &image->surface;
 
-	*image_p = image_h;
-	*memory_p = memory_h;
-	*size = image->size;
-	*offset = image->offset;
-
+	wsi_image->image = image_h;
+	wsi_image->memory = memory_h;
+	wsi_image->size = image->size;
+	wsi_image->offset = image->offset;
 	if (device->physical_device->rad_info.chip_class >= GFX9)
-		*row_pitch = surface->u.gfx9.surf_pitch * surface->bpe;
+		wsi_image->row_pitch =
+			surface->u.gfx9.surf_pitch * surface->bpe;
 	else
-		*row_pitch = surface->u.legacy.level[0].nblk_x * surface->bpe;
+		wsi_image->row_pitch =
+			surface->u.legacy.level[0].nblk_x * surface->bpe;
+
 	return VK_SUCCESS;
  fail_alloc_memory:
 	radv_FreeMemory(device_h, memory_h, pAllocator);
@@ -259,12 +257,11 @@ fail_create_image:
 static void
 radv_wsi_image_free(VkDevice device,
 		    const VkAllocationCallbacks* pAllocator,
-		    VkImage image_h,
-		    VkDeviceMemory memory_h)
+		    struct wsi_image *wsi_image)
 {
-	radv_DestroyImage(device, image_h, pAllocator);
+	radv_DestroyImage(device, wsi_image->image, pAllocator);
 
-	radv_FreeMemory(device, memory_h, pAllocator);
+	radv_FreeMemory(device, wsi_image->memory, pAllocator);
 }
 
 static const struct wsi_image_fns radv_wsi_image_fns = {

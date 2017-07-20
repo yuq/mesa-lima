@@ -175,11 +175,7 @@ anv_wsi_image_create(VkDevice device_h,
                      const VkAllocationCallbacks* pAllocator,
                      bool different_gpu,
                      bool linear,
-                     VkImage *image_p,
-                     VkDeviceMemory *memory_p,
-                     uint32_t *size,
-                     uint32_t *offset,
-                     uint32_t *row_pitch, int *fd_p)
+                     struct wsi_image *wsi_image)
 {
    struct anv_device *device = anv_device_from_handle(device_h);
    VkImage image_h;
@@ -245,7 +241,6 @@ anv_wsi_image_create(VkDevice device_h,
    struct anv_surface *surface = &image->planes[0].surface;
    assert(surface->isl.tiling == ISL_TILING_X);
 
-   *row_pitch = surface->isl.row_pitch;
    int ret = anv_gem_set_tiling(device, memory->bo->gem_handle,
                                 surface->isl.row_pitch, I915_TILING_X);
    if (ret) {
@@ -265,11 +260,12 @@ anv_wsi_image_create(VkDevice device_h,
       goto fail_alloc_memory;
    }
 
-   *image_p = image_h;
-   *memory_p = memory_h;
-   *fd_p = fd;
-   *size = image->size;
-   *offset = 0;
+   wsi_image->image = image_h;
+   wsi_image->memory = memory_h;
+   wsi_image->fd = fd;
+   wsi_image->size = image->size;
+   wsi_image->offset = 0;
+   wsi_image->row_pitch = surface->isl.row_pitch;
    return VK_SUCCESS;
 fail_alloc_memory:
    anv_FreeMemory(device_h, memory_h, pAllocator);
@@ -282,12 +278,11 @@ fail_create_image:
 static void
 anv_wsi_image_free(VkDevice device,
                    const VkAllocationCallbacks* pAllocator,
-                   VkImage image_h,
-                   VkDeviceMemory memory_h)
+                   struct wsi_image *wsi_image)
 {
-   anv_DestroyImage(device, image_h, pAllocator);
+   anv_DestroyImage(device, wsi_image->image, pAllocator);
 
-   anv_FreeMemory(device, memory_h, pAllocator);
+   anv_FreeMemory(device, wsi_image->memory, pAllocator);
 }
 
 static const struct wsi_image_fns anv_wsi_image_fns = {

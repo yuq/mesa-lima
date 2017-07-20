@@ -615,10 +615,8 @@ VkResult wsi_create_xlib_surface(const VkAllocationCallbacks *pAllocator,
 }
 
 struct x11_image {
-   VkImage image;
-   VkImage linear_image; // for prime
-   VkDeviceMemory memory;
-   VkDeviceMemory linear_memory; // for prime
+   struct wsi_image                          base;
+   struct wsi_image                          linear_base;
    xcb_pixmap_t                              pixmap;
    bool                                      busy;
    struct xshmfence *                        shm_fence;
@@ -670,7 +668,7 @@ x11_get_images(struct wsi_swapchain *anv_chain,
    }
 
    for (uint32_t i = 0; i < ret_count; i++)
-      pSwapchainImages[i] = chain->images[i].image;
+      pSwapchainImages[i] = chain->images[i].base.image;
 
    return result;
 }
@@ -680,8 +678,8 @@ x11_get_image_and_linear(struct wsi_swapchain *drv_chain,
                          int imageIndex, VkImage *image, VkImage *linear_image)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)drv_chain;
-   *image = chain->images[imageIndex].image;
-   *linear_image = chain->images[imageIndex].linear_image;
+   *image = chain->images[imageIndex].base.image;
+   *linear_image = chain->images[imageIndex].linear_base.image;
 }
 
 static VkResult
@@ -960,23 +958,14 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
 {
    xcb_void_cookie_t cookie;
    VkResult result;
-   uint32_t row_pitch;
-   uint32_t offset;
    uint32_t bpp = 32;
-   int fd;
-   uint32_t size;
 
    result = chain->base.image_fns->create_wsi_image(device_h,
                                                     pCreateInfo,
                                                     pAllocator,
                                                     chain->base.needs_linear_copy,
                                                     false,
-                                                    &image->image,
-                                                    &image->memory,
-                                                    &size,
-                                                    &offset,
-                                                    &row_pitch,
-                                                    &fd);
+                                                    &image->base);
    if (result != VK_SUCCESS)
       return result;
 
@@ -986,31 +975,31 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
                                                        pAllocator,
                                                        chain->base.needs_linear_copy,
                                                        true,
-                                                       &image->linear_image,
-                                                       &image->linear_memory,
-                                                       &size,
-                                                       &offset,
-                                                       &row_pitch,
-                                                       &fd);
+                                                       &image->linear_base);
+
       if (result != VK_SUCCESS) {
          chain->base.image_fns->free_wsi_image(device_h, pAllocator,
-                                               image->image, image->memory);
+                                               &image->base);
          return result;
       }
    }
 
    image->pixmap = xcb_generate_id(chain->conn);
 
+   struct wsi_image *image_ws =
+      chain->base.needs_linear_copy ? &image->linear_base : &image->base;
    cookie =
       xcb_dri3_pixmap_from_buffer_checked(chain->conn,
                                           image->pixmap,
                                           chain->window,
-                                          size,
+                                          image_ws->size,
                                           pCreateInfo->imageExtent.width,
                                           pCreateInfo->imageExtent.height,
-                                          row_pitch,
-                                          chain->depth, bpp, fd);
+                                          image_ws->row_pitch,
+                                          chain->depth, bpp,
+                                          image_ws->fd);
    xcb_discard_reply(chain->conn, cookie.sequence);
+   image_ws->fd = -1; /* XCB has now taken ownership of the FD */
 
    int fence_fd = xshmfence_alloc_shm();
    if (fence_fd < 0)
@@ -1041,10 +1030,9 @@ fail_pixmap:
 
    if (chain->base.needs_linear_copy) {
       chain->base.image_fns->free_wsi_image(device_h, pAllocator,
-                                            image->linear_image, image->linear_memory);
+                                            &image->linear_base);
    }
-   chain->base.image_fns->free_wsi_image(device_h, pAllocator,
-                                         image->image, image->memory);
+   chain->base.image_fns->free_wsi_image(device_h, pAllocator, &image->base);
 
    return result;
 }
@@ -1065,10 +1053,10 @@ x11_image_finish(struct x11_swapchain *chain,
 
    if (chain->base.needs_linear_copy) {
       chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
-                                            image->linear_image, image->linear_memory);
+                                            &image->linear_base);
    }
    chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
-                                        image->image, image->memory);
+                                         &image->base);
 }
 
 static VkResult

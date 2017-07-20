@@ -30,6 +30,15 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_icd.h>
 
+struct wsi_image {
+   VkImage image;
+   VkDeviceMemory memory;
+   uint32_t size;
+   uint32_t offset;
+   uint32_t row_pitch;
+   int fd;
+};
+
 struct wsi_device;
 struct wsi_image_fns {
    VkResult (*create_wsi_image)(VkDevice device_h,
@@ -37,16 +46,10 @@ struct wsi_image_fns {
                                 const VkAllocationCallbacks *pAllocator,
                                 bool needs_linear_copy,
                                 bool linear,
-                                VkImage *image_p,
-                                VkDeviceMemory *memory_p,
-                                uint32_t *size_p,
-                                uint32_t *offset_p,
-                                uint32_t *row_pitch_p,
-                                int *fd_p);
+                                struct wsi_image *image_p);
    void (*free_wsi_image)(VkDevice device,
                           const VkAllocationCallbacks *pAllocator,
-                          VkImage image_h,
-                          VkDeviceMemory memory_h);
+                          struct wsi_image *image);
 };
 
 struct wsi_swapchain {
