@@ -190,6 +190,9 @@ isl_extent3d_el_to_sa(enum isl_format fmt, struct isl_extent3d extent_el)
 #  define genX(x) gen10_##x
 #  include "isl_genX_priv.h"
 #  undef genX
+#  define genX(x) gen11_##x
+#  include "isl_genX_priv.h"
+#  undef genX
 #endif
 
 #endif /* ISL_PRIV_H */

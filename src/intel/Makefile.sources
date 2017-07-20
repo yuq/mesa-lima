@@ -203,6 +203,10 @@ ISL_GEN10_FILES = \
 	isl/isl_emit_depth_stencil.c \
 	isl/isl_surface_state.c
 
+ISL_GEN11_FILES = \
+	isl/isl_emit_depth_stencil.c \
+	isl/isl_surface_state.c
+
 ISL_GENERATED_FILES = \
 	isl/isl_format_layout.c
 
