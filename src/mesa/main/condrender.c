@@ -133,23 +133,30 @@ _mesa_BeginConditionalRender(GLuint queryId, GLenum mode)
 }
 
 
-void APIENTRY
-_mesa_EndConditionalRender(void)
+static void
+end_conditional_render(struct gl_context *ctx)
 {
-   GET_CURRENT_CONTEXT(ctx);
-
    FLUSH_VERTICES(ctx, 0x0);
-
-   if (!ctx->Extensions.NV_conditional_render || !ctx->Query.CondRenderQuery) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glEndConditionalRender()");
-      return;
-   }
 
    if (ctx->Driver.EndConditionalRender)
       ctx->Driver.EndConditionalRender(ctx, ctx->Query.CondRenderQuery);
 
    ctx->Query.CondRenderQuery = NULL;
    ctx->Query.CondRenderMode = GL_NONE;
+}
+
+
+void APIENTRY
+_mesa_EndConditionalRender(void)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!ctx->Extensions.NV_conditional_render || !ctx->Query.CondRenderQuery) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glEndConditionalRender()");
+      return;
+   }
+
+   end_conditional_render(ctx);
 }
 
 
