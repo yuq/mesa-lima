@@ -49,10 +49,6 @@
 #include "eglsync.h"
 
 /* Includes for _eglNativePlatformDetectNativeDisplay */
-#ifdef HAVE_MINCORE
-#include <unistd.h>
-#include <sys/mman.h>
-#endif
 #ifdef HAVE_WAYLAND_PLATFORM
 #include <wayland-client.h>
 #endif
@@ -102,35 +98,6 @@ _eglGetNativePlatformFromEnv(void)
    }
 
    return plat;
-}
-
-
-/**
- * Perform validity checks on a generic pointer.
- */
-static EGLBoolean
-_eglPointerIsDereferencable(void *p)
-{
-#ifdef HAVE_MINCORE
-   uintptr_t addr = (uintptr_t) p;
-   unsigned char valid = 0;
-   const long page_size = getpagesize();
-
-   if (p == NULL)
-      return EGL_FALSE;
-
-   /* align addr to page_size */
-   addr &= ~(page_size - 1);
-
-   if (mincore((void *) addr, page_size, &valid) < 0) {
-      _eglLog(_EGL_DEBUG, "mincore failed: %m");
-      return EGL_FALSE;
-   }
-
-   return (valid & 0x01) == 0x01;
-#else
-   return p != NULL;
-#endif
 }
 
 
