@@ -299,8 +299,8 @@ do_batch_dump(struct brw_context *brw)
    void *map = brw_bo_map(brw, batch->bo, MAP_READ);
    if (map == NULL) {
       fprintf(stderr,
-	      "WARNING: failed to map batchbuffer, "
-	      "dumping uploaded data instead.\n");
+              "WARNING: failed to map batchbuffer, "
+              "dumping uploaded data instead.\n");
    }
 
    uint32_t *data = map ? map : batch->map;
@@ -633,10 +633,10 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
    } else {
       ret = brw_bo_subdata(batch->bo, 0, 4 * USED_BATCH(*batch), batch->map);
       if (ret == 0 && batch->state_batch_offset != batch->bo->size) {
-	 ret = brw_bo_subdata(batch->bo,
-				    batch->state_batch_offset,
-				    batch->bo->size - batch->state_batch_offset,
-				    (char *)batch->map + batch->state_batch_offset);
+         ret = brw_bo_subdata(batch->bo,
+                              batch->state_batch_offset,
+                              batch->bo->size - batch->state_batch_offset,
+                              (char *)batch->map + batch->state_batch_offset);
       }
    }
 
@@ -661,7 +661,7 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
          flags |= I915_EXEC_RENDER;
       }
       if (batch->needs_sol_reset)
-	 flags |= I915_EXEC_GEN7_SOL_RESET;
+         flags |= I915_EXEC_GEN7_SOL_RESET;
 
       if (ret == 0) {
          uint32_t hw_ctx = batch->ring == RENDER_RING ? brw->hw_ctx : 0;
