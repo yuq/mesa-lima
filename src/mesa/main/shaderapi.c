@@ -1039,7 +1039,7 @@ get_shader_source(struct gl_context *ctx, GLuint shader, GLsizei maxLength,
  * glShaderSource[ARB].
  */
 static void
-shader_source(struct gl_shader *sh, const GLchar *source)
+set_shader_source(struct gl_shader *sh, const GLchar *source)
 {
    assert(sh);
 
@@ -1894,7 +1894,7 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    }
 #endif /* ENABLE_SHADER_CACHE */
 
-   shader_source(sh, source);
+   set_shader_source(sh, source);
 
    free(offsets);
 }
