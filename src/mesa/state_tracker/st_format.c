@@ -1035,12 +1035,11 @@ test_format_conversion(struct st_context *st)
 
    /* Test all Gallium formats */
    for (i = 1; i < PIPE_FORMAT_COUNT; i++) {
-      mesa_format mf = st_pipe_format_to_mesa_format(i);
-
       /* ETC formats are translated differently, skip them. */
       if (i == PIPE_FORMAT_ETC1_RGB8 && !st->has_etc1)
          continue;
 
+      mesa_format mf = st_pipe_format_to_mesa_format(i);
       if (_mesa_is_format_etc2(mf) && !st->has_etc2)
          continue;
 
