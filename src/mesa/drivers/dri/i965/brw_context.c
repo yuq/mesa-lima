@@ -194,8 +194,6 @@ intel_update_state(struct gl_context * ctx)
    if (new_state & _NEW_POLYGON)
       brw->polygon_front_bit = _mesa_polygon_get_front_bit(ctx);
 
-   intel_prepare_render(brw);
-
    if (new_state & _NEW_BUFFERS) {
       intel_update_framebuffer(ctx, ctx->DrawBuffer);
       if (ctx->DrawBuffer != ctx->ReadBuffer)
