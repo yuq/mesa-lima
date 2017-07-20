@@ -1904,6 +1904,15 @@ shader_source(struct gl_context *ctx, GLuint shaderObj, GLsizei count,
 
 
 void GLAPIENTRY
+_mesa_ShaderSource_no_error(GLuint shaderObj, GLsizei count,
+                            const GLchar *const *string, const GLint *length)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   shader_source(ctx, shaderObj, count, string, length, true);
+}
+
+
+void GLAPIENTRY
 _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
                    const GLchar *const *string, const GLint *length)
 {
