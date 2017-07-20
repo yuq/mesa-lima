@@ -1028,7 +1028,7 @@ test_format_conversion(struct st_context *st)
 
       pf = st_mesa_format_to_pipe_format(st, i);
       if (pf != PIPE_FORMAT_NONE) {
-         mesa_format mf = st_pipe_format_to_mesa_format(pf);
+         mesa_format MAYBE_UNUSED mf = st_pipe_format_to_mesa_format(pf);
          assert(mf == i);
       }
    }
@@ -1044,7 +1044,8 @@ test_format_conversion(struct st_context *st)
          continue;
 
       if (mf != MESA_FORMAT_NONE) {
-         enum pipe_format pf = st_mesa_format_to_pipe_format(st, mf);
+         enum pipe_format MAYBE_UNUSED pf =
+            st_mesa_format_to_pipe_format(st, mf);
          assert(pf == i);
       }
    }
