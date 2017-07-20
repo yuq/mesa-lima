@@ -129,6 +129,8 @@ void gen9_blorp_exec(struct blorp_batch *batch,
                      const struct blorp_params *params);
 void gen10_blorp_exec(struct blorp_batch *batch,
                       const struct blorp_params *params);
+void gen11_blorp_exec(struct blorp_batch *batch,
+                      const struct blorp_params *params);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -150,6 +150,10 @@ i965_gen10_FILES = \
 	genX_blorp_exec.c \
 	genX_state_upload.c
 
+i965_gen11_FILES = \
+	genX_blorp_exec.c \
+	genX_state_upload.c
+
 i965_oa_GENERATED_FILES = \
 	brw_oa_hsw.h \
 	brw_oa_hsw.c \

@@ -334,6 +334,7 @@ void gen75_init_atoms(struct brw_context *brw);
 void gen8_init_atoms(struct brw_context *brw);
 void gen9_init_atoms(struct brw_context *brw);
 void gen10_init_atoms(struct brw_context *brw);
+void gen11_init_atoms(struct brw_context *brw);
 
 /* Memory Object Control State:
  * Specifying zero for L3 means "uncached in L3", at least on Haswell
