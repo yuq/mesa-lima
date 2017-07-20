@@ -813,9 +813,6 @@ init_teximage_fields_ms(struct gl_context *ctx,
    img->Width2 = width - 2 * border;   /* == 1 << img->WidthLog2; */
    img->WidthLog2 = _mesa_logbase2(img->Width2);
 
-   img->NumSamples = 0;
-   img->FixedSampleLocations = GL_TRUE;
-
    switch(target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_BUFFER:
