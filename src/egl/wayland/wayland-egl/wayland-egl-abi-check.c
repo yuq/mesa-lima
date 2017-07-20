@@ -61,6 +61,7 @@ struct wl_egl_window_v1 {
 };
 
 /* From: 690ead4a13 - Stencel, Joanna : egl/wayland-egl: Fix for segfault in dri2_wl_destroy_surface. */
+#define WL_EGL_WINDOW_VERSION_v2 2
 struct wl_egl_window_v2 {
     struct wl_surface *surface;
 
@@ -77,6 +78,26 @@ struct wl_egl_window_v2 {
     void (*destroy_window_callback)(void *);
 };
 
+/* From: XXX - Miguel A. Vico : wayland-egl: Make wl_egl_window a versioned struct */
+#define WL_EGL_WINDOW_VERSION_v3 3
+struct wl_egl_window_v3 {
+    const intptr_t version;
+
+    int width;
+    int height;
+    int dx;
+    int dy;
+
+    int attached_width;
+    int attached_height;
+
+    void *private;
+    void (*resize_callback)(struct wl_egl_window *, void *);
+    void (*destroy_window_callback)(void *);
+
+    struct wl_surface *surface;
+};
+
 
 /* This program checks we keep a backwards-compatible struct wl_egl_window
  * definition whenever it is modified in wayland-egl-priv.h.
@@ -87,7 +108,7 @@ struct wl_egl_window_v2 {
 
 #define MEMBER_SIZE(type, member) sizeof(((type *)0)->member)
 
-#define CHECK_MEMBERS(a_ver, b_ver, a_member, b_member)                             \
+#define CHECK_RENAMED_MEMBER(a_ver, b_ver, a_member, b_member)                      \
     do {                                                                            \
         if (offsetof(struct wl_egl_window ## a_ver, a_member) !=                    \
             offsetof(struct wl_egl_window ## b_ver, b_member)) {                    \
@@ -106,7 +127,7 @@ struct wl_egl_window_v2 {
         }                                                                           \
     } while (0)
 
-#define CHECK_MEMBER(a_ver, b_ver, member) CHECK_MEMBERS(a_ver, b_ver, member, member)
+#define CHECK_MEMBER(a_ver, b_ver, member) CHECK_RENAMED_MEMBER(a_ver, b_ver, member, member)
 #define CHECK_MEMBER_CURRENT(a_ver, member) CHECK_MEMBER(a_ver,, member)
 
 #define CHECK_SIZE(a_ver, b_ver)                                                    \
@@ -127,6 +148,28 @@ struct wl_egl_window_v2 {
             printf("Backards incompatible change detected!\n   "                    \
                    "sizeof(struct wl_egl_window" #a_ver ") != "                     \
                    "sizeof(struct wl_egl_window)\n");                               \
+            return 1;                                                               \
+        }                                                                           \
+    } while (0)
+
+#define CHECK_VERSION(a_ver, b_ver)                                                 \
+    do {                                                                            \
+        if ((WL_EGL_WINDOW_VERSION ## a_ver) >=                                     \
+            (WL_EGL_WINDOW_VERSION ## b_ver)) {                                     \
+            printf("Backards incompatible change detected!\n   "                    \
+                   "WL_EGL_WINDOW_VERSION" #a_ver " >= "                            \
+                   "WL_EGL_WINDOW_VERSION" #b_ver "\n");                            \
+            return 1;                                                               \
+        }                                                                           \
+    } while (0)
+
+#define CHECK_VERSION_CURRENT(a_ver)                                                \
+    do {                                                                            \
+        if ((WL_EGL_WINDOW_VERSION ## a_ver) !=                                     \
+            (WL_EGL_WINDOW_VERSION)) {                                              \
+            printf("Backards incompatible change detected!\n   "                    \
+                   "WL_EGL_WINDOW_VERSION" #a_ver " != "                            \
+                   "WL_EGL_WINDOW_VERSION\n");                                      \
             return 1;                                                               \
         }                                                                           \
     } while (0)
@@ -157,19 +200,36 @@ int main(int argc, char **argv)
 
     CHECK_SIZE(_v1, _v2);
 
-    /* Check current wl_egl_window ABI against wl_egl_window_v2 */
-    CHECK_MEMBER_CURRENT(_v2, surface);
-    CHECK_MEMBER_CURRENT(_v2, width);
-    CHECK_MEMBER_CURRENT(_v2, height);
-    CHECK_MEMBER_CURRENT(_v2, dx);
-    CHECK_MEMBER_CURRENT(_v2, dy);
-    CHECK_MEMBER_CURRENT(_v2, attached_width);
-    CHECK_MEMBER_CURRENT(_v2, attached_height);
-    CHECK_MEMBER_CURRENT(_v2, private);
-    CHECK_MEMBER_CURRENT(_v2, resize_callback);
-    CHECK_MEMBER_CURRENT(_v2, destroy_window_callback);
+    /* Check wl_egl_window_v3 ABI against wl_egl_window_v2 */
+    CHECK_RENAMED_MEMBER(_v2, _v3, surface, version);
+    CHECK_MEMBER        (_v2, _v3, width);
+    CHECK_MEMBER        (_v2, _v3, height);
+    CHECK_MEMBER        (_v2, _v3, dx);
+    CHECK_MEMBER        (_v2, _v3, dy);
+    CHECK_MEMBER        (_v2, _v3, attached_width);
+    CHECK_MEMBER        (_v2, _v3, attached_height);
+    CHECK_MEMBER        (_v2, _v3, private);
+    CHECK_MEMBER        (_v2, _v3, resize_callback);
+    CHECK_MEMBER        (_v2, _v3, destroy_window_callback);
 
-    CHECK_SIZE_CURRENT(_v2);
+    CHECK_SIZE   (_v2, _v3);
+    CHECK_VERSION(_v2, _v3);
+
+    /* Check current wl_egl_window ABI against wl_egl_window_v3 */
+    CHECK_MEMBER_CURRENT(_v3, version);
+    CHECK_MEMBER_CURRENT(_v3, width);
+    CHECK_MEMBER_CURRENT(_v3, height);
+    CHECK_MEMBER_CURRENT(_v3, dx);
+    CHECK_MEMBER_CURRENT(_v3, dy);
+    CHECK_MEMBER_CURRENT(_v3, attached_width);
+    CHECK_MEMBER_CURRENT(_v3, attached_height);
+    CHECK_MEMBER_CURRENT(_v3, private);
+    CHECK_MEMBER_CURRENT(_v3, resize_callback);
+    CHECK_MEMBER_CURRENT(_v3, destroy_window_callback);
+    CHECK_MEMBER_CURRENT(_v3, surface);
+
+    CHECK_SIZE_CURRENT   (_v3);
+    CHECK_VERSION_CURRENT(_v3);
 
     return 0;
 }
