@@ -298,19 +298,6 @@ _mesa_initialize_vao(struct gl_context *ctx,
 
 
 /**
- * Add the given array object to the array object pool.
- */
-static void
-save_array_object(struct gl_context *ctx, struct gl_vertex_array_object *vao)
-{
-   if (vao->Name > 0) {
-      /* insert into hash table */
-      _mesa_HashInsertLocked(ctx->Array.Objects, vao->Name, vao);
-   }
-}
-
-
-/**
  * Updates the derived gl_vertex_arrays when a gl_vertex_attrib_array
  * or a gl_vertex_buffer_binding has changed.
  */
@@ -546,7 +533,7 @@ gen_vertex_arrays(struct gl_context *ctx, GLsizei n, GLuint *arrays,
          return;
       }
       obj->EverBound = create;
-      save_array_object(ctx, obj);
+      _mesa_HashInsertLocked(ctx->Array.Objects, obj->Name, obj);
       arrays[i] = first + i;
    }
 }
