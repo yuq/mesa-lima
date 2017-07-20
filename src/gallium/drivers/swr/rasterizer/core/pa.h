@@ -572,7 +572,7 @@ struct PA_STATE_CUT : public PA_STATE
     {
         uint32_t vertexIndex = vertex / SIMD_WIDTH;
         uint32_t vertexOffset = vertex & (SIMD_WIDTH - 1);
-        return _bittest((const LONG*)&this->pCutIndices[vertexIndex], vertexOffset) == 1;
+        return CheckBit(this->pCutIndices[vertexIndex], vertexOffset);
     }
 
     // iterates across the unprocessed verts until we hit the end or we 

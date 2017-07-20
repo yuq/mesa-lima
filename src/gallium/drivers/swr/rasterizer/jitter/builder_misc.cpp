@@ -112,9 +112,9 @@ namespace SwrJit
     ///        float
     /// @param val - 16-bit float
     /// @todo Maybe move this outside of this file into a header?
-    static float ConvertSmallFloatTo32(UINT val)
+    static float ConvertSmallFloatTo32(uint32_t val)
     {
-        UINT result;
+        uint32_t result;
         if ((val & 0x7fff) == 0)
         {
             result = ((uint32_t)(val & 0x8000)) << 16;

@@ -518,7 +518,7 @@ struct BlendJit : public Builder
         fnName << ComputeCRC(0, &state, sizeof(state));
 
         // blend function signature
-        //typedef void(*PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, BYTE*, simdvector&, simdscalari*, simdscalari*);
+        //typedef void(*PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, uint8_t*, simdvector&, simdscalari*, simdscalari*);
 
         std::vector<Type*> args{
             PointerType::get(Gen_SWR_BLEND_STATE(JM()), 0), // SWR_BLEND_STATE*

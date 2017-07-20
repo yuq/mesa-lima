@@ -35,11 +35,11 @@
 //////////////////////////////////////////////////////////////////////////
 /// FormatSwizzle - Component swizzle selects
 //////////////////////////////////////////////////////////////////////////
-template<UINT comp0 = 0, uint32_t comp1 = 0, uint32_t comp2 = 0, uint32_t comp3 = 0>
+template<uint32_t comp0 = 0, uint32_t comp1 = 0, uint32_t comp2 = 0, uint32_t comp3 = 0>
 struct FormatSwizzle
 {
     // Return swizzle select for component.
-    INLINE static uint32_t swizzle(UINT c)
+    INLINE static uint32_t swizzle(uint32_t c)
     {
         static const uint32_t s[4] = { comp0, comp1, comp2, comp3 };
         return s[c];

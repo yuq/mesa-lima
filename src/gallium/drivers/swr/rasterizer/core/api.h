@@ -697,8 +697,8 @@ SWR_FUNC(void, SwrStoreHotTileToSurface,
 SWR_FUNC(void, SwrStoreHotTileClear,
          SWR_SURFACE_STATE *pDstSurface,
          SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
-         UINT x,
-         UINT y,
+         uint32_t x,
+         uint32_t y,
          uint32_t renderTargetArrayIndex,
          const float* pClearColor);
 

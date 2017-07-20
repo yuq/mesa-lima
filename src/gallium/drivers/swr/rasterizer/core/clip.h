@@ -464,7 +464,7 @@ public:
         // input/output vertex store for clipper
         simdvertex vertices[7]; // maximum 7 verts generated per triangle
 
-        LONG constantInterpMask = this->state.backendState.constantInterpolationMask;
+        uint32_t constantInterpMask = this->state.backendState.constantInterpolationMask;
         uint32_t provokingVertex = 0;
         if(pa.binTopology == TOP_TRIANGLE_FAN)
         {
@@ -495,7 +495,7 @@ public:
 
             // if constant interpolation enabled for this attribute, assign the provoking
             // vertex values to all edges
-            if (_bittest(&constantInterpMask, slot))
+            if (CheckBit(constantInterpMask, slot))
             {
                 for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
                 {
@@ -721,7 +721,7 @@ public:
         // input/output vertex store for clipper
         simd16vertex vertices[7]; // maximum 7 verts generated per triangle
 
-        LONG constantInterpMask = this->state.backendState.constantInterpolationMask;
+        uint32_t constantInterpMask = this->state.backendState.constantInterpolationMask;
         uint32_t provokingVertex = 0;
         if (pa.binTopology == TOP_TRIANGLE_FAN)
         {
@@ -752,7 +752,7 @@ public:
 
             // if constant interpolation enabled for this attribute, assign the provoking
             // vertex values to all edges
-            if (_bittest(&constantInterpMask, slot))
+            if (CheckBit(constantInterpMask, slot))
             {
                 for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
                 {

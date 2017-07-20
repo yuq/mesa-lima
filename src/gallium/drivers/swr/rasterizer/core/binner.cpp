@@ -64,7 +64,7 @@ INLINE void ProcessAttributes(
     static_assert(NumVertsT::value > 0 && NumVertsT::value <= 3, "Invalid value for NumVertsT");
     const SWR_BACKEND_STATE& backendState = pDC->pState->state.backendState;
     // Conservative Rasterization requires degenerate tris to have constant attribute interpolation
-    LONG constantInterpMask = IsDegenerate::value ? 0xFFFFFFFF : backendState.constantInterpolationMask;
+    uint32_t constantInterpMask = IsDegenerate::value ? 0xFFFFFFFF : backendState.constantInterpolationMask;
     const uint32_t provokingVertex = pDC->pState->state.frontendState.topologyProvokingVertex;
     const PRIMITIVE_TOPOLOGY topo = pDC->pState->state.topology;
 
@@ -93,7 +93,7 @@ INLINE void ProcessAttributes(
 
         if (HasConstantInterpT::value || IsDegenerate::value)
         {
-            if (_bittest(&constantInterpMask, i))
+            if (CheckBit(constantInterpMask, i))
             {
                 uint32_t vid;
                 uint32_t adjustedTriIndex;
