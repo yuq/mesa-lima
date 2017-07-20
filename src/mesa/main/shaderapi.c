@@ -1814,23 +1814,26 @@ read_shader(const gl_shader_stage stage, const char *source)
  * Basically, concatenate the source code strings into one long string
  * and pass it to _mesa_shader_source().
  */
-void GLAPIENTRY
-_mesa_ShaderSource(GLuint shaderObj, GLsizei count,
-                   const GLchar * const * string, const GLint * length)
+static ALWAYS_INLINE void
+shader_source(struct gl_context *ctx, GLuint shaderObj, GLsizei count,
+              const GLchar *const *string, const GLint *length, bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
    GLint *offsets;
    GLsizei i, totalLength;
    GLcharARB *source;
    struct gl_shader *sh;
 
-   sh = _mesa_lookup_shader_err(ctx, shaderObj, "glShaderSourceARB");
-   if (!sh)
-      return;
+   if (!no_error) {
+      sh = _mesa_lookup_shader_err(ctx, shaderObj, "glShaderSourceARB");
+      if (!sh)
+         return;
 
-   if (string == NULL) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glShaderSourceARB");
-      return;
+      if (string == NULL) {
+         _mesa_error(ctx, GL_INVALID_VALUE, "glShaderSourceARB");
+         return;
+      }
+   } else {
+      sh = _mesa_lookup_shader(ctx, shaderObj);
    }
 
    /*
@@ -1844,7 +1847,7 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    }
 
    for (i = 0; i < count; i++) {
-      if (string[i] == NULL) {
+      if (!no_error && string[i] == NULL) {
          free((GLvoid *) offsets);
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glShaderSourceARB(null string)");
@@ -1897,6 +1900,15 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    set_shader_source(sh, source);
 
    free(offsets);
+}
+
+
+void GLAPIENTRY
+_mesa_ShaderSource(GLuint shaderObj, GLsizei count,
+                   const GLchar *const *string, const GLint *length)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   shader_source(ctx, shaderObj, count, string, length, false);
 }
 
 
