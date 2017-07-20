@@ -386,12 +386,12 @@ tex_storage_error_check(struct gl_context *ctx,
  * Helper that does the storage allocation for _mesa_TexStorage1/2/3D()
  * and _mesa_TextureStorage1/2/3D().
  */
-void
-_mesa_texture_storage(struct gl_context *ctx, GLuint dims,
-                      struct gl_texture_object *texObj,
-                      GLenum target, GLsizei levels,
-                      GLenum internalformat, GLsizei width,
-                      GLsizei height, GLsizei depth, bool dsa)
+static void
+texture_storage(struct gl_context *ctx, GLuint dims,
+                struct gl_texture_object *texObj,
+                GLenum target, GLsizei levels,
+                GLenum internalformat, GLsizei width,
+                GLsizei height, GLsizei depth, bool dsa)
 {
    GLboolean sizeOK, dimensionsOK;
    mesa_format texFormat;
@@ -480,7 +480,7 @@ texstorage(GLuint dims, GLenum target, GLsizei levels, GLenum internalformat,
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
-   /* Check target.  This is done here so that _mesa_texture_storage
+   /* Check target.  This is done here so that texture_storage
     * can receive unsized formats.
     */
    if (!legal_texobj_target(ctx, dims, target)) {
@@ -509,8 +509,8 @@ texstorage(GLuint dims, GLenum target, GLsizei levels, GLenum internalformat,
    if (!texObj)
       return;
 
-   _mesa_texture_storage(ctx, dims, texObj, target, levels,
-                         internalformat, width, height, depth, false);
+   texture_storage(ctx, dims, texObj, target, levels,
+                   internalformat, width, height, depth, false);
 }
 
 
@@ -543,7 +543,7 @@ texturestorage(GLuint dims, GLuint texture, GLsizei levels,
    if (!texObj)
       return;
 
-   /* Check target.  This is done here so that _mesa_texture_storage
+   /* Check target.  This is done here so that texture_storage
     * can receive unsized formats.
     */
    if (!legal_texobj_target(ctx, dims, texObj->Target)) {
@@ -553,8 +553,8 @@ texturestorage(GLuint dims, GLuint texture, GLsizei levels,
       return;
    }
 
-   _mesa_texture_storage(ctx, dims, texObj, texObj->Target,
-                         levels, internalformat, width, height, depth, true);
+   texture_storage(ctx, dims, texObj, texObj->Target,
+                   levels, internalformat, width, height, depth, true);
 }
 
 
