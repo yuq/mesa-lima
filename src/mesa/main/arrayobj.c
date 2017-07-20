@@ -311,20 +311,6 @@ save_array_object(struct gl_context *ctx, struct gl_vertex_array_object *vao)
 
 
 /**
- * Remove the given array object from the array object pool.
- * Do not deallocate the array object though.
- */
-static void
-remove_array_object(struct gl_context *ctx, struct gl_vertex_array_object *vao)
-{
-   if (vao->Name > 0) {
-      /* remove from hash table */
-      _mesa_HashRemoveLocked(ctx->Array.Objects, vao->Name);
-   }
-}
-
-
-/**
  * Updates the derived gl_vertex_arrays when a gl_vertex_attrib_array
  * or a gl_vertex_buffer_binding has changed.
  */
@@ -504,7 +490,7 @@ _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
             _mesa_BindVertexArray(0);
 
          /* The ID is immediately freed for re-use */
-         remove_array_object(ctx, obj);
+         _mesa_HashRemoveLocked(ctx->Array.Objects, obj->Name);
 
          if (ctx->Array.LastLookedUpVAO == obj)
             _mesa_reference_vao(ctx, &ctx->Array.LastLookedUpVAO, NULL);
