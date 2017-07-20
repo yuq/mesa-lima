@@ -552,6 +552,13 @@ struct st_api
     * Get the currently bound context in the calling thread.
     */
    struct st_context_iface *(*get_current)(struct st_api *stapi);
+
+   /**
+    * Notify the st manager the framebuffer interface object
+    * is no longer valid.
+    */
+   void (*destroy_drawable)(struct st_api *stapi,
+                            struct st_framebuffer_iface *stfbi);
 };
 
 /**

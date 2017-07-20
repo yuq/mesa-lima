@@ -34,6 +34,7 @@
 
 struct st_context;
 struct st_framebuffer;
+struct st_framebuffer_interface;
 
 void
 st_manager_flush_frontbuffer(struct st_context *st);
@@ -48,4 +49,8 @@ st_manager_add_color_renderbuffer(struct st_context *st, struct gl_framebuffer *
 void
 st_framebuffer_reference(struct st_framebuffer **ptr,
                          struct st_framebuffer *stfb);
+
+void
+st_framebuffer_interface_destroy(struct st_framebuffer_interface *stfbi);
+
 #endif /* ST_MANAGER_H */

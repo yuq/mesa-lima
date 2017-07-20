@@ -169,6 +169,8 @@ void
 dri_destroy_buffer(__DRIdrawable * dPriv)
 {
    struct dri_drawable *drawable = dri_drawable(dPriv);
+   struct dri_screen *screen = drawable->screen;
+   struct st_api *stapi = screen->st_api;
    int i;
 
    pipe_surface_reference(&drawable->drisw_surface, NULL);
@@ -180,7 +182,9 @@ dri_destroy_buffer(__DRIdrawable * dPriv)
 
    swap_fences_unref(drawable);
 
-   drawable->base.ID = 0;
+   /* Notify the st manager that this drawable is no longer valid */
+   stapi->destroy_drawable(stapi, &drawable->base);
+
    FREE(drawable);
 }
 

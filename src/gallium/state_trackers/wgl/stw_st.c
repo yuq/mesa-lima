@@ -256,7 +256,11 @@ stw_st_destroy_framebuffer_locked(struct st_framebuffer_iface *stfb)
    for (i = 0; i < ST_ATTACHMENT_COUNT; i++)
       pipe_resource_reference(&stwfb->textures[i], NULL);
 
-   stwfb->base.ID = 0;
+   /* Notify the st manager that the framebuffer interface is no
+    * longer valid.
+    */
+   stw_dev->stapi->destroy_drawable(stw_dev->stapi, &stwfb->base);
+
    FREE(stwfb);
 }
 
