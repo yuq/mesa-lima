@@ -251,7 +251,7 @@
     <param name="mode" type="GLenum"/>
   </function>
 
-  <function name="EndConditionalRender">
+  <function name="EndConditionalRender" no_error="true">
   </function>
 
   <!-- These functions alias ones from GL_EXT_gpu_shader4 -->

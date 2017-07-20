@@ -147,6 +147,14 @@ end_conditional_render(struct gl_context *ctx)
 
 
 void APIENTRY
+_mesa_EndConditionalRender_no_error(void)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   end_conditional_render(ctx);
+}
+
+
+void APIENTRY
 _mesa_EndConditionalRender(void)
 {
    GET_CURRENT_CONTEXT(ctx);
