@@ -30,13 +30,62 @@
 #include "pipe/p_state.h"
 
 #include "lima_context.h"
+#include "lima_program.h"
 
-static const nir_shader_compiler_options nir_options = {
+
+static const nir_shader_compiler_options vs_nir_options = {
    .lower_fpow = true,
    .lower_ffract = true,
    .lower_fdiv = true,
    .lower_fsqrt = true,
 };
+
+static const nir_shader_compiler_options fs_nir_options = {0};
+
+const void *
+lima_program_get_compiler_options(enum pipe_shader_type shader)
+{
+   switch (shader) {
+   case PIPE_SHADER_VERTEX:
+      return &vs_nir_options;
+   case PIPE_SHADER_FRAGMENT:
+      return &fs_nir_options;
+   default:
+      return NULL;
+   }
+}
+
+void
+lima_program_optimize_nir(struct nir_shader *s)
+{
+   bool progress;
+
+   do {
+      progress = false;
+
+      NIR_PASS_V(s, nir_lower_vars_to_ssa);
+      NIR_PASS(progress, s, nir_lower_alu_to_scalar);
+      NIR_PASS(progress, s, nir_lower_phis_to_scalar);
+      NIR_PASS(progress, s, nir_copy_prop);
+      NIR_PASS(progress, s, nir_opt_remove_phis);
+      NIR_PASS(progress, s, nir_opt_dce);
+      NIR_PASS(progress, s, nir_opt_dead_cf);
+      NIR_PASS(progress, s, nir_opt_cse);
+      NIR_PASS(progress, s, nir_opt_peephole_select, 8);
+      NIR_PASS(progress, s, nir_opt_algebraic);
+      NIR_PASS(progress, s, nir_opt_constant_folding);
+      NIR_PASS(progress, s, nir_opt_undef);
+      NIR_PASS(progress, s, nir_opt_loop_unroll,
+               nir_var_shader_in |
+               nir_var_shader_out |
+               nir_var_local);
+   } while (progress);
+
+   NIR_PASS_V(s, nir_lower_locals_to_regs);
+   NIR_PASS_V(s, nir_convert_from_ssa, true);
+   NIR_PASS_V(s, nir_remove_dead_variables, nir_var_local);
+   nir_sweep(s);
+}
 
 static void *
 lima_create_fs_state(struct pipe_context *pctx,
@@ -52,10 +101,6 @@ lima_create_fs_state(struct pipe_context *pctx,
    assert(cso->type == PIPE_SHADER_IR_TGSI);
 
    tgsi_dump(cso->tokens, 0);
-
-   nir_shader *s = tgsi_to_nir(cso->tokens, &nir_options);
-   nir_print_shader(s, stdout);
-   ralloc_free(s);
 
    static uint32_t fs[] = {
       0x00021025, 0x0000014c, 0x03c007cf, 0x00000000, /* 0x00000000 */
@@ -98,13 +143,11 @@ lima_create_vs_state(struct pipe_context *pctx,
 
    printf("dummy %s\n", __func__);
 
-   assert(cso->type == PIPE_SHADER_IR_TGSI);
+   assert(cso->type == PIPE_SHADER_IR_NIR);
 
-   tgsi_dump(cso->tokens, 0);
-
-   nir_shader *s = tgsi_to_nir(cso->tokens, &nir_options);
-   nir_print_shader(s, stdout);
-   ralloc_free(s);
+   nir_shader *nir = cso->ir.nir;
+   lima_program_optimize_nir(nir);
+   nir_print_shader(nir, stdout);
 
 /*
   uniform.load(2), acc[1].pass(uniform.x);
