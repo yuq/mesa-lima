@@ -1294,7 +1294,7 @@ brw_stage_has_packed_dispatch(MAYBE_UNUSED const struct gen_device_info *devinfo
     * to do a full test run with brw_fs_test_dispatch_packing() hooked up to
     * the NIR front-end before changing this assertion.
     */
-   assert(devinfo->gen <= 10);
+   assert(devinfo->gen <= 11);
 
    switch (stage) {
    case MESA_SHADER_FRAGMENT: {
