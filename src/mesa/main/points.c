@@ -55,6 +55,14 @@ point_size(struct gl_context *ctx, GLfloat size)
 
 
 void GLAPIENTRY
+_mesa_PointSize_no_error(GLfloat size)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   point_size(ctx, size);
+}
+
+
+void GLAPIENTRY
 _mesa_PointSize( GLfloat size )
 {
    GET_CURRENT_CONTEXT(ctx);

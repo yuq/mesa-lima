@@ -2092,7 +2092,7 @@
         <glx rop="99"/>
     </function>
 
-    <function name="PointSize" es1="1.0">
+    <function name="PointSize" es1="1.0" no_error="true">
         <param name="size" type="GLfloat"/>
         <glx rop="100"/>
     </function>
