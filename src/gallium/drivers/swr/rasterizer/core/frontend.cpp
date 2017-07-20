@@ -1478,13 +1478,22 @@ void ProcessDraw(
     PA_STATE& pa = paFactory.GetPA();
 
 #if USE_SIMD16_FRONTEND
+#if USE_SIMD16_SHADERS
+    simd16vertex        vin;
+#else
     simdvertex          vin_lo;
     simdvertex          vin_hi;
+#endif
     SWR_VS_CONTEXT      vsContext_lo;
     SWR_VS_CONTEXT      vsContext_hi;
 
+#if USE_SIMD16_SHADERS
+    vsContext_lo.pVin = reinterpret_cast<simdvertex *>(&vin);
+    vsContext_hi.pVin = reinterpret_cast<simdvertex *>(&vin);
+#else
     vsContext_lo.pVin = &vin_lo;
     vsContext_hi.pVin = &vin_hi;
+#endif
     vsContext_lo.AlternateOffset = 0;
     vsContext_hi.AlternateOffset = 1;
 
@@ -1565,17 +1574,31 @@ void ProcessDraw(
             {
                 // 1. Execute FS/VS for a single SIMD.
                 AR_BEGIN(FEFetchShader, pDC->drawId);
+#if USE_SIMD16_SHADERS
+                state.pfnFetchFunc(fetchInfo_lo, vin);
+#else
                 state.pfnFetchFunc(fetchInfo_lo, vin_lo);
 
                 if ((i + KNOB_SIMD_WIDTH) < endVertex)  // 1/2 of KNOB_SIMD16_WIDTH
                 {
                     state.pfnFetchFunc(fetchInfo_hi, vin_hi);
                 }
+#endif
                 AR_END(FEFetchShader, 0);
 
                 // forward fetch generated vertex IDs to the vertex shader
+#if USE_SIMD16_SHADERS
+#if 0
+                vsContext_lo.VertexID = _simd16_extract(fetchInfo_lo.VertexID, 0);
+                vsContext_hi.VertexID = _simd16_extract(fetchInfo_lo.VertexID, 1);
+#else
+                vsContext_lo.VertexID = fetchInfo_lo.VertexID;
+                vsContext_hi.VertexID = fetchInfo_lo.VertexID2;
+#endif
+#else
                 vsContext_lo.VertexID = fetchInfo_lo.VertexID;
                 vsContext_hi.VertexID = fetchInfo_hi.VertexID;
+#endif
 
                 // Setup active mask for vertex shader.
                 vsContext_lo.mask = GenerateMask(endVertex - i);
@@ -1584,8 +1607,18 @@ void ProcessDraw(
                 // forward cut mask to the PA
                 if (IsIndexedT::value)
                 {
+#if USE_SIMD16_SHADERS
+#if 0
+                    *pvCutIndices_lo = _simd_movemask_ps(_simd_castsi_ps(_simd16_extract(fetchInfo_lo.CutMask, 0)));
+                    *pvCutIndices_hi = _simd_movemask_ps(_simd_castsi_ps(_simd16_extract(fetchInfo_lo.CutMask, 1)));
+#else
+                    *pvCutIndices_lo = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_lo.CutMask));
+                    *pvCutIndices_hi = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_lo.CutMask2));
+#endif
+#else
                     *pvCutIndices_lo = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_lo.CutMask));
                     *pvCutIndices_hi = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_hi.CutMask));
+#endif
                 }
 
                 UPDATE_STAT_FE(IaVertices, GetNumInvocations(i, endVertex));

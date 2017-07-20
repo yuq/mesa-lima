@@ -577,6 +577,12 @@ struct SWR_FETCH_CONTEXT
     uint32_t StartInstance;                     // IN: start instance
     simdscalari VertexID;                       // OUT: vector of vertex IDs
     simdscalari CutMask;                        // OUT: vector mask of indices which have the cut index value
+#if USE_SIMD16_SHADERS
+//    simd16scalari VertexID;                     // OUT: vector of vertex IDs
+//    simd16scalari CutMask;                      // OUT: vector mask of indices which have the cut index value
+    simdscalari VertexID2;                      // OUT: vector of vertex IDs
+    simdscalari CutMask2;                       // OUT: vector mask of indices which have the cut index value
+#endif
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -830,7 +836,11 @@ static_assert(sizeof(SWR_BLEND_STATE) == 36, "Invalid SWR_BLEND_STATE size");
 //////////////////////////////////////////////////////////////////////////
 /// FUNCTION POINTERS FOR SHADERS
 
+#if USE_SIMD16_SHADERS
+typedef void(__cdecl *PFN_FETCH_FUNC)(SWR_FETCH_CONTEXT& fetchInfo, simd16vertex& out);
+#else
 typedef void(__cdecl *PFN_FETCH_FUNC)(SWR_FETCH_CONTEXT& fetchInfo, simdvertex& out);
+#endif
 typedef void(__cdecl *PFN_VERTEX_FUNC)(HANDLE hPrivateData, SWR_VS_CONTEXT* pVsContext);
 typedef void(__cdecl *PFN_HS_FUNC)(HANDLE hPrivateData, SWR_HS_CONTEXT* pHsContext);
 typedef void(__cdecl *PFN_DS_FUNC)(HANDLE hPrivateData, SWR_DS_CONTEXT* pDsContext);

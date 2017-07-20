@@ -194,6 +194,14 @@ struct JitManager
     llvm::Type* mSimdVectorInt32Ty;
     llvm::Type* mSimdVectorTy;
 
+#if USE_SIMD16_SHADERS
+    llvm::Type* mSimd16FP32Ty;
+    llvm::Type* mSimd16Int32Ty;
+
+    llvm::Type* mSimd16VectorFP32Ty;
+    llvm::Type* mSimd16VectorInt32Ty;
+
+#endif
     // fetch shader types
     llvm::FunctionType*        mFetchShaderTy;
 
