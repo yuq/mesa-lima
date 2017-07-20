@@ -27,6 +27,7 @@
 #include "lima_screen.h"
 #include "lima_context.h"
 #include "lima_resource.h"
+#include "lima_program.h"
 
 static void
 lima_screen_destroy(struct pipe_screen *pscreen)
@@ -308,7 +309,7 @@ get_vertex_shader_param(struct lima_screen *screen,
       return 0;
 
    case PIPE_SHADER_CAP_PREFERRED_IR:
-      return PIPE_SHADER_IR_TGSI;
+      return PIPE_SHADER_IR_NIR;
 
    case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
    case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
@@ -476,7 +477,7 @@ lima_screen_get_compiler_options(struct pipe_screen *pscreen,
                                  enum pipe_shader_type shader)
 {
    printf("dummy %s\n", __func__);
-   return NULL;
+   return lima_program_get_compiler_options(shader);
 }
 
 struct pipe_screen *
