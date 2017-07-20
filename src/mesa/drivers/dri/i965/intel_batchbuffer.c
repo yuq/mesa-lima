@@ -78,8 +78,8 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch,
    batch->exec_array_size = 100;
    batch->exec_bos =
       malloc(batch->exec_array_size * sizeof(batch->exec_bos[0]));
-   batch->exec_objects =
-      malloc(batch->exec_array_size * sizeof(batch->exec_objects[0]));
+   batch->validation_list =
+      malloc(batch->exec_array_size * sizeof(batch->validation_list[0]));
 
    if (INTEL_DEBUG & DEBUG_BATCH) {
       batch->state_batch_sizes =
@@ -162,7 +162,7 @@ intel_batchbuffer_free(struct intel_batchbuffer *batch)
    }
    free(batch->relocs);
    free(batch->exec_bos);
-   free(batch->exec_objects);
+   free(batch->validation_list);
 
    brw_bo_unreference(batch->last_bo);
    brw_bo_unreference(batch->bo);
@@ -532,13 +532,13 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
       batch->exec_bos =
          realloc(batch->exec_bos,
                  batch->exec_array_size * sizeof(batch->exec_bos[0]));
-      batch->exec_objects =
-         realloc(batch->exec_objects,
-                 batch->exec_array_size * sizeof(batch->exec_objects[0]));
+      batch->validation_list =
+         realloc(batch->validation_list,
+                 batch->exec_array_size * sizeof(batch->validation_list[0]));
    }
 
    struct drm_i915_gem_exec_object2 *validation_entry =
-      &batch->exec_objects[batch->exec_count];
+      &batch->validation_list[batch->exec_count];
    validation_entry->handle = bo->gem_handle;
    if (bo == batch->bo) {
       validation_entry->relocation_count = batch->reloc_count;
@@ -568,7 +568,7 @@ execbuffer(int fd,
            int flags)
 {
    struct drm_i915_gem_execbuffer2 execbuf = {
-      .buffers_ptr = (uintptr_t) batch->exec_objects,
+      .buffers_ptr = (uintptr_t) batch->validation_list,
       .buffer_count = batch->exec_count,
       .batch_start_offset = 0,
       .batch_len = used,
@@ -599,10 +599,10 @@ execbuffer(int fd,
       bo->idle = false;
 
       /* Update brw_bo::offset64 */
-      if (batch->exec_objects[i].offset != bo->offset64) {
+      if (batch->validation_list[i].offset != bo->offset64) {
          DBG("BO %d migrated: 0x%" PRIx64 " -> 0x%llx\n",
-             bo->gem_handle, bo->offset64, batch->exec_objects[i].offset);
-         bo->offset64 = batch->exec_objects[i].offset;
+             bo->gem_handle, bo->offset64, batch->validation_list[i].offset);
+         bo->offset64 = batch->validation_list[i].offset;
       }
    }
 
