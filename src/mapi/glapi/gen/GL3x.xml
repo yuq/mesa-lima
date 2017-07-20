@@ -246,7 +246,7 @@
 
   <!-- These functions alias ones from GL_NV_conditional_render -->
 
-  <function name="BeginConditionalRender">
+  <function name="BeginConditionalRender" no_error="true">
     <param name="query" type="GLuint"/>
     <param name="mode" type="GLenum"/>
   </function>

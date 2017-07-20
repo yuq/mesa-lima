@@ -105,6 +105,14 @@ begin_conditional_render(struct gl_context *ctx, GLuint queryId, GLenum mode,
 
 
 void GLAPIENTRY
+_mesa_BeginConditionalRender_no_error(GLuint queryId, GLenum mode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   begin_conditional_render(ctx, queryId, mode, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BeginConditionalRender(GLuint queryId, GLenum mode)
 {
    GET_CURRENT_CONTEXT(ctx);
