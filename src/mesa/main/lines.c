@@ -77,6 +77,14 @@ line_width(struct gl_context *ctx, GLfloat width, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_LineWidth_no_error(GLfloat width)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   line_width(ctx, width, true);
+}
+
+
+void GLAPIENTRY
 _mesa_LineWidth(GLfloat width)
 {
    GET_CURRENT_CONTEXT(ctx);

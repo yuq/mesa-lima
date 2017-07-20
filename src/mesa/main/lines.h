@@ -37,6 +37,9 @@
 
 struct gl_context;
 
+void GLAPIENTRY
+_mesa_LineWidth_no_error(GLfloat width);
+
 extern void GLAPIENTRY
 _mesa_LineWidth( GLfloat width );
 

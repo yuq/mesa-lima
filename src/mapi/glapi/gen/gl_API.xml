@@ -2059,7 +2059,7 @@
         <glx rop="94"/>
     </function>
 
-    <function name="LineWidth" es1="1.0" es2="2.0">
+    <function name="LineWidth" es1="1.0" es2="2.0" no_error="true">
         <param name="width" type="GLfloat"/>
         <glx rop="95"/>
     </function>
