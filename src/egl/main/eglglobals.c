@@ -168,7 +168,18 @@ _eglPointerIsDereferencable(void *p)
       return EGL_FALSE;
    }
 
-   return (valid & 0x01) == 0x01;
+   /* mincore() returns 0 on success, and -1 on failure.  The last parameter
+    * is a vector of bytes with one entry for each page queried.  mincore
+    * returns page residency information in the first bit of each byte in the
+    * vector.
+    *
+    * Residency doesn't actually matter when determining whether a pointer is
+    * dereferenceable, so the output vector can be ignored.  What matters is
+    * whether mincore succeeds. See:
+    *
+    *   http://man7.org/linux/man-pages/man2/mincore.2.html
+    */
+   return EGL_TRUE;
 #else
    return p != NULL;
 #endif
