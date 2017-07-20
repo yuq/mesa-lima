@@ -1681,18 +1681,25 @@ if test "x$WAYLAND_SCANNER" = x; then
     AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [:])
 fi
 
+PKG_CHECK_EXISTS([wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED], [have_wayland_protocols=yes], [have_wayland_protocols=no])
+if test "x$have_wayland_protocols" = xyes; then
+    ac_wayland_protocols_pkgdatadir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
+fi
+AC_SUBST(WAYLAND_PROTOCOLS_DATADIR, $ac_wayland_protocols_pkgdatadir)
+
 # Do per platform setups and checks
 platforms=`IFS=', '; echo $with_platforms`
 for plat in $platforms; do
     case "$plat" in
     wayland)
 
-        PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED])
-        ac_wayland_protocols_pkgdatadir=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
-        AC_SUBST(WAYLAND_PROTOCOLS_DATADIR, $ac_wayland_protocols_pkgdatadir)
+        PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
 
         if test "x$WAYLAND_SCANNER" = "x:"; then
                 AC_MSG_ERROR([wayland-scanner is needed to compile the wayland platform])
+        fi
+        if test "x$have_wayland_protocols" = xno; then
+                AC_MSG_ERROR([wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED is needed to compile the wayland platform])
         fi
         DEFINES="$DEFINES -DHAVE_WAYLAND_PLATFORM"
         ;;

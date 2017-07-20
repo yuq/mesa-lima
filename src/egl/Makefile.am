@@ -64,7 +64,6 @@ libEGL_common_la_LIBADD += $(top_builddir)/src/loader/libloader_dri3_helper.la
 endif
 endif
 
-if HAVE_PLATFORM_WAYLAND
 WL_DMABUF_XML = $(WAYLAND_PROTOCOLS_DATADIR)/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml
 
 drivers/dri2/linux-dmabuf-unstable-v1-protocol.c: $(WL_DMABUF_XML)
@@ -75,17 +74,19 @@ drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h: $(WL_DMABUF_XML)
 	$(MKDIR_GEN)
 	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
 
-BUILT_SOURCES += \
-	drivers/dri2/linux-dmabuf-unstable-v1-protocol.c \
-	drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
+drivers/dri2/linux-dmabuf-unstable-v1-protocol.lo: drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
+drivers/dri2/egl_dri2.lo: drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
 
+if HAVE_PLATFORM_WAYLAND
 AM_CFLAGS += $(WAYLAND_CFLAGS)
 libEGL_common_la_LIBADD += $(WAYLAND_LIBS)
 libEGL_common_la_LIBADD += $(LIBDRM_LIBS)
 libEGL_common_la_LIBADD += $(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la
 libEGL_common_la_LIBADD += $(top_builddir)/src/util/libmesautil.la
-dri2_backend_FILES += drivers/dri2/platform_wayland.c	\
-	drivers/dri2/linux-dmabuf-unstable-v1-protocol.c
+dri2_backend_FILES += \
+	drivers/dri2/platform_wayland.c	\
+	drivers/dri2/linux-dmabuf-unstable-v1-protocol.c \
+	drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
 endif
 
 if HAVE_PLATFORM_DRM
