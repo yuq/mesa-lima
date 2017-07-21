@@ -167,8 +167,8 @@ struct svga_shader_emitter_v10
 
    /* For fragment shaders only */
    struct {
-      /* apha test */
       unsigned color_out_index[PIPE_MAX_COLOR_BUFS];  /**< the real color output regs */
+      unsigned num_color_outputs;
       unsigned color_tmp_index;  /**< fake/temp color output reg */
       unsigned alpha_ref_index;  /**< immediate constant for alpha ref */
 
@@ -2499,6 +2499,9 @@ emit_output_declarations(struct svga_shader_emitter_v10 *emit)
 
             emit->fs.color_out_index[semantic_index] = index;
 
+            emit->fs.num_color_outputs = MAX2(emit->fs.num_color_outputs,
+                                              index + 1);
+
             /* The semantic index is the shader's color output/buffer index */
             emit_output_declaration(emit,
                                     VGPU10_OPCODE_DCL_OUTPUT, semantic_index,
@@ -2521,6 +2524,9 @@ emit_output_declarations(struct svga_shader_emitter_v10 *emit)
                                         VGPU10_OPERAND_4_COMPONENT_MASK_ALL);
                      emit->info.output_semantic_index[idx] = j;
                   }
+
+                  emit->fs.num_color_outputs =
+                     emit->key.fs.write_color0_to_n_cbufs;
                }
             }
             else {
@@ -6378,6 +6384,47 @@ emit_pre_helpers(struct svga_shader_emitter_v10 *emit)
 
 
 /**
+ * The device has no direct support for the pipe_blend_state::alpha_to_one
+ * option so we implement it here with shader code.
+ *
+ * Note that this is kind of pointless, actually.  Here we're clobbering
+ * the alpha value with 1.0.  So if alpha-to-coverage is enabled, we'll wind
+ * up with 100% coverage.  That's almost certainly not what the user wants.
+ * The work-around is to add extra shader code to compute coverage from alpha
+ * and write it to the coverage output register (if the user's shader doesn't
+ * do so already).  We'll probably do that in the future.
+ */
+static void
+emit_alpha_to_one_instructions(struct svga_shader_emitter_v10 *emit,
+                               unsigned fs_color_tmp_index)
+{
+   struct tgsi_full_src_register one = make_immediate_reg_float(emit, 1.0f);
+   unsigned i;
+
+   /* Note: it's not 100% clear from the spec if we're supposed to clobber
+    * the alpha for all render targets.  But that's what NVIDIA does and
+    * that's what Piglit tests.
+    */
+   for (i = 0; i < emit->fs.num_color_outputs; i++) {
+      struct tgsi_full_dst_register color_dst;
+
+      if (fs_color_tmp_index != INVALID_INDEX && i == 0) {
+         /* write to the temp color register */
+         color_dst = make_dst_temp_reg(fs_color_tmp_index);
+      }
+      else {
+         /* write directly to the color[i] output */
+         color_dst = make_dst_output_reg(emit->fs.color_out_index[i]);
+      }
+
+      color_dst = writemask_dst(&color_dst, TGSI_WRITEMASK_W);
+
+      emit_instruction_op1(emit, VGPU10_OPCODE_MOV, &color_dst, &one, FALSE);
+   }
+}
+
+
+/**
  * Emit alpha test code.  This compares TEMP[fs_color_tmp_index].w
  * against the alpha reference value and discards the fragment if the
  * comparison fails.
@@ -6494,6 +6541,9 @@ emit_post_helpers(struct svga_shader_emitter_v10 *emit)
        */
       emit->fs.color_tmp_index = INVALID_INDEX;
 
+      if (emit->key.fs.alpha_to_one) {
+         emit_alpha_to_one_instructions(emit, fs_color_tmp_index);
+      }
       if (emit->key.fs.alpha_func != SVGA3D_CMP_ALWAYS) {
          emit_alpha_test_instructions(emit, fs_color_tmp_index);
       }

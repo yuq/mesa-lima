@@ -25,6 +25,7 @@
 
 #include "util/u_inlines.h"
 #include "pipe/p_defines.h"
+#include "util/u_format.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/u_bitmask.h"
@@ -233,6 +234,8 @@ make_fs_key(const struct svga_context *svga,
     * SVGA_NEW_BLEND
     */
    key->fs.white_fragments = svga->curr.blend->need_white_fragments;
+
+   key->fs.alpha_to_one = svga->curr.blend->alpha_to_one;
 
 #ifdef DEBUG
    /*
