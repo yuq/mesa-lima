@@ -154,7 +154,8 @@ _mesa_new_sampler_object(struct gl_context *ctx, GLuint name)
 }
 
 static void
-create_samplers(struct gl_context *ctx, GLsizei count, GLuint *samplers)
+create_samplers(struct gl_context *ctx, GLsizei count, GLuint *samplers,
+                const char *caller)
 {
    GLuint first;
    GLint i;
@@ -190,14 +191,14 @@ create_samplers_err(struct gl_context *ctx, GLsizei count, GLuint *samplers,
       return;
    }
 
-   create_samplers(ctx, count, samplers);
+   create_samplers(ctx, count, samplers, caller);
 }
 
 void GLAPIENTRY
 _mesa_GenSamplers_no_error(GLsizei count, GLuint *samplers)
 {
    GET_CURRENT_CONTEXT(ctx);
-   create_samplers(ctx, count, samplers);
+   create_samplers(ctx, count, samplers, "glGenSamplers");
 }
 
 void GLAPIENTRY
@@ -211,7 +212,7 @@ void GLAPIENTRY
 _mesa_CreateSamplers_no_error(GLsizei count, GLuint *samplers)
 {
    GET_CURRENT_CONTEXT(ctx);
-   create_samplers(ctx, count, samplers);
+   create_samplers(ctx, count, samplers, "glCreateSamplers");
 }
 
 void GLAPIENTRY
