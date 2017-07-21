@@ -1083,6 +1083,10 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
    struct dri2_egl_display *dri2_dpy = data;
    uint64_t *mod = NULL;
 
+   if (modifier_hi == (DRM_FORMAT_MOD_INVALID >> 32) &&
+       modifier_lo == (DRM_FORMAT_MOD_INVALID & 0xffffffff))
+      return;
+
    switch (format) {
    case WL_DRM_FORMAT_ARGB8888:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.argb8888);
