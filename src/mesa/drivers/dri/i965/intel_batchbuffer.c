@@ -637,7 +637,19 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
    }
 
    if (!brw->screen->no_hw) {
-      int flags = 0;
+      /* The requirement for using I915_EXEC_NO_RELOC are:
+       *
+       *   The addresses written in the objects must match the corresponding
+       *   reloc.presumed_offset which in turn must match the corresponding
+       *   execobject.offset.
+       *
+       *   Any render targets written to in the batch must be flagged with
+       *   EXEC_OBJECT_WRITE.
+       *
+       *   To avoid stalling, execobject.offset should match the current
+       *   address of that object within the active context.
+       */
+      int flags = I915_EXEC_NO_RELOC;
 
       if (brw->gen >= 6 && batch->ring == BLT_RING) {
          flags |= I915_EXEC_BLT;
@@ -767,8 +779,6 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
 {
    assert(target != NULL);
 
-   uint64_t offset64;
-
    if (batch->reloc_count == batch->reloc_array_size) {
       batch->reloc_array_size *= 2;
       batch->relocs = realloc(batch->relocs,
@@ -780,16 +790,32 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
    assert(batch_offset <= BATCH_SZ - sizeof(uint32_t));
    assert(_mesa_bitcount(write_domain) <= 1);
 
-   if (target != batch->bo)
-      add_exec_bo(batch, target);
+   uint64_t offset64;
+   if (target != batch->bo) {
+      unsigned int index = add_exec_bo(batch, target);
+      struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[index];
+
+      if (write_domain) {
+         entry->flags |= EXEC_OBJECT_WRITE;
+
+         /* PIPECONTROL needs a w/a on gen6 */
+         if (write_domain == I915_GEM_DOMAIN_INSTRUCTION) {
+            struct brw_context *brw = container_of(batch, brw, batch);
+            if (brw->gen == 6)
+               entry->flags |= EXEC_OBJECT_NEEDS_GTT;
+         }
+      }
+
+      offset64 = entry->offset;
+   } else {
+      offset64 = target->offset64;
+   }
 
    struct drm_i915_gem_relocation_entry *reloc =
       &batch->relocs[batch->reloc_count];
 
    batch->reloc_count++;
 
-   /* ensure gcc doesn't reload */
-   offset64 = *((volatile uint64_t *)&target->offset64);
    reloc->offset = batch_offset;
    reloc->delta = target_offset;
    reloc->target_handle = target->gem_handle;
