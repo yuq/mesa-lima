@@ -429,39 +429,9 @@ _mesa_ActiveShaderProgram(GLuint pipeline, GLuint program)
    _mesa_reference_shader_program(ctx, &pipe->ActiveProgram, shProg);
 }
 
-void GLAPIENTRY
-_mesa_BindProgramPipeline_no_error(GLuint pipeline)
+static ALWAYS_INLINE void
+bind_program_pipeline(struct gl_context *ctx, GLuint pipeline, bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_pipeline_object *newObj = NULL;
-
-   /* Rebinding the same pipeline object: no change.
-    */
-   if (ctx->_Shader->Name == pipeline)
-      return;
-
-   /* Get pointer to new pipeline object (newObj)
-    */
-   if (pipeline) {
-      /* non-default pipeline object */
-      newObj = _mesa_lookup_pipeline_object(ctx, pipeline);
-
-      /* Object is created by any Pipeline call but glGenProgramPipelines,
-       * glIsProgramPipeline and GetProgramPipelineInfoLog
-       */
-      newObj->EverBound = GL_TRUE;
-   }
-
-   _mesa_bind_pipeline(ctx, newObj);
-}
-
-/**
- * Make program of the pipeline current
- */
-void GLAPIENTRY
-_mesa_BindProgramPipeline(GLuint pipeline)
-{
-   GET_CURRENT_CONTEXT(ctx);
    struct gl_pipeline_object *newObj = NULL;
 
    if (MESA_VERBOSE & VERBOSE_API)
@@ -482,7 +452,7 @@ _mesa_BindProgramPipeline(GLuint pipeline)
     *         - by BindProgramPipeline if the current transform feedback
     *           object is active and not paused;
     */
-   if (_mesa_is_xfb_active_and_unpaused(ctx)) {
+   if (!no_error && _mesa_is_xfb_active_and_unpaused(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
             "glBindProgramPipeline(transform feedback active)");
       return;
@@ -493,7 +463,7 @@ _mesa_BindProgramPipeline(GLuint pipeline)
    if (pipeline) {
       /* non-default pipeline object */
       newObj = _mesa_lookup_pipeline_object(ctx, pipeline);
-      if (!newObj) {
+      if (!no_error && !newObj) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glBindProgramPipeline(non-gen name)");
          return;
@@ -506,6 +476,23 @@ _mesa_BindProgramPipeline(GLuint pipeline)
    }
 
    _mesa_bind_pipeline(ctx, newObj);
+}
+
+void GLAPIENTRY
+_mesa_BindProgramPipeline_no_error(GLuint pipeline)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_program_pipeline(ctx, pipeline, true);
+}
+
+/**
+ * Make program of the pipeline current
+ */
+void GLAPIENTRY
+_mesa_BindProgramPipeline(GLuint pipeline)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_program_pipeline(ctx, pipeline, false);
 }
 
 void
