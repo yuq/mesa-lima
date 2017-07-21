@@ -2645,15 +2645,6 @@ struct gl_uniform_buffer_variable
 };
 
 
-enum gl_uniform_block_packing
-{
-   ubo_packing_std140,
-   ubo_packing_shared,
-   ubo_packing_packed,
-   ubo_packing_std430
-};
-
-
 struct gl_uniform_block
 {
    /** Declared name of the uniform block */
@@ -2699,7 +2690,7 @@ struct gl_uniform_block
     * This isn't accessible through the API, but it is used while
     * cross-validating uniform blocks.
     */
-   enum gl_uniform_block_packing _Packing;
+   enum glsl_interface_packing _Packing;
    GLboolean _RowMajor;
 };
 
