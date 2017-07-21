@@ -945,10 +945,7 @@ radv_image_view_init(struct radv_image_view *iview,
 	iview->base_mip = range->baseMipLevel;
 
 	radv_image_view_make_descriptor(iview, device, pCreateInfo, false);
-
-	/* For transfers we may use the image as a storage image. */
-	if (image->usage & (VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT))
-		radv_image_view_make_descriptor(iview, device, pCreateInfo, true);
+	radv_image_view_make_descriptor(iview, device, pCreateInfo, true);
 }
 
 bool radv_layout_has_htile(const struct radv_image *image,
