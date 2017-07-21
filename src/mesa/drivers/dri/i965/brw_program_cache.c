@@ -220,7 +220,7 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
    if (can_do_exec_capture(brw->screen))
       new_bo->kflags = EXEC_OBJECT_CAPTURE;
    if (brw->has_llc)
-      llc_map = brw_bo_map(brw, new_bo, MAP_READ | MAP_ASYNC);
+      llc_map = brw_bo_map(brw, new_bo, MAP_READ | MAP_WRITE | MAP_ASYNC);
 
    /* Copy any existing data that needs to be saved. */
    if (cache->next_offset != 0) {
