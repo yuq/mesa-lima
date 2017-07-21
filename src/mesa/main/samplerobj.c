@@ -169,10 +169,18 @@ create_samplers(struct gl_context *ctx, GLsizei count, GLuint *samplers,
 
    /* Insert the ID and pointer to new sampler object into hash table */
    for (i = 0; i < count; i++) {
-      struct gl_sampler_object *sampObj =
-         ctx->Driver.NewSamplerObject(ctx, first + i);
-      _mesa_HashInsertLocked(ctx->Shared->SamplerObjects, first + i, sampObj);
-      samplers[i] = first + i;
+      struct gl_sampler_object *sampObj;
+      GLuint name = first + i;
+
+      sampObj = ctx->Driver.NewSamplerObject(ctx, name);
+      if (!sampObj) {
+         _mesa_HashUnlockMutex(ctx->Shared->SamplerObjects);
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", caller);
+         return;
+      }
+
+      _mesa_HashInsertLocked(ctx->Shared->SamplerObjects, name, sampObj);
+      samplers[i] = name;
    }
 
    _mesa_HashUnlockMutex(ctx->Shared->SamplerObjects);
