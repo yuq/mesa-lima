@@ -5053,14 +5053,13 @@ genX(update_sampler_state)(struct brw_context *brw,
                                  texObj->StencilSampling,
                                  &border_color_offset);
    }
-
-   samp_st.BorderColorPointer = border_color_offset;
-
    if (GEN_GEN < 6) {
-      samp_st.BorderColorPointer += brw->batch.bo->offset64; /* reloc */
-      brw_emit_reloc(&brw->batch, batch_offset_for_sampler_state + 8,
-                     brw->batch.bo, border_color_offset,
-                     I915_GEM_DOMAIN_SAMPLER, 0);
+      samp_st.BorderColorPointer =
+         brw_emit_reloc(&brw->batch, batch_offset_for_sampler_state + 8,
+                        brw->batch.bo, border_color_offset,
+                        I915_GEM_DOMAIN_SAMPLER, 0);
+   } else {
+      samp_st.BorderColorPointer = border_color_offset;
    }
 
 #if GEN_GEN >= 8
