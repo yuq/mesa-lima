@@ -811,17 +811,13 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
       offset64 = target->offset64;
    }
 
-   struct drm_i915_gem_relocation_entry *reloc =
-      &batch->relocs[batch->reloc_count];
-
-   batch->reloc_count++;
-
-   reloc->offset = batch_offset;
-   reloc->delta = target_offset;
-   reloc->target_handle = target->gem_handle;
-   reloc->read_domains = read_domains;
-   reloc->write_domain = write_domain;
-   reloc->presumed_offset = offset64;
+   batch->relocs[batch->reloc_count++] =
+      (struct drm_i915_gem_relocation_entry) {
+         .offset = batch_offset,
+         .delta = target_offset,
+         .target_handle = target->gem_handle,
+         .presumed_offset = offset64,
+      };
 
    /* Using the old buffer offset, write in what the right data would be, in
     * case the buffer doesn't move and we can short-circuit the relocation
