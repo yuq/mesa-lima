@@ -5772,7 +5772,7 @@ texture_image_multisample(struct gl_context *ctx, GLuint dims,
              * like, but being tidy is good.
              */
             _mesa_init_teximage_fields(ctx, texImage,
-                  0, 0, 0, 0, GL_NONE, MESA_FORMAT_NONE);
+                  0, 0, 0, 0, internalformat, texFormat);
          }
       }
 
