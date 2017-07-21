@@ -1805,25 +1805,11 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
 /**
  * OpenGL 4.4 / GL_ARB_multi_bind glBindTextures().
  */
-void GLAPIENTRY
-_mesa_BindTextures(GLuint first, GLsizei count, const GLuint *textures)
+static ALWAYS_INLINE void
+bind_textures(struct gl_context *ctx, GLuint first, GLsizei count,
+              const GLuint *textures, bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   GLint i;
-
-   /* The ARB_multi_bind spec says:
-    *
-    *     "An INVALID_OPERATION error is generated if <first> + <count>
-    *      is greater than the number of texture image units supported
-    *      by the implementation."
-    */
-   if (first + count > ctx->Const.MaxCombinedTextureImageUnits) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindTextures(first=%u + count=%d > the value of "
-                  "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS=%u)",
-                  first, count, ctx->Const.MaxCombinedTextureImageUnits);
-      return;
-   }
+   GLsizei i;
 
    if (textures) {
       /* Note that the error semantics for multi-bind commands differ from
@@ -1860,7 +1846,7 @@ _mesa_BindTextures(GLuint first, GLsizei count, const GLuint *textures)
 
             if (texObj && texObj->Target != 0) {
                bind_texture_object(ctx, first + i, texObj);
-            } else {
+            } else if (!no_error) {
                /* The ARB_multi_bind spec says:
                 *
                 *     "An INVALID_OPERATION error is generated if any value
@@ -1883,6 +1869,29 @@ _mesa_BindTextures(GLuint first, GLsizei count, const GLuint *textures)
       for (i = 0; i < count; i++)
          unbind_textures_from_unit(ctx, first + i);
    }
+}
+
+
+void GLAPIENTRY
+_mesa_BindTextures(GLuint first, GLsizei count, const GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* The ARB_multi_bind spec says:
+    *
+    *     "An INVALID_OPERATION error is generated if <first> + <count>
+    *      is greater than the number of texture image units supported
+    *      by the implementation."
+    */
+   if (first + count > ctx->Const.MaxCombinedTextureImageUnits) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glBindTextures(first=%u + count=%d > the value of "
+                  "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS=%u)",
+                  first, count, ctx->Const.MaxCombinedTextureImageUnits);
+      return;
+   }
+
+   bind_textures(ctx, first, count, textures, false);
 }
 
 
