@@ -301,8 +301,7 @@ emit:
       OUT_BATCH(0);
    } else {
       OUT_BATCH((CMD_CONST_BUFFER << 16) | (1 << 8) | (2 - 2));
-      OUT_RELOC(brw->curbe.curbe_bo,
-		I915_GEM_DOMAIN_INSTRUCTION, 0,
+      OUT_RELOC(brw->curbe.curbe_bo, 0,
 		(brw->curbe.total_size - 1) + brw->curbe.curbe_offset);
    }
    ADVANCE_BATCH();

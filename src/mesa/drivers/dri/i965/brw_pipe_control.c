@@ -109,8 +109,7 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | (6 - 2));
       OUT_BATCH(flags);
       if (bo) {
-         OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION,
-                     I915_GEM_DOMAIN_INSTRUCTION, offset);
+         OUT_RELOC64(bo, RELOC_WRITE, offset);
       } else {
          OUT_BATCH(0);
          OUT_BATCH(0);
@@ -141,8 +140,7 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | (5 - 2));
       OUT_BATCH(flags);
       if (bo) {
-         OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                   gen6_gtt | offset);
+         OUT_RELOC(bo, RELOC_WRITE | RELOC_NEEDS_GGTT, gen6_gtt | offset);
       } else {
          OUT_BATCH(0);
       }
@@ -153,8 +151,7 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
       BEGIN_BATCH(4);
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | flags | (4 - 2));
       if (bo) {
-         OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                   PIPE_CONTROL_GLOBAL_GTT_WRITE | offset);
+         OUT_RELOC(bo, RELOC_WRITE, PIPE_CONTROL_GLOBAL_GTT_WRITE | offset);
       } else {
          OUT_BATCH(0);
       }
@@ -409,8 +406,7 @@ brw_emit_end_of_pipe_sync(struct brw_context *brw, uint32_t flags)
           * 3DPRIMITIVE when needed anyway.
           */
          brw_load_register_mem(brw, GEN7_3DPRIM_START_INSTANCE,
-                               brw->workaround_bo,
-                               I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+                               brw->workaround_bo, 0);
       }
    } else {
       /* On gen4-5, a regular pipe control seems to suffice. */

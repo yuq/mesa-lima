@@ -69,7 +69,7 @@ brw_upload_binding_table(struct brw_context *brw,
             brw, &stage_state->surf_offset[
                     prog_data->binding_table.shader_time_start],
             brw->shader_time.bo, 0, ISL_FORMAT_RAW,
-            brw->shader_time.bo->size, 1, true);
+            brw->shader_time.bo->size, 1, RELOC_WRITE);
       }
       uint32_t *bind =
          brw_state_batch(brw, prog_data->binding_table.size_bytes,

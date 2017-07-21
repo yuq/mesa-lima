@@ -89,6 +89,11 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch,
    batch->use_batch_first =
       brw->screen->kernel_features & KERNEL_ALLOWS_EXEC_BATCH_FIRST;
 
+   /* PIPE_CONTROL needs a w/a but only on gen6 */
+   batch->valid_reloc_flags = EXEC_OBJECT_WRITE;
+   if (brw->gen == 6)
+      batch->valid_reloc_flags |= EXEC_OBJECT_NEEDS_GTT;
+
    intel_batchbuffer_reset(batch, bufmgr, has_llc);
 }
 
@@ -788,7 +793,7 @@ brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo)
 uint64_t
 brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
                struct brw_bo *target, uint32_t target_offset,
-               uint32_t read_domains, uint32_t write_domain)
+               unsigned int reloc_flags)
 {
    assert(target != NULL);
 
@@ -801,21 +806,12 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
 
    /* Check args */
    assert(batch_offset <= BATCH_SZ - sizeof(uint32_t));
-   assert(_mesa_bitcount(write_domain) <= 1);
 
    unsigned int index = add_exec_bo(batch, target);
    struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[index];
 
-   if (write_domain) {
-      entry->flags |= EXEC_OBJECT_WRITE;
-
-         /* PIPECONTROL needs a w/a on gen6 */
-      if (write_domain == I915_GEM_DOMAIN_INSTRUCTION) {
-         struct brw_context *brw = container_of(batch, brw, batch);
-         if (brw->gen == 6)
-            entry->flags |= EXEC_OBJECT_NEEDS_GTT;
-      }
-   }
+   if (reloc_flags)
+      entry->flags |= reloc_flags & batch->valid_reloc_flags;
 
    batch->relocs[batch->reloc_count++] =
       (struct drm_i915_gem_relocation_entry) {
@@ -846,7 +842,6 @@ static void
 load_sized_register_mem(struct brw_context *brw,
                         uint32_t reg,
                         struct brw_bo *bo,
-                        uint32_t read_domains, uint32_t write_domain,
                         uint32_t offset,
                         int size)
 {
@@ -860,7 +855,7 @@ load_sized_register_mem(struct brw_context *brw,
       for (i = 0; i < size; i++) {
          OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (4 - 2));
          OUT_BATCH(reg + i * 4);
-         OUT_RELOC64(bo, read_domains, write_domain, offset + i * 4);
+         OUT_RELOC64(bo, 0, offset + i * 4);
       }
       ADVANCE_BATCH();
    } else {
@@ -868,7 +863,7 @@ load_sized_register_mem(struct brw_context *brw,
       for (i = 0; i < size; i++) {
          OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (3 - 2));
          OUT_BATCH(reg + i * 4);
-         OUT_RELOC(bo, read_domains, write_domain, offset + i * 4);
+         OUT_RELOC(bo, 0, offset + i * 4);
       }
       ADVANCE_BATCH();
    }
@@ -878,20 +873,18 @@ void
 brw_load_register_mem(struct brw_context *brw,
                       uint32_t reg,
                       struct brw_bo *bo,
-                      uint32_t read_domains, uint32_t write_domain,
                       uint32_t offset)
 {
-   load_sized_register_mem(brw, reg, bo, read_domains, write_domain, offset, 1);
+   load_sized_register_mem(brw, reg, bo, offset, 1);
 }
 
 void
 brw_load_register_mem64(struct brw_context *brw,
                         uint32_t reg,
                         struct brw_bo *bo,
-                        uint32_t read_domains, uint32_t write_domain,
                         uint32_t offset)
 {
-   load_sized_register_mem(brw, reg, bo, read_domains, write_domain, offset, 2);
+   load_sized_register_mem(brw, reg, bo, offset, 2);
 }
 
 /*
@@ -907,15 +900,13 @@ brw_store_register_mem32(struct brw_context *brw,
       BEGIN_BATCH(4);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (4 - 2));
       OUT_BATCH(reg);
-      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  offset);
+      OUT_RELOC64(bo, RELOC_WRITE, offset);
       ADVANCE_BATCH();
    } else {
       BEGIN_BATCH(3);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
       OUT_BATCH(reg);
-      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                offset);
+      OUT_RELOC(bo, RELOC_WRITE | RELOC_NEEDS_GGTT, offset);
       ADVANCE_BATCH();
    }
 }
@@ -936,23 +927,19 @@ brw_store_register_mem64(struct brw_context *brw,
       BEGIN_BATCH(8);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (4 - 2));
       OUT_BATCH(reg);
-      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  offset);
+      OUT_RELOC64(bo, RELOC_WRITE, offset);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (4 - 2));
       OUT_BATCH(reg + sizeof(uint32_t));
-      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  offset + sizeof(uint32_t));
+      OUT_RELOC64(bo, RELOC_WRITE, offset + sizeof(uint32_t));
       ADVANCE_BATCH();
    } else {
       BEGIN_BATCH(6);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
       OUT_BATCH(reg);
-      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                offset);
+      OUT_RELOC(bo, RELOC_WRITE | RELOC_NEEDS_GGTT, offset);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
       OUT_BATCH(reg + sizeof(uint32_t));
-      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                offset + sizeof(uint32_t));
+      OUT_RELOC(bo, RELOC_WRITE | RELOC_NEEDS_GGTT, offset + sizeof(uint32_t));
       ADVANCE_BATCH();
    }
 }
@@ -1034,12 +1021,10 @@ brw_store_data_imm32(struct brw_context *brw, struct brw_bo *bo,
    BEGIN_BATCH(4);
    OUT_BATCH(MI_STORE_DATA_IMM | (4 - 2));
    if (brw->gen >= 8)
-      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  offset);
+      OUT_RELOC64(bo, RELOC_WRITE, offset);
    else {
       OUT_BATCH(0); /* MBZ */
-      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                offset);
+      OUT_RELOC(bo, RELOC_WRITE, offset);
    }
    OUT_BATCH(imm);
    ADVANCE_BATCH();
@@ -1057,12 +1042,10 @@ brw_store_data_imm64(struct brw_context *brw, struct brw_bo *bo,
    BEGIN_BATCH(5);
    OUT_BATCH(MI_STORE_DATA_IMM | (5 - 2));
    if (brw->gen >= 8)
-      OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  offset);
+      OUT_RELOC64(bo, 0, offset);
    else {
       OUT_BATCH(0); /* MBZ */
-      OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                offset);
+      OUT_RELOC(bo, RELOC_WRITE, offset);
    }
    OUT_BATCH(imm & 0xffffffffu);
    OUT_BATCH(imm >> 32);

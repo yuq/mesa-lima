@@ -69,8 +69,7 @@ emit_depth_packets(struct brw_context *brw,
              depthbuffer_format << 18 |
              (depth_mt ? depth_mt->surf.row_pitch - 1 : 0));
    if (depth_mt) {
-      OUT_RELOC64(depth_mt->bo,
-                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
+      OUT_RELOC64(depth_mt->bo, RELOC_WRITE, 0);
    } else {
       OUT_BATCH(0);
       OUT_BATCH(0);
@@ -95,8 +94,7 @@ emit_depth_packets(struct brw_context *brw,
       BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
       OUT_BATCH((depth_mt->hiz_buf->pitch - 1) | mocs_wb << 25);
-      OUT_RELOC64(depth_mt->hiz_buf->bo,
-                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
+      OUT_RELOC64(depth_mt->hiz_buf->bo, RELOC_WRITE, 0);
       OUT_BATCH(depth_mt->hiz_buf->qpitch >> 2);
       ADVANCE_BATCH();
    }
@@ -114,8 +112,7 @@ emit_depth_packets(struct brw_context *brw,
       OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (5 - 2));
       OUT_BATCH(HSW_STENCIL_ENABLED | mocs_wb << 22 |
                 (stencil_mt->surf.row_pitch - 1));
-      OUT_RELOC64(stencil_mt->bo,
-                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
+      OUT_RELOC64(stencil_mt->bo, RELOC_WRITE, 0);
       OUT_BATCH(stencil_mt->surf.array_pitch_el_rows >> 2);
       ADVANCE_BATCH();
    }

@@ -92,14 +92,10 @@ tally_prims_written(struct brw_context *brw,
       /* GPR0 = Tally */
       brw_load_register_imm32(brw, HSW_CS_GPR(0) + 4, 0);
       brw_load_register_mem(brw, HSW_CS_GPR(0), obj->prim_count_bo,
-                            I915_GEM_DOMAIN_INSTRUCTION,
-                            I915_GEM_DOMAIN_INSTRUCTION,
                             TALLY_OFFSET + i * sizeof(uint32_t));
       if (!obj->base.Paused) {
          /* GPR1 = Start Snapshot */
          brw_load_register_mem64(brw, HSW_CS_GPR(1), obj->prim_count_bo,
-                                 I915_GEM_DOMAIN_INSTRUCTION,
-                                 I915_GEM_DOMAIN_INSTRUCTION,
                                  START_OFFSET + i * sizeof(uint64_t));
          /* GPR2 = Ending Snapshot */
          brw_load_register_reg64(brw, GEN7_SO_NUM_PRIMS_WRITTEN(i), HSW_CS_GPR(2));
@@ -209,9 +205,7 @@ hsw_pause_transform_feedback(struct gl_context *ctx,
          BEGIN_BATCH(3);
          OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
          OUT_BATCH(GEN7_SO_WRITE_OFFSET(i));
-         OUT_RELOC(brw_obj->offset_bo,
-                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                   i * sizeof(uint32_t));
+         OUT_RELOC(brw_obj->offset_bo, RELOC_WRITE, i * sizeof(uint32_t));
          ADVANCE_BATCH();
       }
    }
@@ -237,9 +231,7 @@ hsw_resume_transform_feedback(struct gl_context *ctx,
          BEGIN_BATCH(3);
          OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (3 - 2));
          OUT_BATCH(GEN7_SO_WRITE_OFFSET(i));
-         OUT_RELOC(brw_obj->offset_bo,
-                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                   i * sizeof(uint32_t));
+         OUT_RELOC(brw_obj->offset_bo, RELOC_WRITE, i * sizeof(uint32_t));
          ADVANCE_BATCH();
       }
    }

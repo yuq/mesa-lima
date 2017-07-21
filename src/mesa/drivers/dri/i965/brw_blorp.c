@@ -150,9 +150,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
    surf->addr = (struct blorp_address) {
       .buffer = mt->bo,
       .offset = mt->offset,
-      .read_domains = is_render_target ? I915_GEM_DOMAIN_RENDER :
-                                         I915_GEM_DOMAIN_SAMPLER,
-      .write_domain = is_render_target ? I915_GEM_DOMAIN_RENDER : 0,
+      .reloc_flags = is_render_target ? EXEC_OBJECT_WRITE : 0,
    };
 
    surf->aux_usage = aux_usage;
@@ -175,9 +173,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
       surf->aux_surf = aux_surf;
       surf->aux_addr = (struct blorp_address) {
-         .read_domains = is_render_target ? I915_GEM_DOMAIN_RENDER :
-                                            I915_GEM_DOMAIN_SAMPLER,
-         .write_domain = is_render_target ? I915_GEM_DOMAIN_RENDER : 0,
+         .reloc_flags = is_render_target ? EXEC_OBJECT_WRITE : 0,
       };
 
       if (mt->mcs_buf) {

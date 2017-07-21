@@ -596,24 +596,16 @@ intelEmitCopyBlit(struct brw_context *brw,
    OUT_BATCH(SET_FIELD(dst_y, BLT_Y) | SET_FIELD(dst_x, BLT_X));
    OUT_BATCH(SET_FIELD(dst_y2, BLT_Y) | SET_FIELD(dst_x2, BLT_X));
    if (brw->gen >= 8) {
-      OUT_RELOC64(dst_buffer,
-                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                  dst_offset);
+      OUT_RELOC64(dst_buffer, RELOC_WRITE, dst_offset);
    } else {
-      OUT_RELOC(dst_buffer,
-                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                dst_offset);
+      OUT_RELOC(dst_buffer, RELOC_WRITE, dst_offset);
    }
    OUT_BATCH(SET_FIELD(src_y, BLT_Y) | SET_FIELD(src_x, BLT_X));
    OUT_BATCH((uint16_t)src_pitch);
    if (brw->gen >= 8) {
-      OUT_RELOC64(src_buffer,
-                  I915_GEM_DOMAIN_RENDER, 0,
-                  src_offset);
+      OUT_RELOC64(src_buffer, 0, src_offset);
    } else {
-      OUT_RELOC(src_buffer,
-                I915_GEM_DOMAIN_RENDER, 0,
-                src_offset);
+      OUT_RELOC(src_buffer, 0, src_offset);
    }
 
    ADVANCE_BATCH_TILED(dst_y_tiled, src_y_tiled);
@@ -681,13 +673,9 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
    OUT_BATCH((0 << 16) | 0); /* clip x1, y1 */
    OUT_BATCH((100 << 16) | 100); /* clip x2, y2 */
    if (brw->gen >= 8) {
-      OUT_RELOC64(dst_buffer,
-                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                  dst_offset);
+      OUT_RELOC64(dst_buffer, RELOC_WRITE, dst_offset);
    } else {
-      OUT_RELOC(dst_buffer,
-                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                dst_offset);
+      OUT_RELOC(dst_buffer, RELOC_WRITE, dst_offset);
    }
    OUT_BATCH(0); /* bg */
    OUT_BATCH(fg_color); /* fg */
@@ -828,13 +816,9 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
          OUT_BATCH(SET_FIELD(y + chunk_y + chunk_h, BLT_Y) |
                    SET_FIELD(x + chunk_x + chunk_w, BLT_X));
          if (brw->gen >= 8) {
-            OUT_RELOC64(mt->bo,
-                        I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                        mt->offset + offset);
+            OUT_RELOC64(mt->bo, RELOC_WRITE, mt->offset + offset);
          } else {
-            OUT_RELOC(mt->bo,
-                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                      mt->offset + offset);
+            OUT_RELOC(mt->bo, RELOC_WRITE, mt->offset + offset);
          }
          OUT_BATCH(0xffffffff); /* white, but only alpha gets written */
          ADVANCE_BATCH_TILED(dst_y_tiled, false);

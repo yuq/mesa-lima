@@ -70,9 +70,13 @@ bool brw_batch_has_aperture_space(struct brw_context *brw,
 
 bool brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo);
 
-uint64_t brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
-                        struct brw_bo *target, uint32_t target_offset,
-                        uint32_t read_domains, uint32_t write_domain);
+#define RELOC_WRITE EXEC_OBJECT_WRITE
+#define RELOC_NEEDS_GGTT EXEC_OBJECT_NEEDS_GTT
+uint64_t brw_emit_reloc(struct intel_batchbuffer *batch,
+                        uint32_t batch_offset,
+                        struct brw_bo *target,
+                        uint32_t target_offset,
+                        unsigned flags);
 
 #define USED_BATCH(batch) ((uintptr_t)((batch).map_next - (batch).map))
 
@@ -158,20 +162,18 @@ intel_batchbuffer_advance(struct brw_context *brw)
 #define OUT_BATCH(d) *__map++ = (d)
 #define OUT_BATCH_F(f) OUT_BATCH(float_as_int((f)))
 
-#define OUT_RELOC(buf, read_domains, write_domain, delta) do {          \
+#define OUT_RELOC(buf, flags, delta) do {          \
    uint32_t __offset = (__map - brw->batch.map) * 4;                    \
    uint32_t reloc =                                                     \
-      brw_emit_reloc(&brw->batch, __offset, (buf), (delta),             \
-                     (read_domains), (write_domain));                   \
+      brw_emit_reloc(&brw->batch, __offset, (buf), (delta), (flags));   \
    OUT_BATCH(reloc);                                                    \
 } while (0)
 
 /* Handle 48-bit address relocations for Gen8+ */
-#define OUT_RELOC64(buf, read_domains, write_domain, delta) do {        \
+#define OUT_RELOC64(buf, flags, delta) do {        \
    uint32_t __offset = (__map - brw->batch.map) * 4;                    \
    uint64_t reloc64 =                                                   \
-      brw_emit_reloc(&brw->batch, __offset, (buf), (delta),             \
-                     (read_domains), (write_domain));                   \
+      brw_emit_reloc(&brw->batch, __offset, (buf), (delta), (flags));   \
    OUT_BATCH(reloc64);                                                  \
    OUT_BATCH(reloc64 >> 32);                                            \
 } while (0)

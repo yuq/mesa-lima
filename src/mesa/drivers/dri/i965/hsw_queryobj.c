@@ -193,36 +193,16 @@ load_overflow_data_to_cs_gprs(struct brw_context *brw,
 {
    int offset = idx * sizeof(uint64_t) * 4;
 
-   brw_load_register_mem64(brw,
-                           HSW_CS_GPR(1),
-                           query->bo,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           offset);
+   brw_load_register_mem64(brw, HSW_CS_GPR(1), query->bo, offset);
 
    offset += sizeof(uint64_t);
-   brw_load_register_mem64(brw,
-                           HSW_CS_GPR(2),
-                           query->bo,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           offset);
+   brw_load_register_mem64(brw, HSW_CS_GPR(2), query->bo, offset);
 
    offset += sizeof(uint64_t);
-   brw_load_register_mem64(brw,
-                           HSW_CS_GPR(3),
-                           query->bo,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           offset);
+   brw_load_register_mem64(brw, HSW_CS_GPR(3), query->bo, offset);
 
    offset += sizeof(uint64_t);
-   brw_load_register_mem64(brw,
-                           HSW_CS_GPR(4),
-                           query->bo,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           I915_GEM_DOMAIN_INSTRUCTION,
-                           offset);
+   brw_load_register_mem64(brw, HSW_CS_GPR(4), query->bo, offset);
 }
 
 /*
@@ -302,8 +282,6 @@ hsw_result_to_gpr0(struct gl_context *ctx, struct brw_query_object *query,
       brw_load_register_mem64(brw,
                               HSW_CS_GPR(0),
                               query->bo,
-                              I915_GEM_DOMAIN_INSTRUCTION,
-                              I915_GEM_DOMAIN_INSTRUCTION,
                               2 * sizeof(uint64_t));
       return;
    }
@@ -321,8 +299,6 @@ hsw_result_to_gpr0(struct gl_context *ctx, struct brw_query_object *query,
       brw_load_register_mem64(brw,
                               HSW_CS_GPR(0),
                               query->bo,
-                              I915_GEM_DOMAIN_INSTRUCTION,
-                              I915_GEM_DOMAIN_INSTRUCTION,
                               0 * sizeof(uint64_t));
    } else if (query->Base.Target == GL_TRANSFORM_FEEDBACK_STREAM_OVERFLOW_ARB
               || query->Base.Target == GL_TRANSFORM_FEEDBACK_OVERFLOW_ARB) {
@@ -333,14 +309,10 @@ hsw_result_to_gpr0(struct gl_context *ctx, struct brw_query_object *query,
       brw_load_register_mem64(brw,
                               HSW_CS_GPR(1),
                               query->bo,
-                              I915_GEM_DOMAIN_INSTRUCTION,
-                              I915_GEM_DOMAIN_INSTRUCTION,
                               0 * sizeof(uint64_t));
       brw_load_register_mem64(brw,
                               HSW_CS_GPR(2),
                               query->bo,
-                              I915_GEM_DOMAIN_INSTRUCTION,
-                              I915_GEM_DOMAIN_INSTRUCTION,
                               1 * sizeof(uint64_t));
 
       BEGIN_BATCH(5);
@@ -417,7 +389,6 @@ set_predicate(struct brw_context *brw, struct brw_bo *query_bo)
 
    /* Load query availability into SRC0 */
    brw_load_register_mem64(brw, MI_PREDICATE_SRC0, query_bo,
-                           I915_GEM_DOMAIN_INSTRUCTION, 0,
                            2 * sizeof(uint64_t));
 
    /* predicate = !(query_availability == 0); */
@@ -450,11 +421,9 @@ store_query_result_reg(struct brw_context *brw, struct brw_bo *bo,
                 (cmd_size - 2));
       OUT_BATCH(reg + 4 * i);
       if (brw->gen >= 8) {
-         OUT_RELOC64(bo, I915_GEM_DOMAIN_INSTRUCTION,
-                     I915_GEM_DOMAIN_INSTRUCTION, offset + 4 * i);
+         OUT_RELOC64(bo, RELOC_WRITE, offset + 4 * i);
       } else {
-         OUT_RELOC(bo, I915_GEM_DOMAIN_INSTRUCTION,
-                   I915_GEM_DOMAIN_INSTRUCTION, offset + 4 * i);
+         OUT_RELOC(bo, RELOC_WRITE | RELOC_NEEDS_GGTT, offset + 4 * i);
       }
    }
    ADVANCE_BATCH();

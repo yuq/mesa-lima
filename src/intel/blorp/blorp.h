@@ -92,8 +92,7 @@ void blorp_batch_finish(struct blorp_batch *batch);
 
 struct blorp_address {
    void *buffer;
-   uint32_t read_domains;
-   uint32_t write_domain;
+   unsigned reloc_flags;
    uint32_t offset;
 };
 

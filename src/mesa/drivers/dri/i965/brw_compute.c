@@ -40,15 +40,9 @@ prepare_indirect_gpgpu_walker(struct brw_context *brw)
    GLintptr indirect_offset = brw->compute.num_work_groups_offset;
    struct brw_bo *bo = brw->compute.num_work_groups_bo;
 
-   brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMX, bo,
-                         I915_GEM_DOMAIN_VERTEX, 0,
-                         indirect_offset + 0);
-   brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMY, bo,
-                         I915_GEM_DOMAIN_VERTEX, 0,
-                         indirect_offset + 4);
-   brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMZ, bo,
-                         I915_GEM_DOMAIN_VERTEX, 0,
-                         indirect_offset + 8);
+   brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMX, bo, indirect_offset + 0);
+   brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMY, bo, indirect_offset + 4);
+   brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMZ, bo, indirect_offset + 8);
 
    if (brw->gen > 7)
       return;
@@ -65,9 +59,7 @@ prepare_indirect_gpgpu_walker(struct brw_context *brw)
    ADVANCE_BATCH();
 
    /* Load compute_dispatch_indirect_x_size into SRC0 */
-   brw_load_register_mem(brw, MI_PREDICATE_SRC0, bo,
-                         I915_GEM_DOMAIN_INSTRUCTION, 0,
-                         indirect_offset + 0);
+   brw_load_register_mem(brw, MI_PREDICATE_SRC0, bo, indirect_offset + 0);
 
    /* predicate = (compute_dispatch_indirect_x_size == 0); */
    BEGIN_BATCH(1);
@@ -78,9 +70,7 @@ prepare_indirect_gpgpu_walker(struct brw_context *brw)
    ADVANCE_BATCH();
 
    /* Load compute_dispatch_indirect_y_size into SRC0 */
-   brw_load_register_mem(brw, MI_PREDICATE_SRC0, bo,
-                         I915_GEM_DOMAIN_INSTRUCTION, 0,
-                         indirect_offset + 4);
+   brw_load_register_mem(brw, MI_PREDICATE_SRC0, bo, indirect_offset + 4);
 
    /* predicate |= (compute_dispatch_indirect_y_size == 0); */
    BEGIN_BATCH(1);
@@ -91,9 +81,7 @@ prepare_indirect_gpgpu_walker(struct brw_context *brw)
    ADVANCE_BATCH();
 
    /* Load compute_dispatch_indirect_z_size into SRC0 */
-   brw_load_register_mem(brw, MI_PREDICATE_SRC0, bo,
-                         I915_GEM_DOMAIN_INSTRUCTION, 0,
-                         indirect_offset + 8);
+   brw_load_register_mem(brw, MI_PREDICATE_SRC0, bo, indirect_offset + 8);
 
    /* predicate |= (compute_dispatch_indirect_z_size == 0); */
    BEGIN_BATCH(1);

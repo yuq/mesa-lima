@@ -71,8 +71,7 @@ emit_dwords(struct brw_context *brw, unsigned n)
 
 struct brw_address {
    struct brw_bo *bo;
-   uint32_t read_domains;
-   uint32_t write_domain;
+   unsigned reloc_flags;
    uint32_t offset;
 };
 
@@ -84,8 +83,7 @@ emit_reloc(struct brw_context *brw,
 
    return brw_emit_reloc(&brw->batch, offset, address.bo,
                          address.offset + delta,
-                         address.read_domains,
-                         address.write_domain);
+                         address.reloc_flags);
 }
 
 #define __gen_address_type struct brw_address
@@ -108,8 +106,7 @@ render_bo(struct brw_bo *bo, uint32_t offset)
    return (struct brw_address) {
             .bo = bo,
             .offset = offset,
-            .read_domains = I915_GEM_DOMAIN_RENDER,
-            .write_domain = I915_GEM_DOMAIN_RENDER,
+            .reloc_flags = RELOC_WRITE,
    };
 }
 
@@ -119,8 +116,6 @@ render_ro_bo(struct brw_bo *bo, uint32_t offset)
    return (struct brw_address) {
             .bo = bo,
             .offset = offset,
-            .read_domains = I915_GEM_DOMAIN_RENDER,
-            .write_domain = 0,
    };
 }
 
@@ -130,8 +125,7 @@ instruction_bo(struct brw_bo *bo, uint32_t offset)
    return (struct brw_address) {
             .bo = bo,
             .offset = offset,
-            .read_domains = I915_GEM_DOMAIN_INSTRUCTION,
-            .write_domain = I915_GEM_DOMAIN_INSTRUCTION,
+            .reloc_flags = RELOC_WRITE | RELOC_NEEDS_GGTT,
    };
 }
 
@@ -141,8 +135,6 @@ instruction_ro_bo(struct brw_bo *bo, uint32_t offset)
    return (struct brw_address) {
             .bo = bo,
             .offset = offset,
-            .read_domains = I915_GEM_DOMAIN_INSTRUCTION,
-            .write_domain = 0,
    };
 }
 
@@ -152,8 +144,6 @@ vertex_bo(struct brw_bo *bo, uint32_t offset)
    return (struct brw_address) {
             .bo = bo,
             .offset = offset,
-            .read_domains = I915_GEM_DOMAIN_VERTEX,
-            .write_domain = 0,
    };
 }
 
@@ -4147,7 +4137,8 @@ genX(upload_cs_state)(struct brw_context *brw)
          brw, &stage_state->surf_offset[
                  prog_data->binding_table.shader_time_start],
          brw->shader_time.bo, 0, ISL_FORMAT_RAW,
-         brw->shader_time.bo->size, 1, true);
+         brw->shader_time.bo->size, 1,
+         RELOC_WRITE);
    }
 
    uint32_t *bind = brw_state_batch(brw, prog_data->binding_table.size_bytes,
@@ -5056,8 +5047,7 @@ genX(update_sampler_state)(struct brw_context *brw,
    if (GEN_GEN < 6) {
       samp_st.BorderColorPointer =
          brw_emit_reloc(&brw->batch, batch_offset_for_sampler_state + 8,
-                        brw->batch.bo, border_color_offset,
-                        I915_GEM_DOMAIN_SAMPLER, 0);
+                        brw->batch.bo, border_color_offset, 0);
    } else {
       samp_st.BorderColorPointer = border_color_offset;
    }

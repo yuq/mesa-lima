@@ -133,7 +133,7 @@ brw_emit_surface_state(struct brw_context *brw,
                        GLenum target, struct isl_view view,
                        enum isl_aux_usage aux_usage,
                        uint32_t mocs, uint32_t *surf_offset, int surf_index,
-                       unsigned read_domains, unsigned write_domains)
+                       unsigned reloc_flags)
 {
    uint32_t tile_x = mt->level[0].level_x;
    uint32_t tile_y = mt->level[0].level_y;
@@ -182,7 +182,7 @@ brw_emit_surface_state(struct brw_context *brw,
    isl_surf_fill_state(&brw->isl_dev, state, .surf = &mt->surf, .view = &view,
                        .address = brw_emit_reloc(&brw->batch,
                                                  *surf_offset + brw->isl_dev.ss.addr_offset,
-                                                 mt->bo, offset, read_domains, write_domains),
+                                                 mt->bo, offset, reloc_flags),
                        .aux_surf = aux_surf, .aux_usage = aux_usage,
                        .aux_address = aux_offset,
                        .mocs = mocs, .clear_color = clear_color,
@@ -202,7 +202,7 @@ brw_emit_surface_state(struct brw_context *brw,
                                  *surf_offset +
                                  brw->isl_dev.ss.aux_addr_offset,
                                  aux_bo, *aux_addr,
-                                 read_domains, write_domains);
+                                 reloc_flags);
    }
 }
 
@@ -247,8 +247,7 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    brw_emit_surface_state(brw, mt, mt->target, view, aux_usage,
                           rb_mocs[brw->gen],
                           &offset, surf_index,
-                          I915_GEM_DOMAIN_RENDER,
-                          I915_GEM_DOMAIN_RENDER);
+                          RELOC_WRITE);
    return offset;
 }
 
@@ -592,7 +591,7 @@ brw_update_texture_surface(struct gl_context *ctx,
       brw_emit_surface_state(brw, mt, mt->target, view, aux_usage,
                              tex_mocs[brw->gen],
                              surf_offset, surf_index,
-                             I915_GEM_DOMAIN_SAMPLER, 0);
+                             0);
    }
 }
 
@@ -604,7 +603,7 @@ brw_emit_buffer_surface_state(struct brw_context *brw,
                               unsigned surface_format,
                               unsigned buffer_size,
                               unsigned pitch,
-                              bool rw)
+                              unsigned reloc_flags)
 {
    uint32_t *dw = brw_state_batch(brw,
                                   brw->isl_dev.ss.size,
@@ -616,8 +615,7 @@ brw_emit_buffer_surface_state(struct brw_context *brw,
                                     brw_emit_reloc(&brw->batch,
                                                    *out_offset + brw->isl_dev.ss.addr_offset,
                                                    bo, buffer_offset,
-                                                   I915_GEM_DOMAIN_SAMPLER,
-                                                   (rw ? I915_GEM_DOMAIN_SAMPLER : 0)),
+                                                   reloc_flags),
                          .size = buffer_size,
                          .format = surface_format,
                          .stride = pitch,
@@ -673,7 +671,7 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
                                  isl_format,
                                  size,
                                  texel_size,
-                                 false /* rw */);
+                                 0);
 }
 
 /**
@@ -689,7 +687,7 @@ brw_create_constant_surface(struct brw_context *brw,
 {
    brw_emit_buffer_surface_state(brw, out_offset, bo, offset,
                                  ISL_FORMAT_R32G32B32A32_FLOAT,
-                                 size, 1, false);
+                                 size, 1, 0);
 }
 
 /**
@@ -711,7 +709,7 @@ brw_create_buffer_surface(struct brw_context *brw,
     */
    brw_emit_buffer_surface_state(brw, out_offset, bo, offset,
                                  ISL_FORMAT_RAW,
-                                 size, 1, true);
+                                 size, 1, RELOC_WRITE);
 }
 
 /**
@@ -785,8 +783,7 @@ brw_update_sol_surface(struct brw_context *brw,
       surface_format << BRW_SURFACE_FORMAT_SHIFT |
       BRW_SURFACE_RC_READ_WRITE;
    surf[1] = brw_emit_reloc(&brw->batch,
-                            *out_offset + 4, bo, offset_bytes,
-                            I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
+                            *out_offset + 4, bo, offset_bytes, RELOC_WRITE);
    surf[2] = (width << BRW_SURFACE_WIDTH_SHIFT |
 	      height << BRW_SURFACE_HEIGHT_SHIFT);
    surf[3] = (depth << BRW_SURFACE_DEPTH_SHIFT |
@@ -901,8 +898,8 @@ brw_emit_null_surface_state(struct brw_context *brw,
 		  1 << BRW_SURFACE_WRITEDISABLE_A_SHIFT);
    }
    surf[1] = !bo ? 0 :
-             brw_emit_reloc(&brw->batch, *out_offset + 4, bo, 0,
-                            I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
+             brw_emit_reloc(&brw->batch, *out_offset + 4, bo, 0, RELOC_WRITE);
+
    surf[2] = ((width - 1) << BRW_SURFACE_WIDTH_SHIFT |
               (height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
 
@@ -976,7 +973,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
                             intel_renderbuffer_get_tile_offsets(irb,
                                                                 &tile_x,
                                                                 &tile_y),
-                            I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
+                            RELOC_WRITE);
 
    surf[2] = ((rb->Width - 1) << BRW_SURFACE_WIDTH_SHIFT |
 	      (rb->Height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
@@ -1160,7 +1157,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
             brw_emit_surface_state(brw, irb->mt, target, view, aux_usage,
                                    tex_mocs[brw->gen],
                                    surf_offset, surf_index,
-                                   I915_GEM_DOMAIN_SAMPLER, 0);
+                                   0);
 
          } else {
             brw->vtbl.emit_null_surface_state(
@@ -1453,7 +1450,8 @@ brw_upload_abo_surfaces(struct brw_context *brw,
 
          brw_emit_buffer_surface_state(brw, &surf_offsets[i], bo,
                                        binding->Offset, ISL_FORMAT_RAW,
-                                       bo->size - binding->Offset, 1, true);
+                                       bo->size - binding->Offset, 1,
+                                       RELOC_WRITE);
       }
 
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
@@ -1614,7 +1612,7 @@ update_image_surface(struct brw_context *brw,
          brw_emit_buffer_surface_state(
             brw, surf_offset, intel_obj->buffer, obj->BufferOffset,
             format, intel_obj->Base.Size, texel_size,
-            access != GL_READ_ONLY);
+            access != GL_READ_ONLY ? RELOC_WRITE : 0);
 
          update_buffer_image_param(brw, u, surface_idx, param);
 
@@ -1638,7 +1636,7 @@ update_image_surface(struct brw_context *brw,
             brw_emit_buffer_surface_state(
                brw, surf_offset, mt->bo, mt->offset,
                format, mt->bo->size - mt->offset, 1 /* pitch */,
-               access != GL_READ_ONLY);
+               access != GL_READ_ONLY ? RELOC_WRITE : 0);
 
          } else {
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
@@ -1649,9 +1647,7 @@ update_image_surface(struct brw_context *brw,
             brw_emit_surface_state(brw, mt, mt->target, view,
                                    ISL_AUX_USAGE_NONE, tex_mocs[brw->gen],
                                    surf_offset, surf_index,
-                                   I915_GEM_DOMAIN_SAMPLER,
-                                   access == GL_READ_ONLY ? 0 :
-                                             I915_GEM_DOMAIN_SAMPLER);
+                                   access == GL_READ_ONLY ? 0 : RELOC_WRITE);
          }
 
          isl_surf_fill_image_param(&brw->isl_dev, param, &mt->surf, &view);
@@ -1766,7 +1762,8 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
       brw_emit_buffer_surface_state(brw, surf_offset,
                                     bo, bo_offset,
                                     ISL_FORMAT_RAW,
-                                    3 * sizeof(GLuint), 1, true);
+                                    3 * sizeof(GLuint), 1,
+                                    RELOC_WRITE);
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
    }
 }

@@ -120,9 +120,7 @@ gen7_pause_transform_feedback(struct gl_context *ctx,
       BEGIN_BATCH(3);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
       OUT_BATCH(GEN7_SO_WRITE_OFFSET(i));
-      OUT_RELOC(brw_obj->offset_bo,
-                I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                i * sizeof(uint32_t));
+      OUT_RELOC(brw_obj->offset_bo, RELOC_WRITE, i * sizeof(uint32_t));
       ADVANCE_BATCH();
    }
 
@@ -149,9 +147,7 @@ gen7_resume_transform_feedback(struct gl_context *ctx,
       BEGIN_BATCH(3);
       OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (3 - 2));
       OUT_BATCH(GEN7_SO_WRITE_OFFSET(i));
-      OUT_RELOC(brw_obj->offset_bo,
-                I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                i * sizeof(uint32_t));
+      OUT_RELOC(brw_obj->offset_bo, RELOC_WRITE, i * sizeof(uint32_t));
       ADVANCE_BATCH();
    }
 

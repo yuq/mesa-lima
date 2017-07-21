@@ -216,7 +216,7 @@ void brw_emit_buffer_surface_state(struct brw_context *brw,
                                    unsigned surface_format,
                                    unsigned buffer_size,
                                    unsigned pitch,
-                                   bool rw);
+                                   unsigned reloc_flags);
 
 void brw_update_texture_surface(struct gl_context *ctx,
                                 unsigned unit, uint32_t *surf_offset,
