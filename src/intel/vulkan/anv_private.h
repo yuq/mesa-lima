@@ -89,7 +89,7 @@ struct gen_l3_config;
  */
 #define ANV_HZ_FC_VAL 1.0f
 
-#define MAX_VBS         31
+#define MAX_VBS         28
 #define MAX_SETS         8
 #define MAX_RTS          8
 #define MAX_VIEWPORTS   16
