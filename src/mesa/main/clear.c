@@ -622,33 +622,34 @@ _mesa_ClearNamedFramebufferfv(GLuint framebuffer, GLenum buffer,
  * New in GL 3.0
  * Clear depth/stencil buffer only.
  */
-void GLAPIENTRY
-_mesa_ClearBufferfi(GLenum buffer, GLint drawbuffer,
-                    GLfloat depth, GLint stencil)
+static ALWAYS_INLINE void
+clear_bufferfi(struct gl_context *ctx, GLenum buffer, GLint drawbuffer,
+               GLfloat depth, GLint stencil, bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
    GLbitfield mask = 0;
 
    FLUSH_VERTICES(ctx, 0);
    FLUSH_CURRENT(ctx, 0);
 
-   if (buffer != GL_DEPTH_STENCIL) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glClearBufferfi(buffer=%s)",
-                  _mesa_enum_to_string(buffer));
-      return;
-   }
+   if (!no_error) {
+      if (buffer != GL_DEPTH_STENCIL) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "glClearBufferfi(buffer=%s)",
+                     _mesa_enum_to_string(buffer));
+         return;
+      }
 
-   /* Page 264 (page 280 of the PDF) of the OpenGL 3.0 spec says:
-    *
-    *     "ClearBuffer generates an INVALID VALUE error if buffer is
-    *     COLOR and drawbuffer is less than zero, or greater than the
-    *     value of MAX DRAW BUFFERS minus one; or if buffer is DEPTH,
-    *     STENCIL, or DEPTH STENCIL and drawbuffer is not zero."
-    */
-   if (drawbuffer != 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glClearBufferfi(drawbuffer=%d)",
-                  drawbuffer);
-      return;
+      /* Page 264 (page 280 of the PDF) of the OpenGL 3.0 spec says:
+       *
+       *     "ClearBuffer generates an INVALID VALUE error if buffer is
+       *     COLOR and drawbuffer is less than zero, or greater than the
+       *     value of MAX DRAW BUFFERS minus one; or if buffer is DEPTH,
+       *     STENCIL, or DEPTH STENCIL and drawbuffer is not zero."
+       */
+      if (drawbuffer != 0) {
+         _mesa_error(ctx, GL_INVALID_VALUE, "glClearBufferfi(drawbuffer=%d)",
+                     drawbuffer);
+         return;
+      }
    }
 
    if (ctx->RasterDiscard)
@@ -679,6 +680,15 @@ _mesa_ClearBufferfi(GLenum buffer, GLint drawbuffer,
       ctx->Depth.Clear = clearDepthSave;
       ctx->Stencil.Clear = clearStencilSave;
    }
+}
+
+
+void GLAPIENTRY
+_mesa_ClearBufferfi(GLenum buffer, GLint drawbuffer,
+                    GLfloat depth, GLint stencil)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   clear_bufferfi(ctx, buffer, drawbuffer, depth, stencil, false);
 }
 
 
