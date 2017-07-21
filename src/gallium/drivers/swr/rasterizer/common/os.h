@@ -237,8 +237,6 @@ void AlignedFree(void* p)
 #define sprintf_s sprintf
 #define strcpy_s(dst,size,src) strncpy(dst,src,size)
 #define GetCurrentProcessId getpid
-pid_t gettid(void);
-#define GetCurrentThreadId gettid
 
 #define InterlockedCompareExchange(Dest, Exchange, Comparand) __sync_val_compare_and_swap(Dest, Comparand, Exchange)
 #define InterlockedExchangeAdd(Addend, Value) __sync_fetch_and_add(Addend, Value)
