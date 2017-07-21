@@ -188,6 +188,15 @@ struct brw_sampler_prog_key_data {
 #define BRW_ATTRIB_WA_SIGN          32  /* interpret as signed in shader */
 #define BRW_ATTRIB_WA_SCALE         64  /* interpret as scaled in shader */
 
+/**
+ * OpenGL attribute slots fall in [0, VERT_ATTRIB_MAX - 1] with the range
+ * [VERT_ATTRIB_GENERIC0, VERT_ATTRIB_MAX - 1] reserved for up to 16 user
+ * input vertex attributes. In Vulkan, we expose up to 28 user vertex input
+ * attributes that are mapped to slots also starting at VERT_ATTRIB_GENERIC0.
+ */
+#define MAX_GL_VERT_ATTRIB     VERT_ATTRIB_MAX
+#define MAX_VK_VERT_ATTRIB     (VERT_ATTRIB_GENERIC0 + 28)
+
 /** The program key for Vertex Shaders. */
 struct brw_vs_prog_key {
    unsigned program_string_id;
@@ -196,8 +205,15 @@ struct brw_vs_prog_key {
     * Per-attribute workaround flags
     *
     * For each attribute, a combination of BRW_ATTRIB_WA_*.
+    *
+    * For OpenGL, where we expose a maximum of 16 user input atttributes
+    * we only need up to VERT_ATTRIB_MAX slots, however, in Vulkan
+    * slots preceding VERT_ATTRIB_GENERIC0 are unused and we can
+    * expose up to 28 user input vertex attributes that are mapped to slots
+    * starting at VERT_ATTRIB_GENERIC0, so this array needs to be large
+    * enough to hold this many slots.
     */
-   uint8_t gl_attrib_wa_flags[VERT_ATTRIB_MAX];
+   uint8_t gl_attrib_wa_flags[MAX2(MAX_GL_VERT_ATTRIB, MAX_VK_VERT_ATTRIB)];
 
    bool copy_edgeflag:1;
 
