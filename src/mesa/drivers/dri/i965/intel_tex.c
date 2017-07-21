@@ -95,6 +95,8 @@ intel_alloc_texture_image_buffer(struct gl_context *ctx,
       intel_image->mt = intel_miptree_create_for_teximage(brw, intel_texobj,
                                                           intel_image,
                                                           1 /* samples */);
+      if (!intel_image->mt)
+         return false;
 
       /* Even if the object currently has a mipmap tree associated
        * with it, this one is a more likely candidate to represent the
