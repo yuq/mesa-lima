@@ -64,6 +64,10 @@ extern void GLAPIENTRY
 _mesa_ClearNamedFramebufferuiv(GLuint framebuffer, GLenum buffer,
                                GLint drawbuffer, const GLuint *value);
 
+void GLAPIENTRY
+_mesa_ClearBufferfv_no_error(GLenum buffer, GLint drawbuffer,
+                             const GLfloat *value);
+
 extern void GLAPIENTRY
 _mesa_ClearBufferfv(GLenum buffer, GLint drawbuffer, const GLfloat *value);
 
