@@ -232,9 +232,7 @@ make_fs_key(const struct svga_context *svga,
     *   
     * SVGA_NEW_BLEND
     */
-   if (svga->curr.blend->need_white_fragments) {
-      key->fs.white_fragments = 1;
-   }
+   key->fs.white_fragments = svga->curr.blend->need_white_fragments;
 
 #ifdef DEBUG
    /*
@@ -349,9 +347,10 @@ make_fs_key(const struct svga_context *svga,
       }
    }
 
-   /* SVGA_NEW_FRAME_BUFFER */
-   if (fs->base.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
-      /* Replicate color0 output to N colorbuffers */
+   /* SVGA_NEW_FRAME_BUFFER | SVGA_NEW_BLEND */
+   if (fs->base.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] ||
+       svga->curr.blend->need_white_fragments) {
+      /* Replicate color0 output (or white) to N colorbuffers */
       key->fs.write_color0_to_n_cbufs = svga->curr.framebuffer.nr_cbufs;
    }
 
