@@ -157,6 +157,8 @@ extern struct gl_texture_image *
 _mesa_get_tex_image(struct gl_context *ctx, struct gl_texture_object *texObj,
                     GLenum target, GLint level);
 
+mesa_format
+_mesa_get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat);
 
 /**
  * Return the base-level texture image for the given texture object.

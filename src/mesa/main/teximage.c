@@ -5169,8 +5169,8 @@ _mesa_CompressedTextureSubImage3D(GLuint texture, GLint level, GLint xoffset,
                                   "glCompressedTextureSubImage3D");
 }
 
-static mesa_format
-get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
+mesa_format
+_mesa_get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
 {
    if (ctx->API == API_OPENGL_COMPAT) {
       switch (internalFormat) {
@@ -5353,7 +5353,7 @@ mesa_format
 _mesa_validate_texbuffer_format(const struct gl_context *ctx,
                                 GLenum internalFormat)
 {
-   mesa_format format = get_texbuffer_format(ctx, internalFormat);
+   mesa_format format = _mesa_get_texbuffer_format(ctx, internalFormat);
    GLenum datatype;
 
    if (format == MESA_FORMAT_NONE)
