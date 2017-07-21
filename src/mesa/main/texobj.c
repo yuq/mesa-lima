@@ -1873,6 +1873,14 @@ bind_textures(struct gl_context *ctx, GLuint first, GLsizei count,
 
 
 void GLAPIENTRY
+_mesa_BindTextures_no_error(GLuint first, GLsizei count, const GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_textures(ctx, first, count, textures, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BindTextures(GLuint first, GLsizei count, const GLuint *textures)
 {
    GET_CURRENT_CONTEXT(ctx);

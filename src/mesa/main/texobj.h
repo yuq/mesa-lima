@@ -205,6 +205,10 @@ _mesa_BindTextureUnit_no_error(GLuint unit, GLuint texture);
 extern void GLAPIENTRY
 _mesa_BindTextureUnit(GLuint unit, GLuint texture);
 
+void GLAPIENTRY
+_mesa_BindTextures_no_error(GLuint first, GLsizei count,
+                            const GLuint *textures);
+
 extern void GLAPIENTRY
 _mesa_BindTextures( GLuint first, GLsizei count, const GLuint *textures );
 
