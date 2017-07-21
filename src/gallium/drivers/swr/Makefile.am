@@ -238,7 +238,7 @@ COMMON_LDFLAGS = \
 	-module \
 	-no-undefined \
 	$(GC_SECTIONS) \
-	$(NO_UNDEFINED)
+	$(LD_NO_UNDEFINED)
 
 lib_LTLIBRARIES =
 
