@@ -371,22 +371,48 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
    use_program_stages(ctx, shProg, stages, pipe);
 }
 
-void GLAPIENTRY
-_mesa_ActiveShaderProgram_no_error(GLuint pipeline, GLuint program)
+static ALWAYS_INLINE void
+active_shader_program(struct gl_context *ctx, GLuint pipeline, GLuint program,
+                      bool no_error)
 {
-   GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg = NULL;
    struct gl_pipeline_object *pipe = _mesa_lookup_pipeline_object(ctx, pipeline);
 
-   if (program)
-      shProg = _mesa_lookup_shader_program(ctx, program);
+   if (program) {
+      if (no_error) {
+         shProg = _mesa_lookup_shader_program(ctx, program);
+      } else {
+         shProg = _mesa_lookup_shader_program_err(ctx, program,
+                                                  "glActiveShaderProgram(program)");
+         if (shProg == NULL)
+            return;
+      }
+   }
+
+   if (!no_error && !pipe) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glActiveShaderProgram(pipeline)");
+      return;
+   }
 
    /* Object is created by any Pipeline call but glGenProgramPipelines,
     * glIsProgramPipeline and GetProgramPipelineInfoLog
     */
    pipe->EverBound = GL_TRUE;
 
+   if (!no_error && shProg != NULL && !shProg->data->LinkStatus) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+            "glActiveShaderProgram(program %u not linked)", shProg->Name);
+      return;
+   }
+
    _mesa_reference_shader_program(ctx, &pipe->ActiveProgram, shProg);
+}
+
+void GLAPIENTRY
+_mesa_ActiveShaderProgram_no_error(GLuint pipeline, GLuint program)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   active_shader_program(ctx, pipeline, program, true);
 }
 
 /**
@@ -397,36 +423,11 @@ void GLAPIENTRY
 _mesa_ActiveShaderProgram(GLuint pipeline, GLuint program)
 {
    GET_CURRENT_CONTEXT(ctx);
-   struct gl_shader_program *shProg = NULL;
-   struct gl_pipeline_object *pipe = _mesa_lookup_pipeline_object(ctx, pipeline);
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glActiveShaderProgram(%u, %u)\n", pipeline, program);
 
-   if (program != 0) {
-      shProg = _mesa_lookup_shader_program_err(ctx, program,
-                                               "glActiveShaderProgram(program)");
-      if (shProg == NULL)
-         return;
-   }
-
-   if (!pipe) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glActiveShaderProgram(pipeline)");
-      return;
-   }
-
-   /* Object is created by any Pipeline call but glGenProgramPipelines,
-    * glIsProgramPipeline and GetProgramPipelineInfoLog
-    */
-   pipe->EverBound = GL_TRUE;
-
-   if ((shProg != NULL) && !shProg->data->LinkStatus) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-            "glActiveShaderProgram(program %u not linked)", shProg->Name);
-      return;
-   }
-
-   _mesa_reference_shader_program(ctx, &pipe->ActiveProgram, shProg);
+   active_shader_program(ctx, pipeline, program, false);
 }
 
 static ALWAYS_INLINE void
