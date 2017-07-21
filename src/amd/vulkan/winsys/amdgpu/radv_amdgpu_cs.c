@@ -1173,6 +1173,8 @@ static int radv_amdgpu_cs_submit(struct radv_amdgpu_ctx *ctx,
 			struct drm_amdgpu_cs_chunk_dep *dep = &sem_dependencies[sem_count++];
 
 			amdgpu_cs_chunk_fence_to_dep(sem, dep);
+
+			sem->context = NULL;
 		}
 		i = num_chunks++;
 
