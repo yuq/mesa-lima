@@ -77,6 +77,16 @@ struct brw_bo {
    uint64_t offset64;
 
    /**
+    * The validation list index for this buffer, or -1 when not in a batch.
+    * Note that a single buffer may be in multiple batches (contexts), and
+    * this is a global field, which refers to the last batch using the BO.
+    * It should not be considered authoritative, but can be used to avoid a
+    * linear walk of the validation list in the common case by guessing that
+    * exec_bos[bo->index] == bo and confirming whether that's the case.
+    */
+   unsigned index;
+
+   /**
     * Boolean of whether the GPU is definitely not accessing the buffer.
     *
     * This is only valid when reusable, since non-reusable

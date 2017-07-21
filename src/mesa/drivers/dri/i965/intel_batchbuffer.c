@@ -509,12 +509,20 @@ throttle(struct brw_context *brw)
    }
 }
 
+#define READ_ONCE(x) (*(volatile __typeof__(x) *)&(x))
+
 static void
 add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 {
    if (bo != batch->bo) {
-      for (int i = 0; i < batch->exec_count; i++) {
-         if (batch->exec_bos[i] == bo)
+      unsigned index = READ_ONCE(bo->index);
+
+      if (index < batch->exec_count && batch->exec_bos[index] == bo)
+         return;
+
+      /* May have been shared between multiple active batches */
+      for (index = 0; index < batch->exec_count; index++) {
+         if (batch->exec_bos[index] == bo)
             return;
       }
 
@@ -547,6 +555,7 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
    validation_entry->rsvd1 = 0;
    validation_entry->rsvd2 = 0;
 
+   bo->index = batch->exec_count;
    batch->exec_bos[batch->exec_count] = bo;
    batch->exec_count++;
    batch->aperture_space += bo->size;
@@ -591,6 +600,7 @@ execbuffer(int fd,
       struct brw_bo *bo = batch->exec_bos[i];
 
       bo->idle = false;
+      bo->index = -1;
 
       /* Update brw_bo::offset64 */
       if (batch->validation_list[i].offset != bo->offset64) {
@@ -736,6 +746,10 @@ brw_batch_has_aperture_space(struct brw_context *brw, unsigned extra_space)
 bool
 brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo)
 {
+   unsigned index = READ_ONCE(bo->index);
+   if (index < batch->exec_count && batch->exec_bos[index] == bo)
+      return true;
+
    for (int i = 0; i < batch->exec_count; i++) {
       if (batch->exec_bos[i] == bo)
          return true;
