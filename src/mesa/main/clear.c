@@ -684,6 +684,15 @@ clear_bufferfi(struct gl_context *ctx, GLenum buffer, GLint drawbuffer,
 
 
 void GLAPIENTRY
+_mesa_ClearBufferfi_no_error(GLenum buffer, GLint drawbuffer,
+                             GLfloat depth, GLint stencil)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   clear_bufferfi(ctx, buffer, drawbuffer, depth, stencil, true);
+}
+
+
+void GLAPIENTRY
 _mesa_ClearBufferfi(GLenum buffer, GLint drawbuffer,
                     GLfloat depth, GLint stencil)
 {

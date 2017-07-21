@@ -135,7 +135,7 @@
     <param name="value" type="const GLfloat *"/>
   </function>
 
-  <function name="ClearBufferfi" es2="3.0" marshal="custom">
+  <function name="ClearBufferfi" es2="3.0" marshal="custom" no_error="true">
     <param name="buffer" type="GLenum"/>
     <param name="drawbuffer" type="GLint"/>
     <param name="depth" type="GLfloat"/>
