@@ -415,6 +415,14 @@ clear_bufferiv(struct gl_context *ctx, GLenum buffer, GLint drawbuffer,
 
 
 void GLAPIENTRY
+_mesa_ClearBufferiv_no_error(GLenum buffer, GLint drawbuffer, const GLint *value)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   clear_bufferiv(ctx, buffer, drawbuffer, value, true);
+}
+
+
+void GLAPIENTRY
 _mesa_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *value)
 {
    GET_CURRENT_CONTEXT(ctx);

@@ -117,7 +117,7 @@
 
   <!-- These functions are unique to GL3 -->
 
-  <function name="ClearBufferiv" es2="3.0" marshal="custom">
+  <function name="ClearBufferiv" es2="3.0" marshal="custom" no_error="true">
     <param name="buffer" type="GLenum"/>
     <param name="drawbuffer" type="GLint"/>
     <param name="value" type="const GLint *"/>

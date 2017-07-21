@@ -49,6 +49,9 @@ _mesa_Clear_no_error(GLbitfield mask);
 extern void GLAPIENTRY
 _mesa_Clear( GLbitfield mask );
 
+void GLAPIENTRY
+_mesa_ClearBufferiv_no_error(GLenum buffer, GLint drawbuffer,
+                             const GLint *value);
 
 extern void GLAPIENTRY
 _mesa_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *value);
