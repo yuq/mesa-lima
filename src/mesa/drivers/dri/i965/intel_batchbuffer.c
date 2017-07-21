@@ -87,6 +87,59 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch,
    }
 }
 
+#define READ_ONCE(x) (*(volatile __typeof__(x) *)&(x))
+
+static unsigned
+add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
+{
+   if (bo != batch->bo) {
+      unsigned index = READ_ONCE(bo->index);
+
+      if (index < batch->exec_count && batch->exec_bos[index] == bo)
+         return index;
+
+      /* May have been shared between multiple active batches */
+      for (index = 0; index < batch->exec_count; index++) {
+         if (batch->exec_bos[index] == bo)
+            return index;
+      }
+
+      brw_bo_reference(bo);
+   }
+
+   if (batch->exec_count == batch->exec_array_size) {
+      batch->exec_array_size *= 2;
+      batch->exec_bos =
+         realloc(batch->exec_bos,
+                 batch->exec_array_size * sizeof(batch->exec_bos[0]));
+      batch->validation_list =
+         realloc(batch->validation_list,
+                 batch->exec_array_size * sizeof(batch->validation_list[0]));
+   }
+
+   struct drm_i915_gem_exec_object2 *validation_entry =
+      &batch->validation_list[batch->exec_count];
+   validation_entry->handle = bo->gem_handle;
+   if (bo == batch->bo) {
+      validation_entry->relocation_count = batch->reloc_count;
+      validation_entry->relocs_ptr = (uintptr_t) batch->relocs;
+   } else {
+      validation_entry->relocation_count = 0;
+      validation_entry->relocs_ptr = 0;
+   }
+   validation_entry->alignment = bo->align;
+   validation_entry->offset = bo->offset64;
+   validation_entry->flags = bo->kflags;
+   validation_entry->rsvd1 = 0;
+   validation_entry->rsvd2 = 0;
+
+   bo->index = batch->exec_count;
+   batch->exec_bos[batch->exec_count] = bo;
+   batch->aperture_space += bo->size;
+
+   return batch->exec_count++;
+}
+
 static void
 intel_batchbuffer_reset(struct intel_batchbuffer *batch,
                         struct brw_bufmgr *bufmgr,
@@ -507,59 +560,6 @@ throttle(struct brw_context *brw)
       drmCommandNone(dri_screen->fd, DRM_I915_GEM_THROTTLE);
       brw->need_flush_throttle = false;
    }
-}
-
-#define READ_ONCE(x) (*(volatile __typeof__(x) *)&(x))
-
-static unsigned
-add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
-{
-   if (bo != batch->bo) {
-      unsigned index = READ_ONCE(bo->index);
-
-      if (index < batch->exec_count && batch->exec_bos[index] == bo)
-         return index;
-
-      /* May have been shared between multiple active batches */
-      for (index = 0; index < batch->exec_count; index++) {
-         if (batch->exec_bos[index] == bo)
-            return index;
-      }
-
-      brw_bo_reference(bo);
-   }
-
-   if (batch->exec_count == batch->exec_array_size) {
-      batch->exec_array_size *= 2;
-      batch->exec_bos =
-         realloc(batch->exec_bos,
-                 batch->exec_array_size * sizeof(batch->exec_bos[0]));
-      batch->validation_list =
-         realloc(batch->validation_list,
-                 batch->exec_array_size * sizeof(batch->validation_list[0]));
-   }
-
-   struct drm_i915_gem_exec_object2 *validation_entry =
-      &batch->validation_list[batch->exec_count];
-   validation_entry->handle = bo->gem_handle;
-   if (bo == batch->bo) {
-      validation_entry->relocation_count = batch->reloc_count;
-      validation_entry->relocs_ptr = (uintptr_t) batch->relocs;
-   } else {
-      validation_entry->relocation_count = 0;
-      validation_entry->relocs_ptr = 0;
-   }
-   validation_entry->alignment = bo->align;
-   validation_entry->offset = bo->offset64;
-   validation_entry->flags = bo->kflags;
-   validation_entry->rsvd1 = 0;
-   validation_entry->rsvd2 = 0;
-
-   bo->index = batch->exec_count;
-   batch->exec_bos[batch->exec_count] = bo;
-   batch->aperture_space += bo->size;
-
-   return batch->exec_count++;
 }
 
 static int
