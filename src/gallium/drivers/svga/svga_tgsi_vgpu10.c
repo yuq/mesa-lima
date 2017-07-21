@@ -6275,15 +6275,17 @@ alloc_common_immediates(struct svga_shader_emitter_v10 *emit)
    emit->common_immediate_pos[n++] =
       alloc_immediate_float4(emit, 0.0f, 1.0f, 0.5f, -1.0f);
 
-   emit->common_immediate_pos[n++] =
-      alloc_immediate_float4(emit, 128.0f, -128.0f, 2.0f, 3.0f);
+   if (emit->info.opcode_count[TGSI_OPCODE_LIT] > 0) {
+      emit->common_immediate_pos[n++] =
+         alloc_immediate_float4(emit, 128.0f, -128.0f, 0.0f, 0.0f);
+   }
 
    emit->common_immediate_pos[n++] =
       alloc_immediate_int4(emit, 0, 1, 0, -1);
 
    if (emit->key.vs.attrib_puint_to_snorm) {
       emit->common_immediate_pos[n++] =
-         alloc_immediate_float4(emit, -2.0f, -2.0f, -2.0f, -1.66666f);
+         alloc_immediate_float4(emit, -2.0f, 2.0f, 3.0f, -1.66666f);
    }
 
    if (emit->key.vs.attrib_puint_to_uscaled) {
