@@ -219,8 +219,10 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
    new_bo = brw_bo_alloc(brw->bufmgr, "program cache", new_size, 64);
    if (can_do_exec_capture(brw->screen))
       new_bo->kflags = EXEC_OBJECT_CAPTURE;
-   if (brw->has_llc)
-      llc_map = brw_bo_map(brw, new_bo, MAP_READ | MAP_WRITE | MAP_ASYNC);
+   if (brw->has_llc) {
+      llc_map = brw_bo_map(brw, new_bo, MAP_READ | MAP_WRITE |
+                                        MAP_ASYNC | MAP_PERSISTENT);
+   }
 
    /* Copy any existing data that needs to be saved. */
    if (cache->next_offset != 0) {
@@ -416,8 +418,10 @@ brw_init_caches(struct brw_context *brw)
    cache->bo = brw_bo_alloc(brw->bufmgr, "program cache",  4096, 64);
    if (can_do_exec_capture(brw->screen))
       cache->bo->kflags = EXEC_OBJECT_CAPTURE;
-   if (brw->has_llc)
-      cache->map = brw_bo_map(brw, cache->bo, MAP_READ | MAP_WRITE | MAP_ASYNC);
+   if (brw->has_llc) {
+      cache->map = brw_bo_map(brw, cache->bo, MAP_READ | MAP_WRITE |
+                                              MAP_ASYNC | MAP_PERSISTENT);
+   }
 }
 
 static void
