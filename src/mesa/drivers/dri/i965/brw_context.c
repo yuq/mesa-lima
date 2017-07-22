@@ -745,6 +745,9 @@ brw_process_driconf_options(struct brw_context *brw)
           brw->has_separate_stencil = false;
    }
 
+   if (driQueryOptionb(options, "mesa_no_error"))
+      ctx->Const.ContextFlags |= GL_CONTEXT_FLAG_NO_ERROR_BIT_KHR;
+
    if (driQueryOptionb(options, "always_flush_batch")) {
       fprintf(stderr, "flushing batchbuffer before/after each draw call\n");
       brw->always_flush_batch = true;
