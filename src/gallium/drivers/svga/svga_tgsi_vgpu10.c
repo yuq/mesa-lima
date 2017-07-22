@@ -134,6 +134,7 @@ struct svga_shader_emitter_v10
 
    /* Samplers */
    unsigned num_samplers;
+   boolean sampler_view[PIPE_MAX_SAMPLERS];  /**< True if sampler view exists*/
    ubyte sampler_target[PIPE_MAX_SAMPLERS];  /**< TGSI_TEXTURE_x */
    ubyte sampler_return_type[PIPE_MAX_SAMPLERS];  /**< TGSI_RETURN_TYPE_x */
 
@@ -2322,6 +2323,7 @@ emit_vgpu10_declaration(struct svga_shader_emitter_v10 *emit,
          emit->sampler_target[unit] = decl->SamplerView.Resource;
          /* Note: we can ignore YZW return types for now */
          emit->sampler_return_type[unit] = decl->SamplerView.ReturnTypeX;
+         emit->sampler_view[unit] = TRUE;
       }
       return TRUE;
 
@@ -2886,14 +2888,17 @@ emit_constant_declaration(struct svga_shader_emitter_v10 *emit)
 
    for (i = 0; i < emit->num_samplers; i++) {
 
-      /* Texcoord scale factors for RECT textures */
-      if (emit->key.tex[i].unnormalized) {
-         emit->texcoord_scale_index[i] = total_consts++;
-      }
+      if (emit->sampler_view[i]) {
 
-      /* Texture buffer sizes */
-      if (emit->sampler_target[i] == TGSI_TEXTURE_BUFFER) {
-         emit->texture_buffer_size_index[i] = total_consts++;
+         /* Texcoord scale factors for RECT textures */
+         if (emit->key.tex[i].unnormalized) {
+            emit->texcoord_scale_index[i] = total_consts++;
+         }
+
+         /* Texture buffer sizes */
+         if (emit->sampler_target[i] == TGSI_TEXTURE_BUFFER) {
+            emit->texture_buffer_size_index[i] = total_consts++;
+         }
       }
    }
 
