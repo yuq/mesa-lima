@@ -554,20 +554,22 @@ do_buffer_copy(struct blorp_batch *batch,
     */
    enum isl_format format = isl_format_for_size(block_size);
 
+   UNUSED bool ok;
    struct isl_surf surf;
-   isl_surf_init(&device->isl_dev, &surf,
-                 .dim = ISL_SURF_DIM_2D,
-                 .format = format,
-                 .width = width,
-                 .height = height,
-                 .depth = 1,
-                 .levels = 1,
-                 .array_len = 1,
-                 .samples = 1,
-                 .row_pitch = width * block_size,
-                 .usage = ISL_SURF_USAGE_TEXTURE_BIT |
-                          ISL_SURF_USAGE_RENDER_TARGET_BIT,
-                 .tiling_flags = ISL_TILING_LINEAR_BIT);
+   ok = isl_surf_init(&device->isl_dev, &surf,
+                      .dim = ISL_SURF_DIM_2D,
+                      .format = format,
+                      .width = width,
+                      .height = height,
+                      .depth = 1,
+                      .levels = 1,
+                      .array_len = 1,
+                      .samples = 1,
+                      .row_pitch = width * block_size,
+                      .usage = ISL_SURF_USAGE_TEXTURE_BIT |
+                               ISL_SURF_USAGE_RENDER_TARGET_BIT,
+                      .tiling_flags = ISL_TILING_LINEAR_BIT);
+   assert(ok);
 
    struct blorp_surf src_blorp_surf = {
       .surf = &surf,
