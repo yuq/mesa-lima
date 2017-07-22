@@ -240,3 +240,13 @@ enum pipe_endian
 device::endianness() const {
    return (enum pipe_endian)pipe->get_param(pipe, PIPE_CAP_ENDIANNESS);
 }
+
+std::string
+device::device_version() const {
+    return "1.1";
+}
+
+std::string
+device::device_clc_version() const {
+    return "1.1";
+}

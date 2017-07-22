@@ -74,6 +74,8 @@ namespace clover {
       cl_uint address_bits() const;
       std::string device_name() const;
       std::string vendor_name() const;
+      std::string device_version() const;
+      std::string device_clc_version() const;
       enum pipe_shader_ir ir_format() const;
       std::string ir_target() const;
       enum pipe_endian endianness() const;
