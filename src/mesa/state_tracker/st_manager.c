@@ -61,9 +61,13 @@
 #include "util/list.h"
 
 struct hash_table;
-static struct hash_table *st_fbi_ht; /* framebuffer iface objects hash table */
+struct st_manager_private
+{
+   struct hash_table *stfbi_ht; /* framebuffer iface objects hash table */
+   mtx_t st_mutex;
+};
 
-static mtx_t st_mutex = _MTX_INITIALIZER_NP;
+static void st_manager_destroy(struct st_manager *);
 
 /**
  * Map an attachment to a buffer index.
@@ -511,45 +515,63 @@ st_framebuffer_iface_equal(const void *a, const void *b)
 
 
 static boolean
-st_framebuffer_iface_lookup(const struct st_framebuffer_iface *stfbi)
+st_framebuffer_iface_lookup(struct st_manager *smapi,
+                            const struct st_framebuffer_iface *stfbi)
 {
+   struct st_manager_private *smPriv =
+      (struct st_manager_private *)smapi->st_manager_private;
    struct hash_entry *entry;
 
-   mtx_lock(&st_mutex);
-   entry = _mesa_hash_table_search(st_fbi_ht, stfbi);
-   mtx_unlock(&st_mutex);
+   assert(smPriv);
+   assert(smPriv->stfbi_ht);
+
+   mtx_lock(&smPriv->st_mutex);
+   entry = _mesa_hash_table_search(smPriv->stfbi_ht, stfbi);
+   mtx_unlock(&smPriv->st_mutex);
 
    return entry != NULL;
 }
 
 
 static boolean
-st_framebuffer_iface_insert(struct st_framebuffer_iface *stfbi)
+st_framebuffer_iface_insert(struct st_manager *smapi,
+                            struct st_framebuffer_iface *stfbi)
 {
+   struct st_manager_private *smPriv =
+      (struct st_manager_private *)smapi->st_manager_private;
    struct hash_entry *entry;
 
-   mtx_lock(&st_mutex);
-   entry = _mesa_hash_table_insert(st_fbi_ht, stfbi, stfbi);
-   mtx_unlock(&st_mutex);
+   assert(smPriv);
+   assert(smPriv->stfbi_ht);
+
+   mtx_lock(&smPriv->st_mutex);
+   entry = _mesa_hash_table_insert(smPriv->stfbi_ht, stfbi, stfbi);
+   mtx_unlock(&smPriv->st_mutex);
 
    return entry != NULL;
 }
 
 
 static void
-st_framebuffer_iface_remove(struct st_framebuffer_iface *stfbi)
+st_framebuffer_iface_remove(struct st_manager *smapi,
+                            struct st_framebuffer_iface *stfbi)
 {
+   struct st_manager_private *smPriv =
+      (struct st_manager_private *)smapi->st_manager_private;
    struct hash_entry *entry;
 
-   mtx_lock(&st_mutex);
-   entry = _mesa_hash_table_search(st_fbi_ht, stfbi);
+   if (!smPriv || !smPriv->stfbi_ht);
+      return;
+
+   mtx_lock(&smPriv->st_mutex);
+   entry = _mesa_hash_table_search(smPriv->stfbi_ht, stfbi);
    if (!entry)
       goto unlock;
 
-   _mesa_hash_table_remove(st_fbi_ht, entry);
+   _mesa_hash_table_remove(smPriv->stfbi_ht, entry);
 
 unlock:
-   mtx_unlock(&st_mutex);
+   mtx_unlock(&smPriv->st_mutex);
 }
 
 
@@ -561,7 +583,10 @@ static void
 st_api_destroy_drawable(struct st_api *stapi,
                         struct st_framebuffer_iface *stfbi)
 {
-   st_framebuffer_iface_remove(stfbi);
+   if (stfbi)
+      return;
+
+   st_framebuffer_iface_remove(stfbi->state_manager, stfbi);
 }
 
 
@@ -572,16 +597,24 @@ st_api_destroy_drawable(struct st_api *stapi,
 static void
 st_framebuffers_purge(struct st_context *st)
 {
+   struct st_context_iface *st_iface = &st->iface;
+   struct st_manager *smapi = st_iface->state_manager;
    struct st_framebuffer *stfb, *next;
 
+   assert(smapi);
+
    LIST_FOR_EACH_ENTRY_SAFE_REV(stfb, next, &st->winsys_buffers, head) {
+      struct st_framebuffer_iface *stfbi = stfb->iface;
+
+      assert(stfbi);
+
       /**
        * If the corresponding framebuffer interface object no longer exists,
        * remove the framebuffer object from the context's winsys buffers list,
        * and unreference the framebuffer object, so its resources can be
        * deleted.
        */
-      if (!st_framebuffer_iface_lookup(stfb->iface)) {
+      if (!st_framebuffer_iface_lookup(smapi, stfbi)) {
          LIST_DEL(&stfb->head);
          st_framebuffer_reference(&stfb, NULL);
       }
@@ -778,6 +811,21 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
       return NULL;
    }
 
+   /* Create a hash table for the framebuffer interface objects
+    * if it has not been created for this st manager.
+    */
+   if (smapi->st_manager_private == NULL) {
+      struct st_manager_private *smPriv;
+
+      smPriv = CALLOC_STRUCT(st_manager_private);
+      mtx_init(&smPriv->st_mutex, mtx_plain);
+      smPriv->stfbi_ht = _mesa_hash_table_create(NULL,
+                                                 st_framebuffer_iface_hash,
+                                                 st_framebuffer_iface_equal);
+      smapi->st_manager_private = smPriv;
+      smapi->destroy = st_manager_destroy;
+   }
+
    if (attribs->flags & ST_CONTEXT_FLAG_ROBUST_ACCESS)
       ctx_flags |= PIPE_CONTEXT_ROBUST_BUFFER_ACCESS;
 
@@ -846,6 +894,7 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    st->iface.st_context_private = (void *) smapi;
    st->iface.cso_context = st->cso_context;
    st->iface.pipe = st->pipe;
+   st->iface.state_manager = smapi;
 
    *error = ST_CONTEXT_SUCCESS;
    return &st->iface;
@@ -888,7 +937,7 @@ st_framebuffer_reuse_or_create(struct st_context *st,
          /* add the referenced framebuffer interface object to
           * the framebuffer interface object hash table.
           */
-         if (!st_framebuffer_iface_insert(stfbi)) {
+         if (!st_framebuffer_iface_insert(stfbi->state_manager, stfbi)) {
             st_framebuffer_reference(&cur, NULL);
             return NULL;
          }
@@ -964,8 +1013,6 @@ st_api_make_current(struct st_api *stapi, struct st_context_iface *stctxi,
 static void
 st_api_destroy(struct st_api *stapi)
 {
-   _mesa_hash_table_destroy(st_fbi_ht, NULL);
-   mtx_destroy(&st_mutex);
 }
 
 /**
@@ -1051,6 +1098,19 @@ st_manager_add_color_renderbuffer(struct st_context *st,
    return TRUE;
 }
 
+static void
+st_manager_destroy(struct st_manager *smapi)
+{
+   struct st_manager_private *smPriv = smapi->st_manager_private;
+
+   if (smPriv && smPriv->stfbi_ht) {
+      _mesa_hash_table_destroy(smPriv->stfbi_ht, NULL);
+      mtx_destroy(&smPriv->st_mutex);
+      free(smPriv);
+      smapi->st_manager_private = NULL;
+   }
+}
+
 static unsigned
 get_version(struct pipe_screen *screen,
             struct st_config_options *options, gl_api api)
@@ -1106,12 +1166,5 @@ static const struct st_api st_gl_api = {
 struct st_api *
 st_gl_api_create(void)
 {
-   /* Create a hash table for all the framebuffer interface objects */
-
-   mtx_init(&st_mutex, mtx_plain);
-   st_fbi_ht = _mesa_hash_table_create(NULL,
-                                       st_framebuffer_iface_hash,
-                                       st_framebuffer_iface_equal);
-
    return (struct st_api *) &st_gl_api;
 }

@@ -199,6 +199,9 @@ stw_cleanup(void)
    DeleteCriticalSection(&stw_dev->fb_mutex);
    DeleteCriticalSection(&stw_dev->ctx_mutex);
 
+   if (stw_dev->smapi->destroy)
+      stw_dev->smapi->destroy(stw_dev->smapi);
+
    FREE(stw_dev->smapi);
    stw_dev->stapi->destroy(stw_dev->stapi);
 
