@@ -813,6 +813,28 @@ brw_bo_map_wc(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
    return bo->map_wc;
 }
 
+/**
+ * Perform an uncached mapping via the GTT.
+ *
+ * Write access through the GTT is not quite fully coherent. On low power
+ * systems especially, like modern Atoms, we can observe reads from RAM before
+ * the write via GTT has landed. A write memory barrier that flushes the Write
+ * Combining Buffer (i.e. sfence/mfence) is not sufficient to order the later
+ * read after the write as the GTT write suffers a small delay through the GTT
+ * indirection. The kernel uses an uncached mmio read to ensure the GTT write
+ * is ordered with reads (either by the GPU, WB or WC) and unconditionally
+ * flushes prior to execbuf submission. However, if we are not informing the
+ * kernel about our GTT writes, it will not flush before earlier access, such
+ * as when using the cmdparser. Similarly, we need to be careful if we should
+ * ever issue a CPU read immediately following a GTT write.
+ *
+ * Telling the kernel about write access also has one more important
+ * side-effect. Upon receiving notification about the write, it cancels any
+ * scanout buffering for FBC/PSR and friends. Later FBC/PSR is then flushed by
+ * either SW_FINISH or DIRTYFB. The presumption is that we never write to the
+ * actual scanout via a mmaping, only to a backbuffer and so all the FBC/PSR
+ * tracking is handled on the buffer exchange instead.
+ */
 static void *
 brw_bo_map_gtt(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
 {
