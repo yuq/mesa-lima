@@ -32,12 +32,15 @@
 #include "main/imports.h"
 #include "main/mtypes.h"
 #include "main/macros.h"
+#include "main/streaming-load-memcpy.h"
 #include "main/bufferobj.h"
+#include "x86/common_x86_asm.h"
 
 #include "brw_context.h"
 #include "intel_blit.h"
 #include "intel_buffer_objects.h"
 #include "intel_batchbuffer.h"
+#include "intel_tiled_memcpy.h"
 
 static void
 mark_buffer_gpu_usage(struct intel_buffer_object *intel_obj,
@@ -337,14 +340,23 @@ brw_get_buffer_subdata(struct gl_context *ctx,
       intel_batchbuffer_flush(brw);
    }
 
-   void *map = brw_bo_map(brw, intel_obj->buffer, MAP_READ);
+   unsigned int map_flags = MAP_READ;
+   mem_copy_fn memcpy_fn = memcpy;
+   if (!intel_obj->buffer->cache_coherent && cpu_has_sse4_1) {
+      /* Rather than acquire a new WB mmaping of the buffer object and pull
+       * it into the CPU cache, keep using the WC mmap that we have for writes,
+       * and use the magic movntd instructions instead.
+       */
+      map_flags |= MAP_COHERENT;
+      memcpy_fn = (mem_copy_fn) _mesa_streaming_load_memcpy;
+   }
 
+   void *map = brw_bo_map(brw, intel_obj->buffer, map_flags);
    if (unlikely(!map)) {
       _mesa_error_no_memory(__func__);
       return;
    }
-
-   memcpy(data, map + offset, size);
+   memcpy_fn(data, map + offset, size);
    brw_bo_unmap(intel_obj->buffer);
 
    mark_buffer_inactive(intel_obj);
