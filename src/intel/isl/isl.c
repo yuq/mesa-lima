@@ -1740,7 +1740,28 @@ isl_surf_get_ccs_surf(const struct isl_device *dev,
    if (surf->usage & ISL_SURF_USAGE_DISABLE_AUX_BIT)
       return false;
 
+   /* The PRM doesn't say this explicitly, but fast-clears don't appear to
+    * work for 3D textures until gen9 where the layout of 3D textures changes
+    * to match 2D array textures.
+    */
    if (ISL_DEV_GEN(dev) <= 8 && surf->dim != ISL_SURF_DIM_2D)
+      return false;
+
+   /* From the HSW PRM Volume 7: 3D-Media-GPGPU, page 652 (Color Clear of
+    * Non-MultiSampler Render Target Restrictions):
+    *
+    *    "Support is for non-mip-mapped and non-array surface types only."
+    *
+    * This restriction is lifted on gen8+.  Technically, it may be possible to
+    * create a CCS for an arrayed or mipmapped image and only enable CCS_D
+    * when rendering to the base slice.  However, there is no documentation
+    * tell us what the hardware would do in that case or what it does if you
+    * walk off the bases slice.  (Does it ignore CCS or does it start
+    * scribbling over random memory?)  We play it safe and just follow the
+    * docs and don't allow CCS_D for arrayed or mip-mapped surfaces.
+    */
+   if (ISL_DEV_GEN(dev) <= 7 &&
+       (surf->levels > 1 || surf->logical_level0_px.array_len > 1))
       return false;
 
    if (isl_format_is_compressed(surf->format))
@@ -1780,19 +1801,14 @@ isl_surf_get_ccs_surf(const struct isl_device *dev,
       return false;
    }
 
-   /* Multi-LOD and multi-layer CCS isn't supported on gen7. */
-   const uint8_t levels = ISL_DEV_GEN(dev) <= 7 ? 1 : surf->levels;
-   const uint32_t array_len = ISL_DEV_GEN(dev) <= 7 ?
-                              1 : surf->logical_level0_px.array_len;
-
    return isl_surf_init(dev, ccs_surf,
                         .dim = surf->dim,
                         .format = ccs_format,
                         .width = surf->logical_level0_px.width,
                         .height = surf->logical_level0_px.height,
                         .depth = surf->logical_level0_px.depth,
-                        .levels = levels,
-                        .array_len = array_len,
+                        .levels = surf->levels,
+                        .array_len = surf->logical_level0_px.array_len,
                         .samples = 1,
                         .row_pitch = row_pitch,
                         .usage = ISL_SURF_USAGE_CCS_BIT,
