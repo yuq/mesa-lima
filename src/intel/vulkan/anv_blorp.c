@@ -564,10 +564,10 @@ do_buffer_copy(struct blorp_batch *batch,
                  .levels = 1,
                  .array_len = 1,
                  .samples = 1,
+                 .row_pitch = width * block_size,
                  .usage = ISL_SURF_USAGE_TEXTURE_BIT |
                           ISL_SURF_USAGE_RENDER_TARGET_BIT,
                  .tiling_flags = ISL_TILING_LINEAR_BIT);
-   assert(surf.row_pitch == width * block_size);
 
    struct blorp_surf src_blorp_surf = {
       .surf = &surf,
