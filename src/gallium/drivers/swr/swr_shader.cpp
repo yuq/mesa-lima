@@ -414,7 +414,10 @@ BuilderSWR::swr_gs_llvm_emit_vertex(const struct lp_build_tgsi_gs_iface *gs_base
        } else if (iface->info->output_semantic_name[attrib] == TGSI_SEMANTIC_POSITION) {
           attribSlot = VERTEX_POSITION_SLOT;
        } else {
-          attribSlot = VERTEX_ATTRIB_START_SLOT + attrib - 1;
+          attribSlot = VERTEX_ATTRIB_START_SLOT + attrib;
+          if (iface->info->writes_position) {
+             attribSlot--;
+          }
        }
 
 #if USE_SIMD16_FRONTEND
@@ -921,6 +924,33 @@ swr_compile_vs(struct swr_context *ctx, swr_jit_vs_key &key)
 
    ctx->vs->map.insert(std::make_pair(key, make_unique<VariantVS>(builder.gallivm, func)));
    return func;
+}
+
+unsigned
+swr_so_adjust_attrib(unsigned in_attrib,
+                     swr_vertex_shader *swr_vs)
+{
+   ubyte semantic_name;
+   unsigned attrib;
+
+   attrib = in_attrib + VERTEX_ATTRIB_START_SLOT;
+
+   if (swr_vs) {
+      semantic_name = swr_vs->info.base.output_semantic_name[in_attrib];
+      if (semantic_name == TGSI_SEMANTIC_POSITION) {
+         attrib = VERTEX_POSITION_SLOT;
+      } else if (semantic_name == TGSI_SEMANTIC_PSIZE) {
+         attrib = VERTEX_SGV_SLOT;
+      } else if (semantic_name == TGSI_SEMANTIC_LAYER) {
+         attrib = VERTEX_SGV_SLOT;
+      } else {
+         if (swr_vs->info.base.writes_position) {
+               attrib--;
+         }
+      }
+   }
+
+   return attrib;
 }
 
 static unsigned

@@ -345,13 +345,14 @@ swr_create_vs_state(struct pipe_context *pipe,
       // soState.streamToRasterizer not used
 
       for (uint32_t i = 0; i < stream_output->num_outputs; i++) {
+         unsigned attrib_slot = stream_output->output[i].register_index;
+         attrib_slot = swr_so_adjust_attrib(attrib_slot, swr_vs);
          swr_vs->soState.streamMasks[stream_output->output[i].stream] |=
-            1 << (stream_output->output[i].register_index - 1);
+            (1 << attrib_slot);
       }
       for (uint32_t i = 0; i < MAX_SO_STREAMS; i++) {
         swr_vs->soState.streamNumEntries[i] =
              _mm_popcnt_u32(swr_vs->soState.streamMasks[i]);
-        swr_vs->soState.vertexAttribOffset[i] = VERTEX_ATTRIB_START_SLOT; // TODO: optimize
        }
    }
 
