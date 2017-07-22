@@ -81,8 +81,11 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
                offsets[output_buffer] = so->output[i].dst_offset;
             }
 
+            unsigned attrib_slot = so->output[i].register_index;
+            attrib_slot = swr_so_adjust_attrib(attrib_slot, ctx->vs);
+
             state.stream.decl[num].bufferIndex = output_buffer;
-            state.stream.decl[num].attribSlot = so->output[i].register_index - 1;
+            state.stream.decl[num].attribSlot = attrib_slot;
             state.stream.decl[num].componentMask =
                ((1 << so->output[i].num_components) - 1)
                << so->output[i].start_component;
@@ -129,10 +132,36 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
     * XXX setup provokingVertex & topologyProvokingVertex */
    SWR_FRONTEND_STATE feState = {0};
 
-   feState.vsVertexSize =
-      VERTEX_ATTRIB_START_SLOT +
-      + ctx->vs->info.base.num_outputs
-      - (ctx->vs->info.base.writes_position ? 1 : 0);
+   // feState.vsVertexSize seeds the PA size that is used as an interface
+   // between all the shader stages, so it has to be large enough to
+   // incorporate all interfaces between stages
+
+   // max of gs and vs num_outputs
+   feState.vsVertexSize = ctx->vs->info.base.num_outputs;
+   if (ctx->gs &&
+       ctx->gs->info.base.num_outputs > feState.vsVertexSize) {
+      feState.vsVertexSize = ctx->gs->info.base.num_outputs;
+   }
+
+   if (ctx->vs->info.base.num_outputs) {
+      // gs does not adjust for position in SGV slot at input from vs
+      if (!ctx->gs)
+         feState.vsVertexSize--;
+   }
+
+   // other (non-SGV) slots start at VERTEX_ATTRIB_START_SLOT
+   feState.vsVertexSize += VERTEX_ATTRIB_START_SLOT;
+
+   // The PA in the clipper does not handle BE vertex sizes
+   // different from FE. Increase vertexsize only for the cases that needed it
+
+   // primid needs a slot
+   if (ctx->fs->info.base.uses_primid)
+      feState.vsVertexSize++;
+   // sprite coord enable
+   if (ctx->rasterizer->sprite_coord_enable)
+      feState.vsVertexSize++;
+
 
    if (ctx->rasterizer->flatshade_first) {
       feState.provokingVertex = {1, 0, 0};
