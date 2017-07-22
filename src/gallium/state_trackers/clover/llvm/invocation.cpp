@@ -63,6 +63,34 @@ using ::llvm::Module;
 using ::llvm::raw_string_ostream;
 
 namespace {
+
+    struct cl_version {
+        std::string version_str; // CL Version
+        unsigned version_number; // Numeric CL Version
+    };
+
+   static const unsigned ANY_VERSION = 999;
+   const cl_version cl_versions[] = {
+      { "1.0", 100},
+      { "1.1", 110},
+      { "1.2", 120},
+      { "2.0", 200},
+      { "2.1", 210},
+      { "2.2", 220},
+   };
+
+    struct clc_version_lang_std {
+        unsigned version_number; // CLC Version
+        clang::LangStandard::Kind clc_lang_standard;
+    };
+
+    const clc_version_lang_std cl_version_lang_stds[] = {
+       { 100, clang::LangStandard::lang_opencl10},
+       { 110, clang::LangStandard::lang_opencl11},
+       { 120, clang::LangStandard::lang_opencl12},
+       { 200, clang::LangStandard::lang_opencl20},
+    };
+
    void
    init_targets() {
       static bool targets_initialized = false;
@@ -91,6 +119,66 @@ namespace {
       std::unique_ptr<LLVMContext> ctx { new LLVMContext };
       compat::set_diagnostic_handler(*ctx, diagnostic_handler, &r_log);
       return ctx;
+   }
+
+   const struct clc_version_lang_std&
+   get_cl_lang_standard(unsigned requested, unsigned max = ANY_VERSION) {
+       for (const struct clc_version_lang_std &version : cl_version_lang_stds) {
+           if (version.version_number == max ||
+                   version.version_number == requested) {
+               return version;
+           }
+       }
+       throw build_error("Unknown/Unsupported language version");
+   }
+
+   const struct cl_version&
+   get_cl_version(const std::string &version_str,
+                  unsigned max = ANY_VERSION) {
+      for (const struct cl_version &version : cl_versions) {
+         if (version.version_number == max || version.version_str == version_str) {
+            return version;
+         }
+      }
+      throw build_error("Unknown/Unsupported language version");
+   }
+
+   clang::LangStandard::Kind
+   get_lang_standard_from_version_str(const std::string &version_str,
+                                      bool is_build_opt = false) {
+
+       //Per CL 2.0 spec, section 5.8.4.5:
+       //  If it's an option, use the value directly.
+       //  If it's a device version, clamp to max 1.x version, a.k.a. 1.2
+      const cl_version version =
+         get_cl_version(version_str, is_build_opt ? ANY_VERSION : 120);
+
+      const struct clc_version_lang_std standard =
+         get_cl_lang_standard(version.version_number);
+
+      return standard.clc_lang_standard;
+   }
+
+   clang::LangStandard::Kind
+   get_language_version(const std::vector<std::string> &opts,
+                        const std::string &device_version) {
+
+      const std::string search = "-cl-std=CL";
+
+      for (auto &opt: opts) {
+         auto pos = opt.find(search);
+         if (pos == 0){
+            const auto ver = opt.substr(pos + search.size());
+            const auto device_ver = get_cl_version(device_version);
+            const auto requested = get_cl_version(ver);
+            if (requested.version_number > device_ver.version_number) {
+               throw build_error();
+            }
+            return get_lang_standard_from_version_str(ver, true);
+         }
+      }
+
+      return get_lang_standard_from_version_str(device_version);
    }
 
    std::unique_ptr<clang::CompilerInstance>
