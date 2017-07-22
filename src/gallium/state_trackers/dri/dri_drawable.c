@@ -158,6 +158,7 @@ dri_create_buffer(__DRIscreen * sPriv,
    dPriv->driverPrivate = (void *)drawable;
    p_atomic_set(&drawable->base.stamp, 1);
    drawable->base.ID = p_atomic_inc_return(&drifb_ID);
+   drawable->base.state_manager = &screen->base;
 
    return GL_TRUE;
 fail:

@@ -181,6 +181,9 @@ xmesa_close_display(Display *display)
     *    xmdpy->screen->destroy(xmdpy->screen);
     * }
     */
+
+   if (xmdpy->smapi->destroy)
+      xmdpy->smapi->destroy(xmdpy->smapi);
    free(xmdpy->smapi);
 
    XFree((char *) info);

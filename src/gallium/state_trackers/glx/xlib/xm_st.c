@@ -304,6 +304,7 @@ xmesa_create_st_framebuffer(XMesaDisplay xmdpy, XMesaBuffer b)
    stfbi->flush_front = xmesa_st_framebuffer_flush_front;
    stfbi->validate = xmesa_st_framebuffer_validate;
    stfbi->ID = p_atomic_inc_return(&xmesa_stfbi_ID);
+   stfbi->state_manager = xmdpy->smapi;
    p_atomic_set(&stfbi->stamp, 1);
    stfbi->st_manager_private = (void *) xstfb;
 

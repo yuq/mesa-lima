@@ -235,6 +235,7 @@ stw_st_create_framebuffer(struct stw_framebuffer *fb)
    stwfb->fb = fb;
    stwfb->stvis = fb->pfi->stvis;
    stwfb->base.ID = p_atomic_inc_return(&stwfb_ID);
+   stwfb->base.state_manager = stw_dev->smapi;
 
    stwfb->base.visual = &stwfb->stvis;
    p_atomic_set(&stwfb->base.stamp, 1);
