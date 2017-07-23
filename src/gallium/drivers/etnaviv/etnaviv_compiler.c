@@ -2353,7 +2353,7 @@ etna_compile_shader(struct etna_shader_variant *v)
    if (!c)
       return false;
 
-   memset(&c->lbl_usage, -1, ARRAY_SIZE(c->lbl_usage));
+   memset(&c->lbl_usage, -1, sizeof(c->lbl_usage));
 
    const struct tgsi_token *tokens = v->shader->tokens;
 
