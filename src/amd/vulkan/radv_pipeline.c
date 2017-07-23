@@ -1035,14 +1035,17 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 	unsigned col_format = 0;
 
 	for (unsigned i = 0; i < (single_cb_enable ? 1 : subpass->color_count); ++i) {
-		struct radv_render_pass_attachment *attachment;
 		unsigned cf;
 
-		attachment = pass->attachments + subpass->color_attachments[i].attachment;
+		if (subpass->color_attachments[i].attachment == VK_ATTACHMENT_UNUSED) {
+			cf = V_028714_SPI_SHADER_ZERO;
+		} else {
+			struct radv_render_pass_attachment *attachment = pass->attachments + subpass->color_attachments[i].attachment;
 
-		cf = si_choose_spi_color_format(attachment->format,
-						blend_enable & (1 << i),
-						blend_need_alpha & (1 << i));
+			cf = si_choose_spi_color_format(attachment->format,
+			                                blend_enable & (1 << i),
+			                                blend_need_alpha & (1 << i));
+		}
 
 		col_format |= cf << (4 * i);
 	}
@@ -1081,6 +1084,9 @@ radv_pipeline_compute_is_int8(const VkGraphicsPipelineCreateInfo *pCreateInfo)
 
 	for (unsigned i = 0; i < subpass->color_count; ++i) {
 		struct radv_render_pass_attachment *attachment;
+
+		if (subpass->color_attachments[i].attachment == VK_ATTACHMENT_UNUSED)
+			continue;
 
 		attachment = pass->attachments + subpass->color_attachments[i].attachment;
 

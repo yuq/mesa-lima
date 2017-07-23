@@ -1080,7 +1080,8 @@ subpass_needs_clear(const struct radv_cmd_buffer *cmd_buffer)
 	ds = cmd_state->subpass->depth_stencil_attachment.attachment;
 	for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
 		uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
-		if (cmd_state->attachments[a].pending_clear_aspects) {
+		if (a != VK_ATTACHMENT_UNUSED &&
+		    cmd_state->attachments[a].pending_clear_aspects) {
 			return true;
 		}
 	}
@@ -1120,7 +1121,8 @@ radv_cmd_buffer_clear_subpass(struct radv_cmd_buffer *cmd_buffer)
 	for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
 		uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
 
-		if (!cmd_state->attachments[a].pending_clear_aspects)
+		if (a == VK_ATTACHMENT_UNUSED ||
+		    !cmd_state->attachments[a].pending_clear_aspects)
 			continue;
 
 		assert(cmd_state->attachments[a].pending_clear_aspects ==
