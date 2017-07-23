@@ -3844,6 +3844,15 @@ struct gl_constants
    GLboolean DisableVaryingPacking;
 
    /**
+    * UBOs and SSBOs can be packed tightly by the OpenGL implementation when
+    * layout is set as shared (the default) or packed. However most Mesa drivers
+    * just use STD140 for these layouts. This flag allows drivers to use STD430
+    * for packed and shared layouts which allows arrays to be packed more
+    * tightly.
+    */
+   bool UseSTD430AsDefaultPacking;
+
+   /**
     * Should meaningful names be generated for compiler temporary variables?
     *
     * Generally, it is not useful to have the compiler generate "meaningful"
