@@ -198,7 +198,7 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 			       unsigned block_width, bool is_stencil,
 			       uint32_t *state)
 {
-	uint64_t gpu_address = device->ws->buffer_get_va(image->bo) + image->offset;
+	uint64_t gpu_address = image->bo ? device->ws->buffer_get_va(image->bo) + image->offset : 0;
 	uint64_t va = gpu_address;
 	unsigned pitch = base_level_info->nblk_x * block_width;
 	enum chip_class chip_class = device->physical_device->rad_info.chip_class;
