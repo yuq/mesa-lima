@@ -1332,7 +1332,7 @@ static void TessellationStages(
     TSDestroyCtx(tsCtx);
 }
 
-THREAD PA_STATE::SIMDVERTEX *pVertexStore = nullptr;
+THREAD PA_STATE::SIMDVERTEX *gpVertexStore = nullptr;
 THREAD uint32_t gVertexStoreSize = 0;
 
 //////////////////////////////////////////////////////////////////////////
@@ -1459,19 +1459,22 @@ void ProcessDraw(
     // grow the vertex store for the PA as necessary
     if (gVertexStoreSize < vertexStoreSize)
     {
-        if (pVertexStore != nullptr)
+        if (gpVertexStore != nullptr)
         {
-            AlignedFree(pVertexStore);
+            AlignedFree(gpVertexStore);
+            gpVertexStore = nullptr;
         }
 
-        pVertexStore = reinterpret_cast<PA_STATE::SIMDVERTEX *>(AlignedMalloc(vertexStoreSize, 64));
+        SWR_ASSERT(gpVertexStore == nullptr);
+
+        gpVertexStore = reinterpret_cast<PA_STATE::SIMDVERTEX *>(AlignedMalloc(vertexStoreSize, 64));
         gVertexStoreSize = vertexStoreSize;
 
-        SWR_ASSERT(pVertexStore != nullptr);
+        SWR_ASSERT(gpVertexStore != nullptr);
     }
 
     // choose primitive assembler
-    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, pVertexStore, numVerts, state.frontendState.vsVertexSize);
+    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, gpVertexStore, numVerts, state.frontendState.vsVertexSize);
     PA_STATE& pa = paFactory.GetPA();
 
 #if USE_SIMD16_FRONTEND
