@@ -419,6 +419,9 @@ intel_depth_format_for_depthstencil_format(mesa_format format);
 mesa_format
 intel_lower_compressed_format(struct brw_context *brw, mesa_format format);
 
+unsigned
+brw_get_num_logical_layers(const struct intel_mipmap_tree *mt, unsigned level);
+
 /** \brief Assert that the level and layer are valid for the miptree. */
 void
 intel_miptree_check_level_layer(const struct intel_mipmap_tree *mt,

@@ -393,8 +393,8 @@ intel_lower_compressed_format(struct brw_context *brw, mesa_format format)
    }
 }
 
-static unsigned
-get_num_logical_layers(const struct intel_mipmap_tree *mt, unsigned level)
+unsigned
+brw_get_num_logical_layers(const struct intel_mipmap_tree *mt, unsigned level)
 {
    if (mt->surf.dim == ISL_SURF_DIM_3D)
       return minify(mt->surf.logical_level0_px.depth, level);
@@ -440,7 +440,7 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
 
    uint32_t total_slices = 0;
    for (uint32_t level = 0; level < levels; level++)
-      total_slices += get_num_logical_layers(mt, level);
+      total_slices += brw_get_num_logical_layers(mt, level);
 
    const size_t per_level_array_size = levels * sizeof(enum isl_aux_state *);
 
@@ -458,7 +458,7 @@ create_aux_state_map(struct intel_mipmap_tree *mt,
    enum isl_aux_state *s = data + per_level_array_size;
    for (uint32_t level = 0; level < levels; level++) {
       per_level_arr[level] = s;
-      const unsigned level_layers = get_num_logical_layers(mt, level);
+      const unsigned level_layers = brw_get_num_logical_layers(mt, level);
       for (uint32_t a = 0; a < level_layers; a++)
          *(s++) = initial;
    }
@@ -1871,7 +1871,7 @@ miptree_layer_range_length(const struct intel_mipmap_tree *mt, uint32_t level,
 {
    assert(level <= mt->last_level);
 
-   const uint32_t total_num_layers = get_num_logical_layers(mt, level);
+   const uint32_t total_num_layers = brw_get_num_logical_layers(mt, level);
    assert(start_layer < total_num_layers);
    if (num_layers == INTEL_REMAINING_LAYERS)
       num_layers = total_num_layers - start_layer;
