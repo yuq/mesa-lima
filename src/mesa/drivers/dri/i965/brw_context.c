@@ -675,6 +675,22 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    /* OES_primitive_bounding_box */
    ctx->Const.NoPrimitiveBoundingBoxOutput = true;
+
+   /* TODO: We should be able to use STD430 packing by default on all hardware
+    * but some piglit tests [1] currently fail on SNB when this is enabled.
+    * The problem is the messages we're using for doing uniform pulls
+    * in the vec4 back-end on SNB is the OWORD block load instruction, which
+    * takes its offset in units of OWORDS (16 bytes).  On IVB+, we use the
+    * sampler which doesn't have these restrictions.
+    *
+    * In the scalar back-end, we use the sampler for dynamic uniform loads and
+    * pull an entire cache line at a time for constant offset loads both of
+    * which support almost any alignment.
+    *
+    * [1] glsl-1.40/uniform_buffer/vs-float-array-variable-index.shader_test
+    */
+   if (brw->gen >= 7)
+      ctx->Const.UseSTD430AsDefaultPacking = true;
 }
 
 static void
