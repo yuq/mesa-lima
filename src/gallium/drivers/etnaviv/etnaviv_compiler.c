@@ -2277,7 +2277,7 @@ etna_compile_check_limits(struct etna_compile *c)
    /* round up number of uniforms, including immediates, in units of four */
    int num_uniforms = c->imm_base / 4 + (c->imm_size + 3) / 4;
 
-   if (c->inst_ptr > c->specs->max_instructions) {
+   if (!c->specs->has_icache && c->inst_ptr > c->specs->max_instructions) {
       DBG("Number of instructions (%d) exceeds maximum %d", c->inst_ptr,
           c->specs->max_instructions);
       return false;
@@ -2501,6 +2501,7 @@ etna_compile_shader(struct etna_shader_variant *v)
    v->vs_pointsize_out_reg = -1;
    v->ps_color_out_reg = -1;
    v->ps_depth_out_reg = -1;
+   v->needs_icache = c->inst_ptr > c->specs->max_instructions;
    copy_uniform_state_to_shader(c, v);
 
    if (c->info.processor == PIPE_SHADER_VERTEX) {
