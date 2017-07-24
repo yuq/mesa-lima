@@ -2303,16 +2303,29 @@ do_untyped_vector_read(const fs_builder &bld,
                        unsigned num_components)
 {
    if (type_sz(dest.type) <= 2) {
-      fs_reg read_offset = bld.vgrf(BRW_REGISTER_TYPE_UD);
-      bld.MOV(read_offset, offset_reg);
-      for (unsigned i = 0; i < num_components; i++) {
-         fs_reg read_reg =
-            emit_byte_scattered_read(bld, surf_index, read_offset,
+      assert(dest.stride == 1);
+
+      if (num_components > 1) {
+         /* Pairs of 16-bit components can be read with untyped read, for 16-bit
+          * vec3 4th component is ignored.
+          */
+         fs_reg read_result =
+            emit_untyped_read(bld, surf_index, offset_reg,
+                              1 /* dims */, DIV_ROUND_UP(num_components, 2),
+                              BRW_PREDICATE_NONE);
+         shuffle_32bit_load_result_to_16bit_data(bld,
+               retype(dest, BRW_REGISTER_TYPE_W),
+               retype(read_result, BRW_REGISTER_TYPE_D),
+               num_components);
+      } else {
+         assert(num_components == 1);
+         /* scalar 16-bit are read using one byte_scattered_read message */
+         fs_reg read_result =
+            emit_byte_scattered_read(bld, surf_index, offset_reg,
                                      1 /* dims */, 1,
                                      type_sz(dest.type) * 8 /* bit_size */,
                                      BRW_PREDICATE_NONE);
-         bld.MOV(offset(dest, bld, i), subscript(read_reg, dest.type, 0));
-         bld.ADD(read_offset, read_offset, brw_imm_ud(type_sz(dest.type)));
+         bld.MOV(dest, subscript(read_result, dest.type, 0));
       }
    } else if (type_sz(dest.type) == 4) {
       fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
