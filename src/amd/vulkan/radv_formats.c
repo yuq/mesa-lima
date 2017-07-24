@@ -1300,8 +1300,7 @@ void radv_GetPhysicalDeviceExternalBufferPropertiesKHR(
 	VkExternalMemoryHandleTypeFlagsKHR compat_flags = 0;
 	switch(pExternalBufferInfo->handleType) {
 	case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
-		flags = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_KHR |
-		        VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHR |
+		flags = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHR |
 		        VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHR;
 		compat_flags = export_flags = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
 		break;
