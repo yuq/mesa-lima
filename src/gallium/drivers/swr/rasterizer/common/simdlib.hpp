@@ -55,6 +55,11 @@ namespace SIMDImpl
         {
 #define __SIMD_LIB_AVX512_HPP__
 #include "simdlib_128_avx512.inl"
+#if defined(SIMD_ARCH_KNIGHTS)
+#include "simdlib_128_avx512_knights.inl"
+#else // optimize for core
+#include "simdlib_128_avx512_core.inl"
+#endif // defined(SIMD_ARCH_KNIGHTS)
 #undef __SIMD_LIB_AVX512_HPP__
         }; // struct AVX2Impl
 #endif // #if SIMD_ARCH >= SIMD_ARCH_AVX512
@@ -105,6 +110,11 @@ namespace SIMDImpl
         {
 #define __SIMD_LIB_AVX512_HPP__
 #include "simdlib_256_avx512.inl"
+#if defined(SIMD_ARCH_KNIGHTS)
+#include "simdlib_256_avx512_knights.inl"
+#else // optimize for core
+#include "simdlib_256_avx512_core.inl"
+#endif // defined(SIMD_ARCH_KNIGHTS)
 #undef __SIMD_LIB_AVX512_HPP__
         }; // struct AVX2Impl
 #endif // #if SIMD_ARCH >= SIMD_ARCH_AVX512
@@ -150,13 +160,20 @@ namespace SIMDImpl
 
 
 #if SIMD_ARCH >= SIMD_ARCH_AVX512
-        struct AVX512Impl
+        struct AVX512Impl : AVXImplBase<SIMD256Impl::AVX512Impl>
         {
 #define __SIMD_LIB_AVX512_HPP__
 #include "simdlib_512_avx512.inl"
 #include "simdlib_512_avx512_masks.inl"
+#if defined(SIMD_ARCH_KNIGHTS)
+#include "simdlib_512_avx512_knights.inl"
+#include "simdlib_512_avx512_masks_knights.inl"
+#else // optimize for core
+#include "simdlib_512_avx512_core.inl"
+#include "simdlib_512_avx512_masks_core.inl"
+#endif // defined(SIMD_ARCH_KNIGHTS)
 #undef __SIMD_LIB_AVX512_HPP__
-        }; // struct AVX512Impl
+        }; // struct AVX512ImplBase
 #endif // #if SIMD_ARCH >= SIMD_ARCH_AVX512
 
         struct Traits : SIMDImpl::Traits

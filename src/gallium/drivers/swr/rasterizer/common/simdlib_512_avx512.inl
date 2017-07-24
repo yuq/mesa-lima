@@ -25,7 +25,7 @@
 #endif
 
 #if defined(__GNUC__) && !defined( __clang__) && !defined(__INTEL_COMPILER)
-// gcc missing these intrinsics
+// gcc as of 7.1 was missing these intrinsics
 #ifndef _mm512_cmpneq_ps_mask
 #define _mm512_cmpneq_ps_mask(a,b) _mm512_cmp_ps_mask((a),(b),_CMP_NEQ_UQ)
 #endif
@@ -37,14 +37,13 @@
 #ifndef _mm512_cmplt_pd_mask
 #define _mm512_cmplt_pd_mask(a,b) _mm512_cmp_pd_mask((a),(b),_CMP_LT_OS)
 #endif
+
 #endif
 
 //============================================================================
-// SIMD16 AVX512 (F) implementation
+// SIMD16 AVX512 (F) implementation (compatible with Knights and Core
+// processors)
 //
-//  TODO: Optimize for KNL / KNH or for SKX??
-//      For now probably optimizing more for KNL as that's where
-//      immediate customers are.
 //============================================================================
 
 static const int TARGET_SIMD_WIDTH = 16;
@@ -153,33 +152,10 @@ using SIMD256T = SIMD256Impl::AVX2Impl;
     }
 #define SIMD_IWRAPPER_2I(op) SIMD_IWRAPPER_2I_(op, op)
 
-#define SIMD_EMU_IWRAPPER_2(op) \
-    static SIMDINLINE \
-    Integer SIMDCALL op(Integer a, Integer b)\
-    {\
-        return Integer\
-        {\
-            SIMD256T::op(a.v8[0], b.v8[0]),\
-            SIMD256T::op(a.v8[1], b.v8[1]),\
-        };\
-    }
-
 private:
-    static SIMDINLINE Integer vmask(__mmask8 m)
-    {
-        return _mm512_maskz_set1_epi64(m, -1LL);
-    }
     static SIMDINLINE Integer vmask(__mmask16 m)
     {
         return _mm512_maskz_set1_epi32(m, -1);
-    }
-    static SIMDINLINE Integer vmask(__mmask32 m)
-    {
-        return _mm512_maskz_set1_epi16(m, -1);
-    }
-    static SIMDINLINE Integer vmask(__mmask64 m)
-    {
-        return _mm512_maskz_set1_epi8(m, -1);
     }
 
 public:
@@ -236,21 +212,10 @@ SIMD_IWRAPPER_2_(andnot_si, andnot_si512);  // return (~a) & b    (int)
 SIMD_IWRAPPER_2_(or_si, or_si512);          // return a | b       (int)
 SIMD_IWRAPPER_2_(xor_si, xor_si512);        // return a ^ b       (int)
 
-#if defined(AVX512F_STRICT)
-
-SIMD_WRAPPERI_2_(and_ps, and_epi32);          // return a & b       (float treated as int)
-SIMD_WRAPPERI_2_(andnot_ps, andnot_epi32);    // return (~a) & b    (float treated as int)
-SIMD_WRAPPERI_2_(or_ps, or_epi32);            // return a | b       (float treated as int)
-SIMD_WRAPPERI_2_(xor_ps, xor_epi32);          // return a ^ b       (float treated as int)
-
-#else
-
-SIMD_WRAPPER_2(and_ps);                     // return a & b       (float treated as int)
-SIMD_WRAPPER_2(andnot_ps);                  // return (~a) & b    (float treated as int)
-SIMD_WRAPPER_2(or_ps);                      // return a | b       (float treated as int)
-SIMD_WRAPPER_2(xor_ps);                     // return a ^ b       (float treated as int)
-
-#endif
+// SIMD_WRAPPER_2(and_ps);                     // return a & b       (float treated as int)
+// SIMD_WRAPPER_2(andnot_ps);                  // return (~a) & b    (float treated as int)
+// SIMD_WRAPPER_2(or_ps);                      // return a | b       (float treated as int)
+// SIMD_WRAPPER_2(xor_ps);                     // return a ^ b       (float treated as int)
 
 
 //-----------------------------------------------------------------------
@@ -260,6 +225,17 @@ SIMD_IWRAPPER_1I(slli_epi32);               // return a << ImmT
 SIMD_IWRAPPER_2(sllv_epi32);
 SIMD_IWRAPPER_1I(srai_epi32);               // return a >> ImmT   (int32)
 SIMD_IWRAPPER_1I(srli_epi32);               // return a >> ImmT   (uint32)
+
+#if 0
+SIMD_IWRAPPER_1I_(srli_si, srli_si512);     // return a >> (ImmT*8) (uint)
+
+template<int ImmT>                              // same as srli_si, but with Float cast to int
+static SIMDINLINE Float SIMDCALL srlisi_ps(Float a)
+{
+    return castsi_ps(srli_si<ImmT>(castps_si(a)));
+}
+#endif
+
 SIMD_IWRAPPER_2(srlv_epi32);
 
 //-----------------------------------------------------------------------
@@ -461,17 +437,10 @@ static SIMDINLINE Integer SIMDCALL insert_si(Integer a, SIMD256Impl::Integer b)
     return _mm512_inserti64x4(a, b, imm);
 }
 
-#if !defined(AVX512F_STRICT)
-SIMD_IWRAPPER_2(packs_epi16);   // See documentation for _mm512_packs_epi16 and _mm512_packs_epi16
-SIMD_IWRAPPER_2(packs_epi32);   // See documentation for _mm512_packs_epi32 and _mm512_packs_epi32
-SIMD_IWRAPPER_2(packus_epi16);  // See documentation for _mm512_packus_epi16 and _mm512_packus_epi16
-SIMD_IWRAPPER_2(packus_epi32);  // See documentation for _mm512_packus_epi32 and _mm512_packus_epi32
-#else
-SIMD_EMU_IWRAPPER_2(packs_epi16)
-SIMD_EMU_IWRAPPER_2(packs_epi32)
-SIMD_EMU_IWRAPPER_2(packus_epi16)
-SIMD_EMU_IWRAPPER_2(packus_epi32)
-#endif
+// SIMD_IWRAPPER_2(packs_epi16);   // See documentation for _mm512_packs_epi16 and _mm512_packs_epi16
+// SIMD_IWRAPPER_2(packs_epi32);   // See documentation for _mm512_packs_epi32 and _mm512_packs_epi32
+// SIMD_IWRAPPER_2(packus_epi16);  // See documentation for _mm512_packus_epi16 and _mm512_packus_epi16
+// SIMD_IWRAPPER_2(packus_epi32);  // See documentation for _mm512_packus_epi32 and _mm512_packus_epi32
 
 static SIMDINLINE Integer SIMDCALL permute_epi32(Integer a, Integer swiz)    // return a[swiz[i]] for each 32-bit lane i (float)
 {
@@ -704,4 +673,4 @@ static SIMDINLINE Float SIMDCALL vmask_ps(int32_t mask)
 #undef SIMD_IWRAPPER_2
 #undef SIMD_IWRAPPER_2_
 #undef SIMD_IWRAPPER_2I
-#undef SIMD_EMU_IWRAPPER_2
+
