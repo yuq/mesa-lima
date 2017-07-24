@@ -1183,26 +1183,30 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
    switch (attrib) {
    case __DRI_IMAGE_ATTRIB_STRIDE:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
-      image->texture->screen->resource_get_handle(image->texture->screen,
-            NULL, image->texture, &whandle, usage);
+      if (!image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage))
+         return GL_FALSE;
       *value = whandle.stride;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_OFFSET:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
-      image->texture->screen->resource_get_handle(image->texture->screen,
-            NULL, image->texture, &whandle, usage);
+      if (!image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage))
+         return GL_FALSE;
       *value = whandle.offset;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_HANDLE:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
-      image->texture->screen->resource_get_handle(image->texture->screen,
-         NULL, image->texture, &whandle, usage);
+      if (!image->texture->screen->resource_get_handle(image->texture->screen,
+         NULL, image->texture, &whandle, usage))
+         return GL_FALSE;
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_NAME:
       whandle.type = DRM_API_HANDLE_TYPE_SHARED;
-      image->texture->screen->resource_get_handle(image->texture->screen,
-         NULL, image->texture, &whandle, usage);
+      if (!image->texture->screen->resource_get_handle(image->texture->screen,
+         NULL, image->texture, &whandle, usage))
+         return GL_FALSE;
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FD:
@@ -1235,14 +1239,16 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_MODIFIER_UPPER:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
-      image->texture->screen->resource_get_handle(image->texture->screen,
-            NULL, image->texture, &whandle, usage);
+      if (!image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage))
+         return GL_FALSE;
       *value = (whandle.modifier >> 32) & 0xffffffff;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_MODIFIER_LOWER:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
-      image->texture->screen->resource_get_handle(image->texture->screen,
-            NULL, image->texture, &whandle, usage);
+      if (!image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage))
+         return GL_FALSE;
       *value = whandle.modifier & 0xffffffff;
       return GL_TRUE;
    default:
