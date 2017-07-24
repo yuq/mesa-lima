@@ -1843,7 +1843,7 @@ public:
 
       this->toplevel_var = var;
       this->varying_floats = 0;
-      program_resource_visitor::process(var);
+      program_resource_visitor::process(var, false);
    }
 
 private:

@@ -4126,9 +4126,9 @@ get_array_size(struct gl_uniform_storage *uni, const glsl_struct_field *field,
 }
 
 static int
-get_array_stride(struct gl_uniform_storage *uni, const glsl_type *interface,
-                 const glsl_struct_field *field, char *interface_name,
-                 char *var_name)
+get_array_stride(struct gl_context *ctx, struct gl_uniform_storage *uni,
+                 const glsl_type *interface, const glsl_struct_field *field,
+                 char *interface_name, char *var_name)
 {
    /* The ARB_program_interface_query spec says:
     *
@@ -4152,7 +4152,9 @@ get_array_stride(struct gl_uniform_storage *uni, const glsl_type *interface,
                                                    var_name))
          return 0;
 
-      if (interface->interface_packing != GLSL_INTERFACE_PACKING_STD430) {
+      if (GLSL_INTERFACE_PACKING_STD140 ==
+          interface->
+             get_internal_ifc_packing(ctx->Const.UseSTD430AsDefaultPacking)) {
          if (array_type->is_record() || array_type->is_array())
             return glsl_align(array_type->std140_size(row_major), 16);
          else
@@ -4165,7 +4167,8 @@ get_array_stride(struct gl_uniform_storage *uni, const glsl_type *interface,
 }
 
 static void
-calculate_array_size_and_stride(struct gl_shader_program *shProg,
+calculate_array_size_and_stride(struct gl_context *ctx,
+                                struct gl_shader_program *shProg,
                                 struct gl_uniform_storage *uni)
 {
    int block_index = uni->block_index;
@@ -4214,7 +4217,7 @@ calculate_array_size_and_stride(struct gl_shader_program *shProg,
             if (strcmp(field->name, var_name) != 0)
                continue;
 
-            array_stride = get_array_stride(uni, interface, field,
+            array_stride = get_array_stride(ctx, uni, interface, field,
                                             interface_name, var_name);
             array_size = get_array_size(uni, field, interface_name, var_name);
             goto write_top_level_array_size_and_stride;
@@ -4340,7 +4343,7 @@ build_program_resource_list(struct gl_context *ctx,
          continue;
 
       if (is_shader_storage) {
-         calculate_array_size_and_stride(shProg,
+         calculate_array_size_and_stride(ctx, shProg,
                                          &shProg->data->UniformStorage[i]);
       }
 
@@ -4642,7 +4645,8 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
 
       if (options->LowerBufferInterfaceBlocks)
          lower_ubo_reference(prog->_LinkedShaders[i],
-                             options->ClampBlockIndicesToArrayBounds);
+                             options->ClampBlockIndicesToArrayBounds,
+                             ctx->Const.UseSTD430AsDefaultPacking);
 
       if (i == MESA_SHADER_COMPUTE)
          lower_shared_reference(prog->_LinkedShaders[i],
