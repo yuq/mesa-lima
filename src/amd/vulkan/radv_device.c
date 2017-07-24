@@ -1045,6 +1045,19 @@ VkResult radv_CreateDevice(
 			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
 	}
 
+	/* Check enabled features */
+	if (pCreateInfo->pEnabledFeatures) {
+		VkPhysicalDeviceFeatures supported_features;
+		radv_GetPhysicalDeviceFeatures(physicalDevice, &supported_features);
+		VkBool32 *supported_feature = (VkBool32 *)&supported_features;
+		VkBool32 *enabled_feature = (VkBool32 *)pCreateInfo->pEnabledFeatures;
+		unsigned num_features = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
+		for (uint32_t i = 0; i < num_features; i++) {
+			if (enabled_feature[i] && !supported_feature[i])
+				return vk_error(VK_ERROR_FEATURE_NOT_PRESENT);
+		}
+	}
+
 	device = vk_alloc2(&physical_device->instance->alloc, pAllocator,
 			     sizeof(*device), 8,
 			     VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
