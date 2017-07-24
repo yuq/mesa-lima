@@ -78,7 +78,7 @@ struct wl_egl_window_v2 {
     void (*destroy_window_callback)(void *);
 };
 
-/* From: XXX - Miguel A. Vico : wayland-egl: Make wl_egl_window a versioned struct */
+/* From: 2d5d61bc49 - Miguel A. Vico : wayland-egl: Make wl_egl_window a versioned struct */
 #define WL_EGL_WINDOW_VERSION_v3 3
 struct wl_egl_window_v3 {
     const intptr_t version;
