@@ -3,6 +3,7 @@ BLORP_FILES = \
 	blorp/blorp.h \
 	blorp/blorp_blit.c \
 	blorp/blorp_clear.c \
+	blorp/blorp_nir_builder.h \
 	blorp/blorp_genX_exec.h \
 	blorp/blorp_priv.h
 
