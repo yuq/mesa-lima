@@ -2253,8 +2253,10 @@ VkResult radv_AllocateMemory(
 		if (!mem->bo) {
 			result = VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR;
 			goto fail;
-		} else
+		} else {
+			close(import_info->fd);
 			goto out_success;
+		}
 	}
 
 	uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
