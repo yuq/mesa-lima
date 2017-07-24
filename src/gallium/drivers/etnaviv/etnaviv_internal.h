@@ -74,6 +74,8 @@ struct etna_specs {
    unsigned has_new_transcendentals : 1;
    /* supports single-buffer rendering with multiple pixel pipes */
    unsigned single_buffer : 1;
+   /* has unified uniforms memory */
+   unsigned has_unified_uniforms : 1;
    /* can use any kind of wrapping mode on npot textures */
    unsigned npot_tex_any_wrap;
    /* number of bits per TS tile */
@@ -100,6 +102,10 @@ struct etna_specs {
    uint32_t vs_offset;
    /* pixel shader memory address*/
    uint32_t ps_offset;
+   /* vertex shader uniforms address*/
+   uint32_t vs_uniforms_offset;
+   /* pixel shader uniforms address*/
+   uint32_t ps_uniforms_offset;
    /* vertex/fragment shader max instructions */
    uint32_t max_instructions;
    /* maximum number of varyings */
