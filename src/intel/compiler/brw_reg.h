@@ -202,30 +202,30 @@ brw_mask_for_swizzle(unsigned swz)
    return brw_apply_inv_swizzle_to_mask(swz, ~0);
 }
 
+/*
+ * The ordering has been chosen so that no enum value is the same as a
+ * compatible hardware encoding.
+ */
 enum PACKED brw_reg_type {
-   BRW_REGISTER_TYPE_UD = 0,
-   BRW_REGISTER_TYPE_D,
-   BRW_REGISTER_TYPE_UW,
-   BRW_REGISTER_TYPE_W,
+   /** Floating-point types: @{ */
+   BRW_REGISTER_TYPE_DF,
    BRW_REGISTER_TYPE_F,
-
-   /** Non-immediates only: @{ */
-   BRW_REGISTER_TYPE_UB,
-   BRW_REGISTER_TYPE_B,
-   /** @} */
-
-   /** Immediates only: @{ */
-   BRW_REGISTER_TYPE_UV, /* Gen6+ */
-   BRW_REGISTER_TYPE_V,
+   BRW_REGISTER_TYPE_HF,
    BRW_REGISTER_TYPE_VF,
    /** @} */
 
-   BRW_REGISTER_TYPE_DF, /* Gen7+ (no immediates until Gen8+) */
-
-   /* Gen8+ */
-   BRW_REGISTER_TYPE_HF,
-   BRW_REGISTER_TYPE_UQ,
+   /** Integer types: @{ */
    BRW_REGISTER_TYPE_Q,
+   BRW_REGISTER_TYPE_UQ,
+   BRW_REGISTER_TYPE_D,
+   BRW_REGISTER_TYPE_UD,
+   BRW_REGISTER_TYPE_W,
+   BRW_REGISTER_TYPE_UW,
+   BRW_REGISTER_TYPE_B,
+   BRW_REGISTER_TYPE_UB,
+   BRW_REGISTER_TYPE_V,
+   BRW_REGISTER_TYPE_UV,
+   /** @} */
 };
 
 unsigned brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,

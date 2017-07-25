@@ -42,8 +42,8 @@ void
 src_reg::init()
 {
    memset(this, 0, sizeof(*this));
-
    this->file = BAD_FILE;
+   this->type = BRW_REGISTER_TYPE_UD;
 }
 
 src_reg::src_reg(enum brw_reg_file file, int nr, const glsl_type *type)
@@ -85,6 +85,7 @@ dst_reg::init()
 {
    memset(this, 0, sizeof(*this));
    this->file = BAD_FILE;
+   this->type = BRW_REGISTER_TYPE_UD;
    this->writemask = WRITEMASK_XYZW;
 }
 

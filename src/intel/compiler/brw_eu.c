@@ -62,7 +62,6 @@ brw_reg_type_letters(unsigned type)
       [BRW_REGISTER_TYPE_UQ] = "UQ",
       [BRW_REGISTER_TYPE_Q]  = "Q",
    };
-   assert(type <= BRW_REGISTER_TYPE_Q);
    return names[type];
 }
 

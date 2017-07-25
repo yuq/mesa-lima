@@ -112,7 +112,6 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
       };
       assert(type < ARRAY_SIZE(imm_hw_types));
       assert(imm_hw_types[type] != -1);
-      assert(devinfo->gen >= 8 || type < BRW_REGISTER_TYPE_DF);
       return imm_hw_types[type];
    } else {
       /* Non-immediate registers */
@@ -134,8 +133,6 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
       };
       assert(type < ARRAY_SIZE(hw_types));
       assert(hw_types[type] != -1);
-      assert(devinfo->gen >= 7 || type < BRW_REGISTER_TYPE_DF);
-      assert(devinfo->gen >= 8 || type < BRW_REGISTER_TYPE_Q);
       return hw_types[type];
    }
 }
@@ -184,9 +181,6 @@ brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
          [GEN8_HW_REG_NON_IMM_TYPE_HF] = 2,
       };
       assert(type < ARRAY_SIZE(hw_sizes));
-      assert(devinfo->gen >= 7 ||
-             (type < GEN7_HW_REG_NON_IMM_TYPE_DF || type == BRW_HW_REG_TYPE_F));
-      assert(devinfo->gen >= 8 || type <= BRW_HW_REG_TYPE_F);
       return hw_sizes[type];
    }
 }

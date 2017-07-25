@@ -403,6 +403,7 @@ void
 fs_reg::init()
 {
    memset(this, 0, sizeof(*this));
+   type = BRW_REGISTER_TYPE_UD;
    stride = 1;
 }
 
