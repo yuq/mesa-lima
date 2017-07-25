@@ -2972,7 +2972,7 @@ st_NewTextureHandle(struct gl_context *ctx, struct gl_texture_object *texObj,
       if (!st_finalize_texture(ctx, pipe, texObj, 0))
          return 0;
 
-      st_convert_sampler(st, texObj, sampObj, &sampler);
+      st_convert_sampler(st, texObj, sampObj, 0, &sampler);
       view = st_get_texture_sampler_view_from_stobj(st, stObj, sampObj, 0);
    } else {
       view = st_get_buffer_sampler_view_from_stobj(st, stObj);
