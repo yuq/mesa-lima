@@ -409,7 +409,7 @@ int virgl_encoder_set_index_buffer(struct virgl_context *ctx,
    virgl_encoder_write_res(ctx, res);
    if (ib) {
       virgl_encoder_write_dword(ctx->cbuf, ib->index_size);
-      virgl_encoder_write_dword(ctx->cbuf, 0);
+      virgl_encoder_write_dword(ctx->cbuf, ib->offset);
    }
    return 0;
 }
