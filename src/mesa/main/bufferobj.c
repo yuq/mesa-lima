@@ -989,7 +989,6 @@ _mesa_handle_bind_buffer_gen(struct gl_context *ctx,
       /* If this is a new buffer object id, or one which was generated but
        * never used before, allocate a buffer object now.
        */
-      assert(ctx->Driver.NewBufferObject);
       buf = ctx->Driver.NewBufferObject(ctx, buffer);
       if (!buf) {
 	 _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", caller);
