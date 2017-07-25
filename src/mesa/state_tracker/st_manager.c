@@ -560,7 +560,7 @@ st_framebuffer_iface_remove(struct st_manager *smapi,
       (struct st_manager_private *)smapi->st_manager_private;
    struct hash_entry *entry;
 
-   if (!smPriv || !smPriv->stfbi_ht);
+   if (!smPriv || !smPriv->stfbi_ht)
       return;
 
    mtx_lock(&smPriv->st_mutex);
