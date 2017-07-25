@@ -569,6 +569,13 @@ brw_inst_imm_ud(const struct gen_device_info *devinfo, const brw_inst *insn)
    return brw_inst_bits(insn, 127, 96);
 }
 
+static inline uint64_t
+brw_inst_imm_uq(const struct gen_device_info *devinfo, const brw_inst *insn)
+{
+   assert(devinfo->gen >= 8);
+   return brw_inst_bits(insn, 127, 64);
+}
+
 static inline float
 brw_inst_imm_f(const struct gen_device_info *devinfo, const brw_inst *insn)
 {

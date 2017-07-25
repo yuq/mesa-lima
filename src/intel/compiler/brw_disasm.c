@@ -1029,6 +1029,12 @@ imm(FILE *file, const struct gen_device_info *devinfo, enum hw_imm_type type,
     const brw_inst *inst)
 {
    switch (type) {
+   case GEN8_HW_IMM_TYPE_UQ:
+      format(file, "0x%16lxUD", brw_inst_imm_uq(devinfo, inst));
+      break;
+   case GEN8_HW_IMM_TYPE_Q:
+      format(file, "%ldD", brw_inst_imm_uq(devinfo, inst));
+      break;
    case BRW_HW_IMM_TYPE_UD:
       format(file, "0x%08xUD", brw_inst_imm_ud(devinfo, inst));
       break;
