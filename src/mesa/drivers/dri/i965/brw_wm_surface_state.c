@@ -101,9 +101,9 @@ get_isl_surf(struct brw_context *brw, struct intel_mipmap_tree *mt,
    assert(view->levels == 1 && view->array_len == 1);
    assert(*tile_x == 0 && *tile_y == 0);
 
-   offset += intel_miptree_get_tile_offsets(mt, view->base_level,
-                                            view->base_array_layer,
-                                            tile_x, tile_y);
+   *offset += intel_miptree_get_tile_offsets(mt, view->base_level,
+                                             view->base_array_layer,
+                                             tile_x, tile_y);
 
    /* Minify the logical dimensions of the texture. */
    const unsigned l = view->base_level - mt->first_level;
