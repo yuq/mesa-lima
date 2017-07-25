@@ -4041,10 +4041,10 @@ bind_buffer_range(GLenum target, GLuint index, GLuint buffer, GLintptr offset,
       bufObj = ctx->Shared->NullBufferObj;
    } else {
       bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+      if (!_mesa_handle_bind_buffer_gen(ctx, buffer,
+                                        &bufObj, "glBindBufferRange"))
+         return;
    }
-   if (!_mesa_handle_bind_buffer_gen(ctx, buffer,
-                                     &bufObj, "glBindBufferRange"))
-      return;
 
    if (no_error) {
       switch (target) {
@@ -4139,10 +4139,10 @@ _mesa_BindBufferBase(GLenum target, GLuint index, GLuint buffer)
       bufObj = ctx->Shared->NullBufferObj;
    } else {
       bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+      if (!_mesa_handle_bind_buffer_gen(ctx, buffer,
+                                        &bufObj, "glBindBufferBase"))
+         return;
    }
-   if (!_mesa_handle_bind_buffer_gen(ctx, buffer,
-                                     &bufObj, "glBindBufferBase"))
-      return;
 
    if (!bufObj) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
