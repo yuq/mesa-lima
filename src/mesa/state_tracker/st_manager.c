@@ -642,6 +642,16 @@ st_context_flush(struct st_context_iface *stctxi, unsigned flags,
 
    if (flags & ST_FLUSH_FRONT)
       st_manager_flush_frontbuffer(st);
+
+   /* DRI3 changes the framebuffer after SwapBuffers, but we need to invoke
+    * st_manager_validate_framebuffers to notice that.
+    *
+    * Set gfx_shaders_may_be_dirty to invoke st_validate_state in the next
+    * draw call, which will invoke st_manager_validate_framebuffers, but it
+    * won't dirty states if there is no change.
+    */
+   if (flags & ST_FLUSH_END_OF_FRAME)
+      st->gfx_shaders_may_be_dirty = true;
 }
 
 static boolean
