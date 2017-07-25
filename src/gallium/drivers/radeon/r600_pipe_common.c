@@ -1024,6 +1024,25 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	}
 }
 
+static unsigned get_max_threads_per_block(struct r600_common_screen *screen,
+					  enum pipe_shader_ir ir_type)
+{
+	if (ir_type != PIPE_SHADER_IR_TGSI)
+		return 256;
+
+	/* Only 16 waves per thread-group on gfx9. */
+	if (screen->chip_class >= GFX9)
+		return 1024;
+
+	/* Up to 40 waves per thread-group on GCN < gfx9. Expose a nice
+	 * round number.
+	 */
+	if (screen->chip_class >= SI)
+		return 2048;
+
+	return 256;
+}
+
 static int r600_get_compute_param(struct pipe_screen *screen,
         enum pipe_shader_ir ir_type,
         enum pipe_compute_cap param,
@@ -1078,27 +1097,17 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
 		if (ret) {
 			uint64_t *block_size = ret;
-			if (rscreen->chip_class >= SI &&
-			    ir_type == PIPE_SHADER_IR_TGSI) {
-				block_size[0] = 2048;
-				block_size[1] = 2048;
-				block_size[2] = 2048;
-			} else {
-				block_size[0] = 256;
-				block_size[1] = 256;
-				block_size[2] = 256;
-			}
+			unsigned threads_per_block = get_max_threads_per_block(rscreen, ir_type);
+			block_size[0] = threads_per_block;
+			block_size[1] = threads_per_block;
+			block_size[2] = threads_per_block;
 		}
 		return 3 * sizeof(uint64_t);
 
 	case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
 		if (ret) {
 			uint64_t *max_threads_per_block = ret;
-			if (rscreen->chip_class >= SI &&
-			    ir_type == PIPE_SHADER_IR_TGSI)
-				*max_threads_per_block = 2048;
-			else
-				*max_threads_per_block = 256;
+			*max_threads_per_block = get_max_threads_per_block(rscreen, ir_type);
 		}
 		return sizeof(uint64_t);
 	case PIPE_COMPUTE_CAP_ADDRESS_BITS:
