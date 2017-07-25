@@ -2129,14 +2129,9 @@ set_max_gl_versions(struct intel_screen *screen)
 /**
  * Return the revision (generally the revid field of the PCI header) of the
  * graphics device.
- *
- * XXX: This function is useful to keep around even if it is not currently in
- * use. It is necessary for new platforms and revision specific workarounds or
- * features. Please don't remove it so that we know it at least continues to
- * build.
  */
-static __attribute__((__unused__)) int
-brw_get_revision(int fd)
+int
+intel_device_get_revision(int fd)
 {
    struct drm_i915_getparam gp;
    int revision;

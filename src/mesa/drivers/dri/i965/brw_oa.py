@@ -175,6 +175,7 @@ hw_vars["$SubsliceMask"] = "brw->perfquery.sys_vars.subslice_mask"
 hw_vars["$GpuTimestampFrequency"] = "brw->perfquery.sys_vars.timestamp_frequency"
 hw_vars["$GpuMinFrequency"] = "brw->perfquery.sys_vars.gt_min_freq"
 hw_vars["$GpuMaxFrequency"] = "brw->perfquery.sys_vars.gt_max_freq"
+hw_vars["$SkuRevisionId"] = "brw->perfquery.sys_vars.revision"
 
 def output_rpn_equation_code(set, counter, equation, counter_vars):
     c("/* RPN equation: " + equation + " */")
