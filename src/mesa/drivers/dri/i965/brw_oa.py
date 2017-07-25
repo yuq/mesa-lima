@@ -325,6 +325,21 @@ semantic_type_map = {
     "ratio": "event"
     }
 
+def output_availability(set, availability, counter_name):
+    expression = splice_rpn_expression(set, counter_name, availability)
+    lines = expression.split(' && ')
+    n_lines = len(lines)
+    if n_lines == 1:
+        c("if (" + lines[0] + ") {")
+    else:
+        c("if (" + lines[0] + " &&")
+        c_indent(4)
+        for i in range(1, (n_lines - 1)):
+            c(lines[i] + " &&")
+        c(lines[(n_lines - 1)] + ") {")
+        c_outdent(4)
+
+
 def output_counter_report(set, counter, current_offset):
     data_type = counter.get('data_type')
     data_type_uc = data_type.upper()
@@ -343,18 +358,7 @@ def output_counter_report(set, counter, current_offset):
 
     availability = counter.get('availability')
     if availability:
-        expression = splice_rpn_expression(set, counter, availability)
-        lines = expression.split(' && ')
-        n_lines = len(lines)
-        if n_lines == 1:
-            c("if (" + lines[0] + ") {")
-        else:
-            c("if (" + lines[0] + " &&")
-            c_indent(4)
-            for i in range(1, (n_lines - 1)):
-                c(lines[i] + " &&")
-            c(lines[(n_lines - 1)] + ") {")
-            c_outdent(4)
+        output_availability(set, availability, counter.get('name'))
         c_indent(3)
 
     c("counter = &query->counters[query->n_counters++];\n")
