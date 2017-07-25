@@ -1536,14 +1536,18 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          }
          for (j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
             if (ctx->TransformFeedback.CurrentObject->Buffers[j] == bufObj) {
-               _mesa_BindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, j, 0 );
+               _mesa_bind_buffer_base_transform_feedback(ctx,
+                                           ctx->TransformFeedback.CurrentObject,
+                                           j, ctx->Shared->NullBufferObj,
+                                           false);
             }
          }
 
          /* unbind UBO binding points */
          for (j = 0; j < ctx->Const.MaxUniformBufferBindings; j++) {
             if (ctx->UniformBufferBindings[j].BufferObject == bufObj) {
-               _mesa_BindBufferBase( GL_UNIFORM_BUFFER, j, 0 );
+               bind_buffer_base_uniform_buffer(ctx, j,
+                                               ctx->Shared->NullBufferObj);
             }
          }
 
@@ -1554,7 +1558,8 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          /* unbind SSBO binding points */
          for (j = 0; j < ctx->Const.MaxShaderStorageBufferBindings; j++) {
             if (ctx->ShaderStorageBufferBindings[j].BufferObject == bufObj) {
-               _mesa_BindBufferBase(GL_SHADER_STORAGE_BUFFER, j, 0);
+               bind_buffer_base_shader_storage_buffer(ctx, j,
+                                                    ctx->Shared->NullBufferObj);
             }
          }
 
@@ -1566,6 +1571,7 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          for (j = 0; j < ctx->Const.MaxAtomicBufferBindings; j++) {
             if (ctx->AtomicBufferBindings[j].BufferObject == bufObj) {
                _mesa_BindBufferBase( GL_ATOMIC_COUNTER_BUFFER, j, 0 );
+               bind_atomic_buffer(ctx, j, ctx->Shared->NullBufferObj, 0, 0);
             }
          }
 
