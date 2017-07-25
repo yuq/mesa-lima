@@ -1212,6 +1212,14 @@ brw_begin_perf_query(struct gl_context *ctx,
       obj->oa.begin_report_id = brw->perfquery.next_query_start_report_id;
       brw->perfquery.next_query_start_report_id += 2;
 
+      /* We flush the batchbuffer here to minimize the chances that MI_RPC
+       * delimiting commands end up in different batchbuffers. If that's the
+       * case, the measurement will include the time it takes for the kernel
+       * scheduler to load a new request into the hardware. This is manifested in
+       * tools like frameretrace by spikes in the "GPU Core Clocks" counter.
+       */
+      intel_batchbuffer_flush(brw);
+
       /* Take a starting OA counter snapshot. */
       brw->vtbl.emit_mi_report_perf_count(brw, obj->oa.bo, 0,
                                           obj->oa.begin_report_id);
@@ -1298,14 +1306,6 @@ brw_end_perf_query(struct gl_context *ctx,
                                              obj->oa.begin_report_id + 1);
       }
 
-      /* We flush the batchbuffer here to minimize the chances that MI_RPC
-       * delimiting commands end up in different batchbuffers. If that's the
-       * case, the measurement will include the time it takes for the kernel
-       * scheduler to load a new request into the hardware. This is manifested
-       * in tools like frameretrace by spikes in the "GPU Core Clocks"
-       * counter.
-       */
-      intel_batchbuffer_flush(brw);
       --brw->perfquery.n_active_oa_queries;
 
       /* NB: even though the query has now ended, it can't be accumulated
