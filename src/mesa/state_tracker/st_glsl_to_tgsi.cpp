@@ -1881,90 +1881,125 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       break;
 
    case ir_binop_ubo_load: {
-      ir_constant *const_uniform_block = ir->operands[0]->as_constant();
-      ir_constant *const_offset_ir = ir->operands[1]->as_constant();
-      unsigned const_offset = const_offset_ir ? const_offset_ir->value.u[0] : 0;
-      unsigned const_block = const_uniform_block ? const_uniform_block->value.u[0] + 1 : 1;
-      st_src_reg index_reg = get_temp(glsl_type::uint_type);
-      st_src_reg cbuf;
+      if (ctx->Const.UseSTD430AsDefaultPacking) {
+         ir_rvalue *block = ir->operands[0];
+         ir_rvalue *offset = ir->operands[1];
+         ir_constant *const_block = block->as_constant();
 
-      cbuf.type = ir->type->base_type;
-      cbuf.file = PROGRAM_CONSTANT;
-      cbuf.index = 0;
-      cbuf.reladdr = NULL;
-      cbuf.negate = 0;
-      cbuf.abs = 0;
-      cbuf.index2D = const_block;
+         st_src_reg cbuf(PROGRAM_CONSTANT,
+            (const_block ? const_block->value.u[0] + 1 : 1),
+            ir->type->base_type);
 
-      assert(ir->type->is_vector() || ir->type->is_scalar());
+         cbuf.has_index2 = true;
 
-      if (const_offset_ir) {
-         /* Constant index into constant buffer */
-         cbuf.reladdr = NULL;
-         cbuf.index = const_offset / 16;
-      }
-      else {
-         ir_expression *offset_expr = ir->operands[1]->as_expression();
-         st_src_reg offset = op[1];
-
-         /* The OpenGL spec is written in such a way that accesses with
-          * non-constant offset are almost always vec4-aligned. The only
-          * exception to this are members of structs in arrays of structs:
-          * each struct in an array of structs is at least vec4-aligned,
-          * but single-element and [ui]vec2 members of the struct may be at
-          * an offset that is not a multiple of 16 bytes.
-          *
-          * Here, we extract that offset, relying on previous passes to always
-          * generate offset expressions of the form (+ expr constant_offset).
-          *
-          * Note that the std430 layout, which allows more cases of alignment
-          * less than vec4 in arrays, is not supported for uniform blocks, so
-          * we do not have to deal with it here.
-          */
-         if (offset_expr && offset_expr->operation == ir_binop_add) {
-            const_offset_ir = offset_expr->operands[1]->as_constant();
-            if (const_offset_ir) {
-               const_offset = const_offset_ir->value.u[0];
-               cbuf.index = const_offset / 16;
-               offset_expr->operands[0]->accept(this);
-               offset = this->result;
-            }
+         if (!const_block) {
+            block->accept(this);
+            cbuf.reladdr = ralloc(mem_ctx, st_src_reg);
+            *cbuf.reladdr = this->result;
+            emit_arl(ir, sampler_reladdr, this->result);
          }
 
-         /* Relative/variable index into constant buffer */
-         emit_asm(ir, TGSI_OPCODE_USHR, st_dst_reg(index_reg), offset,
-              st_src_reg_for_int(4));
-         cbuf.reladdr = ralloc(mem_ctx, st_src_reg);
-         memcpy(cbuf.reladdr, &index_reg, sizeof(index_reg));
-      }
+         /* Calculate the surface offset */
+         offset->accept(this);
+         st_src_reg off = this->result;
 
-      if (const_uniform_block) {
-         /* Constant constant buffer */
-         cbuf.reladdr2 = NULL;
-      }
-      else {
-         /* Relative/variable constant buffer */
-         cbuf.reladdr2 = ralloc(mem_ctx, st_src_reg);
-         memcpy(cbuf.reladdr2, &op[0], sizeof(st_src_reg));
-      }
-      cbuf.has_index2 = true;
+         glsl_to_tgsi_instruction *inst =
+            emit_asm(ir, TGSI_OPCODE_LOAD, result_dst, off);
 
-      cbuf.swizzle = swizzle_for_size(ir->type->vector_elements);
-      if (glsl_base_type_is_64bit(cbuf.type))
-         cbuf.swizzle += MAKE_SWIZZLE4(const_offset % 16 / 8,
-                                       const_offset % 16 / 8,
-                                       const_offset % 16 / 8,
-                                       const_offset % 16 / 8);
-      else
-         cbuf.swizzle += MAKE_SWIZZLE4(const_offset % 16 / 4,
-                                       const_offset % 16 / 4,
-                                       const_offset % 16 / 4,
-                                       const_offset % 16 / 4);
+         if (result_dst.type == GLSL_TYPE_BOOL)
+            emit_asm(ir, TGSI_OPCODE_USNE, result_dst, st_src_reg(result_dst),
+                     st_src_reg_for_int(0));
 
-      if (ir->type->is_boolean()) {
-         emit_asm(ir, TGSI_OPCODE_USNE, result_dst, cbuf, st_src_reg_for_int(0));
+         add_buffer_to_load_and_stores(inst, &cbuf, &this->instructions,
+                                       NULL);
       } else {
-         emit_asm(ir, TGSI_OPCODE_MOV, result_dst, cbuf);
+         ir_constant *const_uniform_block = ir->operands[0]->as_constant();
+         ir_constant *const_offset_ir = ir->operands[1]->as_constant();
+         unsigned const_offset = const_offset_ir ?
+            const_offset_ir->value.u[0] : 0;
+         unsigned const_block = const_uniform_block ?
+            const_uniform_block->value.u[0] + 1 : 1;
+         st_src_reg index_reg = get_temp(glsl_type::uint_type);
+         st_src_reg cbuf;
+
+         cbuf.type = ir->type->base_type;
+         cbuf.file = PROGRAM_CONSTANT;
+         cbuf.index = 0;
+         cbuf.reladdr = NULL;
+         cbuf.negate = 0;
+         cbuf.abs = 0;
+         cbuf.index2D = const_block;
+
+         assert(ir->type->is_vector() || ir->type->is_scalar());
+
+         if (const_offset_ir) {
+            /* Constant index into constant buffer */
+            cbuf.reladdr = NULL;
+            cbuf.index = const_offset / 16;
+         } else {
+            ir_expression *offset_expr = ir->operands[1]->as_expression();
+            st_src_reg offset = op[1];
+
+            /* The OpenGL spec is written in such a way that accesses with
+             * non-constant offset are almost always vec4-aligned. The only
+             * exception to this are members of structs in arrays of structs:
+             * each struct in an array of structs is at least vec4-aligned,
+             * but single-element and [ui]vec2 members of the struct may be at
+             * an offset that is not a multiple of 16 bytes.
+             *
+             * Here, we extract that offset, relying on previous passes to
+             * always generate offset expressions of the form
+             * (+ expr constant_offset).
+             *
+             * Note that the std430 layout, which allows more cases of
+             * alignment less than vec4 in arrays, is not supported for
+             * uniform blocks, so we do not have to deal with it here.
+             */
+            if (offset_expr && offset_expr->operation == ir_binop_add) {
+               const_offset_ir = offset_expr->operands[1]->as_constant();
+               if (const_offset_ir) {
+                  const_offset = const_offset_ir->value.u[0];
+                  cbuf.index = const_offset / 16;
+                  offset_expr->operands[0]->accept(this);
+                  offset = this->result;
+               }
+            }
+
+            /* Relative/variable index into constant buffer */
+            emit_asm(ir, TGSI_OPCODE_USHR, st_dst_reg(index_reg), offset,
+                 st_src_reg_for_int(4));
+            cbuf.reladdr = ralloc(mem_ctx, st_src_reg);
+            memcpy(cbuf.reladdr, &index_reg, sizeof(index_reg));
+         }
+
+         if (const_uniform_block) {
+            /* Constant constant buffer */
+            cbuf.reladdr2 = NULL;
+         } else {
+            /* Relative/variable constant buffer */
+            cbuf.reladdr2 = ralloc(mem_ctx, st_src_reg);
+            memcpy(cbuf.reladdr2, &op[0], sizeof(st_src_reg));
+         }
+         cbuf.has_index2 = true;
+
+         cbuf.swizzle = swizzle_for_size(ir->type->vector_elements);
+         if (glsl_base_type_is_64bit(cbuf.type))
+            cbuf.swizzle += MAKE_SWIZZLE4(const_offset % 16 / 8,
+                                          const_offset % 16 / 8,
+                                          const_offset % 16 / 8,
+                                          const_offset % 16 / 8);
+         else
+            cbuf.swizzle += MAKE_SWIZZLE4(const_offset % 16 / 4,
+                                          const_offset % 16 / 4,
+                                          const_offset % 16 / 4,
+                                          const_offset % 16 / 4);
+
+         if (ir->type->is_boolean()) {
+            emit_asm(ir, TGSI_OPCODE_USNE, result_dst, cbuf,
+                     st_src_reg_for_int(0));
+         } else {
+            emit_asm(ir, TGSI_OPCODE_MOV, result_dst, cbuf);
+         }
       }
       break;
    }
@@ -2981,6 +3016,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
       inst = (glsl_to_tgsi_instruction *)this->instructions.get_tail();
       new_inst = emit_asm(ir, inst->op, l, inst->src[0], inst->src[1], inst->src[2], inst->src[3]);
       new_inst->saturate = inst->saturate;
+      new_inst->resource = inst->resource;
       inst->dead_mask = inst->dst[0].writemask;
    } else {
       emit_block_mov(ir, ir->rhs->type, &l, &r, NULL, false);
@@ -5707,7 +5743,11 @@ compile_tgsi_instruction(struct st_translate *t,
          src[0] = t->shared_memory;
       } else if (inst->resource.file == PROGRAM_BUFFER) {
          src[0] = t->buffers[inst->resource.index];
+      } else if (inst->resource.file == PROGRAM_CONSTANT) {
+         assert(inst->resource.has_index2);
+         src[0] = ureg_src_register(TGSI_FILE_CONSTBUF, inst->resource.index);
       } else {
+         assert(inst->resource.file != PROGRAM_UNDEFINED);
          if (inst->resource.file == PROGRAM_IMAGE) {
             src[0] = t->images[inst->resource.index];
          } else {
