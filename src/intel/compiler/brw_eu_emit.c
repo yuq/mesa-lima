@@ -94,40 +94,37 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
                         enum brw_reg_type type, enum brw_reg_file file)
 {
    if (file == BRW_IMMEDIATE_VALUE) {
-      static const int imm_hw_types[] = {
-         [BRW_REGISTER_TYPE_UD] = BRW_HW_REG_TYPE_UD,
-         [BRW_REGISTER_TYPE_D]  = BRW_HW_REG_TYPE_D,
-         [BRW_REGISTER_TYPE_UW] = BRW_HW_REG_TYPE_UW,
-         [BRW_REGISTER_TYPE_W]  = BRW_HW_REG_TYPE_W,
-         [BRW_REGISTER_TYPE_F]  = BRW_HW_REG_TYPE_F,
-         [BRW_REGISTER_TYPE_UB] = -1,
-         [BRW_REGISTER_TYPE_B]  = -1,
-         [BRW_REGISTER_TYPE_UV] = BRW_HW_REG_IMM_TYPE_UV,
-         [BRW_REGISTER_TYPE_VF] = BRW_HW_REG_IMM_TYPE_VF,
-         [BRW_REGISTER_TYPE_V]  = BRW_HW_REG_IMM_TYPE_V,
-         [BRW_REGISTER_TYPE_DF] = GEN8_HW_REG_IMM_TYPE_DF,
-         [BRW_REGISTER_TYPE_HF] = GEN8_HW_REG_IMM_TYPE_HF,
-         [BRW_REGISTER_TYPE_UQ] = GEN8_HW_REG_TYPE_UQ,
-         [BRW_REGISTER_TYPE_Q]  = GEN8_HW_REG_TYPE_Q,
+      static const enum hw_imm_type hw_types[] = {
+         [0 ... BRW_REGISTER_TYPE_LAST] = -1,
+         [BRW_REGISTER_TYPE_UD] = BRW_HW_IMM_TYPE_UD,
+         [BRW_REGISTER_TYPE_D]  = BRW_HW_IMM_TYPE_D,
+         [BRW_REGISTER_TYPE_UW] = BRW_HW_IMM_TYPE_UW,
+         [BRW_REGISTER_TYPE_W]  = BRW_HW_IMM_TYPE_W,
+         [BRW_REGISTER_TYPE_F]  = BRW_HW_IMM_TYPE_F,
+         [BRW_REGISTER_TYPE_UV] = BRW_HW_IMM_TYPE_UV,
+         [BRW_REGISTER_TYPE_VF] = BRW_HW_IMM_TYPE_VF,
+         [BRW_REGISTER_TYPE_V]  = BRW_HW_IMM_TYPE_V,
+         [BRW_REGISTER_TYPE_DF] = GEN8_HW_IMM_TYPE_DF,
+         [BRW_REGISTER_TYPE_HF] = GEN8_HW_IMM_TYPE_HF,
+         [BRW_REGISTER_TYPE_UQ] = GEN8_HW_IMM_TYPE_UQ,
+         [BRW_REGISTER_TYPE_Q]  = GEN8_HW_IMM_TYPE_Q,
       };
-      assert(type < ARRAY_SIZE(imm_hw_types));
-      assert(imm_hw_types[type] != -1);
-      return imm_hw_types[type];
+      assert(type < ARRAY_SIZE(hw_types));
+      assert(hw_types[type] != -1);
+      return hw_types[type];
    } else {
       /* Non-immediate registers */
-      static const int hw_types[] = {
+      static const enum hw_reg_type hw_types[] = {
+         [0 ... BRW_REGISTER_TYPE_LAST] = -1,
          [BRW_REGISTER_TYPE_UD] = BRW_HW_REG_TYPE_UD,
          [BRW_REGISTER_TYPE_D]  = BRW_HW_REG_TYPE_D,
          [BRW_REGISTER_TYPE_UW] = BRW_HW_REG_TYPE_UW,
          [BRW_REGISTER_TYPE_W]  = BRW_HW_REG_TYPE_W,
-         [BRW_REGISTER_TYPE_UB] = BRW_HW_REG_NON_IMM_TYPE_UB,
-         [BRW_REGISTER_TYPE_B]  = BRW_HW_REG_NON_IMM_TYPE_B,
+         [BRW_REGISTER_TYPE_UB] = BRW_HW_REG_TYPE_UB,
+         [BRW_REGISTER_TYPE_B]  = BRW_HW_REG_TYPE_B,
          [BRW_REGISTER_TYPE_F]  = BRW_HW_REG_TYPE_F,
-         [BRW_REGISTER_TYPE_UV] = -1,
-         [BRW_REGISTER_TYPE_VF] = -1,
-         [BRW_REGISTER_TYPE_V]  = -1,
-         [BRW_REGISTER_TYPE_DF] = GEN7_HW_REG_NON_IMM_TYPE_DF,
-         [BRW_REGISTER_TYPE_HF] = GEN8_HW_REG_NON_IMM_TYPE_HF,
+         [BRW_REGISTER_TYPE_DF] = GEN7_HW_REG_TYPE_DF,
+         [BRW_REGISTER_TYPE_HF] = GEN8_HW_REG_TYPE_HF,
          [BRW_REGISTER_TYPE_UQ] = GEN8_HW_REG_TYPE_UQ,
          [BRW_REGISTER_TYPE_Q]  = GEN8_HW_REG_TYPE_Q,
       };
@@ -147,40 +144,42 @@ brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
                         unsigned type, enum brw_reg_file file)
 {
    if (file == BRW_IMMEDIATE_VALUE) {
-      static const unsigned imm_hw_sizes[] = {
-         [BRW_HW_REG_TYPE_UD]      = 4,
-         [BRW_HW_REG_TYPE_D]       = 4,
-         [BRW_HW_REG_TYPE_UW]      = 2,
-         [BRW_HW_REG_TYPE_W]       = 2,
-         [BRW_HW_REG_IMM_TYPE_UV]  = 2,
-         [BRW_HW_REG_IMM_TYPE_VF]  = 4,
-         [BRW_HW_REG_IMM_TYPE_V]   = 2,
-         [BRW_HW_REG_TYPE_F]       = 4,
-         [GEN8_HW_REG_TYPE_UQ]     = 8,
-         [GEN8_HW_REG_TYPE_Q]      = 8,
-         [GEN8_HW_REG_IMM_TYPE_DF] = 8,
-         [GEN8_HW_REG_IMM_TYPE_HF] = 2,
-      };
-      assert(type < ARRAY_SIZE(imm_hw_sizes));
-      assert(devinfo->gen >= 6 || type != BRW_HW_REG_IMM_TYPE_UV);
-      assert(devinfo->gen >= 8 || type <= BRW_HW_REG_TYPE_F);
-      return imm_hw_sizes[type];
-   } else {
-      /* Non-immediate registers */
-      static const unsigned hw_sizes[] = {
-         [BRW_HW_REG_TYPE_UD]          = 4,
-         [BRW_HW_REG_TYPE_D]           = 4,
-         [BRW_HW_REG_TYPE_UW]          = 2,
-         [BRW_HW_REG_TYPE_W]           = 2,
-         [BRW_HW_REG_NON_IMM_TYPE_UB]  = 1,
-         [BRW_HW_REG_NON_IMM_TYPE_B]   = 1,
-         [GEN7_HW_REG_NON_IMM_TYPE_DF] = 8,
-         [BRW_HW_REG_TYPE_F]           = 4,
-         [GEN8_HW_REG_TYPE_UQ]         = 8,
-         [GEN8_HW_REG_TYPE_Q]          = 8,
-         [GEN8_HW_REG_NON_IMM_TYPE_HF] = 2,
+      static const int hw_sizes[] = {
+         [0 ... 15]            = -1,
+         [BRW_HW_IMM_TYPE_UD]  = 4,
+         [BRW_HW_IMM_TYPE_D]   = 4,
+         [BRW_HW_IMM_TYPE_UW]  = 2,
+         [BRW_HW_IMM_TYPE_W]   = 2,
+         [BRW_HW_IMM_TYPE_UV]  = 2,
+         [BRW_HW_IMM_TYPE_VF]  = 4,
+         [BRW_HW_IMM_TYPE_V]   = 2,
+         [BRW_HW_IMM_TYPE_F]   = 4,
+         [GEN8_HW_IMM_TYPE_UQ] = 8,
+         [GEN8_HW_IMM_TYPE_Q]  = 8,
+         [GEN8_HW_IMM_TYPE_DF] = 8,
+         [GEN8_HW_IMM_TYPE_HF] = 2,
       };
       assert(type < ARRAY_SIZE(hw_sizes));
+      assert(hw_sizes[type] != -1);
+      return hw_sizes[type];
+   } else {
+      /* Non-immediate registers */
+      static const int hw_sizes[] = {
+         [0 ... 15]            = -1,
+         [BRW_HW_REG_TYPE_UD]  = 4,
+         [BRW_HW_REG_TYPE_D]   = 4,
+         [BRW_HW_REG_TYPE_UW]  = 2,
+         [BRW_HW_REG_TYPE_W]   = 2,
+         [BRW_HW_REG_TYPE_UB]  = 1,
+         [BRW_HW_REG_TYPE_B]   = 1,
+         [GEN7_HW_REG_TYPE_DF] = 8,
+         [BRW_HW_REG_TYPE_F]   = 4,
+         [GEN8_HW_REG_TYPE_UQ] = 8,
+         [GEN8_HW_REG_TYPE_Q]  = 8,
+         [GEN8_HW_REG_TYPE_HF] = 2,
+      };
+      assert(type < ARRAY_SIZE(hw_sizes));
+      assert(hw_sizes[type] != -1);
       return hw_sizes[type];
    }
 }

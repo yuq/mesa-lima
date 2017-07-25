@@ -238,17 +238,18 @@ static const char *const access_mode[2] = {
 };
 
 static const char * const reg_encoding[] = {
-   [BRW_HW_REG_TYPE_UD]          = "UD",
-   [BRW_HW_REG_TYPE_D]           = "D",
-   [BRW_HW_REG_TYPE_UW]          = "UW",
-   [BRW_HW_REG_TYPE_W]           = "W",
-   [BRW_HW_REG_NON_IMM_TYPE_UB]  = "UB",
-   [BRW_HW_REG_NON_IMM_TYPE_B]   = "B",
-   [GEN7_HW_REG_NON_IMM_TYPE_DF] = "DF",
-   [BRW_HW_REG_TYPE_F]           = "F",
-   [GEN8_HW_REG_TYPE_UQ]         = "UQ",
-   [GEN8_HW_REG_TYPE_Q]          = "Q",
-   [GEN8_HW_REG_NON_IMM_TYPE_HF] = "HF",
+   [BRW_HW_REG_TYPE_UD]  = "UD",
+   [BRW_HW_REG_TYPE_D]   = "D",
+   [BRW_HW_REG_TYPE_UW]  = "UW",
+   [BRW_HW_REG_TYPE_W]   = "W",
+   [BRW_HW_REG_TYPE_F]   = "F",
+   [GEN8_HW_REG_TYPE_UQ] = "UQ",
+   [GEN8_HW_REG_TYPE_Q]  = "Q",
+
+   [BRW_HW_REG_TYPE_UB]  = "UB",
+   [BRW_HW_REG_TYPE_B]   = "B",
+   [GEN7_HW_REG_TYPE_DF] = "DF",
+   [GEN8_HW_REG_TYPE_HF] = "HF",
 };
 
 static const char *const three_source_reg_encoding[] = {
@@ -1024,41 +1025,42 @@ src2_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
 }
 
 static int
-imm(FILE *file, const struct gen_device_info *devinfo, unsigned type, const brw_inst *inst)
+imm(FILE *file, const struct gen_device_info *devinfo, enum hw_imm_type type,
+    const brw_inst *inst)
 {
    switch (type) {
-   case BRW_HW_REG_TYPE_UD:
+   case BRW_HW_IMM_TYPE_UD:
       format(file, "0x%08xUD", brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_REG_TYPE_D:
+   case BRW_HW_IMM_TYPE_D:
       format(file, "%dD", brw_inst_imm_d(devinfo, inst));
       break;
-   case BRW_HW_REG_TYPE_UW:
+   case BRW_HW_IMM_TYPE_UW:
       format(file, "0x%04xUW", (uint16_t) brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_REG_TYPE_W:
+   case BRW_HW_IMM_TYPE_W:
       format(file, "%dW", (int16_t) brw_inst_imm_d(devinfo, inst));
       break;
-   case BRW_HW_REG_IMM_TYPE_UV:
+   case BRW_HW_IMM_TYPE_UV:
       format(file, "0x%08xUV", brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_REG_IMM_TYPE_VF:
+   case BRW_HW_IMM_TYPE_VF:
       format(file, "[%-gF, %-gF, %-gF, %-gF]VF",
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst)),
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst) >> 8),
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst) >> 16),
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst) >> 24));
       break;
-   case BRW_HW_REG_IMM_TYPE_V:
+   case BRW_HW_IMM_TYPE_V:
       format(file, "0x%08xV", brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_REG_TYPE_F:
+   case BRW_HW_IMM_TYPE_F:
       format(file, "%-gF", brw_inst_imm_f(devinfo, inst));
       break;
-   case GEN8_HW_REG_IMM_TYPE_DF:
+   case GEN8_HW_IMM_TYPE_DF:
       format(file, "%-gDF", brw_inst_imm_df(devinfo, inst));
       break;
-   case GEN8_HW_REG_IMM_TYPE_HF:
+   case GEN8_HW_IMM_TYPE_HF:
       string(file, "Half Float IMM");
       break;
    }

@@ -82,11 +82,11 @@ static unsigned
 signed_type(unsigned type)
 {
    switch (type) {
-   case BRW_HW_REG_TYPE_UD:         return BRW_HW_REG_TYPE_D;
-   case BRW_HW_REG_TYPE_UW:         return BRW_HW_REG_TYPE_W;
-   case BRW_HW_REG_NON_IMM_TYPE_UB: return BRW_HW_REG_NON_IMM_TYPE_B;
-   case GEN8_HW_REG_TYPE_UQ:        return GEN8_HW_REG_TYPE_Q;
-   default:                         return type;
+   case BRW_HW_REG_TYPE_UD:  return BRW_HW_REG_TYPE_D;
+   case BRW_HW_REG_TYPE_UW:  return BRW_HW_REG_TYPE_W;
+   case BRW_HW_REG_TYPE_UB:  return BRW_HW_REG_TYPE_B;
+   case GEN8_HW_REG_TYPE_UQ: return GEN8_HW_REG_TYPE_Q;
+   default:                  return type;
    }
 }
 
@@ -98,9 +98,9 @@ inst_is_raw_move(const struct gen_device_info *devinfo, const brw_inst *inst)
 
    if (brw_inst_src0_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE) {
       /* FIXME: not strictly true */
-      if (brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_IMM_TYPE_VF ||
-          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_IMM_TYPE_UV ||
-          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_IMM_TYPE_V) {
+      if (brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_IMM_TYPE_VF ||
+          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_IMM_TYPE_UV ||
+          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_IMM_TYPE_V) {
          return false;
       }
    } else if (brw_inst_src0_negate(devinfo, inst) ||
@@ -269,18 +269,18 @@ execution_type_for_type(unsigned type, bool is_immediate)
     */
    if (is_immediate) {
       switch (type) {
-      case BRW_HW_REG_IMM_TYPE_UV:
-      case BRW_HW_REG_IMM_TYPE_V:
+      case BRW_HW_IMM_TYPE_UV:
+      case BRW_HW_IMM_TYPE_V:
          type = BRW_HW_REG_TYPE_W;
          break;
-      case BRW_HW_REG_IMM_TYPE_VF:
+      case BRW_HW_IMM_TYPE_VF:
          type = BRW_HW_REG_TYPE_F;
          break;
-      case GEN8_HW_REG_IMM_TYPE_DF:
-         type = GEN7_HW_REG_NON_IMM_TYPE_DF;
+      case GEN8_HW_IMM_TYPE_DF:
+         type = GEN7_HW_REG_TYPE_DF;
          break;
-      case GEN8_HW_REG_IMM_TYPE_HF:
-         type = GEN8_HW_REG_NON_IMM_TYPE_HF;
+      case GEN8_HW_IMM_TYPE_HF:
+         type = GEN8_HW_IMM_TYPE_HF;
          break;
       default:
          break;
@@ -293,15 +293,15 @@ execution_type_for_type(unsigned type, bool is_immediate)
       return BRW_HW_REG_TYPE_D;
    case BRW_HW_REG_TYPE_UW:
    case BRW_HW_REG_TYPE_W:
-   case BRW_HW_REG_NON_IMM_TYPE_UB:
-   case BRW_HW_REG_NON_IMM_TYPE_B:
+   case BRW_HW_REG_TYPE_UB:
+   case BRW_HW_REG_TYPE_B:
       return BRW_HW_REG_TYPE_W;
    case GEN8_HW_REG_TYPE_UQ:
    case GEN8_HW_REG_TYPE_Q:
       return GEN8_HW_REG_TYPE_Q;
    case BRW_HW_REG_TYPE_F:
-   case GEN7_HW_REG_NON_IMM_TYPE_DF:
-   case GEN8_HW_REG_NON_IMM_TYPE_HF:
+   case GEN7_HW_REG_TYPE_DF:
+   case GEN8_HW_REG_TYPE_HF:
       return type;
    default:
       unreachable("not reached");
@@ -332,7 +332,7 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
    src0_exec_type = execution_type_for_type(src0_type, src0_is_immediate);
    if (num_sources == 1) {
       if ((devinfo->gen >= 9 || devinfo->is_cherryview) &&
-          src0_exec_type == GEN8_HW_REG_NON_IMM_TYPE_HF) {
+          src0_exec_type == GEN8_HW_REG_TYPE_HF) {
          return dst_exec_type;
       }
       return src0_exec_type;
@@ -362,9 +362,9 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
        src1_exec_type == BRW_HW_REG_TYPE_W)
       return BRW_HW_REG_TYPE_W;
 
-   if (src0_exec_type == GEN7_HW_REG_NON_IMM_TYPE_DF ||
-       src1_exec_type == GEN7_HW_REG_NON_IMM_TYPE_DF)
-      return GEN7_HW_REG_NON_IMM_TYPE_DF;
+   if (src0_exec_type == GEN7_HW_REG_TYPE_DF ||
+       src1_exec_type == GEN7_HW_REG_TYPE_DF)
+      return GEN7_HW_REG_TYPE_DF;
 
    if (devinfo->gen >= 9 || devinfo->is_cherryview) {
       if (dst_exec_type == BRW_HW_REG_TYPE_F ||
@@ -372,7 +372,7 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
           src1_exec_type == BRW_HW_REG_TYPE_F) {
          return BRW_HW_REG_TYPE_F;
       } else {
-         return GEN8_HW_REG_NON_IMM_TYPE_HF;
+         return GEN8_HW_REG_TYPE_HF;
       }
    }
 
@@ -443,8 +443,8 @@ general_restrictions_based_on_operand_types(const struct gen_device_info *devinf
 
    unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
    bool dst_type_is_byte =
-      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_B ||
-      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_UB;
+      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_B ||
+      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_UB;
 
    if (dst_type_is_byte) {
       if (is_packed(exec_size * dst_stride, exec_size, dst_stride)) {
@@ -1072,14 +1072,14 @@ vector_immediate_restrictions(const struct gen_device_info *devinfo,
     * applies.
     */
    switch (type) {
-   case BRW_HW_REG_IMM_TYPE_V:
-   case BRW_HW_REG_IMM_TYPE_UV:
-   case BRW_HW_REG_IMM_TYPE_VF:
+   case BRW_HW_IMM_TYPE_V:
+   case BRW_HW_IMM_TYPE_UV:
+   case BRW_HW_IMM_TYPE_VF:
       ERROR_IF(dst_subreg % (128 / 8) != 0,
                "Destination must be 128-bit aligned in order to use immediate "
                "vector types");
 
-      if (type == BRW_HW_REG_IMM_TYPE_VF) {
+      if (type == BRW_HW_IMM_TYPE_VF) {
          ERROR_IF(dst_type_size * dst_stride != 4,
                   "Destination must have stride equivalent to dword in order "
                   "to use the VF type");

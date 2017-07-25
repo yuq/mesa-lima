@@ -995,9 +995,9 @@ precompact(const struct gen_device_info *devinfo, brw_inst inst)
        !(devinfo->is_haswell &&
          brw_inst_opcode(devinfo, &inst) == BRW_OPCODE_DIM) &&
        !(devinfo->gen >= 8 &&
-         (brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_REG_IMM_TYPE_DF ||
-          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_REG_TYPE_UQ ||
-          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_REG_TYPE_Q))) {
+         (brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_DF ||
+          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_UQ ||
+          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_Q))) {
       brw_inst_set_src1_reg_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
    }
 
@@ -1016,7 +1016,7 @@ precompact(const struct gen_device_info *devinfo, brw_inst inst)
        brw_inst_src0_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
        brw_inst_dst_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
        brw_inst_dst_hstride(devinfo, &inst) == BRW_HORIZONTAL_STRIDE_1) {
-      brw_inst_set_src0_reg_type(devinfo, &inst, BRW_HW_REG_IMM_TYPE_VF);
+      brw_inst_set_src0_reg_type(devinfo, &inst, BRW_HW_IMM_TYPE_VF);
    }
 
    /* There are no mappings for dst:d | i:d, so if the immediate is suitable

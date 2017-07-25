@@ -226,6 +226,8 @@ enum PACKED brw_reg_type {
    BRW_REGISTER_TYPE_V,
    BRW_REGISTER_TYPE_UV,
    /** @} */
+
+   BRW_REGISTER_TYPE_LAST = BRW_REGISTER_TYPE_UV
 };
 
 unsigned brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
