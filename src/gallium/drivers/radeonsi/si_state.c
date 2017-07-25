@@ -74,11 +74,6 @@ static unsigned si_map_swizzle(unsigned swizzle)
 	}
 }
 
-static uint32_t S_FIXED(float value, uint32_t frac_bits)
-{
-	return value * (1 << frac_bits);
-}
-
 /* 12.4 fixed-point */
 static unsigned si_pack_float_12p4(float x)
 {

@@ -925,10 +925,6 @@ static inline void radeon_set_ctl_const(struct radeon_winsys_cs *cs, unsigned re
 /*
  * common helpers
  */
-static inline uint32_t S_FIXED(float value, uint32_t frac_bits)
-{
-	return value * (1 << frac_bits);
-}
 
 /* 12.4 fixed-point */
 static inline unsigned r600_pack_float_12p4(float x)
