@@ -427,7 +427,10 @@ handleVAEncPictureParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlV
                                             PIPE_USAGE_STREAM, coded_buf->size);
    context->coded_buf = coded_buf;
 
-   context->desc.h264enc.frame_idx[h264->CurrPic.picture_id] = h264->frame_num;
+   util_hash_table_set(context->desc.h264enc.frame_idx,
+		       UINT_TO_PTR(h264->CurrPic.picture_id),
+		       UINT_TO_PTR(h264->frame_num));
+
    if (context->desc.h264enc.is_idr)
       context->desc.h264enc.picture_type = PIPE_H264_ENC_PICTURE_TYPE_IDR;
    else
@@ -455,11 +458,13 @@ handleVAEncSliceParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaB
    for (int i = 0; i < 32; i++) {
       if (h264->RefPicList0[i].picture_id != VA_INVALID_ID) {
          if (context->desc.h264enc.ref_idx_l0 == VA_INVALID_ID)
-            context->desc.h264enc.ref_idx_l0 = context->desc.h264enc.frame_idx[h264->RefPicList0[i].picture_id];
+            context->desc.h264enc.ref_idx_l0 = PTR_TO_UINT(util_hash_table_get(context->desc.h264enc.frame_idx,
+									       UINT_TO_PTR(h264->RefPicList0[i].picture_id)));
       }
       if (h264->RefPicList1[i].picture_id != VA_INVALID_ID && h264->slice_type == 1) {
          if (context->desc.h264enc.ref_idx_l1 == VA_INVALID_ID)
-            context->desc.h264enc.ref_idx_l1 = context->desc.h264enc.frame_idx[h264->RefPicList1[i].picture_id];
+            context->desc.h264enc.ref_idx_l1 = PTR_TO_UINT(util_hash_table_get(context->desc.h264enc.frame_idx,
+									       UINT_TO_PTR(h264->RefPicList1[i].picture_id)));
       }
    }
 

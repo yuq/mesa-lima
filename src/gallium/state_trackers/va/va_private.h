@@ -52,6 +52,19 @@
 #define VL_VA_MAX_IMAGE_FORMATS 11
 #define VL_VA_ENC_GOP_COEFF 16
 
+#define UINT_TO_PTR(x) ((void*)(uintptr_t)(x))
+#define PTR_TO_UINT(x) ((unsigned)((intptr_t)(x)))
+
+static inline unsigned handle_hash(void *key)
+{
+    return PTR_TO_UINT(key);
+}
+
+static inline int handle_compare(void *key1, void *key2)
+{
+    return PTR_TO_UINT(key1) != PTR_TO_UINT(key2);
+}
+
 static inline enum pipe_video_chroma_format
 ChromaToPipe(int format)
 {
