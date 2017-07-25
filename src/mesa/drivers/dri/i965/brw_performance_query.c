@@ -1730,6 +1730,18 @@ read_file_uint64(const char *file, uint64_t *val)
 }
 
 static void
+register_oa_config(struct brw_context *brw,
+                   const struct brw_perf_query_info *query,
+                   uint64_t config_id)
+{
+   struct brw_perf_query_info *registred_query = append_query_info(brw);
+   *registred_query = *query;
+   registred_query->oa_metrics_set_id = config_id;
+   DBG("metric set registred: id = %" PRIu64", guid = %s\n",
+       registred_query->oa_metrics_set_id, query->guid);
+}
+
+static void
 enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
 {
    char buf[256];
@@ -1761,7 +1773,6 @@ enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
       entry = _mesa_hash_table_search(brw->perfquery.oa_metrics_table,
                                       metric_entry->d_name);
       if (entry) {
-         struct brw_perf_query_info *query;
          uint64_t id;
 
          len = snprintf(buf, sizeof(buf), "%s/metrics/%s/id",
@@ -1776,12 +1787,7 @@ enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
             continue;
          }
 
-         query = append_query_info(brw);
-         *query = *(struct brw_perf_query_info *)entry->data;
-         query->oa_metrics_set_id = id;
-
-         DBG("metric set known by mesa: id = %" PRIu64"\n",
-             query->oa_metrics_set_id);
+         register_oa_config(brw, (const struct brw_perf_query_info *)entry->data, id);
       } else
          DBG("metric set not known by mesa (skipping)\n");
    }
@@ -1805,6 +1811,90 @@ read_sysfs_drm_device_file_uint64(struct brw_context *brw,
    }
 
    return read_file_uint64(buf, value);
+}
+
+static bool
+kernel_has_dynamic_config_support(struct brw_context *brw,
+                                  const char *sysfs_dev_dir)
+{
+   __DRIscreen *screen = brw->screen->driScrnPriv;
+   struct hash_entry *entry;
+
+   hash_table_foreach(brw->perfquery.oa_metrics_table, entry) {
+      struct brw_perf_query_info *query = entry->data;
+      char config_path[256];
+      uint64_t config_id;
+
+      snprintf(config_path, sizeof(config_path),
+               "%s/metrics/%s/id", sysfs_dev_dir, query->guid);
+
+      /* Look for the test config, which we know we can't replace. */
+      if (read_file_uint64(config_path, &config_id) && config_id == 1) {
+         uint32_t mux_regs[] = { 0x9888 /* NOA_WRITE */, 0x0 };
+         struct drm_i915_perf_oa_config config;
+
+         memset(&config, 0, sizeof(config));
+
+         memcpy(config.uuid, query->guid, sizeof(config.uuid));
+
+         config.n_mux_regs = 1;
+         config.mux_regs_ptr = (uintptr_t) mux_regs;
+
+         if (ioctl(screen->fd, DRM_IOCTL_I915_PERF_REMOVE_CONFIG, &config_id) < 0 &&
+             errno == ENOENT)
+            return true;
+
+         break;
+      }
+   }
+
+   return false;
+}
+
+static void
+init_oa_configs(struct brw_context *brw, const char *sysfs_dev_dir)
+{
+   __DRIscreen *screen = brw->screen->driScrnPriv;
+   struct hash_entry *entry;
+
+   hash_table_foreach(brw->perfquery.oa_metrics_table, entry) {
+      const struct brw_perf_query_info *query = entry->data;
+      struct drm_i915_perf_oa_config config;
+      char config_path[256];
+      uint64_t config_id;
+      int ret;
+
+      snprintf(config_path, sizeof(config_path),
+               "%s/metrics/%s/id", sysfs_dev_dir, query->guid);
+
+      /* Don't recreate already loaded configs. */
+      if (read_file_uint64(config_path, &config_id)) {
+         register_oa_config(brw, query, config_id);
+         continue;
+      }
+
+      memset(&config, 0, sizeof(config));
+
+      memcpy(config.uuid, query->guid, sizeof(config.uuid));
+
+      config.n_mux_regs = query->n_mux_regs;
+      config.mux_regs_ptr = (uintptr_t) query->mux_regs;
+
+      config.n_boolean_regs = query->n_b_counter_regs;
+      config.boolean_regs_ptr = (uintptr_t) query->b_counter_regs;
+
+      config.n_flex_regs = query->n_flex_regs;
+      config.flex_regs_ptr = (uintptr_t) query->flex_regs;
+
+      ret = ioctl(screen->fd, DRM_IOCTL_I915_PERF_ADD_CONFIG, &config);
+      if (ret < 0) {
+         DBG("Failed to load \"%s\" (%s) metrics set in kernel: %s\n",
+             query->name, query->guid, strerror(errno));
+         continue;
+      }
+
+      register_oa_config(brw, query, config_id);
+   }
 }
 
 static bool
@@ -2054,7 +2144,10 @@ brw_init_perf_query_info(struct gl_context *ctx)
        */
       oa_register(brw);
 
-      enumerate_sysfs_metrics(brw, sysfs_dev_dir);
+      if (kernel_has_dynamic_config_support(brw, sysfs_dev_dir))
+         init_oa_configs(brw, sysfs_dev_dir);
+      else
+         enumerate_sysfs_metrics(brw, sysfs_dev_dir);
    }
 
    brw->perfquery.unaccumulated =
