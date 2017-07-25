@@ -615,6 +615,11 @@ enum brw_query_kind {
    PIPELINE_STATS
 };
 
+struct brw_perf_query_register_prog {
+   uint32_t reg;
+   uint32_t val;
+};
+
 struct brw_perf_query_info
 {
    enum brw_query_kind kind;
@@ -634,6 +639,16 @@ struct brw_perf_query_info
    int a_offset;
    int b_offset;
    int c_offset;
+
+   /* Register programming for a given query */
+   struct brw_perf_query_register_prog *flex_regs;
+   uint32_t n_flex_regs;
+
+   struct brw_perf_query_register_prog *mux_regs;
+   uint32_t n_mux_regs;
+
+   struct brw_perf_query_register_prog *b_counter_regs;
+   uint32_t n_b_counter_regs;
 };
 
 /**
