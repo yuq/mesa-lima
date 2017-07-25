@@ -184,6 +184,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
          surf->aux_addr.buffer = mt->mcs_buf->bo;
          surf->aux_addr.offset = mt->mcs_buf->offset;
       } else {
+         assert(mt->hiz_buf);
          assert(surf->aux_usage == ISL_AUX_USAGE_HIZ);
 
          surf->aux_addr.buffer = mt->hiz_buf->bo;
