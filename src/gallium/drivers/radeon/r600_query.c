@@ -29,6 +29,8 @@
 #include "os/os_time.h"
 #include "tgsi/tgsi_text.h"
 
+#define R600_MAX_STREAMS 4
+
 struct r600_hw_query_params {
 	unsigned start_offset;
 	unsigned end_offset;
@@ -654,6 +656,12 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_screen *rscree
 		query->num_cs_dw_end = 6;
 		query->stream = index;
 		break;
+	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
+		/* NumPrimitivesWritten, PrimitiveStorageNeeded. */
+		query->result_size = 32 * R600_MAX_STREAMS;
+		query->num_cs_dw_begin = 6 * R600_MAX_STREAMS;
+		query->num_cs_dw_end = 6 * R600_MAX_STREAMS;
+		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on EG, 8 on R600. */
 		query->result_size = (rscreen->chip_class >= EVERGREEN ? 11 : 8) * 16;
@@ -702,15 +710,24 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 	}
 }
 
-static unsigned event_type_for_stream(struct r600_query_hw *query)
+static unsigned event_type_for_stream(unsigned stream)
 {
-	switch (query->stream) {
+	switch (stream) {
 	default:
 	case 0: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS;
 	case 1: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS1;
 	case 2: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS2;
 	case 3: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS3;
 	}
+}
+
+static void emit_sample_streamout(struct radeon_winsys_cs *cs, uint64_t va,
+				  unsigned stream)
+{
+	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
+	radeon_emit(cs, EVENT_TYPE(event_type_for_stream(stream)) | EVENT_INDEX(3));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
 }
 
 static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
@@ -732,10 +749,11 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
 	case PIPE_QUERY_SO_STATISTICS:
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
-		radeon_emit(cs, EVENT_TYPE(event_type_for_stream(query)) | EVENT_INDEX(3));
-		radeon_emit(cs, va);
-		radeon_emit(cs, va >> 32);
+		emit_sample_streamout(cs, va, query->stream);
+		break;
+	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
+		for (unsigned stream = 0; stream < R600_MAX_STREAMS; ++stream)
+			emit_sample_streamout(cs, va + 32 * stream, stream);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		if (ctx->chip_class >= SI) {
@@ -827,11 +845,13 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
 	case PIPE_QUERY_SO_STATISTICS:
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-		va += query->result_size/2;
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
-		radeon_emit(cs, EVENT_TYPE(event_type_for_stream(query)) | EVENT_INDEX(3));
-		radeon_emit(cs, va);
-		radeon_emit(cs, va >> 32);
+		va += 16;
+		emit_sample_streamout(cs, va, query->stream);
+		break;
+	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
+		va += 16;
+		for (unsigned stream = 0; stream < R600_MAX_STREAMS; ++stream)
+			emit_sample_streamout(cs, va + 32 * stream, stream);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		va += 8;
@@ -891,10 +911,29 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 	r600_update_prims_generated_query_state(ctx, query->b.type, -1);
 }
 
+static void emit_set_predicate(struct r600_common_context *ctx,
+			       struct r600_resource *buf, uint64_t va,
+			       uint32_t op)
+{
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+
+	if (ctx->chip_class >= GFX9) {
+		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 2, 0));
+		radeon_emit(cs, op);
+		radeon_emit(cs, va);
+		radeon_emit(cs, va >> 32);
+	} else {
+		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
+		radeon_emit(cs, va);
+		radeon_emit(cs, op | ((va >> 32) & 0xFF));
+	}
+	r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_READ,
+			RADEON_PRIO_QUERY);
+}
+
 static void r600_emit_query_predication(struct r600_common_context *ctx,
 					struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	struct r600_query_hw *query = (struct r600_query_hw *)ctx->render_cond;
 	struct r600_query_buffer *qbuf;
 	uint32_t op;
@@ -913,6 +952,7 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 		op = PRED_OP(PREDICATION_OP_ZPASS);
 		break;
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
 		op = PRED_OP(PREDICATION_OP_PRIMCOUNT);
 		invert = !invert;
 		break;
@@ -937,22 +977,19 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 		while (results_base < qbuf->results_end) {
 			uint64_t va = va_base + results_base;
 
-			if (ctx->chip_class >= GFX9) {
-				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 2, 0));
-				radeon_emit(cs, op);
-				radeon_emit(cs, va);
-				radeon_emit(cs, va >> 32);
-			} else {
-				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
-				radeon_emit(cs, va);
-				radeon_emit(cs, op | ((va >> 32) & 0xFF));
-			}
-			r600_emit_reloc(ctx, &ctx->gfx, qbuf->buf, RADEON_USAGE_READ,
-					RADEON_PRIO_QUERY);
-			results_base += query->result_size;
+			if (query->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE) {
+				for (unsigned stream = 0; stream < R600_MAX_STREAMS; ++stream) {
+					emit_set_predicate(ctx, qbuf->buf, va + 32 * stream, op);
 
-			/* set CONTINUE bit for all packets except the first */
-			op |= PREDICATION_CONTINUE;
+					/* set CONTINUE bit for all packets except the first */
+					op |= PREDICATION_CONTINUE;
+				}
+			} else {
+				emit_set_predicate(ctx, qbuf->buf, va, op);
+				op |= PREDICATION_CONTINUE;
+			}
+
+			results_base += query->result_size;
 		}
 	}
 }
@@ -1190,6 +1227,14 @@ static void r600_query_hw_add_result(struct r600_common_screen *rscreen,
 		result->b = result->b ||
 			r600_query_read_result(buffer, 2, 6, true) !=
 			r600_query_read_result(buffer, 0, 4, true);
+		break;
+	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
+		for (unsigned stream = 0; stream < R600_MAX_STREAMS; ++stream) {
+			result->b = result->b ||
+				r600_query_read_result(buffer, 2, 6, true) !=
+				r600_query_read_result(buffer, 0, 4, true);
+			buffer = (char *)buffer + 32;
+		}
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		if (rscreen->chip_class >= EVERGREEN) {
@@ -1704,6 +1749,9 @@ static void r600_render_condition(struct pipe_context *ctx,
 	if (query) {
 		for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
 			atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
+
+		if (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)
+			atom->num_dw *= R600_MAX_STREAMS;
 	}
 
 	rctx->set_atom_dirty(rctx, atom, query != NULL);
