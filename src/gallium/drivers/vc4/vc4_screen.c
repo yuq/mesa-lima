@@ -262,6 +262,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_POST_DEPTH_COVERAGE:
         case PIPE_CAP_BINDLESS_TEXTURE:
         case PIPE_CAP_NIR_SAMPLERS_AS_DEREF:
+        case PIPE_CAP_QUERY_SO_OVERFLOW:
                 return 0;
 
                 /* Stream output. */

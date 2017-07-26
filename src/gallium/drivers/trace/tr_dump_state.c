@@ -879,6 +879,7 @@ trace_dump_query_result(unsigned query_type,
    switch (query_type) {
    case PIPE_QUERY_OCCLUSION_PREDICATE:
    case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+   case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
    case PIPE_QUERY_GPU_FINISHED:
       trace_dump_bool(result->b);
       break;
