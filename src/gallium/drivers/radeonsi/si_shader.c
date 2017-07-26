@@ -2778,6 +2778,12 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	invocation_id = bitcast(bld_base, TGSI_TYPE_FLOAT, invocation_id);
 	tf_lds_offset = bitcast(bld_base, TGSI_TYPE_FLOAT, tf_lds_offset);
 
+	/* Leave a hole corresponding to the two input VGPRs. This ensures that
+	 * the invocation_id output does not alias the param_tcs_rel_ids input,
+	 * which saves a V_MOV on gfx9.
+	 */
+	vgpr += 2;
+
 	ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
 	ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
 	ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
@@ -4246,7 +4252,7 @@ static void create_function(struct si_shader_context *ctx)
 		 */
 		for (i = 0; i < GFX6_TCS_NUM_USER_SGPR + 2; i++)
 			returns[num_returns++] = ctx->i32; /* SGPRs */
-		for (i = 0; i < 3; i++)
+		for (i = 0; i < 5; i++)
 			returns[num_returns++] = ctx->f32; /* VGPRs */
 		break;
 
@@ -4300,7 +4306,7 @@ static void create_function(struct si_shader_context *ctx)
 			 */
 			for (i = 0; i <= 8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K; i++)
 				returns[num_returns++] = ctx->i32; /* SGPRs */
-			for (i = 0; i < 3; i++)
+			for (i = 0; i < 5; i++)
 				returns[num_returns++] = ctx->f32; /* VGPRs */
 		}
 		break;
@@ -6781,6 +6787,8 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	}
 	last_sgpr = num_params - 1;
 
+	params[num_params++] = ctx->i32; /* VGPR gap */
+	params[num_params++] = ctx->i32; /* VGPR gap */
 	params[num_params++] = ctx->i32; /* patch index within the wave (REL_PATCH_ID) */
 	params[num_params++] = ctx->i32; /* invocation ID within the patch */
 	params[num_params++] = ctx->i32; /* LDS offset where tess factors should be loaded from */
@@ -6792,9 +6800,9 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	func = ctx->main_fn;
 
 	si_write_tess_factors(bld_base,
-			      LLVMGetParam(func, last_sgpr + 1),
-			      LLVMGetParam(func, last_sgpr + 2),
-			      LLVMGetParam(func, last_sgpr + 3));
+			      LLVMGetParam(func, last_sgpr + 3),
+			      LLVMGetParam(func, last_sgpr + 4),
+			      LLVMGetParam(func, last_sgpr + 5));
 
 	LLVMBuildRetVoid(gallivm->builder);
 }
