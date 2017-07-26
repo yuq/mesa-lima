@@ -47,6 +47,7 @@
 #include "main/macros.h"
 #include "program/prog_instruction.h"
 #include "brw_eu_defines.h"
+#include "brw_reg_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -201,44 +202,6 @@ brw_mask_for_swizzle(unsigned swz)
 {
    return brw_apply_inv_swizzle_to_mask(swz, ~0);
 }
-
-/*
- * The ordering has been chosen so that no enum value is the same as a
- * compatible hardware encoding.
- */
-enum PACKED brw_reg_type {
-   /** Floating-point types: @{ */
-   BRW_REGISTER_TYPE_DF,
-   BRW_REGISTER_TYPE_F,
-   BRW_REGISTER_TYPE_HF,
-   BRW_REGISTER_TYPE_VF,
-   /** @} */
-
-   /** Integer types: @{ */
-   BRW_REGISTER_TYPE_Q,
-   BRW_REGISTER_TYPE_UQ,
-   BRW_REGISTER_TYPE_D,
-   BRW_REGISTER_TYPE_UD,
-   BRW_REGISTER_TYPE_W,
-   BRW_REGISTER_TYPE_UW,
-   BRW_REGISTER_TYPE_B,
-   BRW_REGISTER_TYPE_UB,
-   BRW_REGISTER_TYPE_V,
-   BRW_REGISTER_TYPE_UV,
-   /** @} */
-
-   BRW_REGISTER_TYPE_LAST = BRW_REGISTER_TYPE_UV
-};
-
-unsigned brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
-                                 enum brw_reg_file file, enum brw_reg_type type);
-
-#define brw_element_size(devinfo, inst, operand)                             \
-   brw_hw_reg_type_to_size(devinfo,                                          \
-                           brw_inst_ ## operand ## _reg_file(devinfo, inst), \
-                           brw_inst_ ## operand ## _reg_type(devinfo, inst))
-unsigned brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
-                                 enum brw_reg_file file, unsigned type);
 
 const char *brw_reg_type_letters(unsigned brw_reg_type);
 uint32_t brw_swizzle_immediate(enum brw_reg_type type, uint32_t x, unsigned swz);
