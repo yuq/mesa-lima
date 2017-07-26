@@ -443,11 +443,10 @@ convert_clear_buffer_data(struct gl_context *ctx,
 static struct gl_buffer_object *
 _mesa_new_buffer_object(struct gl_context *ctx, GLuint name)
 {
-   struct gl_buffer_object *obj;
+   struct gl_buffer_object *obj = MALLOC_STRUCT(gl_buffer_object);
+   if (!obj)
+      return NULL;
 
-   (void) ctx;
-
-   obj = MALLOC_STRUCT(gl_buffer_object);
    _mesa_initialize_buffer_object(ctx, obj, name);
    return obj;
 }
