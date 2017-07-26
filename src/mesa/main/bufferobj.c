@@ -4274,6 +4274,12 @@ bind_buffer_range(GLenum target, GLuint index, GLuint buffer, GLintptr offset,
       if (!_mesa_handle_bind_buffer_gen(ctx, buffer,
                                         &bufObj, "glBindBufferRange"))
          return;
+
+      if (!no_error && !bufObj) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBindBufferRange(invalid buffer=%u)", buffer);
+         return;
+      }
    }
 
    if (no_error) {
@@ -4296,12 +4302,6 @@ bind_buffer_range(GLenum target, GLuint index, GLuint buffer, GLintptr offset,
          unreachable("invalid BindBufferRange target with KHR_no_error");
       }
    } else {
-      if (!bufObj) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glBindBufferRange(invalid buffer=%u)", buffer);
-         return;
-      }
-
       if (buffer != 0) {
          if (size <= 0) {
             _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferRange(size=%d)",
@@ -4372,12 +4372,12 @@ _mesa_BindBufferBase(GLenum target, GLuint index, GLuint buffer)
       if (!_mesa_handle_bind_buffer_gen(ctx, buffer,
                                         &bufObj, "glBindBufferBase"))
          return;
-   }
 
-   if (!bufObj) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindBufferBase(invalid buffer=%u)", buffer);
-      return;
+      if (!bufObj) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBindBufferBase(invalid buffer=%u)", buffer);
+         return;
+      }
    }
 
    /* Note that there's some oddness in the GL 3.1-GL 3.3 specifications with
