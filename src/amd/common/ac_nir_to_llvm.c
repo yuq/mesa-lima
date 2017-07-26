@@ -5815,10 +5815,11 @@ si_export_mrt_z(struct nir_to_llvm_context *ctx,
 		args.enabled_channels |= 0x4;
 	}
 
-	/* SI (except OLAND) has a bug that it only looks
+	/* SI (except OLAND and HAINAN) has a bug that it only looks
 	 * at the X writemask component. */
 	if (ctx->options->chip_class == SI &&
-	    ctx->options->family != CHIP_OLAND)
+	    ctx->options->family != CHIP_OLAND &&
+	    ctx->options->family != CHIP_HAINAN)
 		args.enabled_channels |= 0x1;
 
 	ac_build_export(&ctx->ac, &args);
