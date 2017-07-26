@@ -852,7 +852,7 @@ typedef void(__cdecl *PFN_CPIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pC
 typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, 
     simdvector& vSrc, simdvector& vSrc1, simdscalar& vSrc0Alpha, uint32_t sample, 
     uint8_t* pDst, simdvector& vResult, simdscalari* vOMask, simdscalari* vCoverageMask);
-typedef simdscalar(*PFN_QUANTIZE_DEPTH)(simdscalar);
+typedef simdscalar(*PFN_QUANTIZE_DEPTH)(simdscalar const &);
 
 
 

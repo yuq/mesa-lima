@@ -225,7 +225,7 @@ struct SIMDBase : Traits::IsaImpl
     }
 
     static SIMDINLINE
-    void vec4_set1_vps(Vec4& r, Float s)
+    void vec4_set1_vps(Vec4& r, Float const &s)
     {
         r[0] = s;
         r[1] = s;
@@ -285,7 +285,7 @@ struct SIMDBase : Traits::IsaImpl
     }
 
     static SIMDINLINE
-    void vec4_mul_ps(Vec4& r, const Vec4& v, Float s)
+    void vec4_mul_ps(Vec4& r, const Vec4& v, Float const &s)
     {
         r[0] = SIMD::mul_ps(v[0], s);
         r[1] = SIMD::mul_ps(v[1], s);
@@ -303,7 +303,7 @@ struct SIMDBase : Traits::IsaImpl
     }
 
     static SIMDINLINE
-    void vec4_add_ps(Vec4& r, const Vec4& v0, Float s)
+    void vec4_add_ps(Vec4& r, const Vec4& v0, Float const &s)
     {
         r[0] = SIMD::add_ps(v0[0], s);
         r[1] = SIMD::add_ps(v0[1], s);
@@ -321,7 +321,7 @@ struct SIMDBase : Traits::IsaImpl
     }
 
     static SIMDINLINE
-    void vec4_min_ps(Vec4& r, const Vec4& v0, Float s)
+    void vec4_min_ps(Vec4& r, const Vec4& v0, Float const &s)
     {
         r[0] = SIMD::min_ps(v0[0], s);
         r[1] = SIMD::min_ps(v0[1], s);
@@ -330,7 +330,7 @@ struct SIMDBase : Traits::IsaImpl
     }
 
     static SIMDINLINE
-    void vec4_max_ps(Vec4& r, const Vec4& v0, Float s)
+    void vec4_max_ps(Vec4& r, const Vec4& v0, Float const &s)
     {
         r[0] = SIMD::max_ps(v0[0], s);
         r[1] = SIMD::max_ps(v0[1], s);

@@ -49,7 +49,7 @@ static const simd16scalar g_pixelOffsets_simd16[SWR_PIXEL_LOCATION_UL + 1] =
 /// @brief Convert the X,Y coords of a triangle to the requested Fixed 
 /// Point precision from FP32.
 template <typename PT = FixedPointTraits<Fixed_16_8>>
-INLINE simdscalari fpToFixedPointVertical(const simdscalar vIn)
+INLINE simdscalari fpToFixedPointVertical(const simdscalar &vIn)
 {
     simdscalar vFixed = _simd_mul_ps(vIn, _simd_set1_ps(PT::ScaleT::value));
     return _simd_cvtps_epi32(vFixed);
@@ -57,7 +57,7 @@ INLINE simdscalari fpToFixedPointVertical(const simdscalar vIn)
 
 #if USE_SIMD16_FRONTEND
 template <typename PT = FixedPointTraits<Fixed_16_8>>
-INLINE simd16scalari fpToFixedPointVertical(const simd16scalar vIn)
+INLINE simd16scalari fpToFixedPointVertical(const simd16scalar &vIn)
 {
     simd16scalar vFixed = _simd16_mul_ps(vIn, _simd16_set1_ps(PT::ScaleT::value));
     return _simd16_cvtps_epi32(vFixed);

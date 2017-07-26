@@ -770,7 +770,7 @@ static void GeometryShaderStage(
 #if USE_SIMD16_FRONTEND
     uint32_t numPrims_simd8,
 #endif
-    simdscalari primID)
+    simdscalari const &primID)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -1069,7 +1069,7 @@ static void TessellationStages(
 #if USE_SIMD16_FRONTEND
     uint32_t numPrims_simd8,
 #endif
-    simdscalari primID)
+    simdscalari const &primID)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);

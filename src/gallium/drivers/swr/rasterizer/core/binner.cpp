@@ -36,12 +36,12 @@
 #include "tilemgr.h"
 
 // Function Prototype
-void BinPostSetupLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], simdscalar vRecipW[2], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
-void BinPostSetupPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primID, simdscalari viewportIdx);
+void BinPostSetupLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[3], simdscalar vRecipW[2], uint32_t primMask, simdscalari const &primID, simdscalari const &viewportIdx);
+void BinPostSetupPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primID, simdscalari const &viewportIdx);
 
 #if USE_SIMD16_FRONTEND
-void BinPostSetupLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], simd16scalar vRecipW[2], uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
-void BinPostSetupPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primID, simd16scalari viewportIdx);
+void BinPostSetupLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[3], simd16scalar vRecipW[2], uint32_t primMask, simd16scalari const &primID, simd16scalari const &viewportIdx);
+void BinPostSetupPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primID, simd16scalari const &viewportIdx);
 #endif
 
 //////////////////////////////////////////////////////////////////////////
@@ -433,7 +433,7 @@ void BinTriangles(
     uint32_t workerId,
     simdvector tri[3],
     uint32_t triMask,
-    simdscalari primID)
+    simdscalari const &primID)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -878,7 +878,7 @@ void SIMDCALL BinTriangles_simd16(
     uint32_t workerId,
     simd16vector tri[3],
     uint32_t triMask,
-    simd16scalari primID)
+    simd16scalari const &primID)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -1386,8 +1386,8 @@ void BinPostSetupPoints(
     uint32_t workerId,
     simdvector prim[],
     uint32_t primMask,
-    simdscalari primID,
-    simdscalari viewportIdx)
+    simdscalari const &primID,
+    simdscalari const &viewportIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -1703,7 +1703,7 @@ void BinPoints(
     uint32_t workerId,
     simdvector prim[3],
     uint32_t primMask,
-    simdscalari primID)
+    simdscalari const &primID)
 {
     simdvector& primVerts = prim[0];
 
@@ -1767,8 +1767,8 @@ void BinPostSetupPoints_simd16(
     uint32_t workerId,
     simd16vector prim[],
     uint32_t primMask,
-    simd16scalari primID,
-    simd16scalari viewportIdx)
+    simd16scalari const &primID,
+    simd16scalari const &viewportIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -2086,7 +2086,7 @@ void SIMDCALL BinPoints_simd16(
     uint32_t workerId,
     simd16vector prim[3],
     uint32_t primMask,
-    simd16scalari primID)
+    simd16scalari const &primID)
 {
     simd16vector& primVerts = prim[0];
 
@@ -2160,8 +2160,8 @@ void BinPostSetupLines(
     simdvector prim[],
     simdscalar recipW[],
     uint32_t primMask,
-    simdscalari primID,
-    simdscalari viewportIdx)
+    simdscalari const &primID,
+    simdscalari const &viewportIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -2365,8 +2365,8 @@ void BinPostSetupLines_simd16(
     simd16vector prim[],
     simd16scalar recipW[],
     uint32_t primMask,
-    simd16scalari primID,
-    simd16scalari viewportIdx)
+    simd16scalari const &primID,
+    simd16scalari const &viewportIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -2596,7 +2596,7 @@ void BinLines(
     uint32_t workerId,
     simdvector prim[],
     uint32_t primMask,
-    simdscalari primID)
+    simdscalari const &primID)
 {
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
@@ -2670,7 +2670,7 @@ void SIMDCALL BinLines_simd16(
     uint32_t workerId,
     simd16vector prim[3],
     uint32_t primMask,
-    simd16scalari primID)
+    simd16scalari const &primID)
 {
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;

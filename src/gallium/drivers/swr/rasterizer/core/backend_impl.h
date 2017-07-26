@@ -50,7 +50,7 @@ static const __m256 vULOffsetsY = __m256{0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0}
 #define MASK 0xff
 #endif
 
-static INLINE simdmask ComputeUserClipMask(uint8_t clipMask, float* pUserClipBuffer, simdscalar vI, simdscalar vJ)
+static INLINE simdmask ComputeUserClipMask(uint8_t clipMask, float* pUserClipBuffer, simdscalar const &vI, simdscalar const &vJ)
 {
     simdscalar vClipMask = _simd_setzero_ps();
     uint32_t numClipDistance = _mm_popcnt_u32(clipMask);
@@ -338,7 +338,7 @@ struct generateInputCoverage<T, SWR_INPUT_COVERAGE_INNER_CONSERVATIVE>
 template<typename T>
 INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const SWR_MULTISAMPLE_POS& samplePos,
                             const uint64_t *const coverageMask, const uint32_t sampleMask,
-                            const simdscalar vXSamplePosUL, const simdscalar vYSamplePosUL)
+                            simdscalar const &vXSamplePosUL, simdscalar const &vYSamplePosUL)
 {
     uint32_t inputMask[KNOB_SIMD_WIDTH];
     generateInputCoverage<T, T::InputCoverage>(coverageMask, inputMask, sampleMask);
@@ -412,7 +412,7 @@ INLINE void CalcCentroidPos(SWR_PS_CONTEXT &psContext, const SWR_MULTISAMPLE_POS
 }
 
 INLINE void CalcCentroidBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTEXT &psContext,
-                                     const simdscalar vXSamplePosUL, const simdscalar vYSamplePosUL)
+                                     const simdscalar &vXSamplePosUL, const simdscalar &vYSamplePosUL)
 {
     // evaluate I,J
     psContext.vI.centroid = vplaneps(coeffs.vIa, coeffs.vIb, coeffs.vIc, psContext.vX.centroid, psContext.vY.centroid);
@@ -424,7 +424,7 @@ INLINE void CalcCentroidBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CON
     psContext.vOneOverW.centroid = vplaneps(coeffs.vAOneOverW, coeffs.vBOneOverW, coeffs.vCOneOverW, psContext.vI.centroid, psContext.vJ.centroid);
 }
 
-INLINE simdmask CalcDepthBoundsAcceptMask(simdscalar z, float minz, float maxz)
+INLINE simdmask CalcDepthBoundsAcceptMask(simdscalar const &z, float minz, float maxz)
 {
     const simdscalar minzMask = _simd_cmpge_ps(z, _simd_set1_ps(minz));
     const simdscalar maxzMask = _simd_cmple_ps(z, _simd_set1_ps(maxz));
@@ -711,7 +711,7 @@ static INLINE void CalcSampleBarycentrics(const BarycentricCoeffs& coeffs, SWR_P
 
 // Merge Output to 4x2 SIMD Tile Format
 INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
-    const PFN_BLEND_JIT_FUNC (&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, uint32_t renderTargetMask)
+    const PFN_BLEND_JIT_FUNC (&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar const &depthPassMask, uint32_t renderTargetMask)
 {
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     const uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
@@ -777,7 +777,7 @@ INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
 #if USE_8x2_TILE_BACKEND
 // Merge Output to 8x2 SIMD16 Tile Format
 INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
-    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, uint32_t renderTargetMask, bool useAlternateOffset)
+    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar const &depthPassMask, uint32_t renderTargetMask, bool useAlternateOffset)
 {
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);

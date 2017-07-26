@@ -184,7 +184,7 @@ typedef SIMD256                             SIMD;
 #define _simd_vmask_ps                      SIMD::vmask_ps
 
 template<int mask> SIMDINLINE
-SIMD128::Integer _simd_blend4_epi32(SIMD128::Integer a, SIMD128::Integer b)
+SIMD128::Integer _simd_blend4_epi32(SIMD128::Integer const &a, SIMD128::Integer const &b)
 {
     return SIMD128::castps_si(SIMD128::blend_ps<mask>(SIMD128::castsi_ps(a), SIMD128::castsi_ps(b)));
 }
@@ -242,7 +242,7 @@ void _simdvec_mov(simdvector &r, unsigned int rlane, simdvector& s, unsigned int
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Compute plane equation vA * vX + vB * vY + vC
-SIMDINLINE simdscalar vplaneps(simdscalar vA, simdscalar vB, simdscalar vC, simdscalar &vX, simdscalar &vY)
+SIMDINLINE simdscalar vplaneps(simdscalar const &vA, simdscalar const &vB, simdscalar const &vC, simdscalar const &vX, simdscalar const &vY)
 {
     simdscalar vOut = _simd_fmadd_ps(vA, vX, vC);
     vOut = _simd_fmadd_ps(vB, vY, vOut);
@@ -251,7 +251,7 @@ SIMDINLINE simdscalar vplaneps(simdscalar vA, simdscalar vB, simdscalar vC, simd
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Compute plane equation vA * vX + vB * vY + vC
-SIMDINLINE simd4scalar vplaneps(simd4scalar vA, simd4scalar vB, simd4scalar vC, simd4scalar &vX, simd4scalar &vY)
+SIMDINLINE simd4scalar vplaneps(simd4scalar const &vA, simd4scalar const &vB, simd4scalar const &vC, simd4scalar const &vX, simd4scalar const &vY)
 {
     simd4scalar vOut = _simd128_fmadd_ps(vA, vX, vC);
     vOut = _simd128_fmadd_ps(vB, vY, vOut);
@@ -264,7 +264,7 @@ SIMDINLINE simd4scalar vplaneps(simd4scalar vA, simd4scalar vB, simd4scalar vC, 
 /// @param vJ - barycentric J
 /// @param pInterpBuffer - pointer to attribute barycentric coeffs
 template<UINT Attrib, UINT Comp, UINT numComponents = 4>
-static SIMDINLINE simdscalar InterpolateComponent(simdscalar vI, simdscalar vJ, const float *pInterpBuffer)
+static SIMDINLINE simdscalar InterpolateComponent(simdscalar const &vI, simdscalar const &vJ, const float *pInterpBuffer)
 {
     const float *pInterpA = &pInterpBuffer[Attrib * 3 * numComponents + 0 + Comp];
     const float *pInterpB = &pInterpBuffer[Attrib * 3 * numComponents + numComponents + Comp];
@@ -299,7 +299,7 @@ static SIMDINLINE simdscalar InterpolateComponentFlat(const float *pInterpBuffer
 /// @param vJ - barycentric J
 /// @param pInterpBuffer - pointer to attribute barycentric coeffs
 template<UINT Attrib, UINT Comp, UINT numComponents = 4>
-static SIMDINLINE simd4scalar InterpolateComponent(simd4scalar vI, simd4scalar vJ, const float *pInterpBuffer)
+static SIMDINLINE simd4scalar InterpolateComponent(simd4scalar const &vI, simd4scalar const &vJ, const float *pInterpBuffer)
 {
     const float *pInterpA = &pInterpBuffer[Attrib * 3 * numComponents + 0 + Comp];
     const float *pInterpB = &pInterpBuffer[Attrib * 3 * numComponents + numComponents + Comp];
@@ -315,13 +315,13 @@ static SIMDINLINE simd4scalar InterpolateComponent(simd4scalar vI, simd4scalar v
     return vplaneps(vA, vB, vC, vI, vJ);
 }
 
-static SIMDINLINE simd4scalar _simd128_abs_ps(simd4scalar a)
+static SIMDINLINE simd4scalar _simd128_abs_ps(simd4scalar const &a)
 {
     simd4scalari ai = SIMD128::castps_si(a);
     return SIMD128::castsi_ps(SIMD128::and_si(ai, SIMD128::set1_epi32(0x7fffffff)));
 }
 
-static SIMDINLINE simdscalar _simd_abs_ps(simdscalar a)
+static SIMDINLINE simdscalar _simd_abs_ps(simdscalar const &a)
 {
     simdscalari ai = _simd_castps_si(a);
     return _simd_castsi_ps(_simd_and_si(ai, _simd_set1_epi32(0x7fffffff)));

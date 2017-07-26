@@ -62,7 +62,7 @@ enum SWR_CLIPCODES
 #define GUARDBAND_CLIP_MASK (FRUSTUM_NEAR|FRUSTUM_FAR|GUARDBAND_LEFT|GUARDBAND_TOP|GUARDBAND_RIGHT|GUARDBAND_BOTTOM|NEGW)
 
 INLINE
-void ComputeClipCodes(const API_STATE& state, const simdvector& vertex, simdscalar& clipCodes, simdscalari viewportIndexes)
+void ComputeClipCodes(const API_STATE& state, const simdvector& vertex, simdscalar& clipCodes, simdscalari const &viewportIndexes)
 {
     clipCodes = _simd_setzero_ps();
 
@@ -131,7 +131,7 @@ void ComputeClipCodes(const API_STATE& state, const simdvector& vertex, simdscal
 
 #if USE_SIMD16_FRONTEND
 INLINE
-void ComputeClipCodes(const API_STATE& state, const simd16vector& vertex, simd16scalar& clipCodes, simd16scalari viewportIndexes)
+void ComputeClipCodes(const API_STATE& state, const simd16vector& vertex, simd16scalar& clipCodes, simd16scalari const &viewportIndexes)
 {
     clipCodes = _simd16_setzero_ps();
 
@@ -203,13 +203,13 @@ template<uint32_t NumVertsPerPrim>
 class Clipper
 {
 public:
-    Clipper(uint32_t in_workerId, DRAW_CONTEXT* in_pDC) :
+    INLINE Clipper(uint32_t in_workerId, DRAW_CONTEXT* in_pDC) :
         workerId(in_workerId), pDC(in_pDC), state(GetApiState(in_pDC))
     {
         static_assert(NumVertsPerPrim >= 1 && NumVertsPerPrim <= 3, "Invalid NumVertsPerPrim");
     }
 
-    void ComputeClipCodes(simdvector vertex[], simdscalari viewportIndexes)
+    INLINE void ComputeClipCodes(simdvector vertex[], simdscalari const &viewportIndexes)
     {
         for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
         {
@@ -218,7 +218,7 @@ public:
     }
 
 #if USE_SIMD16_FRONTEND
-    void ComputeClipCodes(simd16vector vertex[], simd16scalari viewportIndexes)
+    INLINE void ComputeClipCodes(simd16vector vertex[], simd16scalari const &viewportIndexes)
     {
         for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
         {
@@ -227,7 +227,7 @@ public:
     }
 
 #endif
-    simdscalar ComputeClipCodeIntersection()
+    INLINE simdscalar ComputeClipCodeIntersection()
     {
         simdscalar result = this->clipCodes[0];
         for (uint32_t i = 1; i < NumVertsPerPrim; ++i)
@@ -238,7 +238,7 @@ public:
     }
 
 #if USE_SIMD16_FRONTEND
-    simd16scalar ComputeClipCodeIntersection_simd16()
+    INLINE simd16scalar ComputeClipCodeIntersection_simd16()
     {
         simd16scalar result = this->clipCodes_simd16[0];
         for (uint32_t i = 1; i < NumVertsPerPrim; ++i)
@@ -249,7 +249,7 @@ public:
     }
 
 #endif
-    simdscalar ComputeClipCodeUnion()
+    INLINE simdscalar ComputeClipCodeUnion()
     {
         simdscalar result = this->clipCodes[0];
         for (uint32_t i = 1; i < NumVertsPerPrim; ++i)
@@ -260,7 +260,7 @@ public:
     }
 
 #if USE_SIMD16_FRONTEND
-    simd16scalar ComputeClipCodeUnion_simd16()
+    INLINE simd16scalar ComputeClipCodeUnion_simd16()
     {
         simd16scalar result = this->clipCodes_simd16[0];
         for (uint32_t i = 1; i < NumVertsPerPrim; ++i)
@@ -271,14 +271,14 @@ public:
     }
 
 #endif
-    int ComputeNegWMask()
+    INLINE int ComputeNegWMask()
     {
         simdscalar clipCodeUnion = ComputeClipCodeUnion();
         clipCodeUnion = _simd_and_ps(clipCodeUnion, _simd_castsi_ps(_simd_set1_epi32(NEGW)));
         return _simd_movemask_ps(_simd_cmpneq_ps(clipCodeUnion, _simd_setzero_ps()));
     }
 
-    int ComputeClipMask()
+    INLINE int ComputeClipMask()
     {
         simdscalar clipUnion = ComputeClipCodeUnion();
         clipUnion = _simd_and_ps(clipUnion, _simd_castsi_ps(_simd_set1_epi32(GUARDBAND_CLIP_MASK)));
@@ -286,7 +286,7 @@ public:
     }
 
 #if USE_SIMD16_FRONTEND
-    int ComputeClipMask_simd16()
+    INLINE int ComputeClipMask_simd16()
     {
         simd16scalar clipUnion = ComputeClipCodeUnion_simd16();
         clipUnion = _simd16_and_ps(clipUnion, _simd16_castsi_ps(_simd16_set1_epi32(GUARDBAND_CLIP_MASK)));
@@ -295,7 +295,7 @@ public:
 
 #endif
     // clipper is responsible for culling any prims with NAN coordinates
-    int ComputeNaNMask(simdvector prim[])
+    INLINE int ComputeNaNMask(simdvector prim[])
     {
         simdscalar vNanMask = _simd_setzero_ps();
         for (uint32_t e = 0; e < NumVertsPerPrim; ++e)
@@ -310,7 +310,7 @@ public:
     }
 
 #if USE_SIMD16_FRONTEND
-    int ComputeNaNMask(simd16vector prim[])
+    INLINE int ComputeNaNMask(simd16vector prim[])
     {
         simd16scalar vNanMask = _simd16_setzero_ps();
         for (uint32_t e = 0; e < NumVertsPerPrim; ++e)
@@ -325,7 +325,7 @@ public:
     }
 
 #endif
-    int ComputeUserClipCullMask(PA_STATE& pa, simdvector prim[])
+    INLINE int ComputeUserClipCullMask(PA_STATE& pa, simdvector prim[])
     {
         uint8_t cullMask = this->state.rastState.cullDistanceMask;
         simdscalar vClipCullMask = _simd_setzero_ps();
@@ -391,7 +391,7 @@ public:
     }
 
 #if USE_SIMD16_FRONTEND
-    int ComputeUserClipCullMask(PA_STATE& pa, simd16vector prim[])
+    INLINE int ComputeUserClipCullMask(PA_STATE& pa, simd16vector prim[])
     {
         uint8_t cullMask = this->state.rastState.cullDistanceMask;
         simd16scalar vClipCullMask = _simd16_setzero_ps();
@@ -459,7 +459,7 @@ public:
 
 #endif
     // clip SIMD primitives
-    void ClipSimd(const simdscalar& vPrimMask, const simdscalar& vClipMask, PA_STATE& pa, const simdscalari& vPrimId)
+    INLINE void ClipSimd(const simdscalar& vPrimMask, const simdscalar& vClipMask, PA_STATE& pa, const simdscalari& vPrimId)
     {
         // input/output vertex store for clipper
         simdvertex vertices[7]; // maximum 7 verts generated per triangle
@@ -943,7 +943,7 @@ public:
 
 #endif
     // execute the clipper stage
-    void ExecuteStage(PA_STATE& pa, simdvector prim[], uint32_t primMask, simdscalari primId)
+    void ExecuteStage(PA_STATE& pa, simdvector prim[], uint32_t primMask, simdscalari const &primId)
     {
         SWR_ASSERT(this->pDC != nullptr);
         SWR_CONTEXT* pContext = this->pDC->pContext;
@@ -1027,7 +1027,7 @@ public:
     }
 
 #if USE_SIMD16_FRONTEND
-    void ExecuteStage(PA_STATE& pa, simd16vector prim[], uint32_t primMask, simd16scalari primId)
+    void ExecuteStage(PA_STATE& pa, simd16vector prim[], uint32_t primMask, simd16scalari const &primId)
     {
         SWR_ASSERT(pa.pDC != nullptr);
         SWR_CONTEXT* pContext = pa.pDC->pContext;
@@ -1110,19 +1110,19 @@ public:
 
 #endif
 private:
-    inline simdscalar ComputeInterpFactor(simdscalar boundaryCoord0, simdscalar boundaryCoord1)
+    inline simdscalar ComputeInterpFactor(simdscalar const &boundaryCoord0, simdscalar const &boundaryCoord1)
     {
         return _simd_div_ps(boundaryCoord0, _simd_sub_ps(boundaryCoord0, boundaryCoord1));
     }
 
 #if USE_SIMD16_FRONTEND
-    inline simd16scalar ComputeInterpFactor(simd16scalar boundaryCoord0, simd16scalar boundaryCoord1)
+    inline simd16scalar ComputeInterpFactor(simd16scalar const &boundaryCoord0, simd16scalar const &boundaryCoord1)
     {
         return _simd16_div_ps(boundaryCoord0, _simd16_sub_ps(boundaryCoord0, boundaryCoord1));
     }
 
 #endif
-    inline simdscalari ComputeOffsets(uint32_t attrib, simdscalari vIndices, uint32_t component)
+    inline simdscalari ComputeOffsets(uint32_t attrib, simdscalari const &vIndices, uint32_t component)
     {
         const uint32_t simdVertexStride = sizeof(simdvertex);
         const uint32_t componentStride = sizeof(simdscalar);
@@ -1143,7 +1143,7 @@ private:
     }
 
 #if USE_SIMD16_FRONTEND
-    inline simd16scalari ComputeOffsets(uint32_t attrib, simd16scalari vIndices, uint32_t component)
+    inline simd16scalari ComputeOffsets(uint32_t attrib, simd16scalari const &vIndices, uint32_t component)
     {
         const uint32_t simdVertexStride = sizeof(simd16vertex);
         const uint32_t componentStride = sizeof(simd16scalar);
@@ -1168,7 +1168,7 @@ private:
 
 #endif
     // gathers a single component for a given attribute for each SIMD lane
-    inline simdscalar GatherComponent(const float* pBuffer, uint32_t attrib, simdscalar vMask, simdscalari vIndices, uint32_t component)
+    inline simdscalar GatherComponent(const float* pBuffer, uint32_t attrib, simdscalar const &vMask, simdscalari const &vIndices, uint32_t component)
     {
         simdscalari vOffsets = ComputeOffsets(attrib, vIndices, component);
         simdscalar vSrc = _mm256_undefined_ps();
@@ -1176,7 +1176,7 @@ private:
     }
 
 #if USE_SIMD16_FRONTEND
-    inline simd16scalar GatherComponent(const float* pBuffer, uint32_t attrib, simd16scalar vMask, simd16scalari vIndices, uint32_t component)
+    inline simd16scalar GatherComponent(const float* pBuffer, uint32_t attrib, simd16scalar const &vMask, simd16scalari const &vIndices, uint32_t component)
     {
         simd16scalari vOffsets = ComputeOffsets(attrib, vIndices, component);
         simd16scalar vSrc = _simd16_setzero_ps();
@@ -1184,7 +1184,7 @@ private:
     }
 
 #endif
-    inline void ScatterComponent(const float* pBuffer, uint32_t attrib, simdscalar vMask, simdscalari vIndices, uint32_t component, simdscalar vSrc)
+    inline void ScatterComponent(const float* pBuffer, uint32_t attrib, simdscalar const &vMask, simdscalari const &vIndices, uint32_t component, simdscalar const &vSrc)
     {
         simdscalari vOffsets = ComputeOffsets(attrib, vIndices, component);
 
@@ -1201,7 +1201,7 @@ private:
     }
 
 #if USE_SIMD16_FRONTEND
-    inline void ScatterComponent(const float* pBuffer, uint32_t attrib, simd16scalar vMask, simd16scalari vIndices, uint32_t component, simd16scalar vSrc)
+    inline void ScatterComponent(const float* pBuffer, uint32_t attrib, simd16scalar const &vMask, simd16scalari const &vIndices, uint32_t component, simd16scalar const &vSrc)
     {
         simd16scalari vOffsets = ComputeOffsets(attrib, vIndices, component);
 
@@ -1891,12 +1891,12 @@ private:
 
 
 // pipeline stage functions
-void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
-void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
-void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari primId);
+void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId);
+void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId);
+void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId);
 #if USE_SIMD16_FRONTEND
-void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
-void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
-void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari primId);
+void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId);
+void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId);
+void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId);
 #endif
 
