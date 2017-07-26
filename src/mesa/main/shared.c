@@ -44,6 +44,9 @@
 #include "util/hash_table.h"
 #include "util/set.h"
 
+static void
+free_shared_state(struct gl_context *ctx, struct gl_shared_state *shared);
+
 /**
  * Allocate and initialize a shared context state structure.
  * Initializes the display list, texture objects and vertex programs hash
@@ -90,6 +93,8 @@ _mesa_alloc_shared_state(struct gl_context *ctx)
 
    /* Allocate the default buffer object */
    shared->NullBufferObj = ctx->Driver.NewBufferObject(ctx, 0);
+   if (!shared->NullBufferObj)
+      goto fail;
 
    /* Create default texture objects */
    for (i = 0; i < NUM_TEXTURE_TARGETS; i++) {
@@ -132,6 +137,10 @@ _mesa_alloc_shared_state(struct gl_context *ctx)
 
    shared->MemoryObjects = _mesa_NewHashTable();
    return shared;
+
+fail:
+   free_shared_state(ctx, shared);
+   return NULL;
 }
 
 
