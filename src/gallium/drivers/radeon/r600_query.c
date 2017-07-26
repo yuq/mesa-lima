@@ -898,11 +898,12 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	struct r600_query_hw *query = (struct r600_query_hw *)ctx->render_cond;
 	struct r600_query_buffer *qbuf;
 	uint32_t op;
-	bool flag_wait;
+	bool flag_wait, invert;
 
 	if (!query)
 		return;
 
+	invert = ctx->render_cond_invert;
 	flag_wait = ctx->render_cond_mode == PIPE_RENDER_COND_WAIT ||
 		    ctx->render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
 
@@ -911,11 +912,9 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		op = PRED_OP(PREDICATION_OP_ZPASS);
 		break;
-	case PIPE_QUERY_PRIMITIVES_EMITTED:
-	case PIPE_QUERY_PRIMITIVES_GENERATED:
-	case PIPE_QUERY_SO_STATISTICS:
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
 		op = PRED_OP(PREDICATION_OP_PRIMCOUNT);
+		invert = !invert;
 		break;
 	default:
 		assert(0);
@@ -923,10 +922,10 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	}
 
 	/* if true then invert, see GL_ARB_conditional_render_inverted */
-	if (ctx->render_cond_invert)
-		op |= PREDICATION_DRAW_NOT_VISIBLE; /* Draw if not visable/overflow */
+	if (invert)
+		op |= PREDICATION_DRAW_NOT_VISIBLE; /* Draw if not visible or overflow */
 	else
-		op |= PREDICATION_DRAW_VISIBLE; /* Draw if visable/overflow */
+		op |= PREDICATION_DRAW_VISIBLE; /* Draw if visible or no overflow */
 
 	op |= flag_wait ? PREDICATION_HINT_WAIT : PREDICATION_HINT_NOWAIT_DRAW;
 	
