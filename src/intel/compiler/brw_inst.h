@@ -35,6 +35,7 @@
 #include <stdint.h>
 
 #include "brw_eu_defines.h"
+#include "brw_reg_type.h"
 #include "common/gen_device_info.h"
 
 #ifdef __cplusplus
@@ -651,6 +652,33 @@ brw_inst_set_imm_uq(const struct gen_device_info *devinfo,
 }
 
 /** @} */
+
+#define REG_TYPE(reg)                                                         \
+static inline void                                                            \
+brw_inst_set_##reg##_file_type(const struct gen_device_info *devinfo,         \
+                               brw_inst *inst, enum brw_reg_file file,        \
+                               enum brw_reg_type type)                        \
+{                                                                             \
+   assert(file <= BRW_IMMEDIATE_VALUE);                                       \
+   unsigned hw_type = brw_reg_type_to_hw_type(devinfo, file, type);           \
+   brw_inst_set_##reg##_reg_file(devinfo, inst, file);                        \
+   brw_inst_set_##reg##_reg_hw_type(devinfo, inst, hw_type);                  \
+}                                                                             \
+                                                                              \
+static inline enum brw_reg_type                                               \
+brw_inst_##reg##_type(const struct gen_device_info *devinfo,                  \
+                      const brw_inst *inst)                                   \
+{                                                                             \
+   unsigned file = brw_inst_##reg##_reg_file(devinfo, inst);                  \
+   unsigned hw_type = brw_inst_##reg##_reg_hw_type(devinfo, inst);            \
+   return brw_hw_type_to_reg_type(devinfo, (enum brw_reg_file)file, hw_type); \
+}
+
+REG_TYPE(dst)
+REG_TYPE(src0)
+REG_TYPE(src1)
+#undef REG_TYPE
+
 
 /* The AddrImm fields are split into two discontiguous sections on Gen8+ */
 #define BRW_IA1_ADDR_IMM(reg, g4_high, g4_low, g8_nine, g8_high, g8_low) \
