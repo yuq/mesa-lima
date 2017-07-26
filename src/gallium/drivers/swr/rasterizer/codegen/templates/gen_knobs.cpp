@@ -140,6 +140,26 @@ extern GlobalKnobs g_GlobalKnobs;
 //========================================================
 void KnobBase::autoExpandEnvironmentVariables(std::string &text)
 {
+#if (__GNUC__) && (GCC_VERSION < 409000)
+    // <regex> isn't implemented prior to gcc-4.9.0
+    // unix style variable replacement
+    size_t start;
+    while ((start = text.find("${'${'}")) != std::string::npos) {
+        size_t end = text.find("}");
+        if (end == std::string::npos)
+            break;
+        const std::string var = GetEnv(text.substr(start + 2, end - start - 2));
+        text.replace(start, end - start + 1, var);
+    }
+    // win32 style variable replacement
+    while ((start = text.find("%")) != std::string::npos) {
+        size_t end = text.find("%", start + 1);
+        if (end == std::string::npos)
+            break;
+        const std::string var = GetEnv(text.substr(start + 1, end - start - 1));
+        text.replace(start, end - start + 1, var);
+    }
+#else
     {
         // unix style variable replacement
         static std::regex env("\\$\\{([^}]+)\\}");
@@ -164,6 +184,7 @@ void KnobBase::autoExpandEnvironmentVariables(std::string &text)
             text.replace(match.prefix().length(), match[0].length(), var);
         }
     }
+#endif
 }
 
 
