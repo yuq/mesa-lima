@@ -93,14 +93,14 @@ signed_type(unsigned type)
 static bool
 inst_is_raw_move(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
-   unsigned dst_type = signed_type(brw_inst_dst_reg_type(devinfo, inst));
-   unsigned src_type = signed_type(brw_inst_src0_reg_type(devinfo, inst));
+   unsigned dst_type = signed_type(brw_inst_dst_reg_hw_type(devinfo, inst));
+   unsigned src_type = signed_type(brw_inst_src0_reg_hw_type(devinfo, inst));
 
    if (brw_inst_src0_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE) {
       /* FIXME: not strictly true */
-      if (brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_IMM_TYPE_VF ||
-          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_IMM_TYPE_UV ||
-          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_IMM_TYPE_V) {
+      if (brw_inst_src0_reg_hw_type(devinfo, inst) == BRW_HW_IMM_TYPE_VF ||
+          brw_inst_src0_reg_hw_type(devinfo, inst) == BRW_HW_IMM_TYPE_UV ||
+          brw_inst_src0_reg_hw_type(devinfo, inst) == BRW_HW_IMM_TYPE_V) {
          return false;
       }
    } else if (brw_inst_src0_negate(devinfo, inst) ||
@@ -316,8 +316,8 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    unsigned num_sources = num_sources_from_inst(devinfo, inst);
    unsigned src0_exec_type, src1_exec_type;
-   unsigned src0_type = brw_inst_src0_reg_type(devinfo, inst);
-   unsigned src1_type = brw_inst_src1_reg_type(devinfo, inst);
+   unsigned src0_type = brw_inst_src0_reg_hw_type(devinfo, inst);
+   unsigned src1_type = brw_inst_src1_reg_hw_type(devinfo, inst);
 
    bool src0_is_immediate =
       brw_inst_src0_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE;
@@ -327,7 +327,7 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
    /* Execution data type is independent of destination data type, except in
     * mixed F/HF instructions on CHV and SKL+.
     */
-   unsigned dst_exec_type = brw_inst_dst_reg_type(devinfo, inst);
+   unsigned dst_exec_type = brw_inst_dst_reg_hw_type(devinfo, inst);
 
    src0_exec_type = execution_type_for_type(src0_type, src0_is_immediate);
    if (num_sources == 1) {
@@ -443,8 +443,8 @@ general_restrictions_based_on_operand_types(const struct gen_device_info *devinf
 
    unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
    bool dst_type_is_byte =
-      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_B ||
-      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_UB;
+      brw_inst_dst_reg_hw_type(devinfo, inst) == BRW_HW_REG_TYPE_B ||
+      brw_inst_dst_reg_hw_type(devinfo, inst) == BRW_HW_REG_TYPE_UB;
 
    if (dst_type_is_byte) {
       if (is_packed(exec_size * dst_stride, exec_size, dst_stride)) {
@@ -1014,8 +1014,8 @@ region_alignment_rules(const struct gen_device_info *devinfo,
                    (1 << (brw_inst_src ## n ## _hstride(devinfo, inst) - 1)) : 0;  \
          bool src ## n ## _is_packed_word =                                        \
             is_packed(vstride, width, hstride) &&                                  \
-            (brw_inst_src ## n ## _reg_type(devinfo, inst) == BRW_HW_REG_TYPE_W || \
-             brw_inst_src ## n ## _reg_type(devinfo, inst) == BRW_HW_REG_TYPE_UW); \
+            (brw_inst_src ## n ## _reg_hw_type(devinfo, inst) == BRW_HW_REG_TYPE_W || \
+             brw_inst_src ## n ## _reg_hw_type(devinfo, inst) == BRW_HW_REG_TYPE_UW); \
                                                                                    \
          ERROR_IF(src ## n ## _regs == 1 &&                                        \
                   !src ## n ## _has_scalar_region(devinfo, inst) &&                \
@@ -1057,8 +1057,8 @@ vector_immediate_restrictions(const struct gen_device_info *devinfo,
                          brw_inst_dst_da1_subreg_nr(devinfo, inst) : 0;
    unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
    unsigned type = num_sources == 1 ?
-                   brw_inst_src0_reg_type(devinfo, inst) :
-                   brw_inst_src1_reg_type(devinfo, inst);
+                   brw_inst_src0_reg_hw_type(devinfo, inst) :
+                   brw_inst_src1_reg_hw_type(devinfo, inst);
 
    /* The PRMs say:
     *

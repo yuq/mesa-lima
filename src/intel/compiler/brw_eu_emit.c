@@ -97,9 +97,9 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
    gen7_convert_mrf_to_grf(p, &dest);
 
    brw_inst_set_dst_reg_file(devinfo, inst, dest.file);
-   brw_inst_set_dst_reg_type(devinfo, inst,
-                             brw_reg_type_to_hw_type(devinfo, dest.file,
-                                                     dest.type));
+   brw_inst_set_dst_reg_hw_type(devinfo, inst,
+                                brw_reg_type_to_hw_type(devinfo, dest.file,
+                                                        dest.type));
    brw_inst_set_dst_address_mode(devinfo, inst, dest.address_mode);
 
    if (dest.address_mode == BRW_ADDRESS_DIRECT) {
@@ -264,8 +264,8 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
    validate_reg(devinfo, inst, reg);
 
    brw_inst_set_src0_reg_file(devinfo, inst, reg.file);
-   brw_inst_set_src0_reg_type(devinfo, inst,
-                              brw_reg_type_to_hw_type(devinfo, reg.file, reg.type));
+   brw_inst_set_src0_reg_hw_type(devinfo, inst,
+                                 brw_reg_type_to_hw_type(devinfo, reg.file, reg.type));
    brw_inst_set_src0_abs(devinfo, inst, reg.abs);
    brw_inst_set_src0_negate(devinfo, inst, reg.negate);
    brw_inst_set_src0_address_mode(devinfo, inst, reg.address_mode);
@@ -283,8 +283,8 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
       if (type_sz(reg.type) < 8) {
          brw_inst_set_src1_reg_file(devinfo, inst,
                                     BRW_ARCHITECTURE_REGISTER_FILE);
-         brw_inst_set_src1_reg_type(devinfo, inst,
-                                    brw_inst_src0_reg_type(devinfo, inst));
+         brw_inst_set_src1_reg_hw_type(devinfo, inst,
+                                       brw_inst_src0_reg_hw_type(devinfo, inst));
       }
    } else {
       if (reg.address_mode == BRW_ADDRESS_DIRECT) {
@@ -371,8 +371,8 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
    validate_reg(devinfo, inst, reg);
 
    brw_inst_set_src1_reg_file(devinfo, inst, reg.file);
-   brw_inst_set_src1_reg_type(devinfo, inst,
-                              brw_reg_type_to_hw_type(devinfo, reg.file, reg.type));
+   brw_inst_set_src1_reg_hw_type(devinfo, inst,
+                                 brw_reg_type_to_hw_type(devinfo, reg.file, reg.type));
    brw_inst_set_src1_abs(devinfo, inst, reg.abs);
    brw_inst_set_src1_negate(devinfo, inst, reg.negate);
 

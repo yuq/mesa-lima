@@ -995,10 +995,10 @@ precompact(const struct gen_device_info *devinfo, brw_inst inst)
        !(devinfo->is_haswell &&
          brw_inst_opcode(devinfo, &inst) == BRW_OPCODE_DIM) &&
        !(devinfo->gen >= 8 &&
-         (brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_DF ||
-          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_UQ ||
-          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_Q))) {
-      brw_inst_set_src1_reg_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
+         (brw_inst_src0_reg_hw_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_DF ||
+          brw_inst_src0_reg_hw_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_UQ ||
+          brw_inst_src0_reg_hw_type(devinfo, &inst) == GEN8_HW_IMM_TYPE_Q))) {
+      brw_inst_set_src1_reg_hw_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
    }
 
    /* Compacted instructions only have 12-bits (plus 1 for the other 20)
@@ -1013,10 +1013,10 @@ precompact(const struct gen_device_info *devinfo, brw_inst inst)
     * If we see a 0.0:F, change the type to VF so that it can be compacted.
     */
    if (brw_inst_imm_ud(devinfo, &inst) == 0x0 &&
-       brw_inst_src0_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
-       brw_inst_dst_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
+       brw_inst_src0_reg_hw_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
+       brw_inst_dst_reg_hw_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
        brw_inst_dst_hstride(devinfo, &inst) == BRW_HORIZONTAL_STRIDE_1) {
-      brw_inst_set_src0_reg_type(devinfo, &inst, BRW_HW_IMM_TYPE_VF);
+      brw_inst_set_src0_reg_hw_type(devinfo, &inst, BRW_HW_IMM_TYPE_VF);
    }
 
    /* There are no mappings for dst:d | i:d, so if the immediate is suitable
@@ -1024,10 +1024,10 @@ precompact(const struct gen_device_info *devinfo, brw_inst inst)
     */
    if (is_compactable_immediate(brw_inst_imm_ud(devinfo, &inst)) &&
        brw_inst_cond_modifier(devinfo, &inst) == BRW_CONDITIONAL_NONE &&
-       brw_inst_src0_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_D &&
-       brw_inst_dst_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_D) {
-      brw_inst_set_src0_reg_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
-      brw_inst_set_dst_reg_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
+       brw_inst_src0_reg_hw_type(devinfo, &inst) == BRW_HW_REG_TYPE_D &&
+       brw_inst_dst_reg_hw_type(devinfo, &inst) == BRW_HW_REG_TYPE_D) {
+      brw_inst_set_src0_reg_hw_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
+      brw_inst_set_dst_reg_hw_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
    }
 
    return inst;
