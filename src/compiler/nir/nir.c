@@ -28,6 +28,7 @@
 #include "nir.h"
 #include "nir_control_flow_private.h"
 #include "util/half_float.h"
+#include <limits.h>
 #include <assert.h>
 #include <math.h>
 

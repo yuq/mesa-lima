@@ -25,6 +25,7 @@
  *
  */
 
+#include <math.h>
 #include "vtn_private.h"
 #include "GLSL.std.450.h"
 
