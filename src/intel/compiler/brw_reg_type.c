@@ -104,43 +104,23 @@ brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
                         enum brw_reg_file file,
                         unsigned hw_type)
 {
-   if (file == BRW_IMMEDIATE_VALUE) {
-      static const int hw_sizes[] = {
-         [0 ... 15]            = -1,
-         [BRW_HW_IMM_TYPE_UD]  = 4,
-         [BRW_HW_IMM_TYPE_D]   = 4,
-         [BRW_HW_IMM_TYPE_UW]  = 2,
-         [BRW_HW_IMM_TYPE_W]   = 2,
-         [BRW_HW_IMM_TYPE_UV]  = 2,
-         [BRW_HW_IMM_TYPE_VF]  = 4,
-         [BRW_HW_IMM_TYPE_V]   = 2,
-         [BRW_HW_IMM_TYPE_F]   = 4,
-         [GEN8_HW_IMM_TYPE_UQ] = 8,
-         [GEN8_HW_IMM_TYPE_Q]  = 8,
-         [GEN8_HW_IMM_TYPE_DF] = 8,
-         [GEN8_HW_IMM_TYPE_HF] = 2,
-      };
-      assert(hw_type < ARRAY_SIZE(hw_sizes));
-      assert(hw_sizes[hw_type] != -1);
-      return hw_sizes[hw_type];
-   } else {
-      /* Non-immediate registers */
-      static const int hw_sizes[] = {
-         [0 ... 15]            = -1,
-         [BRW_HW_REG_TYPE_UD]  = 4,
-         [BRW_HW_REG_TYPE_D]   = 4,
-         [BRW_HW_REG_TYPE_UW]  = 2,
-         [BRW_HW_REG_TYPE_W]   = 2,
-         [BRW_HW_REG_TYPE_UB]  = 1,
-         [BRW_HW_REG_TYPE_B]   = 1,
-         [GEN7_HW_REG_TYPE_DF] = 8,
-         [BRW_HW_REG_TYPE_F]   = 4,
-         [GEN8_HW_REG_TYPE_UQ] = 8,
-         [GEN8_HW_REG_TYPE_Q]  = 8,
-         [GEN8_HW_REG_TYPE_HF] = 2,
-      };
-      assert(hw_type < ARRAY_SIZE(hw_sizes));
-      assert(hw_sizes[hw_type] != -1);
-      return hw_sizes[hw_type];
-   }
+   static const unsigned type_size[] = {
+      [BRW_REGISTER_TYPE_DF] = 8,
+      [BRW_REGISTER_TYPE_F]  = 4,
+      [BRW_REGISTER_TYPE_HF] = 2,
+      [BRW_REGISTER_TYPE_VF] = 4,
+
+      [BRW_REGISTER_TYPE_Q]  = 8,
+      [BRW_REGISTER_TYPE_UQ] = 8,
+      [BRW_REGISTER_TYPE_D]  = 4,
+      [BRW_REGISTER_TYPE_UD] = 4,
+      [BRW_REGISTER_TYPE_W]  = 2,
+      [BRW_REGISTER_TYPE_UW] = 2,
+      [BRW_REGISTER_TYPE_B]  = 1,
+      [BRW_REGISTER_TYPE_UB] = 1,
+      [BRW_REGISTER_TYPE_V]  = 2,
+      [BRW_REGISTER_TYPE_UV] = 2,
+   };
+   enum brw_reg_type type = brw_hw_type_to_reg_type(devinfo, file, hw_type);
+   return type_size[type];
 }
