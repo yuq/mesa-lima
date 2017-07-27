@@ -217,8 +217,13 @@ void si_begin_new_cs(struct si_context *ctx)
 	if (ctx->b.chip_class >= CIK)
 		si_mark_atom_dirty(ctx, &ctx->prefetch_L2);
 
-	ctx->framebuffer.dirty_cbufs = (1 << 8) - 1;
-	ctx->framebuffer.dirty_zsbuf = true;
+	/* CLEAR_STATE disables all colorbuffers, so only enable bound ones. */
+	ctx->framebuffer.dirty_cbufs =
+		u_bit_consecutive(0, ctx->framebuffer.state.nr_cbufs);
+	/* CLEAR_STATE disables the zbuffer, so only enable it if it's bound. */
+	ctx->framebuffer.dirty_zsbuf = ctx->framebuffer.state.zsbuf != NULL;
+	/* This should always be marked as dirty to set the framebuffer scissor
+	 * at least. */
 	si_mark_atom_dirty(ctx, &ctx->framebuffer.atom);
 
 	si_mark_atom_dirty(ctx, &ctx->clip_regs);
@@ -226,7 +231,9 @@ void si_begin_new_cs(struct si_context *ctx)
 	ctx->msaa_sample_locs.nr_samples = 0;
 	si_mark_atom_dirty(ctx, &ctx->msaa_sample_locs.atom);
 	si_mark_atom_dirty(ctx, &ctx->msaa_config);
-	si_mark_atom_dirty(ctx, &ctx->sample_mask.atom);
+	/* CLEAR_STATE sets 0xffff. */
+	if (ctx->sample_mask.sample_mask != 0xffff)
+		si_mark_atom_dirty(ctx, &ctx->sample_mask.atom);
 	si_mark_atom_dirty(ctx, &ctx->cb_render_state);
 	si_mark_atom_dirty(ctx, &ctx->blend_color.atom);
 	si_mark_atom_dirty(ctx, &ctx->db_render_state);
