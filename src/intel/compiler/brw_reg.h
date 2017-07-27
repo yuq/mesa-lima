@@ -203,7 +203,6 @@ brw_mask_for_swizzle(unsigned swz)
    return brw_apply_inv_swizzle_to_mask(swz, ~0);
 }
 
-const char *brw_reg_type_letters(unsigned brw_reg_type);
 uint32_t brw_swizzle_immediate(enum brw_reg_type type, uint32_t x, unsigned swz);
 
 #define REG_SIZE (8*4)

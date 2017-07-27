@@ -1619,7 +1619,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       if (inst->dst.writemask & 8)
          fprintf(file, "w");
    }
-   fprintf(file, ":%s", brw_reg_type_letters(inst->dst.type));
+   fprintf(file, ":%s", brw_reg_type_to_letters(inst->dst.type));
 
    if (inst->src[0].file != BAD_FILE)
       fprintf(file, ", ");
@@ -1714,7 +1714,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "|");
 
       if (inst->src[i].file != IMM) {
-         fprintf(file, ":%s", brw_reg_type_letters(inst->src[i].type));
+         fprintf(file, ":%s", brw_reg_type_to_letters(inst->src[i].type));
       }
 
       if (i < 2 && inst->src[i + 1].file != BAD_FILE)
