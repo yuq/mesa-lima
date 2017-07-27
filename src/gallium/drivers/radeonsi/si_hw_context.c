@@ -227,7 +227,9 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_mark_atom_dirty(ctx, &ctx->framebuffer.atom);
 
 	si_mark_atom_dirty(ctx, &ctx->clip_regs);
-	si_mark_atom_dirty(ctx, &ctx->clip_state.atom);
+	/* CLEAR_STATE sets zeros. */
+	if (ctx->clip_state.any_nonzeros)
+		si_mark_atom_dirty(ctx, &ctx->clip_state.atom);
 	ctx->msaa_sample_locs.nr_samples = 0;
 	si_mark_atom_dirty(ctx, &ctx->msaa_sample_locs.atom);
 	si_mark_atom_dirty(ctx, &ctx->msaa_config);
@@ -235,7 +237,9 @@ void si_begin_new_cs(struct si_context *ctx)
 	if (ctx->sample_mask.sample_mask != 0xffff)
 		si_mark_atom_dirty(ctx, &ctx->sample_mask.atom);
 	si_mark_atom_dirty(ctx, &ctx->cb_render_state);
-	si_mark_atom_dirty(ctx, &ctx->blend_color.atom);
+	/* CLEAR_STATE sets zeros. */
+	if (ctx->blend_color.any_nonzeros)
+		si_mark_atom_dirty(ctx, &ctx->blend_color.atom);
 	si_mark_atom_dirty(ctx, &ctx->db_render_state);
 	si_mark_atom_dirty(ctx, &ctx->stencil_ref.atom);
 	si_mark_atom_dirty(ctx, &ctx->spi_map);

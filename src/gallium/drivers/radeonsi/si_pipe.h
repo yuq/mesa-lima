@@ -127,6 +127,7 @@ struct si_screen {
 struct si_blend_color {
 	struct r600_atom		atom;
 	struct pipe_blend_color		state;
+	bool				any_nonzeros;
 };
 
 struct si_sampler_view {
@@ -193,6 +194,7 @@ struct si_framebuffer {
 struct si_clip_state {
 	struct r600_atom		atom;
 	struct pipe_clip_state		state;
+	bool				any_nonzeros;
 };
 
 struct si_sample_locs {

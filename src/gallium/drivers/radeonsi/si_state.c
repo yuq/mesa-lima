@@ -631,8 +631,10 @@ static void si_set_blend_color(struct pipe_context *ctx,
 			       const struct pipe_blend_color *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	static const struct pipe_blend_color zeros;
 
 	sctx->blend_color.state = *state;
+	sctx->blend_color.any_nonzeros = memcmp(state, &zeros, sizeof(*state)) != 0;
 	si_mark_atom_dirty(sctx, &sctx->blend_color.atom);
 }
 
@@ -653,11 +655,13 @@ static void si_set_clip_state(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_constant_buffer cb;
+	static const struct pipe_clip_state zeros;
 
 	if (memcmp(&sctx->clip_state.state, state, sizeof(*state)) == 0)
 		return;
 
 	sctx->clip_state.state = *state;
+	sctx->clip_state.any_nonzeros = memcmp(state, &zeros, sizeof(*state)) != 0;
 	si_mark_atom_dirty(sctx, &sctx->clip_state.atom);
 
 	cb.buffer = NULL;
