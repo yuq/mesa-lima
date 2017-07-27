@@ -1790,10 +1790,6 @@ static void r600_render_condition(struct pipe_context *ctx,
 	struct r600_query_buffer *qbuf;
 	struct r600_atom *atom = &rctx->render_cond_atom;
 
-	rctx->render_cond = query;
-	rctx->render_cond_invert = condition;
-	rctx->render_cond_mode = mode;
-
 	/* Compute the size of SET_PREDICATION packets. */
 	atom->num_dw = 0;
 	if (query) {
@@ -1820,6 +1816,11 @@ static void r600_render_condition(struct pipe_context *ctx,
 				&rquery->workaround_offset,
 				(struct pipe_resource **)&rquery->workaround_buf);
 
+			/* Reset to NULL to avoid a redundant SET_PREDICATION
+			 * from launching the compute grid.
+			 */
+			rctx->render_cond = NULL;
+
 			ctx->get_query_result_resource(
 				ctx, query, true, PIPE_QUERY_TYPE_U64, 0,
 				&rquery->workaround_buf->b.b, rquery->workaround_offset);
@@ -1835,6 +1836,10 @@ static void r600_render_condition(struct pipe_context *ctx,
 				atom->num_dw *= R600_MAX_STREAMS;
 		}
 	}
+
+	rctx->render_cond = query;
+	rctx->render_cond_invert = condition;
+	rctx->render_cond_mode = mode;
 
 	rctx->set_atom_dirty(rctx, atom, query != NULL);
 }
