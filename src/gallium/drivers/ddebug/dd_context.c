@@ -45,22 +45,6 @@ safe_memcpy(void *dst, const void *src, size_t size)
  * queries
  */
 
-static struct dd_query *
-dd_query(struct pipe_query *query)
-{
-   return (struct dd_query *)query;
-}
-
-static struct pipe_query *
-dd_query_unwrap(struct pipe_query *query)
-{
-   if (query) {
-      return dd_query(query)->query;
-   } else {
-      return NULL;
-   }
-}
-
 static struct pipe_query *
 dd_context_create_query(struct pipe_context *_pipe, unsigned query_type,
                         unsigned index)
@@ -148,21 +132,6 @@ dd_context_get_query_result(struct pipe_context *_pipe,
    struct pipe_context *pipe = dd_context(_pipe)->pipe;
 
    return pipe->get_query_result(pipe, dd_query_unwrap(query), wait, result);
-}
-
-static void
-dd_context_get_query_result_resource(struct pipe_context *_pipe,
-                                     struct pipe_query *query,
-                                     boolean wait,
-                                     enum pipe_query_value_type result_type,
-                                     int index,
-                                     struct pipe_resource *resource,
-                                     unsigned offset)
-{
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
-
-   pipe->get_query_result_resource(pipe, dd_query_unwrap(query), wait,
-                                   result_type, index, resource, offset);
 }
 
 static void
@@ -847,7 +816,6 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    CTX_INIT(begin_query);
    CTX_INIT(end_query);
    CTX_INIT(get_query_result);
-   CTX_INIT(get_query_result_resource);
    CTX_INIT(set_active_query_state);
    CTX_INIT(create_blend_state);
    CTX_INIT(bind_blend_state);

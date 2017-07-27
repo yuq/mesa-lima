@@ -66,6 +66,7 @@ enum call_type
    CALL_CLEAR_RENDER_TARGET,
    CALL_CLEAR_DEPTH_STENCIL,
    CALL_GENERATE_MIPMAP,
+   CALL_GET_QUERY_RESULT_RESOURCE,
 };
 
 struct call_resource_copy_region
@@ -109,6 +110,16 @@ struct call_draw_info {
    struct pipe_draw_indirect_info indirect;
 };
 
+struct call_get_query_result_resource {
+   struct pipe_query *query;
+   enum pipe_query_type query_type;
+   boolean wait;
+   enum pipe_query_value_type result_type;
+   int index;
+   struct pipe_resource *resource;
+   unsigned offset;
+};
+
 struct dd_call
 {
    enum call_type type;
@@ -122,6 +133,7 @@ struct dd_call
       struct call_clear clear;
       struct call_clear_buffer clear_buffer;
       struct call_generate_mipmap generate_mipmap;
+      struct call_get_query_result_resource get_query_result_resource;
    } info;
 };
 
@@ -270,6 +282,22 @@ static inline struct dd_screen *
 dd_screen(struct pipe_screen *screen)
 {
    return (struct dd_screen*)screen;
+}
+
+static inline struct dd_query *
+dd_query(struct pipe_query *query)
+{
+   return (struct dd_query *)query;
+}
+
+static inline struct pipe_query *
+dd_query_unwrap(struct pipe_query *query)
+{
+   if (query) {
+      return dd_query(query)->query;
+   } else {
+      return NULL;
+   }
 }
 
 

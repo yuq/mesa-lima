@@ -154,6 +154,12 @@ util_dump_uint(FILE *f, unsigned i)
 }
 
 static void
+util_dump_int(FILE *f, int i)
+{
+   fprintf(f, "%d", i);
+}
+
+static void
 util_dump_hex(FILE *f, unsigned i)
 {
    fprintf(f, "0x%x", i);
@@ -419,6 +425,18 @@ dd_dump_generate_mipmap(struct dd_draw_state *dstate, FILE *f)
 }
 
 static void
+dd_dump_get_query_result_resource(struct call_get_query_result_resource *info, FILE *f)
+{
+   fprintf(f, "%s:\n", __func__ + 8);
+   DUMP_M(query_type, info, query_type);
+   DUMP_M(uint, info, wait);
+   DUMP_M(query_value_type, info, result_type);
+   DUMP_M(int, info, index);
+   DUMP_M(resource, info, resource);
+   DUMP_M(uint, info, offset);
+}
+
+static void
 dd_dump_flush_resource(struct dd_draw_state *dstate, struct pipe_resource *res,
                        FILE *f)
 {
@@ -524,6 +542,9 @@ dd_dump_call(FILE *f, struct dd_draw_state *state, struct dd_call *call)
       break;
    case CALL_GENERATE_MIPMAP:
       dd_dump_generate_mipmap(state, f);
+      break;
+   case CALL_GET_QUERY_RESULT_RESOURCE:
+      dd_dump_get_query_result_resource(&call->info.get_query_result_resource, f);
       break;
    }
 }
@@ -648,6 +669,9 @@ dd_unreference_copy_of_call(struct dd_call *dst)
    case CALL_GENERATE_MIPMAP:
       pipe_resource_reference(&dst->info.generate_mipmap.res, NULL);
       break;
+   case CALL_GET_QUERY_RESULT_RESOURCE:
+      pipe_resource_reference(&dst->info.get_query_result_resource.resource, NULL);
+      break;
    }
 }
 
@@ -724,6 +748,12 @@ dd_copy_call(struct dd_call *dst, struct dd_call *src)
       pipe_resource_reference(&dst->info.generate_mipmap.res,
                               src->info.generate_mipmap.res);
       dst->info.generate_mipmap = src->info.generate_mipmap;
+      break;
+   case CALL_GET_QUERY_RESULT_RESOURCE:
+      pipe_resource_reference(&dst->info.get_query_result_resource.resource,
+                              src->info.get_query_result_resource.resource);
+      dst->info.get_query_result_resource = src->info.get_query_result_resource;
+      dst->info.get_query_result_resource.query = NULL;
       break;
    }
 }
@@ -1287,6 +1317,39 @@ dd_context_generate_mipmap(struct pipe_context *_pipe,
 }
 
 static void
+dd_context_get_query_result_resource(struct pipe_context *_pipe,
+                                     struct pipe_query *query,
+                                     boolean wait,
+                                     enum pipe_query_value_type result_type,
+                                     int index,
+                                     struct pipe_resource *resource,
+                                     unsigned offset)
+{
+   struct dd_context *dctx = dd_context(_pipe);
+   struct dd_query *dquery = dd_query(query);
+   struct pipe_context *pipe = dctx->pipe;
+   struct dd_call call;
+
+   call.type = CALL_GET_QUERY_RESULT_RESOURCE;
+   call.info.get_query_result_resource.query = query;
+   call.info.get_query_result_resource.wait = wait;
+   call.info.get_query_result_resource.result_type = result_type;
+   call.info.get_query_result_resource.index = index;
+   call.info.get_query_result_resource.resource = resource;
+   call.info.get_query_result_resource.offset = offset;
+
+   /* In pipelined mode, the query may be deleted by the time we need to
+    * print it.
+    */
+   call.info.get_query_result_resource.query_type = dquery->type;
+
+   dd_before_draw(dctx);
+   pipe->get_query_result_resource(pipe, dquery->query, wait,
+                                   result_type, index, resource, offset);
+   dd_after_draw(dctx, &call);
+}
+
+static void
 dd_context_flush_resource(struct pipe_context *_pipe,
                           struct pipe_resource *resource)
 {
@@ -1416,4 +1479,5 @@ dd_init_draw_functions(struct dd_context *dctx)
    CTX_INIT(clear_texture);
    CTX_INIT(flush_resource);
    CTX_INIT(generate_mipmap);
+   CTX_INIT(get_query_result_resource);
 }
