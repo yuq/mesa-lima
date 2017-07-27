@@ -5304,6 +5304,7 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 		unsigned index = target - V_008DFC_SQ_EXP_MRT;
 		unsigned col_format = (ctx->options->key.fs.col_format >> (4 * index)) & 0xf;
 		bool is_int8 = (ctx->options->key.fs.is_int8 >> index) & 1;
+		bool is_int10 = (ctx->options->key.fs.is_int10 >> index) & 1;
 
 		switch(col_format) {
 		case V_028714_SPI_SHADER_ZERO:
@@ -5381,11 +5382,13 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 			break;
 
 		case V_028714_SPI_SHADER_UINT16_ABGR: {
-			LLVMValueRef max = LLVMConstInt(ctx->i32, is_int8 ? 255 : 65535, 0);
+			LLVMValueRef max_rgb = LLVMConstInt(ctx->i32,
+							    is_int8 ? 255 : is_int10 ? 1023 : 65535, 0);
+			LLVMValueRef max_alpha = !is_int10 ? max_rgb : LLVMConstInt(ctx->i32, 3, 0);
 
 			for (unsigned chan = 0; chan < 4; chan++) {
 				val[chan] = to_integer(&ctx->ac, values[chan]);
-				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntULT, val[chan], max);
+				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntULT, val[chan], chan == 3 ? max_alpha : max_rgb);
 			}
 
 			args->compr = 1;
@@ -5395,14 +5398,18 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 		}
 
 		case V_028714_SPI_SHADER_SINT16_ABGR: {
-			LLVMValueRef max = LLVMConstInt(ctx->i32, is_int8 ? 127 : 32767, 0);
-			LLVMValueRef min = LLVMConstInt(ctx->i32, is_int8 ? -128 : -32768, 0);
+			LLVMValueRef max_rgb = LLVMConstInt(ctx->i32,
+							    is_int8 ? 127 : is_int10 ? 511 : 32767, 0);
+			LLVMValueRef min_rgb = LLVMConstInt(ctx->i32,
+							    is_int8 ? -128 : is_int10 ? -512 : -32768, 0);
+			LLVMValueRef max_alpha = !is_int10 ? max_rgb : ctx->i32one;
+			LLVMValueRef min_alpha = !is_int10 ? min_rgb : LLVMConstInt(ctx->i32, -2, 0);
 
 			/* Clamp. */
 			for (unsigned chan = 0; chan < 4; chan++) {
 				val[chan] = to_integer(&ctx->ac, values[chan]);
-				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntSLT, val[chan], max);
-				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntSGT, val[chan], min);
+				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntSLT, val[chan], chan == 3 ? max_alpha : max_rgb);
+				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntSGT, val[chan], chan == 3 ? min_alpha : min_rgb);
 			}
 
 			args->compr = 1;
