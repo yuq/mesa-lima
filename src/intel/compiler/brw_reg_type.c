@@ -95,14 +95,10 @@ brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
 }
 
 /**
- * Return the element size given a hardware register type and file.
- *
- * The hardware encoding may depend on whether the value is an immediate.
+ * Return the element size given a register type.
  */
 unsigned
-brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
-                        enum brw_reg_file file,
-                        unsigned hw_type)
+brw_reg_type_to_size(enum brw_reg_type type)
 {
    static const unsigned type_size[] = {
       [BRW_REGISTER_TYPE_DF] = 8,
@@ -121,7 +117,6 @@ brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
       [BRW_REGISTER_TYPE_V]  = 2,
       [BRW_REGISTER_TYPE_UV] = 2,
    };
-   enum brw_reg_type type = brw_hw_type_to_reg_type(devinfo, file, hw_type);
    return type_size[type];
 }
 
@@ -153,12 +148,4 @@ brw_reg_type_to_letters(enum brw_reg_type type)
    };
    assert(type < ARRAY_SIZE(letters));
    return letters[type];
-}
-
-const char *
-brw_hw_reg_type_to_letters(const struct gen_device_info *devinfo,
-                           enum brw_reg_file file, unsigned hw_type)
-{
-   enum brw_reg_type type = brw_hw_type_to_reg_type(devinfo, file, hw_type);
-   return brw_reg_type_to_letters(type);
 }

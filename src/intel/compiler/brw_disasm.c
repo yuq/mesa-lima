@@ -707,7 +707,8 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
 static int
 dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
-   unsigned elem_size = brw_element_size(devinfo, inst, dst);
+   enum brw_reg_type type = brw_inst_dst_type(devinfo, inst);
+   unsigned elem_size = brw_reg_type_to_size(type);
    int err = 0;
 
    if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
@@ -723,10 +724,7 @@ dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          err |= control(file, "horiz stride", horiz_stride,
                         brw_inst_dst_hstride(devinfo, inst), NULL);
          string(file, ">");
-         string(file,
-                brw_hw_reg_type_to_letters(devinfo,
-                                           brw_inst_dst_reg_file(devinfo, inst),
-                                           brw_inst_dst_reg_hw_type(devinfo, inst)));
+         string(file, brw_reg_type_to_letters(type));
       } else {
          string(file, "g[a0");
          if (brw_inst_dst_ia_subreg_nr(devinfo, inst))
@@ -738,10 +736,7 @@ dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          err |= control(file, "horiz stride", horiz_stride,
                         brw_inst_dst_hstride(devinfo, inst), NULL);
          string(file, ">");
-         string(file,
-                brw_hw_reg_type_to_letters(devinfo,
-                                           brw_inst_dst_reg_file(devinfo, inst),
-                                           brw_inst_dst_reg_hw_type(devinfo, inst)));
+         string(file, brw_reg_type_to_letters(type));
       }
    } else {
       if (brw_inst_dst_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
@@ -754,10 +749,7 @@ dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          string(file, "<1>");
          err |= control(file, "writemask", writemask,
                         brw_inst_da16_writemask(devinfo, inst), NULL);
-         string(file,
-                brw_hw_reg_type_to_letters(devinfo,
-                                           brw_inst_dst_reg_file(devinfo, inst),
-                                           brw_inst_dst_reg_hw_type(devinfo, inst)));
+         string(file, brw_reg_type_to_letters(type));
       } else {
          err = 1;
          string(file, "Indirect align16 address mode not supported");
@@ -812,7 +804,7 @@ static int
 src_da1(FILE *file,
         const struct gen_device_info *devinfo,
         unsigned opcode,
-        unsigned type, unsigned _reg_file,
+        enum brw_reg_type type, unsigned _reg_file,
         unsigned _vert_stride, unsigned _width, unsigned _horiz_stride,
         unsigned reg_num, unsigned sub_reg_num, unsigned __abs,
         unsigned _negate)
@@ -830,11 +822,11 @@ src_da1(FILE *file,
    if (err == -1)
       return 0;
    if (sub_reg_num) {
-      unsigned elem_size = brw_hw_reg_type_to_size(devinfo, _reg_file, type);
+      unsigned elem_size = brw_reg_type_to_size(type);
       format(file, ".%d", sub_reg_num / elem_size);   /* use formal style like spec */
    }
    src_align1_region(file, _vert_stride, _width, _horiz_stride);
-   string(file, brw_hw_reg_type_to_letters(devinfo, _reg_file, type));
+   string(file, brw_reg_type_to_letters(type));
    return err;
 }
 
@@ -842,7 +834,7 @@ static int
 src_ia1(FILE *file,
         const struct gen_device_info *devinfo,
         unsigned opcode,
-        unsigned type,
+        enum brw_reg_type type,
         unsigned _reg_file,
         int _addr_imm,
         unsigned _addr_subreg_nr,
@@ -866,7 +858,7 @@ src_ia1(FILE *file,
       format(file, " %d", _addr_imm);
    string(file, "]");
    src_align1_region(file, _vert_stride, _width, _horiz_stride);
-   string(file, brw_hw_reg_type_to_letters(devinfo, _reg_file, type));
+   string(file, brw_reg_type_to_letters(type));
    return err;
 }
 
@@ -896,7 +888,7 @@ static int
 src_da16(FILE *file,
          const struct gen_device_info *devinfo,
          unsigned opcode,
-         unsigned _reg_type,
+         enum brw_reg_type type,
          unsigned _reg_file,
          unsigned _vert_stride,
          unsigned _reg_nr,
@@ -918,8 +910,7 @@ src_da16(FILE *file,
    if (err == -1)
       return 0;
    if (_subreg_nr) {
-      unsigned elem_size =
-         brw_hw_reg_type_to_size(devinfo, _reg_file, _reg_type);
+      unsigned elem_size = brw_reg_type_to_size(type);
 
       /* bit4 for subreg number byte addressing. Make this same meaning as
          in da1 case, so output looks consistent. */
@@ -929,7 +920,7 @@ src_da16(FILE *file,
    err |= control(file, "vert stride", vert_stride, _vert_stride, NULL);
    string(file, ">");
    err |= src_swizzle(file, BRW_SWIZZLE4(swz_x, swz_y, swz_z, swz_w));
-   string(file, brw_hw_reg_type_to_letters(devinfo, _reg_file, _reg_type));
+   string(file, brw_reg_type_to_letters(type));
    return err;
 }
 
@@ -1077,7 +1068,7 @@ src0(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          return src_da1(file,
                         devinfo,
                         brw_inst_opcode(devinfo, inst),
-                        brw_inst_src0_reg_hw_type(devinfo, inst),
+                        brw_inst_src0_type(devinfo, inst),
                         brw_inst_src0_reg_file(devinfo, inst),
                         brw_inst_src0_vstride(devinfo, inst),
                         brw_inst_src0_width(devinfo, inst),
@@ -1090,7 +1081,7 @@ src0(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          return src_ia1(file,
                         devinfo,
                         brw_inst_opcode(devinfo, inst),
-                        brw_inst_src0_reg_hw_type(devinfo, inst),
+                        brw_inst_src0_type(devinfo, inst),
                         brw_inst_src0_reg_file(devinfo, inst),
                         brw_inst_src0_ia1_addr_imm(devinfo, inst),
                         brw_inst_src0_ia_subreg_nr(devinfo, inst),
@@ -1105,7 +1096,7 @@ src0(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          return src_da16(file,
                          devinfo,
                          brw_inst_opcode(devinfo, inst),
-                         brw_inst_src0_reg_hw_type(devinfo, inst),
+                         brw_inst_src0_type(devinfo, inst),
                          brw_inst_src0_reg_file(devinfo, inst),
                          brw_inst_src0_vstride(devinfo, inst),
                          brw_inst_src0_da_reg_nr(devinfo, inst),
@@ -1133,7 +1124,7 @@ src1(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          return src_da1(file,
                         devinfo,
                         brw_inst_opcode(devinfo, inst),
-                        brw_inst_src1_reg_hw_type(devinfo, inst),
+                        brw_inst_src1_type(devinfo, inst),
                         brw_inst_src1_reg_file(devinfo, inst),
                         brw_inst_src1_vstride(devinfo, inst),
                         brw_inst_src1_width(devinfo, inst),
@@ -1146,7 +1137,7 @@ src1(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          return src_ia1(file,
                         devinfo,
                         brw_inst_opcode(devinfo, inst),
-                        brw_inst_src1_reg_hw_type(devinfo, inst),
+                        brw_inst_src1_type(devinfo, inst),
                         brw_inst_src1_reg_file(devinfo, inst),
                         brw_inst_src1_ia1_addr_imm(devinfo, inst),
                         brw_inst_src1_ia_subreg_nr(devinfo, inst),
@@ -1161,7 +1152,7 @@ src1(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          return src_da16(file,
                          devinfo,
                          brw_inst_opcode(devinfo, inst),
-                         brw_inst_src1_reg_hw_type(devinfo, inst),
+                         brw_inst_src1_type(devinfo, inst),
                          brw_inst_src1_reg_file(devinfo, inst),
                          brw_inst_src1_vstride(devinfo, inst),
                          brw_inst_src1_da_reg_nr(devinfo, inst),

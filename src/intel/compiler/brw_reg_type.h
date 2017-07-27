@@ -67,20 +67,11 @@ enum brw_reg_type
 brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
                         enum brw_reg_file file, unsigned hw_type);
 
-#define brw_element_size(devinfo, inst, operand)                                \
-   brw_hw_reg_type_to_size(devinfo,                                             \
-                           brw_inst_ ## operand ## _reg_file(devinfo, inst),    \
-                           brw_inst_ ## operand ## _reg_hw_type(devinfo, inst))
 unsigned
-brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
-                        enum brw_reg_file file, unsigned hw_type);
+brw_reg_type_to_size(enum brw_reg_type type);
 
 const char *
 brw_reg_type_to_letters(enum brw_reg_type type);
-
-const char *
-brw_hw_reg_type_to_letters(const struct gen_device_info *devinfo,
-                           enum brw_reg_file file, unsigned hw_type);
 
 #ifdef __cplusplus
 }
