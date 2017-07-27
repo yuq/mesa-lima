@@ -2679,23 +2679,23 @@ dump_fs_variant_key(const struct lp_fragment_shader_variant_key *key)
       debug_printf("depth.format = %s\n", util_format_name(key->zsbuf_format));
    }
    if (key->depth.enabled) {
-      debug_printf("depth.func = %s\n", util_dump_func(key->depth.func, TRUE));
+      debug_printf("depth.func = %s\n", util_str_func(key->depth.func, TRUE));
       debug_printf("depth.writemask = %u\n", key->depth.writemask);
    }
 
    for (i = 0; i < 2; ++i) {
       if (key->stencil[i].enabled) {
-         debug_printf("stencil[%u].func = %s\n", i, util_dump_func(key->stencil[i].func, TRUE));
-         debug_printf("stencil[%u].fail_op = %s\n", i, util_dump_stencil_op(key->stencil[i].fail_op, TRUE));
-         debug_printf("stencil[%u].zpass_op = %s\n", i, util_dump_stencil_op(key->stencil[i].zpass_op, TRUE));
-         debug_printf("stencil[%u].zfail_op = %s\n", i, util_dump_stencil_op(key->stencil[i].zfail_op, TRUE));
+         debug_printf("stencil[%u].func = %s\n", i, util_str_func(key->stencil[i].func, TRUE));
+         debug_printf("stencil[%u].fail_op = %s\n", i, util_str_stencil_op(key->stencil[i].fail_op, TRUE));
+         debug_printf("stencil[%u].zpass_op = %s\n", i, util_str_stencil_op(key->stencil[i].zpass_op, TRUE));
+         debug_printf("stencil[%u].zfail_op = %s\n", i, util_str_stencil_op(key->stencil[i].zfail_op, TRUE));
          debug_printf("stencil[%u].valuemask = 0x%x\n", i, key->stencil[i].valuemask);
          debug_printf("stencil[%u].writemask = 0x%x\n", i, key->stencil[i].writemask);
       }
    }
 
    if (key->alpha.enabled) {
-      debug_printf("alpha.func = %s\n", util_dump_func(key->alpha.func, TRUE));
+      debug_printf("alpha.func = %s\n", util_str_func(key->alpha.func, TRUE));
    }
 
    if (key->occlusion_count) {
@@ -2703,15 +2703,15 @@ dump_fs_variant_key(const struct lp_fragment_shader_variant_key *key)
    }
 
    if (key->blend.logicop_enable) {
-      debug_printf("blend.logicop_func = %s\n", util_dump_logicop(key->blend.logicop_func, TRUE));
+      debug_printf("blend.logicop_func = %s\n", util_str_logicop(key->blend.logicop_func, TRUE));
    }
    else if (key->blend.rt[0].blend_enable) {
-      debug_printf("blend.rgb_func = %s\n",   util_dump_blend_func  (key->blend.rt[0].rgb_func, TRUE));
-      debug_printf("blend.rgb_src_factor = %s\n",   util_dump_blend_factor(key->blend.rt[0].rgb_src_factor, TRUE));
-      debug_printf("blend.rgb_dst_factor = %s\n",   util_dump_blend_factor(key->blend.rt[0].rgb_dst_factor, TRUE));
-      debug_printf("blend.alpha_func = %s\n",       util_dump_blend_func  (key->blend.rt[0].alpha_func, TRUE));
-      debug_printf("blend.alpha_src_factor = %s\n", util_dump_blend_factor(key->blend.rt[0].alpha_src_factor, TRUE));
-      debug_printf("blend.alpha_dst_factor = %s\n", util_dump_blend_factor(key->blend.rt[0].alpha_dst_factor, TRUE));
+      debug_printf("blend.rgb_func = %s\n",   util_str_blend_func  (key->blend.rt[0].rgb_func, TRUE));
+      debug_printf("blend.rgb_src_factor = %s\n",   util_str_blend_factor(key->blend.rt[0].rgb_src_factor, TRUE));
+      debug_printf("blend.rgb_dst_factor = %s\n",   util_str_blend_factor(key->blend.rt[0].rgb_dst_factor, TRUE));
+      debug_printf("blend.alpha_func = %s\n",       util_str_blend_func  (key->blend.rt[0].alpha_func, TRUE));
+      debug_printf("blend.alpha_src_factor = %s\n", util_str_blend_factor(key->blend.rt[0].alpha_src_factor, TRUE));
+      debug_printf("blend.alpha_dst_factor = %s\n", util_str_blend_factor(key->blend.rt[0].alpha_dst_factor, TRUE));
    }
    debug_printf("blend.colormask = 0x%x\n", key->blend.rt[0].colormask);
    if (key->blend.alpha_to_coverage) {
@@ -2721,17 +2721,17 @@ dump_fs_variant_key(const struct lp_fragment_shader_variant_key *key)
       const struct lp_static_sampler_state *sampler = &key->state[i].sampler_state;
       debug_printf("sampler[%u] = \n", i);
       debug_printf("  .wrap = %s %s %s\n",
-                   util_dump_tex_wrap(sampler->wrap_s, TRUE),
-                   util_dump_tex_wrap(sampler->wrap_t, TRUE),
-                   util_dump_tex_wrap(sampler->wrap_r, TRUE));
+                   util_str_tex_wrap(sampler->wrap_s, TRUE),
+                   util_str_tex_wrap(sampler->wrap_t, TRUE),
+                   util_str_tex_wrap(sampler->wrap_r, TRUE));
       debug_printf("  .min_img_filter = %s\n",
-                   util_dump_tex_filter(sampler->min_img_filter, TRUE));
+                   util_str_tex_filter(sampler->min_img_filter, TRUE));
       debug_printf("  .min_mip_filter = %s\n",
-                   util_dump_tex_mipfilter(sampler->min_mip_filter, TRUE));
+                   util_str_tex_mipfilter(sampler->min_mip_filter, TRUE));
       debug_printf("  .mag_img_filter = %s\n",
-                   util_dump_tex_filter(sampler->mag_img_filter, TRUE));
+                   util_str_tex_filter(sampler->mag_img_filter, TRUE));
       if (sampler->compare_mode != PIPE_TEX_COMPARE_NONE)
-         debug_printf("  .compare_func = %s\n", util_dump_func(sampler->compare_func, TRUE));
+         debug_printf("  .compare_func = %s\n", util_str_func(sampler->compare_func, TRUE));
       debug_printf("  .normalized_coords = %u\n", sampler->normalized_coords);
       debug_printf("  .min_max_lod_equal = %u\n", sampler->min_max_lod_equal);
       debug_printf("  .lod_bias_non_zero = %u\n", sampler->lod_bias_non_zero);
@@ -2744,7 +2744,7 @@ dump_fs_variant_key(const struct lp_fragment_shader_variant_key *key)
       debug_printf("  .format = %s\n",
                    util_format_name(texture->format));
       debug_printf("  .target = %s\n",
-                   util_dump_tex_target(texture->target, TRUE));
+                   util_str_tex_target(texture->target, TRUE));
       debug_printf("  .level_zero_only = %u\n",
                    texture->level_zero_only);
       debug_printf("  .pot = %u %u %u\n",

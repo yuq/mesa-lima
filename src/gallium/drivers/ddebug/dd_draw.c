@@ -186,7 +186,7 @@ util_dump_query(FILE *f, struct dd_query *query)
       fprintf(f, "PIPE_QUERY_DRIVER_SPECIFIC + %i",
               query->type - PIPE_QUERY_DRIVER_SPECIFIC);
    else
-      fprintf(f, "%s", util_dump_query_type(query->type, false));
+      fprintf(f, "%s", util_str_query_type(query->type, false));
 }
 
 static void
