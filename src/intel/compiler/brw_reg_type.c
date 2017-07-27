@@ -70,6 +70,31 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
 }
 
 /**
+ * Convert the hardware representation into a brw_reg_type enumeration value.
+ *
+ * The hardware encoding may depend on whether the value is an immediate.
+ */
+enum brw_reg_type
+brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
+                        enum brw_reg_file file, unsigned hw_type)
+{
+   if (file == BRW_IMMEDIATE_VALUE) {
+      for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
+         if (gen4_hw_type[i].imm_type == hw_type) {
+            return i;
+         }
+      }
+   } else {
+      for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
+         if (gen4_hw_type[i].reg_type == hw_type) {
+            return i;
+         }
+      }
+   }
+   unreachable("not reached");
+}
+
+/**
  * Return the element size given a hardware register type and file.
  *
  * The hardware encoding may depend on whether the value is an immediate.
