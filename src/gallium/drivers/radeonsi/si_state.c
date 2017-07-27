@@ -4395,32 +4395,25 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_cmd_add(pm4, CONTEXT_CONTROL_SHADOW_ENABLE(1));
 	si_pm4_cmd_end(pm4, false);
 
+	si_pm4_cmd_begin(pm4, PKT3_CLEAR_STATE);
+	si_pm4_cmd_add(pm4, 0);
+	si_pm4_cmd_end(pm4, false);
+
 	si_pm4_set_reg(pm4, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));
-	si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
 
 	/* FIXME calculate these values somehow ??? */
 	if (sctx->b.chip_class <= VI) {
 		si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
 		si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
 	}
-	si_pm4_set_reg(pm4, R_028A5C_VGT_GS_PER_VS, 0x2);
 
-	si_pm4_set_reg(pm4, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
-	si_pm4_set_reg(pm4, R_028B28_VGT_STRMOUT_DRAW_OPAQUE_OFFSET, 0);
-
-	si_pm4_set_reg(pm4, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
 	si_pm4_set_reg(pm4, R_028AA0_VGT_INSTANCE_STEP_RATE_0, 1);
-	if (sctx->b.chip_class >= GFX9)
-		si_pm4_set_reg(pm4, R_028AB4_VGT_REUSE_OFF, 0);
-	si_pm4_set_reg(pm4, R_028AB8_VGT_VTX_CNT_EN, 0x0);
 	if (sctx->b.chip_class < CIK)
 		si_pm4_set_reg(pm4, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
 			       S_008A14_CLIP_VTX_REORDER_ENA(1));
 
 	si_pm4_set_reg(pm4, R_028BD4_PA_SC_CENTROID_PRIORITY_0, 0x76543210);
 	si_pm4_set_reg(pm4, R_028BD8_PA_SC_CENTROID_PRIORITY_1, 0xfedcba98);
-
-	si_pm4_set_reg(pm4, R_02882C_PA_SU_PRIM_FILTER_CNTL, 0);
 
 	switch (sctx->screen->b.family) {
 	case CHIP_TAHITI:
@@ -4518,40 +4511,10 @@ static void si_init_config(struct si_context *sctx)
 		}
 	}
 
-	si_pm4_set_reg(pm4, R_028204_PA_SC_WINDOW_SCISSOR_TL, S_028204_WINDOW_OFFSET_DISABLE(1));
-	si_pm4_set_reg(pm4, R_028240_PA_SC_GENERIC_SCISSOR_TL, S_028240_WINDOW_OFFSET_DISABLE(1));
-	si_pm4_set_reg(pm4, R_028244_PA_SC_GENERIC_SCISSOR_BR,
-		       S_028244_BR_X(16384) | S_028244_BR_Y(16384));
-	si_pm4_set_reg(pm4, R_028030_PA_SC_SCREEN_SCISSOR_TL, 0);
-	si_pm4_set_reg(pm4, R_028034_PA_SC_SCREEN_SCISSOR_BR,
-		       S_028034_BR_X(16384) | S_028034_BR_Y(16384));
-
-	si_pm4_set_reg(pm4, R_02820C_PA_SC_CLIPRECT_RULE, 0xFFFF);
-	si_pm4_set_reg(pm4, R_028230_PA_SC_EDGERULE,
-		       S_028230_ER_TRI(0xA) |
-		       S_028230_ER_POINT(0xA) |
-		       S_028230_ER_RECT(0xA) |
-		       /* Required by DX10_DIAMOND_TEST_ENA: */
-		       S_028230_ER_LINE_LR(0x1A) |
-		       S_028230_ER_LINE_RL(0x26) |
-		       S_028230_ER_LINE_TB(0xA) |
-		       S_028230_ER_LINE_BT(0xA));
-	/* PA_SU_HARDWARE_SCREEN_OFFSET must be 0 due to hw bug on SI */
-	si_pm4_set_reg(pm4, R_028234_PA_SU_HARDWARE_SCREEN_OFFSET, 0);
-	si_pm4_set_reg(pm4, R_028820_PA_CL_NANINF_CNTL, 0);
-	si_pm4_set_reg(pm4, R_028AC0_DB_SRESULTS_COMPARE_STATE0, 0x0);
-	si_pm4_set_reg(pm4, R_028AC4_DB_SRESULTS_COMPARE_STATE1, 0x0);
-	si_pm4_set_reg(pm4, R_028AC8_DB_PRELOAD_CONTROL, 0x0);
-	si_pm4_set_reg(pm4, R_02800C_DB_RENDER_OVERRIDE, 0);
-
 	if (sctx->b.chip_class >= GFX9) {
 		si_pm4_set_reg(pm4, R_030920_VGT_MAX_VTX_INDX, ~0);
 		si_pm4_set_reg(pm4, R_030924_VGT_MIN_VTX_INDX, 0);
 		si_pm4_set_reg(pm4, R_030928_VGT_INDX_OFFSET, 0);
-	} else {
-		si_pm4_set_reg(pm4, R_028400_VGT_MAX_VTX_INDX, ~0);
-		si_pm4_set_reg(pm4, R_028404_VGT_MIN_VTX_INDX, 0);
-		si_pm4_set_reg(pm4, R_028408_VGT_INDX_OFFSET, 0);
 	}
 
 	if (sctx->b.chip_class >= CIK) {
@@ -4601,9 +4564,6 @@ static void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_028424_CB_DCC_CONTROL,
 			       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
 			       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
-		if (sctx->b.family < CHIP_POLARIS10)
-			si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
-		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
 
 		vgt_tess_distribution =
 			S_028B50_ACCUM_ISOLINE(32) |
@@ -4619,13 +4579,7 @@ static void si_init_config(struct si_context *sctx)
 			vgt_tess_distribution |= S_028B50_TRAP_SPLIT(3);
 
 		si_pm4_set_reg(pm4, R_028B50_VGT_TESS_DISTRIBUTION, vgt_tess_distribution);
-	} else {
-		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 14);
-		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 16);
 	}
-
-	if (sctx->screen->b.has_rbplus)
-		si_pm4_set_reg(pm4, R_028C40_PA_SC_SHADER_CONTROL, 0);
 
 	si_pm4_set_reg(pm4, R_028080_TA_BC_BASE_ADDR, border_color_va >> 8);
 	if (sctx->b.chip_class >= CIK)
@@ -4650,10 +4604,6 @@ static void si_init_config(struct si_context *sctx)
 
 		si_pm4_set_reg(pm4, R_028060_DB_DFSM_CONTROL,
 			       S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
-		si_pm4_set_reg(pm4, R_028064_DB_RENDER_FILTER, 0);
-		/* TODO: We can use this to disable RBs for rendering to GART: */
-		si_pm4_set_reg(pm4, R_02835C_PA_SC_TILE_STEERING_OVERRIDE, 0);
-		si_pm4_set_reg(pm4, R_02883C_PA_SU_OVER_RASTERIZATION_CNTL, 0);
 		/* TODO: Enable the binner: */
 		si_pm4_set_reg(pm4, R_028C44_PA_SC_BINNER_CNTL_0,
 			       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
