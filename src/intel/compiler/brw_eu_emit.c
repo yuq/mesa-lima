@@ -91,7 +91,8 @@ gen7_convert_mrf_to_grf(struct brw_codegen *p, struct brw_reg *reg)
  */
 unsigned
 brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
-                        enum brw_reg_type type, enum brw_reg_file file)
+                        enum brw_reg_file file,
+                        enum brw_reg_type type)
 {
    if (file == BRW_IMMEDIATE_VALUE) {
       static const enum hw_imm_type hw_types[] = {
@@ -141,7 +142,8 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
  */
 unsigned
 brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
-                        unsigned type, enum brw_reg_file file)
+                        enum brw_reg_file file,
+                        unsigned type)
 {
    if (file == BRW_IMMEDIATE_VALUE) {
       static const int hw_sizes[] = {
@@ -198,8 +200,8 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
 
    brw_inst_set_dst_reg_file(devinfo, inst, dest.file);
    brw_inst_set_dst_reg_type(devinfo, inst,
-                             brw_reg_type_to_hw_type(devinfo, dest.type,
-                                                     dest.file));
+                             brw_reg_type_to_hw_type(devinfo, dest.file,
+                                                     dest.type));
    brw_inst_set_dst_address_mode(devinfo, inst, dest.address_mode);
 
    if (dest.address_mode == BRW_ADDRESS_DIRECT) {
@@ -365,7 +367,7 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 
    brw_inst_set_src0_reg_file(devinfo, inst, reg.file);
    brw_inst_set_src0_reg_type(devinfo, inst,
-                              brw_reg_type_to_hw_type(devinfo, reg.type, reg.file));
+                              brw_reg_type_to_hw_type(devinfo, reg.file, reg.type));
    brw_inst_set_src0_abs(devinfo, inst, reg.abs);
    brw_inst_set_src0_negate(devinfo, inst, reg.negate);
    brw_inst_set_src0_address_mode(devinfo, inst, reg.address_mode);
@@ -472,7 +474,7 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 
    brw_inst_set_src1_reg_file(devinfo, inst, reg.file);
    brw_inst_set_src1_reg_type(devinfo, inst,
-                              brw_reg_type_to_hw_type(devinfo, reg.type, reg.file));
+                              brw_reg_type_to_hw_type(devinfo, reg.file, reg.type));
    brw_inst_set_src1_abs(devinfo, inst, reg.abs);
    brw_inst_set_src1_negate(devinfo, inst, reg.negate);
 

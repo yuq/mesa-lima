@@ -459,7 +459,7 @@ general_restrictions_based_on_operand_types(const struct gen_device_info *devinf
 
    unsigned exec_type = execution_type(devinfo, inst);
    unsigned exec_type_size =
-      brw_hw_reg_type_to_size(devinfo, exec_type, BRW_GENERAL_REGISTER_FILE);
+      brw_hw_reg_type_to_size(devinfo, BRW_GENERAL_REGISTER_FILE, exec_type);
    unsigned dst_type_size = brw_element_size(devinfo, inst, dst);
 
    /* On IVB/BYT, region parameters and execution size for DF are in terms of

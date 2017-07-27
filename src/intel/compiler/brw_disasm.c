@@ -839,7 +839,7 @@ src_da1(FILE *file,
    if (err == -1)
       return 0;
    if (sub_reg_num) {
-      unsigned elem_size = brw_hw_reg_type_to_size(devinfo, type, _reg_file);
+      unsigned elem_size = brw_hw_reg_type_to_size(devinfo, _reg_file, type);
       format(file, ".%d", sub_reg_num / elem_size);   /* use formal style like spec */
    }
    src_align1_region(file, _vert_stride, _width, _horiz_stride);
@@ -928,7 +928,7 @@ src_da16(FILE *file,
       return 0;
    if (_subreg_nr) {
       unsigned elem_size =
-         brw_hw_reg_type_to_size(devinfo, _reg_type, _reg_file);
+         brw_hw_reg_type_to_size(devinfo, _reg_file, _reg_type);
 
       /* bit4 for subreg number byte addressing. Make this same meaning as
          in da1 case, so output looks consistent. */
