@@ -1142,6 +1142,19 @@ static void r600_get_hw_query_params(struct r600_common_context *rctx,
 		params->end_offset = 24 - index * 8;
 		params->fence_offset = params->end_offset + 4;
 		break;
+	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
+		params->pair_count = R600_MAX_STREAMS;
+		params->pair_stride = 32;
+	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+		params->start_offset = 0;
+		params->end_offset = 16;
+
+		/* We can re-use the high dword of the last 64-bit value as a
+		 * fence: it is initialized as 0, and the high bit is set by
+		 * the write of the streamout stats event.
+		 */
+		params->fence_offset = rquery->result_size - 4;
+		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 	{
 		/* Offsets apply to EG+ */
@@ -1393,6 +1406,7 @@ bool r600_query_hw_get_result(struct r600_common_context *rctx,
  *         32: apply timestamp conversion
  *         64: store full 64 bits result
  *        128: store signed 32 bits result
+ *        256: SO_OVERFLOW mode: take the difference of two successive half-pairs
  *  1.x = fence_offset
  *  1.y = pair_stride
  *  1.z = pair_count
@@ -1423,7 +1437,7 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 		"IMM[1] UINT32 {1, 2, 4, 8}\n"
 		"IMM[2] UINT32 {16, 32, 64, 128}\n"
 		"IMM[3] UINT32 {1000000, 0, %u, 0}\n" /* for timestamp conversion */
-		"IMM[4] UINT32 {0, 0, 0, 0}\n"
+		"IMM[4] UINT32 {256, 0, 0, 0}\n"
 
 		"AND TEMP[5], CONST[0].wwww, IMM[2].xxxx\n"
 		"UIF TEMP[5]\n"
@@ -1474,11 +1488,25 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 					"UMAD TEMP[5].x, TEMP[1].yyyy, CONST[1].yyyy, TEMP[5].xxxx\n"
 					"LOAD TEMP[2].xy, BUFFER[0], TEMP[5].xxxx\n"
 
-					"UADD TEMP[5].x, TEMP[5].xxxx, CONST[0].xxxx\n"
-					"LOAD TEMP[3].xy, BUFFER[0], TEMP[5].xxxx\n"
+					"UADD TEMP[5].y, TEMP[5].xxxx, CONST[0].xxxx\n"
+					"LOAD TEMP[3].xy, BUFFER[0], TEMP[5].yyyy\n"
 
-					"U64ADD TEMP[3].xy, TEMP[3], -TEMP[2]\n"
-					"U64ADD TEMP[0].xy, TEMP[0], TEMP[3]\n"
+					"U64ADD TEMP[4].xy, TEMP[3], -TEMP[2]\n"
+
+					"AND TEMP[5].z, CONST[0].wwww, IMM[4].xxxx\n"
+					"UIF TEMP[5].zzzz\n"
+						/* Load second start/end half-pair and
+						 * take the difference
+						 */
+						"UADD TEMP[5].xy, TEMP[5], IMM[1].wwww\n"
+						"LOAD TEMP[2].xy, BUFFER[0], TEMP[5].xxxx\n"
+						"LOAD TEMP[3].xy, BUFFER[0], TEMP[5].yyyy\n"
+
+						"U64ADD TEMP[3].xy, TEMP[3], -TEMP[2]\n"
+						"U64ADD TEMP[4].xy, TEMP[4], -TEMP[3]\n"
+					"ENDIF\n"
+
+					"U64ADD TEMP[0].xy, TEMP[0], TEMP[4]\n"
 
 					/* Increment pair index */
 					"UADD TEMP[1].y, TEMP[1].yyyy, IMM[1].xxxx\n"
@@ -1655,9 +1683,11 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
 	consts.config = 0;
 	if (index < 0)
 		consts.config |= 4;
-	if (query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE ||
-	    query->b.type == PIPE_QUERY_SO_OVERFLOW_PREDICATE)
+	if (query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE)
 		consts.config |= 8;
+	else if (query->b.type == PIPE_QUERY_SO_OVERFLOW_PREDICATE ||
+		 query->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)
+		consts.config |= 8 | 256;
 	else if (query->b.type == PIPE_QUERY_TIMESTAMP ||
 		 query->b.type == PIPE_QUERY_TIME_ELAPSED)
 		consts.config |= 32;
