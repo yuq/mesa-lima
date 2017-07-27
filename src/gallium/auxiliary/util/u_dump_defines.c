@@ -396,6 +396,25 @@ DEFINE_UTIL_STR_CONTINUOUS(query_type)
 
 
 static const char *
+util_query_value_type_names[] = {
+   "PIPE_QUERY_TYPE_I32",
+   "PIPE_QUERY_TYPE_U32",
+   "PIPE_QUERY_TYPE_I64",
+   "PIPE_QUERY_TYPE_U64",
+};
+
+static const char *
+util_query_value_type_short_names[] = {
+   "i32",
+   "u32",
+   "i64",
+   "u64",
+};
+
+DEFINE_UTIL_STR_CONTINUOUS(query_value_type)
+
+
+static const char *
 util_prim_mode_names[] = {
    "PIPE_PRIM_POINTS",
    "PIPE_PRIM_LINES",
@@ -443,4 +462,10 @@ util_dump_query_type(FILE *stream, unsigned value)
               value - PIPE_QUERY_DRIVER_SPECIFIC);
    else
       fprintf(stream, "%s", util_str_query_type(value, false));
+}
+
+void
+util_dump_query_value_type(FILE *stream, unsigned value)
+{
+   fprintf(stream, "%s", util_str_query_value_type(value, false));
 }
