@@ -615,6 +615,7 @@ vc4_simulator_get_param_ioctl(int fd, struct drm_vc4_get_param *args)
         case DRM_VC4_PARAM_SUPPORTS_BRANCHES:
         case DRM_VC4_PARAM_SUPPORTS_ETC1:
         case DRM_VC4_PARAM_SUPPORTS_THREADED_FS:
+        case DRM_VC4_PARAM_SUPPORTS_FIXED_RCL_ORDER:
                 args->value = true;
                 return 0;
 

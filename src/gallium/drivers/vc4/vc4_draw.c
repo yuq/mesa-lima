@@ -308,6 +308,14 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
         struct vc4_job *job = vc4_get_job_for_fbo(vc4);
 
+        /* Make sure that the raster order flags haven't changed, which can
+         * only be set at job granularity.
+         */
+        if (job->flags != vc4->rasterizer->tile_raster_order_flags) {
+                vc4_job_submit(vc4, job);
+                job = vc4_get_job_for_fbo(vc4);
+        }
+
         vc4_get_draw_cl_space(job, info->count);
 
         if (vc4->prim_mode != info->mode) {

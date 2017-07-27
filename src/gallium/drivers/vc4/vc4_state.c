@@ -135,6 +135,18 @@ vc4_create_rasterizer_state(struct pipe_context *pctx,
         V3D21_POINT_SIZE_pack(NULL, so->packed.point_size, &point_size);
         V3D21_LINE_WIDTH_pack(NULL, so->packed.line_width, &line_width);
 
+        if (cso->tile_raster_order_fixed) {
+                so->tile_raster_order_flags |= VC4_SUBMIT_CL_FIXED_RCL_ORDER;
+                if (cso->tile_raster_order_increasing_x) {
+                        so->tile_raster_order_flags |=
+                                VC4_SUBMIT_CL_RCL_ORDER_INCREASING_X;
+                }
+                if (cso->tile_raster_order_increasing_y) {
+                        so->tile_raster_order_flags |=
+                                VC4_SUBMIT_CL_RCL_ORDER_INCREASING_Y;
+                }
+        }
+
         return so;
 }
 

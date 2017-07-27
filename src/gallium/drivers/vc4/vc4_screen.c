@@ -113,9 +113,25 @@ vc4_screen_destroy(struct pipe_screen *pscreen)
         ralloc_free(pscreen);
 }
 
+static bool
+vc4_has_feature(struct vc4_screen *screen, uint32_t feature)
+{
+        struct drm_vc4_get_param p = {
+                .param = feature,
+        };
+        int ret = vc4_ioctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &p);
+
+        if (ret != 0)
+                return false;
+
+        return p.value;
+}
+
 static int
 vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 {
+        struct vc4_screen *screen = vc4_screen(pscreen);
+
         switch (param) {
                 /* Supported features (boolean caps). */
         case PIPE_CAP_VERTEX_COLOR_CLAMPED:
@@ -134,6 +150,10 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
         case PIPE_CAP_TEXTURE_BARRIER:
                 return 1;
+
+        case PIPE_CAP_TILE_RASTER_ORDER:
+                return vc4_has_feature(screen,
+                                       DRM_VC4_PARAM_SUPPORTS_FIXED_RCL_ORDER);
 
                 /* lying for GL 2.0 */
         case PIPE_CAP_OCCLUSION_QUERY:
@@ -266,7 +286,6 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_MEMOBJ:
         case PIPE_CAP_LOAD_CONSTBUF:
 	case PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS:
-	case PIPE_CAP_TILE_RASTER_ORDER:
                 return 0;
 
                 /* Stream output. */
@@ -587,20 +606,6 @@ static unsigned handle_hash(void *key)
 static int handle_compare(void *key1, void *key2)
 {
     return PTR_TO_UINT(key1) != PTR_TO_UINT(key2);
-}
-
-static bool
-vc4_has_feature(struct vc4_screen *screen, uint32_t feature)
-{
-        struct drm_vc4_get_param p = {
-                .param = feature,
-        };
-        int ret = vc4_ioctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &p);
-
-        if (ret != 0)
-                return false;
-
-        return p.value;
 }
 
 static bool
