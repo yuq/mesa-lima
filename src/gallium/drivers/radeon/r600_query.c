@@ -505,6 +505,7 @@ void r600_query_hw_destroy(struct r600_common_screen *rscreen,
 	}
 
 	r600_resource_reference(&query->buffer.buf, NULL);
+	r600_resource_reference(&query->workaround_buf, NULL);
 	FREE(rquery);
 }
 
@@ -946,19 +947,23 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	flag_wait = ctx->render_cond_mode == PIPE_RENDER_COND_WAIT ||
 		    ctx->render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
 
-	switch (query->b.type) {
-	case PIPE_QUERY_OCCLUSION_COUNTER:
-	case PIPE_QUERY_OCCLUSION_PREDICATE:
-		op = PRED_OP(PREDICATION_OP_ZPASS);
-		break;
-	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
-		op = PRED_OP(PREDICATION_OP_PRIMCOUNT);
-		invert = !invert;
-		break;
-	default:
-		assert(0);
-		return;
+	if (query->workaround_buf) {
+		op = PRED_OP(PREDICATION_OP_BOOL64);
+	} else {
+		switch (query->b.type) {
+		case PIPE_QUERY_OCCLUSION_COUNTER:
+		case PIPE_QUERY_OCCLUSION_PREDICATE:
+			op = PRED_OP(PREDICATION_OP_ZPASS);
+			break;
+		case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+		case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
+			op = PRED_OP(PREDICATION_OP_PRIMCOUNT);
+			invert = !invert;
+			break;
+		default:
+			assert(0);
+			return;
+		}
 	}
 
 	/* if true then invert, see GL_ARB_conditional_render_inverted */
@@ -967,8 +972,21 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	else
 		op |= PREDICATION_DRAW_VISIBLE; /* Draw if visible or no overflow */
 
+	/* Use the value written by compute shader as a workaround. Note that
+	 * the wait flag does not apply in this predication mode.
+	 *
+	 * The shader outputs the result value to L2. Workarounds only affect VI
+	 * and later, where the CP reads data from L2, so we don't need an
+	 * additional flush.
+	 */
+	if (query->workaround_buf) {
+		uint64_t va = query->workaround_buf->gpu_address + query->workaround_offset;
+		emit_set_predicate(ctx, query->workaround_buf, va, op);
+		return;
+	}
+
 	op |= flag_wait ? PREDICATION_HINT_WAIT : PREDICATION_HINT_NOWAIT_DRAW;
-	
+
 	/* emit predicate packets for all data blocks */
 	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
 		unsigned results_base = 0;
@@ -1063,6 +1081,8 @@ bool r600_query_hw_begin(struct r600_common_context *rctx,
 
 	if (!(query->flags & R600_QUERY_HW_FLAG_BEGIN_RESUMES))
 		r600_query_hw_reset_buffers(rctx, query);
+
+	r600_resource_reference(&query->workaround_buf, NULL);
 
 	r600_query_hw_emit_start(rctx, query);
 	if (!query->buffer.buf)
@@ -1777,11 +1797,43 @@ static void r600_render_condition(struct pipe_context *ctx,
 	/* Compute the size of SET_PREDICATION packets. */
 	atom->num_dw = 0;
 	if (query) {
-		for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
-			atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
+		bool needs_workaround = false;
 
-		if (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)
-			atom->num_dw *= R600_MAX_STREAMS;
+		/* There is a firmware regression in VI which causes successive
+		 * SET_PREDICATION packets to give the wrong answer for
+		 * non-inverted stream overflow predication.
+		 */
+		if (rctx->chip_class >= VI && !condition &&
+		    (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE ||
+		     (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_PREDICATE &&
+		      (rquery->buffer.previous ||
+		       rquery->buffer.results_end > rquery->result_size)))) {
+			needs_workaround = true;
+		}
+
+		if (needs_workaround && !rquery->workaround_buf) {
+			bool old_force_off = rctx->render_cond_force_off;
+			rctx->render_cond_force_off = true;
+
+			u_suballocator_alloc(
+				rctx->allocator_zeroed_memory, 8, 8,
+				&rquery->workaround_offset,
+				(struct pipe_resource **)&rquery->workaround_buf);
+
+			ctx->get_query_result_resource(
+				ctx, query, true, PIPE_QUERY_TYPE_U64, 0,
+				&rquery->workaround_buf->b.b, rquery->workaround_offset);
+
+			atom->num_dw = 5;
+
+			rctx->render_cond_force_off = old_force_off;
+		} else {
+			for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
+				atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
+
+			if (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)
+				atom->num_dw *= R600_MAX_STREAMS;
+		}
 	}
 
 	rctx->set_atom_dirty(rctx, atom, query != NULL);

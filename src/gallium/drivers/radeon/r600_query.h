@@ -194,6 +194,10 @@ struct r600_query_hw {
 	struct list_head list;
 	/* For transform feedback: which stream the query is for */
 	unsigned stream;
+
+	/* Workaround via compute shader */
+	struct r600_resource *workaround_buf;
+	unsigned workaround_offset;
 };
 
 bool r600_query_hw_init(struct r600_common_screen *rscreen,
