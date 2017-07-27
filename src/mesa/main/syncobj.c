@@ -69,11 +69,10 @@
 #include "syncobj.h"
 
 static struct gl_sync_object *
-_mesa_new_sync_object(struct gl_context *ctx, GLenum type)
+_mesa_new_sync_object(struct gl_context *ctx)
 {
    struct gl_sync_object *s = CALLOC_STRUCT(gl_sync_object);
    (void) ctx;
-   (void) type;
 
    return s;
 }
@@ -263,7 +262,7 @@ fence_sync(struct gl_context *ctx, GLenum condition, GLbitfield flags)
 {
    struct gl_sync_object *syncObj;
 
-   syncObj = ctx->Driver.NewSyncObject(ctx, GL_SYNC_FENCE);
+   syncObj = ctx->Driver.NewSyncObject(ctx);
    if (syncObj != NULL) {
       syncObj->Type = GL_SYNC_FENCE;
       /* The name is not currently used, and it is never visible to
