@@ -132,6 +132,20 @@
     }
 #define SIMD_IWRAPPER_2I(op) SIMD_IWRAPPER_2I_(op, op)
 
+private:
+    static SIMDINLINE Integer vmask(__mmask8 m)
+    {
+        return _mm512_mask_set1_epi64(_mm512_setzero_si512(), m, -1LL);
+    }
+    static SIMDINLINE Integer vmask(__mmask32 m)
+    {
+        return _mm512_mask_set1_epi16(_mm512_setzero_si512(), m, -1);
+    }
+    static SIMDINLINE Integer vmask(__mmask64 m)
+    {
+        return _mm512_mask_set1_epi8(_mm512_setzero_si512(), m, -1);
+    }
+
 public:
 SIMD_WRAPPERI_2_(and_ps, and_epi32);          // return a & b       (float treated as int)
 SIMD_WRAPPERI_2_(andnot_ps, andnot_epi32);    // return (~a) & b    (float treated as int)
