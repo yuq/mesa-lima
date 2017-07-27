@@ -583,7 +583,7 @@ static void
 st_api_destroy_drawable(struct st_api *stapi,
                         struct st_framebuffer_iface *stfbi)
 {
-   if (stfbi)
+   if (!stfbi)
       return;
 
    st_framebuffer_iface_remove(stfbi->state_manager, stfbi);
