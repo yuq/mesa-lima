@@ -3331,6 +3331,9 @@ contains the current sample id (i.e. gl_SampleID) as an unsigned int.
 Only the X component is used.  If per-sample shading is not enabled,
 the result is (0, undef, undef, undef).
 
+Note that if the fragment shader uses this system value, the fragment
+shader is automatically executed at per sample frequency.
+
 TGSI_SEMANTIC_SAMPLEPOS
 """""""""""""""""""""""
 
@@ -3339,6 +3342,9 @@ value contains the current sample's position as float4(x, y, undef, undef)
 in the render target (i.e.  gl_SamplePosition) when per-fragment shading
 is in effect.  Position values are in the range [0, 1] where 0.5 is
 the center of the fragment.
+
+Note that if the fragment shader uses this system value, the fragment
+shader is automatically executed at per sample frequency.
 
 TGSI_SEMANTIC_SAMPLEMASK
 """"""""""""""""""""""""
