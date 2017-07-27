@@ -1067,20 +1067,37 @@ format_is_int8(VkFormat format)
 	       desc->channel[channel].size == 8;
 }
 
+static bool
+format_is_int10(VkFormat format)
+{
+	const struct vk_format_description *desc = vk_format_description(format);
+
+	if (desc->nr_channels != 4)
+		return false;
+	for (unsigned i = 0; i < 4; i++) {
+		if (desc->channel[i].pure_integer && desc->channel[i].size == 10)
+			return true;
+	}
+	return false;
+}
+
 unsigned radv_format_meta_fs_key(VkFormat format)
 {
 	unsigned col_format = si_choose_spi_color_format(format, false, false) - 1;
 	bool is_int8 = format_is_int8(format);
+	bool is_int10 = format_is_int10(format);
 
-	return col_format + (is_int8 ? 3 : 0);
+	return col_format + (is_int8 ? 3 : is_int10 ? 5 : 0);
 }
 
-static unsigned
-radv_pipeline_compute_is_int8(const VkGraphicsPipelineCreateInfo *pCreateInfo)
+static void
+radv_pipeline_compute_get_int_clamp(const VkGraphicsPipelineCreateInfo *pCreateInfo,
+				    unsigned *is_int8, unsigned *is_int10)
 {
 	RADV_FROM_HANDLE(radv_render_pass, pass, pCreateInfo->renderPass);
 	struct radv_subpass *subpass = pass->subpasses + pCreateInfo->subpass;
-	unsigned is_int8 = 0;
+	*is_int8 = 0;
+	*is_int10 = 0;
 
 	for (unsigned i = 0; i < subpass->color_count; ++i) {
 		struct radv_render_pass_attachment *attachment;
@@ -1091,10 +1108,10 @@ radv_pipeline_compute_is_int8(const VkGraphicsPipelineCreateInfo *pCreateInfo)
 		attachment = pass->attachments + subpass->color_attachments[i].attachment;
 
 		if (format_is_int8(attachment->format))
-			is_int8 |= 1 << i;
+			*is_int8 |= 1 << i;
+		if (format_is_int10(attachment->format))
+			*is_int10 |= 1 << i;
 	}
-
-	return is_int8;
 }
 
 static void
@@ -2053,9 +2070,11 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	}
 
 	if (modules[MESA_SHADER_FRAGMENT]) {
-		union ac_shader_variant_key key;
+		union ac_shader_variant_key key = {0};
 		key.fs.col_format = pipeline->graphics.blend.spi_shader_col_format;
-		key.fs.is_int8 = radv_pipeline_compute_is_int8(pCreateInfo);
+
+		if (pipeline->device->physical_device->rad_info.chip_class < VI)
+			radv_pipeline_compute_get_int_clamp(pCreateInfo, &key.fs.is_int8, &key.fs.is_int10);
 
 		const VkPipelineShaderStageCreateInfo *stage = pStages[MESA_SHADER_FRAGMENT];
 
