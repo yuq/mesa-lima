@@ -3246,6 +3246,8 @@ radv_initialise_ds_surface(struct radv_device *device,
 			ds->db_z_info |= S_028040_TILE_MODE_INDEX(tile_mode_index);
 			tile_mode_index = si_tile_mode_index(iview->image, level, true);
 			ds->db_stencil_info |= S_028044_TILE_MODE_INDEX(tile_mode_index);
+			if (stencil_only)
+				ds->db_z_info |= S_028040_TILE_MODE_INDEX(tile_mode_index);
 		}
 
 		ds->db_depth_size = S_028058_PITCH_TILE_MAX((level_info->nblk_x / 8) - 1) |
