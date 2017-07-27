@@ -434,3 +434,13 @@ util_prim_mode_short_names[] = {
 };
 
 DEFINE_UTIL_STR_CONTINUOUS(prim_mode)
+
+void
+util_dump_query_type(FILE *stream, unsigned value)
+{
+   if (value >= PIPE_QUERY_DRIVER_SPECIFIC)
+      fprintf(stream, "PIPE_QUERY_DRIVER_SPECIFIC + %i",
+              value - PIPE_QUERY_DRIVER_SPECIFIC);
+   else
+      fprintf(stream, "%s", util_str_query_type(value, false));
+}

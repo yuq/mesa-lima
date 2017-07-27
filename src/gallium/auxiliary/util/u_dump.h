@@ -87,6 +87,8 @@ util_str_query_type(unsigned value, boolean shortened);
 const char *
 util_str_prim_mode(unsigned value, boolean shortened);
 
+void
+util_dump_query_type(FILE *stream, unsigned value);
 
 /*
  * p_state.h, through a FILE

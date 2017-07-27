@@ -180,21 +180,11 @@ util_dump_color_union(FILE *f, const union pipe_color_union *color)
 }
 
 static void
-util_dump_query(FILE *f, struct dd_query *query)
-{
-   if (query->type >= PIPE_QUERY_DRIVER_SPECIFIC)
-      fprintf(f, "PIPE_QUERY_DRIVER_SPECIFIC + %i",
-              query->type - PIPE_QUERY_DRIVER_SPECIFIC);
-   else
-      fprintf(f, "%s", util_str_query_type(query->type, false));
-}
-
-static void
 dd_dump_render_condition(struct dd_draw_state *dstate, FILE *f)
 {
    if (dstate->render_cond.query) {
       fprintf(f, "render condition:\n");
-      DUMP_M(query, &dstate->render_cond, query);
+      DUMP_M(query_type, &dstate->render_cond, query->type);
       DUMP_M(uint, &dstate->render_cond, condition);
       DUMP_M(uint, &dstate->render_cond, mode);
       fprintf(f, "\n");
