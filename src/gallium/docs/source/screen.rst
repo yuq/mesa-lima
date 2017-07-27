@@ -408,6 +408,9 @@ The integer capabilities:
   with constant buffers.
 * ``PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS``: Any TGSI register can be used as
   an address for indirect register indexing.
+* ``PIPE_CAP_TILE_RASTER_ORDER``: Whether the driver supports
+  GL_MESA_tile_raster_order, using the tile_raster_order_* fields in
+  pipe_rasterizer_state.
 
 
 .. _pipe_capf:

@@ -312,6 +312,7 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MEMOBJ:
    case PIPE_CAP_LOAD_CONSTBUF:
    case PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS:
+   case PIPE_CAP_TILE_RASTER_ORDER:
       return 0;
    case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
       return 4;
