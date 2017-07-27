@@ -1373,6 +1373,7 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 		"IMM[1] UINT32 {1, 2, 4, 8}\n"
 		"IMM[2] UINT32 {16, 32, 64, 128}\n"
 		"IMM[3] UINT32 {1000000, 0, %u, 0}\n" /* for timestamp conversion */
+		"IMM[4] UINT32 {0, 0, 0, 0}\n"
 
 		"AND TEMP[5], CONST[0].wwww, IMM[2].xxxx\n"
 		"UIF TEMP[5]\n"
@@ -1472,7 +1473,7 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 					/* Convert to boolean */
 					"AND TEMP[4], CONST[0].wwww, IMM[1].wwww\n"
 					"UIF TEMP[4]\n"
-						"U64SNE TEMP[0].x, TEMP[0].xyxy, IMM[0].xxxx\n"
+						"U64SNE TEMP[0].x, TEMP[0].xyxy, IMM[4].zwzw\n"
 						"AND TEMP[0].x, TEMP[0].xxxx, IMM[1].xxxx\n"
 						"MOV TEMP[0].y, IMM[0].xxxx\n"
 					"ENDIF\n"
