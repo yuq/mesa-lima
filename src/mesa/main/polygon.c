@@ -221,6 +221,14 @@ polygon_mode(struct gl_context *ctx, GLenum face, GLenum mode, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_PolygonMode_no_error(GLenum face, GLenum mode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   polygon_mode(ctx, face, mode, true);
+}
+
+
+void GLAPIENTRY
 _mesa_PolygonMode(GLenum face, GLenum mode)
 {
    GET_CURRENT_CONTEXT(ctx);

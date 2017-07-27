@@ -2097,7 +2097,7 @@
         <glx rop="100"/>
     </function>
 
-    <function name="PolygonMode">
+    <function name="PolygonMode" no_error="true">
         <param name="face" type="GLenum"/>
         <param name="mode" type="GLenum"/>
         <glx rop="101"/>
