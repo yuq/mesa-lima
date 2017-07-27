@@ -548,19 +548,6 @@ st_clear_buffer_subdata(struct gl_context *ctx,
                       clearValue, clearValueSize);
 }
 
-
-/* TODO: if buffer wasn't created with appropriate usage flags, need
- * to recreate it now and copy contents -- or possibly create a
- * gallium entrypoint to extend the usage flags and let the driver
- * decide if a copy is necessary.
- */
-void
-st_bufferobj_validate_usage(struct st_context *st,
-                            struct st_buffer_object *obj,
-                            unsigned usage)
-{
-}
-
 static void
 st_bufferobj_page_commitment(struct gl_context *ctx,
                              struct gl_buffer_object *bufferObj,
