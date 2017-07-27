@@ -3188,7 +3188,6 @@ struct gl_query_state
 /** Sync object state */
 struct gl_sync_object
 {
-   GLenum Type;               /**< GL_SYNC_FENCE */
    GLuint Name;               /**< Fence name */
    GLchar *Label;             /**< GL_KHR_debug */
    GLint RefCount;            /**< Reference count */

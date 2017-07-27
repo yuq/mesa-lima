@@ -164,7 +164,6 @@ _mesa_free_sync_data(struct gl_context *ctx)
  * Check if the given sync object is:
  *  - non-null
  *  - not in sync objects hash table
- *  - type is GL_SYNC_FENCE
  *  - not marked as deleted
  *
  * Returns the internal gl_sync_object pointer if the sync object is valid
@@ -181,7 +180,6 @@ _mesa_get_and_ref_sync(struct gl_context *ctx, GLsync sync, bool incRefCount)
    mtx_lock(&ctx->Shared->Mutex);
    if (syncObj != NULL
       && _mesa_set_search(ctx->Shared->SyncObjects, syncObj) != NULL
-      && (syncObj->Type == GL_SYNC_FENCE)
       && !syncObj->DeletePending) {
      if (incRefCount) {
        syncObj->RefCount++;
@@ -264,7 +262,6 @@ fence_sync(struct gl_context *ctx, GLenum condition, GLbitfield flags)
 
    syncObj = ctx->Driver.NewSyncObject(ctx);
    if (syncObj != NULL) {
-      syncObj->Type = GL_SYNC_FENCE;
       /* The name is not currently used, and it is never visible to
        * applications.  If sync support is extended to provide support for
        * NV_fence, this field will be used.  We'll also need to add an object
@@ -429,7 +426,7 @@ _mesa_GetSynciv(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length,
 
    switch (pname) {
    case GL_OBJECT_TYPE:
-      v[0] = syncObj->Type;
+      v[0] = GL_SYNC_FENCE;
       size = 1;
       break;
 
