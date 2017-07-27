@@ -133,10 +133,6 @@
 #define SIMD_IWRAPPER_2I(op) SIMD_IWRAPPER_2I_(op, op)
 
 private:
-    static SIMDINLINE Integer vmask(__mmask8 m)
-    {
-        return _mm512_maskz_set1_epi64(m, -1LL);
-    }
     static SIMDINLINE Integer vmask(__mmask32 m)
     {
         return _mm512_maskz_set1_epi16(m, -1);
@@ -145,17 +141,57 @@ private:
     {
         return _mm512_maskz_set1_epi8(m, -1);
     }
-
 public:
+
+SIMD_IWRAPPER_2(add_epi8);                  // return a + b (int8)
+SIMD_IWRAPPER_2(adds_epu8);                 // return ((a + b) > 0xff) ? 0xff : (a + b) (uint8) 
+SIMD_IWRAPPER_2(subs_epu8);                 // return (b > a) ? 0 : (a - b) (uint8)
+
 SIMD_WRAPPER_2(and_ps);                     // return a & b       (float treated as int)
 SIMD_WRAPPER_2(andnot_ps);                  // return (~a) & b    (float treated as int)
 SIMD_WRAPPER_2(or_ps);                      // return a | b       (float treated as int)
 SIMD_WRAPPER_2(xor_ps);                     // return a ^ b       (float treated as int)
 
-SIMD_IWRAPPER_2(packs_epi16);   // See documentation for _mm512_packs_epi16 and _mm512_packs_epi16
-SIMD_IWRAPPER_2(packs_epi32);   // See documentation for _mm512_packs_epi32 and _mm512_packs_epi32
-SIMD_IWRAPPER_2(packus_epi16);  // See documentation for _mm512_packus_epi16 and _mm512_packus_epi16
-SIMD_IWRAPPER_2(packus_epi32);  // See documentation for _mm512_packus_epi32 and _mm512_packus_epi32
+SIMD_IWRAPPER_1_8(cvtepu8_epi16);           // return (int16)a    (uint8 --> int16)
+
+template<CompareTypeInt CmpTypeT>
+static SIMDINLINE Integer SIMDCALL cmp_epi8(Integer a, Integer b)
+{
+    // Legacy vector mask generator
+    __mmask64 result = _mm512_cmp_epi8_mask(a, b, static_cast<const int>(CmpTypeT));
+    return vmask(result);
+}
+template<CompareTypeInt CmpTypeT>
+static SIMDINLINE Integer SIMDCALL cmp_epi16(Integer a, Integer b)
+{
+    // Legacy vector mask generator
+    __mmask32 result = _mm512_cmp_epi16_mask(a, b, static_cast<const int>(CmpTypeT));
+    return vmask(result);
+}
+
+SIMD_IWRAPPER_2_CMP(cmpeq_epi8,  cmp_epi8<CompareTypeInt::EQ>);    // return a == b (int8)
+SIMD_IWRAPPER_2_CMP(cmpeq_epi16, cmp_epi16<CompareTypeInt::EQ>);   // return a == b (int16)
+SIMD_IWRAPPER_2_CMP(cmpgt_epi8,  cmp_epi8<CompareTypeInt::GT>);    // return a > b (int8)
+SIMD_IWRAPPER_2_CMP(cmpgt_epi16, cmp_epi16<CompareTypeInt::GT>);   // return a > b (int16)
+
+SIMD_IWRAPPER_2(packs_epi16);               // See documentation for _mm512_packs_epi16
+SIMD_IWRAPPER_2(packs_epi32);               // See documentation for _mm512_packs_epi32
+SIMD_IWRAPPER_2(packus_epi16);              // See documentation for _mm512_packus_epi16
+SIMD_IWRAPPER_2(packus_epi32);              // See documentation for _mm512_packus_epi32
+
+SIMD_IWRAPPER_2(unpackhi_epi8);             // See documentation for _mm512_unpackhi_epi8
+SIMD_IWRAPPER_2(unpacklo_epi16);            // See documentation for _mm512_unpacklo_epi16
+SIMD_IWRAPPER_2(unpacklo_epi8);             // See documentation for _mm512_unpacklo_epi8
+
+SIMD_IWRAPPER_2(shuffle_epi8);
+
+static SIMDINLINE uint64_t SIMDCALL movemask_epi8(Integer a)
+{
+    __mmask64 m = _mm512_cmplt_epi8_mask(a, setzero_si());
+    return static_cast<uint64_t>(m);
+}
+
+
 
 #undef SIMD_WRAPPER_1_
 #undef SIMD_WRAPPER_1

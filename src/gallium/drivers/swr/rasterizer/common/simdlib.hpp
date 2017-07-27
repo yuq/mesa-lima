@@ -214,6 +214,8 @@ struct SIMDBase : Traits::IsaImpl
     using Vec4          = typename Traits::Vec4;
     using Mask          = typename Traits::Mask;
 
+    static const size_t VECTOR_BYTES = sizeof(Float);
+
     // Populates a SIMD Vec4 from a non-simd vector. So p = xyzw becomes xxxx yyyy zzzz wwww.
     static SIMDINLINE
     void vec4_load1_ps(Vec4& r, const float *p)
