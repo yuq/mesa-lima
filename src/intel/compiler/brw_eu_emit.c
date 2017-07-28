@@ -356,16 +356,6 @@ validate_reg(const struct gen_device_info *devinfo,
    /* 10. Check destination issues. */
 }
 
-static bool
-is_compactable_immediate(unsigned imm)
-{
-   /* We get the low 12 bits as-is. */
-   imm &= ~0xfff;
-
-   /* We get one bit replicated through the top 20 bits. */
-   return imm == 0 || imm == 0xfffff000;
-}
-
 void
 brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 {
@@ -408,69 +398,11 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
       else
          brw_inst_set_imm_ud(devinfo, inst, reg.ud);
 
-      /* The Bspec's section titled "Non-present Operands" claims that if src0
-       * is an immediate that src1's type must be the same as that of src0.
-       *
-       * The SNB+ DataTypeIndex instruction compaction tables contain mappings
-       * that do not follow this rule. E.g., from the IVB/HSW table:
-       *
-       *  DataTypeIndex   18-Bit Mapping       Mapped Meaning
-       *        3         001000001011111101   r:f | i:vf | a:ud | <1> | dir |
-       *
-       * And from the SNB table:
-       *
-       *  DataTypeIndex   18-Bit Mapping       Mapped Meaning
-       *        8         001000000111101100   a:w | i:w | a:ud | <1> | dir |
-       *
-       * Neither of these cause warnings from the simulator when used,
-       * compacted or otherwise. In fact, all compaction mappings that have an
-       * immediate in src0 use a:ud for src1.
-       *
-       * The GM45 instruction compaction tables do not contain mapped meanings
-       * so it's not clear whether it has the restriction. We'll assume it was
-       * lifted on SNB. (FINISHME: decode the GM45 tables and check.)
-       *
-       * Don't do any of this for 64-bit immediates, since the src1 fields
-       * overlap with the immediate and setting them would overwrite the
-       * immediate we set.
-       */
       if (type_sz(reg.type) < 8) {
          brw_inst_set_src1_reg_file(devinfo, inst,
                                     BRW_ARCHITECTURE_REGISTER_FILE);
-         if (devinfo->gen < 6) {
-            brw_inst_set_src1_reg_type(devinfo, inst,
-                                       brw_inst_src0_reg_type(devinfo, inst));
-         } else {
-            brw_inst_set_src1_reg_type(devinfo, inst, BRW_HW_REG_TYPE_UD);
-         }
-      }
-
-      /* Compacted instructions only have 12-bits (plus 1 for the other 20)
-       * for immediate values. Presumably the hardware engineers realized
-       * that the only useful floating-point value that could be represented
-       * in this format is 0.0, which can also be represented as a VF-typed
-       * immediate, so they gave us the previously mentioned mapping on IVB+.
-       *
-       * Strangely, we do have a mapping for imm:f in src1, so we don't need
-       * to do this there.
-       *
-       * If we see a 0.0:F, change the type to VF so that it can be compacted.
-       */
-      if (brw_inst_imm_ud(devinfo, inst) == 0x0 &&
-          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_F &&
-          brw_inst_dst_reg_type(devinfo, inst) != GEN7_HW_REG_NON_IMM_TYPE_DF) {
-         brw_inst_set_src0_reg_type(devinfo, inst, BRW_HW_REG_IMM_TYPE_VF);
-      }
-
-      /* There are no mappings for dst:d | i:d, so if the immediate is suitable
-       * set the types to :UD so the instruction can be compacted.
-       */
-      if (is_compactable_immediate(brw_inst_imm_ud(devinfo, inst)) &&
-          brw_inst_cond_modifier(devinfo, inst) == BRW_CONDITIONAL_NONE &&
-          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_D &&
-          brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_D) {
-         brw_inst_set_src0_reg_type(devinfo, inst, BRW_HW_REG_TYPE_UD);
-         brw_inst_set_dst_reg_type(devinfo, inst, BRW_HW_REG_TYPE_UD);
+         brw_inst_set_src1_reg_type(devinfo, inst,
+                                    brw_inst_src0_reg_type(devinfo, inst));
       }
    } else {
       if (reg.address_mode == BRW_ADDRESS_DIRECT) {

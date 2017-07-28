@@ -956,6 +956,83 @@ is_compactable_immediate(unsigned imm)
 }
 
 /**
+ * Applies some small changes to instruction types to increase chances of
+ * compaction.
+ */
+static brw_inst
+precompact(const struct gen_device_info *devinfo, brw_inst inst)
+{
+   if (brw_inst_src0_reg_file(devinfo, &inst) != BRW_IMMEDIATE_VALUE)
+      return inst;
+
+   /* The Bspec's section titled "Non-present Operands" claims that if src0
+    * is an immediate that src1's type must be the same as that of src0.
+    *
+    * The SNB+ DataTypeIndex instruction compaction tables contain mappings
+    * that do not follow this rule. E.g., from the IVB/HSW table:
+    *
+    *  DataTypeIndex   18-Bit Mapping       Mapped Meaning
+    *        3         001000001011111101   r:f | i:vf | a:ud | <1> | dir |
+    *
+    * And from the SNB table:
+    *
+    *  DataTypeIndex   18-Bit Mapping       Mapped Meaning
+    *        8         001000000111101100   a:w | i:w | a:ud | <1> | dir |
+    *
+    * Neither of these cause warnings from the simulator when used,
+    * compacted or otherwise. In fact, all compaction mappings that have an
+    * immediate in src0 use a:ud for src1.
+    *
+    * The GM45 instruction compaction tables do not contain mapped meanings
+    * so it's not clear whether it has the restriction. We'll assume it was
+    * lifted on SNB. (FINISHME: decode the GM45 tables and check.)
+    *
+    * Don't do any of this for 64-bit immediates, since the src1 fields
+    * overlap with the immediate and setting them would overwrite the
+    * immediate we set.
+    */
+   if (devinfo->gen >= 6 &&
+       !(devinfo->is_haswell &&
+         brw_inst_opcode(devinfo, &inst) == BRW_OPCODE_DIM) &&
+       !(devinfo->gen >= 8 &&
+         (brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_REG_IMM_TYPE_DF ||
+          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_REG_TYPE_UQ ||
+          brw_inst_src0_reg_type(devinfo, &inst) == GEN8_HW_REG_TYPE_Q))) {
+      brw_inst_set_src1_reg_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
+   }
+
+   /* Compacted instructions only have 12-bits (plus 1 for the other 20)
+    * for immediate values. Presumably the hardware engineers realized
+    * that the only useful floating-point value that could be represented
+    * in this format is 0.0, which can also be represented as a VF-typed
+    * immediate, so they gave us the previously mentioned mapping on IVB+.
+    *
+    * Strangely, we do have a mapping for imm:f in src1, so we don't need
+    * to do this there.
+    *
+    * If we see a 0.0:F, change the type to VF so that it can be compacted.
+    */
+   if (brw_inst_imm_ud(devinfo, &inst) == 0x0 &&
+       brw_inst_src0_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
+       brw_inst_dst_reg_type(devinfo, &inst) != GEN7_HW_REG_NON_IMM_TYPE_DF) {
+      brw_inst_set_src0_reg_type(devinfo, &inst, BRW_HW_REG_IMM_TYPE_VF);
+   }
+
+   /* There are no mappings for dst:d | i:d, so if the immediate is suitable
+    * set the types to :UD so the instruction can be compacted.
+    */
+   if (is_compactable_immediate(brw_inst_imm_ud(devinfo, &inst)) &&
+       brw_inst_cond_modifier(devinfo, &inst) == BRW_CONDITIONAL_NONE &&
+       brw_inst_src0_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_D &&
+       brw_inst_dst_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_D) {
+      brw_inst_set_src0_reg_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
+      brw_inst_set_dst_reg_type(devinfo, &inst, BRW_HW_REG_TYPE_UD);
+   }
+
+   return inst;
+}
+
+/**
  * Tries to compact instruction src into dst.
  *
  * It doesn't modify dst unless src is compactable, which is relied on by
@@ -1427,9 +1504,10 @@ brw_compact_instructions(struct brw_codegen *p, int start_offset,
       old_ip[offset / sizeof(brw_compact_inst)] = src_offset / sizeof(brw_inst);
       compacted_counts[src_offset / sizeof(brw_inst)] = compacted_count;
 
-      brw_inst saved = *src;
+      brw_inst inst = precompact(devinfo, *src);
+      brw_inst saved = inst;
 
-      if (brw_try_compact_instruction(devinfo, dst, src)) {
+      if (brw_try_compact_instruction(devinfo, dst, &inst)) {
          compacted_count++;
 
          if (INTEL_DEBUG) {
