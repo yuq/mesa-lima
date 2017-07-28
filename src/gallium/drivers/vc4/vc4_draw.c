@@ -116,12 +116,13 @@ vc4_predraw_check_textures(struct pipe_context *pctx,
         struct vc4_context *vc4 = vc4_context(pctx);
 
         for (int i = 0; i < stage_tex->num_textures; i++) {
-                struct pipe_sampler_view *view = stage_tex->textures[i];
+                struct vc4_sampler_view *view =
+                        vc4_sampler_view(stage_tex->textures[i]);
                 if (!view)
                         continue;
-                struct vc4_resource *rsc = vc4_resource(view->texture);
-                if (rsc->shadow_parent)
-                        vc4_update_shadow_baselevel_texture(pctx, view);
+
+                if (view->texture != view->base.texture)
+                        vc4_update_shadow_baselevel_texture(pctx, &view->base);
 
                 vc4_flush_jobs_writing_resource(vc4, view->texture);
         }
