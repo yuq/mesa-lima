@@ -848,6 +848,7 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 	if (sscreen->info.chip_class >= GFX9) {
 		out->alignment = rtex->surface.u.gfx9.fmask_alignment;
 		out->size = rtex->surface.u.gfx9.fmask_size;
+		out->tile_swizzle = rtex->surface.u.gfx9.fmask_tile_swizzle;
 		return;
 	}
 

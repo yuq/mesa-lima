@@ -100,6 +100,8 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    else
       config.info.surf_index = NULL;
 
+   config.info.fmask_surf_index = &ws->surf_index_fmask;
+
    return ac_compute_surface(ws->addrlib, &ws->info, &config, mode, surf);
 }
 
