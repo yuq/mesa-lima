@@ -714,12 +714,19 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		ADDR_COMPUTE_BASE_SWIZZLE_INPUT AddrBaseSwizzleIn = {0};
 		ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT AddrBaseSwizzleOut = {0};
 
+		AddrBaseSwizzleIn.size = sizeof(ADDR_COMPUTE_BASE_SWIZZLE_INPUT);
+		AddrBaseSwizzleOut.size = sizeof(ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT);
+
 		AddrBaseSwizzleIn.surfIndex = p_atomic_inc_return(config->info.surf_index) - 1;
 		AddrBaseSwizzleIn.tileIndex = AddrSurfInfoIn.tileIndex;
 		AddrBaseSwizzleIn.macroModeIndex = AddrSurfInfoOut.macroModeIndex;
 		AddrBaseSwizzleIn.pTileInfo = AddrSurfInfoOut.pTileInfo;
 		AddrBaseSwizzleIn.tileMode = AddrSurfInfoOut.tileMode;
-		AddrComputeBaseSwizzle(addrlib, &AddrBaseSwizzleIn, &AddrBaseSwizzleOut);
+
+		r = AddrComputeBaseSwizzle(addrlib, &AddrBaseSwizzleIn,
+					   &AddrBaseSwizzleOut);
+		if (r != ADDR_OK)
+			return r;
 
 		assert(AddrBaseSwizzleOut.tileSwizzle <=
 		       u_bit_consecutive(0, sizeof(surf->tile_swizzle) * 8));
