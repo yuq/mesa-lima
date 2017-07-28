@@ -21,10 +21,11 @@
  */
 
 #include <dlfcn.h>
+#include "util/u_memory.h"
+#include "pipe/p_screen.h"
+
 #include "dri_context.h"
 #include "dri_screen.h"
-#include "pipe/p_screen.h"
-#include "util/u_memory.h"
 
 static bool
 dri2_is_opencl_interop_loaded_locked(struct dri_screen *screen)
