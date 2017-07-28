@@ -1199,15 +1199,15 @@ brw_update_texture_surfaces(struct brw_context *brw)
     * allows the surface format to be overriden for only the
     * gather4 messages. */
    if (devinfo->gen < 8) {
-      if (vs && vs->nir->info.uses_texture_gather)
+      if (vs && vs->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, vs, &brw->vs.base, true, 0);
-      if (tcs && tcs->nir->info.uses_texture_gather)
+      if (tcs && tcs->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, true, 0);
-      if (tes && tes->nir->info.uses_texture_gather)
+      if (tes && tes->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, tes, &brw->tes.base, true, 0);
-      if (gs && gs->nir->info.uses_texture_gather)
+      if (gs && gs->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, gs, &brw->gs.base, true, 0);
-      if (fs && fs->nir->info.uses_texture_gather)
+      if (fs && fs->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, fs, &brw->wm.base, true, 0);
    }
 
@@ -1254,7 +1254,7 @@ brw_update_cs_texture_surfaces(struct brw_context *brw)
     * gather4 messages.
     */
    if (devinfo->gen < 8) {
-      if (cs && cs->nir->info.uses_texture_gather)
+      if (cs && cs->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, cs, &brw->cs.base, true, 0);
    }
 
