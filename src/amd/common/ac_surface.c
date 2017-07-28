@@ -705,8 +705,10 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 
 	surf->is_linear = surf->u.legacy.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
 
-	/* workout base swizzle */
-	if (!(surf->flags & RADEON_SURF_Z_OR_SBUFFER)) {
+	/* Work out tile swizzle. */
+	if (surf->u.legacy.level[0].mode == RADEON_SURF_MODE_2D &&
+	    !(surf->flags & (RADEON_SURF_Z_OR_SBUFFER | RADEON_SURF_SHAREABLE)) &&
+	    (config->info.samples > 1 || !(surf->flags & RADEON_SURF_SCANOUT))) {
 		ADDR_COMPUTE_BASE_SWIZZLE_INPUT AddrBaseSwizzleIn = {0};
 		ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT AddrBaseSwizzleOut = {0};
 
