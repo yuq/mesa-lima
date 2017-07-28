@@ -62,7 +62,6 @@ enum radeon_micro_mode {
 #define RADEON_SURF_SBUFFER                     (1 << 18)
 #define RADEON_SURF_Z_OR_SBUFFER                (RADEON_SURF_ZBUFFER | RADEON_SURF_SBUFFER)
 /* bits 19 and 20 are reserved for libdrm_radeon, don't use them */
-#define RADEON_SURF_HAS_TILE_MODE_INDEX         (1 << 20)
 #define RADEON_SURF_FMASK                       (1 << 21)
 #define RADEON_SURF_DISABLE_DCC                 (1 << 22)
 #define RADEON_SURF_TC_COMPATIBLE_HTILE         (1 << 23)
