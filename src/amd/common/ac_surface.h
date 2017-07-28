@@ -67,6 +67,7 @@ enum radeon_micro_mode {
 #define RADEON_SURF_TC_COMPATIBLE_HTILE         (1 << 23)
 #define RADEON_SURF_IMPORTED                    (1 << 24)
 #define RADEON_SURF_OPTIMIZE_FOR_SPACE          (1 << 25)
+#define RADEON_SURF_SHAREABLE                   (1 << 26)
 
 struct legacy_surf_level {
     uint64_t                    offset;

@@ -280,8 +280,10 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		flags |= RADEON_SURF_SCANOUT;
 	}
 
+	if (ptex->bind & PIPE_BIND_SHARED)
+		flags |= RADEON_SURF_SHAREABLE;
 	if (is_imported)
-		flags |= RADEON_SURF_IMPORTED;
+		flags |= RADEON_SURF_IMPORTED | RADEON_SURF_SHAREABLE;
 	if (!(ptex->flags & R600_RESOURCE_FLAG_FORCE_TILING))
 		flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
