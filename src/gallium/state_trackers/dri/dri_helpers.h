@@ -20,8 +20,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef DRI_EXTENSIONS_H
-#define DRI_EXTENSIONS_H
+#ifndef DRI_HELPERS_H
+#define DRI_HELPERS_H
 
 extern const __DRI2fenceExtension dri2FenceExtension;
 

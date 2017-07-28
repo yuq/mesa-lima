@@ -48,7 +48,7 @@
 #include "dri_screen.h"
 #include "dri_context.h"
 #include "dri_drawable.h"
-#include "dri_extensions.h"
+#include "dri_helpers.h"
 #include "dri_query_renderer.h"
 #include "dri2_buffer.h"
 
