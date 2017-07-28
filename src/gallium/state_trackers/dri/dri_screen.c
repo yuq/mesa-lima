@@ -124,6 +124,21 @@ dri_fill_st_options(struct dri_screen *screen)
    driComputeOptionsSha1(optionCache, options->config_options_sha1);
 }
 
+static unsigned
+dri_loader_get_cap(struct dri_screen *screen, enum dri_loader_cap cap)
+{
+   const __DRIdri2LoaderExtension *dri2_loader = screen->sPriv->dri2.loader;
+   const __DRIimageLoaderExtension *image_loader = screen->sPriv->image.loader;
+
+   if (dri2_loader && dri2_loader->base.version >= 4)
+      return dri2_loader->getCapability(screen->sPriv->loaderPrivate, cap);
+
+   if (image_loader && image_loader->base.version >= 2)
+      return image_loader->getCapability(screen->sPriv->loaderPrivate, cap);
+
+   return 0;
+}
+
 static const __DRIconfig **
 dri_fill_in_modes(struct dri_screen *screen)
 {
@@ -235,8 +250,15 @@ dri_fill_in_modes(struct dri_screen *screen)
 
    assert(ARRAY_SIZE(mesa_formats) == ARRAY_SIZE(pipe_formats));
 
+   /* Expose only BGRA ordering if the loader doesn't support RGBA ordering. */
+   unsigned num_formats;
+   if (dri_loader_get_cap(screen, DRI_LOADER_CAP_RGBA_ORDERING))
+      num_formats = ARRAY_SIZE(mesa_formats);
+   else
+      num_formats = 5;
+
    /* Add configs. */
-   for (format = 0; format < ARRAY_SIZE(mesa_formats); format++) {
+   for (format = 0; format < num_formats; format++) {
       __DRIconfig **new_configs = NULL;
       unsigned num_msaa_modes = 0; /* includes a single-sample mode */
       uint8_t msaa_modes[MSAA_VISUAL_MAX_SAMPLES];
