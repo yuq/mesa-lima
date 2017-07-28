@@ -1,7 +1,7 @@
 /*
  * Copyright © 2007 Red Hat Inc.
  * Copyright © 2007-2017 Intel Corporation
- * Copyright 2006 Tungsten Graphics, Inc., Bismarck, ND., USA
+ * Copyright © 2006 VMware, Inc.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -25,8 +25,8 @@
  */
 
 /*
- * Authors: Thomas Hellström <thomas-at-tungstengraphics-dot-com>
- *          Keith Whitwell <keithw-at-tungstengraphics-dot-com>
+ * Authors: Thomas Hellström <thellstrom@vmware.com>
+ *          Keith Whitwell <keithw@vmware.com>
  *          Eric Anholt <eric@anholt.net>
  *          Dave Airlie <airlied@linux.ie>
  */
