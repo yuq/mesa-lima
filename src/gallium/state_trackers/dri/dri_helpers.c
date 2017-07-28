@@ -23,9 +23,11 @@
 #include <dlfcn.h>
 #include "util/u_memory.h"
 #include "pipe/p_screen.h"
+#include "state_tracker/st_texture.h"
+#include "state_tracker/st_context.h"
+#include "main/texobj.h"
 
-#include "dri_context.h"
-#include "dri_screen.h"
+#include "dri_helpers.h"
 
 static bool
 dri2_is_opencl_interop_loaded_locked(struct dri_screen *screen)
@@ -227,5 +229,107 @@ const __DRI2fenceExtension dri2FenceExtension = {
    .create_fence_fd = dri2_create_fence_fd,
    .get_fence_fd = dri2_get_fence_fd,
 };
+
+__DRIimage *
+dri2_lookup_egl_image(struct dri_screen *screen, void *handle)
+{
+   const __DRIimageLookupExtension *loader = screen->sPriv->dri2.image;
+   __DRIimage *img;
+
+   if (!loader->lookupEGLImage)
+      return NULL;
+
+   img = loader->lookupEGLImage(screen->sPriv,
+				handle, screen->sPriv->loaderPrivate);
+
+   return img;
+}
+
+__DRIimage *
+dri2_create_image_from_renderbuffer(__DRIcontext *context,
+				    int renderbuffer, void *loaderPrivate)
+{
+   struct dri_context *ctx = dri_context(context);
+
+   if (!ctx->st->get_resource_for_egl_image)
+      return NULL;
+
+   /* TODO */
+   return NULL;
+}
+
+void
+dri2_destroy_image(__DRIimage *img)
+{
+   pipe_resource_reference(&img->texture, NULL);
+   FREE(img);
+}
+
+
+__DRIimage *
+dri2_create_from_texture(__DRIcontext *context, int target, unsigned texture,
+                         int depth, int level, unsigned *error,
+                         void *loaderPrivate)
+{
+   __DRIimage *img;
+   struct gl_context *ctx = ((struct st_context *)dri_context(context)->st)->ctx;
+   struct gl_texture_object *obj;
+   struct pipe_resource *tex;
+   GLuint face = 0;
+
+   obj = _mesa_lookup_texture(ctx, texture);
+   if (!obj || obj->Target != target) {
+      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+      return NULL;
+   }
+
+   tex = st_get_texobj_resource(obj);
+   if (!tex) {
+      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+      return NULL;
+   }
+
+   if (target == GL_TEXTURE_CUBE_MAP)
+      face = depth;
+
+   _mesa_test_texobj_completeness(ctx, obj);
+   if (!obj->_BaseComplete || (level > 0 && !obj->_MipmapComplete)) {
+      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+      return NULL;
+   }
+
+   if (level < obj->BaseLevel || level > obj->_MaxLevel) {
+      *error = __DRI_IMAGE_ERROR_BAD_MATCH;
+      return NULL;
+   }
+
+   if (target == GL_TEXTURE_3D && obj->Image[face][level]->Depth < depth) {
+      *error = __DRI_IMAGE_ERROR_BAD_MATCH;
+      return NULL;
+   }
+
+   img = CALLOC_STRUCT(__DRIimageRec);
+   if (!img) {
+      *error = __DRI_IMAGE_ERROR_BAD_ALLOC;
+      return NULL;
+   }
+
+   img->level = level;
+   img->layer = depth;
+   img->dri_format = driGLFormatToImageFormat(obj->Image[face][level]->TexFormat);
+
+   img->loader_private = loaderPrivate;
+
+   if (img->dri_format == __DRI_IMAGE_FORMAT_NONE) {
+      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+      free(img);
+      return NULL;
+   }
+
+   pipe_resource_reference(&img->texture, tex);
+
+   *error = __DRI_IMAGE_ERROR_SUCCESS;
+   return img;
+}
 
 /* vim: set sw=3 ts=8 sts=3 expandtab: */
