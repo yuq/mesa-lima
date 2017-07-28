@@ -97,7 +97,6 @@ struct legacy_surf_layout {
     unsigned                    depth_adjusted:1;
     unsigned                    stencil_adjusted:1;
 
-    uint8_t                     tile_swizzle;
     struct legacy_surf_level    level[RADEON_SURF_MAX_LEVELS];
     struct legacy_surf_level    stencil_level[RADEON_SURF_MAX_LEVELS];
     uint8_t                     tiling_index[RADEON_SURF_MAX_LEVELS];
@@ -168,6 +167,21 @@ struct radeon_surf {
      * they will be treated as hints (e.g. bankw, bankh) and might be
      * changed by the calculator.
      */
+
+    /* Tile swizzle can be OR'd with low bits of the BASE_256B address.
+     * The value is the same for all mipmap levels. Supported tile modes:
+     * - GFX6: Only macro tiling.
+     * - GFX9: Only *_X swizzle modes. Level 0 must not be in the mip tail.
+     *
+     * Only these surfaces are allowed to set it:
+     * - color (if it doesn't have to be displayable)
+     * - DCC (same tile swizzle as color)
+     * - FMASK
+     * - CMASK if it's TC-compatible or if the gen is GFX9
+     * - depth/stencil if HTILE is not TC-compatible and if the gen is not GFX9
+     */
+    uint8_t                     tile_swizzle;
+
     uint64_t                    surf_size;
     uint64_t                    dcc_size;
     uint64_t                    htile_size;

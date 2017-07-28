@@ -716,7 +716,10 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		AddrBaseSwizzleIn.pTileInfo = AddrSurfInfoOut.pTileInfo;
 		AddrBaseSwizzleIn.tileMode = AddrSurfInfoOut.tileMode;
 		AddrComputeBaseSwizzle(addrlib, &AddrBaseSwizzleIn, &AddrBaseSwizzleOut);
-		surf->u.legacy.tile_swizzle = AddrBaseSwizzleOut.tileSwizzle;
+
+		assert(AddrBaseSwizzleOut.tileSwizzle <=
+		       u_bit_consecutive(0, sizeof(surf->tile_swizzle) * 8));
+		surf->tile_swizzle = AddrBaseSwizzleOut.tileSwizzle;
 	}
 	return 0;
 }
