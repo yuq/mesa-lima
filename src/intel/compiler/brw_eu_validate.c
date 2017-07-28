@@ -1036,6 +1036,66 @@ region_alignment_rules(const struct gen_device_info *devinfo,
    return error_msg;
 }
 
+static struct string
+vector_immediate_restrictions(const struct gen_device_info *devinfo,
+                              const brw_inst *inst)
+{
+   unsigned num_sources = num_sources_from_inst(devinfo, inst);
+   struct string error_msg = { .str = NULL, .len = 0 };
+
+   if (num_sources == 3 || num_sources == 0)
+      return (struct string){};
+
+   unsigned file = num_sources == 1 ?
+                   brw_inst_src0_reg_file(devinfo, inst) :
+                   brw_inst_src1_reg_file(devinfo, inst);
+   if (file != BRW_IMMEDIATE_VALUE)
+      return (struct string){};
+
+   unsigned dst_type_size = brw_element_size(devinfo, inst, dst);
+   unsigned dst_subreg = brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1 ?
+                         brw_inst_dst_da1_subreg_nr(devinfo, inst) : 0;
+   unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
+   unsigned type = num_sources == 1 ?
+                   brw_inst_src0_reg_type(devinfo, inst) :
+                   brw_inst_src1_reg_type(devinfo, inst);
+
+   /* The PRMs say:
+    *
+    *    When an immediate vector is used in an instruction, the destination
+    *    must be 128-bit aligned with destination horizontal stride equivalent
+    *    to a word for an immediate integer vector (v) and equivalent to a
+    *    DWord for an immediate float vector (vf).
+    *
+    * The text has not been updated for the addition of the immediate unsigned
+    * integer vector type (uv) on SNB, but presumably the same restriction
+    * applies.
+    */
+   switch (type) {
+   case BRW_HW_REG_IMM_TYPE_V:
+   case BRW_HW_REG_IMM_TYPE_UV:
+   case BRW_HW_REG_IMM_TYPE_VF:
+      ERROR_IF(dst_subreg % (128 / 8) != 0,
+               "Destination must be 128-bit aligned in order to use immediate "
+               "vector types");
+
+      if (type == BRW_HW_REG_IMM_TYPE_VF) {
+         ERROR_IF(dst_type_size * dst_stride != 4,
+                  "Destination must have stride equivalent to dword in order "
+                  "to use the VF type");
+      } else {
+         ERROR_IF(dst_type_size * dst_stride != 2,
+                  "Destination must have stride equivalent to word in order "
+                  "to use the V or UV type");
+      }
+      break;
+   default:
+      break;
+   }
+
+   return error_msg;
+}
+
 bool
 brw_validate_instructions(const struct gen_device_info *devinfo,
                           void *assembly, int start_offset, int end_offset,
@@ -1063,6 +1123,7 @@ brw_validate_instructions(const struct gen_device_info *devinfo,
          CHECK(general_restrictions_based_on_operand_types);
          CHECK(general_restrictions_on_region_parameters);
          CHECK(region_alignment_rules);
+         CHECK(vector_immediate_restrictions);
       }
 
       if (error_msg.str && annotation) {

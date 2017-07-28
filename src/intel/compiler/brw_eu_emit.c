@@ -279,19 +279,8 @@ validate_reg(const struct gen_device_info *devinfo,
    const int execsize_for_reg[] = {1, 2, 4, 8, 16, 32};
    int width, hstride, vstride, execsize;
 
-   if (reg.file == BRW_IMMEDIATE_VALUE) {
-      /* 3.3.6: Region Parameters.  Restriction: Immediate vectors
-       * mean the destination has to be 128-bit aligned and the
-       * destination horiz stride has to be a word.
-       */
-      if (reg.type == BRW_REGISTER_TYPE_V) {
-         unsigned UNUSED elem_size = brw_element_size(devinfo, inst, dst);
-         assert(hstride_for_reg[brw_inst_dst_hstride(devinfo, inst)] *
-                elem_size == 2);
-      }
-
+   if (reg.file == BRW_IMMEDIATE_VALUE)
       return;
-   }
 
    if (reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
        reg.file == BRW_ARF_NULL)
