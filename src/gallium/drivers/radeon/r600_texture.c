@@ -757,6 +757,7 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 	out->tile_mode_index = fmask.u.legacy.tiling_index[0];
 	out->pitch_in_pixels = fmask.u.legacy.level[0].nblk_x;
 	out->bank_height = fmask.u.legacy.bankh;
+	out->tile_swizzle = fmask.tile_swizzle;
 	out->alignment = MAX2(256, fmask.surf_alignment);
 	out->size = fmask.surf_size;
 }
@@ -1447,7 +1448,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	struct pb_buffer *buf = NULL;
 	unsigned stride = 0, offset = 0;
 	unsigned array_mode;
-	struct radeon_surf surface;
+	struct radeon_surf surface = {};
 	int r;
 	struct radeon_bo_metadata metadata = {};
 	struct r600_texture *rtex;
@@ -1511,6 +1512,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 		assert(metadata.u.gfx9.swizzle_mode == surface.u.gfx9.surf.swizzle_mode);
 	}
 
+	assert(rtex->surface.tile_swizzle == 0);
 	return &rtex->resource.b.b;
 }
 

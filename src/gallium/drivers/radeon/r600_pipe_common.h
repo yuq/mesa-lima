@@ -202,6 +202,7 @@ struct r600_fmask_info {
 	unsigned bank_height;
 	unsigned slice_tile_max;
 	unsigned tile_mode_index;
+	unsigned tile_swizzle;
 };
 
 struct r600_cmask_info {

@@ -422,6 +422,13 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 	state[1] &= C_008F14_BASE_ADDRESS_HI;
 	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
 
+	/* Only macrotiled modes can set tile swizzle.
+	 * GFX9 doesn't use (legacy) base_level_info.
+	 */
+	if (sscreen->b.chip_class >= GFX9 ||
+	    base_level_info->mode == RADEON_SURF_MODE_2D)
+		state[0] |= tex->surface.tile_swizzle;
+
 	if (sscreen->b.chip_class >= VI) {
 		state[6] &= C_008F28_COMPRESSION_EN;
 		state[7] = 0;
@@ -430,8 +437,12 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 			meta_va = (!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 				  tex->dcc_offset;
 
-			if (sscreen->b.chip_class <= VI)
+			if (sscreen->b.chip_class == VI) {
 				meta_va += base_level_info->dcc_offset;
+				assert(base_level_info->mode == RADEON_SURF_MODE_2D);
+			}
+
+			meta_va |= (uint32_t)tex->surface.tile_swizzle << 8;
 		} else if (tex->tc_compatible_htile && first_level == 0) {
 			meta_va = tex->resource.gpu_address + tex->htile_offset;
 		}

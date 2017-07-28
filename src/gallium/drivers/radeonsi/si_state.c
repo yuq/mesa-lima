@@ -2767,8 +2767,10 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		cb_color_info = cb->cb_color_info | tex->cb_color_info;
 		cb_color_attrib = cb->cb_color_attrib;
 
-		if (tex->fmask.size)
+		if (tex->fmask.size) {
 			cb_color_fmask = (tex->resource.gpu_address + tex->fmask.offset) >> 8;
+			cb_color_fmask |= tex->fmask.tile_swizzle;
+		}
 
 		/* Set up DCC. */
 		if (vi_dcc_enabled(tex, cb->base.u.tex.level)) {
@@ -2782,6 +2784,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 			cb_dcc_base = ((!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 				       tex->dcc_offset) >> 8;
+			cb_dcc_base |= tex->surface.tile_swizzle;
 		}
 
 		if (sctx->b.chip_class >= GFX9) {
@@ -2794,6 +2797,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 			/* Set mutable surface parameters. */
 			cb_color_base += tex->surface.u.gfx9.surf_offset >> 8;
+			cb_color_base |= tex->surface.tile_swizzle;
 			if (!tex->fmask.size)
 				cb_color_fmask = cb_color_base;
 			cb_color_attrib |= S_028C74_COLOR_SW_MODE(tex->surface.u.gfx9.surf.swizzle_mode) |
@@ -2828,6 +2832,10 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			unsigned cb_color_pitch, cb_color_slice, cb_color_fmask_slice;
 
 			cb_color_base += level_info->offset >> 8;
+			/* Only macrotiled modes can set tile swizzle. */
+			if (level_info->mode == RADEON_SURF_MODE_2D)
+				cb_color_base |= tex->surface.tile_swizzle;
+
 			if (!tex->fmask.size)
 				cb_color_fmask = cb_color_base;
 			if (cb_dcc_base)
@@ -3416,7 +3424,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 			num_format = V_008F14_IMG_NUM_FORMAT_UINT;
 		}
 
-		fmask_state[0] = va >> 8;
+		fmask_state[0] = (va >> 8) | tex->fmask.tile_swizzle;
 		fmask_state[1] = S_008F14_BASE_ADDRESS_HI(va >> 40) |
 				 S_008F14_DATA_FORMAT_GFX6(data_format) |
 				 S_008F14_NUM_FORMAT_GFX6(num_format);
