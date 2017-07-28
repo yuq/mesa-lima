@@ -1392,6 +1392,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	sctx->b.num_draw_calls++;
+	if (sctx->framebuffer.state.nr_cbufs > 1)
+		sctx->b.num_mrt_draw_calls++;
 	if (info->primitive_restart)
 		sctx->b.num_prim_restart_calls++;
 	if (G_0286E8_WAVESIZE(sctx->spi_tmpring_size))
