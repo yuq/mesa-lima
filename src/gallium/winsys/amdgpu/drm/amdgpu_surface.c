@@ -92,6 +92,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    config.info.levels = tex->last_level + 1;
    config.is_3d = !!(tex->target == PIPE_TEXTURE_3D);
    config.is_cube = !!(tex->target == PIPE_TEXTURE_CUBE);
+   config.info.surf_index = NULL;
 
    return ac_compute_surface(ws->addrlib, &ws->info, &config, mode, surf);
 }

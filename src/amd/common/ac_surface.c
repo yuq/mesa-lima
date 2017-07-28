@@ -30,6 +30,7 @@
 #include "amdgpu_id.h"
 #include "ac_gpu_info.h"
 #include "util/macros.h"
+#include "util/u_atomic.h"
 #include "util/u_math.h"
 
 #include <errno.h>
@@ -706,13 +707,14 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 	surf->is_linear = surf->u.legacy.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
 
 	/* Work out tile swizzle. */
-	if (surf->u.legacy.level[0].mode == RADEON_SURF_MODE_2D &&
+	if (config->info.surf_index &&
+	    surf->u.legacy.level[0].mode == RADEON_SURF_MODE_2D &&
 	    !(surf->flags & (RADEON_SURF_Z_OR_SBUFFER | RADEON_SURF_SHAREABLE)) &&
 	    (config->info.samples > 1 || !(surf->flags & RADEON_SURF_SCANOUT))) {
 		ADDR_COMPUTE_BASE_SWIZZLE_INPUT AddrBaseSwizzleIn = {0};
 		ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT AddrBaseSwizzleOut = {0};
 
-		AddrBaseSwizzleIn.surfIndex = config->info.surf_index;
+		AddrBaseSwizzleIn.surfIndex = p_atomic_inc_return(config->info.surf_index) - 1;
 		AddrBaseSwizzleIn.tileIndex = AddrSurfInfoIn.tileIndex;
 		AddrBaseSwizzleIn.macroModeIndex = AddrSurfInfoOut.macroModeIndex;
 		AddrBaseSwizzleIn.pTileInfo = AddrSurfInfoOut.pTileInfo;

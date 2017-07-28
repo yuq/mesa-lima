@@ -209,10 +209,10 @@ struct ac_surf_info {
 	uint32_t width;
 	uint32_t height;
 	uint32_t depth;
-	uint32_t surf_index;
 	uint8_t samples;
 	uint8_t levels;
 	uint16_t array_size;
+	uint32_t *surf_index; /* Set a monotonic counter for tile swizzling. */
 };
 
 struct ac_surf_config {
