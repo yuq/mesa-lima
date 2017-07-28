@@ -36,13 +36,12 @@
 #include "viewport.h"
 
 static void
-set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
-                       GLfloat x, GLfloat y,
-                       GLfloat width, GLfloat height)
+clamp_viewport(struct gl_context *ctx, GLfloat *x, GLfloat *y,
+               GLfloat *width, GLfloat *height)
 {
    /* clamp width and height to the implementation dependent range */
-   width  = MIN2(width, (GLfloat) ctx->Const.MaxViewportWidth);
-   height = MIN2(height, (GLfloat) ctx->Const.MaxViewportHeight);
+   *width  = MIN2(*width, (GLfloat) ctx->Const.MaxViewportWidth);
+   *height = MIN2(*height, (GLfloat) ctx->Const.MaxViewportHeight);
 
    /* The GL_ARB_viewport_array spec says:
     *
@@ -55,12 +54,18 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
    if (ctx->Extensions.ARB_viewport_array ||
        (ctx->Extensions.OES_viewport_array &&
         _mesa_is_gles31(ctx))) {
-      x = CLAMP(x,
-                ctx->Const.ViewportBounds.Min, ctx->Const.ViewportBounds.Max);
-      y = CLAMP(y,
-                ctx->Const.ViewportBounds.Min, ctx->Const.ViewportBounds.Max);
+      *x = CLAMP(*x,
+                 ctx->Const.ViewportBounds.Min, ctx->Const.ViewportBounds.Max);
+      *y = CLAMP(*y,
+                 ctx->Const.ViewportBounds.Min, ctx->Const.ViewportBounds.Max);
    }
+}
 
+static void
+set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
+                       GLfloat x, GLfloat y,
+                       GLfloat width, GLfloat height)
+{
    if (ctx->ViewportArray[idx].X == x &&
        ctx->ViewportArray[idx].Width == width &&
        ctx->ViewportArray[idx].Y == y &&
@@ -89,6 +94,10 @@ static void
 viewport(struct gl_context *ctx, GLint x, GLint y, GLsizei width,
          GLsizei height)
 {
+   /* Clamp the viewport to the implementation dependent values. */
+   clamp_viewport(ctx, (GLfloat *)&x, (GLfloat *)&y,
+                  (GLfloat *)&width, (GLfloat *)&height);
+
    /* The GL_ARB_viewport_array spec says:
     *
     *     "Viewport sets the parameters for all viewports to the same values
@@ -153,6 +162,7 @@ void
 _mesa_set_viewport(struct gl_context *ctx, unsigned idx, GLfloat x, GLfloat y,
                     GLfloat width, GLfloat height)
 {
+   clamp_viewport(ctx, &x, &y, &width, &height);
    set_viewport_no_notify(ctx, idx, x, y, width, height);
 
    if (ctx->Driver.Viewport)
@@ -161,9 +171,12 @@ _mesa_set_viewport(struct gl_context *ctx, unsigned idx, GLfloat x, GLfloat y,
 
 static void
 viewport_array(struct gl_context *ctx, GLuint first, GLsizei count,
-               const struct gl_viewport_inputs *inputs)
+               struct gl_viewport_inputs *inputs)
 {
    for (GLsizei i = 0; i < count; i++) {
+      clamp_viewport(ctx, &inputs[i].X, &inputs[i].Y,
+                     &inputs[i].Width, &inputs[i].Height);
+
       set_viewport_no_notify(ctx, i + first, inputs[i].X, inputs[i].Y,
                              inputs[i].Width, inputs[i].Height);
    }
@@ -177,7 +190,7 @@ _mesa_ViewportArrayv_no_error(GLuint first, GLsizei count, const GLfloat *v)
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   const struct gl_viewport_inputs *const p = (struct gl_viewport_inputs *)v;
+   struct gl_viewport_inputs *p = (struct gl_viewport_inputs *)v;
    viewport_array(ctx, first, count, p);
 }
 
@@ -185,7 +198,7 @@ void GLAPIENTRY
 _mesa_ViewportArrayv(GLuint first, GLsizei count, const GLfloat *v)
 {
    int i;
-   const struct gl_viewport_inputs *const p = (struct gl_viewport_inputs *) v;
+   struct gl_viewport_inputs *p = (struct gl_viewport_inputs *)v;
    GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_API)
