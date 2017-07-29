@@ -2762,7 +2762,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 		/* Compute mutable surface parameters. */
 		cb_color_base = tex->resource.gpu_address >> 8;
-		cb_color_fmask = cb_color_base;
+		cb_color_fmask = 0;
 		cb_dcc_base = 0;
 		cb_color_info = cb->cb_color_info | tex->cb_color_info;
 		cb_color_attrib = cb->cb_color_attrib;
@@ -2794,6 +2794,8 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 			/* Set mutable surface parameters. */
 			cb_color_base += tex->surface.u.gfx9.surf_offset >> 8;
+			if (!tex->fmask.size)
+				cb_color_fmask = cb_color_base;
 			cb_color_attrib |= S_028C74_COLOR_SW_MODE(tex->surface.u.gfx9.surf.swizzle_mode) |
 					   S_028C74_FMASK_SW_MODE(tex->surface.u.gfx9.fmask.swizzle_mode) |
 					   S_028C74_RB_ALIGNED(meta.rb_aligned) |
@@ -2826,6 +2828,8 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			unsigned cb_color_pitch, cb_color_slice, cb_color_fmask_slice;
 
 			cb_color_base += level_info->offset >> 8;
+			if (!tex->fmask.size)
+				cb_color_fmask = cb_color_base;
 			if (cb_dcc_base)
 				cb_dcc_base += level_info->dcc_offset >> 8;
 
