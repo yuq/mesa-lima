@@ -1145,10 +1145,10 @@ void si_ce_pre_draw_synchronization(struct si_context *sctx)
 {
 	if (sctx->ce_need_synchronization) {
 		radeon_emit(sctx->ce_ib, PKT3(PKT3_INCREMENT_CE_COUNTER, 0, 0));
-		radeon_emit(sctx->ce_ib, 1);
+		radeon_emit(sctx->ce_ib, 1); /* 1 = increment CE counter */
 
 		radeon_emit(sctx->b.gfx.cs, PKT3(PKT3_WAIT_ON_CE_COUNTER, 0, 0));
-		radeon_emit(sctx->b.gfx.cs, 1);
+		radeon_emit(sctx->b.gfx.cs, 0); /* 0 = don't flush sL1 conditionally */
 	}
 }
 
@@ -1156,7 +1156,7 @@ void si_ce_post_draw_synchronization(struct si_context *sctx)
 {
 	if (sctx->ce_need_synchronization) {
 		radeon_emit(sctx->b.gfx.cs, PKT3(PKT3_INCREMENT_DE_COUNTER, 0, 0));
-		radeon_emit(sctx->b.gfx.cs, 0);
+		radeon_emit(sctx->b.gfx.cs, 0); /* unused */
 
 		sctx->ce_need_synchronization = false;
 	}
