@@ -407,12 +407,16 @@ static unsigned cik_get_macro_tile_index(struct radeon_surf *surf)
 }
 
 /**
+ * This must be called after the first level is computed.
+ *
  * Copy surface-global settings like pipe/bank config from level 0 surface
- * computation.
+ * computation, and compute tile swizzle.
  */
-static void gfx6_surface_settings(const struct radeon_info* info,
-				  ADDR_COMPUTE_SURFACE_INFO_OUTPUT* csio,
-				  struct radeon_surf *surf)
+static int gfx6_surface_settings(ADDR_HANDLE addrlib,
+				 const struct radeon_info *info,
+				 const struct ac_surf_config *config,
+				 ADDR_COMPUTE_SURFACE_INFO_OUTPUT* csio,
+				 struct radeon_surf *surf)
 {
 	surf->surf_alignment = csio->baseAlign;
 	surf->u.legacy.pipe_config = csio->pTileInfo->pipeConfig - 1;
@@ -429,6 +433,34 @@ static void gfx6_surface_settings(const struct radeon_info* info,
 	} else {
 		surf->u.legacy.macro_tile_index = 0;
 	}
+
+	/* Compute tile swizzle. */
+	if (config->info.surf_index &&
+	    surf->u.legacy.level[0].mode == RADEON_SURF_MODE_2D &&
+	    !(surf->flags & (RADEON_SURF_Z_OR_SBUFFER | RADEON_SURF_SHAREABLE)) &&
+	    (config->info.samples > 1 || !(surf->flags & RADEON_SURF_SCANOUT))) {
+		ADDR_COMPUTE_BASE_SWIZZLE_INPUT AddrBaseSwizzleIn = {0};
+		ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT AddrBaseSwizzleOut = {0};
+
+		AddrBaseSwizzleIn.size = sizeof(ADDR_COMPUTE_BASE_SWIZZLE_INPUT);
+		AddrBaseSwizzleOut.size = sizeof(ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT);
+
+		AddrBaseSwizzleIn.surfIndex = p_atomic_inc_return(config->info.surf_index) - 1;
+		AddrBaseSwizzleIn.tileIndex = csio->tileIndex;
+		AddrBaseSwizzleIn.macroModeIndex = csio->macroModeIndex;
+		AddrBaseSwizzleIn.pTileInfo = csio->pTileInfo;
+		AddrBaseSwizzleIn.tileMode = csio->tileMode;
+
+		int r = AddrComputeBaseSwizzle(addrlib, &AddrBaseSwizzleIn,
+					       &AddrBaseSwizzleOut);
+		if (r != ADDR_OK)
+			return r;
+
+		assert(AddrBaseSwizzleOut.tileSwizzle <=
+		       u_bit_consecutive(0, sizeof(surf->tile_swizzle) * 8));
+		surf->tile_swizzle = AddrBaseSwizzleOut.tileSwizzle;
+	}
+	return 0;
 }
 
 /**
@@ -644,7 +676,10 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 			if (level > 0)
 				continue;
 
-			gfx6_surface_settings(info, &AddrSurfInfoOut, surf);
+			r = gfx6_surface_settings(addrlib, info, config,
+						  &AddrSurfInfoOut, surf);
+			if (r)
+				return r;
 		}
 	}
 
@@ -676,8 +711,12 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 			}
 
 			if (level == 0) {
-				if (only_stencil)
-					gfx6_surface_settings(info, &AddrSurfInfoOut, surf);
+				if (only_stencil) {
+					r = gfx6_surface_settings(addrlib, info, config,
+								  &AddrSurfInfoOut, surf);
+					if (r)
+						return r;
+				}
 
 				/* For 2D modes only. */
 				if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
@@ -705,33 +744,6 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		surf->htile_size *= 2;
 
 	surf->is_linear = surf->u.legacy.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
-
-	/* Work out tile swizzle. */
-	if (config->info.surf_index &&
-	    surf->u.legacy.level[0].mode == RADEON_SURF_MODE_2D &&
-	    !(surf->flags & (RADEON_SURF_Z_OR_SBUFFER | RADEON_SURF_SHAREABLE)) &&
-	    (config->info.samples > 1 || !(surf->flags & RADEON_SURF_SCANOUT))) {
-		ADDR_COMPUTE_BASE_SWIZZLE_INPUT AddrBaseSwizzleIn = {0};
-		ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT AddrBaseSwizzleOut = {0};
-
-		AddrBaseSwizzleIn.size = sizeof(ADDR_COMPUTE_BASE_SWIZZLE_INPUT);
-		AddrBaseSwizzleOut.size = sizeof(ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT);
-
-		AddrBaseSwizzleIn.surfIndex = p_atomic_inc_return(config->info.surf_index) - 1;
-		AddrBaseSwizzleIn.tileIndex = AddrSurfInfoIn.tileIndex;
-		AddrBaseSwizzleIn.macroModeIndex = AddrSurfInfoOut.macroModeIndex;
-		AddrBaseSwizzleIn.pTileInfo = AddrSurfInfoOut.pTileInfo;
-		AddrBaseSwizzleIn.tileMode = AddrSurfInfoOut.tileMode;
-
-		r = AddrComputeBaseSwizzle(addrlib, &AddrBaseSwizzleIn,
-					   &AddrBaseSwizzleOut);
-		if (r != ADDR_OK)
-			return r;
-
-		assert(AddrBaseSwizzleOut.tileSwizzle <=
-		       u_bit_consecutive(0, sizeof(surf->tile_swizzle) * 8));
-		surf->tile_swizzle = AddrBaseSwizzleOut.tileSwizzle;
-	}
 	return 0;
 }
 
