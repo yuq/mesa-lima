@@ -26,19 +26,162 @@
 #include "compiler/nir/nir.h"
 #include "gpir.h"
 
+static void *_gpir_node_create(gpir_compiler *comp, int size, int index, int max_parent)
+{
+   gpir_node *node = CALLOC(1, size + max_parent * sizeof(gpir_node *));
+   if (!node)
+      return NULL;
+
+   node->max_parent = max_parent;
+   if (max_parent)
+      node->parents = (void *)node + size;
+
+   if (index >= 0)
+      comp->var_nodes[index] = node;
+
+   return node;
+}
+
+static void *gpir_node_create_ssa(gpir_compiler *comp, int size, nir_ssa_def *ssa)
+{
+   int max_parent = list_length(&ssa->uses) + list_length(&ssa->if_uses);
+   int index = ssa->index;
+
+   return _gpir_node_create(comp, size, index, max_parent);
+}
+
+static void *gpir_node_create_reg(gpir_compiler *comp, int size, nir_reg_dest *reg)
+{
+   int max_parent = list_length(&reg->reg->uses) + list_length(&reg->reg->if_uses);
+   int index = reg->reg->index + comp->reg_base;
+
+   return _gpir_node_create(comp, size, index, max_parent);
+}
+
+static void *gpir_node_create(gpir_compiler *comp, int size, nir_dest *dest)
+{
+   unsigned max_parent = 0, index = -1;
+
+   if (dest) {
+      if (dest->is_ssa)
+         return gpir_node_create_ssa(comp, size, &dest->ssa);
+      else
+         return gpir_node_create_reg(comp, size, &dest->reg);
+   }
+
+   return _gpir_node_create(comp, size, index, max_parent);
+}
+
+static gpir_node *gpir_node_find(gpir_compiler *comp, nir_src *src)
+{
+   int index;
+   gpir_node *node;
+
+   if (src->is_ssa)
+      index = src->ssa->index;
+   else
+      index = src->reg.reg->index + comp->reg_base;
+
+   node = comp->var_nodes[index];
+   assert(node);
+   return node;
+}
+
+static void gpir_node_add_child(gpir_node *parent, gpir_node *child)
+{
+   parent->children[parent->num_child++] = child;
+   child->parents[child->num_parent++] = parent;
+   assert(child->num_parent <= child->max_parent);
+}
+
+static int nir_to_gpir_opcodes[nir_num_opcodes] = {
+   /* not supported */
+   [0 ... nir_last_opcode] = -1,
+   /* convert */
+   [nir_op_imov] = gpir_op_copy,
+   [nir_op_vec2] = gpir_op_copy,
+   [nir_op_vec3] = gpir_op_copy,
+   [nir_op_vec4] = gpir_op_copy,
+
+   [nir_op_fmul] = gpir_op_mul,
+   [nir_op_fadd] = gpir_op_add,
+   [nir_op_fsub] = gpir_op_sub,
+   [nir_op_fneg] = gpir_op_neg,
+};
+
 static gpir_node *gpir_emit_alu(gpir_compiler *comp, nir_alu_instr *instr)
 {
-   return NULL;
+   int op = nir_to_gpir_opcodes[instr->op];
+
+   if (op < 0) {
+      fprintf(stderr, "gpir: unsupport nir_op %d\n", instr->op);
+      return NULL;
+   }
+
+   gpir_alu_node *node = gpir_node_create(comp, sizeof(*node), &instr->dest.dest);
+   if (!node)
+      return NULL;
+
+   unsigned num_child = nir_op_infos[instr->op].num_inputs;
+   assert(num_child <= ARRAY_SIZE(node->children_component));
+
+   node->node.op = op;
+   for (int i = 0; i < num_child; i++) {
+      nir_alu_src *src = instr->src + i;
+      node->children_negate[i] = src->negate;
+      node->children_component[i] = src->swizzle[0];
+
+      gpir_node *child = gpir_node_find(comp, &src->src);
+      gpir_node_add_child(&node->node, child);
+   }
+
+   return &node->node;
 }
 
 static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *instr)
 {
-   return NULL;
+   gpir_node *child;
+   gpir_load_node *lnode;
+   gpir_store_node *snode;
+
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_uniform:
+   case nir_intrinsic_load_input:
+      lnode = gpir_node_create(comp, sizeof(*lnode), &instr->dest);
+      if (!lnode)
+         return NULL;
+
+      child = gpir_node_find(comp, instr->src);
+      gpir_node_add_child(&lnode->node, child);
+      return &lnode->node;
+
+   case nir_intrinsic_store_output:
+      snode = gpir_node_create(comp, sizeof(*snode), NULL);
+      if (!snode)
+         return NULL;
+
+      for (int i = 0; i < 2; i++) {
+         child = gpir_node_find(comp, instr->src + i);
+         gpir_node_add_child(&snode->node, child);
+      }
+      return &snode->node;
+
+   default:
+      fprintf(stderr, "gpir: unsupport nir_intrinsic_instr %d\n", instr->intrinsic);
+      return NULL;
+   }
 }
 
 static gpir_node *gpir_emit_load_const(gpir_compiler *comp, nir_load_const_instr *instr)
 {
-   return NULL;
+   gpir_const_node *node = gpir_node_create_ssa(comp, sizeof(*node), &instr->def);
+   if (!node)
+      return NULL;
+
+   node->constant.i = instr->value.i32[0];
+   assert(instr->def.num_components == 1);
+   assert(instr->def.bit_size == 32);
+   return &node->node;
 }
 
 static gpir_node *gpir_emit_ssa_undef(gpir_compiler *comp, nir_ssa_undef_instr *instr)
@@ -61,33 +204,23 @@ static gpir_node *gpir_emit_jump(gpir_compiler *comp, nir_jump_instr *instr)
 
 static gpir_node *gpir_emit_instr(gpir_compiler *comp, nir_instr *instr)
 {
-   gpir_node *node;
-
    switch (instr->type) {
    case nir_instr_type_alu:
-      node = gpir_emit_alu(comp, nir_instr_as_alu(instr));
-      break;
+      return gpir_emit_alu(comp, nir_instr_as_alu(instr));
    case nir_instr_type_intrinsic:
-      node = gpir_emit_intrinsic(comp, nir_instr_as_intrinsic(instr));
-      break;
+      return gpir_emit_intrinsic(comp, nir_instr_as_intrinsic(instr));
    case nir_instr_type_load_const:
-      node = gpir_emit_load_const(comp, nir_instr_as_load_const(instr));
-      break;
+      return gpir_emit_load_const(comp, nir_instr_as_load_const(instr));
    case nir_instr_type_ssa_undef:
-      node = gpir_emit_ssa_undef(comp, nir_instr_as_ssa_undef(instr));
-      break;
+      return gpir_emit_ssa_undef(comp, nir_instr_as_ssa_undef(instr));
    case nir_instr_type_tex:
-      node = gpir_emit_tex(comp, nir_instr_as_tex(instr));
-      break;
+      return gpir_emit_tex(comp, nir_instr_as_tex(instr));
    case nir_instr_type_jump:
-      node = gpir_emit_jump(comp, nir_instr_as_jump(instr));
-      break;
+      return gpir_emit_jump(comp, nir_instr_as_jump(instr));
    default:
       fprintf(stderr, "gpir: unknown NIR instr type %d\n", instr->type);
-      node = NULL;
-      break;
+      return NULL;
    }
-   return node;
 }
 
 static gpir_block *gpir_block_create(void)
@@ -118,9 +251,8 @@ static bool gpir_emit_block(gpir_compiler *comp, nir_block *nblock)
 
    nir_foreach_instr(instr, nblock) {
       gpir_node *node = gpir_emit_instr(comp, instr);
-      if (!node)
-         return false;
-      list_addtail(&node->list, &block->node_list);
+      if (node)
+         list_addtail(&node->list, &block->node_list);
    }
 
    return true;
