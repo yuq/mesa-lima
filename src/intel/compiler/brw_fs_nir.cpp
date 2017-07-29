@@ -4122,7 +4122,20 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
              * to rely on byte scattered in order to write 16-bit elements.
              * The byte_scattered_write message needs that every written 16-bit
              * type to be aligned 32-bits (stride=2).
+             * Additionally, while on Untyped Surface messages the
+             * bits of the execution mask are ANDed with the corresponding
+             * bits of the Pixel/Sample Mask, that is not the case for byte
+             * scattered writes. That is needed to avoid ssbo stores writing
+             * on helper invocations. So when that can affect, we load the
+             * sample mask, and predicate the send message.
              */
+            brw_predicate pred = BRW_PREDICATE_NONE;
+
+            if (stage == MESA_SHADER_FRAGMENT) {
+               bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
+               pred = BRW_PREDICATE_NORMAL;
+            }
+
             fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D);
             bld.MOV(subscript(tmp, BRW_REGISTER_TYPE_W, 0),
                      offset(val_reg, bld, first_component));
@@ -4130,7 +4143,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                       tmp,
                                       1 /* dims */, 1,
                                       bit_size,
-                                      BRW_PREDICATE_NONE);
+                                      pred);
          } else {
             assert(num_components * type_size <= 16);
             assert((num_components * type_size) % 4 == 0);
