@@ -450,7 +450,7 @@ static void cik_prefetch_shader_async(struct si_context *sctx,
 	}
 }
 
-static void cik_emit_prefetch_L2(struct si_context *sctx, struct r600_atom *atom)
+void cik_emit_prefetch_L2(struct si_context *sctx)
 {
 	/* Prefetch shaders and VBO descriptors to TC L2. */
 	if (si_pm4_state_changed(sctx, ls))
@@ -473,12 +473,11 @@ static void cik_emit_prefetch_L2(struct si_context *sctx, struct r600_atom *atom
 	}
 	if (si_pm4_state_changed(sctx, ps))
 		cik_prefetch_shader_async(sctx, sctx->queued.named.ps);
+
+	sctx->prefetch_L2 = false;
 }
 
 void si_init_cp_dma_functions(struct si_context *sctx)
 {
 	sctx->b.clear_buffer = si_clear_buffer;
-
-	si_init_atom(sctx, &sctx->prefetch_L2, &sctx->atoms.s.prefetch_L2,
-		     cik_emit_prefetch_L2);
 }

@@ -1177,7 +1177,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * cache is needed. */
 	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 	if (sctx->b.chip_class >= CIK)
-		si_mark_atom_dirty(sctx, &sctx->prefetch_L2);
+		sctx->prefetch_L2 = true;
 	sctx->vertex_buffers_dirty = false;
 	sctx->vertex_buffer_pointer_dirty = true;
 	return true;

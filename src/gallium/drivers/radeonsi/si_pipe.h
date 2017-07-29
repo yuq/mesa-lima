@@ -283,6 +283,7 @@ struct si_context {
 
 	bool				gfx_flush_in_progress:1;
 	bool				compute_is_busy:1;
+	bool				prefetch_L2:1;
 
 	/* Atoms (direct states). */
 	union si_state_atoms		atoms;
@@ -293,7 +294,6 @@ struct si_context {
 	union si_state			emitted;
 
 	/* Atom declarations. */
-	struct r600_atom		prefetch_L2;
 	struct si_framebuffer		framebuffer;
 	struct si_sample_locs		msaa_sample_locs;
 	struct r600_atom		db_render_state;
@@ -484,6 +484,7 @@ void si_copy_buffer(struct si_context *sctx,
 		    unsigned user_flags);
 void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf,
 			      uint64_t offset, unsigned size);
+void cik_emit_prefetch_L2(struct si_context *sctx);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */

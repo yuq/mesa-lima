@@ -3308,7 +3308,7 @@ bool si_update_shaders(struct si_context *sctx)
 	}
 
 	if (sctx->b.chip_class >= CIK)
-		si_mark_atom_dirty(sctx, &sctx->prefetch_L2);
+		sctx->prefetch_L2 = true;
 
 	sctx->do_update_shaders = false;
 	return true;

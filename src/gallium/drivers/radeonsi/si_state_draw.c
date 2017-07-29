@@ -1346,6 +1346,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (sctx->b.flags)
 		si_emit_cache_flush(sctx);
 
+	if (sctx->prefetch_L2)
+		cik_emit_prefetch_L2(sctx);
+
 	/* Emit state atoms. */
 	mask = sctx->dirty_atoms;
 	while (mask) {

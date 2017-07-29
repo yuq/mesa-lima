@@ -217,7 +217,7 @@ void si_begin_new_cs(struct si_context *ctx)
 		si_ce_restore_all_descriptors_at_ib_start(ctx);
 
 	if (ctx->b.chip_class >= CIK)
-		si_mark_atom_dirty(ctx, &ctx->prefetch_L2);
+		ctx->prefetch_L2 = true;
 
 	/* CLEAR_STATE disables all colorbuffers, so only enable bound ones. */
 	ctx->framebuffer.dirty_cbufs =
