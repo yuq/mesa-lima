@@ -734,9 +734,16 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 	 * complicated.
 	 */
 	if (surf->dcc_size && config->info.levels > 1) {
+		/* The smallest miplevels that are never compressed by DCC
+		 * still read the DCC buffer via TC if the base level uses DCC,
+		 * and for some reason the DCC buffer needs to be larger if
+		 * the miptree uses non-zero tile_swizzle. Otherwise there are
+		 * VM faults.
+		 *
+		 * "dcc_alignment * 4" was determined by trial and error.
+		 */
 		surf->dcc_size = align64(surf->surf_size >> 8,
-					 info->pipe_interleave_bytes *
-					 info->num_tile_pipes);
+					 surf->dcc_alignment * 4);
 	}
 
 	/* Make sure HTILE covers the whole miptree, because the shader reads
