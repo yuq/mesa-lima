@@ -25,6 +25,7 @@
 #define LIMA_IR_GP_GPIR_H
 
 #include "util/list.h"
+#include "util/u_math.h"
 
 /* list of operations that a node can do. */
 typedef enum {
@@ -38,12 +39,14 @@ typedef enum {
 
    /* add ops */
    gpir_op_add,
+   gpir_op_sub,
    gpir_op_floor,
    gpir_op_sign,
    gpir_op_ge,
    gpir_op_lt,
    gpir_op_min,
    gpir_op_max,
+   gpir_op_abs,
 
    /* mul/add ops */
    gpir_op_neg,
@@ -77,6 +80,9 @@ typedef enum {
    /* const (emulated) */
    gpir_op_const,
 
+   /* copy (emulated) */
+   gpir_op_copy,
+
    /* emulated ops */
    gpir_op_exp2,
    gpir_op_log2,
@@ -95,7 +101,7 @@ typedef struct gpir_node {
    struct list_head list;
    gpir_op op;
 
-   struct gpir_node *children[4];
+   struct gpir_node *children[5];
    unsigned num_child;
 
    /* point to the end of the sub-struct */
@@ -107,12 +113,13 @@ typedef struct gpir_node {
 typedef struct {
    gpir_node node;
    bool dest_negate;
-   bool children_negate[3];
+   bool children_negate[4];
+   uint8_t children_component[4];
 } gpir_alu_node;
 
 typedef struct {
    gpir_node node;
-   float constant;
+   union fi constant;
 } gpir_const_node;
 
 typedef struct {
@@ -128,7 +135,8 @@ typedef struct {
 typedef struct {
    gpir_node node;
    unsigned index; /* must be 0 when storing temporaries */
-   bool mask[4]; /* which components to store to */
+   bool write_mask[4]; /* which components to store to */
+   uint8_t children_component[4];
 } gpir_store_node;
 
 typedef struct gpir_block {
