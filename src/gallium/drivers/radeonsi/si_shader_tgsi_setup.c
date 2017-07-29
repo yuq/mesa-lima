@@ -756,7 +756,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 */
 			if (array_size > 16 ||
 			    !ctx->screen->llvm_has_working_vgpr_indexing) {
-				array_alloca = LLVMBuildAlloca(builder,
+				array_alloca = lp_build_alloca_undef(&ctx->gallivm,
 					LLVMArrayType(ctx->f32,
 						      array_size), "array");
 				ctx->temp_array_allocas[id] = array_alloca;
