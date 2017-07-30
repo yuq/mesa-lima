@@ -442,7 +442,7 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 	}
 
 	if (check_vm)
-		radeon_save_cs(rctx->ws, cs, &saved);
+		radeon_save_cs(rctx->ws, cs, &saved, true);
 
 	rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence);
 	if (fence)
@@ -464,7 +464,7 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
  * list in \p saved.
  */
 void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
-		    struct radeon_saved_cs *saved)
+		    struct radeon_saved_cs *saved, bool get_buffer_list)
 {
 	void *buf;
 	unsigned i;
@@ -481,6 +481,9 @@ void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
 		buf += cs->prev[i].cdw;
 	}
 	memcpy(buf, cs->current.buf, cs->current.cdw * 4);
+
+	if (!get_buffer_list)
+		return;
 
 	/* Save the buffer list. */
 	saved->bo_count = ws->cs_get_buffer_list(cs, NULL);

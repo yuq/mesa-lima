@@ -220,6 +220,7 @@ static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
 static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 {
 	int last_trace_id = -1;
+	int last_ce_trace_id = -1;
 
 	if (!sctx->last_gfx.ib)
 		return;
@@ -233,8 +234,10 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 						       NULL,
 						       PIPE_TRANSFER_UNSYNCHRONIZED |
 						       PIPE_TRANSFER_READ);
-		if (map)
-			last_trace_id = *map;
+		if (map) {
+			last_trace_id = map[0];
+			last_ce_trace_id = map[1];
+		}
 	}
 
 	if (sctx->init_config)
@@ -251,6 +254,12 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 	ac_parse_ib(f, sctx->last_gfx.ib, sctx->last_gfx.num_dw,
 		    last_trace_id, "IB", sctx->b.chip_class,
 		     NULL, NULL);
+
+	if (sctx->last_ce.ib) {
+		ac_parse_ib(f, sctx->last_ce.ib, sctx->last_ce.num_dw,
+			    last_ce_trace_id, "CE IB", sctx->b.chip_class,
+			    NULL, NULL);
+	}
 }
 
 static const char *priority_to_string(enum radeon_bo_priority priority)
@@ -845,6 +854,7 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 
 		/* dump only once */
 		radeon_clear_saved_cs(&sctx->last_gfx);
+		radeon_clear_saved_cs(&sctx->last_ce);
 		r600_resource_reference(&sctx->last_trace_buf, NULL);
 	}
 }

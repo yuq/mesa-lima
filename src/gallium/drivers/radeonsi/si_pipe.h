@@ -411,6 +411,7 @@ struct si_context {
 	/* Debug state. */
 	bool			is_debug;
 	struct radeon_saved_cs	last_gfx;
+	struct radeon_saved_cs	last_ce;
 	struct r600_resource	*last_trace_buf;
 	struct r600_resource	*trace_buf;
 	unsigned		trace_id;

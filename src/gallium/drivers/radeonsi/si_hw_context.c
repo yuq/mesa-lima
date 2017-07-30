@@ -145,7 +145,9 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	if (ctx->is_debug) {
 		/* Save the IB for debug contexts. */
 		radeon_clear_saved_cs(&ctx->last_gfx);
-		radeon_save_cs(ws, cs, &ctx->last_gfx);
+		radeon_save_cs(ws, cs, &ctx->last_gfx, true);
+		radeon_clear_saved_cs(&ctx->last_ce);
+		radeon_save_cs(ws, ctx->ce_ib, &ctx->last_ce, false);
 		r600_resource_reference(&ctx->last_trace_buf, ctx->trace_buf);
 		r600_resource_reference(&ctx->trace_buf, NULL);
 	}
@@ -173,16 +175,16 @@ void si_context_gfx_flush(void *context, unsigned flags,
 void si_begin_new_cs(struct si_context *ctx)
 {
 	if (ctx->is_debug) {
-		uint32_t zero = 0;
+		static const uint32_t zeros[2];
 
 		/* Create a buffer used for writing trace IDs and initialize it to 0. */
 		assert(!ctx->trace_buf);
 		ctx->trace_buf = (struct r600_resource*)
 				 pipe_buffer_create(ctx->b.b.screen, 0,
-						    PIPE_USAGE_STAGING, 4);
+						    PIPE_USAGE_STAGING, 8);
 		if (ctx->trace_buf)
 			pipe_buffer_write_nooverlap(&ctx->b.b, &ctx->trace_buf->b.b,
-						    0, sizeof(zero), &zero);
+						    0, sizeof(zeros), zeros);
 		ctx->trace_id = 0;
 	}
 
