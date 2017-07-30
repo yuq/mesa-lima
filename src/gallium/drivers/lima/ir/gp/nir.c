@@ -90,6 +90,11 @@ static gpir_node *gpir_node_find(gpir_compiler *comp, nir_src *src)
 static void gpir_node_add_child(gpir_node *parent, gpir_node *child)
 {
    parent->children[parent->num_child++] = child;
+   for (int i = 0; i < child->num_parent; i++) {
+      if (child->parents[i] == parent)
+         return;
+   }
+
    child->parents[child->num_parent++] = parent;
    assert(child->num_parent <= child->max_parent);
 }
