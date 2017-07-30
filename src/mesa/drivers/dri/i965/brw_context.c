@@ -694,6 +694,9 @@ brw_initialize_context_constants(struct brw_context *brw)
     */
    if (devinfo->gen >= 7)
       ctx->Const.UseSTD430AsDefaultPacking = true;
+
+   if (!(ctx->Const.ContextFlags & GL_CONTEXT_FLAG_DEBUG_BIT))
+      ctx->Const.AllowMappedBuffersDuringExecution = true;
 }
 
 static void
