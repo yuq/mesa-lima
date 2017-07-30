@@ -392,6 +392,9 @@ static void si_dump_descriptor_list(struct si_descriptors *desc,
 {
 	unsigned i, j;
 
+	if (!desc->list)
+		return;
+
 	for (i = 0; i < num_elements; i++) {
 		unsigned dw_offset = slot_remap(i) * element_dw_size;
 		uint32_t *gpu_ptr = desc->gpu_list ? desc->gpu_list : desc->list;

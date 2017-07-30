@@ -1101,6 +1101,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	if (!desc->buffer)
 		return false;
 
+	desc->list = ptr;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
 			      RADEON_PRIO_DESCRIPTORS);
@@ -2834,6 +2835,8 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	si_init_descriptors(sctx, &sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
 			    4, SI_NUM_VERTEX_BUFFERS, 0, 0, NULL);
+	FREE(sctx->vertex_buffers.list); /* not used */
+	sctx->vertex_buffers.list = NULL;
 
 	sctx->descriptors_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
 	sctx->total_ce_ram_allocated = ce_offset;
@@ -2947,6 +2950,8 @@ void si_release_all_descriptors(struct si_context *sctx)
 
 	for (i = 0; i < SI_NUM_DESCS; ++i)
 		si_release_descriptors(&sctx->descriptors[i]);
+
+	sctx->vertex_buffers.list = NULL; /* points into a mapped buffer */
 	si_release_descriptors(&sctx->vertex_buffers);
 }
 
