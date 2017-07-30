@@ -63,7 +63,6 @@ const struct {
 #ifdef _EGL_BUILT_IN_DRIVER_HAIKU
    { "egl_haiku", _eglBuiltInDriverHaiku },
 #endif
-   { NULL, NULL }
 };
 
 /**
@@ -172,7 +171,7 @@ _eglAddUserDriver(void)
    if (env) {
       EGLint i;
 
-      for (i = 0; _eglBuiltInDrivers[i].name; i++) {
+      for (i = 0; i < ARRAY_SIZE(_eglBuiltInDrivers); i++) {
          if (!strcmp(_eglBuiltInDrivers[i].name, env)) {
             _EGLModule *mod = _eglAddModule(env);
             if (mod)
@@ -196,7 +195,7 @@ _eglAddBuiltInDrivers(void)
    _EGLModule *mod;
    EGLint i;
 
-   for (i = 0; _eglBuiltInDrivers[i].name; i++) {
+   for (i = 0; i < ARRAY_SIZE(_eglBuiltInDrivers); i++) {
       mod = _eglAddModule(_eglBuiltInDrivers[i].name);
       if (mod)
          mod->BuiltIn = _eglBuiltInDrivers[i].main;
