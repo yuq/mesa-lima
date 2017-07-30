@@ -928,15 +928,17 @@ void radv_GetPhysicalDeviceMemoryProperties(
 	};
 
 	STATIC_ASSERT(RADV_MEM_HEAP_COUNT <= VK_MAX_MEMORY_HEAPS);
+	uint64_t visible_vram_size = MIN2(physical_device->rad_info.vram_size,
+	                                  physical_device->rad_info.vram_vis_size);
 
 	pMemoryProperties->memoryHeapCount = RADV_MEM_HEAP_COUNT;
 	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_VRAM] = (VkMemoryHeap) {
 		.size = physical_device->rad_info.vram_size -
-				physical_device->rad_info.vram_vis_size,
+				visible_vram_size,
 		.flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
 	};
 	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_VRAM_CPU_ACCESS] = (VkMemoryHeap) {
-		.size = physical_device->rad_info.vram_vis_size,
+		.size = visible_vram_size,
 		.flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
 	};
 	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_GTT] = (VkMemoryHeap) {
