@@ -432,7 +432,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 
 			if (sscreen->b.chip_class <= VI)
 				meta_va += base_level_info->dcc_offset;
-		} else if (tex->tc_compatible_htile) {
+		} else if (tex->tc_compatible_htile && first_level == 0) {
 			meta_va = tex->resource.gpu_address + tex->htile_offset;
 		}
 
