@@ -4549,10 +4549,32 @@ static void si_init_config(struct si_context *sctx)
 		}
 	}
 
+	/* CLEAR_STATE doesn't clear these correctly on certain generations.
+	 * I don't know why. Deduced by trial and error.
+	 */
+	if (sctx->b.chip_class <= CIK) {
+		si_pm4_set_reg(pm4, R_028B28_VGT_STRMOUT_DRAW_OPAQUE_OFFSET, 0);
+		si_pm4_set_reg(pm4, R_028204_PA_SC_WINDOW_SCISSOR_TL, S_028204_WINDOW_OFFSET_DISABLE(1));
+		si_pm4_set_reg(pm4, R_028240_PA_SC_GENERIC_SCISSOR_TL, S_028240_WINDOW_OFFSET_DISABLE(1));
+		si_pm4_set_reg(pm4, R_028244_PA_SC_GENERIC_SCISSOR_BR,
+			       S_028244_BR_X(16384) | S_028244_BR_Y(16384));
+		si_pm4_set_reg(pm4, R_028030_PA_SC_SCREEN_SCISSOR_TL, 0);
+		si_pm4_set_reg(pm4, R_028034_PA_SC_SCREEN_SCISSOR_BR,
+			       S_028034_BR_X(16384) | S_028034_BR_Y(16384));
+	}
+
 	if (sctx->b.chip_class >= GFX9) {
 		si_pm4_set_reg(pm4, R_030920_VGT_MAX_VTX_INDX, ~0);
 		si_pm4_set_reg(pm4, R_030924_VGT_MIN_VTX_INDX, 0);
 		si_pm4_set_reg(pm4, R_030928_VGT_INDX_OFFSET, 0);
+	} else {
+		/* These registers, when written, also overwrite the CLEAR_STATE
+		 * context, so we can't rely on CLEAR_STATE setting them.
+		 * It would be an issue if there was another UMD changing them.
+		 */
+		si_pm4_set_reg(pm4, R_028400_VGT_MAX_VTX_INDX, ~0);
+		si_pm4_set_reg(pm4, R_028404_VGT_MIN_VTX_INDX, 0);
+		si_pm4_set_reg(pm4, R_028408_VGT_INDX_OFFSET, 0);
 	}
 
 	if (sctx->b.chip_class >= CIK) {
