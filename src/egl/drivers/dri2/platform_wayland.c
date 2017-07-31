@@ -63,10 +63,6 @@ enum wl_drm_format_flags {
    HAS_RGB565 = 4,
 };
 
-static EGLBoolean
-dri2_wl_swap_interval(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf,
-                      EGLint interval);
-
 static int
 roundtrip(struct dri2_egl_display *dri2_dpy)
 {
@@ -230,8 +226,7 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
        goto cleanup_surf;
     }
 
-   dri2_wl_swap_interval(drv, disp, &dri2_surf->base,
-                         dri2_dpy->default_swap_interval);
+   dri2_surf->base.SwapInterval = dri2_dpy->default_swap_interval;
 
    return &dri2_surf->base;
 
@@ -1150,13 +1145,6 @@ dri2_wl_swap_interval(_EGLDriver *drv,
                    _EGLSurface *surf,
                    EGLint interval)
 {
-   if (interval > surf->Config->MaxSwapInterval)
-      interval = surf->Config->MaxSwapInterval;
-   else if (interval < surf->Config->MinSwapInterval)
-      interval = surf->Config->MinSwapInterval;
-
-   surf->SwapInterval = interval;
-
    return EGL_TRUE;
 }
 

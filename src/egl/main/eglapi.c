@@ -1201,7 +1201,17 @@ eglSwapInterval(EGLDisplay dpy, EGLint interval)
    if (_eglGetSurfaceHandle(surf) == EGL_NO_SURFACE)
       RETURN_EGL_ERROR(disp, EGL_BAD_SURFACE, EGL_FALSE);
 
-   ret = drv->API.SwapInterval(drv, disp, surf, interval);
+   interval = CLAMP(interval,
+                    surf->Config->MinSwapInterval,
+                    surf->Config->MaxSwapInterval);
+
+   if (surf->SwapInterval != interval)
+      ret = drv->API.SwapInterval(drv, disp, surf, interval);
+   else
+      ret = EGL_TRUE;
+
+   if (ret)
+      surf->SwapInterval = interval;
 
    RETURN_EGL_EVAL(disp, ret);
 }

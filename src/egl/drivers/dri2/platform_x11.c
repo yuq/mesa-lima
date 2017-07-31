@@ -956,15 +956,8 @@ dri2_x11_swap_interval(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf,
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
 
-   if (interval > surf->Config->MaxSwapInterval)
-      interval = surf->Config->MaxSwapInterval;
-   else if (interval < surf->Config->MinSwapInterval)
-      interval = surf->Config->MinSwapInterval;
-
-   if (interval != surf->SwapInterval && dri2_dpy->swap_available)
+   if (dri2_dpy->swap_available)
       xcb_dri2_swap_interval(dri2_dpy->conn, dri2_surf->drawable, interval);
-
-   surf->SwapInterval = interval;
 
    return EGL_TRUE;
 }
