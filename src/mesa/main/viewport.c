@@ -94,9 +94,10 @@ static void
 viewport(struct gl_context *ctx, GLint x, GLint y, GLsizei width,
          GLsizei height)
 {
+   struct gl_viewport_inputs input = { x, y, width, height };
+
    /* Clamp the viewport to the implementation dependent values. */
-   clamp_viewport(ctx, (GLfloat *)&x, (GLfloat *)&y,
-                  (GLfloat *)&width, (GLfloat *)&height);
+   clamp_viewport(ctx, &input.X, &input.Y, &input.Width, &input.Height);
 
    /* The GL_ARB_viewport_array spec says:
     *
@@ -110,7 +111,7 @@ viewport(struct gl_context *ctx, GLint x, GLint y, GLsizei width,
     * signal the driver once at the end.
     */
    for (unsigned i = 0; i < ctx->Const.MaxViewports; i++)
-      set_viewport_no_notify(ctx, i, x, y, width, height);
+      set_viewport_no_notify(ctx, i, input.X, input.Y, input.Width, input.Height);
 
    if (ctx->Driver.Viewport)
       ctx->Driver.Viewport(ctx);
