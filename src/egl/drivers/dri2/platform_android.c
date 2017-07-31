@@ -1142,7 +1142,7 @@ static const __DRIdri2LoaderExtension droid_dri2_loader_extension = {
    .getBuffers           = NULL,
    .flushFrontBuffer     = droid_flush_front_buffer,
    .getBuffersWithFormat = droid_get_buffers_with_format,
-   .getCapability        = droid_get_capability;
+   .getCapability        = droid_get_capability,
 };
 
 static const __DRIimageLoaderExtension droid_image_loader_extension = {
