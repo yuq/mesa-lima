@@ -1345,7 +1345,8 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->ws = ws;
 
 	if ((chip_name = r600_get_marketing_name(ws)))
-		snprintf(family_name, sizeof(family_name), "%s / ", r600_get_family_name(rscreen));
+		snprintf(family_name, sizeof(family_name), "%s / ",
+			 r600_get_family_name(rscreen) + 4);
 	else
 		chip_name = r600_get_family_name(rscreen);
 
