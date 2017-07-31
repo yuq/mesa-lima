@@ -28,6 +28,10 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
 	$(C_SOURCES)
 
+ifeq ($(ARCH_ARM_HAVE_NEON),true)
+LOCAL_SRC_FILES += $(NEON_C_SOURCES)
+endif
+
 LOCAL_GENERATED_SOURCES := $(MESA_GEN_NIR_H)
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/include/drm-uapi
