@@ -46,7 +46,9 @@ libmesautil_la_SOURCES = \
 	$(MESA_UTIL_FILES) \
 	$(MESA_UTIL_GENERATED_FILES)
 
-libmesautil_la_LIBADD = $(ZLIB_LIBS)
+libmesautil_la_LIBADD = \
+	$(CLOCK_LIB) \
+	$(ZLIB_LIBS)
 
 libxmlconfig_la_SOURCES = $(XMLCONFIG_FILES)
 libxmlconfig_la_CFLAGS = \
