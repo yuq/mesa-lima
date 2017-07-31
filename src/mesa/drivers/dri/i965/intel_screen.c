@@ -1846,6 +1846,20 @@ intel_supported_msaa_modes(const struct intel_screen  *screen)
    }
 }
 
+static unsigned
+intel_loader_get_cap(const __DRIscreen *dri_screen, enum dri_loader_cap cap)
+{
+   if (dri_screen->dri2.loader && dri_screen->dri2.loader->base.version >= 4 &&
+       dri_screen->dri2.loader->getCapability)
+      return dri_screen->dri2.loader->getCapability(dri_screen->loaderPrivate, cap);
+
+   if (dri_screen->image.loader && dri_screen->image.loader->base.version >= 2 &&
+       dri_screen->image.loader->getCapability)
+      return dri_screen->image.loader->getCapability(dri_screen->loaderPrivate, cap);
+
+   return 0;
+}
+
 static __DRIconfig**
 intel_screen_make_configs(__DRIscreen *dri_screen)
 {
@@ -1888,8 +1902,15 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    uint8_t depth_bits[4], stencil_bits[4];
    __DRIconfig **configs = NULL;
 
+   /* Expose only BGRA ordering if the loader doesn't support RGBA ordering. */
+   unsigned num_formats;
+   if (intel_loader_get_cap(dri_screen, DRI_LOADER_CAP_RGBA_ORDERING))
+      num_formats = ARRAY_SIZE(formats);
+   else
+      num_formats = 3;
+
    /* Generate singlesample configs without accumulation buffer. */
-   for (unsigned i = 0; i < ARRAY_SIZE(formats); i++) {
+   for (unsigned i = 0; i < num_formats; i++) {
       __DRIconfig **new_configs;
       int num_depth_stencil_bits = 2;
 
