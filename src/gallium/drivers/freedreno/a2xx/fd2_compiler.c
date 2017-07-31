@@ -791,6 +791,7 @@ translate_tex(struct fd2_compile_context *ctx,
 	instr = ir2_instr_create(next_exec_cf(ctx), IR2_FETCH);
 	instr->fetch.opc = TEX_FETCH;
 	instr->fetch.is_cube = (inst->Texture.Texture == TGSI_TEXTURE_3D);
+	instr->fetch.is_rect = (inst->Texture.Texture == TGSI_TEXTURE_RECT);
 	assert(inst->Texture.NumOffsets <= 1); // TODO what to do in other cases?
 
 	/* save off the tex fetch to be patched later with correct const_idx: */
@@ -802,7 +803,7 @@ translate_tex(struct fd2_compile_context *ctx,
 	reg = add_src_reg(ctx, instr, coord);
 
 	/* blob compiler always sets 3rd component to same as 1st for 2d: */
-	if (inst->Texture.Texture == TGSI_TEXTURE_2D)
+	if (inst->Texture.Texture == TGSI_TEXTURE_2D || inst->Texture.Texture == TGSI_TEXTURE_RECT)
 		reg->swizzle[2] = reg->swizzle[0];
 
 	/* dst register needs to be marked for sync: */
