@@ -2,10 +2,6 @@ import common
 
 Import('*')
 
-SConscript([
-   'xmlpool',
-])
-
 from sys import executable as python_cmd
 
 env = env.Clone()
