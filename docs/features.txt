@@ -221,6 +221,20 @@ GL 4.5, GLSL 4.50 -- all DONE: nvc0, radeonsi
   GL_KHR_robustness                                     DONE (i965)
   GL_EXT_shader_integer_mix                             DONE (all drivers that support GLSL)
 
+GL 4.6, GLSL 4.60
+
+  GL_ARB_gl_spirv                                       in progress (Nicolai Hähnle, Ian Romanick)
+  GL_ARB_gl_spirv_extensions                            in progress (Nicolai Hähnle, Ian Romanick)
+  GL_ARB_indirect_parameters                            DONE (nvc0, radeonsi)
+  GL_ARB_pipeline_statistics_query                      DONE (i965, nvc0, radeonsi, softpipe, swr)
+  GL_ARB_polygon_offset_clamp                           not started
+  GL_ARB_shader_atomic_counter_ops                      DONE (i965/gen7+, nvc0, radeonsi, softpipe)
+  GL_ARB_shader_draw_parameters                         DONE (i965, nvc0, radeonsi)
+  GL_ARB_shader_group_vote                              DONE (i965, nvc0, radeonsi)
+  GL_ARB_texture_filter_anisotropic                     not started
+  GL_ARB_transform_feedback_overflow_query              DONE (i965/gen6+)
+  GL_KHR_no_error                                       started (Timothy Arceri)
+
 These are the extensions cherry-picked to make GLES 3.1
 GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, radeonsi
 
@@ -282,20 +296,14 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
   GL_ARB_compute_variable_group_size                    DONE (nvc0, radeonsi)
   GL_ARB_ES3_2_compatibility                            DONE (i965/gen8+)
   GL_ARB_fragment_shader_interlock                      not started
-  GL_ARB_gl_spirv                                       not started
   GL_ARB_gpu_shader_int64                               DONE (i965/gen8+, nvc0, radeonsi, softpipe, llvmpipe)
-  GL_ARB_indirect_parameters                            DONE (nvc0, radeonsi)
   GL_ARB_parallel_shader_compile                        not started, but Chia-I Wu did some related work in 2014
-  GL_ARB_pipeline_statistics_query                      DONE (i965, nvc0, radeonsi, softpipe, swr)
   GL_ARB_post_depth_coverage                            DONE (i965)
   GL_ARB_robustness_isolation                           not started
   GL_ARB_sample_locations                               not started
   GL_ARB_seamless_cubemap_per_texture                   DONE (i965, nvc0, radeonsi, r600, softpipe, swr)
-  GL_ARB_shader_atomic_counter_ops                      DONE (i965/gen7+, nvc0, radeonsi, softpipe)
   GL_ARB_shader_ballot                                  DONE (i965/gen8+, nvc0, radeonsi)
   GL_ARB_shader_clock                                   DONE (i965/gen7+, nv50, nvc0, radeonsi)
-  GL_ARB_shader_draw_parameters                         DONE (i965, nvc0, radeonsi)
-  GL_ARB_shader_group_vote                              DONE (i965, nvc0, radeonsi)
   GL_ARB_shader_stencil_export                          DONE (i965/gen9+, radeonsi, softpipe, llvmpipe, swr)
   GL_ARB_shader_viewport_layer_array                    DONE (i965/gen6+, nvc0, radeonsi)
   GL_ARB_sparse_buffer                                  DONE (radeonsi/CIK+)
@@ -303,9 +311,7 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
   GL_ARB_sparse_texture2                                not started
   GL_ARB_sparse_texture_clamp                           not started
   GL_ARB_texture_filter_minmax                          not started
-  GL_ARB_transform_feedback_overflow_query              DONE (i965/gen6+)
   GL_KHR_blend_equation_advanced_coherent               DONE (i965/gen9+)
-  GL_KHR_no_error                                       started (Timothy Arceri)
   GL_KHR_texture_compression_astc_hdr                   DONE (i965/bxt)
   GL_KHR_texture_compression_astc_sliced_3d             DONE (i965/gen9+)
   GL_OES_depth_texture_cube_map                         DONE (all drivers that support GLSL 1.30+)
