@@ -830,11 +830,11 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
          if (brw->gen >= 8) {
             OUT_RELOC64(mt->bo,
                         I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                        offset);
+                        mt->offset + offset);
          } else {
             OUT_RELOC(mt->bo,
                       I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                      offset);
+                      mt->offset + offset);
          }
          OUT_BATCH(0xffffffff); /* white, but only alpha gets written */
          ADVANCE_BATCH_TILED(dst_y_tiled, false);
