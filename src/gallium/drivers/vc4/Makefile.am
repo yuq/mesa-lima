@@ -44,6 +44,13 @@ libvc4_la_LIBADD = \
 	$(top_builddir)/src/broadcom/cle/libbroadcom_cle.la \
 	$()
 
+if HAVE_ARM_ASM
+noinst_LTLIBRARIES += libvc4_neon.la
+libvc4_la_LIBADD += libvc4_neon.la
+libvc4_neon_la_SOURCES = $(NEON_C_SOURCES)
+libvc4_neon_la_CFLAGS = $(AM_CFLAGS) -mfpu=neon
+endif
+
 libvc4_la_LDFLAGS = $(SIM_LDFLAGS)
 
 EXTRA_DIST = kernel/README
