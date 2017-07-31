@@ -792,6 +792,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                         0, 0, width, height, depth, 1, ISL_TILING_Y0_BIT,
                         ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
                         BO_ALLOC_FOR_RENDER, pitch, bo);
+      if (!mt)
+         return NULL;
 
       brw_bo_reference(bo);
 
