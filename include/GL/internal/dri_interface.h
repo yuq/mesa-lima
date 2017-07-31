@@ -1030,6 +1030,10 @@ struct __DRIdri2LoaderExtensionRec {
      * Return a loader capability value. If the loader doesn't know the enum,
      * it will return 0.
      *
+     * \param loaderPrivate The last parameter of createNewScreen or
+     *                      createNewScreen2.
+     * \param cap           See the enum.
+     *
      * \since 4
      */
     unsigned (*getCapability)(void *loaderPrivate, enum dri_loader_cap cap);
