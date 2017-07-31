@@ -32,10 +32,15 @@ LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 LOCAL_SRC_FILES := $(COMMON_FILES)
 
 LOCAL_C_INCLUDES := \
+	external/zlib \
 	$(MESA_TOP)/src/gallium/include \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/mesa
+
+LOCAL_SHARED_LIBRARIES := libexpat libz
+
+LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_genxml
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
