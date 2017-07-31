@@ -115,7 +115,7 @@ rasterizer/codegen/gen_knobs.cpp: rasterizer/codegen/gen_knobs.py rasterizer/cod
 		--output rasterizer/codegen/gen_knobs.cpp \
 		--gen_cpp
 
-rasterizer/codegen/gen_knobs.h: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/gen_knobs.cpp rasterizer/codegen/gen_common.py
+rasterizer/codegen/gen_knobs.h: rasterizer/codegen/gen_knobs.py rasterizer/codegen/knob_defs.py rasterizer/codegen/templates/gen_knobs.h rasterizer/codegen/gen_common.py
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_knobs.py \
@@ -347,5 +347,6 @@ EXTRA_DIST = \
 	rasterizer/codegen/templates/gen_builder.hpp \
 	rasterizer/codegen/templates/gen_header_init.hpp \
 	rasterizer/codegen/templates/gen_knobs.cpp \
+	rasterizer/codegen/templates/gen_knobs.h \
 	rasterizer/codegen/templates/gen_llvm.hpp \
 	rasterizer/codegen/templates/gen_rasterizer.cpp

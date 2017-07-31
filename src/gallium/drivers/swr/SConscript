@@ -54,7 +54,7 @@ env.CodeGenerate(
     command = python_cmd + ' $SCRIPT --output $TARGET --gen_h'
 )
 Depends('rasterizer/codegen/gen_knobs.h',
-        swrroot + 'rasterizer/codegen/templates/gen_knobs.cpp')
+        swrroot + 'rasterizer/codegen/templates/gen_knobs.h')
 
 env.CodeGenerate(
     target = 'rasterizer/jitter/gen_state_llvm.h',
