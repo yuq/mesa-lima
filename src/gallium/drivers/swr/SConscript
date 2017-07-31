@@ -53,7 +53,7 @@ env.CodeGenerate(
     source = '',
     command = python_cmd + ' $SCRIPT --output $TARGET --gen_h'
 )
-Depends('rasterizer/codegen/gen_knobs.cpp',
+Depends('rasterizer/codegen/gen_knobs.h',
         swrroot + 'rasterizer/codegen/templates/gen_knobs.cpp')
 
 env.CodeGenerate(
