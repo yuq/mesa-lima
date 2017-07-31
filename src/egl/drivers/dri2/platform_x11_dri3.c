@@ -53,19 +53,6 @@ egl_dri3_get_swap_interval(struct loader_dri3_drawable *draw)
    return dri3_surf->base.SwapInterval;
 }
 
-static int
-egl_dri3_clamp_swap_interval(struct loader_dri3_drawable *draw, int interval)
-{
-   struct dri3_egl_surface *dri3_surf = loader_drawable_to_egl_surface(draw);
-
-   if (interval > dri3_surf->base.Config->MaxSwapInterval)
-      interval = dri3_surf->base.Config->MaxSwapInterval;
-   else if (interval < dri3_surf->base.Config->MinSwapInterval)
-      interval = dri3_surf->base.Config->MinSwapInterval;
-
-   return interval;
-}
-
 static void
 egl_dri3_set_swap_interval(struct loader_dri3_drawable *draw, int interval)
 {
@@ -126,7 +113,6 @@ egl_dri3_flush_drawable(struct loader_dri3_drawable *draw, unsigned flags)
 
 static const struct loader_dri3_vtable egl_dri3_vtable = {
    .get_swap_interval = egl_dri3_get_swap_interval,
-   .clamp_swap_interval = egl_dri3_clamp_swap_interval,
    .set_swap_interval = egl_dri3_set_swap_interval,
    .set_drawable_size = egl_dri3_set_drawable_size,
    .in_current_context = egl_dri3_in_current_context,

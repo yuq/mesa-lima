@@ -77,7 +77,6 @@ dri3_update_num_back(struct loader_dri3_drawable *draw)
 void
 loader_dri3_set_swap_interval(struct loader_dri3_drawable *draw, int interval)
 {
-   interval = draw->vtable->clamp_swap_interval(draw, interval);
    draw->vtable->set_swap_interval(draw, interval);
    dri3_update_num_back(draw);
 }

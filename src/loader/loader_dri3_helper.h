@@ -98,7 +98,6 @@ struct loader_dri3_drawable;
 
 struct loader_dri3_vtable {
    int (*get_swap_interval)(struct loader_dri3_drawable *);
-   int (*clamp_swap_interval)(struct loader_dri3_drawable *, int);
    void (*set_swap_interval)(struct loader_dri3_drawable *, int);
    void (*set_drawable_size)(struct loader_dri3_drawable *, int, int);
    bool (*in_current_context)(struct loader_dri3_drawable *);
