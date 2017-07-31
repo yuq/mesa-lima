@@ -67,12 +67,6 @@ public:
         return Value();
     }
 
-protected:
-    Knob(T const &defaultValue) :
-        m_Value(expandEnvironmentVariables(defaultValue))
-    {
-    }
-
 private:
     T m_Value;
 };
@@ -83,9 +77,9 @@ private:
 
     {                                                           \\
 
-        Knob_##_name() : Knob<_type>(_default) { }              \\
-
         static const char* Name() { return "KNOB_" #_name; }    \\
+
+        static _type DefaultValue() { return (_default); }      \\
 
     } _name;
 
@@ -117,8 +111,9 @@ struct GlobalKnobs
     % endif
 
     % endfor
-    GlobalKnobs();
+
     std::string ToString(const char* optPerLinePrefix="");
+    GlobalKnobs();
 };
 extern GlobalKnobs g_GlobalKnobs;
 
