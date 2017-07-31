@@ -203,8 +203,8 @@ GlobalKnobs g_GlobalKnobs;
 //========================================================
 GlobalKnobs::GlobalKnobs()
 {
-    % for knob in knobs:
-    InitKnob(${knob[0]});
+    % for knob in knobs :
+    InitKnob(${ knob[0] });
     % endfor
 }
 
