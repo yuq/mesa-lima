@@ -31,15 +31,17 @@ source_lists = env.ParseSourceList('Makefile.sources')
 
 mesautil_sources = (
     source_lists['MESA_UTIL_FILES'] +
-    source_lists['MESA_UTIL_GENERATED_FILES'] +
-    source_lists['XMLCONFIG_FILES']
+    source_lists['MESA_UTIL_GENERATED_FILES']
 )
 
 mesautilenv = env.Clone()
 
-mesautilenv.AppendUnique(LIBS = [
-    'expat',
-])
+if env['dri']:
+    mesautil_sources += source_lists['XMLCONFIG_FILES']
+
+    mesautilenv.AppendUnique(LIBS = [
+        'expat',
+    ])
 
 mesautil = mesautilenv.ConvenienceLibrary(
     target = 'mesautil',
