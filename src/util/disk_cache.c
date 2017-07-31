@@ -112,6 +112,8 @@ struct disk_cache_put_job {
 
    /* Size of data to be compressed and written. */
    size_t size;
+
+   struct cache_item_metadata cache_item_metadata;
 };
 
 /* Create a directory named 'path' if it does not already exist.
@@ -780,15 +782,45 @@ create_put_job(struct disk_cache *cache, const cache_key key,
       dc_job->data = dc_job + 1;
       memcpy(dc_job->data, data, size);
       dc_job->size = size;
+
+      /* Copy the cache item metadata */
+      if (cache_item_metadata) {
+         dc_job->cache_item_metadata.type = cache_item_metadata->type;
+         if (cache_item_metadata->type == CACHE_ITEM_TYPE_GLSL) {
+            dc_job->cache_item_metadata.num_keys =
+               cache_item_metadata->num_keys;
+            dc_job->cache_item_metadata.keys = (cache_key *)
+               malloc(cache_item_metadata->num_keys * sizeof(cache_key));
+
+            if (!dc_job->cache_item_metadata.keys)
+               goto fail;
+
+            memcpy(dc_job->cache_item_metadata.keys,
+                   cache_item_metadata->keys,
+                   sizeof(cache_key) * cache_item_metadata->num_keys);
+         }
+      } else {
+         dc_job->cache_item_metadata.type = CACHE_ITEM_TYPE_UNKNOWN;
+         dc_job->cache_item_metadata.keys = NULL;
+      }
    }
 
    return dc_job;
+
+fail:
+   free(dc_job->cache_item_metadata.keys);
+   free(dc_job);
+
+   return NULL;
 }
 
 static void
 destroy_put_job(void *job, int thread_index)
 {
    if (job) {
+      struct disk_cache_put_job *dc_job = (struct disk_cache_put_job *) job;
+      free(dc_job->cache_item_metadata.keys);
+
       free(job);
    }
 }
@@ -875,6 +907,34 @@ cache_put(void *job, int thread_index)
    if (ret == -1) {
       unlink(filename_tmp);
       goto done;
+   }
+
+   /* Write the cache item metadata. This data can be used to deal with
+    * hash collisions, as well as providing useful information to 3rd party
+    * tools reading the cache files.
+    */
+   ret = write_all(fd, &dc_job->cache_item_metadata.type,
+                   sizeof(uint32_t));
+   if (ret == -1) {
+      unlink(filename_tmp);
+      goto done;
+   }
+
+   if (dc_job->cache_item_metadata.type == CACHE_ITEM_TYPE_GLSL) {
+      ret = write_all(fd, &dc_job->cache_item_metadata.num_keys,
+                      sizeof(uint32_t));
+      if (ret == -1) {
+         unlink(filename_tmp);
+         goto done;
+      }
+
+      ret = write_all(fd, dc_job->cache_item_metadata.keys[0],
+                      dc_job->cache_item_metadata.num_keys *
+                      sizeof(cache_key));
+      if (ret == -1) {
+         unlink(filename_tmp);
+         goto done;
+      }
    }
 
    /* Create CRC of the data. We will read this when restoring the cache and
@@ -1028,6 +1088,31 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
    if (memcmp(cache->driver_keys_blob, file_header, ck_size) != 0)
       goto fail;
 
+   size_t cache_item_md_size = sizeof(uint32_t);
+   uint32_t md_type;
+   ret = read_all(fd, &md_type, cache_item_md_size);
+   if (ret == -1)
+      goto fail;
+
+   if (md_type == CACHE_ITEM_TYPE_GLSL) {
+      uint32_t num_keys;
+      cache_item_md_size += sizeof(uint32_t);
+      ret = read_all(fd, &num_keys, sizeof(uint32_t));
+      if (ret == -1)
+         goto fail;
+
+      /* The cache item metadata is currently just used for distributing
+       * precompiled shaders, they are not used by Mesa so just skip them for
+       * now.
+       * TODO: pass the metadata back to the caller and do some basic
+       * validation.
+       */
+      cache_item_md_size += sizeof(cache_key);
+      ret = lseek(fd, num_keys * sizeof(cache_key), SEEK_CUR);
+      if (ret == -1)
+         goto fail;
+   }
+
    /* Load the CRC that was created when the file was written. */
    struct cache_entry_file_data cf_data;
    size_t cf_data_size = sizeof(cf_data);
@@ -1036,7 +1121,8 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
       goto fail;
 
    /* Load the actual cache data. */
-   size_t cache_data_size = sb.st_size - cf_data_size - ck_size;
+   size_t cache_data_size =
+      sb.st_size - cf_data_size - ck_size - cache_item_md_size;
    ret = read_all(fd, data, cache_data_size);
    if (ret == -1)
       goto fail;
