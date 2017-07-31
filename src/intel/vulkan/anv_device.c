@@ -496,10 +496,6 @@ static const VkExtensionProperties device_extensions[] = {
       .extensionName = VK_KHR_VARIABLE_POINTERS_EXTENSION_NAME,
       .specVersion = 1,
    },
-   {
-      .extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
-      .specVersion = 1,
-   },
 };
 
 static void *
