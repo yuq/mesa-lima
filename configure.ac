@@ -2511,7 +2511,7 @@ if test -n "$with_gallium_drivers"; then
             AC_SUBST([SWR_CXX11_CXXFLAGS])
 
             swr_require_cxx_feature_flags "AVX" "defined(__AVX__)" \
-                ",-mavx,-march=core-avx" \
+                ",-target-cpu=sandybridge,-mavx,-march=core-avx,-tp=sandybridge" \
                 SWR_AVX_CXXFLAGS
             AC_SUBST([SWR_AVX_CXXFLAGS])
 
@@ -2523,21 +2523,21 @@ if test -n "$with_gallium_drivers"; then
                     ;;
                 xavx2)
                     swr_require_cxx_feature_flags "AVX2" "defined(__AVX2__)" \
-                        ",-mavx2 -mfma -mbmi2 -mf16c,-march=core-avx2" \
+                        ",-target-cpu=haswell,-mavx2 -mfma -mbmi2 -mf16c,-march=core-avx2,-tp=haswell" \
                         SWR_AVX2_CXXFLAGS
                     AC_SUBST([SWR_AVX2_CXXFLAGS])
                     HAVE_SWR_AVX2=yes
                     ;;
                 xknl)
                     swr_require_cxx_feature_flags "KNL" "defined(__AVX512F__) && defined(__AVX512ER__)" \
-                        ",-march=knl,-xMIC-AVX512" \
+                        ",-target-cpu=mic-knl,-march=knl,-xMIC-AVX512" \
                         SWR_KNL_CXXFLAGS
                     AC_SUBST([SWR_KNL_CXXFLAGS])
                     HAVE_SWR_KNL=yes
                     ;;
                 xskx)
                     swr_require_cxx_feature_flags "SKX" "defined(__AVX512F__) && defined(__AVX512BW__)" \
-                        ",-march=skylake-avx512,-xCORE-AVX512" \
+                        ",-target-cpu=x86-skylake,-march=skylake-avx512,-xCORE-AVX512" \
                         SWR_SKX_CXXFLAGS
                     AC_SUBST([SWR_SKX_CXXFLAGS])
                     HAVE_SWR_SKX=yes
