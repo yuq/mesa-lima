@@ -349,16 +349,12 @@ intel_image_warn_if_unaligned(__DRIimage *image, const char *func)
 static const struct intel_image_format *
 intel_image_format_lookup(int fourcc)
 {
-   const struct intel_image_format *f = NULL;
-
    for (unsigned i = 0; i < ARRAY_SIZE(intel_image_formats); i++) {
-      if (intel_image_formats[i].fourcc == fourcc) {
-	 f = &intel_image_formats[i];
-	 break;
-      }
+      if (intel_image_formats[i].fourcc == fourcc)
+         return &intel_image_formats[i];
    }
 
-   return f;
+   return NULL;
 }
 
 static boolean intel_lookup_fourcc(int dri_format, int *fourcc)
