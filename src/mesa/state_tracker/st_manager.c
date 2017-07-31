@@ -48,7 +48,6 @@
 #include "st_cb_fbo.h"
 #include "st_cb_flush.h"
 #include "st_manager.h"
-#include "st_sampler_view.h"
 
 #include "state_tracker/st_gl_api.h"
 
@@ -736,7 +735,6 @@ st_context_teximage(struct st_context_iface *stctxi,
    pipe_resource_reference(&stImage->pt, tex);
    stObj->surface_format = pipe_format;
 
-   st_texture_release_all_sampler_views(st, stObj);
    stObj->needs_validation = true;
 
    _mesa_dirty_texobj(ctx, texObj);
