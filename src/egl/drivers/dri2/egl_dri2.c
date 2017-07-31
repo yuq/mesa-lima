@@ -2155,6 +2155,24 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
       return 0;
    }
 
+   for (unsigned i = plane_n; i < DMA_BUF_MAX_PLANES; i++) {
+      /**
+       * The modifiers extension spec says:
+       *
+       * "Modifiers may modify any attribute of a buffer import, including
+       *  but not limited to adding extra planes to a format which
+       *  otherwise does not have those planes. As an example, a modifier
+       *  may add a plane for an external compression buffer to a
+       *  single-plane format. The exact meaning and effect of any
+       *  modifier is canonically defined by drm_fourcc.h, not as part of
+       *  this extension."
+       */
+      if (attrs->DMABufPlaneModifiersLo[i].IsPresent &&
+          attrs->DMABufPlaneModifiersHi[i].IsPresent) {
+         plane_n = i + 1;
+      }
+   }
+
    /**
      * The spec says:
      *
@@ -2181,25 +2199,7 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
    for (unsigned i = plane_n; i < DMA_BUF_MAX_PLANES; ++i) {
       if (attrs->DMABufPlaneFds[i].IsPresent ||
           attrs->DMABufPlaneOffsets[i].IsPresent ||
-          attrs->DMABufPlanePitches[i].IsPresent ||
-          attrs->DMABufPlaneModifiersLo[i].IsPresent ||
-          attrs->DMABufPlaneModifiersHi[i].IsPresent) {
-
-         /**
-          * The modifiers extension spec says:
-          *
-          * "Modifiers may modify any attribute of a buffer import, including
-          *  but not limited to adding extra planes to a format which
-          *  otherwise does not have those planes. As an example, a modifier
-          *  may add a plane for an external compression buffer to a
-          *  single-plane format. The exact meaning and effect of any
-          *  modifier is canonically defined by drm_fourcc.h, not as part of
-          *  this extension."
-          */
-         if (attrs->DMABufPlaneModifiersLo[i].IsPresent &&
-             attrs->DMABufPlaneModifiersHi[i].IsPresent)
-            continue;
-
+          attrs->DMABufPlanePitches[i].IsPresent) {
          _eglError(EGL_BAD_ATTRIBUTE, "too many plane attributes");
          return 0;
       }
