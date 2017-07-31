@@ -859,7 +859,7 @@ static struct intel_mipmap_tree *
 miptree_create_for_planar_image(struct brw_context *brw,
                                 __DRIimage *image, GLenum target)
 {
-   struct intel_image_format *f = image->planar_format;
+   const struct intel_image_format *f = image->planar_format;
    struct intel_mipmap_tree *planar_mt = NULL;
 
    for (int i = 0; i < f->nplanes; i++) {
