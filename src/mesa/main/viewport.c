@@ -492,12 +492,24 @@ void _mesa_init_viewport(struct gl_context *ctx)
 }
 
 
-static void
-clip_control(struct gl_context *ctx, GLenum origin, GLenum depth)
+static ALWAYS_INLINE void
+clip_control(struct gl_context *ctx, GLenum origin, GLenum depth, bool no_error)
 {
    if (ctx->Transform.ClipOrigin == origin &&
        ctx->Transform.ClipDepthMode == depth)
       return;
+
+   if (!no_error &&
+       origin != GL_LOWER_LEFT && origin != GL_UPPER_LEFT) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
+      return;
+   }
+
+   if (!no_error &&
+       depth != GL_NEGATIVE_ONE_TO_ONE && depth != GL_ZERO_TO_ONE) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
+      return;
+   }
 
    /* Affects transform state and the viewport transform */
    FLUSH_VERTICES(ctx, ctx->DriverFlags.NewClipControl ? 0 :
@@ -530,7 +542,7 @@ void GLAPIENTRY
 _mesa_ClipControl_no_error(GLenum origin, GLenum depth)
 {
    GET_CURRENT_CONTEXT(ctx);
-   clip_control(ctx, origin, depth);
+   clip_control(ctx, origin, depth, true);
 }
 
 
@@ -551,17 +563,7 @@ _mesa_ClipControl(GLenum origin, GLenum depth)
       return;
    }
 
-   if (origin != GL_LOWER_LEFT && origin != GL_UPPER_LEFT) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
-      return;
-   }
-
-   if (depth != GL_NEGATIVE_ONE_TO_ONE && depth != GL_ZERO_TO_ONE) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
-      return;
-   }
-
-   clip_control(ctx, origin, depth);
+   clip_control(ctx, origin, depth, false);
 }
 
 /**
