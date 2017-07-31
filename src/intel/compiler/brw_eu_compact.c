@@ -671,7 +671,7 @@ static const uint16_t *src_index_table;
 
 static bool
 set_control_index(const struct gen_device_info *devinfo,
-                  brw_compact_inst *dst, brw_inst *src)
+                  brw_compact_inst *dst, const brw_inst *src)
 {
    uint32_t uncompacted = devinfo->gen >= 8  /* 17b/G45; 19b/IVB+ */
       ? (brw_inst_bits(src, 33, 31) << 16) | /*  3b */
@@ -700,7 +700,7 @@ set_control_index(const struct gen_device_info *devinfo,
 
 static bool
 set_datatype_index(const struct gen_device_info *devinfo, brw_compact_inst *dst,
-                   brw_inst *src)
+                   const brw_inst *src)
 {
    uint32_t uncompacted = devinfo->gen >= 8  /* 18b/G45+; 21b/BDW+ */
       ? (brw_inst_bits(src, 63, 61) << 18) | /*  3b */
@@ -721,7 +721,7 @@ set_datatype_index(const struct gen_device_info *devinfo, brw_compact_inst *dst,
 
 static bool
 set_subreg_index(const struct gen_device_info *devinfo, brw_compact_inst *dst,
-                 brw_inst *src, bool is_immediate)
+                 const brw_inst *src, bool is_immediate)
 {
    uint16_t uncompacted =                 /* 15b */
       (brw_inst_bits(src, 52, 48) << 0) | /*  5b */
@@ -756,7 +756,7 @@ get_src_index(uint16_t uncompacted,
 
 static bool
 set_src0_index(const struct gen_device_info *devinfo,
-               brw_compact_inst *dst, brw_inst *src)
+               brw_compact_inst *dst, const brw_inst *src)
 {
    uint16_t compacted;
    uint16_t uncompacted = brw_inst_bits(src, 88, 77); /* 12b */
@@ -771,7 +771,7 @@ set_src0_index(const struct gen_device_info *devinfo,
 
 static bool
 set_src1_index(const struct gen_device_info *devinfo, brw_compact_inst *dst,
-               brw_inst *src, bool is_immediate)
+               const brw_inst *src, bool is_immediate)
 {
    uint16_t compacted;
 
@@ -791,7 +791,7 @@ set_src1_index(const struct gen_device_info *devinfo, brw_compact_inst *dst,
 
 static bool
 set_3src_control_index(const struct gen_device_info *devinfo,
-                       brw_compact_inst *dst, brw_inst *src)
+                       brw_compact_inst *dst, const brw_inst *src)
 {
    assert(devinfo->gen >= 8);
 
@@ -814,7 +814,7 @@ set_3src_control_index(const struct gen_device_info *devinfo,
 
 static bool
 set_3src_source_index(const struct gen_device_info *devinfo,
-                      brw_compact_inst *dst, brw_inst *src)
+                      brw_compact_inst *dst, const brw_inst *src)
 {
    assert(devinfo->gen >= 8);
 
@@ -847,7 +847,7 @@ set_3src_source_index(const struct gen_device_info *devinfo,
 }
 
 static bool
-has_unmapped_bits(const struct gen_device_info *devinfo, brw_inst *src)
+has_unmapped_bits(const struct gen_device_info *devinfo, const brw_inst *src)
 {
    /* EOT can only be mapped on a send if the src1 is an immediate */
    if ((brw_inst_opcode(devinfo, src) == BRW_OPCODE_SENDC ||
@@ -878,7 +878,8 @@ has_unmapped_bits(const struct gen_device_info *devinfo, brw_inst *src)
 }
 
 static bool
-has_3src_unmapped_bits(const struct gen_device_info *devinfo, brw_inst *src)
+has_3src_unmapped_bits(const struct gen_device_info *devinfo,
+                       const brw_inst *src)
 {
    /* Check for three-source instruction bits that don't map to any of the
     * fields of the compacted instruction.  All of them seem to be reserved
@@ -901,7 +902,7 @@ has_3src_unmapped_bits(const struct gen_device_info *devinfo, brw_inst *src)
 
 static bool
 brw_try_compact_3src_instruction(const struct gen_device_info *devinfo,
-                                 brw_compact_inst *dst, brw_inst *src)
+                                 brw_compact_inst *dst, const brw_inst *src)
 {
    assert(devinfo->gen >= 8);
 
@@ -962,7 +963,7 @@ is_compactable_immediate(unsigned imm)
  */
 bool
 brw_try_compact_instruction(const struct gen_device_info *devinfo,
-                            brw_compact_inst *dst, brw_inst *src)
+                            brw_compact_inst *dst, const brw_inst *src)
 {
    brw_compact_inst temp;
 
