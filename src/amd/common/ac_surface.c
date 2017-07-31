@@ -435,7 +435,9 @@ static int gfx6_surface_settings(ADDR_HANDLE addrlib,
 	}
 
 	/* Compute tile swizzle. */
-	if (config->info.surf_index &&
+	/* TODO: fix tile swizzle with mipmapping for SI */
+	if ((info->chip_class >= CIK || config->info.levels == 1) &&
+	    config->info.surf_index &&
 	    surf->u.legacy.level[0].mode == RADEON_SURF_MODE_2D &&
 	    !(surf->flags & (RADEON_SURF_Z_OR_SBUFFER | RADEON_SURF_SHAREABLE)) &&
 	    (config->info.samples > 1 || !(surf->flags & RADEON_SURF_SCANOUT))) {
