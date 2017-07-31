@@ -885,11 +885,14 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
                                    enum isl_colorspace colorspace,
                                    bool is_winsys_image)
 {
-   if (image->planar_format && image->planar_format->nplanes > 0) {
+   if (image->planar_format && image->planar_format->nplanes > 1) {
       assert(colorspace == ISL_COLORSPACE_NONE ||
              colorspace == ISL_COLORSPACE_YUV);
       return miptree_create_for_planar_image(brw, image, target);
    }
+
+   if (image->planar_format)
+      assert(image->planar_format->planes[0].dri_format == image->dri_format);
 
    mesa_format format = image->format;
    switch (colorspace) {
