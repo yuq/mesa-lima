@@ -1895,7 +1895,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 						    LLVMVectorType(ctx->ac.i32, 2),
 						    "");
 		result = LLVMBuildExtractElement(ctx->ac.builder, tmp,
-						 ctx->ac.i32_0, "");
+						 ctx->ac.i32_1, "");
 		break;
 	}
 
