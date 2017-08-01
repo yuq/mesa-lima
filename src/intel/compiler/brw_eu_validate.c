@@ -96,10 +96,17 @@ inst_is_raw_move(const struct gen_device_info *devinfo, const brw_inst *inst)
    unsigned dst_type = signed_type(brw_inst_dst_reg_type(devinfo, inst));
    unsigned src_type = signed_type(brw_inst_src0_reg_type(devinfo, inst));
 
-   if (brw_inst_src0_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE &&
-       (brw_inst_src0_negate(devinfo, inst) ||
-        brw_inst_src0_abs(devinfo, inst)))
+   if (brw_inst_src0_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE) {
+      /* FIXME: not strictly true */
+      if (brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_IMM_TYPE_VF ||
+          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_IMM_TYPE_UV ||
+          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_IMM_TYPE_V) {
+         return false;
+      }
+   } else if (brw_inst_src0_negate(devinfo, inst) ||
+              brw_inst_src0_abs(devinfo, inst)) {
       return false;
+   }
 
    return brw_inst_opcode(devinfo, inst) == BRW_OPCODE_MOV &&
           brw_inst_saturate(devinfo, inst) == 0 &&
