@@ -21,7 +21,7 @@
 
 .PHONY: git_sha1.h.tmp
 git_sha1.h.tmp:
-	@python $(top_srcdir)/bin/git_sha1_gen.py > $@
+	@$(PYTHON2) $(top_srcdir)/bin/git_sha1_gen.py > $@
 
 git_sha1.h: git_sha1.h.tmp
 	@echo "updating git_sha1.h"
