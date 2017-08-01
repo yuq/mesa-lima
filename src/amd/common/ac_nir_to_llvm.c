@@ -1453,11 +1453,6 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 	int idx;
 	LLVMValueRef result;
 
-	if (!ctx->lds && !ctx->has_ds_bpermute)
-		ctx->lds = LLVMAddGlobalInAddressSpace(ctx->module,
-						       LLVMArrayType(ctx->i32, 64),
-						       "ddxy_lds", LOCAL_ADDR_SPACE);
-
 	if (op == nir_op_fddx_fine || op == nir_op_fddx)
 		mask = AC_TID_MASK_LEFT;
 	else if (op == nir_op_fddy_fine || op == nir_op_fddy)
@@ -1474,7 +1469,7 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 		idx = 2;
 
 	result = ac_build_ddxy(&ctx->ac, ctx->has_ds_bpermute,
-			      mask, idx, ctx->lds,
+			      mask, idx,
 			      src0);
 	return result;
 }

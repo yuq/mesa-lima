@@ -3471,7 +3471,7 @@ static void si_llvm_emit_ddxy(
 
 	val = LLVMBuildBitCast(gallivm->builder, emit_data->args[0], ctx->i32, "");
 	val = ac_build_ddxy(&ctx->ac, ctx->screen->has_ds_bpermute,
-			    mask, idx, ctx->lds, val);
+			    mask, idx, val);
 	emit_data->output[emit_data->chan] = val;
 }
 
@@ -4509,20 +4509,6 @@ static void create_function(struct si_shader_context *ctx)
 
 	assert(shader->info.num_input_vgprs >= num_prolog_vgprs);
 	shader->info.num_input_vgprs -= num_prolog_vgprs;
-
-	if (!ctx->screen->has_ds_bpermute &&
-	    bld_base->info &&
-	    (bld_base->info->opcode_count[TGSI_OPCODE_DDX] > 0 ||
-	     bld_base->info->opcode_count[TGSI_OPCODE_DDY] > 0 ||
-	     bld_base->info->opcode_count[TGSI_OPCODE_DDX_FINE] > 0 ||
-	     bld_base->info->opcode_count[TGSI_OPCODE_DDY_FINE] > 0 ||
-	     bld_base->info->opcode_count[TGSI_OPCODE_INTERP_OFFSET] > 0 ||
-	     bld_base->info->opcode_count[TGSI_OPCODE_INTERP_SAMPLE] > 0))
-		ctx->lds =
-			LLVMAddGlobalInAddressSpace(gallivm->module,
-						    LLVMArrayType(ctx->i32, 64),
-						    "ddxy_lds",
-						    LOCAL_ADDR_SPACE);
 
 	if (shader->key.as_ls ||
 	    ctx->type == PIPE_SHADER_TESS_CTRL ||
