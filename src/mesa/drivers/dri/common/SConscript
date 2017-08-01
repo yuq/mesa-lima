@@ -25,7 +25,7 @@ drienv.Replace(CPPPATH = [
     '#src/mesa/swrast_setup',
     '#src/egl/main',
     '#src/egl/drivers/dri',
-    '#src/util',
+    xmlpool_options.dir.dir,
 ])
 
 sources = drienv.ParseSourceList('Makefile.sources', ['DRI_COMMON_FILES'])
