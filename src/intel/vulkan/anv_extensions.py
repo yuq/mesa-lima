@@ -31,7 +31,7 @@ import xml.etree.cElementTree as et
 
 from mako.template import Template
 
-MAX_API_VERSION = '1.0.54'
+MAX_API_VERSION = '1.0.57'
 
 class Extension:
     def __init__(self, name, ext_version, enable):
