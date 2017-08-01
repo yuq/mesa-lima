@@ -162,7 +162,7 @@ struct PA_STATE_OPT : public PA_STATE
     bool               isStreaming{ false };
 
     SIMDMASK           junkIndices  { 0 };          // temporary index store for unused virtual function
-    
+
     PA_STATE_OPT() {}
     PA_STATE_OPT(DRAW_CONTEXT* pDC, uint32_t numPrims, uint8_t* pStream, uint32_t streamSizeInVerts,
         uint32_t vertexStride, bool in_isStreaming, PRIMITIVE_TOPOLOGY topo = TOP_UNKNOWN);
@@ -412,7 +412,7 @@ struct PA_STATE_CUT : public PA_STATE
     uint32_t vertsPerPrim{ 0 };
     bool processCutVerts{ false };       // vertex indices with cuts should be processed as normal, otherwise they
                                          // are ignored.  Fetch shader sends invalid verts on cuts that should be ignored
-                                         // while the GS sends valid verts for every index 
+                                         // while the GS sends valid verts for every index
 
     simdvector      junkVector;          // junk simdvector for unimplemented API
 #if ENABLE_AVX512_SIMD16
@@ -575,7 +575,7 @@ struct PA_STATE_CUT : public PA_STATE
         return CheckBit(this->pCutIndices[vertexIndex], vertexOffset);
     }
 
-    // iterates across the unprocessed verts until we hit the end or we 
+    // iterates across the unprocessed verts until we hit the end or we
     // have assembled SIMD prims
     void ProcessVerts()
     {
@@ -583,7 +583,7 @@ struct PA_STATE_CUT : public PA_STATE
             this->numRemainingVerts > 0 &&
             this->curVertex != this->headVertex)
         {
-            // if cut index, restart topology 
+            // if cut index, restart topology
             if (IsCutIndex(this->curVertex))
             {
                 if (this->processCutVerts)
@@ -923,7 +923,7 @@ struct PA_STATE_CUT : public PA_STATE
         case 6:
             SWR_ASSERT(this->adjExtraVert != -1, "Algorith failure!");
             AssembleTriStripAdj<gsEnabled>();
-            
+
             uint32_t nextTri[6];
             if (this->reverseWinding)
             {
@@ -939,7 +939,7 @@ struct PA_STATE_CUT : public PA_STATE
                 nextTri[1] = this->adjExtraVert;
                 nextTri[2] = this->vert[3];
                 nextTri[4] = this->vert[4];
-                nextTri[5] = this->vert[0]; 
+                nextTri[5] = this->vert[0];
             }
             for (uint32_t i = 0; i < 6; ++i)
             {

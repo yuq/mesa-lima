@@ -23,7 +23,7 @@
 * @file ${filename}
 *
 * @brief Event handler interface.  auto-generated file
-* 
+*
 * DO NOT EDIT
 *
 * Generation Command Line:
@@ -57,7 +57,7 @@ namespace ArchRast
             std::stringstream outDir;
             outDir << KNOB_DEBUG_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
             CreateDirectory(outDir.str().c_str(), NULL);
-            
+
             // There could be multiple threads creating thread pools. We
             // want to make sure they are uniquly identified by adding in
             // the creator's thread id into the filename.
