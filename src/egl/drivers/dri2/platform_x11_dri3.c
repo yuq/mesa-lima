@@ -45,22 +45,6 @@ loader_drawable_to_egl_surface(struct loader_dri3_drawable *draw) {
    return (struct dri3_egl_surface *)(((void*) draw) - offset);
 }
 
-static int
-egl_dri3_get_swap_interval(struct loader_dri3_drawable *draw)
-{
-   struct dri3_egl_surface *dri3_surf = loader_drawable_to_egl_surface(draw);
-
-   return dri3_surf->base.SwapInterval;
-}
-
-static void
-egl_dri3_set_swap_interval(struct loader_dri3_drawable *draw, int interval)
-{
-   struct dri3_egl_surface *dri3_surf = loader_drawable_to_egl_surface(draw);
-
-   dri3_surf->base.SwapInterval = interval;
-}
-
 static void
 egl_dri3_set_drawable_size(struct loader_dri3_drawable *draw,
                            int width, int height)
@@ -112,8 +96,6 @@ egl_dri3_flush_drawable(struct loader_dri3_drawable *draw, unsigned flags)
 }
 
 static const struct loader_dri3_vtable egl_dri3_vtable = {
-   .get_swap_interval = egl_dri3_get_swap_interval,
-   .set_swap_interval = egl_dri3_set_swap_interval,
    .set_drawable_size = egl_dri3_set_drawable_size,
    .in_current_context = egl_dri3_in_current_context,
    .get_dri_context = egl_dri3_get_dri_context,
@@ -142,6 +124,7 @@ dri3_set_swap_interval(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf,
 {
    struct dri3_egl_surface *dri3_surf = dri3_egl_surface(surf);
 
+   dri3_surf->base.SwapInterval = interval;
    loader_dri3_set_swap_interval(&dri3_surf->loader_drawable, interval);
 
    return EGL_TRUE;

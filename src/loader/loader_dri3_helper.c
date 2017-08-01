@@ -77,7 +77,7 @@ dri3_update_num_back(struct loader_dri3_drawable *draw)
 void
 loader_dri3_set_swap_interval(struct loader_dri3_drawable *draw, int interval)
 {
-   draw->vtable->set_swap_interval(draw, interval);
+   draw->swap_interval = interval;
    dri3_update_num_back(draw);
 }
 
@@ -164,7 +164,7 @@ loader_dri3_drawable_init(xcb_connection_t *conn,
       swap_interval = 1;
       break;
    }
-   draw->vtable->set_swap_interval(draw, swap_interval);
+   draw->swap_interval = swap_interval;
 
    dri3_update_num_back(draw);
 
@@ -634,10 +634,8 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
    __DRIcontext *dri_context;
    int64_t ret = 0;
    uint32_t options = XCB_PRESENT_OPTION_NONE;
-   int swap_interval;
 
    dri_context = draw->vtable->get_dri_context(draw);
-   swap_interval = draw->vtable->get_swap_interval(draw);
 
    draw->vtable->flush_drawable(draw, flush_flags);
 
@@ -673,7 +671,7 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
        */
       ++draw->send_sbc;
       if (target_msc == 0 && divisor == 0 && remainder == 0)
-         target_msc = draw->msc + swap_interval *
+         target_msc = draw->msc + draw->swap_interval *
                       (draw->send_sbc - draw->recv_sbc);
       else if (divisor == 0 && remainder > 0) {
          /* From the GLX_OML_sync_control spec:
@@ -697,7 +695,7 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
        * behaviour by not using XCB_PRESENT_OPTION_ASYNC, but this should not be
        * the default.
        */
-      if (swap_interval == 0)
+      if (draw->swap_interval == 0)
           options |= XCB_PRESENT_OPTION_ASYNC;
       if (force_copy)
           options |= XCB_PRESENT_OPTION_COPY;
