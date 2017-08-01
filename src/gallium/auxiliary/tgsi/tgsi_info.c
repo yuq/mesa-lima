@@ -36,11 +36,11 @@
 #define OTHR TGSI_OUTPUT_OTHER
 
 #define OPCODE(_num_dst, _num_src, _output_mode, name, ...) \
-   { .mnemonic = #name, .opcode = TGSI_OPCODE_ ## name, \
+   { .opcode = TGSI_OPCODE_ ## name, \
      .output_mode = _output_mode, .num_dst = _num_dst, .num_src = _num_src, \
      ##__VA_ARGS__ },
 
-#define OPCODE_GAP(opc) { .mnemonic = "", .opcode = opc },
+#define OPCODE_GAP(opc) { .opcode = opc },
 
 static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
 {
@@ -69,12 +69,23 @@ tgsi_get_opcode_info( uint opcode )
    return NULL;
 }
 
+#define OPCODE(_num_dst, _num_src, _output_mode, name, ...) #name,
+#define OPCODE_GAP(opc) "UNK" #opc,
+
+static const char * const opcode_names[TGSI_OPCODE_LAST] =
+{
+#include "tgsi_info_opcodes.h"
+};
+
+#undef OPCODE
+#undef OPCODE_GAP
 
 const char *
 tgsi_get_opcode_name( uint opcode )
 {
-   const struct tgsi_opcode_info *info = tgsi_get_opcode_info(opcode);
-   return info->mnemonic;
+   if (opcode >= ARRAY_SIZE(opcode_names))
+      return "UNK_OOB";
+   return opcode_names[opcode];
 }
 
 

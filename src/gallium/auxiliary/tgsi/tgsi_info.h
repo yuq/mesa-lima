@@ -79,8 +79,7 @@ struct tgsi_opcode_info
    unsigned pre_dedent:1;
    unsigned post_indent:1;
    enum tgsi_output_mode output_mode:3;
-   const char *mnemonic;
-   uint opcode;
+   unsigned opcode:8;
 };
 
 const struct tgsi_opcode_info *
