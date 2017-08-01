@@ -51,6 +51,9 @@ LOCAL_MODULE := libmesa_util
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
 intermediates := $(call local-generated-sources-dir)
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(intermediates)
+
 UTIL_GENERATED_SOURCES := $(addprefix $(intermediates)/,$(MESA_UTIL_GENERATED_FILES))
 LOCAL_GENERATED_SOURCES := $(UTIL_GENERATED_SOURCES)
 
