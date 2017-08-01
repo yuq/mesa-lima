@@ -32,8 +32,6 @@ from mako.template import Template
 
 from anv_extensions import *
 
-MAX_API_VERSION = 1.0
-
 # We generate a static hash table for entry point lookup
 # (vkGetProcAddress). We use a linear congruential generator for our hash
 # function and a power-of-two size table. The prime numbers are determined
@@ -262,7 +260,7 @@ def get_entrypoints(doc, entrypoints_to_defines):
     enabled_commands = set()
     for feature in doc.findall('./feature'):
         assert feature.attrib['api'] == 'vulkan'
-        if float(feature.attrib['number']) > MAX_API_VERSION:
+        if VkVersion(feature.attrib['number']) > MAX_API_VERSION:
             continue
 
         for command in feature.findall('./require/command'):

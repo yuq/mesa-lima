@@ -25,9 +25,13 @@ COPYRIGHT = """\
 """
 
 import argparse
+import copy
+import re
 import xml.etree.cElementTree as et
 
 from mako.template import Template
+
+MAX_API_VERSION = '1.0.54'
 
 class Extension:
     def __init__(self, name, ext_version, enable):
@@ -63,6 +67,45 @@ EXTENSIONS = [
     Extension('VK_KHR_xlib_surface',                      6, 'VK_USE_PLATFORM_XLIB_KHR'),
     Extension('VK_KHX_multiview',                         1, True),
 ]
+
+class VkVersion:
+    def __init__(self, string):
+        split = string.split('.')
+        self.major = int(split[0])
+        self.minor = int(split[1])
+        if len(split) > 2:
+            assert len(split) == 3
+            self.patch = int(split[2])
+        else:
+            self.patch = None
+
+        # Sanity check.  The range bits are required by the definition of the
+        # VK_MAKE_VERSION macro
+        assert self.major < 1024 and self.minor < 1024
+        assert self.patch is None or self.patch < 4096
+        assert(str(self) == string)
+
+    def __str__(self):
+        ver_list = [str(self.major), str(self.minor)]
+        if self.patch is not None:
+            ver_list.append(str(self.patch))
+        return '.'.join(ver_list)
+
+    def __int_ver(self):
+        # This is just an expansion of VK_VERSION
+        patch = self.patch if self.patch is not None else 0
+        return (self.major << 22) | (self.minor << 12) | patch
+
+    def __cmp__(self, other):
+        # If only one of them has a patch version, "ignore" it by making
+        # other's patch version match self.
+        if (self.patch is None) != (other.patch is None):
+            other = copy.copy(other)
+            other.patch = self.patch
+
+        return self.__int_ver().__cmp__(other.__int_ver())
+
+MAX_API_VERSION = VkVersion(MAX_API_VERSION)
 
 def _init_exts_from_xml(xml):
     """ Walk the Vulkan XML and fill out extra extension information. """
