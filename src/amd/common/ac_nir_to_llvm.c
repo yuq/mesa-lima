@@ -68,8 +68,6 @@ struct ac_nir_context {
 	int num_locals;
 	LLVMValueRef *locals;
 
-	LLVMValueRef ddxy_lds;
-
 	struct nir_to_llvm_context *nctx; /* TODO get rid of this */
 };
 
@@ -1463,11 +1461,6 @@ static LLVMValueRef emit_ddxy(struct ac_nir_context *ctx,
 	LLVMValueRef result;
 	bool has_ds_bpermute = ctx->abi->chip_class >= VI;
 
-	if (!ctx->ddxy_lds && !has_ds_bpermute)
-		ctx->ddxy_lds = LLVMAddGlobalInAddressSpace(ctx->ac.module,
-						       LLVMArrayType(ctx->ac.i32, 64),
-						       "ddxy_lds", LOCAL_ADDR_SPACE);
-
 	if (op == nir_op_fddx_fine || op == nir_op_fddx)
 		mask = AC_TID_MASK_LEFT;
 	else if (op == nir_op_fddy_fine || op == nir_op_fddy)
@@ -1484,7 +1477,7 @@ static LLVMValueRef emit_ddxy(struct ac_nir_context *ctx,
 		idx = 2;
 
 	result = ac_build_ddxy(&ctx->ac, has_ds_bpermute,
-			      mask, idx, ctx->ddxy_lds,
+			      mask, idx,
 			      src0);
 	return result;
 }
