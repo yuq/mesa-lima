@@ -1014,7 +1014,8 @@ precompact(const struct gen_device_info *devinfo, brw_inst inst)
     */
    if (brw_inst_imm_ud(devinfo, &inst) == 0x0 &&
        brw_inst_src0_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
-       brw_inst_dst_reg_type(devinfo, &inst) != GEN7_HW_REG_NON_IMM_TYPE_DF) {
+       brw_inst_dst_reg_type(devinfo, &inst) == BRW_HW_REG_TYPE_F &&
+       brw_inst_dst_hstride(devinfo, &inst) == BRW_HORIZONTAL_STRIDE_1) {
       brw_inst_set_src0_reg_type(devinfo, &inst, BRW_HW_REG_IMM_TYPE_VF);
    }
 
