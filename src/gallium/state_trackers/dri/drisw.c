@@ -362,6 +362,14 @@ drisw_update_tex_buffer(struct dri_drawable *drawable,
    pipe_transfer_unmap(pipe, transfer);
 }
 
+static __DRIimageExtension driSWImageExtension = {
+    .base = { __DRI_IMAGE, 6 },
+
+    .createImageFromRenderbuffer  = dri2_create_image_from_renderbuffer,
+    .createImageFromTexture = dri2_create_from_texture,
+    .destroyImage = dri2_destroy_image,
+};
+
 /*
  * Backend function for init_screen.
  */
@@ -372,6 +380,7 @@ static const __DRIextension *drisw_screen_extensions[] = {
    &dri2ConfigQueryExtension.base,
    &dri2FenceExtension.base,
    &dri2NoErrorExtension.base,
+   &driSWImageExtension.base,
    NULL
 };
 
@@ -412,6 +421,8 @@ drisw_init_screen(__DRIscreen * sPriv)
    configs = dri_init_screen_helper(screen, pscreen);
    if (!configs)
       goto fail;
+
+   screen->lookup_egl_image = dri2_lookup_egl_image;
 
    return configs;
 fail:
