@@ -187,7 +187,6 @@ get_blit_intratile_offset_el(const struct brw_context *brw,
        * The offsets we get from ISL in the tiled case are already aligned.
        * In the linear case, we need to do some of our own aligning.
        */
-      assert(mt->surf.row_pitch % 64 == 0);
       uint32_t delta = *base_address_offset & 63;
       assert(delta % mt->cpp == 0);
       *base_address_offset -= delta;
