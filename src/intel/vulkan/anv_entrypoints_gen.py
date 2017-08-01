@@ -30,7 +30,7 @@ import xml.etree.cElementTree as et
 
 from mako.template import Template
 
-import anv_extensions
+from anv_extensions import *
 
 MAX_API_VERSION = 1.0
 
@@ -268,7 +268,7 @@ def get_entrypoints(doc, entrypoints_to_defines):
         for command in feature.findall('./require/command'):
             enabled_commands.add(command.attrib['name'])
 
-    supported = set(ext.name for ext in anv_extensions.EXTENSIONS)
+    supported = set(ext.name for ext in EXTENSIONS)
     for extension in doc.findall('.extensions/extension'):
         if extension.attrib['name'] not in supported:
             continue

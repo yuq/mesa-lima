@@ -64,7 +64,7 @@ EXTENSIONS = [
     Extension('VK_KHX_multiview',                         1, True),
 ]
 
-def init_exts_from_xml(xml):
+def _init_exts_from_xml(xml):
     """ Walk the Vulkan XML and fill out extra extension information. """
 
     xml = et.parse(xml)
@@ -84,7 +84,7 @@ def init_exts_from_xml(xml):
     for ext in EXTENSIONS:
         assert ext.type == 'instance' or ext.type == 'device'
 
-TEMPLATE = Template(COPYRIGHT + """
+_TEMPLATE = Template(COPYRIGHT + """
 #include "anv_private.h"
 
 #include "vk_util.h"
@@ -172,7 +172,7 @@ if __name__ == '__main__':
     parser.add_argument('--xml', help='Vulkan API XML file.', required=True)
     args = parser.parse_args()
 
-    init_exts_from_xml(args.xml)
+    _init_exts_from_xml(args.xml)
 
     template_env = {
         'instance_extensions': [e for e in EXTENSIONS if e.type == 'instance'],
@@ -180,4 +180,4 @@ if __name__ == '__main__':
     }
 
     with open(args.out, 'w') as f:
-        f.write(TEMPLATE.render(**template_env))
+        f.write(_TEMPLATE.render(**template_env))
