@@ -151,6 +151,7 @@ C_SOURCES := \
 	tgsi/tgsi_from_mesa.h \
 	tgsi/tgsi_info.c \
 	tgsi/tgsi_info.h \
+	tgsi/tgsi_info_opcodes.h \
 	tgsi/tgsi_iterate.c \
 	tgsi/tgsi_iterate.h \
 	tgsi/tgsi_lowering.c \
