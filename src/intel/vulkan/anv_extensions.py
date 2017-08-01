@@ -91,6 +91,10 @@ class VkVersion:
             ver_list.append(str(self.patch))
         return '.'.join(ver_list)
 
+    def c_vk_version(self):
+        ver_list = [str(self.major), str(self.minor), str(self.patch)]
+        return 'VK_MAKE_VERSION(' + ', '.join(ver_list) + ')'
+
     def __int_ver(self):
         # This is just an expansion of VK_VERSION
         patch = self.patch if self.patch is not None else 0
@@ -173,6 +177,12 @@ VkResult anv_EnumerateInstanceExtensionProperties(
     return vk_outarray_status(&out);
 }
 
+uint32_t
+anv_physical_device_api_version(struct anv_physical_device *dev)
+{
+    return ${MAX_API_VERSION.c_vk_version()};
+}
+
 bool
 anv_physical_device_extension_supported(struct anv_physical_device *device,
                                         const char *name)
@@ -218,6 +228,7 @@ if __name__ == '__main__':
     _init_exts_from_xml(args.xml)
 
     template_env = {
+        'MAX_API_VERSION': MAX_API_VERSION,
         'instance_extensions': [e for e in EXTENSIONS if e.type == 'instance'],
         'device_extensions': [e for e in EXTENSIONS if e.type == 'device'],
     }
