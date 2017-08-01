@@ -96,6 +96,11 @@ static uint32_t null_image_descriptor[8] = {
 	 * descriptor */
 };
 
+static uint16_t si_ce_ram_size(struct si_context *sctx)
+{
+	return sctx->b.chip_class >= GFX9 ? 4096 : 32768;
+}
+
 static void si_init_descriptor_list(uint32_t *desc_list,
 				    unsigned element_dw_size,
 				    unsigned num_elements,
@@ -148,11 +153,18 @@ static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned s
 			 unsigned *out_offset, struct r600_resource **out_buf)
 {
 	uint64_t va;
+	unsigned cache_line_size = sctx->screen->b.info.tcc_cache_line_size;
 
-	u_suballocator_alloc(sctx->ce_suballocator, size,
-			     si_optimal_tcc_alignment(sctx, size),
-			     out_offset,
-			     (struct pipe_resource**)out_buf);
+	/* The base and size should be aligned to the L2 cache line size
+	 * for optimal performance. (all dumps should rewrite whole lines)
+	 */
+	size = align(size, cache_line_size);
+
+	(void)si_ce_ram_size; /* silence an "unused" warning */
+	assert(offset + size <= si_ce_ram_size(sctx));
+
+	u_suballocator_alloc(sctx->ce_suballocator, size, cache_line_size,
+			     out_offset, (struct pipe_resource**)out_buf);
 	if (!out_buf)
 			return false;
 
@@ -2852,10 +2864,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->descriptors_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
 	sctx->total_ce_ram_allocated = ce_offset;
 
-	if (sctx->b.chip_class >= GFX9)
-		assert(ce_offset <= 4096);
-	else
-		assert(ce_offset <= 32768);
+	assert(ce_offset <= si_ce_ram_size(sctx));
 
 	/* Set pipe_context functions. */
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
