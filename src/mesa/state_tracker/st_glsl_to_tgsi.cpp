@@ -49,6 +49,7 @@
 #include "tgsi/tgsi_info.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
+#include "st_glsl_types.h"
 #include "st_program.h"
 #include "st_mesa_to_tgsi.h"
 #include "st_format.h"
@@ -2832,8 +2833,16 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
 {
    ir_constant *index;
    st_src_reg src;
-   int element_size = type_size(ir->type);
    bool is_2D = false;
+   ir_variable *var = ir->variable_referenced();
+
+   /* We only need the logic provided by st_glsl_storage_type_size()
+    * for arrays of structs. Indirect sampler and image indexing is handled
+    * elsewhere.
+    */
+   int element_size = ir->type->without_array()->is_record() ?
+      st_glsl_storage_type_size(ir->type, var->data.bindless) :
+      type_size(ir->type);
 
    index = ir->array_index->constant_expression_value(ralloc_parent(ir));
 
@@ -2923,15 +2932,18 @@ glsl_to_tgsi_visitor::visit(ir_dereference_record *ir)
 {
    unsigned int i;
    const glsl_type *struct_type = ir->record->type;
+   ir_variable *var = ir->record->variable_referenced();
    int offset = 0;
 
    ir->record->accept(this);
 
    assert(ir->field_idx >= 0);
+   assert(var);
    for (i = 0; i < struct_type->length; i++) {
       if (i == (unsigned) ir->field_idx)
          break;
-      offset += type_size(struct_type->fields.structure[i].type);
+      const glsl_type *member_type = struct_type->fields.structure[i].type;
+      offset += st_glsl_storage_type_size(member_type, var->data.bindless);
    }
 
    /* If the type is smaller than a vec4, replicate the last channel out. */
