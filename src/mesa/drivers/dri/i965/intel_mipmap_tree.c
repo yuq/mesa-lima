@@ -302,12 +302,8 @@ unwind:
 static bool
 needs_separate_stencil(const struct brw_context *brw,
                        struct intel_mipmap_tree *mt,
-                       mesa_format format, uint32_t layout_flags)
+                       mesa_format format)
 {
-
-   if (layout_flags & MIPTREE_LAYOUT_FOR_BO)
-      return false;
-
    if (_mesa_get_format_base_format(format) != GL_DEPTH_STENCIL)
       return false;
 
@@ -680,7 +676,7 @@ miptree_create(struct brw_context *brw,
          ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
          BO_ALLOC_FOR_RENDER, 0, NULL);
 
-      if (needs_separate_stencil(brw, mt, format, layout_flags) &&
+      if (needs_separate_stencil(brw, mt, format) &&
           !make_separate_stencil_surface(brw, mt)) {
          intel_miptree_release(&mt);
          return NULL;
@@ -700,7 +696,6 @@ miptree_create(struct brw_context *brw,
 
    etc_format = (format != tex_format) ? tex_format : MESA_FORMAT_NONE;
 
-   assert((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0);
    if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
 

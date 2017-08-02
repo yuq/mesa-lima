@@ -350,10 +350,7 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
 
 enum {
    MIPTREE_LAYOUT_ACCELERATED_UPLOAD       = 1 << 0,
-   MIPTREE_LAYOUT_GEN6_HIZ_STENCIL         = 1 << 1,
-   MIPTREE_LAYOUT_FOR_BO                   = 1 << 2,
    MIPTREE_LAYOUT_DISABLE_AUX              = 1 << 3,
-   MIPTREE_LAYOUT_FORCE_HALIGN16           = 1 << 4,
 
    MIPTREE_LAYOUT_TILING_Y                 = 1 << 5,
    MIPTREE_LAYOUT_TILING_NONE              = 1 << 6,
