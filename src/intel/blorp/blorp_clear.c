@@ -25,6 +25,7 @@
 
 #include "main/macros.h" /* Needed for MAX3 and MAX2 for format_rgb9e5 */
 #include "util/format_rgb9e5.h"
+#include "util/format_srgb.h"
 
 #include "blorp_priv.h"
 #include "compiler/brw_eu_defines.h"
@@ -382,6 +383,9 @@ blorp_clear(struct blorp_batch *batch,
    if (format == ISL_FORMAT_R9G9B9E5_SHAREDEXP) {
       clear_color.u32[0] = float3_to_rgb9e5(clear_color.f32);
       format = ISL_FORMAT_R32_UINT;
+   } else if (format == ISL_FORMAT_L8_UNORM_SRGB) {
+      clear_color.f32[0] = util_format_linear_to_srgb_float(clear_color.f32[0]);
+      format = ISL_FORMAT_R8_UNORM;
    } else if (format == ISL_FORMAT_A4B4G4R4_UNORM) {
       /* Broadwell and earlier cannot render to this format so we need to work
        * around it by swapping the colors around and using B4G4R4A4 instead.
