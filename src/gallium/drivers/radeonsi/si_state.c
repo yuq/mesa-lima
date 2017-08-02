@@ -2985,8 +2985,7 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 	if (has_msaa_sample_loc_bug)
 		nr_samples = MAX2(nr_samples, 1);
 
-	if (nr_samples >= 1 &&
-	    (nr_samples != sctx->msaa_sample_locs.nr_samples)) {
+	if (nr_samples != sctx->msaa_sample_locs.nr_samples) {
 		sctx->msaa_sample_locs.nr_samples = nr_samples;
 		cayman_emit_msaa_sample_locs(cs, nr_samples);
 	}
