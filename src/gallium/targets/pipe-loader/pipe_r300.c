@@ -9,7 +9,7 @@ create_screen(int fd, const struct pipe_screen_config *config)
 {
    struct radeon_winsys *sws;
 
-   sws = radeon_drm_winsys_create(fd, flags, r300_screen_create);
+   sws = radeon_drm_winsys_create(fd, config, r300_screen_create);
    return sws ? debug_screen_wrap(sws->screen) : NULL;
 }
 

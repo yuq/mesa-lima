@@ -12,10 +12,10 @@ create_screen(int fd, const struct pipe_screen_config *config)
    struct radeon_winsys *rw;
 
    /* First, try amdgpu. */
-   rw = amdgpu_winsys_create(fd, flags, radeonsi_screen_create);
+   rw = amdgpu_winsys_create(fd, config, radeonsi_screen_create);
 
    if (!rw)
-      rw = radeon_drm_winsys_create(fd, flags, radeonsi_screen_create);
+      rw = radeon_drm_winsys_create(fd, config, radeonsi_screen_create);
 
    return rw ? debug_screen_wrap(rw->screen) : NULL;
 }

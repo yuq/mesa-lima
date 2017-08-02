@@ -146,6 +146,7 @@ pipe_radeonsi_la_LIBADD = \
 	$(top_builddir)/src/gallium/drivers/radeon/libradeon.la \
 	$(top_builddir)/src/gallium/drivers/radeonsi/libradeonsi.la \
 	$(top_builddir)/src/amd/common/libamd_common.la \
+	$(top_builddir)/src/util/libxmlconfig.la \
 	$(LIBDRM_LIBS) \
 	$(RADEON_LIBS) \
 	$(AMDGPU_LIBS)
