@@ -254,7 +254,7 @@ run_tests(const struct gen_device_info *devinfo)
    brw_init_compaction_tables(devinfo);
    bool fail = false;
 
-   for (int i = 0; i < ARRAY_SIZE(tests); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(tests); i++) {
       for (int align_16 = 0; align_16 <= 1; align_16++) {
 	 struct brw_codegen *p = rzalloc(NULL, struct brw_codegen);
 	 brw_init_codegen(devinfo, p, p);
