@@ -956,7 +956,7 @@ lp_build_tgsi_aos(struct gallivm_state *gallivm,
          tgsi_get_opcode_info(instr->Instruction.Opcode);
       if (!lp_emit_instruction_aos(&bld, instr, opcode_info, &pc))
          _debug_printf("warning: failed to translate tgsi opcode %s to LLVM\n",
-                       opcode_info->mnemonic);
+                       tgsi_get_opcode_name(instr->Instruction.Opcode));
    }
 
    if (0) {
