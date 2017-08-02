@@ -662,11 +662,6 @@ void
 intel_update_r8stencil(struct brw_context *brw,
                        struct intel_mipmap_tree *mt);
 
-bool
-brw_miptree_layout(struct brw_context *brw,
-                   struct intel_mipmap_tree *mt,
-                   uint32_t layout_flags);
-
 void
 intel_miptree_map(struct brw_context *brw,
 		  struct intel_mipmap_tree *mt,
