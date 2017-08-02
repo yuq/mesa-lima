@@ -628,16 +628,6 @@ make_separate_stencil_surface(struct brw_context *brw,
    return true;
 }
 
-static bool
-force_linear_tiling(uint32_t layout_flags)
-{
-   /* ANY includes NONE and Y bit. */
-   if (layout_flags & MIPTREE_LAYOUT_TILING_Y)
-      return false;
-
-   return layout_flags & MIPTREE_LAYOUT_TILING_NONE;
-}
-
 static struct intel_mipmap_tree *
 miptree_create(struct brw_context *brw,
                GLenum target,
@@ -663,7 +653,7 @@ miptree_create(struct brw_context *brw,
    const GLenum base_format = _mesa_get_format_base_format(format);
    if ((base_format == GL_DEPTH_COMPONENT ||
         base_format == GL_DEPTH_STENCIL) &&
-       !force_linear_tiling(layout_flags)) {
+       !(layout_flags & MIPTREE_LAYOUT_TILING_NONE)) {
       /* Fix up the Z miptree format for how we're splitting out separate
        * stencil.  Gen7 expects there to be no stencil bits in its depth buffer.
        */
@@ -699,7 +689,8 @@ miptree_create(struct brw_context *brw,
    if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
 
-   isl_tiling_flags_t tiling_flags = force_linear_tiling(layout_flags) ?
+   isl_tiling_flags_t tiling_flags =
+      (layout_flags & MIPTREE_LAYOUT_TILING_NONE) ?
       ISL_TILING_LINEAR_BIT : ISL_TILING_ANY_MASK;
 
    /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
@@ -823,7 +814,6 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    /* The BO already has a tiling format and we shouldn't confuse the lower
     * layers by making it try to find a tiling format again.
     */
-   assert((layout_flags & MIPTREE_LAYOUT_TILING_ANY) == 0);
    assert((layout_flags & MIPTREE_LAYOUT_TILING_NONE) == 0);
 
    mt = make_surface(brw, target, format,
@@ -1059,8 +1049,7 @@ intel_miptree_create_for_renderbuffer(struct brw_context *brw,
    struct intel_mipmap_tree *mt;
    uint32_t depth = 1;
    GLenum target = num_samples > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
-   const uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
-                                 MIPTREE_LAYOUT_TILING_ANY;
+   const uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
 
    mt = intel_miptree_create(brw, target, format, 0, 0,
                              width, height, depth, num_samples,
