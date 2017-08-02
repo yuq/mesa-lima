@@ -34,7 +34,6 @@
 #include "util/u_format_s3tc.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
-#include "util/u_mm.h"
 
 #include "pipe/p_screen.h"
 
