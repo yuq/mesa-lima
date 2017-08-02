@@ -2680,9 +2680,12 @@ st_AllocTextureStorage(struct gl_context *ctx,
    bindings = default_bindings(st, fmt);
 
    /* Raise the sample count if the requested one is unsupported. */
-   if (num_samples > 1) {
+   if (num_samples > 0) {
       enum pipe_texture_target ptarget = gl_target_to_pipe(texObj->Target);
       boolean found = FALSE;
+
+      /* start the query with at least two samples */
+      num_samples = MAX2(num_samples, 2);
 
       for (; num_samples <= ctx->Const.MaxSamples; num_samples++) {
          if (screen->is_format_supported(screen, fmt, ptarget,

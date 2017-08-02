@@ -3303,7 +3303,7 @@ struct gl_renderbuffer
     * called without a rb->TexImage.
     */
    GLboolean NeedsFinishRenderTexture;
-   GLubyte NumSamples;
+   GLubyte NumSamples;    /**< zero means not multisampled */
    GLenum InternalFormat; /**< The user-specified format */
    GLenum _BaseFormat;    /**< Either GL_RGB, GL_RGBA, GL_DEPTH_COMPONENT or
                                GL_STENCIL_INDEX. */
