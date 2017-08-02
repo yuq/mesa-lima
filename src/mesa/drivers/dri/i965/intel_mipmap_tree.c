@@ -59,8 +59,7 @@ intel_miptree_alloc_aux(struct brw_context *brw,
                         struct intel_mipmap_tree *mt);
 
 static bool
-is_mcs_supported(const struct brw_context *brw, mesa_format format,
-                 uint32_t layout_flags)
+is_mcs_supported(const struct brw_context *brw, mesa_format format)
 {
    /* Prior to Gen7, all MSAA surfaces used IMS layout. */
    if (brw->gen < 7)
@@ -85,11 +84,6 @@ is_mcs_supported(const struct brw_context *brw, mesa_format format,
        * which is expensive.
        */
       if (brw->gen == 7 && _mesa_get_format_datatype(format) == GL_INT) {
-         return false;
-      } else if (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) {
-         /* We can't use the CMS layout because it uses an aux buffer, the MCS
-          * buffer. So fallback to UMS, which is identical to CMS without the
-          * MCS. */
          return false;
       } else {
          return true;
@@ -329,8 +323,7 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
 {
    assert(mt->aux_usage == ISL_AUX_USAGE_NONE);
 
-   const unsigned no_flags = 0;
-   if (mt->surf.samples > 1 && is_mcs_supported(brw, mt->format, no_flags)) {
+   if (mt->surf.samples > 1 && is_mcs_supported(brw, mt->format)) {
       assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
       mt->aux_usage = ISL_AUX_USAGE_MCS;
    } else if (intel_tiling_supports_ccs(brw, mt->surf.tiling) &&
