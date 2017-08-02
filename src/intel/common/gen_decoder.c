@@ -943,10 +943,11 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
 
 static void
 print_dword_header(FILE *outfile,
-                   struct gen_field_iterator *iter, uint64_t offset)
+                   struct gen_field_iterator *iter,
+                   uint64_t offset, uint32_t dword)
 {
    fprintf(outfile, "0x%08"PRIx64":  0x%08x : Dword %d\n",
-           offset + 4 * iter->dword, iter->p[iter->dword], iter->dword);
+           offset + 4 * dword, iter->p[dword], dword);
 }
 
 static bool
@@ -968,12 +969,13 @@ gen_print_group(FILE *outfile, struct gen_group *group,
                 uint64_t offset, const uint32_t *p, bool color)
 {
    struct gen_field_iterator iter;
-   int last_dword = 0;
+   int last_dword = -1;
 
    gen_field_iterator_init(&iter, group, p, color);
    while (gen_field_iterator_next(&iter)) {
       if (last_dword != iter.dword) {
-         print_dword_header(outfile, &iter, offset);
+         for (int i = last_dword + 1; i <= iter.dword; i++)
+            print_dword_header(outfile, &iter, offset, i);
          last_dword = iter.dword;
       }
       if (!is_header_field(group, iter.field)) {
