@@ -150,7 +150,7 @@ intel_alloc_texture_storage(struct gl_context *ctx,
                                               0, levels - 1,
                                               width, height, depth,
                                               MAX2(num_samples, 1),
-                                              0);
+                                              MIPTREE_CREATE_DEFAULT);
 
       if (intel_texobj->mt == NULL) {
          return false;
@@ -345,7 +345,7 @@ intel_set_texture_storage_for_buffer_object(struct gl_context *ctx,
                                   buffer_offset,
                                   image->Width, image->Height, image->Depth,
                                   row_stride,
-                                  0);
+                                  MIPTREE_CREATE_DEFAULT);
    if (!intel_texobj->mt)
       return false;
 

@@ -633,7 +633,7 @@ miptree_create(struct brw_context *brw,
                GLuint height0,
                GLuint depth0,
                GLuint num_samples,
-               uint32_t layout_flags)
+               enum intel_miptree_create_flags flags)
 {
    if (format == MESA_FORMAT_S_UINT8)
       return make_surface(brw, target, format, first_level, last_level,
@@ -648,7 +648,7 @@ miptree_create(struct brw_context *brw,
    const GLenum base_format = _mesa_get_format_base_format(format);
    if ((base_format == GL_DEPTH_COMPONENT ||
         base_format == GL_DEPTH_STENCIL) &&
-       !(layout_flags & MIPTREE_LAYOUT_TILING_NONE)) {
+       !(flags & MIPTREE_CREATE_LINEAR)) {
       /* Fix up the Z miptree format for how we're splitting out separate
        * stencil.  Gen7 expects there to be no stencil bits in its depth buffer.
        */
@@ -667,7 +667,7 @@ miptree_create(struct brw_context *brw,
          return NULL;
       }
 
-      if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
+      if (!(flags & MIPTREE_CREATE_NO_AUX))
          intel_miptree_choose_aux_usage(brw, mt);
 
       return mt;
@@ -681,11 +681,10 @@ miptree_create(struct brw_context *brw,
 
    etc_format = (format != tex_format) ? tex_format : MESA_FORMAT_NONE;
 
-   if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
+   if (flags & MIPTREE_CREATE_BUSY)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
 
-   isl_tiling_flags_t tiling_flags =
-      (layout_flags & MIPTREE_LAYOUT_TILING_NONE) ?
+   isl_tiling_flags_t tiling_flags = (flags & MIPTREE_CREATE_LINEAR) ?
       ISL_TILING_LINEAR_BIT : ISL_TILING_ANY_MASK;
 
    /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
@@ -705,7 +704,7 @@ miptree_create(struct brw_context *brw,
 
    mt->etc_format = etc_format;
 
-   if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
+   if (!(flags & MIPTREE_CREATE_NO_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
 
    return mt;
@@ -721,7 +720,7 @@ intel_miptree_create(struct brw_context *brw,
                      GLuint height0,
                      GLuint depth0,
                      GLuint num_samples,
-                     uint32_t layout_flags)
+                     enum intel_miptree_create_flags flags)
 {
    assert(num_samples > 0);
 
@@ -729,7 +728,7 @@ intel_miptree_create(struct brw_context *brw,
                                      brw, target, format,
                                      first_level, last_level,
                                      width0, height0, depth0, num_samples,
-                                     layout_flags);
+                                     flags);
    if (!mt)
       return NULL;
 
@@ -752,7 +751,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                             uint32_t height,
                             uint32_t depth,
                             int pitch,
-                            uint32_t layout_flags)
+                            enum intel_miptree_create_flags flags)
 {
    struct intel_mipmap_tree *mt;
    uint32_t tiling, swizzle;
@@ -771,7 +770,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 
       brw_bo_reference(bo);
 
-      if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
+      if (!(flags & MIPTREE_CREATE_NO_AUX))
          intel_miptree_choose_aux_usage(brw, mt);
 
       return mt;
@@ -807,7 +806,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    /* The BO already has a tiling format and we shouldn't confuse the lower
     * layers by making it try to find a tiling format again.
     */
-   assert((layout_flags & MIPTREE_LAYOUT_TILING_NONE) == 0);
+   assert((flags & MIPTREE_CREATE_LINEAR) == 0);
 
    mt = make_surface(brw, target, format,
                      0, 0, width, height, depth, 1,
@@ -822,7 +821,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    mt->bo = bo;
    mt->offset = offset;
 
-   if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX)) {
+   if (!(flags & MIPTREE_CREATE_NO_AUX)) {
       intel_miptree_choose_aux_usage(brw, mt);
 
       if (!intel_miptree_alloc_aux(brw, mt)) {
@@ -858,7 +857,7 @@ miptree_create_for_planar_image(struct brw_context *brw,
                                      image->offsets[index],
                                      width, height, 1,
                                      image->strides[index],
-                                     MIPTREE_LAYOUT_DISABLE_AUX);
+                                     MIPTREE_CREATE_NO_AUX);
       if (mt == NULL)
          return NULL;
 
@@ -926,8 +925,8 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
     * have the opportunity to do resolves.  Window system buffers also may be
     * used for scanout so we need to flag that appropriately.
     */
-   const uint32_t mt_layout_flags =
-      is_winsys_image ? 0 : MIPTREE_LAYOUT_DISABLE_AUX;
+   const enum intel_miptree_create_flags mt_create_flags =
+      is_winsys_image ? 0 : MIPTREE_CREATE_NO_AUX;
 
    /* Disable creation of the texture's aux buffers because the driver exposes
     * no EGL API to manage them. That is, there is no API for resolving the aux
@@ -937,7 +936,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    struct intel_mipmap_tree *mt =
       intel_miptree_create_for_bo(brw, image->bo, format,
                                   image->offset, image->width, image->height, 1,
-                                  image->pitch, mt_layout_flags);
+                                  image->pitch, mt_create_flags);
    if (mt == NULL)
       return NULL;
 
@@ -1042,11 +1041,10 @@ intel_miptree_create_for_renderbuffer(struct brw_context *brw,
    struct intel_mipmap_tree *mt;
    uint32_t depth = 1;
    GLenum target = num_samples > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
-   const uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
 
    mt = intel_miptree_create(brw, target, format, 0, 0,
                              width, height, depth, num_samples,
-                             layout_flags);
+                             MIPTREE_CREATE_BUSY);
    if (!mt)
       goto fail;
 
@@ -2935,7 +2933,7 @@ intel_miptree_map_blit(struct brw_context *brw,
                                          /* last_level */ 0,
                                          map->w, map->h, 1,
                                          /* samples */ 1,
-                                         MIPTREE_LAYOUT_TILING_NONE);
+                                         MIPTREE_CREATE_LINEAR);
 
    if (!map->linear_mt) {
       fprintf(stderr, "Failed to allocate blit temporary\n");

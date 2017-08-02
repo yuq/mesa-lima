@@ -1518,7 +1518,7 @@ intel_process_dri2_buffer(struct brw_context *brw,
                                   drawable->h,
                                   1,
                                   buffer->pitch,
-                                  0);
+                                  MIPTREE_CREATE_DEFAULT);
    if (!mt) {
       brw_bo_unreference(bo);
       return;
