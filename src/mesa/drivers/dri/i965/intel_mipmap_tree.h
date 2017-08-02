@@ -352,10 +352,7 @@ enum {
    MIPTREE_LAYOUT_ACCELERATED_UPLOAD       = 1 << 0,
    MIPTREE_LAYOUT_DISABLE_AUX              = 1 << 3,
 
-   MIPTREE_LAYOUT_TILING_Y                 = 1 << 5,
    MIPTREE_LAYOUT_TILING_NONE              = 1 << 6,
-   MIPTREE_LAYOUT_TILING_ANY               = MIPTREE_LAYOUT_TILING_Y |
-                                             MIPTREE_LAYOUT_TILING_NONE,
 };
 
 struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
