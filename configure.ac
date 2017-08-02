@@ -1792,13 +1792,7 @@ if test "x$with_dri_drivers" = xno; then
 fi
 
 # Check for expat
-PKG_CHECK_MODULES([EXPAT], [expat], [],
-    # expat version 2.0 and earlier do not provide expat.pc
-    [AC_CHECK_HEADER([expat.h],[],
-                     [AC_MSG_ERROR([Expat headers required for DRI not found])])
-     AC_CHECK_LIB([expat],[XML_ParserCreate],[],
-                 [AC_MSG_ERROR([Expat library required for DRI not found])])
-     EXPAT_LIBS="-lexpat"])
+PKG_CHECK_MODULES([EXPAT], [expat])
 
 dnl If $with_dri_drivers is yes, drivers will be added through
 dnl platform checks. Set DEFINES and LIB_DEPS
