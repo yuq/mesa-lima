@@ -719,9 +719,6 @@ miptree_create(struct brw_context *brw,
 
    mt->etc_format = etc_format;
 
-   if (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT)
-      mt->bo->cache_coherent = false;
-
    if (!(layout_flags & MIPTREE_LAYOUT_DISABLE_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
 
@@ -941,7 +938,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
     * used for scanout so we need to flag that appropriately.
     */
    const uint32_t mt_layout_flags =
-      is_winsys_image ? MIPTREE_LAYOUT_FOR_SCANOUT : MIPTREE_LAYOUT_DISABLE_AUX;
+      is_winsys_image ? 0 : MIPTREE_LAYOUT_DISABLE_AUX;
 
    /* Disable creation of the texture's aux buffers because the driver exposes
     * no EGL API to manage them. That is, there is no API for resolving the aux
@@ -973,6 +970,13 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
          return NULL;
       }
    }
+
+   /* If this is a window-system image, then we can no longer assume it's
+    * cache-coherent because it may suddenly get scanned out which destroys
+    * coherency.
+    */
+   if (is_winsys_image)
+      image->bo->cache_coherent = false;
 
    if (!intel_miptree_alloc_aux(brw, mt)) {
       intel_miptree_release(&mt);
