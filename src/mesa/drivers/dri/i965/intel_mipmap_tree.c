@@ -59,14 +59,19 @@ intel_miptree_alloc_aux(struct brw_context *brw,
                         struct intel_mipmap_tree *mt);
 
 static bool
-is_mcs_supported(const struct brw_context *brw, mesa_format format)
+intel_miptree_supports_mcs(struct brw_context *brw,
+                           const struct intel_mipmap_tree *mt)
 {
+   /* MCS compression only applies to multisampled miptrees */
+   if (mt->surf.samples <= 1)
+      return false;
+
    /* Prior to Gen7, all MSAA surfaces used IMS layout. */
    if (brw->gen < 7)
       return false;
 
    /* In Gen7, IMS layout is only used for depth and stencil buffers. */
-   switch (_mesa_get_format_base_format(format)) {
+   switch (_mesa_get_format_base_format(mt->format)) {
    case GL_DEPTH_COMPONENT:
    case GL_STENCIL_INDEX:
    case GL_DEPTH_STENCIL:
@@ -83,7 +88,7 @@ is_mcs_supported(const struct brw_context *brw, mesa_format format)
        * would require converting between CMS and UMS MSAA layouts on the fly,
        * which is expensive.
        */
-      if (brw->gen == 7 && _mesa_get_format_datatype(format) == GL_INT) {
+      if (brw->gen == 7 && _mesa_get_format_datatype(mt->format) == GL_INT) {
          return false;
       } else {
          return true;
@@ -323,7 +328,7 @@ intel_miptree_choose_aux_usage(struct brw_context *brw,
 {
    assert(mt->aux_usage == ISL_AUX_USAGE_NONE);
 
-   if (mt->surf.samples > 1 && is_mcs_supported(brw, mt->format)) {
+   if (intel_miptree_supports_mcs(brw, mt)) {
       assert(mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
       mt->aux_usage = ISL_AUX_USAGE_MCS;
    } else if (intel_tiling_supports_ccs(brw, mt->surf.tiling) &&
