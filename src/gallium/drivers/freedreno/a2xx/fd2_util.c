@@ -183,6 +183,17 @@ fd2_pipe2surface(enum pipe_format format)
 	case PIPE_FORMAT_R32G32B32A32_FLOAT:
 		return FMT_32_32_32_32_FLOAT;
 
+	/* Compressed textures. */
+	case PIPE_FORMAT_ETC1_RGB8:
+		return FMT_ETC1_RGB;
+	case PIPE_FORMAT_DXT1_RGB:
+	case PIPE_FORMAT_DXT1_RGBA:
+		return FMT_DXT1;
+	case PIPE_FORMAT_DXT3_RGBA:
+		return FMT_DXT2_3;
+	case PIPE_FORMAT_DXT5_RGBA:
+		return FMT_DXT4_5;
+
 	/* YUV buffers. */
 	case PIPE_FORMAT_UYVY:
 		return FMT_Cr_Y1_Cb_Y0;
