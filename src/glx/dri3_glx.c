@@ -495,6 +495,33 @@ dri3_flush_front_buffer(__DRIdrawable *driDrawable, void *loaderPrivate)
    loader_dri3_wait_gl(draw);
 }
 
+/**
+ * Make sure all pending swapbuffers have been submitted to hardware
+ *
+ * \param driDrawable[in]  Pointer to the dri drawable whose swaps we are
+ * flushing.
+ * \param loaderPrivate[in]  Pointer to the corresponding struct
+ * loader_dri_drawable.
+ */
+static void
+dri3_flush_swap_buffers(__DRIdrawable *driDrawable, void *loaderPrivate)
+{
+   struct loader_dri3_drawable *draw = loaderPrivate;
+   struct dri3_drawable *pdraw = loader_drawable_to_dri3_drawable(draw);
+   struct dri3_screen *psc;
+
+   if (!pdraw)
+      return;
+
+   if (!pdraw->base.psc)
+      return;
+
+   psc = (struct dri3_screen *) pdraw->base.psc;
+
+   (void) __glXInitialize(psc->base.dpy);
+   loader_dri3_swapbuffer_barrier(draw);
+}
+
 static void
 dri_set_background_context(void *loaderPrivate)
 {
@@ -514,10 +541,11 @@ dri_is_thread_safe(void *loaderPrivate)
 /* The image loader extension record for DRI3
  */
 static const __DRIimageLoaderExtension imageLoaderExtension = {
-   .base = { __DRI_IMAGE_LOADER, 1 },
+   .base = { __DRI_IMAGE_LOADER, 3 },
 
    .getBuffers          = loader_dri3_get_buffers,
    .flushFrontBuffer    = dri3_flush_front_buffer,
+   .flushSwapBuffers    = dri3_flush_swap_buffers,
 };
 
 const __DRIuseInvalidateExtension dri3UseInvalidate = {
