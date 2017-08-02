@@ -51,7 +51,9 @@ static int (*backends[])(struct pipe_loader_device **, int) = {
 };
 
 const char gallium_driinfo_xml[] =
+   DRI_CONF_BEGIN
 #include "driinfo_gallium.h"
+   DRI_CONF_END
 ;
 
 int
