@@ -237,21 +237,6 @@ static const char *const access_mode[2] = {
    [1] = "align16",
 };
 
-static const char * const reg_encoding[] = {
-   [BRW_HW_REG_TYPE_UD]  = "UD",
-   [BRW_HW_REG_TYPE_D]   = "D",
-   [BRW_HW_REG_TYPE_UW]  = "UW",
-   [BRW_HW_REG_TYPE_W]   = "W",
-   [BRW_HW_REG_TYPE_F]   = "F",
-   [GEN8_HW_REG_TYPE_UQ] = "UQ",
-   [GEN8_HW_REG_TYPE_Q]  = "Q",
-
-   [BRW_HW_REG_TYPE_UB]  = "UB",
-   [BRW_HW_REG_TYPE_B]   = "B",
-   [GEN7_HW_REG_TYPE_DF] = "DF",
-   [GEN8_HW_REG_TYPE_HF] = "HF",
-};
-
 static const char *const three_source_reg_encoding[] = {
    [BRW_3SRC_TYPE_F]  = "F",
    [BRW_3SRC_TYPE_D]  = "D",
@@ -738,8 +723,10 @@ dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          err |= control(file, "horiz stride", horiz_stride,
                         brw_inst_dst_hstride(devinfo, inst), NULL);
          string(file, ">");
-         err |= control(file, "dest reg encoding", reg_encoding,
-                        brw_inst_dst_reg_hw_type(devinfo, inst), NULL);
+         string(file,
+                brw_hw_reg_type_to_letters(devinfo,
+                                           brw_inst_dst_reg_file(devinfo, inst),
+                                           brw_inst_dst_reg_hw_type(devinfo, inst)));
       } else {
          string(file, "g[a0");
          if (brw_inst_dst_ia_subreg_nr(devinfo, inst))
@@ -751,8 +738,10 @@ dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          err |= control(file, "horiz stride", horiz_stride,
                         brw_inst_dst_hstride(devinfo, inst), NULL);
          string(file, ">");
-         err |= control(file, "dest reg encoding", reg_encoding,
-                        brw_inst_dst_reg_hw_type(devinfo, inst), NULL);
+         string(file,
+                brw_hw_reg_type_to_letters(devinfo,
+                                           brw_inst_dst_reg_file(devinfo, inst),
+                                           brw_inst_dst_reg_hw_type(devinfo, inst)));
       }
    } else {
       if (brw_inst_dst_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
@@ -765,8 +754,10 @@ dest(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
          string(file, "<1>");
          err |= control(file, "writemask", writemask,
                         brw_inst_da16_writemask(devinfo, inst), NULL);
-         err |= control(file, "dest reg encoding", reg_encoding,
-                        brw_inst_dst_reg_hw_type(devinfo, inst), NULL);
+         string(file,
+                brw_hw_reg_type_to_letters(devinfo,
+                                           brw_inst_dst_reg_file(devinfo, inst),
+                                           brw_inst_dst_reg_hw_type(devinfo, inst)));
       } else {
          err = 1;
          string(file, "Indirect align16 address mode not supported");
@@ -843,7 +834,7 @@ src_da1(FILE *file,
       format(file, ".%d", sub_reg_num / elem_size);   /* use formal style like spec */
    }
    src_align1_region(file, _vert_stride, _width, _horiz_stride);
-   err |= control(file, "src reg encoding", reg_encoding, type, NULL);
+   string(file, brw_hw_reg_type_to_letters(devinfo, _reg_file, type));
    return err;
 }
 
@@ -875,7 +866,7 @@ src_ia1(FILE *file,
       format(file, " %d", _addr_imm);
    string(file, "]");
    src_align1_region(file, _vert_stride, _width, _horiz_stride);
-   err |= control(file, "src reg encoding", reg_encoding, type, NULL);
+   string(file, brw_hw_reg_type_to_letters(devinfo, _reg_file, type));
    return err;
 }
 
@@ -938,7 +929,7 @@ src_da16(FILE *file,
    err |= control(file, "vert stride", vert_stride, _vert_stride, NULL);
    string(file, ">");
    err |= src_swizzle(file, BRW_SWIZZLE4(swz_x, swz_y, swz_z, swz_w));
-   err |= control(file, "src da16 reg type", reg_encoding, _reg_type, NULL);
+   string(file, brw_hw_reg_type_to_letters(devinfo, _reg_file, _reg_type));
    return err;
 }
 
@@ -1025,50 +1016,53 @@ src2_3src(FILE *file, const struct gen_device_info *devinfo, const brw_inst *ins
 }
 
 static int
-imm(FILE *file, const struct gen_device_info *devinfo, enum hw_imm_type type,
+imm(FILE *file, const struct gen_device_info *devinfo, enum brw_reg_type type,
     const brw_inst *inst)
 {
    switch (type) {
-   case GEN8_HW_IMM_TYPE_UQ:
+   case BRW_REGISTER_TYPE_UQ:
       format(file, "0x%16lxUD", brw_inst_imm_uq(devinfo, inst));
       break;
-   case GEN8_HW_IMM_TYPE_Q:
+   case BRW_REGISTER_TYPE_Q:
       format(file, "%ldD", brw_inst_imm_uq(devinfo, inst));
       break;
-   case BRW_HW_IMM_TYPE_UD:
+   case BRW_REGISTER_TYPE_UD:
       format(file, "0x%08xUD", brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_IMM_TYPE_D:
+   case BRW_REGISTER_TYPE_D:
       format(file, "%dD", brw_inst_imm_d(devinfo, inst));
       break;
-   case BRW_HW_IMM_TYPE_UW:
+   case BRW_REGISTER_TYPE_UW:
       format(file, "0x%04xUW", (uint16_t) brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_IMM_TYPE_W:
+   case BRW_REGISTER_TYPE_W:
       format(file, "%dW", (int16_t) brw_inst_imm_d(devinfo, inst));
       break;
-   case BRW_HW_IMM_TYPE_UV:
+   case BRW_REGISTER_TYPE_UV:
       format(file, "0x%08xUV", brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_IMM_TYPE_VF:
+   case BRW_REGISTER_TYPE_VF:
       format(file, "[%-gF, %-gF, %-gF, %-gF]VF",
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst)),
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst) >> 8),
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst) >> 16),
              brw_vf_to_float(brw_inst_imm_ud(devinfo, inst) >> 24));
       break;
-   case BRW_HW_IMM_TYPE_V:
+   case BRW_REGISTER_TYPE_V:
       format(file, "0x%08xV", brw_inst_imm_ud(devinfo, inst));
       break;
-   case BRW_HW_IMM_TYPE_F:
+   case BRW_REGISTER_TYPE_F:
       format(file, "%-gF", brw_inst_imm_f(devinfo, inst));
       break;
-   case GEN8_HW_IMM_TYPE_DF:
+   case BRW_REGISTER_TYPE_DF:
       format(file, "%-gDF", brw_inst_imm_df(devinfo, inst));
       break;
-   case GEN8_HW_IMM_TYPE_HF:
+   case BRW_REGISTER_TYPE_HF:
       string(file, "Half Float IMM");
       break;
+   case BRW_REGISTER_TYPE_UB:
+   case BRW_REGISTER_TYPE_B:
+      format(file, "*** invalid immediate type %d ", type);
    }
    return 0;
 }
@@ -1077,7 +1071,7 @@ static int
 src0(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    if (brw_inst_src0_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE) {
-      return imm(file, devinfo, brw_inst_src0_reg_hw_type(devinfo, inst), inst);
+      return imm(file, devinfo, brw_inst_src0_type(devinfo, inst), inst);
    } else if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
       if (brw_inst_src0_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
          return src_da1(file,
@@ -1133,7 +1127,7 @@ static int
 src1(FILE *file, const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    if (brw_inst_src1_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE) {
-      return imm(file, devinfo, brw_inst_src1_reg_hw_type(devinfo, inst), inst);
+      return imm(file, devinfo, brw_inst_src1_type(devinfo, inst), inst);
    } else if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
       if (brw_inst_src1_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
          return src_da1(file,

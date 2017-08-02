@@ -78,6 +78,10 @@ brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
 const char *
 brw_reg_type_to_letters(enum brw_reg_type type);
 
+const char *
+brw_hw_reg_type_to_letters(const struct gen_device_info *devinfo,
+                           enum brw_reg_file file, unsigned hw_type);
+
 #ifdef __cplusplus
 }
 #endif

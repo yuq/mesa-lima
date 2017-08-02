@@ -154,3 +154,11 @@ brw_reg_type_to_letters(enum brw_reg_type type)
    assert(type < ARRAY_SIZE(letters));
    return letters[type];
 }
+
+const char *
+brw_hw_reg_type_to_letters(const struct gen_device_info *devinfo,
+                           enum brw_reg_file file, unsigned hw_type)
+{
+   enum brw_reg_type type = brw_hw_type_to_reg_type(devinfo, file, hw_type);
+   return brw_reg_type_to_letters(type);
+}
