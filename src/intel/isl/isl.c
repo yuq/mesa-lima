@@ -982,7 +982,8 @@ isl_calc_phys_total_extent_el_gen4_2d(
                                            &phys_slice0_sa);
    *total_extent_el = (struct isl_extent2d) {
       .w = isl_assert_div(phys_slice0_sa.w, fmtl->bw),
-      .h = *array_pitch_el_rows * phys_level0_sa->array_len,
+      .h = *array_pitch_el_rows * (phys_level0_sa->array_len - 1) +
+           isl_assert_div(phys_slice0_sa.h, fmtl->bh),
    };
 }
 
