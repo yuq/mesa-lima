@@ -61,7 +61,6 @@ struct gen_field_iterator {
    int start; /**< current field starts at this bit number */
    int end;   /**< current field ends at this bit number */
 
-   int field_iter;
    int group_iter;
 
    struct gen_field *field;
@@ -85,9 +84,7 @@ struct gen_group {
    struct gen_spec *spec;
    char *name;
 
-   struct gen_field **fields;
-   uint32_t nfields;
-   uint32_t fields_size;
+   struct gen_field *fields; /* linked list of fields */
 
    uint32_t group_offset, group_count;
    uint32_t group_size;
@@ -142,6 +139,8 @@ struct gen_type {
 };
 
 struct gen_field {
+   struct gen_field *next;
+
    char *name;
    int start, end;
    struct gen_type type;

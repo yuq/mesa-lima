@@ -56,6 +56,9 @@ struct parser_context {
    int nvalues;
    struct gen_value *values[256];
 
+   struct gen_field *fields[256];
+   int nfields;
+
    struct gen_spec *spec;
 };
 
@@ -359,19 +362,25 @@ create_value(struct parser_context *ctx, const char **atts)
    return value;
 }
 
-static void
+static struct gen_field *
 create_and_append_field(struct parser_context *ctx,
                         const char **atts)
 {
-   if (ctx->group->nfields == ctx->group->fields_size) {
-      ctx->group->fields_size = MAX2(ctx->group->fields_size * 2, 2);
-      ctx->group->fields =
-         (struct gen_field **) realloc(ctx->group->fields,
-                                       sizeof(ctx->group->fields[0]) *
-                                       ctx->group->fields_size);
+   struct gen_field *field = create_field(ctx, atts);
+   struct gen_field *prev = NULL, *list = ctx->group->fields;
+
+   while (list && field->start > list->start) {
+      prev = list;
+      list = list->next;
    }
 
-   ctx->group->fields[ctx->group->nfields++] = create_field(ctx, atts);
+   field->next = list;
+   if (prev == NULL)
+      ctx->group->fields = field;
+   else
+      prev->next = field;
+
+   return field;
 }
 
 static void
@@ -421,7 +430,7 @@ start_element(void *data, const char *element_name, const char **atts)
       previous_group->next = group;
       ctx->group = group;
    } else if (strcmp(element_name, "field") == 0) {
-      create_and_append_field(ctx, atts);
+      ctx->fields[ctx->nfields++] = create_and_append_field(ctx, atts);
    } else if (strcmp(element_name, "enum") == 0) {
       ctx->enoom = create_enum(ctx, name, atts);
    } else if (strcmp(element_name, "value") == 0) {
@@ -441,18 +450,17 @@ end_element(void *data, const char *name)
        strcmp(name, "struct") == 0 ||
        strcmp(name, "register") == 0) {
       struct gen_group *group = ctx->group;
+      struct gen_field *list = group->fields;
 
       ctx->group = ctx->group->parent;
 
-      for (int i = 0; i < group->nfields; i++) {
-         if (group->fields[i]->start >= 16 &&
-             group->fields[i]->end <= 31 &&
-             group->fields[i]->has_default) {
+      while (list && list->end <= 31) {
+         if (list->start >= 16 && list->has_default) {
             group->opcode_mask |=
-               mask(group->fields[i]->start % 32, group->fields[i]->end % 32);
-            group->opcode |=
-               group->fields[i]->default_value << group->fields[i]->start;
+               mask(list->start % 32, list->end % 32);
+            group->opcode |= list->default_value << list->start;
          }
+         list = list->next;
       }
 
       if (strcmp(name, "instruction") == 0)
@@ -468,9 +476,10 @@ end_element(void *data, const char *name)
    } else if (strcmp(name, "group") == 0) {
       ctx->group = ctx->group->parent;
    } else if (strcmp(name, "field") == 0) {
-      assert(ctx->group->nfields > 0);
-      struct gen_field *field = ctx->group->fields[ctx->group->nfields - 1];
+      struct gen_field *field = ctx->fields[ctx->nfields - 1];
       size_t size = ctx->nvalues * sizeof(ctx->values[0]);
+      ctx->nfields--;
+      assert(ctx->nfields >= 0);
       field->inline_enum.values = xzalloc(size);
       field->inline_enum.nvalues = ctx->nvalues;
       memcpy(field->inline_enum.values, ctx->values, size);
@@ -758,6 +767,7 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    memset(iter, 0, sizeof(*iter));
 
    iter->group = group;
+   iter->field = group->fields;
    iter->p = p;
    iter->print_colors = print_colors;
 }
@@ -776,7 +786,7 @@ gen_get_enum_name(struct gen_enum *e, uint64_t value)
 static bool
 iter_more_fields(const struct gen_field_iterator *iter)
 {
-   return iter->field_iter < iter->group->nfields;
+   return iter->field != NULL && iter->field->next != NULL;
 }
 
 static uint32_t
@@ -812,7 +822,7 @@ iter_advance_group(struct gen_field_iterator *iter)
       }
    }
 
-   iter->field_iter = 0;
+   iter->field = iter->group->fields;
 }
 
 static bool
@@ -825,7 +835,7 @@ iter_advance_field(struct gen_field_iterator *iter)
       iter_advance_group(iter);
    }
 
-   iter->field = iter->group->fields[iter->field_iter++];
+   iter->field = iter->field->next;
    if (iter->field->name)
        strncpy(iter->name, iter->field->name, sizeof(iter->name));
    else
