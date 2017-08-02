@@ -758,20 +758,6 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
    return -1;
 }
 
-void
-gen_field_iterator_init(struct gen_field_iterator *iter,
-                        struct gen_group *group,
-                        const uint32_t *p,
-                        bool print_colors)
-{
-   memset(iter, 0, sizeof(*iter));
-
-   iter->group = group;
-   iter->field = group->fields;
-   iter->p = p;
-   iter->print_colors = print_colors;
-}
-
 static const char *
 gen_get_enum_name(struct gen_enum *e, uint64_t value)
 {
@@ -939,6 +925,20 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    }
 
    return true;
+}
+
+void
+gen_field_iterator_init(struct gen_field_iterator *iter,
+                        struct gen_group *group,
+                        const uint32_t *p,
+                        bool print_colors)
+{
+   memset(iter, 0, sizeof(*iter));
+
+   iter->group = group;
+   iter->field = group->fields;
+   iter->p = p;
+   iter->print_colors = print_colors;
 }
 
 static void
