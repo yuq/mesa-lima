@@ -56,7 +56,6 @@ struct r200_context;
 typedef struct r200_context r200ContextRec;
 typedef struct r200_context *r200ContextPtr;
 
-#include "main/mm.h"
 
 struct r200_vertex_program {
         struct gl_program mesa_program; /* Must be first */
