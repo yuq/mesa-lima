@@ -944,8 +944,6 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
    struct intel_mipmap_tree *new_mt;
    int width, height, depth;
 
-   uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
-
    intel_get_image_dims(rb->TexImage, &width, &height, &depth);
 
    assert(irb->align_wa_mt == NULL);
@@ -954,7 +952,7 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                  0, 0,
                                  width, height, 1,
                                  irb->mt->surf.samples,
-                                 layout_flags);
+                                 MIPTREE_CREATE_BUSY);
 
    if (!invalidate)
       intel_miptree_copy_slice(brw, intel_image->mt,
