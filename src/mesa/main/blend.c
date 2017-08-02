@@ -694,13 +694,31 @@ _mesa_BlendEquationSeparate(GLenum modeRGB, GLenum modeA)
 }
 
 
-static void
+static ALWAYS_INLINE void
 blend_equation_separatei(struct gl_context *ctx, GLuint buf, GLenum modeRGB,
-                         GLenum modeA)
+                         GLenum modeA, bool no_error)
 {
    if (ctx->Color.Blend[buf].EquationRGB == modeRGB &&
        ctx->Color.Blend[buf].EquationA == modeA)
       return;  /* no change */
+
+   if (!no_error) {
+      /* Only allow simple blending equations.
+       * The GL_KHR_blend_equation_advanced spec says:
+       *
+       *    "NOTE: These enums are not accepted by the <modeRGB> or <modeAlpha>
+       *     parameters of BlendEquationSeparate or BlendEquationSeparatei."
+       */
+      if (!legal_simple_blend_equation(ctx, modeRGB)) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparatei(modeRGB)");
+         return;
+      }
+
+      if (!legal_simple_blend_equation(ctx, modeA)) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparatei(modeA)");
+         return;
+      }
+   }
 
    _mesa_flush_vertices_for_blend_state(ctx);
    ctx->Color.Blend[buf].EquationRGB = modeRGB;
@@ -715,7 +733,7 @@ _mesa_BlendEquationSeparateiARB_no_error(GLuint buf, GLenum modeRGB,
                                          GLenum modeA)
 {
    GET_CURRENT_CONTEXT(ctx);
-   blend_equation_separatei(ctx, buf, modeRGB, modeA);
+   blend_equation_separatei(ctx, buf, modeRGB, modeA, true);
 }
 
 
@@ -738,23 +756,7 @@ _mesa_BlendEquationSeparateiARB(GLuint buf, GLenum modeRGB, GLenum modeA)
       return;
    }
 
-   /* Only allow simple blending equations.
-    * The GL_KHR_blend_equation_advanced spec says:
-    *
-    *    "NOTE: These enums are not accepted by the <modeRGB> or <modeAlpha>
-    *     parameters of BlendEquationSeparate or BlendEquationSeparatei."
-    */
-   if (!legal_simple_blend_equation(ctx, modeRGB)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparatei(modeRGB)");
-      return;
-   }
-
-   if (!legal_simple_blend_equation(ctx, modeA)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquationSeparatei(modeA)");
-      return;
-   }
-
-   blend_equation_separatei(ctx, buf, modeRGB, modeA);
+   blend_equation_separatei(ctx, buf, modeRGB, modeA, false);
 }
 
 
