@@ -750,6 +750,8 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
                struct brw_bo *target, uint32_t target_offset,
                uint32_t read_domains, uint32_t write_domain)
 {
+   assert(target != NULL);
+
    uint64_t offset64;
 
    if (batch->reloc_count == batch->reloc_array_size) {
