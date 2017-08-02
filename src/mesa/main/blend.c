@@ -850,11 +850,36 @@ _mesa_AlphaFunc( GLenum func, GLclampf ref )
 }
 
 
-static void
-logic_op(struct gl_context *ctx, GLenum opcode)
+static ALWAYS_INLINE void
+logic_op(struct gl_context *ctx, GLenum opcode, bool no_error)
 {
    if (ctx->Color.LogicOp == opcode)
       return;
+
+   if (!no_error) {
+      switch (opcode) {
+         case GL_CLEAR:
+         case GL_SET:
+         case GL_COPY:
+         case GL_COPY_INVERTED:
+         case GL_NOOP:
+         case GL_INVERT:
+         case GL_AND:
+         case GL_NAND:
+         case GL_OR:
+         case GL_NOR:
+         case GL_XOR:
+         case GL_EQUIV:
+         case GL_AND_REVERSE:
+         case GL_AND_INVERTED:
+         case GL_OR_REVERSE:
+         case GL_OR_INVERTED:
+            break;
+         default:
+            _mesa_error( ctx, GL_INVALID_ENUM, "glLogicOp" );
+            return;
+      }
+   }
 
    FLUSH_VERTICES(ctx, ctx->DriverFlags.NewLogicOp ? 0 : _NEW_COLOR);
    ctx->NewDriverState |= ctx->DriverFlags.NewLogicOp;
@@ -883,30 +908,7 @@ _mesa_LogicOp( GLenum opcode )
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glLogicOp(%s)\n", _mesa_enum_to_string(opcode));
 
-   switch (opcode) {
-      case GL_CLEAR:
-      case GL_SET:
-      case GL_COPY:
-      case GL_COPY_INVERTED:
-      case GL_NOOP:
-      case GL_INVERT:
-      case GL_AND:
-      case GL_NAND:
-      case GL_OR:
-      case GL_NOR:
-      case GL_XOR:
-      case GL_EQUIV:
-      case GL_AND_REVERSE:
-      case GL_AND_INVERTED:
-      case GL_OR_REVERSE:
-      case GL_OR_INVERTED:
-	 break;
-      default:
-         _mesa_error( ctx, GL_INVALID_ENUM, "glLogicOp" );
-	 return;
-   }
-
-   logic_op(ctx, opcode);
+   logic_op(ctx, opcode, false);
 }
 
 
@@ -914,7 +916,7 @@ void GLAPIENTRY
 _mesa_LogicOp_no_error(GLenum opcode)
 {
    GET_CURRENT_CONTEXT(ctx);
-   logic_op(ctx, opcode);
+   logic_op(ctx, opcode, true);
 }
 
 
