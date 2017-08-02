@@ -1791,6 +1791,15 @@ if test "x$with_dri_drivers" = xno; then
     with_dri_drivers=''
 fi
 
+# Check for expat
+PKG_CHECK_MODULES([EXPAT], [expat], [],
+    # expat version 2.0 and earlier do not provide expat.pc
+    [AC_CHECK_HEADER([expat.h],[],
+                     [AC_MSG_ERROR([Expat headers required for DRI not found])])
+     AC_CHECK_LIB([expat],[XML_ParserCreate],[],
+                 [AC_MSG_ERROR([Expat library required for DRI not found])])
+     EXPAT_LIBS="-lexpat"])
+
 dnl If $with_dri_drivers is yes, drivers will be added through
 dnl platform checks. Set DEFINES and LIB_DEPS
 if test "x$enable_dri" = xyes; then
@@ -1823,15 +1832,6 @@ if test "x$enable_dri" = xyes; then
     if test "x$with_dri_drivers" = "xyes"; then
         with_dri_drivers="i915 i965 nouveau r200 radeon swrast"
     fi
-
-    # Check for expat
-    PKG_CHECK_MODULES([EXPAT], [expat], [],
-        # expat version 2.0 and earlier do not provide expat.pc
-        [AC_CHECK_HEADER([expat.h],[],
-                         [AC_MSG_ERROR([Expat headers required for DRI not found])])
-         AC_CHECK_LIB([expat],[XML_ParserCreate],[],
-                     [AC_MSG_ERROR([Expat library required for DRI not found])])
-         EXPAT_LIBS="-lexpat"])
 
     # put all the necessary libs together
     DRI_LIB_DEPS="$DRI_LIB_DEPS $SELINUX_LIBS $LIBDRM_LIBS $EXPAT_LIBS -lm $PTHREAD_LIBS $DLOPEN_LIBS"
