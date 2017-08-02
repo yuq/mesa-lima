@@ -1455,6 +1455,8 @@ dri2_swap_interval(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf,
                    EGLint interval)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   if (!dri2_dpy->vtbl->swap_interval)
+      return EGL_TRUE;
    return dri2_dpy->vtbl->swap_interval(drv, dpy, surf, interval);
 }
 
