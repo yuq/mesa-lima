@@ -2263,9 +2263,6 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    }
 
    /* Kernel 4.13 retuired for exec object capture */
-#ifndef I915_PARAM_HAS_EXEC_CAPTURE
-#define I915_PARAM_HAS_EXEC_CAPTURE 45
-#endif
    if (intel_get_boolean(screen, I915_PARAM_HAS_EXEC_CAPTURE)) {
       screen->kernel_features |= KERNEL_ALLOWS_EXEC_CAPTURE;
    }
