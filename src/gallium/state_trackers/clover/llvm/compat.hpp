@@ -174,6 +174,12 @@ namespace clover {
 #endif
          }
 
+#if HAVE_LLVM >= 0x0600
+         const auto default_code_model = ::llvm::None;
+#else
+         const auto default_code_model = ::llvm::CodeModel::Default;
+#endif
+
 #if HAVE_LLVM >= 0x0309
          const auto default_reloc_model = ::llvm::None;
 #else
