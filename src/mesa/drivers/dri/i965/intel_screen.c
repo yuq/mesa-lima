@@ -2267,6 +2267,10 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       screen->kernel_features |= KERNEL_ALLOWS_EXEC_CAPTURE;
    }
 
+   if (intel_get_boolean(screen, I915_PARAM_HAS_EXEC_BATCH_FIRST)) {
+      screen->kernel_features |= KERNEL_ALLOWS_EXEC_BATCH_FIRST;
+   }
+
    if (!intel_detect_pipelined_so(screen)) {
       /* We can't do anything, so the effective version is 0. */
       screen->cmd_parser_version = 0;

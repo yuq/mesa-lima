@@ -80,6 +80,7 @@ struct intel_screen
 #define KERNEL_ALLOWS_HSW_SCRATCH1_AND_ROW_CHICKEN3 (1<<3)
 #define KERNEL_ALLOWS_COMPUTE_DISPATCH              (1<<4)
 #define KERNEL_ALLOWS_EXEC_CAPTURE                  (1<<5)
+#define KERNEL_ALLOWS_EXEC_BATCH_FIRST              (1<<6)
 
    struct brw_bufmgr *bufmgr;
 

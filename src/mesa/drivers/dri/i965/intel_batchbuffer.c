@@ -62,7 +62,7 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch,
                        struct brw_bufmgr *bufmgr,
                        bool has_llc)
 {
-   intel_batchbuffer_reset(batch, bufmgr, has_llc);
+   struct brw_context *brw = container_of(batch, brw, batch);
 
    if (!has_llc) {
       batch->cpu_map = malloc(BATCH_SZ);
@@ -85,6 +85,11 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch,
       batch->state_batch_sizes =
          _mesa_hash_table_create(NULL, uint_key_hash, uint_key_compare);
    }
+
+   batch->use_batch_first =
+      brw->screen->kernel_features & KERNEL_ALLOWS_EXEC_BATCH_FIRST;
+
+   intel_batchbuffer_reset(batch, bufmgr, has_llc);
 }
 
 #define READ_ONCE(x) (*(volatile __typeof__(x) *)&(x))
@@ -120,13 +125,8 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
    struct drm_i915_gem_exec_object2 *validation_entry =
       &batch->validation_list[batch->exec_count];
    validation_entry->handle = bo->gem_handle;
-   if (bo == batch->bo) {
-      validation_entry->relocation_count = batch->reloc_count;
-      validation_entry->relocs_ptr = (uintptr_t) batch->relocs;
-   } else {
-      validation_entry->relocation_count = 0;
-      validation_entry->relocs_ptr = 0;
-   }
+   validation_entry->relocation_count = 0;
+   validation_entry->relocs_ptr = 0;
    validation_entry->alignment = bo->align;
    validation_entry->offset = bo->offset64;
    validation_entry->flags = bo->kflags;
@@ -156,6 +156,9 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
       batch->map = brw_bo_map(NULL, batch->bo, MAP_READ | MAP_WRITE);
    }
    batch->map_next = batch->map;
+
+   add_exec_bo(batch, batch->bo);
+   assert(batch->bo->index == 0);
 
    batch->reserved_space = BATCH_RESERVED;
    batch->state_batch_offset = batch->bo->size;
@@ -662,8 +665,22 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
       if (ret == 0) {
          uint32_t hw_ctx = batch->ring == RENDER_RING ? brw->hw_ctx : 0;
 
-         /* Add the batch itself to the end of the validation list */
-         add_exec_bo(batch, batch->bo);
+         struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[0];
+         assert(entry->handle == batch->bo->gem_handle);
+         entry->relocation_count = batch->reloc_count;
+         entry->relocs_ptr = (uintptr_t) batch->relocs;
+
+         if (batch->use_batch_first) {
+            flags |= I915_EXEC_BATCH_FIRST;
+         } else {
+            /* Move the batch to the end of the validation list */
+            struct drm_i915_gem_exec_object2 tmp;
+            const unsigned index = batch->exec_count - 1;
+
+            tmp = *entry;
+            *entry = batch->validation_list[index];
+            batch->validation_list[index] = tmp;
+         }
 
          ret = execbuffer(dri_screen->fd, batch, hw_ctx,
                           4 * USED_BATCH(*batch),
