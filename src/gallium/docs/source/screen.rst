@@ -403,6 +403,7 @@ The integer capabilities:
   ``PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE`` query types are supported. Note that
   for a driver that does not support multiple output streams (i.e.,
   ``PIPE_CAP_MAX_VERTEX_STREAMS`` is 1), both query types are identical.
+* ``PIPE_CAP_MEMOBJ``: Whether operations on memory objects are supported.
 
 
 .. _pipe_capf:
