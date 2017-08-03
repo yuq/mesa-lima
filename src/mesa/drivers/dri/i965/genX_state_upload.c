@@ -101,7 +101,7 @@ __gen_combine_address(struct brw_context *brw, void *location,
 }
 
 static inline struct brw_address
-render_bo(struct brw_bo *bo, uint32_t offset)
+rw_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
             .bo = bo,
@@ -111,7 +111,7 @@ render_bo(struct brw_bo *bo, uint32_t offset)
 }
 
 static inline struct brw_address
-render_ro_bo(struct brw_bo *bo, uint32_t offset)
+ro_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
             .bo = bo,
@@ -120,7 +120,7 @@ render_ro_bo(struct brw_bo *bo, uint32_t offset)
 }
 
 static inline struct brw_address
-instruction_bo(struct brw_bo *bo, uint32_t offset)
+ggtt_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
             .bo = bo,
@@ -129,29 +129,11 @@ instruction_bo(struct brw_bo *bo, uint32_t offset)
    };
 }
 
-static inline struct brw_address
-instruction_ro_bo(struct brw_bo *bo, uint32_t offset)
-{
-   return (struct brw_address) {
-            .bo = bo,
-            .offset = offset,
-   };
-}
-
-static inline struct brw_address
-vertex_bo(struct brw_bo *bo, uint32_t offset)
-{
-   return (struct brw_address) {
-            .bo = bo,
-            .offset = offset,
-   };
-}
-
 #if GEN_GEN == 4
 static inline struct brw_address
 KSP(struct brw_context *brw, uint32_t offset)
 {
-   return instruction_ro_bo(brw->cache.bo, offset);
+   return ro_bo(brw->cache.bo, offset);
 }
 #else
 static inline uint32_t
@@ -334,7 +316,7 @@ genX(emit_vertex_buffer_state)(struct brw_context *brw,
    struct GENX(VERTEX_BUFFER_STATE) buf_state = {
       .VertexBufferIndex = buffer_nr,
       .BufferPitch = stride,
-      .BufferStartingAddress = vertex_bo(bo, start_offset),
+      .BufferStartingAddress = ro_bo(bo, start_offset),
 #if GEN_GEN >= 8
       .BufferSize = end_offset - start_offset,
 #endif
@@ -347,7 +329,7 @@ genX(emit_vertex_buffer_state)(struct brw_context *brw,
       .BufferAccessType = step_rate ? INSTANCEDATA : VERTEXDATA,
       .InstanceDataStepRate = step_rate,
 #if GEN_GEN >= 5
-      .EndAddress = vertex_bo(bo, end_offset - 1),
+      .EndAddress = ro_bo(bo, end_offset - 1),
 #endif
 #endif
 
@@ -863,12 +845,12 @@ genX(emit_index_buffer)(struct brw_context *brw)
       ib.CutIndexEnable = brw->prim_restart.enable_cut_index;
 #endif
       ib.IndexFormat = brw_get_index_type(index_buffer->index_size);
-      ib.BufferStartingAddress = vertex_bo(brw->ib.bo, 0);
+      ib.BufferStartingAddress = ro_bo(brw->ib.bo, 0);
 #if GEN_GEN >= 8
       ib.IndexBufferMOCS = GEN_GEN >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
       ib.BufferSize = brw->ib.size;
 #else
-      ib.BufferEndingAddress = vertex_bo(brw->ib.bo, brw->ib.size - 1);
+      ib.BufferEndingAddress = ro_bo(brw->ib.bo, brw->ib.size - 1);
 #endif
    }
 }
@@ -1295,7 +1277,7 @@ genX(upload_clip_state)(struct brw_context *brw)
       clip.GuardbandClipTestEnable = true;
 
       clip.ClipperViewportStatePointer =
-         instruction_ro_bo(brw->batch.bo, brw->clip.vp_offset);
+         ro_bo(brw->batch.bo, brw->clip.vp_offset);
 
       clip.ScreenSpaceViewportXMin = -1;
       clip.ScreenSpaceViewportXMax = 1;
@@ -1511,8 +1493,7 @@ genX(upload_sf)(struct brw_context *brw)
        * something loaded through the GPE (L2 ISC), so it's INSTRUCTION
        * domain.
        */
-      sf.SetupViewportStateOffset =
-         instruction_ro_bo(brw->batch.bo, brw->sf.vp_offset);
+      sf.SetupViewportStateOffset = ro_bo(brw->batch.bo, brw->sf.vp_offset);
 
       sf.PointRasterizationRule = RASTRULE_UPPER_RIGHT;
 
@@ -1803,7 +1784,7 @@ genX(upload_wm)(struct brw_context *brw)
 
       if (stage_state->sampler_count)
          wm.SamplerStatePointer =
-            instruction_ro_bo(brw->batch.bo, stage_state->sampler_offset);
+            ro_bo(brw->batch.bo, stage_state->sampler_offset);
 #if GEN_GEN == 5
       if (wm_prog_data->prog_offset_2)
          wm.GRFRegisterCount2 = wm_prog_data->reg_blocks_2;
@@ -1893,8 +1874,7 @@ genX(upload_wm)(struct brw_context *brw)
 #endif
 
       if (wm_prog_data->base.total_scratch) {
-         wm.ScratchSpaceBasePointer =
-            render_bo(stage_state->scratch_bo, 0);
+         wm.ScratchSpaceBasePointer = rw_bo(stage_state->scratch_bo, 0);
          wm.PerThreadScratchSpace =
             ffs(stage_state->per_thread_scratch) - 11;
       }
@@ -2022,8 +2002,7 @@ static const struct brw_tracked_state genX(wm_state) = {
    pkt.FloatingPointMode  = stage_prog_data->use_alt_mode;                \
                                                                           \
    if (stage_prog_data->total_scratch) {                                  \
-      pkt.ScratchSpaceBasePointer =                                       \
-         render_bo(stage_state->scratch_bo, 0);                           \
+      pkt.ScratchSpaceBasePointer = rw_bo(stage_state->scratch_bo, 0);    \
       pkt.PerThreadScratchSpace =                                         \
          ffs(stage_state->per_thread_scratch) - 11;                       \
    }                                                                      \
@@ -2098,7 +2077,7 @@ genX(upload_vs_state)(struct brw_context *brw)
 
       vs.StatisticsEnable = false;
       vs.SamplerStatePointer =
-         instruction_ro_bo(brw->batch.bo, stage_state->sampler_offset);
+         ro_bo(brw->batch.bo, stage_state->sampler_offset);
 #endif
 
 #if GEN_GEN == 5
@@ -3111,7 +3090,7 @@ genX(upload_push_constant_packets)(struct brw_context *brw)
 
                pkt.ConstantBody.ReadLength[n] = range->length;
                pkt.ConstantBody.Buffer[n] =
-                  render_ro_bo(bo, range->start * 32 + binding->Offset);
+                  ro_bo(bo, range->start * 32 + binding->Offset);
                n--;
             }
 
@@ -3119,8 +3098,8 @@ genX(upload_push_constant_packets)(struct brw_context *brw)
                assert(n >= 0);
                pkt.ConstantBody.ReadLength[n] = stage_state->push_const_size;
                pkt.ConstantBody.Buffer[n] =
-                  render_ro_bo(stage_state->push_const_bo,
-                               stage_state->push_const_offset);
+                  ro_bo(stage_state->push_const_bo,
+                        stage_state->push_const_offset);
             }
 #else
             pkt.ConstantBody.ReadLength[0] = stage_state->push_const_size;
@@ -3341,8 +3320,7 @@ genX(upload_color_calc_state)(struct brw_context *brw)
 
       cc.StatisticsEnable = brw->stats_wm;
 
-      cc.CCViewportStatePointer =
-         instruction_ro_bo(brw->batch.bo, brw->cc.vp_offset);
+      cc.CCViewportStatePointer = ro_bo(brw->batch.bo, brw->cc.vp_offset);
 #else
       /* _NEW_COLOR */
       cc.BlendConstantColorRed = ctx->Color.BlendColorUnclamped[0];
@@ -3648,10 +3626,10 @@ genX(upload_3dstate_so_buffers)(struct brw_context *brw)
       brw_batch_emit(brw, GENX(3DSTATE_SO_BUFFER), sob) {
          sob.SOBufferIndex = i;
 
-         sob.SurfaceBaseAddress = render_bo(bo, start);
+         sob.SurfaceBaseAddress = rw_bo(bo, start);
 #if GEN_GEN < 8
          sob.SurfacePitch = linked_xfb_info->Buffers[i].Stride * 4;
-         sob.SurfaceEndAddress = render_bo(bo, end);
+         sob.SurfaceEndAddress = rw_bo(bo, end);
 #else
          sob.SOBufferEnable = true;
          sob.StreamOffsetWriteEnable = true;
@@ -3660,7 +3638,7 @@ genX(upload_3dstate_so_buffers)(struct brw_context *brw)
 
          sob.SurfaceSize = MAX2(xfb_obj->Size[i] / 4, 1) - 1;
          sob.StreamOutputBufferOffsetAddress =
-            instruction_bo(brw_obj->offset_bo, i * sizeof(uint32_t));
+            ggtt_bo(brw_obj->offset_bo, i * sizeof(uint32_t));
 
          if (brw_obj->zero_offsets) {
             /* Zero out the offset and write that to offset_bo */
@@ -3901,8 +3879,8 @@ genX(upload_ps)(struct brw_context *brw)
 
       if (prog_data->base.total_scratch) {
          ps.ScratchSpaceBasePointer =
-            render_bo(stage_state->scratch_bo,
-                      ffs(stage_state->per_thread_scratch) - 11);
+            rw_bo(stage_state->scratch_bo,
+                  ffs(stage_state->per_thread_scratch) - 11);
       }
    }
 }
@@ -4154,7 +4132,7 @@ genX(upload_cs_state)(struct brw_context *brw)
             bo_offset = stage_state->per_thread_scratch / 1024 - 1;
          }
          vfe.ScratchSpaceBasePointer =
-            render_bo(stage_state->scratch_bo, bo_offset);
+            rw_bo(stage_state->scratch_bo, bo_offset);
       }
 
       const uint32_t subslices = MAX2(brw->screen->subslice_total, 1);
@@ -4594,7 +4572,7 @@ genX(emit_mi_report_perf_count)(struct brw_context *brw,
                                 uint32_t report_id)
 {
    brw_batch_emit(brw, GENX(MI_REPORT_PERF_COUNT), mi_rpc) {
-      mi_rpc.MemoryAddress = instruction_bo(bo, offset_in_bytes);
+      mi_rpc.MemoryAddress = ggtt_bo(bo, offset_in_bytes);
       mi_rpc.ReportID = report_id;
    }
 }
