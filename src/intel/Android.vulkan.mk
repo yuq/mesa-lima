@@ -55,7 +55,6 @@ LOCAL_C_INCLUDES := \
 	$(VULKAN_COMMON_INCLUDES)
 
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_entrypoints.h
-LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_extensions.c
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/dummy.c
 
 $(intermediates)/vulkan/dummy.c:
@@ -209,6 +208,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 # conditions since they are stored in another location.
 
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_entrypoints.c
+LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_extensions.c
 
 $(intermediates)/vulkan/anv_entrypoints.c:
 	@mkdir -p $(dir $@)
