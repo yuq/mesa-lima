@@ -1451,8 +1451,11 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
                        const VkSemaphore *in_semaphores,
                        uint32_t num_in_semaphores,
                        const VkSemaphore *out_semaphores,
-                       uint32_t num_out_semaphores)
+                       uint32_t num_out_semaphores,
+                       VkFence _fence)
 {
+   ANV_FROM_HANDLE(anv_fence, fence, _fence);
+
    struct anv_execbuf execbuf;
    anv_execbuf_init(&execbuf);
 
@@ -1545,6 +1548,13 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       }
    }
 
+   if (fence) {
+      result = anv_execbuf_add_bo(&execbuf, &fence->bo, NULL,
+                                  EXEC_OBJECT_WRITE, &device->alloc);
+      if (result != VK_SUCCESS)
+         return result;
+   }
+
    if (cmd_buffer)
       result = setup_execbuf_for_cmd_buffer(&execbuf, cmd_buffer);
    else
@@ -1586,6 +1596,20 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
        * the process.
        */
       anv_semaphore_reset_temporary(device, semaphore);
+   }
+
+   if (fence) {
+      /* Once the execbuf has returned, we need to set the fence state to
+       * SUBMITTED.  We can't do this before calling execbuf because
+       * anv_GetFenceStatus does take the global device lock before checking
+       * fence->state.
+       *
+       * We set the fence state to SUBMITTED regardless of whether or not the
+       * execbuf succeeds because we need to ensure that vkWaitForFences() and
+       * vkGetFenceStatus() return a valid result (VK_ERROR_DEVICE_LOST or
+       * VK_SUCCESS) in a finite amount of time even if execbuf fails.
+       */
+      fence->state = ANV_FENCE_STATE_SUBMITTED;
    }
 
    if (result == VK_SUCCESS && need_out_fence) {

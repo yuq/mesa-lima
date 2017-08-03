@@ -1642,7 +1642,8 @@ VkResult anv_cmd_buffer_execbuf(struct anv_device *device,
                                 const VkSemaphore *in_semaphores,
                                 uint32_t num_in_semaphores,
                                 const VkSemaphore *out_semaphores,
-                                uint32_t num_out_semaphores);
+                                uint32_t num_out_semaphores,
+                                VkFence fence);
 
 VkResult anv_cmd_buffer_reset(struct anv_cmd_buffer *cmd_buffer);
 
@@ -1720,8 +1721,6 @@ enum anv_fence_state {
 
 struct anv_fence {
    struct anv_bo bo;
-   struct drm_i915_gem_execbuffer2 execbuf;
-   struct drm_i915_gem_exec_object2 exec2_objects[1];
    enum anv_fence_state state;
 };
 

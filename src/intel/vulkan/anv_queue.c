@@ -114,10 +114,9 @@ VkResult anv_QueueSubmit(
     VkQueue                                     _queue,
     uint32_t                                    submitCount,
     const VkSubmitInfo*                         pSubmits,
-    VkFence                                     _fence)
+    VkFence                                     fence)
 {
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
-   ANV_FROM_HANDLE(anv_fence, fence, _fence);
    struct anv_device *device = queue->device;
 
    /* Query for device status prior to submitting.  Technically, we don't need
@@ -158,7 +157,20 @@ VkResult anv_QueueSubmit(
     */
    pthread_mutex_lock(&device->mutex);
 
+   if (fence && submitCount == 0) {
+      /* If we don't have any command buffers, we need to submit a dummy
+       * batch to give GEM something to wait on.  We could, potentially,
+       * come up with something more efficient but this shouldn't be a
+       * common case.
+       */
+      result = anv_cmd_buffer_execbuf(device, NULL, NULL, 0, NULL, 0, fence);
+      goto out;
+   }
+
    for (uint32_t i = 0; i < submitCount; i++) {
+      /* Fence for this submit.  NULL for all but the last one */
+      VkFence submit_fence = (i == submitCount - 1) ? fence : NULL;
+
       if (pSubmits[i].commandBufferCount == 0) {
          /* If we don't have any command buffers, we need to submit a dummy
           * batch to give GEM something to wait on.  We could, potentially,
@@ -169,7 +181,8 @@ VkResult anv_QueueSubmit(
                                          pSubmits[i].pWaitSemaphores,
                                          pSubmits[i].waitSemaphoreCount,
                                          pSubmits[i].pSignalSemaphores,
-                                         pSubmits[i].signalSemaphoreCount);
+                                         pSubmits[i].signalSemaphoreCount,
+                                         submit_fence);
          if (result != VK_SUCCESS)
             goto out;
 
@@ -181,6 +194,10 @@ VkResult anv_QueueSubmit(
                          pSubmits[i].pCommandBuffers[j]);
          assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
          assert(!anv_batch_has_error(&cmd_buffer->batch));
+
+         /* Fence for this execbuf.  NULL for all but the last one */
+         VkFence execbuf_fence =
+            (j == pSubmits[i].commandBufferCount - 1) ? submit_fence : NULL;
 
          const VkSemaphore *in_semaphores = NULL, *out_semaphores = NULL;
          uint32_t num_in_semaphores = 0, num_out_semaphores = 0;
@@ -198,23 +215,14 @@ VkResult anv_QueueSubmit(
 
          result = anv_cmd_buffer_execbuf(device, cmd_buffer,
                                          in_semaphores, num_in_semaphores,
-                                         out_semaphores, num_out_semaphores);
+                                         out_semaphores, num_out_semaphores,
+                                         execbuf_fence);
          if (result != VK_SUCCESS)
             goto out;
       }
    }
 
-   if (fence) {
-      struct anv_bo *fence_bo = &fence->bo;
-      result = anv_device_execbuf(device, &fence->execbuf, &fence_bo);
-      if (result != VK_SUCCESS)
-         goto out;
-
-      /* Update the fence and wake up any waiters */
-      assert(fence->state == ANV_FENCE_STATE_RESET);
-      fence->state = ANV_FENCE_STATE_SUBMITTED;
-      pthread_cond_broadcast(&device->queue_submit);
-   }
+   pthread_cond_broadcast(&device->queue_submit);
 
 out:
    if (result != VK_SUCCESS) {
@@ -232,15 +240,6 @@ out:
        */
       result = vk_errorf(VK_ERROR_DEVICE_LOST, "vkQueueSubmit() failed");
       device->lost = true;
-
-      /* If we return VK_ERROR_DEVICE LOST here, we need to ensure that
-       * vkWaitForFences() and vkGetFenceStatus() return a valid result
-       * (VK_SUCCESS or VK_ERROR_DEVICE_LOST) in a finite amount of time.
-       * Setting the fence status to SIGNALED ensures this will happen in
-       * any case.
-       */
-      if (fence)
-         fence->state = ANV_FENCE_STATE_SIGNALED;
    }
 
    pthread_mutex_unlock(&device->mutex);
@@ -265,55 +264,16 @@ VkResult anv_CreateFence(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_bo fence_bo;
    struct anv_fence *fence;
-   struct anv_batch batch;
-   VkResult result;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
 
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence_bo, 4096);
+   VkResult result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence_bo, 4096);
    if (result != VK_SUCCESS)
       return result;
 
    /* Fences are small.  Just store the CPU data structure in the BO. */
    fence = fence_bo.map;
    fence->bo = fence_bo;
-
-   /* Place the batch after the CPU data but on its own cache line. */
-   const uint32_t batch_offset = align_u32(sizeof(*fence), CACHELINE_SIZE);
-   batch.next = batch.start = fence->bo.map + batch_offset;
-   batch.end = fence->bo.map + fence->bo.size;
-   anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END, bbe);
-   anv_batch_emit(&batch, GEN7_MI_NOOP, noop);
-
-   if (!device->info.has_llc) {
-      assert(((uintptr_t) batch.start & CACHELINE_MASK) == 0);
-      assert(batch.next - batch.start <= CACHELINE_SIZE);
-      __builtin_ia32_mfence();
-      __builtin_ia32_clflush(batch.start);
-   }
-
-   fence->exec2_objects[0].handle = fence->bo.gem_handle;
-   fence->exec2_objects[0].relocation_count = 0;
-   fence->exec2_objects[0].relocs_ptr = 0;
-   fence->exec2_objects[0].alignment = 0;
-   fence->exec2_objects[0].offset = fence->bo.offset;
-   fence->exec2_objects[0].flags = 0;
-   fence->exec2_objects[0].rsvd1 = 0;
-   fence->exec2_objects[0].rsvd2 = 0;
-
-   fence->execbuf.buffers_ptr = (uintptr_t) fence->exec2_objects;
-   fence->execbuf.buffer_count = 1;
-   fence->execbuf.batch_start_offset = batch.start - fence->bo.map;
-   fence->execbuf.batch_len = batch.next - batch.start;
-   fence->execbuf.cliprects_ptr = 0;
-   fence->execbuf.num_cliprects = 0;
-   fence->execbuf.DR1 = 0;
-   fence->execbuf.DR4 = 0;
-
-   fence->execbuf.flags =
-      I915_EXEC_HANDLE_LUT | I915_EXEC_NO_RELOC | I915_EXEC_RENDER;
-   fence->execbuf.rsvd1 = device->context_id;
-   fence->execbuf.rsvd2 = 0;
 
    if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
       fence->state = ANV_FENCE_STATE_SIGNALED;
