@@ -667,7 +667,7 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
          entry->relocs_ptr = (uintptr_t) batch->relocs;
 
          if (batch->use_batch_first) {
-            flags |= I915_EXEC_BATCH_FIRST;
+            flags |= I915_EXEC_BATCH_FIRST | I915_EXEC_HANDLE_LUT;
          } else {
             /* Move the batch to the end of the validation list */
             struct drm_i915_gem_exec_object2 tmp;
@@ -821,7 +821,7 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
       (struct drm_i915_gem_relocation_entry) {
          .offset = batch_offset,
          .delta = target_offset,
-         .target_handle = target->gem_handle,
+         .target_handle = batch->use_batch_first ? index : target->gem_handle,
          .presumed_offset = entry->offset,
       };
 
