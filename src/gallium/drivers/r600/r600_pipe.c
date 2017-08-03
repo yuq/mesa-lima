@@ -651,7 +651,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws,
 	rscreen->b.b.get_shader_param = r600_get_shader_param;
 	rscreen->b.b.resource_create = r600_resource_create;
 
-	if (!r600_common_screen_init(&rscreen->b, ws, config->flags)) {
+	if (!r600_common_screen_init(&rscreen->b, ws)) {
 		FREE(rscreen);
 		return NULL;
 	}

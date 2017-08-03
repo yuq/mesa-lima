@@ -748,7 +748,7 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 			 enum blitter_attrib_type type,
 			 const union pipe_color_union *attrib);
 bool r600_common_screen_init(struct r600_common_screen *rscreen,
-			     struct radeon_winsys *ws, unsigned flags);
+			     struct radeon_winsys *ws);
 void r600_destroy_common_screen(struct r600_common_screen *rscreen);
 void r600_preflush_suspend_features(struct r600_common_context *ctx);
 void r600_postflush_resume_features(struct r600_common_context *ctx);
