@@ -478,20 +478,12 @@ dri_set_background_context(struct st_context_iface *st,
       hud_add_queue_for_monitoring(ctx->hud, queue_info);
 }
 
-unsigned
-dri_init_options_get_screen_flags(struct dri_screen *screen)
+void
+dri_init_options(struct dri_screen *screen)
 {
-   unsigned flags = 0;
-
    pipe_loader_load_options(screen->dev);
 
    dri_fill_st_options(screen);
-
-   if (driQueryOptionb(&screen->dev->option_cache,
-                       "glsl_correct_derivatives_after_discard"))
-      flags |= PIPE_SCREEN_ENABLE_CORRECT_TGSI_DERIVATIVES_AFTER_KILL;
-
-   return flags;
 }
 
 const __DRIconfig **

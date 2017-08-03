@@ -365,7 +365,6 @@ struct pipe_screen {
  * Global configuration options for screen creation.
  */
 struct pipe_screen_config {
-   unsigned flags;
    const struct driOptionCache *options;
 };
 
