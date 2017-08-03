@@ -100,7 +100,7 @@ pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
    if (!sdev->dd)
       return false;
 #else
-   sdev->lib = pipe_loader_find_module(&sdev->base, PIPE_SEARCH_DIR);
+   sdev->lib = pipe_loader_find_module("swrast", PIPE_SEARCH_DIR);
    if (!sdev->lib)
       return false;
 
