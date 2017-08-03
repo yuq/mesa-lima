@@ -123,13 +123,14 @@ pipe_loader_get_driinfo_xml(const char *driver_name)
 }
 
 struct pipe_screen *
-pipe_loader_create_screen(struct pipe_loader_device *dev,
-                          struct pipe_screen_config *config)
+pipe_loader_create_screen(struct pipe_loader_device *dev)
 {
-   pipe_loader_load_options(dev);
-   config->options = &dev->option_cache;
+   struct pipe_screen_config config;
 
-   return dev->ops->create_screen(dev, config);
+   pipe_loader_load_options(dev);
+   config.options = &dev->option_cache;
+
+   return dev->ops->create_screen(dev, &config);
 }
 
 struct util_dl_library *

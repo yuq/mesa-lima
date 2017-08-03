@@ -2071,11 +2071,9 @@ dri2_init_screen(__DRIscreen * sPriv)
 
 
    if (pipe_loader_drm_probe_fd(&screen->dev, fd)) {
-      struct pipe_screen_config config = {};
-
       dri_init_options(screen);
 
-      pscreen = pipe_loader_create_screen(screen->dev, &config);
+      pscreen = pipe_loader_create_screen(screen->dev);
    }
 
    if (!pscreen)
@@ -2166,12 +2164,10 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    if (screen->fd < 0 || (fd = fcntl(screen->fd, F_DUPFD_CLOEXEC, 3)) < 0)
       goto free_screen;
 
-   struct pipe_screen_config config = {};
-
    dri_init_options(screen);
 
    if (pipe_loader_sw_probe_kms(&screen->dev, fd))
-      pscreen = pipe_loader_create_screen(screen->dev, &config);
+      pscreen = pipe_loader_create_screen(screen->dev);
 
    if (!pscreen)
        goto release_pipe;

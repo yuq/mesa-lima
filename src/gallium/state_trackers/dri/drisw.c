@@ -401,10 +401,9 @@ drisw_init_screen(__DRIscreen * sPriv)
    sPriv->extensions = drisw_screen_extensions;
 
    if (pipe_loader_sw_probe_dri(&screen->dev, &drisw_lf)) {
-      struct pipe_screen_config config;
       dri_init_options(screen);
 
-      pscreen = pipe_loader_create_screen(screen->dev, &config);
+      pscreen = pipe_loader_create_screen(screen->dev);
    }
 
    if (!pscreen)
