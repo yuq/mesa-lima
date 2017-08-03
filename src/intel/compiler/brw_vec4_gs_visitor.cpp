@@ -912,6 +912,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
             memcpy(prog_data->base.base.param, param,
                    sizeof(gl_constant_value*) * param_count);
             prog_data->base.base.nr_params = param_count;
+            prog_data->base.base.nr_pull_params = 0;
             ralloc_free(param);
          }
       }
