@@ -443,7 +443,7 @@ struct radv_meta_state {
 		VkPipeline                                decompress_pipeline;
 		VkPipeline                                resummarize_pipeline;
 		VkRenderPass                              pass;
-	} depth_decomp;
+	} depth_decomp[1 + MAX_SAMPLES_LOG2];
 
 	struct {
 		VkPipeline                                cmask_eliminate_pipeline;
