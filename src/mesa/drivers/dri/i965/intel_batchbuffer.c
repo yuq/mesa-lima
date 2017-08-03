@@ -97,20 +97,19 @@ intel_batchbuffer_init(struct intel_batchbuffer *batch,
 static unsigned
 add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 {
-   if (bo != batch->bo) {
-      unsigned index = READ_ONCE(bo->index);
+   unsigned index = READ_ONCE(bo->index);
 
-      if (index < batch->exec_count && batch->exec_bos[index] == bo)
+   if (index < batch->exec_count && batch->exec_bos[index] == bo)
+      return index;
+
+   /* May have been shared between multiple active batches */
+   for (index = 0; index < batch->exec_count; index++) {
+      if (batch->exec_bos[index] == bo)
          return index;
-
-      /* May have been shared between multiple active batches */
-      for (index = 0; index < batch->exec_count; index++) {
-         if (batch->exec_bos[index] == bo)
-            return index;
-      }
-
-      brw_bo_reference(bo);
    }
+
+   if (bo != batch->bo)
+      brw_bo_reference(bo);
 
    if (batch->exec_count == batch->exec_array_size) {
       batch->exec_array_size *= 2;
@@ -807,25 +806,18 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
    assert(batch_offset <= BATCH_SZ - sizeof(uint32_t));
    assert(_mesa_bitcount(write_domain) <= 1);
 
-   uint64_t offset64;
-   if (target != batch->bo) {
-      unsigned int index = add_exec_bo(batch, target);
-      struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[index];
+   unsigned int index = add_exec_bo(batch, target);
+   struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[index];
 
-      if (write_domain) {
-         entry->flags |= EXEC_OBJECT_WRITE;
+   if (write_domain) {
+      entry->flags |= EXEC_OBJECT_WRITE;
 
          /* PIPECONTROL needs a w/a on gen6 */
-         if (write_domain == I915_GEM_DOMAIN_INSTRUCTION) {
-            struct brw_context *brw = container_of(batch, brw, batch);
-            if (brw->gen == 6)
-               entry->flags |= EXEC_OBJECT_NEEDS_GTT;
-         }
+      if (write_domain == I915_GEM_DOMAIN_INSTRUCTION) {
+         struct brw_context *brw = container_of(batch, brw, batch);
+         if (brw->gen == 6)
+            entry->flags |= EXEC_OBJECT_NEEDS_GTT;
       }
-
-      offset64 = entry->offset;
-   } else {
-      offset64 = target->offset64;
    }
 
    batch->relocs[batch->reloc_count++] =
@@ -833,14 +825,14 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
          .offset = batch_offset,
          .delta = target_offset,
          .target_handle = target->gem_handle,
-         .presumed_offset = offset64,
+         .presumed_offset = entry->offset,
       };
 
    /* Using the old buffer offset, write in what the right data would be, in
     * case the buffer doesn't move and we can short-circuit the relocation
     * processing in the kernel
     */
-   return offset64 + target_offset;
+   return entry->offset + target_offset;
 }
 
 void
