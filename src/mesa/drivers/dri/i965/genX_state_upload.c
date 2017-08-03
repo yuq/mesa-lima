@@ -151,12 +151,6 @@ vertex_bo(struct brw_bo *bo, uint32_t offset)
 static inline struct brw_address
 KSP(struct brw_context *brw, uint32_t offset)
 {
-   return instruction_bo(brw->cache.bo, offset);
-}
-
-static inline struct brw_address
-KSP_ro(struct brw_context *brw, uint32_t offset)
-{
    return instruction_ro_bo(brw->cache.bo, offset);
 }
 #else
@@ -165,9 +159,6 @@ KSP(struct brw_context *brw, uint32_t offset)
 {
    return offset;
 }
-
-#define KSP_ro KSP
-
 #endif
 
 #include "genxml/genX_pack.h"
@@ -1267,7 +1258,7 @@ genX(upload_clip_state)(struct brw_context *brw)
 
    ctx->NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
    brw_state_emit(brw, GENX(CLIP_STATE), 32, &brw->clip.state_offset, clip) {
-      clip.KernelStartPointer = KSP_ro(brw, brw->clip.prog_offset);
+      clip.KernelStartPointer = KSP(brw, brw->clip.prog_offset);
       clip.GRFRegisterCount =
          DIV_ROUND_UP(brw->clip.prog_data->total_grf, 16) - 1;
       clip.FloatingPointMode = FLOATING_POINT_MODE_Alternate;
@@ -1507,7 +1498,7 @@ genX(upload_sf)(struct brw_context *brw)
    ctx->NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
 
    brw_state_emit(brw, GENX(SF_STATE), 64, &brw->sf.state_offset, sf) {
-      sf.KernelStartPointer = KSP_ro(brw, brw->sf.prog_offset);
+      sf.KernelStartPointer = KSP(brw, brw->sf.prog_offset);
       sf.FloatingPointMode = FLOATING_POINT_MODE_Alternate;
       sf.GRFRegisterCount = DIV_ROUND_UP(sf_prog_data->total_grf, 16) - 1;
       sf.DispatchGRFStartRegisterForURBData = 3;
@@ -1863,15 +1854,13 @@ genX(upload_wm)(struct brw_context *brw)
          wm_prog_data->base.dispatch_grf_start_reg;
       if (GEN_GEN == 6 ||
           wm_prog_data->dispatch_8 || wm_prog_data->dispatch_16) {
-         wm.KernelStartPointer0 = KSP_ro(brw,
-                                         stage_state->prog_offset);
+         wm.KernelStartPointer0 = KSP(brw, stage_state->prog_offset);
       }
 
 #if GEN_GEN >= 5
       if (GEN_GEN == 6 || wm_prog_data->prog_offset_2) {
          wm.KernelStartPointer2 =
-            KSP_ro(brw, stage_state->prog_offset +
-                   wm_prog_data->prog_offset_2);
+            KSP(brw, stage_state->prog_offset + wm_prog_data->prog_offset_2);
       }
 #endif
 
