@@ -332,6 +332,8 @@ gpir_prog *gpir_compile_nir(nir_shader *nir)
       return NULL;
    }
 
+   gpir_lower_const(comp);
+
    gpir_compiler_delete(comp);
    return NULL;
 }
