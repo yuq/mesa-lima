@@ -2706,6 +2706,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
    }
 
    mt->aux_usage = ISL_AUX_USAGE_NONE;
+   mt->supports_fast_clear = false;
 }
 
 
