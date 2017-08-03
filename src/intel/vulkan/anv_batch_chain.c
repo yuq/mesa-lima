@@ -1549,10 +1549,20 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
    }
 
    if (fence) {
-      result = anv_execbuf_add_bo(&execbuf, &fence->bo, NULL,
-                                  EXEC_OBJECT_WRITE, &device->alloc);
-      if (result != VK_SUCCESS)
-         return result;
+      assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
+      struct anv_fence_impl *impl = &fence->permanent;
+
+      switch (impl->type) {
+      case ANV_FENCE_TYPE_BO:
+         result = anv_execbuf_add_bo(&execbuf, &impl->bo.bo, NULL,
+                                     EXEC_OBJECT_WRITE, &device->alloc);
+         if (result != VK_SUCCESS)
+            return result;
+         break;
+
+      default:
+         unreachable("Invalid fence type");
+      }
    }
 
    if (cmd_buffer)
@@ -1598,7 +1608,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       anv_semaphore_reset_temporary(device, semaphore);
    }
 
-   if (fence) {
+   if (fence && fence->permanent.type == ANV_FENCE_TYPE_BO) {
       /* Once the execbuf has returned, we need to set the fence state to
        * SUBMITTED.  We can't do this before calling execbuf because
        * anv_GetFenceStatus does take the global device lock before checking
@@ -1609,7 +1619,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
        * vkGetFenceStatus() return a valid result (VK_ERROR_DEVICE_LOST or
        * VK_SUCCESS) in a finite amount of time even if execbuf fails.
        */
-      fence->state = ANV_FENCE_STATE_SUBMITTED;
+      fence->permanent.bo.state = ANV_FENCE_STATE_SUBMITTED;
    }
 
    if (result == VK_SUCCESS && need_out_fence) {

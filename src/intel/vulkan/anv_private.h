@@ -1707,6 +1707,12 @@ anv_cmd_buffer_alloc_blorp_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
 
+enum anv_fence_type {
+   ANV_FENCE_TYPE_NONE = 0,
+   ANV_FENCE_TYPE_BO,
+   ANV_FENCE_TYPE_SYNCOBJ,
+};
+
 enum anv_fence_state {
    /** Indicates that this is a new (or newly reset fence) */
    ANV_FENCE_STATE_RESET,
@@ -1719,9 +1725,41 @@ enum anv_fence_state {
    ANV_FENCE_STATE_SIGNALED,
 };
 
+struct anv_fence_impl {
+   enum anv_fence_type type;
+
+   union {
+      /** Fence implementation for BO fences
+       *
+       * These fences use a BO and a set of CPU-tracked state flags.  The BO
+       * is added to the object list of the last execbuf call in a QueueSubmit
+       * and is marked EXEC_WRITE.  The state flags track when the BO has been
+       * submitted to the kernel.  We need to do this because Vulkan lets you
+       * wait on a fence that has not yet been submitted and I915_GEM_BUSY
+       * will say it's idle in this case.
+       */
+      struct {
+         struct anv_bo bo;
+         enum anv_fence_state state;
+      } bo;
+   };
+};
+
 struct anv_fence {
-   struct anv_bo bo;
-   enum anv_fence_state state;
+   /* Permanent fence state.  Every fence has some form of permanent state
+    * (type != ANV_SEMAPHORE_TYPE_NONE).  This may be a BO to fence on (for
+    * cross-process fences0 or it could just be a dummy for use internally.
+    */
+   struct anv_fence_impl permanent;
+
+   /* Temporary fence state.  A fence *may* have temporary state.  That state
+    * is added to the fence by an import operation and is reset back to
+    * ANV_SEMAPHORE_TYPE_NONE when the fence is reset.  A fence with temporary
+    * state cannot be signaled because the fence must already be signaled
+    * before the temporary state can be exported from the fence in the other
+    * process and imported here.
+    */
+   struct anv_fence_impl temporary;
 };
 
 struct anv_event {

@@ -262,28 +262,48 @@ VkResult anv_CreateFence(
     VkFence*                                    pFence)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_bo fence_bo;
    struct anv_fence *fence;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
 
-   VkResult result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence_bo, 4096);
+   fence = vk_zalloc2(&device->alloc, pAllocator, sizeof(*fence), 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (fence == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   fence->permanent.type = ANV_FENCE_TYPE_BO;
+
+   VkResult result = anv_bo_pool_alloc(&device->batch_bo_pool,
+                                       &fence->permanent.bo.bo, 4096);
    if (result != VK_SUCCESS)
       return result;
 
-   /* Fences are small.  Just store the CPU data structure in the BO. */
-   fence = fence_bo.map;
-   fence->bo = fence_bo;
-
    if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-      fence->state = ANV_FENCE_STATE_SIGNALED;
+      fence->permanent.bo.state = ANV_FENCE_STATE_SIGNALED;
    } else {
-      fence->state = ANV_FENCE_STATE_RESET;
+      fence->permanent.bo.state = ANV_FENCE_STATE_RESET;
    }
 
    *pFence = anv_fence_to_handle(fence);
 
    return VK_SUCCESS;
+}
+
+static void
+anv_fence_impl_cleanup(struct anv_device *device,
+                       struct anv_fence_impl *impl)
+{
+   switch (impl->type) {
+   case ANV_FENCE_TYPE_NONE:
+      /* Dummy.  Nothing to do */
+      return;
+
+   case ANV_FENCE_TYPE_BO:
+      anv_bo_pool_free(&device->batch_bo_pool, &impl->bo.bo);
+      return;
+   }
+
+   unreachable("Invalid fence type");
 }
 
 void anv_DestroyFence(
@@ -297,8 +317,10 @@ void anv_DestroyFence(
    if (!fence)
       return;
 
-   assert(fence->bo.map == fence);
-   anv_bo_pool_free(&device->batch_bo_pool, &fence->bo);
+   anv_fence_impl_cleanup(device, &fence->temporary);
+   anv_fence_impl_cleanup(device, &fence->permanent);
+
+   vk_free2(&device->alloc, pAllocator, fence);
 }
 
 VkResult anv_ResetFences(
@@ -308,7 +330,18 @@ VkResult anv_ResetFences(
 {
    for (uint32_t i = 0; i < fenceCount; i++) {
       ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
-      fence->state = ANV_FENCE_STATE_RESET;
+
+      assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
+      struct anv_fence_impl *impl = &fence->permanent;
+
+      switch (impl->type) {
+      case ANV_FENCE_TYPE_BO:
+         impl->bo.state = ANV_FENCE_STATE_RESET;
+         break;
+
+      default:
+         unreachable("Invalid fence type");
+      }
    }
 
    return VK_SUCCESS;
@@ -324,44 +357,49 @@ VkResult anv_GetFenceStatus(
    if (unlikely(device->lost))
       return VK_ERROR_DEVICE_LOST;
 
-   switch (fence->state) {
-   case ANV_FENCE_STATE_RESET:
-      /* If it hasn't even been sent off to the GPU yet, it's not ready */
-      return VK_NOT_READY;
+   assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
+   struct anv_fence_impl *impl = &fence->permanent;
 
-   case ANV_FENCE_STATE_SIGNALED:
-      /* It's been signaled, return success */
-      return VK_SUCCESS;
+   switch (impl->type) {
+   case ANV_FENCE_TYPE_BO:
+      switch (impl->bo.state) {
+      case ANV_FENCE_STATE_RESET:
+         /* If it hasn't even been sent off to the GPU yet, it's not ready */
+         return VK_NOT_READY;
 
-   case ANV_FENCE_STATE_SUBMITTED: {
-      VkResult result = anv_device_bo_busy(device, &fence->bo);
-      if (result == VK_SUCCESS) {
-         fence->state = ANV_FENCE_STATE_SIGNALED;
+      case ANV_FENCE_STATE_SIGNALED:
+         /* It's been signaled, return success */
          return VK_SUCCESS;
-      } else {
-         return result;
+
+      case ANV_FENCE_STATE_SUBMITTED: {
+         VkResult result = anv_device_bo_busy(device, &impl->bo.bo);
+         if (result == VK_SUCCESS) {
+            impl->bo.state = ANV_FENCE_STATE_SIGNALED;
+            return VK_SUCCESS;
+         } else {
+            return result;
+         }
       }
-   }
+      default:
+         unreachable("Invalid fence status");
+      }
+
    default:
-      unreachable("Invalid fence status");
+      unreachable("Invalid fence type");
    }
 }
 
 #define NSEC_PER_SEC 1000000000
 #define INT_TYPE_MAX(type) ((1ull << (sizeof(type) * 8 - 1)) - 1)
 
-VkResult anv_WaitForFences(
-    VkDevice                                    _device,
-    uint32_t                                    fenceCount,
-    const VkFence*                              pFences,
-    VkBool32                                    waitAll,
-    uint64_t                                    _timeout)
+static VkResult
+anv_wait_for_bo_fences(struct anv_device *device,
+                       uint32_t fenceCount,
+                       const VkFence *pFences,
+                       bool waitAll,
+                       uint64_t _timeout)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
    int ret;
-
-   if (unlikely(device->lost))
-      return VK_ERROR_DEVICE_LOST;
 
    /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and is supposed
     * to block indefinitely timeouts <= 0.  Unfortunately, this was broken
@@ -379,7 +417,16 @@ VkResult anv_WaitForFences(
       bool signaled_fences = false;
       for (uint32_t i = 0; i < fenceCount; i++) {
          ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
-         switch (fence->state) {
+
+         /* This function assumes that all fences are BO fences and that they
+          * have no temporary state.  Since BO fences will never be exported,
+          * this should be a safe assumption.
+          */
+         assert(fence->permanent.type == ANV_FENCE_TYPE_BO);
+         assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
+         struct anv_fence_impl *impl = &fence->permanent;
+
+         switch (impl->bo.state) {
          case ANV_FENCE_STATE_RESET:
             /* This fence hasn't been submitted yet, we'll catch it the next
              * time around.  Yes, this may mean we dead-loop but, short of
@@ -403,10 +450,10 @@ VkResult anv_WaitForFences(
             /* These are the fences we really care about.  Go ahead and wait
              * on it until we hit a timeout.
              */
-            result = anv_device_wait(device, &fence->bo, timeout);
+            result = anv_device_wait(device, &impl->bo.bo, timeout);
             switch (result) {
             case VK_SUCCESS:
-               fence->state = ANV_FENCE_STATE_SIGNALED;
+               impl->bo.state = ANV_FENCE_STATE_SIGNALED;
                signaled_fences = true;
                if (!waitAll)
                   goto done;
@@ -436,7 +483,7 @@ VkResult anv_WaitForFences(
          uint32_t now_pending_fences = 0;
          for (uint32_t i = 0; i < fenceCount; i++) {
             ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
-            if (fence->state == ANV_FENCE_STATE_RESET)
+            if (fence->permanent.bo.state == ANV_FENCE_STATE_RESET)
                now_pending_fences++;
          }
          assert(now_pending_fences <= pending_fences);
@@ -485,6 +532,21 @@ done:
       return VK_ERROR_DEVICE_LOST;
 
    return result;
+}
+
+VkResult anv_WaitForFences(
+    VkDevice                                    _device,
+    uint32_t                                    fenceCount,
+    const VkFence*                              pFences,
+    VkBool32                                    waitAll,
+    uint64_t                                    timeout)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   if (unlikely(device->lost))
+      return VK_ERROR_DEVICE_LOST;
+
+   return anv_wait_for_bo_fences(device, fenceCount, pFences, waitAll, timeout);
 }
 
 // Queue semaphore functions
