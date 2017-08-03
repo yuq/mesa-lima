@@ -46,8 +46,7 @@ EXTRA_DIST += \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
 	vulkan/anv_entrypoints_gen.py \
 	vulkan/anv_extensions.py \
-	vulkan/dev_icd.json.in \
-	vulkan/intel_icd.json.in \
+	vulkan/anv_icd.py \
 	vulkan/TODO
 
 vulkan/dev_icd.json : vulkan/anv_extensions.py vulkan/anv_icd.py
