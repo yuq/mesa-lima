@@ -1018,6 +1018,8 @@ brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns)
    if (ret == -1)
       return -errno;
 
+   bo->idle = true;
+
    return ret;
 }
 
