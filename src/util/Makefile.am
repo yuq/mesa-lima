@@ -70,6 +70,7 @@ CLEANFILES = $(BUILT_SOURCES)
 EXTRA_DIST = \
 	drirc \
 	format_srgb.py \
+	merge_driinfo.py \
 	SConscript \
 	xmlpool.h \
 	sha1/README
