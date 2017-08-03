@@ -1,7 +1,8 @@
 gpir_SOURCES := \
 	  ir/gp/gpir.h \
 	  ir/gp/nir.c \
-	  ir/gp/node.c
+	  ir/gp/node.c \
+	  ir/gp/lower.c
 
 C_SOURCES := \
 	  lima_screen.c \
