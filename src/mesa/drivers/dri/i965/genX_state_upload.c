@@ -3638,7 +3638,7 @@ genX(upload_3dstate_so_buffers)(struct brw_context *brw)
 
          sob.SurfaceSize = MAX2(xfb_obj->Size[i] / 4, 1) - 1;
          sob.StreamOutputBufferOffsetAddress =
-            ggtt_bo(brw_obj->offset_bo, i * sizeof(uint32_t));
+            rw_bo(brw_obj->offset_bo, i * sizeof(uint32_t));
 
          if (brw_obj->zero_offsets) {
             /* Zero out the offset and write that to offset_bo */
