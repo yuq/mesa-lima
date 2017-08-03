@@ -637,12 +637,12 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
    }
 
    if (!brw->screen->no_hw) {
-      int flags;
+      int flags = 0;
 
       if (brw->gen >= 6 && batch->ring == BLT_RING) {
-         flags = I915_EXEC_BLT;
+         flags |= I915_EXEC_BLT;
       } else {
-         flags = I915_EXEC_RENDER;
+         flags |= I915_EXEC_RENDER;
       }
       if (batch->needs_sol_reset)
 	 flags |= I915_EXEC_GEN7_SOL_RESET;
