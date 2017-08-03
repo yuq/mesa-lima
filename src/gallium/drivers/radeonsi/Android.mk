@@ -36,7 +36,8 @@ LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/amd/common \
-	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_amd_common,,)/common
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_amd_common,,)/common \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir
 
 LOCAL_STATIC_LIBRARIES := libmesa_amd_common
 
