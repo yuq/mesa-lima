@@ -101,7 +101,7 @@ typedef struct gpir_node {
    struct list_head list;
    gpir_op op;
 
-   struct gpir_node *children[5];
+   struct gpir_node *children[4];
    unsigned num_child;
 
    /* point to the end of the sub-struct */
@@ -119,7 +119,8 @@ typedef struct {
 
 typedef struct {
    gpir_node node;
-   union fi constant;
+   union fi value[4];
+   unsigned num_components;
 } gpir_const_node;
 
 typedef struct {
@@ -136,7 +137,6 @@ typedef struct {
    gpir_node node;
    unsigned index; /* must be 0 when storing temporaries */
    bool write_mask[4]; /* which components to store to */
-   uint8_t children_component[4];
 } gpir_store_node;
 
 typedef struct gpir_block {
@@ -164,5 +164,10 @@ typedef struct gpir_prog {
 typedef struct nir_shader nir_shader;
 
 gpir_prog *gpir_compile_nir(nir_shader *nir);
+
+void *gpir_node_create(gpir_compiler *comp, int size, int index, int max_parent);
+void gpir_node_add_child(gpir_node *parent, gpir_node *child);
+void gpir_node_remove_parent_cleanup(gpir_node *node);
+void gpir_node_delete(gpir_node *node);
 
 #endif
