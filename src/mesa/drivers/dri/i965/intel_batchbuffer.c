@@ -121,16 +121,13 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
                  batch->exec_array_size * sizeof(batch->validation_list[0]));
    }
 
-   struct drm_i915_gem_exec_object2 *validation_entry =
-      &batch->validation_list[batch->exec_count];
-   validation_entry->handle = bo->gem_handle;
-   validation_entry->relocation_count = 0;
-   validation_entry->relocs_ptr = 0;
-   validation_entry->alignment = bo->align;
-   validation_entry->offset = bo->offset64;
-   validation_entry->flags = bo->kflags;
-   validation_entry->rsvd1 = 0;
-   validation_entry->rsvd2 = 0;
+   batch->validation_list[batch->exec_count] =
+      (struct drm_i915_gem_exec_object2) {
+         .handle = bo->gem_handle,
+         .alignment = bo->align,
+         .offset = bo->offset64,
+         .flags = bo->kflags,
+      };
 
    bo->index = batch->exec_count;
    batch->exec_bos[batch->exec_count] = bo;
