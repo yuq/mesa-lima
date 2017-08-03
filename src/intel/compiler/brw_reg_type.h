@@ -28,6 +28,12 @@
 extern "C" {
 #endif
 
+#ifdef HAVE_FUNC_ATTRIBUTE_PURE
+#define ATTRIBUTE_PURE __attribute__((__pure__))
+#else
+#define ATTRIBUTE_PURE
+#endif
+
 enum brw_reg_file;
 struct gen_device_info;
 
@@ -63,7 +69,7 @@ unsigned
 brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
                         enum brw_reg_file file, enum brw_reg_type type);
 
-enum brw_reg_type
+enum brw_reg_type ATTRIBUTE_PURE
 brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
                         enum brw_reg_file file, unsigned hw_type);
 
