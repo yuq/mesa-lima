@@ -511,19 +511,19 @@ throttle(struct brw_context *brw)
 
 #define READ_ONCE(x) (*(volatile __typeof__(x) *)&(x))
 
-static void
+static unsigned
 add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 {
    if (bo != batch->bo) {
       unsigned index = READ_ONCE(bo->index);
 
       if (index < batch->exec_count && batch->exec_bos[index] == bo)
-         return;
+         return index;
 
       /* May have been shared between multiple active batches */
       for (index = 0; index < batch->exec_count; index++) {
          if (batch->exec_bos[index] == bo)
-            return;
+            return index;
       }
 
       brw_bo_reference(bo);
@@ -557,8 +557,9 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 
    bo->index = batch->exec_count;
    batch->exec_bos[batch->exec_count] = bo;
-   batch->exec_count++;
    batch->aperture_space += bo->size;
+
+   return batch->exec_count++;
 }
 
 static int
