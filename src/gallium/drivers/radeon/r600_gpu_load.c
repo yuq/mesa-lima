@@ -121,7 +121,7 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 		UPDATE_COUNTER(meq, MEQ_BUSY);
 		UPDATE_COUNTER(me, ME_BUSY);
 		UPDATE_COUNTER(surf_sync, SURFACE_SYNC_BUSY);
-		UPDATE_COUNTER(dma, DMA_BUSY);
+		UPDATE_COUNTER(cp_dma, DMA_BUSY);
 		UPDATE_COUNTER(scratch_ram, SCRATCH_RAM_BUSY);
 		UPDATE_COUNTER(ce, CE_BUSY);
 	}
@@ -262,8 +262,8 @@ static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 		return BUSY_INDEX(rscreen, me);
 	case R600_QUERY_GPU_SURF_SYNC_BUSY:
 		return BUSY_INDEX(rscreen, surf_sync);
-	case R600_QUERY_GPU_DMA_BUSY:
-		return BUSY_INDEX(rscreen, dma);
+	case R600_QUERY_GPU_CP_DMA_BUSY:
+		return BUSY_INDEX(rscreen, cp_dma);
 	case R600_QUERY_GPU_SCRATCH_RAM_BUSY:
 		return BUSY_INDEX(rscreen, scratch_ram);
 	case R600_QUERY_GPU_CE_BUSY:

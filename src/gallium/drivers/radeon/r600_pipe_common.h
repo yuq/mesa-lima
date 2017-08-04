@@ -371,7 +371,7 @@ union r600_mmio_counters {
 		struct r600_mmio_counter meq;
 		struct r600_mmio_counter me;
 		struct r600_mmio_counter surf_sync;
-		struct r600_mmio_counter dma;
+		struct r600_mmio_counter cp_dma;
 		struct r600_mmio_counter scratch_ram;
 		struct r600_mmio_counter ce;
 	} named;
