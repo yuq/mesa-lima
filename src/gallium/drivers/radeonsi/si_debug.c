@@ -815,8 +815,15 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 
-	if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS)
+	if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
 		si_dump_debug_registers(sctx, f);
+
+		if (flags & PIPE_DUMP_CURRENT_SHADERS) {
+			si_dump_annotated_shaders(sctx, f);
+			si_dump_command("Active waves (raw data)", "umr -wa | column -t", f);
+			si_dump_command("Wave information", "umr -O bits -wa", f);
+		}
+	}
 
 	if (flags & PIPE_DUMP_CURRENT_STATES)
 		si_dump_framebuffer(sctx, f);
@@ -828,12 +835,6 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_gfx_shader(sctx->screen, &sctx->gs_shader, f);
 		si_dump_gfx_shader(sctx->screen, &sctx->ps_shader, f);
 		si_dump_compute_shader(sctx->screen, &sctx->cs_shader_state, f);
-
-		if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
-			si_dump_annotated_shaders(sctx, f);
-			si_dump_command("Active waves (raw data)", "umr -wa | column -t", f);
-			si_dump_command("Wave information", "umr -O bits -wa", f);
-		}
 
 		si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
 					"", "RW buffers", 4, SI_NUM_RW_BUFFERS,
