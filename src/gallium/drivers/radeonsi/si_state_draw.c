@@ -1162,14 +1162,49 @@ void si_ce_post_draw_synchronization(struct si_context *sctx)
 	}
 }
 
+static void si_emit_all_states(struct si_context *sctx, const struct pipe_draw_info *info,
+			       unsigned skip_atom_mask)
+{
+	/* Emit state atoms. */
+	unsigned mask = sctx->dirty_atoms & ~skip_atom_mask;
+	while (mask) {
+		struct r600_atom *atom = sctx->atoms.array[u_bit_scan(&mask)];
+
+		atom->emit(&sctx->b, atom);
+	}
+	sctx->dirty_atoms &= skip_atom_mask;
+
+	/* Emit states. */
+	mask = sctx->dirty_states;
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+		struct si_pm4_state *state = sctx->queued.array[i];
+
+		if (!state || sctx->emitted.array[i] == state)
+			continue;
+
+		si_pm4_emit(sctx, state);
+		sctx->emitted.array[i] = state;
+	}
+	sctx->dirty_states = 0;
+
+	/* Emit draw states. */
+	unsigned num_patches = 0;
+
+	si_emit_rasterizer_prim_state(sctx);
+	if (sctx->tes_shader.cso)
+		si_emit_derived_tess_state(sctx, info, &num_patches);
+	si_emit_vs_state(sctx, info);
+	si_emit_draw_registers(sctx, info, num_patches);
+}
+
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct pipe_resource *indexbuf = info->index.resource;
-	unsigned mask, dirty_tex_counter;
+	unsigned dirty_tex_counter;
 	enum pipe_prim_type rast_prim;
-	unsigned num_patches = 0;
 	unsigned index_size = info->index_size;
 	unsigned index_offset = info->indirect ? info->start * index_size : 0;
 
@@ -1249,9 +1284,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	if (sctx->do_update_shaders && !si_update_shaders(sctx))
-		return;
-
-	if (!si_upload_graphics_shader_descriptors(sctx))
 		return;
 
 	if (index_size) {
@@ -1342,44 +1374,61 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	    si_is_atom_dirty(sctx, &sctx->b.scissors.atom))
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
 
-	/* Flush caches before the first state atom, which does L2 prefetches. */
-	if (sctx->b.flags)
+	/* Use optimal packet order based on whether we need to sync the pipeline. */
+	if (unlikely(sctx->b.flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
+				      SI_CONTEXT_FLUSH_AND_INV_DB |
+				      SI_CONTEXT_PS_PARTIAL_FLUSH |
+				      SI_CONTEXT_CS_PARTIAL_FLUSH))) {
+		/* If we have to wait for idle, set all states first, so that all
+		 * SET packets are processed in parallel with previous draw calls.
+		 * Then upload descriptors, set shader pointers, and draw, and
+		 * prefetch at the end. This ensures that the time the CUs
+		 * are idle is very short. (there are only SET_SH packets between
+		 * the wait and the draw)
+		 */
+		struct r600_atom *shader_pointers = &sctx->shader_pointers.atom;
+
+		/* Emit all states except shader pointers. */
+		si_emit_all_states(sctx, info, 1 << shader_pointers->id);
 		si_emit_cache_flush(sctx);
 
-	if (sctx->b.chip_class >= CIK && sctx->prefetch_L2_mask)
-		cik_emit_prefetch_L2(sctx);
+		/* <-- CUs are idle here. */
+		if (!si_upload_graphics_shader_descriptors(sctx))
+			return;
 
-	/* Emit state atoms. */
-	mask = sctx->dirty_atoms;
-	while (mask) {
-		struct r600_atom *atom = sctx->atoms.array[u_bit_scan(&mask)];
+		/* Set shader pointers after descriptors are uploaded. */
+		if (si_is_atom_dirty(sctx, shader_pointers)) {
+			shader_pointers->emit(&sctx->b, NULL);
+			sctx->dirty_atoms = 0;
+		}
 
-		atom->emit(&sctx->b, atom);
+		si_ce_pre_draw_synchronization(sctx);
+		si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);
+		/* <-- CUs are busy here. */
+
+		/* Start prefetches after the draw has been started. Both will run
+		 * in parallel, but starting the draw first is more important.
+		 */
+		if (sctx->b.chip_class >= CIK && sctx->prefetch_L2_mask)
+			cik_emit_prefetch_L2(sctx);
+	} else {
+		/* If we don't wait for idle, start prefetches first, then set
+		 * states, and draw at the end.
+		 */
+		if (sctx->b.flags)
+			si_emit_cache_flush(sctx);
+
+		if (sctx->b.chip_class >= CIK && sctx->prefetch_L2_mask)
+			cik_emit_prefetch_L2(sctx);
+
+		if (!si_upload_graphics_shader_descriptors(sctx))
+			return;
+
+		si_emit_all_states(sctx, info, 0);
+		si_ce_pre_draw_synchronization(sctx);
+		si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);
 	}
-	sctx->dirty_atoms = 0;
 
-	/* Emit states. */
-	mask = sctx->dirty_states;
-	while (mask) {
-		unsigned i = u_bit_scan(&mask);
-		struct si_pm4_state *state = sctx->queued.array[i];
-
-		if (!state || sctx->emitted.array[i] == state)
-			continue;
-
-		si_pm4_emit(sctx, state);
-		sctx->emitted.array[i] = state;
-	}
-	sctx->dirty_states = 0;
-
-	si_emit_rasterizer_prim_state(sctx);
-	if (sctx->tes_shader.cso)
-		si_emit_derived_tess_state(sctx, info, &num_patches);
-	si_emit_vs_state(sctx, info);
-	si_emit_draw_registers(sctx, info, num_patches);
-
-	si_ce_pre_draw_synchronization(sctx);
-	si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);
 	si_ce_post_draw_synchronization(sctx);
 
 	if (sctx->trace_buf)
