@@ -484,7 +484,7 @@ si_make_texture_descriptor(struct radv_device *device,
 
 		fmask_state[0] = va >> 8;
 		if (device->physical_device->rad_info.chip_class < GFX9)
-			fmask_state[0] |= image->surface.tile_swizzle;
+			fmask_state[0] |= image->fmask.tile_swizzle;
 		fmask_state[1] = S_008F14_BASE_ADDRESS_HI(va >> 40) |
 			S_008F14_DATA_FORMAT_GFX6(fmask_format) |
 			S_008F14_NUM_FORMAT_GFX6(num_format);
@@ -616,6 +616,8 @@ radv_image_get_fmask_info(struct radv_device *device,
 	info.samples = 1;
 	fmask.flags = image->surface.flags | RADEON_SURF_FMASK;
 
+	info.surf_index = &device->fmask_mrt_offset_counter;
+
 	/* Force 2D tiling if it wasn't set. This may occur when creating
 	 * FMASK for MSAA resolve on R6xx. On R6xx, the single-sample
 	 * destination buffer must have an FMASK too. */
@@ -644,6 +646,7 @@ radv_image_get_fmask_info(struct radv_device *device,
 	out->tile_mode_index = fmask.u.legacy.tiling_index[0];
 	out->pitch_in_pixels = fmask.u.legacy.level[0].nblk_x;
 	out->bank_height = fmask.u.legacy.bankh;
+	out->tile_swizzle = fmask.tile_swizzle;
 	out->alignment = MAX2(256, fmask.surf_alignment);
 	out->size = fmask.surf_size;
 }

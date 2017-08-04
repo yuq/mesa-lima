@@ -3042,7 +3042,7 @@ radv_initialise_color_surface(struct radv_device *device,
 		va = device->ws->buffer_get_va(iview->bo) + iview->image->offset + iview->image->fmask.offset;
 		cb->cb_color_fmask = va >> 8;
 		if (device->physical_device->rad_info.chip_class < GFX9)
-			cb->cb_color_fmask |= iview->image->surface.tile_swizzle;
+			cb->cb_color_fmask |= iview->image->fmask.tile_swizzle;
 	} else {
 		cb->cb_color_fmask = cb->cb_color_base;
 	}

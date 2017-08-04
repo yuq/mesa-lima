@@ -547,8 +547,12 @@ struct radv_device {
 	/* Backup in-memory cache to be used if the app doesn't provide one */
 	struct radv_pipeline_cache *                mem_cache;
 
+	/*
+	 * use different counters so MSAA MRTs get consecutive surface indices,
+	 * even if MASK is allocated in between.
+	 */
 	uint32_t image_mrt_offset_counter;
-
+	uint32_t fmask_mrt_offset_counter;
 	struct list_head shader_slabs;
 	mtx_t shader_slab_mutex;
 };
@@ -1193,6 +1197,7 @@ struct radv_fmask_info {
 	unsigned bank_height;
 	unsigned slice_tile_max;
 	unsigned tile_mode_index;
+	unsigned tile_swizzle;
 };
 
 struct radv_cmask_info {
