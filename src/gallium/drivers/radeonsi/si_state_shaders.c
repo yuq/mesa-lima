@@ -1534,19 +1534,6 @@ static bool si_check_missing_main_part(struct si_screen *sscreen,
 	return true;
 }
 
-static void si_destroy_shader_selector(struct si_context *sctx,
-				       struct si_shader_selector *sel);
-
-static void si_shader_selector_reference(struct si_context *sctx,
-					 struct si_shader_selector **dst,
-					 struct si_shader_selector *src)
-{
-	if (pipe_reference(&(*dst)->reference, &src->reference))
-		si_destroy_shader_selector(sctx, *dst);
-
-	*dst = src;
-}
-
 /* Select the hw shader variant depending on the current state. */
 static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_ctx_state *state,
@@ -2447,8 +2434,8 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 	free(shader);
 }
 
-static void si_destroy_shader_selector(struct si_context *sctx,
-				       struct si_shader_selector *sel)
+void si_destroy_shader_selector(struct si_context *sctx,
+				struct si_shader_selector *sel)
 {
 	struct si_shader *p = sel->first_variant, *c;
 	struct si_shader_ctx_state *current_shader[SI_NUM_SHADERS] = {

@@ -663,4 +663,18 @@ si_shader_uses_bindless_images(struct si_shader_selector *selector)
 	return selector ? selector->info.uses_bindless_images : false;
 }
 
+void si_destroy_shader_selector(struct si_context *sctx,
+			        struct si_shader_selector *sel);
+
+static inline void
+si_shader_selector_reference(struct si_context *sctx,
+			     struct si_shader_selector **dst,
+			     struct si_shader_selector *src)
+{
+	if (pipe_reference(&(*dst)->reference, &src->reference))
+		si_destroy_shader_selector(sctx, *dst);
+
+	*dst = src;
+}
+
 #endif
