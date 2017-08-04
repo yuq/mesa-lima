@@ -53,6 +53,14 @@ struct simd16BBox
 };
 #endif
 
+template<typename SIMD_T>
+struct SIMDBBOX_T
+{
+    typename SIMD_T::Integer            ymin;
+    typename SIMD_T::Integer            ymax;
+    typename SIMD_T::Integer            xmin;
+    typename SIMD_T::Integer            xmax;
+};
 
 // helper function to unroll loops
 template<int Begin, int End, int Step = 1>

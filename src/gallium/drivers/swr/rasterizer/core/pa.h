@@ -91,6 +91,7 @@ struct PA_STATE
     virtual bool Assemble(uint32_t slot, simdvector verts[]) = 0;
 #if ENABLE_AVX512_SIMD16
     virtual bool Assemble_simd16(uint32_t slot, simd16vector verts[]) = 0;
+    virtual bool Assemble(uint32_t slot, simd16vector verts[]) = 0;
 #endif
     virtual void AssembleSingle(uint32_t slot, uint32_t primIndex, simd4scalar verts[]) = 0;
     virtual bool NextPrim() = 0;
@@ -201,6 +202,11 @@ struct PA_STATE_OPT : public PA_STATE
     bool Assemble_simd16(uint32_t slot, simd16vector verts[])
     {
         return this->pfnPaFunc_simd16(*this, slot, verts);
+    }
+
+    bool Assemble(uint32_t slot, simd16vector verts[])
+    {
+        return Assemble_simd16(slot, verts);
     }
 
 #endif
@@ -765,6 +771,11 @@ struct PA_STATE_CUT : public PA_STATE
         return true;
     }
 
+    bool Assemble(uint32_t slot, simd16vector verts[])
+    {
+        return Assemble_simd16(slot, verts);
+    }
+
 #endif
     void AssembleSingle(uint32_t slot, uint32_t triIndex, simd4scalar tri[3])
     {
@@ -1317,6 +1328,11 @@ struct PA_TESS : PA_STATE
         }
 
         return true;
+    }
+
+    bool Assemble(uint32_t slot, simd16vector verts[])
+    {
+        return Assemble_simd16(slot, verts);
     }
 
 #endif
