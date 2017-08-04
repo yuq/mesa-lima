@@ -47,6 +47,8 @@
 #include "util/u_transfer.h"
 #include "util/u_threaded_context.h"
 
+struct u_log_context;
+
 #define ATI_VENDOR_ID 0x1002
 
 #define R600_RESOURCE_FLAG_TRANSFER		(PIPE_RESOURCE_FLAG_DRV_PRIV << 0)
@@ -652,6 +654,7 @@ struct r600_common_context {
 
 	struct pipe_debug_callback	debug;
 	struct pipe_device_reset_callback device_reset_callback;
+	struct u_log_context		*log;
 
 	void				*query_result_shader;
 

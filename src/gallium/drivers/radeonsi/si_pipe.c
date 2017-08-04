@@ -28,6 +28,7 @@
 
 #include "radeon/radeon_uvd.h"
 #include "util/hash_table.h"
+#include "util/u_log.h"
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"
 #include "util/u_tests.h"
@@ -157,6 +158,13 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 				       LLVMCodeModelDefault);
 }
 
+static void si_set_log_context(struct pipe_context *ctx,
+			       struct u_log_context *log)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	sctx->b.log = log;
+}
+
 static struct pipe_context *si_create_context(struct pipe_screen *screen,
                                               unsigned flags)
 {
@@ -175,6 +183,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->b.b.priv = NULL;
 	sctx->b.b.destroy = si_destroy_context;
 	sctx->b.b.emit_string_marker = si_emit_string_marker;
+	sctx->b.b.set_log_context = si_set_log_context;
 	sctx->b.set_atom_dirty = (void *)si_set_atom_dirty;
 	sctx->screen = sscreen; /* Easy accessing of screen/winsys. */
 	sctx->is_debug = (flags & PIPE_CONTEXT_DEBUG) != 0;
