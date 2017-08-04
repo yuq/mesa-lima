@@ -268,6 +268,19 @@ struct si_image_handle
 	struct pipe_image_view		view;
 };
 
+struct si_saved_cs {
+	struct pipe_reference	reference;
+	struct si_context	*ctx;
+	struct radeon_saved_cs	gfx;
+	struct radeon_saved_cs	ce;
+	struct r600_resource	*trace_buf;
+	unsigned		trace_id;
+
+	unsigned		gfx_last_dw;
+	unsigned		ce_last_dw;
+	bool			flushed;
+};
+
 struct si_context {
 	struct r600_common_context	b;
 	struct blitter_context		*blitter;
@@ -419,11 +432,7 @@ struct si_context {
 
 	/* Debug state. */
 	bool			is_debug;
-	struct radeon_saved_cs	last_gfx;
-	struct radeon_saved_cs	last_ce;
-	struct r600_resource	*last_trace_buf;
-	struct r600_resource	*trace_buf;
-	unsigned		trace_id;
+	struct si_saved_cs	*current_saved_cs;
 	uint64_t		dmesg_timestamp;
 	unsigned		apitrace_call_number;
 
@@ -497,6 +506,8 @@ void cik_emit_prefetch_L2(struct si_context *sctx);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */
+void si_auto_log_cs(void *data, struct u_log_context *log);
+void si_log_hw_flush(struct si_context *sctx);
 void si_init_debug_functions(struct si_context *sctx);
 void si_check_vm_faults(struct r600_common_context *ctx,
 			struct radeon_saved_cs *saved, enum ring_type ring);
@@ -506,6 +517,7 @@ bool si_replace_shader(unsigned num, struct ac_shader_binary *binary);
 void si_init_dma_functions(struct si_context *sctx);
 
 /* si_hw_context.c */
+void si_destroy_saved_cs(struct si_saved_cs *scs);
 void si_context_gfx_flush(void *context, unsigned flags,
 			  struct pipe_fence_handle **fence);
 void si_begin_new_cs(struct si_context *ctx);
@@ -601,6 +613,15 @@ si_optimal_tcc_alignment(struct si_context *sctx, unsigned upload_size)
 	alignment = util_next_power_of_two(upload_size);
 	tcc_cache_line_size = sctx->screen->b.info.tcc_cache_line_size;
 	return MIN2(alignment, tcc_cache_line_size);
+}
+
+static inline void
+si_saved_cs_reference(struct si_saved_cs **dst, struct si_saved_cs *src)
+{
+	if (pipe_reference(&(*dst)->reference, &src->reference))
+		si_destroy_saved_cs(*dst);
+
+	*dst = src;
 }
 
 #endif

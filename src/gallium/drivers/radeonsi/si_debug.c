@@ -34,6 +34,9 @@
 #include "util/u_memory.h"
 #include "ac_debug.h"
 
+static void si_dump_bo_list(struct si_context *sctx,
+			    const struct radeon_saved_cs *saved, FILE *f);
+
 DEBUG_GET_ONCE_OPTION(replace_shaders, "RADEON_REPLACE_SHADERS", NULL)
 
 static void si_dump_shader(struct si_screen *sscreen,
@@ -266,49 +269,181 @@ static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
 	fprintf(f, "\n");
 }
 
-static void si_dump_last_ib(struct si_context *sctx, FILE *f)
+struct si_log_chunk_cs {
+	struct si_context *ctx;
+	struct si_saved_cs *cs;
+	bool dump_bo_list;
+	unsigned gfx_begin, gfx_end;
+	unsigned ce_begin, ce_end;
+};
+
+static void si_log_chunk_type_cs_destroy(void *data)
 {
+	struct si_log_chunk_cs *chunk = data;
+	si_saved_cs_reference(&chunk->cs, NULL);
+	free(chunk);
+}
+
+static void si_parse_current_ib(FILE *f, struct radeon_winsys_cs *cs,
+				unsigned begin, unsigned end,
+				unsigned last_trace_id, const char *name,
+				enum chip_class chip_class)
+{
+	unsigned orig_end = end;
+
+	assert(begin <= end);
+
+	fprintf(f, "------------------ %s begin (dw = %u) ------------------\n",
+		name, begin);
+
+	for (unsigned prev_idx = 0; prev_idx < cs->num_prev; ++prev_idx) {
+		struct radeon_winsys_cs_chunk *chunk = &cs->prev[prev_idx];
+
+		if (begin < chunk->cdw) {
+			ac_parse_ib_chunk(f, chunk->buf + begin,
+					  MIN2(end, chunk->cdw) - begin,
+					  last_trace_id, chip_class, NULL, NULL);
+		}
+
+		if (end <= chunk->cdw)
+			return;
+
+		if (begin < chunk->cdw)
+			fprintf(f, "\n---------- Next %s Chunk ----------\n\n",
+				name);
+
+		begin -= MIN2(begin, chunk->cdw);
+		end -= chunk->cdw;
+	}
+
+	assert(end <= cs->current.cdw);
+
+	ac_parse_ib_chunk(f, cs->current.buf + begin, end - begin, last_trace_id,
+			  chip_class, NULL, NULL);
+
+	fprintf(f, "------------------- %s end (dw = %u) -------------------\n\n",
+		name, orig_end);
+}
+
+static void si_log_chunk_type_cs_print(void *data, FILE *f)
+{
+	struct si_log_chunk_cs *chunk = data;
+	struct si_context *ctx = chunk->ctx;
+	struct si_saved_cs *scs = chunk->cs;
 	int last_trace_id = -1;
 	int last_ce_trace_id = -1;
 
-	if (!sctx->last_gfx.ib)
-		return;
+	/* We are expecting that the ddebug pipe has already
+	 * waited for the context, so this buffer should be idle.
+	 * If the GPU is hung, there is no point in waiting for it.
+	 */
+	uint32_t *map = ctx->b.ws->buffer_map(scs->trace_buf->buf,
+					      NULL,
+					      PIPE_TRANSFER_UNSYNCHRONIZED |
+					      PIPE_TRANSFER_READ);
+	if (map) {
+		last_trace_id = map[0];
+		last_ce_trace_id = map[1];
+	}
 
-	if (sctx->last_trace_buf) {
-		/* We are expecting that the ddebug pipe has already
-		 * waited for the context, so this buffer should be idle.
-		 * If the GPU is hung, there is no point in waiting for it.
-		 */
-		uint32_t *map = sctx->b.ws->buffer_map(sctx->last_trace_buf->buf,
-						       NULL,
-						       PIPE_TRANSFER_UNSYNCHRONIZED |
-						       PIPE_TRANSFER_READ);
-		if (map) {
-			last_trace_id = map[0];
-			last_ce_trace_id = map[1];
+	if (chunk->gfx_end != chunk->gfx_begin) {
+		if (chunk->gfx_begin == 0) {
+			if (ctx->init_config)
+				ac_parse_ib(f, ctx->init_config->pm4, ctx->init_config->ndw,
+					    -1, "IB2: Init config", ctx->b.chip_class,
+					    NULL, NULL);
+
+			if (ctx->init_config_gs_rings)
+				ac_parse_ib(f, ctx->init_config_gs_rings->pm4,
+					    ctx->init_config_gs_rings->ndw,
+					    -1, "IB2: Init GS rings", ctx->b.chip_class,
+					    NULL, NULL);
+		}
+
+		if (scs->flushed) {
+			ac_parse_ib(f, scs->gfx.ib + chunk->gfx_begin,
+				    chunk->gfx_end - chunk->gfx_begin,
+				    last_trace_id, "IB", ctx->b.chip_class,
+				    NULL, NULL);
+		} else {
+			si_parse_current_ib(f, ctx->b.gfx.cs, chunk->gfx_begin,
+					    chunk->gfx_end, last_trace_id, "IB",
+					    ctx->b.chip_class);
 		}
 	}
 
-	if (sctx->init_config)
-		ac_parse_ib(f, sctx->init_config->pm4, sctx->init_config->ndw,
-			    -1, "IB2: Init config", sctx->b.chip_class,
-			    NULL, NULL);
+	if (chunk->ce_end != chunk->ce_begin) {
+		assert(ctx->ce_ib);
 
-	if (sctx->init_config_gs_rings)
-		ac_parse_ib(f, sctx->init_config_gs_rings->pm4,
-			    sctx->init_config_gs_rings->ndw,
-			    -1, "IB2: Init GS rings", sctx->b.chip_class,
-			    NULL, NULL);
-
-	ac_parse_ib(f, sctx->last_gfx.ib, sctx->last_gfx.num_dw,
-		    last_trace_id, "IB", sctx->b.chip_class,
-		     NULL, NULL);
-
-	if (sctx->last_ce.ib) {
-		ac_parse_ib(f, sctx->last_ce.ib, sctx->last_ce.num_dw,
-			    last_ce_trace_id, "CE IB", sctx->b.chip_class,
-			    NULL, NULL);
+		if (scs->flushed) {
+			ac_parse_ib(f, scs->ce.ib + chunk->ce_begin,
+				    chunk->ce_end - chunk->ce_begin,
+				    last_ce_trace_id, "CE IB", ctx->b.chip_class,
+				    NULL, NULL);
+		} else {
+			si_parse_current_ib(f, ctx->ce_ib, chunk->ce_begin,
+					    chunk->ce_end, last_ce_trace_id, "CE IB",
+					    ctx->b.chip_class);
+		}
 	}
+
+	if (chunk->dump_bo_list) {
+		fprintf(f, "Flushing.\n\n");
+		si_dump_bo_list(ctx, &scs->gfx, f);
+	}
+}
+
+static const struct u_log_chunk_type si_log_chunk_type_cs = {
+	.destroy = si_log_chunk_type_cs_destroy,
+	.print = si_log_chunk_type_cs_print,
+};
+
+static void si_log_cs(struct si_context *ctx, struct u_log_context *log,
+		      bool dump_bo_list)
+{
+	assert(ctx->current_saved_cs);
+
+	struct si_saved_cs *scs = ctx->current_saved_cs;
+	unsigned gfx_cur = ctx->b.gfx.cs->prev_dw + ctx->b.gfx.cs->current.cdw;
+	unsigned ce_cur = 0;
+
+	if (ctx->ce_ib)
+		ce_cur = ctx->ce_ib->prev_dw + ctx->ce_ib->current.cdw;
+
+	if (!dump_bo_list &&
+	    gfx_cur == scs->gfx_last_dw &&
+	    ce_cur == scs->ce_last_dw)
+		return;
+
+	struct si_log_chunk_cs *chunk = calloc(1, sizeof(*chunk));
+
+	chunk->ctx = ctx;
+	si_saved_cs_reference(&chunk->cs, scs);
+	chunk->dump_bo_list = dump_bo_list;
+
+	chunk->gfx_begin = scs->gfx_last_dw;
+	chunk->gfx_end = gfx_cur;
+	scs->gfx_last_dw = gfx_cur;
+
+	chunk->ce_begin = scs->ce_last_dw;
+	chunk->ce_end = ce_cur;
+	scs->ce_last_dw = ce_cur;
+
+	u_log_chunk(log, &si_log_chunk_type_cs, chunk);
+}
+
+void si_auto_log_cs(void *data, struct u_log_context *log)
+{
+	struct si_context *ctx = (struct si_context *)data;
+	si_log_cs(ctx, log, false);
+}
+
+void si_log_hw_flush(struct si_context *sctx)
+{
+	if (!sctx->b.log)
+		return;
+
+	si_log_cs(sctx, sctx->b.log, true);
 }
 
 static const char *priority_to_string(enum radeon_bo_priority priority)
@@ -920,6 +1055,9 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 
+	if (sctx->b.log)
+		u_log_flush(sctx->b.log);
+
 	if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
 		si_dump_debug_registers(sctx, f);
 
@@ -957,18 +1095,6 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 
 	u_log_new_page_print(&log, f);
 	u_log_context_destroy(&log);
-
-	if (flags & PIPE_DUMP_LAST_COMMAND_BUFFER) {
-		si_dump_bo_list(sctx, &sctx->last_gfx, f);
-		si_dump_last_ib(sctx, f);
-
-		fprintf(f, "Done.\n");
-
-		/* dump only once */
-		radeon_clear_saved_cs(&sctx->last_gfx);
-		radeon_clear_saved_cs(&sctx->last_ce);
-		r600_resource_reference(&sctx->last_trace_buf, NULL);
-	}
 }
 
 static void si_dump_dma(struct si_context *sctx,

@@ -96,9 +96,7 @@ static void si_destroy_context(struct pipe_context *context)
 
 	LLVMDisposeTargetMachine(sctx->tm);
 
-	r600_resource_reference(&sctx->trace_buf, NULL);
-	r600_resource_reference(&sctx->last_trace_buf, NULL);
-	radeon_clear_saved_cs(&sctx->last_gfx);
+	si_saved_cs_reference(&sctx->current_saved_cs, NULL);
 
 	pb_slabs_deinit(&sctx->bindless_descriptor_slabs);
 	util_dynarray_fini(&sctx->bindless_descriptors);
@@ -163,6 +161,9 @@ static void si_set_log_context(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	sctx->b.log = log;
+
+	if (log)
+		u_log_add_auto_logger(log, si_auto_log_cs, sctx);
 }
 
 static struct pipe_context *si_create_context(struct pipe_screen *screen,

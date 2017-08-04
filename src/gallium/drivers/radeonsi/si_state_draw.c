@@ -30,6 +30,7 @@
 #include "gfx9d.h"
 
 #include "util/u_index_modify.h"
+#include "util/u_log.h"
 #include "util/u_upload_mgr.h"
 #include "util/u_prim.h"
 
@@ -1434,7 +1435,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 	si_ce_post_draw_synchronization(sctx);
 
-	if (sctx->trace_buf)
+	if (unlikely(sctx->current_saved_cs))
 		si_trace_emit(sctx);
 
 	/* Workaround for a VGT hang when streamout is enabled.
@@ -1464,20 +1465,18 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 void si_trace_emit(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-
-	sctx->trace_id++;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, sctx->trace_buf,
-			      RADEON_USAGE_READWRITE, RADEON_PRIO_TRACE);
+	uint64_t va = sctx->current_saved_cs->trace_buf->gpu_address;
+	uint32_t trace_id = ++sctx->current_saved_cs->trace_id;
 
 	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
 	radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
 		    S_370_WR_CONFIRM(1) |
 		    S_370_ENGINE_SEL(V_370_ME));
-	radeon_emit(cs, sctx->trace_buf->gpu_address);
-	radeon_emit(cs, sctx->trace_buf->gpu_address >> 32);
-	radeon_emit(cs, sctx->trace_id);
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, trace_id);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-	radeon_emit(cs, AC_ENCODE_TRACE_POINT(sctx->trace_id));
+	radeon_emit(cs, AC_ENCODE_TRACE_POINT(trace_id));
 
 	if (sctx->ce_ib) {
 		struct radeon_winsys_cs *ce = sctx->ce_ib;
@@ -1486,10 +1485,13 @@ void si_trace_emit(struct si_context *sctx)
 		radeon_emit(ce, S_370_DST_SEL(V_370_MEM_ASYNC) |
 			    S_370_WR_CONFIRM(1) |
 			    S_370_ENGINE_SEL(V_370_CE));
-		radeon_emit(ce, sctx->trace_buf->gpu_address + 4);
-		radeon_emit(ce, (sctx->trace_buf->gpu_address + 4) >> 32);
-		radeon_emit(ce, sctx->trace_id);
+		radeon_emit(ce, va + 4);
+		radeon_emit(ce, (va + 4) >> 32);
+		radeon_emit(ce, trace_id);
 		radeon_emit(ce, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(ce, AC_ENCODE_TRACE_POINT(sctx->trace_id));
+		radeon_emit(ce, AC_ENCODE_TRACE_POINT(trace_id));
 	}
+
+	if (sctx->b.log)
+		u_log_flush(sctx->b.log);
 }
