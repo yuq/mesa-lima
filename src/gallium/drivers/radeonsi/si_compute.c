@@ -151,6 +151,7 @@ static void *si_create_compute_state(
 	struct si_screen *sscreen = (struct si_screen *)ctx->screen;
 	struct si_compute *program = CALLOC_STRUCT(si_compute);
 
+	pipe_reference_init(&program->reference, 1);
 	program->screen = (struct si_screen *)ctx->screen;
 	program->ir_type = cso->ir_type;
 	program->local_size = cso->req_local_mem;
@@ -855,20 +856,24 @@ static void si_launch_grid(
 		sctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH;
 }
 
+void si_destroy_compute(struct si_compute *program)
+{
+	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
+		util_queue_drop_job(&program->screen->shader_compiler_queue,
+				    &program->ready);
+		util_queue_fence_destroy(&program->ready);
+	}
+
+	si_shader_destroy(&program->shader);
+	FREE(program);
+}
 
 static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	struct si_compute *program = (struct si_compute *)state;
 	struct si_context *sctx = (struct si_context*)ctx;
 
-	if (!state) {
+	if (!state)
 		return;
-	}
-
-	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
-		util_queue_drop_job(&sctx->screen->shader_compiler_queue,
-				    &program->ready);
-		util_queue_fence_destroy(&program->ready);
-	}
 
 	if (program == sctx->cs_shader_state.program)
 		sctx->cs_shader_state.program = NULL;
@@ -876,8 +881,7 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	if (program == sctx->cs_shader_state.emitted_program)
 		sctx->cs_shader_state.emitted_program = NULL;
 
-	si_shader_destroy(&program->shader);
-	FREE(program);
+	si_compute_reference(&program, NULL);
 }
 
 static void si_set_compute_resources(struct pipe_context * ctx_,
