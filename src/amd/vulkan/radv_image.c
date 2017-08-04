@@ -217,7 +217,8 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 
 	state[0] = va >> 8;
 	if (chip_class < GFX9)
-		state[0] |= image->surface.tile_swizzle;
+		if (base_level_info->mode == RADEON_SURF_MODE_2D)
+			state[0] |= image->surface.tile_swizzle;
 	state[1] &= C_008F14_BASE_ADDRESS_HI;
 	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
 	state[3] |= S_008F1C_TILING_INDEX(si_tile_mode_index(image, base_level,
