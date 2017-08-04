@@ -390,12 +390,10 @@ static uint32_t *ac_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
  *                      be NULL.
  * \param addr_callback_data user data for addr_callback
  */
-void ac_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
-		 const char *name, enum chip_class chip_class,
-		 ac_debug_addr_callback addr_callback, void *addr_callback_data)
+void ac_parse_ib_chunk(FILE *f, uint32_t *ib, int num_dw, int trace_id,
+		       enum chip_class chip_class,
+		       ac_debug_addr_callback addr_callback, void *addr_callback_data)
 {
-	fprintf(f, "------------------ %s begin ------------------\n", name);
-
 	while (num_dw > 0) {
 		unsigned type = PKT_TYPE_G(ib[0]);
 
@@ -420,10 +418,33 @@ void ac_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
 		}
 	}
 
-	fprintf(f, "------------------- %s end -------------------\n", name);
 	if (num_dw < 0) {
-		printf("Packet ends after the end of IB.\n");
+		printf("\nPacket ends after the end of IB.\n");
 		exit(0);
 	}
-	fprintf(f, "\n");
+}
+
+/**
+ * Parse and print an IB into a file.
+ *
+ * \param f		file
+ * \param ib		IB
+ * \param num_dw	size of the IB
+ * \param chip_class	chip class
+ * \param trace_id	the last trace ID that is known to have been reached
+ *			and executed by the CP, typically read from a buffer
+ * \param addr_callback Get a mapped pointer of the IB at a given address. Can
+ *                      be NULL.
+ * \param addr_callback_data user data for addr_callback
+ */
+void ac_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
+		 const char *name, enum chip_class chip_class,
+		 ac_debug_addr_callback addr_callback, void *addr_callback_data)
+{
+	fprintf(f, "------------------ %s begin ------------------\n", name);
+
+	ac_parse_ib_chunk(f, ib, num_dw, trace_id, chip_class, addr_callback,
+			  addr_callback_data);
+
+	fprintf(f, "------------------- %s end -------------------\n\n", name);
 }
