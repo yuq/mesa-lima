@@ -260,6 +260,8 @@ C_SOURCES := \
 	util/u_keymap.h \
 	util/u_linear.c \
 	util/u_linear.h \
+	util/u_log.c \
+	util/u_log.h \
 	util/u_math.c \
 	util/u_math.h \
 	util/u_memory.h \
