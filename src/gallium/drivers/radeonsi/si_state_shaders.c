@@ -3297,12 +3297,12 @@ bool si_update_shaders(struct si_context *sctx)
 		}
 	}
 
-	if (si_pm4_state_changed(sctx, ls) ||
-	    si_pm4_state_changed(sctx, hs) ||
-	    si_pm4_state_changed(sctx, es) ||
-	    si_pm4_state_changed(sctx, gs) ||
-	    si_pm4_state_changed(sctx, vs) ||
-	    si_pm4_state_changed(sctx, ps)) {
+	if (si_pm4_state_enabled_and_changed(sctx, ls) ||
+	    si_pm4_state_enabled_and_changed(sctx, hs) ||
+	    si_pm4_state_enabled_and_changed(sctx, es) ||
+	    si_pm4_state_enabled_and_changed(sctx, gs) ||
+	    si_pm4_state_enabled_and_changed(sctx, vs) ||
+	    si_pm4_state_enabled_and_changed(sctx, ps)) {
 		if (!si_update_spi_tmpring_size(sctx))
 			return false;
 	}

@@ -288,6 +288,9 @@ struct si_buffer_resources {
 #define si_pm4_state_changed(sctx, member) \
 	((sctx)->queued.named.member != (sctx)->emitted.named.member)
 
+#define si_pm4_state_enabled_and_changed(sctx, member) \
+	((sctx)->queued.named.member && si_pm4_state_changed(sctx, member))
+
 #define si_pm4_bind_state(sctx, member, value) \
 	do { \
 		(sctx)->queued.named.member = (value); \
