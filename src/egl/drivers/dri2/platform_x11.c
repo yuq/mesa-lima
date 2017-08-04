@@ -246,11 +246,6 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
                        dri2_surf->drawable, dri2_dpy->screen->root,
 			dri2_surf->base.Width, dri2_surf->base.Height);
    } else {
-      if (!drawable) {
-         assert(type == EGL_PIXMAP_BIT)
-         _eglError(EGL_BAD_NATIVE_PIXMAP, "dri2_create_surface");
-         goto cleanup_surf;
-      }
       dri2_surf->drawable = drawable;
    }
 
