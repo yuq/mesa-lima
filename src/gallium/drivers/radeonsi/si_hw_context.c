@@ -216,8 +216,20 @@ void si_begin_new_cs(struct si_context *ctx)
 	if (ctx->ce_ib)
 		si_ce_restore_all_descriptors_at_ib_start(ctx);
 
-	if (ctx->b.chip_class >= CIK)
-		ctx->prefetch_L2 = true;
+	if (ctx->queued.named.ls)
+		ctx->prefetch_L2_mask |= SI_PREFETCH_LS;
+	if (ctx->queued.named.hs)
+		ctx->prefetch_L2_mask |= SI_PREFETCH_HS;
+	if (ctx->queued.named.es)
+		ctx->prefetch_L2_mask |= SI_PREFETCH_ES;
+	if (ctx->queued.named.gs)
+		ctx->prefetch_L2_mask |= SI_PREFETCH_GS;
+	if (ctx->queued.named.vs)
+		ctx->prefetch_L2_mask |= SI_PREFETCH_VS;
+	if (ctx->queued.named.ps)
+		ctx->prefetch_L2_mask |= SI_PREFETCH_PS;
+	if (ctx->vertex_buffers.buffer)
+		ctx->prefetch_L2_mask |= SI_PREFETCH_VBO_DESCRIPTORS;
 
 	/* CLEAR_STATE disables all colorbuffers, so only enable bound ones. */
 	ctx->framebuffer.dirty_cbufs =

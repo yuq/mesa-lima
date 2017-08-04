@@ -451,28 +451,28 @@ static void cik_prefetch_shader_async(struct si_context *sctx,
 void cik_emit_prefetch_L2(struct si_context *sctx)
 {
 	/* Prefetch shaders and VBO descriptors to TC L2. */
-	if (si_pm4_state_enabled_and_changed(sctx, ls))
+	if (sctx->prefetch_L2_mask & SI_PREFETCH_LS)
 		cik_prefetch_shader_async(sctx, sctx->queued.named.ls);
-	if (si_pm4_state_enabled_and_changed(sctx, hs))
+	if (sctx->prefetch_L2_mask & SI_PREFETCH_HS)
 		cik_prefetch_shader_async(sctx, sctx->queued.named.hs);
-	if (si_pm4_state_enabled_and_changed(sctx, es))
+	if (sctx->prefetch_L2_mask & SI_PREFETCH_ES)
 		cik_prefetch_shader_async(sctx, sctx->queued.named.es);
-	if (si_pm4_state_enabled_and_changed(sctx, gs))
+	if (sctx->prefetch_L2_mask & SI_PREFETCH_GS)
 		cik_prefetch_shader_async(sctx, sctx->queued.named.gs);
-	if (si_pm4_state_enabled_and_changed(sctx, vs))
+	if (sctx->prefetch_L2_mask & SI_PREFETCH_VS)
 		cik_prefetch_shader_async(sctx, sctx->queued.named.vs);
 
 	/* Vertex buffer descriptors are uploaded uncached, so prefetch
 	 * them right after the VS binary. */
-	if (sctx->vertex_buffer_pointer_dirty) {
+	if (sctx->prefetch_L2_mask & SI_PREFETCH_VBO_DESCRIPTORS) {
 		cik_prefetch_TC_L2_async(sctx, &sctx->vertex_buffers.buffer->b.b,
 					 sctx->vertex_buffers.buffer_offset,
 					 sctx->vertex_elements->desc_list_byte_size);
 	}
-	if (si_pm4_state_enabled_and_changed(sctx, ps))
+	if (sctx->prefetch_L2_mask & SI_PREFETCH_PS)
 		cik_prefetch_shader_async(sctx, sctx->queued.named.ps);
 
-	sctx->prefetch_L2 = false;
+	sctx->prefetch_L2_mask = 0;
 }
 
 void si_init_cp_dma_functions(struct si_context *sctx)

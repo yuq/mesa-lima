@@ -68,6 +68,14 @@
 #define SI_CONTEXT_VGT_FLUSH		(R600_CONTEXT_PRIVATE_FLAG << 12)
 #define SI_CONTEXT_VGT_STREAMOUT_SYNC	(R600_CONTEXT_PRIVATE_FLAG << 13)
 
+#define SI_PREFETCH_VBO_DESCRIPTORS	(1 << 0)
+#define SI_PREFETCH_LS			(1 << 1)
+#define SI_PREFETCH_HS			(1 << 2)
+#define SI_PREFETCH_ES			(1 << 3)
+#define SI_PREFETCH_GS			(1 << 4)
+#define SI_PREFETCH_VS			(1 << 5)
+#define SI_PREFETCH_PS			(1 << 6)
+
 #define SI_MAX_BORDER_COLORS	4096
 #define SIX_BITS		0x3F
 
@@ -279,11 +287,11 @@ struct si_context {
 	struct u_suballocator		*ce_suballocator;
 	unsigned			ce_ram_saved_offset;
 	uint16_t			total_ce_ram_allocated;
+	uint16_t			prefetch_L2_mask;
 	bool				ce_need_synchronization:1;
 
 	bool				gfx_flush_in_progress:1;
 	bool				compute_is_busy:1;
-	bool				prefetch_L2:1;
 
 	/* Atoms (direct states). */
 	union si_state_atoms		atoms;
