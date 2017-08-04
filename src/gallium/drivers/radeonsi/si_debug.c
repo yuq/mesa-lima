@@ -1067,34 +1067,38 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 			si_dump_command("Wave information", "umr -O bits -wa", f);
 		}
 	}
+}
 
-	struct u_log_context log;
-	u_log_context_init(&log);
+void si_log_draw_state(struct si_context *sctx, struct u_log_context *log)
+{
+	if (!log)
+		return;
 
-	if (flags & PIPE_DUMP_CURRENT_STATES)
-		si_dump_framebuffer(sctx, &log);
+	si_dump_framebuffer(sctx, log);
 
-	if (flags & PIPE_DUMP_CURRENT_SHADERS) {
-		si_dump_gfx_shader(sctx, &sctx->vs_shader, &log);
-		si_dump_gfx_shader(sctx, &sctx->tcs_shader, &log);
-		si_dump_gfx_shader(sctx, &sctx->tes_shader, &log);
-		si_dump_gfx_shader(sctx, &sctx->gs_shader, &log);
-		si_dump_gfx_shader(sctx, &sctx->ps_shader, &log);
-		si_dump_compute_shader(&sctx->cs_shader_state, &log);
+	si_dump_gfx_shader(sctx, &sctx->vs_shader, log);
+	si_dump_gfx_shader(sctx, &sctx->tcs_shader, log);
+	si_dump_gfx_shader(sctx, &sctx->tes_shader, log);
+	si_dump_gfx_shader(sctx, &sctx->gs_shader, log);
+	si_dump_gfx_shader(sctx, &sctx->ps_shader, log);
 
-		si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
-					"", "RW buffers", 4, SI_NUM_RW_BUFFERS,
-					si_identity, &log);
-		si_dump_gfx_descriptors(sctx, &sctx->vs_shader, &log);
-		si_dump_gfx_descriptors(sctx, &sctx->tcs_shader, &log);
-		si_dump_gfx_descriptors(sctx, &sctx->tes_shader, &log);
-		si_dump_gfx_descriptors(sctx, &sctx->gs_shader, &log);
-		si_dump_gfx_descriptors(sctx, &sctx->ps_shader, &log);
-		si_dump_compute_descriptors(sctx, &log);
-	}
+	si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
+				"", "RW buffers", 4, SI_NUM_RW_BUFFERS,
+				si_identity, log);
+	si_dump_gfx_descriptors(sctx, &sctx->vs_shader, log);
+	si_dump_gfx_descriptors(sctx, &sctx->tcs_shader, log);
+	si_dump_gfx_descriptors(sctx, &sctx->tes_shader, log);
+	si_dump_gfx_descriptors(sctx, &sctx->gs_shader, log);
+	si_dump_gfx_descriptors(sctx, &sctx->ps_shader, log);
+}
 
-	u_log_new_page_print(&log, f);
-	u_log_context_destroy(&log);
+void si_log_compute_state(struct si_context *sctx, struct u_log_context *log)
+{
+	if (!log)
+		return;
+
+	si_dump_compute_shader(&sctx->cs_shader_state, log);
+	si_dump_compute_descriptors(sctx, log);
 }
 
 static void si_dump_dma(struct si_context *sctx,
@@ -1246,13 +1250,17 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 			sctx->apitrace_call_number);
 
 	switch (ring) {
-	case RING_GFX:
-		si_dump_debug_state(&sctx->b.b, f,
-				    PIPE_DUMP_CURRENT_STATES |
-				    PIPE_DUMP_CURRENT_SHADERS |
-				    PIPE_DUMP_LAST_COMMAND_BUFFER);
-		break;
+	case RING_GFX: {
+		struct u_log_context log;
+		u_log_context_init(&log);
 
+		si_log_draw_state(sctx, &log);
+		si_log_compute_state(sctx, &log);
+
+		u_log_new_page_print(&log, f);
+		u_log_context_destroy(&log);
+		break;
+	}
 	case RING_DMA:
 		si_dump_dma(sctx, saved, f);
 		break;

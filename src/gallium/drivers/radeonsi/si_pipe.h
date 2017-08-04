@@ -508,6 +508,8 @@ void si_init_cp_dma_functions(struct si_context *sctx);
 /* si_debug.c */
 void si_auto_log_cs(void *data, struct u_log_context *log);
 void si_log_hw_flush(struct si_context *sctx);
+void si_log_draw_state(struct si_context *sctx, struct u_log_context *log);
+void si_log_compute_state(struct si_context *sctx, struct u_log_context *log);
 void si_init_debug_functions(struct si_context *sctx);
 void si_check_vm_faults(struct r600_common_context *ctx,
 			struct radeon_saved_cs *saved, enum ring_type ring);

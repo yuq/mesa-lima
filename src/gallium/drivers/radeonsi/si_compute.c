@@ -801,6 +801,9 @@ static void si_launch_grid(
 
 	si_need_cs_space(sctx);
 
+	if (sctx->b.log)
+		si_log_compute_state(sctx, sctx->b.log);
+
 	if (!sctx->cs_shader_state.initialized)
 		si_initialize_compute(sctx);
 
@@ -846,6 +849,9 @@ static void si_launch_grid(
 	si_emit_dispatch_packets(sctx, info);
 
 	si_ce_post_draw_synchronization(sctx);
+
+	if (unlikely(sctx->current_saved_cs))
+		si_trace_emit(sctx);
 
 	sctx->compute_is_busy = true;
 	sctx->b.num_compute_calls++;
