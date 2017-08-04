@@ -120,8 +120,12 @@ libEGL_common_la_SOURCES += \
 	$(dri2_backend_FILES) \
 	$(dri3_backend_FILES)
 
-libEGL_common_la_LIBADD += $(top_builddir)/src/loader/libloader.la
-libEGL_common_la_LIBADD += $(DLOPEN_LIBS) $(LIBDRM_LIBS) $(CLOCK_LIB)
+libEGL_common_la_LIBADD += \
+	$(top_builddir)/src/loader/libloader.la \
+	$(top_builddir)/src/util/libxmlconfig.la \
+	$(DLOPEN_LIBS) \
+	$(LIBDRM_LIBS) \
+	$(CLOCK_LIB)
 
 GLVND_GEN_DEPS = generate/gen_egl_dispatch.py \
 	generate/egl.xml generate/eglFunctionList.py generate/genCommon.py \
