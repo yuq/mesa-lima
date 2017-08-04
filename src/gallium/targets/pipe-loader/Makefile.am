@@ -25,6 +25,7 @@ include $(top_srcdir)/src/gallium/Automake.inc
 AM_CPPFLAGS = \
 	$(GALLIUM_CFLAGS) \
 	-I$(top_srcdir)/include \
+	-I$(top_builddir)/src/gallium/drivers \
 	-I$(top_srcdir)/src/gallium/drivers \
 	-I$(top_srcdir)/src/gallium/winsys \
 	-I$(top_builddir)/src/util \
