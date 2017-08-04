@@ -238,7 +238,7 @@ dri3_create_pbuffer_surface(_EGLDriver *drv, _EGLDisplay *disp,
                                 _EGLConfig *conf, const EGLint *attrib_list)
 {
    return dri3_create_surface(drv, disp, EGL_PBUFFER_BIT, conf,
-                              XCB_WINDOW_NONE, attrib_list);
+                              NULL, attrib_list);
 }
 
 static EGLBoolean
