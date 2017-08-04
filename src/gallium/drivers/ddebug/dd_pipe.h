@@ -33,6 +33,7 @@
 #include "pipe/p_screen.h"
 #include "dd_util.h"
 #include "os/os_thread.h"
+#include "util/u_log.h"
 
 enum dd_mode {
    DD_DETECT_HANGS,
@@ -224,6 +225,7 @@ struct dd_draw_record {
 
    struct dd_call call;
    struct dd_draw_state_copy draw_state;
+   struct u_log_page *log_page;
    char *driver_state_log;
 };
 
@@ -234,6 +236,8 @@ struct dd_context
 
    struct dd_draw_state draw_state;
    unsigned num_draw_calls;
+
+   struct u_log_context log;
 
    /* Pipelined hang detection.
     *

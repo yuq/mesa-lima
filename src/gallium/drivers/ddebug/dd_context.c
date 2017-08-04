@@ -583,6 +583,11 @@ dd_context_destroy(struct pipe_context *_pipe)
       pipe->transfer_unmap(pipe, dctx->fence_transfer);
       pipe_resource_reference(&dctx->fence, NULL);
    }
+
+   if (pipe->set_log_context)
+      pipe->set_log_context(pipe, NULL);
+   u_log_context_destroy(&dctx->log);
+
    pipe->destroy(pipe);
    FREE(dctx);
 }
@@ -898,6 +903,10 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    CTX_INIT(make_image_handle_resident);
 
    dd_init_draw_functions(dctx);
+
+   u_log_context_init(&dctx->log);
+   if (pipe->set_log_context)
+      pipe->set_log_context(pipe, &dctx->log);
 
    dctx->draw_state.sample_mask = ~0;
 

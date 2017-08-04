@@ -561,6 +561,12 @@ dd_write_report(struct dd_context *dctx, struct dd_call *call, unsigned flags,
 
    dd_dump_call(f, &dctx->draw_state, call);
    dd_dump_driver_state(dctx, f, flags);
+
+   fprintf(f,"\n\n**************************************************"
+             "***************************\n");
+   fprintf(f, "Context Log:\n\n");
+   u_log_new_page_print(&dctx->log, f);
+
    if (dump_dmesg)
       dd_dump_dmesg(f);
    dd_close_file_stream(f);
@@ -936,6 +942,7 @@ dd_free_record(struct dd_draw_record **record)
 {
    struct dd_draw_record *next = (*record)->next;
 
+   u_log_page_destroy((*record)->log_page);
    dd_unreference_copy_of_call(&(*record)->call);
    dd_unreference_copy_of_draw_state(&(*record)->draw_state);
    FREE((*record)->driver_state_log);
@@ -959,6 +966,11 @@ dd_dump_record(struct dd_context *dctx, struct dd_draw_record *record,
 
    dd_dump_call(f, &record->draw_state.base, &record->call);
    fprintf(f, "%s\n", record->driver_state_log);
+
+   fprintf(f,"\n\n**************************************************"
+             "***************************\n");
+   fprintf(f, "Context Log:\n\n");
+   u_log_page_print(record->log_page, f);
 
    dctx->pipe->dump_debug_state(dctx->pipe, f,
                                 PIPE_DUMP_DEVICE_STATUS_REGISTERS);
@@ -1101,6 +1113,7 @@ dd_pipelined_process_draw(struct dd_context *dctx, struct dd_call *call)
    record->timestamp = os_time_get();
    record->sequence_no = dctx->sequence_no;
    record->driver_state_log = log;
+   record->log_page = u_log_new_page(&dctx->log);
 
    memset(&record->call, 0, sizeof(record->call));
    dd_copy_call(&record->call, call);
@@ -1170,6 +1183,8 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
 
             /* Terminate the process to prevent future hangs. */
             dd_kill_process();
+         } else {
+            u_log_page_destroy(u_log_new_page(&dctx->log));
          }
          break;
       case DD_DETECT_HANGS_PIPELINED:
@@ -1193,6 +1208,8 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
                             false);
             /* No need to continue. */
             exit(0);
+         } else {
+            u_log_page_destroy(u_log_new_page(&dctx->log));
          }
          break;
       default:
