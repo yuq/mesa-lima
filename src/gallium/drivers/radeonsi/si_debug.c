@@ -30,6 +30,7 @@
 #include "gfx9d.h"
 #include "sid_tables.h"
 #include "ddebug/dd_util.h"
+#include "util/u_log.h"
 #include "util/u_memory.h"
 #include "ac_debug.h"
 
@@ -45,24 +46,72 @@ static void si_dump_shader(struct si_screen *sscreen,
 		si_shader_dump(sscreen, shader, NULL, processor, f, false);
 }
 
-static void si_dump_gfx_shader(struct si_screen *sscreen,
-			       const struct si_shader_ctx_state *state, FILE *f)
+struct si_log_chunk_shader {
+	/* The shader destroy code assumes a current context for unlinking of
+	 * PM4 packets etc.
+	 *
+	 * While we should be able to destroy shaders without a context, doing
+	 * so would happen only very rarely and be therefore likely to fail
+	 * just when you're trying to debug something. Let's just remember the
+	 * current context in the chunk.
+	 */
+	struct si_context *ctx;
+	struct si_shader *shader;
+
+	/* For keep-alive reference counts */
+	struct si_shader_selector *sel;
+	struct si_compute *program;
+};
+
+static void
+si_log_chunk_shader_destroy(void *data)
 {
-	const struct si_shader *current = state->current;
+	struct si_log_chunk_shader *chunk = data;
+	si_shader_selector_reference(chunk->ctx, &chunk->sel, NULL);
+	si_compute_reference(&chunk->program, NULL);
+	FREE(chunk);
+}
+
+static void
+si_log_chunk_shader_print(void *data, FILE *f)
+{
+	struct si_log_chunk_shader *chunk = data;
+	struct si_screen *sscreen = chunk->ctx->screen;
+	si_dump_shader(sscreen, chunk->shader->selector->info.processor,
+		       chunk->shader, f);
+}
+
+static struct u_log_chunk_type si_log_chunk_type_shader = {
+	.destroy = si_log_chunk_shader_destroy,
+	.print = si_log_chunk_shader_print,
+};
+
+static void si_dump_gfx_shader(struct si_context *ctx,
+			       const struct si_shader_ctx_state *state,
+			       struct u_log_context *log)
+{
+	struct si_shader *current = state->current;
 
 	if (!state->cso || !current)
 		return;
 
-	si_dump_shader(sscreen, state->cso->info.processor, current, f);
+	struct si_log_chunk_shader *chunk = CALLOC_STRUCT(si_log_chunk_shader);
+	chunk->ctx = ctx;
+	chunk->shader = current;
+	si_shader_selector_reference(ctx, &chunk->sel, current->selector);
+	u_log_chunk(log, &si_log_chunk_type_shader, chunk);
 }
 
-static void si_dump_compute_shader(struct si_screen *sscreen,
-				   const struct si_cs_shader_state *state, FILE *f)
+static void si_dump_compute_shader(const struct si_cs_shader_state *state,
+				   struct u_log_context *log)
 {
 	if (!state->program || state->program != state->emitted_program)
 		return;
 
-	si_dump_shader(sscreen, PIPE_SHADER_COMPUTE, &state->program->shader, f);
+	struct si_log_chunk_shader *chunk = CALLOC_STRUCT(si_log_chunk_shader);
+	chunk->shader = &state->program->shader;
+	si_compute_reference(&chunk->program, state->program);
+	u_log_chunk(log, &si_log_chunk_type_shader, chunk);
 }
 
 /**
@@ -365,7 +414,7 @@ static void si_dump_bo_list(struct si_context *sctx,
 		   "      Other buffers can still be allocated there.\n\n");
 }
 
-static void si_dump_framebuffer(struct si_context *sctx, FILE *f)
+static void si_dump_framebuffer(struct si_context *sctx, struct u_log_context *log)
 {
 	struct pipe_framebuffer_state *state = &sctx->framebuffer.state;
 	struct r600_texture *rtex;
@@ -376,20 +425,112 @@ static void si_dump_framebuffer(struct si_context *sctx, FILE *f)
 			continue;
 
 		rtex = (struct r600_texture*)state->cbufs[i]->texture;
-		fprintf(f, COLOR_YELLOW "Color buffer %i:" COLOR_RESET "\n", i);
-		r600_print_texture_info(sctx->b.screen, rtex, f);
-		fprintf(f, "\n");
+		u_log_printf(log, COLOR_YELLOW "Color buffer %i:" COLOR_RESET "\n", i);
+		r600_print_texture_info(sctx->b.screen, rtex, log);
+		u_log_printf(log, "\n");
 	}
 
 	if (state->zsbuf) {
 		rtex = (struct r600_texture*)state->zsbuf->texture;
-		fprintf(f, COLOR_YELLOW "Depth-stencil buffer:" COLOR_RESET "\n");
-		r600_print_texture_info(sctx->b.screen, rtex, f);
-		fprintf(f, "\n");
+		u_log_printf(log, COLOR_YELLOW "Depth-stencil buffer:" COLOR_RESET "\n");
+		r600_print_texture_info(sctx->b.screen, rtex, log);
+		u_log_printf(log, "\n");
 	}
 }
 
 typedef unsigned (*slot_remap_func)(unsigned);
+
+struct si_log_chunk_desc_list {
+	/** Pointer to memory map of buffer where the list is uploader */
+	uint32_t *gpu_list;
+	/** Reference of buffer where the list is uploaded, so that gpu_list
+	 * is kept live. */
+	struct r600_resource *buf;
+
+	const char *shader_name;
+	const char *elem_name;
+	slot_remap_func slot_remap;
+	unsigned element_dw_size;
+	unsigned num_elements;
+
+	uint32_t list[0];
+};
+
+static void
+si_log_chunk_desc_list_destroy(void *data)
+{
+	struct si_log_chunk_desc_list *chunk = data;
+	r600_resource_reference(&chunk->buf, NULL);
+	FREE(chunk);
+}
+
+static void
+si_log_chunk_desc_list_print(void *data, FILE *f)
+{
+	struct si_log_chunk_desc_list *chunk = data;
+
+	for (unsigned i = 0; i < chunk->num_elements; i++) {
+		unsigned cpu_dw_offset = i * chunk->element_dw_size;
+		unsigned gpu_dw_offset = chunk->slot_remap(i) * chunk->element_dw_size;
+		const char *list_note = chunk->gpu_list ? "GPU list" : "CPU list";
+		uint32_t *cpu_list = chunk->list + cpu_dw_offset;
+		uint32_t *gpu_list = chunk->gpu_list ? chunk->gpu_list + gpu_dw_offset : cpu_list;
+
+		fprintf(f, COLOR_GREEN "%s%s slot %u (%s):" COLOR_RESET "\n",
+			chunk->shader_name, chunk->elem_name, i, list_note);
+
+		switch (chunk->element_dw_size) {
+		case 4:
+			for (unsigned j = 0; j < 4; j++)
+				ac_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
+					    gpu_list[j], 0xffffffff);
+			break;
+		case 8:
+			for (unsigned j = 0; j < 8; j++)
+				ac_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
+					    gpu_list[j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    Buffer:" COLOR_RESET "\n");
+			for (unsigned j = 0; j < 4; j++)
+				ac_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
+					    gpu_list[4+j], 0xffffffff);
+			break;
+		case 16:
+			for (unsigned j = 0; j < 8; j++)
+				ac_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
+					    gpu_list[j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    Buffer:" COLOR_RESET "\n");
+			for (unsigned j = 0; j < 4; j++)
+				ac_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
+					    gpu_list[4+j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    FMASK:" COLOR_RESET "\n");
+			for (unsigned j = 0; j < 8; j++)
+				ac_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
+					    gpu_list[8+j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    Sampler state:" COLOR_RESET "\n");
+			for (unsigned j = 0; j < 4; j++)
+				ac_dump_reg(f, R_008F30_SQ_IMG_SAMP_WORD0 + j*4,
+					    gpu_list[12+j], 0xffffffff);
+			break;
+		}
+
+		if (memcmp(gpu_list, cpu_list, chunk->element_dw_size * 4) != 0) {
+			fprintf(f, COLOR_RED "!!!!! This slot was corrupted in GPU memory !!!!!"
+				COLOR_RESET "\n");
+		}
+
+		fprintf(f, "\n");
+	}
+
+}
+
+static const struct u_log_chunk_type si_log_chunk_type_descriptor_list = {
+	.destroy = si_log_chunk_desc_list_destroy,
+	.print = si_log_chunk_desc_list_print,
+};
 
 static void si_dump_descriptor_list(struct si_descriptors *desc,
 				    const char *shader_name,
@@ -397,68 +538,30 @@ static void si_dump_descriptor_list(struct si_descriptors *desc,
 				    unsigned element_dw_size,
 				    unsigned num_elements,
 				    slot_remap_func slot_remap,
-				    FILE *f)
+				    struct u_log_context *log)
 {
-	unsigned i, j;
-
 	if (!desc->list)
 		return;
 
-	for (i = 0; i < num_elements; i++) {
-		unsigned dw_offset = slot_remap(i) * element_dw_size;
-		uint32_t *gpu_ptr = desc->gpu_list ? desc->gpu_list : desc->list;
-		const char *list_note = desc->gpu_list ? "GPU list" : "CPU list";
-		uint32_t *cpu_list = desc->list + dw_offset;
-		uint32_t *gpu_list = gpu_ptr + dw_offset;
+	struct si_log_chunk_desc_list *chunk =
+		CALLOC_VARIANT_LENGTH_STRUCT(si_log_chunk_desc_list,
+					     4 * element_dw_size * num_elements);
+	chunk->shader_name = shader_name;
+	chunk->elem_name = elem_name;
+	chunk->element_dw_size = element_dw_size;
+	chunk->num_elements = num_elements;
+	chunk->slot_remap = slot_remap;
 
-		fprintf(f, COLOR_GREEN "%s%s slot %u (%s):" COLOR_RESET "\n",
-			shader_name, elem_name, i, list_note);
+	r600_resource_reference(&chunk->buf, desc->buffer);
+	chunk->gpu_list = desc->gpu_list;
 
-		switch (element_dw_size) {
-		case 4:
-			for (j = 0; j < 4; j++)
-				ac_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
-					    gpu_list[j], 0xffffffff);
-			break;
-		case 8:
-			for (j = 0; j < 8; j++)
-				ac_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
-					    gpu_list[j], 0xffffffff);
-
-			fprintf(f, COLOR_CYAN "    Buffer:" COLOR_RESET "\n");
-			for (j = 0; j < 4; j++)
-				ac_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
-					    gpu_list[4+j], 0xffffffff);
-			break;
-		case 16:
-			for (j = 0; j < 8; j++)
-				ac_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
-					    gpu_list[j], 0xffffffff);
-
-			fprintf(f, COLOR_CYAN "    Buffer:" COLOR_RESET "\n");
-			for (j = 0; j < 4; j++)
-				ac_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
-					    gpu_list[4+j], 0xffffffff);
-
-			fprintf(f, COLOR_CYAN "    FMASK:" COLOR_RESET "\n");
-			for (j = 0; j < 8; j++)
-				ac_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
-					    gpu_list[8+j], 0xffffffff);
-
-			fprintf(f, COLOR_CYAN "    Sampler state:" COLOR_RESET "\n");
-			for (j = 0; j < 4; j++)
-				ac_dump_reg(f, R_008F30_SQ_IMG_SAMP_WORD0 + j*4,
-					    gpu_list[12+j], 0xffffffff);
-			break;
-		}
-
-		if (memcmp(gpu_list, cpu_list, desc->element_dw_size * 4) != 0) {
-			fprintf(f, COLOR_RED "!!!!! This slot was corrupted in GPU memory !!!!!"
-				COLOR_RESET "\n");
-		}
-
-		fprintf(f, "\n");
+	for (unsigned i = 0; i < num_elements; ++i) {
+		memcpy(&chunk->list[i * element_dw_size],
+		       &desc->list[slot_remap(i) * element_dw_size],
+		       4 * element_dw_size);
 	}
+
+	u_log_chunk(log, &si_log_chunk_type_descriptor_list, chunk);
 }
 
 static unsigned si_identity(unsigned slot)
@@ -468,7 +571,8 @@ static unsigned si_identity(unsigned slot)
 
 static void si_dump_descriptors(struct si_context *sctx,
 				enum pipe_shader_type processor,
-				const struct tgsi_shader_info *info, FILE *f)
+				const struct tgsi_shader_info *info,
+				struct u_log_context *log)
 {
 	struct si_descriptors *descs =
 		&sctx->descriptors[SI_DESCS_FIRST_SHADER +
@@ -499,44 +603,45 @@ static void si_dump_descriptors(struct si_context *sctx,
 
 		si_dump_descriptor_list(&sctx->vertex_buffers, name,
 					" - Vertex buffer", 4, info->num_inputs,
-					si_identity, f);
+					si_identity, log);
 	}
 
 	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS],
 				name, " - Constant buffer", 4,
 				util_last_bit(enabled_constbuf),
-				si_get_constbuf_slot, f);
+				si_get_constbuf_slot, log);
 	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS],
 				name, " - Shader buffer", 4,
 				util_last_bit(enabled_shaderbuf),
-				si_get_shaderbuf_slot, f);
+				si_get_shaderbuf_slot, log);
 	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_SAMPLERS_AND_IMAGES],
 				name, " - Sampler", 16,
 				util_last_bit(enabled_samplers),
-				si_get_sampler_slot, f);
+				si_get_sampler_slot, log);
 	si_dump_descriptor_list(&descs[SI_SHADER_DESCS_SAMPLERS_AND_IMAGES],
 				name, " - Image", 8,
 				util_last_bit(enabled_images),
-				si_get_image_slot, f);
+				si_get_image_slot, log);
 }
 
 static void si_dump_gfx_descriptors(struct si_context *sctx,
 				    const struct si_shader_ctx_state *state,
-				    FILE *f)
+				    struct u_log_context *log)
 {
 	if (!state->cso || !state->current)
 		return;
 
-	si_dump_descriptors(sctx, state->cso->type, &state->cso->info, f);
+	si_dump_descriptors(sctx, state->cso->type, &state->cso->info, log);
 }
 
-static void si_dump_compute_descriptors(struct si_context *sctx, FILE *f)
+static void si_dump_compute_descriptors(struct si_context *sctx,
+					struct u_log_context *log)
 {
 	if (!sctx->cs_shader_state.program ||
 	    sctx->cs_shader_state.program != sctx->cs_shader_state.emitted_program)
 		return;
 
-	si_dump_descriptors(sctx, PIPE_SHADER_COMPUTE, NULL, f);
+	si_dump_descriptors(sctx, PIPE_SHADER_COMPUTE, NULL, log);
 }
 
 struct si_shader_inst {
@@ -825,27 +930,33 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		}
 	}
 
+	struct u_log_context log;
+	u_log_context_init(&log);
+
 	if (flags & PIPE_DUMP_CURRENT_STATES)
-		si_dump_framebuffer(sctx, f);
+		si_dump_framebuffer(sctx, &log);
 
 	if (flags & PIPE_DUMP_CURRENT_SHADERS) {
-		si_dump_gfx_shader(sctx->screen, &sctx->vs_shader, f);
-		si_dump_gfx_shader(sctx->screen, &sctx->tcs_shader, f);
-		si_dump_gfx_shader(sctx->screen, &sctx->tes_shader, f);
-		si_dump_gfx_shader(sctx->screen, &sctx->gs_shader, f);
-		si_dump_gfx_shader(sctx->screen, &sctx->ps_shader, f);
-		si_dump_compute_shader(sctx->screen, &sctx->cs_shader_state, f);
+		si_dump_gfx_shader(sctx, &sctx->vs_shader, &log);
+		si_dump_gfx_shader(sctx, &sctx->tcs_shader, &log);
+		si_dump_gfx_shader(sctx, &sctx->tes_shader, &log);
+		si_dump_gfx_shader(sctx, &sctx->gs_shader, &log);
+		si_dump_gfx_shader(sctx, &sctx->ps_shader, &log);
+		si_dump_compute_shader(&sctx->cs_shader_state, &log);
 
 		si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
 					"", "RW buffers", 4, SI_NUM_RW_BUFFERS,
-					si_identity, f);
-		si_dump_gfx_descriptors(sctx, &sctx->vs_shader, f);
-		si_dump_gfx_descriptors(sctx, &sctx->tcs_shader, f);
-		si_dump_gfx_descriptors(sctx, &sctx->tes_shader, f);
-		si_dump_gfx_descriptors(sctx, &sctx->gs_shader, f);
-		si_dump_gfx_descriptors(sctx, &sctx->ps_shader, f);
-		si_dump_compute_descriptors(sctx, f);
+					si_identity, &log);
+		si_dump_gfx_descriptors(sctx, &sctx->vs_shader, &log);
+		si_dump_gfx_descriptors(sctx, &sctx->tcs_shader, &log);
+		si_dump_gfx_descriptors(sctx, &sctx->tes_shader, &log);
+		si_dump_gfx_descriptors(sctx, &sctx->gs_shader, &log);
+		si_dump_gfx_descriptors(sctx, &sctx->ps_shader, &log);
+		si_dump_compute_descriptors(sctx, &log);
 	}
+
+	u_log_new_page_print(&log, f);
+	u_log_context_destroy(&log);
 
 	if (flags & PIPE_DUMP_LAST_COMMAND_BUFFER) {
 		si_dump_bo_list(sctx, &sctx->last_gfx, f);
