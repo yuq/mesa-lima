@@ -279,9 +279,9 @@ VkResult anv_CreateFence(
       return result;
 
    if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-      fence->permanent.bo.state = ANV_FENCE_STATE_SIGNALED;
+      fence->permanent.bo.state = ANV_BO_FENCE_STATE_SIGNALED;
    } else {
-      fence->permanent.bo.state = ANV_FENCE_STATE_RESET;
+      fence->permanent.bo.state = ANV_BO_FENCE_STATE_RESET;
    }
 
    *pFence = anv_fence_to_handle(fence);
@@ -336,7 +336,7 @@ VkResult anv_ResetFences(
 
       switch (impl->type) {
       case ANV_FENCE_TYPE_BO:
-         impl->bo.state = ANV_FENCE_STATE_RESET;
+         impl->bo.state = ANV_BO_FENCE_STATE_RESET;
          break;
 
       default:
@@ -363,18 +363,18 @@ VkResult anv_GetFenceStatus(
    switch (impl->type) {
    case ANV_FENCE_TYPE_BO:
       switch (impl->bo.state) {
-      case ANV_FENCE_STATE_RESET:
+      case ANV_BO_FENCE_STATE_RESET:
          /* If it hasn't even been sent off to the GPU yet, it's not ready */
          return VK_NOT_READY;
 
-      case ANV_FENCE_STATE_SIGNALED:
+      case ANV_BO_FENCE_STATE_SIGNALED:
          /* It's been signaled, return success */
          return VK_SUCCESS;
 
-      case ANV_FENCE_STATE_SUBMITTED: {
+      case ANV_BO_FENCE_STATE_SUBMITTED: {
          VkResult result = anv_device_bo_busy(device, &impl->bo.bo);
          if (result == VK_SUCCESS) {
-            impl->bo.state = ANV_FENCE_STATE_SIGNALED;
+            impl->bo.state = ANV_BO_FENCE_STATE_SIGNALED;
             return VK_SUCCESS;
          } else {
             return result;
@@ -427,7 +427,7 @@ anv_wait_for_bo_fences(struct anv_device *device,
          struct anv_fence_impl *impl = &fence->permanent;
 
          switch (impl->bo.state) {
-         case ANV_FENCE_STATE_RESET:
+         case ANV_BO_FENCE_STATE_RESET:
             /* This fence hasn't been submitted yet, we'll catch it the next
              * time around.  Yes, this may mean we dead-loop but, short of
              * lots of locking and a condition variable, there's not much that
@@ -436,7 +436,7 @@ anv_wait_for_bo_fences(struct anv_device *device,
             pending_fences++;
             continue;
 
-         case ANV_FENCE_STATE_SIGNALED:
+         case ANV_BO_FENCE_STATE_SIGNALED:
             /* This fence is not pending.  If waitAll isn't set, we can return
              * early.  Otherwise, we have to keep going.
              */
@@ -446,14 +446,14 @@ anv_wait_for_bo_fences(struct anv_device *device,
             }
             continue;
 
-         case ANV_FENCE_STATE_SUBMITTED:
+         case ANV_BO_FENCE_STATE_SUBMITTED:
             /* These are the fences we really care about.  Go ahead and wait
              * on it until we hit a timeout.
              */
             result = anv_device_wait(device, &impl->bo.bo, timeout);
             switch (result) {
             case VK_SUCCESS:
-               impl->bo.state = ANV_FENCE_STATE_SIGNALED;
+               impl->bo.state = ANV_BO_FENCE_STATE_SIGNALED;
                signaled_fences = true;
                if (!waitAll)
                   goto done;
@@ -483,7 +483,7 @@ anv_wait_for_bo_fences(struct anv_device *device,
          uint32_t now_pending_fences = 0;
          for (uint32_t i = 0; i < fenceCount; i++) {
             ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
-            if (fence->permanent.bo.state == ANV_FENCE_STATE_RESET)
+            if (fence->permanent.bo.state == ANV_BO_FENCE_STATE_RESET)
                now_pending_fences++;
          }
          assert(now_pending_fences <= pending_fences);

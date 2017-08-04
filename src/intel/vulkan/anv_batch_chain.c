@@ -1619,7 +1619,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
        * vkGetFenceStatus() return a valid result (VK_ERROR_DEVICE_LOST or
        * VK_SUCCESS) in a finite amount of time even if execbuf fails.
        */
-      fence->permanent.bo.state = ANV_FENCE_STATE_SUBMITTED;
+      fence->permanent.bo.state = ANV_BO_FENCE_STATE_SUBMITTED;
    }
 
    if (result == VK_SUCCESS && need_out_fence) {
