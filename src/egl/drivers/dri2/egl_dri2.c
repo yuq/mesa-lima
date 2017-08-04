@@ -729,6 +729,41 @@ dri2_setup_screen(_EGLDisplay *disp)
    }
 }
 
+void
+dri2_setup_swap_interval(_EGLDisplay *disp, int max_swap_interval)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   GLint vblank_mode = DRI_CONF_VBLANK_DEF_INTERVAL_1;
+
+   /* Allow driconf to override applications.*/
+   if (dri2_dpy->config)
+      dri2_dpy->config->configQueryi(dri2_dpy->dri_screen,
+                                     "vblank_mode", &vblank_mode);
+   switch (vblank_mode) {
+   case DRI_CONF_VBLANK_NEVER:
+      dri2_dpy->min_swap_interval = 0;
+      dri2_dpy->max_swap_interval = 0;
+      dri2_dpy->default_swap_interval = 0;
+      break;
+   case DRI_CONF_VBLANK_ALWAYS_SYNC:
+      dri2_dpy->min_swap_interval = 1;
+      dri2_dpy->max_swap_interval = max_swap_interval;
+      dri2_dpy->default_swap_interval = 1;
+      break;
+   case DRI_CONF_VBLANK_DEF_INTERVAL_0:
+      dri2_dpy->min_swap_interval = 0;
+      dri2_dpy->max_swap_interval = max_swap_interval;
+      dri2_dpy->default_swap_interval = 0;
+      break;
+   default:
+   case DRI_CONF_VBLANK_DEF_INTERVAL_1:
+      dri2_dpy->min_swap_interval = 0;
+      dri2_dpy->max_swap_interval = max_swap_interval;
+      dri2_dpy->default_swap_interval = 1;
+      break;
+   }
+}
+
 /* All platforms but DRM call this function to create the screen and populate
  * the driver_configs. DRM inherits that information from its display - GBM.
  */
