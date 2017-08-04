@@ -153,7 +153,7 @@ union si_state_atoms {
 		struct r600_atom *blend_color;
 		struct r600_atom *clip_regs;
 		struct r600_atom *clip_state;
-		struct r600_atom *shader_userdata;
+		struct r600_atom *shader_pointers;
 		struct r600_atom *scissors;
 		struct r600_atom *viewports;
 		struct r600_atom *stencil_ref;
@@ -339,9 +339,9 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 void si_update_all_texture_descriptors(struct si_context *sctx);
 void si_shader_change_notify(struct si_context *sctx);
 void si_update_needs_color_decompress_masks(struct si_context *sctx);
-void si_emit_graphics_shader_userdata(struct si_context *sctx,
+void si_emit_graphics_shader_pointers(struct si_context *sctx,
                                       struct r600_atom *atom);
-void si_emit_compute_shader_userdata(struct si_context *sctx);
+void si_emit_compute_shader_pointers(struct si_context *sctx);
 void si_set_rw_buffer(struct si_context *sctx,
 		      uint slot, const struct pipe_constant_buffer *input);
 void si_set_active_descriptors(struct si_context *sctx, unsigned desc_idx,

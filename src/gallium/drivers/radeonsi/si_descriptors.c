@@ -1175,7 +1175,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * on performance (confirmed by testing). New descriptors are always
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
-	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
+	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
 	sctx->vertex_buffers_dirty = false;
 	sctx->vertex_buffer_pointer_dirty = true;
 	sctx->prefetch_L2_mask |= SI_PREFETCH_VBO_DESCRIPTORS;
@@ -2097,14 +2097,14 @@ static void si_mark_shader_pointers_dirty(struct si_context *sctx,
 	if (shader == PIPE_SHADER_VERTEX)
 		sctx->vertex_buffer_pointer_dirty = sctx->vertex_buffers.buffer != NULL;
 
-	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
+	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
 }
 
-static void si_shader_userdata_begin_new_cs(struct si_context *sctx)
+static void si_shader_pointers_begin_new_cs(struct si_context *sctx)
 {
 	sctx->shader_pointers_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
 	sctx->vertex_buffer_pointer_dirty = sctx->vertex_buffers.buffer != NULL;
-	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
+	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
 }
 
 /* Set a base register address for user data constants in the given shader.
@@ -2113,7 +2113,7 @@ static void si_shader_userdata_begin_new_cs(struct si_context *sctx)
 static void si_set_user_data_base(struct si_context *sctx,
 				  unsigned shader, uint32_t new_base)
 {
-	uint32_t *base = &sctx->shader_userdata.sh_base[shader];
+	uint32_t *base = &sctx->shader_pointers.sh_base[shader];
 
 	if (*base != new_base) {
 		*base = new_base;
@@ -2184,11 +2184,11 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 	radeon_emit(cs, va >> 32);
 }
 
-void si_emit_graphics_shader_userdata(struct si_context *sctx,
+void si_emit_graphics_shader_pointers(struct si_context *sctx,
                                       struct r600_atom *atom)
 {
 	unsigned mask;
-	uint32_t *sh_base = sctx->shader_userdata.sh_base;
+	uint32_t *sh_base = sctx->shader_pointers.sh_base;
 	struct si_descriptors *descs;
 
 	descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
@@ -2242,7 +2242,7 @@ void si_emit_graphics_shader_userdata(struct si_context *sctx,
 	}
 }
 
-void si_emit_compute_shader_userdata(struct si_context *sctx)
+void si_emit_compute_shader_pointers(struct si_context *sctx)
 {
 	unsigned base = R_00B900_COMPUTE_USER_DATA_0;
 	struct si_descriptors *descs = sctx->descriptors;
@@ -2883,8 +2883,8 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.rebind_buffer = si_rebind_buffer;
 
 	/* Shader user data. */
-	si_init_atom(sctx, &sctx->shader_userdata.atom, &sctx->atoms.s.shader_userdata,
-		     si_emit_graphics_shader_userdata);
+	si_init_atom(sctx, &sctx->shader_pointers.atom, &sctx->atoms.s.shader_pointers,
+		     si_emit_graphics_shader_pointers);
 
 	/* Set default and immutable mappings. */
 	si_set_user_data_base(sctx, PIPE_SHADER_VERTEX, R_00B130_SPI_SHADER_USER_DATA_VS_0);
@@ -2915,7 +2915,7 @@ bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
 		unsigned i = u_bit_scan(&dirty);
 
 		if (!si_upload_descriptors(sctx, &sctx->descriptors[i],
-					   &sctx->shader_userdata.atom))
+					   &sctx->shader_pointers.atom))
 			return false;
 	}
 
@@ -2989,7 +2989,7 @@ void si_all_descriptors_begin_new_cs(struct si_context *sctx)
 	for (i = 0; i < SI_NUM_DESCS; ++i)
 		si_descriptors_begin_new_cs(sctx, &sctx->descriptors[i]);
 
-	si_shader_userdata_begin_new_cs(sctx);
+	si_shader_pointers_begin_new_cs(sctx);
 }
 
 void si_set_active_descriptors(struct si_context *sctx, unsigned desc_idx,

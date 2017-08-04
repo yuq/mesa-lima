@@ -105,7 +105,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	unsigned tess_uses_primid = sctx->ia_multi_vgt_param_key.u.tess_uses_prim_id;
 	bool has_primid_instancing_bug = sctx->b.chip_class == SI &&
 					 sctx->b.screen->info.max_se == 1;
-	unsigned tes_sh_base = sctx->shader_userdata.sh_base[PIPE_SHADER_TESS_EVAL];
+	unsigned tes_sh_base = sctx->shader_pointers.sh_base[PIPE_SHADER_TESS_EVAL];
 	unsigned num_tcs_input_cp = info->vertices_per_patch;
 	unsigned num_tcs_output_cp, num_tcs_inputs, num_tcs_outputs;
 	unsigned num_tcs_patch_outputs;
@@ -567,7 +567,7 @@ static void si_emit_vs_state(struct si_context *sctx,
 		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 
 		radeon_set_sh_reg(cs,
-			sctx->shader_userdata.sh_base[PIPE_SHADER_VERTEX] +
+			sctx->shader_pointers.sh_base[PIPE_SHADER_VERTEX] +
 			SI_SGPR_VS_STATE_BITS * 4,
 			sctx->current_vs_state);
 
@@ -640,7 +640,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 {
 	struct pipe_draw_indirect_info *indirect = info->indirect;
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	unsigned sh_base_reg = sctx->shader_userdata.sh_base[PIPE_SHADER_VERTEX];
+	unsigned sh_base_reg = sctx->shader_pointers.sh_base[PIPE_SHADER_VERTEX];
 	bool render_cond_bit = sctx->b.render_cond && !sctx->b.render_cond_force_off;
 	uint32_t index_max_size = 0;
 	uint64_t index_va = 0;

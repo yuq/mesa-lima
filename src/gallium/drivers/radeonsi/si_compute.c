@@ -811,7 +811,7 @@ static void si_launch_grid(
 		return;
 
 	si_upload_compute_shader_descriptors(sctx);
-	si_emit_compute_shader_userdata(sctx);
+	si_emit_compute_shader_pointers(sctx);
 
 	if (si_is_atom_dirty(sctx, sctx->atoms.s.render_cond)) {
 		sctx->atoms.s.render_cond->emit(&sctx->b,

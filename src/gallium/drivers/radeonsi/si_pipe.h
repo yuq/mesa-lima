@@ -312,7 +312,7 @@ struct si_context {
 	struct si_blend_color		blend_color;
 	struct r600_atom		clip_regs;
 	struct si_clip_state		clip_state;
-	struct si_shader_data		shader_userdata;
+	struct si_shader_data		shader_pointers;
 	struct si_stencil_ref		stencil_ref;
 	struct r600_atom		spi_map;
 
