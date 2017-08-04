@@ -1412,28 +1412,39 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	(void) mtx_init(&rscreen->gpu_load_mutex, mtx_plain);
 
 	if (rscreen->debug_flags & DBG_INFO) {
+		printf("pci (domain:bus:dev.func): %04x:%02x:%02x.%x\n",
+		       rscreen->info.pci_domain, rscreen->info.pci_bus,
+		       rscreen->info.pci_dev, rscreen->info.pci_func);
 		printf("pci_id = 0x%x\n", rscreen->info.pci_id);
 		printf("family = %i (%s)\n", rscreen->info.family,
 		       r600_get_family_name(rscreen));
 		printf("chip_class = %i\n", rscreen->info.chip_class);
+		printf("pte_fragment_size = %u\n", rscreen->info.pte_fragment_size);
+		printf("gart_page_size = %u\n", rscreen->info.gart_page_size);
 		printf("gart_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.gart_size, 1024*1024));
 		printf("vram_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.vram_size, 1024*1024));
 		printf("vram_vis_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.vram_vis_size, 1024*1024));
 		printf("max_alloc_size = %i MB\n",
 		       (int)DIV_ROUND_UP(rscreen->info.max_alloc_size, 1024*1024));
+		printf("min_alloc_size = %u\n", rscreen->info.min_alloc_size);
+		printf("has_dedicated_vram = %u\n", rscreen->info.has_dedicated_vram);
 		printf("has_virtual_memory = %i\n", rscreen->info.has_virtual_memory);
 		printf("gfx_ib_pad_with_type2 = %i\n", rscreen->info.gfx_ib_pad_with_type2);
+		printf("has_hw_decode = %u\n", rscreen->info.has_hw_decode);
 		printf("num_sdma_rings = %i\n", rscreen->info.num_sdma_rings);
-		printf("has_hw_decode = %i\n", rscreen->info.has_hw_decode);
+		printf("num_compute_rings = %u\n", rscreen->info.num_compute_rings);
+		printf("uvd_fw_version = %u\n", rscreen->info.uvd_fw_version);
+		printf("vce_fw_version = %u\n", rscreen->info.vce_fw_version);
 		printf("me_fw_version = %i\n", rscreen->info.me_fw_version);
 		printf("pfp_fw_version = %i\n", rscreen->info.pfp_fw_version);
 		printf("ce_fw_version = %i\n", rscreen->info.ce_fw_version);
-		printf("vce_fw_version = %i\n", rscreen->info.vce_fw_version);
 		printf("vce_harvest_config = %i\n", rscreen->info.vce_harvest_config);
 		printf("clock_crystal_freq = %i\n", rscreen->info.clock_crystal_freq);
+		printf("tcc_cache_line_size = %u\n", rscreen->info.tcc_cache_line_size);
 		printf("drm = %i.%i.%i\n", rscreen->info.drm_major,
 		       rscreen->info.drm_minor, rscreen->info.drm_patchlevel);
 		printf("has_userptr = %i\n", rscreen->info.has_userptr);
+		printf("has_syncobj = %u\n", rscreen->info.has_syncobj);
 
 		printf("r600_max_quad_pipes = %i\n", rscreen->info.r600_max_quad_pipes);
 		printf("max_shader_clock = %i\n", rscreen->info.max_shader_clock);
@@ -1448,6 +1459,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("num_tile_pipes = %i\n", rscreen->info.num_tile_pipes);
 		printf("pipe_interleave_bytes = %i\n", rscreen->info.pipe_interleave_bytes);
 		printf("enabled_rb_mask = 0x%x\n", rscreen->info.enabled_rb_mask);
+		printf("max_alignment = %u\n", (unsigned)rscreen->info.max_alignment);
 	}
 	return true;
 }
