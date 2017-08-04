@@ -1560,6 +1560,14 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
             return result;
          break;
 
+      case ANV_FENCE_TYPE_SYNCOBJ:
+         result = anv_execbuf_add_syncobj(&execbuf, impl->syncobj,
+                                          I915_EXEC_FENCE_SIGNAL,
+                                          &device->alloc);
+         if (result != VK_SUCCESS)
+            return result;
+         break;
+
       default:
          unreachable("Invalid fence type");
       }

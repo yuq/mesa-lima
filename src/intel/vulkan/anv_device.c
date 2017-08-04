@@ -339,6 +339,8 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->has_exec_async = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_ASYNC);
    device->has_exec_fence = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_FENCE);
    device->has_syncobj = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_FENCE_ARRAY);
+   device->has_syncobj_wait = device->has_syncobj &&
+                              anv_gem_supports_syncobj_wait(fd);
 
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 

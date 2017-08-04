@@ -646,6 +646,7 @@ struct anv_physical_device {
     bool                                        has_exec_async;
     bool                                        has_exec_fence;
     bool                                        has_syncobj;
+    bool                                        has_syncobj_wait;
 
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
@@ -1747,6 +1748,9 @@ struct anv_fence_impl {
          struct anv_bo bo;
          enum anv_bo_fence_state state;
       } bo;
+
+      /** DRM syncobj handle for syncobj-based fences */
+      uint32_t syncobj;
    };
 };
 

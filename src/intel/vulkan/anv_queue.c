@@ -271,17 +271,29 @@ VkResult anv_CreateFence(
    if (fence == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   fence->permanent.type = ANV_FENCE_TYPE_BO;
+   if (device->instance->physicalDevice.has_syncobj_wait) {
+      fence->permanent.type = ANV_FENCE_TYPE_SYNCOBJ;
 
-   VkResult result = anv_bo_pool_alloc(&device->batch_bo_pool,
-                                       &fence->permanent.bo.bo, 4096);
-   if (result != VK_SUCCESS)
-      return result;
+      uint32_t create_flags = 0;
+      if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT)
+         create_flags |= DRM_SYNCOBJ_CREATE_SIGNALED;
 
-   if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-      fence->permanent.bo.state = ANV_BO_FENCE_STATE_SIGNALED;
+      fence->permanent.syncobj = anv_gem_syncobj_create(device, create_flags);
+      if (!fence->permanent.syncobj)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    } else {
-      fence->permanent.bo.state = ANV_BO_FENCE_STATE_RESET;
+      fence->permanent.type = ANV_FENCE_TYPE_BO;
+
+      VkResult result = anv_bo_pool_alloc(&device->batch_bo_pool,
+                                          &fence->permanent.bo.bo, 4096);
+      if (result != VK_SUCCESS)
+         return result;
+
+      if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
+         fence->permanent.bo.state = ANV_BO_FENCE_STATE_SIGNALED;
+      } else {
+         fence->permanent.bo.state = ANV_BO_FENCE_STATE_RESET;
+      }
    }
 
    *pFence = anv_fence_to_handle(fence);
@@ -300,6 +312,10 @@ anv_fence_impl_cleanup(struct anv_device *device,
 
    case ANV_FENCE_TYPE_BO:
       anv_bo_pool_free(&device->batch_bo_pool, &impl->bo.bo);
+      return;
+
+   case ANV_FENCE_TYPE_SYNCOBJ:
+      anv_gem_syncobj_destroy(device, impl->syncobj);
       return;
    }
 
@@ -328,6 +344,8 @@ VkResult anv_ResetFences(
     uint32_t                                    fenceCount,
     const VkFence*                              pFences)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
    for (uint32_t i = 0; i < fenceCount; i++) {
       ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
 
@@ -337,6 +355,10 @@ VkResult anv_ResetFences(
       switch (impl->type) {
       case ANV_FENCE_TYPE_BO:
          impl->bo.state = ANV_BO_FENCE_STATE_RESET;
+         break;
+
+      case ANV_FENCE_TYPE_SYNCOBJ:
+         anv_gem_syncobj_reset(device, impl->syncobj);
          break;
 
       default:
@@ -384,6 +406,22 @@ VkResult anv_GetFenceStatus(
          unreachable("Invalid fence status");
       }
 
+   case ANV_FENCE_TYPE_SYNCOBJ: {
+      int ret = anv_gem_syncobj_wait(device, &impl->syncobj, 1, 0, true);
+      if (ret == -1) {
+         if (errno == ETIME) {
+            return VK_NOT_READY;
+         } else {
+            /* We don't know the real error. */
+            device->lost = true;
+            return vk_errorf(VK_ERROR_DEVICE_LOST,
+                             "drm_syncobj_wait failed: %m");
+         }
+      } else {
+         return VK_SUCCESS;
+      }
+   }
+
    default:
       unreachable("Invalid fence type");
    }
@@ -391,6 +429,78 @@ VkResult anv_GetFenceStatus(
 
 #define NSEC_PER_SEC 1000000000
 #define INT_TYPE_MAX(type) ((1ull << (sizeof(type) * 8 - 1)) - 1)
+
+static uint64_t
+gettime_ns(void)
+{
+   struct timespec current;
+   clock_gettime(CLOCK_MONOTONIC, &current);
+   return (uint64_t)current.tv_sec * NSEC_PER_SEC + current.tv_nsec;
+}
+
+static VkResult
+anv_wait_for_syncobj_fences(struct anv_device *device,
+                            uint32_t fenceCount,
+                            const VkFence *pFences,
+                            bool waitAll,
+                            uint64_t _timeout)
+{
+   uint32_t *syncobjs = vk_zalloc(&device->alloc,
+                                  sizeof(*syncobjs) * fenceCount, 8,
+                                  VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
+   if (!syncobjs)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   for (uint32_t i = 0; i < fenceCount; i++) {
+      ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
+      assert(fence->permanent.type == ANV_FENCE_TYPE_SYNCOBJ);
+
+      struct anv_fence_impl *impl =
+         fence->temporary.type != ANV_FENCE_TYPE_NONE ?
+         &fence->temporary : &fence->permanent;
+
+      assert(impl->type == ANV_FENCE_TYPE_SYNCOBJ);
+      syncobjs[i] = impl->syncobj;
+   }
+
+   int64_t abs_timeout_ns = 0;
+   if (_timeout > 0) {
+      uint64_t current_ns = gettime_ns();
+
+      /* Add but saturate to INT32_MAX */
+      if (current_ns + _timeout < current_ns)
+         abs_timeout_ns = INT64_MAX;
+      else if (current_ns + _timeout > INT64_MAX)
+         abs_timeout_ns = INT64_MAX;
+      else
+         abs_timeout_ns = current_ns + _timeout;
+   }
+
+   /* The gem_syncobj_wait ioctl may return early due to an inherent
+    * limitation in the way it computes timeouts.  Loop until we've actually
+    * passed the timeout.
+    */
+   int ret;
+   do {
+      ret = anv_gem_syncobj_wait(device, syncobjs, fenceCount,
+                                 abs_timeout_ns, waitAll);
+   } while (ret == -1 && errno == ETIME && gettime_ns() < abs_timeout_ns);
+
+   vk_free(&device->alloc, syncobjs);
+
+   if (ret == -1) {
+      if (errno == ETIME) {
+         return VK_TIMEOUT;
+      } else {
+         /* We don't know the real error. */
+         device->lost = true;
+         return vk_errorf(VK_ERROR_DEVICE_LOST,
+                          "drm_syncobj_wait failed: %m");
+      }
+   } else {
+      return VK_SUCCESS;
+   }
+}
 
 static VkResult
 anv_wait_for_bo_fences(struct anv_device *device,
@@ -546,7 +656,13 @@ VkResult anv_WaitForFences(
    if (unlikely(device->lost))
       return VK_ERROR_DEVICE_LOST;
 
-   return anv_wait_for_bo_fences(device, fenceCount, pFences, waitAll, timeout);
+   if (device->instance->physicalDevice.has_syncobj_wait) {
+      return anv_wait_for_syncobj_fences(device, fenceCount, pFences,
+                                         waitAll, timeout);
+   } else {
+      return anv_wait_for_bo_fences(device, fenceCount, pFences,
+                                    waitAll, timeout);
+   }
 }
 
 // Queue semaphore functions
