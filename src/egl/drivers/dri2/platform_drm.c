@@ -115,11 +115,6 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
 
    switch (type) {
    case EGL_WINDOW_BIT:
-      if (!window) {
-         _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_create_surface");
-         goto cleanup_surf;
-      }
-
       surf = gbm_dri_surface(window);
       dri2_surf->gbm_surf = surf;
       dri2_surf->base.Width =  surf->base.width;

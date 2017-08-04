@@ -162,11 +162,6 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
          dri2_surf->format = WL_SHM_FORMAT_ARGB8888;
    }
 
-   if (!window) {
-      _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_create_surface");
-      goto cleanup_surf;
-   }
-
    dri2_surf->wl_win = window;
    dri2_surf->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
    if (!dri2_surf->wl_queue) {

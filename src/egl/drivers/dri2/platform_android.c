@@ -329,7 +329,7 @@ droid_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    if (type == EGL_WINDOW_BIT) {
       int format;
 
-      if (!window || window->common.magic != ANDROID_NATIVE_WINDOW_MAGIC) {
+      if (window->common.magic != ANDROID_NATIVE_WINDOW_MAGIC) {
          _eglError(EGL_BAD_NATIVE_WINDOW, "droid_create_surface");
          goto cleanup_surface;
       }
