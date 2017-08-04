@@ -285,8 +285,10 @@ struct dri2_egl_surface
    struct gbm_dri_surface *gbm_surf;
 #endif
 
+   /* EGL-owned buffers */
+   __DRIbuffer           *local_buffers[__DRI_BUFFER_COUNT];
+
 #if defined(HAVE_WAYLAND_PLATFORM) || defined(HAVE_DRM_PLATFORM)
-   __DRIbuffer           *dri_buffers[__DRI_BUFFER_COUNT];
    struct {
 #ifdef HAVE_WAYLAND_PLATFORM
       struct wl_buffer   *wl_buffer;
@@ -310,9 +312,6 @@ struct dri2_egl_surface
    struct ANativeWindowBuffer *buffer;
    __DRIimage *dri_image_back;
    __DRIimage *dri_image_front;
-
-   /* EGL-owned buffers */
-   __DRIbuffer           *local_buffers[__DRI_BUFFER_COUNT];
 
    /* Used to record all the buffers created by ANativeWindow and their ages.
     * Usually Android uses at most triple buffers in ANativeWindow
@@ -455,5 +454,12 @@ dri2_set_WL_bind_wayland_display(_EGLDriver *drv, _EGLDisplay *disp)
 
 void
 dri2_display_destroy(_EGLDisplay *disp);
+
+__DRIbuffer *
+dri2_egl_surface_alloc_local_buffer(struct dri2_egl_surface *dri2_surf,
+                                    unsigned int att, unsigned int format);
+
+void
+dri2_egl_surface_free_local_buffers(struct dri2_egl_surface *dri2_surf);
 
 #endif /* EGL_DRI2_INCLUDED */

@@ -176,11 +176,7 @@ dri2_drm_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 	 gbm_bo_destroy(dri2_surf->color_buffers[i].bo);
    }
 
-   for (unsigned i = 0; i < __DRI_BUFFER_COUNT; i++) {
-      if (dri2_surf->dri_buffers[i])
-         dri2_dpy->dri2->releaseBuffer(dri2_dpy->dri_screen,
-                                       dri2_surf->dri_buffers[i]);
-   }
+   dri2_egl_surface_free_local_buffers(dri2_surf);
 
    free(surf);
 
@@ -271,39 +267,18 @@ back_bo_to_dri_buffer(struct dri2_egl_surface *dri2_surf, __DRIbuffer *buffer)
    buffer->flags = 0;
 }
 
-static int
-get_aux_bo(struct dri2_egl_surface *dri2_surf,
-	   unsigned int attachment, unsigned int format, __DRIbuffer *buffer)
-{
-   struct dri2_egl_display *dri2_dpy =
-      dri2_egl_display(dri2_surf->base.Resource.Display);
-   __DRIbuffer *b = dri2_surf->dri_buffers[attachment];
-
-   if (b == NULL) {
-      b = dri2_dpy->dri2->allocateBuffer(dri2_dpy->dri_screen,
-					 attachment, format,
-					 dri2_surf->base.Width,
-					 dri2_surf->base.Height);
-      dri2_surf->dri_buffers[attachment] = b;
-   }
-   if (b == NULL)
-      return -1;
-
-   memcpy(buffer, b, sizeof *buffer);
-
-   return 0;
-}
-
 static __DRIbuffer *
 dri2_drm_get_buffers_with_format(__DRIdrawable *driDrawable,
-			     int *width, int *height,
-			     unsigned int *attachments, int count,
-			     int *out_count, void *loaderPrivate)
+                                 int *width, int *height,
+                                 unsigned int *attachments, int count,
+                                 int *out_count, void *loaderPrivate)
 {
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
    int i, j;
 
    for (i = 0, j = 0; i < 2 * count; i += 2, j++) {
+      __DRIbuffer *local;
+
       assert(attachments[i] < __DRI_BUFFER_COUNT);
       assert(j < ARRAY_SIZE(dri2_surf->buffers));
 
@@ -316,11 +291,14 @@ dri2_drm_get_buffers_with_format(__DRIdrawable *driDrawable,
          back_bo_to_dri_buffer(dri2_surf, &dri2_surf->buffers[j]);
 	 break;
       default:
-	 if (get_aux_bo(dri2_surf, attachments[i], attachments[i + 1],
-			&dri2_surf->buffers[j]) < 0) {
-	    _eglError(EGL_BAD_ALLOC, "failed to allocate aux buffer");
+	 local = dri2_egl_surface_alloc_local_buffer(dri2_surf, attachments[i],
+                                                     attachments[i + 1]);
+
+	 if (!local) {
+	    _eglError(EGL_BAD_ALLOC, "failed to allocate local buffer");
 	    return NULL;
 	 }
+	 dri2_surf->buffers[j] = *local;
 	 break;
       }
    }
