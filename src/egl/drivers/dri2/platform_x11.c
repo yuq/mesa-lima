@@ -222,11 +222,7 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    xcb_get_geometry_cookie_t cookie;
    xcb_get_geometry_reply_t *reply;
    xcb_generic_error_t *error;
-   xcb_drawable_t drawable;
    const __DRIconfig *config;
-
-   STATIC_ASSERT(sizeof(uintptr_t) == sizeof(native_surface));
-   drawable = (uintptr_t) native_surface;
 
    (void) drv;
 
@@ -246,7 +242,8 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
                        dri2_surf->drawable, dri2_dpy->screen->root,
 			dri2_surf->base.Width, dri2_surf->base.Height);
    } else {
-      dri2_surf->drawable = drawable;
+      STATIC_ASSERT(sizeof(uintptr_t) == sizeof(native_surface));
+      dri2_surf->drawable = (uintptr_t) native_surface;
    }
 
    config = dri2_get_dri_config(dri2_conf, type,

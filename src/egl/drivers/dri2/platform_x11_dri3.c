@@ -141,9 +141,6 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    const __DRIconfig *dri_config;
    xcb_drawable_t drawable;
 
-   STATIC_ASSERT(sizeof(uintptr_t) == sizeof(native_surface));
-   drawable = (uintptr_t) native_surface;
-
    (void) drv;
 
    dri3_surf = calloc(1, sizeof *dri3_surf);
@@ -160,6 +157,9 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       xcb_create_pixmap(dri2_dpy->conn, conf->BufferSize,
                         drawable, dri2_dpy->screen->root,
                         dri3_surf->base.Width, dri3_surf->base.Height);
+   } else {
+      STATIC_ASSERT(sizeof(uintptr_t) == sizeof(native_surface));
+      drawable = (uintptr_t) native_surface;
    }
 
    dri_config = dri2_get_dri_config(dri2_conf, type,
