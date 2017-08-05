@@ -402,7 +402,7 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 						     .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 							     .image = radv_image_to_handle(dest_image),
 							     .viewType = radv_meta_get_view_type(dest_image),
-							     .format = dest_image->vk_format,
+							     .format = vk_to_non_srgb_format(dest_image->vk_format),
 							     .subresourceRange = {
 							     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 							     .baseMipLevel = region->dstSubresource.mipLevel,
