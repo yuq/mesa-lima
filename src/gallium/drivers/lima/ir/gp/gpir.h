@@ -170,6 +170,6 @@ void gpir_node_add_child(gpir_node *parent, gpir_node *child);
 void gpir_node_remove_parent_cleanup(gpir_node *node);
 void gpir_node_delete(gpir_node *node);
 
-void gpir_lower_const(gpir_compiler *comp);
+void gpir_lower_prog(gpir_compiler *comp);
 
 #endif
