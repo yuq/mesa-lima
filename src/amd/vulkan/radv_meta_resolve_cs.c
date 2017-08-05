@@ -66,7 +66,7 @@ static nir_ssa_def *radv_meta_build_resolve_srgb_conversion(nir_builder *b,
 	nir_ssa_def *comp[4];
 	for (i = 0; i < 3; i++)
 		comp[i] = nir_bcsel(b, cmp[i], ltvals[i], gtvals[i]);
-	comp[3] = nir_channels(b, input, 3);
+	comp[3] = nir_channels(b, input, 1 << 3);
 	return nir_vec(b, comp, 4);
 }
 
