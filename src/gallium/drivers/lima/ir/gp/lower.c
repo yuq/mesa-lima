@@ -24,7 +24,7 @@
 
 #include "gpir.h"
 
-void gpir_lower_const(gpir_compiler *comp)
+static void gpir_lower_const(gpir_compiler *comp)
 {
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
@@ -35,12 +35,16 @@ void gpir_lower_const(gpir_compiler *comp)
             for (int i = 0; i < num_parent; i++) {
                gpir_node *p = node->parents[i];
 
-               if (p->op == gpir_op_load_attribute) {
+               if (p->op == gpir_op_load_attribute ||
+                   (p->op == gpir_op_store_varying && p->children[1] == node)) {
                   assert(c->num_components == 1);
                   assert(c->value[0].ui == 0);
 
-                  p->children[0] = NULL;
-                  p->num_child = 0;
+                  if (p->op == gpir_op_load_attribute)
+                     p->children[0] = NULL;
+                  else
+                     p->children[1] = NULL;
+                  p->num_child--;
 
                   node->parents[i] = NULL;
                   node->num_parent--;
@@ -54,4 +58,9 @@ void gpir_lower_const(gpir_compiler *comp)
          }
       }
    }
+}
+
+void gpir_lower_prog(gpir_compiler *comp)
+{
+   gpir_lower_const(comp);
 }
