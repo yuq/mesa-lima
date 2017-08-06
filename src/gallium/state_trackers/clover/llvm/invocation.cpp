@@ -94,7 +94,7 @@ namespace {
    }
 
    std::unique_ptr<clang::CompilerInstance>
-   create_compiler_instance(const target &target,
+   create_compiler_instance(const device &dev,
                             const std::vector<std::string> &opts,
                             std::string &r_log) {
       std::unique_ptr<clang::CompilerInstance> c { new clang::CompilerInstance };
@@ -107,6 +107,8 @@ namespace {
       // class to recognize it as an OpenCL source file.
       const std::vector<const char *> copts =
          map(std::mem_fn(&std::string::c_str), opts);
+
+      const target &target = dev.ir_target();
 
       if (!clang::CompilerInvocation::CreateFromArgs(
              c->getInvocation(), copts.data(), copts.data() + copts.size(), diag))
@@ -208,8 +210,7 @@ clover::llvm::compile_program(const std::string &source,
       debug::log(".cl", "// Options: " + opts + '\n' + source);
 
    auto ctx = create_context(r_log);
-   auto c = create_compiler_instance(dev.ir_target(),
-                                     tokenize(opts + " input.cl"), r_log);
+   auto c = create_compiler_instance(dev, tokenize(opts + " input.cl"), r_log);
    auto mod = compile(*ctx, *c, "input.cl", source, headers, dev.ir_target(),
                       opts, r_log);
 
@@ -276,7 +277,7 @@ clover::llvm::link_program(const std::vector<module> &modules,
    erase_if(equals("-create-library"), options);
 
    auto ctx = create_context(r_log);
-   auto c = create_compiler_instance(dev.ir_target(), options, r_log);
+   auto c = create_compiler_instance(dev, options, r_log);
    auto mod = link(*ctx, *c, modules, r_log);
 
    optimize(*mod, c->getCodeGenOpts().OptimizationLevel, !create_library);
