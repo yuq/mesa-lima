@@ -139,9 +139,58 @@ typedef struct {
    bool write_mask[4]; /* which components to store to */
 } gpir_store_node;
 
+typedef struct {
+   struct list_head list;
+
+   /* Multiply 0/1 slot */
+   gpir_node* mul_slots[2];
+
+   /* Add 0/1 slot */
+   gpir_node* add_slots[2];
+
+   /* Uniform load slot */
+   gpir_node* uniform_slot[6];
+   unsigned uniform_slot_num_used;
+   unsigned uniform_index;
+   unsigned uniform_off_reg; // 0 = no offset, 1 = offset register 0, etc.
+   bool uniform_is_temp;
+
+   /* Attribute/Register load slot */
+   gpir_node* attr_reg_slot[6];
+   unsigned attr_reg_slot_num_used;
+   bool attr_reg_slot_is_attr; // true = attribute, false = register
+   bool attr_reg_is_phys_reg;
+   unsigned attr_reg_index;
+
+   /* Register load slot */
+   gpir_node* reg_slot[6];
+   unsigned reg_slot_num_used;
+   unsigned reg_index;
+   bool reg_is_phys_reg;
+
+   /* Branch slot */
+   gpir_node* branch_slot;
+
+   /* Store slot */
+   gpir_node* store_slot[4];
+   bool store_slot_mask[4];
+   unsigned store_slot_num_used;
+   bool store_slot_is_temp;
+   bool store_slot_is_varying;
+   unsigned store_slot_index;
+   unsigned num_unscheduled_store_children;
+
+   /* Complex slot */
+   gpir_node* complex_slot;
+
+   /* Passthrough slot */
+   gpir_node* pass_slot;
+} gpir_instr;
+
 typedef struct gpir_block {
    struct list_head list;
    struct list_head node_list;
+   struct list_head instr_list;
 } gpir_block;
 
 typedef struct {
@@ -171,5 +220,6 @@ void gpir_node_remove_parent_cleanup(gpir_node *node);
 void gpir_node_delete(gpir_node *node);
 
 void gpir_lower_prog(gpir_compiler *comp);
+void gpir_schedule_prog(gpir_compiler *comp);
 
 #endif
