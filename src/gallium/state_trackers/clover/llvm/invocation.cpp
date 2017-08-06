@@ -145,7 +145,7 @@ namespace {
    std::unique_ptr<Module>
    compile(LLVMContext &ctx, clang::CompilerInstance &c,
            const std::string &name, const std::string &source,
-           const header_map &headers, const std::string &target,
+           const header_map &headers, const device &dev,
            const std::string &opts, std::string &r_log) {
       c.getFrontendOpts().ProgramAction = clang::frontend::EmitLLVMOnly;
       c.getHeaderSearchOpts().UseBuiltinIncludes = true;
@@ -189,7 +189,7 @@ namespace {
       // barrier() (e.g. Moving barrier() inside a conditional that is
       // no executed by all threads) during its optimizaton passes.
       compat::add_link_bitcode_file(c.getCodeGenOpts(),
-                                    LIBCLC_LIBEXECDIR + target + ".bc");
+                                    LIBCLC_LIBEXECDIR + dev.ir_target() + ".bc");
 
       // Compile the code
       clang::EmitLLVMOnlyAction act(&ctx);
@@ -211,8 +211,7 @@ clover::llvm::compile_program(const std::string &source,
 
    auto ctx = create_context(r_log);
    auto c = create_compiler_instance(dev, tokenize(opts + " input.cl"), r_log);
-   auto mod = compile(*ctx, *c, "input.cl", source, headers, dev.ir_target(),
-                      opts, r_log);
+   auto mod = compile(*ctx, *c, "input.cl", source, headers, dev, opts, r_log);
 
    if (has_flag(debug::llvm))
       debug::log(".ll", print_module_bitcode(*mod));
