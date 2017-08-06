@@ -97,6 +97,15 @@ typedef enum {
    gpir_op_branch_uncond,
 } gpir_op;
 
+typedef struct {
+   char *name;
+   bool dest_neg;
+   bool src_neg[4];
+   int latency;
+} gpir_op_info;
+
+extern const gpir_op_info gpir_op_infos[];
+
 typedef struct gpir_node {
    struct list_head list;
    gpir_op op;
