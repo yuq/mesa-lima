@@ -232,6 +232,11 @@ static void gpir_block_delete(gpir_block *block)
    list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
       FREE(node);
    }
+
+   list_for_each_entry_safe(gpir_instr, instr, &block->instr_list, list) {
+      FREE(instr);
+   }
+
    FREE(block);
 }
 
@@ -242,6 +247,8 @@ static bool gpir_emit_block(gpir_compiler *comp, nir_block *nblock)
       return false;
 
    list_addtail(&block->list, &comp->block_list);
+   list_inithead(&block->node_list);
+   list_inithead(&block->instr_list);
 
    nir_foreach_instr(instr, nblock) {
       gpir_node *node = gpir_emit_instr(comp, instr);
@@ -333,6 +340,7 @@ gpir_prog *gpir_compile_nir(nir_shader *nir)
    }
 
    gpir_lower_prog(comp);
+   gpir_schedule_prog(comp);
 
    gpir_compiler_delete(comp);
    return NULL;
