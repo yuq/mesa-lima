@@ -174,7 +174,7 @@ get_texobj_by_name(struct gl_context *ctx, GLuint texture, const char *name)
    case GL_TEXTURE_RECTANGLE:
       return texObj;
    default:
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s(target)", name);
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(target)", name);
       return NULL;
    }
 
