@@ -383,8 +383,13 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
          break;
 
       /* If we don't have a buffer, then block on the server to release one for
-       * us, and try again. */
-      if (wl_display_dispatch_queue(dri2_dpy->wl_dpy, dri2_surf->wl_queue) < 0)
+       * us, and try again. wl_display_dispatch_queue will process any pending
+       * events, however not all servers flush on issuing a buffer release
+       * event. So, we spam the server with roundtrips as they always cause a
+       * client flush.
+       */
+      if (wl_display_roundtrip_queue(dri2_dpy->wl_dpy,
+                                     dri2_surf->wl_queue) < 0)
           return -1;
    }
 
