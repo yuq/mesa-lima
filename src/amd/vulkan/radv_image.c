@@ -616,7 +616,8 @@ radv_image_get_fmask_info(struct radv_device *device,
 	info.samples = 1;
 	fmask.flags = image->surface.flags | RADEON_SURF_FMASK;
 
-	info.surf_index = &device->fmask_mrt_offset_counter;
+	if (!image->shareable);
+		info.surf_index = &device->fmask_mrt_offset_counter;
 
 	/* Force 2D tiling if it wasn't set. This may occur when creating
 	 * FMASK for MSAA resolve on R6xx. On R6xx, the single-sample
@@ -649,6 +650,8 @@ radv_image_get_fmask_info(struct radv_device *device,
 	out->tile_swizzle = fmask.tile_swizzle;
 	out->alignment = MAX2(256, fmask.surf_alignment);
 	out->size = fmask.surf_size;
+
+	assert(!out->tile_swizzle || !image->shareable);
 }
 
 static void
