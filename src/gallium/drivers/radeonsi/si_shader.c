@@ -4305,8 +4305,6 @@ enum {
 
 static void create_function(struct si_shader_context *ctx)
 {
-	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
-	struct gallivm_state *gallivm = &ctx->gallivm;
 	struct si_shader *shader = ctx->shader;
 	struct si_function_info fninfo;
 	LLVMTypeRef returns[16+32*4];
