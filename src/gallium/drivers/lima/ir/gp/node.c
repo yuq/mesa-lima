@@ -198,7 +198,7 @@ const gpir_op_info gpir_op_infos[] = {
       .name = "store_varying",
       .dest_neg = false,
       .src_neg = {false, false, false, false},
-      .latency = -1,
+      .latency = 1,
    },
    [gpir_op_store_temp_load_off0] = {
       .name = "store_off0",
@@ -222,7 +222,7 @@ const gpir_op_info gpir_op_infos[] = {
       .name = "branch_cond",
       .dest_neg = false,
       .src_neg = {false, false, false, false},
-      .latency = -1,
+      .latency = 1,
    },
    [gpir_op_const] = {
       .name = "const",
@@ -316,6 +316,8 @@ void *gpir_node_create(gpir_compiler *comp, int size, int index, int max_parent)
 
    if (index >= 0)
       comp->var_nodes[index] = node;
+
+   node->distance = -1;
 
    return node;
 }
