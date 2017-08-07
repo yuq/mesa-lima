@@ -576,13 +576,12 @@
     <field name="Clear Value Address Enable" start="330" end="330" type="bool"/>
     <field name="Quilt Height" start="325" end="329" type="uint"/>
     <field name="Quilt Width" start="320" end="324" type="uint"/>
+    <!-- This address points to the address of a Clear Color in the case of
+         CCS_D and CCS_E surfaces, and Depth Color for HiZ surfaces -->
+    <field name="Clear Value Address" start="390" end="431" type="address"/>
     <field name="Red Clear Color" start="384" end="415" type="int"/>
-    <field name="Clear Color Address" start="390" end="415" type="address"/>
-    <field name="Clear Depth Address Low" start="390" end="415" type="address"/>
     <field name="Clear Color Conversion Enable" start="389" end="389" type="uint"/>
     <field name="Green Clear Color" start="416" end="447" type="int"/>
-    <field name="Clear Color Address High" start="416" end="431" type="address"/>
-    <field name="Clear Depth Address High" start="416" end="431" type="address"/>
     <field name="Blue Clear Color" start="448" end="479" type="int"/>
     <field name="Alpha Clear Color" start="480" end="511" type="int"/>
   </struct>
