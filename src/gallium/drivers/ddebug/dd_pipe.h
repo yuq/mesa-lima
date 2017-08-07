@@ -226,7 +226,6 @@ struct dd_draw_record {
    struct dd_call call;
    struct dd_draw_state_copy draw_state;
    struct u_log_page *log_page;
-   char *driver_state_log;
 };
 
 struct dd_context

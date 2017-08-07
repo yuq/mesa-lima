@@ -945,7 +945,6 @@ dd_free_record(struct dd_draw_record **record)
    u_log_page_destroy((*record)->log_page);
    dd_unreference_copy_of_call(&(*record)->call);
    dd_unreference_copy_of_draw_state(&(*record)->draw_state);
-   FREE((*record)->driver_state_log);
    FREE(*record);
    *record = next;
 }
@@ -965,7 +964,6 @@ dd_dump_record(struct dd_context *dctx, struct dd_draw_record *record,
            (now - record->timestamp) / 1000);
 
    dd_dump_call(f, &record->draw_state.base, &record->call);
-   fprintf(f, "%s\n", record->driver_state_log);
 
    fprintf(f,"\n\n**************************************************"
              "***************************\n");
@@ -1035,70 +1033,16 @@ dd_thread_pipelined_hang_detect(void *input)
    return 0;
 }
 
-static char *
-dd_get_driver_shader_log(struct dd_context *dctx)
-{
-#if defined(PIPE_OS_LINUX)
-   FILE *f;
-   char *buf;
-   int written_bytes;
-
-   if (!dctx->max_log_buffer_size)
-      dctx->max_log_buffer_size = 16 * 1024;
-
-   /* Keep increasing the buffer size until there is enough space.
-    *
-    * open_memstream can resize automatically, but it's VERY SLOW.
-    * fmemopen is much faster.
-    */
-   while (1) {
-      buf = malloc(dctx->max_log_buffer_size);
-      buf[0] = 0;
-
-      f = fmemopen(buf, dctx->max_log_buffer_size, "a");
-      if (!f) {
-         free(buf);
-         return NULL;
-      }
-
-      dd_dump_driver_state(dctx, f, PIPE_DUMP_CURRENT_SHADERS);
-      written_bytes = ftell(f);
-      fclose(f);
-
-      /* Return if the backing buffer is large enough. */
-      if (written_bytes < dctx->max_log_buffer_size - 1)
-         break;
-
-      /* Try again. */
-      free(buf);
-      dctx->max_log_buffer_size *= 2;
-   }
-
-   return buf;
-#else
-   /* Return an empty string. */
-   return (char*)calloc(1, 4);
-#endif
-}
-
 static void
 dd_pipelined_process_draw(struct dd_context *dctx, struct dd_call *call)
 {
    struct pipe_context *pipe = dctx->pipe;
    struct dd_draw_record *record;
-   char *log;
 
    /* Make a record of the draw call. */
    record = MALLOC_STRUCT(dd_draw_record);
    if (!record)
       return;
-
-   /* Create the log. */
-   log = dd_get_driver_shader_log(dctx);
-   if (!log) {
-      FREE(record);
-      return;
-   }
 
    /* Update the fence with the GPU.
     *
@@ -1112,7 +1056,6 @@ dd_pipelined_process_draw(struct dd_context *dctx, struct dd_call *call)
    /* Initialize the record. */
    record->timestamp = os_time_get();
    record->sequence_no = dctx->sequence_no;
-   record->driver_state_log = log;
    record->log_page = u_log_new_page(&dctx->log);
 
    memset(&record->call, 0, sizeof(record->call));
