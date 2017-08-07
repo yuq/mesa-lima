@@ -399,8 +399,8 @@ public:
         simd16vector vClipCullDistLo[3];
         simd16vector vClipCullDistHi[3];
 
-        pa.Assemble_simd16(VERTEX_CLIPCULL_DIST_LO_SLOT, vClipCullDistLo);
-        pa.Assemble_simd16(VERTEX_CLIPCULL_DIST_HI_SLOT, vClipCullDistHi);
+        pa.Assemble(VERTEX_CLIPCULL_DIST_LO_SLOT, vClipCullDistLo);
+        pa.Assemble(VERTEX_CLIPCULL_DIST_HI_SLOT, vClipCullDistHi);
 
         DWORD index;
         while (_BitScanForward(&index, cullMask))
@@ -680,7 +680,7 @@ public:
                 {
 #if USE_SIMD16_FRONTEND
                     simd16vector attrib_simd16[NumVertsPerPrim];
-                    bool assemble = clipPa.Assemble_simd16(VERTEX_POSITION_SLOT, attrib_simd16);
+                    bool assemble = clipPa.Assemble(VERTEX_POSITION_SLOT, attrib_simd16);
 
                     if (assemble)
                     {
@@ -731,7 +731,7 @@ public:
 
         // assemble pos
         simd16vector tmpVector[NumVertsPerPrim];
-        pa.Assemble_simd16(VERTEX_POSITION_SLOT, tmpVector);
+        pa.Assemble(VERTEX_POSITION_SLOT, tmpVector);
         for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
         {
             vertices[i].attrib[VERTEX_POSITION_SLOT] = tmpVector[i];
@@ -748,7 +748,7 @@ public:
             maxSlot = std::max<int32_t>(maxSlot, mapSlot);
             uint32_t inputSlot = backendState.vertexAttribOffset + mapSlot;
 
-            pa.Assemble_simd16(inputSlot, tmpVector);
+            pa.Assemble(inputSlot, tmpVector);
 
             // if constant interpolation enabled for this attribute, assign the provoking
             // vertex values to all edges
@@ -771,7 +771,7 @@ public:
         // assemble user clip distances if enabled
         if (this->state.rastState.clipDistanceMask & 0xf)
         {
-            pa.Assemble_simd16(VERTEX_CLIPCULL_DIST_LO_SLOT, tmpVector);
+            pa.Assemble(VERTEX_CLIPCULL_DIST_LO_SLOT, tmpVector);
             for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
             {
                 vertices[i].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT] = tmpVector[i];
@@ -780,7 +780,7 @@ public:
 
         if (this->state.rastState.clipDistanceMask & 0xf0)
         {
-            pa.Assemble_simd16(VERTEX_CLIPCULL_DIST_HI_SLOT, tmpVector);
+            pa.Assemble(VERTEX_CLIPCULL_DIST_HI_SLOT, tmpVector);
             for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
             {
                 vertices[i].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT] = tmpVector[i];
@@ -919,7 +919,7 @@ public:
                 do
                 {
                     simd16vector attrib[NumVertsPerPrim];
-                    bool assemble = clipPa.Assemble_simd16(VERTEX_POSITION_SLOT, attrib);
+                    bool assemble = clipPa.Assemble(VERTEX_POSITION_SLOT, attrib);
 
                     if (assemble)
                     {
@@ -1060,7 +1060,7 @@ public:
         if (state.backendState.readViewportArrayIndex)
         {
             simd16vector vpiAttrib[NumVertsPerPrim];
-            pa.Assemble_simd16(VERTEX_SGV_SLOT, vpiAttrib);
+            pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
 
             // OOB indices => forced to zero.
             simd16scalari vpai = _simd16_castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);

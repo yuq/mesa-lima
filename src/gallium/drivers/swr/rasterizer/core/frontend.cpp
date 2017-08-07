@@ -929,7 +929,7 @@ static void GeometryShaderStage(
 #if USE_SIMD16_FRONTEND
                         simd16vector attrib_simd16[3];
 
-                        bool assemble = gsPa.Assemble_simd16(VERTEX_POSITION_SLOT, attrib_simd16);
+                        bool assemble = gsPa.Assemble(VERTEX_POSITION_SLOT, attrib_simd16);
 
 #else
                         bool assemble = gsPa.Assemble(VERTEX_POSITION_SLOT, attrib);
@@ -1297,7 +1297,7 @@ static void TessellationStages(
                     AR_BEGIN(FEPAAssemble, pDC->drawId);
                     bool assemble =
 #if USE_SIMD16_FRONTEND
-                        tessPa.Assemble_simd16(VERTEX_POSITION_SLOT, prim_simd16);
+                        tessPa.Assemble(VERTEX_POSITION_SLOT, prim_simd16);
 #else
                         tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
 #endif
@@ -1646,7 +1646,7 @@ void ProcessDraw(
                 simd16vector prim_simd16[MAX_NUM_VERTS_PER_PRIM];
 
                 RDTSC_START(FEPAAssemble);
-                bool assemble = pa.Assemble_simd16(VERTEX_POSITION_SLOT, prim_simd16);
+                bool assemble = pa.Assemble(VERTEX_POSITION_SLOT, prim_simd16);
                 RDTSC_STOP(FEPAAssemble, 1, 0);
 
 #if KNOB_ENABLE_TOSS_POINTS
