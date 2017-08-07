@@ -117,6 +117,9 @@ typedef struct gpir_node {
    struct gpir_node **parents;
    unsigned num_parent;
    unsigned max_parent;
+
+   /* for scheduler */
+   int distance;
 } gpir_node;
 
 typedef struct {
