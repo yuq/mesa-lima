@@ -605,7 +605,7 @@ texturestorage_error(GLuint dims, GLuint texture, GLsizei levels,
     * can receive unsized formats.
     */
    if (!legal_texobj_target(ctx, dims, texObj->Target)) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
+      _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(illegal target=%s)", caller,
                   _mesa_enum_to_string(texObj->Target));
       return;
