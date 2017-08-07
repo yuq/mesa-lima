@@ -161,7 +161,7 @@ static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned s
 	size = align(size, cache_line_size);
 
 	(void)si_ce_ram_size; /* silence an "unused" warning */
-	assert(offset + size <= si_ce_ram_size(sctx));
+	assert(ce_offset + size <= si_ce_ram_size(sctx));
 
 	u_suballocator_alloc(sctx->ce_suballocator, size, cache_line_size,
 			     out_offset, (struct pipe_resource**)out_buf);
