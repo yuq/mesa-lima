@@ -620,10 +620,7 @@ dd_flush_and_handle_hang(struct dd_context *dctx,
       if (f) {
          fprintf(f, "dd: %s.\n", cause);
          dd_dump_driver_state(dctx, f,
-                              PIPE_DUMP_DEVICE_STATUS_REGISTERS |
-                              PIPE_DUMP_CURRENT_STATES |
-                              PIPE_DUMP_CURRENT_SHADERS |
-                              PIPE_DUMP_LAST_COMMAND_BUFFER);
+                              PIPE_DUMP_DEVICE_STATUS_REGISTERS);
          dd_dump_dmesg(f);
          dd_close_file_stream(f);
       }
@@ -1118,10 +1115,7 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
          if (!dscreen->no_flush &&
             dd_flush_and_check_hang(dctx, NULL, 0)) {
             dd_write_report(dctx, call,
-                         PIPE_DUMP_DEVICE_STATUS_REGISTERS |
-                         PIPE_DUMP_CURRENT_STATES |
-                         PIPE_DUMP_CURRENT_SHADERS |
-                         PIPE_DUMP_LAST_COMMAND_BUFFER,
+                         PIPE_DUMP_DEVICE_STATUS_REGISTERS,
                          true);
 
             /* Terminate the process to prevent future hangs. */
@@ -1136,19 +1130,12 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
       case DD_DUMP_ALL_CALLS:
          if (!dscreen->no_flush)
             pipe->flush(pipe, NULL, 0);
-         dd_write_report(dctx, call,
-                         PIPE_DUMP_CURRENT_STATES |
-                         PIPE_DUMP_CURRENT_SHADERS |
-                         PIPE_DUMP_LAST_COMMAND_BUFFER,
-                         false);
+         dd_write_report(dctx, call, 0, false);
          break;
       case DD_DUMP_APITRACE_CALL:
          if (dscreen->apitrace_dump_call ==
              dctx->draw_state.apitrace_call_number) {
-            dd_write_report(dctx, call,
-                            PIPE_DUMP_CURRENT_STATES |
-                            PIPE_DUMP_CURRENT_SHADERS,
-                            false);
+            dd_write_report(dctx, call, 0, false);
             /* No need to continue. */
             exit(0);
          } else {

@@ -1061,11 +1061,9 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
 		si_dump_debug_registers(sctx, f);
 
-		if (flags & PIPE_DUMP_CURRENT_SHADERS) {
-			si_dump_annotated_shaders(sctx, f);
-			si_dump_command("Active waves (raw data)", "umr -wa | column -t", f);
-			si_dump_command("Wave information", "umr -O bits -wa", f);
-		}
+		si_dump_annotated_shaders(sctx, f);
+		si_dump_command("Active waves (raw data)", "umr -wa | column -t", f);
+		si_dump_command("Wave information", "umr -O bits -wa", f);
 	}
 }
 
