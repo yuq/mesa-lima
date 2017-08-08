@@ -99,8 +99,8 @@ swrastDestroyDrawable(struct dri2_egl_display * dri2_dpy,
    xcb_free_gc(dri2_dpy->conn, dri2_surf->swapgc);
 }
 
-static void
-swrastGetDrawableInfo(__DRIdrawable * draw,
+static bool
+x11_get_drawable_info(__DRIdrawable * draw,
                       int *x, int *y, int *w, int *h,
                       void *loaderPrivate)
 {
@@ -110,14 +110,15 @@ swrastGetDrawableInfo(__DRIdrawable * draw,
    xcb_get_geometry_cookie_t cookie;
    xcb_get_geometry_reply_t *reply;
    xcb_generic_error_t *error;
+   bool ret;
 
-   *x = *y = *w = *h = 0;
    cookie = xcb_get_geometry (dri2_dpy->conn, dri2_surf->drawable);
    reply = xcb_get_geometry_reply (dri2_dpy->conn, cookie, &error);
    if (reply == NULL)
-      return;
+      return false;
 
    if (error != NULL) {
+      ret = false;
       _eglLog(_EGL_WARNING, "error in xcb_get_geometry");
       free(error);
    } else {
@@ -125,8 +126,19 @@ swrastGetDrawableInfo(__DRIdrawable * draw,
       *y = reply->y;
       *w = reply->width;
       *h = reply->height;
+      ret = true;
    }
    free(reply);
+   return ret;
+}
+
+static void
+swrastGetDrawableInfo(__DRIdrawable * draw,
+                      int *x, int *y, int *w, int *h,
+                      void *loaderPrivate)
+{
+   *x = *y = *w = *h = 0;
+   x11_get_drawable_info(draw, x, y, w, h, loaderPrivate);
 }
 
 static void
@@ -412,15 +424,14 @@ dri2_query_surface(_EGLDriver *drv, _EGLDisplay *dpy,
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
-   int x, y, w = -1, h = -1;
+   int x, y, w, h;
 
    __DRIdrawable *drawable = dri2_dpy->vtbl->get_dri_drawable(surf);
 
    switch (attribute) {
    case EGL_WIDTH:
    case EGL_HEIGHT:
-      swrastGetDrawableInfo(drawable, &x, &y, &w, &h, dri2_surf);
-      if (w != -1 && h != -1) {
+      if (x11_get_drawable_info(drawable, &x, &y, &w, &h, dri2_surf)) {
          surf->Width = w;
          surf->Height = h;
       }
