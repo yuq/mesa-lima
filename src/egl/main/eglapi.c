@@ -275,7 +275,7 @@ _eglSetFuncName(const char *funcName, _EGLDisplay *disp, EGLenum objectType, _EG
    }
 
    _eglDebugReportFull(EGL_BAD_ALLOC, funcName, funcName,
-		       EGL_DEBUG_MSG_CRITICAL_KHR, NULL, NULL);
+                       EGL_DEBUG_MSG_CRITICAL_KHR, NULL, NULL);
    return EGL_FALSE;
 }
 
@@ -377,7 +377,7 @@ eglGetDisplay(EGLNativeDisplayType nativeDisplay)
 
 static EGLDisplay
 _eglGetPlatformDisplayCommon(EGLenum platform, void *native_display,
-			     const EGLint *attrib_list)
+                             const EGLint *attrib_list)
 {
    _EGLDisplay *dpy;
 
@@ -616,8 +616,8 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
       _eglCreateExtensionsString(disp);
       _eglCreateAPIsString(disp);
       snprintf(disp->VersionString, sizeof(disp->VersionString),
-              "%d.%d (%s)", disp->Version / 10, disp->Version % 10,
-              disp->Driver->Name);
+               "%d.%d (%s)", disp->Version / 10, disp->Version % 10,
+               disp->Driver->Name);
    }
 
    /* Update applications version of major and minor if not NULL */
@@ -715,7 +715,7 @@ eglChooseConfig(EGLDisplay dpy, const EGLint *attrib_list, EGLConfig *configs,
 
    _EGL_CHECK_DISPLAY(disp, EGL_FALSE, drv);
    ret = drv->API.ChooseConfig(drv, disp, attrib_list, configs,
-                                config_size, num_config);
+                               config_size, num_config);
 
    RETURN_EGL_EVAL(disp, ret);
 }
@@ -978,13 +978,13 @@ static void *
 _fixupNativePixmap(_EGLDisplay *disp, void *native_pixmap)
 {
 #ifdef HAVE_X11_PLATFORM
-      /* The `native_pixmap` parameter for the X11 platform differs between
-       * eglCreatePixmapSurface() and eglCreatePlatformPixmapSurfaceEXT(). In
-       * eglCreatePixmapSurface(), the type of `native_pixmap` is an Xlib
-       * `Pixmap`. In eglCreatePlatformPixmapSurfaceEXT(), the type is
-       * `Pixmap*`.  Convert `Pixmap*` to `Pixmap` because that's what
-       * dri2_x11_create_pixmap_surface() expects.
-       */
+   /* The `native_pixmap` parameter for the X11 platform differs between
+    * eglCreatePixmapSurface() and eglCreatePlatformPixmapSurfaceEXT(). In
+    * eglCreatePixmapSurface(), the type of `native_pixmap` is an Xlib
+    * `Pixmap`. In eglCreatePlatformPixmapSurfaceEXT(), the type is
+    * `Pixmap*`.  Convert `Pixmap*` to `Pixmap` because that's what
+    * dri2_x11_create_pixmap_surface() expects.
+    */
    if (disp->Platform == _EGL_PLATFORM_X11 && native_pixmap != NULL)
       return (void *)(* (Pixmap*) native_pixmap);
 #endif
@@ -1038,13 +1038,13 @@ eglCreatePixmapSurface(EGLDisplay dpy, EGLConfig config,
    _EGL_FUNC_START(disp, EGL_OBJECT_DISPLAY_KHR, NULL, EGL_NO_SURFACE);
    STATIC_ASSERT(sizeof(void*) == sizeof(pixmap));
    return _eglCreatePixmapSurfaceCommon(disp, config, (void*) pixmap,
-                                         attrib_list);
+                                        attrib_list);
 }
 
 static EGLSurface EGLAPIENTRY
 eglCreatePlatformPixmapSurfaceEXT(EGLDisplay dpy, EGLConfig config,
-                                   void *native_pixmap,
-                                   const EGLint *attrib_list)
+                                  void *native_pixmap,
+                                  const EGLint *attrib_list)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
 
@@ -1641,7 +1641,7 @@ eglReleaseThread(void)
 
 static EGLImage
 _eglCreateImageCommon(_EGLDisplay *disp, EGLContext ctx, EGLenum target,
-                  EGLClientBuffer buffer, const EGLint *attr_list)
+                      EGLClientBuffer buffer, const EGLint *attr_list)
 {
    _EGLContext *context = _eglLookupContext(ctx, disp);
    _EGLDriver *drv;
@@ -1659,8 +1659,8 @@ _eglCreateImageCommon(_EGLDisplay *disp, EGLContext ctx, EGLenum target,
    if (ctx != EGL_NO_CONTEXT && target == EGL_LINUX_DMA_BUF_EXT)
       RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_NO_IMAGE_KHR);
 
-   img = drv->API.CreateImageKHR(drv,
-         disp, context, target, buffer, attr_list);
+   img = drv->API.CreateImageKHR(drv, disp, context, target,
+                                 buffer, attr_list);
    ret = (img) ? _eglLinkImage(img) : EGL_NO_IMAGE_KHR;
 
    RETURN_EGL_EVAL(disp, ret);
@@ -1768,7 +1768,7 @@ _eglCreateSync(_EGLDisplay *disp, EGLenum type, const EGLAttrib *attrib_list,
 
    /* return an error if the client API doesn't support GL_OES_EGL_sync */
    if (ctx && (ctx->Resource.Display != disp ||
-       ctx->ClientAPI != EGL_OPENGL_ES_API))
+               ctx->ClientAPI != EGL_OPENGL_ES_API))
       RETURN_EGL_ERROR(disp, EGL_BAD_MATCH, EGL_NO_SYNC_KHR);
 
    switch (type) {
@@ -2083,7 +2083,7 @@ eglDupNativeFenceFDANDROID(EGLDisplay dpy, EGLSync sync)
 
 static EGLBoolean EGLAPIENTRY
 eglSwapBuffersRegionNOK(EGLDisplay dpy, EGLSurface surface,
-			EGLint numRects, const EGLint *rects)
+                        EGLint numRects, const EGLint *rects)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -2131,7 +2131,7 @@ eglCreateDRMImageMESA(EGLDisplay dpy, const EGLint *attr_list)
 
 static EGLBoolean EGLAPIENTRY
 eglExportDRMImageMESA(EGLDisplay dpy, EGLImage image,
-		      EGLint *name, EGLint *handle, EGLint *stride)
+                      EGLint *name, EGLint *handle, EGLint *stride)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLImage *img = _eglLookupImage(image, disp);
@@ -2333,7 +2333,7 @@ eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImage image,
 
 static EGLint EGLAPIENTRY
 eglLabelObjectKHR(EGLDisplay dpy, EGLenum objectType, EGLObjectKHR object,
-		  EGLLabelKHR label)
+                  EGLLabelKHR label)
 {
    _EGLDisplay *disp = NULL;
    _EGLResourceType type;
@@ -2400,7 +2400,7 @@ _validDebugMessageLevel(EGLAttrib level)
 
 static EGLint EGLAPIENTRY
 eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback,
-			  const EGLAttrib *attrib_list)
+                          const EGLAttrib *attrib_list)
 {
    unsigned int newEnabled;
 
@@ -2425,7 +2425,7 @@ eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback,
          // debug callback, and return the error code.
          mtx_unlock(_eglGlobal.Mutex);
          _eglReportError(EGL_BAD_ATTRIBUTE, NULL,
-               "Invalid attribute 0x%04lx", (unsigned long) attrib_list[i]);
+                         "Invalid attribute 0x%04lx", (unsigned long) attrib_list[i]);
          return EGL_BAD_ATTRIBUTE;
       }
    }
@@ -2465,7 +2465,7 @@ eglQueryDebugKHR(EGLint attribute, EGLAttrib *value)
 
       mtx_unlock(_eglGlobal.Mutex);
       _eglReportError(EGL_BAD_ATTRIBUTE, NULL,
-              "Invalid attribute 0x%04lx", (unsigned long) attribute);
+                      "Invalid attribute 0x%04lx", (unsigned long) attribute);
       return EGL_FALSE;
    } while (0);
 
