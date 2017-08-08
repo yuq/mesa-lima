@@ -829,8 +829,10 @@ translate_tex(struct fd2_compile_context *ctx,
 
 /* SGE(a,b) = GTE((b - a), 1.0, 0.0) */
 /* SLT(a,b) = GTE((b - a), 0.0, 1.0) */
+/* SEQ(a,b) = EQU((b - a), 1.0, 0.0) */
+/* SNE(a,b) = EQU((b - a), 0.0, 1.0) */
 static void
-translate_sge_slt(struct fd2_compile_context *ctx,
+translate_sge_slt_seq_sne(struct fd2_compile_context *ctx,
 		struct tgsi_full_instruction *inst, unsigned opc)
 {
 	struct ir2_instruction *instr;
@@ -838,6 +840,7 @@ translate_sge_slt(struct fd2_compile_context *ctx,
 	struct tgsi_src_register tmp_src;
 	struct tgsi_src_register tmp_const;
 	float c0, c1;
+	instr_vector_opc_t vopc;
 
 	switch (opc) {
 	default:
@@ -845,10 +848,22 @@ translate_sge_slt(struct fd2_compile_context *ctx,
 	case TGSI_OPCODE_SGE:
 		c0 = 1.0;
 		c1 = 0.0;
+		vopc = CNDGTEv;
 		break;
 	case TGSI_OPCODE_SLT:
 		c0 = 0.0;
 		c1 = 1.0;
+		vopc = CNDGTEv;
+		break;
+	case TGSI_OPCODE_SEQ:
+		c0 = 0.0;
+		c1 = 1.0;
+		vopc = CNDEv;
+		break;
+	case TGSI_OPCODE_SNE:
+		c0 = 1.0;
+		c1 = 0.0;
+		vopc = CNDEv;
 		break;
 	}
 
@@ -859,7 +874,7 @@ translate_sge_slt(struct fd2_compile_context *ctx,
 	add_src_reg(ctx, instr, &inst->Src[0].Register)->flags |= IR2_REG_NEGATE;
 	add_src_reg(ctx, instr, &inst->Src[1].Register);
 
-	instr = ir2_instr_create_alu(next_exec_cf(ctx), CNDGTEv, ~0);
+	instr = ir2_instr_create_alu(next_exec_cf(ctx), vopc, ~0);
 	add_dst_reg(ctx, instr, &inst->Dst[0].Register);
 	/* maybe should re-arrange the syntax some day, but
 	 * in assembler/disassembler and what ir.c expects
@@ -1057,7 +1072,9 @@ translate_instruction(struct fd2_compile_context *ctx,
 		break;
 	case TGSI_OPCODE_SLT:
 	case TGSI_OPCODE_SGE:
-		translate_sge_slt(ctx, inst, opc);
+	case TGSI_OPCODE_SEQ:
+	case TGSI_OPCODE_SNE:
+		translate_sge_slt_seq_sne(ctx, inst, opc);
 		break;
 	case TGSI_OPCODE_MAD:
 		instr = ir2_instr_create_alu(cf, MULADDv, ~0);
