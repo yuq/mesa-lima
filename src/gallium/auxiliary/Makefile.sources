@@ -253,6 +253,8 @@ C_SOURCES := \
 	util/u_hash_table.h \
 	util/u_helpers.c \
 	util/u_helpers.h \
+	util/u_idalloc.c \
+	util/u_idalloc.h \
 	util/u_index_modify.c \
 	util/u_index_modify.h \
 	util/u_inlines.h \
