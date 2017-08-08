@@ -540,6 +540,8 @@ vgpu9_get_shader_param(struct pipe_screen *screen,
       case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
       case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS:
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
          return 0;
       case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
          return 32;
@@ -605,6 +607,8 @@ vgpu9_get_shader_param(struct pipe_screen *screen,
       case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
       case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS:
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
          return 0;
       case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
          return 32;

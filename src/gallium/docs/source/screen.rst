@@ -519,7 +519,10 @@ MOV OUT[0], CONST[0][3]  # copy vector 3 of constbuf 0
 * ``PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS``: Whether the merge registers
   TGSI pass is skipped. This might reduce code size and register pressure if
   the underlying driver has a real backend compiler.
-
+* ``PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS``: If atomic counters are separate,
+  how many HW counters are available for this stage. (0 uses SSBO atomics).
+* ``PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS``: If atomic counters are
+  separate, how many atomic counter buffers are available for this stage.
 
 .. _pipe_compute_cap:
 

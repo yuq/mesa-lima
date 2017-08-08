@@ -341,6 +341,8 @@ virgl_get_shader_param(struct pipe_screen *screen,
       case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
       case PIPE_SHADER_CAP_INT64_ATOMICS:
       case PIPE_SHADER_CAP_FP16:
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS:
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
       default:
          return 0;
       }

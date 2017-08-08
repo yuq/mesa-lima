@@ -792,6 +792,8 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	/* Unsupported boolean features. */
 	case PIPE_SHADER_CAP_SUBROUTINES:
 	case PIPE_SHADER_CAP_SUPPORTED_IRS:
+	case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS:
+	case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
 		return 0;
 	}
 	return 0;
