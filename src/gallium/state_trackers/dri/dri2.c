@@ -2061,10 +2061,10 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    if (screen->fd < 0 || (fd = fcntl(screen->fd, F_DUPFD_CLOEXEC, 3)) < 0)
       goto free_screen;
 
-   dri_init_options(screen);
-
-   if (pipe_loader_sw_probe_kms(&screen->dev, fd))
+   if (pipe_loader_sw_probe_kms(&screen->dev, fd)) {
+      dri_init_options(screen);
       pscreen = pipe_loader_create_screen(screen->dev);
+   }
 
    if (!pscreen)
        goto release_pipe;
