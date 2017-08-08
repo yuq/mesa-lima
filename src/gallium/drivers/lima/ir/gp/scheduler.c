@@ -49,9 +49,38 @@ static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *inse
    list_addtail(&insert_node->ready, insert_pos);
 }
 
+static void gpir_schedule_node(gpir_block *block, gpir_node *node)
+{
+   node->scheduled = true;
+}
+
 static void gpir_schedule_ready_list(gpir_block *block, struct list_head *ready_list)
 {
-   
+   if (list_empty(ready_list))
+      return;
+
+   gpir_node *node = list_first_entry(ready_list, gpir_node, ready);
+   list_del(&node->ready);
+
+   gpir_schedule_node(block, node);
+
+   for (int i = 0; i < node->num_parent; i++) {
+      gpir_node *parent = node->parents[i];
+      bool ready = true;
+
+      /* after all children has been scheduled */
+      for (int j = 0; j < parent->num_child; j++) {
+         if (!parent->children[j]->scheduled) {
+            ready = false;
+            break;
+         }
+      }
+
+      if (ready)
+         gpir_insert_ready_list(ready_list, parent);
+   }
+
+   gpir_schedule_ready_list(block, ready_list);
 }
 
 #define gpir_node_array_n(buf) ((buf)->size / sizeof(gpir_node *))
