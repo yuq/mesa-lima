@@ -26,6 +26,7 @@
 
 #include "util/list.h"
 #include "util/u_math.h"
+#include "util/u_dynarray.h"
 
 /* list of operations that a node can do. */
 typedef enum {
@@ -152,8 +153,6 @@ typedef struct {
 } gpir_store_node;
 
 typedef struct {
-   struct list_head list;
-
    /* Multiply 0/1 slot */
    gpir_node* mul_slots[2];
 
@@ -202,7 +201,7 @@ typedef struct {
 typedef struct gpir_block {
    struct list_head list;
    struct list_head node_list;
-   struct list_head instr_list;
+   struct util_dynarray instrs;
 } gpir_block;
 
 typedef struct {
