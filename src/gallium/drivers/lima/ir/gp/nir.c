@@ -224,6 +224,8 @@ static gpir_block *gpir_block_create(void)
       return NULL;
 
    list_inithead(&block->node_list);
+   util_dynarray_init(&block->instrs);
+
    return block;
 }
 
@@ -233,9 +235,7 @@ static void gpir_block_delete(gpir_block *block)
       FREE(node);
    }
 
-   list_for_each_entry_safe(gpir_instr, instr, &block->instr_list, list) {
-      FREE(instr);
-   }
+   util_dynarray_fini(&block->instrs);
 
    FREE(block);
 }
@@ -247,8 +247,6 @@ static bool gpir_emit_block(gpir_compiler *comp, nir_block *nblock)
       return false;
 
    list_addtail(&block->list, &comp->block_list);
-   list_inithead(&block->node_list);
-   list_inithead(&block->instr_list);
 
    nir_foreach_instr(instr, nblock) {
       gpir_node *node = gpir_emit_instr(comp, instr);
