@@ -22,7 +22,6 @@
  *
  */
 
-#include "util/u_dynarray.h"
 #include "gpir.h"
 
 static void gpir_update_distance(gpir_node *node, int d)
