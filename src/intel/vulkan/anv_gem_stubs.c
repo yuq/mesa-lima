@@ -187,6 +187,19 @@ anv_gem_sync_file_merge(struct anv_device *device, int fd1, int fd2)
    unreachable("Unused");
 }
 
+int
+anv_gem_syncobj_export_sync_file(struct anv_device *device, uint32_t handle)
+{
+   unreachable("Unused");
+}
+
+int
+anv_gem_syncobj_import_sync_file(struct anv_device *device,
+                                 uint32_t handle, int fd)
+{
+   unreachable("Unused");
+}
+
 uint32_t
 anv_gem_syncobj_create(struct anv_device *device, uint32_t flags)
 {

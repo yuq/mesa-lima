@@ -489,6 +489,34 @@ anv_gem_syncobj_fd_to_handle(struct anv_device *device, int fd)
    return args.handle;
 }
 
+int
+anv_gem_syncobj_export_sync_file(struct anv_device *device, uint32_t handle)
+{
+   struct drm_syncobj_handle args = {
+      .handle = handle,
+      .flags = DRM_SYNCOBJ_HANDLE_TO_FD_FLAGS_EXPORT_SYNC_FILE,
+   };
+
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_SYNCOBJ_HANDLE_TO_FD, &args);
+   if (ret)
+      return -1;
+
+   return args.fd;
+}
+
+int
+anv_gem_syncobj_import_sync_file(struct anv_device *device,
+                                 uint32_t handle, int fd)
+{
+   struct drm_syncobj_handle args = {
+      .handle = handle,
+      .fd = fd,
+      .flags = DRM_SYNCOBJ_FD_TO_HANDLE_FLAGS_IMPORT_SYNC_FILE,
+   };
+
+   return anv_ioctl(device->fd, DRM_IOCTL_SYNCOBJ_FD_TO_HANDLE, &args);
+}
+
 void
 anv_gem_syncobj_reset(struct anv_device *device, uint32_t handle)
 {

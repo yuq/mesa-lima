@@ -688,11 +688,14 @@ void anv_GetPhysicalDeviceExternalFencePropertiesKHR(
 
    switch (pExternalFenceInfo->handleType) {
    case VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+   case VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR:
       if (device->has_syncobj_wait) {
          pExternalFenceProperties->exportFromImportedHandleTypes =
-            VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+            VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR |
+            VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR;
          pExternalFenceProperties->compatibleHandleTypes =
-            VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+            VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR |
+            VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR;
          pExternalFenceProperties->externalFenceFeatures =
             VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT_KHR |
             VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT_KHR;
@@ -732,21 +735,40 @@ VkResult anv_ImportFenceFdKHR(
       if (!new_impl.syncobj)
          return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 
-      /* From the Vulkan 1.0.53 spec:
-       *
-       *    "Importing a fence payload from a file descriptor transfers
-       *    ownership of the file descriptor from the application to the
-       *    Vulkan implementation. The application must not perform any
-       *    operations on the file descriptor after a successful import."
-       *
-       * If the import fails, we leave the file descriptor open.
+      break;
+
+   case VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR:
+      /* Sync files are a bit tricky.  Because we want to continue using the
+       * syncobj implementation of WaitForFences, we don't use the sync file
+       * directly but instead import it into a syncobj.
        */
-      close(fd);
+      new_impl.type = ANV_FENCE_TYPE_SYNCOBJ;
+
+      new_impl.syncobj = anv_gem_syncobj_create(device, 0);
+      if (!new_impl.syncobj)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      if (anv_gem_syncobj_import_sync_file(device, new_impl.syncobj, fd)) {
+         anv_gem_syncobj_destroy(device, new_impl.syncobj);
+         return vk_errorf(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR,
+                          "syncobj sync file import failed: %m");
+      }
       break;
 
    default:
       return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
    }
+
+   /* From the Vulkan 1.0.53 spec:
+    *
+    *    "Importing a fence payload from a file descriptor transfers
+    *    ownership of the file descriptor from the application to the
+    *    Vulkan implementation. The application must not perform any
+    *    operations on the file descriptor after a successful import."
+    *
+    * If the import fails, we leave the file descriptor open.
+    */
+   close(fd);
 
    if (pImportFenceFdInfo->flags & VK_FENCE_IMPORT_TEMPORARY_BIT_KHR) {
       anv_fence_impl_cleanup(device, &fence->temporary);
@@ -777,6 +799,15 @@ VkResult anv_GetFenceFdKHR(
    switch (pGetFdInfo->handleType) {
    case VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR: {
       int fd = anv_gem_syncobj_handle_to_fd(device, impl->syncobj);
+      if (fd < 0)
+         return vk_error(VK_ERROR_TOO_MANY_OBJECTS);
+
+      *pFd = fd;
+      break;
+   }
+
+   case VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT_KHR: {
+      int fd = anv_gem_syncobj_export_sync_file(device, impl->syncobj);
       if (fd < 0)
          return vk_error(VK_ERROR_TOO_MANY_OBJECTS);
 

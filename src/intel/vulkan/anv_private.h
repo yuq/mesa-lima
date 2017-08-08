@@ -810,6 +810,10 @@ uint32_t anv_gem_syncobj_create(struct anv_device *device, uint32_t flags);
 void anv_gem_syncobj_destroy(struct anv_device *device, uint32_t handle);
 int anv_gem_syncobj_handle_to_fd(struct anv_device *device, uint32_t handle);
 uint32_t anv_gem_syncobj_fd_to_handle(struct anv_device *device, int fd);
+int anv_gem_syncobj_export_sync_file(struct anv_device *device,
+                                     uint32_t handle);
+int anv_gem_syncobj_import_sync_file(struct anv_device *device,
+                                     uint32_t handle, int fd);
 void anv_gem_syncobj_reset(struct anv_device *device, uint32_t handle);
 bool anv_gem_supports_syncobj_wait(int fd);
 int anv_gem_syncobj_wait(struct anv_device *device,
