@@ -122,6 +122,7 @@ typedef struct gpir_node {
    /* for scheduler */
    int distance;
    struct list_head ready;
+   bool scheduled;
 } gpir_node;
 
 typedef struct {
