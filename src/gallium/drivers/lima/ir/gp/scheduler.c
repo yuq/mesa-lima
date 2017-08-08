@@ -33,6 +33,30 @@ static void gpir_update_distance(gpir_node *node, int d)
    }
 }
 
+static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *insert_node)
+{
+   struct list_head *insert_pos = ready_list;
+
+   list_for_each_entry(gpir_node, node, ready_list, ready) {
+      if (insert_node->distance > node->distance ||
+          (insert_node->distance == node->distance &&
+           insert_node->num_parent > node->num_parent)) {
+         insert_pos = &node->ready;
+         break;
+      }
+   }
+
+   list_addtail(&insert_node->ready, insert_pos);
+}
+
+static void gpir_schedule_ready_list(gpir_block *block, struct list_head *ready_list)
+{
+   
+}
+
+#define gpir_node_array_n(buf) ((buf)->size / sizeof(gpir_node *))
+#define gpir_node_array_e(buf, idx) (*util_dynarray_element(buf, gpir_node *, idx))
+
 static void gpir_schedule_block(gpir_block *block)
 {
    struct util_dynarray root, leaf;
@@ -48,11 +72,21 @@ static void gpir_schedule_block(gpir_block *block)
          util_dynarray_append(&root, gpir_node *, node);
    }
 
-   for (int i = 0; i < root.size / sizeof(gpir_node *); i++)
-      gpir_update_distance(*util_dynarray_element(&root, gpir_node *, i), 0);
-
+   for (int i = 0; i < gpir_node_array_n(&root); i++)
+      gpir_update_distance(gpir_node_array_e(&root, i), 0);
    util_dynarray_fini(&root);
+
+   struct list_head ready_list;
+   list_inithead(&ready_list);
+
+   /* construct the ready list initially from leaf nodes */
+   for (int i = 0; i < gpir_node_array_n(&leaf); i++) {
+      gpir_node *insert_node = gpir_node_array_e(&leaf, i);
+      gpir_insert_ready_list(&ready_list, insert_node);
+   }
    util_dynarray_fini(&leaf);
+
+   gpir_schedule_ready_list(block, &ready_list);
 }
 
 void gpir_schedule_prog(gpir_compiler *comp)
