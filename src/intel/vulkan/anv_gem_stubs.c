@@ -210,3 +210,23 @@ anv_gem_syncobj_fd_to_handle(struct anv_device *device, int fd)
 {
    unreachable("Unused");
 }
+
+void
+anv_gem_syncobj_reset(struct anv_device *device, uint32_t handle)
+{
+   unreachable("Unused");
+}
+
+bool
+anv_gem_supports_syncobj_wait(int fd)
+{
+   return false;
+}
+
+int
+anv_gem_syncobj_wait(struct anv_device *device,
+                     uint32_t *handles, uint32_t num_handles,
+                     int64_t abs_timeout_ns, bool wait_all)
+{
+   unreachable("Unused");
+}
