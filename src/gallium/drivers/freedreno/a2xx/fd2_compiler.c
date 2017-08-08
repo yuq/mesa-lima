@@ -987,6 +987,24 @@ translate_trig(struct fd2_compile_context *ctx,
 	add_src_reg(ctx, instr, &tmp_src);
 }
 
+static void
+translate_dp2(struct fd2_compile_context *ctx,
+		struct tgsi_full_instruction *inst,
+		unsigned opc)
+{
+	struct tgsi_src_register tmp_const;
+	struct ir2_instruction *instr;
+	/* DP2ADD c,a,b -> dot2(a,b) + c */
+	/* for c we use the constant 0.0 */
+	instr = ir2_instr_create_alu(next_exec_cf(ctx), DOT2ADDv, ~0);
+	get_immediate(ctx, &tmp_const, fui(0.0f));
+	add_dst_reg(ctx, instr, &inst->Dst[0].Register);
+	add_src_reg(ctx, instr, &tmp_const);
+	add_src_reg(ctx, instr, &inst->Src[0].Register);
+	add_src_reg(ctx, instr, &inst->Src[1].Register);
+	add_vector_clamp(inst, instr);
+}
+
 /*
  * Main part of compiler/translator:
  */
@@ -1053,6 +1071,9 @@ translate_instruction(struct fd2_compile_context *ctx,
 	case TGSI_OPCODE_ADD:
 		instr = ir2_instr_create_alu(cf, ADDv, ~0);
 		add_regs_vector_2(ctx, inst, instr);
+		break;
+	case TGSI_OPCODE_DP2:
+		translate_dp2(ctx, inst, opc);
 		break;
 	case TGSI_OPCODE_DP3:
 		instr = ir2_instr_create_alu(cf, DOT3v, ~0);
