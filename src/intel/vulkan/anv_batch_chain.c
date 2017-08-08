@@ -1549,8 +1549,20 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
    }
 
    if (fence) {
-      assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
-      struct anv_fence_impl *impl = &fence->permanent;
+      /* Under most circumstances, out fences won't be temporary.  However,
+       * the spec does allow it for opaque_fd.  From the Vulkan 1.0.53 spec:
+       *
+       *    "If the import is temporary, the implementation must restore the
+       *    semaphore to its prior permanent state after submitting the next
+       *    semaphore wait operation."
+       *
+       * The spec says nothing whatsoever about signal operations on
+       * temporarily imported semaphores so it appears they are allowed.
+       * There are also CTS tests that require this to work.
+       */
+      struct anv_fence_impl *impl =
+         fence->temporary.type != ANV_FENCE_TYPE_NONE ?
+         &fence->temporary : &fence->permanent;
 
       switch (impl->type) {
       case ANV_FENCE_TYPE_BO:
@@ -1617,6 +1629,9 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
    }
 
    if (fence && fence->permanent.type == ANV_FENCE_TYPE_BO) {
+      /* BO fences can't be shared, so they can't be temporary. */
+      assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
+
       /* Once the execbuf has returned, we need to set the fence state to
        * SUBMITTED.  We can't do this before calling execbuf because
        * anv_GetFenceStatus does take the global device lock before checking

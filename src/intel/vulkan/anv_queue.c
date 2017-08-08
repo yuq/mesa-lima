@@ -349,7 +349,18 @@ VkResult anv_ResetFences(
    for (uint32_t i = 0; i < fenceCount; i++) {
       ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
 
-      assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
+      /* From the Vulkan 1.0.53 spec:
+       *
+       *    "If any member of pFences currently has its payload imported with
+       *    temporary permanence, that fence’s prior permanent payload is
+       *    first restored. The remaining operations described therefore
+       *    operate on the restored payload.
+       */
+      if (fence->temporary.type != ANV_FENCE_TYPE_NONE) {
+         anv_fence_impl_cleanup(device, &fence->temporary);
+         fence->temporary.type = ANV_FENCE_TYPE_NONE;
+      }
+
       struct anv_fence_impl *impl = &fence->permanent;
 
       switch (impl->type) {
@@ -379,11 +390,14 @@ VkResult anv_GetFenceStatus(
    if (unlikely(device->lost))
       return VK_ERROR_DEVICE_LOST;
 
-   assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
-   struct anv_fence_impl *impl = &fence->permanent;
+   struct anv_fence_impl *impl =
+      fence->temporary.type != ANV_FENCE_TYPE_NONE ?
+      &fence->temporary : &fence->permanent;
 
    switch (impl->type) {
    case ANV_FENCE_TYPE_BO:
+      /* BO fences don't support import/export */
+      assert(fence->temporary.type == ANV_FENCE_TYPE_NONE);
       switch (impl->bo.state) {
       case ANV_BO_FENCE_STATE_RESET:
          /* If it hasn't even been sent off to the GPU yet, it's not ready */
@@ -663,6 +677,128 @@ VkResult anv_WaitForFences(
       return anv_wait_for_bo_fences(device, fenceCount, pFences,
                                     waitAll, timeout);
    }
+}
+
+void anv_GetPhysicalDeviceExternalFencePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    const VkPhysicalDeviceExternalFenceInfoKHR* pExternalFenceInfo,
+    VkExternalFencePropertiesKHR*               pExternalFenceProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+
+   switch (pExternalFenceInfo->handleType) {
+   case VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+      if (device->has_syncobj_wait) {
+         pExternalFenceProperties->exportFromImportedHandleTypes =
+            VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+         pExternalFenceProperties->compatibleHandleTypes =
+            VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+         pExternalFenceProperties->externalFenceFeatures =
+            VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT_KHR |
+            VK_EXTERNAL_FENCE_FEATURE_IMPORTABLE_BIT_KHR;
+         return;
+      }
+      break;
+
+   default:
+      break;
+   }
+
+   pExternalFenceProperties->exportFromImportedHandleTypes = 0;
+   pExternalFenceProperties->compatibleHandleTypes = 0;
+   pExternalFenceProperties->externalFenceFeatures = 0;
+}
+
+VkResult anv_ImportFenceFdKHR(
+    VkDevice                                    _device,
+    const VkImportFenceFdInfoKHR*               pImportFenceFdInfo)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_fence, fence, pImportFenceFdInfo->fence);
+   int fd = pImportFenceFdInfo->fd;
+
+   assert(pImportFenceFdInfo->sType ==
+          VK_STRUCTURE_TYPE_IMPORT_FENCE_FD_INFO_KHR);
+
+   struct anv_fence_impl new_impl = {
+      .type = ANV_FENCE_TYPE_NONE,
+   };
+
+   switch (pImportFenceFdInfo->handleType) {
+   case VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+      new_impl.type = ANV_FENCE_TYPE_SYNCOBJ;
+
+      new_impl.syncobj = anv_gem_syncobj_fd_to_handle(device, fd);
+      if (!new_impl.syncobj)
+         return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+
+      /* From the Vulkan 1.0.53 spec:
+       *
+       *    "Importing a fence payload from a file descriptor transfers
+       *    ownership of the file descriptor from the application to the
+       *    Vulkan implementation. The application must not perform any
+       *    operations on the file descriptor after a successful import."
+       *
+       * If the import fails, we leave the file descriptor open.
+       */
+      close(fd);
+      break;
+
+   default:
+      return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+   }
+
+   if (pImportFenceFdInfo->flags & VK_FENCE_IMPORT_TEMPORARY_BIT_KHR) {
+      anv_fence_impl_cleanup(device, &fence->temporary);
+      fence->temporary = new_impl;
+   } else {
+      anv_fence_impl_cleanup(device, &fence->permanent);
+      fence->permanent = new_impl;
+   }
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_GetFenceFdKHR(
+    VkDevice                                    _device,
+    const VkFenceGetFdInfoKHR*                  pGetFdInfo,
+    int*                                        pFd)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_fence, fence, pGetFdInfo->fence);
+
+   assert(pGetFdInfo->sType == VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR);
+
+   struct anv_fence_impl *impl =
+      fence->temporary.type != ANV_FENCE_TYPE_NONE ?
+      &fence->temporary : &fence->permanent;
+
+   assert(impl->type == ANV_FENCE_TYPE_SYNCOBJ);
+   switch (pGetFdInfo->handleType) {
+   case VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR: {
+      int fd = anv_gem_syncobj_handle_to_fd(device, impl->syncobj);
+      if (fd < 0)
+         return vk_error(VK_ERROR_TOO_MANY_OBJECTS);
+
+      *pFd = fd;
+      break;
+   }
+
+   default:
+      unreachable("Invalid fence export handle type");
+   }
+
+   /* From the Vulkan 1.0.53 spec:
+    *
+    *    "Export operations have the same transference as the specified handle
+    *    type’s import operations. [...] If the fence was using a
+    *    temporarily imported payload, the fence’s prior permanent payload
+    *    will be restored.
+    */
+   if (impl == &fence->temporary)
+      anv_fence_impl_cleanup(device, impl);
+
+   return VK_SUCCESS;
 }
 
 // Queue semaphore functions
