@@ -1602,7 +1602,6 @@ public:
    {
       assert(callee->return_type != NULL);
       actual_parameters->move_nodes_to(& this->actual_parameters);
-      this->use_builtin = callee->is_builtin();
    }
 
    ir_call(ir_function_signature *callee,
@@ -1613,7 +1612,6 @@ public:
    {
       assert(callee->return_type != NULL);
       actual_parameters->move_nodes_to(& this->actual_parameters);
-      this->use_builtin = callee->is_builtin();
    }
 
    virtual ir_call *clone(void *mem_ctx, struct hash_table *ht) const;
@@ -1654,9 +1652,6 @@ public:
 
    /* List of ir_rvalue of paramaters passed in this call. */
    exec_list actual_parameters;
-
-   /** Should this call only bind to a built-in function? */
-   bool use_builtin;
 
    /*
     * ARB_shader_subroutine support -
