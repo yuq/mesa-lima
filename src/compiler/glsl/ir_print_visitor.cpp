@@ -423,7 +423,10 @@ void ir_print_visitor::visit(ir_dereference_record *ir)
 {
    fprintf(f, "(record_ref ");
    ir->record->accept(this);
-   fprintf(f, " %s) ", ir->field);
+
+   const char *field_name =
+      ir->record->type->fields.structure[ir->field_idx].name;
+   fprintf(f, " %s) ", field_name);
 }
 
 

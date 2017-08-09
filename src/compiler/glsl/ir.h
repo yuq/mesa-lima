@@ -2108,7 +2108,7 @@ public:
    virtual ir_visitor_status accept(ir_hierarchical_visitor *);
 
    ir_rvalue *record;
-   const char *field;
+   int field_idx;
 };
 
 
@@ -2192,7 +2192,7 @@ public:
 
    ir_constant *get_array_element(unsigned i) const;
 
-   ir_constant *get_record_field(const char *name);
+   ir_constant *get_record_field(int idx);
 
    /**
     * Copy the values on another constant at a given offset.

@@ -1104,10 +1104,8 @@ ir_constant::get_array_element(unsigned i) const
 }
 
 ir_constant *
-ir_constant::get_record_field(const char *name)
+ir_constant::get_record_field(int idx)
 {
-   int idx = this->type->field_index(name);
-
    if (idx < 0)
       return NULL;
 
@@ -1452,8 +1450,8 @@ ir_dereference_record::ir_dereference_record(ir_rvalue *value,
    assert(value != NULL);
 
    this->record = value;
-   this->field = ralloc_strdup(this, field);
    this->type = this->record->type->field_type(field);
+   this->field_idx = this->record->type->field_index(field);
 }
 
 
@@ -1464,8 +1462,8 @@ ir_dereference_record::ir_dereference_record(ir_variable *var,
    void *ctx = ralloc_parent(var);
 
    this->record = new(ctx) ir_dereference_variable(var);
-   this->field = ralloc_strdup(this, field);
    this->type = this->record->type->field_type(field);
+   this->field_idx = this->record->type->field_index(field);
 }
 
 bool

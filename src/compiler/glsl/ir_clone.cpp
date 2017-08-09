@@ -194,8 +194,10 @@ ir_dereference_array::clone(void *mem_ctx, struct hash_table *ht) const
 ir_dereference_record *
 ir_dereference_record::clone(void *mem_ctx, struct hash_table *ht) const
 {
+   const char *field_name =
+      this->record->type->fields.structure[this->field_idx].name;
    return new(mem_ctx) ir_dereference_record(this->record->clone(mem_ctx, ht),
-					     this->field);
+                                             field_name);
 }
 
 ir_texture *

@@ -1602,8 +1602,9 @@ ir_to_mesa_visitor::visit(ir_dereference_record *ir)
 
    ir->record->accept(this);
 
+   assert(ir->field_idx >= 0);
    for (i = 0; i < struct_type->length; i++) {
-      if (strcmp(struct_type->fields.structure[i].name, ir->field) == 0)
+      if (i == (unsigned) ir->field_idx)
 	 break;
       offset += type_size(struct_type->fields.structure[i].type);
    }
@@ -1684,8 +1685,7 @@ calc_sampler_offsets(struct gl_shader_program *prog, ir_dereference *deref,
 
    case ir_type_dereference_record: {
       ir_dereference_record *deref_record = deref->as_dereference_record();
-      unsigned field_index =
-         deref_record->record->type->field_index(deref_record->field);
+      unsigned field_index = deref_record->field_idx;
       *location +=
          deref_record->record->type->record_location_offset(field_index);
       calc_sampler_offsets(prog, deref_record->record->as_dereference(),

@@ -485,7 +485,7 @@ constant_referenced(const ir_dereference *deref,
        */
       assert(suboffset == 0);
 
-      store = substore->get_record_field(dr->field);
+      store = substore->get_record_field(dr->field_idx);
       break;
    }
 
@@ -828,7 +828,7 @@ ir_dereference_record::constant_expression_value(struct hash_table *)
 {
    ir_constant *v = this->record->constant_expression_value();
 
-   return (v != NULL) ? v->get_record_field(this->field) : NULL;
+   return (v != NULL) ? v->get_record_field(this->field_idx) : NULL;
 }
 
 

@@ -2927,8 +2927,9 @@ glsl_to_tgsi_visitor::visit(ir_dereference_record *ir)
 
    ir->record->accept(this);
 
+   assert(ir->field_idx >= 0);
    for (i = 0; i < struct_type->length; i++) {
-      if (strcmp(struct_type->fields.structure[i].name, ir->field) == 0)
+      if (i == (unsigned) ir->field_idx)
          break;
       offset += type_size(struct_type->fields.structure[i].type);
    }
@@ -3784,23 +3785,20 @@ get_image_qualifiers(ir_dereference *ir, const glsl_type **type,
    switch (ir->ir_type) {
    case ir_type_dereference_record: {
       ir_dereference_record *deref_record = ir->as_dereference_record();
-      const glsl_type *struct_type = deref_record->record->type;
 
-      for (unsigned i = 0; i < struct_type->length; i++) {
-         if (!strcmp(struct_type->fields.structure[i].name,
-                     deref_record->field)) {
-            *type = struct_type->fields.structure[i].type->without_array();
-            *memory_coherent =
-               struct_type->fields.structure[i].memory_coherent;
-            *memory_volatile =
-               struct_type->fields.structure[i].memory_volatile;
-            *memory_restrict =
-               struct_type->fields.structure[i].memory_restrict;
-            *image_format =
-               struct_type->fields.structure[i].image_format;
-            break;
-         }
-      }
+      *type = deref_record->type;
+
+      const glsl_type *struct_type =
+         deref_record->record->type->without_array();
+      int fild_idx = deref_record->field_idx;
+      *memory_coherent =
+         struct_type->fields.structure[fild_idx].memory_coherent;
+      *memory_volatile =
+         struct_type->fields.structure[fild_idx].memory_volatile;
+      *memory_restrict =
+         struct_type->fields.structure[fild_idx].memory_restrict;
+      *image_format =
+         struct_type->fields.structure[fild_idx].image_format;
       break;
    }
 
@@ -4128,7 +4126,7 @@ glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *tail,
    case ir_type_dereference_record: {
       ir_dereference_record *deref_record = tail->as_dereference_record();
       const glsl_type *struct_type = deref_record->record->type;
-      int field_index = deref_record->record->type->field_index(deref_record->field);
+      int field_index = deref_record->field_idx;
 
       calc_deref_offsets(deref_record->record->as_dereference(), array_elements, index, indirect, location);
 

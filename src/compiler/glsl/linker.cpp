@@ -248,14 +248,7 @@ public:
 
    virtual ir_visitor_status visit_leave(ir_dereference_record *ir)
    {
-      for (unsigned i = 0; i < ir->record->type->length; i++) {
-         const struct glsl_struct_field *field =
-            &ir->record->type->fields.structure[i];
-         if (strcmp(field->name, ir->field) == 0) {
-            ir->type = field->type;
-            break;
-         }
-      }
+      ir->type = ir->record->type->fields.structure[ir->field_idx].type;
       return visit_continue;
    }
 };
