@@ -286,6 +286,7 @@ driCreateConfigs(mesa_format format,
 
 		    if ( db_modes[i] == GLX_NONE ) {
 		    	modes->doubleBufferMode = GL_FALSE;
+		        modes->swapMethod = GLX_SWAP_UNDEFINED_OML;
 		    }
 		    else {
 		    	modes->doubleBufferMode = GL_TRUE;
@@ -403,7 +404,6 @@ static const struct { unsigned int attrib, offset; } attribMap[] = {
      * so the iterator includes them though.*/
     __ATTRIB(__DRI_ATTRIB_RENDER_TYPE,			level),
     __ATTRIB(__DRI_ATTRIB_CONFIG_CAVEAT,		level),
-    __ATTRIB(__DRI_ATTRIB_SWAP_METHOD,			level)
 };
 
 
@@ -428,10 +428,6 @@ driGetConfigAttribIndex(const __DRIconfig *config,
 	else
 	    *value = 0;
 	break;
-    case __DRI_ATTRIB_SWAP_METHOD:
-        /* XXX no return value??? */
-	break;
-
     default:
         /* any other int-sized field */
 	*value = *(unsigned int *)

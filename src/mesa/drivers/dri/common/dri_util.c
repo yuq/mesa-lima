@@ -767,7 +767,7 @@ driSwapBuffers(__DRIdrawable *pdp)
 
 /** Core interface */
 const __DRIcoreExtension driCoreExtension = {
-    .base = { __DRI_CORE, 1 },
+    .base = { __DRI_CORE, 2 },
 
     .createNewScreen            = NULL,
     .destroyScreen              = driDestroyScreen,

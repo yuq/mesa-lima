@@ -726,9 +726,12 @@ struct __DRIuseInvalidateExtensionRec {
 
 /**
  * This extension defines the core DRI functionality.
+ *
+ * Version >= 2 indicates that getConfigAttrib with __DRI_ATTRIB_SWAP_METHOD
+ * returns a reliable value.
  */
 #define __DRI_CORE "DRI_Core"
-#define __DRI_CORE_VERSION 1
+#define __DRI_CORE_VERSION 2
 
 struct __DRIcoreExtensionRec {
     __DRIextension base;
