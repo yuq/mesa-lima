@@ -1367,8 +1367,13 @@ isl_calc_row_pitch(const struct isl_device *dev,
        !pitch_in_range(row_pitch, _3DSTATE_HIER_DEPTH_BUFFER_SurfacePitch_bits(dev->info)))
       return false;
 
-   if (surf_info->usage & ISL_SURF_USAGE_STENCIL_BIT)
-      isl_finishme("validate row pitch of stencil surfaces");
+   const uint32_t stencil_pitch_bits = dev->use_separate_stencil ?
+      _3DSTATE_STENCIL_BUFFER_SurfacePitch_bits(dev->info) :
+      _3DSTATE_DEPTH_BUFFER_SurfacePitch_bits(dev->info);
+
+   if ((surf_info->usage & ISL_SURF_USAGE_STENCIL_BIT) &&
+       !pitch_in_range(row_pitch, stencil_pitch_bits))
+      return false;
 
  done:
    *out_row_pitch = row_pitch;
