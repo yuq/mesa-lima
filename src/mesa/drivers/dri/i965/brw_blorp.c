@@ -301,8 +301,9 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       src_format = dst_format = MESA_FORMAT_R_FLOAT32;
    }
 
+   enum isl_format src_isl_format = brw_isl_format_for_mesa_format(src_format);
    enum isl_aux_usage src_aux_usage =
-      intel_miptree_texture_aux_usage(brw, src_mt, src_format);
+      intel_miptree_texture_aux_usage(brw, src_mt, src_isl_format);
    /* We do format workarounds for some depth formats so we can't reliably
     * sample with HiZ.  One of these days, we should fix that.
     */
