@@ -556,7 +556,11 @@ ir_expression::ir_expression(int op, ir_rvalue *op0, ir_rvalue *op1,
    }
 }
 
-unsigned int
+/**
+ * This is only here for ir_reader to used for testing purposes. Please use
+ * the precomputed num_operands field if you need the number of operands.
+ */
+unsigned
 ir_expression::get_num_operands(ir_expression_operation op)
 {
    assert(op <= ir_last_opcode);
@@ -573,8 +577,7 @@ ir_expression::get_num_operands(ir_expression_operation op)
    if (op <= ir_last_quadop)
       return 4;
 
-   assert(false);
-   return 0;
+   unreachable("Could not calculate number of operands");
 }
 
 #include "ir_expression_operation_strings.h"

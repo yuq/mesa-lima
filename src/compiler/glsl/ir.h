@@ -1538,18 +1538,10 @@ public:
    virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
 
    /**
-    * Determine the number of operands used by an expression
+    * This is only here for ir_reader to used for testing purposes please use
+    * the precomputed num_operands field if you need the number of operands.
     */
-   static unsigned int get_num_operands(ir_expression_operation);
-
-   /**
-    * Determine the number of operands used by an expression
-    */
-   unsigned int get_num_operands() const
-   {
-      return (this->operation == ir_quadop_vector)
-	 ? this->type->vector_elements : get_num_operands(operation);
-   }
+   static unsigned get_num_operands(ir_expression_operation);
 
    /**
     * Return whether the expression operates on vectors horizontally.
