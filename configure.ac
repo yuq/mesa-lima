@@ -2914,6 +2914,8 @@ AC_OUTPUT
 # source file
 $SED -i -e 's/brw_blorp.cpp/brw_blorp.c/' src/mesa/drivers/dri/i965/.deps/brw_blorp.Plo
 
+rm -f src/compiler/spirv/spirv_info.lo
+echo "# dummy" > src/compiler/spirv/.deps/spirv_info.Plo
 
 dnl
 dnl Output some configuration info for the user
