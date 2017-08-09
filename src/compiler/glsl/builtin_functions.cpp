@@ -6291,16 +6291,7 @@ _mesa_glsl_find_builtin_function(_mesa_glsl_parse_state *state,
    s = builtins.find(state, name, actual_parameters);
    mtx_unlock(&builtins_lock);
 
-   if (s == NULL)
-      return NULL;
-
-   struct hash_table *ht =
-      _mesa_hash_table_create(NULL, _mesa_hash_pointer, _mesa_key_pointer_equal);
-   void *mem_ctx = state;
-   ir_function *f = s->function()->clone(mem_ctx, ht);
-   _mesa_hash_table_destroy(ht, NULL);
-
-   return f->matching_signature(state, actual_parameters, true);
+   return s;
 }
 
 bool
