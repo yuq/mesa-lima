@@ -1579,8 +1579,21 @@ public:
 
    virtual ir_variable *variable_referenced() const;
 
+   /**
+    * Determine the number of operands used by an expression
+    */
+   void init_num_operands()
+   {
+      if (operation == ir_quadop_vector) {
+         num_operands = this->type->vector_elements;
+      } else {
+         num_operands = get_num_operands(operation);
+      }
+   }
+
    ir_expression_operation operation;
    ir_rvalue *operands[4];
+   uint8_t num_operands;
 };
 
 

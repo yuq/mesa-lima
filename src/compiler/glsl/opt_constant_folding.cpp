@@ -74,7 +74,7 @@ ir_constant_fold(ir_rvalue **rvalue)
     */
    ir_expression *expr = (*rvalue)->as_expression();
    if (expr) {
-      for (unsigned int i = 0; i < expr->get_num_operands(); i++) {
+      for (unsigned int i = 0; i < expr->num_operands; i++) {
 	 if (!expr->operands[i]->as_constant())
 	    return false;
       }

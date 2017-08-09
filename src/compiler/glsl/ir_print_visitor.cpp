@@ -291,7 +291,7 @@ void ir_print_visitor::visit(ir_expression *ir)
 
    fprintf(f, " %s ", ir_expression_operation_strings[ir->operation]);
 
-   for (unsigned i = 0; i < ir->get_num_operands(); i++) {
+   for (unsigned i = 0; i < ir->num_operands; i++) {
       ir->operands[i]->accept(this);
    }
 

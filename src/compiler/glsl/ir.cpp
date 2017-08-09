@@ -203,10 +203,15 @@ ir_expression::ir_expression(int op, const struct glsl_type *type,
    this->operands[1] = op1;
    this->operands[2] = op2;
    this->operands[3] = op3;
+   init_num_operands();
+
 #ifndef NDEBUG
-   int num_operands = get_num_operands(this->operation);
-   for (int i = num_operands; i < 4; i++) {
+   for (unsigned i = num_operands; i < 4; i++) {
       assert(this->operands[i] == NULL);
+   }
+
+   for (unsigned i = 0; i < num_operands; i++) {
+      assert(this->operands[i] != NULL);
    }
 #endif
 }
@@ -221,6 +226,9 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    this->operands[3] = NULL;
 
    assert(op <= ir_last_unop);
+   init_num_operands();
+   assert(num_operands == 1);
+   assert(this->operands[0]);
 
    switch (this->operation) {
    case ir_unop_bit_not:
@@ -425,6 +433,11 @@ ir_expression::ir_expression(int op, ir_rvalue *op0, ir_rvalue *op1)
    this->operands[3] = NULL;
 
    assert(op > ir_last_unop);
+   init_num_operands();
+   assert(num_operands == 2);
+   for (unsigned i = 0; i < num_operands; i++) {
+      assert(this->operands[i] != NULL);
+   }
 
    switch (this->operation) {
    case ir_binop_all_equal:
@@ -519,6 +532,11 @@ ir_expression::ir_expression(int op, ir_rvalue *op0, ir_rvalue *op1,
    this->operands[3] = NULL;
 
    assert(op > ir_last_binop && op <= ir_last_triop);
+   init_num_operands();
+   assert(num_operands == 3);
+   for (unsigned i = 0; i < num_operands; i++) {
+      assert(this->operands[i] != NULL);
+   }
 
    switch (this->operation) {
    case ir_triop_fma:

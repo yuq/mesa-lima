@@ -1004,7 +1004,7 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
       return;
    }
 
-   for (operand = 0; operand < ir->get_num_operands(); operand++) {
+   for (operand = 0; operand < ir->num_operands; operand++) {
       this->result.file = PROGRAM_UNDEFINED;
       ir->operands[operand]->accept(this);
       if (this->result.file == PROGRAM_UNDEFINED) {
@@ -1736,7 +1736,7 @@ ir_to_mesa_visitor::process_move_condition(ir_rvalue *ir)
    bool switch_order = false;
 
    ir_expression *const expr = ir->as_expression();
-   if ((expr != NULL) && (expr->get_num_operands() == 2)) {
+   if ((expr != NULL) && (expr->num_operands == 2)) {
       bool zero_on_left = false;
 
       if (expr->operands[0]->is_zero()) {

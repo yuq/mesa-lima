@@ -1575,7 +1575,7 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
    if (ir->operation == ir_quadop_vector)
       assert(!"ir_quadop_vector should have been lowered");
 
-   for (unsigned int operand = 0; operand < ir->get_num_operands(); operand++) {
+   for (unsigned int operand = 0; operand < ir->num_operands; operand++) {
       this->result.file = PROGRAM_UNDEFINED;
       ir->operands[operand]->accept(this);
       if (this->result.file == PROGRAM_UNDEFINED) {
@@ -2990,7 +2990,7 @@ glsl_to_tgsi_visitor::process_move_condition(ir_rvalue *ir)
    ir_expression *const expr = ir->as_expression();
 
    if (native_integers) {
-      if ((expr != NULL) && (expr->get_num_operands() == 2)) {
+      if ((expr != NULL) && (expr->num_operands == 2)) {
          enum glsl_base_type type = expr->operands[0]->type->base_type;
          if (type == GLSL_TYPE_INT || type == GLSL_TYPE_UINT ||
              type == GLSL_TYPE_BOOL) {
@@ -3019,7 +3019,7 @@ glsl_to_tgsi_visitor::process_move_condition(ir_rvalue *ir)
       return switch_order;
    }
 
-   if ((expr != NULL) && (expr->get_num_operands() == 2)) {
+   if ((expr != NULL) && (expr->num_operands == 2)) {
       bool zero_on_left = false;
 
       if (expr->operands[0]->is_zero()) {

@@ -328,8 +328,8 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       }
    }
 
-   assert(ir->get_num_operands() <= 4);
-   for (unsigned i = 0; i < ir->get_num_operands(); i++) {
+   assert(ir->num_operands <= 4);
+   for (unsigned i = 0; i < ir->num_operands; i++) {
       if (ir->operands[i]->type->is_matrix())
 	 return ir;
 

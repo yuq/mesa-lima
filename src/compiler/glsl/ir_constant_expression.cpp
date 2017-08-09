@@ -638,7 +638,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
 
    memset(&data, 0, sizeof(data));
 
-   for (unsigned operand = 0; operand < this->get_num_operands(); operand++) {
+   for (unsigned operand = 0; operand < this->num_operands; operand++) {
       op[operand] = this->operands[operand]->constant_expression_value(variable_context);
       if (!op[operand])
          return NULL;

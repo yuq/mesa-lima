@@ -160,7 +160,7 @@ ir_expression::clone(void *mem_ctx, struct hash_table *ht) const
    ir_rvalue *op[ARRAY_SIZE(this->operands)] = { NULL, };
    unsigned int i;
 
-   for (i = 0; i < get_num_operands(); i++) {
+   for (i = 0; i < num_operands; i++) {
       op[i] = this->operands[i]->clone(mem_ctx, ht);
    }
 

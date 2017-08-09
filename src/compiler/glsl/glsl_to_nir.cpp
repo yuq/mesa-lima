@@ -1494,11 +1494,11 @@ nir_visitor::visit(ir_expression *ir)
    }
 
    nir_ssa_def *srcs[4];
-   for (unsigned i = 0; i < ir->get_num_operands(); i++)
+   for (unsigned i = 0; i < ir->num_operands; i++)
       srcs[i] = evaluate_rvalue(ir->operands[i]);
 
    glsl_base_type types[4];
-   for (unsigned i = 0; i < ir->get_num_operands(); i++)
+   for (unsigned i = 0; i < ir->num_operands; i++)
       if (supports_ints)
          types[i] = ir->operands[i]->type->base_type;
       else
