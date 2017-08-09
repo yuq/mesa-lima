@@ -284,9 +284,9 @@ driCreateConfigs(mesa_format format,
 		    modes->transparentIndex = GLX_DONT_CARE;
 		    modes->rgbMode = GL_TRUE;
 
-		    if ( db_modes[i] == GLX_NONE ) {
+		    if (db_modes[i] == __DRI_ATTRIB_SWAP_NONE) {
 		    	modes->doubleBufferMode = GL_FALSE;
-		        modes->swapMethod = GLX_SWAP_UNDEFINED_OML;
+		        modes->swapMethod = __DRI_ATTRIB_SWAP_UNDEFINED;
 		    }
 		    else {
 		    	modes->doubleBufferMode = GL_TRUE;

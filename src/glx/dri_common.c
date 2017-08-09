@@ -317,6 +317,19 @@ driConfigEqual(const __DRIcoreExtension *core,
             return GL_FALSE;
          break;
 
+      case __DRI_ATTRIB_SWAP_METHOD:
+         if (value == __DRI_ATTRIB_SWAP_EXCHANGE)
+            glxValue = GLX_SWAP_EXCHANGE_OML;
+         else if (value == __DRI_ATTRIB_SWAP_COPY)
+            glxValue = GLX_SWAP_COPY_OML;
+         else
+            glxValue = GLX_SWAP_UNDEFINED_OML;
+
+         if (!scalarEqual(config, attrib, glxValue))
+            return GL_FALSE;
+
+         break;
+
       default:
          if (!scalarEqual(config, attrib, value))
             return GL_FALSE;

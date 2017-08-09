@@ -770,11 +770,9 @@ __DRIconfig **radeonInitScreen2(__DRIscreen *psp)
       MESA_FORMAT_B8G8R8X8_UNORM,
       MESA_FORMAT_B8G8R8A8_UNORM
    };
-   /* GLX_SWAP_COPY_OML is only supported because the Intel driver doesn't
-    * support pageflipping at all.
-    */
+
    static const GLenum back_buffer_modes[] = {
-     GLX_NONE, GLX_SWAP_UNDEFINED_OML, /*, GLX_SWAP_COPY_OML*/
+      __DRI_ATTRIB_SWAP_NONE, __DRI_ATTRIB_SWAP_UNDEFINED
    };
    uint8_t depth_bits[4], stencil_bits[4], msaa_samples_array[1];
    int color;

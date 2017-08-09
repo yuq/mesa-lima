@@ -724,6 +724,18 @@ struct __DRIuseInvalidateExtensionRec {
 #define __DRI_ATTRIB_TEXTURE_2D_BIT		0x02
 #define __DRI_ATTRIB_TEXTURE_RECTANGLE_BIT	0x04
 
+/* __DRI_ATTRIB_SWAP_METHOD */
+/* Note that with the exception of __DRI_ATTRIB_SWAP_NONE, we need to define
+ * the same tokens as GLX. This is because old and current X servers will
+ * transmit the driconf value grabbed from the AIGLX driver untranslated as
+ * the GLX fbconfig value. __DRI_ATTRIB_SWAP_NONE is only used by dri drivers
+ * to signal to the dri core that the driconfig is single-buffer.
+ */
+#define __DRI_ATTRIB_SWAP_NONE                  0x0000
+#define __DRI_ATTRIB_SWAP_EXCHANGE              0x8061
+#define __DRI_ATTRIB_SWAP_COPY                  0x8062
+#define __DRI_ATTRIB_SWAP_UNDEFINED             0x8063
+
 /**
  * This extension defines the core DRI functionality.
  *
