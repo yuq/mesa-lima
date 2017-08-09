@@ -1005,7 +1005,12 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 Value *vMask = vGatherMask;
 
                                 // Gather a SIMD of vertices
-                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vMask, C((char)1));
+                                // APIs allow a 4GB range for offsets
+                                // However, GATHERPS uses signed 32-bit offsets, so only a 2GB range :(
+                                // But, we know that elements must be aligned for FETCH. :)
+                                // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
+                                Value* vShiftedOffsets = VPSRLI(vOffsets, C(1));
+                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vMask, C((char)2));
                             }
                             else
                             {
