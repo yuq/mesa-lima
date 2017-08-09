@@ -404,35 +404,6 @@ void ProcessUserClipDist(PA_STATE& pa, uint32_t primIndex, uint8_t clipDistMask,
     }
 }
 
-// WA linux compiler issue with SIMDLIB and shift immediates
-#define SIMD_WA_SXXI_EPI32 1
-
-#if SIMD_WA_SXXI_EPI32
-template<int i>
-simdscalari simd_wa_slli_epi32(simdscalari a)
-{
-    return SIMD256::slli_epi32<i>(a);
-}
-
-template<int i>
-simd16scalari simd_wa_slli_epi32(simd16scalari a)
-{
-    return SIMD512::slli_epi32<i>(a);
-}
-
-template<int i>
-simdscalari simd_wa_srai_epi32(simdscalari a)
-{
-    return SIMD256::srai_epi32<i>(a);
-}
-
-template<int i>
-simd16scalari simd_wa_srai_epi32(simd16scalari a)
-{
-    return SIMD512::srai_epi32<i>(a);
-}
-
-#endif
 INLINE
 void TransposeVertices(simd4scalar(&dst)[8], const simdscalar &src0, const simdscalar &src1, const simdscalar &src2)
 {
@@ -804,17 +775,10 @@ endBinTriangles:
     }
 
     // Convert triangle bbox to macrotile units.
-#if SIMD_WA_SXXI_EPI32
-    bbox.xmin = simd_wa_srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
-    bbox.ymin = simd_wa_srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
-    bbox.xmax = simd_wa_srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
-    bbox.ymax = simd_wa_srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
-#else
-    bbox.xmin = SIMD_T::srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
-    bbox.ymin = SIMD_T::srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
-    bbox.xmax = SIMD_T::srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
-    bbox.ymax = SIMD_T::srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
-#endif
+    bbox.xmin = SIMD_T::template srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
+    bbox.ymin = SIMD_T::template srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
+    bbox.xmax = SIMD_T::template srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
+    bbox.ymax = SIMD_T::template srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
 
     OSALIGNSIMD16(uint32_t) aMTLeft[SIMD_WIDTH], aMTRight[SIMD_WIDTH], aMTTop[SIMD_WIDTH], aMTBottom[SIMD_WIDTH];
 
@@ -1034,13 +998,8 @@ void BinPostSetupPointsImpl(
         primMask &= ~SIMD_T::movemask_ps(SIMD_T::castsi_ps(vYi));
 
         // compute macro tile coordinates 
-#if SIMD_WA_SXXI_EPI32
-        typename SIMD_T::Integer macroX = simd_wa_srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(vXi);
-        typename SIMD_T::Integer macroY = simd_wa_srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(vYi);
-#else
-        typename SIMD_T::Integer macroX = SIMD_T::srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(vXi);
-        typename SIMD_T::Integer macroY = SIMD_T::srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(vYi);
-#endif
+        typename SIMD_T::Integer macroX = SIMD_T::template srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(vXi);
+        typename SIMD_T::Integer macroY = SIMD_T::template srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(vYi);
 
         OSALIGNSIMD16(uint32_t) aMacroX[SIMD_WIDTH], aMacroY[SIMD_WIDTH];
 
@@ -1048,30 +1007,15 @@ void BinPostSetupPointsImpl(
         SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aMacroY), macroY);
 
         // compute raster tile coordinates
-#if SIMD_WA_SXXI_EPI32
-        typename SIMD_T::Integer rasterX = simd_wa_srai_epi32<KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT>(vXi);
-        typename SIMD_T::Integer rasterY = simd_wa_srai_epi32<KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT>(vYi);
-#else
-        typename SIMD_T::Integer rasterX = SIMD_T::srai_epi32<KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT>(vXi);
-        typename SIMD_T::Integer rasterY = SIMD_T::srai_epi32<KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT>(vYi);
-#endif
+        typename SIMD_T::Integer rasterX = SIMD_T::template srai_epi32<KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT>(vXi);
+        typename SIMD_T::Integer rasterY = SIMD_T::template srai_epi32<KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT>(vYi);
 
         // compute raster tile relative x,y for coverage mask
-#if SIMD_WA_SXXI_EPI32
-        typename SIMD_T::Integer tileAlignedX = simd_wa_slli_epi32<KNOB_TILE_X_DIM_SHIFT>(rasterX);
-        typename SIMD_T::Integer tileAlignedY = simd_wa_slli_epi32<KNOB_TILE_Y_DIM_SHIFT>(rasterY);
-#else
-        typename SIMD_T::Integer tileAlignedX = SIMD_T::slli_epi32<KNOB_TILE_X_DIM_SHIFT>(rasterX);
-        typename SIMD_T::Integer tileAlignedY = SIMD_T::slli_epi32<KNOB_TILE_Y_DIM_SHIFT>(rasterY);
-#endif
+        typename SIMD_T::Integer tileAlignedX = SIMD_T::template slli_epi32<KNOB_TILE_X_DIM_SHIFT>(rasterX);
+        typename SIMD_T::Integer tileAlignedY = SIMD_T::template slli_epi32<KNOB_TILE_Y_DIM_SHIFT>(rasterY);
 
-#if SIMD_WA_SXXI_EPI32
-        typename SIMD_T::Integer tileRelativeX = SIMD_T::sub_epi32(simd_wa_srai_epi32<FIXED_POINT_SHIFT>(vXi), tileAlignedX);
-        typename SIMD_T::Integer tileRelativeY = SIMD_T::sub_epi32(simd_wa_srai_epi32<FIXED_POINT_SHIFT>(vYi), tileAlignedY);
-#else
-        typename SIMD_T::Integer tileRelativeX = SIMD_T::sub_epi32(SIMD_T::srai_epi32<FIXED_POINT_SHIFT>(vXi), tileAlignedX);
-        typename SIMD_T::Integer tileRelativeY = SIMD_T::sub_epi32(SIMD_T::srai_epi32<FIXED_POINT_SHIFT>(vYi), tileAlignedY);
-#endif
+        typename SIMD_T::Integer tileRelativeX = SIMD_T::sub_epi32(SIMD_T::template srai_epi32<FIXED_POINT_SHIFT>(vXi), tileAlignedX);
+        typename SIMD_T::Integer tileRelativeY = SIMD_T::sub_epi32(SIMD_T::template srai_epi32<FIXED_POINT_SHIFT>(vYi), tileAlignedY);
 
         OSALIGNSIMD16(uint32_t) aTileRelativeX[SIMD_WIDTH];
         OSALIGNSIMD16(uint32_t) aTileRelativeY[SIMD_WIDTH];
@@ -1223,17 +1167,10 @@ void BinPostSetupPointsImpl(
         primMask = primMask & ~maskOutsideScissor;
 
         // Convert bbox to macrotile units.
-#if SIMD_WA_SXXI_EPI32
-        bbox.xmin = simd_wa_srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
-        bbox.ymin = simd_wa_srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
-        bbox.xmax = simd_wa_srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
-        bbox.ymax = simd_wa_srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
-#else
-        bbox.xmin = SIMD_T::srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
-        bbox.ymin = SIMD_T::srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
-        bbox.xmax = SIMD_T::srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
-        bbox.ymax = SIMD_T::srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
-#endif
+        bbox.xmin = SIMD_T::template srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
+        bbox.ymin = SIMD_T::template srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
+        bbox.xmax = SIMD_T::template srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
+        bbox.ymax = SIMD_T::template srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
 
         OSALIGNSIMD16(uint32_t) aMTLeft[SIMD_WIDTH], aMTRight[SIMD_WIDTH], aMTTop[SIMD_WIDTH], aMTBottom[SIMD_WIDTH];
 
@@ -1569,17 +1506,10 @@ void BinPostSetupLinesImpl(
     }
 
     // Convert triangle bbox to macrotile units.
-#if SIMD_WA_SXXI_EPI32
-    bbox.xmin = simd_wa_srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
-    bbox.ymin = simd_wa_srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
-    bbox.xmax = simd_wa_srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
-    bbox.ymax = simd_wa_srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
-#else
-    bbox.xmin = SIMD_T::srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
-    bbox.ymin = SIMD_T::srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
-    bbox.xmax = SIMD_T::srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
-    bbox.ymax = SIMD_T::srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
-#endif
+    bbox.xmin = SIMD_T::template srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmin);
+    bbox.ymin = SIMD_T::template srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymin);
+    bbox.xmax = SIMD_T::template srai_epi32<KNOB_MACROTILE_X_DIM_FIXED_SHIFT>(bbox.xmax);
+    bbox.ymax = SIMD_T::template srai_epi32<KNOB_MACROTILE_Y_DIM_FIXED_SHIFT>(bbox.ymax);
 
     OSALIGNSIMD16(uint32_t) aMTLeft[SIMD_WIDTH], aMTRight[SIMD_WIDTH], aMTTop[SIMD_WIDTH], aMTBottom[SIMD_WIDTH];
 
