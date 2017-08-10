@@ -56,6 +56,9 @@ static struct loader_dri3_blit_context blit_context = {
    _MTX_INITIALIZER_NP, NULL
 };
 
+static void
+dri3_flush_present_events(struct loader_dri3_drawable *draw);
+
 /**
  * Do we have blit functionality in the image blit extension?
  *
@@ -481,6 +484,9 @@ dri3_find_back(struct loader_dri3_drawable *draw)
    int b;
    xcb_generic_event_t *ev;
    xcb_present_generic_event_t *ge;
+
+   /* Increase the likelyhood of reusing current buffer */
+   dri3_flush_present_events(draw);
 
    for (;;) {
       for (b = 0; b < draw->num_back; b++) {
