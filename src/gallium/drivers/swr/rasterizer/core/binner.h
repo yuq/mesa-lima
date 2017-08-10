@@ -31,11 +31,19 @@
 //////////////////////////////////////////////////////////////////////////
 /// @brief Offsets added to post-viewport vertex positions based on
 /// raster state.
+///
+/// Can't use templated variable because we must stick with C++11 features.
+/// Template variables were introduced with C++14
 template <typename SIMD_T>
-static const typename SIMD_T::Float g_pixelOffsets[SWR_PIXEL_LOCATION_UL + 1] =
+struct SwrPixelOffsets
 {
-    SIMD_T::set1_ps(0.0f),  // SWR_PIXEL_LOCATION_CENTER
-    SIMD_T::set1_ps(0.5f),  // SWR_PIXEL_LOCATION_UL
+public:
+    INLINE static typename SIMD_T::Float GetOffset(uint32_t loc)
+    {
+        SWR_ASSERT(loc <= 1);
+
+        return SIMD_T::set1_ps(loc ? 0.5f : 0.0f);
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////

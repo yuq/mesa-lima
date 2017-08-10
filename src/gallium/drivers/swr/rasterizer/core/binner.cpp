@@ -502,7 +502,7 @@ void SIMDCALL BinTrianglesImpl(
     }
 
     // Adjust for pixel center location
-    typename SIMD_T::Float offset = g_pixelOffsets<SIMD_T>[rastState.pixelLocation];
+    typename SIMD_T::Float offset = SwrPixelOffsets<SIMD_T>::GetOffset(rastState.pixelLocation);
 
     tri[0].x = SIMD_T::add_ps(tri[0].x, offset);
     tri[0].y = SIMD_T::add_ps(tri[0].y, offset);
@@ -1332,7 +1332,7 @@ void BinPointsImpl(
         }
     }
 
-    typename SIMD_T::Float offset = g_pixelOffsets<SIMD_T>[rastState.pixelLocation];
+    typename SIMD_T::Float offset = SwrPixelOffsets<SIMD_T>::GetOffset(rastState.pixelLocation);
 
     prim[0].x = SIMD_T::add_ps(prim[0].x, offset);
     prim[0].y = SIMD_T::add_ps(prim[0].y, offset);
@@ -1666,7 +1666,7 @@ void SIMDCALL BinLinesImpl(
     }
 
     // adjust for pixel center location
-    typename SIMD_T::Float offset = g_pixelOffsets<SIMD_T>[rastState.pixelLocation];
+    typename SIMD_T::Float offset = SwrPixelOffsets<SIMD_T>::GetOffset(rastState.pixelLocation);
 
     prim[0].x = SIMD_T::add_ps(prim[0].x, offset);
     prim[0].y = SIMD_T::add_ps(prim[0].y, offset);
