@@ -31,12 +31,19 @@ const gpir_op_info gpir_op_infos[] = {
       .dest_neg = false,
       .src_neg = {false, false, false, false},
       .latency = 1,
+      .slots = (int []) {
+         GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_MUL1,
+         GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1,
+         GPIR_INSTR_SLOT_COMPLEX, GPIR_INSTR_SLOT_PASS,
+         GPIR_INSTR_SLOT_END
+      },
    },
    [gpir_op_mul] = {
       .name = "mul",
       .dest_neg = true,
       .src_neg = {false, false, false, false},
       .latency = 1,
+      .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_MUL1, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_select] = {
       .name = "select",
@@ -61,12 +68,14 @@ const gpir_op_info gpir_op_infos[] = {
       .dest_neg = false,
       .src_neg = {true, true, false, false},
       .latency = 1,
+      .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_sub] = {
       .name = "sub",
       .dest_neg = false,
       .src_neg = {true, true, false, false},
       .latency = 1,
+      .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_floor] = {
       .name = "floor",
@@ -175,6 +184,7 @@ const gpir_op_info gpir_op_infos[] = {
       .dest_neg = false,
       .src_neg = {false, false, false, false},
       .latency = 0,
+      .slots = (int []) { GPIR_INSTR_SLOT_LOAD0, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_load_reg] = {
       .name = "load_reg",
@@ -199,6 +209,7 @@ const gpir_op_info gpir_op_infos[] = {
       .dest_neg = false,
       .src_neg = {false, false, false, false},
       .latency = 1,
+      .slots = (int []) { GPIR_INSTR_SLOT_STORE, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_store_temp_load_off0] = {
       .name = "store_off0",
