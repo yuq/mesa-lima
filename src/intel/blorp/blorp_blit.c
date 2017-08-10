@@ -2325,11 +2325,11 @@ bitcast_color_value_to_uint(union isl_color_value color,
    return bits;
 }
 
-static void
-surf_convert_to_uncompressed(const struct isl_device *isl_dev,
-                             struct brw_blorp_surface_info *info,
-                             uint32_t *x, uint32_t *y,
-                             uint32_t *width, uint32_t *height)
+void
+blorp_surf_convert_to_uncompressed(const struct isl_device *isl_dev,
+                                   struct brw_blorp_surface_info *info,
+                                   uint32_t *x, uint32_t *y,
+                                   uint32_t *width, uint32_t *height)
 {
    const struct isl_format_layout *fmtl =
       isl_format_get_layout(info->surf.format);
@@ -2356,10 +2356,12 @@ surf_convert_to_uncompressed(const struct isl_device *isl_dev,
       *height = DIV_ROUND_UP(*height, fmtl->bh);
    }
 
-   assert(*x % fmtl->bw == 0);
-   assert(*y % fmtl->bh == 0);
-   *x /= fmtl->bw;
-   *y /= fmtl->bh;
+   if (x || y) {
+      assert(*x % fmtl->bw == 0);
+      assert(*y % fmtl->bh == 0);
+      *x /= fmtl->bw;
+      *y /= fmtl->bh;
+   }
 
    info->surf.logical_level0_px.width =
       DIV_ROUND_UP(info->surf.logical_level0_px.width, fmtl->bw);
@@ -2477,14 +2479,15 @@ blorp_copy(struct blorp_batch *batch,
       isl_format_get_layout(params.dst.view.format)->channels.r.bits;
 
    if (src_fmtl->bw > 1 || src_fmtl->bh > 1) {
-      surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.src,
-                                   &src_x, &src_y, &src_width, &src_height);
+      blorp_surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.src,
+                                         &src_x, &src_y,
+                                         &src_width, &src_height);
       wm_prog_key.need_src_offset = true;
    }
 
    if (dst_fmtl->bw > 1 || dst_fmtl->bh > 1) {
-      surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.dst,
-                                   &dst_x, &dst_y, NULL, NULL);
+      blorp_surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.dst,
+                                         &dst_x, &dst_y, NULL, NULL);
       wm_prog_key.need_dst_offset = true;
    }
 
