@@ -771,13 +771,6 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
                                     back->image,
                                     0, 0, back->width, back->height,
                                     0, 0, __BLIT_FLAG_FLUSH);
-      /* Update the fake front */
-      if (draw->have_fake_front)
-         (void) loader_dri3_blit_image(draw,
-                                       draw->buffers[LOADER_DRI3_FRONT_ID]->image,
-                                       back->image,
-                                       0, 0, draw->width, draw->height,
-                                       0, 0, __BLIT_FLAG_FLUSH);
    }
 
    /* If we need to preload the new back buffer, remember the source.
@@ -786,6 +779,20 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
     */
    if (draw->swap_method == __DRI_ATTRIB_SWAP_COPY || force_copy)
       draw->cur_blit_source = LOADER_DRI3_BACK_ID(draw->cur_back);
+
+   /* Exchange the back and fake front. Even though the server knows about these
+    * buffers, it has no notion of back and fake front.
+    */
+   if (back && draw->have_fake_front) {
+      struct loader_dri3_buffer *tmp;
+
+      tmp = dri3_fake_front_buffer(draw);
+      draw->buffers[LOADER_DRI3_FRONT_ID] = back;
+      draw->buffers[LOADER_DRI3_BACK_ID(draw->cur_back)] = tmp;
+
+      if (draw->swap_method == __DRI_ATTRIB_SWAP_COPY  || force_copy)
+         draw->cur_blit_source = LOADER_DRI3_FRONT_ID;
+   }
 
    dri3_flush_present_events(draw);
 
@@ -852,21 +859,26 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
                          remainder, 0, NULL);
       ret = (int64_t) draw->send_sbc;
 
-      /* If there's a fake front, then copy the source back buffer
-       * to the fake front to keep it up to date. This needs
-       * to reset the fence and make future users block until
-       * the X server is done copying the bits
+      /* Schedule a server-side back-preserving blit if necessary.
+       * This happens iff all conditions below are satisfied:
+       * a) We have a fake front,
+       * b) We need to preserve the back buffer,
+       * c) We don't have local blit capabilities.
        */
-      if (draw->have_fake_front && !draw->is_different_gpu) {
-         dri3_fence_reset(draw->conn, draw->buffers[LOADER_DRI3_FRONT_ID]);
-         dri3_copy_area(draw->conn,
-                        back->pixmap,
-                        draw->buffers[LOADER_DRI3_FRONT_ID]->pixmap,
+      if (!loader_dri3_have_image_blit(draw) && draw->cur_blit_source != -1 &&
+          draw->cur_blit_source != LOADER_DRI3_BACK_ID(draw->cur_back)) {
+         struct loader_dri3_buffer *new_back = dri3_back_buffer(draw);
+         struct loader_dri3_buffer *src = draw->buffers[draw->cur_blit_source];
+
+         dri3_fence_reset(draw->conn, new_back);
+         dri3_copy_area(draw->conn, src->pixmap,
+                        new_back->pixmap,
                         dri3_drawable_gc(draw),
-                        0, 0, 0, 0,
-                        draw->width, draw->height);
-         dri3_fence_trigger(draw->conn, draw->buffers[LOADER_DRI3_FRONT_ID]);
+                        0, 0, 0, 0, draw->width, draw->height);
+         dri3_fence_trigger(draw->conn, new_back);
+         new_back->last_swap = src->last_swap;
       }
+
       xcb_flush(draw->conn);
       if (draw->stamp)
          ++(*draw->stamp);
