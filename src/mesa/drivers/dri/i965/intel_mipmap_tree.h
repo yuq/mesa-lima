@@ -180,6 +180,22 @@ struct intel_miptree_aux_buffer
     * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceQPitch
     */
    uint32_t qpitch;
+
+   /**
+    * Buffer object containing the indirect clear color.
+    *
+    * @see create_ccs_buf_for_image
+    * @see RENDER_SURFACE_STATE.ClearValueAddress
+    */
+   struct brw_bo *clear_color_bo;
+
+   /**
+    * Offset into bo where the clear color can be found.
+    *
+    * @see create_ccs_buf_for_image
+    * @see RENDER_SURFACE_STATE.ClearValueAddress
+    */
+   uint32_t clear_color_offset;
 };
 
 struct intel_mipmap_tree
