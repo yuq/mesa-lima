@@ -25,6 +25,7 @@
 #include "core/platform.hpp"
 #include "pipe/p_screen.h"
 #include "pipe/p_state.h"
+#include "util/u_debug.h"
 
 using namespace clover;
 
@@ -268,10 +269,14 @@ device::endianness() const {
 
 std::string
 device::device_version() const {
-    return "1.1";
+   static const std::string device_version =
+         debug_get_option("CLOVER_DEVICE_VERSION_OVERRIDE", "1.1");
+   return device_version;
 }
 
 std::string
 device::device_clc_version() const {
-    return "1.1";
+   static const std::string device_clc_version =
+         debug_get_option("CLOVER_DEVICE_CLC_VERSION_OVERRIDE", "1.1");
+   return device_clc_version;
 }
