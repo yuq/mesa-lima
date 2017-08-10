@@ -401,6 +401,14 @@ dri3_get_dri_drawable(_EGLSurface *surf)
    return dri3_surf->loader_drawable.dri_drawable;
 }
 
+static void
+dri3_close_screen_notify(_EGLDisplay *dpy)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+
+   loader_dri3_close_screen(dri2_dpy->dri_screen);
+}
+
 struct dri2_egl_display_vtbl dri3_x11_display_vtbl = {
    .authenticate = dri3_authenticate,
    .create_window_surface = dri3_create_window_surface,
@@ -420,6 +428,7 @@ struct dri2_egl_display_vtbl dri3_x11_display_vtbl = {
    .create_wayland_buffer_from_image = dri2_fallback_create_wayland_buffer_from_image,
    .get_sync_values = dri3_get_sync_values,
    .get_dri_drawable = dri3_get_dri_drawable,
+   .close_screen_notify = dri3_close_screen_notify,
 };
 
 EGLBoolean

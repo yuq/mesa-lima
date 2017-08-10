@@ -241,4 +241,7 @@ loader_dri3_update_drawable_geometry(struct loader_dri3_drawable *draw);
 
 void
 loader_dri3_swapbuffer_barrier(struct loader_dri3_drawable *draw);
+
+void
+loader_dri3_close_screen(__DRIscreen *dri_screen);
 #endif

@@ -32,6 +32,7 @@
 
 #include <X11/Xlib-xcb.h>
 
+#include <c11/threads.h>
 #include "loader_dri3_helper.h"
 
 /* From xmlpool/options.h, user exposed so should be stable */
@@ -39,6 +40,121 @@
 #define DRI_CONF_VBLANK_DEF_INTERVAL_0 1
 #define DRI_CONF_VBLANK_DEF_INTERVAL_1 2
 #define DRI_CONF_VBLANK_ALWAYS_SYNC 3
+
+/**
+ * A cached blit context.
+ */
+struct loader_dri3_blit_context {
+   mtx_t mtx;
+   __DRIcontext *ctx;
+   __DRIscreen *cur_screen;
+   const __DRIcoreExtension *core;
+};
+
+/* For simplicity we maintain the cache only for a single screen at a time */
+static struct loader_dri3_blit_context blit_context = {
+   _MTX_INITIALIZER_NP, NULL
+};
+
+/**
+ * Do we have blit functionality in the image blit extension?
+ *
+ * \param draw[in]  The drawable intended to blit from / to.
+ * \return  true if we have blit functionality. false otherwise.
+ */
+static bool loader_dri3_have_image_blit(const struct loader_dri3_drawable *draw)
+{
+   return draw->ext->image->base.version >= 9 &&
+      draw->ext->image->blitImage != NULL;
+}
+
+/**
+ * Get and lock (for use with the current thread) a dri context associated
+ * with the drawable's dri screen. The context is intended to be used with
+ * the dri image extension's blitImage method.
+ *
+ * \param draw[in]  Pointer to the drawable whose dri screen we want a
+ * dri context for.
+ * \return A dri context or NULL if context creation failed.
+ *
+ * When the caller is done with the context (even if the context returned was
+ * NULL), the caller must call loader_dri3_blit_context_put.
+ */
+static __DRIcontext *
+loader_dri3_blit_context_get(struct loader_dri3_drawable *draw)
+{
+   mtx_lock(&blit_context.mtx);
+
+   if (blit_context.ctx && blit_context.cur_screen != draw->dri_screen) {
+      blit_context.core->destroyContext(blit_context.ctx);
+      blit_context.ctx = NULL;
+   }
+
+   if (!blit_context.ctx) {
+      blit_context.ctx = draw->ext->core->createNewContext(draw->dri_screen,
+                                                           NULL, NULL, NULL);
+      blit_context.cur_screen = draw->dri_screen;
+      blit_context.core = draw->ext->core;
+   }
+
+   return blit_context.ctx;
+}
+
+/**
+ * Release (for use with other threads) a dri context previously obtained using
+ * loader_dri3_blit_context_get.
+ */
+static void
+loader_dri3_blit_context_put(void)
+{
+   mtx_unlock(&blit_context.mtx);
+}
+
+/**
+ * Blit (parts of) the contents of a DRI image to another dri image
+ *
+ * \param draw[in]  The drawable which owns the images.
+ * \param dst[in]  The destination image.
+ * \param src[in]  The source image.
+ * \param dstx0[in]  Start destination coordinate.
+ * \param dsty0[in]  Start destination coordinate.
+ * \param width[in]  Blit width.
+ * \param height[in] Blit height.
+ * \param srcx0[in]  Start source coordinate.
+ * \param srcy0[in]  Start source coordinate.
+ * \param flush_flag[in]  Image blit flush flag.
+ * \return true iff successful.
+ */
+static bool
+loader_dri3_blit_image(struct loader_dri3_drawable *draw,
+                       __DRIimage *dst, __DRIimage *src,
+                       int dstx0, int dsty0, int width, int height,
+                       int srcx0, int srcy0, int flush_flag)
+{
+   __DRIcontext *dri_context;
+   bool use_blit_context = false;
+
+   if (!loader_dri3_have_image_blit(draw))
+      return false;
+
+   dri_context = draw->vtable->get_dri_context(draw);
+
+   if (!dri_context || !draw->vtable->in_current_context(draw)) {
+      dri_context = loader_dri3_blit_context_get(draw);
+      use_blit_context = true;
+      flush_flag |= __BLIT_FLAG_FLUSH;
+   }
+
+   if (dri_context)
+      draw->ext->image->blitImage(dri_context, dst, src, dstx0, dsty0,
+                                  width, height, srcx0, srcy0,
+                                  width, height, flush_flag);
+
+   if (use_blit_context)
+      loader_dri3_blit_context_put();
+
+   return dri_context != NULL;
+}
 
 static inline void
 dri3_fence_reset(xcb_connection_t *c, struct loader_dri3_buffer *buffer)
@@ -467,9 +583,6 @@ loader_dri3_copy_sub_buffer(struct loader_dri3_drawable *draw,
 {
    struct loader_dri3_buffer *back;
    unsigned flags = __DRI2_FLUSH_DRAWABLE;
-   __DRIcontext *dri_context;
-
-   dri_context = draw->vtable->get_dri_context(draw);
 
    /* Check we have the right attachments */
    if (!draw->have_back || draw->is_pixmap)
@@ -482,25 +595,23 @@ loader_dri3_copy_sub_buffer(struct loader_dri3_drawable *draw,
    back = dri3_back_buffer(draw);
    y = draw->height - y - height;
 
-   if (draw->is_different_gpu && draw->vtable->in_current_context(draw)) {
+   if (draw->is_different_gpu) {
       /* Update the linear buffer part of the back buffer
        * for the dri3_copy_area operation
        */
-      draw->ext->image->blitImage(dri_context,
-                                  back->linear_buffer,
-                                  back->image,
-                                  0, 0, back->width,
-                                  back->height,
-                                  0, 0, back->width,
-                                  back->height, __BLIT_FLAG_FLUSH);
-      /* We use blitImage to update our fake front,
+      (void) loader_dri3_blit_image(draw,
+                                    back->linear_buffer,
+                                    back->image,
+                                    0, 0, back->width, back->height,
+                                    0, 0, __BLIT_FLAG_FLUSH);
+      /* We use blit_image to update our fake front,
        */
       if (draw->have_fake_front)
-         draw->ext->image->blitImage(dri_context,
-                                     dri3_fake_front_buffer(draw)->image,
-                                     back->image,
-                                     x, y, width, height,
-                                     x, y, width, height, __BLIT_FLAG_FLUSH);
+         (void) loader_dri3_blit_image(draw,
+                                       dri3_fake_front_buffer(draw)->image,
+                                       back->image,
+                                       x, y, width, height,
+                                       x, y, __BLIT_FLAG_FLUSH);
    }
 
    loader_dri3_swapbuffer_barrier(draw);
@@ -547,13 +658,11 @@ void
 loader_dri3_wait_x(struct loader_dri3_drawable *draw)
 {
    struct loader_dri3_buffer *front;
-   __DRIcontext *dri_context;
 
    if (draw == NULL || !draw->have_fake_front)
       return;
 
    front = dri3_fake_front_buffer(draw);
-   dri_context = draw->vtable->get_dri_context(draw);
 
    loader_dri3_copy_drawable(draw, front->pixmap, draw->drawable);
 
@@ -562,39 +671,33 @@ loader_dri3_wait_x(struct loader_dri3_drawable *draw)
     * Copy back to the tiled buffer we use for rendering.
     * Note that we don't need flushing.
     */
-   if (draw->is_different_gpu && draw->vtable->in_current_context(draw))
-      draw->ext->image->blitImage(dri_context,
-                                  front->image,
-                                  front->linear_buffer,
-                                  0, 0, front->width,
-                                  front->height,
-                                  0, 0, front->width,
-                                  front->height, 0);
+   if (draw->is_different_gpu)
+      (void) loader_dri3_blit_image(draw,
+                                    front->image,
+                                    front->linear_buffer,
+                                    0, 0, front->width, front->height,
+                                    0, 0, 0);
 }
 
 void
 loader_dri3_wait_gl(struct loader_dri3_drawable *draw)
 {
    struct loader_dri3_buffer *front;
-   __DRIcontext *dri_context;
 
    if (draw == NULL || !draw->have_fake_front)
       return;
 
    front = dri3_fake_front_buffer(draw);
-   dri_context = draw->vtable->get_dri_context(draw);
 
    /* In the psc->is_different_gpu case, we update the linear_buffer
     * before updating the real front.
     */
-   if (draw->is_different_gpu && draw->vtable->in_current_context(draw))
-      draw->ext->image->blitImage(dri_context,
-                                  front->linear_buffer,
-                                  front->image,
-                                  0, 0, front->width,
-                                  front->height,
-                                  0, 0, front->width,
-                                  front->height, __BLIT_FLAG_FLUSH);
+   if (draw->is_different_gpu)
+      (void) loader_dri3_blit_image(draw,
+                                    front->linear_buffer,
+                                    front->image,
+                                    0, 0, front->width, front->height,
+                                    0, 0, __BLIT_FLAG_FLUSH);
    loader_dri3_swapbuffer_barrier(draw);
    loader_dri3_copy_drawable(draw, draw->drawable, front->pixmap);
 }
@@ -631,32 +734,26 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
                              bool force_copy)
 {
    struct loader_dri3_buffer *back;
-   __DRIcontext *dri_context;
    int64_t ret = 0;
    uint32_t options = XCB_PRESENT_OPTION_NONE;
-
-   dri_context = draw->vtable->get_dri_context(draw);
 
    draw->vtable->flush_drawable(draw, flush_flags);
 
    back = draw->buffers[dri3_find_back(draw)];
    if (draw->is_different_gpu && back) {
       /* Update the linear buffer before presenting the pixmap */
-      draw->ext->image->blitImage(dri_context,
-                                  back->linear_buffer,
-                                  back->image,
-                                  0, 0, back->width,
-                                  back->height,
-                                  0, 0, back->width,
-                                  back->height, __BLIT_FLAG_FLUSH);
+      (void) loader_dri3_blit_image(draw,
+                                    back->linear_buffer,
+                                    back->image,
+                                    0, 0, back->width, back->height,
+                                    0, 0, __BLIT_FLAG_FLUSH);
       /* Update the fake front */
       if (draw->have_fake_front)
-         draw->ext->image->blitImage(dri_context,
-                                     draw->buffers[LOADER_DRI3_FRONT_ID]->image,
-                                     back->image,
-                                     0, 0, draw->width, draw->height,
-                                     0, 0, draw->width, draw->height,
-                                     __BLIT_FLAG_FLUSH);
+         (void) loader_dri3_blit_image(draw,
+                                       draw->buffers[LOADER_DRI3_FRONT_ID]->image,
+                                       back->image,
+                                       0, 0, draw->width, draw->height,
+                                       0, 0, __BLIT_FLAG_FLUSH);
    }
 
    dri3_flush_present_events(draw);
@@ -1188,9 +1285,6 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
 {
    struct loader_dri3_buffer *buffer;
    int buf_id;
-   __DRIcontext *dri_context;
-
-   dri_context = draw->vtable->get_dri_context(draw);
 
    if (buffer_type == loader_dri3_buffer_back) {
       buf_id = dri3_find_back(draw);
@@ -1237,11 +1331,11 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
                               draw->width, draw->height);
                dri3_fence_trigger(draw->conn, new_buffer);
             } else if (draw->vtable->in_current_context(draw)) {
-               draw->ext->image->blitImage(dri_context,
-                                           new_buffer->image,
-                                           buffer->image,
-                                           0, 0, draw->width, draw->height,
-                                           0, 0, draw->width, draw->height, 0);
+               (void) loader_dri3_blit_image(draw,
+                                             new_buffer->image,
+                                             buffer->image,
+                                             0, 0, draw->width, draw->height,
+                                             0, 0, 0);
             }
             dri3_free_render_buffer(draw, buffer);
          }
@@ -1260,11 +1354,11 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
          if (new_buffer->linear_buffer &&
              draw->vtable->in_current_context(draw)) {
             dri3_fence_await(draw->conn, new_buffer);
-            draw->ext->image->blitImage(dri_context,
-                                        new_buffer->image,
-                                        new_buffer->linear_buffer,
-                                        0, 0, draw->width, draw->height,
-                                        0, 0, draw->width, draw->height, 0);
+            (void) loader_dri3_blit_image(draw,
+                                          new_buffer->image,
+                                          new_buffer->linear_buffer,
+                                          0, 0, draw->width, draw->height,
+                                          0, 0, 0);
          }
          break;
       }
@@ -1435,4 +1529,21 @@ loader_dri3_swapbuffer_barrier(struct loader_dri3_drawable *draw)
    int64_t ust, msc, sbc;
 
    (void) loader_dri3_wait_for_sbc(draw, 0, &ust, &msc, &sbc);
+}
+
+/**
+ * Perform any cleanup associated with a close screen operation.
+ * \param dri_screen[in,out] Pointer to __DRIscreen about to be closed.
+ *
+ * This function destroys the screen's cached swap context if any.
+ */
+void
+loader_dri3_close_screen(__DRIscreen *dri_screen)
+{
+   mtx_lock(&blit_context.mtx);
+   if (blit_context.ctx && blit_context.cur_screen == dri_screen) {
+      blit_context.core->destroyContext(blit_context.ctx);
+      blit_context.ctx = NULL;
+   }
+   mtx_unlock(&blit_context.mtx);
 }

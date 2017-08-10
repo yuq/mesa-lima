@@ -154,6 +154,8 @@ struct dri2_egl_display_vtbl {
                                  EGLuint64KHR *sbc);
 
    __DRIdrawable *(*get_dri_drawable)(_EGLSurface *surf);
+
+   void (*close_screen_notify)(_EGLDisplay *dpy);
 };
 
 struct dri2_egl_display

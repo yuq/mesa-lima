@@ -945,8 +945,11 @@ dri2_display_destroy(_EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
 
-   if (dri2_dpy->own_dri_screen)
+   if (dri2_dpy->own_dri_screen) {
+      if (dri2_dpy->vtbl->close_screen_notify)
+         dri2_dpy->vtbl->close_screen_notify(disp);
       dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
+   }
    if (dri2_dpy->fd >= 0)
       close(dri2_dpy->fd);
    if (dri2_dpy->driver)

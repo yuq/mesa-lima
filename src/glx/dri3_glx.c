@@ -572,6 +572,7 @@ dri3_destroy_screen(struct glx_screen *base)
    struct dri3_screen *psc = (struct dri3_screen *) base;
 
    /* Free the direct rendering per screen data */
+   loader_dri3_close_screen(psc->driScreen);
    (*psc->core->destroyScreen) (psc->driScreen);
    driDestroyConfigs(psc->driver_configs);
    close(psc->fd);
