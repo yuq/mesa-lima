@@ -1087,7 +1087,6 @@ static const struct dri2_egl_display_vtbl droid_display_vtbl = {
    .create_pbuffer_surface = droid_create_pbuffer_surface,
    .destroy_surface = droid_destroy_surface,
    .create_image = droid_create_image_khr,
-   .swap_interval = dri2_fallback_swap_interval,
    .swap_buffers = droid_swap_buffers,
    .swap_buffers_with_damage = dri2_fallback_swap_buffers_with_damage,
    .swap_buffers_region = dri2_fallback_swap_buffers_region,

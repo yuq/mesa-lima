@@ -1131,7 +1131,6 @@ static const struct dri2_egl_display_vtbl dri2_x11_swrast_display_vtbl = {
    .create_pbuffer_surface = dri2_x11_create_pbuffer_surface,
    .destroy_surface = dri2_x11_destroy_surface,
    .create_image = dri2_create_image_khr,
-   .swap_interval = dri2_fallback_swap_interval,
    .swap_buffers = dri2_x11_swap_buffers,
    .set_damage_region = dri2_fallback_set_damage_region,
    .swap_buffers_region = dri2_fallback_swap_buffers_region,
@@ -1275,6 +1274,7 @@ dri2_x11_setup_swap_interval(_EGLDisplay *disp)
     */
    dri2_dpy->min_swap_interval = 0;
    dri2_dpy->max_swap_interval = 0;
+   dri2_dpy->default_swap_interval = 0;
 
    if (!dri2_dpy->swap_available)
       return;
