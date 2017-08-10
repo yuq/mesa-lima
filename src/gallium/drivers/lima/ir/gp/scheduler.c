@@ -49,9 +49,57 @@ static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *inse
    list_addtail(&insert_node->ready, insert_pos);
 }
 
+#define gpir_instr_array_n(buf) ((buf)->size / sizeof(gpir_instr))
+#define gpir_instr_array_e(buf, idx) (util_dynarray_element(buf, gpir_instr, idx))
+
+static gpir_instr *gpir_instr_array_grow(struct util_dynarray *instrs, int pos)
+{
+   int n = gpir_instr_array_n(instrs);
+   if (n <= pos) {
+      int size = (pos + 1 - n) * sizeof(gpir_instr);
+      util_dynarray_grow(instrs, size);
+      memset(gpir_instr_array_e(instrs, n), 0, size);
+   }
+
+   return gpir_instr_array_e(instrs, pos);
+}
+
 static void gpir_schedule_node(gpir_block *block, gpir_node *node)
 {
    node->scheduled = true;
+
+   int *slots = gpir_op_infos[node->op].slots;
+   if (!slots)
+      return;
+
+   int i, start = 0;
+
+   /* find the fist legal instr contrained by child */
+   for (i = 0; i < node->num_child; i++) {
+      gpir_node *child = node->children[i];
+      int next = child->instr_index + gpir_op_infos[child->op].latency;
+      if (next > start)
+         start = next;
+   }
+
+   while (1) {
+      gpir_instr *instr = gpir_instr_array_grow(&block->instrs, start);
+
+      /* find an idle slot to insert the node */
+      for (i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
+         if (!instr->slots[slots[i]]) {
+            instr->slots[slots[i]] = node;
+            break;
+         }
+      }
+
+      if (slots[i] != GPIR_INSTR_SLOT_END) {
+         node->instr_index = start;
+         break;
+      }
+
+      start++;
+   }
 }
 
 static void gpir_schedule_ready_list(gpir_block *block, struct list_head *ready_list)
