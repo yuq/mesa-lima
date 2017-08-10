@@ -1308,6 +1308,15 @@ struct isl_surf_fill_state_info {
    union isl_color_value clear_color;
 
    /**
+    * Send only the clear value address
+    *
+    * If set, we only pass the clear address to the GPU and it will fetch it
+    * from wherever it is.
+    */
+   bool use_clear_address;
+   uint64_t clear_address;
+
+   /**
     * Surface write disables for gen4-5
     */
    isl_channel_mask_t write_disables;

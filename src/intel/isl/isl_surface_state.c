@@ -637,11 +637,21 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #endif
 
    if (info->aux_usage != ISL_AUX_USAGE_NONE) {
+      if (info->use_clear_address) {
+#if GEN_GEN >= 10
+         s.ClearValueAddressEnable = true;
+         s.ClearValueAddress = info->clear_address;
+#else
+         unreachable("Gen9 and earlier do not support indirect clear colors");
+#endif
+      }
 #if GEN_GEN >= 9
-      s.RedClearColor = info->clear_color.u32[0];
-      s.GreenClearColor = info->clear_color.u32[1];
-      s.BlueClearColor = info->clear_color.u32[2];
-      s.AlphaClearColor = info->clear_color.u32[3];
+      if (!info->use_clear_address) {
+         s.RedClearColor = info->clear_color.u32[0];
+         s.GreenClearColor = info->clear_color.u32[1];
+         s.BlueClearColor = info->clear_color.u32[2];
+         s.AlphaClearColor = info->clear_color.u32[3];
+      }
 #elif GEN_GEN >= 7
       /* Prior to Sky Lake, we only have one bit for the clear color which
        * gives us 0 or 1 in whatever the surface's format happens to be.
