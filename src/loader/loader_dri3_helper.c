@@ -777,7 +777,7 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
     * The force_copy parameter is used by EGL to attempt to preserve
     * the back buffer across a call to this function.
     */
-   if (draw->swap_method == __DRI_ATTRIB_SWAP_COPY || force_copy)
+   if (draw->swap_method != __DRI_ATTRIB_SWAP_UNDEFINED || force_copy)
       draw->cur_blit_source = LOADER_DRI3_BACK_ID(draw->cur_back);
 
    /* Exchange the back and fake front. Even though the server knows about these
@@ -1504,8 +1504,10 @@ loader_dri3_get_buffers(__DRIdrawable *driDrawable,
    if (!dri3_update_drawable(driDrawable, draw))
       return false;
 
-   /* pixmaps always have front buffers */
-   if (draw->is_pixmap)
+   /* pixmaps always have front buffers.
+    * Exchange swaps also mandate fake front buffers.
+    */
+   if (draw->is_pixmap || draw->swap_method == __DRI_ATTRIB_SWAP_EXCHANGE)
       buffer_mask |= __DRI_IMAGE_BUFFER_FRONT;
 
    if (buffer_mask & __DRI_IMAGE_BUFFER_FRONT) {
