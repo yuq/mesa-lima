@@ -268,6 +268,8 @@ loader_dri3_drawable_init(xcb_connection_t *conn,
    draw->have_fake_front = 0;
    draw->first_init = true;
 
+   draw->cur_blit_source = -1;
+
    if (draw->ext->config)
       draw->ext->config->configQueryi(draw->dri_screen,
                                       "vblank_mode", &vblank_mode);
@@ -484,12 +486,21 @@ dri3_find_back(struct loader_dri3_drawable *draw)
    int b;
    xcb_generic_event_t *ev;
    xcb_present_generic_event_t *ge;
+   int num_to_consider = draw->num_back;
 
    /* Increase the likelyhood of reusing current buffer */
    dri3_flush_present_events(draw);
 
+   /* Check whether we need to reuse the current back buffer as new back.
+    * In that case, wait until it's not busy anymore.
+    */
+   if (!loader_dri3_have_image_blit(draw) && draw->cur_blit_source != -1) {
+      num_to_consider = 1;
+      draw->cur_blit_source = -1;
+   }
+
    for (;;) {
-      for (b = 0; b < draw->num_back; b++) {
+      for (b = 0; b < num_to_consider; b++) {
          int id = LOADER_DRI3_BACK_ID((b + draw->cur_back) % draw->num_back);
          struct loader_dri3_buffer *buffer = draw->buffers[id];
 
@@ -762,6 +773,13 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
                                        0, 0, __BLIT_FLAG_FLUSH);
    }
 
+   /* If we need to preload the new back buffer, remember the source.
+    * The force_copy parameter is used by EGL to attempt to preserve
+    * the back buffer across a call to this function.
+    */
+   if (force_copy)
+      draw->cur_blit_source = LOADER_DRI3_BACK_ID(draw->cur_back);
+
    dri3_flush_present_events(draw);
 
    if (back && !draw->is_pixmap) {
@@ -800,8 +818,13 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
        */
       if (draw->swap_interval == 0)
           options |= XCB_PRESENT_OPTION_ASYNC;
-      if (force_copy)
-          options |= XCB_PRESENT_OPTION_COPY;
+
+      /* If we need to populate the new back, but need to reuse the back
+       * buffer slot due to lack of local blit capabilities, make sure
+       * the server doesn't flip and we deadlock.
+       */
+      if (!loader_dri3_have_image_blit(draw) && draw->cur_blit_source != -1)
+         options |= XCB_PRESENT_OPTION_COPY;
 
       back->busy = 1;
       back->last_swap = draw->send_sbc;
@@ -1374,6 +1397,31 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
    }
    dri3_fence_await(draw->conn, buffer);
 
+   /*
+    * Do we need to preserve the content of a previous buffer?
+    *
+    * Note that this blit is needed only to avoid a wait for a buffer that
+    * is currently in the flip chain or being scanned out from. That's really
+    * a tradeoff. If we're ok with the wait we can reduce the number of back
+    * buffers to 1 for SWAP_EXCHANGE, and 1 for SWAP_COPY,
+    * but in the latter case we must disallow page-flipping.
+    */
+   if (buffer_type == loader_dri3_buffer_back &&
+       draw->cur_blit_source != -1 &&
+       draw->buffers[draw->cur_blit_source] &&
+       buffer != draw->buffers[draw->cur_blit_source]) {
+
+      struct loader_dri3_buffer *source = draw->buffers[draw->cur_blit_source];
+
+      /* Avoid flushing here. Will propably do good for tiling hardware. */
+      (void) loader_dri3_blit_image(draw,
+                                    buffer->image,
+                                    source->image,
+                                    0, 0, draw->width, draw->height,
+                                    0, 0, 0);
+      buffer->last_swap = source->last_swap;
+      draw->cur_blit_source = -1;
+   }
    /* Return the requested buffer */
    return buffer;
 }
