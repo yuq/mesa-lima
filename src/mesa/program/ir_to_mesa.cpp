@@ -1543,7 +1543,7 @@ ir_to_mesa_visitor::visit(ir_dereference_array *ir)
    src_reg src;
    int element_size = type_size(ir->type);
 
-   index = ir->array_index->constant_expression_value();
+   index = ir->array_index->constant_expression_value(ralloc_parent(ir));
 
    ir->array->accept(this);
    src = this->result;
@@ -1657,8 +1657,10 @@ calc_sampler_offsets(struct gl_shader_program *prog, ir_dereference *deref,
    switch (deref->ir_type) {
    case ir_type_dereference_array: {
       ir_dereference_array *deref_arr = deref->as_dereference_array();
+
+      void *mem_ctx = ralloc_parent(deref_arr);
       ir_constant *array_index =
-         deref_arr->array_index->constant_expression_value();
+         deref_arr->array_index->constant_expression_value(mem_ctx);
 
       if (!array_index) {
 	 /* GLSL 1.10 and 1.20 allowed variable sampler array indices,

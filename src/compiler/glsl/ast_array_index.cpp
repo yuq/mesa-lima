@@ -167,7 +167,7 @@ _mesa_ast_array_index_to_hir(void *mem_ctx,
     * index is not a constant expression, ensure that the array has a
     * declared size.
     */
-   ir_constant *const const_index = idx->constant_expression_value();
+   ir_constant *const const_index = idx->constant_expression_value(mem_ctx);
    if (const_index != NULL && idx->type->is_integer()) {
       const int idx = const_index->value.i[0];
       const char *type_name = "error";

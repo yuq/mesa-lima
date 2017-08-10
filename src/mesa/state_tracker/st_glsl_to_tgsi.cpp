@@ -2835,7 +2835,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
    int element_size = type_size(ir->type);
    bool is_2D = false;
 
-   index = ir->array_index->constant_expression_value();
+   index = ir->array_index->constant_expression_value(ralloc_parent(ir));
 
    ir->array->accept(this);
    src = this->result;
@@ -4137,7 +4137,10 @@ glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *tail,
 
    case ir_type_dereference_array: {
       ir_dereference_array *deref_arr = tail->as_dereference_array();
-      ir_constant *array_index = deref_arr->array_index->constant_expression_value();
+
+      void *mem_ctx = ralloc_parent(deref_arr);
+      ir_constant *array_index =
+         deref_arr->array_index->constant_expression_value(mem_ctx);
 
       if (!array_index) {
          st_src_reg temp_reg;

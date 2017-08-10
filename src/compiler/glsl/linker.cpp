@@ -428,7 +428,7 @@ public:
       if (!ir->variable_referenced()->type->contains_sampler())
          return visit_continue;
 
-      if (!ir->array_index->constant_expression_value()) {
+      if (!ir->array_index->constant_expression_value(ralloc_parent(ir))) {
          dynamic_sampler_array_indexing = true;
          return visit_stop;
       }

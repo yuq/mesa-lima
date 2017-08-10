@@ -404,7 +404,7 @@ lower_buffer_access::setup_buffer_access(void *mem_ctx,
             array_index = i2u(array_index);
 
          ir_constant *const_index =
-            array_index->constant_expression_value(NULL);
+            array_index->constant_expression_value(mem_ctx, NULL);
          if (const_index) {
             *const_offset += array_stride * const_index->value.u[0];
          } else {

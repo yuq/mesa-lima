@@ -263,9 +263,11 @@ ir_algebraic_visitor::reassociate_constant(ir_expression *ir1, int const_index,
        ir2->operands[1]->type->is_matrix())
       return false;
 
+   void *mem_ctx = ralloc_parent(ir2);
+
    ir_constant *ir2_const[2];
-   ir2_const[0] = ir2->operands[0]->constant_expression_value();
-   ir2_const[1] = ir2->operands[1]->constant_expression_value();
+   ir2_const[0] = ir2->operands[0]->constant_expression_value(mem_ctx);
+   ir2_const[1] = ir2->operands[1]->constant_expression_value(mem_ctx);
 
    if (ir2_const[0] && ir2_const[1])
       return false;
@@ -333,7 +335,8 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       if (ir->operands[i]->type->is_matrix())
 	 return ir;
 
-      op_const[i] = ir->operands[i]->constant_expression_value();
+      op_const[i] =
+         ir->operands[i]->constant_expression_value(ralloc_parent(ir));
       op_expr[i] = ir->operands[i]->as_expression();
    }
 

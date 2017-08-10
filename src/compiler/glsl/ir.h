@@ -229,7 +229,8 @@ public:
 
    virtual ir_visitor_status accept(ir_hierarchical_visitor *);
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    ir_rvalue *as_rvalue_to_saturate();
 
@@ -1170,7 +1171,9 @@ public:
     * given a list of the actual parameters and the variable context.
     * Returns NULL for non-built-ins.
     */
-   ir_constant *constant_expression_value(exec_list *actual_parameters, struct hash_table *variable_context);
+   ir_constant *constant_expression_value(void *mem_ctx,
+                                          exec_list *actual_parameters,
+                                          struct hash_table *variable_context);
 
    /**
     * Get the name of the function for which this is a signature
@@ -1273,7 +1276,8 @@ private:
     * Returns false if the expression is not constant, true otherwise,
     * and the value in *result if result is non-NULL.
     */
-   bool constant_expression_evaluate_expression_list(const struct exec_list &body,
+   bool constant_expression_evaluate_expression_list(void *mem_ctx,
+                                                     const struct exec_list &body,
 						     struct hash_table *variable_context,
 						     ir_constant **result);
 };
@@ -1429,7 +1433,8 @@ public:
 
    virtual ir_assignment *clone(void *mem_ctx, struct hash_table *ht) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    virtual void accept(ir_visitor *v)
    {
@@ -1535,7 +1540,8 @@ public:
     * If the expression cannot be constant folded, this method will return
     * \c NULL.
     */
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    /**
     * This is only here for ir_reader to used for testing purposes please use
@@ -1616,7 +1622,8 @@ public:
 
    virtual ir_call *clone(void *mem_ctx, struct hash_table *ht) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    virtual void accept(ir_visitor *v)
    {
@@ -1838,7 +1845,8 @@ public:
 
    virtual ir_texture *clone(void *mem_ctx, struct hash_table *) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    virtual void accept(ir_visitor *v)
    {
@@ -1935,7 +1943,8 @@ public:
 
    virtual ir_swizzle *clone(void *mem_ctx, struct hash_table *) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    /**
     * Construct an ir_swizzle from the textual representation.  Can fail.
@@ -2001,7 +2010,8 @@ public:
    virtual ir_dereference_variable *clone(void *mem_ctx,
 					  struct hash_table *) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    virtual bool equals(const ir_instruction *ir,
                        enum ir_node_type ignore = ir_type_unset) const;
@@ -2048,7 +2058,8 @@ public:
    virtual ir_dereference_array *clone(void *mem_ctx,
 				       struct hash_table *) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    virtual bool equals(const ir_instruction *ir,
                        enum ir_node_type ignore = ir_type_unset) const;
@@ -2085,7 +2096,8 @@ public:
    virtual ir_dereference_record *clone(void *mem_ctx,
 					struct hash_table *) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    /**
     * Get the variable that is ultimately referenced by an r-value
@@ -2156,7 +2168,8 @@ public:
 
    virtual ir_constant *clone(void *mem_ctx, struct hash_table *) const;
 
-   virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
+   virtual ir_constant *constant_expression_value(void *mem_ctx,
+                                                  struct hash_table *variable_context = NULL);
 
    virtual void accept(ir_visitor *v)
    {
