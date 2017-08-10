@@ -311,6 +311,13 @@ loader_dri3_drawable_init(xcb_connection_t *conn,
    draw->vtable->set_drawable_size(draw, draw->width, draw->height);
    free(reply);
 
+   draw->swap_method = __DRI_ATTRIB_SWAP_UNDEFINED;
+   if (draw->ext->core->base.version >= 2) {
+      (void )draw->ext->core->getConfigAttrib(dri_config,
+                                              __DRI_ATTRIB_SWAP_METHOD,
+                                              &draw->swap_method);
+   }
+
    /*
     * Make sure server has the same swap interval we do for the new
     * drawable.
@@ -777,7 +784,7 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
     * The force_copy parameter is used by EGL to attempt to preserve
     * the back buffer across a call to this function.
     */
-   if (force_copy)
+   if (draw->swap_method == __DRI_ATTRIB_SWAP_COPY || force_copy)
       draw->cur_blit_source = LOADER_DRI3_BACK_ID(draw->cur_back);
 
    dri3_flush_present_events(draw);
