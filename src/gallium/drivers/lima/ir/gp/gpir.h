@@ -103,6 +103,7 @@ typedef struct {
    bool dest_neg;
    bool src_neg[4];
    int latency;
+   int *slots;
 } gpir_op_info;
 
 extern const gpir_op_info gpir_op_infos[];
@@ -123,6 +124,7 @@ typedef struct gpir_node {
    int distance;
    struct list_head ready;
    bool scheduled;
+   int instr_index;
 } gpir_node;
 
 typedef struct {
@@ -154,50 +156,24 @@ typedef struct {
    bool write_mask[4]; /* which components to store to */
 } gpir_store_node;
 
+enum gpir_instr_slot {
+   GPIR_INSTR_SLOT_MUL0,
+   GPIR_INSTR_SLOT_MUL1,
+   GPIR_INSTR_SLOT_ADD0,
+   GPIR_INSTR_SLOT_ADD1,
+   GPIR_INSTR_SLOT_LOAD0,
+   GPIR_INSTR_SLOT_LOAD1,
+   GPIR_INSTR_SLOT_LOAD2,
+   GPIR_INSTR_SLOT_BRANCH,
+   GPIR_INSTR_SLOT_STORE,
+   GPIR_INSTR_SLOT_COMPLEX,
+   GPIR_INSTR_SLOT_PASS,
+   GPIR_INSTR_SLOT_NUM,
+   GPIR_INSTR_SLOT_END,
+};
+
 typedef struct {
-   /* Multiply 0/1 slot */
-   gpir_node* mul_slots[2];
-
-   /* Add 0/1 slot */
-   gpir_node* add_slots[2];
-
-   /* Uniform load slot */
-   gpir_node* uniform_slot[6];
-   unsigned uniform_slot_num_used;
-   unsigned uniform_index;
-   unsigned uniform_off_reg; // 0 = no offset, 1 = offset register 0, etc.
-   bool uniform_is_temp;
-
-   /* Attribute/Register load slot */
-   gpir_node* attr_reg_slot[6];
-   unsigned attr_reg_slot_num_used;
-   bool attr_reg_slot_is_attr; // true = attribute, false = register
-   bool attr_reg_is_phys_reg;
-   unsigned attr_reg_index;
-
-   /* Register load slot */
-   gpir_node* reg_slot[6];
-   unsigned reg_slot_num_used;
-   unsigned reg_index;
-   bool reg_is_phys_reg;
-
-   /* Branch slot */
-   gpir_node* branch_slot;
-
-   /* Store slot */
-   gpir_node* store_slot[4];
-   bool store_slot_mask[4];
-   unsigned store_slot_num_used;
-   bool store_slot_is_temp;
-   bool store_slot_is_varying;
-   unsigned store_slot_index;
-   unsigned num_unscheduled_store_children;
-
-   /* Complex slot */
-   gpir_node* complex_slot;
-
-   /* Passthrough slot */
-   gpir_node* pass_slot;
+   gpir_node *slots[GPIR_INSTR_SLOT_NUM];
 } gpir_instr;
 
 typedef struct gpir_block {
