@@ -2928,9 +2928,8 @@ void si_init_all_descriptors(struct si_context *sctx)
 	si_set_user_data_base(sctx, PIPE_SHADER_FRAGMENT, R_00B030_SPI_SHADER_USER_DATA_PS_0);
 }
 
-bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
+static bool si_upload_shader_descriptors(struct si_context *sctx, unsigned mask)
 {
-	const unsigned mask = u_bit_consecutive(0, SI_DESCS_FIRST_COMPUTE);
 	unsigned dirty = sctx->descriptors_dirty & mask;
 
 	/* Assume nothing will go wrong: */
@@ -2951,6 +2950,12 @@ bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
 	return true;
 }
 
+bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
+{
+	const unsigned mask = u_bit_consecutive(0, SI_DESCS_FIRST_COMPUTE);
+	return si_upload_shader_descriptors(sctx, mask);
+}
+
 bool si_upload_compute_shader_descriptors(struct si_context *sctx)
 {
 	/* Does not update rw_buffers as that is not needed for compute shaders
@@ -2958,23 +2963,7 @@ bool si_upload_compute_shader_descriptors(struct si_context *sctx)
 	 */
 	const unsigned mask = u_bit_consecutive(SI_DESCS_FIRST_COMPUTE,
 						SI_NUM_DESCS - SI_DESCS_FIRST_COMPUTE);
-	unsigned dirty = sctx->descriptors_dirty & mask;
-
-	/* Assume nothing will go wrong: */
-	sctx->shader_pointers_dirty |= dirty;
-
-	while (dirty) {
-		unsigned i = u_bit_scan(&dirty);
-
-		if (!si_upload_descriptors(sctx, &sctx->descriptors[i], NULL))
-			return false;
-	}
-
-	sctx->descriptors_dirty &= ~mask;
-
-	si_upload_bindless_descriptors(sctx);
-
-	return true;
+	return si_upload_shader_descriptors(sctx, mask);
 }
 
 void si_release_all_descriptors(struct si_context *sctx)
