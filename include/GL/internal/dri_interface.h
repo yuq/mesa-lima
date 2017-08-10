@@ -1190,7 +1190,7 @@ struct __DRIdri2ExtensionRec {
  * by the driver (YUV planar formats) but serve as a base image for
  * creating sub-images for the different planes within the image.
  *
- * R8, GR88 and NONE should not be used with createImageFormName or
+ * R8, GR88 and NONE should not be used with createImageFromName or
  * createImage, and are returned by query from sub images created with
  * createImageFromNames (NONE, see above) and fromPlane (R8 & GR88).
  */
