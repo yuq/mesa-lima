@@ -1368,11 +1368,15 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!si_upload_vertex_buffer_descriptors(sctx))
 		return;
 
-	/* GFX9 scissor bug workaround. There is also a more efficient but
-	 * more involved alternative workaround. */
+	/* GFX9 scissor bug workaround. This must be done before VPORT scissor
+	 * registers are changed. There is also a more efficient but more
+	 * involved alternative workaround.
+	 */
 	if (sctx->b.chip_class == GFX9 &&
-	    si_is_atom_dirty(sctx, &sctx->b.scissors.atom))
+	    si_is_atom_dirty(sctx, &sctx->b.scissors.atom)) {
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
+		si_emit_cache_flush(sctx);
+	}
 
 	/* Use optimal packet order based on whether we need to sync the pipeline. */
 	if (unlikely(sctx->b.flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
