@@ -75,6 +75,17 @@ compile_shaders(struct gl_context *ctx, struct gl_shader_program *prog) {
 }
 
 static void
+get_struct_type_field_and_pointer_sizes(size_t *s_field_size,
+                                        size_t *s_field_ptrs,
+                                        unsigned num_fields)
+{
+   *s_field_size = sizeof(glsl_struct_field) * num_fields;
+   *s_field_ptrs =
+     sizeof(((glsl_struct_field *)0)->type) +
+     sizeof(((glsl_struct_field *)0)->name);
+}
+
+static void
 encode_type_to_blob(struct blob *blob, const glsl_type *type)
 {
    uint32_t encoding;
@@ -127,11 +138,19 @@ encode_type_to_blob(struct blob *blob, const glsl_type *type)
       blob_write_uint32(blob, (type->base_type) << 24);
       blob_write_string(blob, type->name);
       blob_write_uint32(blob, type->length);
-      blob_write_bytes(blob, type->fields.structure,
-                       sizeof(glsl_struct_field) * type->length);
+
+      size_t s_field_size, s_field_ptrs;
+      get_struct_type_field_and_pointer_sizes(&s_field_size, &s_field_ptrs,
+                                              type->length);
+
       for (unsigned i = 0; i < type->length; i++) {
          encode_type_to_blob(blob, type->fields.structure[i].type);
          blob_write_string(blob, type->fields.structure[i].name);
+
+         /* Write the struct field skipping the pointers */
+         blob_write_bytes(blob,
+                          ((char *)&type->fields.structure[i]) + s_field_ptrs,
+                          s_field_size - s_field_ptrs);
       }
 
       if (type->is_interface()) {
@@ -192,22 +211,34 @@ decode_type_from_blob(struct blob_reader *blob)
    case GLSL_TYPE_INTERFACE: {
       char *name = blob_read_string(blob);
       unsigned num_fields = blob_read_uint32(blob);
-      glsl_struct_field *fields = (glsl_struct_field *)
-         blob_read_bytes(blob, sizeof(glsl_struct_field) * num_fields);
+
+      size_t s_field_size, s_field_ptrs;
+      get_struct_type_field_and_pointer_sizes(&s_field_size, &s_field_ptrs,
+                                              num_fields);
+
+      glsl_struct_field *fields =
+         (glsl_struct_field *) malloc(s_field_size * num_fields);
       for (unsigned i = 0; i < num_fields; i++) {
          fields[i].type = decode_type_from_blob(blob);
          fields[i].name = blob_read_string(blob);
+
+         blob_copy_bytes(blob, ((uint8_t *) &fields[i]) + s_field_ptrs,
+                         s_field_size - s_field_ptrs);
       }
 
+      const glsl_type *t;
       if (base_type == GLSL_TYPE_INTERFACE) {
          enum glsl_interface_packing packing =
             (glsl_interface_packing) blob_read_uint32(blob);
          bool row_major = blob_read_uint32(blob);
-         return glsl_type::get_interface_instance(fields, num_fields,
-                                                  packing, row_major, name);
+         t = glsl_type::get_interface_instance(fields, num_fields, packing,
+                                               row_major, name);
       } else {
-         return glsl_type::get_record_instance(fields, num_fields, name);
+         t = glsl_type::get_record_instance(fields, num_fields, name);
       }
+
+      free(fields);
+      return t;
    }
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_ERROR:
