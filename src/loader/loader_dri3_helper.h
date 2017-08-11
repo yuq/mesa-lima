@@ -158,6 +158,7 @@ struct loader_dri3_drawable {
    const struct loader_dri3_vtable *vtable;
 
    unsigned int swap_method;
+   unsigned int back_format;
 };
 
 void

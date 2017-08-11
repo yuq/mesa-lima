@@ -59,6 +59,9 @@ static struct loader_dri3_blit_context blit_context = {
 static void
 dri3_flush_present_events(struct loader_dri3_drawable *draw);
 
+static struct loader_dri3_buffer *
+dri3_find_back_alloc(struct loader_dri3_drawable *draw);
+
 /**
  * Do we have blit functionality in the image blit extension?
  *
@@ -269,6 +272,7 @@ loader_dri3_drawable_init(xcb_connection_t *conn,
    draw->first_init = true;
 
    draw->cur_blit_source = -1;
+   draw->back_format = __DRI_IMAGE_FORMAT_NONE;
 
    if (draw->ext->config)
       draw->ext->config->configQueryi(draw->dri_screen,
@@ -616,7 +620,10 @@ loader_dri3_copy_sub_buffer(struct loader_dri3_drawable *draw,
       flags |= __DRI2_FLUSH_CONTEXT;
    loader_dri3_flush(draw, flags, __DRI2_THROTTLE_SWAPBUFFER);
 
-   back = dri3_back_buffer(draw);
+   back = dri3_find_back_alloc(draw);
+   if (!back)
+      return;
+
    y = draw->height - y - height;
 
    if (draw->is_different_gpu) {
@@ -641,7 +648,7 @@ loader_dri3_copy_sub_buffer(struct loader_dri3_drawable *draw,
    loader_dri3_swapbuffer_barrier(draw);
    dri3_fence_reset(draw->conn, back);
    dri3_copy_area(draw->conn,
-                  dri3_back_buffer(draw)->pixmap,
+                  back->pixmap,
                   draw->drawable,
                   dri3_drawable_gc(draw),
                   x, y, x, y, width, height);
@@ -652,7 +659,7 @@ loader_dri3_copy_sub_buffer(struct loader_dri3_drawable *draw,
    if (draw->have_fake_front && !draw->is_different_gpu) {
       dri3_fence_reset(draw->conn, dri3_fake_front_buffer(draw));
       dri3_copy_area(draw->conn,
-                     dri3_back_buffer(draw)->pixmap,
+                     back->pixmap,
                      dri3_fake_front_buffer(draw)->pixmap,
                      dri3_drawable_gc(draw),
                      x, y, x, y, width, height);
@@ -763,7 +770,8 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
 
    draw->vtable->flush_drawable(draw, flush_flags);
 
-   back = draw->buffers[dri3_find_back(draw)];
+   back = dri3_find_back_alloc(draw);
+
    if (draw->is_different_gpu && back) {
       /* Update the linear buffer before presenting the pixmap */
       (void) loader_dri3_blit_image(draw,
@@ -892,15 +900,12 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
 int
 loader_dri3_query_buffer_age(struct loader_dri3_drawable *draw)
 {
-   int back_id = LOADER_DRI3_BACK_ID(dri3_find_back(draw));
+   struct loader_dri3_buffer *back = dri3_find_back_alloc(draw);
 
-   if (back_id < 0 || !draw->buffers[back_id])
+   if (!back || back->last_swap == 0)
       return 0;
 
-   if (draw->buffers[back_id]->last_swap != 0)
-      return draw->send_sbc - draw->buffers[back_id]->last_swap + 1;
-   else
-      return 0;
+   return draw->send_sbc - back->last_swap + 1;
 }
 
 /** loader_dri3_open
@@ -1334,6 +1339,8 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
    int buf_id;
 
    if (buffer_type == loader_dri3_buffer_back) {
+      draw->back_format = format;
+
       buf_id = dri3_find_back(draw);
 
       if (buf_id < 0)
@@ -1619,4 +1626,36 @@ loader_dri3_close_screen(__DRIscreen *dri_screen)
       blit_context.ctx = NULL;
    }
    mtx_unlock(&blit_context.mtx);
+}
+
+/**
+ * Find a backbuffer slot - potentially allocating a back buffer
+ *
+ * \param draw[in,out]  Pointer to the drawable for which to find back.
+ * \return Pointer to a new back buffer or NULL if allocation failed or was
+ * not mandated.
+ *
+ * Find a potentially new back buffer, and if it's not been allocated yet and
+ * in addition needs initializing, then try to allocate and initialize it.
+ */
+static struct loader_dri3_buffer *
+dri3_find_back_alloc(struct loader_dri3_drawable *draw)
+{
+   struct loader_dri3_buffer *back;
+   int id;
+
+   id = dri3_find_back(draw);
+   back = (id >= 0) ? draw->buffers[id] : NULL;
+
+   if (back || (id >= 0 && draw->back_format != __DRI_IMAGE_FORMAT_NONE)) {
+      if (dri3_update_drawable(draw->dri_drawable, draw)) {
+         (void) dri3_get_buffer(draw->dri_drawable,
+                                draw->back_format,
+                                loader_dri3_buffer_back,
+                                draw);
+         back = (id >= 0) ? draw->buffers[id] : NULL;
+      }
+   }
+
+   return back;
 }
