@@ -1315,10 +1315,9 @@ create_linked_shader_and_program(struct gl_context *ctx,
 
    /* Restore shader info */
    blob_copy_bytes(metadata, (uint8_t *) &glprog->info, sizeof(shader_info));
-   if (glprog->info.name)
-      glprog->info.name = ralloc_strdup(glprog, blob_read_string(metadata));
-   if (glprog->info.label)
-      glprog->info.label = ralloc_strdup(glprog, blob_read_string(metadata));
+
+   glprog->info.name = ralloc_strdup(glprog, blob_read_string(metadata));
+   glprog->info.label = ralloc_strdup(glprog, blob_read_string(metadata));
 
    _mesa_reference_shader_program_data(ctx, &glprog->sh.data, prog->data);
    _mesa_reference_program(ctx, &linked->Program, glprog);
@@ -1362,9 +1361,13 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
          if (sh->Program->info.name)
             blob_write_string(metadata, sh->Program->info.name);
+         else
+            blob_write_string(metadata, "");
 
          if (sh->Program->info.label)
             blob_write_string(metadata, sh->Program->info.label);
+         else
+            blob_write_string(metadata, "");
       }
    }
 
