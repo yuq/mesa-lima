@@ -618,8 +618,6 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
       encode_type_to_blob(metadata, prog->data->UniformStorage[i].type);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].array_elements);
       blob_write_string(metadata, prog->data->UniformStorage[i].name);
-      blob_write_uint32(metadata, prog->data->UniformStorage[i].storage -
-                                  prog->data->UniformDataSlots);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].builtin);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].remap_location);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].block_index);
@@ -638,6 +636,12 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
                         prog->data->UniformStorage[i].top_level_array_size);
       blob_write_uint32(metadata,
                         prog->data->UniformStorage[i].top_level_array_stride);
+
+     if (has_uniform_storage(prog, i)) {
+         blob_write_uint32(metadata, prog->data->UniformStorage[i].storage -
+                                     prog->data->UniformDataSlots);
+      }
+
       blob_write_bytes(metadata, prog->data->UniformStorage[i].opaque,
                        sizeof(prog->data->UniformStorage[i].opaque));
    }
@@ -683,7 +687,6 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
       uniforms[i].type = decode_type_from_blob(metadata);
       uniforms[i].array_elements = blob_read_uint32(metadata);
       uniforms[i].name = ralloc_strdup(prog, blob_read_string (metadata));
-      uniforms[i].storage = data + blob_read_uint32(metadata);
       uniforms[i].builtin = blob_read_uint32(metadata);
       uniforms[i].remap_location = blob_read_uint32(metadata);
       uniforms[i].block_index = blob_read_uint32(metadata);
@@ -700,6 +703,10 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
       uniforms[i].top_level_array_size = blob_read_uint32(metadata);
       uniforms[i].top_level_array_stride = blob_read_uint32(metadata);
       prog->UniformHash->put(i, uniforms[i].name);
+
+      if (has_uniform_storage(prog, i)) {
+         uniforms[i].storage = data + blob_read_uint32(metadata);
+      }
 
       memcpy(uniforms[i].opaque,
              blob_read_bytes(metadata, sizeof(uniforms[i].opaque)),
