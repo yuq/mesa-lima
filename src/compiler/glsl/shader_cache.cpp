@@ -79,6 +79,11 @@ encode_type_to_blob(struct blob *blob, const glsl_type *type)
 {
    uint32_t encoding;
 
+   if (!type) {
+      blob_write_uint32(blob, 0);
+      return;
+   }
+
    switch (type->base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
@@ -149,6 +154,11 @@ static const glsl_type *
 decode_type_from_blob(struct blob_reader *blob)
 {
    uint32_t u = blob_read_uint32(blob);
+
+   if (u == 0) {
+      return NULL;
+   }
+
    glsl_base_type base_type = (glsl_base_type) (u >> 24);
 
    switch (base_type) {
