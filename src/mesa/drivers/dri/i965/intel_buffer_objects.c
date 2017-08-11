@@ -342,6 +342,7 @@ brw_get_buffer_subdata(struct gl_context *ctx,
 
    unsigned int map_flags = MAP_READ;
    mem_copy_fn memcpy_fn = memcpy;
+#ifdef USE_SSE41
    if (!intel_obj->buffer->cache_coherent && cpu_has_sse4_1) {
       /* Rather than acquire a new WB mmaping of the buffer object and pull
        * it into the CPU cache, keep using the WC mmap that we have for writes,
@@ -350,6 +351,7 @@ brw_get_buffer_subdata(struct gl_context *ctx,
       map_flags |= MAP_COHERENT;
       memcpy_fn = (mem_copy_fn) _mesa_streaming_load_memcpy;
    }
+#endif
 
    void *map = brw_bo_map(brw, intel_obj->buffer, map_flags);
    if (unlikely(!map)) {
