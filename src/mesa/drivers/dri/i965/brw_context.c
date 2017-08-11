@@ -934,7 +934,7 @@ brwCreateContext(gl_api api,
 
    intel_fbo_init(brw);
 
-   intel_batchbuffer_init(&brw->batch, brw->bufmgr, brw->has_llc);
+   intel_batchbuffer_init(screen, &brw->batch);
 
    if (brw->gen >= 6) {
       /* Create a new hardware context.  Using a hardware context means that
