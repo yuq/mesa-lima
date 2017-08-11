@@ -596,6 +596,17 @@ read_xfb(struct blob_reader *metadata, struct gl_shader_program *shProg)
                       MAX_FEEDBACK_BUFFERS);
 }
 
+static bool
+has_uniform_storage(struct gl_shader_program *prog, unsigned idx)
+{
+   if (!prog->data->UniformStorage[idx].builtin &&
+       !prog->data->UniformStorage[idx].is_shader_storage &&
+       prog->data->UniformStorage[idx].block_index == -1)
+      return true;
+
+   return false;
+}
+
 static void
 write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
 {
@@ -638,9 +649,7 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
     */
    blob_write_uint32(metadata, prog->data->NumHiddenUniforms);
    for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
-      if (!prog->data->UniformStorage[i].builtin &&
-          !prog->data->UniformStorage[i].is_shader_storage &&
-          prog->data->UniformStorage[i].block_index == -1) {
+      if (has_uniform_storage(prog, i)) {
          unsigned vec_size =
             prog->data->UniformStorage[i].type->component_slots() *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
@@ -700,9 +709,7 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
    /* Restore uniform values. */
    prog->data->NumHiddenUniforms = blob_read_uint32(metadata);
    for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
-      if (!prog->data->UniformStorage[i].builtin &&
-          !prog->data->UniformStorage[i].is_shader_storage &&
-          prog->data->UniformStorage[i].block_index == -1) {
+      if (has_uniform_storage(prog, i)) {
          unsigned vec_size =
             prog->data->UniformStorage[i].type->component_slots() *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
