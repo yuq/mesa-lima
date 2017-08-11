@@ -878,6 +878,18 @@ write_shader_subroutine_index(struct blob *metadata,
 }
 
 static void
+get_shader_var_and_pointer_sizes(size_t *s_var_size, size_t *s_var_ptrs,
+                                 const gl_shader_variable *var)
+{
+   *s_var_size = sizeof(gl_shader_variable);
+   *s_var_ptrs =
+      sizeof(var->type) +
+      sizeof(var->interface_type) +
+      sizeof(var->outermost_struct_type) +
+      sizeof(var->name);
+}
+
+static void
 write_program_resource_data(struct blob *metadata,
                             struct gl_shader_program *prog,
                             struct gl_program_resource *res)
@@ -888,16 +900,19 @@ write_program_resource_data(struct blob *metadata,
    case GL_PROGRAM_INPUT:
    case GL_PROGRAM_OUTPUT: {
       const gl_shader_variable *var = (gl_shader_variable *)res->Data;
-      blob_write_bytes(metadata, var, sizeof(gl_shader_variable));
+
       encode_type_to_blob(metadata, var->type);
-
-      if (var->interface_type)
-         encode_type_to_blob(metadata, var->interface_type);
-
-      if (var->outermost_struct_type)
-         encode_type_to_blob(metadata, var->outermost_struct_type);
+      encode_type_to_blob(metadata, var->interface_type);
+      encode_type_to_blob(metadata, var->outermost_struct_type);
 
       blob_write_string(metadata, var->name);
+
+      size_t s_var_size, s_var_ptrs;
+      get_shader_var_and_pointer_sizes(&s_var_size, &s_var_ptrs, var);
+
+      /* Write gl_shader_variable skipping over the pointers */
+      blob_write_bytes(metadata, ((char *)var) + s_var_ptrs,
+                       s_var_size - s_var_ptrs);
       break;
    }
    case GL_UNIFORM_BLOCK:
@@ -988,16 +1003,17 @@ read_program_resource_data(struct blob_reader *metadata,
    case GL_PROGRAM_OUTPUT: {
       gl_shader_variable *var = ralloc(prog, struct gl_shader_variable);
 
-      blob_copy_bytes(metadata, (uint8_t *) var, sizeof(gl_shader_variable));
       var->type = decode_type_from_blob(metadata);
-
-      if (var->interface_type)
-         var->interface_type = decode_type_from_blob(metadata);
-
-      if (var->outermost_struct_type)
-         var->outermost_struct_type = decode_type_from_blob(metadata);
+      var->interface_type = decode_type_from_blob(metadata);
+      var->outermost_struct_type = decode_type_from_blob(metadata);
 
       var->name = ralloc_strdup(prog, blob_read_string(metadata));
+
+      size_t s_var_size, s_var_ptrs;
+      get_shader_var_and_pointer_sizes(&s_var_size, &s_var_ptrs, var);
+
+      blob_copy_bytes(metadata, ((uint8_t *) var) + s_var_ptrs,
+                      s_var_size - s_var_ptrs);
 
       res->Data = var;
       break;
