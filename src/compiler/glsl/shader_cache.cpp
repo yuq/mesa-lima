@@ -1296,6 +1296,14 @@ create_binding_str(const char *key, unsigned value, void *closure)
 }
 
 static void
+get_shader_info_and_pointer_sizes(size_t *s_info_size, size_t *s_info_ptrs,
+                                  shader_info *info)
+{
+   *s_info_size = sizeof(shader_info);
+   *s_info_ptrs = sizeof(info->name) + sizeof(info->label);
+}
+
+static void
 create_linked_shader_and_program(struct gl_context *ctx,
                                  gl_shader_stage stage,
                                  struct gl_shader_program *prog,
@@ -1313,11 +1321,16 @@ create_linked_shader_and_program(struct gl_context *ctx,
 
    read_shader_metadata(metadata, glprog, linked);
 
-   /* Restore shader info */
-   blob_copy_bytes(metadata, (uint8_t *) &glprog->info, sizeof(shader_info));
-
    glprog->info.name = ralloc_strdup(glprog, blob_read_string(metadata));
    glprog->info.label = ralloc_strdup(glprog, blob_read_string(metadata));
+
+   size_t s_info_size, s_info_ptrs;
+   get_shader_info_and_pointer_sizes(&s_info_size, &s_info_ptrs,
+                                     &glprog->info);
+
+   /* Restore shader info */
+   blob_copy_bytes(metadata, ((uint8_t *) &glprog->info) + s_info_ptrs,
+                   s_info_size - s_info_ptrs);
 
    _mesa_reference_shader_program_data(ctx, &glprog->sh.data, prog->data);
    _mesa_reference_program(ctx, &linked->Program, glprog);
@@ -1356,9 +1369,6 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
       if (sh) {
          write_shader_metadata(metadata, sh);
 
-         /* Store nir shader info */
-         blob_write_bytes(metadata, &sh->Program->info, sizeof(shader_info));
-
          if (sh->Program->info.name)
             blob_write_string(metadata, sh->Program->info.name);
          else
@@ -1368,6 +1378,15 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
             blob_write_string(metadata, sh->Program->info.label);
          else
             blob_write_string(metadata, "");
+
+         size_t s_info_size, s_info_ptrs;
+         get_shader_info_and_pointer_sizes(&s_info_size, &s_info_ptrs,
+                                           &sh->Program->info);
+
+         /* Store shader info */
+         blob_write_bytes(metadata,
+                          ((char *) &sh->Program->info) + s_info_ptrs,
+                          s_info_size - s_info_ptrs);
       }
    }
 
