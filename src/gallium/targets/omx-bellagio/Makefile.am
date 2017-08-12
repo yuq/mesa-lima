@@ -3,7 +3,7 @@ include $(top_srcdir)/src/gallium/Automake.inc
 AM_CFLAGS = \
 	$(GALLIUM_TARGET_CFLAGS)
 
-omxdir = $(OMX_LIB_INSTALL_DIR)
+omxdir = $(OMX_BELLAGIO_LIB_INSTALL_DIR)
 omx_LTLIBRARIES = libomx_mesa.la
 
 nodist_EXTRA_libomx_mesa_la_SOURCES = dummy.cpp
@@ -19,16 +19,16 @@ libomx_mesa_la_LDFLAGS = \
 
 if HAVE_LD_VERSION_SCRIPT
 libomx_mesa_la_LDFLAGS += \
-	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/omx/omx.sym
+	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/omx-bellagio/omx.sym
 endif # HAVE_LD_VERSION_SCRIPT
 
 libomx_mesa_la_LIBADD = \
-	$(top_builddir)/src/gallium/state_trackers/omx/libomxtracker.la \
+	$(top_builddir)/src/gallium/state_trackers/omx_bellagio/libomxtracker.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvlwinsys.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
-	$(OMX_LIBS) \
+	$(OMX_BELLAGIO_LIBS) \
 	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
