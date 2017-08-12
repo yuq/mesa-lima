@@ -45,11 +45,10 @@ NVC0LegalizeSSA::handleDIV(Instruction *i)
 {
    FlowInstruction *call;
    int builtin;
-   Value *def[2];
 
    bld.setPosition(i, false);
-   def[0] = bld.mkMovToReg(0, i->getSrc(0))->getDef(0);
-   def[1] = bld.mkMovToReg(1, i->getSrc(1))->getDef(0);
+   bld.mkMovToReg(0, i->getSrc(0));
+   bld.mkMovToReg(1, i->getSrc(1));
    switch (i->dType) {
    case TYPE_U32: builtin = NVC0_BUILTIN_DIV_U32; break;
    case TYPE_S32: builtin = NVC0_BUILTIN_DIV_S32; break;
@@ -57,7 +56,7 @@ NVC0LegalizeSSA::handleDIV(Instruction *i)
       return;
    }
    call = bld.mkFlow(OP_CALL, NULL, CC_ALWAYS, NULL);
-   bld.mkMov(i->getDef(0), def[(i->op == OP_DIV) ? 0 : 1]);
+   bld.mkMovFromReg(i->getDef(0), i->op == OP_DIV ? 0 : 1);
    bld.mkClobber(FILE_GPR, (i->op == OP_DIV) ? 0xe : 0xd, 2);
    bld.mkClobber(FILE_PREDICATE, (i->dType == TYPE_S32) ? 0xf : 0x3, 0);
 
