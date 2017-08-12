@@ -98,12 +98,21 @@ typedef enum {
    gpir_op_branch_uncond,
 } gpir_op;
 
+typedef enum {
+   gpir_node_type_alu,
+   gpir_node_type_const,
+   gpir_node_type_load,
+   gpir_node_type_store,
+   gpir_node_type_branch,
+} gpir_node_type;
+
 typedef struct {
    char *name;
    bool dest_neg;
    bool src_neg[4];
    int latency;
    int *slots;
+   gpir_node_type type;
 } gpir_op_info;
 
 extern const gpir_op_info gpir_op_infos[];
@@ -111,6 +120,7 @@ extern const gpir_op_info gpir_op_infos[];
 typedef struct gpir_node {
    struct list_head list;
    gpir_op op;
+   gpir_node_type type;
 
    struct gpir_node *children[4];
    unsigned num_child;
@@ -154,6 +164,7 @@ typedef struct {
    gpir_node node;
    unsigned index; /* must be 0 when storing temporaries */
    bool write_mask[4]; /* which components to store to */
+   uint8_t children_component[4];
 } gpir_store_node;
 
 enum gpir_instr_slot {
@@ -203,9 +214,10 @@ typedef struct nir_shader nir_shader;
 
 gpir_prog *gpir_compile_nir(nir_shader *nir);
 
-void *gpir_node_create(gpir_compiler *comp, int size, int index, int max_parent);
+void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index, int max_parent);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);
 void gpir_node_remove_parent_cleanup(gpir_node *node);
+void gpir_node_replace_parent(gpir_node *child, gpir_node *parent);
 void gpir_node_delete(gpir_node *node);
 
 void gpir_lower_prog(gpir_compiler *comp);
