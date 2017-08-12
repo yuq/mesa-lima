@@ -68,7 +68,7 @@ static void gpir_schedule_node(gpir_block *block, gpir_node *node)
 {
    node->scheduled = true;
 
-   gpir_op_info *info = gpir_op_infos + node->op;
+   const gpir_op_info *info = gpir_op_infos + node->op;
    int *slots = info->slots;
    /* not schedule node without instr slot or no latency
     * like load node which can be schduled with child */

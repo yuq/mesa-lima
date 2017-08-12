@@ -27,34 +27,34 @@
 #include "gpir.h"
 
 
-static void *gpir_node_create_ssa(gpir_compiler *comp, int size, nir_ssa_def *ssa)
+static void *gpir_node_create_ssa(gpir_compiler *comp, gpir_op op, nir_ssa_def *ssa)
 {
    int max_parent = list_length(&ssa->uses) + list_length(&ssa->if_uses);
    int index = ssa->index;
 
-   return gpir_node_create(comp, size, index, max_parent);
+   return gpir_node_create(comp, op, index, max_parent);
 }
 
-static void *gpir_node_create_reg(gpir_compiler *comp, int size, nir_reg_dest *reg)
+static void *gpir_node_create_reg(gpir_compiler *comp, gpir_op op, nir_reg_dest *reg)
 {
    int max_parent = list_length(&reg->reg->uses) + list_length(&reg->reg->if_uses);
    int index = reg->reg->index + comp->reg_base;
 
-   return gpir_node_create(comp, size, index, max_parent);
+   return gpir_node_create(comp, op, index, max_parent);
 }
 
-static void *gpir_node_create_dest(gpir_compiler *comp, int size, nir_dest *dest)
+static void *gpir_node_create_dest(gpir_compiler *comp, gpir_op op, nir_dest *dest)
 {
    unsigned max_parent = 0, index = -1;
 
    if (dest) {
       if (dest->is_ssa)
-         return gpir_node_create_ssa(comp, size, &dest->ssa);
+         return gpir_node_create_ssa(comp, op, &dest->ssa);
       else
-         return gpir_node_create_reg(comp, size, &dest->reg);
+         return gpir_node_create_reg(comp, op, &dest->reg);
    }
 
-   return gpir_node_create(comp, size, index, max_parent);
+   return gpir_node_create(comp, op, index, max_parent);
 }
 
 static gpir_node *gpir_node_find(gpir_compiler *comp, nir_src *src)
@@ -96,14 +96,13 @@ static gpir_node *gpir_emit_alu(gpir_compiler *comp, nir_alu_instr *instr)
       return NULL;
    }
 
-   gpir_alu_node *node = gpir_node_create_dest(comp, sizeof(*node), &instr->dest.dest);
+   gpir_alu_node *node = gpir_node_create_dest(comp, op, &instr->dest.dest);
    if (!node)
       return NULL;
 
    unsigned num_child = nir_op_infos[instr->op].num_inputs;
    assert(num_child <= ARRAY_SIZE(node->children_component));
 
-   node->node.op = op;
    for (int i = 0; i < num_child; i++) {
       nir_alu_src *src = instr->src + i;
       node->children_negate[i] = src->negate;
@@ -121,11 +120,15 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
    gpir_node *child;
    gpir_load_node *lnode;
    gpir_store_node *snode;
+   int op;
 
    switch (instr->intrinsic) {
    case nir_intrinsic_load_uniform:
    case nir_intrinsic_load_input:
-      lnode = gpir_node_create_dest(comp, sizeof(*lnode), &instr->dest);
+      op = instr->intrinsic == nir_intrinsic_load_input ?
+         gpir_op_load_attribute : gpir_op_load_uniform;
+
+      lnode = gpir_node_create_dest(comp, op, &instr->dest);
       if (!lnode)
          return NULL;
 
@@ -135,21 +138,17 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
       gpir_node_add_child(&lnode->node, child);
 
       if (instr->intrinsic == nir_intrinsic_load_input) {
-         lnode->node.op = gpir_op_load_attribute;
          /* TODO: only support fix address input load, not sure if the hardware limit */
          assert(lnode->node.children[0]->op == gpir_op_const);
       }
-      else
-         lnode->node.op = gpir_op_load_uniform;
 
       return &lnode->node;
 
    case nir_intrinsic_store_output:
-      snode = gpir_node_create_dest(comp, sizeof(*snode), NULL);
+      snode = gpir_node_create_dest(comp, gpir_op_store_varying, NULL);
       if (!snode)
          return NULL;
 
-      snode->node.op = gpir_op_store_varying;
       for (int i = 0; i < 2; i++) {
          child = gpir_node_find(comp, instr->src + i);
          gpir_node_add_child(&snode->node, child);
@@ -164,13 +163,12 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
 
 static gpir_node *gpir_emit_load_const(gpir_compiler *comp, nir_load_const_instr *instr)
 {
-   gpir_const_node *node = gpir_node_create_ssa(comp, sizeof(*node), &instr->def);
+   gpir_const_node *node = gpir_node_create_ssa(comp, gpir_op_const, &instr->def);
    if (!node)
       return NULL;
 
    assert(instr->def.bit_size == 32);
    node->num_components = instr->def.num_components;
-   node->node.op = gpir_op_const;
 
    for (int i = 0; i < node->num_components; i++)
       node->value[i].i = instr->value.i32[i];
@@ -232,7 +230,7 @@ static gpir_block *gpir_block_create(void)
 static void gpir_block_delete(gpir_block *block)
 {
    list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
-      FREE(node);
+      gpir_node_delete(node);
    }
 
    util_dynarray_fini(&block->instrs);
