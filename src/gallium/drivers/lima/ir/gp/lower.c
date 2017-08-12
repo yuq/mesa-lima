@@ -60,7 +60,50 @@ static void gpir_lower_const(gpir_compiler *comp)
    }
 }
 
+static void gpir_lower_copy(gpir_compiler *comp)
+{
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
+         if (node->op == gpir_op_copy) {
+            gpir_alu_node *copy = (gpir_alu_node *)node;
+
+            /* update all copy node parents to use copy node children directly */
+            for (int i = 0; i < node->num_parent; i++) {
+               gpir_node *parent = node->parents[i];
+               if (parent->type == gpir_node_type_alu) {
+                  assert(node->num_child == 1);
+                  gpir_alu_node *alu = (gpir_alu_node *)parent;
+
+                  for (int j = 0; j < parent->num_child; j++) {
+                     if (parent->children[j] == node) {
+                        parent->children[j] = node->children[0];
+                        alu->children_component[j] = copy->children_component[0];
+                     }
+                  }
+               }
+               else {
+                  assert(parent->type == gpir_node_type_store);
+                  gpir_store_node *store = (gpir_store_node *)parent;
+                  for (int j = 0; j < node->num_child; j++) {
+                     parent->children[j] = node->children[j];
+                     store->children_component[j] = copy->children_component[j];
+                  }
+                  parent->num_child = node->num_child;
+               }
+            }
+
+            /* add all copy node parents to copy node children's parents */
+            for (int i = 0; i < node->num_child; i++)
+               gpir_node_replace_parent(node->children[i], node);
+
+            gpir_node_delete(node);
+         }
+      }
+   }
+}
+
 void gpir_lower_prog(gpir_compiler *comp)
 {
    gpir_lower_const(comp);
+   gpir_lower_copy(comp);
 }
