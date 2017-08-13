@@ -22,6 +22,8 @@
  *
  */
 
+#include <stdio.h>
+
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "gpir.h"
@@ -347,4 +349,27 @@ void gpir_node_delete(gpir_node *node)
    if (node->max_parent)
       FREE(node->parents);
    FREE(node);
+}
+
+static void gpir_node_print_node(gpir_node *node, int space)
+{
+   for (int i = 0; i < space; i++)
+      printf(" ");
+   printf("%s\n", gpir_op_infos[node->op].name);
+
+   for (int i = 0; i < node->num_child; i++)
+      gpir_node_print_node(node->children[i], space + 2);
+}
+
+void gpir_node_print_prog(gpir_compiler *comp)
+{
+   printf("========prog========\n");
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      printf("-------block------\n");
+      list_for_each_entry(gpir_node, node, &block->node_list, list) {
+         if (!node->num_parent)
+            gpir_node_print_node(node, 0);
+      }
+   }
+   printf("====================\n");
 }
