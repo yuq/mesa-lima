@@ -32,17 +32,17 @@ void gpir_instr_print_prog(gpir_compiler *comp)
       int len;
       char *name;
    } fields[] = {
-      [GPIR_INSTR_SLOT_MUL0] = { 5, "mul0" },
-      [GPIR_INSTR_SLOT_MUL1] = { 5, "mul1" },
-      [GPIR_INSTR_SLOT_ADD0] = { 5, "add0" },
-      [GPIR_INSTR_SLOT_ADD1] = { 5, "add1" },
-      [GPIR_INSTR_SLOT_LOAD0] = { 8, "load0" },
-      [GPIR_INSTR_SLOT_LOAD1] = { 8, "load1" },
-      [GPIR_INSTR_SLOT_LOAD2] = { 8, "load2" },
-      [GPIR_INSTR_SLOT_BRANCH] = { 6, "branch" },
-      [GPIR_INSTR_SLOT_STORE] = { 8, "store" },
-      [GPIR_INSTR_SLOT_COMPLEX] = { 8, "complex" },
-      [GPIR_INSTR_SLOT_PASS] = { 5, "pass" },
+      [GPIR_INSTR_SLOT_MUL0] = { 8, "mul0" },
+      [GPIR_INSTR_SLOT_MUL1] = { 8, "mul1" },
+      [GPIR_INSTR_SLOT_ADD0] = { 8, "add0" },
+      [GPIR_INSTR_SLOT_ADD1] = { 8, "add1" },
+      [GPIR_INSTR_SLOT_LOAD0] = { 10, "load0" },
+      [GPIR_INSTR_SLOT_LOAD1] = { 10, "load1" },
+      [GPIR_INSTR_SLOT_LOAD2] = { 10, "load2" },
+      [GPIR_INSTR_SLOT_BRANCH] = { 8, "branch" },
+      [GPIR_INSTR_SLOT_STORE] = { 10, "store" },
+      [GPIR_INSTR_SLOT_COMPLEX] = { 10, "complex" },
+      [GPIR_INSTR_SLOT_PASS] = { 8, "pass" },
    };
 
    printf("========prog instr========\n");
@@ -59,7 +59,10 @@ void gpir_instr_print_prog(gpir_compiler *comp)
          gpir_instr *instr = gpir_instr_array_e(&block->instrs, i);
          for (int j = 0; j < GPIR_INSTR_SLOT_NUM; j++) {
             gpir_node *node = instr->slots[j];
-            printf("%-*s ", fields[j].len, node ? gpir_op_infos[node->op].name : "null");
+            char buff[32] = "null";
+            if (node)
+               snprintf(buff, sizeof(buff), "%d|%s", node->index, gpir_op_infos[node->op].name);
+            printf("%-*s ", fields[j].len, buff);
          }
          printf("\n");
       }
