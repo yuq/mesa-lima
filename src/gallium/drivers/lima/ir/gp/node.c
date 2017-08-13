@@ -138,17 +138,17 @@ const gpir_op_info gpir_op_infos[] = {
       .latency = 1,
    },
    [gpir_op_load_uniform] = {
-      .name = "ld_unif",
+      .name = "ld_uni",
       .latency = 0,
       .type = gpir_node_type_load,
    },
    [gpir_op_load_temp] = {
-      .name = "ld_temp",
+      .name = "ld_tmp",
       .latency = 0,
       .type = gpir_node_type_load,
    },
    [gpir_op_load_attribute] = {
-      .name = "ld_attr",
+      .name = "ld_att",
       .latency = 0,
       .slots = (int []) { GPIR_INSTR_SLOT_LOAD0, GPIR_INSTR_SLOT_END },
       .type = gpir_node_type_load,
@@ -159,33 +159,33 @@ const gpir_op_info gpir_op_infos[] = {
       .type = gpir_node_type_load,
    },
    [gpir_op_store_temp] = {
-      .name = "str_temp",
+      .name = "st_tmp",
       .latency = 4,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_reg] = {
-      .name = "str_reg",
+      .name = "st_reg",
       .latency = 3,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_varying] = {
-      .name = "str_vary",
+      .name = "st_var",
       .latency = 1,
       .slots = (int []) { GPIR_INSTR_SLOT_STORE, GPIR_INSTR_SLOT_END },
       .type = gpir_node_type_store,
    },
    [gpir_op_store_temp_load_off0] = {
-      .name = "str_off0",
+      .name = "st_of0",
       .latency = 4,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_temp_load_off1] = {
-      .name = "str_off1",
+      .name = "st_of1",
       .latency = 4,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_temp_load_off2] = {
-      .name = "str_off2",
+      .name = "st_of2",
       .latency = 4,
       .type = gpir_node_type_store,
    },
@@ -279,6 +279,7 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index, int max_paren
 
    node->op = op;
    node->type = type;
+   node->index = comp->cur_index++;
    node->distance = -1;
 
    return node;
@@ -355,7 +356,7 @@ static void gpir_node_print_node(gpir_node *node, int space)
 {
    for (int i = 0; i < space; i++)
       printf(" ");
-   printf("%s\n", gpir_op_infos[node->op].name);
+   printf("%s %d\n", gpir_op_infos[node->op].name, node->index);
 
    for (int i = 0; i < node->num_child; i++)
       gpir_node_print_node(node->children[i], space + 2);
