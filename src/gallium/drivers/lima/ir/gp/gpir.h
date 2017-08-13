@@ -193,6 +193,9 @@ typedef struct gpir_block {
    struct util_dynarray instrs;
 } gpir_block;
 
+#define gpir_instr_array_n(buf) ((buf)->size / sizeof(gpir_instr))
+#define gpir_instr_array_e(buf, idx) (util_dynarray_element(buf, gpir_instr, idx))
+
 typedef struct {
    gpir_node node;
    gpir_block *dest;
@@ -220,6 +223,8 @@ void gpir_node_remove_parent_cleanup(gpir_node *node);
 void gpir_node_replace_parent(gpir_node *child, gpir_node *parent);
 void gpir_node_delete(gpir_node *node);
 void gpir_node_print_prog(gpir_compiler *comp);
+
+void gpir_instr_print_prog(gpir_compiler *comp);
 
 void gpir_lower_prog(gpir_compiler *comp);
 void gpir_schedule_prog(gpir_compiler *comp);
