@@ -49,9 +49,6 @@ static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *inse
    list_addtail(&insert_node->ready, insert_pos);
 }
 
-#define gpir_instr_array_n(buf) ((buf)->size / sizeof(gpir_instr))
-#define gpir_instr_array_e(buf, idx) (util_dynarray_element(buf, gpir_instr, idx))
-
 static gpir_instr *gpir_instr_array_grow(struct util_dynarray *instrs, int pos)
 {
    int n = gpir_instr_array_n(instrs);
