@@ -121,6 +121,7 @@ typedef struct gpir_node {
    struct list_head list;
    gpir_op op;
    gpir_node_type type;
+   int index;
 
    struct gpir_node *children[4];
    unsigned num_child;
@@ -203,6 +204,7 @@ typedef struct {
 
 typedef struct gpir_compiler {
    struct list_head block_list;
+   int cur_index;
    /* array for searching ssa/reg node */
    gpir_node **var_nodes;
    unsigned reg_base;
