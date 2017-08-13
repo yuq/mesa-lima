@@ -1219,18 +1219,20 @@ write_shader_metadata(struct blob *metadata, gl_linked_shader *shader)
    blob_write_bytes(metadata, glprog->sh.ImageUnits,
                     sizeof(glprog->sh.ImageUnits));
 
+   size_t ptr_size = sizeof(GLvoid *);
+
    blob_write_uint32(metadata, glprog->sh.NumBindlessSamplers);
    blob_write_uint32(metadata, glprog->sh.HasBoundBindlessSampler);
    for (i = 0; i < glprog->sh.NumBindlessSamplers; i++) {
       blob_write_bytes(metadata, &glprog->sh.BindlessSamplers[i],
-                       sizeof(struct gl_bindless_sampler));
+                       sizeof(struct gl_bindless_sampler) - ptr_size);
    }
 
    blob_write_uint32(metadata, glprog->sh.NumBindlessImages);
    blob_write_uint32(metadata, glprog->sh.HasBoundBindlessImage);
    for (i = 0; i < glprog->sh.NumBindlessImages; i++) {
       blob_write_bytes(metadata, &glprog->sh.BindlessImages[i],
-                       sizeof(struct gl_bindless_image));
+                       sizeof(struct gl_bindless_image) - ptr_size);
    }
 
    write_shader_parameters(metadata, glprog->Parameters);
@@ -1258,6 +1260,8 @@ read_shader_metadata(struct blob_reader *metadata,
    blob_copy_bytes(metadata, (uint8_t *) glprog->sh.ImageUnits,
                    sizeof(glprog->sh.ImageUnits));
 
+   size_t ptr_size = sizeof(GLvoid *);
+
    glprog->sh.NumBindlessSamplers = blob_read_uint32(metadata);
    glprog->sh.HasBoundBindlessSampler = blob_read_uint32(metadata);
    if (glprog->sh.NumBindlessSamplers > 0) {
@@ -1267,7 +1271,7 @@ read_shader_metadata(struct blob_reader *metadata,
 
       for (i = 0; i < glprog->sh.NumBindlessSamplers; i++) {
          blob_copy_bytes(metadata, (uint8_t *) &glprog->sh.BindlessSamplers[i],
-                         sizeof(struct gl_bindless_sampler));
+                         sizeof(struct gl_bindless_sampler) - ptr_size);
       }
    }
 
@@ -1280,7 +1284,7 @@ read_shader_metadata(struct blob_reader *metadata,
 
       for (i = 0; i < glprog->sh.NumBindlessImages; i++) {
          blob_copy_bytes(metadata, (uint8_t *) &glprog->sh.BindlessImages[i],
-                        sizeof(struct gl_bindless_image));
+                        sizeof(struct gl_bindless_image) - ptr_size);
       }
    }
 
