@@ -53,6 +53,7 @@ noinst_LTLIBRARIES = libcompiler.la
 
 libcompiler_la_SOURCES = $(LIBCOMPILER_FILES)
 
+noinst_PROGRAMS =
 check_PROGRAMS =
 TESTS =
 BUILT_SOURCES =
