@@ -2913,7 +2913,7 @@ r600_texture_from_memobj(struct pipe_screen *screen,
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct r600_memory_object *memobj = (struct r600_memory_object *)_memobj;
 	struct r600_texture *rtex;
-	struct radeon_surf surface;
+	struct radeon_surf surface = {};
 	struct radeon_bo_metadata metadata = {};
 	enum radeon_surf_mode array_mode;
 	bool is_scanout;
