@@ -69,6 +69,8 @@ EXTRA_DIST = \
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
 
+include Makefile.spirv.am
+
 include Makefile.glsl.am
 
 include Makefile.nir.am
