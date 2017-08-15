@@ -205,6 +205,13 @@ struct simd16vertex
 };
 
 #endif
+
+template<typename SIMD_T>
+struct SIMDVERTEX_T
+{
+    typename SIMD_T::Vec4               attrib[SWR_VTX_NUM_SLOTS];
+};
+
 //////////////////////////////////////////////////////////////////////////
 /// SWR_VS_CONTEXT
 /// @brief Input to vertex shader

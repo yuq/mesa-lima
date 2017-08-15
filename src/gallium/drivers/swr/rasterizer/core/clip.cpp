@@ -32,9 +32,9 @@
 #include "core/clip.h"
 
 // Temp storage used by the clipper
-THREAD simdvertex tlsTempVertices[7];
+THREAD SIMDVERTEX_T<SIMD256> tlsTempVertices[7];
 #if USE_SIMD16_FRONTEND
-THREAD simd16vertex tlsTempVertices_simd16[7];
+THREAD SIMDVERTEX_T<SIMD512> tlsTempVertices_simd16[7];
 #endif
 
 float ComputeInterpFactor(float boundaryCoord0, float boundaryCoord1)
@@ -164,7 +164,7 @@ void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvecto
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipTriangles, pDC->drawId);
-    Clipper<3> clipper(workerId, pDC);
+    Clipper<SIMD256, 3> clipper(workerId, pDC);
     clipper.ExecuteStage(pa, prims, primMask, primId);
     AR_END(FEClipTriangles, 1);
 }
@@ -173,7 +173,7 @@ void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector pr
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipLines, pDC->drawId);
-    Clipper<2> clipper(workerId, pDC);
+    Clipper<SIMD256, 2> clipper(workerId, pDC);
     clipper.ExecuteStage(pa, prims, primMask, primId);
     AR_END(FEClipLines, 1);
 }
@@ -182,7 +182,7 @@ void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector p
 {
     SWR_CONTEXT *pContext = pDC->pContext;
     AR_BEGIN(FEClipPoints, pDC->drawId);
-    Clipper<1> clipper(workerId, pDC);
+    Clipper<SIMD256, 1> clipper(workerId, pDC);
     clipper.ExecuteStage(pa, prims, primMask, primId);
     AR_END(FEClipPoints, 1);
 }
@@ -195,7 +195,7 @@ void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t wor
 
     enum { VERTS_PER_PRIM = 3 };
 
-    Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
+    Clipper<SIMD512, VERTS_PER_PRIM> clipper(workerId, pDC);
 
     pa.useAlternateOffset = false;
     clipper.ExecuteStage(pa, prims, primMask, primId);
@@ -210,7 +210,7 @@ void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerI
 
     enum { VERTS_PER_PRIM = 2 };
 
-    Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
+    Clipper<SIMD512, VERTS_PER_PRIM> clipper(workerId, pDC);
 
     pa.useAlternateOffset = false;
     clipper.ExecuteStage(pa, prims, primMask, primId);
@@ -225,7 +225,7 @@ void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t worker
 
     enum { VERTS_PER_PRIM = 1 };
 
-    Clipper<VERTS_PER_PRIM> clipper(workerId, pDC);
+    Clipper<SIMD512, VERTS_PER_PRIM> clipper(workerId, pDC);
 
     pa.useAlternateOffset = false;
     clipper.ExecuteStage(pa, prims, primMask, primId);
