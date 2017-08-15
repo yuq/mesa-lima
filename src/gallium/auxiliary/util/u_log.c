@@ -36,13 +36,18 @@ struct u_log_page {
    unsigned max_entries;
 };
 
+struct u_log_auto_logger {
+   u_auto_log_fn *callback;
+   void *data;
+};
+
 /**
  * Initialize the given logging context.
  */
 void
 u_log_context_init(struct u_log_context *ctx)
 {
-   ctx->cur = NULL;
+   memset(ctx, 0, sizeof(*ctx));
 }
 
 /**
@@ -55,7 +60,56 @@ void
 u_log_context_destroy(struct u_log_context *ctx)
 {
    u_log_page_destroy(ctx->cur);
-   ctx->cur = NULL;
+   FREE(ctx->auto_loggers);
+   memset(ctx, 0, sizeof(*ctx));
+}
+
+/**
+ * Add an auto logger.
+ *
+ * Auto loggers are called each time a chunk is added to the log.
+ */
+void
+u_log_add_auto_logger(struct u_log_context *ctx, u_auto_log_fn *callback,
+                      void *data)
+{
+   struct u_log_auto_logger *new_auto_loggers =
+      REALLOC(ctx->auto_loggers,
+              sizeof(*new_auto_loggers) * ctx->num_auto_loggers,
+              sizeof(*new_auto_loggers) * (ctx->num_auto_loggers + 1));
+   if (!new_auto_loggers) {
+      fprintf(stderr, "Gallium u_log: out of memory\n");
+      return;
+   }
+
+   unsigned idx = ctx->num_auto_loggers++;
+   ctx->auto_loggers = new_auto_loggers;
+   ctx->auto_loggers[idx].callback = callback;
+   ctx->auto_loggers[idx].data = data;
+}
+
+/**
+ * Make sure that auto loggers have run.
+ */
+void
+u_log_flush(struct u_log_context *ctx)
+{
+   if (!ctx->num_auto_loggers)
+      return;
+
+   struct u_log_auto_logger *auto_loggers = ctx->auto_loggers;
+   unsigned num_auto_loggers = ctx->num_auto_loggers;
+
+   /* Prevent recursion. */
+   ctx->num_auto_loggers = 0;
+   ctx->auto_loggers = NULL;
+
+   for (unsigned i = 0; i < num_auto_loggers; ++i)
+      auto_loggers[i].callback(auto_loggers[i].data, ctx);
+
+   assert(!ctx->num_auto_loggers);
+   ctx->num_auto_loggers = num_auto_loggers;
+   ctx->auto_loggers = auto_loggers;
 }
 
 static void str_print(void *data, FILE *stream)
@@ -95,6 +149,8 @@ u_log_chunk(struct u_log_context *ctx, const struct u_log_chunk_type *type,
             void *data)
 {
    struct u_log_page *page = ctx->cur;
+
+   u_log_flush(ctx);
 
    if (!page) {
       ctx->cur = CALLOC_STRUCT(u_log_page);

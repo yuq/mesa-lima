@@ -35,6 +35,11 @@
  *
  * Chunks are accumulated into "pages". The manager of the log can periodically
  * take out the current page using \ref u_log_new_page and dump it to a file.
+ *
+ * Furthermore, "auto loggers" can be added to a context, which are callbacks
+ * that are given the opportunity to add their own logging each time a chunk is
+ * added. Drivers can use this to lazily log chunks of their command stream.
+ * Lazy loggers don't need to be re-entrant.
  */
 
 #ifndef U_LOG_H
@@ -45,6 +50,7 @@
 #include "u_debug.h"
 
 struct u_log_page;
+struct u_log_auto_logger;
 
 struct u_log_chunk_type {
    void (*destroy)(void *data);
@@ -53,13 +59,24 @@ struct u_log_chunk_type {
 
 struct u_log_context {
    struct u_log_page *cur;
+   struct u_log_auto_logger *auto_loggers;
+   unsigned num_auto_loggers;
 };
+
+typedef void (u_auto_log_fn)(void *data, struct u_log_context *ctx);
 
 void
 u_log_context_init(struct u_log_context *ctx);
 
 void
 u_log_context_destroy(struct u_log_context *ctx);
+
+void
+u_log_add_auto_logger(struct u_log_context *ctx, u_auto_log_fn *callback,
+                      void *data);
+
+void
+u_log_flush(struct u_log_context *ctx);
 
 void
 u_log_printf(struct u_log_context *ctx, const char *fmt, ...) _util_printf_format(2,3);
