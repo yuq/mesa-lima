@@ -2983,6 +2983,7 @@ radv_initialise_color_surface(struct radv_device *device,
 			S_028C74_PIPE_ALIGNED(meta.pipe_aligned);
 
 		cb->cb_color_base += iview->image->surface.u.gfx9.surf_offset >> 8;
+		cb->cb_color_base |= iview->image->surface.tile_swizzle;
 	} else {
 		const struct legacy_surf_level *level_info = &surf->u.legacy.level[iview->base_mip];
 		unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
@@ -3024,8 +3025,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	va = device->ws->buffer_get_va(iview->bo) + iview->image->offset;
 	va += iview->image->dcc_offset;
 	cb->cb_dcc_base = va >> 8;
-	if (device->physical_device->rad_info.chip_class < GFX9)
-		cb->cb_dcc_base |= iview->image->surface.tile_swizzle;
+	cb->cb_dcc_base |= iview->image->surface.tile_swizzle;
 
 	uint32_t max_slice = radv_surface_layer_count(iview);
 	cb->cb_color_view = S_028C6C_SLICE_START(iview->base_layer) |
@@ -3041,8 +3041,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	if (iview->image->fmask.size) {
 		va = device->ws->buffer_get_va(iview->bo) + iview->image->offset + iview->image->fmask.offset;
 		cb->cb_color_fmask = va >> 8;
-		if (device->physical_device->rad_info.chip_class < GFX9)
-			cb->cb_color_fmask |= iview->image->fmask.tile_swizzle;
+		cb->cb_color_fmask |= iview->image->fmask.tile_swizzle;
 	} else {
 		cb->cb_color_fmask = cb->cb_color_base;
 	}
