@@ -592,6 +592,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    void *feedback;
    struct pipe_screen *screen;
    bool interlaced;
+   bool realloc = false;
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -627,7 +628,23 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       surf->templat.interlaced = screen->get_video_param(screen, context->decoder->profile,
                                                          PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
                                                          PIPE_VIDEO_CAP_PREFERS_INTERLACED);
+      realloc = true;
+   }
 
+   if (u_reduce_video_profile(context->templat.profile) == PIPE_VIDEO_FORMAT_JPEG &&
+       surf->buffer->buffer_format == PIPE_FORMAT_NV12) {
+      if (context->mjpeg.sampling_factor == 0x211111 ||
+          context->mjpeg.sampling_factor == 0x221212) {
+         surf->templat.buffer_format = PIPE_FORMAT_YUYV;
+         realloc = true;
+      } else if (context->mjpeg.sampling_factor != 0x221111) {
+         /* Not NV12 either */
+         mtx_unlock(&drv->mutex);
+         return VA_STATUS_ERROR_INVALID_SURFACE;
+      }
+   }
+
+   if (realloc) {
       surf->buffer->destroy(surf->buffer);
 
       if (vlVaHandleSurfaceAllocate(ctx, surf, &surf->templat) != VA_STATUS_SUCCESS) {
