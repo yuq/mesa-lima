@@ -30,6 +30,7 @@
 void vlVaHandlePictureParameterBufferMJPEG(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
    VAPictureParameterBufferJPEGBaseline *mjpeg = buf->data;
+   unsigned sf;
    int i;
 
    assert(buf->size >= sizeof(VAPictureParameterBufferJPEGBaseline) && buf->num_elements == 1);
@@ -46,6 +47,10 @@ void vlVaHandlePictureParameterBufferMJPEG(vlVaDriver *drv, vlVaContext *context
          mjpeg->components[i].v_sampling_factor;
       context->desc.mjpeg.picture_parameter.components[i].quantiser_table_selector =
          mjpeg->components[i].quantiser_table_selector;
+
+      sf = mjpeg->components[i].h_sampling_factor << 4 | mjpeg->components[i].v_sampling_factor;
+      context->mjpeg.sampling_factor <<= 8;
+      context->mjpeg.sampling_factor |= sf;
    }
 
    context->desc.mjpeg.picture_parameter.num_components = mjpeg->num_components;

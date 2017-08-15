@@ -65,6 +65,7 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
    context->target_id = render_target;
    surf->ctx = context_id;
    context->target = surf->buffer;
+   context->mjpeg.sampling_factor = 0;
 
    if (!context->decoder) {
 

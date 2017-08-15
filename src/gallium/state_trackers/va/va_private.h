@@ -277,6 +277,10 @@ typedef struct {
       uint8_t start_code[32];
    } mpeg4;
 
+   struct {
+      unsigned sampling_factor;
+   } mjpeg;
+
    struct vl_deint_filter *deint;
    vlVaBuffer *coded_buf;
    int target_id;
