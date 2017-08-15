@@ -40,7 +40,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_STATIC_LIBRARIES := libmesa_amd_common
 
-LOCAL_SHARED_LIBRARIES := libdrm_radeon libLLVM
+LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_radeonsi
 
 $(call mesa-build-with-llvm)
