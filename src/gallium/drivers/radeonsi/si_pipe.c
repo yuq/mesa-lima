@@ -134,6 +134,9 @@ static void si_emit_string_marker(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context *)ctx;
 
 	dd_parse_apitrace_marker(string, len, &sctx->apitrace_call_number);
+
+	if (sctx->b.log)
+		u_log_printf(sctx->b.log, "\nString marker: %*s\n", len, string);
 }
 
 static LLVMTargetMachineRef
