@@ -29,7 +29,26 @@
 
 void vlVaHandlePictureParameterBufferMJPEG(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
-   /* TODO */
+   VAPictureParameterBufferJPEGBaseline *mjpeg = buf->data;
+   int i;
+
+   assert(buf->size >= sizeof(VAPictureParameterBufferJPEGBaseline) && buf->num_elements == 1);
+
+   context->desc.mjpeg.picture_parameter.picture_width = mjpeg->picture_width;
+   context->desc.mjpeg.picture_parameter.picture_height = mjpeg->picture_height;
+
+   for (i = 0; i < mjpeg->num_components; ++i) {
+      context->desc.mjpeg.picture_parameter.components[i].component_id =
+         mjpeg->components[i].component_id;
+      context->desc.mjpeg.picture_parameter.components[i].h_sampling_factor =
+         mjpeg->components[i].h_sampling_factor;
+      context->desc.mjpeg.picture_parameter.components[i].v_sampling_factor =
+         mjpeg->components[i].v_sampling_factor;
+      context->desc.mjpeg.picture_parameter.components[i].quantiser_table_selector =
+         mjpeg->components[i].quantiser_table_selector;
+   }
+
+   context->desc.mjpeg.picture_parameter.num_components = mjpeg->num_components;
 }
 
 void vlVaHandleIQMatrixBufferMJPEG(vlVaContext *context, vlVaBuffer *buf)
