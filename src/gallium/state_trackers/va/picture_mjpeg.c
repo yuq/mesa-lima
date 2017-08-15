@@ -63,7 +63,24 @@ void vlVaHandleIQMatrixBufferMJPEG(vlVaContext *context, vlVaBuffer *buf)
 
 void vlVaHandleHuffmanTableBufferType(vlVaContext *context, vlVaBuffer *buf)
 {
-   /* TODO */
+   VAHuffmanTableBufferJPEGBaseline *mjpeg = buf->data;
+   int i;
+
+   assert(buf->size >= sizeof(VASliceParameterBufferJPEGBaseline) && buf->num_elements == 1);
+
+   for (i = 0; i < 2; ++i) {
+      context->desc.mjpeg.huffman_table.load_huffman_table[i] = mjpeg->load_huffman_table[i];
+
+      memcpy(&context->desc.mjpeg.huffman_table.table[i].num_dc_codes,
+         mjpeg->huffman_table[i].num_dc_codes, 16);
+      memcpy(&context->desc.mjpeg.huffman_table.table[i].dc_values,
+         mjpeg->huffman_table[i].dc_values, 12);
+      memcpy(&context->desc.mjpeg.huffman_table.table[i].num_ac_codes,
+         mjpeg->huffman_table[i].num_ac_codes, 16);
+      memcpy(&context->desc.mjpeg.huffman_table.table[i].ac_values,
+         mjpeg->huffman_table[i].ac_values, 162);
+      memcpy(&context->desc.mjpeg.huffman_table.table[i].pad, mjpeg->huffman_table[i].pad, 2);
+   }
 }
 
 void vlVaHandleSliceParameterBufferMJPEG(vlVaContext *context, vlVaBuffer *buf)
