@@ -87,6 +87,7 @@ struct si_screen {
 	struct r600_common_screen	b;
 	unsigned			gs_table_depth;
 	unsigned			tess_offchip_block_dw_size;
+	bool				has_clear_state;
 	bool				has_distributed_tess;
 	bool				has_draw_indirect_multi;
 	bool				has_ds_bpermute;

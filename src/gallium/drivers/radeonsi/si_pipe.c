@@ -1067,6 +1067,10 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	sscreen->tess_offchip_block_dw_size =
 		sscreen->b.family == CHIP_HAWAII ? 4096 : 8192;
 
+	/* The mere presense of CLEAR_STATE in the IB causes random GPU hangs
+	 * on SI. */
+	sscreen->has_clear_state = sscreen->b.chip_class >= CIK;
+
 	sscreen->has_distributed_tess =
 		sscreen->b.chip_class >= VI &&
 		sscreen->b.info.max_se >= 2;
