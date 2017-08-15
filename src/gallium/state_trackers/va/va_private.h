@@ -264,6 +264,7 @@ typedef struct {
       struct pipe_vc1_picture_desc vc1;
       struct pipe_h264_picture_desc h264;
       struct pipe_h265_picture_desc h265;
+      struct pipe_mjpeg_picture_desc mjpeg;
       struct pipe_h264_enc_picture_desc h264enc;
    } desc;
 
