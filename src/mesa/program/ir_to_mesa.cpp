@@ -499,7 +499,7 @@ ir_to_mesa_visitor::src_reg_for_float(float val)
 }
 
 static int
-type_size(const struct glsl_type *type)
+storage_type_size(const struct glsl_type *type, bool bindless)
 {
    unsigned int i;
    int size;
@@ -541,16 +541,18 @@ type_size(const struct glsl_type *type)
          return 1;
    case GLSL_TYPE_ARRAY:
       assert(type->length > 0);
-      return type_size(type->fields.array) * type->length;
+      return storage_type_size(type->fields.array, bindless) * type->length;
    case GLSL_TYPE_STRUCT:
       size = 0;
       for (i = 0; i < type->length; i++) {
-	 size += type_size(type->fields.structure[i].type);
+	 size += storage_type_size(type->fields.structure[i].type, bindless);
       }
       return size;
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
-      return 0;
+      if (!bindless)
+         return 0;
+      /* fall through */
    case GLSL_TYPE_SUBROUTINE:
       return 1;
    case GLSL_TYPE_ATOMIC_UINT:
@@ -563,6 +565,12 @@ type_size(const struct glsl_type *type)
    }
 
    return 0;
+}
+
+static int
+type_size(const struct glsl_type *type)
+{
+   return storage_type_size(type, false);
 }
 
 /**
@@ -2452,7 +2460,7 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
 
    assert(_mesa_lookup_parameter_index(params, name) < 0);
 
-   unsigned size = type_size(type) * 4;
+   unsigned size = storage_type_size(type, var->data.bindless) * 4;
 
    int index = _mesa_add_parameter(params, PROGRAM_UNIFORM, name, size,
                                    type->gl_type, NULL, NULL);
