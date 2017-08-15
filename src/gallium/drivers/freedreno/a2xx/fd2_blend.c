@@ -61,11 +61,10 @@ fd2_blend_state_create(struct pipe_context *pctx,
 {
 	const struct pipe_rt_blend_state *rt = &cso->rt[0];
 	struct fd2_blend_stateobj *so;
+	unsigned rop = PIPE_LOGICOP_COPY;
 
-	if (cso->logicop_enable) {
-		DBG("Unsupported! logicop");
-		return NULL;
-	}
+	if (cso->logicop_enable)
+		rop = cso->logicop_func; /* 1:1 mapping with hw */
 
 	if (cso->independent_blend_enable) {
 		DBG("Unsupported! independent blend state");
@@ -78,7 +77,7 @@ fd2_blend_state_create(struct pipe_context *pctx,
 
 	so->base = *cso;
 
-	so->rb_colorcontrol = A2XX_RB_COLORCONTROL_ROP_CODE(12);
+	so->rb_colorcontrol = A2XX_RB_COLORCONTROL_ROP_CODE(rop);
 
 	so->rb_blendcontrol =
 		A2XX_RB_BLEND_CONTROL_COLOR_SRCBLEND(fd_blend_factor(rt->rgb_src_factor)) |
