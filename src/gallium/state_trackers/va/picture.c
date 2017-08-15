@@ -170,14 +170,17 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
 
    /* Create the decoder once max_references is known. */
    if (!context->decoder) {
+      enum pipe_video_format format =
+         u_reduce_video_profile(context->templat.profile);
+
       if (!context->target)
          return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-      if (context->templat.max_references == 0)
+      if (context->templat.max_references == 0 &&
+         format != PIPE_VIDEO_FORMAT_JPEG)
          return VA_STATUS_ERROR_INVALID_BUFFER;
 
-      if (u_reduce_video_profile(context->templat.profile) ==
-          PIPE_VIDEO_FORMAT_MPEG4_AVC)
+      if (format == PIPE_VIDEO_FORMAT_MPEG4_AVC)
          context->templat.level = u_get_h264_level(context->templat.width,
             context->templat.height, &context->templat.max_references);
 
