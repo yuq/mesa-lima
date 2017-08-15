@@ -121,13 +121,12 @@ class VkEnum(object):
         self.values = values or []
 
 
-def xml_parser(filename):
-    """Parse the XML file and return parsed data.
+def parse_xml(efactory, filename):
+    """Parse the XML file. Accumulate results into the efactory.
 
     This parser is a memory efficient iterative XML parser that returns a list
     of VkEnum objects.
     """
-    efactory = EnumFactory(VkEnum)
 
     with open(filename, 'rb') as f:
         context = iter(et.iterparse(f, events=('start', 'end')))
@@ -153,25 +152,29 @@ def xml_parser(filename):
 
             root.clear()
 
-    return efactory.registry.values()
-
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--xml', help='Vulkan API XML file.', required=True)
+    parser.add_argument('--xml', required=True,
+                        help='Vulkan API XML files',
+                        action='append',
+                        dest='xml_files')
     parser.add_argument('--outdir',
                         help='Directory to put the generated files in',
                         required=True)
 
     args = parser.parse_args()
 
-    enums = xml_parser(args.xml)
+    efactory = EnumFactory(VkEnum)
+    for filename in args.xml_files:
+        parse_xml(efactory, filename)
+
     for template, file_ in [(C_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.c')),
                             (H_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.h'))]:
         with open(file_, 'wb') as f:
             f.write(template.render(
                 file=os.path.basename(__file__),
-                enums=enums,
+                enums=efactory.registry.values(),
                 copyright=COPYRIGHT))
 
 
