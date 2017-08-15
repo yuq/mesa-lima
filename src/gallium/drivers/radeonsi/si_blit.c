@@ -24,6 +24,7 @@
 #include "si_pipe.h"
 #include "si_compute.h"
 #include "util/u_format.h"
+#include "util/u_log.h"
 #include "util/u_surface.h"
 
 enum si_blitter_op /* bitmask */
@@ -338,6 +339,12 @@ si_decompress_depth(struct si_context *sctx,
 		}
 	}
 
+	if (unlikely(sctx->b.log))
+		u_log_printf(sctx->b.log,
+			     "\n------------------------------------------------\n"
+			     "Decompress Depth (levels %u - %u, levels Z: 0x%x S: 0x%x)\n\n",
+			     first_level, last_level, levels_z, levels_s);
+
 	/* We may have to allocate the flushed texture here when called from
 	 * si_decompress_subresource.
 	 */
@@ -453,6 +460,12 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 		level_mask &= rtex->dirty_level_mask;
 	if (!level_mask)
 		return;
+
+	if (unlikely(sctx->b.log))
+		u_log_printf(sctx->b.log,
+			     "\n------------------------------------------------\n"
+			     "Decompress Color (levels %u - %u, mask 0x%x)\n\n",
+			     first_level, last_level, level_mask);
 
 	if (rtex->dcc_offset && need_dcc_decompress) {
 		custom_blend = sctx->custom_blend_dcc_decompress;
