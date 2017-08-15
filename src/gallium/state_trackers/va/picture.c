@@ -589,6 +589,8 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    vlVaBuffer *coded_buf;
    vlVaSurface *surf;
    void *feedback;
+   struct pipe_screen *screen;
+   bool interlaced;
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -614,6 +616,26 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    mtx_lock(&drv->mutex);
    surf = handle_table_get(drv->htab, context->target_id);
    context->mpeg4.frame_num++;
+
+   screen = context->decoder->context->screen;
+   interlaced = screen->get_video_param(screen, context->decoder->profile,
+                                        PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+                                        PIPE_VIDEO_CAP_SUPPORTS_INTERLACED);
+
+   if (surf->buffer->interlaced != interlaced) {
+      surf->templat.interlaced = screen->get_video_param(screen, context->decoder->profile,
+                                                         PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+                                                         PIPE_VIDEO_CAP_PREFERS_INTERLACED);
+
+      surf->buffer->destroy(surf->buffer);
+
+      if (vlVaHandleSurfaceAllocate(ctx, surf, &surf->templat) != VA_STATUS_SUCCESS) {
+         mtx_unlock(&drv->mutex);
+         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+      }
+
+      context->target = surf->buffer;
+   }
 
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
       coded_buf = context->coded_buf;
