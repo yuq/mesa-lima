@@ -60,6 +60,7 @@ struct ac_fs_variant_key {
 	uint32_t col_format;
 	uint32_t is_int8;
 	uint32_t is_int10;
+	uint32_t multisample : 1;
 };
 
 union ac_shader_variant_key {

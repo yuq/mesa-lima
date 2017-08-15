@@ -5010,9 +5010,38 @@ handle_vs_inputs(struct nir_to_llvm_context *ctx,
 }
 
 static void
+prepare_interp_optimize(struct nir_to_llvm_context *ctx,
+                        struct nir_shader *nir)
+{
+	if (!ctx->options->key.fs.multisample)
+		return;
+
+	bool uses_center = false;
+	bool uses_centroid = false;
+	nir_foreach_variable(variable, &nir->inputs) {
+		if (glsl_get_base_type(glsl_without_array(variable->type)) != GLSL_TYPE_FLOAT ||
+		    variable->data.sample)
+			continue;
+
+		if (variable->data.centroid)
+			uses_centroid = true;
+		else
+			uses_center = true;
+	}
+
+	if (uses_center && uses_centroid) {
+		LLVMValueRef sel = LLVMBuildICmp(ctx->builder, LLVMIntSLT, ctx->prim_mask, ctx->ac.i32_0, "");
+		ctx->persp_centroid = LLVMBuildSelect(ctx->builder, sel, ctx->persp_center, ctx->persp_centroid, "");
+		ctx->linear_centroid = LLVMBuildSelect(ctx->builder, sel, ctx->linear_center, ctx->linear_centroid, "");
+	}
+}
+
+static void
 handle_fs_inputs(struct nir_to_llvm_context *ctx,
                  struct nir_shader *nir)
 {
+	prepare_interp_optimize(ctx, nir);
+
 	nir_foreach_variable(variable, &nir->inputs)
 		handle_fs_input_decl(ctx, variable);
 
