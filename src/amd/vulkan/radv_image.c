@@ -555,10 +555,11 @@ radv_query_opaque_metadata(struct radv_device *device,
 	memcpy(&md->metadata[2], desc, sizeof(desc));
 
 	/* Dwords [10:..] contain the mipmap level offsets. */
-	for (i = 0; i <= image->info.levels - 1; i++)
-		md->metadata[10+i] = image->surface.u.legacy.level[i].offset >> 8;
-
-	md->size_metadata = (11 + image->info.levels - 1) * 4;
+	if (device->physical_device->rad_info.chip_class <= VI) {
+		for (i = 0; i <= image->info.levels - 1; i++)
+			md->metadata[10+i] = image->surface.u.legacy.level[i].offset >> 8;
+		md->size_metadata = (11 + image->info.levels - 1) * 4;
+	}
 }
 
 void
