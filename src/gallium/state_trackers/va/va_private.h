@@ -170,6 +170,8 @@ PipeToProfile(enum pipe_video_profile profile)
       return VAProfileHEVCMain;
    case PIPE_VIDEO_PROFILE_HEVC_MAIN_10:
       return VAProfileHEVCMain10;
+   case PIPE_VIDEO_PROFILE_JPEG_BASELINE:
+      return VAProfileJPEGBaseline;
    case PIPE_VIDEO_PROFILE_MPEG4_AVC_EXTENDED:
    case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH10:
    case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH422:
@@ -214,6 +216,8 @@ ProfileToPipe(VAProfile profile)
       return PIPE_VIDEO_PROFILE_HEVC_MAIN;
    case VAProfileHEVCMain10:
       return PIPE_VIDEO_PROFILE_HEVC_MAIN_10;
+   case VAProfileJPEGBaseline:
+      return PIPE_VIDEO_PROFILE_JPEG_BASELINE;
    case VAProfileNone:
        return PIPE_VIDEO_PROFILE_UNKNOWN;
    default:
