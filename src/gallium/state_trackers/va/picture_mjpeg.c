@@ -85,5 +85,27 @@ void vlVaHandleHuffmanTableBufferType(vlVaContext *context, vlVaBuffer *buf)
 
 void vlVaHandleSliceParameterBufferMJPEG(vlVaContext *context, vlVaBuffer *buf)
 {
-   /* TODO */
+   VASliceParameterBufferJPEGBaseline *mjpeg = buf->data;
+   int i;
+
+   assert(buf->size >= sizeof(VASliceParameterBufferJPEGBaseline) && buf->num_elements == 1);
+
+   context->desc.mjpeg.slice_parameter.slice_data_size = mjpeg->slice_data_size;
+   context->desc.mjpeg.slice_parameter.slice_data_offset = mjpeg->slice_data_offset;
+   context->desc.mjpeg.slice_parameter.slice_data_flag = mjpeg->slice_data_flag;
+   context->desc.mjpeg.slice_parameter.slice_horizontal_position = mjpeg->slice_horizontal_position;
+   context->desc.mjpeg.slice_parameter.slice_vertical_position = mjpeg->slice_vertical_position;
+
+   for (i = 0; i < mjpeg->num_components; ++i) {
+      context->desc.mjpeg.slice_parameter.components[i].component_selector =
+         mjpeg->components[i].component_selector;
+      context->desc.mjpeg.slice_parameter.components[i].dc_table_selector =
+         mjpeg->components[i].dc_table_selector;
+      context->desc.mjpeg.slice_parameter.components[i].ac_table_selector =
+         mjpeg->components[i].ac_table_selector;
+   }
+
+   context->desc.mjpeg.slice_parameter.num_components = mjpeg->num_components;
+   context->desc.mjpeg.slice_parameter.restart_interval = mjpeg->restart_interval;
+   context->desc.mjpeg.slice_parameter.num_mcus = mjpeg->num_mcus;
 }
