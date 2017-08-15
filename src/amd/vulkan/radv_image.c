@@ -1059,23 +1059,34 @@ radv_DestroyImage(VkDevice _device, VkImage _image,
 }
 
 void radv_GetImageSubresourceLayout(
-	VkDevice                                    device,
+	VkDevice                                    _device,
 	VkImage                                     _image,
 	const VkImageSubresource*                   pSubresource,
 	VkSubresourceLayout*                        pLayout)
 {
 	RADV_FROM_HANDLE(radv_image, image, _image);
+	RADV_FROM_HANDLE(radv_device, device, _device);
 	int level = pSubresource->mipLevel;
 	int layer = pSubresource->arrayLayer;
 	struct radeon_surf *surface = &image->surface;
 
-	pLayout->offset = surface->u.legacy.level[level].offset + surface->u.legacy.level[level].slice_size * layer;
-	pLayout->rowPitch = surface->u.legacy.level[level].nblk_x * surface->bpe;
-	pLayout->arrayPitch = surface->u.legacy.level[level].slice_size;
-	pLayout->depthPitch = surface->u.legacy.level[level].slice_size;
-	pLayout->size = surface->u.legacy.level[level].slice_size;
-	if (image->type == VK_IMAGE_TYPE_3D)
-		pLayout->size *= u_minify(image->info.depth, level);
+	if (device->physical_device->rad_info.chip_class >= GFX9) {
+		pLayout->offset = surface->u.gfx9.offset[level] + surface->u.gfx9.surf_slice_size * layer;
+		pLayout->rowPitch = surface->u.gfx9.surf_pitch * surface->bpe;
+		pLayout->arrayPitch = surface->u.gfx9.surf_slice_size;
+		pLayout->depthPitch = surface->u.gfx9.surf_slice_size;
+		pLayout->size = surface->u.gfx9.surf_slice_size;
+		if (image->type == VK_IMAGE_TYPE_3D)
+			pLayout->size *= u_minify(image->info.depth, level);
+	} else {
+		pLayout->offset = surface->u.legacy.level[level].offset + surface->u.legacy.level[level].slice_size * layer;
+		pLayout->rowPitch = surface->u.legacy.level[level].nblk_x * surface->bpe;
+		pLayout->arrayPitch = surface->u.legacy.level[level].slice_size;
+		pLayout->depthPitch = surface->u.legacy.level[level].slice_size;
+		pLayout->size = surface->u.legacy.level[level].slice_size;
+		if (image->type == VK_IMAGE_TYPE_3D)
+			pLayout->size *= u_minify(image->info.depth, level);
+	}
 }
 
 
