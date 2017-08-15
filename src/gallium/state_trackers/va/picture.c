@@ -164,6 +164,10 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
       vlVaHandlePictureParameterBufferHEVC(drv, context, buf);
       break;
 
+  case PIPE_VIDEO_FORMAT_JPEG:
+      vlVaHandlePictureParameterBufferMJPEG(drv, context, buf);
+      break;
+
    default:
       break;
    }
@@ -216,6 +220,10 @@ handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
       vlVaHandleIQMatrixBufferHEVC(context, buf);
       break;
 
+   case PIPE_VIDEO_FORMAT_JPEG:
+      vlVaHandleIQMatrixBufferMJPEG(context, buf);
+      break;
+
    default:
       break;
    }
@@ -243,6 +251,10 @@ handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
 
    case PIPE_VIDEO_FORMAT_HEVC:
       vlVaHandleSliceParameterBufferHEVC(context, buf);
+      break;
+
+   case PIPE_VIDEO_FORMAT_JPEG:
+      vlVaHandleSliceParameterBufferMJPEG(context, buf);
       break;
 
    default:
@@ -313,6 +325,9 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
       vlVaDecoderFixMPEG4Startcode(context);
       buffers[num_buffers] = (void *)context->mpeg4.start_code;
       sizes[num_buffers++] = context->mpeg4.start_code_size;
+   case PIPE_VIDEO_FORMAT_JPEG:
+      /* TODO */
+      break;
    default:
       break;
    }
@@ -551,6 +566,10 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
 
       case VAEncSliceParameterBufferType:
          vaStatus = handleVAEncSliceParameterBufferType(drv, context, buf);
+         break;
+
+      case VAHuffmanTableBufferType:
+         vlVaHandleHuffmanTableBufferType(context, buf);
          break;
 
       default:
