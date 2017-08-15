@@ -53,7 +53,12 @@ void vlVaHandlePictureParameterBufferMJPEG(vlVaDriver *drv, vlVaContext *context
 
 void vlVaHandleIQMatrixBufferMJPEG(vlVaContext *context, vlVaBuffer *buf)
 {
-   /* TODO */
+   VAIQMatrixBufferJPEGBaseline *mjpeg = buf->data;
+
+   assert(buf->size >= sizeof(VAIQMatrixBufferJPEGBaseline) && buf->num_elements == 1);
+
+   memcpy(&context->desc.mjpeg.quantization_table.load_quantiser_table, mjpeg->load_quantiser_table, 4);
+   memcpy(&context->desc.mjpeg.quantization_table.quantiser_table, mjpeg->quantiser_table, 4 * 64);
 }
 
 void vlVaHandleHuffmanTableBufferType(vlVaContext *context, vlVaBuffer *buf)
