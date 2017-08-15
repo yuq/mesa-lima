@@ -220,6 +220,8 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 31;
    case PIPE_CAP_DRAW_INDIRECT:
       return 1;
+   case PIPE_CAP_QUERY_SO_OVERFLOW:
+      return 1;
 
    case PIPE_CAP_VENDOR_ID:
       return 0xFFFFFFFF;
@@ -307,7 +309,6 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_POST_DEPTH_COVERAGE:
    case PIPE_CAP_BINDLESS_TEXTURE:
    case PIPE_CAP_NIR_SAMPLERS_AS_DEREF:
-   case PIPE_CAP_QUERY_SO_OVERFLOW:
    case PIPE_CAP_MEMOBJ:
       return 0;
    case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:

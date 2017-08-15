@@ -63,6 +63,7 @@ softpipe_create_query(struct pipe_context *pipe,
           type == PIPE_QUERY_TIME_ELAPSED ||
           type == PIPE_QUERY_SO_STATISTICS ||
           type == PIPE_QUERY_SO_OVERFLOW_PREDICATE ||
+          type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE ||
           type == PIPE_QUERY_PRIMITIVES_EMITTED ||
           type == PIPE_QUERY_PRIMITIVES_GENERATED || 
           type == PIPE_QUERY_PIPELINE_STATISTICS ||
@@ -102,7 +103,9 @@ softpipe_begin_query(struct pipe_context *pipe, struct pipe_query *q)
       sq->so.primitives_storage_needed = softpipe->so_stats.primitives_storage_needed;
       break;
    case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-      sq->end = FALSE;
+   case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
+      sq->so.num_primitives_written = softpipe->so_stats.num_primitives_written;
+      sq->so.primitives_storage_needed = softpipe->so_stats.primitives_storage_needed;
       break;
    case PIPE_QUERY_PRIMITIVES_EMITTED:
       sq->so.num_primitives_written = softpipe->so_stats.num_primitives_written;
@@ -153,6 +156,7 @@ softpipe_end_query(struct pipe_context *pipe, struct pipe_query *q)
       sq->end = os_time_get_nano();
       break;
    case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+   case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
       sq->so.num_primitives_written =
          softpipe->so_stats.num_primitives_written - sq->so.num_primitives_written;
       sq->so.primitives_storage_needed =
@@ -230,6 +234,7 @@ softpipe_get_query_result(struct pipe_context *pipe,
       vresult->b = TRUE;
       break;
    case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+   case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
       vresult->b = sq->end != 0;
       break;
    case PIPE_QUERY_TIMESTAMP_DISJOINT: {
