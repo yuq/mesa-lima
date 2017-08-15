@@ -217,7 +217,7 @@ fd2_emit_state(struct fd_context *ctx, const enum fd_dirty_3d_state dirty)
 		OUT_RING(ring, zsa->rb_alpha_ref);
 	}
 
-	if (dirty & (FD_DIRTY_RASTERIZER | FD_DIRTY_FRAMEBUFFER)) {
+	if (ctx->rasterizer && dirty & FD_DIRTY_RASTERIZER) {
 		struct fd2_rasterizer_stateobj *rasterizer =
 				fd2_rasterizer_stateobj(ctx->rasterizer);
 		OUT_PKT3(ring, CP_SET_CONSTANT, 3);
