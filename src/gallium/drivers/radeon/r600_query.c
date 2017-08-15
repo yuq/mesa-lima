@@ -780,7 +780,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 			 * (bottom-of-pipe)
 			 */
 			r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS,
-						 0, 3, NULL, va, 0, 0);
+						 0, 3, NULL, va, 0, 0, query->b.type);
 		}
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
@@ -865,7 +865,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		/* fall through */
 	case PIPE_QUERY_TIMESTAMP:
 		r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS,
-					 0, 3, NULL, va, 0, 0);
+					 0, 3, NULL, va, 0, 0, query->b.type);
 		fence_va = va + 8;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS: {
@@ -888,7 +888,8 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 
 	if (fence_va)
 		r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0, 1,
-					 query->buffer.buf, fence_va, 0, 0x80000000);
+					 query->buffer.buf, fence_va, 0, 0x80000000,
+					 query->b.type);
 }
 
 static void r600_query_hw_emit_stop(struct r600_common_context *ctx,

@@ -103,7 +103,8 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 			      unsigned event, unsigned event_flags,
 			      unsigned data_sel,
 			      struct r600_resource *buf, uint64_t va,
-			      uint32_t old_fence, uint32_t new_fence)
+			      uint32_t old_fence, uint32_t new_fence,
+			      unsigned query_type)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	unsigned op = EVENT_TYPE(event) |
@@ -111,6 +112,29 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 		      event_flags;
 
 	if (ctx->chip_class >= GFX9) {
+		/* A ZPASS_DONE or PIXEL_STAT_DUMP_EVENT (of the DB occlusion
+		 * counters) must immediately precede every timestamp event to
+		 * prevent a GPU hang on GFX9.
+		 *
+		 * Occlusion queries don't need to do it here, because they
+		 * always do ZPASS_DONE before the timestamp.
+		 */
+		if (ctx->chip_class == GFX9 &&
+		    query_type != PIPE_QUERY_OCCLUSION_COUNTER &&
+		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE) {
+			struct r600_resource *scratch = ctx->eop_bug_scratch;
+
+			assert(16 * ctx->screen->info.num_render_backends <=
+			       scratch->b.b.width0);
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
+			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
+			radeon_emit(cs, scratch->gpu_address);
+			radeon_emit(cs, scratch->gpu_address >> 32);
+
+			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
+						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
+		}
+
 		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 6, 0));
 		radeon_emit(cs, op);
 		radeon_emit(cs, EOP_DATA_SEL(data_sel));
@@ -655,6 +679,14 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	r600_query_init(rctx);
 	cayman_init_msaa(&rctx->b);
 
+	if (rctx->chip_class == GFX9) {
+		rctx->eop_bug_scratch = (struct r600_resource*)
+			pipe_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
+					   16 * rscreen->info.num_render_backends);
+		if (!rctx->eop_bug_scratch)
+			return false;
+	}
+
 	rctx->allocator_zeroed_memory =
 		u_suballocator_create(&rctx->b, rscreen->info.gart_page_size,
 				      0, PIPE_USAGE_DEFAULT, 0, true);
@@ -724,6 +756,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 	}
 	rctx->ws->fence_reference(&rctx->last_gfx_fence, NULL);
 	rctx->ws->fence_reference(&rctx->last_sdma_fence, NULL);
+	r600_resource_reference(&rctx->eop_bug_scratch, NULL);
 }
 
 /*
