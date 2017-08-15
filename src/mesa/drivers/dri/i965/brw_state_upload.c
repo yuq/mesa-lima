@@ -447,7 +447,7 @@ merge_ctx_state(struct brw_context *brw,
    state->brw |= brw->ctx.NewDriverState;
 }
 
-static inline void
+static ALWAYS_INLINE void
 check_and_emit_atom(struct brw_context *brw,
                     struct brw_state_flags *state,
                     const struct brw_tracked_state *atom)
