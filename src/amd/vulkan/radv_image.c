@@ -204,7 +204,6 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 {
 	uint64_t gpu_address = image->bo ? device->ws->buffer_get_va(image->bo) + image->offset : 0;
 	uint64_t va = gpu_address;
-	unsigned pitch = base_level_info->nblk_x * block_width;
 	enum chip_class chip_class = device->physical_device->rad_info.chip_class;
 	uint64_t meta_va = 0;
 	if (chip_class >= GFX9) {
@@ -221,9 +220,6 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 			state[0] |= image->surface.tile_swizzle;
 	state[1] &= C_008F14_BASE_ADDRESS_HI;
 	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
-	state[3] |= S_008F1C_TILING_INDEX(si_tile_mode_index(image, base_level,
-							     is_stencil));
-	state[4] |= S_008F20_PITCH_GFX6(pitch - 1);
 
 	if (chip_class >= VI) {
 		state[6] &= C_008F28_COMPRESSION_EN;
