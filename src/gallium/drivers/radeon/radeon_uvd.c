@@ -220,6 +220,9 @@ static uint32_t profile2stream_type(struct ruvd_decoder *dec, unsigned family)
 	case PIPE_VIDEO_FORMAT_HEVC:
 		return RUVD_CODEC_H265;
 
+	case PIPE_VIDEO_FORMAT_JPEG:
+		return RUVD_CODEC_MJPEG;
+
 	default:
 		assert(0);
 		return 0;
@@ -467,6 +470,10 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 		dpb_size += align(width_in_mb * height_in_mb * 32, 64);
 
 		dpb_size = MAX2(dpb_size, 30 * 1024 * 1024);
+		break;
+
+	case PIPE_VIDEO_FORMAT_JPEG:
+		dpb_size = 0;
 		break;
 
 	default:
@@ -1091,7 +1098,8 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 		dec->msg->body.decode.height_in_samples = align(dec->msg->body.decode.height_in_samples, 16) / 16;
 	}
 
-	dec->msg->body.decode.dpb_size = dec->dpb.res->buf->size;
+	if (dec->dpb.res)
+		dec->msg->body.decode.dpb_size = dec->dpb.res->buf->size;
 	dec->msg->body.decode.bsd_size = bs_size;
 	dec->msg->body.decode.db_pitch = align(dec->base.width, get_db_pitch_alignment(dec));
 
@@ -1138,6 +1146,9 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 		dec->msg->body.decode.codec.mpeg4 = get_mpeg4_msg(dec, (struct pipe_mpeg4_picture_desc*)picture);
 		break;
 
+	case PIPE_VIDEO_FORMAT_JPEG:
+		break;
+
 	default:
 		assert(0);
 		return;
@@ -1151,8 +1162,10 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 
 	send_msg_buf(dec);
 
-	send_cmd(dec, RUVD_CMD_DPB_BUFFER, dec->dpb.res->buf, 0,
-		 RADEON_USAGE_READWRITE, RADEON_DOMAIN_VRAM);
+	if (dec->dpb.res)
+		send_cmd(dec, RUVD_CMD_DPB_BUFFER, dec->dpb.res->buf, 0,
+			RADEON_USAGE_READWRITE, RADEON_DOMAIN_VRAM);
+
 	if (dec->ctx.res)
 		send_cmd(dec, RUVD_CMD_CONTEXT_BUFFER, dec->ctx.res->buf, 0,
 			RADEON_USAGE_READWRITE, RADEON_DOMAIN_VRAM);
@@ -1272,13 +1285,13 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 	}
 
 	dpb_size = calc_dpb_size(dec);
-
-	if (!rvid_create_buffer(dec->screen, &dec->dpb, dpb_size, PIPE_USAGE_DEFAULT)) {
-		RVID_ERR("Can't allocated dpb.\n");
-		goto error;
+	if (dpb_size) {
+		if (!rvid_create_buffer(dec->screen, &dec->dpb, dpb_size, PIPE_USAGE_DEFAULT)) {
+			RVID_ERR("Can't allocated dpb.\n");
+			goto error;
+		}
+		rvid_clear_buffer(context, &dec->dpb);
 	}
-
-	rvid_clear_buffer(context, &dec->dpb);
 
 	if (dec->stream_type == RUVD_CODEC_H264_PERF && info.family >= CHIP_POLARIS10) {
 		unsigned ctx_size = calc_ctx_size_h264_perf(dec);
