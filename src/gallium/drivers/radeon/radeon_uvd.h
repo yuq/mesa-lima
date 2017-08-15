@@ -82,6 +82,7 @@
 #define RUVD_CODEC_MPEG2	0x00000003
 #define RUVD_CODEC_MPEG4	0x00000004
 #define RUVD_CODEC_H264_PERF	0x00000007
+#define RUVD_CODEC_MJPEG	0x00000008
 #define RUVD_CODEC_H265		0x00000010
 
 /* UVD decode target buffer tiling mode */
