@@ -894,7 +894,7 @@ void si_emit_cache_flush(struct si_context *sctx)
 			/* Necessary for DCC */
 			if (rctx->chip_class == VI)
 				r600_gfx_write_event_eop(rctx, V_028A90_FLUSH_AND_INV_CB_DATA_TS,
-							 0, 0, NULL, 0, 0, 0, 0);
+							 0, 0, NULL, 0, 0, 0);
 		}
 		if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB)
 			cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
@@ -995,7 +995,6 @@ void si_emit_cache_flush(struct si_context *sctx)
 
 		r600_gfx_write_event_eop(rctx, cb_db_event, tc_flags, 1,
 					 sctx->wait_mem_scratch, va,
-					 sctx->wait_mem_number - 1,
 					 sctx->wait_mem_number, 0);
 		r600_gfx_wait_fence(rctx, va, sctx->wait_mem_number, 0xffffffff);
 	}

@@ -103,8 +103,7 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 			      unsigned event, unsigned event_flags,
 			      unsigned data_sel,
 			      struct r600_resource *buf, uint64_t va,
-			      uint32_t old_fence, uint32_t new_fence,
-			      unsigned query_type)
+			      uint32_t new_fence, unsigned query_type)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	unsigned op = EVENT_TYPE(event) |
@@ -146,6 +145,9 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 	} else {
 		if (ctx->chip_class == CIK ||
 		    ctx->chip_class == VI) {
+			struct r600_resource *scratch = ctx->eop_bug_scratch;
+			uint64_t va = scratch->gpu_address;
+
 			/* Two EOP events are required to make all engines go idle
 			 * (and optional cache flushes executed) before the timestamp
 			 * is written.
@@ -154,8 +156,11 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 			radeon_emit(cs, op);
 			radeon_emit(cs, va);
 			radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
-			radeon_emit(cs, old_fence); /* immediate data */
+			radeon_emit(cs, 0); /* immediate data */
 			radeon_emit(cs, 0); /* unused */
+
+			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
+						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 		}
 
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
@@ -679,7 +684,9 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	r600_query_init(rctx);
 	cayman_init_msaa(&rctx->b);
 
-	if (rctx->chip_class == GFX9) {
+	if (rctx->chip_class == CIK ||
+	    rctx->chip_class == VI ||
+	    rctx->chip_class == GFX9) {
 		rctx->eop_bug_scratch = (struct r600_resource*)
 			pipe_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
 					   16 * rscreen->info.num_render_backends);
