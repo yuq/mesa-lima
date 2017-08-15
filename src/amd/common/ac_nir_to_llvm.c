@@ -5003,26 +5003,19 @@ handle_fs_input_decl(struct nir_to_llvm_context *ctx,
 }
 
 static void
-handle_shader_input_decl(struct nir_to_llvm_context *ctx,
-			 struct nir_variable *variable)
-{
-	switch (ctx->stage) {
-	case MESA_SHADER_VERTEX:
+handle_vs_inputs(struct nir_to_llvm_context *ctx,
+                 struct nir_shader *nir) {
+	nir_foreach_variable(variable, &nir->inputs)
 		handle_vs_input_decl(ctx, variable);
-		break;
-	case MESA_SHADER_FRAGMENT:
-		handle_fs_input_decl(ctx, variable);
-		break;
-	default:
-		break;
-	}
-
 }
 
 static void
-handle_fs_inputs_pre(struct nir_to_llvm_context *ctx,
-		     struct nir_shader *nir)
+handle_fs_inputs(struct nir_to_llvm_context *ctx,
+                 struct nir_shader *nir)
 {
+	nir_foreach_variable(variable, &nir->inputs)
+		handle_fs_input_decl(ctx, variable);
+
 	unsigned index = 0;
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_INPUTS; ++i) {
 		LLVMValueRef interp_param;
@@ -6311,11 +6304,10 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.num_output_clips = nir->info.clip_distance_array_size;
 	ctx.num_output_culls = nir->info.cull_distance_array_size;
 
-	nir_foreach_variable(variable, &nir->inputs)
-		handle_shader_input_decl(&ctx, variable);
-
 	if (nir->stage == MESA_SHADER_FRAGMENT)
-		handle_fs_inputs_pre(&ctx, nir);
+		handle_fs_inputs(&ctx, nir);
+	else if(nir->stage == MESA_SHADER_VERTEX)
+		handle_vs_inputs(&ctx, nir);
 
 	ctx.abi.chip_class = options->chip_class;
 	ctx.abi.inputs = &ctx.inputs[0];
