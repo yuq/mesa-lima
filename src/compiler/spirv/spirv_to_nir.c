@@ -2753,7 +2753,27 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
                                 const uint32_t *w, unsigned count)
 {
    switch (opcode) {
-   case SpvOpSource:
+   case SpvOpSource: {
+      const char *lang;
+      switch (w[1]) {
+      default:
+      case SpvSourceLanguageUnknown:      lang = "unknown";    break;
+      case SpvSourceLanguageESSL:         lang = "ESSL";       break;
+      case SpvSourceLanguageGLSL:         lang = "GLSL";       break;
+      case SpvSourceLanguageOpenCL_C:     lang = "OpenCL C";   break;
+      case SpvSourceLanguageOpenCL_CPP:   lang = "OpenCL C++"; break;
+      case SpvSourceLanguageHLSL:         lang = "HLSL";       break;
+      }
+
+      uint32_t version = w[2];
+
+      const char *file =
+         (count > 3) ? vtn_value(b, w[3], vtn_value_type_string)->str : "";
+
+      vtn_info("Parsing SPIR-V from %s %u source file %s", lang, version, file);
+      break;
+   }
+
    case SpvOpSourceExtension:
    case SpvOpSourceContinued:
    case SpvOpExtension:
