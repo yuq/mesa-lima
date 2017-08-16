@@ -183,16 +183,4 @@ void st_init_flush_functions(struct pipe_screen *screen,
 
    if (screen->get_param(screen, PIPE_CAP_DEVICE_RESET_STATUS_QUERY))
       functions->GetGraphicsResetStatus = st_get_graphics_reset_status;
-
-   /* Windows opengl32.dll calls glFinish prior to every swapbuffers.
-    * This is unnecessary and degrades performance.  Luckily we have some
-    * scope to work around this, as the externally-visible behaviour of
-    * Finish() is identical to Flush() in all cases - no differences in
-    * rendering or ReadPixels are visible if we opt not to wait here.
-    *
-    * Only set this up on Windows to avoid surprise elsewhere.
-    */
-#ifdef PIPE_OS_WINDOWS
-   functions->Finish = st_glFlush;
-#endif
 }
