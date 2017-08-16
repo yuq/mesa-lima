@@ -86,6 +86,7 @@ typedef uint32_t xcb_window_t;
 #define MAX_SAMPLES_LOG2 4
 #define NUM_META_FS_KEYS 13
 #define RADV_MAX_DRM_DEVICES 8
+#define MAX_VIEWS        8
 
 #define NUM_DEPTH_CLEAR_PIPELINES 3
 
