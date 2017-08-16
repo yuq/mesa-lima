@@ -38,6 +38,7 @@ struct ac_shader_info {
 	struct {
 		bool force_persample;
 		bool needs_sample_positions;
+		bool uses_input_attachments;
 	} ps;
 	struct {
 		uint8_t grid_components_used;
