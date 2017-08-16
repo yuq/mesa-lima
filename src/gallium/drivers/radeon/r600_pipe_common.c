@@ -222,11 +222,6 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	unsigned offset = 0;
 	float *vb;
 
-	if (type == UTIL_BLITTER_ATTRIB_TEXCOORD) {
-		util_blitter_draw_rectangle(blitter, x1, y1, x2, y2, depth, type, attrib);
-		return;
-	}
-
 	/* Some operations (like color resolve on r6xx) don't work
 	 * with the conventional primitive types.
 	 * One that works is PT_RECTLIST, which we use here. */
@@ -241,7 +236,7 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	rctx->b.set_viewport_states(&rctx->b, 0, 1, &viewport);
 
 	/* Upload vertices. The hw rectangle has only 3 vertices,
-	 * I guess the 4th one is derived from the first 3.
+	 * The 4th one is derived from the first 3.
 	 * The vertex specification should match u_blitter's vertex element state. */
 	u_upload_alloc(rctx->b.stream_uploader, 0, sizeof(float) * 24,
 		       rctx->screen->info.tcc_cache_line_size,
@@ -264,10 +259,21 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	vb[18] = depth;
 	vb[19] = 1;
 
-	if (attrib) {
+	switch (type) {
+	case UTIL_BLITTER_ATTRIB_COLOR:
 		memcpy(vb+4, attrib->f, sizeof(float)*4);
 		memcpy(vb+12, attrib->f, sizeof(float)*4);
 		memcpy(vb+20, attrib->f, sizeof(float)*4);
+		break;
+	case UTIL_BLITTER_ATTRIB_TEXCOORD:
+		vb[4] = attrib->f[0]; /* x1 */
+		vb[5] = attrib->f[1]; /* y1 */
+		vb[12] = attrib->f[0]; /* x1 */
+		vb[13] = attrib->f[3]; /* y2 */
+		vb[20] = attrib->f[2]; /* x2 */
+		vb[21] = attrib->f[1]; /* y1 */
+		break;
+	default:; /* Nothing to do. */
 	}
 
 	/* draw */
