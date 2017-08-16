@@ -28,6 +28,8 @@
 #ifndef _VTN_PRIVATE_H_
 #define _VTN_PRIVATE_H_
 
+#include <setjmp.h>
+
 #include "nir/nir.h"
 #include "nir/nir_builder.h"
 #include "util/u_dynarray.h"
@@ -48,6 +50,48 @@ void vtn_logf(struct vtn_builder *b, enum nir_spirv_debug_level level,
 void _vtn_warn(struct vtn_builder *b, const char *file, unsigned line,
                const char *fmt, ...) PRINTFLIKE(4, 5);
 #define vtn_warn(...) _vtn_warn(b, __FILE__, __LINE__, __VA_ARGS__)
+
+/** Fail SPIR-V parsing
+ *
+ * This function logs an error and then bails out of the shader compile using
+ * longjmp.  This being safe relies on two things:
+ *
+ *  1) We must guarantee that setjmp is called after allocating the builder
+ *     and setting up b->debug (so that logging works) but before before any
+ *     errors have a chance to occur.
+ *
+ *  2) While doing the SPIR-V -> NIR conversion, we need to be careful to
+ *     ensure that all heap allocations happen through ralloc and are parented
+ *     to the builder.  This way they will get properly cleaned up on error.
+ *
+ *  3) We must ensure that _vtn_fail is never called while a mutex lock or a
+ *     reference to any other resource is held with the exception of ralloc
+ *     objects which are parented to the builder.
+ *
+ * So long as these two things continue to hold, we can easily longjmp back to
+ * spirv_to_nir(), clean up the builder, and return NULL.
+ */
+void _vtn_fail(struct vtn_builder *b, const char *file, unsigned line,
+               const char *fmt, ...) NORETURN PRINTFLIKE(4, 5);
+#define vtn_fail(...) _vtn_fail(b, __FILE__, __LINE__, __VA_ARGS__)
+
+/** Fail if the given expression evaluates to true */
+#define vtn_fail_if(expr, ...) \
+   do { \
+      if (unlikely(expr)) \
+         vtn_fail(__VA_ARGS__); \
+   } while (0)
+
+/** Assert that a condition is true and, if it isn't, vtn_fail
+ *
+ * This macro is transitional only and should not be used in new code.  Use
+ * vtn_fail_if and provide a real message instead.
+ */
+#define vtn_assert(expr) \
+   do { \
+      if (!likely(expr)) \
+         vtn_fail("%s", #expr); \
+   } while (0)
 
 enum vtn_value_type {
    vtn_value_type_invalid = 0,
@@ -477,6 +521,9 @@ struct vtn_decoration {
 
 struct vtn_builder {
    nir_builder nb;
+
+   /* Used by vtn_fail to jump back to the beginning of SPIR-V compilation */
+   jmp_buf fail_jump;
 
    const uint32_t *spirv;
 

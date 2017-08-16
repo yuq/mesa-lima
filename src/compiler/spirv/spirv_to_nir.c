@@ -106,6 +106,20 @@ _vtn_warn(struct vtn_builder *b, const char *file, unsigned line,
    va_end(args);
 }
 
+void
+_vtn_fail(struct vtn_builder *b, const char *file, unsigned line,
+          const char *fmt, ...)
+{
+   va_list args;
+
+   va_start(args, fmt);
+   vtn_log_err(b, NIR_SPIRV_DEBUG_LEVEL_ERROR, "SPIR-V parsing FAILED:\n",
+               file, line, fmt, args);
+   va_end(args);
+
+   longjmp(b->fail_jump, 1);
+}
+
 struct spec_constant_value {
    bool is_double;
    union {
@@ -3417,6 +3431,12 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    b->entry_point_stage = stage;
    b->entry_point_name = entry_point_name;
    b->options = options;
+
+   /* See also _vtn_fail() */
+   if (setjmp(b->fail_jump)) {
+      ralloc_free(b);
+      return NULL;
+   }
 
    const uint32_t *word_end = words + word_count;
 
