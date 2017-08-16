@@ -31,6 +31,81 @@
 #include "nir/nir_constant_expressions.h"
 #include "spirv_info.h"
 
+void
+vtn_log(struct vtn_builder *b, enum nir_spirv_debug_level level,
+        size_t spirv_offset, const char *message)
+{
+   if (b->options->debug.func) {
+      b->options->debug.func(b->options->debug.private_data,
+                             level, spirv_offset, message);
+   }
+
+#ifndef NDEBUG
+   if (level >= NIR_SPIRV_DEBUG_LEVEL_WARNING)
+      fprintf(stderr, "%s\n", message);
+#endif
+}
+
+void
+vtn_logf(struct vtn_builder *b, enum nir_spirv_debug_level level,
+         size_t spirv_offset, const char *fmt, ...)
+{
+   va_list args;
+   char *msg;
+
+   va_start(args, fmt);
+   msg = ralloc_vasprintf(NULL, fmt, args);
+   va_end(args);
+
+   vtn_log(b, level, spirv_offset, msg);
+
+   ralloc_free(msg);
+}
+
+static void
+vtn_log_err(struct vtn_builder *b,
+            enum nir_spirv_debug_level level, const char *prefix,
+            const char *file, unsigned line,
+            const char *fmt, va_list args)
+{
+   char *msg;
+
+   msg = ralloc_strdup(NULL, prefix);
+
+#ifndef NDEBUG
+   ralloc_asprintf_append(&msg, "    In file %s:%u\n", file, line);
+#endif
+
+   ralloc_asprintf_append(&msg, "    ");
+
+   ralloc_vasprintf_append(&msg, fmt, args);
+
+   ralloc_asprintf_append(&msg, "\n    %zu bytes into the SPIR-V binary",
+                          b->spirv_offset);
+
+   if (b->file) {
+      ralloc_asprintf_append(&msg,
+                             "\n    in SPIR-V source file %s, line %d, col %d",
+                             b->file, b->line, b->col);
+   }
+
+   vtn_log(b, level, b->spirv_offset, msg);
+
+   ralloc_free(msg);
+}
+
+void
+_vtn_warn(struct vtn_builder *b, const char *file, unsigned line,
+          const char *fmt, ...)
+{
+   va_list args;
+
+   va_start(args, fmt);
+   vtn_log_err(b, NIR_SPIRV_DEBUG_LEVEL_WARNING, "SPIR-V WARNING:\n",
+               file, line, fmt, args);
+   va_end(args);
+}
+
 struct spec_constant_value {
    bool is_double;
    union {
@@ -38,21 +113,6 @@ struct spec_constant_value {
       uint64_t data64;
    };
 };
-
-void
-_vtn_warn(const char *file, int line, const char *msg, ...)
-{
-   char *formatted;
-   va_list args;
-
-   va_start(args, msg);
-   formatted = ralloc_vasprintf(NULL, msg, args);
-   va_end(args);
-
-   fprintf(stderr, "%s:%d WARNING: %s\n", file, line, formatted);
-
-   ralloc_free(formatted);
-}
 
 static struct vtn_ssa_value *
 vtn_undef_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
@@ -224,6 +284,8 @@ vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
       unsigned count = w[0] >> SpvWordCountShift;
       assert(count >= 1 && w + count <= end);
 
+      b->spirv_offset = (uint8_t *)w - (uint8_t *)b->spirv;
+
       switch (opcode) {
       case SpvOpNop:
          break; /* Do nothing */
@@ -248,6 +310,12 @@ vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
 
       w += count;
    }
+
+   b->spirv_offset = 0;
+   b->file = NULL;
+   b->line = -1;
+   b->col = -1;
+
    assert(w == end);
    return w;
 }
@@ -3321,6 +3389,10 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
 {
    /* Initialize the stn_builder object */
    struct vtn_builder *b = rzalloc(NULL, struct vtn_builder);
+   b->spirv = words;
+   b->file = NULL;
+   b->line = -1;
+   b->col = -1;
    exec_list_make_empty(&b->functions);
    b->entry_point_stage = stage;
    b->entry_point_name = entry_point_name;

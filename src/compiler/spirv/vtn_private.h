@@ -37,6 +37,18 @@
 struct vtn_builder;
 struct vtn_decoration;
 
+void vtn_log(struct vtn_builder *b, enum nir_spirv_debug_level level,
+             size_t spirv_offset, const char *message);
+
+void vtn_logf(struct vtn_builder *b, enum nir_spirv_debug_level level,
+              size_t spirv_offset, const char *fmt, ...) PRINTFLIKE(4, 5);
+
+#define vtn_info(...) vtn_logf(b, NIR_SPIRV_DEBUG_LEVEL_INFO, 0, __VA_ARGS__)
+
+void _vtn_warn(struct vtn_builder *b, const char *file, unsigned line,
+               const char *fmt, ...) PRINTFLIKE(4, 5);
+#define vtn_warn(...) _vtn_warn(b, __FILE__, __LINE__, __VA_ARGS__)
+
 enum vtn_value_type {
    vtn_value_type_invalid = 0,
    vtn_value_type_undef,
@@ -466,13 +478,16 @@ struct vtn_decoration {
 struct vtn_builder {
    nir_builder nb;
 
+   const uint32_t *spirv;
+
    nir_shader *shader;
    const struct spirv_to_nir_options *options;
    struct vtn_block *block;
 
-   /* Current file, line, and column.  Useful for debugging.  Set
+   /* Current offset, file, line, and column.  Useful for debugging.  Set
     * automatically by vtn_foreach_instruction.
     */
+   size_t spirv_offset;
    char *file;
    int line, col;
 
@@ -559,9 +574,6 @@ vtn_value(struct vtn_builder *b, uint32_t value_id,
    assert(val->value_type == value_type);
    return val;
 }
-
-void _vtn_warn(const char *file, int line, const char *msg, ...);
-#define vtn_warn(...) _vtn_warn(__FILE__, __LINE__, __VA_ARGS__)
 
 struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
 
