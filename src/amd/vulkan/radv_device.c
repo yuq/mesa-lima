@@ -178,6 +178,10 @@ static const VkExtensionProperties ext_sema_device_extensions[] = {
 		.extensionName = VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static VkResult
@@ -628,6 +632,13 @@ void radv_GetPhysicalDeviceFeatures2KHR(
 			features->variablePointers = false;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX: {
+			VkPhysicalDeviceMultiviewFeaturesKHX *features = (VkPhysicalDeviceMultiviewFeaturesKHX*)ext;
+			features->multiview = true;
+			features->multiviewGeometryShader = true;
+			features->multiviewTessellationShader = true;
+			break;
+		}
 		default:
 			break;
 		}
@@ -802,6 +813,12 @@ void radv_GetPhysicalDeviceProperties2KHR(
 			memcpy(properties->driverUUID, pdevice->driver_uuid, VK_UUID_SIZE);
 			memcpy(properties->deviceUUID, pdevice->device_uuid, VK_UUID_SIZE);
 			properties->deviceLUIDValid = false;
+			break;
+		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX: {
+			VkPhysicalDeviceMultiviewPropertiesKHX *properties = (VkPhysicalDeviceMultiviewPropertiesKHX*)ext;
+			properties->maxMultiviewViewCount = MAX_VIEWS;
+			properties->maxMultiviewInstanceIndex = INT_MAX;
 			break;
 		}
 		default:
