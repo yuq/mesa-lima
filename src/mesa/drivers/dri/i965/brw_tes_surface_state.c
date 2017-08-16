@@ -59,7 +59,6 @@ const struct brw_tracked_state brw_tes_pull_constants = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_TES_PROG_DATA |
              BRW_NEW_TESS_PROGRAMS,
    },
@@ -85,7 +84,6 @@ const struct brw_tracked_state brw_tes_ubo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_TES_PROG_DATA |
              BRW_NEW_UNIFORM_BUFFER,
    },
@@ -110,7 +108,6 @@ const struct brw_tracked_state brw_tes_abo_surfaces = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_ATOMIC_BUFFER |
              BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_TES_PROG_DATA,
    },
    .emit = brw_upload_tes_abo_surfaces,
@@ -132,7 +129,6 @@ brw_upload_tes_image_surfaces(struct brw_context *brw)
 const struct brw_tracked_state brw_tes_image_surfaces = {
    .dirty = {
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_FAST_CLEAR_COLOR |
              BRW_NEW_IMAGE_UNITS |
              BRW_NEW_TESS_PROGRAMS |

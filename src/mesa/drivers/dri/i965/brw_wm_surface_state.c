@@ -817,7 +817,6 @@ const struct brw_tracked_state brw_wm_pull_constants = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA,
    },
@@ -1055,7 +1054,6 @@ const struct brw_tracked_state brw_renderbuffer_surfaces = {
       .mesa = _NEW_BUFFERS |
               _NEW_COLOR,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_FS_PROG_DATA,
    },
    .emit = update_renderbuffer_surfaces,
@@ -1065,7 +1063,6 @@ const struct brw_tracked_state gen6_renderbuffer_surfaces = {
    .dirty = {
       .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_FAST_CLEAR_COLOR,
    },
    .emit = update_renderbuffer_surfaces,
@@ -1247,7 +1244,6 @@ const struct brw_tracked_state brw_texture_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_FAST_CLEAR_COLOR |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA |
@@ -1288,7 +1284,6 @@ const struct brw_tracked_state brw_cs_texture_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_COMPUTE_PROGRAM |
              BRW_NEW_FAST_CLEAR_COLOR,
    },
@@ -1377,7 +1372,6 @@ const struct brw_tracked_state brw_wm_ubo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_FS_PROG_DATA |
              BRW_NEW_UNIFORM_BUFFER,
    },
@@ -1400,7 +1394,6 @@ const struct brw_tracked_state brw_cs_ubo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_CS_PROG_DATA |
              BRW_NEW_UNIFORM_BUFFER,
    },
@@ -1454,7 +1447,6 @@ const struct brw_tracked_state brw_wm_abo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_ATOMIC_BUFFER |
-             BRW_NEW_BLORP |
              BRW_NEW_BATCH |
              BRW_NEW_FS_PROG_DATA,
    },
@@ -1477,7 +1469,6 @@ const struct brw_tracked_state brw_cs_abo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_ATOMIC_BUFFER |
-             BRW_NEW_BLORP |
              BRW_NEW_BATCH |
              BRW_NEW_CS_PROG_DATA,
    },
@@ -1501,7 +1492,6 @@ const struct brw_tracked_state brw_cs_image_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE | _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_CS_PROG_DATA |
              BRW_NEW_FAST_CLEAR_COLOR |
              BRW_NEW_IMAGE_UNITS
@@ -1687,7 +1677,6 @@ const struct brw_tracked_state brw_wm_image_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
              BRW_NEW_FAST_CLEAR_COLOR |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA |
@@ -1751,8 +1740,7 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
 
 const struct brw_tracked_state brw_cs_work_groups_surface = {
    .dirty = {
-      .brw = BRW_NEW_BLORP |
-             BRW_NEW_CS_PROG_DATA |
+      .brw = BRW_NEW_CS_PROG_DATA |
              BRW_NEW_CS_WORK_GROUPS
    },
    .emit = brw_upload_cs_work_groups_surface,
