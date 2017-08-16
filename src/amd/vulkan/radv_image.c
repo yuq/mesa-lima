@@ -281,10 +281,14 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 }
 
 static unsigned radv_tex_dim(VkImageType image_type, VkImageViewType view_type,
-			     unsigned nr_layers, unsigned nr_samples, bool is_storage_image)
+			     unsigned nr_layers, unsigned nr_samples, bool is_storage_image, bool gfx9)
 {
 	if (view_type == VK_IMAGE_VIEW_TYPE_CUBE || view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)
 		return is_storage_image ? V_008F1C_SQ_RSRC_IMG_2D_ARRAY : V_008F1C_SQ_RSRC_IMG_CUBE;
+
+	/* GFX9 allocates 1D textures as 2D. */
+	if (gfx9 && image_type == VK_IMAGE_TYPE_1D)
+		image_type = VK_IMAGE_TYPE_2D;
 	switch (image_type) {
 	case VK_IMAGE_TYPE_1D:
 		return nr_layers > 1 ? V_008F1C_SQ_RSRC_IMG_1D_ARRAY : V_008F1C_SQ_RSRC_IMG_1D;
@@ -375,7 +379,7 @@ si_make_texture_descriptor(struct radv_device *device,
 	}
 
 	type = radv_tex_dim(image->type, view_type, image->info.array_size, image->info.samples,
-			    is_storage_image);
+			    is_storage_image, device->physical_device->rad_info.chip_class >= GFX9);
 	if (type == V_008F1C_SQ_RSRC_IMG_1D_ARRAY) {
 	        height = 1;
 		depth = image->info.array_size;
@@ -495,7 +499,7 @@ si_make_texture_descriptor(struct radv_device *device,
 			S_008F1C_DST_SEL_Y(V_008F1C_SQ_SEL_X) |
 			S_008F1C_DST_SEL_Z(V_008F1C_SQ_SEL_X) |
 			S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_X) |
-			S_008F1C_TYPE(radv_tex_dim(image->type, view_type, 1, 0, false));
+			S_008F1C_TYPE(radv_tex_dim(image->type, view_type, 1, 0, false, false));
 		fmask_state[4] = 0;
 		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer);
 		fmask_state[6] = 0;
