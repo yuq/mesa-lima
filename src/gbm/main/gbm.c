@@ -85,6 +85,20 @@ gbm_device_is_format_supported(struct gbm_device *gbm,
    return gbm->is_format_supported(gbm, format, usage);
 }
 
+/** Get the number of planes that are required for a given format+modifier
+ *
+ * \param gbm The gbm device returned from gbm_create_device()
+ * \param format The format to query
+ * \param modifier The modifier to query
+ */
+GBM_EXPORT int
+gbm_device_get_format_modifier_plane_count(struct gbm_device *gbm,
+                                           uint32_t format,
+                                           uint64_t modifier)
+{
+   return gbm->get_format_modifier_plane_count(gbm, format, modifier);
+}
+
 /** Destroy the gbm device and free all resources associated with it.
  *
  * \param gbm The device created using gbm_create_device()

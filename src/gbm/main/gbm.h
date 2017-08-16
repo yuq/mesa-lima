@@ -238,6 +238,11 @@ int
 gbm_device_is_format_supported(struct gbm_device *gbm,
                                uint32_t format, uint32_t usage);
 
+int
+gbm_device_get_format_modifier_plane_count(struct gbm_device *gbm,
+                                           uint32_t format,
+                                           uint64_t modifier);
+
 void
 gbm_device_destroy(struct gbm_device *gbm);
 
