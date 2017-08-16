@@ -6544,6 +6544,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
        shader->info.fs.uses_sample_qualifier ||
        shader->info.outputs_read);
 
+   prog_data->has_render_target_reads = shader->info.outputs_read != 0ull;
+
    prog_data->early_fragment_tests = shader->info.fs.early_fragment_tests;
    prog_data->post_depth_coverage = shader->info.fs.post_depth_coverage;
    prog_data->inner_coverage = shader->info.fs.inner_coverage;

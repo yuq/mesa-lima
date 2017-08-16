@@ -1049,9 +1049,8 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
    const struct brw_wm_prog_data *wm_prog_data =
       brw_wm_prog_data(brw->wm.base.prog_data);
 
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
-       brw->fragment_program && brw->fragment_program->info.outputs_read) {
+   if (wm_prog_data->has_render_target_reads &&
+       !ctx->Extensions.MESA_shader_framebuffer_fetch) {
       /* _NEW_BUFFERS */
       const struct gl_framebuffer *fb = ctx->DrawBuffer;
 
@@ -1117,7 +1116,6 @@ const struct brw_tracked_state brw_renderbuffer_read_surfaces = {
       .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_FAST_CLEAR_COLOR |
-             BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA,
    },
    .emit = update_renderbuffer_read_surfaces,
