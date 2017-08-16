@@ -2177,7 +2177,7 @@ static LLVMValueRef build_tex_intrinsic(struct nir_to_llvm_context *ctx,
 		break;
 	}
 
-	if (instr->op == nir_texop_tg4) {
+	if (instr->op == nir_texop_tg4 && ctx->options->chip_class <= VI) {
 		enum glsl_base_type stype = glsl_get_sampler_result_type(instr->texture->var->type);
 		if (stype == GLSL_TYPE_UINT || stype == GLSL_TYPE_INT) {
 			return radv_lower_gather4_integer(ctx, args, instr);
