@@ -1875,6 +1875,7 @@ radv_cmd_state_setup_attachments(struct radv_cmd_buffer *cmd_buffer,
 		}
 
 		state->attachments[i].pending_clear_aspects = clear_aspects;
+		state->attachments[i].cleared_views = 0;
 		if (clear_aspects && info) {
 			assert(info->clearValueCount > i);
 			state->attachments[i].clear_value = info->pClearValues[i];
