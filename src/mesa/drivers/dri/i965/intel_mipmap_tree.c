@@ -1061,12 +1061,10 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
       }
    }
 
-   /* If this is a window-system image, then we can no longer assume it's
-    * cache-coherent because it may suddenly get scanned out which destroys
-    * coherency.
+   /* Don't assume coherency for imported EGLimages.  We don't know what
+    * external clients are going to do with it.  They may scan it out.
     */
-   if (is_winsys_image)
-      image->bo->cache_coherent = false;
+   image->bo->cache_coherent = false;
 
    return mt;
 }
