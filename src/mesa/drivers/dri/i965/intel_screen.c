@@ -799,7 +799,14 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
    case __DRI_IMAGE_ATTRIB_FOURCC:
       return intel_lookup_fourcc(image->dri_format, value);
    case __DRI_IMAGE_ATTRIB_NUM_PLANES:
-      *value = isl_drm_modifier_has_aux(image->modifier) ? 2 : 1;
+      if (isl_drm_modifier_has_aux(image->modifier)) {
+         assert(!image->planar_format || image->planar_format->nplanes == 1);
+         *value = 2;
+      } else if (image->planar_format) {
+         *value = image->planar_format->nplanes;
+      } else {
+         *value = 1;
+      }
       return true;
    case __DRI_IMAGE_ATTRIB_OFFSET:
       *value = image->offset;
