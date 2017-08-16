@@ -3351,7 +3351,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
       return NULL;
    }
 
-   b->shader = nir_shader_create(NULL, stage, nir_options, NULL);
+   b->shader = nir_shader_create(b, stage, nir_options, NULL);
 
    /* Set shader info defaults */
    b->shader->info.gs.invocations = 1;
@@ -3389,6 +3389,9 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    assert(b->entry_point->value_type == vtn_value_type_function);
    nir_function *entry_point = b->entry_point->func->impl->function;
    assert(entry_point);
+
+   /* Unparent the shader from the vtn_builder before we delete the builder */
+   ralloc_steal(NULL, b->shader);
 
    ralloc_free(b);
 
