@@ -70,6 +70,7 @@ struct ac_shader_variant_key {
 		struct ac_tes_variant_key tes;
 		struct ac_tcs_variant_key tcs;
 	};
+	bool has_multiview_view_index;
 };
 
 struct ac_nir_compiler_options {
@@ -92,7 +93,8 @@ enum ac_ud_index {
 	AC_UD_SCRATCH_RING_OFFSETS = 0,
 	AC_UD_PUSH_CONSTANTS = 1,
 	AC_UD_INDIRECT_DESCRIPTOR_SETS = 2,
-	AC_UD_SHADER_START = 3,
+	AC_UD_VIEW_INDEX = 3,
+	AC_UD_SHADER_START = 4,
 	AC_UD_VS_VERTEX_BUFFERS = AC_UD_SHADER_START,
 	AC_UD_VS_BASE_VERTEX_START_INSTANCE,
 	AC_UD_VS_LS_TCS_IN_LAYOUT,
