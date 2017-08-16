@@ -3319,6 +3319,13 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
              const struct spirv_to_nir_options *options,
              const nir_shader_compiler_options *nir_options)
 {
+   /* Initialize the stn_builder object */
+   struct vtn_builder *b = rzalloc(NULL, struct vtn_builder);
+   exec_list_make_empty(&b->functions);
+   b->entry_point_stage = stage;
+   b->entry_point_name = entry_point_name;
+   b->options = options;
+
    const uint32_t *word_end = words + word_count;
 
    /* Handle the SPIR-V header (first 4 dwords)  */
@@ -3332,14 +3339,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
 
    words+= 5;
 
-   /* Initialize the stn_builder object */
-   struct vtn_builder *b = rzalloc(NULL, struct vtn_builder);
    b->value_id_bound = value_id_bound;
    b->values = rzalloc_array(b, struct vtn_value, value_id_bound);
-   exec_list_make_empty(&b->functions);
-   b->entry_point_stage = stage;
-   b->entry_point_name = entry_point_name;
-   b->options = options;
 
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
