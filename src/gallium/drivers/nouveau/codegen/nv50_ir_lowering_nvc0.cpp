@@ -1081,15 +1081,20 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
 bool
 NVC0LoweringPass::handleManualTXD(TexInstruction *i)
 {
-   static const uint8_t qOps[4][2] =
-   {
-      { QUADOP(MOV2, ADD,  MOV2, ADD),  QUADOP(MOV2, MOV2, ADD,  ADD) }, // l0
-      { QUADOP(SUBR, MOV2, SUBR, MOV2), QUADOP(MOV2, MOV2, ADD,  ADD) }, // l1
-      { QUADOP(MOV2, ADD,  MOV2, ADD),  QUADOP(SUBR, SUBR, MOV2, MOV2) }, // l2
-      { QUADOP(SUBR, MOV2, SUBR, MOV2), QUADOP(SUBR, SUBR, MOV2, MOV2) }, // l3
-   };
+   // Always done from the l0 perspective. This is the way that NVIDIA's
+   // driver does it, and doing it from the "current" lane's perpsective
+   // doesn't seem to always work for reasons that aren't altogether clear,
+   // even in frag shaders.
+   //
+   // Note that we must move not only the coordinates into lane0, but also all
+   // ancillary arguments, like array indices and depth compare as they may
+   // differ between lanes. Offsets for TXD are supposed to be uniform, so we
+   // leave them alone.
+   static const uint8_t qOps[2] =
+      { QUADOP(MOV2, ADD,  MOV2, ADD),  QUADOP(MOV2, MOV2, ADD,  ADD) };
+
    Value *def[4][4];
-   Value *crd[3];
+   Value *crd[3], *arr[2], *shadow;
    Instruction *tex;
    Value *zero = bld.loadImm(bld.getSSA(), 0);
    int l, c;
@@ -1100,7 +1105,7 @@ NVC0LoweringPass::handleManualTXD(TexInstruction *i)
    // indirect are both in the leading arg, while for Kepler, array and
    // indirect are separate (and both precede the coordinates). Maxwell is
    // handled in a separate function.
-   unsigned array;
+   int array;
    if (targ->getChipset() < NVISA_GK104_CHIPSET)
       array = i->tex.target.isArray() || i->tex.rIndirectSrc >= 0;
    else
@@ -1110,19 +1115,34 @@ NVC0LoweringPass::handleManualTXD(TexInstruction *i)
 
    for (c = 0; c < dim; ++c)
       crd[c] = bld.getScratch();
+   for (c = 0; c < array; ++c)
+      arr[c] = bld.getScratch();
+   shadow = bld.getScratch();
 
-   bld.mkOp(OP_QUADON, TYPE_NONE, NULL);
    for (l = 0; l < 4; ++l) {
       Value *src[3], *val;
-      // mov coordinates from lane l to all lanes
+
+      bld.mkOp(OP_QUADON, TYPE_NONE, NULL);
+      // we're using the texture result from lane 0 in all cases, so make sure
+      // that lane 0 is pointing at the proper array index, indirect value,
+      // and depth compare.
+      if (l != 0) {
+         for (c = 0; c < array; ++c)
+            bld.mkQuadop(0x00, arr[c], l, i->getSrc(c), zero);
+         if (i->tex.target.isShadow()) {
+            // The next argument after coords is the depth compare
+            bld.mkQuadop(0x00, shadow, l, i->getSrc(array + dim), zero);
+         }
+      }
+      // mov position coordinates from lane l to all lanes
       for (c = 0; c < dim; ++c)
          bld.mkQuadop(0x00, crd[c], l, i->getSrc(c + array), zero);
       // add dPdx from lane l to lanes dx
       for (c = 0; c < dim; ++c)
-         bld.mkQuadop(qOps[l][0], crd[c], l, i->dPdx[c].get(), crd[c]);
+         bld.mkQuadop(qOps[0], crd[c], l, i->dPdx[c].get(), crd[c]);
       // add dPdy from lane l to lanes dy
       for (c = 0; c < dim; ++c)
-         bld.mkQuadop(qOps[l][1], crd[c], l, i->dPdy[c].get(), crd[c]);
+         bld.mkQuadop(qOps[1], crd[c], l, i->dPdy[c].get(), crd[c]);
       // normalize cube coordinates
       if (i->tex.target.isCube()) {
          for (c = 0; c < 3; ++c)
@@ -1139,8 +1159,21 @@ NVC0LoweringPass::handleManualTXD(TexInstruction *i)
       }
       // texture
       bld.insert(tex = cloneForward(func, i));
+      if (l != 0) {
+         for (c = 0; c < array; ++c)
+            tex->setSrc(c, arr[c]);
+         if (i->tex.target.isShadow())
+            tex->setSrc(array + dim, shadow);
+      }
       for (c = 0; c < dim; ++c)
          tex->setSrc(c + array, src[c]);
+      // broadcast results from lane 0 to all lanes so that the moves *into*
+      // the target lane pick up the proper value.
+      if (l != 0)
+         for (c = 0; i->defExists(c); ++c)
+            bld.mkQuadop(0x00, tex->getDef(c), 0, tex->getDef(c), zero);
+      bld.mkOp(OP_QUADPOP, TYPE_NONE, NULL);
+
       // save results
       for (c = 0; i->defExists(c); ++c) {
          Instruction *mov;
@@ -1150,7 +1183,6 @@ NVC0LoweringPass::handleManualTXD(TexInstruction *i)
          mov->lanes = 1 << l;
       }
    }
-   bld.mkOp(OP_QUADPOP, TYPE_NONE, NULL);
 
    for (c = 0; i->defExists(c); ++c) {
       Instruction *u = bld.mkOp(OP_UNION, TYPE_U32, i->getDef(c));
