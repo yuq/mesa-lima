@@ -823,6 +823,27 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
    }
 }
 
+static GLboolean
+intel_query_format_modifier_attribs(__DRIscreen *dri_screen,
+                                    uint32_t fourcc, uint64_t modifier,
+                                    int attrib, uint64_t *value)
+{
+   struct intel_screen *screen = dri_screen->driverPrivate;
+   const struct intel_image_format *f = intel_image_format_lookup(fourcc);
+
+   if (!modifier_is_supported(&screen->devinfo, f, 0, modifier))
+      return false;
+
+   switch (attrib) {
+   case __DRI_IMAGE_FORMAT_MODIFIER_ATTRIB_PLANE_COUNT:
+      *value = isl_drm_modifier_has_aux(modifier) ? 2 : f->nplanes;
+      return true;
+
+   default:
+      return false;
+   }
+}
+
 static __DRIimage *
 intel_dup_image(__DRIimage *orig_image, void *loaderPrivate)
 {
@@ -1267,7 +1288,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
 }
 
 static const __DRIimageExtension intelImageExtension = {
-    .base = { __DRI_IMAGE, 15 },
+    .base = { __DRI_IMAGE, 16 },
 
     .createImageFromName                = intel_create_image_from_name,
     .createImageFromRenderbuffer        = intel_create_image_from_renderbuffer,
@@ -1289,6 +1310,7 @@ static const __DRIimageExtension intelImageExtension = {
     .createImageFromDmaBufs2            = intel_create_image_from_dma_bufs2,
     .queryDmaBufFormats                 = intel_query_dma_buf_formats,
     .queryDmaBufModifiers               = intel_query_dma_buf_modifiers,
+    .queryDmaBufFormatModifierAttribs   = intel_query_format_modifier_attribs,
 };
 
 static uint64_t
