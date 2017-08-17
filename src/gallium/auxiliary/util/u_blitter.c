@@ -2490,7 +2490,7 @@ void util_blitter_custom_resolve_color(struct blitter_context *blitter,
    blitter_set_common_draw_rect_state(ctx, false, false, false);
    blitter_set_dst_dimensions(ctx, src->width0, src->height0);
    blitter->draw_rectangle(blitter, 0, 0, src->width0, src->height0,
-                           0, 1, 0, NULL);
+                           0, 1, UTIL_BLITTER_ATTRIB_NONE, NULL);
    util_blitter_restore_fb_state(blitter);
    util_blitter_restore_vertex_states(blitter);
    util_blitter_restore_fragment_states(blitter);
@@ -2540,7 +2540,7 @@ void util_blitter_custom_color(struct blitter_context *blitter,
    blitter_set_common_draw_rect_state(ctx, false, false, false);
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
    blitter->draw_rectangle(blitter, 0, 0, dstsurf->width, dstsurf->height,
-                           0, 1, 0, NULL);
+                           0, 1, UTIL_BLITTER_ATTRIB_NONE, NULL);
 
    util_blitter_restore_vertex_states(blitter);
    util_blitter_restore_fragment_states(blitter);
