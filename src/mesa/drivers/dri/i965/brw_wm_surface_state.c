@@ -990,14 +990,11 @@ update_renderbuffer_surfaces(struct brw_context *brw)
 {
    const struct gl_context *ctx = &brw->ctx;
 
-   /* BRW_NEW_FS_PROG_DATA */
-   const struct brw_wm_prog_data *wm_prog_data =
-      brw_wm_prog_data(brw->wm.base.prog_data);
-
    /* _NEW_BUFFERS | _NEW_COLOR */
    const struct gl_framebuffer *fb = ctx->DrawBuffer;
 
-   const unsigned rt_start = wm_prog_data->binding_table.render_target_start;
+   /* Render targets always start at binding table index 0. */
+   const unsigned rt_start = 0;
 
    uint32_t *surf_offsets = brw->wm.base.surf_offset;
 
@@ -1025,8 +1022,7 @@ const struct brw_tracked_state brw_renderbuffer_surfaces = {
    .dirty = {
       .mesa = _NEW_BUFFERS |
               _NEW_COLOR,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_FS_PROG_DATA,
+      .brw = BRW_NEW_BATCH,
    },
    .emit = update_renderbuffer_surfaces,
 };

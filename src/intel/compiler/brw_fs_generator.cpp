@@ -277,8 +277,13 @@ fs_generator::fire_fb_write(fs_inst *inst,
    else
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_SINGLE_SOURCE_SUBSPAN01;
 
-   uint32_t surf_index =
-      prog_data->binding_table.render_target_start + inst->target;
+   /* We assume render targets start at 0, because headerless FB write
+    * messages set "Render Target Index" to 0.  Using a different binding
+    * table index would make it impossible to use headerless messages.
+    */
+   assert(prog_data->binding_table.render_target_start == 0);
+
+   const uint32_t surf_index = inst->target;
 
    bool last_render_target = inst->eot ||
                              (prog_data->dual_src_blend && dispatch_width == 16);
