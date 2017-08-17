@@ -54,7 +54,7 @@ void gpir_instr_print_prog(gpir_compiler *comp)
    int index = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       printf("-------block instr------\n");
-      for (int i = 0; i < gpir_instr_array_n(&block->instrs); i++) {
+      for (int i = gpir_instr_array_n(&block->instrs) - 1; i >= 0; i--) {
          printf("%03d: ", index++);
          gpir_instr *instr = gpir_instr_array_e(&block->instrs, i);
          for (int j = 0; j < GPIR_INSTR_SLOT_NUM; j++) {

@@ -31,7 +31,6 @@
 const gpir_op_info gpir_op_infos[] = {
    [gpir_op_mov] = {
       .name = "mov",
-      .latency = 1,
       .slots = (int []) {
          GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_MUL1,
          GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1,
@@ -42,210 +41,165 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_mul] = {
       .name = "mul",
       .dest_neg = true,
-      .latency = 1,
       .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_MUL1, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_select] = {
       .name = "select",
       .dest_neg = true,
-      .latency = 1,
    },
    [gpir_op_complex1] = {
       .name = "complex1",
-      .latency = 2,
    },
    [gpir_op_complex2] = {
       .name = "complex2",
-      .latency = 1,
    },
    [gpir_op_add] = {
       .name = "add",
       .src_neg = {true, true, false, false},
-      .latency = 1,
       .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_sub] = {
       .name = "sub",
       .src_neg = {true, true, false, false},
-      .latency = 1,
       .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_floor] = {
       .name = "floor",
       .src_neg = {true, false, false, false},
-      .latency = 1,
    },
    [gpir_op_sign] = {
       .name = "sign",
       .src_neg = {true, false, false, false},
-      .latency = 1,
    },
    [gpir_op_ge] = {
       .name = "ge",
       .src_neg = {true, true, false, false},
-      .latency = 1,
    },
    [gpir_op_lt] = {
       .name = "lt",
       .src_neg = {true, true, false, false},
-      .latency = 1,
    },
    [gpir_op_min] = {
       .name = "min",
       .src_neg = {true, true, false, false},
-      .latency = 1,
    },
    [gpir_op_max] = {
       .name = "max",
       .src_neg = {true, true, false, false},
-      .latency = 1,
    },
    [gpir_op_abs] = {
       .name = "abs",
       .src_neg = {true, true, false, false},
-      .latency = 1,
    },
    [gpir_op_neg] = {
       .name = "neg",
-      .latency = 1,
    },
    [gpir_op_clamp_const] = {
       .name = "clamp_const",
-      .latency = 1,
    },
    [gpir_op_preexp2] = {
       .name = "preexp2",
-      .latency = 1,
    },
    [gpir_op_postlog2] = {
       .name = "postlog2",
-      .latency = 1,
    },
    [gpir_op_exp2_impl] = {
       .name = "exp2_impl",
-      .latency = 1,
    },
    [gpir_op_log2_impl] = {
       .name = "log2_impl",
-      .latency = 1,
    },
    [gpir_op_rcp_impl] = {
       .name = "rcp_impl",
-      .latency = 1,
    },
    [gpir_op_rsqrt_impl] = {
       .name = "rsqrt_impl",
-      .latency = 1,
    },
    [gpir_op_load_uniform] = {
       .name = "ld_uni",
-      .latency = 0,
       .type = gpir_node_type_load,
    },
    [gpir_op_load_temp] = {
       .name = "ld_tmp",
-      .latency = 0,
       .type = gpir_node_type_load,
    },
    [gpir_op_load_attribute] = {
       .name = "ld_att",
-      .latency = 0,
       .slots = (int []) { GPIR_INSTR_SLOT_LOAD0, GPIR_INSTR_SLOT_END },
       .type = gpir_node_type_load,
    },
    [gpir_op_load_reg] = {
       .name = "ld_reg",
-      .latency = 0,
       .type = gpir_node_type_load,
    },
    [gpir_op_store_temp] = {
       .name = "st_tmp",
-      .latency = 4,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_reg] = {
       .name = "st_reg",
-      .latency = 3,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_varying] = {
       .name = "st_var",
-      .latency = 1,
       .slots = (int []) { GPIR_INSTR_SLOT_STORE, GPIR_INSTR_SLOT_END },
       .type = gpir_node_type_store,
    },
    [gpir_op_store_temp_load_off0] = {
       .name = "st_of0",
-      .latency = 4,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_temp_load_off1] = {
       .name = "st_of1",
-      .latency = 4,
       .type = gpir_node_type_store,
    },
    [gpir_op_store_temp_load_off2] = {
       .name = "st_of2",
-      .latency = 4,
       .type = gpir_node_type_store,
    },
    [gpir_op_branch_cond] = {
       .name = "branch_cond",
-      .latency = 1,
       .type = gpir_node_type_branch,
    },
    [gpir_op_const] = {
       .name = "const",
-      .latency = -1,
       .type = gpir_node_type_const,
    },
    [gpir_op_copy] = {
       .name = "copy",
-      .latency = 0,
    },
    [gpir_op_exp2] = {
       .name = "exp2",
-      .latency = -1,
    },
    [gpir_op_log2] = {
       .name = "log2",
-      .latency = -1,
    },
    [gpir_op_rcp] = {
       .name = "rcp",
-      .latency = -1,
    },
    [gpir_op_rsqrt] = {
       .name = "rsqrt",
-      .latency = -1,
    },
    [gpir_op_ceil] = {
       .name = "ceil",
-      .latency = -1,
    },
    [gpir_op_exp] = {
       .name = "exp",
-      .latency = -1,
    },
    [gpir_op_log] = {
       .name = "log",
-      .latency = -1,
    },
    [gpir_op_sin] = {
       .name = "sin",
-      .latency = -1,
    },
    [gpir_op_cos] = {
       .name = "cos",
-      .latency = -1,
    },
    [gpir_op_tan] = {
       .name = "tan",
-      .latency = -1,
    },
    [gpir_op_branch_uncond] = {
       .name = "branch_uncond",
-      .latency = -1,
       .type = gpir_node_type_branch,
    },
 };
