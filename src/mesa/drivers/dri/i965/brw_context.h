@@ -635,11 +635,6 @@ struct brw_context
                                               struct gl_renderbuffer *rb,
                                               uint32_t flags, unsigned unit,
                                               uint32_t surf_index);
-      void (*emit_null_surface_state)(struct brw_context *brw,
-                                      unsigned width,
-                                      unsigned height,
-                                      unsigned samples,
-                                      uint32_t *out_offset);
 
       /**
        * Send the appropriate state packets to configure depth, stencil, and

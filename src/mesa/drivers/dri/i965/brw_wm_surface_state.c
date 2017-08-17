@@ -833,72 +833,48 @@ const struct brw_tracked_state brw_wm_pull_constants = {
  * hardware discard the target 0 color output..
  */
 static void
-brw_emit_null_surface_state(struct brw_context *brw,
-                            unsigned width,
-                            unsigned height,
-                            unsigned samples,
-                            uint32_t *out_offset)
+emit_null_surface_state(struct brw_context *brw,
+                        unsigned width,
+                        unsigned height,
+                        unsigned samples,
+                        uint32_t *out_offset)
 {
-   /* From the Sandy bridge PRM, Vol4 Part1 p71 (Surface Type: Programming
-    * Notes):
+   uint32_t *surf = brw_state_batch(brw,
+                                    brw->isl_dev.ss.size,
+                                    brw->isl_dev.ss.align,
+                                    out_offset);
+
+   if (brw->gen != 6 || samples <= 1) {
+      isl_null_fill_state(&brw->isl_dev, surf,
+                          isl_extent3d(width, height, 1));
+      return;
+   }
+
+   /* On Gen6, null render targets seem to cause GPU hangs when multisampling.
+    * So work around this problem by rendering into dummy color buffer.
     *
-    *     A null surface will be used in instances where an actual surface is
-    *     not bound. When a write message is generated to a null surface, no
-    *     actual surface is written to. When a read message (including any
-    *     sampling engine message) is generated to a null surface, the result
-    *     is all zeros. Note that a null surface type is allowed to be used
-    *     with all messages, even if it is not specificially indicated as
-    *     supported. All of the remaining fields in surface state are ignored
-    *     for null surfaces, with the following exceptions:
+    * To decrease the amount of memory needed by the workaround buffer, we
+    * set its pitch to 128 bytes (the width of a Y tile).  This means that
+    * the amount of memory needed for the workaround buffer is
+    * (width_in_tiles + height_in_tiles - 1) tiles.
     *
-    *     - [DevSNB+]: Width, Height, Depth, and LOD fields must match the
-    *       depth buffer’s corresponding state for all render target surfaces,
-    *       including null.
-    *
-    *     - Surface Format must be R8G8B8A8_UNORM.
+    * Note that since the workaround buffer will be interpreted by the
+    * hardware as an interleaved multisampled buffer, we need to compute
+    * width_in_tiles and height_in_tiles by dividing the width and height
+    * by 16 rather than the normal Y-tile size of 32.
     */
-   unsigned surface_type = BRW_SURFACE_NULL;
-   struct brw_bo *bo = NULL;
-   unsigned pitch_minus_1 = 0;
-   uint32_t multisampling_state = 0;
-   uint32_t *surf = brw_state_batch(brw, 6 * 4, 32, out_offset);
+   unsigned width_in_tiles = ALIGN(width, 16) / 16;
+   unsigned height_in_tiles = ALIGN(height, 16) / 16;
+   unsigned pitch_minus_1 = 127;
+   unsigned size_needed = (width_in_tiles + height_in_tiles - 1) * 4096;
+   brw_get_scratch_bo(brw, &brw->wm.multisampled_null_render_target_bo,
+                      size_needed);
 
-   if (samples > 1) {
-      /* On Gen6, null render targets seem to cause GPU hangs when
-       * multisampling.  So work around this problem by rendering into dummy
-       * color buffer.
-       *
-       * To decrease the amount of memory needed by the workaround buffer, we
-       * set its pitch to 128 bytes (the width of a Y tile).  This means that
-       * the amount of memory needed for the workaround buffer is
-       * (width_in_tiles + height_in_tiles - 1) tiles.
-       *
-       * Note that since the workaround buffer will be interpreted by the
-       * hardware as an interleaved multisampled buffer, we need to compute
-       * width_in_tiles and height_in_tiles by dividing the width and height
-       * by 16 rather than the normal Y-tile size of 32.
-       */
-      unsigned width_in_tiles = ALIGN(width, 16) / 16;
-      unsigned height_in_tiles = ALIGN(height, 16) / 16;
-      unsigned size_needed = (width_in_tiles + height_in_tiles - 1) * 4096;
-      brw_get_scratch_bo(brw, &brw->wm.multisampled_null_render_target_bo,
-                         size_needed);
-      bo = brw->wm.multisampled_null_render_target_bo;
-      surface_type = BRW_SURFACE_2D;
-      pitch_minus_1 = 127;
-      multisampling_state = brw_get_surface_num_multisamples(samples);
-   }
-
-   surf[0] = (surface_type << BRW_SURFACE_TYPE_SHIFT |
+   surf[0] = (BRW_SURFACE_2D << BRW_SURFACE_TYPE_SHIFT |
 	      ISL_FORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT);
-   if (brw->gen < 6) {
-      surf[0] |= (1 << BRW_SURFACE_WRITEDISABLE_R_SHIFT |
-		  1 << BRW_SURFACE_WRITEDISABLE_G_SHIFT |
-		  1 << BRW_SURFACE_WRITEDISABLE_B_SHIFT |
-		  1 << BRW_SURFACE_WRITEDISABLE_A_SHIFT);
-   }
-   surf[1] = !bo ? 0 :
-             brw_emit_reloc(&brw->batch, *out_offset + 4, bo, 0, RELOC_WRITE);
+   surf[1] = brw_emit_reloc(&brw->batch, *out_offset + 4,
+                            brw->wm.multisampled_null_render_target_bo,
+                            0, RELOC_WRITE);
 
    surf[2] = ((width - 1) << BRW_SURFACE_WIDTH_SHIFT |
               (height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
@@ -910,7 +886,7 @@ brw_emit_null_surface_state(struct brw_context *brw,
     */
    surf[3] = (BRW_SURFACE_TILED | BRW_SURFACE_TILED_Y |
               pitch_minus_1 << BRW_SURFACE_PITCH_SHIFT);
-   surf[4] = multisampling_state;
+   surf[4] = BRW_SURFACE_MULTISAMPLECOUNT_4;
    surf[5] = 0;
 }
 
@@ -1047,14 +1023,12 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
                brw->vtbl.update_renderbuffer_surface(
                   brw, fb->_ColorDrawBuffers[i], flags, i, surf_index);
 	 } else {
-            brw->vtbl.emit_null_surface_state(brw, w, h, s,
-               &surf_offset[surf_index]);
+            emit_null_surface_state(brw, w, h, s, &surf_offset[surf_index]);
 	 }
       }
    } else {
       const uint32_t surf_index = render_target_start;
-      brw->vtbl.emit_null_surface_state(brw, w, h, s,
-         &surf_offset[surf_index]);
+      emit_null_surface_state(brw, w, h, s, &surf_offset[surf_index]);
    }
 }
 
@@ -1160,9 +1134,11 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
                                    0);
 
          } else {
-            brw->vtbl.emit_null_surface_state(
-               brw, _mesa_geometric_width(fb), _mesa_geometric_height(fb),
-               _mesa_geometric_samples(fb), surf_offset);
+            emit_null_surface_state(brw,
+                                    _mesa_geometric_width(fb),
+                                    _mesa_geometric_height(fb),
+                                    _mesa_geometric_samples(fb),
+                                    surf_offset);
          }
       }
 
@@ -1334,7 +1310,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          &ctx->UniformBufferBindings[prog->sh.UniformBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-         brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ubo_surf_offsets[i]);
+         emit_null_surface_state(brw, 1, 1, 1, &ubo_surf_offsets[i]);
       } else {
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
@@ -1359,7 +1335,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          &ctx->ShaderStorageBufferBindings[prog->sh.ShaderStorageBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-         brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ssbo_surf_offsets[i]);
+         emit_null_surface_state(brw, 1, 1, 1, &ssbo_surf_offsets[i]);
       } else {
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
@@ -1655,7 +1631,7 @@ update_image_surface(struct brw_context *brw,
       }
 
    } else {
-      brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, surf_offset);
+      emit_null_surface_state(brw, 1, 1, 1, surf_offset);
       update_default_image_param(brw, u, surface_idx, param);
    }
 }
@@ -1718,7 +1694,6 @@ void
 gen4_init_vtable_surface_functions(struct brw_context *brw)
 {
    brw->vtbl.update_renderbuffer_surface = gen4_update_renderbuffer_surface;
-   brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
 }
 
 void

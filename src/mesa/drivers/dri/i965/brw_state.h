@@ -232,14 +232,6 @@ void brw_update_renderbuffer_surfaces(struct brw_context *brw,
                                       uint32_t render_target_start,
                                       uint32_t *surf_offset);
 
-/* gen7_wm_surface_state.c */
-void gen7_check_surface_setup(uint32_t *surf, bool is_render_target);
-void gen7_init_vtable_surface_functions(struct brw_context *brw);
-
-/* gen8_surface_state.c */
-
-void gen8_init_vtable_surface_functions(struct brw_context *brw);
-
 /* brw_sampler_state.c */
 void brw_emit_sampler_state(struct brw_context *brw,
                             uint32_t *sampler_state,
