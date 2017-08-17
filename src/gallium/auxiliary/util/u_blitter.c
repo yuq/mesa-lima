@@ -345,7 +345,7 @@ static void bind_vs_pos_only(struct blitter_context_priv *ctx,
       ctx->vs_pos_only[index] =
          util_make_vertex_passthrough_shader_with_so(pipe, 1, semantic_names,
                                                      semantic_indices, FALSE,
-                                                     &so);
+                                                     false, &so);
    }
 
    pipe->bind_vs_state(pipe, ctx->vs_pos_only[index]);
