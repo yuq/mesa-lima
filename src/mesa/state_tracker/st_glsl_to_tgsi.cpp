@@ -944,6 +944,32 @@ type_size(const struct glsl_type *type)
    return type->count_attribute_slots(false);
 }
 
+static void
+add_buffer_to_load_and_stores(glsl_to_tgsi_instruction *inst, st_src_reg *buf,
+                              exec_list *instructions, ir_constant *access)
+{
+   /**
+    * emit_asm() might have actually split the op into pieces, e.g. for
+    * double stores. We have to go back and fix up all the generated ops.
+    */
+   unsigned op = inst->op;
+   do {
+      inst->resource = *buf;
+      if (access)
+         inst->buffer_access = access->value.u[0];
+
+      if (inst == instructions->get_head_raw())
+         break;
+      inst = (glsl_to_tgsi_instruction *)inst->get_prev();
+
+      if (inst->op == TGSI_OPCODE_UADD) {
+         if (inst == instructions->get_head_raw())
+            break;
+         inst = (glsl_to_tgsi_instruction *)inst->get_prev();
+      }
+   } while (inst->op == op && inst->resource.file == PROGRAM_UNDEFINED);
+}
+
 /**
  * If the given GLSL type is an array or matrix or a structure containing
  * an array/matrix member, return true.  Else return false.
@@ -3340,25 +3366,7 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
       assert(access);
    }
 
-   /* The emit_asm() might have actually split the op into pieces, e.g. for
-    * double stores. We have to go back and fix up all the generated ops.
-    */
-   unsigned op = inst->op;
-   do {
-      inst->resource = buffer;
-      if (access)
-         inst->buffer_access = access->value.u[0];
-
-      if (inst == this->instructions.get_head_raw())
-         break;
-      inst = (glsl_to_tgsi_instruction *)inst->get_prev();
-
-      if (inst->op == TGSI_OPCODE_UADD) {
-         if (inst == this->instructions.get_head_raw())
-            break;
-         inst = (glsl_to_tgsi_instruction *)inst->get_prev();
-      }
-   } while (inst->op == op && inst->resource.file == PROGRAM_UNDEFINED);
+   add_buffer_to_load_and_stores(inst, &buffer, &this->instructions, access);
 }
 
 void
