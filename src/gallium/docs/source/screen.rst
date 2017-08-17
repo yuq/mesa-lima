@@ -404,6 +404,8 @@ The integer capabilities:
   for a driver that does not support multiple output streams (i.e.,
   ``PIPE_CAP_MAX_VERTEX_STREAMS`` is 1), both query types are identical.
 * ``PIPE_CAP_MEMOBJ``: Whether operations on memory objects are supported.
+* ``PIPE_CAP_LOAD_CONSTBUF``: True if the driver supports TGSI_OPCODE_LOAD use
+  with constant buffers.
 
 
 .. _pipe_capf:
