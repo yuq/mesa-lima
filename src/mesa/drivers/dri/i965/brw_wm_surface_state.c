@@ -824,15 +824,18 @@ const struct brw_tracked_state brw_wm_pull_constants = {
  */
 static void
 emit_null_surface_state(struct brw_context *brw,
-                        unsigned width,
-                        unsigned height,
-                        unsigned samples,
+                        const struct gl_framebuffer *fb,
                         uint32_t *out_offset)
 {
    uint32_t *surf = brw_state_batch(brw,
                                     brw->isl_dev.ss.size,
                                     brw->isl_dev.ss.align,
                                     out_offset);
+
+   /* Use the fb dimensions or 1x1x1 */
+   const unsigned width   = fb ? _mesa_geometric_width(fb)   : 1;
+   const unsigned height  = fb ? _mesa_geometric_height(fb)  : 1;
+   const unsigned samples = fb ? _mesa_geometric_samples(fb) : 1;
 
    if (brw->gen != 6 || samples <= 1) {
       isl_null_fill_state(&brw->isl_dev, surf,
@@ -992,9 +995,6 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
                                  uint32_t *surf_offset)
 {
    GLuint i;
-   const unsigned int w = _mesa_geometric_width(fb);
-   const unsigned int h = _mesa_geometric_height(fb);
-   const unsigned int s = _mesa_geometric_samples(fb);
 
    /* Update surfaces for drawing buffers */
    if (fb->_NumColorDrawBuffers >= 1) {
@@ -1007,12 +1007,12 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
                gen6_update_renderbuffer_surface(brw, rb, i, surf_index) :
                gen4_update_renderbuffer_surface(brw, rb, i, surf_index);
 	 } else {
-            emit_null_surface_state(brw, w, h, s, &surf_offset[surf_index]);
+            emit_null_surface_state(brw, fb, &surf_offset[surf_index]);
 	 }
       }
    } else {
       const uint32_t surf_index = render_target_start;
-      emit_null_surface_state(brw, w, h, s, &surf_offset[surf_index]);
+      emit_null_surface_state(brw, fb, &surf_offset[surf_index]);
    }
 }
 
@@ -1117,11 +1117,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
                                    0);
 
          } else {
-            emit_null_surface_state(brw,
-                                    _mesa_geometric_width(fb),
-                                    _mesa_geometric_height(fb),
-                                    _mesa_geometric_samples(fb),
-                                    surf_offset);
+            emit_null_surface_state(brw, fb, surf_offset);
          }
       }
 
@@ -1294,7 +1290,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          &ctx->UniformBufferBindings[prog->sh.UniformBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-         emit_null_surface_state(brw, 1, 1, 1, &ubo_surf_offsets[i]);
+         emit_null_surface_state(brw, NULL, &ubo_surf_offsets[i]);
       } else {
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
@@ -1319,7 +1315,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
          &ctx->ShaderStorageBufferBindings[prog->sh.ShaderStorageBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-         emit_null_surface_state(brw, 1, 1, 1, &ssbo_surf_offsets[i]);
+         emit_null_surface_state(brw, NULL, &ssbo_surf_offsets[i]);
       } else {
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
@@ -1611,7 +1607,7 @@ update_image_surface(struct brw_context *brw,
       }
 
    } else {
-      emit_null_surface_state(brw, 1, 1, 1, surf_offset);
+      emit_null_surface_state(brw, NULL, surf_offset);
       update_default_image_param(brw, u, surface_idx, param);
    }
 }
