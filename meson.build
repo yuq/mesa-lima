@@ -479,6 +479,10 @@ if cc.compiles('int foo(void) { return 0; } int bar(void) __attribute__((alias("
                name : '__attribute__((alias(...)))')
   pre_args += '-DHAVE_FUNC_ATTRIBUTE_ALIAS'
 endif
+if cc.compiles('int foo(void) __attribute__((__noreturn__));',
+               name : '__attribute__((__noreturn__))')
+  pre_args += '-DHAVE_FUNC_ATTRIBUTE_NORETURN'
+endif
 
 # TODO: this is very incomplete
 if ['linux', 'cygwin'].contains(host_machine.system())
