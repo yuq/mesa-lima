@@ -482,6 +482,7 @@ lower_instructions_visitor::ldexp_to_arith(ir_expression *ir)
       ir->init_num_operands();
       ir->operands[0] = bit_or(bit_and(bitcast_f2u(x), sign_mantissa_mask),
                                lshift(i2u(resulting_biased_exp), exp_shift_clone));
+      ir->operands[1] = NULL;
    }
 
    this->progress = true;
