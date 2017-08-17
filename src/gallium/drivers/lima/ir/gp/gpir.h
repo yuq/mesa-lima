@@ -110,7 +110,6 @@ typedef struct {
    char *name;
    bool dest_neg;
    bool src_neg[4];
-   int latency;
    int *slots;
    gpir_node_type type;
 } gpir_op_info;
