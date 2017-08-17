@@ -985,37 +985,6 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    return offset;
 }
 
-/**
- * Construct SURFACE_STATE objects for renderbuffers/draw buffers.
- */
-void
-brw_update_renderbuffer_surfaces(struct brw_context *brw,
-                                 const struct gl_framebuffer *fb,
-                                 uint32_t render_target_start,
-                                 uint32_t *surf_offset)
-{
-   GLuint i;
-
-   /* Update surfaces for drawing buffers */
-   if (fb->_NumColorDrawBuffers >= 1) {
-      for (i = 0; i < fb->_NumColorDrawBuffers; i++) {
-         const uint32_t surf_index = render_target_start + i;
-         struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[i];
-
-	 if (intel_renderbuffer(rb)) {
-            surf_offset[surf_index] = brw->gen >= 6 ?
-               gen6_update_renderbuffer_surface(brw, rb, i, surf_index) :
-               gen4_update_renderbuffer_surface(brw, rb, i, surf_index);
-	 } else {
-            emit_null_surface_state(brw, fb, &surf_offset[surf_index]);
-	 }
-      }
-   } else {
-      const uint32_t surf_index = render_target_start;
-      emit_null_surface_state(brw, fb, &surf_offset[surf_index]);
-   }
-}
-
 static void
 update_renderbuffer_surfaces(struct brw_context *brw)
 {
@@ -1027,10 +996,28 @@ update_renderbuffer_surfaces(struct brw_context *brw)
 
    /* _NEW_BUFFERS | _NEW_COLOR */
    const struct gl_framebuffer *fb = ctx->DrawBuffer;
-   brw_update_renderbuffer_surfaces(
-      brw, fb,
-      wm_prog_data->binding_table.render_target_start,
-      brw->wm.base.surf_offset);
+
+   const unsigned rt_start = wm_prog_data->binding_table.render_target_start;
+
+   uint32_t *surf_offsets = brw->wm.base.surf_offset;
+
+   /* Update surfaces for drawing buffers */
+   if (fb->_NumColorDrawBuffers >= 1) {
+      for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
+         struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[i];
+
+	 if (intel_renderbuffer(rb)) {
+            surf_offsets[rt_start + i] = brw->gen >= 6 ?
+               gen6_update_renderbuffer_surface(brw, rb, i, rt_start + i) :
+               gen4_update_renderbuffer_surface(brw, rb, i, rt_start + i);
+	 } else {
+            emit_null_surface_state(brw, fb, &surf_offsets[rt_start + i]);
+	 }
+      }
+   } else {
+      emit_null_surface_state(brw, fb, &surf_offsets[rt_start]);
+   }
+
    brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 

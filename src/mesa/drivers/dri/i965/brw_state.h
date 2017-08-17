@@ -221,11 +221,6 @@ void brw_update_texture_surface(struct gl_context *ctx,
                                 unsigned unit, uint32_t *surf_offset,
                                 bool for_gather, uint32_t plane);
 
-void brw_update_renderbuffer_surfaces(struct brw_context *brw,
-                                      const struct gl_framebuffer *fb,
-                                      uint32_t render_target_start,
-                                      uint32_t *surf_offset);
-
 /* brw_sampler_state.c */
 void brw_emit_sampler_state(struct brw_context *brw,
                             uint32_t *sampler_state,
