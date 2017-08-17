@@ -2571,7 +2571,20 @@ intel_miptree_texture_aux_usage(struct brw_context *brw,
 
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
-      if (mt->mcs_buf && can_texture_with_ccs(brw, mt, view_format))
+      if (!mt->mcs_buf) {
+         assert(mt->aux_usage == ISL_AUX_USAGE_CCS_D);
+         return ISL_AUX_USAGE_NONE;
+      }
+
+      /* If we don't have any unresolved color, report an aux usage of
+       * ISL_AUX_USAGE_NONE.  This way, texturing won't even look at the
+       * aux surface and we can save some bandwidth.
+       */
+      if (!intel_miptree_has_color_unresolved(mt, 0, INTEL_REMAINING_LEVELS,
+                                              0, INTEL_REMAINING_LAYERS))
+         return ISL_AUX_USAGE_NONE;
+
+      if (can_texture_with_ccs(brw, mt, view_format))
          return ISL_AUX_USAGE_CCS_E;
       break;
 
