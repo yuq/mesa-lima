@@ -1212,6 +1212,10 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 	struct radv_framebuffer *framebuffer = cmd_buffer->state.framebuffer;
 	const struct radv_subpass *subpass = cmd_buffer->state.subpass;
 
+	/* this may happen for inherited secondary recording */
+	if (!framebuffer)
+		return;
+
 	for (i = 0; i < 8; ++i) {
 		if (i >= subpass->color_count || subpass->color_attachments[i].attachment == VK_ATTACHMENT_UNUSED) {
 			radeon_set_context_reg(cmd_buffer->cs, R_028C70_CB_COLOR0_INFO + i * 0x3C,
