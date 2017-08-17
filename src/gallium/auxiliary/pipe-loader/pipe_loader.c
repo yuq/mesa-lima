@@ -114,7 +114,11 @@ pipe_loader_load_options(struct pipe_loader_device *dev)
 char *
 pipe_loader_get_driinfo_xml(const char *driver_name)
 {
+#ifdef HAVE_LIBDRM
    char *xml = pipe_loader_drm_get_driinfo_xml(driver_name);
+#else
+   char *xml = NULL;
+#endif
 
    if (!xml)
       xml = strdup(gallium_driinfo_xml);
