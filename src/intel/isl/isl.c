@@ -1812,6 +1812,13 @@ isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
 }
 
 void
+isl_null_fill_state(const struct isl_device *dev, void *state,
+                    struct isl_extent3d size)
+{
+   isl_genX_call(dev, null_fill_state, state, size);
+}
+
+void
 isl_emit_depth_stencil_hiz_s(const struct isl_device *dev, void *batch,
                              const struct isl_depth_stencil_hiz_emit_info *restrict info)
 {

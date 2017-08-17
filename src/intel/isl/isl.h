@@ -1691,6 +1691,10 @@ void
 isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
                         const struct isl_buffer_fill_state_info *restrict info);
 
+void
+isl_null_fill_state(const struct isl_device *dev, void *state,
+                    struct isl_extent3d size);
+
 #define isl_emit_depth_stencil_hiz(dev, batch, ...) \
    isl_emit_depth_stencil_hiz_s((dev), (batch), \
                                 &(struct isl_depth_stencil_hiz_emit_info) {  __VA_ARGS__ })

@@ -753,3 +753,29 @@ isl_genX(buffer_fill_state_s)(void *state,
 
    GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &s);
 }
+
+void
+isl_genX(null_fill_state)(void *state, struct isl_extent3d size)
+{
+   struct GENX(RENDER_SURFACE_STATE) s = {
+      .SurfaceType = SURFTYPE_NULL,
+      .SurfaceFormat = ISL_FORMAT_B8G8R8A8_UNORM,
+#if GEN_GEN >= 7
+      .SurfaceArray = size.depth > 0,
+#endif
+#if GEN_GEN >= 8
+      .TileMode = YMAJOR,
+#else
+      .TiledSurface = true,
+      .TileWalk = TILEWALK_YMAJOR,
+#endif
+      .Width = size.width - 1,
+      .Height = size.height - 1,
+      .Depth = size.depth - 1,
+      .RenderTargetViewExtent = size.depth - 1,
+#if GEN_GEN <= 5
+      .ColorBufferComponentWriteDisables = 0xf,
+#endif
+   };
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &s);
+}
