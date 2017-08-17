@@ -20,6 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#include <unistd.h>
 #include "core/device.hpp"
 #include "core/platform.hpp"
 #include "pipe/p_screen.h"
@@ -192,6 +193,11 @@ device::has_doubles() const {
 bool
 device::has_unified_memory() const {
    return pipe->get_param(pipe, PIPE_CAP_UMA);
+}
+
+cl_uint
+device::mem_base_addr_align() const {
+   return sysconf(_SC_PAGESIZE);
 }
 
 std::vector<size_t>
