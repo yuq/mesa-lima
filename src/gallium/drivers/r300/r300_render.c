@@ -1125,13 +1125,14 @@ void r300_blitter_draw_rectangle(struct blitter_context *blitter,
     unsigned vertex_size =
             type == UTIL_BLITTER_ATTRIB_COLOR || !r300->draw ? 8 : 4;
     unsigned dwords = 13 + vertex_size +
-                      (type == UTIL_BLITTER_ATTRIB_TEXCOORD ? 7 : 0);
+                      (type == UTIL_BLITTER_ATTRIB_TEXCOORD_XY ? 7 : 0);
     static const union blitter_attrib zeros;
     CS_LOCALS(r300);
 
     /* XXX workaround for a lockup in MSAA resolve on SWTCL chipsets, this
      * function most probably doesn't handle type=NONE correctly */
     if ((!r300->screen->caps.has_tcl && type == UTIL_BLITTER_ATTRIB_NONE) ||
+        type == UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW ||
         num_instances > 1) {
         util_blitter_draw_rectangle(blitter, x1, y1, x2, y2, depth,
                                     num_instances, type, attrib);
@@ -1141,7 +1142,7 @@ void r300_blitter_draw_rectangle(struct blitter_context *blitter,
     if (r300->skip_rendering)
         return;
 
-    if (type == UTIL_BLITTER_ATTRIB_TEXCOORD)
+    if (type == UTIL_BLITTER_ATTRIB_TEXCOORD_XY)
         r300->sprite_coord_enable = 1;
 
     r300_update_derived_state(r300);
@@ -1158,7 +1159,7 @@ void r300_blitter_draw_rectangle(struct blitter_context *blitter,
     /* Set up GA. */
     OUT_CS_REG(R300_GA_POINT_SIZE, (height * 6) | ((width * 6) << 16));
 
-    if (type == UTIL_BLITTER_ATTRIB_TEXCOORD) {
+    if (type == UTIL_BLITTER_ATTRIB_TEXCOORD_XY) {
         /* Set up the GA to generate texcoords. */
         OUT_CS_REG(R300_GB_ENABLE, R300_GB_POINT_STUFF_ENABLE |
                    (R300_GB_TEX_STR << R300_GB_TEX0_SOURCE_SHIFT));

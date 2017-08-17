@@ -41,14 +41,15 @@ struct pipe_context;
 enum blitter_attrib_type {
    UTIL_BLITTER_ATTRIB_NONE,
    UTIL_BLITTER_ATTRIB_COLOR,
-   UTIL_BLITTER_ATTRIB_TEXCOORD
+   UTIL_BLITTER_ATTRIB_TEXCOORD_XY,
+   UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW,
 };
 
 union blitter_attrib {
    float color[4];
 
    struct {
-      float x1, y1, x2, y2;
+      float x1, y1, x2, y2, z, w;
    } texcoord;
 };
 

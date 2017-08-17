@@ -266,7 +266,11 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 		memcpy(vb+12, attrib->color, sizeof(float)*4);
 		memcpy(vb+20, attrib->color, sizeof(float)*4);
 		break;
-	case UTIL_BLITTER_ATTRIB_TEXCOORD:
+	case UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW:
+		vb[6] = vb[14] = vb[22] = attrib->texcoord.z;
+		vb[7] = vb[15] = vb[23] = attrib->texcoord.w;
+		/* fall through */
+	case UTIL_BLITTER_ATTRIB_TEXCOORD_XY:
 		vb[4] = attrib->texcoord.x1;
 		vb[5] = attrib->texcoord.y1;
 		vb[12] = attrib->texcoord.x1;
