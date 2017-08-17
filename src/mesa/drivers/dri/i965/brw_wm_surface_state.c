@@ -206,11 +206,11 @@ brw_emit_surface_state(struct brw_context *brw,
    }
 }
 
-uint32_t
-brw_update_renderbuffer_surface(struct brw_context *brw,
-                                struct gl_renderbuffer *rb,
-                                uint32_t flags, unsigned unit,
-                                uint32_t surf_index)
+static uint32_t
+gen6_update_renderbuffer_surface(struct brw_context *brw,
+                                 struct gl_renderbuffer *rb,
+                                 uint32_t flags, unsigned unit,
+                                 uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
@@ -1695,7 +1695,7 @@ void
 gen6_init_vtable_surface_functions(struct brw_context *brw)
 {
    gen4_init_vtable_surface_functions(brw);
-   brw->vtbl.update_renderbuffer_surface = brw_update_renderbuffer_surface;
+   brw->vtbl.update_renderbuffer_surface = gen6_update_renderbuffer_surface;
 }
 
 static void
