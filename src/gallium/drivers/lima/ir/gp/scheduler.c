@@ -22,14 +22,72 @@
  *
  */
 
+#include <limits.h>
+#include <stdio.h>
+
 #include "gpir.h"
+
+static int gpir_min_dist_alu(gpir_node *node)
+{
+   switch (node->op) {
+   case gpir_op_load_attribute:
+      return 0;
+
+   default:
+      return 1;
+   }
+}
+
+static int gpir_get_min_dist(gpir_node *parent, gpir_node *child)
+{
+   switch (parent->op) {
+   case gpir_op_store_varying:
+      return 0;
+
+   case gpir_op_mov:
+   case gpir_op_mul:
+   case gpir_op_add:
+   case gpir_op_sub:
+      return gpir_min_dist_alu(child);
+
+   default:
+      return 0;
+   }
+}
+
+static int gpir_max_dist_alu(gpir_node *node)
+{
+   switch (node->op) {
+   case gpir_op_load_attribute:
+      return 1;
+   default:
+      return 2;
+   }
+}
+
+static int gpir_get_max_dist(gpir_node *parent, gpir_node *child)
+{
+   switch (parent->op) {
+   case gpir_op_store_varying:
+      return 0;
+
+   case gpir_op_mov:
+   case gpir_op_mul:
+   case gpir_op_add:
+   case gpir_op_sub:
+      return gpir_max_dist_alu(child);
+
+   default:
+      return 0;
+   }
+}
 
 static void gpir_update_distance(gpir_node *node, int d)
 {
    if (d > node->distance) {
       node->distance = d;
-      for (int i = 0; i < node->num_child; i++)
-         gpir_update_distance(node->children[i], d + gpir_op_infos[node->op].latency);
+      for (int i = 0; i < node->num_parent; i++)
+         gpir_update_distance(node->parents[i], d + gpir_get_min_dist(node->parents[i], node));
    }
 }
 
@@ -38,9 +96,7 @@ static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *inse
    struct list_head *insert_pos = ready_list;
 
    list_for_each_entry(gpir_node, node, ready_list, ready) {
-      if (insert_node->distance > node->distance ||
-          (insert_node->distance == node->distance &&
-           insert_node->num_parent > node->num_parent)) {
+      if (insert_node->distance > node->distance) {
          insert_pos = &node->ready;
          break;
       }
@@ -67,22 +123,28 @@ static void gpir_schedule_node(gpir_block *block, gpir_node *node)
 
    const gpir_op_info *info = gpir_op_infos + node->op;
    int *slots = info->slots;
-   /* not schedule node without instr slot or no latency
-    * like load node which can be schduled with child */
-   if (!slots || !info->latency)
+   /* not schedule node without instr slot */
+   if (!slots)
       return;
 
-   int i, start = 0;
+   int i, start = 0, end = INT_MAX;
 
-   /* find the fist legal instr contrained by child */
-   for (i = 0; i < node->num_child; i++) {
-      gpir_node *child = node->children[i];
-      int next = child->instr_index + gpir_op_infos[child->op].latency;
-      if (next > start)
-         start = next;
+   /* find legal instr range contrained by parents */
+   for (i = 0; i < node->num_parent; i++) {
+      gpir_node *parent = node->parents[i];
+      int min = parent->instr_index + gpir_get_min_dist(parent, node);
+      int max = parent->instr_index + gpir_get_max_dist(parent, node);
+
+      if (min > end || max < start)
+         goto err_out;
+
+      if (min > start)
+         start = min;
+      if (max < end)
+         end = max;
    }
 
-   while (1) {
+   while (start <= end) {
       gpir_instr *instr = gpir_instr_array_grow(&block->instrs, start);
 
       /* find an idle slot to insert the node */
@@ -95,11 +157,15 @@ static void gpir_schedule_node(gpir_block *block, gpir_node *node)
 
       if (slots[i] != GPIR_INSTR_SLOT_END) {
          node->instr_index = start;
-         break;
+         return;
       }
 
       start++;
    }
+
+err_out:
+   fprintf(stderr, "gpir: fail to schedule node %s %d\n",
+           gpir_op_infos[node->op].name, node->index);
 }
 
 static void gpir_schedule_ready_list(gpir_block *block, struct list_head *ready_list)
@@ -112,20 +178,28 @@ static void gpir_schedule_ready_list(gpir_block *block, struct list_head *ready_
 
    gpir_schedule_node(block, node);
 
-   for (int i = 0; i < node->num_parent; i++) {
-      gpir_node *parent = node->parents[i];
-      bool ready = true;
+   for (int i = 0; i < node->num_child; i++) {
+      gpir_node *child = node->children[i];
+      /* process same child node only once */
+      for (int j = 0; j < i; j++) {
+         if (child == node->children[j]) {
+            child = NULL;
+            break;
+         }
+      }
+      if (!child)
+         continue;
 
-      /* after all children has been scheduled */
-      for (int j = 0; j < parent->num_child; j++) {
-         if (!parent->children[j]->scheduled) {
+      bool ready = true;
+      /* after all parents has been scheduled */
+      for (int j = 0; j < child->num_parent; j++) {
+         if (!child->parents[j]->scheduled) {
             ready = false;
             break;
          }
       }
-
       if (ready)
-         gpir_insert_ready_list(ready_list, parent);
+         gpir_insert_ready_list(ready_list, child);
    }
 
    gpir_schedule_ready_list(block, ready_list);
@@ -133,18 +207,25 @@ static void gpir_schedule_ready_list(gpir_block *block, struct list_head *ready_
 
 static void gpir_schedule_block(gpir_block *block)
 {
-   /* calculate distance start from root nodes */
+   /* schedule node start from root to leaf (backwork schedule)
+    * we can also use forword schedule from leaf to root which more
+    * suites the instruction execution sequence and human mind,
+    * but backword schedule bring us some convenience for inserting
+    * move and load nodes.
+    */
+
+   /* calculate distance start from leaf nodes */
    list_for_each_entry(gpir_node, node, &block->node_list, list) {
-      if (!node->num_parent)
+      if (!node->num_child)
          gpir_update_distance(node, 0);
    }
 
    struct list_head ready_list;
    list_inithead(&ready_list);
 
-   /* construct the ready list from leaf nodes */
+   /* construct the ready list from root nodes */
    list_for_each_entry(gpir_node, node, &block->node_list, list) {
-      if (!node->num_child)
+      if (!node->num_parent)
          gpir_insert_ready_list(&ready_list, node);
    }
 
