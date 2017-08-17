@@ -37,10 +37,6 @@ __gen_combine_address(void *data, void *loc, uint64_t addr, uint32_t delta)
 
 #include "isl_priv.h"
 
-#define __PASTE2(x, y) x ## y
-#define __PASTE(x, y) __PASTE2(x, y)
-#define isl_genX(x) __PASTE(isl_, genX(x))
-
 static const uint32_t isl_to_gen_ds_surftype[] = {
 #if GEN_GEN >= 9
    /* From the SKL PRM, "3DSTATE_DEPTH_STENCIL::SurfaceType":
