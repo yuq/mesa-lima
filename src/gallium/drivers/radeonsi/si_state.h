@@ -195,13 +195,12 @@ enum {
  * are contiguous:
  *
  *  0 - rw buffers
- *  1 - vertex const buffers
- *  2 - vertex shader buffers
+ *  1 - vertex const and shader buffers
+ *  2 - vertex samplers and images
+ *  3 - fragment const and shader buffer
  *   ...
- *  5 - fragment const buffers
- *   ...
- *  21 - compute const buffers
- *   ...
+ *  11 - compute const and shader buffers
+ *  12 - compute samplers and images
  */
 enum {
 	SI_SHADER_DESCS_CONST_AND_SHADER_BUFFERS,
