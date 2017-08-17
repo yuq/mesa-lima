@@ -44,6 +44,14 @@ enum blitter_attrib_type {
    UTIL_BLITTER_ATTRIB_TEXCOORD
 };
 
+union blitter_attrib {
+   float color[4];
+
+   struct {
+      float x1, y1, x2, y2;
+   } texcoord;
+};
+
 struct blitter_context
 {
    /**
@@ -75,7 +83,7 @@ struct blitter_context
                           int x1, int y1, int x2, int y2,
                           float depth,
                           enum blitter_attrib_type type,
-                          const union pipe_color_union *color);
+                          const union blitter_attrib *attrib);
 
    /* Whether the blitter is running. */
    bool running;
@@ -148,7 +156,7 @@ void util_blitter_set_texture_multisample(struct blitter_context *blitter,
 void util_blitter_draw_rectangle(struct blitter_context *blitter,
                                  int x1, int y1, int x2, int y2, float depth,
                                  enum blitter_attrib_type type,
-                                 const union pipe_color_union *attrib);
+                                 const union blitter_attrib *attrib);
 
 
 /*

@@ -767,7 +767,7 @@ void r600_gfx_wait_fence(struct r600_common_context *ctx,
 void r600_draw_rectangle(struct blitter_context *blitter,
 			 int x1, int y1, int x2, int y2, float depth,
 			 enum blitter_attrib_type type,
-			 const union pipe_color_union *attrib);
+			 const union blitter_attrib *attrib);
 bool r600_common_screen_init(struct r600_common_screen *rscreen,
 			     struct radeon_winsys *ws);
 void r600_destroy_common_screen(struct r600_common_screen *rscreen);

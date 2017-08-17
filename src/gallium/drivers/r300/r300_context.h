@@ -746,7 +746,7 @@ void r300_blitter_draw_rectangle(struct blitter_context *blitter,
                                  int x1, int y1, int x2, int y2,
                                  float depth,
                                  enum blitter_attrib_type type,
-                                 const union pipe_color_union *attrib);
+                                 const union blitter_attrib *attrib);
 
 /* r300_state.c */
 enum r300_fb_state_change {

@@ -213,7 +213,7 @@ void r600_gfx_wait_fence(struct r600_common_context *ctx,
 void r600_draw_rectangle(struct blitter_context *blitter,
 			 int x1, int y1, int x2, int y2, float depth,
 			 enum blitter_attrib_type type,
-			 const union pipe_color_union *attrib)
+			 const union blitter_attrib *attrib)
 {
 	struct r600_common_context *rctx =
 		(struct r600_common_context*)util_blitter_get_pipe(blitter);
@@ -261,17 +261,17 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 
 	switch (type) {
 	case UTIL_BLITTER_ATTRIB_COLOR:
-		memcpy(vb+4, attrib->f, sizeof(float)*4);
-		memcpy(vb+12, attrib->f, sizeof(float)*4);
-		memcpy(vb+20, attrib->f, sizeof(float)*4);
+		memcpy(vb+4, attrib->color, sizeof(float)*4);
+		memcpy(vb+12, attrib->color, sizeof(float)*4);
+		memcpy(vb+20, attrib->color, sizeof(float)*4);
 		break;
 	case UTIL_BLITTER_ATTRIB_TEXCOORD:
-		vb[4] = attrib->f[0]; /* x1 */
-		vb[5] = attrib->f[1]; /* y1 */
-		vb[12] = attrib->f[0]; /* x1 */
-		vb[13] = attrib->f[3]; /* y2 */
-		vb[20] = attrib->f[2]; /* x2 */
-		vb[21] = attrib->f[1]; /* y1 */
+		vb[4] = attrib->texcoord.x1;
+		vb[5] = attrib->texcoord.y1;
+		vb[12] = attrib->texcoord.x1;
+		vb[13] = attrib->texcoord.y2;
+		vb[20] = attrib->texcoord.x2;
+		vb[21] = attrib->texcoord.y1;
 		break;
 	default:; /* Nothing to do. */
 	}
