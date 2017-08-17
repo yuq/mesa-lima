@@ -356,7 +356,9 @@ static void r600_surface_import_metadata(struct r600_common_screen *rscreen,
 			*array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
 
 		*is_scanout = metadata->u.gfx9.swizzle_mode == 0 ||
-			metadata->u.gfx9.swizzle_mode % 4 == 2;
+			      metadata->u.gfx9.swizzle_mode % 4 == 2;
+
+		surf->u.gfx9.surf.swizzle_mode = metadata->u.gfx9.swizzle_mode;
 	} else {
 		surf->u.legacy.pipe_config = metadata->u.legacy.pipe_config;
 		surf->u.legacy.bankw = metadata->u.legacy.bankw;
@@ -1520,11 +1522,6 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 
 	if (rscreen->apply_opaque_metadata)
 		rscreen->apply_opaque_metadata(rscreen, rtex, &metadata);
-
-	/* Validate that addrlib arrived at the same surface parameters. */
-	if (rscreen->chip_class >= GFX9) {
-		assert(metadata.u.gfx9.swizzle_mode == surface.u.gfx9.surf.swizzle_mode);
-	}
 
 	assert(rtex->surface.tile_swizzle == 0);
 	return &rtex->resource.b.b;
