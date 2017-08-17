@@ -2119,10 +2119,11 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 
 	if (ps->info.fs.layer_input) {
 		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_LAYER];
-		if (vs_offset != AC_EXP_PARAM_UNDEFINED) {
+		if (vs_offset != AC_EXP_PARAM_UNDEFINED)
 			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
-			++ps_offset;
-		}
+		else
+			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(AC_EXP_PARAM_DEFAULT_VAL_0000, true);
+		++ps_offset;
 	}
 
 	if (ps->info.fs.has_pcoord) {
