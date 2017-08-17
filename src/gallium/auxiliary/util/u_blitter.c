@@ -1268,7 +1268,8 @@ static void blitter_draw(struct blitter_context_priv *ctx,
 }
 
 void util_blitter_draw_rectangle(struct blitter_context *blitter,
-                                 int x1, int y1, int x2, int y2, float depth,
+                                 int x1, int y1, int x2, int y2,
+                                 float depth, unsigned num_instances,
                                  enum blitter_attrib_type type,
                                  const union blitter_attrib *attrib)
 {
@@ -1286,7 +1287,7 @@ void util_blitter_draw_rectangle(struct blitter_context *blitter,
       default:;
    }
 
-   blitter_draw(ctx, x1, y1, x2, y2, depth, 1);
+   blitter_draw(ctx, x1, y1, x2, y2, depth, num_instances);
 }
 
 static void *get_clear_blend_state(struct blitter_context_priv *ctx,
@@ -1383,18 +1384,17 @@ static void util_blitter_clear_custom(struct blitter_context *blitter,
    pipe->bind_vertex_elements_state(pipe, ctx->velem_state);
    bind_fs_write_all_cbufs(ctx);
 
+   union blitter_attrib attrib;
+   memcpy(attrib.color, color->ui, sizeof(color->ui));
+
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, false, true);
-      blitter_set_clear_color(ctx, color->f);
-      blitter_draw(ctx, 0, 0, width, height, depth, num_layers);
-   }
-   else {
-      union blitter_attrib attrib;
-
-      memcpy(attrib.color, color->ui, sizeof(color->ui));
+      blitter->draw_rectangle(blitter, 0, 0, width, height, (float) depth,
+                              num_layers, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
+   } else {
       blitter_set_common_draw_rect_state(ctx, false, false);
       blitter->draw_rectangle(blitter, 0, 0, width, height, (float) depth,
-                              UTIL_BLITTER_ATTRIB_COLOR, &attrib);
+                              1, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
    }
 
    util_blitter_restore_vertex_states(blitter);
@@ -1644,7 +1644,7 @@ static void do_blits(struct blitter_context_priv *ctx,
       pipe->set_sample_mask(pipe, ~0);
       ctx->base.draw_rectangle(&ctx->base, dstbox->x, dstbox->y,
                                dstbox->x + dstbox->width,
-                               dstbox->y + dstbox->height, 0,
+                               dstbox->y + dstbox->height, 0, 1,
                                UTIL_BLITTER_ATTRIB_TEXCOORD, &coord);
    } else {
       /* Draw the quad with the generic codepath. */
@@ -2103,19 +2103,18 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
 
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
 
+   union blitter_attrib attrib;
+   memcpy(attrib.color, color->ui, sizeof(color->ui));
+
    num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, false, true);
-      blitter_set_clear_color(ctx, color->f);
-      blitter_draw(ctx, dstx, dsty, dstx+width, dsty+height, 0, num_layers);
-   }
-   else {
-      union blitter_attrib attrib;
-
-      memcpy(attrib.color, color->ui, sizeof(color->ui));
+      blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height, 0,
+                              num_layers, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
+   } else {
       blitter_set_common_draw_rect_state(ctx, false, false);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height, 0,
-                              UTIL_BLITTER_ATTRIB_COLOR, &attrib);
+                              1, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
    }
 
    util_blitter_restore_vertex_states(blitter);
@@ -2187,12 +2186,13 @@ void util_blitter_clear_depth_stencil(struct blitter_context *blitter,
    num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, false, true);
-      blitter_draw(ctx, dstx, dsty, dstx+width, dsty+height, (float) depth, num_layers);
-   }
-   else {
+      blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height,
+                              depth, num_layers,
+                              UTIL_BLITTER_ATTRIB_NONE, NULL);
+   } else {
       blitter_set_common_draw_rect_state(ctx, false, false);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height,
-                              (float) depth,
+                              depth, 1,
                               UTIL_BLITTER_ATTRIB_NONE, NULL);
    }
 
@@ -2253,7 +2253,7 @@ void util_blitter_custom_depth_stencil(struct blitter_context *blitter,
    blitter_set_common_draw_rect_state(ctx, false, false);
    blitter_set_dst_dimensions(ctx, zsurf->width, zsurf->height);
    blitter->draw_rectangle(blitter, 0, 0, zsurf->width, zsurf->height, depth,
-                           UTIL_BLITTER_ATTRIB_NONE, NULL);
+                           1, UTIL_BLITTER_ATTRIB_NONE, NULL);
 
    util_blitter_restore_vertex_states(blitter);
    util_blitter_restore_fragment_states(blitter);
@@ -2453,7 +2453,7 @@ void util_blitter_custom_resolve_color(struct blitter_context *blitter,
    blitter_set_common_draw_rect_state(ctx, false, false);
    blitter_set_dst_dimensions(ctx, src->width0, src->height0);
    blitter->draw_rectangle(blitter, 0, 0, src->width0, src->height0,
-                           0, 0, NULL);
+                           0, 1, 0, NULL);
    util_blitter_restore_fb_state(blitter);
    util_blitter_restore_vertex_states(blitter);
    util_blitter_restore_fragment_states(blitter);
@@ -2503,7 +2503,7 @@ void util_blitter_custom_color(struct blitter_context *blitter,
    blitter_set_common_draw_rect_state(ctx, false, false);
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
    blitter->draw_rectangle(blitter, 0, 0, dstsurf->width, dstsurf->height,
-                           0, 0, NULL);
+                           0, 1, 0, NULL);
 
    util_blitter_restore_vertex_states(blitter);
    util_blitter_restore_fragment_states(blitter);

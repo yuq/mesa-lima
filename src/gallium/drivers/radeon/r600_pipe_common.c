@@ -211,7 +211,8 @@ void r600_gfx_wait_fence(struct r600_common_context *ctx,
 }
 
 void r600_draw_rectangle(struct blitter_context *blitter,
-			 int x1, int y1, int x2, int y2, float depth,
+			 int x1, int y1, int x2, int y2,
+			 float depth, unsigned num_instances,
 			 enum blitter_attrib_type type,
 			 const union blitter_attrib *attrib)
 {
@@ -277,8 +278,14 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	}
 
 	/* draw */
-	util_draw_vertex_buffer(&rctx->b, NULL, buf, blitter->vb_slot, offset,
-				R600_PRIM_RECTANGLE_LIST, 3, 2);
+	struct pipe_vertex_buffer vbuffer = {};
+	vbuffer.buffer.resource = buf;
+	vbuffer.stride = 2 * 4 * sizeof(float); /* vertex size */
+	vbuffer.buffer_offset = offset;
+
+	rctx->b.set_vertex_buffers(&rctx->b, blitter->vb_slot, 1, &vbuffer);
+	util_draw_arrays_instanced(&rctx->b, R600_PRIM_RECTANGLE_LIST, 0, 3,
+				   0, num_instances);
 	pipe_resource_reference(&buf, NULL);
 }
 

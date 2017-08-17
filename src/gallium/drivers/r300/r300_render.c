@@ -1114,7 +1114,7 @@ struct draw_stage* r300_draw_stage(struct r300_context* r300)
  * somewhat inefficient. Instead we use a rectangular point sprite. */
 void r300_blitter_draw_rectangle(struct blitter_context *blitter,
                                  int x1, int y1, int x2, int y2,
-                                 float depth,
+                                 float depth, unsigned num_instances,
                                  enum blitter_attrib_type type,
                                  const union blitter_attrib *attrib)
 {
@@ -1131,8 +1131,10 @@ void r300_blitter_draw_rectangle(struct blitter_context *blitter,
 
     /* XXX workaround for a lockup in MSAA resolve on SWTCL chipsets, this
      * function most probably doesn't handle type=NONE correctly */
-    if (!r300->screen->caps.has_tcl && type == UTIL_BLITTER_ATTRIB_NONE) {
-        util_blitter_draw_rectangle(blitter, x1, y1, x2, y2, depth, type, attrib);
+    if ((!r300->screen->caps.has_tcl && type == UTIL_BLITTER_ATTRIB_NONE) ||
+        num_instances > 1) {
+        util_blitter_draw_rectangle(blitter, x1, y1, x2, y2, depth,
+                                    num_instances, type, attrib);
         return;
     }
 

@@ -744,7 +744,7 @@ void r300_plug_in_stencil_ref_fallback(struct r300_context *r300);
 void r500_emit_index_bias(struct r300_context *r300, int index_bias);
 void r300_blitter_draw_rectangle(struct blitter_context *blitter,
                                  int x1, int y1, int x2, int y2,
-                                 float depth,
+                                 float depth, unsigned num_instances,
                                  enum blitter_attrib_type type,
                                  const union blitter_attrib *attrib);
 
