@@ -68,7 +68,9 @@ struct blitter_context_priv
    /* Constant state objects. */
    /* Vertex shaders. */
    void *vs; /**< Vertex shader which passes {pos, generic} to the output.*/
-   void *vs_pos_only[4]; /**< Vertex shader which passes pos to the output.*/
+   void *vs_nogeneric;
+   void *vs_pos_only[4]; /**< Vertex shader which passes pos to the output
+                              for clear_buffer/copy_buffer.*/
    void *vs_layered; /**< Vertex shader which sets LAYER = INSTANCEID. */
 
    /* Fragment shaders. */
@@ -351,7 +353,7 @@ static void bind_vs_pos_only(struct blitter_context_priv *ctx,
    pipe->bind_vs_state(pipe, ctx->vs_pos_only[index]);
 }
 
-static void bind_vs_passthrough(struct blitter_context_priv *ctx)
+static void bind_vs_passthrough_pos_generic(struct blitter_context_priv *ctx)
 {
    struct pipe_context *pipe = ctx->base.pipe;
 
@@ -365,6 +367,23 @@ static void bind_vs_passthrough(struct blitter_context_priv *ctx)
    }
 
    pipe->bind_vs_state(pipe, ctx->vs);
+}
+
+static void bind_vs_passthrough_pos(struct blitter_context_priv *ctx)
+{
+   struct pipe_context *pipe = ctx->base.pipe;
+
+   if (!ctx->vs_nogeneric) {
+      const uint semantic_names[] = { TGSI_SEMANTIC_POSITION };
+      const uint semantic_indices[] = { 0 };
+
+      ctx->vs_nogeneric =
+         util_make_vertex_passthrough_shader(pipe, 1,
+                                             semantic_names,
+                                             semantic_indices, false);
+   }
+
+   pipe->bind_vs_state(pipe, ctx->vs_nogeneric);
 }
 
 static void bind_vs_layered(struct blitter_context_priv *ctx)
@@ -444,6 +463,8 @@ void util_blitter_destroy(struct blitter_context *blitter)
       pipe->delete_rasterizer_state(pipe, ctx->rs_discard_state);
    if (ctx->vs)
       pipe->delete_vs_state(pipe, ctx->vs);
+   if (ctx->vs_nogeneric)
+      pipe->delete_vs_state(pipe, ctx->vs_nogeneric);
    for (i = 0; i < 4; i++)
       if (ctx->vs_pos_only[i])
          pipe->delete_vs_state(pipe, ctx->vs_pos_only[i]);
@@ -1193,7 +1214,8 @@ void util_blitter_cache_all_shaders(struct blitter_context *blitter)
 
 static void blitter_set_common_draw_rect_state(struct blitter_context_priv *ctx,
                                                bool scissor,
-                                               bool vs_layered)
+                                               bool vs_layered,
+                                               bool vs_pass_generic)
 {
    struct pipe_context *pipe = ctx->base.pipe;
 
@@ -1201,8 +1223,10 @@ static void blitter_set_common_draw_rect_state(struct blitter_context_priv *ctx,
                                              : ctx->rs_state);
    if (vs_layered)
       bind_vs_layered(ctx);
+   else if (vs_pass_generic)
+      bind_vs_passthrough_pos_generic(ctx);
    else
-      bind_vs_passthrough(ctx);
+      bind_vs_passthrough_pos(ctx);
 
    if (ctx->has_geometry_shader)
       pipe->bind_gs_state(pipe, NULL);
@@ -1364,14 +1388,18 @@ static void util_blitter_clear_custom(struct blitter_context *blitter,
    union blitter_attrib attrib;
    memcpy(attrib.color, color->ui, sizeof(color->ui));
 
+   bool pass_generic = (clear_buffers & PIPE_CLEAR_COLOR) != 0;
+   enum blitter_attrib_type type = pass_generic ? UTIL_BLITTER_ATTRIB_COLOR :
+                                                  UTIL_BLITTER_ATTRIB_NONE;
+
    if (num_layers > 1 && ctx->has_layered) {
-      blitter_set_common_draw_rect_state(ctx, false, true);
+      blitter_set_common_draw_rect_state(ctx, false, true, pass_generic);
       blitter->draw_rectangle(blitter, 0, 0, width, height, (float) depth,
-                              num_layers, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
+                              num_layers, type, &attrib);
    } else {
-      blitter_set_common_draw_rect_state(ctx, false, false);
+      blitter_set_common_draw_rect_state(ctx, false, false, pass_generic);
       blitter->draw_rectangle(blitter, 0, 0, width, height, (float) depth,
-                              1, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
+                              1, type, &attrib);
    }
 
    util_blitter_restore_vertex_states(blitter);
@@ -1917,7 +1945,7 @@ void util_blitter_blit_generic(struct blitter_context *blitter,
       pipe->set_scissor_states(pipe, 0, 1, scissor);
    }
 
-   blitter_set_common_draw_rect_state(ctx, scissor != NULL, false);
+   blitter_set_common_draw_rect_state(ctx, scissor != NULL, false, true);
 
    do_blits(ctx, dst, dstbox, src, src_width0, src_height0,
             srcbox, blit_depth || blit_stencil, use_txf);
@@ -2024,7 +2052,7 @@ void util_blitter_generate_mipmap(struct blitter_context *blitter,
                              0, 1, &sampler_state);
 
    pipe->bind_vertex_elements_state(pipe, ctx->velem_state);
-   blitter_set_common_draw_rect_state(ctx, false, false);
+   blitter_set_common_draw_rect_state(ctx, false, false, true);
 
    for (src_level = base_level; src_level < last_level; src_level++) {
       struct pipe_box dstbox = {0}, srcbox = {0};
@@ -2117,11 +2145,11 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
 
    num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
    if (num_layers > 1 && ctx->has_layered) {
-      blitter_set_common_draw_rect_state(ctx, false, true);
+      blitter_set_common_draw_rect_state(ctx, false, true, true);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height, 0,
                               num_layers, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
    } else {
-      blitter_set_common_draw_rect_state(ctx, false, false);
+      blitter_set_common_draw_rect_state(ctx, false, false, true);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height, 0,
                               1, UTIL_BLITTER_ATTRIB_COLOR, &attrib);
    }
@@ -2194,12 +2222,12 @@ void util_blitter_clear_depth_stencil(struct blitter_context *blitter,
 
    num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
    if (num_layers > 1 && ctx->has_layered) {
-      blitter_set_common_draw_rect_state(ctx, false, true);
+      blitter_set_common_draw_rect_state(ctx, false, true, false);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height,
                               depth, num_layers,
                               UTIL_BLITTER_ATTRIB_NONE, NULL);
    } else {
-      blitter_set_common_draw_rect_state(ctx, false, false);
+      blitter_set_common_draw_rect_state(ctx, false, false, false);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height,
                               depth, 1,
                               UTIL_BLITTER_ATTRIB_NONE, NULL);
@@ -2259,7 +2287,7 @@ void util_blitter_custom_depth_stencil(struct blitter_context *blitter,
    pipe->set_framebuffer_state(pipe, &fb_state);
    pipe->set_sample_mask(pipe, sample_mask);
 
-   blitter_set_common_draw_rect_state(ctx, false, false);
+   blitter_set_common_draw_rect_state(ctx, false, false, false);
    blitter_set_dst_dimensions(ctx, zsurf->width, zsurf->height);
    blitter->draw_rectangle(blitter, 0, 0, zsurf->width, zsurf->height, depth,
                            1, UTIL_BLITTER_ATTRIB_NONE, NULL);
@@ -2459,7 +2487,7 @@ void util_blitter_custom_resolve_color(struct blitter_context *blitter,
    fb_state.zsbuf = NULL;
    pipe->set_framebuffer_state(pipe, &fb_state);
 
-   blitter_set_common_draw_rect_state(ctx, false, false);
+   blitter_set_common_draw_rect_state(ctx, false, false, false);
    blitter_set_dst_dimensions(ctx, src->width0, src->height0);
    blitter->draw_rectangle(blitter, 0, 0, src->width0, src->height0,
                            0, 1, 0, NULL);
@@ -2509,7 +2537,7 @@ void util_blitter_custom_color(struct blitter_context *blitter,
    pipe->set_framebuffer_state(pipe, &fb_state);
    pipe->set_sample_mask(pipe, ~0);
 
-   blitter_set_common_draw_rect_state(ctx, false, false);
+   blitter_set_common_draw_rect_state(ctx, false, false, false);
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
    blitter->draw_rectangle(blitter, 0, 0, dstsurf->width, dstsurf->height,
                            0, 1, 0, NULL);
