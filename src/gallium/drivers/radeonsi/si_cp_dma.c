@@ -450,6 +450,9 @@ static void cik_prefetch_shader_async(struct si_context *sctx,
 
 static void cik_prefetch_VBO_descriptors(struct si_context *sctx)
 {
+	if (!sctx->vertex_elements)
+		return;
+
 	cik_prefetch_TC_L2_async(sctx, &sctx->vertex_buffers.buffer->b.b,
 				 sctx->vertex_buffers.buffer_offset,
 				 sctx->vertex_elements->desc_list_byte_size);
