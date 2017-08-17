@@ -872,22 +872,10 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
       ANV_FROM_HANDLE(anv_framebuffer, framebuffer, begin->framebuffer);
       assert(pass->attachment_count == framebuffer->attachment_count);
 
-      struct GENX(RENDER_SURFACE_STATE) null_ss = {
-         .SurfaceType = SURFTYPE_NULL,
-         .SurfaceArray = framebuffer->layers > 0,
-         .SurfaceFormat = ISL_FORMAT_R8G8B8A8_UNORM,
-#if GEN_GEN >= 8
-         .TileMode = YMAJOR,
-#else
-         .TiledSurface = true,
-#endif
-         .Width = framebuffer->width - 1,
-         .Height = framebuffer->height - 1,
-         .Depth = framebuffer->layers - 1,
-         .RenderTargetViewExtent = framebuffer->layers - 1,
-      };
-      GENX(RENDER_SURFACE_STATE_pack)(NULL, state->null_surface_state.map,
-                                      &null_ss);
+      isl_null_fill_state(isl_dev, state->null_surface_state.map,
+                          isl_extent3d(framebuffer->width,
+                                       framebuffer->height,
+                                       framebuffer->layers));
 
       for (uint32_t i = 0; i < pass->attachment_count; ++i) {
          struct anv_render_pass_attachment *att = &pass->attachments[i];
