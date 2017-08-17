@@ -515,7 +515,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450ModfStruct: {
       nir_ssa_def *sign = nir_fsign(nb, src[0]);
       nir_ssa_def *abs = nir_fabs(nb, src[0]);
-      assert(glsl_type_is_struct(val->ssa->type));
+      vtn_assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = nir_fmul(nb, sign, nir_ffract(nb, abs));
       val->ssa->elems[1]->def = nir_fmul(nb, sign, nir_ffloor(nb, abs));
       return;
@@ -690,7 +690,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    }
 
    case GLSLstd450FrexpStruct: {
-      assert(glsl_type_is_struct(val->ssa->type));
+      vtn_assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = build_frexp(nb, src[0],
                                             &val->ssa->elems[1]->def);
       return;

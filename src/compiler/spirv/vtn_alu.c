@@ -243,29 +243,29 @@ vtn_handle_bitcast(struct vtn_builder *b, struct vtn_ssa_value *dest,
    unsigned dest_bit_size = glsl_get_bit_size(dest->type);
    unsigned src_components = src->num_components;
    unsigned dest_components = glsl_get_vector_elements(dest->type);
-   assert(src_bit_size * src_components == dest_bit_size * dest_components);
+   vtn_assert(src_bit_size * src_components == dest_bit_size * dest_components);
 
    nir_ssa_def *dest_chan[4];
    if (src_bit_size > dest_bit_size) {
-      assert(src_bit_size % dest_bit_size == 0);
+      vtn_assert(src_bit_size % dest_bit_size == 0);
       unsigned divisor = src_bit_size / dest_bit_size;
       for (unsigned comp = 0; comp < src_components; comp++) {
-         assert(src_bit_size == 64);
-         assert(dest_bit_size == 32);
+         vtn_assert(src_bit_size == 64);
+         vtn_assert(dest_bit_size == 32);
          nir_ssa_def *split =
             nir_unpack_64_2x32(&b->nb, nir_channel(&b->nb, src, comp));
          for (unsigned i = 0; i < divisor; i++)
             dest_chan[divisor * comp + i] = nir_channel(&b->nb, split, i);
       }
    } else {
-      assert(dest_bit_size % src_bit_size == 0);
+      vtn_assert(dest_bit_size % src_bit_size == 0);
       unsigned divisor = dest_bit_size / src_bit_size;
       for (unsigned comp = 0; comp < dest_components; comp++) {
          unsigned channels = ((1 << divisor) - 1) << (comp * divisor);
          nir_ssa_def *src_chan =
             nir_channels(&b->nb, src, channels);
-         assert(dest_bit_size == 64);
-         assert(src_bit_size == 32);
+         vtn_assert(dest_bit_size == 64);
+         vtn_assert(src_bit_size == 32);
          dest_chan[comp] = nir_pack_64_2x32(&b->nb, src_chan);
       }
    }
@@ -374,7 +374,7 @@ static void
 handle_no_contraction(struct vtn_builder *b, struct vtn_value *val, int member,
                       const struct vtn_decoration *dec, void *_void)
 {
-   assert(dec->scope == VTN_DEC_DECORATION);
+   vtn_assert(dec->scope == VTN_DEC_DECORATION);
    if (dec->decoration != SpvDecorationNoContraction)
       return;
 
@@ -407,7 +407,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    val->ssa = vtn_create_ssa_value(b, type);
    nir_ssa_def *src[4] = { NULL, };
    for (unsigned i = 0; i < num_inputs; i++) {
-      assert(glsl_type_is_vector_or_scalar(vtn_src[i]->type));
+      vtn_assert(glsl_type_is_vector_or_scalar(vtn_src[i]->type));
       src[i] = vtn_src[i]->def;
    }
 
@@ -459,25 +459,25 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpIAddCarry:
-      assert(glsl_type_is_struct(val->ssa->type));
+      vtn_assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = nir_iadd(&b->nb, src[0], src[1]);
       val->ssa->elems[1]->def = nir_uadd_carry(&b->nb, src[0], src[1]);
       break;
 
    case SpvOpISubBorrow:
-      assert(glsl_type_is_struct(val->ssa->type));
+      vtn_assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = nir_isub(&b->nb, src[0], src[1]);
       val->ssa->elems[1]->def = nir_usub_borrow(&b->nb, src[0], src[1]);
       break;
 
    case SpvOpUMulExtended:
-      assert(glsl_type_is_struct(val->ssa->type));
+      vtn_assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = nir_imul(&b->nb, src[0], src[1]);
       val->ssa->elems[1]->def = nir_umul_high(&b->nb, src[0], src[1]);
       break;
 
    case SpvOpSMulExtended:
-      assert(glsl_type_is_struct(val->ssa->type));
+      vtn_assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = nir_imul(&b->nb, src[0], src[1]);
       val->ssa->elems[1]->def = nir_imul_high(&b->nb, src[0], src[1]);
       break;

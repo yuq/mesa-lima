@@ -260,7 +260,7 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
       return val->ssa;
 
    case vtn_value_type_pointer:
-      assert(val->pointer->ptr_type && val->pointer->ptr_type->type);
+      vtn_assert(val->pointer->ptr_type && val->pointer->ptr_type->type);
       struct vtn_ssa_value *ssa =
          vtn_create_ssa_value(b, val->pointer->ptr_type->type);
       ssa->def = vtn_pointer_to_ssa(b, val->pointer);
@@ -296,7 +296,7 @@ vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
    while (w < end) {
       SpvOp opcode = w[0] & SpvOpCodeMask;
       unsigned count = w[0] >> SpvWordCountShift;
-      assert(count >= 1 && w + count <= end);
+      vtn_assert(count >= 1 && w + count <= end);
 
       b->spirv_offset = (uint8_t *)w - (uint8_t *)b->spirv;
 
@@ -352,8 +352,7 @@ vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
    case SpvOpExtInst: {
       struct vtn_value *val = vtn_value(b, w[3], vtn_value_type_extension);
       bool handled = val->ext_handler(b, w[4], w, count);
-      (void)handled;
-      assert(handled);
+      vtn_assert(handled);
       break;
    }
 
@@ -374,7 +373,7 @@ _foreach_decoration_helper(struct vtn_builder *b,
       if (dec->scope == VTN_DEC_DECORATION) {
          member = parent_member;
       } else if (dec->scope >= VTN_DEC_STRUCT_MEMBER0) {
-         assert(parent_member == -1);
+         vtn_assert(parent_member == -1);
          member = dec->scope - VTN_DEC_STRUCT_MEMBER0;
       } else {
          /* Not a decoration */
@@ -382,7 +381,7 @@ _foreach_decoration_helper(struct vtn_builder *b,
       }
 
       if (dec->group) {
-         assert(dec->group->value_type == vtn_value_type_decoration_group);
+         vtn_assert(dec->group->value_type == vtn_value_type_decoration_group);
          _foreach_decoration_helper(b, base_value, member, dec->group,
                                     cb, data);
       } else {
@@ -412,7 +411,7 @@ vtn_foreach_execution_mode(struct vtn_builder *b, struct vtn_value *value,
       if (dec->scope != VTN_DEC_EXECUTION_MODE)
          continue;
 
-      assert(dec->group == NULL);
+      vtn_assert(dec->group == NULL);
       cb(b, value, dec, data);
    }
 }
@@ -543,7 +542,7 @@ mutable_matrix_member(struct vtn_builder *b, struct vtn_type *type, int member)
       type = type->array_element;
    }
 
-   assert(glsl_type_is_matrix(type->type));
+   vtn_assert(glsl_type_is_matrix(type->type));
 
    return type;
 }
@@ -558,7 +557,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
    if (member < 0)
       return;
 
-   assert(member < ctx->num_fields);
+   vtn_assert(member < ctx->num_fields);
 
    switch (dec->decoration) {
    case SpvDecorationNonWritable:
@@ -582,7 +581,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
       break;
    case SpvDecorationStream:
       /* Vulkan only allows one GS stream */
-      assert(dec->literals[0] == 0);
+      vtn_assert(dec->literals[0] == 0);
       break;
    case SpvDecorationLocation:
       ctx->fields[member].location = dec->literals[0];
@@ -661,7 +660,7 @@ struct_member_matrix_stride_cb(struct vtn_builder *b,
 {
    if (dec->decoration != SpvDecorationMatrixStride)
       return;
-   assert(member >= 0);
+   vtn_assert(member >= 0);
 
    struct member_decoration_ctx *ctx = void_ctx;
 
@@ -671,7 +670,7 @@ struct_member_matrix_stride_cb(struct vtn_builder *b,
       mat_type->stride = mat_type->array_element->stride;
       mat_type->array_element->stride = dec->literals[0];
    } else {
-      assert(mat_type->array_element->stride > 0);
+      vtn_assert(mat_type->array_element->stride > 0);
       mat_type->stride = dec->literals[0];
    }
 }
@@ -688,17 +687,17 @@ type_decoration_cb(struct vtn_builder *b,
 
    switch (dec->decoration) {
    case SpvDecorationArrayStride:
-      assert(type->base_type == vtn_base_type_matrix ||
-             type->base_type == vtn_base_type_array ||
-             type->base_type == vtn_base_type_pointer);
+      vtn_assert(type->base_type == vtn_base_type_matrix ||
+                 type->base_type == vtn_base_type_array ||
+                 type->base_type == vtn_base_type_pointer);
       type->stride = dec->literals[0];
       break;
    case SpvDecorationBlock:
-      assert(type->base_type == vtn_base_type_struct);
+      vtn_assert(type->base_type == vtn_base_type_struct);
       type->block = true;
       break;
    case SpvDecorationBufferBlock:
-      assert(type->base_type == vtn_base_type_struct);
+      vtn_assert(type->base_type == vtn_base_type_struct);
       type->buffer_block = true;
       break;
    case SpvDecorationGLSLShared:
@@ -850,7 +849,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *base = vtn_value(b, w[2], vtn_value_type_type)->type;
       unsigned elems = w[3];
 
-      assert(glsl_type_is_scalar(base->type));
+      vtn_assert(glsl_type_is_scalar(base->type));
       val->type->base_type = vtn_base_type_vector;
       val->type->type = glsl_vector_type(glsl_get_base_type(base->type), elems);
       val->type->stride = glsl_get_bit_size(base->type) / 8;
@@ -862,12 +861,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *base = vtn_value(b, w[2], vtn_value_type_type)->type;
       unsigned columns = w[3];
 
-      assert(glsl_type_is_vector(base->type));
+      vtn_assert(glsl_type_is_vector(base->type));
       val->type->base_type = vtn_base_type_matrix;
       val->type->type = glsl_matrix_type(glsl_get_base_type(base->type),
                                          glsl_get_vector_elements(base->type),
                                          columns);
-      assert(!glsl_type_is_error(val->type->type));
+      vtn_assert(!glsl_type_is_error(val->type->type));
       val->type->length = columns;
       val->type->array_element = base;
       val->type->row_major = false;
@@ -969,7 +968,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       const struct glsl_type *sampled_type =
          vtn_value(b, w[2], vtn_value_type_type)->type->type;
 
-      assert(glsl_type_is_vector_or_scalar(sampled_type));
+      vtn_assert(glsl_type_is_vector_or_scalar(sampled_type));
 
       enum glsl_sampler_dim dim;
       switch ((SpvDim)w[3]) {
@@ -1011,7 +1010,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
                                              glsl_get_base_type(sampled_type));
       } else if (sampled == 2) {
-         assert(!is_shadow);
+         vtn_assert(!is_shadow);
          val->type->sampled = false;
          val->type->type = glsl_image_type(dim, is_array,
                                            glsl_get_base_type(sampled_type));
@@ -1071,7 +1070,7 @@ vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
       break;
 
    case GLSL_TYPE_ARRAY:
-      assert(glsl_get_length(type) > 0);
+      vtn_assert(glsl_get_length(type) > 0);
       c->num_elements = glsl_get_length(type);
       c->elements = ralloc_array(b, nir_constant *, c->num_elements);
 
@@ -1101,7 +1100,7 @@ spec_constant_decoration_cb(struct vtn_builder *b, struct vtn_value *v,
                              int member, const struct vtn_decoration *dec,
                              void *data)
 {
-   assert(member == -1);
+   vtn_assert(member == -1);
    if (dec->decoration != SpvDecorationSpecId)
       return;
 
@@ -1147,12 +1146,12 @@ handle_workgroup_size_decoration_cb(struct vtn_builder *b,
                                     const struct vtn_decoration *dec,
                                     void *data)
 {
-   assert(member == -1);
+   vtn_assert(member == -1);
    if (dec->decoration != SpvDecorationBuiltIn ||
        dec->literals[0] != SpvBuiltInWorkgroupSize)
       return;
 
-   assert(val->const_type == glsl_vector_type(GLSL_TYPE_UINT, 3));
+   vtn_assert(val->const_type == glsl_vector_type(GLSL_TYPE_UINT, 3));
 
    b->shader->info.cs.local_size[0] = val->constant->values[0].u32[0];
    b->shader->info.cs.local_size[1] = val->constant->values[0].u32[1];
@@ -1168,17 +1167,17 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    val->constant = rzalloc(b, nir_constant);
    switch (opcode) {
    case SpvOpConstantTrue:
-      assert(val->const_type == glsl_bool_type());
+      vtn_assert(val->const_type == glsl_bool_type());
       val->constant->values[0].u32[0] = NIR_TRUE;
       break;
    case SpvOpConstantFalse:
-      assert(val->const_type == glsl_bool_type());
+      vtn_assert(val->const_type == glsl_bool_type());
       val->constant->values[0].u32[0] = NIR_FALSE;
       break;
 
    case SpvOpSpecConstantTrue:
    case SpvOpSpecConstantFalse: {
-      assert(val->const_type == glsl_bool_type());
+      vtn_assert(val->const_type == glsl_bool_type());
       uint32_t int_val =
          get_specialization(b, val, (opcode == SpvOpSpecConstantTrue));
       val->constant->values[0].u32[0] = int_val ? NIR_TRUE : NIR_FALSE;
@@ -1186,19 +1185,19 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpConstant: {
-      assert(glsl_type_is_scalar(val->const_type));
+      vtn_assert(glsl_type_is_scalar(val->const_type));
       int bit_size = glsl_get_bit_size(val->const_type);
       if (bit_size == 64) {
          val->constant->values->u32[0] = w[3];
          val->constant->values->u32[1] = w[4];
       } else {
-         assert(bit_size == 32);
+         vtn_assert(bit_size == 32);
          val->constant->values->u32[0] = w[3];
       }
       break;
    }
    case SpvOpSpecConstant: {
-      assert(glsl_type_is_scalar(val->const_type));
+      vtn_assert(glsl_type_is_scalar(val->const_type));
       val->constant->values[0].u32[0] = get_specialization(b, val, w[3]);
       int bit_size = glsl_get_bit_size(val->const_type);
       if (bit_size == 64)
@@ -1225,17 +1224,17 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       case GLSL_TYPE_DOUBLE: {
          int bit_size = glsl_get_bit_size(val->const_type);
          if (glsl_type_is_matrix(val->const_type)) {
-            assert(glsl_get_matrix_columns(val->const_type) == elem_count);
+            vtn_assert(glsl_get_matrix_columns(val->const_type) == elem_count);
             for (unsigned i = 0; i < elem_count; i++)
                val->constant->values[i] = elems[i]->values[0];
          } else {
-            assert(glsl_type_is_vector(val->const_type));
-            assert(glsl_get_vector_elements(val->const_type) == elem_count);
+            vtn_assert(glsl_type_is_vector(val->const_type));
+            vtn_assert(glsl_get_vector_elements(val->const_type) == elem_count);
             for (unsigned i = 0; i < elem_count; i++) {
                if (bit_size == 64) {
                   val->constant->values[0].u64[i] = elems[i]->values[0].u64[0];
                } else {
-                  assert(bit_size == 32);
+                  vtn_assert(bit_size == 32);
                   val->constant->values[0].u32[i] = elems[i]->values[0].u32[0];
                }
             }
@@ -1263,10 +1262,10 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          struct vtn_value *v0 = &b->values[w[4]];
          struct vtn_value *v1 = &b->values[w[5]];
 
-         assert(v0->value_type == vtn_value_type_constant ||
-                v0->value_type == vtn_value_type_undef);
-         assert(v1->value_type == vtn_value_type_constant ||
-                v1->value_type == vtn_value_type_undef);
+         vtn_assert(v0->value_type == vtn_value_type_constant ||
+                    v0->value_type == vtn_value_type_undef);
+         vtn_assert(v1->value_type == vtn_value_type_constant ||
+                    v1->value_type == vtn_value_type_undef);
 
          unsigned len0 = v0->value_type == vtn_value_type_constant ?
                          glsl_get_vector_elements(v0->const_type) :
@@ -1275,7 +1274,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                          glsl_get_vector_elements(v1->const_type) :
                          glsl_get_vector_elements(v1->type->type);
 
-         assert(len0 + len1 < 16);
+         vtn_assert(len0 + len1 < 16);
 
          unsigned bit_size = glsl_get_bit_size(val->const_type);
          unsigned bit_size0 = v0->value_type == vtn_value_type_constant ?
@@ -1285,7 +1284,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                               glsl_get_bit_size(v1->const_type) :
                               glsl_get_bit_size(v1->type->type);
 
-         assert(bit_size == bit_size0 && bit_size == bit_size1);
+         vtn_assert(bit_size == bit_size0 && bit_size == bit_size1);
          (void)bit_size0; (void)bit_size1;
 
          if (bit_size == 64) {
@@ -1365,12 +1364,12 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
             case GLSL_TYPE_BOOL:
                /* If we hit this granularity, we're picking off an element */
                if (glsl_type_is_matrix(type)) {
-                  assert(col == 0 && elem == -1);
+                  vtn_assert(col == 0 && elem == -1);
                   col = w[i];
                   elem = 0;
                   type = glsl_get_column_type(type);
                } else {
-                  assert(elem <= 0 && glsl_type_is_vector(type));
+                  vtn_assert(elem <= 0 && glsl_type_is_vector(type));
                   elem = w[i];
                   type = glsl_scalar_type(glsl_get_base_type(type));
                }
@@ -1401,14 +1400,14 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                   if (bit_size == 64) {
                      val->constant->values[0].u64[i] = (*c)->values[col].u64[elem + i];
                   } else {
-                     assert(bit_size == 32);
+                     vtn_assert(bit_size == 32);
                      val->constant->values[0].u32[i] = (*c)->values[col].u32[elem + i];
                   }
             }
          } else {
             struct vtn_value *insert =
                vtn_value(b, w[4], vtn_value_type_constant);
-            assert(insert->const_type == type);
+            vtn_assert(insert->const_type == type);
             if (elem == -1) {
                *c = insert->constant;
             } else {
@@ -1418,7 +1417,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                   if (bit_size == 64) {
                      (*c)->values[col].u64[elem + i] = insert->constant->values[0].u64[i];
                   } else {
-                     assert(bit_size == 32);
+                     vtn_assert(bit_size == 32);
                      (*c)->values[col].u32[elem + i] = insert->constant->values[0].u32[i];
                   }
             }
@@ -1437,13 +1436,13 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
             glsl_get_bit_size(val->const_type);
 
          nir_const_value src[4];
-         assert(count <= 7);
+         vtn_assert(count <= 7);
          for (unsigned i = 0; i < count - 4; i++) {
             nir_constant *c =
                vtn_value(b, w[4 + i], vtn_value_type_constant)->constant;
 
             unsigned j = swap ? 1 - i : i;
-            assert(bit_size == 32);
+            vtn_assert(bit_size == 32);
             src[j] = c->values[0];
          }
 
@@ -1503,7 +1502,7 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
    }
 
    nir_variable *out_tmp = NULL;
-   assert(res_type->type == callee->return_type);
+   vtn_assert(res_type->type == callee->return_type);
    if (!glsl_type_is_void(callee->return_type)) {
       out_tmp = nir_local_variable_create(b->nb.impl, callee->return_type,
                                           "out_tmp");
@@ -1588,7 +1587,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       if (src_val->value_type == vtn_value_type_sampled_image) {
          val->pointer = src_val->sampled_image->image;
       } else {
-         assert(src_val->value_type == vtn_value_type_pointer);
+         vtn_assert(src_val->value_type == vtn_value_type_pointer);
          val->pointer = src_val->pointer;
       }
       return;
@@ -1602,7 +1601,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    if (sampled_val->value_type == vtn_value_type_sampled_image) {
       sampled = *sampled_val->sampled_image;
    } else {
-      assert(sampled_val->value_type == vtn_value_type_pointer);
+      vtn_assert(sampled_val->value_type == vtn_value_type_pointer);
       sampled.type = sampled_val->pointer->type;
       sampled.image = NULL;
       sampled.sampler = sampled_val->pointer;
@@ -1766,19 +1765,19 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       uint32_t operands = w[idx++];
 
       if (operands & SpvImageOperandsBiasMask) {
-         assert(texop == nir_texop_tex);
+         vtn_assert(texop == nir_texop_tex);
          texop = nir_texop_txb;
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_bias);
       }
 
       if (operands & SpvImageOperandsLodMask) {
-         assert(texop == nir_texop_txl || texop == nir_texop_txf ||
-                texop == nir_texop_txs);
+         vtn_assert(texop == nir_texop_txl || texop == nir_texop_txf ||
+                    texop == nir_texop_txs);
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_lod);
       }
 
       if (operands & SpvImageOperandsGradMask) {
-         assert(texop == nir_texop_txl);
+         vtn_assert(texop == nir_texop_txl);
          texop = nir_texop_txd;
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ddx);
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ddy);
@@ -1794,13 +1793,13 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       }
 
       if (operands & SpvImageOperandsSampleMask) {
-         assert(texop == nir_texop_txf_ms);
+         vtn_assert(texop == nir_texop_txf_ms);
          texop = nir_texop_txf_ms;
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ms_index);
       }
    }
    /* We should have now consumed exactly all of the arguments */
-   assert(idx == count);
+   vtn_assert(idx == count);
 
    nir_tex_instr *instr = nir_tex_instr_create(b->shader, p - srcs);
    instr->op = texop;
@@ -1861,14 +1860,14 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    nir_ssa_dest_init(&instr->instr, &instr->dest,
                      nir_tex_instr_dest_size(instr), 32, NULL);
 
-   assert(glsl_get_vector_elements(ret_type->type) ==
-          nir_tex_instr_dest_size(instr));
+   vtn_assert(glsl_get_vector_elements(ret_type->type) ==
+              nir_tex_instr_dest_size(instr));
 
    nir_ssa_def *def;
    nir_instr *instruction;
    if (gather_offsets) {
-      assert(glsl_get_base_type(gather_offsets->type) == GLSL_TYPE_ARRAY);
-      assert(glsl_get_length(gather_offsets->type) == 4);
+      vtn_assert(glsl_get_base_type(gather_offsets->type) == GLSL_TYPE_ARRAY);
+      vtn_assert(glsl_get_length(gather_offsets->type) == 4);
       nir_tex_instr *instrs[4] = {instr, NULL, NULL, NULL};
 
       /* Copy the current instruction 4x */
@@ -2031,7 +2030,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       image.coord = get_image_coord(b, w[4]);
 
       if (count > 5 && (w[5] & SpvImageOperandsSampleMask)) {
-         assert(w[5] == SpvImageOperandsSampleMask);
+         vtn_assert(w[5] == SpvImageOperandsSampleMask);
          image.sample = vtn_ssa_value(b, w[6])->def;
       } else {
          image.sample = nir_ssa_undef(&b->nb, 1, 32);
@@ -2045,7 +2044,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       /* texel = w[3] */
 
       if (count > 4 && (w[4] & SpvImageOperandsSampleMask)) {
-         assert(w[4] == SpvImageOperandsSampleMask);
+         vtn_assert(w[4] == SpvImageOperandsSampleMask);
          image.sample = vtn_ssa_value(b, w[5])->def;
       } else {
          image.sample = nir_ssa_undef(&b->nb, 1, 32);
@@ -2286,7 +2285,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
 
       }
    } else {
-      assert(ptr->mode == vtn_variable_mode_ssbo);
+      vtn_assert(ptr->mode == vtn_variable_mode_ssbo);
       nir_ssa_def *offset, *index;
       offset = vtn_pointer_to_offset(b, ptr, &index, NULL);
 
@@ -2493,12 +2492,12 @@ vtn_vector_construct(struct vtn_builder *b, unsigned num_components,
     *    "When constructing a vector, there must be at least two Constituent
     *    operands."
     */
-   assert(num_srcs >= 2);
+   vtn_assert(num_srcs >= 2);
 
    unsigned dest_idx = 0;
    for (unsigned i = 0; i < num_srcs; i++) {
       nir_ssa_def *src = srcs[i];
-      assert(dest_idx + src->num_components <= num_components);
+      vtn_assert(dest_idx + src->num_components <= num_components);
       for (unsigned j = 0; j < src->num_components; j++) {
          vec->src[dest_idx].src = nir_src_for_ssa(src);
          vec->src[dest_idx].swizzle[0] = j;
@@ -2511,7 +2510,7 @@ vtn_vector_construct(struct vtn_builder *b, unsigned num_components,
     *    "When constructing a vector, the total number of components in all
     *    the operands must equal the number of components in Result Type."
     */
-   assert(dest_idx == num_components);
+   vtn_assert(dest_idx == num_components);
 
    nir_builder_instr_insert(&b->nb, &vec->instr);
 
@@ -2571,7 +2570,7 @@ vtn_composite_extract(struct vtn_builder *b, struct vtn_ssa_value *src,
    struct vtn_ssa_value *cur = src;
    for (unsigned i = 0; i < num_indices; i++) {
       if (glsl_type_is_vector_or_scalar(cur->type)) {
-         assert(i == num_indices - 1);
+         vtn_assert(i == num_indices - 1);
          /* According to the SPIR-V spec, OpCompositeExtract may work down to
           * the component granularity. The last index will be the index of the
           * vector to extract.
@@ -2904,9 +2903,9 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpMemoryModel:
-      assert(w[1] == SpvAddressingModelLogical);
-      assert(w[2] == SpvMemoryModelSimple ||
-             w[2] == SpvMemoryModelGLSL450);
+      vtn_assert(w[1] == SpvAddressingModelLogical);
+      vtn_assert(w[2] == SpvMemoryModelSimple ||
+                 w[2] == SpvMemoryModelGLSL450);
       break;
 
    case SpvOpEntryPoint: {
@@ -2919,7 +2918,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
           stage_for_execution_model(w[1]) != b->entry_point_stage)
          break;
 
-      assert(b->entry_point == NULL);
+      vtn_assert(b->entry_point == NULL);
       b->entry_point = entry_point;
       break;
    }
@@ -2957,7 +2956,7 @@ static void
 vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
                           const struct vtn_decoration *mode, void *data)
 {
-   assert(b->entry_point == entry_point);
+   vtn_assert(b->entry_point == entry_point);
 
    switch(mode->exec_mode) {
    case SpvExecutionModeOriginUpperLeft:
@@ -2967,34 +2966,34 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       break;
 
    case SpvExecutionModeEarlyFragmentTests:
-      assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
       b->shader->info.fs.early_fragment_tests = true;
       break;
 
    case SpvExecutionModeInvocations:
-      assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
       b->shader->info.gs.invocations = MAX2(1, mode->literals[0]);
       break;
 
    case SpvExecutionModeDepthReplacing:
-      assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
       b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_ANY;
       break;
    case SpvExecutionModeDepthGreater:
-      assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
       b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_GREATER;
       break;
    case SpvExecutionModeDepthLess:
-      assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
       b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_LESS;
       break;
    case SpvExecutionModeDepthUnchanged:
-      assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_FRAGMENT);
       b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_UNCHANGED;
       break;
 
    case SpvExecutionModeLocalSize:
-      assert(b->shader->info.stage == MESA_SHADER_COMPUTE);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_COMPUTE);
       b->shader->info.cs.local_size[0] = mode->literals[0];
       b->shader->info.cs.local_size[1] = mode->literals[1];
       b->shader->info.cs.local_size[2] = mode->literals[2];
@@ -3007,7 +3006,7 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
           b->shader->info.stage == MESA_SHADER_TESS_EVAL) {
          b->shader->info.tess.tcs_vertices_out = mode->literals[0];
       } else {
-         assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
+         vtn_assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
          b->shader->info.gs.vertices_out = mode->literals[0];
       }
       break;
@@ -3024,7 +3023,7 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
          b->shader->info.tess.primitive_mode =
             gl_primitive_from_spv_execution_mode(mode->exec_mode);
       } else {
-         assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
+         vtn_assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
          b->shader->info.gs.vertices_in =
             vertices_in_from_spv_execution_mode(mode->exec_mode);
       }
@@ -3033,39 +3032,39 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
    case SpvExecutionModeOutputPoints:
    case SpvExecutionModeOutputLineStrip:
    case SpvExecutionModeOutputTriangleStrip:
-      assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
       b->shader->info.gs.output_primitive =
          gl_primitive_from_spv_execution_mode(mode->exec_mode);
       break;
 
    case SpvExecutionModeSpacingEqual:
-      assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
-             b->shader->info.stage == MESA_SHADER_TESS_EVAL);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
+                 b->shader->info.stage == MESA_SHADER_TESS_EVAL);
       b->shader->info.tess.spacing = TESS_SPACING_EQUAL;
       break;
    case SpvExecutionModeSpacingFractionalEven:
-      assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
-             b->shader->info.stage == MESA_SHADER_TESS_EVAL);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
+                 b->shader->info.stage == MESA_SHADER_TESS_EVAL);
       b->shader->info.tess.spacing = TESS_SPACING_FRACTIONAL_EVEN;
       break;
    case SpvExecutionModeSpacingFractionalOdd:
-      assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
-             b->shader->info.stage == MESA_SHADER_TESS_EVAL);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
+                 b->shader->info.stage == MESA_SHADER_TESS_EVAL);
       b->shader->info.tess.spacing = TESS_SPACING_FRACTIONAL_ODD;
       break;
    case SpvExecutionModeVertexOrderCw:
-      assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
-             b->shader->info.stage == MESA_SHADER_TESS_EVAL);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
+                 b->shader->info.stage == MESA_SHADER_TESS_EVAL);
       b->shader->info.tess.ccw = false;
       break;
    case SpvExecutionModeVertexOrderCcw:
-      assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
-             b->shader->info.stage == MESA_SHADER_TESS_EVAL);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
+                 b->shader->info.stage == MESA_SHADER_TESS_EVAL);
       b->shader->info.tess.ccw = true;
       break;
    case SpvExecutionModePointMode:
-      assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
-             b->shader->info.stage == MESA_SHADER_TESS_EVAL);
+      vtn_assert(b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
+                 b->shader->info.stage == MESA_SHADER_TESS_EVAL);
       b->shader->info.tess.point_mode = true;
       break;
 
@@ -3231,7 +3230,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       if (image->mode == vtn_variable_mode_image) {
          vtn_handle_image(b, opcode, w, count);
       } else {
-         assert(image->mode == vtn_variable_mode_sampler);
+         vtn_assert(image->mode == vtn_variable_mode_sampler);
          vtn_handle_texture(b, opcode, w, count);
       }
       break;
@@ -3256,7 +3255,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       if (pointer->value_type == vtn_value_type_image_pointer) {
          vtn_handle_image(b, opcode, w, count);
       } else {
-         assert(pointer->value_type == vtn_value_type_pointer);
+         vtn_assert(pointer->value_type == vtn_value_type_pointer);
          vtn_handle_ssbo_or_shared_atomic(b, opcode, w, count);
       }
       break;
@@ -3267,7 +3266,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       if (pointer->value_type == vtn_value_type_image_pointer) {
          vtn_handle_image(b, opcode, w, count);
       } else {
-         assert(pointer->value_type == vtn_value_type_pointer);
+         vtn_assert(pointer->value_type == vtn_value_type_pointer);
          vtn_handle_ssbo_or_shared_atomic(b, opcode, w, count);
       }
       break;
@@ -3441,13 +3440,13 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    const uint32_t *word_end = words + word_count;
 
    /* Handle the SPIR-V header (first 4 dwords)  */
-   assert(word_count > 5);
+   vtn_assert(word_count > 5);
 
-   assert(words[0] == SpvMagicNumber);
-   assert(words[1] >= 0x10000);
+   vtn_assert(words[0] == SpvMagicNumber);
+   vtn_assert(words[1] >= 0x10000);
    /* words[2] == generator magic */
    unsigned value_id_bound = words[3];
-   assert(words[4] == 0);
+   vtn_assert(words[4] == 0);
 
    words+= 5;
 
@@ -3499,9 +3498,9 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
       }
    } while (progress);
 
-   assert(b->entry_point->value_type == vtn_value_type_function);
+   vtn_assert(b->entry_point->value_type == vtn_value_type_function);
    nir_function *entry_point = b->entry_point->func->impl->function;
-   assert(entry_point);
+   vtn_assert(entry_point);
 
    /* Unparent the shader from the vtn_builder before we delete the builder */
    ralloc_steal(NULL, b->shader);
