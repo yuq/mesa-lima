@@ -195,7 +195,6 @@ void *brw_state_batch(struct brw_context *brw,
 uint32_t brw_state_batch_size(struct brw_context *brw, uint32_t offset);
 
 /* brw_wm_surface_state.c */
-void gen4_init_vtable_surface_functions(struct brw_context *brw);
 uint32_t brw_get_surface_tiling_bits(uint32_t tiling);
 uint32_t brw_get_surface_num_multisamples(unsigned num_samples);
 enum isl_format brw_isl_format_for_mesa_format(mesa_format mesa_format);
@@ -246,9 +245,6 @@ void brw_emit_sampler_state(struct brw_context *brw,
                             unsigned shadow_function,
                             bool non_normalized_coordinates,
                             uint32_t border_color_offset);
-
-/* gen6_surface_state.c */
-void gen6_init_vtable_surface_functions(struct brw_context *brw);
 
 /* brw_vs_surface_state.c */
 void

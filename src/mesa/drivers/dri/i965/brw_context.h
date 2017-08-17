@@ -633,11 +633,6 @@ struct brw_context
 
    struct
    {
-      uint32_t (*update_renderbuffer_surface)(struct brw_context *brw,
-                                              struct gl_renderbuffer *rb,
-                                              unsigned unit,
-                                              uint32_t surf_index);
-
       /**
        * Send the appropriate state packets to configure depth, stencil, and
        * HiZ buffers (i965+ only)

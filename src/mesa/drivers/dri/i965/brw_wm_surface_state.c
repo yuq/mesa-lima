@@ -1000,11 +1000,12 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
    if (fb->_NumColorDrawBuffers >= 1) {
       for (i = 0; i < fb->_NumColorDrawBuffers; i++) {
          const uint32_t surf_index = render_target_start + i;
+         struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[i];
 
-	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
-            surf_offset[surf_index] =
-               brw->vtbl.update_renderbuffer_surface(
-                  brw, fb->_ColorDrawBuffers[i], i, surf_index);
+	 if (intel_renderbuffer(rb)) {
+            surf_offset[surf_index] = brw->gen >= 6 ?
+               gen6_update_renderbuffer_surface(brw, rb, i, surf_index) :
+               gen4_update_renderbuffer_surface(brw, rb, i, surf_index);
 	 } else {
             emit_null_surface_state(brw, w, h, s, &surf_offset[surf_index]);
 	 }
@@ -1668,19 +1669,6 @@ const struct brw_tracked_state brw_wm_image_surfaces = {
    },
    .emit = brw_upload_wm_image_surfaces,
 };
-
-void
-gen4_init_vtable_surface_functions(struct brw_context *brw)
-{
-   brw->vtbl.update_renderbuffer_surface = gen4_update_renderbuffer_surface;
-}
-
-void
-gen6_init_vtable_surface_functions(struct brw_context *brw)
-{
-   gen4_init_vtable_surface_functions(brw);
-   brw->vtbl.update_renderbuffer_surface = gen6_update_renderbuffer_surface;
-}
 
 static void
 brw_upload_cs_work_groups_surface(struct brw_context *brw)
