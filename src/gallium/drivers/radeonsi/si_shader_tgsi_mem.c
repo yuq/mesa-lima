@@ -73,7 +73,8 @@ static LLVMValueRef get_buffer_size(
 
 static LLVMValueRef
 shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
-			 const struct tgsi_full_src_register *reg)
+			 const struct tgsi_full_src_register *reg,
+			 bool ubo)
 {
 	LLVMValueRef index;
 
@@ -84,7 +85,10 @@ shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 					      reg->Register.Index);
 	}
 
-	return ctx->abi.load_ssbo(&ctx->abi, index, false);
+	if (ubo)
+		return ctx->abi.load_ubo(&ctx->abi, index);
+	else
+		return ctx->abi.load_ssbo(&ctx->abi, index, false);
 }
 
 static bool tgsi_is_array_sampler(unsigned target)
@@ -370,12 +374,14 @@ static void load_fetch_args(
 
 	emit_data->dst_type = ctx->v4f32;
 
-	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
+		   inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
 		LLVMBuilderRef builder = gallivm->builder;
 		LLVMValueRef offset;
 		LLVMValueRef tmp;
 
-		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0]);
+		bool ubo = inst->Src[0].Register.File == TGSI_FILE_CONSTBUF;
+		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], ubo);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
 		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
@@ -421,7 +427,7 @@ static unsigned get_store_intr_attribs(bool writeonly_memory)
 
 static void load_emit_buffer(struct si_shader_context *ctx,
 			     struct lp_build_emit_data *emit_data,
-			     bool can_speculate)
+			     bool can_speculate, bool allow_smem)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	uint writemask = inst->Dst[0].Register.WriteMask;
@@ -448,7 +454,7 @@ static void load_emit_buffer(struct si_shader_context *ctx,
 				     args[2], NULL, 0,
 				     LLVMConstIntGetZExtValue(args[3]),
 				     LLVMConstIntGetZExtValue(args[4]),
-				     can_speculate, false);
+				     can_speculate, allow_smem);
 }
 
 static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
@@ -578,6 +584,11 @@ static void load_emit(
 		return;
 	}
 
+	if (inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
+		load_emit_buffer(ctx, emit_data, true, true);
+		return;
+	}
+
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
 		si_emit_waitcnt(ctx, VM_CNT);
 
@@ -589,7 +600,7 @@ static void load_emit(
 						info->images_atomic);
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
-		load_emit_buffer(ctx, emit_data, can_speculate);
+		load_emit_buffer(ctx, emit_data, can_speculate, false);
 		return;
 	}
 
@@ -643,7 +654,7 @@ static void store_fetch_args(
 		LLVMValueRef offset;
 		LLVMValueRef tmp;
 
-		rsrc = shader_buffer_fetch_rsrc(ctx, &memory);
+		rsrc = shader_buffer_fetch_rsrc(ctx, &memory, false);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 0, 0);
 		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
@@ -863,7 +874,7 @@ static void atomic_fetch_args(
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
 		LLVMValueRef offset;
 
-		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0]);
+		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], false);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
 		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
@@ -1071,7 +1082,7 @@ static void resq_fetch_args(
 	emit_data->dst_type = ctx->v4i32;
 
 	if (reg->Register.File == TGSI_FILE_BUFFER) {
-		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg);
+		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg, false);
 		emit_data->arg_count = 1;
 	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
 		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
