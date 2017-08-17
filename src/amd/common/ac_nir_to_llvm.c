@@ -3345,6 +3345,7 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 					LLVMBuildAdd(ctx->ac.builder, fmask_load_address[chan],
 						LLVMBuildFPToUI(ctx->ac.builder, ctx->abi->frag_pos[chan],
 								ctx->ac.i32, ""), "");
+			fmask_load_address[2] = to_integer(&ctx->ac, ctx->abi->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)]);
 		}
 		sample_index = adjust_sample_index_using_fmask(&ctx->ac,
 							       fmask_load_address[0],
@@ -3367,9 +3368,11 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 		}
 
 		if (add_frag_pos) {
-			for (chan = 0; chan < count; ++chan)
+			for (chan = 0; chan < 2; ++chan)
 				coords[chan] = LLVMBuildAdd(ctx->ac.builder, coords[chan], LLVMBuildFPToUI(ctx->ac.builder, ctx->abi->frag_pos[chan],
 						ctx->ac.i32, ""), "");
+			coords[2] = to_integer(&ctx->ac, ctx->abi->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)]);
+			count++;
 		}
 		if (is_ms) {
 			coords[count] = sample_index;
@@ -3414,7 +3417,9 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		res = to_integer(&ctx->ac, res);
 	} else {
 		bool is_da = glsl_sampler_type_is_array(type) ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_SUBPASS ||
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_SUBPASS_MS;
 		LLVMValueRef da = is_da ? i1true : i1false;
 		LLVMValueRef glc = i1false;
 		LLVMValueRef slc = i1false;
@@ -5062,6 +5067,10 @@ handle_fs_inputs(struct nir_to_llvm_context *ctx,
 		handle_fs_input_decl(ctx, variable);
 
 	unsigned index = 0;
+
+	if (ctx->shader_info->info.ps.uses_input_attachments)
+		ctx->input_mask |= 1ull << VARYING_SLOT_LAYER;
+
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_INPUTS; ++i) {
 		LLVMValueRef interp_param;
 		LLVMValueRef *inputs = ctx->inputs +radeon_llvm_reg_index_soa(i, 0);
