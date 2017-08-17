@@ -2161,7 +2161,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       ir_constant *const_uniform_block = ir->operands[0]->as_constant();
       ir_constant *const_offset_ir = ir->operands[1]->as_constant();
       unsigned const_offset = const_offset_ir ? const_offset_ir->value.u[0] : 0;
-      unsigned const_block = const_uniform_block ? const_uniform_block->value.u[0] + 1 : 0;
+      unsigned const_block = const_uniform_block ? const_uniform_block->value.u[0] + 1 : 1;
       st_src_reg index_reg = get_temp(glsl_type::uint_type);
       st_src_reg cbuf;
 
@@ -2171,6 +2171,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       cbuf.reladdr = NULL;
       cbuf.negate = 0;
       cbuf.abs = 0;
+      cbuf.index2D = const_block;
 
       assert(ir->type->is_vector() || ir->type->is_scalar());
 
@@ -2217,13 +2218,11 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       if (const_uniform_block) {
          /* Constant constant buffer */
          cbuf.reladdr2 = NULL;
-         cbuf.index2D = const_block;
          cbuf.has_index2 = true;
       }
       else {
          /* Relative/variable constant buffer */
          cbuf.reladdr2 = ralloc(mem_ctx, st_src_reg);
-         cbuf.index2D = 1;
          memcpy(cbuf.reladdr2, &op[0], sizeof(st_src_reg));
          cbuf.has_index2 = true;
       }
