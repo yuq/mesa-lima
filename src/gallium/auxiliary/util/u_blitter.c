@@ -147,10 +147,6 @@ struct blitter_context_priv
    void   (*delete_fs_state)(struct pipe_context *, void *);
 };
 
-static struct pipe_surface *
-util_blitter_get_next_surface_layer(struct pipe_context *pipe,
-                                    struct pipe_surface *surf);
-
 struct blitter_context *util_blitter_create(struct pipe_context *pipe)
 {
    struct blitter_context_priv *ctx;
@@ -167,7 +163,6 @@ struct blitter_context *util_blitter_create(struct pipe_context *pipe)
 
    ctx->base.pipe = pipe;
    ctx->base.draw_rectangle = util_blitter_draw_rectangle;
-   ctx->base.get_next_surface_layer = util_blitter_get_next_surface_layer;
 
    ctx->bind_fs_state = pipe->bind_fs_state;
    ctx->delete_fs_state = pipe->delete_fs_state;
@@ -1730,7 +1725,7 @@ static void do_blits(struct blitter_context_priv *ctx,
           * just unreference the last one. */
          old = dst;
          if (dst_z < dstbox->depth-1) {
-            dst = ctx->base.get_next_surface_layer(ctx->base.pipe, dst);
+            dst = util_blitter_get_next_surface_layer(ctx->base.pipe, dst);
          }
          if (dst_z) {
             pipe_surface_reference(&old, NULL);
