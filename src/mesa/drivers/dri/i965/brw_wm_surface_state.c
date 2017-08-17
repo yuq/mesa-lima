@@ -55,11 +55,6 @@
 #include "brw_defines.h"
 #include "brw_wm.h"
 
-enum {
-   INTEL_RENDERBUFFER_LAYERED = 1 << 0,
-   INTEL_AUX_BUFFER_DISABLED = 1 << 1,
-};
-
 uint32_t tex_mocs[] = {
    [7] = GEN7_MOCS_L3,
    [8] = BDW_MOCS_WB,
@@ -209,7 +204,7 @@ brw_emit_surface_state(struct brw_context *brw,
 static uint32_t
 gen6_update_renderbuffer_surface(struct brw_context *brw,
                                  struct gl_renderbuffer *rb,
-                                 uint32_t flags, unsigned unit,
+                                 unsigned unit,
                                  uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -217,13 +212,9 @@ gen6_update_renderbuffer_surface(struct brw_context *brw,
    struct intel_mipmap_tree *mt = irb->mt;
 
    enum isl_aux_usage aux_usage =
+      brw->draw_aux_buffer_disabled[unit] ? ISL_AUX_USAGE_NONE :
       intel_miptree_render_aux_usage(brw, mt, ctx->Color.sRGBEnabled,
                                      ctx->Color.BlendEnabled & (1 << unit));
-
-   if (flags & INTEL_AUX_BUFFER_DISABLED) {
-      assert(brw->gen >= 9);
-      aux_usage = ISL_AUX_USAGE_NONE;
-   }
 
    assert(brw_render_target_supported(brw, rb));
 
@@ -897,7 +888,7 @@ emit_null_surface_state(struct brw_context *brw,
 static uint32_t
 gen4_update_renderbuffer_surface(struct brw_context *brw,
                                  struct gl_renderbuffer *rb,
-                                 uint32_t flags, unsigned unit,
+                                 unsigned unit,
                                  uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -910,9 +901,6 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    /* _NEW_BUFFERS */
    mesa_format rb_format = _mesa_get_render_format(ctx, intel_rb_format(irb));
    /* BRW_NEW_FS_PROG_DATA */
-
-   assert(!(flags & INTEL_RENDERBUFFER_LAYERED));
-   assert(!(flags & INTEL_AUX_BUFFER_DISABLED));
 
    if (rb->TexImage && !brw->has_surface_tile_offset) {
       intel_renderbuffer_get_tile_offsets(irb, &tile_x, &tile_y);
@@ -1012,15 +1000,11 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
    if (fb->_NumColorDrawBuffers >= 1) {
       for (i = 0; i < fb->_NumColorDrawBuffers; i++) {
          const uint32_t surf_index = render_target_start + i;
-         const int flags = (_mesa_geometric_layers(fb) > 0 ?
-                              INTEL_RENDERBUFFER_LAYERED : 0) |
-                           (brw->draw_aux_buffer_disabled[i] ?
-                              INTEL_AUX_BUFFER_DISABLED : 0);
 
 	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
             surf_offset[surf_index] =
                brw->vtbl.update_renderbuffer_surface(
-                  brw, fb->_ColorDrawBuffers[i], flags, i, surf_index);
+                  brw, fb->_ColorDrawBuffers[i], i, surf_index);
 	 } else {
             emit_null_surface_state(brw, w, h, s, &surf_offset[surf_index]);
 	 }

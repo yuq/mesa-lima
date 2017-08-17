@@ -635,7 +635,7 @@ struct brw_context
    {
       uint32_t (*update_renderbuffer_surface)(struct brw_context *brw,
                                               struct gl_renderbuffer *rb,
-                                              uint32_t flags, unsigned unit,
+                                              unsigned unit,
                                               uint32_t surf_index);
 
       /**
