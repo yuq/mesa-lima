@@ -131,7 +131,7 @@ static struct pb_buffer* si_uvd_set_dtb(struct ruvd_msg *msg, struct vl_video_bu
 
 	msg->body.decode.dt_field_mode = buf->base.interlaced;
 
-	ruvd_set_dt_surfaces(msg, &luma->surface, &chroma->surface, type);
+	ruvd_set_dt_surfaces(msg, &luma->surface, (chroma) ? &chroma->surface : NULL, type);
 
 	return luma->resource.buf;
 }
