@@ -1571,7 +1571,8 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
    result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
 
    /* Execbuf does not consume the in_fence.  It's our job to close it. */
-   close(in_fence);
+   if (in_fence != -1)
+      close(in_fence);
 
    for (uint32_t i = 0; i < num_in_semaphores; i++) {
       ANV_FROM_HANDLE(anv_semaphore, semaphore, in_semaphores[i]);
