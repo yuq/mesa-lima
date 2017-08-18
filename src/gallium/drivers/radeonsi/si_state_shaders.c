@@ -857,14 +857,10 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 	 * not sent again.
 	 */
 	if (!gs) {
-		unsigned mode = 0;
+		unsigned mode = V_028A40_GS_OFF;
 
-		/* PrimID needs GS scenario A.
-		 * GFX9 also needs it when ViewportIndex is enabled.
-		 */
-		if (enable_prim_id ||
-		    (sscreen->b.chip_class >= GFX9 &&
-		     shader->selector->info.writes_viewport_index))
+		/* PrimID needs GS scenario A. */
+		if (enable_prim_id)
 			mode = V_028A40_GS_SCENARIO_A;
 
 		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, S_028A40_MODE(mode));
