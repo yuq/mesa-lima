@@ -976,17 +976,31 @@ void si_emit_cache_flush(struct si_context *sctx)
 			cb_db_event = V_028A90_CACHE_FLUSH_AND_INV_TS_EVENT;
 		}
 
-		/* TC    | TC_WB         = invalidate L2 data
-		 * TC_MD | TC_WB         = invalidate L2 metadata (DCC, etc.)
-		 * TC    | TC_WB | TC_MD = invalidate L2 data & metadata
+		/* These are the only allowed combinations. If you need to
+		 * do multiple operations at once, do them separately.
+		 * All operations that invalidate L2 also seem to invalidate
+		 * metadata. Volatile (VOL) and WC flushes are not listed here.
+		 *
+		 * TC    | TC_WB         = writeback & invalidate L2 & L1
+		 * TC    | TC_WB | TC_NC = writeback & invalidate L2 for MTYPE == NC
+		 *         TC_WB | TC_NC = writeback L2 for MTYPE == NC
+		 * TC            | TC_NC = invalidate L2 for MTYPE == NC
+		 * TC    | TC_MD         = writeback & invalidate L2 metadata (DCC, etc.)
+		 * TCL1                  = invalidate L1
 		 */
-		tc_flags = 0;
+
+		/* When flushing CB or DB, L2 metadata should always be invali-
+		 * dated before texturing. Invalidating L2 data is not needed
+		 * in some cases.
+		 */
+		tc_flags = EVENT_TC_ACTION_ENA |
+			   EVENT_TC_MD_ACTION_ENA;
 
 		/* Ideally flush TC together with CB/DB. */
 		if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {
-			tc_flags |= EVENT_TC_ACTION_ENA |
-				    EVENT_TC_WB_ACTION_ENA |
-				    EVENT_TCL1_ACTION_ENA;
+			/* Writeback and invalidate everything in L2 & L1. */
+			tc_flags = EVENT_TC_ACTION_ENA |
+				   EVENT_TC_WB_ACTION_ENA;
 
 			/* Clear the flags. */
 			rctx->flags &= ~(SI_CONTEXT_INV_GLOBAL_L2 |
